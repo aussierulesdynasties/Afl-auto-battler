@@ -24,6 +24,10 @@ set -u
 cd "$(dirname "$0")/.." || exit 1
 
 GODOT="${GODOT:-godot}"
+# The suites play on the data without the director's hand-set OVR rows
+# (data/ovr_overrides.csv): they check the rules, not those numbers. Only the
+# ratings suite turns the rows back on, because it tests them.
+export AFL_SKIP_OVR_ROWS=1
 SUITE_TIMEOUT="${SUITE_TIMEOUT:-900}"
 # The check floors (tools/test_run_tests.sh points this at its own file).
 EXPECTED_CHECKS="${EXPECTED_CHECKS:-tests/expected_checks.txt}"

@@ -29,8 +29,9 @@ const OVR_CSV := "res://data/ovr_overrides.csv"
 var override_hits := {}
 var override_unmatched: Array = []
 ## Tests that measure how the rules spread players over the underlying data (not
-## the director's hand-set numbers) turn the OVR rows off for a reload.
-var skip_ovr_overrides := false
+## the director's hand-set numbers) turn the OVR rows off for a reload; tools/run_tests.sh
+## turns them off for every suite but the ratings one (AFL_SKIP_OVR_ROWS=1).
+var skip_ovr_overrides := OS.get_environment("AFL_SKIP_OVR_ROWS") == "1"
 ## Draft pedigree and rated past seasons, built by tools/build_history.py.
 const HISTORY_CSV := "res://data/player_history_2026.csv"
 ## How real players look on the vignette figures (Appearance.gd): skin tone and

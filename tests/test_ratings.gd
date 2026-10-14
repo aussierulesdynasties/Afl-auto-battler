@@ -17,6 +17,7 @@ func run() -> void:
 	failures.clear()
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
+	GameDB.skip_ovr_overrides = false     # this suite tests the hand-set rows
 	GameDB.reload()
 	_test_weights()
 	_test_role_attributes()
