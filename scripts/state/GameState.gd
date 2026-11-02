@@ -486,8 +486,8 @@ func set_screen_size(key: String) -> void:
 
 
 func screen_orientation() -> String:
-	var key := str(get_setting("screen_orientation", "auto"))
-	return key if ["auto", "portrait", "landscape"].has(key) else "auto"
+	var key := str(get_setting("screen_orientation", ScreenLayout.DEFAULT_ORIENTATION))
+	return key if ["auto", "portrait", "landscape"].has(key) else ScreenLayout.DEFAULT_ORIENTATION
 
 
 func set_screen_orientation(key: String, from_tap := false) -> void:
@@ -791,6 +791,7 @@ func load_career() -> bool:
 	if state.get("draft") is Dictionary:
 		draft = Draft.new([], [], 0)
 		CareerSave.apply_vars(draft, state["draft"])
+		_watch_draft_night()
 		draft._pick_by_player = {}
 		for entry in draft.pick_history:
 			if bool(entry.get("released", false)):
@@ -1459,6 +1460,22 @@ func begin_real_lists() -> void:
 			p["comp_eligible"] = false
 			p["contract_years"] = 0
 			free_agents.append(p)
+	# The 2026 trade period and free agency (data/club_moves_2026.csv): those
+	# players are on their new club's list. data_club stays the club he played
+	# 2026 for, so his record still runs through 2026 there (start_season).
+	var joined := {}
+	for code in active:
+		for p in (league_lists[code] as Array).duplicate():
+			var mv := GameDB.club_move(p)
+			if mv.is_empty() or str(mv["from"]) != code or not league_lists.has(str(mv["to"])):
+				continue
+			(league_lists[code] as Array).erase(p)
+			p["data_club"] = str(p.get("data_club", code))
+			p["club"] = str(mv["to"])
+			(league_lists[str(mv["to"])] as Array).append(p)
+			joined[str(mv["to"])] = true
+	for code in joined:
+		unique_jumpers(league_lists[code])
 	intake_assignments = []
 	# The real 2026 class, and the career's own prospect if it has one.
 	var cls: Array = _career_copies(GameDB.draftees)
@@ -1629,6 +1646,7 @@ func begin_intake_draft() -> bool:
 			comps.append(c)
 	draft.set_pick_owners(draft_pick_owners(season_year))
 	draft.add_compensation(comps)
+	_watch_draft_night()
 	draft.start_for_user(my_club)
 	autosave()
 	return true
@@ -2652,6 +2670,13 @@ func preseason_stop() -> String:
 	# The practice match, the same way: the opponent and the trial, then the report.
 	if str(PreSeason.STOPS.get(w, "")) == "practice" and preseason.get("practice") is Dictionary 			and not bool((preseason["practice"] as Dictionary).get("seen", false)):
 		return "practice"
+	# The papers, in the quiet last week: the ladder and the story to answer.
+	if str(PreSeason.STOPS.get(w, "")) == "papers" and not papers_record().is_empty() \
+			and not bool(papers_record().get("seen", false)):
+		return "papers"
+	# The story cards the block threw up (data/stories, phase "preseason").
+	if bool(preseason.get("story_pending", false)):
+		return "story"
 	return ""
 
 
@@ -2713,7 +2738,21 @@ func preseason_drills(i: int) -> Array:
 ## The fitness base your plan is heading for, were every block trained as it
 ## is set now: "thin" / "sound" / "strong".
 func preseason_base() -> String:
-	return PreSeason.base_band(PreSeason.planned_run(preseason_blocks()))
+	return PreSeason.base_band(preseason_run_forecast())
+
+
+## The weeks of running your side will have by Round 1: what is already done
+## (cards included, such as a camp) and the weeks still to come as set now.
+## Before week 1 that is exactly the plan's total.
+func preseason_run_forecast() -> float:
+	var blocks := preseason_blocks()
+	var entry: Dictionary = (preseason.get("clubs", {}) as Dictionary).get(my_club, {})
+	var run := float(entry.get("run", 0.0))
+	for w in range(preseason_week() + 1, PreSeason.weeks() + 1):
+		var i := PreSeason.block_of_week(w)
+		if i >= 0 and i < blocks.size():
+			run += PreSeason.work(str(blocks[i][0]), str(blocks[i][1]), "running")
+	return run
 
 
 ## The time trial, by player id: {"best": [...], "worst": [...]}, or {}.
@@ -2726,14 +2765,18 @@ func preseason_trial() -> Dictionary:
 func preseason_step_week() -> String:
 	if not preseason_active():
 		return "done"
-	if preseason_stop() == "trial" or preseason_stop() == "intra" or preseason_stop() == "practice":
+	if ["trial", "intra", "practice", "papers", "story"].has(preseason_stop()):
 		return preseason_stop()
+	if preseason_week() >= PreSeason.weeks():
+		_finish_preseason()
+		return "done"
 	var w := preseason_week() + 1
 	var clubs: Dictionary = preseason.get("clubs", {})
 	for club in season.clubs:
 		if clubs.has(str(club)) and season.lists.has(club):
 			# A week passes for anyone already hurt, then the week is trained.
 			Injuries.tick(season.lists[club])
+			_light_heal(clubs[str(club)], season.lists[club], w)
 			_preseason_train(str(club), clubs[str(club)], w)
 	preseason["week"] = w
 	mark_dirty()
@@ -2750,10 +2793,29 @@ func preseason_step_week() -> String:
 	if str(PreSeason.STOPS.get(w, "")) == "practice" and _ai_practices(clubs):
 		# Every other pair of clubs plays its own that week; yours waits for you.
 		return "practice"
+	if str(PreSeason.STOPS.get(w, "")) == "papers":
+		_build_papers()
+		return "papers"
 	if w >= PreSeason.weeks():
 		_finish_preseason()
 		return "done"
 	return ""
+
+
+## A Light week is easy on the body: the injured heal light_heal_extra weeks
+## more (a concussion runs on matches, under the protocols, so not that).
+func _light_heal(entry: Dictionary, list: Array, w: int) -> void:
+	var i := PreSeason.block_of_week(w)
+	var blocks: Array = entry.get("blocks", [])
+	if i < 0 or i >= blocks.size() or str(blocks[i][0]) != "light":
+		return
+	for p in list:
+		var left := int(p.get("injury_weeks", 0))
+		if left <= 0 or str(p.get("injury_kind", "")) == "concussion":
+			continue
+		p["injury_weeks"] = maxi(0, left - int(PreSeason.tune("light_heal_extra")))
+		if int(p["injury_weeks"]) == 0:
+			p.erase("injury_kind")
 
 
 ## One club's training week: running work toward its base, skills work as
@@ -2841,6 +2903,121 @@ func _finish_preseason() -> void:
 
 
 # ---------------------------------------------------------------------------
+# The papers (PreSeason.gd, week 8): a predicted ladder and one story to answer
+# ---------------------------------------------------------------------------
+## Yours, this pre-season: {"order": [club codes, best first], "pred", "kind"
+## (finish, breakout, pressure, or "" when there is nothing to answer), "pid",
+## "claim" (the finish you named, 0 for none), "answered", "choice", "result",
+## "seen"}. {} before week 8.
+func papers_record() -> Dictionary:
+	return preseason.get("papers", {}) if preseason.get("papers") is Dictionary else {}
+
+
+## The paper's ladder, best first: each club's best side as TeamRating reads it
+## after the summer's injuries, near-ties to last year's finish.
+func _build_papers() -> void:
+	var ratings := {}
+	var last := {}
+	for club in season.clubs:
+		var code := str(club)
+		ratings[code] = TeamRating.rating(season.lists[club])
+		last[code] = last_finish_of(code)
+	var order := PreSeason.predicted_order(ratings, last, club_expect)
+	var pred := order.find(my_club) + 1
+	var eligible := []
+	if pred > Season.FINALISTS:
+		eligible.append("finish")
+	if PreSeason.finishes_short(board.get("goal", {}) as Dictionary, pred):
+		eligible.append("pressure")
+	var pid := _papers_breakout()
+	if pid != "":
+		eligible.append("breakout")
+	var kind := ""
+	if not eligible.is_empty():
+		kind = PreSeason.pick_paper(eligible, PreSeason.papers_seed(career_seed, season_year, my_club))
+	preseason["papers"] = {"order": order, "pred": pred, "kind": kind,
+			"pid": pid if kind == "breakout" else "", "claim": 0, "answered": false,
+			"choice": -2, "result": "", "seen": false}
+	mark_dirty()
+
+
+## The young player the papers would tip: fit, young, able to be backed, the
+## most potential (then the id). "" when none.
+func _papers_breakout() -> String:
+	var best := {}
+	for p in my_list:
+		if float(p.get("age", 30.0)) > float(PreSeason.tune("papers_breakout_age")):
+			continue
+		if int(p.get("injury_weeks", 0)) > 0 or not Backing.can_back(p, games_played(p)):
+			continue
+		var pot := int(p.get("potential", p.get("overall", 0)))
+		var best_pot := int(best.get("potential", best.get("overall", 0)))
+		if best.is_empty() or pot > best_pot or (pot == best_pot and str(p["id"]) < str(best["id"])):
+			best = p
+	return str(best.get("id", ""))
+
+
+## The story to answer, as a card (the same card the weekly stories use), or
+## {} when the papers have nothing to ask this year.
+func papers_card() -> Dictionary:
+	var rec := papers_record()
+	var kind := str(rec.get("kind", ""))
+	if kind == "":
+		return {}
+	var who: Dictionary = list_player(str(rec.get("pid", ""))) if str(rec.get("pid", "")) != "" else {}
+	if kind == "breakout" and who.is_empty():
+		return {}
+	return story_card(str(PreSeason.PAPER_CARD[kind]), who)
+
+
+## Answer the papers with choice `choice` of the card. Returns what happened.
+func papers_answer(choice: int) -> String:
+	var rec := papers_record()
+	if preseason_stop() != "papers" or bool(rec.get("answered", false)):
+		return ""
+	var card := papers_card()
+	if card.is_empty() or (card.get("options", []) as Array).is_empty():
+		return ""
+	choice = clampi(choice, 0, (card["options"] as Array).size() - 1)
+	var out := ClubStories.apply_choice(self, card, choice)
+	StoryEngine.record_choice(story, card, choice, story_week())
+	rec["answered"] = true
+	rec["choice"] = choice
+	rec["result"] = out
+	mark_dirty()
+	return out
+
+
+## Say nothing: the card's own cost for silence, as any unanswered card.
+func papers_say_nothing() -> void:
+	var rec := papers_record()
+	if bool(rec.get("answered", false)):
+		return
+	rec["answered"] = true
+	var card := papers_card()
+	if card.is_empty():
+		return
+	var cost: Dictionary = card.get("unanswered", {})
+	if int(cost.get("board", 0)) != 0 and not board.is_empty():
+		board["confidence"] = clampi(board_confidence() + int(cost["board"]), 0, 100)
+	if int(cost.get("trust", 0)) != 0 and str(card.get("player_id", "")) != "":
+		Trust.change(relations, Trust.player_key(str(card["player_id"])), int(cost["trust"]),
+				str(cost.get("why", "You said nothing")), int(season_year), "Pre-season")
+	rec["choice"] = -1
+	rec["result"] = str(cost.get("text", "Business as usual."))
+	StoryEngine.record_choice(story, card, -1, story_week())
+	mark_dirty()
+
+
+## Talking the club up puts a finish on the record. The board's goal does not move.
+func papers_on_record(rank: int) -> void:
+	if papers_record().is_empty():
+		return
+	(preseason["papers"] as Dictionary)["claim"] = maxi(0, rank)
+	mark_dirty()
+
+
+# ---------------------------------------------------------------------------
 # Plan familiarity (PreSeason.gd): how well each club knows each game plan.
 # Behind the same switch. The rules are PreSeason's; this keeps the record.
 # ---------------------------------------------------------------------------
@@ -2907,10 +3084,19 @@ func plan_known_line(plan: String) -> String:
 	return PreSeason.known_line(plan_level(my_club, plan))
 
 
-## Where the pre-season, as your blocks are set now, leaves a plan.
+## Where the pre-season, as your blocks are set now, leaves a plan (a card's
+## extra drilling, such as staying home from camp, included).
 func plan_level_after_drills(plan: String) -> int:
+	return PreSeason.drilled_level(plan_level(my_club, plan), float(my_drill_credit().get(plan, 0.0)))
+
+
+## Your weeks of drilling by plan: the blocks as set now and any card's.
+func my_drill_credit() -> Dictionary:
 	var credit: Dictionary = PreSeason.drill_credit(preseason_blocks())
-	return PreSeason.drilled_level(plan_level(my_club, plan), float(credit.get(plan, 0.0)))
+	var extra: Dictionary = preseason.get("bonus_drill", {})
+	for plan in extra:
+		credit[plan] = float(credit.get(plan, 0.0)) + float(extra[plan])
+	return credit
 
 
 ## Whether the plans carry a "Plan fluency" line at all (the switch is on).
@@ -2935,6 +3121,10 @@ func _finish_drills() -> String:
 		if not plan_known.has(code):
 			continue
 		var credit: Dictionary = PreSeason.drill_credit((clubs[club] as Dictionary).get("blocks", []))
+		if code == my_club:
+			var extra: Dictionary = preseason.get("bonus_drill", {})
+			for plan in extra:
+				credit[plan] = float(credit.get(plan, 0.0)) + float(extra[plan])
 		for plan in credit:
 			var was := int((plan_known[code] as Dictionary).get(plan, 0))
 			var now := PreSeason.drilled_level(was, float(credit[plan]))
@@ -2982,6 +3172,8 @@ func preseason_advance() -> String:
 		return "done"
 	if preseason_stop() == "trial":
 		preseason["trial_seen"] = true
+	elif preseason_stop() == "story":
+		_end_preseason_cards()
 	elif preseason_stop() == "intra":
 		if not intra_played():
 			# Pressed on without playing it: it is simmed on the sides and
@@ -2998,9 +3190,20 @@ func preseason_advance() -> String:
 			autosave()
 			return "practice"
 		(preseason["practice"] as Dictionary)["seen"] = true
+	elif preseason_stop() == "papers":
+		# Pressed on without answering: saying nothing is an answer, and costs
+		# what it costs on any card.
+		papers_say_nothing()
+		(preseason["papers"] as Dictionary)["seen"] = true
 	var at := ""
 	while at == "":
 		at = preseason_step_week()
+		# The end of a block may bring a card: it stops the pre-season after
+		# the time trial or the intra-club match, if that is the week.
+		if preseason_active() and PreSeason.STORY_WEEKS.has(preseason_week()) and int(preseason.get("cards_week", 0)) != preseason_week():
+			preseason["cards_week"] = preseason_week()
+			if _preseason_cards() and at == "":
+				at = "story"
 	mark_dirty()
 	autosave()
 	return at
@@ -3012,8 +3215,11 @@ func preseason_advance() -> String:
 func preseason_sim_to_round1() -> void:
 	if not preseason_active():
 		return
+	preseason["hands_off"] = true
 	while preseason_active():
 		preseason["trial_seen"] = true
+		if preseason_stop() == "story":
+			_end_preseason_cards()
 		if preseason_stop() == "intra":
 			if not intra_played():
 				sim_intra_match()
@@ -3022,9 +3228,74 @@ func preseason_sim_to_round1() -> void:
 			if not practice_played():
 				sim_practice_match()
 			(preseason["practice"] as Dictionary)["seen"] = true
+		if preseason_stop() == "papers":
+			papers_say_nothing()
+			(preseason["papers"] as Dictionary)["seen"] = true
 		preseason_step_week()
 	mark_dirty()
 	autosave()
+
+
+# ---------------------------------------------------------------------------
+# Pre-season story cards (data/stories, phase "preseason"), behind the same switch
+# ---------------------------------------------------------------------------
+## The block just finished may stop the pre-season for a card (at most one;
+## most pre-seasons two or three over the three blocks). Round 1's cards, drawn
+## when the season was made, wait aside until the pre-season is done. Returns
+## whether a card is waiting.
+func _preseason_cards() -> bool:
+	if my_club == "" or not stories_on or is_sacked():
+		return false
+	var drawn := ClubStories.pick(self)
+	if drawn.is_empty():
+		return false
+	if not preseason.has("round1"):
+		preseason["round1"] = week_events
+	week_events = drawn
+	preseason["story_pending"] = true
+	mark_dirty()
+	return true
+
+
+## The coach presses on from a card stop: what is still unanswered settles by
+## the card's own rule, and Round 1's cards come back.
+func _end_preseason_cards() -> void:
+	_settle_week_event()
+	preseason["story_pending"] = false
+	if preseason.has("round1"):
+		week_events = preseason["round1"]
+		preseason.erase("round1")
+	else:
+		week_events = []
+	mark_dirty()
+
+
+## Running done on a card, in weeks of solid running toward the fitness base.
+func preseason_add_running(weeks: float) -> void:
+	var entry: Dictionary = (preseason.get("clubs", {}) as Dictionary).get(my_club, {})
+	if entry.is_empty():
+		return
+	entry["run"] = maxf(0.0, float(entry.get("run", 0.0)) + weeks)
+
+
+## The plan a card's drilling goes to: the one the side plays, or for a side
+## that plays Balanced, the one it knows least.
+func card_drill_plan() -> String:
+	var plan := club_plan
+	if not PreSeason.DRILL_PLANS.has(plan):
+		_ensure_plan_known()
+		plan = str(PreSeason.default_drill(plan, plan_known.get(my_club, {}))[0])
+	return plan
+
+
+## Weeks of drilling a card adds to the plan the side plays (or, for a side that
+## plays Balanced, to the plan it knows least): counted with the blocks' own
+## when the pre-season ends (_finish_drills).
+func preseason_add_drill(weeks: int) -> void:
+	var plan := card_drill_plan()
+	var extra: Dictionary = preseason.get("bonus_drill", {})
+	extra[plan] = float(extra.get(plan, 0.0)) + float(weeks)
+	preseason["bonus_drill"] = extra
 
 
 # ---------------------------------------------------------------------------
@@ -3047,6 +3318,31 @@ func intra_prospects() -> Array:
 	for p in draftee_pool:
 		if not drafted_draftees.has(str(p.get("id", ""))):
 			out.append(p)
+	return out
+
+
+## Your recruiters' read of this year's draft class, by id: {"overall": [lo, hi],
+## "potential": [lo, hi], "rank": n}, the rank being where they have him in the
+## class (director, 2026-10-19: prospects show OVR, POT and a projected draft
+## ranking). The same read and weighting the National Draft shows and drafts on
+## (DraftScouting.projection with this season's intake seed, Draft
+## AI_POT_WEIGHT_INTAKE), so the draft night board agrees with it.
+func prospect_reads(prospects: Array) -> Dictionary:
+	var seed := _clock_seed(2) if replay_seed != 0 else posmod(career_seed * 7919 + season_year * 131 + 34, 1000000)
+	var mult := recruiting_uncertainty_mult()
+	var out := {}
+	var order := []
+	for p in prospects:
+		var view := DraftScouting.projection(p, my_club, seed, mult)
+		var id := str(p.get("id", ""))
+		out[id] = {"overall": view["overall"], "potential": view["potential"]}
+		order.append([DraftScouting.scouted_worth(p, my_club, seed, Draft.AI_POT_WEIGHT_INTAKE, mult), id])
+	order.sort_custom(func(a, b):
+		if not is_equal_approx(float(a[0]), float(b[0])):
+			return float(a[0]) > float(b[0])
+		return str(a[1]) < str(b[1]))
+	for i in range(order.size()):
+		(out[str(order[i][1])] as Dictionary)["rank"] = i + 1
 	return out
 
 
@@ -6613,9 +6909,18 @@ const TRADE_PICK_ROUNDS := 3
 
 
 ## The draft years whose picks can be traded now, while the off-season is
-## open: this year's national draft and next year's.
+## open or the national draft is on: this year's draft and the next two (the
+## AFL's rule; director 2026-10-25, "this and next 2 drafts").
 func trade_pick_years() -> Array:
-	return [season_year, season_year + 1] if offseason_open() else []
+	if offseason_open() or draft_night_open():
+		return [season_year, season_year + 1, season_year + 2]
+	return []
+
+
+## True while the national draft is on: picks still to be made trade live
+## (director 2026-10-25); players do not, the lists are closed.
+func draft_night_open() -> bool:
+	return draft != null and draft.intake_mode and draft.league_mode and not draft.is_finished() 			and season != null and my_club != "" and season.lists.has(my_club)
 
 
 func pick_id(year: int, rnd: int, origin: String) -> String:
@@ -6726,10 +7031,26 @@ func pick_asset(id: String) -> Dictionary:
 	if not trade_pick_years().has(year) or rnd < 1 or rnd > trade_pick_rounds(year) \
 			or not GameDB.active_clubs(season_year).has(origin) or not GameDB.active_clubs(year).has(origin):
 		return {}
-	var positions := [[draft_spot(year, rnd, origin), 1.0]] if year == season_year else future_spots(rnd, origin)
+	var owner := pick_owner_of(year, rnd, origin)
+	var positions: Array
+	var spot := 0
+	if year == season_year and draft_night_open():
+		# On the night a pick is where it sits in the order still to run: the
+		# prospects left are what it buys. A pick already made is spent.
+		var slot: int = draft.pick_slot(rnd, origin)
+		if slot < 0:
+			return {}
+		spot = slot + 1
+		owner = str(draft.pick_sequence[slot])
+		positions = [[slot - int(draft.pick_index) + 1, 1.0]]
+	elif year == season_year:
+		spot = draft_spot(year, rnd, origin)
+		positions = [[spot, 1.0]]
+	else:
+		positions = future_spots(rnd, origin)
 	return {"pick": true, "id": id, "year": year, "round": rnd, "origin": origin,
-			"owner": pick_owner_of(year, rnd, origin), "positions": positions,
-			"name": _pick_name(year, rnd, origin, int(positions[0][0]) if year == season_year else 0)}
+			"owner": owner, "positions": positions, "spot": spot,
+			"name": _pick_name(year, rnd, origin, spot)}
 
 
 ## The overall pick a club's pick in `rnd` will be in this year's national
@@ -6777,6 +7098,8 @@ func _draft_order() -> Array:
 
 
 func _pick_name(year: int, rnd: int, origin: String, at: int) -> String:
+	if year == season_year and at > 0 and draft_night_open():
+		return "pick %d tonight" % at   # the night's own words: the number on the board
 	var nth: String = ["first", "second", "third", "fourth"][clampi(rnd - 1, 0, 3)]
 	var name := "%s %d %s-round pick" % [GameDB.club_name(origin) + ("'" if GameDB.club_name(origin).ends_with("s") else "'s"),
 			year, nth]
@@ -6790,7 +7113,9 @@ func club_picks(code: String) -> Array:
 		for rnd in range(1, trade_pick_rounds(int(year)) + 1):
 			for origin in GameDB.active_clubs(season_year):
 				if pick_owner_of(int(year), rnd, str(origin)) == code:
-					out.append(pick_asset(pick_id(int(year), rnd, str(origin))))
+					var pk := pick_asset(pick_id(int(year), rnd, str(origin)))
+					if not pk.is_empty():   # a pick already made tonight is spent
+						out.append(pk)
 	out.sort_custom(func(a, b):
 		if int(a["year"]) != int(b["year"]):
 			return int(a["year"]) < int(b["year"])
@@ -6825,6 +7150,8 @@ func _open_class(year: int) -> Array:
 	for p in draftee_pool:
 		if drafted_draftees.has(str(p["id"])) or int(p.get("draft_year", year)) != year:
 			continue
+		if draft_night_open() and draft.picked.has(str(p["id"])):
+			continue   # taken tonight: no pick buys him now
 		if str(p.get("tied_club", "")) != "" and int(p.get("draft_year", 0)) == year:
 			continue
 		pool.append(p)
@@ -6834,6 +7161,10 @@ func _open_class(year: int) -> Array:
 ## Rounds of `year`'s draft that can be traded: the rounds it will run (as
 ## many as the class fills, Draft.build_intake), at most TRADE_PICK_ROUNDS.
 func trade_pick_rounds(year: int) -> int:
+	if draft_night_open():
+		# The night runs the rounds it was planned with; the pool shrinking
+		# pick by pick does not take a round off the table.
+		return mini(TRADE_PICK_ROUNDS, maxi(1, draft.planned_rounds()))
 	if year > season_year:
 		year = season_year  # next year's class isn't known yet: assume one like this year's
 	var clubs := maxi(1, GameDB.active_clubs(season_year).size())
@@ -6871,8 +7202,13 @@ func _trade_assets(ids: Array, owner: String) -> Dictionary:
 
 ## Would `club` accept your `mine` (player and pick ids) for its `theirs`?
 func evaluate_trade(club: String, mine: Array, theirs: Array) -> Dictionary:
-	if not offseason_open():
+	var night := draft_night_open()
+	if not offseason_open() and not night:
 		return {"ok": false, "code": "trade_closed", "reason": AiReasons.line("trade_closed")}
+	if night:
+		for id in mine + theirs:
+			if not str(id).begins_with("pick:"):
+				return {"ok": false, "code": "trade_night_picks_only", "reason": AiReasons.line("trade_night_picks_only")}
 	var g := _trade_assets(theirs, club)
 	var t := _trade_assets(mine, my_club)
 	if str(g["error"]) != "" or str(t["error"]) != "":
@@ -6890,7 +7226,9 @@ func evaluate_trade(club: String, mine: Array, theirs: Array) -> Dictionary:
 	for p in give + take:
 		names[str(p["id"])] = str(p["name"]) if Contracts.is_pick(p) else GameDB.player_display_name(p)
 	ctx["names"] = names
-	ctx["prospects"] = trade_prospects()
+	# On the night a club judges a pick by its own read of the prospects left
+	# (the same read it drafts with), not the consensus.
+	ctx["prospects"] = _night_prospects(club) if night else trade_prospects()
 	return Contracts.evaluate_trade(season.lists.get(club, []), give, take,
 			salary_cap, my_list, salary_cap, float(difficulty_rules()["trade_margin"]), ctx)
 
@@ -7028,10 +7366,18 @@ func make_trade(club: String, mine: Array, theirs: Array) -> Dictionary:
 		return verdict
 	var incoming: Array = _trade_assets(theirs, club)["assets"]
 	var outgoing: Array = _trade_assets(mine, my_club)["assets"]
+	var night := draft_night_open()
+	var at: int = int(draft.pick_index) + 1 if night else 0
 	_execute_trade(my_club, club, outgoing, incoming)
-	offseason_log.append({"kind": "trade", "club": club, "in": theirs.duplicate(), "out": mine.duplicate()})
-	add_news("trade", "Trade: %s get %s from %s for %s." % [GameDB.club_name(my_club),
-			_names(incoming), GameDB.club_name(club), _names(outgoing)])
+	var said := "%s get %s from %s for %s." % [GameDB.club_name(my_club),
+			_names(incoming), GameDB.club_name(club), _names(outgoing)]
+	var row := {"kind": "trade", "club": club, "in": theirs.duplicate(), "out": mine.duplicate()}
+	if night:
+		row["night"] = true
+		draft.night_trades.append({"at": at, "buyer": my_club, "seller": club, "in": theirs.duplicate(),
+				"out": mine.duplicate(), "text": said})
+	offseason_log.append(row)
+	add_news("trade", ("Draft night trade: " if night else "Trade: ") + said)
 	mark_dirty()
 	return {"ok": true, "reason": "Trade done."}
 
@@ -7065,6 +7411,8 @@ func _move_asset(a: Dictionary, from: String, to: String) -> void:
 			pick_owner.erase(key)
 		else:
 			pick_owner[key] = to
+		if int(a["year"]) == season_year and draft_night_open():
+			draft.reassign_pick(draft.pick_slot(int(a["round"]), str(a["origin"])), to)
 		return
 	(season.lists[from] as Array).erase(a)
 	_join(to, a)
@@ -7104,6 +7452,169 @@ func _club_verdict(club: String, other: String, gives: Array, gets: Array, margi
 			season.lists[other], salary_cap, margin, ctx)
 
 
+# ---------------------------------------------------------------------------
+# Draft night (director 2026-10-25): picks trade live. You offer at any time;
+# rivals put offers to you as your pick comes up; rivals deal among themselves
+# and the board shows it. Picks of this draft and the next two, never players;
+# the same values as the trade period, each club by its own read of the class.
+# ---------------------------------------------------------------------------
+## Share of rival picks (rounds 1 to TRADE_PICK_ROUNDS) that a rival tries to
+## buy on the night: about three deals tried in a 54-pick first three rounds.
+const NIGHT_DEAL_RATE := 0.06
+## Rivals asked, by the seeded club order, before a night deal is given up.
+const NIGHT_BUYERS := 5
+## Rivals that may put an offer to you for the pick you are on the clock with.
+const NIGHT_OFFER_TRIES := 6
+## How far under fair value (the consensus read) a night offer may sit: a real
+## haggle, never a lowball (director 2026-10-25).
+const NIGHT_OFFER_FLOOR := 0.9
+## The pick index your last night offers were made for (-1: none yet).
+var night_offers_at := -1
+
+
+## The draft is on: listen for rivals on the clock.
+func _watch_draft_night() -> void:
+	if draft == null or not draft.intake_mode:
+		return
+	if not draft.rival_on_clock.is_connected(_rival_on_clock):
+		draft.rival_on_clock.connect(_rival_on_clock)
+	night_offers_at = -1
+
+
+## The prospects left on the night as `club` reads them, best first (the read
+## it drafts with: Draft._ai_score, its own scouting error included), for every
+## draft year on the table (next years' classes stand in as this one does).
+func _night_prospects(club: String) -> Dictionary:
+	var out := {}
+	if not draft_night_open():
+		return out
+	var left := []
+	for p in draft.pool:
+		if not draft.picked.has(str(p["id"])):
+			left.append(p)
+	var scored := {}
+	for p in left:
+		scored[str(p["id"])] = float(draft._ai_score(club, p))
+	left.sort_custom(func(a, b):
+		var sa := float(scored[str(a["id"])])
+		var sb := float(scored[str(b["id"])])
+		if sa != sb:
+			return sa > sb
+		return str(a["id"]) < str(b["id"]))
+	for year in trade_pick_years():
+		out[str(year)] = left
+	return out
+
+
+## A rival is on the clock with pick `index`: now and then a rival with a later
+## pick in the round buys it, paying with picks priced by its own read of the
+## class; the seller judges by its own. Seeded on the year and the pick, so a
+## reload gets the same night.
+func _rival_on_clock(code: String, index: int) -> void:
+	if not draft_night_open() or code == my_club or index >= draft.pick_rounds.size():
+		return
+	var rnd := int(draft.pick_rounds[index])
+	if rnd > TRADE_PICK_ROUNDS or index >= draft.pick_origin.size():
+		return
+	if Draft._hash01("night:%d:%d:%d" % [season_year, int(draft.seed), index]) >= NIGHT_DEAL_RATE:
+		return
+	var origin := str(draft.pick_origin[index])
+	var pick := pick_asset(pick_id(season_year, rnd, origin))
+	if pick.is_empty() or str(pick["owner"]) != code:
+		return
+	var margin := float(difficulty_rules()["trade_margin"])
+	_freeze_league(true)
+	var sellers_read := trade_prospects()
+	var tried := 0
+	for buyer in _club_order("night:%d" % index):
+		if tried >= NIGHT_BUYERS:
+			break
+		if buyer == code or _deals(buyer) >= DEALS_PER_CLUB:
+			continue
+		# A buyer with a later pick in this round wants to move up.
+		var later := draft.upcoming_picks(buyer, 1)
+		if later.is_empty() or int(later[0]) - 1 <= index or int(draft.pick_rounds[int(later[0]) - 1]) != rnd:
+			continue
+		tried += 1
+		var read := _night_prospects(buyer)
+		var pkg := _bid(buyer, pick, _worth_to_read(buyer, pick, read), UNASKED_BID, read, code)
+		if pkg.is_empty():
+			continue
+		if not bool(_club_verdict(code, buyer, [pick], pkg, margin, sellers_read)["ok"]):
+			continue
+		_log_night_trade(buyer, code, pick, pkg, index + 1)
+		break
+	_freeze_league(false)
+
+
+## What a pick is worth to `club` by a given read of the class.
+func _worth_to_read(club: String, pick: Dictionary, read: Dictionary) -> float:
+	return TradeValue.pick_value(pick["positions"], read.get(str(pick["year"]), []), club_phase(club))
+
+
+## A night deal between rivals: done, on the board, in the news.
+func _log_night_trade(buyer: String, seller: String, pick: Dictionary, pkg: Array, at: int) -> void:
+	var phases := [club_phase(buyer), club_phase(seller)]
+	_execute_trade(buyer, seller, pkg, [pick])
+	var said := "%s get %s from %s for %s." % [GameDB.club_name(buyer),
+			_names([pick]), GameDB.club_name(seller), _names(pkg)]
+	var ids := pkg.map(func(a): return str(a["id"]))
+	offseason_log.append({"kind": "ai_trade", "club": buyer, "with": seller, "in": [str(pick["id"])],
+			"out": ids, "text": said, "phases": phases, "night": true})
+	draft.night_trades.append({"at": at, "buyer": buyer, "seller": seller, "in": [str(pick["id"])],
+			"out": ids, "text": said})
+	add_news("trade", "Draft night trade: " + said)
+	mark_dirty()
+
+
+## You are on the clock: a few rivals with a later pick in the round may put an
+## offer to you for it, each priced by its own read of the class (so an offer
+## can be well under what you think the pick is worth). Once per pick of yours;
+## the offers go off the table when the pick is made. Returns how many came in.
+func make_night_offers() -> int:
+	if not draft_night_open() or not draft.is_user_turn() or night_offers_at == int(draft.pick_index):
+		return 0
+	night_offers_at = int(draft.pick_index)
+	var index := int(draft.pick_index)
+	var rnd := int(draft.pick_rounds[index])
+	if rnd > TRADE_PICK_ROUNDS:
+		return 0
+	var pick := pick_asset(pick_id(season_year, rnd, str(draft.pick_origin[index])))
+	if pick.is_empty() or str(pick["owner"]) != my_club:
+		return 0
+	for o in trade_offers:
+		if str(o["status"]) == "open" and (o["take"] as Array).has(str(pick["id"])):
+			return 0   # a reload: the offers for this pick are already on the table
+	var made := 0
+	var tried := 0
+	_freeze_league(true)
+	var consensus := trade_prospects()
+	for club in _club_order("night offers:%d" % index):
+		if made >= MAX_OFFERS or tried >= NIGHT_OFFER_TRIES:
+			break
+		var later := draft.upcoming_picks(club, 1)
+		if later.is_empty() or int(later[0]) - 1 <= index or int(draft.pick_rounds[int(later[0]) - 1]) != rnd:
+			continue
+		tried += 1
+		var read := _night_prospects(club)
+		# No haggling on the clock: a rival bids the most it would pay by its own
+		# read, and only tables it if, by the consensus read of the class, you
+		# would come out even or ahead (director 2026-10-25: a late pick and a
+		# future second for pick 6 is "absurd"). A club that rates a prospect
+		# above the field finds the room; one that does not stays quiet.
+		var pkg := _bid(club, pick, _worth_to_read(club, pick, read), 1.0, read, my_club, 0.0)
+		if pkg.is_empty() or not bool(_club_verdict(my_club, club, [pick], pkg, NIGHT_OFFER_FLOOR - 1.0, consensus)["ok"]):
+			continue
+		trade_offers.append({"club": club, "give": pkg.map(func(a): return str(a["id"])),
+				"take": [str(pick["id"])], "status": "open", "night": true})
+		made += 1
+		add_news("trade", "%s have made an offer for your pick %d." % [GameDB.club_name(club), int(pick["spot"])])
+	_freeze_league(false)
+	if made > 0:
+		mark_dirty()
+	return made
+
+
 ## When `club` turns your offer down on value, the one change that would get
 ## it done, in its own words: one more of yours (the least it would settle
 ## for), or else one of theirs left out. {"say", "mine", "theirs", "code" (the
@@ -7126,8 +7637,9 @@ func _counter(club: String, mine: Array, theirs: Array) -> Dictionary:
 		var extra := []
 		for pk in club_picks(my_club):
 			extra.append(str(pk["id"]))
-		for p in my_list:
-			extra.append(str(p["id"]))
+		if not draft_night_open():   # players never move on draft night
+			for p in my_list:
+				extra.append(str(p["id"]))
 		for id in extra:
 			if mine.has(id):
 				continue
@@ -7159,6 +7671,10 @@ func _with_code(counter: Dictionary, verdict: Dictionary) -> Dictionary:
 func _ask_name(id: String, whose := "your") -> String:
 	if id.begins_with("pick:"):
 		var pk := pick_asset(id)
+		if pk.is_empty():
+			return "a pick already made"
+		if int(pk["year"]) == season_year and int(pk.get("spot", 0)) > 0 and draft_night_open():
+			return "%s pick %d tonight" % [whose, int(pk["spot"])]   # the night's own words
 		var nth: String = ["first", "second", "third", "fourth"][clampi(int(pk["round"]) - 1, 0, 3)]
 		var from := "" if str(pk["origin"]) == str(pk["owner"]) else " (from %s)" % GameDB.club_name(str(pk["origin"]))
 		return "%s %d %s-round pick%s" % [whose, int(pk["year"]), nth, from]
@@ -7231,7 +7747,7 @@ func _bids(buyer: String, most: float, prospects: Dictionary) -> Array:
 	var pool := []
 	for pk in club_picks(buyer):
 		pool.append([pk, TradeValue.pick_value(pk["positions"], prospects.get(str(pk["year"]), []), phase)])
-	var list: Array = (season.lists[buyer] as Array).duplicate()
+	var list: Array = (season.lists[buyer] as Array).duplicate() if not draft_night_open() else []
 	list.sort_custom(func(a, b):
 		if int(a["overall"]) != int(b["overall"]):
 			return int(a["overall"]) > int(b["overall"])
@@ -7263,8 +7779,12 @@ func _bids(buyer: String, most: float, prospects: Dictionary) -> Array:
 ## A club's opening bid for something it values at `worth`: the package
 ## nearest `shade` of the most it would pay (worth less its trading margin),
 ## that it would stand by. [] if it has nothing that fits.
-func _bid(club: String, asset: Dictionary, worth: float, shade: float, prospects: Dictionary) -> Array:
-	var margin := float(difficulty_rules()["trade_margin"])
+func _bid(club: String, asset: Dictionary, worth: float, shade: float, prospects: Dictionary, other := "",
+		margin := -1.0) -> Array:
+	if other == "":
+		other = my_club
+	if margin < 0.0:
+		margin = float(difficulty_rules()["trade_margin"])
 	var most := worth / (1.0 + margin)
 	var options := _bids(club, most, prospects)
 	options.sort_custom(func(x, y):
@@ -7274,7 +7794,7 @@ func _bid(club: String, asset: Dictionary, worth: float, shade: float, prospects
 			return dx < dy
 		return float(x[1]) < float(y[1]))
 	for o in options.slice(0, 6):
-		if bool(_club_verdict(club, my_club, o[0], [asset], margin, prospects)["ok"]):
+		if bool(_club_verdict(club, other, o[0], [asset], margin, prospects)["ok"]):
 			return o[0]
 	return []
 
@@ -7619,7 +8139,7 @@ func _worth_to(club: String, asset: Dictionary, prospects: Dictionary) -> float:
 ## {"ok", "reason", "offers": how many came in}.
 func put_on_trade_table(id: String) -> Dictionary:
 	if not offseason_open():
-		return {"ok": false, "reason": "Trades are only open in the off-season.", "offers": 0}
+		return {"ok": false, "reason": "The trade table is open in the off-season, not on draft night.", "offers": 0}
 	if trade_table.has(id):
 		return {"ok": false, "reason": "That's already on the trade table.", "offers": 0}
 	if untouchable.has(id):
@@ -7678,6 +8198,8 @@ func open_trade_offers() -> Array:
 		var o: Dictionary = trade_offers[i]
 		if str(o["status"]) != "open":
 			continue
+		if draft_night_open() and not bool(o.get("night", false)):
+			continue   # the off-season's offers for players wait: lists are closed tonight
 		if str(_trade_assets(o["give"], str(o["club"]))["error"]) != "" or str(_trade_assets(o["take"], my_club)["error"]) != "":
 			o["status"] = "off"
 			continue

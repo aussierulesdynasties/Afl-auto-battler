@@ -25,58 +25,60 @@ func run() -> void:
 	GameState.replay_seed = SUITE_SEED
 	GameDB.reload()
 	StoryDeck.reload()
-	_test_deck_is_valid()
-	_test_validator_catches()
-	_test_folded_sizes()
-	_test_hints_in_words()
-	_test_choice_stakes_are_stated()
-	_test_every_option_has_a_cost()
-	_test_silent_defaults_announced()
-	_test_every_line_has_a_size()
-	_test_line_numbers_match_effects()
-	_test_trial_rating_and_old_cards()
-	_test_trust_rules()
-	_test_engine_rules()
-	_test_arcs()
-	_test_finals_and_big_weeks()
-	_test_private_cards()
-	_test_papers_cards_are_football()
-	_test_role_trial()
-	_test_trial_injury()
-	_test_trial_result()
-	_test_role_card_shape()
-	_test_role_trial_save()
-	_test_ten_seasons()
-	_test_trust_in_play()
-	_test_stories_never_move_the_dice()
-	_test_save_round_trip()
-	_test_old_save()
-	_test_leadership()
-	_test_captaincy()
-	_test_culture()
-	_test_culture_news()
-	_test_culture_reasons_read_cleanly()
-	_test_culture_settles()
-	_test_culture_signs_match_words()
-	_test_culture_headline()
-	_test_culture_order_and_tails()
-	_test_culture_sentences()
-	_test_culture_runs_once()
-	_test_culture_copy_is_true()
-	_test_culture_effects()
-	_test_culture_effects_fixture()
-	_test_captain_cards()
-	_test_group_words_are_sentence_case()
-	_test_captain_cards_in_play()
-	_test_captain_from_the_start()
-	_test_time_trial_names()
-	_test_vacancy_is_filled()
+	_t("_test_deck_is_valid")
+	_t("_test_validator_catches")
+	_t("_test_folded_sizes")
+	_t("_test_hints_in_words")
+	_t("_test_choice_stakes_are_stated")
+	_t("_test_every_option_has_a_cost")
+	_t("_test_silent_defaults_announced")
+	_t("_test_every_line_has_a_size")
+	_t("_test_line_numbers_match_effects")
+	_t("_test_trial_rating_and_old_cards")
+	_t("_test_trust_rules")
+	_t("_test_engine_rules")
+	_t("_test_arcs")
+	_t("_test_finals_and_big_weeks")
+	_t("_test_private_cards")
+	_t("_test_papers_cards_are_football")
+	_t("_test_role_trial")
+	_t("_test_trial_injury")
+	_t("_test_trial_result")
+	_t("_test_role_card_shape")
+	_t("_test_role_trial_save")
+	_t("_test_ten_seasons")
+	_t("_test_trust_in_play")
+	_t("_test_stories_never_move_the_dice")
+	_t("_test_save_round_trip")
+	_t("_test_old_save")
+	_t("_test_leadership")
+	_t("_test_captaincy")
+	_t("_test_culture")
+	_t("_test_culture_news")
+	_t("_test_culture_reasons_read_cleanly")
+	_t("_test_culture_settles")
+	_t("_test_culture_signs_match_words")
+	_t("_test_culture_headline")
+	_t("_test_culture_order_and_tails")
+	_t("_test_culture_sentences")
+	_t("_test_culture_runs_once")
+	_t("_test_culture_copy_is_true")
+	_t("_test_culture_effects")
+	_t("_test_culture_effects_fixture")
+	_t("_test_captain_cards")
+	_t("_test_group_words_are_sentence_case")
+	_t("_test_captain_cards_in_play")
+	_t("_test_captain_from_the_start")
+	_t("_test_time_trial_names")
+	_t("_test_vacancy_is_filled")
 	var finals_cards = load("res://tests/test_finals_cards.gd").new()
 	finals_cards.run(self)
+	var preseason_cards = load("res://tests/test_preseason_cards.gd").new()
+	preseason_cards.run(self)
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	GameState.stories_on = true
-	print("Story tests: %d checks, %d failures" % [checks, failures.size()])
+	print(Ran.line("Story", self, [finals_cards, preseason_cards]))
 
 
 func _check(condition: bool, message: String) -> void:
@@ -84,6 +86,11 @@ func _check(condition: bool, message: String) -> void:
 	if not condition:
 		failures.append(message)
 		push_error(message)
+
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
 
 
 func _start() -> void:
@@ -200,13 +207,15 @@ func _test_hints_in_words() -> void:
 const GAIN_WORDS := {
 	"morale": "(?i)morale", "xp": "(?i)development", "board": "(?i)board confidence", "trust": "trusts you ([0-9]+% )?more",
 	"fresh": "legs", "promise_win": "Win and", "extend_early": "signs on", "captaincy_swap": "takes the armband",
-	"rush_back": "cleared to play", "role_trial": "plays as a", "rest": "can't get hurt",
+	"rush_back": "cleared to play", "role_trial": "plays as a", "rest": "can't get hurt", "culture": "(Standards|Togetherness|Ambition) rises [0-9]+%",
+	"running": "more weeks? of running", "drill": "on the game plan", "open_price": "early premium",
 }
 const COST_WORDS := {
 	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "trusts you ([0-9]+% )?less",
 	"rest": "misses", "heavy_legs": "Heavy legs", "sore": "chance he is injured", "expects_game": "expects a game",
 	"start_backing": "expects to be picked", "back_kid": "is promised", "promise_win": "Lose or draw and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
-	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot",
+	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot", "on_record": "on the record",
+	"culture": "(Standards|Togetherness|Ambition) falls [0-9]+%", "running": "less running", "forgo_xp": "Slower growth",
 }
 const SAMPLE_FACTS := {"sore_odds": "about 1 in 6", "run_games": 3, "early_price": "$1m", "more_seasons": "two more seasons"}
 
@@ -245,18 +254,21 @@ func _stakes_in(effects: Array) -> Array:
 			for k in ["morale", "trust"]:
 				if not costs.has(k):
 					costs.append(k)
-		if op == "slow_start":
+		if op == "slow_start" or op == "on_record" or op == "forgo_xp":
 			costs.append(op)
+			continue
+		if op == "open_price":
+			gains.append(op)
 			continue
 		if op == "loss_sting":
 			costs.append_array([op, "morale"])
 			continue
-		if op in ["morale", "board", "trust"]:
+		if op in ["morale", "board", "trust", "culture", "running"]:
 			if d > 0 and not gains.has(op):
 				gains.append(op)
 			elif d < 0 and not costs.has(op):
 				costs.append(op)
-		elif op in ["xp", "fresh", "promise_win", "extend_early"] and not gains.has(op):
+		elif op in ["xp", "fresh", "drill", "promise_win", "extend_early"] and not gains.has(op):
 			gains.append(op)
 		if op in ["rest", "heavy_legs", "sore", "expects_game", "start_backing", "back_kid", "promise_win", "extend_early"] and not costs.has(op):
 			costs.append(op)
@@ -290,7 +302,9 @@ func _stakes_problems(effects: Array, lines: PackedStringArray) -> Array:
 		for kind in table:
 			var named := RegEx.create_from_string(str(table[kind])).search(line) != null
 			var has: bool = (want[side] as Array).has(kind)
-			if named and not has and not (kind == "board" and (want[side] as Array).has("promise_win")):
+			# A board mention is fine where the line explains a later board cost: a promise
+			# to win, or a finish put on the record (the papers' reckoning card).
+			if named and not has and not (kind == "board" and ((want[side] as Array).has("promise_win") or (want[side] as Array).has("on_record"))):
 				problems.append("%s line names %s which the effects do not contain" % [label, kind])
 			if has and not named:
 				problems.append("%s line leaves out %s" % [label, kind])
@@ -1147,7 +1161,7 @@ func _test_trial_result() -> void:
 func _test_role_card_shape() -> void:
 	_start()
 	_run_on(5)
-	_test_front_group_words()
+	_t("_test_front_group_words")
 	# The dropped card shows what his form has been and what a starter in his position averages.
 	var pc := GameState.story_card("media_in_the_papers", _trial_candidate())
 	var pf: Dictionary = pc["facts"]
@@ -2835,7 +2849,7 @@ func _test_silent_defaults_announced() -> void:
 func _test_every_line_has_a_size() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[4]
-	var sized := RegEx.create_from_string("[0-9]+%|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot")
+	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+ XP|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot")
 	var bad := []
 	var parts_seen := 0
 	for t in StoryDeck.all():
@@ -2880,13 +2894,24 @@ func _test_line_numbers_match_effects() -> void:
 					"morale", "board", "trust":
 						want = "%d%%" % absi(StoryEngine.effect_d(e, card["facts"]))
 					"xp":
-						want = "%d%% of a senior game" % maxi(1, roundi(float(e["d"]) * 100.0 / float(GameState.XP_SENIOR_GAME)))
+						want = "%d XP of development (a senior game gives %d)" % [int(e["d"]), GameState.XP_SENIOR_GAME]
 					"slow_start":
 						want = "About a %d%% chance" % int(e["chance"])
 					"loss_sting":
 						want = "about a %d%% chance the side's morale also falls %d%%" % [int(e["chance"]), absi(int(e["d"]))]
 					"expects_game":
 						want = "morale falls up to %d%%, he trusts you %d%% less" % [int(e.get("sting", 12)), absi(ClubStories.BROKEN_PROMISE_TRUST)]
+					# The pre-season cards' levers, against the pre-season's own sizes.
+					"culture":
+						want = "%s %d%%" % ["rises" if int(e["d"]) > 0 else "falls", absi(int(e["d"]))]
+					"running":
+						want = ("more week" if int(e["d"]) > 0 else "less running")
+					"drill":
+						want = "more week%s on the game plan" % ("" if int(e["d"]) == 1 else "s")
+					"forgo_xp":
+						want = "goes without %d XP" % int(e["d"])
+					"open_price":
+						want = "No %d%% early premium" % StoryEngine.EARLY_PREMIUM_PCT
 				if want == "":
 					continue
 				checked += 1
@@ -2909,6 +2934,10 @@ func _test_line_numbers_match_effects() -> void:
 			"Heavy and fresh legs quote the injury rule's own sizes, for every injury (%s / %s)" % [heavy, fresh])
 	var sting := " ".join(StoryEngine.stakes_lines([{"op": "loss_sting", "chance": 20, "d": -8}], {}))
 	_check(not sting.contains("instead") and sting.contains("also falls 8%"), "The finals sting says the fall comes on top of the lift (%s)" % sting)
+	# A card's own lift and a promise's thrill for the same player are one move: printed once, with the total.
+	var promise := " ".join(StoryEngine.stakes_lines([{"op": "morale", "d": 5}, {"op": "start_backing"}], {"run_games": "three"}))
+	_check(promise.contains("His morale up %d%%." % (5 + Backing.THRILL)) and promise.count("His morale up") == 1,
+			"Two lifts for the same player print once, with their total (%s)" % promise)
 	var slow := " ".join(StoryEngine.stakes_lines([{"op": "slow_start", "who": "subject", "chance": 15, "on": "week"}], {}))
 	_check(slow.contains("this week's game") and slow.contains("15%") and slow.contains("at the first bounce"), "A slow start in the season names this week's game and its chance (%s)" % slow)
 

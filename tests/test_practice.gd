@@ -16,22 +16,22 @@ const CLUB := "FRE"
 func run() -> void:
 	GameState.replay_seed = SUITE_SEED
 	Features.set_on("preseason", true)
-	_test_pairs()
-	_test_flow()
-	_test_trial()
-	_test_leaves_nothing()
-	_test_ai_clubs()
-	_test_determinism()
-	_test_saves()
-	_test_sim_to_round_one()
-	await _test_screens_phone()
-	await _test_screens_pc()
-	_test_switch_off()
+	_t("_test_pairs")
+	_t("_test_flow")
+	_t("_test_trial")
+	_t("_test_leaves_nothing")
+	_t("_test_ai_clubs")
+	_t("_test_determinism")
+	_t("_test_saves")
+	_t("_test_sim_to_round_one")
+	await _t("_test_screens_phone")
+	await _t("_test_screens_pc")
+	_t("_test_switch_off")
 	PreSeason.reload()
 	Features.clear("preseason")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
-	print("Practice tests: %d checks, %d failures" % [checks, failures.size()])
+	print(Ran.line("Practice", self))
 
 
 func _check(ok: bool, message: String) -> void:
@@ -41,11 +41,18 @@ func _check(ok: bool, message: String) -> void:
 		push_error(message)
 
 
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
+
+
 func _career(club := CLUB, seed := SUITE_SEED) -> void:
 	GameState.reset()
 	GameState.career_seed = seed
 	GameState.replay_seed = seed
 	GameState.start_season(club, GameDB.club_list(club))
+	GameState.stories_on = false  # the pre-season cards have their own suites (preseason, story)
 	GameState.open_preseason()
 
 
@@ -56,6 +63,20 @@ func _to_practice() -> bool:
 		guard += 1
 		GameState.preseason_advance()
 	return GameState.preseason_stop() == "practice"
+
+
+## The papers wait in week 8 (their own suite, papers): pressing on passes them.
+func _past_papers(at: String) -> String:
+	return GameState.preseason_advance() if at == "papers" else at
+
+
+## The same on screen: a tap on the way on passes the papers.
+func _past_papers_scene(tree: SceneTree, scene: Control) -> Control:
+	if scene != null and scene.name == "PreSeasonScene" and GameState.preseason_stop() == "papers":
+		await _tap(scene.find_child("PreSeasonGo", true, false), "On to Round 1 from the papers")
+		await _frames(tree, 10)
+		return tree.current_scene as Control
+	return scene
 
 
 func _frames(tree: SceneTree, n: int) -> void:
@@ -162,7 +183,7 @@ func _test_flow() -> void:
 	_check(names == ["Fremantle", "West Coast"] and int(score[0]) >= 0 and int(score[1]) >= 0 and str(rep["opponent"]) == "WCE",
 			"The report names the two clubs and carries the score")
 	_check(not GameState.sim_practice_match(), "It cannot be played twice")
-	_check(GameState.preseason_advance() == "done" and not GameState.preseason_active() and GameState.preseason_week() == 8,
+	_check(_past_papers(GameState.preseason_advance()) == "done" and not GameState.preseason_active() and GameState.preseason_week() == 8,
 			"Pressing on from the report finishes the last week and opens Round 1")
 	_career()
 	_to_practice()
@@ -365,7 +386,7 @@ func _test_saves() -> void:
 	_career()
 	_to_practice()
 	GameState.preseason.erase("practice")
-	_check(GameState.preseason_stop() == "" and GameState.preseason_advance() == "done" and not GameState.preseason_active(),
+	_check(GameState.preseason_stop() == "" and _past_papers(GameState.preseason_advance()) == "done" and not GameState.preseason_active(),
 			"A save from week 7 with no practice match runs on to Round 1")
 	_career()
 	var guard := 0
@@ -422,6 +443,21 @@ func _test_screens_phone() -> void:
 	_check(_label(scene, "PracticeCount") == "0 of 3 trialled" and _label(scene, "PracticePlan").begins_with("Game plan: ")
 			and scene.find_child("PracticeSelection", true, false) != null and _fits(scene, 390.0),
 			"Phone: it says how many are trialled, the plan, and fits the screen")
+	var seen_id := ""
+	var unseen_id := ""
+	for q in GameState.intra_prospects():
+		var mine: Dictionary = (q.get("seen", {}) as Dictionary).get(GameState.my_club, {}) if q.get("seen") is Dictionary else {}
+		if seen_id == "" and not mine.is_empty():
+			seen_id = str(q["id"])
+		elif unseen_id == "" and mine.is_empty():
+			unseen_id = str(q["id"])
+	var seen_row := scene.find_child("Trial_" + seen_id, true, false) as Button
+	var unseen_row := scene.find_child("Trial_" + unseen_id, true, false) as Button
+	_check(seen_row != null and unseen_row != null and seen_row.text.contains("
+Intra-club: ")
+			and bool(seen_row.get_meta("seen", false)) and not unseen_row.text.contains("Intra-club")
+			and (seen_row.get_theme_stylebox("normal") as StyleBoxFlat).bg_color != (unseen_row.get_theme_stylebox("normal") as StyleBoxFlat).bg_color,
+			"Phone: a prospect trialled in the intra-club match stands out on the club's colour, with what he did there")
 	var ids: Array = GameState.intra_prospects().slice(0, 2).map(func(p): return str(p["id"]))
 	for id in ids:
 		_check(await _tap(scene.find_child("Trial_" + str(id), true, false), "a prospect"),
@@ -485,6 +521,7 @@ func _test_screens_phone() -> void:
 			"Phone: a finger's tap goes on")
 	await _frames(tree, 10)
 	scene = tree.current_scene as Control
+	scene = await _past_papers_scene(tree, scene)
 	_check(scene != null and scene.name == "HubScene" and not GameState.preseason_active() and GameState.preseason_week() == 8,
 			"Phone: the quiet week passes and the hub opens at Round 1")
 	# Simmed from the screen.
@@ -531,6 +568,7 @@ func _test_screens_pc() -> void:
 	_check(await _tap(scene.find_child("PreSeasonGo", true, false), "Back to training"), "PC: a click goes on")
 	await _frames(tree, 8)
 	scene = tree.current_scene as Control
+	scene = await _past_papers_scene(tree, scene)
 	_check(scene != null and scene.name == "HubScene" and not GameState.preseason_active(),
 			"PC: the hub opens at Round 1")
 	tree.root.size = Vector2i(390, 844)

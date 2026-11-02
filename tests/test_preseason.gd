@@ -15,28 +15,30 @@ const CLUB := "FRE"
 
 func run() -> void:
 	GameState.replay_seed = SUITE_SEED
-	_test_switch_default()
+	_t("_test_switch_default")
 	# Everything below is the feature itself: switched on for this suite.
 	Features.set_on("preseason", true)
-	_test_rules()
-	_test_words()
-	_test_hand_over()
-	_test_flow()
-	_test_determinism()
-	_test_own_dice()
-	_test_sim_to_round_one()
-	_test_ai_parity()
-	_test_training_injuries()
-	_test_intra_club()
-	_test_old_saves()
-	await _test_screens()
-	await _test_draft_card()
-	await _test_switch_off()
+	_t("_test_rules")
+	_t("_test_words")
+	_t("_test_hand_over")
+	_t("_test_flow")
+	_t("_test_determinism")
+	_t("_test_own_dice")
+	_t("_test_sim_to_round_one")
+	_t("_test_ai_parity")
+	_t("_test_training_injuries")
+	_t("_test_light_and_forecast")
+	_t("_test_intra_club")
+	_t("_test_old_saves")
+	await _t("_test_screens")
+	await _t("_test_story_stop")
+	await _t("_test_draft_card")
+	await _t("_test_switch_off")
 	PreSeason.reload()
 	Features.clear("preseason")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
-	print("Preseason tests: %d checks, %d failures" % [checks, failures.size()])
+	print(Ran.line("Preseason", self))
 
 
 func _check(ok: bool, message: String) -> void:
@@ -48,6 +50,11 @@ func _check(ok: bool, message: String) -> void:
 
 ## A seeded career at `club`; with `open`, its first season starts with a
 ## pre-season, as a new career does in the game.
+
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
 func _career(open := true, club := CLUB) -> void:
 	GameState.reset()
 	GameState.career_seed = SUITE_SEED
@@ -211,10 +218,10 @@ func _test_words() -> void:
 			and said["solid|running|0"].contains("half the time")
 			and PreSeason.work("heavy", "running", "running") > PreSeason.work("solid", "running", "running")
 			and PreSeason.work("heavy", "running", "skills") > PreSeason.work("solid", "running", "skills")
-			and said["heavy|running|0"].contains("more skills work too")
+			and said["heavy|running|0"].contains("more Skills work too")
 			and is_equal_approx(PreSeason.work("light", "skills", "skills"), 0.5 * PreSeason.work("solid", "skills", "skills"))
 			and is_equal_approx(PreSeason.work("light", "skills", "running"), 0.5 * PreSeason.work("solid", "skills", "running"))
-			and said["light|skills|0"].contains("Half the running and half the skills work of a Solid block"),
+			and said["light|skills|0"].contains("Half the Running and half the Skills work of a Solid block"),
 			"The words match the data: the other area gets half, Heavy is more of both than Solid, Light half of both")
 	_check(PreSeason.block_title(0) == "Weeks 1 to 3" and PreSeason.block_title(2) == "Weeks 6 to 7",
 			"A block is named by its weeks")
@@ -287,8 +294,10 @@ func _test_hand_over() -> void:
 			and Conditioning.status_line(_rec("steady", "strong"), span) == Conditioning.status_words(_rec("steady"), span)
 			and Conditioning.status_line(_rec("steady", "thin"), 20).ends_with("on a thin base"),
 			"A strong base is named only while it holds the legs; a thin one all season, for the lower peak it leaves")
-	_check(str(PreSeason.BASE_EFFECT["thin"]).contains("soft-tissue risk") and str(PreSeason.BASE_EFFECT["strong"]).contains("soft-tissue risk"),
-			"Both a thin and a strong base say what they do to soft-tissue risk")
+	_check(PreSeason.base_effect("thin").contains("4% faster") and PreSeason.base_effect("thin").contains("6% more soft-tissue injuries")
+			and PreSeason.base_effect("strong").contains("2% slower") and PreSeason.base_effect("strong").contains("4% fewer soft-tissue injuries")
+			and PreSeason.base_rule(5.0) == "Running by Round 1: 5 weeks. Under 4.5 is thin, 6 or more strong.",
+			"A thin and a strong base say what they do in Round 1 in real sizes, and the footer says how running builds the base")
 	_check(Conditioning.base_of({"base": "enormous"}) == "sound"
 			and Conditioning.base_of(Conditioning.revise(_rec("steady", "strong"), 0, "peak")) == "strong",
 			"An unknown base reads as sound, and changing the season plan keeps the base")
@@ -435,6 +444,9 @@ func _run_preseason(reload_at := -1) -> String:
 			if GameState.preseason_stop() == "practice":
 				GameState.sim_practice_match()
 				GameState.preseason["practice"]["seen"] = true
+			if GameState.preseason_stop() == "papers":
+				GameState.papers_say_nothing()
+				GameState.preseason["papers"]["seen"] = true
 			GameState.preseason_step_week()
 			if GameState.preseason_week() == reload_at:
 				GameState.save_career()
@@ -641,6 +653,34 @@ func _test_ai_parity() -> void:
 
 ## A Heavy week is a gamble: each fit player's own roll for a soft-tissue
 ## injury, at every club alike, on the pre-season's own dice.
+## A Light week heals the injured faster (director, 2026-10-19: Light needs a
+## real gain in every block), and the base the footer forecasts counts running
+## a card added (a hard camp), not only the blocks.
+func _test_light_and_forecast() -> void:
+	PreSeason.reload()
+	_check(PreSeason.gain_line("light", "skills", 0) == "Injured players heal twice as fast in these weeks."
+			and PreSeason.gain_line("light", "running", 2).contains("Fresh legs")
+			and PreSeason.gain_line("light", "running", 2).contains("heal twice as fast"),
+			"A Light block says its gain in every block: the injured heal twice as fast")
+	_career()
+	_set_blocks([["light", "skills"], ["solid", "skills"], ["solid", "running"]])
+	var hurt: Dictionary = GameState.my_list[0]
+	var other: Dictionary = GameState.my_list[1]
+	hurt["injury_weeks"] = 5
+	hurt["injury_kind"] = "hamstring"
+	other["injury_weeks"] = 3
+	other["injury_kind"] = "concussion"
+	GameState.preseason_step_week()
+	_check(int(hurt.get("injury_weeks", 0)) == 3 and int(other.get("injury_weeks", 0)) == 2,
+			"In a Light week a hamstring heals two weeks, a concussion (counted in matches) only the one")
+	_set_blocks([["light", "skills"], ["solid", "running"], ["solid", "running"]])
+	var before := GameState.preseason_run_forecast()
+	GameState.preseason_add_running(1.0)
+	_check(is_equal_approx(GameState.preseason_run_forecast(), before + 1.0)
+			and is_equal_approx(before, 0.25 + 2.0 * 0.25 + 4.0),
+			"The forecast is the running done so far plus the weeks to come as set, and a camp's week counts")
+
+
 func _test_training_injuries() -> void:
 	PreSeason.reload()
 	var soft: Array = PreSeason.tune("soft_tissue_kinds")
@@ -956,8 +996,16 @@ func _test_intra_club() -> void:
 			and str(GameState.preseason_intra()["report"]["stood"]) == str(rep["stood"])
 			and not GameState.sim_intra_match() and not GameState.toggle_intra_invite(str(pool[0]["id"])),
 			"Loaded after it is played, the report is still there and the match cannot be played again")
-	_check(GameState.preseason_advance() == "practice" and _press_on(),
-			"From the report, pressing on trains weeks 6 and 7, plays the practice match, and leaves Round 1 to play")
+	# A story card may stop it at the end of a block; pressing on leaves it unanswered.
+	var at_stop: String = GameState.preseason_advance()
+	var stops := 0
+	while at_stop == "story" and stops < 4:
+		stops += 1
+		at_stop = GameState.preseason_advance()
+	_check(at_stop == "practice" and GameState.sim_practice_match()
+			and GameState.preseason_advance() == "papers" and GameState.preseason_active()
+			and GameState.preseason_advance() == "done" and not GameState.preseason_active(),
+			"From the report, pressing on trains weeks 6 and 7, plays the practice match, stops at the papers in week 8, and leaves Round 1 to play")
 	# Best side v the rest plays out differently, and one-sidedly.
 	_to_intra()
 	GameState.set_intra_mode("best")
@@ -1078,6 +1126,59 @@ func _roll() -> void:
 		GameState.start_next_season()
 
 
+## A story card at the end of a block, on the screen, by real taps: the stop
+## says where it is, the card answers, the outcome shows, and the way on works.
+func _test_story_stop() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.size = Vector2i(390, 844)
+	PreSeason.reload()
+	var found := false
+	for seed in range(SUITE_SEED, SUITE_SEED + 30):
+		GameState.reset()
+		GameState.career_seed = seed
+		GameState.replay_seed = seed
+		GameState.start_season(CLUB, GameDB.club_list(CLUB))
+		GameState.open_preseason()
+		GameState.set_setting("seen_weekly_loop_intro", true)
+		GameState.set_setting("seen_training_intro", true)
+		var guard := 0
+		while GameState.preseason_active() and GameState.preseason_stop() != "story" and guard < 10:
+			guard += 1
+			if GameState.preseason_stop() == "intra" and not GameState.intra_played():
+				GameState.sim_intra_match()
+			GameState.preseason_advance()
+		if GameState.preseason_stop() == "story":
+			found = true
+			break
+	_check(found, "A card stop turns up in thirty careers, to see on the screen")
+	if not found:
+		return
+	var week := GameState.preseason_week()
+	var scene: Control = await _open(tree)
+	_check(scene != null and scene.name == "PreSeasonScene" and _label(scene, "PreSeasonHero") == "After week %d of 8" % week,
+			"A career saved at a card stop opens on that stop, saying which week it is")
+	var card := scene.find_child("WeekEvent", true, false)
+	var first_choice := scene.find_child("Event_0", true, false) as Button
+	_check(card != null and first_choice != null and scene.find_child("PreSeasonCards", true, false) != null,
+			"The card is on the pre-season screen with its answers")
+	_check(scene.find_child("EventGain_0_0", true, false) != null or scene.find_child("EventCost_0_0", true, false) != null,
+			"...and a choice shows its Gain or Cost line under it")
+	_check(_fits(scene, 390.0), "Nothing on the card stop runs off a phone's screen")
+	var id := str(GameState.week_events[0]["tid"])
+	_check(await _tap(first_choice, "the card's first answer"), "A finger's tap answers the card")
+	_check(bool(GameState.week_events[0].get("resolved", false)) and int(GameState.week_events[0].get("choice", -1)) == 0
+			and str(GameState.week_events[0].get("tid", "")) == id,
+			"...and the answer is recorded")
+	var scene2 := tree.current_scene as Control
+	_check(scene2.find_child("Event_0", true, false) == null, "...and the card then shows what happened, not its buttons")
+	var go := scene2.find_child("PreSeasonGo", true, false) as Button
+	_check(await _tap(go, "the way on from the card"), "A finger's tap presses on from the card")
+	await _frames(tree, 4)
+	_check(GameState.preseason_stop() != "story" and not bool(GameState.preseason.get("story_pending", false)),
+			"...and the pre-season is no longer waiting on it")
+	GameState.delete_saved_career()
+
+
 ## The draft card at the National Draft that follows the pre-season.
 func _test_draft_card() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
@@ -1122,17 +1223,17 @@ func _test_draft_card() -> void:
 	await _frames(tree, 3)
 
 
-## The switch as it ships: off, unless the command line or the project says so.
+## The switch as it ships: ON since 1.0.1 (director 2026-10-19: "1.0 isnt 1.0 without pre season").
 func _test_switch_default() -> void:
 	Features.clear("preseason")
-	_check(not bool(ProjectSettings.get_setting("features/preseason", false))
-			and FileAccess.get_file_as_string("res://project.godot").contains("preseason=false")
-			and not Features.on("preseason"),
-			"The pre-season switch ships off: an exported build, and any run that does not ask for it, has no pre-season")
-	Features.set_on("preseason", true)
-	_check(Features.on("preseason"), "A test or tool turns the switch on for itself")
+	_check(bool(ProjectSettings.get_setting("features/preseason", false))
+			and FileAccess.get_file_as_string("res://project.godot").contains("preseason=true")
+			and Features.on("preseason"),
+			"The pre-season switch ships on: an exported build plays the eight weeks before Round 1")
 	Features.set_on("preseason", false)
-	_check(not Features.on("preseason"), "...and off again")
+	_check(not Features.on("preseason"), "A test or tool turns the switch off for itself")
+	Features.set_on("preseason", true)
+	_check(Features.on("preseason"), "...and on again")
 	Features.clear("preseason")
 
 
@@ -1294,7 +1395,7 @@ func _test_screens() -> void:
 	_check(_fits(scene, 390.0), "Nothing on the plan runs off a phone's screen")
 	_check(_label(scene, "PreSeasonQuietWeek").contains("weeks 6 to 7")
 			and not _label(scene, "PreSeasonBaseEffect").contains("level")
-			and _label(scene, "PreSeasonBaseEffect").contains("usual fitness"),
+			and _label(scene, "PreSeasonBaseEffect").contains("normal fitness"),
 			"Week 8's line names the weeks whose legs last into Round 1, and a sound base says what the side starts with")
 	var plan_sub := scene.find_child("SeasonPlanSub", true, false) as Label
 	_check(plan_sub != null and not plan_sub.text.contains("Steady") and plan_sub.text.contains("Round 1")
@@ -1467,6 +1568,16 @@ func _test_screens() -> void:
 	_check(str(GameState.preseason_intra()["mode"]) == "best" and _label(scene, "IntraGain") == str(PreSeason.INTRA_GAIN["best"])
 			and _label(scene, "IntraCost") == str(PreSeason.INTRA_COST["best"]),
 			"The sides choice is taken and its gain and cost change with it")
+	var grid_rows := (scene.find_child("IntraProspects", true, false) as Control).get_children()
+	var reads: Dictionary = GameState.prospect_reads(GameState.intra_prospects())
+	var top := grid_rows[0] as Button
+	var top_id := str(top.name).trim_prefix("Invite_")
+	_check(int(reads[top_id]["rank"]) == 1 and int(reads[str((grid_rows[1] as Button).name).trim_prefix("Invite_")]["rank"]) == 2
+			and top.text.contains("
+Ranked 1st  ·  ") and top.text.contains("%s OVR" % DraftScouting.range_text(reads[top_id]["overall"]))
+			and top.text.contains("%s POT" % DraftScouting.range_text(reads[top_id]["potential"])),
+			"Each prospect shows where your recruiters rank him and their read of his OVR and POT, best first (%s)" % top.text.replace("
+", " / "))
 	var first_two: Array = GameState.intra_prospects().slice(0, 2)
 	for q in first_two:
 		_check(await _tap(scene.find_child("Invite_" + str(q["id"]), true, false), "a prospect"),
@@ -1521,23 +1632,56 @@ func _test_screens() -> void:
 	_check(GameState.season.round_index == 0 and GameState.season_log.is_empty() and str(GameState.season.ladder) == ladder_before
 			and GameState.board_confidence() == board_before and GameState.season_tally.is_empty(),
 			"The coached match left nothing on the ladder, the season's record, the votes or the board")
-	_check(scene.find_child("Block_2", true, false) != null and scene.find_child("Block_1", true, false) == null
+	_check(scene.find_child("Block_2", true, false) == null and (scene.find_child("PreSeasonGo", true, false) as Button).text == "Set weeks 6 to 7"
 			and _fits(scene, 390.0),
-			"With the report, only weeks 6 to 7 can still be changed")
-	_check(await _tap(scene.find_child("PreSeasonGo", true, false), "Back to training after the match"),
+			"The report is a screen of its own; the way on is to set weeks 6 to 7")
+	_check(await _tap(scene.find_child("PreSeasonGo", true, false), "Set weeks 6 to 7"),
+			"A finger's tap opens weeks 6 to 7")
+	await _frames(tree, 6)
+	_check(scene.find_child("Block_2", true, false) != null and scene.find_child("Block_1", true, false) == null
+			and scene.find_child("IntraStood_0", true, false) == null and _label(scene, "PreSeasonHero") == "Weeks 6 to 7"
+			and (scene.find_child("PreSeasonGo", true, false) as Button).text == "Start weeks 6 to 7" and _fits(scene, 390.0),
+			"Weeks 6 to 7 have their own screen: only that block can still be changed, and the report is not repeated")
+	Router.handle_back()
+	await _frames(tree, 6)
+	_check(tree.current_scene == scene and scene.find_child("IntraStood_0", true, false) != null
+			and GameState.preseason_stop() == "intra",
+			"Back from weeks 6 to 7 is the report again")
+	await _tap(scene.find_child("PreSeasonGo", true, false), "Set weeks 6 to 7 again")
+	await _frames(tree, 6)
+	_check(await _tap(scene.find_child("PreSeasonGo", true, false), "Start weeks 6 to 7"),
 			"A finger's tap goes back to training")
 	await _frames(tree, 10)
 	scene = tree.current_scene as Control
+	# A card at the end of a block stops it on the way; the way on is the same button.
+	var card_stops := 0
+	while scene != null and scene.find_child("PreSeasonCards", true, false) != null and card_stops < 4:
+		card_stops += 1
+		await _tap(scene.find_child("PreSeasonGo", true, false), "the way on past a card")
+		await _frames(tree, 10)
+		scene = tree.current_scene as Control
 	_check(scene != null and scene.name == "PreSeasonScene" and GameState.preseason_stop() == "practice"
 			and _label(scene, "PreSeasonHero") == "The practice match",
 			"Weeks 6 and 7 are trained and the game stops at the practice match (its own suite plays it)")
 	GameState.sim_practice_match()
 	GameState.preseason["practice"]["seen"] = true
-	_check(GameState.preseason_advance() == "done", "...and from there the last week passes")
+	var after: String = GameState.preseason_advance()
+	var more := 0
+	while after == "story" and more < 4:
+		more += 1
+		after = GameState.preseason_advance()
+	_check(after == "papers", "...and from there the last week passes to the papers")
 	scene = await _open(tree)
+	_check(scene != null and scene.name == "PreSeasonScene" and GameState.preseason_stop() == "papers"
+			and GameState.preseason_week() == 8,
+			"The papers are waiting in week 8")
+	_check(await _tap(scene.find_child("PreSeasonGo", true, false), "On to Round 1 from the papers"),
+			"A finger's tap goes on to Round 1")
+	await _frames(tree, 10)
+	scene = tree.current_scene as Control
 	_check(scene != null and scene.name == "HubScene" and not GameState.preseason_active()
 			and GameState.preseason_week() == 8 and GameState.season.round_index == 0,
-			"The rest of the pre-season is trained and the hub opens at Round 1")
+			"The hub opens at Round 1")
 	_check(scene.find_child("WeekActions", true, false) != null
 			and _label(scene, "SeasonPlanWords").ends_with("base") == (Conditioning.base_of(GameState.fitness_record(CLUB)) != "sound"),
 			"Round 1 is there to play, and the season plan's line carries the base")
@@ -1624,6 +1768,13 @@ func _test_screens() -> void:
 			and last_runner.get_global_rect().end.y <= foot.global_position.y
 			and foot.get_global_rect().end.y <= 540.0,
 			"On a PC the whole time trial is in view above the buttons, nothing cut by them")
+	var trial_base := scene.find_child("PreSeasonBaseWord", true, false)
+	var trial_scroll := (scene.find_child("PreSeasonPage", true, false) as Control).get_parent() as ScrollContainer
+	_check(trial_base != null and foot.is_ancestor_of(trial_base),
+			"On a PC the fitness base sits in the footer at the time trial too, as on the plan")
+	_check(trial_scroll != null and not trial_scroll.get_v_scroll_bar().visible,
+			"On a PC the time trial needs no scrollbar (page %s in %s, footer %s)" % [
+				str((scene.find_child("PreSeasonPage", true, false) as Control).size), str(trial_scroll.size), str(foot.size)])
 	tree.root.size = Vector2i(390, 844)
 	Router.stack = []
 	if tree.current_scene != null:

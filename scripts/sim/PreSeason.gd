@@ -42,8 +42,15 @@ const DEFAULTS := {
 	"trial_worst": 3,
 	"trial_noise": 6.0,
 	"heavy_week_injury": 0.008,
+	"light_heal_extra": 1,
 	"soft_tissue_kinds": ["hamstring", "calf", "groin", "quad"],
 	"ai_old_age": 28.0,
+	"papers_claim_up": 4,
+	"papers_breakout_age": 22.0,
+	"papers_short_wins_pos": 14,
+	"papers_after": 6,
+	"papers_within": 22,
+	"papers_places": 1,
 	"intra_week": 5,
 	"intra_side_size": 23,
 	"intra_injury_rate": 0.5,
@@ -74,8 +81,11 @@ const BASES := ["thin", "sound", "strong"]
 const DEFAULT_BASE := "sound"
 ## The weeks after which the pre-season stops for the coach: {week: stop}.
 ## The time trial, the intra-club match, then the practice match against
-## another club at the end of the last block.
-const STOPS := {3: "trial", 5: "intra", 7: "practice"}
+## another club at the end of the last block; the papers in the quiet last week.
+const STOPS := {3: "trial", 5: "intra", 7: "practice", 8: "papers"}
+## The weeks after which a story card may stop the pre-season: the end of each
+## block (a card never comes in the quiet last week). At most one a block.
+const STORY_WEEKS := [3, 5, 7]
 
 static var _data := {}
 
@@ -413,11 +423,11 @@ static func block_title(i: int) -> String:
 const _GAIN := {
 	"running": {
 		"solid": "Running first, for the fitness base. Skills work gets half the time.",
-		"heavy": "A bigger fitness base than a Solid block builds, and more skills work too.",
+		"heavy": "A bigger fitness base than a Solid block builds, and more Skills work too.",
 	},
 	"skills": {
 		"solid": "Skills first, so every fit player develops. Running gets half the time.",
-		"heavy": "More development than a Solid block gives, and more running too.",
+		"heavy": "More development than a Solid block gives, and more Running too.",
 	},
 }
 
@@ -431,12 +441,15 @@ static func gain_line(load: String, focus: String, i: int, plans := []) -> Strin
 			"light":
 				return "%s %s" % [gain_line("light", "running", i), drill]
 			"heavy":
-				return "%s More running and skills work than a Solid block on the plan." % drill
+				return "%s More Running and Skills work than a Solid block on the plan." % drill
 		return drill
 	if load == "light":
+		# Director, 2026-10-19: a Light block needs a real gain in every block,
+		# so a Light week heals the injured a week faster (light_heal_extra).
+		var heal := "Injured players heal twice as fast in these weeks."
 		if is_last_block(i):
-			return "Fresh legs and less soft-tissue risk in Round 1."
-		return "An easier time on the track. Nothing carries to Round 1."
+			return "Fresh legs and less soft-tissue risk in Round 1. %s" % heal
+		return heal
 	return str((_GAIN.get(focus, {}) as Dictionary).get(load, ""))
 
 
@@ -445,26 +458,52 @@ static func cost_line(load: String, focus: String, i: int) -> String:
 	var line := ""
 	match load:
 		"light":
-			line = "Half the running and half the skills work of a Solid block."
+			line = "Half the Running and half the Skills work of a Solid block."
 			if focus == "plan":
-				line = "Half the running and skills work of a Solid block on the plan."
+				line = "Half the Running and Skills work of a Solid block on the plan."
 		"heavy":
 			if is_last_block(i):
 				line = "A risk of soft-tissue injuries in these weeks, and sore legs in Round 1."
 			else:
 				line = "A risk of soft-tissue injuries in these weeks."
 	if focus == "plan" and load != "light":
-		var share := "Running and skills work both get half the time."
+		var share := "Running and Skills work both get half the time."
 		line = share if line == "" else "%s %s" % [line, share]
 	return line
 
 
 const BASE_LABEL := {"thin": "a thin fitness base", "sound": "a sound fitness base", "strong": "a strong fitness base"}
-const BASE_EFFECT := {
-	"thin": "The side starts underdone: it tires sooner and carries more soft-tissue risk for the first six rounds. A planned peak comes lower.",
-	"sound": "The side starts Round 1 at its usual fitness: no early lift, nothing lost.",
-	"strong": "Fresher legs and a little less soft-tissue risk through the first month.",
-}
+
+
+## Weeks of running as a coach would say them: "5", "4.5", "5.3".
+static func run_weeks_text(run: float) -> String:
+	var r := snappedf(run, 0.1)
+	return str(int(r)) if is_equal_approx(r, roundf(r)) else "%.1f" % r
+
+
+## How the base is built, with this plan's own total (director, 2026-10-19:
+## say what builds it, in plain football maths).
+static func base_rule(run: float) -> String:
+	return "Running by Round 1: %s weeks. Under %s is thin, %s or more strong." % [
+			run_weeks_text(run), run_weeks_text(float(tune("base_thin_below"))), run_weeks_text(float(tune("base_strong_from")))]
+
+
+## What the base does in Round 1, with its real sizes: the season curve's
+## tiring and soft-tissue sizes (Conditioning DRAIN_K, INJURY_K) at the base's
+## early value, fading over its rounds.
+static func base_effect(base: String) -> String:
+	match base:
+		"thin":
+			var early := float(tune("thin_early"))
+			return "Round 1: tires %d%% faster, %d%% more soft-tissue injuries, fading over %d rounds; a peak reaches only %d%%." % [
+					roundi(Conditioning.DRAIN_K * early * 100.0), roundi(Conditioning.INJURY_K * early * 100.0),
+					int(tune("thin_weeks")), roundi(float(tune("thin_peak_share")) * 100.0)]
+		"strong":
+			var early := float(tune("strong_early"))
+			return "Round 1: tires %d%% slower, %d%% fewer soft-tissue injuries, fading over %d rounds." % [
+					roundi(Conditioning.DRAIN_K * early * 100.0), roundi(Conditioning.INJURY_K * early * 100.0),
+					int(tune("strong_weeks"))]
+	return "Round 1 at normal fitness: no early lift, no early cost."
 
 
 # ---------------------------------------------------------------------------
@@ -684,3 +723,89 @@ static func drill_sentence(plans: Array) -> String:
 	if names.size() == 1:
 		return "Fluency in %s rises a step for every %d weeks on it." % [names[0], int(tune("drill_step_weeks"))]
 	return "Fluency in %s and %s rises a step for every %d weeks on each, sharing the weeks between them." % [names[0], names[1], int(tune("drill_step_weeks"))]
+
+
+# ---------------------------------------------------------------------------
+# The papers (director, 2026-10-13: "Predict, and you answer"). Week 8: the
+# papers print a ladder and one story about your club; you answer it. Talking
+# the club up lifts the board's mood now and puts a finish on the record: if
+# the club is behind its own words by mid-season a card comes ("A reckoning
+# later, no new target"). The board's goal never moves.
+# ---------------------------------------------------------------------------
+const PAPER_KINDS := ["finish", "breakout", "pressure"]
+## The card each story is, in data/stories/media.json.
+const PAPER_CARD := {"finish": "media_papers_finish", "breakout": "media_papers_breakout",
+		"pressure": "media_papers_pressure"}
+## Who writes it: the ladder is Dev Mehta's; the doubts and the pressure are Gary Haddon's.
+const PAPER_WRITER := {"finish": "stats", "breakout": "sycophant", "pressure": "muckraker"}
+
+
+static func papers_seed(career_seed: int, year: int, club: String) -> int:
+	return hash("%d|papers|%d|%s" % [career_seed, year, club])
+
+
+## The paper's ladder, best first. `ratings`: club -> the side it would pick,
+## as TeamRating reads it, with this pre-season's injuries counted. Near-ties
+## go to last year's finish (0 = none, last), then the board's own list ranking
+## (`expect`), then the code, so the same lists always print the same ladder.
+static func predicted_order(ratings: Dictionary, last: Dictionary, expect: Dictionary) -> Array:
+	var codes: Array = ratings.keys()
+	codes.sort_custom(func(a, b):
+		if int(ratings[a]) != int(ratings[b]):
+			return int(ratings[a]) > int(ratings[b])
+		var la := int(last.get(a, 0))
+		var lb := int(last.get(b, 0))
+		la = la if la > 0 else 99
+		lb = lb if lb > 0 else 99
+		if la != lb:
+			return la < lb
+		var ea := int(expect.get(a, 99))
+		var eb := int(expect.get(b, 99))
+		if ea != eb:
+			return ea < eb
+		return str(a) < str(b))
+	return codes
+
+
+## The finish the coach names when he talks the club up: a few places above
+## the paper's, never above first.
+static func claim_rank(predicted: int) -> int:
+	return clampi(predicted - int(tune("papers_claim_up")), 1, maxi(1, predicted))
+
+
+## How far below its own words the club sits (0 when level or ahead).
+static func places_behind(position: int, claim: int) -> int:
+	if claim <= 0 or position <= 0:
+		return 0
+	return maxi(0, position - claim)
+
+
+## Is the club behind its words enough for the papers to come back?
+static func reckoning_due(position: int, claim: int) -> bool:
+	return claim > 0 and places_behind(position, claim) >= int(tune("papers_places"))
+
+
+## Does the paper rate the club below the board's goal? The goal's position
+## for a ladder goal; for "win seven games" a finish outside the club's
+## papers_short_wins_pos.
+static func finishes_short(goal: Dictionary, predicted: int) -> bool:
+	if goal.has("pos"):
+		return predicted > int(goal["pos"])
+	return predicted > int(tune("papers_short_wins_pos"))
+
+
+## Which story the papers run: one of `eligible`, by the pre-season's own seed.
+static func pick_paper(eligible: Array, seed: int) -> String:
+	if eligible.is_empty():
+		return "finish"
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	return str(eligible[rng.randi_range(0, eligible.size() - 1)])
+
+
+## "13th".
+static func ordinal(n: int) -> String:
+	var suffix := "th"
+	if n % 100 < 11 or n % 100 > 13:
+		suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+	return "%d%s" % [n, suffix]

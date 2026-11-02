@@ -80,17 +80,38 @@ func _build() -> void:
 	for i in range(PreSeason.block_count()):
 		if not GameState.preseason_block_open(i):
 			first = i + 1
-	if stop == "intra":
-		if GameState.intra_played():
-			page.add_child(_intra_report())
+	if stop == "papers":
+		if _wide():
+			# A PC: the story on the left, the ladder beside it.
+			var pcols := UiKit.hbox(28)
+			var pl := _papers_story()
+			pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			pcols.add_child(pl)
+			var pr := _papers_ladder()
+			pr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			pcols.add_child(pr)
+			page.add_child(pcols)
+		else:
+			page.add_child(_papers_story())
+			page.add_child(_papers_ladder())
+	if stop == "story":
+		page.add_child(_story_cards())
+		page.add_child(_blocks_section(first, _wide()))
+		_page_base(page)
+	elif stop == "intra":
+		# Director, 2026-10-19: the report and the last block are two screens,
+		# so neither needs a scroll: the report first, then weeks 6 to 7.
+		if GameState.intra_played() and _weeks_view:
 			page.add_child(_blocks_section(first, _wide()))
-			page.add_child(_base_result())
+			_page_base(page)
+		elif GameState.intra_played():
+			page.add_child(_intra_report())
 		else:
 			page.add_child(_intra_setup())
 	elif stop == "practice":
 		if GameState.practice_played():
 			page.add_child(_match_report(GameState.preseason_practice().get("report", {}), "Practice", GameState.draftee_pool))
-			page.add_child(_base_result())
+			_page_base(page)
 		else:
 			page.add_child(_practice_setup())
 	elif stop == "trial" and _wide():
@@ -102,8 +123,6 @@ func _build() -> void:
 		cols.add_child(left)
 		var right := _blocks_section(first, true)
 		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		right.add_child(UiKit.spacer(4))
-		right.add_child(_base_result())
 		cols.add_child(right)
 		page.add_child(cols)
 	else:
@@ -200,9 +219,13 @@ func _hero(stop: String) -> String:
 		"trial":
 			return "The time trial"
 		"intra":
-			return "The intra-club match"
+			return "Weeks 6 to 7" if _weeks_view and GameState.intra_played() else "The intra-club match"
 		"practice":
 			return "The practice match"
+		"papers":
+			return "The papers"
+		"story":
+			return "After week %d of %d" % [GameState.preseason_week(), PreSeason.weeks()]
 	return "Week %d of 8" % mini(PreSeason.weeks(), GameState.preseason_week() + 1)
 
 
@@ -213,15 +236,141 @@ func _hero_sub(stop: String) -> String:
 		"trial":
 			return "Two kilometres at the end of week 3. This is the order they finished. No rating or fitness changes because of it."
 		"intra":
+			if GameState.intra_played() and _weeks_view:
+				return "The last block before Round 1. The practice match is at the end of week 7."
 			if GameState.intra_played():
 				return "End of week 5. It counts for nothing on the ladder; what it showed is below."
 			return "End of week 5: two sides of 23 from your own list, with prospects from this year's National Draft filling the spots. It counts for nothing on the ladder."
 		"practice":
 			var opp := GameDB.club_name(GameState.practice_opponent())
 			if GameState.practice_played():
-				return "End of week 7, against %s. It counts for nothing on the ladder; what it showed is below. Week 8 is a quiet week." % opp
+				return "End of week 7, against %s. It counts for nothing on the ladder; what it showed is below. Week 8 is a quiet week: no training, and the papers come out." % opp
 			return "End of week 7: one match against %s. It counts for nothing on the ladder." % opp
+		"papers":
+			return "Week 8. Training is done. This is the ladder the papers have printed, and what they want to know."
+		"story":
+			return "Something has come up. Answer it, or press on and nothing changes."
 	return "Training is under way."
+
+
+# ---------------------------------------------------------------------------
+# The papers: the story to answer, and the ladder they printed
+# ---------------------------------------------------------------------------
+## The one story, with the three answers (back it, deflect, talk it up), each
+## with what it gains and what it costs; or, once answered, what you said.
+func _papers_story() -> Control:
+	var v := UiKit.vbox(8)
+	v.name = "PapersStory"
+	var rec: Dictionary = GameState.papers_record()
+	var card: Dictionary = GameState.papers_card()
+	if card.is_empty():
+		var none := UiKit.lbl("The papers have no question for you this year.", UiKit.BODY, UiKit.TEXT)
+		none.name = "PapersNothing"
+		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(none)
+		return v
+	# Every name in the story wears his club's colour (NameInk).
+	var names := NameInk.from_lists(GameState.season.lists)
+	var title := NameInk.label(str(card.get("title", "")), names, UiKit.HEADING, UiKit.TEXT, true)
+	title.name = "PapersTitle"
+	v.add_child(title)
+	var text := NameInk.label(str(card.get("text", "")), names, UiKit.BODY, UiKit.TEXT)
+	text.name = "PapersText"
+	v.add_child(text)
+	if bool(rec.get("answered", false)):
+		v.add_child(UiKit.spacer(4))
+		var said := NameInk.label(str(rec.get("result", "")), names, UiKit.BODY, UiKit.TEXT, true)
+		said.name = "PapersResult"
+		v.add_child(said)
+		return v
+	var silence := str((card.get("unanswered", {}) as Dictionary).get("hint", ""))
+	if silence != "":
+		var sl := NameInk.label(silence, names, UiKit.SECONDARY, UiKit.TEXT)
+		sl.name = "PapersSilence"
+		v.add_child(sl)
+	var opts: Array = card.get("options", [])
+	for i in range(opts.size()):
+		var o: Dictionary = opts[i]
+		var col := UiKit.vbox(3)
+		var b := UiKit.btn(str(o.get("label", "")), UiKit.BODY, false)
+		b.name = "Papers_%d" % i
+		b.custom_minimum_size = Vector2(0, 48)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var index := i
+		b.pressed.connect(func():
+			GameState.papers_answer(index)
+			GameState.autosave()
+			_build())
+		col.add_child(b)
+		for line in StoryEngine.stakes_lines(o.get("effects", []), card.get("facts", {})):
+			var mark := ""
+			var kind := "Note"
+			if line.begins_with(StoryEngine.GAIN_MARK):
+				mark = "Gain:"
+				kind = "Gain"
+			elif line.begins_with(StoryEngine.COST_MARK):
+				mark = "Cost:"
+				kind = "Cost"
+			var cl := NameInk.label(line.substr(mark.length()).strip_edges() if mark != "" else line, names, UiKit.SECONDARY, UiKit.TEXT)
+			cl.name = "Papers%s_%d" % [kind, i]
+			if mark == "":
+				col.add_child(cl)
+				continue
+			var item := UiKit.hbox(6)
+			var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.TEXT, true)
+			mk.name = "Papers%sMark_%d" % [kind, i]
+			mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			mk.autowrap_mode = TextServer.AUTOWRAP_OFF
+			mk.custom_minimum_size = Vector2(40, 0)
+			item.add_child(mk)
+			cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			item.add_child(cl)
+			col.add_child(item)
+		v.add_child(col)
+	return v
+
+
+## The ladder the papers printed, best first: your club in bold, every club
+## in its own colour.
+func _papers_ladder() -> Control:
+	var v := UiKit.vbox(2)
+	v.name = "PapersLadder"
+	v.add_child(_section_head("The papers' ladder"))
+	var order: Array = GameState.papers_record().get("order", [])
+	# A PC is short: the ladder is two columns of nine, so all of it is in view.
+	var cols: Array = [v, v]
+	if _wide():
+		var pair := UiKit.hbox(24)
+		pair.name = "PapersLadderColumns"
+		var left := UiKit.vbox(2)
+		var right := UiKit.vbox(2)
+		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pair.add_child(left)
+		pair.add_child(right)
+		v.add_child(pair)
+		cols = [left, right]
+	for i in range(order.size()):
+		var code := str(order[i])
+		var row := UiKit.hbox(10)
+		row.name = "PapersRow_%d" % i
+		row.custom_minimum_size = Vector2(0, 28)
+		var pos := UiKit.figure(str(i + 1), UiKit.NUMBER)
+		pos.custom_minimum_size = Vector2(26, 0)
+		pos.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		pos.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(pos)
+		var mark := UiKit.club_marker(code, 20.0)
+		mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(mark)
+		var mine := code == GameState.my_club
+		var nm := UiKit.lbl(GameDB.club_name(code), UiKit.BODY, UiKit.club_name_colour(UiKit.club_ink(code)), mine)
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(nm)
+		(cols[0] if i < (order.size() + 1) / 2 else cols[1]).add_child(row)
+	return v
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +378,8 @@ func _hero_sub(stop: String) -> String:
 # ---------------------------------------------------------------------------
 var _invite_count: Label
 var _invite_rows := {}      # prospect id -> Button
+## After the intra-club report, the last block on a screen of its own.
+var _weeks_view := false
 
 
 ## Before it is played: how the sides are made, and who is invited.
@@ -289,15 +440,17 @@ func _intra_setup() -> Control:
 	grid.columns = 3 if _wide() else 1
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 6)
-	for p in GameState.intra_prospects():
+	var reads := _prospects_by_rank()
+	for p in reads[0]:
 		var id := str(p["id"])
 		var b := UiKit.btn("", UiKit.BODY)
 		b.name = "Invite_" + id
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 34 if _wide() else 44)
+		# The row is as wide as the column, never its words: long lines wrap.
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		b.custom_minimum_size = Vector2(0, 52)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.text = "%s  ·  %s, age %d" % [GameDB.player_display_name(p),
-				str(UiKit.ROLE_LABEL.get(str(p.get("role", "")), str(p.get("role", "")))), int(float(p.get("age", 18.0)))]
+		b.text = _prospect_text(p, reads[1])
 		b.pressed.connect(func():
 			GameState.toggle_intra_invite(id)
 			_refresh_invites())
@@ -307,6 +460,35 @@ func _intra_setup() -> Control:
 	v.add_child(guests)
 	_refresh_invites()
 	return v
+
+
+## This year's class in your recruiters' order, and their read of each:
+## [prospects, reads by id] (GameState.prospect_reads).
+func _prospects_by_rank() -> Array:
+	var list: Array = GameState.intra_prospects()
+	var reads: Dictionary = GameState.prospect_reads(list)
+	list = list.duplicate()
+	list.sort_custom(func(a, b): return int(reads[str(a["id"])]["rank"]) < int(reads[str(b["id"])]["rank"]))
+	return [list, reads]
+
+
+## What a prospect did in your intra-club match this pre-season, or "".
+func _seen_line(p: Dictionary) -> String:
+	var seen: Dictionary = (p.get("seen", {}) as Dictionary).get(GameState.my_club, {}) if p.get("seen") is Dictionary else {}
+	if int(seen.get("year", 0)) != GameState.season_year:
+		return ""
+	return str(seen.get("line", ""))
+
+
+## A prospect's button: who he is, then where your recruiters rank him and
+## their read of his OVR and POT, as the draft board shows them.
+func _prospect_text(p: Dictionary, reads: Dictionary) -> String:
+	var r: Dictionary = reads.get(str(p["id"]), {})
+	return "%s  ·  %s, age %d
+Ranked %s  ·  %s OVR  ·  %s POT" % [GameDB.player_display_name(p),
+			str(UiKit.ROLE_LABEL.get(str(p.get("role", "")), str(p.get("role", "")))), int(float(p.get("age", 18.0))),
+			PreSeason.ordinal(int(r.get("rank", 0))), DraftScouting.range_text(r.get("overall", [0, 0])),
+			DraftScouting.range_text(r.get("potential", [0, 0]))]
 
 
 ## The invitations as they stand: who is in (bold, outlined), and how many.
@@ -468,18 +650,30 @@ func _practice_setup() -> Control:
 	_trial_rows = {}
 	var grid := GridContainer.new()
 	grid.name = "PracticeProspects"
-	grid.columns = 3 if _wide() else 1
+	# Two across on a PC: a prospect seen in the intra-club match carries a
+	# third line, what he did there, and it needs the width.
+	grid.columns = 2 if _wide() else 1
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 6)
-	for p in GameState.intra_prospects():
+	var reads := _prospects_by_rank()
+	for p in reads[0]:
 		var id := str(p["id"])
 		var b := UiKit.btn("", UiKit.BODY)
 		b.name = "Trial_" + id
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 34 if _wide() else 44)
+		# The row is as wide as the column, never its words: long lines wrap.
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		b.custom_minimum_size = Vector2(0, 52)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.text = "%s  ·  %s, age %d" % [GameDB.player_display_name(p),
-				str(UiKit.ROLE_LABEL.get(str(p.get("role", "")), str(p.get("role", "")))), int(float(p.get("age", 18.0)))]
+		b.text = _prospect_text(p, reads[1])
+		# Director, 2026-10-19: a prospect already trialled in the intra-club
+		# match stands out, with what he did there.
+		var seen := _seen_line(p)
+		if seen != "":
+			b.text += "
+Intra-club: " + seen
+			b.custom_minimum_size = Vector2(0, 74)
+			b.set_meta("seen", true)
 		b.pressed.connect(func():
 			GameState.toggle_practice_invite(id)
 			_refresh_trial())
@@ -494,7 +688,7 @@ func _practice_setup() -> Control:
 func _refresh_trial() -> void:
 	var invites: Array = GameState.practice_invites()
 	for id in _trial_rows:
-		_paint_choice(_trial_rows[id], invites.has(str(id)))
+		_paint_choice(_trial_rows[id], invites.has(str(id)), bool((_trial_rows[id] as Button).get_meta("seen", false)))
 	if _trial_count != null and is_instance_valid(_trial_count):
 		_trial_count.text = "%d of %d trialled" % [invites.size(), PreSeason.practice_guests()]
 	if _trial_cost != null and is_instance_valid(_trial_cost):
@@ -520,6 +714,17 @@ func _trial_cost_text(invites: Array) -> String:
 
 
 ## A 2 px rule in the club's colour: the section belongs to your club.
+## The card or cards the block threw up, answered here as on the hub.
+func _story_cards() -> Control:
+	var v := UiKit.vbox(10)
+	v.name = "PreSeasonCards"
+	var names := NameInk.from_lists(GameState.season.lists)
+	for i in range(GameState.week_events.size()):
+		v.add_child(EventCardView.build(i, not _wide(), func(): _build(),
+				func(t: String): EventCardView.rule_sheet(self, t), names))
+	return v
+
+
 func _club_rule() -> Control:
 	var r := ColorRect.new()
 	r.color = UiKit.club_ink(GameState.my_club)
@@ -582,7 +787,7 @@ func _blocks_section(first: int, across: bool) -> Control:
 		# Side by side, each block (and its club bar) is as tall as its own words.
 		b.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		holder.add_child(b)
-	var quiet := UiKit.lbl("Week 8 is a quiet week: no training and nothing to choose. Heavy or fresh legs from weeks 6 to 7 last into Round 1.",
+	var quiet := UiKit.lbl("Week 8 is a quiet week: no training to choose, and the papers print their ladder. Heavy or fresh legs from weeks 6 to 7 last into Round 1.",
 			UiKit.SECONDARY, UiKit.TEXT)
 	quiet.name = "PreSeasonQuietWeek"
 	quiet.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -634,6 +839,12 @@ func _drill_row(i: int) -> Control:
 	h.name = "Drill%d" % i
 	var l := UiKit.lbl("Drill", UiKit.BODY, UiKit.TEXT, true)
 	h.add_child(l)
+	# Says what the second line of each button is (director, 2026-10-19:
+	# "medium, then high" read as nothing).
+	var key_line := UiKit.lbl("Under each plan: how well the side knows it now, and by Round 1 with this drilling.", UiKit.SECONDARY, UiKit.TEXT)
+	key_line.name = "DrillKey%d" % i
+	key_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	h.add_child(key_line)
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -659,13 +870,13 @@ func _drill_row(i: int) -> Control:
 
 
 ## How well the side knows a plan, and where the drilling set leaves it:
-## "medium", or "medium, then high" once the weeks are enough.
+## "medium", or "medium, high by Round 1" once the weeks are enough.
 func _knows_words(plan: String) -> String:
 	var now: int = GameState.plan_level(GameState.my_club, plan)
 	var after: int = GameState.plan_level_after_drills(plan)
 	var t := PreSeason.fluency_word(now)
 	if after != now:
-		t += ", then " + PreSeason.fluency_word(after)
+		t += ", %s by Round 1" % PreSeason.fluency_word(after)
 	return t
 
 
@@ -718,8 +929,10 @@ func _choice_row(label: String, node_name: String, options: Array, current: Stri
 	return h
 
 
-func _paint_choice(b: Button, on: bool) -> void:
-	var sb := UiKit.style(UiKit.SURFACE, 8, UiKit.RADIUS, UiKit.TEXT if on else Color.TRANSPARENT)
+func _paint_choice(b: Button, on: bool, seen := false) -> void:
+	# A prospect your recruiters have already seen sits on your club's colour.
+	var surface := UiKit.SURFACE.lerp(UiKit.club_ink(GameState.my_club), 0.35) if seen else UiKit.SURFACE
+	var sb := UiKit.style(surface, 8, UiKit.RADIUS, UiKit.TEXT if on else Color.TRANSPARENT)
 	sb.set_border_width_all(2 if on else 0)
 	for s in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		b.add_theme_stylebox_override(s, sb)
@@ -753,6 +966,29 @@ func _pick(i: int, load: String, focus: String) -> void:
 	GameState.set_preseason_block(i, load if load != "" else str(blocks[i][0]),
 			focus if focus != "" else str(blocks[i][1]))
 	_refresh_words()
+
+
+## Whether the fitness base sits in the footer at this stop: always while the
+## plan is set, and on a PC wherever the stop shows it at all.
+func _base_pinned(stop: String) -> bool:
+	if stop == "plan":
+		return true
+	if not _wide():
+		return false
+	match stop:
+		"story", "trial":
+			return true
+		"intra":
+			return GameState.intra_played() and _weeks_view
+		"practice":
+			return GameState.practice_played()
+	return false
+
+
+## The base in the page, on a phone (a PC pins it in the footer instead).
+func _page_base(page: Control) -> void:
+	if not _wide():
+		page.add_child(_base_result())
 
 
 ## The fitness base the training builds, and what that base does: the result
@@ -794,7 +1030,8 @@ func _refresh_words() -> void:
 	if _base_head != null and is_instance_valid(_base_head):
 		var base: String = GameState.preseason_base()
 		_base_head.text = "This training builds %s." % str(PreSeason.BASE_LABEL[base])
-		_base_body.text = str(PreSeason.BASE_EFFECT[base])
+		_base_body.text = "%s
+%s" % [PreSeason.base_effect(base), PreSeason.base_rule(GameState.preseason_run_forecast())]
 
 
 ## The time trial: the order they came home, the first five and the last
@@ -887,10 +1124,18 @@ func _actions(stop: String) -> Control:
 	var v := UiKit.vbox(6)
 	v.name = "PreSeasonActions"
 	var setup := (stop == "intra" and not GameState.intra_played()) or (stop == "practice" and not GameState.practice_played())
-	var go := _primary("Start training" if stop == "plan" else ("Coach the match" if setup else "Back to training"))
+	var report_first := stop == "intra" and GameState.intra_played() and not _weeks_view
+	var go := _primary("Start training" if stop == "plan" else ("Coach the match" if setup else
+			("On to Round 1" if stop == "papers" else ("Set weeks 6 to 7" if report_first else
+			("Start weeks 6 to 7" if stop == "intra" else "Back to training")))))
 	go.name = "PreSeasonGo"
 	go.custom_minimum_size = Vector2(0, 48)
-	go.pressed.connect((_on_coach_practice if stop == "practice" else _on_coach) if setup else _on_go)
+	if report_first:
+		go.pressed.connect(func():
+			_weeks_view = true
+			_build())
+	else:
+		go.pressed.connect((_on_coach_practice if stop == "practice" else _on_coach) if setup else _on_go)
 	var quiet := UiKit.hbox(6)
 	quiet.name = "PreSeasonNav"
 	if setup:
@@ -913,8 +1158,10 @@ func _actions(stop: String) -> Control:
 		b.pressed.connect(func(): Router.go(key))
 		quiet.add_child(b)
 	# The result of the plan is pinned here while the whole plan is being
-	# set; at the time trial it sits with the blocks instead.
-	var base: Control = _base_result() if stop == "plan" else Control.new()
+	# set, and on a PC at every stop that shows it (director, 2026-10-19: the
+	# same line in another place made a scroll for no reason). On a phone the
+	# later stops keep it with the blocks, off the footer.
+	var base: Control = _base_result() if _base_pinned(stop) else Control.new()
 	base.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if _wide():
 		# A PC: the result at the left, every button together at the right
@@ -988,8 +1235,17 @@ func handle_back() -> bool:
 		plan_sheet.queue_free()
 		_build()
 		return true
+	var rule := get_node_or_null("RuleSheet")
+	if rule != null and is_instance_valid(rule) and not rule.is_queued_for_deletion():
+		rule.queue_free()
+		return true
 	if _settings != null and is_instance_valid(_settings):
 		_settings.queue_free()
 		_settings = null
+		return true
+	if _weeks_view and GameState.preseason_stop() == "intra":
+		# Back from weeks 6 to 7 is the report again.
+		_weeks_view = false
+		_build()
 		return true
 	return false
