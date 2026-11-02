@@ -15,3 +15,4 @@ his differs, the later one wins. Nothing here edits the bible.
 ## Approved cuts
 
 - Draft pool filters (CUT_AUDIT row 9): the pool keeps position, sort and search. Club, career stage, style, trait, available-only and the Combine sort are gone, live with no switch; the pool always shows available players. Combine results stay on a prospect's sheet. No save migration needed (view state, never saved).
+| 7 | Row 37 AI draft buff: on or off? | off | `ai_draft_buff` ships off (#862); it is rivals only, so the user's Pick for me is unchanged. Whether the buff should also change Pick for me is not yet decided |
