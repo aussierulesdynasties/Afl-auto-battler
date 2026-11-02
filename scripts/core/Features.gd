@@ -34,8 +34,12 @@ extends RefCounted
 ##               player per rival club, and Canberra as a career choice
 ##               (ExpansionBuild). Off, a new club arrives with the 36
 ##               generated players it always did and Canberra always joins.
+##   milestone_games   the week's milestones (games, debuts, goals, your games
+##               as coach, first win, first final) on the Hub, in the news and
+##               on the full-time screen (Milestones.gd). The record itself is
+##               always kept; off, nothing of it is shown.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "milestone_games"]
 
 static var _forced := {}
 static var _from_args := {}

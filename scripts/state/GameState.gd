@@ -116,6 +116,7 @@ var achievements := {}
 ## G7: the career's durable facts, {player id: [row, ...]} (CareerFacts.gd).
 ## Saved with the career; a player leaving the lists does not take them.
 var career_facts := {}
+var milestone_log := Milestones.empty()   # milestone games (Milestones.gd)
 ## Players who have left the game: id -> his name card (CareerFacts.name_card),
 ## so an honour-roll or record line can still name him.
 var departed_names := {}
@@ -685,6 +686,7 @@ func save_career() -> bool:
 		"finals_counted_since": finals_counted_since,
 		"achievements": achievements,
 		"career_facts": career_facts,
+		"milestone_log": milestone_log,
 		"departed_names": departed_names,
 		"salary_cap": salary_cap,
 		"free_agents": free_agents,
@@ -866,6 +868,7 @@ func load_career() -> bool:
 			int(state.get("season_year", 0)) + (1 if season != null and not season.finals.is_empty() else 0)))
 	achievements = state.get("achievements", {})
 	career_facts = state.get("career_facts", {})
+	milestone_log = Milestones.normalise(state.get("milestone_log"), self)
 	departed_names = state.get("departed_names", {})
 	salary_cap = int(state.get("salary_cap", 0))
 	free_agents = state.get("free_agents", [])
@@ -1298,6 +1301,7 @@ func reset() -> void:
 	finals_counted_since = 0
 	achievements = {}
 	career_facts = {}
+	milestone_log = Milestones.empty()
 	departed_names = {}
 	coaches = {}
 	coach_archive = {}
@@ -5492,6 +5496,7 @@ func _after_round(results: Array) -> void:
 		Awards.tally_match(season_tally, res, not res.has("tag"))
 		StatBook.add_match(season_stats, res)
 		_note_form_and_team(res)
+	Milestones.record_round(self, results)
 	_nominate_rising_star(results)
 	_round_news(results)
 	_note_firsts(results)
@@ -5510,6 +5515,8 @@ func _after_round(results: Array) -> void:
 	_culture_week(results)
 	_next_week_event()
 	_find_coach_approaches()
+	if Milestones.shown():
+		Milestones.preview_news(self)
 
 
 ## Each player who took the field in a final has played one more final in this

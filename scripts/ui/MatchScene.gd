@@ -3932,6 +3932,13 @@ func _ft_summary(v: VBoxContainer) -> void:
 					UiKit.EMPH if through else UiKit.MUTED, true)
 			ol.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(ol)
+		if Milestones.shown():
+			var ms_line := Milestones.summary_line(GameState, _res)
+			if ms_line != "":
+				var msl := UiKit.lbl(ms_line, UiKit.BODY, UiKit.TEXT, true)
+				msl.name = "MilestoneLine"
+				msl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				v.add_child(msl)
 		if (_interactive or _review) and str(_res.get("tag", "")) == "":
 			var moved := GameState.ladder_move_line(_pos_before)
 			if moved != "":
