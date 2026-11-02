@@ -196,6 +196,13 @@ func _show_season_wrap() -> void:
 		v.add_child(why)
 	# With a pre-season to come, the wrap leads into it; a career saved at the
 	# wrap before pre-seasons existed begins its season as it always did.
+	# Last season's page in the club almanac (switch club_almanac).
+	if Almanac.on():
+		var alm := UiKit.btn("Club almanac", UiKit.BODY)
+		alm.name = "WrapAlmanac"
+		alm.flat = true
+		alm.pressed.connect(func(): Router.go("almanac"))
+		(box["footer"] as VBoxContainer).add_child(alm)
 	var to_preseason: bool = GameState.preseason_active()
 	var go := UiKit.btn("Start the pre-season" if to_preseason else "Begin season", UiKit.BODY, true)
 	go.name = "BeginSeason"
@@ -408,6 +415,13 @@ func _standing_card() -> Control:
 	var last := _last_match_button()
 	if last != null:
 		cv.add_child(last)
+	# The club almanac: your career, season by season (switch club_almanac).
+	if Almanac.on():
+		var alm := UiKit.text_action("Club almanac  ›", UiKit.SECONDARY)
+		alm.name = "HubAlmanac"
+		alm.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		alm.pressed.connect(func(): Router.go("almanac"))
+		cv.add_child(alm)
 	# The board lives in Coaching; here only when your job is at risk.
 	if GameState.board_goal_text() != "":
 		var warned := bool(GameState.board.get("warned", false))
