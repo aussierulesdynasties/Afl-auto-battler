@@ -38,8 +38,13 @@ extends RefCounted
 ##               as coach, first win, first final) on the Hub, in the news and
 ##               on the full-time screen (Milestones.gd). The record itself is
 ##               always kept; off, nothing of it is shown.
+##   match_story   the match makes the story (director, 2026-11-03, plan step 1b): each
+##               match's hero, turning point and why it was won or lost (MatchStory.gd),
+##               at the top of the full-time Summary, on the news front, in the press
+##               question, and kept on GameState.match_stories. Off, none of it shows
+##               and nothing is written.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "milestone_games"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "milestone_games", "match_story"]
 
 static var _forced := {}
 static var _from_args := {}

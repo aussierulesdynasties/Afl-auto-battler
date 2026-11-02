@@ -54,6 +54,16 @@ static func from_history(gs) -> Dictionary:
 		if not r.is_empty():
 			c["games"] = int(c["games"]) + int(r["w"]) + int(r["l"]) + int(r["d"])
 			c["wins"] = int(c["wins"]) + int(r["w"])
+		# Finals already played this season (a save made mid-finals).
+		for week in gs.season.finals.get("weeks", []):
+			for res in week:
+				var side := _my_side(gs, res)
+				if side < 0:
+					continue
+				c["games"] = int(c["games"]) + 1
+				c["finals"] = int(c["finals"]) + 1
+				if _won(res, side):
+					c["wins"] = int(c["wins"]) + 1
 	return out
 
 
