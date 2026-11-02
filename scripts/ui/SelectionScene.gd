@@ -33,8 +33,6 @@ func _ready() -> void:
 	if GameState.season == null or GameState.my_list.is_empty():
 		Router.replace("main")
 		return
-	# Opening it ticks the job on the Hub's weekly checklist (when on).
-	WeekChecklist.mark(GameState, "team")
 	# Your club's colour behind the page, as on the hub and match day
 	# (director, 2026-10-10: every screen in the gameday style).
 	add_child(ClubBackdrop.new().setup(GameState.my_club))
@@ -48,6 +46,7 @@ func _ready() -> void:
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
 			_build())
 	_build()
+	FirstVisitIntro.show_if_due.call_deferred(self, "selection")
 
 
 func _build() -> void:
@@ -102,7 +101,32 @@ func _build() -> void:
 		cols.add_child(right)
 	else:
 		_root.add_child(_scroller(_side_page(auto), "SelectionScroll"))
+	var confirm := _confirm_row()
+	if confirm != null:
+		_root.add_child(confirm)
 	UiKit.restore_places(_root, places)
+
+
+## "Confirm side" ticks the Hub checklist's "Look over the side" job
+## (director, 2026-11-03: an explicit button, not merely opening Team).
+## Only with the weekly_checklist setting on; off, nothing shows or writes.
+func _confirm_row() -> Control:
+	if not WeekChecklist.on(GameState) or GameState.season.is_season_over():
+		return null
+	var row := UiKit.hbox(8)
+	row.name = "ConfirmRow"
+	row.alignment = BoxContainer.ALIGNMENT_END
+	var done := WeekChecklist.is_done(GameState, "team")
+	var b := UiKit.btn("Side confirmed" if done else "Confirm side", UiKit.NAME, not done)
+	b.name = "ConfirmSide"
+	b.custom_minimum_size = Vector2(minf(220.0, UiKit.view_width(self) - 24.0), 44)
+	b.disabled = done
+	b.pressed.connect(func():
+		WeekChecklist.mark(GameState, "team")
+		_notice = "Side confirmed for this week."
+		_build())
+	row.add_child(b)
+	return row
 
 
 ## A page fills the space and scrolls only if something abnormal (a very long
@@ -492,6 +516,8 @@ func _close_profile() -> void:
 ## Android Back closes a profile or the synergy guide, then the week sheet
 ## (a phone), then leaves.
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	if _sheet != null and is_instance_valid(_sheet):
 		_close_profile()
 		return true

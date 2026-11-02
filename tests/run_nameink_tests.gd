@@ -45,6 +45,9 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_nameink.save"
 	_state.settings_path = "user://test_nameink.cfg"
+	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_state.set_setting("seen_%s_intro" % key, true)
 	_state.delete_saved_career()
 	_t("_test_helper")
 	await _t("_test_match_screen")

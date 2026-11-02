@@ -85,6 +85,7 @@ var season_awards := {}          # the finished season's awards
 ## from before nominations were recorded starts "from" its next round.
 var rising_star_noms := {"from": 1, "rounds": []}
 var honour_roll: Array = []      # one entry per completed season
+var almanac: Array = []          # the club almanac, one page per season (Almanac.gd; switch club_almanac)
 ## Every coach in the game, once: cid -> record (Coaches.gd). A club's staff
 ## is read from the records, never stored beside them.
 var coaches := {}
@@ -116,6 +117,7 @@ var achievements := {}
 ## G7: the career's durable facts, {player id: [row, ...]} (CareerFacts.gd).
 ## Saved with the career; a player leaving the lists does not take them.
 var career_facts := {}
+var milestone_log := Milestones.empty()   # milestone games (Milestones.gd)
 ## Players who have left the game: id -> his name card (CareerFacts.name_card),
 ## so an honour-roll or record line can still name him.
 var departed_names := {}
@@ -301,10 +303,6 @@ var settings_path := "user://settings.cfg"
 ## Autosave runs on every screen change, after every round and when the app
 ## is backgrounded or closed. Tests switch it off.
 var autosave_enabled := true
-## Set while a skip plays several rounds in one go: each round leaves the save alone and
-## the skip saves once at the end (a 4 MB save written every round was a quarter of the
-## skip's time, more on a phone). Killed mid-skip, the career is where the skip began.
-var _batching := false
 ## A new draft or season is seeded from the clock, so no two careers play
 ## alike. Measurement tools set this so a career replays exactly: each of
 ## those seeds then comes from it and the year (_clock_seed). 0 in the game.
@@ -628,7 +626,7 @@ func saved_career_meta() -> Dictionary:
 ## rest of the round is already on the ladder but the round has not closed,
 ## so the last save (from before the match) is the consistent one to keep.
 func autosave() -> bool:
-	if _batching or not autosave_enabled or not has_career() or not pending_match.is_empty():
+	if not autosave_enabled or not has_career() or not pending_match.is_empty():
 		return false
 	return save_career()
 
@@ -687,11 +685,13 @@ func save_career() -> bool:
 		"season_awards": season_awards,
 		"rising_star_noms": rising_star_noms,
 		"honour_roll": honour_roll,
+		"almanac": almanac,
 		"records": records,
 		"rivalry_history": rivalry_history,
 		"finals_counted_since": finals_counted_since,
 		"achievements": achievements,
 		"career_facts": career_facts,
+		"milestone_log": milestone_log,
 		"departed_names": departed_names,
 		"salary_cap": salary_cap,
 		"free_agents": free_agents,
@@ -869,6 +869,7 @@ func load_career() -> bool:
 	rising_star_noms = state.get("rising_star_noms",
 			{"from": season.round_index + 1 if season != null else 1, "rounds": []})
 	honour_roll = state.get("honour_roll", [])
+	almanac = state.get("almanac", [])  # older saves: none; the page falls back to the honour roll
 	records = state.get("records", {})
 	rivalry_history = state.get("rivalry_history", {})
 	# An older save has played finals nobody counted: its count starts with the next ones.
@@ -876,6 +877,7 @@ func load_career() -> bool:
 			int(state.get("season_year", 0)) + (1 if season != null and not season.finals.is_empty() else 0)))
 	achievements = state.get("achievements", {})
 	career_facts = state.get("career_facts", {})
+	milestone_log = Milestones.normalise(state.get("milestone_log"), self)
 	departed_names = state.get("departed_names", {})
 	salary_cap = int(state.get("salary_cap", 0))
 	free_agents = state.get("free_agents", [])
@@ -1305,11 +1307,13 @@ func reset() -> void:
 	season_awards = {}
 	rising_star_noms = {"from": 1, "rounds": []}
 	honour_roll = []
+	almanac = []
 	records = {}
 	rivalry_history = {}
 	finals_counted_since = 0
 	achievements = {}
 	career_facts = {}
+	milestone_log = Milestones.empty()
 	departed_names = {}
 	coaches = {}
 	coach_archive = {}
@@ -1835,6 +1839,8 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	intake_summary = Prospects.age_league(league_lists, next_year)
 	intake_summary["signed"] = signed
 	_retirees_to_coaching(intake_summary.get("retired", []), listed)
+	if Almanac.on():
+		Almanac.add_legends(self, intake_summary.get("retired", []), listed)
 	for r in intake_summary.get("retired", []):
 		if int(r.get("overall", 0)) >= NEWS_MIN_OVR:
 			add_news("retirement", "%s (%s) has retired at %d." % [
@@ -5506,6 +5512,7 @@ func _after_round(results: Array) -> void:
 		Awards.tally_match(season_tally, res, not res.has("tag"))
 		StatBook.add_match(season_stats, res)
 		_note_form_and_team(res)
+	Milestones.record_round(self, results)
 	_nominate_rising_star(results)
 	_round_news(results)
 	_record_match_story(results)
@@ -5525,6 +5532,8 @@ func _after_round(results: Array) -> void:
 	_culture_week(results)
 	_next_week_event()
 	_find_coach_approaches()
+	if Milestones.shown():
+		Milestones.preview_news(self)
 
 
 ## Each player who took the field in a final has played one more final in this
@@ -5625,6 +5634,8 @@ func _close_season_awards() -> void:
 		"my_finals": _my_last_final(),
 		"my_aa": _my_all_australians(),
 	})
+	if Almanac.on():
+		almanac.append(Almanac.season_entry(self))
 	# Achievements first, then the season news, so the premiership line
 	# stays the newest item in the feed.
 	_close_season_achievements()
@@ -10155,47 +10166,6 @@ func _next_week_event() -> void:
 	if season == null or is_sacked() or not stories_on or my_club == "":
 		return
 	week_events = ClubStories.pick(self)
-
-
-## Quick sim: play up to `rounds` home-and-away rounds (-1: to the end of the
-## home-and-away season). It never plays a final, and stops early if the
-## season ends or something genuinely stops the club (you are sacked).
-## Returns {"played": n, "reason": "done" | "season_end" | "sacked"}.
-func quick_sim(rounds: int) -> Dictionary:
-	var played := 0
-	var reason := "done"
-	_batching = true
-	while season != null and (rounds < 0 or played < rounds):
-		if season.is_regular_done():
-			reason = "season_end"
-			break
-		advance()
-		played += 1
-		if is_sacked():
-			reason = "sacked"
-			break
-	if reason == "done" and season != null and season.is_regular_done():
-		reason = "season_end"
-	_batching = false
-	if played > 0:
-		autosave()
-	return {"played": played, "reason": reason}
-
-
-## The rest of the finals in one go, once the home and away is over ("Play to Grand
-## Final"): saved once at the end, as quick_sim. Returns the weeks played.
-func sim_finals_to_end() -> int:
-	if season == null or not season.is_regular_done():
-		return 0
-	var weeks := 0
-	_batching = true
-	while not season.is_season_over() and weeks < 10:
-		advance()
-		weeks += 1
-	_batching = false
-	if weeks > 0:
-		autosave()
-	return weeks
 
 
 func week_event_pending() -> bool:

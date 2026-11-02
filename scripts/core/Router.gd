@@ -17,6 +17,7 @@ const SCENES := {
 	"season_review": "res://scenes/SeasonReviewScene.tscn",
 	"forge": "res://scenes/ClubForgeScene.tscn",
 	"preseason": "res://scenes/PreSeasonScene.tscn",
+	"almanac": "res://scenes/AlmanacScene.tscn",
 }
 
 var stack: Array = []
