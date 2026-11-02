@@ -136,12 +136,6 @@ func _measure(scene: Node, tag: String) -> void:
 		var inner := sc.get_child(0) as Control
 		print(tag, " SCROLL room ", int(sc.size.y), " holds ", int(inner.get_combined_minimum_size().y),
 				" overflow ", int(inner.get_combined_minimum_size().y - sc.size.y))
-	var ruck: Node = box.find_child("MainRuckPicker", true, false)
-	print(tag, " MAINRUCK ", "drawn" if ruck != null else "not drawn (fewer than two rucks on the ground)")
-	if ruck != null:
-		for b in ruck.find_children("*", "Button", true, false):
-			print(tag, " MAINRUCK card: ", str((b as Button).text).replace("
-", " | "))
 	for r in box.find_children("BreakMatchup_*", "HBoxContainer", true, false):
 		var ml := r.find_child("MatchupLine", true, false) as RichTextLabel
 		var mc := r.find_child("ChangeMatchup", true, false) as Button
