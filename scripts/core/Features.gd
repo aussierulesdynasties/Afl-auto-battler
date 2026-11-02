@@ -29,12 +29,22 @@ extends RefCounted
 ##               and their story beats. Off, generated classes are exactly as before.
 ##   training_report   the report after every fourth round: who improved, who
 ##               fell back, and who can learn a new position (TrainingReport.gd).
+##   expansion_package   how a new club builds its list (director, 2026-10-14):
+##               state-league signings, early draft picks, one out-of-contract
+##               player per rival club, and Canberra as a career choice
+##               (ExpansionBuild). Off, a new club arrives with the 36
+##               generated players it always did and Canberra always joins.
+##   match_story   the match makes the story (director, 2026-11-03, plan step 1b): each
+##               match's hero, turning point and why it was won or lost (MatchStory.gd),
+##               at the top of the full-time Summary, on the news front, in the press
+##               question, and kept on GameState.match_stories. Off, none of it shows
+##               and nothing is written.
 ##   top_attributes   every player card (profile sheet, draft detail) shows his top three
 ##               rated attributes, and Needs work says how he sits against players of
 ##               his position (PlayerProfile.top_attributes / needs_work_line). Off,
 ##               the cards show the graded strengths and the old Needs work line.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "top_attributes"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "match_story", "top_attributes"]
 
 static var _forced := {}
 static var _from_args := {}

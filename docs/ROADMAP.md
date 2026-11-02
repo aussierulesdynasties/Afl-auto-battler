@@ -85,6 +85,7 @@ A roadmap item is context, not authorisation.
 - [Director decisions, 2026-10-18, proposals pass 2](roadmap/29-director-decisions-2026-10-18-pass2.md) (3 KB)
 - [Director decisions, 2026-10-18 morning](roadmap/30-director-decisions-2026-10-18-morning.md) (3 KB)
 - [Director decisions, 2026-10-25](roadmap/31-director-decisions-2026-10-25.md) (2 KB)
+- [Director decisions, 2026-11-03](roadmap/32-director-decisions-2026-11-03.md) (2 KB)
 
 ## History (implementation records; not requirements)
 

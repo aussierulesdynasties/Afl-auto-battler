@@ -96,6 +96,10 @@ func _show_weekly_loop_intro() -> void:
 		"This is home base. Check the next opponent, then use Team to pick the side and Coaching if you want to change how you play.",
 		"Play match when you want the live coaching calls. Sim the week plays the round out for you quickly; the match itself is the same either way.",
 		"After the game, review what happened and change selection or training only when you have a reason. There is no weekly checklist to clear.",
+	] if not WeekChecklist.on(GameState) else [
+		"This is home base. Check the next opponent, then use Team to pick the side and Coaching if you want to change how you play.",
+		"Each week a short list here shows the jobs still open: look over the side, check training, and anything waiting on you. Tap a job to go to it; it ticks when done.",
+		"The list is a guide, never a gate. Play match or Sim the week whenever you are ready, jobs left or not.",
 	]:
 		var l := UiKit.lbl(line, 14, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -240,7 +244,13 @@ func _build() -> void:
 	var page := UiKit.vbox(UiKit.SECTION)
 	_root.add_child(UiKit.scroll(page))
 	var week := _week_section(season)
-	var ladder := _ladder_section(season)
+	# PC: the ladder and the league's front page stand side by side in the right
+	# column, both in view without scrolling (director, 2026-10-14).
+	var right_w := (_content_width() - 28.0) * 0.56
+	# With no news yet the ladder has the column to itself: its table is laid out
+	# for that width, so the record stays beside its club (row-gap rule).
+	var ladder_w := right_w * (1.0 if GameState.news.is_empty() else 0.42)
+	var ladder := _ladder_section(season, -1.0 if _narrow() else ladder_w)
 	if _narrow():
 		if TrainingReport.hub_due(GameState):
 			page.add_child(TrainingReportSheet.hub_card(self, _go_retrain))
@@ -261,10 +271,21 @@ func _build() -> void:
 		left.add_child(week)
 		left.add_child(UiKit.rule())
 		left.add_child(_standing_card())
-		if not GameState.news.is_empty():
-			left.add_child(_news_card())
+		# The front page sits under the ladder, in the space it leaves empty.
+		var right := UiKit.hbox(20)
+		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		right.size_flags_stretch_ratio = 1.25
+		left.size_flags_stretch_ratio = 1.0
+		cols.add_child(right)
 		ladder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		cols.add_child(ladder)
+		ladder.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		right.add_child(ladder)
+		if not GameState.news.is_empty():
+			var news := _news_card()
+			news.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			news.size_flags_stretch_ratio = 1.2
+			news.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			right.add_child(news)
 	if _narrow():
 		_root.add_child(_bar_air())
 		_root.add_child(_footer(season))
@@ -287,9 +308,12 @@ func _build() -> void:
 		# left and the club's screens on the right.
 		if not season.is_season_over() and not _upcoming_match().is_empty():
 			week_row.add_child(_sim_round_button())
-		foot.add_child(week_row)
+		# The same split as the columns above, so the club buttons stand under the ladder.
+		week_row.size_flags_stretch_ratio = 1.0
+		foot.add_child(_with_jobs_note(week_row))
 		var row := _footer(season, false)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.size_flags_stretch_ratio = 1.25
 		foot.add_child(row)
 	# Motion plays once per visit, not on every rebuild after an answer.
 	_settled = true
@@ -310,7 +334,7 @@ func _week_title(season: Season) -> String:
 	return _finals_label()
 
 
-func _ladder_section(season: Season) -> Control:
+func _ladder_section(season: Season, table_width := -1.0) -> Control:
 	var v := UiKit.vbox(6)
 	v.name = "LadderSection"
 	var head := UiKit.hbox(8)
@@ -329,6 +353,8 @@ func _ladder_section(season: Season) -> Control:
 		series.pressed.connect(_show_finals)
 		head.add_child(series)
 	var width := _content_width() if _narrow() else _content_width() * 0.45
+	if table_width > 0.0:
+		width = table_width
 	v.add_child(UiKit.ladder_table(season.ladder_sorted(), GameState.my_club, width, 0, false))
 	return v
 
@@ -479,41 +505,18 @@ func _league_names() -> Dictionary:
 	return _name_index
 
 
-## The latest league headlines; More opens the whole feed.
+## The league's front page in small: the lead story and a few headlines; a
+## tap opens the whole page.
 func _news_card() -> Control:
-	var card := HBoxContainer.new()
-	card.name = "NewsCard"
-	var row := card
-	row.add_theme_constant_override("separation", 8)
-	var v := UiKit.vbox(2)
-	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(v)
-	v.add_child(UiKit.lbl("League news", UiKit.BODY, UiKit.TEXT, true))
-	for item in GameState.news.slice(0, 2):
-		v.add_child(UiKit.ellipsis(str(item["text"]), UiKit.SECONDARY, UiKit.TEXT))
-	var more := UiKit.btn("More", 14)
-	more.name = "NewsMore"
-	more.custom_minimum_size = Vector2(72, 44)
-	more.pressed.connect(_show_news)
-	row.add_child(more)
-	return card
+	return NewsFront.mini(GameState.news, GameState.my_club, _show_news, _league_names())
 
 
 func _show_news() -> void:
-	var box := UiKit.modal_box(self, 620.0, 560.0)
+	var wide := ScreenLayout.roomy(UiKit.view_width(self), UiKit.view_height(self))
+	var box := UiKit.modal_box(self, 1080.0 if wide else 620.0, 0.0 if wide else 560.0)
 	_news_overlay = box["overlay"]
 	_news_overlay.name = "NewsFeed"
-	var v: VBoxContainer = box["body"]
-	v.add_child(UiKit.heading("League news", UiKit.H1))
-	var last_when := ""
-	for item in GameState.news:
-		var when := "%d  %s" % [int(item["year"]), str(item["when"])]
-		if when != last_when:
-			v.add_child(UiKit.lbl(when, UiKit.SECONDARY, UiKit.EMPH, true))
-			last_when = when
-		var l := NameInk.label(str(item["text"]), _league_names(), UiKit.SECONDARY, UiKit.TEXT)
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(l)
+	NewsFront.fill(box["body"], GameState.news, GameState.my_club, wide, _league_names())
 	var ok := UiKit.btn("Close", UiKit.NAME, true)
 	ok.custom_minimum_size = Vector2(0, 44)
 	ok.pressed.connect(func(): _news_overlay.queue_free())
@@ -534,6 +537,9 @@ func _week_section(season: Season) -> Control:
 		nv.add_child(approaches)
 	if not GameState.pending_mro_challenges().is_empty():
 		nv.add_child(_tribunal_card())
+	var jobs_card := _week_jobs_card()
+	if jobs_card != null:
+		nv.add_child(jobs_card)
 	if season.is_season_over():
 		nv.add_child(UiKit.lbl("Season complete", UiKit.H1, UiKit.TEXT, true))
 		nv.add_child(UiKit.ellipsis("Premiers: %s" % GameDB.club_name(GameState.premier()),
@@ -689,8 +695,89 @@ func _week_section(season: Season) -> Control:
 	# phone they close the week's section.
 	if _narrow():
 		nv.add_child(UiKit.spacer(4))
-		nv.add_child(_week_actions(season))
+		nv.add_child(_with_jobs_note(_week_actions(season)))
 	return nv
+
+
+## The week's jobs (WeekChecklist; setting "weekly_checklist", off by
+## default): the big call's slot first, then the routine jobs, each one tap
+## from its screen and ticked when done. null when off or with no jobs.
+func _week_jobs_card() -> Control:
+	var items := WeekChecklist.items(GameState)
+	var call := WeekChecklist.big_call(GameState)
+	if items.is_empty() and call.is_empty():
+		return null
+	var panel := UiKit.panel(UiKit.PANEL, 12)
+	panel.name = "WeekJobs"
+	var v := UiKit.vbox(2)
+	panel.add_child(v)
+	var left := WeekChecklist.left(GameState)
+	var head := UiKit.lbl("This week" if left == 0 else "This week  ·  %d to do" % left,
+			UiKit.SECONDARY, UiKit.MUTED, true)
+	head.name = "WeekJobsHead"
+	v.add_child(head)
+	# The big call's slot: the coach-arcs step fills it. Nothing shows without one.
+	if not call.is_empty():
+		var bc := _week_job_row(str(call.get("text", "")), false, str(call.get("route", "")), true)
+		bc.name = "BigCall"
+		v.add_child(bc)
+	for it in items:
+		var row := _week_job_row(str(it["text"]), bool(it["done"]), str(it["route"]))
+		row.name = "WeekJob_%s" % str(it["key"])
+		v.add_child(row)
+	return panel
+
+
+## One job: open ones in TEXT and a tap to their screen; done ones ticked
+## in GOOD, the job itself MUTED. A job on this page itself is a plain line.
+func _week_job_row(text: String, done: bool, route: String, big := false) -> Button:
+	var b := UiKit.text_action("", UiKit.NAME if big else UiKit.BODY)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(0, 44)
+	var h := UiKit.hbox(8)
+	h.set_anchors_preset(Control.PRESET_FULL_RECT)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(h)
+	var mark := UiKit.lbl("Done" if done else "To do", UiKit.FINE, UiKit.GOOD if done else UiKit.MUTED, true)
+	mark.name = "Mark"
+	mark.custom_minimum_size = Vector2(48, 0)
+	mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(mark)
+	var t := UiKit.ellipsis(text + ("  ›" if route != "" and not done else ""),
+			UiKit.NAME if big else UiKit.BODY, UiKit.MUTED if done else UiKit.TEXT, big)
+	t.name = "Text"
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	t.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(t)
+	b.tooltip_text = text
+	if route != "":
+		b.pressed.connect(func(): Router.go(route))
+	else:
+		b.focus_mode = Control.FOCUS_NONE
+		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return b
+
+
+## The match row with a gentle "N jobs left" over it when the week's
+## checklist has jobs open and Play match is there. Never a block.
+func _with_jobs_note(row: Control) -> Control:
+	var left := WeekChecklist.left(GameState)
+	if left == 0 or row.find_child("PlayMatch", true, false) == null:
+		return row
+	var box := UiKit.vbox(2)
+	box.name = "WeekActionsBox"
+	box.size_flags_horizontal = row.size_flags_horizontal
+	box.size_flags_vertical = row.size_flags_vertical
+	box.size_flags_stretch_ratio = row.size_flags_stretch_ratio
+	var note := UiKit.lbl("1 job left this week" if left == 1 else "%d jobs left this week" % left,
+			UiKit.FINE, UiKit.MUTED)
+	note.name = "JobsLeftNote"
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	box.add_child(note)
+	box.add_child(row)
+	return box
 
 
 ## A live MRO sanction can be challenged once before the next round. Keep it
