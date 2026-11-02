@@ -21,3 +21,12 @@ his differs, the later one wins. Nothing here edits the bible.
 | 10 | B8's running cost while the preseason switch is off? | carry it silently | the debt is saved and paid into the next pre-season's running base when one opens |
 | 11 | A3 "Keep the noise outside" board +1? | swap it for Standards +1 | no card of the eight rewards the board |
 | 12 | Where do the Grand Final history lines come from? | only the save's own history plus data/club_premierships.csv | no line claims a final or flag the record cannot show |
+
+## Cuts shipped
+
+- Cut audit §10 row 1 (CUT_AUDIT_2026-11-03.md): the intra-club match (week 5) and the practice match (week 7) are one
+  pre-season match, the practice match at the end of week 7, live with no switch. It keeps the stood out / struggled
+  reads, the side picked on Selection, the prospect looks (tune `seen_uncertainty`, `guest_spare_number`), XP and
+  injuries. Trial spots the coach leaves empty are filled by his recruiters' top picks (PracticeFill button, and
+  automatically on sim / press on). Old saves drop the `intra` key and press on to week 7. The "sides of one club"
+  kits (GameDB, PitchView, UiKit) went with it.
