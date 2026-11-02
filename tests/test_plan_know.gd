@@ -16,21 +16,21 @@ const CLUB := "FRE"
 
 func run() -> void:
 	GameState.replay_seed = SUITE_SEED
-	_test_switch_off()
+	_t("_test_switch_off")
 	Features.set_on("preseason", true)
-	_test_rules()
-	_test_words()
-	_test_match_effect()
-	_test_drilling()
-	_test_ai()
-	_test_off_season_and_fade()
-	_test_old_saves()
-	await _test_screens()
+	_t("_test_rules")
+	_t("_test_words")
+	_t("_test_match_effect")
+	_t("_test_drilling")
+	_t("_test_ai")
+	_t("_test_off_season_and_fade")
+	_t("_test_old_saves")
+	await _t("_test_screens")
 	PreSeason.reload()
 	Features.clear("preseason")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
-	print("Plan familiarity tests: %d checks, %d failures" % [checks, failures.size()])
+	print(Ran.line("Plan familiarity", self))
 
 
 func _check(ok: bool, message: String) -> void:
@@ -38,6 +38,11 @@ func _check(ok: bool, message: String) -> void:
 	if not ok:
 		failures.append(message)
 		push_error(message)
+
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
 
 
 func _career(open := true, club := CLUB) -> void:
@@ -113,7 +118,10 @@ func _sim(known0: Dictionary, known1: Dictionary, plan0: String, plan1: String, 
 func _test_switch_off() -> void:
 	PreSeason.reload()
 	_career(false)
-	_check(not Features.on("preseason"), "The pre-season switch ships off")
+	# The switch ships ON since 1.0.1; this test forces it off to prove the game
+	# without the pre-season is the game as it was.
+	Features.set_on("preseason", false)
+	_check(not Features.on("preseason"), "The pre-season switch can be turned off for a run")
 	GameState.set_club_plan("attacking")
 	GameState._refresh_coach_tactics()
 	_check(GameState.plan_known.is_empty() and CoachEffects.known.is_empty()
@@ -138,6 +146,7 @@ func _test_switch_off() -> void:
 		GameState.advance()
 	_check(GameState.plan_known.is_empty() and GameState.plan_idle.is_empty(),
 			"Three rounds on, still nothing kept: the game is as it was")
+	Features.set_on("preseason", true)
 
 
 func _test_rules() -> void:
@@ -193,15 +202,15 @@ func _test_words() -> void:
 	var g := PreSeason.gain_line("solid", "plan", 1, ["defensive"])
 	var c := PreSeason.cost_line("solid", "plan", 1)
 	_check(g.begins_with("Fluency in Defensive press") and "step" in g, "A Game plan block says what it drills and what that gains")
-	_check(c == "Running and skills work both get half the time.",
+	_check(c == "Running and Skills work both get half the time.",
 			"...and costs the time its running and skills would have had")
 	var pair := PreSeason.gain_line("solid", "plan", 0, ["contest", "attacking"])
 	_check("Win contest" in pair and "Attack corridor" in pair and "sharing" in pair, "Two plans: both named, the weeks shared")
 	_check(PreSeason.cost_line("heavy", "plan", 2).begins_with("A risk of soft-tissue injuries")
 			and "half the time" in PreSeason.cost_line("heavy", "plan", 2),
 			"A Heavy Game plan block still costs its injury risk, and the time")
-	_check(PreSeason.cost_line("solid", "running", 0) == "" and PreSeason.cost_line("light", "skills", 0) == "Half the running and half the skills work of a Solid block."
-			and PreSeason.cost_line("light", "plan", 0) == "Half the running and skills work of a Solid block on the plan.",
+	_check(PreSeason.cost_line("solid", "running", 0) == "" and PreSeason.cost_line("light", "skills", 0) == "Half the Running and half the Skills work of a Solid block."
+			and PreSeason.cost_line("light", "plan", 0) == "Half the Running and Skills work of a Solid block on the plan.",
 			"The other blocks cost what they did")
 	_check(PreSeason.gain_line("light", "plan", 2, ["contest"]).begins_with("Fresh legs"),
 			"A Light Game plan block keeps the fresh legs it gains")
@@ -450,7 +459,7 @@ func _test_screens() -> void:
 	_check(contest.text == "Win contest\nmedium", "Three weeks shared by two plans: neither is lifted")
 	await _tap(scene.find_child("Drill0_through_stars", true, false) as Button, "let a plan go")
 	_check(GameState.preseason_drills(0) == ["contest"], "A tap on a chosen plan lets it go")
-	_check(contest.text == "Win contest\nmedium, then high", "...and with one plan drilled the button says where it ends up")
+	_check(contest.text == "Win contest\nmedium, high by Round 1", "...and with one plan drilled the button says where it ends up")
 	_check((scene.find_child("Drill0_attacking", true, false) as Button).text == "Attack corridor\nhigh",
 			"The plan you play has high fluency")
 	_check(_fits(scene, 390.0), "...and nothing runs off a phone's width")

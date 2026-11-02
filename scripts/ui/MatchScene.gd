@@ -117,7 +117,8 @@ func _ready() -> void:
 		_res["events"] = []
 		_my_side = GameDB.coach_side(str(_res["home"]), str(_res["away"]), GameState.my_club)
 		_pos_before = GameState.my_position()
-		_farewell = _farewell_for(GameState.pending_match)
+		# A pre-season practice match is nobody's debut, farewell or first goal.
+		_farewell = {} if _is_practice(GameState.pending_match) else _farewell_for(GameState.pending_match)
 		_key_moments = GameState.match_way_live == "key"
 	else:
 		_res = GameState.last_match
@@ -139,7 +140,7 @@ func _ready() -> void:
 	_pitch.setup(_res)
 	_refresh_rings()
 	# Whose first AFL goal the feed can say, if it comes today (MatchNotes).
-	if _interactive:
+	if _interactive and not _is_practice(_res):
 		_duel_mem["first_goal"] = GameState.first_goal_candidates()
 	_pitch.event_played.connect(_on_event)
 	_pitch.finished.connect(_on_finished)
@@ -957,10 +958,8 @@ func _show_coach_box() -> void:
 		elif str(calls["tagger_id"]) != "" and not my_mids.has(str(calls["tagger_id"])):
 			NameInk.set_line(tag_note, "%s, your tagger, is on the bench. %s tags %s until he is back." % [
 					GameDB.player_display_name_by_id(str(calls["tagger_id"]), "Your tagger"), GameDB.player_display_name(who), target], _names())
-		elif Roles.is_tagger(who):
-			NameInk.set_line(tag_note, "%s, your tagger, tags %s." % [GameDB.player_display_name(who), target], _names())
 		else:
-			NameInk.set_line(tag_note, "%s tags %s. He gives up his own game." % [GameDB.player_display_name(who), target], _names())
+			NameInk.set_line(tag_note, GateOdds.tag_note(GameDB.player_display_name(who), target), _names())
 	# The tag is offered on their listed midfielders only (director, 2026-10-14:
 	# "Only listed midfielders"): the names, and "Other midfielder..." for the
 	# listed midfielders not already shown, which is not drawn when none is
@@ -1281,6 +1280,7 @@ Your assistant's pick"
 		# A PC sheet's actions sit together at the right, not as full-width bars.
 		var acts := UiKit.hbox(12)
 		acts.alignment = BoxContainer.ALIGNMENT_END
+		acts.add_child(_skip_note(sim.current_quarter, true))
 		skip.custom_minimum_size = Vector2(220, 48)
 		start.custom_minimum_size = Vector2(300, 48)
 		if stats_pc != null:
@@ -1311,6 +1311,7 @@ Your assistant's pick"
 	else:
 		box["footer"].add_child(start)
 		box["footer"].add_child(skip)
+		v.add_child(_skip_note(q, false))
 	# A call the quarter broke brightens twice (Feel; never a nag).
 	for picker in MatchNotes.broken_calls(_res, sim.injuries, _my_side, q, _last_tactics):
 		var found := overlay.find_child(str(picker) + "*", true, false)
@@ -1324,6 +1325,62 @@ Your assistant's pick"
 				UiKit.attention(row as CanvasItem)
 		elif found != null:
 			UiKit.attention(found.get_parent() as CanvasItem)
+	_land_call_intent(overlay, q)
+
+
+## A response tapped beside an opposition fact on the hub (P-13,
+## GameState.call_intent) lands here, before the first ball-up: that call's
+## block is brought into view and brightens once, with the one fact that sent
+## the coach there restated above its picker. Nothing is chosen for him and
+## nothing else on the pane changes.
+const INTENT_NODES := {"tag": "TagPicker", "matchup": "BreakMatchups", "minder": "MinderBlock",
+		"ruck": "MainRuckPicker", "loose": "InterceptorPicker", "plan": "PlanPicker"}
+
+
+func _land_call_intent(overlay: Control, q: int) -> void:
+	var intent: Dictionary = GameState.call_intent
+	GameState.call_intent = {}
+	if q != 1 or intent.is_empty():
+		return
+	var target: Node = overlay.find_child(str(INTENT_NODES.get(str(intent.get("call", "")), "-")), true, false)
+	if target == null:
+		return
+	# The call's own block: the one holding its heading.
+	var block: Node = target
+	while block != null and block != overlay and block.find_child("CallHeading", false, false) == null 			and not (str(block.name) == "BreakMatchups"):
+		block = block.get_parent()
+	if block == null or block == overlay:
+		return
+	var line := _say(str(intent.get("fact", "")), UiKit.BODY, UiKit.TEXT, true)
+	line.name = "CallIntentFact"
+	if line is Label:
+		(line as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	block.add_child(line)
+	var heading: Node = block.find_child("CallHeading", false, false)
+	block.move_child(line, (heading.get_index() + 1) if heading != null else mini(2, block.get_child_count() - 1))
+	_show_intent_block.call_deferred(block, str(intent.get("player_id", "")))
+
+
+func _show_intent_block(block: Node, player_id: String) -> void:
+	# The columns of a PC pane are dealt a frame after the break is built.
+	for i in range(4):
+		await get_tree().process_frame
+	if not is_instance_valid(block):
+		return
+	var shown: Node = block
+	var row: Node = block.find_child("BreakMatchup_" + player_id, true, false) if player_id != "" else null
+	if row != null:
+		shown = row
+	var up: Node = block
+	while up != null and not (up is ScrollContainer):
+		up = up.get_parent()
+	if up != null:
+		# The block's top (its heading and the fact) at the top of the pane; a
+		# long block would otherwise be shown by its end.
+		var sc := up as ScrollContainer
+		var top := (block as Control).global_position.y - (sc.get_child(0) as Control).global_position.y
+		sc.scroll_vertical = maxi(0, int(top) - 8)
+	UiKit.attention(shown as CanvasItem)
 
 
 # ---------------------------------------------------------------------------
@@ -1561,6 +1618,7 @@ func _mount_one_line(c: Dictionary) -> void:
 		one.add_child(skip)
 		one.add_child(start)
 		box["footer"].add_child(one)
+		v.add_child(_skip_note(sim.current_quarter, false))
 	else:
 		# A PC: the quarter and Best so far, the rows, and the chosen call beside
 		# them. The pane keeps the room of its tallest call, so choosing another
@@ -1613,6 +1671,7 @@ func _mount_one_line(c: Dictionary) -> void:
 			(row_of[key] as Button).pressed.connect(func(): select.call(k))
 		var acts := UiKit.hbox(12)
 		acts.alignment = BoxContainer.ALIGNMENT_END
+		acts.add_child(_skip_note(sim.current_quarter, true))
 		skip.custom_minimum_size = Vector2(220, 48)
 		start.custom_minimum_size = Vector2(300, 48)
 		var stats_pc: Button = c["stats_pc"]
@@ -1837,6 +1896,18 @@ func _tag_fact_line(sim: MatchSim) -> String:
 ## Its parts are the break's own blocks, lent to the sheet and handed back to
 ## `home` when it closes, so a pick made here is the pick the quarter starts
 ## with. Back closes the top sheet (handle_back).
+## What Skip to full time keeps and drops (G11; GateOdds.skip_line): beside
+## the actions on a PC, at the foot of the calls on a phone.
+func _skip_note(q: int, wide: bool) -> Label:
+	var l := UiKit.lbl(GateOdds.skip_line(q), UiKit.SMALL, UiKit.TEXT)
+	l.name = "SkipNote"
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if wide:
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	return l
+
+
 func _open_break_sheet(node_name: String, title: String, parts: Array, home: Node) -> void:
 	var box := UiKit.modal_box(self, 640.0, 0.0, _wash())
 	var ov: Control = box["overlay"]
@@ -2367,7 +2438,7 @@ func _calls_record(kind: String) -> Control:
 				row.add_child(dot)
 			# The club in its own ink, both clubs alike (director A1, 2026-10-14), and
 			# named in full as the break's title names it (Fremantle, not Dockers).
-			var nm := UiKit.lbl(GameDB.club_name(code) + ": ", UiKit.SECONDARY, inks[side], true)
+			var nm := UiKit.lbl(GameDB.club_name(code) + ": ", UiKit.SECONDARY, UiKit.club_name_colour(inks[side]), true)
 			nm.name = "ClubName%d" % i
 			nm.autowrap_mode = TextServer.AUTOWRAP_OFF
 			row.add_child(nm)
@@ -2571,9 +2642,7 @@ func _show_moment() -> void:
 		b.custom_minimum_size = Vector2(0, 46)
 		b.pressed.connect(_on_moment_choice.bind(i))
 		v.add_child(b)
-		var d := UiKit.lbl(str(o.get("detail", "")), 12, UiKit.MUTED)
-		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(d)
+		_moment_lines(v, o)
 
 
 ## The late centre-bounce call as a scene (ARD-M8-007 prototype): the match
@@ -2629,9 +2698,7 @@ func _show_bounce_moment(m: Dictionary) -> void:
 		b.pressed.connect(_on_moment_choice.bind(i))
 		call.add_child(b)
 		buttons.append(b)
-		var d := UiKit.lbl(str(o.get("detail", "")), 12, UiKit.MUTED)
-		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		call.add_child(d)
+		_moment_lines(call, o)
 	panel.modulate.a = 0.0
 	margin.add_theme_constant_override("margin_bottom", -600)
 	vignette.ready_for_call.connect(func() -> void:
@@ -2644,6 +2711,17 @@ func _show_bounce_moment(m: Dictionary) -> void:
 		var tw := margin.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tw.tween_method(func(v: float) -> void: margin.add_theme_constant_override("margin_bottom", int(v)),
 				-600.0, 0.0, 0.3))
+
+
+## Under a call's choice: what it does for you and what it costs, sized
+## (GateOdds; "gain" and "cost" on the option), or its one line of words.
+func _moment_lines(to: Container, o: Dictionary) -> void:
+	var lines: Array = [str(o["gain"]), str(o["cost"])] if o.has("gain") else [str(o.get("detail", ""))]
+	for i in range(lines.size()):
+		var d := UiKit.lbl(str(lines[i]), UiKit.SMALL, UiKit.TEXT if o.has("gain") else UiKit.MUTED)
+		d.name = ("MomentGain" if i == 0 else "MomentCost") if o.has("gain") else "MomentDetail"
+		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		to.add_child(d)
 
 
 func _on_moment_choice(i: int) -> void:
@@ -2806,7 +2884,10 @@ func _card_text(r: Dictionary, detail: Callable) -> String:
 ## "card_text" meta for the tests.
 func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: bool) -> void:
 	var gives_value := str(c["gives"]).left(1).to_upper() + str(c["gives"]).substr(1)
-	var plain := "%s\n%s\nPressure %s\nLegs %s\n%s %s" % [who_name, c["where"], c["pressure"], c["legs"],
+	# The hold sits beside his Pressure (it is his Pressure and legs that set
+	# it), so the card keeps its three rows and the PC break still fits.
+	var press_value := "%s · their man keeps %s" % [c["pressure"], c["holds"]]
+	var plain := "%s\n%s\nPressure %s\nLegs %s\n%s %s" % [who_name, c["where"], press_value, c["legs"],
 			c["gives_label"], gives_value]
 	if is_pick:
 		plain += "\nYour assistant's pick"
@@ -2844,13 +2925,13 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 	var nm := UiKit.line(who_name, UiKit.NAME, UiKit.TEXT, true)
 	nm.name = "CardName"
 	if _names().has(who_name):
-		nm.add_theme_color_override("font_color", UiKit.club_ink(str(_names()[who_name])))
+		nm.add_theme_color_override("font_color", UiKit.club_name_colour(UiKit.club_ink(str(_names()[who_name]))))
 	head.add_child(nm)
 	var where := UiKit.line(str(c["where"]), UiKit.SECONDARY, UiKit.MUTED)
 	where.name = "CardWhere"
 	head.add_child(where)
 	col.add_child(head)
-	var rows := [["Pressure", str(c["pressure"]), false], ["Legs", str(c["legs"]), bool(c["legs_bad"])],
+	var rows := [["Pressure", press_value, false], ["Legs", str(c["legs"]), bool(c["legs_bad"])],
 			[str(c["gives_label"]), gives_value, false]]
 	# A phone card is wide: label and value in two columns. A PC's card is a
 	# narrow half of a column: the label above the long value instead.
@@ -3089,7 +3170,7 @@ func _best_so_far() -> Control:
 				row.set_meta("best_third", true)
 			var col := UiKit.vbox(0)
 			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			var pn := UiKit.ellipsis(str(p["name"]), UiKit.BODY if _pc_break else UiKit.NAME, inks[side], true)
+			var pn := UiKit.ellipsis(str(p["name"]), UiKit.BODY if _pc_break else UiKit.NAME, UiKit.club_name_colour(inks[side]), true)
 			pn.name = "StandoutName"
 			col.add_child(pn)
 			# A PC column is narrow: two numbers fit on the line, a third ran
@@ -3681,6 +3762,12 @@ func _on_finished() -> void:
 
 ## Who the scene after the siren honours, and both sides' players: {} unless your
 ## side has a milestone man (FarewellVignette.caption) who is in the side today.
+## The pre-season practice match (GameState.prepare_practice_match): played
+## for its own sake, so it carries no ladder, finals, debut or milestone talk.
+func _is_practice(m: Dictionary) -> bool:
+	return str(m.get("label", "")) == "Practice match"
+
+
 func _farewell_for(match: Dictionary) -> Dictionary:
 	# Vignettes off (Settings) means no scene at all, this one included.
 	if GameState.season == null or GameState.my_club == "" or not GameState.vignettes_on():
@@ -3833,8 +3920,8 @@ func _ft_summary(v: VBoxContainer) -> void:
 		row.add_child(UiKit.spacer(10))
 		v.add_child(row)
 
-	# What it means: finals, the ladder, who is next.
-	if mine:
+	# What it means: finals, the ladder, who is next. (Nothing, for a practice match.)
+	if mine and not _is_practice(_res):
 		var outlook := GameState.finals_outcome_line(_res)
 		if outlook != "":
 			var tag_now := str(_res.get("tag", ""))
@@ -3988,7 +4075,7 @@ func _standout_row(p: Dictionary, side: int, best: bool) -> Control:
 	var name := "%s  ·  %s" % [str(p["name"]), GameDB.club_short(code)]
 	if best:
 		name += "  ·  best on ground"
-	v.add_child(UiKit.ellipsis(name, UiKit.BODY, UiKit.club_ink(code), true))
+	v.add_child(UiKit.ellipsis(name, UiKit.BODY, UiKit.club_name_colour(UiKit.club_ink(code)), true))
 	v.add_child(UiKit.ellipsis(str(p["line"]), UiKit.SMALL, UiKit.MUTED))
 	var r := UiKit.line(MatchNotes.rating_text(float(p["rating"])), 20, UiKit.TEXT, true)
 	r.name = "StandoutRating"
@@ -4314,7 +4401,10 @@ func _show_break_matchup(sim: MatchSim, fid: String, line: RichTextLabel, q: int
 		v.add_child(UiKit.lbl(Matchups.describe(fwd), UiKit.SMALL, UiKit.MUTED))
 	var cur := str((sim.duels[_my_side] as Dictionary).get(fid, ""))
 	for p in Matchups.defenders((sim.squads[_my_side] as Squad).ground):
-		var b := UiKit.btn("%s\n%s" % [GameDB.player_display_name(p), Matchups.describe(p)], 15)
+		# His card: the ratings the duel runs on, then what putting him there
+		# does and costs, sized from the duel rule (GateOdds.duel_lines; G6).
+		var dl := GateOdds.duel_lines(sim, _my_side, fid, p)
+		var b := UiKit.btn("%s\n%s" % [GameDB.player_display_name(p), str(dl[0])], 15)
 		b.name = "Defender_" + str(p["id"])
 		b.custom_minimum_size = Vector2(0, 56)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -4331,6 +4421,11 @@ func _show_break_matchup(sim: MatchSim, fid: String, line: RichTextLabel, q: int
 			_matchup_overlay.queue_free()
 			_matchup_overlay = null)
 		v.add_child(b)
+		for i in [1, 2]:
+			var dline := UiKit.lbl(str(dl[i]), UiKit.SMALL, UiKit.TEXT)
+			dline.name = "DuelGain" if i == 1 else "DuelCost"
+			dline.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			v.add_child(dline)
 	var close := UiKit.btn("Close", UiKit.NAME)
 	close.custom_minimum_size = Vector2(0, 48)
 	close.pressed.connect(func():

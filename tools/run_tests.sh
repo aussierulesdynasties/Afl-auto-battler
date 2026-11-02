@@ -6,18 +6,23 @@
 #      script error fails even if every check it reached passed
 #   3. the dataset check and the intake/development harness
 #
-# A green suite must mean every check ran:
+# A green suite must mean every test ran:
 #   - suites run on a fixed frame clock (--fixed-fps), so a busy machine
 #     cannot change how far a match plays between two checks;
-#   - every suite has a floor in tests/expected_checks.txt; a suite that
-#     reports fewer checks fails ("checks went missing"), and a suite with no
-#     floor fails until one is added;
-#   - a check a suite skips on purpose prints one "SKIP: <reason>" line per
-#     check; skipped checks count towards the floor, and the summary shows
-#     how many were skipped.
+#   - every suite calls its test functions through tests/functions_ran.gd and
+#     ends with "<Suite> tests: K of M functions, N checks, F failures"; a
+#     `_test_*` function that never ran or made no check is a failure by name,
+#     and a line short of functions ("functions short") or with no function
+#     count fails here;
+#   - a check a suite skips on purpose prints one "SKIP: <reason>" line, and
+#     the summary shows how many were skipped.
 #
 #   GODOT=/path/to/godot tools/run_tests.sh          # default: godot on PATH
 #   SUITE_TIMEOUT=900 tools/run_tests.sh ai finals   # just some suites
+#   tools/run_tests.sh --quick draft_ui              # local loop: no re-import when
+#       .godot exists, and no dataset, seeds, export or harness checks (CI runs those)
+#   tools/run_tests.sh --verbose ai                  # or VERBOSE=1: every step and every
+#       suite's line. By default only failures and one summary line are printed.
 #
 # Exits nonzero if anything failed.
 set -u
@@ -25,16 +30,29 @@ cd "$(dirname "$0")/.." || exit 1
 
 GODOT="${GODOT:-godot}"
 SUITE_TIMEOUT="${SUITE_TIMEOUT:-900}"
-# The check floors (tools/test_run_tests.sh points this at its own file).
-EXPECTED_CHECKS="${EXPECTED_CHECKS:-tests/expected_checks.txt}"
-FLOOR_DELTAS="${FLOOR_DELTAS:-tests/floor_deltas}"
+# Where the runners live (tools/test_run_tests.sh points this at its fixtures).
+RUNNER_DIR="${RUNNER_DIR:-tests}"
 # SUITES_ONLY=1 skips the dataset, export and harness steps after the suites.
+# SKIP_VERSION_CHECK=1 leaves out the build-number check (CI runs it once, in plan).
 # EXTRAS_ONLY=1 runs only those steps (and the harness self-test), no suites.
 # CI splits the work this way: shards run SUITES_ONLY, one job runs EXTRAS_ONLY.
 SUITES_ONLY="${SUITES_ONLY:-0}"
 # PR CI stops promptly; local/main/diagnostic runs default to all failures.
 STOP_ON_FAILURE="${STOP_ON_FAILURE:-0}"
-ALL_SUITES=(draft draft_ui assets intake intake_ui expansion expansion_package finals save chronology career coaches coach_market coach_pathway coach_effects career_ui potential ratings ai training selection matchup matchday calls roles injuries awards achievements contracts league club match_game pressure workload fitness preseason plan_know planpane match_visual match_motion league_balance calibration balance stats story back_nav scroll family keyboard nameink rowgap trainrep international namelink)
+QUICK=0
+VERBOSE="${VERBOSE:-0}"
+while [ "$#" -gt 0 ]; do
+	case "$1" in
+		--quick) QUICK=1; SUITES_ONLY=1; shift ;;
+		--verbose) VERBOSE=1; shift ;;
+		*) break ;;
+	esac
+done
+say() { if [ "$VERBOSE" = 1 ]; then echo "$@"; fi; }
+passed=0
+failed_names=()
+# Every tests/run_<suite>_tests.gd is a suite: no list to keep (tools/list_suites.sh).
+mapfile -t ALL_SUITES < <(tools/list_suites.sh "$RUNNER_DIR")
 [ "$#" -gt 0 ] && SUITES=("$@") || SUITES=("${ALL_SUITES[@]}")
 # Read once and clear it: the harness self-test runs this script again, and a
 # child that inherited EXTRAS_ONLY would run no suites and pass a short one.
@@ -60,8 +78,12 @@ note_error() {  # message
 	if [ "$in_ci" = 1 ]; then echo "::error::$1"; else echo "ERROR: $1"; fi
 }
 
-echo "== Godot: $("$GODOT" --headless --version 2>/dev/null | tail -1)"
-echo "== Importing the project"
+say "== Godot: $("$GODOT" --headless --version 2>/dev/null | tail -1)"
+if [ "$QUICK" = 1 ] && [ -d .godot ]; then
+say "== Quick: skipping the import (.godot exists; a script error still fails its suite)"
+summary+=("| import | skipped | --quick |")
+else
+say "== Importing the project"
 timeout 600 "$GODOT" --headless --path . --editor --import > "$LOG_DIR/import.log" 2>&1
 import_code=$?
 if [ "$import_code" != 0 ] || grep -qE "SCRIPT ERROR|Parse Error|Compile Error" "$LOG_DIR/import.log"; then
@@ -73,9 +95,10 @@ if [ "$import_code" != 0 ] || grep -qE "SCRIPT ERROR|Parse Error|Compile Error" 
 else
 	summary+=("| import | pass | |")
 fi
+fi
 
 for suite in ${SUITES[@]+"${SUITES[@]}"}; do
-	runner="tests/run_${suite}_tests.gd"
+	runner="$RUNNER_DIR/run_${suite}_tests.gd"
 	log="$LOG_DIR/$suite.log"
 	start=$(date +%s)
 	XDG_DATA_HOME="$RUN_DATA" timeout "$SUITE_TIMEOUT" "$GODOT" --headless --fixed-fps 60 --path . --script "$runner" > "$log" 2>&1
@@ -94,26 +117,29 @@ for suite in ${SUITES[@]+"${SUITES[@]}"}; do
 	else
 		status="pass"; detail="$result"
 	fi
-	# Every check must have run: compare with the suite's floor.
-	ran=$(echo "$result" | grep -oE "[0-9]+ checks" | head -1 | grep -oE "[0-9]+")
-	floor=$(grep -E "^$suite[[:space:]]" "$EXPECTED_CHECKS" 2>/dev/null | awk '{print $2}')
-	# A PR raises a floor with tests/floor_deltas/<branch>.txt ("suite +N"), not by
-	# editing the shared line, so two PRs never conflict. Floor = base + every delta;
-	# tools/fold_floor_deltas.sh folds them into the base.
-	if [ -n "$floor" ] && [ -d "$FLOOR_DELTAS" ]; then
-		add=$(cat "$FLOOR_DELTAS"/*.txt 2>/dev/null | tr -d '\r' | awk -v s="$suite" '$1==s {gsub(/\+/,"",$2); t+=$2} END {print t+0}')
-		floor=$((floor + add))
-	fi
+	# Every test function must have run: "K of M functions" with K = M.
+	ran=$(echo "$result" | grep -oE "[0-9]+ of [0-9]+ functions" | head -1)
+	ran_k=$(echo "$ran" | awk '{print $1}')
+	ran_m=$(echo "$ran" | awk '{print $3}')
 	skipped=$(grep -c "^SKIP:" "$log")
-	if [ "$status" = pass ] && [ -z "$floor" ]; then
-		status="FAIL"; detail="$result, but $EXPECTED_CHECKS has no floor for '$suite'"
-	elif [ "$status" = pass ] && [ -n "$ran" ] && [ $((ran + skipped)) -lt "$floor" ]; then
-		status="FAIL"; detail="$result, but only $ran of at least $floor checks ran: checks went missing"
+	short=""
+	if [ -n "$result" ] && [ -z "$ran" ]; then
+		short="the line has no function count (call tests through tests/functions_ran.gd)"
+	elif [ -n "$ran" ] && [ "$ran_k" -lt "$ran_m" ]; then
+		short="functions short: $((ran_m - ran_k)) never ran (named in the log)"
+	elif [ -n "$ran" ] && [ "$ran_m" -eq 0 ]; then
+		short="the suite has no _test_ functions"
+	fi
+	if [ -n "$short" ] && [ "$code" != 124 ]; then
+		status="FAIL"; detail="$detail; $short"
 	fi
 	if [ "$skipped" -gt 0 ]; then
 		detail="$detail ($skipped skipped on purpose)"
 	fi
-	printf '%-5s %-11s %4ss  %s\n' "$status" "$suite" "$secs" "$detail"
+	if [ "$status" = FAIL ] || [ "$VERBOSE" = 1 ]; then
+		printf '%-5s %-11s %4ss  %s\n' "$status" "$suite" "$secs" "$detail"
+	fi
+	if [ "$status" = FAIL ]; then failed_names+=("$suite"); else passed=$((passed + 1)); fi
 	if [ "$status" = FAIL ]; then
 		failed=1
 		note_error "suite '$suite' failed: $detail"
@@ -139,7 +165,7 @@ for suite in ${SUITES[@]+"${SUITES[@]}"}; do
 done
 
 if [ "$SUITES_ONLY" != 1 ]; then
-echo "== Dataset check"
+say "== Dataset check"
 if python3 tools/validate_data.py > "$LOG_DIR/validate.log" 2>&1; then
 	summary+=("| validate_data | pass | |")
 else
@@ -149,7 +175,7 @@ else
 	summary+=("| validate_data | FAIL | see log |")
 fi
 
-echo "== Suite seeds"
+say "== Suite seeds"
 if bash tools/check_suite_seeds.sh > "$LOG_DIR/suite_seeds.log" 2>&1; then
 	summary+=("| suite_seeds | pass | |")
 else
@@ -159,18 +185,7 @@ else
 	summary+=("| suite_seeds | FAIL | see log |")
 fi
 
-echo "== Player-facing odds"
-if python3 tools/test_check_player_facing_odds.py > "$LOG_DIR/player_facing_odds.log" 2>&1 \
-		&& python3 tools/check_player_facing_odds.py >> "$LOG_DIR/player_facing_odds.log" 2>&1; then
-	summary+=("| player_facing_odds | pass | |")
-else
-	cat "$LOG_DIR/player_facing_odds.log"
-	note_error "tools/check_player_facing_odds.py: a player-facing string quotes odds"
-	failed=1
-	summary+=("| player_facing_odds | FAIL | see log |")
-fi
-
-echo "== Exported-build data check"
+say "== Exported-build data check"
 if GODOT="$GODOT" tools/check_export_data.sh > "$LOG_DIR/export_data.log" 2>&1; then
 	summary+=("| export_data | pass | |")
 else
@@ -180,7 +195,7 @@ else
 	summary+=("| export_data | FAIL | see log |")
 fi
 
-echo "== Intake / development harness"
+say "== Intake / development harness"
 if python3 tools/intake_harness.py --quiet > "$LOG_DIR/intake_harness.log" 2>&1; then
 	summary+=("| intake_harness | pass | |")
 else
@@ -190,7 +205,9 @@ else
 	summary+=("| intake_harness | FAIL | see log |")
 fi
 
-echo "== One version (project.godot config/version is the only copy)"
+# CI runs the build-number check once, in the plan job, and sets SKIP_VERSION_CHECK=1 here.
+if [ "${SKIP_VERSION_CHECK:-0}" != 1 ]; then
+say "== One version (project.godot config/version is the only copy)"
 if python3 tools/test_check_version.py > "$LOG_DIR/one_version.log" 2>&1 && python3 -I tools/check_version.py >> "$LOG_DIR/one_version.log" 2>&1; then
 	summary+=("| one_version | pass | |")
 else
@@ -199,8 +216,9 @@ else
 	failed=1
 	summary+=("| one_version | FAIL | see log |")
 fi
+fi
 
-echo "== Offline promise (Android preset requests vibrate only)"
+say "== Offline promise (Android preset requests vibrate only)"
 if python3 tools/test_android_permissions.py > "$LOG_DIR/offline_promise.log" 2>&1 		&& python3 tools/check_android_permissions.py >> "$LOG_DIR/offline_promise.log" 2>&1; then
 	summary+=("| offline_promise | pass | |")
 else
@@ -211,14 +229,14 @@ else
 fi
 fi
 
-# The harness checks itself: a truncated or unfloored suite must fail.
+# The harness checks itself: a test function that never ran must fail.
 if [ "$SUITES_ONLY" != 1 ] && [ "$#" -eq 0 ]; then
-	echo "== Harness self-test"
+	say "== Harness self-test"
 	if GODOT="$GODOT" tools/test_run_tests.sh > "$LOG_DIR/harness_selftest.log" 2>&1; then
 		summary+=("| harness_selftest | pass | |")
 	else
 		tail -15 "$LOG_DIR/harness_selftest.log"
-		note_error "tools/test_run_tests.sh: the test runner no longer catches missing checks"
+		note_error "tools/test_run_tests.sh: the test runner no longer catches a test function that never ran"
 		failed=1
 		summary+=("| harness_selftest | FAIL | see log |")
 	fi
@@ -232,6 +250,9 @@ if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
 		printf '%s\n' "${summary[@]}"
 	} >> "$GITHUB_STEP_SUMMARY"
 fi
-echo "Logs: $LOG_DIR"
-[ "$failed" = 0 ] && echo "All checks passed." || echo "Some checks FAILED."
+if [ "$failed" = 0 ]; then
+	echo "All checks passed: $passed suites$([ "$SUITES_ONLY" != 1 ] && echo ' and the dataset, export and harness checks'). Logs: $LOG_DIR"
+else
+	echo "Some checks FAILED${failed_names[0]+: suites ${failed_names[*]}} ($passed suites passed). Logs: $LOG_DIR"
+fi
 exit "$failed"

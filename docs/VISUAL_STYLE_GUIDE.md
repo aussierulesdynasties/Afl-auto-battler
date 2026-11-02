@@ -78,7 +78,7 @@ only sizes a screen may use; literal sizes are a defect and a test fails them.
 | NAME | 16 | Bold | a player or club leading a row; button text |
 | BODY | 15 | Regular | sentences |
 | SECONDARY | 14 | Regular, MUTED | the line under a name |
-| FINE | 12 | Regular, MUTED | stamps and fine print only, never a fact the player decides on |
+| FINE | 13 | Regular, MUTED | stamps and fine print only, never a fact the player decides on |
 | RATING | 30 | Display | a rating as a figure |
 | SCORE | 24 | Display | a match score |
 | NUMBER | 22 | Display | a figure in a list row |
@@ -154,8 +154,9 @@ last.
 
 ### 4.4 Decision sheet (coach's break, contract, event)
 What happened in two lines, the choice as a segmented control or at most three secondary buttons
-each with a one-line consequence in plain words, one primary action. No numbers unless the number
-is the decision (a cost, a term).
+each stating its upside, downside, size and odds in plain words (bible §4, director 2026-10-18),
+never which is better, one primary action. Off the gate, no numbers unless the number is the
+decision (a cost, a term).
 
 ### 4.5 Leaderboard (stats)
 A picker for the stat, one toggle (totals or per game), then leaderboard rows. One stat at a time

@@ -20,22 +20,28 @@ func run() -> void:
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
 	GameDB.reload()
-	_test_switch_off_is_today()
+	_t("_test_switch_off_is_today")
 	Features.set_on(FEATURE, true)
-	_test_rules()
-	_test_canberra_choice()
-	_test_draft_seats()
-	_test_build_and_entry()
-	_test_second_year_and_end()
-	_test_your_player_is_approached()
-	_test_who_a_rival_keeps()
-	_test_save_round_trip()
-	_test_old_saves()
+	_t("_test_rules")
+	_t("_test_canberra_choice")
+	_t("_test_draft_seats")
+	_t("_test_build_and_entry")
+	_t("_test_second_year_and_end")
+	_t("_test_your_player_is_approached")
+	_t("_test_who_a_rival_keeps")
+	_t("_test_save_round_trip")
+	_t("_test_old_saves")
 	Features.clear(FEATURE)
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
-	print("Expansion package tests: %d checks, %d failures" % [checks, failures.size()])
+	print(Ran.line("Expansion package", self))
+
+
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
 
 
 func _check(condition: bool, message: String) -> void:

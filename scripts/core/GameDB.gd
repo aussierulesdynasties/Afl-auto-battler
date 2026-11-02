@@ -135,6 +135,14 @@ const LIST_ADDITION_STATS_CSV := "res://data/list_additions_stats.csv"
 ## "rookie_delisted", "catb_delisted").
 var departures := {}
 const DEPARTURES_CSV := "res://data/departures_2026.csv"
+## Who changed club in the 2026 trade period and free agency, after the 2026
+## season and before the National Draft: the key "first|last|dob" (lower case)
+## to {"from", "to", "kind"} ("traded" or "free_agent"). The 2026 season record
+## (players_2026.csv, checked club by club against AFL Tables) stays as it was
+## played; a real-lists career moves these players when it opens
+## (GameState.begin_real_lists).
+var club_moves := {}
+const CLUB_MOVES_CSV := "res://data/club_moves_2026.csv"
 var late_draftees := []    # generated future classes registered at runtime
 var appearance := {}       # "first|last|dob" -> {skin, hair, status, club}: curated looks
 var skin_mix: Array = Appearance.DEFAULT_SKIN_MIX
@@ -182,6 +190,7 @@ func reload() -> void:
 	draftees = _load_draftees()
 	list_additions = _load_list_additions()
 	departures = _load_departures()
+	club_moves = _load_club_moves()
 	mark_unicorns(players + draftees)
 	late_draftees = []
 
@@ -803,6 +812,34 @@ func departure_kind(p: Dictionary) -> String:
 	return str(departures.get(_look_key(p), ""))
 
 
+func _load_club_moves() -> Dictionary:
+	var out := {}
+	if not FileAccess.file_exists(CLUB_MOVES_CSV):
+		return out
+	var rows := _read_rows(CLUB_MOVES_CSV)
+	if rows.size() < 2:
+		return out
+	var header: Array = rows[0]
+	var idx := {}
+	for j in range(header.size()):
+		idx[header[j]] = j
+	for i in range(1, rows.size()):
+		var cells: Array = rows[i]
+		if cells.size() < header.size() or _cell_str(cells, idx, "to_club") == "":
+			continue
+		var key := _look_key({"first": _cell_str(cells, idx, "first"),
+				"last": _cell_str(cells, idx, "last"), "dob": _cell_str(cells, idx, "dob")})
+		out[key] = {"from": _cell_str(cells, idx, "from_club"), "to": _cell_str(cells, idx, "to_club"),
+				"kind": _cell_str(cells, idx, "kind")}
+	return out
+
+
+## The club this player joined in the 2026 trade period or free agency, as
+## {"from", "to", "kind"}; {} if he stayed where he played 2026.
+func club_move(p: Dictionary) -> Dictionary:
+	return club_moves.get(_look_key(p), {})
+
+
 func _cell_str(cells: Array, idx: Dictionary, key: String) -> String:
 	if not idx.has(key):
 		return ""
@@ -1027,11 +1064,18 @@ func assign_aliases(list: Array) -> void:
 	for i in range(list.size()):
 		var label := _alias_at(_alias_next)
 		_alias_next += 1
-		while _real_names.has(label):
+		while _real_names.has(label) or alias_is_double(label):
 			label = _alias_at(_alias_next)
 			_alias_next += 1
 		list[i]["generic_name"] = label
 		list[i]["name"] = label
+
+
+## True when a name's first word equals its last word ("Reid Reid"). Such a
+## label is skipped at the draw, so the cursor and every stored name stay valid.
+static func alias_is_double(label: String) -> bool:
+	var parts := label.strip_edges().split(" ", false)
+	return parts.size() >= 2 and str(parts[0]).to_lower() == str(parts[parts.size() - 1]).to_lower()
 
 
 func _alias_at(idx: int) -> String:

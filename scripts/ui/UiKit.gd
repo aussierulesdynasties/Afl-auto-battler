@@ -133,7 +133,7 @@ const TITLE := H1           # a screen's title, the one big fact
 const HEADING := H2         # a section heading
 const NAME := 16            # a player or club name leading a row; button text
 const SECONDARY := 14       # the line under it (14, not 13: the sign face thins out under 14)
-const FINE := 12            # stamps and fine print (the style guide's FINE 12)
+const FINE := 13            # stamps and fine print (13 px is the readability floor, screen lint rule)
 const RATING := 30          # a rating as a figure (DISPLAY)
 const SCORE := 24           # a match score as a figure (DISPLAY)
 const NUMBER := 22          # a score in a list row (DISPLAY)
@@ -142,7 +142,10 @@ const GLYPH := 26           # a bare glyph button ("‹")
 const ROLE_COL := 72        # the role tag column in a player row (fits "RUCK/MID")
 ## Every size a screen may use. tests/run_career_ui_tests.gd fails a literal size
 ## outside this set (docs/VISUAL_STYLE_GUIDE.md §2.3).
-const SIZES := [TINY, FINE, SMALL, SECONDARY, BODY, NAME, H2, 20, NUMBER, H1, GLYPH, RATING, HERO]
+## 12 stays on the list only for the literal 12s still on DraftScene, TrainingScene,
+## SeasonReviewScene, OffseasonScene, PlanTiles, TeamBuilder, MatchScene and HubScene,
+## which their owners move to FINE (13); no new 12 should be added.
+const SIZES := [TINY, 12, FINE, SMALL, SECONDARY, BODY, NAME, H2, 20, NUMBER, H1, GLYPH, RATING, HERO]
 
 ## One family at every size, ARD Signwriter down to FINE (director, 2026-10-10,
 ## audit §9.1 A/B: Signwriter over Barlow for the small sizes).
@@ -892,13 +895,18 @@ static func drift_at(elapsed: float, secs: float) -> float:
 	return 1.0 - pow(1.0 - k, 3.0)
 
 
-## Run `f` once `c` is on screen, `delay` seconds later.
+## Run `f` once `c` is on screen, `delay` seconds later. The wait is a tween on
+## `c` itself, so it ends with `c`: a scene left inside the delay (Continue at
+## full time) never calls `f` with its freed nodes ("Lambda capture was freed"),
+## as a tree-wide timer outliving the scene did.
 static func _after(c: CanvasItem, delay: float, f: Callable) -> void:
 	var run := func() -> void:
 		if not is_instance_valid(c) or not c.is_inside_tree():
 			return
 		if delay > 0.0:
-			c.get_tree().create_timer(delay).timeout.connect(f)
+			var wait := c.create_tween()
+			wait.tween_interval(delay)
+			wait.tween_callback(f)
 		else:
 			f.call()
 	if c.is_inside_tree():

@@ -12,23 +12,23 @@ func run() -> void:
 	failures.clear()
 	checks = 0
 	GameDB.reload()
-	_test_identity()
-	_test_vocabulary()
-	_test_wing_marking()
-	_test_named_wings()
-	_test_named_players()
-	_test_engine_rewards_wings()
-	_test_tagger()
-	_test_tag_targets()
-	_test_no_prescriptions()
-	_test_corrections()
-	_test_forward_types()
-	_test_every_club_fields_wings()
-	_test_listed_second_positions()
-	_test_identities()
-	_test_formation_wings()
-	_test_list_profile()
-	print("Roles tests: %d checks, %d failures" % [checks, failures.size()])
+	_t("_test_identity")
+	_t("_test_vocabulary")
+	_t("_test_wing_marking")
+	_t("_test_named_wings")
+	_t("_test_named_players")
+	_t("_test_engine_rewards_wings")
+	_t("_test_tagger")
+	_t("_test_tag_targets")
+	_t("_test_no_prescriptions")
+	_t("_test_corrections")
+	_t("_test_forward_types")
+	_t("_test_every_club_fields_wings")
+	_t("_test_listed_second_positions")
+	_t("_test_identities")
+	_t("_test_formation_wings")
+	_t("_test_list_profile")
+	print(Ran.line("Roles", self))
 
 
 func _check(condition: bool, message: String) -> void:
@@ -36,6 +36,11 @@ func _check(condition: bool, message: String) -> void:
 	if not condition:
 		failures.append(message)
 		push_error(message)
+
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
 
 
 func _mid(id: String, carry: int, disposal: int, contested: int, pressure := 50) -> Dictionary:
@@ -326,8 +331,10 @@ func _test_tag_targets() -> void:
 	away.ground[di] = Ratings._for_slot(ruck, "MID")
 	_check(not sim.tag_target_ok(1, str(ruck["id"])), "A ruck in a midfield slot is not a target")
 	ruck["role2"] = "MID"
+	# A ruck by his own position (the copy came from a defender's slot).
+	ruck["own_role"] = "RUCK"
 	away.ground[di] = Ratings._for_slot(ruck, "MID")
-	_check(sim.tag_target_ok(1, str(ruck["id"])), "...unless midfield is one of his positions")
+	_check(not sim.tag_target_ok(1, str(ruck["id"])), "...nor when midfield is his second position: no one tags ruckmen (director, 2026-10-18)")
 
 	# Resting a midfielder keeps his tag; bringing him back on up forward keeps
 	# it too, with no "dropped" line: the coach's tag persists across breaks.
