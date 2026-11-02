@@ -11,4 +11,22 @@ his differs, the later one wins. Nothing here edits the bible.
 | 4 | Keep the random story deck? | keep it, and layer coach arcs on top | the 12 decks stay; multi-season arc cards are drawn alongside deck cards and remember named players and clubs (plan step 1a) |
 | 5 | What comes first? | the match hero and why we won or lost | plan step 1b: each match names its hero, its turning point and one to three reasons traced to numbers in the result (MatchStory.gd, switch match_story, off until he plays it) |
 | 6 | A weekly checklist? | yes: a short weekly checklist with one big arc-linked call | replaces "no weekly checklist": each Hub week shows one big call tied to an arc (drop the out-of-form star? play the kid?) plus the routine jobs; the Hub's "There is no weekly checklist" text goes (plan step 3a) |
-| 7 | Which match calls go (CUT_AUDIT_2026-11-03 rows 2-5)? | all four cuts | Play through is the Through stars plan (it plays through your best on-ground star per slot); Defensive forward and Loose interceptor are one Defensive set-up call (man on man, loose defender, cover their loose man, both); the in-match Main ruck call is gone; Rotations are automatic (ride the stars in a close last quarter or a close final from Q3, rotate hard for a develop plan or heat, else normal). No switch; old saves load, old keys are ignored |
+
+## Approved cuts
+
+- Draft pool filters (CUT_AUDIT row 9): the pool keeps position, sort and search. Club, career stage, style, trait, available-only and the Combine sort are gone, live with no switch; the pool always shows available players. Combine results stay on a prospect's sheet. No save migration needed (view state, never saved).
+| 7 | Row 37 AI draft buff: on or off? | off | `ai_draft_buff` ships off (#862); it is rivals only, so the user's Pick for me is unchanged. Whether the buff should also change Pick for me is not yet decided |
+| 8 | Cut "Play to Grand Final" and the long-press play-ahead menu? | cut (CUT_AUDIT row 11) | Sim the week is the only fast path: one round at a time, finals included; UI-only, nothing saved, so no save migration |
+
+## Cuts shipped
+
+- Cut audit §10 row 1 (CUT_AUDIT_2026-11-03.md): the intra-club match (week 5) and the practice match (week 7) are one
+  pre-season match, the practice match at the end of week 7, live with no switch. It keeps the stood out / struggled
+  reads, the side picked on Selection, the prospect looks (tune `seen_uncertainty`, `guest_spare_number`), XP and
+  injuries. Trial spots the coach leaves empty are filled by his recruiters' top picks (PracticeFill button, and
+  automatically on sim / press on). Old saves drop the `intra` key and press on to week 7. The "sides of one club"
+  kits (GameDB, PitchView, UiKit) went with it.
+- Cut audit rows 2-5 (match break calls, #874): Play through is the Through stars plan (best on-ground star per line);
+  Defensive forward and Loose interceptor are one Defensive set-up call; the in-match Main ruck call is gone (the
+  selected ruck goes up); rotations are automatic for both sides (MatchSim.auto_rotation: season plan, heat, close
+  late quarters). Live, no switch; old saves load and the old call keys are ignored.

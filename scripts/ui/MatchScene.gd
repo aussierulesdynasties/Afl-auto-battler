@@ -114,7 +114,7 @@ func _ready() -> void:
 		_res["label"] = GameState.pending_match["label"]
 		_res["venue"] = str(GameState.pending_match.get("venue", ""))
 		_res["events"] = []
-		_my_side = GameDB.coach_side(str(_res["home"]), str(_res["away"]), GameState.my_club)
+		_my_side = 0 if str(_res["home"]) == GameState.my_club else 1
 		_pos_before = GameState.my_position()
 		# A pre-season practice match is nobody's debut, farewell or first goal.
 		_farewell = {} if _is_practice(GameState.pending_match) else _farewell_for(GameState.pending_match)
@@ -124,7 +124,7 @@ func _ready() -> void:
 		_review = GameState.review_requested
 		GameState.review_requested = false
 		if not _res.is_empty() and GameState.my_club != "":
-			_my_side = GameDB.coach_side(str(_res.get("home", "")), str(_res.get("away", "")), GameState.my_club)
+			_my_side = 0 if str(_res.get("home", "")) == GameState.my_club else 1
 		_pos_before = GameState.last_pos_before
 	if _res.is_empty():
 		Router.replace("hub")
@@ -3720,6 +3720,13 @@ func _ft_summary(v: VBoxContainer) -> void:
 					UiKit.EMPH if through else UiKit.MUTED, true)
 			ol.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(ol)
+		if Milestones.shown():
+			var ms_line := Milestones.summary_line(GameState, _res)
+			if ms_line != "":
+				var msl := UiKit.lbl(ms_line, UiKit.BODY, UiKit.TEXT, true)
+				msl.name = "MilestoneLine"
+				msl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				v.add_child(msl)
 		if (_interactive or _review) and str(_res.get("tag", "")) == "":
 			var moved := GameState.ladder_move_line(_pos_before)
 			if moved != "":
