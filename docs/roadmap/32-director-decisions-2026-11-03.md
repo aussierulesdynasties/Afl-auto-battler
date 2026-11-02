@@ -22,3 +22,12 @@ his differs, the later one wins. Nothing here edits the bible.
   be extremely competent: every club, the user's included, acts in its own best interest at all times; mistakes come
   only from imperfect information, never from deliberate dumbing down. The buffed logic is now the only National Draft
   logic (rivals, Pick for me, sim-through picks, live pick trades); switch `ai_draft_buff` is gone. Supersedes row 7.
+
+## Cuts shipped
+
+- Cut audit §10 row 1 (CUT_AUDIT_2026-11-03.md): the intra-club match (week 5) and the practice match (week 7) are one
+  pre-season match, the practice match at the end of week 7, live with no switch. It keeps the stood out / struggled
+  reads, the side picked on Selection, the prospect looks (tune `seen_uncertainty`, `guest_spare_number`), XP and
+  injuries. Trial spots the coach leaves empty are filled by his recruiters' top picks (PracticeFill button, and
+  automatically on sim / press on). Old saves drop the `intra` key and press on to week 7. The "sides of one club"
+  kits (GameDB, PitchView, UiKit) went with it.
