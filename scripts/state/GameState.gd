@@ -194,6 +194,11 @@ var stories_on := true
 var media_conference := {}       # pending post-match press question
 var backing_talk := {}           # a sit-down when a promised run ends (Backing.talk)
 var media_memory := {}           # question key -> last round asked
+## The match makes the story (switch "match_story"): one record per match of
+## yours, oldest first (MatchStory.record). Empty, and not saved, while off.
+var match_stories: Array = []
+## Matches kept: four seasons' worth, enough for the coach's arcs.
+const MAX_MATCH_STORIES := 120
 var losing_streak := 0
 ## Your match-ups for the next match (Matchups): {their forward id: your
 ## defender id}, on top of the default set-up. Cleared after each of your
@@ -750,6 +755,8 @@ func save_career() -> bool:
 		state["expansion"] = expansion
 	if not canberra_on:
 		state["canberra_on"] = false
+	if not match_stories.is_empty():
+		state["match_stories"] = match_stories
 	if Features.on("training_report"):
 		state["training_block"] = training_block
 		state["training_report"] = training_report
@@ -896,6 +903,7 @@ func load_career() -> bool:
 	relations = state.get("relations", {})
 	story = StoryEngine.ensure(state.get("story", {}))
 	media_conference = state.get("media_conference", {})
+	match_stories = state.get("match_stories", []) if state.get("match_stories") is Array else []
 	backing_talk = state.get("backing_talk", {})
 	media_memory = state.get("media_memory", {})
 	losing_streak = int(state.get("losing_streak", 0))
@@ -1338,6 +1346,7 @@ func reset() -> void:
 	relations = {}
 	story = StoryEngine.new_state()
 	media_conference = {}
+	match_stories = []
 	backing_talk = {}
 	media_memory = {}
 	losing_streak = 0
@@ -5500,6 +5509,7 @@ func _after_round(results: Array) -> void:
 		_note_form_and_team(res)
 	_nominate_rising_star(results)
 	_round_news(results)
+	_record_match_story(results)
 	_note_firsts(results)
 	_draft_class_news()
 	_board_after_round(results)
@@ -9959,6 +9969,37 @@ func _rival_morale_after_round(results: Array) -> void:
 
 
 ## A notable user match may produce one short press conference.
+## Switch "match_story": the setting that gates the match story everywhere.
+func match_story_on() -> bool:
+	return MatchStory.on()
+
+
+## Keep your match's story (hero, turning point, reasons) and put its
+## headline on the news front. Played or simmed, the same record.
+func _record_match_story(results: Array) -> void:
+	if not match_story_on() or my_club == "":
+		return
+	var res := _my_result(results)
+	if res.is_empty():
+		return
+	var side := 0 if str(res["home"]) == my_club else 1
+	var rec := MatchStory.record(res, side, season_year)
+	if rec.is_empty():
+		return
+	match_stories.append(rec)
+	if match_stories.size() > MAX_MATCH_STORIES:
+		match_stories = match_stories.slice(match_stories.size() - MAX_MATCH_STORIES)
+	if str(rec["hero_name"]) != "":
+		add_news("match_story", "%s. %s: %s." % [str(rec["headline"]), str(rec["hero_name"]), str(rec["hero_line"])])
+
+
+## The latest match story record, {} when there is none (or the switch is off).
+func last_match_story() -> Dictionary:
+	if not match_story_on() or match_stories.is_empty():
+		return {}
+	return match_stories[-1]
+
+
 func _prepare_media_conference(results: Array) -> void:
 	media_conference = {}
 	var res := _my_result(results)
@@ -9984,6 +10025,12 @@ func _prepare_media_conference(results: Array) -> void:
 				star = {"name": GameDB.player_display_name(p) if not p.is_empty() else str(r.get("name", "A player")),
 						"line": "kicked %d goals" % goals if goals >= 6 else "had %d disposals" % disposals}
 				break
+	# The match story's hero (switch "match_story") is asked about when no big
+	# number already put a player in the question.
+	if star.is_empty() and match_story_on():
+		var hero := MatchStory.hero_of(res)
+		if not hero.is_empty() and int(hero["side"]) == side:
+			star = {"name": str(hero["name"]), "line": "was the hero: %s" % str(hero["line"])}
 	var round_no := season.round_index if last_phase == "regular" else Season.REGULAR_ROUNDS + int((season.finals.get("weeks", []) as Array).size())
 	# How many of your side were young enough for the Philosopher to ask.
 	var young := 0
