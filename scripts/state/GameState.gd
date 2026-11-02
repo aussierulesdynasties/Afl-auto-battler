@@ -85,6 +85,7 @@ var season_awards := {}          # the finished season's awards
 ## from before nominations were recorded starts "from" its next round.
 var rising_star_noms := {"from": 1, "rounds": []}
 var honour_roll: Array = []      # one entry per completed season
+var almanac: Array = []          # the club almanac, one page per season (Almanac.gd; switch club_almanac)
 ## Every coach in the game, once: cid -> record (Coaches.gd). A club's staff
 ## is read from the records, never stored beside them.
 var coaches := {}
@@ -141,6 +142,13 @@ var pick_got := {}
 ## them in the offers they put to you. Saved (a new key; an older save has none).
 var untouchable := {}
 var offseason_log: Array = []    # what happened in the off-season, for news
+## New clubs building their lists (ExpansionBuild; the feature switch
+## "expansion_package"): {club code: its state}. Empty, and not saved, while
+## the switch is off.
+var expansion := {}
+## Does Canberra join in 2030? A choice at career start once the switch is
+## on (off by default); a career begun before it keeps Canberra.
+var canberra_on := true
 ## Offers rival clubs have made you this off-season: [{"club", "give" (their
 ## player and pick ids), "take" (yours), "status": "open", "accepted",
 ## "declined" or "off"}]. See _make_trade_offers.
@@ -175,6 +183,8 @@ var week_event: Dictionary:
 		return week_events[0] if not week_events.is_empty() else {}
 	set(value):
 		week_events = [] if value.is_empty() else [value]
+## The week's checklist record (WeekChecklist.gd; setting "weekly_checklist").
+var week_checks := {}
 ## Trust between you and the people around the club (Trust.gd): {"p:<player
 ## id>": {"t", "log"}}. Missing means neutral. Saved; later phases add coaches,
 ## journalists, the board and club culture under their own keys, same shape.
@@ -186,6 +196,11 @@ var stories_on := true
 var media_conference := {}       # pending post-match press question
 var backing_talk := {}           # a sit-down when a promised run ends (Backing.talk)
 var media_memory := {}           # question key -> last round asked
+## The match makes the story (switch "match_story"): one record per match of
+## yours, oldest first (MatchStory.record). Empty, and not saved, while off.
+var match_stories: Array = []
+## Matches kept: four seasons' worth, enough for the coach's arcs.
+const MAX_MATCH_STORIES := 120
 var losing_streak := 0
 ## Your match-ups for the next match (Matchups): {their forward id: your
 ## defender id}, on top of the default set-up. Cleared after each of your
@@ -673,6 +688,7 @@ func save_career() -> bool:
 		"season_awards": season_awards,
 		"rising_star_noms": rising_star_noms,
 		"honour_roll": honour_roll,
+		"almanac": almanac,
 		"records": records,
 		"rivalry_history": rivalry_history,
 		"finals_counted_since": finals_counted_since,
@@ -702,6 +718,7 @@ func save_career() -> bool:
 		"tutorials": tutorials,
 		"board": board,
 		"week_events": week_events,
+		"week_checks": week_checks,
 		"relations": relations,
 		"story": story,
 		"media_conference": media_conference,
@@ -735,6 +752,14 @@ func save_career() -> bool:
 		# Players carry p["career"]; saves without this mark predate it.
 		"career_version": CAREER_VERSION,
 	}
+	# The new-club build writes nothing while its switch is off and the career
+	# has made no choice about Canberra.
+	if not expansion.is_empty():
+		state["expansion"] = expansion
+	if not canberra_on:
+		state["canberra_on"] = false
+	if not match_stories.is_empty():
+		state["match_stories"] = match_stories
 	if Features.on("training_report"):
 		state["training_block"] = training_block
 		state["training_report"] = training_report
@@ -772,6 +797,10 @@ func load_career() -> bool:
 	reset()
 	# A created club joins the competition before anything reads the clubs.
 	custom_club = state.get("custom_club", {})
+	# Canberra, before anything reads the clubs: a save from before the choice
+	# existed keeps it.
+	set_canberra(bool(state.get("canberra_on", true)))
+	expansion = state.get("expansion", {}) if state.get("expansion") is Dictionary else {}
 	best23 = state.get("best23", {})
 	if not custom_club.is_empty():
 		GameDB.register_club(ClubForge.row(custom_club))
@@ -842,6 +871,7 @@ func load_career() -> bool:
 	rising_star_noms = state.get("rising_star_noms",
 			{"from": season.round_index + 1 if season != null else 1, "rounds": []})
 	honour_roll = state.get("honour_roll", [])
+	almanac = state.get("almanac", [])  # older saves: none; the page falls back to the honour roll
 	records = state.get("records", {})
 	rivalry_history = state.get("rivalry_history", {})
 	# An older save has played finals nobody counted: its count starts with the next ones.
@@ -871,11 +901,13 @@ func load_career() -> bool:
 	news = state.get("news", [])
 	board = state.get("board", {})
 	week_events = state.get("week_events", [])
+	week_checks = state.get("week_checks", {}) if state.get("week_checks") is Dictionary else {}
 	if not state.has("week_events"):
 		week_event = state.get("week_event", {})
 	relations = state.get("relations", {})
 	story = StoryEngine.ensure(state.get("story", {}))
 	media_conference = state.get("media_conference", {})
+	match_stories = state.get("match_stories", []) if state.get("match_stories") is Array else []
 	backing_talk = state.get("backing_talk", {})
 	media_memory = state.get("media_memory", {})
 	losing_streak = int(state.get("losing_streak", 0))
@@ -1276,6 +1308,7 @@ func reset() -> void:
 	season_awards = {}
 	rising_star_noms = {"from": 1, "rounds": []}
 	honour_roll = []
+	almanac = []
 	records = {}
 	rivalry_history = {}
 	finals_counted_since = 0
@@ -1311,10 +1344,14 @@ func reset() -> void:
 	_wrap_picks = []
 	news = []
 	board = {}
+	expansion = {}
+	set_canberra(not ExpansionBuild.on())
 	week_events = []
+	week_checks = {}
 	relations = {}
 	story = StoryEngine.new_state()
 	media_conference = {}
+	match_stories = []
 	backing_talk = {}
 	media_memory = {}
 	losing_streak = 0
@@ -1614,6 +1651,10 @@ func begin_intake_draft() -> bool:
 		order.append(str(row["code"]))
 	order.reverse()
 
+	# A new club's extra picks, and the pick it must trade: made first, because
+	# that trade moves a player and the lists are measured next.
+	var new_club_picks: Array = ExpansionBuild.draft_picks(self, GameDB.active_clubs(season_year).size(), open_pool.size())
+
 	var sizes := {}
 	var role_counts := {}
 	var role_pairs := {}
@@ -1632,11 +1673,13 @@ func begin_intake_draft() -> bool:
 
 	# Only clubs on this season's ladder take intake picks. An expansion club
 	# arrives with its own generated list at its first season (see
-	# _start_next_season) rather than drafting into one.
+	# _start_next_season) rather than drafting into one - unless it is
+	# building its list (ExpansionBuild): then it has a seat and early picks.
 	var active := GameDB.active_clubs(season_year)
 	var seed := _clock_seed(2)
 	draft = Draft.build_intake(open_pool, active.duplicate(), order,
 			seed, sizes, role_counts, role_pairs)
+	ExpansionBuild.seat_guests(self, draft)
 	# Recruiting funding narrows only our club's uncertainty; rivals use the
 	# same scouting model at Standard rather than hidden true ratings.
 	draft.scouting_mults[my_club] = recruiting_uncertainty_mult()
@@ -1644,6 +1687,7 @@ func begin_intake_draft() -> bool:
 	for c in compensation:
 		if active.has(str(c["club"])):
 			comps.append(c)
+	comps.append_array(new_club_picks)
 	draft.set_pick_owners(draft_pick_owners(season_year))
 	draft.add_compensation(comps)
 	_watch_draft_night()
@@ -1666,6 +1710,10 @@ func finish_intake_draft() -> bool:
 		if int(str(key).split(":")[0]) <= season_year:
 			pick_got.erase(key)
 	_ensure_league_lists()
+	# A club building its list drafts into the list it is building.
+	for code in ExpansionBuild.building(self):
+		if ExpansionBuild.has_package(self, code):
+			league_lists[code] = ExpansionBuild.list_of(self, code)
 	var next_year := season_year + 1
 	var merged := 0
 	for code in GameDB.club_order:
@@ -1736,6 +1784,13 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# Free agents are on no list until a rival signs them, so heal after
 	# free agency closes, and heal the season's lists too.
 	_close_contracts()
+	# A club that built its list (ExpansionBuild) brings it now, so its
+	# players age into their first season with everyone else.
+	for code in GameDB.club_order:
+		if GameDB.enter_year(code) == next_year and ExpansionBuild.enter(self, code):
+			add_news("expansion", "%s (the %s) join the competition for %d, their first season. %s" % [
+					GameDB.club_name(code), GameDB.club_short(code), next_year,
+					ExpansionBuild.entry_line(self, code)])
 	Workload.reset(league_lists)
 	Workload.reset({"free_agents": free_agents})
 	Injuries.heal_all(league_lists)
@@ -1784,6 +1839,8 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	intake_summary = Prospects.age_league(league_lists, next_year)
 	intake_summary["signed"] = signed
 	_retirees_to_coaching(intake_summary.get("retired", []), listed)
+	if Almanac.on():
+		Almanac.add_legends(self, intake_summary.get("retired", []), listed)
 	for r in intake_summary.get("retired", []):
 		if int(r.get("overall", 0)) >= NEWS_MIN_OVR:
 			add_news("retirement", "%s (%s) has retired at %d." % [
@@ -1823,6 +1880,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# Expansion lists are born here, so their contracts must be assigned
 	# here too (start_season does the same for the first season).
 	ensure_contracts()
+	ExpansionBuild.set_relief(self, next_year)
 	season_year = next_year
 	season_log = []
 	last_training_report = {}
@@ -1868,7 +1926,11 @@ func _build_season_wrap(year: int) -> void:
 			"released":
 				if str(e.get("club", "")) == my_club:
 					var how := "free agent" if bool(e.get("wanted", false)) else "delisted"
-					if comp_after.has(str(e["id"])):
+					if str(e.get("to", "")) != "":
+						how = "signed with %s" % GameDB.club_name(str(e["to"]))
+						if comp_after.has(str(e["id"])):
+							how += "; compensation pick after pick %d" % int(comp_after[str(e["id"])])
+					elif comp_after.has(str(e["id"])):
 						how = "free agent; compensation pick after pick %d" % int(comp_after[str(e["id"])])
 					outs.append({"id": str(e["id"]), "how": how})
 			"trade":
@@ -5452,6 +5514,7 @@ func _after_round(results: Array) -> void:
 		_note_form_and_team(res)
 	_nominate_rising_star(results)
 	_round_news(results)
+	_record_match_story(results)
 	_note_firsts(results)
 	_draft_class_news()
 	_board_after_round(results)
@@ -5568,6 +5631,8 @@ func _close_season_awards() -> void:
 		"my_finals": _my_last_final(),
 		"my_aa": _my_all_australians(),
 	})
+	if Almanac.on():
+		almanac.append(Almanac.season_entry(self))
 	# Achievements first, then the season news, so the premiership line
 	# stays the newest item in the feed.
 	_close_season_achievements()
@@ -6113,6 +6178,8 @@ func open_offseason() -> void:
 	offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() else {}
 	_decide_retirements()
 	free_agents = []
+	# A new club's approaches are settled first: it had first call.
+	ExpansionBuild.resolve(self)
 	for code in season.lists:
 		if code == my_club:
 			continue
@@ -6120,7 +6187,7 @@ func open_offseason() -> void:
 		for p in Contracts.expiring(list).duplicate():
 			if retiring_now(p):
 				continue  # he retires at the rollover: no contract, no free agency
-			var why := Contracts.ai_release_reason(p, list, salary_cap)
+			var why := Contracts.ai_release_reason(p, list, cap_for(code))
 			if why == "" or list.size() <= Contracts.MIN_LIST:
 				# Rivals bargain by the same rules: the least he takes for that term
 				# (a club pushing to win now keeps him a little cheaper, as yours does).
@@ -6384,7 +6451,21 @@ func _finish_t(code: String) -> float:
 
 
 func _cap_room_of(code: String) -> int:
-	return salary_cap - Contracts.payroll(season.lists.get(code, []))
+	return cap_for(code) - Contracts.payroll(season.lists.get(code, []))
+
+
+## The cap `code` works under: the league's, plus a new club's sign-on money
+## in its first two seasons (ExpansionBuild.relief; nothing for anyone else).
+func cap_for(code: String) -> int:
+	return salary_cap + ExpansionBuild.relief(self, code)
+
+
+## Whether Canberra joins this career in 2030. Set before the career's first
+## draft (the new-career screen) and kept in the save.
+func set_canberra(on: bool) -> void:
+	canberra_on = on
+	if GameDB.clubs.has("CANB"):
+		GameDB.set_enter_year("CANB", GameDB.data_enter_year("CANB") if on else Expansion.NEVER)
 
 
 func _offer_of(p: Dictionary, code: String) -> Dictionary:
@@ -7071,7 +7152,9 @@ func draft_spot(year: int, rnd: int, origin: String) -> int:
 	var order := _draft_order()
 	var n := order.size()
 	var i := order.find(origin)
-	return (rnd - 1) * n + i + 1
+	var regular := (rnd - 1) * n + i + 1
+	# A new club's extra picks come first: every pick behind them is later.
+	return regular + ExpansionBuild.picks_ahead(self, year, regular, n)
 
 
 ## Where a club's pick in next year's draft might fall: [[overall pick,
@@ -9890,6 +9973,37 @@ func _rival_morale_after_round(results: Array) -> void:
 			ClubLife.morale_after_match(list, played, int(score[side]) > int(score[1 - side]), soft, culture_effect(code, "sting"))
 
 
+## Switch "match_story": the setting that gates the match story everywhere.
+func match_story_on() -> bool:
+	return MatchStory.on()
+
+
+## Keep your match's story (hero, turning point, reasons) and put its
+## headline on the news front. Played or simmed, the same record.
+func _record_match_story(results: Array) -> void:
+	if not match_story_on() or my_club == "":
+		return
+	var res := _my_result(results)
+	if res.is_empty():
+		return
+	var side := 0 if str(res["home"]) == my_club else 1
+	var rec := MatchStory.record(res, side, season_year)
+	if rec.is_empty():
+		return
+	match_stories.append(rec)
+	if match_stories.size() > MAX_MATCH_STORIES:
+		match_stories = match_stories.slice(match_stories.size() - MAX_MATCH_STORIES)
+	if str(rec["hero_name"]) != "":
+		add_news("match_story", "%s. %s: %s." % [str(rec["headline"]), str(rec["hero_name"]), str(rec["hero_line"])])
+
+
+## The latest match story record, {} when there is none (or the switch is off).
+func last_match_story() -> Dictionary:
+	if not match_story_on() or match_stories.is_empty():
+		return {}
+	return match_stories[-1]
+
+
 ## A notable user match may produce one short press conference.
 func _prepare_media_conference(results: Array) -> void:
 	media_conference = {}
@@ -9916,6 +10030,12 @@ func _prepare_media_conference(results: Array) -> void:
 				star = {"name": GameDB.player_display_name(p) if not p.is_empty() else str(r.get("name", "A player")),
 						"line": "kicked %d goals" % goals if goals >= 6 else "had %d disposals" % disposals}
 				break
+	# The match story's hero (switch "match_story") is asked about when no big
+	# number already put a player in the question.
+	if star.is_empty() and match_story_on():
+		var hero := MatchStory.hero_of(res)
+		if not hero.is_empty() and int(hero["side"]) == side:
+			star = {"name": str(hero["name"]), "line": "was the hero: %s" % str(hero["line"])}
 	var round_no := season.round_index if last_phase == "regular" else Season.REGULAR_ROUNDS + int((season.finals.get("weeks", []) as Array).size())
 	# How many of your side were young enough for the Philosopher to ask.
 	var young := 0
@@ -10038,6 +10158,7 @@ func _board_season_end() -> void:
 
 
 func _next_week_event() -> void:
+	ExpansionBuild.week(self)
 	week_events = []
 	if season == null or is_sacked() or not stories_on or my_club == "":
 		return

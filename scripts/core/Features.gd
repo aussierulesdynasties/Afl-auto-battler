@@ -29,14 +29,28 @@ extends RefCounted
 ##               and their story beats. Off, generated classes are exactly as before.
 ##   training_report   the report after every fourth round: who improved, who
 ##               fell back, and who can learn a new position (TrainingReport.gd).
+##   expansion_package   how a new club builds its list (director, 2026-10-14):
+##               state-league signings, early draft picks, one out-of-contract
+##               player per rival club, and Canberra as a career choice
+##               (ExpansionBuild). Off, a new club arrives with the 36
+##               generated players it always did and Canberra always joins.
+##   club_almanac   the club almanac (Almanac.gd, AlmanacScene): a page per
+##               season of your career, reached from the Hub and the season wrap.
+##               Off, no entry is shown and no almanac page is written.
+##   match_story   the match makes the story (director, 2026-11-03, plan step 1b): each
+##               match's hero, turning point and why it was won or lost (MatchStory.gd),
+##               at the top of the full-time Summary, on the news front, in the press
+##               question, and kept on GameState.match_stories. Off, none of it shows
+##               and nothing is written.
 
 ##   ai_draft_buff   rival clubs' National Draft picks lean on the best player
 ##               available (roadmap row 37): scarcity ramps in over two rounds and
 ##               counts for at most 5 points, a covered position keeps 97% of a
-##               prospect's worth (was 92%). Off, rival drafting is exactly as before.
+##               prospect's worth (was 92%). Rivals only: the user's Pick for me is
+##               unchanged. Off, rival drafting is exactly as before.
 ##               Balance-gated: the director's call.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "ai_draft_buff"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "ai_draft_buff"]
 
 static var _forced := {}
 static var _from_args := {}
