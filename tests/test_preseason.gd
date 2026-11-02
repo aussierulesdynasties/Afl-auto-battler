@@ -773,8 +773,23 @@ func _test_training_injuries() -> void:
 	# Solid all the way: nobody of yours is hurt.
 	_career()
 	GameState.preseason_sim_to_round1()
-	_check(GameState.preseason_injury_lines().is_empty() and Injuries.injured(GameState.my_list).is_empty(),
-			"A pre-season without a Heavy block hurts none of your players")
+	# Training only: the intra-club and practice matches carry their usual match risk (rows with
+	# "how"), and whether one of yours is hurt there moves with the ratings, not the blocks.
+	var trained_hurt := 0
+	var match_hurt := {}
+	for row in GameState.preseason_injuries():
+		if str(row["club"]) != CLUB:
+			continue
+		if row.has("how"):
+			match_hurt[str(row["id"])] = true
+		else:
+			trained_hurt += 1
+	var unexplained := 0
+	for q in Injuries.injured(GameState.my_list):
+		if not match_hurt.has(str(q["id"])):
+			unexplained += 1
+	_check(trained_hurt == 0 and unexplained == 0,
+			"A pre-season without a Heavy block hurts none of your players in training (%d, %d)" % [trained_hurt, unexplained])
 	PreSeason.reload()
 
 
