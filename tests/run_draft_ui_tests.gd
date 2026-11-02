@@ -28,6 +28,9 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_career.save"
 	_state.settings_path = "user://test_settings.cfg"
+	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_state.set_setting("seen_%s_intro" % key, true)
 	_state.show_real_names = false
 	_db = root.get_node("GameDB")
 	await _t("_test_board")
@@ -79,9 +82,6 @@ func _test_board() -> void:
 	ui.set("_role", "DEF")
 	ui.set("_search", "Jack")
 	ui.set("_sort", "value")
-	ui.set("_club_filter", "ADE")
-	ui.set("_available_only", false)
-	ui.set("_advanced_open", true)
 	ui.set("_history_club", "RIC")
 	ui.call("_show_board")
 	await _settle()
@@ -100,8 +100,8 @@ func _test_board() -> void:
 			_check_layout(ui, label + " / " + tab)
 		ui.call("_select_tab", "pool")
 
-	await _t("_test_career_stage_filters", [ui])
-	await _t("_test_style_and_trait_filters", [ui])
+	await _t("_test_pool_controls", [ui])
+	await _t("_test_pool_row", [ui])
 	await _t("_test_position_filters", [ui])
 
 	# No-results recovery resets controls as well as their backing values.
@@ -109,7 +109,6 @@ func _test_board() -> void:
 	await _settle()
 	_check(ui.get("_search") == "", "Clear filters resets search")
 	_check(ui.get("_role") == "", "Clear filters resets position")
-	_check(ui.get("_available_only") == true, "Clear filters restores availability")
 	var finish: Button = ui.find_child("StartSeason", true, false)
 	_check(finish.disabled, "Season cannot start before a valid draft is complete")
 	await _t("_test_side_shape", [ui])
@@ -399,8 +398,6 @@ func _test_intake_combine() -> void:
 	root.add_child(ui)
 	await _settle()
 	var sort: OptionButton = ui.find_child("SortPlayers", true, false)
-	_check(ui.find_child("CareerStageFilter", true, false) == null,
-			"Career-stage filtering stays out of the National Draft")
 	_check(sort != null and sort.get_item_text(0) == "Best scouted"
 			and sort.get_item_text(1) == "Highest upside",
 			"National Draft sorting is phrased as scouting, not hidden truth")
@@ -457,9 +454,8 @@ func _test_intake_combine() -> void:
 	root.size = old_size
 
 
-## The Combine as a menu (ARD-M5-014): a finger's tap opens the tests, a test
-## sorts the class on its results best first, each row says the result and
-## where it sits, a prospect shows all four, and Back returns to the same view.
+## The Combine (ARD-M5-014): seeded results in real units, shown on a
+## prospect's sheet. The pool's Combine sort was cut (director, 2026-11-03).
 func _test_combine_pool() -> void:
 	root.size = Vector2i(360, 800)
 	var Comb = load("res://scripts/sim/Combine.gd")
@@ -494,39 +490,16 @@ func _test_combine_pool() -> void:
 	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
 	root.add_child(ui)
 	await _settle()
-	var Tap = preload("res://tests/tap.gd")
-	var open: Button = ui.find_child("CombineOpen", true, false)
-	var why: String = await Tap.tap(open) if open != null else "no Combine button"
+	var first_id := str(_state.draft.board("", "", "", "overall", true)[0]["id"])
+	for p in prospects:
+		if Comb.tested(p, seed) and not _state.draft.picked.has(str(p["id"])):
+			first_id = str(p["id"])
+			break
+	ui.call("_open_player", first_id)
 	await _settle()
-	_check(why == "" and (ui.find_child("CombineRow", true, false) as Control).visible, "A tap on Combine shows the tests (%s)" % why)
-	var sprint: Button = null
-	for b in ui.find_children("*", "Button", true, false):
-		if (b as Button).text == "Sprint":
-			sprint = b
-	why = await Tap.tap(sprint) if sprint != null else "no Sprint test"
-	await _settle()
-	var rows: Array = ui.call("_board_rows")
-	var sorted_ok := rows.size() > 2
-	for i in range(rows.size() - 1):
-		var a: float = Comb.result(rows[i], "sprint", seed)
-		var b: float = Comb.result(rows[i + 1], "sprint", seed)
-		if b >= 0.0 and (a < 0.0 or a > b):
-			sorted_ok = false
-	_check(why == "" and sorted_ok, "Sprint sorts the class fastest first, the untested last (%s)" % why)
-	var first: Label = ui.find_child("CombineResult_" + str(rows[0]["id"]), true, false) if not rows.is_empty() else null
-	_check(first != null and first.text.contains(" s") and first.text.contains("Best in the class"),
-			"The fastest row says his time and that it was the best (%s)" % (first.text if first else "-"))
-	var what: Label = ui.find_child("CombineWhat", true, false)
-	_check(what != null and what.text.contains("Acceleration"), "The test says what it tells you about his football")
-	var inspect: Button = ui.find_child("Inspect_" + str(rows[0]["id"]), true, false)
-	why = await Tap.tap(inspect) if inspect != null else "no row"
-	await _settle()
-	_check(why == "" and ui.find_children("Tested_*", "", true, false).size() == 4, "His sheet shows all four results (%s)" % why)
-	ui.call("handle_back")
-	await _settle()
-	_check(ui.get("_detail") == null, "Back closes his sheet")
-	_check(str(ui.get("_combine")) == "sprint" and ui.find_child("CombineResult_" + str(rows[0]["id"]), true, false) != null,
-			"...back to the same Combine view")
+	_check(ui.find_children("Tested_*", "", true, false).size() == 4, "A tested prospect's sheet shows all four results")
+	_check(ui.find_child("CombineOpen", true, false) == null and ui.find_child("CombineRow", true, false) == null,
+			"The pool has no Combine sort: his results live on his sheet")
 	ui.queue_free()
 	await _settle()
 
@@ -819,77 +792,51 @@ func _snapshot(ui: Control) -> Dictionary:
 		"remaining": draft.remaining(),
 		"pick_index": draft.pick_index,
 	}
-	for key in ["_role", "_search", "_sort", "_club_filter", "_career_stage",
-			"_available_only", "_advanced_open", "_history_club"]:
+	for key in ["_role", "_search", "_sort", "_history_club"]:
 		out[key] = ui.get(key)
 	return out
 
 
-# The opening League Draft can be narrowed by career stage without changing
-# the draft itself. The cut-offs are based on the actual 2027 pool.
-## Filter by how a player plays and by trait, with position, and every row
-## shows his age and playing style (director's PC playtest, 2026-10-07:
-## "Interceptor, Crumber", "Tagger", age on the row).
-func _test_style_and_trait_filters(ui: Control) -> void:
-	var profile = load("res://scripts/sim/PlayerProfile.gd")
-	var traits_lib = load("res://scripts/sim/Traits.gd")
-	var old_size := root.size
-	root.size = Vector2i(390, 844)
-	ui.set("_advanced_open", true)
-	ui.set("_role", "")
-	ui.set("_club_filter", "")
-	ui.set("_search", "")
-	ui.set("_career_stage", "")
-	ui.set("_available_only", false)
-	ui.call("_show_board")
+## The pool keeps three controls: position, sort and search (director's cut,
+## 2026-11-03). Every other filter is gone, and sort sits beside search.
+func _test_pool_controls(ui: Control) -> void:
+	ui.call("_select_tab", "pool")
 	await _settle()
-	var style_opt: OptionButton = ui.find_child("StyleFilter", true, false)
-	var trait_opt: OptionButton = ui.find_child("TraitFilter", true, false)
-	_check(style_opt != null and trait_opt != null, "The draft has playing-style and trait filters")
-	if style_opt == null or trait_opt == null:
-		root.size = old_size
-		return
-	var styles := []
-	for i in range(style_opt.item_count):
-		styles.append(style_opt.get_item_text(i))
-	var trait_names := []
-	for i in range(trait_opt.item_count):
-		trait_names.append(trait_opt.get_item_text(i))
-	_check(trait_names.has("Interceptor") and trait_names.has("Crumber") and trait_names.has("Tagger"),
-			"Traits to filter by include the director's examples (%s)" % ", ".join(trait_names))
-	_check(styles.has("Key forward") and styles.has("Wing"), "Playing styles are how a player plays (%s)" % ", ".join(styles))
-	var si := styles.find("Key forward")
-	style_opt.select(si)
-	style_opt.item_selected.emit(si)
+	for gone in ["MoreFilters", "OriginClubFilter", "CareerStageFilter", "StyleFilter", "TraitFilter",
+			"AvailableOnly", "CombineOpen", "CombineRow"]:
+		_check(ui.find_child(gone, true, false) == null, "The draft pool has no %s control" % gone)
+	var search: Control = ui.find_child("PlayerSearch", true, false)
+	var sort: OptionButton = ui.find_child("SortPlayers", true, false)
+	_check(search != null and sort != null and sort.is_visible_in_tree() and sort.get_parent() == search.get_parent(),
+			"Sort sits beside search, always visible")
+	ui.set("_search", "")
+	ui.call("_set_role", "")
+	var idx := -1
+	for i in range(sort.item_count):
+		if sort.get_item_text(i) == "Name A–Z":
+			idx = i
+	sort.select(idx)
+	sort.item_selected.emit(idx)
 	await _settle()
 	var rows: Array = ui.call("_board_rows")
-	_check(not rows.is_empty() and rows.all(func(p): return profile.player_type(p) == "Key forward"),
-			"Playing style Key forward shows only key forwards (%d)" % rows.size())
-	ui.call("_set_role", "FWD")
+	var sorted_ok := rows.size() > 2
+	for i in range(rows.size() - 1):
+		sorted_ok = sorted_ok and _db.player_sort_name(rows[i]) <= _db.player_sort_name(rows[i + 1])
+	_check(str(ui.get("_sort")) == "name" and sorted_ok, "Sort orders the pool")
+	_check(rows.all(func(p): return not _state.draft.picked.has(str(p["id"]))), "The pool shows only players still available")
+	ui.call("_clear_filters")
 	await _settle()
-	rows = ui.call("_board_rows")
-	var ratings_lib = load("res://scripts/sim/Ratings.gd")
-	_check(rows.all(func(p): return profile.player_type(p) == "Key forward" and (str(p["role"]) == "FWD" or ratings_lib.second_positions(p).has("FWD"))),
-			"Style and position combine")
-	ui.call("_set_role", "")
-	style_opt = ui.find_child("StyleFilter", true, false)
-	style_opt.select(0)
-	style_opt.item_selected.emit(0)
+
+
+## Every row shows his age and playing style (director's PC playtest,
+## 2026-10-07), and his price fits a phone.
+func _test_pool_row(ui: Control) -> void:
+	var old_size := root.size
+	root.size = Vector2i(390, 844)
+	ui.set("_role", "")
+	ui.set("_search", "")
+	ui.call("_show_board")
 	await _settle()
-	trait_opt = ui.find_child("TraitFilter", true, false)
-	var ti := -1
-	for i in range(trait_opt.item_count):
-		if trait_opt.get_item_text(i) == "Tagger":
-			ti = i
-	_check(ti > 0, "Tagger is a trait to filter by")
-	if ti > 0:
-		trait_opt.select(ti)
-		trait_opt.item_selected.emit(ti)
-		await _settle()
-		rows = ui.call("_board_rows")
-		var roles_lib = load("res://scripts/sim/Roles.gd")
-		_check(not rows.is_empty() and rows.all(func(p): return roles_lib.is_tagger(p)),
-				"The Tagger filter finds players with the Tagger trait, not the word (%d)" % rows.size())
 	# The row: his age on the facts line, how he plays on its own line, and
 	# both fit a phone.
 	var row: Control = ui.find_child("Player_*", true, false)
@@ -913,94 +860,8 @@ func _test_style_and_trait_filters(ui: Control) -> void:
 			"A pool row keeps his price on a phone, inside the row (%s)" % (facts.text if facts else "-"))
 	ui.call("_clear_filters")
 	await _settle()
-	_check(str(ui.get("_style")) == "" and str(ui.get("_trait")) == "", "Clear filters resets style and trait")
 	root.size = old_size
 	await _settle()
-
-
-func _test_career_stage_filters(ui: Control) -> void:
-	var counts := {"rookie": 0, "prime": 0, "veteran": 0}
-	var valid := true
-	for p in _state.draft.pool:
-		var stage := str(ui.call("_career_stage_for_age", float(p.get("age", 0.0))))
-		if not counts.has(stage):
-			valid = false
-		else:
-			counts[stage] = int(counts[stage]) + 1
-	_check(valid and int(counts["rookie"]) + int(counts["prime"]) + int(counts["veteran"]) == _state.draft.pool.size(),
-			"Every League Draft player belongs to exactly one career stage")
-	_check(int(counts["rookie"]) > 100 and int(counts["prime"]) > 100 and int(counts["veteran"]) > 100,
-			"The 2027 career-stage bands are all useful, populated groups")
-	_check(str(ui.call("_career_stage_for_age", 23.99)) == "rookie"
-			and str(ui.call("_career_stage_for_age", 24.0)) == "prime"
-			and str(ui.call("_career_stage_for_age", 28.99)) == "prime"
-			and str(ui.call("_career_stage_for_age", 29.0)) == "veteran",
-			"Career-stage boundary ages route to the intended band")
-
-	var old_size := root.size
-	root.size = Vector2i(360, 800)
-	var pool_size: int = int(_state.draft.pool.size())
-	var history: Array = _state.draft.pick_history.duplicate(true)
-	ui.set("_advanced_open", true)
-	ui.set("_role", "MID")
-	ui.set("_club_filter", "")
-	ui.set("_search", "")
-	ui.set("_career_stage", "rookie")
-	ui.call("_show_board")
-	await _settle()
-	var stage_filter: OptionButton = ui.find_child("CareerStageFilter", true, false)
-	_check(stage_filter != null and stage_filter.item_count == 4
-			and stage_filter.get_item_text(0) == "All"
-			and stage_filter.get_item_text(1) == "Rookies"
-			and stage_filter.get_item_text(2) == "Prime"
-			and stage_filter.get_item_text(3) == "Veterans",
-			"League Draft exposes one compact All/Rookies/Prime/Veterans control")
-	var viewport := Rect2(Vector2.ZERO, root.get_visible_rect().size).grow(1)
-	_check(stage_filter != null and stage_filter.size.y >= 44
-			and viewport.encloses(stage_filter.get_global_rect()),
-			"Career-stage filter is touch-sized and fits a 360px portrait phone")
-
-	var rows: Array = ui.call("_board_rows")
-	var combined_ok := not rows.is_empty()
-	for p in rows:
-		combined_ok = combined_ok and (
-				load("res://scripts/sim/Ratings.gd").plays_role(p, "MID")
-				and str(ui.call("_career_stage_for_age", float(p.get("age", 0.0)))) == "rookie")
-	_check(combined_ok, "Career stage combines with the existing position filter")
-
-	if not rows.is_empty():
-		var target: Dictionary = rows[0]
-		var search_name := str(target.get("real_name", target.get("name", "")))
-		var query := search_name.split(" ")[0] if not search_name.is_empty() else str(target["id"])
-		ui.set("_search", query)
-		var searched: Array = ui.call("_board_rows")
-		var search_ok := not searched.is_empty()
-		for p in searched:
-			search_ok = search_ok and str(ui.call("_career_stage_for_age", float(p.get("age", 0.0)))) == "rookie"
-		_check(search_ok, "Career stage combines with player search")
-
-	if stage_filter != null:
-		stage_filter.select(2)
-		stage_filter.emit_signal("item_selected", 2)
-		await _settle()
-	_check(str(ui.get("_career_stage")) == "prime", "Switching the career-stage control changes only the view")
-	_check(_state.draft.pool.size() == pool_size and _state.draft.pick_history == history,
-			"Switching career stage never changes the underlying draft pool or picks")
-
-	ui.set("_search", "")
-	var prime_rows: Array = ui.call("_board_rows")
-	if not prime_rows.is_empty():
-		ui.call("_open_player", str(prime_rows[0]["id"]))
-		await _settle()
-		_check(str(ui.get("_career_stage")) == "prime", "Inspecting a player preserves the career-stage filter")
-		ui.call("_close_player")
-		await _settle()
-		_check(str(ui.get("_career_stage")) == "prime", "Closing a player returns to the same career stage")
-
-	ui.call("_clear_filters")
-	await _settle()
-	_check(str(ui.get("_career_stage")) == "", "Clear filters restores All career stages")
-	root.size = old_size
 
 
 # One row of position cards shows the list's needs and filters the pool; no
@@ -1032,8 +893,7 @@ func _test_position_filters(ui: Control) -> void:
 	await _settle()
 	_check(ui.get("_role") == "MID", "Tapping a card filters the pool to that position")
 	var info: Label = ui.get("_board_info")
-	var want: int = _state.draft.board("MID", str(ui.get("_club_filter")), str(ui.get("_search")),
-			str(ui.get("_sort")), bool(ui.get("_available_only"))).size()
+	var want: int = _state.draft.board("MID", "", str(ui.get("_search")), str(ui.get("_sort")), true).size()
 	_check(info.text.begins_with("%d MID " % want), "The pool lists that position's players (%s)" % info.text)
 	var sb: StyleBoxFlat = mid.get_theme_stylebox("normal")
 	_check(sb.border_color == kit.ROLE_COLOUR["MID"], "The chosen card is outlined")
