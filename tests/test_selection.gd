@@ -20,23 +20,23 @@ func run() -> void:
 	# the director's hand-set ratings (data/ovr_overrides.csv): they play on the data without them.
 	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
-	_test_auto_matches_select_22()
-	_test_ruck_selection_integrity()
-	_test_named_side()
-	_test_formation_layout()
-	_test_complete_synergy()
-	_test_gaps_and_overflow()
-	_test_left_out_player_sits_out()
-	_test_selection_saved()
-	_test_with_us_and_milestones()
-	_test_fifth_interchange()
-	_test_dual_ruck()
-	_test_merit_second_position()
+	_t("_test_auto_matches_select_22")
+	_t("_test_ruck_selection_integrity")
+	_t("_test_named_side")
+	_t("_test_formation_layout")
+	_t("_test_complete_synergy")
+	_t("_test_gaps_and_overflow")
+	_t("_test_left_out_player_sits_out")
+	_t("_test_selection_saved")
+	_t("_test_with_us_and_milestones")
+	_t("_test_fifth_interchange")
+	_t("_test_dual_ruck")
+	_t("_test_merit_second_position")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
-	print("Selection tests: %d checks, %d failures" % [checks, failures.size()])
+	print(Ran.line("Selection", self))
 
 
 func _check(condition: bool, message: String) -> void:
@@ -44,6 +44,11 @@ func _check(condition: bool, message: String) -> void:
 	if not condition:
 		failures.append(message)
 		push_error(message)
+
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
 
 
 func _ids(arr: Array) -> Array:
@@ -251,7 +256,7 @@ func _test_with_us_and_milestones() -> void:
 	var w := GameState.with_us(p)
 	_check(int(w["games"]) == 59 and int(w["goals"]) == 20 and int(w["since"]) == year - 5,
 			"With us counts only his games for your club: %s" % str(w))
-	_check(GameState.with_us_text(p) == "With us since %d: 59 games, 20 goals. Best and fairest %d. Premiership %d." % [
+	_check(GameState.with_us_text(p) == "With us since %d: 59 games, 20 goals. Carji Greeves Medal %d. Premiership %d." % [
 			year - 5, year - 3, year - 3], "With us in words: " + GameState.with_us_text(p))
 	var notes := GameState.milestone_notes()
 	var found := false

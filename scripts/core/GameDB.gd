@@ -133,11 +133,24 @@ var draftees := []         # the shipped draft class, projections applied
 ## Not in the League redraft pool.
 var list_additions := []
 const LIST_ADDITIONS_CSV := "res://data/list_additions_2026.csv"
+## Senior numbers for the additions who have played AFL before (built by
+## tools/build_addition_stats.py from AFL Tables, season in the "src" column):
+## they are rated from that record through Ratings.derive_all, like any listed
+## player, not as draft prospects.
+const LIST_ADDITION_STATS_CSV := "res://data/list_additions_stats.csv"
 ## Who left a list at the end of 2026, before the National Draft: the key
 ## "first|last|dob" (lower case) to the kind ("retired", "delisted",
 ## "rookie_delisted", "catb_delisted").
 var departures := {}
 const DEPARTURES_CSV := "res://data/departures_2026.csv"
+## Who changed club in the 2026 trade period and free agency, after the 2026
+## season and before the National Draft: the key "first|last|dob" (lower case)
+## to {"from", "to", "kind"} ("traded" or "free_agent"). The 2026 season record
+## (players_2026.csv, checked club by club against AFL Tables) stays as it was
+## played; a real-lists career moves these players when it opens
+## (GameState.begin_real_lists).
+var club_moves := {}
+const CLUB_MOVES_CSV := "res://data/club_moves_2026.csv"
 var late_draftees := []    # generated future classes registered at runtime
 var appearance := {}       # "first|last|dob" -> {skin, hair, status, club}: curated looks
 var skin_mix: Array = Appearance.DEFAULT_SKIN_MIX
@@ -192,6 +205,7 @@ func reload() -> void:
 	_apply_potential_overrides(list_additions)
 	override_unmatched = _report_unmatched_overrides()
 	departures = _load_departures()
+	club_moves = _load_club_moves()
 	mark_unicorns(players + draftees)
 	late_draftees = []
 
@@ -650,6 +664,8 @@ func _load_list_additions() -> Array:
 	var idx := {}
 	for j in range(header.size()):
 		idx[header[j]] = j
+	var record := _load_addition_stats()
+	var established := []
 	var n := 0
 	for i in range(1, rows.size()):
 		var cells: Array = rows[i]
@@ -682,6 +698,27 @@ func _load_list_additions() -> Array:
 		p["role2"] = ""
 		p["real_pos"] = Ratings.ROLE_SHORT_TO_POS.get(str(p["role"]), "MID")
 		p["role_estimated"] = pos == ""
+		var rec = record.get("%s|%s|%s" % [club, p["first"], p["last"]])
+		if rec != null:
+			# Played AFL before: rated on that season, as any listed player is.
+			for k in STAT_KEYS:
+				p[k] = float(rec.get(k, 0.0))
+			p["real_pos"] = pos if pos != "" else ""
+			p["role_estimated"] = false
+			p["stats_year"] = int(rec.get("src", 0))
+			p["data_src"] = "listed 2026, rated on his %d season" % int(rec.get("src", 0))
+			p["draft_year"] = DATA_SEASON
+			p["draft_rank"] = 0
+			p["draft_team"] = ""
+			p["draft_league"] = ""
+			p["draft_state"] = ""
+			p["tied_club"] = ""
+			p["tied_type"] = ""
+			for k in ["u18_gm", "u18_di", "u18_gl", "u18_mk", "u18_tk", "u18_if50", "u18_ho"]:
+				p[k] = 0.0
+			p["note"] = ""
+			established.append(p)
+			continue
 		# Rated as the prospect he still is: a recent draftee about where a
 		# mid-first-round pick sits, an older or rookie-listed player lower.
 		var h := absi(hash(str(p["id"])))
@@ -704,7 +741,44 @@ func _load_list_additions() -> Array:
 		p["data_src"] = "listed 2026, no senior game"
 		Prospects.project(p)
 		out.append(p)
+	if not established.is_empty():
+		Ratings.derive_all(established, players)
+		for p in established:
+			# A position the list gives him is his first position, whatever
+			# one season's numbers read (Powell-Pepper is a midfielder).
+			var listed := str(p.get("real_pos", ""))
+			if listed in ["RUCK", "MID", "DEF", "FWD"] and listed != str(p["role"]):
+				p["role"] = listed
+				p["role2"] = Ratings.assign_secondary(p)
+				p["overall"] = Ratings.rate_overall(p["attr"], listed, float(p["gm"]))
+				p["value"] = Ratings.salary_value(int(p["overall"]))
+			p["career"] = Career.from_source("?")
+			p["data_club"] = str(p["club"])
+			Potential.assign(p)
+		_apply_potential_overrides(established)
+		out.append_array(established)
 	_assign_fictional_names(out)
+	return out
+
+
+## club|first|last -> the stats row (strings read as numbers) for each
+## addition in LIST_ADDITION_STATS_CSV.
+func _load_addition_stats() -> Dictionary:
+	var out := {}
+	if not FileAccess.file_exists(LIST_ADDITION_STATS_CSV):
+		return out
+	var rows := _read_rows(LIST_ADDITION_STATS_CSV)
+	if rows.size() < 2:
+		return out
+	var header: Array = rows[0]
+	for i in range(1, rows.size()):
+		var cells: Array = rows[i]
+		if cells.size() < header.size():
+			continue
+		var d := {}
+		for j in range(header.size()):
+			d[str(header[j]).strip_edges()] = str(cells[j]).strip_edges()
+		out["%s|%s|%s" % [d["club"], d["first"], d["last"]]] = d
 	return out
 
 
@@ -751,6 +825,34 @@ func _load_departures() -> Dictionary:
 ## How this player left his list at the end of 2026 ("" if he stayed).
 func departure_kind(p: Dictionary) -> String:
 	return str(departures.get(_look_key(p), ""))
+
+
+func _load_club_moves() -> Dictionary:
+	var out := {}
+	if not FileAccess.file_exists(CLUB_MOVES_CSV):
+		return out
+	var rows := _read_rows(CLUB_MOVES_CSV)
+	if rows.size() < 2:
+		return out
+	var header: Array = rows[0]
+	var idx := {}
+	for j in range(header.size()):
+		idx[header[j]] = j
+	for i in range(1, rows.size()):
+		var cells: Array = rows[i]
+		if cells.size() < header.size() or _cell_str(cells, idx, "to_club") == "":
+			continue
+		var key := _look_key({"first": _cell_str(cells, idx, "first"),
+				"last": _cell_str(cells, idx, "last"), "dob": _cell_str(cells, idx, "dob")})
+		out[key] = {"from": _cell_str(cells, idx, "from_club"), "to": _cell_str(cells, idx, "to_club"),
+				"kind": _cell_str(cells, idx, "kind")}
+	return out
+
+
+## The club this player joined in the 2026 trade period or free agency, as
+## {"from", "to", "kind"}; {} if he stayed where he played 2026.
+func club_move(p: Dictionary) -> Dictionary:
+	return club_moves.get(_look_key(p), {})
 
 
 func _cell_str(cells: Array, idx: Dictionary, key: String) -> String:
@@ -963,11 +1065,18 @@ func assign_aliases(list: Array) -> void:
 	for i in range(list.size()):
 		var label := _alias_at(_alias_next)
 		_alias_next += 1
-		while _real_names.has(label):
+		while _real_names.has(label) or alias_is_double(label):
 			label = _alias_at(_alias_next)
 			_alias_next += 1
 		list[i]["generic_name"] = label
 		list[i]["name"] = label
+
+
+## True when a name's first word equals its last word ("Reid Reid"). Such a
+## label is skipped at the draw, so the cursor and every stored name stay valid.
+static func alias_is_double(label: String) -> bool:
+	var parts := label.strip_edges().split(" ", false)
+	return parts.size() >= 2 and str(parts[0]).to_lower() == str(parts[parts.size() - 1]).to_lower()
 
 
 func _alias_at(idx: int) -> String:

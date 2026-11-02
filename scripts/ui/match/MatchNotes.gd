@@ -201,6 +201,82 @@ static func press_trigger(timeline: Array, event_index: int, ev: Dictionary, sai
 	return presser if plan == "defensive" else -1
 
 
+## The coach's structural calls in the feed (P-12, director 2026-10-18: "the
+## oval answers a structural call"): a line when a side's game plan starts,
+## carries on over a break or ends, and when a short call (MatchSim.BURSTS)
+## runs out. A short call's start already has its line, the coach's call
+## ("Coach's call: Flood behind the ball for the rest of the quarter."), so it
+## gets no second one. Read from the match's recorded calls (timeline); a plan
+## is in force until the next break at least, when the coach can change it.
+## Every short call ends at the break (MatchSim.end_quarter).
+const PLAN_UNTIL := {1: "quarter time", 2: "half time", 3: "three-quarter time", 4: "the final siren"}
+
+
+## A fresh memory for call_lines, one a match.
+static func call_state() -> Dictionary:
+	return {"i": 0, "plan": ["", ""], "bursts": [[], []], "break": false, "changed": [false, false]}
+
+
+## The feed lines the event at `event_index` brings ([] for none), in order.
+## `state` (call_state) is updated: call once per released event, in order.
+static func call_lines(timeline: Array, event_index: int, ev: Dictionary, state: Dictionary,
+		home: String, away: String) -> Array:
+	var out := []
+	var clubs := [GameDB.club_name(home), GameDB.club_name(away)]
+	var kind := str(ev.get("kind", ""))
+	var q := int(ev.get("q", 1))
+	var bursts: Array = state["bursts"]
+	var plans: Array = state["plan"]
+	if kind == "quarter":
+		# The break ends every short call still running.
+		for side in range(2):
+			for b in (bursts[side] as Array):
+				out.append("%s: %s ends at the break." % [clubs[side], _burst_label(str(b))])
+			bursts[side] = []
+		state["break"] = true
+		state["changed"] = [false, false]
+		return out
+	if kind == "final":
+		return out
+	var changed: Array = state["changed"]
+	while int(state["i"]) < timeline.size() 			and int((timeline[int(state["i"])] as Dictionary).get("at", 0)) <= event_index:
+		var e: Dictionary = timeline[int(state["i"])]
+		state["i"] = int(state["i"]) + 1
+		var side := int(e.get("side", 0))
+		if side < 0 or side > 1:
+			continue
+		var plan := MatchSim.plan_key(str(e.get("plan", "balanced")))
+		var was := str(plans[side])
+		if plan != was:
+			changed[side] = true
+			if plan != "balanced":
+				out.append("%s: %s is on until %s." % [clubs[side], CoachReport.plan_label(plan), _until(q)])
+			elif was != "" and was != "balanced":
+				out.append("%s: %s ends." % [clubs[side], CoachReport.plan_label(was)])
+			plans[side] = plan
+		var now: Array = e.get("bursts", [])
+		for b in (bursts[side] as Array):
+			if not now.has(b):
+				out.append("%s: %s ends." % [clubs[side], _burst_label(str(b))])
+		bursts[side] = now.duplicate()
+	if bool(state["break"]) and kind != "sub" and kind != "injury":
+		# The first play after a break: a plan kept on for the new quarter.
+		state["break"] = false
+		for side in range(2):
+			var kept := str(plans[side])
+			if not changed[side] and kept != "" and kept != "balanced" and q <= 4:
+				out.append("%s: %s stays on until %s." % [clubs[side], CoachReport.plan_label(kept), _until(q)])
+	return out
+
+
+static func _until(q: int) -> String:
+	return str(PLAN_UNTIL.get(q, "the end of extra time"))
+
+
+static func _burst_label(kind: String) -> String:
+	return str((MatchSim.BURSTS.get(kind, {}) as Dictionary).get("label", kind))
+
+
 # ---------------------------------------------------------------------------
 # Quarter-break facts
 # ---------------------------------------------------------------------------
@@ -432,6 +508,7 @@ const FOCUS_ROLES := {
 
 ## The three play-through calls (director, 2026-10-07): [heading, his job,
 ## what it does, with nobody picked, the spot it works from].
+const FOCUS_ORDER := ["focus_fwd", "focus_mid", "focus_def"]  # forward, midfield, back: the order everywhere the coach reads them
 const FOCUS_SLOT_TEXT := {
 	"focus_mid": ["Midfield pillar", "our midfield pillar",
 			"the ball goes to him more often through the midfield",
@@ -725,6 +802,11 @@ static func loose_question() -> String:
 	return "Who plays loose behind the ball?"
 
 
+## The question the Tag call asks, over its choices (an assistant tagger is a follow-up).
+static func tag_question() -> String:
+	return "Tag which player?"
+
+
 ## Your loose man's intercepts this match, in a line: "Jake Lever: 4
 ## intercepts so far." Nothing hidden: the number is his match stat.
 static func loose_tally_line(who: String, n: int) -> String:
@@ -771,9 +853,9 @@ static func card_detail(p: Dictionary, trait_name: String, ratings: PackedString
 ## the tag rule reads, nothing else, as parts so the card can set each in its
 ## own place. His position ("Tagger" with the trait), his Pressure, his legs
 ## in the game's words (legs_word, no number; `legs_bad` only when he is
-## running on empty) and what going to the tag gives up of his own game: his
-## Player rating for the season so far, the figure the Ratings screen shows
-## (a game's average; `rating` is -1 before he has played).
+## running on empty), what going to the tag gives up of his own game and what
+## their man keeps with him on (GateOdds), with his Player rating for the
+## season so far beside the cost (`rating` is -1 before he has played).
 static func tagger_card(p: Dictionary, legs: float, rating := -1.0) -> Dictionary:
 	var places := PackedStringArray()
 	for r in Ratings.positions(p):
@@ -783,12 +865,17 @@ static func tagger_card(p: Dictionary, legs: float, rating := -1.0) -> Dictionar
 		where += " · Tagger"
 	var a: Dictionary = p.get("attr", {})
 	var lw := legs_word(legs)
-	var gives := "his own game (yet to play this season)"
+	# What the job costs him and what it holds their man to, sized from the
+	# sim's constants (GateOdds; bible §4). The cost is the same whoever goes;
+	# the hold is his Pressure and his legs (MatchSim.tag_hold).
+	# His season Player rating stays beside it (director, 2026-10-13).
+	var season := " (yet to play this season)"
 	if rating >= 0.0:
-		gives = "his own game (season rating %.1f)" % rating
+		season = " (season rating %.1f)" % rating
 	return {"where": where, "pressure": str(roundi(float(a.get("pressure", 0)))),
 			"legs": lw.left(1).to_upper() + lw.substr(1), "legs_bad": legs < TIRING,
-			"gives_label": "Gives up", "gives": gives}
+			"gives_label": "Gives up", "gives": GateOdds.tag_gives() + season,
+			"holds_label": "Their man keeps", "holds": GateOdds.pct(GateOdds.tag_kept(p, legs))}
 
 
 ## The same card in one run of words, for the long list ("Other player...")
@@ -799,7 +886,7 @@ static func tagger_card_detail(p: Dictionary, legs: float, wide: bool, rating :=
 	# never ends on one.
 	var dot := " · "
 	var first := "%s%sPressure %s" % [c["where"], dot, c["pressure"]]
-	var second := "%s%sGives up %s" % [c["legs"], dot, c["gives"]]
+	var second := "%s%sGives up %s%sTheir man keeps %s of his ball" % [c["legs"], dot, c["gives"], dot, c["holds"]]
 	return (first + dot + second) if wide else (first + "
 " + second)
 

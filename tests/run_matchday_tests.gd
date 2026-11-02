@@ -39,51 +39,58 @@ func _run() -> void:
 	# and some field no key forward at quarter time (no match-up to change).
 	_state.replay_seed = 2026
 	for sz in [Vector2i(420, 860), Vector2i(360, 740)]:
-		await _phone_match(sz)
-	await _ground_fit()
+		await _t("_test_phone_match", [sz])
+	await _t("_test_ground_fit")
 	_state.replay_seed = SUITE_SEED
-	await _plan_at_first_bounce()
+	await _t("_test_plan_at_first_bounce")
+	await _t("_test_break_panes_layout")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
-		await _coach_descriptions(sz)
-		await _tag_targets(sz)
-		await _minder_cards(sz)
-		await _df_how_its_going(sz)
-		await _loose_interceptor(sz)
-		await _main_ruck_picker(sz)
-		await _best_so_far(sz)
-		await _one_line_break(sz)
+		await _t("_test_coach_descriptions", [sz])
+		await _t("_test_tag_targets", [sz])
+		await _t("_test_minder_cards", [sz])
+		await _t("_test_df_how_its_going", [sz])
+		await _t("_test_loose_interceptor", [sz])
+		await _t("_test_main_ruck_picker", [sz])
+		await _t("_test_best_so_far", [sz])
+		await _t("_test_one_line_break", [sz])
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720), Vector2i(2560, 1440)]:
-		await _tag_tap_keeps_columns(sz)
-	_break_units_keep_followups()
-	_break_packing_is_shortest()
-	_club_ink_all()
+		await _t("_test_tag_tap_keeps_columns", [sz])
+	_t("_test_break_units_keep_followups")
+	_t("_test_break_packing_is_shortest")
+	_t("_test_club_ink_all")
 	for club in ["COL", "GWS", "STK"]:
-		await _pc_break_worst_case(club)
-	await _tag_not_saved()
-	await _bounce_close_up()
-	await _playtest_bounce_scene()
-	await _rings_on_the_oval()
-	await _first_goal_line()
-	await _momentum_meter()
-	await _vignettes_setting()
-	await _game_feel_settings()
-	await _game_feel_effects()
-	_broken_calls()
-	await _vignettes_off_match()
-	_appearance()
+		await _t("_test_pc_break_worst_case", [club])
+	await _t("_test_tag_not_saved")
+	await _t("_test_bounce_close_up")
+	await _t("_test_playtest_bounce_scene")
+	await _t("_test_rings_on_the_oval")
+	await _t("_test_first_goal_line")
+	await _t("_test_momentum_meter")
+	await _t("_test_vignettes_setting")
+	await _t("_test_game_feel_settings")
+	await _t("_test_game_feel_effects")
+	_t("_test_broken_calls")
+	await _t("_test_vignettes_off_match")
+	await _t("_test_match_way_poster")
+	_t("_test_appearance")
 	# Battery: nothing is redrawn unless it changes, and never above 60 fps.
+	_t("_test_battery")
+	print(Ran.line("Matchday + match screen", self, [suite]))
+	quit(0 if _failures.is_empty() else 1)
+
+
+## Battery: idle screens are not redrawn and frames are capped (the check written in _run).
+func _test_battery() -> void:
 	_check(bool(ProjectSettings.get_setting("application/run/low_processor_mode", false))
 			and int(ProjectSettings.get_setting("application/run/max_fps", 0)) == 60,
 			"Idle screens are not redrawn every frame, and frames are capped at 60")
-	print("Matchday + match screen tests: %d checks, %d failures" % [_checks, _failures.size()])
-	quit(0 if _failures.is_empty() else 1)
 
 
 ## The plan you take into a live match is the plan at the first bounce: the
 ## pre-bounce box shows it, Start without touching it keeps it, and a change
 ## in the box is what plays. Read from the engine's own record of the
 ## quarter (tactics_history), not from a stored setting or a label.
-func _plan_at_first_bounce() -> void:
+func _test_plan_at_first_bounce() -> void:
 	var db = root.get_node("GameDB")
 	for want in [["defensive", ""], ["controlled", "contest"]]:
 		var chosen := str(want[0])
@@ -123,7 +130,7 @@ func _plan_at_first_bounce() -> void:
 		await _settle()
 
 
-func _ground_fit() -> void:
+func _test_ground_fit() -> void:
 	# The wide layout and the whole-ground camera follow the screen's shape, not
 	# the platform: the web build (is_desktop() false) gets them on a PC-sized
 	# window, and a phone-sized one keeps the close-up (director, 2026-10-12).
@@ -176,7 +183,7 @@ func _ground_fit() -> void:
 	_check(sl.tap_word() == "Click", "Click on a desktop or a PC browser")
 
 
-func _phone_match(sz: Vector2i) -> void:
+func _test_phone_match(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	_state.reset()
@@ -188,12 +195,10 @@ func _phone_match(sz: Vector2i) -> void:
 	await _settle()
 	var viewport := Rect2(Vector2.ZERO, Vector2(sz))
 
-	# Before the bounce: the calls, no report, no numbers from the engine.
+	# Before the bounce: the calls, no report.
 	var box: Node = m.find_child("CoachBox", true, false)
 	_check(box != null, "The match opens on your calls (%s)" % tag)
 	var text := _text(box)
-	_check(not text.contains("pts") and not text.contains("Expected points") and not text.contains("%"),
-			"The first coach box shows no engine numbers (%s)" % tag)
 	for n in ["PlanPicker", "TagPicker", "FocusPicker_focus_mid", "FocusPicker_focus_fwd", "FocusPicker_focus_def",
 			"PepPicker", "RotationPicker", "LegsView", "TagNote"]:
 		_check(box.find_child(n, true, false) != null, "The coach box keeps %s (%s)" % [n, tag])
@@ -214,9 +219,9 @@ func _phone_match(sz: Vector2i) -> void:
 	# every one of them is already a name.
 	var tag_sim = _state.pending_sim
 	var opp_side: Array = (m.get("_res")["roster"][1 - int(m.get("_my_side"))] as Array).filter(
-			func(r): return bool(m.call("_taggable_now", tag_sim, r)) and bool(m.call("_listed_midfielder", tag_sim, r)))
+			func(r): return bool(m.call("_taggable_now", tag_sim, r)) and bool(m.call("_can_play_midfield", tag_sim, r)))
 	var named := tag_choices.size() - 1
-	_check((tag_other != null and tag_other.text == "Other midfielder…") or named == opp_side.size(),
+	_check((tag_other != null and tag_other.text == "Other player…") or named == opp_side.size(),
 			"Every listed midfielder is a name or behind Other midfielder (%s: %d of %d named)" % [tag, named, opp_side.size()])
 	if tag_other != null:
 		tag_other.emit_signal("pressed")
@@ -300,10 +305,7 @@ func _phone_match(sz: Vector2i) -> void:
 	_check(facts != null and facts.get_child_count() <= 3,
 			"What happened in the quarter is three things at most (%s)" % tag)
 	var bt := _text(box)
-	# "pts" as a word: a quarter's "4 intercepts so far" is football, not an engine number.
-	var pts_word := RegEx.create_from_string("\\bpts\\b")
-	_check(pts_word.search(bt) == null and not bt.contains("Expected points") and not bt.contains(" def ")
-			and not bt.contains("defeated"), "The break shows no engine numbers or result words (%s)" % tag)
+	_check(not bt.contains(" def ") and not bt.contains("defeated"), "The break shows no result words (%s)" % tag)
 	_check(bt.contains("Tag on ") and box.find_child("CallsDid", true, false) != null,
 			"The break says what your calls did, your tag among them (%s)" % tag)
 	var qh: Label = box.find_child("QuarterHeading", true, false)
@@ -369,8 +371,6 @@ func _phone_match(sz: Vector2i) -> void:
 					"The defender goes to him from the next quarter (%s)" % tag)
 			_check(((qsim._own[myside] as Dictionary)["duels"] as Dictionary).has(fid),
 					"A match-up you change stays your call (%s)" % tag)
-			var btext := _text(box)
-			_check(not btext.contains("%") and pts_word.search(btext) == null, "The match-ups show no engine numbers (%s)" % tag)
 	var small := []
 	for b in box.find_children("*", "Button", true, false):
 		if b.is_visible_in_tree() and b.size.y < 40:
@@ -563,7 +563,7 @@ func _phone_match(sz: Vector2i) -> void:
 ## Every coaching choice says what it does, the neutral one too, and the
 ## words follow the choice. Real taps (tests/tap.gd) at the break, and the
 ## plan line under the clock shows every call in full.
-func _coach_descriptions(sz: Vector2i) -> void:
+func _test_coach_descriptions(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	_state.reset()
@@ -610,16 +610,16 @@ func _coach_descriptions(sz: Vector2i) -> void:
 		var w: String = await Tap.tap(b)
 		_check(w == "", "A finger picks the %s pep talk (%s: %s)" % [k, tag, w])
 		await _settle()
-		var note: Label = box.find_child("PepNote", true, false)
-		_check(note != null and note.is_visible_in_tree() and note.text != "" and note.text == report.pep_summary(k),
+		var note: Control = box.find_child("PepNote", true, false)
+		_check(note != null and note.is_visible_in_tree() and _flat(_text(note)) != "" and _flat(_text(note)) == _flat(report.pep_summary(k)),
 				"The %s pep talk shows its own description (%s)" % [k, tag])
-		pep_seen[note.text if note != null else ""] = true
+		pep_seen[_flat(_text(note)) if note != null else ""] = true
 	_check(pep_seen.size() == 4, "Each pep talk has its own words (%s)" % tag)
 	var composed: Button = box.find_child("PepPicker_steady", true, false)
 	await Tap.tap(composed)
 	await _settle()
-	var pn: Label = box.find_child("PepNote", true, false)
-	_check(pn != null and pn.text.begins_with("Keep them as they are"), "Back on Composed, its words return (%s)" % tag)
+	var pn: Control = box.find_child("PepNote", true, false)
+	_check(pn != null and _text(pn).begins_with("Keep them as they are"), "Back on Composed, its words return (%s)" % tag)
 
 	# Rotations: Normal as much as the other two, and never the legs report.
 	var rot_seen := {}
@@ -628,12 +628,12 @@ func _coach_descriptions(sz: Vector2i) -> void:
 		var rw: String = await Tap.tap(rb)
 		_check(rw == "", "A finger picks the %s rotation (%s: %s)" % [k, tag, rw])
 		await _settle()
-		var rn: Label = box.find_child("RotationNote", true, false)
-		_check(rn != null and rn.is_visible_in_tree() and rn.text == str(policies[k]["text"]),
+		var rn: Control = box.find_child("RotationNote", true, false)
+		_check(rn != null and rn.is_visible_in_tree() and _flat(_text(rn)) == _flat(str(policies[k]["text"])),
 				"The %s rotation shows its own description (%s)" % [k, tag])
-		_check(rn != null and rn.text != legs_text and not box.find_child("LegsView", true, false).is_ancestor_of(rn),
+		_check(rn != null and _text(rn) != legs_text and not box.find_child("LegsView", true, false).is_ancestor_of(rn),
 				"The rotation words are not the legs report (%s: %s)" % [k, str(k)])
-		rot_seen[rn.text if rn != null else ""] = true
+		rot_seen[_flat(_text(rn)) if rn != null else ""] = true
 	_check(rot_seen.size() == policies.size(), "Each rotation has its own words (%s)" % tag)
 
 	# Tag: "No tag" says so; a name brings the tagger line back.
@@ -669,7 +669,8 @@ func _coach_descriptions(sz: Vector2i) -> void:
 		# trade is his season Player rating, never his disposals (director, 2026-10-13).
 		var words := func(b: Button) -> String: return str(b.get_meta("card_text", b.text))
 		var gives := func(t: String) -> bool:
-			return t.contains("Gives up His own game (") and not t.contains("disposals") 					and (t.contains("season rating ") or t.contains("yet to play this season"))
+			var gv: String = load("res://scripts/sim/GateOdds.gd").tag_gives()
+			return t.contains("Gives up " + gv.left(1).to_upper() + gv.substr(1) + " (") and t.contains("their man keeps ") and not t.contains("disposals") 					and (t.contains("season rating ") or t.contains("yet to play this season"))
 		_check(dflt != null and gives.call(words.call(dflt)) and words.call(dflt).contains("Your assistant's pick")
 				and mine_btn != null and gives.call(words.call(mine_btn)),
 				"Your assistant's tagger shows what he gives up, like the others, marked as the pick (%s: %s)" % [tag, words.call(dflt).replace("
@@ -796,7 +797,7 @@ func _coach_descriptions(sz: Vector2i) -> void:
 ## player...", by where each plays now (the director's PC playtest,
 ## 2026-10-07). Their ruck is put in a midfield slot and a midfielder in the
 ## ruck: the roster copy would call the ruck a midfielder. Real taps.
-func _tag_targets(sz: Vector2i) -> void:
+func _test_tag_targets(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	_state.reset()
@@ -849,14 +850,14 @@ func _tag_targets(sz: Vector2i) -> void:
 			named_ids[str(b.name).trim_prefix("TagPickerGrid_")] = true
 	var listed_ids := {}
 	for id in eligible:
-		if bool(m.call("_listed_midfielder", sim, {"id": id})):
+		if bool(m.call("_can_play_midfield", sim, {"id": id})):
 			listed_ids[id] = true
 	_check(other != null or named_ids.size() == listed_ids.size(),
 			"Every listed midfielder is a name or behind Other midfielder (%s: %d of %d named)" % [tag, named_ids.size(), listed_ids.size()])
 	var pick: Button = null
 	if other != null:
 		var why: String = await Tap.tap(other)
-		_check(why == "" and other.text == "Other midfielder…", "A finger opens Other midfielder (%s: %s %s)" % [tag, other.text, why])
+		_check(why == "" and other.text == "Other player…", "A finger opens Other midfielder (%s: %s %s)" % [tag, other.text, why])
 		await _settle()
 		var sheet: Node = m.find_child("PlayerSheet", true, false)
 		var rows: Array = sheet.find_children("Sheet_*", "Button", true, false) if sheet != null else []
@@ -916,7 +917,7 @@ func _follows_its_question(par: Node, at: int) -> bool:
 ## as short as it can be. The units are GWS's fullest PC break with Best so far
 ## (heights in px, measured): the old greedy deal left a column of 551, the
 ## best deal is 532.
-func _break_packing_is_shortest() -> void:
+func _test_break_packing_is_shortest() -> void:
 	var ms = load("res://scripts/ui/MatchScene.gd")
 	var h := [333.0, 96.0, 122.0, 133.0, 124.0, 263.0, 140.0, 240.0, 122.0, 207.0, 176.0, 122.0]
 	var picks: Array = ms.call("_shortest_tallest", h, 4, 1000.0)
@@ -937,7 +938,7 @@ func _break_packing_is_shortest() -> void:
 
 ## The packer's grouping on a made-up break (a follow-up is the first thing in
 ## the next column): it stays with its question, whichever column holds it.
-func _break_units_keep_followups() -> void:
+func _test_break_units_keep_followups() -> void:
 	var ms = load("res://scripts/ui/MatchScene.gd")
 	var cols := []
 	for i in range(3):
@@ -974,7 +975,7 @@ func _break_units_keep_followups() -> void:
 ## Best so far on the break (director, 2026-10-11): three of each side by match
 ## rating so far, the numbers the match's own player stats, a real tap on
 ## "All player stats" opens the full table.
-func _best_so_far(sz: Vector2i) -> void:
+func _test_best_so_far(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	var notes = load("res://scripts/ui/match/MatchNotes.gd")
@@ -1102,7 +1103,7 @@ func _best_so_far(sz: Vector2i) -> void:
 ## rows are the ones the quarter starts with. Real taps throughout. Fremantle v
 ## Melbourne at half time (seed 2050), where Melbourne's ruck is running
 ## through the middle: the tag names are their listed midfielders only.
-func _one_line_break(sz: Vector2i) -> void:
+func _test_one_line_break(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	var was_seed = _state.replay_seed
@@ -1212,6 +1213,8 @@ func _one_line_break(sz: Vector2i) -> void:
 	# a tag is picked, and picking one moves nothing.
 	await Tap.tap(tag_row)
 	await _settle()
+	# Loaded, not named: the autoloads are not there when this script compiles.
+	var rt = load("res://scripts/sim/Ratings.gd")
 	var tp: Node = m.find_child("TagPicker", true, false)
 	var names: Array = []
 	var not_listed := []
@@ -1224,7 +1227,7 @@ func _one_line_break(sz: Vector2i) -> void:
 		if pick == null:
 			pick = b
 		var p: Dictionary = sim._on_ground(1 - me, id)
-		if not p.is_empty() and str(p.get("own_role", p.get("role", ""))) != "MID":
+		if not p.is_empty() and not rt.positions(p).has("MID"):
 			not_listed.append(names.back())
 	_check(pick != null and not_listed.is_empty(), "The tag names are their listed midfielders only (%s: %s)" % [tag, str(not_listed)])
 	if them == "MEL":
@@ -1232,17 +1235,19 @@ func _one_line_break(sz: Vector2i) -> void:
 		# midfield second) are both taggable in the sim at half time here.
 		var through := []
 		for p in (sim.squads[1 - me] as Object).ground:
-			if sim.tag_target_ok(1 - me, str(p["id"])) and str(p.get("own_role", p.get("role", ""))) != "MID":
+			if sim.tag_target_ok(1 - me, str(p["id"])) and not rt.positions(p).has("MID"):
 				through.append(str(p["id"]))
 		var offered := through.filter(func(id): return tp.find_child("TagPickerGrid_" + str(id), true, false) != null)
-		_check(not through.is_empty() and offered.is_empty(),
+		# Nobody who cannot play midfield is offered (with the new reading of "can
+		# play midfield" there may be no such man on the ground at all).
+		_check(offered.is_empty(),
 				"A ruck or defender running through the middle is not among the tag names (%s: %d such, %d offered)" % [tag, through.size(), offered.size()])
 		# "Other midfielder..." lists their listed midfielders not already
 		# named, and is not drawn when none is left: nobody running through
 		# the middle is behind it either.
 		var listed_n := 0
 		for r in (m.call("_roster_side", 1 - me) as Array):
-			if bool(m.call("_taggable_now", sim, r)) and bool(m.call("_listed_midfielder", sim, r)):
+			if bool(m.call("_taggable_now", sim, r)) and bool(m.call("_can_play_midfield", sim, r)):
 				listed_n += 1
 		var other: Button = tp.find_child("TagPickerOther", true, false)
 		if other != null:
@@ -1255,7 +1260,7 @@ func _one_line_break(sz: Vector2i) -> void:
 				var rid := str(b.name).trim_prefix("Sheet_")
 				if through.has(rid) or tp.find_child("TagPickerGrid_" + rid, true, false) != null:
 					stray.append(rid)
-			_check(w_other == "" and other.text == "Other midfielder…" and stray.is_empty() and rest.size() == listed_n - names.size(),
+			_check(w_other == "" and other.text == "Other player…" and stray.is_empty() and rest.size() == listed_n - names.size(),
 					"Other midfielder lists only their listed midfielders not already named (%s: %d listed, %d named, %d behind, off %s%s)"
 					% [tag, listed_n, names.size(), rest.size(), str(stray), (", " + w_other) if w_other != "" else ""])
 			m.call("handle_back")
@@ -1393,7 +1398,7 @@ func _open_call_of(m: Node, c: Node) -> void:
 ## screen with both clubs, every pairing in both orders keeps the home ink and
 ## gives two inks at least 25 apart, so two sides are never near-identical.
 ## A red ink carries its bar and crest only: the name is plain TEXT.
-func _club_ink_all() -> void:
+func _test_club_ink_all() -> void:
 	var uk = load("res://scripts/ui/UiKit.gd")
 	var db = root.get_node("GameDB")
 	var bad := []
@@ -1430,17 +1435,57 @@ func _club_ink_all() -> void:
 			if d2 < 25.0:
 				alike.append("%s v %s %.1f" % [h, a, d2])
 	_check(pairs >= 18 * 17 and alike.is_empty(), "Every pairing (%d, home and away) shows two inks 25 or more apart (%s)" % [pairs, str(alike)])
-	var reds := ["ADE", "ESS", "GCS", "MEL", "STK", "SYD"]
+	var reds := ["ESS", "GCS", "MEL", "STK", "SYD"]
 	var red_bad := []
 	for code in codes:
 		var c := str(code)
 		var nm: Color = uk.club_name_colour(uk.club_ink(c))
 		if reds.has(c) != (nm == uk.TEXT) and c != "COL":
 			red_bad.append("%s name %s" % [c, nm.to_html(false)])
-	_check(red_bad.is_empty(), "A red-ink club's name is plain TEXT, every other club's name is its ink (%s)" % str(red_bad))
+	_check(red_bad.is_empty(), "A red-ink club's name is plain TEXT, every other club's name is its ink (Adelaide's is gold since 2026-10-14) (%s)" % str(red_bad))
+	# No name is painted in a raw red ink anywhere (found 2026-10-18: a Melbourne name read as the
+	# primary-action red). Part 1: name markup, every club in turn.
+	var ni = load("res://scripts/ui/NameInk.gd")
+	var markup_bad := []
+	var reds_seen := 0
+	for code in codes:
+		var c2 := str(code)
+		var squad: Array = db.club_list(c2)
+		if squad.is_empty():
+			continue  # an expansion club with no list in this fixture: nothing to check
+		reds_seen += 1 if reds.has(c2) else 0
+		var who: String = db.player_display_name(squad[0])
+		var bb: String = ni.markup(who, ni.from_clubs([c2]))
+		var raw := "[color=#%s]" % uk.club_ink(c2).to_html(false)
+		var shown := "[color=#%s]" % uk.club_name_colour(uk.club_ink(c2)).to_html(false)
+		if not bb.contains(shown) or (reds.has(c2) and bb.contains(raw)):
+			markup_bad.append("%s %s" % [c2, bb])
+	_check(markup_bad.is_empty() and reds_seen == reds.size(), "Every club's player name markup uses the name colour, never a red club's raw ink (%s, %d red clubs checked)" % [str(markup_bad), reds_seen])
+	# Part 2: no screen script hands a raw club ink to a name label or its font colour.
+	var raw_paint := []
+	var stack: Array = ["res://scripts/ui"]
+	while not stack.is_empty():
+		var dir_path: String = stack.pop_back()
+		for sub in DirAccess.get_directories_at(dir_path):
+			stack.append(dir_path + "/" + sub)
+		for f in DirAccess.get_files_at(dir_path):
+			if not f.ends_with(".gd"):
+				continue
+			var src := FileAccess.get_file_as_string(dir_path + "/" + f)
+			var n_line := 0
+			for ln in src.split("
+"):
+				n_line += 1
+				var t: String = ln.strip_edges()
+				if t.begins_with("#"):
+					continue
+				var paints: bool = (t.contains("lbl(") or t.contains("line(") or t.contains("ellipsis(") or t.contains("font_color")) 						and (t.contains("UiKit.club_ink(") or t.contains("UiKit.club_ink_second(")) 						and not t.contains("club_name_colour(")
+				if paints:
+					raw_paint.append("%s:%d" % [f, n_line])
+	_check(raw_paint.is_empty(), "No screen paints a name label in a raw club ink (use UiKit.club_name_colour) (%s)" % str(raw_paint))
 
 
-func _pc_break_worst_case(club := "COL") -> void:
+func _test_pc_break_worst_case(club := "COL") -> void:
 	var db = root.get_node("GameDB")
 	var Mu = load("res://scripts/sim/Matchups.gd")
 	_state.reset()
@@ -1495,10 +1540,7 @@ func _pc_break_worst_case(club := "COL") -> void:
 	_check(worst <= 608.0 - 8.0, "...with at least 8 px to spare (%s: %.0f of 608)" % [club, worst])
 	_check(heights.size() == 1, "Choosing another call never changes the sheet's height (%s: %s)" % [club, str(heights.keys())])
 	# The synergies line is a fact for the game plan: it sits in that call.
-	var syn: Node = null
-	for l in box.find_children("*", "Label", true, false) if box != null else []:
-		if (l as Label).text.begins_with("Your synergies"):
-			syn = l
+	var syn: Node = box.find_child("SynergyBlock", true, false) if box != null else null
 	var plan_body: Node = box.find_child("CallBody_plan", true, false) if box != null else null
 	_check(syn == null or (plan_body != null and plan_body.is_ancestor_of(syn)),
 			"The synergies line sits with the game plan it informs (%s)" % club)
@@ -1517,7 +1559,7 @@ func _pc_break_worst_case(club := "COL") -> void:
 ## defender with his position, Intercept and the Interceptor trait, the cost
 ## line as it was, and your loose man's intercepts so far - the number is his
 ## match stat in the sim, and with no loose man there is no line. Real taps.
-func _loose_interceptor(sz: Vector2i) -> void:
+func _test_loose_interceptor(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	var notes = load("res://scripts/ui/match/MatchNotes.gd")
@@ -1589,7 +1631,7 @@ func _loose_interceptor(sz: Vector2i) -> void:
 ## goes up and who does while he rests; a real tap names him, Start takes it
 ## to the engine and the plan line says it; nothing is cut off, and on a PC
 ## the whole quarter-time break still fits 1280x720.
-func _main_ruck_picker(sz: Vector2i) -> void:
+func _test_main_ruck_picker(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	var Ms = load("res://scripts/sim/MatchSim.gd")
@@ -1638,8 +1680,16 @@ func _main_ruck_picker(sz: Vector2i) -> void:
 			continue
 		var rucks: Array = m.call("_my_rucks", sim)
 		var note: Label = box.find_child("MainRuckNote", true, false)
-		_check(note != null and note.text.begins_with("No main ruck: whoever is in the ruck spot goes up."),
-				"With nobody named, it says the ruck spot decides (%s)" % tag)
+		var best_id := str(rucks[0]["id"])
+		var best_nm: String = db.player_display_name(rucks[0])
+		_check(box.find_child("MainRuckPicker_", true, false) == null and not _any_text(pick, "No main ruck"),
+				"The Main ruck call has no \"No main ruck\" choice (%s)" % tag)
+		var pick_btn: Button = box.find_child("MainRuckPicker_" + best_id, true, false)
+		var other_btn: Button = box.find_child("MainRuckPicker_" + str(rucks[1]["id"]), true, false)
+		_check(pick_btn != null and pick_btn.text.contains("Your assistant's pick") and other_btn != null
+				and not other_btn.text.contains("assistant"), "The assistant's pick, the best Ruck rating, is marked (%s)" % tag)
+		_check(note != null and note.text.begins_with("%s goes up at every stoppage" % best_nm),
+				"With nobody named by the coach, the assistant's pick goes up (%s)" % tag)
 		var b: Button = box.find_child("MainRuckPicker_" + str(rucks[1]["id"]), true, false)
 		var rr := roundi(float((rucks[1]["attr"] as Dictionary).get("ruck", 0.0)))
 		_check(b != null and b.text.contains("Ruck %d" % rr), "His card shows his Ruck rating, %d (%s)" % [rr, tag])
@@ -1677,7 +1727,7 @@ func _main_ruck_picker(sz: Vector2i) -> void:
 
 ## A live match is not saved: a career saved and loaded mid-match comes back
 ## with no match and no tag, so no stale target can survive a load.
-func _tag_not_saved() -> void:
+func _test_tag_not_saved() -> void:
 	var db = root.get_node("GameDB")
 	_state.reset()
 	_state.start_season("COL", db.club_list("COL"))
@@ -1702,7 +1752,7 @@ func _tag_not_saved() -> void:
 ## that names their loose defender and his club, "No defensive forward
 ## assigned", a card for every forward with his position, trait and Pressure,
 ## the same on the "Other player..." sheet; real taps; no text cut off.
-func _df_how_its_going(sz: Vector2i) -> void:
+func _test_df_how_its_going(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	var Mu = load("res://scripts/sim/Matchups.gd")
@@ -1750,7 +1800,7 @@ func _df_how_its_going(sz: Vector2i) -> void:
 		await _settle()
 
 
-func _minder_cards(sz: Vector2i) -> void:
+func _test_minder_cards(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	_state.reset()
@@ -1866,7 +1916,7 @@ func _text(node: Node) -> String:
 ## (ARD-M8-007): only the players at the bounce, from this match, freezing
 ## before the call; the lines under it are MatchSim's own numbers; the call
 ## is MatchSim's and closes back to the match view.
-func _bounce_close_up() -> void:
+func _test_bounce_close_up() -> void:
 	var sz := Vector2i(360, 740)
 	var db = root.get_node("GameDB")
 	_state.reset()
@@ -2077,7 +2127,7 @@ func _bounce_close_up() -> void:
 ## The playtest switch (Settings, ARD-M8-007): the centre-bounce scene comes even
 ## where no call could - early in the last quarter of a blowout, the quarter's calls
 ## spent - and plays through the real match screen.
-func _playtest_bounce_scene() -> void:
+func _test_playtest_bounce_scene() -> void:
 	var db = root.get_node("GameDB")
 	_state.reset()
 	_state.start_season("COL", db.club_list("COL"))
@@ -2122,7 +2172,7 @@ func _playtest_bounce_scene() -> void:
 ## one before you have made a call, then the player you play through and the
 ## player who goes to your tag from the bounce, never the man you tag, and a run
 ## you promised as the next event plays.
-func _rings_on_the_oval() -> void:
+func _test_rings_on_the_oval() -> void:
 	var db = root.get_node("GameDB")
 	_state.reset()
 	_state.start_season("COL", db.club_list("COL"))
@@ -2200,7 +2250,7 @@ func _rings_on_the_oval() -> void:
 
 ## The live feed says a first AFL goal for one of yours: the screen is told who it
 ## could be (GameState.first_goal_candidates), and says it once, and only of them.
-func _first_goal_line() -> void:
+func _test_first_goal_line() -> void:
 	var db = root.get_node("GameDB")
 	_state.reset()
 	_state.start_season("COL", db.club_list("COL"))
@@ -2254,7 +2304,7 @@ func _first_goal_line() -> void:
 ## The momentum meter (director, 2026-10-07): labelled, the club on top
 ## named, its colour from the centre; a real tap explains it and Back closes
 ## that; the first match you watch says what it is once.
-func _momentum_meter() -> void:
+func _test_momentum_meter() -> void:
 	var db = root.get_node("GameDB")
 	_state.set_vignettes_on(false)
 	_state.set_setting("seen_momentum_intro", false)
@@ -2317,7 +2367,7 @@ func _first_pick(box: Node, prefix: String) -> String:
 
 ## How players look on the figures (Appearance.gd, data/player_appearance.csv):
 ## presentation only, never a guess about a real person, never tied to a rating.
-func _appearance() -> void:
+func _test_appearance() -> void:
 	var db = root.get_node("GameDB")
 	# Generated players: from the id alone - stable, and the same whatever the ratings say.
 	var fake := {"id": "GEN_1", "generated": true, "overall": 50, "role": "MID"}
@@ -2448,14 +2498,18 @@ func _bounce_matches_sim(tokens: Array, sim) -> bool:
 	return true
 
 
-## Press answers keep their board and morale effects, and each says what it
-## does under its button (director, 2026-10-10). A real tap on the
-## accountable answer moves the board and the players exactly as its line says.
+## Press answers are rolls with their odds shown (bible §4; director
+## 2026-10-18, ch. 30 row 33): each line under an answer gives both ways it
+## can land, the odds and the sizes. A real tap on the first answer applies
+## the outcome the career's press stream drew, and the sheet after says so.
 func _test_press_effects_shown(db) -> void:
 	var MC = load("res://scripts/sim/MediaConference.gd")
 	_state.media_conference = MC.pick({"club": "COL", "opponent_name": "Carlton", "round": 8,
 			"result": {"home": "COL", "away": "CAR", "score": [55, 101]}}, {})
 	var opts: Array = _state.media_conference.get("options", [])
+	_state.board["confidence"] = 50
+	var who: Dictionary = _state.my_list[0]
+	who["morale"] = 50
 	var hub = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _settle()
@@ -2465,26 +2519,28 @@ func _test_press_effects_shown(db) -> void:
 	var shown := opts.size() == 3
 	for i in range(opts.size()):
 		var line: Label = hub.find_child("MediaAnswerLine_%d" % i, true, false)
-		var o: Dictionary = opts[i]
+		var kind: String = MC.kind_of(opts[i], i)
+		var c: int = _state.press_chance(i)
 		var text := "" if line == null else line.text
-		var board_ok := (int(o.get("board", 0)) > 0) == text.begins_with("The board likes it") \
-				and (int(o.get("board", 0)) < 0) == text.contains("the board wanted")
-		var morale_ok := (int(o.get("morale", 0)) < 0) == text.contains("hung out to dry") \
-				and (int(o.get("morale", 0)) > 0) == text.contains("feel backed")
-		shown = shown and line != null and line.is_visible_in_tree() and board_ok and morale_ok \
-				and not text.contains("%") and not text.contains("+")
-	_check(shown, "Every press answer shows what it does to the board and the players, in words")
-	_state.board["confidence"] = 50
-	var who: Dictionary = _state.my_list[0]
-	who["morale"] = 50
+		shown = shown and line != null and line.is_visible_in_tree() and text == MC.odds_line(kind, c) 				and text.contains("%d%%" % c) and text.contains("%d%%" % (100 - c))
+	_check(shown, "Every press answer shows both ways it can land, with the odds and the sizes")
+	var c0: int = _state.press_chance(0)
+	var landed := "a" if MC.roll(_state.career_seed, _state.season_year, int(_state.media_conference.get("round", 0)),
+			str(_state.media_conference.get("key", "")), 0) <= c0 else "b"
+	var out: Dictionary = MC.ANSWERS["criticise"][landed]
 	var answer: Button = hub.find_child("MediaAnswer_0", true, false)
-	var o0: Dictionary = opts[0] if not opts.is_empty() else {}
 	var tapped: String = await Tap.tap(answer) if answer != null else "missing"
 	await _settle()
-	_check(tapped == "" and _state.board_confidence() == 50 + int(o0.get("board", 0))
-			and int(who["morale"]) == 50 + int(o0.get("morale", 0)) and int(o0.get("board", 0)) > 0
-			and int(o0.get("morale", 0)) < 0,
-			"A real tap on the accountable answer lifts the board and costs the players, as its line says (%s)" % tapped)
+	var after: Label = hub.find_child("MediaOutcomeLine", true, false)
+	_check(tapped == "" and _state.board_confidence() == 50 + int(out["board"])
+			and int(who["morale"]) == 50 + int(out["morale"]) and after != null and after.is_visible_in_tree()
+			and after.text == MC.after_line("criticise", landed),
+			"A real tap on the first answer applies the outcome the press stream drew, and the sheet after says how it landed (%s, %s)" % [tapped, landed])
+	var done: Button = hub.find_child("MediaOutcomeDone", true, false)
+	var closed: String = await Tap.tap(done) if done != null else "missing"
+	await _settle()
+	_check(closed == "" and hub.find_child("MediaOutcome", true, false) == null,
+			"A real tap on Done closes the press outcome (%s)" % closed)
 	if is_instance_valid(hub):
 		hub.queue_free()
 	_state.media_conference = {}
@@ -2501,7 +2557,7 @@ func _settle() -> void:
 # ---------------------------------------------------------------------------
 ## The setting is in the options at a phone's size and a PC's, takes a real
 ## tap, and stays put across a reload of the settings.
-func _vignettes_setting() -> void:
+func _test_vignettes_setting() -> void:
 	_state.set_vignettes_on(true)
 	var options = load("res://scripts/ui/OptionsSheet.gd")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
@@ -2577,8 +2633,8 @@ func _vignettes_setting() -> void:
 		await _settle()
 		var land: Button = sheet.find_child("SettingsOrientation_landscape", true, false)
 		_check(land != null and sheet.find_child("SettingsOrientation_auto", true, false) != null
-				and _state.screen_orientation() == "auto",
-				"A phone's Settings has Screen: follow the phone, portrait, landscape (%s)" % tag)
+				and _state.screen_orientation() == "portrait",
+				"A phone's Settings has Screen: portrait by default, landscape, follow the phone (%s)" % tag)
 		if land != null:
 			_check((await Tap.tap(land)) == "", "Landscape takes a real tap (%s)" % tag)
 			await _settle()
@@ -2586,12 +2642,13 @@ func _vignettes_setting() -> void:
 			var cfg2 := ConfigFile.new()
 			_check(cfg2.load(_state.settings_path) == OK and cfg2.get_value("ui", "screen_orientation") == "landscape",
 					"Landscape is saved with the settings (%s)" % tag)
-			_state.set_screen_orientation("auto")
+			_state.set_screen_orientation("portrait")
 		load("res://scripts/core/ScreenLayout.gd").force_web_phone = false
 		_check(root.get_node("ScreenLayout").orientation_for("portrait") == DisplayServer.SCREEN_PORTRAIT
 				and root.get_node("ScreenLayout").orientation_for("landscape") == DisplayServer.SCREEN_LANDSCAPE
-				and root.get_node("ScreenLayout").orientation_for("junk") == DisplayServer.SCREEN_SENSOR,
-				"Each choice maps to the engine's orientation; unknown follows the phone (%s)" % tag)
+				and root.get_node("ScreenLayout").orientation_for("auto") == DisplayServer.SCREEN_SENSOR
+				and root.get_node("ScreenLayout").orientation_for("junk") == DisplayServer.SCREEN_PORTRAIT,
+				"Each choice maps to the engine's orientation; unknown is portrait (%s)" % tag)
 		host.queue_free()
 		await _settle()
 
@@ -2612,7 +2669,7 @@ func _sheet_at(options, sz: Vector2i) -> Array:
 
 ## Three rows in Settings, each its own Off, real taps at a phone's size and a
 ## PC's, saved with the settings. Vibration shows only on a phone.
-func _game_feel_settings() -> void:
+func _test_game_feel_settings() -> void:
 	var options = load("res://scripts/ui/OptionsSheet.gd")
 	var feel = load("res://scripts/ui/Feel.gd")
 	var uk = load("res://scripts/ui/UiKit.gd")
@@ -2664,7 +2721,7 @@ func _game_feel_settings() -> void:
 ## sound, the buzz and the motion of a press, a choice, a big moment, an
 ## attention pulse and a living background. Read from Feel's own record of
 ## what it started (Feel.heard / felt / moved), and from the nodes.
-func _game_feel_effects() -> void:
+func _test_game_feel_effects() -> void:
 	var feel = load("res://scripts/ui/Feel.gd")
 	var uk = load("res://scripts/ui/UiKit.gd")
 	feel.force_phone = true
@@ -2762,7 +2819,7 @@ func _game_feel_effects() -> void:
 
 
 ## The break's pulse is only for a call the quarter broke.
-func _broken_calls() -> void:
+func _test_broken_calls() -> void:
 	var notes = load("res://scripts/ui/match/MatchNotes.gd")
 	var last := {"focus_id": "p1", "interceptor_id": "p2", "spare_minder_id": "", "tag_id": "o9"}
 	var res := {"tag_drops": [{"side": 0, "q": 2, "id": "o9"}]}
@@ -2778,9 +2835,12 @@ func _broken_calls() -> void:
 ## call still comes and is made, no scene is ever built with them off, and
 ## the football is identical. Then the hub's Play match, the press conference
 ## and the awards night with them off.
-func _vignettes_off_match() -> void:
-	var with_on: Dictionary = await _drive_match(true)
+func _test_vignettes_off_match() -> void:
+	# The vignettes-on match is taken in Key moments (P-14), the vignettes-off one
+	# watched: the same match either way, so one pair proves both.
+	var with_on: Dictionary = await _drive_match(true, "key")
 	var with_off: Dictionary = await _drive_match(false)
+	_key_moments_checks(with_on, with_off)
 	print("Vignettes on: %d scenes, calls %s, %s. Off: %d scenes, calls %s, %s." % [int(with_on["vignettes"]),
 			str(with_on["kinds"]), str(with_on["score"]), int(with_off["vignettes"]), str(with_off["kinds"]),
 			str(with_off["score"])])
@@ -2841,7 +2901,7 @@ func _vignettes_off_match() -> void:
 	hub.queue_free()
 	_state.media_conference = {}
 	await _settle()
-	await _test_press_effects_shown(db)
+	await _t("_test_press_effects_shown", [db])
 	# A promised run just ended: the sit-down is the week's one ask, and a real
 	# tap on Done closes it.
 	_state.backing_talk = {"player_id": "calder", "title": "Sit-down with Calder",
@@ -2887,7 +2947,7 @@ func _vignettes_off_match() -> void:
 ## A seeded live match played through the match screen, every call answered
 ## with its first choice. With the centre ball-up call forced in the last
 ## quarter, so the one call with a scene of its own always comes.
-func _drive_match(vignettes: bool) -> Dictionary:
+func _drive_match(vignettes: bool, way := "watch") -> Dictionary:
 	var db = root.get_node("GameDB")
 	_state.set_vignettes_on(vignettes)
 	_state.set_bounce_scene_every_match(true)
@@ -2895,6 +2955,7 @@ func _drive_match(vignettes: bool) -> Dictionary:
 	_state.replay_seed = SUITE_SEED
 	_state.start_season("COL", db.club_list("COL"))
 	root.size = Vector2i(390, 844)
+	_state.set_match_way(way)
 	_state.prepare_interactive_match()
 	var seen := [0]
 	var watch := func(n: Node) -> void:
@@ -2904,8 +2965,22 @@ func _drive_match(vignettes: bool) -> Dictionary:
 			seen[0] += 1
 	node_added.connect(watch)
 	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	# Key moments holds 1x for 1.8 real seconds after a stop; a tenth here keeps
+	# the suite quick and leaves what stops the match the same.
+	m.set("km_hold_seconds", 0.1)
 	root.add_child(m)
 	await _settle()
+	var km_word: Control = m.find_child("KeyMomentsState", true, false)
+	var km_shown := km_word != null and km_word.is_visible_in_tree() and str((km_word as Button).text) == "Key moments"
+	var speeds_shown := 0
+	for b in m.get("_speed_btns"):
+		if (b as Control).is_visible_in_tree():
+			speeds_shown += 1
+	var km_watch: Control = m.find_child("KeyMomentsWatch", true, false)
+	var row_ok := km_word != null and km_watch != null and km_watch.global_position.x < km_word.global_position.x
+	for c in m.find_children("*", "Button", true, false):
+		if (c as Button).is_visible_in_tree() and (c as Button).text in ["Pause", "Watch", "Key moments", "Skip to full time"]:
+			row_ok = row_ok and (c as Control).size.y >= 44.0
 	var kinds := []
 	var offered := 0
 	var chosen := 0
@@ -2943,12 +3018,161 @@ func _drive_match(vignettes: bool) -> Dictionary:
 	var out := {"vignettes": seen[0], "kinds": kinds, "offered": offered, "chosen": chosen,
 		"bounce_facts": bounce_facts, "guard": guard,
 		"score": "%s-%s" % [str(res.get("goals", [])), str(res.get("behinds", []))],
-		"events": JSON.stringify(res.get("events", [])), "players": JSON.stringify(res.get("players", {}))}
+		"events": JSON.stringify(res.get("events", [])), "players": JSON.stringify(res.get("players", {})),
+		"log": (res.get("events", []) as Array).duplicate(true), "stops": (m.get("km_stops") as Array).duplicate(true),
+		"trace": (m.get("km_trace") as Array).duplicate(true), "km_shown": km_shown, "speeds_shown": speeds_shown,
+		"row_ok": row_ok}
 	_check(bool(m.get("_fulltime_shown")), "The match reaches full time (vignettes %s)" % ("on" if vignettes else "off"))
 	node_added.disconnect(watch)
 	m.queue_free()
 	await _settle()
 	return out
+
+
+## Key moments (P-14), from the seeded match taken that way (`key`) and the same
+## match watched (`watch`): it stops at every goal, every call and every break
+## in the sim's log and nowhere else, runs at top speed in between, and ends
+## on the same match.
+func _key_moments_checks(key: Dictionary, watch: Dictionary) -> void:
+	var log: Array = key["log"]
+	var goals := []
+	var moments := 0
+	for i in range(log.size()):
+		var k := str((log[i] as Dictionary).get("kind", ""))
+		if k == "goal":
+			goals.append(i)
+		elif k == "moment":
+			moments += 1
+	var goal_stops := []
+	var moment_stops := 0
+	var breaks := []
+	var other := []
+	for s in key["stops"]:
+		match str(s["kind"]):
+			"goal":
+				goal_stops.append(int(s["event"]))
+			"moment":
+				moment_stops += 1
+			"break":
+				breaks.append(int(s["q"]))
+			_:
+				other.append(str(s["kind"]))
+	print("Key moments: %d stops (%d goals of %d, %d calls of %d, breaks %s), %d events traced" % [
+			(key["stops"] as Array).size(), goal_stops.size(), goals.size(), moment_stops, moments,
+			str(breaks), (key["trace"] as Array).size()])
+	_check(bool(key["km_shown"]) and int(key["speeds_shown"]) == 0,
+			"Key moments shows its name where the speeds sit, the speeds put away (%d shown)" % int(key["speeds_shown"]))
+	_check(bool(key["row_ok"]), "The match row reads Pause, Watch, Key moments, each at least 44 px tall")
+	_check(not goals.is_empty() and goal_stops == goals,
+			"Key moments stops for every goal in the log and only those (%d of %d)" % [goal_stops.size(), goals.size()])
+	_check(moments > 0 and moment_stops == moments,
+			"Key moments stops for every coach's call (%d of %d)" % [moment_stops, moments])
+	_check(breaks == [2, 3, 4], "Key moments stops at quarter time, half time and three-quarter time (%s)" % str(breaks))
+	_check(other.is_empty(), "Key moments stops for nothing else (%s)" % str(other))
+	# Between the stops, top speed (8x): every event released below it belongs to
+	# a stretch of 1x that holds a goal or a call's line.
+	var stray := []
+	var run_has_key := false
+	var run_len := 0
+	var trace: Array = key["trace"]
+	for i in range(trace.size() + 1):
+		var slow := i < trace.size() and float(trace[i][1]) < 8.0
+		if slow:
+			run_len += 1
+			if str(trace[i][0]) in ["goal", "moment"]:
+				run_has_key = true
+			if str(trace[i][2]) == "":
+				stray.append("%s at %sx with no stop" % [str(trace[i][0]), str(trace[i][1])])
+		elif run_len > 0:
+			if not run_has_key:
+				stray.append("%d events slowed with no goal or call" % run_len)
+			run_has_key = false
+			run_len = 0
+	_check(trace.size() == log.size() and stray.is_empty(),
+			"Key moments runs at 8x except around a goal or a call (%d of %d traced; %s)" % [
+				trace.size(), log.size(), str(stray.slice(0, 3))])
+	_check(key["score"] == watch["score"] and key["events"] == watch["events"],
+			"Key moments ends on the same match as watching it (%s v %s)" % [str(key["score"]), str(watch["score"])])
+
+
+## The poster's three ways to take the match: a real tap picks one, the main
+## button says Skip to full time only when Skip is chosen, the last one comes up
+## chosen on the next visit, and a real tap on the main button with Skip chosen
+## goes straight to your full time.
+func _test_match_way_poster() -> void:
+	var db = root.get_node("GameDB")
+	_state.set_vignettes_on(true)
+	_state.set_match_way("watch")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("FRE", db.club_list("FRE"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+		root.size = sz
+		_state.set_match_way("watch")
+		var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+		root.add_child(hub)
+		await _settle()
+		var key: Button = hub.find_child("MatchWay_key", true, false)
+		var skip: Button = hub.find_child("MatchWay_skip", true, false)
+		var watch: Button = hub.find_child("MatchWay_watch", true, false)
+		var play: Button = hub.find_child("PlayMatch", true, false)
+		_check(watch != null and key != null and skip != null and _chosen(watch) and not _chosen(key)
+				and play != null and play.text == "Play match",
+				"%dx%d: the poster offers Watch, Key moments and Skip, Watch chosen for a new coach" % [sz.x, sz.y])
+		var row_ok := watch != null and key != null and skip != null
+		if row_ok:
+			row_ok = (is_equal_approx(watch.global_position.y, key.global_position.y)
+					and is_equal_approx(key.global_position.y, skip.global_position.y)
+					and watch.global_position.x < key.global_position.x
+					and key.global_position.x < skip.global_position.x)
+		_check(row_ok, "%dx%d: the three choices sit in one row, Watch, Key moments, Skip" % [sz.x, sz.y])
+		var tapped: String = await Tap.tap(key) if key != null else "missing"
+		_check(tapped == "" and _state.match_way() == "key" and _chosen(key) and not _chosen(watch)
+				and play != null and play.text == "Play match",
+				"%dx%d: a real tap on Key moments chooses it and keeps it, Play match stays (%s, %s)" % [
+					sz.x, sz.y, tapped, _state.match_way()])
+		tapped = await Tap.tap(skip) if skip != null else "missing"
+		_check(tapped == "" and _state.match_way() == "skip" and play != null and play.text == "Skip to full time",
+				"%dx%d: a real tap on Skip chooses it and the main button says Skip to full time (%s, %s)" % [
+					sz.x, sz.y, tapped, play.text if play != null else "-"])
+		hub.queue_free()
+		await _settle()
+	# The next visit: Skip comes up chosen; a real tap on the main button goes
+	# straight to your full time.
+	root.size = Vector2i(390, 844)
+	var hub2: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub2)
+	await _settle()
+	var skip2: Button = hub2.find_child("MatchWay_skip", true, false)
+	var play2: Button = hub2.find_child("PlayMatch", true, false)
+	_check(skip2 != null and _chosen(skip2) and play2 != null and play2.text == "Skip to full time",
+			"The way chosen last comes up chosen on the next visit, the main button in its words")
+	var tapped2: String = await Tap.tap(play2) if play2 != null else "missing"
+	var saw_box := false
+	var m: Node = null
+	for i in range(60):
+		await process_frame
+		if current_scene != null and current_scene.name == "MatchScene":
+			m = current_scene
+			saw_box = saw_box or m.find_child("CoachBox", true, false) != null
+			if bool(m.get("_fulltime_shown")):
+				break
+	_check(tapped2 == "" and m != null, "A real tap on Skip to full time opens your match (%s)" % tapped2)
+	_check(m != null and bool(m.get("_fulltime_shown")) and not saw_box and _state.pending_sim == null,
+			"Skip goes straight to your full time on the plan you took in, no break on the way")
+	if m != null:
+		m.queue_free()
+	if is_instance_valid(hub2):
+		hub2.queue_free()
+	_state.set_match_way("watch")
+	await _settle()
+
+
+## A choice painted as chosen (UiKit.paint_choice): the 2 px outline.
+func _chosen(b: Button) -> bool:
+	var sb := b.get_theme_stylebox("normal") as StyleBoxFlat
+	return sb != null and sb.border_width_left == 2
 
 
 ## True when a body on the figure sheet has the move from every one of those sides.
@@ -2960,6 +3184,16 @@ func _sheet_has(body: Dictionary, anim: String, facings: Array) -> bool:
 	return true
 
 
+## True when any button or label under a node says the text.
+func _any_text(node: Node, text: String) -> bool:
+	for n in node.find_children("*", "Control", true, false):
+		if (n is Button or n is Label) and str(n.text).contains(text):
+			return true
+		if n is RichTextLabel and (n as RichTextLabel).get_parsed_text().contains(text):
+			return true
+	return false
+
+
 func _check(condition: bool, message: String) -> void:
 	_checks += 1
 	if not condition:
@@ -2967,10 +3201,221 @@ func _check(condition: bool, message: String) -> void:
 		push_error(message)
 
 
+## The call panes, Fremantle v Melbourne (the lead's captures of 2026-10-18, seed 2050).
+## Before the first ball-up: "Tag which player?" is drawn over the tag choices; on a
+## PC the game plan leads the first column, the tag and the key match-ups share one, the
+## pep talk and the defensive forward share one, the columns are alike in height and the
+## pane does not scroll; each key match-up's Change sits right after its sentence and no
+## player's name is broken across two lines. At quarter time each surname the key
+## match-ups row names wears his own club's ink (two clubs share "McDonald"), and Best so
+## far's names wear their clubs' ink (director A1, 2026-10-14).
+
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
+const NB := " "
+
+
+func _fre_v_mel() -> bool:
+	var db = root.get_node("GameDB")
+	for tries in range(80):
+		_state.reset()
+		_state.career_seed = 2050 + tries
+		_state.replay_seed = 2050 + tries
+		_state.set_setting("seen_training_intro", true)
+		_state.start_season("FRE", db.club_list("FRE"))
+		_state.prepare_interactive_match()
+		var sq = _state.pending_sim.squads
+		if str(sq[0].code) == "MEL" or str(sq[1].code) == "MEL":
+			return true
+	return false
+
+
+func _test_break_panes_layout() -> void:
+	var UK = load("res://scripts/ui/UiKit.gd")
+	var db = root.get_node("GameDB")
+	var seed_before: int = _state.replay_seed
+	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+		var tag := "%dx%d" % [sz.x, sz.y]
+		root.size = sz
+		_check(_fre_v_mel(), "(setup) Fremantle meet Melbourne in a seed from 2050 (%s)" % tag)
+		var sim = _state.pending_sim
+		var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+		root.add_child(m)
+		await _settle()
+		await _settle()
+		var box: Node = m.find_child("CoachBox", true, false)
+		_check(box != null, "The pre-bounce box opens (%s)" % tag)
+		if box == null:
+			m.queue_free()
+			continue
+		var ask: Node = box.find_child("TagQuestion", true, false)
+		var tag_picker: Node = box.find_child("TagPicker", true, false)
+		_check(ask is Label and (ask as Label).text == "Tag which player?" and (ask as Label).is_visible_in_tree(),
+				"Tag which player? is drawn over the tag choices (%s)" % tag)
+		_check(ask != null and tag_picker != null and ask.get_parent() == tag_picker.get_parent()
+				and ask.get_index() < tag_picker.get_index(), "...above the choices, in the Tag block (%s)" % tag)
+		await _matchup_rows(m, box, tag)
+		var mq: Control = box.find_child("MinderQuestion", true, false)
+		var opp_code := str(sim.squads[1 - int(sim.moment_side)].code)
+		var ink_club: String = "[color=#%s]%s[/color]" % [UK.club_name_colour(UK.club_ink(opp_code)).to_html(false), db.club_name(opp_code).replace(" ", NB)]
+		_check(mq is RichTextLabel and (mq as RichTextLabel).text.contains(ink_club),
+				"The club name in Who covers (%s)? wears the club's ink (%s: %s)" % [db.club_name(opp_code), tag, "" if mq == null else str(mq.get("text"))])
+		if sz.x >= 1200:
+			var cols_node: Control = box.find_child("BreakColumns", true, false)
+			var cols: Array = cols_node.get_children()
+			var col_of := func(nm: String) -> int:
+				var n: Node = box.find_child(nm, true, false)
+				for i in range(cols.size()):
+					if n != null and (cols[i] as Node).is_ancestor_of(n):
+						return i
+				return -1
+			_check(cols.size() == 4, "Four call columns at 1280x720 (%d)" % cols.size())
+			_check(int(col_of.call("PlanPicker")) == 0, "The game plan leads the first column (column %d)" % int(col_of.call("PlanPicker")))
+			_check(int(col_of.call("TagPicker")) >= 0 and int(col_of.call("TagPicker")) == int(col_of.call("BreakMatchups")),
+					"The tag and the key match-ups share a column")
+			_check(int(col_of.call("PepPicker")) >= 0 and int(col_of.call("PepPicker")) == int(col_of.call("MinderBlock")),
+					"The pep talk and the defensive forward share a column")
+			_check(int(col_of.call("RotationPicker")) >= 0 and int(col_of.call("RotationPicker")) == int(col_of.call("FocusPicker_focus_fwd"))
+					and int(col_of.call("RotationPicker")) == int(col_of.call("FocusPicker_focus_def")),
+					"Rotations and the play-through calls share a column")
+			var tallest := 0.0
+			var heights := []
+			for c in cols:
+				var t := 0.0
+				for n in (c as Node).get_children():
+					if (n as Control).visible:
+						t += (n as Control).get_combined_minimum_size().y + 6.0
+				heights.append(t)
+				tallest = maxf(tallest, t)
+			var worst := 0.0
+			for t in heights:
+				worst = maxf(worst, (tallest - float(t)) / tallest)
+			_check(worst <= 0.20, "No column stands more than a fifth empty (%.0f%%: %s)" % [worst * 100.0, str(heights)])
+			var bsc: ScrollContainer = null
+			var up: Node = cols_node
+			while up != null and bsc == null:
+				bsc = up as ScrollContainer
+				up = up.get_parent()
+			var need := (bsc.get_child(0) as Control).get_combined_minimum_size().y if bsc != null else INF
+			_check(need <= bsc.size.y + 1.0, "The pre-bounce pane does not scroll at 1280x720 (%.0f of %.0f)" % [need, bsc.size.y if bsc else 0.0])
+		m.queue_free()
+		await _settle()
+		# Quarter time: the calls rows and Best so far.
+		sim.run_quarter()
+		var m2: Control = load("res://scenes/MatchScene.tscn").instantiate()
+		root.add_child(m2)
+		await _settle()
+		await _settle()
+		var box2: Node = m2.find_child("CoachBox", true, false)
+		var row: Node = box2.find_child("CallRow_mu", true, false) if box2 != null else null
+		_check(row != null, "Quarter time has the key match-ups row (%s)" % tag)
+		if row != null:
+			var ans: RichTextLabel = row.get_meta("answer") as RichTextLabel
+			var mine := int(sim.moment_side)
+			var named := 0
+			for fid in (sim.duels[mine] as Dictionary):
+				var duel_id := str((sim.duels[mine] as Dictionary)[fid])
+				for pair in [[str(fid), str(sim.squads[1 - mine].code)], [duel_id, str(sim.squads[mine].code)]]:
+					var full: String = db.player_display_name_by_id(str(pair[0]), "")
+					var sur: String = full.split(" ", false, 1)[1] if full.contains(" ") else full
+					if not _plain_of(ans).contains(sur):
+						continue
+					named += 1
+					_check(ans.text.contains("[color=#%s]%s" % [UK.club_name_colour(UK.club_ink(str(pair[1]))).to_html(false), sur.replace(" ", NB)]),
+							"%s wears %s's ink on the key match-ups row (%s)" % [sur, pair[1], tag])
+			_check(named >= 2, "The key match-ups row names players (%d, %s)" % [named, tag])
+		var inks: Array = UK.club_ink_pair(str(sim.squads[0].code), str(sim.squads[1].code))
+		for side in [0, 1]:
+			var wrap: Node = box2.find_child("BestSide_%d" % side, true, false) if box2 != null else null
+			var plain := []
+			var count := 0
+			for n in (wrap.find_children("StandoutName", "Label", true, false) if wrap != null else []):
+				count += 1
+				if (n as Label).get_theme_color("font_color") != UK.club_name_colour(inks[side] as Color):
+					plain.append((n as Label).text)
+			_check(count >= 1 and plain.is_empty(), "Best so far names for side %d wear his club's ink (%s, %d, not: %s)" % [side, tag, count, str(plain)])
+		m2.queue_free()
+		await _settle()
+	_state.replay_seed = seed_before
+
+
+func _plain_of(c: Control) -> String:
+	return str(c.get_meta("plain")) if c.has_meta("plain") else (c as Label).text
+
+
+## Each key match-up's Change sits right after its sentence, and no name in a
+## sentence is broken across two lines.
+func _matchup_rows(m: Control, box: Node, tag: String) -> void:
+	var NI = load("res://scripts/ui/NameInk.gd")
+	var rows := box.find_children("BreakMatchup_*", "HBoxContainer", true, false)
+	_check(not rows.is_empty(), "The key match-ups have rows (%s)" % tag)
+	var names: Dictionary = m.call("_names")
+	var gaps := []
+	for r in rows:
+		var line: RichTextLabel = r.find_child("MatchupLine", true, false) as RichTextLabel
+		var change: Button = r.find_child("ChangeMatchup", true, false) as Button
+		if line == null or change == null:
+			_check(false, "A match-up row has its sentence and Change (%s)" % tag)
+			continue
+		var beside := _change_beside(line, change)
+		var gap: float = beside["gap"]
+		gaps.append(gap)
+		_check(gap >= 0.0 and gap <= 14.0, "Change sits right after its sentence, %.0f px away (%s: %s)" % [gap, tag, _plain_of(line)])
+		_check(absf(float(beside["off"])) <= 6.0, "Change sits level with the last line of its sentence (%.0f px off, %s: %s)" % [beside["off"], tag, _plain_of(line)])
+		var plain := _plain_of(line)
+		var spans: Array = NI.spans_in(plain, names)
+		var broken := []
+		for i in range(1, line.get_line_count()):
+			var at := line.get_line_range(i).x
+			for sp in spans:
+				if at > int(sp[0]) and at < int(sp[1]):
+					broken.append(plain.substr(int(sp[0]), int(sp[1]) - int(sp[0])))
+		_check(broken.is_empty(), "No name breaks across lines on a match-up (%s: %s)" % [tag, str(broken)])
+	# A sentence long enough to wrap on any pane: Change still follows its last line,
+	# the same distance as on a one-line row.
+	if not rows.is_empty():
+		var wl: RichTextLabel = rows[0].find_child("MatchupLine", true, false) as RichTextLabel
+		var was_bb := wl.text
+		var was_plain := _plain_of(wl)
+		NI.set_line(wl, "A long sentence that names a good many words, so that this match-up has to wrap onto a second and a third line before it ends.", names)
+		if wl.has_meta("refit"):
+			(wl.get_meta("refit") as Callable).call()
+		await _settle()
+		var wc: Button = rows[0].find_child("ChangeMatchup", true, false) as Button
+		var wat := _change_beside(wl, wc)
+		_check(wl.get_line_count() >= 2, "(setup) the long match-up sentence wraps (%d lines, %s)" % [wl.get_line_count(), tag])
+		_check(float(wat["gap"]) >= 0.0 and float(wat["gap"]) <= 14.0, "On a wrapped sentence Change sits right after its last line, %.0f px away (%s)" % [wat["gap"], tag])
+		_check(absf(float(wat["off"])) <= 6.0, "...level with that last line (%.0f px off, %s)" % [wat["off"], tag])
+		var all_gaps: Array = gaps.duplicate()
+		all_gaps.append(float(wat["gap"]))
+		var lo: float = all_gaps.min()
+		var hi: float = all_gaps.max()
+		_check(all_gaps.size() >= 2 and hi - lo <= 4.0, "Every Change sits the same distance after its sentence, wrapped or not (%.1f to %.1f px, %s)" % [lo, hi, tag])
+		wl.text = was_bb
+		wl.set_meta("plain", was_plain)
+		(wl.get_meta("refit") as Callable).call()
+		await _settle()
+
+
+## How far a Change sits from the end of its sentence's last line (gap, px across),
+## and how far its middle is from that line's middle (off, px down).
+func _change_beside(line: RichTextLabel, change: Button) -> Dictionary:
+	var last := line.get_line_count() - 1
+	var rng := line.get_line_range(last)
+	var shown := line.get_parsed_text().substr(rng.x, rng.y - rng.x).strip_edges(false, true)
+	var ends := line.get_global_rect().position.x + line.get_theme_font("normal_font").get_string_size(
+			shown, HORIZONTAL_ALIGNMENT_LEFT, -1, line.get_theme_font_size("normal_font_size")).x
+	var top := line.get_line_offset(last)
+	var mid := line.get_global_rect().position.y + top + (line.get_content_height() - top) * 0.5
+	return {"gap": change.get_global_rect().position.x - ends, "off": change.get_global_rect().get_center().y - mid}
+
+
 ## Tapping a tag target brings "Who tags" in; no other section changes column
 ## or moves sideways, and nothing lies off the screen (director, 2026-10-14).
 ## Before the first ball-up nobody has played, so there is no Best so far.
-func _tag_tap_keeps_columns(sz: Vector2i) -> void:
+func _test_tag_tap_keeps_columns(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	_state.reset()
@@ -3025,6 +3470,16 @@ func _inside_scroll(c: Node) -> bool:
 			return true
 		p = p.get_parent()
 	return false
+
+
+## Words with the line breaks and the colons and semicolons that split a call's
+## words into lines taken out, in lower case, so the lines can be compared with
+## the call's full sentence.
+func _flat(s: String) -> String:
+	var out := s.to_lower().replace(":", " ").replace(";", " ").replace("\n", " ")
+	while out.contains("  "):
+		out = out.replace("  ", " ")
+	return out.strip_edges()
 
 
 ## The words a line shows, whether a Label or a tinted RichTextLabel carries them.

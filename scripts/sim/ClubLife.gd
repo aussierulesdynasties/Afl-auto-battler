@@ -7,14 +7,24 @@ extends RefCounted
 ## (a top-four list must finish top four; a bottom list must win seven).
 ## Results move its confidence (0-100). Miss the goal and it drops sharply;
 ## finish a season under WARN_LINE and you get a final warning, do it again
-## and you are sacked.
+## and you are sacked. How many poor seasons the board puts up with before
+## the warning is the board-patience dial (season_end, data/difficulty_dials.json).
 ##
 ## Morale (0-100, 70 is settled): playing and winning lift it, being left out
 ## while fit drags it down - stars most. It nudges match form (+/-3%) and an
 ## unhappy player asks 25% more to re-sign.
 
 const START_CONFIDENCE := 60
+## The season line a Fair or Patient board uses (the board dial's
+## poor_season_below, data/difficulty_dials.json): a season that ends under
+## it counts as poor and moves the board towards the final warning or sack.
 const WARN_LINE := 30
+## Where the hub starts warning the coach, the same on every board type
+## (director 2026-10-18, "Warn at 40"). The board's words keep each dial's own
+## season line (board_state), so Patient and Fair still read "Under pressure"
+## between 40 and 30; Ruthless differs in its season line and in how soon the
+## sack follows.
+const POOR_LINE := 40
 const MORALE_BASE := 70
 
 
@@ -84,15 +94,17 @@ static func after_match(confidence: int, margin: int, steps := [2, -2], losses_i
 	return {"confidence": c, "delta": c - confidence}
 
 
-## The board's mood in words; the number stays behind the scenes.
-static func board_state(confidence: int) -> String:
+## The board's mood in words; the number stays behind the scenes. `line` is
+## the confidence under which the board is "In trouble": the board dial's own
+## season line (poor_season_below); the default is the Fair line.
+static func board_state(confidence: int, line := WARN_LINE) -> String:
 	if confidence >= 80:
 		return "Very secure"
 	if confidence >= 62:
 		return "Secure"
 	if confidence >= 45:
 		return "Stable"
-	if confidence >= WARN_LINE:
+	if confidence >= line:
 		return "Under pressure"
 	return "In trouble"
 
@@ -115,12 +127,57 @@ static func match_reason(goal: Dictionary, opp_name: String, margin: int, losses
 	return "A draw with %s leaves the board where it was." % opp_name
 
 
+## The hub's warning once confidence is under POOR_LINE (any board type), "" above it.
+## It says what happens next, with the real lines: `season_line` is this
+## board's poor_season_below, `before_warning` its poor_seasons_before_warning,
+## `poor_seasons` the poor seasons so far. On a final warning the next poor
+## season is the sack.
+static func board_warning(confidence: int, warned: bool, season_line: int, before_warning := 1, poor_seasons := 0) -> String:
+	if confidence >= POOR_LINE:
+		return ""
+	var head := "Board confidence is poor (%d%%). " % confidence
+	if warned:
+		return head + "End the season under %d%% and you are sacked." % season_line
+	if poor_seasons + 1 >= before_warning:
+		return head + "End the season under %d%% and you get a final warning." % season_line
+	return head + "End the season under %d%% and the board marks it against you." % season_line
+
+
 ## Confidence after the season: goal met or missed, a flag on top.
 static func after_season(confidence: int, met: bool, premier: bool) -> int:
 	var c := confidence + (20 if met else -25)
 	if premier:
 		c += 30
 	return clampi(c, 0, 100)
+
+
+## What the board does at the end of a season, by how patient it is
+## (DifficultyDials.step("board_patience", ...)). `conf` is the confidence
+## after the season (after_season). A season is poor when it ends under the
+## step's poor_season_below. The board warns you on the poor season that
+## reaches poor_seasons_before_warning, and the next poor season after the
+## warning is the sacking; a season that meets the goal clears both.
+## Returns {"confidence", "warned", "sacked", "poor_seasons", "verdict"}.
+static func season_end(conf: int, met: bool, warned: bool, poor_seasons: int, patience: Dictionary) -> Dictionary:
+	var verdict := "The board is delighted." if met else "The board is disappointed."
+	var sacked := false
+	var poor_n := poor_seasons
+	var c := conf
+	if conf < int(patience.get("poor_season_below", WARN_LINE)):
+		poor_n += 1
+		if warned:
+			sacked = true
+			verdict = "The board has sacked you."
+		elif poor_n >= int(patience.get("poor_seasons_before_warning", 1)):
+			warned = true
+			c = maxi(conf, WARN_LINE + 5)
+			verdict = "Final warning: miss again next year and you are gone."
+		else:
+			verdict = "The board is losing patience."
+	elif met:
+		warned = false
+		poor_n = 0
+	return {"confidence": c, "warned": warned, "sacked": sacked, "poor_seasons": poor_n, "verdict": verdict}
 
 
 static func morale(p: Dictionary) -> int:
@@ -131,18 +188,27 @@ static func add_morale(p: Dictionary, d: int) -> void:
 	p["morale"] = clampi(morale(p) + d, 5, 100)
 
 
+static func _sting_share(own: float, culture_s: float) -> float:
+	if culture_s == 0.0:
+		return own
+	var lim: Array = Culture.effects().get("sting_limit", [-0.4, 0.6])
+	return clampf(own + culture_s, float(lim[0]), float(lim[1]))
+
+
 ## After your match: who played gets a lift (more for a win), a fit player
 ## left out loses some - a star left out loses more.
 ## `soften` (id -> 0..0.4, from your man-managers) spares part of what being
 ## left out costs; it never adds to it.
-static func morale_after_match(list: Array, played: Dictionary, won: bool, soften: Dictionary = {}) -> void:
+## `culture_s` is the club's culture on the same scale (Togetherness: +0.1 softens
+## the sting 10%, -0.1 sharpens it), added to each player's own softening.
+static func morale_after_match(list: Array, played: Dictionary, won: bool, soften: Dictionary = {}, culture_s := 0.0) -> void:
 	for p in list:
 		var id := str(p["id"])
 		if played.has(id):
 			add_morale(p, 2 + (2 if won else 0) - (0 if won else 1))
 		elif int(p.get("injury_weeks", 0)) <= 0:
 			var loss := 6 if int(p.get("overall", 0)) >= 78 else 3
-			add_morale(p, -CoachEffects.softened(loss, float(soften.get(id, 0.0))))
+			add_morale(p, -CoachEffects.softened(loss, _sting_share(float(soften.get(id, 0.0)), culture_s)))
 		else:
 			# Injured players drift back toward settled.
 			add_morale(p, signi(MORALE_BASE - morale(p)))
@@ -261,6 +327,26 @@ static func extension_wanted(p: Dictionary, memory: Dictionary) -> bool:
 static func early_price(p: Dictionary) -> int:
 	var ask := Contracts.asking_salary(p)
 	return ask + maxi(1, roundi(float(ask) * 0.15))
+
+
+## What waiting can cost on the "wants to talk contract" card, worked out
+## from the rules (bible §4: the gate says the size): at the off-season he asks
+## the price of his rating then, and this season's training can lift that
+## rating at most to `ceiling` (GameState.season_ceiling). The templates hold
+## no figure; tests/test_club.gd checks the line against the price curve.
+const WAIT_LIFT := "At the off-season he asks what his rating is worth then. Training can lift him at most %d %s this season, up to %s a season more than today; less if his form drops."
+const WAIT_FLAT := "At the off-season he asks what his rating is worth then. Training can't lift him further this season; less if his form drops."
+
+
+static func wait_words(p: Dictionary, ceiling: int) -> String:
+	var ovr := int(p.get("overall", 0))
+	var lift := maxi(0, ceiling - ovr)
+	var up := p.duplicate()
+	up["overall"] = ovr + lift
+	var more := Contracts.asking_salary(up) - Contracts.asking_salary(p)
+	if lift <= 0 or more <= 0:
+		return WAIT_FLAT
+	return WAIT_LIFT % [lift, "point" if lift == 1 else "points", Contracts.money(more)]
 
 
 ## Seasons an early extension runs, counting this one: younger players sign
