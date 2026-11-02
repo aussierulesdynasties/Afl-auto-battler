@@ -34,8 +34,11 @@ extends RefCounted
 ##               player per rival club, and Canberra as a career choice
 ##               (ExpansionBuild). Off, a new club arrives with the 36
 ##               generated players it always did and Canberra always joins.
+##   club_almanac   the club almanac (Almanac.gd, AlmanacScene): a page per
+##               season of your career, reached from the Hub and the season wrap.
+##               Off, no entry is shown and no almanac page is written.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac"]
 
 static var _forced := {}
 static var _from_args := {}
