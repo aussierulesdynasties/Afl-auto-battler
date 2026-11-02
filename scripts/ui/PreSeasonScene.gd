@@ -3,9 +3,7 @@ extends Control
 ## One job per stop:
 ##   the plan       a load and a focus for each of the three blocks, then go;
 ##   the time trial who ran well and who did not, and the blocks still to come;
-##   the intra-club  how the two sides are made and which draft prospects are
-##                   invited, then (coached or simmed) what the match showed;
-##   the practice    the club you play, the side and plan you take and which
+##   the match       the club you play, the side and plan you take and which
 ##                   prospects you trial, then what the match showed.
 ## Every choice says what it gains and what it costs in words, and the fitness
 ## base the training builds is pinned above the way on, so it answers each
@@ -35,8 +33,6 @@ func _ready() -> void:
 	if not GameState.preseason_active():
 		Router.replace("hub")
 		return
-	# Back from a coached intra-club match: its two sides are done with.
-	GameDB.unregister_sides()
 	add_child(ClubBackdrop.new().setup(GameState.my_club).live())
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -99,16 +95,6 @@ func _build() -> void:
 		page.add_child(_story_cards())
 		page.add_child(_blocks_section(first, _wide()))
 		_page_base(page)
-	elif stop == "intra":
-		# Director, 2026-10-19: the report and the last block are two screens,
-		# so neither needs a scroll: the report first, then weeks 6 to 7.
-		if GameState.intra_played() and _weeks_view:
-			page.add_child(_blocks_section(first, _wide()))
-			_page_base(page)
-		elif GameState.intra_played():
-			page.add_child(_intra_report())
-		else:
-			page.add_child(_intra_setup())
 	elif stop == "practice":
 		if GameState.practice_played():
 			page.add_child(_match_report(GameState.preseason_practice().get("report", {}), "Practice", GameState.draftee_pool))
@@ -219,8 +205,6 @@ func _hero(stop: String) -> String:
 			return "Eight weeks to Round 1"
 		"trial":
 			return "The time trial"
-		"intra":
-			return "Weeks 6 to 7" if _weeks_view and GameState.intra_played() else "The intra-club match"
 		"practice":
 			return "The practice match"
 		"papers":
@@ -236,12 +220,6 @@ func _hero_sub(stop: String) -> String:
 			return "Set the training for each block. Training runs until the time trial, after week 3."
 		"trial":
 			return "Two kilometres at the end of week 3. This is the order they finished. No rating or fitness changes because of it."
-		"intra":
-			if GameState.intra_played() and _weeks_view:
-				return "The last block before Round 1. The practice match is at the end of week 7."
-			if GameState.intra_played():
-				return "End of week 5. It counts for nothing on the ladder; what it showed is below."
-			return "End of week 5: two sides of 23 from your own list, with prospects from this year's National Draft filling the spots. It counts for nothing on the ladder."
 		"practice":
 			var opp := GameDB.club_name(GameState.practice_opponent())
 			if GameState.practice_played():
@@ -375,110 +353,18 @@ func _papers_ladder() -> Control:
 
 
 # ---------------------------------------------------------------------------
-# The intra-club match: the sides and the invitations, then the report
+# The prospects on offer to a pre-season match
 # ---------------------------------------------------------------------------
-var _invite_count: Label
-var _invite_rows := {}      # prospect id -> Button
-## After the intra-club report, the last block on a screen of its own.
-var _weeks_view := false
-
-
-## Before it is played: how the sides are made, and who is invited.
-func _intra_setup() -> Control:
-	var v := UiKit.vbox(UiKit.SECTION)
-	v.name = "IntraSetup"
-	var intra: Dictionary = GameState.preseason_intra()
-	var mode := str(intra.get("mode", "even"))
-	var sides := UiKit.vbox(6)
-	sides.add_child(_section_head("The two sides"))
-	var names: Array = GameDB.SIDE_COLOUR_NAMES.get(GameState.my_club, ["Home", "Clash"])
-	var strips := UiKit.lbl("%s %s v %s %s. You coach %s." % [GameDB.club_name(GameState.my_club), str(names[0]),
-			GameDB.club_name(GameState.my_club), str(names[1]), str(names[0])], UiKit.BODY, UiKit.TEXT)
-	strips.name = "IntraStrips"
-	strips.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	sides.add_child(strips)
-	var options := []
-	for k in PreSeason.INTRA_MODES:
-		options.append([str(k), str(PreSeason.INTRA_MODE_LABEL[k])])
-	var gain := _stake(sides, "Gain:", "IntraGain")
-	var cost := _stake(sides, "Cost:", "IntraCost")
-	gain.text = str(PreSeason.INTRA_GAIN[mode])
-	cost.text = str(PreSeason.INTRA_COST[mode])
-	var pick := _choice_row("Sides", "IntraMode", options, mode, func(key: String):
-		GameState.set_intra_mode(key)
-		gain.text = str(PreSeason.INTRA_GAIN[key])
-		cost.text = str(PreSeason.INTRA_COST[key]))
-	sides.add_child(pick)
-	sides.move_child(pick, (gain.get_meta("row") as Control).get_index())
-	v.add_child(sides)
-
-	var need: int = GameState.intra_needed()
-	var guests := UiKit.vbox(6)
-	guests.name = "IntraInvites"
-	guests.add_child(_section_head("Prospects to invite"))
-	var why := UiKit.lbl("Your sides need %d more. Whoever you invite, your recruiters see him play against senior bodies: his draft card gets a line on what he did, and their read of him is a little surer. He cannot be hurt and nothing else about him changes." % need,
-			UiKit.SECONDARY, UiKit.TEXT)
-	why.name = "IntraWhy"
-	why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	guests.add_child(why)
-	var head := UiKit.hbox(8)
-	_invite_count = UiKit.lbl("", UiKit.BODY, UiKit.TEXT, true)
-	_invite_count.name = "IntraCount"
-	_invite_count.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_invite_count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	head.add_child(_invite_count)
-	var fill := UiKit.btn("Recruiters fill the rest", UiKit.BODY)
-	fill.name = "IntraFill"
-	fill.custom_minimum_size = Vector2(0, 44)
-	fill.pressed.connect(func():
-		GameState.intra_fill_invites()
-		_refresh_invites())
-	head.add_child(fill)
-	guests.add_child(head)
-	_invite_rows = {}
-	var grid := GridContainer.new()
-	grid.name = "IntraProspects"
-	grid.columns = 3 if _wide() else 1
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 6)
-	var reads := _prospects_by_rank()
-	for p in reads[0]:
-		var id := str(p["id"])
-		var b := UiKit.btn("", UiKit.BODY)
-		b.name = "Invite_" + id
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		# The row is as wide as the column, never its words: long lines wrap.
-		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		b.custom_minimum_size = Vector2(0, 52)
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.text = _prospect_text(p, reads[1])
-		b.pressed.connect(func():
-			GameState.toggle_intra_invite(id)
-			_refresh_invites())
-		_invite_rows[id] = b
-		grid.add_child(b)
-	guests.add_child(grid)
-	v.add_child(guests)
-	_refresh_invites()
-	return v
 
 
 ## This year's class in your recruiters' order, and their read of each:
 ## [prospects, reads by id] (GameState.prospect_reads).
 func _prospects_by_rank() -> Array:
-	var list: Array = GameState.intra_prospects()
+	var list: Array = GameState.preseason_prospects()
 	var reads: Dictionary = GameState.prospect_reads(list)
 	list = list.duplicate()
 	list.sort_custom(func(a, b): return int(reads[str(a["id"])]["rank"]) < int(reads[str(b["id"])]["rank"]))
 	return [list, reads]
-
-
-## What a prospect did in your intra-club match this pre-season, or "".
-func _seen_line(p: Dictionary) -> String:
-	var seen: Dictionary = (p.get("seen", {}) as Dictionary).get(GameState.my_club, {}) if p.get("seen") is Dictionary else {}
-	if int(seen.get("year", 0)) != GameState.season_year:
-		return ""
-	return str(seen.get("line", ""))
 
 
 ## A prospect's button: who he is, then where your recruiters rank him and
@@ -490,21 +376,6 @@ Ranked %s  ·  %s OVR  ·  %s POT" % [GameDB.player_display_name(p),
 			str(UiKit.ROLE_LABEL.get(str(p.get("role", "")), str(p.get("role", "")))), int(float(p.get("age", 18.0))),
 			PreSeason.ordinal(int(r.get("rank", 0))), DraftScouting.range_text(r.get("overall", [0, 0])),
 			DraftScouting.range_text(r.get("potential", [0, 0]))]
-
-
-## The invitations as they stand: who is in (bold, outlined), and how many.
-func _refresh_invites() -> void:
-	var invites: Array = GameState.intra_invites()
-	for id in _invite_rows:
-		_paint_choice(_invite_rows[id], invites.has(str(id)))
-	if _invite_count != null and is_instance_valid(_invite_count):
-		_invite_count.text = "%d of %d invited" % [invites.size(), GameState.intra_needed()]
-
-
-## After it is played: the score, who stood out, who struggled, who was hurt,
-## and what was seen of each prospect.
-func _intra_report() -> Control:
-	return _match_report(GameState.preseason_intra().get("report", {}), "Intra", GameState.intra_prospects())
 
 
 ## A played pre-season match, in either kind: node names start with `prefix`.
@@ -643,17 +514,28 @@ func _practice_setup() -> Control:
 	guests.name = "PracticeInvites"
 	guests.add_child(_section_head("Prospects to trial"))
 	var gain := _stake(guests, "Gain:", "PracticeGain")
-	gain.text = "His draft card gets a line on what he did against a senior side, and your recruiters' read of his rating is %d%% tighter. He cannot be hurt." % roundi((1.0 - float(PreSeason.tune("intra_seen_uncertainty"))) * 100.0)
+	gain.text = "His draft card gets a line on what he did against a senior side, and your recruiters' read of his rating is %d%% tighter. He cannot be hurt." % roundi((1.0 - float(PreSeason.tune("seen_uncertainty"))) * 100.0)
 	_trial_cost = _stake(guests, "Cost:", "PracticeCost")
 	_trial_count = UiKit.lbl("", UiKit.BODY, UiKit.TEXT, true)
 	_trial_count.name = "PracticeCount"
-	guests.add_child(_trial_count)
+	# The spots you leave empty your recruiters fill when the match is played;
+	# this fills them now, so you can see who they would take.
+	var head := UiKit.hbox(8)
+	_trial_count.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_trial_count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(_trial_count)
+	var fill := UiKit.btn("Recruiters fill the rest", UiKit.BODY)
+	fill.name = "PracticeFill"
+	fill.custom_minimum_size = Vector2(0, 44)
+	fill.pressed.connect(func():
+		GameState.practice_fill_invites()
+		_refresh_trial())
+	head.add_child(fill)
+	guests.add_child(head)
 	_trial_rows = {}
 	var grid := GridContainer.new()
 	grid.name = "PracticeProspects"
-	# Two across on a PC: a prospect seen in the intra-club match carries a
-	# third line, what he did there, and it needs the width.
-	grid.columns = 2 if _wide() else 1
+	grid.columns = 3 if _wide() else 1
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 6)
 	var reads := _prospects_by_rank()
@@ -667,14 +549,6 @@ func _practice_setup() -> Control:
 		b.custom_minimum_size = Vector2(0, 52)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.text = _prospect_text(p, reads[1])
-		# Director, 2026-10-19: a prospect already trialled in the intra-club
-		# match stands out, with what he did there.
-		var seen := _seen_line(p)
-		if seen != "":
-			b.text += "
-Intra-club: " + seen
-			b.custom_minimum_size = Vector2(0, 74)
-			b.set_meta("seen", true)
 		b.pressed.connect(func():
 			GameState.toggle_practice_invite(id)
 			_refresh_trial())
@@ -689,7 +563,7 @@ Intra-club: " + seen
 func _refresh_trial() -> void:
 	var invites: Array = GameState.practice_invites()
 	for id in _trial_rows:
-		_paint_choice(_trial_rows[id], invites.has(str(id)), bool((_trial_rows[id] as Button).get_meta("seen", false)))
+		_paint_choice(_trial_rows[id], invites.has(str(id)))
 	if _trial_count != null and is_instance_valid(_trial_count):
 		_trial_count.text = "%d of %d trialled" % [invites.size(), PreSeason.practice_guests()]
 	if _trial_cost != null and is_instance_valid(_trial_cost):
@@ -930,10 +804,8 @@ func _choice_row(label: String, node_name: String, options: Array, current: Stri
 	return h
 
 
-func _paint_choice(b: Button, on: bool, seen := false) -> void:
-	# A prospect your recruiters have already seen sits on your club's colour.
-	var surface := UiKit.SURFACE.lerp(UiKit.club_ink(GameState.my_club), 0.35) if seen else UiKit.SURFACE
-	var sb := UiKit.style(surface, 8, UiKit.RADIUS, UiKit.TEXT if on else Color.TRANSPARENT)
+func _paint_choice(b: Button, on: bool) -> void:
+	var sb := UiKit.style(UiKit.SURFACE, 8, UiKit.RADIUS, UiKit.TEXT if on else Color.TRANSPARENT)
 	sb.set_border_width_all(2 if on else 0)
 	for s in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		b.add_theme_stylebox_override(s, sb)
@@ -979,8 +851,6 @@ func _base_pinned(stop: String) -> bool:
 	match stop:
 		"story", "trial":
 			return true
-		"intra":
-			return GameState.intra_played() and _weeks_view
 		"practice":
 			return GameState.practice_played()
 	return false
@@ -1124,26 +994,19 @@ func _primary(text: String) -> Button:
 func _actions(stop: String) -> Control:
 	var v := UiKit.vbox(6)
 	v.name = "PreSeasonActions"
-	var setup := (stop == "intra" and not GameState.intra_played()) or (stop == "practice" and not GameState.practice_played())
-	var report_first := stop == "intra" and GameState.intra_played() and not _weeks_view
+	var setup := stop == "practice" and not GameState.practice_played()
 	var go := _primary("Start training" if stop == "plan" else ("Coach the match" if setup else
-			("On to Round 1" if stop == "papers" else ("Set weeks 6 to 7" if report_first else
-			("Start weeks 6 to 7" if stop == "intra" else "Back to training")))))
+			("On to Round 1" if stop == "papers" else "Back to training")))
 	go.name = "PreSeasonGo"
 	go.custom_minimum_size = Vector2(0, 48)
-	if report_first:
-		go.pressed.connect(func():
-			_weeks_view = true
-			_build())
-	else:
-		go.pressed.connect((_on_coach_practice if stop == "practice" else _on_coach) if setup else _on_go)
+	go.pressed.connect(_on_coach_practice if setup else _on_go)
 	var quiet := UiKit.hbox(6)
 	quiet.name = "PreSeasonNav"
 	if setup:
 		var sim_it := UiKit.btn("Sim the match", UiKit.BODY)
-		sim_it.name = "PracticeSim" if stop == "practice" else "IntraSim"
+		sim_it.name = "PracticeSim"
 		sim_it.custom_minimum_size = Vector2(0, 44)
-		sim_it.pressed.connect(_on_sim_practice if stop == "practice" else _on_sim_intra)
+		sim_it.pressed.connect(_on_sim_practice)
 		quiet.add_child(sim_it)
 	if stop == "plan":
 		var sim := UiKit.btn("Sim to Round 1", UiKit.BODY)
@@ -1192,12 +1055,6 @@ func _on_go() -> void:
 	_after(GameState.preseason_advance())
 
 
-## Coach it from the box: the match scene, with the two sides in their strips.
-func _on_coach() -> void:
-	if GameState.prepare_intra_match():
-		Router.go("match")
-
-
 func _on_coach_practice() -> void:
 	if GameState.prepare_practice_match():
 		Router.go("match")
@@ -1205,13 +1062,6 @@ func _on_coach_practice() -> void:
 
 func _on_sim_practice() -> void:
 	GameState.sim_practice_match()
-	GameState.autosave()
-	_build()
-
-
-## Or sim it: the report is the next thing on this screen.
-func _on_sim_intra() -> void:
-	GameState.sim_intra_match()
 	GameState.autosave()
 	_build()
 
@@ -1245,10 +1095,5 @@ func handle_back() -> bool:
 	if _settings != null and is_instance_valid(_settings):
 		_settings.queue_free()
 		_settings = null
-		return true
-	if _weeks_view and GameState.preseason_stop() == "intra":
-		# Back from weeks 6 to 7 is the report again.
-		_weeks_view = false
-		_build()
 		return true
 	return false

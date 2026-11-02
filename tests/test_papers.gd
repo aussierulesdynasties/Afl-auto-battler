@@ -55,7 +55,7 @@ func _career(club := CLUB) -> void:
 	GameState.open_preseason()
 
 
-## Press on until the papers are waiting (the intra-club match is simmed on
+## Press on until the papers are waiting (the pre-season match is simmed on
 ## the way, as pressing on does).
 func _to_papers() -> bool:
 	var guard := 0
@@ -122,7 +122,7 @@ func _test_deck() -> void:
 func _test_flow() -> void:
 	_career()
 	_check(_to_papers() and GameState.preseason_week() == 8,
-			"Pressing on stops at the papers in week 8, after the intra-club match")
+			"Pressing on stops at the papers in week 8, after the pre-season match")
 	var rec: Dictionary = GameState.papers_record()
 	_check((rec["order"] as Array).size() == GameState.season.clubs.size() and (rec["order"] as Array).has(CLUB)
 			and int(rec["pred"]) == (rec["order"] as Array).find(CLUB) + 1,
@@ -330,7 +330,7 @@ func _test_saves() -> void:
 			"...and loads back to the same papers, the same answer, the same claim")
 	GameState.preseason_advance()
 	_check(not GameState.preseason_active(), "...and goes on to Round 1")
-	# A pre-season saved before the papers existed (it stood at the intra-club match) plays on to them.
+	# A pre-season saved before the papers existed (it stood mid pre-season) plays on to them.
 	_career()
 	var guard := 0
 	while GameState.preseason_week() < 5 and guard < 12:

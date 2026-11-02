@@ -91,7 +91,7 @@ func _run() -> void:
 	await _shot(out + "_setup_low.png")
 	await _scroll(false)
 	var picked := 0
-	for pr in state.intra_prospects():
+	for pr in state.preseason_prospects():
 		if picked >= 3:
 			break
 		await _press("Trial_" + str(pr["id"]))
@@ -133,7 +133,7 @@ func _run() -> void:
 		await _frames(12)
 		current_scene.call("_open_player", seen_id)
 		await _frames(6)
-		var seen_lbl: Node = current_scene.find_child("SeenIntraClub", true, false)
+		var seen_lbl: Node = current_scene.find_child("SeenPreSeason", true, false)
 		print("draft card ", seen_id, " line ", (seen_lbl as Label).text if seen_lbl != null else "MISSING")
 		if seen_lbl != null:
 			var lp: Node = seen_lbl.get_parent()
