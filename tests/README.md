@@ -55,6 +55,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `intake` | The National Draft model: the 2026 class, projection, season rollover |
 | `intake_ui` | The National Draft on the shared draft screen |
 | `expansion` | Tasmania in 2028 and Canberra in 2030, and a Club Forge club entering with the career |
+| `expansion_package` | How a new club builds its list behind the switch `expansion_package`: off is exactly today; on gives state-league signings, early picks, the traded pick, out-of-contract signings, sign-on money, the Canberra choice, the approach card, saves both ways |
 | `finals` | The wildcard finals bracket, extra time, draws |
 | `save` | Saving and loading a career, including old-save migrations and the safe write: a failed or interrupted write never loses the career, and a failed swap leaves the newer save readable |
 | `chronology` | 2026 is history, careers start in 2027, and every system agrees |

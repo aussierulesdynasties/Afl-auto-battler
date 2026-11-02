@@ -593,6 +593,12 @@ static func _spared_words(e: Dictionary, facts: Dictionary) -> String:
 	return ""
 
 
+## A new club's approach for your out-of-contract player (ExpansionBuild).
+const NEW_CLUB_KEEP_GAIN := "He stays for {keep_seasons}."
+const NEW_CLUB_KEEP_COST := "{keep_price} a season against your cap."
+const NEW_CLUB_GO_COST := "He joins {new_club} when this season ends."
+
+
 ## The one effect-phrase function: [kind, words] for each thing an effect does
 ## ("gain", "cost" or "note"); an effect that moves nothing the coach feels gives none.
 static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
@@ -663,6 +669,13 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 		"extend_early":
 			return [["gain", "He signs on for {more_seasons}, and his morale goes up %s." % _pct(EXTEND_MORALE)],
 					["cost", "Locked in at {early_price} a season, %s over what he is worth today, whatever he does next." % _pct(EARLY_PREMIUM_PCT)]]
+		"new_club_keep":
+			return [["gain", NEW_CLUB_KEEP_GAIN], ["cost", NEW_CLUB_KEEP_COST
+					+ ("" if bool(facts.get("keep_room", true)) else " {keep_note}")]]
+		"new_club_go":
+			if int(facts.get("comp_after", 0)) > 0:
+				return [["gain", "{comp_line}"], ["cost", NEW_CLUB_GO_COST]]
+			return [["cost", NEW_CLUB_GO_COST + " {comp_line}"]]
 		"promise_win":
 			return [["gain", "Win and board confidence goes up %s more than a win alone." % _pct(PROMISE_WIN_UP)],
 					["cost", "Lose or draw and board confidence falls %s more than a loss alone." % _pct(PROMISE_WIN_DOWN)]]

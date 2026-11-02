@@ -45,6 +45,9 @@ const OPS := {
 	# final is then lost, the side's morale falls by `d` instead of lifting; an
 	# injured player made available at a sore player's risk; one line to the news.
 	"slow_start": false, "loss_sting": false, "rush_back": true, "news": false,
+	# A new club has asked about your out-of-contract player (ExpansionBuild):
+	# re-sign him now at his asking price, or let him go at season's end.
+	"new_club_keep": true, "new_club_go": true,
 	# The pre-season cards: a step on one of the club's three culture strands
 	# (Culture.gd), weeks of running toward the fitness base, weeks of drilling the
 	# game plan (PreSeason.gd). They act on the club, not on a player.
@@ -75,6 +78,7 @@ const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "over
 		"sore_pct", "injury_pct", "trial_ovr", "ask", "early_price", "more_seasons", "extension_ok", "job", "real_named",
 		"form", "form_games", "has_role2", "starting", "form_low", "role_avg", "role_word", "trial_word", "trial_home", "trial_avg", "trial_par", "trial_tail",
 		"leadership", "captain", "delegate_holds", "holds_at", "holds_trust_at",
+		"new_club", "keep_price", "keep_seasons", "keep_note", "comp_line",
 		# The finals cards: the ageing rule says this is his last season, the finals he has
 		# played in this save (and whether this save has seen every game he has played),
 		# a debut year, the milestone game he is about to play (0 for none), his rank by

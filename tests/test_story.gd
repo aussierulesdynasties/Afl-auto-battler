@@ -208,7 +208,7 @@ const GAIN_WORDS := {
 	"morale": "(?i)morale", "xp": "(?i)development", "board": "(?i)board confidence", "trust": "trusts you ([0-9]+% )?more",
 	"fresh": "legs", "promise_win": "Win and", "extend_early": "signs on", "captaincy_swap": "takes the armband",
 	"rush_back": "cleared to play", "role_trial": "plays as a", "rest": "can't get hurt", "culture": "(Standards|Togetherness|Ambition) rises [0-9]+%",
-	"running": "more weeks? of running", "drill": "on the game plan", "open_price": "early premium",
+	"running": "more weeks? of running", "drill": "on the game plan", "open_price": "early premium", "new_club_keep": "He stays for",
 }
 const COST_WORDS := {
 	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "trusts you ([0-9]+% )?less",
@@ -216,8 +216,11 @@ const COST_WORDS := {
 	"start_backing": "expects to be picked", "back_kid": "is promised", "promise_win": "Lose or draw and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
 	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot", "on_record": "on the record",
 	"culture": "(Standards|Togetherness|Ambition) falls [0-9]+%", "running": "less running", "forgo_xp": "Slower growth",
+	"new_club_keep": "against your cap", "new_club_go": "when this season ends",
 }
-const SAMPLE_FACTS := {"sore_odds": "about 1 in 6", "run_games": 3, "early_price": "$1m", "more_seasons": "two more seasons"}
+const SAMPLE_FACTS := {"sore_odds": "about 1 in 6", "run_games": 3, "early_price": "$1m", "more_seasons": "two more seasons",
+		"new_club": "Tasmania", "keep_seasons": "three more seasons", "keep_price": "$600k", "comp_after": 20,
+		"comp_line": "You receive a draft pick after pick 20, early in the second round."}
 
 
 ## [gains, costs]: the kinds of effect a choice really has (a flag, a note or an
@@ -268,9 +271,9 @@ func _stakes_in(effects: Array) -> Array:
 				gains.append(op)
 			elif d < 0 and not costs.has(op):
 				costs.append(op)
-		elif op in ["xp", "fresh", "drill", "promise_win", "extend_early"] and not gains.has(op):
+		elif op in ["xp", "fresh", "drill", "promise_win", "extend_early", "new_club_keep"] and not gains.has(op):
 			gains.append(op)
-		if op in ["rest", "heavy_legs", "sore", "expects_game", "start_backing", "back_kid", "promise_win", "extend_early"] and not costs.has(op):
+		if op in ["rest", "heavy_legs", "sore", "expects_game", "start_backing", "back_kid", "promise_win", "extend_early", "new_club_keep", "new_club_go"] and not costs.has(op):
 			costs.append(op)
 	return [gains, costs]
 
@@ -2849,7 +2852,7 @@ func _test_silent_defaults_announced() -> void:
 func _test_every_line_has_a_size() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[4]
-	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+ XP|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot")
+	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+ XP|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends")
 	var bad := []
 	var parts_seen := 0
 	for t in StoryDeck.all():
