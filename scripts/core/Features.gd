@@ -39,8 +39,12 @@ extends RefCounted
 ##               at the top of the full-time Summary, on the news front, in the press
 ##               question, and kept on GameState.match_stories. Off, none of it shows
 ##               and nothing is written.
+##   player_looks   register row 6 (director 2026-10-10: "they look like clones"): ten more
+##               hair styles drawn (VignetteLooks.HAIR_STYLES) and a minimal face - eyes and
+##               brows, the brows one of five chosen by his id, in his hair colour, the eyes
+##               near black. Off, those styles draw the short crop and no face is drawn.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "match_story"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "match_story", "player_looks"]
 
 static var _forced := {}
 static var _from_args := {}
