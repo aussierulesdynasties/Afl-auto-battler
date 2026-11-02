@@ -714,7 +714,7 @@ func _week_section(season: Season) -> Control:
 	return nv
 
 
-## The week's milestones (Milestones.gd), behind the switch milestone_games:
+## The week's milestones (Milestones.gd), always shown:
 ## a small card in the event-card style, or nothing. The note lines above
 ## keep their "plays his 100th" lines; the card leaves those out.
 func _milestone_card() -> Control:
