@@ -102,6 +102,7 @@ func _test_off_is_old_hub() -> void:
 	_check(_find("WeekJobs") == null and _find("JobsLeftNote") == null and _find("PlayMatch") != null,
 			"Off: the Hub has no checklist and no note, Play match as before")
 	await _go("selection")
+	_check(_find("ConfirmSide") == null, "Off: Team has no Confirm side button")
 	_check(_state.week_checks.is_empty(), "Off: opening Team writes no checklist state")
 
 
@@ -138,7 +139,17 @@ func _test_ticks_on_completion() -> void:
 		await _settle()
 	_check(_router.current() == "selection", "Tapping a job opens its screen")
 	await _hub()
-	_check(_mark_text("team") == "Done" and _mark_text("training") == "To do", "Opening Team ticks its job")
+	_check(_mark_text("team") == "To do", "Merely opening Team does not tick its job")
+	await _go("selection")
+	var confirm: Button = _find("ConfirmSide")
+	_check(confirm != null and not confirm.disabled and confirm.text == "Confirm side", "Team shows Confirm side")
+	if confirm != null:
+		confirm.emit_signal("pressed")
+		await _settle()
+	confirm = _find("ConfirmSide")
+	_check(confirm != null and confirm.disabled and confirm.text == "Side confirmed", "Pressed, it reads Side confirmed")
+	await _hub()
+	_check(_mark_text("team") == "Done" and _mark_text("training") == "To do", "Confirm side ticks its job")
 	await _go("training")
 	await _hub()
 	_check(_mark_text("training") == "Done" and WC.left(_state) == 0, "Opening Training ticks its job")
@@ -184,6 +195,13 @@ func _test_layout_sizes() -> void:
 		for job in ["team", "training"]:
 			var row: Control = _find("WeekJob_" + job)
 			_check(row != null and row.size.y >= 44.0, "%dx%d: %s is a full tap target" % [size.x, size.y, job])
+		await _go("selection")
+		var cb: Control = _find("ConfirmSide")
+		var r := cb.get_global_rect() if cb != null else Rect2()
+		var vh: float = float(current_scene.get_viewport_rect().size.y)
+		_check(cb != null and cb.is_visible_in_tree() and r.size.y >= 44.0 and r.position.x >= 0.0
+				and r.end.x <= vw + 0.5 and r.end.y <= vh + 0.5,
+				"%dx%d: Confirm side is on screen, a full tap target (%s)" % [size.x, size.y, r])
 	root.size = SIZES[0]
 	await _settle(2)
 
