@@ -1,8 +1,8 @@
 extends SceneTree
 ## godot --headless --path . --script tests/run_calls_tests.gd
-## The match calls (director, 2026-10-14): the main ruck is always named (the
-## assistant's pick unless the coach changes it), Play through reads forward,
-## midfield, back, the coach's tagger stays on the ground while his tag is on,
+## The match calls (director, 2026-10-14; 2026-11-03 cuts): old calls with
+## main ruck, play-through or rotation load cleanly and are ignored, the
+## Defensive set-up reads its shape, the coach's tagger stays on the ground while his tag is on,
 ## and anyone who can play midfield can be tagged. Split from the matchday suite
 ## to keep it under its time limit.
 
@@ -26,8 +26,8 @@ func _run() -> void:
 	_state.settings_path = "user://test_settings.cfg"
 	_state.show_real_names = false
 	_state.replay_seed = SUITE_SEED
-	await _t("_test_main_ruck_default_and_sticks")
-	await _t("_test_play_through_order")
+	await _t("_test_old_calls_load_and_rotations_are_automatic")
+	await _t("_test_defence_setup_keys")
 	await _t("_test_tag_is_permanent")
 	_state.autosave_enabled = true
 	print(Ran.line("Match calls", self))
@@ -48,80 +48,51 @@ func _check(condition: bool, message: String) -> void:
 		push_error(message)
 
 
-## Old calls with main_ruck "" load and get the assistant's pick, which Start
-## takes to the engine; a coach's change sticks into the next quarter.
-
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
-func _test_main_ruck_default_and_sticks() -> void:
+## Old calls (director, 2026-11-03 cuts): a saved set of calls that still
+## carries main_ruck, focus_* or rotation loads cleanly; Start sends none of
+## them to the engine, and the rotations are the automatic ones.
+func _test_old_calls_load_and_rotations_are_automatic() -> void:
 	var db = root.get_node("GameDB")
-	var Ms = load("res://scripts/sim/MatchSim.gd")
 	root.size = Vector2i(420, 860)
-	for c in ["BRL", "HAW", "GWS", "WCE", "STK", "COL", "GEE", "CAR", "SYD", "MEL"]:
-		_state.reset()
-		_state.start_season(c, db.club_list(c))
-		if not _state.prepare_interactive_match():
-			continue
-		var sim = _state.pending_sim
-		var me := int(sim.moment_side)
-		var n := 0
-		for p in sim.squads[me].ground:
-			if Ms._is_ruckman(p):
-				n += 1
-		if n < 2:
-			continue
-		var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
-		root.add_child(m)
-		await _settle()
-		m.set("_last_tactics", {"main_ruck": ""})
-		var box: Node = m.find_child("CoachBox", true, false)
-		var rucks: Array = m.call("_my_rucks", sim)
-		var gw: String = await Tap.tap(box.find_child("StartQuarter", true, false))
-		await _settle()
-		_check(gw == "" and str((sim.tactics[me] as Dictionary).get("main_ruck", "")) == str(rucks[0]["id"]),
-				"Old calls with no main ruck get the assistant's pick at the bounce (%s)" % c)
-		m.queue_free()
-		await _settle()
-		return
-	_check(false, "(setup) a club with two rucks for the default check")
-
-
-## "Play through (forward, midfield, back)": the value lists the same order,
-## with "no one" holding an empty slot's place, for every combination.
-func _test_play_through_order() -> void:
-	var db = root.get_node("GameDB")
 	_state.reset()
 	_state.start_season("MEL", db.club_list("MEL"))
-	var players: Array = db.club_list("MEL")
-	var ids := [str(players[0]["id"]), str(players[1]["id"]), str(players[2]["id"])]
-	var surnames := []
-	for i in 3:
-		surnames.append(" ".join(str(db.player_display_name_by_id(ids[i], "")).split(" ").slice(1)))
-	var m = load("res://scripts/ui/MatchScene.gd").new()
-	var slots: Array = (load("res://scripts/ui/match/MatchNotes.gd").FOCUS_ORDER as Array)
-	_check(slots == ["focus_fwd", "focus_mid", "focus_def"], "Play through lists forward, midfield, back")
-	var bad := []
-	for mask in range(8):
-		var calls := {}
-		for i in 3:
-			calls[slots[i]] = ids[i] if (mask >> i) & 1 == 1 else ""
-		var got: String = m.call("_call_answer", "pt", calls, {"sim": null})
-		if mask == 0:
-			if got != "No one":
-				bad.append(got)
-			continue
-		var parts := got.split(", ")
-		if parts.size() != 3:
-			bad.append(got)
-			continue
-		for i in 3:
-			var want_empty := (mask >> i) & 1 == 0
-			if want_empty != (parts[i] == "no one") or (not want_empty and not parts[i].ends_with(surnames[i])):
-				bad.append(got)
-	_check(bad.is_empty(), "The Play through row reads in its label's order for all 8 combinations, empties held as \"no one\" (%s)" % str(bad))
-	m.free()
+	_check(_state.prepare_interactive_match(), "A match is prepared for the old-calls check")
+	var sim = _state.pending_sim
+	var me := int(sim.moment_side)
+	var anyone := str(sim.squads[me].ground[0]["id"])
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	m.set("_last_tactics", {"main_ruck": anyone, "focus_mid": anyone, "focus_fwd": anyone, "focus_id": anyone, "rotation": "stars"})
+	var box: Node = m.find_child("CoachBox", true, false)
+	for gone in ["MainRuckPicker", "RotationPicker", "FocusPicker_focus_mid", "InterceptorPicker", "SpareMinderPicker"]:
+		_check(m.find_child(gone, true, false) == null, "No %s at the break any more" % gone)
+	_check(m.find_child("DefenceSetupPicker", true, false) != null, "One Defensive set-up call in its place")
+	var gw: String = await Tap.tap(box.find_child("StartQuarter", true, false))
+	await _settle()
+	var t: Dictionary = sim.tactics[me]
+	_check(gw == "" and not t.has("main_ruck") and not t.has("rotation") and not t.has("focus_mid"),
+			"Start sends no main ruck, rotation or play-through call (%s)" % str(t.keys()))
+	_check(str(sim.rotation_policy[me]) == sim.auto_rotation(me, _state.fitness_plan(str(_state.my_club))),
+			"The rotations are the automatic ones (%s)" % str(sim.rotation_policy[me]))
+	m.queue_free()
+	await _settle()
+
+
+## The Defensive set-up answers read the shape, and the four shapes map onto
+## the loose defender and the forward on their loose man.
+func _test_defence_setup_keys() -> void:
+	var MN = load("res://scripts/ui/match/MatchNotes.gd")
+	_check(MN.defence_key(false, false) == "man" and MN.defence_key(true, false) == "loose"
+			and MN.defence_key(false, true) == "cover" and MN.defence_key(true, true) == "both",
+			"Old loose and minder picks map onto one Defensive set-up")
+	for o in MN.DEFENCE_SETUPS:
+		_check(MN.defence_answer(str(o[0])) == str(o[1]), "The break row reads %s" % str(o[1]))
+	_check(MN.defence_setup_line("man", "", "", "") != "", "Man on man says what it means")
 
 
 ## True when any button or label under a node says the text.

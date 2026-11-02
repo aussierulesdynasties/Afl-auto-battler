@@ -923,7 +923,10 @@ func _test_oval_people(res: Dictionary) -> void:
 	for p in GameDB.club_list("RIC"):
 		list.append((p as Dictionary).duplicate(true))
 	var tagger_id := str(MatchSim.tagger_for(mine)["id"])
-	sim.set_tactics(me, {"gameplan": "balanced", "focus_id": str(focus["id"]),
+	# Play through is the Through stars plan (director, 2026-11-03): with him
+	# the side's one star, he is the man played through.
+	sim.stars[me] = {str(focus["id"]): true}
+	sim.set_tactics(me, {"gameplan": "through_stars",
 			"tag_id": str(their_mid["id"]), "pep": "steady"})
 	# The sim sets up its own match-ups; those are not your calls, so not ringed.
 	_check(MatchRings.ids(sim, me, list) == [str(focus["id"]), tagger_id],
@@ -962,7 +965,7 @@ func _test_oval_people(res: Dictionary) -> void:
 		if theirs_ids.has(str(id)):
 			only_mine = false
 	_check(only_mine, "Only your own players are ringed, never the man you tag or the forward you match up")
-	(sim.tactics[me] as Dictionary)["focus_id"] = str(defenders[0]["id"])
+	(sim.stars[me] as Dictionary)[str(defenders[0]["id"])] = true
 	_check(MatchRings.ids(sim, me, list).count(str(defenders[0]["id"])) == 1,
 			"A player with two calls on him is ringed once")
 	for i in range(12):
@@ -2503,8 +2506,8 @@ func _test_plan_tint_every_quarter() -> void:
 		var cursor := 0
 		var shown := []
 		for q in range(4):
-			sim.set_tactics(my_side, {"gameplan": plans[q], "focus_id": "", "tag_id": "", "pep": "steady"})
-			sim.set_tactics(1 - my_side, {"gameplan": "balanced", "focus_id": "", "tag_id": "", "pep": "steady"})
+			sim.set_tactics(my_side, {"gameplan": plans[q], "tag_id": "", "pep": "steady"})
+			sim.set_tactics(1 - my_side, {"gameplan": "balanced", "tag_id": "", "pep": "steady"})
 			var res := sim.run_quarter()
 			res["home"] = "ADE"
 			res["away"] = "MEL"

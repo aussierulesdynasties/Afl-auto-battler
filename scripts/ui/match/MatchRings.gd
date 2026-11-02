@@ -24,9 +24,9 @@ static func ids(sim: MatchSim, side: int, my_list: Array, my_matchups := {}) -> 
 		if Backing.is_active(p):
 			_add(out, str(p["id"]))
 	var t: Dictionary = sim.tactics[side]
-	_add(out, str(t.get("focus_id", "")))
-	for slot in MatchSim.FOCUS_SLOTS:
-		_add(out, str(t.get(slot, "")))
+	# Who the side plays through (Through stars): the engine's own pick.
+	for id in sim.focus_ids(side):
+		_add(out, str(id))
 	# The tagger is the midfielder who goes to the man you are tagging.
 	if str(t.get("tag_id", "")) != "":
 		var tagger = sim.tagger_of(side)

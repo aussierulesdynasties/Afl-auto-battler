@@ -789,7 +789,7 @@ func _test_fact_options() -> void:
 			for o in shown[i]:
 				shown_ok = shown_ok and bool(o["enabled"])
 				if str(facts[i]["key"]) == "ruck":
-					ruck_clean = ruck_clean and str(o["call"]) == "ruck"
+					ruck_clean = ruck_clean and str(o["call"]) == "plan" and str(o["plan"]) == "contest"
 					ruck_facts += 1
 		table_ok = table_ok and opts.size() == facts.size()
 		for i in range(mini(facts.size(), opts.size())):
@@ -820,17 +820,16 @@ func _test_fact_options() -> void:
 				push_error("%s %s: options %s, table %s" % [code, key, str(got), str(want)])
 	_check(table_ok, "Every fact of every opponent has exactly the table's responses for its kind")
 	_check(shown_ok, "The hub shows only responses the coach can take (no greyed ones)")
-	_check(ruck_clean, "No ruck fact carries Tag, Key match-up or a plan across all clubs (%d ruck facts)" % ruck_facts)
+	_check(ruck_clean, "A ruck fact is answered by the Win contest plan alone across all clubs (%d ruck facts)" % ruck_facts)
 	var two_r := {"id": "r1", "role": "RUCK", "overall": 80, "attr": {}}
 	var one_r := {"id": "r2", "role": "RUCK", "overall": 80, "attr": {}}
 	var mid_r := {"id": "m", "role": "MID", "overall": 70, "attr": {}}
-	_check(FO.takeable(FO.options({"key": "ruck", "player_id": "r1"}, [two_r], [mid_r, one_r], [two_r])).is_empty(),
-			"With one ruck of his own the ruck fact shows nothing")
-	_check(_names(FO.takeable(FO.options({"key": "ruck", "player_id": "r1"}, [two_r], [one_r, one_r.duplicate()], [two_r]))) == ["ruck"],
-			"With two rucks the ruck fact offers the Main ruck call and nothing else")
-	_check(_names(FO.takeable(FO.options({"key": "danger", "player_id": "r1"}, [two_r], [one_r, one_r.duplicate()], [two_r]))) == ["ruck"],
-			"A danger man who is a ruck is answered by the Main ruck call alone, never a tag")
-	_check(order_ok, "The responses always come in the fixed order: tag, key match-up, defensive forward, main ruck, loose interceptor, plan")
+	_check(_names(FO.takeable(FO.options({"key": "ruck", "player_id": "r1"}, [two_r], [mid_r, one_r], [two_r]))) == ["plan"],
+			"The ruck fact offers the Win contest plan: Main ruck is no longer a call (2026-11-03)")
+	_check(not FO.ORDER.has("ruck") and not FO.NAMES.has("ruck"), "No Main ruck response is left")
+	_check(_names(FO.takeable(FO.options({"key": "danger", "player_id": "r1"}, [two_r], [one_r, one_r.duplicate()], [two_r]))).is_empty(),
+			"A danger man who is a ruck is never offered a tag")
+	_check(order_ok, "The responses always come in the fixed order: tag, key match-up, defensive set-up (cover, loose), plan")
 	_check(reasons_ok and disabled_seen > 0, "Every unsuitable response is disabled with its reason (%d seen)" % disabled_seen)
 	_check(words_ok and enabled_seen > 0, "Every other one carries its cost, and none says best, recommended or should (%d seen)" % enabled_seen)
 	_check(kinds.has("danger") and kinds.has("interceptor") and (kinds.has("midfield") or kinds.has("ruck")),
@@ -1365,7 +1364,7 @@ func _gate_odds() -> void:
 	var MU = load("res://scripts/sim/Matchups.gd")
 	var digits := RegEx.create_from_string("[0-9]")
 	var templates := [GO.GAIN, GO.COST, GO.TAG_GAIN, GO.TAG_COST, GO.MATCHUP_GAIN, GO.MATCHUP_COST_NEXT,
-			GO.MATCHUP_COST_LOOSE, GO.MINDER_GAIN, GO.MINDER_COST, GO.RUCK_GAIN, GO.RUCK_COST, GO.LOOSE_GAIN,
+			GO.MATCHUP_COST_LOOSE, GO.MINDER_GAIN, GO.MINDER_COST, GO.LOOSE_GAIN,
 			GO.LOOSE_COST, GO.TAG_GIVES, GO.TAG_NOTE, GO.SKIP_FIRST, GO.SKIP_LATER, GO.BACK_STATS, GO.BACK_CM,
 			GO.DUEL_GAIN, GO.DUEL_COST_SWAP, GO.DUEL_COST_LOOSE, GO.DUEL_COST_FREE, GO.DUEL_COST_KEEP,
 			GO.FOR_MINUTES, GO.TO_SIREN, GO.TO_BREAK, GO.NONE_GAIN, GO.NONE_COST_RUN, GO.NONE_COST_BOUNCE]
@@ -1381,8 +1380,6 @@ func _gate_odds() -> void:
 	var md: Array = GO.minder_lines()
 	_check(str(md[0]).contains(pct.call(float(Ms.MINDER_ROAM["other"]))) and str(md[0]).contains(pct.call(float(Ms.MINDER_ROAM["specialist"])))
 			and str(md[1]).contains(pct.call(1.0 - Ms.MINDER_INVOLVE)), "Defensive forward: his reach both ways and your forward's cost (%s / %s)" % md)
-	var rk: Array = GO.ruck_lines()
-	_check(str(rk[1]).contains(pct.call(float(Ms.ROLE_DRAIN["RUCK"]) / float(Ms.ROLE_DRAIN["FWD"]) - 1.0)), "Main ruck: how much faster he tires (%s)" % rk[1])
 	var att: Array = GO.plan_lines("attacking")
 	_check(str(att[0]).contains(pct.call(float(Ms.PLANS["attacking"]["goal"]) - 1.0)) and str(att[1]).contains(pct.call(float(Ms.PLANS["attacking"]["clangers"]) - 1.0))
 			and str(att[1]).contains(pct.call(float(Ms.PLANS["attacking"]["exposed"]) - 1.0)), "Attack corridor: both sides from PLANS (%s / %s)" % att)

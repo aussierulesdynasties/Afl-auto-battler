@@ -1460,10 +1460,10 @@ Your career stays on this device.",
 	_router.handle_back(true)
 	await _settle()
 	_check(_router.current() == "match", "Back cannot abandon a live match")
-	_check(current_scene.find_child("RotationPicker", true, false) != null
+	_check(current_scene.find_child("RotationPicker", true, false) == null
 			and current_scene.find_child("LegsView", true, false) != null
 			and current_scene.find_child("PlanPicker", true, false) != null,
-			"The coach box offers gameplan, rotations and a legs report")
+			"The coach box offers gameplan and a legs report; rotations are automatic")
 	# Play quarters until the match stops for a coach's call, then answer it.
 	var sim = _state.pending_sim
 	var start_btn: Button = current_scene.find_child("StartQuarter", true, false)

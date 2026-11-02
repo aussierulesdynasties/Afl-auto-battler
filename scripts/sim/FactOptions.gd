@@ -5,7 +5,8 @@ extends RefCounted
 ## anything about it?"). One place says which responses bear on which kind of
 ## fact (Matchup's "key": danger, interceptor, midfield, ruck, attack,
 ## defence, missing, form), in a fixed order that is not an order of merit:
-## tag, key match-up, defensive forward, main ruck, loose interceptor, plan.
+## tag, key match-up, defensive set-up (cover their loose man, or a loose
+## defender of your own), plan. Main ruck is no longer a call (2026-11-03).
 ##
 ## A layout rule over the controls the rules already have. Nothing here is a
 ## new lever, a grade or a recommendation: every response that bears on a
@@ -14,32 +15,30 @@ extends RefCounted
 ## pre-bounce pane already uses (see COST_*).
 
 ## The responses, in the order they are always shown.
-const ORDER := ["tag", "matchup", "minder", "ruck", "loose", "plan"]
+const ORDER := ["tag", "matchup", "minder", "loose", "plan"]
 
 ## What each is called: the heading of the call it opens on the pre-bounce pane.
-const NAMES := {"tag": "Tag", "matchup": "Key match-up", "minder": "Defensive forward",
-		"ruck": "Main ruck", "loose": "Loose interceptor"}
+const NAMES := {"tag": "Tag", "matchup": "Key match-up", "minder": "Defensive set-up: cover him",
+		"loose": "Defensive set-up: loose defender"}
 
 ## The cost of each, from the words the pane already uses:
 ## tag: "He gives up his own game." (MatchScene tag note);
 ## matchup: the swap a Change makes, the defender moved leaves his man;
 ## minder: "Whoever goes is a target less often himself." (MatchNotes.minder_cost_line);
-## ruck: "... and tires like a ruck for it." (MatchScene._main_ruck_note);
 ## loose: "if he flies and loses, space opens behind him." (the loose interceptor's note).
 ## A plan's cost is the first clause of its own cost line (CoachReport.PLAN_PARTS).
 const COST := {
 	"tag": "Your tagger gives up his own game",
 	"matchup": "The defender you move leaves his man",
-	"ruck": "He tires like a ruck for it",
 	"loose": "Space opens behind him if he loses",
 }
 
 ## fact key -> the responses that bear on it, as [call] or ["plan", plan key].
 const TABLE := {
-	"danger": [["tag"], ["matchup"], ["minder"], ["ruck"]],
+	"danger": [["tag"], ["matchup"], ["minder"]],
 	"interceptor": [["minder"], ["plan", "attacking"], ["plan", "controlled"]],
 	"midfield": [["tag"], ["plan", "contest"], ["plan", "controlled"]],
-	"ruck": [["ruck"]],
+	"ruck": [["plan", "contest"]],
 	"attack": [["matchup"], ["loose"], ["plan", "defensive"], ["plan", "controlled"]],
 	"defence": [["plan", "attacking"], ["plan", "controlled"]],
 	# Who is missing and a run of results are facts to know, not to answer.
@@ -107,11 +106,6 @@ static func _option(key: String, row: Array, who: Dictionary, theirs: Array, min
 				reason = "He is not their loose defender." if not who.is_empty() else "They have no loose defender."
 			elif Matchups.minder_candidates(mine).is_empty():
 				reason = "You have no forward to send."
-		"ruck":
-			if not who.is_empty() and not MatchSim._is_ruckman(who):
-				reason = "He is not a ruck."
-			elif mine.filter(func(p): return MatchSim._is_ruckman(p)).size() < 2:
-				reason = "You have one ruck: this call is for two."
 		"loose":
 			if Matchups.defenders(mine).is_empty():
 				reason = "You have no defender to send loose."
@@ -137,8 +131,6 @@ static func _sides(call: String, plan: String, who: Dictionary, theirs: Array, m
 			return GateOdds.tag_lines()
 		"minder":
 			return GateOdds.minder_lines()
-		"ruck":
-			return GateOdds.ruck_lines()
 		"loose":
 			return GateOdds.loose_lines()
 		"plan":
