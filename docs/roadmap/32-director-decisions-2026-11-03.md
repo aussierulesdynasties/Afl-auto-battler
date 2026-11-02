@@ -11,3 +11,7 @@ his differs, the later one wins. Nothing here edits the bible.
 | 4 | Keep the random story deck? | keep it, and layer coach arcs on top | the 12 decks stay; multi-season arc cards are drawn alongside deck cards and remember named players and clubs (plan step 1a) |
 | 5 | What comes first? | the match hero and why we won or lost | plan step 1b: each match names its hero, its turning point and one to three reasons traced to numbers in the result (MatchStory.gd, switch match_story, off until he plays it) |
 | 6 | A weekly checklist? | yes: a short weekly checklist with one big arc-linked call | replaces "no weekly checklist": each Hub week shows one big call tied to an arc (drop the out-of-form star? play the kid?) plus the routine jobs; the Hub's "There is no weekly checklist" text goes (plan step 3a) |
+
+## Approved cuts
+
+- Draft pool filters (CUT_AUDIT row 9): the pool keeps position, sort and search. Club, career stage, style, trait, available-only and the Combine sort are gone, live with no switch; the pool always shows available players. Combine results stay on a prospect's sheet. No save migration needed (view state, never saved).
