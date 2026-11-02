@@ -3879,6 +3879,48 @@ func _render_ft() -> void:
 		sc.scroll_vertical = 0
 
 
+## The match story at the top of the Summary: the hero and his game, the
+## turning point, and why it was won or lost. Read from MatchStory; it never
+## changes the result.
+func _ft_story(v: VBoxContainer, me: int) -> void:
+	var st := MatchStory.build(_res, me)
+	if st.is_empty():
+		return
+	var box := UiKit.vbox(4)
+	box.name = "MatchStory"
+	box.add_child(UiKit.spacer(UiKit.GAP))
+	var hero: Dictionary = st["hero"]
+	if not hero.is_empty():
+		box.add_child(UiKit.section("Hero of the match"))
+		var hl := UiKit.lbl(str(hero["name"]), UiKit.NAME,
+				UiKit.club_name_colour(UiKit.club_ink(str(hero["club"]))), true)
+		hl.name = "MatchHero"
+		hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(hl)
+		var gl := UiKit.lbl(str(hero["line"]), UiKit.BODY, UiKit.TEXT)
+		gl.name = "MatchHeroLine"
+		gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(gl)
+	if str(st["turning_point"]) != "":
+		box.add_child(UiKit.section("Turning point"))
+		var tl := UiKit.lbl(str(st["turning_point"]), UiKit.BODY, UiKit.TEXT)
+		tl.name = "TurningPoint"
+		tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(tl)
+	var why: Array = st["reasons"]
+	if not why.is_empty():
+		box.add_child(UiKit.section("Why you won" if bool(st["won"])
+				else ("Why it was a draw" if bool(st["drawn"]) else "Why you lost")))
+		var rv := UiKit.vbox(4)
+		rv.name = "WhyReasons"
+		for r in why:
+			var rl := UiKit.lbl(str(r["text"]), UiKit.BODY, UiKit.TEXT)
+			rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			rv.add_child(rl)
+		box.add_child(rv)
+	v.add_child(box)
+
+
 ## The Summary tab: the result, what it means, how it went, the best
 ## players, a few numbers and your week.
 func _ft_summary(v: VBoxContainer) -> void:
@@ -3920,6 +3962,10 @@ func _ft_summary(v: VBoxContainer) -> void:
 		# Clear of the scrollbar.
 		row.add_child(UiKit.spacer(10))
 		v.add_child(row)
+
+	# The match story (switch "match_story"): the hero, the turning point and why.
+	if mine and MatchStory.on():
+		_ft_story(v, me)
 
 	# What it means: finals, the ladder, who is next. (Nothing, for a practice match.)
 	if mine and not _is_practice(_res):

@@ -134,6 +134,15 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 					"headline": "%s are the %s premiers" % [m.get_string(1), m.get_string(2)],
 					"standfirst": "The flag is theirs."}, true)
 			return _mine(s, my_club)
+	elif kind == "match_story":
+		# Your match's hero (switch "match_story"): "<headline>. <hero>: <his game>."
+		m = _re("hero", "^((.+) stars as (.+?) (?:beat|and) .+?)\\. (.+)$").search(text)
+		if m != null:
+			s.merge({"name": m.get_string(2), "club": code_of(m.get_string(3)), "weight": 62,
+					"headline": m.get_string(1), "standfirst": m.get_string(4)}, true)
+			s = _mine(s, my_club)
+			s["mine"] = true
+			return s
 	elif kind == "media":
 		m = _re("media", "^Post-match: '(.*)'$").search(text)
 		s.merge({"club": my_club, "weight": 66, "mine": true,

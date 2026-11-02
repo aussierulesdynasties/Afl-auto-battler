@@ -95,6 +95,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `international` | International prospects (switch `international_prospects`): one or two per generated class over 150 seeded years, never none or three, from seven countries; names from their own country's lists; raw but high-ceiling ratings shaped by their code; switched off the class is unchanged; one drafted, kept across a save and a season rollover; an old save loads |
 | `namelink` | A player's name opens his profile: real touches at 390x844 and 1280x720 on the Training header, a row's Profile tap and a name in the week's news; a drag that starts on a name still scrolls; Back closes the profile and leaves the screen as it was. |
 | `trainrep` | The monthly training report: the block snapshot, a known riser with his stats, the retraining list matching the Training menu's own (and the club's two-project limit), the switch off leaving the hub as it was, an old save, and real taps on a phone and a PC (open, a name, a retraining entry, Close, Android Back) |
+| `match_story` | The match makes the story (switch `match_story`): with the switch off nothing shows or is kept; the hero is the winners' best by goals, disposals, tackles, clearances and clutch late goals; every reason traces to a number in the result; one record per match of yours persists through save and load and Sim the week; an old save loads; the Summary shows the story above How it went on a phone and a PC |
 
 By area:
 
