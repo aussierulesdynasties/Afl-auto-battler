@@ -140,8 +140,13 @@ func _test_coach() -> void:
 	_check(_kinds(_M.record_round(_state, [_res(p, 0, false, "SF1")]), "coach").is_empty(), "Not the second")
 	c["games"] = 99
 	_check(_kinds(_M.record_round(_state, [_res(p)]), "coach") == ["coached100"], "Game 100 as coach")
-	c["games"] = 149
-	_check(_kinds(_M.record_round(_state, [_res(p)]), "coach").is_empty(), "Game 150 is not a coach milestone")
+	for n in [150, 200, 250, 300]:
+		c["games"] = n - 1
+		_check(_kinds(_M.record_round(_state, [_res(p)]), "coach") == ["coached%d" % n], "Game %d as coach" % n)
+	c["games"] = 174
+	_check(_kinds(_M.record_round(_state, [_res(p)]), "coach").is_empty(), "Game 175 is not a coach milestone")
+	c["games"] = 349
+	_check(_kinds(_M.record_round(_state, [_res(p)]), "coach").is_empty(), "Game 350 is past the coach milestones")
 
 
 func _test_sim_week_records() -> void:
@@ -212,4 +217,24 @@ func _test_switch() -> void:
 	var p := _complete_player()
 	_state.milestone_log["coach"]["games"] = 49
 	_check(_M.upcoming(_state).any(func(u): return str(u["key"]) == "coached"), "On, the coach's 50th is this week's")
+	# The Hub: the note lines keep "plays his 100th"; the card leaves it out.
+	var side: Dictionary = _state.current_side()
+	var sid := ""
+	for k in side:
+		for id in side[k]:
+			if sid == "" and Career.complete(_state.list_player(str(id))):
+				sid = str(id)
+	_check(sid != "", "A side player with a full career on record")
+	var sp: Dictionary = _state.list_player(sid)
+	_set_games(sp, 99)
+	var noted: Array = _state.my_week_notes().filter(func(n): return str(n.get("player_id", "")) == sid)
+	_check(noted.size() == 1 and str(noted[0]["text"]).ends_with("plays his 100th game."), "On, the note line still says his 100th (%s)" % [noted])
+	_check(_M.upcoming(_state).any(func(u): return str(u["id"]) == sid and str(u["key"]) == "games"), "The 100th is this week's milestone")
+	var card: Array = _M.card_items(_state)
+	_check(not card.any(func(u): return str(u["id"]) == sid and str(u["key"]) == "games"), "The card does not word the 100th again (%s)" % [card])
+	_check(card.any(func(u): return str(u["key"]) == "coached"), "The card keeps the coach's 50th")
+	var texts := {}
+	for u in card:
+		texts[str(u["text"])] = true
+	_check(texts.size() == card.size(), "No line twice on the card")
 	Features.set_on(_M.FEATURE, false)
