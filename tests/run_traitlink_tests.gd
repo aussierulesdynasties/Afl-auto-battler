@@ -51,6 +51,9 @@ func _run() -> void:
 	_gs.autosave_enabled = false
 	_gs.save_path = "user://test_traitlink.save"
 	_gs.settings_path = "user://test_traitlink.cfg"
+	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_gs.set_setting("seen_%s_intro" % key, true)
 	_gs.show_real_names = false
 	await _t("_test_words")
 	for club in ["FRE", "MEL"]:

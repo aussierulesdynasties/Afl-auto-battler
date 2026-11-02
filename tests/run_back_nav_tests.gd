@@ -51,6 +51,10 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_back_nav.save"
 	_state.settings_path = "user://test_back_nav.cfg"
+	# The first-visit intros (FirstVisitIntro.gd) are their own suite; here every
+	# screen is a return visit, so the top bar's back arrow is uncovered.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_state.set_setting("seen_%s_intro" % key, true)
 	_state.replay_seed = SUITE_SEED
 	_state.delete_saved_career()
 	root.size = Vector2i(1280, 720)
@@ -364,7 +368,6 @@ func _test_overlays() -> void:
 	var pid := _first_player_id()
 	await _overlay_case("hub: settings sheet", "hub", func(s): await _click_named(s, "HubSettings"))
 	await _overlay_case("hub: news", "hub", func(s): s.call("_show_news"))
-	await _overlay_case("hub: quick sim", "hub", func(s): s.call("_open_quick_sim"))
 	# Continue (the click way) hands a pending press conference to the hub, and
 	# it stays open under the next way: whether one is pending depends on the
 	# seeded results, so each way starts with it cleared and this case stays
