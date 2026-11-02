@@ -137,7 +137,7 @@ func _test_old_save() -> void:
 
 
 func _test_legends() -> void:
-	GameState.almanac = [{"year": 2026, "club": "GEE", "legends": []}]
+	GameState.almanac = [{"year": int(GameState.season_year), "club": "GEE", "legends": []}]
 	var vet := {"id": "V1", "name": "Old Hand", "career": {"games": 210, "goals": 40, "stints": [], "through": 2026, "unknown": []}}
 	var kid := {"id": "K1", "name": "Short Stay", "career": {"games": 30, "goals": 5, "stints": [], "through": 2026, "unknown": []}}
 	var rival := {"id": "R1", "name": "Their Man", "career": {"games": 300, "goals": 9, "stints": [], "through": 2026, "unknown": []}}
@@ -146,6 +146,10 @@ func _test_legends() -> void:
 	var legends: Array = GameState.almanac[0]["legends"]
 	_check(legends.size() == 1 and str(legends[0]["id"]) == "V1" and int(legends[0]["games"]) == 210,
 			"Only your retirees past a legend's mark are kept (%s)" % str(legends))
+	GameState.almanac = [{"year": int(GameState.season_year) - 1, "club": "GEE", "legends": []}]
+	Almanac.add_legends(GameState, retired, {"V1": vet, "K1": kid, "R1": rival})
+	_check((GameState.almanac[0]["legends"] as Array).is_empty(),
+			"An older season's page never takes this rollover's legends")
 
 
 func _test_rows_and_coach_record() -> void:
