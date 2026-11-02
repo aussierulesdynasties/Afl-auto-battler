@@ -13,11 +13,9 @@ extends RefCounted
 ##             "value", "id", "name", "club", "text"}],
 ##    "seen": {key: true},          # one entry per milestone, ever
 ##    "last_match": match key}      # the last of your matches recorded
-## Recording is always on (it is invisible). What the player sees (the Hub
-## card, the news front preview, the full-time line) sits behind the feature
-## switch "milestone_games", off by default.
+## Recording and showing are always on (director, 2026-11-03: milestone games
+## are live, no switch): the Hub card, the news front preview, the full-time line.
 
-const FEATURE := "milestone_games"
 const PLAYER_GAMES := [50, 100, 150, 200, 250, 300]
 const PLAYER_GOALS := [100, 200, 300]
 const COACH_GAMES := [50, 100, 200]
@@ -26,7 +24,7 @@ const GOALS_NEAR := 3
 
 
 static func shown() -> bool:
-	return Features.on(FEATURE)
+	return true
 
 
 static func empty() -> Dictionary:

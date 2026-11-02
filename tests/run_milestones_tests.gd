@@ -199,17 +199,8 @@ func _test_old_save() -> void:
 
 
 func _test_switch() -> void:
-	_check(not Features.on(_M.FEATURE), "The switch is off by default")
+	_check(_M.shown() and not Features.KNOWN.has("milestone_games"), "Milestones are live: no switch")
 	_fresh()
-	var before: int = _state.news.size()
-	_state.advance()
-	var shown := 0
-	for n in _state.news:
-		if str(n.get("text", "")).begins_with("This week: "):
-			shown += 1
-	_check(shown == 0, "Off, no milestone preview reaches the news (%d, %d)" % [shown, before])
-	Features.set_on(_M.FEATURE, true)
 	var p := _complete_player()
 	_state.milestone_log["coach"]["games"] = 49
-	_check(_M.upcoming(_state).any(func(u): return str(u["key"]) == "coached"), "On, the coach's 50th is this week's")
-	Features.set_on(_M.FEATURE, false)
+	_check(_M.upcoming(_state).any(func(u): return str(u["key"]) == "coached"), "The coach's 50th is this week's")
