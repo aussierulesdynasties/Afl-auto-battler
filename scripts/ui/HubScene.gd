@@ -96,6 +96,10 @@ func _show_weekly_loop_intro() -> void:
 		"This is home base. Check the next opponent, then use Team to pick the side and Coaching if you want to change how you play.",
 		"Play match when you want the live coaching calls. Sim the week plays the round out for you quickly; the match itself is the same either way.",
 		"After the game, review what happened and change selection or training only when you have a reason. There is no weekly checklist to clear.",
+	] if not WeekChecklist.on(GameState) else [
+		"This is home base. Check the next opponent, then use Team to pick the side and Coaching if you want to change how you play.",
+		"Each week a short list here shows the jobs still open: look over the side, check training, and anything waiting on you. Tap a job to go to it; it ticks when done.",
+		"The list is a guide, never a gate. Play match or Sim the week whenever you are ready, jobs left or not.",
 	]:
 		var l := UiKit.lbl(line, 14, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -192,6 +196,13 @@ func _show_season_wrap() -> void:
 		v.add_child(why)
 	# With a pre-season to come, the wrap leads into it; a career saved at the
 	# wrap before pre-seasons existed begins its season as it always did.
+	# Last season's page in the club almanac (switch club_almanac).
+	if Almanac.on():
+		var alm := UiKit.btn("Club almanac", UiKit.BODY)
+		alm.name = "WrapAlmanac"
+		alm.flat = true
+		alm.pressed.connect(func(): Router.go("almanac"))
+		(box["footer"] as VBoxContainer).add_child(alm)
 	var to_preseason: bool = GameState.preseason_active()
 	var go := UiKit.btn("Start the pre-season" if to_preseason else "Begin season", UiKit.BODY, true)
 	go.name = "BeginSeason"
@@ -306,7 +317,7 @@ func _build() -> void:
 			week_row.add_child(_sim_round_button())
 		# The same split as the columns above, so the club buttons stand under the ladder.
 		week_row.size_flags_stretch_ratio = 1.0
-		foot.add_child(week_row)
+		foot.add_child(_with_jobs_note(week_row))
 		var row := _footer(season, false)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.size_flags_stretch_ratio = 1.25
@@ -404,6 +415,13 @@ func _standing_card() -> Control:
 	var last := _last_match_button()
 	if last != null:
 		cv.add_child(last)
+	# The club almanac: your career, season by season (switch club_almanac).
+	if Almanac.on():
+		var alm := UiKit.text_action("Club almanac  ›", UiKit.SECONDARY)
+		alm.name = "HubAlmanac"
+		alm.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		alm.pressed.connect(func(): Router.go("almanac"))
+		cv.add_child(alm)
 	# The board lives in Coaching; here only when your job is at risk.
 	if GameState.board_goal_text() != "":
 		var warned := bool(GameState.board.get("warned", false))
@@ -533,6 +551,9 @@ func _week_section(season: Season) -> Control:
 		nv.add_child(approaches)
 	if not GameState.pending_mro_challenges().is_empty():
 		nv.add_child(_tribunal_card())
+	var jobs_card := _week_jobs_card()
+	if jobs_card != null:
+		nv.add_child(jobs_card)
 	if season.is_season_over():
 		nv.add_child(UiKit.lbl("Season complete", UiKit.H1, UiKit.TEXT, true))
 		nv.add_child(UiKit.ellipsis("Premiers: %s" % GameDB.club_name(GameState.premier()),
@@ -688,8 +709,89 @@ func _week_section(season: Season) -> Control:
 	# phone they close the week's section.
 	if _narrow():
 		nv.add_child(UiKit.spacer(4))
-		nv.add_child(_week_actions(season))
+		nv.add_child(_with_jobs_note(_week_actions(season)))
 	return nv
+
+
+## The week's jobs (WeekChecklist; setting "weekly_checklist", off by
+## default): the big call's slot first, then the routine jobs, each one tap
+## from its screen and ticked when done. null when off or with no jobs.
+func _week_jobs_card() -> Control:
+	var items := WeekChecklist.items(GameState)
+	var call := WeekChecklist.big_call(GameState)
+	if items.is_empty() and call.is_empty():
+		return null
+	var panel := UiKit.panel(UiKit.PANEL, 12)
+	panel.name = "WeekJobs"
+	var v := UiKit.vbox(2)
+	panel.add_child(v)
+	var left := WeekChecklist.left(GameState)
+	var head := UiKit.lbl("This week" if left == 0 else "This week  ·  %d to do" % left,
+			UiKit.SECONDARY, UiKit.MUTED, true)
+	head.name = "WeekJobsHead"
+	v.add_child(head)
+	# The big call's slot: the coach-arcs step fills it. Nothing shows without one.
+	if not call.is_empty():
+		var bc := _week_job_row(str(call.get("text", "")), false, str(call.get("route", "")), true)
+		bc.name = "BigCall"
+		v.add_child(bc)
+	for it in items:
+		var row := _week_job_row(str(it["text"]), bool(it["done"]), str(it["route"]))
+		row.name = "WeekJob_%s" % str(it["key"])
+		v.add_child(row)
+	return panel
+
+
+## One job: open ones in TEXT and a tap to their screen; done ones ticked
+## in GOOD, the job itself MUTED. A job on this page itself is a plain line.
+func _week_job_row(text: String, done: bool, route: String, big := false) -> Button:
+	var b := UiKit.text_action("", UiKit.NAME if big else UiKit.BODY)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(0, 44)
+	var h := UiKit.hbox(8)
+	h.set_anchors_preset(Control.PRESET_FULL_RECT)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(h)
+	var mark := UiKit.lbl("Done" if done else "To do", UiKit.FINE, UiKit.GOOD if done else UiKit.MUTED, true)
+	mark.name = "Mark"
+	mark.custom_minimum_size = Vector2(48, 0)
+	mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(mark)
+	var t := UiKit.ellipsis(text + ("  ›" if route != "" and not done else ""),
+			UiKit.NAME if big else UiKit.BODY, UiKit.MUTED if done else UiKit.TEXT, big)
+	t.name = "Text"
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	t.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(t)
+	b.tooltip_text = text
+	if route != "":
+		b.pressed.connect(func(): Router.go(route))
+	else:
+		b.focus_mode = Control.FOCUS_NONE
+		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return b
+
+
+## The match row with a gentle "N jobs left" over it when the week's
+## checklist has jobs open and Play match is there. Never a block.
+func _with_jobs_note(row: Control) -> Control:
+	var left := WeekChecklist.left(GameState)
+	if left == 0 or row.find_child("PlayMatch", true, false) == null:
+		return row
+	var box := UiKit.vbox(2)
+	box.name = "WeekActionsBox"
+	box.size_flags_horizontal = row.size_flags_horizontal
+	box.size_flags_vertical = row.size_flags_vertical
+	box.size_flags_stretch_ratio = row.size_flags_stretch_ratio
+	var note := UiKit.lbl("1 job left this week" if left == 1 else "%d jobs left this week" % left,
+			UiKit.FINE, UiKit.MUTED)
+	note.name = "JobsLeftNote"
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	box.add_child(note)
+	box.add_child(row)
+	return box
 
 
 ## A live MRO sanction can be challenged once before the next round. Keep it

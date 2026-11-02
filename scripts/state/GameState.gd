@@ -85,6 +85,7 @@ var season_awards := {}          # the finished season's awards
 ## from before nominations were recorded starts "from" its next round.
 var rising_star_noms := {"from": 1, "rounds": []}
 var honour_roll: Array = []      # one entry per completed season
+var almanac: Array = []          # the club almanac, one page per season (Almanac.gd; switch club_almanac)
 ## Every coach in the game, once: cid -> record (Coaches.gd). A club's staff
 ## is read from the records, never stored beside them.
 var coaches := {}
@@ -182,6 +183,8 @@ var week_event: Dictionary:
 		return week_events[0] if not week_events.is_empty() else {}
 	set(value):
 		week_events = [] if value.is_empty() else [value]
+## The week's checklist record (WeekChecklist.gd; setting "weekly_checklist").
+var week_checks := {}
 ## Trust between you and the people around the club (Trust.gd): {"p:<player
 ## id>": {"t", "log"}}. Missing means neutral. Saved; later phases add coaches,
 ## journalists, the board and club culture under their own keys, same shape.
@@ -193,6 +196,11 @@ var stories_on := true
 var media_conference := {}       # pending post-match press question
 var backing_talk := {}           # a sit-down when a promised run ends (Backing.talk)
 var media_memory := {}           # question key -> last round asked
+## The match makes the story (switch "match_story"): one record per match of
+## yours, oldest first (MatchStory.record). Empty, and not saved, while off.
+var match_stories: Array = []
+## Matches kept: four seasons' worth, enough for the coach's arcs.
+const MAX_MATCH_STORIES := 120
 var losing_streak := 0
 ## Your match-ups for the next match (Matchups): {their forward id: your
 ## defender id}, on top of the default set-up. Cleared after each of your
@@ -680,6 +688,7 @@ func save_career() -> bool:
 		"season_awards": season_awards,
 		"rising_star_noms": rising_star_noms,
 		"honour_roll": honour_roll,
+		"almanac": almanac,
 		"records": records,
 		"rivalry_history": rivalry_history,
 		"finals_counted_since": finals_counted_since,
@@ -709,6 +718,7 @@ func save_career() -> bool:
 		"tutorials": tutorials,
 		"board": board,
 		"week_events": week_events,
+		"week_checks": week_checks,
 		"relations": relations,
 		"story": story,
 		"media_conference": media_conference,
@@ -748,6 +758,8 @@ func save_career() -> bool:
 		state["expansion"] = expansion
 	if not canberra_on:
 		state["canberra_on"] = false
+	if not match_stories.is_empty():
+		state["match_stories"] = match_stories
 	if Features.on("training_report"):
 		state["training_block"] = training_block
 		state["training_report"] = training_report
@@ -859,6 +871,7 @@ func load_career() -> bool:
 	rising_star_noms = state.get("rising_star_noms",
 			{"from": season.round_index + 1 if season != null else 1, "rounds": []})
 	honour_roll = state.get("honour_roll", [])
+	almanac = state.get("almanac", [])  # older saves: none; the page falls back to the honour roll
 	records = state.get("records", {})
 	rivalry_history = state.get("rivalry_history", {})
 	# An older save has played finals nobody counted: its count starts with the next ones.
@@ -888,11 +901,13 @@ func load_career() -> bool:
 	news = state.get("news", [])
 	board = state.get("board", {})
 	week_events = state.get("week_events", [])
+	week_checks = state.get("week_checks", {}) if state.get("week_checks") is Dictionary else {}
 	if not state.has("week_events"):
 		week_event = state.get("week_event", {})
 	relations = state.get("relations", {})
 	story = StoryEngine.ensure(state.get("story", {}))
 	media_conference = state.get("media_conference", {})
+	match_stories = state.get("match_stories", []) if state.get("match_stories") is Array else []
 	backing_talk = state.get("backing_talk", {})
 	media_memory = state.get("media_memory", {})
 	losing_streak = int(state.get("losing_streak", 0))
@@ -1293,6 +1308,7 @@ func reset() -> void:
 	season_awards = {}
 	rising_star_noms = {"from": 1, "rounds": []}
 	honour_roll = []
+	almanac = []
 	records = {}
 	rivalry_history = {}
 	finals_counted_since = 0
@@ -1331,9 +1347,11 @@ func reset() -> void:
 	expansion = {}
 	set_canberra(not ExpansionBuild.on())
 	week_events = []
+	week_checks = {}
 	relations = {}
 	story = StoryEngine.new_state()
 	media_conference = {}
+	match_stories = []
 	backing_talk = {}
 	media_memory = {}
 	losing_streak = 0
@@ -1821,6 +1839,8 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	intake_summary = Prospects.age_league(league_lists, next_year)
 	intake_summary["signed"] = signed
 	_retirees_to_coaching(intake_summary.get("retired", []), listed)
+	if Almanac.on():
+		Almanac.add_legends(self, intake_summary.get("retired", []), listed)
 	for r in intake_summary.get("retired", []):
 		if int(r.get("overall", 0)) >= NEWS_MIN_OVR:
 			add_news("retirement", "%s (%s) has retired at %d." % [
@@ -5494,6 +5514,7 @@ func _after_round(results: Array) -> void:
 		_note_form_and_team(res)
 	_nominate_rising_star(results)
 	_round_news(results)
+	_record_match_story(results)
 	_note_firsts(results)
 	_draft_class_news()
 	_board_after_round(results)
@@ -5610,6 +5631,8 @@ func _close_season_awards() -> void:
 		"my_finals": _my_last_final(),
 		"my_aa": _my_all_australians(),
 	})
+	if Almanac.on():
+		almanac.append(Almanac.season_entry(self))
 	# Achievements first, then the season news, so the premiership line
 	# stays the newest item in the feed.
 	_close_season_achievements()
@@ -9950,6 +9973,37 @@ func _rival_morale_after_round(results: Array) -> void:
 			ClubLife.morale_after_match(list, played, int(score[side]) > int(score[1 - side]), soft, culture_effect(code, "sting"))
 
 
+## Switch "match_story": the setting that gates the match story everywhere.
+func match_story_on() -> bool:
+	return MatchStory.on()
+
+
+## Keep your match's story (hero, turning point, reasons) and put its
+## headline on the news front. Played or simmed, the same record.
+func _record_match_story(results: Array) -> void:
+	if not match_story_on() or my_club == "":
+		return
+	var res := _my_result(results)
+	if res.is_empty():
+		return
+	var side := 0 if str(res["home"]) == my_club else 1
+	var rec := MatchStory.record(res, side, season_year)
+	if rec.is_empty():
+		return
+	match_stories.append(rec)
+	if match_stories.size() > MAX_MATCH_STORIES:
+		match_stories = match_stories.slice(match_stories.size() - MAX_MATCH_STORIES)
+	if str(rec["hero_name"]) != "":
+		add_news("match_story", "%s. %s: %s." % [str(rec["headline"]), str(rec["hero_name"]), str(rec["hero_line"])])
+
+
+## The latest match story record, {} when there is none (or the switch is off).
+func last_match_story() -> Dictionary:
+	if not match_story_on() or match_stories.is_empty():
+		return {}
+	return match_stories[-1]
+
+
 ## A notable user match may produce one short press conference.
 func _prepare_media_conference(results: Array) -> void:
 	media_conference = {}
@@ -9976,6 +10030,12 @@ func _prepare_media_conference(results: Array) -> void:
 				star = {"name": GameDB.player_display_name(p) if not p.is_empty() else str(r.get("name", "A player")),
 						"line": "kicked %d goals" % goals if goals >= 6 else "had %d disposals" % disposals}
 				break
+	# The match story's hero (switch "match_story") is asked about when no big
+	# number already put a player in the question.
+	if star.is_empty() and match_story_on():
+		var hero := MatchStory.hero_of(res)
+		if not hero.is_empty() and int(hero["side"]) == side:
+			star = {"name": str(hero["name"]), "line": "was the hero: %s" % str(hero["line"])}
 	var round_no := season.round_index if last_phase == "regular" else Season.REGULAR_ROUNDS + int((season.finals.get("weeks", []) as Array).size())
 	# How many of your side were young enough for the Philosopher to ask.
 	var young := 0
