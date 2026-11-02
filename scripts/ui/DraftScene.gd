@@ -137,6 +137,8 @@ func _ready() -> void:
 			and GameState.draft_meeting_year != GameState.season_year:
 		GameState.draft_meeting_year = GameState.season_year
 		_show_meeting()
+	else:
+		FirstVisitIntro.show_if_due.call_deferred(self, "draft")
 
 
 func _on_resize() -> void:
@@ -1462,6 +1464,8 @@ func _land_my_pick() -> void:
 # ---------------------------------------------------------------------------
 ## Android Back and the top-bar back close the player first.
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	# Back first cuts draft night's show to the end: the stage and the replay.
 	if is_instance_valid(_beat) or replaying():
 		_finish_night()
