@@ -906,8 +906,8 @@ const AI_LIST_SHARE := {"RUCK": 0.08, "MID": 0.30, "DEF": 0.33, "FWD": 0.33}
 const AI_VORP_FULL_ROUNDS := 2
 
 
-func _vorp_weight() -> float:
-	if intake_mode and not clubs.is_empty() and Features.on("ai_draft_buff"):
+func _vorp_weight(code := "") -> float:
+	if not clubs.is_empty() and _buffed(code):
 		# Row 37 buff (switch ai_draft_buff, off): the National Draft ramps
 		# scarcity in over two rounds too, so a club takes the best player
 		# early and reaches for a thin position late.
@@ -926,14 +926,18 @@ const AI_BUFF_VORP_CAP := 5.0
 const AI_BUFF_INTAKE_COVERED := 0.97
 
 
-func _vorp_cap() -> float:
-	if intake_mode and Features.on("ai_draft_buff"):
-		return AI_BUFF_VORP_CAP
-	return AI_VORP_CAP
+## The buff is rivals-only: the user's "Pick for me" keeps the shipped
+## scoring (director undecided, 2026-11-03).
+func _buffed(code: String) -> bool:
+	return intake_mode and Features.on("ai_draft_buff") and code != user_club
 
 
-func _intake_covered() -> float:
-	return AI_BUFF_INTAKE_COVERED if Features.on("ai_draft_buff") else INTAKE_COVERED
+func _vorp_cap(code := "") -> float:
+	return AI_BUFF_VORP_CAP if _buffed(code) else AI_VORP_CAP
+
+
+func _intake_covered(code: String) -> float:
+	return AI_BUFF_INTAKE_COVERED if _buffed(code) else INTAKE_COVERED
 
 
 var _ai_cache_at := -1
@@ -971,8 +975,8 @@ func _ai_score(code: String, p: Dictionary, detail = null) -> float:
 		# A club's own opinion counts in full for a starting spot it is
 		# filling; for depth and surplus picks it leans on the consensus.
 		var worth := base + err * need
-		var over := minf(_vorp_cap(), worth - _replacement(code, role))
-		var s := (worth + _vorp_weight() * over) * need * float(entry[1])
+		var over := minf(_vorp_cap(code), worth - _replacement(code, role))
+		var s := (worth + _vorp_weight(code) * over) * need * float(entry[1])
 		if s > best and detail is Dictionary:
 			detail["role"] = role
 			detail["need"] = need
@@ -1275,7 +1279,7 @@ func _need_weight(code: String, role: String) -> float:
 	if intake_mode:
 		# The national draft builds for years ahead: need tips close calls,
 		# it never makes a club pass a much better prospect.
-		return 1.0 if n < int(_ideal_counts(code).get(role, 0)) else _intake_covered()
+		return 1.0 if n < int(_ideal_counts(code).get(role, 0)) else _intake_covered(code)
 	if n < int(_ideal_counts(code).get(role, 0)):
 		return 0.6
 	return 0.2
