@@ -682,6 +682,8 @@ func _week_section(season: Season) -> Control:
 		if plan_line != null:
 			nv.add_child(UiKit.spacer(4))
 			nv.add_child(plan_line)
+	# The week your season ends has its card (finals_cards_2), the Grand Final played or not.
+	if not season.is_season_over() or Features.on(StoryDeck.FINALS_2):
 		for i in range(GameState.week_events.size()):
 			nv.add_child(UiKit.spacer(4))
 			var ev := _event_card(i)

@@ -18,7 +18,9 @@ extends RefCounted
 const DIR := "res://data/stories/"
 const CATEGORIES := ["training", "health", "family", "media", "contracts", "leadership",
 		"community", "rivals", "board", "members", "selection"]
-const PHASES := ["regular", "finals", "preseason"]
+## "season_end": the one card the week your season ends (knocked out, premiers or
+## runners-up), behind the finals_cards_2 switch (ClubStories.pick).
+const PHASES := ["regular", "finals", "preseason", "season_end"]
 const BEATS := ["start", "middle", "end"]
 
 ## The biggest effect one choice may carry, per lever.
@@ -108,7 +110,14 @@ const CLUB_FACTS := ["club", "opp", "round", "year", "losing_run", "winning_run"
 		# established rival).
 		"finals_math", "finals_bye", "lost_last_final", "gf_run", "gf_run_word", "gf_again", "rival",
 		# The pre-season cards: weeks of it done (0 outside it) and the flag won last year.
-		"pre_week", "premiers"]
+		"pre_week", "premiers",
+		# The finals cards' second slice (switch finals_cards_2): this week's opponent
+		# finished above you; seasons since your last final in this save and its year;
+		# the Grand Final's forecast; and the week your season ends, how it ended
+		# ("eliminated", "premier", "runner_up"), the final you lost, and the Grand
+		# Final's margin, the club's history and your best player, each as a line.
+		"underdog", "years_since_final", "last_final_year", "forecast_line",
+		"result", "lost_final", "lost_prelim", "margin", "margin_line", "history_line", "best_line"]
 
 const DEFAULTS := {"weight": 1, "cooldown": 40, "subject_cooldown": 8, "per_season": 0,
 		"phase": ["regular"], "default": -1, "bye": false, "priority": false}
@@ -119,16 +128,23 @@ const INTERNATIONAL_FILE := "res://data/stories/international.json"
 
 static var _cache: Array = []
 static var _cache_intl := false
+static var _cache_f2 := false
+
+## A card marked "feature": "<switch>" is dealt only with that switch on.
+const FINALS_2 := "finals_cards_2"
 
 
 ## Every card in the game, loaded once.
 static func all() -> Array:
 	var with_intl := Features.on(InternationalProspects.FEATURE)
-	if _cache.is_empty() or with_intl != _cache_intl:
+	var with_f2 := Features.on(FINALS_2)
+	if _cache.is_empty() or with_intl != _cache_intl or with_f2 != _cache_f2:
 		_cache = load_dir(DIR)
 		if with_intl:
 			_cache.append_array(load_file(INTERNATIONAL_FILE))
+		_cache = _cache.filter(func(t): return str(t.get("feature", "")) == "" or Features.on(str(t["feature"])))
 		_cache_intl = with_intl
+		_cache_f2 = with_f2
 	return _cache
 
 
@@ -231,6 +247,9 @@ static func _check_card(t: Dictionary) -> Array:
 	if kind != "player" and kind != "club":
 		errs.append("%s: subject kind must be player or club" % id)
 	var player := kind == "player"
+	var feat := str(t.get("feature", ""))
+	if feat != "" and not Features.KNOWN.has(feat):
+		errs.append("%s: unknown feature switch '%s'" % [id, feat])
 	if bool(t.get("private", false)) and not player:
 		errs.append("%s: a private card must be about a player" % id)
 	for ph in t.get("phase", []):

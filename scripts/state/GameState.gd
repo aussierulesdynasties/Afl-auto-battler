@@ -198,6 +198,10 @@ var media_memory := {}           # question key -> last round asked
 ## The match makes the story (switch "match_story"): one record per match of
 ## yours, oldest first (MatchStory.record). Empty, and not saved, while off.
 var match_stories: Array = []
+## Weeks of running a season-end card took off next pre-season's fitness base
+## (finals_cards_2, B8 "Celebrate it properly": negative). Read once when the
+## pre-season opens; with the preseason switch off it is carried and never read.
+var preseason_run_debt: float = 0.0
 ## Matches kept: four seasons' worth, enough for the coach's arcs.
 const MAX_MATCH_STORIES := 120
 var losing_streak := 0
@@ -758,6 +762,8 @@ func save_career() -> bool:
 		state["canberra_on"] = false
 	if not match_stories.is_empty():
 		state["match_stories"] = match_stories
+	if preseason_run_debt != 0.0:
+		state["preseason_run_debt"] = preseason_run_debt
 	if Features.on("training_report"):
 		state["training_block"] = training_block
 		state["training_report"] = training_report
@@ -905,6 +911,7 @@ func load_career() -> bool:
 	story = StoryEngine.ensure(state.get("story", {}))
 	media_conference = state.get("media_conference", {})
 	match_stories = state.get("match_stories", []) if state.get("match_stories") is Array else []
+	preseason_run_debt = float(state.get("preseason_run_debt", 0.0))
 	backing_talk = state.get("backing_talk", {})
 	media_memory = state.get("media_memory", {})
 	losing_streak = int(state.get("losing_streak", 0))
@@ -1348,6 +1355,7 @@ func reset() -> void:
 	story = StoryEngine.new_state()
 	media_conference = {}
 	match_stories = []
+	preseason_run_debt = 0.0
 	backing_talk = {}
 	media_memory = {}
 	losing_streak = 0
@@ -2655,6 +2663,12 @@ func open_preseason() -> void:
 					PreSeason.ai_blocks(_club_phase(code), _best22_age(code)),
 					_club_phase(code), _usual_plan(code))
 	preseason = PreSeason.new_state(season_year, blocks)
+	if preseason_run_debt != 0.0:
+		# A season-end card's cost: the list starts this pre-season behind.
+		var mine_e: Dictionary = (preseason.get("clubs", {}) as Dictionary).get(my_club, {})
+		if not mine_e.is_empty():
+			mine_e["run"] = float(mine_e.get("run", 0.0)) + preseason_run_debt
+		preseason_run_debt = 0.0
 	if offseason:
 		_slip_plan_known()
 	_ensure_plan_known()
