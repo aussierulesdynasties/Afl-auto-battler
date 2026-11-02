@@ -22,6 +22,11 @@ his differs, the later one wins. Nothing here edits the bible.
 | 11 | A3 "Keep the noise outside" board +1? | swap it for Standards +1 | no card of the eight rewards the board |
 | 12 | Where do the Grand Final history lines come from? | only the save's own history plus data/club_premierships.csv | no line claims a final or flag the record cannot show |
 
+- **Row 37 draft logic, later ruling (2026-11-03):** the buff also applies to the user's "Pick for me", and the sim must
+  be extremely competent: every club, the user's included, acts in its own best interest at all times; mistakes come
+  only from imperfect information, never from deliberate dumbing down. The buffed logic is now the only National Draft
+  logic (rivals, Pick for me, sim-through picks, live pick trades); switch `ai_draft_buff` is gone. Supersedes row 7.
+
 ## Cuts shipped
 
 - Cut audit §10 row 1 (CUT_AUDIT_2026-11-03.md): the intra-club match (week 5) and the practice match (week 7) are one
