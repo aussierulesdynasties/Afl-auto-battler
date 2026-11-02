@@ -302,10 +302,6 @@ var settings_path := "user://settings.cfg"
 ## Autosave runs on every screen change, after every round and when the app
 ## is backgrounded or closed. Tests switch it off.
 var autosave_enabled := true
-## Set while a skip plays several rounds in one go: each round leaves the save alone and
-## the skip saves once at the end (a 4 MB save written every round was a quarter of the
-## skip's time, more on a phone). Killed mid-skip, the career is where the skip began.
-var _batching := false
 ## A new draft or season is seeded from the clock, so no two careers play
 ## alike. Measurement tools set this so a career replays exactly: each of
 ## those seeds then comes from it and the year (_clock_seed). 0 in the game.
@@ -629,7 +625,7 @@ func saved_career_meta() -> Dictionary:
 ## rest of the round is already on the ladder but the round has not closed,
 ## so the last save (from before the match) is the consistent one to keep.
 func autosave() -> bool:
-	if _batching or not autosave_enabled or not has_career() or not pending_match.is_empty():
+	if not autosave_enabled or not has_career() or not pending_match.is_empty():
 		return false
 	return save_career()
 
@@ -10163,47 +10159,6 @@ func _next_week_event() -> void:
 	if season == null or is_sacked() or not stories_on or my_club == "":
 		return
 	week_events = ClubStories.pick(self)
-
-
-## Quick sim: play up to `rounds` home-and-away rounds (-1: to the end of the
-## home-and-away season). It never plays a final, and stops early if the
-## season ends or something genuinely stops the club (you are sacked).
-## Returns {"played": n, "reason": "done" | "season_end" | "sacked"}.
-func quick_sim(rounds: int) -> Dictionary:
-	var played := 0
-	var reason := "done"
-	_batching = true
-	while season != null and (rounds < 0 or played < rounds):
-		if season.is_regular_done():
-			reason = "season_end"
-			break
-		advance()
-		played += 1
-		if is_sacked():
-			reason = "sacked"
-			break
-	if reason == "done" and season != null and season.is_regular_done():
-		reason = "season_end"
-	_batching = false
-	if played > 0:
-		autosave()
-	return {"played": played, "reason": reason}
-
-
-## The rest of the finals in one go, once the home and away is over ("Play to Grand
-## Final"): saved once at the end, as quick_sim. Returns the weeks played.
-func sim_finals_to_end() -> int:
-	if season == null or not season.is_regular_done():
-		return 0
-	var weeks := 0
-	_batching = true
-	while not season.is_season_over() and weeks < 10:
-		advance()
-		weeks += 1
-	_batching = false
-	if weeks > 0:
-		autosave()
-	return weeks
 
 
 func week_event_pending() -> bool:
