@@ -12,7 +12,8 @@ his differs, the later one wins. Nothing here edits the bible.
 | 5 | What comes first? | the match hero and why we won or lost | plan step 1b: each match names its hero, its turning point and one to three reasons traced to numbers in the result (MatchStory.gd, switch match_story, off until he plays it) |
 | 6 | A weekly checklist? | yes: a short weekly checklist with one big arc-linked call | replaces "no weekly checklist": each Hub week shows one big call tied to an arc (drop the out-of-form star? play the kid?) plus the routine jobs; the Hub's "There is no weekly checklist" text goes (plan step 3a) |
 | 7 | Row 37 AI draft buff: on or off? | off | `ai_draft_buff` ships off (#862); it is rivals only, so the user's Pick for me is unchanged. Whether the buff should also change Pick for me is not yet decided |
-| 8 | Finals cards slice 2 (rows 35, 36): sizes the 2026-10-13 ruling left open? | A9 "No Grand Final talk" Standards +2; A14 "Back your players" Togetherness +2; B8 "Celebrate" costs 1 week of running off the next pre-season base | built behind switch finals_cards_2 (off) |
-| 9 | B8's running cost while the preseason switch is off? | carry it silently | the debt is saved and paid into the next pre-season's running base when one opens |
-| 10 | A3 "Keep the noise outside" board +1? | swap it for Standards +1 | no card of the eight rewards the board |
-| 11 | Where do the Grand Final history lines come from? | only the save's own history plus data/club_premierships.csv | no line claims a final or flag the record cannot show |
+| 8 | Cut "Play to Grand Final" and the long-press play-ahead menu? | cut (CUT_AUDIT row 11) | Sim the week is the only fast path: one round at a time, finals included; UI-only, nothing saved, so no save migration |
+| 9 | Finals cards slice 2 (rows 35, 36): sizes the 2026-10-13 ruling left open? | A9 "No Grand Final talk" Standards +2; A14 "Back your players" Togetherness +2; B8 "Celebrate" costs 1 week of running off the next pre-season base | built behind switch finals_cards_2 (off) |
+| 10 | B8's running cost while the preseason switch is off? | carry it silently | the debt is saved and paid into the next pre-season's running base when one opens |
+| 11 | A3 "Keep the noise outside" board +1? | swap it for Standards +1 | no card of the eight rewards the board |
+| 12 | Where do the Grand Final history lines come from? | only the save's own history plus data/club_premierships.csv | no line claims a final or flag the record cannot show |
