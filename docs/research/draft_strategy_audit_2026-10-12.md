@@ -1,5 +1,7 @@
 # Draft strategy audit: do AI clubs that build from scratch end up weaker than the real 2026 lists?
 
+> **Superseded** by [AI_DRAFT_AUDIT_2026-11-03.md](AI_DRAFT_AUDIT_2026-11-03.md): the National Draft changed (#732) and the re-audit replaces these numbers.
+
 Roadmap row 37 (director, 2026-10-12). **Audit only: no balance change is made or proposed here.**
 Script: `tools/audit/draft_strategy_impl.gd`; tables: `tools/audit/draft_strategy_agg.py`.
 Runs: 8 audit runs on CI at commit adb868c9 (see "Runs" at the end).

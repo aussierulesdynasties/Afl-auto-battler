@@ -15,6 +15,7 @@ func run() -> void:
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
 	_t("_test_history_and_snake_order")
+	_t("_test_ai_draft_buff_switch")
 	_t("_test_position_guidance")
 	_t("_test_dual_position_coverage")
 	_t("_test_position_status")
@@ -1092,3 +1093,39 @@ func _real_draft(kind: String) -> Draft:
 		pairs[code] = pr
 	var pool: Array = GameDB.draftees.map(func(q): return (q as Dictionary).duplicate(true))
 	return Draft.build_intake(pool, clubs, clubs.duplicate(), 4242, sizes, counts, pairs)
+
+
+## Row 37 buff (switch ai_draft_buff): off, the National Draft AI is exactly
+## as before; on, scarcity ramps in over two rounds and is capped at 5, and a
+## covered position keeps 97% of a prospect's worth. The League Draft is the
+## same either way.
+func _test_ai_draft_buff_switch() -> void:
+	var pool := []
+	for i in range(24):
+		pool.append({"id": "bf_%d" % i, "name": "P %d" % i, "club": "U18",
+				"role": ["MID", "DEF", "FWD", "RUCK"][i % 4], "role2": "",
+				"overall": 60, "potential": 75, "value": 1, "gl": 0, "di": 0})
+	var clubs := ["A", "B", "C", "D"]
+	var sizes := {}
+	var counts := {}
+	for c in clubs:
+		sizes[c] = 36
+		counts[c] = {"RUCK": 3, "MID": 16, "DEF": 9, "FWD": 8}
+	var d := Draft.build_intake(pool, clubs, clubs, 11, sizes, counts)
+	Features.set_on("ai_draft_buff", false)
+	_check(is_equal_approx(d._need_weight("A", "MID"), Draft.INTAKE_COVERED)
+			and is_equal_approx(d._vorp_weight("A"), Draft.AI_VORP_WEIGHT)
+			and is_equal_approx(d._vorp_cap("A"), Draft.AI_VORP_CAP), "Switch off: the National Draft AI is unchanged")
+	Features.set_on("ai_draft_buff", true)
+	_check(is_equal_approx(d._need_weight("A", "MID"), Draft.AI_BUFF_INTAKE_COVERED)
+			and d._need_weight("A", "DEF") == 1.0, "Switch on: a covered position keeps 97%, an open one 100%")
+	_check(is_zero_approx(d._vorp_weight("A")) and is_equal_approx(d._vorp_cap("A"), Draft.AI_BUFF_VORP_CAP),
+			"Switch on: scarcity counts for nothing at the first pick and at most 5 points")
+	d.pick_index = clubs.size() * Draft.AI_VORP_FULL_ROUNDS
+	_check(is_equal_approx(d._vorp_weight("A"), Draft.AI_VORP_WEIGHT), "Switch on: scarcity counts in full from the third round")
+	d.user_club = "B"
+	_check(is_equal_approx(d._need_weight("B", "MID"), Draft.INTAKE_COVERED)
+			and is_equal_approx(d._vorp_cap("B"), Draft.AI_VORP_CAP), "Switch on: the user's Pick for me keeps the shipped scoring")
+	var lg := Draft.new(pool, clubs.duplicate(), 11)
+	_check(is_equal_approx(lg._vorp_cap("A"), Draft.AI_VORP_CAP), "Switch on: the League Draft keeps its cap")
+	Features.clear("ai_draft_buff")
