@@ -54,6 +54,7 @@ func _ready() -> void:
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
 			_build())
 	_build()
+	(func(): FirstVisitIntro.show_if_due(self, "offseason")).call_deferred()
 
 
 func _build() -> void:

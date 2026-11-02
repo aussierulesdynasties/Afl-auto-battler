@@ -29,6 +29,7 @@ func _ready() -> void:
 		if not UiKit.keyboard_resize(self):
 			_build())
 	_build()
+	(func(): FirstVisitIntro.show_if_due(self, "staff")).call_deferred()
 
 
 func _build() -> void:

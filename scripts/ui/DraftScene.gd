@@ -137,6 +137,8 @@ func _ready() -> void:
 			and GameState.draft_meeting_year != GameState.season_year:
 		GameState.draft_meeting_year = GameState.season_year
 		_show_meeting()
+	else:
+		(func(): FirstVisitIntro.show_if_due(self, "draft")).call_deferred()
 
 
 func _on_resize() -> void:
