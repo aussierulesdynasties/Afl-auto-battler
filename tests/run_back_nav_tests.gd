@@ -368,7 +368,6 @@ func _test_overlays() -> void:
 	var pid := _first_player_id()
 	await _overlay_case("hub: settings sheet", "hub", func(s): await _click_named(s, "HubSettings"))
 	await _overlay_case("hub: news", "hub", func(s): s.call("_show_news"))
-	await _overlay_case("hub: quick sim", "hub", func(s): s.call("_open_quick_sim"))
 	# Continue (the click way) hands a pending press conference to the hub, and
 	# it stays open under the next way: whether one is pending depends on the
 	# seeded results, so each way starts with it cleared and this case stays

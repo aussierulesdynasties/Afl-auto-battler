@@ -4,7 +4,7 @@ extends SceneTree
 ##   godot --headless --path . --script tools/perf/season_skip.gd -- [--club GEE] [--mode split|real]
 ## split: plays every home-and-away round through the same steps as GameState.advance(),
 ##        timing each one, and prints a PERF line per step (total ms, ms a round).
-## real:  times GameState.quick_sim(-1) as the button runs it, end to end.
+## real:  times GameState.advance() round by round to the end of the home and away.
 ## Both print the save file's size after the last round. Nothing touches a real save.
 
 
@@ -30,8 +30,11 @@ func _run() -> void:
 	print("PERF start_season %.0f ms" % ((Time.get_ticks_usec() - t) / 1000.0))
 	if mode == "real":
 		t = Time.get_ticks_usec()
-		var r: Dictionary = gs.quick_sim(-1)
-		print("PERF quick_sim_all %.0f ms, %d rounds (%s)" % [(Time.get_ticks_usec() - t) / 1000.0, int(r["played"]), str(r["reason"])])
+		var played := 0
+		while not gs.season.is_regular_done() and not gs.is_sacked():
+			gs.advance()
+			played += 1
+		print("PERF advance_to_finals %.0f ms, %d rounds" % [(Time.get_ticks_usec() - t) / 1000.0, played])
 	else:
 		var steps := ["prep", "play_round", "post_round", "xp", "train_rivals", "rivalries", "after_round", "autosave"]
 		var total := {}
