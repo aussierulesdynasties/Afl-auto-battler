@@ -804,7 +804,7 @@ func _test_collection_pauses(res: Dictionary) -> void:
 		var p = d._phases[d._pi] if d._pi < d._phases.size() else null
 		if p == cur:
 			continue
-		if cur != null and str(cur.get("t", "")) == "collect" and kind != "" 				and d.time - start >= PAUSE_S:
+		if cur != null and str(cur.get("t", "")) == "collect" and kind != "" and d.time - start >= PAUSE_S:
 			pauses += 1
 			far_sum += dist
 			if kind == "pressure":
