@@ -9967,7 +9967,6 @@ func _rival_morale_after_round(results: Array) -> void:
 			ClubLife.morale_after_match(list, played, int(score[side]) > int(score[1 - side]), soft, culture_effect(code, "sting"))
 
 
-## A notable user match may produce one short press conference.
 ## Switch "match_story": the setting that gates the match story everywhere.
 func match_story_on() -> bool:
 	return MatchStory.on()
@@ -9999,6 +9998,7 @@ func last_match_story() -> Dictionary:
 	return match_stories[-1]
 
 
+## A notable user match may produce one short press conference.
 func _prepare_media_conference(results: Array) -> void:
 	media_conference = {}
 	var res := _my_result(results)
