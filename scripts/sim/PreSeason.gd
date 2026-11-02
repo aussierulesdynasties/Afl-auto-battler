@@ -51,12 +51,8 @@ const DEFAULTS := {
 	"papers_after": 6,
 	"papers_within": 22,
 	"papers_places": 1,
-	"intra_week": 5,
-	"intra_side_size": 23,
-	"intra_injury_rate": 0.5,
-	"intra_xp_games": 1.0,
-	"intra_seen_uncertainty": 0.7,
-	"intra_spare_number": 60,
+	"seen_uncertainty": 0.7,
+	"guest_spare_number": 60,
 	"practice_week": 7,
 	"practice_guests": 3,
 	"practice_injury_rate": 0.5,
@@ -80,9 +76,10 @@ const FOCUS_LABEL := {"running": "Running", "skills": "Skills", "plan": "Game pl
 const BASES := ["thin", "sound", "strong"]
 const DEFAULT_BASE := "sound"
 ## The weeks after which the pre-season stops for the coach: {week: stop}.
-## The time trial, the intra-club match, then the practice match against
-## another club at the end of the last block; the papers in the quiet last week.
-const STOPS := {3: "trial", 5: "intra", 7: "practice", 8: "papers"}
+## The time trial, then the one pre-season match (director, 2026-11-03: the
+## intra-club match and the practice match merged) against another club at the
+## end of the last block; the papers in the quiet last week.
+const STOPS := {3: "trial", 7: "practice", 8: "papers"}
 ## The weeks after which a story card may stop the pre-season: the end of each
 ## block (a card never comes in the quiet last week). At most one a block.
 const STORY_WEEKS := [3, 5, 7]
@@ -101,7 +98,7 @@ static func data() -> Dictionary:
 				if DEFAULTS.has(k):
 					_data[k] = parsed[k]
 		# The scouting read's own copy of its size (DraftScouting cannot ask us).
-		DraftScouting.seen_uncertainty = float(_data.get("intra_seen_uncertainty", 0.7))
+		DraftScouting.seen_uncertainty = float(_data.get("seen_uncertainty", 0.7))
 	return _data
 
 
@@ -266,61 +263,12 @@ static func training_injury(p: Dictionary, load: String, career_seed: int, year:
 
 
 # ---------------------------------------------------------------------------
-# The intra-club match (director, 2026-10-14): two sides of the club's own
-# list, with prospects from the coming National Draft filling the spots.
+# The prospects a pre-season match trials: copies of this year's National
+# Draft class, playing in a club's side for the day.
 # ---------------------------------------------------------------------------
-const INTRA_MODES := ["even", "best"]
-const INTRA_MODE_LABEL := {"even": "Even sides", "best": "Best side v the rest"}
-## What each way of picking the sides gains and costs, as it plays out.
-const INTRA_GAIN := {
-	"even": "Two sides matched on rating, so every player and prospect gets a fair test.",
-	"best": "You coach your best 23 as one side, and every prospect is tested against them.",
-}
-const INTRA_COST := {
-	"even": "Your best 23 are split across the two sides.",
-	"best": "The rest of the list and the prospects are up against it, and may see little of the ball.",
-}
-
-
-static func intra_week() -> int:
-	return int(tune("intra_week"))
-
-
-static func intra_seed(career_seed: int, year: int, club: String) -> int:
-	return hash(["preseason", "intra", career_seed, year, club])
-
-
-## How many prospects the two sides need: two full sides, less the listed
-## players fit to play, and never more than there are prospects.
-static func invites_needed(fit_listed: int, prospects: int) -> int:
-	return clampi(2 * int(tune("intra_side_size")) - fit_listed, 0, prospects)
-
-
-## The two sides: [first, second], arrays of players. `listed` are the fit
-## listed players, best first; `guests` the invited prospects (copies), best
-## first. "best": the best side_size listed players are the first side, and
-## everyone else and every guest the second. "even": the listed players are
-## dealt alternately, then the guests, the first to whichever side is short.
-static func intra_sides(listed: Array, guests: Array, mode: String) -> Array:
-	var size := int(tune("intra_side_size"))
-	var first := []
-	var second := []
-	if mode == "best":
-		for i in range(listed.size()):
-			(first if i < size else second).append(listed[i])
-		for g in guests:
-			(second if second.size() < size or first.size() >= size else first).append(g)
-		return [first, second]
-	for i in range(listed.size()):
-		(first if i % 2 == 0 else second).append(listed[i])
-	for g in guests:
-		(first if first.size() <= second.size() else second).append(g)
-	return [first, second]
-
-
 ## A prospect as he plays on the day: a copy with a spare jumper number, who
 ## cannot be hurt. Nothing done to it reaches the draft pool.
-static func intra_guest(p: Dictionary, number: int, club: String) -> Dictionary:
+static func guest(p: Dictionary, number: int, club: String) -> Dictionary:
 	var g := p.duplicate(true)
 	g["num"] = number
 	g["club"] = club
@@ -363,6 +311,7 @@ static func seen_line(p: Dictionary, club: String) -> String:
 	var seen: Dictionary = (p.get("seen", {}) as Dictionary).get(club, {}) if p.get("seen") is Dictionary else {}
 	if seen.is_empty():
 		return ""
+	# A note from before the one pre-season match (no "kind") was the intra-club match's.
 	var where := "practice match" if str(seen.get("kind", "")) == "practice" else "intra-club match"
 	return "Seen in your %d %s. %s" % [int(seen.get("year", 0)), where, str(seen.get("line", ""))]
 

@@ -18,6 +18,10 @@ const GAPS := {"BRL": "SA", "GEE": "DEF", "GCS": "SA", "MEL": "SA", "WCE": "SA"}
 func run() -> void:
 	failures.clear()
 	checks = 0
+	# The first-visit intros (FirstVisitIntro.gd) are their own suite; here
+	# every screen is a return visit, so the taps reach the screen.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		GameState.set_setting("seen_%s_intro" % key, true)
 	GameState.replay_seed = SUITE_SEED
 	_t("_test_seed_structure")
 	_t("_test_seed_integrity")

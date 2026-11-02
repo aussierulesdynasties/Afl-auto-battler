@@ -195,8 +195,8 @@ func _test_flow() -> void:
 	before = GameState.my_list.map(func(p): return str(p["id"]) + str(p.get("xp", 0)))
 	_check(GameState.prepare_practice_match() and GameState.pending_phase == "practice"
 			and str(GameState.pending_match["home"]) == "FRE" and str(GameState.pending_match["away"]) == "WCE"
-			and GameState.pending_sim != null and not GameDB.is_side("FRE_H"),
-			"Coached from the box, it is Fremantle at home to West Coast, two real clubs and no club's two sides")
+			and GameState.pending_sim != null,
+			"Coached from the box, it is Fremantle at home to West Coast")
 	GameState._clear_pending()
 	_check(before.size() == GameState.my_list.size(), "...and setting it up changes nobody")
 
@@ -204,7 +204,7 @@ func _test_flow() -> void:
 func _test_trial() -> void:
 	_career()
 	_to_practice()
-	var prospects: Array = GameState.intra_prospects()
+	var prospects: Array = GameState.preseason_prospects()
 	var ids := prospects.slice(0, 5).map(func(p): return str(p["id"]))
 	_check(GameState.toggle_practice_invite(ids[0]) and GameState.toggle_practice_invite(ids[1]) and GameState.toggle_practice_invite(ids[2]),
 			"Up to three prospects can be trialled")
@@ -228,7 +228,6 @@ func _test_trial() -> void:
 	for p in on:
 		every_guest = every_guest and bool(p.get("guest", false)) and float(p.get("cond_injury", 1.0)) == 0.0
 	_check(every_guest, "...each a guest who cannot be hurt")
-	GameDB.unregister_sides()
 	GameState.sim_practice_match()
 	var rep: Dictionary = GameState.preseason_practice()["report"]
 	var lines: Array = rep["prospects"]
@@ -254,7 +253,7 @@ func _test_trial() -> void:
 	# An opponent never trials the same prospect.
 	_career()
 	_to_practice()
-	var mine: Array = GameState._intra_picks(CLUB, 3, [], 1.0)
+	var mine: Array = GameState._guest_picks(CLUB, 3, [], 1.0)
 	for id in mine:
 		GameState.toggle_practice_invite(id)
 	var b2: Dictionary = GameState._practice_mine()
@@ -265,6 +264,18 @@ func _test_trial() -> void:
 	_check((g["FRE"] as Array).size() == 3 and (g["WCE"] as Array).size() == 3 and not clash,
 			"Both clubs trial three prospects and never the same one")
 	GameState._clear_pending()
+	# Spots left empty are filled by your recruiters, as every club's are: the
+	# match always gives its full look at the class (director, 2026-11-03).
+	_career()
+	_to_practice()
+	var own := str(GameState.preseason_prospects()[GameState.preseason_prospects().size() - 1]["id"])
+	GameState.toggle_practice_invite(own)
+	var picks: Array = GameState._guest_picks(CLUB, 3, [own], GameState.recruiting_uncertainty_mult())
+	GameState.sim_practice_match()
+	var filled: Array = GameState.practice_invites()
+	_check(filled.size() == 3 and filled[0] == own and filled.slice(1) == picks
+			and (GameState.preseason_practice()["report"]["prospects"] as Array).size() == 3,
+			"A trial left short is filled by your recruiters' top-rated prospects, and all three are seen")
 
 
 func _pool(id: String) -> Dictionary:
@@ -359,7 +370,7 @@ func _test_determinism() -> void:
 	for i in range(2):
 		_career()
 		_to_practice()
-		GameState.toggle_practice_invite(str(GameState.intra_prospects()[0]["id"]))
+		GameState.toggle_practice_invite(str(GameState.preseason_prospects()[0]["id"]))
 		GameState.sim_practice_match()
 		var rep: Dictionary = GameState.preseason_practice()["report"]
 		sigs.append(str(rep["score"]) + str(rep["stood"]) + str(rep["prospects"]))
@@ -369,7 +380,7 @@ func _test_determinism() -> void:
 func _test_saves() -> void:
 	_career()
 	_to_practice()
-	GameState.toggle_practice_invite(str(GameState.intra_prospects()[1]["id"]))
+	GameState.toggle_practice_invite(str(GameState.preseason_prospects()[1]["id"]))
 	GameState.save_career()
 	var kept: Dictionary = GameState.preseason_practice().duplicate(true)
 	GameState.reset()
@@ -389,16 +400,33 @@ func _test_saves() -> void:
 	_check(GameState.preseason_stop() == "" and _past_papers(GameState.preseason_advance()) == "done" and not GameState.preseason_active(),
 			"A save from week 7 with no practice match runs on to Round 1")
 	_career()
+	GameState.preseason_advance()  # to the time trial, week 3
 	var guard := 0
-	while GameState.preseason_week() < 5 and guard < 8:
-		guard += 1
-		GameState.preseason_advance()
 	GameState.save_career()
 	var raw := CareerSave.read(GameState.save_path)
-	_check(not (raw.get("preseason", {}) as Dictionary).has("practice"), "(a save from the intra-club stop holds no practice match yet)")
+	_check(not (raw.get("preseason", {}) as Dictionary).has("practice"), "(a save from before week 7 holds no practice match yet)")
 	GameState.reset()
 	_check(GameState.load_career() and _to_practice() and GameState.practice_opponent() == "WCE",
 			"A save from before week 7 loads and meets the practice match when it gets there")
+	# A save standing at the old intra-club stop (end of week 5, before the one
+	# pre-season match, director 2026-11-03): it loads, the old match is gone,
+	# and pressing on meets the practice match.
+	_career()
+	guard = 0
+	while GameState.preseason_week() < 5 and guard < 8:
+		guard += 1
+		GameState.preseason_advance()
+	_check(GameState.preseason_week() == 7 and GameState.preseason_stop() == "practice",
+			"With no intra-club match, pressing on from the time trial runs to the practice match at the end of week 7")
+	GameState.preseason["week"] = 5
+	GameState.preseason.erase("practice")
+	GameState.preseason["intra"] = {"mode": "best", "invites": [], "played": false, "seen": false}
+	GameState.save_career()
+	GameState.reset()
+	_check(GameState.load_career() and not GameState.preseason.has("intra") and GameState.preseason_stop() == "",
+			"A save from the old intra-club stop loads with the old match gone and the pre-season not waiting")
+	_check(GameState.preseason_advance() == "practice" and GameState.preseason_week() == 7 and GameState.practice_opponent() == "WCE",
+			"...and pressing on meets the practice match at the end of week 7")
 
 
 func _test_sim_to_round_one() -> void:
@@ -419,10 +447,6 @@ func _tap_to_practice(tree: SceneTree) -> Control:
 	while GameState.preseason_stop() != "practice" and guard < 10:
 		guard += 1
 		var go := scene.find_child("PreSeasonGo", true, false) as Control
-		if GameState.preseason_stop() == "intra" and not GameState.intra_played():
-			GameState.sim_intra_match()
-			scene = await _open(tree)
-			continue
 		await _tap(go, "the way on")
 		await _frames(tree, 10)
 		scene = tree.current_scene as Control
@@ -443,22 +467,9 @@ func _test_screens_phone() -> void:
 	_check(_label(scene, "PracticeCount") == "0 of 3 trialled" and _label(scene, "PracticePlan").begins_with("Game plan: ")
 			and scene.find_child("PracticeSelection", true, false) != null and _fits(scene, 390.0),
 			"Phone: it says how many are trialled, the plan, and fits the screen")
-	var seen_id := ""
-	var unseen_id := ""
-	for q in GameState.intra_prospects():
-		var mine: Dictionary = (q.get("seen", {}) as Dictionary).get(GameState.my_club, {}) if q.get("seen") is Dictionary else {}
-		if seen_id == "" and not mine.is_empty():
-			seen_id = str(q["id"])
-		elif unseen_id == "" and mine.is_empty():
-			unseen_id = str(q["id"])
-	var seen_row := scene.find_child("Trial_" + seen_id, true, false) as Button
-	var unseen_row := scene.find_child("Trial_" + unseen_id, true, false) as Button
-	_check(seen_row != null and unseen_row != null and seen_row.text.contains("
-Intra-club: ")
-			and bool(seen_row.get_meta("seen", false)) and not unseen_row.text.contains("Intra-club")
-			and (seen_row.get_theme_stylebox("normal") as StyleBoxFlat).bg_color != (unseen_row.get_theme_stylebox("normal") as StyleBoxFlat).bg_color,
-			"Phone: a prospect trialled in the intra-club match stands out on the club's colour, with what he did there")
-	var ids: Array = GameState.intra_prospects().slice(0, 2).map(func(p): return str(p["id"]))
+	_check(scene.find_child("IntraSetup", true, false) == null and scene.find_child("PracticeFill", true, false) != null,
+			"Phone: one pre-season match (no intra-club stop on the way), and the recruiters can fill the trial")
+	var ids: Array = GameState.preseason_prospects().slice(0, 2).map(func(p): return str(p["id"]))
 	for id in ids:
 		_check(await _tap(scene.find_child("Trial_" + str(id), true, false), "a prospect"),
 				"Phone: a finger's tap trials a prospect")
@@ -468,7 +479,7 @@ Intra-club: ")
 	# The gate states both sides, sized from the rules (director, 2026-10-18).
 	var cost2 := _label(scene, "PracticeCost")
 	var gap2 := GameState.practice_trial_gap_pct(GameState.practice_invites())
-	_check(_label(scene, "PracticeGain").contains("%d%% tighter" % roundi((1.0 - float(PreSeason.tune("intra_seen_uncertainty"))) * 100.0))
+	_check(_label(scene, "PracticeGain").contains("%d%% tighter" % roundi((1.0 - float(PreSeason.tune("seen_uncertainty"))) * 100.0))
 			and (cost2.contains("about %d%% below" % gap2) if gap2 > 0 else cost2.contains("no lower")),
 			"Phone: the trial's gain and cost carry their sizes, the cost for the two chosen (%s)" % cost2)
 	var risk := _label(scene, "PracticeRisk")
@@ -550,7 +561,7 @@ func _test_screens_pc() -> void:
 	var foot := scene.find_child("PreSeasonActions", true, false) as Control
 	_check(go != null and go.size.x < 500.0 and foot != null and foot.get_global_rect().end.y <= 540.0,
 			"PC: the way on is sized to its words and the buttons are on the screen")
-	var id := str(GameState.intra_prospects()[0]["id"])
+	var id := str(GameState.preseason_prospects()[0]["id"])
 	_check(await _tap(scene.find_child("Trial_" + id, true, false), "a prospect"), "PC: a click trials a prospect")
 	_check(GameState.practice_invites() == [id], "PC: he is trialled")
 	_check(await _tap(scene.find_child("PracticePlanGo", true, false), "Game plan"), "PC: a click opens the game plan")

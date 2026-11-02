@@ -17,3 +17,12 @@ his differs, the later one wins. Nothing here edits the bible.
 - Draft pool filters (CUT_AUDIT row 9): the pool keeps position, sort and search. Club, career stage, style, trait, available-only and the Combine sort are gone, live with no switch; the pool always shows available players. Combine results stay on a prospect's sheet. No save migration needed (view state, never saved).
 | 7 | Row 37 AI draft buff: on or off? | off | `ai_draft_buff` ships off (#862); it is rivals only, so the user's Pick for me is unchanged. Whether the buff should also change Pick for me is not yet decided |
 | 8 | Cut "Play to Grand Final" and the long-press play-ahead menu? | cut (CUT_AUDIT row 11) | Sim the week is the only fast path: one round at a time, finals included; UI-only, nothing saved, so no save migration |
+
+## Cuts shipped
+
+- Cut audit §10 row 1 (CUT_AUDIT_2026-11-03.md): the intra-club match (week 5) and the practice match (week 7) are one
+  pre-season match, the practice match at the end of week 7, live with no switch. It keeps the stood out / struggled
+  reads, the side picked on Selection, the prospect looks (tune `seen_uncertainty`, `guest_spare_number`), XP and
+  injuries. Trial spots the coach leaves empty are filled by his recruiters' top picks (PracticeFill button, and
+  automatically on sim / press on). Old saves drop the `intra` key and press on to week 7. The "sides of one club"
+  kits (GameDB, PitchView, UiKit) went with it.

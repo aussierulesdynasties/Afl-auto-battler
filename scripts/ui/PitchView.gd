@@ -113,8 +113,6 @@ var clash := false
 ## side do (Fremantle's purple and Melbourne's navy are 26.6 apart and read as one
 ## side in a pack: audit frame fre_mel_phone 005).
 const DISC_CLASH := 40.0
-## Two sides of one club whose strips are this close in base colour (Gold Coast's two reds) take the club's farthest colour instead.
-const SIDE_CLASH := 30.0
 ## Discs that would overlap are drawn apart, so both numbers show. Drawing only:
 ## the players stay where the match has them. NUDGE_GAP is the distance two drawn
 ## centres are pushed toward, in disc diameters; each frame the nudge eases back
@@ -505,9 +503,6 @@ func _change_ends() -> void:
 ## kit whose pattern colour is no farther from the home base than its base
 ## (a created club, say) is left as it is: no colour is invented.
 static func kits_for(home: String, away: String) -> Array:
-	if GameDB.is_side(home) or GameDB.is_side(away):
-		dress_sides(GameDB.side_base(home))
-		dress_sides(GameDB.side_base(away))
 	var h: Dictionary = with_trim(home, GameDB.club_guernsey(home))
 	var a: Dictionary = with_trim(away, GameDB.club_guernsey(away))
 	if disc_distance(h, a) >= DISC_CLASH:
@@ -518,10 +513,6 @@ static func kits_for(home: String, away: String) -> Array:
 	var best: Dictionary = a
 	var best_d := disc_distance(h, a)
 	var options := clash_options(away, a)
-	if GameDB.side_base(home) == GameDB.side_base(away):
-		# A club against itself (an intra-club match): the strip is only its own
-		# two colours changed over, so a side's ink matches the strip it wears.
-		options = options.slice(0, 1) if UiKit.colour_distance(a.get("base", Color.WHITE), a.get("pattern", Color.WHITE)) > 12.0 else []
 	for c in options:
 		var d := disc_distance(h, c)
 		if d > best_d + 0.01:
@@ -546,7 +537,7 @@ static func clash_options(code: String, kit: Dictionary) -> Array:
 		out.append(with_trim(code, sw, true))
 	# A white clash strip, as the real clubs wear (Melbourne, Hawthorn, Essendon):
 	# only for a club whose third colour is white.
-	var white: Color = GameDB.club_colours(GameDB.side_base(code))[2]
+	var white: Color = GameDB.club_colours(code)[2]
 	if white.is_equal_approx(Color.WHITE) and UiKit.colour_distance(base, white) > 25.0:
 		var w1: Dictionary = kit.duplicate()
 		w1["base"] = white
@@ -583,7 +574,7 @@ static func with_trim(code: String, kit: Dictionary, keep := false) -> Dictionar
 	if keep and out.has("ring"):
 		return out
 	out.erase("ring")
-	if not GameDB.THREE_COLOUR_CLUBS.has(GameDB.side_base(code)):
+	if not GameDB.THREE_COLOUR_CLUBS.has(code):
 		return out
 	var third: Color = kit.get("pattern2", Color.WHITE)
 	if UiKit.colour_distance(third, kit.get("base", Color.WHITE)) < 25.0:
@@ -714,37 +705,6 @@ static func _dominant(p: Array) -> Color:
 		if float(e[1]) > float(best[1]):
 			best = e
 	return best[0]
-
-
-## invented here. Harmless to call again.
-static func dress_sides(base: String) -> void:
-	var codes: Array = GameDB.side_codes(base)
-	if not GameDB.is_side(str(codes[1])) or (GameDB.clubs[codes[1]] as Dictionary).has("kit"):
-		return
-	var home: Dictionary = GameDB.club_guernsey(base)
-	var second: Dictionary = kits_for(base, base)[1]
-	var hb: Color = home.get("base", Color.WHITE)
-	if UiKit.colour_distance(hb, second.get("base", Color.WHITE)) < SIDE_CLASH:
-		# The kit's two colours are too alike to tell two sides apart (Gold
-		# Coast's two reds): the second side takes the club's own colour that
-		# is farthest from the first side's, still one of the club's colours.
-		var far: Color = hb
-		for c in GameDB.club_colours(base):
-			if UiKit.colour_distance(hb, c) > UiKit.colour_distance(hb, far):
-				far = c
-		second = home.duplicate()
-		second["base"] = far
-		second["pattern"] = hb
-		second["clash"] = true
-	# Each side wears its strip's colour plain, like training bibs: with the
-	# design kept, a kit that is half one colour and half the other (Melbourne's
-	# yoke) gives two sides that are mirror images of each other on a disc and
-	# cannot be told apart at match size. The colours are still the club's own.
-	for kit in [home, second]:
-		kit["pattern"] = kit.get("base", Color.WHITE)
-		kit["pattern2"] = kit.get("base", Color.WHITE)
-	GameDB.set_side_kit(str(codes[0]), home)
-	GameDB.set_side_kit(str(codes[1]), second)
 
 
 ## +1 when the home side kicks to the right of the screen, -1 when it kicks
@@ -1355,7 +1315,7 @@ const PRESS_NO_HUE := Color(0.02, 0.03, 0.07)
 ## mix, kept in range.
 static func press_zone_colour(code: String) -> Color:
 	var cols: Array = GameDB.club_colours(code)
-	var slot := int(PRESS_INK_SLOT.get(GameDB.side_base(code), 0))
+	var slot := int(PRESS_INK_SLOT.get(code, 0))
 	if slot < 0:
 		return PRESS_NO_HUE
 	var pick: Color = cols[slot]
