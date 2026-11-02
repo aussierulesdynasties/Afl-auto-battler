@@ -5,8 +5,8 @@ extends RefCounted
 ## nothing here decides or changes anything in the match.
 ##
 ## The order is what survives the cap. The people with a story come first (a
-## run you promised, Backing), then the calls: the player you play through,
-## the tagger, the spare, the defenders on the forwards you matched up. Your
+## run you promised, Backing), then the calls: the star the Through stars plan
+## plays through, the tagger, the spare, the defenders on the forwards you matched up. Your
 ## own players only: a ring means one of yours that you have a say about, so
 ## the match-ups the sim sets up by itself, the calls your assistant makes for
 ## you (MatchSim.coach_call), and the man you tag, are not ringed.

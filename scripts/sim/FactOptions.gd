@@ -173,7 +173,7 @@ static func plan_cost(plan: String) -> String:
 
 
 ## Mid or forward with a midfield position, never a ruckman (director, 2026-10-14, A9; lead, 2026-10-18):
-## a ruck who also lists MID is the Main ruck call's business here, not a tag's.
+## a ruck who also lists MID goes up in the ruck (picked at selection), not a tag's.
 static func _tag_candidate(p: Dictionary) -> bool:
 	return MatchSim.can_be_tagged(p) and str(Ratings.positions(p)[0]) != "RUCK"
 

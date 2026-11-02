@@ -706,8 +706,7 @@ func _show_coach_box() -> void:
 	v.add_child(band)
 	# Wide (PC, director 2026-10-11: no column scrolls at 1280x720): the
 	# quarter just played and the key match-ups, then the calls in three
-	# columns - the plan, the tag and the talk; the rotations and the loose
-	# men; the three play-through calls. A phone keeps one column, every call
+	# columns - the plan, the tag and the talk; the defensive set-up. A phone keeps one column, every call
 	# in it.
 	# Below 1200 units the first column sits above the other three.
 	var rep: VBoxContainer = v
@@ -3085,6 +3084,9 @@ func _apply_quarter_tactics(t: Dictionary) -> void:
 	# The rival coach plays its usual game, protects a lead, chases a
 	# deficit, and tags your best midfielder after half time.
 	sim.set_tactics(1 - _my_side, sim.ai_tactics(1 - _my_side))
+	# Every club rotates as a competent coach would, the rival included.
+	var rival := str((sim.squads[1 - _my_side] as Squad).code)
+	sim.set_rotation_policy(1 - _my_side, sim.auto_rotation(1 - _my_side, GameState.fitness_plan(rival)))
 
 
 ## "Defensive press · tagging Walsh": your calls for this quarter, one line.
