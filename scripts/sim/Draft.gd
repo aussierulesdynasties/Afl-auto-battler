@@ -907,10 +907,33 @@ const AI_VORP_FULL_ROUNDS := 2
 
 
 func _vorp_weight() -> float:
+	if intake_mode and not clubs.is_empty() and Features.on("ai_draft_buff"):
+		# Row 37 buff (switch ai_draft_buff, off): the National Draft ramps
+		# scarcity in over two rounds too, so a club takes the best player
+		# early and reaches for a thin position late.
+		var r := float(pick_index) / float(clubs.size() * AI_VORP_FULL_ROUNDS)
+		return AI_VORP_WEIGHT * clampf(r, 0.0, 1.0)
 	if intake_mode or clubs.is_empty():
 		return AI_VORP_WEIGHT
 	var ramp := float(pick_index) / float(clubs.size() * AI_VORP_FULL_ROUNDS)
 	return AI_VORP_WEIGHT * clampf(ramp, 0.0, 1.0)
+
+
+## Row 37 buff (switch ai_draft_buff, off): in the National Draft the edge
+## over replacement counts for at most this much, and a covered position
+## keeps this share of a prospect's worth (need only tips near-equals).
+const AI_BUFF_VORP_CAP := 5.0
+const AI_BUFF_INTAKE_COVERED := 0.97
+
+
+func _vorp_cap() -> float:
+	if intake_mode and Features.on("ai_draft_buff"):
+		return AI_BUFF_VORP_CAP
+	return AI_VORP_CAP
+
+
+func _intake_covered() -> float:
+	return AI_BUFF_INTAKE_COVERED if Features.on("ai_draft_buff") else INTAKE_COVERED
 
 
 var _ai_cache_at := -1
@@ -948,7 +971,7 @@ func _ai_score(code: String, p: Dictionary, detail = null) -> float:
 		# A club's own opinion counts in full for a starting spot it is
 		# filling; for depth and surplus picks it leans on the consensus.
 		var worth := base + err * need
-		var over := minf(AI_VORP_CAP, worth - _replacement(code, role))
+		var over := minf(_vorp_cap(), worth - _replacement(code, role))
 		var s := (worth + _vorp_weight() * over) * need * float(entry[1])
 		if s > best and detail is Dictionary:
 			detail["role"] = role
@@ -1252,7 +1275,7 @@ func _need_weight(code: String, role: String) -> float:
 	if intake_mode:
 		# The national draft builds for years ahead: need tips close calls,
 		# it never makes a club pass a much better prospect.
-		return 1.0 if n < int(_ideal_counts(code).get(role, 0)) else INTAKE_COVERED
+		return 1.0 if n < int(_ideal_counts(code).get(role, 0)) else _intake_covered()
 	if n < int(_ideal_counts(code).get(role, 0)):
 		return 0.6
 	return 0.2

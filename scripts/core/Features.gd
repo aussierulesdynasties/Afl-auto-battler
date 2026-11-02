@@ -30,7 +30,13 @@ extends RefCounted
 ##   training_report   the report after every fourth round: who improved, who
 ##               fell back, and who can learn a new position (TrainingReport.gd).
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects"]
+##   ai_draft_buff   rival clubs' National Draft picks lean on the best player
+##               available (roadmap row 37): scarcity ramps in over two rounds and
+##               counts for at most 5 points, a covered position keeps 97% of a
+##               prospect's worth (was 92%). Off, rival drafting is exactly as before.
+##               Balance-gated: the director's call.
+
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "ai_draft_buff"]
 
 static var _forced := {}
 static var _from_args := {}
