@@ -3,7 +3,7 @@ extends RefCounted
 ## Milestone games (plan step 3c): real career milestones read from the sim,
 ## for your players and for you, the coach.
 ##   player  games 50/100/150/200/250/300, his debut, career goals 100/200/300
-##   coach   games coached 50/100/200, your first win, your first final
+##   coach   games coached every 50 from 50 to 300, your first win, your first final
 ##
 ## The record lives in GameState.milestone_log, its own small structure, so
 ## later story arcs and the almanac can read it without the news feed:
@@ -20,7 +20,7 @@ extends RefCounted
 const FEATURE := "milestone_games"
 const PLAYER_GAMES := [50, 100, 150, 200, 250, 300]
 const PLAYER_GOALS := [100, 200, 300]
-const COACH_GAMES := [50, 100, 200]
+const COACH_GAMES := [50, 100, 150, 200, 250, 300]
 ## How close a goals milestone must be to show as "within reach" this week.
 const GOALS_NEAR := 3
 
@@ -204,6 +204,17 @@ static func upcoming(gs) -> Array:
 	if gs.season.is_regular_done() and int(c.get("finals", 0)) == 0 and gs.my_finals_status() == "alive":
 		out.append({"key": "first_final", "who": "coach", "id": "", "text": "Your first final as coach."})
 	return out
+
+
+## The Hub card's lines: this week's milestones less what the week's note
+## lines already say (GameState.milestone_notes: "plays his 100th game."), so
+## a fact is worded once on the Hub, not in both the notes and the card.
+static func card_items(gs) -> Array:
+	var said := {}
+	for n in gs.milestone_notes():
+		said[str(n.get("player_id", ""))] = true
+	return upcoming(gs).filter(func(u):
+		return not (str(u["key"]) == "games" and said.has(str(u["id"]))))
 
 
 ## The full-time screen's one line for this match ("" when nothing). Reads the

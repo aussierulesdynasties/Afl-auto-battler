@@ -306,6 +306,9 @@ func _test_ui() -> void:
 	# narrow portrait viewport used for the Android playtest.
 	GameState.season.round_index = GameState.season.fixture.size()
 	GameState.open_offseason()
+	# Return visit: the first-visit intros (FirstVisitIntro.gd) have their own suite.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		GameState.set_setting("seen_%s_intro" % key, true)
 	var offseason: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
 	tree.root.add_child(offseason)
 	for i in range(4):
