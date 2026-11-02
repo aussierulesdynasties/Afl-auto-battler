@@ -33,6 +33,8 @@ func _ready() -> void:
 	if GameState.season == null or GameState.my_list.is_empty():
 		Router.replace("main")
 		return
+	# Opening it ticks the job on the Hub's weekly checklist (when on).
+	WeekChecklist.mark(GameState, "team")
 	# Your club's colour behind the page, as on the hub and match day
 	# (director, 2026-10-10: every screen in the gameday style).
 	add_child(ClubBackdrop.new().setup(GameState.my_club))

@@ -43,6 +43,8 @@ func _ready() -> void:
 	if GameState.my_club == "" or GameState.my_list.is_empty():
 		Router.replace("main")
 		return
+	# Opening it ticks the job on the Hub's weekly checklist (when on).
+	WeekChecklist.mark(GameState, "training")
 	if not GameState.player_names_changed.is_connected(_on_names):
 		GameState.player_names_changed.connect(_on_names)
 	# Your club's colour behind the page, as on the hub and match day
