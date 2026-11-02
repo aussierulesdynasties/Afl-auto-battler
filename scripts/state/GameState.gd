@@ -85,6 +85,7 @@ var season_awards := {}          # the finished season's awards
 ## from before nominations were recorded starts "from" its next round.
 var rising_star_noms := {"from": 1, "rounds": []}
 var honour_roll: Array = []      # one entry per completed season
+var almanac: Array = []          # the club almanac, one page per season (Almanac.gd; switch club_almanac)
 ## Every coach in the game, once: cid -> record (Coaches.gd). A club's staff
 ## is read from the records, never stored beside them.
 var coaches := {}
@@ -182,6 +183,8 @@ var week_event: Dictionary:
 		return week_events[0] if not week_events.is_empty() else {}
 	set(value):
 		week_events = [] if value.is_empty() else [value]
+## The week's checklist record (WeekChecklist.gd; setting "weekly_checklist").
+var week_checks := {}
 ## Trust between you and the people around the club (Trust.gd): {"p:<player
 ## id>": {"t", "log"}}. Missing means neutral. Saved; later phases add coaches,
 ## journalists, the board and club culture under their own keys, same shape.
@@ -687,6 +690,7 @@ func save_career() -> bool:
 		"season_awards": season_awards,
 		"rising_star_noms": rising_star_noms,
 		"honour_roll": honour_roll,
+		"almanac": almanac,
 		"records": records,
 		"rivalry_history": rivalry_history,
 		"finals_counted_since": finals_counted_since,
@@ -716,6 +720,7 @@ func save_career() -> bool:
 		"tutorials": tutorials,
 		"board": board,
 		"week_events": week_events,
+		"week_checks": week_checks,
 		"relations": relations,
 		"story": story,
 		"media_conference": media_conference,
@@ -870,6 +875,7 @@ func load_career() -> bool:
 	rising_star_noms = state.get("rising_star_noms",
 			{"from": season.round_index + 1 if season != null else 1, "rounds": []})
 	honour_roll = state.get("honour_roll", [])
+	almanac = state.get("almanac", [])  # older saves: none; the page falls back to the honour roll
 	records = state.get("records", {})
 	rivalry_history = state.get("rivalry_history", {})
 	# An older save has played finals nobody counted: its count starts with the next ones.
@@ -899,6 +905,7 @@ func load_career() -> bool:
 	news = state.get("news", [])
 	board = state.get("board", {})
 	week_events = state.get("week_events", [])
+	week_checks = state.get("week_checks", {}) if state.get("week_checks") is Dictionary else {}
 	if not state.has("week_events"):
 		week_event = state.get("week_event", {})
 	relations = state.get("relations", {})
@@ -1306,6 +1313,7 @@ func reset() -> void:
 	season_awards = {}
 	rising_star_noms = {"from": 1, "rounds": []}
 	honour_roll = []
+	almanac = []
 	records = {}
 	rivalry_history = {}
 	finals_counted_since = 0
@@ -1344,6 +1352,7 @@ func reset() -> void:
 	expansion = {}
 	set_canberra(not ExpansionBuild.on())
 	week_events = []
+	week_checks = {}
 	relations = {}
 	story = StoryEngine.new_state()
 	media_conference = {}
@@ -1836,6 +1845,8 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	intake_summary = Prospects.age_league(league_lists, next_year)
 	intake_summary["signed"] = signed
 	_retirees_to_coaching(intake_summary.get("retired", []), listed)
+	if Almanac.on():
+		Almanac.add_legends(self, intake_summary.get("retired", []), listed)
 	for r in intake_summary.get("retired", []):
 		if int(r.get("overall", 0)) >= NEWS_MIN_OVR:
 			add_news("retirement", "%s (%s) has retired at %d." % [
@@ -5626,6 +5637,8 @@ func _close_season_awards() -> void:
 		"my_finals": _my_last_final(),
 		"my_aa": _my_all_australians(),
 	})
+	if Almanac.on():
+		almanac.append(Almanac.season_entry(self))
 	# Achievements first, then the season news, so the premiership line
 	# stays the newest item in the feed.
 	_close_season_achievements()
