@@ -252,9 +252,6 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	return overlay
 
 
-## "With us": his games and goals for your club, then up to three remembered
-## facts (Remembered.gd), each on a line of its own, newest first. Null for
-## someone yet to play for you.
 ## Top attributes and the Needs work line (Features "top_attributes"): his
 ## three highest-rated football attributes with their ratings, whatever their
 ## level, then how he sits against players of his position. `hidden` (a draft
@@ -293,6 +290,9 @@ static func top_attributes_block(v: VBoxContainer, p: Dictionary, hidden: bool, 
 		v.add_child(nl)
 
 
+## "With us": his games and goals for your club, then up to three remembered
+## facts (Remembered.gd), each on a line of its own, newest first. Null for
+## someone yet to play for you.
 static func with_us_block(p: Dictionary) -> Control:
 	var w := GameState.with_us(p)
 	var head := Remembered.head(w)

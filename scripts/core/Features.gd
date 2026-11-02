@@ -34,6 +34,9 @@ extends RefCounted
 ##               player per rival club, and Canberra as a career choice
 ##               (ExpansionBuild). Off, a new club arrives with the 36
 ##               generated players it always did and Canberra always joins.
+##   club_almanac   the club almanac (Almanac.gd, AlmanacScene): a page per
+##               season of your career, reached from the Hub and the season wrap.
+##               Off, no entry is shown and no almanac page is written.
 ##   match_story   the match makes the story (director, 2026-11-03, plan step 1b): each
 ##               match's hero, turning point and why it was won or lost (MatchStory.gd),
 ##               at the top of the full-time Summary, on the news front, in the press
@@ -44,7 +47,7 @@ extends RefCounted
 ##               his position (PlayerProfile.top_attributes / needs_work_line). Off,
 ##               the cards show the graded strengths and the old Needs work line.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "match_story", "top_attributes"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "top_attributes"]
 
 static var _forced := {}
 static var _from_args := {}
