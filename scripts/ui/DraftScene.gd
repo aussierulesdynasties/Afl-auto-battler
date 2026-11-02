@@ -1642,6 +1642,8 @@ func _open_player(id: String) -> void:
 					UiKit.BAD if Traits.is_bad(str(t)) else UiKit.TEXT)
 			tl.name = "Trait_" + str(t)
 			tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			if TraitLink.known(str(t)):
+				TraitLink.tappable(tl, str(t))
 			kv.add_child(tl)
 
 	# The Combine: his results on the day (measured, the same for every club),
@@ -2133,7 +2135,12 @@ func _refresh_order() -> void:
 			v.add_child(tl)
 		var comp := _draft.comp_at(index)
 		if not comp.is_empty():
-			var why := UiKit.ellipsis("Compensation for losing %s" % str(comp.get("name", "a free agent")), UiKit.SMALL, UiKit.TEXT)
+			var said := "Compensation for losing %s" % str(comp.get("name", "a free agent"))
+			if bool(comp.get("concession", false)):
+				var from := GameDB.club_name(str(comp.get("origin", code)))
+				said = ("Traded by %s for a senior player" % from) if bool(comp.get("traded", false)) \
+						else "%s list-build pick" % from
+			var why := UiKit.ellipsis(said, UiKit.SMALL, UiKit.TEXT)
 			why.name = "CompPick"
 			v.add_child(why)
 		elif _draft.intake_mode and index < _draft.pick_origin.size():
