@@ -14,6 +14,8 @@ extends RefCounted
 ##   DP    one line per AI draft pick: the pick against the best still available
 ##   DC    each draft pick followed one and three seasons on
 ## Args after the impl name: mode seed club seasons (default redraft 1 MEL 10).
+## Mode real_buff or redraft_buff runs the same start with the ai_draft_buff
+## switch on (2026-11-03 re-audit: paired before/after).
 ## godot --headless --path . --script tools/audit/run_audit.gd -- draft_strategy_impl real 11 MEL 10
 
 var mode := "redraft"
@@ -221,12 +223,15 @@ func run() -> void:
 	seed_n = int(args[2]) if args.size() > 2 else 1
 	club = str(args[3]) if args.size() > 3 else "MEL"
 	var seasons := int(args[4]) if args.size() > 4 else 10
+	# "real_buff" / "redraft_buff": the same career with the row 37 buff
+	# switch (ai_draft_buff) on, for paired before/after numbers.
+	Features.set_on("ai_draft_buff", mode.ends_with("_buff"))
 	GameState.reset()
 	GameState.autosave_enabled = false
 	GameState.career_seed = seed_n
 	GameState.replay_seed = seed_n
 	print("DA|%s|%d|user %s|seasons %d" % [mode, seed_n, club, seasons])
-	if mode == "real":
+	if mode.trim_suffix("_buff") == "real":
 		GameState.begin_real_lists()
 		# The real 2026 lists as they stand before the 2026 draft: the retired
 		# are gone, the delisted are free agents, the club-tied draftees are on.
