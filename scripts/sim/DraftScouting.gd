@@ -12,15 +12,15 @@ const COMBINE_NOISE := 4.0
 
 
 ## How wide a club's read on a prospect is once it has seen him play in its
-## intra-club match, as a share of its usual read. The size is the pre-season's
-## (data/preseason.json "intra_seen_uncertainty"; PreSeason sets it here when
+## pre-season match, as a share of its usual read. The size is the pre-season's
+## (data/preseason.json "seen_uncertainty"; PreSeason sets it here when
 ## it reads its data). Kept here, not asked of PreSeason, so this file stays
 ## free of anything that needs the game's autoloads: test runners name it
 ## before they exist.
 static var seen_uncertainty := 0.7
 
 
-## 1.0 unless `club` has a note on him from its intra-club match (p["seen"])
+## 1.0 unless `club` has a note on him from its pre-season match (p["seen"])
 ## and the pre-season is switched on.
 static func seen_mult(p: Dictionary, club: String) -> float:
 	if not (p.get("seen") is Dictionary) or not (p["seen"] as Dictionary).has(club) or not Features.on("preseason"):
@@ -32,7 +32,7 @@ static func projection(p: Dictionary, club: String, seed: int, uncertainty_mult 
 	var ov := int(p.get("overall", 50))
 	var pot := maxi(ov, int(p.get("potential", ov)))
 	var certainty := _certainty(p)
-	# A club that saw him in its intra-club match reads him more tightly
+	# A club that saw him in its pre-season match reads him more tightly
 	# (seen_mult; 1.0 for everyone else, and with the switch off).
 	var u := maxf(0.25, float(uncertainty_mult) * seen_mult(p, club))
 	if p.has("intl"):

@@ -11,3 +11,12 @@ his differs, the later one wins. Nothing here edits the bible.
 | 4 | Keep the random story deck? | keep it, and layer coach arcs on top | the 12 decks stay; multi-season arc cards are drawn alongside deck cards and remember named players and clubs (plan step 1a) |
 | 5 | What comes first? | the match hero and why we won or lost | plan step 1b: each match names its hero, its turning point and one to three reasons traced to numbers in the result (MatchStory.gd, switch match_story, off until he plays it) |
 | 6 | A weekly checklist? | yes: a short weekly checklist with one big arc-linked call | replaces "no weekly checklist": each Hub week shows one big call tied to an arc (drop the out-of-form star? play the kid?) plus the routine jobs; the Hub's "There is no weekly checklist" text goes (plan step 3a) |
+
+## Cuts shipped
+
+- Cut audit §10 row 1 (CUT_AUDIT_2026-11-03.md): the intra-club match (week 5) and the practice match (week 7) are one
+  pre-season match, the practice match at the end of week 7, live with no switch. It keeps the stood out / struggled
+  reads, the side picked on Selection, the prospect looks (tune `seen_uncertainty`, `guest_spare_number`), XP and
+  injuries. Trial spots the coach leaves empty are filled by his recruiters' top picks (PracticeFill button, and
+  automatically on sim / press on). Old saves drop the `intra` key and press on to week 7. The "sides of one club"
+  kits (GameDB, PitchView, UiKit) went with it.
