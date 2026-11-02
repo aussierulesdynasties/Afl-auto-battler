@@ -10,7 +10,7 @@ extends RefCounted
 ##
 ## State: GameState.week_checks = {"week": story_week, "done": {key: true},
 ## "seen": {key: true}}. A new week starts it empty. "done" is what the coach
-## did this week (opened Team, opened Training); "seen" remembers that a job
+## did this week (confirmed the side, opened Training); "seen" remembers that a job
 ## came up this week, so it stays on the list, ticked, once it is dealt with.
 
 const SETTING := "weekly_checklist"
@@ -28,7 +28,12 @@ static func _week(gs) -> Dictionary:
 	return gs.week_checks
 
 
-## The coach did `key` this week ("team", "training"). Nothing when off.
+## Whether the coach did `key` this week. False when off.
+static func is_done(gs, key: String) -> bool:
+	return on(gs) and gs.season != null and _done(gs, key)
+
+
+## The coach did `key` this week ("team" via Confirm side, "training"). Nothing when off.
 static func mark(gs, key: String) -> void:
 	if not on(gs) or gs.season == null:
 		return
