@@ -11,3 +11,6 @@ his differs, the later one wins. Nothing here edits the bible.
 | 4 | Keep the random story deck? | keep it, and layer coach arcs on top | the 12 decks stay; multi-season arc cards are drawn alongside deck cards and remember named players and clubs (plan step 1a) |
 | 5 | What comes first? | the match hero and why we won or lost | plan step 1b: each match names its hero, its turning point and one to three reasons traced to numbers in the result (MatchStory.gd, switch match_story, off until he plays it) |
 | 6 | A weekly checklist? | yes: a short weekly checklist with one big arc-linked call | replaces "no weekly checklist": each Hub week shows one big call tied to an arc (drop the out-of-form star? play the kid?) plus the routine jobs; the Hub's "There is no weekly checklist" text goes (plan step 3a) |
+| 7 | Which attributes does a card's top three rank? | all 13, Durability and Star power included | PlayerProfile.TOP_KEYS holds all 13 (switch top_attributes, off until he plays it); open-requirements row 1 |
+| 8 | Change the Needs work cutoffs or benchmark? | no | the existing cutoffs and the 2026 positional benchmark stay |
+| 9 | What does a hidden-rating prospect show? | the scout grade word | draft detail names his top three with the scouts' grade word, never a number |

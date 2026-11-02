@@ -1152,16 +1152,19 @@ func _test_top_attributes_on_cards() -> void:
 	var host := Control.new()
 	host.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tree.root.add_child(host)
+	var features = load("res://scripts/core/Features.gd")
+	var sheet_s = load("res://scripts/ui/PlayerSheet.gd")
+	var profile = load("res://scripts/sim/PlayerProfile.gd")
 	var p := {}
 	for q in root.get_node("GameDB").players:
 		if str(q.get("real_name", "")) == "Wil Dawson":
 			p = q
 	for on in [true, false]:
-		Features.set_on("top_attributes", on)
-		var sheet: Control = PlayerSheet.open(host, p)
+		features.set_on("top_attributes", on)
+		var sheet: Control = sheet_s.open(host, p)
 		for i in range(3):
 			await tree.process_frame
-		var top := PlayerProfile.top_attributes(p)
+		var top: Array = profile.top_attributes(p)
 		var shown := true
 		for t in top:
 			var row := sheet.find_child("TopAttr_" + str(t["key"]), true, false)
@@ -1170,7 +1173,7 @@ func _test_top_attributes_on_cards() -> void:
 			_check(shown and sheet.find_child("TopAttributesHead", true, false) != null,
 					"Switch on: Wil Dawson's profile shows his top three with ratings")
 			var nw := sheet.find_child("NeedsWork", true, false) as Label
-			var want := PlayerProfile.needs_work_line(p)
+			var want: String = profile.needs_work_line(p)
 			_check((want == "" and nw == null) or (nw != null and nw.text == want),
 					"Switch on: the Needs work line is the positional sentence (%s)" % want)
 		else:
@@ -1179,5 +1182,5 @@ func _test_top_attributes_on_cards() -> void:
 					"Switch off: the profile is as before")
 		sheet.queue_free()
 		await tree.process_frame
-	Features.clear("top_attributes")
+	features.clear("top_attributes")
 	host.queue_free()
