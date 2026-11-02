@@ -46,8 +46,11 @@ extends RefCounted
 ##               at the top of the full-time Summary, on the news front, in the press
 ##               question, and kept on GameState.match_stories. Off, none of it shows
 ##               and nothing is written.
+##   finals_cards_2  the finals cards' second slice (rows 35, 36): A3, A9, A14, B7 in
+##               finals weeks, and one card the week your season ends (A15, A16, B8,
+##               B9). Off, those cards are not in the deck and nothing is written.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "milestone_games", "club_almanac", "match_story"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "milestone_games", "club_almanac", "match_story", "finals_cards_2"]
 
 static var _forced := {}
 static var _from_args := {}

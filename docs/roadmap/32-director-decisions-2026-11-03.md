@@ -17,6 +17,10 @@ his differs, the later one wins. Nothing here edits the bible.
 - Draft pool filters (CUT_AUDIT row 9): the pool keeps position, sort and search. Club, career stage, style, trait, available-only and the Combine sort are gone, live with no switch; the pool always shows available players. Combine results stay on a prospect's sheet. No save migration needed (view state, never saved).
 | 7 | Row 37 AI draft buff: on or off? | off | `ai_draft_buff` ships off (#862); it is rivals only, so the user's Pick for me is unchanged. Whether the buff should also change Pick for me is not yet decided |
 | 8 | Cut "Play to Grand Final" and the long-press play-ahead menu? | cut (CUT_AUDIT row 11) | Sim the week is the only fast path: one round at a time, finals included; UI-only, nothing saved, so no save migration |
+| 9 | Finals cards slice 2 (rows 35, 36): sizes the 2026-10-13 ruling left open? | A9 "No Grand Final talk" Standards +2; A14 "Back your players" Togetherness +2; B8 "Celebrate" costs 1 week of running off the next pre-season base | built behind switch finals_cards_2 (off) |
+| 10 | B8's running cost while the preseason switch is off? | carry it silently | the debt is saved and paid into the next pre-season's running base when one opens |
+| 11 | A3 "Keep the noise outside" board +1? | swap it for Standards +1 | no card of the eight rewards the board |
+| 12 | Where do the Grand Final history lines come from? | only the save's own history plus data/club_premierships.csv | no line claims a final or flag the record cannot show |
 
 - **Row 37 draft logic, later ruling (2026-11-03):** the buff also applies to the user's "Pick for me", and the sim must
   be extremely competent: every club, the user's included, acts in its own best interest at all times; mistakes come
