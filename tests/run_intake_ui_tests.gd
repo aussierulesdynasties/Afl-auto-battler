@@ -36,6 +36,22 @@ func _run() -> void:
 	_state.replay_seed = SUITE_SEED
 	_db = root.get_node("GameDB")
 	_state.reset()
+	await _t("_test_intake_by_taps")
+	await _t("_test_pass_and_pick_for_me", [Vector2i(390, 844)])
+	await _t("_test_pass_and_pick_for_me", [Vector2i(1280, 720)])
+	await _t("_test_pick_order_and_untouchable_ui")
+	await _t("_test_draft_night_words")
+	await _t("_test_draft_night_screen", [Vector2i(390, 844)])
+	await _t("_test_draft_night_screen", [Vector2i(1280, 720)])
+	await _t("_test_trade_picks_sheet", [Vector2i(390, 844)])
+	await _t("_test_trade_picks_sheet", [Vector2i(1280, 720)])
+	print(Ran.line("Intake UI", self))
+	_state.replay_seed = 0
+	quit(0 if _failures.is_empty() else 1)
+
+
+## The National Draft on the shared screen, driven by taps, through to the new list (the checks written in _run).
+func _test_intake_by_taps() -> void:
 	var first_year := int(_state.season_year)
 	_state.start_season("COL", _db.club_list("COL"))
 	var season = _state.season
@@ -44,6 +60,14 @@ func _run() -> void:
 	_state.open_offseason()
 	_state.compensation.append({"club": "COL", "player": "comp_test", "name": "Sam Example",
 			"to": "CAR", "salary": 8, "years": 3, "value": 10.0, "after": 1})
+	# A first-round pick bought from Carlton for a player: the order and your
+	# picks must say where it came from (P-46).
+	_state.pick_owner = {}
+	_state.pick_got = {}
+	var bought_pick: Dictionary = _state.pick_asset(_state.pick_id(first_year, 1, "CAR"))
+	var paid_player: Dictionary = (_state.season.lists["COL"] as Array)[-1]
+	var paid_name: String = _db.player_display_name(paid_player)
+	_state._execute_trade("CAR", "COL", [bought_pick], [paid_player])
 	var opened: bool = _state.begin_intake_draft()
 	_check(opened, "begin_intake_draft opens after the home-and-away")
 	var draft = _state.draft
@@ -96,6 +120,45 @@ func _run() -> void:
 	_check(comp_rows.size() == 1
 			and str((comp_rows[0] as Label).text).contains("Compensation for losing Sam Example"),
 			"The draft order shows a compensation pick as compensation, with the player it replaces")
+	var want_via := "From %s, for %s, %d trade period" % [_db.club_name("CAR"), paid_name, first_year]
+	var via_node: Control = ui.find_child("ViaPick", true, false)
+	_check(via_node != null and _line_text(via_node) == want_via,
+			"The draft order says where a bought pick came from: %s" % (_line_text(via_node) if via_node else "-"))
+	_check(via_node is RichTextLabel and str((via_node as RichTextLabel).text).contains("[color=#"),
+			"The player in that line wears his club's ink")
+	var own_node: Control = null
+	for c in ui.find_children("OwnPick", "Control", true, false):
+		if own_node == null and _line_text(c).begins_with("Your own, "):
+			own_node = c
+	_check(own_node != null and _line_text(own_node).begins_with("Your own, ")
+			and _line_text(own_node).ends_with("on the ladder"),
+			"Your own pick says so and where the club finished: %s" % (_line_text(own_node) if own_node else "-"))
+	# One ink for every provenance line (lead review): own and traded alike, and a
+	# rival's own pick says so too, so no row of the order is left without one.
+	_check(_ink(via_node) == _text_ink() and _ink(own_node) == _text_ink(),
+			"Own and traded picks read in the same ink, not quieter for being your own")
+	var round_picks: int = (draft.pick_rounds as Array).count(draft.current_round())
+	var story_rows := ui.find_children("ViaPick", "Control", true, false).size()
+	story_rows += ui.find_children("OwnPick", "Control", true, false).size()
+	story_rows += ui.find_children("CompPick", "Control", true, false).size()
+	_check(round_picks > 0 and story_rows == round_picks,
+			"Every row of the draft order says whose pick it is and where it came from (%d lines, %d rows)" % [story_rows, round_picks])
+	var rival_own := ui.find_children("OwnPick", "Control", true, false).filter(func(c): return _line_text(c).contains("'s own"))
+	_check(not rival_own.is_empty(), "A rival's own pick reads \"Club's own\" (%d rows)" % rival_own.size())
+	var squad_tab: Button = ui.find_child("Tab_squad", true, false)
+	if squad_tab == null:
+		squad_tab = ui.find_child("SideTab_squad", true, false)
+	if squad_tab != null:
+		await _press(squad_tab, "My list")
+		await _settle()
+	var stories := ui.find_children("MyPickStory_*", "Control", true, false)
+	var told := stories.filter(func(c): return _line_text(c) == want_via)
+	_check(ui.find_child("MyPicks", true, false) != null and not told.is_empty()
+			and stories.any(func(c): return _line_text(c).begins_with("Your own, ")),
+			"Your picks list each one with how you got it (%d lines)" % stories.size())
+	if order_tab != null:
+		await _press(order_tab, "the draft order")
+		await _settle()
 	var tab_pool: Button = ui.find_child("Tab_pool", true, false)
 	if tab_pool != null:
 		await _press(tab_pool, "the pool tab")
@@ -139,9 +202,12 @@ func _run() -> void:
 	_check(ui.find_child("PlayerDetail", true, false) != null, "A prospect's details open")
 	_check(draft.count() == count_before and draft.pick_history == hist_before, "Inspecting a prospect signs nobody")
 	var ovr: Control = ui.find_child("DetailOVR", true, false)
-	var scout := DraftScouting.projection(prospect, draft.user_club, draft.seed,
+	# Loaded here, not named: DraftScouting reaches GameDB, which does not exist yet
+	# when this script compiles (an autoload class named at compile time hangs the suite).
+	var scouting: GDScript = load("res://scripts/sim/DraftScouting.gd")
+	var scout: Dictionary = scouting.projection(prospect, draft.user_club, draft.seed,
 			draft.scouting_mult_for(draft.user_club))
-	_check(ovr != null and (ovr.get_child(0) as Label).text == DraftScouting.range_text(scout["overall"])
+	_check(ovr != null and (ovr.get_child(0) as Label).text == scouting.range_text(scout["overall"])
 			and (ovr.get_child(1) as Label).text == "Projected OVR",
 			"His projected OVR is shown as a scouting range")
 	_check(ui.find_child("DetailAllRatings", true, false) == null,
@@ -230,15 +296,10 @@ func _run() -> void:
 	_check(all_landed, "Every intake signing is on the new list")
 	ui.queue_free()
 	await _settle()
-	await _pass_and_pick_for_me(Vector2i(390, 844))
-	await _pass_and_pick_for_me(Vector2i(1280, 720))
-	print("Intake UI tests: %d checks, %d failures" % [_checks, _failures.size()])
-	_state.replay_seed = 0
-	quit(0 if _failures.is_empty() else 1)
 
 
 ## Real taps on "Pick for me" and "Pass" at one screen size.
-func _pass_and_pick_for_me(size: Vector2i) -> void:
+func _test_pass_and_pick_for_me(size: Vector2i) -> void:
 	var tag := "%dx%d" % [size.x, size.y]
 	_state.reset()
 	_state.replay_seed = SUITE_SEED
@@ -296,6 +357,198 @@ func _pass_and_pick_for_me(size: Vector2i) -> void:
 	await _settle()
 
 
+## Draft night's Trade picks (director 2026-10-25), by real taps: the button on
+## the board, the sheet with the club and its picks, a pick on each side, the
+## club's answer in words, and the way back to the draft.
+func _test_trade_picks_sheet(size: Vector2i) -> void:
+	var tag := "%dx%d" % [size.x, size.y]
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	if not _state.begin_intake_draft():
+		_check(false, "The draft opens for the trade sheet test (%s)" % tag)
+		return
+	var draft = _state.draft
+	root.size = size
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	var skip: Button = ui.find_child("MeetingDone", true, false)
+	if skip != null:
+		await _press(skip, "the recruiting panel (%s)" % tag)
+	var guard := 0
+	while not draft.is_user_turn() and not draft.is_finished() and guard < 200:
+		guard += 1
+		draft.auto_until_user_turn()
+	ui.call("_refresh")
+	await _settle()
+	var trade: Button = ui.find_child("TradePicks", true, false)
+	_check(trade != null and not trade.disabled and trade.text.begins_with("Trade picks"),
+			"Trade picks sits with Pick for me and Pass (%s: %s)" % [tag, trade.text if trade else "-"])
+	if trade == null:
+		ui.queue_free()
+		return
+	var viewport := Rect2(Vector2.ZERO, Vector2(size))
+	_check(viewport.grow(1).encloses(trade.get_global_rect()) and trade.size.y >= 44.0,
+			"The button is on screen and thumb-sized (%s)" % tag)
+	await _press(trade, "Trade picks (%s)" % tag)
+	await _settle()
+	var sheet: Control = ui.find_child("TradeSheet", true, false)
+	var with_l: Label = ui.find_child("TradingWith", true, false)
+	_check(sheet != null and with_l != null and with_l.text.begins_with("Trading with "),
+			"The sheet opens on a club (%s: %s)" % [tag, with_l.text if with_l else "-"])
+	var rule: Label = ui.find_child("TradeSheetRule", true, false)
+	_check(rule != null and rule.text.begins_with("Only picks change hands tonight"),
+			"The sheet says only picks trade tonight (%s)" % tag)
+	if sheet == null:
+		ui.queue_free()
+		return
+	# Their first pick, then yours, by taps; the club answers in words.
+	var their_btn: Button = null
+	for b in ui.find_children("Their_pick_*", "Button", true, false):
+		their_btn = b
+		break
+	_check(their_btn != null, "Their picks are listed to add (%s)" % tag)
+	if their_btn != null:
+		await _press(their_btn, "one of their picks (%s)" % tag)
+		await _settle()
+	var mine_tab: Button = ui.find_child("TradeSide_mine", true, false)
+	if mine_tab != null:
+		await _press(mine_tab, "Your picks (%s)" % tag)
+		await _settle()
+	var my_btn: Button = null
+	for b in ui.find_children("Mine_pick_*", "Button", true, false):
+		my_btn = b
+		break
+	_check(my_btn != null and my_btn.text.begins_with("Pick %d tonight" % (draft.pick_index + 1)),
+			"Your pick on the clock heads your picks, by its number tonight (%s: %s)" % [tag, my_btn.text if my_btn else "-"])
+	if my_btn != null:
+		await _press(my_btn, "your pick (%s)" % tag)
+		await _settle()
+	var verdict: Label = ui.find_child("TradeVerdict", true, false)
+	_check(verdict != null and verdict.text != "Put a pick on each side." and verdict.text != "",
+			"The club answers in words (%s: %s)" % [tag, verdict.text if verdict else "-"])
+	var digits := verdict != null and RegEx.create_from_string("\\d").search(verdict.text) != null
+	_check(not digits, "The answer carries no value (%s)" % tag)
+	var give := ui.find_children("GiveRow_*", "Control", true, false)
+	var get := ui.find_children("GetRow_*", "Control", true, false)
+	_check(give.size() == 1 and get.size() == 1, "A pick on each side (%s: %d/%d)" % [tag, give.size(), get.size()])
+	var close: Button = ui.find_child("TradeSheetClose", true, false)
+	_check(close != null and viewport.grow(1).encloses(close.get_global_rect()), "Back to the draft is on screen (%s)" % tag)
+	if close != null:
+		await _press(close, "Back to the draft (%s)" % tag)
+		await _settle()
+	_check(ui.find_child("TradeSheet", true, false) == null and draft.is_user_turn(),
+			"The sheet closes and you are still on the clock (%s)" % tag)
+	ui.queue_free()
+	await _settle()
+
+
+## The hub's draft line in the last rounds (P-47) and the untouchable mark on
+## My list, by a real tap (P-49), on a phone.
+func _test_pick_order_and_untouchable_ui() -> void:
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", _db.club_list("COL"))
+	root.size = Vector2i(390, 844)
+	var s = _state.season
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	_check(hub.find_child("DraftPickLine", true, false) == null, "Early in the season the hub says nothing about the draft")
+	hub.queue_free()
+	await _settle()
+	s.round_index = s.fixture.size() - _state.PICK_LINE_ROUNDS
+	hub = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	var line: Control = hub.find_child("DraftPickLine", true, false)
+	_check(line != null and (line as Label).text == _state.pick_order_line()
+			and (line as Label).text.begins_with("Your first pick today: No. "),
+			"In the last rounds the hub says where your first pick would fall: %s" % ((line as Label).text if line else "-"))
+	hub.queue_free()
+	await _settle()
+	# One line, never an orphaned "No. 11." on the next, at 360, 390 and 412.
+	for width in [360, 390, 412]:
+		root.size = Vector2i(width, 844)
+		hub = load("res://scenes/HubScene.tscn").instantiate()
+		root.add_child(hub)
+		await _settle()
+		line = hub.find_child("DraftPickLine", true, false)
+		_check(line is Label and (line as Label).get_line_count() == 1,
+				"The hub's pick line is one line at %d wide: %s" % [width,
+				"%d lines" % (line as Label).get_line_count() if line is Label else "-"])
+		hub.queue_free()
+		await _settle()
+	root.size = Vector2i(390, 844)
+
+	# My list: open a player, tap the mark, see it on his row, tap it off.
+	var player: Dictionary = (_state.my_list as Array)[3]
+	var id := str(player["id"])
+	var ls: Control = load("res://scenes/ListScene.tscn").instantiate()
+	root.add_child(ls)
+	await _settle()
+	var full: Button = null
+	for t in ls.find_children("*", "Button", true, false):
+		if (t as Button).text == "Full list":
+			full = t
+	_check(full != null, "My list has its Full list tab on a phone")
+	if full != null:
+		await _press(full, "Full list")
+		await _settle()
+	var row: Button = ls.find_child("Row_" + id, true, false)
+	_check(row != null and ls.find_child("RowUntouchable", true, false) == null, "No one is marked to begin with")
+	if row == null:
+		ls.queue_free()
+		return
+	await _press(row, "a player's row")
+	await _settle()
+	var mark: Button = ls.find_child("Untouchable", true, false)
+	_check(mark != null and mark.text == "Mark untouchable", "His profile offers Mark untouchable")
+	var what: Control = ls.find_child("Detail_Untouchable", true, false)
+	_check(what != null and _ink(what) == _text_ink() and what.get_parent() == mark.get_parent(),
+			"What the mark does is a fact in full ink, in the block with the button, not under Ratings")
+	if mark != null:
+		await _press(mark, "Mark untouchable")
+		await _settle()
+	_check(_state.is_untouchable(id), "A tap marks him untouchable")
+	var on_row: Control = ls.find_child("Row_" + id, true, false)
+	_check(on_row != null and on_row.find_child("RowUntouchable", true, false) != null,
+			"His row on My list carries the mark")
+	var off: Button = ls.find_child("Untouchable", true, false)
+	_check(off != null and off.text == "Remove untouchable mark", "The profile now offers to remove the mark")
+	if off != null:
+		await _press(off, "Remove untouchable mark")
+		await _settle()
+	_check(not _state.is_untouchable(id) and ls.find_child("RowUntouchable", true, false) == null,
+			"A second tap takes the mark off, and the row loses it")
+	ls.queue_free()
+	await _settle()
+
+
+## UiKit's body ink (loaded when asked: UiKit needs the GameDB autoload).
+func _text_ink() -> Color:
+	return load("res://scripts/ui/UiKit.gd").TEXT
+
+
+## The ink a line is set in, plain or with names in ink.
+func _ink(c: Control) -> Color:
+	if c is RichTextLabel:
+		return (c as RichTextLabel).get_theme_color("default_color")
+	return c.get_theme_color("font_color")
+
+
+## The words of a line, whether a plain label or one with names in ink.
+func _line_text(c: Control) -> String:
+	if c == null:
+		return ""
+	if c.has_meta("plain"):
+		return str(c.get_meta("plain"))
+	return str(c.get("text"))
+
+
 func _has_sandringham(draft) -> bool:
 	for p in draft.pool:
 		if str(p["club"]) == "Sandringham Dragons":
@@ -328,7 +581,7 @@ func _check_layout(ui: Control, label: String) -> void:
 	var margin: Control = ui.get("_margin")
 	_check(viewport.grow(1).encloses(margin.get_global_rect()), label + " has no page overflow")
 	for node_name in ["DraftWorkspace", "StartSeason", "DraftPool", "DraftActivity",
-			"LatestRivalPick"]:
+			"LiveBoard"]:
 		var node: Control = ui.find_child(node_name, true, false)
 		if node != null and node.is_visible_in_tree():
 			_check(viewport.grow(1).encloses(node.get_global_rect()), label + ": " + node_name + " fits")
@@ -358,3 +611,362 @@ func _check(condition: bool, message: String) -> void:
 	if not condition:
 		_failures.append(message)
 		push_error(message)
+
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
+
+# ---------------------------------------------------------------------------
+# Draft night (P-15): the live board, your pick on the stage, the recruiter's
+# line. Words first (no hidden stat, no grade), then the screen with motion on
+# at a phone and a PC size, with real taps.
+# ---------------------------------------------------------------------------
+## Words a draft-night line must never carry: a grade, a rank, a verdict on
+## the pick or a percentage (bible: make the rules transparent, don't make the
+## decision).
+const NIGHT_FORBIDDEN := ["grade", "rank", "best available", "steal", "reach", "a+", "%",
+		"potential", "ovr", "pot ", "rating", "should", "must", "recommend"]
+
+
+func _night_forbidden(text: String) -> String:
+	var low := text.to_lower()
+	for w in NIGHT_FORBIDDEN:
+		if low.contains(w):
+			return w
+	return ""
+
+
+func _test_draft_night_words() -> void:
+	var dn = load("res://scripts/ui/DraftNight.gd")
+	_check(dn != null, "Draft night's words exist (scripts/ui/DraftNight.gd)")
+	if dn == null:
+		return
+	var walter := {"id": "T_walter", "generic_name": "Jed Walter", "name": "Jed Walter", "role": "FWD",
+			"height_cm": 195.0, "age": 18.4, "draft_team": "Sandringham Dragons", "club": "Sandringham Dragons",
+			"u18_gm": 12.0, "u18_gl": 2.4, "u18_mk": 5.0, "u18_di": 12.0, "u18_tk": 2.0}
+	var name: String = _db.player_display_name(walter)
+	_check(dn.announcement(14, "FRE", walter) == "Pick 14: Fremantle. %s, from the Sandringham Dragons, key forward" % name,
+			"The name is read in words: %s" % dn.announcement(14, "FRE", walter))
+	_check(dn.from_words({"draft_team": "Claremont"}) == "from Claremont"
+			and dn.from_words({"draft_team": "Swan Districts"}) == "from Swan Districts"
+			and dn.from_words({"draft_team": "Suns Academy"}) == "from the Suns Academy",
+			"A club by its place takes no \"the\"; a nickname or an academy does")
+	_check(dn.your_pick_line(14, 12) == "Your pick: 14, two away" and dn.your_pick_line(14, 13) == "Your pick: 14, next"
+			and dn.your_pick_line(14, 14) == "You're on the clock" and dn.your_pick_line(40, 12) == "Your pick: 40, 28 away",
+			"Your next pick reads in words: %s" % dn.your_pick_line(14, 12))
+	_check(dn.clock_line(12, "FRE") == "Pick 12: Fremantle", "The club on the clock reads \"Pick 12: Fremantle\"")
+	_check(dn.recruiter_line(walter, "FRE") == "A key forward who kicks goals in bunches; key position players take time.",
+			"The recruiter's line is football words: %s" % dn.recruiter_line(walter, "FRE"))
+	# Every prospect in a real class: the line reads only what is public, so
+	# scrambling every hidden figure leaves it as it was, and it never grades.
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	if not _state.begin_intake_draft():
+		_check(false, "The draft opens for the words test")
+		return
+	var pool: Array = _state.draft.pool
+	var hidden_free := true
+	var clean := true
+	var no_figures := true
+	var said_bad := ""
+	for p in pool:
+		var line: String = dn.recruiter_line(p, "FRE")
+		var read: String = dn.announcement(1, "FRE", p)
+		var scrambled: Dictionary = (p as Dictionary).duplicate(true)
+		for key in ["overall", "potential", "class_shift", "class_ceiling", "value", "draft_rank"]:
+			scrambled[key] = 1 if key != "potential" else 99
+		var attr: Dictionary = scrambled.get("attr", {})
+		for k in attr:
+			attr[k] = 1.0
+		if dn.recruiter_line(scrambled, "FRE") != line or dn.announcement(1, "FRE", scrambled) != read:
+			hidden_free = false
+			said_bad = line
+		var bad := _night_forbidden(line + " " + dn.from_words(p) + " " + dn.position_words(p))
+		if bad != "":
+			clean = false
+			said_bad = "%s (%s)" % [line, bad]
+		for ch in line:
+			if ch >= "0" and ch <= "9":
+				no_figures = false
+				said_bad = line
+	_check(pool.size() > 20 and hidden_free,
+			"The recruiter's line and the name read out use no hidden figure, across %d prospects (%s)" % [pool.size(), said_bad])
+	_check(clean, "No line says grade, rank, best available, steal, reach, A+ or a percentage (%s)" % said_bad)
+	_check(no_figures, "The recruiter's line carries no figure at all (%s)" % said_bad)
+
+
+## The screen: the board, the beat on your pick only, a tap skips it, the
+## replay of the rivals, Back and leaving the screen, at a phone and a PC size.
+func _test_draft_night_screen(size: Vector2i) -> void:
+	var tag := "%dx%d" % [size.x, size.y]
+	var dn = load("res://scripts/ui/DraftNight.gd")
+	var feel = load("res://scripts/ui/Feel.gd")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	if not _state.begin_intake_draft() or dn == null:
+		_check(false, "The draft opens for the draft night test (%s)" % tag)
+		return
+	var draft = _state.draft
+	# What the save holds before the night: the same keys after it (the show is
+	# the screen's alone; the model and the save are untouched).
+	_state.save_career()
+	var saved_before: Dictionary = load("res://scripts/state/CareerSave.gd").read(_state.save_path)
+	var draft_keys_before: Array = (saved_before.get("draft", {}) as Dictionary).keys()
+	root.size = size
+	feel.test_motion = true
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	var skip: Button = ui.find_child("MeetingDone", true, false)
+	if skip != null:
+		await _press(skip, "the recruiting panel (%s)" % tag)
+	var guard := 0
+	while not draft.is_user_turn() and not draft.is_finished() and guard < 200:
+		guard += 1
+		draft.auto_until_user_turn()
+	ui.call("_refresh")
+	await _settle()
+	_check(ui.find_child("DraftNightStage", true, false) == null, "No stage before your pick (%s)" % tag)
+	var status: Label = ui.find_child("DraftStatus", true, false)
+	var yours: Label = ui.find_child("YourNextPick", true, false)
+	var mine_no: int = draft.pick_index + 1
+	_check(status != null and status.text == "Pick %d: Fremantle" % mine_no,
+			"The board has Fremantle on the clock in words (%s: %s)" % [tag, status.text if status else "-"])
+	_check(yours != null and yours.is_visible_in_tree() and yours.text == "You're on the clock",
+			"The board shows your pick (%s: %s)" % [tag, yours.text if yours else "-"])
+	var recent := ui.find_children("RecentPick_*", "Control", true, false)
+	var rows_want := mini(3 if size.y >= 780 or size.x >= 760 else 2, draft.pick_history.size())
+	_check(recent.size() == rows_want, "The last picks are under it: three, two on a shorter screen (%s: %d)" % [tag, recent.size()])
+	var strip: Control = ui.find_child("RecentPicks", true, false)
+	if size.x >= 760:
+		# PC: the pick log beside the board already lists the picks; the strip shows
+		# only when the log is not on screen.
+		_check(strip != null and not strip.is_visible_in_tree(), "PC: no last-picks strip beside the pick log (%s)" % tag)
+		await _press(ui.find_child("SideTab_squad", true, false), "My list beside the pool (%s)" % tag)
+		_check(strip.is_visible_in_tree(), "PC: the strip shows when the pick log is not on screen (%s)" % tag)
+		await _press(ui.find_child("SideTab_picks", true, false), "the pick log tab (%s)" % tag)
+	else:
+		_check(strip != null and strip.is_visible_in_tree(), "Phone: the last picks show on the board (%s)" % tag)
+	# The pick numbers read one way on this screen: "42", never "#42".
+	var hash_text := ""
+	for l in ui.find_children("*", "Label", true, false):
+		if (l as Label).is_visible_in_tree() and RegEx.create_from_string("#\\d").search((l as Label).text) != null:
+			hash_text = (l as Label).text
+	_check(hash_text == "", "Picks are written as numbers, never with # (%s: %s)" % [tag, hash_text])
+	var pool_info_want: int = draft.remaining_pool()
+	var board: Control = ui.find_child("LiveBoard", true, false)
+	var viewport := Rect2(Vector2.ZERO, Vector2(size))
+	_check(board != null and viewport.grow(1).encloses(board.get_global_rect()), "The board is whole on screen (%s)" % tag)
+	if not size.x >= 760:
+		# Phone: the pool is the tab under the board.
+		var pool_tab: Button = ui.find_child("Tab_pool", true, false)
+		if pool_tab != null:
+			await _press(pool_tab, "the pool tab (%s)" % tag)
+	# Your pick, with a finger on the pool's button.
+	var target: Dictionary = {}
+	for p in draft.board("", "", "", "overall", true):
+		if draft.can_pick_player(p):
+			target = p
+			break
+	var pick_btn: Button = ui.find_child("Pick_" + str(target.get("id", "")), true, false)
+	_check(pick_btn != null, "A pick button for a prospect (%s)" % tag)
+	if pick_btn == null:
+		feel.test_motion = false
+		ui.queue_free()
+		await _settle()
+		return
+	var at: int = draft.pick_history.size()
+	await _press(pick_btn, "a prospect's pick button (%s)" % tag)
+	await _settle()
+	var stage: Control = ui.find_child("DraftNightStage", true, false)
+	_check(stage != null and str(draft.pick_history[at]["player_id"]) == str(target["id"]),
+			"Your pick goes on the stage (%s)" % tag)
+	if stage == null:
+		feel.test_motion = false
+		ui.queue_free()
+		await _settle()
+		return
+	var want: String = dn.announcement(mine_no, "FRE", target)
+	_check(str(stage.get_meta("announcement", "")) == want, "The stage reads the pick: %s" % want)
+	var name_l: Label = stage.find_child("BeatName", true, false)
+	var from_l: Label = stage.find_child("BeatFrom", true, false)
+	var pick_l: Label = stage.find_child("BeatPick", true, false)
+	var rec_l: Label = stage.find_child("BeatRecruiter", true, false)
+	_check(pick_l != null and pick_l.text == "Pick %d: Fremantle" % mine_no and name_l != null
+			and name_l.text == _db.player_display_name(target) and from_l != null
+			and from_l.text == "%s, %s" % [dn.from_words(target), dn.position_words(target)],
+			"It says his name, where he is from and his position (%s: %s / %s)" % [tag,
+			name_l.text if name_l else "-", from_l.text if from_l else "-"])
+	_check(rec_l != null and rec_l.text.begins_with("Recruiting note: ") and not rec_l.text.contains("“") and rec_l.text.contains(dn.recruiter_line(target, "FRE"))
+			and _night_forbidden(rec_l.text) == "",
+			"Then the recruiter's one line, with no grade in it (%s: %s)" % [tag, rec_l.text if rec_l else "-"])
+	var vignette: Control = stage.find_child("DraftNightVignette", true, false)
+	_check(vignette != null and vignette.get_script() == load("res://scripts/ui/match/AwardWinnerVignette.gd")
+			and vignette.get("club") == "FRE" and vignette.get("medal") == false,
+			"He is on the award stage in Fremantle's guernsey, with no medal (%s)" % tag)
+	# Where the stage sits: PC beside the pick log; phone under the board.
+	var sr := stage.get_global_rect()
+	var activity: Control = ui.find_child("DraftActivity", true, false)
+	if size.x >= 760:
+		_check(activity != null and not sr.intersects(activity.get_global_rect().grow(-1)) and sr.end.y <= size.y + 1,
+				"PC: the stage and the pick log share the width (%s)" % tag)
+	else:
+		_check(board != null and sr.position.y >= board.get_global_rect().end.y - 1 and viewport.grow(1).encloses(sr),
+				"Phone: the stage sits under the board, on screen, no scrolling (%s)" % tag)
+	_check(board != null and board.is_visible_in_tree(), "The board stays in view during the beat (%s)" % tag)
+	_check(ui.call("replaying") and status.text == "Pick %d: Fremantle" % mine_no and not yours.is_visible_in_tree(),
+			"While the stage reads your pick the board stays on it and holds the rivals' picks back (%s: %s)" % [tag, status.text])
+	var strip_now: Control = ui.find_child("RecentPicks", true, false)
+	_check(strip_now != null and not strip_now.is_visible_in_tree(),
+			"The last-picks strip steps aside while the stage reads your pick (%s)" % tag)
+	var cap_l: Label = ui.find_child("SalaryCap", true, false)
+	_check(cap_l != null and cap_l.text == "%d prospects left" % pool_info_want,
+			"The board's count stays at your pick during the beat (%s: %s, want %d)" % [tag, cap_l.text if cap_l else "-", pool_info_want])
+	var pick_me_b: Button = ui.find_child("PickForMe", true, false)
+	var pass_b: Button = ui.find_child("PassPick", true, false)
+	_check(pick_me_b != null and pick_me_b.disabled and (pass_b == null or pass_b.disabled),
+			"Pick for me and Pass wait while the stage plays (%s)" % tag)
+	var signed_before: int = draft.count()
+	var hist_before: int = draft.pick_history.size()
+	if pick_me_b != null:
+		await Tap.tap(pick_me_b)
+		await _settle()
+	_check(draft.count() == signed_before and draft.pick_history.size() == hist_before
+			and ui.find_child("DraftNightStage", true, false) != null,
+			"A tap on Pick for me during the stage picks no one (%s)" % tag)
+	var kit_n = load("res://scripts/ui/UiKit.gd")
+	var board_ink: Color = kit_n.club_name_colour(kit_n.club_ink("FRE"))
+	_check(pick_l != null and pick_l.get_theme_color("font_color").is_equal_approx(board_ink),
+			"The stage writes Fremantle in the same ink as the board (%s)" % tag)
+	# A tap skips the beat; the board then replays the rival picks.
+	var why: String = await Tap.tap(stage as Button)
+	await _settle()
+	_check(why == "" and ui.find_child("DraftNightStage", true, false) == null, "A tap ends the beat (%s: %s)" % [tag, why])
+	# The stage fades out first; then the board moves on.
+	await create_timer(float(ui.get_script().get_script_constant_map()["BEAT_FADE"]) + 0.06).timeout
+	var rivals: int = draft.pick_history.size() - at - 1
+	if rivals > 0:
+		var first_rival: Dictionary = draft.pick_history[at + 1]
+		_check(ui.call("replaying") and status.text == "Pick %d: %s" % [int(first_rival["pick"]), _db.club_name(str(first_rival["club"]))],
+				"Then the board puts the next club on the clock (%s: %s)" % [tag, status.text])
+		var next_mine: int = draft.pick_index + 1
+		_check(yours.text == dn.your_pick_line(next_mine, int(first_rival["pick"])),
+				"And says how far away your next pick is (%s: %s)" % [tag, yours.text])
+		_check(ui.find_child("DraftNightStage", true, false) == null, "A rival's pick gets no stage (%s)" % tag)
+		var cap_r: Label = ui.find_child("SalaryCap", true, false)
+		_check(cap_r != null and cap_r.text == "%d prospects left" % (draft.remaining_pool() + draft.pick_history.size() - (at + 1)),
+				"The prospects-left count holds back with the board (%s: %s)" % [tag, cap_r.text if cap_r else "-"])
+		var info_r: Label = ui.get("_board_info")
+		_check(info_r != null and info_r.text != "" and not info_r.text.left(1).is_valid_int(),
+				"The pool's line does not repeat the count the board gives (%s: %s)" % [tag, info_r.text if info_r else "-"])
+		var picks_tab: Button = ui.find_child("SideTab_picks" if size.x >= 760 else "Tab_picks", true, false)
+		_check(picks_tab != null and picks_tab.text == "Picks (%d)" % (at + 1),
+				"The pick log holds back the picks the board has not shown (%s: %s)" % [tag, picks_tab.text if picks_tab else "-"])
+		await create_timer(0.75).timeout
+		_check(ui.find_child("DraftNightStage", true, false) == null and status.text != "Pick %d: %s" % [int(first_rival["pick"]), _db.club_name(str(first_rival["club"]))],
+				"The rival picks fill in one by one, with no stage (%s: %s)" % [tag, status.text])
+		# A tap on the board finishes the replay at once.
+		await Tap.tap(board)
+		await _settle()
+		_check(not ui.call("replaying") and status.text == "Pick %d: Fremantle" % next_mine
+				and yours.text == "You're on the clock",
+				"A tap on the board finishes the replay: you are on the clock again (%s: %s)" % [tag, status.text])
+		picks_tab = ui.find_child("SideTab_picks" if size.x >= 760 else "Tab_picks", true, false)
+		_check(picks_tab != null and picks_tab.text == "Picks (%d)" % draft.pick_history.size(),
+				"Then the pick log has every pick (%s: %s)" % [tag, picks_tab.text if picks_tab else "-"])
+	# Back cuts the show to the end, beat and replay alike.
+	if draft.is_user_turn():
+		var pick_me: Button = ui.find_child("PickForMe", true, false)
+		await _press(pick_me, "Pick for me (%s)" % tag)
+		await _settle()
+		_check(ui.find_child("DraftNightStage", true, false) != null, "Pick for me goes on the stage too (%s)" % tag)
+		_check(bool(ui.call("handle_back")) and not ui.call("replaying"), "Back skips the beat and the replay (%s)" % tag)
+		await _settle()
+		_check(ui.find_child("DraftNightStage", true, false) == null and status.text.ends_with(": Fremantle"),
+				"After Back the board is at the end: you on the clock (%s: %s)" % [tag, status.text])
+	# Back in the middle of the replay finishes it at once.
+	if draft.is_user_turn():
+		var mark: int = draft.pick_history.size()
+		await _press(ui.find_child("PickForMe", true, false), "Pick for me, to replay (%s)" % tag)
+		await _settle()
+		var beat: Button = ui.find_child("DraftNightStage", true, false)
+		if beat != null:
+			await Tap.tap(beat)
+		await _settle()
+		if draft.pick_history.size() - mark > 1:
+			_check(ui.call("replaying"), "The replay is running before Back (%s)" % tag)
+			var backed := bool(ui.call("handle_back"))
+			var end_clock: String = "Draft complete" if draft.is_finished() else dn.clock_line(draft.pick_index + 1, draft.current_club())
+			_check(backed and not ui.call("replaying") and status.text == end_clock,
+					"Back mid-replay finishes it: the board at the end (%s: %s)" % [tag, status.text])
+	# The beat ends on its own; and leaving mid-replay never leaves it half-shown.
+	if draft.is_user_turn():
+		await _press(ui.find_child("PickForMe", true, false), "Pick for me again (%s)" % tag)
+		await _settle()
+		await create_timer(float(ui.get_script().get_script_constant_map()["BEAT_TIME"]) + 0.3).timeout
+		_check(ui.find_child("DraftNightStage", true, false) == null, "The beat ends by itself after about two seconds (%s)" % tag)
+		ui.queue_free()
+		await _settle()
+		ui = load("res://scenes/DraftScene.tscn").instantiate()
+		root.add_child(ui)
+		await _settle()
+		status = ui.find_child("DraftStatus", true, false)
+		var want_clock: String = "Draft complete" if draft.is_finished() else dn.clock_line(draft.pick_index + 1, draft.current_club())
+		_check(not ui.call("replaying") and status != null and status.text == want_clock,
+				"Back on the screen, the board is whole, not half-replayed (%s: %s)" % [tag, status.text if status else "-"])
+	# A pass gets no stage.
+	if draft.is_user_turn() and draft.pass_block_reason() == "":
+		await _press(ui.find_child("PassPick", true, false), "Pass (%s)" % tag)
+		await _settle()
+		_check(ui.find_child("DraftNightStage", true, false) == null, "A pass goes on no stage (%s)" % tag)
+	ui.queue_free()
+	await _settle()
+	# No new save key: the career saves the same fields after the night.
+	_state.save_career()
+	var saved_after: Dictionary = load("res://scripts/state/CareerSave.gd").read(_state.save_path)
+	var top_before: Array = saved_before.keys()
+	var top_after: Array = saved_after.keys()
+	var draft_keys_after: Array = (saved_after.get("draft", {}) as Dictionary).keys()
+	top_before.sort()
+	top_after.sort()
+	draft_keys_before.sort()
+	draft_keys_after.sort()
+	_check(not top_before.is_empty() and top_before == top_after and not draft_keys_before.is_empty()
+			and draft_keys_before == draft_keys_after,
+			"Draft night adds no save key (%s: %d top, %d draft keys)" % [tag, top_after.size(), draft_keys_after.size()])
+	# With motion off (tests, captures, reduced motion) the pick lands as before.
+	feel.test_motion = false
+	if size.x >= 760:
+		return
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	_state.begin_intake_draft()
+	draft = _state.draft
+	ui = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	var done_b: Button = ui.find_child("MeetingDone", true, false)
+	if done_b != null:
+		done_b.emit_signal("pressed")
+	guard = 0
+	while not draft.is_user_turn() and not draft.is_finished() and guard < 200:
+		guard += 1
+		draft.auto_until_user_turn()
+	ui.call("_refresh")
+	await _settle()
+	ui.call("_on_pick_for_me")
+	await _settle()
+	_check(ui.find_child("DraftNightStage", true, false) == null and not ui.call("replaying"),
+			"Without motion the pick lands with no stage and no replay (%s)" % tag)
+	ui.queue_free()
+	await _settle()

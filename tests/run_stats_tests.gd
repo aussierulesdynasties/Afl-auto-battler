@@ -41,42 +41,42 @@ func _run() -> void:
 	_state.reset()
 	_state.start_season("COL", db.club_list("COL"))
 	# Before any round: no press conference sits over the hub.
-	await _intro()
-	await _hub_button()
-	await _awards_early()
-	await _trophies_unplayed()
+	await _t("_test_intro")
+	await _t("_test_hub_button")
+	await _t("_test_awards_early")
+	await _t("_test_trophies_unplayed")
 	for i in range(4):
 		_state.advance()
-	await _sections()
+	await _t("_test_sections")
 	# The awards read the season after four rounds: before anything below
 	# plays it on (the fixture's finals test plays it to the end).
-	await _awards_races()
-	await _awards_ties()
-	_rising_star_rules()
-	await _rising_star_saves()
-	await _awards_awarded()
-	await _players_section()
+	await _t("_test_awards_races")
+	await _t("_test_awards_ties")
+	_t("_test_rising_star_rules")
+	await _t("_test_rising_star_saves")
+	await _t("_test_awards_awarded")
+	await _t("_test_players_section")
 	for sz in [Vector2i(390, 844), Vector2i(360, 800), Vector2i(1280, 720)]:
-		await _ratings_section(sz)
-	_club_per_game()
-	_season_book()
-	_book_rates()
+		await _t("_test_ratings_section", [sz])
+	_t("_test_club_per_game")
+	_t("_test_season_book")
+	_t("_test_book_rates")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
-		await _fixture(sz)
+		await _t("_test_fixture", [sz])
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
-		await _ladder(sz)
+		await _t("_test_ladder", [sz])
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
-		await _team_rating(sz)
-	await _trophies_early()
-	await _fixture_finals()
-	await _trophies()
-	await _readability_b1()
-	print("Stats tests: %d checks, %d failures" % [_checks, _failures.size()])
+		await _t("_test_team_rating", [sz])
+	await _t("_test_trophies_early")
+	await _t("_test_fixture_finals")
+	await _t("_test_trophies")
+	await _t("_test_readability_b1")
+	print(Ran.line("Stats", self, [ev]))
 	quit(0 if _failures.is_empty() else 1)
 
 
 ## The first visit explains the hub in two lines, once; "Got it" closes it.
-func _intro() -> void:
+func _test_intro() -> void:
 	root.size = Vector2i(390, 844)
 	_state.set_setting("seen_season_stats_intro", false)
 	var s: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
@@ -101,7 +101,7 @@ func _intro() -> void:
 
 
 ## The hub's Season stats button takes a tap and opens the hub.
-func _hub_button() -> void:
+func _test_hub_button() -> void:
 	root.size = Vector2i(1280, 720)
 	_state.set_setting("seen_weekly_loop_intro", true)
 	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
@@ -121,7 +121,7 @@ func _hub_button() -> void:
 ## Player rating a game from the season book; a player is ranked once he has
 ## played half his club's games, the rest follow, still listed. Your club's
 ## players carry its colour. A real tap opens it; nothing is cut off.
-func _ratings_section(sz: Vector2i) -> void:
+func _test_ratings_section(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var Hub = load("res://scripts/ui/StatsHubScene.gd")
 	var points: Dictionary = load("res://scripts/ui/match/MatchNotes.gd").RATING_POINTS
@@ -223,6 +223,11 @@ func _ratings_section(sz: Vector2i) -> void:
 	var rule: Label = s.find_child("RatingsRule", true, false)
 	_check(rule != null and rule.get_global_rect().end.x <= sz.x + 1 and rule.get_line_count() >= 1
 			and rule.get_visible_line_count() == rule.get_line_count(), "The ranking rule is said in full at the top (%s)" % tag)
+	var intro: Control = s.find_child("RatingsIntro", true, false)
+	var first_row: Control = s.find_child("RatingsList", true, false)
+	var heading_x: float = (intro.get_child(0).get_child(0) as Control).get_global_rect().position.x if intro != null else -1.0
+	_check(intro != null and first_row != null and heading_x >= (sec as Control).get_global_rect().position.x + 8.0 and heading_x >= 8.0,
+			"The Ratings heading starts inside the page, not on its edge (%s)" % tag)
 	var head := []
 	for i in range(mini(12, rows.size())):
 		head.append(rows[i])
@@ -256,7 +261,7 @@ func _ratings_section(sz: Vector2i) -> void:
 
 
 ## Every section opens, at a phone's width and a PC's.
-func _sections() -> void:
+func _test_sections() -> void:
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		root.size = sz
 		var s: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
@@ -290,7 +295,7 @@ func _sections() -> void:
 ## leaderboard (rank, guernsey, full name, one big figure); a wide screen the
 ## table with words in its headings. Per game, a rate's qualifiers, filters in
 ## a sheet, and a tap away from his season and career.
-func _players_section() -> void:
+func _test_players_section() -> void:
 	var SP = load("res://scripts/ui/stats/StatsPlayers.gd")
 	var Hub = load("res://scripts/ui/StatsHubScene.gd")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
@@ -535,7 +540,7 @@ func _ascending(a: Array) -> bool:
 
 ## The season book adds up to the season's matches, matches the awards tally,
 ## and survives a save and load with every match's stat lines.
-func _season_book() -> void:
+func _test_season_book() -> void:
 	var book: Dictionary = _state.season_stats
 	var tally: Dictionary = _state.season_tally
 	_check(not book.is_empty() and book.size() == tally.size(),
@@ -607,7 +612,7 @@ func _season_book() -> void:
 
 
 ## A club's new statistics a game, over the games it has counted them.
-func _club_per_game() -> void:
+func _test_club_per_game() -> void:
 	var code := str(_state.my_club)
 	var row: Dictionary = _state.season_team.get(code, {})
 	var g := int(row.get("book_games", 0))
@@ -619,7 +624,7 @@ func _club_per_game() -> void:
 
 
 ## Rates come from their counts; nothing under a rate is no rate, not zero.
-func _book_rates() -> void:
+func _test_book_rates() -> void:
 	_check(_SB.rate({}, "accuracy") == -1.0 and _SB.rate({"goals": 3.0, "shots": 4.0}, "accuracy") == 0.75,
 			"Accuracy is goals over shots, and no shots is no rate")
 	_check(_SB.rate({"hitouts": 10.0, "ruck_contests": 25.0}, "hitout_win") == 0.4
@@ -660,7 +665,7 @@ func _book_rates() -> void:
 ## Next and the picker move about, a played match opens its box score and an
 ## upcoming one a preview, Back closes the sheet first, and nothing runs off
 ## the screen. A result with only what a save keeps says what was not kept.
-func _fixture(sz: Vector2i) -> void:
+func _test_fixture(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	var season = _state.season
@@ -835,7 +840,7 @@ func _close(s: Control) -> void:
 ## sorts back, "Ladder order" and Reset restore it, the filters narrow it, the
 ## team view is per game from season_team, and a club opens its side on the field
 ## view with Back returning to the table as it was.
-func _ladder(sz: Vector2i) -> void:
+func _test_ladder(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	var season = _state.season
@@ -868,6 +873,35 @@ func _ladder(sz: Vector2i) -> void:
 		var row_text := _text(s.find_child("Club_" + mine, true, false))
 		_check(season.club_results(mine).size() == 0 or row_text.contains("".join(PackedStringArray((season.club_results(mine) as Array).slice(-5)))),
 				"...and the last five results as letters (%s)" % tag)
+
+	# The sort headers are thumb high on a phone (44 px; the sweep, 2026-10-18:
+	# they were 40) with the columns no wider than before, and unchanged on a PC.
+	var short_heads := []
+	var header_w := 0.0
+	for b in s.find_child("LadderHeader", true, false).get_children():
+		if not b is Button:
+			continue
+		if (b as Control).size.y < (44.0 if sz.x < 900 else 40.0):
+			short_heads.append("%s %.0f" % [b.name, (b as Control).size.y])
+		header_w += (b as Control).size.x
+	_check(short_heads.is_empty(), "Ladder sort headers are %s px tall (%s: short %s)" % ["at least 44" if sz.x < 900 else "40", tag, str(short_heads)])
+	var short_rows := []
+	for b in s.find_children("Club_*", "Button", true, false):
+		if (b as Control).size.y < (44.0 if sz.x < 900 else 32.0):
+			short_rows.append("%s %.0f" % [b.name, (b as Control).size.y])
+	_check(short_rows.is_empty() and not _row_codes(s).is_empty(), "Ladder rows are %s px tall (%s: short %s)" % ["at least 44" if sz.x < 900 else "at least 32", tag, str(short_rows.slice(0, 3))])
+	if sz.x < 900:
+		_check(header_w <= sz.x, "...and the header row still fits the screen (%s: %.0f px)" % [tag, header_w])
+		# A finger on the narrowest header, the "#" column, takes the tap and
+		# puts the ladder back in its true order.
+		var pos_why: String = await Tap.tap(s.find_child("Sort_pos", true, false))
+		_check(pos_why == "", "A finger on the # header (24 px wide, 44 tall) reaches it (%s: %s)" % [tag, pos_why])
+	else:
+		# On a PC the "#" header, the way back to the true order, is at least thumb-wide too.
+		var pos_btn: Control = s.find_child("Sort_pos", true, false)
+		_check(pos_btn != null and pos_btn.size.x >= 44.0, "The # sort header is at least 44 px wide (%s: %.0f)" % [tag, pos_btn.size.x if pos_btn != null else 0.0])
+		var pos_pc: String = await Tap.tap(pos_btn)
+		_check(pos_pc == "", "A real tap on the # header reaches it (%s: %s)" % [tag, pos_pc])
 
 	# A wide screen: the table is as wide as its columns, at the left beside the
 	# toggles, and the toggles are compact groups rather than bars across the window.
@@ -1049,9 +1083,9 @@ func _table_recipe(s: Node, tag: String, with_pos: bool) -> void:
 	var rows := s.find_children("Club_*", "Button", true, false)
 	var tall := true
 	for b in rows:
-		if int(b.size.y) != (32 if root.size.x >= 900 else 40):
+		if int(b.size.y) != (32 if root.size.x >= 900 else 44):
 			tall = false
-	_check(tall and not rows.is_empty(), "Rows are 32 px on a wide screen and a thumb-sized 40 px on a phone (%s)" % tag)
+	_check(tall and not rows.is_empty(), "Rows are 32 px on a wide screen and a thumb-sized 44 px on a phone (%s)" % tag)
 	# Your club's row is in your colour instead of its band.
 	var kit = load("res://scripts/ui/UiKit.gd")
 	var mine := str(_state.my_club)
@@ -1099,7 +1133,7 @@ func _table_recipe(s: Node, tag: String, with_pos: bool) -> void:
 ## the OVR scale, the same list in three seasons, and the phase the AI trades
 ## on in football words. On the ladder (a List column; a tap on a club says it
 ## in full), nothing cut off with the longest club names.
-func _team_rating(sz: Vector2i) -> void:
+func _test_team_rating(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var TR = load("res://scripts/sim/TeamRating.gd")
 	var RT = load("res://scripts/sim/Ratings.gd")
@@ -1250,7 +1284,7 @@ func _label_bold(row: Node, text: String, bold_font) -> bool:
 
 
 ## The finals weeks are in the fixture once the finals start, and not before.
-func _fixture_finals() -> void:
+func _test_fixture_finals() -> void:
 	var season = _state.season
 	var fix = load("res://scripts/ui/stats/StatsFixture.gd")
 	_check(fix.pages(season).size() == _rounds() and season.finals.is_empty(),
@@ -1315,7 +1349,7 @@ func _text(node: Node) -> String:
 func _rounds() -> int:
 	return load("res://scripts/sim/Season.gd").REGULAR_ROUNDS
 ## Before a ball is bounced: every race says so, nothing is projected.
-func _awards_early() -> void:
+func _test_awards_early() -> void:
 	var s := await _open_awards(Vector2i(390, 844))
 	_check(s.find_child("AwardsProvisional", true, false) != null, "Awards before Round 1 are labelled provisional")
 	var none: Label = s.find_child("ColemanEmpty", true, false)
@@ -1329,7 +1363,7 @@ func _awards_early() -> void:
 
 ## Four rounds in, at a phone's size and a PC's: the races, the sealed
 ## Brownlow, the projected team, and real taps on a player and the team.
-func _awards_races() -> void:
+func _test_awards_races() -> void:
 	var min_games: int = _aw.aa_min_games(4)
 	_check(min_games == 2, "The All-Australian minimum after 4 of 24 rounds is 2 games (%d)" % min_games)
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
@@ -1395,7 +1429,7 @@ func _awards_races() -> void:
 
 
 ## Level counts share a rank; a tie across the cut is summed up, never split.
-func _awards_ties() -> void:
+func _test_awards_ties() -> void:
 	var keep: Dictionary = _state.season_tally
 	var ids := []
 	for p in _state.season.lists["COL"]:
@@ -1429,7 +1463,7 @@ func _awards_ties() -> void:
 
 
 ## One nominee a round: the most influential eligible player, once a season.
-func _rising_star_rules() -> void:
+func _test_rising_star_rules() -> void:
 	var res := {"home": "COL", "away": "CAR",
 		"roster": [[{"id": "old"}, {"id": "kid"}], [{"id": "kid2"}]],
 		"players": {"old": {"disposals": 40}, "kid": {"disposals": 20}, "kid2": {"disposals": 10}}}
@@ -1476,7 +1510,7 @@ func _rising_star_rules() -> void:
 
 ## Nominations survive a save and load; an older save says which rounds it
 ## never recorded, and records from the next round on.
-func _rising_star_saves() -> void:
+func _test_rising_star_saves() -> void:
 	var before := JSON.stringify(_state.rising_star_noms)
 	_check(_state.save_career() and _state.load_career(), "The career saves and loads")
 	_check(JSON.stringify(_state.rising_star_noms) == before, "The Rising Star nominations survive a save and load")
@@ -1503,7 +1537,7 @@ func _rising_star_saves() -> void:
 
 ## Once the season's awards are presented they lead, labelled awarded, and
 ## nothing is called projected.
-func _awards_awarded() -> void:
+func _test_awards_awarded() -> void:
 	_state.season_awards = _aw.season_awards(_state.season_tally, _players(), _state.season_year,
 			_state.rising_star_noms)
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
@@ -1558,7 +1592,7 @@ func _rank(row: Node) -> String:
 ## The trophy room through a first season and into a seeded second: empty
 ## and honest at first, then a premiership on the shelf, only your club's
 ## seasons counted, older entries said plainly, taps and Back, save and load.
-func _trophies_early() -> void:
+func _test_trophies_early() -> void:
 	var year: int = _state.season_year
 	var s := await _open_trophies(Vector2i(390, 844))
 	var none: Label = s.find_child("NoPremierships", true, false)
@@ -1577,7 +1611,7 @@ func _trophies_early() -> void:
 
 ## Before a game this season's row gives no ladder finish: there is no
 ## ladder to sit on yet.
-func _trophies_unplayed() -> void:
+func _test_trophies_unplayed() -> void:
 	var s := await _open_trophies(Vector2i(390, 844))
 	var now: Node = s.find_child("Season_%d" % _state.season_year, true, false)
 	_check(now != null and _finish(now) == "" and _row_text(now).contains("0-0-0"),
@@ -1593,7 +1627,7 @@ func _finish(row: Node) -> String:
 
 
 ## ...and once the season is over (the fixture's finals test plays it out).
-func _trophies() -> void:
+func _test_trophies() -> void:
 	var year: int = _state.season_year
 	var s: Control
 	var intro: Label
@@ -1694,7 +1728,7 @@ func _trophies() -> void:
 			groups.append([str(g.name).trim_prefix("PlayerGroup_"), who.text if who else "", hon])
 		_check(groups.size() == 2 and groups[0][0] == ids[0] and groups[1][0] == ids[2],
 				"Your players' honours by player, the most decorated first, none from elsewhere (%s: %s)" % [tag, str(groups)])
-		_check(groups.size() == 2 and groups[0][2] == ["Brownlow Medal %d" % year, "Best and fairest %d" % (year - 1)]
+		_check(groups.size() == 2 and groups[0][2] == ["Brownlow Medal %d" % year, "Copeland Trophy %d" % (year - 1)]
 				and groups[1][2] == ["All-Australian %d" % year],
 				"Each player's honours sit under him, newest first (%s)" % tag)
 		_check(groups.size() == 2 and groups[0][1] == str(_state.award_name({"id": ids[0]})),
@@ -1792,7 +1826,7 @@ func _trophies() -> void:
 	var listed := []
 	for i in range(opt.item_count if opt != null else 0):
 		listed.append(opt.get_item_text(i))
-	_check(listed == ["All honours", "Premierships", "Minor premierships", "Brownlow Medal", "All-Australian", "Best and fairest"],
+	_check(listed == ["All honours", "Premierships", "Minor premierships", "Brownlow Medal", "All-Australian", "Copeland Trophy"],
 			"The filter lists only the kinds of honour won (%s)" % str(listed))
 	_check(opt != null and (await Tap.tap(opt)) == "", "The filter takes a tap")
 	await _settle()
@@ -1860,7 +1894,12 @@ func _check(ok: bool, what: String) -> void:
 ## at a glance): the fixture marks your match like the ladder's mine row, the
 ## clubs' names carry their colour, nothing is clipped, and the touched screens
 ## still take a real tap.
-func _readability_b1() -> void:
+
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
+func _test_readability_b1() -> void:
 	var uk = load("res://scripts/ui/UiKit.gd")
 	var fix = load("res://scripts/ui/stats/StatsFixture.gd")
 	var mine: String = _state.my_club

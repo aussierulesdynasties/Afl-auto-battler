@@ -28,6 +28,12 @@ func _check(condition: bool, message: String) -> void:
 		push_error(message)
 
 
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
+
+
 func _settle(n := 6) -> void:
 	for i in range(n):
 		await process_frame
@@ -74,17 +80,17 @@ func _run() -> void:
 	_state.save_path = "user://test_newsfront.save"
 	_state.settings_path = "user://test_newsfront.cfg"
 	_state.delete_saved_career()
-	_pure("MEL")
-	await _page()
-	await _hub(Vector2i(1280, 720), true)
-	await _hub(Vector2i(390, 844), false)
-	print("Newsfront tests: %d checks, %d failures" % [_checks, _failures.size()])
+	await _t("_test_pure", ["MEL"])
+	await _t("_test_page")
+	await _t("_test_hub", [Vector2i(1280, 720), true])
+	await _t("_test_hub", [Vector2i(390, 844), false])
+	print(Ran.line("Newsfront", self))
 	for f in _failures:
 		print("  FAIL: " + f)
 	quit(1 if not _failures.is_empty() else 0)
 
 
-func _pure(me: String) -> void:
+func _test_pure(me: String) -> void:
 	var items := _round_one()
 	var page = _nf.build(items, me)
 	var all = _nf.all_stories(page)
@@ -134,7 +140,7 @@ func _pure(me: String) -> void:
 	_check(_nf.build([], me)["count"] == 0, "An empty feed makes an empty page")
 
 
-func _page() -> void:
+func _test_page() -> void:
 	_state.reset()
 	_state.start_season("MEL", _db.club_list("MEL"))
 	_state.tutorials = false
@@ -199,7 +205,7 @@ func _page() -> void:
 	b2.queue_free()
 
 
-func _hub(size: Vector2i, wide: bool) -> void:
+func _test_hub(size: Vector2i, wide: bool) -> void:
 	var tag := "%dx%d" % [size.x, size.y]
 	_state.reset()
 	_state.start_season("MEL", _db.club_list("MEL"))

@@ -18,29 +18,29 @@ func run() -> void:
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
 	GameDB.reload()
-	_test_default_plan_spends()
-	_test_manual_and_focus()
-	_test_changing_plans()
-	_test_plans_survive_save()
-	_test_plans_match_the_engine()
-	_test_archetypes_differ()
-	_test_traits_through_training()
-	_test_old_plans_migrate()
-	_test_training_news()
-	_test_reserves_development()
-	_test_department_development()
-	_test_stat_guide_complete()
-	_test_dual_role_plans()
-	_test_training_multiselect()
-	_test_plan_is_not_identity()
-	_test_learning_a_position()
-	_test_unicorn()
-	_test_rival_projects()
-	_test_project_endings()
-	_test_teaching_moves_the_ceiling()
+	_t("_test_default_plan_spends")
+	_t("_test_manual_and_focus")
+	_t("_test_changing_plans")
+	_t("_test_plans_survive_save")
+	_t("_test_plans_match_the_engine")
+	_t("_test_archetypes_differ")
+	_t("_test_traits_through_training")
+	_t("_test_old_plans_migrate")
+	_t("_test_training_news")
+	_t("_test_reserves_development")
+	_t("_test_department_development")
+	_t("_test_stat_guide_complete")
+	_t("_test_dual_role_plans")
+	_t("_test_training_multiselect")
+	_t("_test_plan_is_not_identity")
+	_t("_test_learning_a_position")
+	_t("_test_unicorn")
+	_t("_test_rival_projects")
+	_t("_test_project_endings")
+	_t("_test_teaching_moves_the_ceiling")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
-	print("Training tests: %d checks, %d failures" % [checks, failures.size()])
+	print(Ran.line("Training", self))
 
 
 func _check(condition: bool, message: String) -> void:
@@ -48,6 +48,11 @@ func _check(condition: bool, message: String) -> void:
 	if not condition:
 		failures.append(message)
 		push_error(message)
+
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
 
 
 func _new_season() -> void:
@@ -221,7 +226,8 @@ func _row(id: String) -> Dictionary:
 ## and survives a save.
 func _test_reserves_development() -> void:
 	_new_season()
-	GameState.difficulty = "normal"
+	GameState.board_patience = "fair"
+	GameState.rival_recruiting = "shrewd"
 	# The reserves rate itself, not the coaching around it: a Good (70)
 	# staff, each coach in his own line, teaches at exactly par.
 	var staff := GameState.club_staff(GameState.my_club)
@@ -285,8 +291,9 @@ func _test_reserves_development() -> void:
 	_check(counted > 0 and int(report["reserves_count"]) == counted
 			and int(report["reserves_total"]) == counted * res_xp,
 			"The report counts the reserves (%d at %d)" % [counted, res_xp])
-	_check(GameState.reserves_summary_line().contains("+%d XP each" % res_xp),
-			"The results screens get a reserves line")
+	_check(GameState.reserves_summary_line() == "%d %s developing in the reserves." % [counted, "player kept" if counted == 1 else "players kept"]
+			and not GameState.reserves_summary_line().contains("XP"),
+			"The results screens get a reserves line, with no XP in it (%s)" % GameState.reserves_summary_line())
 
 	# 7: the same match cannot pay twice.
 	var once := int(GameState.list_player(depth)["xp"])
@@ -332,14 +339,16 @@ func _test_reserves_development() -> void:
 			and GameState.xp_gain_for(depth) >= GameState.XP_SQUAD + GameState.XP_SELECTED + GameState.XP_NAMED,
 			"Recalled, he earns senior XP again (%d)" % GameState.xp_gain_for(depth))
 
-	# Difficulty never changes development: reserves XP is the same on Hard.
-	GameState.difficulty = "hard"
+	# Difficulty never changes development: reserves XP is the same on the hardest dials.
+	GameState.board_patience = "ruthless"
+	GameState.rival_recruiting = "cutthroat"
 	GameState.list_player(depth)["injury_weeks"] = 0  # he may have been hurt in his senior game
 	_pick(depth, false)
 	_round()
 	_check(GameState.xp_gain_for(depth) == res_xp,
-			"Reserves XP is the same on Hard (%d)" % GameState.xp_gain_for(depth))
-	GameState.difficulty = "normal"
+			"Reserves XP is the same on Ruthless and Cut-throat (%d)" % GameState.xp_gain_for(depth))
+	GameState.board_patience = "fair"
+	GameState.rival_recruiting = "shrewd"
 
 
 func _test_department_development() -> void:
@@ -520,6 +529,17 @@ func _test_training_news() -> void:
 	GameState.last_training_report = {"auto": out}
 	var line := GameState.training_summary_line()
 	_check(line.begins_with("Training:") and line.contains("OVR"), "The summary line reports it (%s)" % line)
+	# Every riser is named with his from-to, however many (director, 2026-10-19).
+	var many := []
+	for q in GameState.my_list.slice(0, 13):
+		many.append([str(q["id"]), 70, 71])
+	GameState.last_training_report = {"auto": {"rises": many, "traits": [], "at_pot": []}}
+	var names := GameState.training_rise_lines()
+	var all_named := names.size() == 13
+	for q in GameState.my_list.slice(0, 13):
+		all_named = all_named and names.has("%s 70 to 71" % GameDB.player_display_name(q))
+	_check(all_named, "All 13 risers are named with from and to (%d listed)" % names.size())
+	_check(not GameState.training_summary_line().contains("more"), "The summary never says 'N more'")
 	GameState.last_training_report = {"auto": {"points": 5, "rises": [], "traits": []}}
 	_check(GameState.training_summary_line() == "", "Stat points alone are not news")
 

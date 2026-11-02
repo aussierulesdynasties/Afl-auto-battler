@@ -112,7 +112,9 @@ var clash := false
 ## an 18 px dot on green, where two dark bases merge sooner than two names side by
 ## side do (Fremantle's purple and Melbourne's navy are 26.6 apart and read as one
 ## side in a pack: audit frame fre_mel_phone 005).
-const DISC_CLASH := 30.0
+const DISC_CLASH := 40.0
+## Two sides of one club whose strips are this close in base colour (Gold Coast's two reds) take the club's farthest colour instead.
+const SIDE_CLASH := 30.0
 ## Discs that would overlap are drawn apart, so both numbers show. Drawing only:
 ## the players stay where the match has them. NUDGE_GAP is the distance two drawn
 ## centres are pushed toward, in disc diameters; each frame the nudge eases back
@@ -129,6 +131,12 @@ const NUDGE_CAP := 0.5
 static var nudge_full := false
 const NUDGE_EASE := 0.85
 const NUDGE_PASSES := 24
+## The draw-apart moves a disc no faster than a walk (MatchMotion.WALK, in the
+## match's own seconds): two discs closing on each other part over a moment and
+## never snap across (the motion critic, 2026-10-18: a disc hopping 4 m in one
+## frame as a pile re-sorted). Match seconds played since the last layout; -1
+## until the first one, which places the discs at once.
+var _nudge_h := -1.0
 var _nudge := PackedVector2Array()
 var _disc := PackedVector2Array()   # where each token is drawn, in pixels
 ## The bench: each side's five as small discs, along the bottom of the view (the
@@ -186,6 +194,7 @@ func setup(p_result: Dictionary) -> void:
 	clash = bool((_kits[1] as Dictionary).get("clash", false))
 	_nudge = PackedVector2Array()
 	_disc = PackedVector2Array()
+	_order = []
 	_flip_pending = false
 	_trail = []
 	mini_figures = GameState.match_figures_on()
@@ -201,6 +210,15 @@ func setup(p_result: Dictionary) -> void:
 	_press_said = [false, false]
 	_press_banner = {}
 	_zone_fade = [0.0, 0.0]
+	_corr_fade = [0.0, 0.0]
+	_stop_fade = [0.0, 0.0]
+	_open_fade = [0.0, 0.0]
+	_stop_ring = [{}, {}]
+	_open_ring = [{}, {}]
+	_open_leaving = [false, false]
+	_open_wait = [0.0, 0.0]
+	_open_on = [0.0, 0.0]
+	_mark_ball = Vector2.INF
 	_ev_idx = 0
 	_last_actor = -1
 	_poss_side = -1
@@ -276,6 +294,8 @@ func progress() -> float:
 
 func _process(delta: float) -> void:
 	if playing:
+		if _nudge_h >= 0.0:
+			_nudge_h += delta * speed * MatchDirector.TEMPO
 		var out := director.advance(delta * speed)
 		for ev in out:
 			_track_quarter(ev)
@@ -297,6 +317,7 @@ func _process(delta: float) -> void:
 	_name_the_ball_carrier()
 	_age_caption(delta)
 	_step_zone_fade(delta)
+	_step_marks(delta)
 	if not _press_banner.is_empty():
 		_press_banner["left"] = float(_press_banner["left"]) - delta
 		if float(_press_banner["left"]) <= 0.0:
@@ -308,7 +329,7 @@ func _process(delta: float) -> void:
 	if playing or _cam.distance_to(_drawn_cam) > 0.05 or absf(_zoom - _drawn_zoom) > 0.002 \
 			or not director.flash.is_empty() or not _caption.is_empty() or not _press_banner.is_empty() \
 			or float(_zone_fade[0]) > 0.0 or float(_zone_fade[1]) > 0.0 \
-			or director.press_zone_on(0) or director.press_zone_on(1):
+			or director.press_zone_on(0) or director.press_zone_on(1) or marks_live():
 		queue_redraw()
 
 
@@ -487,23 +508,214 @@ static func kits_for(home: String, away: String) -> Array:
 	if GameDB.is_side(home) or GameDB.is_side(away):
 		dress_sides(GameDB.side_base(home))
 		dress_sides(GameDB.side_base(away))
-	var h: Dictionary = GameDB.club_guernsey(home)
-	var a: Dictionary = GameDB.club_guernsey(away)
-	var hb: Color = h.get("base", Color.WHITE)
-	var ab: Color = a.get("base", Color.WHITE)
-	var ap: Color = a.get("pattern", Color.DIM_GRAY)
-	if UiKit.colour_distance(hb, ab) < DISC_CLASH and UiKit.colour_distance(hb, ap) > UiKit.colour_distance(hb, ab):
-		a = a.duplicate()
-		a["base"] = ap
-		a["pattern"] = ab
-		a["clash"] = true
-	return [h, a]
+	var h: Dictionary = with_trim(home, GameDB.club_guernsey(home))
+	var a: Dictionary = with_trim(away, GameDB.club_guernsey(away))
+	if disc_distance(h, a) >= DISC_CLASH:
+		return [h, a]
+	# Too alike on the turf: the away side tries its clash strips (its own kit's
+	# two colours changed over; for a three-colour club its third colour as the
+	# body) and wears the one farthest from the home side's disc.
+	var best: Dictionary = a
+	var best_d := disc_distance(h, a)
+	var options := clash_options(away, a)
+	if GameDB.side_base(home) == GameDB.side_base(away):
+		# A club against itself (an intra-club match): the strip is only its own
+		# two colours changed over, so a side's ink matches the strip it wears.
+		options = options.slice(0, 1) if UiKit.colour_distance(a.get("base", Color.WHITE), a.get("pattern", Color.WHITE)) > 12.0 else []
+	for c in options:
+		var d := disc_distance(h, c)
+		if d > best_d + 0.01:
+			best = c
+			best_d = d
+	if best != a:
+		best["clash"] = true
+	return [h, best]
 
 
-## An intra-club match: the side in the home strip wears the club's kit colour,
-## and the side in the clash strip the colour the oval gives that club as an
-## away side against a home side in its own colours (kits_for of the club
-## against itself: its kit's two colours changed over), so no colour is
+## The away side's clash strips: the kit's base and pattern changed over, and
+## (only for a club whose third colour is a real one) the third colour as the
+## body with the base as the pattern. Only the club's own colours are used.
+static func clash_options(code: String, kit: Dictionary) -> Array:
+	var out := []
+	var base: Color = kit.get("base", Color.WHITE)
+	var pat: Color = kit.get("pattern", Color.DIM_GRAY)
+	if UiKit.colour_distance(base, pat) > 12.0:
+		var sw: Dictionary = kit.duplicate()
+		sw["base"] = pat
+		sw["pattern"] = base
+		out.append(with_trim(code, sw, true))
+	# A white clash strip, as the real clubs wear (Melbourne, Hawthorn, Essendon):
+	# only for a club whose third colour is white.
+	var white: Color = GameDB.club_colours(GameDB.side_base(code))[2]
+	if white.is_equal_approx(Color.WHITE) and UiKit.colour_distance(base, white) > 25.0:
+		var w1: Dictionary = kit.duplicate()
+		w1["base"] = white
+		w1["pattern"] = base
+		w1.erase("ring")
+		out.append(w1)
+		var w2: Dictionary = kit.duplicate()
+		w2["base"] = white
+		w2["pattern"] = pat
+		w2.erase("ring")
+		out.append(w2)
+	var ring = kit.get("ring", null)
+	if ring != null:
+		var third: Dictionary = kit.duplicate()
+		third["base"] = ring
+		third["pattern"] = base
+		third["ring"] = pat
+		out.append(third)
+		var third2: Dictionary = kit.duplicate()
+		third2["base"] = ring
+		third2["pattern"] = pat
+		third2["ring"] = base
+		out.append(third2)
+	return out
+
+
+## The third colour of a club that has one (Adelaide's gold, the Bulldogs'
+## white) as a ring round the rim of the disc: it survives an 18 px disc, leaves
+## the number clear, and is the one thing that tells Adelaide's navy and red
+## from Melbourne's. `ring` is left out when it is the same as the body or the
+## pattern (a ring that adds nothing).
+static func with_trim(code: String, kit: Dictionary, keep := false) -> Dictionary:
+	var out: Dictionary = kit.duplicate()
+	if keep and out.has("ring"):
+		return out
+	out.erase("ring")
+	if not GameDB.THREE_COLOUR_CLUBS.has(GameDB.side_base(code)):
+		return out
+	var third: Color = kit.get("pattern2", Color.WHITE)
+	if UiKit.colour_distance(third, kit.get("base", Color.WHITE)) < 25.0:
+		return out
+	if UiKit.colour_distance(third, kit.get("pattern", Color.WHITE)) < 12.0 and str(kit.get("design", "plain")) != "plain":
+		return out
+	out["ring"] = third
+	return out
+
+
+## What a disc looks like, as colours sampled over its face (a 13 x 13 grid
+## inside the circle, the kit's own geometry from _draw_kit).
+static func disc_samples(kit: Dictionary) -> Array:
+	var out := []
+	var n := 13
+	for iy in range(n):
+		for ix in range(n):
+			var x := (float(ix) + 0.5) / float(n) * 2.0 - 1.0
+			var y := (float(iy) + 0.5) / float(n) * 2.0 - 1.0
+			if x * x + y * y <= 1.0:
+				out.append(kit_colour_at(kit, x, y))
+	return out
+
+
+## The colour of the disc at (x, y) in the unit circle: the geometry _draw_kit
+## draws.
+static func kit_colour_at(kit: Dictionary, x: float, y: float) -> Color:
+	var base: Color = kit.get("base", Color.WHITE)
+	var pat: Color = kit.get("pattern", Color.DIM_GRAY)
+	var ring = kit.get("ring", null)
+	var design := str(kit.get("design", "plain"))
+	var d := sqrt(x * x + y * y)
+	var col := base
+	if ring != null and d > 0.8:
+		return ring
+	var r := 0.94
+	match design:
+		"stripes":
+			for cx in [-0.55, 0.0, 0.55]:
+				if absf(x - float(cx) * r) < r * 0.13:
+					col = pat
+		"hoops", "lowhoops", "twohoops", "tiers":
+			for cy in [-0.4, 0.3]:
+				if absf(y - float(cy) * r) < r * 0.15:
+					col = pat
+		"sash":
+			if absf(x) < r * 0.75 and y - x > -r * 0.42 and y - x < r * 0.42:
+				col = pat
+		"yoke", "shoulders":
+			if y < -0.05 * r:
+				col = pat
+		"band":
+			if absf(y) < r * 0.22:
+				col = pat
+		"chevron", "chevrons", "wings":
+			if absf(x) < r * 0.7 and absf(y - (-0.35 + 0.75 * (1.0 - absf(x) / (r * 0.7))) * r) < r * 0.16:
+				col = pat
+		"panels", "sides", "giants", "map":
+			if x < 0.0:
+				col = pat
+		_:
+			if d < 0.55:
+				col = pat
+	return col
+
+
+## The number's two inks on a kit: white with a dark edge, or (on a light body,
+## Richmond's yellow) near-black with a white edge. Judged on the colours under
+## the number (the middle of the disc).
+static func number_inks(kit: Dictionary) -> Array:
+	var lum := 0.0
+	var cnt := 0
+	for dy in [-0.3, 0.0, 0.3]:
+		for dx in [-0.3, 0.0, 0.3]:
+			var c := kit_colour_at(kit, float(dx), float(dy))
+			lum += 0.2126 * c.srgb_to_linear().r + 0.7152 * c.srgb_to_linear().g + 0.0722 * c.srgb_to_linear().b
+			cnt += 1
+	if lum / float(cnt) > 0.30:
+		return [Color(0.05, 0.05, 0.08), Color(1, 1, 1, 0.9)]
+	return [Color(1, 1, 1), Color(0, 0, 0, 0.85)]
+
+
+## How different two discs look on the turf, in CIELAB: half the distance
+## between their palettes (each colour on one disc to the nearest colour on the
+## other, by the share of the face it covers, both ways) and half the distance
+## between their body colours. Layout does not count: Melbourne's red body and
+## navy yoke against Adelaide's navy body and red hoops share their colours and
+## score low; a third colour or a different body raises it.
+static func disc_distance(a: Dictionary, b: Dictionary) -> float:
+	var pa := _palette(a)
+	var pb := _palette(b)
+	var chamfer := 0.5 * (_palette_gap(pa, pb) + _palette_gap(pb, pa))
+	return 0.5 * chamfer + 0.5 * UiKit.colour_distance(_dominant(_palette(_bodied(a))), _dominant(_palette(_bodied(b))))
+
+
+## The colours on a disc and the share of its face each covers.
+static func _palette(kit: Dictionary) -> Array:
+	var counts := {}
+	var cells := disc_samples(kit)
+	for c in cells:
+		var key := (c as Color).to_html(false)
+		counts[key] = int(counts.get(key, 0)) + 1
+	var out := []
+	for key in counts:
+		out.append([Color.html(str(key)), float(counts[key]) / float(cells.size())])
+	return out
+
+
+static func _palette_gap(from: Array, to: Array) -> float:
+	var total := 0.0
+	for f in from:
+		var nearest := 1000.0
+		for t in to:
+			nearest = minf(nearest, UiKit.colour_distance(f[0], t[0]))
+		total += nearest * float(f[1])
+	return total
+
+
+static func _bodied(kit: Dictionary) -> Dictionary:
+	var k: Dictionary = kit.duplicate()
+	k.erase("ring")
+	return k
+
+
+static func _dominant(p: Array) -> Color:
+	var best: Array = p[0]
+	for e in p:
+		if float(e[1]) > float(best[1]):
+			best = e
+	return best[0]
+
+
 ## invented here. Harmless to call again.
 static func dress_sides(base: String) -> void:
 	var codes: Array = GameDB.side_codes(base)
@@ -512,7 +724,7 @@ static func dress_sides(base: String) -> void:
 	var home: Dictionary = GameDB.club_guernsey(base)
 	var second: Dictionary = kits_for(base, base)[1]
 	var hb: Color = home.get("base", Color.WHITE)
-	if UiKit.colour_distance(hb, second.get("base", Color.WHITE)) < DISC_CLASH:
+	if UiKit.colour_distance(hb, second.get("base", Color.WHITE)) < SIDE_CLASH:
 		# The kit's two colours are too alike to tell two sides apart (Gold
 		# Coast's two reds): the second side takes the club's own colour that
 		# is farthest from the first side's, still one of the club's colours.
@@ -691,7 +903,12 @@ func _draw() -> void:
 		var x0 := c.x - a + (2.0 * a) * float(i) / float(stripes)
 		var x1 := c.x - a + (2.0 * a) * float(i + 1) / float(stripes)
 		draw_colored_polygon(_stripe(c, a, b, x0, x1), grass[1])
+	drawn_layers = ["turf"]
 	_draw_press_zone(c, a, b)
+	drawn_layers.append("press")
+	# The coach's call marked on the grass, under the lines and the players.
+	if _draw_marks(token_radius()) > 0:
+		drawn_layers.append("marks")
 	# The turf's edge in the stand's shadow: a few soft rings fading inward.
 	var shade := maxf(6.0, 7.0 * s)
 	for i in range(4):
@@ -737,6 +954,7 @@ func _draw() -> void:
 	var tr := token_radius()
 	_layout_discs(tr)
 	_draw_bench(tr)
+	drawn_layers.append("discs")
 	_draw_tokens(tr)
 	_draw_rings(tr)
 	if _figs != null:
@@ -783,7 +1001,7 @@ const PRESS_ZONE_ALPHA := 0.3
 ## The strength the colour is worked out at (what the club colour would be at
 ## a 40% mix), so the colour is the same hue and the strength the one above.
 const PRESS_COLOUR_ALPHA := 0.4
-const PRESS_FADE_SECS := 0.9
+const PRESS_FADE_SECS := 2.5
 var _zone_fade := [0.0, 0.0]
 var _press_said := [false, false]
 var _caption_rect = null       # where the caption was drawn last (the press line steps clear of it)
@@ -799,8 +1017,8 @@ static func ease_fade(t: float) -> float:
 
 func _step_zone_fade(delta: float) -> void:
 	for side in [0, 1]:
-		var on: bool = director.press_zone_on(side)
-		_zone_fade[side] = move_toward(float(_zone_fade[side]), 1.0 if on else 0.0, delta / PRESS_FADE_SECS)
+		var target: float = director.press_zone_level(side)
+		_zone_fade[side] = move_toward(float(_zone_fade[side]), target, delta / PRESS_FADE_SECS)
 
 
 func _draw_press_zone(c: Vector2, a: float, b: float) -> void:
@@ -834,6 +1052,283 @@ func _draw_press_zone(c: Vector2, a: float, b: float) -> void:
 				var t := 0.0 if xr <= xl else clampf((p.x - xl) / (xr - xl), 0.0, 1.0)
 				cols.append(Color(base.r, base.g, base.b, PRESS_ZONE_ALPHA * fade * lerpf(left_k, right_k, t)))
 			draw_polygon(q, cols)
+
+
+## The oval marks the call (P-12 pass 5, director 2026-10-18: "Merge, then mark
+## the oval"): Attack corridor and Win contest get a faint marking on the grass
+## in the side's colour (press_zone_colour), so the call reads where the discs
+## crowding the ball cannot say it. MatchDirector says when (corridor_mark_on,
+## contest_mark); this draws, under the lines, the players and the ball, and
+## moves nobody.
+## - The corridor: the lanes' width plus a disc, from the side's defensive 50 to
+##   the goal square, soft at its edges and ends, while the side has the ball.
+## - The contest ring: round a ball-up or throw-in, the pack's ring planted on
+##   the contest from the call to the clearance; in open play the midfield's ring
+##   on the ball while it moves at a player's pace, easing out when the ball goes
+##   faster than a sprint and back in where it comes down. The players on the ring stand
+##   on its radius, so on a phone (a disc is 8.6 m across) a line there is under
+##   their discs: the ring is drawn round the outside of them (radius plus a
+##   disc), a faint pad of the colour inside, the rim at full strength.
+## Strength: the press wash's faint state (0.3 x a half), never more. Where the
+## press wash lies, a marking only tops the wash up to that, never adds on top
+## (lead, 2026-10-18: the press tint stays as the director accepted it; under a
+## full-strength hunting press the marking gives way). In and out over
+## MARK_FADE_SECS of real time, eased: it never pops.
+const MARK_ALPHA := PRESS_ZONE_ALPHA * MatchDirector.PRESS_ZONE_STANDING
+const MARK_FADE_SECS := 0.5
+const MARK_SIDE_FEATHER := 2.5     # metres: the corridor's long edges, soft
+const MARK_END_FEATHER := 8.0      # ...and its ends, softer
+const MARK_RIM := 2.0              # metres: the ring's rim, inside its edge...
+const MARK_RIM_FEATHER := 1.5      # ...and its soft outer edge
+const MARK_PAD := 0.5              # the pad inside the rim, this share of the rim's strength
+const MARK_RIM_SAT := 0.4          # the rim's tint of the club colour (mark_rim_colour)
+const MARK_OPEN_SHARE := 1.0       # ...as strong (0.7 did not show on a phone at 1x)
+## The open-play ring's least time on (motion critic, 2026-10-18: a pad blinked on
+## for five frames round a mark taken just before a set shot). The ring comes in
+## only once the ball has been at a player's pace in open play this long (match
+## seconds at 1x: a quarter of that in real time at 4x), so a shorter touch gets no
+## pad; and once it shows it stays (easing out where it is) at least this long in
+## real seconds, at every speed.
+const MARK_OPEN_LEAST := 0.4
+var _corr_fade := [0.0, 0.0]
+var _stop_fade := [0.0, 0.0]
+var _open_fade := [0.0, 0.0]
+var _stop_ring := [{}, {}]         # {at, r}: the last stoppage ring, kept while it fades
+var _open_ring := [{}, {}]
+var _open_leaving := [false, false]   # the open ring easing out after a fast ball
+var _open_wait := [0.0, 0.0]       # match seconds (at 1x) the ball has been at a player's pace in open play
+var _open_on := [0.0, 0.0]         # real seconds the open ring has been showing
+var _mark_ball := Vector2.INF      # where the ball was last frame (its speed)
+## The layers in the order the last frame drew them (tests: a marking under the discs).
+var drawn_layers: Array = []
+
+
+func _step_marks(delta: float) -> void:
+	var md := delta * speed * MatchDirector.TEMPO if playing else 0.0
+	var k := delta / MARK_FADE_SECS
+	# The ball's speed this frame: faster than a sprint is a kick or handball in
+	# flight (no player runs that fast: MatchMotion caps them at a sprint).
+	var bpos: Vector2 = director.ball.get("pos", Vector2.ZERO) if not director.ball.is_empty() else Vector2.ZERO
+	var fast := md > 0.0 and _mark_ball.is_finite() and bpos.distance_to(_mark_ball) > MatchMotion.SPRINT * md + 0.001
+	_mark_ball = bpos
+	for side in [0, 1]:
+		_corr_fade[side] = move_toward(float(_corr_fade[side]), 1.0 if director.corridor_mark_on(side) else 0.0, k)
+		var m: Dictionary = director.contest_mark(side)
+		var stop := not m.is_empty() and bool(m["stop"])
+		var open := not m.is_empty() and not bool(m["stop"])
+		# The stoppage ring is planted on the contest from the call to the
+		# clearance. A new contest elsewhere while it still shows: the old ring
+		# goes out first, then the new one comes in on its own spot. It never slides.
+		var sr: Dictionary = _stop_ring[side]
+		if stop and not sr.is_empty() and float(_stop_fade[side]) > 0.0 				and (sr["at"] as Vector2).distance_to(m["at"]) > 0.01:
+			stop = false
+		elif stop:
+			_stop_ring[side] = {"at": m["at"], "r": m["r"]}
+		# The open-play ring is on the ball while the ball moves at a player's
+		# pace. When it goes faster than a sprint (a kick or handball in flight)
+		# the ring stays where it was and eases out, and eases back in where the
+		# ball comes down: nothing drags across the ground.
+		var on_ball := false
+		_open_wait[side] = float(_open_wait[side]) + delta * speed if open and not fast else 0.0
+		if open:
+			var orr: Dictionary = _open_ring[side]
+			if float(_open_fade[side]) <= 0.0:
+				# A new ring only once the touch has lasted MARK_OPEN_LEAST.
+				if float(_open_wait[side]) >= MARK_OPEN_LEAST - 0.0001:
+					_open_ring[side] = {"at": bpos, "r": m["r"]}
+					_open_leaving[side] = false
+					on_ball = true
+			elif fast:
+				_open_leaving[side] = true
+			elif bool(_open_leaving[side]):
+				# Come down inside the ring (a short handball): it carries on.
+				if (orr["at"] as Vector2).distance_to(bpos) <= mark_pad_radius(float(m["r"])) - mark_ball_radius():
+					_open_leaving[side] = false
+					on_ball = true
+			else:
+				on_ball = true
+			if on_ball and float(_open_fade[side]) > 0.0:
+				orr["at"] = (orr["at"] as Vector2).move_toward(bpos, MatchMotion.SPRINT * md)
+				orr["r"] = m["r"]
+		# Off the ball for any reason (a fast ball, or the ball out of open play):
+		# planted where it is, easing out.
+		if not on_ball and float(_open_fade[side]) > 0.0:
+			_open_leaving[side] = true
+		_stop_fade[side] = move_toward(float(_stop_fade[side]), 1.0 if stop else 0.0, k)
+		var of := float(_open_fade[side])
+		if on_ball or of <= 0.0:
+			_open_fade[side] = move_toward(of, 1.0 if on_ball else 0.0, k)
+		else:
+			# Easing out: never gone before it has shown MARK_OPEN_LEAST in all.
+			var left := MARK_OPEN_LEAST - float(_open_on[side])
+			_open_fade[side] = move_toward(of, 0.0, minf(k, of * delta / left) if left > delta else k)
+		_open_on[side] = float(_open_on[side]) + delta if float(_open_fade[side]) > 0.0 else 0.0
+
+
+## The ring's pad, its radius in metres: inside the rim (the ring's edge, `r` plus a disc).
+func mark_pad_radius(r: float) -> float:
+	var s := _scale()
+	return r + (token_radius() / s if s > 0.0 else 0.0) - MARK_RIM
+
+
+## The ball's drawn radius on the turf, in metres (_draw_ball: 0.42 of a disc).
+func mark_ball_radius() -> float:
+	var s := _scale()
+	return 0.42 * token_radius() / s if s > 0.0 else 0.0
+
+
+## Whether the open-play ring is off the ball, planted and easing out (after a ball
+## faster than a sprint, or with the ball out of open play).
+func open_ring_leaving(side: int) -> bool:
+	return bool(_open_leaving[side])
+
+
+## Whether any marking is showing or fading (the view keeps redrawing).
+func marks_live() -> bool:
+	for side in [0, 1]:
+		if float(_corr_fade[side]) > 0.0 or float(_stop_fade[side]) > 0.0 or float(_open_fade[side]) > 0.0:
+			return true
+	return false
+
+
+## Each marking's strength now, for the tests: {"corridor": [a0, a1], "stop": [...],
+## "open": [...]}, the alpha it is laid at before the press wash takes its share.
+func mark_alphas() -> Dictionary:
+	var out := {"corridor": [], "stop": [], "open": []}
+	for side in [0, 1]:
+		(out["corridor"] as Array).append(MARK_ALPHA * ease_fade(float(_corr_fade[side])))
+		(out["stop"] as Array).append(MARK_ALPHA * ease_fade(float(_stop_fade[side])))
+		(out["open"] as Array).append(MARK_ALPHA * MARK_OPEN_SHARE * ease_fade(float(_open_fade[side])))
+	return out
+
+
+## The press wash's strength at `wx` metres (the director's frame): the most of
+## either side's, as _draw_press_zone lays it.
+func press_alpha_at(wx: float) -> float:
+	var out := 0.0
+	for side in [0, 1]:
+		var f := ease_fade(float(_zone_fade[side]))
+		if f > 0.003:
+			out = maxf(out, PRESS_ZONE_ALPHA * f * MatchDirector.press_zone_field(wx * MatchDirector._dir(side)))
+	return out
+
+
+## A marking's alpha at a point where it wants `want`: only what tops the press
+## wash up to it, never more on top.
+func mark_over_press(want: float, wx: float) -> float:
+	return maxf(0.0, want - press_alpha_at(wx))
+
+
+## Draws every marking showing; returns how many it drew.
+func _draw_marks(tr: float) -> int:
+	var s := _scale()
+	if s <= 0.0:
+		return 0
+	var drew := 0
+	var disc_m := tr / s
+	for side in [0, 1]:
+		var code := home_code if side == 0 else away_code
+		var base := press_zone_colour(code)
+		var rim := mark_rim_colour(code)
+		var cf := MARK_ALPHA * ease_fade(float(_corr_fade[side]))
+		if cf > 0.002:
+			_draw_corridor(side, base, cf, MatchDirector.CORRIDOR_HALF + disc_m)
+			drew += 1
+		var sf := MARK_ALPHA * ease_fade(float(_stop_fade[side]))
+		if sf > 0.002 and not (_stop_ring[side] as Dictionary).is_empty():
+			var sr: Dictionary = _stop_ring[side]
+			_draw_mark_ring(sr["at"], float(sr["r"]) + disc_m, base, rim, sf)
+			drew += 1
+		var of := MARK_ALPHA * MARK_OPEN_SHARE * ease_fade(float(_open_fade[side]))
+		if of > 0.002 and not (_open_ring[side] as Dictionary).is_empty():
+			var orr: Dictionary = _open_ring[side]
+			_draw_mark_ring(orr["at"], float(orr["r"]) + disc_m, base, rim, of)
+			drew += 1
+	return drew
+
+
+## The corridor shade: slices up the ground, each a strip of quads across it with
+## a colour at every corner, soft at the edges.
+func _draw_corridor(side: int, base: Color, a: float, half: float) -> void:
+	var dir := MatchDirector._dir(side)
+	# Full strength over the whole corridor; the soft ends lie outside it.
+	var x0 := MatchDirector.CORRIDOR_FROM - MARK_END_FEATHER
+	var x1 := MatchDirector.CORRIDOR_TO + MARK_END_FEATHER
+	var ys := [-half - MARK_SIDE_FEATHER, -half, half, half + MARK_SIDE_FEATHER]
+	var yk := [0.0, 1.0, 1.0, 0.0]
+	var n := 24
+	for i in range(n):
+		var xa := lerpf(x0, x1, float(i) / float(n))
+		var xb := lerpf(x0, x1, float(i + 1) / float(n))
+		var ka := corridor_end(xa)
+		var kb := corridor_end(xb)
+		for j in range(3):
+			var pts := PackedVector2Array([
+					_w2s_flat(Vector2(xa * dir, ys[j])), _w2s_flat(Vector2(xb * dir, ys[j])),
+					_w2s_flat(Vector2(xb * dir, ys[j + 1])), _w2s_flat(Vector2(xa * dir, ys[j + 1]))])
+			var ks := [ka * float(yk[j]), kb * float(yk[j]), kb * float(yk[j + 1]), ka * float(yk[j + 1])]
+			var xs := [xa, xb, xb, xa]
+			var cols := PackedColorArray()
+			var any := false
+			for q in range(4):
+				var al := mark_over_press(a * float(ks[q]), float(xs[q]) * dir)
+				any = any or al > 0.001
+				cols.append(Color(base.r, base.g, base.b, al))
+			if any:
+				draw_polygon(pts, cols)
+
+
+## The corridor's strength along the ground (metres up it from the centre, for
+## its own side): full from the defensive 50 to the goal square, easing to
+## nothing over MARK_END_FEATHER beyond each end (lead's check, 2026-10-18: with
+## the ease inside, the shade only read from the centre square).
+static func corridor_end(x: float) -> float:
+	var x0 := MatchDirector.CORRIDOR_FROM
+	var x1 := MatchDirector.CORRIDOR_TO
+	return smoothstep(x0 - MARK_END_FEATHER, x0, x) * (1.0 - smoothstep(x1, x1 + MARK_END_FEATHER, x))
+
+
+## The ring's rim: a light tint of the club's colour, so a line a few pixels wide
+## reads on the dark turf at the same faint strength (the wash's colour, worked to
+## mix at turf lightness, only darkens the grass in a line that thin). A club with
+## no hue gets a light grey.
+static func mark_rim_colour(code: String) -> Color:
+	var base := press_zone_colour(code)
+	if base == PRESS_NO_HUE:
+		return Color(0.85, 0.85, 0.85)
+	return Color.from_hsv(base.h, MARK_RIM_SAT, 1.0)
+
+
+## A ring on the grass round `at` (metres), its edge at `edge`: the rim (in `rim`)
+## at `a` just inside the edge, soft to nothing just outside it, a pad of `base`
+## at MARK_PAD of it within.
+func _draw_mark_ring(at: Vector2, edge: float, base: Color, rim: Color, a: float) -> void:
+	var rs := [0.0, edge - MARK_RIM, edge - MARK_RIM * 0.3, edge, edge + MARK_RIM_FEATHER]
+	var rk := [MARK_PAD, MARK_PAD, 1.0, 1.0, 0.0]
+	var n := 56
+	for i in range(n):
+		var t0 := TAU * float(i) / float(n)
+		var t1 := TAU * float(i + 1) / float(n)
+		for j in range(rs.size() - 1):
+			var w := [at + Vector2.from_angle(t0) * float(rs[j]), at + Vector2.from_angle(t1) * float(rs[j]),
+					at + Vector2.from_angle(t1) * float(rs[j + 1]), at + Vector2.from_angle(t0) * float(rs[j + 1])]
+			var ks := [rk[j], rk[j], rk[j + 1], rk[j + 1]]
+			if j == 0:
+				# The middle: a triangle from the centre, not a quad with two corners on it.
+				w.remove_at(1)
+				ks.remove_at(1)
+			var pts := PackedVector2Array()
+			var cols := PackedColorArray()
+			var any := false
+			for q in range(w.size()):
+				var wp: Vector2 = w[q]
+				pts.append(_w2s_flat(wp))
+				var al := mark_over_press(a * float(ks[q]), wp.x)
+				any = any or al > 0.001
+				var c: Color = base if float(ks[q]) <= MARK_PAD + 0.001 else rim
+				cols.append(Color(c.r, c.g, c.b, al))
+			if any:
+				draw_polygon(pts, cols)
 
 
 ## The turf the wash sits on, for working out what colour to lay over it.
@@ -903,20 +1398,35 @@ func _draw_rings(tr: float) -> void:
 ## passing caption (a goal, a ringed player's touch) still sits above.
 func _draw_role_labels(tr: float) -> void:
 	var fs := clampi(int(tr * 1.15), 9, 12)
-	# Named under the token: the players with a job, whoever has the ball, and
-	# your ringed players (audit §8 Phase 3.1), each once.
-	var named := {}
-	for id in director.role_labels():
-		named[int(id)] = true
-	var holder := int(director.ball.get("holder", -1)) if not director.ball.is_empty() else -1
-	if holder >= 0:
-		named[holder] = true
-	if not rings.is_empty():
-		for i in range(director.tokens.size()):
-			if rings.has(str(director.tokens[i].get("pid", ""))):
-				named[i] = true
-	for id in named:
-		if id < 0 or id >= director.tokens.size():
+	for l in role_label_layout(tr, fs):
+		var text := str(l["text"])
+		var origin: Vector2 = l["origin"]
+		for off in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
+			draw_string(UiKit.BOLD, origin + off, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.7))
+		draw_string(UiKit.BOLD, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.85))
+
+
+## Where each surname goes: [{id, text, origin, rect}]. Under its disc first;
+## when that would sit on another name or on another player's disc (and its
+## number) it moves to above, beside, or further below; a name with no clear
+## place is left out, except the ball carrier's, which is always written (the
+## nearest clear place, else under his disc).
+func role_label_layout(tr: float, fs: int) -> Array:
+	var named := label_wanted()
+	var ids := named.keys()
+	# The ball carrier first, then ringed players, then the rest, so the
+	# important names claim their place before the others.
+	ids.sort_custom(func(x, y): return int(named[x]) < int(named[y]) or (int(named[x]) == int(named[y]) and int(x) < int(y)))
+	# A player whose name the caption is writing (a goal, a touch) is not named
+	# twice.
+	var captioned := int(_caption["tok"]) if not _caption.is_empty() else -1
+	var discs := []
+	for i in range(director.tokens.size()):
+		discs.append(_disc_at(i))
+	var placed := []
+	var out := []
+	for id in ids:
+		if id < 0 or id >= director.tokens.size() or int(id) == captioned:
 			continue
 		var t: Dictionary = director.tokens[id]
 		if float(t.get("down", 0.0)) > 0.0:
@@ -925,13 +1435,76 @@ func _draw_role_labels(tr: float) -> void:
 		if text == "":
 			continue
 		var width := UiKit.BOLD.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var p := _disc_at(int(id))
+		var p: Vector2 = discs[id]
 		if p.x < -width or p.y < 0.0 or p.x > size.x + width or p.y > size.y + float(fs) * 2.0:
 			continue
-		var origin := p + Vector2(-width * 0.5, tr * 1.25 + float(fs))
-		for off in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
-			draw_string(UiKit.BOLD, origin + off, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.7))
-		draw_string(UiKit.BOLD, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.85))
+		var h := float(fs)
+		# Only places beside the disc: under, over, either side (a name far
+		# from its disc names the wrong player).
+		var spots := [
+			Vector2(-width * 0.5, tr * 1.25 + h),
+			Vector2(-width * 0.5, -tr * 1.25 - 3.0),
+			Vector2(tr * 1.3, h * 0.35),
+			Vector2(-tr * 1.3 - width, h * 0.35),
+			Vector2(tr * 1.0, tr * 1.1 + h * 0.8),
+			Vector2(-tr * 1.0 - width, tr * 1.1 + h * 0.8),
+			Vector2(tr * 1.0, -tr * 1.1),
+			Vector2(-tr * 1.0 - width, -tr * 1.1),
+		]
+		var chosen = null
+		# First a place clear of every name and every other disc; failing that,
+		# one clear of the names (it may lie over a neighbour's edge, but the
+		# name is still written beside its own disc).
+		for strict in [true, false]:
+			for off in spots:
+				var origin: Vector2 = p + off
+				origin.x = clampf(origin.x, 2.0, maxf(2.0, size.x - width - 2.0))
+				var rect := Rect2(origin + Vector2(-1, -h), Vector2(width + 2.0, h + 3.0))
+				if _label_clear(rect, id, placed, discs, tr, strict):
+					chosen = [origin, rect]
+					break
+			if chosen != null:
+				break
+		if chosen == null:
+			continue
+		placed.append(chosen[1])
+		out.append({"id": id, "text": text, "origin": chosen[0], "rect": chosen[1]})
+	return out
+
+
+## The players whose name is wanted under the disc, with a priority (lower
+## first): the ball carrier, your ringed players, those with a recorded job.
+func label_wanted() -> Dictionary:
+	var named := {}
+	for id in director.role_labels():
+		named[int(id)] = 1
+	var holder := int(director.ball.get("holder", -1)) if not director.ball.is_empty() else -1
+	if holder >= 0:
+		named[holder] = -1
+	if not rings.is_empty():
+		for i in range(director.tokens.size()):
+			if rings.has(str(director.tokens[i].get("pid", ""))):
+				named[i] = mini(int(named.get(i, 0)), 0)
+	return named
+
+
+## A name's box clear of every name already placed and of every other player's
+## disc (so no name runs over a number).
+func _label_clear(rect: Rect2, id: int, placed: Array, discs: Array, tr: float, strict := true) -> bool:
+	for r in placed:
+		if rect.intersects(r as Rect2):
+			return false
+	if not strict:
+		return true
+	for i in range(discs.size()):
+		if i == id or float(director.tokens[i].get("down", 0.0)) > 0.0:
+			continue
+		var c: Vector2 = discs[i]
+		var nx := clampf(c.x, rect.position.x, rect.end.x)
+		var ny := clampf(c.y, rect.position.y, rect.end.y)
+		if Vector2(nx, ny).distance_to(c) < tr:
+			return false
+	return true
 
 
 func _draw_press_banner() -> void:
@@ -1099,6 +1672,11 @@ func _layout_discs(tr: float) -> void:
 	if _nudge.size() != n:
 		_nudge.resize(n)
 		_nudge.fill(Vector2.ZERO)
+		_nudge_h = -1.0
+	# How far a disc may be moved apart, or back, since the last layout.
+	var budget := INF if nudge_full or _nudge_h < 0.0 else MatchMotion.WALK * _nudge_h * _scale()
+	_nudge_h = 0.0
+	var was := _nudge.duplicate()
 	var real := PackedVector2Array()
 	real.resize(n)
 	var pos := PackedVector2Array()
@@ -1134,42 +1712,66 @@ func _layout_discs(tr: float) -> void:
 				if off.length() > cap:
 					pos[i] = real[i] + off.limit_length(cap)
 	for i in range(n):
-		_nudge[i] = pos[i] - real[i]
+		var off := pos[i] - real[i]
+		if budget < INF:
+			off = was[i] + (off - was[i]).limit_length(budget)
+		if cap < INF:
+			off = off.limit_length(cap)
+		_nudge[i] = off
+		pos[i] = real[i] + off
 	_disc = pos
 
 
-## The order the discs are drawn in, last on top: the farthest from the ball
-## first, and last of all the two opponents nearest the man with the ball, then
-## the man himself, so where discs still overlap the ones that matter show whole.
+## The order the discs are drawn in, last on top: lower on the screen over
+## higher, then the player id, and the man with the ball over everyone. The
+## order is kept from frame to frame: two discs change places only once one has
+## passed the other on screen by more than a disc's radius (the motion critic,
+## 2026-10-18: discs swapping in front of each other as players neared the ball).
+## Only the ball changing hands lifts a disc to the top at once.
+var _order: Array = []
+
+
 func draw_order() -> Array:
 	var n := director.tokens.size()
-	var ball_pos: Vector2 = director.ball.get("pos", Vector2.ZERO)
+	if _order.size() != n:
+		_order = range(n)
+		_order.sort_custom(func(a, b): return _disc_at(a).y < _disc_at(b).y \
+				or (_disc_at(a).y == _disc_at(b).y and a < b))
+	var ys := PackedFloat32Array()
+	ys.resize(n)
+	for i in range(n):
+		ys[i] = _disc_at(i).y
+	var r := token_radius()
+	# Neighbours swap only when the one drawn first is lower by more than a
+	# radius; every swap undoes one such crossing, so this always ends.
+	var moved := true
+	var guard := 0
+	while moved and guard < n * n:
+		moved = false
+		for k in range(n - 1):
+			guard += 1
+			var a: int = _order[k]
+			var b: int = _order[k + 1]
+			if ys[a] > ys[b] + r:
+				_order[k] = b
+				_order[k + 1] = a
+				moved = true
+	var out := _order.duplicate()
+	var carrier := top_disc()
+	if carrier >= 0:
+		out.erase(carrier)
+		out.append(carrier)
+	return out
+
+
+## The player drawn on top of everyone: the man with the ball, or the last to
+## have it while it is in the air; -1 for none.
+func top_disc() -> int:
+	var n := director.tokens.size()
 	var carrier := int(director.ball.get("holder", -1))
 	if carrier < 0 or carrier >= n:
 		carrier = director.actor if director.actor >= 0 and director.actor < n else -1
-	var rows := []
-	for i in range(n):
-		rows.append([(director.tokens[i]["pos"] as Vector2).distance_squared_to(ball_pos), i])
-	rows.sort_custom(func(a, b): return a[0] > b[0] if a[0] != b[0] else a[1] < b[1])
-	var out := []
-	for r in rows:
-		out.append(int(r[1]))
-	if carrier >= 0:
-		var side := int(director.tokens[carrier]["side"])
-		var at: Vector2 = director.tokens[carrier]["pos"]
-		var opp := []
-		for i in range(n):
-			if int(director.tokens[i]["side"]) != side:
-				opp.append([(director.tokens[i]["pos"] as Vector2).distance_squared_to(at), i])
-		opp.sort_custom(func(a, b): return a[0] < b[0] if a[0] != b[0] else a[1] < b[1])
-		var top := []
-		for k in range(mini(2, opp.size()) - 1, -1, -1):
-			top.append(int(opp[k][1]))
-		top.append(carrier)
-		for id in top:
-			out.erase(id)
-			out.append(id)
-	return out
+	return carrier
 
 
 ## The player whose disc is drawn at `p` (a point in this view), -1 for none: the
@@ -1188,6 +1790,12 @@ func disc_at_point(p: Vector2) -> int:
 ## step exactly as a drawn frame makes it.
 func disc_positions() -> PackedVector2Array:
 	_layout_discs(token_radius())
+	return _disc
+
+
+## Where the last drawn frame put the discs (no new layout step), for the
+## capture tool's motion print.
+func disc_positions_drawn() -> PackedVector2Array:
 	return _disc
 
 
@@ -1259,18 +1867,23 @@ func _draw_bench(tr: float) -> void:
 ## One disc: the kit, a dark edge, and the number in white with a full dark edge
 ## (eight directions) so it reads on a white stripe as well as on navy.
 func _draw_disc(p: Vector2, r: float, kit: Dictionary, label: String, fs: int) -> void:
-	draw_circle(p + Vector2(0, r * 0.22), r, Color(0, 0, 0, 0.28))
-	_draw_kit(p, r, kit)
-	draw_circle(p, r, Color(0, 0, 0, 0.45), false, 1.2, antialias)
+	paint_disc(self, p, r, kit, label, fs, antialias)
+
+
+static func paint_disc(ci: CanvasItem, p: Vector2, r: float, kit: Dictionary, label: String, fs: int, aa: bool) -> void:
+	ci.draw_circle(p + Vector2(0, r * 0.22), r, Color(0, 0, 0, 0.28))
+	paint_kit(ci, p, r, kit, aa)
+	ci.draw_circle(p, r, Color(0, 0, 0, 0.45), false, 1.2, aa)
 	if label == "":
 		return
 	var font := UiKit.BOLD
+	var inks := number_inks(kit)
 	var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, fs).x
 	var origin := p + Vector2(-w * 0.5, fs * 0.36)
 	for off in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1),
 			Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
-		draw_string(font, origin + off, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.85))
-	draw_string(font, origin, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1))
+		ci.draw_string(font, origin + off, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, inks[1])
+	ci.draw_string(font, origin, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, inks[0])
 
 
 ## Where the ball is drawn on the turf, in pixels: in a player's hands it goes
@@ -1312,10 +1925,11 @@ func _draw_tokens(tr: float) -> void:
 		var origin := p + Vector2(-w * 0.5, fs * 0.36)
 		# A full dark edge (eight directions) so the white figure reads on a
 		# white stripe as well as on navy.
+		var inks := number_inks(kit)
 		for off in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1),
 				Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
-			draw_string(font, origin + off, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.85))
-		draw_string(font, origin, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1))
+			draw_string(font, origin + off, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, inks[1])
+		draw_string(font, origin, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, inks[0])
 
 
 ## PROTOTYPE: the six nearest the ball as figures, each a slot for the
@@ -1391,25 +2005,30 @@ func _look_for(pid: String) -> Dictionary:
 ## is the base with an inner disc of the pattern colour. Shapes are drawn
 ## within the disc's chord so nothing pokes out of the circle.
 func _draw_kit(p: Vector2, tr: float, kit: Dictionary) -> void:
+	paint_kit(self, p, tr, kit, antialias)
+
+
+## The kit on any canvas item (the oval's discs, the audit board).
+static func paint_kit(ci: CanvasItem, p: Vector2, tr: float, kit: Dictionary, aa: bool) -> void:
 	var base: Color = kit.get("base", Color.WHITE)
 	var pat: Color = kit.get("pattern", Color.DIM_GRAY)
 	var design := str(kit.get("design", "plain"))
-	draw_circle(p, tr, base)
+	ci.draw_circle(p, tr, base)
 	var r := tr * 0.94
 	match design:
 		"stripes":
 			for x in [-0.55, 0.0, 0.55]:
 				var cx := float(x) * r
 				var half := sqrt(maxf(0.0, r * r - cx * cx)) * 0.98
-				draw_rect(Rect2(p + Vector2(cx - r * 0.13, -half), Vector2(r * 0.26, half * 2.0)), pat)
+				ci.draw_rect(Rect2(p + Vector2(cx - r * 0.13, -half), Vector2(r * 0.26, half * 2.0)), pat)
 		"hoops", "lowhoops", "twohoops", "tiers":
 			for y in [-0.4, 0.3]:
 				var cy := float(y) * r
 				var half := sqrt(maxf(0.0, r * r - cy * cy)) * 0.98
-				draw_rect(Rect2(p + Vector2(-half, cy - r * 0.15), Vector2(half * 2.0, r * 0.3)), pat)
+				ci.draw_rect(Rect2(p + Vector2(-half, cy - r * 0.15), Vector2(half * 2.0, r * 0.3)), pat)
 		"sash":
 			var w := r * 0.42
-			draw_colored_polygon(PackedVector2Array([p + Vector2(-r * 0.75, -r * 0.75 + w), p + Vector2(-r * 0.75, -r * 0.75),
+			ci.draw_colored_polygon(PackedVector2Array([p + Vector2(-r * 0.75, -r * 0.75 + w), p + Vector2(-r * 0.75, -r * 0.75),
 					p + Vector2(r * 0.75, r * 0.75 - w), p + Vector2(r * 0.75, r * 0.75)]), pat)
 		"yoke", "shoulders":
 			# The top near-half, so the two colours read at 18 px: the arc from
@@ -1419,20 +2038,24 @@ func _draw_kit(p: Vector2, tr: float, kit: Dictionary) -> void:
 			for i in range(15):
 				var ang := lerpf(PI + lift, TAU - lift, float(i) / 14.0)
 				pts.append(p + Vector2(cos(ang) * r, sin(ang) * r))
-			draw_colored_polygon(pts, pat)
+			ci.draw_colored_polygon(pts, pat)
 		"band":
-			draw_rect(Rect2(p + Vector2(-r * 0.98, -r * 0.22), Vector2(r * 1.96, r * 0.44)), pat)
+			ci.draw_rect(Rect2(p + Vector2(-r * 0.98, -r * 0.22), Vector2(r * 1.96, r * 0.44)), pat)
 		"chevron", "chevrons", "wings":
-			draw_polyline(PackedVector2Array([p + Vector2(-r * 0.7, -r * 0.35), p + Vector2(0, r * 0.4),
-					p + Vector2(r * 0.7, -r * 0.35)]), pat, maxf(2.0, r * 0.32), antialias)
+			ci.draw_polyline(PackedVector2Array([p + Vector2(-r * 0.7, -r * 0.35), p + Vector2(0, r * 0.4),
+					p + Vector2(r * 0.7, -r * 0.35)]), pat, maxf(2.0, r * 0.32), aa)
 		"panels", "sides", "giants", "map":
 			var pts := PackedVector2Array()
 			for i in range(17):
 				var ang := PI * 0.5 + PI * float(i) / 16.0
 				pts.append(p + Vector2(cos(ang) * r, sin(ang) * r))
-			draw_colored_polygon(pts, pat)
+			ci.draw_colored_polygon(pts, pat)
 		_:
-			draw_circle(p, tr * 0.55, pat)
+			ci.draw_circle(p, tr * 0.55, pat)
+	var ring = kit.get("ring", null)
+	if ring != null:
+		# The club's third colour round the rim, clear of the number.
+		ci.draw_arc(p, tr * 0.88, 0.0, TAU, 28, ring, maxf(2.0, tr * 0.2), aa)
 
 
 func _readable_on(bg: Color) -> Color:
