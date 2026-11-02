@@ -29,7 +29,6 @@ func _run() -> void:
 	var club := "MEL"
 	var their_loose := false
 	var plain := false
-	var ruck_mode := false
 	var rounds := 0
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
@@ -48,8 +47,6 @@ func _run() -> void:
 				their_loose = true
 			"--plain":
 				plain = true
-			"--ruck":
-				ruck_mode = true
 			"--rounds":
 				rounds = int(a[i + 1])
 	await process_frame
@@ -63,22 +60,6 @@ func _run() -> void:
 	state.career_seed = 2026
 	state.replay_seed = 2026
 	state.set_setting("seen_training_intro", true)
-	if ruck_mode:
-		# A club that starts two rucks on the ground, so the Main ruck call shows.
-		var Ms = load("res://scripts/sim/MatchSim.gd")
-		for c in ["BRL", "HAW", "GWS", "WCE", "STK", "COL", "GEE", "CAR", "SYD", "MEL"]:
-			state.reset()
-			state.career_seed = 2026
-			state.replay_seed = 2026
-			state.set_setting("seen_training_intro", true)
-			state.start_season(c, db.club_list(c))
-			if not state.prepare_interactive_match():
-				continue
-			var sq0 = state.pending_sim.squads[int(state.pending_sim.moment_side)]
-			if sq0.ground.filter(func(q): return Ms._is_ruckman(q)).size() >= 2:
-				club = c
-				break
-		print("ruck club ", club)
 	state.start_season(club, db.club_list(club))
 	for _r in range(rounds):
 		state.advance()
@@ -91,8 +72,7 @@ func _run() -> void:
 		var sim0 = state.pending_sim
 		spare = load("res://scripts/sim/Matchups.gd").best_interceptor(sim0.squads[1 - int(sim0.moment_side)].ground, 0.0)
 		sim0.set_interceptor(1 - int(sim0.moment_side), str(spare.get("id", "")), false)
-	if not ruck_mode:
-		state.pending_sim.run_quarter()
+	state.pending_sim.run_quarter()
 	if their_loose:
 		state.pending_sim.set_interceptor(1 - int(state.pending_sim.moment_side), str(spare.get("id", "")), true)
 	if plain:
@@ -121,32 +101,6 @@ func _run() -> void:
 	if more != null:
 		more.emit_signal("pressed")
 	await _frames(6)
-	# A forward picked for Play through: the note says his job.
-	var side0 := int(scene.get("_my_side"))
-	var fwd := ""
-	for p in state.pending_sim.squads[side0].ground:
-		if str(p["role"]) == "FWD":
-			fwd = str(p["id"])
-			break
-	var pick: Button = scene.find_child("FocusPicker_focus_fwdGrid_" + fwd, true, false)
-	if pick == null:
-		var other: Button = scene.find_child("FocusPicker_focus_fwdOther", true, false)
-		if other != null:
-			other.emit_signal("pressed")
-			await _frames(6)
-		pick = scene.find_child("Sheet_" + fwd, true, false)
-	if pick != null:
-		pick.emit_signal("pressed")
-		await _frames(6)
-	if ruck_mode:
-		var rp = scene.find_child("MainRuckPicker", true, false)
-		await _shoot((rp.get_parent() as Control) if rp != null else null, out + "_ruck.png")
-		await _frames(8)
-		_save(out + "_ruck_screen.png")
-		quit()
-		return
-	await _shoot(scene.find_child("FocusPicker_focus_fwd", true, false), out + "_focus.png")
-	await _frames(8)
 	# Composed and Normal are the defaults: their words show without a tap.
 	await _shoot(scene.find_child("PepPicker", true, false), out + "_pep.png")
 	await _frames(8)
@@ -167,14 +121,14 @@ func _run() -> void:
 		await _frames(8)
 		scene.find_child("TagPickerGrid_", true, false).emit_signal("pressed")
 		await _frames(6)
-	# The loose interceptor call: question, cards, his intercepts so far.
-	await _shoot(scene.find_child("LooseBlock", true, false), out + "_loose.png")
+	# The Defensive set-up call: question, shapes, his intercepts so far.
+	await _shoot(scene.find_child("DefenceBlock", true, false), out + "_defence.png")
 	await _frames(8)
 	# A long plan line: the longest names on either side, every call set.
 	var side := int(scene.get("_my_side"))
 	var mine: Array = scene.call("_roster_side", side)
 	var theirs: Array = scene.call("_roster_side", 1 - side)
-	var calls := {"gameplan": "defensive", "tag_id": _longest(db, theirs), "focus_id": fwd if fwd != "" else _longest(db, mine),
+	var calls := {"gameplan": "defensive", "tag_id": _longest(db, theirs),
 			"interceptor_id": _longest(db, mine.filter(func(r): return str(r["role"]) == "DEF")),
 			"spare_accountable": false}
 	var go: Button = scene.find_child("StartQuarter", true, false)

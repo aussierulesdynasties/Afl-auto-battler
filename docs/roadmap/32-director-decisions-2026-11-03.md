@@ -31,3 +31,7 @@ his differs, the later one wins. Nothing here edits the bible.
   injuries. Trial spots the coach leaves empty are filled by his recruiters' top picks (PracticeFill button, and
   automatically on sim / press on). Old saves drop the `intra` key and press on to week 7. The "sides of one club"
   kits (GameDB, PitchView, UiKit) went with it.
+- Cut audit rows 2-5 (match break calls, #874): Play through is the Through stars plan (best on-ground star per line);
+  Defensive forward and Loose interceptor are one Defensive set-up call; the in-match Main ruck call is gone (the
+  selected ruck goes up); rotations are automatic for both sides (MatchSim.auto_rotation: season plan, heat, close
+  late quarters). Live, no switch; old saves load and the old call keys are ignored.

@@ -38,7 +38,7 @@ const BOUNDARY_EXIT_P := 0.008
 const BOUNDARY_RUSHED_BONUS := 0.004
 const OUT_ON_FULL_SHARE := 0.12
 const BOUNDARY_TOUCHED_SHARE := 0.28
-var tactics := [{}, {}]      # per side: gameplan, focus_mid/fwd/def (focus_id), tag_id, tagger_id, pep
+var tactics := [{}, {}]      # per side: gameplan, tag_id, tagger_id, pep
 ## Tags dropped because the man was no longer a midfielder: {side, id, q}.
 var tag_drops: Array = []
 ## How well each side's match-day players suit each plan (PlanFit): the
@@ -867,42 +867,37 @@ const FOCUS_SLOTS := ["focus_mid", "focus_fwd", "focus_def"]
 const FOCUS_SLOT_ROLES := {"focus_mid": ["MID", "RUCK"], "focus_fwd": ["FWD"], "focus_def": ["DEF"]}
 
 
-## Who this side plays through, {id: slot}. The single older call (focus_id,
-## the AI's and older saves') counts as the slot his role fills, unless that
-## slot has its own call.
+## Who this side plays through, {id: slot}. Play through is part of the
+## Through stars plan (director, 2026-11-03: the separate break call is cut):
+## under that plan each line plays through its best star on the ground, the
+## man a coach would name; under any other plan nobody. Old focus keys
+## (focus_mid/fwd/def, focus_id) in a tactics dict are ignored.
 func _focus_slots(side: int) -> Dictionary:
-	var t: Dictionary = tactics[side]
 	var out := {}
+	if _plan(side) != "through_stars":
+		return out
+	var mine: Dictionary = stars[side]
 	for slot in FOCUS_SLOTS:
-		var id := str(t.get(slot, ""))
-		if id != "":
-			out[id] = slot
-	var legacy := str(t.get("focus_id", ""))
-	if legacy != "" and not out.has(legacy):
-		var p = _ground_player(side, legacy)
-		if p != null:
-			var slot := focus_slot_for(str(p["role"]))
-			if str(t.get(slot, "")) == "":
-				out[legacy] = slot
+		var best = null
+		for p in (squads[side] as Squad).ground:
+			if not mine.has(str(p["id"])) or not (FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"])):
+				continue
+			if best == null or int(p["overall"]) > int(best["overall"]):
+				best = p
+		if best != null:
+			out[str(best["id"])] = slot
 	return out
 
 
-## The play-through slot a ground role fills.
-static func focus_slot_for(role: String) -> String:
-	for slot in FOCUS_SLOT_ROLES:
-		if (FOCUS_SLOT_ROLES[slot] as Array).has(role):
-			return slot
-	return "focus_mid"
+## The players this side plays through right now (Through stars only).
+func focus_ids(side: int) -> Array:
+	return _focus_slots(side).keys() if side >= 0 and side <= 1 else []
 
 
 ## Whether `slot`'s call is working now: its man is on the ground in a spot
 ## the call works from (a forward target resting on the bench is not).
 func focus_active(side: int, slot: String) -> bool:
-	var id := str((tactics[side] as Dictionary).get(slot, ""))
-	if id == "":
-		return false
-	var p = _ground_player(side, id)
-	return p != null and (FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"]))
+	return (_focus_slots(side).values() as Array).has(slot)
 
 
 func _ground_player(side: int, id: String):
@@ -2420,13 +2415,9 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 ## with none out there, the best tap man on the ground (an emergency ruck).
 ## Returned as [] or [player] so callers can keep the list shape.
 func _contestant(sq: Squad) -> Array:
-	# Your main ruck (director, 2026-10-07: dual-ruck sides) goes up whenever
-	# he is on the ground, whatever spot he stands in; resting, the usual rule.
-	var main_id := str((tactics[0 if sq == squads[0] else 1] as Dictionary).get("main_ruck", ""))
-	if main_id != "":
-		for p in sq.ground:
-			if str(p["id"]) == main_id and _is_ruckman(p):
-				return [p]
+	# No in-match main ruck call (director, 2026-11-03): the ruck picked at
+	# selection stands in the ruck spot and goes up; an old "main_ruck" key
+	# in a tactics dict is ignored.
 	var in_slot := _by_roles(sq.ground, ["RUCK"])
 	if not in_slot.is_empty() and _is_ruckman(in_slot[0]):
 		return [in_slot[0]]
@@ -4058,6 +4049,27 @@ func _mid_fit(side: int) -> float:
 	return total / float(n) if n > 0 else 1.0
 
 
+## The rotations a competent coach runs this quarter (director, 2026-11-03:
+## the break call is cut, rotations follow the season plan and the legs).
+## A club developing and managing its list protects freshness, as does any
+## side on a hot day; a close last quarter, or the second half of a final,
+## rides the stars (a star running on empty then brings the "rest him now"
+## moment); otherwise balanced rotations.
+func auto_rotation(side: int, season_plan := "steady") -> String:
+	if side < 0 or side > 1:
+		return "normal"
+	var close := absi(score(side) - score(1 - side)) <= AUTO_RIDE_MARGIN
+	if close and (current_quarter >= 4 or (finals_mode and current_quarter >= 3)):
+		return "stars"
+	if season_plan == "develop" or weather == "hot":
+		return "hard"
+	return "normal"
+
+
+## Within this margin (points) a late quarter is close enough to ride the stars.
+const AUTO_RIDE_MARGIN := 18
+
+
 func set_rotation_policy(side: int, key: String) -> void:
 	if side >= 0 and side <= 1 and ROTATION_POLICIES.has(key):
 		rotation_policy[side] = key
@@ -4089,16 +4101,11 @@ func _after_chain() -> void:
 			if tagger != null:
 				tagger_id = str(tagger["id"])
 		# Asked once a side, not once a player (the same answers every time).
-		var focus_ids := _focus_slots(side)
+		var focus_now := _focus_slots(side)
 		var tagged_id := _tag_id(1 - side)
 		var holding := _burst(side, "hold")
 		var flooding := _burst(side, "flood")
 		var stacking := _burst(side, "stack")
-		# The man you name as main ruck does a ruck's work, wherever he stands.
-		# With no main ruck named, the drain is exactly what it was (qa W7: a
-		# stand-in who tired like a ruck changed every match, the AI's included).
-		var up: Array = _contestant(sq) if str((tactics[side] as Dictionary).get("main_ruck", "")) != "" else []
-		var up_id := str((up[0] as Dictionary)["id"]) if not up.is_empty() else ""
 		for p in sq.ground:
 			var id := str(p["id"])
 			var role := str(p["role"])
@@ -4107,7 +4114,7 @@ func _after_chain() -> void:
 				gps *= GPS_WING_MULT
 			if _chain_touch.has(id):
 				gps *= GPS_TOUCH_MULT
-			if focus_ids.has(id):
+			if focus_now.has(id):
 				gps *= GPS_FOCUS_MULT
 			if id == tagger_id:
 				gps *= GPS_TAGGER_MULT
@@ -4126,8 +4133,7 @@ func _after_chain() -> void:
 			_p(p, "distance_run", gps)
 
 			var dur := float((p["attr"] as Dictionary).get("durability", 70.0))
-			var drain_role := "RUCK" if id == up_id and float(ROLE_DRAIN.get(role, 1.0)) < float(ROLE_DRAIN["RUCK"]) else role
-			var d := ENERGY_DRAIN * per_chain * float(ROLE_DRAIN.get(drain_role, 1.0)) 					* (1.2 - 0.4 * dur / 100.0) * fatigue_pace * Workload.drain_mult(p)
+			var d := ENERGY_DRAIN * per_chain * float(ROLE_DRAIN.get(role, 1.0)) 					* (1.2 - 0.4 * dur / 100.0) * fatigue_pace * Workload.drain_mult(p)
 			if _trait(p, "engine"):
 				d *= 0.75
 			exertion[id] = float(exertion.get(id, 0.0)) + d

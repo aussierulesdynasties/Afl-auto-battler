@@ -5,8 +5,8 @@ extends RefCounted
 ## nothing here decides or changes anything in the match.
 ##
 ## The order is what survives the cap. The people with a story come first (a
-## run you promised, Backing), then the calls: the player you play through,
-## the tagger, the spare, the defenders on the forwards you matched up. Your
+## run you promised, Backing), then the calls: the star the Through stars plan
+## plays through, the tagger, the spare, the defenders on the forwards you matched up. Your
 ## own players only: a ring means one of yours that you have a say about, so
 ## the match-ups the sim sets up by itself, the calls your assistant makes for
 ## you (MatchSim.coach_call), and the man you tag, are not ringed.
@@ -24,9 +24,9 @@ static func ids(sim: MatchSim, side: int, my_list: Array, my_matchups := {}) -> 
 		if Backing.is_active(p):
 			_add(out, str(p["id"]))
 	var t: Dictionary = sim.tactics[side]
-	_add(out, str(t.get("focus_id", "")))
-	for slot in MatchSim.FOCUS_SLOTS:
-		_add(out, str(t.get(slot, "")))
+	# Who the side plays through (Through stars): the engine's own pick.
+	for id in sim.focus_ids(side):
+		_add(out, str(id))
 	# The tagger is the midfielder who goes to the man you are tagging.
 	if str(t.get("tag_id", "")) != "":
 		var tagger = sim.tagger_of(side)

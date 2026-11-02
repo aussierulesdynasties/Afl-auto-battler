@@ -28,11 +28,10 @@ func run() -> void:
 	_t("_test_decision_credits")
 	_t("_test_pep_talks")
 	_t("_test_tired_call_holds")
-	_t("_test_play_through")
+	_t("_test_play_through_is_the_plan")
 	_t("_test_play_through_by_job")
-	_t("_test_play_through_three")
-	_t("_test_main_ruck")
-	_t("_test_main_ruck_costs_an_easy_role")
+	_t("_test_no_main_ruck_call")
+	_t("_test_auto_rotation")
 	_t("_test_hothead")
 	_t("_test_lockdown_midfielder")
 	_t("_test_traits")
@@ -1092,20 +1091,6 @@ func _test_gps_distance() -> void:
 			"Attack corridor covers more ground than Controlled tempo (%.0f km v %.0f km)" % [
 			fast_km / 1000.0, slow_km / 1000.0])
 
-	var plain := _sim(9052)
-	var focus_id := ""
-	for p in (plain.squads[0] as Squad).ground:
-		if str(p["role"]) == "MID":
-			focus_id = str(p["id"])
-			break
-	var plain_km := float((plain.run()["players"].get(focus_id, {}) as Dictionary).get("distance_run", 0.0))
-	var through := _sim(9052)
-	through.set_tactics(0, {"focus_id": focus_id})
-	var through_km := float((through.run()["players"].get(focus_id, {}) as Dictionary).get("distance_run", 0.0))
-	_check(focus_id != "" and through_km > plain_km,
-			"Playing through a midfielder makes him work farther (%.1f km v %.1f km)" % [
-			through_km / 1000.0, plain_km / 1000.0])
-
 
 ## Phone playtest: a huge hit-out win came with a narrow clearance count,
 ## and one ruck was beaten far too heavily. The tap now decides where a
@@ -1240,328 +1225,110 @@ func _test_ruck_integrity() -> void:
 	_check(off / tot < 0.15, "Hit-outs mostly go to ruckmen (%.0f%% to others)" % (100.0 * off / tot))
 
 
-## Play through a midfielder: he wins more of the ball in the chain, but the
-## call does not turn him into the side's shooter.
-func _test_play_through() -> void:
-	var probe := _sim(60)
-	var mid: Dictionary = {}
-	for p in probe.squads[0].ground:
-		if str(p["role"]) == "MID":
-			mid = p
-			break
-	var plain := probe._tactic_player_mult(0, mid, "shooter")
-	var plain_carry := probe._tactic_player_mult(0, mid, "carrier")
-	probe.set_tactics(0, {"focus_id": str(mid["id"])})
-	_check(probe._tactic_player_mult(0, mid, "shooter") == plain,
-			"Play through does not favour him for the shot")
-	_check(probe._tactic_player_mult(0, mid, "carrier") > plain_carry,
-			"Play through favours him in the chain")
-	var d_on := 0.0
-	var d_off := 0.0
-	var g_on := 0.0
-	var g_off := 0.0
-	var n := 30
-	for i in range(n):
-		var on := _sim(700 + i)
-		on.set_tactics(0, {"focus_id": str(mid["id"])})
-		var r_on := on.run()
-		var r_off := _sim(700 + i).run()
-		var s_on: Dictionary = r_on["players"].get(str(mid["id"]), {})
-		var s_off: Dictionary = r_off["players"].get(str(mid["id"]), {})
-		d_on += float(s_on.get("disposals", 0.0))
-		d_off += float(s_off.get("disposals", 0.0))
-		g_on += float(s_on.get("goals", 0.0))
-		g_off += float(s_off.get("goals", 0.0))
-	_check(d_on > d_off, "Played through, he gets more of the ball (%.1f v %.1f a game)" % [d_on / n, d_off / n])
-	_check(d_on / n < 40.0, "...but not an absurd share (%.1f a game)" % (d_on / n))
-	_check(g_on / n <= g_off / n + 0.35,
-			"...and he does not become the goalkicker (%.2f v %.2f goals a game)" % [g_on / n, g_off / n])
+## Play through is the Through stars plan (director, 2026-11-03): no separate
+## call. Under that plan the side plays through its best star in each slot
+## (forward target, midfield pillar, backline distributor); under any other
+## plan nobody. An old focus key in a tactics dict is ignored.
+func _test_play_through_is_the_plan() -> void:
+	var sim := _sim(60)
+	var anyone := str((sim.squads[0] as Squad).ground[0]["id"])
+	sim.set_tactics(0, {"gameplan": "balanced", "focus_id": anyone, "focus_mid": anyone})
+	_check(sim.focus_ids(0).is_empty(), "Off the Through stars plan nobody is played through, old keys or not")
+	sim.set_tactics(0, {"gameplan": "through_stars"})
+	var ids: Array = sim.focus_ids(0)
+	_check(not ids.is_empty() and ids.size() <= 3, "Through stars plays through up to one star a slot (%d)" % ids.size())
+	var stars_ok := true
+	for id in ids:
+		stars_ok = stars_ok and (sim.stars[0] as Dictionary).has(str(id))
+	_check(stars_ok, "...and only the side's stars")
+	var by_slot: Dictionary = sim._focus_slots(0)
+	var best_ok := true
+	for id in by_slot:
+		var slot := str(by_slot[id])
+		var me = sim._ground_player(0, str(id))
+		for p in (sim.squads[0] as Squad).ground:
+			if (sim.stars[0] as Dictionary).has(str(p["id"])) and (MatchSim.FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"])):
+				best_ok = best_ok and int(p["overall"]) <= int(me["overall"])
+		best_ok = best_ok and sim.focus_active(0, slot)
+	_check(best_ok, "Each slot goes to the best star who fills it, and that slot is working")
+	sim.stars[0] = {}
+	_check(sim.focus_ids(0).is_empty() and not sim.focus_active(0, "focus_mid"), "With no star on the ground, nobody")
 
 
-
-## Play through by the slot he fills (#508): a forward is favoured for the shot
-## and for the ball up forward; a defender for the ball coming out of the back
-## half; a midfielder or ruck for the ball in every chain, and never for the
-## shot (ARD-M1-003). The bias moves who gets the ball and the shot, not how many.
+## Played through, by the slot he fills (#508): a forward is favoured for the
+## shot and the ball up forward; a defender for the ball out of the back half;
+## a midfielder or ruck for the ball in every chain, never the shot.
 func _test_play_through_by_job() -> void:
-	var probe := _sim(60)
-	var who := {}
-	for p in probe.squads[0].ground:
-		var role := str(p["role"])
-		if not who.has(role) or probe._a(p, "goalkicking") > probe._a(who[role], "goalkicking"):
-			who[role] = p
-	for role in ["FWD", "MID", "DEF", "RUCK"]:
-		_check(who.has(role), "(setup) a %s is on the ground" % role)
-		if not who.has(role):
-			return
-	# The multiplier: what the call is worth, by the pick it is made in.
-	var plain := {}
-	for role in who:
-		for purpose in ["shooter", "carrier", "transition"]:
-			for zone in ["back", "middle", "attack", "inside"]:
-				plain["%s/%s/%s" % [role, purpose, zone]] = _job_mult(probe, who[role], purpose, zone)
-	for role in who:
-		probe.set_tactics(0, {"focus_id": str(who[role]["id"])})
-		for purpose in ["shooter", "carrier", "transition"]:
-			for zone in ["back", "middle", "attack", "inside"]:
-				var ratio: float = _job_mult(probe, who[role], purpose, zone) / float(plain["%s/%s/%s" % [role, purpose, zone]])
-				var want := 1.0
-				if purpose == "shooter":
-					want = MatchSim.FOCUS_SHOT if role == "FWD" else 1.0
-				elif role == "FWD":
-					want = MatchSim.FOCUS_CARRY if zone == "attack" or zone == "inside" else 1.0
-				elif role == "DEF":
-					want = MatchSim.FOCUS_EXIT if zone == "back" else 1.0
-				else:
-					want = MatchSim.FOCUS_CARRY
-				_check(is_equal_approx(ratio, want), "%s played through, %s in the %s: x%.2f (want x%.2f)" % [role, purpose, zone, ratio, want])
-	# The picks, on one seed so the dice are shared: only his weight differs.
-	var picks := {
-		"FWD": ["shooter", 0.0], "MID": ["shooter", 0.0],
-		"DEF": ["carrier", -40.0], "RUCK": ["shooter", 0.0],
-	}
-	for role in who:
-		var id := str(who[role]["id"])
-		var off := _count_picks(60, id, str((picks[role] as Array)[0]), float((picks[role] as Array)[1]), "")
-		var on := _count_picks(60, id, str((picks[role] as Array)[0]), float((picks[role] as Array)[1]), id)
-		if role == "FWD" or role == "DEF":
-			_check(on >= off * 1.10 and off > 0, "A %s played through is picked more for the %s (%d v %d of 3000)" % [role, str((picks[role] as Array)[0]), on, off])
-		else:
-			_check(on == off, "A %s played through is not made the shooter (%d v %d of 3000)" % [role, on, off])
-	var mid_id := str(who["MID"]["id"])
-	var ruck_id := str(who["RUCK"]["id"])
-	var def_id := str(who["DEF"]["id"])
-	var fwd_id := str(who["FWD"]["id"])
-	_check(_count_picks(60, mid_id, "carrier", 0.0, mid_id) >= _count_picks(60, mid_id, "carrier", 0.0, "") * 1.10,
-			"A midfielder played through gets more of the ball through the middle")
-	_check(_count_picks(60, ruck_id, "carrier", 0.0, ruck_id) >= _count_picks(60, ruck_id, "carrier", 0.0, "") * 1.10,
-			"A ruck played through gets more of the ball in the middle")
-	# Up forward he is one carrier in seventy: 3000 draws give him about 45,
-	# too few to see a x1.14 call through the rounding, so this one draws 20000.
-	_check(_count_picks(60, fwd_id, "carrier", 25.0, fwd_id, 20000) >= _count_picks(60, fwd_id, "carrier", 25.0, "", 20000) * 1.10,
-			"A forward played through gets more of the ball up forward")
-	_check(_count_picks(60, def_id, "carrier", 0.0, def_id) == _count_picks(60, def_id, "carrier", 0.0, ""),
-			"A defender played through gets no more of the ball through the middle")
-	_check(_count_picks(60, def_id, "carrier", 25.0, def_id) == _count_picks(60, def_id, "carrier", 25.0, ""),
-			"...nor up forward: his job is out of the back half")
-
-
-## Three play-through calls at once (director, 2026-10-07): a midfield pillar,
-## a forward target and a backline distributor. Each works by its own job, all
-## three together; the older single call is the same as its slot's; a call
-## waits while its man is off the spot it works from; and nobody becomes the
-## only one who gets the ball.
-func _test_play_through_three() -> void:
-	var probe := _sim(60)
-	var who := {}
-	for p in probe.squads[0].ground:
-		var role := str(p["role"])
-		if not who.has(role):
-			who[role] = p
-	for role in ["FWD", "MID", "DEF"]:
-		_check(who.has(role), "(setup) a %s is on the ground" % role)
-		if not who.has(role):
-			return
-	var mid: Dictionary = who["MID"]
-	var fwd: Dictionary = who["FWD"]
-	var def: Dictionary = who["DEF"]
-	var plain_mid := _job_mult(probe, mid, "carrier", "middle")
-	var plain_fwd := _job_mult(probe, fwd, "shooter", "inside")
-	var plain_def := _job_mult(probe, def, "carrier", "back")
-	var three := {"focus_mid": str(mid["id"]), "focus_fwd": str(fwd["id"]), "focus_def": str(def["id"])}
-	probe.set_tactics(0, three)
-	_check(is_equal_approx(_job_mult(probe, mid, "carrier", "middle") / plain_mid, MatchSim.FOCUS_CARRY),
-			"The midfield pillar gets more of the ball in the chain")
-	_check(is_equal_approx(_job_mult(probe, fwd, "shooter", "inside") / plain_fwd, MatchSim.FOCUS_SHOT),
-			"...the forward target more of the shots, at the same time")
-	_check(is_equal_approx(_job_mult(probe, def, "carrier", "back") / plain_def, MatchSim.FOCUS_EXIT),
-			"...and the backline distributor first use out of the back half")
-	_check(is_equal_approx(_job_mult(probe, mid, "shooter", "inside"), _job_mult(_sim(60), mid, "shooter", "inside")),
-			"The pillar is not made the shooter")
-	# The older single call is the call for his slot.
-	var old := _sim(60)
-	old.set_tactics(0, {"focus_id": str(fwd["id"])})
-	var new := _sim(60)
-	new.set_tactics(0, {"focus_fwd": str(fwd["id"])})
-	_check(is_equal_approx(_job_mult(old, fwd, "shooter", "inside"), _job_mult(new, fwd, "shooter", "inside")),
-			"A single older play-through call is the call for his slot")
-	# A call made for a spot he is not filling waits.
-	var off := _sim(60)
-	off.set_tactics(0, {"focus_fwd": str(mid["id"])})
-	_check(not off.focus_active(0, "focus_fwd") and is_equal_approx(
-			_job_mult(off, mid, "carrier", "middle"), plain_mid), "A forward-target call on a midfielder waits")
-	_check(off.focus_active(0, "focus_fwd") == false and probe.focus_active(0, "focus_fwd"),
-			"...and the screen can tell a working call from a waiting one")
-	# Real matches, paired seeds: each man gets more of his job, none an absurd share.
-	var n := 24
-	var on := {"md": 0.0, "fs": 0.0, "dk": 0.0, "td": 0.0, "top": 0.0}
-	var base := {"md": 0.0, "fs": 0.0, "dk": 0.0, "td": 0.0}
+	var sim := _sim(60)
+	for zone in ["back", "middle", "attack", "inside"]:
+		_check(is_equal_approx(sim._focus_mult("focus_fwd", "shooter", zone), MatchSim.FOCUS_SHOT), "Forward target: more of the shots (%s)" % zone)
+		_check(is_equal_approx(sim._focus_mult("focus_fwd", "carrier", zone), MatchSim.FOCUS_CARRY if zone == "attack" or zone == "inside" else 1.0),
+				"Forward target carries more only up forward (%s)" % zone)
+		_check(is_equal_approx(sim._focus_mult("focus_def", "carrier", zone), MatchSim.FOCUS_EXIT if zone == "back" else 1.0),
+				"Backline distributor: more ball only out of the back half (%s)" % zone)
+		_check(is_equal_approx(sim._focus_mult("focus_mid", "carrier", zone), MatchSim.FOCUS_CARRY), "Pillar: more of the chain (%s)" % zone)
+		_check(is_equal_approx(sim._focus_mult("focus_mid", "shooter", zone), 1.0), "The pillar is never made the shooter (%s)" % zone)
+		_check(is_equal_approx(sim._focus_mult("focus_def", "shooter", zone), 1.0), "Nor the distributor (%s)" % zone)
+	# In a match: the plan's men get more of the ball, the side no more of it.
+	var n := 16
+	var on := 0.0
+	var off := 0.0
+	var td_on := 0.0
+	var td_off := 0.0
 	for i in range(n):
 		var a := _sim(900 + i)
-		a.set_tactics(0, three)
-		var ra := a.run()
-		var rb := _sim(900 + i).run()
-		for pair in [[ra, on], [rb, base]]:
-			var pl: Dictionary = pair[0]["players"]
-			var acc: Dictionary = pair[1]
-			var sf: Dictionary = pl.get(str(fwd["id"]), {})
-			acc["md"] += float((pl.get(str(mid["id"]), {}) as Dictionary).get("disposals", 0.0))
-			acc["fs"] += float(sf.get("goals", 0.0)) + float(sf.get("behinds", 0.0))
-			acc["dk"] += float((pl.get(str(def["id"]), {}) as Dictionary).get("disposals", 0.0))
-			acc["td"] += float(((pair[0]["team"] as Array)[0] as Dictionary).get("disposals", 0.0))
-		for id in three.values():
-			on["top"] = maxf(float(on["top"]), float(((ra["players"] as Dictionary).get(id, {}) as Dictionary).get("disposals", 0.0)))
-	_check(on["md"] > base["md"], "Pillar: more of the ball (%.1f v %.1f a game)" % [on["md"] / n, base["md"] / n])
-	_check(on["fs"] > base["fs"], "Target: more shots (%.2f v %.2f a game)" % [on["fs"] / n, base["fs"] / n])
-	_check(on["dk"] > base["dk"], "Distributor: more of the ball (%.1f v %.1f a game)" % [on["dk"] / n, base["dk"] / n])
-	_check(absf(on["td"] - base["td"]) / base["td"] < 0.03,
-			"The calls move who gets it, not how much the side has (%.0f v %.0f disposals)" % [on["td"] / n, base["td"] / n])
-	_check(on["top"] < 45.0, "Nobody becomes the only one who gets it (most in a game %d)" % int(on["top"]))
-
-
-## Main ruck (director, 2026-10-07, dual-ruck sides): the man you name goes up
-## at every stoppage while he is on the ground, wherever he stands, and does
-## a ruck's work for it (he tires like a ruck); resting, the usual rule. It
-## moves the hit-outs between the two rucks, it does not make more of them.
-func _test_main_ruck() -> void:
-	var club := ""
-	var rucks := []
-	# A dual-ruck side: both rucks start on the ground, one in the ruck and one
-	# elsewhere (St Kilda, the Bulldogs). A second ruck who starts on the bench
-	# mostly comes on for the first, through the ruck spot, so the call has
-	# little to move there (audit mainruck_impl: Brisbane 28 v 24 contests a
-	# game; St Kilda 54 v 29).
-	for c in ["GEE", "COL", "MEL", "CAR", "SYD", "BRL", "HAW", "ESS", "FRE", "ADE", "GWS", "STK", "WCE", "WBD"]:
-		var sim := _sim(70, c, "COL" if c != "COL" else "GEE")
-		var found := []
-		for q in (sim.squads[0] as Squad).ground:
-			if MatchSim._is_ruckman(q):
-				found.append(q)
-		if found.size() >= 2:
-			club = c
-			rucks = found
-			break
-	_check(club != "", "(setup) a club that starts two rucks on the ground")
-	if club == "":
-		return
-	var opp := "COL" if club != "COL" else "GEE"
-	var probe := _sim(70, club, opp)
-	var first: Array = probe._contestant(probe.squads[0])
-	var other := ""
-	for r in rucks:
-		if first.is_empty() or str(r["id"]) != str(first[0]["id"]):
-			other = str(r["id"])
-			break
-	# Named but resting on the bench: the usual rule still picks.
-	probe.set_tactics(0, {"main_ruck": other})
-	var on_ground := false
-	for q in (probe.squads[0] as Squad).ground:
-		on_ground = on_ground or str(q["id"]) == other
-	var now: Array = probe._contestant(probe.squads[0])
-	_check(not now.is_empty() and (str(now[0]["id"]) == other) == on_ground,
-			"The main ruck goes up when he is on the ground, and only then")
-	var n := 16
-	var ho_on := 0.0
-	var ho_off := 0.0
-	var side_on := 0.0
-	var side_off := 0.0
-	var ex_on := 0.0
-	var ex_off := 0.0
-	for i in range(n):
-		# Your side is the coach's, not the AI's: an AI club picks its plan
-		# afresh every quarter, which would drop the call after the first.
-		var a := _sim(1100 + i, club, opp)
 		(a.squads[0] as Squad).ai_plans = false
-		a.set_tactics(0, {"main_ruck": other})
+		a.set_tactics(0, {"gameplan": "through_stars"})
+		var ids: Array = a.focus_ids(0)
 		var ra := a.run()
-		var b := _sim(1100 + i, club, opp)
+		var b := _sim(900 + i)
 		(b.squads[0] as Squad).ai_plans = false
 		var rb := b.run()
-		ho_on += float(((ra["players"] as Dictionary).get(other, {}) as Dictionary).get("hitouts", 0.0))
-		ho_off += float(((rb["players"] as Dictionary).get(other, {}) as Dictionary).get("hitouts", 0.0))
-		side_on += float(((ra["team"] as Array)[0] as Dictionary).get("hitouts", 0.0))
-		side_off += float(((rb["team"] as Array)[0] as Dictionary).get("hitouts", 0.0))
-		ex_on += float((ra["exertion"] as Dictionary).get(other, 0.0))
-		ex_off += float((rb["exertion"] as Dictionary).get(other, 0.0))
-	_check(ho_on > ho_off * 1.2, "Named main ruck, he takes more of the hit-outs (%.1f v %.1f a game)" % [ho_on / n, ho_off / n])
-	# (b) A ruck who already lines up in a drain-heavier role (a midfielder, 1.25 v
-	# the ruck's 1.15) is not asked to work less or more: the call changes who goes
-	# up, not what he costs, so his exertion is the same with and without it.
-	if str(_role_of(rucks, other)) == "MID" or str(_role_of(rucks, other)) == "RUCK":
-		_check(absf(ex_on - ex_off) / n < 0.5,
-				"...a ruck who already drains like one (or more) is unchanged by the call (exertion %.1f v %.1f)" % [ex_on / n, ex_off / n])
-	_check(absf(side_on - side_off) / side_off < 0.15,
-			"The side's hit-outs move between the rucks, not from nowhere (%.1f v %.1f)" % [side_on / n, side_off / n])
+		for id in ids:
+			on += float(((ra["players"] as Dictionary).get(str(id), {}) as Dictionary).get("disposals", 0.0))
+			off += float(((rb["players"] as Dictionary).get(str(id), {}) as Dictionary).get("disposals", 0.0))
+		td_on += float(((ra["team"] as Array)[0] as Dictionary).get("disposals", 0.0))
+		td_off += float(((rb["team"] as Array)[0] as Dictionary).get("disposals", 0.0))
+	_check(on > off, "Through stars: the men played through get more of the ball (%.1f v %.1f a game)" % [on / n, off / n])
+	_check(absf(td_on - td_off) / td_off < 0.05, "...not the side more of it (%.0f v %.0f)" % [td_on / n, td_off / n])
 
 
-func _role_of(list: Array, id: String) -> String:
-	for q in list:
-		if str(q["id"]) == id:
-			return str(q["role"])
-	return ""
+## No in-match Main ruck call (director, 2026-11-03): the ruck in the ruck spot
+## goes up, and an old "main_ruck" key changes nothing.
+func _test_no_main_ruck_call() -> void:
+	var a := _sim(70, "STK")
+	var before: Array = a._contestant(a.squads[0])
+	var other := ""
+	for q in (a.squads[0] as Squad).ground:
+		if MatchSim._is_ruckman(q) and (before.is_empty() or str(q["id"]) != str(before[0]["id"])):
+			other = str(q["id"])
+	a.set_tactics(0, {"main_ruck": other})
+	var after: Array = a._contestant(a.squads[0])
+	_check(not before.is_empty() and str(after[0]["id"]) == str(before[0]["id"]), "An old main ruck key is ignored")
+	var r1 := _sim(1100, "STK").run()
+	var b := _sim(1100, "STK")
+	b.set_tactics(0, {"main_ruck": other})
+	_check(b.run()["score"] == r1["score"], "...in a whole match too")
 
 
-## (a) The call has a cost when it moves a man out of an easier job: a second ruck
-## who lines up in defence or forward (drain 0.85 / 0.9) works a ruck's 1.15 once
-## he goes up, so his exertion over the first quarter is higher with the call than
-## without it. Read at quarter one's end, before rotations pull the two matches
-## apart (a tired man rests, which hides the drain in a whole-match total; the
-## first version of this check, over a match, went 108 v 116 once #647 merged).
-func _test_main_ruck_costs_an_easy_role() -> void:
-	var club := ""
-	var man := ""
-	for c in ["WBD", "STK", "GEE", "COL", "MEL", "CAR", "SYD", "BRL", "HAW", "ESS", "FRE", "ADE", "GWS", "WCE"]:
-		var sim := _sim(70, c, "COL" if c != "COL" else "GEE")
-		for q in (sim.squads[0] as Squad).ground:
-			if MatchSim._is_ruckman(q) and (str(q["role"]) == "DEF" or str(q["role"]) == "FWD"):
-				club = c
-				man = str(q["id"])
-		if club != "":
-			break
-	_check(club != "", "(setup) a club that starts a ruck in a defensive or forward role")
-	if club == "":
-		return
-	var opp := "COL" if club != "COL" else "GEE"
-	var n := 16
-	var left_on := 0.0
-	var left_off := 0.0
-	for i in range(n):
-		var a := _sim(1100 + i, club, opp)
-		(a.squads[0] as Squad).ai_plans = false
-		a.set_tactics(0, {"main_ruck": man})
-		a.run_quarter()
-		left_on += float(a.exertion.get(man, 0.0))
-		var b := _sim(1100 + i, club, opp)
-		(b.squads[0] as Squad).ai_plans = false
-		b.run_quarter()
-		left_off += float(b.exertion.get(man, 0.0))
-	_check(left_on > left_off, "A second ruck from defence or forward works harder in the first quarter once he goes up (exertion %.1f v %.1f)" % [left_on / n, left_off / n])
-
-
-func _job_mult(sim: MatchSim, p: Dictionary, purpose: String, zone: String) -> float:
-	var ctx := sim._pick_ctx(0)
-	ctx["zone"] = zone
-	return sim._tactic_player_mult(0, p, purpose, ctx)
-
-
-## How often `id` is picked in 3000 draws of one kind of pick, side 0, with
-## `focus` (or nobody) played through. `at` is the field position of a carrier pick.
-func _count_picks(seed: int, id: String, kind: String, at: float, focus: String, draws := 3000) -> int:
-	var sim := _sim(seed)
-	if focus != "":
-		sim.set_tactics(0, {"focus_id": focus})
-	var ground: Array = sim.squads[0].ground
-	var n := 0
-	for i in range(draws):
-		var got
-		if kind == "shooter":
-			got = sim._weighted_roles(ground, "goalkicking", MatchSim.SHOT_ROLES, float(Ratings.T["shooter_power"]), 0, "shooter",
-					MatchSim.TARGET_SIZES)
-		else:
-			got = sim.pick_carrier(0, at)
-		if str(got["id"]) == id:
-			n += 1
-	return n
+## Rotations are automatic (director, 2026-11-03): balanced by default, fresh
+## legs for a develop season or a hot day, the stars ridden in a close last
+## quarter or a close second half of a final.
+func _test_auto_rotation() -> void:
+	var s := _sim(5)
+	s.current_quarter = 1
+	_check(s.auto_rotation(0, "steady") == "normal", "Balanced by default")
+	_check(s.auto_rotation(0, "develop") == "hard", "A develop season keeps the legs fresh")
+	s.weather = "hot"
+	_check(s.auto_rotation(0, "peak") == "hard", "So does a hot day")
+	s.weather = "perfect"
+	s.current_quarter = 4
+	_check(s.auto_rotation(0, "develop") == "stars", "A close last quarter rides the stars")
+	s.current_quarter = 3
+	_check(s.auto_rotation(0, "steady") == "normal", "...not the third, in the home and away")
+	s.finals_mode = true
+	_check(s.auto_rotation(0, "steady") == "stars", "...but a close second half of a final does")
+	_check(MatchSim.ROTATION_POLICIES.has(s.auto_rotation(0, "fast")), "Always a real policy")
 
 
 ## ARD-M1-001 stat credits: a goal assist only when a goal is kicked (never

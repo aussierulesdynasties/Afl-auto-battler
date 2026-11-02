@@ -68,7 +68,7 @@ func _run() -> void:
 	var rots := ["normal", "hard", "stars"]
 	for q in range(quarters):
 		mine = int(sim.moment_side)
-		sim.set_tactics(mine, {"gameplan": plans_seq[q % 3], "pep": peps[q % 3], "focus_id": "", "tag_id": ""})
+		sim.set_tactics(mine, {"gameplan": plans_seq[q % 3], "pep": peps[q % 3], "tag_id": ""})
 		sim.set_rotation_policy(mine, rots[q % 3])
 		sim.run_quarter()
 	UK.apply_appearance("dark")
