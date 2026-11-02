@@ -12,6 +12,7 @@ var _checks := 0
 var _failures: Array[String] = []
 
 const WC := preload("res://scripts/state/WeekChecklist.gd")
+const SUITE_SEED := 2027
 const SIZES := [Vector2i(1280, 720), Vector2i(390, 844)]
 
 
@@ -62,6 +63,8 @@ func _run() -> void:
 func _fresh(on: bool) -> void:
 	_state.reset()
 	_state.set_setting(WC.SETTING, on)
+	_state.career_seed = SUITE_SEED
+	_state.replay_seed = SUITE_SEED
 	_state.start_season("MEL", _db.club_list("MEL"))
 	_state.tutorials = false
 	_state.week_events = []
