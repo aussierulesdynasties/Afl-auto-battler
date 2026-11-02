@@ -1,7 +1,7 @@
 extends SceneTree
-## The League Draft board, for the director's look at its rows and filters.
+## The League Draft board, for the director's look at its rows.
 ## Needs a real renderer:
-##   godot --path . --script tools/visual/capture_draft.gd -- --out /tmp/draft [--size 390x844] [--filters]
+##   godot --path . --script tools/visual/capture_draft.gd -- --out /tmp/draft [--size 390x844]
 ## Writes <out>_sheet.png.
 
 var W := 390
@@ -14,7 +14,6 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var out := "/tmp/draft"
-	var filters := false
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		if str(a[i]) == "--out" and i + 1 < a.size():
@@ -23,8 +22,6 @@ func _run() -> void:
 			var wh := str(a[i + 1]).split("x")
 			W = int(wh[0])
 			H = int(wh[1])
-		if str(a[i]) == "--filters":
-			filters = true
 	await process_frame
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
@@ -39,9 +36,6 @@ func _run() -> void:
 	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
 	root.add_child(ui)
 	ui.call("_on_club_chosen", "COL")
-	if filters:
-		ui.set("_advanced_open", true)
-		ui.call("_show_board")
 	for i in range(12):
 		await process_frame
 	var img := root.get_viewport().get_texture().get_image()
