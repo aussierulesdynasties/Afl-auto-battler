@@ -23,6 +23,9 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_career.save"
 	_state.settings_path = "user://test_settings.cfg"
+	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_state.set_setting("seen_%s_intro" % key, true)
 	_state.show_real_names = false
 	var script = load("res://tests/test_matchup.gd")
 	if script == null or not script.can_instantiate():
@@ -295,14 +298,11 @@ func _test_regular_bye() -> void:
 	_check(text.contains("Bye") and not text.contains("Season over for you")
 			and not text.contains("missed the top"), "A mid-season bye is not the end of the season")
 	var actions: Node = hub.find_child("WeekActions", true, false)
-	_check(actions != null and actions.find_child("SimToGrandFinal", true, false) == null
-			and actions.find_child("SimFinalsWeek", true, false) == null,
+	_check(actions != null and actions.find_child("SimFinalsWeek", true, false) == null,
 			"No finals controls before the home-and-away season is done")
 	_check(hub.find_child("FinalsOpen", true, false) == null, "No finals series button before September")
 	var sim: Button = actions.find_child("SimByeRound", true, false) if actions != null else null
 	_check(sim != null and sim.text == "Play Round %d" % (r0 + 1), "The bye round can be simmed on its own")
-	hub.call("_on_sim_to_end")
-	_check(season.round_index == r0, "Sim to Grand Final never runs through home-and-away rounds")
 	if sim != null:
 		sim.emit_signal("pressed")
 		await _settle()
@@ -315,7 +315,7 @@ func _test_regular_bye() -> void:
 
 ## Out of the finals, the league still plays them a week at a time: the hub
 ## offers the week, shows its results, and the season (and its awards) ends
-## only after the Grand Final. Sim to Grand Final stays as the fast-forward.
+## only after the Grand Final. There is no skip to the Grand Final.
 func _test_finals_week_by_week() -> void:
 	var db = root.get_node("GameDB")
 	var out := ""
@@ -355,8 +355,7 @@ func _test_finals_week_by_week() -> void:
 	while not _state.season.is_season_over() and weeks < 6:
 		var actions: Node = hub.find_child("WeekActions", true, false)
 		var week: Button = actions.find_child("SimFinalsWeek", true, false) if actions != null else null
-		var skip: Button = actions.find_child("SimToGrandFinal", true, false) if actions != null else null
-		if week == null or skip == null:
+		if week == null or actions.find_child("SimToGrandFinal", true, false) != null:
 			one_at_a_time = false
 			break
 		var before := int(_state.season.finals.get("week", 0))

@@ -46,6 +46,7 @@ func _ready() -> void:
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
 			_build())
 	_build()
+	FirstVisitIntro.show_if_due.call_deferred(self, "selection")
 
 
 func _build() -> void:
@@ -515,6 +516,8 @@ func _close_profile() -> void:
 ## Android Back closes a profile or the synergy guide, then the week sheet
 ## (a phone), then leaves.
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	if _sheet != null and is_instance_valid(_sheet):
 		_close_profile()
 		return true
