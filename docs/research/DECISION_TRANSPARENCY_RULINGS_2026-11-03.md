@@ -55,7 +55,7 @@ Register row 45. Source: [the audit](DECISION_TRANSPARENCY_AUDIT_2026-10-18.md) 
    - B: one line on the scouting budget only.
 5. **List dominant options (L4).** Each needs a cost.
    - **A (recommended): costs already in the rule's spirit**: a haggle under his ask lowers his morale by a stated %; a release pays out a stated share of the contract against the cap; a retiree asked again who says yes plays the season at a stated drop in legs.
-   - B: the lead drafts a cost sheet per option for a later look (as storygates did).
+   - B: a cost sheet per option is drafted for a later look (as storygates did).
    - C: accept these as dominant.
 6. **Club dominant options (C1).**
    - **A (recommended): a cost sheet per option, built like the 17 story cards** (slow start, board %, morale %), for one look.
