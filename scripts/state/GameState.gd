@@ -196,6 +196,8 @@ var media_memory := {}           # question key -> last round asked
 ## The match makes the story (switch "match_story"): one record per match of
 ## yours, oldest first (MatchStory.record). Empty, and not saved, while off.
 var match_stories: Array = []
+## The coach's career arcs (ClubArcs; switch "coach_arcs"). Empty while off.
+var coach_arcs := {}
 ## Matches kept: four seasons' worth, enough for the coach's arcs.
 const MAX_MATCH_STORIES := 120
 var losing_streak := 0
@@ -755,6 +757,8 @@ func save_career() -> bool:
 		state["canberra_on"] = false
 	if not match_stories.is_empty():
 		state["match_stories"] = match_stories
+	if not coach_arcs.is_empty():
+		state["coach_arcs"] = coach_arcs
 	if Features.on("training_report"):
 		state["training_block"] = training_block
 		state["training_report"] = training_report
@@ -901,6 +905,7 @@ func load_career() -> bool:
 	story = StoryEngine.ensure(state.get("story", {}))
 	media_conference = state.get("media_conference", {})
 	match_stories = state.get("match_stories", []) if state.get("match_stories") is Array else []
+	coach_arcs = state.get("coach_arcs", {}) if state.get("coach_arcs") is Dictionary else {}
 	backing_talk = state.get("backing_talk", {})
 	media_memory = state.get("media_memory", {})
 	losing_streak = int(state.get("losing_streak", 0))
@@ -1343,6 +1348,7 @@ func reset() -> void:
 	story = StoryEngine.new_state()
 	media_conference = {}
 	match_stories = []
+	coach_arcs = {}
 	backing_talk = {}
 	media_memory = {}
 	losing_streak = 0
@@ -9788,6 +9794,7 @@ func _open_board_season() -> void:
 	board.erase("promise")
 	losing_streak = 0
 	StoryEngine.new_season(story)
+	ClubArcs.season_start(self)
 	_next_week_event()
 func board_confidence() -> int:
 	return int(board.get("confidence", ClubLife.START_CONFIDENCE))
@@ -10150,6 +10157,7 @@ func _next_week_event() -> void:
 	if season == null or is_sacked() or not stories_on or my_club == "":
 		return
 	week_events = ClubStories.pick(self)
+	ClubArcs.week(self)
 
 
 ## Quick sim: play up to `rounds` home-and-away rounds (-1: to the end of the
@@ -10225,6 +10233,7 @@ func _settle_week_event() -> void:
 		card["choice"] = -1
 		card["outcome"] = str(cost.get("text", "Business as usual."))
 		StoryEngine.record_choice(story, card, -1, story_week())
+		ClubArcs.answered(self, card, -1)
 		mark_dirty()
 
 
@@ -10253,6 +10262,7 @@ func resolve_card(index: int, choice: int) -> String:
 	card["resolved"] = true
 	card["choice"] = choice
 	card["outcome"] = out
+	ClubArcs.answered(self, card, choice)
 	mark_dirty()
 	return out
 

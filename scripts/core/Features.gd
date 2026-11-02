@@ -39,8 +39,13 @@ extends RefCounted
 ##               at the top of the full-time Summary, on the news front, in the press
 ##               question, and kept on GameState.match_stories. Off, none of it shows
 ##               and nothing is written.
+##   coach_arcs   the coach's career arcs (director, 2026-11-03, phase 1): stories that
+##               run across seasons (hot seat, a protege, a drought, a legacy...),
+##               started by real game state and told as Hub event cards
+##               (CoachArcs.gd, ClubArcs.gd, data/arcs/coach_arcs.json). Off, no
+##               arc starts, no card shows and GameState.coach_arcs stays empty.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "match_story"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "match_story", "coach_arcs"]
 
 static var _forced := {}
 static var _from_args := {}
