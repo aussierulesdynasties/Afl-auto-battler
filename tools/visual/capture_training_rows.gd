@@ -2,7 +2,7 @@ extends SceneTree
 ## Real renderer: godot --path . --rendering-method gl_compatibility --script tools/visual/capture_training_rows.gd
 ## Environment: CAP_W, CAP_H (default 390x800), CAP_OUT (file prefix, default
 ## "training_rows"). Saves <prefix>_list.png and <prefix>_group.png: the Training
-## list with a long name, an injury stamp, a manual plan and a short name, then
+## list with a long name, an injury stamp, an archetype plan and a short name, then
 ## the same list with a group selected. Illustrative fixture only; it never
 ## touches a real save.
 
@@ -28,11 +28,11 @@ func _run() -> void:
 	var prefix := OS.get_environment("CAP_OUT") if OS.get_environment("CAP_OUT") != "" else "training_rows"
 	DisplayServer.window_set_size(Vector2i(w, h))
 	root.size = Vector2i(w, h)
-	# The states a real list shows: a long name, an injury stamp, a manual plan.
+	# The states a real list shows: a long name, an injury stamp, an archetype plan.
 	var list: Array = state.my_list
 	list[0]["generic_name"] = "Alexander Papaioannou-Featherstone"
 	list[1]["injury_weeks"] = 3
-	state.set_player_plan(str(list[2]["id"]), "manual")
+	state.set_player_plan(str(list[2]["id"]), str(state.plans_for(list[2])[1]) if state.plans_for(list[2]).size() > 1 else "position")
 	state.set_setting("seen_training_intro", true)
 	router.go("training")
 	for i in range(8):

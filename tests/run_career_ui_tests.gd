@@ -1287,21 +1287,26 @@ Your career stays on this device.",
 		if b.size.y < 44:
 			small_plan = true
 	_check(not small_plan, "Every plan is a thumb-sized tap")
-	var manual_btn: Button = picker.find_child("PlayerPlan_manual", false, false) if picker != null else null
-	if manual_btn != null:
-		manual_btn.emit_signal("pressed")
+	_check(picker != null and picker.find_child("PlayerPlan_manual", false, false) == null,
+			"There is no Manual plan to pick")
+	var other_key := ""
+	for k in _state.plans_for(first):
+		if str(k) != _state.plan_for(first) and not str(k).begins_with(_state.LEARN_PREFIX):
+			other_key = str(k)
+			break
+	var other_btn: Button = picker.find_child("PlayerPlan_" + other_key, false, false) if picker != null and other_key != "" else null
+	if other_btn != null:
+		other_btn.emit_signal("pressed")
 	await _settle()
-	_check(_state.plan_for(first) == "manual", "Tapping a plan sets his plan")
-	_check(current_scene.find_child("ManualWarning", true, false) != null,
-			"Manual is flagged as paused development in the player view")
+	_check(_state.plan_for(first) == other_key, "Tapping a plan sets his plan")
 	var adv: Button = current_scene.find_child("AdvancedToggle", true, false)
-	_check(adv != null and adv.text.begins_with("Stats and hand training"),
-			"Hand training sits behind one button in the player view")
+	_check(adv != null and adv.text == "Stats" and current_scene.find_child("ManualWarning", true, false) == null,
+			"His stats sit behind one button; there is no hand training")
 	if adv != null:
 		adv.emit_signal("pressed")
 		await _settle()
 	var adv2: Button = current_scene.find_child("AdvancedToggle", true, false)
-	_check(adv2 != null and adv2.text.begins_with("Hide"), "The button opens the stats and hand training")
+	_check(adv2 != null and adv2.text.begins_with("Hide"), "The button opens his stats")
 	# Back inside a player detail steps out to the list, not out of Training.
 	_router.handle_back(true)
 	await _settle()

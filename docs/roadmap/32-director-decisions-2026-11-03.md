@@ -11,3 +11,5 @@ his differs, the later one wins. Nothing here edits the bible.
 | 4 | Keep the random story deck? | keep it, and layer coach arcs on top | the 12 decks stay; multi-season arc cards are drawn alongside deck cards and remember named players and clubs (plan step 1a) |
 | 5 | What comes first? | the match hero and why we won or lost | plan step 1b: each match names its hero, its turning point and one to three reasons traced to numbers in the result (MatchStory.gd, switch match_story, off until he plays it) |
 | 6 | A weekly checklist? | yes: a short weekly checklist with one big arc-linked call | replaces "no weekly checklist": each Hub week shows one big call tied to an arc (drop the out-of-form star? play the kid?) plus the routine jobs; the Hub's "There is no weekly checklist" text goes (plan step 3a) |
+
+- Cut Manual stat training (CUT_AUDIT row 6): only the training plans stay; no hand-buying of stat points. Old saves on Manual (own or club plan) load on the plan closest to how each player is built, and his banked XP is spent under it.
