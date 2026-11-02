@@ -51,6 +51,10 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_back_nav.save"
 	_state.settings_path = "user://test_back_nav.cfg"
+	# The first-visit intros (FirstVisitIntro.gd) are their own suite; here every
+	# screen is a return visit, so the top bar's back arrow is uncovered.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_state.set_setting("seen_%s_intro" % key, true)
 	_state.replay_seed = SUITE_SEED
 	_state.delete_saved_career()
 	root.size = Vector2i(1280, 720)

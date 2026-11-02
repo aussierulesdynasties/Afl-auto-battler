@@ -34,6 +34,10 @@ extends RefCounted
 ##               player per rival club, and Canberra as a career choice
 ##               (ExpansionBuild). Off, a new club arrives with the 36
 ##               generated players it always did and Canberra always joins.
+##   milestone_games   the week's milestones (games, debuts, goals, your games
+##               as coach, first win, first final) on the Hub, in the news and
+##               on the full-time screen (Milestones.gd). The record itself is
+##               always kept; off, nothing of it is shown.
 ##   club_almanac   the club almanac (Almanac.gd, AlmanacScene): a page per
 ##               season of your career, reached from the Hub and the season wrap.
 ##               Off, no entry is shown and no almanac page is written.
@@ -55,7 +59,7 @@ extends RefCounted
 ##               unchanged. Off, rival drafting is exactly as before.
 ##               Balance-gated: the director's call.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "ai_draft_buff", "coach_arcs"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "milestone_games", "club_almanac", "match_story", "ai_draft_buff", "coach_arcs"]
 
 static var _forced := {}
 static var _from_args := {}
