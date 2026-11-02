@@ -363,6 +363,8 @@ func _close_profile() -> void:
 
 ## Android Back closes a profile before leaving the list.
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	if _profile != null and is_instance_valid(_profile):
 		if _profile.has_meta("back") and bool((_profile.get_meta("back") as Callable).call()):
 			return true

@@ -11,6 +11,7 @@ var _FV
 var _checks := 0
 var _failures: Array[String] = []
 
+const SUITE_SEED := 2027
 const KEYS := ["draft", "selection", "coaching", "list", "staff", "offseason", "preseason", "season_review"]
 const SCENES := {
 	"selection": "res://scenes/SelectionScene.tscn",
@@ -33,6 +34,7 @@ func _run() -> void:
 	_state.settings_path = "user://test_first_visit_settings.cfg"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(_state.settings_path))
 	_state.show_real_names = false
+	_state.replay_seed = SUITE_SEED
 	_state.reset()
 	_state.start_season("COL", root.get_node("GameDB").club_list("COL"))
 	root.size = Vector2i(390, 844)
@@ -110,9 +112,10 @@ func _test_scene(key: String) -> void:
 	var ok: Button = s.find_child("*IntroOk", true, false)
 	_check(ok != null, "%s screen shows its intro on the first visit" % key)
 	if ok != null:
-		_check((await Tap.tap(ok)) == "", "%s screen: Got it takes a tap" % key)
+		_check(s.handle_back(), "%s screen: Back closes the intro first" % key)
 		await _settle()
-	_check(s.find_child("*IntroOk", true, false) == null, "%s screen: Got it closes it" % key)
+	_check(s.find_child("*IntroOk", true, false) == null, "%s screen: Back closes it, screen stays" % key)
+	_check(s.is_inside_tree(), "%s screen: still open after Back" % key)
 	s.queue_free()
 	await _settle()
 	var again: Control = load(SCENES[key]).instantiate()

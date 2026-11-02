@@ -397,6 +397,8 @@ func _staff_row(job: String, c: Dictionary) -> Control:
 
 ## Router back hook: close a profile first.
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	if _sheet != null and is_instance_valid(_sheet):
 		_sheet.queue_free()
 		_sheet = null

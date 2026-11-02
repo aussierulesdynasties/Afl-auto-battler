@@ -42,6 +42,20 @@ const TEXT := {
 }
 
 
+const GROUP := "first_visit_intro"
+
+
+## Back closes an open intro first, like the four older intros. True if one closed.
+static func close_open(host: Node) -> bool:
+	if not is_instance_valid(host):
+		return false
+	for n in host.get_children():
+		if n.is_in_group(GROUP) and not n.is_queued_for_deletion():
+			n.queue_free()
+			return true
+	return false
+
+
 ## Opens the intro for key over host if it is due. Returns the sheet, or null.
 static func show_if_due(host: Control, key: String) -> Control:
 	if not is_instance_valid(host) or not host.is_inside_tree() or not TEXT.has(key) \
@@ -57,6 +71,7 @@ static func show(host: Control, key: String) -> Control:
 	var overlay: Control = box["overlay"]
 	var node := "".join(Array(key.split("_")).map(func(s: String) -> String: return s.capitalize()))
 	overlay.name = node + "Intro"
+	overlay.add_to_group(GROUP)
 	UiKit.close_on_outside_tap(box)
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading(title, UiKit.TITLE))

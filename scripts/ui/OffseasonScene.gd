@@ -311,6 +311,8 @@ func _close_release() -> void:
 
 
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	if _choosing_club and _tab == "trade":
 		_choosing_club = false
 		_build()

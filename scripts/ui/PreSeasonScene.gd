@@ -1231,6 +1231,8 @@ func _after(at: String) -> void:
 ## Android Back: an open sheet closes first; otherwise the router takes the
 ## coach to the main menu, as from the hub (the career is saved).
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	var plan_sheet := get_node_or_null("SeasonPlanSheet")
 	if plan_sheet != null and is_instance_valid(plan_sheet) and not plan_sheet.is_queued_for_deletion():
 		plan_sheet.queue_free()

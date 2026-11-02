@@ -491,6 +491,8 @@ func _close_profile() -> void:
 ## Android Back closes a profile or the synergy guide, then the week sheet
 ## (a phone), then leaves.
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	if _sheet != null and is_instance_valid(_sheet):
 		_close_profile()
 		return true

@@ -38,6 +38,8 @@ func _ready() -> void:
 
 
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	# The awards program closes before the screen is left (Escape, the mouse's
 	# back button and Android Back all land here).
 	if is_instance_valid(_awards_program):
