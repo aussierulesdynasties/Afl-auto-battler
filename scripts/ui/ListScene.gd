@@ -35,7 +35,7 @@ func _ready() -> void:
 	if not GameState.player_names_changed.is_connected(_on_names):
 		GameState.player_names_changed.connect(_on_names)
 	_build()
-	(func(): FirstVisitIntro.show_if_due(self, "list")).call_deferred()
+	FirstVisitIntro.show_if_due.call_deferred(self, "list")
 
 
 func _on_names() -> void:

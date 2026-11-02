@@ -34,7 +34,7 @@ func _ready() -> void:
 			and not bool(GameState.season_awards.get("presentation_seen", false)):
 		_awards_overlay = SeasonAwards.open(self)
 	else:
-		(func(): FirstVisitIntro.show_if_due(self, "season_review")).call_deferred()
+		FirstVisitIntro.show_if_due.call_deferred(self, "season_review")
 
 
 func handle_back() -> bool:

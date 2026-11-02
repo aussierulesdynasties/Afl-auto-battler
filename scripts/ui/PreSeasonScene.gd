@@ -46,7 +46,7 @@ func _ready() -> void:
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(_on_resize)
 	_build()
-	(func(): FirstVisitIntro.show_if_due(self, "preseason")).call_deferred()
+	FirstVisitIntro.show_if_due.call_deferred(self, "preseason")
 
 
 func _on_resize() -> void:
