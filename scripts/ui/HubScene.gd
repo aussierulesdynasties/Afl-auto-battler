@@ -660,6 +660,9 @@ func _week_section(season: Season) -> Control:
 		# The football: two or three facts, then anything on our side.
 		var facts := GameState.opponent_facts(opp)
 		var notes := GameState.my_week_notes()
+		# The milestone card says these when it is on (_milestone_card).
+		if Milestones.shown():
+			notes = notes.filter(func(n): return str(n.get("key", "")) != "milestone")
 		# The one who got away (P-16): a player who left you and lines up for
 		# them, from what the club kept. Nothing when there is no one.
 		var former := GameState.former_players(opp).slice(0, FormerPlayers.SHOWN)
@@ -696,6 +699,10 @@ func _week_section(season: Season) -> Control:
 		if plan_line != null:
 			nv.add_child(UiKit.spacer(4))
 			nv.add_child(plan_line)
+		var ms_card := _milestone_card()
+		if ms_card != null:
+			nv.add_child(UiKit.spacer(4))
+			nv.add_child(ms_card)
 		for i in range(GameState.week_events.size()):
 			nv.add_child(UiKit.spacer(4))
 			var ev := _event_card(i)
@@ -711,6 +718,26 @@ func _week_section(season: Season) -> Control:
 		nv.add_child(UiKit.spacer(4))
 		nv.add_child(_with_jobs_note(_week_actions(season)))
 	return nv
+
+
+## The week's milestones (Milestones.gd), behind the switch milestone_games:
+## a small card in the event-card style, or nothing.
+func _milestone_card() -> Control:
+	if not Milestones.shown():
+		return null
+	var items := Milestones.upcoming(GameState)
+	if items.is_empty():
+		return null
+	var panel := UiKit.panel(UiKit.PANEL, 12)
+	panel.name = "MilestoneCard"
+	var v := UiKit.vbox(4)
+	panel.add_child(v)
+	v.add_child(UiKit.lbl("Milestones this week", UiKit.SMALL, UiKit.MUTED, true))
+	for i in range(items.size()):
+		var l := NameInk.label(str(items[i]["text"]), _league_names(), UiKit.BODY, UiKit.TEXT)
+		l.name = "Milestone_%d" % i
+		v.add_child(l)
+	return panel
 
 
 ## The week's jobs (WeekChecklist; setting "weekly_checklist", off by
