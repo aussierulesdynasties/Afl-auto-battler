@@ -444,5 +444,132 @@
 		],
 		"cooldown": 20,
 		"per_season": 1
+	},
+	{
+		"id": "finals_drought_over",
+		"category": "members",
+		"feature": "finals_cards_2",
+		"subject": {
+			"kind": "club"
+		},
+		"phase": [
+			"finals"
+		],
+		"bye": true,
+		"per_season": 1,
+		"weight": 3,
+		"when": {
+			"finals_week": 1,
+			"years_since_final_min": 3
+		},
+		"title": [
+			"Our first final since {last_final_year}"
+		],
+		"text": [
+			"The queue for tickets runs round the block. The players can hear the supporters from the track."
+		],
+		"choices": [
+			{
+				"key": "feel",
+				"label": "Let the players feel it",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 6,
+						"who": "all"
+					},
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 2,
+						"why": "The players shared the first final in years with the supporters"
+					}
+				],
+				"result": "The players walk the queue after training, signing whatever's handed to them."
+			},
+			{
+				"key": "outside",
+				"label": "Keep the noise outside",
+				"effects": [
+					{
+						"op": "xp",
+						"d": 3,
+						"who": "all"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You kept the first final in years a week like any other"
+					}
+				],
+				"result": "Same drills, same meetings, same Thursday. The doors stay shut."
+			}
+		]
+	},
+	{
+		"id": "gf_premiers",
+		"category": "members",
+		"feature": "finals_cards_2",
+		"subject": {
+			"kind": "club"
+		},
+		"phase": [
+			"season_end"
+		],
+		"priority": true,
+		"cooldown": 0,
+		"weight": 1,
+		"when": {
+			"result": "premier"
+		},
+		"title": [
+			"Premiers"
+		],
+		"text": [
+			"{margin_line} {history_line} {best_line}"
+		],
+		"choices": [
+			{
+				"key": "celebrate",
+				"label": "Celebrate it properly",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 10,
+						"who": "all"
+					},
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 2,
+						"why": "You let the premiership players celebrate it properly"
+					},
+					{
+						"op": "running",
+						"d": -1
+					}
+				],
+				"result": "The celebrations run for a week."
+			},
+			{
+				"key": "again",
+				"label": "One week, then go again",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 4,
+						"who": "all"
+					},
+					{
+						"op": "culture",
+						"strand": "ambition",
+						"d": 2,
+						"why": "One week of celebrations, then you set the next target"
+					}
+				],
+				"result": "One week, then the talk turns to doing it again."
+			}
+		]
 	}
 ]

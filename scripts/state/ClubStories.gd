@@ -32,6 +32,8 @@ static func phase(gs) -> String:
 ## This week's cards. In the finals, only while you are still in it: playing,
 ## or on the week off a qualifying final or a top-six finish earns.
 static func pick(gs) -> Array:
+	if season_end_due(gs):
+		return _season_end_pick(gs)
 	if phase(gs) == "finals" and (gs.season.is_season_over() or not ["alive", "bye"].has(gs.my_finals_status())):
 		return []
 	var cards: Array = StoryEngine.pick_week(StoryDeck.all(), context(gs), gs.story)
@@ -51,9 +53,28 @@ static func pick(gs) -> Array:
 	return cards
 
 
-static func context(gs) -> Dictionary:
+## The week your season ends (finals_cards_2): knocked out, or the Grand Final
+## played. One card, once a season (the story's season counts hold the mark).
+const SEASON_END_MARK := "_season_end"
+
+
+static func season_end_due(gs) -> bool:
+	if not Features.on(StoryDeck.FINALS_2) or gs.season == null or not gs.season.is_regular_done():
+		return false
+	if not ["eliminated", "premier", "runner_up"].has(gs.my_finals_status()):
+		return false
+	StoryEngine.ensure(gs.story)
+	return not (gs.story["season"] as Dictionary).has(SEASON_END_MARK)
+
+
+static func _season_end_pick(gs) -> Array:
+	(gs.story["season"] as Dictionary)[SEASON_END_MARK] = 1
+	return StoryEngine.pick_week(StoryDeck.all(), context(gs, "season_end"), gs.story)
+
+
+static func context(gs, ph_override := "") -> Dictionary:
 	var week := week_in_season(gs)
-	var ph := phase(gs)
+	var ph := phase(gs) if ph_override == "" else ph_override
 	return {"seed": int(gs.season.seed), "year": int(gs.season_year), "week": week, "phase": ph,
 			"big": ph == "finals" or (ph == "regular" and (week == 1 or week == Season.REGULAR_ROUNDS)),
 			"club": club_facts(gs, week, ph), "players": player_facts(gs)}
@@ -68,7 +89,7 @@ static func club_facts(gs, week: int, ph: String) -> Dictionary:
 			"year": int(gs.season_year), "losing_run": int(gs.losing_streak), "winning_run": _winning_run(gs),
 			"ladder": gs.my_position(), "board": gs.board_confidence(), "fit_count": fit,
 			"run_games": MatchNotes.count_word(Backing.RUN_GAMES),
-			"finals_week": week - Season.REGULAR_ROUNDS if ph == "finals" else 0,
+			"finals_week": week - Season.REGULAR_ROUNDS if ph == "finals" or ph == "season_end" else 0,
 			"pre_week": gs.preseason_week() if ph == "preseason" else 0, "premiers": _premiers_last_year(gs)}
 	facts.merge(_leader_facts(gs), true)
 	facts.merge(_finals_facts(gs, ph), true)
@@ -128,12 +149,203 @@ static func _finals_facts(gs, ph: String) -> Dictionary:
 	if ph == "regular":
 		out["finals_math"] = gs.season.finals_math(gs.my_club)
 		return out
+	if Features.on(StoryDeck.FINALS_2):
+		out.merge(finals_2_facts(gs, ph), true)
 	out["finals_bye"] = gs.my_finals_status() == "bye"
 	var slots: Dictionary = gs.season.finals.get("slots", {})
 	out["lost_last_final"] = str(slots.get("L_QF1", "")) == gs.my_club or str(slots.get("L_QF2", "")) == gs.my_club
 	if int(gs.season.finals.get("week", 0)) == 5:
 		out.merge(_grand_final_story(gs), true)
 	return out
+
+
+## The finals cards' second slice (finals_cards_2). Only in-save history and
+## data/club_premierships.csv are read (director, 2026-11-03).
+const FINAL_WORDS := {"WC": "wildcard final", "EF": "elimination final", "SF": "semi-final",
+		"PF": "preliminary final", "QF": "qualifying final", "GF": "Grand Final"}
+## A flag or a Grand Final this many seasons ago or longer is a drought.
+const DROUGHT_YEARS := 10
+const RUN_WORDS := {2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six", 7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten"}
+const FORECAST := {"perfect": "Not a cloud forecast for tomorrow.", "wet": "Rain's forecast for tomorrow.",
+		"windy": "A gusty northerly is forecast for tomorrow.", "hot": "It's going to be a hot one tomorrow."}
+
+
+static func finals_2_facts(gs, ph: String) -> Dictionary:
+	var year := int(gs.season_year)
+	var out := {"underdog": false, "years_since_final": 0, "last_final_year": 0, "forecast_line": "",
+			"result": "", "lost_final": "", "lost_prelim": false, "margin": 0, "margin_line": "",
+			"history_line": "", "best_line": ""}
+	# The last season this save saw you play finals (the board's record of each finish).
+	var last := 0
+	for h in gs.board.get("history", []):
+		var y := int((h as Dictionary).get("year", 0))
+		if y < year and int(h.get("position", 99)) <= Season.FINALISTS and y > last:
+			last = y
+	if last > 0:
+		out["last_final_year"] = last
+		out["years_since_final"] = year - last - 1
+	if ph == "finals":
+		var opp := _this_week_opponent(gs)
+		if opp != "":
+			var pos := _ladder_positions(gs.season)
+			out["underdog"] = int(pos.get(opp, 99)) < int(pos.get(gs.my_club, 99))
+		if int(gs.season.finals.get("week", 0)) == 5:
+			out["forecast_line"] = _forecast_line(gs)
+		return out
+	if ph != "season_end":
+		return out
+	var status: String = gs.my_finals_status()
+	out["result"] = status
+	var slots: Dictionary = gs.season.finals.get("slots", {})
+	for tag in ["WC1", "WC2", "EF1", "EF2", "SF1", "SF2", "PF1", "PF2", "GF"]:
+		if str(slots.get("L_" + tag, "")) == gs.my_club:
+			out["lost_final"] = str(FINAL_WORDS.get(tag.substr(0, 2), "final"))
+			out["lost_prelim"] = tag.begins_with("PF")
+	if status == "premier" or status == "runner_up":
+		var gf := _grand_final_result(gs)
+		if not gf.is_empty():
+			var side := 0 if str(gf["home"]) == gs.my_club else 1
+			var sc: Array = gf.get("score", [0, 0])
+			out["margin"] = absi(int(sc[0]) - int(sc[1]))
+			out["best_line"] = _best_line(gs, gf, side, status == "premier")
+		out["margin_line"] = margin_line(int(out["margin"]), status == "premier")
+		out["history_line"] = history_line(gs.my_club, year, gs.honour_roll, status == "premier")
+	return out
+
+
+static func _this_week_opponent(gs) -> String:
+	for m in gs.season.finals_week_matches():
+		if str(m["home"]) == gs.my_club:
+			return str(m["away"])
+		if str(m["away"]) == gs.my_club:
+			return str(m["home"])
+	return ""
+
+
+static func _ladder_positions(sea) -> Dictionary:
+	var out := {}
+	var rows: Array = sea.ladder_sorted()
+	for i in range(rows.size()):
+		out[str(rows[i]["code"])] = i + 1
+	return out
+
+
+## The Grand Final's seeded weather: the weather it is played in (GameState plays it with the same call).
+static func _forecast_line(gs) -> String:
+	for m in gs.season.finals_week_matches():
+		if str(m["home"]) == gs.my_club or str(m["away"]) == gs.my_club:
+			var w: String = gs.season.weather_for(str(m["home"]), str(m["away"]), Season.REGULAR_ROUNDS + 5, m)
+			return str(FORECAST.get(w, FORECAST["perfect"]))
+	return ""
+
+
+static func _grand_final_result(gs) -> Dictionary:
+	for week in gs.season.finals.get("weeks", []):
+		for res in week:
+			if str((res as Dictionary).get("tag", "")) == "GF":
+				return res
+	return {}
+
+
+## The final margin only: no line claims how the game unfolded.
+static func margin_line(m: int, won: bool) -> String:
+	if won:
+		if m <= 6:
+			return "By %d points. A kick in it at the siren." % m
+		if m <= 24:
+			return "By %d points." % m
+		if m <= 39:
+			return "By %d points, comfortably." % m
+		return "By %d points. A thumping." % m
+	if m <= 6:
+		return "Beaten by %d points. Under a goal." % m
+	if m <= 24:
+		return "Beaten by %d points." % m
+	if m <= 39:
+		return "Beaten by %d points, well held." % m
+	return "Beaten by %d points. A hiding." % m
+
+
+## The club's history, with this year's Grand Final the newest entry. Flags come
+## from the save's honour roll and, before the save, data/club_premierships.csv;
+## Grand Finals lost only from the save. Where the record cannot know, the line says nothing it can't.
+static func history_line(club: String, year: int, roll: Array, won: bool) -> String:
+	var flags := {}
+	var lost := {}
+	var save_from := year
+	for h in roll:
+		var y := int((h as Dictionary).get("year", 0))
+		if y >= year:
+			continue
+		save_from = mini(save_from, y)
+		if str(h.get("premier", "")) == club:
+			flags[y] = true
+		elif str(h.get("runner_up", "")) == club:
+			lost[y] = true
+	var before := ClubHistory.before_career(club)
+	for y in before["years"]:
+		if int(y) < save_from:
+			flags[int(y)] = true
+	var last_flag := 0
+	for y in flags:
+		last_flag = maxi(last_flag, int(y))
+	if won:
+		if flags.is_empty() and bool(before["known"]):
+			return "The club's first premiership. Ever."
+		var run := 1
+		while flags.has(year - run):
+			run += 1
+		if run == 2:
+			return "Back-to-back."
+		if run >= 3:
+			return "%s in a row." % str(RUN_WORDS.get(run, str(run)))
+		if lost.has(year - 1):
+			return "A year after losing one, they've won one."
+		if last_flag > 0 and year - last_flag >= DROUGHT_YEARS:
+			return "The first flag since %d." % last_flag
+		return "Another flag for the club."
+	var losses := 1
+	while lost.has(year - losses):
+		losses += 1
+	if losses == 2:
+		return "Two Grand Finals, two losses."
+	if losses >= 3:
+		return "%s Grand Finals lost in a row." % str(RUN_WORDS.get(losses, str(losses)))
+	if flags.has(year - 1):
+		return "Last year's premiers, beaten on the day."
+	var last_gf := last_flag
+	for y in lost:
+		last_gf = maxi(last_gf, int(y))
+	if last_gf > 0 and year - last_gf >= DROUGHT_YEARS:
+		return "The first Grand Final since %d, and it got away." % last_gf
+	return "So close to a flag."
+
+
+## Your best player in the Grand Final by influence (the Norm Smith's own measure),
+## and whether he was best on ground.
+static func _best_line(gs, gf: Dictionary, side: int, won: bool) -> String:
+	var stats_all: Dictionary = gf.get("players", {})
+	var roster: Array = gf.get("roster", [])
+	if roster.size() <= side:
+		return ""
+	var best_id := ""
+	var best_inf := -INF
+	for r in roster[side]:
+		var id := str(r["id"])
+		if stats_all.has(id):
+			var inf := CoachReport.influence(stats_all[id])
+			if inf > best_inf:
+				best_inf = inf
+				best_id = id
+	if best_id == "":
+		return ""
+	var who: String = gs.award_name({"id": best_id})
+	if not won:
+		return "%s gave everything." % who
+	var bog: Dictionary = Awards.norm_smith(gf)
+	if str(bog.get("id", "")) == best_id:
+		return "%s was best on ground." % who
+	return "%s was your best." % who
 
 
 ## The Grand Final against this opponent: how many in a row (this one included),
@@ -428,7 +640,8 @@ static func card_for(gs, tid: String, p: Dictionary = {}, extra: Dictionary = {}
 	var t := StoryDeck.by_id(deck, tid)
 	if t.is_empty():
 		return {}
-	var ctx := context(gs) if gs.season != null else {"club": {}, "players": []}
+	var end_card := (t.get("phase", []) as Array).has("season_end")
+	var ctx := context(gs, "season_end" if end_card else "") if gs.season != null else {"club": {}, "players": []}
 	var subj := {"kind": "club"}
 	if not p.is_empty():
 		subj = {}
@@ -567,7 +780,11 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 		"culture":
 			gs._culture_move(gs.my_club, str(e.get("strand", "")), d, StoryEngine.fill(str(e.get("why", "")), facts))
 		"running":
-			gs.preseason_add_running(float(d))
+			if str(facts.get("result", "")) != "" and not gs.preseason_active():
+				# The week the season ends (B8): next pre-season starts behind.
+				gs.preseason_run_debt += float(d)
+			else:
+				gs.preseason_add_running(float(d))
 		"drill":
 			gs.preseason_add_drill(d)
 		"news":

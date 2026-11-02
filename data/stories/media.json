@@ -859,5 +859,178 @@
 			}
 		],
 		"default": -1
+	},
+	{
+		"id": "finals_prelim_week",
+		"category": "media",
+		"feature": "finals_cards_2",
+		"subject": {
+			"kind": "club"
+		},
+		"phase": [
+			"finals"
+		],
+		"when": {
+			"finals_week": 4
+		},
+		"title": [
+			"One win from the Grand Final"
+		],
+		"text": [
+			"Everyone outside the club wants to talk about the last Saturday in September. You need them thinking about this week."
+		],
+		"choices": [
+			{
+				"key": "ban",
+				"label": "No Grand Final talk at the club",
+				"effects": [
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 2,
+						"why": "You banned Grand Final talk in prelim week"
+					},
+					{
+						"op": "morale",
+						"d": -2,
+						"who": "all"
+					}
+				],
+				"result": "Anyone who says the words buys the coffees. Nobody slips."
+			},
+			{
+				"key": "dream",
+				"label": "Let them dream a little",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 5,
+						"who": "all"
+					},
+					{
+						"op": "slow_start",
+						"who": "side",
+						"chance": 20,
+						"on": "week"
+					}
+				],
+				"result": "The players talk about the big day. Training has an edge to it."
+			}
+		]
+	},
+	{
+		"id": "finals_written_off",
+		"category": "media",
+		"feature": "finals_cards_2",
+		"subject": {
+			"kind": "club"
+		},
+		"phase": [
+			"finals"
+		],
+		"when": {
+			"finals_week_max": 4,
+			"underdog": true
+		},
+		"title": [
+			"Most of the tips have {opp} winning"
+		],
+		"text": [
+			"They finished above you, and the papers have noticed. The reporters want to know if you've read it."
+		],
+		"choices": [
+			{
+				"key": "pin",
+				"label": "Pin the tips up in the rooms",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 5,
+						"who": "side"
+					}
+				],
+				"result": "Every tip for {opp} goes on the noticeboard. The players read them twice."
+			},
+			{
+				"key": "back",
+				"label": "Back your players in the press",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 2,
+						"who": "side"
+					},
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 2,
+						"why": "You backed your players in the press before a final"
+					}
+				],
+				"result": "\"We finished below them. We've beaten better sides.\" The players notice."
+			}
+		]
+	},
+	{
+		"id": "finals_one_week_short",
+		"category": "media",
+		"feature": "finals_cards_2",
+		"subject": {
+			"kind": "club"
+		},
+		"phase": [
+			"season_end"
+		],
+		"priority": true,
+		"cooldown": 0,
+		"weight": 1,
+		"when": {
+			"result": "eliminated",
+			"lost_prelim": true
+		},
+		"title": [
+			"One week short"
+		],
+		"text": [
+			"A preliminary final lost. The first question in the press conference: has this list gone as far as it can?"
+		],
+		"choices": [
+			{
+				"key": "not_done",
+				"label": "This group isn't done",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 4,
+						"who": "all"
+					},
+					{
+						"op": "culture",
+						"strand": "ambition",
+						"d": 2,
+						"why": "You told the press this group isn't done"
+					}
+				],
+				"result": "\"We'll be back here, and we'll go one better.\""
+			},
+			{
+				"key": "nobody",
+				"label": "Nobody's spot is safe",
+				"effects": [
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 2,
+						"why": "You told the press nobody's spot was safe after the prelim"
+					},
+					{
+						"op": "morale",
+						"d": -5,
+						"who": "all"
+					}
+				],
+				"result": "\"We'll look hard at the list and at how we play. Nobody's spot is safe.\" The players read every word."
+			}
+		]
 	}
 ]

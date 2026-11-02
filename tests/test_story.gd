@@ -75,10 +75,12 @@ func run() -> void:
 	finals_cards.run(self)
 	var preseason_cards = load("res://tests/test_preseason_cards.gd").new()
 	preseason_cards.run(self)
+	var finals_cards_2 = load("res://tests/test_finals_cards_2.gd").new()
+	finals_cards_2.run(self)
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	GameState.stories_on = true
-	print(Ran.line("Story", self, [finals_cards, preseason_cards]))
+	print(Ran.line("Story", self, [finals_cards, preseason_cards, finals_cards_2]))
 
 
 func _check(condition: bool, message: String) -> void:

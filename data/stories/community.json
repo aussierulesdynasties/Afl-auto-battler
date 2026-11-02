@@ -295,5 +295,58 @@
 				"result": "The session runs as planned. A couple of the old players take it personally."
 			}
 		]
+	},
+	{
+		"id": "gf_night_before",
+		"category": "community",
+		"feature": "finals_cards_2",
+		"subject": {
+			"kind": "club"
+		},
+		"phase": [
+			"finals"
+		],
+		"when": {
+			"finals_week": 5
+		},
+		"weight": 1,
+		"cooldown": 60,
+		"title": [
+			"The night before"
+		],
+		"text": [
+			"{forecast_line} Some of them won't sleep a wink."
+		],
+		"choices": [
+			{
+				"key": "together",
+				"label": "All together",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 4,
+						"who": "side"
+					},
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 2,
+						"why": "The players spent the night before the Grand Final together"
+					}
+				],
+				"result": "One long table, a few quiet words from the captain, lights out by ten."
+			},
+			{
+				"key": "families",
+				"label": "With their families",
+				"effects": [
+					{
+						"op": "fresh",
+						"who": "side"
+					}
+				],
+				"result": "Dinner at home and their own bed. Nobody's in a hurry to talk footy."
+			}
+		]
 	}
 ]
