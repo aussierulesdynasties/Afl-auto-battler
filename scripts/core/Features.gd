@@ -18,7 +18,7 @@ extends RefCounted
 ## Otherwise it is OFF: every test suite that does not ask for it, and a plain
 ## editor run, for any switch whose project setting is false.
 ##
-## Switches (international_prospects ships ON since 2026-10-18; preseason, speccy_front, training_report ship off):
+## Switches (international_prospects ships ON since 2026-10-18; preseason, speccy_front, training_report, top_attributes ship off):
 ##   preseason   the eight-week pre-season between the wrap and Round 1
 ##               (PreSeason.gd, PreSeasonScene), and everything built on it
 ##               for patch 0.2.0 (the pre-season match comes next).
@@ -29,8 +29,12 @@ extends RefCounted
 ##               and their story beats. Off, generated classes are exactly as before.
 ##   training_report   the report after every fourth round: who improved, who
 ##               fell back, and who can learn a new position (TrainingReport.gd).
+##   top_attributes   every player card (profile sheet, draft detail) shows his top three
+##               rated attributes, and Needs work says how he sits against players of
+##               his position (PlayerProfile.top_attributes / needs_work_line). Off,
+##               the cards show the graded strengths and the old Needs work line.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "top_attributes"]
 
 static var _forced := {}
 static var _from_args := {}
