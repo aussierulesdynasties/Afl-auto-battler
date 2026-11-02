@@ -34,8 +34,13 @@ extends RefCounted
 ##               player per rival club, and Canberra as a career choice
 ##               (ExpansionBuild). Off, a new club arrives with the 36
 ##               generated players it always did and Canberra always joins.
+##   match_story   the match makes the story (director, 2026-11-03, plan step 1b): each
+##               match's hero, turning point and why it was won or lost (MatchStory.gd),
+##               at the top of the full-time Summary, on the news front, in the press
+##               question, and kept on GameState.match_stories. Off, none of it shows
+##               and nothing is written.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "match_story"]
 
 static var _forced := {}
 static var _from_args := {}
