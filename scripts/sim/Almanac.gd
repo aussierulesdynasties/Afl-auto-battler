@@ -131,6 +131,10 @@ static func add_legends(gs, retired: Array, listed: Dictionary) -> void:
 	if gs.almanac.is_empty():
 		return
 	var entry: Dictionary = gs.almanac.back()
+	# Only onto the page of the season just closed: with the switch turned on
+	# mid-career, the last page may be an older year that these men never saw out.
+	if int(entry.get("year", 0)) != int(gs.season_year):
+		return
 	var legends: Array = entry.get("legends", [])
 	for r in retired:
 		if str(r.get("club", "")) != str(entry.get("club", "")):
