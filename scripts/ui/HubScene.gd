@@ -243,7 +243,10 @@ func _build() -> void:
 	# PC: the ladder and the league's front page stand side by side in the right
 	# column, both in view without scrolling (director, 2026-10-14).
 	var right_w := (_content_width() - 28.0) * 0.56
-	var ladder := _ladder_section(season, -1.0 if _narrow() else right_w * 0.42)
+	# With no news yet the ladder has the column to itself: its table is laid out
+	# for that width, so the record stays beside its club (row-gap rule).
+	var ladder_w := right_w * (1.0 if GameState.news.is_empty() else 0.42)
+	var ladder := _ladder_section(season, -1.0 if _narrow() else ladder_w)
 	if _narrow():
 		if TrainingReport.hub_due(GameState):
 			page.add_child(TrainingReportSheet.hub_card(self, _go_retrain))
