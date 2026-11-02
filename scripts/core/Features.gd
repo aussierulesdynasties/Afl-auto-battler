@@ -43,7 +43,17 @@ extends RefCounted
 ##               question, and kept on GameState.match_stories. Off, none of it shows
 ##               and nothing is written.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2"]
+##   ai_draft_buff   rival clubs' National Draft picks lean on the best player
+##               available (roadmap row 37): scarcity ramps in over two rounds and
+##               counts for at most 5 points, a covered position keeps 97% of a
+##               prospect's worth (was 92%). Rivals only: the user's Pick for me is
+##               unchanged. Off, rival drafting is exactly as before.
+##               Balance-gated: the director's call.
+##   finals_cards_2  the finals cards' second slice (rows 35, 36): A3, A9, A14, B7 in
+##               finals weeks, and one card the week your season ends (A15, A16, B8,
+##               B9). Off, those cards are not in the deck and nothing is written.
+
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "ai_draft_buff", "finals_cards_2"]
 
 static var _forced := {}
 static var _from_args := {}
