@@ -47,7 +47,14 @@ extends RefCounted
 ##               his position (PlayerProfile.top_attributes / needs_work_line). Off,
 ##               the cards show the graded strengths and the old Needs work line.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "top_attributes"]
+##   ai_draft_buff   rival clubs' National Draft picks lean on the best player
+##               available (roadmap row 37): scarcity ramps in over two rounds and
+##               counts for at most 5 points, a covered position keeps 97% of a
+##               prospect's worth (was 92%). Rivals only: the user's Pick for me is
+##               unchanged. Off, rival drafting is exactly as before.
+##               Balance-gated: the director's call.
+
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "ai_draft_buff", "top_attributes"]
 
 static var _forced := {}
 static var _from_args := {}
