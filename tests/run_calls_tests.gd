@@ -24,6 +24,9 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_career.save"
 	_state.settings_path = "user://test_settings.cfg"
+	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_state.set_setting("seen_%s_intro" % key, true)
 	_state.show_real_names = false
 	_state.replay_seed = SUITE_SEED
 	await _t("_test_main_ruck_default_and_sticks")

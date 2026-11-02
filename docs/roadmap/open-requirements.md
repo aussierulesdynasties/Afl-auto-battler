@@ -52,7 +52,7 @@ Nothing here starts until the boss assigns it. Reconciled 2026-10-10 against mai
 | # | Requirement | Source | Owner | Status |
 |---|---|---|---|---|
 | 26 | Season stats hub phone review | §1.11 stats patch | director | waiting |
-| 27 | Stat guide as a topic grid; per-menu first-visit tutorials | §1.11 stat guide, tutorials | none | toggle #572 DONE; rest open |
+| 27 | Stat guide as a topic grid; per-menu first-visit tutorials | §1.11 stat guide, tutorials | tests/run_first_visit_intro_tests.gd | toggle #572 DONE; first-visit intros on every main screen (draft, selection, coaching, list, staff, off-season, pre-season, season review; scripts/ui/FirstVisitIntro.gd) DONE; stat guide topic grid open |
 
 ## Audits the roadmap asks for, unowned
 

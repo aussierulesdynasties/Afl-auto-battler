@@ -25,6 +25,7 @@ func _ready() -> void:
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(_on_resize)
 	_build()
+	FirstVisitIntro.show_if_due.call_deferred(self, "coaching")
 
 
 func _on_resize() -> void:
@@ -396,6 +397,8 @@ func _staff_row(job: String, c: Dictionary) -> Control:
 
 ## Router back hook: close a profile first.
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	if _sheet != null and is_instance_valid(_sheet):
 		_sheet.queue_free()
 		_sheet = null

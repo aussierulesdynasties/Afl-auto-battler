@@ -54,6 +54,7 @@ func _ready() -> void:
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
 			_build())
 	_build()
+	FirstVisitIntro.show_if_due.call_deferred(self, "offseason")
 
 
 func _build() -> void:
@@ -310,6 +311,8 @@ func _close_release() -> void:
 
 
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	if _choosing_club and _tab == "trade":
 		_choosing_club = false
 		_build()

@@ -33,9 +33,13 @@ func _ready() -> void:
 	if not GameState.season_awards.is_empty() and GameState.season.is_season_over() \
 			and not bool(GameState.season_awards.get("presentation_seen", false)):
 		_awards_overlay = SeasonAwards.open(self)
+	else:
+		FirstVisitIntro.show_if_due.call_deferred(self, "season_review")
 
 
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	# The awards program closes before the screen is left (Escape, the mouse's
 	# back button and Android Back all land here).
 	if is_instance_valid(_awards_program):

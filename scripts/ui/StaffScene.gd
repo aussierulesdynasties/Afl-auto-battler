@@ -29,6 +29,7 @@ func _ready() -> void:
 		if not UiKit.keyboard_resize(self):
 			_build())
 	_build()
+	FirstVisitIntro.show_if_due.call_deferred(self, "staff")
 
 
 func _build() -> void:
@@ -276,6 +277,8 @@ func _padded(c: Control) -> Control:
 ## Router back hook: close a profile first, then return to your own staff,
 ## then leave.
 func handle_back() -> bool:
+	if FirstVisitIntro.close_open(self):
+		return true
 	if is_instance_valid(_sheet):
 		_sheet.queue_free()
 		_sheet = null

@@ -317,6 +317,9 @@ func _run() -> void:
 	_state.replay_seed = SUITE_SEED
 	_state.delete_saved_career()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_settings.cfg"))
+	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_state.set_setting("seen_%s_intro" % key, true)
 	_t("_test_press_rolls")
 
 	await _t("_test_menu_and_career")

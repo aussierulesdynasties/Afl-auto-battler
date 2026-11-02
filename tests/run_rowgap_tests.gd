@@ -54,6 +54,9 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_rowgap.save"
 	_state.settings_path = "user://test_rowgap.cfg"
+	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_state.set_setting("seen_%s_intro" % key, true)
 	_state.delete_saved_career()
 	for size in SIZES:
 		root.size = size
