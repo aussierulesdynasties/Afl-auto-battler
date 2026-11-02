@@ -19,6 +19,11 @@ his differs, the later one wins. Nothing here edits the bible.
 | 8 | Cut "Play to Grand Final" and the long-press play-ahead menu? | cut (CUT_AUDIT row 11) | Sim the week is the only fast path: one round at a time, finals included; UI-only, nothing saved, so no save migration |
 | 9 | Milestone games: switch on or off? | live, no off switch | the `milestone_games` switch is removed (Features.KNOWN, Milestones.FEATURE); the Hub milestone card, news preview and full-time line always show; recording was already always on |
 
+- **Row 37 draft logic, later ruling (2026-11-03):** the buff also applies to the user's "Pick for me", and the sim must
+  be extremely competent: every club, the user's included, acts in its own best interest at all times; mistakes come
+  only from imperfect information, never from deliberate dumbing down. The buffed logic is now the only National Draft
+  logic (rivals, Pick for me, sim-through picks, live pick trades); switch `ai_draft_buff` is gone. Supersedes row 7.
+
 ## Cuts shipped
 
 - Cut audit §10 row 1 (CUT_AUDIT_2026-11-03.md): the intra-club match (week 5) and the practice match (week 7) are one
