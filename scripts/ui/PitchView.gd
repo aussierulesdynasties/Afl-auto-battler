@@ -166,7 +166,7 @@ class MiniFigures extends Control:
 	func _draw() -> void:
 		for s in slots:
 			StoppageVignette.draw_frame(self, s["feet"], s["info"], int(s["frame"]), float(s["k"]),
-					s["colour"], bool(s["mirror"]), s["number"], Transform2D.IDENTITY, str(s["hair"]))
+					s["colour"], bool(s["mirror"]), s["number"], Transform2D.IDENTITY, str(s["hair"]), int(s.get("face", -1)))
 
 
 func _ready() -> void:
@@ -1945,7 +1945,8 @@ func _figure_slots(tr: float) -> Array:
 			number = StoppageVignette.number_colour(kit, int(t["num"]), 1.0, mirror)
 		out.append({"feet": p + Vector2(0, tr * 0.3), "info": info, "frame": frame, "k": k,
 				"colour": StoppageVignette.look_colour(kit, look, mirror), "mirror": mirror,
-				"number": number, "hair": str(look.get("hair_style", VignetteFigures.HAIR_BASE))})
+				"number": number, "hair": str(look.get("hair_style", VignetteFigures.HAIR_BASE)),
+				"face": StoppageVignette.face_of(look)})
 	# The man lower on the screen stands in front.
 	out.sort_custom(func(a, b): return (a["feet"] as Vector2).y < (b["feet"] as Vector2).y)
 	return out
