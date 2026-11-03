@@ -22,6 +22,8 @@ his differs, the later one wins. Nothing here edits the bible.
 | 11 | A3 "Keep the noise outside" board +1? | swap it for Standards +1 | no card of the eight rewards the board |
 | 12 | Where do the Grand Final history lines come from? | only the save's own history plus data/club_premierships.csv | no line claims a final or flag the record cannot show |
 | 13 | Milestone games: switch on or off? | live, no off switch | the `milestone_games` switch is removed (Features.KNOWN, Milestones.FEATURE); the Hub milestone card, news preview and full-time line always show; recording was already always on |
+| 14 | Row 10 receiver choice: can a kick go to anyone on the ground? | no: the receiver is capped by a maximum kick distance from the kicker's kicking rating; better kickers reach further; nearest teammate when nobody is in range | `MatchSim.kick_range` = 30 m + 0.35 x disposal (44 m at 40, 63 m at 95); `kick_targets` keeps teammates whose line home (DEF -50, MID/RUCK 0, FWD +50 m from centre) is in reach; switch `kick_range` (off) |
+| 15 | Row 10: does the simulated match (Sim the week, AI v AI) choose receivers the same way as the watched match? | yes, one shared function, no duplicate | every path runs `MatchSim.kick_receiver` (the open-play next carrier and the general-play aerial receiver); tested same state and seed, same receiver |
 
 - **Row 37 draft logic, later ruling (2026-11-03):** the buff also applies to the user's "Pick for me", and the sim must
   be extremely competent: every club, the user's included, acts in its own best interest at all times; mistakes come
