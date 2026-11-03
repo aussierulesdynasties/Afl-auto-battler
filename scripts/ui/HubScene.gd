@@ -964,15 +964,15 @@ func _sim_round_button() -> Button:
 
 ## A little air above a pinned bar and a soft fade over the clip edge, so scrolled
 ## content never reads as cut mid-button by the bar (phone and PC).
-func _bar_air() -> Control:
+func _bar_air(col: Color = UiKit.BG) -> Control:
 	var air := Control.new()
 	air.custom_minimum_size = Vector2(0, 10)
 	air.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var fade := TextureRect.new()
 	fade.name = "BarFade"
 	var grad := Gradient.new()
-	grad.set_color(0, Color(UiKit.BG.r, UiKit.BG.g, UiKit.BG.b, 0.0))
-	grad.set_color(1, Color(UiKit.BG.r, UiKit.BG.g, UiKit.BG.b, 0.92))
+	grad.set_color(0, Color(col.r, col.g, col.b, 0.0))
+	grad.set_color(1, Color(col.r, col.g, col.b, 0.92))
 	var gt := GradientTexture2D.new()
 	gt.gradient = grad
 	gt.fill_from = Vector2(0, 0)
@@ -1614,6 +1614,17 @@ func _show_results(results: Array) -> void:
 		_results_overlay = null
 		_build()
 		_show_week_ask())
+	# The list scrolls under Continue: air and a soft edge so a row is never sliced by the button.
+	if not others.is_empty():
+		var air := _bar_air(UiKit.PANEL)
+		# The fade ends exactly on the scroll's clip edge (8 px above the footer) and is fully
+		# solid there, so a row is eased out, never sliced.
+		var edge: TextureRect = air.get_node("BarFade")
+		edge.offset_top = -48
+		edge.offset_bottom = -8
+		(edge.texture as GradientTexture2D).height = 48
+		(edge.texture as GradientTexture2D).gradient.set_color(1, UiKit.PANEL)
+		box["footer"].add_child(air)
 	box["footer"].add_child(ok)
 
 
@@ -1629,6 +1640,10 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 			30, UiKit.TEXT if drew else UiKit.margin_colour(won), true)
 	verdict.name = "MyVerdict"
 	v.add_child(verdict)
+	# ui_motion: a win lands by scale alone (all text is solid from frame 0, the
+	# scores are true at once); a loss and a draw are only shown, sober.
+	if UiKit.juice() and won and not drew:
+		UiKit.land(verdict, 0.12)
 	for side in [0, 1]:
 		var row := UiKit.hbox(8)
 		row.name = "MyScore_%d" % side
@@ -1661,19 +1676,22 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 		v.add_child(tl)
 	var best := MatchNotes.standouts(res, me, 1)
 	if not best.is_empty():
-		var bl := UiKit.ellipsis("Best: %s %s  ·  %s" % [str(best[0]["name"]),
+		var bl := UiKit.lbl("Best: %s %s  ·  %s" % [str(best[0]["name"]),
 				MatchNotes.rating_text(float(best[0]["rating"])), str(best[0]["line"])],
 				UiKit.SMALL, UiKit.TEXT)
+		bl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		bl.name = "MyBest"
 		v.add_child(bl)
 	var hurt := GameState.my_new_injuries()
 	if not hurt.is_empty():
 		var inj := UiKit.lbl("Injured: " + ", ".join(hurt), UiKit.SMALL, UiKit.BAD, true)
+		inj.name = "MyInjured"
 		inj.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(inj)
 	var mro := GameState.my_mro_lines()
 	if not mro.is_empty():
 		var mr := UiKit.lbl("MRO: " + ", ".join(mro), UiKit.SMALL, UiKit.BAD, true)
+		mr.name = "MyMRO"
 		mr.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(mr)
 	if GameState.last_phase == "regular":

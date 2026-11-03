@@ -807,6 +807,10 @@ func _show_coach_box() -> void:
 			did_head.name = "CallsDidHeading"
 			did_head.set_meta("break_unit", true)
 			rep.add_child(did_head)
+			var dnote := UiKit.lbl(MatchNotes.CALLS_DID_NOTE, UiKit.SMALL, UiKit.MUTED)
+			dnote.name = "CallsDidNote"
+			dnote.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			rep.add_child(dnote)
 			var dv := UiKit.vbox(4)
 			dv.name = "CallsDid"
 			for t in did:
@@ -1066,9 +1070,8 @@ func _show_coach_box() -> void:
 	# From quarter time on: how your loose man and your forward on theirs are going.
 	var loose_now := str(sim.interceptor[_my_side])
 	if q > 1 and loose_now != "":
-		var stats: Dictionary = (_res.get("players", {}) as Dictionary).get(loose_now, {})
 		var tally := _say(MatchNotes.loose_tally_line(GameDB.player_display_name_by_id(loose_now, "Your loose man"),
-				int(float(stats.get("intercepts", 0.0)))), UiKit.SMALL, UiKit.TEXT)
+				maxi(0, sim.intercepts_since_call(_my_side))), UiKit.SMALL, UiKit.TEXT)
 		tally.name = "LooseTally"
 		tally.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		def_block.add_child(tally)
@@ -2327,6 +2330,11 @@ func _calls_view(q: int) -> Control:
 			before = (snaps[q - 2] as Dictionary).get("impact", [{}, {}])
 	v.add_child(UiKit.section("What your calls did" + (" in Q%d" % q if q > 0 else "")))
 	var lines := CoachReport.impact_lines(now, before, _my_side)
+	if not lines.is_empty():
+		var wnote := UiKit.lbl(MatchNotes.CALLS_WORTH_NOTE, UiKit.SMALL, UiKit.MUTED)
+		wnote.name = "CallsWorthNote"
+		wnote.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(wnote)
 	# Each cause beside what it was worth (director, 2026-10-14: a figure at the far
 	# end of the row "divorces the number from the source").
 	var worth := GridContainer.new()
@@ -4116,9 +4124,8 @@ func _matchups_view(sim: MatchSim, q: int) -> Control:
 	var ours: Dictionary = sim.duels[1 - _my_side]
 	if theirs.is_empty() and ours.is_empty():
 		return null
-	var v := UiKit.vbox(4)
+	var v := UiKit.vbox(2)
 	v.name = "BreakMatchups"
-	v.add_child(UiKit.spacer(4))
 	v.add_child(UiKit.lbl("Key match-ups", UiKit.BODY, UiKit.TEXT, true))
 	var their_spare := sim._roaming_interceptor(1 - _my_side)
 	if not their_spare.is_empty():
@@ -4134,25 +4141,25 @@ func _matchups_view(sim: MatchSim, q: int) -> Control:
 		loose2.name = "MyInterceptor"
 		loose2.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(loose2)
+	v.add_child(_matchup_head("Forward", "On him", q))
 	for fid in theirs.keys():
-		var row := UiKit.hbox(8)
+		var row := _matchup_row(str(fid), str(theirs[fid]), q, false)
 		row.name = "BreakMatchup_" + str(fid)
-		var l := _say_live(_matchup_text(str(fid), str(theirs[fid]), q), UiKit.BODY, UiKit.TEXT, [str(fid), str(theirs[fid])])
-		l.name = "MatchupLine"
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		row.add_child(l)
-		# An editorial row with its action as a word (audit §8 Phase 1.5).
+		var cells: Dictionary = row.get_meta("cells")
 		var b := UiKit.text_action("Change", UiKit.SECONDARY)
 		b.name = "ChangeMatchup"
+		b.custom_minimum_size.x = MATCHUP_CHANGE_W
 		var f := str(fid)
-		b.pressed.connect(func(): _show_break_matchup(sim, f, l, q))
+		b.pressed.connect(func(): _show_break_matchup(sim, f, cells, q))
 		row.add_child(b)
-		_beside_sentence(row, l, b)
 		v.add_child(row)
 	for fid in ours.keys():
-		var l2 := _say("Yours: " + _matchup_text(str(fid), str(ours[fid]), q), UiKit.SMALL, UiKit.MUTED, false, [str(fid), str(ours[fid])])
-		l2.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(l2)
+		var row2 := _matchup_row(str(fid), str(ours[fid]), q, true)
+		row2.name = "BreakYours_" + str(fid)
+		var pad := Control.new()
+		pad.custom_minimum_size = Vector2(MATCHUP_CHANGE_W, 0)
+		row2.add_child(pad)
+		v.add_child(row2)
 	# Who made these calls: your assistant, until you make them yourself.
 	if sim.assistant_active(_my_side):
 		var a := UiKit.lbl("Your assistant sets the match-ups and the spare. Change one and it stays your call.",
@@ -4163,59 +4170,62 @@ func _matchups_view(sim: MatchSim, q: int) -> Control:
 	return v
 
 
-## A sentence with its action right after it, not at the far edge of the pane: the
-## sentence is as wide as its words need, up to what the row leaves beside the
-## action, so a long one wraps (before a name, never inside one: NameInk) and the
-## action sits right after the end of its LAST line, level with it, the same gap on
-## every row. Both are placed by hand in one slot of the row: the action keeps its
-## full touch height and hangs over the line's top and bottom instead of making the
-## row taller than its words. `refit` (a meta on the line) runs again after the
-## words change.
-const BESIDE_GAP := 6.0
+## The key match-ups as a compact grid: one row a forward, three columns (the
+## forward, the man on him, how the forward went last quarter) and the Change
+## after them. Columns share the same stretch so every row lines up.
+const MATCHUP_COLS := [3.0, 3.0, 3.0]
 
 
-func _beside_sentence(row: HBoxContainer, line: RichTextLabel, action: Button) -> void:
-	var slot := Control.new()
-	slot.name = "BesideSentence"
-	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# The slot has no width of its own, only the row's: a long sentence wraps to
-	# the pane, it never widens it.
-	slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for n in [line, action]:
-		if (n as Node).get_parent() != null:
-			(n as Node).get_parent().remove_child(n)
-		slot.add_child(n)
-	row.add_child(slot)
-	var refit := func() -> void:
-		if not is_instance_valid(line) or not is_instance_valid(row) or not is_instance_valid(action):
-			return
-		var font := line.get_theme_font("normal_font")
-		var size := line.get_theme_font_size("normal_font_size")
-		var natural := font.get_string_size(NameInk.plain(line), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 4.0
-		var btn := action.get_combined_minimum_size()
-		var room := slot.size.x - btn.x - BESIDE_GAP
-		# Before the row has a width, leave the sentence its own: the first
-		# layout pass then sets it right.
-		var w := natural if slot.size.x <= 0.0 else maxf(60.0, minf(natural, room))
-		line.size = Vector2(w, line.size.y)
-		var lines := line.get_line_count()
-		if lines <= 0:
-			return
-		var text_h := line.get_content_height()
-		var last := line.get_line_range(lines - 1)
-		var tail := line.get_parsed_text().substr(last.x, last.y - last.x).strip_edges(false, true)
-		var tail_w := font.get_string_size(tail, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
-		var top := line.get_line_offset(lines - 1)
-		var height := maxf(text_h + 4.0, btn.y)
-		var text_y := (height - text_h) * 0.5
-		line.position = Vector2(0.0, text_y)
-		line.size = Vector2(w, text_h)
-		action.size = btn
-		action.position = Vector2(tail_w + BESIDE_GAP, text_y + top + (text_h - top) * 0.5 - btn.y * 0.5)
-		slot.custom_minimum_size = Vector2(0.0, height)
-	line.set_meta("refit", refit)
-	slot.resized.connect(refit)
-	refit.call_deferred()
+func _matchup_head(first: String, second: String, q: int) -> Control:
+	var h := UiKit.hbox(8)
+	h.name = "MatchupHead"
+	var titles := [first, second] + (["Last quarter"] if q > 1 else [])
+	for i in range(titles.size()):
+		var t := UiKit.lbl(str(titles[i]), UiKit.SMALL, UiKit.MUTED)
+		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		t.size_flags_stretch_ratio = MATCHUP_COLS[i]
+		h.add_child(t)
+	# Room for Change, so the heads sit over their columns.
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(MATCHUP_CHANGE_W, 0)
+	h.add_child(gap)
+	return h
+
+
+const MATCHUP_CHANGE_W := 64.0
+
+
+func _matchup_row(fid: String, did: String, q: int, mine: bool) -> HBoxContainer:
+	# `mine`: your forward against their defender (the forward is yours).
+	var row := UiKit.hbox(8)
+	var inks := UiKit.club_ink_pair(str(_res["home"]), str(_res["away"]))
+	var fwd_side := _my_side if mine else 1 - _my_side
+	var cells := {}
+	var texts := [_surname(MatchNotes._pname(fid)), _surname(MatchNotes._pname(did)) if did != "" else "Nobody"]
+	if q > 1:
+		texts.append(_matchup_marked(fid, q))
+	var keys := ["fwd", "def", "marked"]
+	for i in range(texts.size()):
+		var c: Label
+		if i < 2:
+			var side := fwd_side if i == 0 else 1 - fwd_side
+			c = UiKit.ellipsis(str(texts[i]), UiKit.BODY, UiKit.club_name_colour(inks[side]), true)
+		else:
+			c = UiKit.ellipsis(str(texts[i]), UiKit.SMALL, UiKit.MUTED)
+		c.name = "Matchup_" + str(keys[i])
+		c.size_flags_stretch_ratio = MATCHUP_COLS[i]
+		row.add_child(c)
+		cells[keys[i]] = c
+	row.set_meta("cells", cells)
+	return row
+
+
+## "4 of 6" of last quarter's contests the forward marked, or "No contests".
+func _matchup_marked(fid: String, q: int) -> String:
+	var t := MatchNotes.duel_tally(_res, fid, q - 1)
+	if int(t[0]) == 0:
+		return "No contests"
+	return "marked %d of %d" % [int(t[1]), int(t[0])]
 
 
 func _matchup_text(fid: String, did: String, q: int) -> String:
@@ -4226,7 +4236,7 @@ func _matchup_text(fid: String, did: String, q: int) -> String:
 
 ## Who goes to their forward, from your defenders on the ground. The change
 ## is made in the engine at once and takes effect from the next bounce.
-func _show_break_matchup(sim: MatchSim, fid: String, line: RichTextLabel, q: int) -> void:
+func _show_break_matchup(sim: MatchSim, fid: String, cells: Dictionary, q: int) -> void:
 	if _matchup_overlay != null and is_instance_valid(_matchup_overlay):
 		_matchup_overlay.queue_free()
 	var box := UiKit.modal_box(self, 480.0, 0.0, _wash())
@@ -4252,9 +4262,10 @@ func _show_break_matchup(sim: MatchSim, fid: String, line: RichTextLabel, q: int
 		var pid := str(p["id"])
 		b.pressed.connect(func():
 			sim.coach_matchup(_my_side, fid, pid)
-			NameInk.set_line(line, _matchup_text(fid, pid, 1).trim_suffix(".") + " from the next bounce.", _names_named([fid, pid]))
-			if line.has_meta("refit"):
-				(line.get_meta("refit") as Callable).call_deferred()
+			(cells["def"] as Label).text = _surname(MatchNotes._pname(pid))
+			(cells["def"] as Label).tooltip_text = MatchNotes._pname(pid)
+			if cells.has("marked"):
+				(cells["marked"] as Label).text = "from next bounce"
 			if _break_refresh.is_valid():
 				_break_refresh.call()
 			_matchup_overlay.queue_free()
