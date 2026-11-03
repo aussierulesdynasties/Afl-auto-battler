@@ -914,10 +914,17 @@ func load_career() -> bool:
 	if not state.has("week_events"):
 		week_event = state.get("week_event", {})
 	relations = state.get("relations", {})
-	story = StoryEngine.ensure(state.get("story", {}))
+	var raw_story: Variant = state.get("story", {})
+	var old_calendar := StoryEngine.is_old_calendar(raw_story)
+	if old_calendar:
+		StoryEngine.migrate_calendar(raw_story)
+	story = StoryEngine.ensure(raw_story if raw_story is Dictionary else {})
 	media_conference = state.get("media_conference", {})
 	match_stories = state.get("match_stories", []) if state.get("match_stories") is Array else []
 	coach_arcs = state.get("coach_arcs", {}) if state.get("coach_arcs") is Dictionary else {}
+	if old_calendar:
+		CoachArcs.migrate_calendar(coach_arcs)
+		week_checks = {}
 	preseason_run_debt = float(state.get("preseason_run_debt", 0.0))
 	backing_talk = state.get("backing_talk", {})
 	media_memory = state.get("media_memory", {})
