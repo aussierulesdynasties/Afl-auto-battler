@@ -747,7 +747,7 @@ func _show_coach_box() -> void:
 			c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			c.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 			cols.add_child(c)
-	# The calls of a four-column PC break, by what they are, for _deal_calls.
+	# The calls of the PC pre-bounce break (three columns once dealt), by what they are, for _deal_calls.
 	var calls_by := {}
 	var group := func(key: String, node: Node) -> void:
 		if node != null:
