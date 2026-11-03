@@ -6,7 +6,7 @@ extends StoppageVignette
 ## (set_shot). The late centre-bounce call has its own scene (StoppageVignette).
 ##
 ## The match cuts to a low camera, the players the call is about move into place and
-## the frame freezes; the call slides up over it (MatchScene._show_decision_moment).
+## the frame freezes; the call slides up over it (MatchScene._show_moment).
 ## Presentation only, like every vignette: it reads who MatchSim says the call is about
 ## (the moment's player_id, defender_id, sub_id, the tagger, the match-up) and what the
 ## ground looks like, and changes nothing. What each choice does is MatchSim's.
@@ -29,8 +29,6 @@ const STAGE := {
 var kind := ""
 var _end := 3.0
 var _stage: Dictionary = STAGE["tired"]
-var _hold_ball := {}              # {id, hand} when a player has the ball in his hands
-var _fly := {}                    # the duel's ball: {from: Vector2, to_id: [id, id]}
 
 
 static func has_scene(k: String) -> bool:
@@ -42,8 +40,6 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary) -> void:
 	title = str(moment.get("title", ""))
 	tokens.clear()
 	facts = []
-	_hold_ball = {}
-	_fly = {}
 	_stage = STAGE.get(kind, STAGE["tired"])
 	_end = float(END.get(kind, 3.0))
 	weather = str(sim.get("weather")) if sim.get("weather") != null else ""
@@ -56,8 +52,6 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary) -> void:
 		_colours[side] = GameDB.club_colours(code)
 		_codes[side] = code
 	var them := 1 - my_side
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash("%s|%s|%d" % [kind, str(moment.get("player_id", "")), sim.current_minute])
 	var me := _pick(sim, my_side, str(moment.get("player_id", "")))
 	match kind:
 		"tired":
@@ -82,7 +76,9 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary) -> void:
 			_add(_pick(sim, them, str(moment.get("player_id", ""))), them, false, wet, {"role": "carrier", "from": Vector2(1.0, 26.0), "to": Vector2(-0.3, 1.0),
 					"delay": 0.0, "dur": 2.6, "face": "front"})
 			if not (stopper is Dictionary) or (stopper as Dictionary).is_empty():
-				stopper = _pick(sim, my_side, "")
+				# No tagger: a midfielder chases, never a defender or ruck drawn by default.
+				var mids: Array = (sim.squads[my_side] as Squad).ground.filter(func(p): return str(p["role"]) == "MID")
+				stopper = (mids[0] as Dictionary) if not mids.is_empty() else {}
 			_add(stopper, my_side, true, wet, {"role": "chaser", "from": Vector2(2.6, 29.0), "to": Vector2(1.9, 4.0),
 					"delay": 0.0, "dur": 2.8, "face": "front"})
 		"momentum":
@@ -107,7 +103,6 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary) -> void:
 			if not def.is_empty():
 				_add(def, them, false, wet, {"role": "on_the_mark", "from": Vector2(-1.0, 9.0), "to": Vector2(-1.0, 2.6),
 						"delay": 0.0, "dur": 0.9, "face": "back"})
-			_hold_ball = {"id": str(me.get("id", "")), "kicker": true}
 	_style_rucks()
 	_t = 0.0
 	_hold = 0.0
@@ -116,13 +111,14 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary) -> void:
 	queue_redraw()
 
 
-## The player of that id on the ground (or the bench), else the first on the ground of the side.
+## The player of that id on the ground (or the bench); empty when the id is "" or unknown,
+## so a scene never names someone MatchSim did not choose.
 func _pick(sim: MatchSim, side: int, id: String, bench := false) -> Dictionary:
 	var sq: Squad = sim.squads[side]
 	for p in (sq.bench if bench else sq.ground) + (sq.ground if bench else sq.bench):
 		if str((p as Dictionary)["id"]) == id:
 			return p
-	return (sq.ground[0] as Dictionary) if not sq.ground.is_empty() and id == "" else {}
+	return {}
 
 
 func _add(p: Dictionary, side: int, mine: bool, wet: bool, extra: Dictionary) -> void:

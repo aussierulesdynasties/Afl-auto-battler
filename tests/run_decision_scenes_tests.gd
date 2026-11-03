@@ -33,7 +33,9 @@ func _run() -> void:
 	for kind in KINDS:
 		await _t("_test_kind", [kind])
 	await _t("_test_card_without_switch")
-	await _t("_test_tap")
+	for kind in KINDS:
+		await _t("_test_tap", [kind])
+	await _t("_test_no_chosen_defender")
 	Features.set_on("decision_scenes", original)
 	print(Ran.line("Decision scenes", self))
 	for f in _failures:
@@ -74,8 +76,10 @@ func _moment(sim, me: int, kind: String) -> Dictionary:
 		{"key": "b", "label": "Second", "detail": "Two."},
 		{"key": "none", "label": "Third", "detail": "Three."},
 	]
+	if kind == "tired":
+		opts = opts.slice(0, 2)   # MatchSim offers the tired call two ways
 	var m := {"kind": kind, "title": "A call", "text": "Make it.", "options": opts, "q": 2, "min": 50,
-			"default": 2}
+			"default": opts.size() - 1}
 	match kind:
 		"tired":
 			m["player_id"] = str(star["id"])
@@ -185,7 +189,7 @@ func _test_kind(kind: String) -> void:
 	for b in card.find_children("Moment_*", "Button", true, false):
 		if not viewport.encloses((b as Button).get_global_rect()) or (b as Button).size.y < 44:
 			off.append(b.name)
-	_check(off.is_empty() and card.find_children("Moment_*", "Button", true, false).size() == 3,
+	_check(off.is_empty() and card.find_children("Moment_*", "Button", true, false).size() == (call["options"] as Array).size(),
 			"%s: every option is on screen and thumb-sized (%s)" % [kind, str(off)])
 	var said := " ".join(vig.facts)
 	_check(not said.contains("%") and not said.to_lower().contains("recommend"), "%s: no stats or advice over the scene" % kind)
@@ -193,29 +197,30 @@ func _test_kind(kind: String) -> void:
 	await _settle()
 
 
-## Switch off, or Vignettes off: the call is the text card it always was.
+## Switch off, or Vignettes off: the call is the text card it always was, for every kind.
 func _test_card_without_switch() -> void:
 	for setting in ["switch", "vignettes"]:
-		var ctx := await _match()
-		var m: Control = ctx["m"]
-		var sim = ctx["sim"]
-		var me: int = ctx["me"]
-		Features.set_on("decision_scenes", setting != "switch")
-		_state.set_vignettes_on(setting != "vignettes")
-		sim.moment_side = me
-		sim.pending_moment = _moment(sim, me, "momentum")
-		m.call("_show_moment")
-		await _settle()
-		_check(m.find_child("MomentCard", true, false) != null and m.find_child("DecisionVignette", true, false) == null,
-				"With %s off the call is the text card" % setting)
-		m.queue_free()
-		await _settle()
+		for kind in KINDS:
+			var ctx := await _match()
+			var m: Control = ctx["m"]
+			var sim = ctx["sim"]
+			var me: int = ctx["me"]
+			Features.set_on("decision_scenes", setting != "switch")
+			_state.set_vignettes_on(setting != "vignettes")
+			sim.moment_side = me
+			sim.pending_moment = _moment(sim, me, kind)
+			m.call("_show_moment")
+			await _settle()
+			_check(m.find_child("MomentCard", true, false) != null and m.find_child("DecisionVignette", true, false) == null,
+					"%s with %s off: the call is the text card" % [kind, setting])
+			m.queue_free()
+			await _settle()
 	_state.set_vignettes_on(true)
 
 
-## A finger on the third choice, after the scene freezes: MatchSim takes the call and the
-## match view is back.
-func _test_tap() -> void:
+## A finger on the last choice, after the scene freezes: MatchSim takes the call and the
+## match view is back. Every scene shares the one call layout; each is tapped.
+func _test_tap(kind: String) -> void:
 	var ctx := await _match()
 	var m: Control = ctx["m"]
 	var sim = ctx["sim"]
@@ -223,13 +228,14 @@ func _test_tap() -> void:
 	_state.set_vignettes_on(true)
 	Features.set_on("decision_scenes", true)
 	sim.moment_side = me
-	sim.pending_moment = _moment(sim, me, "momentum")
+	sim.pending_moment = _moment(sim, me, kind)
+	var last: int = (sim.pending_moment["options"] as Array).size() - 1
 	m.call("_show_moment")
 	await _settle()
 	var card = m.find_child("MomentCard", true, false)
 	var vig = m.find_child("DecisionVignette", true, false)
-	var b: Button = card.find_child("Moment_2", true, false) if card != null else null
-	_check(vig != null and b != null, "Tap: the scene and its call are up")
+	var b: Button = card.find_child("Moment_%d" % last, true, false) if card != null else null
+	_check(vig != null and b != null, "%s tap: the scene and its call are up" % kind)
 	if vig == null or b == null:
 		m.queue_free()
 		return
@@ -238,12 +244,42 @@ func _test_tap() -> void:
 		await process_frame
 	var asked: int = sim.moments.size()
 	var why: String = await Tap.tap(b)
-	_check(why == "", "Tap: a finger on the choice reaches it (%s)" % why)
-	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("kind", "")) == "momentum",
-			"Tap: MatchSim takes the call")
+	_check(why == "", "%s tap: a finger on the choice reaches it (%s)" % [kind, why])
+	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("kind", "")) == kind,
+			"%s tap: MatchSim takes the call" % kind)
 	for i in range(40):
 		await process_frame
-	_check(m.find_child("DecisionVignette", true, false) == null, "Tap: the scene is gone, back to the match")
+	_check(m.find_child("DecisionVignette", true, false) == null, "%s tap: the scene is gone, back to the match" % kind)
+	m.queue_free()
+	await _settle()
+
+
+## MatchSim sends no defender when it has none: the scene draws nobody on the mark. With
+## no tagger, the chaser is a midfielder or nobody; the scene never invents a man.
+func _test_no_chosen_defender() -> void:
+	var ctx := await _match()
+	var m: Control = ctx["m"]
+	var sim = ctx["sim"]
+	var me: int = ctx["me"]
+	var vig = load("res://scripts/ui/match/DecisionVignette.gd").new()
+	m.add_child(vig)
+	var shot := _moment(sim, me, "set_shot")
+	shot["defender_id"] = ""
+	vig.setup_decision(sim, me, shot)
+	var roles: Array = vig.tokens.map(func(t): return str(t["role"]))
+	_check(roles.has("kicker") and not roles.has("on_the_mark"),
+			"set_shot with no defender: nobody is drawn on the mark (%s)" % str(roles))
+	sim.tactics[me]["tagger_id"] = ""
+	vig.setup_decision(sim, me, _moment(sim, me, "hot"))
+	var ch: Dictionary = vig.token_of("chaser")
+	var ground: Array = sim.squads[me].ground
+	var role := ""
+	for p in ground:
+		if str(p["id"]) == str(ch.get("id", "")):
+			role = str(p["role"])
+	_check(ch.is_empty() or role == "MID" or str(ch.get("id", "")) == str((sim.tagger_of(me) as Dictionary).get("id", "")),
+			"hot with no named tagger: the chaser is a midfielder, not a default man")
+	vig.queue_free()
 	m.queue_free()
 	await _settle()
 
