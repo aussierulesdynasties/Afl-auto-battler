@@ -292,8 +292,10 @@ func _test_intake_values_potential() -> void:
 func _test_rivals_train() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	# Manual: your players bank XP, so any attribute change would be the AI's.
-	GameState.default_train_plan = "manual"
+	# Your players held at their season limit: they bank XP, so any attribute
+	# change would be the AI's.
+	for p in GameState.my_list:
+		p["season_start_ov"] = int(p["overall"]) - 30
 	var rival: Array = GameState.season.lists["COL"]
 	var before := {}
 	for p in rival:
@@ -315,8 +317,8 @@ func _test_rivals_train() -> void:
 			past_pot += 1
 	_check(trained > rival.size() / 2, "Rival players train after games (%d of %d)" % [trained, rival.size()])
 	_check(past_pot == 0, "Rivals never train a player well past his POT (%d)" % past_pot)
-	# Training is the only thing that spends XP, and on Manual it must not
-	# run: every player's XP only grows, and no attribute moves - bar the
+	# Training is the only thing that spends XP, and held at the limit it
+	# cannot: every player's XP only grows, and no attribute moves - bar the
 	# ones a weekly event sets directly (patience: +2 discipline).
 	var untouched := true
 	var earned := false
@@ -358,7 +360,6 @@ func _test_rivals_train() -> void:
 	mine["season_start_ov"] = int(mine["overall"])
 	var start := int(mine["overall"])
 	GameState.apply_plan_to(mine)
-	for k in ["disposal", "contested", "marking", "pressure"]:
-		GameState.train_stat(str(mine["id"]), k, 20)
+	GameState.apply_plan_to(mine)
 	_check(int(mine["overall"]) <= start + GameState.SEASON_TRAIN_GAIN + GameState.teach_step(mine) + 1,
-			"Your player is held to the same season limit, by plan or by hand (%d -> %d)" % [start, int(mine["overall"])])
+			"Your player is held to the same season limit (%d -> %d)" % [start, int(mine["overall"])])

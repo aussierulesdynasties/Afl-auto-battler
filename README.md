@@ -226,11 +226,10 @@ automatically after the game:
 - **Role plans** - inside midfielder, outside runner, key defender,
   rebounding defender, key forward, small forward, ruck, star power.
 - **Focus: <stat>** - every point into one stat.
-- **Manual** - bank the XP and spend it yourself.
 
 Change the club plan or any player's plan at any time in Training; banked XP
-is spent under the new plan straight away. You can still buy any stat by
-hand. The results and full-time screens say what the plans bought.
+is spent under the new plan straight away (Manual hand-training was cut on
+2026-11-03). The results and full-time screens say what the plans bought.
 
 **Stat guide.** Training's *Stat guide* button (also on the main menu under
 How to play) explains all 13 stats: what each is built from, exactly what it

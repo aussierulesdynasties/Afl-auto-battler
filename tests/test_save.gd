@@ -403,8 +403,9 @@ func _test_training_survives() -> void:
 	var p: Dictionary = GameState.my_list[0]
 	var id := str(p["id"])
 	p["xp"] = 500
-	var r := GameState.train_stat(id, "marking", 3)
-	_check(bool(r.get("ok", false)), "Training spends XP")
+	var marking_before := int(p["attr"]["marking"])
+	p["attr"]["marking"] = marking_before + 3
+	p["xp"] = 123
 	var marking := int(p["attr"]["marking"])
 	var xp := int(p["xp"])
 	GameState.save_career()

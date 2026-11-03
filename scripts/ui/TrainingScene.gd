@@ -1,8 +1,7 @@
 class_name TrainingScene
 extends Control
 ## Training. Every listed player is here. XP is personal and earned every
-## game; each player's training plan spends it automatically after the game
-## (or banks it, on Manual), and any stat can still be trained by hand.
+## game; each player's training plan spends it automatically after the game.
 
 const ROLES := ["", "DEF", "MID", "RUCK", "FWD"]
 const ROLE_NOUN := {"RUCK": "ruck", "MID": "midfielder", "DEF": "defender", "FWD": "forward"}
@@ -115,7 +114,7 @@ func _show_intro() -> void:
 		"Pick what kind of footballer each player should become. His plan spends the XP he earns after every game on exactly that - an inside midfielder on winning the ball, a key forward on marking and goals.",
 		"Position plan is the safe default: it trains what his position is judged on. Change a plan whenever you like; banked XP is spent straight away.",
 		"Playing senior football develops a player fastest. Fit players you leave out develop in the reserves at about half the rate; injured and rested players barely at all.",
-		"Young players with room below their potential improve quickest. Manual pauses a player's development until you spend his XP by hand.",
+		"Young players with room below their potential improve quickest.",
 	]:
 		var l := UiKit.lbl(line, 14, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -228,16 +227,6 @@ func _summary() -> Control:
 	var plan_line := SeasonPlanSheet.line(self, func(): _build())
 	if plan_line != null:
 		v.add_child(plan_line)
-	var paused := 0
-	for p in GameState.my_list:
-		if GameState.plan_for(p) == "manual":
-			paused += 1
-	if paused > 0:
-		var warn := UiKit.lbl("%d %s on Manual: development paused until you spend by hand." % [
-				paused, "player" if paused == 1 else "players"], 13, UiKit.BAD, true)
-		warn.name = "PausedWarning"
-		warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(warn)
 	# What it costs and what it buys, in one line (P-63).
 	var trade := UiKit.lbl(TRADE_OFF_LINE, UiKit.SMALL, UiKit.TEXT)
 	trade.name = "TrainingTradeOff"
@@ -247,7 +236,7 @@ func _summary() -> Control:
 
 
 ## This player's plans as taps: Position plan, his roles' archetypes,
-## Manual last. The chosen one is outlined.
+## then positions he could learn. The chosen one is outlined.
 func _plan_picker(p: Dictionary, on_pick: Callable) -> Control:
 	# A dual-role player's Position plan trains his first role: say which.
 	var first := str(p.get("role", ""))
@@ -257,8 +246,6 @@ func _plan_picker(p: Dictionary, on_pick: Callable) -> Control:
 		var label := GameState.train_plan_label(key)
 		if key == "position" and dual:
 			label = "Position plan (%s)" % PlayerProfile.role_word(first).to_lower()
-		elif key == "manual":
-			label = "Manual"
 		elif key.begins_with(GameState.LEARN_PREFIX):
 			label = "Learn " + str(GameState.LEARN_JOBS[key.trim_prefix(GameState.LEARN_PREFIX)]["word"])
 		options.append([key, label])
@@ -314,7 +301,7 @@ func _set_role(role: String) -> void:
 
 ## Group training stays deliberately small: select players, then choose one
 ## plan that makes sense for every player in the group. A mixed-position
-## group therefore gets Position plan / Manual rather than nonsense such as
+## group therefore gets Position plan rather than nonsense such as
 ## putting a ruck on a key-forward plan.
 func _bulk_panel() -> Control:
 	var panel := UiKit.panel(UiKit.PANEL_ALT, 8, 6)
@@ -339,10 +326,7 @@ func _bulk_panel() -> Control:
 	v.add_child(UiKit.lbl("Apply one development focus to the group.", 12, UiKit.MUTED))
 	var options := []
 	for key in _bulk_plans():
-		var label := GameState.train_plan_label(str(key))
-		if str(key) == "manual":
-			label = "Manual"
-		options.append([str(key), label])
+		options.append([str(key), GameState.train_plan_label(str(key))])
 	var picker := UiKit.choice_grid("GroupPlan", options, "", 2, _apply_bulk_plan)
 	v.add_child(picker)
 	if _notice != "":
@@ -524,15 +508,12 @@ func _player_row(p: Dictionary) -> Control:
 	h.add_child(info)
 	info.add_child(UiKit.name_label(GameDB.player_display_name(p)))
 	var plan := GameState.plan_for(p)
-	if plan == "manual":
-		info.add_child(UiKit.ellipsis("Manual  ·  development paused", UiKit.SECONDARY, UiKit.BAD))
-	else:
-		# On the position plan (most of the list) the plan goes without saying: just
-		# where he is. Any other plan is named, then where he is.
-		# "At his peak", not "At his projected peak": a coach's words, and they fit the row.
-		var state := GameState.development_state(p).replace(" his projected peak", " his peak")
-		var under := state if plan == "position" else "%s  ·  %s" % [_row_plan(plan), state]
-		info.add_child(UiKit.ellipsis(under, UiKit.SECONDARY, UiKit.MUTED))
+	# On the position plan (most of the list) the plan goes without saying: just
+	# where he is. Any other plan is named, then where he is.
+	# "At his peak", not "At his projected peak": a coach's words, and they fit the row.
+	var state := GameState.development_state(p).replace(" his projected peak", " his peak")
+	var under := state if plan == "position" else "%s  ·  %s" % [_row_plan(plan), state]
+	info.add_child(UiKit.ellipsis(under, UiKit.SECONDARY, UiKit.MUTED))
 	var duty := GameState.last_duty(id)
 	if int(p.get("injury_weeks", 0)) > 0:
 		h.add_child(UiKit.line("INJ %dw" % int(p["injury_weeks"]), UiKit.FINE, UiKit.BAD, true))
@@ -705,7 +686,7 @@ func _detail_panel() -> Control:
 	focus.add_child(fv)
 	fv.add_child(UiKit.lbl("Development focus", 12, UiKit.MUTED, true))
 	var plan := GameState.plan_for(p)
-	var plan_name := UiKit.lbl(GameState.train_plan_label(plan), UiKit.HEADING, UiKit.BAD if plan == "manual" else UiKit.EMPH, true)
+	var plan_name := UiKit.lbl(GameState.train_plan_label(plan), UiKit.HEADING, UiKit.EMPH, true)
 	plan_name.name = "FocusName"
 	fv.add_child(plan_name)
 	var meaning := UiKit.lbl(GameState.train_plan_description(plan, str(p.get("role", "MID"))), 13, UiKit.TEXT)
@@ -718,15 +699,9 @@ func _detail_panel() -> Control:
 		pl.name = "ProjectProgress"
 		pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		fv.add_child(pl)
-	if plan != "manual":
-		var working := _working_on(p)
-		if working != "":
-			fv.add_child(UiKit.lbl("Working on: " + working, 12, UiKit.MUTED))
-	else:
-		var paused := UiKit.lbl("%d XP banked and unused." % int(p.get("xp", 0)), 13, UiKit.BAD, true)
-		paused.name = "ManualWarning"
-		paused.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		fv.add_child(paused)
+	var working := _working_on(p)
+	if working != "":
+		fv.add_child(UiKit.lbl("Working on: " + working, 12, UiKit.MUTED))
 	var pid := _selected
 	var pick := _plan_picker(p, func(key: String):
 		var q := GameState.list_player(pid)
@@ -757,8 +732,7 @@ func _detail_panel() -> Control:
 		res_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		body.add_child(res_line)
 	# Everything else sits behind one button.
-	var adv := UiKit.btn("Hide stats and hand training" if _advanced
-			else "Stats and hand training  ·  %d XP banked" % int(p.get("xp", 0)), 13)
+	var adv := UiKit.btn("Hide stats" if _advanced else "Stats", 13)
 	adv.name = "AdvancedToggle"
 	adv.custom_minimum_size = Vector2(0, 44)
 	adv.pressed.connect(func():
@@ -775,8 +749,6 @@ func _detail_panel() -> Control:
 			var bl := UiKit.lbl(background, 12, UiKit.MUTED)
 			bl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			body.add_child(bl)
-		body.add_child(UiKit.lbl("Buy points by hand. A point costs more as the stat rises; 99 is the cap.",
-				12, UiKit.MUTED))
 		var rows := []
 		for row in GameState.TRAIN_STATS:
 			rows.append([str(row[0]), str(row[1]), GameState.stat_useful_for(p, str(row[0]))])
@@ -818,7 +790,6 @@ func _stat_row(p: Dictionary, key: String, label: String, useful := true) -> Con
 	var v := UiKit.vbox(4)
 	card.add_child(v)
 	var cur := int((p["attr"] as Dictionary).get(key, 1))
-	var cost := GameState.train_cost(p, key)
 	var h := UiKit.hbox(8)
 	v.add_child(h)
 	var name := UiKit.ellipsis(label, UiKit.BODY, UiKit.TEXT, true)
@@ -834,36 +805,7 @@ func _stat_row(p: Dictionary, key: String, label: String, useful := true) -> Con
 	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(what)
 	v.add_child(_bar(cur))
-	var actions := UiKit.hbox(6)
-	v.add_child(actions)
-	var one := UiKit.btn("Maxed" if cost < 0 else "+1  ·  %d XP" % cost, UiKit.SECONDARY)
-	one.clip_text = true
-	one.custom_minimum_size = Vector2(0, 44)
-	one.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	one.disabled = cost < 0 or int(p.get("xp", 0)) < cost
-	one.pressed.connect(_train.bind(_selected, key, 1))
-	actions.add_child(one)
-	var batch := GameState.affordable_points(_selected, key, 5)
-	if batch >= 2:
-		var many := UiKit.btn("+%d" % batch, UiKit.SECONDARY)
-		many.custom_minimum_size = Vector2(64, 44)
-		many.pressed.connect(_train.bind(_selected, key, batch))
-		actions.add_child(many)
 	return card
-
-
-func _train(player_id: String, key: String, points: int) -> void:
-	var result := GameState.train_stat(player_id, key, points)
-	if not bool(result.get("ok", false)):
-		_notice = str(result.get("reason", "Could not train that stat."))
-	else:
-		var label := GameState.train_stat_label(key)
-		var ov := int(result["overall_after"]) - int(result["overall_before"])
-		var ov_text := "Overall unchanged" if ov == 0 else "Overall %d to %d" % [
-				int(result["overall_before"]), int(result["overall_after"])]
-		_notice = "%s %d to %d. %s. %d XP left." % [label, int(result["stat_before"]),
-				int(result["stat_after"]), ov_text, int(result["xp"])]
-	_build()
 
 
 func _bar(value: int) -> Control:

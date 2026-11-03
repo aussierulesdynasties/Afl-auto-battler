@@ -765,7 +765,8 @@ table, shot conversion, every best and quiet player with his numbers and
     marking, so he can stay a Crumber), Ruck (ruck, contested). A
     dual-role player gets both roles' archetypes; his Position plan trains
     his first role and the picker says which ("Position plan (ruck)").
-  - *Manual* pauses development: XP banks until spent by hand.
+  - *Manual* (hand-spending XP) was cut 2026-11-03: old saves on Manual load
+    on the plan closest to how the player is built (`GameState._closest_plan`).
   Every plan attribute must be in the role's core or behind a trait the
   role can earn (`GameState.stat_useful_for_role`; tested). The old Star
   power plan and the single-stat focuses are gone (saves
