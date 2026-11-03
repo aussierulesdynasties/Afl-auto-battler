@@ -46,8 +46,11 @@ static func season_close(gs) -> void:
 	_assistant_leaves(gs, st)
 	if to == "":
 		return
+	# The assistant who may inherit the job (arc "assistant"), named now while
+	# the arc still remembers him.
+	var heir_id := str((st["active"].get("assistant", {}) as Dictionary).get("mem", {}).get("assistant_id", ""))
 	_close_for_move(gs, st)
-	st["move"] = {"to": to, "why": why, "from": str(gs.my_club), "year": year}
+	st["move"] = {"to": to, "why": why, "from": str(gs.my_club), "year": year, "heir": heir_id}
 	if sacked:
 		CoachArcs.log_line(st, year, "Season end", "move", "Sacked by %s. %s offer him their senior job." % [
 				GameDB.club_name(gs.my_club), GameDB.club_name(to)])
@@ -88,6 +91,10 @@ static func _job_after_sack(gs, st: Dictionary) -> String:
 	for h in st["coach"]["clubs"]:
 		if str(h.get("why_left", "")) == "sacked":
 			sacked_him[str(h["code"])] = true
+	# Not the club his own assistant is leaving to coach.
+	var asst: Dictionary = st["active"].get("assistant", {})
+	if (asst.get("flags", {}) as Dictionary).has("backed"):
+		sacked_him[str(asst.get("mem", {}).get("assistant_code", ""))] = true
 	var pool := []
 	for i in range(table.size() - 1, -1, -1):
 		var code := str(table[i]["code"])
@@ -143,7 +150,10 @@ static func apply_move(gs) -> void:
 	var heir := {}
 	var a: Dictionary = st["done"].get("assistant", {})
 	if str(a.get("ending", "")) == "took_job" and int(a.get("year", 0)) == year:
-		heir = gs.coaches.get(str(st.get("last_assistant", "")), {})
+		heir = gs.coaches.get(str(mv.get("heir", "")), {})
+		# Only while he is still on staff at the club he would take over.
+		if str(heir.get("status", "")) != "club" or str(heir.get("club", "")) != from:
+			heir = {}
 	if not heir.is_empty():
 		CoachMarket._appoint(heir, from, "SC", year, seed)
 		if not theirs.is_empty():
@@ -261,7 +271,6 @@ static func assistant_trigger(gs, st: Dictionary, tr: Dictionary, ctx: Dictionar
 		return {}
 	pool.sort()
 	var to: String = pool[_roll(gs, "assistant_to|%d|%s" % [int(gs.season_year), best_id], pool.size())]
-	st["last_assistant"] = best_id
 	return {"mem": {"assistant": GameDB.player_display_name(best), "assistant_id": best_id,
 			"assistant_to": GameDB.club_name(to), "assistant_code": to}}
 
