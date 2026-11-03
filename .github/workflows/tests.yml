@@ -13,9 +13,9 @@ name: Tests
 # suite; nothing lists them by hand. The layout is planned from a real run's
 # suite timings (tools/ci_suite_timings.json); a suite added since the last
 # re-plan joins the lightest shard on its own (tools/ci_shards.py). The test job prints each shard's
-# observed time and warns when one runs long, but never fails on it. The
-# league_balance suite (a developer tool) runs on pushes to main, not on pull
-# requests. A pull request runs only the suites that cover its changed files, plus a
+# observed time and warns when one runs long, but never fails on it. Long
+# suites (tools/ci_long_suites.txt, over about 240 s each) never run here: the
+# nightly workflow (nightly.yml) runs them in full. A pull request runs only the suites that cover its changed files, plus a
 # smoke set (tools/select_suites.py); anything it cannot trace (data/, project.godot,
 # the harness, this workflow) runs everything, and a push to main always runs the full wall.
 # One more job runs the
@@ -40,10 +40,6 @@ on:
         description: "Pretend a pull request changed these files (space-separated) and run just the suites they select"
         required: false
         default: ""
-  # Nightly on main: the balance suites that pull requests skip
-  # (balance, league_balance, calibration). 16:00 UTC is 03:00 in Melbourne (AEDT).
-  schedule:
-    - cron: "0 16 * * *"
 
 # A newer push to a PR supersedes its older run. Every push to main gets its own
 # group (its sha) and is never cancelled, so back-to-back merges each get a verdict.
@@ -121,9 +117,17 @@ jobs:
         env:
           PRETEND: ${{ inputs.changed_files }}
         run: |
-          matrix=$(python3 tools/ci_shards.py --matrix)
+          # Fast gate (director 2026-11-04): pull requests and pushes to main skip the
+          # long suites in tools/ci_long_suites.txt (over about 240 s on CI); the
+          # nightly workflow (nightly.yml) runs them in full. The rest pack into
+          # shards of about 240 s (tools/ci_shards.py --only), so the gate stays under 10 minutes.
+          long=$(grep -vE '^[[:space:]]*(#|$)' tools/ci_long_suites.txt | xargs)
+          skip="$long"
+          # Pull requests run calibration only when scripts/sim/ or data/ changed.
+          if [ "${{ github.event_name }}" = pull_request ] && [ "${{ steps.changes.outputs.sim }}" != true ]; then skip="$skip calibration"; fi
+          suites=$(tools/list_suites.sh tests | xargs)
           # A pull request runs the suites that cover its changed files plus the smoke set
-          # (tools/select_suites.py); pushes to main and the nightly run the full wall.
+          # (tools/select_suites.py); pushes to main run every suite but the long ones.
           partial=false
           files=""
           if [ "${{ github.event_name }}" = pull_request ]; then files=$(git diff --name-only --no-renames HEAD^1 HEAD); fi
@@ -132,34 +136,22 @@ jobs:
             pick=$(python3 tools/select_suites.py --json --files $files)
             echo "Selection: $pick"
             note=$(printf '%s' "$pick" | python3 -c 'import json,sys; print(json.load(sys.stdin)["note"])')
-            suites=$(printf '%s' "$pick" | python3 -c 'import json,sys; print(json.load(sys.stdin)["suites"])')
             if [ "$(printf '%s' "$pick" | python3 -c 'import json,sys; print(json.load(sys.stdin)["partial"])')" = True ]; then
               partial=true
+              suites=$(printf '%s' "$pick" | python3 -c 'import json,sys; print(json.load(sys.stdin)["suites"])')
               # Calibration runs on every pull request that touches the sim, whatever its suites cover.
               if [ "${{ steps.changes.outputs.sim }}" = true ]; then suites="$suites calibration"; fi
-              skip="balance league_balance"; [ "${{ steps.changes.outputs.sim }}" = true ] || skip="$skip calibration"
-              if [ "${{ github.event_name }}" != pull_request ]; then skip=""; fi
-              matrix=$(python3 tools/ci_shards.py --matrix --only "$suites" --skip "$skip")
             fi
             {
               echo "### Suites this run needs"
               echo "$note. Changed: $(printf '%s' "$files" | wc -w) files."
-              if [ "$partial" = true ]; then echo "Suites: $suites (balance suites follow the usual pull-request rule). A push to main runs the full wall."; fi
+              if [ "$partial" = true ]; then echo "Suites: $suites. A push to main runs every suite but the long ones."; fi
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+          echo "Long suites (nightly.yml runs them in full): $long" >> "$GITHUB_STEP_SUMMARY"
           echo "partial=$partial" >> "$GITHUB_OUTPUT"
-          # Balance suites (director 2026-10-19): pull requests skip balance and
-          # league_balance, and run calibration only when scripts/sim/ or data/
-          # changed; the nightly schedule runs just those three; main pushes and
-          # manual runs run everything. A shard left with no suite is dropped
-          # (an empty list would make run_tests.sh run every suite).
-          case "${{ github.event_name }}" in
-            pull_request) mode=drop; picked="balance league_balance"; [ "${{ steps.changes.outputs.sim }}" = true ] || picked="$picked calibration" ;;
-            schedule) mode=keep; picked="balance league_balance calibration" ;;
-            *) mode=drop; picked="" ;;
-          esac
-          if [ "$partial" = true ]; then mode=drop; picked=""; fi
-          matrix=$(printf '%s' "$matrix" | MODE="$mode" PICKED="$picked" python3 -c 'import json,os,sys; m=json.load(sys.stdin); p=set(os.environ["PICKED"].split()); keep=os.environ["MODE"]=="keep"; [g.update(suites=" ".join(s for s in g["suites"].split() if (s in p)==keep)) for g in m["include"]]; m["include"]=[g for g in m["include"] if g["suites"]]; print(json.dumps(m))')
+          python3 tools/ci_shards.py   # the shard plan itself must still be valid
+          matrix=$(python3 tools/ci_shards.py --matrix --only "$suites" --skip "$skip")
           echo "Shards: $matrix"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 

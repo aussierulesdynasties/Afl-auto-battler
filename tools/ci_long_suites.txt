@@ -1,0 +1,21 @@
+# Suites that run nightly (.github/workflows/nightly.yml), not on pull requests
+# or in the main-push gate (.github/workflows/tests.yml). One suite per line.
+#
+# Rule (director 2026-11-04, "fast PR gate + nightly long suites"): a suite whose
+# median CI time is over about 240 s is long. Medians from main run 41641362134
+# and PR runs 41636393349 41639727757 41641590475 41641730855 41646965345
+# (suite-timings artifacts, 2026-11-03/04), in seconds:
+story
+save
+match_game
+career
+contracts
+coach_arcs
+match_visual
+matchday
+match_motion
+back_nav
+preseason
+# The balance harness suites ran nightly before this rule and still do.
+balance
+league_balance
