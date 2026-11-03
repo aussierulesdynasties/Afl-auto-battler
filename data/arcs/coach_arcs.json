@@ -417,7 +417,8 @@
   "trigger": {
    "kind": "protege",
    "age_max": 20,
-   "potential_min": 80
+   "potential_min": 80,
+   "hero_count_min": 3
   },
   "max_seasons": 6,
   "start_line": "{name} is the coach's project now: the kid he has put his name to.",
@@ -774,6 +775,49 @@
       "arc": {
        "flag": "dropped"
       }
+     }
+    ]
+   },
+   {
+    "id": "arc_veteran_still_got_it",
+    "category": "media",
+    "gap": 2,
+    "when": {
+     "hero_is_arc_player": true
+    },
+    "skip_after": 8,
+    "title": [
+     "{first} has still got it"
+    ],
+    "text": [
+     "{name} was the hero on the weekend, and the papers want to know if his last season is really his last."
+    ],
+    "choices": [
+     {
+      "key": "praise",
+      "label": "Say he has earned his say",
+      "effects": [
+       {
+        "op": "morale",
+        "d": 4
+       }
+      ],
+      "result": "He reads it on Monday and stands a little taller.",
+      "arc": {
+       "flag": "still_got_it"
+      }
+     },
+     {
+      "key": "plan",
+      "label": "Say the plan has not changed",
+      "effects": [
+       {
+        "op": "trust",
+        "d": -3,
+        "why": "You said his last season is still his last"
+       }
+      ],
+      "result": "He nods, and says nothing."
      }
     ]
    },
@@ -1204,7 +1248,8 @@
   "kind": "club",
   "trigger": {
    "kind": "media",
-   "statements": 3
+   "statements": 3,
+   "hero_count_min": 3
   },
   "max_seasons": 2,
   "start_line": "The coach has become a story in his own right. {journalist} has noticed.",

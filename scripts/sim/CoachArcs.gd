@@ -38,7 +38,9 @@ const KINDS := ["club", "player"]
 ## Facts an arc's text may name beyond the deck's own (ClubArcs.arc_facts).
 const ARC_FACTS := ["chairman", "journalist", "rival_club", "father", "seasons_coached",
 		"coach_games", "coach_flags", "drought", "arc_year", "arc_seasons", "opp_is_rival",
-		"old_club", "old_chairman", "former", "suitor", "suitor_president", "assistant", "assistant_to", "opp_is_old"]
+		"old_club", "old_chairman", "former", "suitor", "suitor_president", "assistant", "assistant_to", "opp_is_old",
+		# From the match stories (plan step 1b; MatchStory.arc_facts), this season:
+		"hero_streak", "hero_count", "last_hero_mine", "hero_is_arc_player", "close_losses", "turned_against"]
 ## Facts a closing rule reads at a season's start (ClubArcs.close_facts).
 const CLOSE_FACTS := ["sacked", "warned", "premiers", "met", "board", "here", "morale", "ladder_last"]
 

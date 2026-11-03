@@ -188,10 +188,26 @@ static func _facts(gs, st: Dictionary, rec: Dictionary, club: Dictionary) -> Dic
 	f["opp_is_rival"] = str(rec.get("mem", {}).get("rival_club", "")) != "" and str(club.get("opp", "")) == str(rec["mem"]["rival_club"])
 	var old := str(rec.get("mem", {}).get("old_club", ""))
 	f["opp_is_old"] = old != "" and str(club.get("opp", "")) == old
+	var hf := hero_facts(gs)
+	var who := str(rec.get("who", ""))
+	f["hero_streak"] = int(hf["hero_streak"])
+	f["hero_count"] = int((hf["hero_counts"] as Dictionary).get(who, 0)) if who != "" else 0
+	f["last_hero_mine"] = bool(hf["last_hero_mine"])
+	f["hero_is_arc_player"] = who != "" and str(hf["last_hero_id"]) == who
+	f["close_losses"] = int(hf["close_losses"])
+	f["turned_against"] = int(hf["turned_against"])
 	for k in ["rival_club", "father", "old_club", "old_chairman", "former", "suitor", "suitor_president", "assistant", "assistant_to"]:
 		if not f.has(k):
 			f[k] = ""
 	return f
+
+
+## This season's facts from the match stories (MatchStory.arc_facts); all
+## zero while the match story switch is off.
+static func hero_facts(gs) -> Dictionary:
+	if not MatchStory.on():
+		return MatchStory.arc_facts([], 0)
+	return MatchStory.arc_facts(gs.match_stories, int(gs.season_year))
 
 
 ## Seasons under this coach since his last flag (all of them, if none).
@@ -247,6 +263,12 @@ static func trigger(gs, st: Dictionary, def: Dictionary, ctx: Dictionary, season
 				var backed := bool(p.get("backed", false)) or (gs.story.get("arcs", {}) as Dictionary).has("backed_kid|" + str(p["id"]))
 				if backed and float(p.get("age", 99)) <= float(tr.get("age_max", 20)) and int(p.get("potential", 0)) >= int(tr.get("potential_min", 80)):
 					return _player_hit(p)
+			# Or a kid the match stories keep naming the hero (plan step 1b).
+			if tr.has("hero_count_min"):
+				var counts: Dictionary = hero_facts(gs)["hero_counts"]
+				for p in players:
+					if float(p.get("age", 99)) <= float(tr.get("age_max", 20)) 							and int(counts.get(str(p["id"]), 0)) >= int(tr["hero_count_min"]):
+						return _player_hit(p)
 		"one_year_too_long":
 			for p in players:
 				if bool(p.get("last_season", false)) and float(p.get("age", 0)) >= float(tr.get("age_min", 31)) \
@@ -264,6 +286,12 @@ static func trigger(gs, st: Dictionary, def: Dictionary, ctx: Dictionary, season
 		"media":
 			if statements(gs, st) >= int(tr.get("statements", 3)):
 				return {"mem": {}}
+			# Or a player of yours the hero again and again: the papers come asking.
+			if tr.has("hero_count_min"):
+				var counts: Dictionary = hero_facts(gs)["hero_counts"]
+				for id in counts:
+					if int(counts[id]) >= int(tr["hero_count_min"]):
+						return {"mem": {}}
 		"rivalry":
 			for code in gs.season.ladder:
 				if str(code) == str(gs.my_club) or not Rivalries.established(gs.my_club, str(code)).is_empty():
