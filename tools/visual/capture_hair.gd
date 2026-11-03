@@ -6,8 +6,11 @@ extends SceneTree
 ##   godot --path . --script tools/visual/capture_hair.gd -- --out /tmp/hair
 ## Writes <out>.png. Needs a real renderer and a window (keep it off screen with
 ## an override.cfg).
+## With Features "player_looks" on (-- --features player_looks): every style
+## (Appearance.HAIR_STYLES), each row wearing face (row mod 5) - register row 6.
 
-const STYLES := ["short_crop", "swept_back", "textured_short", "dreadlocks", "bald", "buzz"]
+const OLD_STYLES := ["short_crop", "swept_back", "textured_short", "dreadlocks", "bald", "buzz"]
+var STYLES: Array = OLD_STYLES
 ## [skin, hair]: light skin / brown, deep skin / black, light skin / blond.
 const LOOKS := [[1, 2], [4, 0], [0, 4]]
 const POSES := [["idle", "front", 0], ["jog", "side_l", 2], ["jog", "back", 4], ["idle", "back", 0]]
@@ -27,6 +30,8 @@ func _run() -> void:
 		if str(a[i]) == "--out":
 			out = str(a[i + 1])
 	await process_frame
+	if Features.on("player_looks"):
+		STYLES = Appearance.HAIR_STYLES
 	var SV: GDScript = load("res://scripts/ui/match/StoppageVignette.gd")
 	var w := int(LEFT + CELL * POSES.size() * LOOKS.size() + 20)
 	var h := int(ROW * STYLES.size() + 20)
@@ -48,6 +53,9 @@ func _run() -> void:
 		for r in STYLES.size():
 			var y := 10.0 + r * ROW
 			c.draw_string(font, Vector2(8, y + 24), STYLES[r], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
+			if Features.on("player_looks"):
+				c.draw_string(font, Vector2(8, y + 44), "face %d" % (r % VignetteLooks.FACES.size()),
+						HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 			# Close up: the head and shoulders, 1.5 x the sheet (the body below is covered).
 			for mode in ["close", "phone"]:
 				if mode == "phone":
@@ -61,7 +69,8 @@ func _run() -> void:
 						# Phone size: the whole figure about 60 px tall.
 						var feet := Vector2(x + CELL * 0.5, y + 222.0) if mode == "phone" else Vector2(x + CELL * 0.5, y + 300.0)
 						SV.draw_frame(c, feet, info, int(pose[2]), 0.32 if mode == "phone" else 1.5, col, false,
-								Color(0, 0, 0, 0), Transform2D.IDENTITY, STYLES[r])
+								Color(0, 0, 0, 0), Transform2D.IDENTITY, STYLES[r],
+								r % VignetteLooks.FACES.size() if Features.on("player_looks") else -1)
 						x += CELL
 	)
 	root.add_child(c)
