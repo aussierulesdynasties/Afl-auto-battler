@@ -14,6 +14,9 @@ func run() -> void:
 	failures.clear()
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
+	# The draft rules are read on the data without the hand-set OVR rows (data/ovr_overrides.csv).
+	GameDB.skip_ovr_overrides = true
+	GameDB.reload()
 	_t("_test_history_and_snake_order")
 	_t("_test_ai_draft_logic")
 	_t("_test_pick_for_me_matches_rival")
@@ -37,6 +40,8 @@ func run() -> void:
 	_t("_test_draft_reasons_change_nothing")
 	_t("_test_real_drafts_reasons_change_nothing")
 	GameState.replay_seed = 0
+	GameDB.skip_ovr_overrides = false
+	GameDB.reload()
 	print(Ran.line("Draft", self))
 
 

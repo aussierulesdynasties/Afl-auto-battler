@@ -10,6 +10,9 @@ var checks := 0
 func run() -> void:
 	failures.clear()
 	checks = 0
+	# These fixtures (rotations, rucks played through) are about the engine, not the director's
+	# hand-set ratings (data/ovr_overrides.csv): they play on the data without them.
+	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	_t("_test_auto_sim_untouched")
 	_t("_test_stoppage_location")
@@ -77,6 +80,8 @@ func run() -> void:
 	_t("_test_set_shot_bands")
 	_t("_test_set_shot_calls")
 	_t("_test_forward_archetypes")
+	GameDB.skip_ovr_overrides = false
+	GameDB.reload()
 	print(Ran.line("Match game", self))
 
 
