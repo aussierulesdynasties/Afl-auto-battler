@@ -54,7 +54,7 @@ const DEFAULTS := {
 	"seen_uncertainty": 0.7,
 	"guest_spare_number": 60,
 	"practice_week": 7,
-	"practice_guests": 3,
+	"practice_guests": 6,
 	"practice_injury_rate": 0.5,
 	"practice_xp_games": 1.0,
 	"familiar_default": 1,
