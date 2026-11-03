@@ -22,7 +22,6 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 
 | # | What | Done looks like |
 |---|---|---|
-| 9 | Feed styling: own goals positive, conceded negative, behinds and tactical lines neutral | feed colours match |
 | 17 | Key-matchup block as a compact grid; loose tally "since the call"; "What your calls did" explains its numbers | grid shown |
 | 18 | Match summary: full injury wording (not "to a hand"); scoring-run line with when and score before/after | lines present |
 | 23 | This week: both sides' key forwards and defenders, height and marking, side by side | both sides shown |
@@ -44,6 +43,7 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 |---|---|---|---|
 | 1 | Top three attributes on cards, Needs work benchmark, scout grade word for hidden prospects | `top_attributes` | #863 |
 | 6 | Player faces, 15 hair styles, 30 strips re-rendered | `player_looks` | #873 |
+| 9 | Feed colours: your goals good, goals against bad, behinds and calls neutral | `feed_colours` | #918 |
 | 10 | Kick range caps receiver choice; Sim the week shares the same pick | `kick_range` | #857 #879 |
 | 48 | Coach career arcs | `coach_arcs` | #867 #877 #881 #886 |
 | 49 | Match hero, turning point, reasons | `match_story` | #853 #890 |

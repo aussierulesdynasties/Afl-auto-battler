@@ -68,6 +68,7 @@ func _run() -> void:
 	await _t("_test_playtest_bounce_scene")
 	await _t("_test_rings_on_the_oval")
 	await _t("_test_first_goal_line")
+	await _t("_test_feed_colours")
 	await _t("_test_momentum_meter")
 	await _t("_test_vignettes_setting")
 	await _t("_test_game_feel_settings")
@@ -2099,6 +2100,60 @@ func _test_rings_on_the_oval() -> void:
 		pitch._process(0.25)
 		guard += 1
 	_check(kid != "" and pitch.ringed(kid), "A player you promised a run is ringed as the next event plays")
+	m.queue_free()
+	await _settle()
+
+
+## Row 9 (switch feed_colours): your goals read good, goals against read bad, a behind
+## and a coach's call stay neutral; off, every goal head is plain text.
+func _test_feed_colours() -> void:
+	var db = root.get_node("GameDB")
+	_state.reset()
+	_state.start_season("COL", db.club_list("COL"))
+	root.size = Vector2i(420, 860)
+	_check(_state.prepare_interactive_match(), "A live match is prepared (feed colours)")
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	var me := int(m.get("_my_side"))
+	var feed: Node = m.find_child("Feed", true, false)
+	var head_col := func(row: Node) -> Color:
+		var h: Control = row.get_child(1).get_child(0)
+		return h.get_theme_color("default_color") if h is RichTextLabel else h.get_theme_color("font_color")
+	var ui = load("res://scripts/ui/UiKit.gd")
+	var was: bool = Features.on("feed_colours")
+	Features.set_on("feed_colours", true)
+	var goal := {"kind": "goal", "q": 1, "min": 3, "name": "Test Kicker", "goals": [1, 0], "behinds": [0, 0], "score": [6, 0]}
+	goal["side"] = me
+	m.call("_feed_add", goal)
+	goal["side"] = 1 - me
+	m.call("_feed_add", goal)
+	var rows := []
+	for c in feed.get_children():
+		if str(c.get_meta("feed_kind", "")) == "goal":
+			rows.append(c)
+	_check(rows.size() == 2, "Both goals reach the feed (%d)" % rows.size())
+	if rows.size() == 2:
+		_check(str(rows[0].get_meta("tone")) == "good" and head_col.call(rows[0]) == ui.GOOD,
+				"Your goal reads in the good colour")
+		_check(str(rows[1].get_meta("tone")) == "bad" and head_col.call(rows[1]) == ui.BAD,
+				"A goal against reads in the bad colour")
+	var behind := {"kind": "behind", "q": 1, "min": 4, "side": me, "name": "Test Kicker", "score": [6, 1]}
+	m.call("_feed_add", behind)
+	var last: Node = feed.get_child(feed.get_child_count() - 1)
+	_check(str(last.get_meta("feed_kind", "")) == "PlayLine"
+			and (last as Control).get_theme_color("default_color" if last is RichTextLabel else "font_color") == ui.TEXT,
+			"Your behind stays neutral")
+	_check(load("res://scripts/ui/match/MatchNotes.gd").feed_tone({"kind": "moment", "side": me}, me) == "neutral", "A coach's call stays neutral")
+	Features.set_on("feed_colours", false)
+	m.call("_feed_add", goal)
+	var off: Node = null
+	for c in feed.get_children():
+		if str(c.get_meta("feed_kind", "")) == "goal":
+			off = c
+	_check(off != null and str(off.get_meta("tone")) == "neutral" and head_col.call(off) == ui.TEXT,
+			"Switch off: the goal head is plain text")
+	Features.set_on("feed_colours", was)
 	m.queue_free()
 	await _settle()
 
