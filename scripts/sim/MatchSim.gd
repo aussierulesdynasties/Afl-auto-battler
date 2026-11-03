@@ -4858,6 +4858,9 @@ func _boundary_moment() -> bool:
 	var run_key := "run|%d" % (goals(opp) - int(_run[opp]))
 	if _run[opp] >= 3 and not _asked.has(run_key):
 		_asked[run_key] = true
+		if Features.on("goal_run_moves"):
+			_fire_run_moves(_run[opp])
+			return true
 		_fire({"kind": "momentum", "default": 2,
 			"title": "They have kicked %d in a row" % _run[opp],
 			"text": "The game is getting away from you. Make a call for the next ten minutes.",
@@ -4872,6 +4875,24 @@ func _boundary_moment() -> bool:
 		return true
 	# A tight last-quarter centre bounce.
 	return _bounce_moment(margin)
+
+
+## The run against you as two concrete moves (row 14, switch goal_run_moves):
+## stack the next centre bounces to win the ball back from the middle, or flood
+## behind the ball to stop the goals. Each carries its gain and cost as
+## percentages (GateOdds.burst_lines), and neither is called the better. The
+## card has no "ride it out": a side that is not asked (a simulated match)
+## makes no call, default -1.
+func _fire_run_moves(run: int) -> void:
+	_fire({"kind": "momentum", "moves": true, "default": -1,
+		"title": "They have kicked %d in a row" % run,
+		"text": "Two ways to answer it from the next centre bounce.",
+		"options": _sized([
+			{"key": "stack", "label": "Stack the centre bounce",
+				"detail": "Extra numbers at the ball-up."},
+			{"key": "flood", "label": "Flood behind the ball",
+				"detail": "Everyone back, so they cannot run it in."},
+		], current_quarter * 30 - current_minute, GateOdds.NONE_COST_RUN)})
 
 
 ## Lockdown's opponent. A defender's is the forward he stands on the shot
