@@ -3325,7 +3325,10 @@ func _goal_row(ev: Dictionary, stamp: String) -> Control:
 	var names := _names().duplicate()
 	if who != "":
 		names[who] = code
-	var hl := NameInk.label(head, names, UiKit.NAME, UiKit.TEXT, true)
+	var tone := MatchNotes.feed_tone(ev, _my_side) if Features.on("feed_colours") else "neutral"
+	row.set_meta("tone", tone)
+	var head_col: Color = UiKit.GOOD if tone == "good" else (UiKit.BAD if tone == "bad" else UiKit.TEXT)
+	var hl := NameInk.label(head, names, UiKit.NAME, head_col, true)
 	hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(hl)
 	var g: Array = ev.get("goals", [0, 0])

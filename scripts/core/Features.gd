@@ -92,7 +92,11 @@ extends RefCounted
 ##               the players they are about, like the centre-bounce call (DecisionVignette).
 ##               Off, they are the text cards they were. Settings > Vignettes off also
 ##               keeps the card.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes"]
+##   feed_colours   row 9 (director, 2026-11-04): in the match feed a goal your club kicks reads in the
+##               good colour, a goal you concede in the bad one; behinds, breaks and the coach's calls
+##               stay neutral. The club stripe and name ink are unchanged. Presentation only. Off,
+##               every goal head is plain text.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "feed_colours"]
 
 static var _forced := {}
 static var _from_args := {}
