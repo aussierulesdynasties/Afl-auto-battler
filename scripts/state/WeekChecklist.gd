@@ -56,10 +56,22 @@ static func _seen(gs, key: String, pending: bool) -> bool:
 
 
 ## The big call: the week's one weighty decision about the coach's own
-## career. The coach-arcs step fills this; until then there is none, and the
-## Hub shows nothing for it. {} or {"text", "route"}.
-static func big_call(_gs) -> Dictionary:
-	return {}
+## career. A due coach-arc beat first (ClubArcs.big_call); else the most pressing
+## of backing a young player, captaincy, the press or an assistant approach
+## (BigCalls; both behind "coach_arcs"). {} or {"text", "route", "done", ...}.
+static func big_call(gs) -> Dictionary:
+	if not on(gs) or gs.season == null:
+		return {}
+	# Loaded here, not named: these read the GameDB autoload, which a test's
+	# preload of this script compiles before autoloads exist.
+	var arcs = load("res://scripts/state/ClubArcs.gd")
+	var arc: Dictionary = arcs.big_call(gs)
+	if not arc.is_empty():
+		arc["done"] = false
+		return arc
+	if not arcs.on(gs):
+		return {}
+	return load("res://scripts/state/BigCalls.gd").pick(gs, _week(gs))
 
 
 ## This week's routine jobs, in order: [{key, text, done, route}]. "route"

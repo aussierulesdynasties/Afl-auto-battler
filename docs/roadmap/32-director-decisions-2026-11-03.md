@@ -22,6 +22,10 @@ his differs, the later one wins. Nothing here edits the bible.
 | 11 | A3 "Keep the noise outside" board +1? | swap it for Standards +1 | no card of the eight rewards the board |
 | 12 | Where do the Grand Final history lines come from? | only the save's own history plus data/club_premierships.csv | no line claims a final or flag the record cannot show |
 | 13 | Milestone games: switch on or off? | live, no off switch | the `milestone_games` switch is removed (Features.KNOWN, Milestones.FEATURE); the Hub milestone card, news preview and full-time line always show; recording was already always on |
+| 14 | Row 6: how much face? | minimal: eyes, brows, skin tones | a face overlay of MPFB's eyes and eyebrow cards over every figure (VignetteLooks, switch player_looks, off until he plays it); no mouth, nose or lashes |
+| 15 | Row 6: one brow for everyone? | brows vary per player | five brows (face_lib EYEBROWS), one chosen from his id alone (Appearance.brows_for), tinted his hair colour; eyes near black |
+| 16 | Row 6: buzz? | buzz keeps no hair overlay | buzz still shows the bald base's stubble; with the switch on he gets the face like everyone else |
+| 17 | Row 6: strips that fell back to the short crop with no face? | re-render them all | the 30 player strips (ready, ready_turn, ready_b, tap, tap_b, bounce, mark_f, brace_f, mark_s, brace_s) re-rendered for every new style and face on the pipeline commit that built each installed strip (same rig, poses, camera and scale; short crop IoU 1.00 against the installed cells); the coach (base look only) and carrier_near (no hair overlay) are unchanged |
 
 - **Row 37 draft logic, later ruling (2026-11-03):** the buff also applies to the user's "Pick for me", and the sim must
   be extremely competent: every club, the user's included, acts in its own best interest at all times; mistakes come
@@ -40,7 +44,20 @@ his differs, the later one wins. Nothing here edits the bible.
   Defensive forward and Loose interceptor are one Defensive set-up call; the in-match Main ruck call is gone (the
   selected ruck goes up); rotations are automatic for both sides (MatchSim.auto_rotation: season plan, heat, close
   late quarters). Live, no switch; old saves load and the old call keys are ignored.
+- PC pre-bounce break (1280x720 and wider) is three call columns, not four; no column more than a fifth empty
+  (strict matchday check restored). Game plan leads column 1, Tag leads column 2; key match-ups, pep talk, defensive
+  set-up and the legs/synergies lines are dealt for balance (tag + match-ups together were ~360 of ~940, so they no
+  longer share a column). Phone and 768-1199 layouts unchanged.
+- Competent-AI rule, rotations everywhere: background AI-vs-AI matches, Sim the week, finals weeks and practice matches
+  now run MatchSim.auto_rotation for both sides each quarter on each club's own fitness plan (Season.fitness_plans,
+  stamped weekly; no plan = Steady). Seeded, deterministic. 3 seeded seasons (301-303) before/after: ladder SD
+  17.3 -> 16.8 pts, injuries/game 1.44 -> 1.45, mean workload 6.18 -> 6.18 (noise-level; clubs now run hard ~26%,
+  stars ~11% of quarters). Audit: tools/audit/rotations_season_impl.gd.
 - Cut audit row 6: Manual stat training is gone; only the training plans stay, no hand-buying of stat points. Old saves
   on Manual (own or club plan) load on the plan closest to how each player is built, and his banked XP is spent under it.
 - Practice match guests: the single pre-season practice match trials 6 prospects per club (was 3; data/preseason.json
   practice_guests). Invites, the setup count, "Recruiters fill the rest" and AI pairs all use the one number.
+- Weekly big call (plan 3a, cut audit): the Hub's one big call is a due coach-arc beat (ClubArcs.big_call), else the
+  most pressing of: a pending press question, an open assistant approach, no captain named, a young player ready for
+  backing (could be backed, rated within 3 of the list's 22nd best), a pre-season captaincy review (BigCalls.gd). One
+  call per week, kept in week_checks (saved), ticked when dealt with. Behind weekly_checklist and coach_arcs; off, as before.

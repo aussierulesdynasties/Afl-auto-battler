@@ -41,7 +41,7 @@ uniform sampler2D digits_tex : filter_linear, repeat_disable;   // 0-9: R fill, 
 uniform sampler2D flag_tex : filter_nearest, repeat_disable;
 uniform bool use_flag_tex = false;
 uniform ivec2 sheet_size = ivec2(2048, 2304);
-uniform ivec2 hair_sizes[8];
+uniform ivec2 hair_sizes[32];
 uniform int hair_count = 0;
 uniform vec4 kit_base[4];
 uniform vec4 kit_pattern[4];
@@ -218,7 +218,7 @@ vec2 flag_at(vec2 uv) {
 }
 
 bool is_hair(ivec2 size) {
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < 32; i++) {
 		if (i < hair_count && size == hair_sizes[i]) {
 			return true;
 		}
