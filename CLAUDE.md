@@ -1,6 +1,6 @@
 # AFL Auto-Battler: working rules
 
-The design bible and `docs/TODO.md` (the one list of work not done; director rulings are in `docs/roadmap/21..32`) load in
+The design bible and `docs/TODO.md` (the one list of work not done; director rulings are in `docs/DIRECTOR_BIBLE.md`) load in
 full at session start ("Always loaded" below). Must-read files stay under 60 KB (CI: `tools/check_doc_sizes.py`).
 
 Godot 4 / GDScript. Run `tools/run_tests.sh` (or `tools/run_tests.sh draft_ui`
@@ -132,8 +132,8 @@ usability.
 
 ## Assigned flavour and styling work (director, 2026-10-06)
 
-- **Flavour FL-001-FL-008:** scope and status in [ROADMAP §9.3](docs/roadmap/21-9-3-approved-flavour-and-culture-work-director-decisions.md#93-approved-flavour-and-culture-work--director-decisions-2026-10-06). Every addition has zero gameplay effects and must look distinct from real game information; new ritual/farewell vignette scenes are authorised (shared 2.5D art, tactical-scene gates kept).
-- **Styling STYLE-01-STYLE-08:** scope in [ROADMAP §9.5](docs/roadmap/23-9-5-approved-visual-styling-work-director-interview-2026.md#95-approved-visual-styling-work--director-interview-2026-10-06). Dark Android first. Light theme parked (director 2026-10-13: "im also happy to abandon 'light mode' for now"): no new light-theme work, captures or tests; the code stays. A visual treatment merges only after the director approves its look; green CI is not enough.
+- **Flavour FL-001-FL-008:** scope and rulings in [the Director Bible](docs/DIRECTOR_BIBLE.md). Every addition has zero gameplay effects and must look distinct from real game information; new ritual/farewell vignette scenes are authorised (shared 2.5D art, tactical-scene gates kept).
+- **Styling STYLE-01-STYLE-08:** scope and rulings in [the Director Bible](docs/DIRECTOR_BIBLE.md). Dark Android first. Light theme parked (director 2026-10-13: "im also happy to abandon 'light mode' for now"): no new light-theme work, captures or tests; the code stays. A visual treatment merges only after the director approves its look; green CI is not enough.
 - The Training player-row name/secondary-line stack is a confirmed vertical-alignment defect.
 
 ## Skills
