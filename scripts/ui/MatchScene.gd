@@ -3659,6 +3659,14 @@ func _ft_story(v: VBoxContainer, me: int) -> void:
 		gl.name = "MatchHeroLine"
 		gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(gl)
+	# A loss: your best player too (director, 2026-11-03).
+	if int(st["margin"]) < 0:
+		var mb := MatchStory.my_best(_res, me)
+		if not mb.is_empty():
+			var ml := UiKit.lbl("Your best: %s, %s" % [str(mb["name"]), str(mb["line"])], UiKit.BODY, UiKit.TEXT)
+			ml.name = "MatchMyBest"
+			ml.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			box.add_child(ml)
 	if str(st["turning_point"]) != "":
 		box.add_child(UiKit.section("Turning point"))
 		var tl := UiKit.lbl(str(st["turning_point"]), UiKit.BODY, UiKit.TEXT)

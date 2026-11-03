@@ -63,6 +63,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_triggers_from_state")
 	_t("_test_beats_only_active")
 	_t("_test_persist")
+	_t("_test_hero_count_trigger")
 	_t("_test_poached_moves_club")
 	_t("_test_sacked_way_back")
 	_t("_test_reunion")
@@ -475,3 +476,46 @@ func _test_assistant_leaves() -> void:
 	_check(GameState._vacancy_open(str(sa.get("job", "SA"))) or GameState._vacancy_open("SA"), "assistant: his job is open")
 	_check(CoachArcs.closing(def, rec, {"sacked": false}, GameState.season_year + 1) == "left_friend", "assistant: resolves 'left_friend'")
 	st["active"].erase("assistant")
+
+
+## The match-story facts (plan step 1b): validate() knows them, and an arc
+## whose condition is hero_count >= 3 starts only after the third hero match.
+func _test_hero_count_trigger() -> void:
+	for f in ["hero_streak", "hero_count", "last_hero_mine", "hero_is_arc_player", "close_losses", "turned_against"]:
+		_check(CoachArcs.ARC_FACTS.has(f), "the arcs know the fact %s" % f)
+	var probe := [{"id": "probe", "kind": "club", "trigger": {"kind": "media"}, "beats": [CoachArcs.by_id(CoachArcs.all(), "media_darling")["beats"][0].duplicate(true)],
+			"endings": {"done": {"line": "Done."}}, "close": [{"when": {}, "ending": "done"}]}]
+	probe[0]["beats"][0]["id"] = "probe_beat"
+	probe[0]["beats"][0]["when"] = {"hero_count_min": 3, "hero_streak_min": 1, "close_losses_max": 9}
+	var errs := CoachArcs.validate(probe)
+	_check(errs.is_empty(), "validate() accepts the new facts: %s" % str(errs))
+	_fresh()
+	Features.set_on("match_story", true)
+	# A kid of 19 on the list who is not a backed high-potential pick.
+	var young: Dictionary = GameState.my_list[GameState.my_list.size() - 1]
+	young["age"] = 19.0
+	young["potential"] = 60
+	var ctx := ClubStories.context(GameState)
+	var kid := {}
+	for p in ctx["players"]:
+		if str(p["id"]) == str(young["id"]):
+			kid = p
+	_check(not kid.is_empty(), "the list has a player of 20 or under")
+	var def := CoachArcs.by_id(CoachArcs.all(), "protege")
+	var st: Dictionary = ClubArcs._st(GameState)
+	GameState.match_stories = []
+	for n in range(1, 4):
+		GameState.match_stories.append({"year": GameState.season_year, "club": GameState.my_club, "opp": "WCE", "margin": 8,
+				"hero_id": str(kid.get("id", "")), "hero_name": "Kid", "hero_club": GameState.my_club})
+		var hit := ClubArcs.trigger(GameState, st, def, ClubStories.context(GameState), false)
+		var named := str(hit.get("who", "")) == str(kid.get("id", ""))
+		if n < 3:
+			_check(not named, "after %d hero match(es) the protege arc does not start for him" % n)
+		else:
+			_check(named, "after the third hero match the protege arc starts for him: %s" % str(hit))
+	var rec := {"who": str(kid.get("id", "")), "start": GameState.season_year}
+	var f := ClubArcs._facts(GameState, st, rec, ctx["club"])
+	_check(int(f["hero_count"]) == 3 and int(f["hero_streak"]) == 3 and bool(f["hero_is_arc_player"]),
+			"the arc's facts read the match stories (%s)" % str([f["hero_count"], f["hero_streak"], f["hero_is_arc_player"]]))
+	GameState.match_stories = []
+	Features.clear("match_story")

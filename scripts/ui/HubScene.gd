@@ -193,6 +193,13 @@ func _show_season_wrap() -> void:
 	# wrap before pre-seasons existed begins its season as it always did.
 	# Last season's page in the club almanac (switch club_almanac).
 	if Almanac.on():
+		var page: Dictionary = GameState.almanac.back() if not GameState.almanac.is_empty() else {}
+		var first := Almanac.first_sentence(str(page.get(Almanac.STORY_KEY, "")))
+		if first != "":
+			var lead := UiKit.lbl(first, 14, UiKit.MUTED)
+			lead.name = "WrapAlmanacStory"
+			lead.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			(box["footer"] as VBoxContainer).add_child(lead)
 		var alm := UiKit.btn("Club almanac", UiKit.BODY)
 		alm.name = "WrapAlmanac"
 		alm.flat = true

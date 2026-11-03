@@ -25,6 +25,8 @@ const EDGES := [
 	["marks", 10, "marks"],
 ]
 const MAX_REASONS := 3
+## A close game: decided by two goals or less.
+const CLOSE := 12
 
 
 static func on() -> bool:
@@ -78,6 +80,17 @@ static func hero_of(res: Dictionary) -> Dictionary:
 	var sides := [0, 1]
 	if int(score[0]) != int(score[1]):
 		sides = [0 if int(score[0]) > int(score[1]) else 1]
+	return best_of(res, sides)
+
+
+## Your best player by the same hero points (director, 2026-11-03: a loss
+## names both the winners' hero and your best). Same shape as hero_of.
+static func my_best(res: Dictionary, side: int) -> Dictionary:
+	return best_of(res, [side])
+
+
+## The best by hero points over the given sides.
+static func best_of(res: Dictionary, sides: Array) -> Dictionary:
 	var clutch := clutch_goals(res)
 	var codes := [str(res.get("home", "")), str(res.get("away", ""))]
 	var best := {}
@@ -214,9 +227,115 @@ static func record(res: Dictionary, side: int, year: int) -> Dictionary:
 	var reason_texts := []
 	for r in st["reasons"]:
 		reason_texts.append(str(r["text"]))
+	var mine := {}
+	if int(st["margin"]) < 0:
+		mine = my_best(res, side)
 	return {"year": year, "label": str(res.get("label", "")), "round": int(res.get("round", 0)),
 			"club": codes[side], "opp": codes[1 - side], "margin": int(st["margin"]),
 			"hero_id": str(hero.get("id", "")), "hero_name": str(hero.get("name", "")),
 			"hero_club": str(hero.get("club", "")), "hero_line": str(hero.get("line", "")),
 			"turning_point": str(st["turning_point"]), "reasons": reason_texts,
-			"headline": str(st["headline"])}
+			"headline": str(st["headline"]),
+			# Your best in a loss (empty in a win or draw).
+			"my_best_id": str(mine.get("id", "")), "my_best_name": str(mine.get("name", "")),
+			"my_best_line": str(mine.get("line", "")),
+			# The match turned on a comeback (ComebackTelling): yours in a win, against you in a loss.
+			"comeback": not ComebackTelling.turn_facts(res, side).is_empty(),
+			"final": str(res.get("tag", "")) != ""}
+
+
+## Your side's hero of a record: the hero when he is yours, else your best
+## in a loss. {id, name} or {} (a draw's hero from the other side).
+static func side_hero(rec: Dictionary) -> Dictionary:
+	if str(rec.get("hero_club", "")) == str(rec.get("club", "")) and str(rec.get("hero_id", "")) != "":
+		return {"id": str(rec["hero_id"]), "name": str(rec.get("hero_name", ""))}
+	if str(rec.get("my_best_id", "")) != "":
+		return {"id": str(rec["my_best_id"]), "name": str(rec.get("my_best_name", ""))}
+	return {}
+
+
+## Arc facts from the match stories of `year` (plan step 1b, for CoachArcs):
+## hero_streak (your matches in a row, counted back from the last, with the
+## same player of yours the hero), hero_counts {id: n} (your side's hero:
+## my_best in a loss), last_hero_mine, last_hero_id, close_losses (by CLOSE
+## or less), turned_against (losses that turned on a comeback against you).
+static func arc_facts(stories: Array, year: int) -> Dictionary:
+	var f := {"hero_streak": 0, "hero_counts": {}, "last_hero_mine": false, "last_hero_id": "",
+			"close_losses": 0, "turned_against": 0}
+	var ids := []
+	for rec in stories:
+		if int(rec.get("year", 0)) != year:
+			continue
+		var m := int(rec.get("margin", 0))
+		if m < 0 and -m <= CLOSE:
+			f["close_losses"] += 1
+		if m < 0 and bool(rec.get("comeback", false)):
+			f["turned_against"] += 1
+		var sh := side_hero(rec)
+		if not sh.is_empty():
+			f["hero_counts"][sh["id"]] = int(f["hero_counts"].get(sh["id"], 0)) + 1
+		ids.append(str(sh.get("id", "")))
+	if not ids.is_empty():
+		var last: String = ids[-1]
+		f["last_hero_mine"] = last != ""
+		f["last_hero_id"] = last
+		if last != "":
+			for i in range(ids.size() - 1, -1, -1):
+				if ids[i] != last:
+					break
+				f["hero_streak"] += 1
+	return f
+
+
+## Fold one record into its season's digest (GameState.match_story_digest,
+## keyed by the year as a string), so a season outlives the trimmed list:
+## {played, heroes {id: {name, count}}, best_win, worst_loss, best_final_win,
+## close_final_loss ({opp, margin, label, headline, turning_point} or {}),
+## comebacks, comebacks_against, close_wins, close_losses}.
+static func fold(digest: Dictionary, rec: Dictionary) -> void:
+	var key := str(int(rec.get("year", 0)))
+	if not digest.has(key):
+		digest[key] = {"heroes": {}, "played": 0, "best_win": {}, "worst_loss": {}, "best_final_win": {},
+				"close_final_loss": {}, "comebacks": 0, "comebacks_against": 0, "close_wins": 0, "close_losses": 0}
+	var d: Dictionary = digest[key]
+	d["played"] = int(d["played"]) + 1
+	var sh := side_hero(rec)
+	if not sh.is_empty():
+		var h: Dictionary = (d["heroes"] as Dictionary).get(sh["id"], {"name": sh["name"], "count": 0})
+		h["count"] = int(h["count"]) + 1
+		d["heroes"][sh["id"]] = h
+	var m := int(rec.get("margin", 0))
+	var game := {"opp": str(rec.get("opp", "")), "margin": m, "label": str(rec.get("label", "")),
+			"headline": str(rec.get("headline", "")), "turning_point": str(rec.get("turning_point", ""))}
+	var fin := bool(rec.get("final", false))
+	if m > 0:
+		if (d["best_win"] as Dictionary).is_empty() or m > int(d["best_win"]["margin"]):
+			d["best_win"] = game
+		if fin and ((d["best_final_win"] as Dictionary).is_empty() or m > int(d["best_final_win"]["margin"])):
+			d["best_final_win"] = game
+		if m <= CLOSE:
+			d["close_wins"] = int(d["close_wins"]) + 1
+		if bool(rec.get("comeback", false)):
+			d["comebacks"] = int(d["comebacks"]) + 1
+	elif m < 0:
+		if (d["worst_loss"] as Dictionary).is_empty() or m < int(d["worst_loss"]["margin"]):
+			d["worst_loss"] = game
+		if fin and ((d["close_final_loss"] as Dictionary).is_empty() or m > int(d["close_final_loss"]["margin"])):
+			d["close_final_loss"] = game
+		if -m <= CLOSE:
+			d["close_losses"] = int(d["close_losses"]) + 1
+		if bool(rec.get("comeback", false)):
+			d["comebacks_against"] = int(d["comebacks_against"]) + 1
+
+
+## The season's hero leader in a digest: {id, name, count} or {}. A tie goes
+## to `tiebreak` {id: n} (the BF votes), then to the first to reach it.
+static func season_hero(d: Dictionary, tiebreak := {}) -> Dictionary:
+	var best := {}
+	var heroes: Dictionary = d.get("heroes", {})
+	for id in heroes:
+		var n := int(heroes[id]["count"])
+		if best.is_empty() or n > int(best["count"]) or (n == int(best["count"]) \
+				and int(tiebreak.get(str(id), 0)) > int(tiebreak.get(str(best["id"]), 0))):
+			best = {"id": str(id), "name": str(heroes[id]["name"]), "count": n}
+	return best

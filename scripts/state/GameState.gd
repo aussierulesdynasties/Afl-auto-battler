@@ -200,6 +200,14 @@ var media_memory := {}           # question key -> {year, round} last asked (leg
 ## The match makes the story (switch "match_story"): one record per match of
 ## yours, oldest first (MatchStory.record). Empty, and not saved, while off.
 var match_stories: Array = []
+## Each season of match stories folded into a digest, keyed by year (a
+## string), so the almanac keeps a season after the list is trimmed
+## (MatchStory.fold). Empty, and not saved, while off.
+var match_story_digest := {}
+## Club records for every club (switch "club_almanac"; Almanac.update_club_records):
+## code -> {record key: {value, who, year, label}}, plus "_streak" (the run now).
+## Empty, and not saved, while off.
+var club_records := {}
 ## The coach's career arcs (ClubArcs; switch "coach_arcs"). Empty while off.
 var coach_arcs := {}
 ## Weeks of running a season-end card took off next pre-season's fitness base
@@ -765,6 +773,10 @@ func save_career() -> bool:
 		state["canberra_on"] = false
 	if not match_stories.is_empty():
 		state["match_stories"] = match_stories
+	if not match_story_digest.is_empty():
+		state["match_story_digest"] = match_story_digest
+	if not club_records.is_empty():
+		state["club_records"] = club_records
 	if not coach_arcs.is_empty():
 		state["coach_arcs"] = coach_arcs
 	if preseason_run_debt != 0.0:
@@ -923,6 +935,8 @@ func load_career() -> bool:
 	story = StoryEngine.ensure(raw_story if raw_story is Dictionary else {})
 	media_conference = state.get("media_conference", {})
 	match_stories = state.get("match_stories", []) if state.get("match_stories") is Array else []
+	match_story_digest = state.get("match_story_digest", {}) if state.get("match_story_digest") is Dictionary else {}
+	club_records = state.get("club_records", {}) if state.get("club_records") is Dictionary else {}
 	coach_arcs = state.get("coach_arcs", {}) if state.get("coach_arcs") is Dictionary else {}
 	if old_calendar:
 		CoachArcs.migrate_calendar(coach_arcs)
@@ -1376,6 +1390,8 @@ func reset() -> void:
 	story = StoryEngine.new_state()
 	media_conference = {}
 	match_stories = []
+	match_story_digest = {}
+	club_records = {}
 	coach_arcs = {}
 	preseason_run_debt = 0.0
 	backing_talk = {}
@@ -5240,6 +5256,8 @@ func _after_round(results: Array) -> void:
 	_nominate_rising_star(results)
 	_round_news(results)
 	_record_match_story(results)
+	if Almanac.on():
+		Almanac.update_club_records(self, results)
 	_note_firsts(results)
 	_draft_class_news()
 	_board_after_round(results)
@@ -5338,6 +5356,8 @@ func _close_season_awards() -> void:
 		season_awards["norm_smith"] = medal
 	records = Awards.update_records(records, season_awards, season_log)
 	var mine_bf: Array = (season_awards["best_and_fairest"] as Dictionary).get(my_club, [])
+	if Almanac.on():
+		Almanac.count_honours(self, players)
 	honour_roll.append({
 		"year": season_year,
 		"premier": premier(),
@@ -5358,8 +5378,16 @@ func _close_season_awards() -> void:
 		"my_finals": _my_last_final(),
 		"my_aa": _my_all_australians(),
 	})
+	# The season hero (director, 2026-11-03): a named club award on the honour
+	# roll, the most match-hero awards (match story digest) this season.
+	var sh := Almanac.season_hero(self)
+	if not sh.is_empty():
+		honour_roll[-1]["season_hero"] = [sh]
 	if Almanac.on():
 		almanac.append(Almanac.season_entry(self))
+		var first := Almanac.first_sentence(str(almanac[-1].get(Almanac.STORY_KEY, "")))
+		if first != "":
+			add_news("almanac_story", first)
 	# Achievements first, then the season news, so the premiership line
 	# stays the newest item in the feed.
 	_close_season_achievements()
@@ -9667,10 +9695,15 @@ func _record_match_story(results: Array) -> void:
 	if rec.is_empty():
 		return
 	match_stories.append(rec)
+	# Folded into its season's digest first, so trimming never loses a season.
+	MatchStory.fold(match_story_digest, rec)
 	if match_stories.size() > MAX_MATCH_STORIES:
 		match_stories = match_stories.slice(match_stories.size() - MAX_MATCH_STORIES)
 	if str(rec["hero_name"]) != "":
-		add_news("match_story", "%s. %s: %s." % [str(rec["headline"]), str(rec["hero_name"]), str(rec["hero_line"])])
+		var line := "%s. %s: %s." % [str(rec["headline"]), str(rec["hero_name"]), str(rec["hero_line"])]
+		if str(rec.get("my_best_name", "")) != "":
+			line += " Your best: %s, %s." % [str(rec["my_best_name"]), str(rec["my_best_line"])]
+		add_news("match_story", line)
 
 
 ## The latest match story record, {} when there is none (or the switch is off).
@@ -9712,6 +9745,11 @@ func _prepare_media_conference(results: Array) -> void:
 		var hero := MatchStory.hero_of(res)
 		if not hero.is_empty() and int(hero["side"]) == side:
 			star = {"name": str(hero["name"]), "line": "was the hero: %s" % str(hero["line"])}
+		elif not hero.is_empty():
+			# A loss: your best player (director, 2026-11-03).
+			var mb := MatchStory.my_best(res, side)
+			if not mb.is_empty():
+				star = {"name": str(mb["name"]), "line": "was your best: %s" % str(mb["line"])}
 	var round_no := season.round_index if last_phase == "regular" else Season.REGULAR_ROUNDS + int((season.finals.get("weeks", []) as Array).size())
 	# How many of your side were young enough for the Philosopher to ask.
 	var young := 0
