@@ -151,7 +151,8 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 			s["mine"] = true
 			return s
 	elif kind == "media":
-		m = _re("media", "^Post-match: '(.*)'$").search(text)
+		# GameState writes "Post-match: '<answer>' <after-line>": the answer is the headline.
+		m = _re("media", "^Post-match: '(.*?)'(?: .*)?$").search(text)
 		s.merge({"club": my_club, "weight": 66, "mine": true,
 				"headline": "“%s”" % (m.get_string(1) if m != null else text),
 				"standfirst": "Your word after the match."}, true)
