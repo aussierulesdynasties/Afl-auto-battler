@@ -379,7 +379,7 @@ func _test_reunion() -> void:
 		return
 	var def := CoachArcs.by_id(CoachArcs.all(), "reunion")
 	var rec := CoachArcs.start(st, def, GameState.season_year, GameState.story_week(), "", hit["mem"])
-	var line := StoryEngine.fill(str(def["beats"][0]["text"][0]), ClubArcs._facts(GameState, st, rec, club))
+	var line := StoryEngine.fill(str(def["beats"][0]["text"][-1]), ClubArcs._facts(GameState, st, rec, club))
 	_check(line.find("{") < 0 and line.find(GameDB.club_name(old)) >= 0, "reunion: the grudge text names the old club: %s" % line)
 	var last: Array = GameState.season.results[-1]
 	last.append({"home": GameState.my_club, "away": old, "score": [90, 60]})

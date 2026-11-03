@@ -259,6 +259,7 @@ static func validate(defs: Array) -> Array:
 				c.erase("arc")
 			card.erase("gap"); card.erase("next_season"); card.erase("skip_after"); card.erase("subject_where")
 			card.erase("when")
+			_strip_arc_conds(card)
 			for line in StoryDeck._check_card(_untokened(card)):
 				errs.append("%s: %s" % [id, line])
 			for k in (b.get("when", {}) as Dictionary):
@@ -272,6 +273,26 @@ static func validate(defs: Array) -> Array:
 				if end != "" and not endings.has(end):
 					errs.append("%s/%s: names an ending '%s' the arc does not have" % [bid, str(c.get("key", "")), end])
 	return errs
+
+
+## Takes the arc's own facts out of a beat's title, text and choice cases (the
+## deck's checks do not know them).
+static func _strip_arc_conds(card: Dictionary) -> void:
+	var conds: Array = []
+	for field in ["title", "text"]:
+		for v in card.get(field, []):
+			if v is Dictionary and (v as Dictionary).get("when") is Dictionary:
+				conds.append(v["when"])
+	for c in card.get("choices", []):
+		if (c as Dictionary).get("when") is Dictionary:
+			conds.append(c["when"])
+	for cond in conds:
+		for k in (cond as Dictionary).keys():
+			var base := str(k)
+			for suffix in ["_min", "_max", "_every"]:
+				base = base.trim_suffix(suffix)
+			if ARC_FACTS.has(base):
+				(cond as Dictionary).erase(k)
 
 
 ## A beat with the arc's own names swapped for a club fact, so the deck's checks read it.
