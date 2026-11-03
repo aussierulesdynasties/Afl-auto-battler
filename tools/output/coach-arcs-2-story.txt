@@ -1,0 +1,64 @@
+Coach arcs: 10 seasons of Sim the week, FRE, seed 2027. Clubs: [{"chairman":"David Bishop","code":"FRE","from":2027,"name":"Fremantle","to":2032,"why":"first job","why_left":"poached"},{"code":"RIC","from":2033,"name":"Richmond","to":0,"why":"poached"}]
+Coach: {"club":"RIC","clubs":[{"chairman":"David Bishop","code":"FRE","from":2027,"name":"Fremantle","to":2032,"why":"first job","why_left":"poached"},{"code":"RIC","from":2033,"name":"Richmond","to":0,"why":"poached"}],"coached":{"ADE_19":true,"CAR_23":true,"ESS_41":true,"ESS_7":true,"EXP_CANB_25":true,"EXP_TAS_35":true,"FRE_10":true,"FRE_11":true,"FRE_13":true,"FRE_14":true,"FRE_16":true,"FRE_17":true,"FRE_18":true,"FRE_2":true,"FRE_20":true,"FRE_21":true,"FRE_23":true,"FRE_24":true,"FRE_25":true,"FRE_26":true,"FRE_28":true,"FRE_3":true,"FRE_30":true,"FRE_31":true,"FRE_32":true,"FRE_34":true,"FRE_35":true,"FRE_36":true,"FRE_39":true,"FRE_4":true,"FRE_41":true,"FRE_43":true,"FRE_44":true,"FRE_45":true,"FRE_5":true,"FRE_6":true,"FRE_8":true,"FRE_9":true,"GCS_10":true,"GCS_8":true,"GEE_21":true,"GEE_30":true,"NTH_22":true,"RIC_1":true,"RIC_10":true,"RIC_24":true,"RIC_27":true,"RIC_28":true,"RIC_29":true,"RIC_30":true,"RIC_32":true,"RIC_33":true,"RIC_34":true,"RIC_4":true,"RIC_41":true,"RIC_43":true,"RIC_45":true,"RIC_5":true,"RIC_50":true,"RIC_6":true,"STK_20":true,"WCE_19":true,"WCE_28":true,"WCE_48":true},"flags":0,"games":205,"last_flag":0,"moved":{"from":"FRE","to":"RIC","why":"poached","year":2032},"sackings":1,"seasons":9,"seen":2035,"start":2027}
+2027 Season start [one_year_too_long] BEGINS: Mason Cox has 158 games behind him and his body is telling him it is the last year.
+2027 R1 [one_year_too_long] Mason's last year?: Plan his send-off. You start planning a proper farewell.
+2027 R18 [board_feud] BEGINS: The coach and David Bishop's board are no longer speaking the same language.
+2027 R19 [board_feud] The football budget: Fight it. You tell the board the cut costs games. Board confidence went down.
+2027 R21 [one_year_too_long] (arc_veteran_form passed: its moment never came)
+2027 R23 [board_feud] The sponsor's favourite: Refuse. Selection stays yours. Board confidence went down.
+2027 R24 [one_year_too_long] A farewell game: Say no. The side picks itself, you tell him.
+2028 Season start [one_year_too_long] ENDS (one_more): Mason Cox has gone round again: one more year.
+2028 Pre-season [board_feud] A board election: Back the challenger. You put your name to the other ticket. Board confidence went down.
+2029 Season start [board_feud] ENDS (won_over): The challenger won the vote. The new board is the coach's board.
+2029 R20 [media_darling] BEGINS: The coach has become a story in his own right. Andrew Graham has noticed.
+2029 R21 [media_darling] A weekly radio spot: (no answer). Business as usual.
+2030 R1 [assistant] BEGINS: Andrew Sturgess, Fremantle's senior assistant, is being talked about for the top job.
+2030 Pre-season [media_darling] Andrew Graham names Luke: Agree. You don't disagree. He trusts you less.
+2030 R2 [media_darling] A story leaks: (no answer). Business as usual.
+2030 R3 [assistant] Andrew Sturgess at lunch with David Bishop: Give him more to do. You hand Andrew Sturgess the forward line. If he wants the job, he can earn it. Board confidence went up.
+2030 R7 [assistant] Richmond want Andrew Sturgess: (no answer). Business as usual.
+2031 Season start [media_darling] ENDS (villain): In Andrew Graham's columns the coach is the villain now. The players have closed ranks.
+2031 Season start [assistant] ENDS (stayed_loyal): Andrew Sturgess stays at Fremantle, loyal to the coach for now.
+2031 Finals [rivalry] BEGINS: Fremantle and Brisbane: a rivalry made on this coach's watch.
+2032 Season start [drought] BEGINS: 5 seasons under this coach and no flag. David Bishop is counting.
+2032 Season start [poached] BEGINS: Richmond want a new coach, and they want Fremantle's.
+2032 Pre-season [drought] Flag or bust: Accept it. Flag or bust it is. Board confidence went up.
+2032 R2 [drought] All in?: Keep building. The long game. Board confidence went down.
+2032 R3 [poached] Brendan Jarvis on the phone: (no answer). Business as usual.
+2032 R6 [poached] The offer from Richmond: Take the job. You sign for Richmond, to start next season. It stays quiet, for now.
+2032 R8 [poached] Alex Pearce asks you straight: Deny it. You look him in the eye and say no. He goes back to training. He trusts you less.
+2032 R16 [drought] (arc_drought_september passed: its moment never came)
+2032 R24 [rivalry] Brisbane's coach has a go: Ignore him. No reply.
+2032 Season end [rivalry] ENDS (moved_on): The rivalry he made stays behind at Fremantle: the coach has moved on.
+2032 Season end [drought] ENDS (moved_on): The drought stays behind at Fremantle: the coach has moved on.
+2032 Season end [poached] ENDS (left): The coach has left Fremantle for Richmond. David Bishop will not forget it.
+2033 R9 [reunion] BEGINS: Richmond against Fremantle: the coach meets his old club.
+2033 R9 [reunion] Grudge match: Tag Jye Amiss. You put your best stopper on Jye Amiss.
+2033 R10 [reunion] The handshake: Shake his hand. A handshake, and a word of thanks for the years. It leads the news. Board confidence went up.
+2034 Season start [reunion] ENDS (reconciled): Fremantle got the better of the day, but the coach and David Bishop are on speaking terms again.
+2034 Season start [hot_seat] BEGINS: Andrew Mulcahy and the board have put Richmond's coach on notice.
+2034 Season start [drought] BEGINS: 7 seasons under this coach and no flag. Andrew Mulcahy is counting.
+2034 Pre-season [hot_seat] Andrew Mulcahy sets the line: Accept the target. You shake on it. The goal stands. Board confidence went up.
+2034 R2 [drought] Flag or bust: Accept it. Flag or bust it is. Board confidence went up.
+2034 R6 [hot_seat] Three in a row: Change the game plan. New plan on the whiteboard by Tuesday.
+2034 R8 [drought] All in?: Keep building. The long game. Board confidence went down.
+2034 R10 [hot_seat] A leak from the boardroom: Go public. You front the cameras and say it to the board's face. Board confidence went down.
+2034 R18 [hot_seat] The must-win game: Promise the board a win. You tell Andrew Mulcahy: we win this one.
+2034 R22 [drought] (arc_drought_september passed: its moment never came)
+2035 Season start [hot_seat] ENDS (survived): He survived the hot seat. The board starts next season a little warmer.
+2035 Season start [drought] ENDS (another_miss): Another season without a flag. The drought goes on.
+2035 R15 [assistant] BEGINS: Mitch Duncan, Richmond's senior assistant, is being talked about for the top job.
+2035 R15 [assistant] Mitch Duncan at lunch with Andrew Mulcahy: Give him more to do. You hand Mitch Duncan the forward line. If he wants the job, he can earn it. Board confidence went up.
+2035 R19 [assistant] Canberra want Mitch Duncan: Ask him to stay. You ask him to stay. He thinks it over, and stays. Board confidence went down.
+2036 Season start [assistant] ENDS (stayed_loyal): Mitch Duncan stays at Richmond, loyal to the coach for now.
+2036 Season start [legacy] BEGINS: 10 seasons, 205 games, 0 flag(s). The coach's legacy is being talked about.
+2036 R2 [legacy] How to mark it: Accept the honour. A guard of honour and a speech. Board confidence went up.
+2036 R8 [reunion] BEGINS: Richmond against Fremantle: the coach meets his old club.
+2036 R8 [legacy] Who comes after you?: Not yet. There is time, you tell him. Board confidence went down.
+2036 R9 [reunion] Grudge match: Bite back in the press. You tell Andrew Graham you know where the bodies are buried at Fremantle. Board confidence went down.
+2036 R10 [reunion] The handshake: Walk past him. You walk past David Bishop without a word. The cameras get all of it.
+2036 Season end [legacy] ENDS (moved_on): Legacy stays behind at Richmond: the coach has moved on.
+2036 Season end [reunion] ENDS (enjoyed): Fremantle got the better of their old coach, and enjoyed every minute of it.
+2036 Season end [move] Sacked by Richmond. West Coast offer him their senior job.
+Arcs started: ["one_year_too_long", "board_feud", "media_darling", "assistant", "rivalry", "drought", "poached", "reunion", "hot_seat", "legacy"]
+Done: {"assistant":{"ending":"stayed_loyal","times":2,"year":2036},"board_feud":{"ending":"won_over","times":1,"year":2029},"drought":{"ending":"another_miss","times":2,"year":2035},"hot_seat":{"ending":"survived","times":1,"year":2035},"legacy":{"ending":"moved_on","times":1,"year":2036},"media_darling":{"ending":"villain","times":1,"year":2031},"one_year_too_long":{"ending":"one_more","times":1,"year":2028},"poached":{"ending":"left","times":1,"year":2032},"reunion":{"ending":"enjoyed","times":2,"year":2036},"rivalry":{"ending":"moved_on","times":1,"year":2032}}

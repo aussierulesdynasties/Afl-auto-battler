@@ -1804,5 +1804,643 @@
     "line": "The coach's legacy is set. He coaches on, with no successor named."
    }
   }
+ },
+ {
+  "id": "way_back",
+  "name": "The sack and the way back",
+  "catalogue": 2,
+  "kind": "club",
+  "trigger": {
+   "kind": "sacked"
+  },
+  "max_seasons": 1,
+  "start_line": "Sacked by {old_club}, the coach starts again at {club}.",
+  "beats": [
+   {
+    "id": "arc_back_why",
+    "category": "media",
+    "gap": 0,
+    "title": [
+     "Why {old_club} let you go"
+    ],
+    "text": [
+     "Your first press call at {club}, and {journalist} only wants to ask about {old_club}."
+    ],
+    "choices": [
+     {
+      "key": "quiet",
+      "label": "Go quietly",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": 1,
+        "why": "The new coach would not talk about his old club"
+       }
+      ],
+      "result": "You talk about {club} and nothing else.",
+      "arc": {
+       "flag": "quiet"
+      }
+     },
+     {
+      "key": "speak",
+      "label": "Speak your mind",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "side",
+        "d": 2
+       },
+       {
+        "op": "board",
+        "d": -3
+       }
+      ],
+      "result": "You say {old_club} gave up on a plan halfway through. It runs on every back page.",
+      "arc": {
+       "flag": "spoke"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_back_former",
+    "category": "leadership",
+    "gap": 5,
+    "title": [
+     "A call from {former}"
+    ],
+    "text": [
+     "{former}, who you coached at {old_club}, rings to ask how the new place is treating you."
+    ],
+    "choices": [
+     {
+      "key": "keep",
+      "label": "Keep in touch",
+      "effects": [],
+      "result": "You talk for an hour. He misses the old plan.",
+      "arc": {
+       "flag": "kept_touch"
+      }
+     },
+     {
+      "key": "leave",
+      "label": "Keep it short",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "together",
+        "d": 1,
+        "why": "The coach gave everything to the new group"
+       }
+      ],
+      "result": "You wish him well and hang up. {club} is the job now."
+     }
+    ]
+   },
+   {
+    "id": "arc_back_meet",
+    "category": "rivals",
+    "gap": 1,
+    "when": {
+     "opp_is_old": true
+    },
+    "skip_after": 30,
+    "title": [
+     "{old_club} this week"
+    ],
+    "text": [
+     "The first game against the club that sacked you. {old_chairman} will be in the box."
+    ],
+    "choices": [
+     {
+      "key": "nothing",
+      "label": "Say it is just a game",
+      "effects": [
+       {
+        "op": "board",
+        "d": 2
+       }
+      ],
+      "result": "You tell the press it is four points like any other.",
+      "arc": {
+       "flag": "played_down"
+      }
+     },
+     {
+      "key": "everything",
+      "label": "Say it means everything",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "side",
+        "d": 4
+       },
+       {
+        "op": "board",
+        "d": -2
+       }
+      ],
+      "result": "You tell the group this one is for you. They hear it.",
+      "arc": {
+       "flag": "meant_it"
+      }
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "sacked": true
+    },
+    "ending": "sacked_again"
+   },
+   {
+    "when": {
+     "met": true
+    },
+    "ending": "rebuilt"
+   },
+   {
+    "when": {},
+    "ending": "settled"
+   }
+  ],
+  "endings": {
+   "sacked_again": {
+    "line": "Sacked by {old_club}, and now by {club} too. The way back has run out of road."
+   },
+   "rebuilt": {
+    "line": "One season at {club} and the board's goal is met. {old_club} are a memory now.",
+    "board": 5
+   },
+   "settled": {
+    "line": "A first season at {club} is done. The sacking at {old_club} is behind him."
+   }
+  }
+ },
+ {
+  "id": "poached",
+  "name": "Poached",
+  "catalogue": 3,
+  "kind": "club",
+  "trigger": {
+   "kind": "poached",
+   "top4": 2,
+   "top": 4
+  },
+  "max_seasons": 1,
+  "cooldown_seasons": 4,
+  "start_line": "{suitor} want a new coach, and they want {club}'s.",
+  "beats": [
+   {
+    "id": "arc_poach_call",
+    "category": "board",
+    "gap": 0,
+    "title": [
+     "{suitor_president} on the phone"
+    ],
+    "text": [
+     "{suitor_president}, president of {suitor}, rings you at home. He wants a coffee, nothing more, yet."
+    ],
+    "choices": [
+     {
+      "key": "listen",
+      "label": "Listen",
+      "effects": [
+       {
+        "op": "board",
+        "d": -5
+       }
+      ],
+      "result": "You agree to a coffee. By Friday someone at {club} knows.",
+      "arc": {
+       "flag": "listened"
+      }
+     },
+     {
+      "key": "hang_up",
+      "label": "Hang up",
+      "effects": [
+       {
+        "op": "board",
+        "d": 5
+       }
+      ],
+      "result": "You tell him you have a job. {chairman} hears about it and is pleased.",
+      "arc": {
+       "flag": "hung_up",
+       "end": "loyal"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_poach_offer",
+    "category": "board",
+    "gap": 3,
+    "title": [
+     "The offer from {suitor}"
+    ],
+    "text": [
+     "{suitor} put it in writing: a bigger list budget, a longer deal, and the senior job from next season."
+    ],
+    "choices": [
+     {
+      "key": "leverage",
+      "label": "Take it to {chairman}",
+      "effects": [
+       {
+        "op": "board",
+        "d": -8
+       }
+      ],
+      "result": "{chairman} matches it, and does not enjoy doing so.",
+      "arc": {
+       "flag": "leveraged"
+      }
+     },
+     {
+      "key": "take",
+      "label": "Take the job",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "side",
+        "d": -3
+       }
+      ],
+      "result": "You sign for {suitor}, to start next season. It stays quiet, for now.",
+      "arc": {
+       "flag": "taking"
+      }
+     },
+     {
+      "key": "no",
+      "label": "Say no",
+      "effects": [
+       {
+        "op": "board",
+        "d": 3
+       }
+      ],
+      "result": "You thank {suitor_president} and say no.",
+      "arc": {
+       "flag": "stayed"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_poach_captain",
+    "category": "leadership",
+    "gap": 2,
+    "subject": {
+     "pick": "random",
+     "where": {
+      "captain": true
+     }
+    },
+    "title": [
+     "{name} asks you straight"
+    ],
+    "text": [
+     "The rumours have reached the rooms. Your captain {name} asks if you are leaving for {suitor}."
+    ],
+    "choices": [
+     {
+      "key": "truth",
+      "label": "Tell him the truth",
+      "effects": [
+       {
+        "op": "trust",
+        "d": 4,
+        "why": "You told him the truth about the offer"
+       },
+       {
+        "op": "morale",
+        "who": "side",
+        "d": -3
+       }
+      ],
+      "result": "You tell him what you know. He respects it.",
+      "arc": {
+       "flag": "told_truth"
+      }
+     },
+     {
+      "key": "deny",
+      "label": "Deny it",
+      "effects": [
+       {
+        "op": "trust",
+        "d": -2,
+        "why": "You lied to him about the offer"
+       }
+      ],
+      "result": "You look him in the eye and say no. He goes back to training.",
+      "arc": {
+       "flag": "denied"
+      }
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "arc_flag": "taking"
+    },
+    "ending": "left"
+   },
+   {
+    "when": {
+     "arc_flag": "leveraged"
+    },
+    "ending": "new_deal"
+   },
+   {
+    "when": {},
+    "ending": "loyal"
+   }
+  ],
+  "endings": {
+   "left": {
+    "line": "The coach has left {club} for {suitor}. {chairman} will not forget it."
+   },
+   "new_deal": {
+    "line": "The coach stays at {club} on a richer deal, and {chairman}'s board is cooler for it."
+   },
+   "loyal": {
+    "line": "{suitor} came for the coach and went away without him. {club} has a loyal coach.",
+    "board": 3
+   }
+  }
+ },
+ {
+  "id": "reunion",
+  "name": "The old-club reunion",
+  "catalogue": 7,
+  "kind": "club",
+  "trigger": {
+   "kind": "reunion"
+  },
+  "max_seasons": 1,
+  "cooldown_seasons": 2,
+  "start_line": "{club} against {old_club}: the coach meets his old club.",
+  "beats": [
+   {
+    "id": "arc_reunion_grudge",
+    "category": "rivals",
+    "gap": 0,
+    "title": [
+     "Grudge match"
+    ],
+    "text": [
+     "The papers call {old_club} this week a grudge match. {former}, who you coached there, lines up against you."
+    ],
+    "choices": [
+     {
+      "key": "tag",
+      "label": "Tag {former}",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": 1,
+        "why": "The coach planned for the man he knew best"
+       }
+      ],
+      "result": "You put your best stopper on {former}.",
+      "arc": {
+       "flag": "tagged"
+      }
+     },
+     {
+      "key": "bite",
+      "label": "Bite back in the press",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "side",
+        "d": 4
+       },
+       {
+        "op": "board",
+        "d": -2
+       }
+      ],
+      "result": "You tell {journalist} you know where the bodies are buried at {old_club}.",
+      "arc": {
+       "flag": "bit"
+      }
+     },
+     {
+      "key": "down",
+      "label": "Play it down",
+      "effects": [],
+      "result": "You call it four points and leave it there."
+     }
+    ]
+   },
+   {
+    "id": "arc_reunion_handshake",
+    "category": "rivals",
+    "gap": 1,
+    "title": [
+     "The handshake"
+    ],
+    "text": [
+     "After the {old_club} game, {old_chairman} waits by the race. The cameras are on you both."
+    ],
+    "choices": [
+     {
+      "key": "gracious",
+      "label": "Shake his hand",
+      "effects": [
+       {
+        "op": "board",
+        "d": 2
+       }
+      ],
+      "result": "A handshake, and a word of thanks for the years. It leads the news.",
+      "arc": {
+       "flag": "gracious"
+      }
+     },
+     {
+      "key": "cold",
+      "label": "Walk past him",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "side",
+        "d": 2
+       }
+      ],
+      "result": "You walk past {old_chairman} without a word. The cameras get all of it.",
+      "arc": {
+       "flag": "cold"
+      }
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "arc_flag": "won"
+    },
+    "ending": "remembered"
+   },
+   {
+    "when": {
+     "arc_flag": "gracious"
+    },
+    "ending": "reconciled"
+   },
+   {
+    "when": {},
+    "ending": "enjoyed"
+   }
+  ],
+  "endings": {
+   "remembered": {
+    "line": "The coach beat {old_club}, and {club} will bring it up at every meeting from now on."
+   },
+   "reconciled": {
+    "line": "{old_club} got the better of the day, but the coach and {old_chairman} are on speaking terms again."
+   },
+   "enjoyed": {
+    "line": "{old_club} got the better of their old coach, and enjoyed every minute of it."
+   }
+  }
+ },
+ {
+  "id": "assistant",
+  "name": "The assistant who wants his job",
+  "catalogue": 11,
+  "kind": "club",
+  "trigger": {
+   "kind": "assistant",
+   "board_below": 50,
+   "rep_min": 55
+  },
+  "max_seasons": 1,
+  "cooldown_seasons": 4,
+  "start_line": "{assistant}, {club}'s senior assistant, is being talked about for the top job.",
+  "beats": [
+   {
+    "id": "arc_assist_lunch",
+    "category": "board",
+    "gap": 0,
+    "title": [
+     "{assistant} at lunch with {chairman}"
+    ],
+    "text": [
+     "Someone saw your senior assistant {assistant} at lunch with {chairman}. Nobody told you about it."
+    ],
+    "choices": [
+     {
+      "key": "confront",
+      "label": "Confront him",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": 1,
+        "why": "The coach would not be undermined"
+       }
+      ],
+      "result": "You ask {assistant} what the lunch was about. He says it was about nothing.",
+      "arc": {
+       "flag": "confronted"
+      }
+     },
+     {
+      "key": "delegate",
+      "label": "Give him more to do",
+      "effects": [
+       {
+        "op": "board",
+        "d": 2
+       }
+      ],
+      "result": "You hand {assistant} the forward line. If he wants the job, he can earn it.",
+      "arc": {
+       "flag": "delegated"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_assist_offer",
+    "category": "board",
+    "gap": 4,
+    "title": [
+     "{assistant_to} want {assistant}"
+    ],
+    "text": [
+     "{assistant_to} have offered {assistant} their senior job from next season. He asks what you think."
+    ],
+    "choices": [
+     {
+      "key": "back",
+      "label": "Back him to go",
+      "effects": [],
+      "result": "You tell him to take it. He will be a friend at {assistant_to}.",
+      "arc": {
+       "flag": "backed"
+      }
+     },
+     {
+      "key": "block",
+      "label": "Ask him to stay",
+      "effects": [
+       {
+        "op": "board",
+        "d": -2
+       }
+      ],
+      "result": "You ask him to stay. He thinks it over, and stays.",
+      "arc": {
+       "flag": "blocked"
+      }
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "sacked": true,
+     "no_arc_flag": "backed"
+    },
+    "ending": "took_job"
+   },
+   {
+    "when": {
+     "arc_flag": "backed"
+    },
+    "ending": "left_friend"
+   },
+   {
+    "when": {},
+    "ending": "stayed_loyal"
+   }
+  ],
+  "endings": {
+   "took_job": {
+    "line": "The coach is gone from {club}, and {assistant} has his job."
+   },
+   "left_friend": {
+    "line": "{assistant} has gone to coach {assistant_to}, a friend at a rival club."
+   },
+   "stayed_loyal": {
+    "line": "{assistant} stays at {club}, loyal to the coach for now."
+   }
+  }
  }
 ]
