@@ -2497,7 +2497,7 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	overlay.set_meta("scene", true)
 	_moment_overlay = overlay
 	var vignette: StoppageVignette
-	if str(m.get("kind", "")) == "bounce":
+	if str(m.get("kind", "")) == "bounce" or bool(m.get("moves", false)):
 		vignette = StoppageVignette.new()
 		vignette.name = "StoppageVignette"
 	else:
