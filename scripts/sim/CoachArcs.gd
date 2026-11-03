@@ -16,7 +16,10 @@ extends RefCounted
 ## Pure rules over the state ClubArcs hands in. The state, saved on GameState
 ## as `coach_arcs` only while the switch is on:
 ##   coach   the player's coach record: seasons, games, flags, last_flag, start,
-##           seen (last season counted), coached {player id: true}
+##           seen (last season counted), coached {player id: true}, club (code
+##           now), clubs [{code, name, from, to, why, chairman}] (every club
+##           coached, oldest first), sackings, moved {year, why, from, to}
+##   move    a club change decided at a season's close, made at the rollover
 ##   people  named people who are not players: chairman, journalist
 ##   active  {arc id: {start, start_w, beat, last_w, last_year, wait_from, who,
 ##           mem {remembered names}, flags {arc flag: week}}}
@@ -34,7 +37,8 @@ const LOG_KEEP := 400
 const KINDS := ["club", "player"]
 ## Facts an arc's text may name beyond the deck's own (ClubArcs.arc_facts).
 const ARC_FACTS := ["chairman", "journalist", "rival_club", "father", "seasons_coached",
-		"coach_games", "coach_flags", "drought", "arc_year", "arc_seasons", "opp_is_rival"]
+		"coach_games", "coach_flags", "drought", "arc_year", "arc_seasons", "opp_is_rival",
+		"old_club", "old_chairman", "former", "suitor", "suitor_president", "assistant", "assistant_to", "opp_is_old"]
 ## Facts a closing rule reads at a season's start (ClubArcs.close_facts).
 const CLOSE_FACTS := ["sacked", "warned", "premiers", "met", "board", "here", "morale", "ladder_last"]
 
@@ -66,8 +70,9 @@ static func by_id(defs: Array, id: String) -> Dictionary:
 
 
 static func new_state() -> Dictionary:
-	return {"coach": {"seasons": 0, "games": 0, "flags": 0, "last_flag": 0, "start": 0, "seen": 0, "coached": {}},
-			"people": {}, "active": {}, "done": {}, "counts": {"year": 0, "refusals": 0, "statements": 0}, "log": []}
+	return {"coach": {"seasons": 0, "games": 0, "flags": 0, "last_flag": 0, "start": 0, "seen": 0, "coached": {},
+			"club": "", "clubs": [], "sackings": 0, "moved": {}},
+			"people": {}, "active": {}, "done": {}, "counts": {"year": 0, "refusals": 0, "statements": 0}, "log": [], "move": {}}
 
 
 ## An older or partial state: every key present.

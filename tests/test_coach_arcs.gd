@@ -63,6 +63,10 @@ func run(tree: SceneTree) -> void:
 	_t("_test_triggers_from_state")
 	_t("_test_beats_only_active")
 	_t("_test_persist")
+	_t("_test_poached_moves_club")
+	_t("_test_sacked_way_back")
+	_t("_test_reunion")
+	_t("_test_assistant_leaves")
 	_t("_test_ten_seasons")
 	Features.clear("coach_arcs")
 	GameState.delete_saved_career()
@@ -92,7 +96,7 @@ func _test_switch_off() -> void:
 
 func _test_file_fit() -> void:
 	var defs := CoachArcs.all()
-	_check(defs.size() == 10, "ten arcs are built (catalogue 1, 4, 5, 6, 8, 9, 10, 12, 13, 14), got %d" % defs.size())
+	_check(defs.size() == 14, "all fourteen catalogue arcs are built, got %d" % defs.size())
 	var errs := CoachArcs.validate(defs)
 	_check(errs.is_empty(), "the arcs file is fit to play: %s" % str(errs))
 
@@ -161,7 +165,6 @@ func _test_ten_seasons() -> void:
 	_fresh()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = SUITE_SEED + 3
-	var sackings := []
 	# Ten seasons locally (about 10 minutes); CI plays three to stay inside
 	# the suite time limit. COACH_ARCS_SEASONS overrides either.
 	var n := 3 if OS.get_environment("CI") != "" else 10
@@ -172,17 +175,13 @@ func _test_ten_seasons() -> void:
 		while not GameState.season.is_season_over() and guard < 40:
 			guard += 1
 			_week(rng)
-			if GameState.is_sacked():
-				# Test only: keep the career going to read ten seasons of story.
-				sackings.append(GameState.season_year)
-				GameState.board["sacked"] = false
-				GameState.board["warned"] = false
-				GameState.board["confidence"] = 45
+			# A sacking no longer ends the career: the coach changes clubs.
+			_check(not GameState.is_sacked(), "a sacked coach goes on at another club")
 		if s < n - 1:
 			_check(GameState.start_next_season(), "season %d rolls on" % (s + 1))
 	var st: Dictionary = GameState.coach_arcs
 	var lines := PackedStringArray()
-	lines.append("Coach arcs: %d seasons of Sim the week, FRE, seed %d. Sacked (and kept on, test only): %s" % [n, SUITE_SEED, str(sackings)])
+	lines.append("Coach arcs: %d seasons of Sim the week, FRE, seed %d. Clubs: %s" % [n, SUITE_SEED, JSON.stringify(st["coach"]["clubs"])])
 	lines.append("Coach: %s" % JSON.stringify(st["coach"]))
 	var started := {}
 	for row in st["log"]:
@@ -199,3 +198,221 @@ func _test_ten_seasons() -> void:
 	_check(f != null, "the story log is written to %s" % DUMP)
 	_check(started.size() >= (4 if n >= 10 else 1), "several arcs start over ten seasons: %s" % str(started.keys()))
 	_check(int(st["coach"]["seasons"]) == n - 1, "every closed season is counted: %s" % str(st["coach"]))
+
+
+## Plays the rest of this season, keeping the board where `conf` puts it (-1: leave it).
+func _play_out(rng: RandomNumberGenerator, conf := -1) -> void:
+	var guard := 0
+	while not GameState.season.is_season_over() and guard < 40:
+		guard += 1
+		if conf >= 0:
+			GameState.board["confidence"] = conf
+			GameState.board["warned"] = true
+		_week(rng)
+
+
+func _senior_at(code: String) -> Dictionary:
+	return ClubMoves._senior_coach(GameState, code)
+
+
+func _my_assistant() -> String:
+	for cid in GameState.coaches:
+		var c: Dictionary = GameState.coaches[cid]
+		if str(c.get("club", "")) == GameState.my_club and str(c.get("job", "")) == "SA" and str(c.get("status", "")) == "club":
+			return str(cid)
+	return ""
+
+
+## Arc 3: a rival's offer taken in season; at its close the arc ends "left",
+## and at the rollover he is that club's coach, its coach takes his old job,
+## and his record carries on. Persists across save and load.
+func _test_poached_moves_club() -> void:
+	_fresh()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SUITE_SEED + 4
+	for i in range(3):
+		_week(rng)
+	var st: Dictionary = GameState.coach_arcs
+	# The trigger reads real finishes: two top-4 seasons at this club.
+	var roll: Array = GameState.honour_roll.duplicate(true)
+	var finish: Dictionary = GameState._last_finish.duplicate()
+	GameState._last_finish = {}
+	var k := 0
+	for code in GameState.season.ladder:
+		k += 1
+		GameState._last_finish[str(code)] = k
+	GameState.honour_roll.append({"year": GameState.season_year, "my_club": "FRE", "my_position": 2, "premier": "COL"})
+	GameState.honour_roll.append({"year": GameState.season_year, "my_club": "FRE", "my_position": 3, "premier": "FRE"})
+	var def := CoachArcs.by_id(CoachArcs.all(), "poached")
+	_check(ClubMoves.poach_trigger(GameState, st, def["trigger"], false).is_empty(), "poached: only at a season's start")
+	var hit := ClubMoves.poach_trigger(GameState, st, def["trigger"], true)
+	GameState.honour_roll = roll
+	GameState._last_finish = finish
+	var suitor := str(hit.get("mem", {}).get("suitor_code", ""))
+	_check(suitor != "" and suitor != "FRE", "poached: a struggling rival wants him: %s" % str(hit))
+	if suitor == "":
+		return
+	var their_coach := _senior_at(suitor)
+	_check(not their_coach.is_empty(), "poached: the suitor has a senior coach to replace")
+	var rec := CoachArcs.start(st, def, GameState.season_year, GameState.story_week(), "", hit["mem"])
+	var facts := ClubArcs._facts(GameState, st, rec, {"club": "Fremantle", "opp": ""})
+	var b := CoachArcs.due_beat(def, rec, GameState.story_week(), GameState.season_year, "regular", facts)
+	_check(str(b.get("id", "")) == "arc_poach_call", "poached: the first beat is the call: %s" % str(b.get("id", "")))
+	_check(StoryEngine.fill("{suitor_president} of {suitor}", facts).find("{") < 0, "poached: its names fill the text")
+	CoachArcs.answer(def, rec, "arc_poach_call", "listen", GameState.story_week(), GameState.season_year)
+	CoachArcs.answer(def, rec, "arc_poach_offer", "take", GameState.story_week() + 3, GameState.season_year)
+	CoachArcs.answer(def, rec, "arc_poach_captain", "truth", GameState.story_week() + 5, GameState.season_year)
+	_check((rec["flags"] as Dictionary).has("taking") and int(rec["beat"]) == 3, "poached: the offer is taken and every beat played")
+	_play_out(rng)
+	_check(str(st["move"].get("to", "")) == suitor and str(st["move"].get("why", "")) == "poached", "poached: the move waits for the rollover: %s" % str(st["move"]))
+	_check(str(st["done"].get("poached", {}).get("ending", "")) == "left", "poached: it resolves 'left': %s" % str(st["done"].get("poached", {})))
+	_check(st["active"].is_empty(), "poached: every arc ends at the club he leaves: %s" % str(st["active"].keys()))
+	var coached_before := (st["coach"]["coached"] as Dictionary).size()
+	# Save and load with the move pending: it is still made.
+	_check(GameState.save_career() and GameState.load_career(), "poached: saves and loads with the move pending")
+	st = GameState.coach_arcs
+	_check(str(st["move"].get("to", "")) == suitor, "poached: the pending move survives a reload")
+	their_coach = _senior_at(suitor)
+	_check(GameState.start_next_season(), "poached: the season rolls on")
+	st = GameState.coach_arcs
+	_check(GameState.my_club == suitor, "poached: he coaches %s now, got %s" % [suitor, GameState.my_club])
+	_check(GameState.my_list == GameState.season.lists[suitor], "poached: his list is the new club's")
+	_check(str(their_coach.get("club", "")) == "FRE" and str(their_coach.get("job", "")) == "SC", "poached: %s's coach takes the Fremantle job" % suitor)
+	_check(_senior_at(suitor).is_empty(), "poached: the club he joins has no AI senior coach (he is it)")
+	var clubs: Array = st["coach"]["clubs"]
+	_check(clubs.size() == 2 and str(clubs[0]["code"]) == "FRE" and int(clubs[0]["to"]) == GameState.season_year - 1 \
+			and str(clubs[1]["code"]) == suitor, "poached: the career history has both clubs: %s" % JSON.stringify(clubs))
+	_check(int(st["coach"]["seasons"]) == 1, "poached: the Fremantle season is still on his record: %s" % str(st["coach"]))
+	_check((st["coach"]["coached"] as Dictionary).size() > coached_before, "poached: the players he coached at both clubs are remembered")
+	_check(str(clubs[0].get("chairman", "")) != "" and str(st["people"].get("chairman", "")) != str(clubs[0]["chairman"]),
+			"poached: the old chairman is remembered and the new club has its own")
+	var before := JSON.stringify(st)
+	_check(GameState.save_career() and GameState.load_career(), "poached: saves and loads at the new club")
+	_check(JSON.stringify(GameState.coach_arcs) == before and GameState.my_club == suitor, "poached: the career history comes back as it was")
+
+
+## Arc 2 (and arc 11's take-over): sacked at a season's close, he takes a job
+## at a bottom club, his assistant takes the job he lost, and the way back
+## starts at the new club, remembering the old one.
+func _test_sacked_way_back() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SUITE_SEED + 5
+	var st: Dictionary = GameState.coach_arcs
+	var old := str(GameState.my_club)
+	for i in range(3):
+		_week(rng)
+	# An assistant with a name, after the job: arc 11 runs as the board sinks.
+	var sa_id := _my_assistant()
+	_check(sa_id != "", "sacked: the club has a senior assistant")
+	if sa_id == "":
+		return
+	var sa: Dictionary = GameState.coaches[sa_id]
+	sa["rep"] = 80
+	GameState.board["confidence"] = 30
+	var adef := CoachArcs.by_id(CoachArcs.all(), "assistant")
+	st["active"].erase("assistant")
+	var ahit := ClubMoves.assistant_trigger(GameState, st, adef["trigger"], ClubStories.context(GameState), false)
+	_check(str(ahit.get("mem", {}).get("assistant_id", "")) == sa_id, "assistant: the trigger names him: %s" % str(ahit))
+	st["done"].erase("assistant")
+	var arec := CoachArcs.start(st, adef, GameState.season_year, GameState.story_week(), "", ahit.get("mem", {}))
+	CoachArcs.answer(adef, arec, "arc_assist_lunch", "confront", GameState.story_week(), GameState.season_year)
+	CoachArcs.answer(adef, arec, "arc_assist_offer", "block", GameState.story_week() + 4, GameState.season_year)
+	_play_out(rng, 0)
+	st = GameState.coach_arcs
+	_check(not GameState.is_sacked(), "sacked: the career goes on (no sacked card)")
+	var to := str(st["move"].get("to", ""))
+	_check(str(st["move"].get("why", "")) == "sacked" and to != "" and to != old, "sacked: a job at another club: %s" % str(st["move"]))
+	_check(int(st["coach"]["sackings"]) == 1, "sacked: the sacking is on his record")
+	_check(str(st["done"].get("assistant", {}).get("ending", "")) == "took_job", "assistant: resolves 'took_job': %s" % str(st["done"].get("assistant", {})))
+	_check(GameState.start_next_season(), "sacked: the season rolls on")
+	st = GameState.coach_arcs
+	sa = GameState.coaches.get(sa_id, {})
+	_check(GameState.my_club == to, "sacked: he coaches %s now" % to)
+	_check(str(sa.get("club", "")) == old and str(sa.get("job", "")) == "SC", "assistant: he has the job the coach lost: %s" % str([sa.get("club"), sa.get("job")]))
+	var wb: Dictionary = st["active"].get("way_back", {})
+	_check(not wb.is_empty(), "way back: it starts at the new club: %s" % str(st["active"].keys()))
+	_check(str(wb.get("mem", {}).get("old_club", "")) == GameDB.club_name(old) and str(wb.get("mem", {}).get("former", "")) != "",
+			"way back: it remembers the club and a player he left: %s" % str(wb.get("mem", {})))
+	_check((st["coach"]["clubs"] as Array).size() == 3 and str(st["coach"]["clubs"][1].get("why_left", "")) == "sacked",
+			"sacked: three clubs on the record, the second left by the sack: %s" % JSON.stringify(st["coach"]["clubs"]))
+	var seen := {}
+	for i in range(8):
+		for c in GameState.week_events:
+			if str(c.get("coach_arc", "")) == "way_back":
+				seen[str(c.get("tid", ""))] = true
+		_week(rng)
+	_check(seen.has("arc_back_why"), "way back: the first press call is dealt: %s" % str(seen.keys()))
+	var before := JSON.stringify(GameState.coach_arcs)
+	_check(GameState.save_career() and GameState.load_career(), "way back: saves and loads")
+	_check(JSON.stringify(GameState.coach_arcs) == before, "way back: comes back as it was")
+	_play_out(rng)
+	_check(GameState.start_next_season(), "way back: the season rolls on")
+	st = GameState.coach_arcs
+	var end := str(st["done"].get("way_back", {}).get("ending", ""))
+	_check(end in ["rebuilt", "settled", "sacked_again"], "way back: it resolves: %s" % str(st["done"].get("way_back", {})))
+
+
+## Arc 7: a club he coached before on this week's fixture starts the reunion,
+## remembering the club, its chairman and a player; the result is recorded.
+func _test_reunion() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SUITE_SEED + 6
+	for i in range(3):
+		_week(rng)
+	var st: Dictionary = GameState.coach_arcs
+	var old := str(st["coach"]["clubs"][0]["code"])
+	var ctx := ClubStories.context(GameState)
+	var club: Dictionary = (ctx["club"] as Dictionary).duplicate()
+	club["opp"] = GameDB.club_name(old)
+	st["active"].erase("way_back")
+	st["active"].erase("reunion")
+	var hit := ClubMoves.reunion_trigger(GameState, st, club, ctx, false)
+	_check(str(hit.get("mem", {}).get("old_code", "")) == old and str(hit.get("mem", {}).get("old_chairman", "")) != "" \
+			and str(hit.get("mem", {}).get("former", "")) != "", "reunion: it remembers the old club, its chairman and a player: %s" % str(hit))
+	club["opp"] = GameDB.club_name(GameState.my_club)
+	_check(ClubMoves.reunion_trigger(GameState, st, club, ctx, false).is_empty(), "reunion: not against any other club")
+	if hit.is_empty():
+		return
+	var def := CoachArcs.by_id(CoachArcs.all(), "reunion")
+	var rec := CoachArcs.start(st, def, GameState.season_year, GameState.story_week(), "", hit["mem"])
+	var line := StoryEngine.fill(str(def["beats"][0]["text"][0]), ClubArcs._facts(GameState, st, rec, club))
+	_check(line.find("{") < 0 and line.find(GameDB.club_name(old)) >= 0, "reunion: the grudge text names the old club: %s" % line)
+	var last: Array = GameState.season.results[-1]
+	last.append({"home": GameState.my_club, "away": old, "score": [90, 60]})
+	ClubMoves.record_reunion(GameState, st)
+	last.pop_back()
+	_check((rec["flags"] as Dictionary).has("won"), "reunion: the win over the old club is recorded")
+	CoachArcs.answer(def, rec, "arc_reunion_grudge", "bite", GameState.story_week(), GameState.season_year)
+	CoachArcs.answer(def, rec, "arc_reunion_handshake", "gracious", GameState.story_week() + 1, GameState.season_year)
+	_check(int(rec["beat"]) == 2, "reunion: both beats played")
+	_check(CoachArcs.closing(def, rec, {}, GameState.season_year + 1) == "remembered", "reunion: a win resolves 'remembered'")
+	rec["flags"].erase("won")
+	_check(CoachArcs.closing(def, rec, {}, GameState.season_year + 1) == "reconciled", "reunion: a gracious loss resolves 'reconciled'")
+	st["active"].erase("reunion")
+
+
+## Arc 11, the other way: backed to go, the assistant takes a rival's senior
+## job at the season's close and his own job opens.
+func _test_assistant_leaves() -> void:
+	var st: Dictionary = GameState.coach_arcs
+	var sa_id := _my_assistant()
+	_check(sa_id != "", "assistant: the new club has a senior assistant")
+	if sa_id == "":
+		return
+	var sa: Dictionary = GameState.coaches[sa_id]
+	var to := ""
+	for code in GameState.season.ladder:
+		if str(code) != GameState.my_club and not _senior_at(str(code)).is_empty():
+			to = str(code)
+			break
+	var def := CoachArcs.by_id(CoachArcs.all(), "assistant")
+	st["active"].erase("assistant")
+	var rec := CoachArcs.start(st, def, GameState.season_year, 1, "", {"assistant": GameDB.player_display_name(sa), "assistant_id": sa_id,
+			"assistant_to": GameDB.club_name(to), "assistant_code": to})
+	CoachArcs.answer(def, rec, "arc_assist_lunch", "delegate", 1, GameState.season_year)
+	CoachArcs.answer(def, rec, "arc_assist_offer", "back", 5, GameState.season_year)
+	ClubMoves._assistant_leaves(GameState, st)
+	_check(str(sa.get("club", "")) == to and str(sa.get("job", "")) == "SC", "assistant: backed, he coaches %s" % to)
+	_check(GameState._vacancy_open(str(sa.get("job", "SA"))) or GameState._vacancy_open("SA"), "assistant: his job is open")
+	_check(CoachArcs.closing(def, rec, {"sacked": false}, GameState.season_year + 1) == "left_friend", "assistant: resolves 'left_friend'")
+	st["active"].erase("assistant")

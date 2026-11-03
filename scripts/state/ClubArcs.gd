@@ -51,9 +51,13 @@ static func _count_last_season(gs, st: Dictionary) -> void:
 	if int(c["start"]) == 0:
 		c["start"] = year
 		c["seen"] = year - 1
+	if str(c["club"]) == "":
+		c["club"] = str(gs.my_club)
+		(c["clubs"] as Array).append({"code": str(gs.my_club), "name": GameDB.club_name(gs.my_club), "from": year, "to": 0, "why": "first job"})
 	for h in gs.honour_roll:
 		var y := int(h.get("year", 0))
-		if y <= int(c["seen"]) or y >= year or str(h.get("my_club", "")) != str(gs.my_club):
+		# Every season he coached counts, at whichever club he coached it.
+		if y <= int(c["seen"]) or y >= year or str(h.get("my_club", "")) == "":
 			continue
 		c["seasons"] = int(c["seasons"]) + 1
 		var wld := str(h.get("my_record", "0-0-0")).split("-")
@@ -104,6 +108,7 @@ static func week(gs) -> void:
 		if str(def.get("kind", "")) == "player" and gs.list_player(str(rec.get("who", ""))).is_empty():
 			var ending := CoachArcs.closing(def, rec, close_facts(gs, rec), int(gs.season_year))
 			_end(gs, st, def, rec, ending if ending != "" else "faded", _label(gs))
+	ClubMoves.record_reunion(gs, st)
 	_try_starts(gs, st, defs, ctx, false)
 	var card := _due_card(gs, st, defs, ctx)
 	if card.is_empty():
@@ -181,7 +186,9 @@ static func _facts(gs, st: Dictionary, rec: Dictionary, club: Dictionary) -> Dic
 	f["arc_year"] = int(rec.get("start", gs.season_year))
 	f["arc_seasons"] = int(gs.season_year) - int(rec.get("start", gs.season_year))
 	f["opp_is_rival"] = str(rec.get("mem", {}).get("rival_club", "")) != "" and str(club.get("opp", "")) == str(rec["mem"]["rival_club"])
-	for k in ["rival_club", "father"]:
+	var old := str(rec.get("mem", {}).get("old_club", ""))
+	f["opp_is_old"] = old != "" and str(club.get("opp", "")) == old
+	for k in ["rival_club", "father", "old_club", "old_chairman", "former", "suitor", "suitor_president", "assistant", "assistant_to"]:
 		if not f.has(k):
 			f[k] = ""
 	return f
@@ -271,11 +278,32 @@ static func trigger(gs, st: Dictionary, def: Dictionary, ctx: Dictionary, season
 						hit["mem"]["father"] = _person_name(gs, str(tie["id"]))
 						hit["mem"]["father_id"] = str(tie["id"])
 						return hit
+		"sacked":
+			var mv: Dictionary = c.get("moved", {})
+			if season_start and str(mv.get("why", "")) == "sacked" and int(mv.get("year", 0)) == int(gs.season_year) - 1:
+				return {"mem": _old_club_mem(gs, st, str(mv.get("from", "")))}
+		"poached":
+			return ClubMoves.poach_trigger(gs, st, tr, season_start)
+		"reunion":
+			return ClubMoves.reunion_trigger(gs, st, club, ctx, season_start)
+		"assistant":
+			return ClubMoves.assistant_trigger(gs, st, tr, ctx, season_start)
 		"legacy":
 			if season_start and (int(c["seasons"]) + 1 >= int(tr.get("seasons_min", 10)) or int(c["games"]) >= int(tr.get("games_min", 250)) \
 					or int(c["flags"]) >= int(tr.get("flags_min", 2))):
 				return {"mem": {}}
 	return {}
+
+
+## What an arc about a club he left remembers: its name, its chairman in his
+## time, and the best player there he coached.
+static func _old_club_mem(gs, st: Dictionary, code: String) -> Dictionary:
+	var chairman := ""
+	for h in st["coach"]["clubs"]:
+		if str(h.get("code", "")) == code:
+			chairman = str(h.get("chairman", ""))
+	return {"old_club": GameDB.club_name(code), "old_code": code, "old_chairman": chairman if chairman != "" else "their chairman",
+			"former": ClubMoves.former_player(gs, st, code)}
 
 
 static func _player_hit(p: Dictionary) -> Dictionary:
