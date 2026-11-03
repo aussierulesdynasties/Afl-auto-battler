@@ -2,15 +2,26 @@
 
 The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call; nothing ships on without his playtest. Updated 2026-11-04 against main `a8b23185`.
 
+## Itch builds: when a new upload is worth it
+
+The itch page runs the browser build of main with every switch in section B off, so a build with only switched-off work shows a player nothing new. A build is worth uploading only when a player can see a difference: the switches named for it are on (he has played them), the listed rows are merged, CI is green and the web build ran. Sessions push with butler and post a short devlog in football words (docs/ITCH_UPLOAD.md). He says go; at least three changes a player can see, or one big one.
+
+| Build | Name | Ready when (rows and switches) | What a player sees |
+|---|---|---|---|
+| I1 | The new match | His playtest passes `match_flow`, `clanger_cause`, `ballup_two`, `goal_run_moves`, `kick_range`, `match_story`, `top_attributes`, then they go on. Rows 9, 17, 18 merged. | Play on after a won ball, a clanger says why, two honest late ball-up choices, hero and turning point after the match, top attributes on cards, feed colours and the matchup grid |
+| I2 | Safe to keep a career | T7.R84 save restore and frozen fixtures, 57 export/import, T5.Q24 migration, T8.Q20 faster weekly sim, T3.R56 onboarding on fresh saves. | Restore last good save, back up and move a career, no career lost on update, a quicker Sim the week, a fresh start that teaches |
+| I3 | Match day on a phone | T3.R42 one thumb, T3.R41 team selection as two screens, T3.R10 text size and colour-blind marks, 53 coaches' votes, 25 team builder setup before Start, 24 training grid, 23 this week. | Controls in thumb reach, score and clock always visible, Larger and Largest text, no scrolling team pick |
+| I4 | Look and feel | `ui_motion` on after his look (#907 and V1), V2 to V9 merged, hub hero (6.Q2), `player_looks` on, 6.36 app icon. | Result sheet and counts that move, the premiership streamers and the Brownlow sparkles, a hub that leads with one big thing, new faces, a real icon |
+| I5 | Off-season and the draft | 54 carnival and rookie draft, 55 list problem, 22 draft AI, T5.r134 inherited 2026 lists, 4.Q9 lower draftees, T5.Q23b Brownlow count, 4.Q8 McNeil. | A proper off-season, a draft that behaves, a Brownlow count to sit through, a real 2026 start |
+| I6 | A career with a story | `coach_arcs` and `weekly_checklist` on after his playthrough, T5.r22 sacked is not the end, T5.r23 rivals call, T5.Q25 take another club, T5.Q16 coaching hierarchy, `finals_cards_2` on. | Arcs and a weekly big call, a sacking you can come back from, offers from other clubs, finals with their own cards |
+| I7 | Real grounds and crowd | 33 oval answer, 6.44 six more grounds, 6.49 and 6.51 crowd and breeze. | Grounds you know from the oval alone, a crowd that follows the score |
+
+Order is I1 first (it is already built and only needs his playtest), I2 before any build that people will save a long career in, then I3, I4, I5, I6, I7. A build can go early if everything it names is done. He can reorder.
+
 ## A. Build now (open, no blocker, order = story first, then sim, then approachable)
 
 | # | What | Done looks like |
 |---|---|---|
-| 11 | Stoppages from contests, play on after an intercept or free, then recalibrate contested ball, spoils, turnovers. Work sits on unmerged `claude/match-flow` (14 commits, 2026-10-10) | rebase on main (#885 moved calibration), PR, audit shows bands hold |
-| 12 | Disposals to empty space: feed names the real cause; kicks to space readable | feed line tells why |
-| 13 | Every in-match decision gets a vignette: tired, duel, hot, momentum, set shot are still text cards | each decision type has a scene when vignettes are on |
-| 14 | Opposition goal-run decision rebuilt around two concrete football moves, with vignettes (still Throw numbers / Slow it down / Ride it out) | two moves, scenes, odds in football words |
-| 15 | Late-game centre ball-up: two distinct choices (still three) | two options |
 | 9 | Feed styling: own goals positive, conceded negative, behinds and tactical lines neutral | feed colours match |
 | 17 | Key-matchup block as a compact grid; loose tally "since the call"; "What your calls did" explains its numbers | grid shown |
 | 18 | Match summary: full injury wording (not "to a hand"); scoring-run line with when and score before/after | lines present |
@@ -40,6 +51,11 @@ The one list of work not done. Point a session at this file and it works down it
 | 51 | Weekly checklist with one big arc call (Hub "no weekly checklist" text goes when on) | `weekly_checklist` | #859 #861 #867 #877 #881 |
 | 35, 36 | Finals cards slice 2 and Grand Final cards | `finals_cards_2` | #864 |
 | 52 | Expansion package, training report, speccy front | `expansion_package`, `training_report`, `speccy_front` | #745 #741 |
+| 11 | Stoppages from contests, play on after a won ball. Only partly met with the switch on: spoils 0.57 of real, intercept marks 0.76, ground ball gets 0.71 (`docs/research/MATCH_FLOW_AUDIT_2026-11-04.md`); a spilled tackle is counted as an intercept. Open: another tuning pass, or his playtest first | `match_flow` | #897 #901 |
+| 12 | A clanger names a real cause (wet ball, wind) in the feed | `clanger_cause` | #905 |
+| 13 | Every in-match decision opens on a vignette scene. Time pauses at a decision, so scenes do not fight live speed. Parked behind the section 1.11 playtest gate by his ruling | `decision_scenes` | #902 #908 |
+| 14 | Opposition goal run as two football moves over the centre ball-up | `goal_run_moves` | #903 |
+| 15 | Late-game centre ball-up: two distinct choices | `ballup_two` | #895 |
 
 ## C. Needs his look or call (shown, then ask)
 
@@ -78,7 +94,7 @@ The one list of work not done. Point a session at this file and it works down it
 - Deferred by ruling: weather at the quarter break, announce the cap step, league rule changes.
 
 ## In flight
-Open PR #888 (AI club decisions). Unmerged branches: `claude/match-flow`, `claude/comeback-audit-row42`.
+Open PR #907 (menu juice, `ui_motion`, off). Unmerged branch: `claude/comeback-audit-row42`.
 
 ## Working rules
 - One Godot process per agent at a time, off-screen, own user data (`APPDATA=<scratch dir>`); kill only your own PIDs.
