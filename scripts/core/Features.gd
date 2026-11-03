@@ -66,6 +66,13 @@ extends RefCounted
 ##               kicker's reach (MatchSim.kick_range: 30 m + 0.35 x disposal), nearest
 ##               teammate when nobody is; every match path shares MatchSim.kick_receiver.
 ##               Off, the receiver is the old zone pick from the whole ground.
+##   clanger_cause   row 12 (director, 2026-11-04): a clanger that ends a chain on a wet or
+##               windy day is the last touch's and says why (the weather raises the rate,
+##               so it is a real cause; MatchSim.clanger_why; the oval names it over the
+##               player, the match feed stays as is). Off, the clanger is a weighted pick
+##               from the ground and reads "gives away a clanger". On, player credit for
+##               clangers moves to the last carrier (the player clangers stat, notes and
+##               ratings); team totals, score and events are unchanged.
 ##   match_flow  row 11 (director, 2026-10-10): stoppages come from contests that lock up
 ##               (a held tackle, a rushed kick into a pack, a spoil in the pocket), a won ball
 ##               after an intercept or a free is played on, chains are shorter and more
@@ -80,7 +87,7 @@ extends RefCounted
 ##               concrete football moves (stack the centre bounce, or flood behind the ball),
 ##               shown as a centre ball-up scene, each with what it does and costs as a
 ##               percentage. Off, the card is Throw numbers / Slow it down / Ride it out.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause"]
 
 static var _forced := {}
 static var _from_args := {}
