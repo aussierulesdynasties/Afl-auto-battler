@@ -67,6 +67,11 @@ his differs, the later one wins. Nothing here edits the bible.
   most pressing of: a pending press question, an open assistant approach, no captain named, a young player ready for
   backing (could be backed, rated within 3 of the list's 22nd best), a pre-season captaincy review (BigCalls.gd). One
   call per week, kept in week_checks (saved), ticked when dealt with. Behind weekly_checklist and coach_arcs; off, as before.
+- Centre bounce after every goal: a goal is always followed by a centre bounce; the end-of-chain clanger can no longer
+  pay a free over it (MatchSim._play_one_chain, `not at_centre` guard; test_match_game _test_no_free_after_goal,
+  which found 47 of 538 goals cancelled before the fix). Recalibrated in Ratings.gd: clanger_is_free 0.34 -> 0.43
+  (free kicks for ratio 0.94 before, 0.88 with the guard alone, 0.95 after) and hitouts_per_stoppage 0.81 -> 0.78
+  (the restored bounces took hit-outs from 1.05 to 1.07; 1.03 after). Every calibration row stays in band.
 - PC pre-bounce break, Tag with Key match-ups: on the three-column PC break (1280x720 and wider, _deal_calls) the Tag
   block and the Key match-ups block stay together in the Tag's column; #878's split, made so every column was within
   a fifth empty, is reversed. The balance check loosens to 30% empty (the best split with them together measured
@@ -84,3 +89,9 @@ his differs, the later one wins. Nothing here edits the bible.
   Cooldowns (director, option b): card and subject cooldowns count played weeks only (pre-season, rounds, finals;
   StoryEngine.played_between), never off-season weeks, so every card keeps its written cooldown and repeats as often
   as before.
+- Match motion, noise-safe bounds (director, 2026-11-03, option A): the seed-sensitive measures (ball-up ring,
+  visibility, every call against Balanced) are averaged over games 40-44, not read from game 42 alone. Each bound sits
+  below main's own average by about twice its seed-to-seed noise, so a reshuffle of seeded games cannot decide it:
+  ball-up closest pair of a side >= 1.5 m (was 2.5), Attack corridor longest file <= Balanced's + 0.75 (was <=),
+  Attack corridor shift from Balanced >= 7.5 m (was 8), its spread 9.5-11.5 m (was 10-11). Five games keep the suite
+  under the 900 s timeout. The worst-case motion limits stay on game 42, every frame.
