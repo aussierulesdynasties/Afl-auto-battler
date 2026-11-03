@@ -25,6 +25,7 @@ his differs, the later one wins. Nothing here edits the bible.
 | 14 | Row 6: how much face? | minimal: eyes, brows, skin tones | a face overlay of MPFB's eyes and eyebrow cards over every figure (VignetteLooks, switch player_looks, off until he plays it); no mouth, nose or lashes |
 | 15 | Row 6: one brow for everyone? | brows vary per player | five brows (face_lib EYEBROWS), one chosen from his id alone (Appearance.brows_for), tinted his hair colour; eyes near black |
 | 16 | Row 6: buzz? | buzz keeps no hair overlay | buzz still shows the bald base's stubble; with the switch on he gets the face like everyone else |
+| 17 | Row 6: strips that fell back to the short crop with no face? | re-render them all | the 30 player strips (ready, ready_turn, ready_b, tap, tap_b, bounce, mark_f, brace_f, mark_s, brace_s) re-rendered for every new style and face on the pipeline commit that built each installed strip (same rig, poses, camera and scale; short crop IoU 1.00 against the installed cells); the coach (base look only) and carrier_near (no hair overlay) are unchanged |
 
 - **Row 37 draft logic, later ruling (2026-11-03):** the buff also applies to the user's "Pick for me", and the sim must
   be extremely competent: every club, the user's included, acts in its own best interest at all times; mistakes come
