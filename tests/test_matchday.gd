@@ -631,19 +631,30 @@ func _story(q: Array, goals_log: Array) -> Dictionary:
 ## Comebacks told better (director, 2026-10-14): every line true to the scores, nothing when
 ## there is nothing to say, and the sim untouched.
 ## The first seed from `from` up where MEL (home) lose a game the other side turned.
-func _find_lost_turn_seed(from: int) -> int:
-	for seed in range(from, from + 80):
-		var home := Squad.new("MEL", GameDB.club_list("MEL"), true, "MEL")
-		var away := Squad.new("FRE", GameDB.club_list("FRE"), false, "FRE")
+## The first seed from `from` up whose `pr` game (home v away) is the case
+## wanted: "win" or "loss" turned in the third quarter, "none" with no turn.
+## Found, not fixed: any change to the engine's rates moves every seeded game.
+## -1 when none of the next 400 seeds is that case.
+func _find_turn_seed(pr: Array, from: int, want: String) -> int:
+	for seed in range(from, from + 400):
+		var home := Squad.new(pr[0], GameDB.club_list(pr[0]), true, pr[0])
+		var away := Squad.new(pr[1], GameDB.club_list(pr[1]), false, pr[1])
 		home.ai_plans = true
 		away.ai_plans = true
 		var sim := MatchSim.new(home, away, seed)
 		for q in range(4):
 			sim.run_quarter()
 		var res := sim.result()
-		if int(res["score"][0]) < int(res["score"][1]) and not ComebackTelling.turning_quarter(res, 0).is_empty():
+		var tq := ComebackTelling.turning_quarter(res, 0)
+		if want == "none":
+			if ComebackTelling.turn_line(res, 0) == "":
+				return seed
+			continue
+		var won := int(res["score"][0]) > int(res["score"][1])
+		var lost := int(res["score"][0]) < int(res["score"][1])
+		if (won if want == "win" else lost) and not tq.is_empty() and int(tq["q"]) == 3:
 			return seed
-	return from
+	return -1
 
 
 func _test_comeback_telling() -> void:
@@ -680,12 +691,16 @@ func _test_comeback_telling() -> void:
 			== "You lead by 90, and you have kicked the last six goals.", "Six in a row is said even in a blowout")
 	_check(ComebackTelling.break_line({}, 0) == "", "No quarters, no line")
 
-	# Seeded matches (SYD v CAR 175, MEL v FRE 188, SYD v CAR 3). me = home.
-	# The loss is found, not fixed: hand-set ratings (data/ovr_overrides.csv) change
-	# Melbourne and Fremantle's games, so it is the first MEL v FRE game from 188
-	# up that Melbourne's side turned against them.
-	var cases := {175: "win", _find_lost_turn_seed(188): "loss", 3: "none"}
+	# Seeded matches (SYD v CAR from 175, MEL v FRE from 188, SYD v CAR from 3).
+	# me = home. Each is found, not fixed (_find_turn_seed): hand-set ratings and
+	# every rate change move the seeded games.
+	var cases := {_find_turn_seed(["SYD", "CAR"], 175, "win"): "win",
+			_find_turn_seed(["MEL", "FRE"], 188, "loss"): "loss",
+			_find_turn_seed(["SYD", "CAR"], 3, "none"): "none"}
+	_check(cases.size() == 3 and not cases.has(-1), "A seeded win, loss and ordinary game are all found (%s)" % str(cases))
 	for seed in cases:
+		if int(seed) < 0:
+			continue
 		var pr: Array = ["MEL", "FRE"] if str(cases[seed]) == "loss" else ["SYD", "CAR"]
 		var home := Squad.new(pr[0], GameDB.club_list(pr[0]), true, pr[0])
 		var away := Squad.new(pr[1], GameDB.club_list(pr[1]), false, pr[1])

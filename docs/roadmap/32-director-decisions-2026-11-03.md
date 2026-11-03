@@ -71,6 +71,11 @@ his differs, the later one wins. Nothing here edits the bible.
   block and the Key match-ups block stay together in the Tag's column; #878's split, made so every column was within
   a fifth empty, is reversed. The balance check loosens to 30% empty (the best split with them together measured
   28% at 1280x720: 261, 363, 308). The phone and 768-1199 layouts are unchanged.
+- Coach styles (match-day tactics): a senior coach's style only moves his reaction thresholds, by at most 25% either
+  way (MatchSim.COACH_STYLES: protect / chase / loose margins 0.75-1.25, fire-up at 9 or 12 down, no extra points, no
+  quarter gates moved). No style ever switches a reaction off (stubborn's never-chase lost_q 9 and never-pull loose 99
+  are gone). Every club, your own assistant included, acts in its best interest: from Q2 each counters the plan the
+  other side ran when the counter is worth within 0.3 of its usual game (PlanFit.plan_score = edge x plan knowledge).
 - Story calendar (bug bash): pre-season gets its own block of story weeks, after last season's finals and before
   Round 1, never sharing a week with any season. StoryEngine.week_abs(year, week) = (year-2000)*52 + 12 + 10 + week:
   a 12-week off-season gap, the pre-season's 10 slots (weeks -9..0), then 30 weeks of rounds and finals, so the

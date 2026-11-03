@@ -212,9 +212,26 @@ func _test_assistant() -> void:
 			[1, beaten, false, false]]}
 	on.duel_log[fid] = lost.duplicate(true)
 	on.current_quarter = 2
+	# He moves him when some defender lowers the forwards' summed mark chance
+	# (MatchSim._rematch); otherwise the beaten man is still the best there is.
+	var fwd := on._on_ground(1, fid)
+	var on_by := {}
+	for f in d:
+		on_by[str(d[f])] = str(f)
+	var cur := on._on_ground(0, beaten)
+	var better := false
+	for p in Matchups.defenders((on.squads[0] as Squad).ground):
+		var pid := str(p["id"])
+		if pid == beaten or pid == str(on.interceptor[0]):
+			continue
+		var gain := Matchups.mark_chance(fwd, cur) - Matchups.mark_chance(fwd, p)
+		if on_by.has(pid):
+			var f2 := on._on_ground(1, str(on_by[pid]))
+			gain += Matchups.mark_chance(f2, p) - Matchups.mark_chance(f2, cur)
+		better = better or gain > 0.0
 	on._assistant_calls(0)
-	_check(str((on.duels[0] as Dictionary).get(fid, "")) != beaten,
-			"Your assistant moves a key defender who lost three of four contests last quarter")
+	_check((str((on.duels[0] as Dictionary).get(fid, "")) != beaten) == better,
+			"Your assistant moves a key defender who lost three of four contests last quarter when a better match-up exists")
 	# One you put there yourself stays, whatever the contests say.
 	var kept: MatchSim = make.call(true)
 	var mine := str((kept.duels[0] as Dictionary)[fid])

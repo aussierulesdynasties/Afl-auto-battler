@@ -138,19 +138,27 @@ static func fit(ground: Array, plan: String) -> float:
 	return clampf(1.0 + PER_SPREAD * edge(ground, plan), FIT_MIN, FIT_MAX)
 
 
-## The plan an AI club plays as its usual game: the one its list suits best,
-## if it clearly suits one; otherwise Balanced.
-static func standing_plan(ground: Array) -> String:
+## The plan a club plays as its usual game: the one its list suits best,
+## weighted by how well the club knows it (`know`: Squad.plan_know, plan ->
+## multiplier; empty = all known), if it clearly suits one; otherwise
+## Balanced. Controlled tempo counts like any other plan.
+static func standing_plan(ground: Array, know := {}) -> String:
 	var best := "balanced"
-	var best_edge := STANDING_EDGE
+	var best_score := STANDING_EDGE
 	for plan in NEEDS:
-		if plan == "controlled":
-			continue   # the AI's game for protecting a lead, not a style
-		var e := edge(ground, plan)
-		if e > best_edge:
-			best_edge = e
+		var sc := plan_score(ground, plan, know)
+		if sc > best_score:
+			best_score = sc
 			best = plan
 	return best
+
+
+## A plan's worth to a club as a coach weighs it: its list's edge for the plan
+## times how well the club knows it. Balanced: 0.
+static func plan_score(ground: Array, plan: String, know := {}) -> float:
+	if not LEAGUE.has(plan):
+		return 0.0
+	return edge(ground, plan) * float(know.get(plan, 1.0))
 
 
 ## How the side's carriers for `plan` compare with the league, in words.
