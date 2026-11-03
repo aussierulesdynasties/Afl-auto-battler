@@ -1099,6 +1099,21 @@ func _test_oval_people(res: Dictionary) -> void:
 	pv3._cue_turnover({"kind": "pressure", "side": 1, "num": away})
 	_check(pv3.caption_text() == "Turnover", "A forced turnover always says so")
 	_check(not pv3.shaking(), "A turnover is an ordinary event: no shake")
+	# A clanger that says why names the cause over the player who erred, and the
+	# turnover that follows does not cover it; one with no cause says nothing.
+	pv3._cue_turnover({"kind": "ballup", "side": -1})
+	pv3._cue_turnover({"kind": "kick", "side": 0, "num": home})
+	for i in range(40):
+		pv3._process(0.05)
+	pv3._cue_turnover({"kind": "clanger", "side": 0, "num": home})
+	_check(pv3.caption_text() == "", "A clanger with no cause says nothing")
+	pv3._cue_turnover({"kind": "clanger", "side": 0, "num": home, "why": "wet"})
+	_check(pv3.caption_text() == "Slippery ball", "A clanger names why it went astray")
+	pv3._cue_turnover({"kind": "kick", "side": 1, "num": away})
+	_check(pv3.caption_text() == "Slippery ball", "The turnover after it does not cover the cause")
+	for i in range(40):
+		pv3._process(0.05)
+	_check(pv3.caption_text() == "", "The cause goes after a second or two")
 	# The club banner's light (UiKit.drift) is smooth: a pure function of time, monotone,
 	# near-constant change per unit time, the same position at 30 and 60 fps.
 	for fps in [30.0, 60.0]:

@@ -21,6 +21,7 @@ func run() -> void:
 	_t("_test_contextual_frees_and_general_spoils")
 	_t("_test_free_causes_follow_the_play")
 	_t("_test_free_keeps_possession")
+	_t("_test_clanger_cause")
 	_t("_test_no_free_after_goal")
 	_t("_test_free_set_shots_counted")
 	_t("_test_legs_and_rotations")
@@ -389,6 +390,64 @@ func _test_free_set_shots_counted() -> void:
 			var st: Dictionary = sim.player_stats.get(id, {})
 			counted = counted and int(st.get("set_shots", 0)) >= int(by_taker[id])
 	_check(frees > 0 and counted, "A set shot from a free in 50 counts in the taker's set shots (%d scored)" % frees)
+
+
+## Row 12: with the clanger_cause switch a clanger that ends a chain in the wet or
+## the wind names it, belongs to the last disposal's player, and the dice are
+## untouched; with it off the line is the old one and carries no cause.
+func _test_clanger_cause() -> void:
+	var withwhy := 0
+	var plain_on := 0
+	var causes := {}
+	var line_ok := true
+	var names_ok := true
+	var same_play := true
+	var off_clean := true
+	for seed in range(24):
+		var weather := "wet" if seed % 3 == 0 else ("windy" if seed % 3 == 1 else "perfect")
+		Features.set_on("clanger_cause", false)
+		var roff := _sim(9100 + seed)
+		roff.weather = weather
+		var res_off: Dictionary = roff.run()
+		Features.set_on("clanger_cause", true)
+		var ron := _sim(9100 + seed)
+		ron.weather = weather
+		var res_on: Dictionary = ron.run()
+		Features.clear("clanger_cause")
+		same_play = same_play and res_off["score"] == res_on["score"] 				and res_off["events"].size() == res_on["events"].size()
+		for ev in res_off["events"]:
+			if str(ev.get("kind", "")) == "clanger":
+				off_clean = off_clean and not ev.has("why") and str(ev["text"]).ends_with("gives away a clanger")
+		var who := {}
+		for side in range(2):
+			var sq: Squad = ron.squads[side]
+			for p in sq.list + sq.ground + sq.bench:
+				who[str(p["id"])] = int(side)
+		for ev in res_on["events"]:
+			if str(ev.get("kind", "")) != "clanger":
+				continue
+			if not ev.has("why"):
+				plain_on += 1
+				continue
+			withwhy += 1
+			var why := str(ev["why"])
+			causes[why] = int(causes.get(why, 0)) + 1
+			line_ok = line_ok and MatchSim.CLANGER_WHY.has(why) 					and str(ev["text"]) == str(MatchSim.CLANGER_WHY[why]) % str(ev["name"]) 					and MatchNotes.clanger_caption(why) != ""
+			names_ok = names_ok and who.get(str(ev.get("player_id", "")), -1) == int(ev["side"])
+			if weather != "wet":
+				line_ok = line_ok and why != "wet"
+			if weather != "windy":
+				line_ok = line_ok and why != "wind"
+	print("Clanger cause: %d with a cause %s, %d plain" % [withwhy, str(causes), plain_on])
+	_check(withwhy >= 5, "Clangers name a cause in the sample (%d)" % withwhy)
+	_check(causes.size() >= 2, "Both weather causes show (%s)" % str(causes))
+	_check(line_ok, "Each cause line is its own words, each weather's cause only in that weather")
+	_check(names_ok, "The player named is of the side that erred")
+	_check(same_play, "The switch changes words and player credit, never the score or the events")
+	_check(off_clean, "Switch off: the old line, no cause")
+	_check(MatchSim.clanger_why({}, "wet") == "", "No disposal, no cause")
+	_check(MatchSim.clanger_why({"kind": "kick", "end": "tackle"}, "wet") == "", "A tackle has its own line: no cause")
+	_check(MatchSim.clanger_why({"kind": "kick", "end": ""}, "perfect") == "", "Dry still day: nothing to blame")
 
 
 func _test_free_causes_follow_the_play() -> void:

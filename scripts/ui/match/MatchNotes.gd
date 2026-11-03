@@ -54,6 +54,15 @@ static func break_score(home: String, away: String, goals: Array, behinds: Array
 	return "%s lead %s by %d." % [a_line, h_line, aws - hs]
 
 
+## Why a clanger went astray, short enough to sit over the player on the oval
+## (MatchSim.clanger_why's causes). "" for no cause: the oval says nothing.
+const CLANGER_CAPTIONS := {"wet": "Slippery ball", "wind": "Blown off line"}
+
+
+static func clanger_caption(why: String) -> String:
+	return str(CLANGER_CAPTIONS.get(why, ""))
+
+
 ## The feed line for an event, or {} to leave it to the oval.
 ## {"text", "tier"}: tier "goal" (its own row), "break" (bold), "play".
 static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
