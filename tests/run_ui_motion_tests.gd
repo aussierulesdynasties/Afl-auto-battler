@@ -378,6 +378,7 @@ func _test_result_sheet_win() -> void:
 	var best: Label = hub.find_child("MyBest", true, false)
 	_check(best != null and best.autowrap_mode != TextServer.AUTOWRAP_OFF and best.text_overrun_behavior == TextServer.OVERRUN_NO_TRIMMING,
 			"The Best line wraps instead of trimming with an ellipsis")
+	_check(hub.find_child("BarFade", true, false) != null, "The results list fades out above Continue, so no row is sliced by the button")
 	await create_timer(1.2).timeout
 	_check(_feel.moved.has("sheet_in") and _feel.moved.has("land") and not _feel.moved.has("stagger") and not _feel.moved.has("reveal"),
 			"Win: Feel.moved shows sheet_in and land, no stagger, no reveal (%s)" % str(_feel.moved))

@@ -964,15 +964,15 @@ func _sim_round_button() -> Button:
 
 ## A little air above a pinned bar and a soft fade over the clip edge, so scrolled
 ## content never reads as cut mid-button by the bar (phone and PC).
-func _bar_air() -> Control:
+func _bar_air(col: Color = UiKit.BG) -> Control:
 	var air := Control.new()
 	air.custom_minimum_size = Vector2(0, 10)
 	air.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var fade := TextureRect.new()
 	fade.name = "BarFade"
 	var grad := Gradient.new()
-	grad.set_color(0, Color(UiKit.BG.r, UiKit.BG.g, UiKit.BG.b, 0.0))
-	grad.set_color(1, Color(UiKit.BG.r, UiKit.BG.g, UiKit.BG.b, 0.92))
+	grad.set_color(0, Color(col.r, col.g, col.b, 0.0))
+	grad.set_color(1, Color(col.r, col.g, col.b, 0.92))
 	var gt := GradientTexture2D.new()
 	gt.gradient = grad
 	gt.fill_from = Vector2(0, 0)
@@ -1614,6 +1614,9 @@ func _show_results(results: Array) -> void:
 		_results_overlay = null
 		_build()
 		_show_week_ask())
+	# The list scrolls under Continue: air and a soft edge so a row is never sliced by the button.
+	if not others.is_empty():
+		box["footer"].add_child(_bar_air(UiKit.PANEL))
 	box["footer"].add_child(ok)
 
 
