@@ -310,6 +310,9 @@ func _test_phone_match(sz: Vector2i) -> void:
 	_check(not bt.contains(" def ") and not bt.contains("defeated"), "The break shows no result words (%s)" % tag)
 	_check(bt.contains("Tag on ") and box.find_child("CallsDid", true, false) != null,
 			"The break says what your calls did, your tag among them (%s)" % tag)
+	var dn: Node = box.find_child("CallsDidNote", true, false)
+	_check(dn != null and _plain(dn) == load("res://scripts/ui/match/MatchNotes.gd").CALLS_DID_NOTE,
+			"What your calls did says what its numbers are (%s)" % tag)
 	var qh: Label = box.find_child("QuarterHeading", true, false)
 	_check(qh != null and qh.text == "First quarter" and not bt.contains("What's happening"),
 			"Quarter time leads with the quarter just played, by name (%s)" % tag)
@@ -1527,10 +1530,10 @@ func _test_loose_interceptor(sz: Vector2i) -> void:
 		if not named:
 			_check(id == "" and tally == null, "With no loose man there is no intercepts line (%s: %s)" % [tag, id])
 		else:
-			var n := int(float((sim.player_stats.get(id, {}) as Dictionary).get("intercepts", 0.0)))
+			var n: int = sim.intercepts_since_call(me)
 			var who: String = db.player_display_name_by_id(id, "")
 			_check(tally != null and _plain(tally) == notes.loose_tally_line(who, n),
-					"The line says his intercepts this match, %d (%s: %s)" % [n, tag, _plain(tally) if tally else "-"])
+					"The line says his intercepts since the call, %d (%s: %s)" % [n, tag, _plain(tally) if tally else "-"])
 		var note: Label = block.find_child("DefenceNote", true, false)
 		var man_b: Button = block.find_child("DefenceSetupPicker_man", true, false)
 		var w: String = await Tap.tap(man_b)
@@ -3126,11 +3129,13 @@ func _test_break_panes_layout() -> void:
 					"The pep talk and the defensive set-up are in the columns")
 			var tallest := 0.0
 			var heights := []
+			var parts := []
 			for c in cols:
 				var t := 0.0
 				for n in (c as Node).get_children():
 					if (n as Control).visible:
 						t += (n as Control).get_combined_minimum_size().y + 6.0
+						parts.append("%s %.0f" % [n.name, (n as Control).get_combined_minimum_size().y])
 				heights.append(t)
 				tallest = maxf(tallest, t)
 			var worst := 0.0
@@ -3138,7 +3143,7 @@ func _test_break_panes_layout() -> void:
 				worst = maxf(worst, (tallest - float(t)) / tallest)
 			# Three columns before the bounce (director, 2026-11-03): no column
 			# stands more than 30% empty, with Tag and Key match-ups kept together.
-			_check(worst <= 0.30, "No column stands more than 30%% empty (%.0f%%: %s)" % [worst * 100.0, str(heights)])
+			_check(worst <= 0.30, "No column stands more than 30%% empty (%.0f%%: %s %s)" % [worst * 100.0, str(heights), str(parts)])
 			var bsc: ScrollContainer = null
 			var up: Node = cols_node
 			while up != null and bsc == null:
@@ -3191,71 +3196,26 @@ func _plain_of(c: Control) -> String:
 	return str(c.get_meta("plain")) if c.has_meta("plain") else (c as Label).text
 
 
-## Each key match-up's Change sits right after its sentence, and no name in a
-## sentence is broken across two lines.
+## The key match-ups are a compact grid: every row's columns line up under the
+## head and Change sits after them inside the pane.
 func _matchup_rows(m: Control, box: Node, tag: String) -> void:
-	var NI = load("res://scripts/ui/NameInk.gd")
 	var rows := box.find_children("BreakMatchup_*", "HBoxContainer", true, false)
 	_check(not rows.is_empty(), "The key match-ups have rows (%s)" % tag)
-	var names: Dictionary = m.call("_names")
-	var gaps := []
+	_check(box.find_child("MatchupHead", true, false) != null, "The match-up grid has a head over its columns (%s)" % tag)
+	var xs := {}
 	for r in rows:
-		var line: RichTextLabel = r.find_child("MatchupLine", true, false) as RichTextLabel
+		var fwd := r.find_child("Matchup_fwd", true, false) as Label
+		var dfd := r.find_child("Matchup_def", true, false) as Label
 		var change: Button = r.find_child("ChangeMatchup", true, false) as Button
-		if line == null or change == null:
-			_check(false, "A match-up row has its sentence and Change (%s)" % tag)
+		if fwd == null or dfd == null or change == null:
+			_check(false, "A match-up row has forward, defender and Change (%s)" % tag)
 			continue
-		var beside := _change_beside(line, change)
-		var gap: float = beside["gap"]
-		gaps.append(gap)
-		_check(gap >= 0.0 and gap <= 14.0, "Change sits right after its sentence, %.0f px away (%s: %s)" % [gap, tag, _plain_of(line)])
-		_check(absf(float(beside["off"])) <= 6.0, "Change sits level with the last line of its sentence (%.0f px off, %s: %s)" % [beside["off"], tag, _plain_of(line)])
-		var plain := _plain_of(line)
-		var spans: Array = NI.spans_in(plain, names)
-		var broken := []
-		for i in range(1, line.get_line_count()):
-			var at := line.get_line_range(i).x
-			for sp in spans:
-				if at > int(sp[0]) and at < int(sp[1]):
-					broken.append(plain.substr(int(sp[0]), int(sp[1]) - int(sp[0])))
-		_check(broken.is_empty(), "No name breaks across lines on a match-up (%s: %s)" % [tag, str(broken)])
-	# A sentence long enough to wrap on any pane: Change still follows its last line,
-	# the same distance as on a one-line row.
-	if not rows.is_empty():
-		var wl: RichTextLabel = rows[0].find_child("MatchupLine", true, false) as RichTextLabel
-		var was_bb := wl.text
-		var was_plain := _plain_of(wl)
-		NI.set_line(wl, "A long sentence that names a good many words, so that this match-up has to wrap onto a second and a third line before it ends.", names)
-		if wl.has_meta("refit"):
-			(wl.get_meta("refit") as Callable).call()
-		await _settle()
-		var wc: Button = rows[0].find_child("ChangeMatchup", true, false) as Button
-		var wat := _change_beside(wl, wc)
-		_check(wl.get_line_count() >= 2, "(setup) the long match-up sentence wraps (%d lines, %s)" % [wl.get_line_count(), tag])
-		_check(float(wat["gap"]) >= 0.0 and float(wat["gap"]) <= 14.0, "On a wrapped sentence Change sits right after its last line, %.0f px away (%s)" % [wat["gap"], tag])
-		_check(absf(float(wat["off"])) <= 6.0, "...level with that last line (%.0f px off, %s)" % [wat["off"], tag])
-		var all_gaps: Array = gaps.duplicate()
-		all_gaps.append(float(wat["gap"]))
-		var lo: float = all_gaps.min()
-		var hi: float = all_gaps.max()
-		_check(all_gaps.size() >= 2 and hi - lo <= 4.0, "Every Change sits the same distance after its sentence, wrapped or not (%.1f to %.1f px, %s)" % [lo, hi, tag])
-		wl.text = was_bb
-		wl.set_meta("plain", was_plain)
-		(wl.get_meta("refit") as Callable).call()
-		await _settle()
-
-
-## How far a Change sits from the end of its sentence's last line (gap, px across),
-## and how far its middle is from that line's middle (off, px down).
-func _change_beside(line: RichTextLabel, change: Button) -> Dictionary:
-	var last := line.get_line_count() - 1
-	var rng := line.get_line_range(last)
-	var shown := line.get_parsed_text().substr(rng.x, rng.y - rng.x).strip_edges(false, true)
-	var ends := line.get_global_rect().position.x + line.get_theme_font("normal_font").get_string_size(
-			shown, HORIZONTAL_ALIGNMENT_LEFT, -1, line.get_theme_font_size("normal_font_size")).x
-	var top := line.get_line_offset(last)
-	var mid := line.get_global_rect().position.y + top + (line.get_content_height() - top) * 0.5
-	return {"gap": change.get_global_rect().position.x - ends, "off": change.get_global_rect().get_center().y - mid}
+		xs[snappedf(fwd.get_global_rect().position.x, 1.0)] = true
+		xs[snappedf(dfd.get_global_rect().position.x, 1.0) + 100000.0] = true
+		_check(dfd.get_global_rect().end.x <= change.get_global_rect().position.x + 1.0
+				and change.get_global_rect().end.x <= m.get_viewport().get_visible_rect().size.x + 1.0,
+				"Change sits after the columns and inside the pane (%s: %s)" % [tag, dfd.text])
+	_check(xs.size() <= 2, "Every match-up row's columns line up (%s: %s)" % [tag, str(xs.keys())])
 
 
 ## Tapping a tag target brings "Who tags" in; no other section changes column
