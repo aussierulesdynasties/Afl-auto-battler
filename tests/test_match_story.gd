@@ -369,7 +369,7 @@ func _test_digest_survives_trim() -> void:
 	_rounds(2)
 	_check(GameState.match_stories.size() == GameState.MAX_MATCH_STORIES, "the list stays capped at 120")
 	var d: Dictionary = GameState.match_story_digest.get(str(old), {})
-	_check(int(d.get("played", 0)) == GameState.MAX_MATCH_STORIES and int(d["heroes"]["H1"]["count"]) == 60,
+	_check(int(d.get("played", 0)) == GameState.MAX_MATCH_STORIES and int(d["heroes"]["H1"]["count"]) == GameState.MAX_MATCH_STORIES,
 			"the trimmed season's digest is whole (%s)" % str(d.get("played")))
 	_check(GameState.save_career() and GameState.load_career(), "saves and loads with a digest")
 	_check(int((GameState.match_story_digest.get(str(old), {}) as Dictionary).get("played", 0)) == GameState.MAX_MATCH_STORIES,

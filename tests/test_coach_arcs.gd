@@ -432,17 +432,15 @@ func _test_hero_count_trigger() -> void:
 	_check(errs.is_empty(), "validate() accepts the new facts: %s" % str(errs))
 	_fresh()
 	Features.set_on("match_story", true)
+	# A kid of 19 on the list who is not a backed high-potential pick.
+	var young: Dictionary = GameState.my_list[GameState.my_list.size() - 1]
+	young["age"] = 19.0
+	young["potential"] = 60
 	var ctx := ClubStories.context(GameState)
 	var kid := {}
 	for p in ctx["players"]:
-		if float(p.get("age", 99)) <= 20 and not bool(p.get("backed", false)) and int(p.get("potential", 0)) < 80:
+		if str(p["id"]) == str(young["id"]):
 			kid = p
-			break
-	if kid.is_empty():
-		for p in ctx["players"]:
-			if float(p.get("age", 99)) <= 20:
-				kid = p
-				break
 	_check(not kid.is_empty(), "the list has a player of 20 or under")
 	var def := CoachArcs.by_id(CoachArcs.all(), "protege")
 	var st: Dictionary = ClubArcs._st(GameState)
