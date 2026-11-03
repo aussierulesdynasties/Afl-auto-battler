@@ -10141,6 +10141,16 @@ func _coaching_offseason() -> void:
 	coach_approaches = []
 
 
+## Your club's season as a coach weighs it when a rival approaches him
+## (CoachMarket.stay_chance): board goal met, finals, a flag.
+func _my_coach_result() -> Dictionary:
+	if season == null:
+		return {}
+	var r: Dictionary = (_coach_market_ctx({}, {})["results"] as Dictionary).get(my_club, {}).duplicate()
+	r["flag"] = premier() == my_club
+	return r
+
+
 ## The market's view of the season just played: each club's board goal met
 ## or not, from the ladder as it stands.
 func _coach_market_ctx(the_coaches: Dictionary, archive: Dictionary) -> Dictionary:
@@ -10231,7 +10241,7 @@ func answer_approach(i: int, choice: String) -> String:
 	a["choice"] = choice
 	if choice == "go":
 		a["text"] = "%s will join %s after the season. You wished him well." % [who, rival]
-	elif CoachMarket.stays(c, choice, str(a["job"]), season_year, career_seed):
+	elif CoachMarket.stays(c, choice, str(a["job"]), season_year, career_seed, _my_coach_result()):
 		a["kept"] = true
 		if choice == "promote":
 			var old := str(c.get("job", ""))

@@ -213,6 +213,7 @@ func _test_retirement_and_pruning() -> void:
 	coaches["ESS_FWD"]["born"] = Y + 1 - 70
 	coaches["FREE_3"]["unemployed_since"] = Y + 1 - CoachMarket.UNEMPLOYED_YEARS
 	coaches["FREE_10"]["unemployed_since"] = Y + 1 - CoachMarket.UNEMPLOYED_YEARS   # a former senior coach
+	coaches["FREE_10"]["rep"] = 0   # hiring is by merit now: never the best left for the job ESS_FWD opens
 	var archive := {}
 	CoachMarket.offseason({"coaches": coaches, "archive": archive, "year": Y, "my_club": "",
 			"clubs": GameDB.active_clubs(Y + 1), "results": _results(true), "premier": "", "seed": SEED})
@@ -270,12 +271,14 @@ func _test_your_staff() -> void:
 	_check(sl.size() >= 3 and sl.size() <= 5, "A shortlist of three to five (%d)" % sl.size())
 	CoachMarket.appoint_mine(coaches, str(sl[0]), my, job, Y, SEED)
 	_check(Coaches.staff(coaches, my).get(job, "") == str(sl[0]), "Appointing fills the job")
-	var left := CoachMarket.release(coaches, str(Coaches.staff(coaches, my)["DEV"]), Y)
-	_check(left == "DEV" and not Coaches.staff(coaches, my).has("DEV"), "Releasing an assistant opens his job")
-	_check(not CoachMarket.shortlist(coaches, my, "DEV", Y, SEED).has("%s_DEV" % my),
+	var rj := str(Coaches.staff(coaches, my).keys()[0])
+	var rcid := str(Coaches.staff(coaches, my)[rj])
+	var left := CoachMarket.release(coaches, rcid, Y)
+	_check(left == rj and not Coaches.staff(coaches, my).has(rj), "Releasing an assistant opens his job")
+	_check(not CoachMarket.shortlist(coaches, my, rj, Y, SEED).has(rcid),
 			"...and he is not offered back to you")
-	CoachMarket.auto_fill(coaches, my, "DEV", Y, SEED)
-	_check(Coaches.staff(coaches, my).has("DEV"), "Auto-fill fills it")
+	CoachMarket.auto_fill(coaches, my, rj, Y, SEED)
+	_check(Coaches.staff(coaches, my).has(rj), "Auto-fill fills it")
 
 
 func _test_generation_and_expansion() -> void:
@@ -340,6 +343,7 @@ func _test_long_run() -> void:
 				elite += 1
 	_check(unfilled == 0, "Thirty seasons: no club ever short of a coach")
 	_check(sc_changes >= 30 and sc_changes <= 150, "Senior coach changes are steady, not constant (%d in 30)" % sc_changes)
+	print("coach_market: senior coach changes in 30 seasons = %d" % sc_changes)
 	_check(internal > 0 and internal < sc_changes, "Some senior appointments are internal, not all (%d of %d)" % [internal, sc_changes])
 	_check(coaches.size() < 260, "The coaching records do not balloon (%d)" % coaches.size())
 	_check(float(elite) / n < 0.08, "Elite stays rare (%.1f%%)" % (100.0 * elite / n))
@@ -490,6 +494,27 @@ func _test_approaches_market() -> void:
 	_check(CoachMarket.stay_chance(c, "promote", "FWD", Y) > CoachMarket.stay_chance(c, "stay", "FWD", Y)
 			and CoachMarket.stay_chance(c, "promote", "SC", Y) < CoachMarket.stay_chance(c, "promote", "FWD", Y),
 			"Senior assistant keeps him more often than asking; a senior coach's job is the hardest to keep him from")
+	_check(CoachMarket.stays(c, "promote", "FWD", Y, 1) == CoachMarket.stays(c, "promote", "FWD", Y, 999)
+			and CoachMarket.stays(c, "promote", "FWD", Y, 1) == (CoachMarket.stay_chance(c, "promote", "FWD", Y) >= CoachMarket.STAY_BAR),
+			"Whether he stays follows the offer and his years with you, never a roll")
+	_check(CoachMarket.stay_chance(c, "stay", "SA", Y, {"met": true, "finals": true, "flag": true})
+			> CoachMarket.stay_chance(c, "stay", "SA", Y, {"met": false}),
+			"A winning club keeps its coach more readily than a losing one")
+	# Contract terms follow performance: a goal met and a big reputation earn longer.
+	var plain := c.duplicate(true)
+	plain["rep"] = 50
+	var star := c.duplicate(true)
+	star["rep"] = CoachMarket.REP_LONG_TERM
+	_check(CoachMarket.term_years(plain, "SC") == 2 and CoachMarket.term_years(plain, "SC", true) == 3
+			and CoachMarket.term_years(star, "SC", true) == 4 and CoachMarket.term_years(star, "MID", true) == 3,
+			"Coach contract terms follow performance (goal met, reputation)")
+	# A step up appeals by his record, not a roll.
+	var low := plain.duplicate(true)
+	low["rep"] = CoachMarket.keen_bar("SA") - 1
+	var keen := plain.duplicate(true)
+	keen["rep"] = CoachMarket.keen_bar("SA")
+	_check(CoachMarket.keen_bar("SA") > CoachMarket.keen_bar("MID") and int(low["rep"]) < int(keen["rep"]),
+			"A bigger step up asks a bigger reputation")
 
 
 func _test_approaches_flow() -> void:
