@@ -375,7 +375,9 @@ static func story_parts(entry: Dictionary, digest: Dictionary) -> Dictionary:
 	elif ft == "Missed the finals" or ft == "":
 		parts["result"] = "%s missed the finals in %d, %s on the ladder at %s." % [club, int(entry["year"]), place, wld]
 	else:
-		parts["result"] = "%s finished %s at %s in %d and went out in the finals." % [club, place, wld, int(entry["year"])]
+		# The week it went out, from the club's own last final (finals_tag).
+		parts["result"] = "%s finished %s at %s in %d and went out in %s." % [club, place, wld, int(entry["year"]),
+				ft.trim_prefix("Out in ")]
 	var sh: Array = entry.get("season_hero", [])
 	if not sh.is_empty():
 		var n := int(sh[0].get("count", 0))

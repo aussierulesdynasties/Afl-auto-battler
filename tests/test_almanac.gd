@@ -30,6 +30,7 @@ func run() -> void:
 	_t("_test_rows_and_coach_record")
 	_t("_test_screen")
 	_t("_test_club_records")
+	_t("_test_story_finals_result")
 	_t("_test_story_with_match_story")
 	Features.clear(FEATURE)
 	GameState.reset()
@@ -267,3 +268,29 @@ func _trace(story: String, e: Dictionary, d: Dictionary) -> void:
 		nums[str(int(m.get_string()))] = true
 	for m in RegEx.create_from_string("\\d+").search_all(story):
 		_check(nums.has(str(int(m.get_string()))), "The story's %s traces to the entry or digest" % m.get_string())
+
+
+## The story's result sentence follows the club's own finals: a club that
+## played no final is never said to have played one; one that did is told
+## the week it went out.
+func _test_story_finals_result() -> void:
+	var base := {"year": 2030, "club": "GEE", "ladder": 11, "of": 18, "w": 10, "l": 13, "d": 0, "flag": false}
+	var miss := base.duplicate()
+	miss["finals_tag"] = ""
+	miss["finals_text"] = Almanac.finals_text("", false, false)
+	var r := str(Almanac.story_parts(miss, {})["result"])
+	_check(r.contains("missed the finals") and not r.contains("went out"), "A non-finalist missed the finals: %s" % r)
+	for tag in ["WC1", "EF2", "SF1", "PF1"]:
+		var e := base.duplicate()
+		e["ladder"] = 7
+		e["finals_tag"] = tag
+		e["finals_text"] = Almanac.finals_text(tag, false, false)
+		var t := str(Almanac.story_parts(e, {})["result"])
+		_check(t.contains("went out in " + str(e["finals_text"]).trim_prefix("Out in ")) and not t.contains("in the finals."),
+				"A finalist is told the week he went out (%s): %s" % [tag, t])
+	for e in GameState.almanac:
+		var played := str(e.get("finals_tag", "")) != ""
+		var story := str(e.get(Almanac.STORY_KEY, ""))
+		if not played and story != "":
+			_check(not story.contains("went out") and not story.contains("Grand Final") or bool(e.get("flag", false)),
+					"A season without a final never says it played one: %s" % story)
