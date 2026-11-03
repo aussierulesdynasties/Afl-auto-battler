@@ -19,13 +19,13 @@ const T := {
 	"tackle_retention": 0.44,        # attacking team wins the ball back
 	"pressure_base": 0.160,          # chance a touch is tackled
 	"clanger_per_chain": 0.625,     # chance the chain ends in an error
-	"clanger_is_free": 0.34,         # ...of which are free kicks against
+	"clanger_is_free": 0.43,         # ...of which are free kicks against
 	"mark_share_of_kicks": 0.327,
 	"handball_share": 0.44,
 	"inside50_goal": 0.262,          # of inside-50 entries (0.279 before frees in 50 became set shots, backlog item 24; 0.269 before forward archetypes, ARD-M3-002)
 	"inside50_behind": 0.180,
 	"stoppage_share": 0.42,          # chains that begin at a genuine stoppage
-	"hitouts_per_stoppage": 0.81,    # split between the two rucks
+	"hitouts_per_stoppage": 0.78,    # split between the two rucks
 	"clearance_per_stoppage": 0.815,  # to the team that wins the stoppage
 	"one_percenter_share": 0.83,     # of inside-50 entries that yield a 1%
 	"rebound_on_exit": 0.55,         # defensive-half chains that yield a reb50

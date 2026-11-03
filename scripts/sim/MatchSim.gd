@@ -3833,8 +3833,9 @@ func _play_one_chain(T: Dictionary) -> void:
 		_emit("clanger", side, fp, err,
 				"%s gives away a clanger" % GameDB.player_display_name(err))
 		_lost_by = side
-		# After a behind the kick-in comes first: no free is paid over it.
-		if not kick_in and free_rng.randf() < float(T["clanger_is_free"]) * GENERIC_FREE_MULT:
+		# After a behind the kick-in comes first, and after a goal the centre
+		# bounce (director, 2026-11-03): no free is paid over either.
+		if not kick_in and not at_centre and free_rng.randf() < float(T["clanger_is_free"]) * GENERIC_FREE_MULT:
 			var recipient = _free_to(1 - side, fp if side == 0 else -fp)
 			next_side = 1 - side
 			_prev_end = "free"

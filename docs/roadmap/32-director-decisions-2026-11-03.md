@@ -64,3 +64,8 @@ his differs, the later one wins. Nothing here edits the bible.
   most pressing of: a pending press question, an open assistant approach, no captain named, a young player ready for
   backing (could be backed, rated within 3 of the list's 22nd best), a pre-season captaincy review (BigCalls.gd). One
   call per week, kept in week_checks (saved), ticked when dealt with. Behind weekly_checklist and coach_arcs; off, as before.
+- Centre bounce after every goal: a goal is always followed by a centre bounce; the end-of-chain clanger can no longer
+  pay a free over it (MatchSim._play_one_chain, `not at_centre` guard; test_match_game _test_no_free_after_goal,
+  which found 47 of 538 goals cancelled before the fix). Recalibrated in Ratings.gd: clanger_is_free 0.34 -> 0.43
+  (free kicks for ratio 0.94 before, 0.88 with the guard alone, 0.95 after) and hitouts_per_stoppage 0.81 -> 0.78
+  (the restored bounces took hit-outs from 1.05 to 1.07; 1.03 after). Every calibration row stays in band.
