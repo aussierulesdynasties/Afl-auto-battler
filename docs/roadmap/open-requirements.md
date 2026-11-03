@@ -23,7 +23,7 @@ Nothing here starts until the boss assigns it. Reconciled 2026-10-10 against mai
 
 | # | Requirement | Source | Owner | Status |
 |---|---|---|---|---|
-| 10 | Collection pauses / far receiver: "urgent regression"; next approach named (role allocation reads the log ahead) | §1.11 visual simulation, 2026-10-08 record | none | open |
+| 10 | Collection pauses / far receiver: "urgent regression"; next approach named (role allocation reads the log ahead) | §1.11 visual simulation, 2026-10-08 record | claude/collection-pauses | PR #857 open; exported-PC full-match check still the director's |
 | 11 | Play on after an intercept or a free; stoppages from contests (Step 1), then recalibrate contested ball, spoils, turnovers (Step 2) | #607 audit, director 2026-10-10 | boss (claude/match-flow) | in progress |
 | 12 | Disposals to empty space: the feed says the real cause; kicks to space readable | §1.11 visual simulation | none | open |
 | 13 | Every in-match decision has a vignette when on: audit all decision types | §1.11 every decision | none | open (toggle #518 DONE) |
