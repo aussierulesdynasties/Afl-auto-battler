@@ -40,3 +40,7 @@ his differs, the later one wins. Nothing here edits the bible.
   Defensive forward and Loose interceptor are one Defensive set-up call; the in-match Main ruck call is gone (the
   selected ruck goes up); rotations are automatic for both sides (MatchSim.auto_rotation: season plan, heat, close
   late quarters). Live, no switch; old saves load and the old call keys are ignored.
+- PC pre-bounce break (1280x720 and wider) is three call columns, not four; no column more than a fifth empty
+  (strict matchday check restored). Game plan leads column 1, Tag leads column 2; key match-ups, pep talk, defensive
+  set-up and the legs/synergies lines are dealt for balance (tag + match-ups together were ~360 of ~940, so they no
+  longer share a column). Phone and 768-1199 layouts unchanged.

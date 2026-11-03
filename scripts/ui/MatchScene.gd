@@ -1932,15 +1932,17 @@ func _balance_break_columns(cols: Array, again := false) -> void:
 			return
 
 
-## Before the first ball-up on a four-column PC sheet the calls are dealt by what
+## Before the first ball-up on a three-column PC sheet the calls are dealt by what
 ## they are (director, 2026-10-15: empty space is a defect; "PC is not a big
-## phone"): the game plan leads the first column; the tag and the key match-ups
-## share the second; the pep talk the third. The rest (the defensive set-up,
-## and the legs and synergies lines) go where they make the four columns most
-## alike in height, under what fits 720 high.
+## phone"): the game plan leads the first column and the tag the second. The
+## rest (the key match-ups, the pep talk, the defensive set-up, and the legs
+## and synergies lines) go where they make the three columns most alike in
+## height, under what fits 720 high (director, 2026-11-03: three columns, none
+## more than a fifth empty; with the tag and the match-ups held together that
+## column alone is ~360 of ~940, so they are dealt apart).
 ## Where a call sits is dealt once: a call that opens later (Who tags) grows its
 ## own column and never moves another call.
-const DEAL_FIRST := {"gameplan": 0, "tag": 1, "mu": 1, "pep": 2}
+const DEAL_FIRST := {"gameplan": 0, "tag": 1}
 const DEAL_ORDER := ["gameplan", "tag", "mu", "pep", "df", "facts"]
 
 
@@ -1985,7 +1987,13 @@ func _deal_calls(cols: Array, groups: Dictionary) -> void:
 	for k in keys:
 		if not DEAL_FIRST.has(k):
 			free.append(k)
-	var base := [0.0, 0.0, 0.0, 0.0]
+	# Three columns before the first ball-up (director, 2026-11-03: with four
+	# match calls cut, four columns left one 378 tall beside one of 161). The
+	# last column built is emptied into the others and leaves the row.
+	var n := mini(3, cols.size())
+	var base := []
+	for i in range(n):
+		base.append(0.0)
 	for k in keys:
 		if DEAL_FIRST.has(k):
 			base[int(DEAL_FIRST[k])] += float(h[k])
@@ -1993,14 +2001,14 @@ func _deal_calls(cols: Array, groups: Dictionary) -> void:
 	# least empty room under the shortest column (else the shortest tallest).
 	var best := []
 	var best_score := [INF, INF, INF]
-	var total := int(pow(4, free.size()))
+	var total := int(pow(n, free.size()))
 	for code in range(total):
 		var load_h := base.duplicate()
 		var at := []
 		var rest := code
 		for k in free:
-			var c := rest % 4
-			rest = int(floorf(rest / 4.0))
+			var c := rest % n
+			rest = int(floorf(rest / float(n)))
 			at.append(c)
 			load_h[c] += float(h[k])
 		var mx := float(load_h.max())
@@ -2015,12 +2023,18 @@ func _deal_calls(cols: Array, groups: Dictionary) -> void:
 		if DEAL_FIRST.has(k):
 			where[k] = int(DEAL_FIRST[k])
 	for i in range(free.size()):
-		where[free[i]] = int(best[i]) if not best.is_empty() else 3
+		where[free[i]] = int(best[i]) if not best.is_empty() else n - 1
 	for k in keys:
-		for n in groups[k]:
-			if (n as Node).get_parent() != null:
-				(n as Node).get_parent().remove_child(n)
-			(cols[int(where[k])] as Node).add_child(n)
+		for nd in groups[k]:
+			if (nd as Node).get_parent() != null:
+				(nd as Node).get_parent().remove_child(nd)
+			(cols[int(where[k])] as Node).add_child(nd)
+	for i in range(n, cols.size()):
+		var spare: Node = cols[i]
+		if spare.get_parent() != null:
+			spare.get_parent().remove_child(spare)
+		spare.queue_free()
+	cols.resize(n)
 
 
 func _unit_heights(units: Array, sep: float) -> Array:
