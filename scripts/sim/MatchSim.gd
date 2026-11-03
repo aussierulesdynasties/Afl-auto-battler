@@ -4698,8 +4698,21 @@ func _playtest_bounce() -> bool:
 
 func _fire_bounce(margin: int) -> void:
 	var state := "level" if margin == 0 else ("%d up" % margin if margin > 0 else "%d down" % -margin)
-	_fire({"kind": "bounce", "default": 2,
-		"title": "Centre ball-up - %s with %d minutes left" % [state, 120 - current_minute],
+	var left: int = current_quarter * 30 - current_minute
+	var title := "Centre ball-up - %s with %d minutes left" % [state, 120 - current_minute]
+	if Features.on("ballup_two"):
+		# Two distinct calls, each with its own upside and downside and no
+		# "Play it straight" (row 15). Unanswered (skipped, auto-played) is no call.
+		_fire({"kind": "bounce", "default": -1, "title": title,
+			"text": "Set up for the rest of the game.",
+			"options": _sized([
+				{"key": "stack", "label": "Stack the stoppage",
+					"detail": "Extra numbers at the bounce: win far more clearances, but they score more easily if they get out."},
+				{"key": "flood", "label": "Flood behind the ball",
+					"detail": "Protect the lead: they score far less, and so do you."},
+			], left, GateOdds.NONE_COST_BOUNCE)})
+		return
+	_fire({"kind": "bounce", "default": 2, "title": title,
 		"text": "Set up for the rest of the game.",
 		"options": _sized([
 			{"key": "stack", "label": "Stack the stoppage",
@@ -4708,7 +4721,7 @@ func _fire_bounce(margin: int) -> void:
 				"detail": "Protect the lead: they score far less, and so do you."},
 			{"key": "none", "label": "Play it straight",
 				"detail": "No change."},
-		], current_quarter * 30 - current_minute, GateOdds.NONE_COST_BOUNCE)})
+		], left, GateOdds.NONE_COST_BOUNCE)})
 
 
 ## A risk card's options with what each does for you and what it costs, sized
@@ -5039,8 +5052,10 @@ func resolve_moment(choice: int) -> Dictionary:
 	var m := pending_moment
 	pending_moment = {}
 	var options: Array = m.get("options", [])
-	choice = clampi(choice, 0, maxi(0, options.size() - 1))
-	var opt: Dictionary = options[choice] if not options.is_empty() else {}
+	# A call whose default is -1 (the two-choice centre ball-up) can be left
+	# unanswered: nothing changes.
+	choice = clampi(choice, -1 if int(m.get("default", 0)) < 0 else 0, maxi(0, options.size() - 1))
+	var opt: Dictionary = options[choice] if choice >= 0 and not options.is_empty() 			else ({"key": "none", "label": "No call"} if choice < 0 else {})
 	var side := int(m.get("side", moment_side))
 	var key := str(opt.get("key", ""))
 	var outcome := ""
