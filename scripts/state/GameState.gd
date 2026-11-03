@@ -7838,6 +7838,7 @@ func _bid(club: String, asset: Dictionary, worth: float, shade: float, prospects
 ## cheapest first, and the seller takes the first bid it values enough -
 ## neither sees the other's sums. Turned down, the buyer tries its next
 ## target, up to TARGET_TRIES. Clubs keep dealing while such deals exist;
+## a club whose turn finds no deal is out of that year's market;
 ## never with you; MAX_AI_TRADES a year is a runaway guard only.
 func _ai_trades(prospects: Dictionary) -> void:
 	var done := 0
@@ -7847,13 +7848,15 @@ func _ai_trades(prospects: Dictionary) -> void:
 	var order := _club_order("ai_trades")
 	var sellers := _club_order("sellers")
 	var dealt := true
+	var out := {}   # a club that finds no deal on its turn leaves the market
 	while dealt and done < MAX_AI_TRADES:
 		dealt = false
 		for buyer in order:
 			if done >= MAX_AI_TRADES:
 				break
-			if buyer == my_club:
+			if buyer == my_club or out.has(buyer):
 				continue
+			out[buyer] = true
 			var others := []
 			var club_of := {}
 			for code in sellers:
@@ -7876,6 +7879,7 @@ func _ai_trades(prospects: Dictionary) -> void:
 				_log_ai_trade(buyer, seller, target, pkg, "")
 				done += 1
 				dealt = true
+				out.erase(buyer)
 				break
 
 
