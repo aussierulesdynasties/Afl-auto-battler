@@ -61,6 +61,7 @@ func _test_intake_by_taps() -> void:
 	season.round_index = season.fixture.size()  # The H&A is done; draft time.
 	# A compensation pick for losing a free agent, so the order shows one.
 	_state.open_offseason()
+	_state.compensation.clear()   # only this fixture pick: the real offseason may award its own
 	_state.compensation.append({"club": "COL", "player": "comp_test", "name": "Sam Example",
 			"to": "CAR", "salary": 8, "years": 3, "value": 10.0, "after": 1})
 	# A first-round pick bought from Carlton for a player: the order and your
