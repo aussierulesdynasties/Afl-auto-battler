@@ -1,6 +1,6 @@
 # AFL Auto-Battler: working rules
 
-The design bible, the roadmap index and the open director requirements (owner, status) load in
+The design bible and `docs/TODO.md` (the one list of work not done; director rulings are in `docs/roadmap/21..32`) load in
 full at session start ("Always loaded" below). Must-read files stay under 60 KB (CI: `tools/check_doc_sizes.py`).
 
 Godot 4 / GDScript. Run `tools/run_tests.sh` (or `tools/run_tests.sh draft_ui`
@@ -12,8 +12,7 @@ Claude Code imports these core documents in full at every session start (the `@`
 so they are part of this file: read them as rules, never skim or skip them.
 
 @docs/DESIGN_BIBLE.md
-@docs/ROADMAP.md
-@docs/roadmap/open-requirements.md
+@docs/TODO.md
 
 ## The design bible comes first (director, 2026-10-09)
 
@@ -23,7 +22,7 @@ role work from it.
 
 - **Authority.** Where this file, the roadmap or any other document disagrees
   with the bible, the bible wins: report the conflict and correct the other
-  document. The roadmap still owns execution, status and order.
+  document. `docs/TODO.md` owns execution, status and order.
 - **Nobody edits the bible without the director.** Each change needs the
   director's explicit consent for that change. Propose it; do not make it.
 - **Assess before you build.** Before starting a feature, say in a line or two

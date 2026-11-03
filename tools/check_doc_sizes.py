@@ -4,7 +4,7 @@
 The director's rule (2026-10-10): skimming the documents is a sin; agents read their memory,
 handoff, skill and checklist files in full. The Read tool returns roughly 100 KB a call, so a
 must-read file above the budget here cannot be read in full in one piece, and in practice gets
-skimmed. On 2026-10-10 docs/ROADMAP.md was 775 KB and no agent had ever read it whole; the
+skimmed. On 2026-10-10 the old roadmap was 775 KB and no agent had ever read it whole; the
 director was never told. When a doc is too long, the fix is to split it, never to skim it.
 
 Budget: 60 KB per must-read file (about 15k tokens, comfortably one read with room for the
@@ -23,9 +23,7 @@ BUDGET_KB = 60
 # Every file an agent is expected to read in full at session start or before a task.
 MUST_READ = [
     "CLAUDE.md",
-    "docs/ROADMAP.md",                  # the index: one page once split
-    "docs/roadmap/open-requirements.md",
-    "docs/agents/STATUS.md",
+    "docs/TODO.md",                     # the one work list
 ]
 MUST_READ_GLOBS = [
     ".claude/skills/*/SKILL.md",
