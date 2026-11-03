@@ -1,12 +1,15 @@
 class_name CultureSheet
 extends RefCounted
 ## Your club's culture, over My list: three strands in words, the reasons from
-## the career behind them. Display only: no numbers, no meters, no effect on
-## the sim. Back, or the back arrow, returns to My list.
+## the career behind them, and what each does for you now. No numbers, no
+## meters: each effect is one football line (Culture.effect_line). Back, or the back arrow, returns to My list.
 ##
 ## Layout: three words about us, and how we got here (director, 2026-10-13).
 
 const WIDE := 760.0
+## Under the title, what culture touches and what it costs (P-63), true to the
+## effects in data/culture_effects.json: Standards and Togetherness cut both ways.
+const TRADE_OFF_LINE := "Culture tilts your list: how quickly legs recover, how players take a missed game, who stays and joins, and how fast young players come on. Let standards slip or the group split and it costs you."
 ## The strand emblems: a square this size, tinted this far towards the club's colour.
 const ICON := 48.0
 const ICON_TINT := 0.55
@@ -60,6 +63,22 @@ static func strands(club: String) -> Array:
 	return out
 
 
+## The phrases the row on My list prints. The row is an invitation and the phrases
+## carry no strand names, so only the strands with something to say are printed;
+## when none has, the block says "Nothing stands out yet" once, not once per strand.
+## The sheet it opens names all three.
+static func entry_phrases(data: Array) -> PackedStringArray:
+	var nothing := Culture.quiet_words(0, false)
+	var phrases := PackedStringArray()
+	for d in data:
+		var w := str((d as Dictionary)["words"])
+		if w != nothing:
+			phrases.append(w)
+	if phrases.is_empty():
+		phrases.append(nothing)
+	return phrases
+
+
 ## The row on My list that opens it: an invitation, the three phrases in bold.
 static func entry_row() -> Button:
 	var club: String = _gs().my_club
@@ -67,9 +86,7 @@ static func entry_row() -> Button:
 	b.name = "CultureOpen"
 	b.custom_minimum_size = Vector2(0, 92)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var phrases := PackedStringArray()
-	for d in strands(club):
-		phrases.append(str(d["words"]))
+	var phrases := entry_phrases(strands(club))
 	b.tooltip_text = "Club culture"
 	var h := UiKit.hbox(12)
 	h.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -188,10 +205,15 @@ static func emblem_tint(club: String) -> Color:
 	return Color.WHITE.lerp(ink, ICON_TINT)
 
 
-## What moves the strand: one plain line under its headline. (What it does in
-## play joins it once the director approves the effects.)
+## Under a strand's headline: what it does now (bold, only while its band does
+## something) and what moves it.
 static func _what_it_does(d: Dictionary, parent: Control, size := 0) -> void:
 	var fs := size if size > 0 else UiKit.SECONDARY
+	var effect := Culture.effect_line(str(d["id"]), int(d["t"]))
+	if effect != "":
+		var does := UiKit.lbl(effect, fs, UiKit.TEXT, true)
+		does.name = "StrandEffect"
+		parent.add_child(does)
 	var moves := UiKit.lbl(Culture.moves_line(str(d["id"])), fs, UiKit.TEXT)
 	moves.name = "StrandMoves"
 	parent.add_child(moves)
@@ -216,6 +238,11 @@ static func _build(root: Control, club: String, data: Array, wide: bool, done: C
 	mark.add_child(mark_name)
 	top.add_child(mark)
 	page.add_child(top)
+	# What it costs and what it buys, in one line (P-63).
+	var plain := UiKit.lbl(TRADE_OFF_LINE, UiKit.SECONDARY, UiKit.TEXT)
+	plain.name = "CultureTradeOff"
+	plain.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	page.add_child(plain)
 	page.add_child(UiKit.spacer(14))
 	# The statement: three phrases as one, the strand's name small beside each.
 	var statement := UiKit.vbox(88 if wide else 22)

@@ -13,18 +13,29 @@ extends RefCounted
 ##        godot --path . -- --features preseason
 ##      (several: --features preseason,other);
 ##   3. the project setting features/<name> is true (project.godot). This is
-##      what an exported build reads, and it ships FALSE.
-## Otherwise it is OFF: every exported build, every test suite that does not
-## ask for it, and a plain editor run.
+##      what an exported build reads. international_prospects ships ON since
+##      2026-10-18 (director: "Names fine, switch on"); every other switch ships off.
+## Otherwise it is OFF: every test suite that does not ask for it, and a plain
+## editor run, for any switch whose project setting is false.
 ##
-## Switches:
+## Switches (international_prospects ships ON since 2026-10-18; preseason, speccy_front, training_report ship off):
 ##   preseason   the eight-week pre-season between the wrap and Round 1
 ##               (PreSeason.gd, PreSeasonScene), and everything built on it
 ##               for patch 0.2.0 (the pre-season match comes next).
 ##   speccy_front   the low, tight front-on speccy shot that freezes on the grab
 ##               (BroadcastVignette). Off, a spectacular mark plays the earlier shot.
+##   international_prospects   one or two prospects from Ireland, New Zealand, the USA
+##               and Africa in each generated draft class (InternationalProspects.gd),
+##               and their story beats. Off, generated classes are exactly as before.
+##   training_report   the report after every fourth round: who improved, who
+##               fell back, and who can learn a new position (TrainingReport.gd).
+##   expansion_package   how a new club builds its list (director, 2026-10-14):
+##               state-league signings, early draft picks, one out-of-contract
+##               player per rival club, and Canberra as a career choice
+##               (ExpansionBuild). Off, a new club arrives with the 36
+##               generated players it always did and Canberra always joins.
 
-const KNOWN := ["preseason", "speccy_front"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package"]
 
 static var _forced := {}
 static var _from_args := {}

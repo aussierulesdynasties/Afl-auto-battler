@@ -11,17 +11,17 @@ const SUITE_SEED := 2027
 
 func run() -> void:
 	GameState.replay_seed = SUITE_SEED
-	_test_budget_model()
-	_test_budget_allocation_state()
-	_test_recovery()
-	_test_match()
-	_test_selection()
-	_test_career()
-	_test_finals()
-	await _test_ui()
+	_t("_test_budget_model")
+	_t("_test_budget_allocation_state")
+	_t("_test_recovery")
+	_t("_test_match")
+	_t("_test_selection")
+	_t("_test_career")
+	_t("_test_finals")
+	await _t("_test_ui")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
-	print("Workload tests: %d checks, %d failures" % [checks, failures.size()])
+	print(Ran.line("Workload", self))
 
 
 ## A finger's tap on b where it sits on screen (tests/tap.gd), checked; if
@@ -40,6 +40,11 @@ func _check(ok: bool, message: String) -> void:
 		failures.append(message)
 		push_error(message)
 
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
+
 
 func _test_budget_model() -> void:
 	var standard := ClubBudget.defaults()
@@ -56,7 +61,7 @@ func _test_budget_model() -> void:
 			and ClubBudget.development_mult(1) > ClubBudget.development_mult(0),
 			"More Development funding always has a larger, diminishing XP benefit")
 	_check(ClubBudget.benefit_text("recruiting", 2).contains("20% narrower")
-			and ClubBudget.benefit_text("high_performance", 3).contains("20% higher"),
+			and ClubBudget.benefit_text("high_performance", 3).contains("Legs recover 20% faster"),
 			"Funding benefits are stated as exact effects, not hidden scores")
 
 	var normal := {"id": "normal", "age": 25, "attr": {"durability": 70}, "workload": 50.0}
@@ -266,6 +271,34 @@ func _test_ui() -> void:
 	var explanation := sheet.find_child("ProfileReadiness", true, false) as Label
 	_check(explanation != null and explanation.text.contains("week out of seniors"),
 			"The profile explains how the coach can help a tired player recover")
+	sheet.queue_free()
+	# A rival's load, mood and promises are private: never on his card or profile.
+	var other_code := "ADE"
+	var theirs: Array = GameDB.club_list(other_code)
+	var rp: Dictionary = theirs[0]
+	rp["workload"] = 60.0
+	rp["club"] = other_code
+	var tb := TeamBuilder.new()
+	tb.setup({"mid": [rp["id"]]}, false, theirs, true)
+	tree.root.add_child(tb)
+	for i in range(3):
+		await tree.process_frame
+	_check(tb.find_child("Readiness_" + str(rp["id"]), true, false) == null,
+			"A rival's card never shows his load")
+	var rsheet := PlayerSheet.open(screen, rp)
+	for i in range(3):
+		await tree.process_frame
+	_check(rsheet.find_child("ProfileReadiness", true, false) == null,
+			"A rival's profile never shows his load")
+	var rstate := rsheet.find_child("ProfileState", true, false) as Label
+	_check(rstate != null and not rstate.text.contains("Mood"), "A rival's profile never shows his mood")
+	var plan_leak := false
+	for lb in rsheet.find_children("*", "Label", true, false):
+		if (lb as Label).text.begins_with("Training plan"):
+			plan_leak = true
+	_check(not plan_leak, "A rival's profile never shows his training plan")
+	rsheet.queue_free()
+	tb.queue_free()
 	screen.queue_free()
 	await tree.process_frame
 

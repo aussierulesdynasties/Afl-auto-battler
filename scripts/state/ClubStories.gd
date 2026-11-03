@@ -7,20 +7,25 @@ extends RefCounted
 ## data/stories. `gs` is GameState.
 
 ## Trust lost when a promise made on a card is broken after the match.
-const BROKEN_PROMISE_TRUST := -8
-const BROKEN_RUN_TRUST := -10
+const BROKEN_PROMISE_TRUST := StoryEngine.BROKEN_PROMISE_TRUST
+const BROKEN_RUN_TRUST := StoryEngine.BROKEN_RUN_TRUST
 
 
 ## Your week of the season: the round, then the finals weeks after it.
 static func week_in_season(gs) -> int:
 	if gs.season == null:
 		return 0
+	# The pre-season's stops sit just before Round 1 on the calendar: week 3 is -5.
+	if gs.preseason_active():
+		return gs.preseason_week() - PreSeason.weeks()
 	if not gs.season.is_regular_done():
 		return gs.season.round_index + 1
 	return Season.REGULAR_ROUNDS + (gs.season.finals.get("weeks", []) as Array).size() + 1
 
 
 static func phase(gs) -> String:
+	if gs.preseason_active():
+		return "preseason"
 	return "finals" if gs.season != null and gs.season.is_regular_done() else "regular"
 
 
@@ -39,6 +44,10 @@ static func pick(gs) -> Array:
 			if not c.is_empty():
 				cards.push_front(c)
 		gs.trial_result = {}
+	# A new club has asked about one of your players: that comes first.
+	var asked := ExpansionBuild.card(gs)
+	if not asked.is_empty():
+		cards.push_front(asked)
 	return cards
 
 
@@ -46,7 +55,7 @@ static func context(gs) -> Dictionary:
 	var week := week_in_season(gs)
 	var ph := phase(gs)
 	return {"seed": int(gs.season.seed), "year": int(gs.season_year), "week": week, "phase": ph,
-			"big": ph == "finals" or week == 1 or week == Season.REGULAR_ROUNDS,
+			"big": ph == "finals" or (ph == "regular" and (week == 1 or week == Season.REGULAR_ROUNDS)),
 			"club": club_facts(gs, week, ph), "players": player_facts(gs)}
 
 
@@ -55,20 +64,67 @@ static func club_facts(gs, week: int, ph: String) -> Dictionary:
 	for p in gs.my_list:
 		if int(p.get("injury_weeks", 0)) <= 0:
 			fit += 1
-	var facts := {"club": GameDB.club_name(gs.my_club), "opp": _opponent_name(gs), "round": week,
+	var facts := {"club": GameDB.club_name(gs.my_club), "opp": _opponent_name(gs), "round": maxi(week, 0),
 			"year": int(gs.season_year), "losing_run": int(gs.losing_streak), "winning_run": _winning_run(gs),
 			"ladder": gs.my_position(), "board": gs.board_confidence(), "fit_count": fit,
 			"run_games": MatchNotes.count_word(Backing.RUN_GAMES),
-			"finals_week": week - Season.REGULAR_ROUNDS if ph == "finals" else 0}
+			"finals_week": week - Season.REGULAR_ROUNDS if ph == "finals" else 0,
+			"pre_week": gs.preseason_week() if ph == "preseason" else 0, "premiers": _premiers_last_year(gs)}
 	facts.merge(_leader_facts(gs), true)
 	facts.merge(_finals_facts(gs, ph), true)
+	facts.merge(papers_facts(gs), true)
+	if ph == "preseason" and gs.preseason_active():
+		# The camp's levers in real terms: the running the plan adds up to and
+		# where the plan a card drills stands (StoryEngine _running_words, _drill_words).
+		var plan: String = gs.card_drill_plan()
+		facts["pre_run"] = gs.preseason_run_forecast()
+		facts["drill_plan"] = CoachReport.plan_label(plan)
+		facts["drill_level"] = gs.plan_level(gs.my_club, plan)
+		facts["drill_credit"] = float(gs.my_drill_credit().get(plan, 0.0))
 	return facts
+
+
+## The pre-season papers: who wrote it, the finish they tipped, the finish you
+## named (if you did), and how far below your own words the club sits now.
+static func papers_facts(gs) -> Dictionary:
+	var out := {"paper": "", "writer": "", "pred_word": "", "pred_rank": 0, "claim_word": "",
+			"claim_rank": 0, "goal_line": "", "words_word": "", "words_behind": 0, "ladder_word": ""}
+	var rec: Dictionary = gs.papers_record()
+	if rec.is_empty() or int(gs.preseason.get("year", 0)) != int(gs.season_year):
+		return out
+	var kind := str(rec.get("kind", ""))
+	var j: Dictionary = MediaConference.JOURNALISTS.get(str(PreSeason.PAPER_WRITER.get(kind, "stats")), {})
+	var pred := int(rec.get("pred", 0))
+	var claim := int(rec.get("claim", 0))
+	var goal := str((gs.board.get("goal", {}) as Dictionary).get("text", ""))
+	out["paper"] = str(j.get("outlet", "The papers"))
+	out["writer"] = str(j.get("name", "A columnist"))
+	out["pred_rank"] = pred
+	out["pred_word"] = PreSeason.ordinal(pred) if pred > 0 else ""
+	out["claim_rank"] = claim if claim > 0 else PreSeason.claim_rank(pred)
+	out["claim_word"] = PreSeason.ordinal(int(out["claim_rank"])) if pred > 0 else ""
+	out["goal_line"] = goal.substr(0, 1).to_lower() + goal.substr(1) if goal != "" else ""
+	if claim > 0:
+		out["words_word"] = PreSeason.ordinal(claim)
+		out["words_behind"] = PreSeason.places_behind(gs.my_position(), claim)
+	out["ladder_word"] = PreSeason.ordinal(gs.my_position())
+	return out
+
+
+## Won the flag last year, by the honour roll this save holds.
+static func _premiers_last_year(gs) -> bool:
+	if gs.honour_roll.is_empty():
+		return false
+	var last: Dictionary = gs.honour_roll[gs.honour_roll.size() - 1]
+	return int(last.get("year", 0)) == int(gs.season_year) - 1 and str(last.get("premier", "")) == gs.my_club
 
 
 ## Where you stand in September (and on the ten before it).
 static func _finals_facts(gs, ph: String) -> Dictionary:
 	var out := {"finals_math": "", "finals_bye": false, "lost_last_final": false, "gf_run": 0,
 			"gf_run_word": "", "gf_again": "", "rival": false}
+	if ph == "preseason":
+		return out
 	if ph == "regular":
 		out["finals_math"] = gs.season.finals_math(gs.my_club)
 		return out
@@ -265,6 +321,10 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"talk_text": ClubLife.talk_text(case, i), "verdict": str(i.get("verdict", "")),
 			"job": str(i.get("job", "")), "need": str(i.get("need", "")),
 			"sore_odds": ClubLife.odds(Injuries.chance(sore)),
+			"sore_pct": "about a %d%%" % roundi(Injuries.chance(sore) * 100.0),
+			"injury_pct": "about a %d%%" % roundi(Injuries.chance(p) * 100.0),
+			# How he rates in the spot a role trial would play him (his usual rating when he has none).
+			"trial_ovr": gs.rating_as(p, trial_role(p)) if trial_role(p) != "" and p.has("attr") else ovr,
 			"ask": Contracts.money(Contracts.asking_salary(p)), "early_price": Contracts.money(early),
 			"more_seasons": "%s more season%s" % [MatchNotes.count_word(more), "" if more == 1 else "s"],
 			"extension_ok": ClubLife.extension_wanted(p, {}) and early - int(p.get("salary", 0)) <= cap_room,
@@ -279,7 +339,25 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"save_debut": gs.save_saw_every_game(p), "debut_year": _debut_year(gs, p),
 			"milestone_next": _milestone_next(gs, p), "injured_weeks": int(p.get("injury_weeks", 0)),
 			"rushable": int(p.get("injury_weeks", 0)) > 0 and str(p.get("injury_kind", "")) != "concussion",
-			"overall_rank": all_rank, "told_players": gs.story_flag_set(id, "farewell_told")}
+			"overall_rank": all_rank, "told_players": gs.story_flag_set(id, "farewell_told"),
+			"new_here": _new_here(gs, p), "trial_place": _trial_place(gs, id),
+			"injury_kind": str(p.get("injury_kind", ""))}
+	# International prospects' cards: where he comes from and how far into his career he is.
+	var country: Dictionary = InternationalProspects.country(str(p.get("intl", "")))
+	var career := Career.of(p)
+	var career_goals := int(career.get("goals", 0))
+	if int(career.get("through", 0)) < int(gs.season_year):
+		career_goals += int((gs.season_tally.get(id, {}) as Dictionary).get("goals", 0))
+	out["intl"] = not country.is_empty()
+	out["intl_region"] = str(country.get("region", ""))
+	out["from"] = str(country.get("from", country.get("name", "")))
+	out["demonym"] = str(country.get("demonym", ""))
+	out["home_club"] = str(p.get("draft_team", ""))
+	out["seasons_listed"] = int(gs.season_year) - int(p.get("drafted_year", int(gs.season_year) - 99))
+	out["goals"] = career_goals
+	# What waiting on an early extension can cost: the rise training can still
+	# bring his price this season (read on a copy: the ceiling marks the player).
+	out["wait_price"] = ClubLife.wait_words(p, gs.season_ceiling(p.duplicate()))
 	# The result of his role trial, for the card that reports it.
 	var tr: Dictionary = gs.trial_result
 	if not tr.is_empty() and str(tr.get("id", "")) == id:
@@ -294,6 +372,22 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			out["trial_tail"] = back
 	return out
 
+
+
+## Arrived this summer: signed or traded in last off-season, or drafted in it.
+static func _new_here(gs, p: Dictionary) -> bool:
+	var last: int = int(gs.season_year) - 1
+	return int(p.get("joined", 0)) == last or int(p.get("drafted_year", 0)) == last
+
+
+## Where he finished in this pre-season's time trial: "best", "worst" or "".
+static func _trial_place(gs, id: String) -> String:
+	var tr: Dictionary = gs.preseason_trial()
+	if (tr.get("best", []) as Array).has(id):
+		return "best"
+	if (tr.get("worst", []) as Array).has(id):
+		return "worst"
+	return ""
 
 
 ## The ageing rule retires him at this rollover (Retirement.intends, read-only: the
@@ -329,7 +423,7 @@ static func _milestone_next(gs, p: Dictionary) -> int:
 
 ## One card from the deck about `p` (or the club), built for this week whether
 ## or not it would come up: for tests and captures.
-static func card_for(gs, tid: String, p: Dictionary = {}) -> Dictionary:
+static func card_for(gs, tid: String, p: Dictionary = {}, extra: Dictionary = {}) -> Dictionary:
 	var deck := StoryDeck.all()
 	var t := StoryDeck.by_id(deck, tid)
 	if t.is_empty():
@@ -343,6 +437,11 @@ static func card_for(gs, tid: String, p: Dictionary = {}) -> Dictionary:
 				subj = f
 		if subj.is_empty():
 			subj = player_fact(gs, p, false, {}, 99, 0)
+	if tid == "contracts_new_club_approach" and extra.is_empty() and not p.is_empty():
+		extra = ExpansionBuild.card_facts(gs, p, ExpansionBuild.asking_club(gs))
+	if not extra.is_empty():
+		subj = subj.duplicate()
+		subj.merge(extra, true)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(tid)
 	return StoryEngine.build(deck, t, subj, ctx["club"], rng, gs.story_week())
@@ -359,6 +458,7 @@ static func apply_choice(gs, card: Dictionary, choice: int) -> String:
 		return "The moment has passed: he is no longer at the club."
 	var facts: Dictionary = (card.get("facts", {}) as Dictionary).duplicate()
 	facts["_tid"] = str(card.get("tid", ""))
+	facts["_result"] = str(opt.get("result", ""))
 	var applied := {}
 	var said: PackedStringArray = []
 	# A role trial that cannot start (he is not in the side now, or is picked
@@ -376,6 +476,9 @@ static func apply_choice(gs, card: Dictionary, choice: int) -> String:
 		if line != "":
 			said.append(line)
 	var out := " ".join(said) if not said.is_empty() else str(opt.get("result", ""))
+	# A promise made on a card that has its own result line: the line first, then what he now expects.
+	if bool(applied.get("_lead_result", false)) and not said.is_empty() and str(opt.get("result", "")) != "":
+		out = str(opt["result"]) + " " + out
 	out = StoryEngine.fill_ranked(out, running_fitness(gs))
 	if out == "":
 		out = "Business as usual."
@@ -443,13 +546,15 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			applied["board"] = int(applied.get("board", 0)) + d
 		"trust":
 			var when := "Round %d" % int(facts.get("round", 0)) if int(facts.get("finals_week", 0)) == 0 else "Finals"
+			if int(facts.get("pre_week", 0)) > 0:
+				when = "Pre-season"
 			applied["trust"] = int(applied.get("trust", 0)) + Trust.change(gs.relations, Trust.player_key(str(p["id"])),
 					d, StoryEngine.fill(str(e.get("why", "")), facts), int(gs.season_year), when)
 		"rest":
 			p["rested"] = true
 		"slow_start":
 			# A small chance, rolled once for the whole group (or the one player), from the
-			# save's seed: the same save answers the same way. Never announced; it shows on the day.
+			# save's seed: the same save answers the same way. The card names the chance; the roll shows on the day.
 			var hit := StoryEngine.risk_hit(int(gs.season.seed), int(facts.get("year", 0)), int(facts.get("round", 0)),
 					"%s|slow|%s|%s" % [facts.get("_tid", ""), e.get("who", "subject"), name], int(e.get("chance", 0)))
 			if hit:
@@ -459,6 +564,12 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			# Waits for the result (GameState._settle_loss_sting).
 			for q in _targets(gs, e, p):
 				q["loss_sting"] = [int(e.get("chance", 0)), int(e.get("d", 0))]
+		"culture":
+			gs._culture_move(gs.my_club, str(e.get("strand", "")), d, StoryEngine.fill(str(e.get("why", "")), facts))
+		"running":
+			gs.preseason_add_running(float(d))
+		"drill":
+			gs.preseason_add_drill(d)
 		"news":
 			gs.add_news("retirement", StoryEngine.fill(str(e.get("text", "")), facts))
 		"rush_back":
@@ -468,6 +579,8 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			p.erase("injury_kind")
 			p["sore"] = true
 			return "%s is cleared to play. Name him in the side." % name
+		"on_record":
+			gs.papers_on_record(int(facts.get("claim_rank", 0)))
 		"role_trial":
 			return gs.start_role_trial(p, int(e.get("weeks", 3)))
 		"sore":
@@ -479,6 +592,13 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 				q[str(e["op"])] = true
 		"expects_game":
 			p["expects_game"] = int(e.get("sting", 12))
+			if str(facts.get("_result", "")) != "":
+				# The card's own result line speaks; on Auto-pick he is named anyway, so
+				# only a side you picked yourself needs the reminder.
+				if gs.my_selection().is_empty():
+					return ""
+				applied["_lead_result"] = true
+				return "He expects a game this week."
 			return ("%s feels heard. He's in the side this week." if gs.my_selection().is_empty()
 					else "%s feels heard, and expects a game this week.") % name
 		"start_backing":
@@ -490,6 +610,10 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 					else "%s is told he has a run of %s games. Pick him this week.") % [name, run]
 		"extend_early":
 			return _extend(gs, p, name)
+		"new_club_keep":
+			return ExpansionBuild.keep(gs, p)
+		"new_club_go":
+			return ExpansionBuild.let_go(gs, p)
 		"promise_win":
 			gs.board["promise"] = true
 		"explain":
@@ -544,6 +668,6 @@ static func _extend(gs, p: Dictionary, name: String) -> String:
 		return "The cap no longer has room to extend %s now; it waits for the off-season." % name
 	p["salary"] = cost
 	p["contract_years"] = years
-	ClubLife.add_morale(p, 8)
+	ClubLife.add_morale(p, StoryEngine.EXTEND_MORALE)
 	return "%s signs on for %d more season%s at %s a season." % [name, years - 1,
 			"" if years == 2 else "s", Contracts.money(cost)]

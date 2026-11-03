@@ -133,7 +133,7 @@ const TITLE := H1           # a screen's title, the one big fact
 const HEADING := H2         # a section heading
 const NAME := 16            # a player or club name leading a row; button text
 const SECONDARY := 14       # the line under it (14, not 13: the sign face thins out under 14)
-const FINE := 12            # stamps and fine print (the style guide's FINE 12)
+const FINE := 13            # stamps and fine print (13 px is the readability floor, screen lint rule)
 const RATING := 30          # a rating as a figure (DISPLAY)
 const SCORE := 24           # a match score as a figure (DISPLAY)
 const NUMBER := 22          # a score in a list row (DISPLAY)
@@ -142,7 +142,10 @@ const GLYPH := 26           # a bare glyph button ("‹")
 const ROLE_COL := 72        # the role tag column in a player row (fits "RUCK/MID")
 ## Every size a screen may use. tests/run_career_ui_tests.gd fails a literal size
 ## outside this set (docs/VISUAL_STYLE_GUIDE.md §2.3).
-const SIZES := [TINY, FINE, SMALL, SECONDARY, BODY, NAME, H2, 20, NUMBER, H1, GLYPH, RATING, HERO]
+## 12 stays on the list only for the literal 12s still on DraftScene, TrainingScene,
+## SeasonReviewScene, OffseasonScene, PlanTiles, TeamBuilder, MatchScene and HubScene,
+## which their owners move to FINE (13); no new 12 should be added.
+const SIZES := [TINY, 12, FINE, SMALL, SECONDARY, BODY, NAME, H2, 20, NUMBER, H1, GLYPH, RATING, HERO]
 
 ## One family at every size, ARD Signwriter down to FINE (director, 2026-10-10,
 ## audit §9.1 A/B: Signwriter over Barlow for the small sizes).
@@ -411,7 +414,7 @@ const INK_SLOT := {"WBD": 1, "ESS": 1, "COL": -1}
 ## guernsey has no second colour that reads, the second is plain white
 ## (Collingwood is white either way: no hue at all).
 const CLUB_INKS := {
-	"ADE": ["#F0455C", "#FFB81C"],  # red, then gold
+	"ADE": ["#FFC83A", "#F0455C"],  # gold, then red (director 2026-10-14: "why is there no yellow for the crows?"); a gold 14 from West Coast's
 	"BRL": ["#F7CE8A", "#4D90E0"],  # gold, then blue
 	"CAR": ["#6B7CF2", "#F1EEE6"],  # navy lifted to blue, then white
 	"CANB": ["#4FA0F0", "#F5B301"],  # navy lifted to blue, then gold
@@ -643,6 +646,33 @@ static func club_section_body(code: String, content: Control, ink := Color(0, 0,
 	return wrap
 
 
+## A figure sits next to the name it belongs to (director, 2026-10-14: "having all
+## this space between divorces the number from the source and harms readability").
+## In a row of `name` then `fig`, the name takes a column `name_w` wide (it ellipsises
+## beyond that) instead of stretching, and the figure starts right after it.
+static func near_figure(name_label: Label, fig: Label, name_w := 200.0, fig_w := 0.0) -> void:
+	name_label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	name_label.custom_minimum_size.x = name_w
+	fig.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	if fig_w > 0.0:
+		fig.custom_minimum_size.x = fig_w
+
+
+## `content` held to a readable width, centred, on a wide screen; the whole width
+## on a phone. The column follows its own width, so a window resize needs no rebuild.
+static func reading_column(content: Control, max_w := 900.0) -> MarginContainer:
+	var m := MarginContainer.new()
+	m.name = "ReadingColumn"
+	m.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	m.add_child(content)
+	m.resized.connect(func():
+		var side := int(maxf(0.0, (m.size.x - max_w) * 0.5))
+		m.add_theme_constant_override("margin_left", side)
+		m.add_theme_constant_override("margin_right", side))
+	return m
+
+
 ## Emphasis roles: weight and size before colour. A person's or thing's name
 ## leading a row is bold TEXT (NAME); what is said about him sits under it in
 ## full TEXT at SECONDARY, never grey, so no line is overlooked.
@@ -865,13 +895,18 @@ static func drift_at(elapsed: float, secs: float) -> float:
 	return 1.0 - pow(1.0 - k, 3.0)
 
 
-## Run `f` once `c` is on screen, `delay` seconds later.
+## Run `f` once `c` is on screen, `delay` seconds later. The wait is a tween on
+## `c` itself, so it ends with `c`: a scene left inside the delay (Continue at
+## full time) never calls `f` with its freed nodes ("Lambda capture was freed"),
+## as a tree-wide timer outliving the scene did.
 static func _after(c: CanvasItem, delay: float, f: Callable) -> void:
 	var run := func() -> void:
 		if not is_instance_valid(c) or not c.is_inside_tree():
 			return
 		if delay > 0.0:
-			c.get_tree().create_timer(delay).timeout.connect(f)
+			var wait := c.create_tween()
+			wait.tween_interval(delay)
+			wait.tween_callback(f)
 		else:
 			f.call()
 	if c.is_inside_tree():
@@ -1262,14 +1297,13 @@ static func chip(text: String, colour: Color) -> PanelContainer:
 
 
 ## A player's traits as one quiet line ("Ball magnet · Big-game player"),
-## Hothead in BAD. Empty when he has none. Tooltips say what each one does.
+## Hothead in BAD. Empty when he has none. Hover or tap says what each one does (TraitLink).
 static func trait_chips(p: Dictionary) -> HBoxContainer:
 	var h := hbox(10)
 	h.name = "Traits"
 	for t in Traits.of(p):
 		var l := line(Traits.label(t), SMALL, BAD if Traits.is_bad(t) else MUTED)
-		l.tooltip_text = Traits.text(t)
-		l.mouse_filter = Control.MOUSE_FILTER_PASS
+		TraitLink.tappable(l, str(t))
 		h.add_child(l)
 	return h
 
@@ -1528,11 +1562,19 @@ static func ladder_table(rows: Array, mine: String, width: float, limit := 0,
 	return v
 
 
+const LADDER_CLUB_W := 155.0
+
+
 static func ladder_specs(width: float, full: bool) -> Array:
 	var specs: Array = [
 		{"key": "pos", "title": "#", "w": 26},
 		{"key": "club", "title": "Club", "expand": true},
 	]
+	# Room to spare: the club column stops at a name's width and the figures follow
+	# it, instead of the record sitting a screen away from its club (director,
+	# 2026-10-14).
+	if width > 420.0:
+		specs[1] = {"key": "club", "title": "Club", "w": int(LADDER_CLUB_W), "left": true}
 	if width >= 640.0:
 		specs.append({"key": "p", "title": "P", "w": 28})
 		specs.append({"key": "w", "title": "W", "w": 28})
@@ -1553,8 +1595,11 @@ static func _ladder_header(specs: Array) -> HBoxContainer:
 	var h := hbox(4)
 	for spec in specs:
 		var expand: bool = bool(spec.get("expand", false))
-		h.add_child(_ladder_label(str(spec["title"]), int(spec.get("w", 0)),
-				MUTED, SECONDARY, false, expand))
+		var head := _ladder_label(str(spec["title"]), int(spec.get("w", 0)),
+				MUTED, SECONDARY, false, expand)
+		if bool(spec.get("left", false)):
+			head.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		h.add_child(head)
 	return h
 
 
@@ -1567,7 +1612,11 @@ static func _ladder_data_row(r: Dictionary, pos: int, specs: Array, mine: String
 		var expand: bool = bool(spec.get("expand", false))
 		var w := int(spec.get("w", 0))
 		if key == "club":
-			h.add_child(club_badge(str(r["code"]), SECONDARY, false, true))
+			var cb := club_badge(str(r["code"]), SECONDARY, false, true)
+			if bool(spec.get("left", false)):
+				cb.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+				cb.custom_minimum_size.x = w
+			h.add_child(cb)
 		elif key == "pos":
 			h.add_child(_ladder_label(str(pos), w, col, SECONDARY, is_mine, false))
 		elif key == "rec":

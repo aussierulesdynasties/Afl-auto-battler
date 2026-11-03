@@ -229,6 +229,12 @@ static func project(p: Dictionary) -> void:
 	if tk > 0.0:
 		a["pressure"] = float(a["pressure"]) + clampf((tk - 3.0) * 0.5, 0.0, 4.0)
 
+	# An international's code shapes his game (Gaelic footballers kick, rugby
+	# players contest); absent for everyone else, so nothing moves for them.
+	var bias: Dictionary = p.get("attr_bias", {})
+	for key in bias:
+		a[key] = float(a.get(key, target)) + float(bias[key])
+
 	a = fit_attributes(a, role, target)
 	for key in a:
 		a[key] = int(a[key])
@@ -583,6 +589,7 @@ static func generate_class(year: int, career_seed := 0) -> Array:
 				rucks += 1
 	_maybe_unicorn(out, year, career_seed)
 	GameDB.assign_aliases(out)
+	InternationalProspects.apply(out, year)
 	return out
 
 
@@ -807,8 +814,10 @@ static func class_shifts(tier: String, rank: int) -> Array:
 ## overalls around the league baseline - competitive, but not a dynasty.
 ## Deterministic per club and year; the club's own state league supplies
 ## half the list when it has junior teams.
-static func generate_expansion_list(code: String, year: int, size := 36) -> Array:
-	var rng := _rng_for("expansion-%s-%d" % [code, year])
+## `salt` (the career's seed, in words) gives each career its own players;
+## without it the list is the same one every time, as it always was.
+static func generate_expansion_list(code: String, year: int, size := 36, salt := "") -> Array:
+	var rng := _rng_for("expansion-%s-%d%s" % [code, year, salt])
 	var home_teams := []
 	for team in JUNIOR_TEAMS:
 		if str(team[2]) == str(code):
@@ -866,7 +875,7 @@ static func generate_expansion_list(code: String, year: int, size := 36) -> Arra
 		p["u18_if50"] = float(rng.randi_range(1, 6))
 		p["u18_ho"] = float(rng.randi_range(12, 28)) if role == "RUCK" else 0.0
 		p["note"] = "Expansion list, %d" % year
-		p["id"] = "EXP_%s_%02d" % [code, r]
+		p["id"] = ("EXP_%s_%02d" % [code, r]) if salt == "" else ("FND_%s_%s_%02d" % [code, salt, r])
 		p["real_name"] = ""
 		p["generic_name"] = ""
 		p["name"] = ""

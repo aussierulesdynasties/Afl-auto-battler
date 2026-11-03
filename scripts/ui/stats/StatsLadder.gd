@@ -10,7 +10,8 @@ extends RefCounted
 ## rules between them; every other row has a very faint
 ## band (PANEL, flat). Numbers and their headers are right-aligned.
 const ROW_H := 32
-const ROW_H_NARROW := 40
+## A phone's row opens a club: thumb high (CLAUDE.md "Mobile first").
+const ROW_H_NARROW := 44
 const COL_GAP := 4
 
 ## The ladder's columns, phone first; a wide screen adds the rest.
@@ -23,7 +24,7 @@ const WIDE_CLUB := 190
 ## Wildcard, Rebuilding) and the list in three years.
 const LADDER_PHONE := [["pos", "#", 24], ["club", "Club", 0], ["p", "P", 26], ["w", "W", 26],
 		["l", "L", 26], ["d", "D", 24], ["pct", "%", 42], ["pts", "Pts", 34], ["rating", "Rating", 46]]
-const LADDER_WIDE := [["pos", "#", 28], ["club", "Club", WIDE_CLUB], ["p", "P", 32], ["w", "W", 32],
+const LADDER_WIDE := [["pos", "#", 44], ["club", "Club", WIDE_CLUB], ["p", "P", 32], ["w", "W", 32],
 		["l", "L", 32], ["d", "D", 30], ["pf", "PF", 50], ["pa", "PA", 50], ["pct", "%", 50],
 		["pts", "Pts", 40], ["home", "Home", 68], ["away", "Away", 68], ["form", "Form", 76],
 		["rating", "Rating", 52]]
@@ -139,7 +140,7 @@ static func build(host: Control) -> Control:
 	if wide:
 		# As wide as its columns, left-aligned: no gap between a club and its numbers.
 		t.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	t.add_child(_header(host, specs, width))
+	t.add_child(_header(host, specs, width, wide))
 	var band := false
 	for r in shown:
 		t.add_child(_row(host, r, specs, width, band, ROW_H if wide else ROW_H_NARROW))
@@ -204,7 +205,7 @@ static func _title_of(key: String) -> String:
 	return key
 
 
-static func _header(host: Control, specs: Array, width: float) -> Control:
+static func _header(host: Control, specs: Array, width: float, wide := false) -> Control:
 	var h := UiKit.hbox(COL_GAP)
 	h.name = "LadderHeader"
 	for c in specs:
@@ -220,7 +221,7 @@ static func _header(host: Control, specs: Array, width: float) -> Control:
 		b.mouse_filter = Control.MOUSE_FILTER_PASS
 		b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		b.add_theme_font_override("font", UiKit.BOLD if key == _sort else UiKit.FONT)
-		b.add_theme_font_size_override("font_size", 12)
+		b.add_theme_font_size_override("font_size", UiKit.FINE)
 		var on: bool = key == _sort
 		for col in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 			b.add_theme_color_override(col, UiKit.TEXT if on else UiKit.MUTED)
@@ -230,7 +231,9 @@ static func _header(host: Control, specs: Array, width: float) -> Control:
 		sb.border_color = UiKit.TEXT
 		for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 			b.add_theme_stylebox_override(state, sb)
-		b.custom_minimum_size = Vector2(int(c[2]), 40)
+		# A thumb-high header on a phone (44 px, CLAUDE.md "Mobile first"); the
+		# columns keep their widths. A wide screen keeps 40.
+		b.custom_minimum_size = Vector2(int(c[2]), 40 if wide else 44)
 		if int(c[2]) == 0:
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT if key == "club" else HORIZONTAL_ALIGNMENT_RIGHT
@@ -240,7 +243,7 @@ static func _header(host: Control, specs: Array, width: float) -> Control:
 
 
 static func _plain(text: String, w: int, col: Color) -> Label:
-	var l := UiKit.line(text, 12, col)
+	var l := UiKit.line(text, UiKit.FINE, col)
 	l.custom_minimum_size = Vector2(w, 0)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	return l
@@ -309,7 +312,7 @@ static func _row(host: Control, r: Dictionary, specs: Array, width: float, band 
 		var text := cell_text(r, key)
 		# The position is muted, so is a zero; the rest is plain text.
 		var ink := UiKit.MUTED if key == "pos" or _is_zero(text) else UiKit.TEXT
-		var l := UiKit.line(text, 13 if key == "pts" or key == "pos" else 12, ink, mine or key == "pts")
+		var l := UiKit.line(text, UiKit.FINE, ink, mine or key == "pts")
 		l.custom_minimum_size = Vector2(w, 0)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(l)

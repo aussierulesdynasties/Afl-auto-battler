@@ -1,11 +1,14 @@
 extends Control
 ## Main menu: the title, Continue and New career, and a quiet How to play and
-## Settings. New career opens a short setup (player names, difficulty); the
+## Settings. New career opens a short setup (player names, the two difficulty dials); the
 ## club is chosen next, at the start of the draft, where each club's first
 ## pick is shown. The setup changes nothing until the career starts.
 
 var _pitch: PitchView
 var _content: VBoxContainer
+## The setup's "Choose your club" button lives under the scrolling choices, so it
+## stays in thumb reach however many choices the setup has.
+var _footer: VBoxContainer
 var _mode := "home"                 # "home" | "setup"
 var _help_panel: PanelContainer
 var _confirm_overlay: Control
@@ -15,12 +18,18 @@ var _load_error: Label
 var _logo: TextureRect
 ## The setup's choices, applied only when the career starts.
 var _pick_real := true
-var _pick_difficulty := "normal"
+var _pick_board := "fair"
+var _pick_rivals := "shrewd"
 var _pick_tutorials := true
+## Canberra joins in 2030 (shown with the feature switch expansion_package).
+var _pick_canberra := false
+var _setup_tight := false
 ## How the next career starts (ARD-M5-016): "redraft" or "real" (real 2026 lists).
 var _pick_start := "redraft"
 var _pick_prospect := false
 var _pick_club := false
+## The web build's one line when the browser refuses to keep the save (P-71), or "".
+var _storage_line := ""
 
 ## Placeholder title art. Swap the file (same path) to replace it.
 const LOGO := preload("res://assets/ui/aussie_rules_dynasties_logo_placeholder.png")
@@ -32,7 +41,19 @@ const LOGO_MAX_H_SHARE := 0.26
 const LOGO_REGION := Rect2(90, 228, 1374, 614)
 const TAGLINE := "Build your dynasty."
 const NAME_OPTIONS := [["generated", "Generated"], ["real", "Real"]]
+## The promise, printed once on the menu (P-70). tools/check_android_permissions.py
+## fails CI if the Android export ever asks for more than vibrate.
+const OFFLINE_PROMISE := "Plays offline. No ads, no account."
+## Where the career is kept, true on every platform: a browser build keeps it in the
+## browser, the app and the desktop game on this device (it said "your phone" on all).
+const KEPT_ON_DEVICE := "Your career stays on this device."
+const KEPT_IN_BROWSER := "Your career stays in this browser."
 const NAMES_INFO := "Real shows each player's AFL name; generated names are invented. Ratings and results are the same either way."
+
+
+## The promise as the menu prints it: two lines, the second naming where the save lives.
+static func promise_text(web: bool) -> String:
+	return OFFLINE_PROMISE + "\n" + (KEPT_IN_BROWSER if web else KEPT_ON_DEVICE)
 
 
 ## The title treatment: the logo, whole and undistorted. Its black ground
@@ -87,7 +108,8 @@ func _ready() -> void:
 		GameState.new_career_setup_requested = false
 		_mode = "setup"
 	_pick_real = GameState.show_real_names
-	_pick_difficulty = GameState.new_career_difficulty()
+	_pick_board = GameState.new_career_dial(DifficultyDials.BOARD)
+	_pick_rivals = GameState.new_career_dial(DifficultyDials.RIVALS)
 	_pick_tutorials = GameState.new_career_tutorials()
 	# The oval stays as a faint ground; the logo and buttons carry the screen.
 	_pitch = PitchView.new()
@@ -109,18 +131,50 @@ func _ready() -> void:
 	add_child(margin)
 	_content = UiKit.vbox(12)
 	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	margin.add_child(UiKit.scroll(_content))
+	var shell := UiKit.vbox(12)
+	margin.add_child(shell)
+	shell.add_child(UiKit.scroll(_content))
+	_footer = UiKit.vbox(0)
+	shell.add_child(_footer)
 	get_viewport().size_changed.connect(func():
 		if not UiKit.keyboard_resize(self):
 			_render())
 	_render()
+	if WebStorage.should_ask(WebStorage.on_web(), bool(GameState.get_setting(WebStorage.ASKED_KEY, false))):
+		WebStorage.ask()
+		_wait_for_storage_answer()
+
+
+## Poll the browser's answer for a few seconds (a prompt may be open). A final answer is
+## remembered so the browser is asked once; a refusal shows its line this visit only.
+func _wait_for_storage_answer() -> void:
+	for i in range(40):
+		await get_tree().create_timer(0.5).timeout
+		if not is_inside_tree():
+			return
+		var got := WebStorage.answer()
+		if WebStorage.is_final(got):
+			_on_storage_answer(got)
+			return
+
+
+func _on_storage_answer(got: String) -> void:
+	GameState.set_setting(WebStorage.ASKED_KEY, true)
+	if not WebStorage.notice_due(got, bool(GameState.get_setting(WebStorage.SHOWN_KEY, false))):
+		return
+	GameState.set_setting(WebStorage.SHOWN_KEY, true)
+	_storage_line = WebStorage.REFUSED_LINE
+	if _mode == "home":
+		_render()
 
 
 func _render() -> void:
+	UiKit.clear(_footer)
 	if _mode == "setup":
 		_show_setup()
 	else:
 		_show_home()
+	_footer.visible = _mode == "setup"
 	_layout()
 
 
@@ -206,6 +260,18 @@ func _show_home() -> void:
 		exit.custom_minimum_size = Vector2(120, 48)
 		quiet.add_child(exit)
 	_content.add_child(quiet)
+	_content.add_child(UiKit.spacer(10))
+	var promise := UiKit.lbl(promise_text(WebStorage.on_web()), UiKit.SECONDARY, UiKit.MUTED)
+	promise.name = "OfflinePromise"
+	promise.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	promise.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_content.add_child(promise)
+	if _storage_line != "":
+		var storage := UiKit.lbl(_storage_line, UiKit.SECONDARY, UiKit.TEXT)
+		storage.name = "StorageNotice"
+		storage.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		storage.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_content.add_child(storage)
 	var build := UiKit.lbl("Build " + BuildInfo.label(), UiKit.SMALL, UiKit.MUTED)
 	build.name = "BuildLabel"
 	build.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -251,8 +317,10 @@ func _on_continue() -> void:
 
 func _on_new_career() -> void:
 	_pick_real = GameState.show_real_names
-	_pick_difficulty = GameState.new_career_difficulty()
+	_pick_board = GameState.new_career_dial(DifficultyDials.BOARD)
+	_pick_rivals = GameState.new_career_dial(DifficultyDials.RIVALS)
 	_pick_tutorials = GameState.new_career_tutorials()
+	_pick_canberra = false
 	_pick_prospect = not GameState.forge_player().is_empty()
 	_pick_club = not GameState.forge_club().is_empty()
 	_mode = "setup"
@@ -279,7 +347,10 @@ func _show_setup() -> void:
 	var above := Control.new()
 	above.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_content.add_child(above)
-	var form := UiKit.vbox(UiKit.SECTION)
+	# A fifth choice (Canberra) no longer fits a phone at the usual spacing, and
+	# the button must stay on screen: on a short screen the rows sit closer.
+	_setup_tight = ExpansionBuild.on() and UiKit.view_height(self) < 900.0
+	var form := UiKit.vbox(8 if _setup_tight else UiKit.SECTION)
 	form.name = "NewCareerSetup"
 	form.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	form.custom_minimum_size.x = _column_width(440.0)
@@ -287,7 +358,7 @@ func _show_setup() -> void:
 	var title := UiKit.lbl("New career", UiKit.H1, UiKit.TEXT, true)
 	title.name = "SetupTitle"
 	# A little more under the title than between the sections.
-	title.custom_minimum_size.y = UiKit.H1 * 1.4 + 6
+	title.custom_minimum_size.y = (UiKit.H1 * 1.15) if _setup_tight else (UiKit.H1 * 1.4 + 6)
 	form.add_child(title)
 	form.add_child(_choice("Start", "StartMode", [["redraft", "League redraft"], ["real", "Real 2026 lists"]],
 			_pick_start,
@@ -298,17 +369,23 @@ func _show_setup() -> void:
 			"real" if _pick_real else "generated",
 			func(_k): return NAMES_INFO + " You can change this later in Settings.",
 			func(k): _pick_real = k == "real"))
-	var diff_options := []
-	for key in GameState.DIFFICULTY_ORDER:
-		diff_options.append([key, str(GameState.DIFFICULTIES[key]["label"])])
-	form.add_child(_choice("Difficulty", "Difficulty", diff_options, _pick_difficulty,
-			func(k): return str(GameState.DIFFICULTIES[k]["text"]),
-			func(k): _pick_difficulty = k))
+	form.add_child(_dial_choice(DifficultyDials.BOARD, "BoardPatience", _pick_board,
+			func(k): _pick_board = k))
+	form.add_child(_dial_choice(DifficultyDials.RIVALS, "RivalRecruiting", _pick_rivals,
+			func(k): _pick_rivals = k))
 	form.add_child(_choice("Tutorials", "Tutorials", [["on", "On"], ["off", "Off"]],
 			"on" if _pick_tutorials else "off",
 			func(k): return ("A short note the first time you open each screen, saying what it shows and how to use it." if k == "on"
 					else "No notes open by themselves. You can change this later in Settings."),
 			func(k): _pick_tutorials = k == "on"))
+	# Canberra, the second new club: a choice made once, here (director,
+	# 2026-10-14). Tasmania joins in 2028 either way.
+	if ExpansionBuild.on():
+		form.add_child(_choice("Canberra", "Canberra", [["out", "19 clubs"], ["in", "Joins in 2030"]],
+				"in" if _pick_canberra else "out",
+				func(k): return ("Tasmania join in 2028 and Canberra in 2030, making 20 clubs. It cannot be changed once the career starts." if k == "in"
+						else "Tasmania join in 2028 and the league stays at 19 clubs. It cannot be changed once the career starts."),
+				func(k): _pick_canberra = k == "in"))
 	# Your Club Forge player, if you made one: he enters this career's first
 	# National Draft like any other prospect.
 	var forged := GameState.forge_player()
@@ -325,16 +402,18 @@ func _show_setup() -> void:
 				"in" if _pick_club else "out",
 				func(_k): return "It joins the competition as an extra club and drafts its list in the League Draft like everyone else. Choose it as your club next, or coach against it.",
 				func(k): _pick_club = k == "in"))
-	# The button follows the choices closely, set just apart from them.
-	var cta := MarginContainer.new()
-	cta.add_theme_constant_override("margin_top", 6)
-	form.add_child(cta)
+	# The button sits under the scrolling choices, always on screen: with the two
+	# dials the setup is taller than a phone, and the button was below the fold.
 	var start := UiKit.btn("Choose your club", UiKit.H2, true)
 	start.name = "StartCareer"
-	start.custom_minimum_size.y = 52
+	start.custom_minimum_size = Vector2(_column_width(440.0), 52)
+	start.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	start.disabled = not GameDB.loaded
 	start.pressed.connect(_on_start)
+	var cta := MarginContainer.new()
+	cta.add_theme_constant_override("margin_top", 6)
 	cta.add_child(start)
+	_footer.add_child(cta)
 	var below := Control.new()
 	below.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	below.size_flags_stretch_ratio = SETUP_BELOW
@@ -346,7 +425,7 @@ func _show_setup() -> void:
 ## `info` maps the current key to its explanation; `on_pick` records a pick.
 func _choice(title: String, prefix: String, options: Array, current: String,
 		info: Callable, on_pick: Callable) -> VBoxContainer:
-	var v := UiKit.vbox(8)
+	var v := UiKit.vbox(2 if _setup_tight else 8)
 	var head := UiKit.hbox(4)
 	var t := UiKit.lbl(title, UiKit.H2, UiKit.TEXT, true)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -385,6 +464,45 @@ func _choice(title: String, prefix: String, options: Array, current: String,
 	return v
 
 
+## A difficulty dial (board patience, rival recruiting): its title, three
+## named steps with the current one outlined, and under them one plain
+## sentence saying what the picked step means - always shown, so nobody has to
+## open a "?" to learn what they are choosing. Sizes stay in
+## data/difficulty_dials.json and never reach the screen.
+func _dial_choice(dial: String, prefix: String, current: String, on_pick: Callable) -> VBoxContainer:
+	var v := UiKit.vbox(8)
+	# The title takes the height of the other rows' header (their "?" is 44 high),
+	# so the setup keeps one rhythm.
+	var head := UiKit.lbl(DifficultyDials.title(dial), UiKit.H2, UiKit.TEXT, true)
+	head.custom_minimum_size.y = 44
+	head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	v.add_child(head)
+	var row := UiKit.hbox(8)
+	v.add_child(row)
+	var note := UiKit.lbl("", UiKit.SMALL, UiKit.MUTED)
+	note.name = prefix + "Note"
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(note)
+	var buttons := {}
+	var state := {"key": current}
+	var paint := func():
+		for k in buttons:
+			UiKit.set_selected(buttons[k], k == state["key"])
+		note.text = DifficultyDials.text(dial, str(state["key"]))
+	for key in DifficultyDials.order(dial):
+		var b := UiKit.btn(DifficultyDials.label(dial, key), UiKit.NAME)
+		b.name = "%s_%s" % [prefix, key]
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.pressed.connect(func():
+			state["key"] = key
+			on_pick.call(key)
+			paint.call())
+		row.add_child(b)
+		buttons[key] = b
+	paint.call()
+	return v
+
+
 func _close_setup() -> void:
 	_mode = "home"
 	_render()
@@ -399,12 +517,15 @@ func _on_start() -> void:
 
 func _start_new_career() -> void:
 	GameState.set_show_real_names(_pick_real)
-	GameState.set_new_career_difficulty(_pick_difficulty)
+	GameState.set_new_career_dial(DifficultyDials.BOARD, _pick_board)
+	GameState.set_new_career_dial(DifficultyDials.RIVALS, _pick_rivals)
 	GameState.set_new_career_tutorials(_pick_tutorials)
 	# The old save stays on disk until the new career has a club and its first
 	# save replaces it: backing out of Choose your club must not cost the player
 	# the career they had (reset() clears memory only).
 	GameState.reset()
+	if ExpansionBuild.on():
+		GameState.set_canberra(_pick_canberra)
 	# A created club has no real 2026 list, so it only joins a League redraft.
 	if _pick_club and _pick_start != "real":
 		var club := GameState.forge_club()
@@ -518,7 +639,7 @@ func _show_help() -> void:
 			+ ("6. Finish in the top %d to play finals and chase the flag. The top four start in the qualifying finals, 5-10 in the wildcards and eliminations. The season's awards, the honour roll and league records are in the Season Review.\n\n"
 			% Season.FINALISTS)
 			+ "7. In the off-season, re-sign, release, sign free agents and trade in Trades & Contracts, then draft the next class. The hub's League news follows the whole league.\n\n"
-			+ "Difficulty (Easy, Normal or Hard) is chosen when you start a new career: it sets how hard rival clubs bargain when they trade with you. Players develop by the same rules on every difficulty.\n\n"
+			+ "Two dials are set when you start a new career. Board patience is how many poor seasons the board puts up with before it warns you, and then moves on you. Rival recruiting is how hard the other clubs bargain when they trade with you. Players develop by the same rules whatever you pick.\n\n"
 			+ "Player names are the real AFL names, such as Jordan Dawson, unless you choose otherwise. Settings switches to generated names without changing ratings or gameplay.\n\n"
 			+ "Rotate your device at any time. Your draft picks, search and filters stay intact.", 16)
 	v.add_child(UiKit.scroll(text))

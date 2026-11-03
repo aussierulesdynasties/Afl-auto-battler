@@ -130,11 +130,17 @@ static func asking_salary(p: Dictionary) -> int:
 
 # ---------------------------------------------------------------------------
 # Negotiation. No dice: the same offer always gets the same answer, and what
-# a player wants is shown in full - only how far he would bend is left to the
-# words in `stance`.
+# a player wants is shown in full, and how far he would bend is shown with
+# its size under the words in `stance` (bend_line).
 # ---------------------------------------------------------------------------
 ## Failed offers before a player gives up on talks and tests free agency.
 const MAX_OFFERS := 3
+## An offer under INSULT_NUM / INSULT_DEN of his lowest is an insult: it counts
+## as INSULT_STRIKES failed offers and costs him INSULT_MORALE morale.
+const INSULT_NUM := 2
+const INSULT_DEN := 3
+const INSULT_STRIKES := 2
+const INSULT_MORALE := 5
 
 
 ## His opening position: his asking price over the term he would like.
@@ -161,6 +167,45 @@ static func stance(p: Dictionary) -> String:
 	return "He'd give a little on salary for the security he wants."
 
 
+## How far he would bend, in the sizes the talks use (bible §4, director
+## 2026-10-18: the gate says the size; "B: percentages"): under the stance
+## line in contract talks. `floor_share` is the share of his lowest your
+## club's culture takes off (GameState.culture_effect "resign_floor"), so the
+## line quotes the very floor `respond` is given. Every figure comes from
+## `lowest`, the insult rule and MAX_OFFERS; the templates hold none.
+const BEND_DOWN := "He'd sign for %s a season, %s under his ask, for %s or more."
+const BEND_FIRM := "He won't go under his ask for %s or more."
+const BEND_SHORT := "Fewer seasons cost at least %s a season."
+const BEND_INSULT := "Offer under %s and he's insulted: it uses up %d of your %d offers and his morale drops %d%%."
+
+
+static func floor_after(p: Dictionary, years: int, floor_share := 0.0) -> int:
+	var low := lowest(p, years)
+	return low - int(round(float(low) * floor_share))
+
+
+## The least that is not an insult against a floor (respond's rule).
+static func insult_line(floor_price: int) -> int:
+	return ceili(float(floor_price * INSULT_NUM) / float(INSULT_DEN))
+
+
+static func bend_line(p: Dictionary, floor_share := 0.0) -> String:
+	var want := wants(p)
+	var ask := int(want["salary"])
+	var years := int(want["years"])
+	var term := "%d season%s" % [years, "" if years == 1 else "s"]
+	var low := floor_after(p, years, floor_share)
+	var parts: PackedStringArray = []
+	if low < ask:
+		parts.append(BEND_DOWN % [money(low), "%d%%" % roundi(100.0 * float(ask - low) / float(ask)), term])
+	else:
+		parts.append(BEND_FIRM % term)
+	if years > 1:
+		parts.append(BEND_SHORT % money(floor_after(p, years - 1, floor_share)))
+	parts.append(BEND_INSULT % [money(insult_line(low)), INSULT_STRIKES, MAX_OFFERS, INSULT_MORALE])
+	return " ".join(parts)
+
+
 ## The least he would sign for over `years`. Given the term he wants (or
 ## longer) he gives up to a fifth of his price, less the more leverage he has;
 ## a shorter deal costs one normal negotiation step more for anyone.
@@ -181,8 +226,8 @@ static func respond(p: Dictionary, salary: int, years: int, failed := 0, premium
 	var floor_price := lowest(p, years) + premium
 	if salary >= floor_price:
 		return {"answer": "accept", "salary": salary, "insult": false}
-	var insult := salary * 3 < floor_price * 2
-	var strikes := failed + (2 if insult else 1)
+	var insult := salary * INSULT_DEN < floor_price * INSULT_NUM
+	var strikes := failed + (INSULT_STRIKES if insult else 1)
 	if strikes >= MAX_OFFERS:
 		return {"answer": "walk", "salary": floor_price, "insult": insult}
 	return {"answer": "counter", "salary": floor_price, "insult": insult}
@@ -196,13 +241,15 @@ static func respond(p: Dictionary, salary: int, years: int, failed := 0, premium
 static func free_agent_terms(_p: Dictionary, facts: Dictionary) -> Dictionary:
 	var reasons := []
 	var refuse := false
+	var code := ""
 	if not bool(facts.get("in_best22", true)):
 		if int(facts.get("rivals", 0)) > 0:
 			refuse = true
 			reasons.append("He wants senior football: he wouldn't make your best 23, and a club that would play him has made an offer.")
+			code = "fa_wants_senior_football"
 		else:
 			reasons.append("He wouldn't make your best 23, but no club that would play him has made an offer.")
-	return {"premium": 0, "refuse": refuse, "reasons": reasons}
+	return {"premium": 0, "refuse": refuse, "reasons": reasons, "code": code}
 
 
 # ---------------------------------------------------------------------------
@@ -224,7 +271,7 @@ const ROLE_RANK := {"ground": 2, "bench": 1, "depth": 0}
 ## Never shown as a number; `offer_view` puts it in words.
 static func offer_score(p: Dictionary, o: Dictionary) -> float:
 	var wanted := int(wants(p)["years"])
-	return salary_score(int(o["salary"])) + 0.4 * float(mini(int(o["years"]), wanted)) \
+	return salary_score(int(o["salary"])) + 0.4 * float(mini(int(o["years"]), wanted)) + float(o.get("amb", 0.0)) \
 			+ float(ROLE_WEIGHT.get(str(o.get("role", "depth")), 0.0)) \
 			+ 0.8 * (1.0 - clampf(float(o.get("finish_t", 0.5)), 0.0, 1.0))
 
@@ -233,19 +280,52 @@ static func offer_score(p: Dictionary, o: Dictionary) -> float:
 ## deal, then the bigger role, then the club that finished higher - never
 ## to a club's place in any list.
 static func prefers(p: Dictionary, a: Dictionary, b: Dictionary) -> bool:
+	return bool(prefers_why(p, a, b, false)[0])
+
+
+## `prefers` with its reason: [prefers a, code], the code naming the branch
+## that settled it (P-18, data/ai_reasons.json): on the score, the part of
+## it that favours the winner most (`score_edge`); on a tie, the tie-break
+## that decided it; "fa_first" when nothing separates them (the earlier
+## offer stands). `why` false: the answer only, same branches.
+static func prefers_why(p: Dictionary, a: Dictionary, b: Dictionary, why := true) -> Array:
 	var sa := snappedf(offer_score(p, a), 0.001)
 	var sb := snappedf(offer_score(p, b), 0.001)
 	if sa != sb:
-		return sa > sb
+		if not why:
+			return [sa > sb, ""]  # the market's many comparisons skip the words
+		return [sa > sb, score_edge(p, a, b) if sa > sb else score_edge(p, b, a)]
 	if int(a["salary"]) != int(b["salary"]):
-		return int(a["salary"]) > int(b["salary"])
+		return [int(a["salary"]) > int(b["salary"]), "fa_money"]
 	if int(a["years"]) != int(b["years"]):
-		return int(a["years"]) > int(b["years"])
+		return [int(a["years"]) > int(b["years"]), "fa_security"]
 	var ra := int(ROLE_RANK.get(str(a.get("role", "depth")), 0))
 	var rb := int(ROLE_RANK.get(str(b.get("role", "depth")), 0))
 	if ra != rb:
-		return ra > rb
-	return float(a.get("finish_t", 1.0)) < float(b.get("finish_t", 1.0))
+		return [ra > rb, "fa_role"]
+	var fa := float(a.get("finish_t", 1.0))
+	var fb := float(b.get("finish_t", 1.0))
+	if fa != fb:
+		return [fa < fb, "fa_club"]
+	return [false, "fa_first"]
+
+
+## The part of his score (offer_score: money, security, role, last season,
+## a club pushing to win) by which `win` beats `lose` most, as a reason code.
+static func score_edge(p: Dictionary, win: Dictionary, lose: Dictionary) -> String:
+	var wanted := int(wants(p)["years"])
+	var gaps := {
+		"fa_money": salary_score(int(win["salary"])) - salary_score(int(lose["salary"])),
+		"fa_security": 0.4 * float(mini(int(win["years"]), wanted) - mini(int(lose["years"]), wanted)),
+		"fa_role": float(ROLE_WEIGHT.get(str(win.get("role", "depth")), 0.0)) - float(ROLE_WEIGHT.get(str(lose.get("role", "depth")), 0.0)),
+		"fa_club": 0.8 * (clampf(float(lose.get("finish_t", 0.5)), 0.0, 1.0) - clampf(float(win.get("finish_t", 0.5)), 0.0, 1.0)),
+		"fa_push": float(win.get("amb", 0.0)) - float(lose.get("amb", 0.0)),
+	}
+	var top := "fa_money"
+	for k in ["fa_money", "fa_role", "fa_security", "fa_club", "fa_push"]:
+		if float(gaps[k]) > float(gaps[top]):
+			top = k
+	return top
 
 
 ## The offer he prefers among `offers` (standing ones only), or {}.
@@ -312,9 +392,10 @@ static func offer_view(p: Dictionary, o: Dictionary, other: Dictionary, club_nam
 		"security": 0.4 * float(mini(int(o["years"]), wanted) - mini(int(other["years"]), wanted)),
 		"role": float(ROLE_WEIGHT.get(str(o.get("role", "depth")), 0.0)) - float(ROLE_WEIGHT.get(str(other.get("role", "depth")), 0.0)),
 		"club": 0.8 * (float(other.get("finish_t", 0.5)) - float(o.get("finish_t", 0.5))),
+		"push": float(o.get("amb", 0.0)) - float(other.get("amb", 0.0)),
 	}
 	var top := ""
-	for k in ["money", "role", "security", "club"]:
+	for k in ["money", "role", "security", "club", "push"]:
 		if float(gaps[k]) > 0.0 and (top == "" or float(gaps[k]) > float(gaps[top])):
 			top = k
 	match top:
@@ -324,6 +405,8 @@ static func offer_view(p: Dictionary, o: Dictionary, other: Dictionary, club_nam
 			return "Clearer path into the best 23."
 		"security":
 			return "More contract security."
+		"push":
+			return "Prefers %s offer: they are pushing to win now." % (club_name + ("'" if club_name.ends_with("s") else "'s"))
 		"club":
 			return "Prefers %s offer after their stronger season." % (club_name + ("'" if club_name.ends_with("s") else "'s"))
 	return ""
@@ -449,11 +532,12 @@ static func is_pick(a: Dictionary) -> bool:
 ## judged against its side without the players it gives up, and counted as
 ## a package (its lesser pieces for less); what it gives up is counted in
 ## full. Returns {"ok": bool,
-## "reason": String, "in": value received, "out": value given}.
+## "code": the reason code (data/ai_reasons.json, chosen at the branch taken),
+## "reason": its sentence, "in": value received, "out": value given}.
 static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 		my_list: Array, my_cap: int, margin := TRADE_MARGIN, ctx := {}) -> Dictionary:
 	if give.is_empty() or take.is_empty():
-		return {"ok": false, "reason": "Pick a player or a pick from each side."}
+		return _verdict(false, "trade_empty", ctx)
 	# Draft picks ride along with players: no list spot, no salary.
 	var give_picks := give.filter(func(a): return is_pick(a))
 	var take_picks := take.filter(func(a): return is_pick(a))
@@ -462,15 +546,15 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 	var ai_after := ai_list.size() - give.size() + take.size()
 	var my_after := my_list.size() - take.size() + give.size()
 	if ai_after > MAX_LIST or my_after > MAX_LIST:
-		return {"ok": false, "reason": "That would take a list past %d players." % MAX_LIST}
+		return _verdict(false, "trade_list_over", ctx, {"n": MAX_LIST})
 	if ai_after < MIN_LIST or my_after < MIN_LIST:
-		return {"ok": false, "reason": "That would take a list below %d players." % MIN_LIST}
+		return _verdict(false, "trade_list_under", ctx, {"n": MIN_LIST})
 	var ai_pay := payroll(ai_list) - payroll(give) + payroll(take)
 	if ai_pay > cap:
-		return {"ok": false, "reason": "They cannot fit the salary under their cap."}
+		return _verdict(false, "trade_their_cap", ctx)
 	var my_pay := payroll(my_list) - payroll(take) + payroll(give)
 	if my_pay > my_cap:
-		return {"ok": false, "reason": "You cannot fit the salary under your cap."}
+		return _verdict(false, "trade_your_cap", ctx)
 	var phase := str(ctx.get("phase", "building"))
 	var games: Dictionary = ctx.get("games", {})
 	var remaining := ai_list.filter(func(q): return not give.has(q))
@@ -520,17 +604,28 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 			cornerstone = str((ctx.get("names", {}) as Dictionary).get(str(p["id"]), p.get("name", "")))
 	for pk in give_picks:
 		out_value += TradeValue.pick_value(pk["positions"], prospects.get(str(pk["year"]), []), phase)
-	var out := {"ok": false, "in": in_value, "out": out_value}
+	var out := {}
 	if in_value < out_value * (1.0 + margin):
-		var club := str(ctx.get("name", "They"))
+		# The reason is the branch taken here (P-18): a rebuilder keeping its
+		# young cornerstone, a newcomer it wouldn't pick, or the value itself.
 		if phase == "rebuilding" and cornerstone != "":
-			out["reason"] = "%s are rebuilding: %s is part of their future." % [club, cornerstone]
+			out = _verdict(false, "trade_rebuild_future", ctx, {"player": cornerstone})
 		elif benchwarmer != "" and in_value < 0.9 * out_value:
-			out["reason"] = "%s wouldn't get a game in their side." % benchwarmer
+			out = _verdict(false, "trade_no_game", ctx, {"player": benchwarmer})
+		elif in_value >= 0.9 * out_value:
+			out = _verdict(false, "trade_value_close", ctx)
 		else:
-			var short := "a little short" if in_value >= 0.9 * out_value else "well short"
-			out["reason"] = "They want more for that: your offer is %s of what they give up." % short
-		return out
-	out["ok"] = true
-	out["reason"] = "They accept."
+			out = _verdict(false, "trade_value_gap", ctx)
+	else:
+		out = _verdict(true, "trade_accept", ctx)
+	out["in"] = in_value
+	out["out"] = out_value
 	return out
+
+
+## A trade answer: {"ok", "code", "reason"}, the reason the code's sentence
+## (AiReasons) with the club's name from `ctx` and any `facts`.
+static func _verdict(ok: bool, code: String, ctx: Dictionary, facts := {}) -> Dictionary:
+	var f: Dictionary = facts.duplicate()
+	f["club"] = str(ctx.get("name", "They"))
+	return {"ok": ok, "code": code, "reason": AiReasons.line(code, f)}

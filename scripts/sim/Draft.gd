@@ -38,9 +38,19 @@ var pick_origin: Array = []       # the club each pick came from (differs from i
 ## Traded picks: "round:origin club" -> owner. A pick not listed is its own
 ## club's. See set_pick_owners.
 var pick_owners := {}
+## Pick trades struck on draft night, in order: {"at": the pick about to be
+## made when it was struck, "buyer", "seller", "in": [ids the buyer got],
+## "out": [ids it gave], "text": the line the board reads}. GameState fills
+## it; the screen shows it with the picks.
+var night_trades: Array = []
+## Draft night: a rival is on the clock (its club code, the pick's index),
+## before it picks. GameState listens, and may let it sell the pick.
+signal rival_on_clock(code: String, index: int)
 ## Free-agency compensation picks in this draft: [{"index" (0-based pick),
 ## "club", "after", "player", "name", "to", ...}]. See add_compensation.
 var comp_picks: Array = []
+## Clubs with a seat but no regular pick (add_guest).
+var guests: Array = []
 var pick_index := 0               # next pick in pick_sequence
 var league_mode := false
 var seed := 0
@@ -56,6 +66,33 @@ var order: Array = []             # user's player ids, in pick order
 ## resizing or reopening the draft never loses the rival selections.
 var pick_history: Array = []
 var _pick_by_player := {}         # player id -> history entry
+## What the coach opened on the board and why rivals passed on it (P-18):
+## session only, never saved (lead 2026-10-18). The career save writes every
+## script variable of a draft (CareerSave.object_vars), so these live in a
+## static table keyed by this draft, dropped once it is gone.
+static var _session := {}
+
+
+## Prospects your coach opened on the board this draft: {player id: true}.
+func wanted() -> Dictionary:
+	return _session_of()["wanted"]
+
+
+## Why a rival passed on, or took, a prospect in `wanted()`, in pick order:
+## [{"pick", "club", "player_id", "other_id", "code", "gap"}], the code
+## chosen in _best_ai_pick at the branch it took (data/ai_reasons.json).
+func wanted_news() -> Array:
+	return _session_of()["news"]
+
+
+func _session_of() -> Dictionary:
+	var k := get_instance_id()
+	if not _session.has(k):
+		for old in _session.keys():
+			if not is_instance_id_valid(old):
+				_session.erase(old)   # a draft that is gone
+		_session[k] = {"wanted": {}, "news": []}
+	return _session[k]
 
 
 func _init(all_players: Array, p_clubs: Array = [], p_seed: int = 0,
@@ -152,6 +189,9 @@ func _build_sequence(comps: Array) -> void:
 		(by_after[k] as Array).append(c)
 	var slots := []   # [club, round, comp entry or {}]
 	var regular := 0
+	# An extra pick before the first regular pick (a new club's pick 1).
+	for c in by_after.get(0, []):
+		slots.append([str(c["club"]), int(c.get("round", 1)), c, str(c.get("origin", c["club"]))])
 	for r in range(target_size):
 		var round_order := draft_order.duplicate()
 		# The League Draft snakes. The National Draft runs the same order every
@@ -163,7 +203,7 @@ func _build_sequence(comps: Array) -> void:
 			slots.append([owner, r + 1, {}, code])
 			regular += 1
 			for c in by_after.get(regular, []):
-				slots.append([str(c["club"]), r + 1, c, str(c["club"])])
+				slots.append([str(c["club"]), int(c.get("round", r + 1)), c, str(c.get("origin", c["club"]))])
 	# A pick placed after one the draft never reaches goes at the very end.
 	var ks := by_after.keys()
 	ks.sort()
@@ -194,6 +234,44 @@ func _build_sequence(comps: Array) -> void:
 		pick_origin.append(slot[3])
 
 
+## The index of `origin`'s own regular pick in `rnd` if it has not been made
+## yet, or -1 (made, passed over, or never in the order). Compensation picks
+## are not it.
+func pick_slot(rnd: int, origin: String) -> int:
+	var comp := {}
+	for c in comp_picks:
+		comp[int(c["index"])] = true
+	for i in range(pick_index, mini(pick_sequence.size(), pick_origin.size())):
+		if comp.has(i):
+			continue
+		if int(pick_rounds[i]) == rnd and str(pick_origin[i]) == origin:
+			return i
+	return -1
+
+
+## A pick not yet made changes owner on the night: the club at that spot in
+## the order, and the owners table (pick_limit reads it). A pick back with its
+## own club needs no entry.
+func reassign_pick(index: int, to: String) -> void:
+	if index < pick_index or index >= pick_sequence.size():
+		return
+	pick_sequence[index] = to
+	var key := "%d:%s" % [int(pick_rounds[index]), str(pick_origin[index])]
+	if to == str(pick_origin[index]):
+		pick_owners.erase(key)
+	else:
+		pick_owners[key] = to
+
+
+## The rounds the draft was planned with (not the extra rounds added when
+## prospects are left over).
+func planned_rounds() -> int:
+	var n := 0
+	for i in range(mini(_planned_len, pick_rounds.size())):
+		n = maxi(n, int(pick_rounds[i]))
+	return n
+
+
 ## Who owns this year's traded picks: {"round:origin club": owner}. Set
 ## before the first pick (the order is rebuilt by add_compensation).
 func set_pick_owners(owners: Dictionary) -> void:
@@ -218,6 +296,22 @@ func add_compensation(comps: Array) -> void:
 			return float(a.get("value", 0.0)) > float(b.get("value", 0.0))
 		return draft_order.find(str(a["club"])) < draft_order.find(str(b["club"])))
 	_build_sequence(sorted)
+
+
+## A seat at the intake draft for a club that is not playing yet (a new club
+## building its list): it holds no regular pick, only the extra ones slotted
+## in with add_compensation. `size`, `counts` and `pairs` describe the list it
+## has so far, as existing_sizes and friends do for every other club.
+func add_guest(code: String, size: int, counts: Dictionary, pairs: Array) -> void:
+	if clubs.has(code) or pick_index != 0:
+		return
+	guests.append(code)
+	clubs.append(code)
+	club_lists[code] = []
+	club_spend[code] = 0
+	existing_sizes[code] = size
+	existing_role_counts[code] = counts
+	existing_roles[code] = pairs
 
 
 func start_for_user(code: String) -> void:
@@ -342,6 +436,10 @@ func auto_until_user_turn() -> void:
 			continue
 		if code == user_club:
 			return
+		if intake_mode:
+			rival_on_clock.emit(code, pick_index)
+			if str(current_club()) != code:
+				continue   # the pick changed hands: whoever holds it now is on the clock
 		if not _ai_pick_current():
 			# A rival with no legal pick passes rather than freezing the whole
 			# draft (the cap guard makes this rare; an older save can hold it).
@@ -351,10 +449,63 @@ func auto_until_user_turn() -> void:
 
 func _ai_pick_current() -> bool:
 	var code := current_club()
-	var p := _best_ai_pick(code)
+	var why := {}
+	var p := _best_ai_pick(code, why)
 	if p.is_empty():
 		return false
-	return _draft_pick(code, p)
+	var at := pick_index + 1
+	if not _draft_pick(code, p):
+		return false
+	_note_wanted(code, p, why, at)
+	return true
+
+
+## Remember why `code` passed on each prospect you opened that was still on
+## the board, and why it took one you opened (`why`: id -> reason code, from
+## _best_ai_pick). `at`: the pick it made.
+func _note_wanted(code: String, p: Dictionary, why: Dictionary, at: int) -> void:
+	if why.is_empty():
+		return
+	var gap := ""
+	var next := upcoming_picks(user_club, 1)
+	if not next.is_empty():
+		gap = gap_words(int(next[0]) - at)
+	var ids := why.keys()
+	ids.sort()
+	for id in ids:
+		wanted_news().append({"pick": at, "club": code, "player_id": str(id), "other_id": str(p["id"]),
+				"code": str(why[id]), "gap": gap})
+
+
+## "one pick before yours", "two picks before yours", "12 picks before yours".
+static func gap_words(n: int) -> String:
+	if n <= 0:
+		return "before your pick"
+	var words := ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+	var num: String = words[n - 1] if n <= words.size() else str(n)
+	return "%s pick%s before yours" % [num, "" if n == 1 else "s"]
+
+
+## The sentence for one wanted_news entry (AiReasons), with names from
+## `name_of` (a Callable: player dictionary -> display name).
+func wanted_line(e: Dictionary, name_of: Callable) -> String:
+	var who := _pool_player(str(e["player_id"]))
+	var other := _pool_player(str(e["other_id"]))
+	var code := str(e["code"])
+	var role := str(who.get("role", ""))
+	var pos := role_noun(role, 1) if code == "draft_took_need" else role_noun(role, 2)
+	return AiReasons.line(code, {"club": GameDB.club_name(str(e["club"])), "player": name_of.call(who),
+			"other": name_of.call(other), "pos": pos, "gap": str(e.get("gap", "")),
+			"age": int(who.get("age", 0))})
+
+
+func _pool_player(id: String) -> Dictionary:
+	if picked.has(id):
+		return picked[id]
+	for q in pool:
+		if str(q["id"]) == id:
+			return q
+	return {}
 
 
 func _draft_pick(code: String, p: Dictionary) -> bool:
@@ -625,20 +776,35 @@ func _reserve_per_spot() -> float:
 	return _reserve_cache
 
 
-func _best_ai_pick(code: String) -> Dictionary:
+## The rival's pick. `why` is filled with a reason code for each prospect in
+## `wanted` it passed on, or took (P-18): the branch below that ruled him
+## out, or what his score lost on against the pick (_why_scored).
+func _best_ai_pick(code: String, why := {}) -> Dictionary:
 	var forced_role := _forced_role(code)
 	var best := {}
 	var best_score := -INF
+	var watch := AiReasons.enabled and not wanted().is_empty()
+	var scored := {}   # wanted id -> [score, detail]
 	for p in pool:
-		if picked.has(str(p["id"])):
+		var id := str(p["id"])
+		if picked.has(id):
 			continue
 		if forced_role != "" and not Ratings.plays_role(p, forced_role):
+			if watch and wanted().has(id):
+				why[id] = "draft_must_ruck"
 			continue
 		if not _can_afford_for(code, p):
+			if watch and wanted().has(id):
+				why[id] = "draft_cap"
 			continue
 		if intake_mode and str(p["role"]) == "RUCK" and _intake_ruck_need(code, p) <= 0.0:
+			if watch and wanted().has(id):
+				why[id] = "draft_ruck_full"
 			continue   # a fourth ruck: no use to this club
-		var score := _ai_score(code, p)
+		var detail := {}
+		var score := _ai_score(code, p, detail)
+		if watch and wanted().has(id):
+			scored[id] = [score, detail]
 		if score > best_score:
 			best_score = score
 			best = p
@@ -647,15 +813,66 @@ func _best_ai_pick(code: String) -> Dictionary:
 	# affordable player. This should be rare, but protects small custom datasets.
 	if best.is_empty() and forced_role != "":
 		for p in pool:
-			if picked.has(str(p["id"])):
+			var id := str(p["id"])
+			if picked.has(id):
 				continue
 			if not _can_afford_for(code, p):
 				continue
-			var fallback_score := _ai_score(code, p)
+			var detail := {}
+			var fallback_score := _ai_score(code, p, detail)
+			if watch and wanted().has(id):
+				why.erase(id)  # the forced role no longer ruled him out
+				scored[id] = [fallback_score, detail]
 			if fallback_score > best_score:
 				best_score = fallback_score
 				best = p
+	if watch and not best.is_empty():
+		_why_scored(code, best, best_score, scored, why)
 	return best
+
+
+## Reason codes for the wanted prospects that were scored: the pick itself
+## ("draft_took_need" when it filled an open starting spot, else
+## "draft_took_best"), and for the rest the part of the score they lost on.
+func _why_scored(code: String, best: Dictionary, best_score: float, scored: Dictionary, why: Dictionary) -> void:
+	var bid := str(best["id"])
+	var bd := {}
+	if scored.has(bid):
+		bd = scored[bid][1]
+	else:
+		_ai_score(code, best, bd)
+	for id in scored:
+		var d: Dictionary = scored[id][1]
+		if id == bid:
+			why[id] = "draft_took_need" if float(d.get("need", 0.0)) >= 1.0 else "draft_took_best"
+		elif bool(d.get("second_star", false)):
+			# The rule turns on his rating and their ruck's: say so only when
+			# the board shows the coach both; otherwise only what is plain.
+			why[id] = "draft_first_ruck" if _first_ruck_public(code, scored_player(id)) else "draft_preferred"
+		elif float(d.get("need", 0.0)) <= 0.0 and str(d.get("role", "")) == "RUCK":
+			why[id] = "draft_ruck_full"
+		elif float(d.get("need_list", 0.0)) < float(bd.get("need_list", 0.0)):
+			why[id] = "draft_stocked"
+		elif float(scored[id][0]) + float(d.get("penalty", 0.0)) - float(bd.get("penalty", 0.0)) > best_score:
+			why[id] = "draft_price"
+		else:
+			why[id] = "draft_preferred"
+
+
+## The prospect `id` from the pool (for a reason's check), or {}.
+func scored_player(id: String) -> Dictionary:
+	return _pool_player(id)
+
+
+## True when the board shows the coach exact ratings for `p` and for every
+## first-choice ruck on `code`'s list: only then may a reason rest on them.
+func _first_ruck_public(code: String, p: Dictionary) -> bool:
+	if p.is_empty() or bool(user_view(p)["scouted"]):
+		return false
+	for q in club_lists.get(code, []):
+		if str(q["role"]) == "RUCK" and int(q["overall"]) >= RUCK_FIRST_CHOICE and bool(user_view(q)["scouted"]):
+			return false
+	return true
 
 
 func _forced_role(code: String) -> String:
@@ -726,7 +943,9 @@ func scouting_mult_for(code: String) -> float:
 	return maxf(0.25, float(scouting_mults.get(code, 1.0)))
 
 
-func _ai_score(code: String, p: Dictionary) -> float:
+## `detail`, when given, is filled with the parts of the winning position's
+## score: {"role", "need", "second_star", "penalty"} (P-18 reasons).
+func _ai_score(code: String, p: Dictionary, detail = null) -> float:
 	_refresh_ai_cache()
 	var base := DraftScouting.scouted_worth(p, code, seed, AI_POT_WEIGHT_INTAKE,
 			scouting_mult_for(code)) if intake_mode else _club_worth(code, p)
@@ -741,17 +960,27 @@ func _ai_score(code: String, p: Dictionary) -> float:
 		var need := _need_weight(code, role)
 		if role == "RUCK" and intake_mode:
 			need = _intake_ruck_need(code, p)
+		var second_star := false
 		if role == "RUCK" and _has_first_ruck(code) and int(p["overall"]) >= RUCK_FIRST_CHOICE:
 			# One ruck plays at a time: a club with its first-choice ruck
 			# looks for a second, not another star to sit behind him.
 			need *= SECOND_STAR_RUCK
+			second_star = true
 		# A club's own opinion counts in full for a starting spot it is
 		# filling; for depth and surplus picks it leans on the consensus.
 		var worth := base + err * need
 		var over := minf(AI_VORP_CAP, worth - _replacement(code, role))
 		var s := (worth + _vorp_weight() * over) * need * float(entry[1])
+		if s > best and detail is Dictionary:
+			detail["role"] = role
+			detail["need"] = need
+			detail["need_list"] = _need_by_count(code, role)
+			detail["second_star"] = second_star
 		best = maxf(best, s)
-	return best - _cap_penalty(code, p)
+	var penalty := _cap_penalty(code, p)
+	if detail is Dictionary:
+		detail["penalty"] = penalty
+	return best - penalty
 
 
 # ---------------------------------------------------------------------------
@@ -1014,6 +1243,20 @@ func _intake_ruck_need(code: String, p: Dictionary) -> float:
 	return INTAKE_COVERED if (current_round() >= INTAKE_RUCK_LATE_ROUND or project) else INTAKE_RUCK_THIRD
 
 
+## The need a reason may name: from the list's counts and the round alone,
+## never a rating (the intake ruck rule's "project" turns on POT; the first-
+## choice ruck rule on OVR). P-18 reasons only; picks use _need_weight.
+func _need_by_count(code: String, role: String) -> float:
+	if role == "RUCK" and intake_mode:
+		var n := int(role_counts_for(code).get("RUCK", 0))
+		if n < 2:
+			return 1.0
+		if n >= 3:
+			return 0.0
+		return INTAKE_COVERED if current_round() >= INTAKE_RUCK_LATE_ROUND else INTAKE_RUCK_THIRD
+	return _need_weight(code, role)
+
+
 func _need_weight(code: String, role: String) -> float:
 	var n := int(role_counts_for(code).get(role, 0))
 	if role == "RUCK" and not intake_mode and n == 1:
@@ -1135,7 +1378,7 @@ func count() -> int:
 ## Picks a club may make: one a round, plus any compensation picks and picks
 ## it traded for, less those it traded away.
 func pick_limit(code: String) -> int:
-	var n := target_size
+	var n := 0 if guests.has(code) else target_size
 	for c in comp_picks:
 		if str(c["club"]) == code:
 			n += 1

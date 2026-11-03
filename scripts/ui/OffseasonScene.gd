@@ -6,6 +6,10 @@ var _name_index := {}
 var _root: VBoxContainer
 var _tab := "contracts"
 var _notice := ""
+## A notice that gives a reason (a free agent who turned you down or chose a
+## rival, P-18) reads as text, not a success, with the rival's name in its ink.
+var _notice_club := ""
+var _notice_club_text := ""   # the reason notice it belongs to: any other notice stays as it was
 var _trade_club := ""
 var _mine: Array = []     # your player and pick ids in the trade
 var _theirs: Array = []   # theirs
@@ -71,7 +75,10 @@ func _build() -> void:
 	else:
 		hv.add_child(_para("Leave one of your best 23 unsigned and he tests free agency: your offer stands at his asking price, but rivals can beat it. Other players re-sign for two seasons if the cap allows.", 12, UiKit.MUTED))
 	if _notice != "":
-		hv.add_child(_para(_notice, 13, UiKit.GOOD))
+		var said := _why_para(_notice, _notice_club, 13, UiKit.TEXT) if _notice_club_text != "" and _notice == _notice_club_text \
+				else _para(_notice, 13, UiKit.GOOD)
+		said.name = "OffseasonNotice"
+		hv.add_child(said)
 	var tabs := UiKit.hbox(4)
 	_root.add_child(tabs)
 	for t in [["contracts", "Contracts"], ["agents", "Agents"], ["trade", "Trade"], ["budget", "Budget"]]:
@@ -81,6 +88,8 @@ func _build() -> void:
 		b.pressed.connect(func():
 			_tab = str(t[0])
 			_notice = ""
+			_notice_club = ""
+			_notice_club_text = ""
 			_choosing_club = false
 			_build())
 		tabs.add_child(b)
@@ -271,6 +280,13 @@ func _confirm_release(p: Dictionary) -> void:
 	_release_overlay = box["overlay"]
 	_release_overlay.name = "ReleaseConfirmation"
 	box["body"].add_child(_para("Release %s?" % GameDB.player_display_name(p), 20, UiKit.TEXT))
+	# What the club remembers of him, once (P-37): the drop has a face. Read-only.
+	var kept := Remembered.release_line(p, GameState.career_facts, GameState.my_club,
+			GameState.with_us(p), GameState.LEARN_JOBS)
+	if kept != "":
+		var memory := _para(kept, 14, UiKit.TEXT)
+		memory.name = "ReleaseRemembered"
+		box["body"].add_child(memory)
 	box["body"].add_child(_para("He will leave your list and become a free agent. A delisted player earns no draft pick if he signs elsewhere.", 14, UiKit.TEXT))
 	var release := UiKit.btn("Release player", UiKit.NAME, true)
 	release.name = "ConfirmRelease"
@@ -345,13 +361,21 @@ func _show_talks() -> void:
 	_talk_overlay = box["overlay"]
 	_talk_overlay.name = "ContractTalks"
 	var v: VBoxContainer = box["body"]
-	v.add_child(_para(GameDB.player_display_name(p), 20, UiKit.TEXT))
+	var talk_name := _para(GameDB.player_display_name(p), 20, UiKit.TEXT)
+	talk_name.name = "TalkPlayerName"
+	v.add_child(NameLink.tappable(talk_name, str(p["id"])))
 	v.add_child(_para("Age %d  ·  %d OVR  ·  %s POT  ·  on %s now" % [int(p.get("age", 0)), int(p["overall"]),
 			str(GameState.pot_view(p)["text"]), Contracts.money(int(p.get("salary", 0)))], 13, UiKit.MUTED))
 	# For a free agent his terms include what his options add.
 	var meet_salary := int(want["salary"]) + int(terms.get("premium", 0))
 	v.add_child(_para("He wants %s a season for %d seasons. %s" % [Contracts.money(meet_salary), int(want["years"]),
 			Contracts.stance(p)], 15, UiKit.TEXT))
+	if not _talk_fa:
+		# How far he bends, with the sizes: his lowest, the price of a shorter
+		# deal and where an offer insults him (Contracts.bend_line).
+		var bend := _para(Contracts.bend_line(p, GameState.culture_effect(GameState.my_club, "resign_floor")), 13, UiKit.TEXT)
+		bend.name = "TalksBend"
+		v.add_child(bend)
 	if _talk_fa and GameState.my_list.size() >= Contracts.MAX_LIST:
 		v.add_child(_para("Your list is full (%d): release a player first." % Contracts.MAX_LIST, 14, UiKit.BAD))
 	for reason in terms.get("reasons", []):
@@ -485,6 +509,8 @@ func _make_offer(salary: int, years: int) -> void:
 		return
 	_close_talks()
 	_notice = str(r["reason"])
+	_notice_club = str(r.get("club", ""))
+	_notice_club_text = _notice if r.has("code") else ""
 	_build()
 
 
@@ -610,9 +636,13 @@ func _trade(body: VBoxContainer) -> void:
 	var empty := _mine.is_empty() or _theirs.is_empty()
 	var shopping := _mine.size() == 1 and _theirs.is_empty()
 	var prompt := "Add what you want back, or put it on the trade table." if shopping else "Put something on each side."
-	var answer := _para(prompt if empty else str(verdict["reason"]), 14,
-			UiKit.GOOD if bool(verdict["ok"]) else UiKit.MUTED)
+	# Their answer in one line, with the reason their decision took (P-18);
+	# the club's name wears its ink, and a refusal reads as text, not grey.
+	var answer := _para(prompt, 14, UiKit.MUTED) if empty else \
+			_why_para(str(verdict["reason"]), _trade_club, 14, UiKit.GOOD if bool(verdict["ok"]) else UiKit.TEXT)
 	answer.name = "TradeVerdict"
+	if not empty:
+		answer.set_meta("code", str(verdict.get("code", "")))
 	body.add_child(answer)
 	if not empty and not bool(verdict["ok"]):
 		var counter := _counter_for(_trade_club, _mine, _theirs)
@@ -800,10 +830,15 @@ func _draft_picks(body: VBoxContainer, code: String, chosen: Array, prefix: Stri
 	body.add_child(UiKit.lbl("Draft picks", 14, UiKit.MUTED, true))
 	for pk in picks:
 		var id := str(pk["id"])
-		var b := _asset_button(_pick_label(pk), chosen.has(id))
+		var b := _asset_button(_pick_label(pk, false), chosen.has(id))
 		b.name = prefix + id.replace(":", "_")
 		b.pressed.connect(_toggle.bind(chosen, id))
 		body.add_child(b)
+		# How the club got it: its own, or from whom and for what.
+		var story := _para(GameState.pick_story(int(pk["year"]), int(pk["round"]), str(pk["origin"])),
+				12, UiKit.TEXT)
+		story.name = "PickStory_" + id.replace(":", "_")
+		body.add_child(story)
 
 
 ## A list to add players from, best first: name, position, OVR, POT and age.
@@ -816,11 +851,14 @@ func _pick_grid(body: VBoxContainer, list: Array, chosen: Array, prefix: String)
 		return str(a["id"]) < str(b["id"]))
 	for p in sorted:
 		var id := str(p["id"])
-		var b := _asset_button("%s  ·  %s  ·  %d OVR  ·  %s POT  ·  %d" % [GameDB.player_display_name(p),
+		var b := _asset_button("%s  ·  %s  ·  %d OVR  ·  %s POT  ·  %d%s" % [GameDB.player_display_name(p),
 				Ratings.role_tag(p), int(p["overall"]), str(GameState.pot_view(p)["text"]),
-				int(p.get("age", 0))], chosen.has(id))
+				int(p.get("age", 0)), "  ·  Untouchable" if GameState.is_untouchable(id) else ""], chosen.has(id))
 		b.name = prefix + id
-		b.pressed.connect(_toggle.bind(chosen, id))
+		b.pressed.connect(func():
+			if not NameLink.on_profile_tap(b):
+				_toggle(chosen, id))
+		NameLink.profile_tap_text(b, id)
 		body.add_child(b)
 
 
@@ -843,12 +881,12 @@ func _toggle(chosen: Array, id: String) -> void:
 	_build()
 
 
-func _pick_label(pk: Dictionary) -> String:
+func _pick_label(pk: Dictionary, with_via := true) -> String:
 	var nth: String = ["first", "second", "third", "fourth"][clampi(int(pk["round"]) - 1, 0, 3)]
 	var text := "%d %s round" % [int(pk["year"]), nth]
 	if int(pk["year"]) == GameState.season_year:
 		text += ", No. %d" % int(pk["positions"][0][0])
-	if str(pk["origin"]) != str(pk["owner"]):
+	if with_via and str(pk["origin"]) != str(pk["owner"]):
 		text += " (via %s)" % GameDB.club_name(str(pk["origin"]))
 	return text
 
@@ -899,7 +937,9 @@ func _player_card(p: Dictionary, detail: String) -> PanelContainer:
 	var chip := UiKit.role_chip(Ratings.role_tag(p))
 	chip.custom_minimum_size.x = 72
 	h.add_child(chip)
-	h.add_child(UiKit.ellipsis(GameDB.player_display_name(p), UiKit.BODY, UiKit.TEXT, true))
+	var who := UiKit.ellipsis(GameDB.player_display_name(p), UiKit.BODY, UiKit.TEXT, true)
+	who.name = "PlayerName_" + str(p["id"])
+	h.add_child(NameLink.tappable(who, str(p["id"])))
 	info.add_child(_para(detail, 12, UiKit.MUTED))
 	return card
 
@@ -917,6 +957,17 @@ func _names() -> Dictionary:
 	if _name_index.is_empty() and GameState.season != null:
 		_name_index = NameInk.from_lists(GameState.season.lists)
 	return _name_index
+
+
+## A line naming a rival club: the club's name in its ink, players' names in
+## theirs (NameInk).
+func _why_para(text: String, club: String, size: int, colour: Color) -> Control:
+	var index: Dictionary = _names().duplicate()
+	if club != "":
+		index[GameDB.club_name(club)] = club
+	var l := NameInk.label(text, index, size, colour)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return l
 
 
 func _para(text: String, size: int, colour: Color) -> Control:
