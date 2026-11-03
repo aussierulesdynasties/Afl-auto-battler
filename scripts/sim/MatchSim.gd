@@ -56,6 +56,9 @@ var duels := [{}, {}]
 ## This is a role/assignment, not an extra player.
 var interceptor := ["", ""]
 var interceptor_changes: Array = []
+## His intercepts the moment he was sent loose, per side ({"id", "n"}): the
+## "since the call" tally at the break. A record only.
+var interceptor_base := [{}, {}]
 ## Every contest a matched forward and his direct opponent played:
 ## forward id -> {"side": attacking side, "contests": [[q, defender id,
 ## forward marked, goal from it]]}.
@@ -525,6 +528,8 @@ func set_interceptor(def_side: int, def_id: String, during := true) -> bool:
 		return true
 	var old := str(interceptor[def_side])
 	interceptor[def_side] = def_id
+	interceptor_base[def_side] = {"id": def_id,
+			"n": int(float((player_stats.get(def_id, {}) as Dictionary).get("intercepts", 0.0)))}
 
 	if def_id != "":
 		var d: Dictionary = duels[def_side]
@@ -558,6 +563,16 @@ func set_interceptor(def_side: int, def_id: String, during := true) -> bool:
 		interceptor_changes.append({"q": maxi(1, current_quarter), "from": from,
 				"side": def_side, "from_id": old, "id": def_id})
 	return true
+
+
+## The loose defender's intercepts since he was sent loose (-1: nobody is).
+func intercepts_since_call(side: int) -> int:
+	var id := str(interceptor[side])
+	if id == "":
+		return -1
+	var base: Dictionary = interceptor_base[side]
+	var was := int(base.get("n", 0)) if str(base.get("id", "")) == id else 0
+	return maxi(0, int(float((player_stats.get(id, {}) as Dictionary).get("intercepts", 0.0))) - was)
 
 
 func _roaming_interceptor(side: int) -> Dictionary:

@@ -425,6 +425,10 @@ static func _standout(res: Dictionary, now: Dictionary, was: Dictionary, side: i
 ## before where there is one: the stat each call is about, in its own words,
 ## so a problem at the break and the call you answered it with read the same.
 ## Facts only - never whether it was the right call.
+const CALLS_DID_NOTE := "Each line is the number that call is about, this quarter against the one before."
+const CALLS_WORTH_NOTE := "Points are what each call added to your margin or took off it, worked out from where the ball went."
+
+
 static func calls_lines(res: Dictionary, my_side: int, q: int) -> Array:
 	var hist: Array = res.get("tactics_history", [])
 	var snaps: Array = res.get("quarter_teams", [])
@@ -820,8 +824,8 @@ static func tag_question() -> String:
 ## intercepts so far." Nothing hidden: the number is his match stat.
 static func loose_tally_line(who: String, n: int) -> String:
 	if n <= 0:
-		return "%s: no intercepts yet." % who
-	return "%s: %d intercept%s so far." % [who, n, "" if n == 1 else "s"]
+		return "%s: no intercepts since the call." % who
+	return "%s: %d intercept%s since the call." % [who, n, "" if n == 1 else "s"]
 
 
 ## A forward's card for the job: where he plays, Defensive forward when he
