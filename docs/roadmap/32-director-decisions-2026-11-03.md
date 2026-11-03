@@ -42,3 +42,5 @@ his differs, the later one wins. Nothing here edits the bible.
   late quarters). Live, no switch; old saves load and the old call keys are ignored.
 - Cut audit row 6: Manual stat training is gone; only the training plans stay, no hand-buying of stat points. Old saves
   on Manual (own or club plan) load on the plan closest to how each player is built, and his banked XP is spent under it.
+- Practice match guests: the single pre-season practice match trials 6 prospects per club (was 3; data/preseason.json
+  practice_guests). Invites, the setup count, "Recruiters fill the rest" and AI pairs all use the one number.
