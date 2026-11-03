@@ -226,7 +226,7 @@ func run() -> void:
 	GameState.career_seed = seed_n
 	GameState.replay_seed = seed_n
 	print("DA|%s|%d|user %s|seasons %d" % [mode, seed_n, club, seasons])
-	if mode == "real":
+	if mode.trim_suffix("_buff") == "real":
 		GameState.begin_real_lists()
 		# The real 2026 lists as they stand before the 2026 draft: the retired
 		# are gone, the delisted are free agents, the club-tied draftees are on.

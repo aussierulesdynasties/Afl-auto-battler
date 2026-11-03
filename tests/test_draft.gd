@@ -18,6 +18,8 @@ func run() -> void:
 	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	_t("_test_history_and_snake_order")
+	_t("_test_ai_draft_logic")
+	_t("_test_pick_for_me_matches_rival")
 	_t("_test_position_guidance")
 	_t("_test_dual_position_coverage")
 	_t("_test_position_status")
@@ -1097,3 +1099,68 @@ func _real_draft(kind: String) -> Draft:
 		pairs[code] = pr
 	var pool: Array = GameDB.draftees.map(func(q): return (q as Dictionary).duplicate(true))
 	return Draft.build_intake(pool, clubs, clubs.duplicate(), 4242, sizes, counts, pairs)
+
+
+## Row 37 (director 2026-11-03): the National Draft AI ramps scarcity in over
+## two rounds, caps it at 5, and a covered position keeps 97% of a prospect's
+## worth, for every club, the user's included. The League Draft keeps its cap.
+func _ai_test_pool() -> Array:
+	var pool := []
+	for i in range(24):
+		pool.append({"id": "bf_%d" % i, "name": "P %d" % i, "club": "U18",
+				"role": ["MID", "DEF", "FWD", "RUCK"][i % 4], "role2": "",
+				"overall": 50 + (i * 7) % 20, "potential": 65 + (i * 11) % 25, "value": 1, "gl": 0, "di": 0})
+	return pool
+
+
+func _ai_test_intake() -> Draft:
+	var clubs := ["A", "B", "C", "D"]
+	var sizes := {}
+	var counts := {}
+	for c in clubs:
+		sizes[c] = 36
+		counts[c] = {"RUCK": 3, "MID": 16, "DEF": 9, "FWD": 8}
+	return Draft.build_intake(_ai_test_pool(), clubs, clubs, 11, sizes, counts)
+
+
+func _test_ai_draft_logic() -> void:
+	var d := _ai_test_intake()
+	_check(is_equal_approx(d._need_weight("A", "MID"), Draft.AI_INTAKE_COVERED)
+			and d._need_weight("A", "DEF") == 1.0, "A covered position keeps 97%, an open one 100%")
+	_check(is_zero_approx(d._vorp_weight("A")) and is_equal_approx(d._vorp_cap("A"), Draft.AI_INTAKE_VORP_CAP),
+			"Scarcity counts for nothing at the first pick and at most 5 points")
+	d.pick_index = 4 * Draft.AI_VORP_FULL_ROUNDS
+	_check(is_equal_approx(d._vorp_weight("A"), Draft.AI_VORP_WEIGHT), "Scarcity counts in full from the third round")
+	d.user_club = "B"
+	_check(is_equal_approx(d._need_weight("B", "MID"), Draft.AI_INTAKE_COVERED)
+			and is_equal_approx(d._vorp_cap("B"), Draft.AI_INTAKE_VORP_CAP), "The user's club scores like a rival")
+	var lg := Draft.new(_ai_test_pool(), ["A", "B", "C", "D"], 11)
+	_check(is_equal_approx(lg._vorp_cap("A"), Draft.AI_VORP_CAP), "The League Draft keeps its cap")
+
+
+## Pick for me takes exactly what a rival in the same slot would take.
+func _test_pick_for_me_matches_rival() -> void:
+	var as_rival := _ai_test_intake()
+	var rival_ids := []
+	for i in range(8):
+		var c := as_rival.current_club()
+		var p := as_rival._best_ai_pick(c)
+		rival_ids.append(str(p.get("id", "")))
+		as_rival._draft_pick(c, p)
+	var as_user := _ai_test_intake()
+	as_user.start_for_user("A")
+	var user_ids := []
+	for i in range(8):
+		as_user.auto_until_user_turn()
+		if as_user.is_finished():
+			break
+		if as_user.current_club() == "A":
+			var before := as_user.pick_index
+			var p := as_user._best_ai_pick("A")
+			user_ids.append([before, str(p.get("id", ""))])
+			as_user.pick_for_me()
+	var ok := not user_ids.is_empty()
+	for e in user_ids:
+		if int(e[0]) < rival_ids.size() and str(e[1]) != rival_ids[int(e[0])]:
+			ok = false
+	_check(ok, "Pick for me picks what a rival in the same slot picks (%s vs %s)" % [user_ids, rival_ids])

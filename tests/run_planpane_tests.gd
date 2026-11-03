@@ -20,6 +20,9 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_career.save"
 	_state.settings_path = "user://test_settings.cfg"
+	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_state.set_setting("seen_%s_intro" % key, true)
 	_state.show_real_names = false
 	_state.replay_seed = 2027
 	await _t("_test_plan_lines")
@@ -111,7 +114,7 @@ func _test_calls_record() -> void:
 		var peps := ["fire_up", "heat"]
 		var rots := ["hard", "stars"]
 		for q in range(2):
-			sim.set_tactics(mine, {"gameplan": plans[q], "pep": peps[q], "focus_id": "", "tag_id": ""})
+			sim.set_tactics(mine, {"gameplan": plans[q], "pep": peps[q], "tag_id": ""})
 			sim.set_rotation_policy(mine, rots[q])
 			sim.run_quarter()
 			if q == 0:
@@ -130,7 +133,7 @@ func _test_calls_record() -> void:
 		var other := 1 - mine
 		var mine_code := str(sim.squads[mine].code)
 		var other_code := str(sim.squads[other].code)
-		for kind in ["gameplan", "pep", "rotation"]:
+		for kind in ["gameplan", "pep"]:
 			var rec: Node = m.find_child("CallsRecord_" + kind, true, false)
 			_check(rec != null, "A record of %s calls shows at half time (%s)" % [kind, str(sz)])
 			if rec == null:
@@ -148,7 +151,7 @@ func _test_calls_record() -> void:
 				for n in names:
 					got_clubs.append((n as Label).text.trim_suffix(": "))
 				_check(got_clubs == want_clubs, "Right clubs on Q%d %s (%s)" % [q + 1, kind, str(got_clubs)])
-				var want_mine: String = Cr.plan_label(plans[q]) if kind == "gameplan" 						else (Cr.pep_label(peps[q]) if kind == "pep" else str(ROTATION_WORDS[rots[q]]))
+				var want_mine: String = Cr.plan_label(plans[q]) if kind == "gameplan" 						else Cr.pep_label(peps[q])
 				_check(words.size() == want_clubs.size() and (words[0] as Label).text == want_mine,
 						"Right call on Q%d %s (%s)" % [q + 1, kind, (words[0] as Label).text if not words.is_empty() else "-"])
 				if kind == "gameplan":
@@ -162,8 +165,6 @@ func _test_calls_record() -> void:
 		m.queue_free()
 		await _settle()
 
-
-const ROTATION_WORDS := {"hard": "Freshness", "normal": "Balanced", "stars": "Key players"}
 
 
 func _settle() -> void:

@@ -922,16 +922,33 @@ const AI_POT_WEIGHT_INTAKE := 0.65
 const AI_LIST_SHARE := {"RUCK": 0.08, "MID": 0.30, "DEF": 0.33, "FWD": 0.33}
 
 ## Scarcity is a reason to reach late, not at the top: the edge over
-## replacement counts in full from the third round of a career draft and
-## not at all at its first pick. The national draft keeps it throughout.
+## replacement counts in full from the third round and not at all at the
+## first pick, in both drafts (row 37, director 2026-11-03), so a club takes
+## the best player early and reaches for a thin position late.
 const AI_VORP_FULL_ROUNDS := 2
 
 
-func _vorp_weight() -> float:
-	if intake_mode or clubs.is_empty():
+func _vorp_weight(_code := "") -> float:
+	if clubs.is_empty():
 		return AI_VORP_WEIGHT
 	var ramp := float(pick_index) / float(clubs.size() * AI_VORP_FULL_ROUNDS)
 	return AI_VORP_WEIGHT * clampf(ramp, 0.0, 1.0)
+
+
+## National Draft (row 37): the edge over replacement counts for at most this
+## much, and a covered position keeps this share of a prospect's worth (need
+## only tips near-equals). Every club drafts this way, the user's "Pick for
+## me" and sim-through picks included (director, 2026-11-03).
+const AI_INTAKE_VORP_CAP := 5.0
+const AI_INTAKE_COVERED := 0.97
+
+
+func _vorp_cap(_code := "") -> float:
+	return AI_INTAKE_VORP_CAP if intake_mode else AI_VORP_CAP
+
+
+func _intake_covered(_code: String) -> float:
+	return AI_INTAKE_COVERED
 
 
 var _ai_cache_at := -1
@@ -969,8 +986,8 @@ func _ai_score(code: String, p: Dictionary, detail = null) -> float:
 		# A club's own opinion counts in full for a starting spot it is
 		# filling; for depth and surplus picks it leans on the consensus.
 		var worth := base + err * need
-		var over := minf(AI_VORP_CAP, worth - _replacement(code, role))
-		var s := (worth + _vorp_weight() * over) * need * float(entry[1])
+		var over := minf(_vorp_cap(code), worth - _replacement(code, role))
+		var s := (worth + _vorp_weight(code) * over) * need * float(entry[1])
 		if s > best and detail is Dictionary:
 			detail["role"] = role
 			detail["need"] = need
@@ -1273,7 +1290,7 @@ func _need_weight(code: String, role: String) -> float:
 	if intake_mode:
 		# The national draft builds for years ahead: need tips close calls,
 		# it never makes a club pass a much better prospect.
-		return 1.0 if n < int(_ideal_counts(code).get(role, 0)) else INTAKE_COVERED
+		return 1.0 if n < int(_ideal_counts(code).get(role, 0)) else _intake_covered(code)
 	if n < int(_ideal_counts(code).get(role, 0)):
 		return 0.6
 	return 0.2

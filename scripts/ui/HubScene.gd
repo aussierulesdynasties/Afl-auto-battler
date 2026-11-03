@@ -15,14 +15,9 @@ var _talk_overlay: Control
 var _news_overlay: Control
 var _rule_overlay: Control
 var _sim_confirm: Control
-var _quick_sim: Control
 var _onboarding_overlay: Control
-## A long press on Play round opens the play-ahead menu instead of playing one round.
-var _hold_fired := false
-var _hold_id := 0
 var _pre_match: PreMatchVignette    # the scene over the wait after Play match
 var _starting_match := false        # Play match with vignettes off: on the way to the match
-const HOLD_SECONDS := 0.5
 ## How long the pre-match scene runs before the side goes through the banner: a
 ## moment of the warm-up, time to jog in to the huddle unhurried and stand together,
 ## then the run - still a couple of seconds of match day, not a wait (a tap goes straight
@@ -96,6 +91,10 @@ func _show_weekly_loop_intro() -> void:
 		"This is home base. Check the next opponent, then use Team to pick the side and Coaching if you want to change how you play.",
 		"Play match when you want the live coaching calls. Sim the week plays the round out for you quickly; the match itself is the same either way.",
 		"After the game, review what happened and change selection or training only when you have a reason. There is no weekly checklist to clear.",
+	] if not WeekChecklist.on(GameState) else [
+		"This is home base. Check the next opponent, then use Team to pick the side and Coaching if you want to change how you play.",
+		"Each week a short list here shows the jobs still open: look over the side, check training, and anything waiting on you. Tap a job to go to it; it ticks when done.",
+		"The list is a guide, never a gate. Play match or Sim the week whenever you are ready, jobs left or not.",
 	]:
 		var l := UiKit.lbl(line, 14, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -192,6 +191,13 @@ func _show_season_wrap() -> void:
 		v.add_child(why)
 	# With a pre-season to come, the wrap leads into it; a career saved at the
 	# wrap before pre-seasons existed begins its season as it always did.
+	# Last season's page in the club almanac (switch club_almanac).
+	if Almanac.on():
+		var alm := UiKit.btn("Club almanac", UiKit.BODY)
+		alm.name = "WrapAlmanac"
+		alm.flat = true
+		alm.pressed.connect(func(): Router.go("almanac"))
+		(box["footer"] as VBoxContainer).add_child(alm)
 	var to_preseason: bool = GameState.preseason_active()
 	var go := UiKit.btn("Start the pre-season" if to_preseason else "Begin season", UiKit.BODY, true)
 	go.name = "BeginSeason"
@@ -306,7 +312,7 @@ func _build() -> void:
 			week_row.add_child(_sim_round_button())
 		# The same split as the columns above, so the club buttons stand under the ladder.
 		week_row.size_flags_stretch_ratio = 1.0
-		foot.add_child(week_row)
+		foot.add_child(_with_jobs_note(week_row))
 		var row := _footer(season, false)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.size_flags_stretch_ratio = 1.25
@@ -404,6 +410,13 @@ func _standing_card() -> Control:
 	var last := _last_match_button()
 	if last != null:
 		cv.add_child(last)
+	# The club almanac: your career, season by season (switch club_almanac).
+	if Almanac.on():
+		var alm := UiKit.text_action("Club almanac  ›", UiKit.SECONDARY)
+		alm.name = "HubAlmanac"
+		alm.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		alm.pressed.connect(func(): Router.go("almanac"))
+		cv.add_child(alm)
 	# The board lives in Coaching; here only when your job is at risk.
 	if GameState.board_goal_text() != "":
 		var warned := bool(GameState.board.get("warned", false))
@@ -533,6 +546,9 @@ func _week_section(season: Season) -> Control:
 		nv.add_child(approaches)
 	if not GameState.pending_mro_challenges().is_empty():
 		nv.add_child(_tribunal_card())
+	var jobs_card := _week_jobs_card()
+	if jobs_card != null:
+		nv.add_child(jobs_card)
 	if season.is_season_over():
 		nv.add_child(UiKit.lbl("Season complete", UiKit.H1, UiKit.TEXT, true))
 		nv.add_child(UiKit.ellipsis("Premiers: %s" % GameDB.club_name(GameState.premier()),
@@ -675,6 +691,12 @@ func _week_section(season: Season) -> Control:
 		if plan_line != null:
 			nv.add_child(UiKit.spacer(4))
 			nv.add_child(plan_line)
+		var ms_card := _milestone_card()
+		if ms_card != null:
+			nv.add_child(UiKit.spacer(4))
+			nv.add_child(ms_card)
+	# The week your season ends has its card (finals_cards_2), the Grand Final played or not.
+	if not season.is_season_over() or Features.on(StoryDeck.FINALS_2):
 		for i in range(GameState.week_events.size()):
 			nv.add_child(UiKit.spacer(4))
 			var ev := _event_card(i)
@@ -688,8 +710,110 @@ func _week_section(season: Season) -> Control:
 	# phone they close the week's section.
 	if _narrow():
 		nv.add_child(UiKit.spacer(4))
-		nv.add_child(_week_actions(season))
+		nv.add_child(_with_jobs_note(_week_actions(season)))
 	return nv
+
+
+## The week's milestones (Milestones.gd), always shown:
+## a small card in the event-card style, or nothing. The note lines above
+## keep their "plays his 100th" lines; the card leaves those out.
+func _milestone_card() -> Control:
+	if not Milestones.shown():
+		return null
+	var items := Milestones.card_items(GameState)
+	if items.is_empty():
+		return null
+	var panel := UiKit.panel(UiKit.PANEL, 12)
+	panel.name = "MilestoneCard"
+	var v := UiKit.vbox(4)
+	panel.add_child(v)
+	v.add_child(UiKit.lbl("Milestones this week", UiKit.SMALL, UiKit.MUTED, true))
+	for i in range(items.size()):
+		var l := NameInk.label(str(items[i]["text"]), _league_names(), UiKit.BODY, UiKit.TEXT)
+		l.name = "Milestone_%d" % i
+		v.add_child(l)
+	return panel
+
+
+## The week's jobs (WeekChecklist; setting "weekly_checklist", off by
+## default): the big call's slot first, then the routine jobs, each one tap
+## from its screen and ticked when done. null when off or with no jobs.
+func _week_jobs_card() -> Control:
+	var items := WeekChecklist.items(GameState)
+	var call := WeekChecklist.big_call(GameState)
+	if items.is_empty() and call.is_empty():
+		return null
+	var panel := UiKit.panel(UiKit.PANEL, 12)
+	panel.name = "WeekJobs"
+	var v := UiKit.vbox(2)
+	panel.add_child(v)
+	var left := WeekChecklist.left(GameState)
+	var head := UiKit.lbl("This week" if left == 0 else "This week  ·  %d to do" % left,
+			UiKit.SECONDARY, UiKit.MUTED, true)
+	head.name = "WeekJobsHead"
+	v.add_child(head)
+	# The big call's slot: the coach-arcs step fills it. Nothing shows without one.
+	if not call.is_empty():
+		var bc := _week_job_row(str(call.get("text", "")), false, str(call.get("route", "")), true)
+		bc.name = "BigCall"
+		v.add_child(bc)
+	for it in items:
+		var row := _week_job_row(str(it["text"]), bool(it["done"]), str(it["route"]))
+		row.name = "WeekJob_%s" % str(it["key"])
+		v.add_child(row)
+	return panel
+
+
+## One job: open ones in TEXT and a tap to their screen; done ones ticked
+## in GOOD, the job itself MUTED. A job on this page itself is a plain line.
+func _week_job_row(text: String, done: bool, route: String, big := false) -> Button:
+	var b := UiKit.text_action("", UiKit.NAME if big else UiKit.BODY)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(0, 44)
+	var h := UiKit.hbox(8)
+	h.set_anchors_preset(Control.PRESET_FULL_RECT)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(h)
+	var mark := UiKit.lbl("Done" if done else "To do", UiKit.FINE, UiKit.GOOD if done else UiKit.MUTED, true)
+	mark.name = "Mark"
+	mark.custom_minimum_size = Vector2(48, 0)
+	mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(mark)
+	var t := UiKit.ellipsis(text + ("  ›" if route != "" and not done else ""),
+			UiKit.NAME if big else UiKit.BODY, UiKit.MUTED if done else UiKit.TEXT, big)
+	t.name = "Text"
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	t.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(t)
+	b.tooltip_text = text
+	if route != "":
+		b.pressed.connect(func(): Router.go(route))
+	else:
+		b.focus_mode = Control.FOCUS_NONE
+		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return b
+
+
+## The match row with a gentle "N jobs left" over it when the week's
+## checklist has jobs open and Play match is there. Never a block.
+func _with_jobs_note(row: Control) -> Control:
+	var left := WeekChecklist.left(GameState)
+	if left == 0 or row.find_child("PlayMatch", true, false) == null:
+		return row
+	var box := UiKit.vbox(2)
+	box.name = "WeekActionsBox"
+	box.size_flags_horizontal = row.size_flags_horizontal
+	box.size_flags_vertical = row.size_flags_vertical
+	box.size_flags_stretch_ratio = row.size_flags_stretch_ratio
+	var note := UiKit.lbl("1 job left this week" if left == 1 else "%d jobs left this week" % left,
+			UiKit.FINE, UiKit.MUTED)
+	note.name = "JobsLeftNote"
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	box.add_child(note)
+	box.add_child(row)
+	return box
 
 
 ## A live MRO sanction can be challenged once before the next round. Keep it
@@ -802,11 +926,7 @@ func _week_actions(season: Season) -> Control:
 		buttons.append(_nav_button(_finals_play_label(), _on_sim_round, true))
 	elif _upcoming_match().is_empty():
 		# Out of the finals, the league still plays them week by week: each
-		# week's results come up before the next, and the rest of the series
-		# is one tap further if you would rather skip it.
-		var skip := _nav_button("Play to Grand Final", _on_sim_to_end)
-		skip.name = "SimToGrandFinal"
-		buttons.append(skip)
+		# week's results come up before the next.
 		var week := _nav_button(_finals_play_label(), _on_sim_round, true)
 		week.name = "SimFinalsWeek"
 		buttons.append(week)
@@ -822,12 +942,10 @@ func _week_actions(season: Season) -> Control:
 	return row
 
 
-## Play round (the quick sim of the week), with its long press for the
-## play-ahead menu.
+## Sim the week: the one quick sim, a single round.
 func _sim_round_button() -> Button:
 	var sim := _nav_button("Sim the week", _on_sim_round_pressed)
 	sim.name = "SimRound"
-	_wire_long_press(sim)
 	return sim
 
 
@@ -1128,9 +1246,6 @@ func _on_fact_option(option: Dictionary, fact_text: String) -> void:
 ## Sim round skips your own match for good, so it asks first (unless you
 ## have said not to; Settings turns the question back on).
 func _on_sim_round_pressed() -> void:
-	if _hold_fired:
-		_hold_fired = false
-		return
 	var m := _upcoming_match()
 	if m.is_empty() or not GameState.confirm_sim_round():
 		_on_sim_round()
@@ -1171,92 +1286,8 @@ func _close_sim_confirm() -> void:
 	_sim_confirm = null
 
 
-## Hold Sim round (or right-click it) for the quick-sim menu.
-func _wire_long_press(b: Button) -> void:
-	b.button_down.connect(func():
-		_hold_id += 1
-		var id := _hold_id
-		# Still held: no button_up has moved the counter on since.
-		get_tree().create_timer(HOLD_SECONDS).timeout.connect(func():
-			if id == _hold_id and is_instance_valid(b):
-				_hold_fired = true
-				_open_quick_sim()))
-	b.button_up.connect(func(): _hold_id += 1)
-	b.gui_input.connect(func(ev: InputEvent):
-		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed \
-				and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT:
-			_open_quick_sim())
-
-
-## Quick sim: this round, the next four, or the rest of the home-and-away
-## season - each shows where it lands. Never plays a final. Always opens on
-## a long press, whether or not Sim round asks first.
-func _open_quick_sim() -> void:
-	_close_sim_confirm()
-	_close_quick_sim()
-	var season: Season = GameState.season
-	if season == null or season.is_regular_done():
-		return
-	var now := season.round_index + 1
-	var last := season.fixture.size()
-	var box := UiKit.modal_box(self, 420.0, 330.0)
-	_quick_sim = box["overlay"]
-	_quick_sim.name = "QuickSim"
-	var v: VBoxContainer = box["body"]
-	v.add_child(UiKit.heading("Play ahead", UiKit.H1))
-	var why := UiKit.lbl("Your matches are played out for you. It always stops before the finals.",
-			UiKit.SMALL, UiKit.MUTED)
-	why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	v.add_child(why)
-	var four_to := mini(now + 3, last)
-	var options := [
-		["QuickSimOne", "Play this round (Round %d)" % now, 1],
-		["QuickSimFour", "Skip to Round %d" % (four_to + 1) if four_to < last
-				else "Skip to the end of the home and away", 4],
-		["QuickSimAll", "Skip to the end of the home and away (after Round %d)" % last, -1],
-	]
-	for o in options:
-		var b := UiKit.btn(str(o[1]), UiKit.BODY)
-		b.name = str(o[0])
-		b.custom_minimum_size = Vector2(0, 48)
-		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		var n := int(o[2])
-		b.pressed.connect(func(): _run_quick_sim(n))
-		box["footer"].add_child(b)
-	var cancel := UiKit.btn("Cancel", UiKit.BODY)
-	cancel.name = "QuickSimCancel"
-	cancel.custom_minimum_size = Vector2(0, 44)
-	cancel.pressed.connect(_close_quick_sim)
-	box["footer"].add_child(cancel)
-
-
-func _close_quick_sim() -> void:
-	if _quick_sim != null and is_instance_valid(_quick_sim):
-		_quick_sim.queue_free()
-	_quick_sim = null
-
-
-func _run_quick_sim(rounds: int) -> void:
-	_close_quick_sim()
-	GameState.quick_sim(rounds)
-	_build()
-	if not GameState.last_results.is_empty():
-		_show_results(GameState.last_results)
-
-
 func _on_sim_round() -> void:
 	GameState.advance()
-	_build()
-	if not GameState.last_results.is_empty():
-		_show_results(GameState.last_results)
-
-
-## You are out of the finals: run the remaining weeks out and show the winner.
-func _on_sim_to_end() -> void:
-	# Only ever the finals: never sim through home-and-away rounds.
-	if not GameState.season.is_regular_done():
-		return
-	GameState.sim_finals_to_end()
 	_build()
 	if not GameState.last_results.is_empty():
 		_show_results(GameState.last_results)
@@ -1304,9 +1335,6 @@ func handle_back() -> bool:
 	if _settings != null and is_instance_valid(_settings):
 		_settings.queue_free()
 		_settings = null
-		return true
-	if _quick_sim != null and is_instance_valid(_quick_sim):
-		_close_quick_sim()
 		return true
 	if _sim_confirm != null and is_instance_valid(_sim_confirm):
 		_close_sim_confirm()

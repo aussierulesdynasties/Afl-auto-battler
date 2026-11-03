@@ -34,8 +34,19 @@ extends RefCounted
 ##               player per rival club, and Canberra as a career choice
 ##               (ExpansionBuild). Off, a new club arrives with the 36
 ##               generated players it always did and Canberra always joins.
+##   club_almanac   the club almanac (Almanac.gd, AlmanacScene): a page per
+##               season of your career, reached from the Hub and the season wrap.
+##               Off, no entry is shown and no almanac page is written.
+##   match_story   the match makes the story (director, 2026-11-03, plan step 1b): each
+##               match's hero, turning point and why it was won or lost (MatchStory.gd),
+##               at the top of the full-time Summary, on the news front, in the press
+##               question, and kept on GameState.match_stories. Off, none of it shows
+##               and nothing is written.
+##   finals_cards_2  the finals cards' second slice (rows 35, 36): A3, A9, A14, B7 in
+##               finals weeks, and one card the week your season ends (A15, A16, B8,
+##               B9). Off, those cards are not in the deck and nothing is written.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2"]
 
 static var _forced := {}
 static var _from_args := {}
