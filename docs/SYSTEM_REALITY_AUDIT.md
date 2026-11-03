@@ -193,7 +193,7 @@ The same fields for each system.
   - Ride the stars: −1.5 ± 1.4.
   - Interchange counts differ as described (tests).
 - **Status:** WORKING (small).
-- **Superseded 2026-11-03:** rotations are automatic for both sides (`MatchSim.auto_rotation`, docs/roadmap/32-director-decisions-2026-11-03.md).
+- **Superseded 2026-11-03:** rotations are automatic for both sides (`MatchSim.auto_rotation`, docs/DIRECTOR_BIBLE.md).
 
 **10. Key match-ups (Gate 1.12, merged in #96)**
 - **Evidence:** 400 matches: the strong defender against a mismatch is about 0.8 of a goal from the forward, 4–6 points.
