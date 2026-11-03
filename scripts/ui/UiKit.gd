@@ -752,18 +752,75 @@ static func motion_on() -> bool:
 	return (DisplayServer.get_name() != "headless" or Feel.test_motion) and not Feel.reduced
 
 
+## The motion tokens (menu juice, 2026-11-04): every duration, ease and stagger
+## in one place, so a screen's timing is a choice from this list, never a
+## literal. Routine UI stays under 0.4 s; only a milestone runs longer.
+class Motion:
+	const DUR_FAST := 0.18       ## exits, sheet fade, the screen fade
+	const DUR_BASE := 0.32       ## entrances, reveal
+	const DUR_COUNT := 0.7       ## count_up
+	const DUR_HERO := 0.5        ## land
+	const DUR_BAR := 0.45        ## fill_bar
+	const DUR_MILESTONE := 0.9   ## the premiership and award reveals only (not built yet)
+	const RISE := 6.0            ## px a sheet rises as it fades in
+	const STAGGER := 0.04        ## s per row
+	const STAGGER_SHEET := 0.08  ## s per row on a one-time sheet
+	const STAGGER_MAX := 8       ## rows past this simply show
+	const LAND_FROM := 1.22      ## the one overshoot: Verdict, the cup
+	const PRESS_IN := 0.05
+	const PRESS_HOLD := 0.08
+	const PRESS_OUT := 0.12
+	const PRESS_SCALE := 0.96
+	## Ease in: entering, player-triggered. Settle: counts and bars. Out:
+	## leaving. Pulse: attention. Stamp: land only. Never linear.
+	const TRANS_IN := Tween.TRANS_CUBIC
+	const EASE_IN := Tween.EASE_OUT
+	const TRANS_SETTLE := Tween.TRANS_QUART
+	const EASE_SETTLE := Tween.EASE_OUT
+	const TRANS_OUT := Tween.TRANS_CUBIC
+	const EASE_OUT := Tween.EASE_IN
+	const TRANS_PULSE := Tween.TRANS_SINE
+	const TRANS_STAMP := Tween.TRANS_BACK
+	const EASE_STAMP := Tween.EASE_OUT
+
+
+## The `ui_motion` switch (Features.gd): the new motion is built and tested
+## behind it. Off, every helper below does exactly what it did before.
+static func juice() -> bool:
+	return Features.on("ui_motion")
+
+
+## One running tween per node and kind ("mod": modulate, "scale", "text"): a
+## second call stops the first, so two never fight over a property. With the
+## switch off this is a plain create_tween, as before.
+static func _own(c: Node, kind: String) -> Tween:
+	var key := "_motion_" + kind
+	if juice():
+		if c.has_meta(key):
+			var old: Variant = c.get_meta(key)
+			if old is Tween and (old as Tween).is_valid():
+				(old as Tween).kill()
+		var tw := c.create_tween()
+		c.set_meta(key, tw)
+		return tw
+	return c.create_tween()
+
+
 ## Fade `c` up from nothing, `delay` seconds after it is shown.
 static func reveal(c: Control, delay := 0.0) -> void:
 	if not motion_on() or c == null:
 		return
-	c.modulate.a = 0.0
+	c.modulate = Color(1, 1, 1, 0.0) if juice() else Color(c.modulate, 0.0)
 	var run := func() -> void:
 		if not is_instance_valid(c):
 			return
-		var tw := c.create_tween()
+		if juice():
+			Feel.moved.append("reveal")
+		var tw := _own(c, "mod")
 		if delay > 0.0:
 			tw.tween_interval(delay)
-		tw.tween_property(c, "modulate:a", 1.0, 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(c, "modulate:a", 1.0, Motion.DUR_BASE) \
+				.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
 	if c.is_inside_tree():
 		run.call()
 	else:
@@ -772,16 +829,20 @@ static func reveal(c: Control, delay := 0.0) -> void:
 
 ## Count `l` up to `to` (its text set by `say` for each value on the way),
 ## ending exactly on the real figure.
-static func count_up(l: Label, to: int, say: Callable, dur := 0.7, from := 0) -> void:
+static func count_up(l: Label, to: int, say: Callable, dur := Motion.DUR_COUNT, from := 0) -> void:
 	l.text = str(say.call(to))
 	if not motion_on() or to == from:
 		return
 	var run := func() -> void:
 		if not is_instance_valid(l):
 			return
-		var tw := l.create_tween()
+		if juice():
+			Feel.moved.append("count_up")
+		var tw := _own(l, "text")
 		tw.tween_method(func(v: float): l.text = str(say.call(roundi(v))), float(from), float(to), dur) \
-				.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE)
+		# A second call that stops this one still leaves the true figure first.
+		tw.tween_callback(func(): l.text = str(say.call(to)))
 	if l.is_inside_tree():
 		run.call()
 	else:
@@ -801,11 +862,16 @@ static func land(c: Control, delay := 0.0, sound := true) -> void:
 			Feel.press("land")
 		if not motion_on() or not is_instance_valid(c):
 			return
+		# The pivot reads the size, so it waits for the first layout.
+		if juice() and c.size.x < 1.0 and c.is_inside_tree():
+			await c.get_tree().process_frame
+			if not is_instance_valid(c) or not motion_on():
+				return
 		Feel.moved.append("land")
 		c.pivot_offset = _pivot(c)
-		c.scale = Vector2(1.22, 1.22)
-		c.create_tween().tween_property(c, "scale", Vector2.ONE, 0.5) \
-				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		c.scale = Vector2(Motion.LAND_FROM, Motion.LAND_FROM)
+		_own(c, "scale").tween_property(c, "scale", Vector2.ONE, Motion.DUR_HERO) \
+				.set_trans(Motion.TRANS_STAMP).set_ease(Motion.EASE_STAMP)
 	_after(c, delay if motion_on() else 0.0, hit)
 
 
@@ -819,10 +885,71 @@ static func attention(c: CanvasItem, delay := 0.45) -> void:
 		if not is_instance_valid(c):
 			return
 		Feel.moved.append("attention")
-		var tw := c.create_tween()
+		var tw := _own(c, "mod")
 		for i in range(2):
-			tw.tween_property(c, "modulate", Color(1.55, 1.55, 1.55), 0.32).set_trans(Tween.TRANS_SINE)
-			tw.tween_property(c, "modulate", Color.WHITE, 0.55).set_trans(Tween.TRANS_SINE))
+			tw.tween_property(c, "modulate", Color(1.55, 1.55, 1.55), 0.32).set_trans(Motion.TRANS_PULSE)
+			tw.tween_property(c, "modulate", Color.WHITE, 0.55).set_trans(Motion.TRANS_PULSE))
+
+
+## A sheet comes in (menu juice, 2026-11-04): the cover and the panel fade in
+## over DUR_FAST and the panel rises RISE px on the plain-Control wrapper
+## modal_box builds (`box["rise"]`; a Container would put it straight back). No
+## scale and no slide from the side. Its buttons work from frame 0: the fade
+## is only colour, and every node here lets a touch through to them.
+static func sheet_in(box: Dictionary) -> void:
+	var overlay: Control = box.get("overlay")
+	if not juice() or not motion_on() or overlay == null:
+		return
+	var rise: Control = box.get("rise")
+	overlay.modulate.a = 0.0
+	if rise != null:
+		rise.position.y = Motion.RISE
+	_after(overlay, 0.0, func() -> void:
+		if not is_instance_valid(overlay):
+			return
+		Feel.moved.append("sheet_in")
+		var tw := _own(overlay, "mod")
+		tw.tween_property(overlay, "modulate:a", 1.0, Motion.DUR_FAST) \
+				.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
+		if rise != null and is_instance_valid(rise):
+			tw.parallel().tween_property(rise, "position:y", 0.0, Motion.DUR_FAST) \
+					.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN))
+
+
+## A bar fills (menu juice, 2026-11-04): `fill` is the bar's coloured part,
+## anchored left, its width the anchor_right. It runs from `from` to `to` (both
+## 0..1) over DUR_BAR and ends on `to`; without motion it is there at once.
+static func fill_bar(fill: Control, from: float, to: float) -> void:
+	if fill == null:
+		return
+	fill.anchor_right = clampf(to, 0.0, 1.0)
+	if not juice() or not motion_on() or is_equal_approx(from, to):
+		return
+	fill.anchor_right = clampf(from, 0.0, 1.0)
+	_after(fill, 0.0, func() -> void:
+		if not is_instance_valid(fill):
+			return
+		Feel.moved.append("fill_bar")
+		_own(fill, "bar").tween_property(fill, "anchor_right", clampf(to, 0.0, 1.0), Motion.DUR_BAR) \
+				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE))
+
+
+## Lines of a one-time sheet come in one after another (STAGGER_SHEET apart, the
+## first at once), by modulate:a alone: no position, no size, so nothing moves
+## under a thumb and a Container keeps its layout. Only the first STAGGER_MAX
+## rows; the rest simply show.
+static func stagger(rows: Array, step := Motion.STAGGER_SHEET) -> void:
+	if not juice() or not motion_on():
+		return
+	var n := 0
+	for r in rows:
+		if n >= Motion.STAGGER_MAX:
+			break
+		if r is Control and is_instance_valid(r):
+			if n == 0:
+				Feel.moved.append("stagger")
+			reveal(r as Control, n * step)
+			n += 1
 
 
 ## Living backgrounds (director, 2026-10-11): `apply(t)` is called with t going
@@ -908,9 +1035,9 @@ static func _press_in(b: Control) -> void:
 	Feel.moved.append("press")
 	b.pivot_offset = b.size / 2.0
 	var tw := b.create_tween()
-	tw.tween_property(b, "scale", Vector2(0.96, 0.96), 0.05).set_ease(Tween.EASE_OUT)
-	tw.tween_interval(0.08)
-	tw.tween_property(b, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(b, "scale", Vector2(Motion.PRESS_SCALE, Motion.PRESS_SCALE), Motion.PRESS_IN).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(Motion.PRESS_HOLD)
+	tw.tween_property(b, "scale", Vector2.ONE, Motion.PRESS_OUT).set_trans(Motion.TRANS_STAMP).set_ease(Motion.EASE_STAMP)
 
 
 ## The painted drop shade under display type.
@@ -1413,7 +1540,24 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(center)
 	var shell := panel(PANEL, 16)
-	center.add_child(shell)
+	# ui_motion: the sheet rises as it fades in, which a Container would undo, so
+	# the panel sits on a plain Control the CenterContainer places by its size.
+	var rises := juice() and motion_on()
+	if rises:
+		var wrap := Control.new()
+		wrap.name = "SheetRise"
+		wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		center.add_child(wrap)
+		wrap.add_child(shell)
+		var follow := func() -> void:
+			if is_instance_valid(shell) and is_instance_valid(wrap):
+				var m := shell.get_combined_minimum_size()
+				shell.size = m
+				wrap.custom_minimum_size = m
+		shell.minimum_size_changed.connect(follow)
+		follow.call()
+	else:
+		center.add_child(shell)
 	# Not boring (director, 2026-10-08): a wash of your club's colour from the
 	# top of every sheet, fading before the content needs the contrast.
 	var lead := team_colour() if wash == AUTO_COLOUR else wash
@@ -1464,7 +1608,11 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 	body.minimum_size_changed.connect(refit)
 	footer.minimum_size_changed.connect(refit)
 	body.resized.connect(refit)
-	return {"overlay": overlay, "body": body, "footer": footer, "shell": shell}
+	var box := {"overlay": overlay, "body": body, "footer": footer, "shell": shell}
+	if rises:
+		box["rise"] = shell
+	sheet_in(box)
+	return box
 
 
 ## An information sheet (help, a profile, a list) closes when you tap outside it,

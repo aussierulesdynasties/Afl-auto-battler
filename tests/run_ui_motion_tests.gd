@@ -1,0 +1,536 @@
+extends SceneTree
+## godot --headless --path . --script tests/run_ui_motion_tests.gd
+## Menu juice, first prototype (switch `ui_motion`, director 2026-11-04): the
+## UiKit.Motion tokens, the hardened reveal / count_up / land, the Router's
+## ease-out, sheet_in on every modal sheet, fill_bar, and the Sim the week
+## result sheet (the Verdict lands on a win and only fades in on a loss; the
+## injury, MRO and Norm Smith lines come in one after another). Proves: it ran
+## (Feel.moved), it was skipped (Reduced motion, switch off), the figures are
+## true on the first frame, and a real finger (tests/tap.gd) reaches Continue
+## from frame 0, during the stagger, and at the edge of a landing element.
+## Classes are reached through load() and autoload nodes.
+
+const Tap := preload("res://tests/tap.gd")
+const Ran := preload("res://tests/functions_ran.gd")
+const SUITE_SEED := 2027
+
+var _state: Node
+var _uk: Object
+var _feel: Object
+var _feat: Object
+var _checks := 0
+var _failures: Array[String] = []
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _check(condition: bool, message: String) -> void:
+	_checks += 1
+	if not condition:
+		_failures.append(message)
+		push_error(message)
+
+
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
+
+
+func _settle(n := 6) -> void:
+	for i in range(n):
+		await process_frame
+
+
+func _run() -> void:
+	await process_frame
+	_state = root.get_node("GameState")
+	_uk = load("res://scripts/ui/UiKit.gd")
+	_feel = load("res://scripts/ui/Feel.gd")
+	_feat = load("res://scripts/core/Features.gd")
+	_state.autosave_enabled = false
+	_state.save_path = "user://test_ui_motion.save"
+	_state.settings_path = "user://test_ui_motion.cfg"
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_state.set_setting("seen_%s_intro" % key, true)
+	_state.show_real_names = false
+	_state.replay_seed = SUITE_SEED
+	root.size = Vector2i(390, 844)
+	_feel.test_motion = true
+	_feel.force_phone = true
+	await _settle()
+
+	await _t("_test_tokens_and_switch")
+	await _t("_test_helpers_hardened")
+	await _t("_test_router_ease")
+	await _t("_test_fill_bar")
+	await _t("_test_sheet_in")
+	await _t("_test_result_sheet_win")
+	await _t("_test_result_sheet_loss")
+	await _t("_test_result_sheet_reduced_and_off")
+	await _t("_test_land_edge_tap")
+
+	_feat.clear("ui_motion")
+	_feel.test_motion = false
+	_feel.force_phone = false
+	_state.set_reduced_motion(false)
+	print(Ran.line("UI motion", self))
+	for f in _failures:
+		print("  FAIL: " + f)
+	quit(1 if not _failures.is_empty() else 0)
+
+
+## A season started and round one played, so there is a real last match, then
+## its score forced: your side wins or loses by a known margin.
+func _prime(win: bool, hurt := true) -> void:
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", load("res://scripts/core/GameDB.gd") if false else root.get_node("GameDB").club_list("COL"))
+	_state.advance()
+	var res: Dictionary = _state.last_match
+	var me := 0 if str(res["home"]) == _state.my_club else 1
+	var goals := [10, 10]
+	var behinds := [5, 5]
+	goals[me] = 13 if win else 8
+	goals[1 - me] = 8 if win else 13
+	res["goals"] = goals
+	res["behinds"] = behinds
+	res["score"] = [goals[0] * 6 + behinds[0], goals[1] * 6 + behinds[1]]
+	_state.last_match = res
+	var rest: Array = []
+	for r in _state.last_results:
+		if _state.is_my_match(r):
+			rest.append(res)
+		else:
+			rest.append(r)
+	_state.last_results = rest
+	_state.last_injuries = []
+	_state.last_mro = []
+	if hurt:
+		var pid := str((res["roster"][me] as Array)[0]["id"])
+		_state.last_injuries = [{"club": _state.my_club, "id": pid, "kind": "Hamstring", "weeks": 3}]
+		_state.last_mro = [{"club": _state.my_club, "id": "", "name": "Test Player", "outcome": "suspension", "weeks": 2}]
+
+
+## The hub with the result sheet open. The clock starts as the sheet opens.
+func _open_results(win: bool) -> Dictionary:
+	_prime(win)
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	_feel.clear()
+	var t0 := Time.get_ticks_msec()
+	hub.call("_show_results", _state.last_results)
+	return {"hub": hub, "t0": t0}
+
+
+func _score_text_true(hub: Control) -> bool:
+	var res: Dictionary = _state.last_match
+	for side in [0, 1]:
+		var row := hub.find_child("MyScore_%d" % side, true, false)
+		if row == null:
+			return false
+		var want: String = _uk.scoreline(int(res["goals"][side]), int(res["behinds"][side]))
+		var found := false
+		for c in row.get_children():
+			if c is Label and (c as Label).text == want:
+				found = true
+		if not found:
+			return false
+	return true
+
+
+func _alpha_chain(n: Node) -> float:
+	var a := 1.0
+	while n != null:
+		if n is CanvasItem:
+			a *= (n as CanvasItem).modulate.a
+		n = n.get_parent()
+	return a
+
+
+# ---------------------------------------------------------------------------
+
+func _test_tokens_and_switch() -> void:
+	var m = _uk.Motion
+	_check(m.DUR_FAST == 0.18 and m.DUR_BASE == 0.32 and m.DUR_COUNT == 0.7 and m.DUR_HERO == 0.5
+			and m.DUR_BAR == 0.45 and m.STAGGER == 0.04 and m.STAGGER_SHEET == 0.08 and m.STAGGER_MAX == 8
+			and m.RISE == 6.0 and m.LAND_FROM == 1.22 and m.DUR_MILESTONE == 0.9,
+			"The Motion tokens hold the report's values")
+	_check(m.TRANS_IN == Tween.TRANS_CUBIC and m.EASE_IN == Tween.EASE_OUT and m.TRANS_SETTLE == Tween.TRANS_QUART
+			and m.TRANS_STAMP == Tween.TRANS_BACK and m.TRANS_PULSE == Tween.TRANS_SINE
+			and m.TRANS_OUT == Tween.TRANS_CUBIC and m.EASE_OUT == Tween.EASE_IN,
+			"The easing tokens are the report's (never linear)")
+	_check(_feat.KNOWN.has("ui_motion"), "ui_motion is a known switch")
+	_feat.clear("ui_motion")
+	_check(not _feat.on("ui_motion") and not _uk.juice(), "ui_motion is off by default")
+	_feat.set_on("ui_motion", true)
+	_check(_uk.juice(), "set_on turns it on")
+	_feat.clear("ui_motion")
+
+
+## A second call stops the first; a label that has not been laid out yet still
+## grows from its own edge; the true figure always ends up on screen.
+func _test_helpers_hardened() -> void:
+	_feat.set_on("ui_motion", true)
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	# reveal twice: the first tween is killed, one runs, it ends visible.
+	var a: Label = _uk.lbl("Reveal me", 20)
+	host.add_child(a)
+	_feel.clear()
+	_uk.reveal(a)
+	var first: Tween = a.get_meta("_motion_mod")
+	_uk.reveal(a, 0.05)
+	_check(not first.is_valid() and (a.get_meta("_motion_mod") as Tween).is_valid(),
+			"reveal twice: the earlier tween on the node is killed")
+	_check(_feel.moved == ["reveal", "reveal"], "reveal leaves a Feel.moved tag (%s)" % str(_feel.moved))
+	await create_timer(0.6).timeout
+	_check(is_equal_approx(a.modulate.a, 1.0), "reveal ends fully visible")
+	# attention while a reveal runs: they do not fight; the node ends white.
+	_uk.reveal(a)
+	_uk.attention(a, 0.0)
+	await create_timer(1.8).timeout
+	_check(a.modulate == Color.WHITE, "attention after a reveal still ends at rest (%s)" % str(a.modulate))
+	# count_up twice: ends on the second figure, exactly.
+	var n: Label = _uk.lbl("", 20)
+	host.add_child(n)
+	_feel.clear()
+	_uk.count_up(n, 50, func(v): return "%d pts" % v)
+	_uk.count_up(n, 80, func(v): return "%d pts" % v)
+	await create_timer(1.0).timeout
+	_check(n.text == "80 pts", "count_up twice ends on the true figure (%s)" % n.text)
+	_check(_feel.moved == ["count_up", "count_up"], "count_up leaves a tag (%s)" % str(_feel.moved))
+	# land on a label with no layout yet: the pivot is set once it has a size.
+	var l: Label = _uk.lbl("Won by 23", 30, _uk.TEXT, true)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	l.custom_minimum_size = Vector2(200, 40)
+	_feel.clear()
+	host.add_child(l)
+	_uk.land(l)
+	_check(l.size.x < 1.0 or l.size.x >= 1.0, "land on a fresh label does not fail")
+	await _settle(4)
+	_check(l.pivot_offset.x >= 150.0, "land's pivot is set after layout (x %s of %s)" % [str(l.pivot_offset.x), str(l.size.x)])
+	_check(_feel.moved == ["land"], "land leaves a tag (%s)" % str(_feel.moved))
+	var scale_tween: Tween = l.get_meta("_motion_scale")
+	_uk.land(l)
+	await _settle(4)
+	_check(not scale_tween.is_valid(), "land twice: the earlier tween is killed")
+	await create_timer(0.8).timeout
+	_check(is_equal_approx(l.scale.x, 1.0), "land ends at rest")
+	# Switch off: no metas, no tags, as before.
+	_feat.set_on("ui_motion", false)
+	var o: Label = _uk.lbl("Off", 20)
+	host.add_child(o)
+	_feel.clear()
+	_uk.reveal(o)
+	_uk.count_up(o, 9, func(v): return str(v))
+	_uk.sheet_in({"overlay": o})
+	_uk.stagger([o])
+	_uk.fill_bar(o, 0.1, 0.9)
+	await _settle(2)
+	_check(_feel.moved.is_empty() and not o.has_meta("_motion_mod") and not o.has_meta("_motion_text"),
+			"Switch off: reveal, count_up, sheet_in, stagger and fill_bar leave no tag and no tween (%s)" % str(_feel.moved))
+	_feat.clear("ui_motion")
+	host.queue_free()
+	await _settle()
+
+
+## The screen fade eases out: a good way through it is well past the linear
+## position. Off, it is the old linear fade.
+func _test_router_ease() -> void:
+	var router: Node = root.get_node("Router")
+	var samples := {}
+	for on in [true, false]:
+		_feat.set_on("ui_motion", on)
+		var scene := Control.new()
+		root.add_child(scene)
+		current_scene = scene
+		router.call("_ease_in")
+		await _settle(3)
+		await create_timer(0.10).timeout
+		samples[on] = scene.modulate.a
+		await create_timer(0.3).timeout
+		_check(is_equal_approx(scene.modulate.a, 1.0), "The screen fade ends fully in (ui_motion %s)" % str(on))
+		scene.queue_free()
+		current_scene = null
+		await _settle()
+	_check(samples[true] > 0.75 and samples[true] > samples[false] + 0.1,
+			"With ui_motion the fade eases out (%.2f at ~0.1 s) rather than linear (%.2f)" % [samples[true], samples[false]])
+	_feat.clear("ui_motion")
+
+
+func _test_fill_bar() -> void:
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	var fill := ColorRect.new()
+	fill.set_anchors_preset(Control.PRESET_FULL_RECT)
+	host.add_child(fill)
+	_feat.set_on("ui_motion", true)
+	_feel.clear()
+	_uk.fill_bar(fill, 0.2, 0.8)
+	_check(is_equal_approx(fill.anchor_right, 0.2), "fill_bar starts from the old value (%.2f)" % fill.anchor_right)
+	_check(_feel.moved == ["fill_bar"], "fill_bar leaves a tag (%s)" % str(_feel.moved))
+	await create_timer(0.2).timeout
+	_check(fill.anchor_right > 0.2 and fill.anchor_right < 0.8 + 0.001, "fill_bar is part way after 0.2 s (%.2f)" % fill.anchor_right)
+	await create_timer(0.6).timeout
+	_check(is_equal_approx(fill.anchor_right, 0.8), "fill_bar ends on the true value (%.3f)" % fill.anchor_right)
+	# Reduced motion: at the true value at once, no tag.
+	_state.set_reduced_motion(true)
+	_feel.clear()
+	_uk.fill_bar(fill, 0.8, 0.3)
+	_check(is_equal_approx(fill.anchor_right, 0.3) and _feel.moved.is_empty(),
+			"Reduced motion: the bar is at its true value at once, no tag")
+	_state.set_reduced_motion(false)
+	_feat.set_on("ui_motion", false)
+	_feel.clear()
+	_uk.fill_bar(fill, 0.3, 0.6)
+	_check(is_equal_approx(fill.anchor_right, 0.6) and _feel.moved.is_empty(), "Switch off: the bar is at its value at once, no tag")
+	_feat.clear("ui_motion")
+	host.queue_free()
+	await _settle()
+
+
+## Any modal sheet: the cover and panel fade in, the panel rises 6 px on a
+## plain Control, nothing blocks Continue at frame 0, and every effect node
+## lets a touch through.
+func _test_sheet_in() -> void:
+	_feat.set_on("ui_motion", true)
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	await _settle(2)
+	_feel.clear()
+	var box: Dictionary = _uk.modal_box(host, 400.0)
+	var done: Button = _uk.btn("Close", _uk.NAME, true)
+	box["footer"].add_child(done)
+	box["body"].add_child(_uk.lbl("A sheet", 18))
+	_check(_feel.moved == ["sheet_in"], "A modal sheet starts sheet_in once (%s)" % str(_feel.moved))
+	var overlay: Control = box["overlay"]
+	var rise: Control = box.get("rise")
+	_check(rise != null and rise.get_parent() != null and not (rise.get_parent() is Container),
+			"The panel sits on a plain Control, so its rise is not overwritten by a Container")
+	_check(overlay.modulate.a < 0.5, "The sheet starts faded out (%.2f)" % overlay.modulate.a)
+	_check(is_equal_approx(rise.position.y, _uk.Motion.RISE), "The panel starts 6 px low (%.1f)" % rise.position.y)
+	var wrap: Control = rise.get_parent()
+	_check(wrap.mouse_filter == Control.MOUSE_FILTER_IGNORE, "The wrapper lets touches through")
+	# A finger in the first frames closes it.
+	var closed := [false]
+	done.pressed.connect(func(): closed[0] = true; overlay.queue_free())
+	var why: String = await Tap.tap(done)
+	_check(why == "" and closed[0], "A real tap on the sheet's button works in its first frames (%s)" % why)
+	await _settle(2)
+	# A second sheet left to finish: at rest, in place, and the buttons stay put.
+	var box2: Dictionary = _uk.modal_box(host, 400.0)
+	box2["body"].add_child(_uk.lbl("Second", 18))
+	await create_timer(0.5).timeout
+	_check(is_equal_approx(box2["overlay"].modulate.a, 1.0) and is_equal_approx((box2["rise"] as Control).position.y, 0.0),
+			"The sheet ends fully in and in place")
+	var sz: Vector2 = (box2["shell"] as Control).size
+	_check(sz.x >= 220.0 and sz.y > 40.0, "The sheet is laid out at its own size (%s)" % str(sz))
+	# Reduced motion and switch off: no wrapper, no fade, no tag.
+	for mode in ["reduced", "off"]:
+		_feel.clear()
+		if mode == "reduced":
+			_state.set_reduced_motion(true)
+		else:
+			_state.set_reduced_motion(false)
+			_feat.set_on("ui_motion", false)
+		var b3: Dictionary = _uk.modal_box(host, 400.0)
+		_check(_feel.moved.is_empty() and not b3.has("rise") and is_equal_approx(b3["overlay"].modulate.a, 1.0),
+				"%s: the sheet opens at once, no tag, no wrapper (%s)" % [mode, str(_feel.moved)])
+		b3["overlay"].queue_free()
+	_state.set_reduced_motion(false)
+	_feat.clear("ui_motion")
+	host.queue_free()
+	await _settle()
+
+
+func _test_result_sheet_win() -> void:
+	_feat.set_on("ui_motion", true)
+	var o: Dictionary = await _open_results(true)
+	var hub: Control = o["hub"]
+	# The scores are true on the very first frame, before any tween ticks.
+	_check(_score_text_true(hub), "Win: both scorelines are true on the first frame")
+	var verdict: Label = hub.find_child("MyVerdict", true, false)
+	_check(verdict != null and verdict.text == "Won by 30" and verdict.get_theme_color("font_color") == _uk.margin_colour(true),
+			"Win: the verdict says Won by 30 in the GOOD colour (%s)" % (verdict.text if verdict != null else "missing"))
+	var cont: Button = hub.find_child("ResultsContinue", true, false)
+	_check(cont != null and hub.find_child("SheetRise", true, false) != null, "The result sheet has Continue and the rise wrapper")
+	# The notes: Injured and MRO exist and start hidden, then come in one by one.
+	var inj: Label = hub.find_child("MyInjured", true, false)
+	var mro: Label = hub.find_child("MyMRO", true, false)
+	_check(inj != null and mro != null, "Win: the Injured and MRO lines are there")
+	_check(inj.modulate.a < 0.05 and mro.modulate.a < 0.05, "The notes start hidden for their turn")
+	await create_timer(0.12).timeout
+	_check(mro.modulate.a < 1.0, "Part-way through the stagger the last note is still coming in (%.2f)" % mro.modulate.a)
+	await create_timer(1.2).timeout
+	_check(_feel.moved.has("sheet_in") and _feel.moved.has("land") and _feel.moved.has("stagger"),
+			"Win: Feel.moved shows sheet_in, land and stagger (%s)" % str(_feel.moved))
+	_check(is_equal_approx(inj.modulate.a, 1.0) and is_equal_approx(mro.modulate.a, 1.0)
+			and is_equal_approx(_alpha_chain(cont), 1.0) and is_equal_approx(verdict.scale.x, 1.0),
+			"Win: by 1.3 s everything is in and at rest (sheet, notes, verdict scale)")
+	_check(not _feel.moved.has("burst"), "No particles on a win")
+	hub.queue_free()
+	await _settle()
+
+	# A real tap on Continue in the first 0.1 s.
+	o = await _open_results(true)
+	hub = o["hub"]
+	var c1: Button = hub.find_child("ResultsContinue", true, false)
+	var spent := Time.get_ticks_msec() - int(o["t0"])
+	var fading := _alpha_chain(c1) < 0.99
+	var why: String = await Tap.tap(c1)
+	await _settle(3)
+	_check(why == "" and hub.find_child("RoundResults", true, false) == null,
+			"A real tap on Continue at frame 0 closes the sheet (%s, %d ms in)" % [why, spent])
+	# Headless frames are slow, so the proof is the state at touch start (still fading), not the clock.
+	_check(fading, "...and the touch began mid-fade, the sheet not yet fully in (%d ms in)" % spent)
+	hub.queue_free()
+	await _settle()
+
+	# A real tap on Continue during the stagger.
+	o = await _open_results(true)
+	hub = o["hub"]
+	await create_timer(0.1).timeout
+	var last: Label = hub.find_child("MyMRO", true, false)
+	var mid := last.modulate.a < 1.0
+	var c2: Button = hub.find_child("ResultsContinue", true, false)
+	var why2: String = await Tap.tap(c2)
+	await _settle(3)
+	_check(mid, "The tap came while the last note was still coming in")
+	_check(why2 == "" and hub.find_child("RoundResults", true, false) == null,
+			"A real tap on Continue during the stagger closes the sheet (%s)" % why2)
+	hub.queue_free()
+	await _settle()
+
+
+func _test_result_sheet_loss() -> void:
+	_feat.set_on("ui_motion", true)
+	var o: Dictionary = await _open_results(false)
+	var hub: Control = o["hub"]
+	_check(_score_text_true(hub), "Loss: both scorelines are true on the first frame")
+	var verdict: Label = hub.find_child("MyVerdict", true, false)
+	_check(verdict != null and verdict.text == "Lost by 30" and verdict.get_theme_color("font_color") == _uk.margin_colour(false),
+			"Loss: the verdict says Lost by 30 in the BAD colour (%s)" % (verdict.text if verdict != null else "missing"))
+	await create_timer(0.7).timeout
+	_check(_feel.moved.has("sheet_in") and _feel.moved.has("reveal") and not _feel.moved.has("land"),
+			"Loss: sheet_in and a plain reveal, no land (%s)" % str(_feel.moved))
+	_check(not _feel.heard.has("land"), "Loss: no landing sting either (%s)" % str(_feel.heard))
+	_check(is_equal_approx(verdict.scale.x, 1.0) and is_equal_approx(verdict.modulate.a, 1.0),
+			"Loss: the verdict never scaled and ends fully visible")
+	var why: String = await Tap.tap(hub.find_child("ResultsContinue", true, false))
+	await _settle(3)
+	_check(why == "" and hub.find_child("RoundResults", true, false) == null, "Loss: Continue closes the sheet (%s)" % why)
+	hub.queue_free()
+	await _settle()
+
+
+func _test_result_sheet_reduced_and_off() -> void:
+	# Reduced motion with the switch on: no new tag at all, true scores at once.
+	_feat.set_on("ui_motion", true)
+	_state.set_reduced_motion(true)
+	var o: Dictionary = await _open_results(true)
+	var hub: Control = o["hub"]
+	var verdict: Label = hub.find_child("MyVerdict", true, false)
+	var mro: Label = hub.find_child("MyMRO", true, false)
+	_check(_score_text_true(hub) and verdict.text == "Won by 30", "Reduced motion: true scores on the first frame")
+	_check(_feel.moved.is_empty(), "Reduced motion: no tags at all (%s)" % str(_feel.moved))
+	_check(is_equal_approx(_alpha_chain(hub.find_child("ResultsContinue", true, false)), 1.0)
+			and is_equal_approx(mro.modulate.a, 1.0) and is_equal_approx(verdict.scale.x, 1.0)
+			and hub.find_child("SheetRise", true, false) == null,
+			"Reduced motion: the sheet, the notes and the verdict are fully in on the first frame")
+	hub.queue_free()
+	await _settle()
+	_state.set_reduced_motion(false)
+	# Switch off, motion on: exactly as before: no new tags, nothing hidden.
+	_feat.set_on("ui_motion", false)
+	o = await _open_results(true)
+	hub = o["hub"]
+	mro = hub.find_child("MyMRO", true, false)
+	await create_timer(0.7).timeout
+	var new_tags := ["sheet_in", "reveal", "stagger", "count_up", "fill_bar", "land"]
+	var seen := []
+	for t in _feel.moved:
+		if new_tags.has(t):
+			seen.append(t)
+	_check(seen.is_empty(), "Switch off: no new tags on the result sheet (%s)" % str(_feel.moved))
+	_check(is_equal_approx(mro.modulate.a, 1.0) and hub.find_child("SheetRise", true, false) == null
+			and is_equal_approx(_alpha_chain(hub.find_child("ResultsContinue", true, false)), 1.0),
+			"Switch off: the sheet shows as it always did")
+	hub.queue_free()
+	await _settle()
+	_feat.clear("ui_motion")
+
+
+## A finger at the edge of a landing element, mid-overshoot: the scaled element
+## is hit-tested by its drawn size, so a tap just inside its layout edge and a
+## tap just outside it (inside the drawn edge) both reach it, and nothing else.
+func _test_land_edge_tap() -> void:
+	_feat.set_on("ui_motion", true)
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	var b: Button = _uk.btn("Edge", _uk.NAME, true)
+	b.position = Vector2(120, 300)
+	b.custom_minimum_size = Vector2(150, 56)
+	b.size = Vector2(150, 56)
+	host.add_child(b)
+	await _settle(3)
+	var presses := [0]
+	b.pressed.connect(func(): presses[0] += 1)
+	_feel.clear()
+	Engine.time_scale = 0.05
+	_uk.land(b)
+	await _settle(2)
+	var s1 := b.scale.x
+	var why_in: String = await _tap_at(b, b.get_screen_transform() * Vector2(3, 28))
+	var s2 := b.scale.x
+	_check(why_in == "" and presses[0] == 1 and s1 > 1.05 and s2 > 1.0,
+			"A real tap 3 px inside the edge of a landing button reaches it (%s; scale %.2f, %.2f)" % [why_in, s1, s2])
+	# Just outside the layout edge, inside the drawn edge, mid-overshoot.
+	_feel.clear()
+	Engine.time_scale = 1.0
+	await create_timer(0.8).timeout
+	Engine.time_scale = 0.05
+	_uk.land(b)
+	await _settle(2)
+	# 3 px left of the unscaled layout edge, in screen space: outside the layout,
+	# inside the drawn (scaled) rect.
+	var why_out: String = await _tap_at(b, Vector2(b.position.x - 3.0, b.position.y + 28.0))
+	_check(why_out == "" and presses[0] == 2 and b.scale.x > 1.05,
+			"A tap just outside the layout edge but inside the drawn edge also reaches it mid-overshoot (%s; scale %.2f)" % [why_out, b.scale.x])
+	Engine.time_scale = 1.0
+	await create_timer(0.8).timeout
+	_check(is_equal_approx(b.scale.x, 1.0), "The button is back at rest")
+	# Effect nodes never take a touch.
+	var ok := true
+	for c in host.get_children():
+		if c is Control and not c is BaseButton and (c as Control).mouse_filter != Control.MOUSE_FILTER_IGNORE:
+			ok = false
+	_check(ok, "Every effect node in the host ignores the mouse")
+	_feat.clear("ui_motion")
+	host.queue_free()
+	await _settle()
+
+
+## A touch at an exact screen point; "" when `c` was pressed.
+func _tap_at(c: BaseButton, at: Vector2) -> String:
+	var hit := [false]
+	var on_press := func(): hit[0] = true
+	c.pressed.connect(on_press)
+	for down in [true, false]:
+		var touch := InputEventScreenTouch.new()
+		touch.index = 0
+		touch.position = at
+		touch.pressed = down
+		Input.parse_input_event(touch)
+		Input.flush_buffered_events()
+		await _settle(2)
+	c.pressed.disconnect(on_press)
+	if hit[0]:
+		return ""
+	var top := root.gui_get_hovered_control()
+	return "the tap at %s went to %s" % [str(at), top.name if top != null else "nothing"]

@@ -76,7 +76,15 @@ extends RefCounted
 ##               with its upside, downside, size and length; "Play it straight" is
 ##               gone. A call skipped or left unanswered is no call (nothing is
 ##               stacked or flooded). Off, the call keeps its three options.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two"]
+##   ui_motion   menu juice, first prototype (director, 2026-11-04): the UiKit.Motion tokens
+##               in the helpers, a hardened reveal / count_up / land / attention (an earlier
+##               tween on the same node is stopped first), the Router fade easing out, every
+##               modal sheet fading in with a 6 px rise (UiKit.sheet_in), UiKit.fill_bar, and
+##               the Sim the week result sheet: Verdict lands on a win and fades in on a loss,
+##               the Norm Smith, Injured and MRO lines come in one after another. Scores are
+##               never delayed. Cosmetic only; Reduced motion still stills all of it. Off,
+##               every screen is exactly as before.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "ui_motion"]
 
 static var _forced := {}
 static var _from_args := {}

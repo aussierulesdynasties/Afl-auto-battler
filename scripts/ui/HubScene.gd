@@ -1607,6 +1607,14 @@ func _show_results(results: Array) -> void:
 				UiKit.SMALL, UiKit.MUTED, true))
 		v.add_child(_results_list(others))
 
+	# ui_motion: the week's notes come in one after another, from the first frame.
+	var notes := []
+	for n in ["MyInjured", "MyMRO", "NormSmithMedal"]:
+		var note := v.find_child(n, false, false)
+		if note != null:
+			notes.append(note)
+	UiKit.stagger(notes)
+
 	var ok := UiKit.btn("Continue", UiKit.NAME, true)
 	ok.name = "ResultsContinue"
 	ok.pressed.connect(func():
@@ -1629,6 +1637,13 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 			30, UiKit.TEXT if drew else UiKit.margin_colour(won), true)
 	verdict.name = "MyVerdict"
 	v.add_child(verdict)
+	# ui_motion: a win lands (the scores are shown at once and true); a loss and a
+	# draw are only shown, sober.
+	if UiKit.juice():
+		if won and not drew:
+			UiKit.land(verdict, 0.12)
+		else:
+			UiKit.reveal(verdict)
 	for side in [0, 1]:
 		var row := UiKit.hbox(8)
 		row.name = "MyScore_%d" % side
@@ -1669,11 +1684,13 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 	var hurt := GameState.my_new_injuries()
 	if not hurt.is_empty():
 		var inj := UiKit.lbl("Injured: " + ", ".join(hurt), UiKit.SMALL, UiKit.BAD, true)
+		inj.name = "MyInjured"
 		inj.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(inj)
 	var mro := GameState.my_mro_lines()
 	if not mro.is_empty():
 		var mr := UiKit.lbl("MRO: " + ", ".join(mro), UiKit.SMALL, UiKit.BAD, true)
+		mr.name = "MyMRO"
 		mr.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(mr)
 	if GameState.last_phase == "regular":
