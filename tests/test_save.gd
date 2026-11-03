@@ -36,6 +36,7 @@ func run() -> void:
 	_t("_test_career_facts")
 	_t("_test_player_club_follows_list")
 	_t("_test_card_names_never_blank")
+	_t("_test_bug_bash_round_trips")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Save", self))
@@ -1032,3 +1033,20 @@ func _test_card_names_never_blank() -> void:
 	var odd := {"last": "  ", "name": "Cal", "generic_name": "Cal"}
 	_check(GameDB.card_surname(odd) == "Cal", "a one-word name still shows")
 	_check(GameDB.card_surname({"last": "Gawn"}) == "Gawn", "a listed player keeps his surname")
+
+
+## Bug bash 2026-11-03: last season's ladder survives a reload, and an old
+## save (no milestone_log) written after the Grand Final counts that season once.
+func _test_bug_bash_round_trips() -> void:
+	_new_season("SYD")
+	GameState._last_finish = {"ADE": 1, "SYD": 2}
+	_check(GameState.save_career() and GameState.load_career(), "The career saves and loads")
+	_check(GameState.last_finish_of("ADE") == 1 and GameState.last_finish_of("SYD") == 2,
+			"Last season's ladder positions survive a reload (%s)" % str(GameState._last_finish))
+	var r: Dictionary = GameState.my_ladder_row()
+	GameState.honour_roll.append({"year": GameState.season_year, "my_club": "SYD",
+			"my_record": "%d-%d-%d" % [int(r["w"]), int(r["l"]), int(r["d"])], "my_finals": ""})
+	var c: Dictionary = Milestones.from_history(GameState)["coach"]
+	_check(int(c["games"]) == int(r["w"]) + int(r["l"]) + int(r["d"]),
+			"This season's honour-roll entry is not counted on top of the live season (%s)" % str(c))
+	GameState.honour_roll.pop_back()
