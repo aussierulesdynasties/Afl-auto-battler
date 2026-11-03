@@ -3055,7 +3055,7 @@ func _test_break_panes_layout() -> void:
 				return -1
 			_check(cols.size() == 3, "Three call columns at 1280x720 (%d)" % cols.size())
 			_check(int(col_of.call("PlanPicker")) == 0, "The game plan leads the first column (column %d)" % int(col_of.call("PlanPicker")))
-			_check(int(col_of.call("TagPicker")) == 1 and int(col_of.call("BreakMatchups")) >= 0,
+			_check(int(col_of.call("TagPicker")) == 1 and int(col_of.call("BreakMatchups")) == 1,
 					"The tag leads the second column; the key match-ups are in the columns")
 			_check(int(col_of.call("PepPicker")) >= 0 and int(col_of.call("DefenceSetupPicker")) >= 0,
 					"The pep talk and the defensive set-up are in the columns")
@@ -3072,8 +3072,8 @@ func _test_break_panes_layout() -> void:
 			for t in heights:
 				worst = maxf(worst, (tallest - float(t)) / tallest)
 			# Three columns before the bounce (director, 2026-11-03): no column
-			# stands more than a fifth empty.
-			_check(worst <= 0.20, "No column stands more than a fifth empty (%.0f%%: %s)" % [worst * 100.0, str(heights)])
+			# stands more than 30% empty, with Tag and Key match-ups kept together.
+			_check(worst <= 0.30, "No column stands more than 30%% empty (%.0f%%: %s)" % [worst * 100.0, str(heights)])
 			var bsc: ScrollContainer = null
 			var up: Node = cols_node
 			while up != null and bsc == null:
