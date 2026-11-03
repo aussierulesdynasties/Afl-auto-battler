@@ -66,6 +66,7 @@ func run() -> void:
 	_t("_test_run_call_once_a_run")
 	_t("_test_late_bounce_reachable")
 	_t("_test_bounce_once")
+	_t("_test_ballup_two")
 	_t("_test_ruck_never_tags")
 	_t("_test_current_club_identity")
 	_t("_test_tag_ends_with_injury")
@@ -2389,6 +2390,51 @@ func _test_late_bounce_reachable() -> void:
 	sim.at_centre = true
 	sim.current_quarter = 3
 	_check(not sim._boundary_moment(), "...and only in the last quarter")
+
+
+## Row 15 (switch ballup_two): the late centre ball-up is two distinct calls,
+## each with an upside, a downside and a length; unanswered is no call.
+func _test_ballup_two() -> void:
+	var ask := func(on: bool) -> MatchSim:
+		Features.set_on("ballup_two", on)
+		var sim := _sim(4400, "MEL", "CAR")
+		sim.moment_side = 0
+		sim.current_quarter = 4
+		sim.current_minute = 106
+		sim.at_centre = true
+		for side in range(2):
+			(sim.team_stats[side] as Dictionary)["goals"] = 10.0
+		sim._boundary_moment()
+		return sim
+	var off: MatchSim = ask.call(false)
+	_check((off.pending_moment["options"] as Array).size() == 3, "Switch off: the late ball-up call keeps its three options")
+	_check(int(off.pending_moment["default"]) == 2, "Switch off: skipped, it plays straight as before")
+	var sim: MatchSim = ask.call(true)
+	var opts: Array = sim.pending_moment.get("options", [])
+	_check(str(sim.pending_moment.get("kind", "")) == "bounce" and opts.size() == 2, "Switch on: two choices at the late ball-up (%d)" % opts.size())
+	_check(str(opts[0]["key"]) == "stack" and str(opts[1]["key"]) == "flood", "...Stack the stoppage and Flood behind the ball")
+	var said_good := true
+	var ranked := false
+	for o in opts:
+		said_good = said_good and str(o["gain"]).begins_with("Gain: ") and str(o["cost"]).begins_with("Cost: ") 				and str(o["gain"]).contains("%") and (str(o["gain"]).contains("minutes") or str(o["gain"]).contains("siren"))
+		for w in ["best", "better choice", "recommend", "safer"]:
+			ranked = ranked or (str(o["gain"]) + str(o["cost"]) + str(o["label"])).to_lower().contains(w)
+	_check(said_good, "Each choice has an upside, a downside, a size and a length")
+	_check(not ranked, "Neither choice is called better")
+	_check(sim.pending_moment["options"][0]["gain"] != sim.pending_moment["options"][1]["gain"]
+			and str(opts[0]["cost"]) != str(opts[1]["cost"]), "The two choices differ in upside and downside")
+	# Unanswered (Skip, auto-play) is no call: nothing stacked or flooded.
+	var side := int(sim.pending_moment.get("side", 0))
+	var res := sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
+	_check(int(res.get("choice", 0)) == -1 and (sim.bursts[side] as Dictionary).is_empty(), "Unanswered, no call is made")
+	# Each choice takes effect.
+	var a: MatchSim = ask.call(true)
+	a.resolve_moment(0)
+	_check((a.bursts[int(a.moments.back()["side"])] as Dictionary).has("stack"), "Stack the stoppage is on")
+	var b: MatchSim = ask.call(true)
+	b.resolve_moment(1)
+	_check((b.bursts[int(b.moments.back()["side"])] as Dictionary).has("flood"), "Flood behind the ball is on")
+	Features.clear("ballup_two")
 
 
 ## A tag is a midfielder's job (the director's PC playtest, 2026-10-07: the
