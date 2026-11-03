@@ -87,7 +87,12 @@ extends RefCounted
 ##               concrete football moves (stack the centre bounce, or flood behind the ball),
 ##               shown as a centre ball-up scene, each with what it does and costs as a
 ##               percentage. Off, the card is Throw numbers / Slow it down / Ride it out.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause"]
+##   decision_scenes   row 13 (director, 2026-11-04): the in-match calls that were text
+##               cards (tired, duel, hot, momentum, set shot) open on a close-up scene of
+##               the players they are about, like the centre-bounce call (DecisionVignette).
+##               Off, they are the text cards they were. Settings > Vignettes off also
+##               keeps the card.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes"]
 
 static var _forced := {}
 static var _from_args := {}
