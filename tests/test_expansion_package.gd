@@ -431,6 +431,7 @@ func _test_who_a_rival_keeps() -> void:
 		p["contract_years"] = 1
 		p["age"] = 26.0
 		p.erase("retiring")
+		p.erase("rehab")   # rehab lifts his rating to his potential (TradeValue.rating): he would be needed
 		if case == "let go":
 			for q in list:
 				if q != p:
