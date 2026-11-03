@@ -1781,6 +1781,8 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# Undecided assistants stay; then no staff job starts the season empty.
 	_settle_staff_contracts()
 	_fill_open_staff()
+	# Coach arcs: a club change decided at the season's close is made now.
+	ClubMoves.apply_move(self)
 	# The season's close normally counted careers already (Career skips a
 	# season it has seen); this covers a season rolled on without one.
 	if season != null:
@@ -5353,6 +5355,8 @@ func _close_season_awards() -> void:
 	_close_season_achievements()
 	_board_season_end()
 	_coaching_offseason()
+	# Coach arcs: a sacked or poached coach changes clubs (ClubMoves).
+	ClubMoves.season_close(self)
 	_season_news()
 
 
