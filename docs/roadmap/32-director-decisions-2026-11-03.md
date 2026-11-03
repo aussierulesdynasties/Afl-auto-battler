@@ -61,3 +61,7 @@ his differs, the later one wins. Nothing here edits the bible.
   most pressing of: a pending press question, an open assistant approach, no captain named, a young player ready for
   backing (could be backed, rated within 3 of the list's 22nd best), a pre-season captaincy review (BigCalls.gd). One
   call per week, kept in week_checks (saved), ticked when dealt with. Behind weekly_checklist and coach_arcs; off, as before.
+- PC pre-bounce break, Tag with Key match-ups: on the three-column PC break (1280x720 and wider, _deal_calls) the Tag
+  block and the Key match-ups block stay together in the Tag's column; #878's split, made so every column was within
+  a fifth empty, is reversed. The balance check loosens to 30% empty (the best split with them together measured
+  28% at 1280x720: 261, 363, 308). The phone and 768-1199 layouts are unchanged.
