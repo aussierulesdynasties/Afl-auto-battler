@@ -38,7 +38,8 @@ const KINDS := ["club", "player"]
 ## Facts an arc's text may name beyond the deck's own (ClubArcs.arc_facts).
 const ARC_FACTS := ["chairman", "journalist", "rival_club", "father", "seasons_coached",
 		"coach_games", "coach_flags", "drought", "arc_year", "arc_seasons", "opp_is_rival",
-		"old_club", "old_chairman", "former", "suitor", "suitor_president", "assistant", "assistant_to", "opp_is_old"]
+		"old_club", "old_chairman", "former", "suitor", "suitor_president", "assistant", "assistant_to", "opp_is_old",
+		"arc_times", "flag_year", "flag_years_on", "flag_reunion"]
 ## Facts a closing rule reads at a season's start (ClubArcs.close_facts).
 const CLOSE_FACTS := ["sacked", "warned", "premiers", "met", "board", "here", "morale", "ladder_last"]
 
@@ -118,7 +119,7 @@ static func can_start(def: Dictionary, st: Dictionary, year: int) -> bool:
 
 
 static func start(st: Dictionary, def: Dictionary, year: int, w: int, who: String, mem: Dictionary) -> Dictionary:
-	var rec := {"start": year, "start_w": w, "beat": 0, "last_w": w, "last_year": year, "wait_from": w,
+	var rec := {"id": str(def["id"]), "start": year, "start_w": w, "beat": 0, "last_w": w, "last_year": year, "wait_from": w,
 			"who": who, "mem": mem.duplicate(), "flags": {}}
 	st["active"][str(def["id"])] = rec
 	return rec
@@ -203,6 +204,10 @@ static func closing(def: Dictionary, rec: Dictionary, facts: Dictionary, year: i
 	for r in def.get("close", []):
 		if bool(r.get("beats_done", false)) and not all_done and not expired:
 			continue
+		# An arc that runs on ends only by a rule with conditions (or by
+		# running its seasons), never by the always-rule.
+		if bool(def.get("runs_on", false)) and not expired and (r.get("when", {}) as Dictionary).is_empty():
+			continue
 		if meets(facts, r.get("when", {}), rec.get("flags", {})):
 			return str(r.get("ending", ""))
 	return "faded" if expired else ""
@@ -254,7 +259,8 @@ static func validate(defs: Array) -> Array:
 			errs.append_array(_text(id + "/" + str(e), str(endings[e].get("line", "")), player))
 			if absi(int(endings[e].get("board", 0))) > int(StoryDeck.CAPS["board"]):
 				errs.append("%s/%s: an ending's board change is past the cap" % [id, str(e)])
-		errs.append_array(_text(id, str(d.get("start_line", "")), player))
+		errs.append_array(_text(id, JSON.stringify(d.get("start_line", "")), player))
+		errs.append_array(_text(id, str(d.get("season_line", "")), player))
 		for b in beats:
 			var bid := str(b.get("id", ""))
 			if bid == "" or beat_ids.has(bid) or deck_ids.has(bid):
@@ -271,6 +277,7 @@ static func validate(defs: Array) -> Array:
 				c.erase("arc")
 			card.erase("gap"); card.erase("next_season"); card.erase("skip_after"); card.erase("subject_where")
 			card.erase("when")
+			_strip_arc_conds(card)
 			for line in StoryDeck._check_card(_untokened(card)):
 				errs.append("%s: %s" % [id, line])
 			for k in (b.get("when", {}) as Dictionary):
@@ -284,6 +291,26 @@ static func validate(defs: Array) -> Array:
 				if end != "" and not endings.has(end):
 					errs.append("%s/%s: names an ending '%s' the arc does not have" % [bid, str(c.get("key", "")), end])
 	return errs
+
+
+## Takes the arc's own facts out of a beat's title, text and choice cases (the
+## deck's checks do not know them).
+static func _strip_arc_conds(card: Dictionary) -> void:
+	var conds: Array = []
+	for field in ["title", "text"]:
+		for v in card.get(field, []):
+			if v is Dictionary and (v as Dictionary).get("when") is Dictionary:
+				conds.append(v["when"])
+	for c in card.get("choices", []):
+		if (c as Dictionary).get("when") is Dictionary:
+			conds.append(c["when"])
+	for cond in conds:
+		for k in (cond as Dictionary).keys():
+			var base := str(k)
+			for suffix in ["_min", "_max", "_every"]:
+				base = base.trim_suffix(suffix)
+			if ARC_FACTS.has(base):
+				(cond as Dictionary).erase(k)
 
 
 ## A beat with the arc's own names swapped for a club fact, so the deck's checks read it.

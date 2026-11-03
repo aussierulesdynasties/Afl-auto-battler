@@ -860,7 +860,7 @@
    "kind": "drought",
    "seasons_min": 5
   },
-  "max_seasons": 1,
+  "max_seasons": 40,
   "cooldown_seasons": 2,
   "start_line": "{drought} seasons under this coach and no flag. {chairman} is counting.",
   "beats": [
@@ -1025,8 +1025,13 @@
    "another_miss": {
     "line": "Another season without a flag. The drought goes on.",
     "board": -8
+   },
+   "moved_on": {
+    "line": "The coach leaves {club} without the flag the drought was about."
    }
-  }
+  },
+  "runs_on": true,
+  "season_line": "{drought} seasons at {club} and still no flag. The drought goes on."
  },
  {
   "id": "star_wants_out",
@@ -1802,6 +1807,9 @@
    },
    "coaching_on": {
     "line": "The coach's legacy is set. He coaches on, with no successor named."
+   },
+   "moved_on": {
+    "line": "The coach leaves {club}. His legacy there is still being talked about."
    }
   }
  },
@@ -2104,9 +2112,21 @@
      }
     },
     "title": [
+     {
+      "when": {
+       "arc_times_min": 1
+      },
+      "text": "{name} asks you again"
+     },
      "{name} asks you straight"
     ],
     "text": [
+     {
+      "when": {
+       "arc_times_min": 1
+      },
+      "text": "Another club, another offer: {suitor} this time. {name} has been here before with you. Are you going?"
+     },
      "The rumours have reached the rooms. Your captain {name} asks if you are leaving for {suitor}."
     ],
     "choices": [
@@ -2128,6 +2148,9 @@
       "result": "You tell him what you know. He respects it.",
       "arc": {
        "flag": "told_truth"
+      },
+      "when": {
+       "arc_times_max": 0
       }
      },
      {
@@ -2141,6 +2164,50 @@
        }
       ],
       "result": "You look him in the eye and say no. He goes back to training.",
+      "arc": {
+       "flag": "denied"
+      },
+      "when": {
+       "arc_times_max": 0
+      }
+     },
+     {
+      "key": "truth_again",
+      "label": "Tell him the truth",
+      "when": {
+       "arc_times_min": 1
+      },
+      "effects": [
+       {
+        "op": "trust",
+        "d": 3,
+        "why": "You told him the truth about the second offer"
+       },
+       {
+        "op": "morale",
+        "who": "side",
+        "d": -2
+       }
+      ],
+      "result": "You tell him it is {suitor} this time, and what they offered. He nods. He has heard it before.",
+      "arc": {
+       "flag": "told_truth"
+      }
+     },
+     {
+      "key": "deny_again",
+      "label": "Deny it",
+      "when": {
+       "arc_times_min": 1
+      },
+      "effects": [
+       {
+        "op": "trust",
+        "d": -3,
+        "why": "You lied to him about another offer"
+       }
+      ],
+      "result": "You say no again. He does not look as sure this time.",
       "arc": {
        "flag": "denied"
       }
@@ -2185,20 +2252,42 @@
   "catalogue": 7,
   "kind": "club",
   "trigger": {
-   "kind": "reunion"
+   "kind": "reunion",
+   "club_every": 10,
+   "anniversary": 10
   },
   "max_seasons": 1,
   "cooldown_seasons": 2,
-  "start_line": "{club} against {old_club}: the coach meets his old club.",
+  "start_line": [
+   {
+    "when": {
+     "flag_reunion": true
+    },
+    "text": "{club} against {old_club}, {flag_years_on} years on from the {flag_year} {old_club} premiership the coach won there."
+   },
+   "{club} against {old_club}: the coach meets his old club."
+  ],
   "beats": [
    {
     "id": "arc_reunion_grudge",
     "category": "rivals",
     "gap": 0,
     "title": [
+     {
+      "when": {
+       "flag_reunion": true
+      },
+      "text": "The {flag_year} premiership side"
+     },
      "Grudge match"
     ],
     "text": [
+     {
+      "when": {
+       "flag_reunion": true
+      },
+      "text": "{old_club} bring back the {flag_year} premiership side for a lap before the game, {flag_years_on} years on. The coach who won it is in the other box."
+     },
      "The papers call {old_club} this week a grudge match. {former}, who you coached there, lines up against you."
     ],
     "choices": [
@@ -2253,6 +2342,12 @@
      "The handshake"
     ],
     "text": [
+     {
+      "when": {
+       "flag_reunion": true
+      },
+      "text": "After the game, {old_chairman} waits by the race with a {flag_year} premiership medal to sign. The cameras are on you both."
+     },
      "After the {old_club} game, {old_chairman} waits by the race. The cameras are on you both."
     ],
     "choices": [
