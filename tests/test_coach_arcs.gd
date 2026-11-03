@@ -392,14 +392,42 @@ func _test_reunion() -> void:
 	_check(CoachArcs.closing(def, rec, {}, GameState.season_year + 1) == "remembered", "reunion: a win resolves 'remembered'")
 	rec["flags"].erase("won")
 	_check(CoachArcs.closing(def, rec, {}, GameState.season_year + 1) == "reconciled", "reunion: a gracious loss resolves 'reconciled'")
-	# Once told, the reunion with this club is over: no second grudge match or
-	# handshake with the same chairman, even after the cooldown.
+	# The same old club comes round again only once every 10 seasons.
 	ClubArcs._end(GameState, st, def, rec, "reconciled", "Season start")
 	_check(not (st["active"] as Dictionary).has("reunion"), "reunion: an ended reunion is no longer active")
-	st["done"]["reunion"]["year"] = int(GameState.season_year) - 10
+	var year := int(GameState.season_year)
+	var hist: Dictionary = {}
+	for h in st["coach"]["clubs"]:
+		if str(h.get("code", "")) == old:
+			hist = h
+	_check(int(hist.get("reunion", 0)) == year, "reunion: the old club's last reunion is kept: %s" % str(hist))
 	club["opp"] = GameDB.club_name(old)
-	_check(ClubMoves.reunion_trigger(GameState, st, club, ctx, false).is_empty(),
-			"reunion: once per old club, it does not start again against %s" % old)
+	for back in [1, 5, 9]:
+		hist["reunion"] = year - back
+		_check(ClubMoves.reunion_trigger(GameState, st, club, ctx, false).is_empty(),
+				"reunion: blocked %d season(s) after the last one against %s" % [back, old])
+	hist["reunion"] = year - 10
+	_check(not ClubMoves.reunion_trigger(GameState, st, club, ctx, false).is_empty(),
+			"reunion: allowed again 10 seasons after the last one against %s" % old)
+	# A flag won there: the premiership reunion on its 10-year anniversary,
+	# even inside the cooldown, naming the flag year and the club.
+	hist["reunion"] = year - 1
+	var flag_row := {"year": year - 10, "premier": old, "my_club": old, "my_position": 1}
+	GameState.honour_roll.append(flag_row)
+	var anniv := ClubMoves.reunion_trigger(GameState, st, club, ctx, false)
+	_check(bool(anniv.get("mem", {}).get("flag_reunion", false)) and int(anniv.get("mem", {}).get("flag_year", 0)) == year - 10,
+			"reunion: a flag club gets the anniversary reunion: %s" % str(anniv))
+	if not anniv.is_empty():
+		var arec := CoachArcs.start(st, def, year, GameState.story_week(), "", anniv["mem"])
+		var sline := ClubArcs._start_line(def, ClubArcs._facts(GameState, st, arec, club))
+		_check(sline.find(str(year - 10)) >= 0 and sline.find(GameDB.club_name(old)) >= 0 and sline.find("premiership") >= 0,
+				"reunion: the anniversary names the flag year and the team: %s" % sline)
+		ClubArcs._end(GameState, st, def, arec, "enjoyed", "Season start")
+		_check(int(hist.get("anniv", 0)) == year, "reunion: the anniversary is marked once told")
+		_check(ClubMoves.reunion_trigger(GameState, st, club, ctx, false).is_empty(), "reunion: one anniversary reunion a year")
+	GameState.honour_roll.erase(flag_row)
+	hist.erase("anniv")
+	hist["reunion"] = year
 
 
 ## The drought counts seasons at the club he coaches now, not his whole career.
@@ -414,6 +442,12 @@ func _test_drought_counts_this_club() -> void:
 	_check(ClubArcs._dry(st) == 3, "drought: a flag at the old club does not shorten it here: %d" % ClubArcs._dry(st))
 	st["coach"].merge({"seen": 2031, "club": "FRE", "clubs": [{"code": "FRE", "from": 2027, "to": 0}], "last_flag": 0}, true)
 	_check(ClubArcs._dry(st) == 5, "drought: one club, every season counted: %d" % ClubArcs._dry(st))
+	# One drought runs until a flag (or a club change), not one a season.
+	var def := CoachArcs.by_id(CoachArcs.all(), "drought")
+	var rec := CoachArcs.start(st, def, 2032, 0, "", {})
+	rec["beat"] = (def["beats"] as Array).size()
+	_check(CoachArcs.closing(def, rec, {"premiers": false}, 2035) == "", "drought: no flag, it runs on into a fourth season")
+	_check(CoachArcs.closing(def, rec, {"premiers": true}, 2035) == "broken", "drought: a flag ends it")
 
 
 ## Arc 11, the other way: backed to go, the assistant takes a rival's senior

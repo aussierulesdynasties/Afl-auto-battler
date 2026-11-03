@@ -238,19 +238,47 @@ static func poach_trigger(gs, st: Dictionary, tr: Dictionary, season_start: bool
 
 
 ## Arc 7: this week's opponent is a club he coached before (not while the way
-## back, which has its own first meeting, still runs), once per old club.
+## back, which has its own first meeting, still runs). The same club comes
+## round again at most once every `club_every` seasons (counted from when its
+## last reunion ended), except a club he won a flag at: in each year a whole
+## `anniversary` of seasons on from that flag, it is the premiership reunion,
+## whatever the cooldown.
 static func reunion_trigger(gs, st: Dictionary, club: Dictionary, ctx: Dictionary, season_start: bool) -> Dictionary:
 	if season_start or str(ctx["phase"]) != "regular" or (st["active"] as Dictionary).has("way_back"):
 		return {}
+	var tr: Dictionary = CoachArcs.by_id(CoachArcs.all(), "reunion").get("trigger", {})
+	var year := int(gs.season_year)
 	for h in st["coach"]["clubs"]:
 		var code := str(h.get("code", ""))
-		if code == str(gs.my_club) or int(h.get("to", 0)) == 0 or int(h.get("reunion", 0)) > 0 				or str(club.get("opp", "")) != GameDB.club_name(code):
+		if code == str(gs.my_club) or int(h.get("to", 0)) == 0 or str(club.get("opp", "")) != GameDB.club_name(code):
+			continue
+		var flag := anniversary_flag(gs, code, year, int(tr.get("anniversary", 10)))
+		if flag > 0 and int(h.get("anniv", 0)) == year:
+			flag = 0
+		var last := int(h.get("reunion", 0))
+		if flag == 0 and last > 0 and year - last < int(tr.get("club_every", 10)):
 			continue
 		var mem := ClubArcs._old_club_mem(gs, st, code)
-		if str(mem["former"]) == "":
+		if str(mem["former"]) == "" and flag == 0:
 			return {}
+		if flag > 0:
+			mem["flag_year"] = flag
+			mem["flag_years_on"] = year - flag
+			mem["flag_reunion"] = true
 		return {"mem": mem}
 	return {}
+
+
+## The flag he won at `code` a whole number of `every` seasons before `year`
+## (the latest, if more than one), or 0.
+static func anniversary_flag(gs, code: String, year: int, every: int) -> int:
+	var best := 0
+	for h in gs.honour_roll:
+		var y := int(h.get("year", 0))
+		if every > 0 and y < year and (year - y) % every == 0 and str(h.get("premier", "")) == code \
+				and str(h.get("my_club", "")) == code:
+			best = maxi(best, y)
+	return best
 
 
 ## Arc 11: a senior assistant with a name while the board wavers.
