@@ -200,6 +200,8 @@ var media_memory := {}           # question key -> last round asked
 ## The match makes the story (switch "match_story"): one record per match of
 ## yours, oldest first (MatchStory.record). Empty, and not saved, while off.
 var match_stories: Array = []
+## The coach's career arcs (ClubArcs; switch "coach_arcs"). Empty while off.
+var coach_arcs := {}
 ## Weeks of running a season-end card took off next pre-season's fitness base
 ## (finals_cards_2, B8 "Celebrate it properly": negative). Read once when the
 ## pre-season opens; with the preseason switch off it is carried and never read.
@@ -762,6 +764,8 @@ func save_career() -> bool:
 		state["canberra_on"] = false
 	if not match_stories.is_empty():
 		state["match_stories"] = match_stories
+	if not coach_arcs.is_empty():
+		state["coach_arcs"] = coach_arcs
 	if preseason_run_debt != 0.0:
 		state["preseason_run_debt"] = preseason_run_debt
 	if Features.on("training_report"):
@@ -913,6 +917,7 @@ func load_career() -> bool:
 	story = StoryEngine.ensure(state.get("story", {}))
 	media_conference = state.get("media_conference", {})
 	match_stories = state.get("match_stories", []) if state.get("match_stories") is Array else []
+	coach_arcs = state.get("coach_arcs", {}) if state.get("coach_arcs") is Dictionary else {}
 	preseason_run_debt = float(state.get("preseason_run_debt", 0.0))
 	backing_talk = state.get("backing_talk", {})
 	media_memory = state.get("media_memory", {})
@@ -1362,6 +1367,7 @@ func reset() -> void:
 	story = StoryEngine.new_state()
 	media_conference = {}
 	match_stories = []
+	coach_arcs = {}
 	preseason_run_debt = 0.0
 	backing_talk = {}
 	media_memory = {}
@@ -9455,6 +9461,7 @@ func _open_board_season() -> void:
 	board.erase("promise")
 	losing_streak = 0
 	StoryEngine.new_season(story)
+	ClubArcs.season_start(self)
 	_next_week_event()
 func board_confidence() -> int:
 	return int(board.get("confidence", ClubLife.START_CONFIDENCE))
@@ -9817,6 +9824,7 @@ func _next_week_event() -> void:
 	if season == null or is_sacked() or not stories_on or my_club == "":
 		return
 	week_events = ClubStories.pick(self)
+	ClubArcs.week(self)
 
 
 func week_event_pending() -> bool:
@@ -9851,6 +9859,7 @@ func _settle_week_event() -> void:
 		card["choice"] = -1
 		card["outcome"] = str(cost.get("text", "Business as usual."))
 		StoryEngine.record_choice(story, card, -1, story_week())
+		ClubArcs.answered(self, card, -1)
 		mark_dirty()
 
 
@@ -9879,6 +9888,7 @@ func resolve_card(index: int, choice: int) -> String:
 	card["resolved"] = true
 	card["choice"] = choice
 	card["outcome"] = out
+	ClubArcs.answered(self, card, choice)
 	mark_dirty()
 	return out
 
