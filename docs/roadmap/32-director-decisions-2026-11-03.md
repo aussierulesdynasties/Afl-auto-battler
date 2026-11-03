@@ -44,6 +44,11 @@ his differs, the later one wins. Nothing here edits the bible.
   (strict matchday check restored). Game plan leads column 1, Tag leads column 2; key match-ups, pep talk, defensive
   set-up and the legs/synergies lines are dealt for balance (tag + match-ups together were ~360 of ~940, so they no
   longer share a column). Phone and 768-1199 layouts unchanged.
+- Competent-AI rule, rotations everywhere: background AI-vs-AI matches, Sim the week, finals weeks and practice matches
+  now run MatchSim.auto_rotation for both sides each quarter on each club's own fitness plan (Season.fitness_plans,
+  stamped weekly; no plan = Steady). Seeded, deterministic. 3 seeded seasons (301-303) before/after: ladder SD
+  17.3 -> 16.8 pts, injuries/game 1.44 -> 1.45, mean workload 6.18 -> 6.18 (noise-level; clubs now run hard ~26%,
+  stars ~11% of quarters). Audit: tools/audit/rotations_season_impl.gd.
 - Cut audit row 6: Manual stat training is gone; only the training plans stay, no hand-buying of stat points. Old saves
   on Manual (own or club plan) load on the plan closest to how each player is built, and his banked XP is spent under it.
 - Practice match guests: the single pre-season practice match trials 6 prospects per club (was 3; data/preseason.json
