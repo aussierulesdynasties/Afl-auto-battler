@@ -34,3 +34,6 @@ docs/research/_review_*/
 
 # Written by the Web build workflow (short commit shown as the build label)
 build_info.txt
+
+# Test dumps for a person to read (coach_arcs story log)
+tests/output/

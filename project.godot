@@ -69,4 +69,5 @@ speccy_front=false
 international_prospects=true
 training_report=false
 player_looks=false
+coach_arcs=false
 club_almanac=false

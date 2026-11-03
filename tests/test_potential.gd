@@ -195,8 +195,9 @@ func _test_training_discount() -> void:
 			mine = q
 	var normal := mine.duplicate(true)
 	normal["potential"] = int(normal["overall"]) + 1
-	var cheap := GameState.train_cost(mine, "disposal")
-	var full := GameState.train_cost(normal, "disposal")
+	var cur := int(mine["attr"]["disposal"])
+	var cheap := GameState._cost_for(cur, float(mine.get("gm", 18.0)), Potential.training_multiplier(mine))
+	var full := GameState._cost_for(cur, float(normal.get("gm", 18.0)), Potential.training_multiplier(normal))
 	_check(cheap > 0 and cheap < full, "Training cost reflects POT (%d vs %d)" % [cheap, full])
 
 
