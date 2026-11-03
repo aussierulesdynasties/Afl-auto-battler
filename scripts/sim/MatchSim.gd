@@ -4477,7 +4477,7 @@ func _check_injuries() -> void:
 		var rec := {"side": side, "id": id, "q": current_quarter, "min": current_minute,
 				"weeks": int(inj["weeks"]), "kind": str(inj["kind"]), "on": on}
 		injuries.append(rec)
-		_emit("injury", side, fp, hurt, "%s is injured (%s)" % [GameDB.player_display_name(hurt), str(inj["kind"])])
+		_emit("injury", side, fp, hurt, "%s is hurt: %s" % [GameDB.player_display_name(hurt), Injuries.wording(str(inj["kind"]))])
 		events[events.size() - 1]["on"] = on
 		if gone:
 			_refill_duel(side, id)

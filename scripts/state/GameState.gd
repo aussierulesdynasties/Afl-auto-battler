@@ -2743,7 +2743,7 @@ func preseason_injury_lines(from := 1, to := 99) -> Array:
 		var p := list_player(str(inj["id"]))
 		if p.is_empty():
 			continue
-		out.append("%s (%s, %s)" % [GameDB.player_display_name(p), str(inj["kind"]),
+		out.append("%s (%s, %s)" % [GameDB.player_display_name(p), Injuries.wording(str(inj["kind"])),
 				_weeks_text(int(inj["weeks"]))])
 	return out
 
@@ -3686,7 +3686,7 @@ func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dicti
 	var hurt := []
 	for r in rows:
 		var hp := list_player(str(r["id"]))
-		hurt.append("%s (%s, %s)" % [GameDB.player_display_name(hp), str(r["kind"]), _weeks_text(int(r["weeks"]))])
+		hurt.append("%s (%s, %s)" % [GameDB.player_display_name(hp), Injuries.wording(str(r["kind"])), _weeks_text(int(r["weeks"]))])
 	last_injuries = rows
 	var score: Array = res.get("score", [0, 0])
 	return {"score": [int(score[0]), int(score[1])], "goals": res.get("goals", [0, 0]), "behinds": res.get("behinds", [0, 0]),

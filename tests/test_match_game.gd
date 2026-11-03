@@ -2577,6 +2577,23 @@ func _test_match_story() -> void:
 	var calm := MatchNotes.turning_points({"home": "MEL", "away": "CAR", "score": [80, 20], "events": [
 		{"kind": "goal", "q": 1, "min": 3, "side": 0, "name": "A", "score": [6, 0]}]}, 0)
 	_check(calm.is_empty(), "A match led from the first goal has no turning point to invent")
+	# Row 18: full injury wording and the scoring run told with when and score.
+	_check(Injuries.wording("hand") == "a hand injury" and Injuries.wording("hamstring") == "a hamstring strain",
+			"Injury kinds read as a coach would say them")
+	var hurt_res := {"home": "MEL", "away": "CAR", "score": [80, 20], "roster": [[{"id": "s1", "overall": 99}], []],
+			"events": [], "injuries": [{"id": "s1", "side": 0, "q": 2, "kind": "hand"}]}
+	var hp := MatchNotes.turning_points(hurt_res, 0)
+	_check(not hp.is_empty() and not str(hp[0]).contains(" to a hand ") and str(hp[0]).contains("a hand injury"),
+			"Full time says a hand injury, not 'to a hand': %s" % str(hp))
+	var run_res := {"home": "MEL", "away": "CAR", "events": [
+		{"kind": "goal", "q": 1, "min": 5, "side": 1, "score": [0, 6]},
+		{"kind": "goal", "q": 3, "min": 68, "side": 0, "score": [6, 6]},
+		{"kind": "goal", "q": 3, "min": 72, "side": 0, "score": [12, 6]},
+		{"kind": "goal", "q": 3, "min": 75, "side": 0, "score": [18, 6]},
+		{"kind": "goal", "q": 3, "min": 80, "side": 0, "score": [24, 6]}]}
+	var rs := MatchNotes.run_sentence(run_res, MatchNotes._longest_run(run_res["events"]))
+	_check(rs == "Melbourne kicked four unanswered goals from 8 minutes into the third quarter, turning Melbourne 0, Carlton 6 into Melbourne 24, Carlton 6.",
+			"The run says when it began and the score before and after: %s" % rs)
 
 
 ## A first AFL goal for one of yours reaches the feed: once a player, never
