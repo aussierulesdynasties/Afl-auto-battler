@@ -59,7 +59,11 @@ extends RefCounted
 ##               brows, the brows one of five chosen by his id, in his hair colour, the eyes
 ##               near black. Off, those styles draw the short crop and no face is drawn.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes"]
+##   kick_range  row 10 (director, 2026-11-03): a kick's receiver must be within the
+##               kicker's reach (MatchSim.kick_range: 30 m + 0.35 x disposal), nearest
+##               teammate when nobody is; every match path shares MatchSim.kick_receiver.
+##               Off, the receiver is the old zone pick from the whole ground.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range"]
 
 static var _forced := {}
 static var _from_args := {}

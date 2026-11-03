@@ -288,6 +288,7 @@ const FORM_CONTEST := 0.010
 
 func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	squads = [home, away]
+	kick_range_on = Features.on("kick_range")
 	# Who starts on the bench, for the match view's bench strip (read only).
 	for sq in squads:
 		var rows := []
@@ -2215,7 +2216,7 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 	if rushed or gain < 18.0 or aerial_rng.randf() >= (AERIAL_CHANCE if zone_intercepts else 0.22):
 		return {}
 	var opp := 1 - side
-	var receiver = pick_carrier(side, mark_fp)
+	var receiver = kick_receiver(side, mark_fp - gain * (1.0 if side == 0 else -1.0), mark_fp, carrier)
 	if receiver == null:
 		return {}
 	var defender = null
@@ -2275,7 +2276,60 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 	return {}
 
 
-func pick_carrier(side: int, fp: float):
+## Kick range (row 10, director 2026-11-03): a kick's receiver must be within
+## the kicker's reach, and better kickers reach further. Read once at set-up
+## (switch kick_range) so threaded week sims never touch ProjectSettings.
+var kick_range_on := false
+## Reach in metres: 30 + 0.35 x his disposal (kicking) rating, so a 40 kicker
+## reaches 44 m, a 70 kicker 54.5 m, a 95 kicker 63 m. The ground is 170 m
+## goal to goal (Ratings goal_line 85), forward 50 at 35 m from the centre.
+const KICK_RANGE_BASE := 30.0
+const KICK_RANGE_PER := 0.35
+## Where each line stands, metres from the centre toward the side's own goal
+## (the sim has no player coordinates; a line's home is its spot in the
+## structure). Defenders sit at the half-back line, forwards at half-forward.
+const LINE_HOME := {"DEF": -50.0, "MID": 0.0, "RUCK": 0.0, "FWD": 50.0}
+
+
+## How far `kicker` can kick, metres.
+static func kick_range(kicker: Dictionary) -> float:
+	var r := float((kicker.get("attr", {}) as Dictionary).get("disposal", 50.0))
+	return KICK_RANGE_BASE + KICK_RANGE_PER * r
+
+
+## The teammates `kicker` can reach from `from_fp` (field position). Nobody
+## in range: the nearest teammate (the short option). Pure: no dice.
+func kick_targets(side: int, from_fp: float, kicker: Dictionary) -> Array:
+	var from_atk := from_fp if side == 0 else -from_fp
+	var reach := kick_range(kicker)
+	var kid := str(kicker.get("id", ""))
+	var pool := []
+	var nearest = null
+	var best := INF
+	for p in (squads[side] as Squad).ground:
+		if str(p["id"]) == kid:
+			continue
+		var d := absf(float(LINE_HOME.get(str(p["role"]), 0.0)) - from_atk)
+		if d <= reach:
+			pool.append(p)
+		if d < best:
+			best = d
+			nearest = p
+	if pool.is_empty() and nearest != null:
+		pool.append(nearest)
+	return pool
+
+
+## The one receiver choice for a kick, used by every match: watched, Sim the
+## week and AI v AI all run this MatchSim. Switch off: the old carrier pick.
+func kick_receiver(side: int, from_fp: float, to_fp: float, kicker):
+	if not kick_range_on or kicker == null:
+		return pick_carrier(side, to_fp)
+	var pool := kick_targets(side, from_fp, kicker)
+	return pick_carrier(side, to_fp, pool if not pool.is_empty() else [])
+
+
+func pick_carrier(side: int, fp: float, among: Array = []):
 	var T := _rates()
 	var sq: Squad = squads[side]
 	var atk_fp := fp if side == 0 else -fp
@@ -2297,7 +2351,7 @@ func pick_carrier(side: int, fp: float):
 		key = "disposal"
 		purpose = "transition"
 	var sizes: Dictionary = LEAD_UP_SIZES if zone == "middle" or zone == "attack" else {}
-	return _weighted_roles(sq.ground, key, CARRY_ROLES[zone], 2.0, side, purpose, sizes, zone)
+	return _weighted_roles(sq.ground if among.is_empty() else among, key, CARRY_ROLES[zone], 2.0, side, purpose, sizes, zone)
 
 
 ## The primary kick-in player: a defender who can use and carry the ball.
@@ -2628,13 +2682,18 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 	# "up" uncontested (a handball receive, an uncontested mark), "cp" in a
 	# contest, "gb" a ground ball won in a contest (POSSESSION_GAINS).
 	var next_gain := ""
+	# The last kick, for the next carrier's pick (kick_receiver): its kicker
+	# and where it was kicked from. null after a handball.
+	var last_kicker = null
+	var last_kick_fp := 0.0
 	while touches < max_touches:
 		touches += 1
 		if pending != null:
 			_effective(side, pending)
 			pending = null
 		var is_kick_in := from_kick_in and touches == 1
-		var carrier = kick_in_taker(side) if is_kick_in else pick_carrier(side, fp)
+		var carrier = kick_in_taker(side) if is_kick_in else kick_receiver(side, last_kick_fp, fp, last_kicker)
+		last_kicker = null
 		if touches == 1 and clearance_keeps and cleared != null and not is_kick_in:
 			carrier = cleared
 		# He marked it, so he takes the kick: the carrier pick is still drawn,
@@ -2684,6 +2743,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			disposal_event = events.size() - 1
 		else:
 			disposal_kind = "kick"
+			last_kicker = carrier
+			last_kick_fp = fp
 			if counts_disposal:
 				_t(side, "kicks")
 				_p(carrier, "kicks")
@@ -2827,6 +2888,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		if _burst(side, "flood") or _burst(side, "hold"):
 			gain *= BACK_GAIN
 		gain *= rng.randf_range(0.45, 1.75)
+		if kick_range_on and disposal_kind == "kick":
+			gain = minf(gain, kick_range(carrier))
 		if is_kick_in:
 			gain *= 0.82 if not kick_in_play_on else 1.12
 		if rushed:

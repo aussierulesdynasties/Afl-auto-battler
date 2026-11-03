@@ -29,6 +29,8 @@ his differs, the later one wins. Nothing here edits the bible.
 | 18 | Which attributes does a card's top three rank? | all 13, Durability and Star power included | PlayerProfile.TOP_KEYS holds all 13 (switch top_attributes, off until he plays it); open-requirements row 1 |
 | 19 | Change the Needs work cutoffs or benchmark? | no | the existing cutoffs and the 2026 positional benchmark stay |
 | 20 | What does a hidden-rating prospect show? | the scout grade word | draft detail names his top three with the scouts' grade word, never a number |
+| 21 | Row 10 receiver choice: can a kick go to anyone on the ground? | no: the receiver is capped by a maximum kick distance from the kicker's kicking rating; better kickers reach further; nearest teammate when nobody is in range | `MatchSim.kick_range` = 30 m + 0.35 x disposal (44 m at 40, 63 m at 95); `kick_targets` keeps teammates whose line home (DEF -50, MID/RUCK 0, FWD +50 m from centre) is in reach; switch `kick_range` (off) |
+| 22 | Row 10: does the simulated match (Sim the week, AI v AI) choose receivers the same way as the watched match? | yes, one shared function, no duplicate | every path runs `MatchSim.kick_receiver` (the open-play next carrier and the general-play aerial receiver); tested same state and seed, same receiver |
 
 - **Row 37 draft logic, later ruling (2026-11-03):** the buff also applies to the user's "Pick for me", and the sim must
   be extremely competent: every club, the user's included, acts in its own best interest at all times; mistakes come
