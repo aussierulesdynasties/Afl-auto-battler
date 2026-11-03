@@ -2440,8 +2440,15 @@ func _show_moment() -> void:
 					"q": int(GameState.pending_sim.pending_moment.get("q", 0))})
 		_km_slow("moment")
 	var m: Dictionary = GameState.pending_sim.pending_moment
-	var bounce := str(m.get("kind", "")) == "bounce"
+	# The late centre ball-up call, and the run of goals against (row 14), both
+	# put to the coach over a centre ball-up.
+	var bounce := str(m.get("kind", "")) == "bounce" or bool(m.get("moves", false))
 	if bounce and GameState.vignettes_on():
+		_show_bounce_moment(m)
+		return
+	# Row 13: every other call is a scene too (Features "decision_scenes"; off, the card).
+	if Features.on("decision_scenes") and GameState.vignettes_on() \
+			and DecisionVignette.has_scene(str(m.get("kind", ""))):
 		_show_bounce_moment(m)
 		return
 	# Sized for its few lines, not the whole phone.
@@ -2454,7 +2461,7 @@ func _show_moment() -> void:
 	var title := UiKit.lbl(str(m.get("title", "")), 20, UiKit.EMPH, true)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(title)
-	if bounce:
+	if bounce and not bool(m.get("moves", false)):
 		# Vignettes off: the centre ball-up call without its scene, the same
 		# facts the scene would have put over it.
 		for f in StoppageVignette.call_facts(GameState.pending_sim, _my_side):
@@ -2489,11 +2496,19 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	overlay.name = "MomentCard"
 	overlay.set_meta("scene", true)
 	_moment_overlay = overlay
-	var vignette := StoppageVignette.new()
-	vignette.name = "StoppageVignette"
+	var vignette: StoppageVignette
+	if str(m.get("kind", "")) == "bounce" or bool(m.get("moves", false)):
+		vignette = StoppageVignette.new()
+		vignette.name = "StoppageVignette"
+	else:
+		vignette = DecisionVignette.new()
+		vignette.name = "DecisionVignette"
 	overlay.add_child(vignette)
 	vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	vignette.setup(GameState.pending_sim, _my_side, str(m.get("title", "")))
+	if vignette is DecisionVignette:
+		(vignette as DecisionVignette).setup_decision(GameState.pending_sim, _my_side, m)
+	else:
+		vignette.setup(GameState.pending_sim, _my_side, str(m.get("title", "")))
 	# The call, held below the screen until the scene freezes.
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2511,7 +2526,8 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	hold.add_child(panel)
 	var call := UiKit.vbox(6)
 	panel.add_child(call)
-	for f in vignette.facts:
+	# The run-of-goals call is about the goals, not the stoppages: no ruck line.
+	for f in ([] if bool(m.get("moves", false)) else vignette.facts):
 		var fl := _say(str(f), UiKit.BODY, UiKit.TEXT, true)
 		fl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		call.add_child(fl)

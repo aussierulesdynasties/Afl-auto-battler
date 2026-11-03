@@ -66,6 +66,13 @@ extends RefCounted
 ##               kicker's reach (MatchSim.kick_range: 30 m + 0.35 x disposal), nearest
 ##               teammate when nobody is; every match path shares MatchSim.kick_receiver.
 ##               Off, the receiver is the old zone pick from the whole ground.
+##   clanger_cause   row 12 (director, 2026-11-04): a clanger that ends a chain on a wet or
+##               windy day is the last touch's and says why (the weather raises the rate,
+##               so it is a real cause; MatchSim.clanger_why; the oval names it over the
+##               player, the match feed stays as is). Off, the clanger is a weighted pick
+##               from the ground and reads "gives away a clanger". On, player credit for
+##               clangers moves to the last carrier (the player clangers stat, notes and
+##               ratings); team totals, score and events are unchanged.
 ##   match_flow  row 11 (director, 2026-10-10): stoppages come from contests that lock up
 ##               (a held tackle, a rushed kick into a pack, a spoil in the pocket), a won ball
 ##               after an intercept or a free is played on, chains are shorter and more
@@ -76,6 +83,15 @@ extends RefCounted
 ##               with its upside, downside, size and length; "Play it straight" is
 ##               gone. A call skipped or left unanswered is no call (nothing is
 ##               stacked or flooded). Off, the call keeps its three options.
+##   goal_run_moves  row 14 (director, 2026-11-03): the three-goal run against you offers two
+##               concrete football moves (stack the centre bounce, or flood behind the ball),
+##               shown as a centre ball-up scene, each with what it does and costs as a
+##               percentage. Off, the card is Throw numbers / Slow it down / Ride it out.
+##   decision_scenes   row 13 (director, 2026-11-04): the in-match calls that were text
+##               cards (tired, duel, hot, momentum, set shot) open on a close-up scene of
+##               the players they are about, like the centre-bounce call (DecisionVignette).
+##               Off, they are the text cards they were. Settings > Vignettes off also
+##               keeps the card.
 ##   ui_motion   menu juice, first prototype (director, 2026-11-04): the UiKit.Motion tokens
 ##               in the helpers, a hardened reveal / count_up / land / attention (an earlier
 ##               tween on the same node is stopped first), the Router fade easing out, every
@@ -84,7 +100,7 @@ extends RefCounted
 ##               the Norm Smith, Injured and MRO lines come in one after another. Scores are
 ##               never delayed. Cosmetic only; Reduced motion still stills all of it. Off,
 ##               every screen is exactly as before.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "ui_motion"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion"]
 
 static var _forced := {}
 static var _from_args := {}
