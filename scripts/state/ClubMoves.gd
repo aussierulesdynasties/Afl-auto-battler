@@ -76,6 +76,10 @@ static func _close_for_move(gs, st: Dictionary) -> void:
 		if (MOVE_ENDINGS.get(str(id), []) as Array).has(own) or str(id) == "reunion":
 			ClubArcs._end(gs, st, def, rec, own, "Season end")
 			continue
+		# An arc with its own line for him leaving says it.
+		if (def.get("endings", {}) as Dictionary).has("moved_on"):
+			ClubArcs._end(gs, st, def, rec, "moved_on", "Season end")
+			continue
 		var name := str(rec.get("mem", {}).get("name", ""))
 		var line := "%s stays at %s: the coach has moved on." % [name, GameDB.club_name(gs.my_club)] if str(def.get("kind", "")) == "player" and name != "" \
 				else "%s stays behind at %s: the coach has moved on." % [str(def.get("name", id)), GameDB.club_name(gs.my_club)]
@@ -234,13 +238,13 @@ static func poach_trigger(gs, st: Dictionary, tr: Dictionary, season_start: bool
 
 
 ## Arc 7: this week's opponent is a club he coached before (not while the way
-## back, which has its own first meeting, still runs).
+## back, which has its own first meeting, still runs), once per old club.
 static func reunion_trigger(gs, st: Dictionary, club: Dictionary, ctx: Dictionary, season_start: bool) -> Dictionary:
 	if season_start or str(ctx["phase"]) != "regular" or (st["active"] as Dictionary).has("way_back"):
 		return {}
 	for h in st["coach"]["clubs"]:
 		var code := str(h.get("code", ""))
-		if code == str(gs.my_club) or int(h.get("to", 0)) == 0 or str(club.get("opp", "")) != GameDB.club_name(code):
+		if code == str(gs.my_club) or int(h.get("to", 0)) == 0 or int(h.get("reunion", 0)) > 0 				or str(club.get("opp", "")) != GameDB.club_name(code):
 			continue
 		var mem := ClubArcs._old_club_mem(gs, st, code)
 		if str(mem["former"]) == "":

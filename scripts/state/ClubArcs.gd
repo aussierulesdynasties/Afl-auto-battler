@@ -96,6 +96,10 @@ static func week(gs) -> void:
 	if not on(gs) or gs.season == null:
 		return
 	var st := _st(gs)
+	# The rollover builds the new season before its pre-season opens: that
+	# first pick is not Round 1, so no arc starts or plays in it.
+	if _rollover_pick(gs, st):
+		return
 	_people(gs, st)
 	if int(st["counts"].get("year", 0)) != int(gs.season_year):
 		st["counts"] = {"year": int(gs.season_year), "refusals": 0, "statements": 0}
@@ -194,12 +198,24 @@ static func _facts(gs, st: Dictionary, rec: Dictionary, club: Dictionary) -> Dic
 	return f
 
 
-## Seasons under this coach since his last flag (all of them, if none).
+## Seasons this coach has gone without a flag at his current club: since his
+## last flag there, or since he arrived (a move starts the count again).
 static func _dry(st: Dictionary) -> int:
 	var c: Dictionary = st["coach"]
-	if int(c["last_flag"]) == 0:
-		return int(c["seasons"])
-	return int(c["seen"]) - int(c["last_flag"])
+	var since := ClubMoves._club_since(st, str(c.get("club", "")))
+	if since == 0:
+		since = int(c.get("start", 0))
+	if since == 0:
+		return int(c["seasons"]) if int(c["last_flag"]) == 0 else int(c["seen"]) - int(c["last_flag"])
+	if int(c["last_flag"]) >= since:
+		return int(c["seen"]) - int(c["last_flag"])
+	return maxi(0, int(c["seen"]) - since + 1)
+
+
+## True for the week pick made while the rollover builds a season whose
+## pre-season has not opened yet (GameState.start_season, then open_preseason).
+static func _rollover_pick(gs, st: Dictionary) -> bool:
+	return Features.on("preseason") and int(st["coach"].get("seen", 0)) > 0 and gs.season.round_index == 0 			and not gs.season.is_regular_done() and int(gs.preseason.get("year", 0)) != int(gs.season_year)
 
 
 # ---------------------------------------------------------------------------
@@ -409,6 +425,12 @@ static func _end(gs, st: Dictionary, def: Dictionary, rec: Dictionary, ending: S
 			gs.board["confidence"] = clampi(gs.board_confidence() + int(e["board"]), 0, 100)
 	CoachArcs.log_line(st, int(gs.season_year), label, str(def["id"]), "ENDS (%s): %s" % [ending, line])
 	gs.add_news(NEWS_KIND, line)
+	# One reunion per old club: the story of meeting it has been told.
+	var old := str(rec.get("mem", {}).get("old_code", ""))
+	if str(def["id"]) == "reunion" and old != "":
+		for h in st["coach"]["clubs"]:
+			if str(h.get("code", "")) == old:
+				h["reunion"] = int(gs.season_year)
 	CoachArcs.finish(st, str(def["id"]), ending, int(gs.season_year))
 
 

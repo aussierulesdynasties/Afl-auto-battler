@@ -66,6 +66,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_poached_moves_club")
 	_t("_test_sacked_way_back")
 	_t("_test_reunion")
+	_t("_test_drought_counts_this_club")
 	_t("_test_assistant_leaves")
 	_t("_test_ten_seasons")
 	Features.clear("coach_arcs")
@@ -366,6 +367,9 @@ func _test_reunion() -> void:
 	club["opp"] = GameDB.club_name(old)
 	st["active"].erase("way_back")
 	st["active"].erase("reunion")
+	# An earlier test's career may have met this club already; start fresh.
+	for h in st["coach"]["clubs"]:
+		(h as Dictionary).erase("reunion")
 	var hit := ClubMoves.reunion_trigger(GameState, st, club, ctx, false)
 	_check(str(hit.get("mem", {}).get("old_code", "")) == old and str(hit.get("mem", {}).get("old_chairman", "")) != "" \
 			and str(hit.get("mem", {}).get("former", "")) != "", "reunion: it remembers the old club, its chairman and a player: %s" % str(hit))
@@ -388,7 +392,28 @@ func _test_reunion() -> void:
 	_check(CoachArcs.closing(def, rec, {}, GameState.season_year + 1) == "remembered", "reunion: a win resolves 'remembered'")
 	rec["flags"].erase("won")
 	_check(CoachArcs.closing(def, rec, {}, GameState.season_year + 1) == "reconciled", "reunion: a gracious loss resolves 'reconciled'")
-	st["active"].erase("reunion")
+	# Once told, the reunion with this club is over: no second grudge match or
+	# handshake with the same chairman, even after the cooldown.
+	ClubArcs._end(GameState, st, def, rec, "reconciled", "Season start")
+	_check(not (st["active"] as Dictionary).has("reunion"), "reunion: an ended reunion is no longer active")
+	st["done"]["reunion"]["year"] = int(GameState.season_year) - 10
+	club["opp"] = GameDB.club_name(old)
+	_check(ClubMoves.reunion_trigger(GameState, st, club, ctx, false).is_empty(),
+			"reunion: once per old club, it does not start again against %s" % old)
+
+
+## The drought counts seasons at the club he coaches now, not his whole career.
+func _test_drought_counts_this_club() -> void:
+	var st := CoachArcs.new_state()
+	st["coach"].merge({"seasons": 9, "seen": 2035, "start": 2027, "last_flag": 0, "club": "RIC",
+			"clubs": [{"code": "FRE", "from": 2027, "to": 2032}, {"code": "RIC", "from": 2033, "to": 0}]}, true)
+	_check(ClubArcs._dry(st) == 3, "drought: 3 seasons at Richmond after six at Fremantle, not 9: %d" % ClubArcs._dry(st))
+	st["coach"]["last_flag"] = 2034
+	_check(ClubArcs._dry(st) == 1, "drought: counted from a flag won at this club: %d" % ClubArcs._dry(st))
+	st["coach"]["last_flag"] = 2030
+	_check(ClubArcs._dry(st) == 3, "drought: a flag at the old club does not shorten it here: %d" % ClubArcs._dry(st))
+	st["coach"].merge({"seen": 2031, "club": "FRE", "clubs": [{"code": "FRE", "from": 2027, "to": 0}], "last_flag": 0}, true)
+	_check(ClubArcs._dry(st) == 5, "drought: one club, every season counted: %d" % ClubArcs._dry(st))
 
 
 ## Arc 11, the other way: backed to go, the assistant takes a rival's senior

@@ -1802,6 +1802,9 @@
    },
    "coaching_on": {
     "line": "The coach's legacy is set. He coaches on, with no successor named."
+   },
+   "moved_on": {
+    "line": "The coach leaves {club}. His legacy there is still being talked about."
    }
   }
  },
