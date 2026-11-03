@@ -76,7 +76,11 @@ extends RefCounted
 ##               with its upside, downside, size and length; "Play it straight" is
 ##               gone. A call skipped or left unanswered is no call (nothing is
 ##               stacked or flooded). Off, the call keeps its three options.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two"]
+##   goal_run_moves  row 14 (director, 2026-11-03): the three-goal run against you offers two
+##               concrete football moves (stack the centre bounce, or flood behind the ball),
+##               shown as a centre ball-up scene, each with what it does and costs as a
+##               percentage. Off, the card is Throw numbers / Slow it down / Ride it out.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves"]
 
 static var _forced := {}
 static var _from_args := {}
