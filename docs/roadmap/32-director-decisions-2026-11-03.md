@@ -44,5 +44,7 @@ his differs, the later one wins. Nothing here edits the bible.
   most pressing of: a pending press question, an open assistant approach, no captain named, a young player ready for
   backing (could be backed, rated within 3 of the list's 22nd best), a pre-season captaincy review (BigCalls.gd). One
   call per week, kept in week_checks (saved), ticked when dealt with. Behind weekly_checklist and coach_arcs; off, as before.
+- Cut audit row 6: Manual stat training is gone; only the training plans stay, no hand-buying of stat points. Old saves
+  on Manual (own or club plan) load on the plan closest to how each player is built, and his banked XP is spent under it.
 - Practice match guests: the single pre-season practice match trials 6 prospects per club (was 3; data/preseason.json
   practice_guests). Invites, the setup count, "Recruiters fill the rest" and AI pairs all use the one number.
