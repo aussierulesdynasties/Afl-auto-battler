@@ -65,6 +65,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `coach_pathway` | Retired players becoming coaches, and the record they carry |
 | `coach_effects` | What coaching does: teaching, tactics, man-management |
 | `career_ui` | Main menu and save flow, Back, the Hub, Training, selection and trade screens, at 320, 360 and 430 wide |
+| `ui_motion` | Menu motion behind the `ui_motion` switch: tokens, hardened helpers, sheet_in, fill_bar, the result sheet on a win and a loss, Reduced motion and switch off, real taps during the rise, the stagger and a land |
 | `potential` | Potential (POT) rules, rehab years, draft pedigree |
 | `ratings` | The overall rating model |
 | `ai` | Rival clubs' drafting and selection |
