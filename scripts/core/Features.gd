@@ -42,6 +42,11 @@ extends RefCounted
 ##               at the top of the full-time Summary, on the news front, in the press
 ##               question, and kept on GameState.match_stories. Off, none of it shows
 ##               and nothing is written.
+##   coach_arcs   the coach's career arcs (director, 2026-11-03, phase 1): stories that
+##               run across seasons (hot seat, a protege, a drought, a legacy...),
+##               started by real game state and told as Hub event cards
+##               (CoachArcs.gd, ClubArcs.gd, data/arcs/coach_arcs.json). Off, no
+##               arc starts, no card shows and GameState.coach_arcs stays empty.
 ##   finals_cards_2  the finals cards' second slice (rows 35, 36): A3, A9, A14, B7 in
 ##               finals weeks, and one card the week your season ends (A15, A16, B8,
 ##               B9). Off, those cards are not in the deck and nothing is written.
@@ -50,7 +55,7 @@ extends RefCounted
 ##               kicker's reach (MatchSim.kick_range: 30 m + 0.35 x disposal), nearest
 ##               teammate when nobody is; every match path shares MatchSim.kick_receiver.
 ##               Off, the receiver is the old zone pick from the whole ground.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "kick_range"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "coach_arcs", "kick_range"]
 
 static var _forced := {}
 static var _from_args := {}

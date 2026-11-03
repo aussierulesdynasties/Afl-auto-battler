@@ -10,6 +10,9 @@ var checks := 0
 func run() -> void:
 	failures.clear()
 	checks = 0
+	# These fixtures (rotations, rucks played through) are about the engine, not the director's
+	# hand-set ratings (data/ovr_overrides.csv): they play on the data without them.
+	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
 	_t("_test_auto_sim_untouched")
 	_t("_test_stoppage_location")
@@ -32,6 +35,7 @@ func run() -> void:
 	_t("_test_play_through_by_job")
 	_t("_test_no_main_ruck_call")
 	_t("_test_auto_rotation")
+	_t("_test_background_matches_rotate")
 	_t("_test_hothead")
 	_t("_test_lockdown_midfielder")
 	_t("_test_traits")
@@ -77,6 +81,8 @@ func run() -> void:
 	_t("_test_set_shot_bands")
 	_t("_test_set_shot_calls")
 	_t("_test_forward_archetypes")
+	GameDB.skip_ovr_overrides = false
+	GameDB.reload()
 	print(Ran.line("Match game", self))
 
 
@@ -1329,6 +1335,26 @@ func _test_auto_rotation() -> void:
 	s.finals_mode = true
 	_check(s.auto_rotation(0, "steady") == "stars", "...but a close second half of a final does")
 	_check(MatchSim.ROTATION_POLICIES.has(s.auto_rotation(0, "fast")), "Always a real policy")
+
+
+## Background and Sim-the-week matches rotate too (competent-AI rule): each
+## side on its own season plan, every quarter, still deterministic.
+func _test_background_matches_rotate() -> void:
+	var lists := {"GEE": GameDB.club_list("GEE"), "COL": GameDB.club_list("COL")}
+	var season := Season.new(["GEE", "COL"], lists, 7)
+	season.fitness_plans = {"GEE": "develop"}
+	var r1 := season.match_sim("GEE", "COL", 11).run()
+	var r2 := season.match_sim("GEE", "COL", 11).run()
+	_check(r1["score"] == r2["score"], "Still deterministic under a seed")
+	var hard_q := 0
+	var col_hard := 0
+	for th in r1["tactics_history"]:
+		if str(th["rotations"][0]) == "hard":
+			hard_q += 1
+		if str(th["rotations"][1]) == "hard":
+			col_hard += 1
+	_check(hard_q >= 3, "A develop club keeps its legs fresh in the background (%d quarters)" % hard_q)
+	_check(col_hard == 0, "A club with no plan rotates as Steady (balanced)")
 
 
 ## ARD-M1-001 stat credits: a goal assist only when a goal is kicked (never
