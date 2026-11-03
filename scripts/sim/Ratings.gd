@@ -39,6 +39,20 @@ const T := {
 	"contest_clamp": 0.60,           # max stoppage win probability
 }
 
+## Features "match_flow" (row 11, director 2026-10-10): stoppages come from
+## contests that lock up, a won ball is played on, chains are shorter and more
+## numerous. These replace the same keys in T for a match played with the switch
+## on; with it off T is used untouched. Not yet recalibrated on main's current
+## calibration: see docs/research/MATCH_FLOW_AUDIT_2026-11-04.md for the bands.
+const FLOW := {
+	"chains_per_game": 275,
+	"max_touches_per_chain": 10,
+	"metres_gain_mean": 11.3,
+	"tackle_retention": 0.25,
+	"inside50_goal": 0.235,
+	"inside50_behind": 0.175,
+}
+
 ## (metric name, source stat column). "hb" is special-cased as di - ki.
 const METRIC_SPECS := [
 	["disposals_pg", "di"], ["kicks_pg", "ki"], ["marks_pg", "mk"],

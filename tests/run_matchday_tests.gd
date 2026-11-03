@@ -64,6 +64,7 @@ func _run() -> void:
 		await _t("_test_pc_break_worst_case", [club])
 	await _t("_test_tag_not_saved")
 	await _t("_test_bounce_close_up")
+	await _t("_test_ballup_two_scene")
 	await _t("_test_playtest_bounce_scene")
 	await _t("_test_rings_on_the_oval")
 	await _t("_test_first_goal_line")
@@ -1907,6 +1908,68 @@ func _test_bounce_close_up() -> void:
 	for i in range(40):
 		await process_frame
 	_check(not is_instance_valid(card), "The scene is gone once it has faded")
+	m.queue_free()
+	await _settle()
+
+
+## Row 15 (switch ballup_two): the late centre ball-up scene offers two choices,
+## each with its gain and cost, both reachable by a real tap; the tap makes the call.
+func _test_ballup_two_scene() -> void:
+	Features.set_on("ballup_two", true)
+	var sz := Vector2i(360, 740)
+	_state.reset()
+	_state.start_season("COL", root.get_node("GameDB").club_list("COL"))
+	root.size = sz
+	_check(_state.prepare_interactive_match(), "A live match is prepared (two-choice ball-up)")
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	(m.find_child("StartQuarter", true, false) as Button).emit_signal("pressed")
+	await _settle()
+	m.get("_pitch").pause()
+	var sim = _state.pending_sim
+	var me := int(m.get("_my_side"))
+	sim.pending_moment = {}
+	sim.moment_side = me
+	sim.current_quarter = 4
+	sim.current_minute = 106
+	sim.at_centre = true
+	sim.set("_moments_this_q", 0)
+	sim.set("_last_moment_chain", -1000)
+	for side in range(2):
+		(sim.team_stats[side] as Dictionary)["goals"] = 9.0 + side
+	_check(sim.call("_boundary_moment") and str(sim.pending_moment.get("kind", "")) == "bounce",
+			"MatchSim asks the late centre-bounce call")
+	m.call("_show_moment")
+	await _settle()
+	var card = m.find_child("MomentCard", true, false)
+	var vig = m.find_child("StoppageVignette", true, false)
+	_check(card != null and vig != null, "The two-choice call opens on the close-up (art loaded, not a fallback)")
+	if card == null or vig == null:
+		Features.clear("ballup_two")
+		m.queue_free()
+		return
+	vig.finish_now()
+	await _settle()
+	for i in range(30):
+		await process_frame      # the call slides up (0.3 s)
+	var btns := card.find_children("Moment_*", "Button", true, false)
+	_check(btns.size() == 2 and card.find_child("Moment_2", true, false) == null, "Two choices on the card (%d)" % btns.size())
+	var gains := 0
+	var costs := 0
+	for l in card.find_children("*", "Label", true, false):
+		gains += 1 if (l as Label).text.begins_with("Gain: ") else 0
+		costs += 1 if (l as Label).text.begins_with("Cost: ") else 0
+	_check(gains == 2 and costs == 2, "Each choice says its gain and its cost (%d, %d)" % [gains, costs])
+	var low := _text(card).to_lower()
+	_check(not low.contains("play it straight") and not low.contains("recommend") and not low.contains("best"),
+			"No third option and no advice (%s)" % _text(card))
+	var asked: int = sim.moments.size()
+	var why: String = await Tap.tap(card.find_child("Moment_1", true, false))
+	_check(why == "", "A real tap on Flood behind the ball reaches it (%s)" % why)
+	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("choice_label", "")) == "Flood behind the ball"
+			and (sim.bursts[me] as Dictionary).has("flood"), "The tap makes the call, and the flood is on")
+	Features.clear("ballup_two")
 	m.queue_free()
 	await _settle()
 
