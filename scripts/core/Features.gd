@@ -66,7 +66,11 @@ extends RefCounted
 ##               kicker's reach (MatchSim.kick_range: 30 m + 0.35 x disposal), nearest
 ##               teammate when nobody is; every match path shares MatchSim.kick_receiver.
 ##               Off, the receiver is the old zone pick from the whole ground.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range"]
+##   goal_run_moves  row 14 (director, 2026-11-03): the three-goal run against you offers two
+##               concrete football moves (stack the centre bounce, or flood behind the ball),
+##               shown as a centre ball-up scene, each with what it does and costs as a
+##               percentage. Off, the card is Throw numbers / Slow it down / Ride it out.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "goal_run_moves"]
 
 static var _forced := {}
 static var _from_args := {}
