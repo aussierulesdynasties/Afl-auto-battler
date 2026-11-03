@@ -1,0 +1,1808 @@
+[
+ {
+  "id": "hot_seat",
+  "name": "The hot seat",
+  "catalogue": 1,
+  "kind": "club",
+  "trigger": {
+   "kind": "hot_seat",
+   "board_below": 40,
+   "round_min": 8
+  },
+  "max_seasons": 1,
+  "cooldown_seasons": 3,
+  "start_line": "{chairman} and the board have put {club}'s coach on notice.",
+  "beats": [
+   {
+    "id": "arc_hot_seat_line",
+    "category": "board",
+    "gap": 0,
+    "title": [
+     "{chairman} sets the line"
+    ],
+    "text": [
+     "The chairman wants it on the table before another game is played: this is the season you keep your job or lose it."
+    ],
+    "choices": [
+     {
+      "key": "accept",
+      "label": "Accept the target",
+      "effects": [
+       {
+        "op": "board",
+        "d": 5
+       }
+      ],
+      "result": "You shake on it. The goal stands.",
+      "arc": {
+       "flag": "accepted"
+      }
+     },
+     {
+      "key": "argue",
+      "label": "Argue for a lower one",
+      "effects": [
+       {
+        "op": "board",
+        "d": -5
+       }
+      ],
+      "result": "{chairman} hears you out and writes nothing down.",
+      "arc": {
+       "flag": "argued"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_hot_seat_plan",
+    "category": "board",
+    "gap": 2,
+    "when": {
+     "losing_run_min": 3
+    },
+    "skip_after": 14,
+    "title": [
+     "Three in a row"
+    ],
+    "text": [
+     "Three losses running, and every eye in the building is on you. The side is waiting to hear what changes."
+    ],
+    "choices": [
+     {
+      "key": "change",
+      "label": "Change the game plan",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "side",
+        "d": -2
+       },
+       {
+        "op": "culture",
+        "strand": "ambition",
+        "d": 2,
+        "why": "The coach tore up the plan to save the season"
+       }
+      ],
+      "result": "New plan on the whiteboard by Tuesday.",
+      "arc": {
+       "flag": "changed_plan"
+      }
+     },
+     {
+      "key": "hold",
+      "label": "Hold the line",
+      "effects": [
+       {
+        "op": "board",
+        "d": -4
+       },
+       {
+        "op": "culture",
+        "strand": "together",
+        "d": 2,
+        "why": "The coach backed the group under pressure"
+       }
+      ],
+      "result": "You tell them the plan is right and the results will come."
+     }
+    ]
+   },
+   {
+    "id": "arc_hot_seat_leak",
+    "category": "media",
+    "gap": 3,
+    "when": {
+     "round_min": 10
+    },
+    "title": [
+     "A leak from the boardroom"
+    ],
+    "text": [
+     "Someone on {chairman}'s board has told the papers your job is gone at season's end."
+    ],
+    "choices": [
+     {
+      "key": "public",
+      "label": "Go public",
+      "effects": [
+       {
+        "op": "board",
+        "d": -6
+       },
+       {
+        "op": "morale",
+        "who": "side",
+        "d": 3
+       }
+      ],
+      "result": "You front the cameras and say it to the board's face.",
+      "arc": {
+       "flag": "went_public"
+      }
+     },
+     {
+      "key": "quiet",
+      "label": "Say nothing",
+      "effects": [
+       {
+        "op": "board",
+        "d": -2
+       }
+      ],
+      "result": "No comment, and back to work."
+     }
+    ]
+   },
+   {
+    "id": "arc_hot_seat_must_win",
+    "category": "board",
+    "gap": 2,
+    "when": {
+     "round_min": 18
+    },
+    "skip_after": 6,
+    "title": [
+     "The must-win game"
+    ],
+    "text": [
+     "{opp} this week. The papers say this is the game that decides your future."
+    ],
+    "choices": [
+     {
+      "key": "promise",
+      "label": "Promise the board a win",
+      "effects": [
+       {
+        "op": "promise_win"
+       }
+      ],
+      "result": "You tell {chairman}: we win this one."
+     },
+     {
+      "key": "season",
+      "label": "Ask to be judged on the season",
+      "effects": [
+       {
+        "op": "board",
+        "d": -2
+       }
+      ],
+      "result": "One game does not make a season, you tell him."
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "sacked": true
+    },
+    "ending": "sacked"
+   },
+   {
+    "when": {
+     "warned": true
+    },
+    "ending": "still_warned"
+   },
+   {
+    "when": {},
+    "ending": "survived"
+   }
+  ],
+  "endings": {
+   "sacked": {
+    "line": "The board sacked {club}'s coach. The hot seat is on the record."
+   },
+   "still_warned": {
+    "line": "Another season on notice. The hot seat stays hot."
+   },
+   "survived": {
+    "line": "He survived the hot seat. The board starts next season a little warmer.",
+    "board": 5
+   }
+  }
+ },
+ {
+  "id": "board_feud",
+  "name": "Board feud",
+  "catalogue": 4,
+  "kind": "club",
+  "trigger": {
+   "kind": "board_feud",
+   "refusals": 2,
+   "gap": 30
+  },
+  "max_seasons": 2,
+  "start_line": "The coach and {chairman}'s board are no longer speaking the same language.",
+  "beats": [
+   {
+    "id": "arc_feud_budget",
+    "category": "board",
+    "gap": 1,
+    "title": [
+     "The football budget"
+    ],
+    "text": [
+     "{chairman} wants a cut to the football department's budget, starting now."
+    ],
+    "choices": [
+     {
+      "key": "accept",
+      "label": "Accept the cut",
+      "effects": [
+       {
+        "op": "board",
+        "d": 3
+       },
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": -1,
+        "why": "The football department lost money it needed"
+       }
+      ],
+      "result": "You find the savings."
+     },
+     {
+      "key": "fight",
+      "label": "Fight it",
+      "effects": [
+       {
+        "op": "board",
+        "d": -8
+       }
+      ],
+      "result": "You tell the board the cut costs games.",
+      "arc": {
+       "flag": "fought"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_feud_sponsor",
+    "category": "board",
+    "gap": 4,
+    "subject": {
+     "pick": "highest:fit_rank",
+     "where": {
+      "selected": false,
+      "fit": true
+     }
+    },
+    "title": [
+     "The sponsor's favourite"
+    ],
+    "text": [
+     "A major sponsor wants {name} in the side, and {chairman} has made sure you know it."
+    ],
+    "choices": [
+     {
+      "key": "pick",
+      "label": "Pick him",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "others",
+        "d": -3
+       },
+       {
+        "op": "board",
+        "d": 6
+       }
+      ],
+      "result": "{name} gets his game. The rooms notice."
+     },
+     {
+      "key": "refuse",
+      "label": "Refuse",
+      "effects": [
+       {
+        "op": "board",
+        "d": -4
+       }
+      ],
+      "result": "Selection stays yours.",
+      "arc": {
+       "flag": "refused_sponsor"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_feud_election",
+    "category": "board",
+    "gap": 6,
+    "title": [
+     "A board election"
+    ],
+    "text": [
+     "A challenger is running against {chairman}. Both camps want to know where the coach stands."
+    ],
+    "choices": [
+     {
+      "key": "challenger",
+      "label": "Back the challenger",
+      "effects": [
+       {
+        "op": "board",
+        "d": -5
+       }
+      ],
+      "result": "You put your name to the other ticket.",
+      "arc": {
+       "flag": "backed_challenger"
+      }
+     },
+     {
+      "key": "out",
+      "label": "Stay out of it",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": 1,
+        "why": "The coach kept football out of club politics"
+       }
+      ],
+      "result": "Football only, you say."
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "arc_flag": "backed_challenger",
+     "board_min": 50
+    },
+    "ending": "won_over",
+    "beats_done": true
+   },
+   {
+    "when": {
+     "arc_flag": "backed_challenger"
+    },
+    "ending": "lost_feud",
+    "beats_done": true
+   },
+   {
+    "when": {},
+    "ending": "peace",
+    "beats_done": true
+   }
+  ],
+  "endings": {
+   "won_over": {
+    "line": "The challenger won the vote. The new board is the coach's board.",
+    "board_to": 60
+   },
+   "lost_feud": {
+    "line": "{chairman} held his seat, and remembers who backed the other side.",
+    "board": -8
+   },
+   "peace": {
+    "line": "The feud with the board has settled into an uneasy peace."
+   }
+  }
+ },
+ {
+  "id": "protege",
+  "name": "The protege",
+  "catalogue": 5,
+  "kind": "player",
+  "trigger": {
+   "kind": "protege",
+   "age_max": 20,
+   "potential_min": 80
+  },
+  "max_seasons": 6,
+  "start_line": "{name} is the coach's project now: the kid he has put his name to.",
+  "beats": [
+   {
+    "id": "arc_protege_debut",
+    "category": "selection",
+    "gap": 1,
+    "title": [
+     "When does {first} play?"
+    ],
+    "text": [
+     "{name} is ready to train with the seniors. The question is when he plays with them."
+    ],
+    "choices": [
+     {
+      "key": "throw",
+      "label": "Throw him in",
+      "effects": [
+       {
+        "op": "xp",
+        "d": 20
+       }
+      ],
+      "result": "He plays this year.",
+      "arc": {
+       "flag": "thrown_in"
+      }
+     },
+     {
+      "key": "hold",
+      "label": "Hold him back",
+      "effects": [
+       {
+        "op": "morale",
+        "d": -2
+       }
+      ],
+      "result": "Another block of training first."
+     }
+    ]
+   },
+   {
+    "id": "arc_protege_asked",
+    "category": "contracts",
+    "next_season": true,
+    "when": {
+     "round_max": 8
+    },
+    "title": [
+     "Rivals ask about {first}"
+    ],
+    "text": [
+     "Two clubs have called about {name}. Word gets back to him that you took the calls."
+    ],
+    "choices": [
+     {
+      "key": "untouchable",
+      "label": "He's untouchable",
+      "effects": [
+       {
+        "op": "trust",
+        "d": 4,
+        "why": "You told rival clubs he was not for sale"
+       }
+      ],
+      "result": "Not for sale, you tell them."
+     },
+     {
+      "key": "listen",
+      "label": "Listen",
+      "effects": [
+       {
+        "op": "trust",
+        "d": -4,
+        "why": "You listened to offers for him"
+       }
+      ],
+      "result": "You hear the offers. He hears that you did.",
+      "arc": {
+       "flag": "listened"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_protege_group",
+    "category": "leadership",
+    "next_season": true,
+    "title": [
+     "The leadership group"
+    ],
+    "text": [
+     "{name} has the respect of the young group. Some of the older ones think he should wait his turn."
+    ],
+    "choices": [
+     {
+      "key": "in",
+      "label": "Put him in the group",
+      "effects": [
+       {
+        "op": "trust",
+        "d": 5,
+        "why": "You put him in the leadership group"
+       },
+       {
+        "op": "morale",
+        "who": "others",
+        "d": -2
+       }
+      ],
+      "result": "{name} joins the leaders.",
+      "arc": {
+       "flag": "leader"
+      }
+     },
+     {
+      "key": "wait",
+      "label": "Not yet",
+      "effects": [
+       {
+        "op": "morale",
+        "d": -2
+       }
+      ],
+      "result": "His time will come, you tell him."
+     }
+    ]
+   },
+   {
+    "id": "arc_protege_armband",
+    "category": "leadership",
+    "next_season": true,
+    "subject_where": {
+     "age_min": 21
+    },
+    "title": [
+     "The next captain"
+    ],
+    "text": [
+     "The club asks who leads after the current captain. Everyone knows whose name you would say."
+    ],
+    "choices": [
+     {
+      "key": "heir",
+      "label": "Name him the heir",
+      "effects": [
+       {
+        "op": "trust",
+        "d": 6,
+        "why": "You named him the next captain"
+       }
+      ],
+      "result": "{name} is the captain-in-waiting.",
+      "arc": {
+       "flag": "heir"
+      }
+     },
+     {
+      "key": "keep",
+      "label": "Keep it as it is",
+      "effects": [
+       {
+        "op": "morale",
+        "d": -3
+       }
+      ],
+      "result": "No change at the top."
+     }
+    ]
+   },
+   {
+    "id": "arc_protege_contract",
+    "category": "contracts",
+    "gap": 4,
+    "subject_where": {
+     "contract_years_max": 1
+    },
+    "skip_after": 60,
+    "title": [
+     "{first} names his reason"
+    ],
+    "text": [
+     "{name}'s new deal is on the table. He tells the papers he is staying because of the coach."
+    ],
+    "choices": [
+     {
+      "key": "thank",
+      "label": "Thank him in public",
+      "effects": [
+       {
+        "op": "morale",
+        "d": 5
+       },
+       {
+        "op": "trust",
+        "d": 4,
+        "why": "You thanked him in public for staying"
+       }
+      ],
+      "result": "A handshake for the cameras."
+     },
+     {
+      "key": "team",
+      "label": "Make it about the team",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "together",
+        "d": 1,
+        "why": "The coach turned a star's praise back to the group"
+       }
+      ],
+      "result": "It's about the club, you say."
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "here": false
+    },
+    "ending": "left"
+   },
+   {
+    "when": {
+     "arc_flag": "heir"
+    },
+    "ending": "heir",
+    "beats_done": true
+   },
+   {
+    "when": {},
+    "ending": "made",
+    "beats_done": true
+   }
+  ],
+  "endings": {
+   "left": {
+    "line": "{name} has gone. The kid the coach backed plays his football somewhere else now."
+   },
+   "heir": {
+    "line": "{name}, backed as a kid, is now the captain-in-waiting under the coach who backed him."
+   },
+   "made": {
+    "line": "{name} has made it under the coach who backed him."
+   }
+  }
+ },
+ {
+  "id": "one_year_too_long",
+  "name": "One year too long",
+  "catalogue": 6,
+  "kind": "player",
+  "trigger": {
+   "kind": "one_year_too_long",
+   "age_min": 31,
+   "games_min": 150
+  },
+  "max_seasons": 2,
+  "start_line": "{name} has {games} games behind him and his body is telling him it is the last year.",
+  "beats": [
+   {
+    "id": "arc_veteran_talk",
+    "category": "leadership",
+    "gap": 0,
+    "title": [
+     "{first}'s last year?"
+    ],
+    "text": [
+     "{name} comes to see you. He thinks this is his last season and wants to know what you think."
+    ],
+    "choices": [
+     {
+      "key": "more",
+      "label": "Ask him to think about one more",
+      "effects": [
+       {
+        "op": "trust",
+        "d": 4,
+        "why": "You told him you wanted him for another year"
+       }
+      ],
+      "result": "He says he'll decide at season's end.",
+      "arc": {
+       "flag": "asked_more"
+      }
+     },
+     {
+      "key": "go",
+      "label": "Plan his send-off",
+      "effects": [
+       {
+        "op": "morale",
+        "d": 3
+       }
+      ],
+      "result": "You start planning a proper farewell.",
+      "arc": {
+       "flag": "farewell"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_veteran_form",
+    "category": "selection",
+    "gap": 3,
+    "subject_where": {
+     "form_low": true
+    },
+    "skip_after": 16,
+    "title": [
+     "{first} is struggling"
+    ],
+    "text": [
+     "{name}'s form has dropped off. The younger ones are pushing for his spot."
+    ],
+    "choices": [
+     {
+      "key": "keep",
+      "label": "Keep picking him",
+      "effects": [
+       {
+        "op": "morale",
+        "d": 3
+       },
+       {
+        "op": "morale",
+        "who": "others",
+        "d": -2
+       }
+      ],
+      "result": "He keeps his place."
+     },
+     {
+      "key": "drop",
+      "label": "Drop him",
+      "effects": [
+       {
+        "op": "trust",
+        "d": -8,
+        "why": "You dropped him in his last season"
+       },
+       {
+        "op": "culture",
+        "strand": "together",
+        "d": -1,
+        "why": "A club great was dropped in his last year"
+       }
+      ],
+      "result": "He takes it badly.",
+      "arc": {
+       "flag": "dropped"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_veteran_farewell",
+    "category": "selection",
+    "gap": 2,
+    "when": {
+     "round_min": 19
+    },
+    "skip_after": 8,
+    "title": [
+     "A farewell game"
+    ],
+    "text": [
+     "{name} asks for one last game in front of the home crowd."
+    ],
+    "choices": [
+     {
+      "key": "yes",
+      "label": "Give him the game",
+      "effects": [
+       {
+        "op": "expects_game",
+        "sting": 10
+       }
+      ],
+      "result": "He'll run out one last time."
+     },
+     {
+      "key": "no",
+      "label": "Say no",
+      "effects": [
+       {
+        "op": "morale",
+        "d": -5
+       }
+      ],
+      "result": "The side picks itself, you tell him.",
+      "arc": {
+       "flag": "no_farewell"
+      }
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "here": false,
+     "arc_flag": "dropped"
+    },
+    "ending": "sour_exit"
+   },
+   {
+    "when": {
+     "here": false
+    },
+    "ending": "send_off"
+   },
+   {
+    "when": {},
+    "ending": "one_more"
+   }
+  ],
+  "endings": {
+   "sour_exit": {
+    "line": "{name} has retired. He was dropped in his last season and has not forgotten it."
+   },
+   "send_off": {
+    "line": "{name} has retired after {games} games, with a send-off from the coach."
+   },
+   "one_more": {
+    "line": "{name} has gone round again: one more year."
+   }
+  }
+ },
+ {
+  "id": "drought",
+  "name": "The drought",
+  "catalogue": 8,
+  "kind": "club",
+  "trigger": {
+   "kind": "drought",
+   "seasons_min": 5
+  },
+  "max_seasons": 1,
+  "cooldown_seasons": 2,
+  "start_line": "{drought} seasons under this coach and no flag. {chairman} is counting.",
+  "beats": [
+   {
+    "id": "arc_drought_bust",
+    "category": "board",
+    "gap": 0,
+    "when": {
+     "round_max": 6
+    },
+    "title": [
+     "Flag or bust"
+    ],
+    "text": [
+     "{chairman} says it out loud: {drought} seasons without a flag is enough."
+    ],
+    "choices": [
+     {
+      "key": "accept",
+      "label": "Accept it",
+      "effects": [
+       {
+        "op": "board",
+        "d": 4
+       },
+       {
+        "op": "culture",
+        "strand": "ambition",
+        "d": 2,
+        "why": "The coach said it was flag or bust"
+       }
+      ],
+      "result": "Flag or bust it is.",
+      "arc": {
+       "flag": "flag_or_bust"
+      }
+     },
+     {
+      "key": "time",
+      "label": "Ask for time",
+      "effects": [
+       {
+        "op": "board",
+        "d": -4
+       }
+      ],
+      "result": "You ask for one more build."
+     }
+    ]
+   },
+   {
+    "id": "arc_drought_all_in",
+    "category": "training",
+    "gap": 6,
+    "title": [
+     "All in?"
+    ],
+    "text": [
+     "Mid-season. The list can push for this year, or keep building for the next three."
+    ],
+    "choices": [
+     {
+      "key": "all_in",
+      "label": "Go all in on this year",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "side",
+        "d": 3
+       },
+       {
+        "op": "culture",
+        "strand": "ambition",
+        "d": 2,
+        "why": "The coach went all in on this season"
+       }
+      ],
+      "result": "This year, you tell them.",
+      "arc": {
+       "flag": "all_in"
+      }
+     },
+     {
+      "key": "build",
+      "label": "Keep building",
+      "effects": [
+       {
+        "op": "board",
+        "d": -3
+       },
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": 2,
+        "why": "The coach kept building the list"
+       }
+      ],
+      "result": "The long game."
+     }
+    ]
+   },
+   {
+    "id": "arc_drought_september",
+    "category": "leadership",
+    "gap": 1,
+    "phase": [
+     "finals"
+    ],
+    "skip_after": 12,
+    "title": [
+     "September again"
+    ],
+    "text": [
+     "Finals. {drought} seasons of waiting, and the whole club knows it."
+    ],
+    "choices": [
+     {
+      "key": "lift",
+      "label": "Lift them for one more step",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "side",
+        "d": 3
+       }
+      ],
+      "result": "One more week."
+     },
+     {
+      "key": "calm",
+      "label": "Keep it calm",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "together",
+        "d": 1,
+        "why": "The coach kept September calm"
+       }
+      ],
+      "result": "Same week as any other."
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "premiers": true
+    },
+    "ending": "broken"
+   },
+   {
+    "when": {},
+    "ending": "another_miss"
+   }
+  ],
+  "endings": {
+   "broken": {
+    "line": "The drought is over. A flag, at last, for this coach.",
+    "board": 8
+   },
+   "another_miss": {
+    "line": "Another season without a flag. The drought goes on.",
+    "board": -8
+   }
+  }
+ },
+ {
+  "id": "star_wants_out",
+  "name": "The star who wants out",
+  "catalogue": 9,
+  "kind": "player",
+  "trigger": {
+   "kind": "star_wants_out",
+   "top": 3,
+   "morale_below": 50
+  },
+  "max_seasons": 1,
+  "start_line": "{name}, one of the best three at {club}, is unhappy and out of contract.",
+  "beats": [
+   {
+    "id": "arc_star_manager",
+    "category": "contracts",
+    "gap": 0,
+    "title": [
+     "{first}'s manager calls"
+    ],
+    "text": [
+     "{name}'s manager says his client is open to a move. He would rather deal through him."
+    ],
+    "choices": [
+     {
+      "key": "meet",
+      "label": "Meet {first} yourself",
+      "effects": [
+       {
+        "op": "trust",
+        "d": 4,
+        "why": "You came to him yourself"
+       }
+      ],
+      "result": "You sit down with him, no manager in the room.",
+      "arc": {
+       "flag": "met"
+      }
+     },
+     {
+      "key": "manager",
+      "label": "Deal through the manager",
+      "effects": [
+       {
+        "op": "trust",
+        "d": -4,
+        "why": "You only spoke to his manager"
+       }
+      ],
+      "result": "Phone calls with the manager."
+     }
+    ]
+   },
+   {
+    "id": "arc_star_role",
+    "category": "contracts",
+    "gap": 3,
+    "title": [
+     "What would keep {first}?"
+    ],
+    "text": [
+     "He wants to feel he matters here. You can show him, or start looking at what he would bring in a trade."
+    ],
+    "choices": [
+     {
+      "key": "wanted",
+      "label": "Tell him he's the heart of it",
+      "effects": [
+       {
+        "op": "morale",
+        "d": 6
+       }
+      ],
+      "result": "He hears it."
+     },
+     {
+      "key": "shop",
+      "label": "Shop him",
+      "effects": [
+       {
+        "op": "trust",
+        "d": -6,
+        "why": "You shopped him to other clubs"
+       }
+      ],
+      "result": "Calls go out to the other clubs.",
+      "arc": {
+       "flag": "shopped"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_star_decision",
+    "category": "contracts",
+    "gap": 3,
+    "when": {
+     "round_min": 17
+    },
+    "skip_after": 12,
+    "title": [
+     "Stay or go"
+    ],
+    "text": [
+     "The season is nearly done. {name} wants an answer before the trade period."
+    ],
+    "choices": [
+     {
+      "key": "keep",
+      "label": "Ask him to stay",
+      "effects": [
+       {
+        "op": "morale",
+        "d": 5
+       }
+      ],
+      "result": "You ask him to stay.",
+      "arc": {
+       "flag": "asked_stay"
+      }
+     },
+     {
+      "key": "go",
+      "label": "Tell him he can go",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "others",
+        "d": -2
+       }
+      ],
+      "result": "You will not stand in his way.",
+      "arc": {
+       "flag": "let_go"
+      }
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "here": false
+    },
+    "ending": "left"
+   },
+   {
+    "when": {
+     "morale_min": 50
+    },
+    "ending": "stays_loyal"
+   },
+   {
+    "when": {},
+    "ending": "sulks"
+   }
+  ],
+  "endings": {
+   "left": {
+    "line": "{name} has left {club}. Twice a year now the coach faces him."
+   },
+   "stays_loyal": {
+    "line": "{name} stayed, and is settled again."
+   },
+   "sulks": {
+    "line": "{name} stayed, and is still not happy about it."
+   }
+  }
+ },
+ {
+  "id": "media_darling",
+  "name": "Media darling or villain",
+  "catalogue": 10,
+  "kind": "club",
+  "trigger": {
+   "kind": "media",
+   "statements": 3
+  },
+  "max_seasons": 2,
+  "start_line": "The coach has become a story in his own right. {journalist} has noticed.",
+  "beats": [
+   {
+    "id": "arc_media_radio",
+    "category": "media",
+    "gap": 1,
+    "title": [
+     "A weekly radio spot"
+    ],
+    "text": [
+     "{journalist}'s station wants the coach on air every Monday."
+    ],
+    "choices": [
+     {
+      "key": "take",
+      "label": "Take it",
+      "effects": [
+       {
+        "op": "board",
+        "d": 3
+       },
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": -1,
+        "why": "The coach took a weekly radio spot"
+       }
+      ],
+      "result": "Mondays on air.",
+      "arc": {
+       "flag": "radio"
+      }
+     },
+     {
+      "key": "no",
+      "label": "Say no",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": 1,
+        "why": "The coach turned down a radio spot to focus on the club"
+       }
+      ],
+      "result": "Football first."
+     }
+    ]
+   },
+   {
+    "id": "arc_media_named",
+    "category": "media",
+    "gap": 5,
+    "subject": {
+     "pick": "lowest:form",
+     "where": {
+      "games_min": 20
+     }
+    },
+    "title": [
+     "{journalist} names {first}"
+    ],
+    "text": [
+     "{journalist} writes that {name} is the problem at {club}."
+    ],
+    "choices": [
+     {
+      "key": "defend",
+      "label": "Defend him",
+      "effects": [
+       {
+        "op": "trust",
+        "d": 5,
+        "why": "You defended him against the papers"
+       }
+      ],
+      "result": "You take {journalist} on in public.",
+      "arc": {
+       "flag": "defended"
+      }
+     },
+     {
+      "key": "agree",
+      "label": "Agree",
+      "effects": [
+       {
+        "op": "trust",
+        "d": -8,
+        "why": "You agreed with the papers about him"
+       }
+      ],
+      "result": "You don't disagree.",
+      "arc": {
+       "flag": "agreed"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_media_mad_monday",
+    "category": "media",
+    "gap": 8,
+    "title": [
+     "A story leaks"
+    ],
+    "text": [
+     "{journalist} has a story about the players' night out. It runs tomorrow."
+    ],
+    "choices": [
+     {
+      "key": "front",
+      "label": "Front it yourself",
+      "effects": [
+       {
+        "op": "board",
+        "d": -3
+       },
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": 2,
+        "why": "The coach fronted the media for the group"
+       }
+      ],
+      "result": "You take the questions."
+     },
+     {
+      "key": "blame",
+      "label": "Blame the players",
+      "effects": [
+       {
+        "op": "board",
+        "d": 2
+       },
+       {
+        "op": "morale",
+        "who": "all",
+        "d": -4
+       }
+      ],
+      "result": "You hang it on them.",
+      "arc": {
+       "flag": "blamed"
+      }
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "arc_flag": "blamed"
+    },
+    "ending": "villain",
+    "beats_done": true
+   },
+   {
+    "when": {
+     "arc_flag": "agreed"
+    },
+    "ending": "villain",
+    "beats_done": true
+   },
+   {
+    "when": {
+     "arc_flag": "radio"
+    },
+    "ending": "darling",
+    "beats_done": true
+   },
+   {
+    "when": {},
+    "ending": "quiet",
+    "beats_done": true
+   }
+  ],
+  "endings": {
+   "villain": {
+    "line": "In {journalist}'s columns the coach is the villain now. The players have closed ranks."
+   },
+   "darling": {
+    "line": "The media love the coach. The board likes the coverage; some players think he is distracted."
+   },
+   "quiet": {
+    "line": "The coach has gone quiet in the press, and the story has moved on."
+   }
+  }
+ },
+ {
+  "id": "rivalry",
+  "name": "The rivalry he made",
+  "catalogue": 12,
+  "kind": "club",
+  "trigger": {
+   "kind": "rivalry"
+  },
+  "max_seasons": 3,
+  "start_line": "{club} and {rival_club}: a rivalry made on this coach's watch.",
+  "beats": [
+   {
+    "id": "arc_rival_press",
+    "category": "rivals",
+    "gap": 0,
+    "when": {
+     "opp_is_rival": true
+    },
+    "skip_after": 30,
+    "title": [
+     "{rival_club}'s coach has a go"
+    ],
+    "text": [
+     "{rival_club}'s coach says your side cannot win the big ones. It is on every back page."
+    ],
+    "choices": [
+     {
+      "key": "answer",
+      "label": "Answer him",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "side",
+        "d": 3
+       },
+       {
+        "op": "board",
+        "d": -2
+       }
+      ],
+      "result": "You give it straight back.",
+      "arc": {
+       "flag": "answered"
+      }
+     },
+     {
+      "key": "ignore",
+      "label": "Ignore him",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": 1,
+        "why": "The coach let the football do the talking"
+       }
+      ],
+      "result": "No reply."
+     }
+    ]
+   },
+   {
+    "id": "arc_rival_deal",
+    "category": "rivals",
+    "next_season": true,
+    "title": [
+     "A call from {rival_club}"
+    ],
+    "text": [
+     "{rival_club}'s list manager wants to talk about a swap."
+    ],
+    "choices": [
+     {
+      "key": "deal",
+      "label": "Hear them out",
+      "effects": [
+       {
+        "op": "board",
+        "d": 2
+       }
+      ],
+      "result": "You take the call.",
+      "arc": {
+       "flag": "dealt"
+      }
+     },
+     {
+      "key": "never",
+      "label": "Never with them",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "together",
+        "d": 2,
+        "why": "The coach would not deal with the old enemy"
+       }
+      ],
+      "result": "Not them. Not ever.",
+      "arc": {
+       "flag": "never"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_rival_final",
+    "category": "rivals",
+    "gap": 1,
+    "phase": [
+     "finals"
+    ],
+    "when": {
+     "opp_is_rival": true
+    },
+    "skip_after": 60,
+    "title": [
+     "{rival_club} in a final"
+    ],
+    "text": [
+     "A final against {rival_club}. Nothing else this week matters."
+    ],
+    "choices": [
+     {
+      "key": "fire",
+      "label": "Fire them up",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "side",
+        "d": 4
+       }
+      ],
+      "result": "They will run through a wall.",
+      "arc": {
+       "flag": "final_met"
+      }
+     },
+     {
+      "key": "plan",
+      "label": "Stick to the plan",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": 1,
+        "why": "The coach treated the rival final like any other"
+       }
+      ],
+      "result": "Same plan, same jobs.",
+      "arc": {
+       "flag": "final_met"
+      }
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "arc_flag": "dealt"
+    },
+    "ending": "truce",
+    "beats_done": true
+   },
+   {
+    "when": {},
+    "ending": "named",
+    "beats_done": true
+   }
+  ],
+  "endings": {
+   "truce": {
+    "line": "{club} and {rival_club} have made a truce of sorts. They do business now."
+   },
+   "named": {
+    "line": "{club} against {rival_club} is a rivalry with a name now, and this coach made it."
+   }
+  }
+ },
+ {
+  "id": "family_club",
+  "name": "Family club",
+  "catalogue": 13,
+  "kind": "player",
+  "trigger": {
+   "kind": "family_club"
+  },
+  "max_seasons": 3,
+  "start_line": "{name} is at {club}: the son of {father}, who played under this coach.",
+  "beats": [
+   {
+    "id": "arc_family_welcome",
+    "category": "family",
+    "gap": 0,
+    "title": [
+     "{father}'s boy"
+    ],
+    "text": [
+     "{name} arrives with his father's name on his back and every old teammate watching."
+    ],
+    "choices": [
+     {
+      "key": "look",
+      "label": "Look after him",
+      "effects": [
+       {
+        "op": "morale",
+        "d": 5
+       }
+      ],
+      "result": "You make sure he settles.",
+      "arc": {
+       "flag": "looked_after"
+      }
+     },
+     {
+      "key": "nofavours",
+      "label": "No favours",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": 1,
+        "why": "The coach gave the father-son no favours"
+       }
+      ],
+      "result": "Same as everyone, you tell him."
+     }
+    ]
+   },
+   {
+    "id": "arc_family_debut",
+    "category": "family",
+    "gap": 1,
+    "subject_where": {
+     "selected": true
+    },
+    "skip_after": 90,
+    "title": [
+     "{father} in the stands"
+    ],
+    "text": [
+     "{name} is picked to play. {father} will be in the stands."
+    ],
+    "choices": [
+     {
+      "key": "jumper",
+      "label": "Ask {father} to present the jumper",
+      "effects": [
+       {
+        "op": "morale",
+        "d": 6
+       }
+      ],
+      "result": "Father hands son the jumper.",
+      "arc": {
+       "flag": "jumper"
+      }
+     },
+     {
+      "key": "low",
+      "label": "Keep it low-key",
+      "effects": [
+       {
+        "op": "morale",
+        "d": 2
+       }
+      ],
+      "result": "Just another game, you tell him."
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "here": false
+    },
+    "ending": "got_away"
+   },
+   {
+    "when": {},
+    "ending": "dynasty",
+    "beats_done": true
+   }
+  ],
+  "endings": {
+   "got_away": {
+    "line": "{name}, {father}'s son, has left {club}. The one that got away."
+   },
+   "dynasty": {
+    "line": "Father and son, both under this coach: {name} carries on {father}'s name at {club}."
+   }
+  }
+ },
+ {
+  "id": "legacy",
+  "name": "Legacy",
+  "catalogue": 14,
+  "kind": "club",
+  "trigger": {
+   "kind": "legacy",
+   "seasons_min": 10,
+   "games_min": 250,
+   "flags_min": 2
+  },
+  "max_seasons": 1,
+  "start_line": "{seasons_coached} seasons, {coach_games} games, {coach_flags} flag(s). The coach's legacy is being talked about.",
+  "beats": [
+   {
+    "id": "arc_legacy_milestone",
+    "category": "community",
+    "gap": 1,
+    "title": [
+     "How to mark it"
+    ],
+    "text": [
+     "The club wants to mark the coach's milestone before this week's game."
+    ],
+    "choices": [
+     {
+      "key": "players",
+      "label": "Make it about the players",
+      "effects": [
+       {
+        "op": "morale",
+        "who": "all",
+        "d": 4
+       }
+      ],
+      "result": "The players are the story, you say."
+     },
+     {
+      "key": "honour",
+      "label": "Accept the honour",
+      "effects": [
+       {
+        "op": "board",
+        "d": 4
+       }
+      ],
+      "result": "A guard of honour and a speech.",
+      "arc": {
+       "flag": "honoured"
+      }
+     }
+    ]
+   },
+   {
+    "id": "arc_legacy_successor",
+    "category": "leadership",
+    "gap": 6,
+    "title": [
+     "Who comes after you?"
+    ],
+    "text": [
+     "{chairman} asks the question nobody else will: who takes over when you go?"
+    ],
+    "choices": [
+     {
+      "key": "name",
+      "label": "Start the handover now",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "standards",
+        "d": 2,
+        "why": "The coach started planning his succession"
+       }
+      ],
+      "result": "You name your senior assistant as the next coach.",
+      "arc": {
+       "flag": "successor"
+      }
+     },
+     {
+      "key": "later",
+      "label": "Not yet",
+      "effects": [
+       {
+        "op": "board",
+        "d": -2
+       }
+      ],
+      "result": "There is time, you tell him."
+     }
+    ]
+   }
+  ],
+  "close": [
+   {
+    "when": {
+     "arc_flag": "successor"
+    },
+    "ending": "successor_ready",
+    "beats_done": true
+   },
+   {
+    "when": {},
+    "ending": "coaching_on",
+    "beats_done": true
+   }
+  ],
+  "endings": {
+   "successor_ready": {
+    "line": "The coach's legacy is set, and his successor is named."
+   },
+   "coaching_on": {
+    "line": "The coach's legacy is set. He coaches on, with no successor named."
+   }
+  }
+ }
+]
