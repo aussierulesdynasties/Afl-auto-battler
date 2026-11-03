@@ -1616,7 +1616,15 @@ func _show_results(results: Array) -> void:
 		_show_week_ask())
 	# The list scrolls under Continue: air and a soft edge so a row is never sliced by the button.
 	if not others.is_empty():
-		box["footer"].add_child(_bar_air(UiKit.PANEL))
+		var air := _bar_air(UiKit.PANEL)
+		# The fade ends exactly on the scroll's clip edge (8 px above the footer) and is fully
+		# solid there, so a row is eased out, never sliced.
+		var edge: TextureRect = air.get_node("BarFade")
+		edge.offset_top = -48
+		edge.offset_bottom = -8
+		(edge.texture as GradientTexture2D).height = 48
+		(edge.texture as GradientTexture2D).gradient.set_color(1, UiKit.PANEL)
+		box["footer"].add_child(air)
 	box["footer"].add_child(ok)
 
 
