@@ -12,17 +12,17 @@
 # balance, league_balance and calibration are planned last because most pull
 # requests skip them.
 # --- plan ---
-# From main run 39144840688 (2026-10-19), 56 suites, by tools/plan_ci_shards.py --shards 12.
-# Pull-request suite seconds per shard: 637 570 547 547 548 549 547 546 547 547 546 547
+# From main run 41608122529 (2026-11-03), 68 suites, by tools/plan_ci_shards.py --shards 12.
+# Pull-request suite seconds per shard: 612 587 585 586 586 585 585 587 583 586 586 583
 1: save
-2: match_game
-3: story chronology namelink calibration
-4: career match_marks traitlink
-5: match_visual stats intake family
-6: preseason expansion pressure intake_ui nameink
-7: matchday career_ui draft_ui awards fitness selection
-8: back_nav matchup league training keyboard planpane league_balance
-9: contracts match_motion ai coaches workload coach_pathway
-10: club practice international rowgap roles coach_effects
-11: plan_know draft injuries achievements scroll potential balance
-12: coach_market papers finals trainrep calls assets ratings
+2: match_visual ratings
+3: match_game intake fitness coach_pathway calibration
+4: story pressure chronology planpane first_visit_intro
+5: career draft_ui scroll family
+6: coach_arcs match_motion coaches training milestones potential player_looks
+7: contracts ai league match_story workload traitlink
+8: back_nav preseason international rowgap roles namelink
+9: almanac matchday injuries trainrep intake_ui kick_range selection league_balance
+10: club draft finals achievements career_ui weekly_checklist big_call nameink
+11: plan_know expansion_package papers expansion match_marks keyboard coach_effects newsfront
+12: coach_market matchup stats practice awards assets calls balance

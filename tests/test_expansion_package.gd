@@ -436,6 +436,13 @@ func _test_who_a_rival_keeps() -> void:
 				if q != p:
 					q["overall"] = maxi(int(q["overall"]), int(p["overall"]) + 8)
 					q["potential"] = maxi(int(q.get("potential", 0)), int(q["overall"]))
+			# A competent club delists him only for someone better (#888): a free
+			# agent at his position who beats him.
+			var fa: Dictionary = p.duplicate(true)
+			fa["id"] = "FA_" + str(p["id"])
+			fa["overall"] = int(p["overall"]) + 6
+			fa["potential"] = maxi(int(fa.get("potential", 0)), int(fa["overall"]))
+			GameState.free_agents.append(fa)
 		elif case.begins_with("cap"):
 			p["overall"] = maxi(int(p["overall"]), 84)
 			p["potential"] = maxi(int(p.get("potential", 0)), 86)
