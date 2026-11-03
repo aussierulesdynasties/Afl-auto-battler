@@ -40,11 +40,16 @@ his differs, the later one wins. Nothing here edits the bible.
   Defensive forward and Loose interceptor are one Defensive set-up call; the in-match Main ruck call is gone (the
   selected ruck goes up); rotations are automatic for both sides (MatchSim.auto_rotation: season plan, heat, close
   late quarters). Live, no switch; old saves load and the old call keys are ignored.
-- Weekly big call (plan 3a, cut audit): the Hub's one big call is a due coach-arc beat (ClubArcs.big_call), else the
-  most pressing of: a pending press question, an open assistant approach, no captain named, a young player ready for
-  backing (could be backed, rated within 3 of the list's 22nd best), a pre-season captaincy review (BigCalls.gd). One
-  call per week, kept in week_checks (saved), ticked when dealt with. Behind weekly_checklist and coach_arcs; off, as before.
+- Competent-AI rule, rotations everywhere: background AI-vs-AI matches, Sim the week, finals weeks and practice matches
+  now run MatchSim.auto_rotation for both sides each quarter on each club's own fitness plan (Season.fitness_plans,
+  stamped weekly; no plan = Steady). Seeded, deterministic. 3 seeded seasons (301-303) before/after: ladder SD
+  17.3 -> 16.8 pts, injuries/game 1.44 -> 1.45, mean workload 6.18 -> 6.18 (noise-level; clubs now run hard ~26%,
+  stars ~11% of quarters). Audit: tools/audit/rotations_season_impl.gd.
 - Cut audit row 6: Manual stat training is gone; only the training plans stay, no hand-buying of stat points. Old saves
   on Manual (own or club plan) load on the plan closest to how each player is built, and his banked XP is spent under it.
 - Practice match guests: the single pre-season practice match trials 6 prospects per club (was 3; data/preseason.json
   practice_guests). Invites, the setup count, "Recruiters fill the rest" and AI pairs all use the one number.
+- Weekly big call (plan 3a, cut audit): the Hub's one big call is a due coach-arc beat (ClubArcs.big_call), else the
+  most pressing of: a pending press question, an open assistant approach, no captain named, a young player ready for
+  backing (could be backed, rated within 3 of the list's 22nd best), a pre-season captaincy review (BigCalls.gd). One
+  call per week, kept in week_checks (saved), ticked when dealt with. Behind weekly_checklist and coach_arcs; off, as before.
