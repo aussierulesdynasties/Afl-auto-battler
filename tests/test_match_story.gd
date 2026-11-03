@@ -64,6 +64,10 @@ func run(tree: SceneTree) -> void:
 	_t("_test_reasons_trace")
 	_t("_test_records_persist")
 	_t("_test_old_save")
+	_t("_test_arc_facts_and_digest")
+	_t("_test_my_best_in_loss")
+	_t("_test_digest_survives_trim")
+	_t("_test_digest_off")
 	for size in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		_tree.root.size = size
 		await _settle()
@@ -272,3 +276,113 @@ func _test_summary(size: Vector2i) -> void:
 	Router.stack = []
 	Router.go("hub")
 	await _settle(4)
+
+
+## hero_streak / hero_count / close_losses equal a count made by hand from
+## match_stories, and the season digest totals equal the per-match records.
+func _test_arc_facts_and_digest() -> void:
+	_fresh()
+	_rounds(12)
+	var year := int(GameState.season_year)
+	var recs: Array = GameState.match_stories.filter(func(r): return int(r["year"]) == year)
+	var counts := {}
+	var close_l := 0
+	var against := 0
+	var mine_ids := []
+	for r in recs:
+		var id := ""
+		if str(r["hero_club"]) == str(r["club"]) and str(r["hero_id"]) != "":
+			id = str(r["hero_id"])
+		elif str(r.get("my_best_id", "")) != "":
+			id = str(r["my_best_id"])
+		if id != "":
+			counts[id] = int(counts.get(id, 0)) + 1
+		mine_ids.append(id)
+		if int(r["margin"]) < 0 and int(r["margin"]) >= -12:
+			close_l += 1
+		if int(r["margin"]) < 0 and bool(r["comeback"]):
+			against += 1
+	var streak := 0
+	if not mine_ids.is_empty() and str(mine_ids[-1]) != "":
+		for i in range(mine_ids.size() - 1, -1, -1):
+			if mine_ids[i] != mine_ids[-1]:
+				break
+			streak += 1
+	var f := MatchStory.arc_facts(GameState.match_stories, year)
+	_check(f["hero_counts"] == counts, "hero counts match a hand count (%s vs %s)" % [str(f["hero_counts"]), str(counts)])
+	_check(int(f["hero_streak"]) == streak, "hero streak matches a hand count (%d vs %d)" % [int(f["hero_streak"]), streak])
+	_check(int(f["close_losses"]) == close_l and int(f["turned_against"]) == against, "close losses and comebacks against match")
+	var d: Dictionary = GameState.match_story_digest.get(str(year), {})
+	_check(int(d.get("played", 0)) == recs.size() and recs.size() >= 10, "the digest counts every match (%d)" % recs.size())
+	var total := 0
+	for id in d.get("heroes", {}):
+		total += int(d["heroes"][id]["count"])
+		_check(int(d["heroes"][id]["count"]) == int(counts.get(id, -1)), "digest hero count for %s matches" % str(id))
+	var hand_total := 0
+	for id in counts:
+		hand_total += int(counts[id])
+	_check(total == hand_total, "digest hero total matches the records")
+	var best := 0
+	var worst := 0
+	for r in recs:
+		best = maxi(best, int(r["margin"]))
+		worst = mini(worst, int(r["margin"]))
+	_check(int((d["best_win"] as Dictionary).get("margin", 0)) == best and int((d["worst_loss"] as Dictionary).get("margin", 0)) == worst,
+			"digest best win and worst loss are the real ones")
+	_check(int(d["close_losses"]) == close_l, "digest close losses match")
+
+
+## In a loss the record names your best player: yours, and the top by hero points.
+func _test_my_best_in_loss() -> void:
+	var found := false
+	for r in GameState.season_log:
+		var side := 0 if str(r["home"]) == GameState.my_club else (1 if str(r["away"]) == GameState.my_club else -1)
+		if side < 0 or int(r["score"][side]) >= int(r["score"][1 - side]):
+			continue
+		found = true
+		var rec := MatchStory.record(r, side, GameState.season_year)
+		var mb := MatchStory.my_best(r, side)
+		_check(int(mb["side"]) == side and str(rec["my_best_id"]) == str(mb["id"]) and str(rec["my_best_id"]) != "",
+				"a loss names your best player from your side")
+		var clutch := MatchStory.clutch_goals(r)
+		var top := -9999
+		for p in MatchNotes.rated_players(r, side):
+			top = maxi(top, MatchStory.hero_points(p["stats"], int(clutch.get(str(p["id"]), 0))))
+		_check(int(mb["points"]) == top, "your best is the top by hero points (%d vs %d)" % [int(mb["points"]), top])
+		_check(str(rec["hero_club"]) != str(rec["club"]), "the hero is still the winners'")
+		break
+	if not found:
+		_check(true, "no loss in the sample to check")
+
+
+## A season folded into the digest survives the list being trimmed past 120.
+func _test_digest_survives_trim() -> void:
+	_fresh()
+	var old := int(GameState.season_year) - 1
+	GameState.match_stories = []
+	GameState.match_story_digest = {}
+	for i in range(GameState.MAX_MATCH_STORIES):
+		var rec := {"year": old, "label": "Round %d" % (i % 23 + 1), "club": "FRE", "opp": "WCE", "margin": 10 if i % 2 == 0 else -5,
+				"hero_id": "H1", "hero_name": "Old Hero", "hero_club": "FRE", "headline": "x", "turning_point": ""}
+		GameState.match_stories.append(rec)
+		MatchStory.fold(GameState.match_story_digest, rec)
+	_rounds(2)
+	_check(GameState.match_stories.size() == GameState.MAX_MATCH_STORIES, "the list stays capped at 120")
+	var d: Dictionary = GameState.match_story_digest.get(str(old), {})
+	_check(int(d.get("played", 0)) == GameState.MAX_MATCH_STORIES and int(d["heroes"]["H1"]["count"]) == GameState.MAX_MATCH_STORIES,
+			"the trimmed season's digest is whole (%s)" % str(d.get("played")))
+	_check(GameState.save_career() and GameState.load_career(), "saves and loads with a digest")
+	_check(int((GameState.match_story_digest.get(str(old), {}) as Dictionary).get("played", 0)) == GameState.MAX_MATCH_STORIES,
+			"the digest survives a save and load")
+
+
+## With the switch off the digest is never written or saved.
+func _test_digest_off() -> void:
+	Features.set_on("match_story", false)
+	_fresh()
+	_rounds(2)
+	_check(GameState.match_story_digest.is_empty(), "off: no digest is kept")
+	GameState.save_career()
+	var state := CareerSave.read(GameState.save_path)
+	_check(not state.has("match_story_digest"), "off: the save has no match_story_digest")
+	Features.set_on("match_story", true)
