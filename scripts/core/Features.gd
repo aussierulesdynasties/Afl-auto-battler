@@ -71,7 +71,12 @@ extends RefCounted
 ##               after an intercept or a free is played on, chains are shorter and more
 ##               numerous (Ratings.FLOW, MatchSim LOCKUP_*, TACKLE_SPILL). Changes match
 ##               output. Off, a match is exactly as before.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow"]
+##   ballup_two  row 15 (director, 2026-11-04): the late centre ball-up call is two
+##               distinct choices, Stack the stoppage or Flood behind the ball, each
+##               with its upside, downside, size and length; "Play it straight" is
+##               gone. A call skipped or left unanswered is no call (nothing is
+##               stacked or flooded). Off, the call keeps its three options.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two"]
 
 static var _forced := {}
 static var _from_args := {}
