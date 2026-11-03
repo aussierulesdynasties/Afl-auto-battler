@@ -89,3 +89,9 @@ his differs, the later one wins. Nothing here edits the bible.
   Cooldowns (director, option b): card and subject cooldowns count played weeks only (pre-season, rounds, finals;
   StoryEngine.played_between), never off-season weeks, so every card keeps its written cooldown and repeats as often
   as before.
+- Match motion, noise-safe bounds (director, 2026-11-03, option A): the seed-sensitive measures (ball-up ring,
+  visibility, every call against Balanced) are averaged over games 40-44, not read from game 42 alone. Each bound sits
+  below main's own average by about twice its seed-to-seed noise, so a reshuffle of seeded games cannot decide it:
+  ball-up closest pair of a side >= 1.5 m (was 2.5), Attack corridor longest file <= Balanced's + 0.75 (was <=),
+  Attack corridor shift from Balanced >= 7.5 m (was 8), its spread 9.5-11.5 m (was 10-11). Five games keep the suite
+  under the 900 s timeout. The worst-case motion limits stay on game 42, every frame.
