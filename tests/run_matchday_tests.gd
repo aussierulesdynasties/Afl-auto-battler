@@ -3053,10 +3053,10 @@ func _test_break_panes_layout() -> void:
 					if n != null and (cols[i] as Node).is_ancestor_of(n):
 						return i
 				return -1
-			_check(cols.size() == 4, "Four call columns at 1280x720 (%d)" % cols.size())
+			_check(cols.size() == 3, "Three call columns at 1280x720 (%d)" % cols.size())
 			_check(int(col_of.call("PlanPicker")) == 0, "The game plan leads the first column (column %d)" % int(col_of.call("PlanPicker")))
-			_check(int(col_of.call("TagPicker")) >= 0 and int(col_of.call("TagPicker")) == int(col_of.call("BreakMatchups")),
-					"The tag and the key match-ups share a column")
+			_check(int(col_of.call("TagPicker")) == 1 and int(col_of.call("BreakMatchups")) >= 0,
+					"The tag leads the second column; the key match-ups are in the columns")
 			_check(int(col_of.call("PepPicker")) >= 0 and int(col_of.call("DefenceSetupPicker")) >= 0,
 					"The pep talk and the defensive set-up are in the columns")
 			var tallest := 0.0
@@ -3071,12 +3071,9 @@ func _test_break_panes_layout() -> void:
 			var worst := 0.0
 			for t in heights:
 				worst = maxf(worst, (tallest - float(t)) / tallest)
-			# Four calls fewer since 2026-11-03 (Rotations, Play through, Main ruck,
-			# one defensive call): the tag and match-ups column alone is ~380 of
-			# ~990, so four columns cannot be within a fifth; the open question
-			# for the director is the PC pre-bounce layout. Until then: no column
-			# more than three-fifths empty (57% at Fremantle v Melbourne).
-			_check(worst <= 0.60, "No column stands more than three-fifths empty (%.0f%%: %s)" % [worst * 100.0, str(heights)])
+			# Three columns before the bounce (director, 2026-11-03): no column
+			# stands more than a fifth empty.
+			_check(worst <= 0.20, "No column stands more than a fifth empty (%.0f%%: %s)" % [worst * 100.0, str(heights)])
 			var bsc: ScrollContainer = null
 			var up: Node = cols_node
 			while up != null and bsc == null:
