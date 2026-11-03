@@ -19,8 +19,6 @@ const MATCHUP_COST_NEXT := "moving %s frees their next forward"
 const MATCHUP_COST_LOOSE := "%s can no longer play loose"
 const MINDER_GAIN := "their loose man reaches %s of his contests, %s with a Defensive forward"
 const MINDER_COST := "your forward is a target %s less often"
-const RUCK_GAIN := "the ruck you name goes up at every stoppage"
-const RUCK_COST := "he tires %s faster than up forward"
 const LOOSE_GAIN := "a top reader gets to %s of their entries"
 const LOOSE_COST := "he leaves his man on %s of entries, and space opens if he is late"
 const PLAN_GAIN := {
@@ -141,11 +139,6 @@ static func minder_lines() -> Array:
 	var roam: Dictionary = MatchSim.MINDER_ROAM
 	return [MINDER_GAIN % [pct(float(roam["other"])), pct(float(roam["specialist"]))],
 			MINDER_COST % pct(1.0 - float(MatchSim.MINDER_INVOLVE))]
-
-
-static func ruck_lines() -> Array:
-	var d: Dictionary = MatchSim.ROLE_DRAIN
-	return [RUCK_GAIN, RUCK_COST % pct(float(d["RUCK"]) / float(d["FWD"]) - 1.0)]
 
 
 static func loose_lines() -> Array:

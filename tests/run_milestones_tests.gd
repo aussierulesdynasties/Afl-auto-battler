@@ -204,19 +204,11 @@ func _test_old_save() -> void:
 
 
 func _test_switch() -> void:
-	_check(not Features.on(_M.FEATURE), "The switch is off by default")
+	_check(_M.shown() and not Features.KNOWN.has("milestone_games"), "Milestones are live: no switch")
 	_fresh()
-	var before: int = _state.news.size()
-	_state.advance()
-	var shown := 0
-	for n in _state.news:
-		if str(n.get("text", "")).begins_with("This week: "):
-			shown += 1
-	_check(shown == 0, "Off, no milestone preview reaches the news (%d, %d)" % [shown, before])
-	Features.set_on(_M.FEATURE, true)
 	var p := _complete_player()
 	_state.milestone_log["coach"]["games"] = 49
-	_check(_M.upcoming(_state).any(func(u): return str(u["key"]) == "coached"), "On, the coach's 50th is this week's")
+	_check(_M.upcoming(_state).any(func(u): return str(u["key"]) == "coached"), "The coach's 50th is this week's")
 	# The Hub: the note lines keep "plays his 100th"; the card leaves it out.
 	var side: Dictionary = _state.current_side()
 	var sid := ""
@@ -228,7 +220,7 @@ func _test_switch() -> void:
 	var sp: Dictionary = _state.list_player(sid)
 	_set_games(sp, 99)
 	var noted: Array = _state.my_week_notes().filter(func(n): return str(n.get("player_id", "")) == sid)
-	_check(noted.size() == 1 and str(noted[0]["text"]).ends_with("plays his 100th game."), "On, the note line still says his 100th (%s)" % [noted])
+	_check(noted.size() == 1 and str(noted[0]["text"]).ends_with("plays his 100th game."), "The note line still says his 100th (%s)" % [noted])
 	_check(_M.upcoming(_state).any(func(u): return str(u["id"]) == sid and str(u["key"]) == "games"), "The 100th is this week's milestone")
 	var card: Array = _M.card_items(_state)
 	_check(not card.any(func(u): return str(u["id"]) == sid and str(u["key"]) == "games"), "The card does not word the 100th again (%s)" % [card])
@@ -237,4 +229,3 @@ func _test_switch() -> void:
 	for u in card:
 		texts[str(u["text"])] = true
 	_check(texts.size() == card.size(), "No line twice on the card")
-	Features.set_on(_M.FEATURE, false)
