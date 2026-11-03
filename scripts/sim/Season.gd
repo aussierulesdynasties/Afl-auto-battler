@@ -371,6 +371,8 @@ func match_sim(home_code: String, away_code: String, match_seed: int,
 	sim.finals_mode = is_final
 	sim.weather = weather
 	for side in range(2):
+		# Every club rotates as a competent coach would, on its own plan.
+		sim.season_plans[side] = str(fitness_plans.get([home_code, away_code][side], "steady"))
 		var plan := str(plans.get([home_code, away_code][side], ""))
 		if plan != "":
 			sim.set_tactics(side, {"gameplan": plan})
@@ -494,6 +496,12 @@ func weather_for(home_code: String, away_code: String, round_i: int, finals_m: D
 	var state := str(GameDB_ref().club(home_code).get("state", ""))
 	return Weather.condition(ground, Weather.month_of_round(round_i, is_final),
 			hash([seed, round_i, home_code, away_code, "weather"]), state)
+
+
+
+## Each club's season fitness plan this week (GameState stamps it before a
+## round); a club missing here runs the default "steady". Not saved.
+var fitness_plans := {}
 
 
 func next_seed(extra: int = 0) -> int:
