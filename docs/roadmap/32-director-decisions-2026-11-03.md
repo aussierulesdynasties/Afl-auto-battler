@@ -71,3 +71,9 @@ his differs, the later one wins. Nothing here edits the bible.
   block and the Key match-ups block stay together in the Tag's column; #878's split, made so every column was within
   a fifth empty, is reversed. The balance check loosens to 30% empty (the best split with them together measured
   28% at 1280x720: 261, 363, 308). The phone and 768-1199 layouts are unchanged.
+- Contenders discount far picks (overrides the 2026-10-14 hold on pick values, for this change only): a contending
+  club counts a pick in a later draft (the next two) at TradeValue.CONTENDER_FAR_PICK (0.8) of its worth; rebuilders
+  and builders count it in full; this year's picks never change. Set by club_phase (finish, list rank, age), never a
+  roll. Draft night between rivals: the gate compares each club's pick against the same slot next year (a scale
+  every club shares); rivals ask each other NIGHT_RIVAL_MARGIN (1%, director ruling 2026-11-03) while trades with
+  you keep the difficulty margin (4% at the middle step); a night package may hold three picks.

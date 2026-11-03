@@ -615,7 +615,8 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 		side.append(p)
 	var prospects: Dictionary = ctx.get("prospects", {})
 	for pk in take_picks:
-		in_values.append(TradeValue.pick_value(pk["positions"], prospects.get(str(pk["year"]), []), phase))
+		in_values.append(TradeValue.pick_value(pk["positions"], prospects.get(str(pk["year"]), []), phase,
+				int(pk["year"]) - int(ctx.get("year", pk["year"]))))
 	var in_value := TradeValue.package(in_values)
 	var out_value := 0.0
 	var cornerstone := ""
@@ -631,7 +632,8 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 			best_future = float(v["future"])
 			cornerstone = str((ctx.get("names", {}) as Dictionary).get(str(p["id"]), p.get("name", "")))
 	for pk in give_picks:
-		out_value += TradeValue.pick_value(pk["positions"], prospects.get(str(pk["year"]), []), phase)
+		out_value += TradeValue.pick_value(pk["positions"], prospects.get(str(pk["year"]), []), phase,
+				int(pk["year"]) - int(ctx.get("year", pk["year"])))
 	var out := {}
 	if in_value < out_value * (1.0 + margin):
 		# The reason is the branch taken here (P-18): a rebuilder keeping its

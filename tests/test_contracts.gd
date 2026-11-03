@@ -68,6 +68,18 @@ func _new_season() -> void:
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 
 
+## Your players at `role` drop to 40, so a free agent there would start for you.
+## Their attributes drop too: a load rates every player from them again.
+func _thin_line(role: String) -> void:
+	for q in GameState.my_list:
+		if str(q["role"]) == role:
+			for k in q["attr"]:
+				q["attr"][k] = mini(int(q["attr"][k]), 30)
+			q["overall"] = mini(int(q["overall"]),
+					Ratings.rate_overall(q["attr"], role, Ratings.effective_games(q)))
+	GameState._bars = {}
+
+
 func _to_offseason() -> void:
 	GameState.season.round_index = GameState.season.fixture.size()
 	GameState.ensure_finals()
@@ -568,8 +580,19 @@ func _test_free_agents() -> void:
 		var r0 := GameState.offer_free_agent(str(refused["id"]), Contracts.asking_salary(refused) + 1000000, 3)
 		_check(not bool(r0["ok"]) and str(r0["answer"]) == "reject" and GameState.free_agents.has(refused),
 				"A player who won't come turns down even a big offer, and says why")
-	# Bidding against rivals for a player who would start for you.
+	# Bidding against rivals for a player who would start for you. Rivals keep
+	# anyone better than they can replace, so the market's best rarely makes a
+	# strong side: thin your line at the best contested free agent's position.
 	GameState.salary_cap += 10000000
+	var contested := {}
+	for fa in GameState.free_agents:
+		var real := (fa.get("offers", []) as Array).size() >= 1
+		for o in fa.get("offers", []):
+			real = real and not bool(o.get("filler", false))
+		if real and (contested.is_empty() or int(fa["overall"]) > int(contested["overall"])):
+			contested = fa
+	if not contested.is_empty():
+		_thin_line(str(contested["role"]))
 	var target := {}
 	for fa in GameState.free_agents:
 		if GameState.fa_role(fa, me) == "ground" and (fa.get("offers", []) as Array).size() >= 1:
@@ -1294,7 +1317,12 @@ func _run_draft() -> void:
 ## draft's and the next two drafts'; players never; a rival judges by its own
 ## read; a pick you sell moves you off the clock; the deal survives a save.
 func _test_draft_night_trades() -> void:
-	_new_season()
+	# A career where rivals deal on the night (seed 3: two deals; about one a
+	# night across seeds 1-6 and 2027).
+	GameState.reset()
+	GameState.career_seed = 3
+	GameState.replay_seed = 3
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	_to_offseason()
 	var me := GameState.my_club
 	var year := GameState.season_year
@@ -1379,11 +1407,12 @@ func _test_draft_night_trades() -> void:
 			and GameState.pick_owner_of(year, rnd, str(d.pick_origin[index])) == rival,
 			"The order shows the swap: they are on the clock, you pick later")
 	_check(not d.is_user_turn() and d.current_club() == rival, "You are off the clock; the buyer is on it")
-	_check(d.night_trades.size() == 1 and int(d.night_trades[0]["at"]) == index + 1
-			and str(d.night_trades[0]["buyer"]) == me,
+	var my_deals := d.night_trades.filter(func(x): return str(x["buyer"]) == me or str(x["seller"]) == me)
+	_check(my_deals.size() == 1 and int(my_deals[0]["at"]) == index + 1 and str(my_deals[0]["buyer"]) == me,
 			"The night's board remembers the deal (%s)" % str(d.night_trades))
+	var board := d.night_trades.size()
 	_check(GameState.save_career() and GameState.load_career()
-			and str(GameState.draft.pick_sequence[index]) == rival and GameState.draft.night_trades.size() == 1,
+			and str(GameState.draft.pick_sequence[index]) == rival and GameState.draft.night_trades.size() == board,
 			"The deal survives a save and load")
 	d = GameState.draft
 	d.auto_until_user_turn()
@@ -1420,6 +1449,19 @@ func _test_draft_night_trades() -> void:
 	for code in sizes:
 		same = same and (GameState.season.lists[code] as Array).size() == int(sizes[code])
 	_check(only_picks and same, "Every night deal is picks for picks and no list changes (%d deals)" % d.night_trades.size())
+	# The bid gate: a rival bids only for a pick worth more to it than to the
+	# seller, by more than the trade margin.
+	var gated := true
+	var rival_deals := 0
+	for tr in d.night_trades:
+		if str(tr["buyer"]) == me or str(tr["seller"]) == me:
+			continue
+		rival_deals += 1
+		var w: Array = tr.get("worths", [])
+		gated = gated and w.size() == 2 and float(w[0]) > float(w[1])
+	print("contracts: rival draft-night deals = %d" % rival_deals)
+	_check(rival_deals > 0, "Rivals trade picks with each other on draft night (%d deals)" % rival_deals)
+	_check(gated, "Every rival's night bid is for a pick worth more to it than the seller's worth plus the margin (%d deals)" % rival_deals)
 
 
 ## Next year's picks: valued with honest uncertainty about where a club will
@@ -2363,6 +2405,12 @@ func _test_free_agent_reasons() -> void:
 	_to_offseason()
 	var me := GameState.my_club
 	GameState.salary_cap += 10000000
+	var best_fa := {}
+	for fa in GameState.free_agents:
+		if best_fa.is_empty() or int(fa["overall"]) > int(best_fa["overall"]):
+			best_fa = fa
+	if not best_fa.is_empty():
+		_thin_line(str(best_fa["role"]))   # rivals keep their starters: make room for him
 	var target := {}
 	for fa in GameState.free_agents:
 		if GameState.fa_role(fa, me) == "ground" and (target.is_empty() or int(fa["overall"]) > int(target["overall"])):
