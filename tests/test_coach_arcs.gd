@@ -319,6 +319,8 @@ func _test_sacked_way_back() -> void:
 	var arec := CoachArcs.start(st, adef, GameState.season_year, GameState.story_week(), "", ahit.get("mem", {}))
 	CoachArcs.answer(adef, arec, "arc_assist_lunch", "confront", GameState.story_week(), GameState.season_year)
 	CoachArcs.answer(adef, arec, "arc_assist_offer", "block", GameState.story_week() + 4, GameState.season_year)
+	# A goal no side meets: a premiership (+30) cannot save a missed one (0 - 25 + 30 < 30).
+	GameState.board["goal"] = {"key": "wins99", "text": "Win 99 games", "wins": 99}
 	_play_out(rng, 0)
 	st = GameState.coach_arcs
 	_check(not GameState.is_sacked(), "sacked: the career goes on (no sacked card)")
