@@ -14,17 +14,19 @@ extends RefCounted
 const ORDER := ["press", "approach", "captain_vacant", "backing", "captain_review"]
 
 
-## Every candidate that is live now: {kind: {text, route, ref}}.
+## Every candidate that is live now: {kind: {text, route, ref}}. The press
+## and approach are answered on the Hub itself (the conference overlay and the
+## approach cards), so their route is "hub": tapping reloads it in place.
 static func candidates(gs) -> Dictionary:
 	var out := {}
 	if gs.season == null or gs.my_club == "" or gs.season.is_season_over():
 		return out
 	if gs.media_conference_pending():
-		out["press"] = {"text": "Face the press", "route": "", "ref": ""}
+		out["press"] = {"text": "Face the press", "route": "hub", "ref": ""}
 	for a in gs.coach_approaches:
 		if str((a as Dictionary).get("choice", "")) == "":
 			out["approach"] = {"text": "Answer %s's approach for your %s" % [GameDB.club_name(str(a["club"])),
-					CoachMarket._job_word(str(a["from_job"]))], "route": "", "ref": str(a["cid"])}
+					CoachMarket._job_word(str(a["from_job"]))], "route": "hub", "ref": str(a["cid"])}
 			break
 	var rec: Dictionary = gs.captaincy_record(gs.my_club)
 	if Captaincy.ids(rec, "captain").is_empty():

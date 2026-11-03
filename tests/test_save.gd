@@ -658,7 +658,7 @@ static func _to_old(v: Variant) -> Variant:
 ## previous good save is set aside, not deleted, until the new one is in
 ## place, and reading recovers the newest good save that survives.
 func _test_safe_replacement() -> void:
-	var path := "user://test_safe_replacement.save"
+	var path := "user://test_safe_replacement_%d.save" % OS.get_process_id()
 	CareerSave.delete(path)
 	CareerSave.fail_at = ""
 	var a := {"which": "A"}

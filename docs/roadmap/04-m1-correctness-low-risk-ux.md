@@ -271,12 +271,8 @@ Instrument/seed the offending situation and confirm the ball is targeting the co
 **Merged:** PR #53 as `4552e20`; verified on main 2026-09-28 (full suite green).  
 **Priority:** `P0`  
 **Autonomy:** `SAFE`
-### Play round long-press discovery — missing onboarding explanation (director, 2026-10-07)
-**Status:** `TODO`. **Priority:** `P1` — usability/onboarding defect, under this existing quick-sim owner and M8-004.
-
-The director reports **nowhere explains how to long-press “Play round” to reach the skip-to-finals/season-skip controls**. Verify the current button label, available menu options and actual stopping point; do not teach obsolete “Sim round” wording or imply that skipping to the end of home-and-away simulates finals if it does not.
-
-At the first relevant Hub encounter, explicitly explain **press and hold Play round to open the quick-sim options**, then explain the available options and where each stops. Demonstrate the interaction with a short contextual cue/walkthrough anchored to the actual button, with clear dismiss/skip and replayable Help. Make the hidden interaction discoverable beyond the one-time introduction through a restrained persistent cue or an accessible equivalent entry. Explain any desktop equivalent actually supported. Verify a fresh-save user can discover and perform the gesture and select the intended skip action without prior knowledge; tutorials must not activate simulation by themselves.
+### Play round long-press discovery (director, 2026-10-07)
+**Status:** `SUPERSEDED` — the long-press play-ahead menu was cut (32-director-decisions-2026-11-03.md row 8); Sim the week is the only fast path, one round at a time.
 
 ### Pre-timeskip survey — how the sim runs your club while you skip (director, 2026-10-09)
 **Status:** `TODO`, unassigned. **Priority:** not set by the director. From the design bible brainstorm.
@@ -286,7 +282,7 @@ Before a timeskip the player tells the sim how to manage their club. The ethos i
 **Open director question:** a full survey, or the simpler version in which the sim follows the instructions the club already holds (game plan, selection, roles) and asks only about what nothing else covers. Do not build either until the director chooses.
 
 ### Skip to end of season — excessive simulation/loading time (director, 2026-10-07)
-**Status:** `TODO`. **Priority:** `P1` — high-priority performance/usability follow-up, coordinated with the existing §1.11 simulation/performance owner.
+**Status:** `SUPERSEDED` — skip-to-end-of-season was cut with the play-ahead menu (32-director-decisions-2026-11-03.md row 8). Kept as the 2026-10-07 record.
 
 The director reports **“Skip to end of season” can take up to five minutes to simulate the season**, which is far too long. Reproduce the actual control and career state, platform/build, club count and number of remaining rounds; the five-minute duration is a user-observed report, not a benchmark already confirmed. **Reduce the actual wait/loading duration where possible**, not merely the appearance of the loading screen.
 
@@ -312,50 +308,19 @@ Actions:
 `Options → Gameplay → Confirm before simming round`.
 
 ### Long press
-Open a compact quick-sim menu:
-- Sim this round
-- Skip next 4 rounds
-- Skip to end of home-and-away season
-- Cancel
+Cut 2026-11-03 (32-director-decisions-2026-11-03.md row 8): no play-ahead menu; Sim the week sims one round, finals included.
 
 ### Rules
-- Show landing round where practical.
-- Next 4 stops early if the H&A season ends.
-- End-of-H&A **must stop before finals**.
-- Never silently simulate finals.
-- Genuine blocking decisions/events may interrupt a batch.
-- Long press always opens its menu even when ordinary confirmation is disabled.
+- Genuine blocking decisions/events may interrupt a sim.
 
 ### Tests
 - setting persistence,
-- season-boundary stop,
-- finals stop,
 - current round advancement,
 - no duplicate simulation,
 - save/reload during preference state.
 
 ---
 
-
-### Temporary playtest affordance — one-tap Sim to finals
-**Status:** `TODO` — temporary testing convenience only; remove/defer once the post-season test cycle no longer needs it. _(2026-10-06: never built. `Sim round` and `Sim to Grand Final` on the Hub, week-by-week finals and the quick-sim path now cover the need; drop this unless the director still wants the button.)_
-
-For the current post-season/off-season playtest cycle, expose a visible **Sim to finals** button on the regular-season Hub so the user can reach the finals/post-season quickly without long-pressing Quick sim or manually advancing rounds.
-
-This should **reuse the existing quick-sim-to-end-of-home-and-away path** rather than create a second simulation route:
-- one tap simulates the remaining home-and-away rounds;
-- it must stop **before the first finals week**;
-- it must still stop if the user is sacked or another existing hard stop occurs;
-- it must preserve the same match results, injuries, awards, XP, board effects and save behaviour as the normal quick-sim path;
-- after arriving at the finals, normal finals controls take over so the user can test the post-season flow.
-
-Keep this deliberately lightweight and easy to delete. It is a **testing convenience, not a permanent UX commitment**. Mark the control/comment clearly enough that it can be removed once post-season testing is no longer the active focus.
-
-Acceptance:
-- from Round 1 or any later home-and-away round, one tap reaches the end of H&A without entering the finals;
-- no duplicate sim logic is introduced;
-- the resulting ladder/finals bracket is identical to using the existing `quick_sim(-1)` path;
-- the temporary button can be removed later without touching simulation code.
 
 ## ARD-M1-008 — Full Ratings mobile layout
 **Status:** `DONE`  

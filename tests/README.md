@@ -96,7 +96,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `namelink` | A player's name opens his profile: real touches at 390x844 and 1280x720 on the Training header, a row's Profile tap and a name in the week's news; a drag that starts on a name still scrolls; Back closes the profile and leaves the screen as it was. |
 | `trainrep` | The monthly training report: the block snapshot, a known riser with his stats, the retraining list matching the Training menu's own (and the club's two-project limit), the switch off leaving the hub as it was, an old save, and real taps on a phone and a PC (open, a name, a retraining entry, Close, Android Back) |
 | `match_story` | The match makes the story (switch `match_story`): with the switch off nothing shows or is kept; the hero is the winners' best by goals, disposals, tackles, clearances and clutch late goals; every reason traces to a number in the result; one record per match of yours persists through save and load and Sim the week; an old save loads; the Summary shows the story above How it went on a phone and a PC |
-| `coach_arcs` | The coach's career arcs (switch `coach_arcs`): with the switch off nothing is written or shown; the ten built arcs pass the deck's card checks; arcs start only from real game state (a board below 40 by round 8, a trade request); every beat dealt comes from an active arc and is the week's big call; the state persists through save and load and an old save loads empty; a 10-season Sim-the-week career (three on CI; COACH_ARCS_SEASONS overrides) writes its story log to tests/output/coach_arcs_story.txt (not committed) |
+| `coach_arcs` | The coach's career arcs (switch `coach_arcs`): with the switch off nothing is written or shown; all fourteen catalogue arcs pass the deck's card checks; phase 2's club changes: a rival's offer taken (poached) and a sacking each move the coach to another club at the rollover, the other club's coach or his own assistant takes the job he left, the career record (every club, its chairman, every season and player) carries on and persists through save and load with the move pending or made, the way back, the old-club reunion and the assistant arcs trigger, progress and resolve; arcs start only from real game state (a board below 40 by round 8, a trade request); every beat dealt comes from an active arc and is the week's big call; the state persists through save and load and an old save loads empty; a 10-season Sim-the-week career (three on CI; COACH_ARCS_SEASONS overrides) writes its story log to tests/output/coach_arcs_story.txt (not committed) |
 
 By area:
 
@@ -288,14 +288,14 @@ cannot verify a hardware orientation sensor or OS safe-area values):
 3. Scroll the pool with a finger starting on a player row. It must scroll, not
    accidentally sign someone. Draft actions should remain at least 44 UI units.
 4. Search with the software keyboard open, then rotate. Check the query/caret,
-   selected position, club/sort filters, availability toggle and roster survive.
+   selected position, sort and roster survive.
 5. Rotate with Picks / My list / Order open. The pool and activity panel should
    split on sufficiently wide landscape screens, otherwise use tabs. On short
-   screens scroll to reach filters rather than losing the action footer.
+   screens scroll to reach the pool controls rather than losing the action footer.
 6. Verify notches, the status bar and the home/gesture indicator do not overlap
    the draft's back button, tabs or Start Season action.
-7. Toggle **Filters → Available only** off. Taken players must show their new
-   club/pick, and must not be draftable again.
+7. A signed player must leave the pool and show in the pick log with his new
+   club/pick (the pool shows available players only; filters cut 2026-11-03).
 8. Complete a valid list, open older rival picks, then start the season.
 
 Position targets are **guidance**, except for the existing two-ruck rule. This

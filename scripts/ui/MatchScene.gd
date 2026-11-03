@@ -1008,7 +1008,7 @@ func _show_coach_box() -> void:
 	if mv != null:
 		mv.set_meta("break_unit", true)
 		(rep if rep != v else col_a).add_child(mv)
-		group.call("mu", mv)
+		group.call("tag", mv)  # Tag and Key match-ups stay together (director, 2026-11-03)
 	# Defensive set-up (director, 2026-11-03: Defensive forward and Loose
 	# interceptor fold into one call). The coach picks the shape; the men are
 	# the ones a coach would send: your loose man stays the one in the job
@@ -1943,7 +1943,7 @@ func _balance_break_columns(cols: Array, again := false) -> void:
 ## Where a call sits is dealt once: a call that opens later (Who tags) grows its
 ## own column and never moves another call.
 const DEAL_FIRST := {"gameplan": 0, "tag": 1}
-const DEAL_ORDER := ["gameplan", "tag", "mu", "pep", "df", "facts"]
+const DEAL_ORDER := ["gameplan", "tag", "pep", "df", "facts"]
 
 
 func _deal_calls(cols: Array, groups: Dictionary) -> void:
