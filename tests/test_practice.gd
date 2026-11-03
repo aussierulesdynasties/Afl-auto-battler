@@ -205,12 +205,14 @@ func _test_trial() -> void:
 	_career()
 	_to_practice()
 	var prospects: Array = GameState.preseason_prospects()
-	var ids := prospects.slice(0, 5).map(func(p): return str(p["id"]))
-	_check(GameState.toggle_practice_invite(ids[0]) and GameState.toggle_practice_invite(ids[1]) and GameState.toggle_practice_invite(ids[2]),
-			"Up to three prospects can be trialled")
-	_check(not GameState.toggle_practice_invite(ids[3]) and GameState.practice_invites().size() == 3,
-			"...and not a fourth")
-	_check(GameState.toggle_practice_invite(ids[2]) and GameState.practice_invites().size() == 2 and GameState.toggle_practice_invite(ids[3]),
+	var ids := prospects.slice(0, 8).map(func(p): return str(p["id"]))
+	var all_in := true
+	for i in range(6):
+		all_in = all_in and GameState.toggle_practice_invite(ids[i])
+	_check(all_in, "Up to six prospects can be trialled")
+	_check(not GameState.toggle_practice_invite(ids[6]) and GameState.practice_invites().size() == 6,
+			"...and not a seventh")
+	_check(GameState.toggle_practice_invite(ids[5]) and GameState.practice_invites().size() == 5 and GameState.toggle_practice_invite(ids[6]),
 			"An invitation can be taken back, and the place given to someone else")
 	_check(not GameState.toggle_practice_invite("nobody"), "Someone not in the class cannot be trialled")
 	var trialled: Array = GameState.practice_invites().duplicate()
@@ -222,7 +224,7 @@ func _test_trial() -> void:
 	for p in squad.ground + squad.bench:
 		dup = dup or nums.has(int(p["num"]))
 		nums[int(p["num"])] = true
-	_check(squad.ground.size() == 18 and squad.bench.size() == 5 and on.size() == 3 and not dup,
+	_check(squad.ground.size() == 18 and squad.bench.size() == 5 and on.size() == 6 and not dup,
 			"A trialled prospect starts: 18 on the ground and 5 on the bench, each with his own number")
 	var every_guest := true
 	for p in on:
@@ -236,7 +238,7 @@ func _test_trial() -> void:
 		var p := _pool(str(row["id"]))
 		var note := PreSeason.seen_line(p, CLUB)
 		noted = noted and trialled.has(str(row["id"])) and note.begins_with("Seen in your 2027 practice match.")
-	_check(lines.size() == 3 and noted, "Each prospect trialled has a line on his draft card, in his own words: seen in the practice match")
+	_check(lines.size() == 6 and noted, "Each prospect trialled has a line on his draft card, in his own words: seen in the practice match")
 	var p0 := _pool(trialled[0])
 	_check(PreSeason.seen_mult(p0, CLUB) < 1.0 and PreSeason.seen_mult(p0, "ZZZ") == 1.0,
 			"...and your club's read of him is surer, nobody else's")
@@ -253,7 +255,7 @@ func _test_trial() -> void:
 	# An opponent never trials the same prospect.
 	_career()
 	_to_practice()
-	var mine: Array = GameState._guest_picks(CLUB, 3, [], 1.0)
+	var mine: Array = GameState._guest_picks(CLUB, 6, [], 1.0)
 	for id in mine:
 		GameState.toggle_practice_invite(id)
 	var b2: Dictionary = GameState._practice_mine()
@@ -261,8 +263,8 @@ func _test_trial() -> void:
 	var clash := false
 	for id in g["WCE"]:
 		clash = clash or (g["FRE"] as Array).has(id)
-	_check((g["FRE"] as Array).size() == 3 and (g["WCE"] as Array).size() == 3 and not clash,
-			"Both clubs trial three prospects and never the same one")
+	_check((g["FRE"] as Array).size() == 6 and (g["WCE"] as Array).size() == 6 and not clash,
+			"Both clubs trial six prospects and never the same one")
 	GameState._clear_pending()
 	# Spots left empty are filled by your recruiters, as every club's are: the
 	# match always gives its full look at the class (director, 2026-11-03).
@@ -270,12 +272,12 @@ func _test_trial() -> void:
 	_to_practice()
 	var own := str(GameState.preseason_prospects()[GameState.preseason_prospects().size() - 1]["id"])
 	GameState.toggle_practice_invite(own)
-	var picks: Array = GameState._guest_picks(CLUB, 3, [own], GameState.recruiting_uncertainty_mult())
+	var picks: Array = GameState._guest_picks(CLUB, 6, [own], GameState.recruiting_uncertainty_mult())
 	GameState.sim_practice_match()
 	var filled: Array = GameState.practice_invites()
-	_check(filled.size() == 3 and filled[0] == own and filled.slice(1) == picks
-			and (GameState.preseason_practice()["report"]["prospects"] as Array).size() == 3,
-			"A trial left short is filled by your recruiters' top-rated prospects, and all three are seen")
+	_check(filled.size() == 6 and filled[0] == own and filled.slice(1) == picks
+			and (GameState.preseason_practice()["report"]["prospects"] as Array).size() == 6,
+			"A trial left short is filled by your recruiters' top-rated prospects, and all six are seen")
 
 
 func _pool(id: String) -> Dictionary:
@@ -305,7 +307,7 @@ func _test_leaves_nothing() -> void:
 		grew += 1 if with_dev["FRE"][k] != without["FRE"][k] else 0
 	for k in with_dev["WCE"]:
 		wce_grew += 1 if with_dev["WCE"][k] != without["WCE"][k] else 0
-	_check(grew >= 18 and wce_grew >= 18, "The players who play get a reserves game's development, at both clubs (%d, %d)" % [grew, wce_grew])
+	_check(grew >= 23 - PreSeason.practice_guests() and wce_grew >= 23 - PreSeason.practice_guests(), "The players who play get a reserves game's development, at both clubs (%d, %d)" % [grew, wce_grew])
 	PreSeason.reload()
 	var leftover := false
 	for code in GameState.season.lists:
@@ -464,7 +466,7 @@ func _test_screens_phone() -> void:
 			and _label(scene, "PreSeasonHero") == "The practice match"
 			and _label(scene, "PracticeHome") == "Fremantle" and _label(scene, "PracticeAway") == "West Coast",
 			"Phone: the practice stop names the match, Fremantle at home to West Coast")
-	_check(_label(scene, "PracticeCount") == "0 of 3 trialled" and _label(scene, "PracticePlan").begins_with("Game plan: ")
+	_check(_label(scene, "PracticeCount") == "0 of 6 trialled" and _label(scene, "PracticePlan").begins_with("Game plan: ")
 			and scene.find_child("PracticeSelection", true, false) != null and _fits(scene, 390.0),
 			"Phone: it says how many are trialled, the plan, and fits the screen")
 	_check(scene.find_child("IntraSetup", true, false) == null and scene.find_child("PracticeFill", true, false) != null,
@@ -473,7 +475,7 @@ func _test_screens_phone() -> void:
 	for id in ids:
 		_check(await _tap(scene.find_child("Trial_" + str(id), true, false), "a prospect"),
 				"Phone: a finger's tap trials a prospect")
-	_check(GameState.practice_invites().size() == 2 and _label(scene, "PracticeCount") == "2 of 3 trialled"
+	_check(GameState.practice_invites().size() == 2 and _label(scene, "PracticeCount") == "2 of 6 trialled"
 			and bool((scene.find_child("Trial_" + str(ids[0]), true, false) as Button).get_meta("chosen", false)),
 			"Phone: the two are marked and counted")
 	# The gate states both sides, sized from the rules (director, 2026-10-18).
