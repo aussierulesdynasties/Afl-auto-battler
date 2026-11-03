@@ -45,3 +45,7 @@ his differs, the later one wins. Nothing here edits the bible.
   stamped weekly; no plan = Steady). Seeded, deterministic. 3 seeded seasons (301-303) before/after: ladder SD
   17.3 -> 16.8 pts, injuries/game 1.44 -> 1.45, mean workload 6.18 -> 6.18 (noise-level; clubs now run hard ~26%,
   stars ~11% of quarters). Audit: tools/audit/rotations_season_impl.gd.
+- Cut audit row 6: Manual stat training is gone; only the training plans stay, no hand-buying of stat points. Old saves
+  on Manual (own or club plan) load on the plan closest to how each player is built, and his banked XP is spent under it.
+- Practice match guests: the single pre-season practice match trials 6 prospects per club (was 3; data/preseason.json
+  practice_guests). Invites, the setup count, "Recruiters fill the rest" and AI pairs all use the one number.

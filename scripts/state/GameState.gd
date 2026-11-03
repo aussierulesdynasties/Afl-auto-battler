@@ -200,6 +200,8 @@ var media_memory := {}           # question key -> last round asked
 ## The match makes the story (switch "match_story"): one record per match of
 ## yours, oldest first (MatchStory.record). Empty, and not saved, while off.
 var match_stories: Array = []
+## The coach's career arcs (ClubArcs; switch "coach_arcs"). Empty while off.
+var coach_arcs := {}
 ## Weeks of running a season-end card took off next pre-season's fitness base
 ## (finals_cards_2, B8 "Celebrate it properly": negative). Read once when the
 ## pre-season opens; with the preseason switch off it is carried and never read.
@@ -762,6 +764,8 @@ func save_career() -> bool:
 		state["canberra_on"] = false
 	if not match_stories.is_empty():
 		state["match_stories"] = match_stories
+	if not coach_arcs.is_empty():
+		state["coach_arcs"] = coach_arcs
 	if preseason_run_debt != 0.0:
 		state["preseason_run_debt"] = preseason_run_debt
 	if Features.on("training_report"):
@@ -913,6 +917,7 @@ func load_career() -> bool:
 	story = StoryEngine.ensure(state.get("story", {}))
 	media_conference = state.get("media_conference", {})
 	match_stories = state.get("match_stories", []) if state.get("match_stories") is Array else []
+	coach_arcs = state.get("coach_arcs", {}) if state.get("coach_arcs") is Dictionary else {}
 	preseason_run_debt = float(state.get("preseason_run_debt", 0.0))
 	backing_talk = state.get("backing_talk", {})
 	media_memory = state.get("media_memory", {})
@@ -1362,6 +1367,7 @@ func reset() -> void:
 	story = StoryEngine.new_state()
 	media_conference = {}
 	match_stories = []
+	coach_arcs = {}
 	preseason_run_debt = 0.0
 	backing_talk = {}
 	media_memory = {}
@@ -4849,8 +4855,9 @@ func _club_xp(club: String, p: Dictionary, base: int, staff: Dictionary, on_grou
 ##
 ## "position" trains the role core that OVR is built from
 ## (Ratings.ROLE_WEIGHTS) - the safe default, and what rival clubs use. The
-## archetypes lean a player toward one job (and the traits that go with it);
-## "manual" pauses development until you spend by hand.
+## archetypes lean a player toward one job (and the traits that go with it).
+## Manual (spend XP by hand) was cut 2026-11-03: old saves map to the
+## closest plan (_closest_plan).
 const TRAIN_PLANS := [
 	{"key": "position", "label": "Position plan", "roles": []},
 	{"key": "inside_mid", "label": "Inside midfielder", "roles": ["MID"],
@@ -4876,8 +4883,6 @@ const TRAIN_PLANS := [
 	{"key": "ruck", "label": "Ruck", "roles": ["RUCK"],
 			"text": "Wins the hit-out, then the ball at the stoppage.",
 			"weights": {"ruck": 3.0, "contested": 1.0}},
-	{"key": "manual", "label": "Manual (development paused)", "roles": [],
-			"text": "Nothing is trained automatically. His XP banks until you spend it by hand - banked XP does not make him better."},
 ]
 # ---------------------------------------------------------------------------
 # Learning another position (roadmap M5-003, director-selected RC-003)
@@ -5133,7 +5138,7 @@ const POSITION_PLAN_TEXT := {
 	"FWD": "Goalkicking and marking first, then carry and accuracy - what puts a score on the board.",
 	"RUCK": "Wins the tap, then the ball at the stoppage - a ruck's job in a match.",
 }
-## The plan for anyone without his own: Position plan, or Manual.
+## The plan for anyone without his own: Position plan (always).
 var default_train_plan := "position"
 
 
@@ -8741,7 +8746,7 @@ func train_plan_description(key: String, role := "") -> String:
 
 
 ## The plans that make sense for this player: Position plan, the archetypes
-## of his role (and his second role), a position he could learn, and Manual.
+## of his role (and his second role), and a position he could learn.
 func plans_for(p: Dictionary) -> Array:
 	var out := []
 	for row in TRAIN_PLANS:
@@ -8753,13 +8758,7 @@ func plans_for(p: Dictionary) -> Array:
 		learn.append(LEARN_PREFIX + current)
 	for job in learnable_jobs(p):
 		learn.append(LEARN_PREFIX + str(job))
-	var at := out.find("manual")
-	for k in learn:
-		if at >= 0:
-			out.insert(at, k)
-			at += 1
-		else:
-			out.append(k)
+	out.append_array(learn)
 	return out
 
 
@@ -8781,7 +8780,7 @@ func plan_for(p: Dictionary) -> String:
 	var own := str(p.get("train_plan", ""))
 	if own != "" and plan_valid_for(p, own):
 		return own
-	return default_train_plan if default_train_plan == "manual" else "position"
+	return "position"
 
 
 ## What a plan spends on for this player.
@@ -8815,28 +8814,59 @@ func set_player_plan(player_id: String, key: String) -> Dictionary:
 	return apply_plan_to(p)
 
 
-## Change the club plan - Position plan or Manual; nothing else suits every
-## role - then spend.
-func set_default_plan(key: String) -> Dictionary:
-	default_train_plan = "manual" if key == "manual" else "position"
+## The club plan is always Position plan (the only plan that suits every
+## role). Kept for callers; spends banked XP.
+func set_default_plan(_key := "position") -> Dictionary:
+	default_train_plan = "position"
 	mark_dirty()
 	return apply_train_plans()
 
 
-## Plans from older saves: the club plan becomes Position plan (a Manual
-## club plan becomes Manual on each player who followed it, so nobody's
-## development starts or stops behind your back), and a player's own plan
-## that no longer exists or does not suit his role is cleared.
+## Plans from older saves: the club plan becomes Position plan, and a
+## player's own plan that no longer exists or does not suit his role is
+## cleared. Manual (cut 2026-11-03), whether his own or followed from a
+## Manual club plan, becomes the plan closest to how he was hand-trained;
+## his banked XP is spent under it on the next apply.
 func _migrate_train_plans() -> void:
-	if default_train_plan == "manual":
-		for p in my_list:
-			if str(p.get("train_plan", "")) == "":
-				p["train_plan"] = "manual"
+	var club_manual := default_train_plan == "manual"
 	default_train_plan = "position"
 	for p in my_list:
 		var own := str(p.get("train_plan", ""))
+		if own == "manual" or (own == "" and club_manual):
+			var best := _closest_plan(p)
+			if best == "position":
+				p.erase("train_plan")
+			else:
+				p["train_plan"] = best
+			continue
 		if own != "" and not plan_valid_for(p, own):
 			p.erase("train_plan")
+
+
+## The plan whose spending best matches how a player already is: each plan
+## valid for him scores the weighted mean of his attributes on what it
+## trains, and an archetype must beat Position plan by a clear margin (3
+## points) to win, so a balanced player stays on the safe default.
+func _closest_plan(p: Dictionary) -> String:
+	var attr: Dictionary = p.get("attr", {})
+	var score := func(w: Dictionary) -> float:
+		var tot := 0.0
+		var sum := 0.0
+		for k in w:
+			tot += float(w[k])
+			sum += float(w[k]) * float(attr.get(k, 0))
+		return sum / tot if tot > 0.0 else 0.0
+	var best := "position"
+	var best_score: float = score.call(plan_weights(p, "position")) + 3.0
+	for row in TRAIN_PLANS:
+		var key := str(row["key"])
+		if key == "position" or not row.has("weights") or not plan_valid_for(p, key):
+			continue
+		var s: float = score.call(row["weights"])
+		if s > best_score:
+			best_score = s
+			best = key
+	return best
 
 
 ## Spend every list player's XP under his plan. Returns
@@ -8871,8 +8901,6 @@ func apply_train_plans() -> Dictionary:
 
 ## Spend one player's XP under his plan. Returns {stat: points bought}.
 func apply_plan_to(p: Dictionary) -> Dictionary:
-	if plan_for(p) == "manual":
-		return {}
 	var job := project_job(p)
 	if job != "" and plan_for(p) == LEARN_PREFIX + job:
 		# Learning: the same season limit, counted in the new position.
@@ -9084,15 +9112,6 @@ func _xp_amount(stats: Dictionary, on_ground: bool, on_bench: bool, reserves := 
 	return xp + clampi(perf, 0, XP_PERF_CAP)
 
 
-func train_cost(p: Dictionary, attr_key: String) -> int:
-	if not (p.get("attr", {}) as Dictionary).has(attr_key):
-		return -1
-	var cur := int((p["attr"] as Dictionary).get(attr_key, 1))
-	if cur >= 99:
-		return -1
-	return _cost_for(cur, float(p.get("gm", 18.0)), Potential.training_multiplier(p))
-
-
 ## Potential scales the price: up to half off while a player sits well below
 ## his POT (rehabbing a star, bringing on a top pick), dearer near it and
 ## steeply dearer past it (Potential.training_multiplier).
@@ -9107,75 +9126,6 @@ func _cost_for(cur: int, games: float, pot_mult := 1.0) -> int:
 ## nothing. Points cost this much more so a season's development stays where
 ## it was (one season through GameState: your list +5 OVR, as before).
 const TRAIN_COST_SCALE := 1.25
-
-
-func affordable_points(player_id: String, attr_key: String, cap := 5) -> int:
-	var p := list_player(player_id)
-	if p.is_empty():
-		return 0
-	var xp := int(p.get("xp", 0))
-	var cur := int((p["attr"] as Dictionary).get(attr_key, 1))
-	var games := float(p.get("gm", 18.0))
-	var pot_mult := Potential.training_multiplier(p)
-	var n := 0
-	while n < cap and cur < 99:
-		var cost := _cost_for(cur, games, pot_mult)
-		if xp < cost:
-			break
-		xp -= cost
-		cur += 1
-		n += 1
-	return n
-
-
-## Spend a player's own XP on one stat. `points` is a cap, not a promise:
-## the call stops at 99 or when the bank runs out.
-func train_stat(player_id: String, attr_key: String, points := 1) -> Dictionary:
-	var fail := {"ok": false, "reason": "Could not train that stat.", "points": 0, "cost": 0}
-	var p := list_player(player_id)
-	if p.is_empty():
-		fail["reason"] = "That player is not on your list."
-		return fail
-	if not (p.get("attr", {}) as Dictionary).has(attr_key):
-		fail["reason"] = "That stat cannot be trained."
-		return fail
-	var spent := 0
-	var gained := 0
-	var ov_before := int(p["overall"])
-	var stat_before := int(p["attr"][attr_key])
-	for _step in range(maxi(1, points)):
-		if int(p["overall"]) >= season_ceiling(p):
-			break
-		var cost := train_cost(p, attr_key)
-		if cost < 0 or int(p.get("xp", 0)) < cost:
-			break
-		p["xp"] = int(p["xp"]) - cost
-		p["attr"][attr_key] = mini(99, int(p["attr"][attr_key]) + 1)
-		spent += cost
-		gained += 1
-		_recalc_player_overall(p)
-	if gained == 0:
-		var needed := train_cost(p, attr_key)
-		fail["cost"] = needed
-		if int(p["overall"]) >= season_ceiling(p):
-			fail["reason"] = "He has had a full season's development. More after the off-season."
-		else:
-			fail["reason"] = "That stat is already 99." if needed < 0 else "Needs %d XP." % needed
-		return fail
-	_recalc_player_overall(p)
-	mark_dirty()
-	return {
-		"ok": true,
-		"reason": "",
-		"points": gained,
-		"cost": spent,
-		"stat_before": stat_before,
-		"stat_after": int(p["attr"][attr_key]),
-		"overall_before": ov_before,
-		"overall_after": int(p["overall"]),
-		"xp": int(p["xp"]),
-		"attr": attr_key,
-	}
 
 
 func _recalc_player_overall(p: Dictionary) -> void:
@@ -9513,6 +9463,7 @@ func _open_board_season() -> void:
 	board.erase("promise")
 	losing_streak = 0
 	StoryEngine.new_season(story)
+	ClubArcs.season_start(self)
 	_next_week_event()
 func board_confidence() -> int:
 	return int(board.get("confidence", ClubLife.START_CONFIDENCE))
@@ -9875,6 +9826,7 @@ func _next_week_event() -> void:
 	if season == null or is_sacked() or not stories_on or my_club == "":
 		return
 	week_events = ClubStories.pick(self)
+	ClubArcs.week(self)
 
 
 func week_event_pending() -> bool:
@@ -9909,6 +9861,7 @@ func _settle_week_event() -> void:
 		card["choice"] = -1
 		card["outcome"] = str(cost.get("text", "Business as usual."))
 		StoryEngine.record_choice(story, card, -1, story_week())
+		ClubArcs.answered(self, card, -1)
 		mark_dirty()
 
 
@@ -9937,6 +9890,7 @@ func resolve_card(index: int, choice: int) -> String:
 	card["resolved"] = true
 	card["choice"] = choice
 	card["outcome"] = out
+	ClubArcs.answered(self, card, choice)
 	mark_dirty()
 	return out
 
