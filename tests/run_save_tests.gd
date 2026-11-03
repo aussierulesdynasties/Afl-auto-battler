@@ -18,6 +18,8 @@ func _run() -> void:
 		return
 	var suite = script.new()
 	suite.run()
+	CareerSave.delete(gs_save_path())
+	DirAccess.remove_absolute(root.get_node("GameState").settings_path)
 	quit(0 if suite.failures.is_empty() else 1)
 
 
@@ -25,6 +27,15 @@ func _run() -> void:
 func _isolate_saves() -> void:
 	var gs = root.get_node("GameState")
 	gs.autosave_enabled = false
-	gs.save_path = "user://test_career.save"
-	gs.settings_path = "user://test_settings.cfg"
+	# Its own files per process: every worktree shares one user:// folder and
+	# most suites write user://test_career.save, so a suite running anywhere
+	# else at the same time replaced or deleted this one's save between its
+	# save and load (2026-11-03: "the season-2 save loads" failed locally).
+	var tag := OS.get_process_id()
+	gs.save_path = "user://test_save_suite_%d.save" % tag
+	gs.settings_path = "user://test_save_suite_%d.cfg" % tag
 	gs.show_real_names = false
+
+
+func gs_save_path() -> String:
+	return str(root.get_node("GameState").save_path)
