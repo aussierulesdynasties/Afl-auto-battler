@@ -18,7 +18,7 @@ extends RefCounted
 ## Otherwise it is OFF: every test suite that does not ask for it, and a plain
 ## editor run, for any switch whose project setting is false.
 ##
-## Switches (international_prospects ships ON since 2026-10-18; preseason, speccy_front, training_report ship off):
+## Switches (international_prospects ships ON since 2026-10-18; preseason, speccy_front, training_report, top_attributes ship off):
 ##   preseason   the eight-week pre-season between the wrap and Round 1
 ##               (PreSeason.gd, PreSeasonScene), and everything built on it
 ##               for patch 0.2.0 (the pre-season match comes next).
@@ -42,6 +42,10 @@ extends RefCounted
 ##               at the top of the full-time Summary, on the news front, in the press
 ##               question, and kept on GameState.match_stories. Off, none of it shows
 ##               and nothing is written.
+##   top_attributes   every player card (profile sheet, draft detail) shows his top three
+##               rated attributes, and Needs work says how he sits against players of
+##               his position (PlayerProfile.top_attributes / needs_work_line). Off,
+##               the cards show the graded strengths and the old Needs work line.
 ##   coach_arcs   the coach's career arcs (director, 2026-11-03, phase 1): stories that
 ##               run across seasons (hot seat, a protege, a drought, a legacy...),
 ##               started by real game state and told as Hub event cards
@@ -59,7 +63,7 @@ extends RefCounted
 ##               kicker's reach (MatchSim.kick_range: 30 m + 0.35 x disposal), nearest
 ##               teammate when nobody is; every match path shares MatchSim.kick_receiver.
 ##               Off, the receiver is the old zone pick from the whole ground.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "kick_range"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range"]
 
 static var _forced := {}
 static var _from_args := {}
