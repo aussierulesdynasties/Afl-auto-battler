@@ -1422,8 +1422,10 @@ func _open_player(id: String) -> void:
 	var type_l := UiKit.lbl(Roles.label(p), UiKit.HEADING, UiKit.TEXT, true)
 	type_l.name = "DetailType"
 	kv.add_child(type_l)
-	var strengths := PlayerProfile.strengths(p)
-	if strengths.is_empty():
+	var strengths := [] if Features.on("top_attributes") else PlayerProfile.strengths(p)
+	if Features.on("top_attributes"):
+		PlayerSheet.top_attributes_block(kv, p, scouted, 14, UiKit.SECONDARY)
+	elif strengths.is_empty():
 		kv.add_child(UiKit.lbl("No standout strength yet for his position.", UiKit.SECONDARY, UiKit.MUTED))
 	for s in strengths:
 		var row := UiKit.hbox(8)
@@ -1433,7 +1435,7 @@ func _open_player(id: String) -> void:
 		sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(sl)
 		row.add_child(UiKit.line(str(s["grade"]), 14, UiKit.MUTED))
-	var weak := PlayerProfile.weakness(p)
+	var weak := {} if Features.on("top_attributes") else PlayerProfile.weakness(p)
 	if not weak.is_empty():
 		kv.add_child(UiKit.lbl("Needs work: " + str(weak["label"]).to_lower(), UiKit.SECONDARY, UiKit.MUTED))
 	var traits: Array = Traits.of(p)

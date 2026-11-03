@@ -28,6 +28,8 @@ func run() -> void:
 	_t("_test_identities")
 	_t("_test_formation_wings")
 	_t("_test_list_profile")
+	_t("_test_top_attributes")
+	_t("_test_needs_work_line")
 	print(Ran.line("Roles", self))
 
 
@@ -705,3 +707,77 @@ func _rank(prof: Array, dim: String) -> int:
 		if str(r["dim"]) == dim:
 			return int(r["rank"])
 	return -1
+
+
+func _real(name: String) -> Dictionary:
+	for p in GameDB.players:
+		if str(p.get("real_name", "")) == name:
+			return p
+	return {}
+
+
+## Every card's top three (director, 2026-10-07): weak players get the same
+## three as strong ones, best first, ties in a fixed order, never made up.
+func _test_top_attributes() -> void:
+	for name in ["Hayden Young", "Wil Dawson"]:
+		var p := _real(name)
+		_check(not p.is_empty(), "%s is in the 2026 pool" % name)
+		if p.is_empty():
+			continue
+		var top := PlayerProfile.top_attributes(p)
+		var best := -1
+		for k in PlayerProfile.TOP_KEYS:
+			best = maxi(best, int(p["attr"][k]))
+		_check(top.size() == 3 and int(top[0]["value"]) == best
+				and int(top[0]["value"]) >= int(top[1]["value"]) and int(top[1]["value"]) >= int(top[2]["value"]),
+				"%s shows his top three rated attributes, best first (%s)" % [name, str(top)])
+	var weakest := {}
+	for p in GameDB.players:
+		if (p.get("attr", {}) as Dictionary).is_empty():
+			continue
+		if weakest.is_empty() or int(p["overall"]) < int(weakest["overall"]):
+			weakest = p
+	_check(PlayerProfile.top_attributes(weakest).size() == 3,
+			"The lowest-rated player in the league still gets three (OVR %d)" % int(weakest.get("overall", 0)))
+	var tied := _mid("T1", 50, 50, 50, 50)
+	var order := []
+	for t in PlayerProfile.top_attributes(tied):
+		order.append(str(t["key"]))
+	_check(order == ["disposal", "contested", "marking"], "Level ratings keep a fixed order (%s)" % str(order))
+	tied["attr"]["star"] = 99
+	tied["attr"]["durability"] = 99
+	var sd := []
+	for t in PlayerProfile.top_attributes(tied):
+		sd.append(str(t["key"]))
+	_check(sd == ["durability", "star", "disposal"], "Durability and Star power are ranked with the rest (%s)" % str(sd))
+	_check(PlayerProfile.TOP_KEYS.size() == 13, "All 13 attributes are ranked")
+	_check(PlayerProfile.top_attributes({"attr": {"marking": 61, "carry": 70}}).size() == 2
+			and PlayerProfile.top_attributes({}).is_empty(), "Missing ratings are never made up")
+
+
+## Needs work against players of his position, in a sentence; all above
+## average says so; in between says nothing.
+func _test_needs_work_line() -> void:
+	var core: Dictionary = Ratings.ROLE_WEIGHTS["MID"]
+	var low := _mid("N1", 50, 50, 50)
+	var high := _mid("N2", 50, 50, 50)
+	for k in core:
+		high["attr"][k] = 99
+	var key := ""
+	for k in core:
+		if float(core[k]) >= 0.2:
+			key = k
+	low["attr"] = (high["attr"] as Dictionary).duplicate()
+	low["attr"][key] = 1
+	var label := str(PlayerProfile.ATTR_LABELS[key])
+	_check(PlayerProfile.needs_work_line(low) == "Needs work: %s is below average for his position." % label,
+			"Needs work names the attribute against his position (%s)" % PlayerProfile.needs_work_line(low))
+	_check(PlayerProfile.needs_work_line(high) == "Above average across the attributes assessed for his position.",
+			"All above average says so (%s)" % PlayerProfile.needs_work_line(high))
+	var mid := (high["attr"] as Dictionary).duplicate()
+	mid[key] = int(PlayerProfile._values("MID", key)[int(PlayerProfile._values("MID", key).size() * 0.4)])
+	var middling := {"role": "MID", "attr": mid}
+	_check(PlayerProfile.percentile(middling, key) >= PlayerProfile.WEAK_SHARE
+			and PlayerProfile.percentile(middling, key) < 0.5 and PlayerProfile.needs_work_line(middling) == "",
+			"Just under average but not a weakness: no line, never a made-up one")
+

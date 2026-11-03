@@ -9,7 +9,7 @@ Nothing here starts until the boss assigns it. Reconciled 2026-10-10 against mai
 
 | # | Requirement (director's words in the section file) | Source | Owner | Status |
 |---|---|---|---|---|
-| 1 | Every player card shows his **top three attributes**; Needs work compares to a positional peer benchmark; retraining adds a position and never degrades old ones | §1.11 positional weaknesses | boss (3rd) | not built (only "Needs work:" exists) |
+| 1 | Every player card shows his **top three attributes**; Needs work compares to a positional peer benchmark; retraining adds a position and never degrades old ones | §1.11 positional weaknesses | boss (3rd) | built behind switch top_attributes (off), PR #863 |
 | 2 | Rotation policies named for intent (Protect freshness / Balanced rotations / Prioritise key players) with a one-line effect each | §1.11 coaching controls | boss | DONE #624 (2026-10-10): Protect freshness / Balanced rotations / Prioritise key players, descriptions pinned to thresholds by test; look gate on the coaching break still the director's |
 | 3 | Every pep talk, including the default, shows its effect; a **fourth pep-talk option** | §1.11 coaching controls | boss | DONE #624 (2026-10-10): fourth talk Bring the heat (+12% pressure, pace x1.15, paired-seed test); all four show their effect; balance size unmeasured against the other talks (lever audit) |
 | 4 | **Play through** split into three (midfield pillar, forward target, backline distributor); **Main ruck** for dual-ruck sides | §1.11 coaching controls | boss | built: #634 (three play-through calls), #652 + #758 (main ruck) |

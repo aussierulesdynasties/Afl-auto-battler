@@ -118,16 +118,19 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 
 	# What he is picked for.
 	v.add_child(UiKit.spacer(4))
-	for st in PlayerProfile.strengths(p):
-		var row := UiKit.hbox(8)
-		var sn := UiKit.lbl(str(st["label"]), UiKit.BODY, UiKit.TEXT)
-		sn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(sn)
-		row.add_child(UiKit.line(str(st["grade"]), UiKit.BODY, UiKit.MUTED))
-		v.add_child(row)
-	var weak := PlayerProfile.weakness(p)
-	if not weak.is_empty():
-		v.add_child(UiKit.lbl("Needs work: " + str(weak["label"]).to_lower(), UiKit.SMALL, UiKit.MUTED))
+	if Features.on("top_attributes"):
+		top_attributes_block(v, p, false, UiKit.BODY, UiKit.SMALL)
+	else:
+		for st in PlayerProfile.strengths(p):
+			var row := UiKit.hbox(8)
+			var sn := UiKit.lbl(str(st["label"]), UiKit.BODY, UiKit.TEXT)
+			sn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(sn)
+			row.add_child(UiKit.line(str(st["grade"]), UiKit.BODY, UiKit.MUTED))
+			v.add_child(row)
+		var weak := PlayerProfile.weakness(p)
+		if not weak.is_empty():
+			v.add_child(UiKit.lbl("Needs work: " + str(weak["label"]).to_lower(), UiKit.SMALL, UiKit.MUTED))
 	for t in Traits.of(p):
 		var tl := UiKit.lbl("%s. %s" % [Traits.label(str(t)), Traits.scout(str(t))], UiKit.SMALL,
 				UiKit.BAD if Traits.is_bad(str(t)) else UiKit.TEXT)
@@ -247,6 +250,44 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 			on_close.call())
 	box["footer"].add_child(close)
 	return overlay
+
+
+## Top attributes and the Needs work line (Features "top_attributes"): his
+## three highest-rated football attributes with their ratings, whatever their
+## level, then how he sits against players of his position. `hidden` (a draft
+## prospect whose ratings the club cannot see) names the three with the
+## scouts' grade word instead of a number. Shared by the profile sheet and the
+## draft detail so every card says it the same way.
+static func top_attributes_block(v: VBoxContainer, p: Dictionary, hidden: bool, size: int, note_size: int) -> void:
+	var top := PlayerProfile.top_attributes(p)
+	var head := UiKit.lbl("Top attributes", note_size, UiKit.MUTED)
+	head.name = "TopAttributesHead"
+	v.add_child(head)
+	if top.is_empty():
+		var none := UiKit.lbl("No ratings on record yet.", note_size, UiKit.MUTED)
+		none.name = "TopAttributesNone"
+		v.add_child(none)
+	for t in top:
+		var row := UiKit.hbox(8)
+		row.name = "TopAttr_" + str(t["key"])
+		var sn := UiKit.lbl(str(t["label"]), size, UiKit.TEXT)
+		sn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(sn)
+		var shown := str(t["value"])
+		if hidden:
+			shown = PlayerProfile.grade(PlayerProfile.percentile(p, str(t["key"])))
+		row.add_child(UiKit.line(shown, size, UiKit.MUTED))
+		v.add_child(row)
+	if top.size() in [1, 2]:
+		var short := UiKit.lbl("Only %d rated on record." % top.size(), note_size, UiKit.MUTED)
+		short.name = "TopAttributesShort"
+		v.add_child(short)
+	var nw := PlayerProfile.needs_work_line(p)
+	if nw != "":
+		var nl := UiKit.lbl(nw, note_size, UiKit.MUTED)
+		nl.name = "NeedsWork"
+		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(nl)
 
 
 ## "With us": his games and goals for your club, then up to three remembered

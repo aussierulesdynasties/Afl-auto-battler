@@ -37,6 +37,7 @@ func run() -> void:
 	_t("_test_unicorn")
 	_t("_test_rival_projects")
 	_t("_test_project_endings")
+	_t("_test_retraining_is_additive")
 	_t("_test_teaching_moves_the_ceiling")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -1005,3 +1006,66 @@ func _test_teaching_moves_the_ceiling() -> void:
 func _last_project_fact(id: String) -> Dictionary:
 	var all := CareerFacts.of(GameState.career_facts, id, "project")
 	return all[-1] if not all.is_empty() else {}
+
+
+## Retraining adds a position and never takes one away (director,
+## 2026-10-07): a second and then a third position learned keep his first
+## position and every earlier one, no attribute falls as a consequence, and
+## all of it survives a save.
+func _test_retraining_is_additive() -> void:
+	_new_season()
+	var cand := {}
+	for q in GameState.my_list:
+		if str(q.get("role2", "")) == "" and not GameState.learnable_jobs(q).is_empty():
+			cand = q
+			break
+	_check(not cand.is_empty(), "Someone on the list can learn a position")
+	if cand.is_empty():
+		return
+	var id := str(cand["id"])
+	cand["potential"] = 95
+	var first := str(cand["role"])
+	var learned_roles := []
+	for n in range(2):
+		var jobs := GameState.learnable_jobs(cand)
+		if jobs.is_empty():
+			# A third position needs a job in reach; bring the line he would learn within it.
+			for r in ["MID", "FWD", "DEF", "RUCK"]:
+				if not Ratings.positions(cand).has(r) and GameState.learn_job_for(cand, r) != "":
+					for k in Ratings.ROLE_WEIGHTS[r]:
+						cand["attr"][k] = maxi(int(cand["attr"][k]), 90)
+					GameState._recalc_player_overall(cand)
+					break
+			jobs = GameState.learnable_jobs(cand)
+		_check(not jobs.is_empty(), "Position %d is open to learn" % (n + 2))
+		if jobs.is_empty():
+			return
+		var job: String = jobs[0]
+		var role: String = GameState.LEARN_JOBS[job]["role"]
+		GameState.set_player_plan(id, GameState.LEARN_PREFIX + job)
+		for k in Ratings.ROLE_WEIGHTS[role]:
+			cand["attr"][k] = maxi(int(cand["attr"][k]), 90)
+		GameState._recalc_player_overall(cand)
+		var before: Dictionary = (cand["attr"] as Dictionary).duplicate()
+		var res := {}
+		for i in range(GameState.PROJECT_WEEKS):
+			res = GameState._project_week(cand)
+		_check(bool(res.get("learned", false)), "Position %d is learned (%s)" % [n + 2, str(res)])
+		learned_roles.append(role)
+		var fell := []
+		for k in before:
+			if int(cand["attr"][k]) < int(before[k]):
+				fell.append(k)
+		_check(fell.is_empty(), "Learning %s lowers none of his attributes (%s)" % [role, str(fell)])
+		var all := Ratings.positions(cand)
+		var kept := all.has(first) and str(cand["role"]) == first
+		for r in learned_roles:
+			kept = kept and all.has(r) and Ratings.plays_role(cand, r)
+		_check(kept, "After %d learned he still plays every position he had (%s)" % [n + 1, str(all)])
+		cand.erase("project_year")
+	GameState.save_career()
+	GameState.load_career()
+	var back := GameState.list_player(id)
+	var after := Ratings.positions(back)
+	_check(after.has(first) and after.has(learned_roles[0]) and after.has(learned_roles[1]),
+			"Every learned position survives a save (%s)" % str(after))
