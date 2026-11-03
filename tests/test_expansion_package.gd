@@ -447,7 +447,7 @@ func _test_who_a_rival_keeps() -> void:
 			for q in list:
 				if q != p:
 					q["salary"] = share + 100000
-		var why := Contracts.ai_release_reason(p, list, GameState.cap_for(club))
+		var why := GameState.ai_release_reason(club, p)
 		var expect_why: String = {"kept": "", "let go": "delist", "cap": "cap", "cap, no first call": "cap"}[case]
 		ExpansionBuild.ensure_foundation(GameState, "TAS")
 		var st := ExpansionBuild.state(GameState, "TAS")

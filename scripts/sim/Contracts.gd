@@ -342,10 +342,22 @@ static func best_offer(p: Dictionary, offers: Array) -> Dictionary:
 ## The most a club will pay him a season, from his role there and his
 ## asking price - never his potential: a starter up to two $25k steps over
 ## his ask, a bench player one, a depth signing only his lowest.
-static func club_max(p: Dictionary, role: String, cap_room: int) -> int:
+##
+## A rebuilding club (`phase`) pays one step more for a player 23 or under
+## whose projected rating is 5 or more above his rating now: it is buying the
+## player he will be (TradeValue.future_rating / now_rating).
+static func club_max(p: Dictionary, role: String, cap_room: int, phase := "") -> int:
 	var ask := asking_salary(p)
 	var most := ask + 2 * SALARY_STEP if role == "ground" else (ask + SALARY_STEP if role == "bench" else lowest(p, ai_years(p)))
+	if growth_premium(p, phase):
+		most += SALARY_STEP
 	return mini(most, cap_room)
+
+
+## Whether a club in `phase` pays the growth step for him (club_max).
+static func growth_premium(p: Dictionary, phase: String) -> bool:
+	return phase == "rebuilding" and float(p.get("age", 25.0)) <= 23.0 \
+			and TradeValue.future_rating(p) - TradeValue.now_rating(p) >= 5.0
 
 
 ## A club's opening offer: his lowest price for the term he wants (a depth
@@ -430,27 +442,43 @@ const COMP_TENURE := 2
 
 
 ## Why a rival lets an expiring player go: "" (it keeps him), "delist" (not
-## wanted: past it, or below the list's median worth) or "cap" (wanted, but
-## no room for his price - he walks to free agency and can earn a pick).
-static func ai_release_reason(p: Dictionary, list: Array, cap: int) -> String:
-	if float(p.get("age", 25.0)) >= 33.0 and int(p.get("overall", 50)) < 70:
-		return "delist"
-	var worths := []
-	for q in list:
-		worths.append(worth(q))
-	worths.sort()
-	var median := float(worths[worths.size() / 2]) if not worths.is_empty() else 0.0
-	if worth(p) < median - 2.0:
+## wanted: worth less than the best replacement it can get at his position -
+## `replacement`, the top free agent there or what its next pick buys - and
+## outside its best 22) or "cap" (wanted, but no room for his price - he walks
+## to free agency and can earn a pick). A club never lets a player go that it
+## cannot replace with someone better, nor one it would pick (director
+## 2026-11-03: every club acts in its best interest).
+static func ai_release_reason(p: Dictionary, list: Array, cap: int, replacement: float = -INF) -> String:
+	if not needed(p, list) and worth(p) < replacement:
 		return "delist"
 	if asking_salary(p) > cap - payroll(list) + int(p.get("salary", 0)):
 		return "cap"
 	return ""
 
 
+## In his club's best 22: his rating clears the weakest starter picked at his
+## position (or his second one), or its weakest bench player
+## (TradeValue.selection_bars).
+static func needed(p: Dictionary, list: Array) -> bool:
+	var bars := TradeValue.selection_bars(list)
+	var ovr := roundi(TradeValue.rating(p))
+	for r in [str(p.get("role", "")), str(p.get("role2", ""))]:
+		if r != "" and bars.has(r) and ovr >= int(bars[r]):
+			return true
+	return ovr >= int(bars.get("bench", 999))   # or on its bench
+
+
 ## The term a rival club offers: longer for the young.
 static func ai_years(p: Dictionary) -> int:
 	var age := float(p.get("age", 25.0))
 	return 3 if age <= 25.0 else (2 if age <= 30.0 else 1)
+
+
+## The term a rival offers a player it keeps or signs: the term he wants when
+## he is in its best 22 (a club locks in the players it picks), else its
+## usual term for his age.
+static func ai_term(p: Dictionary, list: Array) -> int:
+	return int(wants(p)["years"]) if needed(p, list) else ai_years(p)
 
 
 ## What losing him is worth, from what the market paid for him and who he

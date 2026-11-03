@@ -171,15 +171,29 @@ func _test_senior_coach_decisions() -> void:
 			"Two failed seasons: the senior coach is sacked")
 	_check(str(coaches["BRL_SC"]["status"]) == "club", "A premiership coach is protected")
 	_check(str(coaches["CAR_SC"]["status"]) == "club", "A first season does not count toward a sacking")
-	_check(int(out["log"]["sackings"]) <= CoachMarket.MAX_SACKINGS, "At most five sackings in an offseason")
-	# Everyone failing twice: still capped.
+	# Everyone failing twice: every club acts for itself, no league-wide cap.
 	var all := _league()
 	for cid in all:
 		if str(all[cid]["job"]) == "SC":
 			all[cid]["fail_streak"] = 1
 	var out2 := CoachMarket.offseason({"coaches": all, "archive": {}, "year": Y, "my_club": "",
 			"clubs": GameDB.active_clubs(Y + 1), "results": res, "premier": "", "seed": SEED})
-	_check(int(out2["log"]["sackings"]) == CoachMarket.MAX_SACKINGS, "The league-wide sacking cap holds")
+	var eligible := 0
+	for cid in all:
+		if str(all[cid]["job"]) == "SC" and all[cid].has("sacked_by") and (all[cid]["sacked_by"] as Dictionary).size() > 0:
+			eligible += 1
+	_check(int(out2["log"]["sackings"]) > 5 and int(out2["log"]["sackings"]) == eligible,
+			"No sacking cap: every club with two failed seasons sacks its coach")
+	# Renewal has no dice: a club keeps its coach unless a candidate who would
+	# take the job beats him by more than CHANGE_COST; the same inputs decide alike.
+	var c5 := _league()
+	var inc: Dictionary = c5["COL_SC"]
+	var own := CoachMarket.hire_score(inc, "COL", "SC", Y, SEED)
+	var rival := CoachMarket.best_candidate_score(c5, "COL", "SC", Y, SEED, str(inc["cid"]))
+	_check(CoachMarket.renews(c5, inc, Y, SEED) == (own + CoachMarket.CHANGE_COST > rival),
+			"Renewal follows the hiring scores, not a roll")
+	_check(CoachMarket.renews(c5, inc, Y, SEED) == CoachMarket.renews(c5, inc, Y, SEED + 99),
+			"Renewal does not depend on the seed")
 	# Contract expiry: a coach who met his goal is renewed.
 	var c3 := _league()
 	c3["COL_SC"]["contract_to"] = Y

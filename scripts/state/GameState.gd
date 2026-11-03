@@ -1282,6 +1282,7 @@ func reset() -> void:
 	_targets_signed = {}
 	fa_lost = []
 	_bars = {}
+	_fa_phase = {}
 	_order_cache = {}
 	_standings_cache = {}
 	_fringe_cache = {}
@@ -2628,15 +2629,17 @@ func set_fitness_plan(plan: String) -> bool:
 	return true
 
 
-## Before each week's matches: AI clubs look again at round 14, then every
-## listed player carries his club's conditioning for the week.
+## Before each week's matches: AI clubs look again at every revision point
+## you get (Conditioning.revision_weeks: their bye, round 14, the last month),
+## then every listed player carries his club's conditioning for the week.
 func _stamp_conditioning() -> void:
 	if season == null:
 		return
 	var w := fitness_week()
 	for club in season.lists:
 		var rec := fitness_record(str(club))
-		if w == Conditioning.ROUND_14 and str(club) != my_club and fitness_ai_by_phase \
+		if w > 0 and str(club) != my_club and fitness_ai_by_phase and not season.is_regular_done() \
+				and Conditioning.revision_weeks(fitness_bye_week(str(club))).has(w) \
 				and Conditioning.chosen_at(rec, w) < w:
 			var plan := Conditioning.ai_plan(_club_phase(str(club)))
 			if plan != Conditioning.plan_at(rec, w):
@@ -4905,8 +4908,8 @@ const TRAIN_PLANS := [
 ## can lift him only PROJECT_OWN_GAIN more that season (and a learned position
 ## gives LEARN_PAYBACK back the season after) (the new position's
 ## training can still help his own game where the two overlap).
-## Rival clubs learn positions too, sparingly: AI_PROJECTS a season each, by
-## the same gates (_ai_projects).
+## Rival clubs learn positions too, PROJECT_MAX at once as you may, by the
+## same gates (_ai_projects).
 const LEARN_PREFIX := "learn_"
 const PROJECT_WEEKS := 8
 const PROJECT_REACH := 6
@@ -4917,7 +4920,6 @@ const PROJECT_OWN_GAIN := 2
 ## rating LEARN_PAYBACK more than the usual limit, never past his POT
 ## (director, 2026-10-06: projects must matter).
 const LEARN_PAYBACK := 1
-const AI_PROJECTS := 1
 const PROJECT_POT := {1: 70, 2: 90}      # positions he has -> POT to learn another
 const MAX_POSITIONS := 3
 const KEY_FWD_CM := 192.0
@@ -5093,33 +5095,68 @@ func _finish_project(p: Dictionary, announce := true, at := "Season end") -> Dic
 	return {"id": str(p["id"]), "job": job, "learned": learned, "own": own, "there": there}
 
 
-## A rival club's projects for one game: it starts AI_PROJECTS a season, on
-## its highest-POT candidate (a job in a line he does not have yet where he
-## has one), and its learners' weeks count as yours do. No news.
+## A rival club's projects for one game: it runs up to PROJECT_MAX at once,
+## as you may. Each one goes where it helps the club most: the job in its
+## thinnest position (players there per place in the side, FILL_SHARE), for a
+## player who gives up nothing for it - his season ceiling is within
+## AI_PROJECT_ROOM of his rating, so the cap a project puts on his own
+## training costs him nothing (director 2026-11-03). Its learners' weeks count
+## as yours do. No news.
 func _ai_projects(list: Array) -> void:
-	var started := 0
+	var running := 0
 	for p in list:
-		if int(p.get("project_year", 0)) == season_year:
-			started += 1
-	if started < AI_PROJECTS:
-		var best := {}
-		var best_jobs := []
-		for p in list:
-			var jobs := _jobs_open(p)
-			if not jobs.is_empty() and (best.is_empty() or int(p.get("potential", 0)) > int(best.get("potential", 0))):
-				best = p
-				best_jobs = jobs
-		if not best.is_empty():
-			var have := Ratings.positions(best)
-			var job := str(best_jobs[0])
-			for j in best_jobs:
-				var role := str(LEARN_JOBS[j]["role"])
-				if role in ["FWD", "MID", "DEF"] and not have.has(role):
-					job = str(j)
-					break
-			_start_project(best, job)
+		if project_job(p) != "":
+			running += 1
+	while running < PROJECT_MAX:
+		var pick := _ai_project_choice(list)
+		if pick.is_empty():
+			break
+		_start_project(pick["player"], str(pick["job"]))
+		running += 1
 	for p in list:
 		_project_week(p, false)
+
+
+## A player gives up nothing to a project when his season ceiling is at most
+## this far above his rating.
+const AI_PROJECT_ROOM := 2
+
+
+## The (player, job) a rival club's next project goes to, {"player", "job"},
+## or {}: the job in its thinnest position, then the player closest to his
+## own rating there, then by id.
+func _ai_project_choice(list: Array) -> Dictionary:
+	var counts := {}
+	for q in list:
+		for r in Ratings.positions(q):
+			counts[r] = int(counts.get(r, 0)) + 1
+	for q in list:
+		if project_job(q) != "":
+			var r := project_role(q)
+			counts[r] = int(counts.get(r, 0)) + 1   # a learner already on the way
+	var best := {}
+	var best_key := []
+	for p in list:
+		if season_ceiling(p.duplicate()) - int(p.get("overall", 0)) > AI_PROJECT_ROOM:
+			continue
+		for j in _jobs_open(p):
+			var role := str(LEARN_JOBS[j]["role"])
+			if not FILL_SHARE.has(role):
+				continue
+			var thin := float(counts.get(role, 0)) / float(FILL_SHARE[role])
+			var gap := int(p.get("overall", 0)) - rating_as(p, role)
+			var key := [thin, gap, str(p["id"]), str(j)]
+			if best.is_empty() or _key_less(key, best_key):
+				best = {"player": p, "job": str(j)}
+				best_key = key
+	return best
+
+
+static func _key_less(a: Array, b: Array) -> bool:
+	for i in range(a.size()):
+		if a[i] != b[i]:
+			return a[i] < b[i]
+	return false
 
 
 func _advance_projects() -> Array:
@@ -5908,11 +5945,22 @@ func open_offseason() -> void:
 		for p in Contracts.expiring(list).duplicate():
 			if retiring_now(p):
 				continue  # he retires at the rollover: no contract, no free agency
-			var why := Contracts.ai_release_reason(p, list, cap_for(code))
+			if not list.has(p):
+				continue   # already delisted to make cap room for a better player
+			var why := ai_release_reason(code, p)
+			while why == "cap" and list.size() > Contracts.MIN_LIST:
+				# Before a wanted player walks for want of cap room, the club
+				# delists its least valuable expiring player it does not pick (one
+				# it could replace or not), then looks again.
+				var spare := _spare_expiring(code, p)
+				if spare.is_empty():
+					break
+				_release(code, spare, false)
+				why = ai_release_reason(code, p)
 			if why == "" or list.size() <= Contracts.MIN_LIST:
 				# Rivals bargain by the same rules: the least he takes for that term
 				# (a club pushing to win now keeps him a little cheaper, as yours does).
-				var years := Contracts.ai_years(p)
+				var years := Contracts.ai_term(p, list)
 				_resign(p, years, Contracts.lowest(p, years) - culture_resign_discount(code, p, years))
 			else:
 				# A player they wanted but could not fit can earn them a pick;
@@ -5932,8 +5980,61 @@ func open_offseason() -> void:
 	_targets_signed = {}
 	fa_lost = []   # the wrap tells this off-season's losses, not last year's
 	_bars = {}
+	_fa_phase = {}
 	_open_market(free_agents)
 	mark_dirty()
+
+
+## Why rival `code` lets expiring player `p` go (Contracts.ai_release_reason),
+## measured against the best replacement it can actually get at his position.
+func ai_release_reason(code: String, p: Dictionary) -> String:
+	var list: Array = season.lists.get(code, [])
+	return Contracts.ai_release_reason(p, list, cap_for(code), replacement_worth(code, p))
+
+
+## The best a club can get in his place, on Contracts.worth's scale: the top
+## free agent on the market at his position, or the best prospect at his
+## position its next pick in this year's draft can reach. -INF when neither.
+func replacement_worth(code: String, p: Dictionary) -> float:
+	var role := str(p.get("role", ""))
+	var best := -INF
+	for q in free_agents:
+		if str(q.get("role", "")) == role or str(q.get("role2", "")) == role:
+			best = maxf(best, Contracts.worth(q))
+	var spot := 0
+	for pk in club_picks(code):
+		if int(pk["year"]) == season_year:
+			var at := int((pk["positions"] as Array)[0][0])
+			if spot == 0 or at < spot:
+				spot = at
+	if spot > 0:
+		var key := "%d:%d" % [season_year, draftee_pool.size()]
+		if str(_repl_class.get("key", "")) != key:
+			_repl_class = {"key": key, "ranked": TradeValue.rank_prospects(_open_class(season_year))}
+		var ranked: Array = _repl_class["ranked"]
+		for i in range(spot - 1, ranked.size()):
+			var q: Dictionary = ranked[i]
+			if str(q.get("role", "")) == role or str(q.get("role2", "")) == role:
+				best = maxf(best, Contracts.worth(TradeValue._held(q)))
+				break   # ranked best first: the first at his position is the best left
+	return best
+
+
+var _repl_class := {}
+
+
+## The expiring player `code` would delist first to make cap room for `keep`:
+## the least valuable one outside its best 22, or {}.
+func _spare_expiring(code: String, keep: Dictionary) -> Dictionary:
+	var list: Array = season.lists.get(code, [])
+	var spare := {}
+	for q in Contracts.expiring(list):
+		if q == keep or retiring_now(q) or bool(q.get("resigned", false)) or Contracts.needed(q, list):
+			continue
+		if spare.is_empty() or Contracts.worth(q) < Contracts.worth(spare) \
+				or (Contracts.worth(q) == Contracts.worth(spare) and str(q["id"]) < str(spare["id"])):
+			spare = q
+	return spare
 
 
 ## Who retires at this rollover is decided now, by the ageing rules, so a
@@ -6217,6 +6318,7 @@ func _open_market(players: Array) -> void:
 			free_agents.erase(p)
 			_career_over(p)
 	_bars = {}
+	_fa_phase = {}
 	var depth_held := {}
 	var targets_held := {}
 	for q in free_agents:
@@ -6256,7 +6358,7 @@ func _open_market(players: Array) -> void:
 				break
 			var role := fa_role(p, code)
 			var open := Contracts.opening_offer(p, role)
-			if int(open["salary"]) > Contracts.club_max(p, role, room):
+			if int(open["salary"]) > Contracts.club_max(p, role, room, _fa_phase_of(code)):
 				continue
 			aims -= 1
 			_add_offer(p, code, open, role, ft)
@@ -6360,7 +6462,7 @@ func _filler_choice(code: String, ranked: Array, targeted: Dictionary, counts: D
 				continue
 			if not any and str(p.get("role", "")) != need and str(p.get("role2", "")) != need:
 				continue
-			if int(Contracts.opening_offer(p, "depth")["salary"]) > Contracts.club_max(p, "depth", room):
+			if int(Contracts.opening_offer(p, "depth")["salary"]) > Contracts.club_max(p, "depth", room, _fa_phase_of(code)):
 				continue
 			return p
 	return {}
@@ -6395,8 +6497,21 @@ func _add_offer(p: Dictionary, code: String, open: Dictionary, role: String, ft:
 func offer_max(p: Dictionary, o: Dictionary) -> int:
 	var room := _cap_room_of(str(o["club"]))
 	if bool(o.get("filler", false)):
-		return Contracts.club_max(p, "depth", room)
-	return Contracts.club_max(p, str(o.get("role", "depth")), room)
+		return Contracts.club_max(p, "depth", room, _fa_phase_of(str(o["club"])))
+	return Contracts.club_max(p, str(o.get("role", "depth")), room, _fa_phase_of(str(o["club"])))
+
+
+## A club's phase for this market (_club_phase), read once per off-season
+## market (cleared with _bars).
+var _fa_phase := {}
+
+
+func _fa_phase_of(code: String) -> String:
+	if code == my_club or not season.lists.has(code):
+		return ""   # your offers are yours to make
+	if not _fa_phase.has(code):
+		_fa_phase[code] = _club_phase(code)
+	return str(_fa_phase[code])
 
 
 ## Rivals behind `leader` answer it once, all at the same moment, so no
@@ -6524,6 +6639,7 @@ func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 		return out
 	# A real offer: on the table, beside any rival's.
 	_bars = {}
+	_fa_phase = {}
 	var mine := _offer_of(p, my_club)
 	if mine.is_empty():
 		mine = {"club": my_club}
@@ -6734,7 +6850,8 @@ func trade_pick_years() -> Array:
 ## True while the national draft is on: picks still to be made trade live
 ## (director 2026-10-25); players do not, the lists are closed.
 func draft_night_open() -> bool:
-	return draft != null and draft.intake_mode and draft.league_mode and not draft.is_finished() 			and season != null and my_club != "" and season.lists.has(my_club)
+	return draft != null and draft.intake_mode and draft.league_mode and not draft.is_finished() \
+				and season != null and my_club != "" and season.lists.has(my_club)
 
 
 func pick_id(year: int, rnd: int, origin: String) -> String:
@@ -7239,11 +7356,14 @@ func _move_asset(a: Dictionary, from: String, to: String) -> void:
 # ---------------------------------------------------------------------------
 ## Most players and picks one side can put in a trade.
 const TRADE_MAX := 5
-## At most this many offers to you, and trades between rival clubs, in an
-## off-season: a market that moves, not one that churns.
+## At most this many offers to you in an off-season.
 const MAX_OFFERS := 2
-const MAX_AI_TRADES := 12
-## Most trades one rival club makes with other rivals in an off-season.
+## Trades between rival clubs in an off-season: they keep dealing while
+## deals both sides accept are there (director 2026-11-03). This is only a
+## runaway guard, never a limit a sane market reaches.
+const MAX_AI_TRADES := 40
+## Most trades one rival club makes on draft night, and on behalf of players
+## who asked to move.
 const DEALS_PER_CLUB := 2
 ## Bids a buyer tries, dearest first, for one it would stand by.
 const NEGOTIATE_STEPS := 6
@@ -7274,9 +7394,6 @@ func _club_verdict(club: String, other: String, gives: Array, gets: Array, margi
 # and the board shows it. Picks of this draft and the next two, never players;
 # the same values as the trade period, each club by its own read of the class.
 # ---------------------------------------------------------------------------
-## Share of rival picks (rounds 1 to TRADE_PICK_ROUNDS) that a rival tries to
-## buy on the night: about three deals tried in a 54-pick first three rounds.
-const NIGHT_DEAL_RATE := 0.06
 ## Rivals asked, by the seeded club order, before a night deal is given up.
 const NIGHT_BUYERS := 5
 ## Rivals that may put an offer to you for the pick you are on the clock with.
@@ -7322,17 +7439,17 @@ func _night_prospects(club: String) -> Dictionary:
 	return out
 
 
-## A rival is on the clock with pick `index`: now and then a rival with a later
-## pick in the round buys it, paying with picks priced by its own read of the
-## class; the seller judges by its own. Seeded on the year and the pick, so a
-## reload gets the same night.
+## A rival is on the clock with pick `index`: a rival with a later pick in the
+## round bids for it whenever the pick is worth more to it, by its own read of
+## the class, than to the seller by the seller's read (plus the trade margin),
+## paying with picks priced by its read; the seller judges by its own. No
+## dice (director 2026-11-03); each club still makes at most DEALS_PER_CLUB
+## deals, and the seeded club order is the same on a reload.
 func _rival_on_clock(code: String, index: int) -> void:
 	if not draft_night_open() or code == my_club or index >= draft.pick_rounds.size():
 		return
 	var rnd := int(draft.pick_rounds[index])
 	if rnd > TRADE_PICK_ROUNDS or index >= draft.pick_origin.size():
-		return
-	if Draft._hash01("night:%d:%d:%d" % [season_year, int(draft.seed), index]) >= NIGHT_DEAL_RATE:
 		return
 	var origin := str(draft.pick_origin[index])
 	var pick := pick_asset(pick_id(season_year, rnd, origin))
@@ -7341,11 +7458,12 @@ func _rival_on_clock(code: String, index: int) -> void:
 	var margin := float(difficulty_rules()["trade_margin"])
 	_freeze_league(true)
 	var sellers_read := trade_prospects()
+	var seller_worth := _worth_to_read(code, pick, sellers_read)
 	var tried := 0
 	for buyer in _club_order("night:%d" % index):
 		if tried >= NIGHT_BUYERS:
 			break
-		if buyer == code or _deals(buyer) >= DEALS_PER_CLUB:
+		if buyer == code or _deals(buyer, true) >= DEALS_PER_CLUB:
 			continue
 		# A buyer with a later pick in this round wants to move up.
 		var later := draft.upcoming_picks(buyer, 1)
@@ -7353,7 +7471,10 @@ func _rival_on_clock(code: String, index: int) -> void:
 			continue
 		tried += 1
 		var read := _night_prospects(buyer)
-		var pkg := _bid(buyer, pick, _worth_to_read(buyer, pick, read), UNASKED_BID, read, code)
+		var buyer_worth := _worth_to_read(buyer, pick, read)
+		if buyer_worth <= seller_worth * (1.0 + margin):
+			continue   # worth no more to it than to the seller: no bid
+		var pkg := _bid(buyer, pick, buyer_worth, UNASKED_BID, read, code)
 		if pkg.is_empty():
 			continue
 		if not bool(_club_verdict(code, buyer, [pick], pkg, margin, sellers_read)["ok"]):
@@ -7620,42 +7741,46 @@ func _bid(club: String, asset: Dictionary, worth: float, shade: float, prospects
 ## _trade_pool for who is on offer). The buyer bids from its own valuation,
 ## cheapest first, and the seller takes the first bid it values enough -
 ## neither sees the other's sums. Turned down, the buyer tries its next
-## target, up to TARGET_TRIES. A club is in DEALS_PER_CLUB deals at most; never with you;
-## at most MAX_AI_TRADES a year, besides the ones players asked for.
+## target, up to TARGET_TRIES. Clubs keep dealing while such deals exist;
+## never with you; MAX_AI_TRADES a year is a runaway guard only.
 func _ai_trades(prospects: Dictionary) -> void:
 	var done := 0
-	# Every club gets a turn as a buyer, then a second turn: no club buys
-	# twice before the rest have had their chance.
-	var turns := []
-	for _round in range(DEALS_PER_CLUB):
-		turns.append_array(_club_order("ai_trades"))
-	for buyer in turns:
-		if done >= MAX_AI_TRADES:
-			break
-		if _deals(buyer) >= DEALS_PER_CLUB:
-			continue
-		var others := []
-		var club_of := {}
-		for code in _club_order("sellers"):
-			if _deals(code) >= DEALS_PER_CLUB or code == buyer:
-				continue
-			for q in _trade_pool(buyer, code):
-				others.append(q)
-				club_of[str(q["id"])] = code
-		var tried := {}
-		for _try in range(TARGET_TRIES):
-			var target := _trade_target(buyer, others, tried)
-			if target.is_empty():
+	# Every club gets a turn as a buyer, one deal a turn, then the next pass:
+	# no club buys twice before the rest have had their chance. The market
+	# runs until a whole pass finds no deal both sides accept.
+	var order := _club_order("ai_trades")
+	var sellers := _club_order("sellers")
+	var dealt := true
+	while dealt and done < MAX_AI_TRADES:
+		dealt = false
+		for buyer in order:
+			if done >= MAX_AI_TRADES:
 				break
-			tried[str(target["id"])] = true
-			var seller := str(club_of[str(target["id"])])
-			var most := _worth_to(buyer, target, prospects) / (1.0 + Contracts.TRADE_MARGIN)
-			var pkg := _negotiate(buyer, seller, target, _bids(buyer, most, prospects), prospects)
-			if pkg.is_empty():
+			if buyer == my_club:
 				continue
-			_log_ai_trade(buyer, seller, target, pkg, "")
-			done += 1
-			break
+			var others := []
+			var club_of := {}
+			for code in sellers:
+				if code == my_club or code == buyer:
+					continue
+				for q in _trade_pool(buyer, code):
+					others.append(q)
+					club_of[str(q["id"])] = code
+			var tried := {}
+			for _try in range(TARGET_TRIES):
+				var target := _trade_target(buyer, others, tried)
+				if target.is_empty():
+					break
+				tried[str(target["id"])] = true
+				var seller := str(club_of[str(target["id"])])
+				var most := _worth_to(buyer, target, prospects) / (1.0 + Contracts.TRADE_MARGIN)
+				var pkg := _negotiate(buyer, seller, target, _bids(buyer, most, prospects), prospects)
+				if pkg.is_empty():
+					continue
+				_log_ai_trade(buyer, seller, target, pkg, "")
+				done += 1
+				dealt = true
+				break
 
 
 ## A trade between two rival clubs: done, logged and in the news. `why`: the
@@ -7676,11 +7801,13 @@ func _log_ai_trade(buyer: String, seller: String, target: Dictionary, pkg: Array
 
 
 ## Trades a club has made with other rivals this off-season.
-func _deals(club: String) -> int:
+func _deals(club: String, night_only := false) -> int:
 	if club == my_club:
 		return DEALS_PER_CLUB
 	var n := 0
 	for e in offseason_log:
+		if night_only and not bool(e.get("night", false)):
+			continue
 		if str(e.get("kind", "")) == "ai_trade" and (str(e["club"]) == club or str(e["with"]) == club):
 			n += 1
 	return n

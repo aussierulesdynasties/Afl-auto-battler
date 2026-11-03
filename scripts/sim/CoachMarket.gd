@@ -10,7 +10,7 @@ extends RefCounted
 ##   3. coaches retire (from 64, certainly by 70)
 ##   4. AI senior coaches are judged: contract expiry, sackings (after two
 ##      failed seasons, not in a first season, not while premiership-
-##      protected, at most MAX_SACKINGS a year)
+##      protected; no league-wide cap - director 2026-11-03)
 ##   5. expansion clubs open all six jobs
 ##   6. every vacancy is filled, senior jobs first; a promotion elsewhere
 ##      opens the job it leaves, so a chain resolves top-down and stops
@@ -35,16 +35,13 @@ const LEVEL := {"SC": 4, "SA": 3, "MID": 2, "FWD": 2, "DEF": 2, "DEV": 1}
 const FILL_ORDER := ["SC", "SA", "MID", "FWD", "DEF", "DEV"]
 
 const MIN_TENURE := 2               # seasons in a role before an ordinary promotion
-const MAX_SACKINGS := 5            # league-wide senior coach sackings per offseason
 const PREMIER_PROTECTION := 3      # seasons a premiership coach cannot be sacked
 const SACKED_CLUB_COOLDOWN := 5    # seasons before a sacked coach returns to that club
 const SACKED_SC_PENALTY_YEARS := 3
 const UNEMPLOYED_YEARS := 4        # then an unemployed coach leaves the game
 const MAX_POACHED_FROM_YOU := 2
-## AI clubs and expiring assistants: kept at this reputation, otherwise kept
-## this often.
+## A well-regarded assistant (poaching and news use this reputation bar).
 const ASSISTANT_KEEP_REP := 60
-const ASSISTANT_RENEW := 0.6
 const NEW_SC_REPLACES_SA := 0.5
 const RETIRE_FROM := 64
 const RETIRE_BY := 70
@@ -59,7 +56,12 @@ const W_REP := 0.25
 const W_EXP := 0.10
 const W_PATH := 0.10
 const W_LINK := 0.05
-const W_RAND := 0.10
+## No chance in a hiring score (director 2026-11-03: a club hires the best
+## candidate it can see; ties go to the lower cid).
+const W_RAND := 0.0
+## What changing a coach costs a club, on the hiring-score scale: an expiring
+## coach is renewed unless a candidate beats him by more than this.
+const CHANGE_COST := 0.03
 ## The club-link share a former player of the club carries (of W_LINK).
 const PLAYED_LINK := 0.5
 ## Former-player coaches worth keeping in the archive: coached this long, or
@@ -193,8 +195,44 @@ static func hire_score(c: Dictionary, club: String, job: String, year: int, seed
 	# A senior coach sacked in the last few years is a harder sell.
 	if job == "SC" and year + 1 - int(c.get("last_sacked", -99)) <= SACKED_SC_PENALTY_YEARS:
 		score -= 0.06
-	score += W_RAND * _roll(seed, "hire|%d|%s|%s|%s" % [year, club, job, str(c["cid"])])
+	if W_RAND > 0.0:
+		score += W_RAND * _roll(seed, "hire|%d|%s|%s|%s" % [year, club, job, str(c["cid"])])
 	return score
+
+
+## Does a club renew its expiring coach `inc`? Only if no candidate who would
+## take the job outscores him (hire_score, no chance) by more than
+## CHANGE_COST. No dice: a club keeps the best coach it can have.
+static func renews(coaches: Dictionary, inc: Dictionary, year: int, seed: int, my_club := "") -> bool:
+	var club := str(inc["club"])
+	var job := str(inc["job"])
+	var own := hire_score(inc, club, job, year, seed)
+	return own + CHANGE_COST > best_candidate_score(coaches, club, job, year, seed, str(inc["cid"]), my_club)
+
+
+## The best hiring score among coaches who would take `club`'s `job` (not
+## `skip`, and never one of your staff), or -INF.
+static func best_candidate_score(coaches: Dictionary, club: String, job: String, year: int, seed: int,
+		skip := "", my_club := "") -> float:
+	var best := -INF
+	for cid in coaches:
+		if str(cid) == skip:
+			continue
+		var c: Dictionary = coaches[cid]
+		if my_club != "" and str(c.get("status", "")) == "club" and str(c.get("club", "")) == my_club:
+			continue
+		if not would_take(c, club, job, year):
+			continue
+		best = maxf(best, hire_score(c, club, job, year, seed))
+	return best
+
+
+## `a` scored `sa` beats the current best `b` scored `sb`: higher score, ties
+## to the lower cid.
+static func _beats(sa: float, a: Dictionary, sb: float, b: Dictionary) -> bool:
+	if sa != sb:
+		return sa > sb
+	return b.is_empty() or str(a.get("cid", "")) < str(b.get("cid", ""))
 
 
 static func _roll(seed: int, key: String) -> float:
@@ -397,30 +435,26 @@ static func offseason(ctx: Dictionary) -> Dictionary:
 				and year - int(c.get("sc_since", year)) >= 2)):
 			sack_list.append([fails + (1 if bool(r.get("severe", false)) else 0), cid])
 		elif int(c.get("contract_to", year + 1)) <= year:
-			var roll := _roll(seed, "renew|%d|%s" % [year, cid])
-			var keep := bool(r.get("met", false)) or int(c.get("rep", 0)) >= 70 or roll < 0.4
-			if keep:
+			if renews(coaches, c, year, seed, my_club):
 				c["contract_to"] = year + 2 + int(_roll(seed, "reterm|%d|%s" % [year, cid]) * 3.0)
 			else:
 				_leave_job(c, year)
 				log["expired"] += 1
 				news.append([2, "%s have not renewed %s's contract." % [GameDB.club_name(club), _name(c)]])
 	# Assistants at the end of their term (AI clubs; yours wait for you):
-	# a club keeps a well-regarded one, and most of the rest.
+	# a club keeps him unless a better candidate would take the job (renews).
 	for cid in coaches.keys():
 		var c: Dictionary = coaches[cid]
 		if str(c.get("status", "")) != "club" or str(c.get("job", "")) == "SC" \
 				or str(c.get("club", "")) == my_club or int(c.get("contract_to", year + 1)) > year:
 			continue
-		var keep := int(c.get("rep", 0)) >= ASSISTANT_KEEP_REP \
-				or _roll(seed, "arenew|%d|%s" % [year, cid]) < ASSISTANT_RENEW
-		if keep:
+		if renews(coaches, c, year, seed, my_club):
 			c["contract_to"] = year + 2 + int(_roll(seed, "aterm|%d|%s" % [year, cid]) * 2.0)
 		else:
 			_leave_job(c, year)
 			log["assistant_expired"] = int(log.get("assistant_expired", 0)) + 1
 	sack_list.sort_custom(func(a, b): return int(a[0]) > int(b[0]))
-	for i in range(mini(MAX_SACKINGS, sack_list.size())):
+	for i in range(sack_list.size()):
 		var c: Dictionary = coaches[str(sack_list[i][1])]
 		var club := str(c["club"])
 		(c["sacked_by"] as Dictionary)[club] = year
@@ -470,7 +504,7 @@ static func offseason(ctx: Dictionary) -> Dictionary:
 					and (poached_from_you >= MAX_POACHED_FROM_YOU or kept_by_you.has(cid)):
 				continue
 			var s := hire_score(c, club, job, year, seed)
-			if s > best_score:
+			if _beats(s, c, best_score, best):
 				best_score = s
 				best = c
 		if best.is_empty():
@@ -553,7 +587,7 @@ static func staff_new_clubs(coaches: Dictionary, clubs: Array, my_club: String, 
 				var probe := c.duplicate(true)
 				ensure_fields(probe, year + 1)
 				var s := hire_score(probe, club, job, year, seed)
-				if s > best_score:
+				if _beats(s, c, best_score, best):
 					best_score = s
 					best = c
 			if best.is_empty():

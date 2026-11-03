@@ -45,6 +45,7 @@ func run() -> void:
 	_t("_test_trade_reasons")
 	_t("_test_free_agent_reasons")
 	_t("_test_market_reasons_change_nothing")
+	_t("_test_rivals_act_in_their_interest")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Contracts", self))
@@ -1705,11 +1706,11 @@ func _test_trade_market() -> void:
 	for e in deals:
 		for c in [str(e["club"]), str(e["with"])]:
 			clubs_in[c] = int(clubs_in.get(c, 0)) + 1
-			once = once and int(clubs_in[c]) <= GameState.DEALS_PER_CLUB and c != me
+			once = once and c != me
 	var asked_deals := deals.filter(func(e): return e.has("request")).size()
 	_check(deals.size() - asked_deals <= GameState.MAX_AI_TRADES and once,
-			"Rival clubs make at most %d trades with each other besides the ones players asked for, each club in %d at most, never you (%d, %d asked for)" % [
-			GameState.MAX_AI_TRADES, GameState.DEALS_PER_CLUB, deals.size(), asked_deals])
+			"Rival clubs trade with each other within the %d runaway guard, never with you (%d, %d asked for)" % [
+			GameState.MAX_AI_TRADES, deals.size(), asked_deals])
 	var lists_ok := true
 	for code in GameState.season.lists:
 		var l: Array = GameState.season.lists[code]
@@ -2462,3 +2463,41 @@ func _test_market_reasons_change_nothing() -> void:
 	GameState.open_offseason()
 	_check(had > 0 and GameState.fa_lost.is_empty(),
 			"The next off-season's market starts with no free-agency reasons from last year (%d before)" % had)
+
+
+## Every club acts in its own best interest (director 2026-11-03): it delists
+## only a player it does not pick and can replace with someone better, locks
+## in the players it picks for the term they want, and a rebuilding club pays
+## a step more for a young player still growing.
+func _test_rivals_act_in_their_interest() -> void:
+	_new_season()
+	var club := ""
+	for code in GameState.season.lists:
+		if str(code) != GameState.my_club:
+			club = str(code)
+			break
+	var list: Array = GameState.season.lists[club]
+	var ranked := list.duplicate()
+	ranked.sort_custom(func(a, b): return TradeValue.rating(a) > TradeValue.rating(b))
+	var star: Dictionary = ranked[0]
+	var fringe: Dictionary = ranked[ranked.size() - 1]
+	_check(Contracts.needed(star, list), "His club's best player is in its best 22")
+	_check(not Contracts.needed(fringe, list), "Its lowest-rated player is not")
+	_check(Contracts.ai_release_reason(star, list, 1 << 40, 1.0e9) == "",
+			"A club never delists a player it picks, whatever is on the market")
+	_check(Contracts.ai_release_reason(fringe, list, 1 << 40, -INF) == "",
+			"Nor one it cannot replace")
+	_check(Contracts.ai_release_reason(fringe, list, 1 << 40, Contracts.worth(fringe) + 1.0) == "delist",
+			"A player it does not pick goes when a better one at his position is there")
+	_check(Contracts.ai_term(star, list) == int(Contracts.wants(star)["years"]),
+			"A player it picks gets the term he wants")
+	_check(Contracts.ai_term(fringe, list) == Contracts.ai_years(fringe), "The rest get its usual term")
+	var kid := fringe.duplicate(true)
+	kid["age"] = 20.0
+	var grows := Contracts.growth_premium(kid, "rebuilding")
+	_check(not Contracts.growth_premium(kid, "contending"), "Only a rebuilding club pays for growth")
+	if grows:
+		_check(Contracts.club_max(kid, "bench", 1 << 40, "rebuilding")
+				== Contracts.club_max(kid, "bench", 1 << 40) + Contracts.SALARY_STEP,
+				"A rebuilding club pays one step more for a young player still growing")
+	_check(GameState.MAX_AI_TRADES >= 40, "Rival trades have only a runaway guard")

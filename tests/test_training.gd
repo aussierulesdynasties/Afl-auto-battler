@@ -885,7 +885,8 @@ func _test_unicorn() -> void:
 	_check(Traits.active(fwds + [u_fwd]).has("tall_small"), "Playing forward, he can")
 
 
-## Rival clubs learn positions too, one player a season, by the same gates.
+## Rival clubs learn positions too, up to PROJECT_MAX at once, by the same
+## gates, only for players who give up nothing for it.
 func _test_rival_projects() -> void:
 	_new_season()
 	var list := []
@@ -898,7 +899,7 @@ func _test_rival_projects() -> void:
 	for q in list:
 		if GameState.project_job(q) != "":
 			learners.append(q)
-	_check(learners.size() == GameState.AI_PROJECTS, "A rival club starts %d project a season" % GameState.AI_PROJECTS)
+	_check(learners.size() <= GameState.PROJECT_MAX, "A rival club runs at most %d projects" % GameState.PROJECT_MAX)
 	if learners.is_empty():
 		return
 	var l: Dictionary = learners[0]
@@ -910,7 +911,7 @@ func _test_rival_projects() -> void:
 	for q in list:
 		if int(q.get("project_year", 0)) == GameState.season_year:
 			n += 1
-	_check(n == GameState.AI_PROJECTS and int(l["project"]["weeks"]) == w + 1, "No second start; his weeks count game by game")
+	_check(n == learners.size() and int(l["project"]["weeks"]) == w + 1, "No second start; his weeks count game by game")
 
 
 ## A project survives a save mid-way, ends when he changes clubs (his chance
