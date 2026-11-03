@@ -50,6 +50,7 @@ The one list of work not done. Point a session at this file and it works down it
 - 47 Decision transparency: 9 questions on sheet #851 awaiting his answers.
 - 34 62-line event-card copy sheet; never-seen cards and no-trade-off choices unruled.
 - 40/41 Own game plan builder (game as is; Club Forge): decision waits on his plan-drilling play.
+- V0 What does 'beautiful' mean to you: which two or three screens from shipped games would you sit this game beside?
 
 ## D. Audits to run (seeded, via audit.yml)
 
@@ -153,6 +154,32 @@ Ids point at `docs/DIRECTOR_BIBLE.md`. Verified against the code on 2026-11-04.
 | T9.R21 | TODO row 14 says 'odds in football words'. The director's 2026-10-18 ruling is: "I still want the football language, but I also want full transparency behind each decision and the impact it will have". Reword the row to say upside, downside, size and odds in percentages, in football language. | docs/TODO.md row 14 matches bible principle 4 and what #821, #833 and #835 shipped. |
 | T9.R26 | Roadmap 10-05 still says Create-a-club gets 'an expansion-list establishment package'. The ruling (2026-10-06) is that a created club drafts in the League Draft like every club, with no concession. Correct the stale bullet at line 156. | The bullet in docs/roadmap/10-05-ard-m7-009-expansion-clubs-canberra-toggle-club-forge.md says League Draft, no concession package, and nothing else in the roadmap promises one. |
 | T9.R23 | Fix the stale role and state wording: roadmap W3 still lists 'running a check' as a state, and the style guide, STATUS.md and AGENT_TEAMS.md still talk about the lead's QC and art-qa-critic. The director's rules are no roles (2026-10-29), no 'running a check' (2026-10-31) and independent Art QA critics (2026-11-03). | W3 lists only working (with the live job named), awaiting director, blocked and available, and no doc names a lead or lead's QC. |
+
+## V. Visual direction (rulings 2026-11-04)
+
+Director's answers. Style guide updated to match (rulings 1-4); the reports behind them (VISUAL_DIRECTION_REPORT.md, MENU_JUICE_REPORT.md, 2026-11-03) were session reports and are not in the repo.
+
+- V-R1 CLAUDE.md governs over the style guide: gradients and glows are allowed when deliberate.
+- V-R2 The primary button may be filled with club colour. A red club may clash with BAD, so a contrast and collision check is required.
+- V-R3 Navigation icons and relaxed motion (sliding sheets, count-ups, screen transitions) are allowed.
+- V-R4 ARD Regular stays for small body text; no Barlow A/B.
+- V-R5 Particles only for the premiership (club-colour streamers) and the Brownlow winner reveal (24 gold sparkles).
+- V-R6 The live match stays a refined diagram; the vignettes are the showpiece. No following camera, no 3D restart plan, no Clay Oval proof now.
+- V-R7 Lowest supported phone: a recent mid-range, about 2023.
+- V-R8 Figure sheets and the eight vignette scenes are kept; any deletion waits for a future decision.
+- V-R9 Nav icons and the wordmark are AI-assisted candidates; critics check them and the director approves or rejects.
+
+| Id | What | Done looks like |
+|---|---|---|
+| V1 | Motion tokens and the `sheet_in` / `fill_bar` prototype, behind switch `ui_motion` (already in flight) | tokens in UiKit, a sheet slides in and a bar fills with the switch on, nothing moves with it off, headless sees the final state |
+| V2 | Premiership streamers in club colours | plays once on the premiership screen only, a capture frame shows both club colours |
+| V3 | Brownlow winner reveal: 24 gold sparkles | plays once on the winner reveal only, 24 sparkles, a capture frame |
+| V4 | Elevation scale and an automatic contrast test | surface steps are tokens, a test fails any text or club fill under the contrast floor, including each club's primary fill against BAD |
+| V5 | Training results is the proof screen for the new look, then the hub, then the other screens | director approves Training results on his phone before the hub starts, then the hub before the rest |
+| V6 | Match chrome: scorebug 56 to 72 px, bottom decision sheet about a third of the height, one-button transport, goal and siren poster card | captures at 390x844, the oval gets the freed height, every decision reachable with a real tap |
+| V7 | Navigation icon set (AI-assisted candidates) | one icon per hub destination, critics clean, director approves or rejects |
+| V8 | Refresh captures of every screen on current main (the newest are 2026-10-07 to 10-11) | one capture per screen at 390x844, dated, in the audit folder |
+| V9 | Housekeeping: placeholder logo name, the unreferenced 67.5 MB `The MCG.glb` in the repo root, stale worktrees | logo name is final or marked placeholder in one place, the file is removed or referenced, `git worktree list` shows only live ones |
 
 ## H. Needs his call (rulings, one at a time)
 
