@@ -118,6 +118,51 @@ static func weakness(p: Dictionary) -> Dictionary:
 	return worst
 
 
+## The football attributes a card ranks for his top three (director,
+## 2026-10-07: "EVERY player card must display that player's top THREE rated
+## attributes"): all 13, in this order, which also breaks a tie. Durability
+## and Star power are ranked too (director ruling 2026-11-03).
+const TOP_KEYS := ["disposal", "contested", "marking", "pressure", "intercept", "carry",
+		"goalkicking", "accuracy", "creating", "ruck", "discipline", "durability", "star"]
+
+
+## His three highest-rated attributes, whatever their level:
+## [{"key", "label", "value"}], best first; level ratings keep TOP_KEYS order.
+## Fewer than three only when his sheet lacks them (never made up).
+static func top_attributes(p: Dictionary, limit := 3) -> Array:
+	var attr: Dictionary = p.get("attr", {}) if p.get("attr") is Dictionary else {}
+	var rows := []
+	for i in TOP_KEYS.size():
+		var key: String = TOP_KEYS[i]
+		if attr.has(key):
+			rows.append({"key": key, "label": str(ATTR_LABELS[key]), "value": int(attr[key]), "i": i})
+	rows.sort_custom(func(a, b):
+		if int(a["value"]) != int(b["value"]):
+			return int(a["value"]) > int(b["value"])
+		return int(a["i"]) < int(b["i"]))
+	return rows.slice(0, limit)
+
+
+## The Needs work line, against 2026 players of his position (the same peer
+## benchmark as weakness()): "Needs work: Ruck work is below average for his
+## position." When every attribute his position is judged on (weakness's set)
+## sits at or above the middle of his peers: "Above average across the
+## attributes assessed for his position." Otherwise "" - never a made-up flaw.
+static func needs_work_line(p: Dictionary) -> String:
+	var weak := weakness(p)
+	if not weak.is_empty():
+		return "Needs work: %s is below average for his position." % str(weak["label"])
+	var core: Dictionary = Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), {})
+	var assessed := 0
+	for key in core:
+		if float(core[key]) < 0.2:
+			continue
+		assessed += 1
+		if percentile(p, key) < 0.5:
+			return ""
+	return "Above average across the attributes assessed for his position." if assessed > 0 else ""
+
+
 ## "Inside midfielder", "Key forward", "Ruck"...: the training archetype of
 ## his role his attributes fit best.
 static func player_type(p: Dictionary) -> String:
