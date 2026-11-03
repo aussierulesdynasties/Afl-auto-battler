@@ -66,7 +66,12 @@ extends RefCounted
 ##               kicker's reach (MatchSim.kick_range: 30 m + 0.35 x disposal), nearest
 ##               teammate when nobody is; every match path shares MatchSim.kick_receiver.
 ##               Off, the receiver is the old zone pick from the whole ground.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range"]
+##   match_flow  row 11 (director, 2026-10-10): stoppages come from contests that lock up
+##               (a held tackle, a rushed kick into a pack, a spoil in the pocket), a won ball
+##               after an intercept or a free is played on, chains are shorter and more
+##               numerous (Ratings.FLOW, MatchSim LOCKUP_*, TACKLE_SPILL). Changes match
+##               output. Off, a match is exactly as before.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow"]
 
 static var _forced := {}
 static var _from_args := {}
