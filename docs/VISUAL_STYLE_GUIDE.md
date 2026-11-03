@@ -5,7 +5,8 @@ and decided by the director. It replaces nothing in CLAUDE.md; it makes those ru
 enough to build from and to test against. The evidence and the reasoning are in
 [docs/research/VISUAL_AUDIT_2026-10-10.md](research/VISUAL_AUDIT_2026-10-10.md). When this
 guide and a screen disagree, the screen is wrong. When this guide and the director disagree, the
-director is right and this guide changes.
+director is right and this guide changes. Where this guide and CLAUDE.md disagree, CLAUDE.md governs
+(director, 2026-11-04).
 
 The one test, from CLAUDE.md: without the AFL names and logos, would the screen still look like
 this game? If it could belong to any sports-management app, it has drifted.
@@ -38,7 +39,7 @@ this game? If it could belong to any sports-management app, it has drifted.
 | MUTED | `#a39e93` | the line under a name, metadata, inactive tabs |
 | FAINT | `#6e695f` | disabled only |
 | GOOD / BAD | `#8cc49a` / `#e38b73` | a genuine state (form, injury, over the cap); never information, never decoration |
-| ACCENT | red | the primary action when no club colour applies (main menu, Settings) |
+| ACCENT | red | the primary action when no club colour applies (main menu, Settings). Red is no longer the only primary fill (director, 2026-11-04): see 2.2 |
 | Club colour | per club, `team_colour()` | atmosphere and the one primary action; see 2.2 |
 | Role colours | DEF teal, MID green, RUCK gold, FWD red-orange | as ink only, in a fixed-width column; never a box |
 
@@ -51,6 +52,8 @@ Light mode is maintained, not designed for. It uses dedicated pairs, never inver
   heading, the club's guernsey marker. Both clubs on match day. This is where "not boring" lives.
 - **The primary action:** one button per screen, filled in the club colour (ACCENT when there is
   no club), white or near-black ink by luminance. Never two filled buttons on one screen.
+  Director, 2026-11-04: the primary may be filled in club colour. Risk: a red club's fill can clash
+  with BAD, so each club's fill needs a contrast check and a collision check against BAD before it ships.
 - **Selection:** TEXT ink and a 2 px TEXT outline on the chosen option; MUTED ink and nothing
   else on the rest. Selection is never a fill and never the club colour, so a chosen option can
   never be mistaken for the thing to do next.
@@ -61,7 +64,7 @@ Light mode is maintained, not designed for. It uses dedicated pairs, never inver
   for the page. Sections are set apart by weight, size and club colour, not by spacing alone. A
   screen whose text is all one colour and one weight fails review. A club colour that fails
   contrast is never used as ink, and a red club's colour is never placed where it could be read
-  as BAD or as the primary action.
+  as BAD (it may fill the primary button, director 2026-11-04, once the collision check in the primary-action rule passes).
 - **Bold:** headings, names and the one fact per block the coach should not miss. MUTED is for
   what he can safely skip, never for something he decides on.
 - **Everything else:** TEXT, MUTED, PANEL.
@@ -83,9 +86,9 @@ only sizes a screen may use; literal sizes are a defect and a test fails them.
 | SCORE | 24 | Display | a match score |
 | NUMBER | 22 | Display | a figure in a list row |
 
-Small sizes: ARD Signwriter is a sign face and thins out under 14 px. Until the director chooses
-between a text cut of the family and a Barlow pairing for SECONDARY and FINE, SECONDARY is 14 and
-nothing the player decides on is set in FINE.
+Small sizes: ARD Signwriter is a sign face and thins out under 14 px. ARD Regular stays for small
+body text, no Barlow pairing and no A/B (director, 2026-11-04). SECONDARY is 14 and nothing the
+player decides on is set in FINE.
 
 Rules: sentence case always, except AFL conventions (OVR, POT, Grand Final, club codes); no
 letter-spacing; no all-caps labels; digits in tables are tabular; the Display cut is for scores,
@@ -96,8 +99,9 @@ ratings, titles and the "v" between two clubs, never for body copy.
 - GAP 8 between rows; SECTION 18 between sections; page gutter 16 on a phone, 12 inside a
   sheet, 10 around the oval only.
 - RADIUS 6, nothing rounder. Panels have no border. Rules are 1 px LINE.
-- No drop shadows, no top-edge highlights, no glows, no glassmorphism, no gradients except the
-  club wash in 2.2.
+- No drop shadows, no top-edge highlights, no glassmorphism. Gradients and glows are allowed when
+  deliberate (director, 2026-11-04; CLAUDE.md governs): the club wash in 2.2, a glow on the one
+  hero element, never at the cost of readability.
 - Thumb targets are at least 44 px tall; a scrollbar rail is 20 px wide with a 6 px thumb that grows to 10 px under the pointer or when held.
 
 ## 3. Components: the whole kit
@@ -128,8 +132,11 @@ a rule, not a new component.
 | Sheet | PANEL over the screen, Done as the primary | settings, a player, a filter |
 
 Banned: raised tiles, pills, chips, badges, progress bars for anything but a genuine progress,
-icon rows, stat boxes, cards inside cards, a tile grid used as navigation, two-row tab strips,
+decorative icon rows, stat boxes, cards inside cards, a tile grid used as navigation, two-row tab strips,
 decorative dividers, any control whose only job is to look like a control.
+Navigation icons are allowed (director, 2026-11-04): one icon with its word on each button of the
+hub's navigation row. They are AI-assisted candidates; critics check them and the director approves
+or rejects each set.
 
 ## 4. Screen templates
 
@@ -138,7 +145,7 @@ Every screen is one of these. A screen that is none of them is probably two scre
 ### 4.1 Hub (home)
 Order: the hero (match poster), the two or three facts that matter this week in BODY, the
 decision (Pick the side, Play match), your standing (one Display figure and a line), one row of
-four navigation buttons pinned at the foot. Settings in the top bar. Nothing else on the first
+four navigation buttons (icon and word) pinned at the foot. Settings in the top bar. Nothing else on the first
 viewport. Quiet weeks look quiet.
 
 ### 4.2 List (people or clubs)
@@ -194,8 +201,12 @@ skippable, readable culmination.
 ## 6. Motion
 
 - A screen eases in over 0.18 s; a headline reveals; a figure counts up to its real value in
-  under a second; nothing bounces, slides from the side or shakes except the approved match
-  haptics and shake.
+  under a second.
+- Relaxed motion is allowed (director, 2026-11-04): sheets slide in, figures count up, screens
+  transition. It stays short and eased; nothing shakes except the approved match haptics and shake,
+  and nothing bounces without the director's yes. It ships behind the `ui_motion` switch first.
+- Particles only for two moments (director, 2026-11-04): club-colour streamers for the premiership
+  and 24 gold sparkles on a Brownlow winner reveal. Nowhere else.
 - Headless runs (tests, captures) see the final state at once (`UiKit.motion_on()`).
 - Motion in the vignettes is judged as a played clip at game speed, never from stills.
 
