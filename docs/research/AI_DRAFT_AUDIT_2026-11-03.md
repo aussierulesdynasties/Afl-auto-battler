@@ -3,6 +3,8 @@
 Supersedes [draft_strategy_audit_2026-10-12.md](draft_strategy_audit_2026-10-12.md): main changed the National
 Draft since (#732, it runs until every list is full), so the old numbers no longer describe the game.
 
+> Superseded in part by [32-director-decisions-2026-11-03.md](../roadmap/32-director-decisions-2026-11-03.md) (row 37 later ruling, 2026-11-03): the buffed logic is now the only National Draft logic, rivals and Pick for me alike; switch `ai_draft_buff` is gone. The "ships off" and "rivals only" lines below describe the state when this audit ran.
+
 ## Headline
 
 - **Do AI-built lists end up weaker than the real 2026 lists?** No. Across 6 seeds x 10 seasons, AI clubs' best 23

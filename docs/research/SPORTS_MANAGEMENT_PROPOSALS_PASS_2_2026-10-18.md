@@ -361,7 +361,7 @@ Five repo findings the director should know before deciding. First, `scripts/sim
 **P-67. What happened while you were away.** After Play ahead (four rounds or to the end of the home and away) one sheet: each result in a line, injuries, contract clocks reached, trust moves with their reasons, cards answered by default; then the hub. From C-MG-27.
 - Bible intent: the risk of playing hands-off is his, so he sees the bill.
 - Evidence: FM players accept skipping only without hidden drift [player, FM Scout].
-- Exists today: one-round hub glance (`HubScene.gd:1547-1597`); play-ahead options (`:1195-1215`); no multi-round ledger.
+- Exists today: one-round hub glance (`HubScene.gd:1547-1597`); play-ahead options cut 2026-11-03 (CUT_AUDIT row 11); no multi-round ledger.
 - Size: S-M. Tier: B.
 - Does not: add stops (P-07 owns the budget).
 - Conflicts: none.
