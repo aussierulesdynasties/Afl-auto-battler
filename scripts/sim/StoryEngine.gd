@@ -69,7 +69,8 @@ static func pick_week(deck: Array, ctx: Dictionary, story: Dictionary) -> Array:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash("story|%d|%d|%d" % [int(ctx.get("seed", 0)), int(ctx.get("year", 0)), int(ctx.get("week", 0))])
 	# September always has something to say (finals weeks); the rest of the year is as quiet as it was.
-	var quiet := rng.randf() >= EVENT_CHANCE and str(ctx.get("phase", "regular")) != "finals"
+	# The week your season ends always has its card too (finals_cards_2).
+	var quiet := rng.randf() >= EVENT_CHANCE and not ["finals", "season_end"].has(str(ctx.get("phase", "regular")))
 	var out := []
 	var first := _pick_one(deck, ctx, story, rng, w, quiet, "", "")
 	if first.is_empty():
@@ -818,6 +819,10 @@ static func _culture_words(e: Dictionary, d: int) -> String:
 static func _running_words(d: int, facts := {}) -> String:
 	var n := absi(d)
 	var head := ("%s more week%s of running" % [_count(n).capitalize(), "" if n == 1 else "s"]) if d > 0 			else ("%s week%s less running" % [_count(n).capitalize(), "" if n == 1 else "s"])
+	if str(facts.get("result", "")) != "" and d < 0:
+		# The week the season ends (B8): the cost lands on next pre-season's base.
+		return "The list starts next pre-season %s week%s of running behind: a strong fitness base takes %s weeks of running by Round 1." % [
+				_count(n), "" if n == 1 else "s", PreSeason.run_weeks_text(float(PreSeason.tune("base_strong_from")))]
 	if not facts.has("pre_run"):
 		return "%s: a strong fitness base takes %s weeks of running by Round 1." % [head, PreSeason.run_weeks_text(float(PreSeason.tune("base_strong_from")))]
 	var was := float(facts["pre_run"])

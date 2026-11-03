@@ -1463,10 +1463,10 @@ Your career stays on this device.",
 	_router.handle_back(true)
 	await _settle()
 	_check(_router.current() == "match", "Back cannot abandon a live match")
-	_check(current_scene.find_child("RotationPicker", true, false) != null
+	_check(current_scene.find_child("RotationPicker", true, false) == null
 			and current_scene.find_child("LegsView", true, false) != null
 			and current_scene.find_child("PlanPicker", true, false) != null,
-			"The coach box offers gameplan, rotations and a legs report")
+			"The coach box offers gameplan and a legs report; rotations are automatic")
 	# Play quarters until the match stops for a coach's call, then answer it.
 	var sim = _state.pending_sim
 	var start_btn: Button = current_scene.find_child("StartQuarter", true, false)
@@ -1755,7 +1755,7 @@ Your career stays on this device.",
 	await _settle()
 	_check(_router.current() == "main", "Escape on the main menu does nothing")
 
-	# --- Quick sim: hold Sim round -------------------------------------------
+	# --- Hub rating lines --------------------------------------------------
 	_state.reset()
 	_state.start_season("SYD", _db.club_list("SYD"))
 	_state.set_confirm_sim_round(false)
@@ -1772,44 +1772,6 @@ Your career stays on this device.",
 			and opp_line.text.ends_with(rating_tail % [opp_o["category"], opp_o["rating"], opp_o["forecast"]])
 			and own_line.autowrap_mode != TextServer.AUTOWRAP_OFF and opp_line.autowrap_mode != TextServer.AUTOWRAP_OFF,
 			"The hub's two rating lines read as the game's numbers and wrap rather than cut off (%s | %s)" % [own_line.text if own_line else "-", opp_line.text if opp_line else "-"])
-	var r_start: int = _state.season.round_index
-	var sim_btn: Button = current_scene.find_child("SimRound", true, false)
-	sim_btn.emit_signal("button_down")
-	await create_timer(0.8).timeout
-	await _settle()
-	_check(current_scene.find_child("QuickSim", true, false) != null,
-			"Holding Sim round opens the quick-sim menu, even with the question switched off")
-	sim_btn.emit_signal("button_up")
-	sim_btn.emit_signal("pressed")
-	await _settle()
-	_check(_state.season.round_index == r_start, "Letting go after a hold sims nothing")
-	var qtext := _screen_text()
-	_check(qtext.contains("Skip to Round %d" % (r_start + 5)) and qtext.contains("before the finals"),
-			"Each option says where it lands, and that it stops before the finals")
-	var four: Button = current_scene.find_child("QuickSimFour", true, false)
-	if four != null:
-		four.emit_signal("pressed")
-		await _settle()
-	_check(_state.season.round_index == r_start + 4, "Skip next 4 plays four rounds")
-	_router.handle_back(true)
-	await _settle()
-	current_scene.call("_open_quick_sim")
-	await _settle()
-	var all_btn: Button = current_scene.find_child("QuickSimAll", true, false)
-	if all_btn != null:
-		all_btn.emit_signal("pressed")
-		await _settle()
-	_check(_state.season.is_regular_done() and _state.last_phase == "regular",
-			"Skip to the end of the home and away stops before the finals")
-	var qs_again: Dictionary = _state.quick_sim(4)
-	_check(int(qs_again["played"]) == 0 and str(qs_again["reason"]) == "season_end",
-			"Quick sim never plays a final")
-	_router.handle_back(true)
-	await _settle()
-	current_scene.call("_open_quick_sim")
-	await _settle()
-	_check(current_scene.find_child("QuickSim", true, false) == null,
-			"With the home and away done, there is nothing to quick sim")
 	_state.set_confirm_sim_round(true)
 
 	# --- Settings from the hub: speed, the menu, and deleting the career ----
