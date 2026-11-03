@@ -28,4 +28,4 @@ Real = Champion Data 2026 per team a game (Wheelo, 436 team-games). Balance is t
 | Ruck contests (all stoppages) | 94.0 | 97.0 | ~91 | 1.07 |
 
 Points a team a game: 88.0 off, 87.4 on. Still short with the switch on: spoils (0.57), intercept marks (0.76), ground
-ball gets (0.71). Every calibrated stat is within 9% of real; the calibration suite still guards the off path.
+ball gets (0.71). Row 11 is partly met: the calibrated stats are within 9% of real, but those three are not at real, so the bands do not all hold. Intercepts (1.01) are reached partly by definition: a tackle that spills free and a pocket ball-up are both booked as possessions won (a spill counts as an intercept; a pocket ball-up counts as an effective entry, and the spoiling defender gets no rebound). The calibration suite still guards the off path.
