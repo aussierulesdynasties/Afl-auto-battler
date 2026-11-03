@@ -76,3 +76,11 @@ his differs, the later one wins. Nothing here edits the bible.
   quarter gates moved). No style ever switches a reaction off (stubborn's never-chase lost_q 9 and never-pull loose 99
   are gone). Every club, your own assistant included, acts in its best interest: from Q2 each counters the plan the
   other side ran when the counter is worth within 0.3 of its usual game (PlanFit.plan_score = edge x plan knowledge).
+- Story calendar (bug bash): pre-season gets its own block of story weeks, after last season's finals and before
+  Round 1, never sharing a week with any season. StoryEngine.week_abs(year, week) = (year-2000)*52 + 12 + 10 + week:
+  a 12-week off-season gap, the pre-season's 10 slots (weeks -9..0), then 30 weeks of rounds and finals, so the
+  absolute week only moves forward through a career and last September's cards never block pre-season categories.
+  Old saves (no story "calendar" mark) convert their stored weeks on load (story and coach-arc weeks).
+  Cooldowns (director, option b): card and subject cooldowns count played weeks only (pre-season, rounds, finals;
+  StoryEngine.played_between), never off-season weeks, so every card keeps its written cooldown and repeats as often
+  as before.

@@ -141,6 +141,8 @@ func _test_pure(me: String) -> void:
 	var two := items + [old]
 	_check(_nf.rounds(two).size() == 2 and _nf.latest_round(two).size() == items.size(), "The page is the newest round; older ones are earlier")
 	_check(_nf.build([], me)["count"] == 0, "An empty feed makes an empty page")
+	var press: Dictionary = _nf.story(_item("media", "Post-match: 'Our method stood up.' The board bought it: board +2."), me)
+	_check(str(press["headline"]) == "“Our method stood up.”", "A real press item's headline is the answer alone (%s)" % press["headline"])
 
 
 func _test_page() -> void:
