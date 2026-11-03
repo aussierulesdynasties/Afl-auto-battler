@@ -361,13 +361,22 @@ func _test_off_season_and_fade() -> void:
 	for i in range(4):
 		GameState.advance()
 	_check(GameState.plan_level(CLUB, "contest") == 0, "...and nothing fades below barely")
+	# Balanced is the plan put down: your assistant calls the main three in
+	# your name (chasing, protecting, countering), never Balanced unless it is
+	# the plan you went in with, so once dropped nothing plays it.
+	GameState.plan_known[CLUB]["contest"] = 2
+	GameState.plan_idle[CLUB]["contest"] = 0
+	GameState.set_club_plan("contest")
+	for i in range(4):
+		GameState.advance()
+	_check(GameState.plan_level(CLUB, "contest") == 2, "A plan played in matches keeps its place")
 	GameState.plan_known[CLUB]["defensive"] = 2
 	GameState.plan_idle[CLUB]["defensive"] = 0
 	GameState.set_club_plan("defensive")
 	for i in range(4):
 		GameState.advance()
-	_check(GameState.plan_level(CLUB, "defensive") == 2, "A plan played in matches keeps its place")
-	_check(GameState.plan_level(CLUB, "attacking") <= 1, "...and the one put down fades")
+	_check(GameState.plan_level(CLUB, "defensive") == 2, "...as does the one taken up")
+	_check(GameState.plan_level(CLUB, "contest") <= 1, "...and the one put down fades")
 	var snapshot := _levels()
 	var idle := _idles()
 	GameState.save_career()

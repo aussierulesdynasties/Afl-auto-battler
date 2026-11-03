@@ -96,6 +96,9 @@ static func pick(ctx: Dictionary, recent: Dictionary) -> Dictionary:
 	for q in candidates:
 		var key := str(q["key"])
 		var last = recent.get(key, -999)
+		# {"year", "round"}: rounds restart each season, so last year's ask is off cooldown.
+		if last is Dictionary:
+			last = int(last.get("round", -999)) if int(last.get("year", 0)) == int(ctx.get("year", 0)) else -999
 		if typeof(last) != TYPE_INT and typeof(last) != TYPE_FLOAT:
 			last = -999
 		if round_no - int(last) > COOLDOWN_ROUNDS:

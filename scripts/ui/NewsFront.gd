@@ -134,6 +134,13 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 					"headline": "%s are the %s premiers" % [m.get_string(1), m.get_string(2)],
 					"standfirst": "The flag is theirs."}, true)
 			return _mine(s, my_club)
+	elif kind == "almanac_story":
+		# The season wrap's front item (switch "club_almanac"): the first sentence
+		# of the story of the season.
+		s.merge({"club": my_club, "weight": 80, "headline": text,
+				"standfirst": "The story of the season is in the club almanac."}, true)
+		s["mine"] = true
+		return s
 	elif kind == "match_story":
 		# Your match's hero (switch "match_story"): "<headline>. <hero>: <his game>."
 		m = _re("hero", "^((.+) stars as (.+?) (?:beat|and) .+?)\\. (.+)$").search(text)
@@ -144,7 +151,8 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 			s["mine"] = true
 			return s
 	elif kind == "media":
-		m = _re("media", "^Post-match: '(.*)'$").search(text)
+		# GameState writes "Post-match: '<answer>' <after-line>": the answer is the headline.
+		m = _re("media", "^Post-match: '(.*?)'(?: .*)?$").search(text)
 		s.merge({"club": my_club, "weight": 66, "mine": true,
 				"headline": "“%s”" % (m.get_string(1) if m != null else text),
 				"standfirst": "Your word after the match."}, true)

@@ -1430,6 +1430,20 @@ func _test_draft_night_trades() -> void:
 				all_picks = all_picks and str(id).begins_with("pick:")
 		_check(n == open.size() and all_picks, "Night offers to you are picks for your pick (%d)" % n)
 		_check(GameState.make_night_offers() == 0, "Offers for one pick of yours come once")
+		# Each one would go through if you took it: the bid clears the same margin
+		# the accept check uses (bug bash 2026-11-03).
+		var all_pass := true
+		for i in open:
+			var o: Dictionary = GameState.trade_offers[i]
+			all_pass = all_pass and bool(GameState.evaluate_trade(str(o["club"]), o["take"], o["give"])["ok"])
+		_check(all_pass, "Every night offer to you passes the accept check")
+		# Declined, then a reload on the same pick: the offers don't come back.
+		for i in open:
+			GameState.decline_trade_offer(i)
+		var news_n: int = GameState.news.size()
+		GameState.night_offers_at = -1
+		_check(GameState.make_night_offers() == 0 and GameState.news.size() == news_n,
+				"Declined night offers stay declined after a reload")
 	# The rivals' own deals: run the night out and check every one is picks for
 	# picks, never players, and that the lists are untouched.
 	var sizes := {}

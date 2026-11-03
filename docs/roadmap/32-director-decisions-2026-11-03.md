@@ -67,6 +67,11 @@ his differs, the later one wins. Nothing here edits the bible.
   most pressing of: a pending press question, an open assistant approach, no captain named, a young player ready for
   backing (could be backed, rated within 3 of the list's 22nd best), a pre-season captaincy review (BigCalls.gd). One
   call per week, kept in week_checks (saved), ticked when dealt with. Behind weekly_checklist and coach_arcs; off, as before.
+- Centre bounce after every goal: a goal is always followed by a centre bounce; the end-of-chain clanger can no longer
+  pay a free over it (MatchSim._play_one_chain, `not at_centre` guard; test_match_game _test_no_free_after_goal,
+  which found 47 of 538 goals cancelled before the fix). Recalibrated in Ratings.gd: clanger_is_free 0.34 -> 0.43
+  (free kicks for ratio 0.94 before, 0.88 with the guard alone, 0.95 after) and hitouts_per_stoppage 0.81 -> 0.78
+  (the restored bounces took hit-outs from 1.05 to 1.07; 1.03 after). Every calibration row stays in band.
 - PC pre-bounce break, Tag with Key match-ups: on the three-column PC break (1280x720 and wider, _deal_calls) the Tag
   block and the Key match-ups block stay together in the Tag's column; #878's split, made so every column was within
   a fifth empty, is reversed. The balance check loosens to 30% empty (the best split with them together measured
@@ -77,3 +82,22 @@ his differs, the later one wins. Nothing here edits the bible.
   roll. Draft night between rivals: the gate compares each club's pick against the same slot next year (a scale
   every club shares); rivals ask each other NIGHT_RIVAL_MARGIN (1%, director ruling 2026-11-03) while trades with
   you keep the difficulty margin (4% at the middle step); a night package may hold three picks.
+- Coach styles (match-day tactics): a senior coach's style only moves his reaction thresholds, by at most 25% either
+  way (MatchSim.COACH_STYLES: protect / chase / loose margins 0.75-1.25, fire-up at 9 or 12 down, no extra points, no
+  quarter gates moved). No style ever switches a reaction off (stubborn's never-chase lost_q 9 and never-pull loose 99
+  are gone). Every club, your own assistant included, acts in its best interest: from Q2 each counters the plan the
+  other side ran when the counter is worth within 0.3 of its usual game (PlanFit.plan_score = edge x plan knowledge).
+- Story calendar (bug bash): pre-season gets its own block of story weeks, after last season's finals and before
+  Round 1, never sharing a week with any season. StoryEngine.week_abs(year, week) = (year-2000)*52 + 12 + 10 + week:
+  a 12-week off-season gap, the pre-season's 10 slots (weeks -9..0), then 30 weeks of rounds and finals, so the
+  absolute week only moves forward through a career and last September's cards never block pre-season categories.
+  Old saves (no story "calendar" mark) convert their stored weeks on load (story and coach-arc weeks).
+  Cooldowns (director, option b): card and subject cooldowns count played weeks only (pre-season, rounds, finals;
+  StoryEngine.played_between), never off-season weeks, so every card keeps its written cooldown and repeats as often
+  as before.
+- Match motion, noise-safe bounds (director, 2026-11-03, option A): the seed-sensitive measures (ball-up ring,
+  visibility, every call against Balanced) are averaged over games 40-44, not read from game 42 alone. Each bound sits
+  below main's own average by about twice its seed-to-seed noise, so a reshuffle of seeded games cannot decide it:
+  ball-up closest pair of a side >= 1.5 m (was 2.5), Attack corridor longest file <= Balanced's + 0.75 (was <=),
+  Attack corridor shift from Balanced >= 7.5 m (was 8), its spread 9.5-11.5 m (was 10-11). Five games keep the suite
+  under the 900 s timeout. The worst-case motion limits stay on game 42, every frame.

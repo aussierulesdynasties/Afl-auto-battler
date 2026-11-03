@@ -4,6 +4,8 @@ extends Control
 ## here was written at a season's end from what the sim really did.
 
 var _root: VBoxContainer
+## The club whose records the records card shows: your club unless picked.
+var _records_club := ""
 
 
 func _ready() -> void:
@@ -34,6 +36,11 @@ func _build() -> void:
 	_root.add_child(UiKit.scroll(page))
 	var seasons := Almanac.rows(GameState.almanac, GameState.honour_roll)
 	page.add_child(_coach_card(Almanac.coach_record(seasons)))
+	if not GameState.club_records.is_empty():
+		page.add_child(_records_card())
+	var legends := _all_legends(seasons)
+	if not legends.is_empty():
+		page.add_child(_legends_card(legends))
 	if seasons.is_empty():
 		var none := UiKit.lbl("Your first season goes in the almanac when its Grand Final is played.",
 				UiKit.BODY, UiKit.MUTED)
@@ -44,6 +51,64 @@ func _build() -> void:
 		var card := _season_card(e)
 		card.name = "AlmanacSeason_%d" % int(e.get("year", 0))
 		page.add_child(card)
+
+
+## Club records (kept for every club; your club first, others by the picker).
+func _records_card() -> Control:
+	if _records_club == "" or not GameState.club_records.has(_records_club):
+		_records_club = GameState.my_club
+	var card := UiKit.panel(UiKit.PANEL, 14)
+	card.name = "ClubRecords"
+	var v := UiKit.vbox(4)
+	card.add_child(v)
+	v.add_child(UiKit.section("Club records"))
+	var codes: Array = GameState.club_records.keys()
+	codes.sort_custom(func(a, b): return GameDB.club_name(str(a)) < GameDB.club_name(str(b)))
+	var pick := OptionButton.new()
+	pick.name = "ClubRecordsPick"
+	for i in range(codes.size()):
+		pick.add_item(GameDB.club_name(str(codes[i])), i)
+		pick.set_item_metadata(i, str(codes[i]))
+		if str(codes[i]) == _records_club:
+			pick.select(i)
+	pick.item_selected.connect(func(i: int):
+		_records_club = str(pick.get_item_metadata(i))
+		var places := UiKit.scroll_places(_root)
+		_build()
+		UiKit.restore_places(_root, places))
+	v.add_child(pick)
+	for row in Almanac.club_record_rows(GameState, _records_club):
+		var who := str(row.get("who", ""))
+		_row(v, str(Almanac.CLUB_RECORD_NAMES[row["key"]]), "%d%s  ·  %s, %d" % [int(row.get("value", 0)),
+				"  ·  " + who if who != "" else "", str(row.get("label", "")), int(row.get("year", 0))],
+				"ClubRecord_" + str(row["key"]))
+	return card
+
+
+## Every legend on every page, newest season first.
+func _all_legends(seasons: Array) -> Array:
+	var out := []
+	for e in seasons:
+		for lg in e.get("legends", []):
+			var row: Dictionary = (lg as Dictionary).duplicate()
+			row["year"] = int(e.get("year", 0))
+			out.append(row)
+	return out
+
+
+func _legends_card(legends: Array) -> Control:
+	var card := UiKit.panel(UiKit.PANEL, 14)
+	card.name = "LegendsCard"
+	var v := UiKit.vbox(4)
+	card.add_child(v)
+	v.add_child(UiKit.section("Legends"))
+	for lg in legends:
+		var why: Array = lg.get("why", [])
+		var tail := ", ".join(PackedStringArray(why.map(func(w): return str(w)))) if not why.is_empty() \
+				else "%d games, %d goals" % [int(lg.get("games", 0)), int(lg.get("goals", 0))]
+		_row(v, str(int(lg.get("year", 0))), "%s  ·  %s" % [str(lg.get("name", "")), tail],
+				"LegendRow_" + str(lg.get("id", "")))
+	return card
 
 
 ## The coach's own line: the one figure is the flags.
@@ -82,6 +147,13 @@ func _season_card(e: Dictionary) -> Control:
 		badge.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(badge)
 	v.add_child(head)
+	# The story of the season, under the header.
+	var story := str(e.get(Almanac.STORY_KEY, ""))
+	if story != "":
+		var s := UiKit.lbl(story, UiKit.BODY, UiKit.TEXT)
+		s.name = "StoryOfTheSeason"
+		s.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(s)
 	var bits := []
 	if int(e.get("ladder", 0)) > 0:
 		bits.append("%s on the ladder" % GameState.ordinal(int(e["ladder"])))
@@ -98,6 +170,10 @@ func _season_card(e: Dictionary) -> Control:
 	if str(e.get("premier", "")) != "" and not flag:
 		_row(v, "Premiers", GameDB.club_name(str(e["premier"])), "Premiers")
 	_row(v, "Best and fairest", _first_name(e.get("bf", [])), "BestAndFairest")
+	var sh: Array = e.get("season_hero", [])
+	if not sh.is_empty():
+		var n := int(sh[0].get("count", 0))
+		_row(v, "Season hero", "%s, hero %d time%s" % [str(sh[0].get("name", "")), n, "" if n == 1 else "s"], "SeasonHero")
 	var gk: Dictionary = e.get("goalkicker", {})
 	if not gk.is_empty():
 		_row(v, "Leading goalkicker", "%s, %d" % [str(gk.get("name", "")), int(gk.get("goals", 0))], "Goalkicker")
@@ -110,13 +186,8 @@ func _season_card(e: Dictionary) -> Control:
 	for lg in e.get("legends", []):
 		_row(v, "Farewell", "%s  ·  %d games, %d goals" % [str(lg.get("name", "")), int(lg.get("games", 0)),
 				int(lg.get("goals", 0))], "Legend")
-	# The story of the season: plan step 1a fills this slot at the wrap.
-	var story := str(e.get(Almanac.STORY_KEY, ""))
-	if story != "":
-		var s := UiKit.lbl(story, UiKit.BODY, UiKit.TEXT)
-		s.name = "StoryOfTheSeason"
-		s.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(s)
+	for r in e.get("club_records_broken", []):
+		_row(v, "Club record", str(r), "ClubRecordBroken")
 	if bool(e.get("partial", false)):
 		var p := UiKit.lbl("Played before the almanac was kept: the honour roll's record only.",
 				UiKit.SMALL, UiKit.MUTED)

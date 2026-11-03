@@ -1548,9 +1548,11 @@ func _test_loose_interceptor(sz: Vector2i) -> void:
 				await Tap.tap(done)
 				await _settle()
 			_check(note.text.contains("plays loose behind the ball"), "The loose shape names who plays loose (%s: %s)" % [tag, note.text])
+			# The man a coach would pick is read from the ground at the break: the
+			# quarter Start plays can interchange him off before the check.
+			var want := id if named else str((Mu.interceptor_candidates((sim.squads[me].ground as Array).filter(func(p): return str(p["role"]) == "DEF"))[0] as Dictionary)["id"])
 			var gw: String = await Tap.tap(box.find_child("StartQuarter", true, false))
 			await _settle()
-			var want := id if named else str((Mu.interceptor_candidates((sim.squads[me].ground as Array).filter(func(p): return str(p["role"]) == "DEF"))[0] as Dictionary)["id"])
 			_check(gw == "" and str(sim.interceptor[me]) == want,
 					"Start sends the loose man a coach would pick (%s: %s v %s)" % [tag, str(sim.interceptor[me]), want])
 		m.queue_free()
