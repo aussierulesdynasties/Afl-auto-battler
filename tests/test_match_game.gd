@@ -21,6 +21,7 @@ func run() -> void:
 	_t("_test_contextual_frees_and_general_spoils")
 	_t("_test_free_causes_follow_the_play")
 	_t("_test_free_keeps_possession")
+	_t("_test_no_free_after_goal")
 	_t("_test_free_set_shots_counted")
 	_t("_test_legs_and_rotations")
 	_t("_test_moments")
@@ -345,6 +346,28 @@ func _test_free_keeps_possession() -> void:
 	_check(lost.is_empty(), "The side paid a free has the next possession (lost: %s)" % str(lost))
 	_check(int(kept.get("high_contact", 0)) > 0, "High contact on the carrier is paid and keeps the ball (%s)" % str(kept))
 	_check(int(kept.get("marking", 0)) > 0, "Marking-contest frees keep the ball with the side paid (%s)" % str(kept))
+
+
+## Director ruling 2026-11-03: a centre bounce always follows a goal. No free
+## kick (or 50) is paid between a goal and the bounce that restarts play.
+func _test_no_free_after_goal() -> void:
+	var goals := 0
+	var bad := 0
+	for seed in range(20):
+		var evs: Array = _sim(8800 + seed).run()["events"]
+		for i in range(evs.size()):
+			if str(evs[i].get("kind", "")) != "goal":
+				continue
+			goals += 1
+			for j in range(i + 1, evs.size()):
+				var k := str(evs[j].get("kind", ""))
+				if k == "clanger":
+					continue
+				if k in ["free", "fifty"]:
+					bad += 1
+				break
+	_check(goals > 0, "Goals are kicked in the sample")
+	_check(bad == 0, "No free is paid between a goal and the centre bounce (%d of %d goals)" % [bad, goals])
 
 
 ## A free paid inside 50 is a set shot: it counts in the taker's shots and set
