@@ -1292,7 +1292,7 @@ func _figure(pos: Vector2, scale: float, side: int, anim: String, facing: String
 	# The number, printed on the back of the guernsey by the shader.
 	var num := StoppageVignette.number_colour(side, number, 1.0, mirror) 			if number > 0 and facing.begins_with("back") and pm >= 30.0 else Color(0, 0, 0, 0)
 	StoppageVignette.draw_frame(self, feet, info, f, k, StoppageVignette.look_colour(side, look, mirror, _fig_alpha), mirror, num, _view,
-			str(look.get("hair_style", VignetteFigures.HAIR_BASE)))
+			str(look.get("hair_style", VignetteFigures.HAIR_BASE)), StoppageVignette.face_of(look))
 
 
 ## A man standing in the play: ready, not stiff - knees bent, bouncing at a rate

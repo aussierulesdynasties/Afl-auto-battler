@@ -50,8 +50,12 @@ extends RefCounted
 ##   finals_cards_2  the finals cards' second slice (rows 35, 36): A3, A9, A14, B7 in
 ##               finals weeks, and one card the week your season ends (A15, A16, B8,
 ##               B9). Off, those cards are not in the deck and nothing is written.
+##   player_looks   register row 6 (director 2026-10-10: "they look like clones"): ten more
+##               hair styles drawn (VignetteLooks.HAIR_STYLES) and a minimal face - eyes and
+##               brows, the brows one of five chosen by his id, in his hair colour, the eyes
+##               near black. Off, those styles draw the short crop and no face is drawn.
 
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "coach_arcs"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs"]
 
 static var _forced := {}
 static var _from_args := {}

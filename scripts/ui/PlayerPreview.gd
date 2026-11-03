@@ -66,4 +66,4 @@ func _draw() -> void:
 		var number := int(spec.get("number_pref", 0))
 		var num := StoppageVignette.number_colour(0, number) if i == 1 and number > 0 else Color(0, 0, 0, 0)
 		StoppageVignette.draw_frame(self, feet, info, StoppageVignette.figure_frame(info, frame, anim, facing), k,
-				colour, false, num, Transform2D.IDENTITY, hair)
+				colour, false, num, Transform2D.IDENTITY, hair, StoppageVignette.face_of(look))

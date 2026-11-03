@@ -295,7 +295,7 @@ func _draw_figure(at: Vector2, t: Dictionary) -> void:
 	var mirror := bool(pick[2])
 	draw_frame(self, Vector2(base.x, base.y), info, frame, m / VignetteFigures.PX_PER_M,
 			look_colour(int(t["side"]), look, mirror), mirror, Color(0, 0, 0, 0), Transform2D.IDENTITY,
-			str(look.get("hair_style", VignetteFigures.HAIR_BASE)))
+			str(look.get("hair_style", VignetteFigures.HAIR_BASE)), face_of(look))
 
 
 func _draw_copy(fade: float) -> void:

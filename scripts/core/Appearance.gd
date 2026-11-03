@@ -115,7 +115,15 @@ static func full(colours: Dictionary, id: String, generated_player: bool, chosen
 			out[k] = chosen[k].duplicate(true) if chosen[k] is Array else chosen[k]
 	if int(out["beard_colour"]) < 0:
 		out["beard_colour"] = int(out["hair"])
+	if Features.on("player_looks"):
+		out["brows"] = brows_for(id)
 	return out
+
+
+## His brows (register row 6, director 2026-11-03: they vary per player): one of
+## VignetteLooks.FACES, chosen by his id alone, the same every time. Features "player_looks".
+static func brows_for(id: String) -> int:
+	return absi(hash("appearance-brows|" + id)) % VignetteLooks.FACES.size()
 
 
 ## Whether `value` is a valid choice for `key` (unknown keys aren't).
