@@ -36,6 +36,7 @@ func run() -> void:
 	_t("_test_tactical_timeline")
 	var truth_hb: Array = await _t("_test_truth", [res])
 	_t("_test_tail_seeds", [truth_hb])
+	_t("_test_collection_pauses", [res])
 	_t("_test_play_when_idle", [res])
 	_t("_test_numbers_readable")
 	_t("_test_oval_people", [res])
@@ -768,6 +769,58 @@ func _test_truth(res: Dictionary) -> Array:
 	# A share too: any sim change redraws the seeded match.
 	_check(snaps * 40 <= takes, "The ball rarely jumps into a player's hands (%d of %d takes from more than 3 m)" % [snaps, takes])
 	return [hb_total, hb_as_kick]
+
+
+## Collection pauses (ROADMAP §1.11, "urgent regression"; register row 10):
+## the ball waits while the player the log names runs over from far off. The
+## view's role allocation now reads the log ahead: a set-up never claims a
+## player the log needs next, and a presser closes on the carrier from the
+## possession before his act (the 2026-10-08 record's named approach).
+## Yardstick as tools/visual/trace_collect.gd: a collect of 1.5 s or more of
+## match time. Seed 42: 31 such pauses (4 right after a pressure act, the named
+## player 40 m off on average) before, 9 (0, 30 m) after; four trace seeds
+## 139 -> 47. The caps leave room for sim changes redrawing the match.
+const PAUSE_S := 1.5
+const PAUSE_MAX := 12
+const PAUSE_PRESSURE_MAX := 1
+
+
+func _test_collection_pauses(res: Dictionary) -> void:
+	var d := MatchDirector.new()
+	d.setup(res, res["events"])
+	var h := 1.0 / 30.0
+	var cur = null
+	var start := 0.0
+	var dist := 0.0
+	var kind := ""
+	var pauses := 0
+	var after_pressure := 0
+	var far_sum := 0.0
+	var guard := 0
+	while not d.idle() and guard < 400000:
+		guard += 1
+		d.advance(h)
+		var p = d._phases[d._pi] if d._pi < d._phases.size() else null
+		if p == cur:
+			continue
+		if cur != null and str(cur.get("t", "")) == "collect" and kind != "" and d.time - start >= PAUSE_S:
+			pauses += 1
+			far_sum += dist
+			if kind == "pressure":
+				after_pressure += 1
+		cur = p
+		kind = ""
+		if p != null and str(p.get("t", "")) == "collect" and int(p.get("who", -1)) >= 0:
+			start = d.time
+			dist = (d.tokens[int(p["who"])]["pos"] as Vector2).distance_to(d.ball["pos"])
+			kind = str((d.events[d.cursor - 1] as Dictionary).get("kind", "")) if d.cursor > 0 else "?"
+	var mean := far_sum / maxf(1.0, float(pauses))
+	print("PAUSES %d of %.1f s or more (%d after pressure), named player %.0f m off on average" % [
+			pauses, PAUSE_S, after_pressure, mean])
+	_check(pauses <= PAUSE_MAX,
+			"Play rarely waits on a far collector (%d pauses of %.1f s or more, at most %d)" % [pauses, PAUSE_S, PAUSE_MAX])
+	_check(after_pressure <= PAUSE_PRESSURE_MAX,
+			"A presser is already closing when he wins it (%d pauses after pressure, at most %d)" % [after_pressure, PAUSE_PRESSURE_MAX])
 
 
 ## The two tail checks, over four fixed seeds (42 and 1-3) rather than one:

@@ -591,7 +591,7 @@ func _centre_phases(k: int, a: int, loc: Vector2) -> Array:
 	for t in tokens:
 		layout[int(t["id"])] = _centre_spot(t, a)
 	return [
-		{"t": "setup", "layout": layout, "ball_to": Vector2.ZERO, "mode": "centre",
+		{"t": "setup", "layout": layout, "ball_to": Vector2.ZERO, "mode": "centre", "keep": a,
 			"min": 1.1 if after_goal else 0.8, "max": 4.0},
 		{"t": "wait", "dur": 0.3},
 		{"t": "bounce", "at": Vector2.ZERO, "recv": a, "loc": loc},
@@ -634,7 +634,7 @@ func _kickin_phases(k: int, kicker: int, g: Vector2) -> Array:
 		else:
 			layout[id] = _structure_spot(t, g, kside)
 	return [
-		{"t": "setup", "layout": layout, "ball_to": g, "mode": "kickin", "min": 0.9, "max": 4.0},
+		{"t": "setup", "layout": layout, "ball_to": g, "mode": "kickin", "min": 0.9, "max": 4.0, "keep": kicker},
 		{"t": "collect", "who": kicker},
 		{"t": "possess", "who": kicker, "quiet": true},
 		{"t": "wait", "dur": 0.3},
@@ -1218,6 +1218,18 @@ func _lead_receivers(k: int, cur: int) -> void:
 			prev_kind = kind
 			continue
 		if kind == "tackle" or kind == "pressure":
+			# The presser closes on the carrier from the possession before
+			# his act, not when his own beat starts 30 m off (the 2026-10-08
+			# record). He goes for where the carrier gets the ball.
+			var pa := _actor_id(nev)
+			if pa >= 0 and pa != cur and not _busy.has(pa) and int(_lead.get(pa, j)) == j:
+				var ptok: Dictionary = tokens[pa]
+				if _lead.has(pa) or n < 2 or MatchMotion.eta(ptok, prev_loc) + LEAD_SLACK >= t:
+					_lead[pa] = j
+					# A step off him on his own side, as _anticipate closes a tackler.
+					var pfrom: Vector2 = ptok["pos"]
+					MatchMotion.set_goal(ptok, prev_loc + (pfrom - prev_loc).limit_length(2.5), 1.0)
+					_busy[pa] = true
 			t += 1.2
 			continue
 		if kind in ["free", "last_disposal", "out_on_full", "fifty"]:
@@ -1320,7 +1332,15 @@ func _enter(p: Dictionary) -> void:
 	match str(p["t"]):
 		"setup":
 			mode = str(p.get("mode", "centre"))
-			var layout: Dictionary = p["layout"]
+			# A set-up never claims a player the log needs in the next few
+			# events: he keeps his lead (roadmap §1.11 collection pauses, the
+			# 2026-10-08 record: a receiver held on the goal line by a kick-in
+			# layout, then a 60 m sprint to collect).
+			var layout: Dictionary = {}
+			for id in p["layout"]:
+				if not _lead.has(id) or id == int(p.get("keep", -1)):
+					layout[id] = p["layout"][id]
+			p["layout"] = layout
 			for id in layout:
 				MatchMotion.set_goal(tokens[id], layout[id], 0.45, true)
 				tokens[id]["reset"] = SETUP_PACE
