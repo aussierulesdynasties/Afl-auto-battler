@@ -501,8 +501,8 @@ static func _split_plans(res: Dictionary, my_side: int, opp_side: int, quarters:
 
 
 static func _plan_entry(q: int, t: Dictionary) -> Dictionary:
-	# Play through is three calls now (midfield, forward, back line); the older
-	# single call still reads as one.
+	# Old reports kept the play-through calls (midfield, forward, back line,
+	# or the older single call); they still read as one.
 	var focus_ids := []
 	for key in ["focus_mid", "focus_fwd", "focus_def", "focus_id"]:
 		var fid := str(t.get(key, ""))

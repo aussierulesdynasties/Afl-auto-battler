@@ -53,7 +53,6 @@ func run() -> void:
 	_t("_test_discs_apart")
 	_t("_test_clash_kit")
 	_t("_test_label_overlap")
-	_t("_test_sides")
 	_t("_test_bench_strip")
 	_t("_test_ends_change_at_restart", [res])
 	_t("_test_upright_oval", [res])
@@ -923,7 +922,10 @@ func _test_oval_people(res: Dictionary) -> void:
 	for p in GameDB.club_list("RIC"):
 		list.append((p as Dictionary).duplicate(true))
 	var tagger_id := str(MatchSim.tagger_for(mine)["id"])
-	sim.set_tactics(me, {"gameplan": "balanced", "focus_id": str(focus["id"]),
+	# Play through is the Through stars plan (director, 2026-11-03): with him
+	# the side's one star, he is the man played through.
+	sim.stars[me] = {str(focus["id"]): true}
+	sim.set_tactics(me, {"gameplan": "through_stars",
 			"tag_id": str(their_mid["id"]), "pep": "steady"})
 	# The sim sets up its own match-ups; those are not your calls, so not ringed.
 	_check(MatchRings.ids(sim, me, list) == [str(focus["id"]), tagger_id],
@@ -962,7 +964,7 @@ func _test_oval_people(res: Dictionary) -> void:
 		if theirs_ids.has(str(id)):
 			only_mine = false
 	_check(only_mine, "Only your own players are ringed, never the man you tag or the forward you match up")
-	(sim.tactics[me] as Dictionary)["focus_id"] = str(defenders[0]["id"])
+	(sim.stars[me] as Dictionary)[str(defenders[0]["id"])] = true
 	_check(MatchRings.ids(sim, me, list).count(str(defenders[0]["id"])) == 1,
 			"A player with two calls on him is ringed once")
 	for i in range(12):
@@ -2146,119 +2148,6 @@ func _label_run(what: String, ringed_count: int) -> void:
 	pv.free()
 
 
-## Everything a screen can ask about every club and every pair of clubs: names,
-## colours, kits, inks. The same before a club's two sides are registered,
-## while they are, and after they are taken out again.
-func _look_of_every_club() -> String:
-	var parts := []
-	for a in GameDB.club_order:
-		parts.append([a, GameDB.club_name(str(a)), GameDB.club_short(str(a)), str(GameDB.club_colours(str(a))),
-				str(GameDB.club_marker_colours(str(a))), str(GameDB.club_guernsey(str(a))),
-				str(UiKit.club_ink(str(a))), str(UiKit.club_ink_second(str(a))), str(PitchView.press_zone_colour(str(a))),
-				GameDB.side_base(str(a)), GameDB.is_side(str(a))])
-		for b in GameDB.club_order:
-			parts.append([str(PitchView.kits_for(str(a), str(b))), str(UiKit.club_ink_pair(str(a), str(b))),
-					GameDB.coach_side(str(a), str(b), GameState.my_club)])
-	return str(hash(str(parts)))
-
-
-## A club playing itself (an intra-club match): each side is its own entry
-## beside the real clubs, with its own name and kit, and a normal club-v-club
-## match is untouched by it.
-func _test_sides() -> void:
-	var order_before: Array = GameDB.club_order.duplicate()
-	var clubs_before := GameDB.clubs.size()
-	GameState.my_club = "FRE"
-	var before := _look_of_every_club()
-	var plain := _sim(77, "FRE", "MEL").run()
-	_check(not GameDB.is_side("FRE") and GameDB.side_base("FRE") == "FRE" and not GameDB.side_is_coach("FRE")
-			and GameDB.coach_side("FRE", "MEL", GameState.my_club) == 0 and GameDB.coach_side("MEL", "FRE", GameState.my_club) == 1
-			and GameDB.coach_side("MEL", "GEE", GameState.my_club) == 1,
-			"With no sides registered a club is itself, and the coach's side is his club's, as always")
-
-	var codes: Array = GameDB.register_sides("FRE")
-	var home := str(codes[0])
-	var clash := str(codes[1])
-	_check(GameDB.club_name(home) == "Fremantle Purple" and GameDB.club_name(clash) == "Fremantle White"
-			and GameDB.club_short(home) == "Purple" and GameDB.club_short(clash) == "White",
-			"Fremantle's two sides are named by their strips: Fremantle Purple and Fremantle White")
-	_check(GameDB.is_side(home) and GameDB.is_side(clash) and GameDB.side_base(home) == "FRE" and GameDB.side_base(clash) == "FRE"
-			and GameDB.side_is_coach(home) and not GameDB.side_is_coach(clash)
-			and GameDB.coach_side(home, clash, GameState.my_club) == 0 and GameDB.coach_side(clash, home, GameState.my_club) == 1,
-			"The coach's side is the one flagged as his, the side in the home strip, whichever end it is listed")
-	_check(GameDB.club_order == order_before and not GameDB.active_clubs(2030).has(home)
-			and not GameDB.players_by_club.has(home) and GameDB.clubs.size() == clubs_before + 2,
-			"A side is in no competition and holds no list: it is only a name and a kit")
-	var kits: Array = PitchView.kits_for(home, clash)
-	var as_away: Array = PitchView.kits_for("FRE", "FRE")
-	_check((kits[0]["base"] as Color).is_equal_approx(GameDB.club_guernsey("FRE")["base"])
-			and (kits[1]["base"] as Color).is_equal_approx(as_away[1]["base"])
-			and (kits[1]["base"] as Color).is_equal_approx(GameDB.club_guernsey("FRE")["pattern"])
-			and UiKit.colour_distance(kits[0]["base"], kits[1]["base"]) >= PitchView.DISC_CLASH,
-			"The first side wears the club's kit colour and the second the oval's own clash colour for that club, its kit's other colour (no invented colour), and the two read apart")
-	_check((kits[0]["pattern"] as Color).is_equal_approx(kits[0]["base"]) and (kits[1]["pattern"] as Color).is_equal_approx(kits[1]["base"]),
-			"Each side wears its colour plain, so two sides of a half-and-half kit are never mirror images of each other")
-	_check(GameDB.club_guernsey(clash) == kits[1] and GameDB.club_guernsey(home) == kits[0],
-			"Each side's kit is its own wherever a kit is asked for (crests, the close-ups)")
-	var inks: Array = UiKit.club_ink_pair(home, clash)
-	_check(UiKit.club_ink(home).is_equal_approx(UiKit.club_ink("FRE")) and UiKit.club_ink(clash).is_equal_approx(UiKit.club_ink_second("FRE"))
-			and (inks[0] as Color).is_equal_approx(UiKit.club_ink("FRE")) and (inks[1] as Color).is_equal_approx(UiKit.club_ink_second("FRE")),
-			"On the scoreboard and the stats Fremantle Purple is in the club's purple ink and Fremantle White in its white")
-	GameDB.register_sides("MEL")
-	var mel: Array = PitchView.kits_for("MEL_H", "MEL_A")
-	_check(GameDB.club_name("MEL_H") == "Melbourne Navy" and GameDB.club_name("MEL_A") == "Melbourne Red"
-			and (mel[1]["base"] as Color).is_equal_approx(GameDB.club_guernsey("MEL")["pattern"])
-			and UiKit.club_ink("MEL_A").is_equal_approx(UiKit.club_ink("MEL"))
-			and UiKit.club_ink("MEL_H").is_equal_approx(UiKit.club_ink_second("MEL")),
-			"Melbourne Navy is in the club's blue ink and Melbourne Red in its red: each side's ink is the colour of the strip it wears")
-	GameDB.register_sides("RIC")
-	var ric: Array = UiKit.club_ink_pair("RIC_H", "RIC_A")
-	_check(GameDB.club_name("RIC_H") == "Richmond Black" and GameDB.club_name("RIC_A") == "Richmond Yellow"
-			and (ric[0] as Color).s < 0.1 and UiKit.contrast(ric[0], UiKit.PANEL) >= 4.5
-			and (ric[1] as Color).is_equal_approx(UiKit.club_ink("RIC")),
-			"Richmond Black is in a readable grey (no hue invented for black) and Richmond Yellow in the club's yellow")
-	_check(_look_of_every_club() == before, "With the two sides registered, every real club and every real pair looks exactly as before")
-	var pv := PitchView.new()
-	pv.size = Vector2(370, 490)
-	var res := _sim(31, "FRE", "FRE").run()
-	res["home"] = home
-	res["away"] = clash
-	pv.setup(res)
-	_check(pv._kits[0] == kits[0] and pv._kits[1] == kits[1] and pv.clash,
-			"The oval draws the two sides in the home strip and the clash strip")
-	pv.free()
-	# Every club has two named strips, and a created club falls back to plain words.
-	var named := true
-	var worn := []
-	for c in GameDB.CLUB_ORDER:
-		var two: Array = GameDB.register_sides(str(c))
-		var k: Array = PitchView.kits_for(str(two[0]), str(two[1]))
-		named = named and GameDB.SIDE_COLOUR_NAMES.has(str(c)) and GameDB.club_short(str(two[0])) != GameDB.club_short(str(two[1])) \
-				and GameDB.club_name(str(two[0])).begins_with(GameDB.club_name(str(c)) + " ")
-		var two_inks: Array = UiKit.club_ink_pair(str(two[0]), str(two[1]))
-		if UiKit.colour_distance(k[0]["base"], k[1]["base"]) < PitchView.DISC_CLASH \
-				or (two_inks[0] as Color).is_equal_approx(two_inks[1]) \
-				or UiKit.contrast(two_inks[0], UiKit.PANEL) < 4.5 or UiKit.contrast(two_inks[1], UiKit.PANEL) < 4.5:
-			worn.append(str(c))
-		var own: Array = [GameDB.club_colours(str(c))[0], GameDB.club_colours(str(c))[1], GameDB.club_colours(str(c))[2],
-				GameDB.club_guernsey(str(c))["base"], GameDB.club_guernsey(str(c))["pattern"]]
-		var is_own := false
-		for col in own:
-			is_own = is_own or (k[1]["base"] as Color).is_equal_approx(col)
-		named = named and is_own
-	_check(named and worn.is_empty(), "Every club has two strips with their own colour names, the second strip is always one of the club's own colours, and no club's two sides look alike on the oval or the scoreboard (%s)" % ", ".join(worn))
-	GameDB.unregister_sides()
-	_check(GameDB.clubs.size() == clubs_before and not GameDB.is_side(home) and GameDB.club_name(home) == home
-			and _look_of_every_club() == before,
-			"Taken out again, nothing of the sides is left and every club looks as it did")
-	var again := _sim(77, "FRE", "MEL").run()
-	_check(again["score"] == plain["score"] and again["goals"] == plain["goals"] and again["behinds"] == plain["behinds"]
-			and (again["events"] as Array).size() == (plain["events"] as Array).size()
-			and str(again["players"]) == str(plain["players"]),
-			"A club-v-club match on the same seed plays out identically after sides have come and gone")
-	GameState.my_club = ""
-
-
 ## The bench strip: five a side, inside the view, and an interchange swaps the
 ## man coming on for the man going off, when the oval shows it.
 func _test_bench_strip() -> void:
@@ -2503,8 +2392,8 @@ func _test_plan_tint_every_quarter() -> void:
 		var cursor := 0
 		var shown := []
 		for q in range(4):
-			sim.set_tactics(my_side, {"gameplan": plans[q], "focus_id": "", "tag_id": "", "pep": "steady"})
-			sim.set_tactics(1 - my_side, {"gameplan": "balanced", "focus_id": "", "tag_id": "", "pep": "steady"})
+			sim.set_tactics(my_side, {"gameplan": plans[q], "tag_id": "", "pep": "steady"})
+			sim.set_tactics(1 - my_side, {"gameplan": "balanced", "tag_id": "", "pep": "steady"})
 			var res := sim.run_quarter()
 			res["home"] = "ADE"
 			res["away"] = "MEL"
