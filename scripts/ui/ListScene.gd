@@ -350,6 +350,7 @@ func _open_culture() -> void:
 
 func _open_captaincy() -> void:
 	_close_profile()
+	WeekChecklist.mark(GameState, "captaincy")
 	_profile = CaptaincySheet.open(self, func():
 		_profile = null
 		_build())
