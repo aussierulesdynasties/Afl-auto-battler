@@ -18,6 +18,10 @@ const GAPS := {"BRL": "SA", "GEE": "DEF", "GCS": "SA", "MEL": "SA", "WCE": "SA"}
 func run() -> void:
 	failures.clear()
 	checks = 0
+	# The first-visit intros (FirstVisitIntro.gd) are their own suite; here
+	# every screen is a return visit, so the taps reach the screen.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		GameState.set_setting("seen_%s_intro" % key, true)
 	GameState.replay_seed = SUITE_SEED
 	_t("_test_seed_structure")
 	_t("_test_seed_integrity")
@@ -28,6 +32,9 @@ func run() -> void:
 	_t("_test_expansion_structure")
 	_t("_test_no_effects_yet")
 	_t("_test_movement_is_visible")
+	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		GameState.set_setting("seen_%s_intro" % key, true)
 	await _t("_test_ui")
 	await _t("_test_ui_expiring")
 	GameState.delete_saved_career()

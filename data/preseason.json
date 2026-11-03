@@ -111,12 +111,8 @@
 		"quad"
 	],
 	"ai_old_age": 28.0,
-	"intra_week": 5,
-	"intra_side_size": 23,
-	"intra_injury_rate": 0.5,
-	"intra_xp_games": 1.0,
-	"intra_seen_uncertainty": 0.7,
-	"intra_spare_number": 60,
+	"seen_uncertainty": 0.7,
+	"guest_spare_number": 60,
 	"practice_week": 7,
 	"practice_guests": 3,
 	"practice_injury_rate": 0.5,
@@ -167,14 +163,10 @@
 		"heavy_week_injury": "Chance a fit player of ordinary durability picks up a soft-tissue injury in one Heavy training week (a match is 0.042 for each player on the ground). Durability moves it as it moves a match injury. Light and Solid weeks carry none.",
 		"soft_tissue_kinds": "What a training injury can be: the soft-tissue kinds among the game's injuries.",
 		"ai_old_age": "An AI club whose best side averages this age or more never trains Heavy: its Heavy blocks are Solid.",
-		"intra_week": "The intra-club match is played at the end of this week.",
-		"intra_side_size": "Players a side: the normal 18 on the ground and 5 on the bench.",
-		"intra_injury_rate": "A listed player's injury risk in the intra-club match, as a share of a normal match's (director, 2026-10-14: half).",
-		"intra_xp_games": "Development for a listed player who plays in it, in reserves games' worth (director: a reserves game), spent inside the season's training limit.",
-		"intra_seen_uncertainty": "How wide a club's rating read on a prospect is once it has seen him in its intra-club match, as a share of its usual read (1.0 is no tighter; the recruiting department's own tightening still applies on top).",
-		"intra_spare_number": "Invited prospects wear spare jumper numbers from this one up, skipping any a listed player wears.",
-		"practice_week": "The practice match against another club is played at the end of this week.",
-		"practice_guests": "Prospects a club may trial in it, each in place of the weakest starter in his line.",
+		"seen_uncertainty": "How wide a club's rating read on a prospect is once it has trialled him in its pre-season match, as a share of its usual read (1.0 is no tighter; the recruiting department's own tightening still applies on top).",
+		"guest_spare_number": "Trialled prospects wear spare jumper numbers from this one up, skipping any a listed player wears.",
+		"practice_week": "The one pre-season match, against another club, is played at the end of this week (director, 2026-11-03: the intra-club match and the practice match are one).",
+		"practice_guests": "Prospects a club trials in it, each in place of the weakest starter in his line. A spot the coach leaves empty is filled by his recruiters.",
 		"practice_injury_rate": "A listed player's injury risk in the practice match, as a share of a normal match's (director, 2026-10-14: half).",
 		"practice_xp_games": "Development for a listed player who plays in it, in reserves games' worth.",
 		"familiar_default": "Where a plan starts for a club that has never drilled it, when it is not the club's usual plan: 0 barely, 1 partly, 2 well. The usual plan and Balanced start well.",
@@ -188,7 +180,6 @@
 		"papers_short_wins_pos": "For a club whose goal is 'win seven games', the papers are taken to doubt it when they have it finishing below this place.",
 		"papers_after": "Weeks into the season before a talked-up finish can be held against the club.",
 		"papers_within": "Weeks after that the papers can still come back for it.",
-		"papers_places": "How many places below its own words the club must sit for the papers to come back.",
-		"intra_spare_number": "Invited prospects wear spare jumper numbers from this one up, skipping any a listed player wears."
+		"papers_places": "How many places below its own words the club must sit for the papers to come back."
 	}
 }
