@@ -3498,9 +3498,11 @@ func _on_finished() -> void:
 				GameState.my_club, str(_farewell["opp"]), _farewell["mine"], _farewell["theirs"],
 				"Full time", str(GameState.pending_match.get("weather", "")) == "wet")
 		_farewell = {}
+		var wv := weakref(v)   # not the node: it frees itself when it ends
 		tree_exiting.connect(func():            # Back out of the match: it goes too
-			if is_instance_valid(v):
-				v.finish_now())
+			var n = wv.get_ref()
+			if n != null:
+				n.finish_now())
 
 
 ## Who the scene after the siren honours, and both sides' players: {} unless your

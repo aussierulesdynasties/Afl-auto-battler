@@ -41,6 +41,9 @@ static func from_history(gs) -> Dictionary:
 	for h in gs.honour_roll:
 		if str(h.get("my_club", "")) == "":
 			continue
+		# A save between the Grand Final and rollover: the live season below counts it.
+		if gs.season != null and int(h.get("year", 0)) == int(gs.season_year):
+			continue
 		var parts := str(h.get("my_record", "")).split("-")
 		if parts.size() == 3:
 			c["games"] = int(c["games"]) + int(parts[0]) + int(parts[1]) + int(parts[2])

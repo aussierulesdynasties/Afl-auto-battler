@@ -3828,7 +3828,7 @@ func _play_one_chain(T: Dictionary) -> void:
 				"%s gives away a clanger" % GameDB.player_display_name(err))
 		_lost_by = side
 		# After a behind the kick-in comes first: no free is paid over it.
-		if not kick_in and free_rng.randf() < float(T["clanger_is_free"]) * GENERIC_FREE_MULT:
+		if not kick_in and not at_centre and free_rng.randf() < float(T["clanger_is_free"]) * GENERIC_FREE_MULT:
 			var recipient = _free_to(1 - side, fp if side == 0 else -fp)
 			next_side = 1 - side
 			_prev_end = "free"
@@ -4200,16 +4200,19 @@ func _check_injuries() -> void:
 				on = str((sq.bench[rep] as Dictionary)["id"])
 				_swap(side, gi, rep)
 				bi = rep
+		var gone := false   # none left on the bench: he plays on hurt, match-ups and tag kept
 		if bi >= 0 and str((sq.bench[bi] as Dictionary)["id"]) == id:
 			sq.bench.remove_at(bi)
 			(injured_off[side] as Array).append(hurt)
+			gone = true
 		var rec := {"side": side, "id": id, "q": current_quarter, "min": current_minute,
 				"weeks": int(inj["weeks"]), "kind": str(inj["kind"]), "on": on}
 		injuries.append(rec)
 		_emit("injury", side, fp, hurt, "%s is injured (%s)" % [GameDB.player_display_name(hurt), str(inj["kind"])])
 		events[events.size() - 1]["on"] = on
-		_refill_duel(side, id)
-		_drop_tag_on(id)
+		if gone:
+			_refill_duel(side, id)
+			_drop_tag_on(id)
 
 
 ## A tag on a player gone off hurt ends with him: no side keeps a hidden tag
