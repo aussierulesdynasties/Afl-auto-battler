@@ -1306,6 +1306,7 @@ func reset() -> void:
 	fa_lost = []
 	_bars = {}
 	_fa_phase = {}
+	_repl_class = {}
 	_order_cache = {}
 	_standings_cache = {}
 	_fringe_cache = {}
