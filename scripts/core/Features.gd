@@ -66,7 +66,12 @@ extends RefCounted
 ##               kicker's reach (MatchSim.kick_range: 30 m + 0.35 x disposal), nearest
 ##               teammate when nobody is; every match path shares MatchSim.kick_receiver.
 ##               Off, the receiver is the old zone pick from the whole ground.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range"]
+##   decision_scenes   row 13 (director, 2026-11-04): the in-match calls that were text
+##               cards (tired, duel, hot, momentum, set shot) open on a close-up scene of
+##               the players they are about, like the centre-bounce call (DecisionVignette).
+##               Off, they are the text cards they were. Settings > Vignettes off also
+##               keeps the card.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "decision_scenes"]
 
 static var _forced := {}
 static var _from_args := {}

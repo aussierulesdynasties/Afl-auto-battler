@@ -2444,6 +2444,11 @@ func _show_moment() -> void:
 	if bounce and GameState.vignettes_on():
 		_show_bounce_moment(m)
 		return
+	# Row 13: every other call is a scene too (Features "decision_scenes"; off, the card).
+	if Features.on("decision_scenes") and GameState.vignettes_on() \
+			and DecisionVignette.has_scene(str(m.get("kind", ""))):
+		_show_bounce_moment(m)
+		return
 	# Sized for its few lines, not the whole phone.
 	var box := UiKit.modal_box(self, 560.0, 440.0, _wash())
 	_moment_overlay = box["overlay"]
@@ -2489,11 +2494,19 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	overlay.name = "MomentCard"
 	overlay.set_meta("scene", true)
 	_moment_overlay = overlay
-	var vignette := StoppageVignette.new()
-	vignette.name = "StoppageVignette"
+	var vignette: StoppageVignette
+	if str(m.get("kind", "")) == "bounce":
+		vignette = StoppageVignette.new()
+		vignette.name = "StoppageVignette"
+	else:
+		vignette = DecisionVignette.new()
+		vignette.name = "DecisionVignette"
 	overlay.add_child(vignette)
 	vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	vignette.setup(GameState.pending_sim, _my_side, str(m.get("title", "")))
+	if vignette is DecisionVignette:
+		(vignette as DecisionVignette).setup_decision(GameState.pending_sim, _my_side, m)
+	else:
+		vignette.setup(GameState.pending_sim, _my_side, str(m.get("title", "")))
 	# The call, held below the screen until the scene freezes.
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE

@@ -72,3 +72,4 @@ player_looks=false
 top_attributes=false
 coach_arcs=false
 club_almanac=false
+decision_scenes=false
