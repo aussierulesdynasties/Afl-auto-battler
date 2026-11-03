@@ -79,6 +79,9 @@ const CAPTION_TOUCH := 1.0
 ## it (ROADMAP §1.11: a clear turnover cue; tackles where the ball is kept or
 ## held in are not turnovers and carry no label).
 const CAPTION_TURNOVER := 1.1
+## A clanger that says why ("Kick to space") over the player who erred: a little
+## longer than "Turnover", it is a sentence.
+const CAPTION_WHY := 1.5
 ## The goal's shake, the only one in the game: short, gone in under a fifth of a
 ## second. Its size is a share of the oval's height, so it reads the same on a phone
 ## and a PC. Director, 2026-10-13: "reduce screenshake" - about 40% of the old size
@@ -394,6 +397,9 @@ func _cue_turnover(ev: Dictionary) -> void:
 		_restarted = true
 		return
 	var side := int(ev.get("side", -1))
+	if kind == "clanger":
+		_cue_clanger(ev)
+		return
 	var won := kind == "pressure" or kind == "rebound" \
 			or (kind == "mark" and bool(ev.get("intercept", false)))
 	if side < 0 or not (won or MatchDirector.DISPOSALS.has(kind)):
@@ -403,13 +409,29 @@ func _cue_turnover(ev: Dictionary) -> void:
 	_restarted = false
 	if not (won or flipped):
 		return
-	if not _caption.is_empty() and bool(_caption["goal"]):
+	if not _caption.is_empty() and (bool(_caption["goal"]) or bool(_caption.get("why", false))):
 		return
 	var tok := director.token_of(ev)
 	if tok < 0 or tok >= director.tokens.size():
 		return
 	_caption = {"tok": tok, "text": "Turnover", "left": CAPTION_TURNOVER, "goal": false,
 			"turnover": true, "side": side}
+
+
+## A clanger with a cause (switch clanger_cause) names it over the player who
+## erred, underlined in the club that has the ball now. Without a cause it says
+## nothing, as before. A goal's name is never covered, and the turnover that
+## follows does not cover it.
+func _cue_clanger(ev: Dictionary) -> void:
+	var words := MatchNotes.clanger_caption(str(ev.get("why", "")))
+	if words == "" or (not _caption.is_empty() and bool(_caption["goal"])):
+		return
+	var tok := director.token_of(ev)
+	if tok < 0 or tok >= director.tokens.size():
+		return
+	var side := int(ev.get("side", 0))
+	_caption = {"tok": tok, "text": words, "left": CAPTION_WHY, "goal": false,
+			"turnover": true, "why": true, "side": 1 - side}
 
 
 ## Whether the oval is shaking for a goal right now.

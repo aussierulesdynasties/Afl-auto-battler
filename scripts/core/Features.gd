@@ -66,7 +66,14 @@ extends RefCounted
 ##               kicker's reach (MatchSim.kick_range: 30 m + 0.35 x disposal), nearest
 ##               teammate when nobody is; every match path shares MatchSim.kick_receiver.
 ##               Off, the receiver is the old zone pick from the whole ground.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range"]
+##   clanger_cause   row 12 (director, 2026-11-04): a clanger that ends a chain on a wet or
+##               windy day is the last touch's and says why (the weather raises the rate,
+##               so it is a real cause; MatchSim.clanger_why; the oval names it over the
+##               player, the match feed stays as is). Off, the clanger is a weighted pick
+##               from the ground and reads "gives away a clanger". On, player credit for
+##               clangers moves to the last carrier (the player clangers stat, notes and
+##               ratings); team totals, score and events are unchanged.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "clanger_cause"]
 
 static var _forced := {}
 static var _from_args := {}

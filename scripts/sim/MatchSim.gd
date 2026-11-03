@@ -289,6 +289,7 @@ const FORM_CONTEST := 0.010
 func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	squads = [home, away]
 	kick_range_on = Features.on("kick_range")
+	clanger_cause_on = Features.on("clanger_cause")
 	# Who starts on the bench, for the match view's bench strip (read only).
 	for sq in squads:
 		var rows := []
@@ -2308,6 +2309,43 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 	return {}
 
 
+## Clanger cause (row 12, director 2026-11-04): an error that ends a chain is
+## the last disposal's, and the match says why only when the sim really gave a
+## reason: the wet ball and the wind both raise the clanger rate
+## (WEATHER_RATES), so they are real causes. A rushed touch, a tackle, a kick
+## read and taken or an entry all have their own events and do not raise the
+## roll, so they are never named as the cause. Read once at set-up (switch
+## clanger_cause). Off, the clanger is a weighted pick from the ground and
+## reads "gives away a clanger". On, the error is credited to the last
+## carrier, so the player-level clangers stat moves; team totals, score and
+## events do not.
+var clanger_cause_on := false
+## The last touch of the chain being played: {"carrier", "kind", "end"} (end:
+## tackle, pressure, aerial or entry when the touch ended that way, else "").
+## Bookkeeping for the clanger's cause only; no dice.
+var _last_disp := {}
+## Why a clanger went astray: the words after the player's name, by cause. The
+## cause is the event's "why"; MatchNotes.clanger_caption has the short form.
+const CLANGER_WHY := {
+	"wet": "%s loses it on the wet ball",
+	"wind": "%s's kick is blown off line",
+}
+
+
+## The cause of a clanger from the touch that ended the chain (`disp`), in the
+## weather of the day, after a chain that ended in `outcome`. "" when nothing
+## real is to blame: a touch that ended in its own event (a tackle, a forced
+## turnover, a kick taken, an entry), a score, or dry still weather.
+static func clanger_why(disp: Dictionary, weather_now: String, outcome := "stoppage") -> String:
+	if disp.is_empty() or outcome != "stoppage" or str(disp.get("end", "")) != "":
+		return ""
+	if weather_now == "wet":
+		return "wet"
+	if weather_now == "windy" and str(disp.get("kind", "")) == "kick":
+		return "wind"
+	return ""
+
+
 ## Kick range (row 10, director 2026-11-03): a kick's receiver must be within
 ## the kicker's reach, and better kickers reach further. Read once at set-up
 ## (switch kick_range) so threaded week sims never touch ProjectSettings.
@@ -2745,6 +2783,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_p(carrier, "intercepts")
 			_chain_from = {"side": side, "id": str(carrier.get("id", ""))}
 		_chain_touch[str(carrier["id"])] = carrier
+		# Who a clanger would be blamed on, and how his touch ended (clanger_why).
+		_last_disp = {"carrier": carrier, "kind": "", "end": ""}
 		# Champion Data: a kick straight from the goal square is a team
 		# kick-in, not a player disposal. Once the taker plays on it is his
 		# disposal like ordinary play.
@@ -2869,6 +2909,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				var mark := _award_context_free(opp, fp, carrier, tackler,
 						"holding_ball", "Holding the ball")
 				return {"outcome": "free", "fp": mark, "actor": tackler, "free_side": opp}
+			_last_disp["end"] = "tackle"
+			_last_disp["kind"] = disposal_kind
 			_emit("tackle", opp, fp, tackler,
 					"%s tackles %s - ball up" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
 			return {"outcome": "stoppage", "fp": fp, "actor": carrier}
@@ -2890,6 +2932,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_intercept(opp, presser, false)
 				_emit("pressure", opp, fp, presser,
 						"%s forces the turnover" % GameDB.player_display_name(presser))
+				_last_disp["end"] = "pressure"
+				_last_disp["kind"] = disposal_kind
 				return {"outcome": "turnover", "fp": fp, "actor": presser}
 			rushed = true
 
@@ -2933,6 +2977,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		fp += gain * dir
 		fp = clampf(fp, -gline, gline)
 		atk_fp = fp if side == 0 else -fp
+		_last_disp["kind"] = disposal_kind
 		_metres(side, carrier, atk_fp - prev_atk_fp)
 		_run_and_carry(side, carrier, atk_fp - prev_atk_fp, rushed or tackled, is_kick_in, disposal_event, prev_atk_fp)
 		# By default the next carrier gets it uncontested: a handball
@@ -2966,6 +3011,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				if str(aerial.get("outcome", "")) == "loose":
 					return {"outcome": "loose", "fp": fp, "actor": aerial.get("actor")}
 				if str(aerial.get("outcome", "")) == "turnover":
+					_last_disp["end"] = "aerial"
 					return aerial
 				# A mark keeps the same side's chain alive at the new field
 				# position. It is not another disposal by the original kicker.
@@ -2985,6 +3031,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_emit("inside50", side, fp, carrier,
 					"%s sends it inside 50" % GameDB.player_display_name(carrier))
 			var entry := resolve_forward50(side, fp, carrier)
+			_last_disp["end"] = "entry"
 			# A rebound or a free paid to the defence makes the entry
 			# ineffective. A free to the attacking side still retained the ball.
 			var effective_entry := str(entry["outcome"]) != "turnover"
@@ -3871,6 +3918,7 @@ func _play_one_chain(T: Dictionary) -> void:
 	_ball_lost_by = _lost_by if chain_origin == "general" else -1
 	_lost_by = -1
 	var res := {}
+	_last_disp = {}
 	var taker := _free_set_taker(side, start_fp) if chain_origin == "free" else {}
 	_free_taker = {}
 	if not taker.is_empty():
@@ -3923,10 +3971,24 @@ func _play_one_chain(T: Dictionary) -> void:
 		clanger_p *= HOLD_CLANGERS
 	if rng.randf() < clanger_p:
 		var err = _pick(squads[side].ground, cw[0])
+		# Row 12: the error is the last disposal's (when the chain ran out on
+		# one), and the line says why. The pick above is still drawn, so the
+		# dice are where they were.
+		var cause := ""
+		if clanger_cause_on and not _last_disp.is_empty():
+			cause = clanger_why(_last_disp, weather, outcome)
+			# Only his own side's player can be blamed (the chain may have changed hands).
+			if cause != "" and (squads[side].ground.has(_last_disp["carrier"])
+					or squads[side].bench.has(_last_disp["carrier"])):
+				err = _last_disp["carrier"]
+			else:
+				cause = ""
 		_t(side, "clangers")
 		_p(err, "clangers")
-		_emit("clanger", side, fp, err,
-				"%s gives away a clanger" % GameDB.player_display_name(err))
+		var clanger_line: String = CLANGER_WHY[cause] if cause != "" else "%s gives away a clanger"
+		_emit("clanger", side, fp, err, clanger_line % GameDB.player_display_name(err))
+		if cause != "":
+			events[events.size() - 1]["why"] = cause
 		_lost_by = side
 		# After a behind the kick-in comes first, and after a goal the centre
 		# bounce (director, 2026-11-03): no free is paid over either.
