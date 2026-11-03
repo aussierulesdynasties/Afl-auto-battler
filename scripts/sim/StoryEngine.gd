@@ -30,6 +30,19 @@ const DIVERSITY_MAX := 2
 ## Weeks counted per season, finals included (24 rounds and up to 5 finals
 ## weeks fit inside), so a cooldown runs on across seasons.
 const SEASON_WEEKS := 30
+## The pre-season's own block of weeks, after last season's finals and before
+## Round 1 (director 2026-11-03): pre-season weeks -9..0 (week_in_season) sit
+## here, so they never share a week with any season's rounds or finals.
+const PRESEASON_WEEKS := 10
+## The off-season between last season's last week and the pre-season block, so
+## September's cards are well behind the pre-season's (DIVERSITY_WEEKS). Cooldowns
+## skip it: they count played weeks only (played_between).
+const OFFSEASON_WEEKS := 12
+## One year on the stories' calendar (52 weeks): off-season, pre-season block,
+## then rounds and finals. Week 1 of year Y is (Y-2000)*52 + 22 + 1.
+const YEAR_SPAN := OFFSEASON_WEEKS + PRESEASON_WEEKS + SEASON_WEEKS
+## The calendar's version in a saved story; saves without it used year * 30 + week.
+const CALENDAR := 2
 const NEVER := -99999
 const TIERS := ["beat", "start", "one_off"]
 ## A result line may name players from a ranked list: {best3}, {worst2}.
@@ -37,11 +50,80 @@ const RANKED_TOKEN := "\\{(best|worst)([1-9])\\}"
 
 
 static func week_abs(year: int, week: int) -> int:
-	return (year - 2000) * SEASON_WEEKS + week
+	return (year - 2000) * YEAR_SPAN + OFFSEASON_WEEKS + PRESEASON_WEEKS + week
+
+
+## Played weeks in a year: the pre-season's weeks, then rounds and finals.
+static func played_per_year() -> int:
+	return PreSeason.weeks() + 1 + SEASON_WEEKS
+
+
+## An absolute week as a count of played weeks (director 2026-11-03): the
+## off-season and unused pre-season slots count for nothing, so a card's
+## cooldown means what it was written to mean.
+static func played_index(w: int) -> int:
+	# Each year counted from its first pre-season week; its off-season weeks clamp to the next year's start.
+	var first := OFFSEASON_WEEKS + PRESEASON_WEEKS - PreSeason.weeks()
+	var y := floori(float(w - first) / float(YEAR_SPAN))
+	return y * played_per_year() + mini(w - first - y * YEAR_SPAN, played_per_year())
+
+
+## Played weeks from `from` to `to` (cooldowns). NEVER stays far away.
+static func played_between(from: int, to: int) -> int:
+	if from <= NEVER / 2:
+		return to - from
+	return played_index(to) - played_index(from)
+
+
+## An absolute week from the old calendar (year * 30 + week, pre-season
+## overlapping last season's last weeks) on the new one. An old pre-season
+## week reads as last season's late weeks: older, so it blocks less.
+static func from_old_week(v: int) -> int:
+	if v <= NEVER / 2:
+		return v
+	var y := floori(float(v) / float(SEASON_WEEKS))
+	return y * YEAR_SPAN + OFFSEASON_WEEKS + PRESEASON_WEEKS + (v - y * SEASON_WEEKS)
+
+
+## Is this saved story on the old calendar?
+static func is_old_calendar(story: Variant) -> bool:
+	return story is Dictionary and not (story as Dictionary).is_empty() and not (story as Dictionary).has("calendar")
+
+
+## Moves every stored week of an old save's story onto the new calendar.
+static func migrate_calendar(story: Dictionary) -> void:
+	if story.has("calendar"):
+		return
+	for key in ["last", "subj"]:
+		var d: Variant = story.get(key)
+		if d is Dictionary:
+			for k in (d as Dictionary).keys():
+				d[k] = from_old_week(int(d[k]))
+	var flags: Variant = story.get("flags")
+	if flags is Dictionary:
+		for who in (flags as Dictionary).keys():
+			var f: Variant = flags[who]
+			if f is Dictionary:
+				for k in (f as Dictionary).keys():
+					f[k] = from_old_week(int(f[k]))
+	var cats: Variant = story.get("cats")
+	if cats is Array:
+		for row in (cats as Array):
+			if row is Array and (row as Array).size() > 0:
+				row[0] = from_old_week(int(row[0]))
+	var arcs: Variant = story.get("arcs")
+	if arcs is Dictionary:
+		for k in (arcs as Dictionary).keys():
+			var rec: Variant = arcs[k]
+			if rec is Dictionary:
+				for f2 in ["start", "until", "ended"]:
+					if (rec as Dictionary).has(f2):
+						rec[f2] = from_old_week(int(rec[f2]))
+	story["calendar"] = CALENDAR
 
 
 static func new_state() -> Dictionary:
-	return {"flags": {}, "last": {}, "subj": {}, "cats": [], "seen": {}, "season": {}, "arcs": {}}
+	return {"flags": {}, "last": {}, "subj": {}, "cats": [], "seen": {}, "season": {}, "arcs": {}, "calendar": CALENDAR}
 
 
 ## An older save, or a partial one: every key present.
@@ -138,7 +220,7 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 	# A week off in the finals: only the cards written for it.
 	if bool((ctx.get("club", {}) as Dictionary).get("finals_bye", false)) and not bool(t.get("bye", false)):
 		return {}
-	if w - int(story["last"].get(id, NEVER)) < int(t.get("cooldown", 0)):
+	if played_between(int(story["last"].get(id, NEVER)), w) < int(t.get("cooldown", 0)):
 		return {}
 	var per := int(t.get("per_season", 0))
 	if per > 0 and int(story["season"].get(id, 0)) >= per:
@@ -159,7 +241,7 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 		var pid := str(p["id"])
 		if pid == skip_pid:
 			continue
-		if w - int(story["subj"].get(pid, NEVER)) < int(t.get("subject_cooldown", 0)):
+		if played_between(int(story["subj"].get(pid, NEVER)), w) < int(t.get("subject_cooldown", 0)):
 			continue
 		if not meets(p, subject.get("where", {}), story["flags"].get(pid, {})):
 			continue
