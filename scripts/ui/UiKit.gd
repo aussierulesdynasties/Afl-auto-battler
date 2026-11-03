@@ -756,13 +756,13 @@ static func motion_on() -> bool:
 ## in one place, so a screen's timing is a choice from this list, never a
 ## literal. Routine UI stays under 0.4 s; only a milestone runs longer.
 class Motion:
-	const DUR_FAST := 0.18       ## exits, sheet fade, the screen fade
+	const DUR_FAST := 0.18       ## exits, sheet rise, the screen fade
 	const DUR_BASE := 0.32       ## entrances, reveal
 	const DUR_COUNT := 0.7       ## count_up
 	const DUR_HERO := 0.5        ## land
 	const DUR_BAR := 0.45        ## fill_bar
 	const DUR_MILESTONE := 0.9   ## the premiership and award reveals only (not built yet)
-	const RISE := 6.0            ## px a sheet rises as it fades in
+	const RISE := 6.0            ## px a sheet rises as it comes in
 	const STAGGER := 0.04        ## s per row
 	const STAGGER_SHEET := 0.08  ## s per row on a one-time sheet
 	const STAGGER_MAX := 8       ## rows past this simply show
@@ -891,28 +891,26 @@ static func attention(c: CanvasItem, delay := 0.45) -> void:
 			tw.tween_property(c, "modulate", Color.WHITE, 0.55).set_trans(Motion.TRANS_PULSE))
 
 
-## A sheet comes in (menu juice, 2026-11-04): the cover and the panel fade in
-## over DUR_FAST and the panel rises RISE px on the plain-Control wrapper
+## A sheet comes in (menu juice, 2026-11-04; director: no fade): the cover and
+## the panel are solid from frame 0, so the screen behind never shows through,
+## and the panel rises RISE px over DUR_FAST on the plain-Control wrapper
 ## modal_box builds (`box["rise"]`; a Container would put it straight back). No
-## scale and no slide from the side. Its buttons work from frame 0: the fade
-## is only colour, and every node here lets a touch through to them.
+## scale, no alpha and no slide from the side. Its buttons work from frame 0:
+## every node here lets a touch through to them.
 static func sheet_in(box: Dictionary) -> void:
 	var overlay: Control = box.get("overlay")
 	if not juice() or not motion_on() or overlay == null:
 		return
 	var rise: Control = box.get("rise")
-	overlay.modulate.a = 0.0
-	if rise != null:
-		rise.position.y = Motion.RISE
+	if rise == null:
+		return
+	rise.position.y = Motion.RISE
 	_after(overlay, 0.0, func() -> void:
 		if not is_instance_valid(overlay):
 			return
 		Feel.moved.append("sheet_in")
-		var tw := _own(overlay, "mod")
-		tw.tween_property(overlay, "modulate:a", 1.0, Motion.DUR_FAST) \
-				.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
-		if rise != null and is_instance_valid(rise):
-			tw.parallel().tween_property(rise, "position:y", 0.0, Motion.DUR_FAST) \
+		if is_instance_valid(rise):
+			_own(rise, "pos").tween_property(rise, "position:y", 0.0, Motion.DUR_FAST) \
 					.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN))
 
 
@@ -1540,7 +1538,7 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(center)
 	var shell := panel(PANEL, 16)
-	# ui_motion: the sheet rises as it fades in, which a Container would undo, so
+	# ui_motion: the sheet rises into place, which a Container would undo, so
 	# the panel sits on a plain Control the CenterContainer places by its size.
 	var rises := juice() and motion_on()
 	if rises:

@@ -293,7 +293,7 @@ func _test_fill_bar() -> void:
 	await _settle()
 
 
-## Any modal sheet: the cover and panel fade in, the panel rises 6 px on a
+## Any modal sheet: the cover and panel are solid from frame 0 (no fade), the panel rises 6 px on a
 ## plain Control, nothing blocks Continue at frame 0, and every effect node
 ## lets a touch through.
 func _test_sheet_in() -> void:
@@ -312,7 +312,7 @@ func _test_sheet_in() -> void:
 	var rise: Control = box.get("rise")
 	_check(rise != null and rise.get_parent() != null and not (rise.get_parent() is Container),
 			"The panel sits on a plain Control, so its rise is not overwritten by a Container")
-	_check(overlay.modulate.a < 0.5, "The sheet starts faded out (%.2f)" % overlay.modulate.a)
+	_check(is_equal_approx(overlay.modulate.a, 1.0) and is_equal_approx(_alpha_chain(rise), 1.0), "The cover and panel are solid at frame 0 (%.2f)" % overlay.modulate.a)
 	_check(is_equal_approx(rise.position.y, _uk.Motion.RISE), "The panel starts 6 px low (%.1f)" % rise.position.y)
 	var wrap: Control = rise.get_parent()
 	_check(wrap.mouse_filter == Control.MOUSE_FILTER_IGNORE, "The wrapper lets touches through")
@@ -381,13 +381,14 @@ func _test_result_sheet_win() -> void:
 	hub = o["hub"]
 	var c1: Button = hub.find_child("ResultsContinue", true, false)
 	var spent := Time.get_ticks_msec() - int(o["t0"])
-	var fading := _alpha_chain(c1) < 0.99
+	var rising := (hub.find_child("SheetRise", true, false) as Control).position.y > 0.0
+	var solid := is_equal_approx(_alpha_chain(c1), 1.0)
 	var why: String = await Tap.tap(c1)
 	await _settle(3)
 	_check(why == "" and hub.find_child("RoundResults", true, false) == null,
 			"A real tap on Continue at frame 0 closes the sheet (%s, %d ms in)" % [why, spent])
-	# Headless frames are slow, so the proof is the state at touch start (still fading), not the clock.
-	_check(fading, "...and the touch began mid-fade, the sheet not yet fully in (%d ms in)" % spent)
+	# Headless frames are slow, so the proof is the state at touch start (still rising, already solid), not the clock.
+	_check(rising and solid, "...and the touch began mid-rise, the sheet solid (%d ms in)" % spent)
 	hub.queue_free()
 	await _settle()
 
@@ -497,10 +498,10 @@ func _test_land_edge_tap() -> void:
 	Engine.time_scale = 0.05
 	_uk.land(b)
 	await _settle(2)
-	# 3 px left of the unscaled layout edge, in screen space: outside the layout,
+	# 1.5 px left of the unscaled layout edge, in screen space: outside the layout,
 	# inside the drawn (scaled) rect.
-	var why_out: String = await _tap_at(b, Vector2(b.position.x - 3.0, b.position.y + 28.0))
-	_check(why_out == "" and presses[0] == 2 and b.scale.x > 1.05,
+	var why_out: String = await _tap_at(b, Vector2(b.position.x - 1.5, b.position.y + 28.0))
+	_check(why_out == "" and presses[0] == 2 and b.scale.x > 1.03,
 			"A tap just outside the layout edge but inside the drawn edge also reaches it mid-overshoot (%s; scale %.2f)" % [why_out, b.scale.x])
 	Engine.time_scale = 1.0
 	await create_timer(0.8).timeout

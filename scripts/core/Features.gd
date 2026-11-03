@@ -79,7 +79,7 @@ extends RefCounted
 ##   ui_motion   menu juice, first prototype (director, 2026-11-04): the UiKit.Motion tokens
 ##               in the helpers, a hardened reveal / count_up / land / attention (an earlier
 ##               tween on the same node is stopped first), the Router fade easing out, every
-##               modal sheet fading in with a 6 px rise (UiKit.sheet_in), UiKit.fill_bar, and
+##               modal sheet rising 6 px into place, solid from the first frame, no fade (UiKit.sheet_in), UiKit.fill_bar, and
 ##               the Sim the week result sheet: Verdict lands on a win and fades in on a loss,
 ##               the Norm Smith, Injured and MRO lines come in one after another. Scores are
 ##               never delayed. Cosmetic only; Reduced motion still stills all of it. Off,
