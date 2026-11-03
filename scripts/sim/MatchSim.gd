@@ -129,6 +129,10 @@ var energy := {}
 ## it is asked about half a million times a round of matches. The same numbers, computed once.
 var _fit_cache := {}
 var rotation_policy := ["normal", "normal"]
+## A side's season fitness plan when it rotates itself each quarter
+## (auto_rotation at every break); "" leaves rotation_policy as set.
+## Background matches set both: every club rotates in its own interest.
+var season_plans := ["", ""]
 var interchanges := [0, 0]
 var _chain_no := 0
 var _played := [{}, {}]      # side -> id -> true: everyone who took the field
@@ -3590,6 +3594,8 @@ func begin_quarter() -> void:
 			set_tactics(side, ai_tactics(side))
 			if current_quarter > 1:
 				_ai_rematch(side)
+		if str(season_plans[side]) != "":
+			set_rotation_policy(side, auto_rotation(side, str(season_plans[side])))
 	# Snapshot the plans in force this quarter - after the AI has picked its
 	# own, so the break says what they actually ran, not last quarter's plan.
 	# Before any rolls; duplicates only, no RNG draws.

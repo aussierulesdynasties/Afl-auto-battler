@@ -2640,6 +2640,7 @@ func _stamp_conditioning() -> void:
 			if plan != Conditioning.plan_at(rec, w):
 				rec = Conditioning.revise(rec, w, plan)
 				conditioning[club] = rec
+		season.fitness_plans[str(club)] = Conditioning.plan_at(rec, w)
 		Conditioning.stamp_list(season.lists[club],
 				Conditioning.actual(rec, w, fitness_hp_level(str(club))), Conditioning.plan_at(rec, w),
 				Conditioning.base_curve(rec, w))
@@ -3574,6 +3575,7 @@ func _practice_build(home: String, away: String, home_invites: Array, away_invit
 	CoachEffects.apply(a["squad"])
 	var sim := MatchSim.new(h["squad"], a["squad"], PreSeason.practice_seed(career_seed, season_year, home, away))
 	for side in range(2):
+		sim.season_plans[side] = fitness_plan(str([home, away][side]))
 		if [home, away][side] == my_club:
 			sim.set_tactics(side, {"gameplan": club_plan})
 			sim.set_matchups(side, my_matchups)

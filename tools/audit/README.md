@@ -61,3 +61,4 @@ gh run download <run-id> -n capture-capture_match
 ```
 
 `tool` is the script name without `.gd`; `args` is what it reads after `--` (the workflow adds `--out`). It uses software rendering, so it is right for layout, colour and motion, not for frame times.
+- `rotations_season_impl` (competent-AI rotations): seeded autopilot seasons (args `seeds club`, default 301,302,303 MEL); one `ROT` line per season: ladder points SD, top/bottom, injuries per game, mean workload, rotation plans run, premier. Run it on two code states and compare by seed.
