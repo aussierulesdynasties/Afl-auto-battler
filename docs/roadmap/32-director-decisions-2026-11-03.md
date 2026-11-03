@@ -12,10 +12,7 @@ his differs, the later one wins. Nothing here edits the bible.
 | 5 | What comes first? | the match hero and why we won or lost | plan step 1b: each match names its hero, its turning point and one to three reasons traced to numbers in the result (MatchStory.gd, switch match_story, off until he plays it) |
 | 6 | A weekly checklist? | yes: a short weekly checklist with one big arc-linked call | replaces "no weekly checklist": each Hub week shows one big call tied to an arc (drop the out-of-form star? play the kid?) plus the routine jobs; the Hub's "There is no weekly checklist" text goes (plan step 3a) |
 
-## Approved cuts
-
-- Draft pool filters (CUT_AUDIT row 9): the pool keeps position, sort and search. Club, career stage, style, trait, available-only and the Combine sort are gone, live with no switch; the pool always shows available players. Combine results stay on a prospect's sheet. No save migration needed (view state, never saved).
-| 7 | Row 37 AI draft buff: on or off? | off | `ai_draft_buff` ships off (#862); it is rivals only, so the user's Pick for me is unchanged. Whether the buff should also change Pick for me is not yet decided |
+| 7 | Row 37 AI draft buff: on or off? | off (superseded: see the later Row 37 ruling below) | `ai_draft_buff` ships off (#862); it is rivals only, so the user's Pick for me is unchanged. Whether the buff should also change Pick for me is not yet decided |
 | 8 | Cut "Play to Grand Final" and the long-press play-ahead menu? | cut (CUT_AUDIT row 11) | Sim the week is the only fast path: one round at a time, finals included; UI-only, nothing saved, so no save migration |
 | 9 | Finals cards slice 2 (rows 35, 36): sizes the 2026-10-13 ruling left open? | A9 "No Grand Final talk" Standards +2; A14 "Back your players" Togetherness +2; B8 "Celebrate" costs 1 week of running off the next pre-season base | built behind switch finals_cards_2 (off) |
 | 10 | B8's running cost while the preseason switch is off? | carry it silently | the debt is saved and paid into the next pre-season's running base when one opens |
@@ -29,11 +26,17 @@ his differs, the later one wins. Nothing here edits the bible.
 | 18 | Which attributes does a card's top three rank? | all 13, Durability and Star power included | PlayerProfile.TOP_KEYS holds all 13 (switch top_attributes, off until he plays it); open-requirements row 1 |
 | 19 | Change the Needs work cutoffs or benchmark? | no | the existing cutoffs and the 2026 positional benchmark stay |
 | 20 | What does a hidden-rating prospect show? | the scout grade word | draft detail names his top three with the scouts' grade word, never a number |
+| 21 | Row 10 receiver choice: can a kick go to anyone on the ground? | no: the receiver is capped by a maximum kick distance from the kicker's kicking rating; better kickers reach further; nearest teammate when nobody is in range | `MatchSim.kick_range` = 30 m + 0.35 x disposal (44 m at 40, 63 m at 95); `kick_targets` keeps teammates whose line home (DEF -50, MID/RUCK 0, FWD +50 m from centre) is in reach; switch `kick_range` (off) |
+| 22 | Row 10: does the simulated match (Sim the week, AI v AI) choose receivers the same way as the watched match? | yes, one shared function, no duplicate | every path runs `MatchSim.kick_receiver` (the open-play next carrier and the general-play aerial receiver); tested same state and seed, same receiver |
 
 - **Row 37 draft logic, later ruling (2026-11-03):** the buff also applies to the user's "Pick for me", and the sim must
   be extremely competent: every club, the user's included, acts in its own best interest at all times; mistakes come
   only from imperfect information, never from deliberate dumbing down. The buffed logic is now the only National Draft
   logic (rivals, Pick for me, sim-through picks, live pick trades); switch `ai_draft_buff` is gone. Supersedes row 7.
+
+## Approved cuts
+
+- Draft pool filters (CUT_AUDIT row 9): the pool keeps position, sort and search. Club, career stage, style, trait, available-only and the Combine sort are gone, live with no switch; the pool always shows available players. Combine results stay on a prospect's sheet. No save migration needed (view state, never saved).
 
 ## Cuts shipped
 
@@ -69,3 +72,7 @@ his differs, the later one wins. Nothing here edits the bible.
   which found 47 of 538 goals cancelled before the fix). Recalibrated in Ratings.gd: clanger_is_free 0.34 -> 0.43
   (free kicks for ratio 0.94 before, 0.88 with the guard alone, 0.95 after) and hitouts_per_stoppage 0.81 -> 0.78
   (the restored bounces took hit-outs from 1.05 to 1.07; 1.03 after). Every calibration row stays in band.
+- PC pre-bounce break, Tag with Key match-ups: on the three-column PC break (1280x720 and wider, _deal_calls) the Tag
+  block and the Key match-ups block stay together in the Tag's column; #878's split, made so every column was within
+  a fifth empty, is reversed. The balance check loosens to 30% empty (the best split with them together measured
+  28% at 1280x720: 261, 363, 308). The phone and 768-1199 layouts are unchanged.
