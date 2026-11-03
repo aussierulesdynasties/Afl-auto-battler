@@ -44,3 +44,7 @@ his differs, the later one wins. Nothing here edits the bible.
   (strict matchday check restored). Game plan leads column 1, Tag leads column 2; key match-ups, pep talk, defensive
   set-up and the legs/synergies lines are dealt for balance (tag + match-ups together were ~360 of ~940, so they no
   longer share a column). Phone and 768-1199 layouts unchanged.
+- Cut audit row 6: Manual stat training is gone; only the training plans stay, no hand-buying of stat points. Old saves
+  on Manual (own or club plan) load on the plan closest to how each player is built, and his banked XP is spent under it.
+- Practice match guests: the single pre-season practice match trials 6 prospects per club (was 3; data/preseason.json
+  practice_guests). Invites, the setup count, "Recruiters fill the rest" and AI pairs all use the one number.
