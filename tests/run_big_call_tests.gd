@@ -50,6 +50,7 @@ func _run() -> void:
 	await _t("_test_arc_beat_first")
 	await _t("_test_save_load")
 	await _t("_test_hub_row")
+	await _t("_test_every_kind_routes")
 	_state.set_setting(WC.SETTING, false)
 	Features.set_on("coach_arcs", false)
 	_state.delete_saved_career()
@@ -209,3 +210,31 @@ func _test_hub_row() -> void:
 	if bc != null:
 		_check(str((bc as Button).tooltip_text) == str(WC.big_call(_state).get("text", "")),
 				"The row is this week's call")
+
+
+## Every big-call kind has a route the Router knows, so its Hub row can be tapped.
+func _test_every_kind_routes() -> void:
+	_fresh(true, true)
+	var cid := ""
+	for k in _state.coaches:
+		if str(_state.coaches[k].get("club", "")) == "MEL":
+			cid = str(k)
+			break
+	_state.coach_approaches = [{"cid": cid, "from_job": "MD", "club": "GEE", "job": "SA",
+			"choice": "", "kept": false, "text": ""}]
+	_state.media_conference = {"key": "x", "round": 1}
+	var rec: Dictionary = _state.captaincy.get("MEL", {})
+	rec["slots"] = []
+	rec["seeded"] = true
+	_state.captaincy["MEL"] = rec
+	var cands: Dictionary = BigCalls.candidates(_state)
+	for kind in ["press", "approach", "captain_vacant"]:
+		_check(cands.has(kind), "Candidate %s is live for the route check" % kind)
+	for kind in cands:
+		var route := str((cands[kind] as Dictionary).get("route", ""))
+		_check(route != "" and _router.SCENES.has(route), "Big call %s has a valid route: '%s'" % [kind, route])
+	# Kinds not live in this state (backing, captain_review) are still held to it in source.
+	var src := FileAccess.get_file_as_string("res://scripts/state/BigCalls.gd")
+	_check(not src.contains("\"route\": \"\""), "No big call is built with an empty route")
+	for kind in BigCalls.ORDER:
+		_check(src.contains("out[\"%s\"]" % kind), "Big call kind %s is built in candidates()" % kind)

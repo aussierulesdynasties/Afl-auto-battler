@@ -789,7 +789,13 @@ func _week_job_row(text: String, done: bool, route: String, big := false) -> But
 	h.add_child(t)
 	b.tooltip_text = text
 	if route != "":
-		b.pressed.connect(func(): Router.go(route))
+		# A call answered here (press, approach) reloads the Hub in place so the
+		# conference reopens, without stacking the Hub twice.
+		b.pressed.connect(func():
+			if route == Router.current():
+				Router.replace(route)
+			else:
+				Router.go(route))
 	else:
 		b.focus_mode = Control.FOCUS_NONE
 		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
