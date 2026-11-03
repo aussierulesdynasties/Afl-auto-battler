@@ -1607,14 +1607,6 @@ func _show_results(results: Array) -> void:
 				UiKit.SMALL, UiKit.MUTED, true))
 		v.add_child(_results_list(others))
 
-	# ui_motion: the week's notes come in one after another, from the first frame.
-	var notes := []
-	for n in ["MyInjured", "MyMRO", "NormSmithMedal"]:
-		var note := v.find_child(n, false, false)
-		if note != null:
-			notes.append(note)
-	UiKit.stagger(notes)
-
 	var ok := UiKit.btn("Continue", UiKit.NAME, true)
 	ok.name = "ResultsContinue"
 	ok.pressed.connect(func():
@@ -1637,13 +1629,10 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 			30, UiKit.TEXT if drew else UiKit.margin_colour(won), true)
 	verdict.name = "MyVerdict"
 	v.add_child(verdict)
-	# ui_motion: a win lands (the scores are shown at once and true); a loss and a
-	# draw are only shown, sober.
-	if UiKit.juice():
-		if won and not drew:
-			UiKit.land(verdict, 0.12)
-		else:
-			UiKit.reveal(verdict)
+	# ui_motion: a win lands by scale alone (all text is solid from frame 0, the
+	# scores are true at once); a loss and a draw are only shown, sober.
+	if UiKit.juice() and won and not drew:
+		UiKit.land(verdict, 0.12)
 	for side in [0, 1]:
 		var row := UiKit.hbox(8)
 		row.name = "MyScore_%d" % side
@@ -1676,9 +1665,10 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 		v.add_child(tl)
 	var best := MatchNotes.standouts(res, me, 1)
 	if not best.is_empty():
-		var bl := UiKit.ellipsis("Best: %s %s  ·  %s" % [str(best[0]["name"]),
+		var bl := UiKit.lbl("Best: %s %s  ·  %s" % [str(best[0]["name"]),
 				MatchNotes.rating_text(float(best[0]["rating"])), str(best[0]["line"])],
 				UiKit.SMALL, UiKit.TEXT)
+		bl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		bl.name = "MyBest"
 		v.add_child(bl)
 	var hurt := GameState.my_new_injuries()

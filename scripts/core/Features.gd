@@ -96,8 +96,8 @@ extends RefCounted
 ##               in the helpers, a hardened reveal / count_up / land / attention (an earlier
 ##               tween on the same node is stopped first), the Router fade easing out, every
 ##               modal sheet rising 6 px into place, solid from the first frame, no fade (UiKit.sheet_in), UiKit.fill_bar, and
-##               the Sim the week result sheet: Verdict lands on a win and fades in on a loss,
-##               the Norm Smith, Injured and MRO lines come in one after another. Scores are
+##               the Sim the week result sheet: Verdict lands on a win, a loss gets
+##               nothing, and no text ever fades or comes in line by line. Scores are
 ##               never delayed. Cosmetic only; Reduced motion still stills all of it. Off,
 ##               every screen is exactly as before.
 const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion"]

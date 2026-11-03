@@ -3,11 +3,11 @@ extends SceneTree
 ## Menu juice, first prototype (switch `ui_motion`, director 2026-11-04): the
 ## UiKit.Motion tokens, the hardened reveal / count_up / land, the Router's
 ## ease-out, sheet_in on every modal sheet, fill_bar, and the Sim the week
-## result sheet (the Verdict lands on a win and only fades in on a loss; the
+## result sheet (the Verdict lands on a win and a loss gets nothing; no text fades; the
 ## injury, MRO and Norm Smith lines come in one after another). Proves: it ran
 ## (Feel.moved), it was skipped (Reduced motion, switch off), the figures are
 ## true on the first frame, and a real finger (tests/tap.gd) reaches Continue
-## from frame 0, during the stagger, and at the edge of a landing element.
+## from frame 0, during the landing, and at the edge of a landing element.
 ## Classes are reached through load() and autoload nodes.
 
 const Tap := preload("res://tests/tap.gd")
@@ -151,10 +151,21 @@ func _alpha_chain(n: Node) -> float:
 
 # ---------------------------------------------------------------------------
 
+## Every Label under the node is fully opaque (own modulate and every ancestor's).
+func _all_text_solid(root: Node) -> bool:
+	if root == null:
+		return false
+	var ok := true
+	for n in root.find_children("*", "Label", true, false):
+		if not is_equal_approx(_alpha_chain(n), 1.0):
+			ok = false
+	return ok
+
+
 func _test_tokens_and_switch() -> void:
 	var m = _uk.Motion
 	_check(m.DUR_FAST == 0.18 and m.DUR_BASE == 0.32 and m.DUR_COUNT == 0.7 and m.DUR_HERO == 0.5
-			and m.DUR_BAR == 0.45 and m.STAGGER == 0.04 and m.STAGGER_SHEET == 0.08 and m.STAGGER_MAX == 8
+			and m.DUR_BAR == 0.45
 			and m.RISE == 6.0 and m.LAND_FROM == 1.22 and m.DUR_MILESTONE == 0.9,
 			"The Motion tokens hold the report's values")
 	_check(m.TRANS_IN == Tween.TRANS_CUBIC and m.EASE_IN == Tween.EASE_OUT and m.TRANS_SETTLE == Tween.TRANS_QUART
@@ -227,11 +238,10 @@ func _test_helpers_hardened() -> void:
 	_uk.reveal(o)
 	_uk.count_up(o, 9, func(v): return str(v))
 	_uk.sheet_in({"overlay": o})
-	_uk.stagger([o])
 	_uk.fill_bar(o, 0.1, 0.9)
 	await _settle(2)
 	_check(_feel.moved.is_empty() and not o.has_meta("_motion_mod") and not o.has_meta("_motion_text"),
-			"Switch off: reveal, count_up, sheet_in, stagger and fill_bar leave no tag and no tween (%s)" % str(_feel.moved))
+			"Switch off: reveal, count_up, sheet_in and fill_bar leave no tag and no tween (%s)" % str(_feel.moved))
 	_feat.clear("ui_motion")
 	host.queue_free()
 	await _settle()
@@ -359,19 +369,21 @@ func _test_result_sheet_win() -> void:
 			"Win: the verdict says Won by 30 in the GOOD colour (%s)" % (verdict.text if verdict != null else "missing"))
 	var cont: Button = hub.find_child("ResultsContinue", true, false)
 	_check(cont != null and hub.find_child("SheetRise", true, false) != null, "The result sheet has Continue and the rise wrapper")
-	# The notes: Injured and MRO exist and start hidden, then come in one by one.
+	# The notes: Injured and MRO are there, and every label on the sheet is solid from frame 0.
 	var inj: Label = hub.find_child("MyInjured", true, false)
 	var mro: Label = hub.find_child("MyMRO", true, false)
 	_check(inj != null and mro != null, "Win: the Injured and MRO lines are there")
-	_check(inj.modulate.a < 0.05 and mro.modulate.a < 0.05, "The notes start hidden for their turn")
-	await create_timer(0.12).timeout
-	_check(mro.modulate.a < 1.0, "Part-way through the stagger the last note is still coming in (%.2f)" % mro.modulate.a)
+	_check(_all_text_solid(hub.find_child("RoundResults", true, false)),
+			"Win: every line of text on the sheet is fully opaque at frame 0")
+	var best: Label = hub.find_child("MyBest", true, false)
+	_check(best != null and best.autowrap_mode != TextServer.AUTOWRAP_OFF and best.text_overrun_behavior == TextServer.OVERRUN_NO_TRIMMING,
+			"The Best line wraps instead of trimming with an ellipsis")
 	await create_timer(1.2).timeout
-	_check(_feel.moved.has("sheet_in") and _feel.moved.has("land") and _feel.moved.has("stagger"),
-			"Win: Feel.moved shows sheet_in, land and stagger (%s)" % str(_feel.moved))
-	_check(is_equal_approx(inj.modulate.a, 1.0) and is_equal_approx(mro.modulate.a, 1.0)
+	_check(_feel.moved.has("sheet_in") and _feel.moved.has("land") and not _feel.moved.has("stagger") and not _feel.moved.has("reveal"),
+			"Win: Feel.moved shows sheet_in and land, no stagger, no reveal (%s)" % str(_feel.moved))
+	_check(_all_text_solid(hub.find_child("RoundResults", true, false))
 			and is_equal_approx(_alpha_chain(cont), 1.0) and is_equal_approx(verdict.scale.x, 1.0),
-			"Win: by 1.3 s everything is in and at rest (sheet, notes, verdict scale)")
+			"Win: by 1.3 s everything is in and at rest (sheet, text, verdict scale)")
 	_check(not _feel.moved.has("burst"), "No particles on a win")
 	hub.queue_free()
 	await _settle()
@@ -392,18 +404,15 @@ func _test_result_sheet_win() -> void:
 	hub.queue_free()
 	await _settle()
 
-	# A real tap on Continue during the stagger.
+	# A real tap on Continue a moment later, still inside the verdict landing.
 	o = await _open_results(true)
 	hub = o["hub"]
 	await create_timer(0.1).timeout
-	var last: Label = hub.find_child("MyMRO", true, false)
-	var mid := last.modulate.a < 1.0
 	var c2: Button = hub.find_child("ResultsContinue", true, false)
 	var why2: String = await Tap.tap(c2)
 	await _settle(3)
-	_check(mid, "The tap came while the last note was still coming in")
 	_check(why2 == "" and hub.find_child("RoundResults", true, false) == null,
-			"A real tap on Continue during the stagger closes the sheet (%s)" % why2)
+			"A real tap on Continue during the landing closes the sheet (%s)" % why2)
 	hub.queue_free()
 	await _settle()
 
@@ -417,8 +426,9 @@ func _test_result_sheet_loss() -> void:
 	_check(verdict != null and verdict.text == "Lost by 30" and verdict.get_theme_color("font_color") == _uk.margin_colour(false),
 			"Loss: the verdict says Lost by 30 in the BAD colour (%s)" % (verdict.text if verdict != null else "missing"))
 	await create_timer(0.7).timeout
-	_check(_feel.moved.has("sheet_in") and _feel.moved.has("reveal") and not _feel.moved.has("land"),
-			"Loss: sheet_in and a plain reveal, no land (%s)" % str(_feel.moved))
+	_check(_feel.moved.has("sheet_in") and not _feel.moved.has("reveal") and not _feel.moved.has("stagger") and not _feel.moved.has("land"),
+			"Loss: sheet_in only, no reveal, stagger or land (%s)" % str(_feel.moved))
+	_check(_all_text_solid(hub.find_child("RoundResults", true, false)), "Loss: every line of text is fully opaque")
 	_check(not _feel.heard.has("land"), "Loss: no landing sting either (%s)" % str(_feel.heard))
 	_check(is_equal_approx(verdict.scale.x, 1.0) and is_equal_approx(verdict.modulate.a, 1.0),
 			"Loss: the verdict never scaled and ends fully visible")
@@ -452,7 +462,7 @@ func _test_result_sheet_reduced_and_off() -> void:
 	hub = o["hub"]
 	mro = hub.find_child("MyMRO", true, false)
 	await create_timer(0.7).timeout
-	var new_tags := ["sheet_in", "reveal", "stagger", "count_up", "fill_bar", "land"]
+	var new_tags := ["sheet_in", "reveal", "count_up", "fill_bar", "land"]
 	var seen := []
 	for t in _feel.moved:
 		if new_tags.has(t):
