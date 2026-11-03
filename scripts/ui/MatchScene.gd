@@ -2440,7 +2440,9 @@ func _show_moment() -> void:
 					"q": int(GameState.pending_sim.pending_moment.get("q", 0))})
 		_km_slow("moment")
 	var m: Dictionary = GameState.pending_sim.pending_moment
-	var bounce := str(m.get("kind", "")) == "bounce"
+	# The late centre ball-up call, and the run of goals against (row 14), both
+	# put to the coach over a centre ball-up.
+	var bounce := str(m.get("kind", "")) == "bounce" or bool(m.get("moves", false))
 	if bounce and GameState.vignettes_on():
 		_show_bounce_moment(m)
 		return
@@ -2459,7 +2461,7 @@ func _show_moment() -> void:
 	var title := UiKit.lbl(str(m.get("title", "")), 20, UiKit.EMPH, true)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(title)
-	if bounce:
+	if bounce and not bool(m.get("moves", false)):
 		# Vignettes off: the centre ball-up call without its scene, the same
 		# facts the scene would have put over it.
 		for f in StoppageVignette.call_facts(GameState.pending_sim, _my_side):
@@ -2524,7 +2526,8 @@ func _show_bounce_moment(m: Dictionary) -> void:
 	hold.add_child(panel)
 	var call := UiKit.vbox(6)
 	panel.add_child(call)
-	for f in vignette.facts:
+	# The run-of-goals call is about the goals, not the stoppages: no ruck line.
+	for f in ([] if bool(m.get("moves", false)) else vignette.facts):
 		var fl := _say(str(f), UiKit.BODY, UiKit.TEXT, true)
 		fl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		call.add_child(fl)
