@@ -435,7 +435,9 @@ static func offseason(ctx: Dictionary) -> Dictionary:
 				and year - int(c.get("sc_since", year)) >= 2)):
 			sack_list.append([fails + (1 if bool(r.get("severe", false)) else 0), cid])
 		elif int(c.get("contract_to", year + 1)) <= year:
-			if renews(coaches, c, year, seed, my_club):
+			# A coach who met his goal has earned his renewal; otherwise the club
+			# keeps him only if no better candidate would take the job.
+			if bool(r.get("met", false)) or renews(coaches, c, year, seed, my_club):
 				c["contract_to"] = year + 2 + int(_roll(seed, "reterm|%d|%s" % [year, cid]) * 3.0)
 			else:
 				_leave_job(c, year)
