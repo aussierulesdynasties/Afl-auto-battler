@@ -6,6 +6,7 @@ extends SceneTree
 ## with the ball only ever at a palm; the call under it is MatchSim's, and takes a real tap.
 
 const Tap := preload("res://tests/tap.gd")
+const Ran := preload("res://tests/functions_ran.gd")
 const SUITE_SEED := 2027
 const KINDS := ["tired", "duel", "hot", "momentum", "set_shot"]
 
@@ -30,11 +31,11 @@ func _run() -> void:
 	var original: bool = Features.on("decision_scenes")
 	_check(not original, "The decision scenes ship switched off")
 	for kind in KINDS:
-		await _test_kind(kind)
-	await _test_card_without_switch()
-	await _test_tap()
+		await _t("_test_kind", [kind])
+	await _t("_test_card_without_switch")
+	await _t("_test_tap")
 	Features.set_on("decision_scenes", original)
-	print("Decision scenes tests: %d checks, %d failures" % [_checks, _failures.size()])
+	print(Ran.line("Decision scenes", self))
 	for f in _failures:
 		print("  FAIL: ", f)
 	quit(1 if _failures.size() > 0 else 0)
@@ -245,6 +246,11 @@ func _test_tap() -> void:
 	_check(m.find_child("DecisionVignette", true, false) == null, "Tap: the scene is gone, back to the match")
 	m.queue_free()
 	await _settle()
+
+
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
 
 
 func _settle() -> void:
