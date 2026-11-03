@@ -10,7 +10,7 @@ These are here to stop Claude from rebuilding things that already exist. **Verif
 - Concussion now enforces a minimum two-match absence with AI parity and save persistence (PR #51).
 - Wildcard finals/top-10 finals structure already exists; do not add another wildcard-finals feature.
 - Matchday squad was 18 + 4 interchange; migrated to 18 + 5 in #331 (ARD-M5-001).
-- "Play through" now favours possession-chain/transition involvement without generic shooter bias (PR #48).
+- "Play through" is now the Through stars plan (best on-ground star per line); Defensive forward and Loose interceptor are one Defensive set-up call; there is no in-match Main ruck call; rotations are automatic (`MatchSim.auto_rotation`) (cut audit rows 2-5, #874, 2026-11-03).
 - Player/team metres gained are accumulated from actual forward ball movement (PR #55).
 - Effective disposals and Disposal Efficiency are tracked from actual disposal outcomes (PR #55).
 - OOB/out-on-full/throw-in/last-disposal have not historically existed as a complete event path.

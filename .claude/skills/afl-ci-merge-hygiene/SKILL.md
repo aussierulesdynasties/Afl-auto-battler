@@ -43,7 +43,7 @@ true. This repo copy is the only one; the general rules it builds on are in the
   are the other hot files; a PR touching them says so in its [MERGE NOTE].
 - Sync early: merge `origin/main` when you start work on a hot file and again
   just before marking ready, not for the first time on merge day.
-- Only the branch owner pushes to the branch. A support session sends the
+- Only the branch owner pushes to the branch. Another session sends the
   owner the exact conflict list and resolution, or does it in the owner's
   worktree only if the owner has said so.
 
@@ -93,10 +93,10 @@ true. This repo copy is the only one; the general rules it builds on are in the
 
 The accounts never run at once and share `~/.claude` (skills, handoffs).
 Before ending a turn after changes:
-1. Rewrite `~/.claude/handoffs/<project path>.md` (hook-enforced, <120 lines).
+1. Rewrite `~/.claude/handoffs/<project path>.md` (hook-enforced, at most 80 lines; afl-handoff).
 2. It must let a cold session act in five minutes: open PRs with sha and run id,
    what each waits on (CI, W7, director look), worktree paths, the CI/merge
-   queue in order, decisions made, and the live peers (`ListAgents`).
+   queue in order, and decisions made.
 3. Verify claims against GitHub right before writing (`gh pr list`,
    `gh run list`): a handoff naming a merged PR as open wastes the next hour.
 4. Anything the next session must not repeat goes in "Seen so far", not only

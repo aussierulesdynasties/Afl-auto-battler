@@ -88,7 +88,7 @@ The season load model (`Workload.advance_week`) and in-match fatigue (`MatchSim`
 | High-performance budget → weekly recovery | 0.90–1.20× by funding level (Standard 1.00×) | 1.00× |
 | Week-event training card | Heavy session (+6 load, start at 88 energy) or Recovery week (+8 recovery); **default when simmed: Recovery** | never offered |
 | Selection | once set, the side is kept every week | re-picked weekly, freshness-weighted (`Workload.selection_factor`) |
-| Rotation policy | Hard / Normal / Ride the stars | Normal |
+| Rotation policy | Hard / Normal / Ride the stars | Normal | (superseded 2026-11-03: rotations are automatic, `MatchSim.auto_rotation`)
 
 There's no hidden AI fatigue protection.
 

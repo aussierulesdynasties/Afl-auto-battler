@@ -396,7 +396,7 @@ happens) with its own random stream: see `docs/MATCH_VIEW.md`.
 ### Calibration
 Carrier picks fade a player out of the next possession once they have already
 had a realistic game (`usage_multiplier`: unfocused fade from 18 disposals,
-focused from 21). "Run play through" is a 1.14x early weight on that player,
+focused from 21). Playing through a star (the Through stars plan) is a 1.14x early weight on him (`FOCUS_CARRY`),
 not a 1.55x magnet, so a focused game stays in the low 30s (hard ceiling mid-30s
 in the probe) instead of 50–80. Team disposal volume is unchanged — the fade
 only changes who is chosen. The same curve is in `tools/sim_harness.py`.
@@ -435,17 +435,19 @@ log or its quarter snapshots, never decided by the screen.
 - **Quarter breaks.** What happened, then your calls. Up to three facts
   about the quarter (their midfield on top at the stoppages, most of the ball
   going forward, a player hurting you, wayward kicking), what they played,
-  how your tag and your calls came off - then the gameplan, tag, player to
-  play through, pep talk and rotations, each described in football words
+  how your tag and your calls came off - then the gameplan, tag, pep talk
+  and defensive set-up, each described in football words
   (the exact percentages stay in the assistant's report). Legs read in words:
   fresh, tiring, running on empty. The break surfaces the problem; it never
-  names the answer. The calls are taps, not dropdowns: gameplan, pep talk
-  and rotations are short lists shown in full; Tag and Play through show
+  names the answer. The calls are taps, not dropdowns: gameplan and pep talk
+  are short lists shown in full; Tag shows
   "none" and the four players most in the game so far (before the bounce,
   the best rated), plus "Other player..." for the whole side on the ground.
-  The order is a convenience - nobody is filtered out.
+  The order is a convenience - nobody is filtered out. Play through is part
+  of the Through stars plan and rotations are automatic for both sides
+  (`MatchSim.auto_rotation`); the separate calls were cut 2026-11-03.
 - **Your people on the oval.** The players of yours you have a say about wear
-  a thin ring: a run you promised, the player you play through, your tagger,
+  a thin ring: a run you promised, the stars a Through stars plan plays through, your tagger,
   the spare, and the defender on each forward you matched up (six at most; the
   match-ups the engine sets up itself and the man you tag are not ringed). A
   surname goes up for a moment over a goal-scorer, and over a ringed player
@@ -789,8 +791,9 @@ table, shot conversion, every best and quiet player with his numbers and
   `intake_mode`: the salary cap is a formality (rookie contracts), the two-ruck
   rule does not re-apply to an intake, and a club at the 44-man cap has its
   turn skipped rather than stalling the board. Rival AI picks between your
-  turns exactly like the career draft, and the shared DraftScene shows the
-  recruiting-club filter, projected OVR tooltips and scouting notes.
+  turns exactly like the career draft, and the shared DraftScene shows
+  projected OVR tooltips and scouting notes (the pool filters were cut
+  2026-11-03: position, sort and search remain).
 * **Inspecting a player before a pick** — on both draft boards, tapping a
   player (or a pick in the history) opens his details; only the Draft / Sign
   button at the foot of them, or the row's own draft button, picks him.
@@ -897,7 +900,7 @@ scripts/
     DraftScene.gd      club selection + draft board
     HubScene.gd        the week: opponent + facts, your side's news, the match; then ladder
     MatchScene.gd      scoreboard, oval, match feed, quarter breaks, full time, Match stats (PlayerStatsTable)
-    LadderScene.gd     full ladder + finals bracket
+    FinalsBracket.gd   the finals series, shown in the hub
     ListScene.gd       your list, best 23, attributes, real season numbers
     SeasonReviewScene.gd  the flag, your record, final ladder, awards, club achievements
 scenes/                thin .tscn wrappers - a root Control + its script
@@ -916,7 +919,7 @@ tools/
 | Real 2026 dataset | Done — 669 players, all 18 clubs, 220/220 aggregate checks pass |
 | Ratings model | Done, validated against the Brownlow order |
 | Match engine | Done — disposals on the 2026 total; behinds and rebound 50s a little low |
-| Godot port of engine | Done — `scripts/sim/`, same RNG call order as the harness |
+| Godot port of engine | Done — `scripts/sim/` is the engine; the Python harness's match half is stale since 2026-10-08 |
 | Draft / season / ladder / finals | Done — `Draft.gd`, `Season.gd`, `GameState.gd` |
 | 2026 draft class + end-of-season intake | Done — `data/draftees_2026.csv`, `Prospects.gd`, `Draft` intake mode, career rollover |
 | Animated oval + UI | Done — all seven screens build their trees in code |

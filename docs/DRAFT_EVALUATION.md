@@ -21,8 +21,8 @@ board and the human's picks.
   - It is a Gaussian error with SD `club_eval_sd(code)`, capped at ±2.5 SD.
   - It is 0 for your club, 0 in the intake (national) draft, and 0 outside a league draft.
 - `club_eval_sd(code)` is how sharp that club's scouting is. It is uniform on
-  `[AI_EVAL_SD_MIN, AI_EVAL_SD_MAX]` = **[0, 4]** rating points (first
-  shipped as [1, 5]; see "Recalibrated: [0, 4]" below).
+  `[AI_EVAL_SD_MIN, AI_EVAL_SD_MAX]` = **[1, 5]** rating points in the code on
+  main (the 2026-10-04 recalibration to [0, 4] below is not what the code holds).
 - `_need_weight` has one new guard: a club with three rucks gives a fourth a
   weight of 0. The reason is under "Unintended effects" below.
 - Everything is a pure function of `(draft seed, club code, player id)`:
@@ -73,7 +73,7 @@ Two things from the calibration matter:
 
   \* Before the fourth-ruck guard. The U[0.5, 3] row is from the first calibration round, which applied the opinion in full whatever the need. Early rounds are almost identical either way, because need is 1 there.
 
-**First chosen range: U[1, 5]** (now [0, 4], below). Of the settings tested,
+**First chosen range: U[1, 5]** (the range in the code today). Of the settings tested,
 it is the smallest that puts the all-AI league inside the season-one range.
 Narrower shapes with the same mean error fell short.
 

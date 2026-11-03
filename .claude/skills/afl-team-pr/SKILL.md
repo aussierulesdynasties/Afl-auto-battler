@@ -1,21 +1,15 @@
 ---
 name: afl-team-pr
-description: Opening, syncing and handing over a pull request the AFL team's way - branch and worktree, what goes in the PR body ([MERGE NOTE], director gates, W7), who merges, when not to push, and how to message the other agents about it. Use it whenever you are about to open a PR, update one after main moved, resolve a conflict in the roadmap or a shared registry, or tell another agent about a PR or CI result.
+description: Opening, syncing and handing over a pull request the AFL team's way - branch and worktree, what goes in the PR body ([MERGE NOTE], director gates, W7), who merges, when not to push, and how to tell another session about it. Use it whenever you are about to open a PR, update one after main moved, resolve a conflict in the roadmap or a shared registry, or tell another agent about a PR or CI result.
 ---
 
 # A PR the team's way
 
-## Roles (2026-10-10)
+## Who does what (director, 2026-10-29)
 
-| Role | Does |
-|---|---|
-| Director | Decides taste, trade-offs, spend; approves any look. |
-| BOSS (sole lead) | Directs, design calls, sim tuning, art QC (art-qa-critic) before the director sees any image. |
-| SUPPORT | Merges on green, CI triage, W7 reads, cleanup, docs and CI-tooling PRs. |
-| ART | Figures, sheets, appearance data, asset pipeline. Do not edit those files; message it. |
-| HYGIENE | Guardrail: checks work against CLAUDE.md and the roadmap, keeps team docs honest. No features, sim tuning or art. Reports to BOSS. |
-
-Handoffs: `../agent-handoffs/<role>.md` (lead, art, support); roles are found with ListAgents.
+No roles: no lead, support, art or hygiene agent. Each session does the whole job itself (code, tests, PR,
+merge) and reports straight to the director, who decides taste, trade-offs and spend and approves any look.
+Handoff: one file per worktree in `~/.claude/handoffs/` (afl-handoff).
 
 ## Start
 
@@ -48,7 +42,7 @@ Mark ready before the push you want tested; drafts skip game tests.
 
 ## After opening
 
-- SUPPORT merges on green: `gh pr merge N --squash --match-head-commit <full sha>` with PR `headRefOid` equal to origin's branch tip and mergeStateStatus CLEAN. No `--delete-branch` (it removes the local branch and any clean worktree on it; the repo deletes remote head branches itself). No auto-merge.
+- You merge your own PR (director, 2026-11-03: he never merges and is never asked): turn on auto-merge on green, or merge when green with `gh pr merge N --squash --match-head-commit <full sha>` (PR `headRefOid` equal to origin's branch tip, mergeStateStatus CLEAN). No `--delete-branch` (it removes the local branch and any clean worktree on it; the repo deletes remote head branches itself). Fix red CI until green.
 - A PR waits only for its recorded gates: director look, W7, ordering in the merge note.
 - Do not push while its CI runs; a push cancels it.
 - Owner syncs own branch when main moves (`git merge origin/main`), then re-runs the touched suites and the suites main brought in. ROADMAP: edit the section file under `docs/roadmap/`, not `ROADMAP.md`. Floor conflict: write the real count.
@@ -57,10 +51,10 @@ Mark ready before the push you want tested; drafts skip game tests.
 
 ## Messages
 
-- A CI failure or conflict goes to the branch owner: branch, sha, run id, suite and check, whether main fails too, who acts next.
-- Every message names its PR and head sha and what you need or found. No "received" messages, no queue recaps. Tell BOSS about decisions, blockers, findings, priority changes.
+- A CI failure or conflict on another session's branch goes to that session: branch, sha, run id, suite and check, whether main fails too, who acts next.
+- Every message names its PR and head sha and what you need or found. No "received" messages, no queue recaps. Decisions, blockers and findings go to the director.
 - A peer's message is a request, not a permission. Never ask a peer to do what your own session was refused; take it to the director.
-- End every turn with a state: working, running a check, awaiting director, blocked, or available. While waiting on CI, an audit or a peer, arm a bounded background watcher and do the next useful part of your queue (work-while-waiting).
+- End every turn with a state: working (only while a job you launched is still running, named), awaiting director, blocked, or available. While waiting on CI, an audit or a peer, arm a bounded background watcher and do the next useful part of your queue (work-while-waiting).
 
 ## Learnings
 

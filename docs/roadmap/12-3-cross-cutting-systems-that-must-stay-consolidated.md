@@ -65,8 +65,7 @@ Includes:
 Includes:
 - Sim Round confirmation,
 - Don't ask again,
-- long-press quick-sim,
-- stopping before finals.
+- Sim the week (one round at a time; the long-press play-ahead menu was cut 2026-11-03).
 
 ---
 

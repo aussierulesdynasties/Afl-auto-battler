@@ -88,8 +88,8 @@ freshness alongside ability for every club; a named selection remains yours.
 
 - **Rival picks are visible.** A latest-rival-pick strip links to the full log.
   The log includes the overall pick number, destination club, player and role;
-  filter it by club or load earlier selections. Taken players also identify
-  their drafting club when **Available only** is switched off under **Filters**.
+  filter it by club or load earlier selections. The pool always shows available
+  players only (filters cut 2026-11-03; it keeps position, sort and search).
 - **Live position coverage.** DEF / MID / RUCK / FWD counters always show your
   actual totals and remaining needs. Tap a counter to filter the pool; tap it
   again to return to all positions. Targets are **6 DEF, 6 MID, 2 RUCK, 6 FWD**
@@ -98,8 +98,8 @@ freshness alongside ability for every club; a named selection remains yours.
   are recommendations, not additional rules.
 - **Portrait and landscape.** Portrait has Pool / Picks / My list / Order tabs.
   Landscape puts the pool beside the activity panel when there is enough width.
-  Low-height layouts compact the header and scroll filters with the content.
-  Rotation preserves the roster, history, search, sorting and filters.
+  Low-height layouts compact the header and scroll the pool controls with the content.
+  Rotation preserves the roster, history, search and sorting.
 - **Clear next steps.** Cap remaining, list progress and your next snake picks
   stay visible. **Start Season** only enables for a complete, valid list.
   Returning to the menu offers **Resume Draft**, and the draft is saved to disk

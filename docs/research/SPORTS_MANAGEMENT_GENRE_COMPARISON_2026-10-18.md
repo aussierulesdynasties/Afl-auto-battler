@@ -65,7 +65,7 @@ Scores are maturity 0-3 (0 missing, 1 stub, 2 works but rough, 3 polished), take
 
 **Evidence.** Experienced FM players build "sim the week" by hand: assistant, holiday, instant result, and accept it only when skipping does not punish them with hidden drift ("the assistant usually manages to get the whole squad to rebel") [player, FM Scout](https://www.fmscout.com/q-3820-How-people-finish-their-seasons-so-quickly-.html). ZenGM: "Making a game 10x faster changes how people play it" [dev](https://zengm.com/blog/17). OOTP's "Drive for the Pennant" plays only pivotal moments and is praised [critic, GameCritics](https://gamecritics.com/brad-bortone/out-of-the-park-baseball-25-review/).
 
-**Where we stand.** Sim the week, play-ahead, 1x to 8x, Skip to full time, Ask before simming all exist (`HubScene.gd`, `MatchScene.gd`, `OptionsSheet.gd`). What is missing is the middle setting between watching and skipping, and proof that Sim the week never skips a mandatory stop.
+**Where we stand.** Sim the week, 1x to 8x, Skip to full time, Ask before simming all exist (`HubScene.gd`, `MatchScene.gd`, `OptionsSheet.gd`); play-ahead was cut 2026-11-03 (CUT_AUDIT row 11). What is missing is the middle setting between watching and skipping, and proof that Sim the week never skips a mandatory stop.
 
 ### Theme 7. Restraint protected by the developer
 
@@ -151,7 +151,7 @@ Twenty-four proposals in three tiers, in recommended order: **A. Professional ba
 **P-07. An interruption budget for the week.** Count every stop between full time and the next bounce in a seeded ten-season run (cards, press, notes, confirmations); set a cap per quiet week; prove Sim the week stops at every mandatory stop and nowhere else; collapse any two stops that answer the same question.
 - Bible intent: "The player should not feel they will develop arthritis from clicking"; playing hands-off is the gamer's call.
 - Evidence: PC Gamer on FM26: the off-pitch game "refuses to let time pass with any rapidity" [critic via OpenCritic]; Use a Potion: pop-ups make it "tough to build momentum"; FM players accept skipping only when it does not cause hidden drift [player, FM Scout].
-- Exists: Sim the week and play-ahead (`HubScene.gd`, `e517d1d9`), `StoryEngine.gd` cooldowns, "Ask before simming"; release plan Task 1.5 (never skip a mandatory stop) untested; row 34 card audit open (this proposal supplies its cadence numbers).
+- Exists: Sim the week (`HubScene.gd`, `e517d1d9`; play-ahead cut 2026-11-03), `StoryEngine.gd` cooldowns, "Ask before simming"; release plan Task 1.5 (never skip a mandatory stop) untested; row 34 card audit open (this proposal supplies its cadence numbers).
 - Size: M (audit as code in `tools/audit/`, then cuts).
 - Does not: remove any stop that carries a real decision.
 
@@ -195,7 +195,7 @@ Twenty-four proposals in three tiers, in recommended order: **A. Professional ba
 **P-13. Every opposition fact comes with your options beside it.** On the pre-match sheet, each stated opponent fact ("Rankine is their best player", "they win it at the stoppages") sits next to the responses the rules allow (tag, defensive forward, main ruck, loose man), all shown, none marked best, with the cost each carries.
 - Bible intent: "Reading the game is the skill"; make the rules transparent, don't make the decision.
 - Evidence: FM24 Mobile's Pre-Match Hub (opponent strengths, predicted line-up) made it "feel more alive" [critic, iMore]; director A9: "why tell me Rankine is their best player if i cant do anything about it?"
-- Exists: tags (#633, #729), defensive forward (#760), main ruck (PR #758 open), `MatchPoster.gd`, opponent prep. This proposal is a layout rule, not a new control.
+- Exists: tags (#633, #729), Defensive set-up call (#760, merged with Loose interceptor 2026-11-03; the main ruck call was cut, #874), `MatchPoster.gd`, opponent prep. This proposal is a layout rule, not a new control.
 - Size: M. Rule check: no "best" label, every option shown even when unsuitable (with the reason), satisfies CLAUDE.md's no-recommendation rule.
 - Does not: add new in-match levers or a matchup grade.
 

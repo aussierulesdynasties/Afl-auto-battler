@@ -193,6 +193,7 @@ The same fields for each system.
   - Ride the stars: −1.5 ± 1.4.
   - Interchange counts differ as described (tests).
 - **Status:** WORKING (small).
+- **Superseded 2026-11-03:** rotations are automatic for both sides (`MatchSim.auto_rotation`, docs/roadmap/32-director-decisions-2026-11-03.md).
 
 **10. Key match-ups (Gate 1.12, merged in #96)**
 - **Evidence:** 400 matches: the strong defender against a mismatch is about 0.8 of a goal from the forward, 4–6 points.
@@ -292,7 +293,7 @@ The same fields for each system.
 
 | # | System | Status | Evidence |
 |---|---|---|---|
-| 32 | Training plans | WORKING | Behavioural tests: attributes move under each plan; Manual banks XP |
+| 32 | Training plans | WORKING | Behavioural tests: attributes move under each plan; Manual banks XP (Manual cut 2026-11-03, plans only) |
 | 33 | Development, potential, age | WORKING | `Prospects.age_league` applies `Potential.growth` league-wide |
 | 34 | Reserves | WORKING | Reserves XP paid and tested |
 | 35 | Draft scouting uncertainty | WORKING (honest) | Rival clubs only; you see true OVR and POT, and the code says so |

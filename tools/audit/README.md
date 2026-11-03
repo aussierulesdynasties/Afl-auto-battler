@@ -26,9 +26,8 @@ way.
   `replay_seed` drives the draft and season rolls (the clock is used when it is 0).
   Seeding only `Draft.new(..., seed)`, or only one of the two, leaves part of the
   career random.
-- Changing the seed after `reset()` does not rebuild a draft class that `reset()`
-  has already made. #383 makes `start_season` remake the first class from your
-  seed; until it is on main, set the seeds before the first class is read.
+- Changing the seed after `reset()` is safe for the first draft class:
+  `start_season` remakes it from your seed when it was made from another (#383).
 - `run_audit.gd` seeds the global RNG (`AUDIT_SEED`, default 2026), so `reset()`'s
   seed repeats run to run (#428).
 - Never use the clock as a seed. A test or audit that does is flaky by design.
@@ -50,6 +49,7 @@ way.
 - `staff_identity_impl` (RPG-006): paired autopilot careers where your club's staff is given one character each season (`base`, `teach`, `tactics`, `manage`, `fair`) and every other club is left alone; prints young players' rating gain, list gain, ladder, margin and morale per season. Arguments: arm, seed, club, seasons (`STAFF_SEEDS=a,b,c` runs one career each). Results in `docs/research/RPG006_STAFF_IDENTITY_AUDIT.md`.
 - `tactics_pair_impl` (RPG-006): the same matches played twice with the same seeds, the home side's tactics at the top of their range and at the bottom, printing the paired margin difference and its standard error, overall and per pairing. Argument: seeds per pairing (default 40). Results in `docs/research/RPG006_STAFF_IDENTITY_AUDIT.md`.
 - `draft_strategy_impl` (row 37): seeded 10-season autopilot careers, `mode seed club seasons`; mode `redraft` or `real` (the row 37 draft logic is the only logic since 2026-11-03). Prints LIST / DP / DC / AGE lines; `draft_strategy_agg.py <dir>` makes the tables. Latest: docs/research/AI_DRAFT_AUDIT_2026-11-03.md (supersedes draft_strategy_audit_2026-10-12.md).
+- `rotations_season_impl` (competent-AI rotations): seeded autopilot seasons (args `seeds club`, default 301,302,303 MEL); one `ROT` line per season: ladder points SD, top/bottom, injuries per game, mean workload, rotation plans run, premier. Run it on two code states and compare by seed.
 
 ## Captures on GitHub
 
@@ -61,4 +61,3 @@ gh run download <run-id> -n capture-capture_match
 ```
 
 `tool` is the script name without `.gd`; `args` is what it reads after `--` (the workflow adds `--out`). It uses software rendering, so it is right for layout, colour and motion, not for frame times.
-- `rotations_season_impl` (competent-AI rotations): seeded autopilot seasons (args `seeds club`, default 301,302,303 MEL); one `ROT` line per season: ladder points SD, top/bottom, injuries per game, mean workload, rotation plans run, premier. Run it on two code states and compare by seed.

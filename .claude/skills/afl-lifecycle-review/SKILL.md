@@ -62,10 +62,10 @@ Put this in the PR body (ROADMAP §0.4a, W7):
 ## The report
 
 Post the review as a comment on the PR (the record), and send its owner a short
-message with the verdict and any defect (the lead too if it blocks a merge). Per area: **fine**,
+message with the verdict and any defect (the director too if it blocks a merge). Per area: **fine**,
 or **defect** with the reproduction, what goes wrong for the player, and the
 smallest fix you'd suggest. Name what you didn't check. Don't rewrite the PR
-yourself; open a fix PR only when the owner or lead asks. If the PR has
+yourself; open a fix PR only when the owner or the director asks. If the PR has
 already merged (a review after the fact), a defect goes straight to a small fix
 PR with the reproduction as its test, since there's nothing left to request
 changes on. Keep it short: the

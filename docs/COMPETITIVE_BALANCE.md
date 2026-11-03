@@ -123,7 +123,7 @@ a design question for later, not a balance fix.
 
 ## 2. Match-day coaching
 
-Rival clubs coach every match: a loose interceptor from the first bounce, a
+Rival clubs coach every match: a Defensive set-up (loose defender) from the first bounce, a
 game plan picked each quarter from the score and what they have seen, and
 match-ups re-set at the breaks. You have the same levers (the plan, the coach
 box, match-ups) but only if you use them: a simulated week plays the plan
