@@ -90,6 +90,14 @@ static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
 	return {}
 
 
+## The tone of a feed line to the coach: a goal for his club is "good", one against
+## is "bad", everything else (behinds, breaks, calls) "neutral" (row 9).
+static func feed_tone(ev: Dictionary, my_side: int) -> String:
+	if str(ev.get("kind", "")) != "goal" or my_side < 0:
+		return "neutral"
+	return "good" if int(ev.get("side", -1)) == my_side else "bad"
+
+
 static func _result_words(home: String, away: String, score: Array) -> String:
 	var h := int(score[0])
 	var a := int(score[1])
