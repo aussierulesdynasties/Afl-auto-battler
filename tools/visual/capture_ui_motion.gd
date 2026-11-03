@@ -72,6 +72,7 @@ func _run() -> void:
 		var hub = load("res://scenes/HubScene.tscn").instantiate()
 		root.add_child(hub)
 		await _frames(10)
+		await create_timer(1.0).timeout
 		feel.clear()
 		hub.call("_show_results", state.last_results)
 		await create_timer(0.06).timeout

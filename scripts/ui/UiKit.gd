@@ -764,8 +764,6 @@ class Motion:
 	const DUR_MILESTONE := 0.9   ## the premiership and award reveals only (not built yet)
 	const RISE := 6.0            ## px a sheet rises as it comes in
 	const STAGGER := 0.04        ## s per row
-	const STAGGER_SHEET := 0.08  ## s per row on a one-time sheet
-	const STAGGER_MAX := 8       ## rows past this simply show
 	const LAND_FROM := 1.22      ## the one overshoot: Verdict, the cup
 	const PRESS_IN := 0.05
 	const PRESS_HOLD := 0.08
@@ -930,24 +928,6 @@ static func fill_bar(fill: Control, from: float, to: float) -> void:
 		Feel.moved.append("fill_bar")
 		_own(fill, "bar").tween_property(fill, "anchor_right", clampf(to, 0.0, 1.0), Motion.DUR_BAR) \
 				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE))
-
-
-## Lines of a one-time sheet come in one after another (STAGGER_SHEET apart, the
-## first at once), by modulate:a alone: no position, no size, so nothing moves
-## under a thumb and a Container keeps its layout. Only the first STAGGER_MAX
-## rows; the rest simply show.
-static func stagger(rows: Array, step := Motion.STAGGER_SHEET) -> void:
-	if not juice() or not motion_on():
-		return
-	var n := 0
-	for r in rows:
-		if n >= Motion.STAGGER_MAX:
-			break
-		if r is Control and is_instance_valid(r):
-			if n == 0:
-				Feel.moved.append("stagger")
-			reveal(r as Control, n * step)
-			n += 1
 
 
 ## Living backgrounds (director, 2026-10-11): `apply(t)` is called with t going
