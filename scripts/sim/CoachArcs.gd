@@ -87,6 +87,24 @@ static func ensure(st: Dictionary) -> Dictionary:
 	return st
 
 
+## An old save's arc weeks onto the new story calendar (StoryEngine.from_old_week).
+static func migrate_calendar(st: Dictionary) -> void:
+	var active: Variant = st.get("active")
+	if not (active is Dictionary):
+		return
+	for id in (active as Dictionary).keys():
+		var rec: Variant = active[id]
+		if not (rec is Dictionary):
+			continue
+		for f in ["start_w", "last_w", "wait_from"]:
+			if (rec as Dictionary).has(f):
+				rec[f] = StoryEngine.from_old_week(int(rec[f]))
+		var fl: Variant = (rec as Dictionary).get("flags")
+		if fl is Dictionary:
+			for k in (fl as Dictionary).keys():
+				fl[k] = StoryEngine.from_old_week(int(fl[k]))
+
+
 ## Can this arc start now? Not while it runs, not when MAX_ACTIVE run, and
 ## after it ended only once its cooldown (in seasons) has passed.
 static func can_start(def: Dictionary, st: Dictionary, year: int) -> bool:

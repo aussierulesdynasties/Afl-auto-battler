@@ -37,6 +37,7 @@ func run() -> void:
 	_t("_test_trial_rating_and_old_cards")
 	_t("_test_trust_rules")
 	_t("_test_engine_rules")
+	_t("_test_calendar_order")
 	_t("_test_arcs")
 	_t("_test_finals_and_big_weeks")
 	_t("_test_private_cards")
@@ -456,6 +457,40 @@ func _club_card(id: String, cat: String, extra := {}) -> Dictionary:
 	return StoryDeck.normalise(t)
 
 
+## Pre-season has its own weeks (director 2026-11-03): the calendar only moves
+## forward, and last September's cards never crowd the pre-season.
+func _test_calendar_order() -> void:
+	_check(PreSeason.weeks() < StoryEngine.PRESEASON_WEEKS, "The pre-season fits its own block of story weeks")
+	var seq: Array[int] = []
+	for y in [2027, 2028]:
+		for wk in range(-PreSeason.weeks(), StoryEngine.SEASON_WEEKS + 1):
+			seq.append(StoryEngine.week_abs(y, wk))
+	var rising := true
+	for i in range(1, seq.size()):
+		if seq[i] <= seq[i - 1]:
+			rising = false
+	_check(rising, "The story week only moves forward: pre-season, rounds, finals, next pre-season")
+	var story := StoryEngine.new_state()
+	var finals_w := StoryEngine.week_abs(2027, StoryEngine.SEASON_WEEKS)
+	(story["cats"] as Array).append([finals_w, "board"])
+	story["last"]["fin_sep"] = finals_w
+	var pre_w := StoryEngine.week_abs(2028, -PreSeason.weeks())
+	var ctx := {"seed": 1, "year": 2028, "week": -PreSeason.weeks(), "phase": "preseason", "club": {}, "players": []}
+	var rng := RandomNumberGenerator.new()
+	_check(StoryEngine.category_count(story, "board", pre_w) == 0
+			and not StoryEngine.eligible_subject(_club_card("fin", "board", {"cooldown": 5, "phase": ["preseason"]}), ctx, story, pre_w, rng).is_empty(),
+			"A finals-week card does not block a pre-season card of its category")
+	_check(StoryEngine.played_between(finals_w, pre_w) == 1, "September's last week and the first pre-season week are one played week apart")
+	# An old save's weeks (year * 30 + week) move onto the new calendar.
+	var old := {"last": {"a": 27 * 30 + 3}, "subj": {}, "flags": {"club": {"f": 27 * 30 + 26}}, "cats": [[27 * 30 + 26, "board"]], "arcs": {}}
+	_check(StoryEngine.is_old_calendar(old), "A save without the calendar mark reads as old")
+	StoryEngine.migrate_calendar(old)
+	_check(int(old["last"]["a"]) == StoryEngine.week_abs(2027, 3)
+			and int(old["flags"]["club"]["f"]) == StoryEngine.week_abs(2027, 26)
+			and int((old["cats"] as Array)[0][0]) == StoryEngine.week_abs(2027, 26)
+			and not StoryEngine.is_old_calendar(old), "An old save's story weeks convert on load")
+
+
 func _test_engine_rules() -> void:
 	var ctx := {"seed": 1, "year": 2027, "week": 1, "phase": "regular", "club": {}, "players": []}
 	var rng := RandomNumberGenerator.new()
@@ -466,8 +501,9 @@ func _test_engine_rules() -> void:
 	story["last"]["c1"] = w
 	_check(StoryEngine.eligible_subject(t, ctx, story, w + 4, rng).is_empty()
 			and not StoryEngine.eligible_subject(t, ctx, story, w + 5, rng).is_empty(), "A card waits out its cooldown")
-	_check(StoryEngine.week_abs(2028, 1) - StoryEngine.week_abs(2027, 29) == 2,
-			"Cooldowns run on through the off-season")
+	_check(StoryEngine.played_between(StoryEngine.week_abs(2027, 29), StoryEngine.week_abs(2028, 1))
+			== 2 + PreSeason.weeks() + 1,
+			"Cooldowns count played weeks: the off-season counts for nothing, the pre-season's weeks do")
 	# Per season.
 	var once := _club_card("c2", "board", {"per_season": 1})
 	story["season"]["c2"] = 1
@@ -710,6 +746,7 @@ func _test_ten_seasons() -> void:
 	for t in deck:
 		var id := str(t["id"])
 		var n := int(seen.get(id, 0))
+		# Cooldowns count played weeks (StoryEngine.played_between), as this loop plays them.
 		var by_cooldown := weeks / maxi(1, int(t["cooldown"])) + 1
 		if n > by_cooldown:
 			over.append("%s %d > %d (cooldown)" % [id, n, by_cooldown])

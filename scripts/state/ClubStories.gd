@@ -15,9 +15,10 @@ const BROKEN_RUN_TRUST := StoryEngine.BROKEN_RUN_TRUST
 static func week_in_season(gs) -> int:
 	if gs.season == null:
 		return 0
-	# The pre-season's stops sit just before Round 1 on the calendar: week 3 is -5.
+	# The pre-season's stops sit just before Round 1 on the calendar: week 3 is -5,
+	# inside the pre-season's own block (StoryEngine.PRESEASON_WEEKS), never in last season's weeks.
 	if gs.preseason_active():
-		return gs.preseason_week() - PreSeason.weeks()
+		return maxi(gs.preseason_week() - PreSeason.weeks(), 1 - StoryEngine.PRESEASON_WEEKS)
 	if not gs.season.is_regular_done():
 		return gs.season.round_index + 1
 	return Season.REGULAR_ROUNDS + (gs.season.finals.get("weeks", []) as Array).size() + 1

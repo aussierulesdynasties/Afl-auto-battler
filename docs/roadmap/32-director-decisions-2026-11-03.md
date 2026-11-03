@@ -71,3 +71,11 @@ his differs, the later one wins. Nothing here edits the bible.
   block and the Key match-ups block stay together in the Tag's column; #878's split, made so every column was within
   a fifth empty, is reversed. The balance check loosens to 30% empty (the best split with them together measured
   28% at 1280x720: 261, 363, 308). The phone and 768-1199 layouts are unchanged.
+- Story calendar (bug bash): pre-season gets its own block of story weeks, after last season's finals and before
+  Round 1, never sharing a week with any season. StoryEngine.week_abs(year, week) = (year-2000)*52 + 12 + 10 + week:
+  a 12-week off-season gap, the pre-season's 10 slots (weeks -9..0), then 30 weeks of rounds and finals, so the
+  absolute week only moves forward through a career and last September's cards never block pre-season categories.
+  Old saves (no story "calendar" mark) convert their stored weeks on load (story and coach-arc weeks).
+  Cooldowns (director, option b): card and subject cooldowns count played weeks only (pre-season, rounds, finals;
+  StoryEngine.played_between), never off-season weeks, so every card keeps its written cooldown and repeats as often
+  as before.
