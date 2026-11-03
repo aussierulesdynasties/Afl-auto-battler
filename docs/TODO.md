@@ -43,7 +43,7 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 |---|---|---|---|
 | 1 | Top three attributes on cards, Needs work benchmark, scout grade word for hidden prospects | `top_attributes` | #863 |
 | 6 | Player faces, 15 hair styles, 30 strips re-rendered | `player_looks` | #873 |
-| 9 | Feed colours: your goals good, goals against bad, behinds and calls neutral | `feed_colours` | PR pending |
+| 9 | Feed colours: your goals good, goals against bad, behinds and calls neutral | `feed_colours` | #918 |
 | 10 | Kick range caps receiver choice; Sim the week shares the same pick | `kick_range` | #857 #879 |
 | 48 | Coach career arcs | `coach_arcs` | #867 #877 #881 #886 |
 | 49 | Match hero, turning point, reasons | `match_story` | #853 #890 |
