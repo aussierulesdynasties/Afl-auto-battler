@@ -40,6 +40,11 @@ static func season_start(gs) -> void:
 		var ending := CoachArcs.closing(def, rec, close_facts(gs, rec), year)
 		if ending != "":
 			_end(gs, st, def, rec, ending, "Season start")
+		elif str(def.get("season_line", "")) != "" and int(rec.get("start", year)) < year:
+			# An arc that runs on (runs_on) says where it stands each season.
+			var line := StoryEngine.fill(str(def["season_line"]), _facts(gs, st, rec, {"club": GameDB.club_name(gs.my_club), "opp": ""}))
+			CoachArcs.log_line(st, year, "Season start", str(id), line)
+			gs.add_news(NEWS_KIND, line)
 	var ctx := ClubStories.context(gs)
 	_try_starts(gs, st, defs, ctx, true)
 
@@ -96,6 +101,10 @@ static func week(gs) -> void:
 	if not on(gs) or gs.season == null:
 		return
 	var st := _st(gs)
+	# The rollover builds the new season before its pre-season opens: that
+	# first pick is not Round 1, so no arc starts or plays in it.
+	if _rollover_pick(gs, st):
+		return
 	_people(gs, st)
 	if int(st["counts"].get("year", 0)) != int(gs.season_year):
 		st["counts"] = {"year": int(gs.season_year), "refusals": 0, "statements": 0}
@@ -183,6 +192,7 @@ static func _facts(gs, st: Dictionary, rec: Dictionary, club: Dictionary) -> Dic
 	f["coach_games"] = int(c["games"])
 	f["coach_flags"] = int(c["flags"])
 	f["drought"] = _dry(st)
+	f["arc_times"] = int((st["done"].get(str(rec.get("id", "")), {}) as Dictionary).get("times", 0))
 	f["arc_year"] = int(rec.get("start", gs.season_year))
 	f["arc_seasons"] = int(gs.season_year) - int(rec.get("start", gs.season_year))
 	f["opp_is_rival"] = str(rec.get("mem", {}).get("rival_club", "")) != "" and str(club.get("opp", "")) == str(rec["mem"]["rival_club"])
@@ -191,15 +201,33 @@ static func _facts(gs, st: Dictionary, rec: Dictionary, club: Dictionary) -> Dic
 	for k in ["rival_club", "father", "old_club", "old_chairman", "former", "suitor", "suitor_president", "assistant", "assistant_to"]:
 		if not f.has(k):
 			f[k] = ""
+	for k in ["flag_year", "flag_years_on"]:
+		if not f.has(k):
+			f[k] = 0
+	if not f.has("flag_reunion"):
+		f["flag_reunion"] = false
 	return f
 
 
-## Seasons under this coach since his last flag (all of them, if none).
+## Seasons this coach has gone without a flag at his current club: since his
+## last flag there, or since he arrived (a move starts the count again).
 static func _dry(st: Dictionary) -> int:
 	var c: Dictionary = st["coach"]
-	if int(c["last_flag"]) == 0:
-		return int(c["seasons"])
-	return int(c["seen"]) - int(c["last_flag"])
+	var since := ClubMoves._club_since(st, str(c.get("club", "")))
+	if since == 0:
+		since = int(c.get("start", 0))
+	if since == 0:
+		return int(c["seasons"]) if int(c["last_flag"]) == 0 else int(c["seen"]) - int(c["last_flag"])
+	if int(c["last_flag"]) >= since:
+		return int(c["seen"]) - int(c["last_flag"])
+	return maxi(0, int(c["seen"]) - since + 1)
+
+
+## True for the week pick made while the rollover builds a season whose
+## pre-season has not opened yet (GameState.start_season, then open_preseason).
+static func _rollover_pick(gs, st: Dictionary) -> bool:
+	return Features.on("preseason") and int(st["coach"].get("seen", 0)) > 0 and gs.season.round_index == 0 \
+			and not gs.season.is_regular_done() and int(gs.preseason.get("year", 0)) != int(gs.season_year)
 
 
 # ---------------------------------------------------------------------------
@@ -214,12 +242,24 @@ static func _try_starts(gs, st: Dictionary, defs: Array, ctx: Dictionary, season
 		if hit.is_empty():
 			continue
 		var rec := CoachArcs.start(st, def, year, gs.story_week(), str(hit.get("who", "")), hit.get("mem", {}))
-		var line := StoryEngine.fill(str(def.get("start_line", "")), _facts(gs, st, rec, ctx["club"]))
+		var line := _start_line(def, _facts(gs, st, rec, ctx["club"]))
 		CoachArcs.log_line(st, year, "Season start" if season_start else _label(gs), str(def["id"]), "BEGINS: " + line)
 		gs.add_news(NEWS_KIND, line)
 		# One new arc a week at most.
 		if not season_start:
 			return
+
+
+## An arc's start line: one string, or variants as a card's text has them
+## ({"when": {facts}, "text"} cases first, else the first plain line).
+static func _start_line(def: Dictionary, facts: Dictionary) -> String:
+	var sl: Variant = def.get("start_line", "")
+	if sl is Array:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 0
+		var plain: Array = (sl as Array).filter(func(v): return not (v is Dictionary))
+		return StoryEngine.variant((sl as Array).filter(func(v): return v is Dictionary) + plain.slice(0, 1), facts, rng)
+	return StoryEngine.fill(str(sl), facts)
 
 
 ## {} when the arc's trigger does not hold now, else {"who": player id or "",
@@ -409,6 +449,14 @@ static func _end(gs, st: Dictionary, def: Dictionary, rec: Dictionary, ending: S
 			gs.board["confidence"] = clampi(gs.board_confidence() + int(e["board"]), 0, 100)
 	CoachArcs.log_line(st, int(gs.season_year), label, str(def["id"]), "ENDS (%s): %s" % [ending, line])
 	gs.add_news(NEWS_KIND, line)
+	# The old club's last reunion, for its cooldown (and its premiership year).
+	var old := str(rec.get("mem", {}).get("old_code", ""))
+	if str(def["id"]) == "reunion" and old != "":
+		for h in st["coach"]["clubs"]:
+			if str(h.get("code", "")) == old:
+				h["reunion"] = int(gs.season_year)
+				if bool(rec.get("mem", {}).get("flag_reunion", false)):
+					h["anniv"] = int(rec.get("start", gs.season_year))
 	CoachArcs.finish(st, str(def["id"]), ending, int(gs.season_year))
 
 
