@@ -139,4 +139,4 @@ usability.
 
 ## Skills
 
-Learnings and spin-off skills follow the global rules in `~/.claude/CLAUDE.md` (only the lead adds a learning, with evidence). A project skill is named `afl-<topic>` and says which general skill it extends.
+Learnings and spin-off skills follow the global rules in `~/.claude/CLAUDE.md` (add a learning only with evidence). A project skill is named `afl-<topic>` and says which general skill it extends.

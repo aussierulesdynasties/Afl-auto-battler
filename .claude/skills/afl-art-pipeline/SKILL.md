@@ -5,8 +5,7 @@ description: How the vignette footballers are made and what a code agent may cha
 
 # The art pipeline (vignette figures)
 
-The vignette footballers are pre-rendered, recoloured at draw time, and owned
-by the art agent. The detail lives in the pipeline repo, `../ard-asset-pipeline`
+The vignette footballers are pre-rendered, recoloured at draw time. The detail lives in the pipeline repo, `../ard-asset-pipeline`
 (github.com/gabebartolo-spec/ard-asset-pipeline); its README is the reference.
 
 ## How a sheet is made
@@ -47,7 +46,7 @@ ASTC 4x4 on Android, BPTC on desktop. `figures_design` stays **lossless**,
 because compressed, its hoops go wavy and the numbers shred. **Never ETC2**
 (plain VRAM Compressed on Android): the stripes break into blocks. The set was
 about 19.5 MB of GPU memory at #284's 2048 x 3168. Growth past that needs the
-art agent's measurement and the director's phone check. A code PR never
+a measurement and the director's phone check. A code PR never
 changes a figure sheet's `.import`.
 
 ## Build-time checks (pack_sprites.py)
@@ -68,7 +67,7 @@ figure checks fail after an install, rebuild; never patch the PNGs.
 A change to how figures look starts as a sample: a capture at the size the
 game draws figures, beside the current look, a 2-2.5x close-up, and a GIF
 where it moves. The full rebuild comes after the director has seen it.
-Blender close-ups are the art agent's own review, not proof of the game.
+Blender close-ups are the session's own check, not proof of the game.
 
 ## The director's appearance gate
 
@@ -97,7 +96,7 @@ the in-game build.
 - **May:** place, time, mirror and tint figures through `VignetteFigures`; add
   scene logic and data (club colours, `data/clubs.csv` designs); read
   `Appearance`; add tests; capture review images.
-- **Ask the art agent first:** new moves, poses or facings; channel meanings
+- **Ask the director first:** new moves, poses or facings; channel meanings
   or the shader's colour logic; any sheet, atlas or `.import` change; new skin,
   hair or style options; anything a player would see differently.
 - **Never:** hand-edit `VignetteFigures.gd` or a `figures_*.png`; hard-code

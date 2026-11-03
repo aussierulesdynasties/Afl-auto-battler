@@ -187,7 +187,7 @@ _Second mining pass, 2026-10-18, after the director said the first report had no
 **C-MG-27. What happened while you were away.** After Play ahead (four rounds or to the end of the home and away) one sheet: each result in a line, injuries, contract clocks reached, trust moves with their reasons, cards answered by default; then the hub.
 - Bible intent: playing hands-off is the gamer's call and the risk is theirs, so he sees the bill.
 - Evidence: FM players accept skipping only without hidden drift ("the assistant usually manages to get the whole squad to rebel") [player, FM Scout]; "Making a game 10x faster changes how people play it" [dev, ZenGM].
-- Exists today: one-round hub glance (injuries, ladder; `HubScene.gd:1547-1597`); play-ahead options (`:1195-1215`); 53 `add_news` calls. No multi-round ledger.
+- Exists today: one-round hub glance (injuries, ladder; `HubScene.gd:1547-1597`); play-ahead options cut 2026-11-03 (CUT_AUDIT row 11); 53 `add_news` calls. No multi-round ledger.
 - Size: S-M. Tier suggestion: B.
 - Does not: add stops (P-07 owns the budget).
 - Conflicts: none.

@@ -543,7 +543,7 @@ Phone playtesting after the first season shows several players with **OVR above 
 - `Potential.assign()` creates a seeded POT intended to be stable for that player.
 - Natural off-season growth pulls toward POT and stops once the gap closes.
 - Rival XP spending explicitly stops at POT.
-- **The user's manual training does not stop at POT**; `_spend_with_weights(..., stop_at_pot=false)` may push OVR above it, with `Potential.training_multiplier()` making post-POT training 50% more expensive.
+- Manual stat training is gone (cut audit row 6, 2026-11-03); every `_spend_with_weights` call now passes `stop_at_pot=true`, capped by `season_ceiling` (a season limit, not POT).
 - Rating-formula migrations can also lift POT alongside a recalculated OVR on load so old saves do not become internally inconsistent, but ordinary in-career training does not raise POT.
 
 So OVR > POT is **expected under the current rules**, not necessarily a save corruption bug. The problem is whether those rules and the word “Potential” are the right design.

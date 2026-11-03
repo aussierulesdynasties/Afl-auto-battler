@@ -288,14 +288,14 @@ cannot verify a hardware orientation sensor or OS safe-area values):
 3. Scroll the pool with a finger starting on a player row. It must scroll, not
    accidentally sign someone. Draft actions should remain at least 44 UI units.
 4. Search with the software keyboard open, then rotate. Check the query/caret,
-   selected position, club/sort filters, availability toggle and roster survive.
+   selected position, sort and roster survive.
 5. Rotate with Picks / My list / Order open. The pool and activity panel should
    split on sufficiently wide landscape screens, otherwise use tabs. On short
-   screens scroll to reach filters rather than losing the action footer.
+   screens scroll to reach the pool controls rather than losing the action footer.
 6. Verify notches, the status bar and the home/gesture indicator do not overlap
    the draft's back button, tabs or Start Season action.
-7. Toggle **Filters → Available only** off. Taken players must show their new
-   club/pick, and must not be draftable again.
+7. A signed player must leave the pool and show in the pick log with his new
+   club/pick (the pool shows available players only; filters cut 2026-11-03).
 8. Complete a valid list, open older rival picks, then start the season.
 
 Position targets are **guidance**, except for the existing two-ruck rule. This

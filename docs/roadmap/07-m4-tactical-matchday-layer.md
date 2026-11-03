@@ -161,6 +161,8 @@ Acceptance:
 
 ### Director addition — defensive forward archetype / trait
 
+_Superseded at the break (cut audit rows 2-5, #874, 2026-11-03): Defensive forward and Loose interceptor are now one Defensive set-up call._
+
 **Status (2026-10-06):** `IN REVIEW`. Implemented as the director approved: a **Defensive forward** trait (a forward's own position, Pressure 44+, about 1–2 a club) and a person-based answer to their loose defender. At a break, "Their loose defender" sits with the key match-ups and asks who goes to him. A Defensive forward cuts his reach to contests to 40%, any other forward to 70%. The forward sent is up the ground, so he is seldom a target, a shooter or a crumber himself (25%); that replaces the old flat −3.5% on the whole forward line. The AI names its forward by the same rule, after observable roam wins. Tests: `test_match_game.gd` `_test_defensive_forward`.
 
 Add a **Defensive forward** as a genuine player archetype/trait and make it relevant to this exact problem: when an opposition loose/intercept defender is hurting you, a suitable defensive forward should be deployable to make him accountable rather than the response being only an abstract team button.
