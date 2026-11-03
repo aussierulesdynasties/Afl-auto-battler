@@ -125,10 +125,7 @@ static func turning_point(res: Dictionary, side: int) -> String:
 		return str(tps[0])
 	var run := MatchNotes._longest_run(res.get("events", []))
 	if int(run["len"]) >= 4:
-		var codes := [str(res.get("home", "")), str(res.get("away", ""))]
-		var when := " in the %s quarter" % MatchNotes.QUARTER_NAMES[mini(int(run["q"]) - 1, 4)] if bool(run["one_q"]) else ""
-		return "%s kicked %s unanswered goals%s." % [GameDB.club_name(codes[int(run["side"])]),
-				MatchNotes.count_word(int(run["len"])), when]
+		return MatchNotes.run_sentence(res, run)
 	return ""
 
 

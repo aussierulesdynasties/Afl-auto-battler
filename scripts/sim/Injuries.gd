@@ -22,6 +22,22 @@ const KINDS := ["hamstring", "ankle", "knee", "shoulder", "calf", "concussion",
 const CONCUSSION_MIN := 2
 
 
+## What the coach would say: "a hamstring strain", "a broken hand", never just
+## the body part. The kind stays the stored word; this is for reading.
+const WORDING := {"hamstring": "a hamstring strain", "ankle": "a sprained ankle",
+		"knee": "a knee injury", "shoulder": "a shoulder injury", "calf": "a calf strain",
+		"concussion": "concussion", "groin": "a groin strain", "quad": "a quad strain",
+		"hip": "a hip injury", "foot": "a foot injury", "back": "a back injury",
+		"hand": "a hand injury"}
+
+
+static func wording(kind: String) -> String:
+	if WORDING.has(kind):
+		return str(WORDING[kind])
+	var k := kind.replace("_", " ")
+	return "an injury" if k == "" or k == "injury" else "a %s injury" % k
+
+
 ## Chance this player is injured in a game he plays.
 static func chance(p: Dictionary) -> float:
 	var dur := float((p.get("attr", {}) as Dictionary).get("durability", 50))
