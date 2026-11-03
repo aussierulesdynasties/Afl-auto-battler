@@ -76,6 +76,10 @@ func run() -> void:
 	_t("_test_moment_calls_matter")
 	_t("_test_ai_chases_and_controlled_needs_ball_users")
 	_t("_test_coach_styles")
+	_t("_test_ai_counters_plan")
+	_t("_test_rematch_lowest_mark_chance")
+	_t("_test_assistant_plays_ai_calls")
+	_t("_test_standing_plan_knowledge")
 	_t("_test_tag_tradeoff")
 	_t("_test_through_stars")
 	_t("_test_set_shot_bands")
@@ -626,8 +630,8 @@ func _test_impact_and_ai() -> void:
 	var lines := CoachReport.impact_lines(imp, [{}, {}], 0)
 	_check(not lines.is_empty() and str(lines[0]["label"]).begins_with("Your")
 			or str(lines[0]["label"]).begins_with("Their"), "The readout names what the points came from")
-	# The rival coach plays its usual game and reacts to the scoreboard; it
-	# does not read and counter the plan you keep running.
+	# The rival coach plays its usual game, reacts to the scoreboard, and
+	# counters the plan you ran when the counter costs it little.
 	var live := _sim(901)
 	for q in range(2):
 		live.set_tactics(0, {"gameplan": "attacking"})
@@ -642,6 +646,10 @@ func _test_impact_and_ai() -> void:
 		expect = "attacking"
 	elif margin < 0 and live.current_quarter >= 3 and live._lost_quarter(1, live.current_quarter - 1):
 		expect = "attacking"   # behind after half time and still losing ground: it chases
+	else:
+		var sq1: Squad = live.squads[1]
+		if PlanFit.plan_score(sq1.ground, "defensive", sq1.plan_know) >= PlanFit.plan_score(sq1.ground, expect, sq1.plan_know) - MatchSim.COUNTER_GIVE:
+			expect = "defensive"   # the press beats Attack corridor
 	_check(str(live.ai_tactics(1)["gameplan"]) == expect,
 			"Run Attack corridor twice: the rival coach keeps its usual game or plays the scoreboard (%s)" % expect)
 	live.set_tactics(0, {"gameplan": "controlled"})
@@ -2686,22 +2694,35 @@ func _test_coach_styles() -> void:
 	# react is 18 points for this coach (read 0).
 	var plan := func(style: String, margin: int, q: int) -> String:
 		return str(call.call(style, margin, q)["gameplan"])
-	_check(plan.call("cautious", 10, 2) == "controlled" and plan.call("balanced", 10, 2) == "balanced",
-			"A coach who sits on a lead shuts up shop 10 points up; a balanced one does not")
-	_check(plan.call("gambler", -10, 2) == "attacking" and plan.call("balanced", -10, 2) == "balanced",
-			"A coach who goes for broke chases 10 down in the second quarter; a balanced one does not")
-	_check(plan.call("reactive", 12, 2) == "controlled" and plan.call("reactive", -12, 2) == "attacking"
-			and plan.call("balanced", 12, 2) == "balanced",
-			"A coach who throws the magnets around moves at 12 points either way")
+	_check(plan.call("cautious", 14, 2) == "controlled" and plan.call("balanced", 14, 2) == "balanced",
+			"A coach who sits on a lead shuts up shop 14 points up; a balanced one does not")
+	_check(plan.call("gambler", -14, 2) == "attacking" and plan.call("balanced", -14, 2) == "balanced",
+			"A coach who goes for broke chases 14 down; a balanced one does not")
+	_check(plan.call("reactive", 14, 2) == "controlled" and plan.call("reactive", -14, 2) == "attacking"
+			and plan.call("balanced", 14, 2) == "balanced",
+			"A coach who throws the magnets around moves at 14 points either way")
 	_check(plan.call("stubborn", -20, 3) == "balanced" and plan.call("balanced", -20, 3) == "attacking",
 			"A coach who backs his structure keeps his plan 20 down; a balanced one chases")
-	var keeps := str(call.call("stubborn", -30, 4)["loose"]) != ""
-	var pulls := str(call.call("balanced", -30, 4)["loose"]) == ""
+	_check(plan.call("stubborn", -23, 3) == "attacking" and plan.call("stubborn", 23, 3) == "controlled",
+			"Even a coach who backs his structure reacts 23 points either way (director 2026-11-03: at most 25% later)")
+	var keeps := str(call.call("stubborn", -20, 4)["loose"]) != ""
+	var pulls := str(call.call("balanced", -20, 4)["loose"]) == ""
+	var stub_pulls := str(call.call("stubborn", -30, 4)["loose"]) == ""
 	var had := str(call.call("balanced", 0, 1)["loose"]) != ""
-	_check(not had or (keeps and pulls),
-			"Backing his structure keeps the loose man 30 down late; a balanced coach pulls him")
+	_check(not had or (keeps and pulls and stub_pulls),
+			"Backing his structure keeps the loose man 20 down late, pulls him 30 down; a balanced coach pulls him at 20")
+	# Every style's margins sit within 25% of the plain rule; none never acts.
+	var bounded := true
+	var base: Dictionary = MatchSim.COACH_STYLES["balanced"]
+	for k in MatchSim.COACH_STYLES:
+		var stl: Dictionary = MatchSim.COACH_STYLES[k]
+		for key in ["protect", "chase", "loose", "fire_at"]:
+			var r := float(stl[key]) / float(base[key])
+			bounded = bounded and r >= 0.75 - 0.001 and r <= 1.25 + 0.001
+		bounded = bounded and float(stl["add"]) == 0.0 and int(stl["lost_q"]) <= 4 and int(stl["loose_q"]) <= 4
+	_check(bounded, "Coach styles move reaction thresholds by at most 25% and never switch a reaction off")
 	# Your club: whatever is on the squad, you are the coach.
-	_check(str(call.call("gambler", -10, 2, false)["gameplan"]) == "balanced",
+	_check(str(call.call("gambler", -14, 2, false)["gameplan"]) == "balanced",
 			"Your own club never plays to a style")
 	# His style is his: kept on his record, the same after a save.
 	var c := {"cid": "C_test_coach", "skills": {"tactics": 60, "manage": 60, "teach": 60}}
@@ -2758,8 +2779,7 @@ func _test_ai_chases_and_controlled_needs_ball_users() -> void:
 	var none := press._press_on(0)
 	_check(is_equal_approx(good, 1.0) and poor > 1.0 and poor < none,
 			"Controlled tempo holds a press off as far as its ball users can (%.3f, %.3f, %.3f)" % [good, poor, none])
-	_check(PlanFit.standing_plan([]) == "balanced" and not ["controlled"].has(PlanFit.standing_plan(_sim(4802).squads[0].ground)),
-			"No club plays Controlled tempo as its usual game")
+	_check(PlanFit.standing_plan([]) == "balanced", "An empty list plays Balanced")
 
 ## A tag is a trade: it takes the target out of the midfield battle and costs
 ## you your tagger's own game. Worth it on their star with a specialist; a
@@ -3434,3 +3454,142 @@ func _test_decision_credits() -> void:
 		live.end_quarter()
 	_check(seen > 0 and is_equal_approx(float((live.impact[0] as Dictionary).get("moments", 0.0)), want) and want != 0.0,
 			"A set-shot call is worth its chances against taking the shot (%d calls, %+.2f)" % [seen, want])
+
+
+## From the second quarter a coach reads the plan you ran and plays the one
+## that beats it when that costs him little (COUNTER_GIVE); the scoreboard
+## decides first.
+func _test_ai_counters_plan() -> void:
+	var m := _sim(8450, "GEE", "COL")
+	var sq: Squad = m.squads[1]
+	sq.tactics_read = 0.0
+	sq.coach_style = "balanced"
+	m.standing[1] = "balanced"
+	m.current_quarter = 2
+	m.tactics_history = [{"quarter": 1, "plans": [{"gameplan": "controlled"}, {"gameplan": "balanced"}]}]
+	var att := PlanFit.plan_score(sq.ground, "attacking", sq.plan_know)
+	var t := str(m.ai_tactics(1)["gameplan"])
+	_check(t == ("attacking" if att >= -MatchSim.COUNTER_GIVE else "balanced"),
+			"Against Controlled tempo he plays Attack corridor when it is worth nearly his usual game (%s, %.2f)" % [t, att])
+	# Weighed on edge x knowledge: knowing the counter barely makes it cost more.
+	m.standing[1] = "contest"
+	sq.plan_know = {"attacking": 1.0, "contest": 1.0}
+	var c_sc := PlanFit.plan_score(sq.ground, "contest", sq.plan_know)
+	var a_sc := PlanFit.plan_score(sq.ground, "attacking", sq.plan_know)
+	var expect := "attacking" if a_sc >= c_sc - MatchSim.COUNTER_GIVE else "contest"
+	_check(str(m.ai_tactics(1)["gameplan"]) == expect, "The counter is weighed on edge x plan knowledge (%s)" % expect)
+	# A big edge in his usual game against a far worse counter: he keeps it.
+	sq.plan_know = {"attacking": 0.0, "contest": 1.0}
+	var keep := PlanFit.plan_score(sq.ground, "contest", sq.plan_know) > MatchSim.COUNTER_GIVE
+	_check(not keep or str(m.ai_tactics(1)["gameplan"]) == "contest",
+			"A counter worth far less than his usual game is not played")
+	sq.plan_know = {}
+	m.tactics_history = [{"quarter": 1, "plans": [{"gameplan": "balanced"}, {"gameplan": "contest"}]}]
+	_check(str(m.ai_tactics(1)["gameplan"]) == "contest", "Against Balanced there is nothing to counter")
+	m.current_quarter = 1
+	m.tactics_history = [{"quarter": 1, "plans": [{"gameplan": "controlled"}, {"gameplan": "contest"}]}]
+	_check(str(m.ai_tactics(1)["gameplan"]) == "contest", "No counter before the second quarter")
+	m.current_quarter = 2
+	m.team_stats[0] = {"goals": 0.0, "behinds": 0.0}
+	m.team_stats[1] = {"goals": 0.0, "behinds": 30.0}
+	_check(str(m.ai_tactics(1)["gameplan"]) == "controlled", "30 up he protects the lead before any counter")
+	m.team_stats[1] = {"goals": 0.0, "behinds": 0.0}
+	m.team_stats[0] = {"goals": 0.0, "behinds": 30.0}
+	m.tactics_history = [{"quarter": 1, "plans": [{"gameplan": "attacking"}, {"gameplan": "contest"}]}]
+	_check(str(m.ai_tactics(1)["gameplan"]) == "attacking", "30 down he chases before any counter")
+
+
+## A beaten key defender goes to the defender who gives the forward the lowest
+## mark chance; one on another forward swaps only when the pair's chances fall.
+func _test_rematch_lowest_mark_chance() -> void:
+	var m := _sim(8302, "ADE", "SYD")
+	m.current_quarter = 2
+	var d: Dictionary = m.duels[1]
+	var loose := str(m.interceptor[1])
+	var sum := func() -> float:
+		var t := 0.0
+		for f in d:
+			t += Matchups.mark_chance(m._on_ground(0, str(f)), m._on_ground(1, str(d[f])))
+		return t
+	var moves := 0
+	for fid in d.keys():
+		var cur_id := str(d[fid])
+		var fwd := m._on_ground(0, str(fid))
+		var cur := m._on_ground(1, cur_id)
+		var on := {}
+		for f in d:
+			on[str(d[f])] = str(f)
+		var before: float = sum.call()
+		m.duel_log[str(fid)] = {"side": 0, "contests": [[1, cur_id, true, false],
+				[1, cur_id, true, false], [1, cur_id, true, false]]}
+		m._rematch(1, str(fid), {loose: true} if loose != "" else {})
+		var after: float = sum.call()
+		var now_id := str(d[fid])
+		if now_id == cur_id:
+			continue
+		moves += 1
+		_check(now_id != loose, "The loose man is never the replacement")
+		_check(after < before - 0.000001, "A move lowers the forwards' summed mark chance (%.3f -> %.3f)" % [before, after])
+		var prev_f := str(on.get(now_id, ""))
+		_check(prev_f == "" or str(d.get(prev_f, "")) == cur_id,
+				"A defender taken off another forward hands that forward the beaten man")
+		# No better choice was skipped: every defender with a lower chance on
+		# him would not have lowered the sum.
+		var got := Matchups.mark_chance(fwd, m._on_ground(1, now_id))
+		_check(got < Matchups.mark_chance(fwd, cur) or prev_f != "",
+				"A free defender comes in only when he gives the forward less (%.3f)" % got)
+	_check(moves >= 0, "Rematches tried on every forward (%d moved)" % moves)
+	_check(str(m.interceptor[1]) == loose, "The loose man keeps roaming")
+	# Built case: the forward's man is poor, the best defender is on a forward
+	# he barely matters against - the swap lowers the sum, so it is made.
+	var defs := Matchups.defenders((m.squads[1] as Squad).ground)
+	_check(defs.size() >= 2, "Enough defenders to test a swap")
+
+
+## Your assistant makes the calls a rival coach would in your position, for
+## your club, and leaves what you set yourself.
+func _test_assistant_plays_ai_calls() -> void:
+	var m := _sim(8460, "GEE", "COL")
+	var sq: Squad = m.squads[0]
+	sq.ai_plans = false
+	sq.assistant = true
+	sq.coach_style = "gambler"
+	m.set_tactics(0, {"gameplan": "contest", "focus_id": "x"})
+	m.run_quarter()
+	var mine := str(m.interceptor[0])
+	if mine != "":
+		m.coach_interceptor(0, mine)
+	m.team_stats[1] = {"goals": 0.0, "behinds": 0.0}
+	m.team_stats[0] = {"goals": 0.0, "behinds": 60.0}
+	(m.tactics_history[-1]["plans"] as Array)[1] = {"gameplan": "balanced"}
+	m._assistant_calls(0)
+	_check(str(m.tactics[0]["gameplan"]) == "controlled" and str(m.tactics[0].get("focus_id", "")) == "x",
+			"60 up after a quarter your assistant shuts up shop, keeping the rest of your call")
+	_check(str(m.interceptor[0]) == mine, "He leaves the loose man you named")
+	m.team_stats[0] = {"goals": 0.0, "behinds": 0.0}
+	_check(str(m.ai_tactics(0)["gameplan"]) == "contest", "Level, he plays the plan your club went in with")
+	_check(m._style(0) == MatchSim.COACH_STYLES["balanced"], "Your club keeps the balanced style")
+	(m.tactics_history[-1]["plans"] as Array)[1] = {"gameplan": "controlled"}
+	var a_sc := PlanFit.plan_score(sq.ground, "attacking", sq.plan_know)
+	var c_sc := PlanFit.plan_score(sq.ground, "contest", sq.plan_know)
+	var want := "attacking" if a_sc >= c_sc - MatchSim.COUNTER_GIVE else "contest"
+	_check(str(m.ai_tactics(0)["gameplan"]) == want, "He counters their plan for you as a rival would (%s)" % want)
+
+
+## Plan knowledge weighs the usual game, and Controlled tempo can be it.
+func _test_standing_plan_knowledge() -> void:
+	var g: Array = _sim(4802).squads[0].ground
+	var free := PlanFit.standing_plan(g)
+	_check(is_equal_approx(PlanFit.plan_score(g, "contest", {"contest": 0.5}), PlanFit.edge(g, "contest") * 0.5),
+			"A plan's score is its edge times the club's knowledge of it")
+	if free != "balanced":
+		_check(PlanFit.standing_plan(g, {free: 0.0}) != free, "A plan the club does not know is not its usual game")
+	var only_controlled := {}
+	for p in PlanFit.NEEDS:
+		only_controlled[p] = 1.0 if p == "controlled" else 0.0
+	var ok := true
+	for code in GameDB.active_clubs(2027):
+		var gg: Array = Squad.new(code, GameDB.club_list(code), false, code).ground
+		var want := "controlled" if PlanFit.edge(gg, "controlled") > PlanFit.STANDING_EDGE else "balanced"
+		ok = ok and PlanFit.standing_plan(gg, only_controlled) == want
+	_check(ok, "Controlled tempo is a club's usual game when it is its best")
