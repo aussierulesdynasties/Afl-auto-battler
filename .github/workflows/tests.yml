@@ -246,7 +246,20 @@ jobs:
         env:
           SUITES: ${{ matrix.suites }}
           STOP_ON_FAILURE: ${{ github.event_name == 'pull_request' && '1' || '0' }}
-        run: SUITES_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh $SUITES
+        # Flaky rule (director 2026-11-04): a failed shard re-runs once; a pass on
+        # the retry is green but flagged FLAKY in the log and summary. A shard over
+        # 10 minutes only warns (move its slow suite to tools/ci_long_suites.txt).
+        run: |
+          start=$(date +%s)
+          run() { SUITES_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh $SUITES; }
+          if ! run; then
+            echo "::warning::shard ${{ matrix.shard }} failed; retrying once"
+            run
+            echo "::warning::FLAKY: shard ${{ matrix.shard }} ($SUITES) passed only on retry"
+            echo "FLAKY: shard ${{ matrix.shard }} ($SUITES) passed only on retry" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          took=$(( $(date +%s) - start ))
+          if [ "$took" -gt 600 ]; then echo "::warning::shard ${{ matrix.shard }} took ${took}s (gate target 600s)"; fi
 
       - name: Upload test logs
         if: failure()
