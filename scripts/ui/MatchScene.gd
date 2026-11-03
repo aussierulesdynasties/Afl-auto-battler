@@ -3512,9 +3512,11 @@ func _on_finished() -> void:
 				GameState.my_club, str(_farewell["opp"]), _farewell["mine"], _farewell["theirs"],
 				"Full time", str(GameState.pending_match.get("weather", "")) == "wet")
 		_farewell = {}
+		var wv: WeakRef = weakref(v)   # not the node: it frees itself when it ends
 		tree_exiting.connect(func():            # Back out of the match: it goes too
-			if is_instance_valid(v):
-				v.finish_now())
+			var n = wv.get_ref()
+			if n != null:
+				n.finish_now())
 
 
 ## Who the scene after the siren honours, and both sides' players: {} unless your
@@ -3657,6 +3659,14 @@ func _ft_story(v: VBoxContainer, me: int) -> void:
 		gl.name = "MatchHeroLine"
 		gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(gl)
+	# A loss: your best player too (director, 2026-11-03).
+	if int(st["margin"]) < 0:
+		var mb := MatchStory.my_best(_res, me)
+		if not mb.is_empty():
+			var ml := UiKit.lbl("Your best: %s, %s" % [str(mb["name"]), str(mb["line"])], UiKit.BODY, UiKit.TEXT)
+			ml.name = "MatchMyBest"
+			ml.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			box.add_child(ml)
 	if str(st["turning_point"]) != "":
 		box.add_child(UiKit.section("Turning point"))
 		var tl := UiKit.lbl(str(st["turning_point"]), UiKit.BODY, UiKit.TEXT)

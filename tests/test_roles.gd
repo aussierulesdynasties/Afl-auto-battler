@@ -291,10 +291,9 @@ func _test_tagger() -> void:
 		var f := PlanFit.fit(g2, "controlled")
 		lo = minf(lo, f)
 		hi = maxf(hi, f)
-		controlled_ok = controlled_ok and not PlanFit.carriers(g2, "controlled").is_empty() \
-				and PlanFit.standing_plan(g2) != "controlled"
+		controlled_ok = controlled_ok and not PlanFit.carriers(g2, "controlled").is_empty()
 	_check(controlled_ok and hi > lo,
-			"Controlled tempo depends on ball users and is never a club's usual game")
+			"Controlled tempo depends on ball users")
 
 
 ## A tag goes on anyone with a midfield position, first or second, wherever he

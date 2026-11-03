@@ -196,10 +196,18 @@ var story := {}
 var stories_on := true
 var media_conference := {}       # pending post-match press question
 var backing_talk := {}           # a sit-down when a promised run ends (Backing.talk)
-var media_memory := {}           # question key -> last round asked
+var media_memory := {}           # question key -> {year, round} last asked (legacy: round int)
 ## The match makes the story (switch "match_story"): one record per match of
 ## yours, oldest first (MatchStory.record). Empty, and not saved, while off.
 var match_stories: Array = []
+## Each season of match stories folded into a digest, keyed by year (a
+## string), so the almanac keeps a season after the list is trimmed
+## (MatchStory.fold). Empty, and not saved, while off.
+var match_story_digest := {}
+## Club records for every club (switch "club_almanac"; Almanac.update_club_records):
+## code -> {record key: {value, who, year, label}}, plus "_streak" (the run now).
+## Empty, and not saved, while off.
+var club_records := {}
 ## The coach's career arcs (ClubArcs; switch "coach_arcs"). Empty while off.
 var coach_arcs := {}
 ## Weeks of running a season-end card took off next pre-season's fitness base
@@ -698,6 +706,7 @@ func save_career() -> bool:
 		"achievements": achievements,
 		"career_facts": career_facts,
 		"milestone_log": milestone_log,
+		"last_finish": _last_finish,
 		"departed_names": departed_names,
 		"salary_cap": salary_cap,
 		"free_agents": free_agents,
@@ -764,6 +773,10 @@ func save_career() -> bool:
 		state["canberra_on"] = false
 	if not match_stories.is_empty():
 		state["match_stories"] = match_stories
+	if not match_story_digest.is_empty():
+		state["match_story_digest"] = match_story_digest
+	if not club_records.is_empty():
+		state["club_records"] = club_records
 	if not coach_arcs.is_empty():
 		state["coach_arcs"] = coach_arcs
 	if preseason_run_debt != 0.0:
@@ -888,6 +901,7 @@ func load_career() -> bool:
 	achievements = state.get("achievements", {})
 	career_facts = state.get("career_facts", {})
 	milestone_log = Milestones.normalise(state.get("milestone_log"), self)
+	_last_finish = state.get("last_finish") if state.get("last_finish") is Dictionary else {}
 	departed_names = state.get("departed_names", {})
 	salary_cap = int(state.get("salary_cap", 0))
 	free_agents = state.get("free_agents", [])
@@ -914,10 +928,19 @@ func load_career() -> bool:
 	if not state.has("week_events"):
 		week_event = state.get("week_event", {})
 	relations = state.get("relations", {})
-	story = StoryEngine.ensure(state.get("story", {}))
+	var raw_story: Variant = state.get("story", {})
+	var old_calendar := StoryEngine.is_old_calendar(raw_story)
+	if old_calendar:
+		StoryEngine.migrate_calendar(raw_story)
+	story = StoryEngine.ensure(raw_story if raw_story is Dictionary else {})
 	media_conference = state.get("media_conference", {})
 	match_stories = state.get("match_stories", []) if state.get("match_stories") is Array else []
+	match_story_digest = state.get("match_story_digest", {}) if state.get("match_story_digest") is Dictionary else {}
+	club_records = state.get("club_records", {}) if state.get("club_records") is Dictionary else {}
 	coach_arcs = state.get("coach_arcs", {}) if state.get("coach_arcs") is Dictionary else {}
+	if old_calendar:
+		CoachArcs.migrate_calendar(coach_arcs)
+		week_checks = {}
 	preseason_run_debt = float(state.get("preseason_run_debt", 0.0))
 	backing_talk = state.get("backing_talk", {})
 	media_memory = state.get("media_memory", {})
@@ -1367,6 +1390,8 @@ func reset() -> void:
 	story = StoryEngine.new_state()
 	media_conference = {}
 	match_stories = []
+	match_story_digest = {}
+	club_records = {}
 	coach_arcs = {}
 	preseason_run_debt = 0.0
 	backing_talk = {}
@@ -2285,12 +2310,10 @@ func prepare_interactive_match() -> bool:
 					"round": season.round_index + 1,
 					"label": "Round %d" % (season.round_index + 1)}
 		else:
-			others.append(season.match_sim(m["home"], m["away"], season.next_seed(i)))
+			others.append(season.match_sim(m["home"], m["away"], season.next_seed(i),
+					[true, false], false, season.weather_for(m["home"], m["away"], season.round_index)))
 	if pending_match.is_empty():
-		for res in Season.run_all(others):
-			pending_round_results.append(res)
-			season.record_regular(res)
-		season.recalc_ladder()
+		# Your bye: record nothing, the caller's advance() plays the whole round.
 		return false
 	# The rest of the round plays out in the background while you coach
 	# yours (none of it touches your match), and is collected at full time.
@@ -2344,7 +2367,8 @@ func _prepare_interactive_final() -> bool:
 		if i == mine or m["home"] == "" or m["away"] == "":
 			continue
 		others.append(season.match_sim(m["home"], m["away"], season.finals_seed(i),
-				season.finals_at_home(m), true))
+				season.finals_at_home(m), true,
+				season.weather_for(m["home"], m["away"], Season.REGULAR_ROUNDS + int(season.finals["week"]), m)))
 		index.append(i)
 	_others = Season.start_all(others)
 	_others["index"] = index
@@ -5232,6 +5256,8 @@ func _after_round(results: Array) -> void:
 	_nominate_rising_star(results)
 	_round_news(results)
 	_record_match_story(results)
+	if Almanac.on():
+		Almanac.update_club_records(self, results)
 	_note_firsts(results)
 	_draft_class_news()
 	_board_after_round(results)
@@ -5330,6 +5356,8 @@ func _close_season_awards() -> void:
 		season_awards["norm_smith"] = medal
 	records = Awards.update_records(records, season_awards, season_log)
 	var mine_bf: Array = (season_awards["best_and_fairest"] as Dictionary).get(my_club, [])
+	if Almanac.on():
+		Almanac.count_honours(self, players)
 	honour_roll.append({
 		"year": season_year,
 		"premier": premier(),
@@ -5350,8 +5378,16 @@ func _close_season_awards() -> void:
 		"my_finals": _my_last_final(),
 		"my_aa": _my_all_australians(),
 	})
+	# The season hero (director, 2026-11-03): a named club award on the honour
+	# roll, the most match-hero awards (match story digest) this season.
+	var sh := Almanac.season_hero(self)
+	if not sh.is_empty():
+		honour_roll[-1]["season_hero"] = [sh]
 	if Almanac.on():
 		almanac.append(Almanac.season_entry(self))
+		var first := Almanac.first_sentence(str(almanac[-1].get(Almanac.STORY_KEY, "")))
+		if first != "":
+			add_news("almanac_story", first)
 	# Achievements first, then the season news, so the premiership line
 	# stays the newest item in the feed.
 	_close_season_achievements()
@@ -6956,17 +6992,18 @@ func draft_pick_owners(year: int) -> Dictionary:
 func trade_prospects() -> Dictionary:
 	var out := {}
 	for year in trade_pick_years():
-		# Next year's class isn't known yet: this year's stands in for it.
-		out[str(year)] = TradeValue.rank_prospects(_open_class(mini(int(year), season_year)))
+		# Next year's class isn't known yet: this year's stands in for it, whole
+		# (tonight's picks don't thin a class that hasn't been drafted).
+		out[str(year)] = TradeValue.rank_prospects(_open_class(mini(int(year), season_year), int(year) <= season_year))
 	return out
 
 
-func _open_class(year: int) -> Array:
+func _open_class(year: int, tonight := true) -> Array:
 	var pool := []
 	for p in draftee_pool:
 		if drafted_draftees.has(str(p["id"])) or int(p.get("draft_year", year)) != year:
 			continue
-		if draft_night_open() and draft.picked.has(str(p["id"])):
+		if tonight and draft_night_open() and draft.picked.has(str(p["id"])):
 			continue   # taken tonight: no pick buys him now
 		if str(p.get("tied_club", "")) != "" and int(p.get("draft_year", 0)) == year:
 			continue
@@ -7046,7 +7083,7 @@ func evaluate_trade(club: String, mine: Array, theirs: Array) -> Dictionary:
 	# (the same read it drafts with), not the consensus.
 	ctx["prospects"] = _night_prospects(club) if night else trade_prospects()
 	return Contracts.evaluate_trade(season.lists.get(club, []), give, take,
-			salary_cap, my_list, salary_cap, float(difficulty_rules()["trade_margin"]), ctx)
+			cap_for(club), my_list, salary_cap, float(difficulty_rules()["trade_margin"]), ctx)
 
 
 ## What a club weighs a trade with: its cycle, last season's games for
@@ -7264,8 +7301,8 @@ func _club_verdict(club: String, other: String, gives: Array, gets: Array, margi
 		prospects: Dictionary) -> Dictionary:
 	var ctx := trade_context(club)
 	ctx["prospects"] = prospects
-	return Contracts.evaluate_trade(season.lists[club], gives, gets, salary_cap,
-			season.lists[other], salary_cap, margin, ctx)
+	return Contracts.evaluate_trade(season.lists[club], gives, gets, cap_for(club),
+			season.lists[other], cap_for(other), margin, ctx)
 
 
 # ---------------------------------------------------------------------------
@@ -7304,21 +7341,21 @@ func _night_prospects(club: String) -> Dictionary:
 	var out := {}
 	if not draft_night_open():
 		return out
-	var left := []
-	for p in draft.pool:
-		if not draft.picked.has(str(p["id"])):
-			left.append(p)
+	var whole: Array = (draft.pool as Array).duplicate()
 	var scored := {}
-	for p in left:
+	for p in whole:
 		scored[str(p["id"])] = float(draft._ai_score(club, p))
-	left.sort_custom(func(a, b):
+	whole.sort_custom(func(a, b):
 		var sa := float(scored[str(a["id"])])
 		var sb := float(scored[str(b["id"])])
 		if sa != sb:
 			return sa > sb
 		return str(a["id"]) < str(b["id"]))
+	var left := whole.filter(func(p): return not draft.picked.has(str(p["id"])))
+	# Only this year's picks buy from what is left tonight; a future pick is
+	# judged against the whole stand-in class.
 	for year in trade_pick_years():
-		out[str(year)] = left
+		out[str(year)] = left if int(year) <= season_year else whole
 	return out
 
 
@@ -7399,8 +7436,8 @@ func make_night_offers() -> int:
 	if pick.is_empty() or str(pick["owner"]) != my_club:
 		return 0
 	for o in trade_offers:
-		if str(o["status"]) == "open" and (o["take"] as Array).has(str(pick["id"])):
-			return 0   # a reload: the offers for this pick are already on the table
+		if bool(o.get("night", false)) and str(o["status"]) != "off" and (o["take"] as Array).has(str(pick["id"])):
+			return 0   # a reload: the offers for this pick were already made (open or declined)
 	var made := 0
 	var tried := 0
 	_freeze_league(true)
@@ -7418,7 +7455,7 @@ func make_night_offers() -> int:
 		# would come out even or ahead (director 2026-10-25: a late pick and a
 		# future second for pick 6 is "absurd"). A club that rates a prospect
 		# above the field finds the room; one that does not stays quiet.
-		var pkg := _bid(club, pick, _worth_to_read(club, pick, read), 1.0, read, my_club, 0.0)
+		var pkg := _bid(club, pick, _worth_to_read(club, pick, read), 1.0, read, my_club)
 		if pkg.is_empty() or not bool(_club_verdict(my_club, club, [pick], pkg, NIGHT_OFFER_FLOOR - 1.0, consensus)["ok"]):
 			continue
 		trade_offers.append({"club": club, "give": pkg.map(func(a): return str(a["id"])),
@@ -9658,10 +9695,15 @@ func _record_match_story(results: Array) -> void:
 	if rec.is_empty():
 		return
 	match_stories.append(rec)
+	# Folded into its season's digest first, so trimming never loses a season.
+	MatchStory.fold(match_story_digest, rec)
 	if match_stories.size() > MAX_MATCH_STORIES:
 		match_stories = match_stories.slice(match_stories.size() - MAX_MATCH_STORIES)
 	if str(rec["hero_name"]) != "":
-		add_news("match_story", "%s. %s: %s." % [str(rec["headline"]), str(rec["hero_name"]), str(rec["hero_line"])])
+		var line := "%s. %s: %s." % [str(rec["headline"]), str(rec["hero_name"]), str(rec["hero_line"])]
+		if str(rec.get("my_best_name", "")) != "":
+			line += " Your best: %s, %s." % [str(rec["my_best_name"]), str(rec["my_best_line"])]
+		add_news("match_story", line)
 
 
 ## The latest match story record, {} when there is none (or the switch is off).
@@ -9703,6 +9745,11 @@ func _prepare_media_conference(results: Array) -> void:
 		var hero := MatchStory.hero_of(res)
 		if not hero.is_empty() and int(hero["side"]) == side:
 			star = {"name": str(hero["name"]), "line": "was the hero: %s" % str(hero["line"])}
+		elif not hero.is_empty():
+			# A loss: your best player (director, 2026-11-03).
+			var mb := MatchStory.my_best(res, side)
+			if not mb.is_empty():
+				star = {"name": str(mb["name"]), "line": "was your best: %s" % str(mb["line"])}
 	var round_no := season.round_index if last_phase == "regular" else Season.REGULAR_ROUNDS + int((season.finals.get("weeks", []) as Array).size())
 	# How many of your side were young enough for the Philosopher to ask.
 	var young := 0
@@ -9736,7 +9783,7 @@ func media_conference_pending() -> bool:
 func skip_media_conference() -> void:
 	if media_conference.is_empty():
 		return
-	media_memory[str(media_conference.get("key", ""))] = int(media_conference.get("round", 0))
+	media_memory[str(media_conference.get("key", ""))] = {"year": season_year, "round": int(media_conference.get("round", 0))}
 	media_conference = {}
 	mark_dirty()
 	autosave()
@@ -9786,7 +9833,7 @@ func resolve_media_conference(option: int) -> Dictionary:
 	if morale_delta != 0:
 		for p in my_list:
 			ClubLife.add_morale(p, morale_delta)
-	media_memory[key] = round_no
+	media_memory[key] = {"year": season_year, "round": round_no}
 	# What you said, so a journalist can hold you to it later this season.
 	media_memory["said|" + key] = {"year": season_year, "option": option,
 			"opp": str(media_conference.get("opp", "")), "round": round_no}

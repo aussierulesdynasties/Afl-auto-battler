@@ -634,8 +634,9 @@ func _story(q: Array, goals_log: Array) -> Dictionary:
 ## The first seed from `from` up whose `pr` game (home v away) is the case
 ## wanted: "win" or "loss" turned in the third quarter, "none" with no turn.
 ## Found, not fixed: any change to the engine's rates moves every seeded game.
+## -1 when none of the next 400 seeds is that case.
 func _find_turn_seed(pr: Array, from: int, want: String) -> int:
-	for seed in range(from, from + 80):
+	for seed in range(from, from + 400):
 		var home := Squad.new(pr[0], GameDB.club_list(pr[0]), true, pr[0])
 		var away := Squad.new(pr[1], GameDB.club_list(pr[1]), false, pr[1])
 		home.ai_plans = true
@@ -653,7 +654,7 @@ func _find_turn_seed(pr: Array, from: int, want: String) -> int:
 		var lost := int(res["score"][0]) < int(res["score"][1])
 		if (won if want == "win" else lost) and not tq.is_empty() and int(tq["q"]) == 3:
 			return seed
-	return from
+	return -1
 
 
 func _test_comeback_telling() -> void:
@@ -696,7 +697,10 @@ func _test_comeback_telling() -> void:
 	var cases := {_find_turn_seed(["SYD", "CAR"], 175, "win"): "win",
 			_find_turn_seed(["MEL", "FRE"], 188, "loss"): "loss",
 			_find_turn_seed(["SYD", "CAR"], 3, "none"): "none"}
+	_check(cases.size() == 3 and not cases.has(-1), "A seeded win, loss and ordinary game are all found (%s)" % str(cases))
 	for seed in cases:
+		if int(seed) < 0:
+			continue
 		var pr: Array = ["MEL", "FRE"] if str(cases[seed]) == "loss" else ["SYD", "CAR"]
 		var home := Squad.new(pr[0], GameDB.club_list(pr[0]), true, pr[0])
 		var away := Squad.new(pr[1], GameDB.club_list(pr[1]), false, pr[1])

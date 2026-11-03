@@ -316,7 +316,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
 	for side in range(2):
 		synergies[side] = Traits.active((squads[side] as Squad).ground)
-		standing[side] = PlanFit.standing_plan((squads[side] as Squad).ground)
+		standing[side] = PlanFit.standing_plan((squads[side] as Squad).ground, (squads[side] as Squad).plan_know)
 		duels[side] = Matchups.defaults((squads[1 - side] as Squad).ground, (squads[side] as Squad).ground)
 		for plan in PlanFit.LEAGUE:
 			(plan_fit[side] as Dictionary)[plan] = PlanFit.fit((squads[side] as Squad).ground, plan)
@@ -674,36 +674,81 @@ func _spare_minder(attacking_side: int) -> Dictionary:
 
 
 ## An AI club moves a key defender when their forward has had the better of
-## him: three or more contests last quarter and two in three won. It tries
-## the next defender a coach would, not the ideal one.
+## him: three or more contests last quarter and two in three won.
 func _ai_rematch(def_side: int) -> void:
+	var held := {}
+	if str(interceptor[def_side]) != "":
+		held[str(interceptor[def_side])] = true
+	for fid in duels[def_side].keys():
+		if _beaten(def_side, str(fid)):
+			_rematch(def_side, str(fid), held)
+
+
+## Whether the forward `fid` had the better of his direct opponent last
+## quarter: three or more contests and two in three won.
+func _beaten(def_side: int, fid: String) -> bool:
 	var d: Dictionary = duels[def_side]
-	for fid in d.keys():
-		var log: Dictionary = duel_log.get(str(fid), {})
-		var n := 0
-		var won := 0
-		for c in log.get("contests", []):
-			if int(c[0]) == current_quarter - 1 and str(c[1]) == str(d[fid]):
-				n += 1
-				if bool(c[2]):
-					won += 1
-		if n < 3 or float(won) / float(n) < 0.67:
-			continue
-		for p in Matchups.defenders((squads[def_side] as Squad).ground):
-			# Never the loose man: putting him on someone ends his roaming.
-			if str(p["id"]) != str(d[fid]) and str(p["id"]) != str(interceptor[def_side]):
-				set_matchup(def_side, str(fid), str(p["id"]))
-				break
+	var log: Dictionary = duel_log.get(fid, {})
+	var n := 0
+	var won := 0
+	for c in log.get("contests", []):
+		if int(c[0]) == current_quarter - 1 and str(c[1]) == str(d.get(fid, "")):
+			n += 1
+			if bool(c[2]):
+				won += 1
+	return n >= 3 and float(won) / float(n) >= 0.67
+
+
+## Move a beaten key defender: the defender who gives `fid` the lowest mark
+## chance (Matchups.mark_chance), never one in `held` (the loose man, calls
+## the coach made himself). A defender already on another forward is swapped
+## across only when the two pairings' mark chances fall in sum; a free one
+## only when he is better on `fid` than the man there now.
+func _rematch(def_side: int, fid: String, held: Dictionary) -> void:
+	var d: Dictionary = duels[def_side]
+	var fwd := _on_ground(1 - def_side, fid)
+	var cur_id := str(d.get(fid, ""))
+	var cur := _on_ground(def_side, cur_id)
+	if fwd.is_empty() or cur.is_empty():
+		return
+	var on := {}
+	for other in d:
+		on[str(d[other])] = str(other)
+	var now := Matchups.mark_chance(fwd, cur)
+	var cands := []
+	for p in Matchups.defenders((squads[def_side] as Squad).ground):
+		var pid := str(p["id"])
+		if pid != cur_id and not held.has(pid):
+			cands.append([Matchups.mark_chance(fwd, p), pid, p])
+	cands.sort_custom(func(a, b): return float(a[0]) < float(b[0]) or (float(a[0]) == float(b[0]) and str(a[1]) < str(b[1])))
+	for c in cands:
+		var gain := now - float(c[0])
+		var f2_id := str(on.get(str(c[1]), ""))
+		if f2_id != "":
+			var f2 := _on_ground(1 - def_side, f2_id)
+			if f2.is_empty():
+				continue
+			gain += Matchups.mark_chance(f2, c[2]) - Matchups.mark_chance(f2, cur)
+		if gain > 0.0:
+			set_matchup(def_side, fid, str(c[1]))
+			return
 
 
 ## Your assistant's routine calls for the quarter about to start, made at
-## the break so the coach box shows them as your starting point: the loose
-## defender a rival coach would pick, and a key defender moved off a forward
-## who has had the better of him (as _ai_rematch). Whatever you have set
-## yourself he leaves alone, and he never moves a defender you have put on
-## someone.
+## the break so the coach box shows them as your starting point: the plan,
+## pep talk and tag a rival coach would call in your position (ai_tactics,
+## your club's own usual game), the loose defender a rival coach would pick,
+## and a key defender moved off a forward who has had the better of him
+## (_rematch). He acts in your club's best interest, as every coach does.
+## Whatever you have set yourself he leaves alone, and he never moves a
+## defender you have put on someone.
 func _assistant_calls(side: int) -> void:
 	var own: Dictionary = _own[side]
+	var t: Dictionary = (tactics[side] as Dictionary).duplicate()
+	var call := ai_tactics(side)
+	call.erase("interceptor_id")
+	t.merge(call, true)
+	set_tactics(side, t)
 	if not bool(own["interceptor"]):
 		set_interceptor(side, _assistant_interceptor(side), true)
 	var d: Dictionary = duels[side]
@@ -717,21 +762,8 @@ func _assistant_calls(side: int) -> void:
 	for fid in d.keys():
 		if (own["duels"] as Dictionary).has(str(fid)):
 			continue
-		var log: Dictionary = duel_log.get(str(fid), {})
-		var n := 0
-		var won := 0
-		for c in log.get("contests", []):
-			if int(c[0]) == current_quarter - 1 and str(c[1]) == str(d[fid]):
-				n += 1
-				if bool(c[2]):
-					won += 1
-		if n < 3 or float(won) / float(n) < 0.67:
-			continue
-		for p in Matchups.defenders((squads[side] as Squad).ground):
-			var pid := str(p["id"])
-			if pid != str(d[fid]) and not held.has(pid):
-				set_matchup(side, str(fid), pid)
-				break
+		if _beaten(side, str(fid)):
+			_rematch(side, str(fid), held)
 
 
 ## The loose defender a rival coach would use (_ai_interceptor), from the
@@ -4270,16 +4302,19 @@ func _check_injuries() -> void:
 				on = str((sq.bench[rep] as Dictionary)["id"])
 				_swap(side, gi, rep)
 				bi = rep
+		var gone := false   # none left on the bench: he plays on hurt, match-ups and tag kept
 		if bi >= 0 and str((sq.bench[bi] as Dictionary)["id"]) == id:
 			sq.bench.remove_at(bi)
 			(injured_off[side] as Array).append(hurt)
+			gone = true
 		var rec := {"side": side, "id": id, "q": current_quarter, "min": current_minute,
 				"weeks": int(inj["weeks"]), "kind": str(inj["kind"]), "on": on}
 		injuries.append(rec)
 		_emit("injury", side, fp, hurt, "%s is injured (%s)" % [GameDB.player_display_name(hurt), str(inj["kind"])])
 		events[events.size() - 1]["on"] = on
-		_refill_duel(side, id)
-		_drop_tag_on(id)
+		if gone:
+			_refill_duel(side, id)
+			_drop_tag_on(id)
 
 
 ## A tag on a player gone off hurt ends with him: no side keeps a hidden tag
@@ -5312,7 +5347,11 @@ func _score_run(side: int) -> void:
 # ---------------------------------------------------------------------------
 ## The opposition's plan for the coming quarter: its usual game (the plan
 ## its list suits, PlanFit.standing_plan), protecting a big lead or chasing
-## a big deficit. It does not read and counter your plan. With a specialist
+## a big deficit. From the second quarter it reads the plan you ran last
+## quarter and, when it is one of the main three, switches to the plan that
+## beats it (COUNTER) if that plan is worth nearly as much to it as its usual
+## game (COUNTER_GIVE, on PlanFit.plan_score). The scoreboard comes first:
+## a big lead or deficit decides before any counter. With a specialist
 ## tagger on the ground it tags your most influential midfielder from half
 ## time; without one it does not (a tag by a good midfielder costs more than
 ## it takes, _tag_drag).
@@ -5320,13 +5359,20 @@ func _score_run(side: int) -> void:
 ## and tags from half time rather than the last quarter.
 ## His senior coach's tendency (Squad.coach_style, COACH_STYLES) moves when
 ## he reacts, never what his players can do.
+## The plan that beats each of the main three (the triangle at PLANS).
+const COUNTER := {"controlled": "attacking", "defensive": "controlled", "attacking": "defensive"}
+## How much less (PlanFit.plan_score) a counter may be worth than the usual
+## game and still be played.
+const COUNTER_GIVE := 0.3
+
+
 func ai_tactics(side: int) -> Dictionary:
 	var opp := 1 - side
 	var read := float((squads[side] as Squad).tactics_read)
 	var margin := score(side) - score(opp)
 	var react := 18.0 - 8.0 * read
 	var st := _style(side)
-	var plan := str(standing[side])
+	var plan := _usual(side)
 	if margin >= react * float(st["protect"]) + float(st["add"]):
 		plan = "controlled"
 	elif margin <= -(react * float(st["chase"]) + float(st["add"])):
@@ -5335,6 +5381,14 @@ func ai_tactics(side: int) -> Dictionary:
 		# Behind after half time and still losing ground: the usual game is
 		# not working, so it chases. Only what a coach sees - the scoreboard.
 		plan = "attacking"
+	elif current_quarter >= 2 and not tactics_history.is_empty():
+		# What they ran last quarter is on show: beat it if that costs little.
+		var theirs := plan_key(str(((tactics_history[-1]["plans"] as Array)[opp] as Dictionary).get("gameplan", "balanced")))
+		var beat := str(COUNTER.get(theirs, ""))
+		if beat != "" and beat != plan:
+			var sq: Squad = squads[side]
+			if PlanFit.plan_score(sq.ground, beat, sq.plan_know) >= PlanFit.plan_score(sq.ground, plan, sq.plan_know) - COUNTER_GIVE:
+				plan = beat
 	var fire := margin <= float(st["fire_at"]) and current_quarter >= int(st["fire_q"])
 	var t := {"gameplan": plan, "pep": "fire_up" if fire else "steady"}
 	t["interceptor_id"] = _ai_interceptor(side, (squads[side] as Squad).ground)
@@ -5381,26 +5435,37 @@ func _ai_interceptor(side: int, ground: Array) -> String:
 	return str(spare["id"])
 
 
-## A rival senior coach's match-day tendency (director, 2026-10-11): the
-## same rule as everyone's, with its margins moved, never dice. protect / chase:
-## the share of his react margin at which he shuts up shop / chases; add: points
-## on both; lost_q: the quarter from which a lost quarter makes him chase; loose
-## / loose_q: the share of react behind, and the quarter, at which he pulls his
-## loose man to chase; fire_at / fire_q: when he fires them up.
-##   balanced  today's rule.
-##   stubborn  backs his structure: waits 8 points longer either way, never
-##             chases a lost quarter, keeps his loose man.
-##   reactive  throws the magnets around: reacts at 60% of the margin.
-##   gambler   goes for broke: chases from half the margin and from Q2,
-##             pulls his loose man early, fires them up at 6 down.
-##   cautious  sits on a lead: shuts up shop at half the margin.
+## A rival senior coach's match-day tendency (director, 2026-10-11; bounded
+## 2026-11-03): the same rule as everyone's, with its margins moved by at most
+## a quarter either way, never dice and never a reaction he refuses to make.
+## protect / chase: the share of his react margin at which he shuts up shop /
+## chases; add: points on both; lost_q: the quarter from which a lost quarter
+## makes him chase; loose / loose_q: the share of react behind, and the
+## quarter, at which he pulls his loose man to chase; fire_at / fire_q: when
+## he fires them up.
+##   balanced  the plain rule.
+##   stubborn  backs his structure: waits a quarter longer either way.
+##   reactive  throws the magnets around: reacts at 75% of the margin.
+##   gambler   goes for broke: chases and pulls his loose man at 75% of the
+##             margin, fires them up at 9 down.
+##   cautious  sits on a lead: shuts up shop at 75% of the margin.
 const COACH_STYLES := {
 	"balanced": {"protect": 1.0, "chase": 1.0, "add": 0.0, "lost_q": 3, "loose": 1.0, "loose_q": 3, "fire_at": -12.0, "fire_q": 3},
-	"stubborn": {"protect": 1.0, "chase": 1.0, "add": 8.0, "lost_q": 9, "loose": 99.0, "loose_q": 9, "fire_at": -12.0, "fire_q": 3},
-	"reactive": {"protect": 0.6, "chase": 0.6, "add": 0.0, "lost_q": 2, "loose": 0.6, "loose_q": 3, "fire_at": -12.0, "fire_q": 3},
-	"gambler": {"protect": 1.0, "chase": 0.5, "add": 0.0, "lost_q": 2, "loose": 0.5, "loose_q": 2, "fire_at": -6.0, "fire_q": 2},
-	"cautious": {"protect": 0.5, "chase": 1.0, "add": 0.0, "lost_q": 3, "loose": 1.0, "loose_q": 3, "fire_at": -12.0, "fire_q": 3},
+	"stubborn": {"protect": 1.25, "chase": 1.25, "add": 0.0, "lost_q": 3, "loose": 1.25, "loose_q": 3, "fire_at": -12.0, "fire_q": 3},
+	"reactive": {"protect": 0.75, "chase": 0.75, "add": 0.0, "lost_q": 3, "loose": 0.75, "loose_q": 3, "fire_at": -12.0, "fire_q": 3},
+	"gambler": {"protect": 1.0, "chase": 0.75, "add": 0.0, "lost_q": 3, "loose": 0.75, "loose_q": 3, "fire_at": -9.0, "fire_q": 3},
+	"cautious": {"protect": 0.75, "chase": 1.0, "add": 0.0, "lost_q": 3, "loose": 1.0, "loose_q": 3, "fire_at": -12.0, "fire_q": 3},
 }
+
+
+## `side`'s usual game: the plan your club went in with on your side (the
+## first quarter's call), otherwise the plan its list suits (standing).
+func _usual(side: int) -> String:
+	if _assisted(side) and not tactics_history.is_empty():
+		var first: Dictionary = (tactics_history[0]["plans"] as Array)[side]
+		if first.has("gameplan"):
+			return plan_key(str(first["gameplan"]))
+	return str(standing[side])
 
 
 ## `side`'s coach's tendency: his style only for an AI club; your club is you.
