@@ -655,9 +655,6 @@ func _week_section(season: Season) -> Control:
 		# The football: two or three facts, then anything on our side.
 		var facts := GameState.opponent_facts(opp)
 		var notes := GameState.my_week_notes()
-		# The milestone card says these when it is on (_milestone_card).
-		if Milestones.shown():
-			notes = notes.filter(func(n): return str(n.get("key", "")) != "milestone")
 		# The one who got away (P-16): a player who left you and lines up for
 		# them, from what the club kept. Nothing when there is no one.
 		var former := GameState.former_players(opp).slice(0, FormerPlayers.SHOWN)
@@ -698,6 +695,8 @@ func _week_section(season: Season) -> Control:
 		if ms_card != null:
 			nv.add_child(UiKit.spacer(4))
 			nv.add_child(ms_card)
+	# The week your season ends has its card (finals_cards_2), the Grand Final played or not.
+	if not season.is_season_over() or Features.on(StoryDeck.FINALS_2):
 		for i in range(GameState.week_events.size()):
 			nv.add_child(UiKit.spacer(4))
 			var ev := _event_card(i)
@@ -715,12 +714,13 @@ func _week_section(season: Season) -> Control:
 	return nv
 
 
-## The week's milestones (Milestones.gd), behind the switch milestone_games:
-## a small card in the event-card style, or nothing.
+## The week's milestones (Milestones.gd), always shown:
+## a small card in the event-card style, or nothing. The note lines above
+## keep their "plays his 100th" lines; the card leaves those out.
 func _milestone_card() -> Control:
 	if not Milestones.shown():
 		return null
-	var items := Milestones.upcoming(GameState)
+	var items := Milestones.card_items(GameState)
 	if items.is_empty():
 		return null
 	var panel := UiKit.panel(UiKit.PANEL, 12)

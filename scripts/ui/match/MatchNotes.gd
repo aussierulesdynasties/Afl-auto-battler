@@ -458,9 +458,7 @@ static func calls_lines(res: Dictionary, my_side: int, q: int) -> Array:
 			if stars >= 0:
 				out.append(("%s: your stars had %d disposals" % [label, stars])
 						+ ((", from %d%s." % [_stars_disposals(res, was, before, my_side), prev]) if q >= 2 else "."))
-	for key in [["tag_id", "Tag on %s: %d disposal%s", opp], ["focus_mid", "Through %s: %d disposal%s", my_side],
-			["focus_fwd", "Through %s: %d disposal%s", my_side], ["focus_def", "Through %s: %d disposal%s", my_side],
-			["focus_id", "Through %s: %d disposal%s", my_side]]:
+	for key in [["tag_id", "Tag on %s: %d disposal%s", opp]]:
 		var id := str(calls.get(key[0], ""))
 		if id == "":
 			continue
@@ -492,59 +490,6 @@ static func _stars_disposals(res: Dictionary, now: Dictionary, was: Dictionary, 
 	for id in stars[side]:
 		total += _player_delta(now, was, str(id), "disposals")
 	return total
-
-
-## A player picked to play through, by the slot he fills: "Matthew Jefferson
-## our key forward target". The engine favours him by that job (MatchSim
-## _focus_mult): the ball up forward and the shots for a forward, first use out
-## of the back half for a defender, the ball in the chain for a midfielder or ruck.
-const FOCUS_ROLES := {
-	"MID": ["our key midfielder", "the ball goes to him more often through the midfield"],
-	"FWD": ["our key forward target", "more of the ball up forward and more of the shots at goal"],
-	"DEF": ["our key distributor", "first use of the ball out of the back half"],
-	"RUCK": ["our key man in the middle", "the ball goes to him more often"],
-}
-
-
-## The three play-through calls (director, 2026-10-07): [heading, his job,
-## what it does, with nobody picked, the spot it works from].
-const FOCUS_ORDER := ["focus_fwd", "focus_mid", "focus_def"]  # forward, midfield, back: the order everywhere the coach reads them
-const FOCUS_SLOT_TEXT := {
-	"focus_mid": ["Midfield pillar", "our midfield pillar",
-			"the ball goes to him more often through the midfield",
-			"Nobody: the midfield shares the ball.", "the midfield"],
-	"focus_fwd": ["Forward target", "our key forward target",
-			"more of the ball up forward and more of the shots at goal",
-			"Nobody: the forwards share the entries.", "the forward line"],
-	"focus_def": ["Backline distributor", "our backline distributor",
-			"first use of the ball out of the back half",
-			"Nobody: the backs share the ball out of defence.", "the back line"],
-}
-
-
-## Under a play-through call: his job and what it does; with nobody, what that
-## means; and, when he is not in the spot the call works from, that it waits.
-static func focus_slot_note(slot: String, name: String, working: bool, benched: bool) -> String:
-	var t: Array = FOCUS_SLOT_TEXT[slot]
-	if name == "":
-		return str(t[3])
-	if benched:
-		return "%s is on the bench: the call waits until he is back on." % name
-	if not working:
-		return "%s is not in %s now: the call waits until he is back there." % [name, str(t[4])]
-	return "%s is %s: %s." % [name, str(t[1]), str(t[2])]
-
-
-static func focus_role_text(name: String, role: String) -> String:
-	if not FOCUS_ROLES.has(role):
-		return name
-	return "%s %s" % [name, str(FOCUS_ROLES[role][0])]
-
-
-static func focus_effect_text(role: String) -> String:
-	if not FOCUS_ROLES.has(role):
-		return "more of the ball in the chains"
-	return str(FOCUS_ROLES[role][1])
 
 
 ## Your tag that ended in quarter q because the man was no longer a
@@ -794,12 +739,43 @@ static func reach_words(kept: float) -> String:
 	return "nearly all"
 
 
-## A forward's card for the job: where he plays, Defensive forward when he
-## has the trait, and his Pressure (the one attribute the job runs on).
-## `wide` is the list sheet's single line; the grid card puts the trait on
-## its own line.
-static func loose_question() -> String:
-	return "Who plays loose behind the ball?"
+## Defensive set-up (director, 2026-11-03): one call for the loose defender
+## and the forward sent to theirs. The coach picks the shape; the men are
+## picked as a coach would (MatchScene).
+const DEFENCE_SETUPS := [["man", "Man on man"], ["loose", "Loose defender"],
+		["cover", "Cover their loose man"], ["both", "Loose + cover"]]
+
+
+static func defence_key(loose: bool, cover: bool) -> String:
+	if loose and cover:
+		return "both"
+	if loose:
+		return "loose"
+	return "cover" if cover else "man"
+
+
+static func defence_question() -> String:
+	return "How do you set up behind the ball?"
+
+
+## The break row's answer for the call.
+static func defence_answer(key: String) -> String:
+	for o in DEFENCE_SETUPS:
+		if str(o[0]) == key:
+			return str(o[1])
+	return "Man on man"
+
+
+## Under the choices: who does each job and what it costs, in words.
+static func defence_setup_line(key: String, loose_name: String, minder_name: String, spare_name: String) -> String:
+	var parts := PackedStringArray()
+	if key == "loose" or key == "both":
+		parts.append("%s plays loose behind the ball to attack aerial balls; if he flies and loses, space opens behind him." % loose_name)
+	if key == "cover" or key == "both":
+		parts.append("%s goes up the ground with %s and is a target less often himself." % [minder_name, spare_name])
+	if parts.is_empty():
+		return "Every defender plays on his man; no forward leaves his post."
+	return " ".join(parts)
 
 
 ## The question the Tag call asks, over its choices (an assistant tagger is a follow-up).
@@ -815,18 +791,10 @@ static func loose_tally_line(who: String, n: int) -> String:
 	return "%s: %d intercept%s so far." % [who, n, "" if n == 1 else "s"]
 
 
-## A defender's card for the loose interceptor call: where he plays, his
-## Intercept and Marking (his read of the ball is 0.55 Intercept + 0.30
-## Marking + 0.15 Pressure, Matchups.interceptor_score) and "Interceptor"
-## when he has the trait.
-## `wide` is the list sheet's single line (MatchNotes.card_detail).
-static func loose_card_detail(p: Dictionary, wide: bool) -> String:
-	var attr: Dictionary = p.get("attr", {})
-	return card_detail(p, "Interceptor" if Traits.has(p, "interceptor") else "",
-			PackedStringArray(["Intercept %d" % roundi(float(attr.get("intercept", 0.0))),
-			"Marking %d" % roundi(float(attr.get("marking", 0.0)))]), wide)
-
-
+## A forward's card for the job: where he plays, Defensive forward when he
+## has the trait, and his Pressure (the one attribute the job runs on).
+## `wide` is the list sheet's single line; the grid card puts the trait on
+## its own line.
 static func minder_card_detail(p: Dictionary, wide: bool) -> String:
 	var pressure := roundi(float((p.get("attr", {}) as Dictionary).get("pressure", 0.0)))
 	return card_detail(p, "Defensive forward" if Traits.has(p, "def_forward") else "",
@@ -1463,9 +1431,8 @@ static func broken_calls(res: Dictionary, injuries: Array, my_side: int, q: int,
 	for inj in injuries:
 		if int(inj.get("side", -1)) == my_side and int(inj.get("q", 0)) == q - 1:
 			hurt[str(inj.get("id", ""))] = true
-	for pair in [["focus_id", "FocusPicker"], ["interceptor_id", "InterceptorPicker"],
-			["spare_minder_id", "SpareMinderPicker"]]:
-		var id := str(last.get(pair[0], ""))
-		if id != "" and hurt.has(id):
-			out.append(pair[1])
+	for key in ["interceptor_id", "spare_minder_id"]:
+		var id := str(last.get(key, ""))
+		if id != "" and hurt.has(id) and not out.has("DefenceSetupPicker"):
+			out.append("DefenceSetupPicker")
 	return out

@@ -8,31 +8,17 @@ const SORTS := [["overall", "Best rated"], ["potential", "Highest potential"], [
 const INTAKE_SORTS := [["overall", "Best scouted"], ["potential", "Highest upside"],
 	["goals", "Junior goals"], ["disposals", "Junior disposals"], ["name", "Name A–Z"]]
 const PAGE_SIZE := 60
-# Opening League Draft only. The 2027 pool splits cleanly at these natural
-# career stages (252 rookies, 248 prime-age players, 169 veterans).
-const CAREER_STAGES := [["", "All"], ["rookie", "Rookies"], ["prime", "Prime"], ["veteran", "Veterans"]]
-const ROOKIE_MAX_AGE := 24.0
-const PRIME_MAX_AGE := 29.0
 
 var _draft: Draft
 var _meeting: Control = null    # the recruiting meeting, while it is open
 var _club := ""
 var _phase := "club"
 var _role := ""
-var _club_filter := ""
+## The pool's three controls: position, sort and search (director's cut,
+## 2026-11-03: club, career stage, style, trait, availability and Combine
+## filters went; a prospect's sheet still shows his Combine and traits).
 var _search := ""
 var _sort := "overall"
-var _career_stage := ""
-## Playing style (PlayerProfile.player_type: Interceptor, Crumber, Wing...)
-## and trait (Tagger, Contested bull...) filters: the director's PC playtest,
-## 2026-10-07. "" is any.
-var _style := ""
-var _trait := ""
-var _available_only := true
-var _advanced_open := false
-var _combine := ""          # the Combine test the pool is sorted on, or ""
-var _combine_open := false
-var _combine_field: Array = []
 var _history_club := ""
 var _shown := PAGE_SIZE
 var _history_shown := PAGE_SIZE
@@ -61,7 +47,6 @@ var _history_view: VBoxContainer
 var _squad_view: VBoxContainer
 var _order_view: VBoxContainer
 var _all_button: Button
-var _advanced: VBoxContainer
 var _search_field: LineEdit
 var _search_timer: Timer
 var _board_info: Label
@@ -756,78 +741,6 @@ func _filters() -> Control:
 		_shown = PAGE_SIZE
 		_search_timer.start())
 	search_row.add_child(_search_field)
-	var filters := UiKit.btn("Filters", UiKit.SECONDARY)
-	filters.name = "MoreFilters"
-	filters.toggle_mode = true
-	filters.button_pressed = _advanced_open
-	filters.toggled.connect(func(on: bool):
-		_advanced_open = on
-		_advanced.visible = on)
-	search_row.add_child(filters)
-	if _draft.intake_mode:
-		# The Combine: the class's testing results, one test at a time.
-		var combine := UiKit.btn("Combine", UiKit.SECONDARY)
-		combine.name = "CombineOpen"
-		combine.toggle_mode = true
-		combine.button_pressed = _combine_open
-		search_row.add_child(combine)
-		var crow := UiKit.vbox(4)
-		crow.name = "CombineRow"
-		crow.visible = _combine_open
-		v.add_child(crow)
-		var opts_c := [["", "Off"]]
-		for t in Combine.TESTS:
-			opts_c.append([str(t[0]), {"sprint": "Sprint", "trial": "2 km", "leap": "Leap", "kick": "Kicking"}[str(t[0])]])
-		crow.add_child(UiKit.choice_grid("CombineTest", opts_c, _combine, 5, func(k):
-			_combine = str(k)
-			_shown = PAGE_SIZE
-			_show_board()))
-		if _combine != "":
-			var what := UiKit.lbl("%s. %s" % [str(Combine.test(_combine)[1]), str(Combine.test(_combine)[4])],
-					UiKit.SECONDARY, UiKit.MUTED)
-			what.name = "CombineWhat"
-			what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			crow.add_child(what)
-		combine.toggled.connect(func(on: bool):
-			_combine_open = on
-			crow.visible = on
-			if not on and _combine != "":
-				_combine = ""
-				_show_board())
-
-	_advanced = UiKit.vbox(6)
-	_advanced.visible = _advanced_open
-	v.add_child(_advanced)
-	var opts := UiKit.hbox(6)
-	_advanced.add_child(opts)
-	var clubs := UiKit.option()
-	clubs.name = "OriginClubFilter"
-	var origin_values := []
-	if _draft.intake_mode:
-		for p in _draft.pool:
-			var team := str(p["club"])
-			if not origin_values.has(team):
-				origin_values.append(team)
-		origin_values.sort()
-		clubs.add_item("All recruiting clubs")
-	else:
-		# The clubs that actually have players in this draft's pool - the
-		# founding eighteen in the first season, not every club that will ever exist.
-		var present := {}
-		for p in _draft.pool:
-			present[str(p.get("club", ""))] = true
-		for code in GameDB.club_order:
-			if present.has(code):
-				origin_values.append(code)
-		clubs.add_item("All original clubs")
-	for value in origin_values:
-		clubs.add_item(GameDB.club_name(str(value)))
-	clubs.select(0 if _club_filter.is_empty() else origin_values.find(_club_filter) + 1)
-	clubs.item_selected.connect(func(idx: int):
-		_club_filter = "" if idx == 0 else str(origin_values[idx - 1])
-		_shown = PAGE_SIZE
-		_refresh_board(true))
-	opts.add_child(clubs)
 	var sort_option := UiKit.option()
 	sort_option.name = "SortPlayers"
 	var sort_options := _sort_options()
@@ -839,68 +752,7 @@ func _filters() -> Control:
 		_sort = str(sort_options[idx][0])
 		_shown = PAGE_SIZE
 		_refresh_board(true))
-	opts.add_child(sort_option)
-	if _draft.league_mode and not _draft.intake_mode:
-		var stage_row := UiKit.hbox(6)
-		_advanced.add_child(stage_row)
-		var stage_label := UiKit.lbl("Career stage", UiKit.SECONDARY, UiKit.MUTED)
-		stage_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		stage_row.add_child(stage_label)
-		var stage_option := UiKit.option()
-		stage_option.name = "CareerStageFilter"
-		for i in range(CAREER_STAGES.size()):
-			stage_option.add_item(str(CAREER_STAGES[i][1]))
-			if str(CAREER_STAGES[i][0]) == _career_stage:
-				stage_option.select(i)
-		stage_option.item_selected.connect(func(idx: int):
-			_career_stage = str(CAREER_STAGES[idx][0])
-			_shown = PAGE_SIZE
-			_refresh_board(true))
-		stage_row.add_child(stage_option)
-	var kinds := UiKit.hbox(6)
-	_advanced.add_child(kinds)
-	var styles := []
-	var traits := []
-	for p in _draft.pool:
-		var st := PlayerProfile.player_type(p)
-		if st != "" and not styles.has(st):
-			styles.append(st)
-		for t in _traits_of(p):
-			if not traits.has(str(t)):
-				traits.append(str(t))
-	styles.sort()
-	traits.sort_custom(func(a, b): return _trait_label(a) < _trait_label(b))
-	var style_option := UiKit.option()
-	style_option.name = "StyleFilter"
-	style_option.add_item("Any playing style")
-	for st in styles:
-		style_option.add_item(str(st))
-	style_option.select(0 if _style.is_empty() else styles.find(_style) + 1)
-	style_option.item_selected.connect(func(idx: int):
-		_style = "" if idx == 0 else str(styles[idx - 1])
-		_shown = PAGE_SIZE
-		_refresh_board(true))
-	kinds.add_child(style_option)
-	var trait_option := UiKit.option()
-	trait_option.name = "TraitFilter"
-	trait_option.add_item("Any trait")
-	for t in traits:
-		trait_option.add_item(_trait_label(str(t)))
-	trait_option.select(0 if _trait.is_empty() else traits.find(_trait) + 1)
-	trait_option.item_selected.connect(func(idx: int):
-		_trait = "" if idx == 0 else str(traits[idx - 1])
-		_shown = PAGE_SIZE
-		_refresh_board(true))
-	kinds.add_child(trait_option)
-	var avail := UiKit.btn("Available only", 14)
-	avail.name = "AvailableOnly"
-	avail.toggle_mode = true
-	avail.button_pressed = _available_only
-	avail.toggled.connect(func(on: bool):
-		_available_only = on
-		_shown = PAGE_SIZE
-		_refresh_board(true))
-	_advanced.add_child(avail)
+	search_row.add_child(sort_option)
 	_board_info = UiKit.lbl("", UiKit.SMALL, UiKit.MUTED)
 	v.add_child(_board_info)
 	return v
@@ -924,23 +776,6 @@ func _set_role(role: String) -> void:
 	_refresh_board(true)
 
 
-func _career_stage_for_age(age: float) -> String:
-	if age <= 0.0:
-		return ""
-	if age < ROOKIE_MAX_AGE:
-		return "rookie"
-	if age < PRIME_MAX_AGE:
-		return "prime"
-	return "veteran"
-
-
-func _career_stage_label(key: String) -> String:
-	for stage in CAREER_STAGES:
-		if str(stage[0]) == key:
-			return str(stage[1])
-	return ""
-
-
 ## His traits, and Tagger when he is one (Roles: a role, read like a trait
 ## when choosing players).
 func _traits_of(p: Dictionary) -> Array:
@@ -954,21 +789,8 @@ func _trait_label(key: String) -> String:
 	return "Tagger" if key == "tagger" else Traits.label(key)
 
 
-func _board_rows(available := _available_only) -> Array:
-	var rows := _draft.board(_role, _club_filter, _search.strip_edges(), _sort, available)
-	if _combine != "":
-		rows = Combine.sort_rows(rows, _combine, _draft.seed)
-	if not _style.is_empty() or not _trait.is_empty():
-		rows = rows.filter(func(p):
-			return (_style.is_empty() or PlayerProfile.player_type(p) == _style) \
-					and (_trait.is_empty() or _traits_of(p).has(_trait)))
-	if not _draft.league_mode or _draft.intake_mode or _career_stage.is_empty():
-		return rows
-	var filtered := []
-	for p in rows:
-		if _career_stage_for_age(float(p.get("age", 0.0))) == _career_stage:
-			filtered.append(p)
-	return filtered
+func _board_rows(available := true) -> Array:
+	return _draft.board(_role, "", _search.strip_edges(), _sort, available)
 
 
 ## The pool's filter line: "26 available · best scouted". During draft night's
@@ -983,25 +805,16 @@ func _refresh_pool_info() -> void:
 		if str(sort_entry[0]) == _sort:
 			sort_label = str(sort_entry[1]).to_lower()
 	var role_text := "" if _role.is_empty() else _role + " "
-	_board_info.text = "%d %s%s · %s" % [n, role_text,
-			"available" if _available_only else "players", sort_label]
-	if _combine != "":
-		_board_info.text = "%d %s%s · best %s first" % [n, role_text,
-				"available" if _available_only else "players", str(Combine.test(_combine)[1]).to_lower()]
-	if _draft.intake_mode and _available_only and _role.is_empty() and _club_filter.is_empty() and _combine == "" \
-			and _search.strip_edges() == "" and _style.is_empty() and _trait.is_empty():
+	_board_info.text = "%d %savailable · %s" % [n, role_text, sort_label]
+	if _draft.intake_mode and _role.is_empty() and _search.strip_edges() == "":
 		# The board already says how many are left: the line keeps only the order.
 		_board_info.text = sort_label.left(1).to_upper() + sort_label.substr(1)
-	if not _club_filter.is_empty():
-		_board_info.text += " · " + GameDB.club_short(_club_filter)
-	if not _career_stage.is_empty() and _draft.league_mode:
-		_board_info.text += " · " + _career_stage_label(_career_stage).to_lower()
 
 
 ## Prospects picked in the part of the night the board has not replayed yet
 ## that the pool's filters would show.
 func _hidden_in_filter() -> int:
-	if _shown_upto < 0 or not _available_only:
+	if _shown_upto < 0:
 		return 0
 	var hidden := {}
 	for i in range(_shown_picks(), _draft.pick_history.size()):
@@ -1019,8 +832,6 @@ func _refresh_board(reset_scroll := false) -> void:
 	if _phase != "board" or not is_instance_valid(_board_box):
 		return
 	UiKit.clear(_board_box)
-	if _combine != "":
-		_combine_field = Combine.field(_draft.pool, _combine, _draft.seed)
 	var rows := _board_rows()
 	_pool_total.text = "%d available" % (_draft.pool.size() - _draft.picked.size())
 	_pool_rows_n = rows.size()
@@ -1030,7 +841,7 @@ func _refresh_board(reset_scroll := false) -> void:
 		_board_box.add_child(_player_row(rows[i]))
 	if rows.is_empty():
 		_board_box.add_child(UiKit.lbl("No players match these filters.", UiKit.NAME, UiKit.TEXT, true))
-		_board_box.add_child(UiKit.lbl("Try another position, club or player name.", 14, UiKit.MUTED))
+		_board_box.add_child(UiKit.lbl("Try another position or player name.", 14, UiKit.MUTED))
 		var reset := UiKit.btn("Clear filters", 14)
 		reset.pressed.connect(_clear_filters)
 		_board_box.add_child(reset)
@@ -1047,13 +858,8 @@ func _refresh_board(reset_scroll := false) -> void:
 
 func _clear_filters() -> void:
 	_role = ""
-	_club_filter = ""
 	_search = ""
 	_sort = "overall"
-	_career_stage = ""
-	_style = ""
-	_trait = ""
-	_available_only = true
 	_shown = PAGE_SIZE
 	_show_board()
 
@@ -1138,14 +944,6 @@ func _player_row(p: Dictionary) -> Control:
 		kind.append(_trait_label(str(t)))
 	var kind_line := _row_line(" · ".join(kind), UiKit.MUTED)
 	kind_line.name = "Kind_" + str(p["id"])
-	if _combine != "":
-		# On a Combine sort, his result in that test replaces how he plays.
-		var r := Combine.result(p, _combine, _draft.seed)
-		var said := Combine.text(_combine, r)
-		var stand := Combine.standing(_combine, r, _combine_field)
-		kind_line = _row_line(said + ("" if stand == "" else "  ·  " + stand),
-				UiKit.TEXT if r >= 0.0 else UiKit.MUTED, r >= 0.0)
-		kind_line.name = "CombineResult_" + str(p["id"])
 	face.add_child(kind_line)
 	top.add_child(UiKit.line("›", 20, UiKit.MUTED, true))
 	_ignore_mouse(face)
@@ -1676,12 +1474,12 @@ func _open_player(id: String) -> void:
 				tr.add_child(UiKit.line(stand, 13, UiKit.MUTED))
 			tr.add_child(UiKit.line(Combine.text(key, r), 14, UiKit.TEXT if r >= 0.0 else UiKit.MUTED, r >= 0.0))
 			v.add_child(tr)
-	# Seen in your intra-club match (the pre-season): what he did that day.
+	# Seen in your pre-season match: what he did that day.
 	var seen_line := PreSeason.seen_line(p, _club) if Features.on("preseason") else ""
 	if seen_line != "":
 		v.add_child(UiKit.spacer(4))
 		var seen_lbl := UiKit.lbl(seen_line, UiKit.SECONDARY, UiKit.TEXT, true)
-		seen_lbl.name = "SeenIntraClub"
+		seen_lbl.name = "SeenPreSeason"
 		seen_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(seen_lbl)
 	if scouted:

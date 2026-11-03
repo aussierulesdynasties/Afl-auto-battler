@@ -141,23 +141,5 @@ static func field(pool: Array, key: String, seed: int) -> Array:
 	return out
 
 
-## Sort `rows` best first on one test; those who did not test go last.
-static func sort_rows(rows: Array, key: String, seed: int) -> Array:
-	var low_best := bool(test(key)[3])
-	var scored := []
-	for p in rows:
-		scored.append([result(p, key, seed), p])
-	scored.sort_custom(func(a, b):
-		var x := float(a[0])
-		var y := float(b[0])
-		if x < 0.0 or y < 0.0:
-			return y < 0.0 and x >= 0.0
-		return x < y if low_best else x > y)
-	var out := []
-	for s in scored:
-		out.append(s[1])
-	return out
-
-
 static func _key(p: Dictionary, seed: int, suffix: String) -> String:
 	return "combine|%d|%s|%s" % [seed, str(p.get("id", "")), suffix]

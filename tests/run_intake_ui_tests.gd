@@ -242,8 +242,6 @@ func _test_intake_by_taps() -> void:
 	ui.set("_role", "RUCK")
 	ui.set("_search", "a")
 	ui.set("_sort", "overall")
-	ui.set("_club_filter", "Sandringham Dragons" if _has_sandringham(draft) else "")
-	ui.set("_advanced_open", true)
 	ui.call("_show_board")
 	await _settle()
 	var before := _snapshot(ui)
@@ -260,14 +258,6 @@ func _test_intake_by_taps() -> void:
 			await _settle()
 			_check_layout(ui, label + " / " + tab)
 		ui.call("_select_tab", "pool")
-
-	# The recruiting-club filter uses junior clubs, not the 18 AFL codes.
-	var filter: OptionButton = ui.find_child("OriginClubFilter", true, false)
-	var saw_junior := false
-	for i in range(filter.item_count):
-		if str(filter.get_item_text(i)).contains("Dragons"):
-			saw_junior = true
-	_check(_junior_filter_ok(saw_junior), "The origin filter lists recruiting clubs in intake mode")
 
 	ui.call("_clear_filters")
 	await _settle()
@@ -552,19 +542,6 @@ func _line_text(c: Control) -> String:
 	return str(c.get("text"))
 
 
-func _has_sandringham(draft) -> bool:
-	for p in draft.pool:
-		if str(p["club"]) == "Sandringham Dragons":
-			return true
-	return false
-
-
-func _junior_filter_ok(found: bool) -> bool:
-	# The 2026 class always contains Sandringham Dragons kids; generated-only
-	# pools (no CSV) legitimately lack that name.
-	return found or _db.draftees.is_empty()
-
-
 func _snapshot(ui: Control) -> Dictionary:
 	var draft = _state.draft
 	var out := {
@@ -573,8 +550,7 @@ func _snapshot(ui: Control) -> Dictionary:
 		"counts": draft.role_counts(),
 		"pick_index": draft.pick_index,
 	}
-	for key in ["_role", "_search", "_sort", "_club_filter", "_available_only",
-			"_advanced_open", "_history_club"]:
+	for key in ["_role", "_search", "_sort", "_history_club"]:
 		out[key] = ui.get(key)
 	return out
 
