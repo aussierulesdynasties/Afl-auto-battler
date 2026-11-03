@@ -752,9 +752,9 @@ func _week_jobs_card() -> Control:
 			UiKit.SECONDARY, UiKit.MUTED, true)
 	head.name = "WeekJobsHead"
 	v.add_child(head)
-	# The big call's slot: the coach-arcs step fills it. Nothing shows without one.
+	# The big call's slot (WeekChecklist.big_call). Nothing shows without one.
 	if not call.is_empty():
-		var bc := _week_job_row(str(call.get("text", "")), false, str(call.get("route", "")), true)
+		var bc := _week_job_row(str(call.get("text", "")), bool(call.get("done", false)), str(call.get("route", "")), true)
 		bc.name = "BigCall"
 		v.add_child(bc)
 	for it in items:
