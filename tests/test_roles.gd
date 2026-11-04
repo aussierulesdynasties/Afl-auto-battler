@@ -615,9 +615,15 @@ func _test_list_profile() -> void:
 	var words := []
 	for r in range(n):
 		words.append(ListProfile.word(r, n))
-	_check(words.count("Elite") >= 2 and words.count("Elite") <= 4 and words.count("Weak") >= 4
+	_check(n == 18 and words.count("Elite") == 3 and words.count("Weak") >= 4
 			and words[0] == "Elite" and words[n - 1] == "Weak",
 			"The words spread across the league (%s)" % str(words))
+	# T8.Q2: Elite is the top three of eighteen. Rank 2 is Elite, rank 3 is
+	# Strong. Measured on six drafted leagues (seeds 11-66): 3 Elite clubs per
+	# strength in 35 of 36 (one aerial tie at third read 4: tied clubs share a
+	# rank, so a tie at third reads Elite); at 0.17 it was 4.
+	_check(ListProfile.word(2, 18) == "Elite" and ListProfile.word(3, 18) == "Strong",
+			"Elite is the top three of eighteen, the fourth is Strong")
 	var mine := "COL"
 	var prof := ListProfile.profile(grounds, mine)
 	var labels := prof.map(func(r): return str(r["label"]))

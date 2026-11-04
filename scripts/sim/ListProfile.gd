@@ -24,7 +24,8 @@ const MEANS := {
 	"finishing": "Turning entries into scores: your best forwards' goalkicking, accuracy and marking.",
 }
 ## Where the words fall, as a share of the league from the top.
-const ELITE := 0.17
+## Elite is the top three of eighteen (rank 2 is 0.111, rank 3 is 0.167; T8.Q2).
+const ELITE := 0.15
 const STRONG := 0.44
 const AVERAGE := 0.72
 const MARKERS := 6

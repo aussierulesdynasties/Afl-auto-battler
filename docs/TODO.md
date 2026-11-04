@@ -48,7 +48,6 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 | 76 | AFL news layer: generated news items from the save (T5.Q11d) | items appear |
 | 77 | Set shots rise from about 37.5% to the real ~55% of shots, conversion set by distance, total scoring held flat (T8.Q9) | audit shows both |
 | 78 | Rare big margins come back through Momentum (100+ about 0.5% against real 1.9%); balance-gated (T8.Q4) | audit shows the blowout rate |
-| 79 | List Profile Elite is the top 3 of 18: check ListProfile.ELITE (now 0.17) and re-measure (T8.Q2) | constant and audit agree |
 | 80 | Club Forge create-a-player: one weakness compulsory, the second optional, no extra overall power (T8.Q12) | screen enforces it |
 | 82 | Itch gets Windows and Android APK builds beside web; price free (T7.O1, T7.O3); Google Play stays off until his written yes | export presets, builds on itch |
 | 84 | Ladder moves fully into Season stats: the hub nav bar loses Ladder; no other nav change (T3.Q13, T9.Q29) | no Ladder screen or nav entry, ladder reachable in Season stats, tap test |
