@@ -36,7 +36,6 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 | 63 | One cost sheet per club dominant option and one for the 33 gain-only story options, same look as the 17 story cards; nothing is dropped (T5.Q2, T5.Q3) | every option shows a real cost |
 | 64 | Custom prospect Alastair McNeil in the first national draft is the next build (4.Q8) | prospect in draft, story beats |
 | 65 | Draftees start lower: picks 1-5 about 60-62, 6-20 about 55-58, POT kept; his playtest still judges (4.Q9) | draft audit bands |
-| 66 | Teaching is XP scaling of -5% to +10% with Strong at 78+; fix the grade cut-offs to match (4.Q1) | grades and XP agree, test |
 | 67 | Management pays: trade period at real volume, recruiters' edge and development projects (4.Q11); balance-gated | audit across 8-10 seasons |
 | 68 | Culture effects (Standards, Togetherness, Ambition): size review now, shown to him with numbers (T5.Q7) | review shown to him |
 | 69 | Hub leads with one hero element, shown on the hub first (6.Q2) | hub capture, critics clean |
