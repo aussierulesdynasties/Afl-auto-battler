@@ -445,6 +445,7 @@ func _test_clanger_cause() -> void:
 	_check(names_ok, "The player named is of the side that erred")
 	_check(same_play, "The switch changes words and player credit, never the score or the events")
 	_check(off_clean, "Switch off: the old line, no cause")
+	_check(bool(ProjectSettings.get_setting("features/clanger_cause", false)), "Row 81: the switch ships on (project setting)")
 	_check(MatchSim.clanger_why({}, "wet") == "", "No disposal, no cause")
 	_check(MatchSim.clanger_why({"kind": "kick", "end": "tackle"}, "wet") == "", "A tackle has its own line: no cause")
 	_check(MatchSim.clanger_why({"kind": "kick", "end": ""}, "perfect") == "", "Dry still day: nothing to blame")

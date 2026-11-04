@@ -8,7 +8,7 @@ The itch page runs the browser build of main with every switch in section B off,
 
 | Build | Name | Ready when (rows and switches) | What a player sees |
 |---|---|---|---|
-| I1 | The new match | His playtest passes `match_flow`, `clanger_cause`, `ballup_two`, `goal_run_moves`, `kick_range`, `match_story`, `top_attributes`, then they go on. Rows 9, 17, 18 merged. | Play on after a won ball, a clanger says why, two honest late ball-up choices, hero and turning point after the match, top attributes on cards, feed colours and the matchup grid |
+| I1 | The new match | His playtest passes `match_flow`, `ballup_two`, `goal_run_moves`, `kick_range`, `match_story`, `top_attributes`, then they go on. Rows 9, 17, 18 merged. | Play on after a won ball, two honest late ball-up choices, hero and turning point after the match, top attributes on cards, feed colours and the matchup grid |
 | I2 | Safe to keep a career | T7.R84 save restore and frozen fixtures, 57 export/import, T5.Q24 migration, T8.Q20 faster weekly sim, T3.R56 onboarding on fresh saves. | Restore last good save, back up and move a career, no career lost on update, a quicker Sim the week, a fresh start that teaches |
 | I3 | Match day on a phone | T3.R42 one thumb, T3.R41 team selection as two screens, T3.R10 text size and colour-blind marks, 25 team builder setup before Start. (Done: 23 this week, 53 coaches' votes; 24 training grid is behind `training_grid`, off.) | Controls in thumb reach, score and clock always visible, Larger and Largest text, no scrolling team pick |
 | I4 | Look and feel | `ui_motion` on after his look (#907 and V1), V2 to V9 merged, hub hero (6.Q2), `player_looks` on, 6.36 app icon. | Result sheet and counts that move, the premiership streamers and the Brownlow sparkles, a hub that leads with one big thing, new faces, a real icon |
@@ -51,7 +51,6 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 | 78 | Rare big margins come back through Momentum (100+ about 0.5% against real 1.9%); balance-gated (T8.Q4) | audit shows the blowout rate |
 | 79 | List Profile Elite is the top 3 of 18: check ListProfile.ELITE (now 0.17) and re-measure (T8.Q2) | constant and audit agree |
 | 80 | Club Forge create-a-player: one weakness compulsory, the second optional, no extra overall power (T8.Q12) | screen enforces it |
-| 81 | `clanger_cause` ships on: set `features/clanger_cause` true in project.godot; row 12 leaves section B (row 12 ruling) | project setting on, test |
 | 82 | Itch gets Windows and Android APK builds beside web; price free (T7.O1, T7.O3); Google Play stays off until his written yes | export presets, builds on itch |
 | 84 | Ladder moves fully into Season stats: the hub nav bar loses Ladder; no other nav change (T3.Q13, T9.Q29) | no Ladder screen or nav entry, ladder reachable in Season stats, tap test |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
@@ -71,7 +70,6 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 | 35, 36 | Finals cards slice 2 and Grand Final cards | `finals_cards_2` | #864 |
 | 52 | Expansion package, training report, speccy front | `expansion_package`, `training_report`, `speccy_front` | #745 #741 |
 | 11 | Stoppages from contests, play on after a won ball. Only partly met with the switch on: spoils 0.57 of real, intercept marks 0.76, ground ball gets 0.71 (`docs/research/MATCH_FLOW_AUDIT_2026-11-04.md`); a spilled tackle is counted as an intercept. Open: another tuning pass, or his playtest first | `match_flow` | #897 #901 |
-| 12 | A clanger names a real cause (wet ball, wind) in the feed. Ships on (row 81) | `clanger_cause` | #905 |
 | 13 | Every in-match decision opens on a vignette scene. Time pauses at a decision, so scenes do not fight live speed. Parked behind the section 1.11 playtest gate by his ruling | `decision_scenes` | #902 #908 |
 | 14 | Opposition goal run as two football moves over the centre ball-up | `goal_run_moves` | #903 |
 | 15 | Late-game centre ball-up: two distinct choices | `ballup_two` | #895 |
