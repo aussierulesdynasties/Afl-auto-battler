@@ -201,7 +201,8 @@ func _side_page(auto: bool) -> Control:
 func _open_week() -> void:
 	_close_week()
 	# The page behind is dimmed hard (0.92): nothing under the sheet competes.
-	var box := UiKit.modal_box(self, 560.0, 0.0, UiKit.AUTO_COLOUR, 0.92)
+	# One neutral surface, no club wash: a red-brown top reads as the action or BAD colour.
+	var box := UiKit.modal_box(self, 560.0, 0.0, UiKit.PANEL, 0.92)
 	_week_overlay = box["overlay"]
 	_week_overlay.name = "WeekSheet"
 	var v: VBoxContainer = box["body"]
@@ -298,7 +299,7 @@ func _apply_strategy(key: String) -> void:
 
 ## This week: what the choice rests on, from the side as arranged now.
 func _week_page() -> Control:
-	var v := UiKit.vbox(GAP)
+	var v := UiKit.vbox(_gap())
 	v.name = "WeekPage"
 	_fill_week(v)
 	return v
@@ -317,13 +318,14 @@ func _fill_week(v: VBoxContainer) -> void:
 		var heading := UiKit.hbox(6)
 		heading.name = "WeekHeading"
 		heading.add_child(UiKit.line("This week, %s" % ("at home" if str(nxt["venue"]) == "home" else "away"),
-				UiKit.HEADING, UiKit.TEXT, true))
+				UiKit.TITLE, UiKit.TEXT, true))
 		v.add_child(heading)
 		# Both sides' key forwards and defenders lead the sheet, as facts. Who
 		# goes to each is set before the first ball-up, not here.
 		var kp := GameState.week_key_players(code)
 		if not kp.is_empty():
 			v.add_child(_key_players(kp, code))
+			v.add_child(_rule())
 		# What your assistant has seen of them - said there, and only there.
 		var report := _outline_btn("Assistant's report ›")
 		report.name = "AssistantReport"
@@ -332,8 +334,11 @@ func _fill_week(v: VBoxContainer) -> void:
 		var lines := UiKit.vbox(8)
 		lines.name = "HeadToHead"
 		v.add_child(lines)
+		# Midfield and ruck only: forwards against defenders is what the key
+		# players above already show, side by side.
 		for row in GameState.my_head_to_head(code):
-			lines.add_child(_h2h_row(row))
+			if ["midfield", "ruck"].has(str(row["key"])):
+				lines.add_child(_h2h_row(row))
 	v.add_child(_synergy_view())
 	# What the week says about your own people, set apart from the facts above.
 	var notes := UiKit.vbox(8)
@@ -368,15 +373,25 @@ func _fill_week(v: VBoxContainer) -> void:
 
 ## One spacing scale for the week: 8 inside a block, 16 between blocks.
 const GAP := 16
+
+
+## 16 between blocks on a phone; a PC window shows the side and the week
+## together with no scroll, so it spaces them closer (and clicks smaller targets).
+func _gap() -> int:
+	return 10 if _roomy() else GAP
+
+
+func _roomy() -> bool:
+	return ScreenLayout.roomy(UiKit.view_width(self), UiKit.view_height(self))
 ## Near-white for the facts a coach reads closely (TEXT is the full white).
 const SOFT := Color("d6d2c8")
 
 
-## A secondary action: an outline, thumb-high (48), across the sheet. The same
+## A secondary action: an outline, thumb-high (52), across the sheet. The same
 ## on every club - the accent is for the one primary action, and this sheet has none.
 func _outline_btn(text: String) -> Button:
 	var b := UiKit.btn(text, UiKit.NAME)
-	b.custom_minimum_size = Vector2(0, 48)
+	b.custom_minimum_size = Vector2(0, 48 if _roomy() else 52)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var sb := UiKit.style(Color.TRANSPARENT, 8, UiKit.RADIUS, SOFT)
 	sb.set_border_width_all(2)
@@ -393,7 +408,7 @@ func _outline_btn(text: String) -> Button:
 func _h2h_row(row: Dictionary) -> Control:
 	var text := str(row["text"])
 	var cut := text.find(": ")
-	var one := UiKit.vbox(0)
+	var one := UiKit.vbox(8)
 	one.name = "H2H_" + str(row["key"])
 	one.set_meta("plain", text)
 	if cut < 0:
@@ -419,18 +434,46 @@ func _note_row(body: Control, ink: Color) -> Control:
 	return row
 
 
-## Both sides' key forwards and key defenders, your side on the left and
-## theirs on the right: height and how they mark, one player a line. One rule
-## for both sides: the club's readable colour as a bar over its column, its
-## names in plain near-white (never white for one side and colour for the other).
+## A thin rule between the facts above and the report below.
+func _rule() -> Control:
+	var r := ColorRect.new()
+	r.name = "SheetRule"
+	r.color = Color(UiKit.TEXT, 0.14)
+	r.custom_minimum_size = Vector2(0, 1)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return r
+
+
+## A guernsey on a light tile, so a dark club (Carlton's navy) still reads on
+## the dark page: 30 px of crest on a 36 px tile.
+func _crest_tile(code: String) -> Control:
+	var tile := PanelContainer.new()
+	tile.name = "CrestTile"
+	tile.add_theme_stylebox_override("panel", UiKit.style(Color("e8e4da"), 3, UiKit.RADIUS))
+	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tile.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	tile.add_child(UiKit.club_marker(code, 30.0))
+	return tile
+
+
+## Both sides' key forwards and key defenders, your side on the left (marked
+## "You") and theirs on the right: height and how they mark, one player a line.
+## One rule for both sides: the club's readable colour as a bar over its column
+## and on its name (a red club's name stays plain, as everywhere: red is the bar
+## and the crest), the crest on a light tile. Rows are facts, not buttons.
 func _key_players(kp: Dictionary, opp: String) -> Control:
+	var tight := _roomy()
 	var cols := UiKit.hbox(GAP)
 	cols.name = "KeyMatchups"
 	var inks: Array = UiKit.club_ink_pair(GameState.my_club, opp)
 	var at := 0
+	var wrap_head := false
+	for c in [GameState.my_club, opp]:
+		if UiKit.BOLD.get_string_size(GameDB.club_name(str(c)), HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.NAME).x > 112.0:
+			wrap_head = true
 	for side in ["mine", "theirs"]:
 		var code: String = GameState.my_club if side == "mine" else opp
-		var col := UiKit.vbox(8)
+		var col := UiKit.vbox(6 if tight else 12)
 		col.name = "KeySide_" + side
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		col.size_flags_stretch_ratio = 1.0
@@ -440,20 +483,36 @@ func _key_players(kp: Dictionary, opp: String) -> Control:
 		bar.custom_minimum_size = Vector2(0, 4)
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		col.add_child(bar)
-		at += 1
-		var head := UiKit.hbox(6)
+		var head := UiKit.hbox(8)
 		head.name = "ClubHead"
-		head.add_child(UiKit.club_marker(code, 24.0))
-		head.add_child(UiKit.ellipsis(GameDB.club_name(code), UiKit.HEADING, UiKit.TEXT, true))
+		head.add_child(_crest_tile(code))
+		var who := UiKit.vbox(0)
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var mark := UiKit.line("You" if side == "mine" else "Them", UiKit.SECONDARY,
+				UiKit.TEXT if side == "mine" else SOFT, side == "mine")
+		mark.name = "SideMark"
+		who.add_child(mark)
+		# The whole name, over two lines if it needs them (Greater Western Sydney).
+		var nm := UiKit.lbl(GameDB.club_name(code), UiKit.NAME, UiKit.club_name_colour(inks[at]), true)
+		nm.name = "ClubName"
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.custom_minimum_size = Vector2(0, 0)
+		who.add_child(nm)
+		head.add_child(who)
+		# Both heads stand as tall as the longer name needs, so the two columns line up.
+		if wrap_head and not tight:
+			head.custom_minimum_size = Vector2(0, 64)
 		col.add_child(head)
-		for group in [["fwd", "Key forwards"], ["def", "Key defenders"]]:
+		at += 1
+		for group in [["fwd", "Key forwards, marking"], ["def", "Key defenders, marking"]]:
 			var list: Array = (kp[side] as Dictionary)[group[0]]
 			if list.is_empty():
 				continue
-			var sec := UiKit.vbox(8)
-			sec.add_child(UiKit.lbl(str(group[1]), UiKit.SECONDARY, UiKit.TEXT, true))
+			var sec := UiKit.vbox(4 if tight else 12)
+			sec.add_child(UiKit.lbl(str(group[1]), UiKit.SECONDARY, SOFT, true))
 			for p in list:
 				var one := UiKit.vbox(0)
+				one.custom_minimum_size = Vector2(0, 0 if tight else 48)
 				one.name = ("KeyForward_" if group[0] == "fwd" else "KeyDefender_") + str(p["id"])
 				one.add_child(UiKit.ellipsis(GameDB.player_display_name(p), UiKit.NAME, UiKit.TEXT, true))
 				one.add_child(_air_line(p))
@@ -463,29 +522,41 @@ func _key_players(kp: Dictionary, opp: String) -> Control:
 	return cols
 
 
-## "196 cm, strong marking", said as figures and words: the height as a
-## scoreboard figure, and how he marks with its grade in bold. Wraps whole
-## words onto a second line rather than cutting any.
+## "196 cm  strong": the height as a scoreboard figure with a light "cm", then
+## the grade, which steps up in weight and size as it gets better (elite is the
+## biggest and boldest, average the plainest) in the text colours only, so it is
+## never read as GOOD or BAD. What is graded is said once, in the section label.
 func _air_line(p: Dictionary) -> Control:
 	var flow := HFlowContainer.new()
-	flow.add_theme_constant_override("h_separation", 8)
+	flow.add_theme_constant_override("h_separation", 10)
 	flow.add_theme_constant_override("v_separation", 0)
 	flow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if float(p.get("height_cm", 0.0)) > 0.0:
 		var h := UiKit.line("%d" % int(p["height_cm"]), 20, UiKit.TEXT, true)
 		h.add_theme_font_override("font", UiKit.DISPLAY)
-		var cm := UiKit.line("cm", UiKit.SMALL, SOFT)
-		var hh := UiKit.hbox(2)
+		var cm := UiKit.line("cm", UiKit.SECONDARY, SOFT)
+		var hh := UiKit.hbox(3)
 		hh.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hh.add_child(h)
 		hh.add_child(cm)
 		flow.add_child(hh)
-	var g := PlayerProfile.grade(PlayerProfile.percentile(p, "marking"))
-	var mk := UiKit.hbox(4)
-	mk.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	mk.add_child(UiKit.line(g.to_lower() if g != "" else "average", UiKit.SECONDARY, UiKit.TEXT, true))
-	mk.add_child(UiKit.line("marking", UiKit.SMALL, SOFT))
-	flow.add_child(mk)
+	var g := PlayerProfile.grade(PlayerProfile.percentile(p, "marking")).to_lower()
+	if g == "":
+		g = "average"
+	var size := UiKit.SECONDARY
+	var bold := true
+	var ink := UiKit.TEXT
+	match g:
+		"elite":
+			size = UiKit.NAME
+		"good":
+			bold = false
+		"average":
+			bold = false
+			ink = SOFT
+	var gl := UiKit.line(g, size, ink, bold)
+	gl.name = "Grade"
+	flow.add_child(gl)
 	return flow
 
 
@@ -499,13 +570,14 @@ func _synergy_view() -> Control:
 	for r in Traits.progress(GameState.my_squad().ground):
 		if bool(r["active"]):
 			on.append(Traits.with_effect(str(r["key"])))
+	# One pattern for both lines, one colour: the lead-in, the name, what it does or needs.
 	var l := TraitLink.line("Your side has: " + ", ".join(on) + "." if not on.is_empty()
-			else "No line synergies in this side.", UiKit.SECONDARY, UiKit.GOOD if not on.is_empty() else SOFT)
+			else "No line synergies in this side.", UiKit.SECONDARY, UiKit.TEXT)
 	l.name = "SynergyLine"
 	h.add_child(l)
-	var short := Traits.short_text(GameState.my_squad().ground)
+	var short := Traits.short_words(GameState.my_squad().ground)
 	if short != "":
-		var s := TraitLink.line(short, UiKit.SECONDARY, SOFT)
+		var s := TraitLink.line(short, UiKit.SECONDARY, UiKit.TEXT)
 		s.name = "SynergyShort"
 		h.add_child(s)
 	var rules := _outline_btn("Synergies")

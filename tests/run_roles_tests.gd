@@ -77,14 +77,14 @@ func _test_selection_tests() -> void:
 	# This week, line against line: both sides in the same words.
 	var h2h: Node = ui.find_child("HeadToHead", true, false)
 	var h2h_lines: Array = h2h.get_children() if h2h != null else []
-	var h2h_ok := h2h_lines.size() == 4
+	var h2h_ok := h2h_lines.size() == 2
 	for l in h2h_lines:
-		if not (_plain(l).contains("yours") or _plain(l).contains(" v ")):
+		if not (_plain(l).contains("yours") or _plain(l).contains("even, both")):
 			h2h_ok = false
 	_check(h2h_ok, "The matchup reads line against line (%s)" %
 			" | ".join(h2h_lines.map(func(l): return _plain(l))))
 	var mid_line: Control = ui.find_child("H2H_midfield", true, false)
-	_check(mid_line != null and _plain(mid_line).begins_with("Midfield: yours "), "Midfield sets yours against theirs")
+	_check(mid_line != null and _plain(mid_line).begins_with("Midfield: "), "Midfield sets yours against theirs")
 	# Their key forwards are facts here; who goes to them and the game plan are
 	# asked only in the pre-bounce menu (director, 2026-10-13).
 	var km: Node = ui.find_child("KeyMatchups", true, false)
@@ -92,7 +92,7 @@ func _test_selection_tests() -> void:
 			"Selection names their key forwards")
 	_check(km != null and not km.find_children("KeyDefender_*", "Control", true, false).is_empty()
 			and km.find_child("KeySide_mine", true, false) != null and km.find_child("KeySide_theirs", true, false) != null
-			and str(_screen_text(km)).contains("cm") and str(_screen_text(km)).contains("marking"),
+			and str(_screen_text(km)).contains("cm") and str(_screen_text(km)).contains("Key forwards, marking"),
 			"Selection shows both sides' key forwards and defenders, side by side, with height and marking")
 	var small_text := 0
 	for kl in (km.find_children("*", "Label", true, false) if km != null else []):
@@ -123,7 +123,7 @@ func _test_selection_tests() -> void:
 	_check(rules_btn != null and rules_btn.size.y >= 44, "A Synergies button opens the rules")
 	# The nearest synergy the side doesn't have, as a fact (director: "Build it").
 	var short_l: RichTextLabel = ui.find_child("SynergyShort", true, false)
-	var short_want := Traits.short_text(_state.my_squad().ground)
+	var short_want := Traits.short_words(_state.my_squad().ground)
 	_check((short_l == null and short_want == "") or (short_l != null and short_l.get_parsed_text() == short_want),
 			"Selection says the nearest synergy and what it's short (%s)" % short_want)
 	var lock := func(n: int) -> Array:
@@ -133,6 +133,8 @@ func _test_selection_tests() -> void:
 		return out
 	_check(Traits.short_text(lock.call(2)) == "Lockdown unit: 1 lockdown player short.",
 			"One traited player missing says which synergy and what it's short: %s" % Traits.short_text(lock.call(2)))
+	_check(Traits.short_words(lock.call(2)) == "One short: Lockdown unit (needs one more stopper).",
+			"The sheet says it in a coach's words: %s" % Traits.short_words(lock.call(2)))
 	_check(Traits.short_text(lock.call(3)) == "", "A synergy that's on isn't short")
 	_check(Traits.short_text(lock.call(1)) == "" and Traits.short_text([]) == "",
 			"Two or more short says nothing")
