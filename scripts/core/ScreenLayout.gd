@@ -75,7 +75,9 @@ func _update_scale() -> void:
 	# field has focus means a keyboard: keep the scale the screen had. Not on
 	# a desktop, which has no such keyboard: there a window made shorter is
 	# just a shorter window.
-	keyboard_up = not is_desktop() and _kept_density > 0.0 			and int(pixels.x) == _kept_width and typing()
+	# Only a touch device has one: a PC's browser made shorter is a shorter
+	# window too, and holding its scale there would freeze the layout.
+	keyboard_up = is_touch() and _kept_density > 0.0 			and int(pixels.x) == _kept_width and typing()
 	if keyboard_up:
 		density = _kept_density
 	else:
@@ -263,9 +265,31 @@ static func is_phone() -> bool:
 	return force_web_phone or OS.has_feature("android") or OS.has_feature("ios") 			or OS.has_feature("web_android") or OS.has_feature("web_ios")
 
 
-## "Tap" on a phone (native or its browser), "Click" everywhere else.
+## A test stands in for a touch screen whose browser says it is a desktop.
+static var force_touch := false
+## What the browser said, asked once (-1 = not yet asked).
+static var _web_touch := -1
+
+
+## A touch screen: a phone (native or its browser), or a tablet's browser that
+## sends a desktop user agent (iPadOS Safari, Android's "desktop site"), told
+## by its coarse pointer. A touch-screen laptop has a fine pointer (its mouse
+## or pad) and stays a PC. Wording and the phone keyboard follow this; the
+## layout follows the screen's size (roomy, wide_view).
+static func is_touch() -> bool:
+	if force_touch or is_phone():
+		return true
+	if force_web or not OS.has_feature("web"):
+		return false
+	if _web_touch < 0:
+		var t = JavaScriptBridge.eval("(navigator.maxTouchPoints || 0) > 0 && !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches)")
+		_web_touch = 1 if bool(t) else 0
+	return _web_touch == 1
+
+
+## "Tap" on a touch screen, "Click" everywhere else.
 static func tap_word() -> String:
-	return "Tap" if is_phone() else "Click"
+	return "Tap" if is_touch() else "Click"
 
 
 ## LAYOUT, not platform: a roomy landscape window gets the wide layouts (side
