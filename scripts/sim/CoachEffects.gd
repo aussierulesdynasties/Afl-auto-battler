@@ -52,43 +52,31 @@ const TEACH_SA := 0.02       # the senior assistant, a little for everyone
 const TEACH_MIN := -0.05
 const TEACH_MAX := 0.10
 const YOUNG := 22.0
+## The grade words' cut-offs (Coaches.GRADES); a test holds them equal.
+const GOOD_CUT := 68.0
+const STRONG_CUT := 78.0
+
+## A teacher's XP level follows his grade word (4.Q1): Fair (under 68) takes
+## XP away, Good (68-77) leaves it as it was, Strong (78+) adds. Outside the
+## Good band the curve is the usual level().
+static func teach_level(v: float) -> float:
+	if v >= GOOD_CUT and v < STRONG_CUT:
+		return 0.0
+	return level(v)
 
 ## Multiplier on one player's match XP: 0.95 .. 1.10.
 static func xp_mult(staff: Dictionary, p: Dictionary, on_ground: bool) -> float:
 	var young := float(p.get("age", 25.0)) <= YOUNG or not on_ground
-	var b := TEACH_LINE * level(_fit(staff, line_job(p)))
-	b += (TEACH_DEV if young else TEACH_DEV_OTHER) * level(_fit(staff, "DEV"))
-	b += TEACH_SA * level(_skill(staff, "SA", "teach"))
+	var b := TEACH_LINE * teach_level(_fit(staff, line_job(p)))
+	b += (TEACH_DEV if young else TEACH_DEV_OTHER) * teach_level(_fit(staff, "DEV"))
+	b += TEACH_SA * teach_level(_skill(staff, "SA", "teach"))
 	return 1.0 + clampf(b, TEACH_MIN, TEACH_MAX)
 
 
-## How far a club's teachers move a player's season training ceiling
-## (director, 2026-10-09, RPG-006): +1 under an elite teaching staff, -1 under
-## a poor or vacant one, 0 under a good one. Measured: XP alone did nothing,
-## because nearly every young player reached the +3 season ceiling anyway.
-## Reads the teaching skill itself: his line coach, and for a young player
-## the development coach as well, half each.
-## The cut-offs are the grade words' own (4.Q1): a Strong (78) teacher or
-## better lifts, a Fair one (under Good, 68) or a vacant job holds back.
-static var TEACH_UP := level(_grade_cut("Strong"))     # 0.4
-static var TEACH_DOWN := level(_grade_cut("Good"))     # -0.1; below it is Fair
-
-
-static func _grade_cut(word: String) -> float:
-	for g in Coaches.GRADES:
-		if str(g[1]) == word:
-			return float(g[0])
-	return 70.0
-
-
-static func teach_step(staff: Dictionary, p: Dictionary) -> int:
-	var s := level(_skill(staff, line_job(p), "teach"))
-	if float(p.get("age", 25.0)) <= YOUNG:
-		s = 0.5 * (s + level(_skill(staff, "DEV", "teach")))
-	if s >= TEACH_UP:
-		return 1
-	if s < TEACH_DOWN:
-		return -1
+## Teaching no longer moves a player's season training ceiling (director,
+## 4.Q1, 2026-11-04): "Teaching is XP scaling, not the season-ceiling point."
+## Kept as a neutral step so GameState.season_ceiling and old saves need no change.
+static func teach_step(_staff: Dictionary, _p: Dictionary) -> int:
 	return 0
 
 

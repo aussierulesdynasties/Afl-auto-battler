@@ -79,18 +79,29 @@ func _test_teaching() -> void:
 			and CoachEffects.xp_mult(dev, fwd, false) > CoachEffects.xp_mult(dev, fwd, true),
 			"The development coach helps the young and the reserves most")
 	_check(CoachEffects.xp_mult({}, fwd, true) < 1.0, "Empty jobs teach nobody (a weak staff, not an error)")
-	# 4.Q1: the grade words and the teaching effect agree at every cut-off.
-	var vet := {"role": "MID", "age": 28.0}
-	var line := func(v: int) -> Dictionary: return {"MID": {"skills": {"teach": v, "tactics": 70, "manage": 70}}}
+	# 4.Q1: the grade words and teaching XP agree at every skill value.
+	var empty := {}
 	for v in range(40, 100):
 		var word := Coaches.grade(v)
-		var step := CoachEffects.teach_step(line.call(v), vet)
-		var want := 1 if word in ["Strong", "Elite"] else (-1 if word == "Fair" else 0)
-		_check(step == want, "A %s (%d) teacher moves the ceiling %d, not %d" % [word, v, want, step])
+		var d := CoachEffects.xp_mult(_staff(v), fwd, true) - 1.0
+		var ok := (d < 0.0) if word == "Fair" else (is_equal_approx(d, 0.0) if word == "Good" else d > 0.0)
+		_check(ok, "A %s (%d) staff moves XP the grade's way (%+.4f)" % [word, v, d])
+		_check(CoachEffects.teach_step(_staff(v), fwd) == 0 and CoachEffects.teach_step(_staff(v), kid) == 0,
+				"Teaching never moves the season ceiling (%d)" % v)
+	_check(CoachEffects.xp_mult(_staff(68), fwd, true) > CoachEffects.xp_mult(_staff(67), fwd, true)
+			and CoachEffects.xp_mult(_staff(78), fwd, true) > CoachEffects.xp_mult(_staff(77), fwd, true),
+			"XP steps up at the Good (68) and Strong (78) cut-offs")
 	_check(Coaches.grade(78) == "Strong" and Coaches.grade(77) == "Good" and Coaches.grade(68) == "Good"
 			and Coaches.grade(67) == "Fair", "Strong starts at 78, Good at 68")
-	_check(is_equal_approx(CoachEffects.xp_mult({}, fwd, true), 0.95) or CoachEffects.xp_mult({}, fwd, true) >= 0.95,
-			"Teaching XP never drops below -5%")
+	var cuts := {}
+	for g in Coaches.GRADES:
+		cuts[str(g[1])] = float(g[0])
+	_check(is_equal_approx(cuts["Good"], CoachEffects.GOOD_CUT) and is_equal_approx(cuts["Strong"], CoachEffects.STRONG_CUT),
+			"Teaching's cut-offs are the grade table's")
+	_check(is_equal_approx(CoachEffects.xp_mult(empty, fwd, true), 0.95)
+			and is_equal_approx(CoachEffects.xp_mult(_staff(40), fwd, true), 0.95),
+			"Teaching XP bottoms out at exactly -5%")
+	_check(CoachEffects.xp_mult(_staff(66), fwd, true) > 0.95, "A slightly Fair staff costs less than the floor")
 	_check(is_equal_approx(CoachEffects.xp_mult(_staff(99), fwd, false), 1.10),
 			"Teaching XP tops out at exactly +10%")
 
