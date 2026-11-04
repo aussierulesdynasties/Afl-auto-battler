@@ -79,10 +79,10 @@ func _test_selection_tests() -> void:
 	var h2h_lines: Array = h2h.get_children() if h2h != null else []
 	var h2h_ok := h2h_lines.size() == 4
 	for l in h2h_lines:
-		if not (str(l.text).contains("yours") or str(l.text).contains(" v ")):
+		if not (_plain(l).contains("yours") or _plain(l).contains(" v ")):
 			h2h_ok = false
 	_check(h2h_ok, "The matchup reads line against line (%s)" %
-			" | ".join(h2h_lines.map(func(l): return str(l.text))))
+			" | ".join(h2h_lines.map(func(l): return _plain(l))))
 	var mid_line: Control = ui.find_child("H2H_midfield", true, false)
 	_check(mid_line != null and _plain(mid_line).begins_with("Midfield: yours "), "Midfield sets yours against theirs")
 	# Their key forwards are facts here; who goes to them and the game plan are
@@ -92,8 +92,13 @@ func _test_selection_tests() -> void:
 			"Selection names their key forwards")
 	_check(km != null and not km.find_children("KeyDefender_*", "Control", true, false).is_empty()
 			and km.find_child("KeySide_mine", true, false) != null and km.find_child("KeySide_theirs", true, false) != null
-			and str(_screen_text(km)).contains(" cm, ") and str(_screen_text(km)).contains("marking"),
+			and str(_screen_text(km)).contains("cm") and str(_screen_text(km)).contains("marking"),
 			"Selection shows both sides' key forwards and defenders, side by side, with height and marking")
+	var small_text := 0
+	for kl in (km.find_children("*", "Label", true, false) if km != null else []):
+		if (kl as Label).get_theme_font_size("font_size") < 13:
+			small_text += 1
+	_check(km != null and small_text == 0, "Key players read at 13 px or more (%d smaller)" % small_text)
 	_check(ui.find_child("ChangeMatchup", true, false) == null and ui.find_child("ChangePlan", true, false) == null
 			and ui.find_child("PlanLine", true, false) == null and km != null
 			and not str(_screen_text(km)).contains(" is on "),
@@ -449,8 +454,9 @@ func _test_selection_pages_tests() -> void:
 				"Phone: Synergies sits right under its own line (%s)" % tag)
 		var rep: Button = ui.find_child("AssistantReport", true, false)
 		var head: Control = ui.find_child("WeekHeading", true, false)
-		_check(rep != null and head != null and _gap_x(head, rep) < 48.0 and _gap_y(head, rep) < 24.0,
-				"Phone: the assistant's report sits right under This week (%s)" % tag)
+		_check(rep != null and head != null and rep.size.y >= 48.0 and rules != null and rules.size.y >= 48.0
+				and (ui.find_child("WeekClose", true, false) as Control).size.y >= 48.0,
+				"Phone: the report, Synergies and Close are each at least 48 tall (%s)" % tag)
 		var why3: String = await Tap.tap(rules)
 		await _settle()
 		_check(why3 == "" and ui.find_child("SynergyGuide", true, false) != null and ui.find_child("WeekSheet", true, false) != null,
@@ -491,8 +497,8 @@ func _test_selection_pages_tests() -> void:
 			var rep2: Button = ui.find_child("AssistantReport", true, false)
 			var head2: Control = ui.find_child("WeekHeading", true, false)
 			_check(_gap_x(sl2, rules2) < 48.0 and _gap_y(sl2, rules2) < 24.0
-					and _gap_x(head2, rep2) < 48.0 and _gap_y(head2, rep2) < 24.0,
-					"PC: each button is beside or under its own line, under 48 px away (%s)" % ptag)
+					and head2 != null and rep2 != null and rep2.size.y >= 48.0,
+					"PC: Synergies is under its own line and the report is thumb-high (%s)" % ptag)
 			var inter2 := ui.find_child("InterchangeRow", true, false)
 			_check(_gap_x(inter2.get_child(0), ui.find_child("SaveBest23", true, false)) < 48.0,
 					"PC: Save as my Best 23 is beside the interchange (%s)" % ptag)
@@ -1113,20 +1119,18 @@ func _test_week_ink_tests() -> void:
 		var ui := await _open()
 		var opp := str(_state.my_next_opponent().get("code", ""))
 		var h: Label = null
-		var kf: Label = null
 		for l in ui.find_children("*", "Label", true, false):
-			if str(l.text) == db.club_name(opp) and h == null and ui.find_child("WeekHeading", true, false).is_ancestor_of(l):
+			if str(l.text) == db.club_name(opp) and h == null and ui.find_child("KeySide_theirs", true, false).is_ancestor_of(l):
 				h = l
-			if str(l.text) == "Their key forwards":
-				kf = l
-		_check(h != null or opp == "", "The week heading names the opponent beside its guernsey (%s)" % str(code))
-		for lab in [h, kf]:
-			if lab == null:
-				continue
-			# The club's readable ink: 4.5:1 on the dark page, for every club.
-			var ratio: float = uk.contrast(lab.get_theme_color("font_color"), uk.BG)
-			if ratio < 4.5:
-				bad.append("%s %s %.1f" % [code, lab.text, ratio])
+		_check(h != null or opp == "", "The opponent is named once, over its column, beside its guernsey (%s)" % str(code))
+		# Both columns carry their club's readable ink as a bar: 4.5:1 on the dark page, for every club.
+		for side in ["KeySide_mine", "KeySide_theirs"]:
+			var col: Node = ui.find_child(side, true, false)
+			var bar: ColorRect = col.find_child("ClubBar", true, false) if col != null else null
+			if bar != null:
+				var ratio: float = uk.contrast(bar.color, uk.BG)
+				if ratio < 4.5:
+					bad.append("%s %s %.1f" % [code, side, ratio])
 		if str(code) == "FRE":
 			_check(ui.find_child("LineStandings", true, false) == null and ui.find_child("H2H_midfield", true, false) != null,
 					"The week says line against line once, not twice")

@@ -1487,9 +1487,9 @@ static func margin_colour(win: bool) -> Color:
 
 ## A dimmer that actually covers its parent. Anchors set before add_child are
 ## ignored, which is how match controls stayed visible beside the full-time card.
-static func cover(parent: Control) -> ColorRect:
+static func cover(parent: Control, scrim := 0.78) -> ColorRect:
 	var overlay := ColorRect.new()
-	overlay.color = Color(0, 0, 0, 0.78)
+	overlay.color = Color(0, 0, 0, scrim)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	parent.add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1502,9 +1502,10 @@ static func cover(parent: Control) -> ColorRect:
 
 ## Dialog that stays inside the viewport. Body scrolls; footer stays put.
 ## `wash` tints the top of the sheet; by default your club's colour (match
-## day passes the opponent's, from `opponent_wash`).
-static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AUTO_COLOUR) -> Dictionary:
-	var overlay := cover(parent)
+## day passes the opponent's, from `opponent_wash`). `scrim` is how much of the
+## page behind it is dimmed (a sheet full of its own facts asks for more).
+static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AUTO_COLOUR, scrim := 0.78) -> Dictionary:
+	var overlay := cover(parent, scrim)
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
