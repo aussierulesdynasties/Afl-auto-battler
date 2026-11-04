@@ -154,55 +154,25 @@ static func web_density(pixels: Vector2, ratio: float) -> float:
 	return maxf(own, pixels.x / PHONE_REF_W)
 
 
-## The Screen setting on a phone or in its browser: portrait (the default;
-## director, 2026-10-25: the game opens in portrait on a phone), landscape, or
-## follow the phone's own rotation.
-const ORIENTATIONS := [["portrait", "Portrait"], ["landscape", "Landscape"], ["auto", "Follow the phone"]]
-const DEFAULT_ORIENTATION := "portrait"
+## A phone plays in portrait only (director, 2026-11-05: "Drop landscape").
+## There is no Screen setting; a saved "landscape" or "auto" from an older
+## build reads as portrait. A PC keeps its wide window.
+const PHONE_ORIENTATION := "portrait"
 
 
-## The engine's orientation for a saved choice. Anything unknown is portrait.
-static func orientation_for(key: String) -> int:
-	match key:
-		"portrait":
-			return DisplayServer.SCREEN_PORTRAIT
-		"landscape":
-			return DisplayServer.SCREEN_LANDSCAPE
-		"auto":
-			return DisplayServer.SCREEN_SENSOR
-	return DisplayServer.SCREEN_PORTRAIT
+## A saved orientation from any build, as the phone now plays it: portrait.
+static func clamp_orientation(_saved: String) -> String:
+	return PHONE_ORIENTATION
 
 
-## Hold the chosen orientation by the engine's own means. Android honours it.
-## A browser only locks the screen while the page is fullscreen (the Fullscreen
-## API, allowed only from a tap), so choosing Portrait or Landscape on the web
-## goes fullscreen first. Safari on an iPhone has no orientation lock at all:
-## there, the choice cannot hold and the phone's own rotation rules.
-## Returns what was asked of the engine, for a test to read.
-func set_orientation(key: String, from_tap := false) -> Dictionary:
-	var asked := {"orientation": orientation_for(key), "fullscreen": false}
+## Hold the phone in portrait by the engine's own means (Android and iOS also
+## lock it from project.godot's handheld orientation). A desktop and headless
+## are left alone. Returns what was asked of the engine, for a test to read.
+func lock_portrait() -> int:
 	if DisplayServer.get_name() == "headless" or is_desktop() and not force_web_phone:
-		return asked
-	if OS.has_feature("web") and key != "auto" and from_tap:
-		JavaScriptBridge.eval(PAGE_FULLSCREEN_JS % key, true)
-		asked["fullscreen"] = true
-	DisplayServer.screen_set_orientation(asked["orientation"])
-	return asked
-
-
-## The whole page goes fullscreen, not the game's canvas (the engine's own
-## fullscreen). The phone keyboard is raised by a text box the engine keeps
-## beside the canvas; with only the canvas fullscreen that box is off the
-## screen and the keyboard never opens (godotengine/godot#117342). The
-## rotation is held once the page is fullscreen, as the browser requires.
-const PAGE_FULLSCREEN_JS := """(function(o){
-var d=document.documentElement;
-function hold(){try{var p=screen.orientation&&screen.orientation.lock?screen.orientation.lock(o):null;if(p&&p.catch){p.catch(function(){});}}catch(e){}}
-if(document.fullscreenElement||document.webkitFullscreenElement){hold();return;}
-var ask=d.requestFullscreen||d.webkitRequestFullscreen;
-if(!ask){return;}
-try{var p=ask.call(d);if(p&&p.then){p.then(hold).catch(function(){});}else{hold();}}catch(e){}
-})('%s');"""
+		return DisplayServer.SCREEN_PORTRAIT
+	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
+	return DisplayServer.SCREEN_PORTRAIT
 
 
 ## A test or capture stands in for the web build: not a desktop, not a phone.

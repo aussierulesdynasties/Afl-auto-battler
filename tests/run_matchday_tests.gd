@@ -2544,7 +2544,9 @@ func _test_vignettes_setting() -> void:
 					"TV is kept and applied (%s)" % tag)
 			_state.set_screen_size("standard")
 			await _settle()
-		# Screen orientation, on a phone or its browser: a real tap holds it.
+		# Phone is portrait only (director, 2026-11-05: "Drop landscape"): no
+		# Screen row on a desktop or a phone, and an older saved landscape loads
+		# as portrait.
 		_check(sheet.find_child("SettingsOrientation_portrait", true, false) == null,
 				"A desktop has no Screen orientation row (%s)" % tag)
 		load("res://scripts/core/ScreenLayout.gd").force_web_phone = true
@@ -2555,24 +2557,23 @@ func _test_vignettes_setting() -> void:
 		host.size = Vector2(sz)
 		sheet = options.open(host, true)
 		await _settle()
-		var land: Button = sheet.find_child("SettingsOrientation_landscape", true, false)
-		_check(land != null and sheet.find_child("SettingsOrientation_auto", true, false) != null
-				and _state.screen_orientation() == "portrait",
-				"A phone's Settings has Screen: portrait by default, landscape, follow the phone (%s)" % tag)
-		if land != null:
-			_check((await Tap.tap(land)) == "", "Landscape takes a real tap (%s)" % tag)
-			await _settle()
-			_check(_state.screen_orientation() == "landscape", "Landscape is kept (%s)" % tag)
+		_check(sheet.find_child("SettingsOrientation_landscape", true, false) == null
+				and sheet.find_child("SettingsOrientation_auto", true, false) == null
+				and sheet.find_child("SettingsOrientation_portrait", true, false) == null,
+				"A phone's Settings has no Screen row: portrait only (%s)" % tag)
+		for old in ["landscape", "auto", "junk"]:
+			_state.set_setting("screen_orientation", old)
+			_state.clamp_saved_orientation()
 			var cfg2 := ConfigFile.new()
-			_check(cfg2.load(_state.settings_path) == OK and cfg2.get_value("ui", "screen_orientation") == "landscape",
-					"Landscape is saved with the settings (%s)" % tag)
-			_state.set_screen_orientation("portrait")
+			_check(cfg2.load(_state.settings_path) == OK and cfg2.get_value("ui", "screen_orientation") == "portrait"
+					and _state.screen_orientation() == "portrait",
+					"A saved '%s' loads as portrait (%s)" % [old, tag])
+		_check(root.get_node("ScreenLayout").lock_portrait() == DisplayServer.SCREEN_PORTRAIT,
+				"A phone asks the engine for portrait (%s)" % tag)
 		load("res://scripts/core/ScreenLayout.gd").force_web_phone = false
-		_check(root.get_node("ScreenLayout").orientation_for("portrait") == DisplayServer.SCREEN_PORTRAIT
-				and root.get_node("ScreenLayout").orientation_for("landscape") == DisplayServer.SCREEN_LANDSCAPE
-				and root.get_node("ScreenLayout").orientation_for("auto") == DisplayServer.SCREEN_SENSOR
-				and root.get_node("ScreenLayout").orientation_for("junk") == DisplayServer.SCREEN_PORTRAIT,
-				"Each choice maps to the engine's orientation; unknown is portrait (%s)" % tag)
+		var proj := FileAccess.get_file_as_string("res://project.godot")
+		_check(proj.contains("window/handheld/orientation=1") and int(ProjectSettings.get_setting("display/window/handheld/orientation")) == DisplayServer.SCREEN_PORTRAIT,
+				"project.godot locks handhelds to portrait (%s)" % tag)
 		host.queue_free()
 		await _settle()
 
