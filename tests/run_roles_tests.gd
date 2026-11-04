@@ -104,7 +104,7 @@ func _test_selection_tests() -> void:
 			and not str(_screen_text(km)).contains(" is on "),
 			"Selection no longer asks for the match-ups or the game plan")
 	var later: Label = ui.find_child("SetLater", true, false)
-	_check(later != null and later.text == "Match-ups, game plan and tags are set before the first ball-up.",
+	_check(later != null and later.text.ends_with("Match-ups, game plan and tags are set before the first ball-up."),
 			"One quiet line says where those calls are made")
 	var rows := ui.find_children("RoleLabel", "Label", true, false)
 	var field: Node = ui.find_child("BuilderField", true, false)

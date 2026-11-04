@@ -323,8 +323,8 @@ static func head_to_head(mine: String, opp: String, lists: Dictionary, selection
 	return [
 		{"key": "midfield", "text": say.call("Midfield", word.call(mine, "midfield"), word.call(opp, "midfield"))},
 		{"key": "ruck", "text": say.call("Ruck", word.call(mine, "ruck"), word.call(opp, "ruck"))},
-		{"key": "attack", "text": say.call("Your forwards v their defence", word.call(mine, "attack"), word.call(opp, "defence"))},
-		{"key": "defence", "text": say.call("Your defence v their forwards", word.call(mine, "defence"), word.call(opp, "attack"))},
+		{"key": "attack", "text": say.call("Your forwards against their defence", word.call(mine, "attack"), word.call(opp, "defence"))},
+		{"key": "defence", "text": say.call("Your defence against their forwards", word.call(mine, "defence"), word.call(opp, "attack"))},
 	]
 
 

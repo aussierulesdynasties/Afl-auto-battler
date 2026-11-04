@@ -317,8 +317,8 @@ func _fill_week(v: VBoxContainer) -> void:
 		# One phrase, and the opponent is named once: over its own column below.
 		var heading := UiKit.hbox(6)
 		heading.name = "WeekHeading"
-		heading.add_child(UiKit.line("This week, %s" % ("at home" if str(nxt["venue"]) == "home" else "away"),
-				UiKit.TITLE, UiKit.TEXT, true))
+		heading.add_child(UiKit.line("Round %d, %s" % [GameState.season.round_index + 1,
+				"at home" if str(nxt["venue"]) == "home" else "away"], UiKit.TITLE, UiKit.TEXT, true))
 		v.add_child(heading)
 		# Both sides' key forwards and defenders lead the sheet, as facts. Who
 		# goes to each is set before the first ball-up, not here.
@@ -338,7 +338,7 @@ func _fill_week(v: VBoxContainer) -> void:
 		# players above already show, side by side.
 		for row in GameState.my_head_to_head(code):
 			if ["midfield", "ruck"].has(str(row["key"])):
-				lines.add_child(_h2h_row(row))
+				lines.add_child(_h2h_row(row, code))
 	v.add_child(_synergy_view())
 	# What the week says about your own people, set apart from the facts above.
 	var notes := UiKit.vbox(8)
@@ -366,7 +366,7 @@ func _fill_week(v: VBoxContainer) -> void:
 		v.add_child(notes)
 	else:
 		notes.free()
-	var later := _para("Match-ups, game plan and tags are set before the first ball-up.", UiKit.SMALL, SOFT)
+	var later := _para("Two key forwards and two key defenders a side. Match-ups, game plan and tags are set before the first ball-up.", UiKit.SMALL, SOFT)
 	later.name = "SetLater"
 	v.add_child(later)
 
@@ -403,20 +403,38 @@ func _outline_btn(text: String) -> Button:
 	return b
 
 
-## "Midfield: yours below par, theirs middle of the pack." as the line's name
-## on one line and the two standings under it, so no line wraps to one word.
-func _h2h_row(row: Dictionary) -> Control:
+## "Midfield: yours below par, theirs good." as the line's name over two
+## columns that match the header above: yours under your club's colour, theirs
+## under theirs. "Even, both average" stays one line.
+func _h2h_row(row: Dictionary, opp: String) -> Control:
 	var text := str(row["text"])
 	var cut := text.find(": ")
-	var one := UiKit.vbox(8)
+	var one := UiKit.vbox(4)
 	one.name = "H2H_" + str(row["key"])
 	one.set_meta("plain", text)
 	if cut < 0:
 		one.add_child(_para(text, UiKit.SECONDARY, UiKit.TEXT))
 		return one
 	one.add_child(UiKit.lbl(text.substr(0, cut), UiKit.SECONDARY, UiKit.TEXT, true))
-	var rest := text.substr(cut + 2)
-	one.add_child(_para(rest.substr(0, 1).to_upper() + rest.substr(1), UiKit.SECONDARY, SOFT))
+	var rest := text.substr(cut + 2).trim_suffix(".")
+	var at := rest.find(", theirs ")
+	if not rest.begins_with("yours ") or at < 0:
+		one.add_child(_para(rest.substr(0, 1).to_upper() + rest.substr(1) + ".", UiKit.SECONDARY, SOFT))
+		return one
+	var inks: Array = UiKit.club_ink_pair(GameState.my_club, opp)
+	var cols := UiKit.hbox(GAP)
+	var parts := [["Yours", rest.substr(6, at - 6), inks[0]], ["Theirs", rest.substr(at + 9), inks[1]]]
+	for part in parts:
+		var c := UiKit.vbox(4)
+		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var bar := ColorRect.new()
+		bar.color = part[2]
+		bar.custom_minimum_size = Vector2(0, 3)
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		c.add_child(bar)
+		c.add_child(UiKit.lbl("%s %s" % [part[0], part[1]], UiKit.SECONDARY, SOFT, false))
+		cols.add_child(c)
+	one.add_child(cols)
 	return one
 
 
@@ -473,7 +491,7 @@ func _key_players(kp: Dictionary, opp: String) -> Control:
 			wrap_head = true
 	for side in ["mine", "theirs"]:
 		var code: String = GameState.my_club if side == "mine" else opp
-		var col := UiKit.vbox(6 if tight else 12)
+		var col := UiKit.vbox(6 if tight else GAP)
 		col.name = "KeySide_" + side
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		col.size_flags_stretch_ratio = 1.0
@@ -509,6 +527,7 @@ func _key_players(kp: Dictionary, opp: String) -> Control:
 			if list.is_empty():
 				continue
 			var sec := UiKit.vbox(4 if tight else 12)
+			sec.name = "KeySection_" + str(group[0])
 			sec.add_child(UiKit.lbl(str(group[1]), UiKit.SECONDARY, SOFT, true))
 			for p in list:
 				var one := UiKit.vbox(0)
@@ -522,8 +541,8 @@ func _key_players(kp: Dictionary, opp: String) -> Control:
 	return cols
 
 
-## "196 cm  strong": the height as a scoreboard figure with a light "cm", then
-## the grade, which steps up in weight and size as it gets better (elite is the
+## "196 cm  strong": the height as plain secondary text, then the grade, which
+## steps up in weight and size as it gets better (elite is the
 ## biggest and boldest, average the plainest) in the text colours only, so it is
 ## never read as GOOD or BAD. What is graded is said once, in the section label.
 func _air_line(p: Dictionary) -> Control:
@@ -532,14 +551,7 @@ func _air_line(p: Dictionary) -> Control:
 	flow.add_theme_constant_override("v_separation", 0)
 	flow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if float(p.get("height_cm", 0.0)) > 0.0:
-		var h := UiKit.line("%d" % int(p["height_cm"]), 20, UiKit.TEXT, true)
-		h.add_theme_font_override("font", UiKit.DISPLAY)
-		var cm := UiKit.line("cm", UiKit.SECONDARY, SOFT)
-		var hh := UiKit.hbox(3)
-		hh.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		hh.add_child(h)
-		hh.add_child(cm)
-		flow.add_child(hh)
+		flow.add_child(UiKit.line("%d cm" % int(p["height_cm"]), UiKit.SECONDARY, SOFT))
 	var g := PlayerProfile.grade(PlayerProfile.percentile(p, "marking")).to_lower()
 	if g == "":
 		g = "average"
