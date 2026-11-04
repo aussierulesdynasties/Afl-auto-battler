@@ -68,8 +68,18 @@ static func xp_mult(staff: Dictionary, p: Dictionary, on_ground: bool) -> float:
 ## because nearly every young player reached the +3 season ceiling anyway.
 ## Reads the teaching skill itself: his line coach, and for a young player
 ## the development coach as well, half each.
-const TEACH_UP := 0.6        # level of a Strong (82) teacher or better
-const TEACH_DOWN := -0.4     # level of a Fair (62) teacher or worse; vacant is -0.6
+## The cut-offs are the grade words' own (4.Q1): a Strong (78) teacher or
+## better lifts, a Fair one (under Good, 68) or a vacant job holds back.
+static var TEACH_UP := level(_grade_cut("Strong"))     # 0.4
+static var TEACH_DOWN := level(_grade_cut("Good"))     # -0.1; below it is Fair
+
+
+static func _grade_cut(word: String) -> float:
+	for g in Coaches.GRADES:
+		if str(g[1]) == word:
+			return float(g[0])
+	return 70.0
+
 
 static func teach_step(staff: Dictionary, p: Dictionary) -> int:
 	var s := level(_skill(staff, line_job(p), "teach"))
@@ -77,7 +87,7 @@ static func teach_step(staff: Dictionary, p: Dictionary) -> int:
 		s = 0.5 * (s + level(_skill(staff, "DEV", "teach")))
 	if s >= TEACH_UP:
 		return 1
-	if s <= TEACH_DOWN:
+	if s < TEACH_DOWN:
 		return -1
 	return 0
 

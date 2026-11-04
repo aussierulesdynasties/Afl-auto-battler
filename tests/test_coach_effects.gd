@@ -79,6 +79,20 @@ func _test_teaching() -> void:
 			and CoachEffects.xp_mult(dev, fwd, false) > CoachEffects.xp_mult(dev, fwd, true),
 			"The development coach helps the young and the reserves most")
 	_check(CoachEffects.xp_mult({}, fwd, true) < 1.0, "Empty jobs teach nobody (a weak staff, not an error)")
+	# 4.Q1: the grade words and the teaching effect agree at every cut-off.
+	var vet := {"role": "MID", "age": 28.0}
+	var line := func(v: int) -> Dictionary: return {"MID": {"skills": {"teach": v, "tactics": 70, "manage": 70}}}
+	for v in range(40, 100):
+		var word := Coaches.grade(v)
+		var step := CoachEffects.teach_step(line.call(v), vet)
+		var want := 1 if word in ["Strong", "Elite"] else (-1 if word == "Fair" else 0)
+		_check(step == want, "A %s (%d) teacher moves the ceiling %d, not %d" % [word, v, want, step])
+	_check(Coaches.grade(78) == "Strong" and Coaches.grade(77) == "Good" and Coaches.grade(68) == "Good"
+			and Coaches.grade(67) == "Fair", "Strong starts at 78, Good at 68")
+	_check(is_equal_approx(CoachEffects.xp_mult({}, fwd, true), 0.95) or CoachEffects.xp_mult({}, fwd, true) >= 0.95,
+			"Teaching XP never drops below -5%")
+	_check(is_equal_approx(CoachEffects.xp_mult(_staff(99), fwd, false), 1.10),
+			"Teaching XP tops out at exactly +10%")
 
 
 func _test_tactics() -> void:
