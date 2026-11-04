@@ -353,11 +353,7 @@ func _ladder_section(season: Season, table_width := -1.0) -> Control:
 	# behind "Ladder". One nav idiom on the hub (audit §8 Phase 1.1): the
 	# footer row and this heading, no third kind of button.
 	var full := UiKit.section_link("Ladder", "Season stats ›", "SeasonStats")
-	# The ladder lives only in Season stats (director, T3.Q13 / T9.Q29), so
-	# "Ladder" opens on it, whichever section was open last.
-	full.pressed.connect(func():
-		load("res://scripts/ui/StatsHubScene.gd").current = "ladder"
-		Router.go("stats"))
+	full.pressed.connect(func(): Router.go("stats"))
 	head.add_child(full)
 	# September: the series beside the ladder it came from, said as words.
 	if not season.finals.is_empty():
