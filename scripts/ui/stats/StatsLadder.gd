@@ -13,6 +13,9 @@ const ROW_H := 32
 ## A phone's row opens a club: thumb high (CLAUDE.md "Mobile first").
 const ROW_H_NARROW := 44
 const COL_GAP := 4
+## A full-width (phone) table keeps its last column's words this far in from
+## the band's edge.
+const END_PAD := 8
 
 ## The ladder's columns, phone first; a wide screen adds the rest.
 ## {key, title, w}; on a phone the club column takes what is left (0). On a
@@ -22,6 +25,7 @@ const WIDE_CLUB := 190
 ## "Rating": the club's match-day side today on the OVR scale (TeamRating). A
 ## tap on a club says it in full: where the club is in its cycle (Contender,
 ## Wildcard, Rebuilding) and the list in three years.
+const CLUB_NAME_INSET := 26
 const LADDER_PHONE := [["pos", "#", 24], ["club", "Club", 0], ["p", "P", 26], ["w", "W", 26],
 		["l", "L", 26], ["d", "D", 24], ["pct", "%", 42], ["pts", "Pts", 34], ["rating", "Rating", 46]]
 const LADDER_WIDE := [["pos", "#", 44], ["club", "Club", WIDE_CLUB], ["p", "P", 32], ["w", "W", 32],
@@ -139,14 +143,19 @@ static func build(host: Control) -> Control:
 
 	var shown := visible_rows(season, GameState.my_club, _filter, _sort, _desc, _view)
 	# Only when something is filtered or sorted: the whole ladder says so itself.
+	var specs := columns(_view, wide, width)
 	if _filter != "all" or _sort != "":
-		v.add_child(_status(host, shown.size()))
+		var status := _status(host, shown.size())
+		if wide:
+			# Its buttons end where the table's columns end, not past them.
+			status.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			status.custom_minimum_size.x = table_width(specs)
+		v.add_child(status)
 
 	# No panel around it: the bands do the work.
 	var t := UiKit.vbox(0)
 	t.name = "LadderTable"
 	v.add_child(t)
-	var specs := columns(_view, wide, width)
 	if wide:
 		# As wide as its columns, left-aligned: no gap between a club and its numbers.
 		t.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -173,6 +182,17 @@ static func columns(view: String, wide: bool, width := 9999.0) -> Array:
 	if wide:
 		return LADDER_WIDE
 	return LADDER_TIGHT if width < PHONE_TIGHT else LADDER_PHONE
+
+
+## The least width of a table of these columns: the sum the rows are sized to.
+static func table_width(specs: Array) -> float:
+	var fixed := 0
+	var all_fixed := true
+	for c in specs:
+		if int(c[2]) == 0:
+			all_fixed = false
+		fixed += maxi(int(c[2]), CLUB_MIN_NARROW if int(c[2]) == 0 else 0) + COL_GAP
+	return float(fixed if all_fixed else fixed - COL_GAP)
 
 
 ## One line that says what is on show, with the way back to the plain ladder.
@@ -241,6 +261,12 @@ static func _header(host: Control, specs: Array, width: float, wide := false) ->
 		sb.bg_color = Color.TRANSPARENT
 		sb.border_width_bottom = 2 if on else 0
 		sb.border_color = UiKit.TEXT
+		if key == "club":
+			# Over the names, not the crests before them: the crest's 20 px plus
+			# the badge's 6 px gap (UiKit.club_badge, club_marker).
+			sb.content_margin_left = CLUB_NAME_INSET
+		if c == specs[-1] and not _all_fixed(specs):
+			sb.content_margin_right = END_PAD
 		for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 			b.add_theme_stylebox_override(state, sb)
 		# A thumb-high header on a phone (44 px, CLAUDE.md "Mobile first"); the
@@ -253,6 +279,13 @@ static func _header(host: Control, specs: Array, width: float, wide := false) ->
 		b.pressed.connect(func(): _sort_by(host, key))
 		h.add_child(b)
 	return h
+
+
+static func _all_fixed(specs: Array) -> bool:
+	for c in specs:
+		if int(c[2]) == 0:
+			return false
+	return true
 
 
 static func _plain(text: String, w: int, col: Color) -> Label:
@@ -285,14 +318,8 @@ static func _row(host: Control, r: Dictionary, specs: Array, width: float, band 
 	b.mouse_filter = Control.MOUSE_FILTER_PASS
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	# A button does not take its child row's width: a table of fixed columns says so.
-	var fixed := 0
-	var all_fixed := true
-	for c in specs:
-		if int(c[2]) == 0:
-			all_fixed = false
-		fixed += maxi(int(c[2]), CLUB_MIN_NARROW if int(c[2]) == 0 else 0) + COL_GAP
 	# Every row is as wide as the header's least, so the two share one width.
-	b.custom_minimum_size = Vector2(fixed - COL_GAP if not all_fixed else fixed, height)
+	b.custom_minimum_size = Vector2(table_width(specs), height)
 	b.clip_contents = true
 	var flat := StyleBoxFlat.new()
 	flat.bg_color = UiKit.PANEL if band else Color.TRANSPARENT
@@ -331,6 +358,11 @@ static func _row(host: Control, r: Dictionary, specs: Array, width: float, band 
 		var l := UiKit.line(text, UiKit.FINE, ink, mine or key == "pts")
 		l.custom_minimum_size = Vector2(w, 0)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		if c == specs[-1] and not _all_fixed(specs):
+			# Off the band's edge, as the header's last label is (_header).
+			var pad := StyleBoxEmpty.new()
+			pad.content_margin_right = END_PAD
+			l.add_theme_stylebox_override("normal", pad)
 		row.add_child(l)
 	_ignore(row)
 	b.pressed.connect(func(): _side_sheet(host, code))

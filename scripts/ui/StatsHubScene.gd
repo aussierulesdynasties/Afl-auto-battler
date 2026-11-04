@@ -112,6 +112,9 @@ func _build() -> void:
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var sc := UiKit.scroll(_body)
 	sc.name = "StatsScroll"
+	# The bar's gutter is always kept, so a short view (Top 8) does not widen
+	# and shift every column against a long one.
+	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
 	_root.add_child(sc)
 	var section := _section(current)
 	if wide():

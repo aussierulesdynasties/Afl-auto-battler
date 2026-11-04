@@ -38,6 +38,11 @@ func _run() -> void:
 	state.start_season("COL", db.club_list("COL"))
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
+	# --size is in UI units: a scaled (HiDPI) desktop would otherwise lay a
+	# 1280-pixel window out at 640 units, as a phone.
+	var sl = root.get_node("ScreenLayout")
+	sl.ui_scale = 96.0 / maxf(96.0, float(DisplayServer.screen_get_dpi()))
+	sl.call("_update_scale")
 	router.stack = []
 	router.go("main")
 	await _frames(8)
