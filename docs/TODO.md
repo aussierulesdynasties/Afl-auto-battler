@@ -23,7 +23,6 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 | # | What | Done looks like |
 |---|---|---|
 | 25 | Team builder: pre-game setup, and every pre-match decision, before Start (his ruling; none left in the pre-bounce pane); entry points share one side; headers from arranged fit | all pre-match decisions precede Start, test added |
-| 27 | Stat guide as a topic grid (section H: does the matchup grid replace it) | answer, then grid or close |
 | 57 | Save export/import and a version chain with restore | export, import, restore work |
 | 35 | Finals bespoke cards: slice 2 built behind `finals_cards_2`; ships when he has played it | see section B |
 | 61 | Weather at full effect: rain, wind and heat change ball handling, kicking, tackling and scoring (wet tackles toward the real +12%); sizes come from a seeded audit and balance stays his call. Its look never touches the sim | audit bands, rules in code, his playtest |
@@ -236,7 +235,6 @@ Each line is a question he has not answered yet. Answered ones are in Rulings or
 
 - Cut audit (CUT_AUDIT_2026-11-03, 158 rows): which candidates beyond 1 to 5, 9 and 11 are cut, kept or replaced, including manual stat training, audio to Mute plus Volume, Club Forge create player, football-dept budget into high performance, Coaching screen into Hub/List, Culture sheet into Captaincy/List header, one pre-season drill plan and "Ask before simming"? (T1.Q7, T7.O16, T9.Q14)
 - Press conference: where the bible and the code disagree, which one is right and the other gets corrected? (T3.Q6)
-- Stat guide (row 27): does the new key-matchup grid replace it?
 - Synergies are worth +5 to +11 margin when on but rarely reached, and generated draftees lose synergy traits: how should a coach reach them, how far do multi-season spread and trait decay go, and what about too many contested bulls (16.1% generated against 3.5% real)? (4.Q10)
 - Coach arc catalogue: which draft arcs does he keep, change or cut, and will he play a career so the switches can go on? (T5.Q4)
 - Backing and firsts wording: first-goal line for any of his players or only backed ones, cap of three lines, under 10 games, tap in the profile, reminder line, +5 mood, quiet first games? (T5.Q8)
