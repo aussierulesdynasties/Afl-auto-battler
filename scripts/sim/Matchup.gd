@@ -276,7 +276,21 @@ static func _standing_word(rank: int, n: int) -> String:
 	return "middle of the pack"
 
 
-## This week, line against line, in the standing words for both sides:
+## A league rank in the one set of rating words the This week sheet uses for
+## players and lines alike: elite, strong, good, average, below par, poor.
+static func rating_word(rank: int, n: int) -> String:
+	if rank <= EDGE:
+		return "elite"
+	if rank <= 2 * EDGE:
+		return "strong"
+	if rank > n - EDGE:
+		return "poor"
+	if rank > n - 2 * EDGE:
+		return "below par"
+	return "good" if rank * 2 <= n + 1 else "average"
+
+
+## This week, line against line, in the sheet's rating words for both sides:
 ## midfield v midfield, ruck v ruck, your forwards v their defence and your
 ## defence v their forwards. `own` is your side as picked now, so a change of
 ## selection shows. [{"key", "text"}], [] without the opponent.
@@ -299,12 +313,18 @@ static func head_to_head(mine: String, opp: String, lists: Dictionary, selection
 		for c in squads:
 			if str(c) != code and float(values[c][key]) > float(values[code][key]):
 				better += 1
-		return _standing_word(better + 1, n)
+		return rating_word(better + 1, n)
+	# One reading for every row: "Midfield: yours good, theirs average."; when
+	# the two match, "Midfield: even, both average." (never the same words twice).
+	var say := func(label: String, mine_w: String, theirs_w: String) -> String:
+		if mine_w == theirs_w:
+			return "%s: even, both %s." % [label, mine_w]
+		return "%s: yours %s, theirs %s." % [label, mine_w, theirs_w]
 	return [
-		{"key": "midfield", "text": "Midfield: yours %s, theirs %s." % [word.call(mine, "midfield"), word.call(opp, "midfield")]},
-		{"key": "ruck", "text": "Ruck: yours %s, theirs %s." % [word.call(mine, "ruck"), word.call(opp, "ruck")]},
-		{"key": "attack", "text": "Your forwards v their defence: %s v %s." % [word.call(mine, "attack"), word.call(opp, "defence")]},
-		{"key": "defence", "text": "Your defence v their forwards: %s v %s." % [word.call(mine, "defence"), word.call(opp, "attack")]},
+		{"key": "midfield", "text": say.call("Midfield", word.call(mine, "midfield"), word.call(opp, "midfield"))},
+		{"key": "ruck", "text": say.call("Ruck", word.call(mine, "ruck"), word.call(opp, "ruck"))},
+		{"key": "attack", "text": say.call("Your forwards against their defence", word.call(mine, "attack"), word.call(opp, "defence"))},
+		{"key": "defence", "text": say.call("Your defence against their forwards", word.call(mine, "defence"), word.call(opp, "attack"))},
 	]
 
 

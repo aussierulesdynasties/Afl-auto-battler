@@ -24,6 +24,7 @@ func _run() -> void:
 	var club := "COL"
 	var page := ""
 	var rounds := 0
+	var vs := ""
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		if str(a[i]) == "--out" and i + 1 < a.size():
@@ -38,6 +39,8 @@ func _run() -> void:
 			page = str(a[i + 1])
 		if str(a[i]) == "--rounds" and i + 1 < a.size():
 			rounds = int(a[i + 1])
+		if str(a[i]) == "--vs" and i + 1 < a.size():
+			vs = str(a[i + 1])
 		if str(a[i]) == "--picked":
 			picked = true
 		if str(a[i]) == "--oval":
@@ -67,6 +70,11 @@ func _run() -> void:
 	state.start_season(club, db.club_list(club))
 	for r in range(rounds):
 		state.advance()
+	# --vs CODE: play on until that club is the next opponent (longest-name proof).
+	var guard := 0
+	while vs != "" and str(state.my_next_opponent().get("code", "")) != vs and guard < 30:
+		state.advance()
+		guard += 1
 	var ui: Control = load("res://scenes/SelectionScene.tscn").instantiate()
 	if page != "":
 		ui.set("_page", page)

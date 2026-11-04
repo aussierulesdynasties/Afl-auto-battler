@@ -200,15 +200,19 @@ func _side_page(auto: bool) -> Control:
 ## open over it and give it back on Close.
 func _open_week() -> void:
 	_close_week()
-	var box := UiKit.modal_box(self, 560.0, 0.0)
+	# The page behind is dimmed hard (0.92): nothing under the sheet competes.
+	# The wash is your club's own readable colour (club_ink lifts a dark club such as
+	# Fremantle off the page), so the sheet says whose week it is.
+	var box := UiKit.modal_box(self, 560.0, 0.0, UiKit.club_ink(GameState.my_club), false, false, 0.92)
 	_week_overlay = box["overlay"]
 	_week_overlay.name = "WeekSheet"
 	var v: VBoxContainer = box["body"]
-	v.add_theme_constant_override("separation", 10)
+	v.add_theme_constant_override("separation", GAP)
 	_fill_week(v)
+	# The one filled control on the sheet; the report and synergies above are words.
 	var close := UiKit.btn("Close", UiKit.NAME, true)
 	close.name = "WeekClose"
-	close.custom_minimum_size = Vector2(0, 48)
+	close.custom_minimum_size = Vector2(0, 56 if not _roomy() else 48)
 	close.pressed.connect(_close_week)
 	box["footer"].add_child(close)
 
@@ -279,8 +283,7 @@ func _show_report(code: String) -> void:
 			v.add_child(_para(str(t), 14, UiKit.TEXT))
 	if parts.is_empty():
 		v.add_child(_para("Too early to say much about them: they have barely played.", 14, UiKit.MUTED))
-	var close := UiKit.btn("Close", UiKit.NAME, true)
-	close.custom_minimum_size = Vector2(0, 48)
+	var close := _outline_btn("Close")
 	close.pressed.connect(_close_synergies)
 	box["footer"].add_child(close)
 
@@ -299,7 +302,7 @@ func _apply_strategy(key: String) -> void:
 
 ## This week: what the choice rests on, from the side as arranged now.
 func _week_page() -> Control:
-	var v := UiKit.vbox(10)
+	var v := UiKit.vbox(_gap())
 	v.name = "WeekPage"
 	_fill_week(v)
 	return v
@@ -314,25 +317,35 @@ func _fill_week(v: VBoxContainer) -> void:
 		v.add_child(_strength_line())
 	else:
 		var code := str(nxt["code"])
+		# One phrase, and the opponent is named once: over its own column below.
 		var heading := UiKit.hbox(6)
 		heading.name = "WeekHeading"
-		heading.add_child(UiKit.line("This week %s" % ["v" if str(nxt["venue"]) == "home" else "at"], UiKit.BODY, UiKit.TEXT, true))
-		heading.add_child(_side_name(code, UiKit.BODY, 20.0))
+		heading.add_child(UiKit.line("Round %d, %s" % [GameState.season.round_index + 1,
+				"at home" if str(nxt["venue"]) == "home" else "away"], UiKit.TITLE, UiKit.TEXT, true))
 		v.add_child(heading)
+		# Both sides' key forwards and defenders lead the sheet, as facts. Who
+		# goes to each is set before the first ball-up, not here.
+		var kp := GameState.week_key_players(code)
+		if not kp.is_empty():
+			v.add_child(_key_players(kp, code))
+			v.add_child(_rule())
 		# What your assistant has seen of them - said there, and only there.
-		var report := UiKit.text_action("Assistant's report ›", UiKit.SECONDARY)
+		var report := _link_btn("Assistant's report ›")
 		report.name = "AssistantReport"
-		report.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		report.pressed.connect(_show_report.bind(code))
 		v.add_child(report)
-		var lines := UiKit.vbox(3)
+		var lines := UiKit.vbox(22)
 		lines.name = "HeadToHead"
 		v.add_child(lines)
+		# Midfield and ruck only: forwards against defenders is what the key
+		# players above already show, side by side.
 		for row in GameState.my_head_to_head(code):
-			var l := _para(str(row["text"]), 14, UiKit.TEXT)
-			l.name = "H2H_" + str(row["key"])
-			lines.add_child(l)
+			if ["midfield", "ruck"].has(str(row["key"])):
+				lines.add_child(_h2h_row(row, code))
 	v.add_child(_synergy_view())
+	# What the week says about your own people, set apart from the facts above.
+	var notes := UiKit.vbox(8)
+	notes.name = "WeekNotes"
 	var own := GameState.my_week_notes()
 	# A key player already on the team sheet's outs is said there, once.
 	var sheet_outs := {}
@@ -341,60 +354,271 @@ func _fill_week(v: VBoxContainer) -> void:
 	for f in own:
 		if sheet_outs.has(str(f.get("player_id", ""))):
 			continue
-		# Only an injury is bad news; a milestone is just marked.
-		v.add_child(_para(str(f["text"]), 13, UiKit.BAD if str(f.get("key", "")) == "own_injury" else UiKit.TEXT))
-	_backing_lines(v)
+		# Only an injury is bad news; a milestone is a marked row of its own.
+		var bad := str(f.get("key", "")) == "own_injury"
+		notes.add_child(_note_row(_para(str(f["text"]), UiKit.SECONDARY, UiKit.BAD if bad else UiKit.TEXT),
+				UiKit.BAD if bad else Color(UiKit.TEXT, 0.45)))
+	_backing_lines(notes)
 	# The team sheet: who is in and out since your last match, and why.
 	var changes := GameState.week_changes_text()
 	if changes != "":
-		var ch := _para(changes, 14, UiKit.TEXT)
+		var ch := _para(changes, UiKit.SECONDARY, UiKit.TEXT)
 		ch.name = "TeamChanges"
-		v.add_child(ch)
-	if not nxt.is_empty():
-		# Their key forwards, as facts. Who goes to each is set before the
-		# first ball-up, not here.
-		var mus := GameState.week_matchups(str(nxt["code"]))
-		if not mus.is_empty():
-			var mv := UiKit.vbox(2)
-			mv.name = "KeyMatchups"
-			v.add_child(mv)
-			var kf := UiKit.hbox(6)
-			kf.add_child(UiKit.club_marker(str(nxt["code"]), 18.0))
-			kf.add_child(UiKit.line("Their key forwards", UiKit.BODY, _side_ink(str(nxt["code"])), true))
-			mv.add_child(kf)
-			for m in mus:
-				var f: Dictionary = m["fwd"]
-				var fl := _para("%s. %s" % [GameDB.player_display_name(f), Matchups.describe(f)], 14, UiKit.TEXT)
-				fl.name = "KeyForward_" + str(f["id"])
-				mv.add_child(fl)
-	var later := _para("Match-ups, game plan and tags are set before the first ball-up.", UiKit.SMALL, UiKit.MUTED)
-	later.name = "SetLater"
-	v.add_child(later)
+		notes.add_child(ch)
+	if notes.get_child_count() > 0:
+		v.add_child(notes)
+	else:
+		notes.free()
+
+
+## One spacing scale for the week: 8 inside a block, 16 between blocks.
+const GAP := 16
+
+
+## 16 between blocks on a phone; a PC window shows the side and the week
+## together with no scroll, so it spaces them closer (and clicks smaller targets).
+func _gap() -> int:
+	return 10 if _roomy() else GAP
+
+
+func _roomy() -> bool:
+	return ScreenLayout.roomy(UiKit.view_width(self), UiKit.view_height(self))
+## Near-white for the facts a coach reads closely (TEXT is the full white).
+const SOFT := Color("d6d2c8")
+
+
+## A quiet way in: words with a chevron, left-aligned, thumb-high (48), no surface.
+func _link_btn(text: String) -> Button:
+	var b := UiKit.text_action(text, UiKit.NAME)
+	b.custom_minimum_size = Vector2(0, 48)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.add_theme_color_override("font_color", SOFT)
+	var flush := StyleBoxEmpty.new()
+	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+		b.add_theme_stylebox_override(state, flush)
+	return b
+
+
+## A secondary action: an outline, thumb-high (52), across the sheet. The same
+## on every club - the accent is for the one primary action, and this sheet has none.
+func _outline_btn(text: String) -> Button:
+	var b := UiKit.btn(text, UiKit.NAME)
+	b.custom_minimum_size = Vector2(0, 48 if _roomy() else 52)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sb := UiKit.style(Color.TRANSPARENT, 8, UiKit.RADIUS, SOFT)
+	sb.set_border_width_all(2)
+	b.add_theme_stylebox_override("normal", sb)
+	var down := sb.duplicate() as StyleBoxFlat
+	down.bg_color = UiKit.SURFACE
+	for state in ["hover", "pressed", "hover_pressed"]:
+		b.add_theme_stylebox_override(state, down)
+	return b
+
+
+## "Midfield: yours below par, theirs good." as the line's name over two
+## columns that match the header above: yours under your club's colour, theirs
+## under theirs. "Even, both average" stays one line.
+func _h2h_row(row: Dictionary, opp: String) -> Control:
+	var text := str(row["text"])
+	var cut := text.find(": ")
+	var one := UiKit.vbox(4)
+	one.name = "H2H_" + str(row["key"])
+	one.set_meta("plain", text)
+	if cut < 0:
+		one.add_child(_para(text, UiKit.SECONDARY, UiKit.TEXT))
+		return one
+	one.add_child(UiKit.lbl(text.substr(0, cut), UiKit.NAME, UiKit.TEXT, true))
+	var rest := text.substr(cut + 2).trim_suffix(".")
+	var at := rest.find(", theirs ")
+	if not rest.begins_with("yours ") or at < 0:
+		one.add_child(_para(rest.substr(0, 1).to_upper() + rest.substr(1) + ".", UiKit.SECONDARY, SOFT))
+		return one
+	var inks: Array = UiKit.club_ink_pair(GameState.my_club, opp)
+	var cols := UiKit.hbox(GAP)
+	var parts := [["Yours", rest.substr(6, at - 6), inks[0]], ["Theirs", rest.substr(at + 9), inks[1]]]
+	for part in parts:
+		var c := UiKit.vbox(4)
+		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var bar := ColorRect.new()
+		bar.color = part[2]
+		bar.custom_minimum_size = Vector2(0, 3)
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		c.add_child(bar)
+		# Yours in weight (the verdict you decide on), theirs plain.
+		c.add_child(UiKit.lbl("%s %s" % [part[0], part[1]], UiKit.SECONDARY,
+				UiKit.club_name_colour(part[2]), true))
+		cols.add_child(c)
+	one.add_child(cols)
+	return one
+
+
+## A fact about your own people with a short bar in `ink` at its left: its own
+## row, never a stray line under the buttons.
+func _note_row(body: Control, ink: Color) -> Control:
+	var row := UiKit.hbox(8)
+	var bar := ColorRect.new()
+	bar.color = ink
+	bar.custom_minimum_size = Vector2(4, 0)
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(bar)
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(body)
+	return row
+
+
+## A thin rule between the facts above and the report below.
+func _rule() -> Control:
+	var r := ColorRect.new()
+	r.name = "SheetRule"
+	r.color = Color(UiKit.TEXT, 0.14)
+	r.custom_minimum_size = Vector2(0, 1)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return r
+
+
+## A guernsey on a light tile, so a dark club (Carlton's navy) still reads on
+## the dark page: 30 px of crest on a 36 px tile.
+func _crest_tile(code: String) -> Control:
+	var tile := PanelContainer.new()
+	tile.name = "CrestTile"
+	tile.add_theme_stylebox_override("panel", UiKit.style(Color("e8e4da"), 3, UiKit.RADIUS))
+	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tile.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	tile.add_child(UiKit.club_marker(code, 30.0))
+	return tile
+
+
+## Both sides' key forwards and key defenders, your side on the left (marked
+## "You") and theirs on the right: height and how they mark, one player a line.
+## One rule for both sides: the club's readable colour as a bar over its column
+## and on its name (a red club's name stays plain, as everywhere: red is the bar
+## and the crest), the crest on a light tile. Rows are facts, not buttons.
+func _key_players(kp: Dictionary, opp: String) -> Control:
+	var tight := _roomy()
+	var cols := UiKit.hbox(GAP)
+	cols.name = "KeyMatchups"
+	var inks: Array = UiKit.club_ink_pair(GameState.my_club, opp)
+	var at := 0
+	var wrap_head := false
+	for c in [GameState.my_club, opp]:
+		if UiKit.BOLD.get_string_size(GameDB.club_name(str(c)), HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.NAME).x > 112.0:
+			wrap_head = true
+	for side in ["mine", "theirs"]:
+		var code: String = GameState.my_club if side == "mine" else opp
+		var col := UiKit.vbox(6 if tight else GAP)
+		col.name = "KeySide_" + side
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.size_flags_stretch_ratio = 1.0
+		var bar := ColorRect.new()
+		bar.name = "ClubBar"
+		bar.color = inks[at]
+		bar.custom_minimum_size = Vector2(0, 4)
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		col.add_child(bar)
+		var head := UiKit.hbox(8)
+		head.name = "ClubHead"
+		head.add_child(_crest_tile(code))
+		var who := UiKit.vbox(0)
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var mark := UiKit.line("You" if side == "mine" else "Them", UiKit.SECONDARY,
+				UiKit.TEXT if side == "mine" else SOFT, side == "mine")
+		mark.name = "SideMark"
+		who.add_child(mark)
+		# The whole name, over two lines if it needs them (Greater Western Sydney).
+		var nm := UiKit.lbl(GameDB.club_name(code), UiKit.NAME, UiKit.club_name_colour(inks[at]), true)
+		nm.name = "ClubName"
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.custom_minimum_size = Vector2(0, 0)
+		who.add_child(nm)
+		head.add_child(who)
+		# Both heads stand as tall as the longer name needs, so the two columns line up.
+		if wrap_head and not tight:
+			head.custom_minimum_size = Vector2(0, 64)
+		col.add_child(head)
+		at += 1
+		for group in [["fwd", "Key forwards, marking"], ["def", "Key defenders, marking"]]:
+			var list: Array = (kp[side] as Dictionary)[group[0]]
+			if list.is_empty():
+				continue
+			var sec := UiKit.vbox(4 if tight else 12)
+			sec.name = "KeySection_" + str(group[0])
+			# 16 before a group label (the column gap), 4 from it to its first row, 12 between rows.
+			var lead := UiKit.vbox(4)
+			lead.add_child(UiKit.lbl(str(group[1]), UiKit.SECONDARY, SOFT, true))
+			sec.add_child(lead)
+			var first := true
+			for p in list:
+				var one := UiKit.vbox(0)
+				one.custom_minimum_size = Vector2(0, 0 if tight else 44)
+				one.name = ("KeyForward_" if group[0] == "fwd" else "KeyDefender_") + str(p["id"])
+				one.add_child(UiKit.ellipsis(GameDB.player_display_name(p), UiKit.NAME, UiKit.TEXT, true))
+				one.add_child(_air_line(p))
+				if first:
+					lead.add_child(one)
+					first = false
+				else:
+					sec.add_child(one)
+			col.add_child(sec)
+		cols.add_child(col)
+	return cols
+
+
+## "196 cm  strong": the height as plain secondary text, then the grade, which
+## steps up in weight and size as it gets better (elite is the
+## biggest and boldest, average the plainest) in the text colours only, so it is
+## never read as GOOD or BAD. What is graded is said once, in the section label.
+func _air_line(p: Dictionary) -> Control:
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 10)
+	flow.add_theme_constant_override("v_separation", 0)
+	flow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if float(p.get("height_cm", 0.0)) > 0.0:
+		flow.add_child(UiKit.line("%d cm" % int(p["height_cm"]), UiKit.SECONDARY, SOFT))
+	var g := PlayerProfile.grade(PlayerProfile.percentile(p, "marking")).to_lower()
+	if g == "":
+		g = "average"
+	var size := UiKit.SECONDARY
+	var bold := true
+	var ink := UiKit.TEXT
+	match g:
+		"elite":
+			size = UiKit.NAME
+		"good":
+			bold = false
+		"average":
+			bold = false
+			ink = SOFT
+	var gl := UiKit.line(g, size, ink, bold)
+	gl.name = "Grade"
+	flow.add_child(gl)
+	return flow
 
 
 ## The line synergies your 18 switch on - what the side is good at - any
 ## one it is a single player short of (a fact, never a suggested swap: the
 ## choice is yours), and the full rules one tap away, under the line they explain.
 func _synergy_view() -> Control:
-	var h := UiKit.vbox(2)
+	var h := UiKit.vbox(8)
 	h.name = "Synergies"
 	var on: PackedStringArray = []
+	var lit := {}
 	for r in Traits.progress(GameState.my_squad().ground):
 		if bool(r["active"]):
 			on.append(Traits.with_effect(str(r["key"])))
+			lit[Traits.label(str(r["key"]))] = UiKit.GOOD
+	# One pattern for both lines, one colour: the lead-in, the name, what it does or needs.
 	var l := TraitLink.line("Your side has: " + ", ".join(on) + "." if not on.is_empty()
-			else "No line synergies in this side.", 13, UiKit.GOOD if not on.is_empty() else UiKit.MUTED)
+			else "No line synergies in this side.", UiKit.BODY, UiKit.TEXT, {}, lit)
 	l.name = "SynergyLine"
 	h.add_child(l)
-	var short := Traits.short_text(GameState.my_squad().ground)
+	var short := Traits.short_words(GameState.my_squad().ground)
 	if short != "":
-		var s := TraitLink.line(short, 13, UiKit.MUTED)
+		var s := TraitLink.line(short, UiKit.BODY, UiKit.TEXT)
 		s.name = "SynergyShort"
 		h.add_child(s)
-	var rules := UiKit.btn("Synergies", 14)
+	var rules := _link_btn("Synergies")
 	rules.name = "SynergyRules"
-	rules.custom_minimum_size = Vector2(104, 44)
-	rules.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	rules.pressed.connect(_show_synergies)
 	h.add_child(rules)
 	return h
@@ -443,8 +667,7 @@ func _show_synergies() -> void:
 		row.add_child(wl)
 		if not bool(active.get(key, false)):
 			row.add_child(_complete_button(str(key)))
-	var close := UiKit.btn("Close", UiKit.NAME, true)
-	close.custom_minimum_size = Vector2(0, 48)
+	var close := _outline_btn("Close")
 	close.pressed.connect(_close_synergies)
 	box["footer"].add_child(close)
 
