@@ -26,6 +26,7 @@ func _run() -> void:
 	_checks = suite.checks
 	_failures.append_array(suite.failures)
 	await _t("_test_training_hero")
+	await _t("_test_training_grid")
 	print(Ran.line("Training", self, [suite]))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -108,6 +109,79 @@ func _test_training_hero() -> void:
 	plain.queue_free()
 	await _settle()
 	art.dir = "res://assets/ui/models"
+
+
+## Training grid (row 24): two cards across at phone width, every card inside
+## the screen, name and development line share a left edge, traits shown, a
+## real tap on a card opens that player. Off, the list is the full-width rows.
+func _test_training_grid() -> void:
+	var gs = root.get_node("GameState")
+	var db = root.get_node("GameDB")
+	var features = load("res://scripts/core/Features.gd")
+	for on in [false, true]:
+		features.set_on("training_grid", on)
+		gs.reset()
+		gs.set_setting("seen_training_intro", true)
+		gs.start_season("FRE", db.club_list("FRE"))
+		root.size = Vector2i(390, 844)
+		var scene: Control = load("res://scenes/TrainingScene.tscn").instantiate()
+		root.add_child(scene)
+		await _settle()
+		var grids := scene.find_children("TrainingGrid", "GridContainer", true, false)
+		if not on:
+			_check(grids.is_empty(), "Grid off: Training keeps its full-width rows")
+			scene.queue_free()
+			await _settle()
+			continue
+		_check(not grids.is_empty() and (grids[0] as GridContainer).columns == 2, "Grid on: players sit two cards across")
+		var cards := scene.find_children("Trainee_*", "Button", true, false)
+		_check(cards.size() == gs.my_list.size(), "Grid on: every listed player has a card (%d of %d)" % [cards.size(), gs.my_list.size()])
+		var screen := Rect2(Vector2.ZERO, Vector2(390, 844))
+		var inside := true
+		var aligned := true
+		var whole_words := true
+		for c in cards:
+			var b := c as Button
+			var card: Control = b.get_parent()
+			var r := card.get_global_rect()
+			if r.position.x < -0.5 or r.end.x > 390.5 or r.size.x < 140.0 or r.size.y < 64.0:
+				inside = false
+			var nm: Label = card.find_child("Name", true, false)
+			for l in card.find_children("*", "Label", true, false):
+				var lab := l as Label
+				if lab.text != "" and lab != nm and lab.size.y + 1.0 < lab.get_combined_minimum_size().y and lab.text_overrun_behavior == TextServer.OVERRUN_NO_TRIMMING:
+					whole_words = false
+				if lab.text != "" and not card.get_global_rect().grow(0.5).encloses(lab.get_global_rect()):
+					# a card that can't hold its words is a fail; rows below the fold are laid out too
+					whole_words = false
+			var under: Label = null
+			for l in card.find_children("*", "Label", true, false):
+				if l != nm and (l as Label).text != "" and (l as Label).get_parent() == nm.get_parent() and l.get_index() == nm.get_index() + 1:
+					under = l
+			if nm == null or under == null or absf(nm.global_position.x - under.global_position.x) > 0.5:
+				aligned = false
+		_check(inside, "Grid on: every card is inside the screen, at least 140 wide and 64 tall")
+		_check(aligned, "Grid on: each card's name and development line share one left edge")
+		_check(whole_words, "Grid on: no card's words spill out of it")
+		var with_traits := 0
+		for c in cards:
+			var tr := c.get_parent().find_child("Traits", true, false)
+			if tr != null and tr.get_child_count() > 0:
+				with_traits += 1
+		var expect := 0
+		for p in gs.my_list:
+			if not Traits.of(p).is_empty():
+				expect += 1
+		_check(with_traits == expect and expect > 0, "Grid on: a card shows his traits (%d of %d with traits)" % [with_traits, expect])
+		var first: Button = cards[0]
+		var first_id: String = first.name.trim_prefix("Trainee_")
+		var why: String = await Tap.tap(first)
+		await _settle()
+		_check(why == "" and bool(scene.get("_showing_detail")) and str(scene.get("_selected")) == first_id,
+				"Grid on: a real tap on a card opens that player (%s)" % why)
+		scene.queue_free()
+		await _settle()
+	features.clear("training_grid")
 
 
 func _settle() -> void:

@@ -30,6 +30,7 @@ var _hold_serial := 0
 var _press_scroll := 0
 var _press_pos := Vector2.ZERO
 const ROW_PROFILE_W := 56.0
+const GRID_TRAITS := 2   # traits named on a grid card; the rest on his profile
 const DRAG_SLOP := 12.0   # the list's scroll deadzone
 var _root: VBoxContainer
 var _list_scroll: ScrollContainer
@@ -463,6 +464,18 @@ func _fill_rows(rows: Node) -> void:
 		group.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
 		rows.add_child(UiKit.lbl("%s  (%d)" % [UiKit.ROLE_LABEL[role], group.size()],
 				12, UiKit.ROLE_COLOUR[role], true))
+		if Features.on("training_grid"):
+			var grid := GridContainer.new()
+			grid.name = "TrainingGrid"
+			grid.columns = 2
+			grid.add_theme_constant_override("h_separation", 6)
+			grid.add_theme_constant_override("v_separation", 6)
+			grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			rows.add_child(grid)
+			for p in group:
+				grid.add_child(_player_card(p))
+				shown += 1
+			continue
 		for p in group:
 			rows.add_child(_player_row(p))
 			shown += 1
@@ -475,6 +488,82 @@ func _matches(p: Dictionary) -> bool:
 	if q == "":
 		return true
 	return GameDB.player_search_text(p).to_lower().contains(q)
+
+
+## Training grid (feature training_grid): two cards across. Top line: his
+## position tag at the left, his rating at the right (any injury or
+## not-playing stamp beside it); under it his name, where he is in his
+## development, then his traits. The whole card selects him exactly as a row
+## does, a long press still starts a group, and the profile page is one
+## more tap away from his plan page.
+func _player_card(p: Dictionary) -> Control:
+	var id := str(p["id"])
+	var selected := _bulk_selected.has(id) or (_bulk_selected.is_empty() and id == _selected)
+	# The panel is as tall as its words need (a two-line name, two traits); the
+	# button over it takes the taps and draws the chosen outline.
+	var card := UiKit.panel(UiKit.PANEL_ALT, 0, UiKit.RADIUS)
+	if selected:
+		var chosen := UiKit.style(UiKit.PANEL_ALT, 0, UiKit.RADIUS, UiKit.TEXT)
+		chosen.set_border_width_all(2)
+		card.add_theme_stylebox_override("panel", chosen)
+	card.name = "Card_" + id
+	card.custom_minimum_size.y = 72
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.size_flags_vertical = Control.SIZE_FILL
+	var pad := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, 10)
+	card.add_child(pad)
+	var v := UiKit.vbox(2)
+	pad.add_child(v)
+	var top := UiKit.hbox(6)
+	v.add_child(top)
+	# His positions in the first one's colour; a long tag breaks after a slash, never cut short.
+	var tag := Ratings.role_tag(p)
+	var tag_label := UiKit.lbl(tag.replace("/", "/​"), UiKit.FINE, UiKit.ROLE_COLOUR.get(tag.split("/")[0], UiKit.MUTED), true)
+	tag_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tag_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	top.add_child(tag_label)
+	var duty := GameState.last_duty(id)
+	if int(p.get("injury_weeks", 0)) > 0:
+		top.add_child(UiKit.line("INJ %dw" % int(p["injury_weeks"]), UiKit.FINE, UiKit.BAD, true))
+	elif duty == "Interchange":
+		top.add_child(UiKit.line("INT", UiKit.FINE, UiKit.MUTED))
+	elif duty == "Reserves":
+		top.add_child(UiKit.line("RES", UiKit.FINE, UiKit.MUTED))
+	elif duty == "Not selected":
+		top.add_child(UiKit.line("OUT", UiKit.FINE, UiKit.MUTED))
+	var rise := _last_rise(id)
+	top.add_child(UiKit.line(("▲ " if rise.size() > 0 else "") + str(int(p["overall"])), UiKit.NAME,
+			UiKit.GOOD if rise.size() > 0 else UiKit.TEXT, true))
+	v.add_child(UiKit.name_label(GameDB.player_display_name(p)))
+	var plan := GameState.plan_for(p)
+	var state := GameState.development_state(p).replace(" his projected peak", " his peak")
+	var under := state if plan == "position" else "%s  ·  %s" % [_row_plan(plan), state]
+	v.add_child(UiKit.ellipsis(under, UiKit.SECONDARY, UiKit.MUTED))
+	var traits := HFlowContainer.new()
+	traits.name = "Traits"
+	traits.add_theme_constant_override("h_separation", 8)
+	traits.add_theme_constant_override("v_separation", 0)
+	var shown_traits := Traits.of(p)
+	for t in shown_traits.slice(0, GRID_TRAITS):
+		traits.add_child(UiKit.line(Traits.label(t), UiKit.FINE, UiKit.BAD if Traits.is_bad(t) else UiKit.TEXT))
+	if shown_traits.size() > GRID_TRAITS:
+		traits.add_child(UiKit.line("and %d more" % (shown_traits.size() - GRID_TRAITS), UiKit.FINE, UiKit.MUTED))
+	v.add_child(traits)
+	_ignore_mouse(pad)
+	var b := UiKit.btn("", 14)
+	b.name = "Trainee_" + id
+	b.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var clear := UiKit.style(Color.TRANSPARENT, 0, UiKit.RADIUS)
+	clear.set_border_width_all(0)
+	for state_name in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+		b.add_theme_stylebox_override(state_name, clear)
+	b.button_down.connect(_begin_player_hold.bind(id))
+	b.button_up.connect(_end_player_hold.bind(id))
+	b.pressed.connect(_press_player.bind(id))
+	card.add_child(b)
+	return card
 
 
 func _player_row(p: Dictionary) -> Control:
