@@ -167,10 +167,10 @@ static func clamp_orientation(_saved: String) -> String:
 
 ## Hold the phone in portrait by the engine's own means (Android and iOS also
 ## lock it from project.godot's handheld orientation). A desktop and headless
-## are left alone. Returns what was asked of the engine, for a test to read.
+## are left alone. Returns what was asked of the engine, or -1 when nothing was.
 func lock_portrait() -> int:
 	if DisplayServer.get_name() == "headless" or is_desktop() and not force_web_phone:
-		return DisplayServer.SCREEN_PORTRAIT
+		return -1
 	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
 	return DisplayServer.SCREEN_PORTRAIT
 

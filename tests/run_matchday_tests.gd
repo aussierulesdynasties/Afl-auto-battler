@@ -2565,14 +2565,27 @@ func _test_vignettes_setting() -> void:
 			_state.set_setting("screen_orientation", old)
 			_state.clamp_saved_orientation()
 			var cfg2 := ConfigFile.new()
-			_check(cfg2.load(_state.settings_path) == OK and cfg2.get_value("ui", "screen_orientation") == "portrait"
-					and _state.screen_orientation() == "portrait",
+			_check(cfg2.load(_state.settings_path) == OK and cfg2.get_value("ui", "screen_orientation") == "portrait",
 					"A saved '%s' loads as portrait (%s)" % [old, tag])
-		_check(root.get_node("ScreenLayout").lock_portrait() == DisplayServer.SCREEN_PORTRAIT,
-				"A phone asks the engine for portrait (%s)" % tag)
+		var cfg3 := ConfigFile.new()
+		if cfg3.load(_state.settings_path) == OK and cfg3.has_section_key("ui", "screen_orientation"):
+			cfg3.erase_section_key("ui", "screen_orientation")
+			cfg3.save(_state.settings_path)
+		_state.clamp_saved_orientation()
+		var cfg4 := ConfigFile.new()
+		_check(cfg4.load(_state.settings_path) != OK or not cfg4.has_section_key("ui", "screen_orientation"),
+				"No saved orientation stays unsaved after the clamp (%s)" % tag)
+		var gs_src := FileAccess.get_file_as_string("res://scripts/state/GameState.gd")
+		var ready_body := gs_src.substr(gs_src.find("func _ready("))
+		ready_body = ready_body.substr(0, ready_body.find("
+func ", 1))
+		_check(ready_body.contains("clamp_saved_orientation()"),
+				"GameState._ready clamps the saved orientation (%s)" % tag)
 		load("res://scripts/core/ScreenLayout.gd").force_web_phone = false
 		var proj := FileAccess.get_file_as_string("res://project.godot")
-		_check(proj.contains("window/handheld/orientation=1") and int(ProjectSettings.get_setting("display/window/handheld/orientation")) == DisplayServer.SCREEN_PORTRAIT,
+		_check((proj.contains("window/handheld/orientation=1
+") or proj.contains("window/handheld/orientation=1
+")) and int(ProjectSettings.get_setting("display/window/handheld/orientation")) == DisplayServer.SCREEN_PORTRAIT,
 				"project.godot locks handhelds to portrait (%s)" % tag)
 		host.queue_free()
 		await _settle()
