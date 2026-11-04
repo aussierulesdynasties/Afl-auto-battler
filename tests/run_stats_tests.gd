@@ -1031,12 +1031,12 @@ func _test_ladder(sz: Vector2i) -> void:
 	await _settle()
 	var top8 := _row_codes(s)
 	var expect8 := []
-	for c in true_order.slice(0, Season.FINALISTS):
+	for c in true_order.slice(0, load("res://scripts/sim/Season.gd").FINALISTS):
 		expect8.append(c)
 	top8.sort()
 	expect8.sort()
 	_check(top8 == expect8, "Top 10 shows every finals club (%s)" % tag)
-	_check(_text(s.find_child("ActiveState", true, false)).contains("Top %d" % Season.FINALISTS), "The active filter is shown (%s)" % tag)
+	_check(_text(s.find_child("ActiveState", true, false)).contains("Top %d" % load("res://scripts/sim/Season.gd").FINALISTS), "The active filter is shown (%s)" % tag)
 	await Tap.tap(s.find_child("Filter_near", true, false))
 	await _settle()
 	var near := _row_codes(s)
