@@ -27,6 +27,7 @@ func run() -> void:
 	_t("_test_grand_final_at_the_mcg")
 	_t("_test_rest_of_week_in_background")
 	_t("_test_draws_on_the_ladder")
+	_t("_test_preliminary_finals_crossover")
 	GameState.replay_seed = 0
 	print(Ran.line("Finals", self))
 
@@ -408,3 +409,19 @@ func _test_draws_on_the_ladder() -> void:
 				and int(row["w"]) == int(was["w"]) and int(row["l"]) == int(was["l"]) \
 				and int(row["pts"]) == int(was["w"]) * 4 + (int(was["d"]) + 1) * 2
 	_check(ok, "A level home-and-away match is a draw: two points each")
+
+
+## Preliminary finals cross over (AFL system, director): QF1 winner meets the
+## SF2 winner and QF2 winner meets the SF1 winner; the bracket screen agrees.
+func _test_preliminary_finals_crossover() -> void:
+	var season := _to_last_round()
+	season.finals = {"week": 4, "top": [], "done": false, "slots": {
+			"W_QF1": "Q1", "W_QF2": "Q2", "W_SF1": "S1", "W_SF2": "S2"}}
+	var pf: Array = season.finals_week_matches()
+	_check(pf.size() == 2 and pf[0]["home"] == "Q1" and pf[0]["away"] == "S2",
+			"PF1 should be W_QF1 v W_SF2, got %s" % [pf])
+	_check(pf.size() == 2 and pf[1]["home"] == "Q2" and pf[1]["away"] == "S1",
+			"PF2 should be W_QF2 v W_SF1, got %s" % [pf])
+	var ui: Array = FinalsBracket.WEEKS[3][2]
+	_check(ui[0][2] == "W_QF1" and ui[0][3] == "W_SF2" and ui[1][2] == "W_QF2" 			and ui[1][3] == "W_SF1", "Bracket PF wiring should cross over, got %s" % [ui])
+	_check(FinalsBracket.ROUTES.has(["SF2", "PF1", "W"]) 			and FinalsBracket.ROUTES.has(["SF1", "PF2", "W"]), "Bracket routes should cross over")

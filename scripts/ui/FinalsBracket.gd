@@ -17,8 +17,8 @@ const WEEKS := [
 			["QF2", "Qualifying Final 2", "S2", "S3"], ["EF1", "Elimination Final 1", "S5", "W_WC2"],
 			["EF2", "Elimination Final 2", "S6", "W_WC1"]]],
 	["Semi Finals", "Semis", [["SF1", "Semi Final 1", "L_QF1", "W_EF1"], ["SF2", "Semi Final 2", "L_QF2", "W_EF2"]]],
-	["Preliminary Finals", "Prelims", [["PF1", "Preliminary Final 1", "W_QF1", "W_SF1"],
-			["PF2", "Preliminary Final 2", "W_QF2", "W_SF2"]]],
+	["Preliminary Finals", "Prelims", [["PF1", "Preliminary Final 1", "W_QF1", "W_SF2"],
+			["PF2", "Preliminary Final 2", "W_QF2", "W_SF1"]]],
 	["Grand Final", "Grand Final", [["GF", "Grand Final", "W_PF1", "W_PF2"]]],
 ]
 const WIDE := 900.0
@@ -271,7 +271,7 @@ func _stage_cup() -> Control:
 const ROUTES := [
 	["WC1", "EF2", "W"], ["WC2", "EF1", "W"], ["QF1", "PF1", "W"], ["QF1", "SF1", "L"],
 	["QF2", "PF2", "W"], ["QF2", "SF2", "L"], ["EF1", "SF1", "W"], ["EF2", "SF2", "W"],
-	["SF1", "PF1", "W"], ["SF2", "PF2", "W"], ["PF1", "GF", "W"], ["PF2", "GF", "W"],
+	["SF2", "PF1", "W"], ["SF1", "PF2", "W"], ["PF1", "GF", "W"], ["PF2", "GF", "W"],
 ]
 const GF_H := 92.0
 const CUP_H := 130.0
