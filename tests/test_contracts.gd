@@ -306,6 +306,10 @@ func _test_negotiation_rules() -> void:
 	_check(Contracts.leverage(star) > Contracts.leverage(kid) and Contracts.leverage(kid) > Contracts.leverage(fringe)
 			and Contracts.stance(star).contains("won't take less") and Contracts.stance(fringe).contains("fighting"),
 			"Better and younger players have more leverage, and he says so")
+	var min_wage := {"id": "n_min", "overall": 40, "potential": 40, "age": 32.0, "morale": 70}
+	_check(Contracts.asking_salary(min_wage) == Contracts.SENIOR_MIN_2027
+			and Contracts.stance(min_wage).contains("fighting"),
+			"A minimum-wage fringe player is fighting for a spot, not firm on his worth")
 	var ask := Contracts.asking_salary(regular)
 	_check(Contracts.lowest(star, 3) == Contracts.asking_salary(star) and Contracts.lowest(regular, 3) < ask
 			and Contracts.lowest(regular, 4) == Contracts.lowest(regular, 3)
