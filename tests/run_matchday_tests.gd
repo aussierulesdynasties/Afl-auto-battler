@@ -969,7 +969,9 @@ func _test_best_so_far(sz: Vector2i) -> void:
 		var want_votes: String = notes.votes_text(votes_all, str(r["id"]))
 		if want_votes == "–":
 			bad.append("%s is listed with no votes" % str(r["id"]))
-		if votes_l == null or votes_l.text != want_votes:
+		# Only the leader's total is written ("10 votes"); the rest read in order.
+		var is_lead: bool = int(votes_all.get(str(r["id"]), 0)) == int(votes_all.values().max())
+		if votes_l == null or (is_lead and votes_l.text != "%s votes" % want_votes) or (not is_lead and votes_l.visible):
 			bad.append("%s votes %s v %s" % [str(r["id"]), votes_l.text if votes_l else "-", want_votes])
 		var line_l: Label = row.find_child("StandoutLine", true, false)
 		if line_l == null or line_l.text != str(r["line"]):
@@ -983,8 +985,7 @@ func _test_best_so_far(sz: Vector2i) -> void:
 	_check(block.find_child("BestClub_%d" % me, true, false) != null and block.find_child("BestClub_%d" % (1 - me), true, false) != null
 			and found > 0, "Best so far has a heading per club and lists every voted player (%s: %d rows)" % [tag, found])
 	for r in block.find_children("StandoutVotes", "Label", true, false):
-		_check((r as Label).text != "–" and (r as Label).text != "", "No row shows a dash for votes (%s)" % tag)
-		break
+		_check((r as Label).text != "–", "No row shows a dash for votes (%s)" % tag)
 	# Every touch target in the sheet is a full 48 px bar.
 	for nm in ["BestSoFarAll", "BreakStats"]:
 		var lk: Control = m.find_child(nm, true, false)
@@ -1007,11 +1008,11 @@ func _test_best_so_far(sz: Vector2i) -> void:
 			continue
 		if (bar as ColorRect).color != pair_inks[side]:
 			ally_bad.append("%s bar is not the pair's ink" % code)
-		if (bar as ColorRect).custom_minimum_size.x != 4.0:
-			ally_bad.append("%s bar is not 4 px" % code)
+		if (bar as ColorRect).custom_minimum_size.x < 4.0:
+			ally_bad.append("%s bar is under 4 px" % code)
 		var ink: Color = nm.get_theme_color("font_color")
-		if ink != uk.TEXT:
-			ally_bad.append("%s name is not plain white (club colour is the bar and crest only)" % code)
+		if ink != uk.club_name_colour(pair_inks[side]):
+			ally_bad.append("%s name is not the club's name colour" % code)
 		if uk.contrast(ink, uk.BG) < 4.5:
 			ally_bad.append("%s name contrast %.1f" % [code, uk.contrast(ink, uk.BG)])
 		for rl in (bar.get_parent() as Node).find_children("StandoutVotes", "Label", true, false):

@@ -782,7 +782,7 @@ func _show_coach_box() -> void:
 		# The full numbers, both clubs, at every break (director's PC
 		# playtest, 2026-10-07): a tap, never a compulsory report.
 		# On a PC it is a word in the actions row, beside Skip to full time.
-		var stats := UiKit.text_action("Match stats", UiKit.BODY) if wide else UiKit.text_action("Match stats ›", UiKit.BODY)
+		var stats := UiKit.text_action("Match stats", UiKit.BODY)
 		stats.name = "BreakStats"
 		stats.custom_minimum_size = Vector2(0, 48)
 		stats.pressed.connect(_show_break_stats)
@@ -1467,7 +1467,7 @@ func _mount_one_line(c: Dictionary) -> void:
 			quarter_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			put.call(head, quarter_head)
 		var stats: Control = take.call("BreakStats")
-		var open_best := UiKit.text_action("Best so far ›", UiKit.BODY)
+		var open_best := UiKit.text_action("Best so far", UiKit.BODY)
 		open_best.name = "BestSoFarOpen"
 		# In the sheet the two ways to the full numbers share one row of text
 		# links, not two more bars above Done.
@@ -1765,7 +1765,7 @@ func _skip_note(q: int, wide: bool) -> Label:
 
 func _open_break_sheet(node_name: String, title: String, parts: Array, home: Node) -> void:
 	# Best so far is a bottom sheet: the thumb's end of the screen, not floating.
-	var box := UiKit.modal_box(self, 640.0, 0.0, _wash(), node_name == "best")
+	var box := UiKit.modal_box(self, 640.0, 0.0, _wash(), node_name == "best", node_name == "best")
 	var ov: Control = box["overlay"]
 	ov.name = "CallSheet_" + node_name
 	# The break behind a sheet is out of sight: nothing of it reads, or shows
@@ -1781,14 +1781,15 @@ func _open_break_sheet(node_name: String, title: String, parts: Array, home: Nod
 			continue
 		if (p as Node).get_parent() != null:
 			(p as Node).get_parent().remove_child(p)
-		v.add_child(p)
-	var done := UiKit.btn("Done", UiKit.HEADING, node_name != "best")
+		# Best so far: the links sit at the thumb's end with Done, the votes above.
+		(box["footer"] as Node if node_name == "best" and (p as Node).name == "BreakLinks" else v).add_child(p)
+	var done := UiKit.btn("Done", UiKit.HEADING, true)
 	done.name = "CallDone"
 	done.custom_minimum_size = Vector2(0, 48)
 	done.pressed.connect(_close_top_break_sheet)
 	if node_name == "best":
-		# The votes are the screen, not the button: Done is a plain outline, one
-		# 12 px step under the links (the body's gap is 8, the footer's 6).
+		# Done is the one primary action, in the club fill.
+		_club_fill_button(done)
 		box["footer"].add_child(done)
 		var wash_best := UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
 		UiKit.edge_fade(box["body"].get_parent() as ScrollContainer, Color(wash_best, 0.2))
@@ -1796,9 +1797,17 @@ func _open_break_sheet(node_name: String, title: String, parts: Array, home: Nod
 		return
 	# Done stands 16 px clear of the links above it (the body's own gap is 8).
 	v.add_child(UiKit.spacer(8))
-	# A club-colour button on a sheet washed in a club colour needs an edge, and
-	# a fill that stands off the sheet: the club colour lifted until it reads
-	# 3:1 or better against the panel (never a dark purple on dark purple).
+	_club_fill_button(done)
+	box["footer"].add_child(done)
+	var wash_col := UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
+	UiKit.edge_fade(box["body"].get_parent() as ScrollContainer, Color(wash_col, 0.2))
+	_break_sheets.append({"overlay": ov, "close": _best_close(parts, home, ov)})
+
+
+## A club-colour button on a sheet washed in a club colour needs an edge, and
+## a fill that stands off the sheet: the club colour lifted until it reads
+## 3:1 or better against the panel (never a dark purple on dark purple).
+func _club_fill_button(done: Button) -> void:
 	var lead := UiKit.team_colour()
 	var fill := lead
 	var v_up := lead.v
@@ -1815,10 +1824,6 @@ func _open_break_sheet(node_name: String, title: String, parts: Array, home: Nod
 		done.add_theme_stylebox_override(state, sb)
 	for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		done.add_theme_color_override(k, Color.WHITE if UiKit.contrast(fill, Color.WHITE) >= UiKit.contrast(fill, Color("161512")) else Color("161512"))
-	box["footer"].add_child(done)
-	var wash_col := UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
-	UiKit.edge_fade(box["body"].get_parent() as ScrollContainer, Color(wash_col, 0.2))
-	_break_sheets.append({"overlay": ov, "close": _best_close(parts, home, ov)})
 
 
 ## Closing a break sheet hands its parts back to the break they came from.
@@ -2943,11 +2948,19 @@ func _wash() -> Color:
 	var mine := str(GameState.my_club)
 	var home := str(_res.get("home", ""))
 	var away := str(_res.get("away", ""))
+	var w := UiKit.AUTO_COLOUR
 	if mine == home:
-		return UiKit.opponent_wash(away)
-	if mine == away:
-		return UiKit.opponent_wash(home)
-	return UiKit.AUTO_COLOUR
+		w = UiKit.opponent_wash(away)
+	elif mine == away:
+		w = UiKit.opponent_wash(home)
+	# No usable opponent colour (opponent_wash answers plain text): the sheet
+	# carries your own club's colour instead of a neutral grey.
+	return UiKit.AUTO_COLOUR if w == UiKit.TEXT else w
+
+
+## The sheet's wash colour, resolved (AUTO is your club's colour).
+func _wash_col() -> Color:
+	return UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
 
 
 func _close_sheet() -> void:
@@ -3042,7 +3055,7 @@ func _best_so_far() -> Control:
 	var title := UiKit.section("Best so far")
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
-	var all := UiKit.text_action("All player stats" if _pc_break else "All player stats ›", UiKit.BODY)
+	var all := UiKit.text_action("All player stats", UiKit.BODY)
 	all.name = "BestSoFarAll"
 	all.custom_minimum_size = Vector2(0, 24 if _pc_break else 48)
 	all.pressed.connect(func(): _show_break_stats(true))
@@ -3063,13 +3076,14 @@ func _best_so_far() -> Control:
 	var votes := MatchNotes.coaches_votes(_res)
 	for side in [_my_side, 1 - _my_side]:
 		var code := str(_res["home"] if side == 0 else _res["away"])
-		var players := MatchNotes.standouts_by_votes(_res, side, 3 if _pc_break else 99, votes)
+		var players := MatchNotes.standouts_by_votes(_res, side, 3, votes)
 		var wrap := _votes_side(code, inks[side], players, votes, _pc_break)
 		wrap.name = "BestSide_%d" % side
 		(wrap.find_child("ClubName", true, false) as Node).name = "BestClub_%d" % side
 		(wrap.get_child(1) as Node).name = "BestSideBox_%d" % side
 		box.add_child(wrap)
 	if not _pc_break:
+		box.add_child(UiKit.spacer(8))   # with the body's 8: 16 clear of the buttons
 		box.add_child(all)
 	return box
 
@@ -3657,6 +3671,7 @@ func _show_fulltime() -> void:
 	var leave := UiKit.btn("Continue", UiKit.HEADING, true)
 	leave.name = "FullTimeContinue"
 	leave.custom_minimum_size = Vector2(240 if _stats_wide() else 0, 48)
+	_club_fill_button(leave)
 	leave.pressed.connect(func(): Router.back())
 	UiKit.feel(leave, "end")     # the end of the match: the siren
 	actions.add_child(leave)
@@ -3762,7 +3777,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 	var head := "Full time  ·  %s" % str(_res.get("label", "Match"))
 	if bool(_res.get("extra_time", false)):
 		head += "  ·  after extra time"
-	v.add_child(UiKit.ellipsis(head, UiKit.SMALL, UiKit.MUTED))
+	v.add_child(UiKit.ellipsis(head, UiKit.SECONDARY, VOTES_SUB))
 
 	# The result first, big: who won and by how much.
 	var verdict := "Draw"
@@ -3782,7 +3797,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 		# Both clubs read in full text; the winner is bold, the loser plain, and
 		# each name carries its club's colour (a red club's is white).
 		var nm := UiKit.ellipsis(GameDB.club_name(home if side == 0 else away), UiKit.NAME,
-				UiKit.club_name_colour(score_inks[side]), winner != 1 - side)
+				UiKit.readable_ink(UiKit.club_name_colour(score_inks[side]), UiKit.PANEL.lerp(_wash_col(), 0.3)), winner != 1 - side)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(nm)
 		var fig := UiKit.figure(UiKit.scoreline(int(_res["goals"][side]), int(_res["behinds"][side])),
@@ -3820,19 +3835,21 @@ func _ft_summary(v: VBoxContainer) -> void:
 		if Milestones.shown():
 			var ms_line := Milestones.summary_line(GameState, _res)
 			if ms_line != "":
-				var msl := UiKit.lbl(ms_line, UiKit.BODY, UiKit.TEXT, true)
+				# A heading, then the milestone in plain weight: the ladder and the next game follow it.
+				v.add_child(UiKit.section("Milestones"))
+				var msl := UiKit.lbl(ms_line.trim_prefix("Milestones: "), UiKit.BODY, UiKit.TEXT)
 				msl.name = "MilestoneLine"
 				msl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				v.add_child(msl)
 		if (_interactive or _review) and str(_res.get("tag", "")) == "":
 			var moved := GameState.ladder_move_line(_pos_before)
 			if moved != "":
-				var ml := UiKit.lbl(moved, UiKit.BODY, UiKit.TEXT, true)
+				var ml := UiKit.lbl(moved, UiKit.BODY, VOTES_SUB)
 				ml.name = "LadderMove"
 				v.add_child(ml)
 			var nxt := GameState.next_fixture_line()
 			if nxt != "":
-				var nl := UiKit.lbl(nxt, UiKit.BODY, UiKit.TEXT)
+				var nl := UiKit.lbl(nxt, UiKit.NAME, UiKit.TEXT, true)
 				nl.name = "NextFixture"
 				v.add_child(nl)
 		# The people it was about: a debut, a first goal, a promised run done.
@@ -3944,7 +3961,9 @@ func _ft_summary(v: VBoxContainer) -> void:
 ## the right, and his two best numbers under it. One line over both clubs says
 ## what the votes are (_votes_header). Club colour is the bar and the crest
 ## only, so a name can never pass for a button.
-const VOTES_COL_W := 40.0
+const VOTES_BAR_W := 5.0        # the club's bar down its block
+const VOTES_MARKER := 44.0      # the crest's height: about 32 px wide
+const VOTES_SUB := Color("cfcabe")   # the stat line under a name: a step dimmer than the name
 const VOTES_GUTTER := 8.0       # plus the row's 8 gap: 16 clear of the scrollbar and the card's edge; the score lines use it too
 const VOTES_STEP := 12          # one spacing step between blocks and rows
 
@@ -3953,7 +3972,7 @@ const VOTES_STEP := 12          # one spacing step between blocks and rows
 func _votes_side(code: String, ink: Color, players: Array, votes: Dictionary, pc := false, named := true) -> Control:
 	var side_box := UiKit.vbox(4 if pc else VOTES_STEP)
 	var rows_box := UiKit.vbox(BEST_ROW_GAP_PC if pc else VOTES_STEP)
-	var sh := UiKit.club_heading(code, null, UiKit.BODY if pc else UiKit.NAME, 22.0 if pc else 34.0, ink, true, named)
+	var sh := UiKit.club_heading(code, null, UiKit.BODY if pc else UiKit.NAME, 22.0 if pc else VOTES_MARKER, ink, false, named)
 	side_box.add_child(sh)
 	var shown := 0
 	for p in players:
@@ -3978,29 +3997,34 @@ func _votes_side(code: String, ink: Color, players: Array, votes: Dictionary, pc
 		gap.custom_minimum_size.x = VOTES_GUTTER
 		top.add_child(gap)
 		row.add_child(top)
-		var sub := UiKit.lbl(str(p["line"]), UiKit.SECONDARY if pc else UiKit.BODY, UiKit.TEXT)
+		var sub := UiKit.lbl(str(p["line"]), UiKit.SECONDARY, VOTES_SUB)
 		sub.name = "StandoutLine"
 		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		row.add_child(sub)
 		rows_box.add_child(row)
 	side_box.add_child(rows_box)
-	return UiKit.club_section_body(code, side_box, ink)
+	return UiKit.club_section_body(code, side_box, ink, VOTES_BAR_W)
 
 
 ## What the votes are, said once over both clubs: who voted, how the list runs.
 func _votes_header() -> Control:
-	var l := UiKit.lbl("Coaches' votes, best first, 10 the most", UiKit.SECONDARY if _pc_break else UiKit.BODY, UiKit.TEXT)
+	var l := UiKit.lbl("Coaches' votes, best first", UiKit.SECONDARY if _pc_break else UiKit.BODY, UiKit.TEXT)
 	l.name = "VotesHeading"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
 
 
-## A player's coaches' votes, bold and right-aligned in a fixed column. Plain
-## text colour: club colour says who, not how well.
+## The coaches' votes, said once: the leader's total ("10 votes") sits at the
+## right of his row; the rest read in order, with no numbers. Plain text colour:
+## club colour says who, not how well.
 func _votes_figure(votes: Dictionary, id: String) -> Label:
-	var l := UiKit.line(MatchNotes.votes_text(votes, id), 20, UiKit.TEXT, true)
+	var top := 0
+	for k in votes:
+		top = maxi(top, int(votes[k]))
+	var lead := votes.has(id) and int(votes[id]) == top and top > 0
+	var l := UiKit.line("%d votes" % int(votes[id]) if lead else "", UiKit.BODY, UiKit.TEXT, true)
 	l.name = "StandoutVotes"
-	l.custom_minimum_size.x = VOTES_COL_W
+	l.visible = lead
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	return l
 
@@ -4018,9 +4042,8 @@ func _ft_best_players(v: VBoxContainer, me: int, mine: bool, winner: int) -> voi
 	var inks := UiKit.club_ink_pair(str(_res["home"]), str(_res["away"]))
 	for side in [first, 1 - first]:
 		var code := str(_res["home"] if side == 0 else _res["away"])
-		var players := MatchNotes.standouts_by_votes(_res, side, 99, votes)
-		# The score lines above already name both clubs: here the crest and bar say which.
-		var wrap := _votes_side(code, inks[side], players, votes, false, false)
+		var players := MatchNotes.standouts_by_votes(_res, side, 3, votes)
+		var wrap := _votes_side(code, inks[side], players, votes, false, true)
 		wrap.name = "BestSide_%d" % side
 		best_box.add_child(wrap)
 	v.add_child(best_box)

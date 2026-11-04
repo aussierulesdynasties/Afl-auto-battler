@@ -256,7 +256,7 @@ static func edge_fade(sc: ScrollContainer, _tint := Color(0, 0, 0, 0), _h := 28.
 	hint.name = "ScrollHint"
 	hint.text = "Scroll for more"
 	hint.add_theme_font_override("font", FONT)
-	hint.add_theme_font_size_override("font_size", SMALL)
+	hint.add_theme_font_size_override("font_size", SECONDARY)
 	hint.add_theme_color_override("font_color", TEXT)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -639,14 +639,14 @@ static func club_heading(code: String, right: Control = null, fs := NAME, marker
 
 ## `content` set beside a 4 px bar in the club's ink (the same `ink` as its
 ## heading), so a club's section reads as that club's down its whole length.
-static func club_section_body(code: String, content: Control, ink := Color(0, 0, 0, 0)) -> HBoxContainer:
+static func club_section_body(code: String, content: Control, ink := Color(0, 0, 0, 0), bar_w := 4.0) -> HBoxContainer:
 	if ink.a == 0.0:
 		ink = club_ink(code)
 	var wrap := hbox(6)
 	var bar := ColorRect.new()
 	bar.name = "ClubBar"
 	bar.color = ink
-	bar.custom_minimum_size = Vector2(4, 0)
+	bar.custom_minimum_size = Vector2(bar_w, 0)
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wrap.add_child(bar)
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1550,7 +1550,7 @@ static func cover(parent: Control) -> ColorRect:
 ## Dialog that stays inside the viewport. Body scrolls; footer stays put.
 ## `wash` tints the top of the sheet; by default your club's colour (match
 ## day passes the opponent's, from `opponent_wash`).
-static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AUTO_COLOUR, bottom := false) -> Dictionary:
+static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AUTO_COLOUR, bottom := false, fill := false) -> Dictionary:
 	var overlay := cover(parent)
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1634,7 +1634,8 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 			most = minf(most, prefer_h)
 		var chrome := shell.get_combined_minimum_size().y - sc.get_combined_minimum_size().y
 		var room := maxf(80.0, most - chrome)
-		sc.custom_minimum_size.y = minf(body.get_combined_minimum_size().y, room)
+		# fill: the sheet takes the screen's height (no dead band above it).
+		sc.custom_minimum_size.y = room if fill else minf(body.get_combined_minimum_size().y, room)
 		shell.custom_minimum_size = Vector2(w, 0.0)
 	var refit := func() -> void:
 		fit.call_deferred()
