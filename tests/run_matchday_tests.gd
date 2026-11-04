@@ -1024,6 +1024,10 @@ func _test_best_so_far(sz: Vector2i) -> void:
 				ally_bad.append("%s subline under 14 px" % code)
 			if uk.contrast((sl as Label).get_theme_color("font_color"), wash) < 4.5:
 				ally_bad.append("%s subline contrast %.1f" % [code, uk.contrast((sl as Label).get_theme_color("font_color"), wash)])
+			# The sheet itself is washed in one colour behind both clubs.
+			var sheet: Color = uk.PANEL.lerp(m._wash_col(), 0.3)
+			if uk.contrast((sl as Label).get_theme_color("font_color"), sheet) < 4.5:
+				ally_bad.append("%s subline contrast on the sheet wash %.1f" % [code, uk.contrast((sl as Label).get_theme_color("font_color"), sheet)])
 	_check(ally_bad.is_empty(), "Best so far carries each club's colour, readable (%s: %s)" % [tag, str(ally_bad)])
 	# Nothing in the block is clipped: every label's text fits its width.
 	var clipped := []
