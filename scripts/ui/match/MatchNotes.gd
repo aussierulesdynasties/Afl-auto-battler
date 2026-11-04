@@ -42,11 +42,15 @@ static func lead_text(home: String, away: String, score: Array, name: Callable) 
 
 ## A full score sentence for a break: "Melbourne 4.2 (26) lead Collingwood
 ## 3.1 (19) by 7." Never "defeated": that is for a final result only.
-static func break_score(home: String, away: String, goals: Array, behinds: Array) -> String:
+## `short` uses the short club names (Bulldogs, Saints), so the line holds on
+## one line of a phone's banner.
+static func break_score(home: String, away: String, goals: Array, behinds: Array, short := false) -> String:
 	var hs := int(goals[0]) * 6 + int(behinds[0])
 	var aws := int(goals[1]) * 6 + int(behinds[1])
-	var h_line := "%s %s" % [GameDB.club_name(home), UiKit.scoreline(int(goals[0]), int(behinds[0]))]
-	var a_line := "%s %s" % [GameDB.club_name(away), UiKit.scoreline(int(goals[1]), int(behinds[1]))]
+	var h_name := GameDB.club_short(home) if short else GameDB.club_name(home)
+	var a_name := GameDB.club_short(away) if short else GameDB.club_name(away)
+	var h_line := "%s %s" % [h_name, UiKit.scoreline(int(goals[0]), int(behinds[0]))]
+	var a_line := "%s %s" % [a_name, UiKit.scoreline(int(goals[1]), int(behinds[1]))]
 	if hs == aws:
 		return "%s and %s: scores level." % [h_line, a_line]
 	if hs > aws:
@@ -1017,6 +1021,85 @@ static func rated_players(res: Dictionary, side: int) -> Array:
 			return float(a["rating"]) > float(b["rating"])
 		return int(float(a["stats"].get("disposals", 0.0))) > int(float(b["stats"].get("disposals", 0.0))))
 	return out
+
+
+## The coaches' votes, as the AFL gives them: each coach names his five best
+## players on the ground, from either side, 5-4-3-2-1, so a player can earn up
+## to 10. Read from this match's ratings (so far, at a break), and from nothing
+## the sim decides with: each coach's own taste for a player is a fixed small
+## lean, the same all match, so the two coaches can differ on a close call.
+## Returns {player id: votes}; a player on neither coach's five is absent.
+static func coaches_votes(res: Dictionary) -> Dictionary:
+	var everyone := []
+	for side in [0, 1]:
+		everyone.append_array(rated_players(res, side))
+	var votes := {}
+	for coach in [0, 1]:
+		var scored := []
+		for r in everyone:
+			if int(r["rating"]) <= 0:
+				continue
+			var key := "%s|%s|%d|%s" % [res.get("home", ""), res.get("away", ""), coach, r["id"]]
+			var lean := float(key.hash() % 1000) / 1000.0 - 0.5   # -0.5..0.5
+			scored.append([str(r["id"]), float(r["rating"]) * (1.0 + 0.12 * lean)])
+		scored.sort_custom(func(a, b): return a[1] > b[1] or (a[1] == b[1] and str(a[0]) < str(b[0])))
+		for i in range(mini(5, scored.size())):
+			var id := str(scored[i][0])
+			votes[id] = int(votes.get(id, 0)) + (5 - i)
+	return votes
+
+
+## The side's best by the coaches' votes, most votes first and the match
+## rating breaking a tie, so the list reads as the ranking the votes make:
+## [{id, name, line, rating, inf, votes}]. `line` is votes_line: his two
+## best numbers. Players with no vote are left out; n caps the rows (a large
+## n lists every player the coaches voted for).
+static func standouts_by_votes(res: Dictionary, side: int, n: int, votes: Dictionary) -> Array:
+	# Only players a coach voted for: a row with no vote is no row.
+	var ranked := rated_players(res, side).filter(func(r): return votes.has(str(r["id"])))
+	ranked.sort_custom(func(a, b):
+		var va := int(votes.get(str(a["id"]), 0))
+		var vb := int(votes.get(str(b["id"]), 0))
+		if va != vb:
+			return va > vb
+		return float(a["rating"]) > float(b["rating"]))
+	var out := []
+	for r in ranked.slice(0, n):
+		out.append({"id": r["id"], "name": r["name"], "line": votes_line(r["stats"]),
+				"rating": r["rating"], "inf": r["rating"], "votes": int(votes.get(str(r["id"]), 0))})
+	return out
+
+
+## [stat key, singular, plural, a good game's count]. A player's best two are
+## the two furthest above a good game, so a quiet 30 disposals does not hide
+## 12 clearances.
+const VOTE_STATS := [
+	["goals", "goal", "goals", 2.0], ["disposals", "disposal", "disposals", 25.0],
+	["marks", "mark", "marks", 8.0], ["tackles", "tackle", "tackles", 6.0],
+	["clearances", "clearance", "clearances", 7.0], ["hitouts", "hit-out", "hit-outs", 25.0],
+	["pressure_acts", "pressure act", "pressure acts", 20.0], ["spoils", "spoil", "spoils", 6.0],
+	["intercepts", "intercept", "intercepts", 8.0], ["rebounds", "rebound 50", "rebound 50s", 6.0],
+	["inside50", "inside 50", "inside 50s", 6.0]]
+
+
+## A player's game as exactly his two best numbers, best first: "3 goals, 12
+## disposals". One pattern for every row of the votes lists.
+static func votes_line(st: Dictionary) -> String:
+	var ranked := []
+	for row in VOTE_STATS:
+		var n := int(float(st.get(row[0], 0.0)))
+		if n > 0:
+			ranked.append([float(n) / float(row[3]), n, row[1] if n == 1 else row[2]])
+	ranked.sort_custom(func(a, b): return a[0] > b[0])
+	var bits := PackedStringArray()
+	for r in ranked.slice(0, 2):
+		bits.append("%d %s" % [r[1], r[2]])
+	return ", ".join(bits)
+
+
+## "7", or a dash for a player neither coach voted for.
+static func votes_text(votes: Dictionary, id: String) -> String:
+	return str(int(votes[id])) if votes.has(id) else "–"
 
 
 ## The few team numbers worth a glance at full time: [label, mine, theirs].

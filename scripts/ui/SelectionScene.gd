@@ -203,7 +203,7 @@ func _open_week() -> void:
 	# The page behind is dimmed hard (0.92): nothing under the sheet competes.
 	# The wash is your club's own readable colour (club_ink lifts a dark club such as
 	# Fremantle off the page), so the sheet says whose week it is.
-	var box := UiKit.modal_box(self, 560.0, 0.0, UiKit.club_ink(GameState.my_club), 0.92)
+	var box := UiKit.modal_box(self, 560.0, 0.0, UiKit.club_ink(GameState.my_club), false, false, 0.92)
 	_week_overlay = box["overlay"]
 	_week_overlay.name = "WeekSheet"
 	var v: VBoxContainer = box["body"]
