@@ -3,7 +3,8 @@ extends RefCounted
 ## The football ground the vignettes play on, built to the AFL's dimensions and seen
 ## through each scene's camera (Cam), so every painted line, post and stand sits where it
 ## would on a real ground and holds its shape as the camera zooms and pans:
-##   - the oval, 160 m long and 136 m wide, its boundary line painted round it;
+##   - the oval at its own ground's size (data/grounds.json: the MCG 160 m by 141 m,
+##     Bellerive 175 m by 122 m), its boundary line painted round it;
 ##   - the goal posts on the boundary at each end: goal posts 6.4 m apart, behind posts
 ##     6.4 m outside them, the goal line between the behind posts, the goal square
 ##     6.4 m by 9 m in front, the 50 m arc from the middle of the goal line;
@@ -16,8 +17,10 @@ extends RefCounted
 ## y along it towards the end a scene attacks (its goal line at +GOAL_Y).
 ## Everything is drawn as triangles in a couple of calls, for phones.
 
-const A := 68.0                   # half the oval's width
-const L := 80.0                   # half its length
+## Half the oval's width and half its length: the ground's own (venue), else 136 m by
+## 160 m. Literals, not expressions (see GOAL_Y).
+static var A := 68.0
+static var L := 80.0
 const GOAL_GAP := 6.4             # between the goal posts, and from each to its behind post
 ## The goal posts tower; the behind posts are clearly shorter (director), so even when a
 ## close shot cuts off the goal posts' tops, the behinds' stand inside it.
@@ -46,9 +49,53 @@ const APRON := Color(0.13, 0.32, 0.14)
 const PAINT := Color(0.97, 0.97, 0.95, 0.92)
 const WORN := [Color(0.26, 0.36, 0.17, 0.55), Color(0.38, 0.36, 0.22, 0.45)]
 
-## The ground being shown, by its fixture name ("MCG"). A ground with its own treatment
-## (FL-003) draws its landmarks; any other, or "", draws the plain ground.
-static var venue := ""
+## The ground being shown, by its fixture name ("MCG"). Each AFL ground has its own size
+## and look in data/grounds.json (TODO row 33: looks only, the sim never reads it); any
+## other, or "", draws the default ground. Setting it sets the oval's size and look.
+static var venue := "":
+	set(v):
+		venue = v
+		_apply(v)
+
+## The ground's look as drawn now (data/grounds.json, its "default" filled in).
+static var spec := {}
+static var _grounds := {}
+
+
+## A ground's look: its own entry over the default (an unknown ground is the default).
+static func spec_of(ground: String) -> Dictionary:
+	if _grounds.is_empty():
+		var f := FileAccess.open("res://data/grounds.json", FileAccess.READ)
+		if f != null:
+			var parsed = JSON.parse_string(f.get_as_text())
+			if parsed is Dictionary:
+				_grounds = parsed
+	var own: Dictionary = _grounds.get("grounds", {})
+	var out: Dictionary = (_grounds.get("default", {}) as Dictionary).duplicate(true)
+	out.merge(own.get(ground, {}), true)
+	out["known"] = own.has(ground)
+	return out
+
+
+## Every ground with its own look.
+static func ground_names() -> Array:
+	spec_of("")
+	return (_grounds.get("grounds", {}) as Dictionary).keys()
+
+
+static func _apply(ground: String) -> void:
+	spec = spec_of(ground)
+	A = float(spec.get("width", 136.0)) * 0.5
+	L = float(spec.get("length", 160.0)) * 0.5
+	GOAL_Y = L * sqrt(1.0 - pow(1.5 * GOAL_GAP / A, 2.0))
+	_geometry.clear()
+
+
+## The ground's empty seats (the crowd texture's base colour).
+static func seat_colour() -> Color:
+	if spec.is_empty():
+		_apply(venue)
+	return Color.html(str(spec.get("seat", "#121216")))
 
 
 ## The ground a match is played at: a final's own venue, else the home club's
@@ -65,11 +112,11 @@ static func use_match(res: Dictionary) -> void:
 	venue = ground_of(res)
 
 
-## Where the goal line runs: the boundary at the behind posts.
-## (L * sqrt(1 - (1.5 * GOAL_GAP / A)^2), written out: a constant, because a static var set
+## Where the goal line runs: the boundary at the behind posts, L * sqrt(1 - (1.5 * GOAL_GAP / A)^2),
+## worked out by _apply for the ground. The default is written out, because a static var set
 ## from an expression stays 0 when a tool runs with --script (the capture tools), which drew
-## the posts on the centre of the ground in every broadcast capture. The game was right.)
-const GOAL_Y := 79.19875571354891
+## the posts on the centre of the ground in every broadcast capture.
+static var GOAL_Y := 79.19875571354891
 
 
 ## A camera on the ground: standing at pos (scene metres), height up, looking along fwd
@@ -128,7 +175,11 @@ static func looking(pos: Vector2, height: float, target: Vector2, f: float, cx: 
 ## what moves with it (flags in the wind).
 static func draw_ground(ci: CanvasItem, cam: Cam, stage: Rect2, colours: Array, seed := 7, board := {},
 		weather := "", t := 0.0) -> void:
-	ci.draw_rect(stage, SKY, true)
+	if spec.is_empty():
+		_apply(venue)
+	# Under a closed roof the sky is the roof's underside.
+	var closed: bool = spec.get("roof") == "closed"
+	ci.draw_rect(stage, Color.html(str(spec["roof_colour"])).darkened(0.35) if closed else SKY, true)
 	_draw_stands(ci, cam, colours, seed, board, weather, t)
 	var tri := Tris.new()
 	_fence_and_apron(tri, cam, colours)
@@ -226,7 +277,7 @@ static func _markings(tri: Tris, cam: Cam) -> void:
 ## screen as that width really looks from the camera, and never thinner than a pixel
 ## (fainter instead).
 static func _arc(gy: float, end: float) -> Array:
-	var key := ["arc", end]
+	var key := ["arc", end, A, L]
 	if not _geometry.has(key):
 		var arc := []
 		for i in range(181):
@@ -321,16 +372,19 @@ static func _fence_and_apron(tri: Tris, cam: Cam, colours: Array) -> void:
 ## screen above the far end, the light towers behind, and the haze the lights make.
 static func _draw_stands(ci: CanvasItem, cam: Cam, colours: Array, seed: int, board: Dictionary,
 		weather := "", t := 0.0) -> void:
-	var mcg := venue == "MCG"
-	# The MCG's empty seats are a pale blue-grey (Commons, "MCG Shane Warne Stand.png").
-	var tex := VignetteCrowd.seats(colours, seed, MCG_SEAT if mcg else Color(0.07, 0.07, 0.085))
+	# The ground's own seats (the MCG's are a pale blue-grey: Commons, "MCG Shane Warne Stand.png").
+	var tex := VignetteCrowd.seats(colours, seed, seat_colour())
+	# A grass hill: the crowd sitting on the bank (Bellerive, Manuka).
+	var hill: Texture2D = VignetteCrowd.seats(colours, seed + 1, HILL) if spec.get("hill", false) else null
 	if ci.texture_filter != CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS:
 		ci.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	_towers(ci, cam)
 	var ring := _ring_columns(A + FENCE + 2.0, L + FENCE + 2.0, STAND_TILE / 16.0)
 	# Tiers, front to back: [inner offset, outer offset, inner height, outer height] beyond
-	# the fence line. The MCG rises in three, a band of boxes under each of the upper two.
-	var tiers: Array = MCG_TIERS if mcg else [[2.0, 26.0, FENCE_H + 0.3, 13.0], [30.0, 52.0, 17.0, 34.0]]
+	# the fence line: the ground's own. The MCG rises in three, a band of boxes under each
+	# of the upper two.
+	var tiers: Array = spec["tiers"]
+	var roof_c := Color.html(str(spec.get("roof_colour", "#0f0f12")))
 	var lower: Array = tiers[0]
 	var upper: Array = tiers[tiers.size() - 1]
 	var shade := Tris.new()
@@ -349,14 +403,24 @@ static func _draw_stands(ci: CanvasItem, cam: Cam, colours: Array, seed: int, bo
 			# The fascia along the tier's front, panel by panel in the clubs' colours.
 			_wall(lit, cam, a0, a1, tier[0], tier[0], tier[2] - 2.2, tier[2], panel)
 			_wall(lit, cam, a0, a1, tier[0], tier[0], tier[2] - 0.25, tier[2], Color(1, 1, 1, 0.25))
-		# The roof's edge over the top row, its lights along it.
-		_wall(shade, cam, a0, a1, upper[1] - 4.0, upper[1], upper[3] + 1.0, upper[3] + 4.0, Color(0.06, 0.06, 0.07))
+		# The roof over the top row: a thin dark lip, a canopy reaching out over the seats
+		# (pale, or the SCG's green), or a closed roof's deep edge.
+		match str(spec.get("roof", "edge")):
+			"canopy":
+				_wall(lit, cam, a0, a1, upper[0] - 2.0, upper[1], upper[3] + 5.0, upper[3] + 2.0, roof_c.darkened(0.3))
+				_wall(lit, cam, a0, a1, upper[0] - 2.0, upper[0] - 2.0, upper[3] + 4.2, upper[3] + 5.0, roof_c)
+			"closed":
+				_wall(shade, cam, a0, a1, upper[0] - 8.0, upper[1], upper[3] + 6.0, upper[3] + 12.0, roof_c)
+				_wall(lit, cam, a0, a1, upper[0] - 8.0, upper[0] - 8.0, upper[3] + 5.2, upper[3] + 6.0, roof_c.lightened(0.25))
+			_:
+				_wall(shade, cam, a0, a1, upper[1] - 4.0, upper[1], upper[3] + 1.0, upper[3] + 4.0, roof_c)
 	shade.flush(ci)
 	var tints := [Color(0.95, 0.95, 0.97), Color(0.86, 0.86, 0.9), Color(0.78, 0.78, 0.82)]
 	for k in range(tiers.size()):
-		_tier(ci, cam, ring, tiers[k], tex, tints[k] if tiers.size() == 3 else tints[k * 2])
+		var seats: Texture2D = hill if k == 0 and hill != null else tex
+		_tier(ci, cam, ring, tiers[k], seats, tints[k] if tiers.size() == 3 else tints[k * 2])
 	lit.flush(ci)
-	if mcg:
+	if spec.get("trusses", false):
 		_mcg_trusses(ci, cam, ring, upper)
 	# In the wind, the flags people hold up along the front rows stream out.
 	if VignetteWeather.wind(weather) > 0.0:
@@ -396,12 +460,36 @@ static func _draw_stands(ci: CanvasItem, cam: Cam, colours: Array, seed: int, bo
 			VignetteWeather.draw_flag(ci, Vector2(s.x, s.y), 7.0 * s.z, 5.0 * s.z, 2.6 * s.z,
 					c0 if home else c1, t, float(i) * 0.7, wind, _second(colours, 0 if home else 1))
 	_screen(ci, cam, c0, c1, board)
-	if venue == "MCG":
+	if int(spec.get("screens", 1)) > 1:
 		_screen(ci, cam, c0, c1, board, -1)
+	elif spec.get("heritage_board", false):
+		_heritage_board(ci, cam)
 	_haze(ci, cam, weather)
 
 
 const STAND_TILE := 35.0          # metres of stand per copy of the seats texture
+## A grass hill's turf under the crowd sitting on it, darker than the oval at night.
+const HILL := Color(0.11, 0.24, 0.12)
+
+
+## Adelaide Oval's heritage scoreboard at the other end from the big screen: a green
+## board with a white clock tower on top and rows of white name panels.
+static func _heritage_board(ci: CanvasItem, cam: Cam) -> void:
+	var at := Vector2(0.0, -(L + FENCE + 30.0))
+	var c := cam.oval(at, 12.0)
+	if c.z <= 0.0:
+		return
+	var size := Vector2(26.0, 14.0) * c.z
+	var r := Rect2(Vector2(c.x, c.y) - size * 0.5, size)
+	ci.draw_rect(r, Color(0.13, 0.3, 0.2), true)
+	ci.draw_rect(r, Color(0.85, 0.85, 0.8, 0.6), false, maxf(1.0, 0.25 * c.z))
+	for row in range(4):
+		for col in range(6):
+			var cell := Rect2(r.position + r.size * Vector2(0.06 + col * 0.15, 0.14 + row * 0.2), r.size * Vector2(0.11, 0.1))
+			ci.draw_rect(cell, Color(0.93, 0.93, 0.9, 0.85), true)
+	var tower := Rect2(Vector2(c.x, r.position.y) + Vector2(-2.0, -6.0) * c.z, Vector2(4.0, 6.0) * c.z)
+	ci.draw_rect(tower, Color(0.9, 0.9, 0.86), true)
+	ci.draw_circle(tower.get_center(), 1.3 * c.z, Color(0.2, 0.2, 0.22))
 
 
 ## Columns round the stand ring at even steps along it: [angle, metres along].
@@ -500,9 +588,12 @@ static func _wall(tri: Tris, cam: Cam, a0: float, a1: float, o0: float, o1: floa
 ## The light towers outside the stands: a mast and a bank of lights at the top of each,
 ## glowing into the night.
 static func _towers(ci: CanvasItem, cam: Cam) -> void:
-	if venue == "MCG":
-		_mcg_towers(ci, cam)
-		return
+	match str(spec.get("towers", "masts")):
+		"mcg":
+			_mcg_towers(ci, cam)
+			return
+		"none":
+			return
 	for p in _tower_spots():
 		var base := cam.oval(p, 0.0)
 		if base.z <= 0.0:
@@ -519,11 +610,9 @@ static func _towers(ci: CanvasItem, cam: Cam) -> void:
 ## The MCG's stands as seen from the ground (Commons, "MCG Shane Warne Stand.png",
 ## EchidnaLives, 2022, CC BY-SA 4.0): three tiers of seats, a band of boxes under the
 ## middle and upper tiers, a thin dark roof with a row of pale trusses standing up along
-## its edge. Heights are read from the photo, not published.
-const MCG_TIERS := [[2.0, 20.0, FENCE_H + 0.3, 10.0], [23.0, 37.0, 13.5, 22.0], [41.0, 58.0, 25.5, 38.0]]
-## Pale blue-grey seats as they read at night under the lights (darker than by day, so the
-## crowd stays behind the players).
-const MCG_SEAT := Color(0.24, 0.27, 0.32)
+## its edge. Heights are read from the photo, not published. Its tiers and its pale
+## blue-grey seats (darker than by day, so the crowd stays behind the players) are in
+## data/grounds.json with every other ground's.
 ## A truss every this many stand columns, its base and height in metres.
 const MCG_TRUSS_EVERY := 6
 const MCG_TRUSS_H := 5.0
@@ -679,8 +768,11 @@ static func _second(colours: Array, side: int) -> Color:
 ## Where the six light towers stand outside the stands (oval metres).
 static func _tower_spots() -> Array:
 	var out := []
-	for k in range(6):
-		var a := TAU * (float(k) + 0.5) / 6.0
+	# Masts drawn where the ground has them; under a roof's lights the rain sheen still
+	# catches six.
+	var n := 6 if spec.is_empty() or spec.get("towers") == "none" else int(spec.get("tower_count", 6))
+	for k in range(n):
+		var a := TAU * (float(k) + 0.5) / n
 		out.append(Vector2(cos(a) * (A + 75.0), sin(a) * (L + 75.0)))
 	return out
 
@@ -706,7 +798,7 @@ static func _ellipse_ring_made(ax: float, ay: float, ox: float, oy: float, n: in
 
 ## The slice of the oval between y0 and y1 (a mown stripe).
 static func _band(y0: float, y1: float) -> Array:
-	var key := ["band", y0, y1]
+	var key := ["band", y0, y1, A, L]
 	if not _geometry.has(key):
 		_geometry[key] = _band_made(y0, y1)
 	return _geometry[key]
