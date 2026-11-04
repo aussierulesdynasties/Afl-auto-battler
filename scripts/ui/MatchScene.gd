@@ -3997,8 +3997,11 @@ func _votes_side(code: String, ink: Color, players: Array, votes: Dictionary, pc
 		gap.custom_minimum_size.x = VOTES_GUTTER
 		top.add_child(gap)
 		row.add_child(top)
-		# The line sits on the club's wash; brighten it only as far as 4.5:1 needs.
-		var sub := UiKit.lbl(str(p["line"]), UiKit.SECONDARY, UiKit.readable_ink(VOTES_SUB, UiKit.PANEL.lerp(ink, 0.3)))
+		# The line sits on the sheet's wash (the opponent's colour) and near its
+		# club's bar; lift it only as far as 4.5:1 against both needs.
+		var sub_ink := UiKit.readable_ink(VOTES_SUB, UiKit.PANEL.lerp(ink, 0.3))
+		sub_ink = UiKit.readable_ink(sub_ink, UiKit.PANEL.lerp(_wash_col(), 0.3))
+		var sub := UiKit.lbl(str(p["line"]), UiKit.SECONDARY, sub_ink)
 		sub.name = "StandoutLine"
 		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		row.add_child(sub)
