@@ -28,6 +28,16 @@ const LADDER_WIDE := [["pos", "#", 44], ["club", "Club", WIDE_CLUB], ["p", "P", 
 		["l", "L", 32], ["d", "D", 30], ["pf", "PF", 50], ["pa", "PA", 50], ["pct", "%", 50],
 		["pts", "Pts", 40], ["home", "Home", 68], ["away", "Away", 68], ["form", "Form", 76],
 		["rating", "Rating", 52]]
+## A small phone (under PHONE_TIGHT units of content, e.g. 320 units on a
+## scaled desktop window) keeps every phone column at tighter widths, so the
+## club column keeps room for its guernsey and the header stays over its rows
+## (row 84: at 296 units the club column fell to 0 in the header and to the
+## guernsey's width in the rows, one column off).
+const PHONE_TIGHT := 340.0
+const LADDER_TIGHT := [["pos", "#", 20], ["club", "Club", 0], ["p", "P", 22], ["w", "W", 22],
+		["l", "L", 22], ["d", "D", 20], ["pct", "%", 36], ["pts", "Pts", 30], ["rating", "Rating", 44]]
+## The least a phone's club column takes, header and rows alike: a guernsey.
+const CLUB_MIN_NARROW := 28
 ## Team stats: a per-game value for each, from GameState.season_team (only
 ## what is recorded there). One list, so a newly recorded stat joins with one
 ## line: {season_team key, column title, width on a phone, width on a wide
@@ -136,7 +146,7 @@ static func build(host: Control) -> Control:
 	var t := UiKit.vbox(0)
 	t.name = "LadderTable"
 	v.add_child(t)
-	var specs := columns(_view, wide)
+	var specs := columns(_view, wide, width)
 	if wide:
 		# As wide as its columns, left-aligned: no gap between a club and its numbers.
 		t.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -153,14 +163,16 @@ static func build(host: Control) -> Control:
 	return v
 
 
-static func columns(view: String, wide: bool) -> Array:
+static func columns(view: String, wide: bool, width := 9999.0) -> Array:
 	if view == "team":
 		var out := [["club", "Club", WIDE_CLUB if wide else 0]]
 		for c in TEAM_STATS:
 			if wide or bool(c[4]):
 				out.append([c[0], c[1], c[3] if wide else c[2]])
 		return out
-	return LADDER_WIDE if wide else LADDER_PHONE
+	if wide:
+		return LADDER_WIDE
+	return LADDER_TIGHT if width < PHONE_TIGHT else LADDER_PHONE
 
 
 ## One line that says what is on show, with the way back to the plain ladder.
@@ -236,6 +248,7 @@ static func _header(host: Control, specs: Array, width: float, wide := false) ->
 		b.custom_minimum_size = Vector2(int(c[2]), 40 if wide else 44)
 		if int(c[2]) == 0:
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.custom_minimum_size.x = CLUB_MIN_NARROW
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT if key == "club" else HORIZONTAL_ALIGNMENT_RIGHT
 		b.pressed.connect(func(): _sort_by(host, key))
 		h.add_child(b)
@@ -277,8 +290,9 @@ static func _row(host: Control, r: Dictionary, specs: Array, width: float, band 
 	for c in specs:
 		if int(c[2]) == 0:
 			all_fixed = false
-		fixed += int(c[2]) + COL_GAP
-	b.custom_minimum_size = Vector2(fixed if all_fixed else 0, height)
+		fixed += maxi(int(c[2]), CLUB_MIN_NARROW if int(c[2]) == 0 else 0) + COL_GAP
+	# Every row is as wide as the header's least, so the two share one width.
+	b.custom_minimum_size = Vector2(fixed - COL_GAP if not all_fixed else fixed, height)
 	b.clip_contents = true
 	var flat := StyleBoxFlat.new()
 	flat.bg_color = UiKit.PANEL if band else Color.TRANSPARENT
@@ -305,6 +319,8 @@ static func _row(host: Control, r: Dictionary, specs: Array, width: float, band 
 				badge.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 				badge.alignment = BoxContainer.ALIGNMENT_BEGIN
 				badge.custom_minimum_size.x = w
+			else:
+				badge.custom_minimum_size.x = CLUB_MIN_NARROW
 			if mine:
 				_bold(badge)
 			row.add_child(badge)

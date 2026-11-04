@@ -49,7 +49,6 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 | 78 | Rare big margins come back through Momentum (100+ about 0.5% against real 1.9%); balance-gated (T8.Q4) | audit shows the blowout rate |
 | 80 | Club Forge create-a-player: one weakness compulsory, the second optional, no extra overall power (T8.Q12) | screen enforces it |
 | 82 | Itch gets Windows and Android APK builds beside web; price free (T7.O1, T7.O3); Google Play stays off until his written yes | export presets, builds on itch |
-| 84 | Ladder moves fully into Season stats: the hub nav bar loses Ladder; no other nav change (T3.Q13, T9.Q29) | no Ladder screen or nav entry, ladder reachable in Season stats, tap test |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
 
 ## B. Built and OFF: waiting for his playtest, then the switch goes on
@@ -230,7 +229,7 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 - 4.Q5 (Ask around, untouchable, pick order from round 18, pick trade on draft night) are still candidates, not assigned.
 - Row 13 gets all five scenes, stays off and waits for the 1.11 playtest gate. Time pauses at a decision, so scenes never fight live speed.
 - Weather has full effect on play (T1.Q2, T2.Q2, 6.Q10, T8.Q7): wet tackles move toward the real +12% (row 61); how it looks never touches the sim. Weather is off the bible's open list.
-- Ladder goes into Season stats (T3.Q13, T9.Q29): the hub nav bar loses Ladder, no other nav change (row 84).
+- Ladder goes into Season stats (T3.Q13, T9.Q29): the hub nav bar loses Ladder, no other nav change (shipped).
 - Price: free for now. Platforms: web, Windows and an Android APK on itch; Google Play only on his written yes (US$25 fee and signing key).
 - Old PRs #745, #761 and #765 were already merged; nothing to close.
 

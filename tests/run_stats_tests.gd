@@ -68,7 +68,8 @@ func _run() -> void:
 	_t("_test_book_rates")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_fixture", [sz])
-	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+	# 320 x 693: a 390 x 844 window on a scaled desktop (ScreenLayout's 320-unit floor).
+	for sz in [Vector2i(390, 844), Vector2i(320, 693), Vector2i(1280, 720)]:
 		await _t("_test_ladder", [sz])
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_team_rating", [sz])
@@ -115,6 +116,12 @@ func _test_hub_button() -> void:
 	var b: Button = hub.find_child("SeasonStats", true, false)
 	_check(b != null and hub.find_child("FullLadder", true, false) == null,
 			"The hub offers Season stats in place of Full ladder")
+	# Row 84 (T3.Q13, T9.Q29): the hub's nav bar has no Ladder entry.
+	var navs := []
+	for n in hub.find_children("*", "Button", true, false):
+		if (n as Button).text.to_lower().contains("ladder"):
+			navs.append(str(n.name))
+	_check(navs.is_empty(), "No hub button says Ladder (%s)" % str(navs))
 	if b != null:
 		var got := await Tap.tap(b)
 		_check(got == "", "Season stats takes a tap (%s)" % got)
@@ -931,6 +938,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	_check(_row_codes(s) == true_order, "The ladder opens in the true order (%s)" % tag)
 	_fits(s, sz, "the ladder", tag)
 	_table_recipe(s, tag, true)
+	_header_aligns(s, tag)
 
 	# Phone columns, and the wide screen's extra ones.
 	var heads := []
@@ -1003,6 +1011,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	await _settle()
 	wins = _by(s, season, "w")
 	_check(_non_decreasing(wins), "A second tap reverses it (%s: %s)" % [tag, str(wins)])
+	_header_aligns(s, tag + " sorted")
 	await Tap.tap(s.find_child("LadderOrder", true, false))
 	await _settle()
 	_check(_row_codes(s) == true_order and s.find_child("LadderOrder", true, false) == null,
@@ -1126,6 +1135,36 @@ func _test_ladder(sz: Vector2i) -> void:
 			"Back returns to the ladder as it was, sort and filter kept (%s)" % tag)
 	s.queue_free()
 	await _settle()
+
+
+## Each header sits over its own column (row 84: on a phone the header was one
+## column off): every header's right edge (the club's left edge) is within 2 px
+## of the same column's cell in every row.
+func _header_aligns(s: Node, tag: String) -> void:
+	var header: Control = s.find_child("LadderHeader", true, false)
+	_check(header != null, "The ladder has a header row (%s)" % tag)
+	if header == null:
+		return
+	var heads: Array = header.get_children()
+	var off := []
+	for b in s.find_children("Club_*", "Button", true, false):
+		var cells: Array = (b as Control).get_child(0).get_children()
+		if cells.size() != heads.size():
+			off.append("%s has %d cells for %d headers" % [b.name, cells.size(), heads.size()])
+			continue
+		for i in heads.size():
+			var h: Control = heads[i]
+			var c: Control = cells[i]
+			var club := str(h.name) == "Sort_club"
+			var hx: float = h.get_global_rect().position.x if club else h.get_global_rect().end.x
+			var cx: float = c.get_global_rect().position.x if club else c.get_global_rect().end.x
+			if absf(hx - cx) > 2.0:
+				off.append("%s %s %.0f vs %.0f" % [b.name, h.name, hx, cx])
+	var body: Control = s.find_child("Club_*", true, false)
+	if body != null:
+		var rw: float = (body as Control).get_child(0).size.x
+		_check(absf(rw - header.size.x) <= 2.0, "A ladder row is as wide as its header (%s: %.0f vs %.0f)" % [tag, rw, header.size.x])
+	_check(off.is_empty(), "Ladder headers line up with their columns (%s: %s)" % [tag, str(off.slice(0, 4))])
 
 
 ## On a wide screen the table is about as wide as its columns (760 to 900 px),
