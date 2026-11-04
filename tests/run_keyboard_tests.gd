@@ -28,6 +28,8 @@ const SIZES := [
 	["phone upright", true, Vector2i(360, 800), Vector2i(360, 420)],
 	["tablet browser", false, Vector2i(1024, 768), Vector2i(1024, 300)],
 ]
+## A PC's browser has no phone keyboard: a shorter window is a shorter window.
+const PC_WEB := Vector2i(1280, 720)
 
 var _state: Node
 var _router: Node
@@ -86,9 +88,12 @@ func _run() -> void:
 		await _t("_test_screen_field", [row, "list", "NicknameField", _open_nickname])
 	await _t("_test_nickname_line", ["PC", false, Vector2i(1280, 720)])
 	await _t("_test_nickname_line", ["phone", true, Vector2i(390, 844)])
+	await _t("_test_pc_browser_resize")
+	_t("_test_touch_wording")
 
 	load("res://scripts/core/ScreenLayout.gd").force_web_phone = false
 	load("res://scripts/core/ScreenLayout.gd").force_web = false
+	load("res://scripts/core/ScreenLayout.gd").force_touch = false
 	print(Ran.line("Keyboard", self))
 	for f in _failures:
 		print("  FAIL: " + f)
@@ -125,11 +130,46 @@ func _web_keyboard(text: String) -> void:
 	await process_frame
 
 
-## Stand in for the web build: a phone's browser, or a tablet's or PC's.
-func _platform(phone: bool) -> void:
+## Stand in for the web build: a phone's browser, or a tablet's (a touch
+## screen with a desktop user agent), or a PC's (touch false).
+func _platform(phone: bool, touch := true) -> void:
 	var layout = load("res://scripts/core/ScreenLayout.gd")
 	layout.force_web_phone = phone
 	layout.force_web = not phone
+	layout.force_touch = touch and not phone
+
+
+## A PC's browser made shorter with a text field focused is laid out again for
+## the shorter window: the phone keyboard rule is for touch screens only.
+func _test_pc_browser_resize() -> void:
+	_platform(false, false)
+	root.size = PC_WEB
+	await _settle()
+	var field := LineEdit.new()
+	root.add_child(field)
+	field.grab_focus()
+	await _settle()
+	var before := _units()
+	root.size = Vector2i(PC_WEB.x, 300)
+	await _settle()
+	var layout := root.get_node("ScreenLayout")
+	_check(not bool(layout.keyboard_up), "PC browser: a shorter window is not a phone keyboard")
+	_check(absf(_units().y - before.y) > 1.0 or absf(_units().x - before.x) > 1.0,
+			"PC browser: the shorter window is laid out again (%s, was %s)" % [str(_units()), str(before)])
+	field.queue_free()
+	root.size = PC_WEB
+	await _settle()
+
+
+## A tablet's browser with a desktop user agent says Tap; a PC's says Click;
+## the layout of either follows its size, not the touch screen.
+func _test_touch_wording() -> void:
+	var layout = load("res://scripts/core/ScreenLayout.gd")
+	_platform(false, true)
+	_check(layout.tap_word() == "Tap", "Tablet browser: Tap")
+	_check(layout.roomy(1280, 720), "Tablet browser: a roomy screen keeps the wide layout")
+	_platform(false, false)
+	_check(layout.tap_word() == "Click", "PC browser: Click")
 
 
 func _units() -> Vector2:
