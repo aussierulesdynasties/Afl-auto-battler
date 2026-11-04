@@ -385,7 +385,7 @@ func _list_panel() -> Control:
 		else:
 			slot.add_child(_bulk_bar())
 	elif _bulk_selected.is_empty():
-		v.add_child(UiKit.lbl("Click and hold a player to select several." if not ScreenLayout.is_phone()
+		v.add_child(UiKit.lbl("Click and hold a player to select several." if not ScreenLayout.is_touch()
 				else "Long-press a player to select several.", 12, UiKit.MUTED))
 	else:
 		v.add_child(_bulk_panel())

@@ -75,7 +75,7 @@ const TEAM_TENTHS := ["goals"]
 ## The longest a bar gets (the league's best), so it reads the same on a phone and a PC.
 const TEAM_BAR_MAX := 360.0
 
-const FILTERS := [["all", "All"], ["top8", "Top 8"], ["near", "Near you"]]
+const FILTERS := [["all", "All"], ["top10", "Top 10"], ["near", "Near you"]]
 const VIEWS := [["ladder", "Ladder"], ["team", "Team stats"]]
 
 ## Kept across a rebuild and a visit to a club's side. "" sorts nothing: the
@@ -204,7 +204,8 @@ static func _status(host: Control, count: int) -> Control:
 		if str(o[0]) == _filter and _filter != "all":
 			bits.append(str(o[1]))
 	if _sort != "":
-		bits.append("sorted by %s, %s first" % [_title_of(_sort), "most" if _desc else "fewest"])
+		var ends := ["Z–A", "A–Z"] if _sort == "club" else ["most", "fewest"]
+		bits.append("sorted by %s, %s first" % [_title_of(_sort), ends[0] if _desc else ends[1]])
 	var text := "Showing " + (", ".join(bits) if not bits.is_empty() else "all %d clubs" % count)
 	var l := UiKit.lbl(text, UiKit.SMALL, UiKit.MUTED)
 	l.name = "ActiveState"
@@ -724,8 +725,8 @@ static func visible_rows(season: Season, mine: String, filter: String, sort: Str
 	for r in all:
 		var pos := int(r["pos"])
 		match filter:
-			"top8":
-				if pos > 8:
+			"top10":
+				if pos > Season.FINALISTS:
 					continue
 			"near":
 				if my_pos <= 0 or absi(pos - my_pos) > 2:
