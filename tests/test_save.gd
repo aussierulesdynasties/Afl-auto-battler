@@ -30,6 +30,8 @@ func run() -> void:
 	_t("_test_intake_and_second_season")
 	_t("_test_bad_file_is_ignored")
 	_t("_test_old_club_code_migrates")
+	_t("_test_old_version_save_upgrades")
+	_t("_test_unreadable_save_says_why")
 	_t("_test_safe_replacement")
 	_t("_test_fictional_identity")
 	_t("_test_apostrophe_names")
@@ -596,6 +598,81 @@ func _test_intake_and_second_season() -> void:
 	_check(GameState.season.round_index == 3, "The loaded second season keeps playing")
 
 
+## A real save written by the 2026-09-30 build (commit ef3551ca, save
+## version 1, St Kilda still SKN, no season stats): St Kilda after two
+## rounds. It must open, upgraded, never drop to the menu (T5.Q24).
+const OLD_SAVE_FIXTURE := "res://tests/fixtures/career_v1_2026-09-30.save.gz"
+const OLD_SAVE_LADDER := ["GWS 8", "PAD 8", "CAR 8", "ADE 6", "BRL 6", "FRE 4", "RIC 4", "GEE 4", "WCE 4",
+		"GCS 4", "ESS 4", "HAW 4", "STK 4", "WBD 4", "NTH 0", "SYD 0", "COL 0", "MEL 0"]
+
+
+func _put_old_save() -> void:
+	GameState.delete_saved_career()
+	var gz := FileAccess.get_file_as_bytes(OLD_SAVE_FIXTURE)
+	var raw := gz.decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)
+	var f := FileAccess.open(GameState.save_path, FileAccess.WRITE)
+	f.store_buffer(raw)
+	f.close()
+
+
+func _test_old_version_save_upgrades() -> void:
+	_put_old_save()
+	var f := FileAccess.open(GameState.save_path, FileAccess.READ)
+	var raw = f.get_var()
+	f.close()
+	_check(raw is Dictionary and int(raw.get("version", 0)) == 1 and CareerSave.VERSION > 1,
+			"The fixture really is an older-version save")
+	_check(GameState.has_saved_career() and GameState.saved_career_problem() == "",
+			"The menu offers Continue for it, with no problem line")
+	var meta := GameState.saved_career_meta()
+	_check(str(meta.get("club", "")) == "STK" and str(meta.get("stage", "")) == "Round 3",
+			"Its header reads St Kilda, round 3: %s" % meta)
+	GameState.reset()
+	_check(GameState.load_career(), "The older save opens")
+	_check(GameState.my_club == "STK" and GameState.season != null and GameState.season.round_index == 2,
+			"It is the same career: St Kilda, two rounds played")
+	var ladder: Array = GameState.season.ladder_sorted().map(
+			func(r): return "%s %d" % [r["code"], int(r["pts"])])
+	_check(ladder == OLD_SAVE_LADDER, "The ladder is as it was saved: %s" % [ladder])
+	_check(GameState.my_list.size() > 30 and GameState.my_list[0] is Dictionary,
+			"Its list is back")
+	GameState.advance()
+	_check(GameState.season.round_index == 3, "The upgraded career plays on")
+	_check(GameState.save_career(), "It saves again")
+	f = FileAccess.open(GameState.save_path, FileAccess.READ)
+	raw = f.get_var()
+	f.close()
+	_check(int(raw.get("version", 0)) == CareerSave.VERSION, "...as the current version")
+	_check(GameState.load_career() and GameState.season.round_index == 3, "...and reloads")
+
+
+## A save that cannot be opened says so on the menu instead of the menu
+## acting as if there had never been a career.
+func _test_unreadable_save_says_why() -> void:
+	GameState.delete_saved_career()
+	_check(GameState.saved_career_problem() == "", "No file: nothing to explain")
+	var f := FileAccess.open(GameState.save_path, FileAccess.WRITE)
+	f.store_var({"version": CareerSave.VERSION + 1, "meta": {}, "players": {}, "state": {}})
+	f.close()
+	_check(GameState.saved_career_problem().contains("newer version"),
+			"A newer build's save asks for an update")
+	f = FileAccess.open(GameState.save_path, FileAccess.WRITE)
+	f.store_string("not a save")
+	f.close()
+	var why := GameState.saved_career_problem()
+	_check(why.contains("could not be read"), "A damaged save says it could not be read")
+	GameState.reset()
+	var main: Control = load("res://scenes/Main.tscn").instantiate()
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.add_child(main)   # _ready builds the menu
+	var line := main.find_child("SaveProblem", true, false) as Label
+	_check(line != null and line.visible and line.text == why, "The main menu shows it")
+	_check(main.find_child("ContinueCareer", true, false) == null, "...with no Continue to a save that will not open")
+	tree.root.remove_child(main)
+	main.free()
+	GameState.delete_saved_career()
+
+
 func _test_bad_file_is_ignored() -> void:
 	GameState.delete_saved_career()  # no backup to recover from
 	var f := FileAccess.open(GameState.save_path, FileAccess.WRITE)
@@ -620,7 +697,7 @@ func _test_old_club_code_migrates() -> void:
 	var old_meta = _to_old(CareerSave.read_meta(GameState.save_path))
 	_check(var_to_str(old_state).contains("SKN_") and not var_to_str(old_state).contains("STK"),
 			"The test save really is an old SKN save")
-	CareerSave.write(old_state, old_meta, GameState.save_path)
+	CareerSave.write(old_state, old_meta, GameState.save_path, 1)
 	_check(str(GameState.saved_career_meta().get("club", "")) == "STK", "The menu header reads St Kilda's new code")
 	_check(GameState.load_career(), "The old save loads")
 	_check(GameState.my_club == "STK" and GameState.season.lists.has("STK") and not GameState.season.lists.has("SKN"),

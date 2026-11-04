@@ -32,7 +32,6 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 | 35 | Finals bespoke cards: slice 2 built behind `finals_cards_2`; ships when he has played it | see section B |
 | 33 | Per-ground oval dimensions and looks (only MCG look done). Section H asks whether it is presentation only | his answer, then build |
 | 61 | Weather at full effect: rain, wind and heat change ball handling, kicking, tackling and scoring (wet tackles toward the real +12%); sizes come from a seeded audit and balance stays his call. Its look never touches the sim | audit bands, rules in code, his playtest |
-| 62 | Career saves from an older version upgrade instead of dropping to the main menu with no message (T5.Q24) | old save opens, test added |
 | 63 | One cost sheet per club dominant option and one for the 33 gain-only story options, same look as the 17 story cards; nothing is dropped (T5.Q2, T5.Q3) | every option shows a real cost |
 | 64 | Custom prospect Alastair McNeil in the first national draft is the next build (4.Q8) | prospect in draft, story beats |
 | 65 | Draftees start lower: picks 1-5 about 60-62, 6-20 about 55-58, POT kept; his playtest still judges (4.Q9) | draft audit bands |

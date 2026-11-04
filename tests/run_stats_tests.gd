@@ -934,9 +934,11 @@ func _test_hub_ladder_heads(width: float) -> void:
 			pts_i = i
 		if str(specs[i]["key"]) == "club":
 			club_i = i
-	var club_head: Label = head.get_child(club_i)
+	# The header puts a spacer before Club (the crest's room), so its labels
+	# from Club on sit one child later than the rows' cells.
+	var club_head: Label = head.get_child(club_i + 1)
 	var inset: float = club_head.get_theme_stylebox("normal").get_margin(SIDE_LEFT)
-	var head_end := _ink_end(head.get_child(pts_i))
+	var head_end := _ink_end(head.get_child(pts_i + 1))
 	var worst := 0.0
 	var crest_off := 0.0
 	for i in range(1, t.get_child_count()):

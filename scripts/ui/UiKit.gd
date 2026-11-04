@@ -1698,8 +1698,23 @@ static func ladder_table(rows: Array, mine: String, width: float, limit := 0,
 		full := false) -> VBoxContainer:
 	var v := vbox(2)
 	var specs := ladder_specs(width, full)
-	v.add_child(_ladder_header(specs))
 	var shown := rows.size() if limit <= 0 else mini(limit, rows.size())
+	# A fixed club column ends at the longest name it holds (plus a 12 px
+	# gutter), not at LADDER_CLUB_W: W-L then starts beside the names, not
+	# 100 px past "Kangaroos" (critics, 2026-11-05).
+	for spec in specs:
+		if str(spec["key"]) == "club" and bool(spec.get("left", false)):
+			var need := 0.0
+			for i in range(shown):
+				# The badge's name clips (ellipsis), so its own minimum is no
+				# measure: the crest's room and the name's full width are.
+				var probe := line(GameDB.club_short(str(rows[i]["code"])), SECONDARY, TEXT)
+				need = maxf(need, LADDER_NAME_INSET + probe.get_minimum_size().x)
+				probe.free()
+			spec["w"] = int(minf(LADDER_CLUB_W, ceilf(need) + 12.0))
+			# The table, and so the finals rule, ends at its last column.
+			v.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	v.add_child(_ladder_header(specs))
 	var cut := Season.FINALISTS - 1
 	for i in range(shown):
 		v.add_child(_ladder_data_row(rows[i], i + 1, specs, mine))
@@ -1748,10 +1763,16 @@ static func _ladder_header(specs: Array) -> HBoxContainer:
 		if str(spec["key"]) == "club":
 			# Over the names, not the crests before them: the crest's 20 px plus
 			# the badge's 6 px gap (club_badge, club_marker), as StatsLadder's.
+			# A spacer, not a margin inside the label, so the label itself (and
+			# its end) is where its word is; the spacer and the row's 4 px gap
+			# make up the inset and the column keeps its width.
 			head.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-			var inset := StyleBoxEmpty.new()
-			inset.content_margin_left = LADDER_NAME_INSET
-			head.add_theme_stylebox_override("normal", inset)
+			var pad := Control.new()
+			pad.custom_minimum_size.x = LADDER_NAME_INSET - h.get_theme_constant("separation")
+			pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			h.add_child(pad)
+			if not expand:
+				head.custom_minimum_size.x = maxf(0.0, head.custom_minimum_size.x - LADDER_NAME_INSET)
 		h.add_child(head)
 	return h
 
