@@ -336,6 +336,7 @@ func _run() -> void:
 	await _t("_test_list_shape_fits_phones")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_list_words_fit", [sz])
+	await _t("_test_restore_earlier_save_tap")
 	print(Ran.line("Career UI", self))
 	_state.replay_seed = 0
 	quit(0 if _failures.is_empty() else 1)
@@ -2576,3 +2577,36 @@ func _test_list_shape_fits_phones() -> void:
 		await _settle()
 		_check(sc2.scroll_vertical > 100 and not opened[0], "A swipe starting on a guernsey scrolls the Shape pane and opens nobody (%s: scrolled %d)" % [tag, sc2.scroll_vertical])
 
+
+
+## Row 57: the hub's settings list the earlier saves, and a real tap on
+## Restore opens that point of the career. (Back up and Load a backup open the
+## system's file dialog, which a test cannot drive; their logic is covered by
+## the save suite's export and import tests.)
+func _test_restore_earlier_save_tap() -> void:
+	_state.delete_saved_career()
+	_state.reset()
+	_state.start_season("STK", _db.club_list("STK"))
+	_check(_state.save_career(), "Round 1 is saved")
+	_state.advance()
+	_check(_state.save_career(), "Round 2 is saved")
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var hub_settings: Button = current_scene.find_child("HubSettings", true, false)
+	if hub_settings != null:
+		hub_settings.emit_signal("pressed")
+		await _settle()
+	_check(current_scene.find_child("SavesExport", true, false) != null
+			and current_scene.find_child("SavesImport", true, false) != null,
+			"Back up career and Load a backup are in Settings")
+	var row := current_scene.find_child("EarlierSave1", true, false)
+	_check(row != null, "The round 1 save is listed")
+	if row == null:
+		return
+	var why: String = await Tap.tap(row.find_child("Restore", true, false))
+	await _settle()
+	_check(why == "", "A finger's tap reaches Restore: %s" % why)
+	_check(_router.current() == "hub" and _state.season != null and _state.season.round_index == 0,
+			"Restore opens the career at round 1 again")
+	_state.delete_saved_career()

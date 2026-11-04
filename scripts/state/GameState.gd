@@ -1248,6 +1248,56 @@ func delete_saved_career() -> void:
 	CareerSave.delete(save_path)
 
 
+# ---------------------------------------------------------------------------
+# Backups and earlier saves (row 57)
+# ---------------------------------------------------------------------------
+## A career in memory is saved first (never mid-match: the save from before
+## the match is the consistent one), so the backup is the career as it is.
+func export_career() -> PackedByteArray:
+	if has_career() and pending_match.is_empty():
+		save_career()
+	return CareerSave.export_bytes(save_path)
+
+
+## A file name that says whose career it is: ard-fremantle-2027-round-6.ardsave
+func export_file_name() -> String:
+	var meta := _save_meta() if has_career() else saved_career_meta()
+	var bits := ["ard"]
+	for k in ["club_name", "year", "stage"]:
+		var v := str(meta.get(k, "")).to_lower().strip_edges()
+		if v != "":
+			bits.append(v.replace(" ", "-").replace("'", ""))
+	return "-".join(bits) + "." + CareerSave.EXPORT_EXT
+
+
+## Why a backup file could not be loaded, in the coach's words, or "" once it
+## is the career save (open it with load_career()).
+func import_career(bytes: PackedByteArray) -> String:
+	# The career in memory is saved first, so it is kept as an earlier save.
+	if has_career() and pending_match.is_empty():
+		save_career()
+	match CareerSave.import_bytes(bytes, save_path):
+		"":
+			return ""
+		"newer":
+			return "That backup is from a newer version of the game.
+Update the game to load it."
+	return "That file is not a career backup, or it is damaged.
+Your career is unchanged."
+
+
+## The earlier saves kept for restoring, newest first (CareerSave.history).
+func saved_career_history() -> Array:
+	return CareerSave.history(save_path)
+
+
+func restore_saved_career(slot: int) -> bool:
+	# The career in memory is saved first, so it is one of the earlier saves after.
+	return CareerSave.restore_history(slot, save_path, func():
+		if has_career() and pending_match.is_empty():
+			save_career())
+
+
 func _season_to_save() -> Dictionary:
 	var sv := CareerSave.object_vars(season)
 	# The season's results keep every match's stat lines (StatBook); the
