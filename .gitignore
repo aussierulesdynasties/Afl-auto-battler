@@ -37,3 +37,4 @@ build_info.txt
 
 # Test dumps for a person to read (coach_arcs story log)
 tests/output/
+.balance/
