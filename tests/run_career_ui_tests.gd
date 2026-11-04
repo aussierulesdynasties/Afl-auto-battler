@@ -1269,8 +1269,14 @@ Your career stays on this device.",
 			and current_scene.find_child("TrainingIntro", true, false) == null,
 			"Back closes the intro and stays on Training")
 	var guide_btn: Button = current_scene.find_child("StatGuideButton", true, false)
-	guide_btn.emit_signal("pressed")
+	var guide_size := root.size
+	root.size = Vector2i(390, 844)   # a phone, so every tap lands on screen
 	await _settle()
+	guide_btn = current_scene.find_child("StatGuideButton", true, false)
+	guide_btn.emit_signal("pressed")
+	# The guide's sheet lays out (and may rise) over a few frames before a finger can hit a tile.
+	for i in range(20):
+		await process_frame
 	var guide = current_scene.find_child("StatGuide", true, false)
 	var sg: GDScript = load("res://scripts/ui/StatGuide.gd")
 	_check(guide != null and guide.find_child("GuideGrid", true, false) != null
@@ -1279,13 +1285,25 @@ Your career stays on this device.",
 	# Every tile opens its page with a real tap; Back steps the page to the grid.
 	var stats_seen := {}
 	var pages_ok := true
+	var lost_at := ""
 	for t in sg.tiles():
+		if not is_instance_valid(guide):
+			pages_ok = false
+			break
 		var tile: Control = guide.find_child("Tile_" + str(t[0]), true, false)
 		if tile == null:
 			pages_ok = false
 			continue
-		await Tap.tap(tile)
+		var why: String = await Tap.tap(tile)
 		await _settle()
+		if why != "":
+			lost_at = "tap on %s: %s" % [t[0], why]
+			pages_ok = false
+			break
+		if not is_instance_valid(guide):
+			lost_at = "tap on " + str(t[0])
+			pages_ok = false
+			break
 		var page: Node = guide.find_child("GuidePage_" + str(t[0]), true, false)
 		if page == null or guide.find_child("GuideGrid", true, false) != null:
 			pages_ok = false
@@ -1295,15 +1313,21 @@ Your career stays on this device.",
 					stats_seen[key] = true
 		_router.handle_back(true)
 		await _settle()
-		if guide.find_child("GuideGrid", true, false) == null or not is_instance_valid(guide):
+		if not is_instance_valid(guide):
+			lost_at = "Back from " + str(t[0])
 			pages_ok = false
-	_check(pages_ok, "A tap on every topic tile opens its page, and Back returns to the tiles")
+			break
+		if guide.find_child("GuideGrid", true, false) == null:
+			pages_ok = false
+	_check(pages_ok, "A tap on every topic tile opens its page, and Back returns to the tiles (guide lost at: %s)" % lost_at)
 	_check(stats_seen.size() == sg.STATS.size(),
 			"Every stat, star power and discipline included, sits on a topic page (%d of %d)" % [stats_seen.size(), sg.STATS.size()])
 	_router.handle_back(true)
 	await _settle()
 	_check(_router.current() == "training" and current_scene.find_child("StatGuide", true, false) == null,
 			"Back closes the stat guide")
+	root.size = guide_size
+	await _settle()
 	var first: Dictionary = _state.my_list[0]
 	current_scene.call("_open_player", str(first["id"]))
 	await _settle()
