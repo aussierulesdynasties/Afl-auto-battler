@@ -434,6 +434,22 @@ func _test_phone_match(sz: Vector2i) -> void:
 		await _settle()
 		_check(why_q == "" and says != null and says.text.begins_with("Q1:"),
 				"A finger on Q1 says the first quarter (%s: %s)" % [tag, why_q if why_q != "" else (says.text if says else "-")])
+		# One tap arrives as a touch and an emulated click in the same frame;
+		# the pick must stay picked, not toggle on then off.
+		var worm = bs.find_child("Worm", true, false) if bs != null else null
+		if worm != null:
+			bs._pick = {}
+			var touch := InputEventScreenTouch.new()
+			touch.pressed = true
+			touch.position = Vector2(worm.size.x * 0.5, 10.0)
+			var click := InputEventMouseButton.new()
+			click.pressed = true
+			click.button_index = MOUSE_BUTTON_LEFT
+			click.position = touch.position
+			worm._gui_input(touch)
+			worm._gui_input(click)
+		_check(worm != null and bs._pick.has("q"),
+				"One tap delivered as touch and click picks the quarter once (%s)" % tag)
 		var team_t: Node = sheet.find_child("TeamStats", true, false) if sheet != null else null
 		_check(team_t != null and team_t.find_child("TeamRow_disposals", true, false) != null,
 				"Team stats open first, both clubs side by side (%s)" % tag)
@@ -2544,7 +2560,9 @@ func _test_vignettes_setting() -> void:
 					"TV is kept and applied (%s)" % tag)
 			_state.set_screen_size("standard")
 			await _settle()
-		# Screen orientation, on a phone or its browser: a real tap holds it.
+		# Phone is portrait only (director, 2026-11-05: "Drop landscape"): no
+		# Screen row on a desktop or a phone, and an older saved landscape loads
+		# as portrait.
 		_check(sheet.find_child("SettingsOrientation_portrait", true, false) == null,
 				"A desktop has no Screen orientation row (%s)" % tag)
 		load("res://scripts/core/ScreenLayout.gd").force_web_phone = true
@@ -2555,24 +2573,73 @@ func _test_vignettes_setting() -> void:
 		host.size = Vector2(sz)
 		sheet = options.open(host, true)
 		await _settle()
-		var land: Button = sheet.find_child("SettingsOrientation_landscape", true, false)
-		_check(land != null and sheet.find_child("SettingsOrientation_auto", true, false) != null
-				and _state.screen_orientation() == "portrait",
-				"A phone's Settings has Screen: portrait by default, landscape, follow the phone (%s)" % tag)
-		if land != null:
-			_check((await Tap.tap(land)) == "", "Landscape takes a real tap (%s)" % tag)
-			await _settle()
-			_check(_state.screen_orientation() == "landscape", "Landscape is kept (%s)" % tag)
+		_check(sheet.find_child("SettingsOrientation_landscape", true, false) == null
+				and sheet.find_child("SettingsOrientation_auto", true, false) == null
+				and sheet.find_child("SettingsOrientation_portrait", true, false) == null,
+				"A phone's Settings has no Screen row: portrait only (%s)" % tag)
+		for old in ["landscape", "auto", "junk"]:
+			_state.set_setting("screen_orientation", old)
+			_state.clamp_saved_orientation()
 			var cfg2 := ConfigFile.new()
-			_check(cfg2.load(_state.settings_path) == OK and cfg2.get_value("ui", "screen_orientation") == "landscape",
-					"Landscape is saved with the settings (%s)" % tag)
-			_state.set_screen_orientation("portrait")
+			_check(cfg2.load(_state.settings_path) == OK and cfg2.get_value("ui", "screen_orientation") == "portrait",
+					"A saved '%s' loads as portrait (%s)" % [old, tag])
+		var cfg3 := ConfigFile.new()
+		if cfg3.load(_state.settings_path) == OK and cfg3.has_section_key("ui", "screen_orientation"):
+			cfg3.erase_section_key("ui", "screen_orientation")
+			cfg3.save(_state.settings_path)
+		_state.clamp_saved_orientation()
+		var cfg4 := ConfigFile.new()
+		_check(cfg4.load(_state.settings_path) != OK or not cfg4.has_section_key("ui", "screen_orientation"),
+				"No saved orientation stays unsaved after the clamp (%s)" % tag)
+		var gs_src := FileAccess.get_file_as_string("res://scripts/state/GameState.gd")
+		var ready_body := gs_src.substr(gs_src.find("func _ready("))
+		ready_body = ready_body.substr(0, ready_body.find("\nfunc ", 1))
+		_check(ready_body.contains("clamp_saved_orientation()"),
+				"GameState._ready clamps the saved orientation (%s)" % tag)
+		# First tap (director, 2026-11-05): a phone's browser goes fullscreen and
+		# holds portrait from a tap's release (the browser's user gesture), once.
+		var sl_node: Node = root.get_node("ScreenLayout")
+		sl_node.page_lock_done = false
+		sl_node.page_lock_sent.clear()
+		var key_ev := InputEventKey.new()
+		key_ev.pressed = true
+		key_ev.keycode = KEY_A
+		sl_node._input(key_ev)
+		var press := InputEventScreenTouch.new()
+		press.pressed = true
+		sl_node._input(press)
+		var right := InputEventMouseButton.new()
+		right.button_index = MOUSE_BUTTON_RIGHT
+		sl_node._input(right)
+		var no_early: bool = sl_node.page_lock_sent.is_empty()
+		var lift := InputEventScreenTouch.new()
+		sl_node._input(lift)
+		var click_up := InputEventMouseButton.new()
+		click_up.button_index = MOUSE_BUTTON_LEFT
+		sl_node._input(click_up)
+		await process_frame
+		sl_node._input(lift)
+		_check(no_early and sl_node.page_lock_sent.size() == 1 and sl_node.page_lock_done
+				and sl_node.page_lock_sent[0].contains("requestFullscreen")
+				and sl_node.page_lock_sent[0].contains("document.documentElement")
+				and sl_node.page_lock_sent[0].contains("lock(o)")
+				and sl_node.page_lock_sent[0].ends_with("})('portrait');"),
+				"A phone browser's first tap release sends the page fullscreen portrait lock once; not a key, a press or a right click (%s)" % tag)
 		load("res://scripts/core/ScreenLayout.gd").force_web_phone = false
-		_check(root.get_node("ScreenLayout").orientation_for("portrait") == DisplayServer.SCREEN_PORTRAIT
-				and root.get_node("ScreenLayout").orientation_for("landscape") == DisplayServer.SCREEN_LANDSCAPE
-				and root.get_node("ScreenLayout").orientation_for("auto") == DisplayServer.SCREEN_SENSOR
-				and root.get_node("ScreenLayout").orientation_for("junk") == DisplayServer.SCREEN_PORTRAIT,
-				"Each choice maps to the engine's orientation; unknown is portrait (%s)" % tag)
+		var sl_cls = load("res://scripts/core/ScreenLayout.gd")
+		_check(sl_cls.page_lock_for(["web", "web_android"]) and sl_cls.page_lock_for(["web", "web_ios"])
+				and not sl_cls.page_lock_for(["web"]) and not sl_cls.page_lock_for(["android"])
+				and not sl_cls.page_lock_for(["ios"]) and not sl_cls.page_lock_for([]),
+				"Only a phone's browser gets the page lock: not a PC browser, a native phone or a desktop (%s)" % tag)
+		sl_node.page_lock_done = false
+		sl_node.page_lock_sent.clear()
+		await process_frame
+		sl_node._input(lift)
+		_check(sl_node.page_lock_sent.is_empty() and not sl_node.page_lock_done,
+				"A desktop's tap sends no page lock (%s)" % tag)
+		var proj := FileAccess.get_file_as_string("res://project.godot")
+		_check(proj.replace("\r", "").contains("window/handheld/orientation=1\n") and int(ProjectSettings.get_setting("display/window/handheld/orientation")) == DisplayServer.SCREEN_PORTRAIT,
+				"project.godot locks handhelds to portrait (%s)" % tag)
 		host.queue_free()
 		await _settle()
 

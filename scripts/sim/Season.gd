@@ -662,9 +662,9 @@ func finals_week_matches() -> Array:
 		4:
 			return [
 				{"tag": "PF1", "label": "Preliminary Final 1",
-						"home": s.get("W_QF1", ""), "away": s.get("W_SF1", "")},
+						"home": s.get("W_QF1", ""), "away": s.get("W_SF2", "")},
 				{"tag": "PF2", "label": "Preliminary Final 2",
-						"home": s.get("W_QF2", ""), "away": s.get("W_SF2", "")},
+						"home": s.get("W_QF2", ""), "away": s.get("W_SF1", "")},
 			]
 		5:
 			return [{"tag": "GF", "label": "Grand Final",

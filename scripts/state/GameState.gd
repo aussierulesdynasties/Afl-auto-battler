@@ -342,7 +342,8 @@ func _ready() -> void:
 	# A desktop opens fullscreen unless the player chose Window (director, 2026-10-12).
 	ScreenLayout.set_fullscreen(bool(cfg.get_value("ui", "fullscreen", true)))
 	_apply_battery_saver(bool(cfg.get_value("ui", "battery_saver", false)))
-	ScreenLayout.set_orientation(screen_orientation())
+	clamp_saved_orientation()
+	ScreenLayout.lock_portrait()
 
 
 func _exit_tree() -> void:
@@ -511,14 +512,15 @@ func set_screen_size(key: String) -> void:
 	ScreenLayout.set_screen_size(key)
 
 
-func screen_orientation() -> String:
-	var key := str(get_setting("screen_orientation", ScreenLayout.DEFAULT_ORIENTATION))
-	return key if ["auto", "portrait", "landscape"].has(key) else ScreenLayout.DEFAULT_ORIENTATION
-
-
-func set_screen_orientation(key: String, from_tap := false) -> void:
-	set_setting("screen_orientation", key)
-	ScreenLayout.set_orientation(key, from_tap)
+## Phone is portrait only (director, 2026-11-05): an older build's saved
+## landscape or follow-the-phone choice is rewritten as portrait on load.
+func clamp_saved_orientation() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(settings_path) != OK or not cfg.has_section_key("ui", "screen_orientation"):
+		return
+	var saved := str(cfg.get_value("ui", "screen_orientation"))
+	if saved != ScreenLayout.clamp_orientation(saved):
+		set_setting("screen_orientation", ScreenLayout.clamp_orientation(saved))
 
 
 func fullscreen() -> bool:
@@ -629,6 +631,21 @@ func has_career() -> bool:
 
 func has_saved_career() -> bool:
 	return CareerSave.exists(save_path)
+
+
+## One sentence per line, so a narrow phone never leaves one word alone.
+const SAVE_UNREADABLE := "Your saved career could not be read.\nStarting a new career will overwrite it."
+
+
+## Why a career file on disk cannot be continued, in the coach's words, or
+## "" when there is nothing wrong (or no file at all).
+func saved_career_problem() -> String:
+	match CareerSave.problem(save_path):
+		"newer":
+			return "Your saved career is from a newer version.\nUpdate the game to keep playing it.\nStarting a new career will overwrite it."
+		"unreadable":
+			return SAVE_UNREADABLE
+	return ""
 
 
 ## Club, year and stage of the saved career, for the main menu.
@@ -814,7 +831,6 @@ func load_career() -> bool:
 	var state := CareerSave.read(save_path)
 	if state.is_empty():
 		return false
-	state = CareerSave.migrate_club_codes(state)
 	reset()
 	# A created club joins the competition before anything reads the clubs.
 	custom_club = state.get("custom_club", {})
