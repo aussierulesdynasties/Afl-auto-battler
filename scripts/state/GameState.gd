@@ -523,10 +523,6 @@ func clamp_saved_orientation() -> void:
 		set_setting("screen_orientation", ScreenLayout.clamp_orientation(saved))
 
 
-func screen_orientation() -> String:
-	return ScreenLayout.clamp_orientation(str(get_setting("screen_orientation", ScreenLayout.PHONE_ORIENTATION)))
-
-
 func fullscreen() -> bool:
 	return bool(get_setting("fullscreen", true))
 

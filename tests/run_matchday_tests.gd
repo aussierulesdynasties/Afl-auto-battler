@@ -2577,15 +2577,52 @@ func _test_vignettes_setting() -> void:
 				"No saved orientation stays unsaved after the clamp (%s)" % tag)
 		var gs_src := FileAccess.get_file_as_string("res://scripts/state/GameState.gd")
 		var ready_body := gs_src.substr(gs_src.find("func _ready("))
-		ready_body = ready_body.substr(0, ready_body.find("
-func ", 1))
+		ready_body = ready_body.substr(0, ready_body.find("\nfunc ", 1))
 		_check(ready_body.contains("clamp_saved_orientation()"),
 				"GameState._ready clamps the saved orientation (%s)" % tag)
+		# First tap (director, 2026-11-05): a phone's browser goes fullscreen and
+		# holds portrait from a tap's release (the browser's user gesture), once.
+		var sl_node: Node = root.get_node("ScreenLayout")
+		sl_node.page_lock_done = false
+		sl_node.page_lock_sent.clear()
+		var key_ev := InputEventKey.new()
+		key_ev.pressed = true
+		key_ev.keycode = KEY_A
+		sl_node._input(key_ev)
+		var press := InputEventScreenTouch.new()
+		press.pressed = true
+		sl_node._input(press)
+		var right := InputEventMouseButton.new()
+		right.button_index = MOUSE_BUTTON_RIGHT
+		sl_node._input(right)
+		var no_early: bool = sl_node.page_lock_sent.is_empty()
+		var lift := InputEventScreenTouch.new()
+		sl_node._input(lift)
+		var click_up := InputEventMouseButton.new()
+		click_up.button_index = MOUSE_BUTTON_LEFT
+		sl_node._input(click_up)
+		await process_frame
+		sl_node._input(lift)
+		_check(no_early and sl_node.page_lock_sent.size() == 1 and sl_node.page_lock_done
+				and sl_node.page_lock_sent[0].contains("requestFullscreen")
+				and sl_node.page_lock_sent[0].contains("document.documentElement")
+				and sl_node.page_lock_sent[0].contains("lock(o)")
+				and sl_node.page_lock_sent[0].ends_with("})('portrait');"),
+				"A phone browser's first tap release sends the page fullscreen portrait lock once; not a key, a press or a right click (%s)" % tag)
 		load("res://scripts/core/ScreenLayout.gd").force_web_phone = false
+		var sl_cls = load("res://scripts/core/ScreenLayout.gd")
+		_check(sl_cls.page_lock_for(["web", "web_android"]) and sl_cls.page_lock_for(["web", "web_ios"])
+				and not sl_cls.page_lock_for(["web"]) and not sl_cls.page_lock_for(["android"])
+				and not sl_cls.page_lock_for(["ios"]) and not sl_cls.page_lock_for([]),
+				"Only a phone's browser gets the page lock: not a PC browser, a native phone or a desktop (%s)" % tag)
+		sl_node.page_lock_done = false
+		sl_node.page_lock_sent.clear()
+		await process_frame
+		sl_node._input(lift)
+		_check(sl_node.page_lock_sent.is_empty() and not sl_node.page_lock_done,
+				"A desktop's tap sends no page lock (%s)" % tag)
 		var proj := FileAccess.get_file_as_string("res://project.godot")
-		_check((proj.contains("window/handheld/orientation=1
-") or proj.contains("window/handheld/orientation=1
-")) and int(ProjectSettings.get_setting("display/window/handheld/orientation")) == DisplayServer.SCREEN_PORTRAIT,
+		_check(proj.replace("\r", "").contains("window/handheld/orientation=1\n") and int(ProjectSettings.get_setting("display/window/handheld/orientation")) == DisplayServer.SCREEN_PORTRAIT,
 				"project.godot locks handhelds to portrait (%s)" % tag)
 		host.queue_free()
 		await _settle()

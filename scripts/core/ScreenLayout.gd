@@ -175,6 +175,81 @@ func lock_portrait() -> int:
 	return DisplayServer.SCREEN_PORTRAIT
 
 
+## A phone's browser holds portrait only while the page is fullscreen, and the
+## browser allows fullscreen only from a user gesture. So the first tap
+## anywhere (director, 2026-11-05: "First tap") puts the page fullscreen and
+## locks portrait. Only a phone's browser (web_android, web_ios): a browser on
+## a PC, a native app and headless are left alone. Safari on an iPhone has no
+## page fullscreen or orientation lock: nothing is sent there.
+static func wants_page_lock() -> bool:
+	var on := []
+	for f in ["web", "web_android", "web_ios"]:
+		if OS.has_feature(f):
+			on.append(f)
+	return force_web_phone or page_lock_for(on)
+
+
+## The page lock's platform rule on its own, for a test: a phone's browser.
+static func page_lock_for(features: Array) -> bool:
+	return features.has("web") and (features.has("web_android") or features.has("web_ios"))
+
+
+## A tap's release (touchend) or a left click's release: the browser counts
+## these as a user gesture. A touch's press (touchstart) does not.
+static func is_lock_gesture(event: InputEvent) -> bool:
+	if event is InputEventScreenTouch:
+		return not event.pressed
+	if event is InputEventMouseButton:
+		return not event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	return false
+
+
+## Set once the page lock needs no more taps. On the web it stays unset and
+## each tap's release checks the page instead: until the page is fullscreen
+## (a refused first request, or the player left fullscreen with Back) the
+## next tap asks again. Off the web (a test) the first send sets it.
+var page_lock_done := false
+## Every script sent for the page lock, for a test to read.
+var page_lock_sent: Array[String] = []
+var _page_lock_frame := -1
+
+
+## True when the page is already fullscreen, or cannot be (an iPhone).
+const PAGE_HELD_JS := """(function(){var d=document,e=d.documentElement;
+return !!(d.fullscreenElement||d.webkitFullscreenElement)||!(e.requestFullscreen||e.webkitRequestFullscreen);})()"""
+
+
+func _hold_page_portrait() -> void:
+	# One tap arrives twice (the touch, and the mouse click made from it).
+	var frame := Engine.get_process_frames()
+	if frame == _page_lock_frame:
+		return
+	if OS.has_feature("web") and bool(JavaScriptBridge.eval(PAGE_HELD_JS, true)):
+		return
+	_page_lock_frame = frame
+	var js := PAGE_FULLSCREEN_JS % PHONE_ORIENTATION
+	page_lock_sent.append(js)
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval(js, true)
+	else:
+		page_lock_done = true
+
+
+## The whole page goes fullscreen, not the game's canvas (the engine's own
+## fullscreen). The phone keyboard is raised by a text box the engine keeps
+## beside the canvas; with only the canvas fullscreen that box is off the
+## screen and the keyboard never opens (godotengine/godot#117342). The
+## rotation is held once the page is fullscreen, as the browser requires.
+const PAGE_FULLSCREEN_JS := """(function(o){
+var d=document.documentElement;
+function hold(){try{var p=screen.orientation&&screen.orientation.lock?screen.orientation.lock(o):null;if(p&&p.catch){p.catch(function(){});}}catch(e){}}
+if(document.fullscreenElement||document.webkitFullscreenElement){hold();return;}
+var ask=d.requestFullscreen||d.webkitRequestFullscreen;
+if(!ask){return;}
+try{var p=ask.call(d);if(p&&p.then){p.then(hold).catch(function(){});}else{hold();}}catch(e){}
+})('%s');"""
+
+
 ## A test or capture stands in for the web build: not a desktop, not a phone.
 static var force_web := false
 ## ...and for a phone's browser (web_android / web_ios): the web, and touch.
@@ -257,8 +332,13 @@ func set_fullscreen(on: bool) -> void:
 	DisplayServer.window_set_mode(wanted_mode(on))
 
 
-## Alt+Enter switches between fullscreen and window, on a desktop.
+## Alt+Enter switches between fullscreen and window, on a desktop. On a
+## phone's browser the first tap holds the page in portrait. It runs from the
+## tap's own input event, within the gesture's activation window (Godot reads
+## browser input on its next frame, well inside the few seconds allowed).
 func _input(event: InputEvent) -> void:
+	if not page_lock_done and is_lock_gesture(event) and wants_page_lock():
+		_hold_page_portrait()
 	if not is_desktop() or not (event is InputEventKey):
 		return
 	var key := event as InputEventKey
