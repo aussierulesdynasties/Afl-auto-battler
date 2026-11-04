@@ -159,11 +159,13 @@ static func leverage(p: Dictionary) -> float:
 ## What a coach or manager would say about his position. Read off the same
 ## numbers as `lowest`, so the words never promise a discount he won't give.
 static func stance(p: Dictionary) -> String:
+	# Leverage first: a minimum-wage fringe player's lowest is clamped up to
+	# his ask by the senior floor, but he is fighting for a spot, not firm.
+	if leverage(p) < 0.35:
+		return "He's fighting for a spot on a list and will take less."
 	var want := wants(p)
 	if lowest(p, int(want["years"])) >= int(want["salary"]):
 		return "He knows his worth and won't take less."
-	if leverage(p) < 0.35:
-		return "He's fighting for a spot on a list and will take less."
 	return "He'd give a little on salary for the security he wants."
 
 
