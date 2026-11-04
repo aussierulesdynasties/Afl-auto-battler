@@ -309,6 +309,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	squads = [home, away]
 	kick_range_on = Features.on("kick_range")
 	clanger_cause_on = Features.on("clanger_cause")
+	_clanger_seed = seed
 	# Who starts on the bench, for the match view's bench strip (read only).
 	for sq in squads:
 		var rows := []
@@ -2378,6 +2379,14 @@ var clanger_cause_on := false
 ## tackle, pressure, aerial or entry when the touch ended that way, else "").
 ## Bookkeeping for the clanger's cause only; no dice.
 var _last_disp := {}
+## The match seed, for the clanger-cause share below (a hash, never the dice).
+var _clanger_seed := 0
+## The weather is blamed only for its own share of clangers: the extra it adds
+## (WEATHER_RATES clanger_per_chain), so 0.15 / 1.15 in the wet, 0.06 / 1.06 in
+## the wind. Picked by a hash of seed and event count so the dice are untouched.
+static func clanger_blame_share(weather_now: String) -> float:
+	var m := float((WEATHER_RATES.get(weather_now, {}) as Dictionary).get("clanger_per_chain", 1.0))
+	return maxf(0.0, (m - 1.0) / m)
 ## Why a clanger went astray: the words after the player's name, by cause. The
 ## cause is the event's "why"; MatchNotes.clanger_caption has the short form.
 const CLANGER_WHY := {
@@ -2388,10 +2397,19 @@ const CLANGER_WHY := {
 
 ## The cause of a clanger from the touch that ended the chain (`disp`), in the
 ## weather of the day, after a chain that ended in `outcome`. "" when nothing
-## real is to blame: a touch that ended in its own event (a tackle, a forced
-## turnover, a kick taken, an entry), a score, or dry still weather.
+## real is to blame: a score, dry still weather, or a touch that ended in its
+## own event (a tackle, a kick read and marked). A ball turned over off an entry
+## or under pressure can be the wet ball's or the wind's (director, 2026-11-04:
+## widen it), so a turnover counts as well as a plain stoppage.
+const CLANGER_TURNOVER_ENDS := ["", "entry", "pressure"]
 static func clanger_why(disp: Dictionary, weather_now: String, outcome := "stoppage") -> String:
-	if disp.is_empty() or outcome != "stoppage" or str(disp.get("end", "")) != "":
+	if disp.is_empty():
+		return ""
+	var end := str(disp.get("end", ""))
+	if outcome == "stoppage":
+		if end != "":
+			return ""
+	elif outcome != "turnover" or not CLANGER_TURNOVER_ENDS.has(end):
 		return ""
 	if weather_now == "wet":
 		return "wet"
@@ -4076,6 +4094,8 @@ func _play_one_chain(T: Dictionary) -> void:
 		var cause := ""
 		if clanger_cause_on and not _last_disp.is_empty():
 			cause = clanger_why(_last_disp, weather, outcome)
+			if cause != "" and float(absi(hash([_clanger_seed, events.size()])) % 1000) / 1000.0 >= clanger_blame_share(weather):
+				cause = ""
 			# Only his own side's player can be blamed (the chain may have changed hands).
 			if cause != "" and (squads[side].ground.has(_last_disp["carrier"])
 					or squads[side].bench.has(_last_disp["carrier"])):

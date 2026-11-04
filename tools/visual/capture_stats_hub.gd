@@ -63,6 +63,11 @@ func _run() -> void:
 	UK.apply_appearance(mode)
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
+	# --size is in UI units: a scaled (HiDPI) desktop would otherwise lay a
+	# 1280-pixel window out at 640 units, as a phone.
+	var sl = root.get_node("ScreenLayout")
+	sl.ui_scale = 96.0 / maxf(96.0, float(DisplayServer.screen_get_dpi()))
+	sl.call("_update_scale")
 	load("res://scripts/ui/StatsHubScene.gd").current = section
 	var scene: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
 	root.add_child(scene)

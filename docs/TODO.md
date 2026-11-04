@@ -35,23 +35,19 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 | 63 | One cost sheet per club dominant option and one for the 33 gain-only story options, same look as the 17 story cards; nothing is dropped (T5.Q2, T5.Q3) | every option shows a real cost |
 | 64 | Custom prospect Alastair McNeil in the first national draft is the next build (4.Q8) | prospect in draft, story beats |
 | 65 | Draftees start lower: picks 1-5 about 60-62, 6-20 about 55-58, POT kept; his playtest still judges (4.Q9) | draft audit bands |
-| 66 | Teaching is XP scaling of -5% to +10% with Strong at 78+; fix the grade cut-offs to match (4.Q1) | grades and XP agree, test |
 | 67 | Management pays: trade period at real volume, recruiters' edge and development projects (4.Q11); balance-gated | audit across 8-10 seasons |
 | 68 | Culture effects (Standards, Togetherness, Ambition): size review now, shown to him with numbers (T5.Q7) | review shown to him |
 | 69 | Hub leads with one hero element, shown on the hub first (6.Q2) | hub capture, critics clean |
 | 70 | Pre-timeskip: the full survey, not the simpler version (T5.Q20) | survey built |
 | 71 | Former-player coaches: lower the coaching rate toward the 60-80% aspiration (86% by 2058 now) (T5.Q15) | audit shows the lower rate |
-| 72 | Best and fairest medals carry their real names (Doig, Sutton, Barker, Truscott) (T5.Q19) | names shown |
 | 73 | Premiership-year tattoos at a restrained, configurable rate; zero gameplay effect (6.Q16; see G 6.63) | tattoos on, rate in one place |
 | 74 | Gather Round as a shared league event at host venues, with a policy for odd club counts (T5.Q11a) | built |
 | 75 | Sir Doug Nicholls Round as a real annual event, design stored in the save (T5.Q11b) | built |
 | 76 | AFL news layer: generated news items from the save (T5.Q11d) | items appear |
 | 77 | Set shots rise from about 37.5% to the real ~55% of shots, conversion set by distance, total scoring held flat (T8.Q9) | audit shows both |
 | 78 | Rare big margins come back through Momentum (100+ about 0.5% against real 1.9%); balance-gated (T8.Q4) | audit shows the blowout rate |
-| 79 | List Profile Elite is the top 3 of 18: check ListProfile.ELITE (now 0.17) and re-measure (T8.Q2) | constant and audit agree |
 | 80 | Club Forge create-a-player: one weakness compulsory, the second optional, no extra overall power (T8.Q12) | screen enforces it |
 | 82 | Itch gets Windows and Android APK builds beside web; price free (T7.O1, T7.O3); Google Play stays off until his written yes | export presets, builds on itch |
-| 84 | Ladder moves fully into Season stats: the hub nav bar loses Ladder; no other nav change (T3.Q13, T9.Q29) | no Ladder screen or nav entry, ladder reachable in Season stats, tap test |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
 
 ## B. Built and OFF: waiting for his playtest, then the switch goes on
@@ -117,7 +113,8 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 Nothing open. Unmerged branch: `claude/comeback-audit-row42` (row 42).
 
 ## Working rules
-- One Godot process per agent at a time, off-screen, own user data (`APPDATA=<scratch dir>`); kill only your own PIDs.
+- Godot runs off-screen with its own user data (`APPDATA=<scratch dir>`); kill only your own PIDs.
+- Balance: screen every balance-gated row or match-engine change with `tools/balance.sh match 1000` (base vs `--b "--on <switch>"`) before the PR and paste its table in the PR body; extend the harness rather than writing one-off probes (tools/balance/README.md).
 - Run only the suites your change touches locally; CI runs the rest. Long audits go to `audit.yml`.
 - Revert `.import` and `.uid` churn before committing. Stage by name; never `git add -A`.
 - One worktree per session, from `origin/main`. Don't push to a PR branch while its CI runs unless the merge needs it.
@@ -231,7 +228,7 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 - 4.Q5 (Ask around, untouchable, pick order from round 18, pick trade on draft night) are still candidates, not assigned.
 - Row 13 gets all five scenes, stays off and waits for the 1.11 playtest gate. Time pauses at a decision, so scenes never fight live speed.
 - Weather has full effect on play (T1.Q2, T2.Q2, 6.Q10, T8.Q7): wet tackles move toward the real +12% (row 61); how it looks never touches the sim. Weather is off the bible's open list.
-- Ladder goes into Season stats (T3.Q13, T9.Q29): the hub nav bar loses Ladder, no other nav change (row 84).
+- Ladder goes into Season stats (T3.Q13, T9.Q29): the hub nav bar loses Ladder, no other nav change (shipped).
 - Price: free for now. Platforms: web, Windows and an Android APK on itch; Google Play only on his written yes (US$25 fee and signing key).
 - Old PRs #745, #761 and #765 were already merged; nothing to close.
 

@@ -85,6 +85,26 @@ func _test_bf_names() -> void:
 			and BestAndFairest.count_line("COL", "Collingwood", 2) == "2 Copeland Trophies"
 			and BestAndFairest.count_line("FORGE", "Redbacks", 2) == "2 Redbacks best and fairests",
 			"A coach's count reads in the medal's own words")
+	# Wherever a club best and fairest is named, the medal's name is used (T5.Q19).
+	var fre := Remembered.facts({}, {}, "FRE", {"bf": [2030]}, {})
+	var forge := Remembered.facts({}, {}, "FORGE", {"bf": [2030]}, {})
+	_check(str(fre[0]["sheet"]) == "Doig Medal, 2030." and str(fre[0]["said"]) == "He won the Doig Medal in 2030.",
+			"A remembered best and fairest carries the medal's name (%s)" % str(fre[0]))
+	_check(str(forge[0]["sheet"]) == "Best and fairest, 2030." and str(forge[0]["said"]) == "He won your best and fairest in 2030.",
+			"A club with no medal keeps best and fairest (%s)" % str(forge[0]))
+	var hero := str(Almanac.story_parts({"club": "NTH", "year": 2030, "bf": [{"name": "J. Smith"}]}, {})["hero"])
+	_check(hero == "J. Smith won the Syd Barker Medal.", "The almanac story names the medal (%s)" % hero)
+	hero = str(Almanac.story_parts({"club": "FORGE", "year": 2030, "bf": [{"name": "J. Smith"}]}, {})["hero"])
+	_check(hero == "J. Smith won the best and fairest.", "A club with no medal keeps best and fairest (%s)" % hero)
+	hero = str(Almanac.story_parts({"club": "GCS", "year": 2030, "bf": [{"name": "J. Smith"}]}, {})["hero"])
+	_check(hero == "J. Smith won the best and fairest.", "A club champion award is not said as 'won the Club Champion' (%s)" % hero)
+	var gcs := Remembered.facts({}, {}, "GCS", {"bf": [2030]}, {})
+	_check(str(gcs[0]["said"]) == "He won your best and fairest in 2030.", "Gold Coast's line reads naturally (%s)" % str(gcs[0]))
+	var legend := {"honours": {"bf": {"FRE": 3, "FORGE": 3}}}
+	var lm := Almanac.legend_marks(legend, "FRE")
+	_check(lm.has("3 Doig Medals"), "A legend's medal tally names the medal (%s)" % str(lm))
+	lm = Almanac.legend_marks(legend, "FORGE")
+	_check(lm.has("3 %s best and fairests" % GameDB.club_name("FORGE")), "A club with no medal keeps best and fairests (%s)" % str(lm))
 
 
 func _test_vote_arithmetic() -> void:

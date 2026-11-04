@@ -960,23 +960,15 @@ func _test_project_endings() -> void:
 			"A learned third position counts as his own")
 
 
-## Teaching (director, 2026-10-09, RPG-006): a club's teachers move a player's
-## season training ceiling a point either way; XP alone never showed, because
-## nearly every young player reached the +3 ceiling anyway.
+## Teaching (director, 4.Q1, 2026-11-04): teaching is XP scaling, not the
+## season-ceiling point, so no staff moves the ceiling (RPG-006 retired).
 func _test_teaching_moves_the_ceiling() -> void:
 	var coach := func(teach: int): return {"skills": {"teach": teach, "tactics": 70, "manage": 70}}
-	var elite := {"MID": coach.call(90), "DEV": coach.call(90)}
-	var good := {"MID": coach.call(70), "DEV": coach.call(70)}
 	var kid := {"role": "MID", "age": 19.0}
 	var vet := {"role": "MID", "age": 28.0}
-	_check(CoachEffects.teach_step(elite, kid) == 1 and CoachEffects.teach_step(good, kid) == 0
-			and CoachEffects.teach_step({}, kid) == -1,
-			"Elite teachers lift a kid's ceiling a point, good ones leave it, an empty staff costs one")
-	_check(CoachEffects.teach_step({"MID": coach.call(90), "DEV": coach.call(58)}, kid) == 0
-			and CoachEffects.teach_step({"MID": coach.call(90), "DEV": coach.call(58)}, vet) == 1,
-			"A kid needs his development coach too; a senior player only his line coach")
-	_check(CoachEffects.teach_step({"MID": {"skills": {"teach": 58, "tactics": 92, "manage": 92}}}, vet) == -1,
-			"It is the teaching skill that counts, not the coach's overall fit")
+	for staff in [{"MID": coach.call(90), "DEV": coach.call(90)}, {"MID": coach.call(70), "DEV": coach.call(70)}, {}]:
+		_check(CoachEffects.teach_step(staff, kid) == 0 and CoachEffects.teach_step(staff, vet) == 0,
+				"No teaching staff moves the season ceiling")
 	var p: Dictionary = GameState.my_list[0]
 	p["season_start_ov"] = int(p["overall"])
 	p.erase("project_year")

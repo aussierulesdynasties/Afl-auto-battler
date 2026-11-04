@@ -46,6 +46,8 @@ func _run() -> void:
 	# Before any round: no press conference sits over the hub.
 	await _t("_test_intro")
 	await _t("_test_hub_button")
+	for sz in [Vector2i(390, 844), Vector2i(1920, 1080)]:
+		await _t("_test_ladder_only_in_season_stats", [sz])
 	await _t("_test_awards_early")
 	await _t("_test_trophies_unplayed")
 	for i in range(4):
@@ -66,7 +68,8 @@ func _run() -> void:
 	_t("_test_book_rates")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_fixture", [sz])
-	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+	# 320 x 693: a 390 x 844 window on a scaled desktop (ScreenLayout's 320-unit floor).
+	for sz in [Vector2i(390, 844), Vector2i(320, 693), Vector2i(1280, 720)]:
 		await _t("_test_ladder", [sz])
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_team_rating", [sz])
@@ -113,10 +116,83 @@ func _test_hub_button() -> void:
 	var b: Button = hub.find_child("SeasonStats", true, false)
 	_check(b != null and hub.find_child("FullLadder", true, false) == null,
 			"The hub offers Season stats in place of Full ladder")
+	# Row 84 (T3.Q13, T9.Q29): the hub's nav bar has no Ladder entry.
+	var navs := []
+	for n in hub.find_children("*", "Button", true, false):
+		if (n as Button).text.to_lower().contains("ladder"):
+			navs.append(str(n.name))
+	_check(navs.is_empty(), "No hub button says Ladder (%s)" % str(navs))
 	if b != null:
 		var got := await Tap.tap(b)
 		_check(got == "", "Season stats takes a tap (%s)" % got)
 	hub.queue_free()
+	await _settle()
+
+
+## Row 84 (ruling: docs/TODO.md rulings, T3.Q13 / T9.Q29): the ladder lives
+## only in Season stats. No Ladder screen or route, no Ladder button in the
+## hub's nav row; a real tap on the hub's Ladder heading opens Season stats,
+## and a real tap on its Ladder tab shows the ladder.
+func _test_ladder_only_in_season_stats(sz: Vector2i) -> void:
+	var tag := "%dx%d" % [sz.x, sz.y]
+	var old_size := root.size
+	var old_stack: Array = root.get_node("Router").stack.duplicate()
+	var old_scene := current_scene
+	var hub_stats = load("res://scripts/ui/StatsHubScene.gd")
+	var old_current := str(hub_stats.current)
+	_check(not ResourceLoader.exists("res://scenes/LadderScene.tscn")
+			and not ResourceLoader.exists("res://scripts/ui/LadderScene.gd"), "No Ladder screen exists")
+	var routes: Dictionary = load("res://scripts/core/Router.gd").SCENES
+	for k in routes:
+		_check(not str(k).to_lower().contains("ladder") and not str(routes[k]).to_lower().contains("ladder"),
+				"No route leads to a Ladder screen (%s)" % k)
+	root.size = sz
+	# Awards open last, so landing on the ladder has to come from the taps.
+	hub_stats.current = "awards"
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	var navs := 0
+	for name in ["HubFooter", "HubFooterWide"]:
+		var row: Node = hub.find_child(name, true, false)
+		if row == null:
+			continue
+		for b in row.find_children("*", "Button", true, false):
+			navs += 1
+			_check(not (b as Button).text.to_lower().contains("ladder"),
+					"The hub nav row has no Ladder button (%s: %s)" % [tag, (b as Button).text])
+	_check(navs > 0, "The hub nav row is there to check (%s)" % tag)
+	var link: Button = hub.find_child("SeasonStats", true, false)
+	_check(link != null, "The hub's Ladder heading is there (%s)" % tag)
+	if link != null:
+		var got := await Tap.tap(link)
+		_check(got == "", "The Ladder heading takes a real tap (%s: %s)" % [tag, got])
+		await _settle()
+	var s: Node = current_scene
+	_check(s != null and s.scene_file_path == "res://scenes/StatsHubScene.tscn",
+			"The tap opens Season stats (%s)" % tag)
+	if s != null and s.scene_file_path == "res://scenes/StatsHubScene.tscn":
+		var tab: Button = s.find_child("Section_ladder", true, false)
+		_check(tab != null, "Season stats has a Ladder tab (%s)" % tag)
+		if tab != null:
+			var got2 := await Tap.tap(tab)
+			_check(got2 == "", "The Ladder tab takes a real tap (%s: %s)" % [tag, got2])
+			await _settle()
+			tab = s.find_child("Section_ladder", true, false)
+			var sb := tab.get_theme_stylebox("normal") as StyleBoxFlat if tab != null else null
+			_check(sb != null and sb.border_width_bottom == 2, "The Ladder tab is the selected one (%s)" % tag)
+			_check(s.find_child("LadderHeader", true, false) != null,
+					"The ladder shows in Season stats (%s)" % tag)
+	# Leave the tree as it was: no stray Season stats, stack, section or size.
+	if is_instance_valid(hub):
+		hub.queue_free()
+	if s != null and s != old_scene and is_instance_valid(s):
+		s.queue_free()
+	if is_instance_valid(old_scene):
+		current_scene = old_scene
+	root.get_node("Router").stack = old_stack
+	hub_stats.current = old_current
+	root.size = old_size
 	await _settle()
 
 
@@ -862,6 +938,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	_check(_row_codes(s) == true_order, "The ladder opens in the true order (%s)" % tag)
 	_fits(s, sz, "the ladder", tag)
 	_table_recipe(s, tag, true)
+	_header_aligns(s, tag)
 
 	# Phone columns, and the wide screen's extra ones.
 	var heads := []
@@ -934,6 +1011,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	await _settle()
 	wins = _by(s, season, "w")
 	_check(_non_decreasing(wins), "A second tap reverses it (%s: %s)" % [tag, str(wins)])
+	_header_aligns(s, tag + " sorted")
 	await Tap.tap(s.find_child("LadderOrder", true, false))
 	await _settle()
 	_check(_row_codes(s) == true_order and s.find_child("LadderOrder", true, false) == null,
@@ -1057,6 +1135,36 @@ func _test_ladder(sz: Vector2i) -> void:
 			"Back returns to the ladder as it was, sort and filter kept (%s)" % tag)
 	s.queue_free()
 	await _settle()
+
+
+## Each header sits over its own column (row 84: on a phone the header was one
+## column off): every header's right edge (the club's left edge) is within 2 px
+## of the same column's cell in every row.
+func _header_aligns(s: Node, tag: String) -> void:
+	var header: Control = s.find_child("LadderHeader", true, false)
+	_check(header != null, "The ladder has a header row (%s)" % tag)
+	if header == null:
+		return
+	var heads: Array = header.get_children()
+	var off := []
+	for b in s.find_children("Club_*", "Button", true, false):
+		var cells: Array = (b as Control).get_child(0).get_children()
+		if cells.size() != heads.size():
+			off.append("%s has %d cells for %d headers" % [b.name, cells.size(), heads.size()])
+			continue
+		for i in heads.size():
+			var h: Control = heads[i]
+			var c: Control = cells[i]
+			var club := str(h.name) == "Sort_club"
+			var hx: float = h.get_global_rect().position.x if club else h.get_global_rect().end.x
+			var cx: float = c.get_global_rect().position.x if club else c.get_global_rect().end.x
+			if absf(hx - cx) > 2.0:
+				off.append("%s %s %.0f vs %.0f" % [b.name, h.name, hx, cx])
+	var body: Control = s.find_child("Club_*", true, false)
+	if body != null:
+		var rw: float = (body as Control).get_child(0).size.x
+		_check(absf(rw - header.size.x) <= 2.0, "A ladder row is as wide as its header (%s: %.0f vs %.0f)" % [tag, rw, header.size.x])
+	_check(off.is_empty(), "Ladder headers line up with their columns (%s: %s)" % [tag, str(off.slice(0, 4))])
 
 
 ## On a wide screen the table is about as wide as its columns (760 to 900 px),
