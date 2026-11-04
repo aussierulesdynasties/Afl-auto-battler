@@ -68,6 +68,7 @@ func _run() -> void:
 	await _t("_test_crawl")
 	await _t("_test_rest")
 	await _t("_test_new_career_flow")
+	await _t("_test_screen_wipe")
 
 	print("BACKTABLE")
 	for line in _table:
@@ -763,3 +764,36 @@ func _test_new_career_flow() -> void:
 		var ok4: bool = why4 == "" and _continue_shows_old_career(current_scene) and _saved_club() == "COL"
 		_check(ok4, "then the title still offers Continue for the old career (%s: %s)" % [way, why4])
 		_table.append("new career: back to the title | %s | %s" % [way, "ok" if ok4 else "FAIL %s" % why4])
+
+
+## The screen wipe (ScreenTransition): with motion on, a screen change still
+## lands, input is blocked only while the dots cover the screen and is given
+## back after, and the dots fit the window at 1280x720 and 390x844.
+func _test_screen_wipe() -> void:
+	var feel = load("res://scripts/ui/Feel.gd")
+	var wipe: Node = root.get_node("ScreenTransition")
+	var rect: ColorRect = wipe.get_node("TransitionRect")
+	feel.test_motion = true
+	for size in [Vector2i(1280, 720), Vector2i(390, 844)]:
+		root.size = size
+		await _settle(2)
+		var res: Vector2 = rect.material.get_shader_parameter("node_resolution")
+		_check(res.is_equal_approx(Vector2(size)), "wipe fits the window at %s (got %s)" % [size, res])
+		_router.stack = []
+		var before := current_scene
+		_router.go("main")
+		_check(bool(wipe.get("busy")) and rect.visible, "the wipe starts on a screen change at %s" % size)
+		_check(rect.mouse_filter == Control.MOUSE_FILTER_STOP, "taps are blocked under the wipe at %s" % size)
+		_check(current_scene == before, "the old screen stays until full cover at %s" % size)
+		for i in range(120):
+			if not bool(wipe.get("busy")):
+				break
+			await process_frame
+		_check(not bool(wipe.get("busy")), "the wipe ends at %s" % size)
+		_check(current_scene != before and current_scene != null and _router.current() == "main",
+				"the screen change completes under the wipe at %s" % size)
+		_check(not rect.visible and rect.mouse_filter == Control.MOUSE_FILTER_IGNORE,
+				"input is given back after the wipe at %s" % size)
+	feel.test_motion = false
+	root.size = Vector2i(1280, 720)
+	await _settle()
