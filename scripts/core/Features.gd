@@ -14,7 +14,8 @@ extends RefCounted
 ##      (several: --features preseason,other);
 ##   3. the project setting features/<name> is true (project.godot). This is
 ##      what an exported build reads. international_prospects ships ON since
-##      2026-10-18 (director: "Names fine, switch on"); every other switch ships off.
+##      2026-10-18 (director: "Names fine, switch on") and clanger_cause since
+##      2026-11-04 (row 81); every other switch ships off.
 ## Otherwise it is OFF: every test suite that does not ask for it, and a plain
 ## editor run, for any switch whose project setting is false.
 ##
@@ -72,7 +73,8 @@ extends RefCounted
 ##               player, the match feed stays as is). Off, the clanger is a weighted pick
 ##               from the ground and reads "gives away a clanger". On, player credit for
 ##               clangers moves to the last carrier (the player clangers stat, notes and
-##               ratings); team totals, score and events are unchanged.
+##               ratings); team totals, score and events are unchanged. Ships ON since
+##               2026-11-04 (row 81, his row 12 ruling).
 ##   match_flow  row 11 (director, 2026-10-10): stoppages come from contests that lock up
 ##               (a held tackle, a rushed kick into a pack, a spoil in the pocket), a won ball
 ##               after an intercept or a free is played on, chains are shorter and more
