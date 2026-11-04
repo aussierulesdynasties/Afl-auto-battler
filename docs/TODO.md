@@ -28,7 +28,6 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 | 54 | Under-18 carnival week, then mid-season rookie draft; W7 review (ch. 29 row 9) | built |
 | 55 | Off-season: "this year's list problem" in three lines; put a player on the table / Ask around (ch. 29 row 4) | built |
 | 57 | Save export/import and a version chain with restore | export, import, restore work |
-| 42 | Believable comebacks: rules with numbers from the audit on unmerged `claude/comeback-audit-row42` | rules in code, audit bands, his call on balance |
 | 35 | Finals bespoke cards: slice 2 built behind `finals_cards_2`; ships when he has played it | see section B |
 | 33 | Per-ground oval dimensions and looks (only MCG look done). Section H asks whether it is presentation only | his answer, then build |
 | 61 | Weather at full effect: rain, wind and heat change ball handling, kicking, tackling and scoring (wet tackles toward the real +12%); sizes come from a seeded audit and balance stays his call. Its look never touches the sim | audit bands, rules in code, his playtest |
@@ -74,6 +73,7 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 
 - 5 Defensive set-up break wording (merged by #874). 16 PC bounce scene. 20 Press conference black bands gone?
 - 7 Shake on his device. 26 Season stats hub phone review.
+- 42 Comebacks already match real AFL on 9,600 audited matches (docs/COMEBACKS_EVIDENCE_2026-11-05.md); no rule changed. Does he accept that, or want the close-finish band (65.8% v 57.5%) loosened?
 - 30 Coleman goalkicking cap (98th percentile, balance-gated).
 - 58 Difficulty dial sizes (board patience, rival recruiting). 39 Pre-season balance sizes.
 - 47 Decision transparency: 9 questions on sheet #851 (how the plan gain is printed, whether the draft shows the true rating beside the scouting range, whether the Play through role lines and cost (#850) are right).
@@ -110,7 +110,7 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 - Deferred by ruling: weather at the quarter break, announce the cap step, league rule changes.
 
 ## In flight
-Nothing open. Unmerged branch: `claude/comeback-audit-row42` (row 42).
+Nothing open.
 
 ## Working rules
 - Godot runs off-screen with its own user data (`APPDATA=<scratch dir>`); kill only your own PIDs.
