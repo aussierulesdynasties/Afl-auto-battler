@@ -272,6 +272,7 @@ var best23 := {}
 var class_tiers := {}             # draft year (string) -> tier key, as generated
 var draftee_pool: Array = []     # all prospects that have not been drafted yet
 var drafted_draftees := {}       # prospect id -> destination club
+var midseason := {}              # carnival and mid-season rookie draft (MidseasonDraft)
 var intake_assignments: Array = []  # father-son / NGA pre-draft landings
 var intake_summary := {}        # last rollover: retirements and growth
 ## Last game's per-player XP. The training menu reads this so the whole list
@@ -690,6 +691,7 @@ func save_career() -> bool:
 		"my_list": [] if _linked_code(my_list) != "" else my_list,
 		"my_list_link": _linked_code(my_list),
 		"draftee_pool": draftee_pool,
+		"midseason": midseason,
 		"drafted_draftees": drafted_draftees,
 		"intake_assignments": intake_assignments,
 		"intake_summary": intake_summary,
@@ -870,6 +872,7 @@ func load_career() -> bool:
 	var link := str(state.get("my_list_link", ""))
 	my_list = _season_list(link) if link != "" else state.get("my_list", [])
 	draftee_pool = state.get("draftee_pool", [])
+	midseason = state.get("midseason", {})
 	drafted_draftees = state.get("drafted_draftees", {})
 	intake_assignments = state.get("intake_assignments", [])
 	intake_summary = state.get("intake_summary", {})
@@ -1441,6 +1444,7 @@ func reset() -> void:
 	opening_draft = false
 	season_year = GameDB.START_YEAR
 	drafted_draftees = {}
+	midseason = {}
 	intake_assignments = []
 	intake_summary = {}
 	# The 2026 class was drafted before the career began (it is in the
@@ -2305,6 +2309,7 @@ func prepare_interactive_match() -> bool:
 	match_way_live = match_way()
 	preseason_sim_to_round1()
 	_settle_week_event()
+	MidseasonDraft.settle(self)
 	last_pos_before = my_position()
 	if season.is_regular_done():
 		return _prepare_interactive_final()
@@ -2527,6 +2532,7 @@ func advance() -> String:
 		return "none"
 	preseason_sim_to_round1()
 	_settle_week_event()
+	MidseasonDraft.settle(self)
 	_sync_club_plan()
 	_refresh_coach_tactics()
 	_stamp_conditioning()
@@ -5259,6 +5265,7 @@ func _short_name(id: String) -> String:
 ## the Grand Final has just been played - the season's awards.
 func _after_round(results: Array) -> void:
 	_note_plans_played(results)
+	MidseasonDraft.after_round(self)
 	# Who on a promised run could not play this week, before anything ticks.
 	_backing_unavailable = {}
 	for p in my_list:
