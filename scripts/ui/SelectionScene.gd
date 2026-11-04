@@ -351,25 +351,55 @@ func _fill_week(v: VBoxContainer) -> void:
 		ch.name = "TeamChanges"
 		v.add_child(ch)
 	if not nxt.is_empty():
-		# Their key forwards, as facts. Who goes to each is set before the
-		# first ball-up, not here.
-		var mus := GameState.week_matchups(str(nxt["code"]))
-		if not mus.is_empty():
-			var mv := UiKit.vbox(2)
-			mv.name = "KeyMatchups"
-			v.add_child(mv)
-			var kf := UiKit.hbox(6)
-			kf.add_child(UiKit.club_marker(str(nxt["code"]), 18.0))
-			kf.add_child(UiKit.line("Their key forwards", UiKit.BODY, _side_ink(str(nxt["code"])), true))
-			mv.add_child(kf)
-			for m in mus:
-				var f: Dictionary = m["fwd"]
-				var fl := _para("%s. %s" % [GameDB.player_display_name(f), Matchups.describe(f)], 14, UiKit.TEXT)
-				fl.name = "KeyForward_" + str(f["id"])
-				mv.add_child(fl)
+		# Both sides' key forwards and defenders, side by side, as facts. Who
+		# goes to each is set before the first ball-up, not here.
+		var kp := GameState.week_key_players(str(nxt["code"]))
+		if not kp.is_empty():
+			v.add_child(_key_players(kp, str(nxt["code"])))
 	var later := _para("Match-ups, game plan and tags are set before the first ball-up.", UiKit.SMALL, UiKit.MUTED)
 	later.name = "SetLater"
 	v.add_child(later)
+
+
+## Both sides' key forwards and key defenders, your side on the left and
+## theirs on the right: height and how they mark, one player a line.
+func _key_players(kp: Dictionary, opp: String) -> Control:
+	var cols := UiKit.hbox(14)
+	cols.name = "KeyMatchups"
+	for side in ["mine", "theirs"]:
+		var code: String = GameState.my_club if side == "mine" else opp
+		var col := UiKit.vbox(2)
+		col.name = "KeySide_" + side
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.size_flags_stretch_ratio = 1.0
+		var head := UiKit.hbox(6)
+		head.add_child(UiKit.club_marker(code, 18.0))
+		head.add_child(UiKit.ellipsis(GameDB.club_name(code), UiKit.BODY, _side_ink(code)))
+		col.add_child(head)
+		for group in [["fwd", "Key forwards"], ["def", "Key defenders"]]:
+			var list: Array = (kp[side] as Dictionary)[group[0]]
+			if list.is_empty():
+				continue
+			col.add_child(UiKit.spacer(4))
+			col.add_child(UiKit.lbl(str(group[1]), UiKit.SMALL, UiKit.MUTED, true))
+			for p in list:
+				var one := UiKit.vbox(0)
+				one.name = ("KeyForward_" if group[0] == "fwd" else "KeyDefender_") + str(p["id"])
+				one.add_child(UiKit.ellipsis(GameDB.player_display_name(p), 14, _side_ink(code)))
+				one.add_child(UiKit.ellipsis(_air_line(p), UiKit.SMALL, UiKit.MUTED))
+				col.add_child(one)
+		cols.add_child(col)
+	return cols
+
+
+## "196 cm, strong marking": height and how he marks, in words.
+func _air_line(p: Dictionary) -> String:
+	var bits := PackedStringArray()
+	if float(p.get("height_cm", 0.0)) > 0.0:
+		bits.append("%d cm" % int(p["height_cm"]))
+	var g := PlayerProfile.grade(PlayerProfile.percentile(p, "marking"))
+	bits.append("%s marking" % (g.to_lower() if g != "" else "average"))
+	return ", ".join(bits)
 
 
 ## The line synergies your 18 switch on - what the side is good at - any

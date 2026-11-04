@@ -90,6 +90,10 @@ func _test_selection_tests() -> void:
 	var km: Node = ui.find_child("KeyMatchups", true, false)
 	_check(km != null and not km.find_children("KeyForward_*", "Control", true, false).is_empty(),
 			"Selection names their key forwards")
+	_check(km != null and not km.find_children("KeyDefender_*", "Control", true, false).is_empty()
+			and km.find_child("KeySide_mine", true, false) != null and km.find_child("KeySide_theirs", true, false) != null
+			and str(_screen_text(km)).contains(" cm, ") and str(_screen_text(km)).contains("marking"),
+			"Selection shows both sides' key forwards and defenders, side by side, with height and marking")
 	_check(ui.find_child("ChangeMatchup", true, false) == null and ui.find_child("ChangePlan", true, false) == null
 			and ui.find_child("PlanLine", true, false) == null and km != null
 			and not str(_screen_text(km)).contains(" is on "),
