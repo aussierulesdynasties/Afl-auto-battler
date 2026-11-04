@@ -70,6 +70,7 @@ international_prospects=true
 training_report=false
 player_looks=false
 top_attributes=false
+training_grid=false
 coach_arcs=false
 club_almanac=false
 decision_scenes=false
