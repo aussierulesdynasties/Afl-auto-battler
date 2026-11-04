@@ -1011,6 +1011,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	await _settle()
 	wins = _by(s, season, "w")
 	_check(_non_decreasing(wins), "A second tap reverses it (%s: %s)" % [tag, str(wins)])
+	_header_aligns(s, tag + " sorted")
 	await Tap.tap(s.find_child("LadderOrder", true, false))
 	await _settle()
 	_check(_row_codes(s) == true_order and s.find_child("LadderOrder", true, false) == null,
@@ -1140,7 +1141,11 @@ func _test_ladder(sz: Vector2i) -> void:
 ## column off): every header's right edge (the club's left edge) is within 2 px
 ## of the same column's cell in every row.
 func _header_aligns(s: Node, tag: String) -> void:
-	var heads: Array = s.find_child("LadderHeader", true, false).get_children()
+	var header: Control = s.find_child("LadderHeader", true, false)
+	_check(header != null, "The ladder has a header row (%s)" % tag)
+	if header == null:
+		return
+	var heads: Array = header.get_children()
 	var off := []
 	for b in s.find_children("Club_*", "Button", true, false):
 		var cells: Array = (b as Control).get_child(0).get_children()
@@ -1155,6 +1160,10 @@ func _header_aligns(s: Node, tag: String) -> void:
 			var cx: float = c.get_global_rect().position.x if club else c.get_global_rect().end.x
 			if absf(hx - cx) > 2.0:
 				off.append("%s %s %.0f vs %.0f" % [b.name, h.name, hx, cx])
+	var body: Control = s.find_child("Club_*", true, false)
+	if body != null:
+		var rw: float = (body as Control).get_child(0).size.x
+		_check(absf(rw - header.size.x) <= 2.0, "A ladder row is as wide as its header (%s: %.0f vs %.0f)" % [tag, rw, header.size.x])
 	_check(off.is_empty(), "Ladder headers line up with their columns (%s: %s)" % [tag, str(off.slice(0, 4))])
 
 
