@@ -10,7 +10,7 @@ The itch page runs the browser build of main with every switch in section B off,
 |---|---|---|---|
 | I1 | The new match | His playtest passes `match_flow`, `clanger_cause`, `ballup_two`, `goal_run_moves`, `kick_range`, `match_story`, `top_attributes`, then they go on. Rows 9, 17, 18 merged. | Play on after a won ball, a clanger says why, two honest late ball-up choices, hero and turning point after the match, top attributes on cards, feed colours and the matchup grid |
 | I2 | Safe to keep a career | T7.R84 save restore and frozen fixtures, 57 export/import, T5.Q24 migration, T8.Q20 faster weekly sim, T3.R56 onboarding on fresh saves. | Restore last good save, back up and move a career, no career lost on update, a quicker Sim the week, a fresh start that teaches |
-| I3 | Match day on a phone | T3.R42 one thumb, T3.R41 team selection as two screens, T3.R10 text size and colour-blind marks, 53 coaches' votes, 25 team builder setup before Start, 24 training grid, 23 this week. | Controls in thumb reach, score and clock always visible, Larger and Largest text, no scrolling team pick |
+| I3 | Match day on a phone | T3.R42 one thumb, T3.R41 team selection as two screens, T3.R10 text size and colour-blind marks, 25 team builder setup before Start. (Done: 23 this week, 53 coaches' votes; 24 training grid is behind `training_grid`, off.) | Controls in thumb reach, score and clock always visible, Larger and Largest text, no scrolling team pick |
 | I4 | Look and feel | `ui_motion` on after his look (#907 and V1), V2 to V9 merged, hub hero (6.Q2), `player_looks` on, 6.36 app icon. | Result sheet and counts that move, the premiership streamers and the Brownlow sparkles, a hub that leads with one big thing, new faces, a real icon |
 | I5 | Off-season and the draft | 54 carnival and rookie draft, 55 list problem, 22 draft AI, T5.r134 inherited 2026 lists, 4.Q9 lower draftees, T5.Q23b Brownlow count, 4.Q8 McNeil. | A proper off-season, a draft that behaves, a Brownlow count to sit through, a real 2026 start |
 | I6 | A career with a story | `coach_arcs` and `weekly_checklist` on after his playthrough, T5.r22 sacked is not the end, T5.r23 rivals call, T5.Q25 take another club, T5.Q16 coaching hierarchy, `finals_cards_2` on. | Arcs and a weekly big call, a sacking you can come back from, offers from other clubs, finals with their own cards |
@@ -22,12 +22,9 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 
 | # | What | Done looks like |
 |---|---|---|
-| 23 | This week: both sides' key forwards and defenders, height and marking, side by side | both sides shown |
-| 24 | Training: compact player card grid with roles and traits (list is still full-width rows) | grid built |
 | 25 | Team builder: pre-game setup, and every pre-match decision, before Start (his ruling; none left in the pre-bounce pane); entry points share one side; headers from arranged fit | all pre-match decisions precede Start, test added |
 | 27 | Stat guide as a topic grid (section H: does the matchup grid replace it) | answer, then grid or close |
 | 22 | Draft AI: role concentration, named boards, draft scroll in exported build | audit + build check |
-| 53 | Show the actual coaches' votes for best players at breaks and full time (ch. 27 B6) | votes shown |
 | 54 | Under-18 carnival week, then mid-season rookie draft; W7 review (ch. 29 row 9) | built |
 | 55 | Off-season: "this year's list problem" in three lines; put a player on the table / Ask around (ch. 29 row 4) | built |
 | 57 | Save export/import and a version chain with restore | export, import, restore work |
@@ -78,6 +75,7 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 | 13 | Every in-match decision opens on a vignette scene. Time pauses at a decision, so scenes do not fight live speed. Parked behind the section 1.11 playtest gate by his ruling | `decision_scenes` | #902 #908 |
 | 14 | Opposition goal run as two football moves over the centre ball-up | `goal_run_moves` | #903 |
 | 15 | Late-game centre ball-up: two distinct choices | `ballup_two` | #895 |
+| 24 | Training as a compact player card grid with roles and traits | `training_grid` | #928 |
 
 ## C. Needs his look or call (shown, then ask)
 
