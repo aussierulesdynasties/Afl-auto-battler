@@ -201,15 +201,19 @@ func _side_page(auto: bool) -> Control:
 func _open_week() -> void:
 	_close_week()
 	# The page behind is dimmed hard (0.92): nothing under the sheet competes.
-	# One neutral surface, no club wash: a red-brown top reads as the action or BAD colour.
-	var box := UiKit.modal_box(self, 560.0, 0.0, UiKit.PANEL, 0.92)
+	# The wash is your club's own readable colour (club_ink lifts a dark club such as
+	# Fremantle off the page), so the sheet says whose week it is.
+	var box := UiKit.modal_box(self, 560.0, 0.0, UiKit.club_ink(GameState.my_club), 0.92)
 	_week_overlay = box["overlay"]
 	_week_overlay.name = "WeekSheet"
 	var v: VBoxContainer = box["body"]
 	v.add_theme_constant_override("separation", GAP)
 	_fill_week(v)
-	var close := _outline_btn("Close")
+	# Lighter than the two outlines above: a way out, not a third action.
+	var close := UiKit.text_action("Close", UiKit.NAME)
 	close.name = "WeekClose"
+	close.custom_minimum_size = Vector2(0, 52 if not _roomy() else 48)
+	close.add_theme_color_override("font_color", UiKit.MUTED)
 	close.pressed.connect(_close_week)
 	box["footer"].add_child(close)
 
@@ -331,7 +335,7 @@ func _fill_week(v: VBoxContainer) -> void:
 		report.name = "AssistantReport"
 		report.pressed.connect(_show_report.bind(code))
 		v.add_child(report)
-		var lines := UiKit.vbox(8)
+		var lines := UiKit.vbox(12)
 		lines.name = "HeadToHead"
 		v.add_child(lines)
 		# Midfield and ruck only: forwards against defenders is what the key
@@ -366,7 +370,7 @@ func _fill_week(v: VBoxContainer) -> void:
 		v.add_child(notes)
 	else:
 		notes.free()
-	var later := _para("Two key forwards and two key defenders a side. Match-ups, game plan and tags are set before the first ball-up.", UiKit.SMALL, SOFT)
+	var later := _para("Two key forwards and two key defenders a side. Match-ups, game plan and tags are set before the first ball-up.", UiKit.SMALL, UiKit.MUTED)
 	later.name = "SetLater"
 	v.add_child(later)
 
@@ -415,7 +419,7 @@ func _h2h_row(row: Dictionary, opp: String) -> Control:
 	if cut < 0:
 		one.add_child(_para(text, UiKit.SECONDARY, UiKit.TEXT))
 		return one
-	one.add_child(UiKit.lbl(text.substr(0, cut), UiKit.SECONDARY, UiKit.TEXT, true))
+	one.add_child(UiKit.lbl(text.substr(0, cut), UiKit.NAME, UiKit.TEXT, true))
 	var rest := text.substr(cut + 2).trim_suffix(".")
 	var at := rest.find(", theirs ")
 	if not rest.begins_with("yours ") or at < 0:
@@ -432,7 +436,9 @@ func _h2h_row(row: Dictionary, opp: String) -> Control:
 		bar.custom_minimum_size = Vector2(0, 3)
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		c.add_child(bar)
-		c.add_child(UiKit.lbl("%s %s" % [part[0], part[1]], UiKit.SECONDARY, SOFT, false))
+		# Yours in weight (the verdict you decide on), theirs plain.
+		c.add_child(UiKit.lbl("%s %s" % [part[0], part[1]], UiKit.SECONDARY,
+				UiKit.TEXT if part[0] == "Yours" else SOFT, part[0] == "Yours"))
 		cols.add_child(c)
 	one.add_child(cols)
 	return one
@@ -531,7 +537,7 @@ func _key_players(kp: Dictionary, opp: String) -> Control:
 			sec.add_child(UiKit.lbl(str(group[1]), UiKit.SECONDARY, SOFT, true))
 			for p in list:
 				var one := UiKit.vbox(0)
-				one.custom_minimum_size = Vector2(0, 0 if tight else 48)
+				one.custom_minimum_size = Vector2(0, 0 if tight else 44)
 				one.name = ("KeyForward_" if group[0] == "fwd" else "KeyDefender_") + str(p["id"])
 				one.add_child(UiKit.ellipsis(GameDB.player_display_name(p), UiKit.NAME, UiKit.TEXT, true))
 				one.add_child(_air_line(p))
