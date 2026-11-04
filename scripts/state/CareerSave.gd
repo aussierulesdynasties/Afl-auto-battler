@@ -13,7 +13,11 @@ extends RefCounted
 ## list is the season's list for your club, the league lists are the
 ## season's) are relinked by GameState after loading.
 
-const VERSION := 1
+## Bump VERSION whenever the save layout changes, and add the step that
+## lifts the previous version to upgrade(): an older career is upgraded on
+## load, never dropped (T5.Q24).
+##   1 -> 2: St Kilda's club code SKN became STK.
+const VERSION := 2
 const DEFAULT_PATH := "user://career.save"
 
 ## A reference to an entry in the player table.
@@ -62,11 +66,12 @@ static func delete(path := DEFAULT_PATH) -> void:
 
 ## Write `state` with a small readable `meta` header. Returns false (and
 ## leaves any previous save in place) if the file cannot be written.
-static func write(state: Dictionary, meta: Dictionary, path := DEFAULT_PATH) -> bool:
+## `version` is for tests only: write a save as an older build laid it out.
+static func write(state: Dictionary, meta: Dictionary, path := DEFAULT_PATH, version := VERSION) -> bool:
 	var enc := CareerSave.new()
 	var body = enc._encode(state)
 	enc._untag()
-	var blob := {"version": VERSION, "meta": meta, "players": enc._players, "state": body}
+	var blob := {"version": version, "meta": meta, "players": enc._players, "state": body}
 	var tmp := path + TEMP_SUFFIX
 	var bak := path + BACKUP_SUFFIX
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
@@ -119,7 +124,32 @@ static func read(path := DEFAULT_PATH) -> Dictionary:
 ## Just the header (club, year, phase) for the main menu.
 static func read_meta(path := DEFAULT_PATH) -> Dictionary:
 	var blob := _read_blob(path)
-	return migrate_club_codes(blob.get("meta", {})) if not blob.is_empty() else {}
+	return blob.get("meta", {}) if not blob.is_empty() else {}
+
+
+## Why there is no usable save at `path`: "" (a usable save, or no file at
+## all), "newer" (written by a newer build) or "unreadable" (damaged).
+static func problem(path := DEFAULT_PATH) -> String:
+	if exists(path):
+		return ""
+	var found := ""
+	for p in [path, path + TEMP_SUFFIX, path + BACKUP_SUFFIX]:
+		if not FileAccess.file_exists(p):
+			continue
+		var v := _version_at(p)
+		if v > VERSION:
+			return "newer"
+		found = "unreadable"
+	return found
+
+
+static func _version_at(path: String) -> int:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return 0
+	var blob = f.get_var()
+	f.close()
+	return int((blob as Dictionary).get("version", 0)) if blob is Dictionary else 0
 
 
 ## The newest good save. A checked save still waiting in the temp file is
@@ -143,8 +173,30 @@ static func _blob_at(path: String) -> Dictionary:
 		return {}
 	var blob = f.get_var()
 	f.close()
-	if not (blob is Dictionary) or int((blob as Dictionary).get("version", 0)) != VERSION:
+	if not (blob is Dictionary) or not (blob as Dictionary).has("state"):
 		return {}
+	return upgrade(blob)
+
+
+## An older save lifted step by step to VERSION, or {} if no step reaches it
+## (a newer build's save, or a version this build never wrote).
+static func upgrade(blob: Dictionary) -> Dictionary:
+	var v := int(blob.get("version", 0))
+	while v < VERSION:
+		match v:
+			1:
+				blob = _migrate_1_to_2(blob)
+			_:
+				return {}
+		v += 1
+		blob["version"] = v
+	return blob if v == VERSION else {}
+
+
+## The raw blob, players table included, renamed in place (shared player
+## bodies stay shared).
+static func _migrate_1_to_2(blob: Dictionary) -> Dictionary:
+	migrate_club_codes(blob)
 	return blob
 
 

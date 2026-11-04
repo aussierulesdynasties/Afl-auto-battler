@@ -631,6 +631,21 @@ func has_saved_career() -> bool:
 	return CareerSave.exists(save_path)
 
 
+## One sentence per line, so a narrow phone never leaves one word alone.
+const SAVE_UNREADABLE := "Your saved career could not be read.\nStarting a new career will overwrite it."
+
+
+## Why a career file on disk cannot be continued, in the coach's words, or
+## "" when there is nothing wrong (or no file at all).
+func saved_career_problem() -> String:
+	match CareerSave.problem(save_path):
+		"newer":
+			return "Your saved career is from a newer version.\nUpdate the game to keep playing it.\nStarting a new career will overwrite it."
+		"unreadable":
+			return SAVE_UNREADABLE
+	return ""
+
+
 ## Club, year and stage of the saved career, for the main menu.
 func saved_career_meta() -> Dictionary:
 	return CareerSave.read_meta(save_path)
@@ -814,7 +829,6 @@ func load_career() -> bool:
 	var state := CareerSave.read(save_path)
 	if state.is_empty():
 		return false
-	state = CareerSave.migrate_club_codes(state)
 	reset()
 	# A created club joins the competition before anything reads the clubs.
 	custom_club = state.get("custom_club", {})
