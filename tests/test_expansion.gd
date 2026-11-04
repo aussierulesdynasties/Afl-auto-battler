@@ -278,15 +278,23 @@ func _test_2028_season_runs() -> void:
 	_check(not tas_made_finals or GameState.achievements.has("tas_debut_finals"),
 			"Tasmania's debut-finals achievement matches its result")
 	var stored: Dictionary = GameState.achievements.get("tas_debut_finals", {})
-	var debut_year: Variant = stored.get("year", "")
-	_check(debut_year == "" or int(debut_year) == 2028,
-			"The debut achievement, when unlocked, is stamped 2028")
+	_check(_stamped(stored, 2028), "The debut achievement, when unlocked, is stamped 2028")
+	# The stamp is an int: whether Tasmania makes the 2028 finals depends on
+	# the sim, so the unlocked path is checked on a stamp of its own too (an
+	# int compared with "" is a script error that skipped the 2029 rollover).
+	_check(_stamped({"year": 2028}, 2028) and not _stamped({"year": 2029}, 2028)
+			and _stamped({}, 2028), "An int year stamp reads without a script error")
 
 	# 2028 -> 2029: Tasmania stays, the league ages on.
 	_rollover()
 	_check(GameState.season_year == 2029, "The career advances to 2029")
 	var again: Array = GameState.season.lists["TAS"]
 	_check(again.size() >= Prospects.MIN_LIST, "Tasmania keeps a full list into 2029")
+
+
+## True when the achievement is not unlocked, or is stamped `year`.
+func _stamped(stored: Dictionary, year: int) -> bool:
+	return not stored.has("year") or int(stored["year"]) == year
 
 
 func _test_rollover_to_2030() -> void:
