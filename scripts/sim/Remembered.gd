@@ -40,10 +40,10 @@ static func facts(p: Dictionary, store: Dictionary, club: String, with_us: Dicti
 		out.append(_f(int(y) * 1000 + 200, TIER_FLAG, "Premiership, %d." % int(y),
 				"He was with you for the %d premiership." % int(y)))
 	var bf_name := BestAndFairest.award_name(club)
-	var bf_said := bf_name if BestAndFairest.is_named(club) else "your best and fairest"
+	var bf_said := BestAndFairest.won_phrase(club, "your best and fairest")
 	for y in with_us.get("bf", []):
 		out.append(_f(int(y) * 1000 + 150, TIER_BF, "%s, %d." % [bf_name, int(y)],
-				"He won the %s in %d." % [bf_said, int(y)] if BestAndFairest.is_named(club) else "He won %s in %d." % [bf_said, int(y)]))
+				"He won %s in %d." % [bf_said, int(y)]))
 	var d := Firsts.get_one(p, "debut")
 	var g := Firsts.get_one(p, "goal")
 	var same := not d.is_empty() and not g.is_empty() and int(d.get("year", 0)) == int(g.get("year", 0)) \

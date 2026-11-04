@@ -96,6 +96,15 @@ func _test_bf_names() -> void:
 	_check(hero == "J. Smith won the Syd Barker Medal.", "The almanac story names the medal (%s)" % hero)
 	hero = str(Almanac.story_parts({"club": "FORGE", "year": 2030, "bf": [{"name": "J. Smith"}]}, {})["hero"])
 	_check(hero == "J. Smith won the best and fairest.", "A club with no medal keeps best and fairest (%s)" % hero)
+	hero = str(Almanac.story_parts({"club": "GCS", "year": 2030, "bf": [{"name": "J. Smith"}]}, {})["hero"])
+	_check(hero == "J. Smith won the best and fairest.", "A club champion award is not said as 'won the Club Champion' (%s)" % hero)
+	var gcs := Remembered.facts({}, {}, "GCS", {"bf": [2030]}, {})
+	_check(str(gcs[0]["said"]) == "He won your best and fairest in 2030.", "Gold Coast's line reads naturally (%s)" % str(gcs[0]))
+	var legend := {"honours": {"bf": {"FRE": 3, "FORGE": 3}}}
+	var lm := Almanac.legend_marks(legend, "FRE")
+	_check(lm.has("3 Doig Medals"), "A legend's medal tally names the medal (%s)" % str(lm))
+	lm = Almanac.legend_marks(legend, "FORGE")
+	_check(lm.has("3 %s best and fairests" % GameDB.club_name("FORGE")), "A club with no medal keeps best and fairests (%s)" % str(lm))
 
 
 func _test_vote_arithmetic() -> void:
