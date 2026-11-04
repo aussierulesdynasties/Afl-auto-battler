@@ -987,7 +987,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	# toggles, and the toggles are compact groups rather than bars across the window.
 	if sz.x >= 900:
 		_table_fits_content(s, "ladder", tag)
-		for n in ["Filter_all", "Filter_top8", "Filter_near"]:
+		for n in ["Filter_all", "Filter_top10", "Filter_near"]:
 			var tb: Control = s.find_child(n, true, false)
 			_check(tb != null and tb.size.x >= 100 and tb.size.x <= 140,
 					"%s is a compact button, not a bar (%s: %.0f px)" % [n, tag, tb.size.x if tb != null else -1.0])
@@ -1024,18 +1024,19 @@ func _test_ladder(sz: Vector2i) -> void:
 	var az := names.duplicate()
 	az.sort()
 	_check(names == az, "The club column sorts A to Z first (%s)" % tag)
+	_check(_text(s.find_child("ActiveState", true, false)).contains("Club, A–Z first"), "The club sort reads A–Z, not fewest first (%s)" % tag)
 
-	# Filters, by finger: Top 8, Near you, and Reset.
-	await Tap.tap(s.find_child("Filter_top8", true, false))
+	# Filters, by finger: Top 10, Near you, and Reset.
+	await Tap.tap(s.find_child("Filter_top10", true, false))
 	await _settle()
 	var top8 := _row_codes(s)
 	var expect8 := []
-	for c in true_order.slice(0, 8):
+	for c in true_order.slice(0, Season.FINALISTS):
 		expect8.append(c)
 	top8.sort()
 	expect8.sort()
-	_check(top8 == expect8, "Top 8 shows the top eight (%s)" % tag)
-	_check(_text(s.find_child("ActiveState", true, false)).contains("Top 8"), "The active filter is shown (%s)" % tag)
+	_check(top8 == expect8, "Top 10 shows every finals club (%s)" % tag)
+	_check(_text(s.find_child("ActiveState", true, false)).contains("Top %d" % Season.FINALISTS), "The active filter is shown (%s)" % tag)
 	await Tap.tap(s.find_child("Filter_near", true, false))
 	await _settle()
 	var near := _row_codes(s)
@@ -1058,7 +1059,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	var games := int(t.get("games", 0))
 	_check(games > 0, "(setup) your club has games to average (%s)" % tag)
 	_check(s.find_child("TeamBoard", true, false) != null and s.find_child("TeamStat", true, false) != null
-			and s.find_child("Filter_top8", true, false) == null,
+			and s.find_child("Filter_top10", true, false) == null,
 			"Team stats is a leaderboard with its own picker (%s)" % tag)
 	var mine_row: Node = s.find_child("Club_" + mine, true, false)
 	var club_nm: Label = mine_row.find_child("Name", true, false) if mine_row else null
@@ -1101,7 +1102,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	# A club opens its side, read-only; Back returns to the table as it was.
 	await Tap.tap(s.find_child("Sort_pts", true, false))
 	await _settle()
-	await Tap.tap(s.find_child("Filter_top8", true, false))
+	await Tap.tap(s.find_child("Filter_top10", true, false))
 	await _settle()
 	var before := _row_codes(s)
 	var tapped: String = before[1] if before[0] == mine else before[0]
