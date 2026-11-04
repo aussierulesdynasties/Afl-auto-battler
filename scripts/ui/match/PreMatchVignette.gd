@@ -80,7 +80,7 @@ static func open(host: Node, my_code: String, opp_code: String, my_ground: Array
 ## The first frame's one-off work, done early (HubScene calls it while the hub is idle):
 ## the crowd painted for these two clubs' colours, as the scene's ground will ask for it.
 static func warm(my_code: String, opp_code: String) -> void:
-	var seat := VignetteGround.MCG_SEAT if VignetteGround.venue == "MCG" else Color(0.07, 0.07, 0.085)
+	var seat := VignetteGround.seat_colour()
 	VignetteCrowd.seats([GameDB.club_colours(my_code), GameDB.club_colours(opp_code)], 7, seat)
 
 
