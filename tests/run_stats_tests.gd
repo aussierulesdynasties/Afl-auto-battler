@@ -46,6 +46,8 @@ func _run() -> void:
 	# Before any round: no press conference sits over the hub.
 	await _t("_test_intro")
 	await _t("_test_hub_button")
+	for sz in [Vector2i(390, 844), Vector2i(1920, 1080)]:
+		await _t("_test_ladder_only_in_season_stats", [sz])
 	await _t("_test_awards_early")
 	await _t("_test_trophies_unplayed")
 	for i in range(4):
@@ -117,6 +119,73 @@ func _test_hub_button() -> void:
 		var got := await Tap.tap(b)
 		_check(got == "", "Season stats takes a tap (%s)" % got)
 	hub.queue_free()
+	await _settle()
+
+
+## Row 84 (ruling: docs/TODO.md rulings, T3.Q13 / T9.Q29): the ladder lives
+## only in Season stats. No Ladder screen or route, no Ladder button in the
+## hub's nav row; a real tap on the hub's Ladder heading opens Season stats,
+## and a real tap on its Ladder tab shows the ladder.
+func _test_ladder_only_in_season_stats(sz: Vector2i) -> void:
+	var tag := "%dx%d" % [sz.x, sz.y]
+	var old_size := root.size
+	var old_stack: Array = root.get_node("Router").stack.duplicate()
+	var old_scene := current_scene
+	var hub_stats = load("res://scripts/ui/StatsHubScene.gd")
+	var old_current := str(hub_stats.current)
+	_check(not ResourceLoader.exists("res://scenes/LadderScene.tscn")
+			and not ResourceLoader.exists("res://scripts/ui/LadderScene.gd"), "No Ladder screen exists")
+	var routes: Dictionary = load("res://scripts/core/Router.gd").SCENES
+	for k in routes:
+		_check(not str(k).to_lower().contains("ladder") and not str(routes[k]).to_lower().contains("ladder"),
+				"No route leads to a Ladder screen (%s)" % k)
+	root.size = sz
+	# Awards open last, so landing on the ladder has to come from the taps.
+	hub_stats.current = "awards"
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	var navs := 0
+	for name in ["HubFooter", "HubFooterWide"]:
+		var row: Node = hub.find_child(name, true, false)
+		if row == null:
+			continue
+		for b in row.find_children("*", "Button", true, false):
+			navs += 1
+			_check(not (b as Button).text.to_lower().contains("ladder"),
+					"The hub nav row has no Ladder button (%s: %s)" % [tag, (b as Button).text])
+	_check(navs > 0, "The hub nav row is there to check (%s)" % tag)
+	var link: Button = hub.find_child("SeasonStats", true, false)
+	_check(link != null, "The hub's Ladder heading is there (%s)" % tag)
+	if link != null:
+		var got := await Tap.tap(link)
+		_check(got == "", "The Ladder heading takes a real tap (%s: %s)" % [tag, got])
+		await _settle()
+	var s: Node = current_scene
+	_check(s != null and s.scene_file_path == "res://scenes/StatsHubScene.tscn",
+			"The tap opens Season stats (%s)" % tag)
+	if s != null and s.scene_file_path == "res://scenes/StatsHubScene.tscn":
+		var tab: Button = s.find_child("Section_ladder", true, false)
+		_check(tab != null, "Season stats has a Ladder tab (%s)" % tag)
+		if tab != null:
+			var got2 := await Tap.tap(tab)
+			_check(got2 == "", "The Ladder tab takes a real tap (%s: %s)" % [tag, got2])
+			await _settle()
+			tab = s.find_child("Section_ladder", true, false)
+			var sb := tab.get_theme_stylebox("normal") as StyleBoxFlat if tab != null else null
+			_check(sb != null and sb.border_width_bottom == 2, "The Ladder tab is the selected one (%s)" % tag)
+			_check(s.find_child("LadderHeader", true, false) != null,
+					"The ladder shows in Season stats (%s)" % tag)
+	# Leave the tree as it was: no stray Season stats, stack, section or size.
+	if is_instance_valid(hub):
+		hub.queue_free()
+	if s != null and s != old_scene and is_instance_valid(s):
+		s.queue_free()
+	if is_instance_valid(old_scene):
+		current_scene = old_scene
+	root.get_node("Router").stack = old_stack
+	hub_stats.current = old_current
+	root.size = old_size
 	await _settle()
 
 
