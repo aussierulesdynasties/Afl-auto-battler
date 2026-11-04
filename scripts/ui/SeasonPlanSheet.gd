@@ -34,8 +34,13 @@ static func line(host: Control, on_close: Callable = Callable()) -> Control:
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(head)
 	var sub: String = Conditioning.PLAN_LABEL[GameState.fitness_plan(GameState.my_club)]
+	var change := "Set it before round 1" if GameState.fitness_week() == 0 else "You can change it this week"
 	if GameState.can_revise_fitness():
-		sub += " · " + ("set it before round 1" if GameState.fitness_week() == 0 else "you can change it this week")
+		if Features.on("training_grid") and words.begins_with("Steady"):
+			# The headline already says steady; do not say it twice.
+			sub = change
+		else:
+			sub += " · " + change.to_lower()
 	var second := UiKit.ellipsis(sub, UiKit.SMALL, UiKit.MUTED)
 	second.name = "SeasonPlanSub"
 	second.mouse_filter = Control.MOUSE_FILTER_IGNORE
