@@ -56,6 +56,7 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 | 80 | Club Forge create-a-player: one weakness compulsory, the second optional, no extra overall power (T8.Q12) | screen enforces it |
 | 81 | `clanger_cause` ships on: set `features/clanger_cause` true in project.godot; row 12 leaves section B (row 12 ruling) | project setting on, test |
 | 82 | Itch gets Windows and Android APK builds beside web; price free (T7.O1, T7.O3); Google Play stays off until his written yes | export presets, builds on itch |
+| 84 | Ladder moves fully into Season stats: the hub nav bar loses Ladder; no other nav change (T3.Q13, T9.Q29) | no Ladder screen or nav entry, ladder reachable in Season stats, tap test |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
 
 ## B. Built and OFF: waiting for his playtest, then the switch goes on
@@ -234,7 +235,8 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 - Personality types and captaincy are both wanted, later (section F). Culture sizes are reviewed now (row 68).
 - 4.Q5 (Ask around, untouchable, pick order from round 18, pick trade on draft night) are still candidates, not assigned.
 - Row 13 gets all five scenes, stays off and waits for the 1.11 playtest gate. Time pauses at a decision, so scenes never fight live speed.
-- Weather has full effect on play (row 61); how it looks never touches the sim.
+- Weather has full effect on play (T1.Q2, T2.Q2, 6.Q10, T8.Q7): wet tackles move toward the real +12% (row 61); how it looks never touches the sim. Weather is off the bible's open list.
+- Ladder goes into Season stats (T3.Q13, T9.Q29): the hub nav bar loses Ladder, no other nav change (row 84).
 - Price: free for now. Platforms: web, Windows and an Android APK on itch; Google Play only on his written yes (US$25 fee and signing key).
 - Old PRs #745, #761 and #765 were already merged; nothing to close.
 
@@ -243,9 +245,7 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 Each line is a question he has not answered yet. Answered ones are in Rulings or in section A.
 
 - Cut audit (CUT_AUDIT_2026-11-03, 158 rows): which candidates beyond 1 to 5, 9 and 11 are cut, kept or replaced, including manual stat training, audio to Mute plus Volume, Club Forge create player, football-dept budget into high performance, Coaching screen into Hub/List, Culture sheet into Captaincy/List header, one pre-season drill plan and "Ask before simming"? (T1.Q7, T7.O16, T9.Q14)
-- Does he consent to removing weather from the bible's open list, now that weather has full effect? (T2.Q2)
 - Press conference: where the bible and the code disagree, which one is right and the other gets corrected? (T3.Q6)
-- Ladder goes into Season stats: what does the hub nav bar hold now? (T3.Q13, T9.Q29)
 - Stat guide (row 27): does the new key-matchup grid replace it?
 - Per-ground ovals (row 33): is ground size presentation only, or does it change the sim too?
 - Synergies are worth +5 to +11 margin when on but rarely reached, and generated draftees lose synergy traits: how should a coach reach them, how far do multi-season spread and trait decay go, and what about too many contested bulls (16.1% generated against 3.5% real)? (4.Q10)
