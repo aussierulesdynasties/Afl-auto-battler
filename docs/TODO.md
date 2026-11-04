@@ -24,7 +24,6 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 |---|---|---|
 | 25 | Team builder: pre-game setup, and every pre-match decision, before Start (his ruling; none left in the pre-bounce pane); entry points share one side; headers from arranged fit | all pre-match decisions precede Start, test added |
 | 27 | Stat guide as a topic grid (section H: does the matchup grid replace it) | answer, then grid or close |
-| 22 | Draft AI: his call on the audit (`docs/research/DRAFT_SPREAD_AUDIT_2026-11-05.md`): key forwards follow the pool's worth; leave it or lower the potential share for young talls; the veterans' fall (Petracca, Viney, Stewart). Web scroll passed | his answer, then build or close |
 | 22 | Draft AI: his call on the audit (`docs/research/DRAFT_SPREAD_AUDIT_2026-11-05.md`): the veterans' fall (Petracca, Viney, Stewart in the 200s-300s, Gawn 6-327): right or not? Key-forward spread stays as is (his ruling 2026-11-05). Web scroll passed | his answer, then build or close |
 | 55 | Off-season: "this year's list problem" in three lines; put a player on the table / Ask around (ch. 29 row 4) | built |
 | 57 | Save export/import and a version chain with restore | export, import, restore work |
