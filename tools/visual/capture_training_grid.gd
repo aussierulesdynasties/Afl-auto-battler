@@ -34,16 +34,16 @@ func _run() -> void:
 	state.set_player_plan(str(list[2]["id"]), str(state.plans_for(list[2])[1]) if state.plans_for(list[2]).size() > 1 else "position")
 	state.set_setting("seen_training_intro", true)
 	router.go("training")
-	for i in range(8):
+	for i in range(45):
 		await process_frame
-	await RenderingServer.frame_post_draw
+	await _drawn()
 	root.get_texture().get_image().save_png(prefix + "_grid.png")
 	var scene = current_scene
 	var sc: ScrollContainer = scene.get("_list_scroll")
 	sc.scroll_vertical = 600
 	for i in range(4):
 		await process_frame
-	await RenderingServer.frame_post_draw
+	await _drawn()
 	root.get_texture().get_image().save_png(prefix + "_grid_scrolled.png")
 	sc.scroll_vertical = 0
 	var rucks: Array = []
@@ -54,7 +54,18 @@ func _run() -> void:
 	scene.call("_build")
 	for i in range(6):
 		await process_frame
-	await RenderingServer.frame_post_draw
+	await _drawn()
 	root.get_texture().get_image().save_png(prefix + "_group.png")
 	print("CAPTURE saved ", prefix, " at ", w, "x", h)
 	quit()
+
+
+## A frame that has been drawn. frame_post_draw never fires when the window is
+## covered, so a short timer backs it up and the capture cannot hang.
+func _drawn() -> void:
+	var done := [false]
+	var mark := func(): done[0] = true
+	RenderingServer.frame_post_draw.connect(mark, CONNECT_ONE_SHOT)
+	var t := create_timer(1.0)
+	while not done[0] and t.time_left > 0.0:
+		await process_frame
