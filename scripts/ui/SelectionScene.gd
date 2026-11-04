@@ -209,11 +209,10 @@ func _open_week() -> void:
 	var v: VBoxContainer = box["body"]
 	v.add_theme_constant_override("separation", GAP)
 	_fill_week(v)
-	# Lighter than the two outlines above: a way out, not a third action.
-	var close := UiKit.text_action("Close", UiKit.NAME)
+	# The one filled control on the sheet; the report and synergies above are words.
+	var close := UiKit.btn("Close", UiKit.NAME, true)
 	close.name = "WeekClose"
-	close.custom_minimum_size = Vector2(0, 52 if not _roomy() else 48)
-	close.add_theme_color_override("font_color", UiKit.MUTED)
+	close.custom_minimum_size = Vector2(0, 56 if not _roomy() else 48)
 	close.pressed.connect(_close_week)
 	box["footer"].add_child(close)
 
@@ -331,11 +330,11 @@ func _fill_week(v: VBoxContainer) -> void:
 			v.add_child(_key_players(kp, code))
 			v.add_child(_rule())
 		# What your assistant has seen of them - said there, and only there.
-		var report := _outline_btn("Assistant's report ›")
+		var report := _link_btn("Assistant's report ›")
 		report.name = "AssistantReport"
 		report.pressed.connect(_show_report.bind(code))
 		v.add_child(report)
-		var lines := UiKit.vbox(12)
+		var lines := UiKit.vbox(22)
 		lines.name = "HeadToHead"
 		v.add_child(lines)
 		# Midfield and ruck only: forwards against defenders is what the key
@@ -358,7 +357,7 @@ func _fill_week(v: VBoxContainer) -> void:
 		# Only an injury is bad news; a milestone is a marked row of its own.
 		var bad := str(f.get("key", "")) == "own_injury"
 		notes.add_child(_note_row(_para(str(f["text"]), UiKit.SECONDARY, UiKit.BAD if bad else UiKit.TEXT),
-				UiKit.BAD if bad else UiKit.club_ink(GameState.my_club)))
+				UiKit.BAD if bad else Color(UiKit.TEXT, 0.45)))
 	_backing_lines(notes)
 	# The team sheet: who is in and out since your last match, and why.
 	var changes := GameState.week_changes_text()
@@ -370,9 +369,6 @@ func _fill_week(v: VBoxContainer) -> void:
 		v.add_child(notes)
 	else:
 		notes.free()
-	var later := _para("Two key forwards and two key defenders a side. Match-ups, game plan and tags are set before the first ball-up.", UiKit.SMALL, UiKit.MUTED)
-	later.name = "SetLater"
-	v.add_child(later)
 
 
 ## One spacing scale for the week: 8 inside a block, 16 between blocks.
@@ -389,6 +385,19 @@ func _roomy() -> bool:
 	return ScreenLayout.roomy(UiKit.view_width(self), UiKit.view_height(self))
 ## Near-white for the facts a coach reads closely (TEXT is the full white).
 const SOFT := Color("d6d2c8")
+
+
+## A quiet way in: words with a chevron, left-aligned, thumb-high (48), no surface.
+func _link_btn(text: String) -> Button:
+	var b := UiKit.text_action(text, UiKit.NAME)
+	b.custom_minimum_size = Vector2(0, 48)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.add_theme_color_override("font_color", SOFT)
+	var flush := StyleBoxEmpty.new()
+	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+		b.add_theme_stylebox_override(state, flush)
+	return b
 
 
 ## A secondary action: an outline, thumb-high (52), across the sheet. The same
@@ -438,7 +447,7 @@ func _h2h_row(row: Dictionary, opp: String) -> Control:
 		c.add_child(bar)
 		# Yours in weight (the verdict you decide on), theirs plain.
 		c.add_child(UiKit.lbl("%s %s" % [part[0], part[1]], UiKit.SECONDARY,
-				UiKit.TEXT if part[0] == "Yours" else SOFT, part[0] == "Yours"))
+				UiKit.club_name_colour(part[2]), true))
 		cols.add_child(c)
 	one.add_child(cols)
 	return one
@@ -534,14 +543,22 @@ func _key_players(kp: Dictionary, opp: String) -> Control:
 				continue
 			var sec := UiKit.vbox(4 if tight else 12)
 			sec.name = "KeySection_" + str(group[0])
-			sec.add_child(UiKit.lbl(str(group[1]), UiKit.SECONDARY, SOFT, true))
+			# 16 before a group label (the column gap), 4 from it to its first row, 12 between rows.
+			var lead := UiKit.vbox(4)
+			lead.add_child(UiKit.lbl(str(group[1]), UiKit.SECONDARY, SOFT, true))
+			sec.add_child(lead)
+			var first := true
 			for p in list:
 				var one := UiKit.vbox(0)
 				one.custom_minimum_size = Vector2(0, 0 if tight else 44)
 				one.name = ("KeyForward_" if group[0] == "fwd" else "KeyDefender_") + str(p["id"])
 				one.add_child(UiKit.ellipsis(GameDB.player_display_name(p), UiKit.NAME, UiKit.TEXT, true))
 				one.add_child(_air_line(p))
-				sec.add_child(one)
+				if first:
+					lead.add_child(one)
+					first = false
+				else:
+					sec.add_child(one)
 			col.add_child(sec)
 		cols.add_child(col)
 	return cols
@@ -585,20 +602,22 @@ func _synergy_view() -> Control:
 	var h := UiKit.vbox(8)
 	h.name = "Synergies"
 	var on: PackedStringArray = []
+	var lit := {}
 	for r in Traits.progress(GameState.my_squad().ground):
 		if bool(r["active"]):
 			on.append(Traits.with_effect(str(r["key"])))
+			lit[Traits.label(str(r["key"]))] = UiKit.GOOD
 	# One pattern for both lines, one colour: the lead-in, the name, what it does or needs.
 	var l := TraitLink.line("Your side has: " + ", ".join(on) + "." if not on.is_empty()
-			else "No line synergies in this side.", UiKit.SECONDARY, UiKit.TEXT)
+			else "No line synergies in this side.", UiKit.BODY, UiKit.TEXT, {}, lit)
 	l.name = "SynergyLine"
 	h.add_child(l)
 	var short := Traits.short_words(GameState.my_squad().ground)
 	if short != "":
-		var s := TraitLink.line(short, UiKit.SECONDARY, UiKit.TEXT)
+		var s := TraitLink.line(short, UiKit.BODY, UiKit.TEXT)
 		s.name = "SynergyShort"
 		h.add_child(s)
-	var rules := _outline_btn("Synergies")
+	var rules := _link_btn("Synergies")
 	rules.name = "SynergyRules"
 	rules.pressed.connect(_show_synergies)
 	h.add_child(rules)

@@ -103,9 +103,7 @@ func _test_selection_tests() -> void:
 			and ui.find_child("PlanLine", true, false) == null and km != null
 			and not str(_screen_text(km)).contains(" is on "),
 			"Selection no longer asks for the match-ups or the game plan")
-	var later: Label = ui.find_child("SetLater", true, false)
-	_check(later != null and later.text.ends_with("Match-ups, game plan and tags are set before the first ball-up."),
-			"One quiet line says where those calls are made")
+	_check(ui.find_child("SetLater", true, false) == null, "No footnote under the week: the sheet says what it holds")
 	var rows := ui.find_children("RoleLabel", "Label", true, false)
 	var field: Node = ui.find_child("BuilderField", true, false)
 	var formation_players := field.find_children("*", "Button", true, false).filter(func(b): return b.has_meta("id") and str(b.get_meta("id")) != "") if field != null else []
