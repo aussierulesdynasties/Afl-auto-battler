@@ -89,7 +89,7 @@ static func scoring(res: Dictionary) -> Array:
 			continue
 		out.append({"q": int(e.get("q", 1)), "min": int(e.get("min", 0)), "side": int(e.get("side", 0)),
 				"goal": kind == "goal", "id": str(e.get("player_id", "")), "name": str(e.get("name", "")),
-				"set": bool(e.get("setshot", false))})
+				"set": bool(e.get("setshot", false)) or bool(e.get("set", false))})
 	return out
 
 

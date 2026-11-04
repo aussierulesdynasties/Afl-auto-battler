@@ -3943,15 +3943,27 @@ func run_extra_time() -> Dictionary:
 		kick_in = false
 		boundary_throw_in = false
 		var guard := 0
-		while score(0) == score(1) and guard < GOLDEN_POINT_CHAINS:
+		while score(0) == score(1) and guard < golden_point_chains:
 			current_minute = 128 + int(guard / 4)
 			_play_one_chain(T)
 			guard += 1
+		if score(0) == score(1):
+			# A final can't end level: past the cap, the side with more
+			# inside-50s (home side on a tie) is awarded a rushed behind.
+			var i50_0 := float(team_stats[0].get("inside50", 0.0))
+			var i50_1 := float(team_stats[1].get("inside50", 0.0))
+			var side := 1 if i50_1 > i50_0 else 0
+			_t(side, "behinds")
+			_scored(side, 1, null)
+			q_behinds[current_quarter - 1][side] += 1
+			_emit("behind", side, fp, null, _scoreline(side, "Rushed behind"))
 	_emit_full_time("Full time (after extra time)")
 	return result()
 
 
 const GOLDEN_POINT_CHAINS := 60
+## The golden-point cap for this match (tests lower it to reach the fallback).
+var golden_point_chains := GOLDEN_POINT_CHAINS
 
 
 func _emit_full_time(prefix: String) -> void:
@@ -4206,7 +4218,7 @@ func scoring_log() -> Array:
 		var kind := str(e.get("kind", ""))
 		if kind == "goal" or kind == "behind":
 			out.append([int(e["q"]), int(e["min"]), int(e["side"]), 1 if kind == "goal" else 0,
-					str(e.get("player_id", "")), 1 if bool(e.get("setshot", false)) else 0])
+					str(e.get("player_id", "")), 1 if bool(e.get("setshot", false)) or bool(e.get("set", false)) else 0])
 	return out
 
 
@@ -4215,7 +4227,9 @@ func result() -> Dictionary:
 	var s1 := score(1)
 	var winner := 0 if s0 > s1 else (1 if s1 > s0 else -1)
 	var qsc := []
-	for q in range(4):
+	# Four quarters, then extra time (if played) as a fifth period, so the
+	# periods always add up to the final score.
+	for q in range(q_goals.size()):
 		qsc.append([q_goals[q][0] * 6 + q_behinds[q][0],
 				q_goals[q][1] * 6 + q_behinds[q][1]])
 	return {
