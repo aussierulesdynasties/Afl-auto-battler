@@ -12,6 +12,7 @@ var _root: VBoxContainer
 var _results_overlay: Control
 var _media_overlay: Control
 var _talk_overlay: Control
+var _midseason_overlay: Control
 var _news_overlay: Control
 var _rule_overlay: Control
 var _sim_confirm: Control
@@ -69,7 +70,11 @@ func _ready() -> void:
 ## The week's one optional ask, if any (director, 2026-10-09: one a week): a
 ## sit-down with a player whose promised run just ended, or the press.
 func _show_week_ask() -> void:
-	if GameState.backing_talk_pending():
+	if not MidseasonDraft.carnival_lines(GameState).is_empty():
+		_show_carnival()
+	elif MidseasonDraft.waiting(GameState):
+		_show_midseason_pick()
+	elif GameState.backing_talk_pending():
 		_show_backing_talk()
 	elif GameState.media_conference_pending():
 		_show_media_conference()
@@ -1367,6 +1372,9 @@ func handle_back() -> bool:
 	if _talk_overlay != null and is_instance_valid(_talk_overlay):
 		_close_backing_talk()
 		return true
+	if _midseason_overlay != null and is_instance_valid(_midseason_overlay):
+		_close_midseason(true)
+		return true
 	# Back skips the press conference, as its Skip button does (natural
 	# Android Back); an overlay opened over it closes first.
 	if _media_overlay != null and is_instance_valid(_media_overlay):
@@ -1404,6 +1412,90 @@ func _show_backing_talk() -> void:
 	ok.custom_minimum_size = Vector2(0, 48)
 	ok.pressed.connect(_close_backing_talk)
 	(box["footer"] as VBoxContainer).add_child(ok)
+
+
+## Under-18 carnival week (row 54): three who starred, by position and
+## state, no grades. Words only; Done closes it for the season.
+func _show_carnival() -> void:
+	if _midseason_overlay != null and is_instance_valid(_midseason_overlay):
+		return
+	var box := UiKit.modal_box(self, 520.0, 0.0)
+	_midseason_overlay = box["overlay"]
+	_midseason_overlay.name = "CarnivalWeek"
+	var v: VBoxContainer = box["body"]
+	v.add_child(UiKit.heading("Under-18 championships", UiKit.TITLE))
+	var intro := UiKit.lbl("Three from this year's draft class who starred at the carnival:", 15, UiKit.TEXT)
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(intro)
+	var i := 0
+	for line in MidseasonDraft.carnival_lines(GameState):
+		var l := UiKit.lbl(str(line), 15, UiKit.TEXT, true)
+		l.name = "CarnivalLine_%d" % i
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(l)
+		i += 1
+	var ok := UiKit.btn("Done", UiKit.NAME, true)
+	ok.name = "CarnivalDone"
+	ok.custom_minimum_size = Vector2(0, 48)
+	ok.pressed.connect(_close_midseason.bind(true))
+	(box["footer"] as VBoxContainer).add_child(ok)
+
+
+## Mid-season rookie draft, your turn: the best eight left, Pick or Pass.
+## Sim the week passes an unmade pick.
+const MIDSEASON_SHOWN := 8
+
+func _show_midseason_pick() -> void:
+	if _midseason_overlay != null and is_instance_valid(_midseason_overlay):
+		return
+	var box := UiKit.modal_box(self, 560.0, 0.0)
+	_midseason_overlay = box["overlay"]
+	_midseason_overlay.name = "MidseasonDraft"
+	var v: VBoxContainer = box["body"]
+	v.add_child(UiKit.heading("Mid-season rookie draft", UiKit.TITLE))
+	var note := UiKit.lbl("Your pick. He signs a rookie deal to the end of next season. Sim the week without picking passes it.", 15, UiKit.TEXT)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(note)
+	var shown := MidseasonDraft.pool(GameState).slice(0, MIDSEASON_SHOWN)
+	if shown.is_empty():
+		v.add_child(UiKit.lbl("Nobody is left to take.", 15, UiKit.TEXT))
+	for p in shown:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		var txt := UiKit.lbl("%s  %d
+%s, %d, %s" % [GameDB.player_display_name(p), int(p.get("overall", 0)),
+				DraftNight.position_words(p), int(p.get("age", 0)), MidseasonDraft.from_word(GameState, p)], 14, UiKit.TEXT)
+		txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		row.add_child(txt)
+		var pick := UiKit.btn("Pick", UiKit.NAME)
+		pick.name = "MidseasonPick_%s" % str(p["id"])
+		pick.custom_minimum_size = Vector2(88, 48)
+		pick.pressed.connect(_midseason_choose.bind(str(p["id"])))
+		row.add_child(pick)
+		v.add_child(row)
+	var pass_btn := UiKit.btn("Pass", UiKit.NAME, true)
+	pass_btn.name = "MidseasonPass"
+	pass_btn.custom_minimum_size = Vector2(0, 48)
+	pass_btn.pressed.connect(_midseason_choose.bind(""))
+	(box["footer"] as VBoxContainer).add_child(pass_btn)
+
+
+func _midseason_choose(player_id: String) -> void:
+	MidseasonDraft.choose(GameState, player_id)
+	GameState.autosave()
+	_close_midseason(false)
+
+
+## Closing the carnival marks it seen; closing the draft sheet with Back
+## leaves the pick open (Sim the week passes it).
+func _close_midseason(_back: bool) -> void:
+	if _midseason_overlay != null and is_instance_valid(_midseason_overlay):
+		if _midseason_overlay.name == "CarnivalWeek":
+			MidseasonDraft.close_carnival(GameState)
+		_midseason_overlay.queue_free()
+	_midseason_overlay = null
+	_build()
 
 
 func _close_backing_talk() -> void:
