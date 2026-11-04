@@ -94,6 +94,8 @@ func handle_back() -> bool:
 		_build()
 		return true
 	if is_instance_valid(_overlay):
+		if StatGuide.back(_overlay):
+			return true
 		_overlay.queue_free()
 		_overlay = null
 		return true
