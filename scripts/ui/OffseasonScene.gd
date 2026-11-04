@@ -29,6 +29,8 @@ var _offer_years := 0
 var _talk_reply := ""
 var _fa_sort := "value"
 var _fa_sort_desc := true
+var _asked_id := ""       # the player you asked around about (P-50)
+var _asked: Array = []    # every rival's answer, GameState.ask_around
 
 
 func _ready() -> void:
@@ -74,7 +76,16 @@ func _build() -> void:
 	if not GameState.offseason_open():
 		hv.add_child(_para("The off-season is closed: trades and contracts open when the season ends, until the national draft starts.", 13, UiKit.MUTED))
 	else:
-		hv.add_child(_para("Leave one of your best 23 unsigned and he tests free agency: your offer stands at his asking price, but rivals can beat it. Other players re-sign for two seasons if the cap allows.", 12, UiKit.MUTED))
+		# This year's list problem in three lines (P-48): the brief, no advice.
+		var brief := UiKit.vbox(2)
+		brief.name = "ListProblem"
+		hv.add_child(brief)
+		var lines := GameState.list_problem()
+		for i in lines.size():
+			var l := UiKit.lbl(str(lines[i]), 14, UiKit.TEXT, i == 0)
+			l.name = "ListProblem_%d" % i
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			brief.add_child(l)
 	if _notice != "":
 		var said := _why_para(_notice, _notice_club, 13, UiKit.TEXT) if _notice_club_text != "" and _notice == _notice_club_text \
 				else _para(_notice, 13, UiKit.GOOD)
@@ -192,6 +203,8 @@ func _contracts(body: VBoxContainer) -> void:
 			got.name = "CompReceived"
 			body.add_child(got)
 	_retiring(body)
+	if GameState.offseason_open():
+		body.add_child(_para("Leave one of your best 23 unsigned and he tests free agency: your offer stands at his asking price, but rivals can beat it. Other players re-sign for two seasons if the cap allows.", 12, UiKit.MUTED))
 	body.add_child(UiKit.lbl("Out of contract  (%d)" % expiring.size(), UiKit.BODY, UiKit.EMPH, true))
 	if expiring.is_empty():
 		body.add_child(_para("Nobody is out of contract this year.", 13, UiKit.MUTED))
@@ -687,6 +700,16 @@ func _trade(body: VBoxContainer) -> void:
 				_scroll_positions["trade"] = 0
 			_build())
 		body.add_child(table)
+		if not str(_mine[0]).begins_with("pick:"):
+			var ask := UiKit.btn("Ask around", UiKit.BODY)
+			ask.name = "AskAround"
+			ask.custom_minimum_size = Vector2(0, 44)
+			ask.pressed.connect(func():
+				_asked_id = str(_mine[0])
+				_asked = GameState.ask_around(_asked_id)
+				_build())
+			body.add_child(ask)
+	_answers(body)
 	body.add_child(UiKit.spacer(UiKit.SECTION - 6))
 	var sides := UiKit.hbox(4)
 	for t in [["theirs", "Their list"], ["mine", "Your list"]]:
@@ -703,6 +726,46 @@ func _trade(body: VBoxContainer) -> void:
 	else:
 		_draft_picks(body, _trade_club, _theirs, "Their_")
 		_pick_grid(body, GameState.season.lists.get(_trade_club, []), _theirs, "Their_")
+
+
+## What every rival said when you asked around about one of your players
+## (P-50): one line each, keen clubs first, and for a club that would deal a
+## way into the usual trade sheet with its answer filled in.
+func _answers(body: VBoxContainer) -> void:
+	if _asked_id == "" or GameState.list_player(_asked_id).is_empty():
+		_asked_id = ""
+		_asked = []
+		return
+	var p := GameState.list_player(_asked_id)
+	var box := UiKit.vbox(6)
+	box.name = "AskAnswers"
+	body.add_child(box)
+	box.add_child(UiKit.lbl("Asked around about %s" % GameDB.player_display_name(p), UiKit.BODY, UiKit.EMPH, true))
+	for row in _asked:
+		var club := str(row["club"])
+		var keen := str(row["kind"]) != "no"
+		var line := _why_para(str(row["line"]), club, 13, UiKit.TEXT)
+		line.name = "Answer_" + club
+		if not keen:
+			box.add_child(line)
+			continue
+		var h := UiKit.hbox(8)
+		line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(line)
+		var go := UiKit.btn("Trade with them", 13)
+		go.name = "AskTrade_" + club
+		go.custom_minimum_size = Vector2(0, 44)
+		go.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		go.pressed.connect(func():
+			_trade_club = club
+			_mine = (row["mine"] as Array).duplicate()
+			_theirs = (row["theirs"] as Array).duplicate()
+			_asked_id = ""
+			_asked = []
+			_scroll_positions["trade"] = 0
+			_build())
+		h.add_child(go)
+		box.add_child(h)
 
 
 ## Offers rival clubs have put to you: what they'd give and want, in words,
