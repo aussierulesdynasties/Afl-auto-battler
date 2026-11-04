@@ -14,7 +14,7 @@ The itch page runs the browser build of main with every switch in section B off,
 | I4 | Look and feel | `ui_motion` on after his look (#907 and V1), V2 to V9 merged, hub hero (6.Q2), `player_looks` on, 6.36 app icon. | Result sheet and counts that move, the premiership streamers and the Brownlow sparkles, a hub that leads with one big thing, new faces, a real icon |
 | I5 | Off-season and the draft | 54 carnival and rookie draft, 55 list problem, 22 draft AI, T5.r134 inherited 2026 lists, 4.Q9 lower draftees, T5.Q23b Brownlow count, 4.Q8 McNeil. | A proper off-season, a draft that behaves, a Brownlow count to sit through, a real 2026 start |
 | I6 | A career with a story | `coach_arcs` and `weekly_checklist` on after his playthrough, T5.r22 sacked is not the end, T5.r23 rivals call, T5.Q25 take another club, T5.Q16 coaching hierarchy, `finals_cards_2` on. | Arcs and a weekly big call, a sacking you can come back from, offers from other clubs, finals with their own cards |
-| I7 | Real grounds and crowd | 33 oval answer, 6.44 six more grounds, 6.49 and 6.51 crowd and breeze. | Grounds you know from the oval alone, a crowd that follows the score |
+| I7 | Real grounds and crowd | 6.44 six more grounds (sizes and looks done in row 33; his look), 6.49 and 6.51 crowd and breeze. | Grounds you know from the oval alone, a crowd that follows the score |
 
 Order is I1 first (it is already built and only needs his playtest), I2 before any build that people will save a long career in, then I3, I4, I5, I6, I7. A build can go early if everything it names is done. He can reorder.
 
@@ -30,7 +30,6 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 | 57 | Save export/import and a version chain with restore | export, import, restore work |
 | 42 | Believable comebacks: rules with numbers from the audit on unmerged `claude/comeback-audit-row42` | rules in code, audit bands, his call on balance |
 | 35 | Finals bespoke cards: slice 2 built behind `finals_cards_2`; ships when he has played it | see section B |
-| 33 | Per-ground oval dimensions and looks (only MCG look done). Section H asks whether it is presentation only | his answer, then build |
 | 61 | Weather at full effect: rain, wind and heat change ball handling, kicking, tackling and scoring (wet tackles toward the real +12%); sizes come from a seeded audit and balance stays his call. Its look never touches the sim | audit bands, rules in code, his playtest |
 | 63 | One cost sheet per club dominant option and one for the 33 gain-only story options, same look as the 17 story cards; nothing is dropped (T5.Q2, T5.Q3) | every option shows a real cost |
 | 64 | Custom prospect Alastair McNeil in the first national draft is the next build (4.Q8) | prospect in draft, story beats |
@@ -239,7 +238,6 @@ Each line is a question he has not answered yet. Answered ones are in Rulings or
 - Cut audit (CUT_AUDIT_2026-11-03, 158 rows): which candidates beyond 1 to 5, 9 and 11 are cut, kept or replaced, including manual stat training, audio to Mute plus Volume, Club Forge create player, football-dept budget into high performance, Coaching screen into Hub/List, Culture sheet into Captaincy/List header, one pre-season drill plan and "Ask before simming"? (T1.Q7, T7.O16, T9.Q14)
 - Press conference: where the bible and the code disagree, which one is right and the other gets corrected? (T3.Q6)
 - Stat guide (row 27): does the new key-matchup grid replace it?
-- Per-ground ovals (row 33): is ground size presentation only, or does it change the sim too?
 - Synergies are worth +5 to +11 margin when on but rarely reached, and generated draftees lose synergy traits: how should a coach reach them, how far do multi-season spread and trait decay go, and what about too many contested bulls (16.1% generated against 3.5% real)? (4.Q10)
 - Coach arc catalogue: which draft arcs does he keep, change or cut, and will he play a career so the switches can go on? (T5.Q4)
 - Backing and firsts wording: first-goal line for any of his players or only backed ones, cap of three lines, under 10 games, tap in the profile, reminder line, +5 mood, quiet first games? (T5.Q8)

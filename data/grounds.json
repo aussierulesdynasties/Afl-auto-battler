@@ -1,0 +1,77 @@
+{
+  "_about": "How each ground looks in the vignettes. Looks only: nothing here reaches the match sim. length and width are the playing surface in metres (published figures). tiers: [inner offset, outer offset, inner height, outer height] beyond the fence, front to back. hill: the front tier is a grass bank with the crowd sitting on it. roof: edge (a thin dark lip), canopy (a pale roof reaching out over the top tier), closed (a roof over the whole ground). towers: mcg (the MCG's six tubular masts), masts (plain masts), none (lights on the roof). screens: 1 or 2 big screens. heritage_board: the old scoreboard at the other end. A ground not listed draws the default.",
+  "default": {
+    "length": 160, "width": 136,
+    "tiers": [[2.0, 26.0, 1.5, 13.0], [30.0, 52.0, 17.0, 34.0]],
+    "seat": "#121216", "roof": "edge", "roof_colour": "#0f0f12",
+    "towers": "masts", "tower_count": 6, "screens": 1
+  },
+  "grounds": {
+    "MCG": {
+      "length": 160, "width": 141,
+      "tiers": [[2.0, 20.0, 1.5, 10.0], [23.0, 37.0, 13.5, 22.0], [41.0, 58.0, 25.5, 38.0]],
+      "seat": "#3d4552", "roof": "edge", "roof_colour": "#0f0f12",
+      "towers": "mcg", "tower_count": 6, "screens": 2, "trusses": true
+    },
+    "Marvel Stadium": {
+      "length": 160, "width": 129,
+      "tiers": [[2.0, 18.0, 1.5, 10.0], [21.0, 33.0, 12.5, 21.0], [36.0, 50.0, 23.5, 34.0]],
+      "seat": "#1a2340", "roof": "closed", "roof_colour": "#1b1d22",
+      "towers": "none", "tower_count": 0, "screens": 2
+    },
+    "Adelaide Oval": {
+      "length": 167, "width": 124,
+      "tiers": [[2.0, 24.0, 1.5, 12.0], [28.0, 46.0, 15.0, 30.0]],
+      "seat": "#23262c", "roof": "canopy", "roof_colour": "#d8d9d4",
+      "towers": "none", "tower_count": 0, "screens": 1, "heritage_board": true
+    },
+    "Optus Stadium": {
+      "length": 165, "width": 130,
+      "tiers": [[2.0, 19.0, 1.5, 10.5], [22.0, 34.0, 13.0, 21.5], [37.0, 52.0, 24.0, 36.0]],
+      "seat": "#1c1f26", "roof": "canopy", "roof_colour": "#e6e7e3",
+      "towers": "none", "tower_count": 0, "screens": 2
+    },
+    "The Gabba": {
+      "length": 156, "width": 138,
+      "tiers": [[2.0, 18.0, 1.5, 11.0], [21.0, 32.0, 14.0, 23.0], [35.0, 48.0, 26.0, 37.0]],
+      "seat": "#4a2230", "roof": "edge", "roof_colour": "#e0e0dc",
+      "towers": "masts", "tower_count": 6, "screens": 2
+    },
+    "SCG": {
+      "length": 155, "width": 136,
+      "tiers": [[2.0, 22.0, 1.5, 11.0], [26.0, 42.0, 14.0, 27.0]],
+      "seat": "#1e3a2c", "roof": "canopy", "roof_colour": "#3f6b55",
+      "towers": "masts", "tower_count": 6, "screens": 1
+    },
+    "GMHBA Stadium": {
+      "length": 170, "width": 116,
+      "tiers": [[2.0, 20.0, 1.5, 10.0], [24.0, 42.0, 13.0, 30.0]],
+      "seat": "#16213d", "roof": "edge", "roof_colour": "#0f0f12",
+      "towers": "masts", "tower_count": 4, "screens": 1
+    },
+    "People First Stadium": {
+      "length": 158, "width": 134,
+      "tiers": [[2.0, 18.0, 1.5, 10.0], [22.0, 38.0, 12.0, 27.0]],
+      "seat": "#4a1a1c", "roof": "canopy", "roof_colour": "#c9cbc6",
+      "towers": "masts", "tower_count": 4, "screens": 1
+    },
+    "Engie Stadium": {
+      "length": 164, "width": 128,
+      "tiers": [[2.0, 18.0, 1.5, 9.0], [22.0, 34.0, 11.5, 20.0]],
+      "seat": "#5a2e0f", "roof": "canopy", "roof_colour": "#bfc1bc",
+      "towers": "masts", "tower_count": 4, "screens": 1
+    },
+    "Bellerive Oval": {
+      "length": 175, "width": 122,
+      "tiers": [[2.0, 20.0, 1.4, 7.0], [24.0, 42.0, 10.0, 26.0]],
+      "seat": "#16243a", "roof": "edge", "roof_colour": "#0f0f12",
+      "towers": "masts", "tower_count": 4, "screens": 1, "hill": true
+    },
+    "Manuka Oval": {
+      "length": 160, "width": 128,
+      "tiers": [[2.0, 20.0, 1.4, 7.0], [24.0, 40.0, 10.0, 24.0]],
+      "seat": "#2a2d36", "roof": "edge", "roof_colour": "#0f0f12",
+      "towers": "masts", "tower_count": 6, "screens": 1, "hill": true
+    }
+  }
+}
