@@ -51,6 +51,15 @@ static func count_line(club: String, club_name: String, n: int) -> String:
 	return "%s best and fairest" % club_name if n == 1 else "%d %s best and fairests" % [n, club_name]
 
 
+## The award as said after "won": "the Doig Medal", or `fallback` for a club with
+## no medal or one whose name does not read as a medal ("won the Club Champion").
+static func won_phrase(club: String, fallback: String) -> String:
+	var n := award_name(club)
+	if is_named(club) and (n.ends_with("Medal") or n.ends_with("Trophy") or n.ends_with("Award")):
+		return "the " + n
+	return fallback
+
+
 ## The last word made plural: Medal, Trophy, Award, Champion.
 static func plural(title: String) -> String:
 	if title.ends_with("Trophy"):

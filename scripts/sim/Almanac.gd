@@ -203,7 +203,10 @@ static func legend_marks(p: Dictionary, club: String) -> Array:
 	var out := []
 	for k in LEGEND_MARKS:
 		if int(have[k]) >= int(LEGEND_MARKS[k]):
-			out.append(LEGEND_WORDS[k] % int(have[k]))
+			if k == "club_bf":
+				out.append(BestAndFairest.count_line(club, GameDB.club_name(club), int(have[k])))
+			else:
+				out.append(LEGEND_WORDS[k] % int(have[k]))
 	return out
 
 
@@ -384,7 +387,8 @@ static func story_parts(entry: Dictionary, digest: Dictionary) -> Dictionary:
 		parts["hero"] = "%s was the match hero %s." % [str(sh[0].get("name", "")),
 				"once" if n == 1 else ("twice" if n == 2 else "%d times" % n)]
 	elif not (entry.get("bf", []) as Array).is_empty():
-		parts["hero"] = "%s won the best and fairest." % str(entry["bf"][0].get("name", ""))
+		parts["hero"] = "%s won %s." % [str(entry["bf"][0].get("name", "")),
+				BestAndFairest.won_phrase(str(entry.get("club", "")), "the best and fairest")]
 	var game: Dictionary = {}
 	for k in ["best_final_win", "best_win", "close_final_loss"]:
 		if not (digest.get(k, {}) as Dictionary).is_empty():

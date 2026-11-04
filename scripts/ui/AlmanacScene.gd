@@ -169,7 +169,7 @@ func _season_card(e: Dictionary) -> Control:
 		v.add_child(l)
 	if str(e.get("premier", "")) != "" and not flag:
 		_row(v, "Premiers", GameDB.club_name(str(e["premier"])), "Premiers")
-	_row(v, "Best and fairest", _first_name(e.get("bf", [])), "BestAndFairest")
+	_row(v, BestAndFairest.award_name(club), _first_name(e.get("bf", [])), "BestAndFairest")
 	var sh: Array = e.get("season_hero", [])
 	if not sh.is_empty():
 		var n := int(sh[0].get("count", 0))
