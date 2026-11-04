@@ -379,8 +379,13 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 		ovr.custom_minimum_size.x = 26
 		ovr.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		if _wide:
-			# His rating right after his name, not at the card's far edge.
+			# His rating right after his name, not at the card's far edge; a
+			# card narrower than that name's 170 px gives the name only what
+			# is left, so the rating never runs past the card into the next
+			# one (critic, 2026-11-04: the side sheet's right column hid them).
 			UiKit.near_figure(n, ovr, 170.0, 26.0)
+			b.resized.connect(func():
+				n.custom_minimum_size.x = clampf(b.size.x - 12.0 - 6.0 - 26.0, 0.0, 170.0))
 		row.add_child(ovr)
 		var age := int(p.get("age", 0))
 		face.add_child(UiKit.ellipsis("%s · %s · %d yo" % [Ratings.role_tag(p), PlayerProfile.player_type(p), age],
@@ -396,9 +401,25 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 			third.append(Traits.label(str(t)))
 		if Roles.is_tagger(p):
 			third.append("Tagger")
-		face.add_child(UiKit.ellipsis(" · ".join(third) if not third.is_empty() else " ", 12,
-				UiKit.BAD if not Ratings.available(p) else UiKit.MUTED))
+		var third_l := UiKit.ellipsis(" · ".join(third) if not third.is_empty() else " ", 12,
+				UiKit.BAD if not Ratings.available(p) else UiKit.MUTED)
+		third_l.name = "Third"
+		face.add_child(third_l)
 		b.custom_minimum_size = Vector2(160, 62)
+		if _wide:
+			# A PC card says all of it (a cut "Playmak…" hid a trait): the line
+			# wraps and the card grows to hold it.
+			# Top-aligned, 8 px in: every name in a row of cards on one line,
+			# whatever the card beside it wraps to (critic, 2026-11-04: 8 px out).
+			face.alignment = BoxContainer.ALIGNMENT_BEGIN
+			face.offset_top = 8
+			face.offset_bottom = -8
+			third_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			# A wrapped line as close as the card's own lines (critic: 16 px against 13; -1 gives 12).
+			third_l.add_theme_constant_override("line_spacing", -1)
+			third_l.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+			face.minimum_size_changed.connect(func():
+				b.custom_minimum_size.y = maxf(62.0, face.get_combined_minimum_size().y + 16.0))
 	_ignore_mouse(face)
 	if _read_only:
 		if id != "":

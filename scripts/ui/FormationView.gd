@@ -297,6 +297,9 @@ func _geometry() -> Dictionary:
 			bench_i += 1
 		else:
 			var at: Vector2 = entry["slot"]["at"]
+			# The spine (centre back, centre, ruck, half forward) spread as the
+			# Pick the side oval spreads it, so their names never touch.
+			at = TeamBuilder.SPINE.get(str(entry["slot"].get("key", "")), at)
 			px = centre + Vector2(at.x * a * 0.90, at.y * b * 0.86)
 		tokens.append({"px": px, "index": i})
 	return {
@@ -386,6 +389,24 @@ func _draw() -> void:
 			var name_y := px.y + tr + 12.0
 			_draw_label(name, Vector2(px.x, name_y), int(clampf(tr * 0.78, 8.0, 12.0)),
 					UiKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+
+
+## Where each name under a guernsey is drawn (the oval's own coordinates), as
+## _draw puts it: the tests check no two touch.
+func name_rects() -> Array:
+	var geo := _geometry()
+	var out := []
+	if not bool(geo["labels"]):
+		return out
+	var tr: float = geo["tr"]
+	var tokens: Array = geo["tokens"]
+	for i in range(tokens.size()):
+		var p: Dictionary = _placed[i]["player"]
+		var px: Vector2 = tokens[i]["px"]
+		var fs := int(clampf(tr * 0.78, 8.0, 12.0))
+		var w := UiKit.BOLD.get_string_size(_short_name(p), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		out.append(Rect2(px.x - w * 0.5, px.y + tr + 12.0 - float(fs), w, float(fs)))
+	return out
 
 
 func _draw_label(text: String, pos: Vector2, fs: int, col: Color, align: HorizontalAlignment) -> void:
