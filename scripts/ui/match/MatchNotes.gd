@@ -1019,6 +1019,37 @@ static func rated_players(res: Dictionary, side: int) -> Array:
 	return out
 
 
+## The coaches' votes, as the AFL gives them: each coach names his five best
+## players on the ground, from either side, 5-4-3-2-1, so a player can earn up
+## to 10. Read from this match's ratings (so far, at a break), and from nothing
+## the sim decides with: each coach's own taste for a player is a fixed small
+## lean, the same all match, so the two coaches can differ on a close call.
+## Returns {player id: votes}; a player on neither coach's five is absent.
+static func coaches_votes(res: Dictionary) -> Dictionary:
+	var everyone := []
+	for side in [0, 1]:
+		everyone.append_array(rated_players(res, side))
+	var votes := {}
+	for coach in [0, 1]:
+		var scored := []
+		for r in everyone:
+			if int(r["rating"]) <= 0:
+				continue
+			var key := "%s|%s|%d|%s" % [res.get("home", ""), res.get("away", ""), coach, r["id"]]
+			var lean := float(key.hash() % 1000) / 1000.0 - 0.5   # -0.5..0.5
+			scored.append([str(r["id"]), float(r["rating"]) * (1.0 + 0.12 * lean)])
+		scored.sort_custom(func(a, b): return a[1] > b[1] or (a[1] == b[1] and str(a[0]) < str(b[0])))
+		for i in range(mini(5, scored.size())):
+			var id := str(scored[i][0])
+			votes[id] = int(votes.get(id, 0)) + (5 - i)
+	return votes
+
+
+## "7", or a dash for a player neither coach voted for.
+static func votes_text(votes: Dictionary, id: String) -> String:
+	return str(int(votes[id])) if votes.has(id) else "–"
+
+
 ## The few team numbers worth a glance at full time: [label, mine, theirs].
 const KEY_STATS := [["disposals", "Disposals"], ["inside50", "Inside 50s"],
 		["clearances", "Clearances"], ["pressure_rating", "Pressure rating"]]

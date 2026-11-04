@@ -970,6 +970,10 @@ func _test_best_so_far(sz: Vector2i) -> void:
 		var rating_l: Label = row.find_child("StandoutRating", true, false)
 		if rating_l == null or rating_l.text != str(r[1]):
 			bad.append("%s rating %s v %d" % [str(r[0]), rating_l.text if rating_l else "-", int(r[1])])
+		var votes_l: Label = row.find_child("StandoutVotes", true, false)
+		var want_votes: String = notes.votes_text(notes.coaches_votes(res), str(r[0]))
+		if votes_l == null or votes_l.text != want_votes:
+			bad.append("%s votes %s v %s" % [str(r[0]), votes_l.text if votes_l else "-", want_votes])
 		# ...and his stat line is the match's own numbers in words (game_line of
 		# result["players"], read now), not a second count.
 		var line_want: String = notes.game_line((res["players"] as Dictionary).get(str(r[0]), {}))
@@ -988,6 +992,7 @@ func _test_best_so_far(sz: Vector2i) -> void:
 	_check(block.find_child("BestClub_%d" % me, true, false) != null and block.find_child("BestClub_%d" % (1 - me), true, false) != null
 			and (found == 6 or (sz.x >= 900 and found == 4)), "Best so far has a heading per club and the same number each (%s: %d rows)" % [tag, found])
 	_check(block.find_children("RatingHeading", "Label", true, false).size() == 1, "Best so far says Rating once, not per club (%s)" % tag)
+	_check(block.find_children("VotesHeading", "Label", true, false).size() == 1, "Best so far says Votes once, not per club (%s)" % tag)
 	var pair_inks: Array = load("res://scripts/ui/UiKit.gd").club_ink_pair(str(res["home"]), str(res["away"]))
 	# Allegiance: each side has its club-colour bar; its name and ratings are in
 	# the club's readable colour (4.5:1 on the break) or plain text, never a
