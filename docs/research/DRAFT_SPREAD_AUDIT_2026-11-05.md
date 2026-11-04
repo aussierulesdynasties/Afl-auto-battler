@@ -49,5 +49,5 @@ The browser pane's own scroll tool did not reach the game canvas, but a real bro
 
 ## Questions for the director
 
-- Key forwards follow the pool's worth. Leave the AI as is, or lower the potential share for very young talls?
+- Key forwards follow the pool's worth: answered 2026-11-05, "Leave it as is".
 - Should Petracca, Viney and Stewart fall that far in a redraft, and is Gawn's range acceptable?
