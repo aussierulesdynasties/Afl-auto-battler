@@ -73,6 +73,8 @@ func _run() -> void:
 		await _t("_test_ladder", [sz])
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_team_rating", [sz])
+	for w in [366.0, 680.0]:
+		await _t("_test_hub_ladder_heads", [w])
 	await _t("_test_trophies_early")
 	await _t("_test_fixture_finals")
 	await _t("_test_trophies")
@@ -910,6 +912,61 @@ func _open_trophies(sz: Vector2i) -> Control:
 	return s
 
 
+## The hub's ladder (UiKit.ladder_table): "Pts" ends where its figures end,
+## and "Club" starts over the names, past the crests (critic 2026-11-04: Pts
+## 5 px off, Club over the crests; StatsLadder's fix in #950).
+func _test_hub_ladder_heads(width: float) -> void:
+	var tag := "%.0f wide" % width
+	var UK = load("res://scripts/ui/UiKit.gd")
+	var holder := Control.new()
+	holder.size = Vector2(width, 800)
+	root.add_child(holder)
+	var t: VBoxContainer = UK.ladder_table(_state.season.ladder_sorted(), _state.my_club, width)
+	t.size = Vector2(width, 0)
+	holder.add_child(t)
+	await _settle()
+	var head: HBoxContainer = t.get_child(0)
+	var specs: Array = UK.ladder_specs(width, false)
+	var pts_i := -1
+	var club_i := -1
+	for i in specs.size():
+		if str(specs[i]["key"]) == "pts":
+			pts_i = i
+		if str(specs[i]["key"]) == "club":
+			club_i = i
+	# The header puts a spacer before Club (the crest's room), so its labels
+	# from Club on sit one child later than the rows' cells.
+	var club_head: Label = head.get_child(club_i + 1)
+	var inset: float = club_head.get_theme_stylebox("normal").get_margin(SIDE_LEFT)
+	var head_end := _ink_end(head.get_child(pts_i + 1))
+	var worst := 0.0
+	var crest_off := 0.0
+	for i in range(1, t.get_child_count()):
+		var row := t.get_child(i)
+		if not row is HBoxContainer:
+			continue
+		worst = maxf(worst, absf(_ink_end(row.get_child(pts_i)) - head_end))
+		var names: Array = (row.get_child(club_i) as Node).find_children("*", "Label", true, false)
+		crest_off = maxf(crest_off, absf(club_head.get_global_rect().position.x + inset
+				- (names[0] as Control).get_global_rect().position.x))
+	_check(worst <= 1.0, "The hub ladder's Pts ends where its figures end (%s: %.1f px off)" % [tag, worst])
+	_check(crest_off <= 1.0, "The hub ladder's Club starts over the names, not the crests (%s: %.1f px off)" % [tag, crest_off])
+	holder.queue_free()
+	await _settle()
+
+
+## Where a one-line label's text ends on screen, by its alignment.
+func _ink_end(l: Label) -> float:
+	var w: float = l.get_theme_font("font").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			l.get_theme_font_size("font_size")).x
+	var r := l.get_global_rect()
+	if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT:
+		return r.end.x
+	if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER:
+		return r.position.x + (r.size.x + w) * 0.5
+	return r.position.x + w
+
+
 func _close(s: Control) -> void:
 	s.queue_free()
 	await _settle()
@@ -1095,6 +1152,19 @@ func _test_ladder(sz: Vector2i) -> void:
 	_check(tenth_rx.search(_text(s.find_child("Club_" + mine, true, false).find_child("Figure", true, false))) != null,
 			"Goals a game keep their tenth (%s)" % tag)
 	_fits(s, sz, "team stats", tag)
+	# The widest figure's ink starts about 10 px past the end of the bars: its
+	# text box 3 to 8 px, the glyphs' bearing the rest (critic 2026-11-04: 420
+	# px of nothing between them on a PC, then 45, then 18).
+	var near_gap := 9999.0
+	for c in _row_codes(s):
+		var row: Node = s.find_child("Club_" + c, true, false)
+		var bar: Control = row.find_child("Bar", true, false)
+		var fig: Label = row.find_child("Figure", true, false)
+		var ink: float = fig.get_global_rect().end.x - fig.get_theme_font("font").get_string_size(fig.text,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, fig.get_theme_font_size("font_size")).x
+		near_gap = minf(near_gap, ink - bar.get_global_rect().end.x)
+	_check(near_gap >= 3.0 and near_gap <= 8.0,
+			"The widest figure's text starts 3 to 8 px past the longest bar's end (%s: %.0f)" % [tag, near_gap])
 	ladder.pick_team_fact("for")
 	await Tap.tap(s.find_child("View_ladder", true, false))
 	await _settle()
@@ -1119,6 +1189,28 @@ func _test_ladder(sz: Vector2i) -> void:
 		_check(note == ("Side named for this round" if named else "Projected side: picked on match day"),
 				"The side says whether it is projected (%s: %s)" % [tag, note])
 		_fits(side, sz, "a club's side", tag)
+		# Every list card holds its own rating and its whole third line (critic
+		# 2026-11-04: on a PC the right column hid the left one's ratings and
+		# "Playmak…" was cut).
+		var spill := []
+		var cut := []
+		for card in builder.find_child("NotSelected", true, false).get_children():
+			if not card is Button:
+				continue
+			var box: Rect2 = (card as Control).get_global_rect().grow(0.5)
+			for l in card.find_children("*", "Label", true, false):
+				if not box.encloses((l as Control).get_global_rect()):
+					spill.append("%s %s" % [card.name, (l as Label).text])
+			if sz.x >= 900:
+				var top_y := (card as Control).get_global_rect().position.y
+				var name_y: float = (card.find_children("*", "Label", true, false)[0] as Control).get_global_rect().position.y
+				if absf(name_y - top_y - 8.0) > 1.0:
+					cut.append("%s name %.0f px in" % [card.name, name_y - top_y])
+			var third: Label = card.find_child("Third", true, false)
+			if third != null and sz.x >= 900 and third.text_overrun_behavior != TextServer.OVERRUN_NO_TRIMMING:
+				cut.append(str(card.name))
+		_check(spill.is_empty(), "Every list card holds its own words and rating (%s: %s)" % [tag, str(spill.slice(0, 3))])
+		_check(cut.is_empty(), "A PC card's third line wraps, never cut, and its name sits 8 px in (%s: %s)" % [tag, str(cut.slice(0, 3))])
 		# A player opens his profile over the side; Back closes it first.
 		var list: Array = _state.opponent_side(tapped)["list"]
 		builder.emit_signal("inspect", str(list[0]["id"]))

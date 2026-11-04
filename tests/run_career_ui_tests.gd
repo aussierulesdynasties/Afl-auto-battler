@@ -334,6 +334,8 @@ func _run() -> void:
 	await _t("_test_new_career_canberra_choice")
 	await _t("_test_pc_hub_and_list_layout")
 	await _t("_test_list_shape_fits_phones")
+	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+		await _t("_test_list_words_fit", [sz])
 	print(Ran.line("Career UI", self))
 	_state.replay_seed = 0
 	quit(0 if _failures.is_empty() else 1)
@@ -2427,6 +2429,61 @@ func _test_pc_hub_and_list_layout() -> void:
 ## scroll). Every control in the pane is on screen, or inside a scroll that
 ## brings it on screen; a finger's tap on a guernsey at the foot of the oval
 ## opens his profile; a swipe that starts on a guernsey scrolls the pane.
+## My list's Captaincy row keeps its word whole (critic 2026-11-04: "Captain…"
+## on a phone): the label is as wide as its text, and the row stays on screen.
+func _captaincy_whole(tag: String) -> void:
+	var cap: Control = current_scene.find_child("CaptaincyOpen", true, false)
+	var t: Label = cap.find_child("SectionTitle", true, false) if cap != null else null
+	if t == null:
+		_check(false, "My list has a Captaincy row (%s)" % tag)
+		return
+	var need: float = t.get_theme_font("font").get_string_size(t.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			t.get_theme_font_size("font_size")).x
+	_check(t.size.x + 0.5 >= need and t.text == "Captaincy",
+			"The Captaincy label is whole, not cut (%s: %.0f wide for %.0f of text)" % [tag, t.size.x, need])
+	var end := 0.0
+	for c in cap.find_children("*", "Label", true, false):
+		end = maxf(end, (c as Control).get_global_rect().end.x)
+	_check(end <= float(root.size.x) + 0.5, "The Captaincy row ends on screen (%s: %.0f)" % [tag, end])
+
+
+## Collingwood's My list, the critics' case (2026-11-04): the Captaincy word
+## whole beside Moore, Maynard and Daicos on a phone, and on a PC the Best 23
+## oval's centre line (Frampton, Daicos, Cameron, Anderson) with no two names
+## within 8 px.
+func _test_list_words_fit(sz: Vector2i) -> void:
+	var tag := "%dx%d" % [sz.x, sz.y]
+	root.size = sz
+	_state.reset()
+	# Real names, as the critics saw them (the made-up ones are shorter).
+	_state.show_real_names = true
+	_state.start_season("COL", _db.club_list("COL"))
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	_router.go("hub")
+	await _settle()
+	_router.go("list")
+	for i in range(6):
+		await _settle()
+	_captaincy_whole(tag)
+	if sz.x < 760:
+		_state.show_real_names = false
+		return
+	var ovals := current_scene.find_children("*", "FormationView", true, false)
+	_check(not ovals.is_empty(), "My list shows the Best 23 oval (%s)" % tag)
+	for ov in ovals:
+		var rects: Array = ov.call("name_rects")
+		var touching := []
+		for i in rects.size():
+			for j in range(i + 1, rects.size()):
+				if (rects[i] as Rect2).grow_individual(4, 0, 4, 0).intersects((rects[j] as Rect2).grow_individual(4, 0, 4, 0)):
+					touching.append("%s/%s" % [str(rects[i]), str(rects[j])])
+		_check(rects.size() >= 18 and touching.is_empty(),
+				"No two names on the Best 23 oval come within 8 px (%s, %d names: %s)" % [tag, rects.size(), str(touching.slice(0, 3))])
+	_state.show_real_names = false
+
+
 func _test_list_shape_fits_phones() -> void:
 	for sz in [Vector2i(360, 740), Vector2i(390, 844), Vector2i(412, 915)]:
 		var tag := "%dx%d" % [sz.x, sz.y]

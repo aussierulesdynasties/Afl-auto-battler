@@ -1698,8 +1698,23 @@ static func ladder_table(rows: Array, mine: String, width: float, limit := 0,
 		full := false) -> VBoxContainer:
 	var v := vbox(2)
 	var specs := ladder_specs(width, full)
-	v.add_child(_ladder_header(specs))
 	var shown := rows.size() if limit <= 0 else mini(limit, rows.size())
+	# A fixed club column ends at the longest name it holds (plus a 12 px
+	# gutter), not at LADDER_CLUB_W: W-L then starts beside the names, not
+	# 100 px past "Kangaroos" (critics, 2026-11-05).
+	for spec in specs:
+		if str(spec["key"]) == "club" and bool(spec.get("left", false)):
+			var need := 0.0
+			for i in range(shown):
+				# The badge's name clips (ellipsis), so its own minimum is no
+				# measure: the crest's room and the name's full width are.
+				var probe := line(GameDB.club_short(str(rows[i]["code"])), SECONDARY, TEXT)
+				need = maxf(need, LADDER_NAME_INSET + probe.get_minimum_size().x)
+				probe.free()
+			spec["w"] = int(minf(LADDER_CLUB_W, ceilf(need) + 12.0))
+			# The table, and so the finals rule, ends at its last column.
+			v.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	v.add_child(_ladder_header(specs))
 	var cut := Season.FINALISTS - 1
 	for i in range(shown):
 		v.add_child(_ladder_data_row(rows[i], i + 1, specs, mine))
@@ -1709,6 +1724,8 @@ static func ladder_table(rows: Array, mine: String, width: float, limit := 0,
 
 
 const LADDER_CLUB_W := 155.0
+## Where a club's name starts in its badge: the crest's 20 px and the 6 px gap.
+const LADDER_NAME_INSET := 26
 
 
 static func ladder_specs(width: float, full: bool) -> Array:
@@ -1743,8 +1760,19 @@ static func _ladder_header(specs: Array) -> HBoxContainer:
 		var expand: bool = bool(spec.get("expand", false))
 		var head := _ladder_label(str(spec["title"]), int(spec.get("w", 0)),
 				MUTED, SECONDARY, false, expand)
-		if bool(spec.get("left", false)):
+		if str(spec["key"]) == "club":
+			# Over the names, not the crests before them: the crest's 20 px plus
+			# the badge's 6 px gap (club_badge, club_marker), as StatsLadder's.
+			# A spacer, not a margin inside the label, so the label itself (and
+			# its end) is where its word is; the spacer and the row's 4 px gap
+			# make up the inset and the column keeps its width.
 			head.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			var pad := Control.new()
+			pad.custom_minimum_size.x = LADDER_NAME_INSET - h.get_theme_constant("separation")
+			pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			h.add_child(pad)
+			if not expand:
+				head.custom_minimum_size.x = maxf(0.0, head.custom_minimum_size.x - LADDER_NAME_INSET)
 		h.add_child(head)
 	return h
 
@@ -1779,7 +1807,9 @@ static func _ladder_data_row(r: Dictionary, pos: int, specs: Array, mine: String
 static func _ladder_label(text: String, w: int, col: Color, fs: int, bold: bool,
 		expand: bool) -> Label:
 	var l := ellipsis(text, fs, col, bold) if expand else line(text, fs, col, bold)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if expand else HORIZONTAL_ALIGNMENT_CENTER
+	# Figures and their headers end on one edge, as StatsLadder's do: a centred
+	# "Pts" over a centred "0" ended 5 px off it.
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if expand else HORIZONTAL_ALIGNMENT_RIGHT
 	if expand:
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	else:
