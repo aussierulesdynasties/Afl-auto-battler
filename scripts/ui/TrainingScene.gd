@@ -540,7 +540,8 @@ func _player_card(p: Dictionary) -> Control:
 	var plan := GameState.plan_for(p)
 	var state := GameState.development_state(p).replace(" his projected peak", " his peak")
 	var under := state if plan == "position" else "%s  ·  %s" % [_row_plan(plan), state]
-	v.add_child(UiKit.ellipsis(under, UiKit.SECONDARY, UiKit.MUTED))
+	# Wraps rather than cutting: "Training as an inside midfielder" is the point of the line.
+	v.add_child(UiKit.lbl(under, UiKit.SECONDARY, UiKit.MUTED))
 	var traits := HFlowContainer.new()
 	traits.name = "Traits"
 	traits.add_theme_constant_override("h_separation", 8)
