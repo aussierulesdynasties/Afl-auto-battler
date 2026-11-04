@@ -384,7 +384,8 @@ static func story_parts(entry: Dictionary, digest: Dictionary) -> Dictionary:
 		parts["hero"] = "%s was the match hero %s." % [str(sh[0].get("name", "")),
 				"once" if n == 1 else ("twice" if n == 2 else "%d times" % n)]
 	elif not (entry.get("bf", []) as Array).is_empty():
-		parts["hero"] = "%s won the best and fairest." % str(entry["bf"][0].get("name", ""))
+		parts["hero"] = "%s won the %s." % [str(entry["bf"][0].get("name", "")),
+				BestAndFairest.award_name(str(entry.get("club", ""))) if BestAndFairest.is_named(str(entry.get("club", ""))) else "best and fairest"]
 	var game: Dictionary = {}
 	for k in ["best_final_win", "best_win", "close_final_loss"]:
 		if not (digest.get(k, {}) as Dictionary).is_empty():

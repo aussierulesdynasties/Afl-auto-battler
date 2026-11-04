@@ -1947,7 +1947,7 @@ func _test_remembered() -> void:
 		var l := sheet.find_child("Remembered_%d" % i, true, false) as Label
 		if l != null:
 			lines.append(l.text)
-	_check(lines == ["Best and fairest, %d." % (year - 1), "Premiership, %d." % (year - 2),
+	_check(lines == ["Doig Medal, %d." % (year - 1), "Premiership, %d." % (year - 2),
 			"Debuted in Round 7, %d, and kicked his first goal." % (year - 2)],
 			"His sheet has three remembered facts, newest first, and not the injury (%s)" % str(lines))
 	var title := sheet.find_child("WithUsTitle", true, false) as Label
