@@ -439,7 +439,7 @@ func _test_clanger_cause() -> void:
 			if weather != "windy":
 				line_ok = line_ok and why != "wind"
 	print("Clanger cause: %d with a cause %s, %d plain" % [withwhy, str(causes), plain_on])
-	_check(withwhy >= 5, "Clangers name a cause in the sample (%d)" % withwhy)
+	_check(withwhy >= 20, "Clangers name a cause in the sample (%d)" % withwhy)
 	_check(causes.size() >= 2, "Both weather causes show (%s)" % str(causes))
 	_check(line_ok, "Each cause line is its own words, each weather's cause only in that weather")
 	_check(names_ok, "The player named is of the side that erred")
@@ -449,6 +449,12 @@ func _test_clanger_cause() -> void:
 	_check(MatchSim.clanger_why({}, "wet") == "", "No disposal, no cause")
 	_check(MatchSim.clanger_why({"kind": "kick", "end": "tackle"}, "wet") == "", "A tackle has its own line: no cause")
 	_check(MatchSim.clanger_why({"kind": "kick", "end": ""}, "perfect") == "", "Dry still day: nothing to blame")
+	_check(MatchSim.clanger_why({"kind": "kick", "end": "entry"}, "wet", "turnover") == "wet", "A wet-ball turnover off an entry names the wet")
+	_check(MatchSim.clanger_why({"kind": "handball", "end": "pressure"}, "windy", "turnover") == "", "Wind blames kicks only")
+	_check(MatchSim.clanger_why({"kind": "kick", "end": "aerial"}, "wet", "turnover") == "", "A kick read and marked has its own line")
+	_check(MatchSim.clanger_why({"kind": "kick", "end": ""}, "wet", "score") == "", "A score is nobody's clanger")
+	_check(absf(MatchSim.clanger_blame_share("wet") - 0.15 / 1.15) < 0.001 and MatchSim.clanger_blame_share("perfect") == 0.0,
+			"The weather takes only its own share of the blame")
 
 
 func _test_free_causes_follow_the_play() -> void:
@@ -2584,7 +2590,7 @@ func _test_match_story() -> void:
 	var hurt_res := {"home": "MEL", "away": "CAR", "score": [80, 20], "roster": [[{"id": "s1", "overall": 99}], []],
 			"events": [], "injuries": [{"id": "s1", "side": 0, "q": 2, "kind": "hand"}]}
 	var hp := MatchNotes.turning_points(hurt_res, 0)
-	_check(not hp.is_empty() and not str(hp[0]).contains(" to a hand ") and str(hp[0]).contains("a hand injury"),
+	_check(not hp.is_empty() and not str(hp[0]).contains(" to a hand in the") and str(hp[0]).contains("a hand injury"),
 			"Full time says a hand injury, not 'to a hand': %s" % str(hp))
 	var run_res := {"home": "MEL", "away": "CAR", "events": [
 		{"kind": "goal", "q": 1, "min": 5, "side": 1, "score": [0, 6]},
