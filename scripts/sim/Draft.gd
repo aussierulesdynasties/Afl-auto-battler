@@ -1182,6 +1182,9 @@ const HORIZON_WEIGHTS := {
 ## Share of rival clubs going for the flag now; the rest build.
 const HORIZON_NOW_SHARE := 0.25
 const HORIZON_REPLACEMENT := 58.0
+## Share of a season after he retires that still dilutes a building club's
+## view of a veteran (1.0 = full, the old rule).
+static var BUILD_RETIRED_SHARE := 0.35
 var _horizon_cache := {}
 
 
@@ -1203,7 +1206,8 @@ func horizon_worth(p: Dictionary, horizon: String) -> float:
 		# A club going for the flag now values an older star for the seasons he
 		# will actually play: seasons after he retires do not dilute his rating
 		# (director, 2026-10-14). Building clubs count every season as before.
-		total += w * (float(seasons[t][1]) if horizon == "now" else 1.0)
+		var alive := float(seasons[t][1])
+		total += w * (alive if horizon == "now" else alive + BUILD_RETIRED_SHARE * (1.0 - alive))
 		above += w * float(seasons[t][1]) * (float(seasons[t][0]) - HORIZON_REPLACEMENT)
 	var v := HORIZON_REPLACEMENT + above / maxf(0.001, total)
 	_horizon_cache[key] = v
