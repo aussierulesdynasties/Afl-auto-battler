@@ -1709,6 +1709,8 @@ static func ladder_table(rows: Array, mine: String, width: float, limit := 0,
 
 
 const LADDER_CLUB_W := 155.0
+## Where a club's name starts in its badge: the crest's 20 px and the 6 px gap.
+const LADDER_NAME_INSET := 26
 
 
 static func ladder_specs(width: float, full: bool) -> Array:
@@ -1743,8 +1745,13 @@ static func _ladder_header(specs: Array) -> HBoxContainer:
 		var expand: bool = bool(spec.get("expand", false))
 		var head := _ladder_label(str(spec["title"]), int(spec.get("w", 0)),
 				MUTED, SECONDARY, false, expand)
-		if bool(spec.get("left", false)):
+		if str(spec["key"]) == "club":
+			# Over the names, not the crests before them: the crest's 20 px plus
+			# the badge's 6 px gap (club_badge, club_marker), as StatsLadder's.
 			head.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			var inset := StyleBoxEmpty.new()
+			inset.content_margin_left = LADDER_NAME_INSET
+			head.add_theme_stylebox_override("normal", inset)
 		h.add_child(head)
 	return h
 
@@ -1779,7 +1786,9 @@ static func _ladder_data_row(r: Dictionary, pos: int, specs: Array, mine: String
 static func _ladder_label(text: String, w: int, col: Color, fs: int, bold: bool,
 		expand: bool) -> Label:
 	var l := ellipsis(text, fs, col, bold) if expand else line(text, fs, col, bold)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if expand else HORIZONTAL_ALIGNMENT_CENTER
+	# Figures and their headers end on one edge, as StatsLadder's do: a centred
+	# "Pts" over a centred "0" ended 5 px off it.
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if expand else HORIZONTAL_ALIGNMENT_RIGHT
 	if expand:
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	else:

@@ -418,16 +418,46 @@ static func _team_board(host: Control, season: Season, wide: bool) -> Control:
 	var t := UiKit.vbox(0)
 	t.name = "LadderTable"
 	v.add_child(t)
+	# The figure column is as wide as the widest figure, so the best club's
+	# figure starts one gap past the end of its bar (critic, 2026-11-04: 420 px
+	# of nothing between them on a PC, then 45 px of an over-wide column).
+	var fig_w := 0.0
+	for r in list:
+		var probe := UiKit.figure(team_text(float(r["t_" + _team_fact]), _team_fact), UiKit.NUMBER)
+		fig_w = maxf(fig_w, ceilf(probe.get_minimum_size().x))
+		probe.free()
 	# A bar reads the same on a phone and a PC: no longer than a phone gives it.
-	var bar_w := minf(TEAM_BAR_MAX, float(host.call("content_width")) - 150.0)
+	var bar_w := minf(TEAM_BAR_MAX, float(host.call("content_width")) - team_row_width(0.0, fig_w))
+	if wide:
+		# The bar spans its club's sub-line (the other facts), so the figure
+		# follows the bar, not 4 px of sub-line past it.
+		for r in list:
+			var others := PackedStringArray()
+			for f in _view_of(_team_fact)[2]:
+				var k := str(f[0])
+				if k != _team_fact:
+					others.append("%s %s" % [team_text(float(r["t_" + k]), k), str(f[1]).to_lower()])
+			var sub := UiKit.lbl(" · ".join(others), UiKit.SECONDARY, UiKit.MUTED)
+			bar_w = maxf(bar_w, ceilf(sub.get_minimum_size().x))
+			sub.free()
+		# As wide as a row needs, left-aligned.
+		t.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		t.custom_minimum_size.x = team_row_width(bar_w, fig_w)
 	for i in range(list.size()):
 		if i > 0:
 			t.add_child(UiKit.rule())
-		t.add_child(_team_row(host, list[i], i + 1, best, bar_w))
+		t.add_child(_team_row(host, list[i], i + 1, best, bar_w, fig_w))
 	var note := UiKit.lbl("A game, over the games each club has played.", UiKit.SECONDARY, UiKit.MUTED)
 	note.name = "TeamNote"
 	v.add_child(note)
 	return v
+
+
+## A team row's width around a bar of `bar_w` (0: the row less its bar) and a
+## figure column of `fig_w`: margins 8 + 8, rank 22, crest 22, the row's
+## two 10 px gaps and the figure's 2 px (_team_row).
+static func team_row_width(bar_w: float, fig_w: float) -> float:
+	return 8.0 + 22.0 + 10.0 + 22.0 + 10.0 + (maxf(40.0, bar_w) if bar_w > 0.0 else 0.0) + 2.0 + fig_w + 8.0
 
 
 ## Every season_team key a club row carries a game of.
@@ -500,7 +530,8 @@ static func _view_of(fact: String) -> Array:
 
 ## One club: its rank, its guernsey and name, the view's other two facts in
 ## words, a bar against the league's best, and the chosen fact big at the right.
-static func _team_row(host: Control, r: Dictionary, rank: int, best: float, bar_w: float) -> Control:
+static func _team_row(host: Control, r: Dictionary, rank: int, best: float, bar_w: float,
+		fig_w := 56.0) -> Control:
 	var code := str(r["code"])
 	var mine: bool = code == GameState.my_club
 	var b := Button.new()
@@ -574,10 +605,18 @@ static func _team_row(host: Control, r: Dictionary, rank: int, best: float, bar_
 	mid.add_child(bar)
 	var fig := UiKit.figure(team_text(x, _team_fact), UiKit.NUMBER, UiKit.TEXT if x > 0.0 else UiKit.MUTED)
 	fig.name = "Figure"
-	fig.custom_minimum_size.x = 56
+	fig.custom_minimum_size.x = fig_w
 	fig.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	fig.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(fig)
+	# 2 px from the bar, not the row's 10: the figure's shade and side bearing
+	# make up the rest, so its ink starts about 10 px past the bar (critic,
+	# 2026-11-04: 18 px).
+	var tail := UiKit.hbox(2)
+	tail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.remove_child(mid)
+	tail.add_child(mid)
+	tail.add_child(fig)
+	row.add_child(tail)
 	_ignore(m)
 	# A button does not grow with its child: the row asks for what it holds.
 	b.custom_minimum_size.y = maxf(64.0, m.get_combined_minimum_size().y)

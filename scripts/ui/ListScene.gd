@@ -89,7 +89,8 @@ func _build() -> void:
 	for id in Captaincy.ids(cap_rec):
 		for q in GameState.my_list:
 			if str(q.get("id", "")) == str(id):
-				named.append(GameDB.player_display_name(q))
+				# A phone row names them by surname, so all three fit beside the word.
+				named.append(GameDB.player_surname(q) if _narrow() else GameDB.player_display_name(q))
 	var cap_link := UiKit.section_link("Captaincy", (", ".join(named) if not named.is_empty() else "No captain named") + "  ›",
 			"CaptaincyOpen")
 	cap_link.pressed.connect(func(): _open_captaincy())
@@ -109,6 +110,24 @@ func _build() -> void:
 		if h != null:
 			(h as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		(cap_link.get_child(0) as BoxContainer).add_theme_constant_override("separation", 16)
+	else:
+		# A phone keeps the word whole ("Captain…" said nothing, critic
+		# 2026-11-04): the names give way instead, and the chevron stays.
+		var title_n := cap_link.find_child("SectionTitle", true, false) as Label
+		var names_n := cap_link.find_child("SectionLeadsTo", true, false) as Label
+		if title_n != null and names_n != null:
+			title_n.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+			title_n.size_flags_horizontal = Control.SIZE_FILL
+			names_n.text = names_n.text.trim_suffix("›").strip_edges()
+			names_n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			names_n.clip_text = true
+			names_n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			names_n.custom_minimum_size.x = 0.0
+			var chev := UiKit.lbl("›", UiKit.NAME, UiKit.TEXT)
+			chev.name = "CaptaincyChevron"
+			chev.autowrap_mode = TextServer.AUTOWRAP_OFF
+			chev.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			names_n.get_parent().add_child(chev)
 	host.add_child(cap_link)
 	var culture_link := CultureSheet.entry_row()
 	culture_link.pressed.connect(func(): _open_culture())
