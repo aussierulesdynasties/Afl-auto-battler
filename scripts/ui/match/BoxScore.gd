@@ -89,7 +89,7 @@ static func scoring(res: Dictionary) -> Array:
 			continue
 		out.append({"q": int(e.get("q", 1)), "min": int(e.get("min", 0)), "side": int(e.get("side", 0)),
 				"goal": kind == "goal", "id": str(e.get("player_id", "")), "name": str(e.get("name", "")),
-				"set": bool(e.get("setshot", false))})
+				"set": bool(e.get("setshot", false)) or bool(e.get("set", false))})
 	return out
 
 
@@ -460,6 +460,8 @@ class Worm extends Control:
 	const PAD := 6.0
 	const QUARTER := 30.0
 	var _box: BoxScore
+	# Emulated touch/mouse deliver one tap twice in a frame; take it once.
+	var _tap_frame := -1
 
 	func setup(box: BoxScore) -> void:
 		_box = box
@@ -549,6 +551,9 @@ class Worm extends Control:
 		else:
 			return
 		accept_event()
+		if _tap_frame == Engine.get_process_frames():
+			return
+		_tap_frame = Engine.get_process_frames()
 		# Near the lanes, the closest mark on that side (a fingertip wide).
 		if at.y >= PAD + CHART_H - 4.0:
 			var side := 0 if at.y < PAD + CHART_H + LANE_H else 1
