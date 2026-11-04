@@ -22,8 +22,8 @@ not needed.
 3. Uploads: upload the zip, and tick **This file will be played in the browser**.
 4. Embed options:
    - Viewport dimensions: 1280 x 720 (the desktop design size). Tick **Fullscreen button**.
-   - **Mobile friendly**: tick it, and set the orientation to **Default** (the game follows the
-     phone: portrait phone layout when held upright, wide layout when turned).
+   - **Mobile friendly**: tick it, and set the orientation to **Portrait** (the phone plays
+     portrait only; the game's first tap also puts the page fullscreen in portrait).
    - Leave "SharedArrayBuffer support" **off**. Leave "Automatically start on page load" off
      (itch then shows a Run game button; that tap is also what lets the browser play sound).
    - Tick **Click to launch in fullscreen** only if you want phones to start fullscreen.
