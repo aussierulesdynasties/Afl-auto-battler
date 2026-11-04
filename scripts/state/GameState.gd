@@ -631,14 +631,18 @@ func has_saved_career() -> bool:
 	return CareerSave.exists(save_path)
 
 
+## One sentence per line, so a narrow phone never leaves one word alone.
+const SAVE_UNREADABLE := "Your saved career could not be read.\nStarting a new career will overwrite it."
+
+
 ## Why a career file on disk cannot be continued, in the coach's words, or
 ## "" when there is nothing wrong (or no file at all).
 func saved_career_problem() -> String:
 	match CareerSave.problem(save_path):
 		"newer":
-			return "Your saved career was made by a newer version of the game. Update the game to continue it."
+			return "Your saved career is from a newer version.\nUpdate the game to keep playing it.\nStarting a new career will overwrite it."
 		"unreadable":
-			return "Your saved career could not be read. Start a new career to replace it."
+			return SAVE_UNREADABLE
 	return ""
 
 
