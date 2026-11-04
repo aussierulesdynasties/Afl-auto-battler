@@ -101,11 +101,12 @@ static func _loss(res: Dictionary, me: int, margin: int) -> String:
 static func _break_leads(res: Dictionary, me: int) -> Array:
 	var q: Array = res.get("quarters", [])
 	var s: Array = res.get("score", [0, 0])
-	if q.size() != 4:
+	if q.size() < 4:
 		return []
 	var tot := [0, 0]
 	var out := []
-	for i in range(4):
+	# Extra time (a fifth period) only counts toward the total.
+	for i in range(q.size()):
 		tot[0] += int(q[i][0])
 		tot[1] += int(q[i][1])
 		if i < 3:

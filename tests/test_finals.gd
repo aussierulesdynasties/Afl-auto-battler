@@ -23,6 +23,8 @@ func run() -> void:
 	_t("_test_interactive_finals_series")
 	_t("_test_simulated_finals_series")
 	_t("_test_extra_time")
+	_t("_test_extra_time_always_has_winner")
+	_t("_test_set_shots_in_scoring_log")
 	_t("_test_home_and_away_never_extra_time")
 	_t("_test_grand_final_at_the_mcg")
 	_t("_test_rest_of_week_in_background")
@@ -247,6 +249,44 @@ func _test_extra_time() -> void:
 		if int(ev["q"]) == 5:
 			ev_q5 += 1
 	_check(ev_q5 > 0, "Extra-time events are stamped as period 5")
+
+
+## Golden point past its cap still settles a final, and the periods
+## (four quarters plus extra time) add up to the final score.
+func _test_extra_time_always_has_winner() -> void:
+	for seed in range(1, 1500):
+		var sim := _new_sim(seed)
+		sim.finals_mode = true
+		sim.golden_point_chains = 0
+		var res := sim.run()
+		if not bool(res["extra_time"]):
+			continue
+		_check(int(res["winner"]) != -1, "A final never ends in a draw")
+		var qs: Array = res["quarters"]
+		_check(qs.size() == 5, "Extra time is its own period in quarters")
+		var tot := [0, 0]
+		for q in qs:
+			tot[0] += int(q[0])
+			tot[1] += int(q[1])
+		_check(tot[0] == int(res["score"][0]) and tot[1] == int(res["score"][1]),
+				"Quarters add up to the final score after extra time")
+		_check(Headlines._break_leads(res, 0).size() == 3, "Break leads survive extra time")
+		return
+	_check(false, "A level final turns up within 1,500 seeds")
+
+
+## Every set-shot score is flagged as a set shot in the scoring log.
+func _test_set_shots_in_scoring_log() -> void:
+	var res := _new_sim(7).run()
+	var set_scores := 0
+	for e in res["events"]:
+		if ["goal", "behind"].has(str(e["kind"])) and bool(e.get("set", false)):
+			set_scores += 1
+	var logged := 0
+	for s in res["scoring"]:
+		logged += int(s[5])
+	_check(set_scores > 0, "A match has set-shot scores")
+	_check(logged >= set_scores, "Set-shot scores are flagged in the scoring log")
 
 
 ## Regular matches never go to extra time and keep four periods.
