@@ -1422,8 +1422,7 @@ func _test_club_ink_all() -> void:
 				continue
 			var src := FileAccess.get_file_as_string(dir_path + "/" + f)
 			var n_line := 0
-			for ln in src.split("
-"):
+			for ln in src.split("\n"):
 				n_line += 1
 				var t: String = ln.strip_edges()
 				if t.begins_with("#"):
