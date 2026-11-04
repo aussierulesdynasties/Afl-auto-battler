@@ -234,16 +234,17 @@ static func scroll(child: Control) -> ScrollContainer:
 	return s
 
 
-## A scrolling body that says there is more: a soft fade, `h` tall, at the top
-## once it has scrolled and at the bottom while there is more below, so no line
-## is ever cut hard at the edge. The scroll is wrapped (it keeps its place in
-## its parent); `tint` is the colour already under the top of the sheet (its
-## wash), so the fade meets it. Returns the wrapper.
-static func edge_fade(sc: ScrollContainer, tint := Color(0, 0, 0, 0), h := 16.0) -> Control:
+## A scrolling body that says there is more. No line is ever drawn half
+## transparent: the scroll clips hard, 24 px above whatever sits below it, and
+## in that clear strip a plain "Scroll for more" (full text colour) shows while
+## there is more below. The scroll is wrapped (it keeps its place in its
+## parent). `tint` and `h` are kept for callers; nothing is faded now.
+static func edge_fade(sc: ScrollContainer, _tint := Color(0, 0, 0, 0), _h := 28.0) -> Control:
 	var parent := sc.get_parent()
 	var idx := sc.get_index()
-	var holder := MarginContainer.new()
+	var holder := VBoxContainer.new()
 	holder.name = "EdgeFade"
+	holder.add_theme_constant_override("separation", 0)
 	holder.size_flags_horizontal = sc.size_flags_horizontal
 	holder.size_flags_vertical = sc.size_flags_vertical
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -251,28 +252,30 @@ static func edge_fade(sc: ScrollContainer, tint := Color(0, 0, 0, 0), h := 16.0)
 	parent.add_child(holder)
 	parent.move_child(holder, idx)
 	holder.add_child(sc)
-	var veil := Control.new()
-	veil.name = "FadeVeil"
-	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	holder.add_child(veil)
-	var top_col := PANEL.lerp(Color(tint, 1.0), tint.a) if tint.a > 0.0 else PANEL
-	veil.draw.connect(func() -> void:
-		var w := veil.size.x
+	var hint := Label.new()
+	hint.name = "ScrollHint"
+	hint.text = "Scroll for more"
+	hint.add_theme_font_override("font", FONT)
+	hint.add_theme_font_size_override("font_size", SMALL)
+	hint.add_theme_color_override("font_color", TEXT)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(hint)
+	var refresh := func() -> void:
 		var bar := sc.get_v_scroll_bar()
-		var top_a := clampf(float(sc.scroll_vertical) / h, 0.0, 1.0)
-		var left := bar.max_value - bar.page - float(sc.scroll_vertical)
-		var bot_a := clampf(left / h, 0.0, 1.0)
-		if top_a > 0.0:
-			veil.draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
-					PackedColorArray([Color(top_col, top_a), Color(top_col, top_a), Color(top_col, 0), Color(top_col, 0)]))
-		if bot_a > 0.0:
-			var y := veil.size.y
-			veil.draw_polygon(PackedVector2Array([Vector2(0, y - h), Vector2(w, y - h), Vector2(w, y), Vector2(0, y)]),
-					PackedColorArray([Color(PANEL, 0), Color(PANEL, 0), Color(PANEL, bot_a), Color(PANEL, bot_a)])))
-	sc.get_v_scroll_bar().value_changed.connect(func(_v: float) -> void: veil.queue_redraw())
-	sc.get_v_scroll_bar().changed.connect(func() -> void: veil.queue_redraw())
-	veil.resized.connect(veil.queue_redraw)
+		var more := bar.max_value - bar.page - float(sc.scroll_vertical) > 4.0
+		# The clear strip exists only when the body scrolls at all.
+		hint.visible = bar.max_value > bar.page + 1.0
+		hint.custom_minimum_size.y = SCROLL_END_GAP
+		hint.text = "Scroll for more" if more else ""
+	sc.get_v_scroll_bar().value_changed.connect(func(_v: float) -> void: refresh.call())
+	sc.get_v_scroll_bar().changed.connect(func() -> void: refresh.call())
+	refresh.call()
 	return holder
+
+
+const SCROLL_END_GAP := 24   # clear strip under a scrolling body, in units
 
 
 ## A swipe that starts on a button must scroll the page, not stop at the button:
@@ -618,14 +621,17 @@ static func club_name_colour(ink: Color) -> Color:
 ## and guernsey), with `right` (a column heading, say) at the end. Pass `ink`
 ## from club_ink_pair on a screen with two sides. The heading row only; pair it
 ## with club_section_body for the bar.
-static func club_heading(code: String, right: Control = null, fs := NAME, marker := 22.0, ink := Color(0, 0, 0, 0)) -> HBoxContainer:
+static func club_heading(code: String, right: Control = null, fs := NAME, marker := 22.0, ink := Color(0, 0, 0, 0), plain_name := false, show_name := true) -> HBoxContainer:
 	if ink.a == 0.0:
 		ink = club_ink(code)
 	var h := hbox(6)
 	h.add_child(club_marker(code, marker))
-	var n := ellipsis(GameDB.club_name(code), fs, club_name_colour(ink), true)
-	n.name = "ClubName"
-	h.add_child(n)
+	if show_name:
+		# plain_name: white text, the club's colour kept for the bar and the
+		# crest (a vote list, where a tinted name could pass for a button).
+		var n := ellipsis(GameDB.club_name(code), fs, TEXT if plain_name else club_name_colour(ink), true)
+		n.name = "ClubName"
+		h.add_child(n)
 	if right != null:
 		h.add_child(right)
 	return h
@@ -1544,7 +1550,7 @@ static func cover(parent: Control) -> ColorRect:
 ## Dialog that stays inside the viewport. Body scrolls; footer stays put.
 ## `wash` tints the top of the sheet; by default your club's colour (match
 ## day passes the opponent's, from `opponent_wash`).
-static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AUTO_COLOUR) -> Dictionary:
+static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AUTO_COLOUR, bottom := false) -> Dictionary:
 	var overlay := cover(parent)
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1553,12 +1559,20 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 		margin.add_theme_constant_override("margin_" + edge, 12)
 	overlay.add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var center := CenterContainer.new()
+	# bottom: the sheet sits at the foot of the screen (a bottom sheet), not centred.
+	var center: Container = VBoxContainer.new() if bottom else CenterContainer.new()
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(center)
+	if bottom:
+		var lift := Control.new()
+		lift.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lift.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		center.add_child(lift)
 	var shell := panel(PANEL, 16)
+	if bottom:
+		shell.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	# ui_motion: the sheet rises into place, which a Container would undo, so
 	# the panel sits on a plain Control the CenterContainer places by its size.
 	var rises := juice() and motion_on()
@@ -1566,6 +1580,8 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 		var wrap := Control.new()
 		wrap.name = "SheetRise"
 		wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if bottom:
+			wrap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		center.add_child(wrap)
 		wrap.add_child(shell)
 		var follow := func() -> void:

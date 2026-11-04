@@ -71,7 +71,8 @@ func _run() -> void:
 	scene.set("_finished", true)
 	scene.call("_show_fulltime")
 	await _frames(14)
-	await _frames(6)
+	# Let the result and the ladder move land (no half-faded text in a still).
+	await create_timer(2.2).timeout
 	await _shot("%s_%s_ft.png" % [out, club])
 	# Scrolled a little, to see the edge fades.
 	for sc in scene.find_children("*", "ScrollContainer", true, false):

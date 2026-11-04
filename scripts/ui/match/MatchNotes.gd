@@ -1052,9 +1052,11 @@ static func coaches_votes(res: Dictionary) -> Dictionary:
 ## The side's best by the coaches' votes, most votes first and the match
 ## rating breaking a tie, so the list reads as the ranking the votes make:
 ## [{id, name, line, rating, inf, votes}]. `line` is votes_line: his two
-## best numbers.
+## best numbers. Players with no vote are left out; n caps the rows (a large
+## n lists every player the coaches voted for).
 static func standouts_by_votes(res: Dictionary, side: int, n: int, votes: Dictionary) -> Array:
-	var ranked := rated_players(res, side)
+	# Only players a coach voted for: a row with no vote is no row.
+	var ranked := rated_players(res, side).filter(func(r): return votes.has(str(r["id"])))
 	ranked.sort_custom(func(a, b):
 		var va := int(votes.get(str(a["id"]), 0))
 		var vb := int(votes.get(str(b["id"]), 0))

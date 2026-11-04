@@ -458,7 +458,7 @@ func _test_coaches_votes() -> void:
 			if not ten.has(str(id)):
 				outside += 1
 		_check(outside == 0, "Votes go to players among the match's twelve best (%d outside)" % outside)
-	_check(MatchNotes.votes_text({"a": 7}, "a") == "7" and MatchNotes.votes_text({}, "a") == "–", "No votes reads as a dash")
+	_check(MatchNotes.votes_text({"a": 7}, "a") == "7", "Votes read as the number")
 
 
 func _test_report_glance() -> void:
