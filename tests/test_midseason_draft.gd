@@ -28,6 +28,12 @@ func _settle() -> void:
 		await _tree.process_frame
 
 
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
+
+
 func run(tree: SceneTree) -> void:
 	root = tree.root
 	_tree = tree
@@ -36,12 +42,12 @@ func run(tree: SceneTree) -> void:
 	checks = 0
 	root.size = Vector2i(390, 844)
 	GameState.replay_seed = SEED
-	_test_switch_off()
-	await _test_carnival_and_draft()
+	_t("_test_switch_off")
+	await _t("_test_carnival_and_draft")
 	_check(reached_end, "The carnival-and-draft test ran to its end")
 	Features.set_on(MidseasonDraft.SWITCH, false)
 	GameState.replay_seed = 0
-	print("Midseason draft: %d checks, %d failures" % [checks, failures.size()])
+	print(Ran.line("Midseason draft", self))
 
 
 func _new_career() -> void:
