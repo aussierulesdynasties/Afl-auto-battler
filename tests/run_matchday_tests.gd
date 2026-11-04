@@ -434,6 +434,22 @@ func _test_phone_match(sz: Vector2i) -> void:
 		await _settle()
 		_check(why_q == "" and says != null and says.text.begins_with("Q1:"),
 				"A finger on Q1 says the first quarter (%s: %s)" % [tag, why_q if why_q != "" else (says.text if says else "-")])
+		# One tap arrives as a touch and an emulated click in the same frame;
+		# the pick must stay picked, not toggle on then off.
+		var worm = bs.find_child("Worm", true, false) if bs != null else null
+		if worm != null:
+			bs._pick = {}
+			var touch := InputEventScreenTouch.new()
+			touch.pressed = true
+			touch.position = Vector2(worm.size.x * 0.5, 10.0)
+			var click := InputEventMouseButton.new()
+			click.pressed = true
+			click.button_index = MOUSE_BUTTON_LEFT
+			click.position = touch.position
+			worm._gui_input(touch)
+			worm._gui_input(click)
+		_check(worm != null and bs._pick.has("q"),
+				"One tap delivered as touch and click picks the quarter once (%s)" % tag)
 		var team_t: Node = sheet.find_child("TeamStats", true, false) if sheet != null else null
 		_check(team_t != null and team_t.find_child("TeamRow_disposals", true, false) != null,
 				"Team stats open first, both clubs side by side (%s)" % tag)
