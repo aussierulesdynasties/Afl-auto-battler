@@ -1,7 +1,7 @@
 extends SceneTree
 ## Coaches' votes at the half-time break and at full time, 390x844.
 ##   godot --path . --script tools/visual/capture_votes.gd -- --out <dir>/votes --club FRE --vs MEL [--seed 2050]
-## Writes <out>_<club>_ht.png (the break, scrolled to Best so far) and <out>_<club>_ft.png (full time).
+## Writes <out>_<club>_break.png, _ht.png (Best so far sheet), _ft.png (full time at rest) and _ft_scrolled.png.
 var _vp: SubViewport
 
 
@@ -54,6 +54,8 @@ func _run() -> void:
 	await _frames(24)
 	var open_best: Button = scene.find_child("BestSoFarOpen", true, false)
 	print("BestSoFarOpen found ", open_best != null)
+	await _frames(10)
+	await _shot("%s_%s_break.png" % [out, club])
 	if open_best != null:
 		open_best.emit_signal("pressed")
 	await _frames(14)
@@ -69,13 +71,14 @@ func _run() -> void:
 	scene.set("_finished", true)
 	scene.call("_show_fulltime")
 	await _frames(14)
-	var bp: Node = scene.find_child("BestPlayers", true, false)
-	print("BestPlayers found ", bp != null)
-	for s in scene.find_children("*", "ScrollContainer", true, false):
-		if bp != null and (s as Control).is_ancestor_of(bp):
-			(s as ScrollContainer).scroll_vertical = int((bp as Control).global_position.y - (s as Control).global_position.y + (s as ScrollContainer).scroll_vertical) - 60
 	await _frames(6)
 	await _shot("%s_%s_ft.png" % [out, club])
+	# Scrolled a little, to see the edge fades.
+	for sc in scene.find_children("*", "ScrollContainer", true, false):
+		if (sc as Control).is_visible_in_tree():
+			(sc as ScrollContainer).scroll_vertical = 300
+	await _frames(6)
+	await _shot("%s_%s_ft_scrolled.png" % [out, club])
 	quit()
 
 

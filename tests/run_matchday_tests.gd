@@ -495,7 +495,7 @@ func _test_phone_match(sz: Vector2i) -> void:
 	var verdict: Label = ft_box.find_child("Verdict", true, false) if ft_box != null else null
 	_check(verdict != null and (verdict.text.begins_with("Won by") or verdict.text.begins_with("Lost by")
 			or verdict.text == "Draw"), "Full time leads with the result (%s: %s)" % [tag, verdict.text if verdict else "-"])
-	for n in ["MatchFactors", "BestPlayers", "KeyStats", "FinalScore_0", "FinalScore_1", "StandoutRating"]:
+	for n in ["MatchFactors", "BestPlayers", "KeyStats", "FinalScore_0", "FinalScore_1", "StandoutVotes"]:
 		_check(ft_box != null and ft_box.find_child(n, true, false) != null, "Full time shows %s (%s)" % [n, tag])
 	_check(RegEx.create_from_string("\\bpts\\b").search(ft) == null and not ft.contains("Expected points")
 			and not ft.contains("Possession chains"),
@@ -947,51 +947,39 @@ func _test_best_so_far(sz: Vector2i) -> void:
 		_check((await Tap.tap(best_open)) == "" and (block as Control).is_visible_in_tree(),
 				"On a phone Best so far opens from the break with a real tap (%s)" % tag)
 		await _settle()
-	# The top three of each side, from the match's own player stats.
+	# The top three of each side, most coaches' votes first, the match rating
+	# breaking a tie; the subline is the player's two best stats.
+	var votes_all: Dictionary = notes.coaches_votes(res)
 	var want := []
 	for side in [me, 1 - me]:
-		var ranked := []
-		for p in (res["roster"] as Array)[side]:
-			var st: Dictionary = (res["players"] as Dictionary).get(str(p["id"]), {})
-			ranked.append([str(p["id"]), int(notes.rating(st)), int(float(st.get("disposals", 0.0)))])
-		ranked.sort_custom(func(a, b): return a[1] > b[1] or (a[1] == b[1] and a[2] > b[2]))
-		for r in ranked.slice(0, 3):
+		for r in notes.standouts_by_votes(res, side, 3, votes_all):
 			want.append(r)
 	var bad := []
 	var found := 0
 	for r in want:
-		var row: Node = block.find_child("BestRow_%s" % str(r[0]), true, false)
+		var row: Node = block.find_child("BestRow_%s" % str(r["id"]), true, false)
 		if row == null:
 			# A PC break drops the third of each side when it will not fit 720 high.
 			if not (sz.x >= 900 and want.find(r) % 3 == 2):
-				bad.append("missing " + str(r[0]))
+				bad.append("missing " + str(r["id"]))
 			continue
 		found += 1
-		var rating_l: Label = row.find_child("StandoutRating", true, false)
-		if rating_l == null or rating_l.text != str(r[1]):
-			bad.append("%s rating %s v %d" % [str(r[0]), rating_l.text if rating_l else "-", int(r[1])])
 		var votes_l: Label = row.find_child("StandoutVotes", true, false)
-		var want_votes: String = notes.votes_text(notes.coaches_votes(res), str(r[0]))
+		var want_votes: String = notes.votes_text(votes_all, str(r["id"]))
 		if votes_l == null or votes_l.text != want_votes:
-			bad.append("%s votes %s v %s" % [str(r[0]), votes_l.text if votes_l else "-", want_votes])
-		# ...and his stat line is the match's own numbers in words (game_line of
-		# result["players"], read now), not a second count.
-		var line_want: String = notes.game_line((res["players"] as Dictionary).get(str(r[0]), {}))
-		if sz.x >= 900:
-			# A PC column holds two numbers; a third would run off the line.
-			line_want = ", ".join(PackedStringArray(line_want.split(", ")).slice(0, 2))
-		var texts := []
-		for lb in row.find_children("*", "Label", true, false):
-			texts.append((lb as Label).text)
-		if not texts.has(line_want):
-			bad.append("%s line %s not shown" % [str(r[0]), line_want])
+			bad.append("%s votes %s v %s" % [str(r["id"]), votes_l.text if votes_l else "-", want_votes])
+		var line_l: Label = row.find_child("StandoutLine", true, false)
+		if line_l == null or line_l.text != str(r["line"]):
+			bad.append("%s line %s v %s" % [str(r["id"]), line_l.text if line_l else "-", str(r["line"])])
+		if row.find_child("StandoutRating", true, false) != null:
+			bad.append("%s still shows a rating" % str(r["id"]))
 	_check((found == want.size() or (sz.x >= 900 and found == 4)) and bad.is_empty(), "Best so far lists the best of each side with the match's own ratings (%s: %s)" % [tag, str(bad)])
 	# Each side under its own club name, even numbers each; on a phone the
 	# block sits below the controls, so the next quarter's choices are never
 	# pushed under the pinned Start button.
 	_check(block.find_child("BestClub_%d" % me, true, false) != null and block.find_child("BestClub_%d" % (1 - me), true, false) != null
 			and (found == 6 or (sz.x >= 900 and found == 4)), "Best so far has a heading per club and the same number each (%s: %d rows)" % [tag, found])
-	_check(block.find_children("RatingHeading", "Label", true, false).size() == 1, "Best so far says Rating once, not per club (%s)" % tag)
+	_check(block.find_children("RatingHeading", "Label", true, false).is_empty(), "Best so far carries no rating column (%s)" % tag)
 	_check(block.find_children("VotesHeading", "Label", true, false).size() == 1, "Best so far says Votes once, not per club (%s)" % tag)
 	var pair_inks: Array = load("res://scripts/ui/UiKit.gd").club_ink_pair(str(res["home"]), str(res["away"]))
 	# Allegiance: each side has its club-colour bar; its name and ratings are in
@@ -1015,9 +1003,13 @@ func _test_best_so_far(sz: Vector2i) -> void:
 			ally_bad.append("%s name is not in its ink (white for a red club)" % code)
 		if uk.contrast(ink, uk.BG) < 4.5:
 			ally_bad.append("%s name contrast %.1f" % [code, uk.contrast(ink, uk.BG)])
-		for rl in (bar.get_parent() as Node).find_children("StandoutRating", "Label", true, false):
+		for rl in (bar.get_parent() as Node).find_children("StandoutVotes", "Label", true, false):
 			if (rl as Label).get_theme_color("font_color") != uk.TEXT:
-				ally_bad.append("%s rating is not plain bold text" % code)
+				ally_bad.append("%s votes are not plain bold text" % code)
+		for sl in (bar.get_parent() as Node).find_children("StandoutLine", "Label", true, false):
+			var wash: Color = uk.PANEL.lerp(pair_inks[side], 0.3)
+			if uk.contrast((sl as Label).get_theme_color("font_color"), wash) < 4.5:
+				ally_bad.append("%s subline contrast %.1f" % [code, uk.contrast((sl as Label).get_theme_color("font_color"), wash)])
 	_check(ally_bad.is_empty(), "Best so far carries each club's colour, readable (%s: %s)" % [tag, str(ally_bad)])
 	# Nothing in the block is clipped: every label's text fits its width.
 	var clipped := []
@@ -1033,7 +1025,7 @@ func _test_best_so_far(sz: Vector2i) -> void:
 	if sz.x < 900 and plan_pick != null and best_open == null:
 		_check((plan_pick as Control).global_position.y < (block as Control).global_position.y,
 				"On a phone Best so far sits below the gameplan choices (%s)" % tag)
-	var all_b: Button = block.find_child("BestSoFarAll", true, false)
+	var all_b: Control = m.find_child("BestSoFarAll", true, false)
 	_check(all_b != null and (await Tap.tap(all_b)) == "", "All player stats takes a real tap (%s)" % tag)
 	await _settle()
 	var sheet: Node = m.find_child("BreakStatsSheet", true, false)

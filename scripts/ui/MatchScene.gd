@@ -771,7 +771,7 @@ func _show_coach_box() -> void:
 		bv.add_child(where)
 	else:
 		var sc := UiKit.lbl(MatchNotes.break_score(str(_res["home"]), str(_res["away"]),
-				_res.get("goals", [0, 0]), _res.get("behinds", [0, 0])), UiKit.NAME, UiKit.TEXT, true)
+				_res.get("goals", [0, 0]), _res.get("behinds", [0, 0]), not wide), UiKit.NAME, UiKit.TEXT, true)
 		sc.name = "BreakScore"
 		sc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		ClubDuel.on_colour(sc)
@@ -782,9 +782,9 @@ func _show_coach_box() -> void:
 		# The full numbers, both clubs, at every break (director's PC
 		# playtest, 2026-10-07): a tap, never a compulsory report.
 		# On a PC it is a word in the actions row, beside Skip to full time.
-		var stats := UiKit.text_action("Match stats", UiKit.BODY) if wide else UiKit.btn("Match stats", UiKit.BODY)
+		var stats := UiKit.text_action("Match stats", UiKit.BODY) if wide else UiKit.text_action("Match stats ›", UiKit.BODY)
 		stats.name = "BreakStats"
-		stats.custom_minimum_size = Vector2(0, 44)
+		stats.custom_minimum_size = Vector2(0, 48)
 		stats.pressed.connect(_show_break_stats)
 		if wide:
 			stats_pc = stats
@@ -1469,7 +1469,19 @@ func _mount_one_line(c: Dictionary) -> void:
 		var stats: Control = take.call("BreakStats")
 		var open_best := UiKit.text_action("Best so far ›", UiKit.BODY)
 		open_best.name = "BestSoFarOpen"
-		open_best.pressed.connect(func(): _open_break_sheet("best", "", [best, stats], store))
+		# In the sheet the two ways to the full numbers share one row of text
+		# links, not two more bars above Done.
+		var links := UiKit.hbox(8)
+		links.name = "BreakLinks"
+		var all_link: Control = best.find_child("BestSoFarAll", true, false) if best != null else null
+		for lk in [stats, all_link]:
+			if lk == null:
+				continue
+			if lk.get_parent() != null:
+				lk.get_parent().remove_child(lk)
+			lk.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			links.add_child(lk)
+		open_best.pressed.connect(func(): _open_break_sheet("best", "", [best, links], store))
 		head.add_child(open_best)
 		v.add_child(head)
 		for n in [facts, legs]:
@@ -1754,6 +1766,9 @@ func _open_break_sheet(node_name: String, title: String, parts: Array, home: Nod
 	var box := UiKit.modal_box(self, 640.0, 0.0, _wash())
 	var ov: Control = box["overlay"]
 	ov.name = "CallSheet_" + node_name
+	# The break behind a sheet is out of sight: nothing of it reads, or shows
+	# half-cut, past the sheet's edge.
+	(ov as ColorRect).color = Color(0, 0, 0, 0.95)
 	var v: VBoxContainer = box["body"]
 	if title != "":
 		var t := UiKit.heading(title, UiKit.H1)
@@ -1769,7 +1784,15 @@ func _open_break_sheet(node_name: String, title: String, parts: Array, home: Nod
 	done.name = "CallDone"
 	done.custom_minimum_size = Vector2(0, 48)
 	done.pressed.connect(_close_top_break_sheet)
+	# A club-colour button on a sheet washed in a club colour needs an edge.
+	for state in ["normal", "hover", "pressed", "hover_pressed"]:
+		var sb := done.get_theme_stylebox(state).duplicate() as StyleBoxFlat
+		sb.set_border_width_all(2)
+		sb.border_color = Color(UiKit.TEXT, 0.55)
+		done.add_theme_stylebox_override(state, sb)
 	box["footer"].add_child(done)
+	var wash_col := UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
+	UiKit.edge_fade(box["body"].get_parent() as ScrollContainer, Color(wash_col, 0.2))
 	var close := func() -> void:
 		for p in parts:
 			if p == null or not is_instance_valid(p):
@@ -2973,9 +2996,9 @@ func _best_so_far() -> Control:
 	var title := UiKit.section("Best so far")
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
-	var all := UiKit.btn("All player stats", UiKit.BODY)
+	var all := UiKit.text_action("All player stats" if _pc_break else "All player stats ›", UiKit.BODY)
 	all.name = "BestSoFarAll"
-	all.custom_minimum_size = Vector2(0, 24 if _pc_break else 44)
+	all.custom_minimum_size = Vector2(0, 24 if _pc_break else 48)
 	all.pressed.connect(func(): _show_break_stats(true))
 	# On a PC the way to the table sits in the heading row (shorter block: the
 	# fullest break still fits 1280x720); a phone has it under the list.
@@ -2993,61 +3016,11 @@ func _best_so_far() -> Control:
 	var votes := MatchNotes.coaches_votes(_res)
 	for side in [_my_side, 1 - _my_side]:
 		var code := str(_res["home"] if side == 0 else _res["away"])
-		var side_box := UiKit.vbox(4 if _pc_break else 6)
-		var rows_box := UiKit.vbox(BEST_ROW_GAP_PC if _pc_break else 8)
-		# The column heading is a label he can skip: quiet, lighter than the
-		# figures under it.
-		# Said once, in the first club's heading: both columns line up under it.
-		var rh: Control = null
-		if side == _my_side:
-			var heads := UiKit.hbox(0)
-			var vh := UiKit.lbl("Votes", UiKit.SECONDARY, UiKit.MUTED)
-			vh.name = "VotesHeading"
-			vh.custom_minimum_size.x = 30
-			vh.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-			heads.add_child(vh)
-			var rl := UiKit.lbl("Rating", UiKit.SECONDARY, UiKit.MUTED)
-			rl.name = "RatingHeading"
-			rl.custom_minimum_size.x = 56
-			rl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-			heads.add_child(rl)
-			rh = heads
-		var sh := UiKit.club_heading(code, rh, UiKit.BODY if _pc_break else UiKit.NAME, 20.0 if _pc_break else 22.0, inks[side])
-		sh.get_node("ClubName").name = "BestClub_%d" % side
-		side_box.add_child(sh)
-		var shown := 0
-		for p in MatchNotes.standouts(_res, side, 3):
-			shown += 1
-			var row := UiKit.hbox(8)
-			row.name = "BestRow_%s" % str(p["id"])
-			if _pc_break and shown == 3:
-				row.set_meta("best_third", true)
-			var col := UiKit.vbox(0)
-			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			var pn := UiKit.ellipsis(str(p["name"]), UiKit.BODY if _pc_break else UiKit.NAME, UiKit.club_name_colour(inks[side]), true)
-			pn.name = "StandoutName"
-			col.add_child(pn)
-			# A PC column is narrow: two numbers fit on the line, a third ran
-			# off it ("6 rebound 5...", capture 2026-10-12).
-			var bits: PackedStringArray = str(p["line"]).split(", ")
-			var line := ", ".join(bits.slice(0, 2)) if _pc_break else str(p["line"])
-			# Under the bold name, a step down in size and tone, still readable.
-			col.add_child(UiKit.ellipsis(line, UiKit.SECONDARY, UiKit.TEXT.lerp(UiKit.MUTED, 0.4)))
-			row.add_child(col)
-			# The coaches' votes so far (5-4-3-2-1 from each coach, either side).
-			row.add_child(_votes_figure(votes, str(p["id"]), 30))
-			# The figure says how well, in bold TEXT: the club colour says who, and
-			# a red or pink number would read as BAD beside the red Start button.
-			var r := UiKit.line(MatchNotes.rating_text(float(p["rating"])), 20, UiKit.TEXT, true)
-			r.name = "StandoutRating"
-			r.custom_minimum_size.x = 56
-			r.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-			row.add_child(r)
-			rows_box.add_child(row)
-		side_box.add_child(rows_box)
-		var wrap := UiKit.club_section_body(code, side_box, inks[side])
+		var players := MatchNotes.standouts_by_votes(_res, side, 3, votes)
+		var wrap := _votes_side(code, inks[side], players, votes, "", side == _my_side, _pc_break)
 		wrap.name = "BestSide_%d" % side
-		side_box.name = "BestSideBox_%d" % side
+		(wrap.find_child("ClubName", true, false) as Node).name = "BestClub_%d" % side
+		(wrap.get_child(1) as Node).name = "BestSideBox_%d" % side
 		box.add_child(wrap)
 	if not _pc_break:
 		box.add_child(all)
@@ -3609,6 +3582,8 @@ func _show_fulltime() -> void:
 	_ft_tabs.name = "ReviewTabs"
 	outer.add_child(_ft_tabs)
 	outer.move_child(_ft_tabs, 0)
+	var wash_col := UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
+	UiKit.edge_fade(box["body"].get_parent() as ScrollContainer, Color(wash_col, 0.2))
 
 	var home: String = _res["home"]
 	var away: String = _res["away"]
@@ -3655,7 +3630,7 @@ func _render_ft() -> void:
 		var key := str(t[0])
 		var b := UiKit.tab(str(t[1]), key == _ft_tab)
 		b.name = "ReviewTab_" + key
-		b.custom_minimum_size.y = 44
+		b.custom_minimum_size.y = 48
 		b.pressed.connect(func():
 			_ft_tab = key
 			_render_ft())
@@ -3767,6 +3742,11 @@ func _ft_summary(v: VBoxContainer) -> void:
 		row.add_child(UiKit.spacer(10))
 		v.add_child(row)
 
+	# Best players and the coaches' votes, first under the result (director's
+	# review 2026-11-04: they were below the fold). Yours first, then their
+	# best, each club in its colour with its crest.
+	_ft_best_players(v, me, mine, winner)
+
 	# The match story (switch "match_story"): the hero, the turning point and why.
 	if mine and MatchStory.on():
 		_ft_story(v, me)
@@ -3851,53 +3831,6 @@ func _ft_summary(v: VBoxContainer) -> void:
 			factors.add_child(gl)
 	v.add_child(factors)
 
-	# Best players: best on ground, then the rest of yours and their best.
-	v.add_child(UiKit.spacer(UiKit.GAP))
-	v.add_child(UiKit.section("Best players"))
-	var best_box := UiKit.vbox(6)
-	best_box.name = "BestPlayers"
-	# What the two figures are, said once: the coaches' votes (5-4-3-2-1 from
-	# each coach, up to 10) and the match rating.
-	var heads := UiKit.hbox(8)
-	var hsp := Control.new()
-	hsp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	heads.add_child(hsp)
-	var hv := UiKit.lbl("Votes", UiKit.SECONDARY, UiKit.MUTED)
-	hv.name = "VotesHeading"
-	hv.custom_minimum_size.x = 30
-	hv.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	heads.add_child(hv)
-	var hr := UiKit.lbl("Rating", UiKit.SECONDARY, UiKit.MUTED)
-	hr.name = "RatingHeading"
-	hr.custom_minimum_size.x = 44
-	hr.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	heads.add_child(hr)
-	var hgap := Control.new()
-	hgap.custom_minimum_size.x = 10
-	heads.add_child(hgap)
-	best_box.add_child(heads)
-	var first := me if mine else (winner if winner >= 0 else 0)
-	var ours := MatchNotes.standouts(_res, first, 3)
-	var theirs := MatchNotes.standouts(_res, 1 - first, 1)
-	var bog: Dictionary = ours[0] if not ours.is_empty() else {}
-	if not theirs.is_empty() and (bog.is_empty() or float(theirs[0]["inf"]) > float(bog["inf"])):
-		bog = theirs[0]
-	var votes := MatchNotes.coaches_votes(_res)
-	# Best on ground is the one the coaches rated highest of those listed (the
-	# rating breaks a tie), so the mark and the votes never disagree.
-	for p in ours + theirs:
-		var pv := int(votes.get(str(p["id"]), 0))
-		var bv := int(votes.get(str(bog.get("id", "")), 0)) if not bog.is_empty() else -1
-		if pv > bv or (pv == bv and float(p["inf"]) > float(bog.get("inf", -1.0))):
-			bog = p
-	for p in ours:
-		best_box.add_child(_standout_row(p, first, p == bog, votes))
-	if not theirs.is_empty():
-		best_box.add_child(UiKit.spacer(2))
-	for p in theirs:
-		best_box.add_child(_standout_row(p, 1 - first, p == bog, votes))
-	v.add_child(best_box)
-
 	# The coach's side of it: who needs a lift, and what to work on. Only
 	# for your match, and only what the result above does not already say.
 	if mine and (_res.get("quarter_teams", []) as Array).size() >= 2:
@@ -3950,41 +3883,114 @@ func _ft_summary(v: VBoxContainer) -> void:
 			v.add_child(week)
 
 
-## One standout: the name (marked if best on ground), his game in words and
-## his match rating at the end of the line.
-func _standout_row(p: Dictionary, side: int, best: bool, votes := {}) -> Control:
-	var h := UiKit.hbox(8)
-	var v := UiKit.vbox(0)
-	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(v)
-	var code := str(_res["home"] if side == 0 else _res["away"])
-	var name := "%s  ·  %s" % [str(p["name"]), GameDB.club_short(code)]
-	if best:
-		name += "  ·  best on ground"
-	v.add_child(UiKit.ellipsis(name, UiKit.BODY, UiKit.club_name_colour(UiKit.club_ink(code)), true))
-	v.add_child(UiKit.ellipsis(str(p["line"]), UiKit.SMALL, UiKit.MUTED))
-	h.add_child(_votes_figure(votes, str(p["id"]), 30))
-	var r := UiKit.line(MatchNotes.rating_text(float(p["rating"])), 20, UiKit.TEXT, true)
-	r.name = "StandoutRating"
-	r.tooltip_text = "Player rating for this match"
-	r.custom_minimum_size.x = 44
-	r.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	h.add_child(r)
-	# Clear of the scrollbar.
+## The votes lists at the break and at full time are one piece: a club's
+## crest and name in its colour, then its players best-voted first, each a name,
+## his two best numbers, and (for best on ground) a line of its own, with the
+## coaches' votes down the right in one fixed column. `bog_id` marks best on
+## ground. `say_header` puts the column's label, "Coaches' votes", in this
+## club's heading (said once per list).
+const VOTES_COL_W := 56.0
+const VOTES_GUTTER := 10.0
+
+
+func _votes_sub_ink() -> Color:
+	return UiKit.TEXT.lerp(UiKit.MUTED, 0.3)
+
+
+func _votes_side(code: String, ink: Color, players: Array, votes: Dictionary, bog_id: String, say_header: bool, pc := false) -> Control:
+	var side_box := UiKit.vbox(4 if pc else 6)
+	var rows_box := UiKit.vbox(BEST_ROW_GAP_PC if pc else 10)
+	var right: Control = null
+	if say_header:
+		right = _votes_header()
+	var sh := UiKit.club_heading(code, right, UiKit.BODY if pc else UiKit.NAME, 20.0 if pc else 26.0, ink)
+	side_box.add_child(sh)
+	var shown := 0
+	for p in players:
+		shown += 1
+		var row := UiKit.hbox(8)
+		row.name = "BestRow_%s" % str(p["id"])
+		if pc and shown == 3:
+			row.set_meta("best_third", true)
+		var col := UiKit.vbox(0)
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var pn := UiKit.lbl(str(p["name"]), UiKit.BODY if pc else UiKit.NAME, UiKit.club_name_colour(ink), true)
+		pn.name = "StandoutName"
+		pn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		col.add_child(pn)
+		var sub := UiKit.lbl(str(p["line"]), UiKit.SECONDARY, _votes_sub_ink())
+		sub.name = "StandoutLine"
+		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		col.add_child(sub)
+		if str(p["id"]) == bog_id:
+			var tag := UiKit.lbl("Best on ground", UiKit.SECONDARY, UiKit.TEXT, true)
+			tag.name = "BestOnGround"
+			col.add_child(tag)
+		row.add_child(col)
+		var fig := _votes_figure(votes, str(p["id"]))
+		fig.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		row.add_child(fig)
+		var gap := Control.new()
+		gap.custom_minimum_size.x = VOTES_GUTTER
+		row.add_child(gap)
+		rows_box.add_child(row)
+	side_box.add_child(rows_box)
+	return UiKit.club_section_body(code, side_box, ink)
+
+
+## "Coaches' votes", right-aligned over the figures it names.
+func _votes_header() -> Control:
+	var h := UiKit.hbox(0)
+	var l := UiKit.line("Coaches' votes", UiKit.SECONDARY, _votes_sub_ink())
+	l.name = "VotesHeading"
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	l.size_flags_horizontal = Control.SIZE_SHRINK_END
+	h.add_child(l)
 	var gap := Control.new()
-	gap.custom_minimum_size.x = 10
+	gap.custom_minimum_size.x = VOTES_GUTTER + 8.0   # the row's gutter and the gap before it
 	h.add_child(gap)
+	h.size_flags_horizontal = Control.SIZE_SHRINK_END
 	return h
 
 
-## A player's coaches' votes, bold and right-aligned, a dash when neither
-## coach voted for him. Plain text colour: club colour says who, not how well.
-func _votes_figure(votes: Dictionary, id: String, w: float) -> Label:
+## A player's coaches' votes, bold and right-aligned in a fixed column, a dash
+## when neither coach voted for him. Plain text colour: club colour says who,
+## not how well.
+func _votes_figure(votes: Dictionary, id: String) -> Label:
 	var l := UiKit.line(MatchNotes.votes_text(votes, id), 20, UiKit.TEXT, true)
 	l.name = "StandoutVotes"
-	l.custom_minimum_size.x = w
+	l.custom_minimum_size.x = VOTES_COL_W
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	return l
+
+
+## Best players, from the coaches' votes: your three best and their best,
+## most votes first (the match rating breaks a tie), best on ground marked.
+func _ft_best_players(v: VBoxContainer, me: int, mine: bool, winner: int) -> void:
+	v.add_child(UiKit.spacer(UiKit.GAP))
+	v.add_child(UiKit.section("Best players"))
+	var best_box := UiKit.vbox(10)
+	best_box.name = "BestPlayers"
+	var first := me if mine else (winner if winner >= 0 else 0)
+	var votes := MatchNotes.coaches_votes(_res)
+	var ours := MatchNotes.standouts_by_votes(_res, first, 3, votes)
+	var theirs := MatchNotes.standouts_by_votes(_res, 1 - first, 1, votes)
+	# Best on ground is the one the coaches voted highest of those listed, the
+	# rating breaking a tie, so the mark and the votes never disagree.
+	var bog: Dictionary = {}
+	for p in ours + theirs:
+		if bog.is_empty() or int(p["votes"]) > int(bog["votes"]) 				or (int(p["votes"]) == int(bog["votes"]) and float(p["inf"]) > float(bog["inf"])):
+			bog = p
+	var bog_id := str(bog.get("id", ""))
+	var inks := UiKit.club_ink_pair(str(_res["home"]), str(_res["away"]))
+	var n := 0
+	for side in [first, 1 - first]:
+		var code := str(_res["home"] if side == 0 else _res["away"])
+		var wrap := _votes_side(code, inks[side], ours if n == 0 else theirs, votes, bog_id, n == 0)
+		wrap.name = "BestSide_%d" % side
+		best_box.add_child(wrap)
+		n += 1
+	v.add_child(best_box)
 
 
 func _key_stats_view(me: int) -> Control:

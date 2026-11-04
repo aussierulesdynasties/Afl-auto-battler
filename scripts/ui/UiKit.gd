@@ -234,6 +234,47 @@ static func scroll(child: Control) -> ScrollContainer:
 	return s
 
 
+## A scrolling body that says there is more: a soft fade, `h` tall, at the top
+## once it has scrolled and at the bottom while there is more below, so no line
+## is ever cut hard at the edge. The scroll is wrapped (it keeps its place in
+## its parent); `tint` is the colour already under the top of the sheet (its
+## wash), so the fade meets it. Returns the wrapper.
+static func edge_fade(sc: ScrollContainer, tint := Color(0, 0, 0, 0), h := 16.0) -> Control:
+	var parent := sc.get_parent()
+	var idx := sc.get_index()
+	var holder := MarginContainer.new()
+	holder.name = "EdgeFade"
+	holder.size_flags_horizontal = sc.size_flags_horizontal
+	holder.size_flags_vertical = sc.size_flags_vertical
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.remove_child(sc)
+	parent.add_child(holder)
+	parent.move_child(holder, idx)
+	holder.add_child(sc)
+	var veil := Control.new()
+	veil.name = "FadeVeil"
+	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(veil)
+	var top_col := PANEL.lerp(Color(tint, 1.0), tint.a) if tint.a > 0.0 else PANEL
+	veil.draw.connect(func() -> void:
+		var w := veil.size.x
+		var bar := sc.get_v_scroll_bar()
+		var top_a := clampf(float(sc.scroll_vertical) / h, 0.0, 1.0)
+		var left := bar.max_value - bar.page - float(sc.scroll_vertical)
+		var bot_a := clampf(left / h, 0.0, 1.0)
+		if top_a > 0.0:
+			veil.draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
+					PackedColorArray([Color(top_col, top_a), Color(top_col, top_a), Color(top_col, 0), Color(top_col, 0)]))
+		if bot_a > 0.0:
+			var y := veil.size.y
+			veil.draw_polygon(PackedVector2Array([Vector2(0, y - h), Vector2(w, y - h), Vector2(w, y), Vector2(0, y)]),
+					PackedColorArray([Color(PANEL, 0), Color(PANEL, 0), Color(PANEL, bot_a), Color(PANEL, bot_a)])))
+	sc.get_v_scroll_bar().value_changed.connect(func(_v: float) -> void: veil.queue_redraw())
+	sc.get_v_scroll_bar().changed.connect(func() -> void: veil.queue_redraw())
+	veil.resized.connect(veil.queue_redraw)
+	return holder
+
+
 ## A swipe that starts on a button must scroll the page, not stop at the button:
 ## every button inside a scrolling page lets the drag reach the page (a tap
 ## still presses it). Buttons are set as they arrive, so a row built later is

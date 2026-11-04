@@ -275,6 +275,11 @@ func _test_full_time() -> void:
 				bad = str(p["line"])
 	_check(total > 12, "Matches produce reasons (%d)" % total)
 	_check(bad == "", "Full-time reasons are football, not a stat sheet or advice (%s)" % bad)
+	_check(MatchNotes.votes_line({"disposals": 30.0, "clearances": 12.0, "tackles": 2.0}) == "12 clearances, 30 disposals",
+			"A subline leads with the stat furthest above a good game")
+	_check(MatchNotes.votes_line({"goals": 1.0}) == "1 goal", "A single stat reads singular")
+	_check(MatchNotes.break_score("FRE", "MEL", [3, 2], [1, 0], true).length() < MatchNotes.break_score("FRE", "MEL", [3, 2], [1, 0]).length(),
+			"The break banner shortens to club short names")
 	_check(MatchNotes.game_line({"disposals": 31.0, "clearances": 8.0, "goals": 0.0}) == "31 disposals, 8 clearances",
 			"A midfielder's game in a few words")
 	_check(MatchNotes.game_line({"disposals": 12.0, "goals": 4.0}) == "4 goals", "A forward's game is his goals")
