@@ -1186,6 +1186,14 @@ func _test_ladder(sz: Vector2i) -> void:
 		_check(note == ("Side named for this round" if named else "Projected side: picked on match day"),
 				"The side says whether it is projected (%s: %s)" % [tag, note])
 		_fits(side, sz, "a club's side", tag)
+		var gap: Array = pitch_gap(builder)
+		print("PITCHGAP side %s %.1f %s" % [tag, float(gap[0]), str(gap[1])])
+		var off_ground: Array = pitch_off_ground(builder)
+		print("PITCHOFF side %s %s" % [tag, str(off_ground)])
+		print("PITCHSKEW side %s %s" % [tag, str(pitch_skew(builder))])
+		# 320 units: too narrow for three cards abreast inside the line.
+		_check(sz.x < 390 or off_ground.is_empty(), "Every card on the side's oval sits inside the boundary line (%s: %s)" % [tag, str(off_ground)])
+		_check(float(gap[0]) >= 8.0, "No two names on the side's oval come within 8 px (%s: %.1f px, %s)" % [tag, float(gap[0]), str(gap[1])])
 		# Every list card holds its own rating and its whole third line (critic
 		# 2026-11-04: on a PC the right column hid the left one's ratings and
 		# "Playmak…" was cut).
@@ -1526,6 +1534,76 @@ func _test_fixture_finals() -> void:
 
 
 ## No label in `node` runs off the screen at this size.
+## The closest two of a TeamBuilder's oval tokens (each name's card) come (the director, 2026-11-04: Howes and Pickett overlapped on a PC's
+## side sheet, Gawn and Sharp 2 px apart): [gap px, the two names].
+static func pitch_gap(builder: Node) -> Array:
+	var boxes := []
+	for c in builder.find_children("*", "Control", true, false):
+		if not c.has_meta("spot") or not (c as Control).is_visible_in_tree():
+			continue
+		var box: Rect2 = (c as Control).get_global_rect()
+		var who := ""
+		for l in c.find_children("*", "Label", true, false):
+			if who == "" and (l as Label).text.strip_edges() != "":
+				who = (l as Label).text
+		if who != "":
+			boxes.append([box, who])
+	var best := [INF, []]
+	for i in range(boxes.size()):
+		for j in range(i + 1, boxes.size()):
+			var p: Rect2 = boxes[i][0]
+			var q: Rect2 = boxes[j][0]
+			var dx := maxf(q.position.x - p.end.x, p.position.x - q.end.x)
+			var dy := maxf(q.position.y - p.end.y, p.position.y - q.end.y)
+			var g := maxf(dx, dy)
+			if g < float(best[0]):
+				best = [g, [boxes[i][1], boxes[j][1]]]
+	return best
+
+
+## Cards whose corners cross the oval's white boundary (the line is drawn on
+## the pitch's rect inset 2 px): [names] of any corner outside it.
+static func pitch_off_ground(builder: Node) -> Array:
+	var off := []
+	for c in builder.find_children("*", "Control", true, false):
+		if not c.has_meta("spot") or not (c as Control).is_visible_in_tree():
+			continue
+		var pitch: Control = c.get_parent()
+		var g := Rect2(Vector2.ZERO, pitch.size).grow(-3.0)
+		var k := c as Control
+		for corner in [k.position, k.position + Vector2(k.size.x, 0), k.position + Vector2(0, k.size.y), k.position + k.size]:
+			var q: Vector2 = (corner - g.get_center()) / (g.size * 0.5)
+			if q.length_squared() > 1.0:
+				off.append(str(c.get_meta("spot")))
+				break
+	return off
+
+
+## How far the left and right twins (BPL/BPR, HBFL/HBFR, IL/IR, WL/WR,
+## HFFL/HFFR, FPL/FPR) sit from mirror images of each other, in px: [px, key].
+static func pitch_skew(builder: Node) -> Array:
+	var at := {}
+	var pitch: Control = null
+	for c in builder.find_children("*", "Control", true, false):
+		if c.has_meta("spot") and (c as Control).is_visible_in_tree():
+			at[str(c.get_meta("spot"))] = (c as Control).position + (c as Control).size * 0.5
+			pitch = c.get_parent()
+	var worst := [0.0, ""]
+	if pitch == null:
+		return worst
+	var mid: Vector2 = pitch.size * 0.5
+	for k in ["BP", "HBF", "I", "W", "HFF", "FP"]:
+		if not at.has(k + "L") or not at.has(k + "R"):
+			continue
+		var a: Vector2 = at[k + "L"] - mid
+		var b: Vector2 = at[k + "R"] - mid
+		# Twins mirror across the ground's length: one coordinate equal, the other opposite.
+		var d := minf(absf(a.x + b.x) + absf(a.y - b.y), absf(a.x - b.x) + absf(a.y + b.y))
+		if d > float(worst[0]):
+			worst = [d, k]
+	return worst
+
+
 func _fits(node: Node, sz: Vector2i, what: String, tag: String) -> void:
 	var off := []
 	for c in node.find_children("*", "Label", true, false):
@@ -1594,6 +1672,14 @@ func _test_awards_races() -> void:
 					"The profile is gone, and the next Back leaves (%s)" % tag)
 		# The projected team on the oval: 18 spots and five on the bench, filled.
 		var team: Node = s.find_child("AATeam", true, false)
+		if team != null:
+			var agap: Array = pitch_gap(team)
+			print("PITCHGAP aa %s %.1f %s" % [tag, float(agap[0]), str(agap[1])])
+			var aoff: Array = pitch_off_ground(team)
+			print("PITCHOFF aa %s %s" % [tag, str(aoff)])
+			print("PITCHSKEW aa %s %s" % [tag, str(pitch_skew(team))])
+			_check(aoff.is_empty(), "Every card on the All-Australian oval sits inside the boundary line (%s: %s)" % [tag, str(aoff)])
+			_check(float(agap[0]) >= 8.0, "No two names on the All-Australian oval come within 8 px (%s: %.1f px, %s)" % [tag, float(agap[0]), str(agap[1])])
 		var spots := []
 		if team != null:
 			for c in team.find_children("*Spot_*", "Button", true, false):
