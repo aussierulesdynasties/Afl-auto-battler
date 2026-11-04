@@ -609,6 +609,8 @@ func _layout() -> void:
 ## menu itself Back does nothing.
 func handle_back() -> bool:
 	if is_instance_valid(_guide_overlay):
+		if StatGuide.back(_guide_overlay):
+			return true
 		_guide_overlay.queue_free()
 		_guide_overlay = null
 		return true
