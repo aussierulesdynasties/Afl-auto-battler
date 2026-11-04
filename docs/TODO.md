@@ -1,6 +1,6 @@
 ﻿# TODO: everything not done yet
 
-The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call; nothing ships on without his playtest. Updated 2026-11-04 against main `7578eca1`.
+The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call; nothing ships on without his playtest. Updated 2026-11-04 against main `7af1db8f`. Live on itch: 1.0.2 (7af1db8).
 
 ## Itch builds: when a new upload is worth it
 
@@ -117,7 +117,7 @@ Order is I1 first (it is already built and only needs his playtest), I2 before a
 - Deferred by ruling: weather at the quarter break, announce the cap step, league rule changes.
 
 ## In flight
-This rulings PR. Unmerged branch: `claude/comeback-audit-row42` (row 42).
+Nothing open. Unmerged branch: `claude/comeback-audit-row42` (row 42).
 
 ## Working rules
 - One Godot process per agent at a time, off-screen, own user data (`APPDATA=<scratch dir>`); kill only your own PIDs.
