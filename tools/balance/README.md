@@ -22,6 +22,10 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "-
 - **Report.** `balance_report.py` prints a markdown page (also saved to `<run>/report.md`): each stat per
   team-match against `afl_team_rates.json` (IN = inside the 18 clubs' lowest..highest, NEAR = within
   mean +-2 sd, OUT), plus margins, 60+/100+ blowouts, home win share against docs/LEAGUE_BALANCE.md.
+  It also prints key forward v key defender contests per duel per match (row 94), from each match's
+  `duels` rows ([contests, marks, most v one defender, MatchNotes.duel_verdict]): mean, median, share on
+  6+ contests, share with a full-time line (4+), forward marks and the beat / even / held split, and
+  for a paired run contests per duel B-A with its se.
 - **Runs** land in `.balance/<timestamp>/` (git-ignored, `.gdignore`d).
 
 ## When to use it

@@ -40,6 +40,49 @@ def margins(rows):
     return m, h
 
 
+def duel_section(A, B):
+    """Key forward v key defender (row 94): contests per duel per match from the
+    engine's duel log, as the full-time line reads them. A duel is one key
+    forward's match: [contests, marks, most against one defender, verdict]."""
+    if not any("duels" in r for r in A.values()):
+        return
+    arms = [("A", A)] + ([("B", B)] if B else [])
+    stats = {}
+    for name, R in arms:
+        rows = [d for r in R.values() for d in r.get("duels", [])]
+        n = max(1, len(rows))
+        c = sorted(d[0] for d in rows)
+        stats[name] = {
+            "contests": st.mean(c) if c else 0.0,
+            "median": st.median(c) if c else 0.0,
+            "pair": st.mean(d[2] for d in rows) if rows else 0.0,
+            "6+": 100 * sum(d[0] >= 6 for d in rows) / n,
+            "shown": 100 * sum(d[0] >= 4 for d in rows) / n,
+            "mark%": 100 * sum(d[1] for d in rows) / max(1, sum(c)),
+            "beat": 100 * sum(d[0] >= 4 and d[3] > 0 for d in rows) / n,
+            "even": 100 * sum(d[0] >= 4 and d[3] == 0 for d in rows) / n,
+            "held": 100 * sum(d[0] >= 4 and d[3] < 0 for d in rows) / n,
+            "duels": len(rows)}
+    print("\n## Key forward v key defender (contests per duel per match)\n")
+    print("A duel is one key forward's match against his direct opponent(s), from MatchSim.duel_log "
+          "(what the full-time line counts; MatchNotes shows a line from 4 contests). "
+          "beat / even / held: the line's verdict, as a share of all duels.\n")
+    head = "| arm | duels | contests mean | median | v one defender | 6+ contests | line shown (4+) | forward marks | beat / even / held |"
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for name, _ in arms:
+        s = stats[name]
+        print(f"| {name} | {s['duels']} | {s['contests']:.2f} | {s['median']:.0f} | {s['pair']:.2f} | {s['6+']:.0f}% | "
+              f"{s['shown']:.0f}% | {s['mark%']:.1f}% | {s['beat']:.0f} / {s['even']:.0f} / {s['held']:.0f} |")
+    if B:
+        def per(R):
+            return {i: st.mean(d[0] for d in r["duels"]) for i, r in R.items() if r.get("duels")}
+        a, b = per(A), per(B)
+        d = [b[i] - a[i] for i in a if i in b]
+        if len(d) > 1:
+            print(f"\nContests per duel B-A {st.mean(d):+.2f} (se {st.stdev(d) / math.sqrt(len(d)):.2f}, paired by seed).")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -96,6 +139,7 @@ def main():
               f"draws {100*sum(x == 0 for x in m)/n:.1f}%, home win {100*sum(x > 0 for x in h)/n:.1f}%, home margin {st.mean(h):+.1f} "
               f"(se {st.stdev(h)/math.sqrt(n):.1f})")
     print("\nReal AFL (docs/LEAGUE_BALANCE.md): 60+ about 15.5%, 100+ about 1.9%, home win 59.3%.")
+    duel_section(A, B)
     print(f"\nOUT of real range (A): {', '.join(outs) if outs else 'none'}")
 
 

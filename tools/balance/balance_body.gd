@@ -35,6 +35,34 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 			var t: Dictionary = (r["team"][side] as Dictionary).duplicate()
 			t["score"] = int(r["score"][side])
 			teams.append(t)
-		fh.store_line(JSON.stringify({"i": i, "home": h, "away": a, "teams": teams}))
+		fh.store_line(JSON.stringify({"i": i, "home": h, "away": a, "teams": teams, "duels": duels(sim, r)}))
 	fh.close()
 	return 0
+
+
+## Key forward v key defender (row 94): one row per key forward who had a
+## direct opponent, contests from the engine's duel log (what the full-time
+## line reads). [contests, marks, most contests against one defender,
+## MatchNotes.duel_verdict over the match]. A key forward with none is a 0 row.
+func duels(sim: MatchSim, r: Dictionary) -> Array:
+	var log: Dictionary = r.get("duels", {})
+	var ids := {}
+	for side in range(2):
+		for fid in (sim.duels[side] as Dictionary):
+			ids[str(fid)] = true
+	for fid in log:
+		ids[str(fid)] = true
+	var out := []
+	for fid in ids:
+		var n := 0
+		var won := 0
+		var per := {}
+		for c in (log.get(fid, {}) as Dictionary).get("contests", []):
+			n += 1
+			won += 1 if bool(c[2]) else 0
+			per[str(c[1])] = int(per.get(str(c[1]), 0)) + 1
+		var top := 0
+		for d in per:
+			top = maxi(top, int(per[d]))
+		out.append([n, won, top, MatchNotes.duel_verdict(won, n)])
+	return out
