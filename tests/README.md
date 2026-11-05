@@ -94,6 +94,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `match_visual` | The live match view is presentation only (PitchView, MatchDirector, MatchMotion) |
 | `league_balance` | Smoke checks for the balance harness in `tools/balance` |
 | `calibration` | The engine against real 2026 numbers (seeded matches) |
+| `back_carries` | Back-zone carrying (row 92, switch `back_carries`): a defender takes less of his back zone's ball, other zones unchanged (seeded) |
 | `balance` | A long-career guard: three seasons must not inflate the league |
 | `decision_scenes` | The in-match calls (tired, duel, hot, momentum, set shot) opening on a vignette scene behind the default-off `decision_scenes` switch: real players in their own kits, ball only at a palm, sheet frames in range, text card when off, a real tap on the call |
 | `assets` | The art and music as shipped: figure-sheet frames against the layout, vignettes playing their moves through, banners, music files, levels and the player |
