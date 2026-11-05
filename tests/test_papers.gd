@@ -246,7 +246,9 @@ func _test_answers() -> void:
 
 
 func _test_reckoning() -> void:
-	_career()
+	# A club that is not on top after nine rounds, so it can be behind the 1st it named
+	# (Fremantle's start depends on every rating in the league, draftees included).
+	_career("WCE")
 	_to_papers()
 	_force("finish")
 	GameState.papers_answer(2)
