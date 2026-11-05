@@ -96,6 +96,8 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 			"For playtesting: the centre ball-up call comes at the first centre ball-up of every last quarter you coach, whatever the score.",
 			func(k): GameState.set_bounce_scene_every_match(k == "on"))
 
+	_saves(v, overlay, host)
+
 	if in_career:
 		v.add_child(UiKit.spacer(UiKit.GAP))
 		v.add_child(UiKit.rule())
@@ -186,3 +188,105 @@ static func _row(v: VBoxContainer, title: String, node_name: String, options: Ar
 	var l := UiKit.lbl(note, UiKit.SMALL, UiKit.MUTED)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(l)
+
+
+## Backups and earlier saves (row 57): write the career to a file the coach
+## keeps, load one back, or go back to one of the last few saves. Loading or
+## restoring keeps the career it replaces as an earlier save, so each can be
+## undone from the same list.
+const SAVES_INFO := "Back up writes your career to a file you keep, to move it to another device or keep it safe. Loading a backup or an earlier save keeps the career it replaces in the list below, so you can go back."
+
+
+static func _saves(v: VBoxContainer, overlay: Control, host: Control) -> void:
+	var box := UiKit.vbox(6)
+	box.name = "SettingsSaves"
+	v.add_child(UiKit.spacer(UiKit.GAP))
+	v.add_child(UiKit.rule())
+	box.add_child(UiKit.lbl("Your career saves", UiKit.NAME, UiKit.TEXT, true))
+	var info := UiKit.detail(SAVES_INFO)
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(info)
+	var status := UiKit.lbl("", UiKit.BODY, UiKit.TEXT)
+	status.name = "SavesStatus"
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status.visible = false
+	var say := func(text: String, bad: bool):
+		status.text = text
+		status.add_theme_color_override("font_color", UiKit.BAD if bad else UiKit.TEXT)
+		status.visible = text != ""
+	# Mid-match the career cannot change under the match.
+	var locked := not GameState.pending_match.is_empty()
+	var row := UiKit.hbox(8)
+	var backup_btn := UiKit.btn("Back up career", UiKit.NAME)
+	backup_btn.name = "SavesExport"
+	backup_btn.custom_minimum_size = Vector2(0, 44)
+	backup_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	backup_btn.disabled = locked or not (GameState.has_career() or GameState.has_saved_career())
+	backup_btn.pressed.connect(func():
+		var bytes := GameState.export_career()
+		if bytes.is_empty():
+			say.call("There is no saved career to back up yet.", true)
+			return
+		SaveFiles.save_to_device(host, bytes, GameState.export_file_name(), func(ok: bool):
+			say.call("Backed up." if ok else "The backup could not be written there.", not ok)))
+	row.add_child(backup_btn)
+	var import_btn := UiKit.btn("Load a backup", UiKit.NAME)
+	import_btn.name = "SavesImport"
+	import_btn.custom_minimum_size = Vector2(0, 44)
+	import_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	import_btn.disabled = locked
+	import_btn.pressed.connect(func():
+		SaveFiles.pick_from_device(host, func(bytes: PackedByteArray):
+			var why := GameState.import_career(bytes)
+			if why != "":
+				say.call(why, true)
+				return
+			_open_saved(overlay, say)))
+	row.add_child(import_btn)
+	box.add_child(row)
+	var earlier := GameState.saved_career_history()
+	if not earlier.is_empty():
+		box.add_child(UiKit.lbl("Earlier saves", UiKit.BODY, UiKit.TEXT, true))
+		for meta in earlier:
+			var line := UiKit.hbox(8)
+			line.name = "EarlierSave%d" % int(meta["slot"])
+			var what := UiKit.lbl(_save_line(meta), UiKit.BODY, UiKit.TEXT)
+			what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			line.add_child(what)
+			var go := UiKit.btn("Restore", UiKit.NAME)
+			go.name = "Restore"
+			go.custom_minimum_size = Vector2(110, 44)
+			go.disabled = locked
+			var slot := int(meta["slot"])
+			go.pressed.connect(func():
+				if not GameState.restore_saved_career(slot):
+					say.call("That save could not be read. Your career is unchanged.", true)
+					return
+				_open_saved(overlay, say))
+			line.add_child(go)
+			box.add_child(line)
+	box.add_child(status)
+	v.add_child(box)
+
+
+## "Fremantle · 2027 · Round 6 · saved 5 Nov 14:02"
+static func _save_line(meta: Dictionary) -> String:
+	var bits: PackedStringArray = []
+	for k in ["club_name", "year", "stage"]:
+		if str(meta.get(k, "")) != "":
+			bits.append(str(meta[k]))
+	var at := str(meta.get("saved_at", ""))
+	if at.length() >= 16:
+		bits.append("saved " + at.substr(0, 10) + " " + at.substr(11, 5))
+	return "  ·  ".join(bits)
+
+
+## The save on disk is now the one chosen: open it where it stands.
+static func _open_saved(overlay: Control, say: Callable) -> void:
+	if not GameState.load_career():
+		say.call(GameState.SAVE_UNREADABLE, true)
+		return
+	if is_instance_valid(overlay):
+		overlay.queue_free()
+	Router.go("hub" if GameState.season != null else "draft")
