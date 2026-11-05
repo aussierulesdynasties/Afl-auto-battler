@@ -1876,10 +1876,12 @@ func finish_intake_draft() -> bool:
 			p["draft_round"] = int(entry.get("round", 0))
 			_mark_drafted(p, "national", int(entry.get("pick", 0)))
 			Contracts.rookie_deal(p, season_year + 1)
-			if not opening_draft:
+			if not opening_draft and season != null and season.lists.has(code):
 				# The yearly draft's rookies are ticked at this rollover
-				# (_close_contracts), so they are stored as years + 1 like
-				# _resign: two full seasons, as the opening draft gives.
+				# (_close_contracts ticks season.lists), so they are stored as
+				# years + 1 like _resign: two full seasons, as the opening
+				# draft gives. A club still building (ExpansionBuild) drafts
+				# into a list the tick never reaches: it keeps the plain deal.
 				p["contract_years"] = Contracts.ROOKIE_YEARS + 1
 			# The opening draft has no season wrap of its own: its picks must
 			# not turn up in the next year's wrap.

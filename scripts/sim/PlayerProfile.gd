@@ -190,7 +190,7 @@ static func player_type(p: Dictionary) -> String:
 		var total := 0.0
 		var score := 0.0
 		for key in w:
-			score += float(w[key]) * percentile(p, key)
+			score += float(w[key]) * percentile(p, key, true)  # engine-facing (Matchups): strict
 			total += float(w[key])
 		score /= maxf(0.001, total)
 		# A small forward stays small: a strong mark reads as a key forward.
