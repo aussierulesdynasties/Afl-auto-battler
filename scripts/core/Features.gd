@@ -127,7 +127,12 @@ extends RefCounted
 ##               overlooked), his debut, club moves and delistings, each season's games and
 ##               goals, and the end of his career. Reads only: no draft, list or rating change.
 ##               Off, nothing is shown, written or saved.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list"]
+##   set_shots   row 77 (director ruling T8.Q9): set shots rise to about 55% of shots. Most
+##               marks inside 50 go back and kick (MatchSim.SET_SHARE_ON), each spot converts
+##               at the real AFL rate for its distance (SET_BANDS_ON), and the general-play
+##               shot off an unmarked entry comes less often (SET_GP_SHOT) so total scoring
+##               holds. Changes match output. Off, a match is exactly as before.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "set_shots"]
 
 static var _forced := {}
 static var _from_args := {}

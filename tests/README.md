@@ -85,6 +85,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `story` | The week's story cards: the deck's checks, cooldowns, arcs, trust, ten seasons of repeats, the save round trip, cards never moving the dice |
 | `nameink` | A player's name in running text wears his club's ink: the index from the lists, the markup, every club's ink readable on dark, the match feed and goal rows carrying both clubs' colours |
 | `match_game` | Legs and rotations, match moments and calls, the rival coach, key match-ups, Play through by job |
+| `set_shots` | Set shots behind the switch `set_shots` (row 77): off keeps the old bands and share; on, a closer set shot converts more than a longer one, the set-shot share rises toward the real 55% and the score a team holds; the shot log the balance harness reads has every shot and goal |
 | `pressure` | Pressure acts and the team Pressure Rating |
 | `workload` | Workload across the campaign |
 | `fitness` | Season conditioning: each plan's curve, the high-performance department, late changes, AI plans by phase, the save, the plan screens in words and real taps |

@@ -1,7 +1,8 @@
 extends RefCounted
 ## Body of tools/balance/balance_worker.gd (loaded after autoloads are ready).
 ## Seed i: two real 2026 club lists picked from i, home side alternating, match
-## seed 500000 + i. One JSON line per match: score, margin and every team stat.
+## seed 500000 + i. One JSON line per match: score, margin, every team stat and
+## the shot counts (_shot_counts).
 
 
 func play(from: int, count: int, out: String, on: PackedStringArray,
@@ -12,6 +13,15 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		Features.set_on(f, true)
 	for f in off:
 		Features.set_on(f, false)
+	# --tune KEY=V,KEY=V: MatchSim tunables (MatchSim.tune, read through _tv) for
+	# sizing a constant before it is written into the code.
+	var args := OS.get_cmdline_user_args()
+	for i in range(args.size() - 1):
+		if str(args[i]) == "--tune":
+			for kv in str(args[i + 1]).split(",", false):
+				var pair := kv.split("=")
+				if pair.size() == 2:
+					MatchSim.tune[pair[0].strip_edges()] = float(pair[1])
 	var codes: Array = GameDB.active_clubs(2026).duplicate()
 	var pairs := []
 	for a in range(codes.size()):
@@ -34,7 +44,40 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		for side in range(2):
 			var t: Dictionary = (r["team"][side] as Dictionary).duplicate()
 			t["score"] = int(r["score"][side])
+			_shot_counts(t, sim.shot_log, side)
 			teams.append(t)
 		fh.store_line(JSON.stringify({"i": i, "home": h, "away": a, "teams": teams}))
 	fh.close()
 	return 0
+
+
+## Set-shot bands by metres out, as docs/research/SET_SHOT_EVIDENCE.md gives them.
+const SHOT_BANDS := [[10.0, "0-10"], [20.0, "10-20"], [30.0, "20-30"], [40.0, "30-40"], [50.0, "40-50"], [999.0, "50+"]]
+
+
+## Shots off MatchSim.shot_log into the team row: set shots and general-play
+## shots with their goals and behinds, and set shots by distance band
+## ("sshot_<band>_n" shots, "_g" goals, "_b" behinds).
+func _shot_counts(t: Dictionary, shots: Array, side: int) -> void:
+	for k in ["sshot_n", "sshot_g", "sshot_b", "gshot_n", "gshot_g", "gshot_b"]:
+		t[k] = 0
+	for band in SHOT_BANDS:
+		for x in ["_n", "_g", "_b"]:
+			t["sshot_" + str(band[1]) + x] = 0
+	for s in shots:
+		if int(s[0]) != side:
+			continue
+		var pre := "sshot" if int(s[1]) == 1 else "gshot"
+		var res := str(s[3])
+		var keys := [pre]
+		if pre == "sshot":
+			for band in SHOT_BANDS:
+				if float(s[2]) <= float(band[0]):
+					keys.append("sshot_" + str(band[1]))
+					break
+		for k in keys:
+			t[k + "_n"] += 1
+			if res == "goal":
+				t[k + "_g"] += 1
+			elif res == "behind":
+				t[k + "_b"] += 1

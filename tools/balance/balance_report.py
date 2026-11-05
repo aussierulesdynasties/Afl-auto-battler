@@ -40,6 +40,78 @@ def margins(rows):
     return m, h
 
 
+# Set shots against real AFL (docs/research/SET_SHOT_EVIDENCE.md): share of shots
+# from the Champion Data expected-score shot counts [WH] (2026: 5,951 set of
+# 10,859, 55%); goals per shot by distance [ABC] 2021-25, the straight-in-front
+# column (Director Bible #62 names these as the targets), set / general play.
+REAL_SET_SHARE = 0.55
+SHOT_BANDS = ["0-10", "10-20", "20-30", "30-40", "40-50", "50+"]
+REAL_SET_ACC = {"0-10": 1.00, "10-20": 0.96, "20-30": 0.85, "30-40": 0.71, "40-50": 0.54, "50+": 0.33}
+REAL_GP_ACC = {"0-10": 0.89, "10-20": 0.63, "20-30": 0.51, "30-40": 0.38, "40-50": 0.39, "50+": 0.34}
+
+
+def pooled(R, key):
+    return sum(float(t.get(key, 0)) for r in R.values() for t in r["teams"])
+
+
+def share_by_seed(R):
+    """Seed -> set-shot share of that match's shots (both teams), in percent."""
+    out = {}
+    for i, r in R.items():
+        n = sum(float(t.get("sshot_n", 0)) + float(t.get("gshot_n", 0)) for t in r["teams"])
+        if n:
+            out[i] = 100 * sum(float(t.get("sshot_n", 0)) for t in r["teams"]) / n
+    return out
+
+
+def shots_section(A, B):
+    """Set-shot share, conversion by distance and scoring shots, per arm."""
+    if not any("sshot_n" in t for r in A.values() for t in r["teams"]):
+        return
+    arms = [("A", A)] + ([("B", B)] if B else [])
+    print("\n## Shots\n")
+    head = "| per team-match | real |" + "".join(f" {k} |" for k, _ in arms) + (" B-A | se |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+
+    def row(label, real, vals, a=None, b=None, fmt="{:.1f}"):
+        line = f"| {label} | {real} |" + "".join(" " + fmt.format(v) + " |" for v in vals)
+        if a is not None and b is not None:
+            common = [i for i in a if i in b]
+            d = [b[i] - a[i] for i in common]
+            se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+            line += " " + ("{:+.2f}".format(st.mean(d))) + f" | {se:.2f} |"
+        print(line)
+    n = {k: len(R) * 2 for k, R in arms}
+    for key, label in (("sshot_n", "set shots"), ("gshot_n", "general-play shots")):
+        row(label, "-", [pooled(R, key) / n[k] for k, R in arms],
+            per_match(A, key) if B else None, per_match(B, key) if B else None)
+    sc = {k: {i: sum(float(t.get("goals", 0)) + float(t.get("behinds", 0)) for t in r["teams"]) / 2
+              for i, r in R.items()} for k, R in arms}
+    row("scoring shots (goals + behinds)", "22.4", [st.mean(sc[k].values()) for k, _ in arms],
+        sc["A"] if B else None, sc.get("B"))
+    sh = {k: share_by_seed(R) for k, R in arms}
+    row("set-shot share of shots", f"{100 * REAL_SET_SHARE:.0f}%",
+        [100 * pooled(R, "sshot_n") / max(1, pooled(R, "sshot_n") + pooled(R, "gshot_n")) for k, R in arms],
+        sh["A"] if B else None, sh.get("B"), fmt="{:.1f}")
+    print("\nGoals per shot, pooled over every shot of the arm. Real: [ABC] 2021-25, straight in front.\n")
+    head = "| shots | real set | real general |" + "".join(f" {k} goals/shot | {k} a team |" for k, _ in arms)
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for band in SHOT_BANDS:
+        line = f"| set, {band} m | {100 * REAL_SET_ACC[band]:.0f}% | {100 * REAL_GP_ACC[band]:.0f}% |"
+        for k, R in arms:
+            sn = pooled(R, f"sshot_{band}_n")
+            line += (f" {100 * pooled(R, f'sshot_{band}_g') / sn:.0f}% |" if sn else " - |") + f" {sn / n[k]:.2f} |"
+        print(line)
+    for key, label in (("sshot", "all set shots"), ("gshot", "general play (no distance in the sim)")):
+        line = f"| {label} | - | - |"
+        for k, R in arms:
+            sn = pooled(R, key + "_n")
+            line += (f" {100 * pooled(R, key + '_g') / sn:.0f}% |" if sn else " - |") + f" {sn / n[k]:.2f} |"
+        print(line)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -96,6 +168,7 @@ def main():
               f"draws {100*sum(x == 0 for x in m)/n:.1f}%, home win {100*sum(x > 0 for x in h)/n:.1f}%, home margin {st.mean(h):+.1f} "
               f"(se {st.stdev(h)/math.sqrt(n):.1f})")
     print("\nReal AFL (docs/LEAGUE_BALANCE.md): 60+ about 15.5%, 100+ about 1.9%, home win 59.3%.")
+    shots_section(A, B)
     print(f"\nOUT of real range (A): {', '.join(outs) if outs else 'none'}")
 
 
