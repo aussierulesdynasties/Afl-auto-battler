@@ -33,6 +33,11 @@ GODOT="${GODOT:-godot}"
 # (data/ovr_overrides.csv): they check the rules, not those numbers. Only the
 # ratings suite turns the rows back on, because it tests them.
 export AFL_SKIP_OVR_ROWS=1
+# A caller's SUITE_TIMEOUT applies to every suite. Left unset, a suite listed in
+# tools/ci_long_suites.txt gets the nightly's 3000 s and every other suite 900 s:
+# story needs 488-857 s on a CI runner, so 900 s left no headroom on a machine
+# shared by several Godot runs (TODO row 87).
+LONG_TIMEOUT="${SUITE_TIMEOUT:-3000}"
 SUITE_TIMEOUT="${SUITE_TIMEOUT:-900}"
 # Where the runners live (tools/test_run_tests.sh points this at its fixtures).
 RUNNER_DIR="${RUNNER_DIR:-tests}"
@@ -105,13 +110,15 @@ for suite in ${SUITES[@]+"${SUITES[@]}"}; do
 	runner="$RUNNER_DIR/run_${suite}_tests.gd"
 	log="$LOG_DIR/$suite.log"
 	start=$(date +%s)
-	XDG_DATA_HOME="$RUN_DATA" timeout "$SUITE_TIMEOUT" "$GODOT" --headless --fixed-fps 60 --path . --script "$runner" > "$log" 2>&1
+	limit="$SUITE_TIMEOUT"
+	grep -qx "$suite" tools/ci_long_suites.txt 2>/dev/null && limit="$LONG_TIMEOUT"
+	XDG_DATA_HOME="$RUN_DATA" timeout "$limit" "$GODOT" --headless --fixed-fps 60 --path . --script "$runner" > "$log" 2>&1
 	code=$?
 	secs=$(( $(date +%s) - start ))
 	printf '%s\t%s\n' "$suite" "$secs" >> "$LOG_DIR/suite-timings.tsv"
 	result=$(grep -E "[0-9]+ checks, [0-9]+ failures" "$log" | tail -1)
 	if [ "$code" = 124 ]; then
-		status="FAIL"; detail="timed out after ${SUITE_TIMEOUT}s"
+		status="FAIL"; detail="timed out after ${limit}s"
 	elif [ "$code" != 0 ] || [ -z "$result" ]; then
 		status="FAIL"; detail="${result:-no result (exit $code)}"
 	elif grep -qE "SCRIPT ERROR|Parse Error|Compile Error" "$log"; then
