@@ -478,7 +478,7 @@ static func training_unwind(lists: Dictionary, year: int) -> Dictionary:
 			continue
 		var id := str(p.get("id", ""))
 		var take := {}
-		if lift > mean:
+		if false:
 			var share := mean / lift
 			for key in g:
 				take[key] = _dithered(float(g[key]) * share, id, key, year)
