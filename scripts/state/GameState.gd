@@ -221,6 +221,9 @@ var losing_streak := 0
 ## defender id}, on top of the default set-up. Cleared after each of your
 ## matches - every opponent is a new problem.
 var my_matchups := {}
+## How the prepared match was made, so a change to the side before the first
+## bounce rebuilds it the same way (rebuild_pending_side).
+var _pending_build := {}
 var last_side: Array = []       # ids of your players who took the field in your last match
 ## Players on a promised run (Backing) who could not play this round, noted at
 ## the start of _after_round before the week's injuries and suspensions tick
@@ -272,6 +275,7 @@ var best23 := {}
 var class_tiers := {}             # draft year (string) -> tier key, as generated
 var draftee_pool: Array = []     # all prospects that have not been drafted yet
 var drafted_draftees := {}       # prospect id -> destination club
+var midseason := {}              # carnival and mid-season rookie draft (MidseasonDraft)
 var intake_assignments: Array = []  # father-son / NGA pre-draft landings
 var intake_summary := {}        # last rollover: retirements and growth
 ## Last game's per-player XP. The training menu reads this so the whole list
@@ -342,7 +346,8 @@ func _ready() -> void:
 	# A desktop opens fullscreen unless the player chose Window (director, 2026-10-12).
 	ScreenLayout.set_fullscreen(bool(cfg.get_value("ui", "fullscreen", true)))
 	_apply_battery_saver(bool(cfg.get_value("ui", "battery_saver", false)))
-	ScreenLayout.set_orientation(screen_orientation())
+	clamp_saved_orientation()
+	ScreenLayout.lock_portrait()
 
 
 func _exit_tree() -> void:
@@ -511,14 +516,15 @@ func set_screen_size(key: String) -> void:
 	ScreenLayout.set_screen_size(key)
 
 
-func screen_orientation() -> String:
-	var key := str(get_setting("screen_orientation", ScreenLayout.DEFAULT_ORIENTATION))
-	return key if ["auto", "portrait", "landscape"].has(key) else ScreenLayout.DEFAULT_ORIENTATION
-
-
-func set_screen_orientation(key: String, from_tap := false) -> void:
-	set_setting("screen_orientation", key)
-	ScreenLayout.set_orientation(key, from_tap)
+## Phone is portrait only (director, 2026-11-05): an older build's saved
+## landscape or follow-the-phone choice is rewritten as portrait on load.
+func clamp_saved_orientation() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(settings_path) != OK or not cfg.has_section_key("ui", "screen_orientation"):
+		return
+	var saved := str(cfg.get_value("ui", "screen_orientation"))
+	if saved != ScreenLayout.clamp_orientation(saved):
+		set_setting("screen_orientation", ScreenLayout.clamp_orientation(saved))
 
 
 func fullscreen() -> bool:
@@ -631,6 +637,21 @@ func has_saved_career() -> bool:
 	return CareerSave.exists(save_path)
 
 
+## One sentence per line, so a narrow phone never leaves one word alone.
+const SAVE_UNREADABLE := "Your saved career could not be read.\nStarting a new career will overwrite it."
+
+
+## Why a career file on disk cannot be continued, in the coach's words, or
+## "" when there is nothing wrong (or no file at all).
+func saved_career_problem() -> String:
+	match CareerSave.problem(save_path):
+		"newer":
+			return "Your saved career is from a newer version.\nUpdate the game to keep playing it.\nStarting a new career will overwrite it."
+		"unreadable":
+			return SAVE_UNREADABLE
+	return ""
+
+
 ## Club, year and stage of the saved career, for the main menu.
 func saved_career_meta() -> Dictionary:
 	return CareerSave.read_meta(save_path)
@@ -673,6 +694,7 @@ func save_career() -> bool:
 		"my_list": [] if _linked_code(my_list) != "" else my_list,
 		"my_list_link": _linked_code(my_list),
 		"draftee_pool": draftee_pool,
+		"midseason": midseason,
 		"drafted_draftees": drafted_draftees,
 		"intake_assignments": intake_assignments,
 		"intake_summary": intake_summary,
@@ -814,7 +836,6 @@ func load_career() -> bool:
 	var state := CareerSave.read(save_path)
 	if state.is_empty():
 		return false
-	state = CareerSave.migrate_club_codes(state)
 	reset()
 	# A created club joins the competition before anything reads the clubs.
 	custom_club = state.get("custom_club", {})
@@ -854,6 +875,7 @@ func load_career() -> bool:
 	var link := str(state.get("my_list_link", ""))
 	my_list = _season_list(link) if link != "" else state.get("my_list", [])
 	draftee_pool = state.get("draftee_pool", [])
+	midseason = state.get("midseason", {})
 	drafted_draftees = state.get("drafted_draftees", {})
 	intake_assignments = state.get("intake_assignments", [])
 	intake_summary = state.get("intake_summary", {})
@@ -998,8 +1020,12 @@ func load_career() -> bool:
 	staff_vacancies = state.get("staff_vacancies", [])
 	coach_approaches = state.get("coach_approaches", [])
 	coach_approach_year = int(state.get("coach_approach_year", 0))
-	club_expect = state.get("club_expect", {})
-	club_goals = state.get("club_goals", {})
+	# A save from before the board kept its own: _open_board_season above
+	# already set them, so only saved values replace them.
+	if not (state.get("club_expect", {}) as Dictionary).is_empty():
+		club_expect = state["club_expect"]
+	if not (state.get("club_goals", {}) as Dictionary).is_empty():
+		club_goals = state["club_goals"]
 	draft_meeting_year = int(state.get("draft_meeting_year", 0))
 	# A save from before the jumper fix (2026-10-07) may have two players in
 	# one number on a list: renumber the later ones, once.
@@ -1232,6 +1258,56 @@ func delete_saved_career() -> void:
 	CareerSave.delete(save_path)
 
 
+# ---------------------------------------------------------------------------
+# Backups and earlier saves (row 57)
+# ---------------------------------------------------------------------------
+## A career in memory is saved first (never mid-match: the save from before
+## the match is the consistent one), so the backup is the career as it is.
+func export_career() -> PackedByteArray:
+	if has_career() and pending_match.is_empty():
+		save_career()
+	return CareerSave.export_bytes(save_path)
+
+
+## A file name that says whose career it is: ard-fremantle-2027-round-6.ardsave
+func export_file_name() -> String:
+	var meta := _save_meta() if has_career() else saved_career_meta()
+	var bits := ["ard"]
+	for k in ["club_name", "year", "stage"]:
+		var v := str(meta.get(k, "")).to_lower().strip_edges()
+		if v != "":
+			bits.append(v.replace(" ", "-").replace("'", ""))
+	return "-".join(bits) + "." + CareerSave.EXPORT_EXT
+
+
+## Why a backup file could not be loaded, in the coach's words, or "" once it
+## is the career save (open it with load_career()).
+func import_career(bytes: PackedByteArray) -> String:
+	# The career in memory is saved first, so it is kept as an earlier save.
+	if has_career() and pending_match.is_empty():
+		save_career()
+	match CareerSave.import_bytes(bytes, save_path):
+		"":
+			return ""
+		"newer":
+			return "That backup is from a newer version of the game.
+Update the game to load it."
+	return "That file is not a career backup, or it is damaged.
+Your career is unchanged."
+
+
+## The earlier saves kept for restoring, newest first (CareerSave.history).
+func saved_career_history() -> Array:
+	return CareerSave.history(save_path)
+
+
+func restore_saved_career(slot: int) -> bool:
+	# The career in memory is saved first, so it is one of the earlier saves after.
+	return CareerSave.restore_history(slot, save_path, func():
+		if has_career() and pending_match.is_empty():
+			save_career())
+
+
 func _season_to_save() -> Dictionary:
 	var sv := CareerSave.object_vars(season)
 	# The season's results keep every match's stat lines (StatBook); the
@@ -1427,6 +1503,7 @@ func reset() -> void:
 	opening_draft = false
 	season_year = GameDB.START_YEAR
 	drafted_draftees = {}
+	midseason = {}
 	intake_assignments = []
 	intake_summary = {}
 	# The 2026 class was drafted before the career began (it is in the
@@ -1622,6 +1699,33 @@ func opening_order(active: Array) -> Array:
 	return order
 
 
+## The yearly National Draft order: the ladder reversed, but the premiers pick
+## last and the runners-up second last (as opening_order does for 2026).
+func intake_order() -> Array:
+	var order := []
+	for row in season.ladder_sorted():
+		order.append(str(row["code"]))
+	order.reverse()
+	var runner := str(season.finals.get("runner_up", ""))
+	var premier_code := premier()
+	for code in [runner, premier_code]:
+		if code != "" and order.has(code):
+			order.erase(code)
+			order.append(code)
+	return order
+
+
+## The season-wrap word for a club-tied intake (Draft tied_type codes), as
+## the draft screen says it.
+static func _tie_label(kind: String) -> String:
+	match kind:
+		"NGA":
+			return "Next Generation Academy"
+		"FS":
+			return "Father-son"
+	return kind
+
+
 ## Your club in a real-lists career, chosen on the draft screen.
 func choose_real_club(code: String) -> void:
 	if not opening_draft or not league_lists.has(code):
@@ -1690,10 +1794,7 @@ func begin_intake_draft() -> bool:
 		# the next season directly. (Never happens with the shipped class.)
 		return false
 
-	var order := []
-	for row in season.ladder_sorted():
-		order.append(str(row["code"]))
-	order.reverse()
+	var order := intake_order()
 
 	# A new club's extra picks, and the pick it must trade: made first, because
 	# that trade moves a player and the lists are measured next.
@@ -1777,7 +1878,16 @@ func finish_intake_draft() -> bool:
 			p["draft_round"] = int(entry.get("round", 0))
 			_mark_drafted(p, "national", int(entry.get("pick", 0)))
 			Contracts.rookie_deal(p, season_year + 1)
-			if code == my_club:
+			if not opening_draft and season != null and season.lists.has(code):
+				# The yearly draft's rookies are ticked at this rollover
+				# (_close_contracts ticks season.lists), so they are stored as
+				# years + 1 like _resign: two full seasons, as the opening
+				# draft gives. A club still building (ExpansionBuild) drafts
+				# into a list the tick never reaches: it keeps the plain deal.
+				p["contract_years"] = Contracts.ROOKIE_YEARS + 1
+			# The opening draft has no season wrap of its own: its picks must
+			# not turn up in the next year's wrap.
+			if code == my_club and not opening_draft:
 				_wrap_picks.append([id, int(entry.get("pick", 0))])
 			arr.append(p)
 			drafted_draftees[id] = code
@@ -1990,7 +2100,7 @@ func _build_season_wrap(year: int) -> void:
 						outs.append({"id": str(id), "how": "trade"})
 	for a in intake_assignments:
 		if str(a.get("club", "")) == my_club:
-			ins.append({"id": str(a["player_id"]), "how": "NGA" if str(a.get("kind", "")) == "nga" else str(a.get("kind", "")), "name": str(a.get("player_name", ""))})
+			ins.append({"id": str(a["player_id"]), "how": _tie_label(str(a.get("kind", ""))), "name": str(a.get("player_name", ""))})
 	for pk in _wrap_picks:
 		ins.append({"id": str(pk[0]), "how": "pick %d" % int(pk[1])})
 	_wrap_picks = []
@@ -2282,6 +2392,47 @@ func start_season(club_code: String, list: Array) -> void:
 	autosave()
 
 
+## The match you are about to coach, from the clubs' sides as they stand now
+## (prepare_interactive_match and the finals one fill _pending_build first).
+func _build_pending_sim() -> void:
+	var h := str(pending_match["home"])
+	var a := str(pending_match["away"])
+	var at_home: Array = _pending_build["at_home"]
+	var home := Squad.new(GameDB.club_name(h), season.lists[h], bool(at_home[0]), h, season.selections.get(h, {}))
+	var away := Squad.new(GameDB.club_name(a), season.lists[a], bool(at_home[1]), a, season.selections.get(a, {}))
+	home.form = season.club_form(h)
+	away.form = season.club_form(a)
+	CoachEffects.apply(home)
+	CoachEffects.apply(away)
+	pending_sim = MatchSim.new(home, away, int(_pending_build["seed"]))
+	pending_sim.finals_mode = bool(_pending_build["finals"])
+	pending_sim.weather = _pending_build["weather"]
+	pending_sim.moment_side = 0 if h == my_club else 1
+	pending_sim.always_offer_bounce = bounce_scene_every_match()
+	pending_sim.set_tactics(pending_sim.moment_side, {"gameplan": club_plan})
+	pending_sim.set_matchups(pending_sim.moment_side, my_matchups)
+	_pending_build["sim"] = pending_sim
+
+
+## True from Play match until the first bounce: the match is set up and every
+## pre-match call (the side included) can still change (TODO row 25).
+func match_day_setup_open() -> bool:
+	return pending_sim != null and not pending_match.is_empty() and _pending_build.get("sim") == pending_sim \
+			and pending_sim.events.is_empty() and pending_sim.current_quarter == 1
+
+
+## The side changed on Team selection before the first bounce: the match is
+## made again from the new side, with the same seed, weather and plan.
+func rebuild_pending_side() -> void:
+	if match_day_setup_open():
+		_build_pending_sim()
+	side_from_match = false
+
+
+## Set when Change the side leaves the match-day setup for Team selection.
+var side_from_match := false
+
+
 ## Set up your next match (home-and-away round or final) to be played live,
 ## quarter by quarter, with the coach box. Every other match that week is
 ## simulated straight away. Returns false when you have no match to play.
@@ -2291,6 +2442,7 @@ func prepare_interactive_match() -> bool:
 	match_way_live = match_way()
 	preseason_sim_to_round1()
 	_settle_week_event()
+	MidseasonDraft.settle(self)
 	last_pos_before = my_position()
 	if season.is_regular_done():
 		return _prepare_interactive_final()
@@ -2320,22 +2472,9 @@ func prepare_interactive_match() -> bool:
 	# The rest of the round plays out in the background while you coach
 	# yours (none of it touches your match), and is collected at full time.
 	_others = Season.start_all(others)
-	var home := Squad.new(GameDB.club_name(str(pending_match["home"])),
-			season.lists[pending_match["home"]], true, str(pending_match["home"]),
-			season.selections.get(str(pending_match["home"]), {}))
-	var away := Squad.new(GameDB.club_name(str(pending_match["away"])),
-			season.lists[pending_match["away"]], false, str(pending_match["away"]),
-			season.selections.get(str(pending_match["away"]), {}))
-	home.form = season.club_form(str(pending_match["home"]))
-	away.form = season.club_form(str(pending_match["away"]))
-	CoachEffects.apply(home)
-	CoachEffects.apply(away)
-	pending_sim = MatchSim.new(home, away, season.next_seed(99))
-	pending_sim.weather = season.weather_for(str(pending_match["home"]), str(pending_match["away"]), season.round_index)
-	pending_sim.moment_side = 0 if str(pending_match["home"]) == my_club else 1
-	pending_sim.always_offer_bounce = bounce_scene_every_match()
-	pending_sim.set_tactics(pending_sim.moment_side, {"gameplan": club_plan})
-	pending_sim.set_matchups(pending_sim.moment_side, my_matchups)
+	_pending_build = {"at_home": [true, false], "seed": season.next_seed(99), "finals": false,
+			"weather": season.weather_for(str(pending_match["home"]), str(pending_match["away"]), season.round_index)}
+	_build_pending_sim()
 	pending_phase = "regular"
 	pending_label = str(pending_match["label"])
 	last_results = []
@@ -2362,6 +2501,9 @@ func _prepare_interactive_final() -> bool:
 	pending_sim = null
 	_collect_others()
 	pending_round_results = []
+	# The coaching table first: the week's other finals use it too (it is not
+	# saved, so after loading it would be empty), as on the regular-round path.
+	_refresh_coach_tactics()
 	var others := []
 	var index := []
 	for i in range(matches.size()):
@@ -2380,25 +2522,10 @@ func _prepare_interactive_final() -> bool:
 			"round": Season.REGULAR_ROUNDS + int(season.finals["week"]),
 			"label": str(fm["label"]), "tag": str(fm["tag"]),
 			"venue": season.finals_venue(fm), "finals_index": mine}
-	var home := Squad.new(GameDB.club_name(str(fm["home"])),
-			season.lists[fm["home"]], bool(at_home[0]), str(fm["home"]),
-			season.selections.get(str(fm["home"]), {}))
-	var away := Squad.new(GameDB.club_name(str(fm["away"])),
-			season.lists[fm["away"]], bool(at_home[1]), str(fm["away"]),
-			season.selections.get(str(fm["away"]), {}))
-	home.form = season.club_form(str(fm["home"]))
-	away.form = season.club_form(str(fm["away"]))
-	_refresh_coach_tactics()
-	CoachEffects.apply(home)
-	CoachEffects.apply(away)
-	pending_sim = MatchSim.new(home, away, season.finals_seed(mine))
-	pending_sim.finals_mode = true
-	pending_sim.weather = season.weather_for(str(fm["home"]), str(fm["away"]),
-			Season.REGULAR_ROUNDS + int(season.finals["week"]), fm)
-	pending_sim.moment_side = 0 if str(fm["home"]) == my_club else 1
-	pending_sim.always_offer_bounce = bounce_scene_every_match()
-	pending_sim.set_tactics(pending_sim.moment_side, {"gameplan": club_plan})
-	pending_sim.set_matchups(pending_sim.moment_side, my_matchups)
+	_pending_build = {"at_home": at_home, "seed": season.finals_seed(mine), "finals": true,
+			"weather": season.weather_for(str(fm["home"]), str(fm["away"]),
+					Season.REGULAR_ROUNDS + int(season.finals["week"]), fm)}
+	_build_pending_sim()
 	pending_phase = "finals"
 	pending_label = str(fm["label"])
 	last_results = []
@@ -2513,6 +2640,7 @@ func advance() -> String:
 		return "none"
 	preseason_sim_to_round1()
 	_settle_week_event()
+	MidseasonDraft.settle(self)
 	_sync_club_plan()
 	_refresh_coach_tactics()
 	_stamp_conditioning()
@@ -2747,7 +2875,7 @@ func preseason_injury_lines(from := 1, to := 99) -> Array:
 		var p := list_player(str(inj["id"]))
 		if p.is_empty():
 			continue
-		out.append("%s (%s, %s)" % [GameDB.player_display_name(p), str(inj["kind"]),
+		out.append("%s (%s, %s)" % [GameDB.player_display_name(p), Injuries.wording(str(inj["kind"])),
 				_weeks_text(int(inj["weeks"]))])
 	return out
 
@@ -3690,7 +3818,7 @@ func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dicti
 	var hurt := []
 	for r in rows:
 		var hp := list_player(str(r["id"]))
-		hurt.append("%s (%s, %s)" % [GameDB.player_display_name(hp), str(r["kind"]), _weeks_text(int(r["weeks"]))])
+		hurt.append("%s (%s, %s)" % [GameDB.player_display_name(hp), Injuries.wording(str(r["kind"])), _weeks_text(int(r["weeks"]))])
 	last_injuries = rows
 	var score: Array = res.get("score", [0, 0])
 	return {"score": [int(score[0]), int(score[1])], "goals": res.get("goals", [0, 0]), "behinds": res.get("behinds", [0, 0]),
@@ -4183,6 +4311,20 @@ func week_matchups(opp: String) -> Array:
 		if d.has(fid) and mine_ids.has(str(d[fid])):
 			out.append({"fwd": f, "def": mine_ids[str(d[fid])], "set": my_matchups.has(fid)})
 	return out
+
+
+## Both sides' key players for the This week screen: each side's key forwards
+## and key defenders as they would take the field. {"mine"/"theirs":
+## {"fwd": [...], "def": [...]}}. Facts only; who plays on whom is set later.
+func week_key_players(opp: String) -> Dictionary:
+	if season == null or opp == "" or not season.lists.has(opp):
+		return {}
+	var theirs: Array = Squad.new(opp, season.lists[opp], false, opp, season.selections.get(opp, {})).ground
+	var mine: Array = my_squad().ground
+	return {
+		"mine": {"fwd": Matchups.key_forwards(mine), "def": Matchups.defenders(mine).slice(0, Matchups.KEY_FORWARDS)},
+		"theirs": {"fwd": Matchups.key_forwards(theirs), "def": Matchups.defenders(theirs).slice(0, Matchups.KEY_FORWARDS)},
+	}
 
 
 ## Put your defender `def_id` on their forward `fwd_id` for the next match.
@@ -5267,6 +5409,7 @@ func _short_name(id: String) -> String:
 ## the Grand Final has just been played - the season's awards.
 func _after_round(results: Array) -> void:
 	_note_plans_played(results)
+	MidseasonDraft.after_round(self)
 	# Who on a promised run could not play this week, before anything ticks.
 	_backing_unavailable = {}
 	for p in my_list:
@@ -8231,8 +8374,119 @@ func put_on_trade_table(id: String) -> Dictionary:
 	if made == 1:
 		reason = "One club has made an offer for %s." % what
 	elif made > 1:
-		reason = "%s clubs have made offers for %s." % [["", "", "Two", "Three"][made], what]
+		reason = "%s clubs have made offers for %s." % [_count_word(made, true), what]
 	return {"ok": true, "reason": reason, "offers": made}
+
+
+## This year's list problem in three lines (P-48): who is out of contract,
+## how old your best six are, and list spots against this year's picks. Facts
+## only, no advice: the coach reads the brief.
+func list_problem() -> Array:
+	if season == null or my_club == "":
+		return []
+	var side: Array = my_list.duplicate()
+	side.sort_custom(func(a, b):
+		if int(a["overall"]) != int(b["overall"]):
+			return int(a["overall"]) > int(b["overall"])
+		return str(a["id"]) < str(b["id"]))
+	var best22 := {}
+	for q in side.slice(0, 22):
+		best22[str(q["id"])] = true
+	var out_of := Contracts.expiring(my_list).filter(func(q): return not retiring_now(q))
+	var key := out_of.filter(func(q): return best22.has(str(q["id"]))).size()
+	var first := "Nobody out of contract." if out_of.is_empty() else "%s out of contract, %s of them in your best 22." % [
+			_count_word(out_of.size(), true), _count_word(key)]
+	if not out_of.is_empty() and key == 0:
+		first = "%s out of contract, none of them in your best 22." % _count_word(out_of.size(), true)
+	var six := side.slice(0, 6)
+	var ages := 0.0
+	for q in six:
+		ages += float(q.get("age", 25))
+	var going := my_list.filter(func(q): return retiring_now(q)).size()
+	var second := "Your best six average %d years old." % roundi(ages / float(maxi(1, six.size())))
+	if going > 0:
+		second += " %s retiring." % _count_word(going, true)
+	var spots := maxi(0, Contracts.MAX_LIST - my_list.size() + going)
+	var picks := club_picks(my_club).filter(func(pk): return int(pk["year"]) == season_year).size()
+	var third := "%s list spot%s, %s pick%s in the %d draft." % [_count_word(spots, true), "" if spots == 1 else "s",
+			_count_word(picks), "" if picks == 1 else "s", season_year]
+	return [first, second, third]
+
+
+func _count_word(n: int, capital := false) -> String:
+	var words := ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+			"eleven", "twelve"]
+	var w := str(words[n]) if n >= 0 and n < words.size() else str(n)
+	return w.capitalize() if capital else w
+
+
+## Ask around (P-50): every rival answers in one line whether it wants your
+## player, from the same valuation it trades with. Nothing is offered or saved;
+## the coach then opens the usual trade sheet with any club that answered.
+## [{"club", "kind": "yes" | "more" | "no", "line", "mine", "theirs"}], keen
+## clubs first, then by name. "mine"/"theirs" fill the trade sheet.
+func ask_around(id: String) -> Array:
+	if not offseason_open() or id.begins_with("pick:"):
+		return []
+	var found := _trade_assets([id], my_club)
+	if str(found["error"]) != "":
+		return []
+	var asset: Dictionary = found["assets"][0]
+	var who := GameDB.player_display_name(asset)
+	var prospects := trade_prospects()
+	var margin := float(difficulty_rules()["trade_margin"])
+	var out := []
+	_freeze_league(true)
+	for club in _club_order("ask"):
+		var name := GameDB.club_name(club)
+		var row := {"club": club, "kind": "no", "line": "", "mine": [id], "theirs": []}
+		var wont := _wont_go([asset], club)
+		var worth := 0.0 if wont != "" else _worth_to(club, asset, prospects)
+		if wont != "":
+			row["line"] = "%s: not interested. %s" % [name, wont]
+		elif worth <= 0.0:
+			row["line"] = "%s: not interested. %s wouldn't get a game in their side." % [name, who]
+		else:
+			# The most it would give: the package nearest the full price it puts on him.
+			var pkg := _bid(club, asset, worth, 1.0, prospects, "", margin)
+			if not pkg.is_empty():
+				row["kind"] = "yes"
+				row["theirs"] = pkg.map(func(a): return str(a["id"]))
+				row["line"] = "%s: interested. They'd give %s." % [name,
+						" and ".join(pkg.map(func(a): return _ask_name(str(a["id"]), "their")))]
+			else:
+				# He's worth something to them, but less than anything they'd part with:
+				# what else of yours would get their cheapest piece.
+				var cheapest := _bids(club, INF, prospects)
+				var counter := {}
+				if not cheapest.is_empty():
+					var theirs: Array = (cheapest[0][0] as Array).map(func(a): return str(a["id"]))
+					if bool(evaluate_trade(club, [id], theirs)["ok"]):
+						counter = {"mine": [id], "theirs": theirs, "straight": true}
+						row["kind"] = "yes"
+						row["theirs"] = theirs
+						row["line"] = "%s: interested. They'd give %s." % [name,
+								" and ".join(theirs.map(func(x): return _ask_name(str(x), "their")))]
+					else:
+						counter = _counter(club, [id], theirs)
+					if not counter.is_empty() and not counter.has("straight"):
+						row["kind"] = "more"
+						row["mine"] = counter["mine"]
+						row["theirs"] = counter["theirs"]
+						var extra: Array = (counter["mine"] as Array).filter(func(x): return str(x) != id)
+						row["line"] = "%s: interested, not on %s alone. For %s they'd want %s as well." % [name, who,
+								" and ".join(theirs.map(func(x): return _ask_name(str(x), "their"))),
+								" and ".join(extra.map(func(x): return _ask_name(str(x))))]
+				if counter.is_empty():
+					row["line"] = "%s: interested, but nothing they'd part with is a fair swap for %s alone." % [name, who]
+		out.append(row)
+	_freeze_league(false)
+	var rank := {"yes": 0, "more": 1, "no": 2}
+	out.sort_custom(func(a, b):
+		if int(rank[a["kind"]]) != int(rank[b["kind"]]):
+			return int(rank[a["kind"]]) < int(rank[b["kind"]])
+		return GameDB.club_name(str(a["club"])) < GameDB.club_name(str(b["club"])))
+	return out
 
 
 ## Offers still on the table: open, and everything in them still where it was.

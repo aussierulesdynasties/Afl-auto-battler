@@ -78,6 +78,7 @@ jobs:
         id: changes
         env:
           IS_DRAFT: ${{ github.event.pull_request.draft }}
+          PRETEND: ${{ inputs.changed_files }}
         run: |
           code=true
           reason=""
@@ -89,6 +90,12 @@ jobs:
               code=false
               reason="documentation, audit or capture scripts only"
             fi
+          fi
+          # roadmap_close.yml dispatches this on its docs/TODO.md-only commit to earn
+          # the required "test" check before it pushes to main.
+          if [ "${{ github.event_name }}" = workflow_dispatch ] && [ -n "$PRETEND" ] && ! printf '%s\n' $PRETEND | grep -qvE '^docs/|\.md$'; then
+            code=false
+            reason="dispatched for documentation only"
           fi
           # A push to main whose files are exactly what the PR's last green run
           # tested (an up-to-date branch squashed) proves nothing new: skip the
@@ -165,6 +172,25 @@ jobs:
         run: |
           python3 tools/test_check_version.py
           python3 -I tools/check_version.py
+
+      # PRs never edit docs/TODO.md; they write "Closes row N" in the body and
+      # roadmap_close.yml deletes the row after the merge. Label "roadmap" exempts
+      # a PR that really edits the list. Labels are read live (not from the event),
+      # so after adding the label a re-run of the failed jobs passes; label changes
+      # deliberately don't trigger this workflow (they'd cancel and re-run every shard).
+      - name: Check the PR leaves docs/TODO.md alone
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          python3 tools/test_roadmap_close.py
+          if git diff --name-only HEAD^1 HEAD | grep -qx 'docs/TODO.md'; then
+            labels=$(gh api "repos/${{ github.repository }}/pulls/$PR" --jq '.labels[].name' | xargs)
+            case " $labels " in *" roadmap "*) echo "docs/TODO.md edit allowed: label roadmap"; exit 0 ;; esac
+            echo "::error file=docs/TODO.md::This PR edits docs/TODO.md. Revert that and write 'Closes row N' (or 'Closes rows 22, 27') on its own line in the PR body; the row is deleted after merge. To edit the list itself, add the label 'roadmap' and re-run the failed jobs."
+            exit 1
+          fi
 
       # The shard layout's own tests, and the estimated shard seconds. Imbalance
       # is reported after the run, never a failure. Never reduce assertions to speed CI up.

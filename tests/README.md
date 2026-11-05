@@ -65,6 +65,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `coach_pathway` | Retired players becoming coaches, and the record they carry |
 | `coach_effects` | What coaching does: teaching, tactics, man-management |
 | `career_ui` | Main menu and save flow, Back, the Hub, Training, selection and trade screens, at 320, 360 and 430 wide |
+| `ui_motion` | Menu motion behind the `ui_motion` switch: tokens, hardened helpers, sheet_in, fill_bar, the result sheet on a win and a loss, Reduced motion and switch off, real taps during the rise and a land |
 | `potential` | Potential (POT) rules, rehab years, draft pedigree |
 | `ratings` | The overall rating model |
 | `ai` | Rival clubs' drafting and selection |
@@ -90,6 +91,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `league_balance` | Smoke checks for the balance harness in `tools/balance` |
 | `calibration` | The engine against real 2026 numbers (seeded matches) |
 | `balance` | A long-career guard: three seasons must not inflate the league |
+| `decision_scenes` | The in-match calls (tired, duel, hot, momentum, set shot) opening on a vignette scene behind the default-off `decision_scenes` switch: real players in their own kits, ball only at a palm, sheet frames in range, text card when off, a real tap on the call |
 | `assets` | The art and music as shipped: figure-sheet frames against the layout, vignettes playing their moves through, banners, music files, levels and the player |
 | `keyboard` | The phone keyboard on every screen with a text field: the window loses the keyboard's height (phone on its side, upright, tablet) and the same field keeps the focus and its text; text arriving the way the engine's web keyboard sends it fills the field and filters the list; the web export has the phone keyboard on |
 | `international` | International prospects (switch `international_prospects`): one or two per generated class over 150 seeded years, never none or three, from seven countries; names from their own country's lists; raw but high-ceiling ratings shaped by their code; switched off the class is unchanged; one drafted, kept across a save and a season rollover; an old save loads |

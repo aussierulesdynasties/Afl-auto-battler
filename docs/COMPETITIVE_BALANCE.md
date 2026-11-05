@@ -15,7 +15,7 @@ from that evidence. Everything below was measured through the shipped code.
 | AI clubs out-coach a passive human | Real, by design: rivals use every match-day lever, a passive human uses none. It hid the morale edge in autopilot careers. | [2](#2-match-day-coaching) |
 | Neglecting the list costs too little | **Confirmed; changed in the second pass.** A passive club kept its whole list on rolled-over deals and stayed under the cap. Now an unsettled starter tests the market and weekly cards give nothing for free: an autopilot list slides from 9th to 16th strongest in five seasons. | [3](#3-what-neglecting-the-list-costs), [9](#9-contracts-changed) |
 | AI drafting is age-blind | **True, partly exploitable, not a dynasty on its own.** Drafting with age in mind builds the strongest opening list, which fades within three or four seasons without list management. Not changed here. | [4](#4-ai-drafting-and-age) |
-| List Profile "Elite" too easy | **Contradicted as a cause.** It is a rank (Elite: the top four of eighteen). Four Elite words and two Strong is a 0.6%-of-seasons profile: the playtest list was genuinely dominant. | [5](#5-what-the-code-contradicts) |
+| List Profile "Elite" too easy | **Contradicted as a cause.** It is a rank (Elite: the top four of eighteen at the time; now the top three, T8.Q2). Four Elite words and two Strong is a 0.6%-of-seasons profile: the playtest list was genuinely dominant. | [5](#5-what-the-code-contradicts) |
 | Synergies pile up | **Not reproduced league-wide.** About 1.4 of 6 per club, flat over five seasons. | [5](#5-what-the-code-contradicts) |
 | Training, fatigue, development, ageing favour you | **Contradicted.** One rule set for every club; the small user-only extras are listed. | [5](#5-what-the-code-contradicts) |
 | An age-28, 89-POT generated player | **Explained and fixed:** expansion lists gave every age a draft prospect's ceiling; a generated player past draft age now gets the ceiling a listed player of his age has. | [6](#6-generated-players-expansion-lists) |
@@ -206,15 +206,16 @@ question under Also noted.
 ## 5. What the code contradicts
 
 - **List Profile.** `ListProfile.gd` ranks each dimension across the league:
-  Elite is a share under 17% (the top four of eighteen clubs), Strong the
+  Elite is a share under 15% (the top three of eighteen clubs; T8.Q2, was
+  under 17%, the top four), Strong the
   next band; there is no rating threshold to inflate. Across 1,632
   club-seasons of the autopilot careers, four or more Elite words came up in
   2.2% of them, and even the season's strongest list reached four only about
   one season in seven. The playtest's profile (four Elite, two Strong)
   appears in 0.6% of club-seasons: a genuinely dominant side, not a lenient
-  band. Whether Elite should mean the top three, or two, is a one-constant
-  wording choice (`ELITE`); make it after re-measuring dominance on a played
-  save without the morale edge.
+  band. (Figures above are at the old top-four band.) The director ruled
+  Elite the top three (T8.Q2): `ELITE` 0.15; six seeded drafted leagues give
+  3 Elite clubs per strength in 35 of 36 cases (a tie at third read 4).
 - **Synergies.** Six exist. Across the autopilot careers a club's selected 18
   switches on about 1.4 of them, flat across five seasons (1.52 → 1.36 and
   1.42 → 1.43 in the two policies), and four or more in about 1% of

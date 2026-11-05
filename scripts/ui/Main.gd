@@ -194,7 +194,11 @@ func _show_home() -> void:
 	var tag := UiKit.subtitle(TAGLINE)
 	tag.name = "Tagline"
 	_content.add_child(tag)
-	_content.add_child(UiKit.spacer(28))
+	# A career file that cannot be continued says why, instead of the menu
+	# quietly looking like there was never a career (T5.Q24). The space above
+	# shrinks so the note sits as close to the tagline as to New career.
+	var why := "" if GameState.has_career() or GameState.has_saved_career() 			else GameState.saved_career_problem()
+	_content.add_child(UiKit.spacer(28 if why == "" else 6))
 
 	var col := UiKit.vbox(10)
 	col.name = "MenuButtons"
@@ -229,11 +233,16 @@ func _show_home() -> void:
 			info.name = "CareerMeta"
 			info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			col.add_child(info)
-	_load_error = UiKit.lbl("", UiKit.SMALL, UiKit.BAD)
+	_load_error = UiKit.lbl("", UiKit.BODY, UiKit.BAD)
 	_load_error.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_load_error.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_load_error.name = "SaveProblem"
 	_load_error.visible = false
 	col.add_child(_load_error)
+	if why != "":
+		_load_error.text = why
+		_load_error.visible = true
+		col.add_child(UiKit.spacer(10))
 	var new_career := UiKit.btn("New career", UiKit.H2, not (live or saved))
 	new_career.name = "NewCareer"
 	# No career can start on missing or incomplete player data.
@@ -311,7 +320,8 @@ func _on_continue() -> void:
 	if GameState.load_career():
 		Router.go("hub" if GameState.season != null else "draft")
 		return
-	_load_error.text = "That save could not be read. Start a new career to replace it."
+	var why := GameState.saved_career_problem()
+	_load_error.text = why if why != "" else GameState.SAVE_UNREADABLE
 	_load_error.visible = true
 
 
@@ -599,6 +609,8 @@ func _layout() -> void:
 ## menu itself Back does nothing.
 func handle_back() -> bool:
 	if is_instance_valid(_guide_overlay):
+		if StatGuide.back(_guide_overlay):
+			return true
 		_guide_overlay.queue_free()
 		_guide_overlay = null
 		return true

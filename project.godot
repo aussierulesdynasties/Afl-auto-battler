@@ -10,7 +10,7 @@ config_version=5
 
 config/name="Aussie Rules Dynasties"
 config/description="Build an Australian rules football dynasty: shape your list, coach the season and carry the club through the years."
-config/version="1.0.1"
+config/version="1.0.3"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.7")
 config/icon="res://icon.svg"
@@ -30,6 +30,7 @@ ScreenLayout="*res://scripts/core/ScreenLayout.gd"
 GameDB="*res://scripts/core/GameDB.gd"
 GameState="*res://scripts/state/GameState.gd"
 MusicManager="*res://scripts/core/MusicManager.gd"
+ScreenTransition="*res://scripts/core/ScreenTransition.gd"
 Router="*res://scripts/core/Router.gd"
 
 [display]
@@ -39,7 +40,7 @@ window/size/viewport_height=720
 window/dpi/allow_hidpi=true
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
-; SCREEN_PORTRAIT: a phone opens in portrait (director, 2026-10-25); the Screen setting can change it.
+; SCREEN_PORTRAIT: a phone plays in portrait only (director, 2026-11-05: "Drop landscape").
 window/handheld/orientation=1
 
 [input_devices]
@@ -67,8 +68,12 @@ environment/defaults/default_clear_color=Color(0.071, 0.067, 0.063, 1)
 preseason=true
 speccy_front=false
 international_prospects=true
+clanger_cause=true
+vignette_grade=true
 training_report=false
 player_looks=false
 top_attributes=false
+training_grid=false
 coach_arcs=false
 club_almanac=false
+decision_scenes=false

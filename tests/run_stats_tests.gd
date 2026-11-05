@@ -46,6 +46,8 @@ func _run() -> void:
 	# Before any round: no press conference sits over the hub.
 	await _t("_test_intro")
 	await _t("_test_hub_button")
+	for sz in [Vector2i(390, 844), Vector2i(1920, 1080)]:
+		await _t("_test_ladder_only_in_season_stats", [sz])
 	await _t("_test_awards_early")
 	await _t("_test_trophies_unplayed")
 	for i in range(4):
@@ -66,10 +68,13 @@ func _run() -> void:
 	_t("_test_book_rates")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_fixture", [sz])
-	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+	# 320 x 693: a 390 x 844 window on a scaled desktop (ScreenLayout's 320-unit floor).
+	for sz in [Vector2i(390, 844), Vector2i(320, 693), Vector2i(1280, 720)]:
 		await _t("_test_ladder", [sz])
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_team_rating", [sz])
+	for w in [366.0, 680.0]:
+		await _t("_test_hub_ladder_heads", [w])
 	await _t("_test_trophies_early")
 	await _t("_test_fixture_finals")
 	await _t("_test_trophies")
@@ -113,10 +118,83 @@ func _test_hub_button() -> void:
 	var b: Button = hub.find_child("SeasonStats", true, false)
 	_check(b != null and hub.find_child("FullLadder", true, false) == null,
 			"The hub offers Season stats in place of Full ladder")
+	# Row 84 (T3.Q13, T9.Q29): the hub's nav bar has no Ladder entry.
+	var navs := []
+	for n in hub.find_children("*", "Button", true, false):
+		if (n as Button).text.to_lower().contains("ladder"):
+			navs.append(str(n.name))
+	_check(navs.is_empty(), "No hub button says Ladder (%s)" % str(navs))
 	if b != null:
 		var got := await Tap.tap(b)
 		_check(got == "", "Season stats takes a tap (%s)" % got)
 	hub.queue_free()
+	await _settle()
+
+
+## Row 84 (ruling: docs/TODO.md rulings, T3.Q13 / T9.Q29): the ladder lives
+## only in Season stats. No Ladder screen or route, no Ladder button in the
+## hub's nav row; a real tap on the hub's Ladder heading opens Season stats,
+## and a real tap on its Ladder tab shows the ladder.
+func _test_ladder_only_in_season_stats(sz: Vector2i) -> void:
+	var tag := "%dx%d" % [sz.x, sz.y]
+	var old_size := root.size
+	var old_stack: Array = root.get_node("Router").stack.duplicate()
+	var old_scene := current_scene
+	var hub_stats = load("res://scripts/ui/StatsHubScene.gd")
+	var old_current := str(hub_stats.current)
+	_check(not ResourceLoader.exists("res://scenes/LadderScene.tscn")
+			and not ResourceLoader.exists("res://scripts/ui/LadderScene.gd"), "No Ladder screen exists")
+	var routes: Dictionary = load("res://scripts/core/Router.gd").SCENES
+	for k in routes:
+		_check(not str(k).to_lower().contains("ladder") and not str(routes[k]).to_lower().contains("ladder"),
+				"No route leads to a Ladder screen (%s)" % k)
+	root.size = sz
+	# Awards open last, so landing on the ladder has to come from the taps.
+	hub_stats.current = "awards"
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	var navs := 0
+	for name in ["HubFooter", "HubFooterWide"]:
+		var row: Node = hub.find_child(name, true, false)
+		if row == null:
+			continue
+		for b in row.find_children("*", "Button", true, false):
+			navs += 1
+			_check(not (b as Button).text.to_lower().contains("ladder"),
+					"The hub nav row has no Ladder button (%s: %s)" % [tag, (b as Button).text])
+	_check(navs > 0, "The hub nav row is there to check (%s)" % tag)
+	var link: Button = hub.find_child("SeasonStats", true, false)
+	_check(link != null, "The hub's Ladder heading is there (%s)" % tag)
+	if link != null:
+		var got := await Tap.tap(link)
+		_check(got == "", "The Ladder heading takes a real tap (%s: %s)" % [tag, got])
+		await _settle()
+	var s: Node = current_scene
+	_check(s != null and s.scene_file_path == "res://scenes/StatsHubScene.tscn",
+			"The tap opens Season stats (%s)" % tag)
+	if s != null and s.scene_file_path == "res://scenes/StatsHubScene.tscn":
+		var tab: Button = s.find_child("Section_ladder", true, false)
+		_check(tab != null, "Season stats has a Ladder tab (%s)" % tag)
+		if tab != null:
+			var got2 := await Tap.tap(tab)
+			_check(got2 == "", "The Ladder tab takes a real tap (%s: %s)" % [tag, got2])
+			await _settle()
+			tab = s.find_child("Section_ladder", true, false)
+			var sb := tab.get_theme_stylebox("normal") as StyleBoxFlat if tab != null else null
+			_check(sb != null and sb.border_width_bottom == 2, "The Ladder tab is the selected one (%s)" % tag)
+			_check(s.find_child("LadderHeader", true, false) != null,
+					"The ladder shows in Season stats (%s)" % tag)
+	# Leave the tree as it was: no stray Season stats, stack, section or size.
+	if is_instance_valid(hub):
+		hub.queue_free()
+	if s != null and s != old_scene and is_instance_valid(s):
+		s.queue_free()
+	if is_instance_valid(old_scene):
+		current_scene = old_scene
+	root.get_node("Router").stack = old_stack
+	hub_stats.current = old_current
+	root.size = old_size
 	await _settle()
 
 
@@ -834,6 +912,61 @@ func _open_trophies(sz: Vector2i) -> Control:
 	return s
 
 
+## The hub's ladder (UiKit.ladder_table): "Pts" ends where its figures end,
+## and "Club" starts over the names, past the crests (critic 2026-11-04: Pts
+## 5 px off, Club over the crests; StatsLadder's fix in #950).
+func _test_hub_ladder_heads(width: float) -> void:
+	var tag := "%.0f wide" % width
+	var UK = load("res://scripts/ui/UiKit.gd")
+	var holder := Control.new()
+	holder.size = Vector2(width, 800)
+	root.add_child(holder)
+	var t: VBoxContainer = UK.ladder_table(_state.season.ladder_sorted(), _state.my_club, width)
+	t.size = Vector2(width, 0)
+	holder.add_child(t)
+	await _settle()
+	var head: HBoxContainer = t.get_child(0)
+	var specs: Array = UK.ladder_specs(width, false)
+	var pts_i := -1
+	var club_i := -1
+	for i in specs.size():
+		if str(specs[i]["key"]) == "pts":
+			pts_i = i
+		if str(specs[i]["key"]) == "club":
+			club_i = i
+	# The header puts a spacer before Club (the crest's room), so its labels
+	# from Club on sit one child later than the rows' cells.
+	var club_head: Label = head.get_child(club_i + 1)
+	var inset: float = club_head.get_theme_stylebox("normal").get_margin(SIDE_LEFT)
+	var head_end := _ink_end(head.get_child(pts_i + 1))
+	var worst := 0.0
+	var crest_off := 0.0
+	for i in range(1, t.get_child_count()):
+		var row := t.get_child(i)
+		if not row is HBoxContainer:
+			continue
+		worst = maxf(worst, absf(_ink_end(row.get_child(pts_i)) - head_end))
+		var names: Array = (row.get_child(club_i) as Node).find_children("*", "Label", true, false)
+		crest_off = maxf(crest_off, absf(club_head.get_global_rect().position.x + inset
+				- (names[0] as Control).get_global_rect().position.x))
+	_check(worst <= 1.0, "The hub ladder's Pts ends where its figures end (%s: %.1f px off)" % [tag, worst])
+	_check(crest_off <= 1.0, "The hub ladder's Club starts over the names, not the crests (%s: %.1f px off)" % [tag, crest_off])
+	holder.queue_free()
+	await _settle()
+
+
+## Where a one-line label's text ends on screen, by its alignment.
+func _ink_end(l: Label) -> float:
+	var w: float = l.get_theme_font("font").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			l.get_theme_font_size("font_size")).x
+	var r := l.get_global_rect()
+	if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT:
+		return r.end.x
+	if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER:
+		return r.position.x + (r.size.x + w) * 0.5
+	return r.position.x + w
+
+
 func _close(s: Control) -> void:
 	s.queue_free()
 	await _settle()
@@ -862,6 +995,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	_check(_row_codes(s) == true_order, "The ladder opens in the true order (%s)" % tag)
 	_fits(s, sz, "the ladder", tag)
 	_table_recipe(s, tag, true)
+	_header_aligns(s, tag)
 
 	# Phone columns, and the wide screen's extra ones.
 	var heads := []
@@ -910,7 +1044,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	# toggles, and the toggles are compact groups rather than bars across the window.
 	if sz.x >= 900:
 		_table_fits_content(s, "ladder", tag)
-		for n in ["Filter_all", "Filter_top8", "Filter_near"]:
+		for n in ["Filter_all", "Filter_top10", "Filter_near"]:
 			var tb: Control = s.find_child(n, true, false)
 			_check(tb != null and tb.size.x >= 100 and tb.size.x <= 140,
 					"%s is a compact button, not a bar (%s: %.0f px)" % [n, tag, tb.size.x if tb != null else -1.0])
@@ -934,6 +1068,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	await _settle()
 	wins = _by(s, season, "w")
 	_check(_non_decreasing(wins), "A second tap reverses it (%s: %s)" % [tag, str(wins)])
+	_header_aligns(s, tag + " sorted")
 	await Tap.tap(s.find_child("LadderOrder", true, false))
 	await _settle()
 	_check(_row_codes(s) == true_order and s.find_child("LadderOrder", true, false) == null,
@@ -946,18 +1081,19 @@ func _test_ladder(sz: Vector2i) -> void:
 	var az := names.duplicate()
 	az.sort()
 	_check(names == az, "The club column sorts A to Z first (%s)" % tag)
+	_check(_text(s.find_child("ActiveState", true, false)).contains("Club, A–Z first"), "The club sort reads A–Z, not fewest first (%s)" % tag)
 
-	# Filters, by finger: Top 8, Near you, and Reset.
-	await Tap.tap(s.find_child("Filter_top8", true, false))
+	# Filters, by finger: Top 10, Near you, and Reset.
+	await Tap.tap(s.find_child("Filter_top10", true, false))
 	await _settle()
 	var top8 := _row_codes(s)
 	var expect8 := []
-	for c in true_order.slice(0, 8):
+	for c in true_order.slice(0, load("res://scripts/sim/Season.gd").FINALISTS):
 		expect8.append(c)
 	top8.sort()
 	expect8.sort()
-	_check(top8 == expect8, "Top 8 shows the top eight (%s)" % tag)
-	_check(_text(s.find_child("ActiveState", true, false)).contains("Top 8"), "The active filter is shown (%s)" % tag)
+	_check(top8 == expect8, "Top 10 shows every finals club (%s)" % tag)
+	_check(_text(s.find_child("ActiveState", true, false)).contains("Top %d" % load("res://scripts/sim/Season.gd").FINALISTS), "The active filter is shown (%s)" % tag)
 	await Tap.tap(s.find_child("Filter_near", true, false))
 	await _settle()
 	var near := _row_codes(s)
@@ -980,7 +1116,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	var games := int(t.get("games", 0))
 	_check(games > 0, "(setup) your club has games to average (%s)" % tag)
 	_check(s.find_child("TeamBoard", true, false) != null and s.find_child("TeamStat", true, false) != null
-			and s.find_child("Filter_top8", true, false) == null,
+			and s.find_child("Filter_top10", true, false) == null,
 			"Team stats is a leaderboard with its own picker (%s)" % tag)
 	var mine_row: Node = s.find_child("Club_" + mine, true, false)
 	var club_nm: Label = mine_row.find_child("Name", true, false) if mine_row else null
@@ -1016,6 +1152,19 @@ func _test_ladder(sz: Vector2i) -> void:
 	_check(tenth_rx.search(_text(s.find_child("Club_" + mine, true, false).find_child("Figure", true, false))) != null,
 			"Goals a game keep their tenth (%s)" % tag)
 	_fits(s, sz, "team stats", tag)
+	# The widest figure's ink starts about 10 px past the end of the bars: its
+	# text box 3 to 8 px, the glyphs' bearing the rest (critic 2026-11-04: 420
+	# px of nothing between them on a PC, then 45, then 18).
+	var near_gap := 9999.0
+	for c in _row_codes(s):
+		var row: Node = s.find_child("Club_" + c, true, false)
+		var bar: Control = row.find_child("Bar", true, false)
+		var fig: Label = row.find_child("Figure", true, false)
+		var ink: float = fig.get_global_rect().end.x - fig.get_theme_font("font").get_string_size(fig.text,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, fig.get_theme_font_size("font_size")).x
+		near_gap = minf(near_gap, ink - bar.get_global_rect().end.x)
+	_check(near_gap >= 3.0 and near_gap <= 8.0,
+			"The widest figure's text starts 3 to 8 px past the longest bar's end (%s: %.0f)" % [tag, near_gap])
 	ladder.pick_team_fact("for")
 	await Tap.tap(s.find_child("View_ladder", true, false))
 	await _settle()
@@ -1023,7 +1172,7 @@ func _test_ladder(sz: Vector2i) -> void:
 	# A club opens its side, read-only; Back returns to the table as it was.
 	await Tap.tap(s.find_child("Sort_pts", true, false))
 	await _settle()
-	await Tap.tap(s.find_child("Filter_top8", true, false))
+	await Tap.tap(s.find_child("Filter_top10", true, false))
 	await _settle()
 	var before := _row_codes(s)
 	var tapped: String = before[1] if before[0] == mine else before[0]
@@ -1040,6 +1189,36 @@ func _test_ladder(sz: Vector2i) -> void:
 		_check(note == ("Side named for this round" if named else "Projected side: picked on match day"),
 				"The side says whether it is projected (%s: %s)" % [tag, note])
 		_fits(side, sz, "a club's side", tag)
+		var gap: Array = pitch_gap(builder)
+		print("PITCHGAP side %s %.1f %s" % [tag, float(gap[0]), str(gap[1])])
+		var off_ground: Array = pitch_off_ground(builder)
+		print("PITCHOFF side %s %s" % [tag, str(off_ground)])
+		print("PITCHSKEW side %s %s" % [tag, str(pitch_skew(builder))])
+		# 320 units: too narrow for three cards abreast inside the line.
+		_check(sz.x < 390 or off_ground.is_empty(), "Every card on the side's oval sits inside the boundary line (%s: %s)" % [tag, str(off_ground)])
+		_check(float(gap[0]) >= 8.0, "No two names on the side's oval come within 8 px (%s: %.1f px, %s)" % [tag, float(gap[0]), str(gap[1])])
+		# Every list card holds its own rating and its whole third line (critic
+		# 2026-11-04: on a PC the right column hid the left one's ratings and
+		# "Playmak…" was cut).
+		var spill := []
+		var cut := []
+		for card in builder.find_child("NotSelected", true, false).get_children():
+			if not card is Button:
+				continue
+			var box: Rect2 = (card as Control).get_global_rect().grow(0.5)
+			for l in card.find_children("*", "Label", true, false):
+				if not box.encloses((l as Control).get_global_rect()):
+					spill.append("%s %s" % [card.name, (l as Label).text])
+			if sz.x >= 900:
+				var top_y := (card as Control).get_global_rect().position.y
+				var name_y: float = (card.find_children("*", "Label", true, false)[0] as Control).get_global_rect().position.y
+				if absf(name_y - top_y - 8.0) > 1.0:
+					cut.append("%s name %.0f px in" % [card.name, name_y - top_y])
+			var third: Label = card.find_child("Third", true, false)
+			if third != null and sz.x >= 900 and third.text_overrun_behavior != TextServer.OVERRUN_NO_TRIMMING:
+				cut.append(str(card.name))
+		_check(spill.is_empty(), "Every list card holds its own words and rating (%s: %s)" % [tag, str(spill.slice(0, 3))])
+		_check(cut.is_empty(), "A PC card's third line wraps, never cut, and its name sits 8 px in (%s: %s)" % [tag, str(cut.slice(0, 3))])
 		# A player opens his profile over the side; Back closes it first.
 		var list: Array = _state.opponent_side(tapped)["list"]
 		builder.emit_signal("inspect", str(list[0]["id"]))
@@ -1057,6 +1236,36 @@ func _test_ladder(sz: Vector2i) -> void:
 			"Back returns to the ladder as it was, sort and filter kept (%s)" % tag)
 	s.queue_free()
 	await _settle()
+
+
+## Each header sits over its own column (row 84: on a phone the header was one
+## column off): every header's right edge (the club's left edge) is within 2 px
+## of the same column's cell in every row.
+func _header_aligns(s: Node, tag: String) -> void:
+	var header: Control = s.find_child("LadderHeader", true, false)
+	_check(header != null, "The ladder has a header row (%s)" % tag)
+	if header == null:
+		return
+	var heads: Array = header.get_children()
+	var off := []
+	for b in s.find_children("Club_*", "Button", true, false):
+		var cells: Array = (b as Control).get_child(0).get_children()
+		if cells.size() != heads.size():
+			off.append("%s has %d cells for %d headers" % [b.name, cells.size(), heads.size()])
+			continue
+		for i in heads.size():
+			var h: Control = heads[i]
+			var c: Control = cells[i]
+			var club := str(h.name) == "Sort_club"
+			var hx: float = h.get_global_rect().position.x if club else h.get_global_rect().end.x
+			var cx: float = c.get_global_rect().position.x if club else c.get_global_rect().end.x
+			if absf(hx - cx) > 2.0:
+				off.append("%s %s %.0f vs %.0f" % [b.name, h.name, hx, cx])
+	var body: Control = s.find_child("Club_*", true, false)
+	if body != null:
+		var rw: float = (body as Control).get_child(0).size.x
+		_check(absf(rw - header.size.x) <= 2.0, "A ladder row is as wide as its header (%s: %.0f vs %.0f)" % [tag, rw, header.size.x])
+	_check(off.is_empty(), "Ladder headers line up with their columns (%s: %s)" % [tag, str(off.slice(0, 4))])
 
 
 ## On a wide screen the table is about as wide as its columns (760 to 900 px),
@@ -1328,6 +1537,76 @@ func _test_fixture_finals() -> void:
 
 
 ## No label in `node` runs off the screen at this size.
+## The closest two of a TeamBuilder's oval tokens (each name's card) come (the director, 2026-11-04: Howes and Pickett overlapped on a PC's
+## side sheet, Gawn and Sharp 2 px apart): [gap px, the two names].
+static func pitch_gap(builder: Node) -> Array:
+	var boxes := []
+	for c in builder.find_children("*", "Control", true, false):
+		if not c.has_meta("spot") or not (c as Control).is_visible_in_tree():
+			continue
+		var box: Rect2 = (c as Control).get_global_rect()
+		var who := ""
+		for l in c.find_children("*", "Label", true, false):
+			if who == "" and (l as Label).text.strip_edges() != "":
+				who = (l as Label).text
+		if who != "":
+			boxes.append([box, who])
+	var best := [INF, []]
+	for i in range(boxes.size()):
+		for j in range(i + 1, boxes.size()):
+			var p: Rect2 = boxes[i][0]
+			var q: Rect2 = boxes[j][0]
+			var dx := maxf(q.position.x - p.end.x, p.position.x - q.end.x)
+			var dy := maxf(q.position.y - p.end.y, p.position.y - q.end.y)
+			var g := maxf(dx, dy)
+			if g < float(best[0]):
+				best = [g, [boxes[i][1], boxes[j][1]]]
+	return best
+
+
+## Cards whose corners cross the oval's white boundary (the line is drawn on
+## the pitch's rect inset 2 px): [names] of any corner outside it.
+static func pitch_off_ground(builder: Node) -> Array:
+	var off := []
+	for c in builder.find_children("*", "Control", true, false):
+		if not c.has_meta("spot") or not (c as Control).is_visible_in_tree():
+			continue
+		var pitch: Control = c.get_parent()
+		var g := Rect2(Vector2.ZERO, pitch.size).grow(-3.0)
+		var k := c as Control
+		for corner in [k.position, k.position + Vector2(k.size.x, 0), k.position + Vector2(0, k.size.y), k.position + k.size]:
+			var q: Vector2 = (corner - g.get_center()) / (g.size * 0.5)
+			if q.length_squared() > 1.0:
+				off.append(str(c.get_meta("spot")))
+				break
+	return off
+
+
+## How far the left and right twins (BPL/BPR, HBFL/HBFR, IL/IR, WL/WR,
+## HFFL/HFFR, FPL/FPR) sit from mirror images of each other, in px: [px, key].
+static func pitch_skew(builder: Node) -> Array:
+	var at := {}
+	var pitch: Control = null
+	for c in builder.find_children("*", "Control", true, false):
+		if c.has_meta("spot") and (c as Control).is_visible_in_tree():
+			at[str(c.get_meta("spot"))] = (c as Control).position + (c as Control).size * 0.5
+			pitch = c.get_parent()
+	var worst := [0.0, ""]
+	if pitch == null:
+		return worst
+	var mid: Vector2 = pitch.size * 0.5
+	for k in ["BP", "HBF", "I", "W", "HFF", "FP"]:
+		if not at.has(k + "L") or not at.has(k + "R"):
+			continue
+		var a: Vector2 = at[k + "L"] - mid
+		var b: Vector2 = at[k + "R"] - mid
+		# Twins mirror across the ground's length: one coordinate equal, the other opposite.
+		var d := minf(absf(a.x + b.x) + absf(a.y - b.y), absf(a.x - b.x) + absf(a.y + b.y))
+		if d > float(worst[0]):
+			worst = [d, k]
+	return worst
+
+
 func _fits(node: Node, sz: Vector2i, what: String, tag: String) -> void:
 	var off := []
 	for c in node.find_children("*", "Label", true, false):
@@ -1396,6 +1675,14 @@ func _test_awards_races() -> void:
 					"The profile is gone, and the next Back leaves (%s)" % tag)
 		# The projected team on the oval: 18 spots and five on the bench, filled.
 		var team: Node = s.find_child("AATeam", true, false)
+		if team != null:
+			var agap: Array = pitch_gap(team)
+			print("PITCHGAP aa %s %.1f %s" % [tag, float(agap[0]), str(agap[1])])
+			var aoff: Array = pitch_off_ground(team)
+			print("PITCHOFF aa %s %s" % [tag, str(aoff)])
+			print("PITCHSKEW aa %s %s" % [tag, str(pitch_skew(team))])
+			_check(aoff.is_empty(), "Every card on the All-Australian oval sits inside the boundary line (%s: %s)" % [tag, str(aoff)])
+			_check(float(agap[0]) >= 8.0, "No two names on the All-Australian oval come within 8 px (%s: %.1f px, %s)" % [tag, float(agap[0]), str(agap[1])])
 		var spots := []
 		if team != null:
 			for c in team.find_children("*Spot_*", "Button", true, false):

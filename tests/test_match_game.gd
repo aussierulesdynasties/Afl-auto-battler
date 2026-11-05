@@ -21,6 +21,7 @@ func run() -> void:
 	_t("_test_contextual_frees_and_general_spoils")
 	_t("_test_free_causes_follow_the_play")
 	_t("_test_free_keeps_possession")
+	_t("_test_clanger_cause")
 	_t("_test_no_free_after_goal")
 	_t("_test_free_set_shots_counted")
 	_t("_test_legs_and_rotations")
@@ -65,6 +66,7 @@ func run() -> void:
 	_t("_test_run_call_once_a_run")
 	_t("_test_late_bounce_reachable")
 	_t("_test_bounce_once")
+	_t("_test_ballup_two")
 	_t("_test_ruck_never_tags")
 	_t("_test_current_club_identity")
 	_t("_test_tag_ends_with_injury")
@@ -388,6 +390,71 @@ func _test_free_set_shots_counted() -> void:
 			var st: Dictionary = sim.player_stats.get(id, {})
 			counted = counted and int(st.get("set_shots", 0)) >= int(by_taker[id])
 	_check(frees > 0 and counted, "A set shot from a free in 50 counts in the taker's set shots (%d scored)" % frees)
+
+
+## Row 12: with the clanger_cause switch a clanger that ends a chain in the wet or
+## the wind names it, belongs to the last disposal's player, and the dice are
+## untouched; with it off the line is the old one and carries no cause.
+func _test_clanger_cause() -> void:
+	var withwhy := 0
+	var plain_on := 0
+	var causes := {}
+	var line_ok := true
+	var names_ok := true
+	var same_play := true
+	var off_clean := true
+	for seed in range(24):
+		var weather := "wet" if seed % 3 == 0 else ("windy" if seed % 3 == 1 else "perfect")
+		Features.set_on("clanger_cause", false)
+		var roff := _sim(9100 + seed)
+		roff.weather = weather
+		var res_off: Dictionary = roff.run()
+		Features.set_on("clanger_cause", true)
+		var ron := _sim(9100 + seed)
+		ron.weather = weather
+		var res_on: Dictionary = ron.run()
+		Features.clear("clanger_cause")
+		same_play = same_play and res_off["score"] == res_on["score"] 				and res_off["events"].size() == res_on["events"].size()
+		for ev in res_off["events"]:
+			if str(ev.get("kind", "")) == "clanger":
+				off_clean = off_clean and not ev.has("why") and str(ev["text"]).ends_with("gives away a clanger")
+		var who := {}
+		for side in range(2):
+			var sq: Squad = ron.squads[side]
+			for p in sq.list + sq.ground + sq.bench:
+				who[str(p["id"])] = int(side)
+		for ev in res_on["events"]:
+			if str(ev.get("kind", "")) != "clanger":
+				continue
+			if not ev.has("why"):
+				plain_on += 1
+				continue
+			withwhy += 1
+			var why := str(ev["why"])
+			causes[why] = int(causes.get(why, 0)) + 1
+			line_ok = line_ok and MatchSim.CLANGER_WHY.has(why) 					and str(ev["text"]) == str(MatchSim.CLANGER_WHY[why]) % str(ev["name"]) 					and MatchNotes.clanger_caption(why) != ""
+			names_ok = names_ok and who.get(str(ev.get("player_id", "")), -1) == int(ev["side"])
+			if weather != "wet":
+				line_ok = line_ok and why != "wet"
+			if weather != "windy":
+				line_ok = line_ok and why != "wind"
+	print("Clanger cause: %d with a cause %s, %d plain" % [withwhy, str(causes), plain_on])
+	_check(withwhy >= 20, "Clangers name a cause in the sample (%d)" % withwhy)
+	_check(causes.size() >= 2, "Both weather causes show (%s)" % str(causes))
+	_check(line_ok, "Each cause line is its own words, each weather's cause only in that weather")
+	_check(names_ok, "The player named is of the side that erred")
+	_check(same_play, "The switch changes words and player credit, never the score or the events")
+	_check(off_clean, "Switch off: the old line, no cause")
+	_check(bool(ProjectSettings.get_setting("features/clanger_cause", false)), "Row 81: the switch ships on (project setting)")
+	_check(MatchSim.clanger_why({}, "wet") == "", "No disposal, no cause")
+	_check(MatchSim.clanger_why({"kind": "kick", "end": "tackle"}, "wet") == "", "A tackle has its own line: no cause")
+	_check(MatchSim.clanger_why({"kind": "kick", "end": ""}, "perfect") == "", "Dry still day: nothing to blame")
+	_check(MatchSim.clanger_why({"kind": "kick", "end": "entry"}, "wet", "turnover") == "wet", "A wet-ball turnover off an entry names the wet")
+	_check(MatchSim.clanger_why({"kind": "handball", "end": "pressure"}, "windy", "turnover") == "", "Wind blames kicks only")
+	_check(MatchSim.clanger_why({"kind": "kick", "end": "aerial"}, "wet", "turnover") == "", "A kick read and marked has its own line")
+	_check(MatchSim.clanger_why({"kind": "kick", "end": ""}, "wet", "score") == "", "A score is nobody's clanger")
+	_check(absf(MatchSim.clanger_blame_share("wet") - 0.15 / 1.15) < 0.001 and MatchSim.clanger_blame_share("perfect") == 0.0,
+			"The weather takes only its own share of the blame")
 
 
 func _test_free_causes_follow_the_play() -> void:
@@ -2332,6 +2399,51 @@ func _test_late_bounce_reachable() -> void:
 	_check(not sim._boundary_moment(), "...and only in the last quarter")
 
 
+## Row 15 (switch ballup_two): the late centre ball-up is two distinct calls,
+## each with an upside, a downside and a length; unanswered is no call.
+func _test_ballup_two() -> void:
+	var ask := func(on: bool) -> MatchSim:
+		Features.set_on("ballup_two", on)
+		var sim := _sim(4400, "MEL", "CAR")
+		sim.moment_side = 0
+		sim.current_quarter = 4
+		sim.current_minute = 106
+		sim.at_centre = true
+		for side in range(2):
+			(sim.team_stats[side] as Dictionary)["goals"] = 10.0
+		sim._boundary_moment()
+		return sim
+	var off: MatchSim = ask.call(false)
+	_check((off.pending_moment["options"] as Array).size() == 3, "Switch off: the late ball-up call keeps its three options")
+	_check(int(off.pending_moment["default"]) == 2, "Switch off: skipped, it plays straight as before")
+	var sim: MatchSim = ask.call(true)
+	var opts: Array = sim.pending_moment.get("options", [])
+	_check(str(sim.pending_moment.get("kind", "")) == "bounce" and opts.size() == 2, "Switch on: two choices at the late ball-up (%d)" % opts.size())
+	_check(str(opts[0]["key"]) == "stack" and str(opts[1]["key"]) == "flood", "...Stack the stoppage and Flood behind the ball")
+	var said_good := true
+	var ranked := false
+	for o in opts:
+		said_good = said_good and str(o["gain"]).begins_with("Gain: ") and str(o["cost"]).begins_with("Cost: ") 				and str(o["gain"]).contains("%") and (str(o["gain"]).contains("minutes") or str(o["gain"]).contains("siren"))
+		for w in ["best", "better choice", "recommend", "safer"]:
+			ranked = ranked or (str(o["gain"]) + str(o["cost"]) + str(o["label"])).to_lower().contains(w)
+	_check(said_good, "Each choice has an upside, a downside, a size and a length")
+	_check(not ranked, "Neither choice is called better")
+	_check(sim.pending_moment["options"][0]["gain"] != sim.pending_moment["options"][1]["gain"]
+			and str(opts[0]["cost"]) != str(opts[1]["cost"]), "The two choices differ in upside and downside")
+	# Unanswered (Skip, auto-play) is no call: nothing stacked or flooded.
+	var side := int(sim.pending_moment.get("side", 0))
+	var res := sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
+	_check(int(res.get("choice", 0)) == -1 and (sim.bursts[side] as Dictionary).is_empty(), "Unanswered, no call is made")
+	# Each choice takes effect.
+	var a: MatchSim = ask.call(true)
+	a.resolve_moment(0)
+	_check((a.bursts[int(a.moments.back()["side"])] as Dictionary).has("stack"), "Stack the stoppage is on")
+	var b: MatchSim = ask.call(true)
+	b.resolve_moment(1)
+	_check((b.bursts[int(b.moments.back()["side"])] as Dictionary).has("flood"), "Flood behind the ball is on")
+	Features.clear("ballup_two")
+
+
 ## A tag is a midfielder's job (the director's PC playtest, 2026-10-07: the
 ## team's ruckman was sent to tag).
 func _test_ruck_never_tags() -> void:
@@ -2472,6 +2584,23 @@ func _test_match_story() -> void:
 	var calm := MatchNotes.turning_points({"home": "MEL", "away": "CAR", "score": [80, 20], "events": [
 		{"kind": "goal", "q": 1, "min": 3, "side": 0, "name": "A", "score": [6, 0]}]}, 0)
 	_check(calm.is_empty(), "A match led from the first goal has no turning point to invent")
+	# Row 18: full injury wording and the scoring run told with when and score.
+	_check(Injuries.wording("hand") == "a hand injury" and Injuries.wording("hamstring") == "a hamstring strain",
+			"Injury kinds read as a coach would say them")
+	var hurt_res := {"home": "MEL", "away": "CAR", "score": [80, 20], "roster": [[{"id": "s1", "overall": 99}], []],
+			"events": [], "injuries": [{"id": "s1", "side": 0, "q": 2, "kind": "hand"}]}
+	var hp := MatchNotes.turning_points(hurt_res, 0)
+	_check(not hp.is_empty() and not str(hp[0]).contains(" to a hand in the") and str(hp[0]).contains("a hand injury"),
+			"Full time says a hand injury, not 'to a hand': %s" % str(hp))
+	var run_res := {"home": "MEL", "away": "CAR", "events": [
+		{"kind": "goal", "q": 1, "min": 5, "side": 1, "score": [0, 6]},
+		{"kind": "goal", "q": 3, "min": 68, "side": 0, "score": [6, 6]},
+		{"kind": "goal", "q": 3, "min": 72, "side": 0, "score": [12, 6]},
+		{"kind": "goal", "q": 3, "min": 75, "side": 0, "score": [18, 6]},
+		{"kind": "goal", "q": 3, "min": 80, "side": 0, "score": [24, 6]}]}
+	var rs := MatchNotes.run_sentence(run_res, MatchNotes._longest_run(run_res["events"]))
+	_check(rs == "Melbourne kicked four unanswered goals from 8 minutes into the third quarter, turning Melbourne 0, Carlton 6 into Melbourne 24, Carlton 6.",
+			"The run says when it began and the score before and after: %s" % rs)
 
 
 ## A first AFL goal for one of yours reaches the feed: once a player, never

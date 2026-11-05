@@ -42,16 +42,29 @@ static func lead_text(home: String, away: String, score: Array, name: Callable) 
 
 ## A full score sentence for a break: "Melbourne 4.2 (26) lead Collingwood
 ## 3.1 (19) by 7." Never "defeated": that is for a final result only.
-static func break_score(home: String, away: String, goals: Array, behinds: Array) -> String:
+## `short` uses the short club names (Bulldogs, Saints), so the line holds on
+## one line of a phone's banner.
+static func break_score(home: String, away: String, goals: Array, behinds: Array, short := false) -> String:
 	var hs := int(goals[0]) * 6 + int(behinds[0])
 	var aws := int(goals[1]) * 6 + int(behinds[1])
-	var h_line := "%s %s" % [GameDB.club_name(home), UiKit.scoreline(int(goals[0]), int(behinds[0]))]
-	var a_line := "%s %s" % [GameDB.club_name(away), UiKit.scoreline(int(goals[1]), int(behinds[1]))]
+	var h_name := GameDB.club_short(home) if short else GameDB.club_name(home)
+	var a_name := GameDB.club_short(away) if short else GameDB.club_name(away)
+	var h_line := "%s %s" % [h_name, UiKit.scoreline(int(goals[0]), int(behinds[0]))]
+	var a_line := "%s %s" % [a_name, UiKit.scoreline(int(goals[1]), int(behinds[1]))]
 	if hs == aws:
 		return "%s and %s: scores level." % [h_line, a_line]
 	if hs > aws:
 		return "%s lead %s by %d." % [h_line, a_line, hs - aws]
 	return "%s lead %s by %d." % [a_line, h_line, aws - hs]
+
+
+## Why a clanger went astray, short enough to sit over the player on the oval
+## (MatchSim.clanger_why's causes). "" for no cause: the oval says nothing.
+const CLANGER_CAPTIONS := {"wet": "Slippery ball", "wind": "Blown off line"}
+
+
+static func clanger_caption(why: String) -> String:
+	return str(CLANGER_CAPTIONS.get(why, ""))
 
 
 ## The feed line for an event, or {} to leave it to the oval.
@@ -79,6 +92,14 @@ static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
 		"quarter":
 			return {"text": _break_words(ev, home, away), "tier": "break"}
 	return {}
+
+
+## The tone of a feed line to the coach: a goal for his club is "good", one against
+## is "bad", everything else (behinds, breaks, calls) "neutral" (row 9).
+static func feed_tone(ev: Dictionary, my_side: int) -> String:
+	if str(ev.get("kind", "")) != "goal" or my_side < 0:
+		return "neutral"
+	return "good" if int(ev.get("side", -1)) == my_side else "bad"
 
 
 static func _result_words(home: String, away: String, score: Array) -> String:
@@ -416,6 +437,10 @@ static func _standout(res: Dictionary, now: Dictionary, was: Dictionary, side: i
 ## before where there is one: the stat each call is about, in its own words,
 ## so a problem at the break and the call you answered it with read the same.
 ## Facts only - never whether it was the right call.
+const CALLS_DID_NOTE := "Each line is the number that call is about, this quarter against the one before."
+const CALLS_WORTH_NOTE := "Points are what each call added to your margin or took off it, worked out from where the ball went."
+
+
 static func calls_lines(res: Dictionary, my_side: int, q: int) -> Array:
 	var hist: Array = res.get("tactics_history", [])
 	var snaps: Array = res.get("quarter_teams", [])
@@ -587,9 +612,7 @@ static func match_factors(res: Dictionary, my_side: int) -> Array:
 	# 1. The run that decided it: four or more goals in a row.
 	var run := _longest_run(res.get("events", []))
 	if int(run["len"]) >= 4:
-		var who := GameDB.club_name(codes[int(run["side"])])
-		var when := " in the %s quarter" % QUARTER_NAMES[mini(int(run["q"]) - 1, 4)] if bool(run["one_q"]) else ""
-		out.append("%s kicked %s unanswered goals%s." % [who, count_word(int(run["len"])), when])
+		out.append(run_sentence(res, run))
 
 	# 2. A quarter that swung it: won by four goals or more.
 	var qg: Array = res.get("q_goals", [])
@@ -658,13 +681,33 @@ static func match_factors(res: Dictionary, my_side: int) -> Array:
 	return out.slice(0, MAX_FACTORS)
 
 
-## The longest run of goals by one side: {"side", "len", "q", "one_q"}.
+## The run told in full: who, how many, when it began and the score either
+## side of it, as "Carlton kicked four unanswered goals from 8 minutes into the
+## third quarter, turning Carlton 20, Geelong 34 into Carlton 44, Geelong 34."
+static func run_sentence(res: Dictionary, run: Dictionary) -> String:
+	var codes := [str(res.get("home", "")), str(res.get("away", ""))]
+	var s := int(run["side"])
+	var names := [GameDB.club_name(codes[s]), GameDB.club_name(codes[1 - s])]
+	var head := "%s kicked %s unanswered goals" % [names[0], count_word(int(run["len"]))]
+	var a: Array = run.get("before", [])
+	var b: Array = run.get("after", [])
+	if a.size() < 2 or b.size() < 2 or not run.has("start"):
+		return head + "."
+	var when := _when(run["start"] as Dictionary)
+	return "%s from %s, turning %s %d, %s %d into %s %d, %s %d." % [head, when,
+			names[0], int(a[s]), names[1], int(a[1 - s]), names[0], int(b[s]), names[1], int(b[1 - s])]
+
+
+## The longest run of goals by one side: {"side", "len", "q", "one_q", and
+## "start" (the first goal), "before"/"after" (the score either side of it)}.
 static func _longest_run(events: Array) -> Dictionary:
 	var best := {"side": 0, "len": 0, "q": 1, "one_q": true}
 	var side := -1
 	var n := 0
 	var q0 := 1
 	var one_q := true
+	var start := {}
+	var before := []
 	for ev in events:
 		if str(ev.get("kind", "")) != "goal":
 			continue
@@ -678,8 +721,14 @@ static func _longest_run(events: Array) -> Dictionary:
 			n = 1
 			q0 = q
 			one_q = true
+			start = ev
+			var sc0: Array = ev.get("score", [])
+			before = []
+			if sc0.size() >= 2:
+				before = [int(sc0[0]) - (6 if s == 0 else 0), int(sc0[1]) - (6 if s == 1 else 0)]
 		if n > int(best["len"]):
-			best = {"side": side, "len": n, "q": q0, "one_q": one_q}
+			best = {"side": side, "len": n, "q": q0, "one_q": one_q, "start": start,
+					"before": before, "after": ev.get("score", [])}
 	return best
 
 
@@ -787,8 +836,8 @@ static func tag_question() -> String:
 ## intercepts so far." Nothing hidden: the number is his match stat.
 static func loose_tally_line(who: String, n: int) -> String:
 	if n <= 0:
-		return "%s: no intercepts yet." % who
-	return "%s: %d intercept%s so far." % [who, n, "" if n == 1 else "s"]
+		return "%s: no intercepts since the call." % who
+	return "%s: %d intercept%s since the call." % [who, n, "" if n == 1 else "s"]
 
 
 ## A forward's card for the job: where he plays, Defensive forward when he
@@ -972,6 +1021,85 @@ static func rated_players(res: Dictionary, side: int) -> Array:
 			return float(a["rating"]) > float(b["rating"])
 		return int(float(a["stats"].get("disposals", 0.0))) > int(float(b["stats"].get("disposals", 0.0))))
 	return out
+
+
+## The coaches' votes, as the AFL gives them: each coach names his five best
+## players on the ground, from either side, 5-4-3-2-1, so a player can earn up
+## to 10. Read from this match's ratings (so far, at a break), and from nothing
+## the sim decides with: each coach's own taste for a player is a fixed small
+## lean, the same all match, so the two coaches can differ on a close call.
+## Returns {player id: votes}; a player on neither coach's five is absent.
+static func coaches_votes(res: Dictionary) -> Dictionary:
+	var everyone := []
+	for side in [0, 1]:
+		everyone.append_array(rated_players(res, side))
+	var votes := {}
+	for coach in [0, 1]:
+		var scored := []
+		for r in everyone:
+			if int(r["rating"]) <= 0:
+				continue
+			var key := "%s|%s|%d|%s" % [res.get("home", ""), res.get("away", ""), coach, r["id"]]
+			var lean := float(key.hash() % 1000) / 1000.0 - 0.5   # -0.5..0.5
+			scored.append([str(r["id"]), float(r["rating"]) * (1.0 + 0.12 * lean)])
+		scored.sort_custom(func(a, b): return a[1] > b[1] or (a[1] == b[1] and str(a[0]) < str(b[0])))
+		for i in range(mini(5, scored.size())):
+			var id := str(scored[i][0])
+			votes[id] = int(votes.get(id, 0)) + (5 - i)
+	return votes
+
+
+## The side's best by the coaches' votes, most votes first and the match
+## rating breaking a tie, so the list reads as the ranking the votes make:
+## [{id, name, line, rating, inf, votes}]. `line` is votes_line: his two
+## best numbers. Players with no vote are left out; n caps the rows (a large
+## n lists every player the coaches voted for).
+static func standouts_by_votes(res: Dictionary, side: int, n: int, votes: Dictionary) -> Array:
+	# Only players a coach voted for: a row with no vote is no row.
+	var ranked := rated_players(res, side).filter(func(r): return votes.has(str(r["id"])))
+	ranked.sort_custom(func(a, b):
+		var va := int(votes.get(str(a["id"]), 0))
+		var vb := int(votes.get(str(b["id"]), 0))
+		if va != vb:
+			return va > vb
+		return float(a["rating"]) > float(b["rating"]))
+	var out := []
+	for r in ranked.slice(0, n):
+		out.append({"id": r["id"], "name": r["name"], "line": votes_line(r["stats"]),
+				"rating": r["rating"], "inf": r["rating"], "votes": int(votes.get(str(r["id"]), 0))})
+	return out
+
+
+## [stat key, singular, plural, a good game's count]. A player's best two are
+## the two furthest above a good game, so a quiet 30 disposals does not hide
+## 12 clearances.
+const VOTE_STATS := [
+	["goals", "goal", "goals", 2.0], ["disposals", "disposal", "disposals", 25.0],
+	["marks", "mark", "marks", 8.0], ["tackles", "tackle", "tackles", 6.0],
+	["clearances", "clearance", "clearances", 7.0], ["hitouts", "hit-out", "hit-outs", 25.0],
+	["pressure_acts", "pressure act", "pressure acts", 20.0], ["spoils", "spoil", "spoils", 6.0],
+	["intercepts", "intercept", "intercepts", 8.0], ["rebounds", "rebound 50", "rebound 50s", 6.0],
+	["inside50", "inside 50", "inside 50s", 6.0]]
+
+
+## A player's game as exactly his two best numbers, best first: "3 goals, 12
+## disposals". One pattern for every row of the votes lists.
+static func votes_line(st: Dictionary) -> String:
+	var ranked := []
+	for row in VOTE_STATS:
+		var n := int(float(st.get(row[0], 0.0)))
+		if n > 0:
+			ranked.append([float(n) / float(row[3]), n, row[1] if n == 1 else row[2]])
+	ranked.sort_custom(func(a, b): return a[0] > b[0])
+	var bits := PackedStringArray()
+	for r in ranked.slice(0, 2):
+		bits.append("%d %s" % [r[1], r[2]])
+	return ", ".join(bits)
+
+
+## "7", or a dash for a player neither coach voted for.
+static func votes_text(votes: Dictionary, id: String) -> String:
+	return str(int(votes[id])) if votes.has(id) else "–"
 
 
 ## The few team numbers worth a glance at full time: [label, mine, theirs].
@@ -1364,8 +1492,8 @@ static func turning_points(res: Dictionary, my_side: int, skip_kicker := "") -> 
 		if int(inj.get("q", 4)) >= 4 or int(overall.get(str(inj["id"]), 0)) < MatchSim.STAR_OVR:
 			continue
 		var whose := "You" if int(inj["side"]) == my_side else GameDB.club_name(codes[int(inj["side"])])
-		out.append("%s lost %s to a %s in the %s quarter." % [whose, _pname(str(inj["id"])),
-				str(inj.get("kind", "injury")), QUARTER_NAMES[int(inj["q"]) - 1]])
+		out.append("%s lost %s to %s in the %s quarter." % [whose, _pname(str(inj["id"])),
+				Injuries.wording(str(inj.get("kind", "injury"))), QUARTER_NAMES[int(inj["q"]) - 1]])
 		break
 	if winner != my_side and absi(int(score[0]) - int(score[1])) <= CLOSE_MISS:
 		for ev in events:

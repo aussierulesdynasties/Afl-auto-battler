@@ -64,15 +64,18 @@ func _run() -> void:
 		await _t("_test_pc_break_worst_case", [club])
 	await _t("_test_tag_not_saved")
 	await _t("_test_bounce_close_up")
+	await _t("_test_ballup_two_scene")
 	await _t("_test_playtest_bounce_scene")
 	await _t("_test_rings_on_the_oval")
 	await _t("_test_first_goal_line")
+	await _t("_test_feed_colours")
 	await _t("_test_momentum_meter")
 	await _t("_test_vignettes_setting")
 	await _t("_test_game_feel_settings")
 	await _t("_test_game_feel_effects")
 	_t("_test_broken_calls")
 	await _t("_test_vignettes_off_match")
+	await _t("_test_match_day_setup")
 	await _t("_test_match_way_poster")
 	_t("_test_appearance")
 	# Battery: nothing is redrawn unless it changes, and never above 60 fps.
@@ -309,6 +312,9 @@ func _test_phone_match(sz: Vector2i) -> void:
 	_check(not bt.contains(" def ") and not bt.contains("defeated"), "The break shows no result words (%s)" % tag)
 	_check(bt.contains("Tag on ") and box.find_child("CallsDid", true, false) != null,
 			"The break says what your calls did, your tag among them (%s)" % tag)
+	var dn: Node = box.find_child("CallsDidNote", true, false)
+	_check(dn != null and _plain(dn) == load("res://scripts/ui/match/MatchNotes.gd").CALLS_DID_NOTE,
+			"What your calls did says what its numbers are (%s)" % tag)
 	var qh: Label = box.find_child("QuarterHeading", true, false)
 	_check(qh != null and qh.text == "First quarter" and not bt.contains("What's happening"),
 			"Quarter time leads with the quarter just played, by name (%s)" % tag)
@@ -429,6 +435,22 @@ func _test_phone_match(sz: Vector2i) -> void:
 		await _settle()
 		_check(why_q == "" and says != null and says.text.begins_with("Q1:"),
 				"A finger on Q1 says the first quarter (%s: %s)" % [tag, why_q if why_q != "" else (says.text if says else "-")])
+		# One tap arrives as a touch and an emulated click in the same frame;
+		# the pick must stay picked, not toggle on then off.
+		var worm = bs.find_child("Worm", true, false) if bs != null else null
+		if worm != null:
+			bs._pick = {}
+			var touch := InputEventScreenTouch.new()
+			touch.pressed = true
+			touch.position = Vector2(worm.size.x * 0.5, 10.0)
+			var click := InputEventMouseButton.new()
+			click.pressed = true
+			click.button_index = MOUSE_BUTTON_LEFT
+			click.position = touch.position
+			worm._gui_input(touch)
+			worm._gui_input(click)
+		_check(worm != null and bs._pick.has("q"),
+				"One tap delivered as touch and click picks the quarter once (%s)" % tag)
 		var team_t: Node = sheet.find_child("TeamStats", true, false) if sheet != null else null
 		_check(team_t != null and team_t.find_child("TeamRow_disposals", true, false) != null,
 				"Team stats open first, both clubs side by side (%s)" % tag)
@@ -490,7 +512,7 @@ func _test_phone_match(sz: Vector2i) -> void:
 	var verdict: Label = ft_box.find_child("Verdict", true, false) if ft_box != null else null
 	_check(verdict != null and (verdict.text.begins_with("Won by") or verdict.text.begins_with("Lost by")
 			or verdict.text == "Draw"), "Full time leads with the result (%s: %s)" % [tag, verdict.text if verdict else "-"])
-	for n in ["MatchFactors", "BestPlayers", "KeyStats", "FinalScore_0", "FinalScore_1", "StandoutRating"]:
+	for n in ["MatchFactors", "BestPlayers", "KeyStats", "FinalScore_0", "FinalScore_1", "StandoutVotes"]:
 		_check(ft_box != null and ft_box.find_child(n, true, false) != null, "Full time shows %s (%s)" % [n, tag])
 	_check(RegEx.create_from_string("\\bpts\\b").search(ft) == null and not ft.contains("Expected points")
 			and not ft.contains("Possession chains"),
@@ -942,47 +964,52 @@ func _test_best_so_far(sz: Vector2i) -> void:
 		_check((await Tap.tap(best_open)) == "" and (block as Control).is_visible_in_tree(),
 				"On a phone Best so far opens from the break with a real tap (%s)" % tag)
 		await _settle()
-	# The top three of each side, from the match's own player stats.
+	# The top three of each side, most coaches' votes first, the match rating
+	# breaking a tie; the subline is the player's two best stats.
+	var votes_all: Dictionary = notes.coaches_votes(res)
 	var want := []
+	var per_side := 3 if sz.x >= 900 else 99
 	for side in [me, 1 - me]:
-		var ranked := []
-		for p in (res["roster"] as Array)[side]:
-			var st: Dictionary = (res["players"] as Dictionary).get(str(p["id"]), {})
-			ranked.append([str(p["id"]), int(notes.rating(st)), int(float(st.get("disposals", 0.0)))])
-		ranked.sort_custom(func(a, b): return a[1] > b[1] or (a[1] == b[1] and a[2] > b[2]))
-		for r in ranked.slice(0, 3):
+		for r in notes.standouts_by_votes(res, side, per_side, votes_all):
 			want.append(r)
 	var bad := []
 	var found := 0
 	for r in want:
-		var row: Node = block.find_child("BestRow_%s" % str(r[0]), true, false)
+		var row: Node = block.find_child("BestRow_%s" % str(r["id"]), true, false)
 		if row == null:
 			# A PC break drops the third of each side when it will not fit 720 high.
-			if not (sz.x >= 900 and want.find(r) % 3 == 2):
-				bad.append("missing " + str(r[0]))
+			if not sz.x >= 900:
+				bad.append("missing " + str(r["id"]))
 			continue
 		found += 1
-		var rating_l: Label = row.find_child("StandoutRating", true, false)
-		if rating_l == null or rating_l.text != str(r[1]):
-			bad.append("%s rating %s v %d" % [str(r[0]), rating_l.text if rating_l else "-", int(r[1])])
-		# ...and his stat line is the match's own numbers in words (game_line of
-		# result["players"], read now), not a second count.
-		var line_want: String = notes.game_line((res["players"] as Dictionary).get(str(r[0]), {}))
-		if sz.x >= 900:
-			# A PC column holds two numbers; a third would run off the line.
-			line_want = ", ".join(PackedStringArray(line_want.split(", ")).slice(0, 2))
-		var texts := []
-		for lb in row.find_children("*", "Label", true, false):
-			texts.append((lb as Label).text)
-		if not texts.has(line_want):
-			bad.append("%s line %s not shown" % [str(r[0]), line_want])
-	_check((found == want.size() or (sz.x >= 900 and found == 4)) and bad.is_empty(), "Best so far lists the best of each side with the match's own ratings (%s: %s)" % [tag, str(bad)])
+		var votes_l: Label = row.find_child("StandoutVotes", true, false)
+		var want_votes: String = notes.votes_text(votes_all, str(r["id"]))
+		if want_votes == "–":
+			bad.append("%s is listed with no votes" % str(r["id"]))
+		# Only the leader's total is written ("10 votes"); the rest read in order.
+		var is_lead: bool = int(votes_all.get(str(r["id"]), 0)) == int(votes_all.values().max())
+		if votes_l == null or (is_lead and votes_l.text != "%s votes" % want_votes) or (not is_lead and votes_l.visible):
+			bad.append("%s votes %s v %s" % [str(r["id"]), votes_l.text if votes_l else "-", want_votes])
+		var line_l: Label = row.find_child("StandoutLine", true, false)
+		if line_l == null or line_l.text != str(r["line"]):
+			bad.append("%s line %s v %s" % [str(r["id"]), line_l.text if line_l else "-", str(r["line"])])
+		if row.find_child("StandoutRating", true, false) != null:
+			bad.append("%s still shows a rating" % str(r["id"]))
+	_check((found == want.size() or sz.x >= 900) and bad.is_empty(), "Best so far lists the best of each side with the match's own ratings (%s: %s)" % [tag, str(bad)])
 	# Each side under its own club name, even numbers each; on a phone the
 	# block sits below the controls, so the next quarter's choices are never
 	# pushed under the pinned Start button.
 	_check(block.find_child("BestClub_%d" % me, true, false) != null and block.find_child("BestClub_%d" % (1 - me), true, false) != null
-			and (found == 6 or (sz.x >= 900 and found == 4)), "Best so far has a heading per club and the same number each (%s: %d rows)" % [tag, found])
-	_check(block.find_children("RatingHeading", "Label", true, false).size() == 1, "Best so far says Rating once, not per club (%s)" % tag)
+			and found > 0, "Best so far has a heading per club and lists every voted player (%s: %d rows)" % [tag, found])
+	for r in block.find_children("StandoutVotes", "Label", true, false):
+		_check((r as Label).text != "–", "No row shows a dash for votes (%s)" % tag)
+	# Every touch target in the sheet is a full 48 px bar.
+	for nm in ["BestSoFarAll", "BreakStats"]:
+		var lk: Control = m.find_child(nm, true, false)
+		if lk != null and sz.x < 900 and lk.is_visible_in_tree():
+			_check(lk.size.y >= 47.5, "%s is at least 48 px tall (%s: %.0f)" % [nm, tag, lk.size.y])
+	_check(block.find_children("RatingHeading", "Label", true, false).is_empty(), "Best so far carries no rating column (%s)" % tag)
+	_check(block.find_children("VotesHeading", "Label", true, false).size() == 1, "Best so far says what the votes are once, over both clubs (%s)" % tag)
 	var pair_inks: Array = load("res://scripts/ui/UiKit.gd").club_ink_pair(str(res["home"]), str(res["away"]))
 	# Allegiance: each side has its club-colour bar; its name and ratings are in
 	# the club's readable colour (4.5:1 on the break) or plain text, never a
@@ -998,16 +1025,26 @@ func _test_best_so_far(sz: Vector2i) -> void:
 			continue
 		if (bar as ColorRect).color != pair_inks[side]:
 			ally_bad.append("%s bar is not the pair's ink" % code)
-		if (bar as ColorRect).custom_minimum_size.x != 4.0:
-			ally_bad.append("%s bar is not 4 px" % code)
+		if (bar as ColorRect).custom_minimum_size.x < 4.0:
+			ally_bad.append("%s bar is under 4 px" % code)
 		var ink: Color = nm.get_theme_color("font_color")
 		if ink != uk.club_name_colour(pair_inks[side]):
-			ally_bad.append("%s name is not in its ink (white for a red club)" % code)
+			ally_bad.append("%s name is not the club's name colour" % code)
 		if uk.contrast(ink, uk.BG) < 4.5:
 			ally_bad.append("%s name contrast %.1f" % [code, uk.contrast(ink, uk.BG)])
-		for rl in (bar.get_parent() as Node).find_children("StandoutRating", "Label", true, false):
+		for rl in (bar.get_parent() as Node).find_children("StandoutVotes", "Label", true, false):
 			if (rl as Label).get_theme_color("font_color") != uk.TEXT:
-				ally_bad.append("%s rating is not plain bold text" % code)
+				ally_bad.append("%s votes are not plain bold text" % code)
+		for sl in (bar.get_parent() as Node).find_children("StandoutLine", "Label", true, false):
+			var wash: Color = uk.PANEL.lerp(pair_inks[side], 0.3)
+			if (sl as Label).get_theme_font_size("font_size") < 14:
+				ally_bad.append("%s subline under 14 px" % code)
+			if uk.contrast((sl as Label).get_theme_color("font_color"), wash) < 4.5:
+				ally_bad.append("%s subline contrast %.1f" % [code, uk.contrast((sl as Label).get_theme_color("font_color"), wash)])
+			# The sheet itself is washed in one colour behind both clubs.
+			var sheet: Color = uk.PANEL.lerp(m._wash_col(), 0.3)
+			if uk.contrast((sl as Label).get_theme_color("font_color"), sheet) < 4.5:
+				ally_bad.append("%s subline contrast on the sheet wash %.1f" % [code, uk.contrast((sl as Label).get_theme_color("font_color"), sheet)])
 	_check(ally_bad.is_empty(), "Best so far carries each club's colour, readable (%s: %s)" % [tag, str(ally_bad)])
 	# Nothing in the block is clipped: every label's text fits its width.
 	var clipped := []
@@ -1023,7 +1060,7 @@ func _test_best_so_far(sz: Vector2i) -> void:
 	if sz.x < 900 and plan_pick != null and best_open == null:
 		_check((plan_pick as Control).global_position.y < (block as Control).global_position.y,
 				"On a phone Best so far sits below the gameplan choices (%s)" % tag)
-	var all_b: Button = block.find_child("BestSoFarAll", true, false)
+	var all_b: Control = m.find_child("BestSoFarAll", true, false)
 	_check(all_b != null and (await Tap.tap(all_b)) == "", "All player stats takes a real tap (%s)" % tag)
 	await _settle()
 	var sheet: Node = m.find_child("BreakStatsSheet", true, false)
@@ -1407,8 +1444,7 @@ func _test_club_ink_all() -> void:
 				continue
 			var src := FileAccess.get_file_as_string(dir_path + "/" + f)
 			var n_line := 0
-			for ln in src.split("
-"):
+			for ln in src.split("\n"):
 				n_line += 1
 				var t: String = ln.strip_edges()
 				if t.begins_with("#"):
@@ -1526,10 +1562,10 @@ func _test_loose_interceptor(sz: Vector2i) -> void:
 		if not named:
 			_check(id == "" and tally == null, "With no loose man there is no intercepts line (%s: %s)" % [tag, id])
 		else:
-			var n := int(float((sim.player_stats.get(id, {}) as Dictionary).get("intercepts", 0.0)))
+			var n: int = sim.intercepts_since_call(me)
 			var who: String = db.player_display_name_by_id(id, "")
 			_check(tally != null and _plain(tally) == notes.loose_tally_line(who, n),
-					"The line says his intercepts this match, %d (%s: %s)" % [n, tag, _plain(tally) if tally else "-"])
+					"The line says his intercepts since the call, %d (%s: %s)" % [n, tag, _plain(tally) if tally else "-"])
 		var note: Label = block.find_child("DefenceNote", true, false)
 		var man_b: Button = block.find_child("DefenceSetupPicker_man", true, false)
 		var w: String = await Tap.tap(man_b)
@@ -1911,6 +1947,68 @@ func _test_bounce_close_up() -> void:
 	await _settle()
 
 
+## Row 15 (switch ballup_two): the late centre ball-up scene offers two choices,
+## each with its gain and cost, both reachable by a real tap; the tap makes the call.
+func _test_ballup_two_scene() -> void:
+	Features.set_on("ballup_two", true)
+	var sz := Vector2i(360, 740)
+	_state.reset()
+	_state.start_season("COL", root.get_node("GameDB").club_list("COL"))
+	root.size = sz
+	_check(_state.prepare_interactive_match(), "A live match is prepared (two-choice ball-up)")
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	(m.find_child("StartQuarter", true, false) as Button).emit_signal("pressed")
+	await _settle()
+	m.get("_pitch").pause()
+	var sim = _state.pending_sim
+	var me := int(m.get("_my_side"))
+	sim.pending_moment = {}
+	sim.moment_side = me
+	sim.current_quarter = 4
+	sim.current_minute = 106
+	sim.at_centre = true
+	sim.set("_moments_this_q", 0)
+	sim.set("_last_moment_chain", -1000)
+	for side in range(2):
+		(sim.team_stats[side] as Dictionary)["goals"] = 9.0 + side
+	_check(sim.call("_boundary_moment") and str(sim.pending_moment.get("kind", "")) == "bounce",
+			"MatchSim asks the late centre-bounce call")
+	m.call("_show_moment")
+	await _settle()
+	var card = m.find_child("MomentCard", true, false)
+	var vig = m.find_child("StoppageVignette", true, false)
+	_check(card != null and vig != null, "The two-choice call opens on the close-up (art loaded, not a fallback)")
+	if card == null or vig == null:
+		Features.clear("ballup_two")
+		m.queue_free()
+		return
+	vig.finish_now()
+	await _settle()
+	for i in range(30):
+		await process_frame      # the call slides up (0.3 s)
+	var btns := card.find_children("Moment_*", "Button", true, false)
+	_check(btns.size() == 2 and card.find_child("Moment_2", true, false) == null, "Two choices on the card (%d)" % btns.size())
+	var gains := 0
+	var costs := 0
+	for l in card.find_children("*", "Label", true, false):
+		gains += 1 if (l as Label).text.begins_with("Gain: ") else 0
+		costs += 1 if (l as Label).text.begins_with("Cost: ") else 0
+	_check(gains == 2 and costs == 2, "Each choice says its gain and its cost (%d, %d)" % [gains, costs])
+	var low := _text(card).to_lower()
+	_check(not low.contains("play it straight") and not low.contains("recommend") and not low.contains("best"),
+			"No third option and no advice (%s)" % _text(card))
+	var asked: int = sim.moments.size()
+	var why: String = await Tap.tap(card.find_child("Moment_1", true, false))
+	_check(why == "", "A real tap on Flood behind the ball reaches it (%s)" % why)
+	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("choice_label", "")) == "Flood behind the ball"
+			and (sim.bursts[me] as Dictionary).has("flood"), "The tap makes the call, and the flood is on")
+	Features.clear("ballup_two")
+	m.queue_free()
+	await _settle()
+
+
 ## The playtest switch (Settings, ARD-M8-007): the centre-bounce scene comes even
 ## where no call could - early in the last quarter of a blowout, the quarter's calls
 ## spent - and plays through the real match screen.
@@ -2033,6 +2131,60 @@ func _test_rings_on_the_oval() -> void:
 		pitch._process(0.25)
 		guard += 1
 	_check(kid != "" and pitch.ringed(kid), "A player you promised a run is ringed as the next event plays")
+	m.queue_free()
+	await _settle()
+
+
+## Row 9 (switch feed_colours): your goals read good, goals against read bad, a behind
+## and a coach's call stay neutral; off, every goal head is plain text.
+func _test_feed_colours() -> void:
+	var db = root.get_node("GameDB")
+	_state.reset()
+	_state.start_season("COL", db.club_list("COL"))
+	root.size = Vector2i(420, 860)
+	_check(_state.prepare_interactive_match(), "A live match is prepared (feed colours)")
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	var me := int(m.get("_my_side"))
+	var feed: Node = m.find_child("Feed", true, false)
+	var head_col := func(row: Node) -> Color:
+		var h: Control = row.get_child(1).get_child(0)
+		return h.get_theme_color("default_color") if h is RichTextLabel else h.get_theme_color("font_color")
+	var ui = load("res://scripts/ui/UiKit.gd")
+	var was: bool = Features.on("feed_colours")
+	Features.set_on("feed_colours", true)
+	var goal := {"kind": "goal", "q": 1, "min": 3, "name": "Test Kicker", "goals": [1, 0], "behinds": [0, 0], "score": [6, 0]}
+	goal["side"] = me
+	m.call("_feed_add", goal)
+	goal["side"] = 1 - me
+	m.call("_feed_add", goal)
+	var rows := []
+	for c in feed.get_children():
+		if str(c.get_meta("feed_kind", "")) == "goal":
+			rows.append(c)
+	_check(rows.size() == 2, "Both goals reach the feed (%d)" % rows.size())
+	if rows.size() == 2:
+		_check(str(rows[0].get_meta("tone")) == "good" and head_col.call(rows[0]) == ui.GOOD,
+				"Your goal reads in the good colour")
+		_check(str(rows[1].get_meta("tone")) == "bad" and head_col.call(rows[1]) == ui.BAD,
+				"A goal against reads in the bad colour")
+	var behind := {"kind": "behind", "q": 1, "min": 4, "side": me, "name": "Test Kicker", "score": [6, 1]}
+	m.call("_feed_add", behind)
+	var last: Node = feed.get_child(feed.get_child_count() - 1)
+	_check(str(last.get_meta("feed_kind", "")) == "PlayLine"
+			and (last as Control).get_theme_color("default_color" if last is RichTextLabel else "font_color") == ui.TEXT,
+			"Your behind stays neutral")
+	_check(load("res://scripts/ui/match/MatchNotes.gd").feed_tone({"kind": "moment", "side": me}, me) == "neutral", "A coach's call stays neutral")
+	Features.set_on("feed_colours", false)
+	m.call("_feed_add", goal)
+	var off: Node = null
+	for c in feed.get_children():
+		if str(c.get_meta("feed_kind", "")) == "goal":
+			off = c
+	_check(off != null and str(off.get_meta("tone")) == "neutral" and head_col.call(off) == ui.TEXT,
+			"Switch off: the goal head is plain text")
+	Features.set_on("feed_colours", was)
 	m.queue_free()
 	await _settle()
 
@@ -2341,6 +2493,73 @@ func _settle() -> void:
 		await process_frame
 
 
+## TODO row 25: every pre-match call sits before Start, the side included.
+## Play match opens the setup; Change the side opens the same Team selection the
+## hub's Team does; the new side is the one that plays. Real taps (tests/tap.gd).
+func _test_match_day_setup() -> void:
+	_state.set_vignettes_on(false)
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	root.size = Vector2i(390, 844)
+	router.stack = ["hub"]
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	hub.call("_on_play_match")
+	await _settle()
+	var ms: Node = current_scene
+	_check(ms != null and ms.name == "MatchScene" and _state.match_day_setup_open(),
+			"Play match opens the match-day setup, nothing bounced yet")
+	var side: Control = ms.find_child("ChangeSide", true, false) if ms != null else null
+	var start: Control = ms.find_child("StartQuarter", true, false) if ms != null else null
+	_check(side != null and start != null and (start as Button).text == "Start",
+			"The setup has Change the side and Start (%s)" % ((start as Button).text if start else "-"))
+	var sim_side: int = _state.pending_sim.moment_side
+	var dropped := str((_state.pending_sim.squads[sim_side] as Squad).ground[0]["id"])
+	var why: String = await Tap.tap(side)
+	await _settle()
+	var sel: Node = current_scene
+	_check(why == "" and sel != null and sel.name == "SelectionScene",
+			"A tap on Change the side opens Team selection (%s)" % why)
+	_state.set_selection({"OUT": [dropped]})
+	if sel != null:
+		sel.call("_build")
+		await _settle()
+	var back: Control = sel.find_child("BackToMatchDay", true, false) if sel != null else null
+	why = await Tap.tap(back)
+	await _settle()
+	ms = current_scene
+	var ids := []
+	for p in (_state.pending_sim.squads[sim_side] as Squad).ground:
+		ids.append(str(p["id"]))
+	_check(why == "" and ms != null and ms.name == "MatchScene" and not ids.has(dropped)
+			and _state.match_day_setup_open(),
+			"Back to match day: the setup again, with the new side (%s)" % why)
+	start = ms.find_child("StartQuarter", true, false) if ms != null else null
+	why = await Tap.tap(start)
+	await _settle()
+	_check(why == "" and not _state.match_day_setup_open() and ms.find_child("ChangeSide", true, false) == null,
+			"Start bounces the ball and the side is no longer open (%s)" % why)
+	# The hub's Team is the same screen.
+	router.stack = ["hub"]
+	router.go("selection")
+	await _settle()
+	_check(current_scene != null and current_scene.name == "SelectionScene"
+			and current_scene.find_child("BackToMatchDay", true, false) == null,
+			"Team from the hub is the same Team selection, with no match-day way back")
+	if current_scene != null:
+		current_scene.queue_free()
+	if is_instance_valid(hub):
+		hub.queue_free()
+	_state.pending_sim = null
+	_state.side_from_match = false
+	await _settle()
+
+
 # ---------------------------------------------------------------------------
 # Vignettes On/Off (Settings, ROADMAP §1.11)
 # ---------------------------------------------------------------------------
@@ -2409,7 +2628,9 @@ func _test_vignettes_setting() -> void:
 					"TV is kept and applied (%s)" % tag)
 			_state.set_screen_size("standard")
 			await _settle()
-		# Screen orientation, on a phone or its browser: a real tap holds it.
+		# Phone is portrait only (director, 2026-11-05: "Drop landscape"): no
+		# Screen row on a desktop or a phone, and an older saved landscape loads
+		# as portrait.
 		_check(sheet.find_child("SettingsOrientation_portrait", true, false) == null,
 				"A desktop has no Screen orientation row (%s)" % tag)
 		load("res://scripts/core/ScreenLayout.gd").force_web_phone = true
@@ -2420,24 +2641,73 @@ func _test_vignettes_setting() -> void:
 		host.size = Vector2(sz)
 		sheet = options.open(host, true)
 		await _settle()
-		var land: Button = sheet.find_child("SettingsOrientation_landscape", true, false)
-		_check(land != null and sheet.find_child("SettingsOrientation_auto", true, false) != null
-				and _state.screen_orientation() == "portrait",
-				"A phone's Settings has Screen: portrait by default, landscape, follow the phone (%s)" % tag)
-		if land != null:
-			_check((await Tap.tap(land)) == "", "Landscape takes a real tap (%s)" % tag)
-			await _settle()
-			_check(_state.screen_orientation() == "landscape", "Landscape is kept (%s)" % tag)
+		_check(sheet.find_child("SettingsOrientation_landscape", true, false) == null
+				and sheet.find_child("SettingsOrientation_auto", true, false) == null
+				and sheet.find_child("SettingsOrientation_portrait", true, false) == null,
+				"A phone's Settings has no Screen row: portrait only (%s)" % tag)
+		for old in ["landscape", "auto", "junk"]:
+			_state.set_setting("screen_orientation", old)
+			_state.clamp_saved_orientation()
 			var cfg2 := ConfigFile.new()
-			_check(cfg2.load(_state.settings_path) == OK and cfg2.get_value("ui", "screen_orientation") == "landscape",
-					"Landscape is saved with the settings (%s)" % tag)
-			_state.set_screen_orientation("portrait")
+			_check(cfg2.load(_state.settings_path) == OK and cfg2.get_value("ui", "screen_orientation") == "portrait",
+					"A saved '%s' loads as portrait (%s)" % [old, tag])
+		var cfg3 := ConfigFile.new()
+		if cfg3.load(_state.settings_path) == OK and cfg3.has_section_key("ui", "screen_orientation"):
+			cfg3.erase_section_key("ui", "screen_orientation")
+			cfg3.save(_state.settings_path)
+		_state.clamp_saved_orientation()
+		var cfg4 := ConfigFile.new()
+		_check(cfg4.load(_state.settings_path) != OK or not cfg4.has_section_key("ui", "screen_orientation"),
+				"No saved orientation stays unsaved after the clamp (%s)" % tag)
+		var gs_src := FileAccess.get_file_as_string("res://scripts/state/GameState.gd")
+		var ready_body := gs_src.substr(gs_src.find("func _ready("))
+		ready_body = ready_body.substr(0, ready_body.find("\nfunc ", 1))
+		_check(ready_body.contains("clamp_saved_orientation()"),
+				"GameState._ready clamps the saved orientation (%s)" % tag)
+		# First tap (director, 2026-11-05): a phone's browser goes fullscreen and
+		# holds portrait from a tap's release (the browser's user gesture), once.
+		var sl_node: Node = root.get_node("ScreenLayout")
+		sl_node.page_lock_done = false
+		sl_node.page_lock_sent.clear()
+		var key_ev := InputEventKey.new()
+		key_ev.pressed = true
+		key_ev.keycode = KEY_A
+		sl_node._input(key_ev)
+		var press := InputEventScreenTouch.new()
+		press.pressed = true
+		sl_node._input(press)
+		var right := InputEventMouseButton.new()
+		right.button_index = MOUSE_BUTTON_RIGHT
+		sl_node._input(right)
+		var no_early: bool = sl_node.page_lock_sent.is_empty()
+		var lift := InputEventScreenTouch.new()
+		sl_node._input(lift)
+		var click_up := InputEventMouseButton.new()
+		click_up.button_index = MOUSE_BUTTON_LEFT
+		sl_node._input(click_up)
+		await process_frame
+		sl_node._input(lift)
+		_check(no_early and sl_node.page_lock_sent.size() == 1 and sl_node.page_lock_done
+				and sl_node.page_lock_sent[0].contains("requestFullscreen")
+				and sl_node.page_lock_sent[0].contains("document.documentElement")
+				and sl_node.page_lock_sent[0].contains("lock(o)")
+				and sl_node.page_lock_sent[0].ends_with("})('portrait');"),
+				"A phone browser's first tap release sends the page fullscreen portrait lock once; not a key, a press or a right click (%s)" % tag)
 		load("res://scripts/core/ScreenLayout.gd").force_web_phone = false
-		_check(root.get_node("ScreenLayout").orientation_for("portrait") == DisplayServer.SCREEN_PORTRAIT
-				and root.get_node("ScreenLayout").orientation_for("landscape") == DisplayServer.SCREEN_LANDSCAPE
-				and root.get_node("ScreenLayout").orientation_for("auto") == DisplayServer.SCREEN_SENSOR
-				and root.get_node("ScreenLayout").orientation_for("junk") == DisplayServer.SCREEN_PORTRAIT,
-				"Each choice maps to the engine's orientation; unknown is portrait (%s)" % tag)
+		var sl_cls = load("res://scripts/core/ScreenLayout.gd")
+		_check(sl_cls.page_lock_for(["web", "web_android"]) and sl_cls.page_lock_for(["web", "web_ios"])
+				and not sl_cls.page_lock_for(["web"]) and not sl_cls.page_lock_for(["android"])
+				and not sl_cls.page_lock_for(["ios"]) and not sl_cls.page_lock_for([]),
+				"Only a phone's browser gets the page lock: not a PC browser, a native phone or a desktop (%s)" % tag)
+		sl_node.page_lock_done = false
+		sl_node.page_lock_sent.clear()
+		await process_frame
+		sl_node._input(lift)
+		_check(sl_node.page_lock_sent.is_empty() and not sl_node.page_lock_done,
+				"A desktop's tap sends no page lock (%s)" % tag)
+		var proj := FileAccess.get_file_as_string("res://project.godot")
+		_check(proj.replace("\r", "").contains("window/handheld/orientation=1\n") and int(ProjectSettings.get_setting("display/window/handheld/orientation")) == DisplayServer.SCREEN_PORTRAIT,
+				"project.godot locks handhelds to portrait (%s)" % tag)
 		host.queue_free()
 		await _settle()
 
@@ -3063,11 +3333,13 @@ func _test_break_panes_layout() -> void:
 					"The pep talk and the defensive set-up are in the columns")
 			var tallest := 0.0
 			var heights := []
+			var parts := []
 			for c in cols:
 				var t := 0.0
 				for n in (c as Node).get_children():
 					if (n as Control).visible:
 						t += (n as Control).get_combined_minimum_size().y + 6.0
+						parts.append("%s %.0f" % [n.name, (n as Control).get_combined_minimum_size().y])
 				heights.append(t)
 				tallest = maxf(tallest, t)
 			var worst := 0.0
@@ -3075,7 +3347,7 @@ func _test_break_panes_layout() -> void:
 				worst = maxf(worst, (tallest - float(t)) / tallest)
 			# Three columns before the bounce (director, 2026-11-03): no column
 			# stands more than 30% empty, with Tag and Key match-ups kept together.
-			_check(worst <= 0.30, "No column stands more than 30%% empty (%.0f%%: %s)" % [worst * 100.0, str(heights)])
+			_check(worst <= 0.30, "No column stands more than 30%% empty (%.0f%%: %s %s)" % [worst * 100.0, str(heights), str(parts)])
 			var bsc: ScrollContainer = null
 			var up: Node = cols_node
 			while up != null and bsc == null:
@@ -3116,9 +3388,9 @@ func _test_break_panes_layout() -> void:
 			var count := 0
 			for n in (wrap.find_children("StandoutName", "Label", true, false) if wrap != null else []):
 				count += 1
-				if (n as Label).get_theme_color("font_color") != UK.club_name_colour(inks[side] as Color):
+				if (n as Label).get_theme_color("font_color") != UK.TEXT:
 					plain.append((n as Label).text)
-			_check(count >= 1 and plain.is_empty(), "Best so far names for side %d wear his club's ink (%s, %d, not: %s)" % [side, tag, count, str(plain)])
+			_check(count >= 1 and plain.is_empty(), "Best so far names for side %d are plain white (the club colour is the bar and crest) (%s, %d, not: %s)" % [side, tag, count, str(plain)])
 		m2.queue_free()
 		await _settle()
 	_state.replay_seed = seed_before
@@ -3128,71 +3400,26 @@ func _plain_of(c: Control) -> String:
 	return str(c.get_meta("plain")) if c.has_meta("plain") else (c as Label).text
 
 
-## Each key match-up's Change sits right after its sentence, and no name in a
-## sentence is broken across two lines.
+## The key match-ups are a compact grid: every row's columns line up under the
+## head and Change sits after them inside the pane.
 func _matchup_rows(m: Control, box: Node, tag: String) -> void:
-	var NI = load("res://scripts/ui/NameInk.gd")
 	var rows := box.find_children("BreakMatchup_*", "HBoxContainer", true, false)
 	_check(not rows.is_empty(), "The key match-ups have rows (%s)" % tag)
-	var names: Dictionary = m.call("_names")
-	var gaps := []
+	_check(box.find_child("MatchupHead", true, false) != null, "The match-up grid has a head over its columns (%s)" % tag)
+	var xs := {}
 	for r in rows:
-		var line: RichTextLabel = r.find_child("MatchupLine", true, false) as RichTextLabel
+		var fwd := r.find_child("Matchup_fwd", true, false) as Label
+		var dfd := r.find_child("Matchup_def", true, false) as Label
 		var change: Button = r.find_child("ChangeMatchup", true, false) as Button
-		if line == null or change == null:
-			_check(false, "A match-up row has its sentence and Change (%s)" % tag)
+		if fwd == null or dfd == null or change == null:
+			_check(false, "A match-up row has forward, defender and Change (%s)" % tag)
 			continue
-		var beside := _change_beside(line, change)
-		var gap: float = beside["gap"]
-		gaps.append(gap)
-		_check(gap >= 0.0 and gap <= 14.0, "Change sits right after its sentence, %.0f px away (%s: %s)" % [gap, tag, _plain_of(line)])
-		_check(absf(float(beside["off"])) <= 6.0, "Change sits level with the last line of its sentence (%.0f px off, %s: %s)" % [beside["off"], tag, _plain_of(line)])
-		var plain := _plain_of(line)
-		var spans: Array = NI.spans_in(plain, names)
-		var broken := []
-		for i in range(1, line.get_line_count()):
-			var at := line.get_line_range(i).x
-			for sp in spans:
-				if at > int(sp[0]) and at < int(sp[1]):
-					broken.append(plain.substr(int(sp[0]), int(sp[1]) - int(sp[0])))
-		_check(broken.is_empty(), "No name breaks across lines on a match-up (%s: %s)" % [tag, str(broken)])
-	# A sentence long enough to wrap on any pane: Change still follows its last line,
-	# the same distance as on a one-line row.
-	if not rows.is_empty():
-		var wl: RichTextLabel = rows[0].find_child("MatchupLine", true, false) as RichTextLabel
-		var was_bb := wl.text
-		var was_plain := _plain_of(wl)
-		NI.set_line(wl, "A long sentence that names a good many words, so that this match-up has to wrap onto a second and a third line before it ends.", names)
-		if wl.has_meta("refit"):
-			(wl.get_meta("refit") as Callable).call()
-		await _settle()
-		var wc: Button = rows[0].find_child("ChangeMatchup", true, false) as Button
-		var wat := _change_beside(wl, wc)
-		_check(wl.get_line_count() >= 2, "(setup) the long match-up sentence wraps (%d lines, %s)" % [wl.get_line_count(), tag])
-		_check(float(wat["gap"]) >= 0.0 and float(wat["gap"]) <= 14.0, "On a wrapped sentence Change sits right after its last line, %.0f px away (%s)" % [wat["gap"], tag])
-		_check(absf(float(wat["off"])) <= 6.0, "...level with that last line (%.0f px off, %s)" % [wat["off"], tag])
-		var all_gaps: Array = gaps.duplicate()
-		all_gaps.append(float(wat["gap"]))
-		var lo: float = all_gaps.min()
-		var hi: float = all_gaps.max()
-		_check(all_gaps.size() >= 2 and hi - lo <= 4.0, "Every Change sits the same distance after its sentence, wrapped or not (%.1f to %.1f px, %s)" % [lo, hi, tag])
-		wl.text = was_bb
-		wl.set_meta("plain", was_plain)
-		(wl.get_meta("refit") as Callable).call()
-		await _settle()
-
-
-## How far a Change sits from the end of its sentence's last line (gap, px across),
-## and how far its middle is from that line's middle (off, px down).
-func _change_beside(line: RichTextLabel, change: Button) -> Dictionary:
-	var last := line.get_line_count() - 1
-	var rng := line.get_line_range(last)
-	var shown := line.get_parsed_text().substr(rng.x, rng.y - rng.x).strip_edges(false, true)
-	var ends := line.get_global_rect().position.x + line.get_theme_font("normal_font").get_string_size(
-			shown, HORIZONTAL_ALIGNMENT_LEFT, -1, line.get_theme_font_size("normal_font_size")).x
-	var top := line.get_line_offset(last)
-	var mid := line.get_global_rect().position.y + top + (line.get_content_height() - top) * 0.5
-	return {"gap": change.get_global_rect().position.x - ends, "off": change.get_global_rect().get_center().y - mid}
+		xs[snappedf(fwd.get_global_rect().position.x, 1.0)] = true
+		xs[snappedf(dfd.get_global_rect().position.x, 1.0) + 100000.0] = true
+		_check(dfd.get_global_rect().end.x <= change.get_global_rect().position.x + 1.0
+				and change.get_global_rect().end.x <= m.get_viewport().get_visible_rect().size.x + 1.0,
+				"Change sits after the columns and inside the pane (%s: %s)" % [tag, dfd.text])
+	_check(xs.size() <= 2, "Every match-up row's columns line up (%s: %s)" % [tag, str(xs.keys())])
 
 
 ## Tapping a tag target brings "Who tags" in; no other section changes column

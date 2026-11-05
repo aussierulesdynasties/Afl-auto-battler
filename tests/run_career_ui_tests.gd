@@ -327,6 +327,7 @@ func _run() -> void:
 	await _t("_test_back_arrow_taps")
 	await _t("_test_finals_card_taps")
 	await _t("_test_remembered")
+	await _t("_test_list_problem_and_ask_around")
 	_t("_test_type_roles")
 	await _t("_test_names_fit")
 	_state.delete_saved_career()
@@ -334,6 +335,9 @@ func _run() -> void:
 	await _t("_test_new_career_canberra_choice")
 	await _t("_test_pc_hub_and_list_layout")
 	await _t("_test_list_shape_fits_phones")
+	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+		await _t("_test_list_words_fit", [sz])
+	await _t("_test_restore_earlier_save_tap")
 	print(Ran.line("Career UI", self))
 	_state.replay_seed = 0
 	quit(0 if _failures.is_empty() else 1)
@@ -548,6 +552,20 @@ Your career stays on this device.",
 	await _settle()
 	_press("ForgeCreatePlayer")
 	await _settle()
+	# T8.Q12: one weakness is compulsory, a second optional, never a third.
+	var save_b: Button = current_scene.find_child("ForgeSavePlayer", true, false)
+	_check(save_b != null and save_b.disabled and current_scene.find_child("ForgeNeedWeakness", true, false) != null,
+			"Save is blocked, and says why, until he has a weakness")
+	_press("ForgeWeakness_pressure")
+	await _settle()
+	save_b = current_scene.find_child("ForgeSavePlayer", true, false)
+	_check(save_b != null and not save_b.disabled and current_scene.find_child("ForgeNeedWeakness", true, false) == null,
+			"One weakness unblocks Save")
+	_press("ForgeWeakness_kicking")
+	await _settle()
+	_press("ForgeWeakness_marking")
+	await _settle()
+	_check(_forge_weaknesses() == 2, "A third weakness can't be picked (%d)" % _forge_weaknesses())
 	_press("ForgeSavePlayer")
 	await _settle()
 	var problem: Label = current_scene.find_child("ForgeProblem", true, false)
@@ -822,6 +840,11 @@ Your career stays on this device.",
 			"goals": [8, 19], "behinds": [13, 12]}, "FRE")
 	_check(gf_line.begins_with(_db.club_name("FRE")) and gf_line.contains("d.  " + _db.club_name("BRL")),
 			"Season review: the Grand Final winner comes first, home or away (%s)" % gf_line)
+	_check(review.summary_text("", false, "7th") == "You finished 7th.",
+			"Season review: no premiers gives only your finish, no blank club name")
+	_check(review.summary_text("FRE", false, "7th") == "%s take the flag. You finished 7th." % _db.club_name("FRE"),
+			"Season review: another club's flag names them and your finish")
+	_check(review.summary_text("FRE", true, "1st") == "PREMIERSHIP!", "Season review: your flag says PREMIERSHIP!")
 
 	# --- a saved career shows Continue, and it loads -------------------------
 	_state.start_season("SYD", _db.club_list("SYD"))
@@ -1267,16 +1290,65 @@ Your career stays on this device.",
 			and current_scene.find_child("TrainingIntro", true, false) == null,
 			"Back closes the intro and stays on Training")
 	var guide_btn: Button = current_scene.find_child("StatGuideButton", true, false)
-	guide_btn.emit_signal("pressed")
+	var guide_size := root.size
+	root.size = Vector2i(390, 844)   # a phone, so every tap lands on screen
 	await _settle()
+	guide_btn = current_scene.find_child("StatGuideButton", true, false)
+	guide_btn.emit_signal("pressed")
+	# The guide's sheet lays out (and may rise) over a few frames before a finger can hit a tile.
+	for i in range(20):
+		await process_frame
 	var guide = current_scene.find_child("StatGuide", true, false)
-	_check(guide != null and guide.find_child("Guide_star", true, false) != null
-			and guide.find_child("Guide_discipline", true, false) != null,
-			"The stat guide opens with every stat, star power and discipline included")
+	var sg: GDScript = load("res://scripts/ui/StatGuide.gd")
+	_check(guide != null and guide.find_child("GuideGrid", true, false) != null
+			and guide.find_child("GuideGrid", true, false).get_child_count() == sg.tiles().size(),
+			"The stat guide opens on a grid with one tile per topic")
+	# Every tile opens its page with a real tap; Back steps the page to the grid.
+	var stats_seen := {}
+	var pages_ok := true
+	var lost_at := ""
+	for t in sg.tiles():
+		if not is_instance_valid(guide):
+			pages_ok = false
+			break
+		var tile: Control = guide.find_child("Tile_" + str(t[0]), true, false)
+		if tile == null:
+			pages_ok = false
+			continue
+		var why: String = await Tap.tap(tile)
+		await _settle()
+		if why != "":
+			lost_at = "tap on %s: %s" % [t[0], why]
+			pages_ok = false
+			break
+		if not is_instance_valid(guide):
+			lost_at = "tap on " + str(t[0])
+			pages_ok = false
+			break
+		var page: Node = guide.find_child("GuidePage_" + str(t[0]), true, false)
+		if page == null or guide.find_child("GuideGrid", true, false) != null:
+			pages_ok = false
+		else:
+			for key in sg.STATS:
+				if page.find_child("Guide_" + str(key), true, false) != null:
+					stats_seen[key] = true
+		_router.handle_back(true)
+		await _settle()
+		if not is_instance_valid(guide):
+			lost_at = "Back from " + str(t[0])
+			pages_ok = false
+			break
+		if guide.find_child("GuideGrid", true, false) == null:
+			pages_ok = false
+	_check(pages_ok, "A tap on every topic tile opens its page, and Back returns to the tiles (guide lost at: %s)" % lost_at)
+	_check(stats_seen.size() == sg.STATS.size(),
+			"Every stat, star power and discipline included, sits on a topic page (%d of %d)" % [stats_seen.size(), sg.STATS.size()])
 	_router.handle_back(true)
 	await _settle()
 	_check(_router.current() == "training" and current_scene.find_child("StatGuide", true, false) == null,
 			"Back closes the stat guide")
+	root.size = guide_size
+	await _settle()
 	var first: Dictionary = _state.my_list[0]
 	current_scene.call("_open_player", str(first["id"]))
 	await _settle()
@@ -1670,8 +1742,14 @@ Your career stays on this device.",
 	if table_btn != null:
 		table_btn.emit_signal("pressed")
 		await _settle()
-		_check(_screen_text().contains("offer") and current_scene.find_children("GiveRow_*", "", true, false).is_empty(),
-				"The trade table says who came, and clears what you give")
+		var said = current_scene.find_child("OffseasonNotice", true, false)
+		var said_text := ""
+		if said is RichTextLabel:
+			said_text = (said as RichTextLabel).get_parsed_text()
+		elif said is Label:
+			said_text = (said as Label).text
+		_check(said_text.contains("offer") and current_scene.find_children("GiveRow_*", "", true, false).is_empty(),
+				"The trade table says who came, and clears what you give (%s; %d left)" % [current_scene.get("_notice"), current_scene.find_children("GiveRow_*", "", true, false).size()])
 	# A player elsewhere who asked to be traded and named your club: a line
 	# under Asked to be traded, and one tap starts the trade for him.
 	var rival_code := ""
@@ -1947,7 +2025,7 @@ func _test_remembered() -> void:
 		var l := sheet.find_child("Remembered_%d" % i, true, false) as Label
 		if l != null:
 			lines.append(l.text)
-	_check(lines == ["Best and fairest, %d." % (year - 1), "Premiership, %d." % (year - 2),
+	_check(lines == ["Doig Medal, %d." % (year - 1), "Premiership, %d." % (year - 2),
 			"Debuted in Round 7, %d, and kicked his first goal." % (year - 2)],
 			"His sheet has three remembered facts, newest first, and not the injury (%s)" % str(lines))
 	var title := sheet.find_child("WithUsTitle", true, false) as Label
@@ -2019,6 +2097,81 @@ func _test_remembered() -> void:
 	_check(why_g == "" and _state.list_player(str(blank["id"])).is_empty() and _state.my_list.size() == list_before - 1,
 			"A finger on Release player lets him go (%s)" % why_g)
 	scene.queue_free()
+	await _settle()
+
+
+## The off-season brief and Ask around on a phone (P-48, P-50): three lines of
+## facts open the screen; a finger asks around about a player, every rival
+## answers once, nothing is offered or saved, and a keen club's answer opens
+## the trade sheet filled in.
+func _test_list_problem_and_ask_around() -> void:
+	_state.reset()
+	_state.career_seed = 5508
+	_state.replay_seed = 5508
+	_state.start_season("MEL", _db.club_list("MEL"))
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	var lines: Array = _state.list_problem()
+	_check(lines.size() == 3 and str(lines[0]).contains("out of contract")
+			and str(lines[1]).begins_with("Your best six average") and str(lines[2]).contains("draft"),
+			"The list problem is three lines of fact (%s)" % " | ".join(lines))
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	var scene: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	var shown := []
+	for i in 3:
+		var l := scene.find_child("ListProblem_%d" % i, true, false) as Label
+		shown.append(l.text if l != null else "")
+	_check(shown == lines, "The screen opens with the three lines (%s)" % " | ".join(shown))
+	var why_tab: String = await Tap.tap(scene.find_child("Tab_trade", true, false))
+	await _settle()
+	var why_side: String = await Tap.tap(scene.find_child("TradeSide_mine", true, false))
+	await _settle()
+	var side: Array = _state.my_list.duplicate()
+	side.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	var pid := str(side[3]["id"])
+	var why_pick: String = await Tap.tap(scene.find_child("Mine_" + pid, true, false))
+	await _settle()
+	var offers_before: int = _state.trade_offers.size()
+	var table_before: int = _state.trade_table.size()
+	var dirty_list := str(_state.my_list.map(func(q): return q["id"]))
+	var why_ask: String = await Tap.tap(scene.find_child("AskAround", true, false))
+	await _settle()
+	var rivals: int = _db.active_clubs(_state.season_year).size() - 1
+	var answers := scene.find_children("Answer_*", "", true, false)
+	_check(why_tab == "" and why_side == "" and why_pick == "" and why_ask == ""
+			and scene.find_child("AskAnswers", true, false) != null and answers.size() == rivals,
+			"A finger on Ask around gets one answer from each of %d rivals (%d; %s %s %s %s)" % [
+			rivals, answers.size(), why_tab, why_side, why_pick, why_ask])
+	_check(_state.trade_offers.size() == offers_before and _state.trade_table.size() == table_before
+			and str(_state.my_list.map(func(q): return q["id"])) == dirty_list,
+			"Asking around offers, tables and moves nothing")
+	var again: Array = _state.ask_around(pid)
+	var first: Array = _state.ask_around(pid)
+	_check(str(again) == str(first), "Asking twice gets the same answers")
+	var keen := first.filter(func(r): return str(r["kind"]) != "no")
+	for r in first:
+		_check(str(r["line"]).begins_with(_db.club_name(str(r["club"])) + ": "),
+				"Each answer names its club first (%s)" % str(r["line"]))
+	if not keen.is_empty():
+		var club := str(keen[0]["club"])
+		var why_go: String = await Tap.tap(scene.find_child("AskTrade_" + club, true, false))
+		await _settle()
+		_check(why_go == "" and scene.find_child("AskAnswers", true, false) == null,
+				"A finger on Trade with them closes the answers (%s)" % why_go)
+		_check(str(scene.get("_trade_club")) == club and str(scene.get("_mine")) == str(keen[0]["mine"])
+				and str(scene.get("_theirs")) == str(keen[0]["theirs"]),
+				"The trade sheet opens with that club and its answer filled in (%s %s)" % [scene.get("_trade_club"), scene.get("_mine")])
+		_check(scene.find_children("GiveRow_*", "", true, false).size() == (keen[0]["mine"] as Array).size()
+				and scene.find_child("TradeVerdict", true, false) != null,
+				"What you give shows with a verdict (%d give rows)" % scene.find_children("GiveRow_*", "", true, false).size())
+	else:
+		_check(scene.find_children("AskTrade_*", "", true, false).is_empty(),
+				"With nobody keen there is no way into a trade from the answers")
+	scene.queue_free()
+	root.size = size_before
 	await _settle()
 
 
@@ -2167,6 +2320,11 @@ func _test_season_awards() -> void:
 
 
 ## Press a named button in the current scene, or fail the check if it is missing.
+## How many weaknesses the open Forge form holds.
+func _forge_weaknesses() -> int:
+	return (current_scene.get("_spec")["weaknesses"] as Array).size()
+
+
 func _press(node_name: String) -> void:
 	var b = current_scene.find_child(node_name, true, false)
 	_check(b != null, "%s is on screen" % node_name)
@@ -2427,6 +2585,61 @@ func _test_pc_hub_and_list_layout() -> void:
 ## scroll). Every control in the pane is on screen, or inside a scroll that
 ## brings it on screen; a finger's tap on a guernsey at the foot of the oval
 ## opens his profile; a swipe that starts on a guernsey scrolls the pane.
+## My list's Captaincy row keeps its word whole (critic 2026-11-04: "Captain…"
+## on a phone): the label is as wide as its text, and the row stays on screen.
+func _captaincy_whole(tag: String) -> void:
+	var cap: Control = current_scene.find_child("CaptaincyOpen", true, false)
+	var t: Label = cap.find_child("SectionTitle", true, false) if cap != null else null
+	if t == null:
+		_check(false, "My list has a Captaincy row (%s)" % tag)
+		return
+	var need: float = t.get_theme_font("font").get_string_size(t.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			t.get_theme_font_size("font_size")).x
+	_check(t.size.x + 0.5 >= need and t.text == "Captaincy",
+			"The Captaincy label is whole, not cut (%s: %.0f wide for %.0f of text)" % [tag, t.size.x, need])
+	var end := 0.0
+	for c in cap.find_children("*", "Label", true, false):
+		end = maxf(end, (c as Control).get_global_rect().end.x)
+	_check(end <= float(root.size.x) + 0.5, "The Captaincy row ends on screen (%s: %.0f)" % [tag, end])
+
+
+## Collingwood's My list, the critics' case (2026-11-04): the Captaincy word
+## whole beside Moore, Maynard and Daicos on a phone, and on a PC the Best 23
+## oval's centre line (Frampton, Daicos, Cameron, Anderson) with no two names
+## within 8 px.
+func _test_list_words_fit(sz: Vector2i) -> void:
+	var tag := "%dx%d" % [sz.x, sz.y]
+	root.size = sz
+	_state.reset()
+	# Real names, as the critics saw them (the made-up ones are shorter).
+	_state.show_real_names = true
+	_state.start_season("COL", _db.club_list("COL"))
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	_router.go("hub")
+	await _settle()
+	_router.go("list")
+	for i in range(6):
+		await _settle()
+	_captaincy_whole(tag)
+	if sz.x < 760:
+		_state.show_real_names = false
+		return
+	var ovals := current_scene.find_children("*", "FormationView", true, false)
+	_check(not ovals.is_empty(), "My list shows the Best 23 oval (%s)" % tag)
+	for ov in ovals:
+		var rects: Array = ov.call("name_rects")
+		var touching := []
+		for i in rects.size():
+			for j in range(i + 1, rects.size()):
+				if (rects[i] as Rect2).grow_individual(4, 0, 4, 0).intersects((rects[j] as Rect2).grow_individual(4, 0, 4, 0)):
+					touching.append("%s/%s" % [str(rects[i]), str(rects[j])])
+		_check(rects.size() >= 18 and touching.is_empty(),
+				"No two names on the Best 23 oval come within 8 px (%s, %d names: %s)" % [tag, rects.size(), str(touching.slice(0, 3))])
+	_state.show_real_names = false
+
+
 func _test_list_shape_fits_phones() -> void:
 	for sz in [Vector2i(360, 740), Vector2i(390, 844), Vector2i(412, 915)]:
 		var tag := "%dx%d" % [sz.x, sz.y]
@@ -2519,3 +2732,36 @@ func _test_list_shape_fits_phones() -> void:
 		await _settle()
 		_check(sc2.scroll_vertical > 100 and not opened[0], "A swipe starting on a guernsey scrolls the Shape pane and opens nobody (%s: scrolled %d)" % [tag, sc2.scroll_vertical])
 
+
+
+## Row 57: the hub's settings list the earlier saves, and a real tap on
+## Restore opens that point of the career. (Back up and Load a backup open the
+## system's file dialog, which a test cannot drive; their logic is covered by
+## the save suite's export and import tests.)
+func _test_restore_earlier_save_tap() -> void:
+	_state.delete_saved_career()
+	_state.reset()
+	_state.start_season("STK", _db.club_list("STK"))
+	_check(_state.save_career(), "Round 1 is saved")
+	_state.advance()
+	_check(_state.save_career(), "Round 2 is saved")
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var hub_settings: Button = current_scene.find_child("HubSettings", true, false)
+	if hub_settings != null:
+		hub_settings.emit_signal("pressed")
+		await _settle()
+	_check(current_scene.find_child("SavesExport", true, false) != null
+			and current_scene.find_child("SavesImport", true, false) != null,
+			"Back up career and Load a backup are in Settings")
+	var row := current_scene.find_child("EarlierSave1", true, false)
+	_check(row != null, "The round 1 save is listed")
+	if row == null:
+		return
+	var why: String = await Tap.tap(row.find_child("Restore", true, false))
+	await _settle()
+	_check(why == "", "A finger's tap reaches Restore: %s" % why)
+	_check(_router.current() == "hub" and _state.season != null and _state.season.round_index == 0,
+			"Restore opens the career at round 1 again")
+	_state.delete_saved_career()

@@ -1,0 +1,57 @@
+# PRs never edit docs/TODO.md (parallel PRs conflicted there). A PR body names the
+# rows it finishes with "Closes row 54" / "Closes rows 22, 27" / "Closes row T5.Q24";
+# after the merge this deletes those rows from main.
+#
+# main requires the "test" check with enforce_admins, so a bot push to main is rejected
+# even after the check passed. Instead: commit on roadmap-close/pr-N, open a PR labelled
+# "roadmap", turn on squash auto-merge, and dispatch Tests on the branch (PRs opened with
+# GITHUB_TOKEN start no CI; workflow_dispatch is allowed, and changed_files=docs/TODO.md
+# makes it a seconds-long docs-only pass). Needs the repo setting "Allow GitHub Actions
+# to create and approve pull requests". No matching row: a warning, nothing else.
+name: Roadmap close
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+concurrency:
+  group: roadmap-close
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write        # dispatch tests.yml on the close branch
+  pull-requests: write  # open and auto-merge the close PR
+
+jobs:
+  close:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Delete the rows the PR closes
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          PR: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+          printf '%s' "$BODY" > "$RUNNER_TEMP/body.txt"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch="roadmap-close/pr-$PR"
+          ids=$(python3 tools/roadmap_close.py --body-file "$RUNNER_TEMP/body.txt" --todo docs/TODO.md)
+          if [ -z "$ids" ]; then echo "::warning::No TODO row closed for #$PR"; exit 0; fi
+          case "$ids" in *,*) word="rows" ;; *) word="row" ;; esac
+          git checkout -q -b "$branch"
+          git add docs/TODO.md
+          git commit -q -m "Roadmap: close $word $ids (#$PR)"
+          git push -q -f origin "HEAD:refs/heads/$branch"
+          url=$(gh pr create --base main --head "$branch" --label roadmap --title "Roadmap: close $word $ids (#$PR)" --body "Deletes the TODO.md $word closed by #$PR. Opened by the Roadmap close action.")
+          gh pr merge "$url" --auto --squash --delete-branch
+          gh workflow run tests.yml --ref "$branch" -f changed_files=docs/TODO.md
+          echo "Opened $url"

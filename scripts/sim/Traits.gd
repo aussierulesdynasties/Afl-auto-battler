@@ -371,6 +371,35 @@ const PLURALS := {"lockdown": "Lockdown players", "big_game": "Big-game players"
 ## SYNERGIES order; "" when none is exactly one player short (on, or two or
 ## more short). No swap is suggested: who to bring in is the player's call.
 static func short_text(ground: Array) -> String:
+	var gap := _one_short(ground)
+	if gap.is_empty():
+		return ""
+	var name := str(PLURALS.get(str(gap[1]), "")).trim_suffix("s")
+	if name == "":
+		name = label(str(gap[1]))
+	return "%s: 1 %s short." % [label(str(gap[0])), name.to_lower()]
+
+
+## The same fact in a coach's words, for the This week sheet: "One short:
+## Running machine (needs one more runner who never tires)." "" when none.
+static func short_words(ground: Array) -> String:
+	var gap := _one_short(ground)
+	if gap.is_empty():
+		return ""
+	return "One short: %s (needs one more %s)." % [label(str(gap[0])), str(SHORT_WHO.get(str(gap[1]), label(str(gap[1])).to_lower()))]
+
+
+## Who a synergy still needs, as a coach would say him.
+const SHORT_WHO := {
+	"bull": "contested ball winner", "aerial": "key forward who marks overhead",
+	"crumber": "small forward who crumbs the ball", "interceptor": "defender who reads the ball in the air",
+	"lockdown": "stopper", "ball_magnet": "ball magnet", "playmaker": "playmaker",
+	"engine": "runner who never tires",
+}
+
+
+## [synergy key, trait key] for the first synergy exactly one player short, or [].
+static func _one_short(ground: Array) -> Array:
 	var rows := {}
 	for r in progress(ground):
 		rows[str(r["key"])] = r
@@ -380,11 +409,8 @@ static func short_text(ground: Array) -> String:
 			continue
 		for t in r["needs"]:
 			if int(r["have"][t]) < int(r["needs"][t]):
-				var name := str(PLURALS.get(str(t), "")).trim_suffix("s")
-				if name == "":
-					name = label(str(t))
-				return "%s: 1 %s short." % [label(str(key)), name.to_lower()]
-	return ""
+				return [str(key), str(t)]
+	return []
 
 
 ## "2/2 Contested bull (midfield)" style summary for one synergy row.

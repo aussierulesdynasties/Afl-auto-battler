@@ -1099,6 +1099,21 @@ func _test_oval_people(res: Dictionary) -> void:
 	pv3._cue_turnover({"kind": "pressure", "side": 1, "num": away})
 	_check(pv3.caption_text() == "Turnover", "A forced turnover always says so")
 	_check(not pv3.shaking(), "A turnover is an ordinary event: no shake")
+	# A clanger that says why names the cause over the player who erred, and the
+	# turnover that follows does not cover it; one with no cause says nothing.
+	pv3._cue_turnover({"kind": "ballup", "side": -1})
+	pv3._cue_turnover({"kind": "kick", "side": 0, "num": home})
+	for i in range(40):
+		pv3._process(0.05)
+	pv3._cue_turnover({"kind": "clanger", "side": 0, "num": home})
+	_check(pv3.caption_text() == "", "A clanger with no cause says nothing")
+	pv3._cue_turnover({"kind": "clanger", "side": 0, "num": home, "why": "wet"})
+	_check(pv3.caption_text() == "Slippery ball", "A clanger names why it went astray")
+	pv3._cue_turnover({"kind": "kick", "side": 1, "num": away})
+	_check(pv3.caption_text() == "Slippery ball", "The turnover after it does not cover the cause")
+	for i in range(40):
+		pv3._process(0.05)
+	_check(pv3.caption_text() == "", "The cause goes after a second or two")
 	# The club banner's light (UiKit.drift) is smooth: a pure function of time, monotone,
 	# near-constant change per unit time, the same position at 30 and 60 fps.
 	for fps in [30.0, 60.0]:
@@ -1931,6 +1946,28 @@ func _test_match_ground() -> void:
 	_check(VignetteGround.venue != "MCG", "A Geelong home game draws its own ground (%s)" % VignetteGround.venue)
 	VignetteGround.use_match({"home": "GEE", "away": "COL", "venue": "MCG"})
 	_check(VignetteGround.venue == "MCG", "A final at the MCG draws the MCG (the Grand Final)")
+	# Row 33: every club's home ground resolves to its own entry, at its own size and look.
+	var seen := {}
+	for code in GameDB.clubs.keys():
+		var ground: String = GameDB.club(code).get("ground", "")
+		VignetteGround.use_match({"home": code, "away": "COL", "venue": ""})
+		var s: Dictionary = VignetteGround.spec
+		_check(bool(s.get("known", false)), "%s's ground (%s) has its own look in grounds.json" % [code, ground])
+		_check(is_equal_approx(VignetteGround.L * 2.0, float(s["length"])) and is_equal_approx(VignetteGround.A * 2.0, float(s["width"])),
+				"%s is drawn at its own size" % ground)
+		_check(VignetteGround.GOAL_Y > 0.0 and VignetteGround.GOAL_Y < VignetteGround.L, "%s's goal line sits on its boundary" % ground)
+		seen[ground] = [s["length"], s["width"], s["seat"], s["roof"], s["towers"], s.get("tower_count"), s.get("hill", false), s["tiers"].size()]
+	var looks := {}
+	for g in seen:
+		looks[str(seen[g])] = g
+	_check(looks.size() == seen.size(), "Every ground looks different from every other (%d grounds, %d looks)" % [seen.size(), looks.size()])
+	_check(not bool(VignetteGround.spec_of("Alan Ray Oval").get("known", true)), "A ground without its own look draws the default")
+	# Looks only: the sim's result for a fixed seed is the same whichever ground is drawn.
+	VignetteGround.venue = "MCG"
+	var at_mcg := JSON.stringify(_sim(4242).run())
+	VignetteGround.venue = "Bellerive Oval"
+	var at_bellerive := JSON.stringify(_sim(4242).run())
+	_check(at_mcg == at_bellerive, "The ground drawn never changes the match (seed 4242)")
 	VignetteGround.venue = ""
 
 

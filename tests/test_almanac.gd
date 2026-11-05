@@ -194,6 +194,10 @@ func _test_screen() -> void:
 	_check(card != null and card.find_child("Goalkicker", true, false) != null, "The page names the leading goalkicker")
 	_check(card != null and card.find_child("StoryOfTheSeason", true, false) != null, "The page tells the story of the season")
 	_check(scene.find_child("ClubRecords", true, false) != null, "The almanac shows the club records")
+	var bfr := card.find_child("BestAndFairest", true, false) if card != null else null
+	var bfl := str((bfr.get_child(0) as Label).text) if bfr != null else ""
+	_check(bfr != null and bfl == BestAndFairest.award_name("GEE"), "The best and fairest row carries the medal's name (%s)" % bfl)
+	_check(BestAndFairest.award_name("GEE") == "Carji Greeves Medal", "Geelong's medal is the Carji Greeves Medal")
 	scene.queue_free()
 	GameState.almanac[-1]["legends"] = [{"id": "L1", "name": "Legend One", "games": 220, "goals": 12, "why": ["220 games"]}]
 	GameState.almanac.append({"year": int(GameState.season_year) + 1, "club": "GEE",

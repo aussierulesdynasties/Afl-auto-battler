@@ -14,7 +14,8 @@ extends RefCounted
 ##      (several: --features preseason,other);
 ##   3. the project setting features/<name> is true (project.godot). This is
 ##      what an exported build reads. international_prospects ships ON since
-##      2026-10-18 (director: "Names fine, switch on"); every other switch ships off.
+##      2026-10-18 (director: "Names fine, switch on") and clanger_cause since
+##      2026-11-04 (row 81); every other switch ships off.
 ## Otherwise it is OFF: every test suite that does not ask for it, and a plain
 ## editor run, for any switch whose project setting is false.
 ##
@@ -34,6 +35,7 @@ extends RefCounted
 ##               player per rival club, and Canberra as a career choice
 ##               (ExpansionBuild). Off, a new club arrives with the 36
 ##               generated players it always did and Canberra always joins.
+##   vignette_grade   the broadcast colour grade over the match vignettes (VignetteGrade).
 ##   club_almanac   the club almanac (Almanac.gd, AlmanacScene): a page per
 ##               season of your career, reached from the Hub and the season wrap.
 ##               Off, no entry is shown and no almanac page is written.
@@ -66,7 +68,54 @@ extends RefCounted
 ##               kicker's reach (MatchSim.kick_range: 30 m + 0.35 x disposal), nearest
 ##               teammate when nobody is; every match path shares MatchSim.kick_receiver.
 ##               Off, the receiver is the old zone pick from the whole ground.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range"]
+##   clanger_cause   row 12 (director, 2026-11-04): a clanger that ends a chain on a wet or
+##               windy day is the last touch's and says why (the weather raises the rate,
+##               so it is a real cause; MatchSim.clanger_why; the oval names it over the
+##               player, the match feed stays as is). Off, the clanger is a weighted pick
+##               from the ground and reads "gives away a clanger". On, player credit for
+##               clangers moves to the last carrier (the player clangers stat, notes and
+##               ratings); team totals, score and events are unchanged. Ships ON since
+##               2026-11-04 (row 81, his row 12 ruling).
+##   match_flow  row 11 (director, 2026-10-10): stoppages come from contests that lock up
+##               (a held tackle, a rushed kick into a pack, a spoil in the pocket), a won ball
+##               after an intercept or a free is played on, chains are shorter and more
+##               numerous (Ratings.FLOW, MatchSim LOCKUP_*, TACKLE_SPILL). Changes match
+##               output. Off, a match is exactly as before.
+##   ballup_two  row 15 (director, 2026-11-04): the late centre ball-up call is two
+##               distinct choices, Stack the stoppage or Flood behind the ball, each
+##               with its upside, downside, size and length; "Play it straight" is
+##               gone. A call skipped or left unanswered is no call (nothing is
+##               stacked or flooded). Off, the call keeps its three options.
+##   goal_run_moves  row 14 (director, 2026-11-03): the three-goal run against you offers two
+##               concrete football moves (stack the centre bounce, or flood behind the ball),
+##               shown as a centre ball-up scene, each with what it does and costs as a
+##               percentage. Off, the card is Throw numbers / Slow it down / Ride it out.
+##   decision_scenes   row 13 (director, 2026-11-04): the in-match calls that were text
+##               cards (tired, duel, hot, momentum, set shot) open on a close-up scene of
+##               the players they are about, like the centre-bounce call (DecisionVignette).
+##               Off, they are the text cards they were. Settings > Vignettes off also
+##               keeps the card.
+##   feed_colours   row 9 (director, 2026-11-04): in the match feed a goal your club kicks reads in the
+##               good colour, a goal you concede in the bad one; behinds, breaks and the coach's calls
+##               stay neutral. The club stripe and name ink are unchanged. Presentation only. Off,
+##               every goal head is plain text.
+##   ui_motion   menu juice, first prototype (director, 2026-11-04): the UiKit.Motion tokens
+##               in the helpers, a hardened reveal / count_up / land / attention (an earlier
+##               tween on the same node is stopped first), the Router fade easing out, every
+##               modal sheet rising 6 px into place, solid from the first frame, no fade (UiKit.sheet_in), UiKit.fill_bar, and
+##               the Sim the week result sheet: Verdict lands on a win, a loss gets
+##               nothing, and no text ever fades or comes in line by line. Scores are
+##               never delayed. Cosmetic only; Reduced motion still stills all of it. Off,
+##               every screen is exactly as before.
+##   training_grid   row 24 (2026-11-04): the Training list is two player cards across
+##               (position, rating, name, development, traits) instead of full-width
+##               rows. Same taps and groups. Off, the full-width rows.
+##   midseason_draft   row 54 (P-52, ruling 4.44): an under-18 carnival week after round 10
+##               (three prospects named by position and state, no grades) and a mid-season
+##               rookie draft after round 11 (reverse ladder, one pick per club with a list
+##               spot, free agents and passed-over prospects, deal to the end of next season,
+##               no trades). Changes AI lists. Off, nothing runs or is saved.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade"]
 
 static var _forced := {}
 static var _from_args := {}

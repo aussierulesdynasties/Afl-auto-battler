@@ -30,6 +30,7 @@ func _run() -> void:
 	var a := OS.get_cmdline_user_args()
 	var kit_options := a.has("--kit-options")
 	var pin := 0
+	var weather := ""
 	for i in range(a.size() - 1):
 		if str(a[i]) == "--seed":
 			pin = int(a[i + 1])
@@ -38,8 +39,14 @@ func _run() -> void:
 			var wh := str(a[i + 1]).split("x")
 			W = int(wh[0])
 			H = int(wh[1])
+		if str(a[i]) == "--weather":
+			weather = str(a[i + 1])     # wet|hot|windy|perfect: the scene drawn in that weather
+			load("res://scripts/ui/match/VignetteGrade.gd").forced_weather = weather
 		if str(a[i]) == "--out":
 			out = str(a[i + 1])
+		elif str(a[i]) == "--weather":
+			# --weather wet|hot|windy|perfect: the vignettes draw this day instead of the match's.
+			load("res://scripts/ui/match/VignetteGrade.gd").forced_weather = str(a[i + 1])
 		elif str(a[i]) == "--msaa":
 			msaa = true
 		elif str(a[i]) == "--film" and i + 2 < a.size():
@@ -88,6 +95,8 @@ func _run() -> void:
 	m.call("_show_moment")
 	var vig = m.find_child("StoppageVignette", true, false)
 	vig.set_process(false)
+	if weather != "":
+		vig.set("weather", weather)
 	if kit_options:
 		# Long sleeves are a player's own (his look); hoops are the kit's.
 		for t in vig.tokens:

@@ -695,6 +695,138 @@ func old_stars(n: int) -> void:
 		print("OLDMEAN|%s %s age %.1f ovr %d|mean pick %.1f" % [id, GameDB.player_display_name(p), float(p.get("age", 0)), int(p["overall"]), float(sums[id]) / n])
 
 
+## Row 22: role concentration and the director's named boards (2026-10-07).
+## For n seeds of the all-AI League Draft: the position mix of picks 1-11 and
+## 1-30 against the same number of best-by-OVR players in the pool (key
+## forwards split out, Matchups' rule), and the pick each named player went at.
+const NAMED := ["Max Hall", "Sam Darcy", "Cody Walker", "Jagga Smith", "Max Gawn",
+		"Jake Waterman", "Dan McStay", "Tom Stewart", "Josh Worrell", "Callum Wilkie",
+		"Noah Anderson", "Luke Jackson", "Christian Petracca", "Jack Viney"]
+
+
+static func _kind(p: Dictionary) -> String:
+	if Matchups._is_key_forward(p):
+		return "KPF"
+	return str(p.get("role", ""))
+
+
+func spread(n: int) -> void:
+	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
+	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
+	var named_ids := {}
+	for p in pool:
+		var nm := "%s %s" % [str(p.get("first", "")), str(p.get("last", ""))]
+		if not NAMED.has(nm):
+			nm = str(p.get("name", ""))
+		if NAMED.has(nm) and not named_ids.has(nm):
+			named_ids[nm] = p
+	var kinds := ["KPF", "FWD", "MID", "DEF", "RUCK"]
+	for band in [11, 30]:
+		var row := []
+		for k in kinds:
+			var c := 0
+			for p in pool.slice(0, band):
+				if _kind(p) == k:
+					c += 1
+			row.append("%s %d" % [k, c])
+		print("SPREAD|pool best %d by OVR|%s" % [band, ", ".join(row)])
+	# The same bands ranked by the clubs' own worth (rating and potential by
+	# each club's horizon, no scouting error), averaged over the clubs.
+	var d0 := Draft.new(pool, GameDB.active_clubs(GameDB.START_YEAR).duplicate(), 1)
+	var by_worth := pool.duplicate()
+	var wcache := {}
+	for p in by_worth:
+		var t := 0.0
+		for code in d0.clubs:
+			t += float(d0._club_worth(code, p))
+		wcache[str(p["id"])] = t / d0.clubs.size()
+	by_worth.sort_custom(func(a, b): return wcache[str(a["id"])] > wcache[str(b["id"])])
+	for band in [11, 30]:
+		var row := []
+		for k in kinds:
+			var c := 0
+			for p in by_worth.slice(0, band):
+				if _kind(p) == k:
+					c += 1
+			row.append("%s %d" % [k, c])
+		print("SPREAD|pool best %d by club worth|%s" % [band, ", ".join(row)])
+	var picks_of := {}
+	var max_kpf11 := 0
+	for s in range(1, n + 1):
+		var d := Draft.new(pool, GameDB.active_clubs(GameDB.START_YEAR).duplicate(), s)
+		d.start_for_user("")
+		for band in [11, 30]:
+			var counts := {}
+			for e in d.pick_history:
+				if int(e["pick"]) > band:
+					break
+				var k := _kind(_find(pool, str(e["player_id"])))
+				counts[k] = int(counts.get(k, 0)) + 1
+			for k in kinds:
+				_add("S_p%d_%s" % [band, k], int(counts.get(k, 0)))
+			if band == 11:
+				max_kpf11 = maxi(max_kpf11, int(counts.get("KPF", 0)))
+			print("SPREAD|seed %d picks 1-%d|%s" % [s, band, str(counts)])
+		for nm in named_ids:
+			var pk := int(d.pick_details(str(named_ids[nm]["id"])).get("pick", 0))
+			if not picks_of.has(nm):
+				picks_of[nm] = []
+			picks_of[nm].append(pk)
+	_spread_why(pool)
+	_add("S_runs", n)
+	_add("S_max_kpf_in_first11", max_kpf11)
+	for nm in NAMED:
+		if not named_ids.has(nm):
+			print("NAMED|%s|not in the pool" % nm)
+			continue
+		var p: Dictionary = named_ids[nm]
+		var ps: Array = picks_of[nm]
+		var sorted := ps.duplicate()
+		sorted.sort()
+		print("NAMED|%s|age %.0f %s ovr %d pot %d|mean pick %.1f, range %d-%d" % [nm,
+				float(p.get("age", 0)), _kind(p), int(p["overall"]), int(p.get("potential", 0)),
+				_mean(ps), int(sorted[0]), int(sorted[-1])])
+
+
+## Seed 1, picks 1-11: why each pick won. The pick's worth, its value over
+## the replacement in that position, and the need weight, beside the best
+## midfielder the club passed on.
+func _spread_why(pool: Array) -> void:
+	var d := Draft.new(pool, GameDB.active_clubs(GameDB.START_YEAR).duplicate(), 1)
+	for i in range(11):
+		var code := d.current_club()
+		var pick: Dictionary = d._best_ai_pick(code)
+		var alt := {}
+		var alt_s := -INF
+		for p in pool:
+			if d.picked.has(str(p["id"])) or str(p["role"]) != "MID" or p == pick:
+				continue
+			var s: float = d._ai_score(code, p)
+			if s > alt_s:
+				alt_s = s
+				alt = p
+		print("WHY|pick %d %s|%s" % [i + 1, code, _why_row(d, code, pick)])
+		print("WHY|  best MID passed|%s" % _why_row(d, code, alt))
+		d._ai_pick_current()
+
+
+func _why_row(d: Draft, code: String, p: Dictionary) -> String:
+	var role := str(p["role"])
+	var worth: float = d._club_worth(code, p)
+	var repl: float = d._replacement(code, role)
+	return "%s %s ovr %d pot %d age %.0f: worth %.1f repl %.1f over %.1f (cap %.1f, w %.2f) need %.2f score %.1f" % [
+			_kind(p), str(p.get("last", p["id"])), int(p["overall"]), int(p.get("potential", 0)),
+			float(p.get("age", 0)), worth, repl, worth - repl, d._vorp_cap(code), d._vorp_weight(code),
+			d._need_weight(code, role), d._ai_score(code, p)]
+
+
+static func _find(pool: Array, id: String) -> Dictionary:
+	for p in pool:
+		if str(p["id"]) == id:
+			return p
+	return {}
+
+
 func _sig(d: Draft) -> String:
 	var parts := []
 	for e in d.pick_history:
@@ -768,6 +900,8 @@ func run() -> void:
 			dbg()
 		"old":
 			old_stars(n)
+		"spread":
+			spread(n)
 		"who":
 			who()
 			who2()

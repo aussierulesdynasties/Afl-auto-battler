@@ -10,7 +10,7 @@ extends SceneTree
 ## <out>_awards_rising.png and <out>_awards_aa.png (scrolled to the Rising
 ## Star nominations and the projected team), <out>_awards_player.png (the
 ## Coleman leader's profile) and <out>_awards_awarded.png (once presented).
-## For the ladder also <out>_ladder_sorted.png (sorted by W), <out>_ladder_top8.png, <out>_ladder_team.png
+## For the ladder also <out>_ladder_sorted.png (sorted by W), <out>_ladder_top10.png, <out>_ladder_team.png
 ## (Team stats) and <out>_ladder_side.png (a club's side opened).
 ##   --section KEY   ladder, players, awards, fixture or trophies (default fixture)
 ##   --size WxH      window size (default 390x844)    --light   light appearance
@@ -63,6 +63,11 @@ func _run() -> void:
 	UK.apply_appearance(mode)
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
+	# --size is in UI units: a scaled (HiDPI) desktop would otherwise lay a
+	# 1280-pixel window out at 640 units, as a phone.
+	var sl = root.get_node("ScreenLayout")
+	sl.ui_scale = 96.0 / maxf(96.0, float(DisplayServer.screen_get_dpi()))
+	sl.call("_update_scale")
 	load("res://scripts/ui/StatsHubScene.gd").current = section
 	var scene: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
 	root.add_child(scene)
@@ -110,8 +115,8 @@ func _run() -> void:
 	if section == "ladder":
 		await _tap(scene, "Sort_w")
 		_save(out + "_ladder_sorted.png")
-		await _tap(scene, "Filter_top8")
-		_save(out + "_ladder_top8.png")
+		await _tap(scene, "Filter_top10")
+		_save(out + "_ladder_top10.png")
 		await _tap(scene, "ResetLadder")
 		await _tap(scene, "View_team")
 		_save(out + "_ladder_team.png")

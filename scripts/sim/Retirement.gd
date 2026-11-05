@@ -75,7 +75,7 @@ static func answer(p: Dictionary, season: int, games: int, facts: Dictionary) ->
 	if ClubLife.morale(p) < LOW_MORALE:
 		return {"stays": false, "reason": "He isn't enjoying his footy any more."}
 	if games < MIN_GAMES:
-		return {"stays": false, "reason": "%d games this year: he doesn't see a role for himself." % games}
+		return {"stays": false, "reason": "%d %s this year: he doesn't see a role for himself." % [games, "game" if games == 1 else "games"]}
 	return {"stays": true, "reason": "He's fit, he's enjoying it and he's still in the side: he'll go around again."}
 
 

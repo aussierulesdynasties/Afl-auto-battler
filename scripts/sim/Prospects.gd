@@ -677,6 +677,17 @@ static func custom_problem(spec: Dictionary) -> String:
 	return ""
 
 
+## The Club Forge rule on top of custom_problem (T8.Q12): exactly one
+## weakness is compulsory and a second is optional. The weaknesses only
+## reshape him; _shape_custom refits to the same overall, so no choice buys
+## power. Kept apart from custom_problem so a player saved before the rule
+## still enters a career; the Forge asks for one the next time he's edited.
+static func forge_problem(spec: Dictionary) -> String:
+	var weaknesses: Array = spec.get("weaknesses", [])
+	if weaknesses.is_empty():
+		return "Pick one weakness. A second is optional."
+	return custom_problem(spec)
+
 ## The custom prospect for the class drafted in `year`, through the same
 ## projection as every generated prospect (project, Potential.assign). His
 ## standing in the class - and so his ceiling - is rolled once from the

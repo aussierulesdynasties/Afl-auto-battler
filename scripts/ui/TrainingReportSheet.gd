@@ -45,9 +45,15 @@ static func hub_card(host: Control, on_retrain: Callable) -> Control:
 ## The one line under the card's name.
 static func _headline(r: Dictionary) -> String:
 	var n := (r.get("risers", []) as Array).size()
-	if n == 0:
+	var f := (r.get("fallers", []) as Array).size()
+	if n == 0 and f == 0:
 		return "No ratings changed."
-	return "%d %s improved." % [n, "player" if n == 1 else "players"]
+	if n == 0:
+		return "%d %s dropped." % [f, "player" if f == 1 else "players"]
+	var line := "%d %s improved." % [n, "player" if n == 1 else "players"]
+	if f > 0:
+		line = "%d improved, %d dropped." % [n, f]
+	return line
 
 
 ## The Training screen's one-line link.

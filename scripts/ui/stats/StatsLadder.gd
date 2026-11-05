@@ -13,6 +13,9 @@ const ROW_H := 32
 ## A phone's row opens a club: thumb high (CLAUDE.md "Mobile first").
 const ROW_H_NARROW := 44
 const COL_GAP := 4
+## A full-width (phone) table keeps its last column's words this far in from
+## the band's edge.
+const END_PAD := 8
 
 ## The ladder's columns, phone first; a wide screen adds the rest.
 ## {key, title, w}; on a phone the club column takes what is left (0). On a
@@ -22,12 +25,23 @@ const WIDE_CLUB := 190
 ## "Rating": the club's match-day side today on the OVR scale (TeamRating). A
 ## tap on a club says it in full: where the club is in its cycle (Contender,
 ## Wildcard, Rebuilding) and the list in three years.
+const CLUB_NAME_INSET := 26
 const LADDER_PHONE := [["pos", "#", 24], ["club", "Club", 0], ["p", "P", 26], ["w", "W", 26],
 		["l", "L", 26], ["d", "D", 24], ["pct", "%", 42], ["pts", "Pts", 34], ["rating", "Rating", 46]]
 const LADDER_WIDE := [["pos", "#", 44], ["club", "Club", WIDE_CLUB], ["p", "P", 32], ["w", "W", 32],
 		["l", "L", 32], ["d", "D", 30], ["pf", "PF", 50], ["pa", "PA", 50], ["pct", "%", 50],
 		["pts", "Pts", 40], ["home", "Home", 68], ["away", "Away", 68], ["form", "Form", 76],
 		["rating", "Rating", 52]]
+## A small phone (under PHONE_TIGHT units of content, e.g. 320 units on a
+## scaled desktop window) keeps every phone column at tighter widths, so the
+## club column keeps room for its guernsey and the header stays over its rows
+## (row 84: at 296 units the club column fell to 0 in the header and to the
+## guernsey's width in the rows, one column off).
+const PHONE_TIGHT := 340.0
+const LADDER_TIGHT := [["pos", "#", 20], ["club", "Club", 0], ["p", "P", 22], ["w", "W", 22],
+		["l", "L", 22], ["d", "D", 20], ["pct", "%", 36], ["pts", "Pts", 30], ["rating", "Rating", 44]]
+## The least a phone's club column takes, header and rows alike: a guernsey.
+const CLUB_MIN_NARROW := 28
 ## Team stats: a per-game value for each, from GameState.season_team (only
 ## what is recorded there). One list, so a newly recorded stat joins with one
 ## line: {season_team key, column title, width on a phone, width on a wide
@@ -61,7 +75,7 @@ const TEAM_TENTHS := ["goals"]
 ## The longest a bar gets (the league's best), so it reads the same on a phone and a PC.
 const TEAM_BAR_MAX := 360.0
 
-const FILTERS := [["all", "All"], ["top8", "Top 8"], ["near", "Near you"]]
+const FILTERS := [["all", "All"], ["top10", "Top 10"], ["near", "Near you"]]
 const VIEWS := [["ladder", "Ladder"], ["team", "Team stats"]]
 
 ## Kept across a rebuild and a visit to a club's side. "" sorts nothing: the
@@ -129,14 +143,19 @@ static func build(host: Control) -> Control:
 
 	var shown := visible_rows(season, GameState.my_club, _filter, _sort, _desc, _view)
 	# Only when something is filtered or sorted: the whole ladder says so itself.
+	var specs := columns(_view, wide, width)
 	if _filter != "all" or _sort != "":
-		v.add_child(_status(host, shown.size()))
+		var status := _status(host, shown.size())
+		if wide:
+			# Its buttons end where the table's columns end, not past them.
+			status.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			status.custom_minimum_size.x = table_width(specs)
+		v.add_child(status)
 
 	# No panel around it: the bands do the work.
 	var t := UiKit.vbox(0)
 	t.name = "LadderTable"
 	v.add_child(t)
-	var specs := columns(_view, wide)
 	if wide:
 		# As wide as its columns, left-aligned: no gap between a club and its numbers.
 		t.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -153,14 +172,27 @@ static func build(host: Control) -> Control:
 	return v
 
 
-static func columns(view: String, wide: bool) -> Array:
+static func columns(view: String, wide: bool, width := 9999.0) -> Array:
 	if view == "team":
 		var out := [["club", "Club", WIDE_CLUB if wide else 0]]
 		for c in TEAM_STATS:
 			if wide or bool(c[4]):
 				out.append([c[0], c[1], c[3] if wide else c[2]])
 		return out
-	return LADDER_WIDE if wide else LADDER_PHONE
+	if wide:
+		return LADDER_WIDE
+	return LADDER_TIGHT if width < PHONE_TIGHT else LADDER_PHONE
+
+
+## The least width of a table of these columns: the sum the rows are sized to.
+static func table_width(specs: Array) -> float:
+	var fixed := 0
+	var all_fixed := true
+	for c in specs:
+		if int(c[2]) == 0:
+			all_fixed = false
+		fixed += maxi(int(c[2]), CLUB_MIN_NARROW if int(c[2]) == 0 else 0) + COL_GAP
+	return float(fixed if all_fixed else fixed - COL_GAP)
 
 
 ## One line that says what is on show, with the way back to the plain ladder.
@@ -172,7 +204,8 @@ static func _status(host: Control, count: int) -> Control:
 		if str(o[0]) == _filter and _filter != "all":
 			bits.append(str(o[1]))
 	if _sort != "":
-		bits.append("sorted by %s, %s first" % [_title_of(_sort), "most" if _desc else "fewest"])
+		var ends := ["Z–A", "A–Z"] if _sort == "club" else ["most", "fewest"]
+		bits.append("sorted by %s, %s first" % [_title_of(_sort), ends[0] if _desc else ends[1]])
 	var text := "Showing " + (", ".join(bits) if not bits.is_empty() else "all %d clubs" % count)
 	var l := UiKit.lbl(text, UiKit.SMALL, UiKit.MUTED)
 	l.name = "ActiveState"
@@ -229,6 +262,12 @@ static func _header(host: Control, specs: Array, width: float, wide := false) ->
 		sb.bg_color = Color.TRANSPARENT
 		sb.border_width_bottom = 2 if on else 0
 		sb.border_color = UiKit.TEXT
+		if key == "club":
+			# Over the names, not the crests before them: the crest's 20 px plus
+			# the badge's 6 px gap (UiKit.club_badge, club_marker).
+			sb.content_margin_left = CLUB_NAME_INSET
+		if c == specs[-1] and not _all_fixed(specs):
+			sb.content_margin_right = END_PAD
 		for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 			b.add_theme_stylebox_override(state, sb)
 		# A thumb-high header on a phone (44 px, CLAUDE.md "Mobile first"); the
@@ -236,10 +275,18 @@ static func _header(host: Control, specs: Array, width: float, wide := false) ->
 		b.custom_minimum_size = Vector2(int(c[2]), 40 if wide else 44)
 		if int(c[2]) == 0:
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.custom_minimum_size.x = CLUB_MIN_NARROW
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT if key == "club" else HORIZONTAL_ALIGNMENT_RIGHT
 		b.pressed.connect(func(): _sort_by(host, key))
 		h.add_child(b)
 	return h
+
+
+static func _all_fixed(specs: Array) -> bool:
+	for c in specs:
+		if int(c[2]) == 0:
+			return false
+	return true
 
 
 static func _plain(text: String, w: int, col: Color) -> Label:
@@ -272,13 +319,8 @@ static func _row(host: Control, r: Dictionary, specs: Array, width: float, band 
 	b.mouse_filter = Control.MOUSE_FILTER_PASS
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	# A button does not take its child row's width: a table of fixed columns says so.
-	var fixed := 0
-	var all_fixed := true
-	for c in specs:
-		if int(c[2]) == 0:
-			all_fixed = false
-		fixed += int(c[2]) + COL_GAP
-	b.custom_minimum_size = Vector2(fixed if all_fixed else 0, height)
+	# Every row is as wide as the header's least, so the two share one width.
+	b.custom_minimum_size = Vector2(table_width(specs), height)
 	b.clip_contents = true
 	var flat := StyleBoxFlat.new()
 	flat.bg_color = UiKit.PANEL if band else Color.TRANSPARENT
@@ -305,6 +347,8 @@ static func _row(host: Control, r: Dictionary, specs: Array, width: float, band 
 				badge.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 				badge.alignment = BoxContainer.ALIGNMENT_BEGIN
 				badge.custom_minimum_size.x = w
+			else:
+				badge.custom_minimum_size.x = CLUB_MIN_NARROW
 			if mine:
 				_bold(badge)
 			row.add_child(badge)
@@ -315,6 +359,11 @@ static func _row(host: Control, r: Dictionary, specs: Array, width: float, band 
 		var l := UiKit.line(text, UiKit.FINE, ink, mine or key == "pts")
 		l.custom_minimum_size = Vector2(w, 0)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		if c == specs[-1] and not _all_fixed(specs):
+			# Off the band's edge, as the header's last label is (_header).
+			var pad := StyleBoxEmpty.new()
+			pad.content_margin_right = END_PAD
+			l.add_theme_stylebox_override("normal", pad)
 		row.add_child(l)
 	_ignore(row)
 	b.pressed.connect(func(): _side_sheet(host, code))
@@ -370,16 +419,46 @@ static func _team_board(host: Control, season: Season, wide: bool) -> Control:
 	var t := UiKit.vbox(0)
 	t.name = "LadderTable"
 	v.add_child(t)
+	# The figure column is as wide as the widest figure, so the best club's
+	# figure starts one gap past the end of its bar (critic, 2026-11-04: 420 px
+	# of nothing between them on a PC, then 45 px of an over-wide column).
+	var fig_w := 0.0
+	for r in list:
+		var probe := UiKit.figure(team_text(float(r["t_" + _team_fact]), _team_fact), UiKit.NUMBER)
+		fig_w = maxf(fig_w, ceilf(probe.get_minimum_size().x))
+		probe.free()
 	# A bar reads the same on a phone and a PC: no longer than a phone gives it.
-	var bar_w := minf(TEAM_BAR_MAX, float(host.call("content_width")) - 150.0)
+	var bar_w := minf(TEAM_BAR_MAX, float(host.call("content_width")) - team_row_width(0.0, fig_w))
+	if wide:
+		# The bar spans its club's sub-line (the other facts), so the figure
+		# follows the bar, not 4 px of sub-line past it.
+		for r in list:
+			var others := PackedStringArray()
+			for f in _view_of(_team_fact)[2]:
+				var k := str(f[0])
+				if k != _team_fact:
+					others.append("%s %s" % [team_text(float(r["t_" + k]), k), str(f[1]).to_lower()])
+			var sub := UiKit.lbl(" · ".join(others), UiKit.SECONDARY, UiKit.MUTED)
+			bar_w = maxf(bar_w, ceilf(sub.get_minimum_size().x))
+			sub.free()
+		# As wide as a row needs, left-aligned.
+		t.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		t.custom_minimum_size.x = team_row_width(bar_w, fig_w)
 	for i in range(list.size()):
 		if i > 0:
 			t.add_child(UiKit.rule())
-		t.add_child(_team_row(host, list[i], i + 1, best, bar_w))
+		t.add_child(_team_row(host, list[i], i + 1, best, bar_w, fig_w))
 	var note := UiKit.lbl("A game, over the games each club has played.", UiKit.SECONDARY, UiKit.MUTED)
 	note.name = "TeamNote"
 	v.add_child(note)
 	return v
+
+
+## A team row's width around a bar of `bar_w` (0: the row less its bar) and a
+## figure column of `fig_w`: margins 8 + 8, rank 22, crest 22, the row's
+## two 10 px gaps and the figure's 2 px (_team_row).
+static func team_row_width(bar_w: float, fig_w: float) -> float:
+	return 8.0 + 22.0 + 10.0 + 22.0 + 10.0 + (maxf(40.0, bar_w) if bar_w > 0.0 else 0.0) + 2.0 + fig_w + 8.0
 
 
 ## Every season_team key a club row carries a game of.
@@ -452,7 +531,8 @@ static func _view_of(fact: String) -> Array:
 
 ## One club: its rank, its guernsey and name, the view's other two facts in
 ## words, a bar against the league's best, and the chosen fact big at the right.
-static func _team_row(host: Control, r: Dictionary, rank: int, best: float, bar_w: float) -> Control:
+static func _team_row(host: Control, r: Dictionary, rank: int, best: float, bar_w: float,
+		fig_w := 56.0) -> Control:
 	var code := str(r["code"])
 	var mine: bool = code == GameState.my_club
 	var b := Button.new()
@@ -526,10 +606,18 @@ static func _team_row(host: Control, r: Dictionary, rank: int, best: float, bar_
 	mid.add_child(bar)
 	var fig := UiKit.figure(team_text(x, _team_fact), UiKit.NUMBER, UiKit.TEXT if x > 0.0 else UiKit.MUTED)
 	fig.name = "Figure"
-	fig.custom_minimum_size.x = 56
+	fig.custom_minimum_size.x = fig_w
 	fig.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	fig.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(fig)
+	# 2 px from the bar, not the row's 10: the figure's shade and side bearing
+	# make up the rest, so its ink starts about 10 px past the bar (critic,
+	# 2026-11-04: 18 px).
+	var tail := UiKit.hbox(2)
+	tail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.remove_child(mid)
+	tail.add_child(mid)
+	tail.add_child(fig)
+	row.add_child(tail)
 	_ignore(m)
 	# A button does not grow with its child: the row asks for what it holds.
 	b.custom_minimum_size.y = maxf(64.0, m.get_combined_minimum_size().y)
@@ -637,8 +725,8 @@ static func visible_rows(season: Season, mine: String, filter: String, sort: Str
 	for r in all:
 		var pos := int(r["pos"])
 		match filter:
-			"top8":
-				if pos > 8:
+			"top10":
+				if pos > Season.FINALISTS:
 					continue
 			"near":
 				if my_pos <= 0 or absi(pos - my_pos) > 2:

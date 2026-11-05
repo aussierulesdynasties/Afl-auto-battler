@@ -75,7 +75,9 @@ func _update_scale() -> void:
 	# field has focus means a keyboard: keep the scale the screen had. Not on
 	# a desktop, which has no such keyboard: there a window made shorter is
 	# just a shorter window.
-	keyboard_up = not is_desktop() and _kept_density > 0.0 			and int(pixels.x) == _kept_width and typing()
+	# Only a touch device has one: a PC's browser made shorter is a shorter
+	# window too, and holding its scale there would freeze the layout.
+	keyboard_up = is_touch() and _kept_density > 0.0 			and int(pixels.x) == _kept_width and typing()
 	if keyboard_up:
 		density = _kept_density
 	else:
@@ -154,40 +156,85 @@ static func web_density(pixels: Vector2, ratio: float) -> float:
 	return maxf(own, pixels.x / PHONE_REF_W)
 
 
-## The Screen setting on a phone or in its browser: portrait (the default;
-## director, 2026-10-25: the game opens in portrait on a phone), landscape, or
-## follow the phone's own rotation.
-const ORIENTATIONS := [["portrait", "Portrait"], ["landscape", "Landscape"], ["auto", "Follow the phone"]]
-const DEFAULT_ORIENTATION := "portrait"
+## A phone plays in portrait only (director, 2026-11-05: "Drop landscape").
+## There is no Screen setting; a saved "landscape" or "auto" from an older
+## build reads as portrait. A PC keeps its wide window.
+const PHONE_ORIENTATION := "portrait"
 
 
-## The engine's orientation for a saved choice. Anything unknown is portrait.
-static func orientation_for(key: String) -> int:
-	match key:
-		"portrait":
-			return DisplayServer.SCREEN_PORTRAIT
-		"landscape":
-			return DisplayServer.SCREEN_LANDSCAPE
-		"auto":
-			return DisplayServer.SCREEN_SENSOR
+## A saved orientation from any build, as the phone now plays it: portrait.
+static func clamp_orientation(_saved: String) -> String:
+	return PHONE_ORIENTATION
+
+
+## Hold the phone in portrait by the engine's own means (Android and iOS also
+## lock it from project.godot's handheld orientation). A desktop and headless
+## are left alone. Returns what was asked of the engine, or -1 when nothing was.
+func lock_portrait() -> int:
+	if DisplayServer.get_name() == "headless" or is_desktop() and not force_web_phone:
+		return -1
+	DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
 	return DisplayServer.SCREEN_PORTRAIT
 
 
-## Hold the chosen orientation by the engine's own means. Android honours it.
-## A browser only locks the screen while the page is fullscreen (the Fullscreen
-## API, allowed only from a tap), so choosing Portrait or Landscape on the web
-## goes fullscreen first. Safari on an iPhone has no orientation lock at all:
-## there, the choice cannot hold and the phone's own rotation rules.
-## Returns what was asked of the engine, for a test to read.
-func set_orientation(key: String, from_tap := false) -> Dictionary:
-	var asked := {"orientation": orientation_for(key), "fullscreen": false}
-	if DisplayServer.get_name() == "headless" or is_desktop() and not force_web_phone:
-		return asked
-	if OS.has_feature("web") and key != "auto" and from_tap:
-		JavaScriptBridge.eval(PAGE_FULLSCREEN_JS % key, true)
-		asked["fullscreen"] = true
-	DisplayServer.screen_set_orientation(asked["orientation"])
-	return asked
+## A phone's browser holds portrait only while the page is fullscreen, and the
+## browser allows fullscreen only from a user gesture. So the first tap
+## anywhere (director, 2026-11-05: "First tap") puts the page fullscreen and
+## locks portrait. Only a phone's browser (web_android, web_ios): a browser on
+## a PC, a native app and headless are left alone. Safari on an iPhone has no
+## page fullscreen or orientation lock: nothing is sent there.
+static func wants_page_lock() -> bool:
+	var on := []
+	for f in ["web", "web_android", "web_ios"]:
+		if OS.has_feature(f):
+			on.append(f)
+	return force_web_phone or page_lock_for(on)
+
+
+## The page lock's platform rule on its own, for a test: a phone's browser.
+static func page_lock_for(features: Array) -> bool:
+	return features.has("web") and (features.has("web_android") or features.has("web_ios"))
+
+
+## A tap's release (touchend) or a left click's release: the browser counts
+## these as a user gesture. A touch's press (touchstart) does not.
+static func is_lock_gesture(event: InputEvent) -> bool:
+	if event is InputEventScreenTouch:
+		return not event.pressed
+	if event is InputEventMouseButton:
+		return not event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	return false
+
+
+## Set once the page lock needs no more taps. On the web it stays unset and
+## each tap's release checks the page instead: until the page is fullscreen
+## (a refused first request, or the player left fullscreen with Back) the
+## next tap asks again. Off the web (a test) the first send sets it.
+var page_lock_done := false
+## Every script sent for the page lock, for a test to read.
+var page_lock_sent: Array[String] = []
+var _page_lock_frame := -1
+
+
+## True when the page is already fullscreen, or cannot be (an iPhone).
+const PAGE_HELD_JS := """(function(){var d=document,e=d.documentElement;
+return !!(d.fullscreenElement||d.webkitFullscreenElement)||!(e.requestFullscreen||e.webkitRequestFullscreen);})()"""
+
+
+func _hold_page_portrait() -> void:
+	# One tap arrives twice (the touch, and the mouse click made from it).
+	var frame := Engine.get_process_frames()
+	if frame == _page_lock_frame:
+		return
+	if OS.has_feature("web") and bool(JavaScriptBridge.eval(PAGE_HELD_JS, true)):
+		return
+	_page_lock_frame = frame
+	var js := PAGE_FULLSCREEN_JS % PHONE_ORIENTATION
+	page_lock_sent.append(js)
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval(js, true)
+	else:
+		page_lock_done = true
 
 
 ## The whole page goes fullscreen, not the game's canvas (the engine's own
@@ -218,9 +265,31 @@ static func is_phone() -> bool:
 	return force_web_phone or OS.has_feature("android") or OS.has_feature("ios") 			or OS.has_feature("web_android") or OS.has_feature("web_ios")
 
 
-## "Tap" on a phone (native or its browser), "Click" everywhere else.
+## A test stands in for a touch screen whose browser says it is a desktop.
+static var force_touch := false
+## What the browser said, asked once (-1 = not yet asked).
+static var _web_touch := -1
+
+
+## A touch screen: a phone (native or its browser), or a tablet's browser that
+## sends a desktop user agent (iPadOS Safari, Android's "desktop site"), told
+## by its coarse pointer. A touch-screen laptop has a fine pointer (its mouse
+## or pad) and stays a PC. Wording and the phone keyboard follow this; the
+## layout follows the screen's size (roomy, wide_view).
+static func is_touch() -> bool:
+	if force_touch or is_phone():
+		return true
+	if force_web or not OS.has_feature("web"):
+		return false
+	if _web_touch < 0:
+		var t = JavaScriptBridge.eval("(navigator.maxTouchPoints || 0) > 0 && !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches)")
+		_web_touch = 1 if bool(t) else 0
+	return _web_touch == 1
+
+
+## "Tap" on a touch screen, "Click" everywhere else.
 static func tap_word() -> String:
-	return "Tap" if is_phone() else "Click"
+	return "Tap" if is_touch() else "Click"
 
 
 ## LAYOUT, not platform: a roomy landscape window gets the wide layouts (side
@@ -287,8 +356,13 @@ func set_fullscreen(on: bool) -> void:
 	DisplayServer.window_set_mode(wanted_mode(on))
 
 
-## Alt+Enter switches between fullscreen and window, on a desktop.
+## Alt+Enter switches between fullscreen and window, on a desktop. On a
+## phone's browser the first tap holds the page in portrait. It runs from the
+## tap's own input event, within the gesture's activation window (Godot reads
+## browser input on its next frame, well inside the few seconds allowed).
 func _input(event: InputEvent) -> void:
+	if not page_lock_done and is_lock_gesture(event) and wants_page_lock():
+		_hold_page_portrait()
 	if not is_desktop() or not (event is InputEventKey):
 		return
 	var key := event as InputEventKey

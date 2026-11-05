@@ -85,7 +85,7 @@ static func sheet_lines(key: String) -> Array:
 
 ## BBCode for `text` with each trait or synergy name a bold tap, the rest escaped.
 ## `players` ({shown name -> id}, optional) makes his names bold taps to his profile too.
-static func markup(text: String, players := {}) -> String:
+static func markup(text: String, players := {}, lit := {}) -> String:
 	var ids := names()
 	for k in players:
 		ids[str(k)] = NameLink.SCHEME + str(players[k])
@@ -115,7 +115,12 @@ static func markup(text: String, players := {}) -> String:
 	for s in spans:
 		out += _escape(text.substr(at, int(s[0]) - at))
 		var meta := str(s[2]) if str(s[2]).begins_with(NameLink.SCHEME) else SCHEME + str(s[2])
-		out += "[url=%s][b]%s[/b][/url]" % [meta, _escape(text.substr(int(s[0]), int(s[1]) - int(s[0])))]
+		var shown := text.substr(int(s[0]), int(s[1]) - int(s[0]))
+		var inner := "[b]%s[/b]" % _escape(shown)
+		# `lit` ({shown name -> colour}): only that name takes the state colour.
+		if lit.has(shown):
+			inner = "[color=#%s]%s[/color]" % [(lit[shown] as Color).to_html(false), inner]
+		out += "[url=%s]%s[/url]" % [meta, inner]
 		at = int(s[1])
 	return out + _escape(text.substr(at))
 
@@ -129,9 +134,9 @@ static func _escape(t: String) -> String:
 
 
 ## A wrapping line of `text` whose trait and synergy names explain themselves on a tap.
-static func line(text: String, size: int, colour: Color, players := {}) -> RichTextLabel:
+static func line(text: String, size: int, colour: Color, players := {}, lit := {}) -> RichTextLabel:
 	var r := NameInk.rich(size, colour)
-	r.text = markup(text, players)
+	r.text = markup(text, players, lit)
 	r.set_meta("plain", text)
 	r.set_meta("trait_link", true)
 	NameLink.wire(r)

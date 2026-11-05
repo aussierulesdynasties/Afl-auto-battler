@@ -56,6 +56,9 @@ var duels := [{}, {}]
 ## This is a role/assignment, not an extra player.
 var interceptor := ["", ""]
 var interceptor_changes: Array = []
+## His intercepts the moment he was sent loose, per side ({"id", "n"}): the
+## "since the call" tally at the break. A record only.
+var interceptor_base := [{}, {}]
 ## Every contest a matched forward and his direct opponent played:
 ## forward id -> {"side": attacking side, "contests": [[q, defender id,
 ## forward marked, goal from it]]}.
@@ -193,6 +196,16 @@ var _speccies := 0
 ## tuning boundary frequency therefore does not silently re-roll ordinary
 ## disposals in chains that stay in play.
 var boundary_rng := RandomNumberGenerator.new()
+## A contest that locks up into a ball-up (match flow, 2026-10-10): its own
+## stream, so the calibrated play RNG is not re-rolled by it.
+var lockup_rng := RandomNumberGenerator.new()
+## The last chain ended in a ball-up called in play (a tackle held, a contest
+## locked up): the next chain starts at that stoppage.
+var _prev_locked := false
+## Features "match_flow" (row 11): stoppages come from contests, a won ball is
+## played on, shorter chains and the turnover mix that goes with them. Read once
+## per match; off, every draw and every number is exactly as before.
+var _flow := false
 ## The chain being played: how it began (centre, stoppage, kick_in, free,
 ## turnover, general) and who touched the ball in it, for score sources and
 ## score involvements. How the last chain ended decides the next's origin.
@@ -260,6 +273,12 @@ var _rates_cache := {}
 func _rates() -> Dictionary:
 	if _rates_cache.is_empty():
 		_rates_cache = Ratings.T.duplicate()
+		if _flow:
+			for k in Ratings.FLOW:
+				_rates_cache[k] = Ratings.FLOW[k]
+		for k in tune:
+			if _rates_cache.has(k):
+				_rates_cache[k] = tune[k]
 		var mult: Dictionary = WEATHER_RATES.get(weather, {})
 		for k in mult:
 			_rates_cache[k] = float(_rates_cache[k]) * float(mult[k])
@@ -289,6 +308,8 @@ const FORM_CONTEST := 0.010
 func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	squads = [home, away]
 	kick_range_on = Features.on("kick_range")
+	clanger_cause_on = Features.on("clanger_cause")
+	_clanger_seed = seed
 	# Who starts on the bench, for the match view's bench strip (read only).
 	for sq in squads:
 		var rows := []
@@ -312,6 +333,8 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	break_rng.seed = seed * 101 + 103
 	_speccy_quota = speccy_quota(seed)
 	boundary_rng.seed = seed * 17 + 19
+	lockup_rng.seed = seed * 107 + 109
+	_flow = Features.on("match_flow")
 	injury_rng.seed = seed * 13 + 7
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
 	for side in range(2):
@@ -506,6 +529,8 @@ func set_interceptor(def_side: int, def_id: String, during := true) -> bool:
 		return true
 	var old := str(interceptor[def_side])
 	interceptor[def_side] = def_id
+	interceptor_base[def_side] = {"id": def_id,
+			"n": int(float((player_stats.get(def_id, {}) as Dictionary).get("intercepts", 0.0)))}
 
 	if def_id != "":
 		var d: Dictionary = duels[def_side]
@@ -539,6 +564,16 @@ func set_interceptor(def_side: int, def_id: String, during := true) -> bool:
 		interceptor_changes.append({"q": maxi(1, current_quarter), "from": from,
 				"side": def_side, "from_id": old, "id": def_id})
 	return true
+
+
+## The loose defender's intercepts since he was sent loose (-1: nobody is).
+func intercepts_since_call(side: int) -> int:
+	var id := str(interceptor[side])
+	if id == "":
+		return -1
+	var base: Dictionary = interceptor_base[side]
+	var was := int(base.get("n", 0)) if str(base.get("id", "")) == id else 0
+	return maxi(0, int(float((player_stats.get(id, {}) as Dictionary).get("intercepts", 0.0))) - was)
 
 
 func _roaming_interceptor(side: int) -> Dictionary:
@@ -2101,6 +2136,23 @@ const PRESS_RUSH_RATIO := 2.0
 ## tackle counts (2026-10-06: tackles ran about 6% above).
 const PRESS_TACKLE_SHARE := 0.95
 const PRESS_TURNOVER := 0.08
+## With match_flow on: a rusher forces more turnovers, because a share of them
+## now lock up into ball-ups and a tackle can spill the ball.
+const PRESS_TURNOVER_FLOW := 0.28
+## Match flow (director 2026-10-10, MATCH_SHAPE_AUDIT_2026-10-10.md): a ball-up
+## comes from a contest that locks up, not from a won ball. Of the turnovers a
+## presser forces, the share that lock up instead; of the spoils inside 50 the
+## defence would rebound, the share that lock up in the pocket.
+const LOCKUP_PRESS := 0.35
+const LOCKUP_SPOIL := 0.35
+## Of the tackles that stop a carrier without a free, the share where the ball is
+## knocked free and the other side gathers it (a turnover); the rest are ball-ups.
+const TACKLE_SPILL := 0.5
+
+
+## A named constant, or its audit override (tune).
+static func _tv(key: String, value: float) -> float:
+	return float(tune.get(key, value))
 const PRESS_RUSH_GAIN := 0.80
 ## A close defender occasionally gets boot to ball. Around one or two per
 ## match across both sides; pressure and the smotherer's ability move it.
@@ -2211,6 +2263,10 @@ const AERIAL_CHANCE := 0.22
 static var zone_intercepts := true
 ## Audit only (intercept_impl): chain starts by origin, the previous chain's end
 ## and whether the ball changed sides. Off unless an audit turns it on.
+## Audit only: tuning values to try without a commit, e.g. {"chains_per_game": 240,
+## "LOCKUP_PRESS": 0.6}. Ratings.T keys apply through _rates(); named MatchSim
+## constants through _tv(). Empty in play and in every test.
+static var tune := {}
 static var audit_chains_on := false
 static var audit_chains := {}
 var _audit_last_side := -1
@@ -2245,7 +2301,7 @@ func _aerial_defender(def_side: int, fp: float):
 ## it either marks it (an intercept: the ball is turned over) or spoils it,
 ## which leaves the ball loose.
 func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bool) -> Dictionary:
-	if rushed or gain < 18.0 or aerial_rng.randf() >= (AERIAL_CHANCE if zone_intercepts else 0.22):
+	if rushed or gain < 18.0 or aerial_rng.randf() >= (_tv("AERIAL_CHANCE", AERIAL_CHANCE) if zone_intercepts else 0.22):
 		return {}
 	var opp := 1 - side
 	var receiver = kick_receiver(side, mark_fp - gain * (1.0 if side == 0 else -1.0), mark_fp, carrier)
@@ -2282,7 +2338,7 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 	var spoil_p := clampf(0.36 + (stop - receive) / 220.0
 			+ (0.07 if _trait(defender, "interceptor") else 0.0), 0.20, 0.65)
 	if roll < mark_p + spoil_p:
-		if zone_intercepts and aerial_rng.randf() < INTERCEPT_MARK * (0.6 + 0.8 * _a(defender, "intercept") / 100.0):
+		if zone_intercepts and aerial_rng.randf() < _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.6 + 0.8 * _a(defender, "intercept") / 100.0):
 			_intercept(opp, defender, false)
 			_won_back["marked"] = true
 			_t(opp, "marks")
@@ -2306,6 +2362,60 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 		sev["against_id"] = str(receiver.get("id", ""))
 		return {"outcome": "loose", "actor": defender}
 	return {}
+
+
+## Clanger cause (row 12, director 2026-11-04): an error that ends a chain is
+## the last disposal's, and the match says why only when the sim really gave a
+## reason: the wet ball and the wind both raise the clanger rate
+## (WEATHER_RATES), so they are real causes. A rushed touch, a tackle, a kick
+## read and taken or an entry all have their own events and do not raise the
+## roll, so they are never named as the cause. Read once at set-up (switch
+## clanger_cause). Off, the clanger is a weighted pick from the ground and
+## reads "gives away a clanger". On, the error is credited to the last
+## carrier, so the player-level clangers stat moves; team totals, score and
+## events do not.
+var clanger_cause_on := false
+## The last touch of the chain being played: {"carrier", "kind", "end"} (end:
+## tackle, pressure, aerial or entry when the touch ended that way, else "").
+## Bookkeeping for the clanger's cause only; no dice.
+var _last_disp := {}
+## The match seed, for the clanger-cause share below (a hash, never the dice).
+var _clanger_seed := 0
+## The weather is blamed only for its own share of clangers: the extra it adds
+## (WEATHER_RATES clanger_per_chain), so 0.15 / 1.15 in the wet, 0.06 / 1.06 in
+## the wind. Picked by a hash of seed and event count so the dice are untouched.
+static func clanger_blame_share(weather_now: String) -> float:
+	var m := float((WEATHER_RATES.get(weather_now, {}) as Dictionary).get("clanger_per_chain", 1.0))
+	return maxf(0.0, (m - 1.0) / m)
+## Why a clanger went astray: the words after the player's name, by cause. The
+## cause is the event's "why"; MatchNotes.clanger_caption has the short form.
+const CLANGER_WHY := {
+	"wet": "%s loses it on the wet ball",
+	"wind": "%s's kick is blown off line",
+}
+
+
+## The cause of a clanger from the touch that ended the chain (`disp`), in the
+## weather of the day, after a chain that ended in `outcome`. "" when nothing
+## real is to blame: a score, dry still weather, or a touch that ended in its
+## own event (a tackle, a kick read and marked). A ball turned over off an entry
+## or under pressure can be the wet ball's or the wind's (director, 2026-11-04:
+## widen it), so a turnover counts as well as a plain stoppage.
+const CLANGER_TURNOVER_ENDS := ["", "entry", "pressure"]
+static func clanger_why(disp: Dictionary, weather_now: String, outcome := "stoppage") -> String:
+	if disp.is_empty():
+		return ""
+	var end := str(disp.get("end", ""))
+	if outcome == "stoppage":
+		if end != "":
+			return ""
+	elif outcome != "turnover" or not CLANGER_TURNOVER_ENDS.has(end):
+		return ""
+	if weather_now == "wet":
+		return "wet"
+	if weather_now == "windy" and str(disp.get("kind", "")) == "kick":
+		return "wind"
+	return ""
 
 
 ## Kick range (row 10, director 2026-11-03): a kick's receiver must be within
@@ -2745,6 +2855,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_p(carrier, "intercepts")
 			_chain_from = {"side": side, "id": str(carrier.get("id", ""))}
 		_chain_touch[str(carrier["id"])] = carrier
+		# Who a clanger would be blamed on, and how his touch ended (clanger_why).
+		_last_disp = {"carrier": carrier, "kind": "", "end": ""}
 		# Champion Data: a kick straight from the goal square is a team
 		# kick-in, not a player disposal. Once the taker plays on it is his
 		# disposal like ordinary play.
@@ -2869,6 +2981,18 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				var mark := _award_context_free(opp, fp, carrier, tackler,
 						"holding_ball", "Holding the ball")
 				return {"outcome": "free", "fp": mark, "actor": tackler, "free_side": opp}
+			_last_disp["end"] = "tackle"
+			_last_disp["kind"] = disposal_kind
+			# Knocked loose in the tackle: whoever is there for the other side gathers
+			# it (an intercept possession). Otherwise it is held in: a ball-up.
+			if _flow and lockup_rng.randf() < _tv("TACKLE_SPILL", TACKLE_SPILL):
+				var taker = _aerial_defender(opp, fp)
+				if taker == null:
+					taker = tackler
+				_intercept(opp, taker, false)
+				_emit("tackle", opp, fp, tackler,
+						"%s tackles %s - it spills free" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
+				return {"outcome": "turnover", "fp": fp, "actor": taker}
 			_emit("tackle", opp, fp, tackler,
 					"%s tackles %s - ball up" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
 			return {"outcome": "stoppage", "fp": fp, "actor": carrier}
@@ -2880,17 +3004,35 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			var presser = _pick_presser(opp, zone)
 			_t(opp, "pressure_acts")
 			_p(presser, "pressure_acts")
-			var turn_p: float = (PRESS_TURNOVER
+			var turn_p: float = (_tv("PRESS_TURNOVER", PRESS_TURNOVER_FLOW if _flow else PRESS_TURNOVER)
 					* (0.80 + 0.40 * _a(presser, "pressure") / 100.0)
 					* (1.20 - 0.40 * _a(carrier, "disposal") / 100.0))
 			if zone == 0 and _pv(opp, "press") > 1.0:
 				turn_p *= PRESS_ZONE_TURNOVER
 			if rng.randf() < turn_p:
+				# Rushed into a pack: sometimes nobody gets it clean and the
+				# umpire calls a ball-up where it locked up.
+				if _flow and lockup_rng.randf() < _tv("LOCKUP_PRESS", LOCKUP_PRESS):
+					return {"outcome": "stoppage", "fp": fp, "actor": presser}
 				_t(opp, "pressure_wins")
-				_intercept(opp, presser, false)
+				# A rushed handball is picked off by the man on him; a rushed kick
+				# lands with whoever is in that part of the ground, and the better
+				# readers mark it (match flow, 2026-10-10: these are most of a real
+				# game's intercept marks).
+				var taker = presser
+				if _flow and disposal_kind == "kick":
+					var reader = _aerial_defender(opp, fp)
+					if reader != null:
+						taker = reader
+				_intercept(opp, taker, false)
 				_emit("pressure", opp, fp, presser,
 						"%s forces the turnover" % GameDB.player_display_name(presser))
-				return {"outcome": "turnover", "fp": fp, "actor": presser}
+				_last_disp["end"] = "pressure"
+				_last_disp["kind"] = disposal_kind
+				if _flow and disposal_kind == "kick":
+					_kick_marked(opp, taker, fp, mark_rng.randf() < _tv("PRESS_KICK_MARKED", PRESS_KICK_MARKED)
+							* (0.6 + 0.8 * _a(taker, "intercept") / 100.0))
+				return {"outcome": "turnover", "fp": fp, "actor": taker}
 			rushed = true
 
 		# A smother is a real blocked kick, not a decorative stat. It leaves
@@ -2933,6 +3075,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		fp += gain * dir
 		fp = clampf(fp, -gline, gline)
 		atk_fp = fp if side == 0 else -fp
+		_last_disp["kind"] = disposal_kind
 		_metres(side, carrier, atk_fp - prev_atk_fp)
 		_run_and_carry(side, carrier, atk_fp - prev_atk_fp, rushed or tackled, is_kick_in, disposal_event, prev_atk_fp)
 		# By default the next carrier gets it uncontested: a handball
@@ -2944,7 +3087,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 
 		# Outside forward 50, a genuine long kick can become a contested
 		# aerial ball. A mark retains it; a spoil makes the next chain loose.
-		if disposal_kind == "kick" and not marked and gain >= 15.0 and atk_fp < f50 				and aerial_rng.randf() < GENERAL_AERIAL_P:
+		if disposal_kind == "kick" and not marked and gain >= 15.0 and atk_fp < f50 				and aerial_rng.randf() < _tv("GENERAL_AERIAL_P", GENERAL_AERIAL_P):
 			var aerial := _general_aerial_contest(side, fp, carrier)
 			if not aerial.is_empty():
 				match str(aerial["outcome"]):
@@ -2966,6 +3109,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				if str(aerial.get("outcome", "")) == "loose":
 					return {"outcome": "loose", "fp": fp, "actor": aerial.get("actor")}
 				if str(aerial.get("outcome", "")) == "turnover":
+					_last_disp["end"] = "aerial"
 					return aerial
 				# A mark keeps the same side's chain alive at the new field
 				# position. It is not another disposal by the original kicker.
@@ -2985,6 +3129,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_emit("inside50", side, fp, carrier,
 					"%s sends it inside 50" % GameDB.player_display_name(carrier))
 			var entry := resolve_forward50(side, fp, carrier)
+			_last_disp["end"] = "entry"
 			# A rebound or a free paid to the defence makes the entry
 			# ineffective. A free to the attacking side still retained the ball.
 			var effective_entry := str(entry["outcome"]) != "turnover"
@@ -3256,6 +3401,9 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 		if not crumb.is_empty():
 			return crumb
 
+	# Spoiled to the deck in the pocket, nobody clean: a ball-up inside 50.
+	if _flow and spoilt and not marked and lockup_rng.randf() < _tv("LOCKUP_SPOIL", LOCKUP_SPOIL):
+		return {"outcome": "stoppage", "fp": fp, "actor": defender}
 	# The spare comes away with it only when he got the fist to it; reaching
 	# the contest is not winning it. Otherwise the defender in it does.
 	var taker = roamer if (roaming and spoiler == roamer) else defender
@@ -3795,15 +3943,31 @@ func run_extra_time() -> Dictionary:
 		kick_in = false
 		boundary_throw_in = false
 		var guard := 0
-		while score(0) == score(1) and guard < GOLDEN_POINT_CHAINS:
+		while score(0) == score(1) and guard < golden_point_chains:
 			current_minute = 128 + int(guard / 4)
 			_play_one_chain(T)
 			guard += 1
+		if score(0) == score(1):
+			# A final can't end level: past the cap, the side with more
+			# inside-50s (home side on a tie) is awarded a rushed behind.
+			var i50_0 := float(team_stats[0].get("inside50", 0.0))
+			var i50_1 := float(team_stats[1].get("inside50", 0.0))
+			var side := 1 if i50_1 > i50_0 else 0
+			_t(side, "behinds")
+			# Awarded, not played: no chain earned it, so the last chain's
+			# touches and origin get no credit for it.
+			_chain_touch = {}
+			chain_origin = "awarded"
+			_scored(side, 1, null)
+			q_behinds[current_quarter - 1][side] += 1
+			_emit("behind", side, fp, null, _scoreline(side, "Rushed behind"))
 	_emit_full_time("Full time (after extra time)")
 	return result()
 
 
 const GOLDEN_POINT_CHAINS := 60
+## The golden-point cap for this match (tests lower it to reach the fallback).
+var golden_point_chains := GOLDEN_POINT_CHAINS
 
 
 func _emit_full_time(prefix: String) -> void:
@@ -3833,8 +3997,21 @@ func _play_one_chain(T: Dictionary) -> void:
 	var from_boundary := boundary_throw_in
 	kick_in = false
 	boundary_throw_in = false
-	var stoppage := at_centre or from_boundary \
-			or (not from_kick_in and rng.randf() < float(T["stoppage_share"]))
+	# The stoppage roll is drawn exactly as before, so the play RNG stays where
+	# it was; it no longer turns a won ball into a ball-up: after an intercept
+	# or a free the winner plays on (match flow, director 2026-10-10). A ball-up
+	# called in play (a tackle held, a contest locked up) always is one.
+	var roll := 1.0
+	if not (at_centre or from_boundary) and not from_kick_in:
+		roll = rng.randf()
+	var won_ball := _prev_end == "turnover" or _prev_end == "free"
+	var locked := _prev_locked
+	var stoppage := at_centre or from_boundary or locked \
+			or (not won_ball and roll < float(T["stoppage_share"]))
+	_prev_locked = false
+	if not _flow:
+		# As before match flow: any chain may open at a stoppage, a won ball too.
+		stoppage = at_centre or from_boundary 				or (not from_kick_in and roll < float(T["stoppage_share"]))
 	var side: int
 	var start_fp: float
 	if stoppage:
@@ -3871,6 +4048,7 @@ func _play_one_chain(T: Dictionary) -> void:
 	_ball_lost_by = _lost_by if chain_origin == "general" else -1
 	_lost_by = -1
 	var res := {}
+	_last_disp = {}
 	var taker := _free_set_taker(side, start_fp) if chain_origin == "free" else {}
 	_free_taker = {}
 	if not taker.is_empty():
@@ -3895,11 +4073,14 @@ func _play_one_chain(T: Dictionary) -> void:
 	if outcome == "free" and res.has("free_side"):
 		next_side = int(res["free_side"])
 	_prev_end = outcome
+	_prev_locked = _flow and outcome == "stoppage" and res.get("actor") != null
 	if outcome == "loose":
 		_lost_by = side
 	if outcome == "score":
 		fp = 0.0
-	if ["boundary", "free", "loose"].has(outcome):
+	# A ball-up called in play (a tackle held, a contest locked up) is how the
+	# chain ended: no end-of-chain error turns it into a turnover or a free.
+	if ["boundary", "free", "loose"].has(outcome) or _prev_locked:
 		_after_chain()
 		return
 
@@ -3923,10 +4104,26 @@ func _play_one_chain(T: Dictionary) -> void:
 		clanger_p *= HOLD_CLANGERS
 	if rng.randf() < clanger_p:
 		var err = _pick(squads[side].ground, cw[0])
+		# Row 12: the error is the last disposal's (when the chain ran out on
+		# one), and the line says why. The pick above is still drawn, so the
+		# dice are where they were.
+		var cause := ""
+		if clanger_cause_on and not _last_disp.is_empty():
+			cause = clanger_why(_last_disp, weather, outcome)
+			if cause != "" and float(absi(hash([_clanger_seed, events.size()])) % 1000) / 1000.0 >= clanger_blame_share(weather):
+				cause = ""
+			# Only his own side's player can be blamed (the chain may have changed hands).
+			if cause != "" and (squads[side].ground.has(_last_disp["carrier"])
+					or squads[side].bench.has(_last_disp["carrier"])):
+				err = _last_disp["carrier"]
+			else:
+				cause = ""
 		_t(side, "clangers")
 		_p(err, "clangers")
-		_emit("clanger", side, fp, err,
-				"%s gives away a clanger" % GameDB.player_display_name(err))
+		var clanger_line: String = CLANGER_WHY[cause] if cause != "" else "%s gives away a clanger"
+		_emit("clanger", side, fp, err, clanger_line % GameDB.player_display_name(err))
+		if cause != "":
+			events[events.size() - 1]["why"] = cause
 		_lost_by = side
 		# After a behind the kick-in comes first, and after a goal the centre
 		# bounce (director, 2026-11-03): no free is paid over either.
@@ -3958,16 +4155,24 @@ func _clanger_taken(side: int, at: float) -> void:
 	_intercept(opp, taker, false)
 	next_side = opp
 	_prev_end = "turnover"
-	if rng.randf() < CLANGER_MARKED * (0.6 + 0.8 * _a(taker, "intercept") / 100.0):
-		_won_back["marked"] = true
-		_t(opp, "marks")
-		_p(taker, "marks")
-		_t(opp, "intercept_marks")
-		_p(taker, "intercept_marks")
-		_emit("mark", opp, at, taker, "%s intercepts it on the mark" % GameDB.player_display_name(taker))
-		var ev: Dictionary = events[events.size() - 1]
-		ev["general_play"] = true
-		ev["intercept"] = true
+	_kick_marked(opp, taker, at, rng.randf() < _tv("CLANGER_MARKED", CLANGER_MARKED)
+			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0))
+
+
+## A kick that turned over, taken by `taker`: when `marked`, he took it on the
+## mark (an intercept mark, and he takes the next kick).
+func _kick_marked(side: int, taker, at: float, marked: bool) -> void:
+	if not marked:
+		return
+	_won_back["marked"] = true
+	_t(side, "marks")
+	_p(taker, "marks")
+	_t(side, "intercept_marks")
+	_p(taker, "intercept_marks")
+	_emit("mark", side, at, taker, "%s intercepts it on the mark" % GameDB.player_display_name(taker))
+	var ev: Dictionary = events[events.size() - 1]
+	ev["general_play"] = true
+	ev["intercept"] = true
 
 
 ## Of the clangers not paid as frees, the share the other side takes outright
@@ -3976,6 +4181,10 @@ func _clanger_taken(side: int, at: float) -> void:
 ## tools/audit/intercept_impl.gd against Champion Data 2025.
 const CLANGER_TAKEN := 1.0
 const CLANGER_MARKED := 0.3
+## Of rushed kicks that go straight to the opposition, the share an average
+## reader marks (match flow: they replace the clanger after a ball-up, which
+## gave defenders most of their intercept marks).
+const PRESS_KICK_MARKED := 0.4
 
 
 ## The 18 on-ground players per side, so the pitch view can draw real
@@ -4013,7 +4222,7 @@ func scoring_log() -> Array:
 		var kind := str(e.get("kind", ""))
 		if kind == "goal" or kind == "behind":
 			out.append([int(e["q"]), int(e["min"]), int(e["side"]), 1 if kind == "goal" else 0,
-					str(e.get("player_id", "")), 1 if bool(e.get("setshot", false)) else 0])
+					str(e.get("player_id", "")), 1 if bool(e.get("setshot", false)) or bool(e.get("set", false)) else 0])
 	return out
 
 
@@ -4022,7 +4231,9 @@ func result() -> Dictionary:
 	var s1 := score(1)
 	var winner := 0 if s0 > s1 else (1 if s1 > s0 else -1)
 	var qsc := []
-	for q in range(4):
+	# Four quarters, then extra time (if played) as a fifth period, so the
+	# periods always add up to the final score.
+	for q in range(q_goals.size()):
 		qsc.append([q_goals[q][0] * 6 + q_behinds[q][0],
 				q_goals[q][1] * 6 + q_behinds[q][1]])
 	return {
@@ -4071,7 +4282,16 @@ func result() -> Dictionary:
 const ENERGY_DRAIN := 0.9            # per chain on the ground, before modifiers
 const ENERGY_BENCH_RECOVER := 4.0    # per chain on the bench
 const ENERGY_BREAK_RECOVER := 20.0   # at each quarter break
-const ROTATE_EVERY := 3              # chains between rotation checks
+const ROTATE_EVERY := 3              # chains between rotation checks, at CADENCE_CHAINS a game
+## The chain count the rotation cadence and call lengths were set for: they scale
+## with chains_per_game so a match's interchanges and a call's minutes stay the
+## same when chains get shorter (match flow, 2026-10-10).
+const CADENCE_CHAINS := 200.0
+
+
+## `n` chains at CADENCE_CHAINS a game, in this match's chains.
+func _chains_for(n: int) -> int:
+	return maxi(1, roundi(float(n) * float(_rates()["chains_per_game"]) / CADENCE_CHAINS))
 const ROLE_DRAIN := {"MID": 1.25, "RUCK": 1.15, "DEF": 0.85, "FWD": 0.9}
 ## GPS-style distance covered. A full-game player at the base rate covers
 ## about 14.8 km before role and tactical modifiers; rotations bring the
@@ -4181,7 +4401,7 @@ func _after_chain() -> void:
 	momentum *= MOMENTUM_DECAY
 	# Distance, drain and recovery were set for 180 chains a game: a chain is
 	# a share of the game's minutes, so per-game loads stay the same.
-	var per_chain := 180.0 / float(Ratings.T["chains_per_game"])
+	var per_chain := 180.0 / float(_rates()["chains_per_game"])
 	for side in range(2):
 		var sq: Squad = squads[side]
 		# Distance and fatigue both respond to the plan's tempo, pep talk and
@@ -4251,7 +4471,7 @@ func _after_chain() -> void:
 				b.erase(k)
 	_chain_no += 1
 	_check_injuries()
-	if _chain_no % ROTATE_EVERY == 0:
+	if _chain_no % _chains_for(ROTATE_EVERY) == 0:
 		for side in range(2):
 			_auto_rotate(side)
 
@@ -4310,7 +4530,7 @@ func _check_injuries() -> void:
 		var rec := {"side": side, "id": id, "q": current_quarter, "min": current_minute,
 				"weeks": int(inj["weeks"]), "kind": str(inj["kind"]), "on": on}
 		injuries.append(rec)
-		_emit("injury", side, fp, hurt, "%s is injured (%s)" % [GameDB.player_display_name(hurt), str(inj["kind"])])
+		_emit("injury", side, fp, hurt, "%s is hurt: %s" % [GameDB.player_display_name(hurt), Injuries.wording(str(inj["kind"]))])
 		events[events.size() - 1]["on"] = on
 		if gone:
 			_refill_duel(side, id)
@@ -4593,8 +4813,21 @@ func _playtest_bounce() -> bool:
 
 func _fire_bounce(margin: int) -> void:
 	var state := "level" if margin == 0 else ("%d up" % margin if margin > 0 else "%d down" % -margin)
-	_fire({"kind": "bounce", "default": 2,
-		"title": "Centre ball-up - %s with %d minutes left" % [state, 120 - current_minute],
+	var left: int = current_quarter * 30 - current_minute
+	var title := "Centre ball-up - %s with %d minutes left" % [state, 120 - current_minute]
+	if Features.on("ballup_two"):
+		# Two distinct calls, each with its own upside and downside and no
+		# "Play it straight" (row 15). Unanswered (skipped, auto-played) is no call.
+		_fire({"kind": "bounce", "default": -1, "title": title,
+			"text": "Set up for the rest of the game.",
+			"options": _sized([
+				{"key": "stack", "label": "Stack the stoppage",
+					"detail": "Extra numbers at the bounce: win far more clearances, but they score more easily if they get out."},
+				{"key": "flood", "label": "Flood behind the ball",
+					"detail": "Protect the lead: they score far less, and so do you."},
+			], left, GateOdds.NONE_COST_BOUNCE)})
+		return
+	_fire({"kind": "bounce", "default": 2, "title": title,
 		"text": "Set up for the rest of the game.",
 		"options": _sized([
 			{"key": "stack", "label": "Stack the stoppage",
@@ -4603,7 +4836,7 @@ func _fire_bounce(margin: int) -> void:
 				"detail": "Protect the lead: they score far less, and so do you."},
 			{"key": "none", "label": "Play it straight",
 				"detail": "No change."},
-		], current_quarter * 30 - current_minute, GateOdds.NONE_COST_BOUNCE)})
+		], left, GateOdds.NONE_COST_BOUNCE)})
 
 
 ## A risk card's options with what each does for you and what it costs, sized
@@ -4740,6 +4973,9 @@ func _boundary_moment() -> bool:
 	var run_key := "run|%d" % (goals(opp) - int(_run[opp]))
 	if _run[opp] >= 3 and not _asked.has(run_key):
 		_asked[run_key] = true
+		if Features.on("goal_run_moves"):
+			_fire_run_moves(_run[opp])
+			return true
 		_fire({"kind": "momentum", "default": 2,
 			"title": "They have kicked %d in a row" % _run[opp],
 			"text": "The game is getting away from you. Make a call for the next ten minutes.",
@@ -4754,6 +4990,24 @@ func _boundary_moment() -> bool:
 		return true
 	# A tight last-quarter centre bounce.
 	return _bounce_moment(margin)
+
+
+## The run against you as two concrete moves (row 14, switch goal_run_moves):
+## stack the next centre bounces to win the ball back from the middle, or flood
+## behind the ball to stop the goals. Each carries its gain and cost as
+## percentages (GateOdds.burst_lines), and neither is called the better. The
+## card has no "ride it out": a side that is not asked (a simulated match)
+## makes no call, default -1.
+func _fire_run_moves(run: int) -> void:
+	_fire({"kind": "momentum", "moves": true, "default": -1,
+		"title": "They have kicked %d in a row" % run,
+		"text": "Two ways to answer it from the next centre bounce.",
+		"options": _sized([
+			{"key": "stack", "label": "Stack the centre bounce",
+				"detail": "Extra numbers at the ball-up."},
+			{"key": "flood", "label": "Flood behind the ball",
+				"detail": "Everyone back, so they cannot run it in."},
+		], current_quarter * 30 - current_minute, GateOdds.NONE_COST_RUN)})
 
 
 ## Lockdown's opponent. A defender's is the forward he stands on the shot
@@ -4934,8 +5188,10 @@ func resolve_moment(choice: int) -> Dictionary:
 	var m := pending_moment
 	pending_moment = {}
 	var options: Array = m.get("options", [])
-	choice = clampi(choice, 0, maxi(0, options.size() - 1))
-	var opt: Dictionary = options[choice] if not options.is_empty() else {}
+	# A call whose default is -1 (the two-choice centre ball-up) can be left
+	# unanswered: nothing changes.
+	choice = clampi(choice, -1 if int(m.get("default", 0)) < 0 else 0, maxi(0, options.size() - 1))
+	var opt: Dictionary = options[choice] if choice >= 0 and not options.is_empty() 			else ({"key": "none", "label": "No call"} if choice < 0 else {})
 	var side := int(m.get("side", moment_side))
 	var key := str(opt.get("key", ""))
 	var outcome := ""
@@ -4999,7 +5255,7 @@ func resolve_moment(choice: int) -> Dictionary:
 				outcome = "The match-up stays."
 		"momentum", "bounce":
 			if BURSTS.has(key):
-				(bursts[side] as Dictionary)[key] = int(BURSTS[key]["chains"])
+				(bursts[side] as Dictionary)[key] = _chains_for(int(BURSTS[key]["chains"]))
 				outcome = "%s %s." % [str(BURSTS[key]["label"]), str(BURSTS[key]["for"])]
 			else:
 				outcome = "No change."
@@ -5200,7 +5456,7 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 		_p(crumber, "disposals")
 		_p(crumber, "kicks")
 		var snap := shot_chance(side, crumber, false, false) * CRUMB_SNAP
-		var bh: float = float(Ratings.T["inside50_behind"]) * (0.80 + 0.40 * _a(crumber, "goalkicking") / 100.0)
+		var bh: float = float(_rates()["inside50_behind"]) * (0.80 + 0.40 * _a(crumber, "goalkicking") / 100.0)
 		return _set_result(side, crumber, null, back, snap, bh, true)
 	if rng.randf() < PACK_RUSHED:
 		# Rushed through for a behind: no one's shot.

@@ -389,12 +389,25 @@ func _test_reunion() -> void:
 	ClubMoves.record_reunion(GameState, st)
 	last.pop_back()
 	_check((rec["flags"] as Dictionary).has("won"), "reunion: the win over the old club is recorded")
+	var drawn := {"flags": {}}
+	var st_draw := {"active": {"reunion": {"flags": drawn["flags"], "mem": hit["mem"]}}}
+	last.append({"home": GameState.my_club, "away": old, "score": [70, 70]})
+	ClubMoves.record_reunion(GameState, st_draw)
+	last.pop_back()
+	_check((drawn["flags"] as Dictionary).has("drew") and not (drawn["flags"] as Dictionary).has("lost")
+			and not (drawn["flags"] as Dictionary).has("won"), "reunion: a draw is neither a win nor a loss: %s" % str(drawn["flags"]))
 	CoachArcs.answer(def, rec, "arc_reunion_grudge", "bite", GameState.story_week(), GameState.season_year)
 	CoachArcs.answer(def, rec, "arc_reunion_handshake", "gracious", GameState.story_week() + 1, GameState.season_year)
 	_check(int(rec["beat"]) == 2, "reunion: both beats played")
 	_check(CoachArcs.closing(def, rec, {}, GameState.season_year + 1) == "remembered", "reunion: a win resolves 'remembered'")
 	rec["flags"].erase("won")
 	_check(CoachArcs.closing(def, rec, {}, GameState.season_year + 1) == "reconciled", "reunion: a gracious loss resolves 'reconciled'")
+	rec["flags"]["drew"] = GameState.story_week()
+	var draw_end := CoachArcs.closing(def, rec, {}, GameState.season_year + 1)
+	var draw_line := str(def["endings"].get(draw_end, {}).get("line", ""))
+	_check(draw_end == "level" and draw_line.contains("Honours shared") and not draw_line.contains("better of"),
+			"reunion: a drawn reunion resolves 'level' with draw copy: %s / %s" % [draw_end, draw_line])
+	rec["flags"].erase("drew")
 	# The same old club comes round again only once every 10 seasons.
 	ClubArcs._end(GameState, st, def, rec, "reconciled", "Season start")
 	_check(not (st["active"] as Dictionary).has("reunion"), "reunion: an ended reunion is no longer active")

@@ -30,9 +30,22 @@ var _hold_serial := 0
 var _press_scroll := 0
 var _press_pos := Vector2.ZERO
 const ROW_PROFILE_W := 56.0
+const GRID_TAB_NAMES := {"": "All", "DEF": "Def", "MID": "Mid", "RUCK": "Ruck", "FWD": "Fwd"}
+const GRID_POS_NAME := {"RUCK": "Ruck", "MID": "Mid", "DEF": "Def", "FWD": "Fwd"}
+const GRID_TRADE_OFF_LINE := "Each game earns XP, and his plan spends it on the stats it names."
+const GRID_TOUCH := 48.0         # a thumb target: tabs, back, Stat guide
+const CARD_PAD := 10             # inside a card, left and right
+const CARD_PAD_V := 6            # inside a card, top and bottom
+const CARD_BAR := 6.0            # the club's colour down a card's left edge
+const CARD_TINT := 0.18          # how much of the club's colour the card surface carries
+const CARD_FS := 14              # position line on a card
+const CARD_FS_LOW := 13          # trait and status lines on a card
+const CARD_NAME_FS := 15         # every name, whatever its length; only the longest drop a size
+const BAR_SLOT := 60.0           # the group bar's room, kept whether or not it is showing
 const DRAG_SLOP := 12.0   # the list's scroll deadzone
 var _root: VBoxContainer
 var _list_scroll: ScrollContainer
+var _rows: VBoxContainer
 var _detail_scroll: ScrollContainer
 var _overlay: Control
 
@@ -81,6 +94,8 @@ func handle_back() -> bool:
 		_build()
 		return true
 	if is_instance_valid(_overlay):
+		if StatGuide.back(_overlay):
+			return true
 		_overlay.queue_free()
 		_overlay = null
 		return true
@@ -145,16 +160,45 @@ func _build() -> void:
 	var detail_y := UiKit.scroll_place(_detail_scroll) if is_instance_valid(_detail_scroll) else 0
 	UiKit.clear(_root)
 	_list_scroll = null
+	_rows = null
 	_detail_scroll = null
 	var guide := UiKit.btn("Stat guide", UiKit.SECONDARY)
 	guide.name = "StatGuideButton"
 	guide.custom_minimum_size = Vector2(96, 44)
 	guide.pressed.connect(_open_guide)
 	# The top-bar back steps out of the player detail first, then leaves.
-	_root.add_child(UiKit.top_bar("Training", true, guide,
-			Callable(self, "handle_back")))
-	_root.add_child(_summary())
-	if _wide:
+	var bar := UiKit.top_bar("Training", true, guide, Callable(self, "handle_back"))
+	if Features.on("training_grid"):
+		# Opaque behind the title and the button so the club's stripes never
+		# show through the words, and a back and a Stat guide a thumb can hit.
+		guide.custom_minimum_size = Vector2(96, GRID_TOUCH)
+		var back := bar.find_child("TopBarBack", true, false) as Control
+		if back != null:
+			back.custom_minimum_size = Vector2(GRID_TOUCH, GRID_TOUCH)
+		var backing := UiKit.panel(UiKit.PANEL, 4, UiKit.RADIUS)
+		backing.name = "TrainingHeader"
+		backing.add_child(bar)
+		_root.add_child(backing)
+	else:
+		_root.add_child(bar)
+	if _paged():
+		# Training grid on a phone: the news, the tabs and the cards are one
+		# page that scrolls as a whole (no list scrolling inside a page).
+		var page := UiKit.vbox(8)
+		page.add_child(_summary())
+		page.add_child(_list_panel())
+		_list_scroll = UiKit.scroll(page)
+		_list_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+		_root.add_child(_list_scroll)
+		if not _bulk_selected.is_empty():
+			# The group bar is docked under the page: it takes room from the
+			# page's foot, so no card moves when it comes and goes.
+			_root.add_child(_bulk_bar())
+	else:
+		_root.add_child(_summary())
+	if _paged():
+		pass
+	elif _wide:
 		var body := UiKit.hbox(10)
 		body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_root.add_child(body)
@@ -166,6 +210,11 @@ func _build() -> void:
 		_root.add_child(_list_panel())
 	UiKit.restore_scroll(_list_scroll, list_y)
 	UiKit.restore_scroll(_detail_scroll, detail_y)
+
+
+## The grid on a phone with the list open: one page, one scroll.
+func _paged() -> bool:
+	return Features.on("training_grid") and not _wide and not (_showing_detail and _selected != "")
 
 
 ## The training gear beside the week's news (director, 2026-10-14: "Bigger,
@@ -181,9 +230,12 @@ const HERO_WIDE := 96.0
 func _summary() -> Control:
 	var panel := UiKit.panel(UiKit.PANEL, 10, 8)
 	var v := UiKit.vbox(3)
+	# Training grid on a phone with the list open: the news in a line or two,
+	# no picture and no standing explanation, so the cards get the screen.
+	var compact := Features.on("training_grid") and not _wide and not (_showing_detail and _selected != "")
 	# Decoration: it stands on the panel's foot at the right and takes no tap.
 	# Without the picture the news has the whole width, as before.
-	var hero := UiArt.view("training_gear", HERO_WIDE if _wide else HERO_NARROW)
+	var hero := UiArt.view("training_gear", HERO_WIDE if _wide else HERO_NARROW) if not compact else null
 	if hero == null:
 		panel.add_child(v)
 	else:
@@ -221,17 +273,21 @@ func _summary() -> Control:
 			var reserves := GameState.reserves_summary_line()
 			if reserves != "":
 				v.add_child(UiKit.lbl(reserves, UiKit.SECONDARY, UiKit.MUTED))
-	else:
-		v.add_child(UiKit.lbl("No game played yet. Players develop after every match.", UiKit.BODY, UiKit.EMPH, true))
 	# The season plan in words, one tap from the season line.
 	var plan_line := SeasonPlanSheet.line(self, func(): _build())
+	if int(report.get("count", 0)) <= 0 and not (compact and plan_line != null):
+		v.add_child(UiKit.lbl("No game played yet. Players develop after every match.", UiKit.BODY, UiKit.EMPH, true))
 	if plan_line != null:
+		if compact:
+			_plan_as_button(plan_line as Button)
 		v.add_child(plan_line)
-	# What it costs and what it buys, in one line (P-63).
-	var trade := UiKit.lbl(TRADE_OFF_LINE, UiKit.SMALL, UiKit.TEXT)
-	trade.name = "TrainingTradeOff"
-	trade.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	v.add_child(trade)
+	# What it costs and what it buys, in one line (P-63). The compact phone
+	# list leaves it to the intro and the player's page.
+	if not compact:
+		var trade := UiKit.lbl(GRID_TRADE_OFF_LINE if Features.on("training_grid") else TRADE_OFF_LINE, UiKit.SMALL, UiKit.TEXT)
+		trade.name = "TrainingTradeOff"
+		trade.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(trade)
 	return panel
 
 
@@ -260,20 +316,48 @@ func _spend_notice(gains: Dictionary, ov_before: int, ov_after: int) -> String:
 	return "Plan updated. It takes effect after the next game."
 
 
+## The season plan row as a button: outlined, a thumb tall, its second line in
+## the text colour (it is a choice the coach makes, not small print).
+func _plan_as_button(b: Button) -> void:
+	b.flat = false
+	_outline(b)
+	b.custom_minimum_size.y = GRID_TOUCH + 8
+	var inner := b.get_child(0) as Control
+	if inner != null:
+		inner.offset_left = 12
+		inner.offset_right = -12
+	var sub := b.find_child("SeasonPlanSub", true, false) as Label
+	if sub != null:
+		sub.add_theme_color_override("font_color", _soft())
+
+
+## Helper text and quiet tabs that still read: between the muted grey and the
+## text colour, nearer the text.
+static func _soft() -> Color:
+	return UiKit.MUTED.lerp(UiKit.TEXT, 0.7)
+
+
 func _list_panel() -> Control:
 	var panel := UiKit.panel(UiKit.PANEL, 10, 8)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var paged := _paged()
+	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN if paged else Control.SIZE_EXPAND_FILL
 	if _wide:
 		panel.custom_minimum_size.x = 280
+	var grid := Features.on("training_grid")
 	var v := UiKit.vbox(6)
 	panel.add_child(v)
-	v.add_child(UiKit.heading("Your list", UiKit.TITLE))
+	if not grid:
+		v.add_child(UiKit.heading("Your list", UiKit.TITLE))
 	var tabs := UiKit.hbox(2)
+	tabs.name = "RoleTabs"
 	v.add_child(tabs)
 	for item in ROLE_TABS:
 		var key := str(item[0])
-		var b := UiKit.tab(str(item[1]), _role == key)
+		# Grid: sentence-case names, a thumb tall.
+		var b := UiKit.tab(str(GRID_TAB_NAMES[key]) if grid else str(item[1]), _role == key)
+		if grid:
+			_strengthen_tab(b, _role == key)
 		b.pressed.connect(_set_role.bind(key))
 		tabs.add_child(b)
 	var search := UiKit.search_field(_query)
@@ -281,17 +365,54 @@ func _list_panel() -> Control:
 		_query = text
 		_refresh_rows())
 	v.add_child(search)
-	if _bulk_selected.is_empty():
-		v.add_child(UiKit.lbl("Click and hold a player to select several." if not ScreenLayout.is_phone()
+	if grid and paged:
+		var hint := UiKit.lbl(("Touch and hold a player to pick several." if UiKit.view_width(self) < 600.0
+				else "Press and hold a player to pick several.") if _bulk_selected.is_empty()
+				else "Tap a player to add him or take him out.", UiKit.SECONDARY, _soft())
+		hint.name = "GroupHint"
+		v.add_child(hint)
+	elif grid:
+		# One slot for the hint and for the group bar: choosing players swaps
+		# one for the other and the cards stay where they are.
+		var slot := UiKit.vbox(0)
+		slot.name = "GroupSlot"
+		slot.custom_minimum_size.y = BAR_SLOT
+		slot.alignment = BoxContainer.ALIGNMENT_CENTER
+		v.add_child(slot)
+		if _bulk_selected.is_empty():
+			var hint := UiKit.lbl("Touch and hold a player to pick several." if UiKit.view_width(self) < 600.0
+					else "Press and hold a player to pick several.", UiKit.SECONDARY, _soft())
+			hint.name = "GroupHint"
+			slot.add_child(hint)
+		else:
+			slot.add_child(_bulk_bar())
+	elif _bulk_selected.is_empty():
+		v.add_child(UiKit.lbl("Click and hold a player to select several." if not ScreenLayout.is_touch()
 				else "Long-press a player to select several.", 12, UiKit.MUTED))
 	else:
 		v.add_child(_bulk_panel())
 	var rows := UiKit.vbox(4)
 	rows.name = "TrainingRows"
-	_list_scroll = UiKit.scroll(rows)
-	v.add_child(_list_scroll)
+	_rows = rows
+	if paged:
+		v.add_child(rows)
+	else:
+		_list_scroll = UiKit.scroll(rows)
+		v.add_child(_list_scroll)
 	_fill_rows(rows)
 	return panel
+
+
+## A role tab a thumb tall, its words readable when it is not the chosen one
+## and a firmer rule under the one that is.
+static func _strengthen_tab(b: Button, active: bool) -> void:
+	b.custom_minimum_size.y = GRID_TOUCH
+	b.add_theme_color_override("font_color", UiKit.TEXT if active else _soft())
+	if active:
+		for state_name in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+			var sb := b.get_theme_stylebox(state_name).duplicate() as StyleBoxFlat
+			sb.border_width_bottom = 4
+			b.add_theme_stylebox_override(state_name, sb)
 
 
 func _set_role(role: String) -> void:
@@ -335,6 +456,68 @@ func _bulk_panel() -> Control:
 		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(note)
 	return panel
+
+
+## Grid: the group bar on one row. The count, one outlined button per plan he
+## can all take, Clear; it wraps only if the plans do not fit across.
+func _bulk_bar() -> Control:
+	var panel := UiKit.panel(UiKit.PANEL_ALT, 6, 6)
+	panel.name = "BulkTraining"
+	var v := UiKit.vbox(4)
+	panel.add_child(v)
+	panel.custom_minimum_size.y = BAR_SLOT
+	var flow := HFlowContainer.new()
+	flow.name = "BulkRow"
+	flow.add_theme_constant_override("h_separation", 4)
+	flow.add_theme_constant_override("v_separation", 4)
+	v.add_child(flow)
+	var count := _bulk_selected.size()
+	var head := UiKit.line("%d selected" % count, UiKit.SECONDARY, UiKit.TEXT, true)
+	head.custom_minimum_size = Vector2(0, GRID_TOUCH)
+	head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	flow.add_child(head)
+	for key in _bulk_plans():
+		var b := UiKit.btn(_group_button_word(str(key)), UiKit.SECONDARY)
+		b.name = "GroupPlan_%s" % str(key)
+		b.custom_minimum_size.y = GRID_TOUCH
+		_outline(b, 5)
+		b.pressed.connect(_apply_bulk_plan.bind(str(key)))
+		flow.add_child(b)
+	var clear := UiKit.btn("Clear", UiKit.SECONDARY)
+	clear.name = "ClearBulk"
+	clear.custom_minimum_size.y = GRID_TOUCH
+	_outline(clear, 5)
+	clear.pressed.connect(func():
+		_bulk_selected.clear()
+		_notice = ""
+		_build())
+	flow.add_child(clear)
+	if _notice != "":
+		var note := UiKit.lbl(_notice, UiKit.SECONDARY, UiKit.GOOD)
+		note.name = "BulkNotice"
+		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(note)
+	return panel
+
+
+## What a group button says: "Position plan" as it is; a role plan as the job
+## it is, "Train as ruck", so it cannot be read as "set them to Ruck".
+func _group_button_word(key: String) -> String:
+	var label := GameState.train_plan_label(key)
+	if key == "position":
+		return label
+	return "Train as %s" % label.to_lower()
+
+
+## A secondary button that reads as a button on a dark panel: an outline, no
+## fill.
+static func _outline(b: Button, margin := 8) -> void:
+	var rest := UiKit.style(Color.TRANSPARENT, margin, UiKit.RADIUS, UiKit.MUTED)
+	var down := UiKit.style(UiKit.SURFACE, margin, UiKit.RADIUS, UiKit.TEXT)
+	b.add_theme_stylebox_override("normal", rest)
+	b.add_theme_stylebox_override("focus", rest)
+	for state in ["hover", "pressed", "hover_pressed"]:
+		b.add_theme_stylebox_override(state, down)
 
 
 func _bulk_plans() -> Array:
@@ -433,11 +616,10 @@ func _moved_since_press() -> bool:
 
 
 func _refresh_rows() -> void:
-	if not is_instance_valid(_list_scroll):
+	if not is_instance_valid(_rows):
 		_build()
 		return
-	var rows := _list_scroll.get_child(0)
-	_fill_rows(rows)
+	_fill_rows(_rows)
 
 
 func _fill_rows(rows: Node) -> void:
@@ -461,6 +643,37 @@ func _fill_rows(rows: Node) -> void:
 		if group.is_empty():
 			continue
 		group.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+		if Features.on("training_grid"):
+			# A plain heading in the text colour: position is not a state, so
+			# no green or gold here.
+			var head := UiKit.lbl("%s (%d)" % [UiKit.ROLE_LABEL[role], group.size()], UiKit.SECONDARY + 1, UiKit.TEXT, true)
+			head.name = "GroupHead"
+			var air := Control.new()
+			air.name = "GroupAir"
+			air.custom_minimum_size.y = 6
+			air.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			rows.add_child(air)
+			rows.add_child(head)
+			var grid := UiKit.vbox(6)
+			grid.name = "TrainingGrid"
+			rows.add_child(grid)
+			# Two across; an odd one out keeps a half-width card at the left and
+			# its row leaves the other half empty, so every card is one width.
+			for i in range(0, group.size(), 2):
+				var pair: Array = group.slice(i, i + 2)
+				var line := UiKit.hbox(6)
+				line.name = "GridRow"
+				grid.add_child(line)
+				for p in pair:
+					line.add_child(_player_card(p))
+					shown += 1
+				if pair.size() == 1:
+					var hole := Control.new()
+					hole.name = "GridHole"
+					hole.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+					hole.mouse_filter = Control.MOUSE_FILTER_IGNORE
+					line.add_child(hole)
+			continue
 		rows.add_child(UiKit.lbl("%s  (%d)" % [UiKit.ROLE_LABEL[role], group.size()],
 				12, UiKit.ROLE_COLOUR[role], true))
 		for p in group:
@@ -475,6 +688,212 @@ func _matches(p: Dictionary) -> bool:
 	if q == "":
 		return true
 	return GameDB.player_search_text(p).to_lower().contains(q)
+
+
+## Training grid (feature training_grid): player cards, two across, every one
+## the same width and height. Top to bottom: his position and rating, his name
+## (two lines at most, one size), his best trait, then where he is in his
+## development, which is always the bottom line, so statuses sit level across
+## a row whatever the names above them do. The club's colour tints the card and
+## runs down its left edge. The whole card selects him exactly as a row does, a
+## long press still starts a group (the chosen ones carry a tick), and his
+## profile is one more tap away from his plan page.
+func _player_card(p: Dictionary) -> Control:
+	var id := str(p["id"])
+	var in_group := _bulk_selected.has(id)
+	var selected := in_group or (_bulk_selected.is_empty() and id == _selected)
+	var card := UiKit.panel(UiKit.PANEL_ALT, 0, UiKit.RADIUS)
+	card.add_theme_stylebox_override("panel", _card_style(selected, UiKit.club_ink(GameState.my_club)))
+	card.name = "Card_" + id
+	card.custom_minimum_size.y = _card_height()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.size_flags_vertical = Control.SIZE_FILL
+	var text_w := _card_text_width()
+	var line_h := _card_line_h()
+	var row := UiKit.hbox(0)
+	card.add_child(row)
+	var bar := ColorRect.new()
+	bar.name = "ClubBar"
+	bar.color = UiKit.club_ink(GameState.my_club)
+	bar.custom_minimum_size = Vector2(CARD_BAR, 0)
+	row.add_child(bar)
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_left", CARD_PAD)
+	pad.add_theme_constant_override("margin_right", CARD_PAD)
+	pad.add_theme_constant_override("margin_top", CARD_PAD_V)
+	pad.add_theme_constant_override("margin_bottom", CARD_PAD_V)
+	row.add_child(pad)
+	var v := UiKit.vbox(0)
+	pad.add_child(v)
+	# Row 1: where he plays, and his rating.
+	var top := UiKit.hbox(4)
+	top.custom_minimum_size.y = 22
+	v.add_child(top)
+	if in_group:
+		var tick := _Tick.new()
+		tick.name = "Ticked"
+		top.add_child(tick)
+	var pos := UiKit.line(_card_position(p), CARD_FS, UiKit.TEXT)
+	pos.name = "Position"
+	pos.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pos.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	top.add_child(pos)
+	var rise := _last_rise(id)
+	var ovr_word := UiKit.line("OVR", CARD_FS, UiKit.MUTED)
+	ovr_word.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	top.add_child(ovr_word)
+	var ovr := UiKit.line(("▲ " if rise.size() > 0 else "") + str(int(p["overall"])), UiKit.NAME,
+			UiKit.GOOD if rise.size() > 0 else UiKit.TEXT, true)
+	ovr.name = "Rating"
+	ovr.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	top.add_child(ovr)
+	# Middle: his name, and his trait under it, centred in the room between the
+	# top row and the status, so a short name does not leave a hole.
+	var mid := UiKit.vbox(2)
+	mid.name = "CardMiddle"
+	mid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mid.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_child(mid)
+	var full_name := GameDB.player_display_name(p)
+	var fitted := _fit_name(full_name, text_w)
+	var nm := UiKit.name_label(str(fitted[0]), int(fitted[1]))
+	nm.tooltip_text = full_name
+	mid.add_child(nm)
+	var trait_keys := Traits.of(p)
+	if not trait_keys.is_empty():
+		var tr := UiKit.ellipsis(Traits.label(trait_keys[0]), CARD_FS_LOW,
+				UiKit.BAD if Traits.is_bad(trait_keys[0]) else UiKit.TEXT, true)
+		tr.name = "Trait"
+		mid.add_child(tr)
+	# Bottom: one status line, always last, in a lighter weight than the trait.
+	var status := _card_status(p, id, text_w)
+	var st := UiKit.ellipsis(str(status[0]), CARD_FS_LOW, status[1])
+	st.name = "Status"
+	st.custom_minimum_size.y = line_h
+	st.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	v.add_child(st)
+	_ignore_mouse(row)
+	var b := UiKit.btn("", 14)
+	b.name = "Trainee_" + id
+	b.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var clear := UiKit.style(Color.TRANSPARENT, 0, UiKit.RADIUS)
+	clear.set_border_width_all(0)
+	for state_name in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+		b.add_theme_stylebox_override(state_name, clear)
+	b.button_down.connect(_begin_player_hold.bind(id))
+	b.button_up.connect(_end_player_hold.bind(id))
+	b.pressed.connect(_press_player.bind(id))
+	card.add_child(b)
+	return card
+
+
+## A tick in a light disc: the mark of a player picked for the group.
+class _Tick extends Control:
+	func _init() -> void:
+		custom_minimum_size = Vector2(20, 20)
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		draw_circle(size * 0.5, 10.0, UiKit.TEXT)
+		draw_polyline(PackedVector2Array([Vector2(5.5, 10.5), Vector2(8.8, 13.8), Vector2(14.5, 6.8)]),
+				UiKit.PANEL_ALT, 2.4, true)
+
+
+## The card's surface: the club's colour tinted into the card, square on the
+## left where the club's bar sits; the chosen one is outlined in the text colour.
+static func _card_style(selected: bool, club: Color) -> StyleBoxFlat:
+	var surface := UiKit.PANEL_ALT.lerp(club, CARD_TINT)
+	var sb := UiKit.style(surface, 0, UiKit.RADIUS, UiKit.TEXT if selected else surface)
+	sb.set_border_width_all(2 if selected else 0)
+	sb.corner_radius_top_left = 0
+	sb.corner_radius_bottom_left = 0
+	return sb
+
+
+## One line of card text, with its breathing room.
+static func _card_line_h() -> float:
+	return ceilf(UiKit.FONT.get_height(CARD_FS_LOW)) + 1.0
+
+
+## The same for every card: the room the fullest one needs (two lines of name,
+## a trait, a status, and the top row), so no row differs from another.
+static func _card_height() -> float:
+	# Two lines of the label, with the gap the label puts between them.
+	var name_h := ceilf(UiKit.BOLD.get_height(CARD_NAME_FS)) * 2.0 + 4.0
+	return ceilf(2.0 * CARD_PAD_V + 22.0 + name_h + 2.0 + _card_line_h() + _card_line_h())
+
+
+## How wide a card's words can run: the page less its margins and the list
+## panel's padding, shared between the two cards, less the bar and the padding.
+func _card_text_width() -> float:
+	var row := UiKit.view_width(self) - 24.0 - 20.0
+	if _wide:
+		row = maxf(260.0, (UiKit.view_width(self) - 34.0) * 0.5 - 30.0)
+	var card := (row - 6.0) * 0.5
+	return card - CARD_BAR - 2.0 * CARD_PAD
+
+
+## "Mid +1": his own position, then how many more he can play. The full list
+## is on his profile.
+static func _card_position(p: Dictionary) -> String:
+	var tags := Ratings.role_tag(p).split("/")
+	var text: String = GRID_POS_NAME.get(tags[0], str(tags[0]).capitalize())
+	if tags.size() > 1:
+		text += " +%d" % (tags.size() - 1)
+	return text
+
+
+## [text, colour] for the status line: an injury first; otherwise where he is
+## in the match-day squad and what he is training as, as much as fits.
+func _card_status(p: Dictionary, id: String, width: float) -> Array:
+	if int(p.get("injury_weeks", 0)) > 0:
+		return ["Injured %d wks" % int(p["injury_weeks"]), UiKit.BAD]
+	var plan := GameState.plan_for(p)
+	var texts: Array = []
+	if plan == "position":
+		texts.append(GameState.development_state(p).replace(" projected peak", " peak"))
+	elif plan.begins_with(GameState.LEARN_PREFIX):
+		var word := str(GameState.LEARN_JOBS[plan.trim_prefix(GameState.LEARN_PREFIX)]["word"])
+		texts.append("Learning to play %s" % word)
+		texts.append("Learning %s" % word)
+	else:
+		var label := GameState.train_plan_label(plan)
+		texts.append("Training: %s" % label.to_lower())
+		texts.append("Training: %s" % label.to_lower().split(" ")[-1])
+		texts.append(label)
+	var duty := str({"Interchange": "Bench", "Reserves": "Reserves", "Not selected": "Omitted"}.get(GameState.last_duty(id), ""))
+	var options: Array = []
+	if duty != "":
+		for t in texts:
+			options.append("%s · %s" % [duty, t])
+		options.append(duty)
+	options.append_array(texts)
+	for o in options:
+		if UiKit.FONT.get_string_size(str(o), HORIZONTAL_ALIGNMENT_LEFT, -1, CARD_FS_LOW).x <= width:
+			return [o, _soft()]
+	return [options.back(), _soft()]
+
+
+## [name, size]: the whole name at the largest size that keeps it to two
+## lines with no word cut; else his first names as initials; else the smallest
+## size, where the label's own trim is the last resort.
+static func _fit_name(text: String, width: float) -> Array:
+	var sizes := [CARD_NAME_FS, 14, 13]
+	var tries := [text]
+	var parts := text.split(" ")
+	if parts.size() > 1:
+		var short := ""
+		for i in range(parts.size() - 1):
+			short += parts[i].substr(0, 1) + ". "
+		tries.append(short + parts[parts.size() - 1])
+	for t in tries:
+		for fs in sizes:
+			var size := UiKit.BOLD.get_multiline_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, width, fs)
+			if size.x <= width + 0.5 and size.y <= UiKit.BOLD.get_height(fs) * 2.0 + 1.0:
+				return [t, fs]
+	return [tries.back(), 13]
 
 
 func _player_row(p: Dictionary) -> Control:

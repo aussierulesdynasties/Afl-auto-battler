@@ -28,6 +28,7 @@ func run() -> void:
 	_t("_test_full_time")
 	_t("_test_report_roles", [res])
 	_t("_test_rating")
+	_t("_test_coaches_votes")
 	_t("_test_report_glance")
 	_t("_test_lift_skips_short_games")
 	_t("_test_no_green_decoration")
@@ -274,6 +275,11 @@ func _test_full_time() -> void:
 				bad = str(p["line"])
 	_check(total > 12, "Matches produce reasons (%d)" % total)
 	_check(bad == "", "Full-time reasons are football, not a stat sheet or advice (%s)" % bad)
+	_check(MatchNotes.votes_line({"disposals": 30.0, "clearances": 12.0, "tackles": 2.0}) == "12 clearances, 30 disposals",
+			"A subline leads with the stat furthest above a good game")
+	_check(MatchNotes.votes_line({"goals": 1.0}) == "1 goal", "A single stat reads singular")
+	_check(MatchNotes.break_score("FRE", "MEL", [3, 2], [1, 0], true).length() < MatchNotes.break_score("FRE", "MEL", [3, 2], [1, 0]).length(),
+			"The break banner shortens to club short names")
 	_check(MatchNotes.game_line({"disposals": 31.0, "clearances": 8.0, "goals": 0.0}) == "31 disposals, 8 clearances",
 			"A midfielder's game in a few words")
 	_check(MatchNotes.game_line({"disposals": 12.0, "goals": 4.0}) == "4 goals", "A forward's game is his goals")
@@ -427,6 +433,34 @@ func _test_lift_skips_short_games() -> void:
 
 
 ## The half-time report at a glance: a few lines and a few players, in words.
+## Coaches' votes: two coaches, 5-4-3-2-1 each, from the match's own ratings.
+func _test_coaches_votes() -> void:
+	for seed in [2, 9, 21]:
+		var r := _match(seed, "FRE", "MEL")
+		var v := MatchNotes.coaches_votes(r)
+		var total := 0
+		var top := 0
+		for id in v:
+			total += int(v[id])
+			top = maxi(top, int(v[id]))
+		_check(total == 30, "Two coaches hand out 15 votes each (%d)" % total)
+		_check(top <= 10 and top >= 5, "Nobody earns more than 10 votes (%d)" % top)
+		_check(v.size() >= 5 and v.size() <= 10, "Between five and ten players poll (%d)" % v.size())
+		_check(v == MatchNotes.coaches_votes(r), "The same match gives the same votes")
+		# The vote-getters are the match's better players, not the quiet ones.
+		var all := MatchNotes.rated_players(r, 0) + MatchNotes.rated_players(r, 1)
+		all.sort_custom(func(a, b): return int(a["rating"]) > int(b["rating"]))
+		var ten := []
+		for p in all.slice(0, 12):
+			ten.append(str(p["id"]))
+		var outside := 0
+		for id in v:
+			if not ten.has(str(id)):
+				outside += 1
+		_check(outside == 0, "Votes go to players among the match's twelve best (%d outside)" % outside)
+	_check(MatchNotes.votes_text({"a": 7}, "a") == "7", "Votes read as the number")
+
+
 func _test_report_glance() -> void:
 	var bad := ""
 	for seed in [2, 4, 8, 16]:

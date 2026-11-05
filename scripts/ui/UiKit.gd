@@ -234,6 +234,50 @@ static func scroll(child: Control) -> ScrollContainer:
 	return s
 
 
+## A scrolling body that says there is more. No line is ever drawn half
+## transparent: the scroll clips hard, 24 px above whatever sits below it, and
+## in that clear strip a plain "Scroll for more" (full text colour) shows while
+## there is more below. The scroll is wrapped (it keeps its place in its
+## parent). `tint` and `h` are kept for callers; nothing is faded now.
+static func edge_fade(sc: ScrollContainer, _tint := Color(0, 0, 0, 0), _h := 28.0) -> Control:
+	var parent := sc.get_parent()
+	var idx := sc.get_index()
+	var holder := VBoxContainer.new()
+	holder.name = "EdgeFade"
+	holder.add_theme_constant_override("separation", 0)
+	holder.size_flags_horizontal = sc.size_flags_horizontal
+	holder.size_flags_vertical = sc.size_flags_vertical
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.remove_child(sc)
+	parent.add_child(holder)
+	parent.move_child(holder, idx)
+	holder.add_child(sc)
+	var hint := Label.new()
+	hint.name = "ScrollHint"
+	hint.text = "Scroll for more"
+	hint.add_theme_font_override("font", FONT)
+	hint.add_theme_font_size_override("font_size", SECONDARY)
+	hint.add_theme_color_override("font_color", TEXT)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(hint)
+	var refresh := func() -> void:
+		var bar := sc.get_v_scroll_bar()
+		var more := bar.max_value - bar.page - float(sc.scroll_vertical) > 4.0
+		# The clear strip exists only when the body scrolls at all.
+		hint.visible = bar.max_value > bar.page + 1.0
+		hint.custom_minimum_size.y = SCROLL_END_GAP
+		hint.text = "Scroll for more" if more else ""
+	sc.get_v_scroll_bar().value_changed.connect(func(_v: float) -> void: refresh.call())
+	sc.get_v_scroll_bar().changed.connect(func() -> void: refresh.call())
+	refresh.call()
+	return holder
+
+
+const SCROLL_END_GAP := 24   # clear strip under a scrolling body, in units
+
+
 ## A swipe that starts on a button must scroll the page, not stop at the button:
 ## every button inside a scrolling page lets the drag reach the page (a tap
 ## still presses it). Buttons are set as they arrive, so a row built later is
@@ -577,14 +621,17 @@ static func club_name_colour(ink: Color) -> Color:
 ## and guernsey), with `right` (a column heading, say) at the end. Pass `ink`
 ## from club_ink_pair on a screen with two sides. The heading row only; pair it
 ## with club_section_body for the bar.
-static func club_heading(code: String, right: Control = null, fs := NAME, marker := 22.0, ink := Color(0, 0, 0, 0)) -> HBoxContainer:
+static func club_heading(code: String, right: Control = null, fs := NAME, marker := 22.0, ink := Color(0, 0, 0, 0), plain_name := false, show_name := true) -> HBoxContainer:
 	if ink.a == 0.0:
 		ink = club_ink(code)
 	var h := hbox(6)
 	h.add_child(club_marker(code, marker))
-	var n := ellipsis(GameDB.club_name(code), fs, club_name_colour(ink), true)
-	n.name = "ClubName"
-	h.add_child(n)
+	if show_name:
+		# plain_name: white text, the club's colour kept for the bar and the
+		# crest (a vote list, where a tinted name could pass for a button).
+		var n := ellipsis(GameDB.club_name(code), fs, TEXT if plain_name else club_name_colour(ink), true)
+		n.name = "ClubName"
+		h.add_child(n)
 	if right != null:
 		h.add_child(right)
 	return h
@@ -592,14 +639,14 @@ static func club_heading(code: String, right: Control = null, fs := NAME, marker
 
 ## `content` set beside a 4 px bar in the club's ink (the same `ink` as its
 ## heading), so a club's section reads as that club's down its whole length.
-static func club_section_body(code: String, content: Control, ink := Color(0, 0, 0, 0)) -> HBoxContainer:
+static func club_section_body(code: String, content: Control, ink := Color(0, 0, 0, 0), bar_w := 4.0) -> HBoxContainer:
 	if ink.a == 0.0:
 		ink = club_ink(code)
 	var wrap := hbox(6)
 	var bar := ColorRect.new()
 	bar.name = "ClubBar"
 	bar.color = ink
-	bar.custom_minimum_size = Vector2(4, 0)
+	bar.custom_minimum_size = Vector2(bar_w, 0)
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wrap.add_child(bar)
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -752,18 +799,73 @@ static func motion_on() -> bool:
 	return (DisplayServer.get_name() != "headless" or Feel.test_motion) and not Feel.reduced
 
 
+## The motion tokens (menu juice, 2026-11-04): every duration, ease and stagger
+## in one place, so a screen's timing is a choice from this list, never a
+## literal. Routine UI stays under 0.4 s; only a milestone runs longer.
+class Motion:
+	const DUR_FAST := 0.18       ## exits, sheet rise, the screen fade
+	const DUR_BASE := 0.32       ## entrances, reveal
+	const DUR_COUNT := 0.7       ## count_up
+	const DUR_HERO := 0.5        ## land
+	const DUR_BAR := 0.45        ## fill_bar
+	const DUR_MILESTONE := 0.9   ## the premiership and award reveals only (not built yet)
+	const RISE := 6.0            ## px a sheet rises as it comes in
+	const STAGGER := 0.04        ## s per row
+	const LAND_FROM := 1.22      ## the one overshoot: Verdict, the cup
+	const PRESS_IN := 0.05
+	const PRESS_HOLD := 0.08
+	const PRESS_OUT := 0.12
+	const PRESS_SCALE := 0.96
+	## Ease in: entering, player-triggered. Settle: counts and bars. Out:
+	## leaving. Pulse: attention. Stamp: land only. Never linear.
+	const TRANS_IN := Tween.TRANS_CUBIC
+	const EASE_IN := Tween.EASE_OUT
+	const TRANS_SETTLE := Tween.TRANS_QUART
+	const EASE_SETTLE := Tween.EASE_OUT
+	const TRANS_OUT := Tween.TRANS_CUBIC
+	const EASE_OUT := Tween.EASE_IN
+	const TRANS_PULSE := Tween.TRANS_SINE
+	const TRANS_STAMP := Tween.TRANS_BACK
+	const EASE_STAMP := Tween.EASE_OUT
+
+
+## The `ui_motion` switch (Features.gd): the new motion is built and tested
+## behind it. Off, every helper below does exactly what it did before.
+static func juice() -> bool:
+	return Features.on("ui_motion")
+
+
+## One running tween per node and kind ("mod": modulate, "scale", "text"): a
+## second call stops the first, so two never fight over a property. With the
+## switch off this is a plain create_tween, as before.
+static func _own(c: Node, kind: String) -> Tween:
+	var key := "_motion_" + kind
+	if juice():
+		if c.has_meta(key):
+			var old: Variant = c.get_meta(key)
+			if old is Tween and (old as Tween).is_valid():
+				(old as Tween).kill()
+		var tw := c.create_tween()
+		c.set_meta(key, tw)
+		return tw
+	return c.create_tween()
+
+
 ## Fade `c` up from nothing, `delay` seconds after it is shown.
 static func reveal(c: Control, delay := 0.0) -> void:
 	if not motion_on() or c == null:
 		return
-	c.modulate.a = 0.0
+	c.modulate = Color(1, 1, 1, 0.0) if juice() else Color(c.modulate, 0.0)
 	var run := func() -> void:
 		if not is_instance_valid(c):
 			return
-		var tw := c.create_tween()
+		if juice():
+			Feel.moved.append("reveal")
+		var tw := _own(c, "mod")
 		if delay > 0.0:
 			tw.tween_interval(delay)
-		tw.tween_property(c, "modulate:a", 1.0, 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(c, "modulate:a", 1.0, Motion.DUR_BASE) \
+				.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN)
 	if c.is_inside_tree():
 		run.call()
 	else:
@@ -772,16 +874,20 @@ static func reveal(c: Control, delay := 0.0) -> void:
 
 ## Count `l` up to `to` (its text set by `say` for each value on the way),
 ## ending exactly on the real figure.
-static func count_up(l: Label, to: int, say: Callable, dur := 0.7, from := 0) -> void:
+static func count_up(l: Label, to: int, say: Callable, dur := Motion.DUR_COUNT, from := 0) -> void:
 	l.text = str(say.call(to))
 	if not motion_on() or to == from:
 		return
 	var run := func() -> void:
 		if not is_instance_valid(l):
 			return
-		var tw := l.create_tween()
+		if juice():
+			Feel.moved.append("count_up")
+		var tw := _own(l, "text")
 		tw.tween_method(func(v: float): l.text = str(say.call(roundi(v))), float(from), float(to), dur) \
-				.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE)
+		# A second call that stops this one still leaves the true figure first.
+		tw.tween_callback(func(): l.text = str(say.call(to)))
 	if l.is_inside_tree():
 		run.call()
 	else:
@@ -801,11 +907,16 @@ static func land(c: Control, delay := 0.0, sound := true) -> void:
 			Feel.press("land")
 		if not motion_on() or not is_instance_valid(c):
 			return
+		# The pivot reads the size, so it waits for the first layout.
+		if juice() and c.size.x < 1.0 and c.is_inside_tree():
+			await c.get_tree().process_frame
+			if not is_instance_valid(c) or not motion_on():
+				return
 		Feel.moved.append("land")
 		c.pivot_offset = _pivot(c)
-		c.scale = Vector2(1.22, 1.22)
-		c.create_tween().tween_property(c, "scale", Vector2.ONE, 0.5) \
-				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		c.scale = Vector2(Motion.LAND_FROM, Motion.LAND_FROM)
+		_own(c, "scale").tween_property(c, "scale", Vector2.ONE, Motion.DUR_HERO) \
+				.set_trans(Motion.TRANS_STAMP).set_ease(Motion.EASE_STAMP)
 	_after(c, delay if motion_on() else 0.0, hit)
 
 
@@ -819,10 +930,51 @@ static func attention(c: CanvasItem, delay := 0.45) -> void:
 		if not is_instance_valid(c):
 			return
 		Feel.moved.append("attention")
-		var tw := c.create_tween()
+		var tw := _own(c, "mod")
 		for i in range(2):
-			tw.tween_property(c, "modulate", Color(1.55, 1.55, 1.55), 0.32).set_trans(Tween.TRANS_SINE)
-			tw.tween_property(c, "modulate", Color.WHITE, 0.55).set_trans(Tween.TRANS_SINE))
+			tw.tween_property(c, "modulate", Color(1.55, 1.55, 1.55), 0.32).set_trans(Motion.TRANS_PULSE)
+			tw.tween_property(c, "modulate", Color.WHITE, 0.55).set_trans(Motion.TRANS_PULSE))
+
+
+## A sheet comes in (menu juice, 2026-11-04; director: no fade): the cover and
+## the panel are solid from frame 0, so the screen behind never shows through,
+## and the panel rises RISE px over DUR_FAST on the plain-Control wrapper
+## modal_box builds (`box["rise"]`; a Container would put it straight back). No
+## scale, no alpha and no slide from the side. Its buttons work from frame 0:
+## every node here lets a touch through to them.
+static func sheet_in(box: Dictionary) -> void:
+	var overlay: Control = box.get("overlay")
+	if not juice() or not motion_on() or overlay == null:
+		return
+	var rise: Control = box.get("rise")
+	if rise == null:
+		return
+	rise.position.y = Motion.RISE
+	_after(overlay, 0.0, func() -> void:
+		if not is_instance_valid(overlay):
+			return
+		Feel.moved.append("sheet_in")
+		if is_instance_valid(rise):
+			_own(rise, "pos").tween_property(rise, "position:y", 0.0, Motion.DUR_FAST) \
+					.set_trans(Motion.TRANS_IN).set_ease(Motion.EASE_IN))
+
+
+## A bar fills (menu juice, 2026-11-04): `fill` is the bar's coloured part,
+## anchored left, its width the anchor_right. It runs from `from` to `to` (both
+## 0..1) over DUR_BAR and ends on `to`; without motion it is there at once.
+static func fill_bar(fill: Control, from: float, to: float) -> void:
+	if fill == null:
+		return
+	fill.anchor_right = clampf(to, 0.0, 1.0)
+	if not juice() or not motion_on() or is_equal_approx(from, to):
+		return
+	fill.anchor_right = clampf(from, 0.0, 1.0)
+	_after(fill, 0.0, func() -> void:
+		if not is_instance_valid(fill):
+			return
+		Feel.moved.append("fill_bar")
+		_own(fill, "bar").tween_property(fill, "anchor_right", clampf(to, 0.0, 1.0), Motion.DUR_BAR) \
+				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE))
 
 
 ## Living backgrounds (director, 2026-10-11): `apply(t)` is called with t going
@@ -908,9 +1060,9 @@ static func _press_in(b: Control) -> void:
 	Feel.moved.append("press")
 	b.pivot_offset = b.size / 2.0
 	var tw := b.create_tween()
-	tw.tween_property(b, "scale", Vector2(0.96, 0.96), 0.05).set_ease(Tween.EASE_OUT)
-	tw.tween_interval(0.08)
-	tw.tween_property(b, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(b, "scale", Vector2(Motion.PRESS_SCALE, Motion.PRESS_SCALE), Motion.PRESS_IN).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(Motion.PRESS_HOLD)
+	tw.tween_property(b, "scale", Vector2.ONE, Motion.PRESS_OUT).set_trans(Motion.TRANS_STAMP).set_ease(Motion.EASE_STAMP)
 
 
 ## The painted drop shade under display type.
@@ -1382,9 +1534,9 @@ static func margin_colour(win: bool) -> Color:
 
 ## A dimmer that actually covers its parent. Anchors set before add_child are
 ## ignored, which is how match controls stayed visible beside the full-time card.
-static func cover(parent: Control) -> ColorRect:
+static func cover(parent: Control, scrim := 0.78) -> ColorRect:
 	var overlay := ColorRect.new()
-	overlay.color = Color(0, 0, 0, 0.78)
+	overlay.color = Color(0, 0, 0, scrim)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	parent.add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1397,9 +1549,10 @@ static func cover(parent: Control) -> ColorRect:
 
 ## Dialog that stays inside the viewport. Body scrolls; footer stays put.
 ## `wash` tints the top of the sheet; by default your club's colour (match
-## day passes the opponent's, from `opponent_wash`).
-static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AUTO_COLOUR) -> Dictionary:
-	var overlay := cover(parent)
+## day passes the opponent's, from `opponent_wash`). `scrim` is how much of the
+## page behind it is dimmed (a sheet full of its own facts asks for more).
+static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AUTO_COLOUR, bottom := false, fill := false, scrim := 0.78) -> Dictionary:
+	var overlay := cover(parent, scrim)
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1407,13 +1560,40 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 		margin.add_theme_constant_override("margin_" + edge, 12)
 	overlay.add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var center := CenterContainer.new()
+	# bottom: the sheet sits at the foot of the screen (a bottom sheet), not centred.
+	var center: Container = VBoxContainer.new() if bottom else CenterContainer.new()
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(center)
+	if bottom:
+		var lift := Control.new()
+		lift.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lift.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		center.add_child(lift)
 	var shell := panel(PANEL, 16)
-	center.add_child(shell)
+	if bottom:
+		shell.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	# ui_motion: the sheet rises into place, which a Container would undo, so
+	# the panel sits on a plain Control the CenterContainer places by its size.
+	var rises := juice() and motion_on()
+	if rises:
+		var wrap := Control.new()
+		wrap.name = "SheetRise"
+		wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if bottom:
+			wrap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		center.add_child(wrap)
+		wrap.add_child(shell)
+		var follow := func() -> void:
+			if is_instance_valid(shell) and is_instance_valid(wrap):
+				var m := shell.get_combined_minimum_size()
+				shell.size = m
+				wrap.custom_minimum_size = m
+		shell.minimum_size_changed.connect(follow)
+		follow.call()
+	else:
+		center.add_child(shell)
 	# Not boring (director, 2026-10-08): a wash of your club's colour from the
 	# top of every sheet, fading before the content needs the contrast.
 	var lead := team_colour() if wash == AUTO_COLOUR else wash
@@ -1455,7 +1635,8 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 			most = minf(most, prefer_h)
 		var chrome := shell.get_combined_minimum_size().y - sc.get_combined_minimum_size().y
 		var room := maxf(80.0, most - chrome)
-		sc.custom_minimum_size.y = minf(body.get_combined_minimum_size().y, room)
+		# fill: the sheet takes the screen's height (no dead band above it).
+		sc.custom_minimum_size.y = room if fill else minf(body.get_combined_minimum_size().y, room)
 		shell.custom_minimum_size = Vector2(w, 0.0)
 	var refit := func() -> void:
 		fit.call_deferred()
@@ -1464,7 +1645,11 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 	body.minimum_size_changed.connect(refit)
 	footer.minimum_size_changed.connect(refit)
 	body.resized.connect(refit)
-	return {"overlay": overlay, "body": body, "footer": footer, "shell": shell}
+	var box := {"overlay": overlay, "body": body, "footer": footer, "shell": shell}
+	if rises:
+		box["rise"] = shell
+	sheet_in(box)
+	return box
 
 
 ## An information sheet (help, a profile, a list) closes when you tap outside it,
@@ -1513,8 +1698,23 @@ static func ladder_table(rows: Array, mine: String, width: float, limit := 0,
 		full := false) -> VBoxContainer:
 	var v := vbox(2)
 	var specs := ladder_specs(width, full)
-	v.add_child(_ladder_header(specs))
 	var shown := rows.size() if limit <= 0 else mini(limit, rows.size())
+	# A fixed club column ends at the longest name it holds (plus a 12 px
+	# gutter), not at LADDER_CLUB_W: W-L then starts beside the names, not
+	# 100 px past "Kangaroos" (critics, 2026-11-05).
+	for spec in specs:
+		if str(spec["key"]) == "club" and bool(spec.get("left", false)):
+			var need := 0.0
+			for i in range(shown):
+				# The badge's name clips (ellipsis), so its own minimum is no
+				# measure: the crest's room and the name's full width are.
+				var probe := line(GameDB.club_short(str(rows[i]["code"])), SECONDARY, TEXT)
+				need = maxf(need, LADDER_NAME_INSET + probe.get_minimum_size().x)
+				probe.free()
+			spec["w"] = int(minf(LADDER_CLUB_W, ceilf(need) + 12.0))
+			# The table, and so the finals rule, ends at its last column.
+			v.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	v.add_child(_ladder_header(specs))
 	var cut := Season.FINALISTS - 1
 	for i in range(shown):
 		v.add_child(_ladder_data_row(rows[i], i + 1, specs, mine))
@@ -1524,6 +1724,8 @@ static func ladder_table(rows: Array, mine: String, width: float, limit := 0,
 
 
 const LADDER_CLUB_W := 155.0
+## Where a club's name starts in its badge: the crest's 20 px and the 6 px gap.
+const LADDER_NAME_INSET := 26
 
 
 static func ladder_specs(width: float, full: bool) -> Array:
@@ -1558,8 +1760,19 @@ static func _ladder_header(specs: Array) -> HBoxContainer:
 		var expand: bool = bool(spec.get("expand", false))
 		var head := _ladder_label(str(spec["title"]), int(spec.get("w", 0)),
 				MUTED, SECONDARY, false, expand)
-		if bool(spec.get("left", false)):
+		if str(spec["key"]) == "club":
+			# Over the names, not the crests before them: the crest's 20 px plus
+			# the badge's 6 px gap (club_badge, club_marker), as StatsLadder's.
+			# A spacer, not a margin inside the label, so the label itself (and
+			# its end) is where its word is; the spacer and the row's 4 px gap
+			# make up the inset and the column keeps its width.
 			head.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			var pad := Control.new()
+			pad.custom_minimum_size.x = LADDER_NAME_INSET - h.get_theme_constant("separation")
+			pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			h.add_child(pad)
+			if not expand:
+				head.custom_minimum_size.x = maxf(0.0, head.custom_minimum_size.x - LADDER_NAME_INSET)
 		h.add_child(head)
 	return h
 
@@ -1594,7 +1807,9 @@ static func _ladder_data_row(r: Dictionary, pos: int, specs: Array, mine: String
 static func _ladder_label(text: String, w: int, col: Color, fs: int, bold: bool,
 		expand: bool) -> Label:
 	var l := ellipsis(text, fs, col, bold) if expand else line(text, fs, col, bold)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if expand else HORIZONTAL_ALIGNMENT_CENTER
+	# Figures and their headers end on one edge, as StatsLadder's do: a centred
+	# "Pts" over a centred "0" ended 5 px off it.
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if expand else HORIZONTAL_ALIGNMENT_RIGHT
 	if expand:
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	else:
