@@ -34,7 +34,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 90 | Development drift fixed now, cause first: contested bull 3.5% to about 11% and hothead 6.2% to 32.1% over seven seasons (T8.Q10) | cause shown, then a seven-season audit holds the shares |
 | 91 | Listed positions via real_pos: about 85 forwards and 21 defenders stop reading MID; moves 122 players and 110 OVRs (T8.Q11); balance-gated | listed positions match real roles, OVR changes reported |
 | 92 | Back-zone carries retuned (CARRY_ROLES) so defenders carry the ball like real AFL (T9.Q22); balance-gated, paired 1,000-match table in the PR | carry share near real, his playtest judges |
-| 93 | Learning a position: tighten the pass margin from 3; reach (6) and cost to team-mates unchanged (T8.Q15) | test and audit show fewer passes |
 | 94 | Key forward v key defender meet more in the engine so the full-time duel line is real (T8.Q6); balance-gated | audit shows more contests per duel, line reads true |
 | 95 | Storylines before the bounce (beat 3): old-club lines only for 100+ games at that club (T5.Q9) | lines appear in the preview from real facts |
 | 96 | Cut the PRIVATE-WATCH event card: private lives stay out of the game (T5.Q18) | card gone, tests updated |
