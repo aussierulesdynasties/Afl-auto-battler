@@ -742,7 +742,11 @@ func _test_asset_valuation() -> void:
 	var real := Draft.new(GameDB.all_players_sorted() + GameDB.all_draftees_sorted(),
 			GameDB.active_clubs(2027).duplicate(), 4242)
 	var by_worth: Array = real.pool.duplicate()
-	by_worth.sort_custom(func(a, b): return real._worth(a) > real._worth(b))
+	# Ties broken by id, as the draft's own consensus order does (draft-night ratings can tie).
+	by_worth.sort_custom(func(a, b):
+		if not is_equal_approx(real._worth(a), real._worth(b)):
+			return real._worth(a) > real._worth(b)
+		return str(a["id"]) < str(b["id"]))
 	_check(is_equal_approx(real._eval_certainty(by_worth[0]), Draft.AI_EVAL_TOP_SHARE)
 			and is_equal_approx(real._eval_certainty(by_worth[Draft.AI_EVAL_FULL_RANK + 5]), 1.0),
 			"Scouting disagreement shrinks for the consensus best, in full further down")
