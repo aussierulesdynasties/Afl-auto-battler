@@ -40,6 +40,9 @@ func _run() -> void:
 			H = int(wh[1])
 		if str(a[i]) == "--out":
 			out = str(a[i + 1])
+		elif str(a[i]) == "--weather":
+			# --weather wet|hot|windy|perfect: the vignettes draw this day instead of the match's.
+			load("res://scripts/ui/match/VignetteGrade.gd").forced_weather = str(a[i + 1])
 		elif str(a[i]) == "--msaa":
 			msaa = true
 		elif str(a[i]) == "--film" and i + 2 < a.size():

@@ -51,6 +51,8 @@ func _run() -> void:
 			"--clubs": clubs = str(a[i + 1]).split(",")
 			# Loaded, not named: a class named here compiles before the autoloads exist
 			# (VignetteGround reads GameDB), and the whole tool failed to load.
+			# --weather wet|hot|windy|perfect: draw this day instead of the match's.
+			"--weather": load("res://scripts/ui/match/VignetteGrade.gd").forced_weather = str(a[i + 1])
 			"--venue": load("res://scripts/ui/match/VignetteGround.gd").venue = str(a[i + 1])
 	await process_frame
 	# The tool films the new front speccy whatever the shipped switch says.

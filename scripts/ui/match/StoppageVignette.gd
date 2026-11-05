@@ -69,6 +69,7 @@ func setup(sim: MatchSim, my_side: int, heading := "") -> void:
 	tokens.clear()
 	# The day's weather, when MatchSim has one; more of them wear long sleeves in the wet.
 	weather = str(sim.get("weather")) if sim.get("weather") != null else ""
+	weather = VignetteGrade.weather_of(weather)
 	var wet := weather == "wet"
 	_board = {"codes": [str((sim.squads[0] as Squad).code), str((sim.squads[1] as Squad).code)],
 			"goals": [sim.goals(0), sim.goals(1)], "behinds": [sim.behinds(0), sim.behinds(1)],
@@ -112,7 +113,26 @@ func setup(sim: MatchSim, my_side: int, heading := "") -> void:
 	_hold = 0.0
 	_frozen = false
 	_dress()
+	if _ui == self:
+		var ov := VignetteGrade.attach(self, weather, _draw_ui)
+		if ov != null:
+			_ui = ov
 	queue_redraw()
+
+
+## Where the names and bars draw: this node, or the overlay above the grade
+## (VignetteGrade, when its switch is on) so text stays ungraded.
+var _ui: CanvasItem = self
+
+
+## The names, the bars and the cut-in fade.
+func _draw_ui() -> void:
+	var fade := clampf(_t / CUT_IN, 0.0, 1.0) if not _frozen else 1.0
+	if _frozen:
+		_draw_names()
+	_draw_bars(fade)
+	if fade < 1.0:
+		_ui.draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 1.0 - fade), true)
 
 
 ## The two ruckmen contest differently, so they never go up as twins: one taps
@@ -419,7 +439,6 @@ func _ball() -> Vector3:
 
 func _draw() -> void:
 	_set_camera()
-	var fade := clampf(_t / CUT_IN, 0.0, 1.0) if not _frozen else 1.0
 	_draw_ground()
 	# Far to near, so the nearer players stand in front.
 	var figures := []
@@ -442,10 +461,8 @@ func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.18), true)
 		if _hold < 0.15:
 			draw_rect(Rect2(Vector2.ZERO, size), Color(1, 1, 1, 0.5 * (1.0 - _hold / 0.15)), true)
-		_draw_names()
-	_draw_bars(fade)
-	if fade < 1.0:
-		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 1.0 - fade), true)
+	if _ui == self:
+		_draw_ui()
 
 
 ## The ground (VignetteGround, to the AFL's dimensions) through this scene's camera: the
@@ -733,21 +750,21 @@ func _draw_names() -> void:
 			tries += 1
 		p = Vector2(box.position.x, box.position.y + fs)
 		placed.append(box)
-		draw_string(font, p + Vector2(1, 1), name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.6))
-		draw_string(font, p, name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
+		_ui.draw_string(font, p + Vector2(1, 1), name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.6))
+		_ui.draw_string(font, p, name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
 				Color(1, 1, 1, 0.6) if bool(t["tired"]) and not (str(t["slot"]) in ["R", "C"]) else Color(1, 1, 1))
 
 
 ## Letterbox bars slide in on the cut; the call's heading rides the top one.
 func _draw_bars(fade: float) -> void:
 	var bar := size.y * 0.075 * _ease(fade)
-	draw_rect(Rect2(0, 0, size.x, bar), Color(0, 0, 0), true)
-	draw_rect(Rect2(0, size.y - bar, size.x, bar), Color(0, 0, 0), true)
+	_ui.draw_rect(Rect2(0, 0, size.x, bar), Color(0, 0, 0), true)
+	_ui.draw_rect(Rect2(0, size.y - bar, size.x, bar), Color(0, 0, 0), true)
 	if title != "" and fade >= 1.0:
 		var font: Font = UiKit.BOLD
 		var fs := int(clampf(size.x / 24.0, 13.0, 18.0))
 		var tw := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		draw_string(font, Vector2(maxf(12.0, (size.x - tw) * 0.5), bar * 0.5 + fs * 0.36), title,
+		_ui.draw_string(font, Vector2(maxf(12.0, (size.x - tw) * 0.5), bar * 0.5 + fs * 0.36), title,
 				HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, fs, Color(1, 1, 1, 0.92))
 
 

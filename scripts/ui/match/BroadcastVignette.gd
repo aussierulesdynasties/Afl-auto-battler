@@ -115,13 +115,17 @@ func setup(p_kind: String, p_event: Dictionary, p_scene: Dictionary, p_result: D
 	_dress([home, away])
 	var p = GameDB.player_by_id(str(event.get("player_id", "")))
 	# The match's weather, when it has one; more players wear long sleeves in the wet.
-	weather = str(result.get("weather", ""))
+	weather = VignetteGrade.weather_of(str(result.get("weather", "")))
 	_look = GameDB.figure_look(p, weather == "wet") if p is Dictionary else Appearance.UNCURATED
 	_build = build_for(p if p is Dictionary else {})
 	_board = {}
 	if event.has("goals") and event.has("behinds") and home != "" and away != "":
 		_board = {"codes": [home, away], "goals": event["goals"], "behinds": event["behinds"],
 				"q": int(event.get("q", 0))}
+	if _ui == self:
+		var ov := VignetteGrade.attach(self, weather, _draw_letterbox)
+		if ov != null:
+			_ui = ov
 	queue_redraw()
 
 
@@ -268,7 +272,8 @@ func _draw() -> void:
 			_draw_boundary_snap()
 	draw_set_transform_matrix(Transform2D.IDENTITY)
 	VignetteWeather.draw_air(self, Rect2(Vector2.ZERO, size), _t, weather)
-	_draw_letterbox()
+	if _ui == self:
+		_draw_letterbox()
 	_t = real_t
 
 
@@ -552,12 +557,16 @@ func _draw_stadium() -> void:
 	VignetteGround.draw_goals(self, _ground, 1, pad)
 
 
+## Where the letterbox draws: this node, or the overlay above the grade (VignetteGrade).
+var _ui: CanvasItem = self
+
+
 func _draw_letterbox() -> void:
 	if kind == SPECCY_FRONT and _sf_ready():
 		return                                  # boots and turf show in this shot: no bars (pass e)
 	var bar := maxf(20.0, size.y * 0.045)
-	draw_rect(Rect2(0, 0, size.x, bar), Color(0, 0, 0, 0.96), true)
-	draw_rect(Rect2(0, size.y - bar, size.x, bar), Color(0, 0, 0, 0.96), true)
+	_ui.draw_rect(Rect2(0, 0, size.x, bar), Color(0, 0, 0, 0.96), true)
+	_ui.draw_rect(Rect2(0, size.y - bar, size.x, bar), Color(0, 0, 0, 0.96), true)
 
 
 # ---------------------------------------------------------------------------
