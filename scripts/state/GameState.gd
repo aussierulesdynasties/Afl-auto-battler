@@ -17,6 +17,9 @@ var new_career_setup_requested := false
 ## The career's custom prospect (Club Forge, ARD-M7-008): his id once made,
 ## one per career. Followed through drafts and career history.
 var custom_prospect_id := ""
+## His story as last told (OwnProspect, switch custom_prospect_story): where
+## he was, his games and goals, which beats are already in the news.
+var custom_prospect_story := {}
 ## How this career began (ARD-M5-016): "redraft" (the League Draft) or "real"
 ## (every club keeps its real end-of-2026 list and the 2026 National Draft is
 ## run before 2027). Older saves have no field and are redrafts.
@@ -787,6 +790,8 @@ func save_career() -> bool:
 		# Players carry p["career"]; saves without this mark predate it.
 		"career_version": CAREER_VERSION,
 	}
+	if not custom_prospect_story.is_empty():
+		state["custom_prospect_story"] = custom_prospect_story
 	# The new-club build writes nothing while its switch is off and the career
 	# has made no choice about Canberra.
 	if not expansion.is_empty():
@@ -996,6 +1001,8 @@ func load_career() -> bool:
 	captaincy = state.get("captaincy", {})
 	class_tiers = state.get("class_tiers", {})
 	custom_prospect_id = str(state.get("custom_prospect_id", ""))
+	var own_story = state.get("custom_prospect_story", {})
+	custom_prospect_story = own_story if own_story is Dictionary else {}
 	start_mode = str(state.get("start_mode", "redraft"))
 	opening_draft = bool(state.get("opening_draft", false))
 	user_dual_ruck = bool(state.get("user_dual_ruck", false))
@@ -1494,6 +1501,7 @@ func reset() -> void:
 	_xp_grant_key = ""
 	new_career_setup_requested = false
 	custom_prospect_id = ""
+	custom_prospect_story = {}
 	user_dual_ruck = false
 	_dirty = false
 	default_train_plan = "position"
@@ -1663,6 +1671,7 @@ func begin_real_lists() -> void:
 		role_pairs[code] = pairs
 	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
 			_clock_seed(2), sizes, role_counts, role_pairs)
+	OwnProspect.check(self)
 	mark_dirty()
 
 
@@ -1744,6 +1753,7 @@ func begin_draft() -> void:
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
 	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
 	draft = Draft.new(pool, GameDB.active_clubs(season_year).duplicate(), seed)
+	OwnProspect.check(self)
 
 
 # ---------------------------------------------------------------------------
@@ -1889,6 +1899,7 @@ func finish_intake_draft() -> bool:
 				_wrap_picks.append([id, int(entry.get("pick", 0))])
 			arr.append(p)
 			drafted_draftees[id] = code
+	OwnProspect.check(self, season_year)
 	draft = null
 	if opening_draft:
 		# The 2026 National Draft is done: the first season, 2027, starts on
@@ -2055,6 +2066,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	_captaincy_refresh()
 	_culture_rollover()
 	_build_season_wrap(next_year)
+	OwnProspect.check(self)
 	preseason = {}
 	open_preseason()
 	autosave()
@@ -4055,6 +4067,29 @@ func former_players(code: String) -> Array:
 			captaincy_record(code), honour_roll)
 
 
+
+## Storylines before the bounce (OldClubLines, T5.Q9): players in this week's
+## two sides who meet a club they played 100+ games for, every spell and this
+## season counted, the most games first. `skip` holds ids another pre-match
+## line already names. Presentation only: the match never reads it.
+func old_club_lines(code: String, skip := {}) -> Array:
+	if season == null or code == "" or code == my_club or not season.lists.has(code):
+		return []
+	var mine := my_squad()
+	var theirs := Squad.new(GameDB.club_name(code), season.lists[code], true, code,
+			season.selections.get(code, {}))
+	return OldClubLines.rows(_listed(my_list, mine), _listed(season.lists[code], theirs), my_club, code,
+			func(p: Dictionary, club: String) -> int: return int(club_tally(p, club)["games"]), skip)
+
+
+## The list's own player records for a squad's picked side (ground and bench):
+## the squad holds match copies, the list holds his career.
+func _listed(list: Array, sq: Squad) -> Array:
+	var ids := {}
+	for p in sq.ground + sq.bench:
+		ids[str(p.get("id", ""))] = true
+	return list.filter(func(p): return p is Dictionary and ids.has(str(p.get("id", ""))))
+
 ## What comes next, in one line: "Next: Round 5 v Carlton at the MCG." ""
 ## when there is no fixture to name (finals are drawn week by week).
 func next_fixture_line() -> String:
@@ -5083,7 +5118,11 @@ const TRAIN_PLANS := [
 const LEARN_PREFIX := "learn_"
 const PROJECT_WEEKS := 8
 const PROJECT_REACH := 6
-const PROJECT_PASS := 3
+## He earns the position when his rating there is within PROJECT_PASS of his
+## own. Tightened from 3 to 1 (row 93, T8.Q15, director 2026-11-06: "Tighten
+## pass margin"; reach and the price unchanged): at 3 about 92% of projects
+## passed (tools/audit/passmargin_impl.gd).
+const PROJECT_PASS := 1
 const PROJECT_MAX := 2
 const PROJECT_OWN_GAIN := 2
 ## A position learned pays back: the next season his training can lift his own
@@ -5409,6 +5448,7 @@ func _after_round(results: Array) -> void:
 	if Almanac.on():
 		Almanac.update_club_records(self, results)
 	_note_firsts(results)
+	OwnProspect.check(self)
 	_draft_class_news()
 	_board_after_round(results)
 	_rival_morale_after_round(results)
@@ -8388,6 +8428,7 @@ func _execute_trade(a: String, b: String, a_gives: Array, b_gives: Array) -> voi
 		if sel.has(sel_key):
 			for p in leaving:
 				(sel[sel_key] as Array).erase(str(p["id"]))
+	OwnProspect.check(self)
 	mark_dirty()
 
 

@@ -54,6 +54,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `draft_ui` | The draft screen's layout and state: containers, widths, rotate and resume |
 | `intake` | The National Draft model: the 2026 class, projection, season rollover |
 | `intake_ui` | The National Draft on the shared draft screen |
+| `own_prospect` | Row 64 behind the switch `custom_prospect_story`: the prospect you create (Alastair McNeil) in the first National Draft in both starts, the news lines of his career, the marks on his draft row and profile; off is exactly today |
 | `expansion` | Tasmania in 2028 and Canberra in 2030, and a Club Forge club entering with the career |
 | `expansion_package` | How a new club builds its list behind the switch `expansion_package`: off is exactly today; on gives state-league signings, early picks, the traded pick, out-of-contract signings, sign-on money, the Canberra choice, the approach card, saves both ways |
 | `finals` | The wildcard finals bracket, extra time, draws |
