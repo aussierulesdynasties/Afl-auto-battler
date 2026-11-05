@@ -626,16 +626,14 @@ func _week_section(season: Season) -> Control:
 			var marquee_line := UiKit.lbl(str(marquee["name"]), UiKit.SMALL, UiKit.EMPH, true)
 			marquee_line.name = "MarqueeContext"
 			nv.add_child(marquee_line)
-		# Sir Doug Nicholls Round (row 75, switch sir_doug_round): its name and
-		# one factual line, on the match it applies to. A tribute, not a factor.
-		if not GameState.season.is_regular_done() and SirDougRound.marks(GameState,
-				GameState.season.round_index, str(mine["home"]), str(mine["away"])):
+		# Sir Doug Nicholls Round (row 75, switch sir_doug_round): the name only,
+		# in the round your club marks it (the factual line lives on the fixture
+		# page, so the week's decision stays in view). A tribute, not a factor.
+		if not GameState.season.is_regular_done() and SirDougRound.round_for(GameState,
+				GameState.my_club) == GameState.season.round_index:
 			var sd_name := UiKit.lbl(SirDougRound.NAME, UiKit.SMALL, UiKit.EMPH, true)
 			sd_name.name = "SirDougContext"
 			nv.add_child(sd_name)
-			var sd_blurb := UiKit.lbl(SirDougRound.BLURB, UiKit.SMALL, UiKit.MUTED)
-			sd_blurb.name = "SirDougBlurb"
-			nv.add_child(sd_blurb)
 		var rivalry :=GameState.rivalry_context(GameState.my_club, opp)
 		if not rivalry.is_empty():
 			var rivalry_line := UiKit.lbl(str(rivalry["title"]), UiKit.SMALL, UiKit.EMPH, true)

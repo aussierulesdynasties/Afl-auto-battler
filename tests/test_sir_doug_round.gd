@@ -46,6 +46,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_switch_off")
 	_t("_test_round_and_slots")
 	_t("_test_bye_next_round")
+	_t("_test_back_to_back_byes")
 	_t("_test_save_reload_keeps_record")
 	_t("_test_old_save")
 	_t("_test_new_season")
@@ -127,6 +128,28 @@ func _test_bye_next_round() -> void:
 	_check(ok12, "The bye club's Round 12 match is marked")
 
 
+## At 19 or 21 clubs a club's two byes can fall back to back (Season._level_rounds
+## keeps them apart only where the rounds allow it): it marks the round in the
+## first round it plays, and Round 12 does not name it.
+func _test_back_to_back_byes() -> void:
+	Features.set_on(SirDougRound.SWITCH, true)
+	_new_career()
+	var r := SirDougRound.round_of(gs)
+	var rnd: Array = gs.season.fixture[r]
+	var a := str((rnd.pop_back() as Dictionary)["home"])
+	var nxt: Array = gs.season.fixture[r + 1]
+	for i in range(nxt.size() - 1, -1, -1):
+		if str(nxt[i]["home"]) == a or str(nxt[i]["away"]) == a:
+			nxt.remove_at(i)
+	_check(SirDougRound.byes_in(gs.season, r).has(a) and SirDougRound.byes_in(gs.season, r + 1).has(a),
+			"The club has byes in Rounds 11 and 12")
+	var plays_r2 := not SirDougRound.byes_in(gs.season, r + 2).has(a)
+	_check(plays_r2, "...and plays Round 13")
+	_check(SirDougRound.round_for(gs, a) == r + 2, "It marks the round in Round 13 (%d)" % SirDougRound.round_for(gs, a))
+	_check(not SirDougRound.after_bye(gs, r + 1).has(a), "Round 12 does not name it")
+	_check(SirDougRound.after_bye(gs, r + 2).has(a), "Round 13 names it")
+
+
 ## "Store the selected season design in the save so reloading cannot change it."
 func _test_save_reload_keeps_record() -> void:
 	Features.set_on(SirDougRound.SWITCH, true)
@@ -147,7 +170,7 @@ func _test_old_save() -> void:
 	# Strip the key, as a save written before row 75 has none.
 	var state := CareerSave.read(gs.save_path)
 	var meta := CareerSave.read_meta(gs.save_path)
-	_check(state.has("sir_doug"), "The save carries the key")
+	_check(not state.has("sir_doug"), "Switch off: the save has no sir_doug key (as before row 75)")
 	state.erase("sir_doug")
 	_check(CareerSave.write(state, meta, gs.save_path), "The old-style save is written")
 	Features.set_on(SirDougRound.SWITCH, true)
@@ -257,11 +280,10 @@ func _test_hub_card() -> void:
 	root.add_child(hub)
 	await _settle()
 	var name_l: Label = hub.find_child("SirDougContext", true, false)
-	var blurb: Label = hub.find_child("SirDougBlurb", true, false)
 	_check(name_l != null and name_l.text == "Sir Doug Nicholls Round", "Your match card names the round in its week")
-	_check(blurb != null and blurb.text == SirDougRound.BLURB, "...with the one factual line")
-	_check(name_l != null and blurb != null and _inside(name_l, 390) and _inside(blurb, 390),
-			"Both fit a 390-wide phone")
+	_check(hub.find_child("SirDougBlurb", true, false) == null and not _labels(hub).contains("Yorta Yorta"),
+			"...by name only (the factual line is on the fixture page)")
+	_check(name_l != null and _inside(name_l, 390), "It fits a 390-wide phone")
 	hub.queue_free()
 	await _settle()
 	gs.season.round_index = 3
@@ -269,5 +291,29 @@ func _test_hub_card() -> void:
 	root.add_child(hub)
 	await _settle()
 	_check(hub.find_child("SirDougContext", true, false) == null, "Round 4's card says nothing about it")
+	hub.queue_free()
+	await _settle()
+	# Your Round 12 opponent marks it after its bye: your card does not repeat
+	# the round (only the club off the bye marks it, 2.73).
+	var r := SirDougRound.round_of(gs)
+	if SirDougRound.round_for(gs, CLUB) != r:
+		return
+	var opp := ""
+	for x in gs.season.fixture[r + 1]:
+		if str(x["home"]) == CLUB:
+			opp = str(x["away"])
+		elif str(x["away"]) == CLUB:
+			opp = str(x["home"])
+	var rnd: Array = gs.season.fixture[r]
+	for i in range(rnd.size() - 1, -1, -1):
+		if (str(rnd[i]["home"]) == opp or str(rnd[i]["away"]) == opp) and not (str(rnd[i]["home"]) == CLUB or str(rnd[i]["away"]) == CLUB):
+			rnd.remove_at(i)
+	_check(opp != "" and SirDougRound.round_for(gs, opp) == r + 1 and SirDougRound.round_for(gs, CLUB) == r,
+			"Your Round 12 opponent (%s) marks it after its Round 11 bye" % opp)
+	gs.season.round_index = r + 1
+	hub = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	_check(hub.find_child("SirDougContext", true, false) == null, "Your Round 12 card does not name the round a second week")
 	hub.queue_free()
 	await _settle()

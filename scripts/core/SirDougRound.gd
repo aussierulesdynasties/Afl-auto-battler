@@ -79,14 +79,17 @@ static func byes_in(season, ri: int) -> Array:
 
 
 ## The round (0-based) in which `code` marks Sir Doug Nicholls Round: the round
-## itself, or the next one after a bye in it (2.73). -1 with the switch off.
+## itself, or the first later round it plays after a bye in it (2.73; at 19 or
+## 21 clubs two byes can fall back to back). -1 with the switch off, or when the
+## club plays no later home-and-away round.
 static func round_for(gs, code: String) -> int:
 	var r := round_of(gs)
 	if r < 0:
 		return -1
-	if byes_in(gs.season, r).has(code) and r + 1 < gs.season.fixture.size():
-		return r + 1
-	return r
+	var ri := r
+	while ri < gs.season.fixture.size() and byes_in(gs.season, ri).has(code):
+		ri += 1
+	return ri if ri < gs.season.fixture.size() else -1
 
 
 ## Is a home-and-away match in round `ri` between `home` and `away` part of
@@ -100,7 +103,7 @@ static func marks(gs, ri: int, home: String, away: String) -> bool:
 ## The clubs marking the round late in round `ri` after their bye (2.73).
 static func after_bye(gs, ri: int) -> Array:
 	var r := round_of(gs)
-	if r < 0 or ri != r + 1:
+	if r < 0 or ri <= r:
 		return []
 	var out := []
 	for c in byes_in(gs.season, r):

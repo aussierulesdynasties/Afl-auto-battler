@@ -701,7 +701,6 @@ func save_career() -> bool:
 		"my_list_link": _linked_code(my_list),
 		"draftee_pool": draftee_pool,
 		"midseason": midseason,
-		"sir_doug": sir_doug,
 		"drafted_draftees": drafted_draftees,
 		"intake_assignments": intake_assignments,
 		"intake_summary": intake_summary,
@@ -796,6 +795,8 @@ func save_career() -> bool:
 	}
 	if not rookie_draft.is_empty():
 		state["rookie_draft"] = rookie_draft
+	if not sir_doug.is_empty():   # written only once a record exists (switch off: no key)
+		state["sir_doug"] = sir_doug
 	if not custom_prospect_story.is_empty():
 		state["custom_prospect_story"] = custom_prospect_story
 	# The new-club build writes nothing while its switch is off and the career

@@ -43,7 +43,7 @@ func _run() -> void:
 	router.go("hub")
 	for i in range(45):
 		await process_frame
-	var card: Control = current_scene.find_child("SirDougBlurb", true, false)
+	var card: Control = current_scene.find_child("SirDougContext", true, false)
 	if card != null:
 		var sc := _scroll_of(card)
 		if sc != null:
