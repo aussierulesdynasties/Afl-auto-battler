@@ -2284,6 +2284,27 @@ func _test_momentum_meter() -> void:
 	_check(m.call("handle_back") == true, "Back is handled on the explanation")
 	await _settle()
 	_check(m.find_child("MomentumInfo", true, false) == null, "Back closes it")
+	# Row 78: with momentum_runaway on, the sheet says what a runaway does.
+	var feats = load("res://scripts/core/Features.gd")
+	var was_on: bool = feats.on("momentum_runaway")
+	feats.set_on("momentum_runaway", true)
+	why = await Tap.tap(bar)
+	await _settle()
+	var info_on: Node = m.find_child("MomentumInfo", true, false)
+	_check(why == "" and info_on != null and _text(info_on).contains("run away with it")
+			and not _text(info_on).contains("a small edge"),
+			"Runaway on: the meter's sheet explains a runaway (%s)" % why)
+	m.call("handle_back")
+	await _settle()
+	feats.set_on("momentum_runaway", false)
+	why = await Tap.tap(bar)
+	await _settle()
+	var info_off: Node = m.find_child("MomentumInfo", true, false)
+	_check(why == "" and info_off != null and not _text(info_off).contains("run away with it"),
+			"Runaway off: the sheet is as before (%s)" % why)
+	m.call("handle_back")
+	await _settle()
+	feats.set_on("momentum_runaway", was_on)
 	m.queue_free()
 	await _settle()
 	# A later match: no note.
