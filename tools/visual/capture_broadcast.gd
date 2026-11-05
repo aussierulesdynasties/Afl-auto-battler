@@ -35,6 +35,7 @@ func _run() -> void:
 	var fps := 12.0
 	var height := 0
 	var clubs := ["COL", "CAR"]
+	var weather := ""
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size() - 1):
 		match str(a[i]):
@@ -49,6 +50,8 @@ func _run() -> void:
 			"--fps": fps = float(a[i + 1])
 			# --clubs FRE,MEL: the featured player's club and the opposition (default COL,CAR).
 			"--clubs": clubs = str(a[i + 1]).split(",")
+			# --weather wet|hot|windy|perfect: draw every scene in that weather (VignetteWeather).
+			"--weather": weather = str(a[i + 1])
 			# Loaded, not named: a class named here compiles before the autoloads exist
 			# (VignetteGround reads GameDB), and the whole tool failed to load.
 			# --weather wet|hot|windy|perfect: draw this day instead of the match's.
@@ -86,6 +89,8 @@ func _run() -> void:
 		vig.size = root.get_visible_rect().size   # canvas units: the window is scaled (project stretch), not 1:1
 		vig.setup(kind, ev, {}, {"home": clubs[0], "away": clubs[1]})
 		vig.set_process(false)
+		if weather != "":
+			vig.set("weather", weather)
 		var beats: Array = BEATS[kind]
 		if film != "":
 			if kind != film:

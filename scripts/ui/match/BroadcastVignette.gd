@@ -258,6 +258,11 @@ func _draw() -> void:
 	_view = VignetteCamera.view(size, cam[0] + VignetteCamera.breathe(_t, size), cam[1], _stage())
 	draw_set_transform_matrix(_view)
 	_draw_stadium()
+	var lights := VignetteAtmos.draw_back(self, _ground, _stage(), weather)
+	for i in range(lights.size()):
+		var l: Vector3 = lights[i]
+		var s2 := _view * Vector2(l.x, l.y)
+		lights[i] = Vector3(s2.x, s2.y, l.z * _view.get_scale().x)
 	match kind:
 		SPECCY_FRONT, SPECCY_SIDE, SPECCY_DEFENSIVE:
 			if kind == SPECCY_FRONT and _sf_ready():
@@ -272,6 +277,7 @@ func _draw() -> void:
 			_draw_boundary_snap()
 	draw_set_transform_matrix(Transform2D.IDENTITY)
 	VignetteWeather.draw_air(self, Rect2(Vector2.ZERO, size), _t, weather)
+	VignetteAtmos.draw_front(self, Rect2(Vector2.ZERO, size), lights, weather, _t)
 	if _ui == self:
 		_draw_letterbox()
 	_t = real_t
