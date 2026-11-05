@@ -13,7 +13,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 35 | Finals bespoke cards: slice 2 built behind `finals_cards_2`; ships when he has played it | see section B |
 | 61 | Weather at full effect: rain, wind and heat change ball handling, kicking, tackling and scoring (wet tackles toward the real +12%); sizes come from a seeded audit and balance stays his call. Its look never touches the sim | audit bands, rules in code, his playtest |
 | 63 | One cost sheet per club dominant option and one for the 33 gain-only story options, same look as the 17 story cards; nothing is dropped (T5.Q2, T5.Q3) | every option shows a real cost |
-| 64 | Custom prospect Alastair McNeil in the first national draft is the next build (4.Q8) | prospect in draft, story beats |
 | 65 | Draftees start lower: picks 1-5 about 60-62, 6-20 about 55-58, POT kept; his playtest still judges (4.Q9) | draft audit bands |
 | 67 | Management pays: trade period at real volume, recruiters' edge and development projects (4.Q11); balance-gated | audit across 8-10 seasons |
 | 69 | Hub leads with one hero element, shown on the hub first (6.Q2) | hub capture, critics clean |
