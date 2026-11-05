@@ -426,6 +426,73 @@ static func age_player(p: Dictionary, year: int) -> float:
 	return float(int(p["overall"]) - ov)
 
 
+## The league's average training lift this season, per position and
+## attribute: {role: {attr: mean points}} over every listed player of that
+## role (season_gains, kept by GameState._spend_with_weights). Clubs train
+## each position's core, a midfielder's contested first of all, so the lift
+## sits on a few attributes, not across the board.
+static func season_training_lift(lists: Dictionary) -> Dictionary:
+	var sums := {}
+	var counts := {}
+	for code in lists:
+		for p in lists[code]:
+			var role := str(p.get("role", "MID"))
+			counts[role] = int(counts.get(role, 0)) + 1
+			var g: Dictionary = p.get("season_gains", {})
+			if not sums.has(role):
+				sums[role] = {}
+			for key in g:
+				sums[role][key] = float(sums[role].get(key, 0.0)) + float(g[key])
+	var out := {}
+	for role in sums:
+		var per: Dictionary = {}
+		for key in sums[role]:
+			per[key] = float(sums[role][key]) / float(counts[role])
+		out[role] = per
+	return out
+
+
+## Take the league's average training lift back off the attributes it went
+## on, for every player of that position (and every prospect, who sits on the
+## same scale), before the league is re-anchored. Without this the re-anchor
+## took the season's training back evenly off every attribute: a midfielder
+## kept gaining contested against the rest of his game and the untrained
+## attributes sank, so Contested bulls tripled over seven seasons (row 90).
+## A player trained past the league average keeps the difference; so does
+## one trained on something else - a club that trains better keeps its edge.
+static func unwind_training_lift(lists: Dictionary, pool: Array, lift: Dictionary) -> void:
+	if lift.is_empty():
+		return
+	for code in lists:
+		for p in lists[code]:
+			_unwind_player(p, lift)
+	for p in pool:
+		_unwind_player(p, lift)
+
+
+static func _unwind_player(p: Dictionary, lift: Dictionary) -> void:
+	var a: Dictionary = p.get("attr", {})
+	var role := str(p.get("role", "MID"))
+	if a.is_empty() or not lift.has(role):
+		return
+	var per: Dictionary = lift[role]
+	var before := int(p.get("overall", 0))
+	for key in per:
+		if a.has(key):
+			# A whole point more or less per player, so the league gives back
+			# the average exactly: rounding 7.5 to 7 for everyone would leave
+			# half a point behind every season. Keyed on the player and where
+			# the attribute stands, so it is seeded and varies year to year.
+			var dither := float(absi(hash("%s|%s|%d" % [str(p.get("id", "")), key, int(a[key])])) % 1000) / 1000.0
+			a[key] = clampi(int(a[key]) - int(floor(float(per[key]) + dither)), 1, 99)
+	p["overall"] = Ratings.rate_overall(a, role, Ratings.effective_games(p))
+	p["value"] = Ratings.salary_value(int(p["overall"]))
+	# POT moves with him, as in the re-anchor: his distance to it is kept.
+	if p.has("potential"):
+		p["potential"] = clampi(int(p["potential"]) + int(p["overall"]) - before,
+				1, Potential.MAX_POT)
+
+
 ## Ratings are relative to the league. Training, development and new
 ## draftees move the league a little every year - up in the middle, and
 ## bunched toward it as stars age out faster than the young ones catch them.
