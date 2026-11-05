@@ -479,6 +479,11 @@ static func _identity(v: VBoxContainer, p: Dictionary) -> Control:
 		v.add_child(row)
 	elif mine:
 		later = row
+	# The prospect you created at New Career (row 64): marked wherever he goes.
+	if OwnProspect.tag(p) != "":
+		var cl := UiKit.lbl("Created by you at the start of this career.", UiKit.SMALL, UiKit.TEXT, true)
+		cl.name = "ProfileCreatedByYou"
+		v.add_child(cl)
 	# The club he followed as a kid (FL-005): a sourced fact for a real player,
 	# else "Not recorded" - never a guess.
 	var fav := FictionalIdentity.favourite_club(p)

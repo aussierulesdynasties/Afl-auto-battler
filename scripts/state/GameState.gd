@@ -17,6 +17,9 @@ var new_career_setup_requested := false
 ## The career's custom prospect (Club Forge, ARD-M7-008): his id once made,
 ## one per career. Followed through drafts and career history.
 var custom_prospect_id := ""
+## His story as last told (OwnProspect, switch custom_prospect_story): where
+## he was, his games and goals, which beats are already in the news.
+var custom_prospect_story := {}
 ## How this career began (ARD-M5-016): "redraft" (the League Draft) or "real"
 ## (every club keeps its real end-of-2026 list and the 2026 National Draft is
 ## run before 2027). Older saves have no field and are redrafts.
@@ -790,6 +793,8 @@ func save_career() -> bool:
 	}
 	if not rookie_draft.is_empty():
 		state["rookie_draft"] = rookie_draft
+	if not custom_prospect_story.is_empty():
+		state["custom_prospect_story"] = custom_prospect_story
 	# The new-club build writes nothing while its switch is off and the career
 	# has made no choice about Canberra.
 	if not expansion.is_empty():
@@ -1000,6 +1005,8 @@ func load_career() -> bool:
 	captaincy = state.get("captaincy", {})
 	class_tiers = state.get("class_tiers", {})
 	custom_prospect_id = str(state.get("custom_prospect_id", ""))
+	var own_story = state.get("custom_prospect_story", {})
+	custom_prospect_story = own_story if own_story is Dictionary else {}
 	start_mode = str(state.get("start_mode", "redraft"))
 	opening_draft = bool(state.get("opening_draft", false))
 	user_dual_ruck = bool(state.get("user_dual_ruck", false))
@@ -1498,6 +1505,7 @@ func reset() -> void:
 	_xp_grant_key = ""
 	new_career_setup_requested = false
 	custom_prospect_id = ""
+	custom_prospect_story = {}
 	user_dual_ruck = false
 	_dirty = false
 	default_train_plan = "position"
@@ -1668,6 +1676,7 @@ func begin_real_lists() -> void:
 		role_pairs[code] = pairs
 	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
 			_clock_seed(2), sizes, role_counts, role_pairs)
+	OwnProspect.check(self)
 	mark_dirty()
 
 
@@ -1749,6 +1758,7 @@ func begin_draft() -> void:
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
 	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
 	draft = Draft.new(pool, GameDB.active_clubs(season_year).duplicate(), seed)
+	OwnProspect.check(self)
 
 
 # ---------------------------------------------------------------------------
@@ -1897,6 +1907,7 @@ func finish_intake_draft() -> bool:
 				_wrap_picks.append([id, int(entry.get("pick", 0))])
 			arr.append(p)
 			drafted_draftees[id] = code
+	OwnProspect.check(self, season_year)
 	draft = null
 	if opening_draft:
 		# The 2026 National Draft is done: the first season, 2027, starts on
@@ -2066,6 +2077,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	_captaincy_refresh()
 	_culture_rollover()
 	_build_season_wrap(next_year)
+	OwnProspect.check(self)
 	preseason = {}
 	open_preseason()
 	autosave()
@@ -5423,6 +5435,7 @@ func _after_round(results: Array) -> void:
 	if Almanac.on():
 		Almanac.update_club_records(self, results)
 	_note_firsts(results)
+	OwnProspect.check(self)
 	_draft_class_news()
 	_board_after_round(results)
 	_rival_morale_after_round(results)
@@ -8406,6 +8419,7 @@ func _execute_trade(a: String, b: String, a_gives: Array, b_gives: Array) -> voi
 		if sel.has(sel_key):
 			for p in leaving:
 				(sel[sel_key] as Array).erase(str(p["id"]))
+	OwnProspect.check(self)
 	mark_dirty()
 
 
