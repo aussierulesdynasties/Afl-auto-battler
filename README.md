@@ -471,8 +471,8 @@ to keep UI units readable instead of shrinking a 1280px canvas onto a phone.
 The draft room reflows on resize and accounts for mobile safe-area insets.
 Touch/mouse emulation is enabled both ways for fingers and cursors.
 
-`export_presets.cfg` is checked in: it holds the Android Debug preset described
-below, with no keystore, password or SDK path in it. Those stay in the editor's
+`export_presets.cfg` is checked in: it holds the Android, Windows Desktop and Web
+presets, with no keystore, password or SDK path in it. Those stay in the editor's
 settings on each machine.
 
 ## Note
@@ -496,14 +496,6 @@ circles in each club's registered colours. This presentation choice is not legal
 advice or a substitute for licensing review. See `docs/DESIGN.md` §1.
 
 
-### Android debug export
+### Itch builds (Windows, Android, Web)
 
-The repository includes an `Android Debug` export preset for the phone playtest build. It exports an ARM64 APK as `builds/aussie-rules-dynasties-debug.apk` with package ID `com.gabebartolo.aussierulesdynasties`.
-
-After configuring Godot's Android SDK/JDK paths on the development machine:
-
-```bash
-godot --headless --path . --export-debug "Android Debug"
-```
-
-Godot's local debug keystore/export credentials are intentionally not committed. APK/AAB output and the `builds/` directory are ignored.
+`tools/export_builds.sh [windows] [android] [web]` exports into `builds/` with the build label stamped as the Web workflow does. The `Android` preset makes a release APK (arm64-v8a and armeabi-v7a, package `com.gabebartolo.aussierulesdynasties`) signed with the key named in docs/ITCH_BUILDS.md, read from outside the repo; it needs the Android SDK path set in Godot's editor settings. Uploading: docs/ITCH_UPLOAD.md. APK/AAB output and the `builds/` directory are ignored.
