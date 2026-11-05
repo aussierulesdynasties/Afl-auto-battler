@@ -40,6 +40,144 @@ def margins(rows):
     return m, h
 
 
+# Set shots against real AFL (docs/research/SET_SHOT_EVIDENCE.md): share of shots
+# from the Champion Data expected-score shot counts [WH] (2026: 5,951 set of
+# 10,859, 55%); goals per shot by distance [ABC] 2021-25, the straight-in-front
+# column (Director Bible #62 names these as the targets), set / general play.
+# [ABC]'s "straight" is within 30 degrees, so the sim's 45 m "slight angle" spot
+# is a straight-column shot. The sim's pocket (15 m, tight angle) is its own row
+# against the 10-20 m wide cells: set 66% and 55% (mean 60.5%), general 21% and 22%.
+REAL_SET_SHARE = 0.55
+# Real shots that score (goals + behinds per shot at goal, [WH] 2026: 9,047 of
+# 10,860). Set and general-play no-score rates are not published apart.
+REAL_SCORING_PER_SHOT = 0.833
+SHOT_BANDS = ["0-10", "10-20", "20-30", "30-40", "40-50", "50+", "pocket"]
+REAL_SET_ACC = {"0-10": 1.00, "10-20": 0.96, "20-30": 0.85, "30-40": 0.71, "40-50": 0.54, "50+": 0.33, "pocket": 0.605}
+REAL_GP_ACC = {"0-10": 0.89, "10-20": 0.63, "20-30": 0.51, "30-40": 0.38, "40-50": 0.39, "50+": 0.34, "pocket": 0.215}
+
+
+def pooled(R, key):
+    return sum(float(t.get(key, 0)) for r in R.values() for t in r["teams"])
+
+
+def share_by_seed(R, scoring=False):
+    """Seed -> set-shot share of that match's shots (both teams), in percent.
+    scoring=True counts only shots that scored (goal or behind) on both sides."""
+    def cnt(t, pre):
+        if scoring:
+            return float(t.get(pre + "_g", 0)) + float(t.get(pre + "_b", 0))
+        return float(t.get(pre + "_n", 0))
+    out = {}
+    for i, r in R.items():
+        n = sum(cnt(t, "sshot") + cnt(t, "gshot") for t in r["teams"])
+        if n:
+            out[i] = 100 * sum(cnt(t, "sshot") for t in r["teams"]) / n
+    return out
+
+
+def shots_section(A, B):
+    """Set-shot share, conversion by distance and scoring shots, per arm."""
+    if not any("sshot_n" in t for r in A.values() for t in r["teams"]):
+        return
+    arms = [("A", A)] + ([("B", B)] if B else [])
+    print("\n## Shots\n")
+    head = "| per team-match | real |" + "".join(f" {k} |" for k, _ in arms) + (" B-A | se |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+
+    def row(label, real, vals, a=None, b=None, fmt="{:.1f}"):
+        line = f"| {label} | {real} |" + "".join(" " + fmt.format(v) + " |" for v in vals)
+        if a is not None and b is not None:
+            common = [i for i in a if i in b]
+            d = [b[i] - a[i] for i in common]
+            se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+            line += " " + ("{:+.2f}".format(st.mean(d))) + f" | {se:.2f} |"
+        print(line)
+    n = {k: len(R) * 2 for k, R in arms}
+    for key, label in (("sshot_n", "set shots"), ("gshot_n", "general-play shots")):
+        row(label, "-", [pooled(R, key) / n[k] for k, R in arms],
+            per_match(A, key) if B else None, per_match(B, key) if B else None)
+    sc = {k: {i: sum(float(t.get("goals", 0)) + float(t.get("behinds", 0)) for t in r["teams"]) / 2
+              for i, r in R.items()} for k, R in arms}
+    row("scoring shots (goals + behinds)", "22.4", [st.mean(sc[k].values()) for k, _ in arms],
+        sc["A"] if B else None, sc.get("B"))
+    sh = {k: share_by_seed(R) for k, R in arms}
+    row("set-shot share of shots (general play counted only when it scores)", f"{100 * REAL_SET_SHARE:.0f}%",
+        [100 * pooled(R, "sshot_n") / max(1, pooled(R, "sshot_n") + pooled(R, "gshot_n")) for k, R in arms],
+        sh["A"] if B else None, sh.get("B"), fmt="{:.1f}")
+
+    def scoring_share(R):
+        ss = pooled(R, "sshot_g") + pooled(R, "sshot_b")
+        return 100 * ss / max(1, ss + pooled(R, "gshot_g") + pooled(R, "gshot_b"))
+    sc_sh = {k: share_by_seed(R, True) for k, R in arms}
+    row("set-shot share of scoring shots", "~55%*", [scoring_share(R) for k, R in arms],
+        sc_sh["A"] if B else None, sc_sh.get("B"), fmt="{:.1f}")
+    print("\nThe sim logs a general-play shot only when it scores, so the first share has a short"
+          " denominator; the scoring-shot share counts both kinds alike. *Real: "
+          f"{100 * REAL_SET_SHARE:.0f}% of shots are set shots and {100 * REAL_SCORING_PER_SHOT:.0f}% of"
+          " shots score [WH]; if both kinds score equally often, set shots are 55% of scoring shots too"
+          " (the two no-score rates are not published apart).")
+    print("\nGoals per shot, pooled over every shot of the arm. Real: [ABC] 2021-25, straight in front"
+          " (within 30 degrees); the pocket row against the 10-20 m wide cells.\n")
+    head = "| shots | real set | real general |" + "".join(f" {k} goals/shot | {k} a team |" for k, _ in arms)
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for band in SHOT_BANDS:
+        label = "set, pocket (15 m, tight angle)" if band == "pocket" else f"set, {band} m"
+        line = f"| {label} | {100 * REAL_SET_ACC[band]:.1f}% | {100 * REAL_GP_ACC[band]:.1f}% |"
+        for k, R in arms:
+            sn = pooled(R, f"sshot_{band}_n")
+            line += (f" {100 * pooled(R, f'sshot_{band}_g') / sn:.0f}% |" if sn else " - |") + f" {sn / n[k]:.2f} |"
+        print(line)
+    for key, label in (("sshot", "all set shots"), ("gshot", "general play (no distance in the sim)")):
+        line = f"| {label} | - | - |"
+        for k, R in arms:
+            sn = pooled(R, key + "_n")
+            line += (f" {100 * pooled(R, key + '_g') / sn:.0f}% |" if sn else " - |") + f" {sn / n[k]:.2f} |"
+        print(line)
+def duel_section(A, B):
+    """Key forward v key defender (row 94): contests per duel per match from the
+    engine's duel log, as the full-time line reads them. A duel is one key
+    forward's match: [contests, marks, most against one defender, verdict]."""
+    if not any("duels" in r for r in A.values()):
+        return
+    arms = [("A", A)] + ([("B", B)] if B else [])
+    stats = {}
+    for name, R in arms:
+        rows = [d for r in R.values() for d in r.get("duels", [])]
+        n = max(1, len(rows))
+        c = sorted(d[0] for d in rows)
+        stats[name] = {
+            "contests": st.mean(c) if c else 0.0,
+            "median": st.median(c) if c else 0.0,
+            "pair": st.mean(d[2] for d in rows) if rows else 0.0,
+            "6+": 100 * sum(d[0] >= 6 for d in rows) / n,
+            "shown": 100 * sum(d[0] >= 4 for d in rows) / n,
+            "mark%": 100 * sum(d[1] for d in rows) / max(1, sum(c)),
+            "beat": 100 * sum(d[0] >= 4 and d[3] > 0 for d in rows) / n,
+            "even": 100 * sum(d[0] >= 4 and d[3] == 0 for d in rows) / n,
+            "held": 100 * sum(d[0] >= 4 and d[3] < 0 for d in rows) / n,
+            "duels": len(rows)}
+    print("\n## Key forward v key defender (contests per duel per match)\n")
+    print("A duel is one key forward's match against his direct opponent(s), from MatchSim.duel_log "
+          "(what the full-time line counts; MatchNotes shows a line from 4 contests). "
+          "beat / even / held: the line's verdict, as a share of all duels.\n")
+    head = "| arm | duels | contests mean | median | v one defender | 6+ contests | line shown (4+) | forward marks | beat / even / held |"
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for name, _ in arms:
+        s = stats[name]
+        print(f"| {name} | {s['duels']} | {s['contests']:.2f} | {s['median']:.0f} | {s['pair']:.2f} | {s['6+']:.0f}% | "
+              f"{s['shown']:.0f}% | {s['mark%']:.1f}% | {s['beat']:.0f} / {s['even']:.0f} / {s['held']:.0f} |")
+    if B:
+        def per(R):
+            return {i: st.mean(d[0] for d in r["duels"]) for i, r in R.items() if r.get("duels")}
+        a, b = per(A), per(B)
+        d = [b[i] - a[i] for i in a if i in b]
+        if len(d) > 1:
+            print(f"\nContests per duel B-A {st.mean(d):+.2f} (se {st.stdev(d) / math.sqrt(len(d)):.2f}, paired by seed).")
+
+
 TAIL = (40, 60, 80, 100, 120)
 ROOT = os.path.dirname(os.path.dirname(HERE))
 
@@ -334,6 +472,8 @@ def main():
               f"draws {100*sum(x == 0 for x in m)/n:.1f}%, home win {100*sum(x > 0 for x in h)/n:.1f}%, home margin {st.mean(h):+.1f} "
               f"(se {st.stdev(h)/math.sqrt(n):.1f})")
     print("\nReal AFL (docs/LEAGUE_BALANCE.md): 60+ about 15.5%, 100+ about 1.9%, home win 59.3%.")
+    shots_section(A, B)
+    duel_section(A, B)
     margin_tail(A, B)
     role_report(A, B)
     print(f"\nOUT of real range (A): {', '.join(outs) if outs else 'none'}")

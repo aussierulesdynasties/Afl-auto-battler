@@ -20,6 +20,20 @@ const KEY_FORWARDS := 2
 ## Kept small so goals still spread as in the real game: a club's top
 ## goalkicker kicks about 16% of its goals (run_calibration_tests).
 const KEY_TARGET := 0.06
+## With key_duels on (row 94, T8.Q6): sides look for their key forwards a
+## little more, so a key forward and his direct opponent meet more often. The
+## bar is T8.Q6's own: 6 contests, the minimum it asked the line to need. With
+## the switch on the typical duel clears it (median 7, about 70% of duels on 6
+## or more, against median 6 and 58% off). It is held at 0.10 because every
+## entry to him is also his shot at goal: a club's top goalkicker then kicks
+## 18% of its goals (real 16%, run_calibration_tests allows 18.4%); 0.16 gave
+## more contests but 21%, outside it.
+const KEY_TARGET_DUELS := 0.10
+## With key_duels on: the share of general-play marking contests in a side's
+## front half that fall to one of its key forwards leading up at the ball,
+## into his match-up (MatchSim._key_lead). Few contests up the ground are
+## aerial ones, so this adds about 0.2 a match.
+const KEY_LEAD := 0.5
 ## A key forward beaten in the air by his man keeps this share of his chance
 ## of scoring from the entry (the ball spills or is cleared).
 const BEATEN_SHOT := 0.5
