@@ -945,6 +945,12 @@ func _player_row(p: Dictionary) -> Control:
 	var kind_line := _row_line(" · ".join(kind), UiKit.MUTED)
 	kind_line.name = "Kind_" + str(p["id"])
 	face.add_child(kind_line)
+	# The prospect you created at New Career (row 64), easy to find.
+	var own := OwnProspect.tag(p)
+	if own != "":
+		var own_line := UiKit.lbl(own, UiKit.FINE, UiKit.TEXT, true)
+		own_line.name = "Own_" + str(p["id"])
+		face.add_child(own_line)
 	top.add_child(UiKit.line("›", 20, UiKit.MUTED, true))
 	_ignore_mouse(face)
 	# The face is laid over the button, so the button takes its height.
