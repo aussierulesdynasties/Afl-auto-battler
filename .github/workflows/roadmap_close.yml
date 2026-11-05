@@ -2,12 +2,12 @@
 # rows it finishes with "Closes row 54" / "Closes rows 22, 27" / "Closes row T5.Q24";
 # after the merge this deletes those rows from main.
 #
-# main requires the "test" check (enforce_admins on, no PR required, not strict), so a
-# bare push from here is rejected. Instead: commit on a branch, dispatch Tests on it
-# (workflow_dispatch is the one event GITHUB_TOKEN may start; changed_files=docs/TODO.md
-# makes it a seconds-long docs-only pass), wait for "test" to go green on that commit,
-# then fast-forward main to it. If main moved meanwhile, start over (up to 5 times).
-# No matching row: a warning, nothing else.
+# main requires the "test" check with enforce_admins, so a bot push to main is rejected
+# even after the check passed. Instead: commit on roadmap-close/pr-N, open a PR labelled
+# "roadmap", turn on squash auto-merge, and dispatch Tests on the branch (PRs opened with
+# GITHUB_TOKEN start no CI; workflow_dispatch is allowed, and changed_files=docs/TODO.md
+# makes it a seconds-long docs-only pass). Needs the repo setting "Allow GitHub Actions
+# to create and approve pull requests". No matching row: a warning, nothing else.
 name: Roadmap close
 on:
   pull_request:
@@ -20,13 +20,14 @@ concurrency:
 
 permissions:
   contents: write
-  actions: write   # dispatch tests.yml on the close branch
+  actions: write        # dispatch tests.yml on the close branch
+  pull-requests: write  # open and auto-merge the close PR
 
 jobs:
   close:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,33 +44,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           branch="roadmap-close/pr-$PR"
-          cleanup() { git push -q origin --delete "$branch" 2>/dev/null || true; }
-          for i in 1 2 3 4 5; do
-            if ! git fetch -q origin main; then echo "fetch failed, retry $i"; sleep $((i * 5)); continue; fi
-            git reset -q --hard origin/main
-            ids=$(python3 tools/roadmap_close.py --body-file "$RUNNER_TEMP/body.txt" --todo docs/TODO.md)
-            if [ -z "$ids" ]; then echo "::warning::No TODO row closed for #$PR"; cleanup; exit 0; fi
-            case "$ids" in *,*) word="rows" ;; *) word="row" ;; esac
-            git add docs/TODO.md
-            git commit -q -m "Roadmap: close $word $ids (#$PR)"
-            sha=$(git rev-parse HEAD)
-            git push -q -f origin "HEAD:refs/heads/$branch"
-            gh workflow run tests.yml --ref "$branch" -f changed_files=docs/TODO.md
-            run=""
-            for _ in $(seq 1 30); do
-              sleep 5
-              run=$(gh run list --workflow tests.yml --branch "$branch" --event workflow_dispatch \
-                --json databaseId,headSha --jq ".[] | select(.headSha==\"$sha\") | .databaseId" | head -1)
-              [ -n "$run" ] && break
-            done
-            if [ -z "$run" ]; then echo "::error::Tests run for $sha never started"; cleanup; exit 1; fi
-            if ! gh run watch "$run" --exit-status --interval 10 > /dev/null; then
-              echo "::error::Tests run $run failed on the roadmap commit"; cleanup; exit 1
-            fi
-            if git push -q origin "$sha:refs/heads/main"; then
-              echo "Closed $word $ids"; cleanup; exit 0
-            fi
-            echo "main moved, retry $i"
-          done
-          cleanup
-          echo "::error::Could not push the roadmap update after 5 tries"; exit 1
+          ids=$(python3 tools/roadmap_close.py --body-file "$RUNNER_TEMP/body.txt" --todo docs/TODO.md)
+          if [ -z "$ids" ]; then echo "::warning::No TODO row closed for #$PR"; exit 0; fi
+          case "$ids" in *,*) word="rows" ;; *) word="row" ;; esac
+          git checkout -q -b "$branch"
+          git add docs/TODO.md
+          git commit -q -m "Roadmap: close $word $ids (#$PR)"
+          git push -q -f origin "HEAD:refs/heads/$branch"
+          url=$(gh pr create --base main --head "$branch" --label roadmap --title "Roadmap: close $word $ids (#$PR)" --body "Deletes the TODO.md $word closed by #$PR. Opened by the Roadmap close action.")
+          gh pr merge "$url" --auto --squash --delete-branch
+          gh workflow run tests.yml --ref "$branch" -f changed_files=docs/TODO.md
+          echo "Opened $url"
