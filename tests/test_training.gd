@@ -37,6 +37,7 @@ func run() -> void:
 	_t("_test_unicorn")
 	_t("_test_rival_projects")
 	_t("_test_project_endings")
+	_t("_test_pass_margin_tightened")
 	_t("_test_retraining_is_additive")
 	_t("_test_teaching_moves_the_ceiling")
 	GameState.delete_saved_career()
@@ -911,6 +912,46 @@ func _test_rival_projects() -> void:
 		if int(q.get("project_year", 0)) == GameState.season_year:
 			n += 1
 	_check(n == GameState.AI_PROJECTS and int(l["project"]["weeks"]) == w + 1, "No second start; his weeks count game by game")
+
+
+## The pass margin, tightened (row 93, T8.Q15, director 2026-11-06: "Tighten
+## pass margin"): a project that ends with his rating there 3 below his own
+## passed at the old margin of 3 and no longer takes; one that ends within
+## PROJECT_PASS still does. Reach and the price stay where they were.
+func _test_pass_margin_tightened() -> void:
+	_check(GameState.PROJECT_PASS == 1, "The pass margin is 1 (was 3)")
+	_check(GameState.PROJECT_REACH == 6, "Reach is unchanged: a move within 6 may be tried")
+	_check(GameState.PROJECT_OWN_GAIN == 2, "The cost is unchanged: his own training lifts him only 2 more that season")
+	_new_season()
+	var cand := {}
+	var job := ""
+	for q in GameState.my_list:
+		var jobs := GameState.learnable_jobs(q)
+		if not jobs.is_empty():
+			cand = q
+			job = str(jobs[0])
+			break
+	_check(not cand.is_empty(), "Someone on the list can learn a position")
+	if cand.is_empty():
+		return
+	var role := str(GameState.LEARN_JOBS[job]["role"])
+	var keep_ov := int(cand["overall"])
+	# 3 behind at the verdict: learned at the old margin, not now.
+	GameState._start_project(cand, job)
+	var there := GameState.rating_as(cand, role)
+	cand["overall"] = there + 3
+	var r := GameState._finish_project(cand, false)
+	_check(int(r.get("own", 0)) - int(r.get("there", 0)) == 3 and there >= int(r["own"]) - 3,
+			"The case: he ends 3 below his own rating there, a pass at the old margin (%s)" % str(r))
+	_check(not bool(r.get("learned", true)) and not Ratings.plays_role(cand, role),
+			"3 behind no longer takes: he cannot be picked there (%s)" % str(r))
+	# Exactly PROJECT_PASS behind: still learned.
+	GameState._start_project(cand, job)
+	cand["overall"] = there + GameState.PROJECT_PASS
+	r = GameState._finish_project(cand, false)
+	_check(bool(r.get("learned", false)) and Ratings.plays_role(cand, role),
+			"%d behind still takes: he can be picked there (%s)" % [GameState.PROJECT_PASS, str(r)])
+	cand["overall"] = keep_ov
 
 
 ## A project survives a save mid-way, ends when he changes clubs (his chance
