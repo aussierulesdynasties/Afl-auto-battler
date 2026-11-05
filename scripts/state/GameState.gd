@@ -6857,6 +6857,9 @@ func _join(code: String, p: Dictionary) -> void:
 	var list: Array = season.lists[code]
 	if str(p.get("club", "")) != code:
 		p["joined"] = season_year
+		# A move lands him on the new club's senior list (row 88, RookieList:
+		# the key only exists with the switch rookie_list on).
+		p.erase("rookie_list")
 	# A new club ends a project; his season's chance stays spent. The old
 	# club's decision is kept as a career fact, with how it ended.
 	if project_job(p) != "" and str(p.get("club", "")) != code:

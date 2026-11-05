@@ -200,6 +200,13 @@ func _test_upgrade() -> void:
 	_check(done.any(func(d): return str(d["id"]) == str(r1["id"])) and not RookieList.is_rookie(r1),
 			"A rival upgrades a rookie into a free senior spot")
 	_check(not done.any(func(d): return str(d["club"]) == CLUB), "Your club is never upgraded for you")
+	# A rookie who moves club lands on his new club's senior list.
+	var mover: Dictionary = rl[0]
+	mover["rookie_list"] = "A"
+	gs._release("GEE", mover, false, false)
+	gs._join("COL", mover)
+	_check(not RookieList.is_rookie(mover) and str(mover["club"]) == "COL",
+			"A rookie who changes club joins its senior list")
 	Features.set_on(RookieList.SWITCH, false)
 	_check(RookieList.upgrade_block(gs, CLUB, id) == "There is no rookie list.", "Switch off: no upgrade")
 
