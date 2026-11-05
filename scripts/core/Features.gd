@@ -137,7 +137,15 @@ extends RefCounted
 ##               readers more often, and the better readers mark it. Lifts midfield
 ##               intercepts toward Champion Data's 2.5 a game. Changes match output. Off,
 ##               a match is exactly as before.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries"]
+##   gather_round   row 74 (T5.Q11a; Director Bible 2.38, 5.127): one of rounds 3 to 7 each
+##               season is Gather Round, every match staged at the host's grounds (Adelaide
+##               Oval, Norwood Oval, Barossa Park; GatherRound.gd). A club has its home-ground
+##               edge only at its own ground; the weather is the host's. A club on a bye that
+##               round sits it out. The round's name shows on the fixture, the hub, the match
+##               and the warm-up. Changes match output. Nothing saved. Off, every round is as
+##               before.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries",
+		"gather_round"]
 
 static var _forced := {}
 static var _from_args := {}

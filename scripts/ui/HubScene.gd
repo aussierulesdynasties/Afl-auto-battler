@@ -613,6 +613,9 @@ func _week_section(season: Season) -> Control:
 		# ground, not advice.
 		var wx := str(mine.get("weather", ""))
 		var where_text := "%s · %s" % ["Home" if is_home else "Away", ground]
+		# Gather Round: neither club is at home; the round's name stands in.
+		if str(mine.get("label", "")).ends_with(GatherRound.NAME):
+			where_text = "%s · %s" % [GatherRound.NAME, ground]
 		if wx != "":
 			where_text += " · " + Weather.label(wx)
 		# The week's hero: the match as a poster (director, 2026-10-08).
@@ -1193,9 +1196,12 @@ func _upcoming_match() -> Dictionary:
 		var round_matches: Array = season.fixture[season.round_index]
 		for m in round_matches:
 			if m["home"] == GameState.my_club or m["away"] == GameState.my_club:
-				return {"home": m["home"], "away": m["away"],
-						"label": "Round %d" % (season.round_index + 1), "tag": "",
+				var up := {"home": m["home"], "away": m["away"],
+						"label": season.round_label(season.round_index), "tag": "",
 						"weather": season.weather_for(str(m["home"]), str(m["away"]), season.round_index)}
+				if season.round_index == season.gather_round():
+					up["venue"] = season.round_venue(season.round_index, str(m["home"]), str(m["away"]))
+				return up
 		return {}
 	for m in season.finals_week_matches():
 		if str(m["home"]) == "" or str(m["away"]) == "":
@@ -1249,6 +1255,9 @@ func _on_play_match() -> void:
 	# bowl, milestones (GameState.banner_context).
 	var label := str(m["label"])
 	var banner_ctx := GameState.banner_context(m)
+	# Gather Round: the warm-up is at the host ground the match is staged at.
+	if str(m.get("venue", "")) != "" and label.ends_with(GatherRound.NAME):
+		VignetteGround.use_match(m)
 	_pre_match = PreMatchVignette.open(get_tree().root, mine, opp,
 			GameState.my_squad().ground + GameState.my_squad().bench, opp_ground, heading,
 			PreMatchVignette.is_final(label), banner_ctx)

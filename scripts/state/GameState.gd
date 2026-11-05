@@ -2503,17 +2503,22 @@ func prepare_interactive_match() -> bool:
 		if m["home"] == my_club or m["away"] == my_club:
 			pending_match = {"home": m["home"], "away": m["away"],
 					"round": season.round_index + 1,
-					"label": "Round %d" % (season.round_index + 1)}
+					"label": season.round_label(season.round_index)}
+			# Gather Round: the host ground it is staged at (GatherRound).
+			if season.round_index == season.gather_round():
+				pending_match["venue"] = season.round_venue(season.round_index, str(m["home"]), str(m["away"]))
 		else:
 			others.append(season.match_sim(m["home"], m["away"], season.next_seed(i),
-					[true, false], false, season.weather_for(m["home"], m["away"], season.round_index)))
+					season.round_at_home(season.round_index, m["home"], m["away"]), false,
+					season.weather_for(m["home"], m["away"], season.round_index)))
 	if pending_match.is_empty():
 		# Your bye: record nothing, the caller's advance() plays the whole round.
 		return false
 	# The rest of the round plays out in the background while you coach
 	# yours (none of it touches your match), and is collected at full time.
 	_others = Season.start_all(others)
-	_pending_build = {"at_home": [true, false], "seed": season.next_seed(99), "finals": false,
+	_pending_build = {"at_home": season.round_at_home(season.round_index, str(pending_match["home"]),
+			str(pending_match["away"])), "seed": season.next_seed(99), "finals": false,
 			"weather": season.weather_for(str(pending_match["home"]), str(pending_match["away"]), season.round_index)}
 	_build_pending_sim()
 	pending_phase = "regular"
@@ -2587,9 +2592,15 @@ func finish_interactive_match(res: Dictionary) -> void:
 		return
 	res["round"] = int(pending_match.get("round", season.round_index + 1))
 	res["label"] = str(pending_match.get("label", "Match"))
+	# Gather Round: every match keeps the host ground it was staged at.
+	var gather := int(res["round"]) - 1 == season.gather_round()
+	if gather:
+		res["venue"] = str(pending_match.get("venue", ""))
 	for r in _collect_others():
 		r["round"] = res["round"]
 		r["label"] = res["label"]
+		if gather:
+			r["venue"] = season.round_venue(int(res["round"]) - 1, str(r["home"]), str(r["away"]))
 		pending_round_results.append(r)
 		season.record_regular(r)
 	season.record_regular(res)
@@ -2693,7 +2704,7 @@ func advance() -> String:
 	if not season.is_regular_done():
 		last_results = season.play_round()
 		last_phase = "regular"
-		last_label = "Round %d" % season.round_index
+		last_label = season.round_label(season.round_index - 1)
 		ensure_finals()
 	elif not season.is_season_over():
 		ensure_finals()
