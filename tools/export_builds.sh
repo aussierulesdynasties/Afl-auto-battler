@@ -14,6 +14,8 @@
 #   ARD_KEYSTORE           release keystore (default ~/.keys/ard-release.keystore)
 #   ARD_KEYSTORE_PASS_FILE file holding its password (default ~/.keys/ard-release.pass)
 #   ARD_KEYSTORE_ALIAS     key alias (default ard)
+#   ALLOW_DIRTY=1          export with uncommitted tracked changes (local tries only; never upload
+#                          such a build: its label names a commit that does not match its contents)
 # The keystore and password never go in the repo or export_presets.cfg: Godot reads them
 # from GODOT_ANDROID_KEYSTORE_RELEASE_PATH/_USER/_PASSWORD, set here for the Godot process only.
 # The Android export also needs the Android SDK path in Godot's editor settings.
@@ -32,11 +34,22 @@ platforms=("$@")
 version="$(sed -n 's/^config\/version="\([^"]*\)".*/\1/p' project.godot | head -1)"
 sha="$(git rev-parse --short=7 HEAD)"
 [ -n "$version" ] || { echo "project.godot has no config/version" >&2; exit 1; }
+# The label names HEAD, so the tree must be HEAD. *.import files only churn line endings here.
+dirty="$(git status --porcelain --untracked-files=no -- . ':!*.import')"
+if [ -n "$dirty" ] && [ "${ALLOW_DIRTY:-0}" != "1" ]; then
+	echo "FAIL: uncommitted changes; the build would be labelled $sha without them:" >&2
+	echo "$dirty" >&2
+	echo "Commit them, or set ALLOW_DIRTY=1 for a local try that is never uploaded." >&2
+	exit 1
+fi
 git rev-parse --short=7 HEAD > build_info.txt
 
-"$GODOT" --headless --path "$ROOT" --import >/dev/null 2>&1 || true
-
 mkdir -p builds
+if ! "$GODOT" --headless --path "$ROOT" --import > builds/import.log 2>&1; then
+	echo "WARNING: the asset import failed; stale assets may be exported (builds/import.log):" >&2
+	tail -20 builds/import.log >&2
+fi
+
 echo "$version-$sha" > builds/version.txt
 
 failed=0
