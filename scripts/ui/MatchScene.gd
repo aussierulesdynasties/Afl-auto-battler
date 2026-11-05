@@ -283,6 +283,17 @@ const MOMENTUM_INFO := [
 	"Momentum is the run of play. A goal swings it toward the side that kicked it, a behind a little; it fades as play goes on and halves at every break.",
 	"The side on top wins a little more of the ball at centre bounces, stoppages and loose balls - a small edge, never a guarantee. A goal the other way turns it.",
 ]
+## Row 78 (switch momentum_runaway): the second line no longer holds for a
+## side well ahead, so the sheet says what a runaway does.
+const MOMENTUM_INFO_RUNAWAY := [
+	"Momentum is the run of play. A goal swings it toward the side that kicked it, a behind a little; it fades as play goes on and halves at every break.",
+	"The side on top wins a little more of the ball at centre bounces, stoppages and loose balls - never a guarantee. A goal the other way turns it.",
+	"A side more than four goals up with the run of play can run away with it: the further ahead, the more of the ball it wins, the longer the run lasts and the more goals it takes to turn. A call to win the ball back still counts in full.",
+]
+
+
+static func momentum_info() -> Array:
+	return MOMENTUM_INFO_RUNAWAY if Features.on("momentum_runaway") else MOMENTUM_INFO
 
 
 func _momentum_bar() -> Control:
@@ -348,7 +359,7 @@ func _show_momentum_info() -> void:
 	_sheet_overlay = overlay
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Momentum", UiKit.TITLE))
-	for line in MOMENTUM_INFO:
+	for line in momentum_info():
 		var l := UiKit.lbl(line, UiKit.BODY, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
@@ -1759,7 +1770,8 @@ func _tag_fact_line(sim: MatchSim) -> String:
 		if n > most:
 			most = n
 			top = GameDB.player_display_name(r)
-	return "" if top == "" else "%s has had %d disposals, the most of their midfielders." % [top, most]
+	return "" if top == "" else "%s has had %d disposal%s, the most of their midfielders." % [
+			top, most, "" if most == 1 else "s"]
 
 
 ## A sheet over the break: one call (or who tags, or Best so far) with Done.
@@ -2494,8 +2506,9 @@ func _tag_line(q: int) -> String:
 		var st: Dictionary = (_res.get("players", {}) as Dictionary).get(tag_id, {})
 		d = float(st.get("disposals", 0.0))
 		g = float(st.get("goals", 0.0))
-	return "Your tag on %s: %d disposals, %d goals." % [
-			GameDB.player_display_name_by_id(tag_id, "their player"), int(d), int(g)]
+	return "Your tag on %s: %d disposal%s, %d goal%s." % [
+			GameDB.player_display_name_by_id(tag_id, "their player"), int(d), "" if int(d) == 1 else "s",
+			int(g), "" if int(g) == 1 else "s"]
 
 
 ## Legs in words: how both midfields are going, and who is running on empty.
