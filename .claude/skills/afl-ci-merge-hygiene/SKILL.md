@@ -16,6 +16,13 @@ true. This repo copy is the only one; the general rules it builds on are in the
    group per ref) and throws away ~8 minutes. A docs-only commit on a PR whose
    shards are running cancels them too (#522: a roadmap-only push cancelled the
    code run). Batch edits, push once. Check `gh run list --branch <b> --limit 2`.
+1a. **Never edit `docs/TODO.md` in a PR.** Write `Closes row N` / `Closes rows 22, 27`
+   on its own line in the PR body; `roadmap_close.yml` deletes the row on main after the
+   merge, so parallel PRs no longer conflict there. CI fails a PR that touches the file
+   unless it carries the label `roadmap`; labels don't start a run, so after adding it
+   re-run the failed jobs (`gh run rerun <id> --failed`). Keep a `roadmap` PR to list
+   edits only, never mixed with code: that part is convention, CI does not check it.
+   Ids stop at the first word that isn't one ("Closes row 54 for the ruck" closes 54).
 2. **After `git merge origin/main`, run the suites main just brought in**, not
    only yours. A merge of two green branches can be red: set-share (#484) + the
    Stats patch (#509) were each green, the merge failed `stats`
