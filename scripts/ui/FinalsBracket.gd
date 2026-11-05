@@ -120,7 +120,14 @@ func _premiers(prem: String) -> Control:
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var wash := Wash.new()
 	wash.name = "FinalsWash"
-	wash.colour = ClubDuel._banner(UiKit.club_ink(prem))
+	# White type on the wash must read at 3.5:1 even where it is darkened
+	# only 0.2, a step stricter than the duel banner (0.25).
+	var tone := ClubDuel._banner(UiKit.club_ink(prem))
+	for _i in 12:
+		if UiKit.contrast(tone.darkened(0.2), Color.WHITE) >= 3.5:
+			break
+		tone = tone.darkened(0.1)
+	wash.colour = tone
 	p.add_child(wash)
 	var m := MarginContainer.new()
 	m.mouse_filter = Control.MOUSE_FILTER_IGNORE

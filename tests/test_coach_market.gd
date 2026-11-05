@@ -171,15 +171,25 @@ func _test_senior_coach_decisions() -> void:
 			"Two failed seasons: the senior coach is sacked")
 	_check(str(coaches["BRL_SC"]["status"]) == "club", "A premiership coach is protected")
 	_check(str(coaches["CAR_SC"]["status"]) == "club", "A first season does not count toward a sacking")
-	_check(int(out["log"]["sackings"]) <= CoachMarket.MAX_SACKINGS, "At most five sackings in an offseason")
-	# Everyone failing twice: still capped.
+	# Everyone failing twice: every club acts for itself, no league-wide cap.
 	var all := _league()
 	for cid in all:
 		if str(all[cid]["job"]) == "SC":
 			all[cid]["fail_streak"] = 1
 	var out2 := CoachMarket.offseason({"coaches": all, "archive": {}, "year": Y, "my_club": "",
 			"clubs": GameDB.active_clubs(Y + 1), "results": res, "premier": "", "seed": SEED})
-	_check(int(out2["log"]["sackings"]) == CoachMarket.MAX_SACKINGS, "The league-wide sacking cap holds")
+	_check(int(out2["log"]["sackings"]) > 5,
+			"No sacking cap: every club with two failed seasons sacks its coach (%d)" % int(out2["log"]["sackings"]))
+	# Renewal has no dice: a club keeps its coach unless a candidate who would
+	# take the job beats him by more than CHANGE_COST; the same inputs decide alike.
+	var c5 := _league()
+	var inc: Dictionary = c5["COL_SC"]
+	var own := CoachMarket.hire_score(inc, "COL", "SC", Y, SEED)
+	var rival := CoachMarket.best_candidate_score(c5, "COL", "SC", Y, SEED, str(inc["cid"]))
+	_check(CoachMarket.renews(c5, inc, Y, SEED) == (own + CoachMarket.CHANGE_COST > rival),
+			"Renewal follows the hiring scores, not a roll")
+	_check(CoachMarket.renews(c5, inc, Y, SEED) == CoachMarket.renews(c5, inc, Y, SEED + 99),
+			"Renewal does not depend on the seed")
 	# Contract expiry: a coach who met his goal is renewed.
 	var c3 := _league()
 	c3["COL_SC"]["contract_to"] = Y
@@ -203,6 +213,7 @@ func _test_retirement_and_pruning() -> void:
 	coaches["ESS_FWD"]["born"] = Y + 1 - 70
 	coaches["FREE_3"]["unemployed_since"] = Y + 1 - CoachMarket.UNEMPLOYED_YEARS
 	coaches["FREE_10"]["unemployed_since"] = Y + 1 - CoachMarket.UNEMPLOYED_YEARS   # a former senior coach
+	coaches["FREE_10"]["rep"] = 0   # hiring is by merit now: never the best left for the job ESS_FWD opens
 	var archive := {}
 	CoachMarket.offseason({"coaches": coaches, "archive": archive, "year": Y, "my_club": "",
 			"clubs": GameDB.active_clubs(Y + 1), "results": _results(true), "premier": "", "seed": SEED})
@@ -260,12 +271,14 @@ func _test_your_staff() -> void:
 	_check(sl.size() >= 3 and sl.size() <= 5, "A shortlist of three to five (%d)" % sl.size())
 	CoachMarket.appoint_mine(coaches, str(sl[0]), my, job, Y, SEED)
 	_check(Coaches.staff(coaches, my).get(job, "") == str(sl[0]), "Appointing fills the job")
-	var left := CoachMarket.release(coaches, str(Coaches.staff(coaches, my)["DEV"]), Y)
-	_check(left == "DEV" and not Coaches.staff(coaches, my).has("DEV"), "Releasing an assistant opens his job")
-	_check(not CoachMarket.shortlist(coaches, my, "DEV", Y, SEED).has("%s_DEV" % my),
+	var rj := str(Coaches.staff(coaches, my).keys()[0])
+	var rcid := str(Coaches.staff(coaches, my)[rj])
+	var left := CoachMarket.release(coaches, rcid, Y)
+	_check(left == rj and not Coaches.staff(coaches, my).has(rj), "Releasing an assistant opens his job")
+	_check(not CoachMarket.shortlist(coaches, my, rj, Y, SEED).has(rcid),
 			"...and he is not offered back to you")
-	CoachMarket.auto_fill(coaches, my, "DEV", Y, SEED)
-	_check(Coaches.staff(coaches, my).has("DEV"), "Auto-fill fills it")
+	CoachMarket.auto_fill(coaches, my, rj, Y, SEED)
+	_check(Coaches.staff(coaches, my).has(rj), "Auto-fill fills it")
 
 
 func _test_generation_and_expansion() -> void:
@@ -330,6 +343,7 @@ func _test_long_run() -> void:
 				elite += 1
 	_check(unfilled == 0, "Thirty seasons: no club ever short of a coach")
 	_check(sc_changes >= 30 and sc_changes <= 150, "Senior coach changes are steady, not constant (%d in 30)" % sc_changes)
+	print("coach_market: senior coach changes in 30 seasons = %d" % sc_changes)
 	_check(internal > 0 and internal < sc_changes, "Some senior appointments are internal, not all (%d of %d)" % [internal, sc_changes])
 	_check(coaches.size() < 260, "The coaching records do not balloon (%d)" % coaches.size())
 	_check(float(elite) / n < 0.08, "Elite stays rare (%.1f%%)" % (100.0 * elite / n))
@@ -480,6 +494,27 @@ func _test_approaches_market() -> void:
 	_check(CoachMarket.stay_chance(c, "promote", "FWD", Y) > CoachMarket.stay_chance(c, "stay", "FWD", Y)
 			and CoachMarket.stay_chance(c, "promote", "SC", Y) < CoachMarket.stay_chance(c, "promote", "FWD", Y),
 			"Senior assistant keeps him more often than asking; a senior coach's job is the hardest to keep him from")
+	_check(CoachMarket.stays(c, "promote", "FWD", Y, 1) == CoachMarket.stays(c, "promote", "FWD", Y, 999)
+			and CoachMarket.stays(c, "promote", "FWD", Y, 1) == (CoachMarket.stay_chance(c, "promote", "FWD", Y) >= CoachMarket.STAY_BAR),
+			"Whether he stays follows the offer and his years with you, never a roll")
+	_check(CoachMarket.stay_chance(c, "stay", "SA", Y, {"met": true, "finals": true, "flag": true})
+			> CoachMarket.stay_chance(c, "stay", "SA", Y, {"met": false}),
+			"A winning club keeps its coach more readily than a losing one")
+	# Contract terms follow performance: a goal met and a big reputation earn longer.
+	var plain := c.duplicate(true)
+	plain["rep"] = 50
+	var star := c.duplicate(true)
+	star["rep"] = CoachMarket.REP_LONG_TERM
+	_check(CoachMarket.term_years(plain, "SC") == 2 and CoachMarket.term_years(plain, "SC", true) == 3
+			and CoachMarket.term_years(star, "SC", true) == 4 and CoachMarket.term_years(star, "MID", true) == 3,
+			"Coach contract terms follow performance (goal met, reputation)")
+	# A step up appeals by his record, not a roll.
+	var low := plain.duplicate(true)
+	low["rep"] = CoachMarket.keen_bar("SA") - 1
+	var keen := plain.duplicate(true)
+	keen["rep"] = CoachMarket.keen_bar("SA")
+	_check(CoachMarket.keen_bar("SA") > CoachMarket.keen_bar("MID") and int(low["rep"]) < int(keen["rep"]),
+			"A bigger step up asks a bigger reputation")
 
 
 func _test_approaches_flow() -> void:

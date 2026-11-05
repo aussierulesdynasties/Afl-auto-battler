@@ -259,6 +259,9 @@ func _test_market() -> void:
 	var q := _player("M2", 200, 90, "DEF")
 	var ex := CoachPathway.make_coach(q, CoachPathway.snapshot(q, Y - 2, []), Y - 2, SEED)
 	ex["free_from"] = Y + 1
+	# Competent clubs now clear out coaches before he arrives (#888), so a fresh
+	# league's pool can be overloaded; his last allowed wait makes entry certain.
+	ex["pathway_wait"] = CoachPathway.MAX_WAIT
 	var coaches := Coaches.seed("GEE")
 	coaches[str(ex["cid"])] = ex
 	var out := CoachMarket.offseason({"coaches": coaches, "archive": {}, "year": Y, "my_club": "GEE",

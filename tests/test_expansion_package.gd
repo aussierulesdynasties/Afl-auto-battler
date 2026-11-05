@@ -435,15 +435,32 @@ func _test_who_a_rival_keeps() -> void:
 		for q in list:
 			q["contract_years"] = 3
 		list.sort_custom(func(x, y): return int(x["overall"]) > int(y["overall"]))
-		var p: Dictionary = list[12]
+		# The 13th-best player, but never a recognised ruck: the one ruck slot
+		# picks by tap work, not overall (Ratings.select_22), so lifting his
+		# teammates' ratings could never make his club willing to let a sole
+		# ruck go, and the "let go" case would test the career's luck instead.
+		var p: Dictionary = {}
+		for i in range(12, list.size()):
+			if not Ratings.plays_role(list[i], "RUCK"):
+				p = list[i]
+				break
+		_check(not p.is_empty(), "A non-ruck to test the %s case with" % case)
 		p["contract_years"] = 1
 		p["age"] = 26.0
 		p.erase("retiring")
+		p.erase("rehab")   # rehab lifts his rating to his potential (TradeValue.rating): he would be needed
 		if case == "let go":
 			for q in list:
 				if q != p:
 					q["overall"] = maxi(int(q["overall"]), int(p["overall"]) + 8)
 					q["potential"] = maxi(int(q.get("potential", 0)), int(q["overall"]))
+			# A competent club delists him only for someone better (#888): a free
+			# agent at his position who beats him.
+			var fa: Dictionary = p.duplicate(true)
+			fa["id"] = "FA_" + str(p["id"])
+			fa["overall"] = int(p["overall"]) + 6
+			fa["potential"] = maxi(int(fa.get("potential", 0)), int(fa["overall"]))
+			GameState.free_agents.append(fa)
 		elif case.begins_with("cap"):
 			p["overall"] = maxi(int(p["overall"]), 84)
 			p["potential"] = maxi(int(p.get("potential", 0)), 86)
@@ -455,7 +472,7 @@ func _test_who_a_rival_keeps() -> void:
 			for q in list:
 				if q != p:
 					q["salary"] = share + 100000
-		var why := Contracts.ai_release_reason(p, list, GameState.cap_for(club))
+		var why := GameState.ai_release_reason(club, p)
 		var expect_why: String = {"kept": "", "let go": "delist", "cap": "cap", "cap, no first call": "cap"}[case]
 		ExpansionBuild.ensure_foundation(GameState, "TAS")
 		var st := ExpansionBuild.state(GameState, "TAS")
@@ -469,11 +486,18 @@ func _test_who_a_rival_keeps() -> void:
 		for c in GameState.compensation:
 			if str(c["player"]) == str(p["id"]):
 				paid = true
+		# The off-season decision itself let him go (he was not wanted): his
+		# club's draft pick beats him even after last season's free agents
+		# leave the market, so this does not rest on him choosing to go.
+		var let_go := false
+		for e in GameState.offseason_log:
+			if str(e.get("kind", "")) == "released" and str(e.get("id", "")) == str(p["id"]):
+				let_go = not bool(e.get("wanted", true))
 		var want_join: bool = case == "let go" or case == "cap"
 		_check(why == expect_why and joined == want_join and str(t["status"]) == ("joined" if want_join else "stayed")
-				and (case != "cap" or paid or not GameState.comp_tenure_ok(p)) and (case != "let go" or not paid),
-				"A rival's player, %s: %s (his club's reason '%s', joined %s, pick to his club %s)" % [case,
-				"he joins the new club" if want_join else "he stays", why, str(joined), str(paid)])
+				and (case != "cap" or paid or not GameState.comp_tenure_ok(p)) and (case != "let go" or (not paid and let_go)),
+				"A rival's player, %s: %s (his club's reason '%s', joined %s, pick to his club %s, let go in the off-season %s)" % [case,
+				"he joins the new club" if want_join else "he stays", why, str(joined), str(paid), str(let_go)])
 	Expansion.FIRST_CALL_CAP_SQUEEZED = was
 
 
