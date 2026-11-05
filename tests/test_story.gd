@@ -2289,6 +2289,7 @@ func ", at + 5) - at)
 	for st in ["standards", "together", "ambition"]:
 		_check(Culture.moves_line(st) != "", "%s says what moves it" % st)
 	var tg := Culture.moves_line("together")
+	_check(Culture.FINALS_PLACES == Season.FINALISTS, "Culture's finals places match the finals (%d vs %d)" % [Culture.FINALS_PLACES, Season.FINALISTS])
 	for n in [Culture.FINALS_PLACES, Culture.BOTTOM_PLACES, Culture.WINNING_RUNS[0], Culture.WINNING_RUNS[1], Culture.LOSING_RUNS[0], Culture.LOSING_RUNS[1]]:
 		_check(tg.contains(str(n)), "Togetherness line names %d" % n)
 	var top_step := Culture.season_steps(Culture.FINALS_PLACES, 18, false, 0.0, 0.0)
