@@ -1500,6 +1500,12 @@ func _test_first_goal_any_player_once() -> void:
 	_check(GameState.career_goals_before(back) == 1, "...and so does the goal itself")
 	# The next live match: he is no longer a candidate, so the line is never said twice.
 	_check(GameState.prepare_interactive_match(), "The next live match is set up")
+	var me2 := 0 if str(GameState.pending_match["home"]) == GameState.my_club else 1
+	var named := []
+	for row in GameState.pending_sim.squads[me2].ground + GameState.pending_sim.squads[me2].bench:
+		named.append(str(row["id"]))
+	_check(named.has(pid), "He is named again, so the next check is about his record")
+	_check(Career.complete(GameState.list_player(pid)), "...and his career is still fully on record")
 	var again := GameState.first_goal_candidates()
 	_check(not again.has(pid), "Once said, never again in his career")
 	_check(MatchNotes.story_feed_line({"first_goal": again}, goal) != "First AFL goal for %s." % who,
