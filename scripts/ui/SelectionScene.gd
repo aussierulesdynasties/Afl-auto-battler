@@ -9,8 +9,9 @@ extends Control
 ## feel good"): "The side" is the oval, the interchange and the players not
 ## picked; "This week" is what the choice rests on. A phone shows one at a
 ## time with a tap between them; a PC shows both, side by side. Match-ups,
-## game plan and tags are not asked here: they are set in the pre-bounce menu
-## (director, 2026-10-13).
+## game plan and tags are not asked here: they are set on the match-day setup
+## before Start (director, 2026-10-13), which opens this screen through
+## Change the side and comes back to it with the new side (TODO row 25).
 
 const WEEK_W_MIN := 460.0
 const WEEK_W_MAX := 600.0
@@ -104,6 +105,16 @@ func _build() -> void:
 	var confirm := _confirm_row()
 	if confirm != null:
 		_root.add_child(confirm)
+	if GameState.side_from_match and GameState.match_day_setup_open():
+		# Reached from the match-day setup: the way back is the primary action.
+		var row := UiKit.hbox(8)
+		row.alignment = BoxContainer.ALIGNMENT_END
+		var back := UiKit.btn("Back to match day", UiKit.NAME, true)
+		back.name = "BackToMatchDay"
+		back.custom_minimum_size = Vector2(minf(240.0, UiKit.view_width(self) - 24.0), 48)
+		back.pressed.connect(Router.back)
+		row.add_child(back)
+		_root.add_child(row)
 	UiKit.restore_places(_root, places)
 
 

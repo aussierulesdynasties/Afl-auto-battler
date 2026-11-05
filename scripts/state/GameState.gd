@@ -221,6 +221,9 @@ var losing_streak := 0
 ## defender id}, on top of the default set-up. Cleared after each of your
 ## matches - every opponent is a new problem.
 var my_matchups := {}
+## How the prepared match was made, so a change to the side before the first
+## bounce rebuilds it the same way (rebuild_pending_side).
+var _pending_build := {}
 var last_side: Array = []       # ids of your players who took the field in your last match
 ## Players on a promised run (Backing) who could not play this round, noted at
 ## the start of _after_round before the week's injuries and suspensions tick
@@ -2296,6 +2299,47 @@ func start_season(club_code: String, list: Array) -> void:
 	autosave()
 
 
+## The match you are about to coach, from the clubs' sides as they stand now
+## (prepare_interactive_match and the finals one fill _pending_build first).
+func _build_pending_sim() -> void:
+	var h := str(pending_match["home"])
+	var a := str(pending_match["away"])
+	var at_home: Array = _pending_build["at_home"]
+	var home := Squad.new(GameDB.club_name(h), season.lists[h], bool(at_home[0]), h, season.selections.get(h, {}))
+	var away := Squad.new(GameDB.club_name(a), season.lists[a], bool(at_home[1]), a, season.selections.get(a, {}))
+	home.form = season.club_form(h)
+	away.form = season.club_form(a)
+	CoachEffects.apply(home)
+	CoachEffects.apply(away)
+	pending_sim = MatchSim.new(home, away, int(_pending_build["seed"]))
+	pending_sim.finals_mode = bool(_pending_build["finals"])
+	pending_sim.weather = _pending_build["weather"]
+	pending_sim.moment_side = 0 if h == my_club else 1
+	pending_sim.always_offer_bounce = bounce_scene_every_match()
+	pending_sim.set_tactics(pending_sim.moment_side, {"gameplan": club_plan})
+	pending_sim.set_matchups(pending_sim.moment_side, my_matchups)
+	_pending_build["sim"] = pending_sim
+
+
+## True from Play match until the first bounce: the match is set up and every
+## pre-match call (the side included) can still change (TODO row 25).
+func match_day_setup_open() -> bool:
+	return pending_sim != null and not pending_match.is_empty() and _pending_build.get("sim") == pending_sim \
+			and pending_sim.events.is_empty() and pending_sim.current_quarter == 1
+
+
+## The side changed on Team selection before the first bounce: the match is
+## made again from the new side, with the same seed, weather and plan.
+func rebuild_pending_side() -> void:
+	if match_day_setup_open():
+		_build_pending_sim()
+	side_from_match = false
+
+
+## Set when Change the side leaves the match-day setup for Team selection.
+var side_from_match := false
+
+
 ## Set up your next match (home-and-away round or final) to be played live,
 ## quarter by quarter, with the coach box. Every other match that week is
 ## simulated straight away. Returns false when you have no match to play.
@@ -2334,22 +2378,9 @@ func prepare_interactive_match() -> bool:
 	# The rest of the round plays out in the background while you coach
 	# yours (none of it touches your match), and is collected at full time.
 	_others = Season.start_all(others)
-	var home := Squad.new(GameDB.club_name(str(pending_match["home"])),
-			season.lists[pending_match["home"]], true, str(pending_match["home"]),
-			season.selections.get(str(pending_match["home"]), {}))
-	var away := Squad.new(GameDB.club_name(str(pending_match["away"])),
-			season.lists[pending_match["away"]], false, str(pending_match["away"]),
-			season.selections.get(str(pending_match["away"]), {}))
-	home.form = season.club_form(str(pending_match["home"]))
-	away.form = season.club_form(str(pending_match["away"]))
-	CoachEffects.apply(home)
-	CoachEffects.apply(away)
-	pending_sim = MatchSim.new(home, away, season.next_seed(99))
-	pending_sim.weather = season.weather_for(str(pending_match["home"]), str(pending_match["away"]), season.round_index)
-	pending_sim.moment_side = 0 if str(pending_match["home"]) == my_club else 1
-	pending_sim.always_offer_bounce = bounce_scene_every_match()
-	pending_sim.set_tactics(pending_sim.moment_side, {"gameplan": club_plan})
-	pending_sim.set_matchups(pending_sim.moment_side, my_matchups)
+	_pending_build = {"at_home": [true, false], "seed": season.next_seed(99), "finals": false,
+			"weather": season.weather_for(str(pending_match["home"]), str(pending_match["away"]), season.round_index)}
+	_build_pending_sim()
 	pending_phase = "regular"
 	pending_label = str(pending_match["label"])
 	last_results = []
@@ -2394,25 +2425,11 @@ func _prepare_interactive_final() -> bool:
 			"round": Season.REGULAR_ROUNDS + int(season.finals["week"]),
 			"label": str(fm["label"]), "tag": str(fm["tag"]),
 			"venue": season.finals_venue(fm), "finals_index": mine}
-	var home := Squad.new(GameDB.club_name(str(fm["home"])),
-			season.lists[fm["home"]], bool(at_home[0]), str(fm["home"]),
-			season.selections.get(str(fm["home"]), {}))
-	var away := Squad.new(GameDB.club_name(str(fm["away"])),
-			season.lists[fm["away"]], bool(at_home[1]), str(fm["away"]),
-			season.selections.get(str(fm["away"]), {}))
-	home.form = season.club_form(str(fm["home"]))
-	away.form = season.club_form(str(fm["away"]))
 	_refresh_coach_tactics()
-	CoachEffects.apply(home)
-	CoachEffects.apply(away)
-	pending_sim = MatchSim.new(home, away, season.finals_seed(mine))
-	pending_sim.finals_mode = true
-	pending_sim.weather = season.weather_for(str(fm["home"]), str(fm["away"]),
-			Season.REGULAR_ROUNDS + int(season.finals["week"]), fm)
-	pending_sim.moment_side = 0 if str(fm["home"]) == my_club else 1
-	pending_sim.always_offer_bounce = bounce_scene_every_match()
-	pending_sim.set_tactics(pending_sim.moment_side, {"gameplan": club_plan})
-	pending_sim.set_matchups(pending_sim.moment_side, my_matchups)
+	_pending_build = {"at_home": at_home, "seed": season.finals_seed(mine), "finals": true,
+			"weather": season.weather_for(str(fm["home"]), str(fm["away"]),
+					Season.REGULAR_ROUNDS + int(season.finals["week"]), fm)}
+	_build_pending_sim()
 	pending_phase = "finals"
 	pending_label = str(fm["label"])
 	last_results = []
