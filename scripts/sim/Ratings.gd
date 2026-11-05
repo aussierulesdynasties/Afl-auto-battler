@@ -397,27 +397,17 @@ const ATTR_ADJUSTMENTS := {
 }
 
 
-## His club's listing is his first position when the numbers read him as a
-## midfielder: a listed forward or defender with heavy possession is still a
-## forward or defender who can go through the middle. The numbers win when
-## his listed-line game has thinned out and he wins clearances, or when that
-## listed game has gone altogether.
-const LISTED_KEEP := 0.65
-const LISTED_GONE := 0.50
-const LISTED_MID_CLEARANCES := 1.5
-const LISTED_TRUST_GAMES := 6.0
-
-
+## His club's listing is his first position (director, 2026-11-06, T8.Q11,
+## TODO row 91): a listed forward or defender is a forward or defender,
+## whatever one season's numbers read. A listed forward with heavy possession
+## is still a forward who can go through the middle (assign_secondary gives
+## him MID second when his numbers clear that gate). Only a ruck reading
+## stands, since it is gated on real hit-out volume. Listed midfielders and
+## rucks, and players with no listing, keep the numbers' reading.
+## Mirrored in tools/sim_harness.py.
 static func listed_primary(p: Dictionary, role: String) -> String:
 	var listed := str(p.get("real_pos", ""))
-	if role != "MID" or not (listed == "FWD" or listed == "DEF"):
-		return role
-	var scores: Dictionary = p["role_scores"]
-	var games := float(p.get("gm", 0.0))
-	if games < LISTED_TRUST_GAMES \
-			or float(scores[listed]) >= LISTED_KEEP * float(scores["MID"]) \
-			or (float(scores[listed]) >= LISTED_GONE * float(scores["MID"]) \
-				and float(p.get("cl", 0.0)) / games < LISTED_MID_CLEARANCES):
+	if (listed == "FWD" or listed == "DEF") and role != "RUCK":
 		return listed
 	return role
 
