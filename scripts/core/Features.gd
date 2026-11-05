@@ -131,6 +131,11 @@ extends RefCounted
 ##               overlooked), his debut, club moves and delistings, each season's games and
 ##               goals, and the end of his career. Reads only: no draft, list or rating change.
 ##               Off, nothing is shown, written or saved.
+##   set_shots   row 77 (director ruling T8.Q9): set shots rise to about 55% of shots. Most
+##               marks inside 50 go back and kick (MatchSim.SET_SHARE_ON), each spot converts
+##               at the real AFL rate for its distance (SET_BANDS_ON), and the general-play
+##               shot off an unmarked entry comes less often (SET_GP_SHOT) so total scoring
+##               holds. Changes match output. Off, a match is exactly as before.
 ##   momentum_runaway   row 78 (T8.Q4, director: rare big margins come back through Momentum):
 ##               a side with the run of play that also leads by more than 24 wins more of the
 ##               ball (up to 11x the momentum edge at 54+, still capped by contest_clamp),
@@ -160,7 +165,7 @@ extends RefCounted
 ##               round sits it out. The round's name shows on the fixture, the hub, the match
 ##               and the warm-up. Changes match output. Nothing saved. Off, every round is as
 ##               before.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries", "momentum_runaway", "key_duels",
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries", "momentum_runaway", "key_duels", "set_shots",
 		"gather_round"]
 
 static var _forced := {}
