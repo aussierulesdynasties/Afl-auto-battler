@@ -9715,7 +9715,7 @@ func _season_news() -> void:
 				award_name(gk[0]), GameDB.club_name(str(gk[0]["club"])), int(gk[0]["goals"])])
 	var fist: Array = season_awards.get("golden_fist", [])
 	if not fist.is_empty():
-		add_news("award", "%s (%s) won the %s: %s." % [award_name(fist[0]),
+		add_news("award", "%s (%s) won the %s with %s." % [award_name(fist[0]),
 				GameDB.club_name(str(fist[0]["club"])), Awards.GOLDEN_FIST, Awards.golden_fist_line(fist[0])])
 	var medal: Dictionary = season_awards.get("norm_smith", {})
 	if not medal.is_empty():

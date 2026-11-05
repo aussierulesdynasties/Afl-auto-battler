@@ -325,7 +325,7 @@ func _test_full_season() -> void:
 	for item in GameState.news:
 		if str(item["text"]).contains(Awards.GOLDEN_FIST):
 			fist_news = str(item["text"])
-	_check(not fist.is_empty() and fist_news == "%s (%s) won the %s: %s." % [GameState.award_name(fist[0]),
+	_check(not fist.is_empty() and fist_news == "%s (%s) won the %s with %s." % [GameState.award_name(fist[0]),
 			GameDB.club_name(str(fist[0]["club"])), Awards.GOLDEN_FIST, Awards.golden_fist_line(fist[0])],
 			"The news names the Golden Fist with what won it (%s)" % fist_news)
 	if Almanac.on():

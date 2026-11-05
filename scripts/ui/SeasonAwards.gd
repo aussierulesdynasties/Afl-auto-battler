@@ -15,7 +15,7 @@ static func open(host: Control) -> Control:
 		["Coleman Medal", "Home-and-away goals", aw.get("coleman", []), "goals"],
 		# The best defender, lockdown or intercept, each judged against his own kind.
 		# Absent in a season played before it existed.
-		[Awards.GOLDEN_FIST, "Best defender: spoils for a lockdown back, intercept marks for a rebounder",
+		[Awards.GOLDEN_FIST, "Best defender: a lockdown back on his spoils, an interceptor on his marks",
 			aw.get("golden_fist", []), "fist"],
 		["All-Australian", "The season's team", aw.get("all_australian", []), ""],
 		[BestAndFairest.award_name(GameState.my_club), GameDB.club_name(GameState.my_club),
