@@ -57,10 +57,10 @@ def role_rate(rows, role):
 
 
 def role_table(A, B):
-    """Intercepts a game per player by the slot he filled, against Champion Data."""
+    """Intercepts a game per player by listed position, against Champion Data."""
     if not any("pg_MID" in t for r in A.values() for t in r["teams"]):
         return
-    print("\nIntercepts a game per player, by the slot he filled (Champion Data 2025):\n")
+    print("\nIntercepts a game per player, by listed position (Champion Data 2025):\n")
     head = "| role | real | A | share A |" + (" B | share B | B-A | se | sig |" if B else "")
     print(head)
     print("|" + "---|" * (head.count("|") - 1))

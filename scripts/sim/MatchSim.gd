@@ -3123,6 +3123,11 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			if mid_intercepts_on and aerial.is_empty() and _aerial_zone(opp, fp) == "middle" 					and mid_ic_rng.randf() < _tv("MID_KICK_INTERCEPT", MID_KICK_INTERCEPT):
 				var taken := _mid_kick_intercept(side, fp)
 				if not taken.is_empty():
+					# The kick still got it out of his defensive 50: Champion
+					# Data counts the rebound whatever happens to it next.
+					if prev_atk_fp < float(T["rebound_from"]) and atk_fp > float(T["rebound_to"]):
+						_t(side, "rebounds")
+						_p(carrier, "rebounds")
 					_last_disp["end"] = "aerial"
 					return taken
 

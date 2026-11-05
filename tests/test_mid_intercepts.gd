@@ -47,7 +47,7 @@ func _role_ic(res: Dictionary, role: String) -> Vector2:
 	for side in range(2):
 		for pl in (res["roster"][side] as Array):
 			var st: Dictionary = (res["players"] as Dictionary).get(str(pl["id"]), {})
-			if st.is_empty() or str(pl.get("role", "")) != role:
+			if st.is_empty() or str(pl.get("list_role", pl.get("role", ""))) != role:
 				continue
 			out += Vector2(float(st.get("intercepts", 0.0)), 1.0)
 	return out
