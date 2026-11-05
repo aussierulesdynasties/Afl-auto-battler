@@ -1990,6 +1990,9 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	for code in league_lists:
 		for p in league_lists[code]:
 			listed[str(p["id"])] = p
+	# The league's average training lift per position and attribute, measured
+	# on the season's lists before anyone retires (row 90).
+	var train_lift := Prospects.season_training_lift(league_lists)
 	intake_summary = Prospects.age_league(league_lists, next_year)
 	intake_summary["signed"] = signed
 	_retirees_to_coaching(intake_summary.get("retired", []), listed)
@@ -2013,6 +2016,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 		league_lists[code] = Prospects.generate_expansion_list(code, next_year)
 		add_news("expansion", "%s (the %s) join the competition for %d, their first season." % [
 				GameDB.club_name(code), GameDB.club_short(code), next_year])
+	Prospects.unwind_training_lift(league_lists, draftee_pool, train_lift)
 	intake_summary["renormalised"] = Prospects.renormalise_league(league_lists,
 		draftee_pool, GameDB.baseline_overall, GameDB.baseline_spread)
 
@@ -2023,6 +2027,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 		lists[code] = league_lists.get(code, [])
 		for p in lists[code]:
 			p["season_start_ov"] = int(p["overall"])
+			p.erase("season_gains")
 	my_list = lists.get(my_club, [])
 	# The season simulates only this year's active clubs; `lists` keeps an
 	# entry for every club so saves and rollovers never miss a key.
@@ -9289,6 +9294,14 @@ func _spend_with_weights(p: Dictionary, weights: Dictionary, stop_at_pot: bool,
 		attr[best_key] = int(attr[best_key]) + 1
 		gains[best_key] = int(gains.get(best_key, 0)) + 1
 		_recalc_player_overall(p)
+	if not gains.is_empty():
+		# The season's training, kept so the off-season can take the league's
+		# average lift back off the attributes it went on (Prospects.
+		# unwind_training_lift); cleared at rollover.
+		var season_gains: Dictionary = p.get("season_gains", {})
+		for key in gains:
+			season_gains[key] = int(season_gains.get(key, 0)) + int(gains[key])
+		p["season_gains"] = season_gains
 	return gains
 
 
