@@ -35,6 +35,7 @@ func _run() -> void:
 	var fps := 12.0
 	var height := 0
 	var clubs := ["COL", "CAR"]
+	var weather := ""
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size() - 1):
 		match str(a[i]):
@@ -49,12 +50,19 @@ func _run() -> void:
 			"--fps": fps = float(a[i + 1])
 			# --clubs FRE,MEL: the featured player's club and the opposition (default COL,CAR).
 			"--clubs": clubs = str(a[i + 1]).split(",")
+			# --weather wet|hot|windy|perfect: draw every scene in that weather (VignetteWeather).
 			# Loaded, not named: a class named here compiles before the autoloads exist
 			# (VignetteGround reads GameDB), and the whole tool failed to load.
+			# --weather wet|hot|windy|perfect: draw this day instead of the match's.
+			"--weather":
+				weather = str(a[i + 1])
+				load("res://scripts/ui/match/VignetteGrade.gd").forced_weather = weather
 			"--venue": load("res://scripts/ui/match/VignetteGround.gd").venue = str(a[i + 1])
 	await process_frame
 	# The tool films the new front speccy whatever the shipped switch says.
 	Features.set_on("speccy_front", true)
+	if OS.get_environment("VLIGHT_GRADE") == "1":
+		Features.set_on("vignette_grade", true)
 	var db = root.get_node("GameDB")
 	var w := width
 	var h := height if height > 0 else int(round(width * 2.2))       # a tall phone in portrait
@@ -84,6 +92,8 @@ func _run() -> void:
 		vig.size = root.get_visible_rect().size   # canvas units: the window is scaled (project stretch), not 1:1
 		vig.setup(kind, ev, {}, {"home": clubs[0], "away": clubs[1]})
 		vig.set_process(false)
+		if weather != "":
+			vig.set("weather", weather)
 		var beats: Array = BEATS[kind]
 		if film != "":
 			if kind != film:
