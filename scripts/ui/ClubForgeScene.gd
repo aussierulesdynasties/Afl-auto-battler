@@ -291,7 +291,7 @@ func _player_form(body: VBoxContainer) -> void:
 	body.add_child(UiKit.choice_grid("ForgeStyle", styles, str(_spec["style"]), cols, func(k): _spec["style"] = k))
 	body.add_child(_sub("Strengths (up to two)"))
 	body.add_child(_toggles("ForgeStrength", "strengths", "weaknesses", cols))
-	body.add_child(_sub("Weaknesses (up to two)"))
+	body.add_child(_sub("Weakness (one, and a second if you like)"))
 	body.add_child(_toggles("ForgeWeakness", "weaknesses", "strengths", cols))
 	body.add_child(_sub("Dominant foot"))
 	body.add_child(UiKit.choice_grid("ForgeFoot", [["R", "Right"], ["L", "Left"]], str(_spec["foot"]), 2,
@@ -364,11 +364,18 @@ func _player_form(body: VBoxContainer) -> void:
 	save.name = "ForgeSavePlayer"
 	save.custom_minimum_size.y = 48
 	save.pressed.connect(_on_save)
+	# T8.Q12: Save stays blocked until he has his one compulsory weakness.
+	save.disabled = (_spec["weaknesses"] as Array).is_empty()
+	if save.disabled:
+		var need := UiKit.lbl("Pick one weakness to save him.", UiKit.SMALL, UiKit.MUTED)
+		need.name = "ForgeNeedWeakness"
+		need.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		body.add_child(need)
 	body.add_child(save)
 
 
 func _on_save() -> void:
-	var why := Prospects.custom_problem(_spec)
+	var why := Prospects.forge_problem(_spec)
 	if why != "":
 		_problem.text = why
 		_problem.visible = true

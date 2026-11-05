@@ -552,6 +552,20 @@ Your career stays on this device.",
 	await _settle()
 	_press("ForgeCreatePlayer")
 	await _settle()
+	# T8.Q12: one weakness is compulsory, a second optional, never a third.
+	var save_b: Button = current_scene.find_child("ForgeSavePlayer", true, false)
+	_check(save_b != null and save_b.disabled and current_scene.find_child("ForgeNeedWeakness", true, false) != null,
+			"Save is blocked, and says why, until he has a weakness")
+	_press("ForgeWeakness_pressure")
+	await _settle()
+	save_b = current_scene.find_child("ForgeSavePlayer", true, false)
+	_check(save_b != null and not save_b.disabled and current_scene.find_child("ForgeNeedWeakness", true, false) == null,
+			"One weakness unblocks Save")
+	_press("ForgeWeakness_kicking")
+	await _settle()
+	_press("ForgeWeakness_marking")
+	await _settle()
+	_check(_forge_weaknesses() == 2, "A third weakness can't be picked (%d)" % _forge_weaknesses())
 	_press("ForgeSavePlayer")
 	await _settle()
 	var problem: Label = current_scene.find_child("ForgeProblem", true, false)
@@ -2306,6 +2320,11 @@ func _test_season_awards() -> void:
 
 
 ## Press a named button in the current scene, or fail the check if it is missing.
+## How many weaknesses the open Forge form holds.
+func _forge_weaknesses() -> int:
+	return (current_scene.get("_spec")["weaknesses"] as Array).size()
+
+
 func _press(node_name: String) -> void:
 	var b = current_scene.find_child(node_name, true, false)
 	_check(b != null, "%s is on screen" % node_name)
