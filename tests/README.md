@@ -54,6 +54,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `draft_ui` | The draft screen's layout and state: containers, widths, rotate and resume |
 | `intake` | The National Draft model: the 2026 class, projection, season rollover |
 | `intake_ui` | The National Draft on the shared draft screen |
+| `rookie_list` | The rookie list behind the switch `rookie_list`: the National Draft fills the senior list (38), the Rookie Draft after it fills six rookie spots, upgrading a rookie, old saves, both lists on the list screen, real taps on the sheet and the upgrade |
 | `own_prospect` | Row 64 behind the switch `custom_prospect_story`: the prospect you create (Alastair McNeil) in the first National Draft in both starts, the news lines of his career, the marks on his draft row and profile; off is exactly today |
 | `expansion` | Tasmania in 2028 and Canberra in 2030, and a Club Forge club entering with the career |
 | `expansion_package` | How a new club builds its list behind the switch `expansion_package`: off is exactly today; on gives state-league signings, early picks, the traded pick, out-of-contract signings, sign-on money, the Canberra choice, the approach card, saves both ways |
@@ -84,6 +85,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `story` | The week's story cards: the deck's checks, cooldowns, arcs, trust, ten seasons of repeats, the save round trip, cards never moving the dice |
 | `nameink` | A player's name in running text wears his club's ink: the index from the lists, the markup, every club's ink readable on dark, the match feed and goal rows carrying both clubs' colours |
 | `match_game` | Legs and rotations, match moments and calls, the rival coach, key match-ups, Play through by job |
+| `mid_intercepts` | Row 89 behind the switch `mid_intercepts`: off never rolls it; the taker is the other side's midfielder; on, same seeds, midfielders intercept near the real 2.5 a game and scores stay real |
 | `pressure` | Pressure acts and the team Pressure Rating |
 | `workload` | Workload across the campaign |
 | `fitness` | Season conditioning: each plan's curve, the high-performance department, late changes, AI plans by phase, the save, the plan screens in words and real taps |
