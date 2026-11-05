@@ -2248,6 +2248,11 @@ func _assign_draftee(code: String, p: Dictionary, kind: String) -> void:
 	p["draft_pick"] = 0
 	_mark_drafted(p, kind, 0)
 	Contracts.rookie_deal(p, season_year + 1)
+	if not opening_draft and season != null and season.lists.has(code):
+		# Same as a national-draft rookie (finish_intake_draft): the yearly
+		# tie lands on a list _close_contracts ticks at this rollover, so it
+		# is stored as years + 1 to start next season with two.
+		p["contract_years"] = Contracts.ROOKIE_YEARS + 1
 	arr.append(p)
 	drafted_draftees[str(p["id"])] = code
 	intake_assignments.append({
