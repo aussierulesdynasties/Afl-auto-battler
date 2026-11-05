@@ -58,63 +58,6 @@
 		"stakes": "Extend now: {more_seasons} at {early_price} a season, locked in. Wait, and his price moves with his form."
 	},
 	{
-		"id": "contracts_rivals_circling",
-		"category": "contracts",
-		"subject": {
-			"kind": "player",
-			"where": {
-				"fit": true,
-				"contract_years_max": 1,
-				"overall_min": 70
-			},
-			"pick": "highest:overall"
-		},
-		"title": [
-			"Rival clubs are circling {name}"
-		],
-		"text": [
-			"His manager says two clubs have called. He wants to know he's wanted here."
-		],
-		"choices": [
-			{
-				"key": "wanted",
-				"label": "Tell him he's in your plans",
-				"effects": [
-					{
-						"op": "morale",
-						"d": 6
-					},
-					{
-						"op": "trust",
-						"d": 6,
-						"why": "You told him he was in your plans"
-					},
-					{
-						"op": "expects_game",
-						"sting": 12
-					}
-				],
-				"result": "{name} hears what he wanted to hear."
-			},
-			{
-				"key": "market",
-				"label": "Let the market play out",
-				"effects": [
-					{
-						"op": "morale",
-						"d": -5
-					},
-					{
-						"op": "trust",
-						"d": -4,
-						"why": "You let the market decide his future"
-					}
-				],
-				"result": "{name} goes back to his manager."
-			}
-		]
-	},
-	{
 		"id": "contracts_manager_noise",
 		"category": "contracts",
 		"subject": {

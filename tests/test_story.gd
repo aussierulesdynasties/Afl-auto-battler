@@ -52,6 +52,7 @@ func run() -> void:
 	_t("_test_stories_never_move_the_dice")
 	_t("_test_save_round_trip")
 	_t("_test_old_save")
+	_t("_test_cut_card_in_old_save")
 	_t("_test_leadership")
 	_t("_test_captaincy")
 	_t("_test_culture")
@@ -727,6 +728,14 @@ func _test_ten_seasons() -> void:
 	var weeks := 0
 	for y in range(10):
 		StoryEngine.new_season(story)
+		# The list ages a year: the side that played September has finals behind it, and
+		# nobody is in his last season twice. A frozen list kept the same men "first final"
+		# and "last season" for ten years, so those cards' counts measured the fixture.
+		if y > 0:
+			for f in ctx["players"]:
+				if bool(f.get("selected", false)):
+					f["finals_games"] = int(f.get("finals_games", 0)) + 1
+				f["last_season"] = false
 		for wk in range(1, 30):
 			ctx["year"] = 2027 + y
 			ctx["week"] = wk
@@ -908,6 +917,41 @@ func _test_old_save() -> void:
 	_check(tid_ok, "The old card is redrawn from the deck (%s)" % str(GameState.week_events.map(func(c): return c.get("key", ""))))
 	GameState.advance()
 	_check(GameState.season.round_index >= 1, "...and the season plays on")
+
+
+## Row 96 (director, 2026-11-06, T5.Q18 "Cut it"): the rival-clubs-circling card, which
+## invented a real player's manager taking calls, is gone from the deck. A save made while
+## it sat unanswered still loads, answers from the card it stored, and never draws it again.
+const CUT_CARD := "contracts_rivals_circling"
+
+
+func _test_cut_card_in_old_save() -> void:
+	_check(StoryDeck.by_id(StoryDeck.all(), CUT_CARD).is_empty(), "The rival-clubs-circling card is not in the deck")
+	_start()
+	var p: Dictionary = GameState.my_list[4]
+	var card := {"key": CUT_CARD, "tid": CUT_CARD, "story": true, "category": "contracts",
+			"player_id": str(p["id"]), "title": "Rival clubs are circling him",
+			"text": "His manager says two clubs have called.", "facts": {"round": 1},
+			"options": [{"key": "wanted", "label": "Tell him he's in your plans", "detail": "",
+					"effects": [{"op": "morale", "d": 6}], "result": "He hears what he wanted to hear."},
+				{"key": "market", "label": "Let the market play out", "detail": "",
+					"effects": [{"op": "morale", "d": -5}], "result": "He goes back to his manager."}]}
+	GameState.week_events = [card]
+	StoryEngine.ensure(GameState.story)
+	GameState.story["seen"][CUT_CARD] = 2
+	_check(GameState.save_career(), "A save holding the cut card unanswered is written")
+	_check(GameState.load_career(), "...and loads")
+	var held := GameState.week_events.filter(func(c): return str(c.get("tid", "")) == CUT_CARD)
+	_check(held.size() == 1, "The stored card comes back as it was saved (%d)" % held.size())
+	var out := GameState.resolve_week_event(0)
+	_check(out != "", "Answering it gives a result line (%s)" % out)
+	GameState.advance()  # the answered card leaves with its week
+	var drawn: PackedStringArray = []
+	for line in _run_on(6):
+		if line.begins_with(CUT_CARD + "@"):
+			drawn.append(line)
+	_check(drawn.is_empty(), "Six rounds on, it is never drawn again: %s" % ", ".join(drawn))
+	_check(GameState.season.round_index >= 6, "...and the season plays on (round %d)" % GameState.season.round_index)
 
 
 # --- The papers arc as football (2026-10-13) --------------------------------------
@@ -1333,7 +1377,11 @@ func _test_role_trial_save() -> void:
 		var reloaded := _trial_run(4, str(p["id"]))
 		_check(straight == reloaded, "Reload and carry on equals playing straight through\n%s\n%s" % [
 				",".join(straight), ",".join(reloaded)])
-		_check(GameState.role_trial.is_empty(), "...and the trial has ended")
+		# A trial waits while he is injured (_test_trial_injury), so a man hurt in it is
+		# still on trial four games on, with the games he missed not counted.
+		var hurt := int(GameState.list_player(str(p["id"])).get("injury_weeks", 0)) > 0
+		_check(GameState.role_trial.is_empty() or (hurt and int(GameState.role_trial.get("left", 0)) > 0),
+				"...and the trial has ended, or waits on his injury (%s)" % JSON.stringify(GameState.role_trial))
 	# An older save has no trial key at all.
 	GameState.save_career()
 	var state := CareerSave.read(GameState.save_path)
@@ -1871,6 +1919,9 @@ func _test_captain_cards_in_play() -> void:
 		for k in ["captain_slump_start", "captain_slump_mid", "captain_slump_good", "captain_slump_flat"]:
 			ids[k] = StoryDeck.by_id(deck, k)
 		GameState.losing_streak = 2  # a captain's form dips with the team's
+		# The week's own draw may already have put a card on him (his eight-week subject
+		# cooldown); this checks the slump arc on its own, so that draw is set aside.
+		GameState.story["subj"].erase(str(cap["id"]))
 		var ctx := ClubStories.context(GameState)
 		var rng := RandomNumberGenerator.new()
 		var w := GameState.story_week()
@@ -2814,8 +2865,9 @@ func _test_vacancy_is_filled() -> void:
 # --- Decision gates (director, 2026-10-18: every option states its upside and
 # downside with the size and the odds; an option with no downside is a design fault) ---
 
-## The 17 cards whose kind option used to win every number: every option now costs something.
-const GATED := ["board_billboards", "contracts_rivals_circling", "contracts_kid_wants_clarity",
+## The 16 cards whose kind option used to win every number: every option now costs something.
+## (17 until contracts_rivals_circling was cut, row 96: private lives stay out of the game.)
+const GATED := ["board_billboards", "contracts_kid_wants_clarity",
 		"contracts_waited_manager_calls", "family_partner_job_offer", "family_newborn_no_sleep",
 		"family_partner_graduation", "family_house_settlement", "health_veteran_rehab_mentor",
 		"leadership_senior_runs_session", "captain_leaders_meeting", "captain_slump_start",
@@ -2857,7 +2909,7 @@ func _test_every_option_has_a_cost() -> void:
 				gain_only.append(key)
 			if GATED.has(str(t["id"])) and not cost:
 				gated_bad.append(key)
-		# On the card itself every option of the 17 shows a gain and a cost (bible §4).
+		# On the card itself every option of the 16 shows a gain and a cost (bible §4).
 		if GATED.has(str(t["id"])):
 			for i in range((card["options"] as Array).size()):
 				var shown := StoryEngine.card_lines(card, i)
@@ -2868,7 +2920,7 @@ func _test_every_option_has_a_cost() -> void:
 					c = c or l.begins_with(StoryEngine.COST_MARK)
 				if not (g and c):
 					gated_bad.append("%s/%s on the card (%s)" % [t["id"], card["options"][i]["key"], " ".join(shown)])
-	_check(gated_bad.is_empty(), "Every option on the 17 gated cards states a cost, and on the card a gain too: %s" % ", ".join(PackedStringArray(gated_bad)))
+	_check(gated_bad.is_empty(), "Every option on the %d gated cards states a cost, and on the card a gain too: %s" % [GATED.size(), ", ".join(PackedStringArray(gated_bad))])
 	var new_ones := gain_only.filter(func(k): return not GAIN_ONLY_LEFT.has(k))
 	var gone := GAIN_ONLY_LEFT.filter(func(k): return not gain_only.has(k))
 	_check(new_ones.is_empty(), "No option joins the gain-only list (a new card states a cost): %s" % ", ".join(PackedStringArray(new_ones)))
