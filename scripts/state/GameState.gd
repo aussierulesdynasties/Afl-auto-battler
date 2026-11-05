@@ -276,6 +276,7 @@ var class_tiers := {}             # draft year (string) -> tier key, as generate
 var draftee_pool: Array = []     # all prospects that have not been drafted yet
 var drafted_draftees := {}       # prospect id -> destination club
 var midseason := {}              # carnival and mid-season rookie draft (MidseasonDraft)
+var rookie_draft := {}           # the Rookie Draft after the National Draft (RookieList; saved once it exists)
 var intake_assignments: Array = []  # father-son / NGA pre-draft landings
 var intake_summary := {}        # last rollover: retirements and growth
 ## Last game's per-player XP. The training menu reads this so the whole list
@@ -787,6 +788,8 @@ func save_career() -> bool:
 		# Players carry p["career"]; saves without this mark predate it.
 		"career_version": CAREER_VERSION,
 	}
+	if not rookie_draft.is_empty():
+		state["rookie_draft"] = rookie_draft
 	# The new-club build writes nothing while its switch is off and the career
 	# has made no choice about Canberra.
 	if not expansion.is_empty():
@@ -876,6 +879,7 @@ func load_career() -> bool:
 	my_list = _season_list(link) if link != "" else state.get("my_list", [])
 	draftee_pool = state.get("draftee_pool", [])
 	midseason = state.get("midseason", {})
+	rookie_draft = state.get("rookie_draft", {})
 	drafted_draftees = state.get("drafted_draftees", {})
 	intake_assignments = state.get("intake_assignments", [])
 	intake_summary = state.get("intake_summary", {})
@@ -1502,6 +1506,7 @@ func reset() -> void:
 	season_year = GameDB.START_YEAR
 	drafted_draftees = {}
 	midseason = {}
+	rookie_draft = {}
 	intake_assignments = []
 	intake_summary = {}
 	# The 2026 class was drafted before the career began (it is in the
@@ -1803,7 +1808,7 @@ func begin_intake_draft() -> bool:
 	var role_pairs := {}
 	for code in GameDB.club_order:
 		var arr: Array = league_lists.get(code, [])
-		sizes[code] = arr.size()
+		sizes[code] = RookieList.draft_size(arr)
 		var c := {"RUCK": 0, "MID": 0, "DEF": 0, "FWD": 0}
 		var pairs: Array = []
 		for p in arr:
@@ -1822,6 +1827,9 @@ func begin_intake_draft() -> bool:
 	var seed := _clock_seed(2)
 	draft = Draft.build_intake(open_pool, active.duplicate(), order,
 			seed, sizes, role_counts, role_pairs)
+	if RookieList.on():
+		# The National Draft fills the senior list; the Rookie Draft follows.
+		draft.senior_cap = RookieList.SENIOR_SPOTS
 	ExpansionBuild.seat_guests(self, draft)
 	# Recruiting funding narrows only our club's uncertainty; rivals use the
 	# same scouting model at Standard rather than hidden true ratings.
@@ -1875,7 +1883,7 @@ func finish_intake_draft() -> bool:
 			p["draft_pick"] = int(entry.get("pick", 0))
 			p["draft_round"] = int(entry.get("round", 0))
 			_mark_drafted(p, "national", int(entry.get("pick", 0)))
-			Contracts.rookie_deal(p, season_year + 1)
+			Contracts.draftee_deal(p, season_year + 1)
 			if not opening_draft and season != null and season.lists.has(code):
 				# The yearly draft's rookies are ticked at this rollover
 				# (_close_contracts ticks season.lists), so they are stored as
@@ -1900,7 +1908,12 @@ func finish_intake_draft() -> bool:
 		start_season(my_club, league_lists.get(my_club, []))
 		open_preseason()
 		return true
+	# The Rookie Draft follows in the same order (RookieList, switch rookie_list).
+	var rookie_order := intake_order() if RookieList.on() and season != null else []
 	_start_next_season(next_year, merged)
+	if RookieList.on():
+		RookieList.open_draft(self, rookie_order)
+		autosave()
 	return true
 
 
@@ -2247,7 +2260,7 @@ func _assign_draftee(code: String, p: Dictionary, kind: String) -> void:
 	p["num"] = _next_jumper_number(arr)
 	p["draft_pick"] = 0
 	_mark_drafted(p, kind, 0)
-	Contracts.rookie_deal(p, season_year + 1)
+	Contracts.draftee_deal(p, season_year + 1)
 	arr.append(p)
 	drafted_draftees[str(p["id"])] = code
 	intake_assignments.append({
@@ -2441,6 +2454,7 @@ func prepare_interactive_match() -> bool:
 	preseason_sim_to_round1()
 	_settle_week_event()
 	MidseasonDraft.settle(self)
+	RookieList.settle(self)
 	last_pos_before = my_position()
 	if season.is_regular_done():
 		return _prepare_interactive_final()
@@ -2639,6 +2653,7 @@ func advance() -> String:
 	preseason_sim_to_round1()
 	_settle_week_event()
 	MidseasonDraft.settle(self)
+	RookieList.settle(self)
 	_sync_club_plan()
 	_refresh_coach_tactics()
 	_stamp_conditioning()
@@ -2999,6 +3014,7 @@ func preseason_trial() -> Dictionary:
 func preseason_step_week() -> String:
 	if not preseason_active():
 		return "done"
+	RookieList.settle(self)
 	if ["trial", "practice", "papers", "story"].has(preseason_stop()):
 		return preseason_stop()
 	if preseason_week() >= PreSeason.weeks():

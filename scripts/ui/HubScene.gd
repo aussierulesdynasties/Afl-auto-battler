@@ -74,6 +74,8 @@ func _show_week_ask() -> void:
 		_show_carnival()
 	elif MidseasonDraft.waiting(GameState):
 		_show_midseason_pick()
+	elif RookieList.waiting(GameState):
+		RookieDraftSheet.open(self, _build)
 	elif GameState.backing_talk_pending():
 		_show_backing_talk()
 	elif GameState.media_conference_pending():
@@ -1374,6 +1376,8 @@ func handle_back() -> bool:
 		return true
 	if _midseason_overlay != null and is_instance_valid(_midseason_overlay):
 		_close_midseason(true)
+		return true
+	if RookieDraftSheet.close_open(self):
 		return true
 	# Back skips the press conference, as its Skip button does (natural
 	# Android Back); an overlay opened over it closes first.
