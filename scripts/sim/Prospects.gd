@@ -50,13 +50,14 @@ const CLASS_TIERS := [
 ]
 const CLASS_TOP_RANKS := 30
 
-## Draft-night rating scale for generated classes (director 2026-10-14, "A: gentle": young
-## draftees arrive lower and climb like real AFL ones). 1.0 is the old curve. Only new
-## generated classes use it: players already on a list, and the real 2026 class, are not rescaled. The
-## rank-base rating is multiplied by this and the points taken off are added back to
-## the prospect's room, so his POT (his ceiling) does not move.
+## Draft-night rating scale for every draft class (director 2026-10-14, "A: gentle": young
+## draftees arrive lower and climb like real AFL ones; 2026-11-04, 4.Q9 / row 65: picks 1-5
+## about 60-62, picks 6-20 about 55-58, POT kept). 1.0 is the old curve. New draft classes use
+## it, generated and the real 2026 class alike (`draft_class`); players already on a list are
+## not rescaled. The rank-base rating is multiplied by this and the points taken off are added
+## back to the prospect's room, so his POT (his ceiling) does not move.
 ## (static var, not const, only so tools/audit can try arms in one run.)
-static var DRAFT_NIGHT_SCALE := 0.78
+static var DRAFT_NIGHT_SCALE := 0.87
 ## Readiness (director 2026-10-13: "some players are more ready-made than others"): with the scale
 ## below 1, a few prospects keep most of the old draft-night rating (ready-made: senior footy in
 ## year 1, less climb left), most lose it all, and some lose more (long-term projects, a big
@@ -154,7 +155,7 @@ static func project(p: Dictionary) -> void:
 	var role := str(p.get("role", "MID"))
 	var target := rank_base_overall(rank)
 	p.erase("night_drop")
-	if DRAFT_NIGHT_SCALE != 1.0 and p.has("class_shift"):
+	if DRAFT_NIGHT_SCALE != 1.0 and (p.has("class_shift") or bool(p.get("draft_class", false))):
 		var drop := target * (1.0 - DRAFT_NIGHT_SCALE)
 		if DRAFT_READINESS:
 			var rd := readiness(p)
@@ -209,7 +210,8 @@ static func project(p: Dictionary) -> void:
 	# Borrowed from someone at the level he's expected to grow to (his likely
 	# ceiling: Potential's draftee room), since development lifts every
 	# attribute alike - a grown prospect then looks like a real player there.
-	var level := target + maxf(6.0, 22.0 - 0.25 * float(clampi(rank, 1, 80) - 1)) \
+	# The draft-night drop is added back: it lowers where he starts, not where he can grow to.
+	var level := target + float(p.get("night_drop", 0.0)) + maxf(6.0, 22.0 - 0.25 * float(clampi(rank, 1, 80) - 1)) \
 			+ float(p.get("class_ceiling", 0.0))
 	var shape := _shape_for(role, rng, level)
 	for key in ATTR_KEYS:

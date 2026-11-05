@@ -26,6 +26,7 @@ func run() -> void:
 	_t("_test_training_discount")
 	_t("_test_draftee_potential")
 	_t("_test_youth_pace")
+	_t("_test_draftee_bands")
 	_t("_test_pick_values_held")
 	_t("_test_save_and_backfill")
 	GameState.delete_saved_career()
@@ -223,12 +224,12 @@ func _mean_of(ps: Array, key: String) -> float:
 
 
 func _test_youth_pace() -> void:
-	_check(is_equal_approx(Prospects.DRAFT_NIGHT_SCALE, 0.78), "The draft-night scale is the gentle 0.78")
+	_check(is_equal_approx(Prospects.DRAFT_NIGHT_SCALE, 0.87), "The draft-night scale is 0.87 (row 65 bands)")
 	_check(Potential.YOUTH_STEP_PACE == 1.0 and Potential.YOUTH_GAP_PACE == 1.0, "The climb itself runs at the old pace")
 	var old_top := _top_ten(1.0)
 	var top := _top_ten(Prospects.DRAFT_NIGHT_SCALE)
 	var drop := _mean_of(old_top, "overall") - _mean_of(top, "overall")
-	_check(drop >= 10.0 and drop <= 18.0, "A top-10 pick arrives about 14 points lower than on the old curve (%.1f)" % drop)
+	_check(drop >= 5.0 and drop <= 12.0, "A top-10 pick arrives about 8 points lower than on the old curve (%.1f)" % drop)
 	_check(absf(_mean_of(old_top, "potential") - _mean_of(top, "potential")) <= 1.5, "His ceiling (POT) is the same")
 	# Readiness: a few are ready-made, most typical, some long-term projects.
 	var ready := 0
@@ -257,7 +258,7 @@ func _test_youth_pace() -> void:
 	after /= n
 	_check(after - start >= 15.0, "The average top-10 pick climbs %.1f points in three seasons" % (after - start))
 	# Nobody already listed is rescaled: a saved draftee keeps his rating whatever the scale is now,
-	# and the real 2026 class (data, not generated) projects the same either way.
+	# and the real 2026 class (a draft class too, row 65) is rescaled like a generated one.
 	var saved: Dictionary = (_top_ten(1.0)[0] as Dictionary).duplicate(true)
 	var kept := int(saved["overall"])
 	var scale := Prospects.DRAFT_NIGHT_SCALE
@@ -276,7 +277,84 @@ func _test_youth_pace() -> void:
 		Prospects.DRAFT_NIGHT_SCALE = 1.0
 		Prospects.project(real_pick)
 		Prospects.DRAFT_NIGHT_SCALE = scale
-		_check(at_scale == int(real_pick["overall"]), "The real 2026 class is not rescaled")
+		_check(at_scale < int(real_pick["overall"]), "The real 2026 class is rescaled like a generated one (%d v %d)" % [at_scale, int(real_pick["overall"])])
+
+
+## Row 65 (director 4.Q9, 2026-11-04): draftees start lower, picks 1-5 about 60-62 and picks 6-20
+## about 55-58, POT kept. Bands by consensus rank (the order the AI drafts in, near enough; the
+## draft audit tools/audit/draftee_bands_impl.gd measures by actual pick), for twelve generated
+## classes and the real 2026 class; POT as on the old curve; listed young players untouched.
+func _band_means(cls: Array) -> Dictionary:
+	var acc := {"top_o": 0.0, "top_p": 0.0, "top_n": 0, "mid_o": 0.0, "mid_p": 0.0, "mid_n": 0,
+			"late_o": 0.0, "late_n": 0}
+	for p in cls:
+		var r := int(p["draft_rank"])
+		var key := "top" if r <= 5 else ("mid" if r <= 20 else ("late" if r <= 40 else ""))
+		if key == "":
+			continue
+		acc[key + "_o"] += float(p["overall"])
+		if acc.has(key + "_p"):
+			acc[key + "_p"] += float(maxi(int(p["overall"]), int(p["potential"])))
+		acc[key + "_n"] += 1
+	return acc
+
+
+func _classes(scale: float) -> Array:
+	var old := Prospects.DRAFT_NIGHT_SCALE
+	Prospects.DRAFT_NIGHT_SCALE = scale
+	var out: Array = []
+	for y in range(2027, 2039):
+		out.append_array(Prospects.generate_class(y, 900 + y))
+	Prospects.DRAFT_NIGHT_SCALE = old
+	return out
+
+
+func _real_class(scale: float) -> Array:
+	var old := Prospects.DRAFT_NIGHT_SCALE
+	Prospects.DRAFT_NIGHT_SCALE = scale
+	var out: Array = []
+	for p in GameDB.draftees:
+		var q: Dictionary = (p as Dictionary).duplicate(true)
+		Prospects.project(q)
+		out.append(q)
+	Prospects.DRAFT_NIGHT_SCALE = old
+	return out
+
+
+func _test_draftee_bands() -> void:
+	var scale := Prospects.DRAFT_NIGHT_SCALE
+	_check(GameDB.draftees.size() >= 40, "The real 2026 class is loaded (%d)" % GameDB.draftees.size())
+	for arm in [["generated", _classes(scale), _classes(1.0)], ["real 2026", _real_class(scale), _real_class(1.0)]]:
+		var now := _band_means(arm[1])
+		var was := _band_means(arm[2])
+		_check(int(now["top_n"]) >= 5 and int(now["mid_n"]) >= 15 and int(now["late_n"]) >= 20,
+				"%s: every band has picks (%d, %d, %d)" % [arm[0], now["top_n"], now["mid_n"], now["late_n"]])
+		var top: float = now["top_o"] / maxf(1.0, now["top_n"])
+		var mid: float = now["mid_o"] / maxf(1.0, now["mid_n"])
+		var late: float = now["late_o"] / maxf(1.0, now["late_n"])
+		_check(top >= 60.0 and top <= 62.5, "%s: picks 1-5 start about 60-62 (%.1f)" % [arm[0], top])
+		_check(mid >= 55.0 and mid <= 58.0, "%s: picks 6-20 start about 55-58 (%.1f)" % [arm[0], mid])
+		_check(late < mid - 2.0 and late >= 46.0, "%s: picks 21-40 start lower again, scaled the same way (%.1f)" % [arm[0], late])
+		var old_top: float = was["top_o"] / maxf(1.0, was["top_n"])
+		_check(old_top - top >= 6.0, "%s: picks 1-5 start lower than on the old curve (%.1f v %.1f)" % [arm[0], top, old_top])
+		for b in ["top", "mid"]:
+			var pot_now: float = now[b + "_p"] / maxf(1.0, now[b + "_n"])
+			var pot_was: float = was[b + "_p"] / maxf(1.0, was[b + "_n"])
+			_check(absf(pot_now - pot_was) <= 1.0, "%s: POT is kept in band %s (%.1f v %.1f)" % [arm[0], b, pot_now, pot_was])
+	# A young player already on a real list is not a draft class: the scale never touches him.
+	var young: Array = GameDB.list_additions.filter(func(q): return bool(q.get("projected", false)))
+	_check(young.size() >= 5, "The real lists carry projected young players (%d)" % young.size())
+	var same := true
+	for q in young:
+		var at_scale: Dictionary = (q as Dictionary).duplicate(true)
+		var at_one: Dictionary = (q as Dictionary).duplicate(true)
+		Prospects.project(at_scale)
+		Prospects.DRAFT_NIGHT_SCALE = 1.0
+		Prospects.project(at_one)
+		Prospects.DRAFT_NIGHT_SCALE = scale
+		if int(at_scale["overall"]) != int(at_one["overall"]) or int(at_scale["potential"]) != int(at_one["potential"]) 				or at_scale.has("night_drop"):
+			same = false
+	_check(same, "Listed young players on the real lists keep their rating and POT whatever the scale")
 
 
 ## Director 2026-10-14, "hold pick values where they are": a pick is read by the player it buys,

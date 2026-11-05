@@ -78,7 +78,9 @@ func _test_draft_class_data() -> void:
 		_check(attrs_ok, "All 13 attributes are present and in range for %s" % id)
 		if str(p["role"]) == "RUCK":
 			rucks += 1
-			if int(a.get("ruck", 0)) >= 65:
+			# A ruck specialist: his tap work is his best part and senior-ready. Draft-night
+			# ratings run lower since row 65 (picks 6-20 about 55-58), so 60, not 65.
+			if int(a.get("ruck", 0)) >= 60 and int(a.get("ruck", 0)) > ov:
 				strong_ruck = true
 		var tie := str(p.get("tied_club", ""))
 		if tie != "" and not GameDB.CLUB_ORDER.has(tie):

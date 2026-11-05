@@ -549,6 +549,7 @@ func _load_draftees() -> Array:
 		p["u18_ho"] = _cell_float(cells, idx, "u18_ho")
 		p["note"] = _cell_str(cells, idx, "note")
 		p["data_src"] = _cell_str(cells, idx, "data_src")
+		p["draft_class"] = true  # a draft class: rated on Prospects.DRAFT_NIGHT_SCALE (row 65)
 		Prospects.project(p)
 		out.append(p)
 	_assign_fictional_names(out)
