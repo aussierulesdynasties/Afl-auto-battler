@@ -41,6 +41,7 @@ way.
 - `factsgrowth_impl` (#554, G7): a long autopilot career (args `seed club seasons`, default 301 MEL 20); one `FACTS` line a season with `career_facts` rows, its bytes and its share of the save file, then `TIMING` (save and load, facts kept vs emptied, same career) and `SUMMARY`.
 - `traitdecay_impl` (#440): one eight-season career from a seeded upside draft, printing one `DECAY` line a season: the synergies switched on across the league, then the count of players holding each synergy trait, real and generated players apart. `AUDIT_SEED` sets the career seed (default 301), so runs with the same seed pair.
 
+- `listed_positions_impl` (row 91): one `ROW id|club|name|listed|role|role2|overall|potential|gm` line per real player, then `CROSS listed>role` counts and the median OVR of each first position. Run it on two checkouts and join on id to list every player whose position or OVR moved. No arguments.
 - `role_alloc_impl`: every 2027 list's listed position (real_pos) against the first and second positions the numbers give, the player types each role produces, named cases and each club's coverage by line. No arguments.
 - `underrated_impl`: the opening pool's 2026 OVR against each player's 2024-25 level; short 2026 seasons re-rated as if held for 22 games; and a games-weighted 2026/2025/2024 view. No arguments.
 - `unicorn_impl`: Unicorns at the career start and who could become one (POT 90+, the missing line within reach). No arguments.

@@ -25,6 +25,7 @@ func run() -> void:
 	_t("_test_forward_types")
 	_t("_test_every_club_fields_wings")
 	_t("_test_listed_second_positions")
+	_t("_test_old_save_keeps_positions")
 	_t("_test_identities")
 	_t("_test_formation_wings")
 	_t("_test_list_profile")
@@ -490,10 +491,11 @@ func _test_identities() -> void:
 	_check(fwds >= 180, "Forwards are forwards first: enough for six a side and cover (%d)" % fwds)
 
 
-## His club's listing is his first position unless the numbers show a
-## midfielder in fact (clearances, with his listed game thinned out) or his
-## listed game has gone; a listed line the numbers win keeps as a second
-## position when his own numbers back it up.
+## His club's listing is his first position (director, 2026-11-06, T8.Q11,
+## row 91): a listed forward or defender is never a midfielder or the other
+## line on the numbers; only a ruck reading (real hit-out volume) stands. A
+## listed forward who also gets plenty of the ball keeps MID as a second
+## position.
 func _test_listed_second_positions() -> void:
 	var by_name := {}
 	for p in GameDB.players:
@@ -501,24 +503,31 @@ func _test_listed_second_positions() -> void:
 	var tag := func(n: String) -> String:
 		return Ratings.role_tag(by_name[n]) if by_name.has(n) else "?"
 	for n in ["Joe Richards", "Connor Macdonald", "Murphy Reid"]:
-		_check(tag.call(n) == "MID/FWD", "%s is a midfielder who plays forward (%s)" % [n, tag.call(n)])
-	for n in ["Beau McCreery", "Milan Murdock", "Jack Ginnivan", "Kade Chandler", "Max King"]:
+		_check(tag.call(n) == "FWD/MID", "%s is a listed forward who goes through the middle (%s)" % [n, tag.call(n)])
+	for n in ["Beau McCreery", "Milan Murdock", "Jack Ginnivan", "Kade Chandler", "Max King",
+			"Colby McKercher", "Chris Scerri", "Todd Marshall"]:
 		_check(tag.call(n).begins_with("FWD"), "%s is a forward (%s)" % [n, tag.call(n)])
 	_check(tag.call("Gryan Miers") == "FWD/MID", "Gryan Miers is a forward who can go through the middle (%s)" % tag.call("Gryan Miers"))
 	for n in ["Zac Williams", "Liam Baker", "Jhye Clark", "Sam De Koning"]:
 		_check(tag.call(n).begins_with("DEF"), "%s is a defender (%s)" % [n, tag.call(n)])
-	for n in ["Colby McKercher", "Chris Scerri"]:
-		_check(tag.call(n) == "MID", "%s stays a midfielder (%s)" % [n, tag.call(n)])
-	var lp := func(listed: String, gm: float, cl: float, own: float, mid: float) -> String:
-		return Ratings.listed_primary({"real_pos": listed, "gm": gm, "cl": cl * gm,
-				"role_scores": {"FWD": own, "DEF": own, "MID": mid, "RUCK": -1.0}}, "MID")
-	_check(lp.call("FWD", 20, 1.0, 0.33, 0.53) == "FWD", "Disposals alone never move a listed forward")
-	_check(lp.call("FWD", 20, 2.5, 0.30, 0.53) == "MID", "A listed forward winning clearances with little forward game is a midfielder")
-	_check(lp.call("FWD", 20, 2.5, 0.40, 0.53) == "FWD", "...unless his forward game holds up")
-	_check(lp.call("FWD", 20, 0.8, 0.22, 0.53) == "MID", "A listed forward with no forward game left is a midfielder")
-	_check(lp.call("DEF", 3, 3.0, 0.10, 0.60) == "DEF", "A few games never overrule the listing")
-	_check(lp.call("", 20, 0.5, 0.40, 0.53) == "MID" and lp.call("MID", 20, 0.5, 0.40, 0.53) == "MID",
+	var lp := func(listed: String, numbers: String) -> String:
+		return Ratings.listed_primary({"real_pos": listed}, numbers)
+	_check(lp.call("FWD", "MID") == "FWD", "Midfield numbers never move a listed forward")
+	_check(lp.call("DEF", "MID") == "DEF", "Midfield numbers never move a listed defender")
+	_check(lp.call("FWD", "DEF") == "FWD" and lp.call("DEF", "FWD") == "DEF", "Nor does the other line's game")
+	_check(lp.call("FWD", "RUCK") == "RUCK", "A ruck reading (hit-out volume) stands")
+	_check(lp.call("", "MID") == "MID" and lp.call("MID", "DEF") == "DEF" and lp.call("RUC", "MID") == "MID",
 			"Without a forward or back listing, the numbers decide")
+	var ld := 0
+	var misread := ""
+	for p in GameDB.players:
+		var listed := str(p.get("real_pos", ""))
+		if listed == "FWD" or listed == "DEF":
+			ld += 1
+			if str(p["role"]) != listed and str(p["role"]) != "RUCK":
+				misread += "%s (%s reads %s) " % [p.get("real_name", ""), listed, p["role"]]
+	_check(ld >= 400, "The 2026 lists name their forwards and defenders (%d)" % ld)
+	_check(misread == "", "Every listed forward and defender plays his listed line: %s" % misread)
 	var fwd := 0
 	var def := 0
 	var bad := ""
@@ -537,6 +546,36 @@ func _test_listed_second_positions() -> void:
 	_check(Ratings.listed_secondary(mid) == "", "A listed forward who does not kick goals or mark inside 50 does not")
 	_check(Ratings.listed_secondary({"role": "DEF", "real_pos": "FWD", "gm": 10.0, "gl": 9.0}) == "",
 			"Only a midfielder on the numbers takes his listed line")
+
+## Save contract (W7, row 91): a career saved before the listing led keeps the
+## positions and OVRs it was saved with. Player dicts are saved whole and never
+## re-derived on load, so no upgrade step: the new reading reaches new careers.
+func _test_old_save_keeps_positions() -> void:
+	GameState.reset()
+	GameState.start_season("NTH", GameDB.club_list("NTH"))
+	var him: Dictionary = {}
+	for p in GameState.my_list:
+		if str(p.get("real_name", "")) == "Colby McKercher":
+			him = p
+	_check(not him.is_empty() and str(him["role"]) == "FWD", "Colby McKercher starts a new career as a forward")
+	if him.is_empty():
+		return
+	var id := str(him["id"])
+	# As the build before row 91 rated him (the career holds its own copy).
+	him["role"] = "MID"
+	him["role2"] = ""
+	him["overall"] = 51
+	_check(GameState.save_career(), "The career saves")
+	GameState.reset()
+	_check(GameState.load_career(), "A career saved with the old reading loads")
+	var back: Dictionary = {}
+	for p in GameState.my_list:
+		if str(p.get("id", "")) == id:
+			back = p
+	_check(not back.is_empty() and str(back["role"]) == "MID" and int(back["overall"]) == 51,
+			"It keeps the position and OVR it was saved with (%s %s)" % [back.get("role", "?"), back.get("overall", "?")])
+	GameState.reset()
+
 
 ## The Best 22 oval shows the wings the match plays (Roles.mark_wings, the
 ## line "WING" on the match-day copies), never the next two by rating.
