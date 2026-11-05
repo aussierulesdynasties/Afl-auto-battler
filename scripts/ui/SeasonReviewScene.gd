@@ -85,10 +85,8 @@ func _build() -> void:
 		champ_row.add_child(champ_badge)
 	var mine_won: bool = premier == GameState.my_club
 	cv.add_child(UiKit.lbl("Grand Final: %s" % _gf_line(season), UiKit.BODY, UiKit.TEXT, true))
-	cv.add_child(UiKit.lbl("PREMIERSHIP!" if mine_won else
-			"%s take the flag. You finished %s." % [GameDB.club_name(premier),
-			_ordinal(GameState.my_position())], UiKit.SMALL,
-			UiKit.GOOD if mine_won else UiKit.TEXT))
+	cv.add_child(UiKit.lbl(summary_text(premier, mine_won, _ordinal(GameState.my_position())),
+			UiKit.SMALL, UiKit.GOOD if mine_won else UiKit.TEXT))
 
 	# --- your season --------------------------------------------------------
 	var narrow := _content_width() < 720.0
@@ -249,6 +247,17 @@ func _gf_line(season: Season) -> String:
 	var gf: Dictionary = last[0]
 	var winner := str((season.finals.get("slots", {}) as Dictionary).get("W_GF", ""))
 	return gf_text(gf, winner)
+
+
+## The line under the Grand Final. With no premiers (the finals were not played)
+## it gives only your finish: the club name once came out blank, leaving
+## " take the flag. You finished 7th." under "Grand Final: not played".
+static func summary_text(premier: String, mine_won: bool, finish: String) -> String:
+	if premier == "":
+		return "You finished %s." % finish
+	if mine_won:
+		return "PREMIERSHIP!"
+	return "%s take the flag. You finished %s." % [GameDB.club_name(premier), finish]
 
 
 ## "Fremantle 19.12 (126)  d.  Brisbane 8.13 (61)": the premiers first,
