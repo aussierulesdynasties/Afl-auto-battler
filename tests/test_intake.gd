@@ -322,6 +322,13 @@ func _test_career_rollover() -> void:
 	var tied: Dictionary = GameState.draftee_pool[0]
 	tied["tied_club"] = "ADE"
 	tied["tied_type"] = "father-son"
+	# And an academy (NGA) tie, so both pre-listed kinds are checked at the
+	# rollover below (row 86).
+	var academy: Dictionary = GameState.draftee_pool[1]
+	academy["tied_club"] = "ADE"
+	academy["tied_type"] = "NGA"
+	_check(int(tied.get("draft_year", 0)) == 2027 and int(academy.get("draft_year", 0)) == 2027,
+			"The planted father-son and NGA prospects belong to this year's draft")
 	# The yearly order: the ladder reversed, the premiers last and the
 	# runners-up second last (director, bug bash 2026-11-05).
 	var ladder_rev := []
@@ -362,6 +369,15 @@ func _test_career_rollover() -> void:
 			rookie_years.append(int(p.get("contract_years", 0)))
 	_check(not rookie_years.is_empty() and rookie_years.all(func(y): return y == Contracts.ROOKIE_YEARS),
 			"National-draft rookies start 2028 with two full seasons left (%s)" % str(rookie_years))
+	# Row 86: a father-son or NGA rookie lands through _assign_draftee, not
+	# the snake, and must start next season with the same two years.
+	var tie_years := []
+	for p in GameState.my_list:
+		if str(p["id"]) == str(tied["id"]) or str(p["id"]) == str(academy["id"]):
+			tie_years.append("%s:%d" % [str(p.get("drafted_type", "")), int(p.get("contract_years", 0))])
+	_check(tie_years.size() == 2 and tie_years.has("father-son:%d" % Contracts.ROOKIE_YEARS)
+			and tie_years.has("NGA:%d" % Contracts.ROOKIE_YEARS),
+			"Father-son and NGA rookies start 2028 with two full seasons left, like a national pick (%s)" % str(tie_years))
 	# The off-season wrap (ARD-M6-007): built once at the rollover, saved,
 	# and shown before Round 1 until you begin the season.
 	var wrap: Dictionary = GameState.season_wrap
@@ -992,6 +1008,15 @@ func _test_real_lists_start() -> void:
 		if int(q.get("drafted_year", 0)) == GameDB.DATA_SEASON and str(q.get("drafted_type", "")) == "national":
 			rookies += 1
 	_check(rookies >= 1, "Your 2026 draftees are on your 2027 list (%d)" % rookies)
+	# The opening draft ticks no contract before 2027 starts, so its
+	# father-son and NGA picks keep the plain rookie deal (row 86).
+	var opening_ties := []
+	for code in GameState.season.lists:
+		for q in GameState.season.lists[code]:
+			if int(q.get("drafted_year", 0)) == GameDB.DATA_SEASON and str(q.get("drafted_type", "")) in ["FS", "NGA"]:
+				opening_ties.append(int(q.get("contract_years", 0)))
+	_check(opening_ties.size() == 7 and opening_ties.all(func(y): return y == Contracts.ROOKIE_YEARS),
+			"The 2026 class's seven father-son and NGA picks start 2027 with two seasons left (%s)" % str(opening_ties))
 	var same_vet: Dictionary = {}
 	for q in GameState.my_list:
 		if str(q["id"]) == str(vet["id"]):
