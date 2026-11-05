@@ -4065,6 +4065,29 @@ func former_players(code: String) -> Array:
 			captaincy_record(code), honour_roll)
 
 
+
+## Storylines before the bounce (OldClubLines, T5.Q9): players in this week's
+## two sides who meet a club they played 100+ games for, every spell and this
+## season counted, the most games first. `skip` holds ids another pre-match
+## line already names. Presentation only: the match never reads it.
+func old_club_lines(code: String, skip := {}) -> Array:
+	if season == null or code == "" or code == my_club or not season.lists.has(code):
+		return []
+	var mine := my_squad()
+	var theirs := Squad.new(GameDB.club_name(code), season.lists[code], true, code,
+			season.selections.get(code, {}))
+	return OldClubLines.rows(_listed(my_list, mine), _listed(season.lists[code], theirs), my_club, code,
+			func(p: Dictionary, club: String) -> int: return int(club_tally(p, club)["games"]), skip)
+
+
+## The list's own player records for a squad's picked side (ground and bench):
+## the squad holds match copies, the list holds his career.
+func _listed(list: Array, sq: Squad) -> Array:
+	var ids := {}
+	for p in sq.ground + sq.bench:
+		ids[str(p.get("id", ""))] = true
+	return list.filter(func(p): return p is Dictionary and ids.has(str(p.get("id", ""))))
+
 ## What comes next, in one line: "Next: Round 5 v Carlton at the MCG." ""
 ## when there is no fixture to name (finals are drawn week by week).
 func next_fixture_line() -> String:
