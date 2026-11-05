@@ -76,6 +76,7 @@ func run() -> void:
 	_t("_test_first_goal_feed")
 	_t("_test_traits_surfaced")
 	_t("_test_momentum")
+	_t("_test_momentum_runaway")
 	_t("_test_moment_calls_matter")
 	_t("_test_ai_chases_and_controlled_needs_ball_users")
 	_t("_test_coach_styles")
@@ -2715,6 +2716,97 @@ func _test_key_duel_balance() -> void:
 
 ## Momentum is real, small, capped, fading and reversible, and it does not
 ## snowball.
+## Row 78 (T8.Q4): with momentum_runaway on, a side with the run of play that
+## is well ahead wins more of the ball and keeps its run longer, so lopsided
+## matches can run away; close matches are untouched, and off nothing changes.
+func _test_momentum_runaway() -> void:
+	var feats = load("res://scripts/core/Features.gd")
+	# Off: inert, whatever the knobs say.
+	feats.set_on("momentum_runaway", false)
+	var plain := _sim(7800, "GEE", "WCE").run()
+	var wild := _sim(7800, "GEE", "WCE")
+	wild.runaway_gain = 100.0
+	wild.runaway_hold = 1.0
+	wild.runaway_decay = 1.0
+	var wild_r := wild.run()
+	_check(plain["score"] == wild_r["score"] and plain["events"].size() == wild_r["events"].size(),
+			"Switch off: the runaway knobs change nothing (%s vs %s)" % [str(plain["score"]), str(wild_r["score"])])
+	var off_sim := _sim(7801)
+	off_sim.momentum = 1.0
+	off_sim.team_stats[0]["goals"] = 15.0
+	_check(off_sim.runaway() == 0.0, "Switch off: a 90-point lead with full momentum is no runaway")
+	# On: the edge grows only past the lead, for the side that has the run.
+	feats.set_on("momentum_runaway", true)
+	var sim := _sim(7802)
+	sim.momentum = 1.0
+	_check(sim.runaway() == 0.0, "Level scores: no runaway")
+	sim.team_stats[0]["goals"] = 4.0
+	_check(sim.runaway() == 0.0, "A 24-point lead: no runaway yet")
+	sim.team_stats[0]["goals"] = 9.0
+	_check(is_equal_approx(sim.runaway(), 1.0), "A 54-point lead with the run of play: full runaway (%.2f)" % sim.runaway())
+	sim.momentum = -1.0
+	_check(sim.runaway() == 0.0, "The side behind having the run is no runaway")
+	# The away side 54 up with the run: the stoppage edge grows to the contest cap.
+	sim.team_stats[0]["goals"] = 0.0
+	sim.momentum = -1.0
+	var wins := [0, 0]
+	for mode in range(2):
+		sim.team_stats[1]["goals"] = 0.0 if mode == 0 else 9.0
+		sim.rng.seed = 787878
+		for i in range(20000):
+			if sim.contest_winner(false, 0.0) == 1:
+				wins[mode] += 1
+	var lift := float(wins[1] - wins[0]) / 20000.0
+	_check(lift > 0.05, "Run away with it: the side 54 up with the run wins %.1f%% more of the ball" % (100.0 * lift))
+	_check(float(wins[1]) / 20000.0 < float(Ratings.T["contest_clamp"]) + 0.02,
+			"Never past the contest cap (%.3f)" % (float(wins[1]) / 20000.0))
+	sim.team_stats[1]["goals"] = 0.0
+	sim.team_stats[0]["goals"] = 9.0
+	sim.momentum = 0.8
+	sim._after_chain()
+	_check(sim.momentum > 0.8 * MatchSim.MOMENTUM_DECAY, "A run that is running away fades more slowly (%.3f)" % sim.momentum)
+	# Goals the other way (each one on the board) still turn it, a little more slowly.
+	sim.momentum = 0.8
+	var after := []
+	for g in range(3):
+		sim.team_stats[1]["goals"] = float(g + 1)
+		sim._swing_momentum(1, MatchSim.MOMENTUM_GOAL)
+		after.append(snappedf(sim.momentum, 0.01))
+	_check(float(after[0]) > 0.2, "One goal the other way turns it less (%.2f)" % float(after[0]))
+	_check(float(after[2]) < 0.0, "Three goals the other way still turn it (%s)" % str(after))
+	# Paired matches, same seeds, switch off then on.
+	var close_same := 0
+	var close := 0
+	var big := [0, 0]
+	var total := [0.0, 0.0]
+	var n := 30
+	var arms := [[], []]
+	for mode in range(2):
+		feats.set_on("momentum_runaway", mode == 1)
+		for i in range(n):
+			arms[mode].append(_sim(7900 + i, ["GEE", "COL", "BRL", "HAW"][i % 4], ["WCE", "RIC", "NTH", "ESS"][i % 4]).run())
+	_check(arms[0].size() == n and arms[1].size() == n, "Both arms played %d matches" % n)
+	for i in range(n):
+		var lead_max := 0
+		for ev in arms[0][i]["events"]:
+			var sc = ev.get("score", [0, 0])
+			lead_max = maxi(lead_max, absi(int(sc[0]) - int(sc[1])))
+		if lead_max <= int(MatchSim.RUNAWAY_LEAD):
+			close += 1
+			if arms[0][i]["score"] == arms[1][i]["score"]:
+				close_same += 1
+		for mode in range(2):
+			var m := absi(int(arms[mode][i]["score"][0]) - int(arms[mode][i]["score"][1]))
+			total[mode] += float(m)
+			if m >= 60:
+				big[mode] += 1
+	_check(close > 0 and close_same == close,
+			"Close matches (never more than %d in it) play the same with the switch on: %d of %d" % [int(MatchSim.RUNAWAY_LEAD), close_same, close])
+	_check(big[1] > big[0], "The tail widens: 60+ margins %d off, %d on (of %d)" % [big[0], big[1], n])
+	_check(total[1] > total[0], "The mean margin rises: %.1f off, %.1f on" % [total[0] / n, total[1] / n])
+	feats.clear("momentum_runaway")
+
+
 func _test_momentum() -> void:
 	# Real: the side with the run of play wins more of the ball, by about
 	# MOMENTUM_EDGE at full momentum.
