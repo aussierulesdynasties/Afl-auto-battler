@@ -2,8 +2,8 @@ name: Nightly long suites
 
 # Fast gate (director 2026-11-04): pull requests and the main-push gate skip the
 # long suites in tools/ci_long_suites.txt. This workflow runs them in full every
-# night and after each push to main, one suite per runner, and opens an issue
-# when one fails. It never blocks a pull request.
+# night and after each push to main, one suite per runner, and keeps one issue
+# open while they fail (closed by the next green run). It never blocks a pull request.
 on:
   schedule:
     - cron: "0 16 * * *"   # 03:00 Melbourne (AEDT)
@@ -72,15 +72,26 @@ jobs:
           path: ${{ runner.temp }}/test-logs
           if-no-files-found: ignore
 
+  # One open issue at a time, titled "Nightly long suites failing": a red run opens it
+  # or comments on it; the next green run closes it. Cancelled runs say nothing.
   report:
     needs: long
-    if: failure()
+    if: always() && (needs.long.result == 'success' || needs.long.result == 'failure')
     runs-on: ubuntu-latest
     steps:
-      - name: Open an issue
+      - name: Open, update or close the failing issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RESULT: ${{ needs.long.result }}
+          EVENT: ${{ github.event_name }}
         run: |
-          gh issue create --repo "$GITHUB_REPOSITORY" \
-            --title "Nightly long suites failed ($(date -u +%F), ${GITHUB_SHA::8})" \
-            --body "A long suite failed on ${GITHUB_SHA} (${{ github.event_name }}). Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          title="Nightly long suites failing"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          num=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number,title --jq "[.[] | select(.title==\"$title\")][0].number // empty")
+          if [ "$RESULT" = failure ]; then
+            msg="A long suite failed on ${GITHUB_SHA} (${EVENT}). Run: ${run_url}"
+            if [ -n "$num" ]; then gh issue comment "$num" --repo "$GITHUB_REPOSITORY" --body "$msg"
+            else gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$msg"; fi
+          elif [ -n "$num" ]; then
+            gh issue close "$num" --repo "$GITHUB_REPOSITORY" --comment "Green again on ${GITHUB_SHA} (${EVENT}). Run: ${run_url}"
+          fi
