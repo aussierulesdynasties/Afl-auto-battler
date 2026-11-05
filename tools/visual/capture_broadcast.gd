@@ -51,15 +51,18 @@ func _run() -> void:
 			# --clubs FRE,MEL: the featured player's club and the opposition (default COL,CAR).
 			"--clubs": clubs = str(a[i + 1]).split(",")
 			# --weather wet|hot|windy|perfect: draw every scene in that weather (VignetteWeather).
-			"--weather": weather = str(a[i + 1])
 			# Loaded, not named: a class named here compiles before the autoloads exist
 			# (VignetteGround reads GameDB), and the whole tool failed to load.
 			# --weather wet|hot|windy|perfect: draw this day instead of the match's.
-			"--weather": load("res://scripts/ui/match/VignetteGrade.gd").forced_weather = str(a[i + 1])
+			"--weather":
+				weather = str(a[i + 1])
+				load("res://scripts/ui/match/VignetteGrade.gd").forced_weather = weather
 			"--venue": load("res://scripts/ui/match/VignetteGround.gd").venue = str(a[i + 1])
 	await process_frame
 	# The tool films the new front speccy whatever the shipped switch says.
 	Features.set_on("speccy_front", true)
+	if OS.get_environment("VLIGHT_GRADE") == "1":
+		Features.set_on("vignette_grade", true)
 	var db = root.get_node("GameDB")
 	var w := width
 	var h := height if height > 0 else int(round(width * 2.2))       # a tall phone in portrait

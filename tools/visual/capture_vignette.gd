@@ -41,6 +41,7 @@ func _run() -> void:
 			H = int(wh[1])
 		if str(a[i]) == "--weather":
 			weather = str(a[i + 1])     # wet|hot|windy|perfect: the scene drawn in that weather
+			load("res://scripts/ui/match/VignetteGrade.gd").forced_weather = weather
 		if str(a[i]) == "--out":
 			out = str(a[i + 1])
 		elif str(a[i]) == "--weather":
