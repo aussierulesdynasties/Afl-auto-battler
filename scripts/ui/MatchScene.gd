@@ -107,6 +107,9 @@ var _km_watch: Button
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_interactive = GameState.pending_sim != null and not GameState.pending_match.is_empty()
+	if _interactive and GameState.side_from_match:
+		# Back from Change the side: the match is made again from the new side.
+		GameState.rebuild_pending_side()
 	if _interactive:
 		_res = GameState.pending_sim.result()
 		_res["home"] = GameState.pending_match["home"]
@@ -1135,7 +1138,8 @@ func _show_coach_box() -> void:
 	if q > 1:
 		(rep if rep != v else tail).add_child(_best_so_far())
 
-	var start := UiKit.btn("Start quarter" if q > 1 else "Ball it up", UiKit.HEADING, true)
+	# Every pre-match call sits before Start, the side included (TODO row 25).
+	var start := UiKit.btn("Start quarter" if q > 1 else "Start", UiKit.HEADING, true)
 	start.name = "StartQuarter"
 	start.custom_minimum_size = Vector2(0, 48)
 	start.pressed.connect(func():
@@ -1194,6 +1198,17 @@ func _show_coach_box() -> void:
 		box["footer"].add_child(start)
 		box["footer"].add_child(skip)
 		v.add_child(_skip_note(q, false))
+	if q == 1 and GameState.match_day_setup_open():
+		var side := UiKit.text_action("Change the side", UiKit.BODY)
+		side.name = "ChangeSide"
+		side.custom_minimum_size = skip.custom_minimum_size
+		side.pressed.connect(func():
+			GameState.side_from_match = true
+			_close_coach()
+			Router.go("selection"))
+		var at := skip.get_parent()
+		at.add_child(side)
+		at.move_child(side, skip.get_index())
 	# A call the quarter broke brightens twice (Feel; never a nag).
 	for picker in MatchNotes.broken_calls(_res, sim.injuries, _my_side, q, _last_tactics):
 		var found := overlay.find_child(str(picker) + "*", true, false)

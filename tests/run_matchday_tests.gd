@@ -75,6 +75,7 @@ func _run() -> void:
 	await _t("_test_game_feel_effects")
 	_t("_test_broken_calls")
 	await _t("_test_vignettes_off_match")
+	await _t("_test_match_day_setup")
 	await _t("_test_match_way_poster")
 	_t("_test_appearance")
 	# Battery: nothing is redrawn unless it changes, and never above 60 fps.
@@ -2490,6 +2491,73 @@ func _test_press_effects_shown(db) -> void:
 func _settle() -> void:
 	for i in range(6):
 		await process_frame
+
+
+## TODO row 25: every pre-match call sits before Start, the side included.
+## Play match opens the setup; Change the side opens the same Team selection the
+## hub's Team does; the new side is the one that plays. Real taps (tests/tap.gd).
+func _test_match_day_setup() -> void:
+	_state.set_vignettes_on(false)
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	root.size = Vector2i(390, 844)
+	router.stack = ["hub"]
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	hub.call("_on_play_match")
+	await _settle()
+	var ms: Node = current_scene
+	_check(ms != null and ms.name == "MatchScene" and _state.match_day_setup_open(),
+			"Play match opens the match-day setup, nothing bounced yet")
+	var side: Control = ms.find_child("ChangeSide", true, false) if ms != null else null
+	var start: Control = ms.find_child("StartQuarter", true, false) if ms != null else null
+	_check(side != null and start != null and (start as Button).text == "Start",
+			"The setup has Change the side and Start (%s)" % ((start as Button).text if start else "-"))
+	var sim_side: int = _state.pending_sim.moment_side
+	var dropped := str((_state.pending_sim.squads[sim_side] as Squad).ground[0]["id"])
+	var why: String = await Tap.tap(side)
+	await _settle()
+	var sel: Node = current_scene
+	_check(why == "" and sel != null and sel.name == "SelectionScene",
+			"A tap on Change the side opens Team selection (%s)" % why)
+	_state.set_selection({"OUT": [dropped]})
+	if sel != null:
+		sel.call("_build")
+		await _settle()
+	var back: Control = sel.find_child("BackToMatchDay", true, false) if sel != null else null
+	why = await Tap.tap(back)
+	await _settle()
+	ms = current_scene
+	var ids := []
+	for p in (_state.pending_sim.squads[sim_side] as Squad).ground:
+		ids.append(str(p["id"]))
+	_check(why == "" and ms != null and ms.name == "MatchScene" and not ids.has(dropped)
+			and _state.match_day_setup_open(),
+			"Back to match day: the setup again, with the new side (%s)" % why)
+	start = ms.find_child("StartQuarter", true, false) if ms != null else null
+	why = await Tap.tap(start)
+	await _settle()
+	_check(why == "" and not _state.match_day_setup_open() and ms.find_child("ChangeSide", true, false) == null,
+			"Start bounces the ball and the side is no longer open (%s)" % why)
+	# The hub's Team is the same screen.
+	router.stack = ["hub"]
+	router.go("selection")
+	await _settle()
+	_check(current_scene != null and current_scene.name == "SelectionScene"
+			and current_scene.find_child("BackToMatchDay", true, false) == null,
+			"Team from the hub is the same Team selection, with no match-day way back")
+	if current_scene != null:
+		current_scene.queue_free()
+	if is_instance_valid(hub):
+		hub.queue_free()
+	_state.pending_sim = null
+	_state.side_from_match = false
+	await _settle()
 
 
 # ---------------------------------------------------------------------------
