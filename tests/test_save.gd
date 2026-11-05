@@ -1113,7 +1113,13 @@ func _test_card_names_never_blank() -> void:
 	_check(GameDB.card_surname(draftee) == "Hale", "a draftee with an empty surname shows the last word of his name")
 	var odd := {"last": "  ", "name": "Cal", "generic_name": "Cal"}
 	_check(GameDB.card_surname(odd) == "Cal", "a one-word name still shows")
-	_check(GameDB.card_surname({"last": "Gawn"}) == "Gawn", "a listed player keeps his surname")
+	var was_real := GameState.show_real_names
+	var listed := {"last": "Gawn", "name": "Max Gawn", "generic_name": "Mick Gorman", "real_name": "Max Gawn"}
+	GameState.show_real_names = true
+	_check(GameDB.card_surname(listed) == "Gawn", "a listed player keeps his surname with real names on")
+	GameState.show_real_names = false
+	_check(GameDB.card_surname(listed) == "Gorman", "fictional names never show the real surname (%s)" % GameDB.card_surname(listed))
+	GameState.show_real_names = was_real
 
 
 ## Bug bash 2026-11-03: last season's ladder survives a reload, and an old

@@ -230,7 +230,8 @@ func _test_history_lines() -> void:
 func _test_margin_lines() -> void:
 	var want := {[3, true]: "By 3 points. A kick in it at the siren.", [7, true]: "By 7 points.", [25, true]: "By 25 points, comfortably.",
 			[40, true]: "By 40 points. A thumping.", [6, false]: "Beaten by 6 points. Under a goal.", [24, false]: "Beaten by 24 points.",
-			[39, false]: "Beaten by 39 points, well held.", [41, false]: "Beaten by 41 points. A hiding."}
+			[39, false]: "Beaten by 39 points, well held.", [41, false]: "Beaten by 41 points. A hiding.",
+			[1, true]: "By 1 point. A kick in it at the siren.", [1, false]: "Beaten by 1 point. Under a goal."}
 	var bad := []
 	for k in want:
 		if ClubStories.margin_line(int(k[0]), bool(k[1])) != str(want[k]):
