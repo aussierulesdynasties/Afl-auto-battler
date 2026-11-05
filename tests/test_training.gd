@@ -1064,10 +1064,10 @@ func _test_retraining_is_additive() -> void:
 			"Every learned position survives a save (%s)" % str(after))
 
 
-## Row 90: the off-season takes the league's training lift back off the
-## attributes it went on. Before, the re-anchor took it evenly off every
-## attribute, so a midfielder trained on his role gained contested every year
-## against the rest of his game, and Contested bulls tripled in seven seasons.
+## Row 90: the off-season takes the league's training lift back off where each
+## player put it. Before, the re-anchor took it evenly off every attribute,
+## so a midfielder trained on his role gained contested every year against
+## the rest of his game, and Contested bulls tripled in seven seasons.
 func _test_training_lift_unwound() -> void:
 	_new_season()
 	var mids: Array = []
@@ -1076,15 +1076,21 @@ func _test_training_lift_unwound() -> void:
 			if str(p["role"]) == "MID":
 				mids.append(p)
 	_check(mids.size() >= 100, "(setup) a league of midfielders (%d)" % mids.size())
-	# Training records what it bought for the season.
+	# Training records what it bought for the season, in his own position only.
 	var one: Dictionary = (mids[0] as Dictionary).duplicate(true)
 	one.erase("season_gains")
 	one["xp"] = 400
 	var bought := GameState._spend_with_weights(one, Ratings.ROLE_WEIGHTS["MID"], false)
 	_check(not bought.is_empty() and (one.get("season_gains", {}) as Dictionary) == bought,
 			"Training keeps the season's gains on the player (%s / %s)" % [str(bought), str(one.get("season_gains", {}))])
+	var learner: Dictionary = (mids[1] as Dictionary).duplicate(true)
+	learner.erase("season_gains")
+	learner["xp"] = 400
+	var learnt := GameState._spend_with_weights(learner, Ratings.ROLE_WEIGHTS["RUCK"], false, -1, "RUCK")
+	_check(not learnt.is_empty() and not learner.has("season_gains"),
+			"Learning a new position is his to keep: not counted (%s)" % str(learnt))
 	# Seven seasons of rival training on a copy of the league, re-anchored the
-	# old way (evenly) and the new way (training lift back off where it went).
+	# old way (evenly) and the new way (each gives back out of his own gains).
 	var start := _mean_attr(mids, "contested")
 	var start_marking := _mean_attr(mids, "marking")
 	var arms := {}
@@ -1092,7 +1098,6 @@ func _test_training_lift_unwound() -> void:
 		var lists := {}
 		for code in GameState.season.lists:
 			lists[code] = (GameState.season.lists[code] as Array).duplicate(true)
-		var baseline := GameDB.baseline_overall
 		for year in range(7):
 			for code in lists:
 				for p in lists[code]:
@@ -1101,8 +1106,8 @@ func _test_training_lift_unwound() -> void:
 					GameState._spend_with_weights(p, Ratings.ROLE_WEIGHTS[str(p["role"])], true,
 							int(p["overall"]) + GameState.SEASON_TRAIN_GAIN)
 			if arm == "unwound":
-				Prospects.unwind_training_lift(lists, [], Prospects.season_training_lift(lists))
-			Prospects.renormalise_league(lists, [], baseline, GameDB.baseline_spread)
+				Prospects.apply_training_unwind(lists, Prospects.training_unwind(lists, 2027 + year))
+			Prospects.renormalise_league(lists, [], GameDB.baseline_overall, GameDB.baseline_spread)
 		var ms: Array = []
 		var bulls := 0
 		for code in lists:
@@ -1113,37 +1118,91 @@ func _test_training_lift_unwound() -> void:
 						bulls += 1
 		arms[arm] = {"contested": _mean_attr(ms, "contested"), "marking": _mean_attr(ms, "marking"), "bulls": bulls}
 	var bulls_start := mids.filter(func(p): return Traits.has(p, "bull")).size()
-	# The shape of a midfielder's game: contested against an attribute nobody
-	# trains him on. The league's level moves a little with the re-anchor's
-	# spread stretch either way; the drift was the shape.
 	var gap_start := start - start_marking
 	var gap_even := float(arms["even"]["contested"]) - float(arms["even"]["marking"])
 	var gap_new := float(arms["unwound"]["contested"]) - float(arms["unwound"]["marking"])
 	_check(gap_even > gap_start + 15.0,
 			"(control) the even re-anchor pulls contested away from the rest of a midfielder's game (gap %.1f -> %.1f)" % [gap_start, gap_even])
-	_check(absf(gap_new - gap_start) <= 1.5,
-			"Seven seasons of training keep a midfielder's shape (contested over marking %.1f -> %.1f)" % [gap_start, gap_new])
-	_check(absf(float(arms["unwound"]["contested"]) - start) <= 4.0,
-			"Midfielders' contested stays near where it started (%.1f -> %.1f; even re-anchor %.1f)" % [start, float(arms["unwound"]["contested"]), float(arms["even"]["contested"])])
-	_check(int(arms["unwound"]["bulls"]) * 3 < int(arms["even"]["bulls"]),
-			"Far fewer Contested bulls than the even re-anchor made (%d at the start, %d now, %d before the fix)" % [bulls_start, int(arms["unwound"]["bulls"]), int(arms["even"]["bulls"])])
-	# A club that trains past the league keeps the difference, and his POT
-	# moves with his rating.
-	var lists2 := {"A": [], "B": []}
-	for i in range(2):
+	# With no retirements or draft in this copy, what the harder trainers keep
+	# piles up for seven years; the audit (traitdecay) measures the real league.
+	_check(gap_new - gap_start < 0.5 * (gap_even - gap_start),
+			"Seven seasons of training move a midfielder's shape less than half as far (contested over marking %.1f -> %.1f; even re-anchor %.1f)" % [gap_start, gap_new, gap_even])
+	_check(int(arms["unwound"]["bulls"]) * 2 < int(arms["even"]["bulls"]),
+			"Under half the Contested bulls the even re-anchor made (%d at the start, %d now, %d with the even re-anchor)" % [bulls_start, int(arms["unwound"]["bulls"]), int(arms["even"]["bulls"])])
+	# Who gives back what: the harder trainer keeps his edge, a player who
+	# trained something else keeps the attribute he did not train.
+	var trio := {"A": [], "B": [], "C": []}
+	var codes := ["A", "B", "C"]
+	var gains := [{"contested": 12}, {"contested": 2}, {"disposal": 4}]
+	for i in range(3):
 		var p: Dictionary = (mids[i] as Dictionary).duplicate(true)
-		p["season_gains"] = {"contested": 8} if i == 0 else {"contested": 2}
-		(lists2["A" if i == 0 else "B"] as Array).append(p)
-	var hi: Dictionary = lists2["A"][0]
-	var lo: Dictionary = lists2["B"][0]
+		p["id"] = "row90_%d" % i
+		p["season_gains"] = gains[i]
+		(trio[codes[i]] as Array).append(p)
+	var hi: Dictionary = trio["A"][0]
+	var lo: Dictionary = trio["B"][0]
+	var other: Dictionary = trio["C"][0]
 	var hi_c := int(hi["attr"]["contested"])
 	var lo_c := int(lo["attr"]["contested"])
+	var other_c := int(other["attr"]["contested"])
+	var other_d := int(other["attr"]["disposal"])
 	var gap := int(hi.get("potential", 0)) - int(hi["overall"])
-	Prospects.unwind_training_lift(lists2, [], Prospects.season_training_lift(lists2))
-	_check(int(hi["attr"]["contested"]) == hi_c - 5 and int(lo["attr"]["contested"]) == lo_c - 5,
-			"Both give back the league's average lift, so the harder trainer keeps his 6-point edge (%d->%d, %d->%d)" % [hi_c, int(hi["attr"]["contested"]), lo_c, int(lo["attr"]["contested"])])
+	Prospects.apply_training_unwind(trio, Prospects.training_unwind(trio, 2027))
+	var hi_kept := int(hi["attr"]["contested"]) - (hi_c - 12)
+	var lo_kept := int(lo["attr"]["contested"]) - (lo_c - 2)
+	_check(hi_kept > 0 and hi_kept > lo_kept,
+			"The harder trainer keeps part of his gain, more than a light one (%d of 12 kept, %d of 2)" % [hi_kept, lo_kept])
+	_check(int(other["attr"]["disposal"]) < other_d and int(other["attr"]["contested"]) >= other_c - 1,
+			"A player who trained disposal gives back disposal, not contested (contested %d->%d, disposal %d->%d)" % [other_c, int(other["attr"]["contested"]), other_d, int(other["attr"]["disposal"])])
 	_check(int(hi.get("potential", 0)) - int(hi["overall"]) == gap,
 			"His distance to his projection is kept (%d)" % gap)
+	# The real rollover: every listed player's season record is spent, and the
+	# training a league of midfielders bought does not change their shape.
+	_new_season()
+	var before_gap := {}
+	for code in GameState.season.lists:
+		for p in GameState.season.lists[code]:
+			if str(p["role"]) == "MID":
+				before_gap[str(p["id"])] = int(p["attr"]["contested"]) - int(p["attr"]["marking"])
+			p["xp"] = 600
+			GameState.ai_spend_xp(p)
+	var trained_gap := 0.0
+	var n_trained := 0
+	for code in GameState.season.lists:
+		for p in GameState.season.lists[code]:
+			if before_gap.has(str(p["id"])):
+				trained_gap += float(int(p["attr"]["contested"]) - int(p["attr"]["marking"]) - int(before_gap[str(p["id"])]))
+				n_trained += 1
+	trained_gap /= maxf(1.0, float(n_trained))
+	# A delisted player who trained this season: he is on no list at the
+	# rollover, so nothing is given back, and his record must not linger.
+	var fa: Dictionary = (mids[2] as Dictionary).duplicate(true)
+	fa["id"] = "row90_fa"
+	fa["season_gains"] = {"contested": 3}
+	GameState.free_agents.append(fa)
+	GameState._start_next_season(GameState.season_year + 1, 0)
+	var fa_now: Dictionary = {}
+	for p in GameState.free_agents:
+		if str(p.get("id", "")) == "row90_fa":
+			fa_now = p
+	var stale := 0
+	var rolled_gap := 0.0
+	var n_rolled := 0
+	for code in GameState.season.lists:
+		for p in GameState.season.lists[code]:
+			if p.has("season_gains"):
+				stale += 1
+			if str(p.get("id", "")) == "row90_fa":
+				fa_now = p
+			if before_gap.has(str(p["id"])) and str(p["role"]) == "MID":
+				rolled_gap += float(int(p["attr"]["contested"]) - int(p["attr"]["marking"]) - int(before_gap[str(p["id"])]))
+				n_rolled += 1
+	rolled_gap /= maxf(1.0, float(n_rolled))
+	_check(stale == 0 and (fa_now.is_empty() or not fa_now.has("season_gains")),
+			"The rollover spends every season record, free agents' too (%d left; delisted record %s)" % [stale, str(fa_now.get("season_gains", "gone"))])
+	_check(trained_gap >= 1.5 and absf(rolled_gap) <= trained_gap * 0.4,
+			"Through the real rollover a midfielder's shape comes back (contested over marking +%.2f trained, %+.2f after)" % [trained_gap, rolled_gap])
+	_new_season()
 
 
 func _mean_attr(players: Array, key: String) -> float:
