@@ -168,7 +168,11 @@ static func _open_draft(gs) -> void:
 	ladder.reverse()
 	for row in ladder:
 		var code := str(row["code"])
-		if gs.season.lists.has(code) and (gs.season.lists[code] as Array).size() < Contracts.MAX_LIST:
+		if not gs.season.lists.has(code):
+			continue
+		var list: Array = gs.season.lists[code]
+		# With the rookie list on, a pick fills a rookie spot (RookieList).
+		if (RookieList.rookie_spot_free(list) if RookieList.on() else list.size() < Contracts.MAX_LIST):
 			order.append(code)
 	rec["order"] = order
 	rec["next"] = 0
@@ -249,6 +253,8 @@ static func _take(gs, code: String, p: Dictionary) -> void:
 	# so two now is "out of contract after next season".
 	p["contract_years"] = 2
 	p["salary"] = Contracts.indexed_money_2027(Contracts.ROOKIE_MIN_2027, gs.season_year)
+	if RookieList.on():
+		p["rookie_list"] = "A"
 	Workload.reset({code: [p]})
 	(gs.midseason["picks"] as Array).append({"club": code, "id": id,
 			"name": GameDB.player_display_name(p), "from": from})
