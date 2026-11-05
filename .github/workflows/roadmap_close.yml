@@ -1,0 +1,45 @@
+# PRs never edit docs/TODO.md (parallel PRs conflicted there). A PR body names the
+# rows it finishes with "Closes row 54" / "Closes rows 22, 27" / "Closes row T5.Q24";
+# after the merge this deletes those rows from main. Runs serialise; a push race
+# rebases and retries. No matching row: a warning, nothing else.
+name: Roadmap close
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+concurrency:
+  group: roadmap-close
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  close:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Delete the rows the PR closes
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          printf '%s' "$BODY" > "$RUNNER_TEMP/body.txt"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for i in 1 2 3 4 5; do
+            git fetch -q origin main && git reset -q --hard origin/main
+            ids=$(python3 tools/roadmap_close.py --body-file "$RUNNER_TEMP/body.txt" --todo docs/TODO.md)
+            if [ -z "$ids" ]; then echo "::warning::No TODO row closed for #$PR"; exit 0; fi
+            case "$ids" in *,*) word="rows" ;; *) word="row" ;; esac
+            git add docs/TODO.md
+            git commit -q -m "Roadmap: close $word $ids (#$PR)"
+            if git push -q origin HEAD:main; then echo "Closed $word $ids"; exit 0; fi
+            echo "Push race, retry $i"; sleep $((i * 3))
+          done
+          echo "::error::Could not push the roadmap update after 5 tries"; exit 1

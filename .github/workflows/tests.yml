@@ -28,7 +28,7 @@ name: Tests
 # start this workflow at all.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   push:
     branches: [main]
     paths-ignore:
@@ -165,6 +165,21 @@ jobs:
         run: |
           python3 tools/test_check_version.py
           python3 -I tools/check_version.py
+
+      # PRs never edit docs/TODO.md; they write "Closes row N" in the body and
+      # roadmap_close.yml deletes the row after the merge. Label "roadmap" exempts
+      # a PR that really edits the list (new rows, rewording).
+      - name: Check the PR leaves docs/TODO.md alone
+        if: github.event_name == 'pull_request'
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          python3 tools/test_roadmap_close.py
+          if git diff --name-only HEAD^1 HEAD | grep -qx 'docs/TODO.md'; then
+            case ",$LABELS," in *,roadmap,*) echo "docs/TODO.md edit allowed: label roadmap"; exit 0 ;; esac
+            echo "::error file=docs/TODO.md::This PR edits docs/TODO.md. Revert that and write 'Closes row N' (or 'Closes rows 22, 27') in the PR body; the row is deleted after merge. To edit the list itself, add the label 'roadmap'."
+            exit 1
+          fi
 
       # The shard layout's own tests, and the estimated shard seconds. Imbalance
       # is reported after the run, never a failure. Never reduce assertions to speed CI up.

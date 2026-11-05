@@ -1,6 +1,6 @@
 ﻿# TODO: everything not done yet
 
-The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call; nothing ships on without his playtest. Updated 2026-11-04 against main `7af1db8f`. Live on itch: 1.0.2 (7af1db8).
+The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed after merge from the PR's `Closes row N` line (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call; nothing ships on without his playtest. Updated 2026-11-04 against main `7af1db8f`. Live on itch: 1.0.2 (7af1db8).
 
 ## Itch builds: when a new upload is worth it
 
@@ -113,7 +113,7 @@ Nothing open.
 - Run only the suites your change touches locally; CI runs the rest. Long audits go to `audit.yml`.
 - Revert `.import` and `.uid` churn before committing. Stage by name; never `git add -A`.
 - One worktree per session, from `origin/main`. Don't push to a PR branch while its CI runs unless the merge needs it.
-- When an item ships, delete its row here in the same PR. Add new director requests here, with his words.
+- Never edit this file in a feature PR: write `Closes row N` (or `Closes rows 22, 27`, `Closes row T5.Q24`) in the PR body and `roadmap_close.yml` deletes the row after the merge. Edits to the list itself (new director requests, with his words) go in a PR labelled `roadmap`.
 
 ## G. From the Bible check (2026-11-04): open and not built
 
