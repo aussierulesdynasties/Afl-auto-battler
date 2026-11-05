@@ -5093,7 +5093,11 @@ const TRAIN_PLANS := [
 const LEARN_PREFIX := "learn_"
 const PROJECT_WEEKS := 8
 const PROJECT_REACH := 6
-const PROJECT_PASS := 3
+## He earns the position when his rating there is within PROJECT_PASS of his
+## own. Tightened from 3 to 1 (row 93, T8.Q15, director 2026-11-06: "Tighten
+## pass margin"; reach and the price unchanged): at 3 about 92% of projects
+## passed (tools/audit/passmargin_impl.gd).
+const PROJECT_PASS := 1
 const PROJECT_MAX := 2
 const PROJECT_OWN_GAIN := 2
 ## A position learned pays back: the next season his training can lift his own
