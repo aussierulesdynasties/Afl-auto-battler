@@ -133,7 +133,13 @@ extends RefCounted
 ##               its run fades more slowly, and a goal the other way turns it up to 70% less
 ##               (MatchSim.runaway). Changes match output only once a side leads by 24+.
 ##               Off, momentum is exactly as before.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "momentum_runaway"]
+##   mid_intercepts   row 89 (director, 2026-11-06, T8.Q8): a general-play kick through the
+##               middle third with no aerial contest can be read and taken outright by one
+##               of the other side's midfielders (MatchSim.MID_KICK_INTERCEPT), the better
+##               readers more often, and the better readers mark it. Lifts midfield
+##               intercepts toward Champion Data's 2.5 a game. Changes match output. Off,
+##               a match is exactly as before.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "momentum_runaway"]
 
 static var _forced := {}
 static var _from_args := {}
