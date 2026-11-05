@@ -39,6 +39,10 @@ func run() -> void:
 	_t("_test_player_club_follows_list")
 	_t("_test_card_names_never_blank")
 	_t("_test_bug_bash_round_trips")
+	_t("_test_export_import_round_trip")
+	_t("_test_bad_backup_leaves_career")
+	_t("_test_old_save_backup_imports")
+	_t("_test_earlier_saves_restore")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Save", self))
@@ -1127,3 +1131,115 @@ func _test_bug_bash_round_trips() -> void:
 	_check(int(c["games"]) == int(r["w"]) + int(r["l"]) + int(r["d"]),
 			"This season's honour-roll entry is not counted on top of the live season (%s)" % str(c))
 	GameState.honour_roll.pop_back()
+
+
+# ---------------------------------------------------------------------------
+# Backups and earlier saves (row 57)
+# ---------------------------------------------------------------------------
+## A backup taken mid-season loads back into the same career on a device with
+## no save at all, and plays the next round exactly as the original would.
+func _test_export_import_round_trip() -> void:
+	_new_season("FRE")
+	for i in range(3):
+		GameState.advance()
+	var bytes := GameState.export_career()
+	_check(not bytes.is_empty(), "A live career exports")
+	var fname := GameState.export_file_name()
+	_check(fname.begins_with("ard-fremantle-") and fname.ends_with(".ardsave"),
+			"The file is named for the career: %s" % fname)
+	var ladder := _ladder_sig()
+	GameState.advance()
+	var next_round := _round_sig(GameState.last_results)
+	GameState.delete_saved_career()
+	GameState.reset()
+	_check(not GameState.has_saved_career(), "A fresh device has no career")
+	_check(GameState.import_career(bytes) == "", "The backup imports")
+	_check(GameState.load_career(), "...and opens")
+	_check(GameState.my_club == "FRE" and _ladder_sig() == ladder, "It is the same career, same ladder")
+	_check(is_same(GameState.my_list, GameState.season.lists["FRE"]), "Shared lists are relinked")
+	GameState.advance()
+	_check(_round_sig(GameState.last_results) == next_round,
+			"The next round plays as it did before the backup")
+	var again := GameState.export_career()
+	_check(GameState.import_career(again) == "" and GameState.load_career()
+			and GameState.season.round_index == 4, "A backup of the imported career imports again")
+
+
+## A damaged file, a file that is not a save, and a newer build's save each
+## say why and leave the career on disk exactly as it was.
+func _test_bad_backup_leaves_career() -> void:
+	_new_season("MEL")
+	GameState.advance()
+	GameState.save_career()
+	var before := FileAccess.get_file_as_bytes(GameState.save_path)
+	var history_before := GameState.saved_career_history().size()
+	_check(GameState.import_career("not a save".to_utf8_buffer()).contains("not a career backup"),
+			"A stray file says it is not a backup")
+	_check(GameState.import_career(before.slice(0, before.size() / 2)).contains("damaged"),
+			"A half file says it is damaged")
+	_check(GameState.import_career(PackedByteArray()).contains("not a career backup"), "An empty file too")
+	var newer := var_to_bytes({"version": CareerSave.VERSION + 1, "meta": {}, "players": {}, "state": {}})
+	var framed := PackedByteArray()
+	framed.resize(4)
+	framed.encode_u32(0, newer.size())
+	framed.append_array(newer)
+	_check(GameState.import_career(framed).contains("newer version"), "A newer build's backup asks for an update")
+	# import_career saves the live career first; it is the same career, so
+	# compare what opens, not bytes (saved_at moves).
+	_check(GameState.saved_career_history().size() == history_before, "No earlier save was spent on a bad file: %d then %s" % [history_before, GameState.saved_career_history().map(func(m): return m.get("stage", ""))])
+	_check(GameState.load_career() and GameState.my_club == "MEL" and GameState.season.round_index == 1,
+			"The career still opens where it was")
+
+
+## A save file copied out of an old build (version 1) is a valid backup: it
+## imports, upgraded, as the career it was (T5.Q24).
+func _test_old_save_backup_imports() -> void:
+	GameState.delete_saved_career()
+	GameState.reset()
+	var gz := FileAccess.get_file_as_bytes(OLD_SAVE_FIXTURE)
+	var raw := gz.decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)
+	_check(GameState.import_career(raw) == "", "The old save imports")
+	_check(GameState.load_career() and GameState.my_club == "STK" and GameState.season.round_index == 2,
+			"It opens as St Kilda after two rounds")
+	var ladder: Array = GameState.season.ladder_sorted().map(
+			func(r): return "%s %d" % [r["code"], int(r["pts"])])
+	_check(ladder == OLD_SAVE_LADDER, "With its ladder")
+	var f := FileAccess.open(GameState.save_path, FileAccess.READ)
+	var blob = f.get_var()
+	f.close()
+	_check(int(blob.get("version", 0)) == CareerSave.VERSION, "It is stored as the current version")
+
+
+## The last five points of the career are kept; saving twice in one week
+## keeps one point; restoring one keeps the career it replaced, so it can be
+## undone; every earlier save is a career that opens.
+func _test_earlier_saves_restore() -> void:
+	GameState.delete_saved_career()
+	_new_season("WBD")
+	var ladders := {}
+	for i in range(7):
+		GameState.save_career()
+		GameState.save_career()   # same week: one point, not two
+		ladders["Round %d" % (GameState.season.round_index + 1)] = _ladder_sig()
+		GameState.advance()
+	GameState.save_career()       # now at round 8
+	var earlier := GameState.saved_career_history()
+	var stages: Array = earlier.map(func(m): return str(m.get("stage", "")))
+	_check(stages == ["Round 7", "Round 6", "Round 5", "Round 4", "Round 3"],
+			"The five newest earlier points, newest first: %s" % [stages])
+	_check(not earlier.is_empty() and str(earlier[0].get("club", "")) == "WBD", "Each names its club")
+	_check(GameState.restore_saved_career(3), "Round 5 restores")
+	_check(GameState.load_career() and GameState.season.round_index == 4
+			and _ladder_sig() == ladders["Round 5"], "It is the career as it was at round 5")
+	stages = GameState.saved_career_history().map(func(m): return str(m.get("stage", "")))
+	_check(not stages.is_empty() and stages[0] == "Round 8",
+			"The round 8 career it replaced is kept first: %s" % [stages])
+	_check(GameState.restore_saved_career(1) and GameState.load_career()
+			and GameState.season.round_index == 7, "...so the restore is undone")
+	# The index of headers can be lost; it is rebuilt from the files.
+	DirAccess.remove_absolute(GameState.save_path + CareerSave.INDEX_SUFFIX)
+	_check(GameState.saved_career_history().size() == CareerSave.HISTORY_MAX, "A lost index is rebuilt")
+	GameState.delete_saved_career()
+	_check(GameState.saved_career_history().is_empty()
+			and not FileAccess.file_exists(GameState.save_path + ".old1"),
+			"Deleting the career deletes its earlier saves too")

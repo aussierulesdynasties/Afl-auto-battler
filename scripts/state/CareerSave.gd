@@ -62,6 +62,11 @@ static func delete(path := DEFAULT_PATH) -> void:
 	for p in [path, path + TEMP_SUFFIX, path + BACKUP_SUFFIX]:
 		if FileAccess.file_exists(p):
 			DirAccess.remove_absolute(p)
+	for i in range(1, HISTORY_MAX + 2):
+		if FileAccess.file_exists(_history_path(path, i)):
+			DirAccess.remove_absolute(_history_path(path, i))
+	if FileAccess.file_exists(path + INDEX_SUFFIX):
+		DirAccess.remove_absolute(path + INDEX_SUFFIX)
 
 
 ## Write `state` with a small readable `meta` header. Returns false (and
@@ -71,7 +76,12 @@ static func write(state: Dictionary, meta: Dictionary, path := DEFAULT_PATH, ver
 	var enc := CareerSave.new()
 	var body = enc._encode(state)
 	enc._untag()
-	var blob := {"version": version, "meta": meta, "players": enc._players, "state": body}
+	return _write_blob({"version": version, "meta": meta, "players": enc._players, "state": body}, path)
+
+
+## Write an already encoded blob through the safe swap. The save it replaces
+## joins the earlier saves first (_keep_history).
+static func _write_blob(blob: Dictionary, path: String) -> bool:
 	var tmp := path + TEMP_SUFFIX
 	var bak := path + BACKUP_SUFFIX
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
@@ -88,6 +98,7 @@ static func write(state: Dictionary, meta: Dictionary, path := DEFAULT_PATH, ver
 		return false
 	if fail_at == "after_temp":
 		return false
+	_keep_history(path, blob.get("meta", {}))
 	# Swap: the previous save steps aside as the backup (never deleted first),
 	# the new one moves in, and only then is the old backup let go. A failure
 	# at any step leaves a good save to read (read() falls back in order).
@@ -107,6 +118,7 @@ static func write(state: Dictionary, meta: Dictionary, path := DEFAULT_PATH, ver
 		if FileAccess.file_exists(bak) and not FileAccess.file_exists(path):
 			DirAccess.rename_absolute(bak, path)
 		return false
+	_note_current(path, blob.get("meta", {}))
 	return true
 
 
@@ -403,3 +415,163 @@ static func _migrate_in_place(v: Variant) -> void:
 				a[idx] = _renamed_all(a[idx])
 			else:
 				_migrate_in_place(a[idx])
+
+
+# ---------------------------------------------------------------------------
+# Earlier saves (row 57)
+# ---------------------------------------------------------------------------
+## How many earlier saves are kept, newest first at <path>.old1.
+const HISTORY_MAX := 5
+const HISTORY_SUFFIX := ".old"
+
+
+static func _history_path(path: String, i: int) -> String:
+	return "%s%s%d" % [path, HISTORY_SUFFIX, i]
+
+
+## The headers of the save in place ("current") and of each earlier save
+## ("slots", newest first), so neither autosave nor the menu decodes a whole
+## career to know what is kept.
+const INDEX_SUFFIX := ".old.json"
+
+
+static func _index(path: String) -> Dictionary:
+	var txt := FileAccess.get_file_as_string(path + INDEX_SUFFIX)
+	var d = JSON.parse_string(txt) if txt != "" else null
+	if d is Dictionary and d.get("slots") is Array:
+		return d
+	# Lost or damaged: rebuild it from the files (slow, once).
+	var slots := []
+	for i in range(1, HISTORY_MAX + 1):
+		var blob := _blob_at(_history_path(path, i))
+		if blob.is_empty():
+			break
+		slots.append(blob.get("meta", {}))
+	var cur := _blob_at(path)
+	return {"current": cur.get("meta", {}) if not cur.is_empty() else {}, "slots": slots}
+
+
+static func _save_index(path: String, idx: Dictionary) -> void:
+	var f := FileAccess.open(path + INDEX_SUFFIX, FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify(idx))
+		f.close()
+
+
+## A save that is about to be replaced joins the earlier saves when it marks
+## a different point in the career (a new round, stage or year) from the
+## newest one kept, so saving twice in one week keeps one point, not two.
+static func _keep_history(path: String, incoming: Dictionary = {}) -> void:
+	if not FileAccess.file_exists(path):
+		return
+	var idx := _index(path)
+	var cur: Dictionary = idx.get("current", {}) if idx.get("current") is Dictionary else {}
+	var slots: Array = idx["slots"]
+	# Saving the same point again overwrites it; only a new point keeps the old one.
+	if cur.is_empty() or (not incoming.is_empty() and _point(incoming) == _point(cur)):
+		return
+	if not slots.is_empty() and _point(slots[0]) == _point(cur):
+		# Same point: the newer copy of it replaces the older one.
+		DirAccess.remove_absolute(_history_path(path, 1))
+		slots.remove_at(0)
+	else:
+		var last := _history_path(path, HISTORY_MAX)
+		if FileAccess.file_exists(last):
+			DirAccess.remove_absolute(last)
+		for i in range(HISTORY_MAX - 1, 0, -1):
+			if FileAccess.file_exists(_history_path(path, i)):
+				DirAccess.rename_absolute(_history_path(path, i), _history_path(path, i + 1))
+		if slots.size() >= HISTORY_MAX:
+			slots.resize(HISTORY_MAX - 1)
+	if _copy_file(path, _history_path(path, 1)):
+		slots.insert(0, cur)
+	idx["slots"] = slots
+	_save_index(path, idx)
+
+
+## After a save is in place: the index learns its header.
+static func _note_current(path: String, meta: Dictionary) -> void:
+	var idx := _index(path)
+	idx["current"] = meta
+	_save_index(path, idx)
+
+
+static func _point(meta: Dictionary) -> String:
+	# The index is JSON, so a year read back is a float (2027.0): compare as int.
+	return "%s|%d|%s" % [meta.get("club", ""), int(meta.get("year", 0)), meta.get("stage", "")]
+
+
+static func _copy_file(from: String, to: String) -> bool:
+	var bytes := FileAccess.get_file_as_bytes(from)
+	if bytes.is_empty():
+		return false
+	var f := FileAccess.open(to, FileAccess.WRITE)
+	if f == null:
+		return false
+	f.store_buffer(bytes)
+	f.close()
+	return true
+
+
+## The earlier saves that can be restored, newest first: each is its header
+## (club, year, stage, saved_at) plus "slot" for restore_history().
+static func history(path := DEFAULT_PATH) -> Array:
+	var out := []
+	var slots: Array = _index(path)["slots"]
+	for i in slots.size():
+		if not FileAccess.file_exists(_history_path(path, i + 1)) or not (slots[i] is Dictionary):
+			continue
+		var meta: Dictionary = (slots[i] as Dictionary).duplicate()
+		meta["slot"] = i + 1
+		out.append(meta)
+	return out
+
+
+## Make earlier save `slot` the career save. The save it replaces becomes the
+## newest earlier save, so a restore can itself be undone.
+## `before` runs once the earlier save is read and before it is written (the
+## game saves the career in memory there, so that is kept too).
+static func restore_history(slot: int, path := DEFAULT_PATH, before := Callable()) -> bool:
+	# Read first: every write shifts the slots.
+	var blob := _blob_at(_history_path(path, slot))
+	if blob.is_empty():
+		return false
+	if before.is_valid():
+		before.call()
+	return _write_blob(blob, path)
+
+
+# ---------------------------------------------------------------------------
+# Export and import (row 57)
+# ---------------------------------------------------------------------------
+## Extension of an exported career file. The file is the save itself, so a
+## save copied out of user:// by hand imports just the same.
+const EXPORT_EXT := "ardsave"
+
+
+## The bytes of the newest good save, for a file the coach keeps; empty if
+## there is no usable save.
+static func export_bytes(path := DEFAULT_PATH) -> PackedByteArray:
+	for p in [path + TEMP_SUFFIX, path, path + BACKUP_SUFFIX]:
+		if not _blob_at(p).is_empty():
+			return FileAccess.get_file_as_bytes(p)
+	return PackedByteArray()
+
+
+## Make `bytes` (an exported file) the career save. Returns "" on success,
+## "newer" (a newer build wrote it) or "unreadable". The career it replaces
+## joins the earlier saves, so an import can be undone with Restore. A bad
+## file never touches the save in place.
+static func import_bytes(bytes: PackedByteArray, path := DEFAULT_PATH) -> String:
+	var probe := path + ".import"
+	var f := FileAccess.open(probe, FileAccess.WRITE)
+	if f == null:
+		return "unreadable"
+	f.store_buffer(bytes)
+	f.close()
+	var blob := _blob_at(probe)
+	var v := _version_at(probe)
+	DirAccess.remove_absolute(probe)
+	if blob.is_empty():
+		return "newer" if v > VERSION else "unreadable"
+	return "" if _write_blob(blob, path) else "unreadable"
