@@ -279,6 +279,7 @@ var class_tiers := {}             # draft year (string) -> tier key, as generate
 var draftee_pool: Array = []     # all prospects that have not been drafted yet
 var drafted_draftees := {}       # prospect id -> destination club
 var midseason := {}              # carnival and mid-season rookie draft (MidseasonDraft)
+var rookie_draft := {}           # the Rookie Draft after the National Draft (RookieList; saved once it exists)
 var intake_assignments: Array = []  # father-son / NGA pre-draft landings
 var intake_summary := {}        # last rollover: retirements and growth
 ## Last game's per-player XP. The training menu reads this so the whole list
@@ -790,6 +791,8 @@ func save_career() -> bool:
 		# Players carry p["career"]; saves without this mark predate it.
 		"career_version": CAREER_VERSION,
 	}
+	if not rookie_draft.is_empty():
+		state["rookie_draft"] = rookie_draft
 	if not custom_prospect_story.is_empty():
 		state["custom_prospect_story"] = custom_prospect_story
 	# The new-club build writes nothing while its switch is off and the career
@@ -881,6 +884,7 @@ func load_career() -> bool:
 	my_list = _season_list(link) if link != "" else state.get("my_list", [])
 	draftee_pool = state.get("draftee_pool", [])
 	midseason = state.get("midseason", {})
+	rookie_draft = state.get("rookie_draft", {})
 	drafted_draftees = state.get("drafted_draftees", {})
 	intake_assignments = state.get("intake_assignments", [])
 	intake_summary = state.get("intake_summary", {})
@@ -1510,6 +1514,7 @@ func reset() -> void:
 	season_year = GameDB.START_YEAR
 	drafted_draftees = {}
 	midseason = {}
+	rookie_draft = {}
 	intake_assignments = []
 	intake_summary = {}
 	# The 2026 class was drafted before the career began (it is in the
@@ -1654,12 +1659,15 @@ func begin_real_lists() -> void:
 		else:
 			open_pool.append(p)
 	draftee_pool = draftee_pool.filter(func(q): return str(q.get("id", "")) != custom_prospect_id)
+	# Switch rookie_list: the starting lists split into senior and rookie
+	# lists, and the opening National Draft fills the senior list.
+	RookieList.seed_lists(league_lists)
 	var sizes := {}
 	var role_counts := {}
 	var role_pairs := {}
 	for code in active:
 		var arr: Array = league_lists[code]
-		sizes[code] = arr.size()
+		sizes[code] = RookieList.draft_size(arr)
 		var c := {"RUCK": 0, "MID": 0, "DEF": 0, "FWD": 0}
 		var pairs: Array = []
 		for p in arr:
@@ -1671,6 +1679,8 @@ func begin_real_lists() -> void:
 		role_pairs[code] = pairs
 	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
 			_clock_seed(2), sizes, role_counts, role_pairs)
+	if RookieList.on():
+		draft.senior_cap = RookieList.SENIOR_SPOTS
 	OwnProspect.check(self)
 	mark_dirty()
 
@@ -1813,7 +1823,7 @@ func begin_intake_draft() -> bool:
 	var role_pairs := {}
 	for code in GameDB.club_order:
 		var arr: Array = league_lists.get(code, [])
-		sizes[code] = arr.size()
+		sizes[code] = RookieList.draft_size(arr)
 		var c := {"RUCK": 0, "MID": 0, "DEF": 0, "FWD": 0}
 		var pairs: Array = []
 		for p in arr:
@@ -1832,6 +1842,9 @@ func begin_intake_draft() -> bool:
 	var seed := _clock_seed(2)
 	draft = Draft.build_intake(open_pool, active.duplicate(), order,
 			seed, sizes, role_counts, role_pairs)
+	if RookieList.on():
+		# The National Draft fills the senior list; the Rookie Draft follows.
+		draft.senior_cap = RookieList.SENIOR_SPOTS
 	ExpansionBuild.seat_guests(self, draft)
 	# Recruiting funding narrows only our club's uncertainty; rivals use the
 	# same scouting model at Standard rather than hidden true ratings.
@@ -1885,7 +1898,7 @@ func finish_intake_draft() -> bool:
 			p["draft_pick"] = int(entry.get("pick", 0))
 			p["draft_round"] = int(entry.get("round", 0))
 			_mark_drafted(p, "national", int(entry.get("pick", 0)))
-			Contracts.rookie_deal(p, season_year + 1)
+			Contracts.draftee_deal(p, season_year + 1)
 			if not opening_draft and season != null and season.lists.has(code):
 				# The yearly draft's rookies are ticked at this rollover
 				# (_close_contracts ticks season.lists), so they are stored as
@@ -1910,8 +1923,17 @@ func finish_intake_draft() -> bool:
 		season_year = GameDB.START_YEAR
 		start_season(my_club, league_lists.get(my_club, []))
 		open_preseason()
+		if RookieList.on():
+			# The Rookie Draft follows the opening National Draft too, in its order.
+			RookieList.open_draft(self, opening_order(GameDB.active_clubs(season_year)))
+			autosave()
 		return true
+	# The Rookie Draft follows in the same order (RookieList, switch rookie_list).
+	var rookie_order := intake_order() if RookieList.on() and season != null else []
 	_start_next_season(next_year, merged)
+	if RookieList.on():
+		RookieList.open_draft(self, rookie_order)
+		autosave()
 	return true
 
 
@@ -2259,7 +2281,7 @@ func _assign_draftee(code: String, p: Dictionary, kind: String) -> void:
 	p["num"] = _next_jumper_number(arr)
 	p["draft_pick"] = 0
 	_mark_drafted(p, kind, 0)
-	Contracts.rookie_deal(p, season_year + 1)
+	Contracts.draftee_deal(p, season_year + 1)
 	if not opening_draft and season != null and season.lists.has(code):
 		# Same as a national-draft rookie (finish_intake_draft): the yearly
 		# tie lands on a list _close_contracts ticks at this rollover, so it
@@ -2353,6 +2375,9 @@ func start_season(club_code: String, list: Array) -> void:
 			# Drafted players arrive in their old clubs' numbers: two 35s can
 			# land on one list (director's PC playtest, 2026-10-07).
 			unique_jumpers(lists[code])
+		# Switch rookie_list: a re-drafted list of 44 splits into 38 seniors
+		# and six rookies, the youngest.
+		RookieList.seed_lists(lists)
 	else:
 		# Fallback for tests or old saves: your drafted list plus real AI lists.
 		for code in GameDB.club_order:
@@ -2458,6 +2483,7 @@ func prepare_interactive_match() -> bool:
 	preseason_sim_to_round1()
 	_settle_week_event()
 	MidseasonDraft.settle(self)
+	RookieList.settle(self)
 	last_pos_before = my_position()
 	if season.is_regular_done():
 		return _prepare_interactive_final()
@@ -2656,6 +2682,7 @@ func advance() -> String:
 	preseason_sim_to_round1()
 	_settle_week_event()
 	MidseasonDraft.settle(self)
+	RookieList.settle(self)
 	_sync_club_plan()
 	_refresh_coach_tactics()
 	_stamp_conditioning()
@@ -3016,6 +3043,7 @@ func preseason_trial() -> Dictionary:
 func preseason_step_week() -> String:
 	if not preseason_active():
 		return "done"
+	RookieList.settle(self)
 	if ["trial", "practice", "papers", "story"].has(preseason_stop()):
 		return preseason_stop()
 	if preseason_week() >= PreSeason.weeks():
@@ -6238,6 +6266,9 @@ func _resign(p: Dictionary, years: int, salary := -1) -> void:
 func _release(code: String, p: Dictionary, wanted := false, announce := true) -> void:
 	(season.lists[code] as Array).erase(p)
 	p["released_by"] = code
+	# A delisted rookie is a free agent: whoever signs him, his old club
+	# included, puts him on its senior list (row 88, switch rookie_list).
+	p.erase("rookie_list")
 	p["comp_eligible"] = wanted and comp_tenure_ok(p)
 	p["contract_years"] = 0
 	free_agents.append(p)
@@ -6881,6 +6912,9 @@ func _join(code: String, p: Dictionary) -> void:
 	var list: Array = season.lists[code]
 	if str(p.get("club", "")) != code:
 		p["joined"] = season_year
+		# A move lands him on the new club's senior list (row 88, RookieList:
+		# the key only exists with the switch rookie_list on).
+		p.erase("rookie_list")
 	# A new club ends a project; his season's chance stays spent. The old
 	# club's decision is kept as a career fact, with how it ended.
 	if project_job(p) != "" and str(p.get("club", "")) != code:

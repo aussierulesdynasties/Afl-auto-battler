@@ -115,6 +115,12 @@ extends RefCounted
 ##               rookie draft after round 11 (reverse ladder, one pick per club with a list
 ##               spot, free agents and passed-over prospects, deal to the end of next season,
 ##               no trades). Changes AI lists. Off, nothing runs or is saved.
+##   rookie_list   row 88 (director, 2026-11-06): a senior list (RookieList.SENIOR_SPOTS)
+##               and a Category A rookie list (up to 6, rookie wage, 1-2 year deals) in
+##               every club's list; the National Draft fills the senior list, the Rookie
+##               Draft follows it, the mid-season rookie draft fills rookie spots, and a
+##               rookie is upgraded into a free senior spot (RookieList.gd). Changes AI
+##               lists. Off, there is one list, nothing runs and nothing is written.
 ##   custom_prospect_story   row 64 (4.Q8, Director Bible #135): the prospect you create at New
 ##               Career is followed. His draft-board row and profile say "Created by you"; the
 ##               league news tells his nomination, where he is drafted (or that he was
@@ -127,7 +133,7 @@ extends RefCounted
 ##               readers more often, and the better readers mark it. Lifts midfield
 ##               intercepts toward Champion Data's 2.5 a game. Changes match output. Off,
 ##               a match is exactly as before.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "mid_intercepts"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts"]
 
 static var _forced := {}
 static var _from_args := {}
