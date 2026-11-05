@@ -13,6 +13,9 @@ extends RefCounted
 ##                    Final, from either side (the same measure as the votes)
 ##   Best & fairest   5-4-3-2-1 within each side every match, finals included
 ##   All-Australian   the season's best 23 by position (12+ games)
+##   Golden Fist      the season's best defender (golden_fist): a lockdown
+##                    defender's spoils or an intercept defender's marks, each
+##                    judged against the other defenders that season
 ##
 ## Influence is the best-on-ground measure the match screens already use
 ## (CoachReport.influence).
@@ -23,6 +26,105 @@ const AA_SLOTS := [["RUCK", 1], ["MID", 5], ["DEF", 6], ["FWD", 6]]
 const AA_BENCH := 5
 const AA_MIN_GAMES := 12
 const RISING_STAR_AGE := 21.0
+## The best defender's award (T5.Q11c, director: "Add the Danny Frawley Golden
+## Fist award for the best defender of the season."). A real person's name, as
+## the club medals carry theirs (#944); the licensing look is the director's
+## open Q19, and a generic name is a change to this one line.
+const GOLDEN_FIST := "Danny Frawley Golden Fist"
+## The same award where a label column is narrow (the almanac, the honours table).
+const GOLDEN_FIST_SHORT := "Golden Fist"
+## The two ways a defender earns it, from StatBook season counts only (every
+## one a MatchSim event): a lockdown defender's spoils, smothers and tackles,
+## and an intercept defender's intercept marks, intercepts and rebound 50s. An
+## intercept mark is an intercept too, so a mark counts 1.5 in all, by design.
+## Spoils stand in for one-percenters, which already hold most spoils plus a
+## random share, so adding both would count a spoil twice.
+const FIST_LOCKDOWN := {"spoils": 1.0, "smothers": 0.5, "tackles": 0.25}
+const FIST_INTERCEPT := {"intercept_marks": 1.0, "intercepts": 0.5, "rebounds": 0.5}
+## The words for each count, in the order a winner's line says them.
+const FIST_WORDS := {"spoils": ["spoil", "spoils"], "smothers": ["smother", "smothers"],
+		"tackles": ["tackle", "tackles"], "intercept_marks": ["intercept mark", "intercept marks"],
+		"intercepts": ["intercept", "intercepts"], "rebounds": ["rebound 50", "rebound 50s"]}
+const FIST_KEEP := 10
+
+
+## The Golden Fist: the season's defenders, best first. `book` is the season's
+## StatBook (finals included, as its counts are); `players` maps id -> player
+## (his role). Eligible: listed defenders (role DEF) with `min_games` or more.
+## Each defender has a lockdown rate and an intercept rate (per game), each
+## divided by that rate's average across the eligible defenders, so neither
+## kind of defender wins just because his stat runs higher; his better one is
+## his score and his path. Ties go to more games, then the lower id, so the
+## same book always names the same man. Each row: {id, club, games, path
+## ("lockdown" or "intercept"), score, counts {stat: season total}}. [] when
+## no defender qualifies (an older save with no book among them). Read only:
+## nothing here touches a match.
+static func golden_fist(book: Dictionary, players: Dictionary, min_games := AA_MIN_GAMES) -> Array:
+	var rows := []
+	for id in book:
+		var p: Dictionary = players.get(str(id), {})
+		var row: Dictionary = book[id]
+		if str(p.get("role", "")) != "DEF" or int(row.get("games", 0)) < min_games:
+			continue
+		var counts := {}
+		for k in FIST_WORDS:
+			counts[k] = int(round(StatBook.total(row, k)))
+		rows.append({"id": str(id), "club": str(row.get("club", "")), "games": int(row["games"]),
+				"counts": counts, "l": _fist_rate(counts, FIST_LOCKDOWN, int(row["games"])),
+				"i": _fist_rate(counts, FIST_INTERCEPT, int(row["games"]))})
+	if rows.is_empty():
+		return []
+	var mean_l := 0.0
+	var mean_i := 0.0
+	for r in rows:
+		mean_l += float(r["l"])
+		mean_i += float(r["i"])
+	mean_l /= float(rows.size())
+	mean_i /= float(rows.size())
+	for r in rows:
+		var nl := float(r["l"]) / mean_l if mean_l > 0.0 else 0.0
+		var ni := float(r["i"]) / mean_i if mean_i > 0.0 else 0.0
+		r["path"] = "intercept" if ni > nl else "lockdown"
+		r["score"] = maxf(nl, ni)
+		r.erase("l")
+		r.erase("i")
+	rows.sort_custom(func(a, b):
+		if float(a["score"]) != float(b["score"]):
+			return float(a["score"]) > float(b["score"])
+		if int(a["games"]) != int(b["games"]):
+			return int(a["games"]) > int(b["games"])
+		return str(a["id"]) < str(b["id"]))
+	return rows.slice(0, FIST_KEEP)
+
+
+static func _fist_rate(counts: Dictionary, weights: Dictionary, games: int) -> float:
+	var s := 0.0
+	for k in weights:
+		s += float(weights[k]) * float(counts.get(k, 0))
+	return s / float(maxi(1, games))
+
+
+## What won it, in plain words, his season totals on his own path (no
+## weights): "61 spoils, 9 smothers and 22 tackles" or "14 intercept marks,
+## 40 intercepts and 31 rebound 50s". A count of none is left out.
+static func golden_fist_line(row: Dictionary) -> String:
+	var keys: Array = (FIST_INTERCEPT if str(row.get("path", "")) == "intercept" else FIST_LOCKDOWN).keys()
+	var counts: Dictionary = row.get("counts", {})
+	var parts := []
+	for k in keys:
+		var n := int(counts.get(k, 0))
+		if n > 0:
+			parts.append("%d %s" % [n, FIST_WORDS[k][0] if n == 1 else FIST_WORDS[k][1]])
+	if parts.is_empty():
+		return ""
+	if parts.size() == 1:
+		return str(parts[0])
+	return "%s and %s" % [", ".join(parts.slice(0, parts.size() - 1)), parts[parts.size() - 1]]
+
+
+## How he won it, in a word: "Lockdown" or "Intercept".
+static func golden_fist_path(row: Dictionary) -> String:
+	return "Intercept" if str(row.get("path", "")) == "intercept" else "Lockdown"
 
 
 ## Add one match to the tally. `regular` is false for finals.

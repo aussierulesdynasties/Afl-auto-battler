@@ -11,7 +11,7 @@ extends RefCounted
 ## Entry keys (all saved; older entries may lack any of them):
 ##   year, club, ladder, of, w, l, d, finals_tag, finals_text, finals_w,
 ##   finals_l, premier (code), runner_up (code), flag (bool: your club won it),
-##   bf, brownlow, coleman ([{id, name, club, ...}] 0 or 1 row),
+##   bf, brownlow, coleman, golden_fist ([{id, name, club, ...}] 0 or 1 row),
 ##   goalkicker ({id, name, goals} or {}), records ([text]), legends
 ##   ([{id, name, games, goals, why}]), club_records_broken ([text]),
 ##   season_hero ([{id, name, count}], with the match story on),
@@ -80,6 +80,7 @@ static func season_entry(gs) -> Dictionary:
 		"bf": _named(gs, roll.get("my_bf", [])),
 		"brownlow": _named(gs, roll.get("brownlow", [])),
 		"coleman": _named(gs, roll.get("coleman", [])),
+		"golden_fist": _named(gs, roll.get("golden_fist", [])),
 		"goalkicker": _goalkicker(gs, my),
 		"records": _records_broken(gs),
 		"legends": [],
@@ -464,7 +465,7 @@ static func rows(almanac: Array, honour_roll: Array) -> Array:
 				"premier": str(h.get("premier", "")), "runner_up": str(h.get("runner_up", "")),
 				"flag": my != "" and str(h.get("premier", "")) == my,
 				"bf": h.get("my_bf", []), "brownlow": h.get("brownlow", []),
-				"coleman": h.get("coleman", []), "partial": true}
+				"coleman": h.get("coleman", []), "golden_fist": h.get("golden_fist", []), "partial": true}
 		if rec.size() == 3:
 			e["w"] = int(rec[0])
 			e["l"] = int(rec[1])

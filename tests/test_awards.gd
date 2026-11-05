@@ -23,6 +23,8 @@ func run() -> void:
 	_t("_test_norm_smith_rules")
 	_t("_test_comeback_records")
 	_t("_test_bf_names")
+	_t("_test_golden_fist_rule")
+	_t("_test_golden_fist_trophy_room")
 	_t("_test_full_season")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -298,13 +300,159 @@ func _test_full_season() -> void:
 	_check(GameState.honour_roll.size() == 1 and GameState.norm_smith_years(nsm_id).is_empty(),
 			"An old save's season has no Norm Smith recorded and is not back-filled")
 	GameState.honour_roll = kept_roll
+	# The Golden Fist (T5.Q11c): a listed defender with the games, the same
+	# answer from the same book, on the honour roll and in the news.
+	var fist: Array = aw.get("golden_fist", [])
+	var fist_id := str(fist[0].get("id", "")) if not fist.is_empty() else ""
+	var fist_p := _find_player(fist_id)
+	_check(not fist.is_empty() and str(fist_p.get("role", "")) == "DEF" and int(fist[0]["games"]) >= Awards.AA_MIN_GAMES,
+			"The Golden Fist goes to a defender with 12+ games (%s, %s)" % [fist_id, str(fist_p.get("role", ""))])
+	var fist_players := {}
+	for code in GameState.season.lists:
+		for p in GameState.season.lists[code]:
+			fist_players[str(p["id"])] = p
+	for r in fist:
+		var q := _find_player(str(r["id"]))
+		if not q.is_empty():
+			fist_players[str(r["id"])] = q
+	var again := Awards.golden_fist(GameState.season_stats, fist_players)
+	_check(not again.is_empty() and str(again[0]["id"]) == fist_id,
+			"The same season's book names the same Golden Fist winner (seed %d)" % SUITE_SEED)
+	var roll_fist: Array = (GameState.honour_roll.back() as Dictionary).get("golden_fist", [])
+	_check(roll_fist.size() == 1 and str(roll_fist[0]["id"]) == fist_id,
+			"The Golden Fist is kept on the honour roll")
+	var fist_news := ""
+	for item in GameState.news:
+		if str(item["text"]).contains(Awards.GOLDEN_FIST):
+			fist_news = str(item["text"])
+	_check(not fist.is_empty() and fist_news == "%s (%s) won the %s: %s." % [GameState.award_name(fist[0]),
+			GameDB.club_name(str(fist[0]["club"])), Awards.GOLDEN_FIST, Awards.golden_fist_line(fist[0])],
+			"The news names the Golden Fist with what won it (%s)" % fist_news)
+	if Almanac.on():
+		var alm: Dictionary = GameState.almanac.back()
+		_check((alm.get("golden_fist", []) as Array).size() == 1
+				and str(alm["golden_fist"][0].get("id", "")) == fist_id,
+				"The almanac's season page keeps the Golden Fist")
+	# An older save: no Golden Fist anywhere loads cleanly and is not back-filled.
+	var kept_awards: Dictionary = GameState.season_awards.duplicate(true)
+	var old2: Array = GameState.honour_roll.duplicate(true)
+	(old2[0] as Dictionary).erase("golden_fist")
+	GameState.honour_roll = old2
+	GameState.season_awards.erase("golden_fist")
+	GameState.save_career()
+	GameState.load_career()
+	_check(not (GameState.honour_roll[0] as Dictionary).has("golden_fist")
+			and not GameState.season_awards.has("golden_fist")
+			and StatsTrophies.player_honours(GameState.honour_roll).all(func(it): return str(it["key"]) != "golden_fist"),
+			"An old save with no Golden Fist loads and shows none")
+	GameState.honour_roll = kept_roll
+	GameState.season_awards = kept_awards
 	GameState.save_career()
 	GameState.load_career()
 	_check(int(GameState.season_awards.get("year", 0)) == GameDB.START_YEAR and GameState.honour_roll.size() == 1,
 			"Awards, honour roll and records survive a save")
+	_check((GameState.season_awards.get("golden_fist", []) as Array).size() == fist.size()
+			and str(((GameState.honour_roll[0] as Dictionary).get("golden_fist", [{}]) as Array)[0].get("id", "")) == fist_id,
+			"The Golden Fist survives a save")
 	GameState.start_next_season()
 	_check(GameState.season_tally.is_empty() and GameState.honour_roll.size() == 1,
 			"A new season starts a fresh tally and keeps the honour roll")
+
+
+## A season book row: games and {stat: total}.
+func _book_row(club: String, games: int, s: Dictionary) -> Dictionary:
+	return {"club": club, "clubs": {club: games}, "games": games, "s": s}
+
+
+## The Golden Fist rule (T5.Q11c): listed defenders with 12+ games, a lockdown
+## and an intercept path each judged against the field, ties to games then id.
+func _test_golden_fist_rule() -> void:
+	var players := {}
+	for id in ["lock", "int", "avg1", "avg2", "short", "tie_a", "tie_b"]:
+		players[id] = {"id": id, "role": "DEF"}
+	players["mid"] = {"id": "mid", "role": "MID"}
+	var book := {
+		# A lockdown back: all fist, few intercepts.
+		"lock": _book_row("CAR", 22, {"spoils": 140.0, "smothers": 12.0, "tackles": 40.0,
+				"intercept_marks": 6.0, "intercepts": 14.0, "rebounds": 20.0}),
+		# An intercept back: reads the ball, rarely spoils.
+		"int": _book_row("GEE", 22, {"spoils": 20.0, "smothers": 2.0, "tackles": 22.0,
+				"intercept_marks": 60.0, "intercepts": 95.0, "rebounds": 80.0}),
+		"avg1": _book_row("HAW", 20, {"spoils": 50.0, "smothers": 5.0, "tackles": 30.0,
+				"intercept_marks": 25.0, "intercepts": 45.0, "rebounds": 40.0}),
+		"avg2": _book_row("ESS", 20, {"spoils": 45.0, "smothers": 4.0, "tackles": 28.0,
+				"intercept_marks": 22.0, "intercepts": 40.0, "rebounds": 38.0}),
+		# Left out: a midfielder with a defender's numbers, a defender short of games.
+		"mid": _book_row("COL", 22, {"spoils": 400.0, "intercept_marks": 200.0}),
+		"short": _book_row("SYD", 11, {"spoils": 300.0, "intercept_marks": 150.0}),
+	}
+	var rows := Awards.golden_fist(book, players)
+	var ids := rows.map(func(r): return str(r["id"]))
+	_check(not ids.has("mid") and not ids.has("short") and ids.size() == 4,
+			"Only listed defenders with 12+ games are in it (%s)" % str(ids))
+	_check(str(rows[0]["id"]) == "lock" and str(rows[0]["path"]) == "lockdown",
+			"A lockdown defender can win it on spoils (%s via %s)" % [str(rows[0]["id"]), str(rows[0]["path"])])
+	var int_row: Dictionary = rows[ids.find("int")]
+	_check(str(int_row["path"]) == "intercept", "The interceptor is judged on his intercepts")
+	_check(Awards.golden_fist(book, players) == rows, "The same book always gives the same order")
+	_check(Awards.golden_fist_line(rows[0]) == "140 spoils, 12 smothers and 40 tackles"
+			and Awards.golden_fist_line(int_row) == "60 intercept marks, 95 intercepts and 80 rebound 50s",
+			"The line is his raw counts on his own path (%s / %s)" % [
+			Awards.golden_fist_line(rows[0]), Awards.golden_fist_line(int_row)])
+	# A quieter lockdown season: now the interceptor wins, on his path.
+	(book["lock"]["s"] as Dictionary)["spoils"] = 40.0
+	rows = Awards.golden_fist(book, players)
+	_check(str(rows[0]["id"]) == "int" and str(rows[0]["path"]) == "intercept",
+			"An intercept defender can win it on intercepts (%s via %s)" % [str(rows[0]["id"]), str(rows[0]["path"])])
+	# Raw counts never decide it: each path is judged against its own field.
+	var scaled := {
+		"lock": _book_row("CAR", 20, {"spoils": 100.0, "intercept_marks": 10.0}),
+		"int": _book_row("GEE", 20, {"spoils": 60.0, "intercept_marks": 40.0}),
+		"avg1": _book_row("HAW", 20, {"spoils": 80.0, "intercept_marks": 10.0}),
+		"avg2": _book_row("ESS", 20, {"spoils": 80.0, "intercept_marks": 10.0}),
+	}
+	rows = Awards.golden_fist(scaled, players)
+	_check(str(rows[0]["id"]) == "int", "Each path is judged against its own field, not the bigger raw count")
+	# Ties: the same score goes to more games, then to the lower id.
+	var tied := {
+		"tie_a": _book_row("CAR", 24, {"spoils": 96.0}),
+		"tie_b": _book_row("GEE", 12, {"spoils": 48.0}),
+		"avg1": _book_row("HAW", 20, {"spoils": 20.0}),
+	}
+	rows = Awards.golden_fist(tied, players)
+	_check(str(rows[0]["id"]) == "tie_a" and float(rows[0]["score"]) == float(rows[1]["score"]),
+			"A level score goes to the defender with more games")
+	# The book lists the higher id first, so order of entry cannot decide it.
+	tied = {"tie_b": _book_row("GEE", 12, {"spoils": 48.0}), "tie_a": _book_row("CAR", 12, {"spoils": 48.0}),
+			"avg1": _book_row("HAW", 20, {"spoils": 20.0})}
+	rows = Awards.golden_fist(tied, players)
+	_check(str(rows[0]["id"]) == "tie_a" and str(rows[1]["id"]) == "tie_b",
+			"Level on score and games, the lower id wins, every time")
+	_check(Awards.golden_fist({}, players).is_empty(), "No book (an older save): no award")
+	var part := Awards.golden_fist(book, players, Awards.aa_min_games(6))
+	_check(part.map(func(r): return str(r["id"])).has("short"),
+			"A book begun part way through asks for games in proportion")
+
+
+## The trophy room lists your Golden Fist with what won it; another club's
+## winner is not yours.
+func _test_golden_fist_trophy_room() -> void:
+	var keep_club := GameState.my_club
+	GameState.my_club = "GEE"
+	var row := {"id": "gf1", "club": "GEE", "games": 22, "path": "intercept", "score": 1.8,
+			"counts": {"intercept_marks": 14, "intercepts": 40, "rebounds": 31}}
+	var seasons := [{"year": 2026, "my_club": "GEE", "golden_fist": [row]},
+			{"year": 2027, "my_club": "GEE", "golden_fist": [{"id": "gf2", "club": "CAR", "path": "lockdown",
+				"counts": {"spoils": 70}}]},
+			{"year": 2028, "my_club": "GEE"}]
+	var items := StatsTrophies.player_honours(seasons)
+	var fists := items.filter(func(it): return str(it["key"]) == "golden_fist")
+	_check(fists.size() == 1 and str(fists[0]["id"]) == "gf1" and int(fists[0]["year"]) == 2026
+			and str(fists[0]["name"]) == Awards.GOLDEN_FIST
+			and str(fists[0]["count"]) == "14 intercept marks, 40 intercepts and 31 rebound 50s",
+			"Your Golden Fist is on the shelf with its counts; another club's is not (%s)" % str(fists))
+	_check(StatsTrophies.kinds_won(seasons).has("golden_fist"), "The trophy room's filter offers the Golden Fist")
+	GameState.my_club = keep_club
 
 
 ## Greatest comeback and biggest lead lost: from the break scores only, past the same bars as the

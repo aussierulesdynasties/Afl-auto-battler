@@ -13,10 +13,15 @@ static func open(host: Control) -> Control:
 	var stages := [
 		["Brownlow Medal", "Home-and-away votes", aw.get("brownlow", []), "votes"],
 		["Coleman Medal", "Home-and-away goals", aw.get("coleman", []), "goals"],
+		# The best defender, lockdown or intercept, each judged against his own kind.
+		# Absent in a season played before it existed.
+		[Awards.GOLDEN_FIST, "Best defender: spoils for a lockdown back, intercept marks for a rebounder",
+			aw.get("golden_fist", []), "fist"],
 		["All-Australian", "The season's team", aw.get("all_australian", []), ""],
 		[BestAndFairest.award_name(GameState.my_club), GameDB.club_name(GameState.my_club),
 			(aw.get("best_and_fairest", {}) as Dictionary).get(GameState.my_club, []), "bf"],
 	]
+	stages = stages.filter(func(st): return str(st[3]) != "fist" or not (st[2] as Array).is_empty())
 	var state := {"stage": 0, "revealed": false, "vignette": null}
 	var done := func() -> void:
 		GameState.season_awards["presentation_seen"] = true
@@ -78,15 +83,15 @@ static func open(host: Control) -> Control:
 				state["vignette"] = scene
 			# The winner leads, in his club's colour where it reads.
 			body.add_child(_words(GameState.award_name(winner), StatsSide.ink(code), 24, true))
-			body.add_child(_words("%s · %d %s" % [GameDB.club_name(code), int(winner.get(metric, 0)),
-					"goals" if metric == "goals" else "votes"], UiKit.TEXT))
+			body.add_child(_words("%s · %s" % [GameDB.club_name(code), _figure(winner, metric)], UiKit.TEXT))
 			if metric != "goals" and rows.size() > 1:
 				body.add_child(_words("Final placings", UiKit.TEXT, 15, true))
-				for i in range(1, mini(5, rows.size())):
+				# The Golden Fist names its top three, each with his own counts.
+				for i in range(1, mini(3 if metric == "fist" else 5, rows.size())):
 					var row: Dictionary = rows[i]
 					var rc := str(row.get("club", ""))
-					body.add_child(_words("%d. %s · %d votes" % [i + 1, GameState.award_name(row),
-							int(row.get(metric, 0))], StatsSide.ink(rc), 15, rc == GameState.my_club))
+					body.add_child(_words("%d. %s · %s" % [i + 1, GameState.award_name(row),
+							_figure(row, metric)], StatsSide.ink(rc), 15, rc == GameState.my_club))
 		var last := int(state["stage"]) == stages.size() - 1
 		next.text = "Season review" if last else "Next award"
 		var animation = state["vignette"]
@@ -110,6 +115,13 @@ static func open(host: Control) -> Control:
 		build.call())
 	build.call()
 	return overlay
+
+## A row's figure: "56 votes", "71 goals", or a defender's counts.
+static func _figure(row: Dictionary, metric: String) -> String:
+	if metric == "fist":
+		return Awards.golden_fist_line(row)
+	return "%d %s" % [int(row.get(metric, 0)), "goals" if metric == "goals" else "votes"]
+
 
 static func _words(text: String, colour: Color, font_size := 15, bold := false) -> Label:
 	var label := UiKit.lbl(text, font_size, colour, bold)

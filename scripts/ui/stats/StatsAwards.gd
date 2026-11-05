@@ -149,6 +149,8 @@ static func _honours(host: Control, aw: Dictionary) -> Control:
 		["Coleman Medal", _first(aw.get("coleman", [])), "goals", "goal"],
 		["Coaches Award", _first(aw.get("coaches_award", [])), "coaches", "vote"],
 		["Rising Star", _first(aw.get("rising_star", [])), "", ""],
+		# The best defender: his counts are in the season review, too long for this column.
+		[Awards.GOLDEN_FIST_SHORT, _first(aw.get("golden_fist", [])), "", ""],
 	]
 	var rows := []
 	var fig_w := 0.0
