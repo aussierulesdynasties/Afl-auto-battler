@@ -54,66 +54,157 @@ static func _label_for(key: String) -> String:
 	return key
 
 
-## Open the guide as a modal over `parent`. Returns the overlay so the scene
-## can close it from the back button. On a wide screen the groups sit in three
-## columns so it fits about one screen; on a phone it is one short scroll.
+## One line under each topic tile so a coach knows what's behind it.
+const TEASERS := {
+	"Overall (OVR)": "How a player is rated",
+	"Potential (POT)": "Where he could peak",
+	"Team strengths": "Contest, attack, defence",
+	"Traits and synergies": "Standouts and line mixes",
+	"Injuries and legs": "Durability and rotation",
+	"XP and training": "How players improve",
+	"Contracts": "Re-sign, release, trade",
+}
+
+
+## Every tile in the order it reads: [id, title, teaser]. The stat groups come
+## first, then the topics. A tile's id names its button (Tile_<id>) and page.
+static func tiles() -> Array:
+	var out: Array = []
+	for i in GROUPS.size():
+		var g: Array = GROUPS[i]
+		var names: Array = []
+		for key in g[1]:
+			names.append(_label_for(str(key)))
+		out.append(["group%d" % i, str(g[0]), ", ".join(names)])
+	for i in TOPICS.size():
+		var t: Array = TOPICS[i]
+		out.append(["topic%d" % i, str(t[0]), str(TEASERS.get(str(t[0]), ""))])
+	return out
+
+
+## Open the guide as a modal over `parent`: a grid of topic tiles, each
+## opening a short page. Returns the overlay so the scene can close it from
+## the back button; call `back(overlay)` first so Back steps a page to the grid.
 static func show(parent: Control) -> Control:
-	# Columns follow the layout width: a PC window is often only ~570 units
-	# wide after the canvas scale, so two columns from 520, three from 760.
 	var vw := UiKit.view_width(parent)
 	var landscape := not ScreenLayout.is_phone() and vw > UiKit.view_height(parent) * 1.2
-	var cols_n := 3 if (landscape and vw >= 760.0) else (2 if (landscape and vw >= 520.0) else 1)
-	var wide := cols_n > 1
-	var box := UiKit.modal_box(parent, 1100.0 if wide else 720.0, 0.0)
+	var cols_n := 3 if (landscape and vw >= 640.0) else 2
+	var box := UiKit.modal_box(parent, 900.0 if cols_n == 3 else 720.0, 0.0)
 	var overlay: Control = box["overlay"]
 	overlay.name = "StatGuide"
+	overlay.set_meta("cols", cols_n)
 	UiKit.close_on_outside_tap(box)
 	var v: VBoxContainer = box["body"]
-	v.add_theme_constant_override("separation", 6)
-	v.add_child(UiKit.heading("Stat guide", UiKit.H1))
-	var sections: Array = []
-	for g in GROUPS:
-		var sec := UiKit.vbox(4)
-		sec.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		sec.add_child(UiKit.lbl(str(g[0]), UiKit.H2, UiKit.EMPH, true))
-		for key in g[1]:
-			var item := UiKit.vbox(0)
-			item.name = "Guide_" + str(key)
-			item.add_child(UiKit.lbl(_label_for(str(key)), UiKit.NAME, UiKit.EMPH, true))
-			item.add_child(_para(short(str(key)), 12, UiKit.TEXT))
-			sec.add_child(item)
-		sections.append(sec)
-	var rest := UiKit.vbox(4)
-	rest.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rest.add_child(UiKit.lbl("How it fits together", UiKit.H2, UiKit.EMPH, true))
-	for topic in TOPICS:
-		var item := UiKit.vbox(0)
-		item.add_child(UiKit.lbl(str(topic[0]), UiKit.NAME, UiKit.EMPH, true))
-		item.add_child(_para(str(topic[1]), 12, UiKit.TEXT))
-		rest.add_child(item)
-	sections.append(rest)
-	if wide:
-		# Which groups sit in which column (sections 0-4 are the stat groups,
-		# 5 is "How it fits together"); the columns come out about as tall.
-		var cols := HBoxContainer.new()
-		cols.add_theme_constant_override("separation", 20)
-		var layout := [[0, 1], [2, 3, 4], [5]] if cols_n == 3 else [[0, 1, 2, 3], [4, 5]]
-		for col in layout:
-			var c := UiKit.vbox(8)
-			c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			for i in col:
-				c.add_child(sections[i])
-			cols.add_child(c)
-		v.add_child(cols)
-	else:
-		for s in sections:
-			v.add_child(s)
+	v.add_theme_constant_override("separation", 10)
+	overlay.set_meta("body", v)
 	var ok := UiKit.btn("Got it", UiKit.NAME, true)
 	ok.name = "CloseStatGuide"
 	ok.custom_minimum_size = Vector2(0, 44)
 	ok.pressed.connect(func(): overlay.queue_free())
 	box["footer"].add_child(ok)
+	_show_grid(overlay)
 	return overlay
+
+
+## Back on an open page returns to the tiles and reports true; on the tiles
+## (or a closed guide) it reports false so the caller closes the guide.
+static func back(overlay: Control) -> bool:
+	if not is_instance_valid(overlay) or str(overlay.get_meta("page", "")) == "":
+		return false
+	_show_grid(overlay)
+	return true
+
+
+static func open_page(overlay: Control, id: String) -> void:
+	var v: VBoxContainer = overlay.get_meta("body")
+	_clear(v)
+	overlay.set_meta("page", id)
+	var row := UiKit.hbox(10)
+	var all := UiKit.btn("‹ All topics", UiKit.NAME)
+	all.name = "GuideAllTopics"
+	all.custom_minimum_size = Vector2(0, 44)
+	all.pressed.connect(func(): _show_grid(overlay))
+	row.add_child(all)
+	v.add_child(row)
+	var page := UiKit.vbox(10)
+	page.name = "GuidePage_" + id
+	v.add_child(page)
+	if id.begins_with("group"):
+		var g: Array = GROUPS[int(id.trim_prefix("group"))]
+		page.add_child(UiKit.heading(str(g[0]), UiKit.H1))
+		for key in g[1]:
+			var item := UiKit.vbox(2)
+			item.name = "Guide_" + str(key)
+			item.add_child(UiKit.lbl(_label_for(str(key)), UiKit.NAME, _ink(), true))
+			item.add_child(_para(short(str(key)), 14, UiKit.TEXT))
+			page.add_child(item)
+	else:
+		var t: Array = TOPICS[int(id.trim_prefix("topic"))]
+		page.add_child(UiKit.heading(str(t[0]), UiKit.H1))
+		page.add_child(_para(str(t[1]), 14, UiKit.TEXT))
+
+
+static func _show_grid(overlay: Control) -> void:
+	var v: VBoxContainer = overlay.get_meta("body")
+	_clear(v)
+	overlay.set_meta("page", "")
+	v.add_child(UiKit.heading("Stat guide", UiKit.H1))
+	var grid := GridContainer.new()
+	grid.name = "GuideGrid"
+	grid.columns = int(overlay.get_meta("cols", 2))
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for t in tiles():
+		grid.add_child(_tile(overlay, str(t[0]), str(t[1]), str(t[2])))
+	v.add_child(grid)
+
+
+## A tile: the topic in bold over its teaser, with a club-colour bar on the
+## left. The whole tile is the button.
+static func _tile(overlay: Control, id: String, title: String, teaser: String) -> Button:
+	var b := UiKit.btn("", UiKit.NAME)
+	b.name = "Tile_" + id
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(0, 64)
+	b.clip_contents = true
+	var m := MarginContainer.new()
+	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for edge in ["left", "right", "top", "bottom"]:
+		m.add_theme_constant_override("margin_" + edge, 8)
+	var col := UiKit.vbox(2)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	var head := UiKit.lbl(title, UiKit.NAME, _ink(), true)
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.autowrap_mode = TextServer.AUTOWRAP_OFF
+	head.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	col.add_child(head)
+	var sub := UiKit.lbl(teaser, 12, UiKit.MUTED)
+	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sub.autowrap_mode = TextServer.AUTOWRAP_OFF
+	sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	col.add_child(sub)
+	m.add_child(col)
+	b.add_child(m)
+	b.pressed.connect(func(): open_page(overlay, id))
+	return b
+
+
+## Your club's colour sets the topic names apart; from the menu, before a
+## career, plain emphasis.
+static func _ink() -> Color:
+	var code := str(GameState.my_club)
+	if code == "":
+		return UiKit.EMPH
+	return UiKit.club_name_colour(UiKit.club_ink(code))
+
+
+static func _clear(v: Node) -> void:
+	for c in v.get_children():
+		v.remove_child(c)
+		c.queue_free()
 
 
 static func _para(text: String, size: int, colour: Color) -> Label:

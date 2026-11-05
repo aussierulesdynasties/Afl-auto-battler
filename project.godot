@@ -30,6 +30,7 @@ ScreenLayout="*res://scripts/core/ScreenLayout.gd"
 GameDB="*res://scripts/core/GameDB.gd"
 GameState="*res://scripts/state/GameState.gd"
 MusicManager="*res://scripts/core/MusicManager.gd"
+ScreenTransition="*res://scripts/core/ScreenTransition.gd"
 Router="*res://scripts/core/Router.gd"
 
 [display]

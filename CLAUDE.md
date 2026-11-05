@@ -1,18 +1,18 @@
 # AFL Auto-Battler: working rules
 
-The design bible and `docs/TODO.md` (the one list of work not done; director rulings are in `docs/DIRECTOR_BIBLE.md`) load in
-full at session start ("Always loaded" below). Must-read files stay under 60 KB (CI: `tools/check_doc_sizes.py`).
+The design bible loads in full at session start ("Always loaded" below). `docs/TODO.md` is the one list of work not done:
+read it when you pick or close work, not otherwise (a brief that names your row is enough). Director rulings are in
+`docs/DIRECTOR_BIBLE.md` (513 KB: search it, never read it whole). Must-read files stay under 60 KB (CI: `tools/check_doc_sizes.py`).
 
 Godot 4 / GDScript. Run `tools/run_tests.sh` (or `tools/run_tests.sh draft_ui`
 for one suite) before pushing.
 
 ## Always loaded
 
-Claude Code imports these core documents in full at every session start (the `@` lines below),
-so they are part of this file: read them as rules, never skim or skip them.
+Claude Code imports this core document in full at every session start (the `@` lines below),
+so it is part of this file: read it as rules, never skim or skip them.
 
 @docs/DESIGN_BIBLE.md
-@docs/TODO.md
 
 ## The design bible comes first (director, 2026-10-09)
 
@@ -84,52 +84,7 @@ supplies the vision, taste, AFL knowledge, priorities and final judgement.
 
 ## UI and writing
 
-The shared visual language lives in `scripts/ui/UiKit.gd`; use it before
-inventing anything local.
-The visual identity rules (tokens, type roles, the component kit, screen templates,
-art and proof rules) are in [docs/VISUAL_STYLE_GUIDE.md](docs/VISUAL_STYLE_GUIDE.md);
-read it before touching any screen or vignette. Its evidence is
-[docs/research/VISUAL_AUDIT_2026-10-10.md](docs/research/VISUAL_AUDIT_2026-10-10.md).
-
-**Not boring (director, 2026-10-08: "dark mode doesn't need to be boring
-mode").** The UI must have life. Approved pillars: club colour as atmosphere
-(your club's colours carry your screens, both clubs' on match day), big type
-and motion (the scoreboard face for headline facts; count-ups, reveals,
-transitions), and the 2.5D art and textures of the ground beyond the match.
-Proposed, to be shown on the hub first: each screen leads with one hero
-element. Gradients and glows, colourful
-(club-tinted) surfaces and bold decoration (turf, chalk, crowd motifs) are
-now allowed when used deliberately; they override the restraint rules below
-where the two conflict. Still never at the cost of readability or usability.
-
-**Visual identity.** Avoid dark green/charcoal rounded cards everywhere, gold as
-the universal accent, nested rounded rectangles, piles of pills/chips/badges,
-every fact in its own card, generic dashboard grids, big corner radii, excess separators, decorative stat boxes and icons. Prefer flat,
-editorial layouts: typography, alignment, spacing, restrained surfaces.
-
-**Readability is a pillar (design bible, director 2026-10-13).** It applies to
-every screen. Sections feel distinct: club colours and strategic bold set them
-apart, because text that is all one colour and weight harms readability. A
-player's or club's allegiance is obvious at a glance, without reading the name.
-No text the coach needs is overlooked: nothing he decides on sits in uniform
-grey. Club colour must stay readable (check contrast for dark clubs on the dark
-page) and must not be mistaken for GOOD/BAD or the primary action.
-
-**Colour, type, components, copy.** The exact rules are in
-[docs/VISUAL_STYLE_GUIDE.md](docs/VISUAL_STYLE_GUIDE.md): colour and where it goes
-(§2.1-2.2), type roles (§2.3), the component kit (§3), copy (§5). Before adding a
-pill, card, badge or progress bar, ask whether typography, spacing or alignment
-could say it. Font changes are project-wide decisions.
-
-**Consistency.** Reuse what works; don't invent a mini design system per
-screen, and don't copy a template-looking pattern because it exists. Apply
-these rules whenever a screen is materially touched, without turning that into
-an uncontrolled redesign.
-
-**Review test.** Without the AFL names and logos, would the screen still look
-like this game, or like any AI-generated sports-management app? If the latter,
-simplify it. Authored and restrained, not weird; never at the cost of
-usability.
+Before touching any screen, copy or vignette, load the `afl-ui-writing` skill (visual identity, readability, colour, consistency, review test).
 
 ## Assigned flavour and styling work (director, 2026-10-06)
 

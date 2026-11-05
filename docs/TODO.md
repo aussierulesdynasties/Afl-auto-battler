@@ -2,31 +2,15 @@
 
 The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call; nothing ships on without his playtest. Updated 2026-11-04 against main `7af1db8f`. Live on itch: 1.0.2 (7af1db8).
 
-## Itch builds: when a new upload is worth it
+## Itch builds
 
-The itch page runs the browser build of main with every switch in section B off, so a build with only switched-off work shows a player nothing new. A build is worth uploading only when a player can see a difference: the switches named for it are on (he has played them), the listed rows are merged, CI is green and the web build ran. Sessions push with butler and post a short devlog in football words (docs/ITCH_UPLOAD.md). He says go; at least three changes a player can see, or one big one.
-
-| Build | Name | Ready when (rows and switches) | What a player sees |
-|---|---|---|---|
-| I1 | The new match | His playtest passes `match_flow`, `ballup_two`, `goal_run_moves`, `kick_range`, `match_story`, `top_attributes`, then they go on. Rows 9, 17, 18 merged. | Play on after a won ball, two honest late ball-up choices, hero and turning point after the match, top attributes on cards, feed colours and the matchup grid |
-| I2 | Safe to keep a career | T7.R84 save restore and frozen fixtures, T5.Q24 migration, T8.Q20 faster weekly sim, T3.R56 onboarding on fresh saves. | Restore last good save, back up and move a career, no career lost on update, a quicker Sim the week, a fresh start that teaches |
-| I3 | Match day on a phone | T3.R42 one thumb, T3.R41 team selection as two screens, T3.R10 text size and colour-blind marks, 25 team builder setup before Start. (Done: 23 this week, 53 coaches' votes; 24 training grid is behind `training_grid`, off.) | Controls in thumb reach, score and clock always visible, Larger and Largest text, no scrolling team pick |
-| I4 | Look and feel | `ui_motion` on after his look (#907 and V1), V2 to V9 merged, hub hero (6.Q2), `player_looks` on, 6.36 app icon. | Result sheet and counts that move, the premiership streamers and the Brownlow sparkles, a hub that leads with one big thing, new faces, a real icon |
-| I5 | Off-season and the draft | 54 carnival and rookie draft, 55 list problem, 22 draft AI, T5.r134 inherited 2026 lists, 4.Q9 lower draftees, T5.Q23b Brownlow count, 4.Q8 McNeil. | A proper off-season, a draft that behaves, a Brownlow count to sit through, a real 2026 start |
-| I6 | A career with a story | `coach_arcs` and `weekly_checklist` on after his playthrough, T5.r22 sacked is not the end, T5.r23 rivals call, T5.Q25 take another club, T5.Q16 coaching hierarchy, `finals_cards_2` on. | Arcs and a weekly big call, a sacking you can come back from, offers from other clubs, finals with their own cards |
-| I7 | Real grounds and crowd | 6.44 six more grounds (sizes and looks done in row 33; his look), 6.49 and 6.51 crowd and breeze. | Grounds you know from the oval alone, a crowd that follows the score |
-
-Order is I1 first (it is already built and only needs his playtest), I2 before any build that people will save a long career in, then I3, I4, I5, I6, I7. A build can go early if everything it names is done. He can reorder.
+Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it only for a release).
 
 ## A. Build now (open, no blocker, order = story first, then sim, then approachable)
 
 | # | What | Done looks like |
 |---|---|---|
 | 25 | Team builder: pre-game setup, and every pre-match decision, before Start (his ruling; none left in the pre-bounce pane); entry points share one side; headers from arranged fit | all pre-match decisions precede Start, test added |
-| 27 | Stat guide as a topic grid (section H: does the matchup grid replace it) | answer, then grid or close |
-| 22 | Draft AI: his call on the audit (`docs/research/DRAFT_SPREAD_AUDIT_2026-11-05.md`): the veterans' fall (Petracca, Viney, Stewart in the 200s-300s, Gawn 6-327): right or not? Key-forward spread stays as is (his ruling 2026-11-05). Web scroll passed | his answer, then build or close |
-| 54 | Under-18 carnival week, then mid-season rookie draft; W7 review (ch. 29 row 9) | built |
-| 55 | Off-season: "this year's list problem" in three lines; put a player on the table / Ask around (ch. 29 row 4) | built |
 | 35 | Finals bespoke cards: slice 2 built behind `finals_cards_2`; ships when he has played it | see section B |
 | 61 | Weather at full effect: rain, wind and heat change ball handling, kicking, tackling and scoring (wet tackles toward the real +12%); sizes come from a seeded audit and balance stays his call. Its look never touches the sim | audit bands, rules in code, his playtest |
 | 63 | One cost sheet per club dominant option and one for the 33 gain-only story options, same look as the 17 story cards; nothing is dropped (T5.Q2, T5.Q3) | every option shows a real cost |
@@ -230,6 +214,7 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 - Price: free for now. Platforms: web, Windows and an Android APK on itch; Google Play only on his written yes (US$25 fee and signing key).
 - Old PRs #745, #761 and #765 were already merged; nothing to close.
 - Draft AI key-forward spread (2026-11-05): "Leave it as is". Young talls keep their potential credit; no change.
+- Draft AI veterans (2026-11-05): "viney yes, but petracca and stewart should be 125-150"; "petracca is being underrated based on low games, hes very very good". Petracca overridden to 87; building clubs count a retired season at 0.35 dilution. Now Petracca 128, Stewart 138, Viney 301 mean pick.
 
 ## H. Needs his call (questions still open, one at a time)
 
@@ -237,7 +222,6 @@ Each line is a question he has not answered yet. Answered ones are in Rulings or
 
 - Cut audit (CUT_AUDIT_2026-11-03, 158 rows): which candidates beyond 1 to 5, 9 and 11 are cut, kept or replaced, including manual stat training, audio to Mute plus Volume, Club Forge create player, football-dept budget into high performance, Coaching screen into Hub/List, Culture sheet into Captaincy/List header, one pre-season drill plan and "Ask before simming"? (T1.Q7, T7.O16, T9.Q14)
 - Press conference: where the bible and the code disagree, which one is right and the other gets corrected? (T3.Q6)
-- Stat guide (row 27): does the new key-matchup grid replace it?
 - Synergies are worth +5 to +11 margin when on but rarely reached, and generated draftees lose synergy traits: how should a coach reach them, how far do multi-season spread and trait decay go, and what about too many contested bulls (16.1% generated against 3.5% real)? (4.Q10)
 - Coach arc catalogue: which draft arcs does he keep, change or cut, and will he play a career so the switches can go on? (T5.Q4)
 - Backing and firsts wording: first-goal line for any of his players or only backed ones, cap of three lines, under 10 games, tap in the profile, reminder line, +5 mood, quiet first games? (T5.Q8)
