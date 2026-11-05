@@ -31,9 +31,20 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		sim.weather = weather
 		var r: Dictionary = sim.run()
 		var teams := []
+		var stats: Dictionary = r["players"]
 		for side in range(2):
 			var t: Dictionary = (r["team"][side] as Dictionary).duplicate()
 			t["score"] = int(r["score"][side])
+			# Intercepts by each man's listed position (DEF, MID, FWD, RUCK), as
+			# tools/audit/intercept_impl.gd counts them: "ic_MID" intercepts and
+			# "pg_MID" player-games (every man who played and has a stat line).
+			for pl in (r["roster"][side] as Array):
+				var st: Dictionary = stats.get(str(pl["id"]), {})
+				if st.is_empty():
+					continue
+				var role := str(pl.get("list_role", pl.get("role", "")))
+				t["ic_" + role] = float(t.get("ic_" + role, 0.0)) + float(st.get("intercepts", 0.0))
+				t["pg_" + role] = int(t.get("pg_" + role, 0)) + 1
 			teams.append(t)
 		fh.store_line(JSON.stringify({"i": i, "home": h, "away": a, "teams": teams}))
 	fh.close()

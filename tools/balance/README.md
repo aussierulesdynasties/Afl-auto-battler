@@ -22,6 +22,8 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "-
 - **Report.** `balance_report.py` prints a markdown page (also saved to `<run>/report.md`): each stat per
   team-match against `afl_team_rates.json` (IN = inside the 18 clubs' lowest..highest, NEAR = within
   mean +-2 sd, OUT), plus margins, 60+/100+ blowouts, home win share against docs/LEAGUE_BALANCE.md.
+  It also prints intercepts a game per player by his listed position (DEF, MID, FWD, RUCK; the
+  definition of tools/audit/intercept_impl.gd) against Champion Data 2025, with B-A and se when paired.
 - **Runs** land in `.balance/<timestamp>/` (git-ignored, `.gdignore`d).
 
 ## When to use it
