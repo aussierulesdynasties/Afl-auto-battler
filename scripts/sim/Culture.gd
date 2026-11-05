@@ -36,7 +36,10 @@ const STEP_MAX := 6
 const LOSING_RUNS := [4, 8]
 const WINNING_RUNS := [5, 10]
 ## Season-end thresholds.
-const FINALS_PLACES := 8
+## Every club in the finals, wildcard round included: equals Season.FINALISTS
+## (test_story pins it). A literal, because naming Season here pulls GameDB
+## into suites that run without autoloads (roles).
+const FINALS_PLACES := 10
 const BOTTOM_PLACES := 4
 ## Age and discipline are read against the league at season close, so a strand
 ## moves for the clubs that stand out and the league as a whole never drifts.
