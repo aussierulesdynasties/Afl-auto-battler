@@ -3,8 +3,8 @@ extends RefCounted
 ## set shot converts by its distance (MatchSim.SET_BANDS_ON, the real AFL rates)
 ## so a closer one goes in more often than a longer one, the set-shot share of
 ## shots rises toward the real 55%, and total scoring holds. Off, the old bands
-## and share stand. Run through tests/run_set_shots_tests.gd. Seeded by design:
-## every sim takes an explicit match seed.
+## and share stand. Run through tests/run_set_shots_tests.gd.
+## Seeded by design: every sim takes an explicit match seed.
 
 var failures: Array[String] = []
 var checks := 0
