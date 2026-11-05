@@ -176,7 +176,8 @@ static func _slot_row(host: Control, box: Dictionary, state: Dictionary, done: C
 		# Never ends in an ellipsis: the phone drops games, the wide screen has room.
 		var text := "Leadership %d  ·  Age %d" % [Leadership.of(p), int(p.get("age", 0))]
 		if bool(state["wide"]):
-			text += "  ·  %d games" % Leadership.games(p)
+			var games := Leadership.games(p)
+			text += "  ·  %d game%s" % [games, "" if games == 1 else "s"]
 		var sub := UiKit.lbl(text, UiKit.SMALL, UiKit.MUTED)
 		sub.name = "SlotLeadership"
 		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -275,7 +276,7 @@ static func _open_picker(host: Control, sheet: Dictionary, state: Dictionary, do
 		h.add_child(who)
 		who.add_child(UiKit.ellipsis(GameDB.player_display_name(p), UiKit.BODY, UiKit.TEXT, true))
 		var bits := PackedStringArray(["Leadership %d" % Leadership.of(p), "Age %d" % int(p.get("age", 0)),
-				"%d games" % Leadership.games(p)])
+				"%d game%s" % [Leadership.games(p), "" if Leadership.games(p) == 1 else "s"]])
 		if here.has(id):
 			bits.append("named %s" % str(Captaincy.ROLE_WORDS[here[id]]).to_lower())
 		who.add_child(UiKit.ellipsis("  ·  ".join(bits), UiKit.SMALL, UiKit.MUTED))
