@@ -1501,7 +1501,13 @@ func contest_winner(use_fp: bool, fp: float) -> int:
 			+ (c0 - c1) / float(T["contest_swing"])
 			+ home_edge() + form_edge)
 	# The side with the run of play wins a little more of the ball.
-	p_home += momentum_edge * momentum * (1.0 + runaway_gain * runaway())
+	var run := runaway()
+	p_home += momentum_edge * momentum * (1.0 + runaway_gain * run)
+	if run > 0.0:
+		# A runaway can carry the leader to the contest cap on its own; cap it
+		# here so the coaches' contest calls below still move the odds (the
+		# trailing coach's surge or stack is never swallowed by the cap).
+		p_home = clampf(p_home, 1.0 - lim, lim)
 	var b0 := _contest_bonus(0, not use_fp)
 	var b1 := _contest_bonus(1, not use_fp)
 	p_home += b0 - b1
