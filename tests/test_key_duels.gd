@@ -39,6 +39,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_switch_ships_off")
 	_t("_test_more_contests")
 	_t("_test_contests_trace_to_play")
+	_t("_test_no_lead_at_own_kick")
 	_t("_test_line_reads_the_log")
 	_t("_test_switch_off_as_before")
 	Features.clear("key_duels")
@@ -150,6 +151,29 @@ func _test_contests_trace_to_play() -> void:
 			_check(tagged <= contests.size() and wrong_man == 0,
 					"%s: %d tagged contests within %d logged, %d against another man" % [fid, tagged, contests.size(), wrong_man])
 	_check(fids >= SEEDS.size(), "Key forwards with logged contests: %d" % fids)
+
+
+## A key forward never leads up at his own kick: no tagged general-play
+## contest (his mark, his man's intercept or spoil) is on a ball he kicked
+## himself (the last kick before it), over MORE matches.
+func _test_no_lead_at_own_kick() -> void:
+	var gp := 0
+	var own := 0
+	for i in range(MORE):
+		var g := _play(i, true)
+		var last_kicker := ""
+		for ev in (g[1] as Dictionary)["events"]:
+			var e: Dictionary = ev
+			if str(e.get("kind", "")) == "kick":
+				last_kicker = str(e.get("player_id", ""))
+			elif e.get("general_play", false) and e.has("duel_contest"):
+				gp += 1
+				var fid := str(e["duel_contest"])
+				if fid == last_kicker or fid == str(e.get("from_id", "-")):
+					own += 1
+	print("Key duels: %d of %d tagged general-play contests on his own kick" % [own, gp])
+	_check(gp > 0 and own == 0,
+			"No key forward contests his own kick: %d of %d tagged general-play contests" % [own, gp])
 
 
 ## The full-time line's numbers are the log's, and its verdict is the rule's.

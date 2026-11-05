@@ -2334,8 +2334,10 @@ func _duel_man(side: int, fwd) -> Dictionary:
 ## One general-play contest between a key forward and his direct opponent, in
 ## the log the full-time line, the live duel call and the rematch all read
 ## (resolve_forward50 logs the entries inside 50). `ev` is the event the
-## contest produced; it is tagged so the line can be traced to the play.
-func _log_duel(side: int, fwd: Dictionary, man: Dictionary, marked: bool, ev: Dictionary) -> void:
+## contest produced; it is tagged so the line can be traced to the play. A
+## contest nobody won produces no event, so nothing is tagged (as inside 50).
+## A marking free from the contest is not logged, as inside 50.
+func _log_duel(side: int, fwd: Dictionary, man: Dictionary, marked: bool, ev: Dictionary = {}) -> void:
 	var fid := str(fwd["id"])
 	if not duel_log.has(fid):
 		duel_log[fid] = {"side": side, "contests": []}
@@ -2346,14 +2348,16 @@ func _log_duel(side: int, fwd: Dictionary, man: Dictionary, marked: bool, ev: Di
 ## A key forward leading up at a general-play marking contest in his side's
 ## front half (key_duels): on Matchups.KEY_LEAD of them it falls to one of the
 ## side's matched key forwards (the better in the air more often, as inside
-## 50), so he meets his direct opponent up the ground too. {} otherwise.
-func _key_lead(side: int, fp: float) -> Dictionary:
+## 50), so he meets his direct opponent up the ground too. Never the kicker
+## (`carrier`): a man cannot lead up at his own kick. {} otherwise.
+func _key_lead(side: int, fp: float, carrier = null) -> Dictionary:
 	if not key_duels_on or fp * (1.0 if side == 0 else -1.0) <= 0.0:
 		return {}
 	var keys := []
+	var kid := "" if carrier == null else str(carrier.get("id", ""))
 	for fid in (duels[1 - side] as Dictionary):
 		var kf := _on_ground(side, str(fid))
-		if not kf.is_empty() and kf != _spare_minder(side):
+		if not kf.is_empty() and kf != _spare_minder(side) and str(kf["id"]) != kid:
 			keys.append(kf)
 	if keys.is_empty() or lead_rng.randf() >= Matchups.KEY_LEAD:
 		return {}
@@ -2378,7 +2382,7 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 	var receiver = kick_receiver(side, mark_fp - gain * (1.0 if side == 0 else -1.0), mark_fp, carrier)
 	if receiver == null:
 		return {}
-	var lead := _key_lead(side, mark_fp)
+	var lead := _key_lead(side, mark_fp, carrier)
 	if not lead.is_empty():
 		receiver = lead
 	var defender = null
@@ -2445,6 +2449,9 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 		if not man.is_empty():
 			_log_duel(side, receiver, man, false, sev)
 		return {"outcome": "loose", "actor": defender}
+	# Neither marked nor spoiled: a contest he did not win, as inside 50.
+	if not man.is_empty():
+		_log_duel(side, receiver, man, false)
 	return {}
 
 
@@ -2624,7 +2631,7 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 	var opp := 1 - side
 	var target = _weighted_roles((squads[side] as Squad).ground, "marking",
 			GENERAL_MARK_ROLES, 2.0, side, "aerial_target")
-	var lead := _key_lead(side, mark_fp)
+	var lead := _key_lead(side, mark_fp, carrier)
 	if not lead.is_empty():
 		target = lead
 	var defs := _by_roles((squads[opp] as Squad).ground, ["DEF"])
@@ -2711,6 +2718,9 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 		return {"outcome": "loose", "fp": mark_fp, "actor": defender}
 	if roaming:
 		_roam_note(roamer, target, false)
+	elif not man.is_empty():
+		# Neither marked nor spoiled: a contest he did not win, as inside 50.
+		_log_duel(side, target, man, false)
 	return {}
 
 
