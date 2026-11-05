@@ -36,10 +36,11 @@ run_arm() { # name, extra args, project root
     local c=$(( n - from < per ? n - from : per ))
     local ad="$out/appdata_${name}_$w"; mkdir -p "$ad"
     local f; f="$(cd "$out" && pwd -W 2>/dev/null || pwd)/${name}_$w.jsonl"
+    echo "project: $proj" >"$out/${name}_$w.log"
     # shellcheck disable=SC2086
-    APPDATA="$(cygpath -w "$ad" 2>/dev/null || echo "$ad")" "$godot" --headless --path "$root" \
+    APPDATA="$(cygpath -w "$ad" 2>/dev/null || echo "$ad")" "$godot" --headless --path "$proj" \
       --script res://tools/balance/balance_worker.gd -- --from "$from" --count "$c" --out "$f" $extra \
-      >"$out/${name}_$w.log" 2>&1 &
+      >>"$out/${name}_$w.log" 2>&1 &
     from=$(( from + c )); w=$(( w + 1 ))
   done
 }
