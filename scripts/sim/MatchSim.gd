@@ -76,6 +76,9 @@ var duel_changes: Array = []
 var _own := [{"interceptor": false, "duels": {}}, {"interceptor": false, "duels": {}}]
 ## The contest in play, attached to the score or rebound it produces.
 var _duel := {}
+## The key forward whose named contest inside 50 was just logged, so the mark
+## it produced is tagged (event "duel_contest") like the general-play ones.
+var _duel_tag := ""
 ## Injuries during the match (Injuries.roll per player, from injury_rng so
 ## the play dice are untouched). Planned at the first bounce:
 ## [{"side", "id", "q", "min", "weeks", "kind"}]; each happens when its
@@ -190,6 +193,10 @@ var free_rng := RandomNumberGenerator.new()
 ## How a broken tackle was broken (_break_kind): its own dice, so the play
 ## dice are as they were.
 var break_rng := RandomNumberGenerator.new()
+## Whether a general-play marking contest falls to a key forward leading up
+## at it (key_duels, _key_lead): its own dice, so every other roll in the
+## match draws as before.
+var lead_rng := RandomNumberGenerator.new()
 var _speccy_quota := 0
 var _speccies := 0
 ## Boundary law rolls are isolated from the calibrated play RNG. Adding or
@@ -299,6 +306,24 @@ const MOMENTUM_BEHIND := 0.10
 ## Kept each chain: halves in about nine chains (five or six minutes).
 const MOMENTUM_DECAY := 0.93
 const MOMENTUM_BREAK := 0.5
+## Row 78 (T8.Q4, switch momentum_runaway): a side on top that is also well
+## ahead on the scoreboard can run away with it, as real sides do once the
+## other side's heads drop. When the side with the run of play leads by more
+## than runaway_lead, its edge grows, up to runaway_gain times more at
+## runaway_lead + RUNAWAY_SPAN, its run fades more slowly (runaway_decay), and
+## a goal the other way turns it a little less (runaway_hold). Close matches
+## (inside runaway_lead) are untouched. Off, momentum is exactly as it was.
+## The knobs are vars so tools/balance.sh can screen values (--set).
+var momentum_runaway_on := false
+var runaway_lead := RUNAWAY_LEAD
+var runaway_gain := RUNAWAY_GAIN
+var runaway_decay := RUNAWAY_DECAY
+var runaway_hold := RUNAWAY_HOLD
+const RUNAWAY_LEAD := 24.0
+const RUNAWAY_SPAN := 30.0
+const RUNAWAY_GAIN := 10.0
+const RUNAWAY_DECAY := 0.99
+const RUNAWAY_HOLD := 0.7
 ## Clanger-rate change at full form: 0.95x at +1, 1.05x at -1.
 const FORM_COMPOSURE := 0.05
 ## Stoppage-win chance at full form (home_ground_bonus is 0.030).
@@ -309,6 +334,8 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	squads = [home, away]
 	kick_range_on = Features.on("kick_range")
 	clanger_cause_on = Features.on("clanger_cause")
+	key_duels_on = Features.on("key_duels")
+	momentum_runaway_on = Features.on("momentum_runaway")
 	back_carries_on = Features.on("back_carries")
 	mid_intercepts_on = Features.on("mid_intercepts")
 	mid_ic_rng.seed = seed * 109 + 113
@@ -337,6 +364,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	_speccy_quota = speccy_quota(seed)
 	boundary_rng.seed = seed * 17 + 19
 	lockup_rng.seed = seed * 107 + 109
+	lead_rng.seed = seed * 109 + 113
 	_flow = Features.on("match_flow")
 	injury_rng.seed = seed * 13 + 7
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
@@ -1473,7 +1501,7 @@ func contest_winner(use_fp: bool, fp: float) -> int:
 			+ (c0 - c1) / float(T["contest_swing"])
 			+ home_edge() + form_edge)
 	# The side with the run of play wins a little more of the ball.
-	p_home += momentum_edge * momentum
+	p_home += momentum_edge * momentum * (1.0 + runaway_gain * runaway())
 	var b0 := _contest_bonus(0, not use_fp)
 	var b1 := _contest_bonus(1, not use_fp)
 	p_home += b0 - b1
@@ -1982,7 +2010,7 @@ func _shot_pick_p(p_weighted: float, keys: Array, sid: String) -> float:
 		k = 1.0 if ks.size() == 1 else 0.6
 	elif ks.size() > 1 and str(ks[1].get("id", "")) == sid:
 		k = 0.4
-	return (1.0 - Matchups.KEY_TARGET) * p_weighted + Matchups.KEY_TARGET * k
+	return (1.0 - key_target()) * p_weighted + key_target() * k
 
 
 ## Expected points of an inside-50 entry (6 a goal, 1 a behind) with
@@ -2304,6 +2332,64 @@ func _aerial_defender(def_side: int, fp: float):
 	return _pick(group, weights) if not group.is_empty() else null
 
 
+## Key forward v key defender up the ground (row 94, T8.Q6, director
+## 2026-11-06; switch key_duels, read once at set-up). A real match-up goes
+## where the forward goes: when a general-play marking contest falls to a key
+## forward, his direct opponent is the man in it, so the full-time duel line
+## counts every contest the two of them had, not only the entries inside 50.
+## Off, the defender is the zone's or the line's pick as before.
+var key_duels_on := false
+
+
+## The direct opponent on the ground for `fwd` (of `side`) in a general-play
+## contest; {} with the switch off, no match-up or his man off the ground.
+func _duel_man(side: int, fwd) -> Dictionary:
+	if not key_duels_on or fwd == null:
+		return {}
+	var did := str((duels[1 - side] as Dictionary).get(str(fwd.get("id", "")), ""))
+	return {} if did == "" else _on_ground(1 - side, did)
+
+
+## One general-play contest between a key forward and his direct opponent, in
+## the log the full-time line, the live duel call and the rematch all read
+## (resolve_forward50 logs the entries inside 50). `ev` is the event the
+## contest produced; it is tagged so the line can be traced to the play. A
+## contest nobody won produces no event, so nothing is tagged (as inside 50).
+## A marking free from the contest is not logged, as inside 50.
+func _log_duel(side: int, fwd: Dictionary, man: Dictionary, marked: bool, ev: Dictionary = {}) -> void:
+	var fid := str(fwd["id"])
+	if not duel_log.has(fid):
+		duel_log[fid] = {"side": side, "contests": []}
+	(duel_log[fid]["contests"] as Array).append([current_quarter, str(man["id"]), marked, false])
+	ev["duel_contest"] = fid
+
+
+## A key forward leading up at a general-play marking contest in his side's
+## front half (key_duels): on Matchups.KEY_LEAD of them it falls to one of the
+## side's matched key forwards (the better in the air more often, as inside
+## 50), so he meets his direct opponent up the ground too. Never the kicker
+## (`carrier`): a man cannot lead up at his own kick. {} otherwise.
+func _key_lead(side: int, fp: float, carrier = null) -> Dictionary:
+	if not key_duels_on or fp * (1.0 if side == 0 else -1.0) <= 0.0:
+		return {}
+	var keys := []
+	var kid := "" if carrier == null else str(carrier.get("id", ""))
+	for fid in (duels[1 - side] as Dictionary):
+		var kf := _on_ground(side, str(fid))
+		if not kf.is_empty() and kf != _spare_minder(side) and str(kf["id"]) != kid:
+			keys.append(kf)
+	if keys.is_empty() or lead_rng.randf() >= Matchups.KEY_LEAD:
+		return {}
+	keys.sort_custom(func(a, b): return Matchups.forward_air(a) > Matchups.forward_air(b))
+	return keys[0] if keys.size() == 1 or lead_rng.randf() < 0.6 else keys[1]
+
+
+## The share of a side's entries inside 50 that look for one of its key
+## forwards (Matchups.KEY_TARGET; KEY_TARGET_DUELS with key_duels on).
+func key_target() -> float:
+	return Matchups.KEY_TARGET_DUELS if key_duels_on else Matchups.KEY_TARGET
+
+
 ## General-play aerial contest on an unmarked kick. We only create one when
 ## the kick has enough length to plausibly be contested. The defender who wins
 ## it either marks it (an intercept: the ball is turned over) or spoils it,
@@ -2315,6 +2401,9 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 	var receiver = kick_receiver(side, mark_fp - gain * (1.0 if side == 0 else -1.0), mark_fp, carrier)
 	if receiver == null:
 		return {}
+	var lead := _key_lead(side, mark_fp, carrier)
+	if not lead.is_empty():
+		receiver = lead
 	var defender = null
 	if zone_intercepts:
 		_credit_aerial_loose(opp, mark_fp, receiver)
@@ -2323,6 +2412,9 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 		var old := _by_roles((squads[opp] as Squad).ground, ["DEF", "MID"])
 		if not old.is_empty():
 			defender = _weighted(old, "intercept", 2.0, opp, "defender")
+	var man := _duel_man(side, receiver)
+	if not man.is_empty():
+		defender = man
 	if defender == null:
 		return {}
 	var receive := _a(receiver, "marking")
@@ -2342,6 +2434,9 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 		var mev: Dictionary = events[events.size() - 1]
 		mev["contested"] = contested
 		mev["general_play"] = true
+		if not man.is_empty():
+			mev["against_id"] = str(man["id"])
+			_log_duel(side, receiver, man, true, mev)
 		return {"outcome": "mark", "actor": receiver, "contested": contested}
 	var spoil_p := clampf(0.36 + (stop - receive) / 220.0
 			+ (0.07 if _trait(defender, "interceptor") else 0.0), 0.20, 0.65)
@@ -2358,6 +2453,8 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 			var iev: Dictionary = events[events.size() - 1]
 			iev["general_play"] = true
 			iev["intercept"] = true
+			if not man.is_empty():
+				_log_duel(side, receiver, man, false, iev)
 			return {"outcome": "turnover", "fp": mark_fp, "actor": defender}
 		_t(opp, "spoils")
 		_p(defender, "spoils")
@@ -2368,7 +2465,12 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 		var sev: Dictionary = events[events.size() - 1]
 		sev["general_play"] = true
 		sev["against_id"] = str(receiver.get("id", ""))
+		if not man.is_empty():
+			_log_duel(side, receiver, man, false, sev)
 		return {"outcome": "loose", "actor": defender}
+	# Neither marked nor spoiled: a contest he did not win, as inside 50.
+	if not man.is_empty():
+		_log_duel(side, receiver, man, false)
 	return {}
 
 
@@ -2548,10 +2650,17 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 	var opp := 1 - side
 	var target = _weighted_roles((squads[side] as Squad).ground, "marking",
 			GENERAL_MARK_ROLES, 2.0, side, "aerial_target")
+	var lead := _key_lead(side, mark_fp, carrier)
+	if not lead.is_empty():
+		target = lead
 	var defs := _by_roles((squads[opp] as Squad).ground, ["DEF"])
 	if defs.is_empty():
 		defs = (squads[opp] as Squad).ground
 	var defender = _weighted(defs, "intercept", 2.0, opp, "aerial_defender")
+	# A key forward's contest is against his direct opponent (key_duels).
+	var man := _duel_man(side, target)
+	if not man.is_empty():
+		defender = man
 	if target == null or defender == null:
 		return {}
 	# The loose interceptor as an extra body (see resolve_forward50).
@@ -2595,6 +2704,10 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 		if roaming:
 			mev["roaming_interceptor_id"] = str(roamer.get("id", ""))
 			_roam_note(roamer, target, false)
+		elif not man.is_empty():
+			# A third man arriving is not the one-on-one (as inside 50).
+			mev["against_id"] = str(man["id"])
+			_log_duel(side, target, man, true, mev)
 		return {"outcome": "mark", "fp": mark_fp, "actor": target}
 
 	var spoil_p := clampf(GENERAL_SPOIL_BASE
@@ -2619,9 +2732,14 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 			sev["roaming_interceptor"] = defender == roamer
 			if defender == roamer:
 				_roam_note(roamer, target, true)
+		elif not man.is_empty():
+			_log_duel(side, target, man, false, sev)
 		return {"outcome": "loose", "fp": mark_fp, "actor": defender}
 	if roaming:
 		_roam_note(roamer, target, false)
+	elif not man.is_empty():
+		# Neither marked nor spoiled: a contest he did not win, as inside 50.
+		_log_duel(side, target, man, false)
 	return {}
 
 
@@ -3202,7 +3320,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 		var kf := _on_ground(side, str(fid))
 		if not kf.is_empty() and kf != _spare_minder(side):
 			keys.append(kf)
-	if not keys.is_empty() and rng.randf() < Matchups.KEY_TARGET:
+	if not keys.is_empty() and rng.randf() < key_target():
 		keys.sort_custom(func(a, b): return Matchups.forward_air(a) > Matchups.forward_air(b))
 		shooter = keys[0] if keys.size() == 1 or rng.randf() < 0.6 else keys[1]
 	# What the defensive forward call costs in who gets the entry: the share
@@ -3283,6 +3401,8 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 		if not duel_log.has(fid):
 			duel_log[fid] = {"side": side, "contests": []}
 		(duel_log[fid]["contests"] as Array).append([current_quarter, str(matched["id"]), marked, false])
+		if key_duels_on:
+			_duel_tag = fid
 		_duel = {"fwd": fid, "def": str(matched["id"]), "won": "fwd" if marked else "def",
 				"q": current_quarter, "n": (duel_log[fid]["contests"] as Array).size()}
 	if marked:
@@ -3316,6 +3436,9 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 		if roaming:
 			mev["roaming_interceptor_id"] = str(roamer.get("id", ""))
 			_roam_note(roamer, shooter, false)
+		if _duel_tag != "":
+			mev["duel_contest"] = _duel_tag
+	_duel_tag = ""
 	var spoil_edge := 0.05 if defender != null and _trait(defender, "interceptor") else 0.0
 	var spoil_read := dfn.def_intercept
 	if not matched.is_empty():
@@ -3651,7 +3774,20 @@ func _scored(side: int, points: int, scorer) -> void:
 ## cap, more when it is turning the other side's run.
 func _swing_momentum(side: int, amount: float) -> void:
 	var s := 1.0 if side == 0 else -1.0
+	if s * momentum < 0.0:
+		# Turning a side that has run away with it is harder (0 when off).
+		amount *= 1.0 - runaway_hold * runaway()
 	momentum = clampf(momentum + s * amount * (1.0 - s * momentum), -1.0, 1.0)
+
+
+## How far the side with the run of play has run away with it, 0..1: 0 unless
+## momentum_runaway is on and that side leads by more than runaway_lead,
+## 1 at runaway_lead + RUNAWAY_SPAN or more.
+func runaway() -> float:
+	if not momentum_runaway_on or momentum == 0.0:
+		return 0.0
+	var lead := float(score(0) - score(1)) * signf(momentum)
+	return clampf((lead - runaway_lead) / RUNAWAY_SPAN, 0.0, 1.0)
 
 
 ## Who made the spoil, smother or shepherd: mostly defenders, sometimes a
@@ -4475,7 +4611,7 @@ func set_rotation_policy(side: int, key: String) -> void:
 
 
 func _after_chain() -> void:
-	momentum *= MOMENTUM_DECAY
+	momentum *= lerpf(MOMENTUM_DECAY, runaway_decay, runaway())
 	# Distance, drain and recovery were set for 180 chains a game: a chain is
 	# a share of the game's minutes, so per-game loads stay the same.
 	var per_chain := 180.0 / float(_rates()["chains_per_game"])
@@ -5446,6 +5582,8 @@ func _set_result(side: int, kicker: Dictionary, assist, defender: Dictionary, go
 func _tag_result(crumb: bool) -> void:
 	var ev: Dictionary = events[events.size() - 1]
 	ev["set"] = not crumb
+	# A snap off the pack is general play, though a set-shot choice led to it.
+	ev["setshot"] = not crumb
 	if crumb:
 		ev["crumb"] = true
 
@@ -5542,6 +5680,7 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 		q_behinds[current_quarter - 1][side] += 1
 		_emit("behind", side, fp, null, _scoreline(side, "Rushed behind"))
 		events[events.size() - 1]["rushed"] = true
+		events[events.size() - 1]["setshot"] = false
 		_tag_shot(false)
 		_end_moment_chain("behind", kick_in_fp(side), side)
 		return {"points": 1, "text": "Rushed through for a behind."}
@@ -5625,8 +5764,9 @@ func _free_set_shot(side: int, at_fp: float, taker: Dictionary) -> Dictionary:
 	var opp := 1 - side
 	var backs := _by_roles((squads[opp] as Squad).ground, ["DEF"])
 	var back = _weighted(backs if not backs.is_empty() else (squads[opp] as Squad).ground, "marking", 2.0, opp, "defender")
+	# Not a mark (could_mark is false): the copy must not call it one.
 	_intercept(opp, back, false)
-	_emit("rebound", opp, fp, back, "%s's set shot falls short; %s marks it" % [
+	_emit("rebound", opp, fp, back, "%s's set shot falls short; %s gathers it" % [
 			GameDB.player_display_name(taker), GameDB.player_display_name(back)])
 	events[events.size() - 1]["from_free"] = true
 	return {"outcome": "turnover", "fp": fp, "actor": back}

@@ -49,7 +49,8 @@ static func pick(ctx: Dictionary, recent: Dictionary) -> Dictionary:
 	var candidates := []
 
 	var injuries: Array = ctx.get("injuries", [])
-	if not injuries.is_empty():
+	# Asked after a loss only: its answers say the injury cost the game.
+	if not injuries.is_empty() and margin < 0:
 		candidates.append(_q("injury", "bogan", "Tough blow losing %s. How much did that hurt you out there?" %
 				str(injuries[0].get("name", "a player")), round_no,
 				"No excuses. The blokes who came in weren't up to it.", "The group had to adjust, but that's footy.",

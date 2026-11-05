@@ -131,12 +131,28 @@ extends RefCounted
 ##               overlooked), his debut, club moves and delistings, each season's games and
 ##               goals, and the end of his career. Reads only: no draft, list or rating change.
 ##               Off, nothing is shown, written or saved.
+##   momentum_runaway   row 78 (T8.Q4, director: rare big margins come back through Momentum):
+##               a side with the run of play that also leads by more than 24 wins more of the
+##               ball (up to 11x the momentum edge at 54+, still capped by contest_clamp),
+##               its run fades more slowly, and a goal the other way turns it up to 70% less
+##               (MatchSim.runaway). Changes match output only once a side leads by 24+.
+##               Off, momentum is exactly as before.
 ##   mid_intercepts   row 89 (director, 2026-11-06, T8.Q8): a general-play kick through the
 ##               middle third with no aerial contest can be read and taken outright by one
 ##               of the other side's midfielders (MatchSim.MID_KICK_INTERCEPT), the better
 ##               readers more often, and the better readers mark it. Lifts midfield
 ##               intercepts toward Champion Data's 2.5 a game. Changes match output. Off,
 ##               a match is exactly as before.
+##   key_duels   row 94 (T8.Q6, director 2026-11-06): a key forward and his direct opponent
+##               meet more, so the full-time "beat / held" line rests on more contests.
+##               Sides look for their key forwards more often inside 50
+##               (Matchups.KEY_TARGET_DUELS); a key forward leads up at some marking
+##               contests in his front half (Matchups.KEY_LEAD, MatchSim._key_lead); his
+##               marking contest up the ground is against his man, as a real match-up
+##               follows him (MatchSim._duel_man), and goes in the duel log with the
+##               entries inside 50. Changes match output. Off, the zone's or the line's
+##               defender meets it, the key-forward share is Matchups.KEY_TARGET and no
+##               general-play contest is logged, as before.
 ##   gather_round   row 74 (T5.Q11a; Director Bible 2.38, 5.127): one of rounds 3 to 7 each
 ##               season is Gather Round, every match staged at the host's grounds (Adelaide
 ##               Oval, Norwood Oval, Barossa Park; GatherRound.gd). A club has its home-ground
@@ -144,7 +160,7 @@ extends RefCounted
 ##               round sits it out. The round's name shows on the fixture, the hub, the match
 ##               and the warm-up. Changes match output. Nothing saved. Off, every round is as
 ##               before.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries",
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries", "momentum_runaway", "key_duels",
 		"gather_round"]
 
 static var _forced := {}

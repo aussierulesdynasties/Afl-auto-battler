@@ -40,6 +40,152 @@ def margins(rows):
     return m, h
 
 
+def duel_section(A, B):
+    """Key forward v key defender (row 94): contests per duel per match from the
+    engine's duel log, as the full-time line reads them. A duel is one key
+    forward's match: [contests, marks, most against one defender, verdict]."""
+    if not any("duels" in r for r in A.values()):
+        return
+    arms = [("A", A)] + ([("B", B)] if B else [])
+    stats = {}
+    for name, R in arms:
+        rows = [d for r in R.values() for d in r.get("duels", [])]
+        n = max(1, len(rows))
+        c = sorted(d[0] for d in rows)
+        stats[name] = {
+            "contests": st.mean(c) if c else 0.0,
+            "median": st.median(c) if c else 0.0,
+            "pair": st.mean(d[2] for d in rows) if rows else 0.0,
+            "6+": 100 * sum(d[0] >= 6 for d in rows) / n,
+            "shown": 100 * sum(d[0] >= 4 for d in rows) / n,
+            "mark%": 100 * sum(d[1] for d in rows) / max(1, sum(c)),
+            "beat": 100 * sum(d[0] >= 4 and d[3] > 0 for d in rows) / n,
+            "even": 100 * sum(d[0] >= 4 and d[3] == 0 for d in rows) / n,
+            "held": 100 * sum(d[0] >= 4 and d[3] < 0 for d in rows) / n,
+            "duels": len(rows)}
+    print("\n## Key forward v key defender (contests per duel per match)\n")
+    print("A duel is one key forward's match against his direct opponent(s), from MatchSim.duel_log "
+          "(what the full-time line counts; MatchNotes shows a line from 4 contests). "
+          "beat / even / held: the line's verdict, as a share of all duels.\n")
+    head = "| arm | duels | contests mean | median | v one defender | 6+ contests | line shown (4+) | forward marks | beat / even / held |"
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for name, _ in arms:
+        s = stats[name]
+        print(f"| {name} | {s['duels']} | {s['contests']:.2f} | {s['median']:.0f} | {s['pair']:.2f} | {s['6+']:.0f}% | "
+              f"{s['shown']:.0f}% | {s['mark%']:.1f}% | {s['beat']:.0f} / {s['even']:.0f} / {s['held']:.0f} |")
+    if B:
+        def per(R):
+            return {i: st.mean(d[0] for d in r["duels"]) for i, r in R.items() if r.get("duels")}
+        a, b = per(A), per(B)
+        d = [b[i] - a[i] for i in a if i in b]
+        if len(d) > 1:
+            print(f"\nContests per duel B-A {st.mean(d):+.2f} (se {st.stdev(d) / math.sqrt(len(d)):.2f}, paired by seed).")
+
+
+TAIL = (40, 60, 80, 100, 120)
+ROOT = os.path.dirname(os.path.dirname(HERE))
+
+
+def real_margins():
+    """Real AFL 2026 home-and-away margins from data/raw/fixtures_2026.json (finals left out)."""
+    path = os.path.join(ROOT, "data", "raw", "fixtures_2026.json")
+    if not os.path.exists(path):
+        return []
+    games = json.load(open(path, encoding="utf-8"))["games"]
+    return [abs(g["hscore"] - g["ascore"]) for g in games
+            if g.get("complete") == 100 and not g.get("is_final")]
+
+
+def real_history():
+    """Real AFL 2010-2025, every match with finals (afl_comebacks.json, AFL Tables): (h[4], a[4])."""
+    path = os.path.join(HERE, "afl_comebacks.json")
+    if not os.path.exists(path):
+        return []
+    return [(g["h"], g["a"]) for g in json.load(open(path, encoding="utf-8"))["games"]]
+
+
+def came_back(h, a, k):
+    """The winner was k or more points down at a quarter break (QT, HT or 3QT)."""
+    if h[3] == a[3]:
+        return False
+    s = 1 if h[3] > a[3] else -1
+    return any(s * (a[q] - h[q]) >= k for q in range(3))
+
+
+def wilson(k, n, z=1.96):
+    if n == 0:
+        return 0.0, 0.0
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+    return 100 * (c - h), 100 * (c + h)
+
+
+def margin_tail(A, B):
+    """The margin distribution's tail: share of matches at 40+ .. 120+ points, mean, p90, p99,
+    max, against real AFL 2026; paired runs add B - A per seed with its standard error."""
+    real = real_margins()
+    hist = real_history()
+    hm = [abs(h[3] - a[3]) for h, a in hist]
+    common = [i for i in A if i in B] if B else list(A)
+    ma = {i: abs(A[i]["teams"][0]["score"] - A[i]["teams"][1]["score"]) for i in common}
+    mb = {i: abs(B[i]["teams"][0]["score"] - B[i]["teams"][1]["score"]) for i in common} if B else {}
+    n = len(common)
+    print(f"\n## Margin tail ({n} matches{' per arm, paired' if B else ''})\n")
+    head = f"| margin | real AFL 2026 ({len(real)} H&A games, 95% CI) | real 2010-25 ({len(hm)}) | A |"
+    if B:
+        head += " B | B-A | se | sig |"
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+
+    def row(label, f_real, f_hist, fa, fb, fmt):
+        line = f"| {label} | {f_real} | {f_hist} | {fmt(st.mean(fa))} |"
+        if B:
+            d = [b - a for a, b in zip(fa, fb)]
+            md = st.mean(d)
+            se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+            sig = "yes" if se > 0 and abs(md) > 2 * se else ""
+            line += f" {fmt(st.mean(fb))} | {fmt(md, True)} | {fmt(se)} | {sig} |"
+        print(line)
+    for t in TAIL:
+        k = sum(x >= t for x in real)
+        lo, hi = wilson(k, len(real))
+        rr = f"{100*k/len(real):.1f}% ({k}; {lo:.1f}-{hi:.1f})" if real else "-"
+        fa = [100.0 * (ma[i] >= t) for i in common]
+        fb = [100.0 * (mb[i] >= t) for i in common] if B else []
+        hh = f"{100*sum(x >= t for x in hm)/len(hm):.1f}%" if hm else "-"
+        row(f"{t}+", rr, hh, fa, fb, lambda v, s=False: (f"{v:+.2f}%" if s else f"{v:.2f}%"))
+    rr = f"{st.mean(real):.1f}" if real else "-"
+    row("mean margin", rr, f"{st.mean(hm):.1f}" if hm else "-", [float(ma[i]) for i in common], [float(mb[i]) for i in common] if B else [],
+        lambda v, s=False: (f"{v:+.2f}" if s else f"{v:.2f}"))
+    # Upsets and comebacks (bible principle 2: decisions move the odds, never the certainty).
+    if common and "q_score" in A[common[0]]["teams"][0]:
+        def stronger_won(R, i):
+            t = R[i]["teams"]
+            if t[0]["strength"] == t[1]["strength"] or t[0]["score"] == t[1]["score"]:
+                return None
+            return 100.0 * ((t[0]["strength"] > t[1]["strength"]) == (t[0]["score"] > t[1]["score"]))
+
+        def cb(R, i, k):
+            t = R[i]["teams"]
+            return 100.0 * came_back(t[0]["q_score"], t[1]["q_score"], k)
+        ids = [i for i in common if stronger_won(A, i) is not None and (not B or stronger_won(B, i) is not None)]
+        fmt = lambda v, s=False: (f"{v:+.2f}%" if s else f"{v:.2f}%")
+        row("stronger list wins", "-", "-", [stronger_won(A, i) for i in ids],
+            [stronger_won(B, i) for i in ids] if B else [], fmt)
+        for k in (18, 24, 30):
+            hh = f"{100*sum(came_back(h, a, k) for h, a in hist)/len(hist):.1f}%" if hist else "-"
+            row(f"winner {k}+ down at a break", "-", hh, [cb(A, i, k) for i in common],
+                [cb(B, i, k) for i in common] if B else [], fmt)
+    for name, R in (("A", ma), ("B", mb)):
+        if not R:
+            continue
+        v = sorted(R.values())
+        print(f"\n{name}: p90 {v[int(0.9*(len(v)-1))]}, p99 {v[int(0.99*(len(v)-1))]}, max {v[-1]}"
+              + (f" (real 2026 p90 {sorted(real)[int(0.9*(len(real)-1))]}, max {max(real)}; 2010-25 p99 "
+                 f"{sorted(hm)[int(0.99*(len(hm)-1))]}, max {max(hm)})" if real and hm and name == "A" else ""))
 ROLES = ["DEF", "MID", "FWD", "RUCK"]
 ROLE_REF = {"disposals": "disposals", "kicks": "kicks", "handballs": "handballs", "marks": "marks",
             "rebounds": "rebound_50s", "inside50": "inside_50s", "clearances": "clearances", "goals": "goals"}
@@ -231,6 +377,8 @@ def main():
               f"draws {100*sum(x == 0 for x in m)/n:.1f}%, home win {100*sum(x > 0 for x in h)/n:.1f}%, home margin {st.mean(h):+.1f} "
               f"(se {st.stdev(h)/math.sqrt(n):.1f})")
     print("\nReal AFL (docs/LEAGUE_BALANCE.md): 60+ about 15.5%, 100+ about 1.9%, home win 59.3%.")
+    duel_section(A, B)
+    margin_tail(A, B)
     role_report(A, B)
     print(f"\nOUT of real range (A): {', '.join(outs) if outs else 'none'}")
 
