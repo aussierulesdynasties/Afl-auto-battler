@@ -1,6 +1,6 @@
 class_name VignetteGrade
 extends RefCounted
-## The broadcast grade over a match vignette (Features "vignette_grade", off by default).
+## The broadcast grade over a match vignette (Features "vignette_grade", on since 2026-11-06).
 ## attach() adds two children to the vignette: a full-rect ColorRect running
 ## assets/vignette/grade.gdshader over everything the vignette drew (one screen pass),
 ## then an overlay Control the caller draws its names and bars on, so text stays ungraded.
