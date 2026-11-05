@@ -949,17 +949,19 @@ func _week_actions(season: Season) -> Control:
 	elif _regular_bye(season):
 		# A home-and-away bye: the season goes on, one round at a time.
 		buttons.append(_nav_button("Team", func(): Router.go("selection")))
-		var bye := _nav_button("Play Round %d" % (season.round_index + 1), _on_sim_round, true)
+		var bye := _nav_button("Play Round %d" % (season.round_index + 1), _on_sim_round_pressed, true)
 		bye.name = "SimByeRound"
 		buttons.append(bye)
 	elif _upcoming_match().is_empty() and GameState.my_finals_status() == "bye":
 		# Still alive: sim only this week, never past your own final.
 		buttons.append(_nav_button("Team", func(): Router.go("selection")))
-		buttons.append(_nav_button(_finals_play_label(), _on_sim_round, true))
+		var off := _nav_button(_finals_play_label(), _on_sim_round_pressed, true)
+		off.name = "SimFinalsWeekOff"
+		buttons.append(off)
 	elif _upcoming_match().is_empty():
 		# Out of the finals, the league still plays them week by week: each
 		# week's results come up before the next.
-		var week := _nav_button(_finals_play_label(), _on_sim_round, true)
+		var week := _nav_button(_finals_play_label(), _on_sim_round_pressed, true)
 		week.name = "SimFinalsWeek"
 		buttons.append(week)
 	else:
@@ -1275,11 +1277,20 @@ func _on_fact_option(option: Dictionary, fact_text: String) -> void:
 	_on_play_match()
 
 
-## Sim round skips your own match for good, so it asks first (unless you
-## have said not to; Settings turns the question back on).
+## Every button that sims the week comes here. "Ask before simming" asks only
+## when the sim would play a match you could have played yourself: your
+## home-and-away round or your final (row 102). A bye, a finals week off, a
+## finals week you are out of and the off-season sim nothing of yours, so they
+## go straight ahead. The pre-season's Sim to Round 1 (PreSeasonScene) stops
+## before Round 1 and never asks. Settings turns the question back on after
+## Don't ask again.
+func _sim_asks_first() -> bool:
+	return GameState.confirm_sim_round() and not _upcoming_match().is_empty()
+
+
 func _on_sim_round_pressed() -> void:
 	var m := _upcoming_match()
-	if m.is_empty() or not GameState.confirm_sim_round():
+	if not _sim_asks_first():
 		_on_sim_round()
 		return
 	var box := UiKit.modal_box(self, 420.0, 290.0)
