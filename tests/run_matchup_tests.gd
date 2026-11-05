@@ -41,6 +41,8 @@ func _run() -> void:
 	await _t("_test_fact_options")
 	_t("_test_former_rules")
 	await _t("_test_former_player")
+	_t("_test_old_club_rules")
+	await _t("_test_old_club_preview")
 	await _t("_test_wide_hub_footer")
 	await _t("_test_phone_footer_fits")
 	await _t("_test_regular_bye")
@@ -730,6 +732,120 @@ func _test_former_player() -> void:
 	m.queue_free()
 	await _settle()
 
+
+
+## Storylines before the bounce (T5.Q9, "Build, 100+ games"): the rules on
+## their own. 100 games at the old club earns a line, 99 does not; your man
+## meeting his old club and theirs meeting yours; most games first; an id
+## another line already names is left out; the line says the stored games.
+func _test_old_club_rules() -> void:
+	var OC = load("res://scripts/sim/OldClubLines.gd")
+	var hundred := {"id": "oc_100", "club": "FRE", "career": {"stints": [["CAR", 2014, 2019, 60, 9], ["FRE", 2020, 2025, 50, 3], ["CAR", 2026, 2027, 40, 2]]}}
+	var ninety_nine := {"id": "oc_99", "club": "FRE", "career": {"stints": [["CAR", 2015, 2022, 99, 12], ["FRE", 2023, 2025, 30, 1]]}}
+	var theirs := {"id": "oc_theirs", "club": "CAR", "career": {"stints": [["FRE", 2012, 2022, 187, 40], ["CAR", 2023, 2025, 44, 6]]}}
+	var home := {"id": "oc_home", "club": "CAR", "career": {"stints": [["CAR", 2010, 2025, 250, 80]]}}
+	_check(OC.stint_games(hundred, "CAR") == 100 and OC.stint_games(ninety_nine, "CAR") == 99,
+			"Old club: games count every spell at that club (%d, %d)" % [OC.stint_games(hundred, "CAR"), OC.stint_games(ninety_nine, "CAR")])
+	var rows: Array = OC.rows([ninety_nine, hundred], [home, theirs], "FRE", "CAR")
+	_check(rows.size() == 2 and str(rows[0]["id"]) == "oc_theirs" and str(rows[1]["id"]) == "oc_100",
+			"Old club: 100 games earns a line, 99 does not, nor his own club; most games first (%s)" % str(rows.map(func(r): return r["id"])))
+	_check(rows.size() == 2 and str(rows[0]["old"]) == "FRE" and not bool(rows[0]["mine"])
+			and str(rows[1]["old"]) == "CAR" and bool(rows[1]["mine"]) and int(rows[1]["games"]) == 100,
+			"Old club: which club and whose man come from the stints")
+	_check(OC.rows([hundred], [theirs], "FRE", "CAR", Callable(), {"oc_theirs": true}).size() == 1
+			and OC.rows([hundred], [], "", "CAR").is_empty() and OC.rows([hundred], [], "CAR", "CAR").is_empty(),
+			"Old club: a player already named is not told twice; none without two clubs")
+	var counted: Array = OC.rows([ninety_nine], [], "FRE", "CAR", func(_p, _c): return 100)
+	_check(counted.size() == 1 and int(counted[0]["games"]) == 100,
+			"Old club: the count given (this season included) decides the 100")
+	if rows.size() < 2:
+		return
+	_check(OC.line(rows[1], "Jack Gunston", "Carlton") == "Jack Gunston faces his old club: 100 games for Carlton."
+			and OC.line(rows[0], "Sam Walsh", "Fremantle") == "Sam Walsh faces his old club: 187 games for you.",
+			"Old club lines: %s | %s" % [OC.line(rows[1], "Jack Gunston", "Carlton"), OC.line(rows[0], "Sam Walsh", "Fremantle")])
+	var sim := FileAccess.get_file_as_string("res://scripts/sim/MatchSim.gd")
+	_check(sim != "" and not sim.contains("OldClubLines") and not sim.contains("old_club_lines"),
+			"Old club lines are presentation only: the match never reads them")
+
+
+## The Hub's preview: a Fremantle man on 100 games for the opponent gets a line,
+## one on 99 does not, and their man on 151 for Fremantle gets one; each line
+## reads his stored games. Three lines at most; a tap on the name opens him.
+func _test_old_club_preview() -> void:
+	var db = root.get_node("GameDB")
+	var Sq = load("res://scripts/sim/Squad.gd")
+	_reset()
+	_state.set_setting("seen_weekly_loop_intro", true)
+	_state.start_season("FRE", db.club_list("FRE"))
+	root.size = Vector2i(390, 844)
+	var opp := str(_state.my_next_opponent()["code"])
+	# A clean slate: nobody in either list has a record anywhere.
+	var blank := {}
+	for p in _state.season.lists["FRE"] + _state.season.lists[opp] + _state.my_list:
+		p["career"] = {"games": 0, "goals": 0, "stints": [], "through": 2025, "unknown": []}
+		blank[str(p.get("id", ""))] = true
+	var hub := await _open_hub()
+	_check(blank.size() > 40 and hub.find_children("OldClub_*", "Control", true, false).is_empty(),
+			"No old-club line when no one has played for the other club")
+	hub.queue_free()
+	await _settle()
+	# The squads hold match copies: edit the list's own records of the picked men.
+	var by_id := {}
+	for p in _state.my_list + _state.season.lists[opp]:
+		by_id[str(p.get("id", ""))] = p
+	var their_sq = Sq.new(db.club_name(opp), _state.season.lists[opp], true, opp, _state.season.selections.get(opp, {}))
+	var mine: Array = _state.my_squad().ground.map(func(p): return by_id.get(str(p.get("id", "")), {}))
+	var theirs: Array = their_sq.ground.map(func(p): return by_id.get(str(p.get("id", "")), {}))
+	_check(mine.size() >= 4 and theirs.size() >= 1, "Both sides are picked (%d, %d)" % [mine.size(), theirs.size()])
+	if mine.size() < 4 or theirs.is_empty():
+		return
+	var a: Dictionary = mine[0]
+	var b: Dictionary = mine[1]
+	var t: Dictionary = theirs[0]
+	a["career"] = {"games": 160, "goals": 25, "stints": [[opp, 2016, 2021, 100, 20], ["FRE", 2022, 2025, 60, 5]], "through": 2025, "unknown": []}
+	b["career"] = {"games": 159, "goals": 25, "stints": [[opp, 2016, 2021, 99, 20], ["FRE", 2022, 2025, 60, 5]], "through": 2025, "unknown": []}
+	t["career"] = {"games": 201, "goals": 43, "stints": [["FRE", 2014, 2022, 151, 40], [opp, 2023, 2025, 50, 3]], "through": 2025, "unknown": []}
+	var an: String = db.player_display_name(a)
+	var bn: String = db.player_display_name(b)
+	var tn: String = db.player_display_name(t)
+	var want := ["%s faces his old club: 151 games for you." % tn,
+			"%s faces his old club: 100 games for %s." % [an, db.club_name(opp)]]
+	hub = await _open_hub()
+	current_scene = hub
+	var got := hub.find_children("OldClub_*", "Control", true, false)
+	var said: Array = got.map(func(c): return _plain(c))
+	_check(said == want, "The preview says the 100-game men from their records, not the 99 (%s)" % " | ".join(said))
+	_check(not " ".join(said).contains(bn), "No line for %s on 99 games" % bn)
+	if not got.is_empty():
+		var line: Control = got[0]
+		var sc: Node = line.get_parent()
+		while sc != null and not (sc is ScrollContainer):
+			sc = sc.get_parent()
+		if sc != null:
+			(sc as ScrollContainer).ensure_control_visible(line)
+			await _settle()
+		var opened := await _tap_scan(line, hub)
+		var sheet: Node = hub.get_node_or_null("PlayerProfile")
+		var shown := ""
+		if sheet != null:
+			for c in sheet.find_children("*", "Label", true, false):
+				shown = (c as Label).text
+				break
+		_check(opened and shown == tn, "A tap on his name opens his profile (got '%s')" % shown)
+	hub.queue_free()
+	current_scene = null
+	await _settle()
+	# Four with a long record: three lines, the most games first.
+	mine[2]["career"] = {"games": 130, "goals": 1, "stints": [[opp, 2012, 2025, 130, 1]], "through": 2025, "unknown": []}
+	mine[3]["career"] = {"games": 120, "goals": 1, "stints": [[opp, 2012, 2025, 120, 1]], "through": 2025, "unknown": []}
+	hub = await _open_hub()
+	got = hub.find_children("OldClub_*", "Control", true, false)
+	said = got.map(func(c): return _plain(c))
+	_check(said.size() == 3 and str(said[0]).ends_with("151 games for you.") and str(said[1]).ends_with("130 games for %s." % db.club_name(opp))
+			and str(said[2]).ends_with("120 games for %s." % db.club_name(opp)),
+			"At most three storylines, the most games first (%s)" % " | ".join(said))
+	hub.queue_free()
+	await _settle()
 
 ## Touch along a line until a profile opens on `host`.
 func _tap_scan(label: Control, host: Node) -> bool:

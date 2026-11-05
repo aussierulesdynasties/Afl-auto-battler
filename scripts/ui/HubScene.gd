@@ -670,7 +670,13 @@ func _week_section(season: Season) -> Control:
 		# The one who got away (P-16): a player who left you and lines up for
 		# them, from what the club kept. Nothing when there is no one.
 		var former := GameState.former_players(opp).slice(0, FormerPlayers.SHOWN)
-		if not facts.is_empty() or not notes.is_empty() or not former.is_empty():
+		# Storylines before the bounce (T5.Q9): a man meeting a club he played
+		# 100+ games for, after the one who got away, three lines at most.
+		var told := {}
+		for row in former:
+			told[str(row["id"])] = true
+		var old_club := GameState.old_club_lines(opp, told).slice(0, maxi(0, OldClubLines.MATCH_CAP - former.size()))
+		if not facts.is_empty() or not notes.is_empty() or not former.is_empty() or not old_club.is_empty():
 			nv.add_child(UiKit.spacer(4))
 		# The first fact leads (the danger man, the thing to plan for); the
 		# rest follow in body copy, so three lines are not three equals.
@@ -692,6 +698,12 @@ func _week_section(season: Season) -> Control:
 					GameDB.club_name(opp)), _league_names(), UiKit.BODY, UiKit.TEXT)
 			gl.name = "FormerPlayer_%d" % i
 			nv.add_child(gl)
+		for i in range(old_club.size()):
+			var row: Dictionary = old_club[i]
+			var oc := NameInk.label(OldClubLines.line(row, GameDB.player_display_name(row["p"]),
+					GameDB.club_name(str(row["old"]))), _league_names(), UiKit.BODY, UiKit.TEXT)
+			oc.name = "OldClub_%d" % i
+			nv.add_child(oc)
 		for i in range(notes.size()):
 			var nl := NameInk.label(str(notes[i]["text"]), _league_names(), UiKit.BODY,
 					UiKit.BAD if str(notes[i].get("key", "")) == "own_injury" else UiKit.TEXT)
