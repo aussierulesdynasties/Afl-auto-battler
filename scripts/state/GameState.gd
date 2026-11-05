@@ -5470,6 +5470,7 @@ func _after_round(results: Array) -> void:
 	Milestones.record_round(self, results)
 	_nominate_rising_star(results)
 	_round_news(results)
+	LeagueNews.after_round(self, results)
 	_record_match_story(results)
 	if Almanac.on():
 		Almanac.update_club_records(self, results)

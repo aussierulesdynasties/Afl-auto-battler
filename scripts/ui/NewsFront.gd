@@ -166,6 +166,29 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 		return s
 	elif kind == "trade":
 		s["weight"] = 35
+	elif kind == "streak":
+		# League news layer (row 76, switch "league_news"): a winning run, or its end.
+		m = _re("streak", "^(.+) have won (\\d+) in a row after beating (.+)\\.$").search(text)
+		if m != null:
+			var n := int(m.get_string(2))
+			# "name" is the club itself, so a brief or earlier line is in its ink too.
+			s.merge({"name": m.get_string(1), "club": code_of(m.get_string(1)), "weight": 40 + n,
+					"headline": "%s make it %s straight" % [m.get_string(1), _word(n)],
+					"standfirst": "The latest over %s." % m.get_string(3)}, true)
+			return _mine(s, my_club)
+		m = _re("streak_end", "^(.+)'s run of (\\d+) straight wins ended against (.+)\\.$").search(text)
+		if m != null:
+			s.merge({"name": m.get_string(1), "club": code_of(m.get_string(1)), "weight": 50,
+					"headline": "%s's winning run ends at %s" % [m.get_string(1), _word(int(m.get_string(2)))],
+					"standfirst": "Stopped by %s." % m.get_string(3)}, true)
+			return _mine(s, my_club)
+	elif kind == "ladder":
+		m = _re("ladder", "^(.+) are on top of the ladder after (.+?): (.+)\\.$").search(text)
+		if m != null:
+			s.merge({"name": m.get_string(1), "club": code_of(m.get_string(1)), "weight": 58,
+					"headline": "%s go top" % m.get_string(1),
+					"standfirst": "After %s: %s." % [m.get_string(2), m.get_string(3)]}, true)
+			return _mine(s, my_club)
 	elif kind == "own_prospect":
 		# The prospect you created (row 64): his club colours the headline.
 		s.merge({"club": str(item.get("club", "")), "weight": 70,
