@@ -421,6 +421,7 @@ func _draw() -> void:
 	_set_camera()
 	var fade := clampf(_t / CUT_IN, 0.0, 1.0) if not _frozen else 1.0
 	_draw_ground()
+	var lights := VignetteAtmos.draw_back(self, ground_cam(), Rect2(Vector2.ZERO, size), weather)
 	# Far to near, so the nearer players stand in front.
 	var figures := []
 	for t in tokens:
@@ -437,6 +438,7 @@ func _draw() -> void:
 	if not ball_drawn:
 		_draw_ball(b)
 	VignetteWeather.draw_air(self, Rect2(Vector2.ZERO, size), _t, weather)
+	VignetteAtmos.draw_front(self, Rect2(Vector2.ZERO, size), lights, weather, _t)
 	if _frozen:
 		# The freeze: a flash on the cut, then the frame held a shade darker.
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.18), true)
