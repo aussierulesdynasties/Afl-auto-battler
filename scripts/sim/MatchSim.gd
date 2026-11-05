@@ -309,6 +309,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	squads = [home, away]
 	kick_range_on = Features.on("kick_range")
 	clanger_cause_on = Features.on("clanger_cause")
+	back_carries_on = Features.on("back_carries")
 	mid_intercepts_on = Features.on("mid_intercepts")
 	mid_ic_rng.seed = seed * 109 + 113
 	_clanger_seed = seed
@@ -1224,6 +1225,11 @@ const CARRY_ROLES := {
 	"attack": {"MID": 1.0, "FWD": 1.0, "DEF": 0.2, "RUCK": 0.3},
 	"inside": {"FWD": 1.0, "MID": 1.0, "RUCK": 0.3, "DEF": 0.05},
 }
+## Back-zone carrying retuned (row 92, T9.Q22, director 2026-11-06: defenders
+## carry the ball more than real AFL). A defender still leads the back zone's
+## ball, a midfielder drops back to take more of it. Switch back_carries; off,
+## CARRY_ROLES["back"] stands.
+const CARRY_BACK_RETUNED := {"DEF": 0.55, "MID": 1.0, "RUCK": 0.3, "FWD": 0.12}
 ## Forward archetypes (ARD-M3-002), by size as Training's jobs: a key
 ## forward from 192 cm, a small forward up to 181 cm, a general forward
 ## between. Key forwards present in the air inside 50 and bring the ball to
@@ -2424,6 +2430,12 @@ static func clanger_why(disp: Dictionary, weather_now: String, outcome := "stopp
 ## the kicker's reach, and better kickers reach further. Read once at set-up
 ## (switch kick_range) so threaded week sims never touch ProjectSettings.
 var kick_range_on := false
+## Back-zone carrying retuned (row 92): read once at set-up (switch
+## back_carries), so pick_carrier uses CARRY_BACK_RETUNED in the back zone.
+var back_carries_on := false
+## Carrier picks per side, "zone|slot role" -> count. Bookkeeping for the
+## balance harness (carry share by zone); no dice.
+var carry_log := [{}, {}]
 ## Reach in metres: 30 + 0.35 x his disposal (kicking) rating, so a 40 kicker
 ## reaches 44 m, a 70 kicker 54.5 m, a 95 kicker 63 m. The ground is 170 m
 ## goal to goal (Ratings goal_line 85), forward 50 at 35 m from the centre.
@@ -2495,7 +2507,12 @@ func pick_carrier(side: int, fp: float, among: Array = []):
 		key = "disposal"
 		purpose = "transition"
 	var sizes: Dictionary = LEAD_UP_SIZES if zone == "middle" or zone == "attack" else {}
-	return _weighted_roles(sq.ground if among.is_empty() else among, key, CARRY_ROLES[zone], 2.0, side, purpose, sizes, zone)
+	var roles: Dictionary = CARRY_BACK_RETUNED if zone == "back" and back_carries_on else CARRY_ROLES[zone]
+	var who = _weighted_roles(sq.ground if among.is_empty() else among, key, roles, 2.0, side, purpose, sizes, zone)
+	if who != null:
+		var k := zone + "|" + str(who["role"])
+		carry_log[side][k] = int((carry_log[side] as Dictionary).get(k, 0)) + 1
+	return who
 
 
 ## The primary kick-in player: a defender who can use and carry the ball.
