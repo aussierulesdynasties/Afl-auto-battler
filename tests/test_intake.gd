@@ -322,6 +322,21 @@ func _test_career_rollover() -> void:
 	var tied: Dictionary = GameState.draftee_pool[0]
 	tied["tied_club"] = "ADE"
 	tied["tied_type"] = "father-son"
+	# The yearly order: the ladder reversed, the premiers last and the
+	# runners-up second last (director, bug bash 2026-11-05).
+	var ladder_rev := []
+	for row in season.ladder_sorted():
+		ladder_rev.push_front(str(row["code"]))
+	_check(GameState.intake_order() == ladder_rev, "No finals played: the order is the ladder reversed")
+	var saved_finals: Dictionary = season.finals
+	var prem := str(ladder_rev[5])
+	var runner := str(ladder_rev[9])
+	season.finals = {"premier": prem, "runner_up": runner}
+	var fo := GameState.intake_order()
+	season.finals = saved_finals
+	_check(fo.size() == ladder_rev.size() and str(fo[-1]) == prem and str(fo[-2]) == runner
+			and str(fo[0]) == str(ladder_rev[0]),
+			"The premiers pick last and the runners-up second last (%s)" % str(fo))
 	_check(GameState.begin_intake_draft(), "The intake draft opens after the home-and-away")
 	var draft: Draft = GameState.draft
 	_check(draft != null and draft.intake_mode, "GameState built an intake draft")
@@ -341,6 +356,12 @@ func _test_career_rollover() -> void:
 	_check(GameState.finish_intake_draft(), "The rollover commits")
 
 	_check(GameState.season_year == 2028, "The career advances a year")
+	var rookie_years := []
+	for p in GameState.my_list:
+		if str(p.get("drafted_type", "")) == "national" and int(p.get("drafted_year", 0)) == 2027:
+			rookie_years.append(int(p.get("contract_years", 0)))
+	_check(not rookie_years.is_empty() and rookie_years.all(func(y): return y == Contracts.ROOKIE_YEARS),
+			"National-draft rookies start 2028 with two full seasons left (%s)" % str(rookie_years))
 	# The off-season wrap (ARD-M6-007): built once at the rollover, saved,
 	# and shown before Round 1 until you begin the season.
 	var wrap: Dictionary = GameState.season_wrap

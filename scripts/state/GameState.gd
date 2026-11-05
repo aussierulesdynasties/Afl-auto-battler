@@ -1020,8 +1020,12 @@ func load_career() -> bool:
 	staff_vacancies = state.get("staff_vacancies", [])
 	coach_approaches = state.get("coach_approaches", [])
 	coach_approach_year = int(state.get("coach_approach_year", 0))
-	club_expect = state.get("club_expect", {})
-	club_goals = state.get("club_goals", {})
+	# A save from before the board kept its own: _open_board_season above
+	# already set them, so only saved values replace them.
+	if not (state.get("club_expect", {}) as Dictionary).is_empty():
+		club_expect = state["club_expect"]
+	if not (state.get("club_goals", {}) as Dictionary).is_empty():
+		club_goals = state["club_goals"]
 	draft_meeting_year = int(state.get("draft_meeting_year", 0))
 	# A save from before the jumper fix (2026-10-07) may have two players in
 	# one number on a list: renumber the later ones, once.
@@ -1693,6 +1697,33 @@ func opening_order(active: Array) -> Array:
 	return order
 
 
+## The yearly National Draft order: the ladder reversed, but the premiers pick
+## last and the runners-up second last (as opening_order does for 2026).
+func intake_order() -> Array:
+	var order := []
+	for row in season.ladder_sorted():
+		order.append(str(row["code"]))
+	order.reverse()
+	var runner := str(season.finals.get("runner_up", ""))
+	var premier_code := premier()
+	for code in [runner, premier_code]:
+		if code != "" and order.has(code):
+			order.erase(code)
+			order.append(code)
+	return order
+
+
+## The season-wrap word for a club-tied intake (Draft tied_type codes), as
+## the draft screen says it.
+static func _tie_label(kind: String) -> String:
+	match kind:
+		"NGA":
+			return "Next Generation Academy"
+		"FS":
+			return "Father-son"
+	return kind
+
+
 ## Your club in a real-lists career, chosen on the draft screen.
 func choose_real_club(code: String) -> void:
 	if not opening_draft or not league_lists.has(code):
@@ -1761,10 +1792,7 @@ func begin_intake_draft() -> bool:
 		# the next season directly. (Never happens with the shipped class.)
 		return false
 
-	var order := []
-	for row in season.ladder_sorted():
-		order.append(str(row["code"]))
-	order.reverse()
+	var order := intake_order()
 
 	# A new club's extra picks, and the pick it must trade: made first, because
 	# that trade moves a player and the lists are measured next.
@@ -1848,7 +1876,14 @@ func finish_intake_draft() -> bool:
 			p["draft_round"] = int(entry.get("round", 0))
 			_mark_drafted(p, "national", int(entry.get("pick", 0)))
 			Contracts.rookie_deal(p, season_year + 1)
-			if code == my_club:
+			if not opening_draft:
+				# The yearly draft's rookies are ticked at this rollover
+				# (_close_contracts), so they are stored as years + 1 like
+				# _resign: two full seasons, as the opening draft gives.
+				p["contract_years"] = Contracts.ROOKIE_YEARS + 1
+			# The opening draft has no season wrap of its own: its picks must
+			# not turn up in the next year's wrap.
+			if code == my_club and not opening_draft:
 				_wrap_picks.append([id, int(entry.get("pick", 0))])
 			arr.append(p)
 			drafted_draftees[id] = code
@@ -2061,7 +2096,7 @@ func _build_season_wrap(year: int) -> void:
 						outs.append({"id": str(id), "how": "trade"})
 	for a in intake_assignments:
 		if str(a.get("club", "")) == my_club:
-			ins.append({"id": str(a["player_id"]), "how": "NGA" if str(a.get("kind", "")) == "nga" else str(a.get("kind", "")), "name": str(a.get("player_name", ""))})
+			ins.append({"id": str(a["player_id"]), "how": _tie_label(str(a.get("kind", ""))), "name": str(a.get("player_name", ""))})
 	for pk in _wrap_picks:
 		ins.append({"id": str(pk[0]), "how": "pick %d" % int(pk[1])})
 	_wrap_picks = []
@@ -2462,6 +2497,9 @@ func _prepare_interactive_final() -> bool:
 	pending_sim = null
 	_collect_others()
 	pending_round_results = []
+	# The coaching table first: the week's other finals use it too (it is not
+	# saved, so after loading it would be empty), as on the regular-round path.
+	_refresh_coach_tactics()
 	var others := []
 	var index := []
 	for i in range(matches.size()):
@@ -2480,7 +2518,6 @@ func _prepare_interactive_final() -> bool:
 			"round": Season.REGULAR_ROUNDS + int(season.finals["week"]),
 			"label": str(fm["label"]), "tag": str(fm["tag"]),
 			"venue": season.finals_venue(fm), "finals_index": mine}
-	_refresh_coach_tactics()
 	_pending_build = {"at_home": at_home, "seed": season.finals_seed(mine), "finals": true,
 			"weather": season.weather_for(str(fm["home"]), str(fm["away"]),
 					Season.REGULAR_ROUNDS + int(season.finals["week"]), fm)}

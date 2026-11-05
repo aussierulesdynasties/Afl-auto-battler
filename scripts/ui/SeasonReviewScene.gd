@@ -136,9 +136,9 @@ func _build() -> void:
 			["Points for", str(stats["pf"])],
 			["Points against", str(stats["pa"])],
 			["Percentage", "%.1f%%" % stats["pct"]],
-			["Best win", "%d pts (%s)" % [stats["best_margin"], stats["best_opp"]]],
-			["Worst loss", "%d pts (%s)" % [stats["worst_margin"], stats["worst_opp"]]],
-			["Longest win streak", "%d games" % stats["streak"]],
+			["Best win", "No wins" if str(stats["best_opp"]) == "-" else "%d pts (%s)" % [stats["best_margin"], stats["best_opp"]]],
+			["Worst loss", "No losses" if str(stats["worst_opp"]) == "-" else "%d pts (%s)" % [stats["worst_margin"], stats["worst_opp"]]],
+			["Longest win streak", "%d %s" % [stats["streak"], "game" if int(stats["streak"]) == 1 else "games"]],
 			["Goals kicked", str(stats["goals"])],
 	]:
 		facts.add_child(UiKit.line(row[0], 12, UiKit.MUTED))

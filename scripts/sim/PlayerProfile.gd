@@ -65,13 +65,15 @@ static func warm() -> void:
 			_values(role, key)
 
 
-## Share of 2026 players of his role he is at least as good as (0..1).
-static func percentile(p: Dictionary, key: String) -> float:
+## Share of 2026 players of his role he is at least as good as (0..1): ties
+## count for him. `strict` counts only those strictly below him, the measure
+## the archetype lines (forward_type, Roles) were calibrated on.
+static func percentile(p: Dictionary, key: String, strict := false) -> float:
 	var vals := _values(str(p.get("role", "MID")), key)
 	if vals.is_empty():
 		return 0.5
 	var v := float((p.get("attr", {}) as Dictionary).get(key, 0))
-	var below := vals.bsearch(v, true)
+	var below := vals.bsearch(v, strict)
 	return float(below) / float(vals.size())
 
 
@@ -236,7 +238,7 @@ static func forward_type(p: Dictionary) -> String:
 		return "Forward"
 	var view := p.duplicate()
 	view["role"] = "FWD"
-	var aerial := percentile(view, "marking")
+	var aerial := percentile(view, "marking", true)
 	var tall := clampf((h - KEY_FWD_CM[0]) / (KEY_FWD_CM[1] - KEY_FWD_CM[0]), 0.0, 1.0)
 	var short := clampf((SMALL_FWD_CM[0] - h) / (SMALL_FWD_CM[0] - SMALL_FWD_CM[1]), 0.0, 1.0)
 	if 0.6 * tall + 0.4 * aerial >= FWD_TYPE_LINE:
