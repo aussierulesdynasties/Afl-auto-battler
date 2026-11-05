@@ -115,7 +115,13 @@ extends RefCounted
 ##               rookie draft after round 11 (reverse ladder, one pick per club with a list
 ##               spot, free agents and passed-over prospects, deal to the end of next season,
 ##               no trades). Changes AI lists. Off, nothing runs or is saved.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade"]
+##   custom_prospect_story   row 64 (4.Q8, Director Bible #135): the prospect you create at New
+##               Career is followed. His draft-board row and profile say "Created by you"; the
+##               league news tells his nomination, where he is drafted (or that he was
+##               overlooked), his debut, club moves and delistings, each season's games and
+##               goals, and the end of his career. Reads only: no draft, list or rating change.
+##               Off, nothing is shown, written or saved.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story"]
 
 static var _forced := {}
 static var _from_args := {}
