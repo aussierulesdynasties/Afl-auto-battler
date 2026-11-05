@@ -34,7 +34,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 91 | Listed positions via real_pos: about 85 forwards and 21 defenders stop reading MID; moves 122 players and 110 OVRs (T8.Q11); balance-gated | listed positions match real roles, OVR changes reported |
 | 92 | Back-zone carries retuned (CARRY_ROLES) so defenders carry the ball like real AFL (T9.Q22); balance-gated, paired 1,000-match table in the PR | carry share near real, his playtest judges |
 | 94 | Key forward v key defender meet more in the engine so the full-time duel line is real (T8.Q6); balance-gated | audit shows more contests per duel, line reads true |
-| 95 | Storylines before the bounce (beat 3): old-club lines only for 100+ games at that club (T5.Q9) | lines appear in the preview from real facts |
 | 96 | Cut the PRIVATE-WATCH event card: private lives stay out of the game (T5.Q18) | card gone, tests updated |
 | 97 | Training: one stat focus per player per season, drills do the rest (T1.Q7, director 2026-11-06) | focus picked once a season, test |
 | 98 | Audio settings become Mute and one Volume slider (T7.O16) | settings show the two controls, real-tap test |
