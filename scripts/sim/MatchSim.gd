@@ -170,6 +170,10 @@ var stat_rng := RandomNumberGenerator.new()
 ## Whether a mark inside 50 ends in a set shot and from where (SET_BANDS):
 ## its own stream, so the rest of the match draws exactly as before.
 var shot_rng := RandomNumberGenerator.new()
+## Every kick at goal, for the balance harness (tools/balance): [side, 1 for a
+## set shot, metres out (-1 where the sim does not place the shot: general
+## play), result "goal" / "behind" / ""]. Measurement only: no roll reads it.
+var shot_log: Array = []
 ## Smothers alter possession but use their own stream, so ordinary disposal
 ## outcomes keep the calibration RNG sequence they had before this feature.
 var smother_rng := RandomNumberGenerator.new()
@@ -334,6 +338,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	squads = [home, away]
 	kick_range_on = Features.on("kick_range")
 	clanger_cause_on = Features.on("clanger_cause")
+	set_shots_on = Features.on("set_shots")
 	key_duels_on = Features.on("key_duels")
 	momentum_runaway_on = Features.on("momentum_runaway")
 	back_carries_on = Features.on("back_carries")
@@ -3504,6 +3509,11 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 	if not matched.is_empty() and not marked:
 		goal_p *= Matchups.BEATEN_SHOT
 		behind_p *= Matchups.BEATEN_SHOT
+	# set_shots (row 77): more marks inside 50 go back for the kick, so the
+	# general-play shot off an unmarked entry comes less often (SET_GP_SHOT).
+	if set_shots_on and not marked:
+		goal_p *= _tv("SET_GP_SHOT", SET_GP_SHOT)
+		behind_p *= _tv("SET_GP_SHOT", SET_GP_SHOT)
 
 	# A mark inside 50 is a set shot from a distance and angle, or the ball
 	# goes on (SET_BANDS); the chances come from where he kicks from.
@@ -3521,13 +3531,15 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 		var close := current_quarter >= 4 and absi(score(side) - score(opp)) <= 18
 		# Asked about as often as before: a set shot is under half the marks,
 		# and a game has more chains than the 180 this was set for.
-		if moment_rng.randf() < (1.0 if close else 0.49 * 180.0 / float(T["chains_per_game"])):
+		if moment_rng.randf() < (1.0 if close else 0.49 * 180.0 / float(T["chains_per_game"])
+				* (SET_SHOT_SHARE / set_share() if set_shots_on else 1.0)):
 			_offer_set_shot(side, shot_fp, shooter, defender, set_shot, feeder)
 			return {"outcome": "moment", "fp": shot_fp, "actor": shooter}
 
 	var roll := rng.randf()
 	if roll < goal_p + behind_p or not set_shot.is_empty():
-		_shot(side, shooter, not set_shot.is_empty(), "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""))
+		_shot(side, shooter, not set_shot.is_empty(), "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""),
+				float(set_shot.get("metres", -1.0)), str(set_shot.get("key", "")))
 	if roll < goal_p:
 		_t(side, "goals")
 		_p(shooter, "goals")
@@ -3748,10 +3760,15 @@ func _run_and_carry(side: int, carrier, gained: float, pressed: bool, is_kick_in
 
 
 ## A kick at goal: shots, and set shots apart. `result` is "goal", "behind"
-## or "" (it missed everything or fell short).
-func _shot(side: int, shooter, set_shot: bool, result: String) -> void:
+## or "" (it missed everything or fell short). `spot` is where a set shot came
+## from, for the balance harness only: a SET_BANDS key ("pocket" is the tight
+## angle), "free" for a free kick, "lead" for a played-on mark, "" otherwise.
+## A general-play shot is logged only when the sim plays one out: an unmarked
+## entry that scores nothing is not told apart from no shot at all.
+func _shot(side: int, shooter, set_shot: bool, result: String, metres := -1.0, spot := "") -> void:
 	if shooter == null:
 		return
+	shot_log.append([side, 1 if set_shot else 0, metres if set_shot else -1.0, result, spot if set_shot else ""])
 	_t(side, "shots")
 	_p(shooter, "shots")
 	if set_shot:
@@ -5287,7 +5304,7 @@ func _offer_set_shot(side: int, p_fp: float, shooter: Dictionary, defender, band
 	options.append({"key": "bomb", "label": "Bomb it to the goal square",
 		"detail": "Into the pack: a forward might mark it or a crumber snap it, but more often the defence clears it.",
 		"goal": bomb_goal, "behind": 0.30})
-	_fire({"kind": "set_shot", "default": 0, "player_id": str(shooter["id"]),
+	_fire({"kind": "set_shot", "default": 0, "player_id": str(shooter["id"]), "band_key": str(band["key"]),
 		"defender_id": "" if defender == null else str(defender["id"]), "fp": p_fp,
 		"feeder_id": "" if feeder == null else str(feeder["id"]),
 		"title": "%s marks %s" % [GameDB.player_display_name(shooter), spot],
@@ -5317,12 +5334,36 @@ const SET_SHOT_SHARE := 0.55
 ## A missed set shot is usually a behind; now and then it falls short or
 ## goes out on the full.
 const SET_MISS_BEHIND := 0.70
+## set_shots (row 77, director ruling T8.Q9): real set shots are about 55% of
+## shots (Champion Data shot counts, 2026: 5,951 of 10,859; SET_SHOT_EVIDENCE.md
+## [WH]), so most marks inside 50 go back and kick (SET_SHARE_ON), and each
+## band converts at the real rate for its distance and angle: goals per set
+## shot 2021-25 [ABC], straight in front 20-30 m 85%, 30-40 m 71%, 40-50 m 54%,
+## over 50 m 33%; the pocket (10-20 m, wide) the mean of the two wide cells,
+## 66% and 55%. Same spots and shares as SET_BANDS, so the coach's card and the
+## view are unchanged. Total scoring is held flat by the general-play shot off
+## an unmarked entry (SET_GP_SHOT), not by softening the set shot.
+const SET_BANDS_ON := [
+	{"key": "close", "spot": "from 25 metres, straight in front", "metres": 25.0, "acc": 0.85, "share": 0.20},
+	{"key": "front", "spot": "from 35 metres, straight in front", "metres": 35.0, "acc": 0.71, "share": 0.25},
+	{"key": "angle", "spot": "from 45 metres on a slight angle", "metres": 45.0, "acc": 0.54, "share": 0.30},
+	{"key": "pocket", "spot": "from the pocket, on a tight angle", "metres": 15.0, "acc": 0.605, "share": 0.15},
+	{"key": "long", "spot": "from 55 metres out", "metres": 55.0, "acc": 0.33, "share": 0.10},
+]
+const SET_SHARE_ON := 0.63
+const SET_GP_SHOT := 0.74
+var set_shots_on := false
+
+
+## The share of marks inside 50 that end in a set shot from the mark.
+func set_share() -> float:
+	return _tv("SET_SHARE_ON", SET_SHARE_ON) if set_shots_on else SET_SHOT_SHARE
 
 
 ## The bands with this shot's chances filled in: {goal, behind} per band.
-static func set_bands(goal_p: float) -> Array:
+static func set_bands(goal_p: float, by_distance := false) -> Array:
 	var out := []
-	for b in SET_BANDS:
+	for b in (SET_BANDS_ON if by_distance else SET_BANDS):
 		var band: Dictionary = b.duplicate()
 		band["goal"] = clampf(float(b["acc"]) * goal_p / SET_REF, 0.03, 0.97)
 		band["behind"] = (1.0 - float(band["goal"])) * SET_MISS_BEHIND
@@ -5335,13 +5376,14 @@ static func set_bands(goal_p: float) -> Array:
 ## were, so scoring across the league is unchanged; only where they come
 ## from moves. {"band": {} or the band, "goal", "behind"}.
 func _set_shot_split(goal_p: float, behind_p: float) -> Dictionary:
-	var bands := set_bands(goal_p)
+	var bands := set_bands(goal_p, set_shots_on)
+	var share := set_share()
 	var e_goal := 0.0
 	var e_behind := 0.0
 	for b in bands:
 		e_goal += float(b["share"]) * float(b["goal"])
 		e_behind += float(b["share"]) * float(b["behind"])
-	if shot_rng.randf() < SET_SHOT_SHARE:
+	if shot_rng.randf() < share:
 		var r := shot_rng.randf()
 		for b in bands:
 			r -= float(b["share"])
@@ -5349,10 +5391,10 @@ func _set_shot_split(goal_p: float, behind_p: float) -> Dictionary:
 				return {"band": b, "goal": b["goal"], "behind": b["behind"]}
 		var last: Dictionary = bands[bands.size() - 1]
 		return {"band": last, "goal": last["goal"], "behind": last["behind"]}
-	var rest := 1.0 - SET_SHOT_SHARE
+	var rest := 1.0 - share
 	return {"band": {},
-			"goal": maxf(0.0, (goal_p - SET_SHOT_SHARE * e_goal) / rest),
-			"behind": maxf(0.0, (behind_p - SET_SHOT_SHARE * e_behind) / rest)}
+			"goal": maxf(0.0, (goal_p - share * e_goal) / rest),
+			"behind": maxf(0.0, (behind_p - share * e_behind) / rest)}
 
 
 ## A shot's chance in a coach's words, never a percentage.
@@ -5536,7 +5578,8 @@ func _resolve_shot(side: int, m: Dictionary, opt: Dictionary) -> Dictionary:
 		_emit("receive", side, fp, kicker, "%s marks on the lead" % GameDB.player_display_name(kicker))
 		_set_choice["passer_id"] = str(shooter["id"])
 		_set_choice["to_id"] = str(kicker["id"])
-	return _set_result(side, kicker, assist, defender, goal_p, behind_p, false)
+	return _set_result(side, kicker, assist, defender, goal_p, behind_p, false,
+			"lead" if key == "pass" else str(m.get("band_key", "")))
 
 
 ## Where a teammate leads to: `gain` metres nearer goal, no closer than 10 m
@@ -5555,9 +5598,10 @@ const PASS_GAIN := 15.0
 ## A set shot's result: a goal, a behind or the defence rebounds it. Shared by
 ## the three calls; `crumb` marks a snap off the deck.
 func _set_result(side: int, kicker: Dictionary, assist, defender: Dictionary, goal_p: float,
-		behind_p: float, crumb: bool) -> Dictionary:
+		behind_p: float, crumb: bool, spot := "") -> Dictionary:
 	var roll := rng.randf()
-	_shot(side, kicker, not crumb, "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""))
+	_shot(side, kicker, not crumb, "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""),
+			float(Ratings.T["goal_line"]) - (fp if side == 0 else -fp), spot)
 	if roll < goal_p:
 		_t(side, "goals")
 		_p(kicker, "goals")
@@ -5743,7 +5787,7 @@ func _free_set_shot(side: int, at_fp: float, taker: Dictionary) -> Dictionary:
 	var behind_p := (1.0 - goal_p) * SET_MISS_BEHIND
 	var roll := rng.randf()
 	# His shot, as any set shot is counted (shots, set shots, their result).
-	_shot(side, taker, true, "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""))
+	_shot(side, taker, true, "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""), metres, "free")
 	if roll < goal_p:
 		_t(side, "goals")
 		_p(taker, "goals")
