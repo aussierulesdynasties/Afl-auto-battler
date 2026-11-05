@@ -30,6 +30,14 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 87 | coach_arcs and story suites failed once each then passed on rerun: find the flake | 20 clean reruns |
 | 88 | Rookie list (director 2026-11-06): National Draft picks are draftees, not rookies. Add a real rookie list: Rookie Draft right after the National Draft, Category A rookie spots (up to 6, cheaper rookie wage, 1-2 year deals) and Category B spots (non-traditional or international, signed directly, no draft pick), upgrade a rookie to the senior list, pre-season SSP for delisted or overlooked players; the mid-season rookie draft already exists and fills rookie spots. Also fix the National Draft screen copy ("rookies signed", "Rookies join the list") and rename the draftee "rookie_deal" | both lists shown on the list screen, Rookie Draft runs after the National Draft, test covers upgrade |
 | 82 | Itch gets Windows and Android APK builds beside web; price free (T7.O1, T7.O3); Google Play stays off until his written yes | export presets, builds on itch |
+| 89 | Midfield intercepts close the gap now: sim 1.4 per team per game against real 2.5 (T8.Q8); balance-gated, `tools/balance.sh match 1000`, his playtest judges | audit shows the intercept rate near real |
+| 90 | Development drift fixed now, cause first: contested bull 3.5% to about 11% and hothead 6.2% to 32.1% over seven seasons (T8.Q10) | cause shown, then a seven-season audit holds the shares |
+| 91 | Listed positions via real_pos: about 85 forwards and 21 defenders stop reading MID; moves 122 players and 110 OVRs (T8.Q11); balance-gated | listed positions match real roles, OVR changes reported |
+| 92 | Back-zone carries retuned (CARRY_ROLES) so defenders carry the ball like real AFL (T9.Q22); balance-gated, paired 1,000-match table in the PR | carry share near real, his playtest judges |
+| 93 | Learning a position: tighten the pass margin from 3; reach (6) and cost to team-mates unchanged (T8.Q15) | test and audit show fewer passes |
+| 94 | Key forward v key defender meet more in the engine so the full-time duel line is real (T8.Q6); balance-gated | audit shows more contests per duel, line reads true |
+| 95 | Storylines before the bounce (beat 3): old-club lines only for 100+ games at that club (T5.Q9) | lines appear in the preview from real facts |
+| 96 | Cut the PRIVATE-WATCH event card: private lives stay out of the game (T5.Q18) | card gone, tests updated |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
 
 ## B. Built and OFF: waiting for his playtest, then the switch goes on
@@ -217,6 +225,29 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 - Draft AI key-forward spread (2026-11-05): "Leave it as is". Young talls keep their potential credit; no change.
 - Draft AI veterans (2026-11-05): "viney yes, but petracca and stewart should be 125-150"; "petracca is being underrated based on low games, hes very very good". Petracca overridden to 87; building clubs count a retired season at 0.35 dilution. Now Petracca 128, Stewart 138, Viney 301 mean pick.
 
+## Rulings (director, 2026-11-06)
+
+- GitHub deletes a PR's branch when it merges (T7.O20; turned on 2026-11-06).
+- League balance and calibration suites run nightly only, not on every PR (T7.O14).
+- Phone performance budgets and a CI perf gate: not now (T7.O19).
+- Tests: "do a small amount on my pc the rest github" (T7.O20b): GitHub keeps CI; local runs stay small (balance screens, single suites). No self-hosted runner.
+- Trade value keeps counting 60% of unproven growth (T8.Q13).
+- The visual sim reacting to coaching goes before the Season stats patch (T9.Q7).
+- Skills travel with the player: "their skills dont change based on position" (T9.Q27). Tap v mobile rucks, swingmen, tall v small defenders and unicorns stay deferred.
+- Playtest gate 1.12 "Can I feel my decisions?" is adopted (T9.Q28).
+- No single first among the audit's biggest gaps: "all are important no focus on anything particular" (T9.Q30).
+- Cascadeur Indie: written yes to buy (6.Q20). The exact price is shown to him first and he makes the purchase; the gather-on-the-run and other animation calls stay open.
+- The bible's Current focus section moves here (T5.Q21, his consent 2026-11-06); see Current focus below.
+
+## Current focus (moved from the bible, 2026-11-06)
+
+Polish is the gap. There are two big tickets, and one priority above both.
+
+**The single biggest improvement to game feel:** players in the visual sim really react to your coaching moves.
+
+1. **Player agency fine-tuning.** In-match decisions and in-match and pre-game coaching moves, such as matchups and rotation changes. Each decision should feel like it has a real in-match impact and be easily measurable.
+2. **Visual polish.** It should not look like an app. It should feel clean and crisp like a great app does, but also personal, like a hand-crafted game.
+
 ## H. Needs his call (questions still open, one at a time)
 
 Each line is a question he has not answered yet. Answered ones are in Rulings or in section A.
@@ -226,29 +257,14 @@ Each line is a question he has not answered yet. Answered ones are in Rulings or
 - Synergies are worth +5 to +11 margin when on but rarely reached, and generated draftees lose synergy traits: how should a coach reach them, how far do multi-season spread and trait decay go, and what about too many contested bulls (16.1% generated against 3.5% real)? (4.Q10)
 - Coach arc catalogue: which draft arcs does he keep, change or cut, and will he play a career so the switches can go on? (T5.Q4)
 - Backing and firsts wording: first-goal line for any of his players or only backed ones, cap of three lines, under 10 games, tap in the profile, reminder line, +5 mood, quiet first games? (T5.Q8)
-- Storylines before the bounce (beat 3): assign it, and do old-club lines use 100+ games first then 20+ in-career? (T5.Q9)
-- The PRIVATE-WATCH card has a manager making calls about a real person: allowed as business, or private? And are the never-seen cards and no-trade-off choices cut, kept or costed? (T5.Q18, row 34)
-- Does the bible's Current focus section belong in the bible, and what does the game deliberately not have? (T5.Q21)
+- Are the never-seen event cards and no-trade-off choices cut, kept or costed? (T5.Q18, row 34; the PRIVATE-WATCH card is cut, row 96)
+- What does the game deliberately not have? (T5.Q21)
 - Are the hair, beard and boot ids final, and what happens to the 24-style hair, 10-beard and boot contact sheets he has not looked at? (6.Q4)
 - Unassigned defects: club ink under 4.5:1 on club-tinted surfaces, hub ladder empty right side at 2560, break-pane 13 px notes, ellipsised draft subtitle, boundary-snap curved white line, snap-for-goal hovering ball: assign or drop each? (6.Q18)
-- Written yes to the Cascadeur Indie spend, and his calls on the open animation decisions including the gather-on-the-run proof? (6.Q20)
+- His calls on the open animation decisions including the gather-on-the-run proof (Cascadeur spend is a yes)? (6.Q20)
 - Is 1.x frozen to the rows in the register, and which of AFLW, cloud save sync, Play Store, Coach of the Year, club museum, legends wall, own game plan (row 40) and the long-save wishlist move to later? (T7.O4)
 - Which rows make up 1.1 ("tune and polish"): his looks on pre-season, draft night and the oval ring, and which Tier A items? (T7.O5)
-- Do league balance and calibration suites run on every pull request or only nightly? (T7.O14)
 - Retire the remaining no-digit checks on non-gate screens, and loosen the stats column pixel bands to no-clipping only, or leave both? (T7.O15)
-- Does he accept phone budgets of match view p95 under 33 ms and cold start under 6 s, and should CI fail when PERF_BASELINE is exceeded? (T7.O19)
-- Turn on GitHub's "Automatically delete head branches" (agents cannot delete remotely)? Is the WSL2 self-hosted runner pilot still wanted? (T7.O20)
 - Does the transparency continuation order stand (M3, M4, M6, M7, M2 copy first; L1 after Q3, L2 with Q4; M1 after Q2; C2 copy; M5 after #850; L4, C1, S1 after Q5, Q6, Q9; S2 after Q8; L3 after measuring), or does he re-order it? (T7.R89)
-- Key forward v key defender full-time duel line: show only after 6 or more contests, change the engine, or leave it? (T8.Q6)
-- Close the midfield intercept gap now (sim 1.4 vs real 2.5) or keep it deferred? (T8.Q8)
-- Fix the development drift (contested bull 3.5% to about 11%, hothead 6.2% to 32.1% over seven seasons) now, starting with the cause, or leave it? (T8.Q10)
-- Fix the listed-position bias toward midfield (about 85 forwards and 21 defenders read MID) via real_pos, which moves 122 players and 110 OVRs? (T8.Q11)
-- Is unproven potential discounted further in TradeValue beyond #224, or does the current 60% growth counting stand? (T8.Q13)
-- Tighten the pass margin for learning-a-position projects from 3 first, leave reach (6) and cost to team-mates alone, or keep all three? (T8.Q15)
-- Which goes first: the execution queue (ROADMAP 0.4.1 Season stats patch) or the visual sim reacting to coaching (ARD-M8-003 with M4-001/002/004)? (T9.Q7)
 - Keep "League Draft board shows scouted estimates" and the branch's rival scouting error cut to 0-4, or both together (may overcorrect)? (T9.Q15)
-- May Medium retune the CARRY_ROLES back-zone weights, given defenders carry the ball more than they should? (T9.Q22)
-- Does wing marking keep travelling with the player or move to the position, and do tap vs mobile ruck, swingman, tall vs small defenders and unicorns stay deferred? (T9.Q27)
-- Adopt playtest gate 1.12 "Can I feel my decisions?": name a decision that changed a visible contest over three matches, tell each match's story in three sentences including a player battle, explain a loss as personnel, opposition, decision or luck? (T9.Q28)
-- Which of the ten biggest audit gaps goes first (coaching not visibly reacted to, match view identity, onboarding, pre-season behind a switch, clone figures and the rest)? (T9.Q30)
 - Which of P-01 to P-11, P-16, P-19, P-21, P-22 and P-24 does he take? (T9.Q31)
