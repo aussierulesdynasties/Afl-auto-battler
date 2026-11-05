@@ -660,9 +660,9 @@ table, shot conversion, every best and quiet player with his numbers and
   lists: a compact `played` snapshot (games, goals, club stints, draft, listed
   position, retirement year, in-save Brownlows and Colemans) and nothing
   else - no ratings, contract, training, injuries or stat tables. One roll,
-  seeded by the career and his id, decides once whether he coaches: 19%, 22%
-  from 150 games, 25% from 250, a point per major award, capped at 30% (this
-  game's endings are mostly long-serving veterans, about 19 a season). If he
+  seeded by the career and his id, decides once whether he coaches: 14%, 17%
+  from 150 games, 20% from 250, a point per major award (two at most), capped
+  at 30% (this game's endings are mostly long-serving veterans). If he
   does he becomes `C_P_<player id>` with his real name and exactly his
   fictional alias, spends one to three seasons in the pathways (out of sight,
   a season longer when the market is flooded) and then joins the ordinary
@@ -685,8 +685,12 @@ table, shot conversion, every best and quiet player with his numbers and
   career (actual results, retirements and clubs) goes further: 615 careers
   ended, 23% went into coaching, and by 2058 former players held 102 of the
   119 jobs (86%), with several reaching senior coach by the usual path
-  (development, line, senior assistant). The real career is the evidence to
-  trust; if the share keeps climbing, the coaching rate is the lever.
+  (development, line, senior assistant). Row 71 (director, T5.Q15) lowered the
+  base chance from 19% to 14%: six seeded 32-season careers
+  (`coach_rate_impl`) went from 86.0% of jobs in 2058 (SE 1.3) to 71.3% (SE
+  2.0), the middle of the 60-80% aim, every job still filled; former players
+  still reach senior coach (19 of 114 senior jobs in 2058, from 28)
+  (`docs/COACH_RATE_EVIDENCE_2026-11-06.md`).
 * **Team form** — each club's form (-1..1) is derived from its results this
   season (`Season.club_results`, so it is never saved separately and resets
   at every rollover): the last five, weighted 0.30 / 0.25 / 0.20 / 0.15 / 0.10
