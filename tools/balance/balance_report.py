@@ -15,7 +15,7 @@ MAP = {"disposals": "disposals", "kicks": "kicks", "handballs": "handballs",
        "inside50": "inside_50s", "clearances": "clearances", "hitouts": "hitouts",
        "frees_for": "frees_for", "goals": "goals", "behinds": "behinds",
        "rebound50": "rebound_50s", "rebounds": "rebound_50s"}
-EXTRA = ["score", "clangers", "intercepts", "one_percenters", "metres_gained"]
+EXTRA = ["score", "clangers", "intercepts", "one_percenters", "metres_gained", "strength", "draftees"]
 
 
 def load(run, arm):

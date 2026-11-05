@@ -6,6 +6,13 @@ extends RefCounted
 ## `sets` puts values on each MatchSim's own vars (--set name=value,...) to
 ## screen a tuning knob without editing the sim; a name the sim lacks fails.
 ## `echo` also prints each line as "BAL <json>" (tools/audit/balance_match_impl.gd).
+## `start` "real" (--start real, row 65 follow-up): the lists are the 2027 round-1 lists of a
+## real-lists career instead (GameState.begin_real_lists, the 2026 National Draft run with
+## every club picking as the AI does, career and replay seed 2026), so the real 2026 class
+## plays where it is picked; each team line then also carries "draftees", the 2026
+## draftees in its 23.
+
+var start := ""
 
 
 func play(from: int, count: int, out: String, on: PackedStringArray,
@@ -16,6 +23,12 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		Features.set_on(f, true)
 	for f in off:
 		Features.set_on(f, false)
+	var lists := {}
+	var class_ids := {}
+	if start == "real":
+		lists = real_start_lists()
+		for q in GameDB.draftees:
+			class_ids[str(q["id"])] = true
 	var codes: Array = GameDB.active_clubs(2026).duplicate()
 	var pairs := []
 	for a in range(codes.size()):
@@ -30,8 +43,8 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		var flip := (i / pairs.size()) % 2 == 1
 		var h := str(p[1] if flip else p[0])
 		var a := str(p[0] if flip else p[1])
-		var sq_h := Squad.new(h, GameDB.club_list(h), true, h)
-		var sq_a := Squad.new(a, GameDB.club_list(a), false, a)
+		var sq_h := Squad.new(h, lists.get(h, GameDB.club_list(h)), true, h)
+		var sq_a := Squad.new(a, lists.get(a, GameDB.club_list(a)), false, a)
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
 		sim.weather = weather
 		for k in sets:
@@ -61,6 +74,12 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 			t["q_score"] = q_score[side]
 			t["roles"] = role_lines(rosters[side], r["players"])
 			t["carry_zone"] = (sim.carry_log[side] as Dictionary).duplicate()
+			if not class_ids.is_empty():
+				var sq: Squad = sq_h if side == 0 else sq_a
+				var n_new := 0
+				for pl in sq.ground + sq.bench:
+					n_new += 1 if class_ids.has(str(pl["id"])) else 0
+				t["draftees"] = n_new
 			# Intercepts by each man's listed position (DEF, MID, FWD, RUCK), as
 			# tools/audit/intercept_impl.gd counts them: "ic_MID" intercepts and
 			# "pg_MID" player-games (every man who played and has a stat line).
@@ -78,6 +97,27 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 			print("BAL " + line)
 	fh.close()
 	return 0
+
+
+## The 2027 round-1 lists of a real-lists career: the real end-of-2026 lists, the 2026
+## list decisions, trades and free agency, then the 2026 National Draft with every club
+## (MEL included) picking as the AI does. Same seeds every run, so two checkouts pair.
+func real_start_lists() -> Dictionary:
+	GameState.reset()
+	GameState.autosave_enabled = false
+	GameState.career_seed = 2026
+	GameState.replay_seed = 2026
+	GameState.begin_real_lists()
+	GameState.choose_real_club("MEL")
+	var d: Draft = GameState.draft
+	var guard := 0
+	while not d.is_finished() and guard < 5000:
+		guard += 1
+		var c := d._best_ai_pick(d.current_club())
+		if c.is_empty() or not d._draft_pick(d.current_club(), c):
+			d._skip_current_pick()
+	GameState.finish_intake_draft()
+	return GameState.season.lists
 
 
 ## Key forward v key defender (row 94): one row per key forward who had a
