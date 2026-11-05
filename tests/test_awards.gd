@@ -395,8 +395,8 @@ func _test_golden_fist_rule() -> void:
 	var int_row: Dictionary = rows[ids.find("int")]
 	_check(str(int_row["path"]) == "intercept", "The interceptor is judged on his intercepts")
 	_check(Awards.golden_fist(book, players) == rows, "The same book always gives the same order")
-	_check(Awards.golden_fist_line(rows[0]) == "140 spoils, 12 smothers and 40 tackles"
-			and Awards.golden_fist_line(int_row) == "60 intercept marks, 95 intercepts and 80 rebound 50s",
+	_check(Awards.golden_fist_line(rows[0]) == "140 spoils, 12 smothers and 40 tackles in 22 games"
+			and Awards.golden_fist_line(int_row) == "60 intercept marks, 95 intercepts and 80 rebound 50s in 22 games",
 			"The line is his raw counts on his own path (%s / %s)" % [
 			Awards.golden_fist_line(rows[0]), Awards.golden_fist_line(int_row)])
 	# A quieter lockdown season: now the interceptor wins, on his path.
@@ -413,15 +413,27 @@ func _test_golden_fist_rule() -> void:
 	}
 	rows = Awards.golden_fist(scaled, players)
 	_check(str(rows[0]["id"]) == "int", "Each path is judged against its own field, not the bigger raw count")
-	# Ties: the same score goes to more games, then to the lower id.
+	# A game at a time: fewer spoils in fewer games beats more spoils in more,
+	# and the line says the games, so the lower total reads true.
+	var rate := {
+		"few": _book_row("CAR", 14, {"spoils": 112.0}),
+		"many": _book_row("GEE", 24, {"spoils": 160.0}),
+		"avg1": _book_row("HAW", 20, {"spoils": 60.0}),
+	}
+	rows = Awards.golden_fist(rate, {"few": {"role": "DEF"}, "many": {"role": "DEF"}, "avg1": {"role": "DEF"}})
+	_check(str(rows[0]["id"]) == "few" and Awards.golden_fist_line(rows[0]) == "112 spoils in 14 games"
+			and Awards.golden_fist_line(rows[1]) == "160 spoils in 24 games",
+			"Judged per game: 112 spoils in 14 games beats 160 in 24 (%s)" % str(rows.map(func(r): return Awards.golden_fist_line(r))))
+	# Ties: the same score goes to more games, then to the lower id. The higher
+	# id has the more games, so only the games rule can put him first.
 	var tied := {
-		"tie_a": _book_row("CAR", 24, {"spoils": 96.0}),
-		"tie_b": _book_row("GEE", 12, {"spoils": 48.0}),
+		"tie_a": _book_row("CAR", 12, {"spoils": 48.0}),
+		"tie_b": _book_row("GEE", 24, {"spoils": 96.0}),
 		"avg1": _book_row("HAW", 20, {"spoils": 20.0}),
 	}
 	rows = Awards.golden_fist(tied, players)
-	_check(str(rows[0]["id"]) == "tie_a" and float(rows[0]["score"]) == float(rows[1]["score"]),
-			"A level score goes to the defender with more games")
+	_check(str(rows[0]["id"]) == "tie_b" and float(rows[0]["score"]) == float(rows[1]["score"]),
+			"A level score goes to the defender with more games, even with the higher id")
 	# The book lists the higher id first, so order of entry cannot decide it.
 	tied = {"tie_b": _book_row("GEE", 12, {"spoils": 48.0}), "tie_a": _book_row("CAR", 12, {"spoils": 48.0}),
 			"avg1": _book_row("HAW", 20, {"spoils": 20.0})}
@@ -449,7 +461,7 @@ func _test_golden_fist_trophy_room() -> void:
 	var fists := items.filter(func(it): return str(it["key"]) == "golden_fist")
 	_check(fists.size() == 1 and str(fists[0]["id"]) == "gf1" and int(fists[0]["year"]) == 2026
 			and str(fists[0]["name"]) == Awards.GOLDEN_FIST
-			and str(fists[0]["count"]) == "14 intercept marks, 40 intercepts and 31 rebound 50s",
+			and str(fists[0]["count"]) == "14 intercept marks, 40 intercepts and 31 rebound 50s in 22 games",
 			"Your Golden Fist is on the shelf with its counts; another club's is not (%s)" % str(fists))
 	_check(StatsTrophies.kinds_won(seasons).has("golden_fist"), "The trophy room's filter offers the Golden Fist")
 	GameState.my_club = keep_club

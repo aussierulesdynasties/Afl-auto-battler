@@ -13,9 +13,9 @@ static func open(host: Control) -> Control:
 	var stages := [
 		["Brownlow Medal", "Home-and-away votes", aw.get("brownlow", []), "votes"],
 		["Coleman Medal", "Home-and-away goals", aw.get("coleman", []), "goals"],
-		# The best defender, lockdown or intercept, each judged against his own kind.
-		# Absent in a season played before it existed.
-		[Awards.GOLDEN_FIST, "Best defender: a lockdown back on his spoils, an interceptor on his marks",
+		# The best defender, lockdown or intercept, each judged against his own kind;
+		# the winner's line shows which. Absent in a season played before it existed.
+		[Awards.GOLDEN_FIST, "Best defender, finals included",
 			aw.get("golden_fist", []), "fist"],
 		["All-Australian", "The season's team", aw.get("all_australian", []), ""],
 		[BestAndFairest.award_name(GameState.my_club), GameDB.club_name(GameState.my_club),

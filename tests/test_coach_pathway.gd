@@ -80,6 +80,12 @@ func _test_snapshot() -> void:
 	_check(int(h2.get("rising_star", 0)) == 1 and int(h2.get("coaches", 0)) == 2
 			and int((h2.get("bnf", {}) as Dictionary).get("ADE", 0)) == 2,
 			"His Rising Star, Coaches Awards and best and fairests are kept (%s)" % str(h2))
+	var h3: Dictionary = CoachPathway.snapshot(p, Y, roll + [{"year": 2035, "golden_fist": [{"id": "P1"}]},
+			{"year": 2036, "golden_fist": [{"id": "P1"}]}])["honours"]
+	_check(int(h3.get("golden_fist", 0)) == 2
+			and CoachSheet.playing_lines({"games": 263, "goals": 187, "stints": [], "unknown": [], "honours": h3})
+			.has("2 %ss" % Awards.GOLDEN_FIST),
+			"His Golden Fists stay with him into coaching (%s)" % str(h3))
 	var lines2 := CoachSheet.playing_lines({"games": 263, "goals": 187, "stints": [], "unknown": [], "honours": h2})
 	_check(lines2.has("Brownlow Medal") and lines2.has("2 Coaches Awards") and lines2.has("Rising Star")
 			and lines2.has("2 Malcolm Blight Medals"),

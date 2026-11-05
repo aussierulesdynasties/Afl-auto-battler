@@ -104,9 +104,12 @@ static func _fist_rate(counts: Dictionary, weights: Dictionary, games: int) -> f
 	return s / float(maxi(1, games))
 
 
-## What won it, in plain words, his season totals on his own path (no
-## weights): "61 spoils, 9 smothers and 22 tackles" or "14 intercept marks,
-## 40 intercepts and 31 rebound 50s". A count of none is left out.
+## What won it, in plain words, his season totals on his own path and the
+## games they came from (no weights; the award is judged a game at a time, so
+## a winner with fewer totals than a placegetter reads true): "61 spoils, 9
+## smothers and 22 tackles in 15 games" or "14 intercept marks, 40 intercepts
+## and 31 rebound 50s in 22 games". A count of none is left out; so are the
+## games when a row lacks them.
 static func golden_fist_line(row: Dictionary) -> String:
 	var keys: Array = (FIST_INTERCEPT if str(row.get("path", "")) == "intercept" else FIST_LOCKDOWN).keys()
 	var counts: Dictionary = row.get("counts", {})
@@ -117,9 +120,12 @@ static func golden_fist_line(row: Dictionary) -> String:
 			parts.append("%d %s" % [n, FIST_WORDS[k][0] if n == 1 else FIST_WORDS[k][1]])
 	if parts.is_empty():
 		return ""
-	if parts.size() == 1:
-		return str(parts[0])
-	return "%s and %s" % [", ".join(parts.slice(0, parts.size() - 1)), parts[parts.size() - 1]]
+	var line := str(parts[0]) if parts.size() == 1 else "%s and %s" % [
+			", ".join(parts.slice(0, parts.size() - 1)), parts[parts.size() - 1]]
+	var games := int(row.get("games", 0))
+	if games > 0:
+		line += " in %d %s" % [games, "game" if games == 1 else "games"]
+	return line
 
 
 ## How he won it, in a word: "Lockdown" or "Intercept".
