@@ -166,6 +166,11 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 		return s
 	elif kind == "trade":
 		s["weight"] = 35
+	elif kind == "own_prospect":
+		# The prospect you created (row 64): his club colours the headline.
+		s.merge({"club": str(item.get("club", "")), "weight": 70,
+				"standfirst": "The player you created."}, true)
+		return _mine(s, my_club)
 	return s
 
 

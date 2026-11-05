@@ -1,0 +1,369 @@
+extends RefCounted
+## Row 64 (4.Q8): the prospect you create at New Career, Alastair McNeil,
+## enters the first National Draft and his story is told (OwnProspect, switch
+## custom_prospect_story). Off, nothing is written, shown or saved.
+## Run through tests/run_own_prospect_tests.gd.
+
+var failures: Array[String] = []
+var checks := 0
+
+const SEED := 6464
+const FEATURE := "custom_prospect_story"
+
+
+const Tap := preload("res://tests/tap.gd")
+
+
+func run() -> void:
+	failures.clear()
+	checks = 0
+	_t("_test_spec")
+	_t("_test_switch_off")
+	_t("_test_redraft_first_draft")
+	_t("_test_real_lists_first_draft")
+	_t("_test_draft_untouched")
+	_t("_test_career_beats")
+	_t("_test_news_front")
+	_t("_test_save_reload")
+	await _t("_test_marks_on_screen")
+	Features.clear(FEATURE)
+	GameState.replay_seed = 0
+	GameState.reset()
+	print(Ran.line("Own prospect", self))
+
+
+func _check(condition: bool, message: String) -> void:
+	checks += 1
+	if not condition:
+		failures.append(message)
+		push_error(message)
+
+## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+const Ran := preload("res://tests/functions_ran.gd")
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
+
+
+## Alastair McNeil as the coach would make him in the Club Forge.
+func _alastair() -> Dictionary:
+	return {"first": "Alastair", "last": "McNeil", "nickname": "", "role": "FWD", "role2": "",
+			"height_cm": 194, "style": "key_forward", "strengths": ["marking"], "weaknesses": ["pressure"],
+			"foot": "R", "number_pref": 0, "fav_club": "", "look": {}}
+
+
+func _gs():
+	return GameState
+
+
+## A fresh career with Alastair made, the switch as given.
+func _fresh(on: bool) -> void:
+	Features.set_on(FEATURE, on)
+	var gs = _gs()
+	gs.reset()
+	gs.replay_seed = SEED
+	gs.career_seed = SEED
+	_check(gs.add_custom_prospect(_alastair()) == "", "(setup) Alastair McNeil is created")
+
+
+func _mine(gs) -> Array:
+	return (gs.news as Array).filter(func(n): return str(n.get("kind", "")) == OwnProspect.KIND)
+
+
+func _own(gs) -> Dictionary:
+	return OwnProspect.locate(gs)["p"]
+
+
+## Run the National Draft on the board: the user's club takes the top of the
+## board, the AI does the rest. No preference for him either way.
+func _run_draft(gs) -> void:
+	var guard := 0
+	while not gs.draft.is_finished() and guard < 600:
+		guard += 1
+		if gs.draft.is_user_turn():
+			var board: Array = gs.draft.board("", "", "", "overall", true)
+			if board.is_empty() or not gs.draft.pick(board[0]):
+				break
+		else:
+			var club: String = gs.draft.current_club()
+			var cand: Dictionary = gs.draft._best_ai_pick(club)
+			if cand.is_empty() or not gs.draft._draft_pick(club, cand):
+				gs.draft._skip_current_pick()
+
+
+func _test_spec() -> void:
+	var spec := _alastair()
+	_check(Prospects.forge_problem(spec) == "", "Alastair McNeil is a valid Club Forge prospect")
+	var p := Prospects.make_custom(spec, 2027, SEED)
+	_check(GameDB.player_display_name(p) == "Alastair McNeil" and bool(p.get("user_created", false)),
+			"He keeps his name and is marked as created")
+
+
+func _test_switch_off() -> void:
+	_fresh(false)
+	var gs = _gs()
+	gs.begin_draft()
+	var p := _own(gs)
+	_check(not p.is_empty() and OwnProspect.tag(p) == "", "Off: no mark on him")
+	_check(_mine(gs).is_empty() and gs.custom_prospect_story.is_empty(),
+			"Off: nothing is written to the news or kept for the save")
+	OwnProspect.check(gs)
+	_check(_mine(gs).is_empty() and gs.custom_prospect_story.is_empty(), "Off: a look does nothing")
+
+
+func _test_redraft_first_draft() -> void:
+	_fresh(true)
+	var gs = _gs()
+	gs.begin_draft()
+	var ids: Array = gs.draft.pool.map(func(q): return str(q["id"]))
+	_check(not ids.has(gs.custom_prospect_id), "He is not in the League Draft: he is a prospect")
+	var p := _own(gs)
+	_check(OwnProspect.locate(gs)["at"] == "pool" and int(p["draft_year"]) == gs.season_year,
+			"He is in the first National Draft class (%d)" % gs.season_year)
+	_check(OwnProspect.tag(p) == OwnProspect.TAG, "His row and profile say %s" % OwnProspect.TAG)
+	var told := _mine(gs)
+	_check(told.size() == 1 and str(told[0]["text"]).contains("Alastair McNeil")
+			and str(told[0]["text"]).contains("has nominated for the %d National Draft" % gs.season_year),
+			"The news tells his nomination (%s)" % str(told))
+	# The League Draft done, the first season played (fast-forwarded), then
+	# the first National Draft: he is taken, or overlooked, and the news says which.
+	gs.start_season("ADE", GameDB.club_list("ADE"))
+	_check(OwnProspect.locate(gs)["at"] == "pool", "He waits in the class through the first season")
+	gs.season.round_index = gs.season.fixture.size()
+	_check(gs.begin_intake_draft(), "(setup) the first National Draft opens")
+	var year: int = gs.season_year
+	_run_draft(gs)
+	_check(gs.draft.is_finished() and gs.finish_intake_draft(), "(setup) the draft finishes")
+	_draft_beat(gs, year, "redraft")
+
+
+func _test_real_lists_first_draft() -> void:
+	_fresh(true)
+	var gs = _gs()
+	gs.begin_real_lists()
+	var told := _mine(gs)
+	_check(told.size() == 1 and str(told[0]["text"]).contains("has nominated for the %d National Draft" % GameDB.DATA_SEASON),
+			"Real lists: he nominates for the 2026 National Draft (%s)" % str(told))
+	var ids: Array = gs.draft.pool.map(func(q): return str(q["id"]))
+	_check(ids.has(gs.custom_prospect_id), "Real lists: he is in the opening National Draft pool")
+	gs.choose_real_club("GEE")
+	_run_draft(gs)
+	_check(gs.draft.is_finished() and gs.finish_intake_draft(), "(setup) the opening draft finishes")
+	_draft_beat(gs, GameDB.DATA_SEASON, "real lists")
+
+
+## After his first National Draft: one line, and it is the truth.
+func _draft_beat(gs, year: int, label: String) -> void:
+	var now := OwnProspect.locate(gs)
+	var p: Dictionary = now["p"]
+	var lines: Array = _mine(gs).map(func(n): return str(n["text"]))
+	var taken := lines.filter(func(t): return t.contains("National Draft") and t.contains("with pick"))
+	var missed := lines.filter(func(t): return t.contains("overlooked in the %d National Draft" % year))
+	if str(now["at"]) == "club":
+		var want := "%s have taken Alastair McNeil with pick %d in the %d National Draft." % [
+				GameDB.club_name(str(now["club"])), int(p.get("drafted_pick", 0)), year]
+		_check(taken.size() == 1 and str(taken[0]) == want and missed.is_empty(),
+				"%s: the news names his club and pick (%s / %s)" % [label, want, str(lines)])
+	else:
+		_check(missed.size() == 1 and taken.is_empty(),
+				"%s: the news says he was overlooked (%s)" % [label, str(lines)])
+	print("  %s: %s" % [label, " / ".join(lines)])
+	# A second look tells nothing new.
+	var n: int = _mine(gs).size()
+	OwnProspect.check(gs, year)
+	OwnProspect.check(gs)
+	_check(_mine(gs).size() == n, "%s: nothing is told twice" % label)
+
+
+## The story only reads: the opening draft goes exactly the same with the
+## switch on or off.
+func _test_draft_untouched() -> void:
+	var picks := []
+	for on in [false, true]:
+		_fresh(on)
+		var gs = _gs()
+		gs.begin_real_lists()
+		gs.choose_real_club("GEE")
+		_run_draft(gs)
+		picks.append(gs.draft.pick_history.map(func(e): return "%s:%s" % [str(e.get("club", "")), str(e.get("player_id", ""))]))
+		gs.finish_intake_draft()
+	_check(picks[0].size() >= 40 and picks[0] == picks[1],
+			"The same seed drafts the same players with the story on or off (%d picks)" % picks[0].size())
+
+
+## His career from the news: taken, debut, a move, delisted, re-signed, a
+## season, retired. The moves are made by hand; the lines are the system's.
+func _test_career_beats() -> void:
+	_fresh(true)
+	var gs = _gs()
+	gs.begin_real_lists()
+	gs.choose_real_club("GEE")
+	_run_draft(gs)
+	gs.finish_intake_draft()
+	var id: String = gs.custom_prospect_id
+	var p := _own(gs)
+	# Wherever the draft left him, put him on Carlton's list as pick 9.
+	_take_out(gs, id)
+	p["drafted_type"] = "national"
+	p["drafted_pick"] = 9
+	p["drafted_year"] = 2026
+	p["club"] = "CAR"
+	gs.custom_prospect_story["at"] = "pool"
+	gs.custom_prospect_story["club"] = ""
+	(gs.season.lists["CAR"] as Array).append(p)
+	OwnProspect.check(gs)
+	_check(_last(gs) == "Carlton have taken Alastair McNeil with pick 9 in the 2026 National Draft.",
+			"Taken: club and pick (%s)" % _last(gs))
+	gs.season_tally[id] = {"games": 1, "goals": 2}
+	OwnProspect.check(gs)
+	_check(_last(gs) == "Alastair McNeil made his AFL debut for Carlton.", "His debut (%s)" % _last(gs))
+	OwnProspect.check(gs)
+	_check(_last(gs).contains("debut"), "A debut is told once")
+	_take_out(gs, id)
+	p["club"] = "ESS"
+	(gs.season.lists["ESS"] as Array).append(p)
+	OwnProspect.check(gs)
+	_check(_last(gs) == "Alastair McNeil has moved from Carlton to Essendon.", "A move (%s)" % _last(gs))
+	gs.season_tally[id] = {"games": 12, "goals": 20}
+	gs.season.finals = {"done": true}
+	OwnProspect.check(gs)
+	_check(_last(gs) == "Alastair McNeil's 2027: 12 games and 20 goals for Essendon.", "His season (%s)" % _last(gs))
+	OwnProspect.check(gs)
+	_check(_mine(gs).filter(func(n): return str(n["text"]).contains("'s 2027:")).size() == 1, "A season is told once")
+	gs.season.finals = {}
+	_take_out(gs, id)
+	gs.free_agents.append(p)
+	OwnProspect.check(gs)
+	_check(_last(gs) == "Alastair McNeil is off Essendon's list and looking for a new club.", "Delisted (%s)" % _last(gs))
+	_take_out(gs, id)
+	(gs.season.lists["ESS"] as Array).append(p)
+	OwnProspect.check(gs)
+	_check(_last(gs) == "Essendon have signed Alastair McNeil.", "Signed again (%s)" % _last(gs))
+	_take_out(gs, id)
+	gs.departed_names[id] = p
+	OwnProspect.check(gs)
+	_check(_last(gs) == "Alastair McNeil's playing career is over: 12 games and 20 goals.",
+			"His career ends with his record (%s)" % _last(gs))
+	_check(OwnProspect.over_line("Alastair McNeil", 0, 0) == "Alastair McNeil's playing career is over without a senior game."
+			and OwnProspect.season_line("Alastair McNeil", "ESS", 2028, {}) == "Alastair McNeil did not play a senior game for Essendon in 2028.",
+			"A bust is told plainly")
+	_check(_mine(gs).all(func(n): return str(n["text"]).contains("Alastair McNeil")),
+			"Every line names him as created, in this name mode")
+	gs.show_real_names = not gs.show_real_names
+	_check(GameDB.player_display_name(p) == "Alastair McNeil", "His name is his in the other name mode too")
+	gs.show_real_names = not gs.show_real_names
+
+
+func _take_out(gs, id: String) -> void:
+	var all: Array = [gs.league_lists]
+	if gs.season != null:
+		all.append(gs.season.lists)
+	for lists in all:
+		for code in lists:
+			var arr: Array = lists[code]
+			for i in range(arr.size() - 1, -1, -1):
+				if str(arr[i].get("id", "")) == id:
+					arr.remove_at(i)
+	for i in range(gs.free_agents.size() - 1, -1, -1):
+		if str(gs.free_agents[i].get("id", "")) == id:
+			gs.free_agents.remove_at(i)
+	gs.draftee_pool = gs.draftee_pool.filter(func(q): return str(q.get("id", "")) != id)
+	if gs.draft != null:
+		gs.draft.pool = gs.draft.pool.filter(func(q): return str(q.get("id", "")) != id)
+
+
+func _last(gs) -> String:
+	var told := _mine(gs)
+	return str(told[0]["text"]) if not told.is_empty() else ""
+
+
+func _test_news_front() -> void:
+	var item := {"kind": OwnProspect.KIND, "club": "CAR", "text": "Carlton have taken Alastair McNeil with pick 9 in the 2026 National Draft."}
+	var mine := NewsFront.story(item, "CAR")
+	var theirs := NewsFront.story(item, "GEE")
+	_check(str(theirs["club"]) == "CAR" and str(theirs["headline"]) == str(item["text"])
+			and str(theirs["standfirst"]) == "The player you created." and not bool(theirs["mine"]),
+			"The front page tells his line in his club's colours")
+	_check(bool(mine["mine"]) and int(mine["weight"]) > int(theirs["weight"]), "At your club he is your story")
+
+
+func _test_save_reload() -> void:
+	_fresh(true)
+	var gs = _gs()
+	gs.begin_real_lists()
+	gs.choose_real_club("GEE")
+	var before: Dictionary = gs.custom_prospect_story.duplicate(true)
+	_check(not before.is_empty() and gs.save_career() and gs.load_career(), "(setup) save and reload mid-draft")
+	_check(gs.custom_prospect_story == before, "His story survives a reload (%s)" % str(gs.custom_prospect_story))
+	_check(OwnProspect.locate(gs)["at"] == "pool", "He is still in the draft pool after the reload")
+	var n: int = _mine(gs).size()
+	OwnProspect.check(gs)
+	_check(_mine(gs).size() == n, "A reload tells nothing again")
+	# Still in the pool when a draft closes: overlooked, once a year; and the
+	# day he leaves the pool unpicked, the news says so.
+	OwnProspect.check(gs, 2026)
+	OwnProspect.check(gs, 2026)
+	_check(_last(gs) == "Alastair McNeil was overlooked in the 2026 National Draft."
+			and _mine(gs).size() == n + 1, "Overlooked, told once (%s)" % _last(gs))
+	_take_out(gs, gs.custom_prospect_id)
+	OwnProspect.check(gs)
+	_check(_last(gs) == "Alastair McNeil's time in the draft pool is over: no club took him.",
+			"Unpicked and out of the pool (%s)" % _last(gs))
+	# An old save has no story: a career reloaded with it absent starts the
+	# story from where he is, without telling the past again.
+	gs.custom_prospect_story = {}
+	gs.save_career()
+	gs.load_career()
+	_check(gs.custom_prospect_story.is_empty(), "A save without his story loads without one")
+
+
+## His draft-board row and his profile say "Created by you"; a finger's tap on
+## the row opens him. Off, neither mark is there.
+func _test_marks_on_screen() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		GameState.set_setting("seen_%s_intro" % key, true)
+	for on in [true, false]:
+		_fresh(on)
+		GameState.begin_real_lists()
+		GameState.choose_real_club("GEE")
+		var id: String = GameState.custom_prospect_id
+		tree.root.size = Vector2i(390, 844)
+		var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+		tree.root.add_child(ui)
+		await _settle(tree)
+		var done = ui.find_child("MeetingDone", true, false)
+		if done != null:
+			await Tap.tap(done)
+			await _settle(tree)
+		ui.set("_search", "McNeil")
+		ui.call("_refresh_board", true)
+		await _settle(tree)
+		var mark: Label = ui.find_child("Own_" + id, true, false)
+		var inspect: Button = ui.find_child("Inspect_" + id, true, false)
+		_check(inspect != null, "(%s) his row is on the board when searched" % ("on" if on else "off"))
+		if on:
+			_check(mark != null and mark.text == OwnProspect.TAG and mark.is_visible_in_tree(),
+					"His draft row says %s" % OwnProspect.TAG)
+			if inspect != null:
+				var why: String = await Tap.tap(inspect)
+				_check(why == "", "A finger's tap on his row reaches it (%s)" % why)
+				await _settle(tree)
+				_check(ui.find_child("PlayerDetail", true, false) != null, "The tap opens his details")
+		else:
+			_check(mark == null, "Off: his draft row has no mark")
+		ui.queue_free()
+		await _settle(tree)
+		var box := VBoxContainer.new()
+		PlayerSheet._identity(box, _own(GameState))
+		var line: Label = box.find_child("ProfileCreatedByYou", true, false)
+		if on:
+			_check(line != null and line.text == "Created by you at the start of this career.",
+					"His profile says he is the player you created")
+		else:
+			_check(line == null, "Off: his profile has no mark")
+		box.free()
+
+
+func _settle(tree: SceneTree) -> void:
+	for i in range(5):
+		await tree.process_frame
