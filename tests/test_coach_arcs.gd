@@ -402,6 +402,12 @@ func _test_reunion() -> void:
 	_check(CoachArcs.closing(def, rec, {}, GameState.season_year + 1) == "remembered", "reunion: a win resolves 'remembered'")
 	rec["flags"].erase("won")
 	_check(CoachArcs.closing(def, rec, {}, GameState.season_year + 1) == "reconciled", "reunion: a gracious loss resolves 'reconciled'")
+	rec["flags"]["drew"] = GameState.story_week()
+	var draw_end := CoachArcs.closing(def, rec, {}, GameState.season_year + 1)
+	var draw_line := str(def["endings"].get(draw_end, {}).get("line", ""))
+	_check(draw_end == "level" and draw_line.contains("Honours shared") and not draw_line.contains("better of"),
+			"reunion: a drawn reunion resolves 'level' with draw copy: %s / %s" % [draw_end, draw_line])
+	rec["flags"].erase("drew")
 	# The same old club comes round again only once every 10 seasons.
 	ClubArcs._end(GameState, st, def, rec, "reconciled", "Season start")
 	_check(not (st["active"] as Dictionary).has("reunion"), "reunion: an ended reunion is no longer active")
