@@ -299,6 +299,24 @@ const MOMENTUM_BEHIND := 0.10
 ## Kept each chain: halves in about nine chains (five or six minutes).
 const MOMENTUM_DECAY := 0.93
 const MOMENTUM_BREAK := 0.5
+## Row 78 (T8.Q4, switch momentum_runaway): a side on top that is also well
+## ahead on the scoreboard can run away with it, as real sides do once the
+## other side's heads drop. When the side with the run of play leads by more
+## than runaway_lead, its edge grows, up to runaway_gain times more at
+## runaway_lead + RUNAWAY_SPAN, its run fades more slowly (runaway_decay), and
+## a goal the other way turns it a little less (runaway_hold). Close matches
+## (inside runaway_lead) are untouched. Off, momentum is exactly as it was.
+## The knobs are vars so tools/balance.sh can screen values (--set).
+var momentum_runaway_on := false
+var runaway_lead := RUNAWAY_LEAD
+var runaway_gain := RUNAWAY_GAIN
+var runaway_decay := RUNAWAY_DECAY
+var runaway_hold := RUNAWAY_HOLD
+const RUNAWAY_LEAD := 24.0
+const RUNAWAY_SPAN := 30.0
+const RUNAWAY_GAIN := 10.0
+const RUNAWAY_DECAY := 0.99
+const RUNAWAY_HOLD := 0.7
 ## Clanger-rate change at full form: 0.95x at +1, 1.05x at -1.
 const FORM_COMPOSURE := 0.05
 ## Stoppage-win chance at full form (home_ground_bonus is 0.030).
@@ -309,6 +327,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	squads = [home, away]
 	kick_range_on = Features.on("kick_range")
 	clanger_cause_on = Features.on("clanger_cause")
+	momentum_runaway_on = Features.on("momentum_runaway")
 	back_carries_on = Features.on("back_carries")
 	mid_intercepts_on = Features.on("mid_intercepts")
 	mid_ic_rng.seed = seed * 109 + 113
@@ -1473,7 +1492,7 @@ func contest_winner(use_fp: bool, fp: float) -> int:
 			+ (c0 - c1) / float(T["contest_swing"])
 			+ home_edge() + form_edge)
 	# The side with the run of play wins a little more of the ball.
-	p_home += momentum_edge * momentum
+	p_home += momentum_edge * momentum * (1.0 + runaway_gain * runaway())
 	var b0 := _contest_bonus(0, not use_fp)
 	var b1 := _contest_bonus(1, not use_fp)
 	p_home += b0 - b1
@@ -3651,7 +3670,20 @@ func _scored(side: int, points: int, scorer) -> void:
 ## cap, more when it is turning the other side's run.
 func _swing_momentum(side: int, amount: float) -> void:
 	var s := 1.0 if side == 0 else -1.0
+	if s * momentum < 0.0:
+		# Turning a side that has run away with it is harder (0 when off).
+		amount *= 1.0 - runaway_hold * runaway()
 	momentum = clampf(momentum + s * amount * (1.0 - s * momentum), -1.0, 1.0)
+
+
+## How far the side with the run of play has run away with it, 0..1: 0 unless
+## momentum_runaway is on and that side leads by more than runaway_lead,
+## 1 at runaway_lead + RUNAWAY_SPAN or more.
+func runaway() -> float:
+	if not momentum_runaway_on or momentum == 0.0:
+		return 0.0
+	var lead := float(score(0) - score(1)) * signf(momentum)
+	return clampf((lead - runaway_lead) / RUNAWAY_SPAN, 0.0, 1.0)
 
 
 ## Who made the spoil, smother or shepherd: mostly defenders, sometimes a
@@ -4475,7 +4507,7 @@ func set_rotation_policy(side: int, key: String) -> void:
 
 
 func _after_chain() -> void:
-	momentum *= MOMENTUM_DECAY
+	momentum *= lerpf(MOMENTUM_DECAY, runaway_decay, runaway())
 	# Distance, drain and recovery were set for 180 chains a game: a chain is
 	# a share of the game's minutes, so per-game loads stay the same.
 	var per_chain := 180.0 / float(_rates()["chains_per_game"])
