@@ -275,6 +275,7 @@ var best23 := {}
 var class_tiers := {}             # draft year (string) -> tier key, as generated
 var draftee_pool: Array = []     # all prospects that have not been drafted yet
 var drafted_draftees := {}       # prospect id -> destination club
+var midseason := {}              # carnival and mid-season rookie draft (MidseasonDraft)
 var intake_assignments: Array = []  # father-son / NGA pre-draft landings
 var intake_summary := {}        # last rollover: retirements and growth
 ## Last game's per-player XP. The training menu reads this so the whole list
@@ -693,6 +694,7 @@ func save_career() -> bool:
 		"my_list": [] if _linked_code(my_list) != "" else my_list,
 		"my_list_link": _linked_code(my_list),
 		"draftee_pool": draftee_pool,
+		"midseason": midseason,
 		"drafted_draftees": drafted_draftees,
 		"intake_assignments": intake_assignments,
 		"intake_summary": intake_summary,
@@ -873,6 +875,7 @@ func load_career() -> bool:
 	var link := str(state.get("my_list_link", ""))
 	my_list = _season_list(link) if link != "" else state.get("my_list", [])
 	draftee_pool = state.get("draftee_pool", [])
+	midseason = state.get("midseason", {})
 	drafted_draftees = state.get("drafted_draftees", {})
 	intake_assignments = state.get("intake_assignments", [])
 	intake_summary = state.get("intake_summary", {})
@@ -1444,6 +1447,7 @@ func reset() -> void:
 	opening_draft = false
 	season_year = GameDB.START_YEAR
 	drafted_draftees = {}
+	midseason = {}
 	intake_assignments = []
 	intake_summary = {}
 	# The 2026 class was drafted before the career began (it is in the
@@ -2349,6 +2353,7 @@ func prepare_interactive_match() -> bool:
 	match_way_live = match_way()
 	preseason_sim_to_round1()
 	_settle_week_event()
+	MidseasonDraft.settle(self)
 	last_pos_before = my_position()
 	if season.is_regular_done():
 		return _prepare_interactive_final()
@@ -2544,6 +2549,7 @@ func advance() -> String:
 		return "none"
 	preseason_sim_to_round1()
 	_settle_week_event()
+	MidseasonDraft.settle(self)
 	_sync_club_plan()
 	_refresh_coach_tactics()
 	_stamp_conditioning()
@@ -5276,6 +5282,7 @@ func _short_name(id: String) -> String:
 ## the Grand Final has just been played - the season's awards.
 func _after_round(results: Array) -> void:
 	_note_plans_played(results)
+	MidseasonDraft.after_round(self)
 	# Who on a promised run could not play this week, before anything ticks.
 	_backing_unavailable = {}
 	for p in my_list:
@@ -8087,8 +8094,119 @@ func put_on_trade_table(id: String) -> Dictionary:
 	if made == 1:
 		reason = "One club has made an offer for %s." % what
 	elif made > 1:
-		reason = "%s clubs have made offers for %s." % [["", "", "Two", "Three"][made], what]
+		reason = "%s clubs have made offers for %s." % [_count_word(made, true), what]
 	return {"ok": true, "reason": reason, "offers": made}
+
+
+## This year's list problem in three lines (P-48): who is out of contract,
+## how old your best six are, and list spots against this year's picks. Facts
+## only, no advice: the coach reads the brief.
+func list_problem() -> Array:
+	if season == null or my_club == "":
+		return []
+	var side: Array = my_list.duplicate()
+	side.sort_custom(func(a, b):
+		if int(a["overall"]) != int(b["overall"]):
+			return int(a["overall"]) > int(b["overall"])
+		return str(a["id"]) < str(b["id"]))
+	var best22 := {}
+	for q in side.slice(0, 22):
+		best22[str(q["id"])] = true
+	var out_of := Contracts.expiring(my_list).filter(func(q): return not retiring_now(q))
+	var key := out_of.filter(func(q): return best22.has(str(q["id"]))).size()
+	var first := "Nobody out of contract." if out_of.is_empty() else "%s out of contract, %s of them in your best 22." % [
+			_count_word(out_of.size(), true), _count_word(key)]
+	if not out_of.is_empty() and key == 0:
+		first = "%s out of contract, none of them in your best 22." % _count_word(out_of.size(), true)
+	var six := side.slice(0, 6)
+	var ages := 0.0
+	for q in six:
+		ages += float(q.get("age", 25))
+	var going := my_list.filter(func(q): return retiring_now(q)).size()
+	var second := "Your best six average %d years old." % roundi(ages / float(maxi(1, six.size())))
+	if going > 0:
+		second += " %s retiring." % _count_word(going, true)
+	var spots := maxi(0, Contracts.MAX_LIST - my_list.size() + going)
+	var picks := club_picks(my_club).filter(func(pk): return int(pk["year"]) == season_year).size()
+	var third := "%s list spot%s, %s pick%s in the %d draft." % [_count_word(spots, true), "" if spots == 1 else "s",
+			_count_word(picks), "" if picks == 1 else "s", season_year]
+	return [first, second, third]
+
+
+func _count_word(n: int, capital := false) -> String:
+	var words := ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+			"eleven", "twelve"]
+	var w := str(words[n]) if n >= 0 and n < words.size() else str(n)
+	return w.capitalize() if capital else w
+
+
+## Ask around (P-50): every rival answers in one line whether it wants your
+## player, from the same valuation it trades with. Nothing is offered or saved;
+## the coach then opens the usual trade sheet with any club that answered.
+## [{"club", "kind": "yes" | "more" | "no", "line", "mine", "theirs"}], keen
+## clubs first, then by name. "mine"/"theirs" fill the trade sheet.
+func ask_around(id: String) -> Array:
+	if not offseason_open() or id.begins_with("pick:"):
+		return []
+	var found := _trade_assets([id], my_club)
+	if str(found["error"]) != "":
+		return []
+	var asset: Dictionary = found["assets"][0]
+	var who := GameDB.player_display_name(asset)
+	var prospects := trade_prospects()
+	var margin := float(difficulty_rules()["trade_margin"])
+	var out := []
+	_freeze_league(true)
+	for club in _club_order("ask"):
+		var name := GameDB.club_name(club)
+		var row := {"club": club, "kind": "no", "line": "", "mine": [id], "theirs": []}
+		var wont := _wont_go([asset], club)
+		var worth := 0.0 if wont != "" else _worth_to(club, asset, prospects)
+		if wont != "":
+			row["line"] = "%s: not interested. %s" % [name, wont]
+		elif worth <= 0.0:
+			row["line"] = "%s: not interested. %s wouldn't get a game in their side." % [name, who]
+		else:
+			# The most it would give: the package nearest the full price it puts on him.
+			var pkg := _bid(club, asset, worth, 1.0, prospects, "", margin)
+			if not pkg.is_empty():
+				row["kind"] = "yes"
+				row["theirs"] = pkg.map(func(a): return str(a["id"]))
+				row["line"] = "%s: interested. They'd give %s." % [name,
+						" and ".join(pkg.map(func(a): return _ask_name(str(a["id"]), "their")))]
+			else:
+				# He's worth something to them, but less than anything they'd part with:
+				# what else of yours would get their cheapest piece.
+				var cheapest := _bids(club, INF, prospects)
+				var counter := {}
+				if not cheapest.is_empty():
+					var theirs: Array = (cheapest[0][0] as Array).map(func(a): return str(a["id"]))
+					if bool(evaluate_trade(club, [id], theirs)["ok"]):
+						counter = {"mine": [id], "theirs": theirs, "straight": true}
+						row["kind"] = "yes"
+						row["theirs"] = theirs
+						row["line"] = "%s: interested. They'd give %s." % [name,
+								" and ".join(theirs.map(func(x): return _ask_name(str(x), "their")))]
+					else:
+						counter = _counter(club, [id], theirs)
+					if not counter.is_empty() and not counter.has("straight"):
+						row["kind"] = "more"
+						row["mine"] = counter["mine"]
+						row["theirs"] = counter["theirs"]
+						var extra: Array = (counter["mine"] as Array).filter(func(x): return str(x) != id)
+						row["line"] = "%s: interested, not on %s alone. For %s they'd want %s as well." % [name, who,
+								" and ".join(theirs.map(func(x): return _ask_name(str(x), "their"))),
+								" and ".join(extra.map(func(x): return _ask_name(str(x))))]
+				if counter.is_empty():
+					row["line"] = "%s: interested, but nothing they'd part with is a fair swap for %s alone." % [name, who]
+		out.append(row)
+	_freeze_league(false)
+	var rank := {"yes": 0, "more": 1, "no": 2}
+	out.sort_custom(func(a, b):
+		if int(rank[a["kind"]]) != int(rank[b["kind"]]):
+			return int(rank[a["kind"]]) < int(rank[b["kind"]])
+		return GameDB.club_name(str(a["club"])) < GameDB.club_name(str(b["club"])))
+	return out
 
 
 ## Offers still on the table: open, and everything in them still where it was.

@@ -32,12 +32,23 @@ func go(key: String) -> void:
 		push_error("Router: scene not found for '%s' (%s)" % [key, path])
 		return
 	stack.append(key)
+	# The wipe (ScreenTransition) swaps the screen under full cover; with motion
+	# off (headless, Reduced motion) the swap is instant, as before.
+	var wipe := get_node_or_null("/root/ScreenTransition")
+	if wipe != null and bool(wipe.call("should_run")):
+		wipe.call("cover", _swap.bind(key, path, false))
+		return
+	_swap(key, path, true)
+
+
+func _swap(key: String, path: String, ease_in: bool) -> void:
 	var err := get_tree().change_scene_to_file(path)
 	if err != OK:
 		push_error("Router: change_scene_to_file failed (%d) for %s" % [err, path])
 		return
 	MusicManager.set_context(key)
-	_ease_in()
+	if ease_in:
+		_ease_in()
 
 
 ## The new screen eases in rather than cutting (director, 2026-10-08: motion).
@@ -133,6 +144,9 @@ func _input(event: InputEvent) -> void:
 ## screen. Only the OS back button on the main menu leaves the app; Escape on
 ## desktop never quits.
 func handle_back(from_os := false) -> void:
+	var wipe := get_node_or_null("/root/ScreenTransition")
+	if wipe != null and bool(wipe.get("busy")):
+		return
 	var scene := get_tree().current_scene
 	if NameLink.close_open(scene):
 		return
