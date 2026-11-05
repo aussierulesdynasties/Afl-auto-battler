@@ -161,7 +161,7 @@ extends RefCounted
 ##   gather_round   row 74 (T5.Q11a; Director Bible 2.38, 5.127): one of rounds 3 to 7 each
 ##               season is Gather Round, every match staged at the host's grounds (Adelaide
 ##               Oval, Norwood Oval, Barossa Park; GatherRound.gd). A club has its home-ground
-##               edge only at its own ground; the weather is the host's. A club on a bye that
+##               edge only at its own ground; the weather is Adelaide's (Weather's SA row). A club on a bye that
 ##               round sits it out. The round's name shows on the fixture, the hub, the match
 ##               and the warm-up. Changes match output. Nothing saved. Off, every round is as
 ##               before.

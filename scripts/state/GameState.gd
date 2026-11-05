@@ -4141,6 +4141,9 @@ func next_fixture_line() -> String:
 	var nxt := my_next_opponent()
 	if nxt.is_empty():
 		return ""
+	if nxt.has("event"):
+		return "Next: %s, v %s at %s." % [season.round_label(season.round_index),
+				GameDB.club_name(str(nxt["code"])), str(nxt["ground"])]
 	return "Next: Round %d %s %s." % [season.round_index + 1,
 			"v" if str(nxt["venue"]) == "home" else "at", GameDB.club_name(str(nxt["code"]))]
 
@@ -4823,8 +4826,16 @@ func my_next_opponent() -> Dictionary:
 	for m in round_matches:
 		if m["home"] == my_club or m["away"] == my_club:
 			var home: bool = m["home"] == my_club
-			return {"code": m["away"] if home else m["home"], "venue": "home" if home else "away",
+			var out := {"code": m["away"] if home else m["home"], "venue": "home" if home else "away",
 					"weather": season.weather_for(str(m["home"]), str(m["away"]), season.round_index)}
+			# Gather Round: the match is at the host ground; "home" only for a club
+			# playing at its own ground (rule 2.38), else "neutral".
+			if season.round_index == season.gather_round():
+				var at: Array = season.round_at_home(season.round_index, str(m["home"]), str(m["away"]))
+				out["event"] = GatherRound.NAME
+				out["ground"] = season.round_venue(season.round_index, str(m["home"]), str(m["away"]))
+				out["venue"] = "home" if bool(at[0 if home else 1]) else "neutral"
+			return out
 	return {}
 
 

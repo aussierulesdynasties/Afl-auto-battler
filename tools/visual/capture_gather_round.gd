@@ -5,7 +5,9 @@ extends SceneTree
 ## A seeded Geelong career with the switch on, played to the week of Gather Round.
 ## Writes <out>_hub.png (the week's match poster), <out>_fixture.png (the fixture list
 ## open on Gather Round), <out>_match.png (the live match's header) and
-## <out>_results.png (the fixture list after the round). --size WxH (default 390x844).
+## <out>_results.png (the fixture list after the round), <out>_warmup_<ground>.png
+## (the warm-up at the host ground, and at Norwood Oval), <out>_selection.png and
+## <out>_week.png (match prep and its week sheet). --size WxH (default 390x844).
 
 var _w := 390
 var _h := 844
@@ -59,7 +61,39 @@ func _run() -> void:
 	root.add_child(hub)
 	await _frames(20)
 	_save(out + "_hub.png")
+	# The warm-up at the host ground (as the hub's Play match opens it), then the
+	# same warm-up at Norwood Oval, the other host ground with its own look.
+	var up: Dictionary = hub.call("_upcoming_match")
+	var mine := "GEE"
+	var opp := str(up["away"]) if str(up["home"]) == mine else str(up["home"])
+	var VG = load("res://scripts/ui/match/VignetteGround.gd")
+	var PM = load("res://scripts/ui/match/PreMatchVignette.gd")
+	var season = state.season
+	var opp_sq = load("res://scripts/sim/Squad.gd").new(opp, season.lists[opp], false, opp, season.selections.get(opp, {}))
+	var host_ground := str(up.get("venue", ""))
+	for ground in [host_ground, "Norwood Oval"]:
+		VG.use_match({"home": up["home"], "away": up["away"], "venue": ground})
+		print("CAPTURE warm-up at ", VG.venue, " known=", VG.spec_of(VG.venue).get("known"))
+		var pm = PM.open(root, mine, opp, state.my_squad().ground + state.my_squad().bench,
+				opp_sq.ground + opp_sq.bench, "%s  ·  %s v %s" % [str(up["label"]),
+				db.club_name(str(up["home"])), db.club_name(str(up["away"]))], false, {})
+		await _frames(45)
+		_save(out + "_warmup_" + ground.to_lower().replace(" ", "_") + ".png")
+		pm.get_parent().queue_free()
+		await _frames(2)
+	VG.use_match({"home": up["home"], "away": up["away"], "venue": host_ground})
 	hub.queue_free()
+	await _frames(2)
+
+	# Match prep: the week sheet names the event and the host ground.
+	var sel: Control = load("res://scenes/SelectionScene.tscn").instantiate()
+	root.add_child(sel)
+	await _frames(15)
+	_save(out + "_selection.png")
+	sel.call("_open_week")
+	await _frames(15)
+	_save(out + "_week.png")
+	sel.queue_free()
 	await _frames(2)
 
 	load("res://scripts/ui/StatsHubScene.gd").current = "fixture"

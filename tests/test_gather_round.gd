@@ -170,6 +170,19 @@ func _test_career_live_round() -> void:
 	_check(str(pages[g + 1]["event"]) == "", "Fixture list: the next round is not")
 	var on_bye: bool = not gs.season.fixture[g].any(func(m): return m["home"] == "GEE" or m["away"] == "GEE")
 	_check(not on_bye, "Geelong plays in Gather Round")
+	# Match prep names the event and the host ground, never "at home" for a
+	# relocated club (rule 2.38).
+	var nxt: Dictionary = gs.my_next_opponent()
+	_check(str(nxt.get("event", "")) == GatherRound.NAME and _hosts().has(str(nxt.get("ground", ""))),
+			"Match prep: Gather Round at %s" % str(nxt.get("ground", "")))
+	_check(str(nxt["venue"]) == ("home" if gs.season.home_ground("GEE") == str(nxt["ground"]) else "neutral"),
+			"Match prep: Geelong is not at home (%s)" % str(nxt["venue"]))
+	var line: String = gs.next_fixture_line()
+	_check(line.contains(GatherRound.NAME) and line.contains(str(nxt["ground"])) and not line.contains(" at Round"),
+			"Next-match line names the round and ground: %s" % line)
+	# Every host ground has its own look in grounds.json (not the default stadium).
+	for h in _hosts():
+		_check(bool(VignetteGround.spec_of(h).get("known", false)), "%s has its own look" % h)
 	_check(gs.prepare_interactive_match(), "Gather Round is played live")
 	var pm: Dictionary = gs.pending_match
 	_check(str(pm.get("label", "")).ends_with("Gather Round"), "The match is named: %s" % str(pm.get("label", "")))
@@ -193,3 +206,4 @@ func _test_career_live_round() -> void:
 	_check(gs.season.round_index == g + 2 or gs.season.round_index == g + 1, "The season goes on after Gather Round")
 	_check(str(gs.season.round_label(gs.season.round_index - 1)) == "Round %d" % gs.season.round_index,
 			"The round after is a plain round")
+	_check(not gs.my_next_opponent().has("event"), "Match prep after Gather Round is a plain round")

@@ -776,8 +776,18 @@ func _show_coach_box() -> void:
 	ClubDuel.on_colour(title)
 	bv.add_child(title)
 	if q == 1:
-		var where := UiKit.ellipsis("%s  ·  %s v %s  ·  %s" % [str(_res.get("label", "Match")),
+		# Gather Round: the event's name stands for the round number, and the line
+		# may wrap, so the host ground is never cut short on a phone.
+		var label := str(_res.get("label", "Match"))
+		var gather := label.ends_with(GatherRound.NAME)
+		if gather:
+			label = GatherRound.NAME
+		var where := UiKit.ellipsis("%s  ·  %s v %s  ·  %s" % [label,
 				GameDB.club_short(str(_res["home"])), GameDB.club_short(str(_res["away"])), _venue()], UiKit.BODY, UiKit.TEXT, true)
+		where.name = "BreakWhere"
+		if gather:
+			where.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			where.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 		ClubDuel.on_colour(where)
 		if wide:
 			where.size_flags_horizontal = Control.SIZE_EXPAND_FILL

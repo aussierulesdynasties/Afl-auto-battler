@@ -15,7 +15,8 @@ extends RefCounted
 ##     a smaller one). A club whose own home ground is a host ground plays there.
 ##   - home advantage: a club has its home-ground edge only at its own ground
 ##     (as at the Grand Final); a relocated club has none (rule 2.38). The
-##     weather is the host ground's. No event stat buffs.
+##     weather is Adelaide's (Weather has no row for Norwood or Barossa, so all
+##     three use the SA row, Adelaide Oval's). No event stat buffs.
 ##
 ## Derived from the season seed and the saved fixture: nothing is saved, and an
 ## old save gets its Gather Round from the same rule. Switch `gather_round`; off,
