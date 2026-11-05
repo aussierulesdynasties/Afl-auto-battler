@@ -1,7 +1,13 @@
 # PRs never edit docs/TODO.md (parallel PRs conflicted there). A PR body names the
 # rows it finishes with "Closes row 54" / "Closes rows 22, 27" / "Closes row T5.Q24";
-# after the merge this deletes those rows from main. Runs serialise; a push race
-# rebases and retries. No matching row: a warning, nothing else.
+# after the merge this deletes those rows from main.
+#
+# main requires the "test" check (enforce_admins on, no PR required, not strict), so a
+# bare push from here is rejected. Instead: commit on a branch, dispatch Tests on it
+# (workflow_dispatch is the one event GITHUB_TOKEN may start; changed_files=docs/TODO.md
+# makes it a seconds-long docs-only pass), wait for "test" to go green on that commit,
+# then fast-forward main to it. If main moved meanwhile, start over (up to 5 times).
+# No matching row: a warning, nothing else.
 name: Roadmap close
 on:
   pull_request:
@@ -14,32 +20,56 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write   # dispatch tests.yml on the close branch
 
 jobs:
   close:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0
       - name: Delete the rows the PR closes
         env:
           BODY: ${{ github.event.pull_request.body }}
           PR: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -u
           printf '%s' "$BODY" > "$RUNNER_TEMP/body.txt"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch="roadmap-close/pr-$PR"
+          cleanup() { git push -q origin --delete "$branch" 2>/dev/null || true; }
           for i in 1 2 3 4 5; do
-            git fetch -q origin main && git reset -q --hard origin/main
+            if ! git fetch -q origin main; then echo "fetch failed, retry $i"; sleep $((i * 5)); continue; fi
+            git reset -q --hard origin/main
             ids=$(python3 tools/roadmap_close.py --body-file "$RUNNER_TEMP/body.txt" --todo docs/TODO.md)
-            if [ -z "$ids" ]; then echo "::warning::No TODO row closed for #$PR"; exit 0; fi
+            if [ -z "$ids" ]; then echo "::warning::No TODO row closed for #$PR"; cleanup; exit 0; fi
             case "$ids" in *,*) word="rows" ;; *) word="row" ;; esac
             git add docs/TODO.md
             git commit -q -m "Roadmap: close $word $ids (#$PR)"
-            if git push -q origin HEAD:main; then echo "Closed $word $ids"; exit 0; fi
-            echo "Push race, retry $i"; sleep $((i * 3))
+            sha=$(git rev-parse HEAD)
+            git push -q -f origin "HEAD:refs/heads/$branch"
+            gh workflow run tests.yml --ref "$branch" -f changed_files=docs/TODO.md
+            run=""
+            for _ in $(seq 1 30); do
+              sleep 5
+              run=$(gh run list --workflow tests.yml --branch "$branch" --event workflow_dispatch \
+                --json databaseId,headSha --jq ".[] | select(.headSha==\"$sha\") | .databaseId" | head -1)
+              [ -n "$run" ] && break
+            done
+            if [ -z "$run" ]; then echo "::error::Tests run for $sha never started"; cleanup; exit 1; fi
+            if ! gh run watch "$run" --exit-status --interval 10 > /dev/null; then
+              echo "::error::Tests run $run failed on the roadmap commit"; cleanup; exit 1
+            fi
+            if git push -q origin "$sha:refs/heads/main"; then
+              echo "Closed $word $ids"; cleanup; exit 0
+            fi
+            echo "main moved, retry $i"
           done
+          cleanup
           echo "::error::Could not push the roadmap update after 5 tries"; exit 1

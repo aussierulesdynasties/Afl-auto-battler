@@ -15,23 +15,47 @@ import re
 import sys
 
 CLOSES = re.compile(r"(?im)^[\s>*-]*closes?\s+rows?\s+(.+?)\s*$")
-ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+# A row id has a digit (54, T5.Q24, 6.44), so header cells like "Id" never match.
+ID = re.compile(r"(?=[A-Za-z0-9._-]*\d)[A-Za-z0-9][A-Za-z0-9._-]*")
+SEP = re.compile(r"\s*(?:,|\band\b|&)\s*|\s+")
 
 
 def parse_ids(body):
-    """Row ids named in a PR body, in order, without duplicates.
+    """Row-id groups named in a PR body: one list per "Closes row" line.
 
-    "Closes rows 35, 36" also yields "35, 36", so a row whose first cell is
-    literally "35, 36" can be closed too."""
-    ids = []
+    Ids are read left to right and stop at the first word that is not an id, so
+    "Closes row 54 for the ruck" names only 54 and "Closes row 25 (see 12)" only 25."""
+    groups = []
     for m in CLOSES.finditer(body or ""):
-        spec = m.group(1).strip().rstrip(".")
-        parts = ID.findall(re.sub(r"\band\b", ",", spec))
-        cands = parts + ([", ".join(parts)] if len(parts) > 1 else [])
-        for c in cands:
-            if c not in ids:
-                ids.append(c)
-    return ids
+        spec = m.group(1).strip()
+        ids, pos = [], 0
+        while pos < len(spec):
+            t = ID.match(spec, pos)
+            if not t:
+                break
+            ids.append(t.group().rstrip("."))
+            pos = t.end()
+            sep = SEP.match(spec, pos)
+            if not sep or not sep.group():
+                break
+            pos = sep.end()
+        ids = [i for i in ids if i]
+        if ids:
+            groups.append(ids)
+    return groups
+
+
+def resolve(text, groups):
+    """Flatten groups to row ids. A multi-id group whose joined form ("35, 36") is
+    itself a row's first cell closes only that combined row, not the single rows."""
+    cells = {first_cell(l) for l in text.splitlines()}
+    out = []
+    for g in groups:
+        joined = ", ".join(g)
+        for c in ([joined] if len(g) > 1 and joined in cells else g):
+            if c not in out:
+                out.append(c)
+    return out
 
 
 def first_cell(line):
@@ -70,9 +94,9 @@ def main(argv=None):
     path = pathlib.Path(a.todo)
     raw = path.read_bytes()
     text = raw.decode("utf-8")  # keeps a leading BOM as U+FEFF
-    new, closed = close_rows(text, ids)
+    new, closed = close_rows(text, resolve(text, ids))
     if not closed:
-        print(f"warning: no TODO row matches {', '.join(ids)}", file=sys.stderr)
+        print(f"warning: no TODO row matches {'; '.join(', '.join(g) for g in ids)}", file=sys.stderr)
         return 0
     print(f"closing: {', '.join(closed)}", file=sys.stderr)
     if not a.dry_run:

@@ -45,7 +45,7 @@ Mark ready before the push you want tested; drafts skip game tests.
 - You merge your own PR (director, 2026-11-03: he never merges and is never asked): turn on auto-merge on green, or merge when green with `gh pr merge N --squash --match-head-commit <full sha>` (PR `headRefOid` equal to origin's branch tip, mergeStateStatus CLEAN). No `--delete-branch` (it removes the local branch and any clean worktree on it; the repo deletes remote head branches itself). Fix red CI until green.
 - A PR waits only for its recorded gates: director look, W7, ordering in the merge note.
 - Do not push while its CI runs; a push cancels it.
-- Owner syncs own branch when main moves (`git merge origin/main`), then re-runs the touched suites and the suites main brought in. Work list: never edit `docs/TODO.md` in a PR; put `Closes row N` (or `Closes rows 22, 27`, `Closes row T5.Q24`, matching the row's first cell) on its own line in the PR body, and `roadmap_close.yml` deletes the row after the merge. Only a PR labelled `roadmap` may edit the file (CI fails otherwise). Floor conflict: write the real count.
+- Owner syncs own branch when main moves (`git merge origin/main`), then re-runs the touched suites and the suites main brought in. Work list: never edit `docs/TODO.md` in a PR; put `Closes row N` (or `Closes rows 22, 27`, `Closes row T5.Q24`, matching the row's first cell) on its own line in the PR body, and `roadmap_close.yml` deletes the row after the merge. Only a PR labelled `roadmap` may edit the file (CI fails otherwise; after labelling, re-run the failed jobs). Floor conflict: write the real count.
 - Only the branch owner pushes to it.
 - Task boundary: rewrite your handoff (task, branch and sha, open decisions, running jobs).
 
