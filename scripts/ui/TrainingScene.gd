@@ -849,7 +849,8 @@ static func _card_position(p: Dictionary) -> String:
 ## in the match-day squad and what he is training as, as much as fits.
 func _card_status(p: Dictionary, id: String, width: float) -> Array:
 	if int(p.get("injury_weeks", 0)) > 0:
-		return ["Injured %d wks" % int(p["injury_weeks"]), UiKit.BAD]
+		var wks := int(p["injury_weeks"])
+		return ["Injured %d wk%s" % [wks, "" if wks == 1 else "s"], UiKit.BAD]
 	var plan := GameState.plan_for(p)
 	var texts: Array = []
 	if plan == "position":

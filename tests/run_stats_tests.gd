@@ -523,6 +523,8 @@ func _test_players_section() -> void:
 		s.call("refresh")
 		await _settle()
 		_check(s.find_child("PlayersQualify", true, false) != null, "A rate says who it ranks (%s)" % tag)
+		_check(SP.qualify_noun("accuracy", 1) == "shot" and SP.qualify_noun("accuracy", 2) == "shots",
+				"One shot is a shot, not 'shots' (%s)" % tag)
 		if wide:
 			_check(s.find_child("Sort_goals", true, false) != null, "The table shows the rate's group (%s)" % tag)
 		var ranked: Array = SP.sorted_rows()

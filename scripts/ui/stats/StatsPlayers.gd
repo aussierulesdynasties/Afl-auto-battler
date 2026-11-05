@@ -322,7 +322,7 @@ static func _under(row: Dictionary, key: String) -> String:
 		if not QUALIFY.has(key):
 			return ""
 		var n := int((row["s"] as Dictionary).get(str(QUALIFY[key][0]), 0.0))
-		return "of %d %s" % [n, str(QUALIFY[key][2])] if n > 0 else ""
+		return "of %d %s" % [n, qualify_noun(key, n)] if n > 0 else ""
 	var other := value(row, key, not _per_game)
 	if other < 0.0:
 		return ""
@@ -333,7 +333,7 @@ static func _under(row: Dictionary, key: String) -> String:
 static func _qualify_note(v: Control) -> void:
 	if QUALIFY.has(_sort):
 		var q := UiKit.lbl("Ranked by %s among players with at least %d %s so far." % [_name_of(_sort),
-				int(qualify_min(_sort)), str(QUALIFY[_sort][2])], UiKit.SECONDARY, UiKit.MUTED)
+				int(qualify_min(_sort)), qualify_noun(_sort, int(qualify_min(_sort)))], UiKit.SECONDARY, UiKit.MUTED)
 		q.name = "PlayersQualify"
 		q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(q)
@@ -558,6 +558,12 @@ static func qualifies(row: Dictionary, key: String) -> bool:
 		return true
 	var q: Array = QUALIFY[key]
 	return float((row["s"] as Dictionary).get(q[0], 0.0)) >= qualify_min(key)
+
+
+## "shots", or "shot" for one: every QUALIFY noun is a plain plural.
+static func qualify_noun(key: String, n: int) -> String:
+	var noun := str(QUALIFY[key][2])
+	return noun.trim_suffix("s") if n == 1 else noun
 
 
 static func qualify_min(key: String) -> float:

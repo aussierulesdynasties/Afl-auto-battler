@@ -161,14 +161,15 @@ static func _f(t: int, tier: int, sheet: String, said: String) -> Dictionary:
 
 
 ## A sortable moment: the season, then the match in it ("Round 7" is 7, a final
-## 101 and up, a fact the record never dated 0).
+## 100 and up, a fact the record never dated 0).
 static func _time(year: int, label: String) -> int:
 	var within := 0
 	if label.begins_with("Round"):
 		within = int(label.get_slice(" ", 1))
 	elif label != "":
 		var stage := label.rstrip("0123456789 ")
-		within = 101 if stage in ["Qualifying Final", "Elimination Final"] \
+		# The wildcard round is finals week one, before the qualifying finals.
+		within = 100 if stage == "Wildcard Final" else (101 if stage in ["Qualifying Final", "Elimination Final"] \
 				else (102 if stage == "Semi Final" else (103 if stage == "Preliminary Final"
-				else (104 if stage == "Grand Final" else 105)))
+				else (104 if stage == "Grand Final" else 105))))
 	return year * 1000 + within

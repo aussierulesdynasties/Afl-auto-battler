@@ -378,11 +378,17 @@ func _test_no_free_after_goal() -> void:
 func _test_free_set_shots_counted() -> void:
 	var frees := 0
 	var counted := true
+	var short_frees := 0
+	var no_false_mark := true
 	for seed in range(8):
 		var sim := _sim(7800 + seed)
 		var evs: Array = sim.run()["events"]
 		var by_taker := {}
 		for ev in evs:
+			# A free kicked short is gathered, not marked (no mark is counted).
+			if bool(ev.get("from_free", false)) and str(ev.get("kind", "")) == "rebound":
+				short_frees += 1
+				no_false_mark = no_false_mark and not str(ev.get("text", "")).contains("marks it")
 			if bool(ev.get("from_free", false)) and str(ev.get("kind", "")) in ["goal", "behind"]:
 				var id := str(ev.get("player_id", ""))
 				by_taker[id] = int(by_taker.get(id, 0)) + 1
@@ -391,6 +397,7 @@ func _test_free_set_shots_counted() -> void:
 			var st: Dictionary = sim.player_stats.get(id, {})
 			counted = counted and int(st.get("set_shots", 0)) >= int(by_taker[id])
 	_check(frees > 0 and counted, "A set shot from a free in 50 counts in the taker's set shots (%d scored)" % frees)
+	_check(no_false_mark, "A free kicked short never says the defender marked it (%d short)" % short_frees)
 
 
 ## Row 12: with the clanger_cause switch a clanger that ends a chain in the wet or
@@ -2602,6 +2609,9 @@ func _test_match_story() -> void:
 	var rs := MatchNotes.run_sentence(run_res, MatchNotes._longest_run(run_res["events"]))
 	_check(rs == "Melbourne kicked four unanswered goals from 8 minutes into the third quarter, turning Melbourne 0, Carlton 6 into Melbourne 24, Carlton 6.",
 			"The run says when it began and the score before and after: %s" % rs)
+	var et := MatchNotes._when({"q": 5, "min": 122})
+	_check(et == "in extra time" and MatchNotes._when({"q": 4, "min": 102}) == "12 minutes into the last quarter",
+			"A run in extra time says so, not 'the extra time quarter': %s" % et)
 
 
 ## A first AFL goal for one of yours reaches the feed: once a player, never
@@ -3291,6 +3301,7 @@ func _test_set_shot_calls() -> void:
 	var pass_once := true
 	var pack_ok := true
 	var outcomes := {}
+	var snaps := 0
 	var turn := 0
 	for seed in range(4800, 4840):
 		var live := _sim(seed)
@@ -3331,7 +3342,11 @@ func _test_set_shot_calls() -> void:
 				for e in made:
 					tagged = tagged and str(e["choice"]) == key
 				var res: Dictionary = made[made.size() - 1] if not made.is_empty() else {}
-				result_flag = result_flag and ["goal", "behind", "rebound"].has(str(res.get("kind", ""))) 						and bool(res.get("setshot", false))
+				# A snap off the pack or a rushed behind is not a set shot.
+				var general := bool(res.get("crumb", false)) or bool(res.get("rushed", false))
+				if general:
+					snaps += 1
+				result_flag = result_flag and ["goal", "behind", "rebound"].has(str(res.get("kind", ""))) 						and bool(res.get("setshot", false)) != general
 				var kinds := made.map(func(e): return str(e["kind"]))
 				if key == "pass":
 					var disp_after := float((live.player_stats.get(shooter_id, {}) as Dictionary).get("disposals", 0.0))
@@ -3366,7 +3381,7 @@ func _test_set_shot_calls() -> void:
 			break
 	_check(n["shoot"] > 0 and n["pass"] > 0 and n["bomb"] > 0, "Each set-shot call gets played (%s)" % str(n))
 	_check(tagged, "Every event a set-shot call makes names that call")
-	_check(result_flag, "Each call ends in a goal, a behind or a rebound marked as the set shot's")
+	_check(result_flag, "Each call ends in a goal, a behind or a rebound marked as the set shot's, unless it was snapped off the pack or rushed (%d)" % snaps)
 	_check(leftover, "The call's tag stops when its chain does")
 	_check(pass_ok, "Playing on shows the pass, then the mark, and the shot names both men")
 	_check(pass_once, "Playing on counts the marker's kick once")

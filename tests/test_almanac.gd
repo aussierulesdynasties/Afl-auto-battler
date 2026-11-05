@@ -166,6 +166,8 @@ func _test_legends() -> void:
 	_check(str(GameState.almanac[0].get(Almanac.STORY_KEY, "")).contains("Old Hand"), "The legends are added to the story")
 	var hon := {"career": {"stints": []}, "honours": {"bf": {"GEE": 3}}}
 	_check(not Almanac.legend_marks(hon, "GEE").is_empty(), "Three club best and fairests make a legend")
+	var medals := Almanac.legend_marks({"career": {"stints": []}, "honours": {"brownlow": 2, "norm_smith": 1}}, "GEE")
+	_check(medals.has("2 Brownlows") and medals.has("1 Norm Smith"), "Medal counts read as plurals past one (%s)" % str(medals))
 	GameState.almanac = [{"year": int(GameState.season_year) - 1, "club": "GEE", "legends": []}]
 	Almanac.add_legends(GameState, retired, {"V1": vet, "K1": kid, "R1": rival})
 	_check((GameState.almanac[0]["legends"] as Array).is_empty(),
@@ -207,6 +209,9 @@ func _test_screen() -> void:
 	var lc := scene.find_child("LegendsCard", true, false)
 	_check(lc != null and lc.find_child("LegendRow_L1", true, false) != null and lc.find_child("LegendRow_L2", true, false) != null,
 			"The legends card lists every legend")
+	var AS = load("res://scripts/ui/AlmanacScene.gd")
+	_check(AS.games_goals(250, 1) == "250 games, 1 goal" and AS.games_goals(1, 0) == "1 game, 0 goals",
+			"A legend's career line counts in the singular at one")
 	scene.queue_free()
 	GameState.almanac.pop_back()
 

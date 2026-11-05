@@ -136,8 +136,8 @@ func _build() -> void:
 			["Points for", str(stats["pf"])],
 			["Points against", str(stats["pa"])],
 			["Percentage", "%.1f%%" % stats["pct"]],
-			["Best win", "No wins" if str(stats["best_opp"]) == "-" else "%d pts (%s)" % [stats["best_margin"], stats["best_opp"]]],
-			["Worst loss", "No losses" if str(stats["worst_opp"]) == "-" else "%d pts (%s)" % [stats["worst_margin"], stats["worst_opp"]]],
+			["Best win", "No wins" if str(stats["best_opp"]) == "-" else "%d pt%s (%s)" % [stats["best_margin"], "" if int(stats["best_margin"]) == 1 else "s", stats["best_opp"]]],
+			["Worst loss", "No losses" if str(stats["worst_opp"]) == "-" else "%d pt%s (%s)" % [stats["worst_margin"], "" if int(stats["worst_margin"]) == 1 else "s", stats["worst_opp"]]],
 			["Longest win streak", "%d %s" % [stats["streak"], "game" if int(stats["streak"]) == 1 else "games"]],
 			["Goals kicked", str(stats["goals"])],
 	]:

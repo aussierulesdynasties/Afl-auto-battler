@@ -259,7 +259,8 @@ func _say() -> void:
 
 func _minute_words(s: Dictionary) -> String:
 	var into := int(s["min"]) - (int(s["q"]) - 1) * 30
-	return "%d minutes in" % maxi(1, into) if int(s["q"]) <= 4 else "extra time"
+	into = maxi(1, into)
+	return "%d minute%s in" % [into, "" if into == 1 else "s"] if int(s["q"]) <= 4 else "extra time"
 
 
 ## The score after the `i`th scoring shot.

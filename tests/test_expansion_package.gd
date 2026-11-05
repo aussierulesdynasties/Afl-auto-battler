@@ -137,6 +137,18 @@ func _test_switch_off_is_today() -> void:
 	_check(not Features.on(FEATURE), "The switch ships off")
 	_new_career()
 	_check(GameState.canberra_on and GameDB.active_clubs(2030).has("CANB"), "Off: Canberra joins in 2030, as it always did")
+	# A pick's number before the draft follows the draft's own order: the
+	# premier picks last even from the bottom of the ladder.
+	var ladder: Array = GameState.season.ladder_sorted()
+	var flag := str(ladder[ladder.size() - 1]["code"])
+	var saved_finals: Dictionary = GameState.season.finals
+	GameState.season.finals = {"premier": flag, "runner_up": str(ladder[ladder.size() - 2]["code"])}
+	var clubs: int = GameState.intake_order().size()
+	_check(GameState.draft_spot(GameState.season_year, 1, flag) == clubs
+			and GameState._draft_order() == GameState.intake_order(),
+			"The premier's first pick is numbered last, as it falls on draft night (%d of %d)" % [
+				GameState.draft_spot(GameState.season_year, 1, flag), clubs])
+	GameState.season.finals = saved_finals
 	var history := _rollover()
 	_check(_picks_of(history, "TAS").is_empty(), "Off: Tasmania takes no part in the draft before its first season")
 	var tas: Array = GameState.season.lists["TAS"]

@@ -5478,6 +5478,8 @@ func _set_result(side: int, kicker: Dictionary, assist, defender: Dictionary, go
 func _tag_result(crumb: bool) -> void:
 	var ev: Dictionary = events[events.size() - 1]
 	ev["set"] = not crumb
+	# A snap off the pack is general play, though a set-shot choice led to it.
+	ev["setshot"] = not crumb
 	if crumb:
 		ev["crumb"] = true
 
@@ -5574,6 +5576,7 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 		q_behinds[current_quarter - 1][side] += 1
 		_emit("behind", side, fp, null, _scoreline(side, "Rushed behind"))
 		events[events.size() - 1]["rushed"] = true
+		events[events.size() - 1]["setshot"] = false
 		_tag_shot(false)
 		_end_moment_chain("behind", kick_in_fp(side), side)
 		return {"points": 1, "text": "Rushed through for a behind."}
@@ -5657,8 +5660,9 @@ func _free_set_shot(side: int, at_fp: float, taker: Dictionary) -> Dictionary:
 	var opp := 1 - side
 	var backs := _by_roles((squads[opp] as Squad).ground, ["DEF"])
 	var back = _weighted(backs if not backs.is_empty() else (squads[opp] as Squad).ground, "marking", 2.0, opp, "defender")
+	# Not a mark (could_mark is false): the copy must not call it one.
 	_intercept(opp, back, false)
-	_emit("rebound", opp, fp, back, "%s's set shot falls short; %s marks it" % [
+	_emit("rebound", opp, fp, back, "%s's set shot falls short; %s gathers it" % [
 			GameDB.player_display_name(taker), GameDB.player_display_name(back)])
 	events[events.size() - 1]["from_free"] = true
 	return {"outcome": "turnover", "fp": fp, "actor": back}

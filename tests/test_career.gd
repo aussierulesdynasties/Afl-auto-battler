@@ -349,7 +349,18 @@ func _test_reload_never_double_counts() -> void:
 	Career.close_season(_listed(), GameState.season_tally, GameState.season_year)
 	_check(str(_totals(_listed())) == str(closed), "Closing the same season again changes nothing")
 	var ids := closed.keys()
+	# A rivalry from one old final cools at the rollover (Rivalries.age).
+	var stale_key := Rivalries.pair_key("ZZA", "ZZB")
+	GameState.rivalry_history[stale_key] = {"clubs": ["ZZA", "ZZB"], "score": 9,
+			"meetings": 1, "close": 1, "finals": 1, "grand_finals": 0,
+			"last_year": GameDB.START_YEAR - 3, "events": []}
+	_check(Rivalries.state(GameState.rivalry_history, "ZZA", "ZZB") == "brewing",
+			"A pair with one close final years ago starts brewing")
 	_check(GameState.start_next_season(), "The career rolls to %d" % (GameDB.START_YEAR + 1))
+	_check(int((GameState.rivalry_history[stale_key] as Dictionary)["score"]) == 7
+			and Rivalries.state(GameState.rivalry_history, "ZZA", "ZZB") == "",
+			"The rollover cools a rivalry the clubs have not renewed in four seasons")
+	GameState.rivalry_history.erase(stale_key)
 	var rolled := _listed()
 	var same := true
 	for id in ids:

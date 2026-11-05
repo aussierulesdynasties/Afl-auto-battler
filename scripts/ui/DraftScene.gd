@@ -1785,16 +1785,16 @@ func _refresh_mine() -> void:
 	UiKit.clear(_mine_box)
 	if _draft.intake_mode:
 		if _draft.senior_cap > 0:
-			_mine_box.add_child(UiKit.lbl("%d draftees signed · senior list %d / %d" % [
-				_draft.count(),
+			_mine_box.add_child(UiKit.lbl("%d draftee%s signed · senior list %d / %d" % [
+				_draft.count(), "" if _draft.count() == 1 else "s",
 				RookieList.senior_count(GameState.league_lists.get(_club, [])), _draft.senior_cap],
 				15, UiKit.EMPH, true))
 			_mine_box.add_child(UiKit.lbl(
 				"Draftees join the senior list you kept. The draft runs until every senior list is full or the prospects run out; the Rookie Draft follows.",
 				13, UiKit.MUTED))
 		else:
-			_mine_box.add_child(UiKit.lbl("%d draftees signed · list %d / %d" % [
-				_draft.count(),
+			_mine_box.add_child(UiKit.lbl("%d draftee%s signed · list %d / %d" % [
+				_draft.count(), "" if _draft.count() == 1 else "s",
 				int(GameState.league_lists.get(_club, []).size()), Ratings.LIST_SIZE],
 				15, UiKit.EMPH, true))
 			_mine_box.add_child(UiKit.lbl(

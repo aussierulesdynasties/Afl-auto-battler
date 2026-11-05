@@ -1508,6 +1508,8 @@ static func turning_points(res: Dictionary, my_side: int, skip_kicker := "") -> 
 ## "12 minutes into the last quarter", "early in the second quarter".
 static func _when(ev: Dictionary) -> String:
 	var q := int(ev.get("q", 1))
+	if q > 4:
+		return "in extra time"
 	var m := int(ev.get("min", 0)) - (q - 1) * 30
 	var qn: String = QUARTER_NAMES[mini(q - 1, 4)]
 	if m <= 3:

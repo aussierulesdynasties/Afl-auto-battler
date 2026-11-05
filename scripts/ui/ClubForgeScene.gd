@@ -273,13 +273,17 @@ func _player_form(body: VBoxContainer) -> void:
 		_spec["style"] = ""
 		var band: Array = Prospects.CUSTOM_HEIGHT[k]
 		_spec["height_cm"] = clampi(int(_spec["height_cm"]), int(band[0]), int(band[1]))
+		_drop_ruckwork()
 		_build()))
 	var second := [["", "None"]]
 	for r in ROLES:
 		if str(r[0]) != str(_spec["role"]):
 			second.append(r)
 	body.add_child(_sub("Second position"))
-	body.add_child(UiKit.choice_grid("ForgeRole2", second, str(_spec["role2"]), cols, func(k): _spec["role2"] = k))
+	body.add_child(UiKit.choice_grid("ForgeRole2", second, str(_spec["role2"]), cols, func(k):
+		_spec["role2"] = k
+		_drop_ruckwork()
+		_build()))
 
 	body.add_child(_sub("Height"))
 	body.add_child(_stepper("ForgeHeight", "height_cm", "%d cm", Prospects.CUSTOM_HEIGHT[str(_spec["role"])]))
@@ -453,6 +457,15 @@ func _stepper(node_name: String, key: String, fmt: String, band: Array, zero_lab
 			h.add_child(b)
 	show.call()
 	return h
+
+
+## Ruckwork belongs to a ruck: once neither position is RUCK its toggle is
+## hidden, so a pick of it is dropped rather than left counting unseen.
+func _drop_ruckwork() -> void:
+	if str(_spec["role"]) == "RUCK" or str(_spec["role2"]) == "RUCK":
+		return
+	for key in ["strengths", "weaknesses"]:
+		(_spec[key] as Array).erase("ruckwork")
 
 
 ## Up to two of the traits, never one already picked on the other side.

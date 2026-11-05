@@ -98,6 +98,11 @@ func _test_bf_names() -> void:
 	_check(hero == "J. Smith won the best and fairest.", "A club with no medal keeps best and fairest (%s)" % hero)
 	hero = str(Almanac.story_parts({"club": "GCS", "year": 2030, "bf": [{"name": "J. Smith"}]}, {})["hero"])
 	_check(hero == "J. Smith won the best and fairest.", "A club champion award is not said as 'won the Club Champion' (%s)" % hero)
+	# A wildcard final comes before the qualifying finals and the Grand Final.
+	_check(Remembered._time(2030, "Wildcard Final 1") < Remembered._time(2030, "Qualifying Final 1")
+			and Remembered._time(2030, "Wildcard Final 2") < Remembered._time(2030, "Grand Final")
+			and Remembered._time(2030, "Round 24") < Remembered._time(2030, "Wildcard Final 1"),
+			"A remembered wildcard final sorts in finals week one")
 	var gcs := Remembered.facts({}, {}, "GCS", {"bf": [2030]}, {})
 	_check(str(gcs[0]["said"]) == "He won your best and fairest in 2030.", "Gold Coast's line reads naturally (%s)" % str(gcs[0]))
 	var legend := {"honours": {"bf": {"FRE": 3, "FORGE": 3}}}
