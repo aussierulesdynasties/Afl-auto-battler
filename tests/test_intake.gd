@@ -667,6 +667,22 @@ func _test_custom_prospect() -> void:
 		var b := spec.duplicate(true)
 		b.merge(bad, true)
 		_check(Prospects.custom_problem(b) != "", "An invalid custom prospect is turned away (%s)" % str(bad))
+	# T8.Q12: the Forge needs exactly one weakness, allows a second, never a third.
+	_check(Prospects.forge_problem(spec) == "", "One weakness: the Forge accepts him")
+	var two := spec.duplicate(true)
+	two["weaknesses"] = ["pressure", "kicking"]
+	_check(Prospects.forge_problem(two) == "", "A second weakness is optional")
+	var none := spec.duplicate(true)
+	none["weaknesses"] = []
+	_check(Prospects.forge_problem(none) != "", "No weakness: the Forge turns him away")
+	var three := spec.duplicate(true)
+	three["weaknesses"] = ["pressure", "kicking", "running"]
+	_check(Prospects.forge_problem(three) != "", "Three weaknesses: the Forge turns him away")
+	# No extra power from the choices: one or two weaknesses, same overall.
+	var p1 := Prospects.make_custom(spec, 2026, 777)
+	var p2 := Prospects.make_custom(two, 2026, 777)
+	_check(absi(int(p1["overall"]) - int(p2["overall"])) <= 1 and int(p1["potential"]) == int(p2["potential"]),
+			"A second weakness changes his shape, not his overall (%d vs %d)" % [p1["overall"], p2["overall"]])
 
 	GameState.reset()
 	# A fixed career (C15): never the clock's.
