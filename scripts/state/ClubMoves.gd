@@ -323,7 +323,7 @@ static func record_reunion(gs, st: Dictionary) -> void:
 	if rec.is_empty() or gs.season == null or (gs.season.results as Array).is_empty():
 		return
 	var flags: Dictionary = rec["flags"]
-	if flags.has("won") or flags.has("lost"):
+	if flags.has("won") or flags.has("lost") or flags.has("drew"):
 		return
 	var old := str(rec.get("mem", {}).get("old_code", ""))
 	for res in gs.season.results[-1]:
@@ -335,7 +335,10 @@ static func record_reunion(gs, st: Dictionary) -> void:
 		if side < 0:
 			continue
 		var s: Array = res["score"]
-		flags["won" if int(s[side]) > int(s[1 - side]) else "lost"] = gs.story_week()
+		# A draw is neither: it is recorded only so the result is not read again.
+		var mine := int(s[side])
+		var theirs := int(s[1 - side])
+		flags["won" if mine > theirs else ("drew" if mine == theirs else "lost")] = gs.story_week()
 
 
 static func _club_since(st: Dictionary, code: String) -> int:

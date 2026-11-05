@@ -75,8 +75,8 @@ static func is_wing(p: Dictionary) -> bool:
 			return false
 	var mid_view := p.duplicate()
 	mid_view["role"] = "MID"
-	var run := 0.5 * (PlayerProfile.percentile(mid_view, "carry") + PlayerProfile.percentile(mid_view, "disposal"))
-	var win := PlayerProfile.percentile(mid_view, "contested")
+	var run := 0.5 * (PlayerProfile.percentile(mid_view, "carry", true) + PlayerProfile.percentile(mid_view, "disposal", true))
+	var win := PlayerProfile.percentile(mid_view, "contested", true)
 	if run - win >= WING_MARGIN:
 		return true
 	# A midfielder who seldom wins it at the stoppage and gets most of his
@@ -96,9 +96,9 @@ static func is_tagger(p: Dictionary) -> bool:
 		return false
 	var mid_view := p.duplicate()
 	mid_view["role"] = "MID"
-	var press := PlayerProfile.percentile(mid_view, "pressure")
-	var win := PlayerProfile.percentile(mid_view, "contested")
-	var run := 0.5 * (PlayerProfile.percentile(mid_view, "carry") + PlayerProfile.percentile(mid_view, "disposal"))
+	var press := PlayerProfile.percentile(mid_view, "pressure", true)
+	var win := PlayerProfile.percentile(mid_view, "contested", true)
+	var run := 0.5 * (PlayerProfile.percentile(mid_view, "carry", true) + PlayerProfile.percentile(mid_view, "disposal", true))
 	return press >= TAGGER_PRESSURE and press - maxf(win, run) >= TAGGER_MARGIN
 
 
@@ -112,7 +112,7 @@ static func tag_press(p: Dictionary) -> float:
 		return 1.0
 	var mid_view := p.duplicate()
 	mid_view["role"] = "MID"
-	var press := PlayerProfile.percentile(mid_view, "pressure")
+	var press := PlayerProfile.percentile(mid_view, "pressure", true)
 	return clampf((press - TAG_HOLD_FROM) / (TAGGER_PRESSURE - TAG_HOLD_FROM), 0.0, 1.0)
 
 

@@ -414,8 +414,9 @@ func player_display_name_by_id(id: String, fallback := "") -> String:
 ## "last": "" (the key exists, so a plain get() never falls back), which left
 ## their cards without a name. Empty last: the last word of the shown name.
 func card_surname(player: Dictionary) -> String:
+	# The real surname only while real names are shown (as player_surname).
 	var last := str(player.get("last", "")).strip_edges()
-	if last != "":
+	if last != "" and GameState.show_real_names:
 		return last
 	var full := player_display_name(player)
 	var parts := full.split(" ", false)

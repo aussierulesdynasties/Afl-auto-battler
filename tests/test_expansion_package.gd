@@ -297,6 +297,14 @@ func _test_build_and_entry() -> void:
 			no_deal += str(p["id"]) + " "
 	_check(twice == "", "On: no player is on two lists (%s)" % twice)
 	_check(no_deal == "", "On: every Tasmanian has a contract (%s)" % no_deal)
+	# Its draftees went into the list it was building, which the rollover's
+	# contract tick never reaches: the plain two-year rookie deal, not three.
+	var rookie_years := []
+	for p in tas:
+		if str(p.get("drafted_type", "")) == "national" and int(p.get("drafted_year", 0)) == 2027:
+			rookie_years.append(int(p.get("contract_years", 0)))
+	_check(not rookie_years.is_empty() and rookie_years.all(func(y): return y == Contracts.ROOKIE_YEARS),
+			"On: Tasmania's draftees start 2028 with two seasons left (%s)" % str(rookie_years))
 	var relief := int((st.get("relief", {}) as Dictionary).get("2028", -1))
 	_check(relief >= 0 and relief <= Contracts.indexed_money_2027(Expansion.SIGN_ON_SEASON_MAX, 2028),
 			"On: this season's sign-on money is set, inside the limit (%d)" % relief)

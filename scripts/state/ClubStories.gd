@@ -250,6 +250,8 @@ static func _grand_final_result(gs) -> Dictionary:
 
 ## The final margin only: no line claims how the game unfolded.
 static func margin_line(m: int, won: bool) -> String:
+	if m == 1:
+		return "By 1 point. A kick in it at the siren." if won else "Beaten by 1 point. Under a goal."
 	if won:
 		if m <= 6:
 			return "By %d points. A kick in it at the siren." % m

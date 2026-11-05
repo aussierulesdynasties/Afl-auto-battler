@@ -389,6 +389,13 @@ func _test_reunion() -> void:
 	ClubMoves.record_reunion(GameState, st)
 	last.pop_back()
 	_check((rec["flags"] as Dictionary).has("won"), "reunion: the win over the old club is recorded")
+	var drawn := {"flags": {}}
+	var st_draw := {"active": {"reunion": {"flags": drawn["flags"], "mem": hit["mem"]}}}
+	last.append({"home": GameState.my_club, "away": old, "score": [70, 70]})
+	ClubMoves.record_reunion(GameState, st_draw)
+	last.pop_back()
+	_check((drawn["flags"] as Dictionary).has("drew") and not (drawn["flags"] as Dictionary).has("lost")
+			and not (drawn["flags"] as Dictionary).has("won"), "reunion: a draw is neither a win nor a loss: %s" % str(drawn["flags"]))
 	CoachArcs.answer(def, rec, "arc_reunion_grudge", "bite", GameState.story_week(), GameState.season_year)
 	CoachArcs.answer(def, rec, "arc_reunion_handshake", "gracious", GameState.story_week() + 1, GameState.season_year)
 	_check(int(rec["beat"]) == 2, "reunion: both beats played")

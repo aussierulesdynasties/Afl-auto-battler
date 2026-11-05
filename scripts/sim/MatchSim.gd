@@ -3954,6 +3954,10 @@ func run_extra_time() -> Dictionary:
 			var i50_1 := float(team_stats[1].get("inside50", 0.0))
 			var side := 1 if i50_1 > i50_0 else 0
 			_t(side, "behinds")
+			# Awarded, not played: no chain earned it, so the last chain's
+			# touches and origin get no credit for it.
+			_chain_touch = {}
+			chain_origin = "awarded"
 			_scored(side, 1, null)
 			q_behinds[current_quarter - 1][side] += 1
 			_emit("behind", side, fp, null, _scoreline(side, "Rushed behind"))
