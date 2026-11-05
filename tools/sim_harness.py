@@ -295,14 +295,10 @@ def derive_ratings(players):
         else:
             role_scores["RUCK"] = -1.0
         p["role"] = max(role_scores, key=role_scores.get)
-        # Ratings.listed_primary: the listing first, unless the numbers
-        # have all but left his listed line.
+        # Ratings.listed_primary: a listed forward or defender is his
+        # listed line unless the numbers read a ruck (row 91, T8.Q11).
         listed = p.get("real_pos", "")
-        if p["role"] == "MID" and listed in ("FWD", "DEF") and (
-                p["gm"] < LISTED_TRUST_GAMES
-                or role_scores[listed] >= LISTED_KEEP * role_scores["MID"]
-                or (role_scores[listed] >= LISTED_GONE * role_scores["MID"]
-                    and p["cl"] / p["gm"] < LISTED_MID_CLEARANCES)):
+        if listed in ("FWD", "DEF") and p["role"] != "RUCK":
             p["role"] = listed
         # Ratings.ROLE_CORRECTIONS: clearly misread forwards.
         p["role"] = ROLE_CORRECTIONS.get("%s|%s" % (p.get("club", ""), p.get("name", "")), p["role"])
@@ -384,10 +380,6 @@ def assign_secondary(p):
     return best
 
 
-LISTED_KEEP = 0.65
-LISTED_GONE = 0.50
-LISTED_MID_CLEARANCES = 1.5
-LISTED_TRUST_GAMES = 6.0
 LISTED_FWD_GOALS = 0.35
 LISTED_FWD_MARKS_I50 = 0.5
 LISTED_DEF_ACTIONS = 2.0

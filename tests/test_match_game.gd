@@ -76,6 +76,7 @@ func run() -> void:
 	_t("_test_first_goal_feed")
 	_t("_test_traits_surfaced")
 	_t("_test_momentum")
+	_t("_test_momentum_runaway")
 	_t("_test_moment_calls_matter")
 	_t("_test_ai_chases_and_controlled_needs_ball_users")
 	_t("_test_coach_styles")
@@ -377,11 +378,17 @@ func _test_no_free_after_goal() -> void:
 func _test_free_set_shots_counted() -> void:
 	var frees := 0
 	var counted := true
+	var short_frees := 0
+	var no_false_mark := true
 	for seed in range(8):
 		var sim := _sim(7800 + seed)
 		var evs: Array = sim.run()["events"]
 		var by_taker := {}
 		for ev in evs:
+			# A free kicked short is gathered, not marked (no mark is counted).
+			if bool(ev.get("from_free", false)) and str(ev.get("kind", "")) == "rebound":
+				short_frees += 1
+				no_false_mark = no_false_mark and not str(ev.get("text", "")).contains("marks it")
 			if bool(ev.get("from_free", false)) and str(ev.get("kind", "")) in ["goal", "behind"]:
 				var id := str(ev.get("player_id", ""))
 				by_taker[id] = int(by_taker.get(id, 0)) + 1
@@ -390,6 +397,7 @@ func _test_free_set_shots_counted() -> void:
 			var st: Dictionary = sim.player_stats.get(id, {})
 			counted = counted and int(st.get("set_shots", 0)) >= int(by_taker[id])
 	_check(frees > 0 and counted, "A set shot from a free in 50 counts in the taker's set shots (%d scored)" % frees)
+	_check(no_false_mark, "A free kicked short never says the defender marked it (%d short)" % short_frees)
 
 
 ## Row 12: with the clanger_cause switch a clanger that ends a chain in the wet or
@@ -2601,6 +2609,9 @@ func _test_match_story() -> void:
 	var rs := MatchNotes.run_sentence(run_res, MatchNotes._longest_run(run_res["events"]))
 	_check(rs == "Melbourne kicked four unanswered goals from 8 minutes into the third quarter, turning Melbourne 0, Carlton 6 into Melbourne 24, Carlton 6.",
 			"The run says when it began and the score before and after: %s" % rs)
+	var et := MatchNotes._when({"q": 5, "min": 122})
+	_check(et == "in extra time" and MatchNotes._when({"q": 4, "min": 102}) == "12 minutes into the last quarter",
+			"A run in extra time says so, not 'the extra time quarter': %s" % et)
 
 
 ## A first AFL goal for one of yours reaches the feed: once a player, never
@@ -2715,6 +2726,114 @@ func _test_key_duel_balance() -> void:
 
 ## Momentum is real, small, capped, fading and reversible, and it does not
 ## snowball.
+## Row 78 (T8.Q4): with momentum_runaway on, a side with the run of play that
+## is well ahead wins more of the ball and keeps its run longer, so lopsided
+## matches can run away; close matches are untouched, and off nothing changes.
+func _test_momentum_runaway() -> void:
+	var feats = load("res://scripts/core/Features.gd")
+	# Off: inert, whatever the knobs say.
+	feats.set_on("momentum_runaway", false)
+	var plain := _sim(7800, "GEE", "WCE").run()
+	var wild := _sim(7800, "GEE", "WCE")
+	wild.runaway_gain = 100.0
+	wild.runaway_hold = 1.0
+	wild.runaway_decay = 1.0
+	var wild_r := wild.run()
+	_check(plain["score"] == wild_r["score"] and plain["events"].size() == wild_r["events"].size(),
+			"Switch off: the runaway knobs change nothing (%s vs %s)" % [str(plain["score"]), str(wild_r["score"])])
+	var off_sim := _sim(7801)
+	off_sim.momentum = 1.0
+	off_sim.team_stats[0]["goals"] = 15.0
+	_check(off_sim.runaway() == 0.0, "Switch off: a 90-point lead with full momentum is no runaway")
+	# On: the edge grows only past the lead, for the side that has the run.
+	feats.set_on("momentum_runaway", true)
+	var sim := _sim(7802)
+	sim.momentum = 1.0
+	_check(sim.runaway() == 0.0, "Level scores: no runaway")
+	sim.team_stats[0]["goals"] = 4.0
+	_check(sim.runaway() == 0.0, "A 24-point lead: no runaway yet")
+	sim.team_stats[0]["goals"] = 9.0
+	_check(is_equal_approx(sim.runaway(), 1.0), "A 54-point lead with the run of play: full runaway (%.2f)" % sim.runaway())
+	sim.momentum = -1.0
+	_check(sim.runaway() == 0.0, "The side behind having the run is no runaway")
+	# The away side 54 up with the run: the stoppage edge grows to the contest cap.
+	sim.team_stats[0]["goals"] = 0.0
+	sim.momentum = -1.0
+	var wins := [0, 0]
+	for mode in range(2):
+		sim.team_stats[1]["goals"] = 0.0 if mode == 0 else 9.0
+		sim.rng.seed = 787878
+		for i in range(20000):
+			if sim.contest_winner(false, 0.0) == 1:
+				wins[mode] += 1
+	var lift := float(wins[1] - wins[0]) / 20000.0
+	_check(lift > 0.05, "Run away with it: the side 54 up with the run wins %.1f%% more of the ball" % (100.0 * lift))
+	_check(float(wins[1]) / 20000.0 < float(Ratings.T["contest_clamp"]) + 0.02,
+			"Never past the contest cap (%.3f)" % (float(wins[1]) / 20000.0))
+	# The trailing coach's call still bites at full runaway: the cap is applied
+	# to the runaway before the calls, so Throw numbers at it (surge) and a
+	# stacked stoppage win the home side, 54 down, more of the ball.
+	var called := 0
+	sim.bursts[0] = {"surge": 5, "stack": 5}
+	sim.rng.seed = 787878
+	for i in range(20000):
+		if sim.contest_winner(false, 0.0) == 0:
+			called += 1
+	sim.bursts[0] = {}
+	var call_lift := float(called - (20000 - wins[1])) / 20000.0
+	var promised := MatchSim.SURGE_CONTEST + MatchSim.STACK_CONTEST
+	_check(call_lift > promised * 0.6,
+			"A call by the side 54 down still lifts its contest share by about %.1f%% (%.1f%%)" % [100.0 * promised, 100.0 * call_lift])
+	sim.team_stats[1]["goals"] = 0.0
+	sim.team_stats[0]["goals"] = 9.0
+	sim.momentum = 0.8
+	sim._after_chain()
+	_check(sim.momentum > 0.8 * MatchSim.MOMENTUM_DECAY, "A run that is running away fades more slowly (%.3f)" % sim.momentum)
+	# Goals the other way (each one on the board) still turn it, a little more slowly.
+	sim.momentum = 0.8
+	var after := []
+	for g in range(3):
+		sim.team_stats[1]["goals"] = float(g + 1)
+		sim._swing_momentum(1, MatchSim.MOMENTUM_GOAL)
+		after.append(snappedf(sim.momentum, 0.01))
+	_check(float(after[0]) > 0.2, "One goal the other way turns it less (%.2f)" % float(after[0]))
+	_check(float(after[2]) < 0.0, "Three goals the other way still turn it (%s)" % str(after))
+	# Paired matches, same seeds, switch off then on.
+	var close_same := 0
+	var close := 0
+	var big := [0, 0]
+	var changed := 0
+	var n := 30
+	var arms := [[], []]
+	for mode in range(2):
+		feats.set_on("momentum_runaway", mode == 1)
+		for i in range(n):
+			arms[mode].append(_sim(7900 + i, ["GEE", "COL", "BRL", "HAW"][i % 4], ["WCE", "RIC", "NTH", "ESS"][i % 4]).run())
+	_check(arms[0].size() == n and arms[1].size() == n, "Both arms played %d matches" % n)
+	for i in range(n):
+		var lead_max := 0
+		for ev in arms[0][i]["events"]:
+			var sc = ev.get("score", [0, 0])
+			lead_max = maxi(lead_max, absi(int(sc[0]) - int(sc[1])))
+		if lead_max <= int(MatchSim.RUNAWAY_LEAD):
+			close += 1
+			if arms[0][i]["score"] == arms[1][i]["score"]:
+				close_same += 1
+		elif arms[0][i]["score"] != arms[1][i]["score"]:
+			changed += 1
+		for mode in range(2):
+			var m := absi(int(arms[mode][i]["score"][0]) - int(arms[mode][i]["score"][1]))
+			if m >= 60:
+				big[mode] += 1
+	_check(close > 0 and close_same == close,
+			"Close matches (never more than %d in it) play the same with the switch on: %d of %d" % [int(MatchSim.RUNAWAY_LEAD), close_same, close])
+	_check(big[1] > big[0], "The tail widens: 60+ margins %d off, %d on (of %d)" % [big[0], big[1], n])
+	# The mean margin over 30 matches is too noisy to pin (it moves with the suite's earlier
+	# state); the paired 1,000-match balance run measures it with its standard error.
+	_check(changed > 0, "Lopsided matches play differently with the switch on: %d of %d" % [changed, n - close])
+	feats.clear("momentum_runaway")
+
+
 func _test_momentum() -> void:
 	# Real: the side with the run of play wins more of the ball, by about
 	# MOMENTUM_EDGE at full momentum.
@@ -3196,6 +3315,7 @@ func _test_set_shot_calls() -> void:
 	var pass_once := true
 	var pack_ok := true
 	var outcomes := {}
+	var snaps := 0
 	var turn := 0
 	for seed in range(4800, 4840):
 		var live := _sim(seed)
@@ -3236,7 +3356,11 @@ func _test_set_shot_calls() -> void:
 				for e in made:
 					tagged = tagged and str(e["choice"]) == key
 				var res: Dictionary = made[made.size() - 1] if not made.is_empty() else {}
-				result_flag = result_flag and ["goal", "behind", "rebound"].has(str(res.get("kind", ""))) 						and bool(res.get("setshot", false))
+				# A snap off the pack or a rushed behind is not a set shot.
+				var general := bool(res.get("crumb", false)) or bool(res.get("rushed", false))
+				if general:
+					snaps += 1
+				result_flag = result_flag and ["goal", "behind", "rebound"].has(str(res.get("kind", ""))) 						and bool(res.get("setshot", false)) != general
 				var kinds := made.map(func(e): return str(e["kind"]))
 				if key == "pass":
 					var disp_after := float((live.player_stats.get(shooter_id, {}) as Dictionary).get("disposals", 0.0))
@@ -3271,7 +3395,7 @@ func _test_set_shot_calls() -> void:
 			break
 	_check(n["shoot"] > 0 and n["pass"] > 0 and n["bomb"] > 0, "Each set-shot call gets played (%s)" % str(n))
 	_check(tagged, "Every event a set-shot call makes names that call")
-	_check(result_flag, "Each call ends in a goal, a behind or a rebound marked as the set shot's")
+	_check(result_flag, "Each call ends in a goal, a behind or a rebound marked as the set shot's, unless it was snapped off the pack or rushed (%d)" % snaps)
 	_check(leftover, "The call's tag stops when its chain does")
 	_check(pass_ok, "Playing on shows the pass, then the mark, and the shot names both men")
 	_check(pass_once, "Playing on counts the marker's kick once")

@@ -206,7 +206,11 @@ static func legend_marks(p: Dictionary, club: String) -> Array:
 			if k == "club_bf":
 				out.append(BestAndFairest.count_line(club, GameDB.club_name(club), int(have[k])))
 			else:
-				out.append(LEGEND_WORDS[k] % int(have[k]))
+				var words: String = LEGEND_WORDS[k] % int(have[k])
+				# "2 Brownlows", "3 Norm Smiths": the medal names take a plural.
+				if k in ["brownlow", "norm_smith"] and int(have[k]) > 1:
+					words += "s"
+				out.append(words)
 	return out
 
 

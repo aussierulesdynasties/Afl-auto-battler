@@ -22,15 +22,11 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 74 | Gather Round as a shared league event at host venues, with a policy for odd club counts (T5.Q11a) | built |
 | 75 | Sir Doug Nicholls Round as a real annual event, design stored in the save (T5.Q11b) | built |
 | 76 | AFL news layer: generated news items from the save (T5.Q11d) | items appear |
-| 77 | Set shots rise from about 37.5% to the real ~55% of shots, conversion set by distance, total scoring held flat (T8.Q9) | audit shows both |
 | 78 | Rare big margins come back through Momentum (100+ about 0.5% against real 1.9%); balance-gated (T8.Q4) | audit shows the blowout rate |
 | 84 | Togetherness at tight and cliques is felt in matches (director 2026-11-06, after the row 68 review); balance-gated, his playtest judges | audit shows the effect, he has played it |
 | 89 | Midfield intercepts close the gap now: sim 1.4 per team per game against real 2.5 (T8.Q8); balance-gated, `tools/balance.sh match 1000`, his playtest judges | audit shows the intercept rate near real |
 | 90 | Development drift fixed now, cause first: contested bull 3.5% to about 11% and hothead 6.2% to 32.1% over seven seasons (T8.Q10) | cause shown, then a seven-season audit holds the shares |
-| 91 | Listed positions via real_pos: about 85 forwards and 21 defenders stop reading MID; moves 122 players and 110 OVRs (T8.Q11); balance-gated | listed positions match real roles, OVR changes reported |
 | 92 | Back-zone carries retuned (CARRY_ROLES) so defenders carry the ball like real AFL (T9.Q22); balance-gated, paired 1,000-match table in the PR | carry share near real, his playtest judges |
-| 94 | Key forward v key defender meet more in the engine so the full-time duel line is real (T8.Q6); balance-gated | audit shows more contests per duel, line reads true |
-| 96 | Cut the PRIVATE-WATCH event card: private lives stay out of the game (T5.Q18) | card gone, tests updated |
 | 97 | Training: one stat focus per player per season, drills do the rest (T1.Q7, director 2026-11-06) | focus picked once a season, test |
 | 98 | Audio settings become Mute and one Volume slider (T7.O16) | settings show the two controls, real-tap test |
 | 99 | Football department budget merges into High performance: one spend (T9.Q14) | one spend line, old saves load |

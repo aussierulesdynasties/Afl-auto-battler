@@ -202,9 +202,22 @@ static func phase(finish_t: float, strength_t: float, best22_age: float) -> Stri
 ## weight], ...]: one exact spot for this year's draft, a spread for a pick
 ## whose spot isn't known yet. A pick past the end of the class is worth
 ## nothing.
-static func pick_value(positions: Array, prospects: Array, phase: String) -> float:
+## A contender counts a pick in a later draft for this much of its worth: its
+## window is now, and that player arrives after it (director 2026-11-03,
+## "Contenders discount far picks"). Rebuilders and builders count it in full;
+## this year's picks are never discounted.
+const CONTENDER_FAR_PICK := 0.8
+
+
+## `years_out`: how many drafts after this year's the pick is in (0 = this year).
+static func pick_value(positions: Array, prospects: Array, phase: String, years_out := 0) -> float:
 	if prospects.is_empty():
 		return 0.0
+	var keep := CONTENDER_FAR_PICK if phase == "contending" and years_out > 0 else 1.0
+	return keep * _pick_value(positions, prospects, phase)
+
+
+static func _pick_value(positions: Array, prospects: Array, phase: String) -> float:
 	var total := 0.0
 	var weight := 0.0
 	for pw in positions:

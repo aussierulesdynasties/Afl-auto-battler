@@ -169,14 +169,14 @@ Heeney, Bontempelli, Nick Daicos, Rankine and Pickett as MID/FWD; Greene as
 FWD/MID; Sicily, Blakey and Josh Daicos as DEF/MID. Butters (5 goals) and Cripps
 stay MID. DEF/FWD is allowed by the same gates, but the 2026 pool did not
 produce one — it is not invented. The tag is `MID/FWD`.
-A midfielder on the numbers also keeps the line his club lists him in
-(`real_pos`) as a second position when his own numbers back it up
-(`Ratings.listed_secondary`): a listed forward with 0.35 goals or 0.5 marks
-inside 50 a game, a listed defender with 2 rebound 50s plus one percenters a
-game. That gives 71 MID/FWD and 13 MID/DEF their line back (forward-eligible
-players 141 -> 212, defence 224 -> 237). First positions, ratings and types
-are untouched; listed forwards with no forward numbers (McKercher, Delana,
-Scerri) stay midfielders. Match-day selection
+A listed forward or defender (`real_pos`) is his listed line first
+(`Ratings.listed_primary`; director 2026-11-06, T8.Q11, row 91), whatever one
+season's numbers read; only a ruck reading, gated on real hit-out volume,
+stands. One who also gets plenty of the ball keeps MID second through the
+gates above (Reid, Macdonald, Richards read FWD/MID). Listed midfielders,
+rucks and unlisted players keep the numbers' reading. `Ratings.listed_secondary`
+(a midfielder on the numbers keeps his listed line second) now only matters
+for players the listing does not lead. Match-day selection
 fills each slot from primary players first, then from the secondary. The
 on-ground copy's `role` is the slot, so the oval still groups them; `list_tag`
 keeps the natural tag for the list screen. Draft filters and the two-ruck rule
@@ -186,17 +186,16 @@ sum to the list size.
 Two classifier misreads are corrected by hand (`Ratings.ROLE_CORRECTIONS`:
 Maurice Rioli and Cody Weightman, listed and played as forwards).
 
-**Known issue, deferred (a Ratings/classification task of its own).** The
-broad classifier is still biased to MID: the role scores are not on one scale
-(MID rewards disposals, contested ball and clearances that every busy player
-racks up; FWD leans on goals most players kick few of), so ~85 listed forwards
-and 21 listed defenders read MID - pressure forwards can even read as Wings or
-Taggers. Letting the listed position (`real_pos`) lead fixes it, but broad role
-also drives OVR (`Ratings.rate_overall` scores the role's core and position
-stretch), so that fix moves 122 players, changes 110 OVRs (4 by 10+) and pulls
-the forward median ~7 below midfield. It also shows the FWD core undervalues
-pressure forwards: pressure is not in it although the engine rewards team
-pressure. Classification and the forward rating need to be settled together.
+**Listed positions lead (row 91, 2026-11-06).** The broad classifier is
+biased to MID (its role scores are not on one scale: MID rewards disposals,
+contested ball and clearances every busy player racks up). Measured on the
+2026 pool before this row, the earlier listing rule had already brought it
+down to 6 listed forwards reading MID and 2 reading DEF (the "85 forwards and
+21 defenders" of September predates that rule); row 91 moves those 8 and
+changes their 8 OVRs (largest -5). Forward median OVR 56 against midfield 58.
+The FWD core still undervalues pressure forwards (pressure is not in it).
+`tools/audit/listed_positions_impl.gd` dumps every player's listing, first
+position and OVR to compare two checkouts.
 
 ### Match-day roles (`scripts/sim/Roles.gd`)
 Only jobs the engine rewards:
