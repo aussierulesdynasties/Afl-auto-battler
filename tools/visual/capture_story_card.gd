@@ -169,7 +169,7 @@ func _international_for(gs, db, t: Dictionary) -> Dictionary:
 				q["drafted_type"] = "national"
 				q["xp"] = 0
 				q["xp_games"] = 0
-				load("res://scripts/sim/Contracts.gd").rookie_deal(q, int(gs.season_year) + 1)
+				load("res://scripts/sim/Contracts.gd").draftee_deal(q, int(gs.season_year) + 1)
 				db.register_draftees([q])
 				gs._join(gs.my_club, q)
 				return q

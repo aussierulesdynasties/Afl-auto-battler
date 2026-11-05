@@ -81,6 +81,9 @@ func _build() -> void:
 	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	host.add_child(head)
 	var count := "%d players" % GameState.my_list.size()
+	if RookieList.on():
+		count = "%d senior  ·  %d rookie" % [RookieList.senior_count(GameState.my_list),
+				RookieList.rookie_count(GameState.my_list)]
 	if injured > 0:
 		count += "  ·  %d injured" % injured
 	host.add_child(UiKit.lbl(count, UiKit.SMALL, UiKit.MUTED))
@@ -213,13 +216,42 @@ func _full_list_panel() -> Control:
 	lbox.name = "ListRows"
 	rv.add_child(UiKit.scroll(lbox))
 
+	if not RookieList.on():
+		_role_groups(lbox, GameState.my_list, false)
+		return right
+	# Two lists (row 88): the senior list, then the rookie list, each with its spots.
+	var seniors := RookieList.seniors(GameState.my_list)
+	var rookies := RookieList.rookies(GameState.my_list)
+	var sh := UiKit.lbl("Senior list  %d / %d" % [seniors.size(), RookieList.SENIOR_SPOTS], UiKit.BODY, UiKit.EMPH, true)
+	sh.name = "SeniorListHead"
+	lbox.add_child(sh)
+	_role_groups(lbox, seniors, false)
+	lbox.add_child(UiKit.spacer(8))
+	var rh := UiKit.lbl("Rookie list  %d / %d" % [rookies.size(), RookieList.CAT_A_SPOTS], UiKit.BODY, UiKit.EMPH, true)
+	rh.name = "RookieListHead"
+	lbox.add_child(rh)
+	if rookies.is_empty():
+		var none := UiKit.lbl("No rookies. The Rookie Draft after the National Draft and the mid-season rookie draft fill these spots.",
+				UiKit.SMALL, UiKit.MUTED)
+		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lbox.add_child(none)
+	else:
+		_role_groups(lbox, rookies, true)
+	return right
+
+
+## Players under a heading per position, best first. A rookie list skips an
+## empty position.
+func _role_groups(lbox: Control, players: Array, skip_empty: bool) -> void:
 	var grouped := {}
 	for r in ["RUCK", "MID", "DEF", "FWD"]:
 		grouped[r] = []
-	for p in GameState.my_list:
+	for p in players:
 		grouped[str(p["role"])].append(p)
 	for r in ["RUCK", "MID", "DEF", "FWD"]:
 		var g: Array = grouped[r]
+		if skip_empty and g.is_empty():
+			continue
 		g.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
 		lbox.add_child(UiKit.spacer(4))
 		lbox.add_child(UiKit.lbl("%s  (%d)" % [UiKit.ROLE_LABEL[r], g.size()],
@@ -227,7 +259,6 @@ func _full_list_panel() -> Control:
 		for p in g:
 			lbox.add_child(_list_row(p))
 		lbox.add_child(UiKit.spacer(6))
-	return right
 
 
 func _team_row(p: Dictionary, ground: bool) -> Control:
@@ -357,6 +388,18 @@ func _open_profile(id: String) -> void:
 				GameState.set_untouchable(id, not on)
 				_build()
 				_open_profile(id)}]
+	if RookieList.on() and RookieList.is_rookie(p):
+		var block := RookieList.upgrade_block(GameState, GameState.my_club, id)
+		var used := RookieList.senior_count(GameState.my_list)
+		actions.append({"name": "Upgrade", "label": "Upgrade to the senior list",
+				"disabled": block != "",
+				"detail": block if block != "" else "He takes a senior spot (%d of %d used) and his wage rises to the senior minimum, %s a season." % [
+						used, RookieList.SENIOR_SPOTS, Contracts.money(RookieList.senior_wage(GameState.season_year))],
+				"run": func():
+					if RookieList.upgrade(GameState, GameState.my_club, id):
+						GameState.autosave()
+					_build()
+					_open_profile(id)})
 	_profile = PlayerSheet.open(self, p, func(): _profile = null, actions)
 
 

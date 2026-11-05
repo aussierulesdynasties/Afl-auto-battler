@@ -42,6 +42,9 @@ func _ready() -> void:
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(_on_resize)
 	_build()
+	# The Rookie Draft follows the National Draft: your pick waits here.
+	if RookieList.waiting(GameState):
+		RookieDraftSheet.open.call_deferred(self, _build)
 	FirstVisitIntro.show_if_due.call_deferred(self, "preseason")
 
 
@@ -1082,6 +1085,8 @@ func _after(at: String) -> void:
 ## coach to the main menu, as from the hub (the career is saved).
 func handle_back() -> bool:
 	if FirstVisitIntro.close_open(self):
+		return true
+	if RookieDraftSheet.close_open(self):
 		return true
 	var plan_sheet := get_node_or_null("SeasonPlanSheet")
 	if plan_sheet != null and is_instance_valid(plan_sheet) and not plan_sheet.is_queued_for_deletion():

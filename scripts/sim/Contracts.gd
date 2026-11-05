@@ -102,9 +102,10 @@ static func assign_initial(list: Array) -> void:
 		p["salary"] = int(p.get("value", 3))
 
 
-## A first-year National Draft deal. The 2027 CBA base bands are used as
-## the starting point and indexed in later game-world seasons.
-static func rookie_deal(p: Dictionary, year := 2027) -> void:
+## A first-year National Draft deal (a draftee's, on the senior list; the
+## rookie list's wage is RookieList.wage). The 2027 CBA base bands are used
+## as the starting point and indexed in later game-world seasons.
+static func draftee_deal(p: Dictionary, year := 2027) -> void:
 	p["contract_years"] = ROOKIE_YEARS
 	var pick := int(p.get("draft_pick", 0))
 	var base := 125000
