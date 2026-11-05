@@ -1737,13 +1737,13 @@ func _ball_carry(to: Vector2) -> void:
 
 
 ## A ball-up is a dead ball: a player still holding it (the free kick just
-## paid) lets it go at the umpire's spot instead of walking off with it.
+## paid) gives it back to the umpire's spot instead of walking off with it.
+## The ball travels from his hand to the spot (_ball_carry, a short toss of up
+## to about 3 m) rather than jumping there in one frame.
 func _drop_held(at: Vector2) -> void:
 	if str(ball["mode"]) != "held":
 		return
-	ball["mode"] = "dead"
-	ball["holder"] = -1
-	ball["pos"] = at
+	_ball_carry(at)
 
 
 func _update_ball(h: float) -> void:
