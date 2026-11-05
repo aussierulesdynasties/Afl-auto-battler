@@ -25,6 +25,7 @@ extends SceneTree
 ##   --out PATH   stills: <out>_end.png (and <out>_start.png)
 ##   --club CODE  your club (default COL; a colourful club shows the living colour better)
 ##   --no-music   music off, so the clip holds only the feel sounds (to measure them)
+##   --volume N   Settings > Volume at N% (default 100), to show the slider part way
 ## Seeded (2027): the same command films the same club and round.
 
 const Tap := preload("res://tests/tap.gd")
@@ -92,12 +93,14 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_feel.save"
 	state.settings_path = "user://capture_feel_settings.cfg"
-	state.set_button_sounds("normal")
+	state.set_sounds_muted(false)
+	state.set_volume(int(args.get("volume", "100")))
 	state.set_haptics_on(true)
 	state.set_reduced_motion(false)
 	state.set_vignettes_on(false)
 	# --no-music: only the game-feel sounds in the clip (to measure them).
-	state.set_music_level("off" if args.has("no-music") else "normal")
+	var music := AudioServer.get_bus_index(AudioLevels.bus(AudioLevels.MUSIC))
+	AudioServer.set_bus_mute(music, args.has("no-music"))
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	if Engine.get_write_movie_path() != "":
@@ -163,7 +166,7 @@ func _one(effect: String, out: String, secs: float, state, db, club: String) -> 
 			load("res://scripts/ui/Feel.gd").force_phone = W < 600
 			var sheet: Control = load("res://scripts/ui/OptionsSheet.gd").open(host, true)
 			await _wait(0.5)
-			for n in ["SettingsButtonSounds", "SettingsReducedMotion"]:
+			for n in ["SettingsVolume", "SettingsReducedMotion"]:
 				var row: Control = sheet.find_child(n, true, false)
 				var p := row.get_parent()
 				while p != null and not (p is ScrollContainer):

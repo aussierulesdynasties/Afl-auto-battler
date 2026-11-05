@@ -72,6 +72,7 @@ func _run() -> void:
 	await _t("_test_momentum_meter")
 	await _t("_test_vignettes_setting")
 	await _t("_test_game_feel_settings")
+	_t("_test_old_sound_levels_carry_over")
 	await _t("_test_game_feel_effects")
 	_t("_test_broken_calls")
 	await _t("_test_vignettes_off_match")
@@ -2726,54 +2727,121 @@ func _sheet_at(options, sz: Vector2i) -> Array:
 	return [host, sheet]
 
 
-## Three rows in Settings, each its own Off, real taps at a phone's size and a
-## PC's, saved with the settings. Vibration shows only on a phone.
+## Sound is Mute and one Volume slider (row 98); Vibration and Reduced motion
+## keep their own Off. Real taps at a phone's size and a PC's, saved with the
+## settings. Vibration shows only on a phone.
 func _test_game_feel_settings() -> void:
 	var options = load("res://scripts/ui/OptionsSheet.gd")
 	var feel = load("res://scripts/ui/Feel.gd")
 	var uk = load("res://scripts/ui/UiKit.gd")
-	_check(_state.button_sounds() == "normal" and _state.haptics_on() and not _state.reduced_motion(),
-			"Button sounds and Vibration start on, Reduced motion off")
+	_check(not _state.sounds_muted() and _state.volume() == 100 and _state.haptics_on() and not _state.reduced_motion(),
+			"Sound starts on at full volume, Vibration on, Reduced motion off")
 	feel.force_phone = false
 	var pc: Array = await _sheet_at(options, Vector2i(1280, 720))
-	_check(pc[1].find_child("SettingsButtonSounds_off", true, false) != null
+	_check(pc[1].find_child("SettingsMuteSounds_on", true, false) != null
+			and pc[1].find_child("SettingsVolume", true, false) is HSlider
 			and pc[1].find_child("SettingsReducedMotion_on", true, false) != null,
-			"Settings has Button sounds and Reduced motion on a PC")
+			"Settings has Mute, a Volume slider and Reduced motion on a PC")
+	for gone in ["SettingsMusic", "SettingsCrowd", "SettingsButtonSounds"]:
+		_check(pc[1].find_child(gone, true, false) == null, "No %s row: one Volume does it" % gone)
 	_check(pc[1].find_child("SettingsVibration_off", true, false) == null,
 			"No Vibration row on a PC, which has nothing to buzz")
 	pc[0].queue_free()
 	await _settle()
 	feel.force_phone = true
+	var master := AudioServer.get_bus_index("Master")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		var tag := "%dx%d" % [sz.x, sz.y]
 		var hs: Array = await _sheet_at(options, sz)
 		var sheet: Control = hs[1]
-		for pair in [["SettingsButtonSounds_off", "Button sounds Off"], ["SettingsVibration_off", "Vibration Off"],
+		for pair in [["SettingsMuteSounds_on", "Mute On"], ["SettingsVibration_off", "Vibration Off"],
 				["SettingsReducedMotion_on", "Reduced motion On"]]:
 			var b: Button = sheet.find_child(str(pair[0]), true, false)
 			var why: String = await Tap.tap(b) if b != null else "missing"
 			_check(why == "", "%s takes a real tap (%s: %s)" % [pair[1], tag, why])
 			await _settle()
-		_check(_state.button_sounds() == "off" and not _state.haptics_on() and _state.reduced_motion()
+		# A finger a quarter of the way along the slider sets 25%.
+		var vol: HSlider = sheet.find_child("SettingsVolume", true, false)
+		var why_v: String = await Tap.tap_at(vol, _slider_spot(vol, 0.25)) if vol != null else "missing"
+		await _settle()
+		var shown: Label = sheet.find_child("SettingsVolumeValue", true, false)
+		_check(why_v == "" and _state.volume() == 25 and shown != null and shown.text == "25%",
+				"A tap a quarter along Volume sets 25%% and says so (%s: %s, %d, %s)"
+				% [tag, why_v, _state.volume(), shown.text if shown != null else "no label"])
+		_check(_state.sounds_muted() and AudioServer.is_bus_mute(master)
+				and is_equal_approx(AudioServer.get_bus_volume_db(master), linear_to_db(0.25))
+				and not _state.haptics_on() and _state.reduced_motion()
 				and not feel.haptics and feel.reduced and not uk.motion_on(),
-				"The three taps turn sounds and vibration off and motion down (%s)" % tag)
-		var bus := AudioServer.get_bus_index("Interface")
-		_check(bus >= 0 and AudioServer.is_bus_mute(bus), "Button sounds Off mutes its own bus (%s)" % tag)
+				"The taps mute every sound, set Master to 25%%, stop the buzz and still the screen (%s)" % tag)
 		var cfg := ConfigFile.new()
-		_check(cfg.load(_state.settings_path) == OK and str(cfg.get_value("ui", "button_sounds", "")) == "off"
+		_check(cfg.load(_state.settings_path) == OK and cfg.get_value("ui", "mute_sounds", false) == true
+				and int(cfg.get_value("ui", "volume", -1)) == 25
 				and cfg.get_value("ui", "haptics", true) == false and cfg.get_value("ui", "reduced_motion", false) == true,
-				"All three are saved with the settings (%s)" % tag)
-		for pair in [["SettingsButtonSounds_normal", "Button sounds Normal"], ["SettingsVibration_on", "Vibration On"],
+				"All four are saved with the settings (%s)" % tag)
+		for pair in [["SettingsMuteSounds_off", "Mute Off"], ["SettingsVibration_on", "Vibration On"],
 				["SettingsReducedMotion_off", "Reduced motion Off"]]:
 			var b: Button = sheet.find_child(str(pair[0]), true, false)
 			var why: String = await Tap.tap(b) if b != null else "missing"
 			_check(why == "", "%s takes a real tap (%s: %s)" % [pair[1], tag, why])
 			await _settle()
-		_check(_state.button_sounds() == "normal" and _state.haptics_on() and not _state.reduced_motion()
-				and not AudioServer.is_bus_mute(bus), "And back on (%s)" % tag)
+		why_v = await Tap.tap_at(vol, _slider_spot(vol, 1.0)) if vol != null else "missing"
+		await _settle()
+		_check(why_v == "" and _state.volume() == 100 and not _state.sounds_muted() and not AudioServer.is_bus_mute(master)
+				and is_equal_approx(AudioServer.get_bus_volume_db(master), 0.0)
+				and _state.haptics_on() and not _state.reduced_motion(),
+				"And back: sound on at full, buzz and motion back (%s: %s)" % [tag, why_v])
 		hs[0].queue_free()
 		await _settle()
 	feel.force_phone = false
+
+
+## Where along a slider a finger sets `ratio`: Godot centres the thumb on the
+## touch, so the ends sit half a thumb in from the edges.
+func _slider_spot(s: HSlider, ratio: float) -> Vector2:
+	var thumb := float(s.get_theme_icon("grabber").get_width())
+	return Vector2(thumb / 2.0 + ratio * (s.size.x - thumb), s.size.y / 2.0)
+
+
+## An old settings file (a level each for music, crowd and button sounds)
+## comes over as Mute and Volume, once, and the old keys go.
+func _test_old_sound_levels_carry_over() -> void:
+	var keep: String = _state.settings_path
+	_state.settings_path = "user://test_old_sound.cfg"
+	var cases := [
+		[{"music_level": "normal", "crowd_level": "quiet", "button_sounds": "off"}, false, 100, false,
+				"the loudest one he still heard sets Volume"],
+		[{"music_level": "quiet", "crowd_level": "quiet", "button_sounds": "quiet"}, false, 30, false,
+				"all quiet is 30% (-10 dB)"],
+		[{"music_level": "off", "crowd_level": "off", "button_sounds": "off"}, false, 100, true,
+				"all off is Mute on, Volume full for later"],
+		[{"crowd_level": "quiet"}, true, 30, true, "Mute already on stays on"],
+		[{"crowd_level": "nonsense"}, false, 100, false, "a level it doesn't know counts as normal"],
+	]
+	_check(cases.size() == 5, "Five old settings files to carry over")
+	for c in cases:
+		var cfg := ConfigFile.new()
+		for k in c[0]:
+			cfg.set_value("ui", k, c[0][k])
+		cfg.set_value("ui", "mute_sounds", c[1])
+		cfg.save(_state.settings_path)
+		_state._carry_old_sound_levels(cfg)
+		var back := ConfigFile.new()
+		back.load(_state.settings_path)
+		var left := false
+		for k in ["music_level", "crowd_level", "button_sounds"]:
+			left = left or back.has_section_key("ui", k)
+		_check(_state.volume() == int(c[2]) and _state.sounds_muted() == bool(c[3]) and not left,
+				"Old settings: %s (Volume %d, Mute %s)" % [c[4], _state.volume(), str(_state.sounds_muted())])
+	# A file with nothing old is left alone.
+	var plain := ConfigFile.new()
+	plain.set_value("ui", "volume", 55)
+	plain.save(_state.settings_path)
+	_state._carry_old_sound_levels(plain)
+	_check(_state.volume() == 55, "A new settings file is left as it is")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(_state.settings_path))
+	_state.settings_path = keep
+	_state.set_sounds_muted(false)
+	_state.set_volume(100)
 
 
 ## Every effect runs with its setting on and is skipped with it off: the
@@ -2836,11 +2904,15 @@ func _test_game_feel_effects() -> void:
 	_check(draws[0] == 0 and bd.find_child("Drift", true, false) == null and soft.modulate == Color.WHITE
 			and is_equal_approx(big.scale.x, 1.0),
 			"Then everything holds still: no redraws, no timer, colour and size back to rest (%d)" % draws[0])
-	_state.set_button_sounds("off")
+	_state.set_sounds_muted(true)
 	var quiet: Dictionary = await run.call()
 	_check(quiet["heard"].is_empty() and quiet["felt"] == [22, 10, 40],
-			"Button sounds Off: no sound starts; the buzz still comes (%s)" % str(quiet["heard"]))
-	_state.set_button_sounds("normal")
+			"Mute: no sound starts; the buzz still comes (%s)" % str(quiet["heard"]))
+	_state.set_sounds_muted(false)
+	_state.set_volume(0)
+	var zero: Dictionary = await run.call()
+	_check(zero["heard"].is_empty(), "Volume 0: no sound starts either (%s)" % str(zero["heard"]))
+	_state.set_volume(100)
 	_state.set_haptics_on(false)
 	var still: Dictionary = await run.call()
 	_check(still["felt"].is_empty() and still["heard"] == ["main", "tick", "land"],

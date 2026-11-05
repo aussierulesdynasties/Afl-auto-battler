@@ -340,10 +340,9 @@ func _ready() -> void:
 	if cfg.load(settings_path) == OK:
 		show_real_names = bool(cfg.get_value("display", "real_names", true))
 	UiKit.apply_appearance(str(cfg.get_value("ui", "appearance", "dark")))
+	_carry_old_sound_levels(cfg)
 	_apply_sound_mute(bool(cfg.get_value("ui", "mute_sounds", false)))
-	AudioLevels.apply(AudioLevels.MUSIC, AudioLevels.valid(str(cfg.get_value("ui", "music_level", "normal"))))
-	AudioLevels.apply(AudioLevels.CROWD, AudioLevels.valid(str(cfg.get_value("ui", "crowd_level", "normal"))))
-	AudioLevels.apply(AudioLevels.INTERFACE, AudioLevels.valid(str(cfg.get_value("ui", "button_sounds", "normal"))))
+	AudioLevels.apply_volume(AudioLevels.valid(cfg.get_value("ui", "volume", AudioLevels.DEFAULT_VOLUME)))
 	Feel.haptics = bool(cfg.get_value("ui", "haptics", true))
 	Feel.reduced = bool(cfg.get_value("ui", "reduced_motion", false))
 	ScreenLayout.set_screen_size(str(cfg.get_value("ui", "screen_size", "standard")))
@@ -427,35 +426,35 @@ func set_sounds_muted(muted: bool) -> void:
 	_apply_sound_mute(muted)
 
 
-## FL-004: "off", "quiet" or "normal" for the music and for the crowd.
-func music_level() -> String:
-	return AudioLevels.valid(str(get_setting("music_level", "normal")))
+## One Volume for every sound (row 98), a whole percent; Mute sits over it.
+func volume() -> int:
+	return AudioLevels.valid(get_setting("volume", AudioLevels.DEFAULT_VOLUME))
 
 
-func set_music_level(level: String) -> void:
-	set_setting("music_level", AudioLevels.valid(level))
-	AudioLevels.apply(AudioLevels.MUSIC, AudioLevels.valid(level))
+func set_volume(pct: int) -> void:
+	set_setting("volume", AudioLevels.valid(pct))
+	AudioLevels.apply_volume(AudioLevels.valid(pct))
 
 
-func crowd_level() -> String:
-	return AudioLevels.valid(str(get_setting("crowd_level", "normal")))
-
-
-func set_crowd_level(level: String) -> void:
-	set_setting("crowd_level", AudioLevels.valid(level))
-	AudioLevels.apply(AudioLevels.CROWD, AudioLevels.valid(level))
-
-
-## Game feel (director, 2026-10-11): the boot-on-leather click of a button,
-## the stud tick of a choice, the siren at the end of a flow, the sting when a
-## big moment lands. "off", "quiet" or "normal", on its own bus.
-func button_sounds() -> String:
-	return AudioLevels.valid(str(get_setting("button_sounds", "normal")))
-
-
-func set_button_sounds(level: String) -> void:
-	set_setting("button_sounds", AudioLevels.valid(level))
-	AudioLevels.apply(AudioLevels.INTERFACE, AudioLevels.valid(level))
+## A settings file from before row 98 kept a level each for music, the crowd
+## and button sounds. Carry them over once as Mute and Volume
+## (AudioLevels.from_old says how) and drop the old keys, so the file has one
+## answer and no level the player can no longer see stays applied.
+func _carry_old_sound_levels(cfg: ConfigFile) -> void:
+	var old := {}
+	for k in AudioLevels.OLD_KEYS:
+		if cfg.has_section_key("ui", k):
+			old[k] = cfg.get_value("ui", k)
+	if old.is_empty():
+		return
+	var now := AudioLevels.from_old(old)
+	if not cfg.has_section_key("ui", "volume"):
+		cfg.set_value("ui", "volume", now["volume"])
+	if bool(now["mute"]):
+		cfg.set_value("ui", "mute_sounds", true)
+	for k in old:
+		cfg.erase_section_key("ui", k)
+	cfg.save(settings_path)
 
 
 ## A light buzz under a press and a big moment, on a phone. On by default.
