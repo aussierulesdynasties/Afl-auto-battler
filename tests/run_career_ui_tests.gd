@@ -93,6 +93,16 @@ func _test_media_conference_rules() -> void:
 			"result": {"home": "COL", "away": "CAR", "score": [88, 72]}}, {})
 	_check(str(kids.get("key", "")) == "young_side" and str(kids.get("journalist", "")) == "philosopher",
 			"A young side brings the Philosopher")
+	# An injury in a win never gets the answer that the injury cost the game.
+	var hurt_win: Dictionary = MediaConferenceScript.pick({"club": "COL", "opponent_name": "Carlton", "round": 15,
+			"injuries": [{"name": "Jack Smith"}], "result": {"home": "COL", "away": "CAR", "score": [88, 72]}}, {})
+	var hurt_loss: Dictionary = MediaConferenceScript.pick({"club": "COL", "opponent_name": "Carlton", "round": 15,
+			"injuries": [{"name": "Jack Smith"}], "result": {"home": "COL", "away": "CAR", "score": [72, 88]}}, {})
+	var win_lines := str((hurt_win.get("options", []) as Array).map(func(o): return str(o["label"])))
+	_check(str(hurt_win.get("key", "")) != "injury" and not win_lines.contains("cost us the game")
+			and str(hurt_loss.get("key", "")) == "injury"
+			and str((hurt_loss["options"] as Array)[2]["label"]).contains("cost us the game"),
+			"The injury question, whose answers blame a loss, is asked after a loss only (%s)" % win_lines)
 	var stage = VignetteScript.new()
 	stage.size = Vector2(390, 300)
 	stage.club = "COL"
@@ -566,6 +576,31 @@ Your career stays on this device.",
 	_press("ForgeWeakness_marking")
 	await _settle()
 	_check(_forge_weaknesses() == 2, "A third weakness can't be picked (%d)" % _forge_weaknesses())
+	# Ruckwork leaves with the ruck: change the position (or the second one)
+	# and a hidden Ruckwork pick no longer fills a slot.
+	_press("ForgeWeakness_kicking")
+	await _settle()
+	_press("ForgeRole_RUCK")
+	await _settle()
+	_press("ForgeWeakness_ruckwork")
+	await _settle()
+	var had_ruck := (current_scene.get("_spec")["weaknesses"] as Array).has("ruckwork")
+	_press("ForgeRole_MID")
+	await _settle()
+	var role_drop := not (current_scene.get("_spec")["weaknesses"] as Array).has("ruckwork")
+	_press("ForgeRole2_RUCK")
+	await _settle()
+	_press("ForgeWeakness_ruckwork")
+	await _settle()
+	var had_ruck2 := (current_scene.get("_spec")["weaknesses"] as Array).has("ruckwork")
+	_press("ForgeRole2_")
+	await _settle()
+	var role2_drop := not (current_scene.get("_spec")["weaknesses"] as Array).has("ruckwork")
+	_check(had_ruck and role_drop and had_ruck2 and role2_drop and _forge_weaknesses() == 1
+			and current_scene.find_child("ForgeWeakness_ruckwork", true, false) == null,
+			"Ruckwork is dropped when neither position is a ruck (%s)" % str(current_scene.get("_spec")["weaknesses"]))
+	_press("ForgeWeakness_kicking")
+	await _settle()
 	_press("ForgeSavePlayer")
 	await _settle()
 	var problem: Label = current_scene.find_child("ForgeProblem", true, false)
@@ -2308,6 +2343,26 @@ func _test_season_awards() -> void:
 	ceremony.find_child("AwardsSkip", true, false).emit_signal("pressed")
 	await _settle()
 	_check(not is_instance_valid(ceremony), "Replay can skip straight to review")
+	# A suspended top vote-getter: the medal goes to the first eligible player,
+	# the one every other screen names, and he is listed as ineligible.
+	var p2: Dictionary = _state.my_list[1]
+	var banned := {"id": str(p2["id"]), "club": "COL", "votes": 30, "slot": "MID", "brownlow_eligible": false}
+	_state.season_awards = {"year": 2027, "brownlow": [banned, row], "brownlow_winner": row,
+		"coleman": [row], "all_australian": [row], "best_and_fairest": {"COL": [row]}}
+	ceremony = load("res://scripts/ui/SeasonAwards.gd").open(host)
+	await _settle()
+	next = ceremony.find_child("AwardsNext", true, false)
+	next.emit_signal("pressed")
+	await _settle()
+	var medal := ""
+	for l in ceremony.find_children("*", "Label", true, false):
+		medal += (l as Label).text + " | "
+	var crowned: Control = ceremony.find_child("AwardWinner", true, false)
+	_check(medal.contains(_state.award_name(row) + " | ") and medal.contains("(ineligible)")
+			and (crowned == null or crowned.number == int(player["num"])),
+			"The Brownlow is presented to the eligible winner, the suspended player marked ineligible (%s)" % medal.substr(0, 300))
+	ceremony.find_child("AwardsSkip", true, false).emit_signal("pressed")
+	await _settle()
 	for code in _db.CLUB_ORDER:
 		var winner: Control = load("res://scripts/ui/match/AwardWinnerVignette.gd").new()
 		host.add_child(winner)

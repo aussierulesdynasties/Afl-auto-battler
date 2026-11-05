@@ -2036,6 +2036,8 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	ensure_contracts()
 	ExpansionBuild.set_relief(self, next_year)
 	season_year = next_year
+	# Dynamic rivalries cool once a season when two clubs stop meeting.
+	Rivalries.age(rivalry_history, season_year)
 	season_log = []
 	last_training_report = {}
 	_xp_grant_key = ""
@@ -7089,11 +7091,9 @@ var _order_cache := {}
 func _draft_order() -> Array:
 	var key := _league_fingerprint()
 	if str(_order_cache.get("key", "")) != key:
-		var order := []
-		for row in season.ladder_sorted():
-			order.append(str(row["code"]))
-		order.reverse()
-		_order_cache = {"key": key, "order": order}
+		# The draft's own order (premier last, runner-up before it), so a
+		# pick's number matches the one it is called on draft night.
+		_order_cache = {"key": key, "order": intake_order()}
 	return _order_cache["order"]
 
 
@@ -7305,6 +7305,7 @@ func _league_fingerprint() -> String:
 	for code in season.ladder:
 		var row: Dictionary = season.ladder[code]
 		parts.append("%s=%d/%d/%d/%d" % [code, int(row.get("p", 0)), int(row.get("pts", 0)), int(row.get("pf", 0)), int(row.get("pa", 0))])
+	parts.append("gf=%s/%s" % [str(season.finals.get("premier", "")), str(season.finals.get("runner_up", ""))])
 	return "|".join(parts)
 
 

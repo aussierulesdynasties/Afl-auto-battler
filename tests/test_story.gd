@@ -2016,7 +2016,7 @@ func _test_culture() -> void:
 		by2[str(st["strand"])] = int(st["d"])
 	_check(by2.get("together", 0) < 0 and by2.get("ambition", 0) < 0 and by2.get("standards", 0) < 0,
 			"A bottom finish with a young, loose side lowers every strand")
-	_check(Culture.season_steps(10, 18, false, 0.0, 0.0).is_empty(), "A mid-table, mid-age season moves nothing")
+	_check(Culture.season_steps(Season.FINALISTS + 2, 18, false, 0.0, 0.0).is_empty(), "A mid-table, mid-age season moves nothing")
 	_check(Culture.new_faces_step(12, 6.0)[0]["d"] < 0 and Culture.new_faces_step(2, 6.0)[0]["d"] > 0 and Culture.new_faces_step(7, 6.0).is_empty() and Culture.new_faces_step(8, 8.0).is_empty(),
 			"Well more new faces than the league median costs Togetherness; well fewer helps; normal churn does nothing")
 	for strand in Culture.STRANDS:
@@ -2295,11 +2295,14 @@ func ", at + 5) - at)
 	var low_step := Culture.season_steps(18, 18, false, 0.0, 0.0)
 	_check(top_step.size() == 1 and top_step[0]["d"] > 0 and low_step[0]["d"] < 0, "Finals raise Togetherness, a bottom finish lowers it")
 	_check(Culture.run_step(0, 5)[1] > 0 and Culture.run_step(4, 0)[1] < 0, "Win runs raise it, loss runs lower it")
-	var older := Culture.season_steps(9, 18, false, 1.0, 0.0)
-	var younger := Culture.season_steps(9, 18, false, -1.0, 0.0)
+	var wildcard := Culture.season_steps(Season.FINALISTS, 18, false, 0.0, 0.0)
+	_check(wildcard.size() == 1 and str(wildcard[0]["why"]) == "Played finals" and tg.contains("top %d" % Season.FINALISTS),
+			"A wildcard finalist played finals too (%s)" % str(wildcard))
+	var older := Culture.season_steps(Season.FINALISTS + 1, 18, false, 1.0, 0.0)
+	var younger := Culture.season_steps(Season.FINALISTS + 1, 18, false, -1.0, 0.0)
 	_check(older.size() == 1 and older[0]["strand"] == "ambition" and older[0]["d"] > 0 and younger[0]["d"] < 0, "An older best 22 pushes Ambition towards now, a younger one towards later")
-	var tidy := Culture.season_steps(9, 18, false, 0.0, 2.5)
-	var loose := Culture.season_steps(9, 18, false, 0.0, -2.5)
+	var tidy := Culture.season_steps(Season.FINALISTS + 1, 18, false, 0.0, 2.5)
+	var loose := Culture.season_steps(Season.FINALISTS + 1, 18, false, 0.0, -2.5)
 	_check(tidy[0]["strand"] == "standards" and tidy[0]["d"] > 0 and loose[0]["d"] < 0, "Discipline moves Standards the way the line says")
 	_check(Culture.event_text("Togetherness", {"w": "Round 10", "why": "A run of four losses", "d": -3}) == "Round 10: a run of four losses. Togetherness fell.", "An event reads as one line")
 

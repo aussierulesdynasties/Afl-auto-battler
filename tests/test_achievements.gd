@@ -215,10 +215,15 @@ func _test_flags_window() -> void:
 
 func _test_second_chance() -> void:
 	var ladder := _ladder(_codes())
-	var good := {"L_QF1": "WCE", "W_SF1": "WCE", "W_PF1": "WCE", "W_GF": "WCE",
+	# The SF1 winner plays PF2 (Season's crossover, #964).
+	var good := {"L_QF1": "WCE", "W_SF1": "WCE", "W_PF2": "WCE", "W_GF": "WCE",
 			"L_GF": "GEE"}
 	_check(_ids({}, _ctx("WCE", "GEE", ladder, 2026, good)).has("wce_second_chance"),
 			"Lose a qualifying, win the semi, prelim and Grand Final: second chances")
+	var other := {"L_QF2": "WCE", "W_SF2": "WCE", "W_PF1": "WCE", "W_GF": "WCE",
+			"L_GF": "GEE"}
+	_check(_ids({}, _ctx("WCE", "GEE", ladder, 2026, other)).has("wce_second_chance"),
+			"The QF2 loser's path runs through SF2 and PF1")
 	var lost_gf := good.duplicate()
 	lost_gf["L_GF"] = "WCE"
 	lost_gf.erase("W_GF")

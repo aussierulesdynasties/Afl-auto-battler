@@ -1778,8 +1778,8 @@ func _history_row(entry: Dictionary) -> Control:
 func _refresh_mine() -> void:
 	UiKit.clear(_mine_box)
 	if _draft.intake_mode:
-		_mine_box.add_child(UiKit.lbl("%d rookies signed · list %d / %d" % [
-			_draft.count(),
+		_mine_box.add_child(UiKit.lbl("%d rook%s signed · list %d / %d" % [
+			_draft.count(), "ie" if _draft.count() == 1 else "ies",
 			int(GameState.league_lists.get(_club, []).size()), Ratings.LIST_SIZE],
 			15, UiKit.EMPH, true))
 		_mine_box.add_child(UiKit.lbl(
