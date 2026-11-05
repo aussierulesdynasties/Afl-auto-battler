@@ -317,6 +317,9 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	kick_range_on = Features.on("kick_range")
 	clanger_cause_on = Features.on("clanger_cause")
 	key_duels_on = Features.on("key_duels")
+	back_carries_on = Features.on("back_carries")
+	mid_intercepts_on = Features.on("mid_intercepts")
+	mid_ic_rng.seed = seed * 109 + 113
 	_clanger_seed = seed
 	# Who starts on the bench, for the match view's bench strip (read only).
 	for sq in squads:
@@ -1231,6 +1234,11 @@ const CARRY_ROLES := {
 	"attack": {"MID": 1.0, "FWD": 1.0, "DEF": 0.2, "RUCK": 0.3},
 	"inside": {"FWD": 1.0, "MID": 1.0, "RUCK": 0.3, "DEF": 0.05},
 }
+## Back-zone carrying retuned (row 92, T9.Q22, director 2026-11-06: defenders
+## carry the ball more than real AFL). A defender still leads the back zone's
+## ball, a midfielder drops back to take more of it. Switch back_carries; off,
+## CARRY_ROLES["back"] stands.
+const CARRY_BACK_RETUNED := {"DEF": 0.55, "MID": 1.0, "RUCK": 0.3, "FWD": 0.12}
 ## Forward archetypes (ARD-M3-002), by size as Training's jobs: a key
 ## forward from 192 cm, a small forward up to 181 cm, a general forward
 ## between. Key forwards present in the air inside 50 and bring the ball to
@@ -2498,6 +2506,12 @@ static func clanger_why(disp: Dictionary, weather_now: String, outcome := "stopp
 ## the kicker's reach, and better kickers reach further. Read once at set-up
 ## (switch kick_range) so threaded week sims never touch ProjectSettings.
 var kick_range_on := false
+## Back-zone carrying retuned (row 92): read once at set-up (switch
+## back_carries), so pick_carrier uses CARRY_BACK_RETUNED in the back zone.
+var back_carries_on := false
+## Carrier picks per side, "zone|slot role" -> count. Bookkeeping for the
+## balance harness (carry share by zone); no dice.
+var carry_log := [{}, {}]
 ## Reach in metres: 30 + 0.35 x his disposal (kicking) rating, so a 40 kicker
 ## reaches 44 m, a 70 kicker 54.5 m, a 95 kicker 63 m. The ground is 170 m
 ## goal to goal (Ratings goal_line 85), forward 50 at 35 m from the centre.
@@ -2569,7 +2583,12 @@ func pick_carrier(side: int, fp: float, among: Array = []):
 		key = "disposal"
 		purpose = "transition"
 	var sizes: Dictionary = LEAD_UP_SIZES if zone == "middle" or zone == "attack" else {}
-	return _weighted_roles(sq.ground if among.is_empty() else among, key, CARRY_ROLES[zone], 2.0, side, purpose, sizes, zone)
+	var roles: Dictionary = CARRY_BACK_RETUNED if zone == "back" and back_carries_on else CARRY_ROLES[zone]
+	var who = _weighted_roles(sq.ground if among.is_empty() else among, key, roles, 2.0, side, purpose, sizes, zone)
+	if who != null:
+		var k := zone + "|" + str(who["role"])
+		carry_log[side][k] = int((carry_log[side] as Dictionary).get(k, 0)) + 1
+	return who
 
 
 ## The primary kick-in player: a defender who can use and carry the ball.
@@ -3205,6 +3224,18 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				pending = carrier
 				next_gain = "cp" if bool(aerial.get("contested", false)) else "up"
 				continue
+			# mid_intercepts (row 89): a kick through the middle with no contest
+			# can be read and taken outright by one of their midfielders.
+			if mid_intercepts_on and aerial.is_empty() and _aerial_zone(opp, fp) == "middle" 					and mid_ic_rng.randf() < _tv("MID_KICK_INTERCEPT", MID_KICK_INTERCEPT):
+				var taken := _mid_kick_intercept(side, fp)
+				if not taken.is_empty():
+					# The kick still got it out of his defensive 50: Champion
+					# Data counts the rebound whatever happens to it next.
+					if prev_atk_fp < float(T["rebound_from"]) and atk_fp > float(T["rebound_to"]):
+						_t(side, "rebounds")
+						_p(carrier, "rebounds")
+					_last_disp["end"] = "aerial"
+					return taken
 
 		# Rebound 50: winning it out of your own defensive arc.
 		if prev_atk_fp < float(T["rebound_from"]) and atk_fp > float(T["rebound_to"]):
@@ -4251,6 +4282,52 @@ func _clanger_taken(side: int, at: float) -> void:
 	_prev_end = "turnover"
 	_kick_marked(opp, taker, at, rng.randf() < _tv("CLANGER_MARKED", CLANGER_MARKED)
 			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0))
+
+
+## Row 89 (director, 2026-11-06, T8.Q8: midfield intercepts 1.4 a game against
+## real 2.5): of general-play kicks that land in the middle third with no
+## aerial contest, the share one of the other side's midfielders reads and
+## takes outright. Tuned with tools/balance.sh toward Champion Data 2025.
+const MID_KICK_INTERCEPT := 0.10
+## The share of a chain's time a midfield intercept gives back (it cut the
+## passage short). Measured: none drops disposals; a whole chain lifts
+## clearances and hitouts (more ball-ups).
+const MID_GIVE_BACK := 0.5
+var _mid_give_back := 0.0
+var mid_intercepts_on := false
+var mid_ic_rng := RandomNumberGenerator.new()
+
+
+## The midfield kick-intercept (mid_intercepts): `side`'s kick at `at` is taken
+## by one of the other side's midfielders on the ground, the better readers
+## more often; the better readers also mark it (as a clanger taken does).
+func _mid_kick_intercept(side: int, at: float) -> Dictionary:
+	var opp := 1 - side
+	var mids := _by_roles((squads[opp] as Squad).ground, ["MID"])
+	if mids.is_empty():
+		return {}
+	# Its own dice, so the rest of the match draws as it would have.
+	var total := 0.0
+	for p in mids:
+		total += pow(maxf(1.0, _a(p, "intercept")), AERIAL_READ)
+	var r := mid_ic_rng.randf() * total
+	var taker = mids[mids.size() - 1]
+	for p in mids:
+		r -= pow(maxf(1.0, _a(p, "intercept")), AERIAL_READ)
+		if r <= 0.0:
+			taker = p
+			break
+	_intercept(opp, taker, false)
+	_kick_marked(opp, taker, at, mid_ic_rng.randf() < _tv("CLANGER_MARKED", CLANGER_MARKED)
+			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0))
+	# The passage it cut short did not use all its share of the quarter: that
+	# time is played (MID_GIVE_BACK of a chain each), so the match keeps its
+	# length of play.
+	_mid_give_back += _tv("MID_GIVE_BACK", MID_GIVE_BACK)
+	if _mid_give_back >= 1.0:
+		_mid_give_back -= 1.0
+		_q_count += 1
+	return {"outcome": "turnover", "fp": at, "actor": taker}
 
 
 ## A kick that turned over, taken by `taker`: when `marked`, he took it on the

@@ -31,9 +31,23 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		sim.weather = weather
 		var r: Dictionary = sim.run()
 		var teams := []
+		var rosters: Array = sim.rosters()
+		var stats: Dictionary = r["players"]
 		for side in range(2):
 			var t: Dictionary = (r["team"][side] as Dictionary).duplicate()
 			t["score"] = int(r["score"][side])
+			t["roles"] = role_lines(rosters[side], r["players"])
+			t["carry_zone"] = (sim.carry_log[side] as Dictionary).duplicate()
+			# Intercepts by each man's listed position (DEF, MID, FWD, RUCK), as
+			# tools/audit/intercept_impl.gd counts them: "ic_MID" intercepts and
+			# "pg_MID" player-games (every man who played and has a stat line).
+			for pl in (r["roster"][side] as Array):
+				var st: Dictionary = stats.get(str(pl["id"]), {})
+				if st.is_empty():
+					continue
+				var role := str(pl.get("list_role", pl.get("role", "")))
+				t["ic_" + role] = float(t.get("ic_" + role, 0.0)) + float(st.get("intercepts", 0.0))
+				t["pg_" + role] = int(t.get("pg_" + role, 0)) + 1
 			teams.append(t)
 		fh.store_line(JSON.stringify({"i": i, "home": h, "away": a, "teams": teams, "duels": duels(sim, r)}))
 	fh.close()
@@ -66,3 +80,23 @@ func duels(sim: MatchSim, r: Dictionary) -> Array:
 			top = maxi(top, int(per[d]))
 		out.append([n, won, top, MatchNotes.duel_verdict(won, n)])
 	return out
+
+
+## One side's box score by line, grouped by each player's own position
+## (list_role, as afl_role_rates.json groups real players): player-games and
+## the stats the role reference has, so the report can set them against real.
+static func role_lines(roster: Array, players: Dictionary) -> Dictionary:
+	var out := {}
+	for p in roster:
+		var role := str(p.get("list_role", p.get("role", "")))
+		if not out.has(role):
+			out[role] = {"pg": 0}
+		var row: Dictionary = out[role]
+		row["pg"] = int(row["pg"]) + 1
+		var st: Dictionary = players.get(str(p["id"]), {})
+		for k in ROLE_STATS:
+			row[k] = float(row.get(k, 0.0)) + float(st.get(k, 0.0))
+	return out
+
+
+const ROLE_STATS := ["disposals", "kicks", "handballs", "marks", "rebounds", "inside50", "clearances", "goals"]
