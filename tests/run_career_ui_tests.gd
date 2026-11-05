@@ -826,6 +826,11 @@ Your career stays on this device.",
 			"goals": [8, 19], "behinds": [13, 12]}, "FRE")
 	_check(gf_line.begins_with(_db.club_name("FRE")) and gf_line.contains("d.  " + _db.club_name("BRL")),
 			"Season review: the Grand Final winner comes first, home or away (%s)" % gf_line)
+	_check(review.summary_text("", false, "7th") == "You finished 7th.",
+			"Season review: no premiers gives only your finish, no blank club name")
+	_check(review.summary_text("FRE", false, "7th") == "%s take the flag. You finished 7th." % _db.club_name("FRE"),
+			"Season review: another club's flag names them and your finish")
+	_check(review.summary_text("FRE", true, "1st") == "PREMIERSHIP!", "Season review: your flag says PREMIERSHIP!")
 
 	# --- a saved career shows Continue, and it loads -------------------------
 	_state.start_season("SYD", _db.club_list("SYD"))
