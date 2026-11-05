@@ -1,16 +1,16 @@
 extends SceneTree
 ## League news front page and its hub card (needs a real renderer):
-##   godot --path . --script tools/visual/capture_newsfront.gd -- --size 1280x720 --out PREFIX --mode r1|mid [--club MEL]
+##   godot --path . --script tools/visual/capture_newsfront.gd -- --size 1280x720 --out PREFIX --mode r1|mid|flag [--club MEL] [--premier STK]
 ## Writes PREFIX_hub.png and PREFIX_news.png. Dark theme; a fresh career, never a real save.
 ## r1 is the director's Round 1 feed (15 first goals, a fine, an injury, a six-goal haul, a press quote);
-## mid plays six real rounds and shows the news the game made ([--rounds N] [--seed S] pin it;
-## add --features league_news for the row 76 items).
+## mid plays six real rounds and shows the news the game made.
+## flag is the season's end with the switch league_news on (row 76): the premiership item, with its
+## flag-history sentence computed by LeagueNews from data/club_premierships.csv.
 
 var _w := 1280
 var _h := 720
 var _club := "MEL"
-var _rounds := 6
-var _seed := 0
+var _premier := "STK"
 
 
 func _initialize() -> void:
@@ -33,10 +33,8 @@ func _run() -> void:
 				mode = str(a[i + 1])
 			"--club":
 				_club = str(a[i + 1])
-			"--rounds":
-				_rounds = int(a[i + 1])
-			"--seed":
-				_seed = int(a[i + 1])
+			"--premier":
+				_premier = str(a[i + 1])
 			"--size":
 				var wh := str(a[i + 1]).split("x")
 				_w = int(wh[0])
@@ -48,7 +46,6 @@ func _run() -> void:
 	state.autosave_enabled = false
 	state.save_path = "user://capture_newsfront.save"
 	state.settings_path = "user://capture_newsfront.cfg"
-	state.replay_seed = _seed
 	state.reset()
 	state.start_season(_club, db.club_list(_club))
 	state.tutorials = false
@@ -81,14 +78,23 @@ func _run() -> void:
 		for f in firsts:
 			items.append(_item("milestone", "%s kicked his first AFL goal for %s." % [f[0], f[1]]))
 		state.news = items
+	elif mode == "flag":
+		# Loaded at run time: a tool script is compiled before the autoloads exist.
+		load("res://scripts/core/Features.gd").set_on("league_news", true)
+		var year := int(state.season_year)
+		var prem: String = load("res://scripts/state/LeagueNews.gd").premiers_line(_premier, year, state.honour_roll)
+		print("PREMIERS ", prem)
+		state.news = [
+			_item("premiers", prem),
+		]
+		for it in state.news:
+			it["when"] = "Grand Final"
+			it["year"] = year
 	else:
-		for i in range(_rounds):
+		for i in range(6):
 			state.advance()
 		state.media_conference = {}  # the press conference sheet is not what is being shown
 		print("NEWS_COUNT ", state.news.size())
-		for it in state.news:
-			if str(it.get("kind", "")) in ["streak", "ladder"]:
-				print("LEAGUE_NEWS ", it.get("when", ""), " | ", it.get("text", ""))
 	router.stack = []
 	router.go("main")
 	await _frames(8)
@@ -115,11 +121,6 @@ func _run() -> void:
 	_save(out + "_news.png")
 	var feed: Node = root.find_child("NewsFeed", true, false)
 	if feed != null:
-		for sc in feed.find_children("*", "ScrollContainer", true, false):
-			(sc as ScrollContainer).scroll_vertical = 1050  # the briefs: "Around the league" at 390x844, Round 5
-			break
-		await _frames(10)
-		_save(out + "_newsmid.png")
 		for sc in feed.find_children("*", "ScrollContainer", true, false):
 			(sc as ScrollContainer).scroll_vertical = 100000
 			break

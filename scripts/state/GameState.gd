@@ -5470,7 +5470,6 @@ func _after_round(results: Array) -> void:
 	Milestones.record_round(self, results)
 	_nominate_rising_star(results)
 	_round_news(results)
-	LeagueNews.after_round(self, results)
 	_record_match_story(results)
 	if Almanac.on():
 		Almanac.update_club_records(self, results)
@@ -9786,7 +9785,8 @@ func _season_news() -> void:
 		add_news("award", "Norm Smith Medal: %s (%s), %s" % [award_name(medal),
 				GameDB.club_name(str(medal["club"])), str(medal["line"])])
 	if premier() != "":
-		add_news("premiers", "%s are the %d premiers." % [GameDB.club_name(premier()), season_year])
+		# With the switch "league_news", one sentence of the club's flag history (row 76).
+		add_news("premiers", LeagueNews.premiers_line(premier(), season_year, honour_roll))
 
 
 func _find_player(id: String) -> Dictionary:
