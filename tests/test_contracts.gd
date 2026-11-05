@@ -45,6 +45,7 @@ func run() -> void:
 	_t("_test_trade_reasons")
 	_t("_test_free_agent_reasons")
 	_t("_test_market_reasons_change_nothing")
+	_t("_test_rivals_act_in_their_interest")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Contracts", self))
@@ -65,6 +66,18 @@ func _t(test: String, args := []) -> Variant:
 func _new_season() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
+
+
+## Your players at `role` drop to 40, so a free agent there would start for you.
+## Their attributes drop too: a load rates every player from them again.
+func _thin_line(role: String) -> void:
+	for q in GameState.my_list:
+		if str(q["role"]) == role:
+			for k in q["attr"]:
+				q["attr"][k] = mini(int(q["attr"][k]), 30)
+			q["overall"] = mini(int(q["overall"]),
+					Ratings.rate_overall(q["attr"], role, Ratings.effective_games(q)))
+	GameState._bars = {}
 
 
 func _to_offseason() -> void:
@@ -571,8 +584,19 @@ func _test_free_agents() -> void:
 		var r0 := GameState.offer_free_agent(str(refused["id"]), Contracts.asking_salary(refused) + 1000000, 3)
 		_check(not bool(r0["ok"]) and str(r0["answer"]) == "reject" and GameState.free_agents.has(refused),
 				"A player who won't come turns down even a big offer, and says why")
-	# Bidding against rivals for a player who would start for you.
+	# Bidding against rivals for a player who would start for you. Rivals keep
+	# anyone better than they can replace, so the market's best rarely makes a
+	# strong side: thin your line at the best contested free agent's position.
 	GameState.salary_cap += 10000000
+	var contested := {}
+	for fa in GameState.free_agents:
+		var real := (fa.get("offers", []) as Array).size() >= 1
+		for o in fa.get("offers", []):
+			real = real and not bool(o.get("filler", false))
+		if real and (contested.is_empty() or int(fa["overall"]) > int(contested["overall"])):
+			contested = fa
+	if not contested.is_empty():
+		_thin_line(str(contested["role"]))
 	var target := {}
 	for fa in GameState.free_agents:
 		if GameState.fa_role(fa, me) == "ground" and (fa.get("offers", []) as Array).size() >= 1:
@@ -1297,7 +1321,12 @@ func _run_draft() -> void:
 ## draft's and the next two drafts'; players never; a rival judges by its own
 ## read; a pick you sell moves you off the clock; the deal survives a save.
 func _test_draft_night_trades() -> void:
-	_new_season()
+	# A career where rivals deal on the night (seed 3: two deals; about one a
+	# night across seeds 1-6 and 2027).
+	GameState.reset()
+	GameState.career_seed = 3
+	GameState.replay_seed = 3
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	_to_offseason()
 	var me := GameState.my_club
 	var year := GameState.season_year
@@ -1382,11 +1411,12 @@ func _test_draft_night_trades() -> void:
 			and GameState.pick_owner_of(year, rnd, str(d.pick_origin[index])) == rival,
 			"The order shows the swap: they are on the clock, you pick later")
 	_check(not d.is_user_turn() and d.current_club() == rival, "You are off the clock; the buyer is on it")
-	_check(d.night_trades.size() == 1 and int(d.night_trades[0]["at"]) == index + 1
-			and str(d.night_trades[0]["buyer"]) == me,
+	var my_deals := d.night_trades.filter(func(x): return str(x["buyer"]) == me or str(x["seller"]) == me)
+	_check(my_deals.size() == 1 and int(my_deals[0]["at"]) == index + 1 and str(my_deals[0]["buyer"]) == me,
 			"The night's board remembers the deal (%s)" % str(d.night_trades))
+	var board := d.night_trades.size()
 	_check(GameState.save_career() and GameState.load_career()
-			and str(GameState.draft.pick_sequence[index]) == rival and GameState.draft.night_trades.size() == 1,
+			and str(GameState.draft.pick_sequence[index]) == rival and GameState.draft.night_trades.size() == board,
 			"The deal survives a save and load")
 	d = GameState.draft
 	d.auto_until_user_turn()
@@ -1437,6 +1467,19 @@ func _test_draft_night_trades() -> void:
 	for code in sizes:
 		same = same and (GameState.season.lists[code] as Array).size() == int(sizes[code])
 	_check(only_picks and same, "Every night deal is picks for picks and no list changes (%d deals)" % d.night_trades.size())
+	# The bid gate: a rival bids only for a pick worth more to it than to the
+	# seller, by more than the trade margin.
+	var gated := true
+	var rival_deals := 0
+	for tr in d.night_trades:
+		if str(tr["buyer"]) == me or str(tr["seller"]) == me:
+			continue
+		rival_deals += 1
+		var w: Array = tr.get("worths", [])
+		gated = gated and w.size() == 2 and float(w[0]) > float(w[1])
+	print("contracts: rival draft-night deals = %d" % rival_deals)
+	_check(rival_deals > 0, "Rivals trade picks with each other on draft night (%d deals)" % rival_deals)
+	_check(gated, "Every rival's night bid is for a pick worth more to it than the seller's worth plus the margin (%d deals)" % rival_deals)
 
 
 ## Next year's picks: valued with honest uncertainty about where a club will
@@ -1723,11 +1766,11 @@ func _test_trade_market() -> void:
 	for e in deals:
 		for c in [str(e["club"]), str(e["with"])]:
 			clubs_in[c] = int(clubs_in.get(c, 0)) + 1
-			once = once and int(clubs_in[c]) <= GameState.DEALS_PER_CLUB and c != me
+			once = once and c != me
 	var asked_deals := deals.filter(func(e): return e.has("request")).size()
 	_check(deals.size() - asked_deals <= GameState.MAX_AI_TRADES and once,
-			"Rival clubs make at most %d trades with each other besides the ones players asked for, each club in %d at most, never you (%d, %d asked for)" % [
-			GameState.MAX_AI_TRADES, GameState.DEALS_PER_CLUB, deals.size(), asked_deals])
+			"Rival clubs trade with each other within the %d runaway guard, never with you (%d, %d asked for)" % [
+			GameState.MAX_AI_TRADES, deals.size(), asked_deals])
 	var lists_ok := true
 	for code in GameState.season.lists:
 		var l: Array = GameState.season.lists[code]
@@ -2380,6 +2423,12 @@ func _test_free_agent_reasons() -> void:
 	_to_offseason()
 	var me := GameState.my_club
 	GameState.salary_cap += 10000000
+	var best_fa := {}
+	for fa in GameState.free_agents:
+		if best_fa.is_empty() or int(fa["overall"]) > int(best_fa["overall"]):
+			best_fa = fa
+	if not best_fa.is_empty():
+		_thin_line(str(best_fa["role"]))   # rivals keep their starters: make room for him
 	var target := {}
 	for fa in GameState.free_agents:
 		if GameState.fa_role(fa, me) == "ground" and (target.is_empty() or int(fa["overall"]) > int(target["overall"])):
@@ -2480,3 +2529,41 @@ func _test_market_reasons_change_nothing() -> void:
 	GameState.open_offseason()
 	_check(had > 0 and GameState.fa_lost.is_empty(),
 			"The next off-season's market starts with no free-agency reasons from last year (%d before)" % had)
+
+
+## Every club acts in its own best interest (director 2026-11-03): it delists
+## only a player it does not pick and can replace with someone better, locks
+## in the players it picks for the term they want, and a rebuilding club pays
+## a step more for a young player still growing.
+func _test_rivals_act_in_their_interest() -> void:
+	_new_season()
+	var club := ""
+	for code in GameState.season.lists:
+		if str(code) != GameState.my_club:
+			club = str(code)
+			break
+	var list: Array = GameState.season.lists[club]
+	var ranked := list.duplicate()
+	ranked.sort_custom(func(a, b): return TradeValue.rating(a) > TradeValue.rating(b))
+	var star: Dictionary = ranked[0]
+	var fringe: Dictionary = ranked[ranked.size() - 1]
+	_check(Contracts.needed(star, list), "His club's best player is in its best 22")
+	_check(not Contracts.needed(fringe, list), "Its lowest-rated player is not")
+	_check(Contracts.ai_release_reason(star, list, 1 << 40, 1.0e9) == "",
+			"A club never delists a player it picks, whatever is on the market")
+	_check(Contracts.ai_release_reason(fringe, list, 1 << 40, -INF) == "",
+			"Nor one it cannot replace")
+	_check(Contracts.ai_release_reason(fringe, list, 1 << 40, Contracts.worth(fringe) + 1.0) == "delist",
+			"A player it does not pick goes when a better one at his position is there")
+	_check(Contracts.ai_term(star, list) == int(Contracts.wants(star)["years"]),
+			"A player it picks gets the term he wants")
+	_check(Contracts.ai_term(fringe, list) == Contracts.ai_years(fringe), "The rest get its usual term")
+	var kid := fringe.duplicate(true)
+	kid["age"] = 20.0
+	var grows := Contracts.growth_premium(kid, "rebuilding")
+	_check(not Contracts.growth_premium(kid, "contending"), "Only a rebuilding club pays for growth")
+	if grows:
+		_check(Contracts.club_max(kid, "bench", 1 << 40, "rebuilding")
+				== Contracts.club_max(kid, "bench", 1 << 40) + Contracts.SALARY_STEP,
+				"A rebuilding club pays one step more for a young player still growing")
+	_check(GameState.MAX_AI_TRADES >= 40, "Rival trades have only a runaway guard")

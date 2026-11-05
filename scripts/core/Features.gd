@@ -131,6 +131,12 @@ extends RefCounted
 ##               overlooked), his debut, club moves and delistings, each season's games and
 ##               goals, and the end of his career. Reads only: no draft, list or rating change.
 ##               Off, nothing is shown, written or saved.
+##   momentum_runaway   row 78 (T8.Q4, director: rare big margins come back through Momentum):
+##               a side with the run of play that also leads by more than 24 wins more of the
+##               ball (up to 11x the momentum edge at 54+, still capped by contest_clamp),
+##               its run fades more slowly, and a goal the other way turns it up to 70% less
+##               (MatchSim.runaway). Changes match output only once a side leads by 24+.
+##               Off, momentum is exactly as before.
 ##   mid_intercepts   row 89 (director, 2026-11-06, T8.Q8): a general-play kick through the
 ##               middle third with no aerial contest can be read and taken outright by one
 ##               of the other side's midfielders (MatchSim.MID_KICK_INTERCEPT), the better
@@ -142,7 +148,7 @@ extends RefCounted
 ##               ever, back-to-back or more, or the first in 10+ years), from the save's
 ##               honour roll and data/club_premierships.csv (LeagueNews.gd). Reads only.
 ##               Off, the feed is exactly as before.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries",
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries", "momentum_runaway",
 	"league_news",
 ]
 
