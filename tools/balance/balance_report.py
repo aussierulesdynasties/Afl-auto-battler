@@ -143,12 +143,99 @@ def margin_tail(A, B):
         print(f"\n{name}: p90 {v[int(0.9*(len(v)-1))]}, p99 {v[int(0.99*(len(v)-1))]}, max {v[-1]}"
               + (f" (real 2026 p90 {sorted(real)[int(0.9*(len(real)-1))]}, max {max(real)}; 2010-25 p99 "
                  f"{sorted(hm)[int(0.99*(len(hm)-1))]}, max {max(hm)})" if real and hm and name == "A" else ""))
+ROLES = ["DEF", "MID", "FWD", "RUCK"]
+ROLE_REF = {"disposals": "disposals", "kicks": "kicks", "handballs": "handballs", "marks": "marks",
+            "rebounds": "rebound_50s", "inside50": "inside_50s", "clearances": "clearances", "goals": "goals"}
+
+
+def role_rate(r, role, key):
+    """One match's per player-game rate for a line (both sides pooled), or None."""
+    pg = sum(t.get("roles", {}).get(role, {}).get("pg", 0) for t in r["teams"])
+    if pg == 0:
+        return None
+    return sum(t.get("roles", {}).get(role, {}).get(key, 0.0) for t in r["teams"]) / pg
+
+
+def role_share(r, role):
+    """One match's share of both sides' disposals that went to a line."""
+    tot = sum(t.get("roles", {}).get(x, {}).get("disposals", 0.0) for t in r["teams"] for x in t.get("roles", {}))
+    if tot == 0:
+        return None
+    return sum(t.get("roles", {}).get(role, {}).get("disposals", 0.0) for t in r["teams"]) / tot
+
+
+def zone_share(R, zone, role):
+    """Pooled share of a zone's carrier picks that went to a slot role."""
+    n = d = 0
+    for r in R.values():
+        for t in r["teams"]:
+            cz = t.get("carry_zone", {})
+            n += cz.get(f"{zone}|{role}", 0)
+            d += sum(v for k, v in cz.items() if k.startswith(zone + "|"))
+    return None if d == 0 else n / d
+
+
+def paired(A, B, fn):
+    a = {i: fn(r) for i, r in A.items()}
+    a = {i: v for i, v in a.items() if v is not None}
+    if not B:
+        return st.mean(a.values()), None, None, None
+    b = {i: fn(r) for i, r in B.items()}
+    common = [i for i in a if b.get(i) is not None]
+    d = [b[i] - a[i] for i in common]
+    se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+    return st.mean(a.values()), st.mean(b[i] for i in common), st.mean(d), se
+
+
+def role_report(A, B):
+    """Each line's box score per player-game against real 2026 (afl_role_rates.json, grouped by
+    the player's own position as the game derives it) and its share of the side's disposals;
+    then who takes the ball by zone (carrier picks by slot role, no real reference)."""
+    if not any("roles" in t for r in A.values() for t in r["teams"]):
+        return
+    ref = json.load(open(os.path.join(HERE, "afl_role_rates.json")))["roles"]
+    pooled = {x: ref[x]["per_game"]["disposals"] * ref[x]["player_games"] for x in ROLES}
+    real_share = {x: pooled[x] / sum(pooled.values()) for x in ROLES}
+    print("\n## By line, per player-game (real 2026: tools/balance/afl_role_rates.json)\n")
+    head = "| line | stat | real | A |" + (" B | B-A | se | sig |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for role in ROLES:
+        rows = [(k, ref[role]["per_game"][ROLE_REF[k]], lambda r, k=k, role=role: role_rate(r, role, k)) for k in ROLE_REF]
+        rows.append(("share of disposals", real_share[role], lambda r, role=role: role_share(r, role)))
+        for k, real_v, fn in rows:
+            ma, mb, dm, se = paired(A, B, fn)
+            pct = k.startswith("share")
+            f = (lambda v: f"{100*v:.1f}%") if pct else (lambda v: f"{v:.2f}")
+            line = f"| {role} | {k} | {f(real_v)} | {f(ma)} |"
+            if B:
+                sig = "yes" if se and abs(dm) > 2 * se else ""
+                line += f" {f(mb)} | {(100*dm if pct else dm):+.2f}{'pp' if pct else ''} | {(100*se if pct else se):.2f} | {sig} |"
+            print(line)
+    print("\nReal share of disposals pools 2026 player-games by line (DEF %.1f%% of player-games)." %
+          (100 * ref["DEF"]["player_games"] / sum(ref[x]["player_games"] for x in ROLES)))
+    print("\n## Who takes the ball, by zone (share of carrier picks by slot role; no real reference)\n")
+    zones = ["back", "middle", "attack", "inside"]
+    head = "| zone | " + " | ".join(f"{x} A" + (f" | {x} B" if B else "") for x in ROLES) + " |"
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for z in zones:
+        cells = []
+        for x in ROLES:
+            a = zone_share(A, z, x)
+            cells.append("-" if a is None else f"{100*a:.1f}%")
+            if B:
+                b = zone_share(B, z, x)
+                cells.append("-" if b is None else f"{100*b:.1f}%")
+        print(f"| {z} | " + " | ".join(cells) + " |")
+
+
 # Champion Data 2025 (Wheelo), intercepts a game per player by position
 # (docs/research/INTERCEPT_EVIDENCE.md; tools/audit/intercept_impl.gd REAL).
 ROLE_REAL = {"DEF": 4.9, "MID": 2.5, "FWD": 1.1, "RUCK": 2.2}
 
 
-def role_rate(rows, role):
+def ic_role_rate(rows, role):
     """Seed -> intercepts per player-game for one role (both teams pooled)."""
     out = {}
     for i, r in rows.items():
@@ -171,14 +258,14 @@ def role_table(A, B):
     for arm, R in (("A", A), ("B", B)):
         tot[arm] = sum(float(t.get("intercepts", 0)) for r in R.values() for t in r["teams"]) or 1.0
     for role, real in ROLE_REAL.items():
-        a = role_rate(A, role)
+        a = ic_role_rate(A, role)
         if not a:
             continue
         ra = sum(v[0] for v in a.values()) / sum(v[1] for v in a.values())
         sa = 100 * sum(v[0] for v in a.values()) / tot["A"]
         line = f"| {role} | {real:.1f} | {ra:.2f} | {sa:.0f}% |"
         if B:
-            b = role_rate(B, role)
+            b = ic_role_rate(B, role)
             common = [i for i in a if i in b]
             rb = sum(b[i][0] for i in common) / sum(b[i][1] for i in common)
             sb = 100 * sum(b[i][0] for i in common) / tot["B"]
@@ -248,6 +335,7 @@ def main():
               f"(se {st.stdev(h)/math.sqrt(n):.1f})")
     print("\nReal AFL (docs/LEAGUE_BALANCE.md): 60+ about 15.5%, 100+ about 1.9%, home win 59.3%.")
     margin_tail(A, B)
+    role_report(A, B)
     print(f"\nOUT of real range (A): {', '.join(outs) if outs else 'none'}")
 
 

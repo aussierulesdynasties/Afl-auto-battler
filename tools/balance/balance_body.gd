@@ -51,6 +51,7 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 					q_score[0][k] = int(sc[0])
 					q_score[1][k] = int(sc[1])
 		var teams := []
+		var rosters: Array = sim.rosters()
 		var stats: Dictionary = r["players"]
 		for side in range(2):
 			var t: Dictionary = (r["team"][side] as Dictionary).duplicate()
@@ -58,6 +59,8 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 			t["strength"] = snappedf((sq_h if side == 0 else sq_a).strength(), 0.01)
 			q_score[side][3] = int(r["score"][side])
 			t["q_score"] = q_score[side]
+			t["roles"] = role_lines(rosters[side], r["players"])
+			t["carry_zone"] = (sim.carry_log[side] as Dictionary).duplicate()
 			# Intercepts by each man's listed position (DEF, MID, FWD, RUCK), as
 			# tools/audit/intercept_impl.gd counts them: "ic_MID" intercepts and
 			# "pg_MID" player-games (every man who played and has a stat line).
@@ -85,3 +88,23 @@ static func parse_sets(text: String) -> Dictionary:
 		if parts.size() == 2:
 			d[parts[0].strip_edges()] = float(parts[1])
 	return d
+
+
+## One side's box score by line, grouped by each player's own position
+## (list_role, as afl_role_rates.json groups real players): player-games and
+## the stats the role reference has, so the report can set them against real.
+static func role_lines(roster: Array, players: Dictionary) -> Dictionary:
+	var out := {}
+	for p in roster:
+		var role := str(p.get("list_role", p.get("role", "")))
+		if not out.has(role):
+			out[role] = {"pg": 0}
+		var row: Dictionary = out[role]
+		row["pg"] = int(row["pg"]) + 1
+		var st: Dictionary = players.get(str(p["id"]), {})
+		for k in ROLE_STATS:
+			row[k] = float(row.get(k, 0.0)) + float(st.get(k, 0.0))
+	return out
+
+
+const ROLE_STATS := ["disposals", "kicks", "handballs", "marks", "rebounds", "inside50", "clearances", "goals"]
