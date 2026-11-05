@@ -40,6 +40,53 @@ def margins(rows):
     return m, h
 
 
+# Champion Data 2025 (Wheelo), intercepts a game per player by position
+# (docs/research/INTERCEPT_EVIDENCE.md; tools/audit/intercept_impl.gd REAL).
+ROLE_REAL = {"DEF": 4.9, "MID": 2.5, "FWD": 1.1, "RUCK": 2.2}
+
+
+def role_rate(rows, role):
+    """Seed -> intercepts per player-game for one role (both teams pooled)."""
+    out = {}
+    for i, r in rows.items():
+        ic = sum(float(t.get("ic_" + role, 0)) for t in r["teams"])
+        pg = sum(float(t.get("pg_" + role, 0)) for t in r["teams"])
+        if pg > 0:
+            out[i] = (ic, pg)
+    return out
+
+
+def role_table(A, B):
+    """Intercepts a game per player by the slot he filled, against Champion Data."""
+    if not any("pg_MID" in t for r in A.values() for t in r["teams"]):
+        return
+    print("\nIntercepts a game per player, by the slot he filled (Champion Data 2025):\n")
+    head = "| role | real | A | share A |" + (" B | share B | B-A | se | sig |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    tot = {}
+    for arm, R in (("A", A), ("B", B)):
+        tot[arm] = sum(float(t.get("intercepts", 0)) for r in R.values() for t in r["teams"]) or 1.0
+    for role, real in ROLE_REAL.items():
+        a = role_rate(A, role)
+        if not a:
+            continue
+        ra = sum(v[0] for v in a.values()) / sum(v[1] for v in a.values())
+        sa = 100 * sum(v[0] for v in a.values()) / tot["A"]
+        line = f"| {role} | {real:.1f} | {ra:.2f} | {sa:.0f}% |"
+        if B:
+            b = role_rate(B, role)
+            common = [i for i in a if i in b]
+            rb = sum(b[i][0] for i in common) / sum(b[i][1] for i in common)
+            sb = 100 * sum(b[i][0] for i in common) / tot["B"]
+            d = [b[i][0] / b[i][1] - a[i][0] / a[i][1] for i in common]
+            se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+            sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ""
+            line += f" {rb:.2f} | {sb:.0f}% | {rb - ra:+.2f} | {se:.2f} | {sig} |"
+        print(line)
+    print("\nReal shares (Champion Data 2025): DEF 57%, MID 23%, FWD 15%, RUCK 4%; a team intercepts about 63.4 a game.")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -86,6 +133,7 @@ def main():
             sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ("yes" if se == 0 and st.mean(d) != 0 else "")
             line += f" {mb:.1f} | {mark(mb)} | {st.mean(d):+.2f} | {se:.2f} | {sig} |"
         print(line)
+    role_table(A, B)
     for name, R in (("A", A), ("B", B)):
         if not R:
             continue
