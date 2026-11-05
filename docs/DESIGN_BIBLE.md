@@ -154,26 +154,11 @@ to real AFL, and the director's playtest passes the vibe check.
 Player ratings that reflect reality are part of this work, not a separate goal.
 Balance is still settling.
 
-## Current focus
-
-Polish is the gap. There are two big tickets, and one priority above both.
-
-**The single biggest improvement to game feel:** players in the visual sim really
-react to your coaching moves.
-
-1. **Player agency fine-tuning.** In-match decisions and in-match and pre-game
-   coaching moves, such as matchups and rotation changes. Each decision should
-   feel like it has a real in-match impact and be easily measurable.
-2. **Visual polish.** It should not look like an app. It should feel clean and
-   crisp like a great app does, but also personal, like a hand-crafted game.
-
 ## Open questions for the director
 
 - What will this game deliberately not have? Left open in the session.
 - How does weather affect a match? It is decided that it matters; the system is
   not designed.
-- Does the Current focus section belong in the bible? It was placed here on an
-  assumption, not a stated decision.
 - Pre-timeskip survey (a roadmap item): a full survey, or the simpler version
   where the sim follows the club's existing instructions and asks only about what
   nothing else covers?
