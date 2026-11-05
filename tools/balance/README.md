@@ -30,6 +30,10 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "-
   sim logs a general-play shot only when it scores.
   It also prints intercepts a game per player by his listed position (DEF, MID, FWD, RUCK; the
   definition of tools/audit/intercept_impl.gd) against Champion Data 2025, with B-A and se when paired.
+  It also prints key forward v key defender contests per duel per match (row 94), from each match's
+  `duels` rows ([contests, marks, most v one defender, MatchNotes.duel_verdict]): mean, median, share on
+  6+ contests, share with a full-time line (4+), forward marks and the beat / even / held split, and
+  for a paired run contests per duel B-A with its se.
 - **Runs** land in `.balance/<timestamp>/` (git-ignored, `.gdignore`d).
 
 ## When to use it

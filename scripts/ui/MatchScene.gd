@@ -1759,7 +1759,8 @@ func _tag_fact_line(sim: MatchSim) -> String:
 		if n > most:
 			most = n
 			top = GameDB.player_display_name(r)
-	return "" if top == "" else "%s has had %d disposals, the most of their midfielders." % [top, most]
+	return "" if top == "" else "%s has had %d disposal%s, the most of their midfielders." % [
+			top, most, "" if most == 1 else "s"]
 
 
 ## A sheet over the break: one call (or who tags, or Best so far) with Done.
@@ -2494,8 +2495,9 @@ func _tag_line(q: int) -> String:
 		var st: Dictionary = (_res.get("players", {}) as Dictionary).get(tag_id, {})
 		d = float(st.get("disposals", 0.0))
 		g = float(st.get("goals", 0.0))
-	return "Your tag on %s: %d disposals, %d goals." % [
-			GameDB.player_display_name_by_id(tag_id, "their player"), int(d), int(g)]
+	return "Your tag on %s: %d disposal%s, %d goal%s." % [
+			GameDB.player_display_name_by_id(tag_id, "their player"), int(d), "" if int(d) == 1 else "s",
+			int(g), "" if int(g) == 1 else "s"]
 
 
 ## Legs in words: how both midfields are going, and who is running on empty.
