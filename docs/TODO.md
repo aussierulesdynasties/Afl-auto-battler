@@ -29,7 +29,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 86 | National Draft academy (NGA) and father-son rookies lose a year: `_assign_draftee` misses the +1 the yearly draft gives | test shows two seasons |
 | 87 | coach_arcs and story suites failed once each then passed on rerun: find the flake | 20 clean reruns |
 | 88 | Rookie list (director 2026-11-06): National Draft picks are draftees, not rookies. Add a real rookie list: Rookie Draft right after the National Draft, Category A rookie spots (up to 6, cheaper rookie wage, 1-2 year deals) and Category B spots (non-traditional or international, signed directly, no draft pick), upgrade a rookie to the senior list, pre-season SSP for delisted or overlooked players; the mid-season rookie draft already exists and fills rookie spots. Also fix the National Draft screen copy ("rookies signed", "Rookies join the list") and rename the draftee "rookie_deal" | both lists shown on the list screen, Rookie Draft runs after the National Draft, test covers upgrade |
-| 82 | Itch gets Windows and Android APK builds beside web; price free (T7.O1, T7.O3); Google Play stays off until his written yes | export presets, builds on itch |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
 
 ## B. Built and OFF: waiting for his playtest, then the switch goes on
