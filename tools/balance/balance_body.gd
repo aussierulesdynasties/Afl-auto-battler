@@ -31,10 +31,33 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		sim.weather = weather
 		var r: Dictionary = sim.run()
 		var teams := []
+		var rosters: Array = sim.rosters()
 		for side in range(2):
 			var t: Dictionary = (r["team"][side] as Dictionary).duplicate()
 			t["score"] = int(r["score"][side])
+			t["roles"] = role_lines(rosters[side], r["players"])
+			t["carry_zone"] = (sim.carry_log[side] as Dictionary).duplicate()
 			teams.append(t)
 		fh.store_line(JSON.stringify({"i": i, "home": h, "away": a, "teams": teams}))
 	fh.close()
 	return 0
+
+
+## One side's box score by line, grouped by each player's own position
+## (list_role, as afl_role_rates.json groups real players): player-games and
+## the stats the role reference has, so the report can set them against real.
+static func role_lines(roster: Array, players: Dictionary) -> Dictionary:
+	var out := {}
+	for p in roster:
+		var role := str(p.get("list_role", p.get("role", "")))
+		if not out.has(role):
+			out[role] = {"pg": 0}
+		var row: Dictionary = out[role]
+		row["pg"] = int(row["pg"]) + 1
+		var st: Dictionary = players.get(str(p["id"]), {})
+		for k in ROLE_STATS:
+			row[k] = float(row.get(k, 0.0)) + float(st.get(k, 0.0))
+	return out
+
+
+const ROLE_STATS := ["disposals", "kicks", "handballs", "marks", "rebounds", "inside50", "clearances", "goals"]

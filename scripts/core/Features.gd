@@ -76,6 +76,10 @@ extends RefCounted
 ##               clangers moves to the last carrier (the player clangers stat, notes and
 ##               ratings); team totals, score and events are unchanged. Ships ON since
 ##               2026-11-04 (row 81, his row 12 ruling).
+##   back_carries   row 92 (T9.Q22, director 2026-11-06): back-zone carrying retuned so a
+##               defender's share of the ball is nearer real AFL (MatchSim.CARRY_BACK_RETUNED,
+##               DEF 1.0 -> 0.55 in the back zone; midfielders drop back for more of it). Changes
+##               match output. Off, CARRY_ROLES["back"] stands.
 ##   match_flow  row 11 (director, 2026-10-10): stoppages come from contests that lock up
 ##               (a held tackle, a rushed kick into a pack, a spoil in the pocket), a won ball
 ##               after an intercept or a free is played on, chains are shorter and more
@@ -121,7 +125,7 @@ extends RefCounted
 ##               overlooked), his debut, club moves and delistings, each season's games and
 ##               goals, and the end of his career. Reads only: no draft, list or rating change.
 ##               Off, nothing is shown, written or saved.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story"]
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "back_carries"]
 
 static var _forced := {}
 static var _from_args := {}
