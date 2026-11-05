@@ -16,7 +16,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 64 | Custom prospect Alastair McNeil in the first national draft is the next build (4.Q8) | prospect in draft, story beats |
 | 65 | Draftees start lower: picks 1-5 about 60-62, 6-20 about 55-58, POT kept; his playtest still judges (4.Q9) | draft audit bands |
 | 67 | Management pays: trade period at real volume, recruiters' edge and development projects (4.Q11); balance-gated | audit across 8-10 seasons |
-| 68 | Culture effects (Standards, Togetherness, Ambition): size review now, shown to him with numbers (T5.Q7) | review shown to him |
 | 69 | Hub leads with one hero element, shown on the hub first (6.Q2) | hub capture, critics clean |
 | 70 | Pre-timeskip: the full survey, not the simpler version (T5.Q20) | survey built |
 | 71 | Former-player coaches: lower the coaching rate toward the 60-80% aspiration (86% by 2058 now) (T5.Q15) | audit shows the lower rate |
@@ -26,7 +25,10 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 76 | AFL news layer: generated news items from the save (T5.Q11d) | items appear |
 | 77 | Set shots rise from about 37.5% to the real ~55% of shots, conversion set by distance, total scoring held flat (T8.Q9) | audit shows both |
 | 78 | Rare big margins come back through Momentum (100+ about 0.5% against real 1.9%); balance-gated (T8.Q4) | audit shows the blowout rate |
-| 80 | Club Forge create-a-player: one weakness compulsory, the second optional, no extra overall power (T8.Q12) | screen enforces it |
+| 84 | Togetherness at tight and cliques is felt in matches (director 2026-11-06, after the row 68 review); balance-gated, his playtest judges | audit shows the effect, he has played it |
+| 85 | Reunion draw endings ("reconciled", "enjoyed") still say the old club "got the better of" him: new copy for a draw | draw reads as a draw |
+| 86 | National Draft academy (NGA) and father-son rookies lose a year: `_assign_draftee` misses the +1 the yearly draft gives | test shows two seasons |
+| 87 | coach_arcs and story suites failed once each then passed on rerun: find the flake | 20 clean reruns |
 | 82 | Itch gets Windows and Android APK builds beside web; price free (T7.O1, T7.O3); Google Play stays off until his written yes | export presets, builds on itch |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
 
