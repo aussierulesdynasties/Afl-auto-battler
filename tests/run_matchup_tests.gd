@@ -744,17 +744,23 @@ func _test_old_club_rules() -> void:
 	var ninety_nine := {"id": "oc_99", "club": "FRE", "career": {"stints": [["CAR", 2015, 2022, 99, 12], ["FRE", 2023, 2025, 30, 1]]}}
 	var theirs := {"id": "oc_theirs", "club": "CAR", "career": {"stints": [["FRE", 2012, 2022, 187, 40], ["CAR", 2023, 2025, 44, 6]]}}
 	var home := {"id": "oc_home", "club": "CAR", "career": {"stints": [["CAR", 2010, 2025, 250, 80]]}}
-	_check(OC.stint_games(hundred, "CAR") == 100 and OC.stint_games(ninety_nine, "CAR") == 99,
-			"Old club: games count every spell at that club (%d, %d)" % [OC.stint_games(hundred, "CAR"), OC.stint_games(ninety_nine, "CAR")])
-	var rows: Array = OC.rows([ninety_nine, hundred], [home, theirs], "FRE", "CAR")
+	# The rules take the count as given; this one sums the stored stints.
+	var stints := func(p: Dictionary, club: String) -> int:
+		var g := 0
+		for st in p["career"]["stints"]:
+			if str(st[0]) == club:
+				g += int(st[3])
+		return g
+	var rows: Array = OC.rows([ninety_nine, hundred], [home, theirs], "FRE", "CAR", stints)
 	_check(rows.size() == 2 and str(rows[0]["id"]) == "oc_theirs" and str(rows[1]["id"]) == "oc_100",
 			"Old club: 100 games earns a line, 99 does not, nor his own club; most games first (%s)" % str(rows.map(func(r): return r["id"])))
 	_check(rows.size() == 2 and str(rows[0]["old"]) == "FRE" and not bool(rows[0]["mine"])
 			and str(rows[1]["old"]) == "CAR" and bool(rows[1]["mine"]) and int(rows[1]["games"]) == 100,
 			"Old club: which club and whose man come from the stints")
-	_check(OC.rows([hundred], [theirs], "FRE", "CAR", Callable(), {"oc_theirs": true}).size() == 1
-			and OC.rows([hundred], [], "", "CAR").is_empty() and OC.rows([hundred], [], "CAR", "CAR").is_empty(),
-			"Old club: a player already named is not told twice; none without two clubs")
+	_check(OC.rows([hundred], [theirs], "FRE", "CAR", stints, {"oc_theirs": true}).size() == 1
+			and OC.rows([hundred], [], "", "CAR", stints).is_empty() and OC.rows([hundred], [], "CAR", "CAR", stints).is_empty()
+			and OC.rows([hundred], [], "FRE", "CAR", Callable()).is_empty(),
+			"Old club: a player already named is not told twice; none without two clubs or a count")
 	var counted: Array = OC.rows([ninety_nine], [], "FRE", "CAR", func(_p, _c): return 100)
 	_check(counted.size() == 1 and int(counted[0]["games"]) == 100,
 			"Old club: the count given (this season included) decides the 100")

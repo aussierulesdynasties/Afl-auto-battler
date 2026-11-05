@@ -2,9 +2,9 @@ class_name OldClubLines
 extends RefCounted
 ## Storylines before the bounce, beat 3 (director, 2026-11-06, T5.Q9 "Build,
 ## 100+ games"): a player in this week's sides who meets a club he played
-## 100 or more games for. Pure rules from his Career stints (every spell at
-## that club, real AFL seasons to 2025 and this career); writes nothing, adds
-## no randomness and is never read by the match.
+## 100 or more games for. Pure rules over a games count the caller supplies
+## (GameState.club_tally: every spell at that club, this season included);
+## writes nothing, adds no randomness and is never read by the match.
 ##
 ## Two kinds, the same fact:
 ##   yours    one of your side who played 100+ for the opposition
@@ -20,23 +20,15 @@ const MIN_GAMES := 100
 const MATCH_CAP := 3
 
 
-## His games for `club`, every spell, from his Career stints.
-static func stint_games(p: Dictionary, club: String) -> int:
-	var g := 0
-	for st in Career.of(p).get("stints", []):
-		if st is Array and (st as Array).size() >= 4 and str(st[0]) == club:
-			g += int(st[3])
-	return g
-
-
 ## The old-club rows for a match, the most games first:
 ## [{"id", "p", "old" (club code), "games", "mine" (true for your player)}].
 ## `mine` and `theirs` are the two sides' players, `games_at` a
-## Callable(p, club) -> int (stint_games when not given), `skip` ids to leave out.
+## Callable(p, club) -> int giving his games for that club (the game passes
+## GameState.club_tally, the one counting rule), `skip` ids to leave out.
 static func rows(mine: Array, theirs: Array, my_club: String, opp_club: String,
-		games_at := Callable(), skip := {}) -> Array:
+		games_at: Callable, skip := {}) -> Array:
 	var out := []
-	if my_club == "" or opp_club == "" or my_club == opp_club:
+	if my_club == "" or opp_club == "" or my_club == opp_club or not games_at.is_valid():
 		return out
 	for side in [[mine, opp_club, true], [theirs, my_club, false]]:
 		var old: String = side[1]
@@ -46,7 +38,7 @@ static func rows(mine: Array, theirs: Array, my_club: String, opp_club: String,
 			var id := str(p.get("id", ""))
 			if id == "" or skip.has(id) or str(p.get("club", "")) == old:
 				continue
-			var g := int(games_at.call(p, old)) if games_at.is_valid() else stint_games(p, old)
+			var g := int(games_at.call(p, old))
 			if g < MIN_GAMES:
 				continue
 			out.append({"id": id, "p": p, "old": old, "games": g, "mine": side[2]})
