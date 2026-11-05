@@ -25,7 +25,11 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "-
   mean +-2 sd, OUT), plus margins, 60+/100+ blowouts, home win share against docs/LEAGUE_BALANCE.md.
   A Shots section gives set shots and general-play shots a team, the set-shot share against the real
   55%, and goals per set shot by distance (0-10 ... 50+ m) against Champion Data 2021-25
-  (docs/research/SET_SHOT_EVIDENCE.md), from `MatchSim.shot_log`.
+  (docs/research/SET_SHOT_EVIDENCE.md), from `MatchSim.shot_log`; the pocket set shot has its own row
+  against the wide-angle cells, and the set-shot share is also given over scoring shots, because the
+  sim logs a general-play shot only when it scores.
+  It also prints intercepts a game per player by his listed position (DEF, MID, FWD, RUCK; the
+  definition of tools/audit/intercept_impl.gd) against Champion Data 2025, with B-A and se when paired.
 - **Runs** land in `.balance/<timestamp>/` (git-ignored, `.gdignore`d).
 
 ## When to use it

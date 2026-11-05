@@ -44,23 +44,34 @@ def margins(rows):
 # from the Champion Data expected-score shot counts [WH] (2026: 5,951 set of
 # 10,859, 55%); goals per shot by distance [ABC] 2021-25, the straight-in-front
 # column (Director Bible #62 names these as the targets), set / general play.
+# [ABC]'s "straight" is within 30 degrees, so the sim's 45 m "slight angle" spot
+# is a straight-column shot. The sim's pocket (15 m, tight angle) is its own row
+# against the 10-20 m wide cells: set 66% and 55% (mean 60.5%), general 21% and 22%.
 REAL_SET_SHARE = 0.55
-SHOT_BANDS = ["0-10", "10-20", "20-30", "30-40", "40-50", "50+"]
-REAL_SET_ACC = {"0-10": 1.00, "10-20": 0.96, "20-30": 0.85, "30-40": 0.71, "40-50": 0.54, "50+": 0.33}
-REAL_GP_ACC = {"0-10": 0.89, "10-20": 0.63, "20-30": 0.51, "30-40": 0.38, "40-50": 0.39, "50+": 0.34}
+# Real shots that score (goals + behinds per shot at goal, [WH] 2026: 9,047 of
+# 10,860). Set and general-play no-score rates are not published apart.
+REAL_SCORING_PER_SHOT = 0.833
+SHOT_BANDS = ["0-10", "10-20", "20-30", "30-40", "40-50", "50+", "pocket"]
+REAL_SET_ACC = {"0-10": 1.00, "10-20": 0.96, "20-30": 0.85, "30-40": 0.71, "40-50": 0.54, "50+": 0.33, "pocket": 0.605}
+REAL_GP_ACC = {"0-10": 0.89, "10-20": 0.63, "20-30": 0.51, "30-40": 0.38, "40-50": 0.39, "50+": 0.34, "pocket": 0.215}
 
 
 def pooled(R, key):
     return sum(float(t.get(key, 0)) for r in R.values() for t in r["teams"])
 
 
-def share_by_seed(R):
-    """Seed -> set-shot share of that match's shots (both teams), in percent."""
+def share_by_seed(R, scoring=False):
+    """Seed -> set-shot share of that match's shots (both teams), in percent.
+    scoring=True counts only shots that scored (goal or behind) on both sides."""
+    def cnt(t, pre):
+        if scoring:
+            return float(t.get(pre + "_g", 0)) + float(t.get(pre + "_b", 0))
+        return float(t.get(pre + "_n", 0))
     out = {}
     for i, r in R.items():
-        n = sum(float(t.get("sshot_n", 0)) + float(t.get("gshot_n", 0)) for t in r["teams"])
+        n = sum(cnt(t, "sshot") + cnt(t, "gshot") for t in r["teams"])
         if n:
-            out[i] = 100 * sum(float(t.get("sshot_n", 0)) for t in r["teams"]) / n
+            out[i] = 100 * sum(cnt(t, "sshot") for t in r["teams"]) / n
     return out
 
 
@@ -91,15 +102,29 @@ def shots_section(A, B):
     row("scoring shots (goals + behinds)", "22.4", [st.mean(sc[k].values()) for k, _ in arms],
         sc["A"] if B else None, sc.get("B"))
     sh = {k: share_by_seed(R) for k, R in arms}
-    row("set-shot share of shots", f"{100 * REAL_SET_SHARE:.0f}%",
+    row("set-shot share of shots (general play counted only when it scores)", f"{100 * REAL_SET_SHARE:.0f}%",
         [100 * pooled(R, "sshot_n") / max(1, pooled(R, "sshot_n") + pooled(R, "gshot_n")) for k, R in arms],
         sh["A"] if B else None, sh.get("B"), fmt="{:.1f}")
-    print("\nGoals per shot, pooled over every shot of the arm. Real: [ABC] 2021-25, straight in front.\n")
+
+    def scoring_share(R):
+        ss = pooled(R, "sshot_g") + pooled(R, "sshot_b")
+        return 100 * ss / max(1, ss + pooled(R, "gshot_g") + pooled(R, "gshot_b"))
+    sc_sh = {k: share_by_seed(R, True) for k, R in arms}
+    row("set-shot share of scoring shots", "~55%*", [scoring_share(R) for k, R in arms],
+        sc_sh["A"] if B else None, sc_sh.get("B"), fmt="{:.1f}")
+    print("\nThe sim logs a general-play shot only when it scores, so the first share has a short"
+          " denominator; the scoring-shot share counts both kinds alike. *Real: "
+          f"{100 * REAL_SET_SHARE:.0f}% of shots are set shots and {100 * REAL_SCORING_PER_SHOT:.0f}% of"
+          " shots score [WH]; if both kinds score equally often, set shots are 55% of scoring shots too"
+          " (the two no-score rates are not published apart).")
+    print("\nGoals per shot, pooled over every shot of the arm. Real: [ABC] 2021-25, straight in front"
+          " (within 30 degrees); the pocket row against the 10-20 m wide cells.\n")
     head = "| shots | real set | real general |" + "".join(f" {k} goals/shot | {k} a team |" for k, _ in arms)
     print(head)
     print("|" + "---|" * (head.count("|") - 1))
     for band in SHOT_BANDS:
-        line = f"| set, {band} m | {100 * REAL_SET_ACC[band]:.0f}% | {100 * REAL_GP_ACC[band]:.0f}% |"
+        label = "set, pocket (15 m, tight angle)" if band == "pocket" else f"set, {band} m"
+        line = f"| {label} | {100 * REAL_SET_ACC[band]:.1f}% | {100 * REAL_GP_ACC[band]:.1f}% |"
         for k, R in arms:
             sn = pooled(R, f"sshot_{band}_n")
             line += (f" {100 * pooled(R, f'sshot_{band}_g') / sn:.0f}% |" if sn else " - |") + f" {sn / n[k]:.2f} |"
@@ -110,6 +135,51 @@ def shots_section(A, B):
             sn = pooled(R, key + "_n")
             line += (f" {100 * pooled(R, key + '_g') / sn:.0f}% |" if sn else " - |") + f" {sn / n[k]:.2f} |"
         print(line)
+# Champion Data 2025 (Wheelo), intercepts a game per player by position
+# (docs/research/INTERCEPT_EVIDENCE.md; tools/audit/intercept_impl.gd REAL).
+ROLE_REAL = {"DEF": 4.9, "MID": 2.5, "FWD": 1.1, "RUCK": 2.2}
+
+
+def role_rate(rows, role):
+    """Seed -> intercepts per player-game for one role (both teams pooled)."""
+    out = {}
+    for i, r in rows.items():
+        ic = sum(float(t.get("ic_" + role, 0)) for t in r["teams"])
+        pg = sum(float(t.get("pg_" + role, 0)) for t in r["teams"])
+        if pg > 0:
+            out[i] = (ic, pg)
+    return out
+
+
+def role_table(A, B):
+    """Intercepts a game per player by listed position, against Champion Data."""
+    if not any("pg_MID" in t for r in A.values() for t in r["teams"]):
+        return
+    print("\nIntercepts a game per player, by listed position (Champion Data 2025):\n")
+    head = "| role | real | A | share A |" + (" B | share B | B-A | se | sig |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    tot = {}
+    for arm, R in (("A", A), ("B", B)):
+        tot[arm] = sum(float(t.get("intercepts", 0)) for r in R.values() for t in r["teams"]) or 1.0
+    for role, real in ROLE_REAL.items():
+        a = role_rate(A, role)
+        if not a:
+            continue
+        ra = sum(v[0] for v in a.values()) / sum(v[1] for v in a.values())
+        sa = 100 * sum(v[0] for v in a.values()) / tot["A"]
+        line = f"| {role} | {real:.1f} | {ra:.2f} | {sa:.0f}% |"
+        if B:
+            b = role_rate(B, role)
+            common = [i for i in a if i in b]
+            rb = sum(b[i][0] for i in common) / sum(b[i][1] for i in common)
+            sb = 100 * sum(b[i][0] for i in common) / tot["B"]
+            d = [b[i][0] / b[i][1] - a[i][0] / a[i][1] for i in common]
+            se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+            sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ""
+            line += f" {rb:.2f} | {sb:.0f}% | {rb - ra:+.2f} | {se:.2f} | {sig} |"
+        print(line)
+    print("\nReal shares (Champion Data 2025): DEF 57%, MID 23%, FWD 15%, RUCK 4%; a team intercepts about 63.4 a game.")
 
 
 def main():
@@ -158,6 +228,7 @@ def main():
             sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ("yes" if se == 0 and st.mean(d) != 0 else "")
             line += f" {mb:.1f} | {mark(mb)} | {st.mean(d):+.2f} | {se:.2f} | {sig} |"
         print(line)
+    role_table(A, B)
     for name, R in (("A", A), ("B", B)):
         if not R:
             continue

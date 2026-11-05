@@ -137,5 +137,8 @@ func _test_switch_raises_set_share() -> void:
 		points[on] = float(res["points"]) / (2.0 * MATCHES)
 	_check(share[true] > share[false] + 0.03 and share[true] > 0.52 and share[true] < 0.60,
 			"The switch raises the set-shot share toward 55%% (off %.3f, on %.3f)" % [share[false], share[true]])
-	_check(absf(points[true] - points[false]) < 6.0,
-			"The score a team holds within 6 points (off %.1f, on %.1f)" % [points[false], points[true]])
+	# A gross-regression guard only: the arms' rolls part at the first changed
+	# roll, so 30 matches a side cannot show the score held (sd of the gap about
+	# 5 points); the 1,000-match tools/balance.sh run is that proof.
+	_check(absf(points[true] - points[false]) < 15.0,
+			"The score a team holds within 15 points (off %.1f, on %.1f)" % [points[false], points[true]])

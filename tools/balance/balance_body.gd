@@ -41,10 +41,21 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		sim.weather = weather
 		var r: Dictionary = sim.run()
 		var teams := []
+		var stats: Dictionary = r["players"]
 		for side in range(2):
 			var t: Dictionary = (r["team"][side] as Dictionary).duplicate()
 			t["score"] = int(r["score"][side])
 			_shot_counts(t, sim.shot_log, side)
+			# Intercepts by each man's listed position (DEF, MID, FWD, RUCK), as
+			# tools/audit/intercept_impl.gd counts them: "ic_MID" intercepts and
+			# "pg_MID" player-games (every man who played and has a stat line).
+			for pl in (r["roster"][side] as Array):
+				var st: Dictionary = stats.get(str(pl["id"]), {})
+				if st.is_empty():
+					continue
+				var role := str(pl.get("list_role", pl.get("role", "")))
+				t["ic_" + role] = float(t.get("ic_" + role, 0.0)) + float(st.get("intercepts", 0.0))
+				t["pg_" + role] = int(t.get("pg_" + role, 0)) + 1
 			teams.append(t)
 		fh.store_line(JSON.stringify({"i": i, "home": h, "away": a, "teams": teams}))
 	fh.close()
@@ -52,6 +63,8 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 
 
 ## Set-shot bands by metres out, as docs/research/SET_SHOT_EVIDENCE.md gives them.
+## The pocket (MatchSim SET_BANDS "pocket", 15 m on a tight angle) is its own
+## band, "pocket", so it is checked against the wide-angle cells, not straight in front.
 const SHOT_BANDS := [[10.0, "0-10"], [20.0, "10-20"], [30.0, "20-30"], [40.0, "30-40"], [50.0, "40-50"], [999.0, "50+"]]
 
 
@@ -61,7 +74,7 @@ const SHOT_BANDS := [[10.0, "0-10"], [20.0, "10-20"], [30.0, "20-30"], [40.0, "3
 func _shot_counts(t: Dictionary, shots: Array, side: int) -> void:
 	for k in ["sshot_n", "sshot_g", "sshot_b", "gshot_n", "gshot_g", "gshot_b"]:
 		t[k] = 0
-	for band in SHOT_BANDS:
+	for band in SHOT_BANDS + [[0.0, "pocket"]]:
 		for x in ["_n", "_g", "_b"]:
 			t["sshot_" + str(band[1]) + x] = 0
 	for s in shots:
@@ -70,7 +83,9 @@ func _shot_counts(t: Dictionary, shots: Array, side: int) -> void:
 		var pre := "sshot" if int(s[1]) == 1 else "gshot"
 		var res := str(s[3])
 		var keys := [pre]
-		if pre == "sshot":
+		if pre == "sshot" and s.size() > 4 and str(s[4]) == "pocket":
+			keys.append("sshot_pocket")
+		elif pre == "sshot":
 			for band in SHOT_BANDS:
 				if float(s[2]) <= float(band[0]):
 					keys.append("sshot_" + str(band[1]))

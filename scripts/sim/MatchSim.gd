@@ -314,6 +314,8 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	kick_range_on = Features.on("kick_range")
 	clanger_cause_on = Features.on("clanger_cause")
 	set_shots_on = Features.on("set_shots")
+	mid_intercepts_on = Features.on("mid_intercepts")
+	mid_ic_rng.seed = seed * 109 + 113
 	_clanger_seed = seed
 	# Who starts on the bench, for the match view's bench strip (read only).
 	for sq in squads:
@@ -3121,6 +3123,18 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				pending = carrier
 				next_gain = "cp" if bool(aerial.get("contested", false)) else "up"
 				continue
+			# mid_intercepts (row 89): a kick through the middle with no contest
+			# can be read and taken outright by one of their midfielders.
+			if mid_intercepts_on and aerial.is_empty() and _aerial_zone(opp, fp) == "middle" 					and mid_ic_rng.randf() < _tv("MID_KICK_INTERCEPT", MID_KICK_INTERCEPT):
+				var taken := _mid_kick_intercept(side, fp)
+				if not taken.is_empty():
+					# The kick still got it out of his defensive 50: Champion
+					# Data counts the rebound whatever happens to it next.
+					if prev_atk_fp < float(T["rebound_from"]) and atk_fp > float(T["rebound_to"]):
+						_t(side, "rebounds")
+						_p(carrier, "rebounds")
+					_last_disp["end"] = "aerial"
+					return taken
 
 		# Rebound 50: winning it out of your own defensive arc.
 		if prev_atk_fp < float(T["rebound_from"]) and atk_fp > float(T["rebound_to"]):
@@ -3379,7 +3393,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 	var roll := rng.randf()
 	if roll < goal_p + behind_p or not set_shot.is_empty():
 		_shot(side, shooter, not set_shot.is_empty(), "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""),
-				float(set_shot.get("metres", -1.0)))
+				float(set_shot.get("metres", -1.0)), str(set_shot.get("key", "")))
 	if roll < goal_p:
 		_t(side, "goals")
 		_p(shooter, "goals")
@@ -3600,11 +3614,15 @@ func _run_and_carry(side: int, carrier, gained: float, pressed: bool, is_kick_in
 
 
 ## A kick at goal: shots, and set shots apart. `result` is "goal", "behind"
-## or "" (it missed everything or fell short).
-func _shot(side: int, shooter, set_shot: bool, result: String, metres := -1.0) -> void:
+## or "" (it missed everything or fell short). `spot` is where a set shot came
+## from, for the balance harness only: a SET_BANDS key ("pocket" is the tight
+## angle), "free" for a free kick, "lead" for a played-on mark, "" otherwise.
+## A general-play shot is logged only when the sim plays one out: an unmarked
+## entry that scores nothing is not told apart from no shot at all.
+func _shot(side: int, shooter, set_shot: bool, result: String, metres := -1.0, spot := "") -> void:
 	if shooter == null:
 		return
-	shot_log.append([side, 1 if set_shot else 0, metres if set_shot else -1.0, result])
+	shot_log.append([side, 1 if set_shot else 0, metres if set_shot else -1.0, result, spot if set_shot else ""])
 	_t(side, "shots")
 	_p(shooter, "shots")
 	if set_shot:
@@ -4170,6 +4188,52 @@ func _clanger_taken(side: int, at: float) -> void:
 	_prev_end = "turnover"
 	_kick_marked(opp, taker, at, rng.randf() < _tv("CLANGER_MARKED", CLANGER_MARKED)
 			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0))
+
+
+## Row 89 (director, 2026-11-06, T8.Q8: midfield intercepts 1.4 a game against
+## real 2.5): of general-play kicks that land in the middle third with no
+## aerial contest, the share one of the other side's midfielders reads and
+## takes outright. Tuned with tools/balance.sh toward Champion Data 2025.
+const MID_KICK_INTERCEPT := 0.10
+## The share of a chain's time a midfield intercept gives back (it cut the
+## passage short). Measured: none drops disposals; a whole chain lifts
+## clearances and hitouts (more ball-ups).
+const MID_GIVE_BACK := 0.5
+var _mid_give_back := 0.0
+var mid_intercepts_on := false
+var mid_ic_rng := RandomNumberGenerator.new()
+
+
+## The midfield kick-intercept (mid_intercepts): `side`'s kick at `at` is taken
+## by one of the other side's midfielders on the ground, the better readers
+## more often; the better readers also mark it (as a clanger taken does).
+func _mid_kick_intercept(side: int, at: float) -> Dictionary:
+	var opp := 1 - side
+	var mids := _by_roles((squads[opp] as Squad).ground, ["MID"])
+	if mids.is_empty():
+		return {}
+	# Its own dice, so the rest of the match draws as it would have.
+	var total := 0.0
+	for p in mids:
+		total += pow(maxf(1.0, _a(p, "intercept")), AERIAL_READ)
+	var r := mid_ic_rng.randf() * total
+	var taker = mids[mids.size() - 1]
+	for p in mids:
+		r -= pow(maxf(1.0, _a(p, "intercept")), AERIAL_READ)
+		if r <= 0.0:
+			taker = p
+			break
+	_intercept(opp, taker, false)
+	_kick_marked(opp, taker, at, mid_ic_rng.randf() < _tv("CLANGER_MARKED", CLANGER_MARKED)
+			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0))
+	# The passage it cut short did not use all its share of the quarter: that
+	# time is played (MID_GIVE_BACK of a chain each), so the match keeps its
+	# length of play.
+	_mid_give_back += _tv("MID_GIVE_BACK", MID_GIVE_BACK)
+	if _mid_give_back >= 1.0:
+		_mid_give_back -= 1.0
+		_q_count += 1
+	return {"outcome": "turnover", "fp": at, "actor": taker}
 
 
 ## A kick that turned over, taken by `taker`: when `marked`, he took it on the
@@ -5081,7 +5145,7 @@ func _offer_set_shot(side: int, p_fp: float, shooter: Dictionary, defender, band
 	options.append({"key": "bomb", "label": "Bomb it to the goal square",
 		"detail": "Into the pack: a forward might mark it or a crumber snap it, but more often the defence clears it.",
 		"goal": bomb_goal, "behind": 0.30})
-	_fire({"kind": "set_shot", "default": 0, "player_id": str(shooter["id"]),
+	_fire({"kind": "set_shot", "default": 0, "player_id": str(shooter["id"]), "band_key": str(band["key"]),
 		"defender_id": "" if defender == null else str(defender["id"]), "fp": p_fp,
 		"feeder_id": "" if feeder == null else str(feeder["id"]),
 		"title": "%s marks %s" % [GameDB.player_display_name(shooter), spot],
@@ -5355,7 +5419,8 @@ func _resolve_shot(side: int, m: Dictionary, opt: Dictionary) -> Dictionary:
 		_emit("receive", side, fp, kicker, "%s marks on the lead" % GameDB.player_display_name(kicker))
 		_set_choice["passer_id"] = str(shooter["id"])
 		_set_choice["to_id"] = str(kicker["id"])
-	return _set_result(side, kicker, assist, defender, goal_p, behind_p, false)
+	return _set_result(side, kicker, assist, defender, goal_p, behind_p, false,
+			"lead" if key == "pass" else str(m.get("band_key", "")))
 
 
 ## Where a teammate leads to: `gain` metres nearer goal, no closer than 10 m
@@ -5374,10 +5439,10 @@ const PASS_GAIN := 15.0
 ## A set shot's result: a goal, a behind or the defence rebounds it. Shared by
 ## the three calls; `crumb` marks a snap off the deck.
 func _set_result(side: int, kicker: Dictionary, assist, defender: Dictionary, goal_p: float,
-		behind_p: float, crumb: bool) -> Dictionary:
+		behind_p: float, crumb: bool, spot := "") -> Dictionary:
 	var roll := rng.randf()
 	_shot(side, kicker, not crumb, "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""),
-			float(Ratings.T["goal_line"]) - (fp if side == 0 else -fp))
+			float(Ratings.T["goal_line"]) - (fp if side == 0 else -fp), spot)
 	if roll < goal_p:
 		_t(side, "goals")
 		_p(kicker, "goals")
@@ -5560,7 +5625,7 @@ func _free_set_shot(side: int, at_fp: float, taker: Dictionary) -> Dictionary:
 	var behind_p := (1.0 - goal_p) * SET_MISS_BEHIND
 	var roll := rng.randf()
 	# His shot, as any set shot is counted (shots, set shots, their result).
-	_shot(side, taker, true, "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""), metres)
+	_shot(side, taker, true, "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""), metres, "free")
 	if roll < goal_p:
 		_t(side, "goals")
 		_p(taker, "goals")

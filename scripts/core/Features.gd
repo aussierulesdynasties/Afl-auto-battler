@@ -132,7 +132,13 @@ extends RefCounted
 ##               at the real AFL rate for its distance (SET_BANDS_ON), and the general-play
 ##               shot off an unmarked entry comes less often (SET_GP_SHOT) so total scoring
 ##               holds. Changes match output. Off, a match is exactly as before.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "set_shots"]
+##   mid_intercepts   row 89 (director, 2026-11-06, T8.Q8): a general-play kick through the
+##               middle third with no aerial contest can be read and taken outright by one
+##               of the other side's midfielders (MatchSim.MID_KICK_INTERCEPT), the better
+##               readers more often, and the better readers mark it. Lifts midfield
+##               intercepts toward Champion Data's 2.5 a game. Changes match output. Off,
+##               a match is exactly as before.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "set_shots"]
 
 static var _forced := {}
 static var _from_args := {}
