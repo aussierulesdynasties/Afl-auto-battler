@@ -2348,7 +2348,8 @@ func _test_season_awards() -> void:
 	var p2: Dictionary = _state.my_list[1]
 	var banned := {"id": str(p2["id"]), "club": "COL", "votes": 30, "slot": "MID", "brownlow_eligible": false}
 	_state.season_awards = {"year": 2027, "brownlow": [banned, row], "brownlow_winner": row,
-		"coleman": [row], "all_australian": [row], "best_and_fairest": {"COL": [row]}}
+		"coleman": [row], "all_australian": [row],
+		"best_and_fairest": {"COL": [row, banned.merged({"bf": 20})]}}
 	ceremony = load("res://scripts/ui/SeasonAwards.gd").open(host)
 	await _settle()
 	next = ceremony.find_child("AwardsNext", true, false)
@@ -2361,7 +2362,23 @@ func _test_season_awards() -> void:
 	_check(medal.contains(_state.award_name(row) + " | ") and medal.contains("(ineligible)")
 			and (crowned == null or crowned.number == int(player["num"])),
 			"The Brownlow is presented to the eligible winner, the suspended player marked ineligible (%s)" % medal.substr(0, 300))
-	ceremony.find_child("AwardsSkip", true, false).emit_signal("pressed")
+	# The club best and fairest has nothing to do with Brownlow eligibility: the same
+	# suspended player sits in its placings with no "(ineligible)".
+	var club_bf := ""
+	for i in range(12):
+		if not is_instance_valid(ceremony):
+			break
+		var page := ""
+		for l in ceremony.find_children("*", "Label", true, false):
+			page += (l as Label).text + " | "
+		if page.contains("Final placings") and page.contains("Copeland Trophy"):
+			club_bf = page
+		next.emit_signal("pressed")
+		await _settle()
+	_check(club_bf.contains(_state.award_name(banned)) and not club_bf.contains("(ineligible)"),
+			"The club best and fairest lists a suspended player without the Brownlow's ineligible mark (%s)" % club_bf.substr(0, 300))
+	if is_instance_valid(ceremony):
+		ceremony.find_child("AwardsSkip", true, false).emit_signal("pressed")
 	await _settle()
 	for code in _db.CLUB_ORDER:
 		var winner: Control = load("res://scripts/ui/match/AwardWinnerVignette.gd").new()

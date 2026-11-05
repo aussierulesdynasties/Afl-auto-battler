@@ -92,7 +92,8 @@ static func open(host: Control) -> Control:
 					var rc := str(row.get("club", ""))
 					body.add_child(_words("%d. %s · %d votes%s" % [i + 2, GameState.award_name(row),
 							int(row.get(metric, 0)),
-							"" if bool(row.get("brownlow_eligible", true)) else " (ineligible)"],
+							# Brownlow eligibility only: a suspension never touches the club B&F.
+							" (ineligible)" if metric == "votes" and not bool(row.get("brownlow_eligible", true)) else ""],
 							StatsSide.ink(rc), 15, rc == GameState.my_club))
 		var last := int(state["stage"]) == stages.size() - 1
 		next.text = "Season review" if last else "Next award"

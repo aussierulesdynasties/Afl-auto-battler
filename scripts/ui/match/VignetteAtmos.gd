@@ -14,10 +14,8 @@ extends RefCounted
 ## The weather sets the air: wet (mist, bigger halos), hot (warm dust), windy and perfect
 ## (a clear night: least haze). Players stay crisp: nothing hazes them but the glare.
 
-## The switch: the grade's (Features "vignette_grade"), so the look the director
-## chose ships whole; off draws exactly what the game drew before.
-static func on() -> bool:
-	return VignetteGrade.on()
+## The switch: false draws exactly what the game drew before.
+const ON := false
 
 static var _soft: GradientTexture2D
 static var _edge: GradientTexture2D
@@ -85,7 +83,7 @@ static func _band(ci: CanvasItem, stage: Rect2, y0: float, y1: float, c0: Color,
 ## Behind the players. Returns the light banks' screen points and radii ([Vector3]) in
 ## ci's current drawing space, for draw_front.
 static func draw_back(ci: CanvasItem, cam: VignetteGround.Cam, stage: Rect2, weather: String) -> Array:
-	if not on():
+	if not ON:
 		return []
 	var a := air(weather)
 	var hz: Color = a["haze"]
@@ -163,7 +161,7 @@ static func _lights(ci: CanvasItem, cam: VignetteGround.Cam, a: Dictionary) -> A
 ## Over the players, under the names and bars. lights: draw_back's, moved into screen
 ## space; t the scene's time.
 static func draw_front(ci: CanvasItem, rect: Rect2, lights: Array, weather: String, t: float) -> void:
-	if not on():
+	if not ON:
 		return
 	var a := air(weather)
 	var tex := _soft_tex()
