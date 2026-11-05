@@ -118,7 +118,10 @@ static func week(gs) -> void:
 			var ending := CoachArcs.closing(def, rec, close_facts(gs, rec), int(gs.season_year))
 			_end(gs, st, def, rec, ending if ending != "" else "faded", _label(gs))
 	ClubMoves.record_reunion(gs, st)
-	_try_starts(gs, st, defs, ctx, false)
+	# A move decided at the season's close (ClubMoves.season_close) has just
+	# ended every arc at the club he is leaving: none starts there after it.
+	if (st.get("move", {}) as Dictionary).is_empty():
+		_try_starts(gs, st, defs, ctx, false)
 	var card := _due_card(gs, st, defs, ctx)
 	if card.is_empty():
 		return
