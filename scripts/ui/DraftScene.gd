@@ -945,6 +945,12 @@ func _player_row(p: Dictionary) -> Control:
 	var kind_line := _row_line(" · ".join(kind), UiKit.MUTED)
 	kind_line.name = "Kind_" + str(p["id"])
 	face.add_child(kind_line)
+	# The prospect you created at New Career (row 64), easy to find.
+	var own := OwnProspect.tag(p)
+	if own != "":
+		var own_line := UiKit.lbl(own, UiKit.FINE, UiKit.TEXT, true)
+		own_line.name = "Own_" + str(p["id"])
+		face.add_child(own_line)
 	top.add_child(UiKit.line("›", 20, UiKit.MUTED, true))
 	_ignore_mouse(face)
 	# The face is laid over the button, so the button takes its height.
@@ -1778,13 +1784,22 @@ func _history_row(entry: Dictionary) -> Control:
 func _refresh_mine() -> void:
 	UiKit.clear(_mine_box)
 	if _draft.intake_mode:
-		_mine_box.add_child(UiKit.lbl("%d rookies signed · list %d / %d" % [
-			_draft.count(),
-			int(GameState.league_lists.get(_club, []).size()), Ratings.LIST_SIZE],
-			15, UiKit.EMPH, true))
-		_mine_box.add_child(UiKit.lbl(
-			"Rookies join the list you kept. There is no cap here; the draft runs until every list is full or the prospects run out.",
-			13, UiKit.MUTED))
+		if _draft.senior_cap > 0:
+			_mine_box.add_child(UiKit.lbl("%d draftees signed · senior list %d / %d" % [
+				_draft.count(),
+				RookieList.senior_count(GameState.league_lists.get(_club, [])), _draft.senior_cap],
+				15, UiKit.EMPH, true))
+			_mine_box.add_child(UiKit.lbl(
+				"Draftees join the senior list you kept. The draft runs until every senior list is full or the prospects run out; the Rookie Draft follows.",
+				13, UiKit.MUTED))
+		else:
+			_mine_box.add_child(UiKit.lbl("%d draftees signed · list %d / %d" % [
+				_draft.count(),
+				int(GameState.league_lists.get(_club, []).size()), Ratings.LIST_SIZE],
+				15, UiKit.EMPH, true))
+			_mine_box.add_child(UiKit.lbl(
+				"Draftees join the list you kept. There is no cap here; the draft runs until every list is full or the prospects run out.",
+				13, UiKit.MUTED))
 	else:
 		_mine_box.add_child(UiKit.lbl("%d / %d signed · %s of %s spent" % [
 			_draft.count(), _draft.target_size, Contracts.money(_draft.spent()), Contracts.money(_draft.budget)], 15, UiKit.EMPH, true))

@@ -18,7 +18,8 @@ const ATTR_ROWS := [
 
 ## Opens the sheet over `host` and returns its overlay (the host keeps it to
 ## close on Back). `on_close` runs when Close is pressed. `actions` are what the
-## host offers for this player, each {"name", "label", "detail", "run"}: a line
+## host offers for this player, each {"name", "label", "detail", "run"} (and
+## "disabled" when the detail says why it cannot be done now): a line
 ## of what it does and an outline button above Close.
 static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 		actions: Array = []) -> Control:
@@ -240,6 +241,7 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 		var act := UiKit.btn(str(action.get("label", "")), 16)
 		act.name = str(action.get("name", "Action"))
 		act.custom_minimum_size = Vector2(0, 48)
+		act.disabled = bool(action.get("disabled", false))
 		act.pressed.connect(action["run"])
 		box["footer"].add_child(act)
 	var close := UiKit.btn("Close", UiKit.NAME, true)
@@ -477,6 +479,11 @@ static func _identity(v: VBoxContainer, p: Dictionary) -> Control:
 		v.add_child(row)
 	elif mine:
 		later = row
+	# The prospect you created at New Career (row 64): marked wherever he goes.
+	if OwnProspect.tag(p) != "":
+		var cl := UiKit.lbl("Created by you at the start of this career.", UiKit.SMALL, UiKit.TEXT, true)
+		cl.name = "ProfileCreatedByYou"
+		v.add_child(cl)
 	# The club he followed as a kid (FL-005): a sourced fact for a real player,
 	# else "Not recorded" - never a guess.
 	var fav := FictionalIdentity.favourite_club(p)
