@@ -75,7 +75,7 @@ func _show_week_ask() -> void:
 	elif MidseasonDraft.waiting(GameState):
 		_show_midseason_pick()
 	elif RookieList.waiting(GameState):
-		RookieDraftSheet.open(self, _build)
+		RookieDraftSheet.open(self, _build, RookieDraftSheet.PASS_HUB)
 	elif GameState.backing_talk_pending():
 		_show_backing_talk()
 	elif GameState.media_conference_pending():

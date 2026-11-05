@@ -2,16 +2,19 @@ class_name RookieDraftSheet
 extends RefCounted
 ## The Rookie Draft, your turn (row 88): the best eight left, Pick or Pass.
 ## Shown over the pre-season screen (or the hub when there is no pre-season).
-## Starting the pre-season week or the season without picking passes it; Back
-## closes the sheet and leaves the pick open.
+## Starting the pre-season week (over the hub: the next round) without picking
+## passes it; the host names that action in `pass_line`. Back closes the sheet
+## and leaves the pick open.
 
 const NAME := "RookieDraft"
 const SHOWN := 8
+const PASS_PRESEASON := "Starting the pre-season week without picking passes it."
+const PASS_HUB := "Starting the next round without picking passes it."
 
 
 ## Open the sheet over `host` if the Rookie Draft waits on you. `on_done`
 ## runs once the sheet closes for good (your draft over, or Back).
-static func open(host: Control, on_done: Callable) -> Control:
+static func open(host: Control, on_done: Callable, pass_line := PASS_PRESEASON) -> Control:
 	if not RookieList.waiting(GameState):
 		return null
 	var old := host.get_node_or_null(NAME)
@@ -26,9 +29,9 @@ static func open(host: Control, on_done: Callable) -> Control:
 	var year := GameState.season_year
 	var note := UiKit.lbl(("Round %d, your pick. Rookie list %d / %d. A rookie is paid the rookie wage, %s a season: " +
 			"two seasons for a player under 21, one for anyone older. " +
-			"Pass and your Rookie Draft is over; starting the pre-season week without picking passes it.") % [
+			"Pass and your Rookie Draft is over. %s") % [
 			RookieList.round_now(GameState), RookieList.rookie_count(list), RookieList.CAT_A_SPOTS,
-			Contracts.money(RookieList.wage(year))], 15, UiKit.TEXT)
+			Contracts.money(RookieList.wage(year)), pass_line], 15, UiKit.TEXT)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(note)
 	var shown := MidseasonDraft.pool(GameState).slice(0, SHOWN)
@@ -45,13 +48,13 @@ static func open(host: Control, on_done: Callable) -> Control:
 		var pick := UiKit.btn("Pick", UiKit.NAME)
 		pick.name = "RookiePick_%s" % str(p["id"])
 		pick.custom_minimum_size = Vector2(88, 48)
-		pick.pressed.connect(_choose.bind(host, overlay, str(p["id"]), on_done))
+		pick.pressed.connect(_choose.bind(host, overlay, str(p["id"]), on_done, pass_line))
 		row.add_child(pick)
 		v.add_child(row)
 	var pass_btn := UiKit.btn("Pass", UiKit.NAME, true)
 	pass_btn.name = "RookiePass"
 	pass_btn.custom_minimum_size = Vector2(0, 48)
-	pass_btn.pressed.connect(_choose.bind(host, overlay, "", on_done))
+	pass_btn.pressed.connect(_choose.bind(host, overlay, "", on_done, pass_line))
 	(box["footer"] as VBoxContainer).add_child(pass_btn)
 	return overlay
 
@@ -65,7 +68,7 @@ static func close_open(host: Control) -> bool:
 	return true
 
 
-static func _choose(host: Control, overlay: Control, player_id: String, on_done: Callable) -> void:
+static func _choose(host: Control, overlay: Control, player_id: String, on_done: Callable, pass_line: String) -> void:
 	RookieList.choose(GameState, player_id)
 	GameState.autosave()
 	if is_instance_valid(overlay):
@@ -73,6 +76,6 @@ static func _choose(host: Control, overlay: Control, player_id: String, on_done:
 		overlay.queue_free()
 	# Your next pick in a later round opens straight away.
 	if RookieList.waiting(GameState) and is_instance_valid(host):
-		open(host, on_done)
+		open(host, on_done, pass_line)
 	elif on_done.is_valid():
 		on_done.call()

@@ -1659,12 +1659,15 @@ func begin_real_lists() -> void:
 		else:
 			open_pool.append(p)
 	draftee_pool = draftee_pool.filter(func(q): return str(q.get("id", "")) != custom_prospect_id)
+	# Switch rookie_list: the starting lists split into senior and rookie
+	# lists, and the opening National Draft fills the senior list.
+	RookieList.seed_lists(league_lists)
 	var sizes := {}
 	var role_counts := {}
 	var role_pairs := {}
 	for code in active:
 		var arr: Array = league_lists[code]
-		sizes[code] = arr.size()
+		sizes[code] = RookieList.draft_size(arr)
 		var c := {"RUCK": 0, "MID": 0, "DEF": 0, "FWD": 0}
 		var pairs: Array = []
 		for p in arr:
@@ -1676,6 +1679,8 @@ func begin_real_lists() -> void:
 		role_pairs[code] = pairs
 	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
 			_clock_seed(2), sizes, role_counts, role_pairs)
+	if RookieList.on():
+		draft.senior_cap = RookieList.SENIOR_SPOTS
 	OwnProspect.check(self)
 	mark_dirty()
 
@@ -1918,6 +1923,10 @@ func finish_intake_draft() -> bool:
 		season_year = GameDB.START_YEAR
 		start_season(my_club, league_lists.get(my_club, []))
 		open_preseason()
+		if RookieList.on():
+			# The Rookie Draft follows the opening National Draft too, in its order.
+			RookieList.open_draft(self, opening_order(GameDB.active_clubs(season_year)))
+			autosave()
 		return true
 	# The Rookie Draft follows in the same order (RookieList, switch rookie_list).
 	var rookie_order := intake_order() if RookieList.on() and season != null else []
@@ -2366,6 +2375,9 @@ func start_season(club_code: String, list: Array) -> void:
 			# Drafted players arrive in their old clubs' numbers: two 35s can
 			# land on one list (director's PC playtest, 2026-10-07).
 			unique_jumpers(lists[code])
+		# Switch rookie_list: a re-drafted list of 44 splits into 38 seniors
+		# and six rookies, the youngest.
+		RookieList.seed_lists(lists)
 	else:
 		# Fallback for tests or old saves: your drafted list plus real AI lists.
 		for code in GameDB.club_order:
@@ -6227,6 +6239,9 @@ func _resign(p: Dictionary, years: int, salary := -1) -> void:
 func _release(code: String, p: Dictionary, wanted := false, announce := true) -> void:
 	(season.lists[code] as Array).erase(p)
 	p["released_by"] = code
+	# A delisted rookie is a free agent: whoever signs him, his old club
+	# included, puts him on its senior list (row 88, switch rookie_list).
+	p.erase("rookie_list")
 	p["comp_eligible"] = wanted and comp_tenure_ok(p)
 	p["contract_years"] = 0
 	free_agents.append(p)

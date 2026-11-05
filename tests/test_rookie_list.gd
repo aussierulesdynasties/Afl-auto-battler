@@ -50,6 +50,10 @@ func run(tree: SceneTree) -> void:
 	_t("_test_old_save")
 	await _t("_test_rookie_draft_tap")
 	await _t("_test_list_screen_and_upgrade_tap")
+	_t("_test_release_and_resign")
+	_t("_test_entering_club_seat")
+	_t("_test_midseason_fills_rookie_spots")
+	_t("_test_real_lists_start")
 	Features.set_on(RookieList.SWITCH, false)
 	GameState.replay_seed = 0
 	print(Ran.line("Rookie list", self))
@@ -237,6 +241,10 @@ func _test_rookie_draft_tap() -> void:
 	await _settle()
 	var sheet := scene.get_node_or_null(RookieDraftSheet.NAME)
 	_check(sheet != null, "The Rookie Draft sheet opens on %s" % scene_path.get_file())
+	var want: String = RookieDraftSheet.PASS_PRESEASON if gs.preseason_active() else RookieDraftSheet.PASS_HUB
+	var said := sheet != null and sheet.find_children("*", "Label", true, false).any(
+			func(l): return (l as Label).text.contains(want))
+	_check(said, "The sheet names the action on this screen that passes: %s" % want)
 	var pool := MidseasonDraft.pool(gs)
 	if sheet == null or pool.is_empty():
 		scene.queue_free()
@@ -293,3 +301,120 @@ func _test_list_screen_and_upgrade_tap() -> void:
 	_check(rh2 != null and rh2.text.contains("0 / 6"), "The rookie list count drops (%s)" % (rh2.text if rh2 else "none"))
 	scene.queue_free()
 	await _settle()
+
+
+## A delisted rookie is a free agent; whoever signs him, his old club too,
+## puts him on its senior list.
+func _test_release_and_resign() -> void:
+	Features.set_on(RookieList.SWITCH, true)
+	_new_career()
+	var rl: Array = gs.season.lists["GEE"]
+	var p: Dictionary = rl[rl.size() - 1]
+	p["rookie_list"] = "A"
+	var before := RookieList.rookie_count(rl)
+	gs._release("GEE", p, false, false)
+	_check(not RookieList.is_rookie(p) and gs.free_agents.has(p), "A delisted rookie is a free agent off the rookie list")
+	gs._sign_fa(p, "GEE", RookieList.senior_wage(gs.season_year), 1)
+	_check(rl.has(p) and not RookieList.is_rookie(p), "Signed back by his old club, he is on its senior list")
+	_check(RookieList.rookie_count(rl) == before - 1, "The rookie list lost him (%d)" % RookieList.rookie_count(rl))
+
+
+## A club on no ladder yet (in its first season) still gets a Rookie Draft
+## seat, at the end of the order.
+func _test_entering_club_seat() -> void:
+	Features.set_on(RookieList.SWITCH, true)
+	_new_career()
+	var order: Array = gs.intake_order()
+	_check(order.has("WCE") and order.size() >= 18, "(setup) WCE is on the ladder (%d clubs)" % order.size())
+	order.erase("WCE")
+	gs.rookie_draft = {}
+	RookieList.open_draft(gs, order)
+	var seats: Array = gs.rookie_draft.get("order", [])
+	_check(seats.has("WCE") and str(seats[seats.size() - 1]) == "WCE",
+			"A club missing from the National Draft order sits last in the Rookie Draft (%s)" % str(seats))
+	_check(seats.size() == order.size() + 1, "Every other club keeps its seat once (%d)" % seats.size())
+	RookieList.settle(gs)
+	_check(not RookieList.waiting(gs), "(cleanup) your pick is passed")
+
+
+## The mid-season rookie draft fills rookie spots: a club with six rookies is
+## left out, a club with a free rookie spot is in, and every pick is a rookie.
+func _test_midseason_fills_rookie_spots() -> void:
+	Features.set_on(RookieList.SWITCH, true)
+	Features.set_on(MidseasonDraft.SWITCH, true)
+	_new_career()
+	var year: int = gs.season_year
+	var cls: Array = gs.draftee_pool.filter(func(q): return int(q.get("draft_year", year)) == year)
+	_check(cls.size() >= 30, "(setup) a class to pass over (%d)" % cls.size())
+	for i in mini(30, cls.size()):
+		(cls[i] as Dictionary)["draft_year"] = year - 1
+	var full: Array = gs.season.lists["GEE"]
+	for i in RookieList.CAT_A_SPOTS:
+		(full[full.size() - 1 - i] as Dictionary)["rookie_list"] = "A"
+	var open: Array = gs.season.lists["COL"]
+	while open.size() >= Contracts.MAX_LIST:
+		open.pop_back()
+	_check(RookieList.rookie_spot_free(open) and not RookieList.rookie_spot_free(full),
+			"(setup) COL has a rookie spot, GEE has none")
+	MidseasonDraft._record(gs)
+	MidseasonDraft._open_draft(gs)
+	var order: Array = gs.midseason.get("order", [])
+	_check(not order.has("GEE"), "A club with six rookies is out of the mid-season draft")
+	_check(order.has("COL"), "A club with a free rookie spot is in it")
+	# Your pick is passed; the rivals' picks run to the end.
+	MidseasonDraft.settle(gs)
+	_check(not MidseasonDraft.waiting(gs), "Your pick is passed and the draft ends")
+	var picks: Array = gs.midseason.get("picks", [])
+	_check(not picks.is_empty(), "Rivals took players (%d)" % picks.size())
+	for k in picks:
+		var p := RookieList._find(gs.season.lists.get(str(k["club"]), []), str(k["id"]))
+		_check(RookieList.is_rookie(p), "A mid-season pick lands on the rookie list (%s)" % str(k["id"]))
+	Features.set_on(MidseasonDraft.SWITCH, false)
+
+
+## A real-lists career with the switch on: the starting lists split into
+## senior and rookie lists, the opening National Draft fills the senior list
+## and the Rookie Draft follows it.
+func _test_real_lists_start() -> void:
+	Features.set_on(RookieList.SWITCH, true)
+	gs.reset()
+	gs.begin_real_lists()
+	var draft: Draft = gs.draft
+	_check(draft != null and draft.senior_cap == RookieList.SENIOR_SPOTS,
+			"The opening National Draft fills the senior list (38)")
+	if draft == null:
+		return
+	var clubs := 0
+	var marked := 0
+	for code in gs.league_lists:
+		clubs += 1
+		var arr: Array = gs.league_lists[code]
+		_check(RookieList.rookie_count(arr) <= RookieList.CAT_A_SPOTS, "%s starts with at most six rookies" % code)
+		_check(RookieList.rookie_count(arr) == RookieList.CAT_A_SPOTS or RookieList.senior_count(arr) <= RookieList.SENIOR_SPOTS,
+				"%s: over 38 seniors only once its rookie list is full" % code)
+		_check(int(draft.existing_sizes.get(code, -1)) == RookieList.senior_count(arr),
+				"%s: the draft counts the senior list" % code)
+		for p in arr:
+			if str(p.get("list_type", "")) == "rookie" and RookieList.is_rookie(p):
+				marked += 1
+	_check(clubs >= 18, "Every club has a list (%d)" % clubs)
+	_check(marked > 0, "The club lists' rookies start on the rookie list (%d)" % marked)
+	gs.choose_real_club(CLUB)
+	while not draft.is_finished():
+		var candidate := draft._best_ai_pick(draft.current_club())
+		if candidate.is_empty() or not draft._draft_pick(draft.current_club(), candidate):
+			draft._skip_current_pick()
+	for code in draft.existing_sizes:
+		var before := int(draft.existing_sizes[code])
+		var took := draft.count_for(str(code))
+		_check(took == 0 or before + took <= RookieList.SENIOR_SPOTS,
+				"%s: the opening draft stops at a full senior list (%d kept + %d picks)" % [code, before, took])
+	_check(gs.finish_intake_draft(), "The opening National Draft commits")
+	_check(int(gs.rookie_draft.get("year", 0)) == GameDB.START_YEAR and gs.season_year == GameDB.START_YEAR,
+			"The Rookie Draft follows the opening National Draft (%s)" % str(gs.rookie_draft.get("year")))
+	_check((gs.rookie_draft.get("order", []) as Array).size() >= 18, "Every club has a Rookie Draft seat")
+	RookieList.settle(gs)
+	_check(bool(gs.rookie_draft.get("done", false)), "Passing ends your Rookie Draft and it runs to its end")
+	for code in gs.season.lists:
+		_check(RookieList.rookie_count(gs.season.lists[code]) <= RookieList.CAT_A_SPOTS,
+				"%s: at most six rookies after it" % code)

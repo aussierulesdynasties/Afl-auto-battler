@@ -99,6 +99,37 @@ static func deal_years(p: Dictionary) -> int:
 
 
 # ---------------------------------------------------------------------------
+# A new career
+# ---------------------------------------------------------------------------
+## Split every club's starting list into its senior and rookie lists (a new
+## career only, switch on). A player the club list data marks as a rookie
+## (data/list_additions_2026.csv, `list`) goes on the rookie list first; then,
+## while a club has more than SENIOR_SPOTS seniors and a rookie spot left, its
+## youngest senior goes on the rookie list (younger first, then id). A club
+## still over SENIOR_SPOTS after that takes no National Draft pick until its
+## senior list is back under the cap. Same rule for every club.
+static func seed_lists(lists: Dictionary) -> void:
+	if not on():
+		return
+	for code in lists:
+		var list: Array = lists[code]
+		for p in list:
+			if rookie_count(list) >= CAT_A_SPOTS:
+				break
+			if not is_rookie(p) and str(p.get("list_type", "")) == "rookie":
+				p["rookie_list"] = "A"
+		var young := seniors(list)
+		young.sort_custom(func(a, b):
+			if float(a.get("age", 0.0)) != float(b.get("age", 0.0)):
+				return float(a.get("age", 0.0)) < float(b.get("age", 0.0))
+			return str(a["id"]) < str(b["id"]))
+		for p in young:
+			if senior_count(list) <= SENIOR_SPOTS or rookie_count(list) >= CAT_A_SPOTS:
+				break
+			p["rookie_list"] = "A"
+
+
+# ---------------------------------------------------------------------------
 # Upgrade
 # ---------------------------------------------------------------------------
 ## Why this player cannot be upgraded now ("" when he can).
@@ -163,7 +194,13 @@ static func open_draft(gs, order: Array) -> void:
 		return
 	var clubs := []
 	for code in order:
-		if gs.season.lists.has(str(code)):
+		if gs.season.lists.has(str(code)) and not clubs.has(str(code)):
+			clubs.append(str(code))
+	# A club playing its first season was on no ladder, so the National Draft
+	# order may not name it: it takes a seat at the end of the order, the same
+	# rules as every other club.
+	for code in GameDB.active_clubs(gs.season_year):
+		if gs.season.lists.has(str(code)) and not clubs.has(str(code)):
 			clubs.append(str(code))
 	gs.rookie_draft = {"year": gs.season_year, "order": clubs, "next": 0, "round": 1,
 			"passed": {}, "picks": [], "upgrades": ai_upgrades(gs), "done": false}
