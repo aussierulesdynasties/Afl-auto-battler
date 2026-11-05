@@ -19,6 +19,8 @@ extends SceneTree
 ##                   390x844 and place it with --rect as the match screen does
 ##   --rect X,Y,W,H  the oval's rect in the window's UI units (default: all of it)
 ##   --call KEY      shoot, pass or bomb at every home set shot (live match)
+##   --showplan SIDE:KEY the oval shows that side on plan KEY all match (the sim
+##                   untouched; the match marks suite's set-up)
 
 ##   --movie         also write every frame at 30 fps (<out>_f0000.png ...),
 ##                   for capture.yml to make <out>.mp4
@@ -147,6 +149,18 @@ func _run() -> void:
 		res = sim.result()
 	res["home"] = home_code
 	res["away"] = away_code
+	if args.has("showplan"):
+		# --showplan SIDE:KEY: the sim plays as it would, and the oval shows that
+		# side on plan KEY (the other side Balanced, no bursts), as the match
+		# marks suite plays it (test_match_marks.gd _with_call).
+		var sk := str(args["showplan"]).split(":")
+		var tl := []
+		for e in res["timeline"]:
+			var e2: Dictionary = (e as Dictionary).duplicate(true)
+			e2["plan"] = str(sk[1]) if int(e2["side"]) == int(sk[0]) else "balanced"
+			e2["bursts"] = []
+			tl.append(e2)
+		res["timeline"] = tl
 
 	if args.has("size"):
 		var wh := str(args["size"]).split("x")
