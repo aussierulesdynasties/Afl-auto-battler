@@ -2437,6 +2437,12 @@
    },
    {
     "when": {
+     "arc_flag": "drew"
+    },
+    "ending": "level"
+   },
+   {
+    "when": {
      "arc_flag": "gracious"
     },
     "ending": "reconciled"
@@ -2449,6 +2455,9 @@
   "endings": {
    "remembered": {
     "line": "The coach beat {old_club}, and {club} will bring it up at every meeting from now on."
+   },
+   "level": {
+    "line": "The coach and {old_club} finished level. Honours shared."
    },
    "reconciled": {
     "line": "{old_club} got the better of the day, but the coach and {old_chairman} are on speaking terms again."
