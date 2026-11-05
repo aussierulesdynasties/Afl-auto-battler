@@ -26,7 +26,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 76 | AFL news layer: generated news items from the save (T5.Q11d) | items appear |
 | 77 | Set shots rise from about 37.5% to the real ~55% of shots, conversion set by distance, total scoring held flat (T8.Q9) | audit shows both |
 | 78 | Rare big margins come back through Momentum (100+ about 0.5% against real 1.9%); balance-gated (T8.Q4) | audit shows the blowout rate |
-| 80 | Club Forge create-a-player: one weakness compulsory, the second optional, no extra overall power (T8.Q12) | screen enforces it |
 | 82 | Itch gets Windows and Android APK builds beside web; price free (T7.O1, T7.O3); Google Play stays off until his written yes | export presets, builds on itch |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
 
