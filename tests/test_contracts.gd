@@ -86,7 +86,7 @@ func _test_real_money_scale() -> void:
 			"Money is compact enough for a phone")
 	for row in [[1, 150000], [11, 140000], [21, 130000], [51, 125000]]:
 		var p := {"draft_pick": int(row[0])}
-		Contracts.rookie_deal(p, 2027)
+		Contracts.draftee_deal(p, 2027)
 		_check(int(p["salary"]) == int(row[1]),
 				"Pick %d gets the 2027 first-year base (%d)" % [int(row[0]), int(p["salary"])])
 	_check(Contracts.old_points_to_salary(1) == 155000
