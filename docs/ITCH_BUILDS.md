@@ -3,7 +3,7 @@
 Moved out of `docs/TODO.md` (2026-11-05) so it no longer loads into every session. Rows named here still live in `docs/TODO.md`.
 
 
-The itch page runs the browser build of main with every switch in section B off, so a build with only switched-off work shows a player nothing new. A build is worth uploading only when a player can see a difference: the switches named for it are on (he has played them), the listed rows are merged, CI is green and the web build ran. Sessions push with butler and post a short devlog in football words (docs/ITCH_UPLOAD.md). He says go; at least three changes a player can see, or one big one.
+The itch page runs the browser build of main with every switch in section B off, so a build with only switched-off work shows a player nothing new. A build is worth uploading only when a player can see a difference: the switches named for it are on (he has played them), the listed rows are merged, CI is green and the web build ran. Sessions push with butler and post a short devlog in football words (docs/ITCH_UPLOAD.md). The director's standing permission (2026-11-06) replaces "he says go": sessions upload when a build is worth it and post a devlog with every upload. At least three changes a player can see, or one big one.
 
 | Build | Name | Ready when (rows and switches) | What a player sees |
 |---|---|---|---|
@@ -17,3 +17,18 @@ The itch page runs the browser build of main with every switch in section B off,
 
 Order is I1 first (it is already built and only needs his playtest), I2 before any build that people will save a long career in, then I3, I4, I5, I6, I7. A build can go early if everything it names is done. He can reorder.
 
+## Platforms and channels (row 82)
+
+Every upload goes to all three channels with the same `--userversion` (`<config/version>-<sha7>`). The price is free (T7.O1, T7.O3). Google Play stays off until the director's written yes.
+
+| Channel | File | Made by |
+|---|---|---|
+| `html5` | `builds/web/` (index.html at the top) | the Web build workflow, or `tools/export_builds.sh web` |
+| `windows` | `builds/windows/AussieRulesDynasties.exe` (64-bit, project icon, version from config/version) | `tools/export_builds.sh windows` |
+| `android` | `builds/android/aussie-rules-dynasties.apk` (arm64-v8a and armeabi-v7a, release-signed) | `tools/export_builds.sh android` |
+
+- **The Windows exe is unsigned.** Windows SmartScreen shows "unknown publisher" the first time; testers press More info, Run anyway. A code-signing certificate costs money and needs the director's written yes.
+- **Android signing key.** The release keystore is `~/.keys/ard-release.keystore` (alias `ard`, RSA 2048, 10000 days, made 2026-11-06), its password in `~/.keys/ard-release.pass` beside it. Neither is in the repo or in `export_presets.cfg`: `tools/export_builds.sh` hands them to Godot through `GODOT_ANDROID_KEYSTORE_RELEASE_PATH`/`_USER`/`_PASSWORD`. **Back both files up off this machine.** Android installs an update only when it is signed with the same key: lose the keystore and every later APK must be uninstalled first, which wipes the tester's career.
+- **Android SDK.** The Android export needs the SDK (platform-tools, build-tools for `apksigner`) at the path in Godot's editor settings (`export/android/android_sdk_path`), and the JDK 17 path in `export/android/java_sdk_path`. Godot 4.7.2 refuses the export without them.
+- The price is set on the itch dashboard (Edit game: Pricing "No payments"); butler can't set it. The `windows` and `android` channel names give each upload its platform tag by themselves.
+- `tools/export_builds.sh` refuses a tree with uncommitted changes, because the build label names HEAD; an upload is always exported from a clean commit (best: main after the version bump merged).

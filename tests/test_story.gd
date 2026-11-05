@@ -2438,10 +2438,10 @@ func _test_culture_effects() -> void:
 const FIXTURE_ROUNDS := 8
 
 
-func _culture_fixture_run(on: bool) -> Dictionary:
+func _culture_fixture_run(on: bool, run_seed := SUITE_SEED) -> Dictionary:
 	GameState.reset()
-	GameState.career_seed = SUITE_SEED
-	GameState.replay_seed = SUITE_SEED
+	GameState.career_seed = run_seed
+	GameState.replay_seed = run_seed
 	GameState.culture_effects_on = on
 	GameState.start_season("MEL", GameDB.club_list("MEL"))
 	GameState.relations[Culture.key("MEL", "standards")] = {"t": 70, "log": []}
@@ -2489,10 +2489,36 @@ func _culture_fixture_run(on: bool) -> Dictionary:
 			"young_gain": young_gain / float(maxi(1, young_n)), "rounds": r}
 
 
+## Seeds the culture fixture is averaged over: one season's rival results move
+## morale more than culture does, so a single seed decides by noise.
+const CULTURE_SEEDS := [SUITE_SEED, SUITE_SEED + 1, SUITE_SEED + 2, SUITE_SEED + 3]
+
+
+## The fixture's runs over CULTURE_SEEDS: numbers averaged; bands joined, so
+## each must hold on every seed.
+func _culture_fixture_mean(on: bool) -> Dictionary:
+	var out := {"load": 0.0, "morale": 0.0, "young_xp": 0, "young": 0, "bands": "", "young_gain": 0.0, "rounds": 0}
+	var bands := {}
+	var n := float(CULTURE_SEEDS.size())
+	for sd in CULTURE_SEEDS:
+		var r := _culture_fixture_run(on, int(sd))
+		out["load"] = float(out["load"]) + float(r["load"]) / n
+		out["morale"] = float(out["morale"]) + float(r["morale"]) / n
+		out["young_gain"] = float(out["young_gain"]) + float(r["young_gain"]) / n
+		out["young_xp"] = int(out["young_xp"]) + int(r["young_xp"])
+		out["young"] = int(out["young"]) + int(r["young"])
+		out["rounds"] = maxi(int(out["rounds"]), int(r["rounds"]))
+		bands[str(r["bands"])] = true
+	out["bands"] = ",".join(PackedStringArray(bands.keys()))
+	return out
+
+
 func _test_culture_effects_fixture() -> void:
-	var off := _culture_fixture_run(false)
-	var on := _culture_fixture_run(true)
-	print("Culture fixture (Melbourne, seed %d; first %d rounds): load %.2f v %.2f off | morale %.2f v %.2f off | young XP %d v %d off (%d young players) | bands %s | young OVR gain over the %d-round season %.2f v %.2f off" % [
+	var t0 := Time.get_ticks_msec()
+	var off := _culture_fixture_mean(false)
+	var on := _culture_fixture_mean(true)
+	print("Culture fixture: %d runs in %.1f s" % [2 * CULTURE_SEEDS.size(), (Time.get_ticks_msec() - t0) / 1000.0])
+	print("Culture fixture (Melbourne, seeds from %d, mean of 4; first %d rounds): load %.2f v %.2f off | morale %.2f v %.2f off | young XP %d v %d off (%d young players) | bands %s | young OVR gain over the %d-round season %.2f v %.2f off" % [
 			SUITE_SEED, FIXTURE_ROUNDS, float(on["load"]), float(off["load"]), float(on["morale"]), float(off["morale"]),
 			int(on["young_xp"]), int(off["young_xp"]), int(on["young"]), str(on["bands"]), int(on["rounds"]),
 			float(on["young_gain"]), float(off["young_gain"])])

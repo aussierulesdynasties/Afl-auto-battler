@@ -94,6 +94,25 @@ the older build keep loading.
 
 **Version number.** The version comes from `project.godot` `config/version` (the menu and Settings read it, and the Android and Windows exports use it); nothing else holds a copy, and `tools/check_version.py` fails CI if one appears. Bump it with `python3 -I tools/bump_version.py` in its own PR before a build. The butler `--userversion` is `<version>-<sha7>` (for example `0.1.13-60a1bd4`), and the devlog title is `Build <version> (<sha7>): ...`.
 
+## 6. Windows and Android, with butler
+
+Sessions upload (the director's standing permission, 2026-11-06, replaces waiting for his go) and post a devlog with every upload. The page is free. Three channels, one version for all:
+
+```bash
+python3 -I tools/bump_version.py      # its own PR, merged first
+tools/export_builds.sh windows android web
+V="$(cat builds/version.txt)"   # <version>-<sha7>, written by the export
+B=~/tools/butler/butler.exe
+$B push builds/web     aussierulesdynasties/aussie-rules-dynasties:html5   --userversion "$V"
+$B push builds/windows aussierulesdynasties/aussie-rules-dynasties:windows --userversion "$V"
+$B push builds/android/aussie-rules-dynasties.apk aussierulesdynasties/aussie-rules-dynasties:android --userversion "$V"
+$B status aussierulesdynasties/aussie-rules-dynasties
+```
+
+A channel named `windows` or `android` gets its platform tag on itch by itself. The html5 channel can also take the Web build workflow's artifact as before. Then post the devlog, titled `Build <version> (<sha7>): ...`, in football words.
+
+Testers: Windows shows a SmartScreen warning (the exe is unsigned): More info, Run anyway. Android: download the APK, allow installs from the browser, open it. Saves on Windows live in `%APPDATA%/Godot/app_userdata/Aussie Rules Dynasties`; on Android inside the app (uninstalling erases them). The signing key and its backup: docs/ITCH_BUILDS.md.
+
 ## Known issues
 
 - Once in testing, after resizing the window and reloading, the menu drew zoomed in. A reload fixed it
