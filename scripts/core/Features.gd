@@ -143,12 +143,22 @@ extends RefCounted
 ##               readers more often, and the better readers mark it. Lifts midfield
 ##               intercepts toward Champion Data's 2.5 a game. Changes match output. Off,
 ##               a match is exactly as before.
+##   key_duels   row 94 (T8.Q6, director 2026-11-06): a key forward and his direct opponent
+##               meet more, so the full-time "beat / held" line rests on more contests.
+##               Sides look for their key forwards more often inside 50
+##               (Matchups.KEY_TARGET_DUELS); a key forward leads up at some marking
+##               contests in his front half (Matchups.KEY_LEAD, MatchSim._key_lead); his
+##               marking contest up the ground is against his man, as a real match-up
+##               follows him (MatchSim._duel_man), and goes in the duel log with the
+##               entries inside 50. Changes match output. Off, the zone's or the line's
+##               defender meets it, the key-forward share is Matchups.KEY_TARGET and no
+##               general-play contest is logged, as before.
 ##   league_news   row 76 (T5.Q11d, the AFL knowledge layer): the premiership item in
 ##               the news feed carries one sentence of the club's flag history (first
 ##               ever, back-to-back or more, or the first in 10+ years), from the save's
 ##               honour roll and data/club_premierships.csv (LeagueNews.gd). Reads only.
 ##               Off, the feed is exactly as before.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries", "momentum_runaway",
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries", "momentum_runaway", "key_duels",
 	"league_news",
 ]
 

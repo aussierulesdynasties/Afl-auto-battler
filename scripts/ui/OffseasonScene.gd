@@ -247,9 +247,13 @@ func _contracts(body: VBoxContainer) -> void:
 	var sorted := GameState.my_list.duplicate()
 	sorted.sort_custom(func(a, b): return int(a.get("salary", 0)) > int(b.get("salary", 0)))
 	for p in sorted:
-		body.add_child(_para("%s  ·  %d OVR  ·  %s  ·  %d season%s left" % [
+		# The season just played still counts in contract_years until the
+		# rollover (Re-signed above says years - 1 too).
+		var left := int(p.get("contract_years", 1)) - 1
+		var term := "out of contract" if left <= 0 else "%d season%s left" % [left, "" if left == 1 else "s"]
+		body.add_child(_para("%s  ·  %d OVR  ·  %s  ·  %s" % [
 				GameDB.player_display_name(p), int(p["overall"]), Contracts.money(int(p.get("salary", 0))),
-				int(p.get("contract_years", 1)), "" if int(p.get("contract_years", 1)) == 1 else "s"], 12, UiKit.TEXT))
+				term], 12, UiKit.TEXT))
 
 
 ## Your players retiring at the end of the off-season. A healthy one can be
