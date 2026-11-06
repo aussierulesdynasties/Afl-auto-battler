@@ -79,7 +79,7 @@ func _mean(a: Array) -> float:
 func _test_switch_ships_off() -> void:
 	Features.clear("key_duels")
 	_check(Features.KNOWN.has("key_duels"), "key_duels is a known switch")
-	_check(not bool(ProjectSettings.get_setting("features/key_duels", false)), "key_duels ships off")
+	_check(bool(ProjectSettings.get_setting("features/key_duels", false)), "key_duels ships on")
 	var m := MatchSim.new(Squad.new("COL", GameDB.club_list("COL"), true, "COL"),
 			Squad.new("CAR", GameDB.club_list("CAR"), false, "CAR"), 1)
 	_check(not m.key_duels_on and is_equal_approx(m.key_target(), Matchups.KEY_TARGET),
