@@ -23,6 +23,7 @@ func run() -> void:
 	_t("_test_full_list_picks_said")
 	_t("_test_room_for_every_pick")
 	_t("_test_career_spots_match_draft")
+	_t("_test_spots_sheet_before_offseason_opens")
 	_t("_test_draft_rules")
 	_t("_test_career_rollover")
 	_t("_test_class_tiers")
@@ -236,6 +237,31 @@ func _test_room_for_every_pick() -> void:
 		_check(d.pick_for_me(), "The coach takes the pick on the clock")
 	_check(d.count_for("A") == 3, "All three picks are used (%d)" % d.count_for("A"))
 	_check(d.user_passed.is_empty() and d.user_passed_line() == "", "No pass is recorded")
+
+
+## An older save can reach the draft button before its off-season opened
+## (begin_intake_draft opens it, and this year's picks only count once it is
+## open): the sheet still says which picks pass.
+func _test_spots_sheet_before_offseason_opens() -> void:
+	GameState.reset()
+	var me := str(GameDB.CLUB_ORDER[0])
+	GameState.start_season(me, GameDB.club_list(me))
+	var season: Season = GameState.season
+	season.round_index = season.fixture.size()
+	var n := 0
+	while RookieList.senior_count(GameState.my_list) < RookieList.SENIOR_SPOTS and n < 60:
+		var copy: Dictionary = (GameState.my_list[n % GameState.my_list.size()] as Dictionary).duplicate(true)
+		copy["id"] = "pad_old_%d" % n
+		copy["rookie_list"] = ""
+		copy["contract_years"] = 3
+		GameState.my_list.append(copy)
+		n += 1
+	for p in GameState.my_list:
+		p["contract_years"] = 3   # nobody out of contract: the list is settled
+	_check(not GameState.offseason_open(), "The off-season has not opened (an older save)")
+	_check(DraftSpotsSheet.needed(), "The sheet shows for a full list before the off-season opens")
+	_check(not (GameState.draft_list_spots()["passing"] as Array).is_empty(),
+			"Every pick of a full list is named as passing (%s)" % str(GameState.draft_list_spots()))
 
 
 ## In a career, the count the brief and the pre-draft sheet show matches the

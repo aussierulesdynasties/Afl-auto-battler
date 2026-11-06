@@ -2134,14 +2134,17 @@ func _your_pick_words(clock_pick: int, done: bool) -> String:
 	if _draft.passed_clubs.has(_club):
 		return "You have passed: no more picks"
 	if _draft._list_full(_club):
-		return "Your list is full"
+		var left := _draft.upcoming_picks(_club, 0)
+		if left.is_empty():
+			return "Your list is full"
+		return "Your list is full: %s %s will pass" % ["pick" if left.size() == 1 else "picks",
+				Draft.picks_words(left)]
 	var upcoming := _draft.upcoming_picks(_club, 1)
 	if upcoming.is_empty():
 		return "No picks left"
 	var line := DraftNight.your_pick_line(int(upcoming[0]), clock_pick)
 	var said := _spots_words()
-	return line + ("
-" + said if said != "" else "")
+	return line + ("\n" + said if said != "" else "")
 
 
 ## Your picks still to come that have no list spot, in words ("" when every
@@ -2426,7 +2429,8 @@ func _my_picks() -> void:
 		var taken := ""
 		if index < _draft.pick_index:
 			var entry: Dictionary = by_pick.get(index + 1, {})
-			taken = _entry_player_name(entry) if not entry.is_empty() 					else ("passed: list full" if _passed_for_room(index + 1) else "passed")
+			taken = _entry_player_name(entry) if not entry.is_empty() \
+					else ("passed: list full" if _passed_for_room(index + 1) else "passed")
 		var row := UiKit.vbox(1)
 		row.name = "MyPick_%d" % (index + 1)
 		row.add_child(UiKit.lbl("No. %d  ·  Round %d%s" % [index + 1, int(_draft.pick_rounds[index]),

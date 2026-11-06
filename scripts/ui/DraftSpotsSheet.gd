@@ -6,8 +6,9 @@ extends RefCounted
 ## have no senior list spot (GameState.draft_list_spots), this sheet states
 ## the rule and the consequence before anything happens: how full your senior
 ## list will be when the draft opens, which picks pass, and that delisting is
-## only possible before the draft starts. Two answers, no advice: go to the
-## off-season screen's Contracts tab (where Release is) or start the draft.
+## only possible before the draft starts (out-of-contract players, on the
+## Contracts tab; any player can be traded). Two answers, no advice: go to
+## Trades & Contracts or start the draft.
 
 const NAME := "DraftSpots"
 
@@ -18,8 +19,12 @@ static func needed() -> bool:
 	var g = GameState
 	if g.draft != null and g.draft.intake_mode:
 		return false   # resuming: the draft screen says it
-	if not g.offseason_open():
+	if g.season == null or not (g.season.is_season_over() or g.season.is_regular_done()):
 		return false
+	# An older save can reach the draft button before its off-season opened,
+	# and this year's picks only count once it is open. Pressing the button
+	# opens it anyway (begin_intake_draft's first step), so open it here.
+	g.open_offseason()
 	var s: Dictionary = g.draft_list_spots()
 	var picks: Array = s["picks"]
 	return not (s["passing"] as Array).is_empty() \
@@ -44,7 +49,7 @@ static func open(host: Control, on_start: Callable) -> Control:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
 	var footer: VBoxContainer = box["footer"]
-	var delist := UiKit.btn("Delist players", UiKit.NAME)
+	var delist := UiKit.btn("Trades & Contracts", UiKit.NAME)
 	delist.name = "DraftSpotsDelist"
 	delist.custom_minimum_size = Vector2(0, 48)
 	delist.pressed.connect(func() -> void:
@@ -85,7 +90,7 @@ static func lines(s: Dictionary) -> Array:
 				int(s["maybe"]), "" if int(s["maybe"]) == 1 else "s"], false, "", "DraftSpotsMaybe"])
 	if int(s["retiring"]) > 0:
 		out.append(["Retiring players hold their spot until the draft is over.", false, "", "DraftSpotsRetiring"])
-	out.append(["A club with a full senior list passes its picks. Players can only be delisted before the draft starts; rookies do not take a senior spot.",
+	out.append(["A club with a full senior list passes its picks. Out-of-contract players can be delisted before the draft starts, and any player traded away; contracted players cannot be delisted. Rookies do not take a senior spot.",
 			false, "", "DraftSpotsRule"])
 	return out
 
