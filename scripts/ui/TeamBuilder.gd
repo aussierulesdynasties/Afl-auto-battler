@@ -448,8 +448,7 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 	if id != "":
 		b.set_drag_forwarding(
 				func(_at: Vector2):
-					var preview := UiKit.lbl(GameDB.player_display_name(p), 14, UiKit.TEXT, true)
-					b.set_drag_preview(preview)
+					b.set_drag_preview(drag_preview(GameDB.player_display_name(p)))
 					return {"team_builder": id},
 				func(_at: Vector2, data) -> bool:
 					return data is Dictionary and (data as Dictionary).has("team_builder"),
@@ -462,6 +461,18 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 				func(_at: Vector2, data) -> void:
 					_swap(str(data["team_builder"]), "", place))
 	return b
+
+
+## The name that follows a finger while a player is dragged. A drag preview has
+## no parent width, so a wrapping label broke the name into one letter a line
+## (director's screenshot, 2026-11-07): it stays on one line, outlined so it
+## reads over the turf and over the cards.
+static func drag_preview(name: String) -> Label:
+	var l := UiKit.lbl(name, 14, UiKit.TEXT, true)
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.add_theme_color_override("font_outline_color", Color(0.05, 0.05, 0.04, 0.9))
+	l.add_theme_constant_override("outline_size", 4)
+	return l
 
 
 func _player(id: String) -> Dictionary:

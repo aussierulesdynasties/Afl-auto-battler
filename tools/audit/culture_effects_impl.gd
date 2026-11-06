@@ -155,6 +155,8 @@ func run() -> void:
 		print("ROW seed %d on %d year %d | win spread %.2f | injuries %d | morale %.2f | re-sign floor %.0f | top-minus-bottom third wins next year %s" % [
 				seed, 1 if on else 0, year, row_spread, inj, morales.back(), floors.back(),
 				("%.2f" % snow.back()) if snow.size() > 0 and s > 0 else "-"])
+		# Sacked with a job on offer: the audit takes the first club and goes on.
+		ClubMoves.take_first_offer(GameState)
 		if s == seasons - 1 or GameState.is_sacked():
 			break
 		GameState.open_offseason()
