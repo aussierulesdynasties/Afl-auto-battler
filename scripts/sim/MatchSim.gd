@@ -4909,7 +4909,6 @@ func _swap(side: int, gi: int, bi: int) -> void:
 	sq.ground[gi] = on_slot
 	sq.bench[bi] = off
 	interchanges[side] += 1
-	_hand_on_duel(side, str(off["id"]), on_slot)
 	_played[side][str(on["id"])] = true
 	events.append({
 		"q": current_quarter, "min": current_minute, "kind": "sub", "side": side, "fp": fp,
@@ -4922,36 +4921,6 @@ func _swap(side: int, gi: int, bi: int) -> void:
 	})
 	# The man who came on may be filling a slot that is not the midfield.
 	_recheck_tags()
-
-
-## A defender going to the bench hands his forward on: to the man taking his
-## place when that man is a defender by trade, else to the next free defender
-## in the back line (Matchups.defenders); with none free, the forward goes
-## without a direct opponent. A player on the bench keeps no forward.
-func _hand_on_duel(side: int, off_id: String, on_slot: Dictionary) -> void:
-	var d: Dictionary = duels[side]
-	for fid in d.keys():
-		if str(d[fid]) != off_id:
-			continue
-		var used := {}
-		for f in d:
-			used[str(d[f])] = true
-		used[str(interceptor[side])] = true
-		var defs := Matchups.defenders((squads[side] as Squad).ground)
-		var on_id := str(on_slot.get("id", ""))
-		var next := ""
-		for p in defs:
-			if str(p["id"]) == on_id and not used.has(on_id):
-				next = on_id
-		if next == "":
-			for p in defs:
-				if not used.has(str(p["id"])):
-					next = str(p["id"])
-					break
-		if next == "":
-			d.erase(fid)
-		else:
-			d[fid] = next
 
 
 ## Energy for one side, most tired first: [{id, name, num, role, overall,

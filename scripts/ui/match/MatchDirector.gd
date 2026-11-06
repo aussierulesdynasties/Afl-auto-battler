@@ -1823,7 +1823,9 @@ func _assign() -> void:
 		t["tagging"] = false
 		t["chasing"] = -1
 	# Pairs the match recorded (its duels, the tag) and the loose men: the
-	# back line's fitting leaves these alone.
+	# back line's fitting leaves these alone. A match-up shows while its
+	# defender stands in the back line and its forward up forward; one
+	# rotated into another line plays there until he is back.
 	var held := {}
 	for side in range(2):
 		var e: Dictionary = _tac[side]
@@ -1831,7 +1833,7 @@ func _assign() -> void:
 		for fid in duels:
 			var f := int(by_pid.get(str(fid), -1))
 			var d := int(by_pid.get(str(duels[fid]), -1))
-			if f >= 0 and d >= 0:
+			if f >= 0 and d >= 0 and str(tokens[d]["role"]) == "DEF" and str(tokens[f]["role"]) == "FWD":
 				_pair(d, f)
 				held[f] = true
 				held[d] = true
@@ -1867,26 +1869,37 @@ func _assign() -> void:
 ## The back line against the forwards it faces, after the recorded pairs:
 ## a player in a back slot minds a forward only when he is a defender by
 ## trade (a forward or a midfielder rotated into a back pocket plays the space
-## and the ball), and the tallest defenders take the tallest forwards, so a
-## key forward is picked up by a key defender while one is on the ground.
-## A forward left over has no direct opponent. `held`: token ids to leave.
+## and the ball). A defender keeps the forward his slot faces; a forward left
+## without one is picked up by a free defender, the tallest free defender on
+## the tallest such forward. A forward still left over has no direct
+## opponent. `held`: token ids to leave.
 func _fit_defence(held: Dictionary) -> void:
 	for side in range(2):
 		var fwds := []
 		var defs := []
+		var kept := {}
 		for t in tokens:
 			var id := int(t["id"])
-			if held.has(id):
+			if held.has(id) or int(t["side"]) != side or str(t["role"]) != "DEF":
 				continue
-			if int(t["side"]) != side and str(t["role"]) == "FWD":
-				_unpair(id)
-				fwds.append(t)
-			elif int(t["side"]) == side and str(t["role"]) == "DEF":
-				var o := int(t["match"])
-				if o >= 0 and str(tokens[o]["role"]) == "FWD":
-					_unpair(id)
-				if bool(_who(str(t["pid"]))["def"]):
+			var o := int(t["match"])
+			var minds := o >= 0 and str(tokens[o]["role"]) == "FWD" and not held.has(o)
+			if bool(_who(str(t["pid"]))["def"]):
+				if minds:
+					kept[o] = true
+				else:
 					defs.append(t)
+			elif minds:
+				_unpair(id)
+		for t in tokens:
+			var id := int(t["id"])
+			if int(t["side"]) == side or str(t["role"]) != "FWD" or held.has(id) or kept.has(id):
+				continue
+			var o := int(t["match"])
+			if o >= 0 and str(tokens[o]["role"]) == "DEF":
+				_unpair(id)
+			if int(t["match"]) < 0:
+				fwds.append(t)
 		var taller := func(a, b):
 			var ha := float(_who(str(a["pid"]))["h"])
 			var hb := float(_who(str(b["pid"]))["h"])

@@ -352,8 +352,9 @@ func _test_bench_for_back_slot() -> void:
 			"With no defender on the bench another line's player goes on")
 
 
-## A defender going to the bench hands his forward on, never to a
-## forward-midfielder who comes on in his place.
+## A defender going to the bench keeps his forward (he picks him up again
+## when he comes back on): a forward-midfielder coming on in his place never
+## takes the forward.
 func _test_duel_handed_on_at_interchange() -> void:
 	var sim := MatchSim.new(Squad.new("CAR", GameDB.club_list("CAR"), true, "CAR"),
 			Squad.new("ADE", GameDB.club_list("ADE"), false, "ADE"), 4)
@@ -372,10 +373,9 @@ func _test_duel_handed_on_at_interchange() -> void:
 	sim.energy["BUTLER"] = 100.0
 	sim._swap(0, gi, 0)
 	var now := str(d.get(fid, ""))
-	_check(now != "BUTLER" and now != dfn,
-			"Arki Butler on for the key defender does not take his forward: %s" % now)
-	_check(now == "" or _by_trade(sim._on_ground(0, now)),
-			"The forward goes to a defender by trade or to nobody: %s" % now)
+	_check(now == dfn, "Arki Butler on for the key defender does not take his forward: %s" % now)
+	_check(sim._duel_man(1, sim._on_ground(1, fid)).is_empty(),
+			"While his defender rests, the forward has no direct opponent")
 
 
 ## The oval's direct opponents (MatchDirector) through every interchange of
