@@ -150,6 +150,13 @@ extends RefCounted
 ##               readers more often, and the better readers mark it. Lifts midfield
 ##               intercepts toward Champion Data's 2.5 a game. Changes match output. Off,
 ##               a match is exactly as before.
+##   sir_doug_round   row 75 (T5.Q11b, Bible 2.73, #128): one fixed round a season (Round 11)
+##               is Sir Doug Nicholls Round, named with a short factual line on the fixture
+##               and by name on your match card; a club with a bye in it marks it the
+##               first round it plays after.
+##               The round and each club's design slot ("none" until designs exist) are
+##               saved. Label and save groundwork only (#128's designs and visuals are
+##               not built): no bye, venue or match change. Off, nothing is shown or written.
 ##   key_duels   row 94 (T8.Q6, director 2026-11-06): a key forward and his direct opponent
 ##               meet more, so the full-time "beat / held" line rests on more contests.
 ##               Sides look for their key forwards more often inside 50
@@ -186,7 +193,7 @@ extends RefCounted
 ##               honour roll and data/club_premierships.csv (LeagueNews.gd). Reads only.
 ##               Off, the feed is exactly as before.
 const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries", "momentum_runaway", "key_duels", "set_shots",
-		"gather_round", "stat_focus", "league_news", "gen_traits"]
+		"sir_doug_round", "gather_round", "stat_focus", "league_news", "gen_traits"]
 
 static var _forced := {}
 static var _from_args := {}

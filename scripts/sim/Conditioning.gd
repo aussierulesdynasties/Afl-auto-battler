@@ -497,13 +497,17 @@ static func plan_effect(plan: String, hp_level: int) -> String:
 
 ## What the high-performance department does at a level (the Club budget):
 ## how fast legs recover, how high a planned peak goes and how often it lands
-## on time, and what the level costs against Standard.
+## on time, how much of a game plan's edge the players carry out (the old
+## Football department line, row 99), and what the level costs against Standard.
 const HP_RECOVERY_UP := "Legs recover %s faster each week than at Standard."
 const HP_RECOVERY_DOWN := "Legs recover %s slower each week than at Standard."
 const HP_RECOVERY_EVEN := "Legs recover at the normal rate."
 const HP_PEAK := "A planned peak reaches %s of its full height and lands within %d weeks of plan %s."
 const HP_ODDS := "about %s of the time"
 const HP_ODDS_SURE := "every season"
+const HP_PLAN_UP := "Any game plan but Balanced gives %s more of what it is built for than at Standard."
+const HP_PLAN_DOWN := "Any game plan but Balanced gives %s less of what it is built for than at Standard."
+const HP_PLAN_EVEN := "Game plans give what they are built for."
 const HP_COST_MORE := "Costs %s more than Standard, taken from the other departments."
 const HP_COST_LESS := "Frees %s for the other departments."
 const HP_COST_EVEN := "Costs %s, an even share of the budget."
@@ -520,13 +524,19 @@ static func department_words(hp_level: int) -> String:
 	var p := on_time_pct(level)
 	var odds := HP_ODDS_SURE if p == "" else HP_ODDS % p
 	var peak := HP_PEAK % [pct(float(PEAK_HEIGHT[level])), PLATEAU, odds]
+	var t := ClubBudget.tactics_mult(level) - 1.0
+	var plan := HP_PLAN_EVEN
+	if t > 0.0001:
+		plan = HP_PLAN_UP % pct(t)
+	elif t < -0.0001:
+		plan = HP_PLAN_DOWN % pct(-t)
 	var diff := ClubBudget.cost_m(level) - ClubBudget.cost_m(ClubBudget.STANDARD)
 	var cost := HP_COST_EVEN % ("$%.1fm" % ClubBudget.cost_m(level))
 	if diff > 0.001:
 		cost = HP_COST_MORE % ("$%.1fm" % diff)
 	elif diff < -0.001:
 		cost = HP_COST_LESS % ("$%.1fm" % -diff)
-	return "%s %s %s" % [recovery, peak, cost]
+	return "%s %s %s %s" % [recovery, peak, plan, cost]
 
 
 ## The plan sheet's department line: whose level the sizes and odds above are for.

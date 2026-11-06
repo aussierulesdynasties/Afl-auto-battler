@@ -644,7 +644,14 @@ static func age_pool(pool: Array, year: int, drafted: Dictionary) -> Array:
 		var id := str(p["id"])
 		if drafted.has(id):
 			continue
-		age_player(p, year)
+		if int(p.get("draft_year", 0)) == year:
+			# A generated class is made a year ahead; that year in the pool ages it but does not
+			# develop it, so it is drafted at the rating it was made with, as the real 2026 class
+			# is (row 65: one pool year of growth put picks 1-5 at 65-69, above the 4.Q9 bands).
+			# A prospect passed over in his own draft grows from then on, like anyone else.
+			p["age"] = float(p.get("age", 18.0)) + 1.0
+		else:
+			age_player(p, year)
 		if float(p.get("age", 18.0)) >= 22.0:
 			continue  # aged out of draft eligibility
 		out.append(p)

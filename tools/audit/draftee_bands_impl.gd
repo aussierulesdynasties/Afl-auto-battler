@@ -4,6 +4,10 @@ extends RefCounted
 ## list shapes) for the real 2026 class and for n generated classes, and prints OVR and POT by
 ## pick band: 1-5, 6-20, 21-40, 41+. The target (4.Q9): picks 1-5 about 60-62, 6-20 about 55-58,
 ## POT kept.
+## A generated class is drafted as a career drafts it: made a year ahead, then its pool year
+## (Prospects.age_pool, as GameState._first_class and open_offseason do) before its draft.
+## The real 2026 class is drafted as loaded. Optional second argument: the scale
+## (Prospects.DRAFT_NIGHT_SCALE) to try, e.g. `draftee_bands_impl 30 0.84`.
 ##   BAND|class|band|picks|mean OVR|median OVR|p10 OVR|p90 OVR|mean POT|median POT
 ##   READY|class|band|ready|typical|project   (readiness counts, generated classes)
 ## godot --headless --path . --script tools/audit/run_audit.gd -- draftee_bands_impl 30
@@ -74,6 +78,9 @@ func _draft(cls: Array, label: String, s: int) -> void:
 func run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var n := int(args[1]) if args.size() > 1 else 20
+	if args.size() > 2:
+		Prospects.DRAFT_NIGHT_SCALE = float(args[2])
+	print("SCALE|%.2f" % Prospects.DRAFT_NIGHT_SCALE)
 	if GameState.league_lists.is_empty():
 		GameState.begin_real_lists()
 	var real: Array = []
@@ -81,7 +88,9 @@ func run() -> void:
 		real.append((p as Dictionary).duplicate(true))
 	_draft(real, "real2026", 1)
 	for s in range(1, n + 1):
-		_draft(Prospects.generate_class(2027 + (s % 12), s), "generated", s)
+		var year := 2027 + (s % 12)
+		var cls := Prospects.generate_class(year, s)
+		_draft(Prospects.age_pool(cls, year, {}), "generated", s)
 	for label in ["real2026", "generated"]:
 		for b in BANDS:
 			var rows: Array = _rows.get(label, {}).get(str(b[2]), [])
