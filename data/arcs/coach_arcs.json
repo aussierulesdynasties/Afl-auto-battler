@@ -243,10 +243,10 @@
     "category": "board",
     "gap": 1,
     "title": [
-     "The high-performance budget"
+     "The football budget"
     ],
     "text": [
-     "{chairman} wants the high-performance budget cut, starting now."
+     "{chairman} wants the club's football spending cut, starting now."
     ],
     "choices": [
      {
@@ -261,7 +261,7 @@
         "op": "culture",
         "strand": "standards",
         "d": -1,
-        "why": "High performance lost money it needed"
+        "why": "The football side lost money it needed"
        }
       ],
       "result": "You find the savings."
