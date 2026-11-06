@@ -1217,8 +1217,8 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 		if _focus_notice != "":
 			v.add_child(UiKit.lbl(_focus_notice, UiKit.SECONDARY, UiKit.GOOD, true))
 		return box
-	var intro := "Extra work on one stat: %d%% of his training goes into it, %d%% into his plan's drills. A stat that counts for more in his rating lifts his OVR faster. Locked in until the %d season." % [
-			share, 100 - share, year + 1]
+	var intro := "Extra work on one stat: about %d%% of his training goes into it, the rest into his plan's drills. Points on one stat get dearer as it climbs, so his OVR grows more slowly than on his plan alone. Locked in until the %d season." % [
+			share, year + 1]
 	if current != "":
 		intro = "Last season's focus, %s, carries on until you lock one in for %d. " % [
 				GameState.train_stat_label(current).to_lower(), year] + intro

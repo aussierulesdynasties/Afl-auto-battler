@@ -1186,9 +1186,18 @@ func _test_stat_focus_split() -> void:
 	var spent := GameState.focus_spent(p)
 	var total := int(spent[0]) + int(spent[1])
 	_check(total > 0, "Training spent XP with a focus set (%s)" % [spent])
-	var share := float(spent[0]) / float(maxi(total, 1))
-	_check(share > 0.2 and share < 0.5,
-			"The focus takes about a third of his training (%.0f%% of %d XP)" % [share * 100.0, total])
+	# The season ceiling stops this after a few points, so the share is
+	# measured on a long run without the ceiling: about a third, never the
+	# 35-43% the first version overshot to.
+	var q: Dictionary = p.duplicate(true)
+	q.erase("focus_ledger")
+	q["xp"] = 6000
+	GameState._spend_with_weights(q, GameState.plan_weights(q), false, -1, "", key)
+	var led := GameState.focus_spent(q)
+	var long_total := int(led[0]) + int(led[1])
+	var share := float(led[0]) / float(maxi(long_total, 1))
+	_check(share > 0.30 and share < 0.37,
+			"The focus takes about a third of his training (%.1f%% of %d XP)" % [share * 100.0, long_total])
 	_check(int(p["attr"][key]) > int(before[key]), "His focus stat rose (%d to %d)" % [int(before[key]), int(p["attr"][key])])
 	var drills := 0
 	for k in before:

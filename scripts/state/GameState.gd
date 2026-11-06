@@ -9667,11 +9667,22 @@ func _spend_with_weights(p: Dictionary, weights: Dictionary, stop_at_pot: bool,
 				best_key = key
 				best_cost = cost
 		var on_focus := false
-		if focus != "" and attr.has(focus) and int(attr[focus]) < 99 \
-				and float(spent[0]) <= FOCUS_SHARE * float(int(spent[0]) + int(spent[1])):
-			on_focus = true
-			best_key = focus
-			best_cost = _cost_for(int(attr[focus]), games, mult)
+		if focus != "" and attr.has(focus) and int(attr[focus]) < 99:
+			# The point goes wherever it leaves his running focus share
+			# closest to FOCUS_SHARE, judged after the purchase, so neither the
+			# first point nor a dear focus point overshoots the share.
+			var f_cost := _cost_for(int(attr[focus]), games, mult)
+			var s0 := float(spent[0])
+			var total := float(int(spent[0]) + int(spent[1]))
+			var if_focus := absf((s0 + f_cost) / (total + f_cost) - FOCUS_SHARE)
+			var if_drill := absf(s0 / (total + float(maxi(best_cost, 1))) - FOCUS_SHARE)
+			if best_key == "" or if_focus <= if_drill:
+				on_focus = true
+				best_key = focus
+				best_cost = f_cost
+		# A focus point that is due but dearer than his banked XP waits for the
+		# next pay: he saves for it. Buying drills instead would spend that XP
+		# every round and the focus would never get its share.
 		if best_key == "" or int(p.get("xp", 0)) < best_cost:
 			break
 		p["xp"] = int(p["xp"]) - best_cost
