@@ -91,6 +91,7 @@ func _build() -> void:
 				else _para(_notice, 13, UiKit.GOOD)
 		said.name = "OffseasonNotice"
 		hv.add_child(said)
+	_undo_row(hv)
 	var tabs := UiKit.hbox(4)
 	_root.add_child(tabs)
 	for t in [["contracts", "Contracts"], ["agents", "Agents"], ["trade", "Trade"], ["budget", "Budget"]]:
@@ -119,6 +120,46 @@ func _build() -> void:
 		"budget":
 			_budget(body)
 	UiKit.restore_scroll(_scroll_box, int(_scroll_positions.get(_tab, 0)))
+
+
+## Your last delisting, free-agent signing or re-signing can be taken back
+## until the national draft starts (row 119, P-09). One tap, no confirm: the
+## undo puts everything back as it was, so it is its own safety net.
+func _undo_row(hv: VBoxContainer) -> void:
+	var last := GameState.recruit_undo_last()
+	if last.is_empty():
+		return
+	var name := str(last["name"])
+	var did := ""
+	match str(last["kind"]):
+		"release":
+			did = "You delisted %s." % name
+		"sign":
+			did = "%s signed with you." % name
+		"resign":
+			did = "%s re-signed." % name
+	var row := UiKit.hbox(8)
+	row.name = "UndoLast"
+	hv.add_child(row)
+	# Right after the action its own notice names him; the row then only says
+	# what Undo does, so the same news is not printed twice.
+	var text := "You can undo this until the national draft starts." if _notice.contains(name) \
+			else did + " You can undo it until the national draft starts."
+	var said := _para(text, 13, UiKit.TEXT)
+	said.name = "UndoLastText"
+	said.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(said)
+	var b := UiKit.btn("Undo", 15)
+	b.name = "UndoAction"
+	b.custom_minimum_size = Vector2(88, 48)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.pressed.connect(func():
+		var r := GameState.undo_recruit()
+		_notice = str(r["reason"])
+		_notice_club = ""
+		_notice_club_text = ""
+		_build())
+	row.add_child(b)
 
 
 func _budget(body: VBoxContainer) -> void:
