@@ -113,6 +113,9 @@ static func pick(ctx: Dictionary, recent: Dictionary) -> Dictionary:
 ## match: a big gap in inside 50s or clearances against the result, or else the
 ## scoring shots.
 static func _close_question(res: Dictionary, side: int, margin: int, opp: String) -> String:
+	# A draw: nothing decided it.
+	if margin == 0:
+		return "Level at the final siren against %s. Was a draw a fair result?" % opp
 	var teams: Array = res.get("team", [])
 	if teams.size() >= 2:
 		var mine: Dictionary = teams[side]
