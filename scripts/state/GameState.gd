@@ -9292,8 +9292,9 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 	for p in pool:
 		by_id[str(p["id"])] = p
 	# Blooding brings young players in for older ones: a youngster who came
-	# in is never the next one out, and nobody young is dropped, so each
-	# swap is a real change and the note names only what changed.
+	# in is never the next one out, a man swapped out never comes back, and
+	# nobody young is dropped, so each swap is a real change and the note
+	# names only what changed.
 	var brought: Array = []
 	var dropped: Array = []
 	for _n in range(YOUTH_MAX):
@@ -9312,7 +9313,7 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 			var role: String = "MID" if line == "WING" else line
 			for p in pool:
 				var pid := str(p["id"])
-				if used.has(pid) or brought.has(pid) or not is_young(p) \
+				if used.has(pid) or brought.has(pid) or dropped.has(pid) or not is_young(p) \
 						or not Ratings.plays_role(p, role):
 					continue
 				var gap := int(by_id[weakest]["overall"]) - int(p["overall"])

@@ -9,7 +9,8 @@ extends RefCounted
 ##
 ## Each side sets a direct opponent on the other side's key forwards (at most
 ## KEY_FORWARDS). The default is how a coach sets up before he looks closely:
-## his best key defenders, by rating, on their best key forwards, by rating.
+## the men in his key posts (full-back, centre half-back) on their best key
+## forwards, by rating.
 ## Reading who is tall and strong overhead can do better - or worse.
 ##
 ## Pure rules on match-day sides; no state.
@@ -89,8 +90,15 @@ static func mark_chance(fwd: Dictionary, dfn: Dictionary, fwd_lines := 0.0, def_
 	return clampf(MARK_BASE + (fwd_lines - def_lines) / MARK_LINES + edge + mark_shift(fwd, dfn), MARK_FLOOR, DUEL_CAP)
 
 
-static func _is_key_forward(p: Dictionary) -> bool:
+## A key forward and a key defender, as fielded (`p` is a match-day copy:
+## his role is the line he plays). The one definition the match, the
+## selection's key posts (Roles.key_post_order) and the screens share.
+static func is_key_forward(p: Dictionary) -> bool:
 	return str(p.get("role", "")) == "FWD" and PlayerProfile.forward_type(p) == "Key forward"
+
+
+static func is_key_defender(p: Dictionary) -> bool:
+	return str(p.get("role", "")) == "DEF" and PlayerProfile.player_type(p) == "Key defender"
 
 
 ## Their forwards who get a direct opponent: key forwards first, best rated
@@ -102,7 +110,7 @@ static func key_forwards(ground: Array) -> Array:
 		if str(p.get("role", "")) != "FWD":
 			continue
 		fwds.append(p)
-		if _is_key_forward(p):
+		if is_key_forward(p):
 			keys.append(p)
 	var by_ovr := func(a, b):
 		if int(a["overall"]) != int(b["overall"]):
@@ -122,8 +130,8 @@ static func defenders(ground: Array) -> Array:
 		if str(p.get("role", "")) == "DEF":
 			out.append(p)
 	out.sort_custom(func(a, b):
-		var ka := PlayerProfile.player_type(a) == "Key defender"
-		var kb := PlayerProfile.player_type(b) == "Key defender"
+		var ka := is_key_defender(a)
+		var kb := is_key_defender(b)
 		if ka != kb:
 			return ka
 		if int(a["overall"]) != int(b["overall"]):
@@ -132,11 +140,32 @@ static func defenders(ground: Array) -> Array:
 	return out
 
 
-## The default set-up: key defenders by rating on their key forwards by
-## rating. {forward id: defender id}.
+## The defenders in the order the default set-up uses them: the men standing
+## in the key posts first (full-back, then centre half-back: the first and
+## Roles.SECOND_POST-th defender in ground order, the selection's spot order),
+## then the rest as defenders() ranks them.
+static func duel_defenders(ground: Array) -> Array:
+	var line := []
+	for p in ground:
+		if str(p.get("role", "")) == "DEF":
+			line.append(p)
+	var posts := []
+	if not line.is_empty():
+		posts.append(line[0])
+	if line.size() > Roles.SECOND_POST:
+		posts.append(line[Roles.SECOND_POST])
+	var out := posts.duplicate()
+	for p in defenders(ground):
+		if not posts.has(p):
+			out.append(p)
+	return out
+
+
+## The default set-up: the defenders in the key posts (duel_defenders) on
+## their key forwards by rating. {forward id: defender id}.
 static func defaults(attack_ground: Array, defence_ground: Array) -> Dictionary:
 	var out := {}
-	var defs := defenders(defence_ground)
+	var defs := duel_defenders(defence_ground)
 	var i := 0
 	for f in key_forwards(attack_ground):
 		if i >= defs.size():

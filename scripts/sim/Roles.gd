@@ -132,22 +132,24 @@ static func label(p: Dictionary) -> String:
 
 
 ## The key posts of a line (director, 2026-11-07: "Small defenders placed in
-## key defender spots"). A line of six is laid out in spot order: the first
-## is the goal-square post (full-back, full-forward), the last the centre
-## half post (centre half-back, centre half-forward), the four between are the
-## flanks and pockets (TeamBuilder.SPOTS, FormationView.ASSIGN,
-## MatchDirector.SLOTS). The rule: the line's key position players - a Key
-## defender or Key forward by type, in his own position - take the two posts,
-## the better rated at the goal square. A line short of key players fills
-## the post with the tallest of the rest (then the better rated). Everyone
-## else keeps the order he came in. Only the auto-pick lays a line out this
-## way; a coach's own placement is never re-shuffled.
-const KEY_POSTS := 2
+## key defender spots"). A line is laid out in spot order (TeamBuilder.SPOTS,
+## FormationView.ASSIGN, MatchDirector.SLOTS): index 0 is the goal-square
+## post (full-back, full-forward), index SECOND_POST the centre half post
+## (centre half-back, centre half-forward), the four between are the flanks
+## and pockets. The rule: the line's key position players - a Key defender or
+## Key forward as the sim reads him in this line (Matchups) - take the posts,
+## the better rated at the goal square. A line short of key players fills a
+## post with the tallest of the rest (then the better rated). A line too short
+## to have the centre half post (under six) has only the goal-square post.
+## Everyone else keeps the order he came in. Only the auto-pick lays a line
+## out this way; a coach's own placement is never re-shuffled.
+const SECOND_POST := 5
 
 
 static func key_post_order(players: Array, line: String) -> Array:
-	if players.size() < 2 or not (line in ["DEF", "FWD"]):
+	if players.is_empty() or not (line in ["DEF", "FWD"]):
 		return players.duplicate()
+	var posts_n := 2 if players.size() > SECOND_POST else 1
 	# One read per player (player_type is not free), then a plain sort.
 	var rank := []
 	for i in range(players.size()):
@@ -161,31 +163,34 @@ static func key_post_order(players: Array, line: String) -> Array:
 		if a[3] != b[3]:
 			return a[3] > b[3]
 		return a[0] < b[0])
-	var post_at := [int(rank[0][0]), int(rank[1][0])]
-	var posts: Array = [players[post_at[0]], players[post_at[1]]]
+	var post_at := []
+	for k in range(posts_n):
+		post_at.append(int(rank[k][0]))
 	var rest: Array = []
 	for i in range(players.size()):
 		if not post_at.has(i):
 			rest.append(players[i])
-	# Goal-square post, then the four flanks and pockets, then the centre
-	# half post; anyone past six follows.
-	var out: Array = [posts[0]]
-	out.append_array(rest.slice(0, 4))
-	out.append(posts[1])
-	out.append_array(rest.slice(4))
+	# Goal-square post, then the flanks and pockets, then (in a full line) the
+	# centre half post at SECOND_POST; anyone past six follows.
+	var out: Array = [players[post_at[0]]]
+	if posts_n == 1:
+		out.append_array(rest)
+		return out
+	out.append_array(rest.slice(0, SECOND_POST - 1))
+	out.append(players[post_at[1]])
+	out.append_array(rest.slice(SECOND_POST - 1))
 	return out
 
 
-## A key position player for this line, read in his own position.
+## A key position player in this line, read the way the match reads him
+## when he is fielded there (Matchups.is_key_defender / is_key_forward on
+## his match-day copy, whose role is the line he plays).
 static func is_key_post(p: Dictionary, line: String) -> bool:
-	var own := str(p.get("own_role", p.get("role", "")))
-	if own != line:
-		return false
 	var view := p.duplicate()
-	view["role"] = own
+	view["role"] = line
 	if line == "FWD":
-		return PlayerProfile.forward_type(view) == "Key forward"
-	return PlayerProfile.player_type(view) == "Key defender"
+		return Matchups.is_key_forward(view)
+	return line == "DEF" and Matchups.is_key_defender(view)
 
 
 ## Which of the midfielders on the ground play the wings: the named ones

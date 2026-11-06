@@ -193,7 +193,7 @@ func _shape_panel() -> Control:
 	oval.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	oval.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	oval.custom_minimum_size = Vector2(0, 180)
-	oval.setup(_squad.ground, _squad.bench, GameState.my_club)
+	oval.setup(_squad.ground, _squad.bench, GameState.my_club, not GameState.my_selection().is_empty())
 	lv.add_child(oval)
 	return left
 
