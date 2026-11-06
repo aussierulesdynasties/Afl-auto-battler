@@ -937,8 +937,9 @@ func _test_captain_card_ui_tests() -> void:
 	await _settle()
 
 
-## Club culture over My list, by real taps: the way in, the words, the reasons
-## one tap away.
+## Club culture under the leaders in the Captaincy panel (TODO row 100), by real
+## taps: the way in is Captaincy, the words, what each strand does, the reasons;
+## the old Culture sheet and its row on My list are gone.
 func _test_culture_ui_tests() -> void:
 	var db = root.get_node("GameDB")
 	_state.reset()
@@ -948,31 +949,38 @@ func _test_culture_ui_tests() -> void:
 	Culture.change(_state.relations, "FRE", "together", 6, "A run of four losses", _state.season_year, "Round 6")
 	for i in range(3):
 		Culture.change(_state.relations, "FRE", "together", 6, "Played finals", _state.season_year, "Round 24")
-	# The way in is a real tap, the screen says the strands in words and what moves
-	# each, the dated reasons are football words, Android Back closes it.
 	var ls: Control = load("res://scenes/ListScene.tscn").instantiate()
 	root.add_child(ls)
 	await _settle()
-	var open_btn: Button = ls.find_child("CultureOpen", true, false)
-	_check(open_btn != null and open_btn.size.y >= 44, "My list has a thumb-sized way into Club culture")
-	var culture_sheet = load("res://scripts/ui/CultureSheet.gd")
-	var quiet := {"words": "Nothing stands out yet"}
-	var loud := {"words": "A tight group"}
-	_check(culture_sheet.entry_phrases([quiet, quiet, quiet]) == PackedStringArray(["Nothing stands out yet"]),
-			"When all three strands have nothing to say, the block says so once")
-	_check(culture_sheet.entry_phrases([loud, quiet, quiet]) == PackedStringArray(["A tight group"])
-			and culture_sheet.entry_phrases([loud, quiet, loud]).size() == 2
-			and culture_sheet.entry_phrases([loud, loud, loud]).size() == 3,
-			"Otherwise the row names only the strands that stand out, never Nothing stands out yet beside them")
-	_check(open_btn != null and _screen_text(open_btn).count("Nothing stands out yet") <= 1,
-			"The way in never repeats Nothing stands out yet")
-	_check(open_btn != null and _screen_text(open_btn).contains("A tight group"), "The way in says the strands in bold words")
+	# The old sheet cannot be opened: no row on My list, no script, no caller.
+	_check(ls.find_child("CultureOpen", true, false) == null and ls.find_child("CultureSheet", true, false) == null,
+			"My list has no Club culture row of its own any more")
+	_check(not ResourceLoader.exists("res://scripts/ui/CultureSheet.gd"), "The old Culture sheet's script is gone")
+	var callers := []
+	var stack := ["res://scripts"]
+	while not stack.is_empty():
+		var d: String = stack.pop_back()
+		for sub in DirAccess.get_directories_at(d):
+			stack.append(d + "/" + sub)
+		for f in DirAccess.get_files_at(d):
+			if f.ends_with(".gd") and FileAccess.get_file_as_string(d + "/" + f).contains("CultureSheet"):
+				callers.append(f)
+	_check(callers.is_empty(), "Nothing in the game opens a Culture sheet (%s)" % ", ".join(callers))
+	# The way in is a real tap on Captaincy; the culture sits under the leaders.
+	var open_btn: Button = ls.find_child("CaptaincyOpen", true, false)
 	var why: String = await Tap.tap(open_btn)
 	await _settle()
-	var sheet: Node = ls.find_child("CultureSheet", true, false)
+	var cap: Node = ls.find_child("CaptaincySheet", true, false)
+	var sheet: Node = cap.find_child("CaptaincyCulture", true, false) if cap != null else null
 	_check(why == "" and sheet != null and _screen_text(sheet).contains("A tight group")
 			and _screen_text(sheet).contains("Nothing stands out yet"),
-			"The screen says the strands in words, and what has nothing to say (%s)" % why)
+			"The Captaincy panel says the strands in words, and what has nothing to say (%s)" % why)
+	var spots: Control = cap.find_child("CaptaincySpots", true, false) if cap != null else null
+	_check(spots != null and sheet != null
+			and (sheet as Control).get_global_rect().position.y >= spots.get_global_rect().end.y - 1.0,
+			"The culture sits under the captain and vice-captains")
+	var title: Label = sheet.find_child("CultureTitle", true, false) if sheet != null else null
+	_check(title != null and title.text == "%s culture" % db.club_short("FRE"), "The section names whose culture it is")
 	var effect_of := func(id: String) -> String:
 		var row: Node = sheet.find_child("Strand_" + id, true, false) if sheet != null else null
 		var e: Label = row.find_child("StrandEffect", true, false) if row != null else null
@@ -984,17 +992,25 @@ func _test_culture_ui_tests() -> void:
 	var trade: Label = sheet.find_child("CultureTradeOff", true, false) if sheet != null else null
 	_check(trade != null and trade.is_visible_in_tree() and not trade.text.contains("no effect")
 			and trade.text.contains("costs you"),
-			"The header names what culture touches and what it costs (P-63)")
+			"The section names what culture touches and what it costs (P-63)")
 	_check(trade != null and trade.get_global_rect().position.y < sheet.find_child("Strand_standards", true, false).get_global_rect().position.y,
-			"That line sits above the strands, in the header")
+			"That line sits above the strands")
 	_check(sheet != null and _screen_text(sheet).contains(Culture.moves_line("ambition")), "Each strand says what moves it")
 	var reasons: Node = sheet.find_child("CultureReasons", true, false) if sheet != null else null
 	_check(reasons != null and reasons.is_visible_in_tree() and _screen_text(reasons).contains("layed finals. Togetherness rose."),
 			"Each reason is one event in football words")
+	# With the culture below, the spots still take a finger's tap.
+	why = await Tap.tap(cap.find_child("CaptaincySlot_0", true, false) if cap != null else null)
+	await _settle()
+	var picker: Node = ls.find_child("CaptaincyPicker", true, false)
+	_check(why == "" and picker != null, "With the culture below, a tap on a spot still opens the picker (%s)" % why)
+	if picker != null:
+		why = await Tap.tap(picker.find_child("PickerBack", true, false))
+		await _settle()
 	# The strand emblems: the real art with each strand's name, tinted by the club,
-	# never moving the words; and the screen still stands without the files.
-	# Loaded here, not named: the screen's script needs the autoloads to compile.
-	var sheet_script = load("res://scripts/ui/CultureSheet.gd")
+	# never moving the words; and the section still stands without the files.
+	# Loaded here, not named: the script needs the autoloads to compile.
+	var sheet_script = load("res://scripts/ui/CultureSection.gd")
 	var icon_px := float(sheet_script.ICON)
 	var words_x := {}
 	for st in Culture.STRANDS:
@@ -1016,7 +1032,7 @@ func _test_culture_ui_tests() -> void:
 				and absf(name_lbl.get_global_rect().position.y - icon.get_global_rect().end.y) < 8.0,
 				"The %s emblem is drawn at its size, its name centred right under it" % id)
 		var words: Control = row.find_child("StrandWords", true, false) if row != null else null
-		words_x[id] = words.get_global_rect() if words != null else Rect2()
+		words_x[id] = Rect2(words.get_global_rect().position - (sheet as Control).get_global_rect().position, words.size) if words != null else Rect2()
 	var tint: Color = sheet_script.emblem_tint("FRE")
 	_check(tint.s > 0.08 and tint.s < 0.5 and tint.v > 0.75, "Fremantle's emblems carry a light wash of purple (%s)" % tint.to_html(false))
 	var dogs: Color = sheet_script.emblem_tint("WBD")
@@ -1030,20 +1046,21 @@ func _test_culture_ui_tests() -> void:
 	_check(all_icons.size() == 3 and (all_icons[0] as TextureRect).modulate.is_equal_approx(tint), "Each strand has one emblem, in the club's wash")
 	ls.handle_back()
 	await _settle()
-	_check(ls.find_child("CultureSheet", true, false) == null, "Android Back closes the culture screen")
+	_check(ls.find_child("CaptaincySheet", true, false) == null, "Android Back closes the Captaincy panel, culture and all")
 	# Without the files: no emblem, the same words in the same place.
 	sheet_script.icon_dir = "res://assets/ui/no_such_folder"
-	why = await Tap.tap(ls.find_child("CultureOpen", true, false))
+	why = await Tap.tap(ls.find_child("CaptaincyOpen", true, false))
 	await _settle()
-	sheet = ls.find_child("CultureSheet", true, false)
+	cap = ls.find_child("CaptaincySheet", true, false)
+	sheet = cap.find_child("CaptaincyCulture", true, false) if cap != null else null
 	_check(why == "" and sheet != null and sheet.find_child("StrandIcon", true, false) == null
-			and _screen_text(sheet).contains("A tight group"), "Without the emblem files the screen still says the strands (%s)" % why)
+			and _screen_text(sheet).contains("A tight group"), "Without the emblem files the section still says the strands (%s)" % why)
 	for st in Culture.STRANDS:
 		var row2: Node = sheet.find_child("Strand_" + str(st[0]), true, false) if sheet != null else null
 		var words2: Control = row2.find_child("StrandWords", true, false) if row2 != null else null
 		var was: Rect2 = words_x[str(st[0])]
-		_check(words2 != null and is_equal_approx(words2.get_global_rect().position.x, was.position.x)
-				and is_equal_approx(words2.get_global_rect().size.x, was.size.x),
+		var at2: Vector2 = words2.get_global_rect().position - (sheet as Control).get_global_rect().position if words2 != null else Vector2.ZERO
+		_check(words2 != null and is_equal_approx(at2.x, was.position.x) and is_equal_approx(words2.size.x, was.size.x),
 				"The %s emblem takes no width from the strand's words" % str(st[0]))
 	sheet_script.icon_dir = "res://assets/ui/culture"
 	ls.handle_back()

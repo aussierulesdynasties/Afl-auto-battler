@@ -1,8 +1,10 @@
 class_name CaptaincySheet
 extends RefCounted
-## Your captain and up to two vice-captains (Captaincy.gd), over My list.
-## The spots scroll; what your pick would cost, Confirm and Close stay pinned
-## below them (on a wide screen the cost sits beside the spots). The general
+## Your captain and up to two vice-captains (Captaincy.gd), over My list, and
+## under them the club's culture (CultureSection: the old Culture sheet moved
+## here, TODO row 100). The spots and the culture scroll; what your pick would
+## cost, Confirm and Close stay pinned below them (on a wide screen the cost
+## sits beside the spots). The general
 ## rules are one tap away ("How captaincy works"). The picker lists the whole
 ## list by name with Leadership shown plainly: nothing is recommended.
 ## Close or Back returns to My list.
@@ -116,6 +118,8 @@ static func _build(host: Control, box: Dictionary, state: Dictionary, done: Call
 		body.add_child(spots)
 		footer.add_child(how)
 		footer.add_child(notes)
+	# The culture the leaders set, under them.
+	body.add_child(CultureSection.build(wide))
 	if off_why != "":
 		var ol := UiKit.lbl(off_why, UiKit.BODY if off_bad else UiKit.SMALL, UiKit.BAD if off_bad else UiKit.MUTED)
 		ol.name = "CaptaincyWhyNot" if off_bad else "CaptaincyConfirmWhy"
