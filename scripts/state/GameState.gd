@@ -10143,7 +10143,8 @@ func _season_news() -> void:
 		add_news("award", "Norm Smith Medal: %s (%s), %s" % [award_name(medal),
 				GameDB.club_name(str(medal["club"])), str(medal["line"])])
 	if premier() != "":
-		add_news("premiers", "%s are the %d premiers." % [GameDB.club_name(premier()), season_year])
+		# With the switch "league_news", one sentence of the club's flag history (row 76).
+		add_news("premiers", LeagueNews.premiers_line(premier(), season_year, honour_roll))
 
 
 func _find_player(id: String) -> Dictionary:
@@ -11733,7 +11734,7 @@ func _culture_marks() -> Dictionary:
 
 ## Move a club's strand, with the reason. A rival whose strand crosses into a
 ## new named band makes the league news (once a season, neutral words); yours
-## is on your Club culture page.
+## is in the culture under your leaders (the Captaincy panel).
 func _culture_move(code: String, strand: String, d: int, why: String) -> void:
 	var before := Culture.value(relations, code, strand)
 	var when := "Off-season" if season == null or offseason_year == season_year else last_label
