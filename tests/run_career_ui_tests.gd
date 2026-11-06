@@ -486,6 +486,8 @@ func _run() -> void:
 	await _t("_test_back_arrow_taps")
 	await _t("_test_finals_card_taps")
 	await _t("_test_sim_asks_only_before_your_match")
+	await _t("_test_busy_cover")
+	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
 	_t("_test_type_roles")
@@ -2550,6 +2552,94 @@ func _test_sim_asks_only_before_your_match() -> void:
 	_router.go("main")
 	await _settle()
 	root.size = ask_size_before
+
+
+## Sim the week on a phone (2026-11-07, Android: the hub froze with no sign
+## of life while a round played out): a dimmer says what is happening, takes
+## every tap until the round is done, and plays the round once.
+func _test_busy_cover() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_state.set_confirm_sim_round(false)
+	_state.reset()
+	_state.career_seed = 4402
+	_state.replay_seed = 4402
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_state.week_events = []
+	var sea = _state.season
+	var r0: int = sea.round_index
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var hub := current_scene
+	hub.call("_on_sim_round")
+	await process_frame
+	var cover := hub.find_child("BusyCover", true, false) as Control
+	var say := hub.find_child("BusyText", true, false) as Label
+	_check(cover != null and say != null and say.text == "Playing the round..." and sea.round_index == r0,
+			"Sim the week: the dimmer says the round is being played before the round runs")
+	# The dimmer is over Sim the week and stops a finger there. (A real tap
+	# cannot be timed into the step: the round plays within its settle frames.)
+	var sim := hub.find_child("SimRound", true, false) as Control
+	_check(cover != null and sim != null and cover.mouse_filter == Control.MOUSE_FILTER_STOP
+			and cover.get_global_rect().has_point(Tap.screen_point(sim))
+			and cover.get_index() == cover.get_parent().get_child_count() - 1,
+			"A second tap while the round plays is taken by the dimmer, not Sim the week")
+	await _settle()
+	_check(sea.round_index == r0 + 1 and hub.find_child("BusyCover", true, false) == null,
+			"The round is played once and the dimmer is gone (round %d -> %d)" % [r0, sea.round_index])
+	for i in range(3):
+		if not hub.call("handle_back"):
+			break
+		await _settle()
+	sim = hub.find_child("SimRound", true, false) as Control
+	var why: String = await Tap.tap(sim) if sim != null else "missing"
+	await _settle()
+	_check(why == "" and sea.round_index == r0 + 2 and hub.find_child("BusyCover", true, false) == null,
+			"A finger's tap on Sim the week plays the next round behind the dimmer (%s)" % why)
+	_router.stack = ["main"]
+	_router.go("main")
+	await _settle()
+	root.size = size_before
+
+
+## My List on a phone: switching between Shape and Full list shows the pane
+## already built instead of building the page again (a perf guard: Android
+## stalled on every switch).
+func _test_list_tabs_kept() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_state.reset()
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_router.stack = ["main", "hub"]
+	_router.go("list")
+	await _settle()
+	var list := current_scene
+	var full := list.find_child("ListTabFull", true, false) as Control
+	var why: String = await Tap.tap(full)
+	await _settle()
+	var added := [0]
+	var count := func(_n): added[0] += 1
+	node_added.connect(count)
+	var shape: Control = null
+	for t in list.find_children("ListTabShape", "", true, false):
+		if (t as Control).is_visible_in_tree():
+			shape = t
+	why += await Tap.tap(shape)
+	await _settle()
+	full = null
+	for t in list.find_children("ListTabFull", "", true, false):
+		if (t as Control).is_visible_in_tree():
+			full = t
+	why += await Tap.tap(full)
+	await _settle()
+	node_added.disconnect(count)
+	_check(why == "" and added[0] < 10 and list.find_child("ShapeScroll", true, false) != null,
+			"A tab switched back and forth on My List builds the page again for neither (%d nodes added; %s)" % [added[0], why])
+	_router.stack = ["main"]
+	_router.go("main")
+	await _settle()
+	root.size = size_before
 
 
 func _test_season_awards() -> void:

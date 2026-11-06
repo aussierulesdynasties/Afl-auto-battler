@@ -366,11 +366,12 @@ func _ordinal(n: int) -> String:
 ## Continue the career: run the intake draft, or roll on directly when the
 ## prospect pool is empty.
 func _on_intake_draft() -> void:
-	if GameState.begin_intake_draft():
-		Router.go("draft")
-		return
-	if GameState.start_next_season():
-		Router.replace("hub")
+	UiKit.run_covered(self, "Starting the new season...", func():
+		if GameState.begin_intake_draft():
+			Router.go("draft")
+			return
+		if GameState.start_next_season():
+			Router.replace("hub"))
 
 
 # ---------------------------------------------------------------------------
