@@ -269,10 +269,11 @@ static func margin_line(m: int, won: bool) -> String:
 	return "Beaten by %d points. A hiding." % m
 
 
-## The club's history, with this year's Grand Final the newest entry. Flags come
-## from the save's honour roll and, before the save, data/club_premierships.csv;
-## Grand Finals lost only from the save. Where the record cannot know, the line says nothing it can't.
-static func history_line(club: String, year: int, roll: Array, won: bool) -> String:
+## A club's flags before `year`: {flags: {year: true}, lost: {year: true} (Grand
+## Finals lost, from the save only), last_flag (0 for none), known (the record before
+## the save is on file)}. Flags come from the save's honour roll and, before the
+## save, data/club_premierships.csv. Shared with the league news layer (LeagueNews).
+static func flag_record(club: String, year: int, roll: Array) -> Dictionary:
 	var flags := {}
 	var lost := {}
 	var save_from := year
@@ -292,6 +293,18 @@ static func history_line(club: String, year: int, roll: Array, won: bool) -> Str
 	var last_flag := 0
 	for y in flags:
 		last_flag = maxi(last_flag, int(y))
+	return {"flags": flags, "lost": lost, "last_flag": last_flag, "known": bool(before["known"])}
+
+
+## The club's history, with this year's Grand Final the newest entry. Flags come
+## from the save's honour roll and, before the save, data/club_premierships.csv;
+## Grand Finals lost only from the save. Where the record cannot know, the line says nothing it can't.
+static func history_line(club: String, year: int, roll: Array, won: bool) -> String:
+	var rec := flag_record(club, year, roll)
+	var flags: Dictionary = rec["flags"]
+	var lost: Dictionary = rec["lost"]
+	var before := {"known": rec["known"]}
+	var last_flag := int(rec["last_flag"])
 	if won:
 		if flags.is_empty() and bool(before["known"]):
 			return "The club's first premiership. Ever."
