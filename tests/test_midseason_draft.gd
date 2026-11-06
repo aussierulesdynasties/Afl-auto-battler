@@ -183,6 +183,25 @@ func _test_carnival_and_draft() -> void:
 	gs.advance()
 	_check(bool(gs.midseason.get("done", false)), "Sim the week settles the draft")
 	_check(not gs.midseason["picks"].any(func(k): return str(k["club"]) == "GEE"), "Our unmade pick was passed")
+	# Nobody left to take: the hub passes the pick itself and opens no card
+	# with only Pass on it (director, 2026-11-07); the news says why.
+	_check(gs.load_career(), "Back to the waiting pick, once more")
+	_check(MidseasonDraft.waiting(gs), "Waiting before the pool empties")
+	gs.free_agents.clear()
+	gs.draftee_pool = gs.draftee_pool.filter(func(q): return int(q.get("draft_year", gs.season_year)) >= gs.season_year)
+	_check(MidseasonDraft.pool(gs).is_empty(), "Nobody left to take")
+	hub = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	_check(hub.find_child("MidseasonDraft", true, false) == null, "No draft card when there is no choice to make")
+	_check(not MidseasonDraft.waiting(gs) and bool(gs.midseason.get("done", false)), "The pick passed by itself")
+	_check(gs.news.any(func(n): return str(n["text"]) in [MidseasonDraft.NOBODY_LEFT_NEWS, MidseasonDraft.NOBODY_AT_ALL_NEWS]),
+			"The news says the pick passed with nobody left")
+	_check(not (gs.news.any(func(n): return str(n["text"]) == "Mid-season rookie draft: no club took a player.")
+			and gs.news.any(func(n): return str(n["text"]) == MidseasonDraft.NOBODY_LEFT_NEWS)),
+			"Never 'no club took a player' and 'nobody was left' side by side")
+	hub.queue_free()
+	await _settle()
 	# Next season the record starts again.
 	_check(int(gs.midseason.get("year", 0)) == gs.season_year, "Record is this season's")
 	reached_end = true

@@ -56,6 +56,10 @@ func _ready() -> void:
 	_root = UiKit.vbox(10)
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(_on_resize)
+	# A draft pick with nobody left to take is no choice: it passes here,
+	# before the news is built, instead of opening a card with only Pass.
+	MidseasonDraft.pass_if_nobody_left(GameState)
+	RookieList.pass_if_nobody_left(GameState)
 	_build()
 	# The first visit's orientation comes before anything else waiting here;
 	# a pending press conference follows when it closes.
@@ -1517,12 +1521,10 @@ func _show_midseason_pick() -> void:
 	_midseason_overlay.name = "MidseasonDraft"
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Mid-season rookie draft", UiKit.TITLE))
-	var note := UiKit.lbl("Your pick. He signs a rookie deal to the end of next season. Sim the week without picking passes it.", 15, UiKit.TEXT)
+	var note := UiKit.lbl("Your pick: whoever you take signs a rookie deal to the end of next season. Sim the week without picking passes it.", 15, UiKit.TEXT)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(note)
 	var shown := MidseasonDraft.pool(GameState).slice(0, MIDSEASON_SHOWN)
-	if shown.is_empty():
-		v.add_child(UiKit.lbl("Nobody is left to take.", 15, UiKit.TEXT))
 	for p in shown:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
