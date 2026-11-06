@@ -195,8 +195,11 @@ func _test_carnival_and_draft() -> void:
 	await _settle()
 	_check(hub.find_child("MidseasonDraft", true, false) == null, "No draft card when there is no choice to make")
 	_check(not MidseasonDraft.waiting(gs) and bool(gs.midseason.get("done", false)), "The pick passed by itself")
-	_check(gs.news.any(func(n): return str(n["text"]) == MidseasonDraft.NOBODY_LEFT_NEWS),
+	_check(gs.news.any(func(n): return str(n["text"]) in [MidseasonDraft.NOBODY_LEFT_NEWS, MidseasonDraft.NOBODY_AT_ALL_NEWS]),
 			"The news says the pick passed with nobody left")
+	_check(not (gs.news.any(func(n): return str(n["text"]) == "Mid-season rookie draft: no club took a player.")
+			and gs.news.any(func(n): return str(n["text"]) == MidseasonDraft.NOBODY_LEFT_NEWS)),
+			"Never 'no club took a player' and 'nobody was left' side by side")
 	hub.queue_free()
 	await _settle()
 	# Next season the record starts again.

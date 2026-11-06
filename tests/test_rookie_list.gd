@@ -216,7 +216,10 @@ func _test_nobody_left() -> void:
 			"No Rookie Draft sheet opens with nobody to take")
 	host.queue_free()
 	_check(not RookieList.waiting(gs) and bool(gs.rookie_draft.get("done", false)), "The pick passed and the draft ended")
-	_check(gs.news.any(func(n): return str(n["text"]) == RookieList.NOBODY_LEFT_NEWS), "The news says why")
+	_check(gs.news.any(func(n): return str(n["text"]) in [RookieList.NOBODY_LEFT_NEWS, RookieList.NOBODY_AT_ALL_NEWS]), "The news says why")
+	_check(not (gs.news.any(func(n): return str(n["text"]) == "Rookie Draft: no club took a player.")
+			and gs.news.any(func(n): return str(n["text"]) == RookieList.NOBODY_LEFT_NEWS)),
+			"Never 'no club took a player' and 'nobody was left' side by side")
 
 
 ## The Rookie Draft sheet over the pre-season (or the hub): a real tap on Pick.

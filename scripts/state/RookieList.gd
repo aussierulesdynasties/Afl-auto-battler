@@ -40,6 +40,8 @@ const CAT_A_SPOTS := 6
 const SENIOR_SPOTS := Contracts.MAX_LIST - CAT_A_SPOTS
 const KIND := "rookie"
 const NOBODY_LEFT_NEWS := "Rookie Draft: nobody was left when your pick came up, so your draft ended."
+## Nobody to take from the start: one line instead of two.
+const NOBODY_AT_ALL_NEWS := "Rookie Draft: there was nobody to take, so no club made a pick, yours included."
 ## Under this age a Rookie Draft pick signs for two seasons, otherwise one.
 const TWO_YEAR_UNDER := 21.0
 
@@ -326,8 +328,9 @@ static func _finish(gs) -> void:
 	rec["done"] = true
 	var picks: Array = rec.get("picks", [])
 	var mine := picks.filter(func(k): return str(k["club"]) == gs.my_club)
+	var nobody := bool(rec.get("nobody_left", false))
 	if picks.is_empty():
-		gs.add_news("draft", "Rookie Draft: no club took a player.")
+		gs.add_news("draft", NOBODY_AT_ALL_NEWS if nobody else "Rookie Draft: no club took a player.")
 	else:
 		var line := "Rookie Draft, %d pick%s across the league." % [picks.size(), "" if picks.size() == 1 else "s"]
 		if not mine.is_empty():
@@ -336,8 +339,8 @@ static func _finish(gs) -> void:
 				bits.append("%s (%s)" % [k["name"], k["from"]])
 			line += " Your rookies: %s." % ", ".join(bits)
 		gs.add_news("draft", line)
-	if bool(rec.get("nobody_left", false)):
-		gs.add_news("draft", NOBODY_LEFT_NEWS)
+		if nobody:
+			gs.add_news("draft", NOBODY_LEFT_NEWS)
 	gs.mark_dirty()
 
 

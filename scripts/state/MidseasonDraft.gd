@@ -28,6 +28,9 @@ const DRAFT_AFTER := 11
 const STARS := 3
 const KIND := "midseason"
 const NOBODY_LEFT_NEWS := "Mid-season rookie draft: nobody was left when your pick came up, so it passed."
+## Nobody to take from the start: one line, not "no club took a player" and
+## "nobody was left" side by side.
+const NOBODY_AT_ALL_NEWS := "Mid-season rookie draft: there was nobody to take, so no club made a pick, yours included."
 
 const STATE_WORDS := {
 	"VICM": "Vic Metro", "VICC": "Vic Country", "SA": "South Australia",
@@ -271,14 +274,15 @@ static func _finish(gs) -> void:
 	var rec: Dictionary = gs.midseason
 	rec["done"] = true
 	var picks: Array = rec.get("picks", [])
+	var nobody := bool(rec.get("nobody_left", false))
 	if picks.is_empty():
-		gs.add_news("draft", "Mid-season rookie draft: no club took a player.")
+		gs.add_news("draft", NOBODY_AT_ALL_NEWS if nobody else "Mid-season rookie draft: no club took a player.")
 	else:
 		var bits: PackedStringArray = []
 		for k in picks:
 			bits.append("%s: %s (%s)" % [GameDB.club_short(str(k["club"])), k["name"], k["from"]])
 		gs.add_news("draft", "Mid-season rookie draft, %d pick%s. %s." % [picks.size(),
 				"" if picks.size() == 1 else "s", "; ".join(bits)])
-	if bool(rec.get("nobody_left", false)):
-		gs.add_news("draft", NOBODY_LEFT_NEWS)
+		if nobody:
+			gs.add_news("draft", NOBODY_LEFT_NEWS)
 	gs.mark_dirty()
