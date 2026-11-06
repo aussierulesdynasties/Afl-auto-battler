@@ -144,6 +144,7 @@ func _ready() -> void:
 	# Whose first AFL goal the feed can say, if it comes today (MatchNotes).
 	if _interactive and not _is_practice(_res):
 		_duel_mem["first_goal"] = GameState.first_goal_candidates()
+		_duel_mem["career_high"] = GameState.career_high_candidates()
 	_pitch.event_played.connect(_on_event)
 	_pitch.finished.connect(_on_finished)
 	_pitch.ends_changed.connect(_on_ends_changed)
@@ -856,7 +857,8 @@ func _show_coach_box() -> void:
 		"tagger_id": str((sim.tactics[_my_side] as Dictionary).get("tagger_id", _last_tactics.get("tagger_id", ""))),
 		"interceptor_id": str(sim.interceptor[_my_side]),
 		"minder_id": str((sim.tactics[_my_side] as Dictionary).get("spare_minder_id", "")) 				if bool((sim.tactics[_my_side] as Dictionary).get("spare_accountable", false)) else "",
-		"pep": "steady",
+		# Before the bounce, a talk you set before Change the side is kept.
+		"pep": str((sim.tactics[_my_side] as Dictionary).get("pep", "steady")) if q == 1 else "steady",
 	}
 	calls["defence"] = MatchNotes.defence_key(str(calls["interceptor_id"]) != "", str(calls["minder_id"]) != "")
 	var loose_was := str(calls["interceptor_id"])
@@ -1129,7 +1131,7 @@ func _show_coach_box() -> void:
 	col_a.add_child(pep_note)
 	group.call("pep", pep_block)
 	group.call("pep", pep_note)
-	sync_pep.call("steady")
+	sync_pep.call(str(calls["pep"]))
 
 	if wide:
 		def_block.get_parent().remove_child(def_block)
@@ -1158,8 +1160,8 @@ func _show_coach_box() -> void:
 	var start := UiKit.btn("Start quarter" if q > 1 else "Start", UiKit.HEADING, true)
 	start.name = "StartQuarter"
 	start.custom_minimum_size = Vector2(0, 48)
-	start.pressed.connect(func():
-		var t := {
+	var take_calls := func() -> Dictionary:
+		return {
 			"gameplan": str(calls["gameplan"]),
 			"tag_id": str(calls["tag_id"]),
 			"tagger_id": str(calls["tagger_id"]),
@@ -1169,6 +1171,8 @@ func _show_coach_box() -> void:
 			"spare_minder_id": str(calls["minder_id"]),
 			"pep": str(calls["pep"]),
 		}
+	start.pressed.connect(func():
+		var t: Dictionary = take_calls.call()
 		_close_coach()
 		_simulate_next_quarter(t))
 	# One primary action on the break; the way out is said as words.
@@ -1219,6 +1223,12 @@ func _show_coach_box() -> void:
 		side.name = "ChangeSide"
 		side.custom_minimum_size = skip.custom_minimum_size
 		side.pressed.connect(func():
+			# Your calls go into the match before you leave, so they are still
+			# set when you come back (GameState.rebuild_pending_side).
+			var t: Dictionary = take_calls.call()
+			if bool(t["interceptor_set"]):
+				sim.coach_interceptor(_my_side, str(t["interceptor_id"]))
+			sim.set_tactics(_my_side, t)
 			GameState.side_from_match = true
 			_close_coach()
 			Router.go("selection"))
@@ -3264,8 +3274,11 @@ func _on_event(ev: Dictionary) -> void:
 	_update_scoreboard(ev)
 	_track_momentum(ev)
 	_feed_add(ev)
-	_duel_feed(ev)
-	_story_feed(ev)
+	# A career best at a goal is that goal's one extra line: no battle or
+	# story line stacks on it.
+	if not _career_high_feed(ev) or str(ev.get("kind", "")) != "goal":
+		_duel_feed(ev)
+		_story_feed(ev)
 	_press_feed(event_index, ev)
 	_call_feed(event_index, ev)
 	if str(ev.get("kind", "")) == "goal":
@@ -3746,14 +3759,22 @@ func _render_ft() -> void:
 
 ## The match story at the top of the Summary: the hero and his game, the
 ## turning point, and why it was won or lost. Read from MatchStory; it never
-## changes the result.
-func _ft_story(v: VBoxContainer, me: int) -> void:
+## changes the result. Returns what it told (MatchStory.told_facts), so the
+## sections below say each fact once.
+func _ft_story(v: VBoxContainer, me: int) -> Dictionary:
 	var st := MatchStory.build(_res, me)
 	if st.is_empty():
-		return
+		return {}
 	var box := UiKit.vbox(4)
 	box.name = "MatchStory"
 	box.add_child(UiKit.spacer(UiKit.GAP))
+	# Best players above already gives a player's numbers: the hero's line
+	# keeps only what it adds (director's bug report, 2026-11-06).
+	var shown := {}
+	var votes := MatchNotes.coaches_votes(_res)
+	for side in [0, 1]:
+		for p in MatchNotes.standouts_by_votes(_res, side, 3, votes):
+			shown[str(p["id"])] = str(p["line"])
 	var hero: Dictionary = st["hero"]
 	if not hero.is_empty():
 		box.add_child(UiKit.section("Hero of the match"))
@@ -3762,15 +3783,19 @@ func _ft_story(v: VBoxContainer, me: int) -> void:
 		hl.name = "MatchHero"
 		hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(hl)
-		var gl := UiKit.lbl(str(hero["line"]), UiKit.BODY, UiKit.TEXT)
-		gl.name = "MatchHeroLine"
-		gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box.add_child(gl)
+		var hero_line := MatchStory.line_less(hero, str(shown.get(str(hero["id"]), "")))
+		if hero_line != "":
+			var gl := UiKit.lbl(hero_line, UiKit.BODY, UiKit.TEXT)
+			gl.name = "MatchHeroLine"
+			gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			box.add_child(gl)
 	# A loss: your best player too (director, 2026-11-03).
 	if int(st["margin"]) < 0:
 		var mb := MatchStory.my_best(_res, me)
 		if not mb.is_empty():
-			var ml := UiKit.lbl("Your best: %s, %s" % [str(mb["name"]), str(mb["line"])], UiKit.BODY, UiKit.TEXT)
+			var mb_line := MatchStory.line_less(mb, str(shown.get(str(mb["id"]), "")))
+			var ml := UiKit.lbl("Your best: %s" % str(mb["name"]) + (", " + mb_line.left(1).to_lower() + mb_line.substr(1) if mb_line != "" else ""),
+					UiKit.BODY, UiKit.TEXT)
 			ml.name = "MatchMyBest"
 			ml.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			box.add_child(ml)
@@ -3792,6 +3817,7 @@ func _ft_story(v: VBoxContainer, me: int) -> void:
 			rv.add_child(rl)
 		box.add_child(rv)
 	v.add_child(box)
+	return MatchStory.told_facts(st)
 
 
 ## The Summary tab: the result, what it means, how it went, the best
@@ -3848,8 +3874,9 @@ func _ft_summary(v: VBoxContainer) -> void:
 	_ft_best_players(v, me, mine, winner)
 
 	# The match story: the hero, the turning point and why.
+	var told_above := {}
 	if mine:
-		_ft_story(v, me)
+		told_above = _ft_story(v, me)
 
 	# What it means: finals, the ladder, who is next. (Nothing, for a practice match.)
 	if mine and not _is_practice(_res):
@@ -3864,12 +3891,22 @@ func _ft_summary(v: VBoxContainer) -> void:
 					UiKit.EMPH if through else UiKit.MUTED, true)
 			ol.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			v.add_child(ol)
+		# A debut is said once, here, in the fuller words ("kicked a goal on
+		# debut"); the payoff lines below leave it out (director, 2026-11-06).
+		var debut_ids := {}
 		if Milestones.shown():
-			var ms_line := Milestones.summary_line(GameState, _res)
-			if ms_line != "":
+			var ms_texts := []
+			for e in Milestones.summary_items(GameState, _res):
+				if str(e.get("kind", "")) == "debut" and str(e.get("id", "")) != "":
+					debut_ids[str(e["id"])] = true
+					var kicked := int(((_res.get("players", {}) as Dictionary).get(str(e["id"]), {}) as Dictionary).get("goals", 0))
+					ms_texts.append(Firsts.debut_line(str(e.get("name", "")), kicked))
+				else:
+					ms_texts.append(str(e.get("text", "")))
+			if not ms_texts.is_empty():
 				# A heading, then the milestone in plain weight: the ladder and the next game follow it.
 				v.add_child(UiKit.section("Milestones"))
-				var msl := UiKit.lbl(ms_line.trim_prefix("Milestones: "), UiKit.BODY, UiKit.TEXT)
+				var msl := UiKit.lbl(" ".join(ms_texts), UiKit.BODY, UiKit.TEXT)
 				msl.name = "MilestoneLine"
 				msl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				v.add_child(msl)
@@ -3887,7 +3924,11 @@ func _ft_summary(v: VBoxContainer) -> void:
 		# The people it was about: a debut, a first goal, a promised run done.
 		# Said only when the facts kept on the players say it; otherwise silent.
 		if _interactive or _review:
-			var told := GameState.payoff_lines(_res)
+			var told := []
+			for it in GameState.payoff_items(_res):
+				if not (str(it["kind"]) == "debut" and debut_ids.has(str(it["id"]))):
+					told.append(str(it["text"]))
+			told = told.slice(0, Firsts.MAX_LINES)
 			if not told.is_empty():
 				v.add_child(UiKit.spacer(UiKit.GAP))
 				var payoffs := UiKit.vbox(4)
@@ -3914,13 +3955,23 @@ func _ft_summary(v: VBoxContainer) -> void:
 		ms.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(ms)
 
-	# How it went: the few things that decided it, in football words.
-	v.add_child(UiKit.spacer(UiKit.GAP))
-	v.add_child(UiKit.section("How it went"))
+	# How it went: the few things that decided it, in football words, less
+	# what the story above already said (director, 2026-11-06).
+	var hiw_gap := UiKit.spacer(UiKit.GAP)
+	v.add_child(hiw_gap)
+	var hiw_head := UiKit.section("How it went")
+	hiw_head.name = "HowItWentHead"
+	v.add_child(hiw_head)
 	var factors := VBoxContainer.new()
 	factors.name = "MatchFactors"
 	factors.add_theme_constant_override("separation", 4)
-	for f in MatchNotes.match_factors(_res, me if mine else 0):
+	var shown_factors := MatchNotes.match_factors(_res, me if mine else 0, told_above)
+	# What is now said on the screen, for the notes below to leave out.
+	var said_now := told_above.duplicate()
+	for it in MatchNotes.match_factor_items(_res, me if mine else 0):
+		if shown_factors.has(str(it["text"])):
+			said_now[str(it["fact"])] = true
+	for f in shown_factors:
 		var fl := _say(str(f), UiKit.BODY, UiKit.TEXT)
 		fl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		factors.add_child(fl)
@@ -3934,13 +3985,19 @@ func _ft_summary(v: VBoxContainer) -> void:
 			gl.name = "FormerAgainst_%d" % i
 			factors.add_child(gl)
 	v.add_child(factors)
+	# Everything was said above: no empty heading. The node stays, hidden.
+	if factors.get_child_count() == 0:
+		hiw_gap.visible = false
+		hiw_head.visible = false
+		factors.visible = false
 
 	# The coach's side of it: who needs a lift, and what to work on. Only
 	# for your match, and only what the result above does not already say.
 	if mine and (_res.get("quarter_teams", []) as Array).size() >= 2:
 		var g := CoachReport.glance(CoachReport.match_report(_res, me), true)
 		_glance_people(v, "Needs a lift", "ReportLift", g["lift"])
-		_glance_section(v, "Coaching notes", "ReportNotes", (g["notes"] as Array).slice(0, 2))
+		_glance_section(v, "Coaching notes", "ReportNotes",
+				CoachReport.notes_not_told(g["notes"], said_now).slice(0, 2))
 
 	# The key match-ups: who had the better of whom, from the contests.
 	if mine:
@@ -3954,6 +4011,9 @@ func _ft_summary(v: VBoxContainer) -> void:
 		var did := []
 		for qq in range(1, 5):
 			for t in MatchNotes.calls_lines(_res, me, qq) + MatchNotes.duel_change_lines(_res, me, qq):
+				# The call the Why section already quoted is not said again.
+				if told_above.has("q%d" % qq) and told_above.has("call:" + str(t)):
+					continue
 				did.append("Q%d  ·  %s" % [qq, str(t)])
 		if not did.is_empty():
 			_glance_section(v, "Your calls", "FullTimeCalls", did.slice(0, 5))
@@ -4442,6 +4502,20 @@ func _story_feed(ev: Dictionary) -> void:
 				UiKit.TEXT, false, "StoryLine")
 
 
+## A career best for one of yours, in bold so a once-in-a-career moment is
+## not lost among routine lines (MatchNotes.career_high_lines). True when a
+## line was added.
+func _career_high_feed(ev: Dictionary) -> bool:
+	var sim = GameState.pending_sim
+	var extra := int(ev.get("q", 1)) == 4 and (bool(_res.get("extra_time", false))
+			or (_interactive and sim != null and sim.needs_extra_time()))
+	var lines := MatchNotes.career_high_lines(_duel_mem, ev, _res, extra)
+	for text in lines:
+		_feed_text("%s  %s" % [_clock_text(int(ev.get("q", 1)), int(ev.get("min", 0))), str(text)],
+				UiKit.TEXT, true, "CareerHighLine")
+	return not lines.is_empty()
+
+
 ## The Defensive press taking hold, once a side a match: the first time the
 ## side whose plan it is defends after setting it (V2, press pilot).
 func _press_feed(event_index: int, ev: Dictionary) -> void:
@@ -4456,12 +4530,15 @@ func _press_feed(event_index: int, ev: Dictionary) -> void:
 
 ## A side's game plan starting, carrying on over a break or ending, and a short
 ## call running out (P-12, MatchNotes.call_lines). A break's line comes after
-## the break's own score line.
+## the break's own score line. A plan dropped at the break is said at the
+## next bounce, once the break's calls are made, without the new quarter's clock.
 func _call_feed(event_index: int, ev: Dictionary) -> void:
-	for text in MatchNotes.call_lines(_res.get("timeline", []), event_index, ev, _call_mem,
-			str(_res["home"]), str(_res["away"])):
-		_feed_text("%s  %s" % [_clock_text(int(ev.get("q", 1)), int(ev.get("min", 0))), str(text)],
-				UiKit.TEXT, false, "CallLine")
+	var lines := MatchNotes.call_lines(_res.get("timeline", []), event_index, ev, _call_mem,
+			str(_res["home"]), str(_res["away"]))
+	var unstamped := int(_call_mem.get("break_lines", 0))
+	for i in range(lines.size()):
+		var stamp := "" if i < unstamped else "%s  " % _clock_text(int(ev.get("q", 1)), int(ev.get("min", 0)))
+		_feed_text(stamp + str(lines[i]), UiKit.TEXT, false, "CallLine")
 
 
 ## The battle in the feed, rarely (MatchNotes.duel_feed_line).
