@@ -786,9 +786,10 @@ func _test_screen_wipe() -> void:
 		_check(bool(wipe.get("busy")) and rect.visible, "the wipe starts on a screen change at %s" % size)
 		_check(rect.mouse_filter == Control.MOUSE_FILTER_STOP, "taps are blocked under the wipe at %s" % size)
 		_check(current_scene == before, "the old screen stays until full cover at %s" % size)
-		for i in range(120):
-			if not bool(wipe.get("busy")):
-				break
+		# The scene loads on a thread under the cover, so wait on time, not a
+		# frame count (a headless frame is about a millisecond).
+		var t0 := Time.get_ticks_msec()
+		while bool(wipe.get("busy")) and Time.get_ticks_msec() - t0 < 10000:
 			await process_frame
 		_check(not bool(wipe.get("busy")), "the wipe ends at %s" % size)
 		_check(current_scene != before and current_scene != null and _router.current() == "main",
@@ -863,15 +864,16 @@ func _test_loading_cover() -> void:
 	_check(not bool(wipe.get("busy")) and not line.visible, "loading cover: input and the screen come back")
 
 	# My list: its line is up before the screen is built, and stays its own
-	# through the autosave (a dirty career) instead of turning generic.
+	# through the autosave (a dirty career) instead of turning generic. The
+	# hub is held by id: it is freed while the watch still runs.
+	var hub_id := current_scene.get_instance_id()
 	var list_seen := [false]
 	var texts := {}
 	var watch_list := func():
 		if bool(wipe.call("line_visible")):
 			texts[line.text] = true
-			if line.text == "Loading your list..." and _router.current() == "list" and current_scene == hub:
+			if line.text == "Loading your list..." and _router.current() == "list" 					and current_scene != null and current_scene.get_instance_id() == hub_id:
 				list_seen[0] = true
-	hub = current_scene
 	_state.set("_dirty", true)
 	process_frame.connect(watch_list)
 	_router.go("list")
@@ -911,7 +913,8 @@ func _test_loading_cover() -> void:
 
 func _wait_cover(wipe: Node) -> void:
 	await process_frame
-	for i in range(600):
+	var t0 := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 20000:
 		if not bool(wipe.get("busy")):
 			return
 		await process_frame
