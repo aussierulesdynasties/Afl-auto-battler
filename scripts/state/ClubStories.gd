@@ -604,7 +604,9 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 ## Not getting senior games: out of your last side and either left out of the
 ## two rounds before it as well, or picked in fewer than half of this season's
 ## rounds. Before your first round only the last side counts. A regular who
-## sat out one week is not "pushing for games".
+## sat out one week is not "pushing for games", and nor is one who lost his
+## spot to an injury: he is judged on the rounds before he was hurt (the
+## "where do I stand" sit-down is his story).
 const OUT_WEEKS := 2
 
 static func out_of_side(gs, p: Dictionary) -> bool:
@@ -616,10 +618,30 @@ static func out_of_side(gs, p: Dictionary) -> bool:
 	var rounds := int(gs.season.round_index)
 	if rounds <= 0:
 		return true
+	var played := int((gs.season_tally.get(id, {}) as Dictionary).get("games", 0))
+	var hurt := _hurt_in_round(gs, p)
+	if hurt > 0:
+		return played * 2 < hurt
 	if gs.weeks_without_game(p) >= OUT_WEEKS:
 		return true
-	var played := int((gs.season_tally.get(id, {}) as Dictionary).get("games", 0))
 	return played * 2 < rounds
+
+
+## The round this season he was hurt in, when the injury came in his last game
+## or the round after it (he lost his spot to it); 0 otherwise.
+static func _hurt_in_round(gs, p: Dictionary) -> int:
+	var lg = p.get("last_game", [])
+	if not (lg is Array and (lg as Array).size() == 2 and int(lg[0]) == int(gs.season_year)):
+		return 0
+	var inj := CareerFacts.of(gs.career_facts, str(p.get("id", "")), "injury")
+	if inj.is_empty():
+		return 0
+	var f: Dictionary = inj[-1]
+	if int(f["y"]) != int(gs.season_year) or not str(f["at"]).begins_with("Round"):
+		return 0
+	var hurt := str(f["at"]).trim_prefix("Round ").to_int()
+	var last := int(lg[1])
+	return hurt if hurt >= last and hurt <= last + 1 else 0
 
 
 ## Arrived this summer: signed or traded in last off-season, or drafted in it.

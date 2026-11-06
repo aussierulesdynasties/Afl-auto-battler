@@ -1222,6 +1222,16 @@ func _test_pushing_for_games_needs_no_games() -> void:
 	var rested: Dictionary = make.call(GameState.my_list[9], "t_rested", 5, 5)
 	var kid: Dictionary = make.call(GameState.my_list[10], "t_kid", 0, 0)
 	var fringe: Dictionary = make.call(GameState.my_list[11], "t_fringe", 2, 4)
+	# Picked in Rounds 1-3, hurt in Round 3, missed three weeks, fit again:
+	# a regular who lost his spot to injury, not a kid pushing for games.
+	var mended: Dictionary = make.call(GameState.my_list[12], "t_mended", 3, 3)
+	CareerFacts.add(GameState.career_facts, "t_mended",
+			CareerFacts.row(y, "Round 3", "injury", GameState.my_club, "", "hamstring"))
+	# His one senior game was Round 3 and he was hurt in it; fit again and
+	# still out: the injury did not cost him a regular spot.
+	var fringe_hurt: Dictionary = make.call(GameState.my_list[13], "t_fringe_hurt", 1, 3)
+	CareerFacts.add(GameState.career_facts, "t_fringe_hurt",
+			CareerFacts.row(y, "Round 3", "injury", GameState.my_club, "", "ankle"))
 	GameState.last_side = ["t_regular"]
 	var ctx := ClubStories.context(GameState)
 	for id in ["training_kid_pushing", "finals_gone"]:
@@ -1230,16 +1240,19 @@ func _test_pushing_for_games_needs_no_games() -> void:
 			# "selected" false for all: the coming round's side can leave out a
 			# regular (the reported bug); his recent games still count.
 			ctx["players"] = [ClubStories.player_fact(GameState, p, false, {}, 30, 0)]
-			return not StoryEngine.eligible_subject(card, ctx, StoryEngine.new_state(), 10,
-					RandomNumberGenerator.new()).is_empty() if id == "training_kid_pushing" 					else StoryEngine.meets(ctx["players"][0], (card["subject"] as Dictionary)["where"], {})
+			if id == "training_kid_pushing":
+				return not StoryEngine.eligible_subject(card, ctx, StoryEngine.new_state(), 10,
+						RandomNumberGenerator.new()).is_empty()
+			return StoryEngine.meets(ctx["players"][0], (card["subject"] as Dictionary)["where"], {})
 		_check(not drawn.call(regular), "%s: never a kid picked every week" % id)
 		_check(not drawn.call(rested), "%s: never a regular who sat out one week" % id)
+		_check(not drawn.call(mended), "%s: never a regular back from injury" % id)
 		_check(drawn.call(kid), "%s: a fit young player left out all season can be" % id)
 		_check(drawn.call(fringe), "%s: a young player out of the last two sides can be" % id)
-	GameState.season_tally.erase("t_regular")
-	GameState.season_tally.erase("t_rested")
-	GameState.season_tally.erase("t_kid")
-	GameState.season_tally.erase("t_fringe")
+		_check(drawn.call(fringe_hurt), "%s: a fringe player back from injury can be" % id)
+	for tid in ["t_regular", "t_rested", "t_kid", "t_fringe", "t_mended", "t_fringe_hurt"]:
+		GameState.season_tally.erase(tid)
+		GameState.career_facts.erase(tid)
 	GameState.last_side = []
 
 
