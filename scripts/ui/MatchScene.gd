@@ -951,7 +951,7 @@ func _show_coach_box() -> void:
 	var tag_detail := func(r: Dictionary, wide: bool) -> String:
 		var p: Dictionary = my_mids.get(str(r["id"]), r)
 		return MatchNotes.tagger_card_detail(p, float(sim.energy.get(str(r["id"]), 100.0)), wide, season_rating.call(str(r["id"])))
-	var tag_note := NameInk.rich(UiKit.SMALL, UiKit.MUTED)
+	var tag_note := NameInk.rich(UiKit.NOTE, UiKit.MUTED)
 	tag_note.name = "TagNote"
 	tag_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	# Who goes to him is only a question once there is a him: hidden with no
@@ -1065,7 +1065,7 @@ func _show_coach_box() -> void:
 		def_opts.append(o)
 	if not def_opts.any(func(o): return str(o[0]) == str(calls["defence"])):
 		calls["defence"] = "loose" if str(calls["defence"]) == "both" and loose_pick != "" else "man"
-	var def_note := UiKit.lbl("", UiKit.SMALL, UiKit.MUTED)
+	var def_note := UiKit.lbl("", UiKit.NOTE, UiKit.MUTED)
 	def_note.name = "DefenceNote"
 	def_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var df_how: Array = [null]
@@ -1095,7 +1095,7 @@ func _show_coach_box() -> void:
 	var loose_now := str(sim.interceptor[_my_side])
 	if q > 1 and loose_now != "":
 		var tally := _say(MatchNotes.loose_tally_line(GameDB.player_display_name_by_id(loose_now, "Your loose man"),
-				maxi(0, sim.intercepts_since_call(_my_side))), UiKit.SMALL, UiKit.TEXT)
+				maxi(0, sim.intercepts_since_call(_my_side))), UiKit.NOTE, UiKit.TEXT)
 		tally.name = "LooseTally"
 		tally.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		def_block.add_child(tally)
@@ -1791,7 +1791,7 @@ func _tag_fact_line(sim: MatchSim) -> String:
 ## What Skip to full time keeps and drops (G11; GateOdds.skip_line): beside
 ## the actions on a PC, at the foot of the calls on a phone.
 func _skip_note(q: int, wide: bool) -> Label:
-	var l := UiKit.lbl(GateOdds.skip_line(q), UiKit.SMALL, UiKit.TEXT)
+	var l := UiKit.lbl(GateOdds.skip_line(q), UiKit.NOTE, UiKit.TEXT)
 	l.name = "SkipNote"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if wide:
@@ -1849,7 +1849,7 @@ func _club_fill_button(done: Button) -> void:
 	var fill := lead
 	var v_up := lead.v
 	for i in 20:
-		if UiKit.contrast(fill, UiKit.PANEL.lerp(lead, 0.3)) >= 3.0:
+		if UiKit.contrast(fill, UiKit.tinted("sheet", lead)) >= 3.0:
 			break
 		v_up = minf(1.0, v_up + 0.05)
 		fill = Color.from_hsv(lead.h, lead.s, v_up)
@@ -2526,12 +2526,12 @@ func _legs_view() -> Control:
 	var v := UiKit.vbox(2)
 	v.name = "LegsView"
 	var l := UiKit.lbl(MatchNotes.legs_line(_group_energy(_my_side), _group_energy(1 - _my_side)),
-			UiKit.SMALL, UiKit.MUTED)
+			UiKit.NOTE, UiKit.MUTED)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(l)
 	var cooked := MatchNotes.cooked(GameState.pending_sim.legs(_my_side))
 	if not cooked.is_empty():
-		var c := UiKit.lbl("Running on empty: %s." % ", ".join(cooked), UiKit.SMALL, UiKit.TEXT)
+		var c := UiKit.lbl("Running on empty: %s." % ", ".join(cooked), UiKit.NOTE, UiKit.TEXT)
 		c.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(c)
 	return v
@@ -3835,7 +3835,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 		# Both clubs read in full text; the winner is bold, the loser plain, and
 		# each name carries its club's colour (a red club's is white).
 		var nm := UiKit.ellipsis(GameDB.club_name(home if side == 0 else away), UiKit.NAME,
-				UiKit.readable_ink(UiKit.club_name_colour(score_inks[side]), UiKit.PANEL.lerp(_wash_col(), 0.3)), winner != 1 - side)
+				UiKit.readable_ink(UiKit.club_name_colour(score_inks[side]), UiKit.tinted("sheet", _wash_col())), winner != 1 - side)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(nm)
 		var fig := UiKit.figure(UiKit.scoreline(int(_res["goals"][side]), int(_res["behinds"][side])),
@@ -4037,8 +4037,8 @@ func _votes_side(code: String, ink: Color, players: Array, votes: Dictionary, pc
 		row.add_child(top)
 		# The line sits on the sheet's wash (the opponent's colour) and near its
 		# club's bar; lift it only as far as 4.5:1 against both needs.
-		var sub_ink := UiKit.readable_ink(VOTES_SUB, UiKit.PANEL.lerp(ink, 0.3))
-		sub_ink = UiKit.readable_ink(sub_ink, UiKit.PANEL.lerp(_wash_col(), 0.3))
+		var sub_ink := UiKit.readable_ink(VOTES_SUB, UiKit.tinted("sheet", ink))
+		sub_ink = UiKit.readable_ink(sub_ink, UiKit.tinted("sheet", _wash_col()))
 		var sub := UiKit.lbl(str(p["line"]), UiKit.SECONDARY, sub_ink)
 		sub.name = "StandoutLine"
 		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -4293,7 +4293,7 @@ func _matchups_view(sim: MatchSim, q: int) -> Control:
 	var our_spare := sim._roaming_interceptor(_my_side)
 	if not our_spare.is_empty():
 		var loose2 := _say("Yours: %s is roaming as the spare." % GameDB.player_display_name(our_spare),
-				UiKit.SMALL, UiKit.MUTED)
+				UiKit.NOTE, UiKit.MUTED)
 		loose2.name = "MyInterceptor"
 		loose2.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(loose2)
@@ -4319,7 +4319,7 @@ func _matchups_view(sim: MatchSim, q: int) -> Control:
 	# Who made these calls: your assistant, until you make them yourself.
 	if sim.assistant_active(_my_side):
 		var a := UiKit.lbl("Your assistant sets the match-ups and the spare. Change one and it stays your call.",
-				UiKit.SMALL, UiKit.MUTED)
+				UiKit.NOTE, UiKit.MUTED)
 		a.name = "AssistantNote"
 		a.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(a)
