@@ -36,6 +36,19 @@ const DETAIL := [
 	["one_percenters", "one percenters"], ["spoils", "spoils"], ["hitouts", "hit-outs"], ["hitouts_adv", "hit-outs to advantage"],
 	["clangers", "clangers"], ["frees_against", "frees against"],
 ]
+# Labels whose plural is not at their end (or has no trailing s).
+const DETAIL_ONE := {
+	"hit-outs to advantage": "hit-out to advantage", "frees against": "free against",
+	"metres gained": "metre gained",
+}
+
+
+## A DETAIL label for a count: "1 behind", "2 behinds".
+static func detail_words(words: String, n: int) -> String:
+	if n != 1:
+		return words
+	return str(DETAIL_ONE[words]) if DETAIL_ONE.has(words) else BoxScore._one(words)
+
 
 var _res: Dictionary
 var _me := 0
@@ -170,7 +183,7 @@ func _row(p: Dictionary) -> Control:
 				continue
 			var n := int(round(float(st.get(key, 0.0))))
 			if n > 0:
-				bits.append("%d %s" % [n, str(d[1])])
+				bits.append("%d %s" % [n, detail_words(str(d[1]), n)])
 			if key == "handballs" and st.has("effective_disposals") \
 					and float(st.get("disposals", 0.0)) > 0.0:
 				bits.append("%d%% disposal efficiency" % MatchSim.disposal_efficiency(st))
