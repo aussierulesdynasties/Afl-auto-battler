@@ -1621,10 +1621,11 @@ func _test_fact_talks() -> void:
 			"Sit-downs and the last game come back from a save")
 
 
-## Row 115 (T9.Q20, T5.r117): the board goal follows the list's pre-season
-## rank, and the middle band scales with the number of clubs - finish outside
-## the bottom third (top 12 of 18, top 13 of 20, top 14 of 21). The finals
-## band stays the top seven lists: the finals places are the same at any size.
+## Row 115 (T5.r117): the board goal follows the list's pre-season rank, and
+## the middle band scales with the number of clubs. The bands checked here are
+## the row 115 PROPOSAL, pending the director's T9.Q20 answer: finish outside
+## the bottom third (top 12 of 18, top 13 of 20, top 14 of 21), the finals band
+## kept at the top seven lists, seven wins unscaled. Change them with the ruling.
 func _test_goal_follows_rank_by_clubs() -> void:
 	var want := {
 		18: {1: "Make the finals", 7: "Make the finals", 8: "Finish in the top 12", 12: "Finish in the top 12",
@@ -1666,9 +1667,9 @@ func _test_goal_follows_rank_by_clubs() -> void:
 	var r14 := ClubLife.goal_reason(ClubLife.board_goal(14, 0, 21), 14, 21)
 	var r21 := ClubLife.goal_reason(ClubLife.board_goal(21, 0, 21), 21, 21)
 	var r1 := ClubLife.goal_reason(ClubLife.board_goal(1, 2, 18), 1, 18)
-	_check(r6.begins_with("Your list ranks 6th of 18 on paper") and r6.contains("finals"),
+	_check(r6.begins_with("Going into the season your list ranked 6th of 18 on paper") and r6.contains("finals"),
 			"The board says where the list ranks (%s)" % r6)
-	_check(r14.begins_with("Your list ranks 14th of 21 on paper") and r14.contains("bottom third"),
+	_check(r14.begins_with("Going into the season your list ranked 14th of 21 on paper") and r14.contains("bottom third"),
 			"At 21 clubs the middle goal says why: out of the bottom third (%s)" % r14)
 	_check(r21.contains("21st of 21") and r1.contains("1st of 18") and r1.contains("top four last year"),
 			"Edges read right: %s / %s" % [r1, r21])
@@ -1701,7 +1702,7 @@ func _test_board_goal_said_aloud() -> void:
 	_check(GameState.club_goals.size() == n and off.is_empty(), "Every club's goal follows its rank of %d (%s)" % [n, str(off)])
 	var rank := int(GameState.board["rank"])
 	var said := GameState.board_goal_reason()
-	_check(said.begins_with("Your list ranks %s of 18 on paper" % PreSeason.ordinal(rank)),
+	_check(said.begins_with("Going into the season your list ranked %s of 18 on paper" % PreSeason.ordinal(rank)),
 			"The board says where your list ranks (%s)" % said)
 	# Three more clubs in the competition (copies of real lists, as a created
 	# club or the expansion sides would be): the goals are set out of 21.

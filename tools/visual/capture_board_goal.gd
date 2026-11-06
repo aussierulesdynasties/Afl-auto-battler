@@ -90,6 +90,14 @@ func _run() -> void:
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(bg)
 	await _coaching(state, dir, size, "coaching18")
+	# Mid-season: the board's "why it moved" line sits under the goal's reason
+	# (the state players see all season). The line is the one a lost match
+	# writes (ClubLife.match_reason), set here instead of playing rounds.
+	var saved_why := str(state.board.get("why", ""))
+	state.board["why"] = load("res://scripts/sim/ClubLife.gd").match_reason(
+			state.board.get("goal", {}), db.club_name("CAR" if club != "CAR" else "COL"), -14, 2)
+	await _coaching(state, dir, size, "coachingmid")
+	state.board["why"] = saved_why
 	# The pre-season briefing's board lines, from this season's goal.
 	state.season_wrap = {"year": state.season_year, "ins": [], "outs": [], "staff": [], "trades": [],
 			"league_coaches": [], "goal": state.board_goal_text(), "reason": state.board_goal_reason(), "seen": false}

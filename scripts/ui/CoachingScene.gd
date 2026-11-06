@@ -322,10 +322,13 @@ func _board() -> Control:
 	v.add_child(l)
 	v.add_child(_wrapped("Their goal: %s" % GameState.board_goal_text()))
 	# Where the goal came from: the list's pre-season rank, said aloud (row 115).
-	var goal_why := _wrapped(GameState.board_goal_reason(), UiKit.BODY, UiKit.MUTED)
+	# A secondary line under its goal (SMALL), set apart from the "why it moved"
+	# line below, which is BODY after a gap, so the two muted lines never run together.
+	var goal_why := _wrapped(GameState.board_goal_reason(), UiKit.SMALL, UiKit.MUTED)
 	goal_why.name = "BoardGoalWhy"
 	v.add_child(goal_why)
 	if GameState.board_why() != "":
+		v.add_child(UiKit.spacer(8))
 		var why := _wrapped(GameState.board_why(), UiKit.BODY, UiKit.MUTED)
 		why.name = "BoardWhy"
 		v.add_child(why)

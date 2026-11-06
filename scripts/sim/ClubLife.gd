@@ -40,8 +40,11 @@ const MORALE_BASE := 70
 ##   finals     the top seven lists (three inside the finals places, which
 ##              are Season.FINALISTS at any number of clubs);
 ##   top two-thirds  the rest of the lists outside the bottom third, asked to
-##              finish outside it: top 12 of 18, top 13 of 20, top 14 of 21
-##              (row 115, T9.Q20; key "top12" kept so old saves still read);
+##              finish outside it: top 12 of 18, top 13 of 20, top 14 of 21.
+##              PROPOSAL (row 115), not a ruling: the director has not yet
+##              answered T9.Q20 (what the middle goal should be), nor whether
+##              the finals band and "seven wins" should scale. Key "top12" kept
+##              so old saves still read;
 ##   seven wins the bottom third.
 const TOP4_LIST_RANK := 2
 const TOP4_LAST_FINISH := 4
@@ -64,13 +67,14 @@ static func board_goal(rank: int, prev := 0, clubs := 18) -> Dictionary:
 	return {"key": "wins7", "text": "Win at least 7 games", "wins": 7}
 
 
-## Why the board set `goal`, in the board's words, with where the list ranks
-## on paper (`rank` of `clubs`; either 0 leaves the rank out, for a board with
+## Why the board set `goal`, in the board's words, with where the list ranked
+## on paper going into the season (the rank is the pre-season snapshot, so it
+## is said in the past tense: it stays true all season) (`rank` of `clubs`; either 0 leaves the rank out, for a board with
 ## no rank on record).
 static func goal_reason(goal: Dictionary, rank: int, clubs: int) -> String:
 	if rank <= 0 or clubs <= 0:
 		return _no_rank_reason(goal, rank)
-	var paper := "Your list ranks %s of %d on paper" % [PreSeason.ordinal(rank), clubs]
+	var paper := "Going into the season your list ranked %s of %d on paper" % [PreSeason.ordinal(rank), clubs]
 	match str(goal.get("key", "")):
 		"top4":
 			return paper + ", and you finished top four last year: the board expects it again."
