@@ -1584,6 +1584,14 @@ func _show_press_outcome(landed: Dictionary) -> void:
 	l.name = "MediaOutcomeLine"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(l)
+	# What else it did: your standing with the journalist, the record check, and
+	# how long the morale move lasts (director 2026-11-06).
+	var extra := _press_outcome_extra(landed)
+	if extra != "":
+		var e := UiKit.lbl(extra, UiKit.SMALL, UiKit.TEXT)
+		e.name = "MediaOutcomeExtra"
+		e.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(e)
 	var ok := UiKit.btn("Done", UiKit.NAME, true)
 	ok.name = "MediaOutcomeDone"
 	ok.custom_minimum_size = Vector2(0, 48)
@@ -1593,6 +1601,24 @@ func _show_press_outcome(landed: Dictionary) -> void:
 		_media_overlay = null
 		_build())
 	(box["footer"] as VBoxContainer).add_child(ok)
+
+
+## "Gary is warmer to you now (Warm to you). The record backs this. The
+## morale move wears off over 2 rounds."
+static func _press_outcome_extra(landed: Dictionary) -> String:
+	var bits: PackedStringArray = []
+	var j := str(landed.get("journalist", ""))
+	var st: Array = landed.get("standing", [])
+	if st.size() == 2 and int(st[0]) != int(st[1]):
+		bits.append("%s is %s to you now (%s)." % [MediaConference.first_name(j),
+				"warmer" if int(st[1]) > int(st[0]) else "cooler", MediaConference.standing_word(int(st[1]))])
+	var verdict := str(landed.get("verdict", ""))
+	if verdict != "":
+		bits.append(str(MediaConference.RECORD_CLAUSE.get(verdict, "")))
+	var rounds := int(landed.get("fade_rounds", 0))
+	if rounds > 0:
+		bits.append("The morale move wears off over %d round%s." % [rounds, "" if rounds == 1 else "s"])
+	return " ".join(bits)
 
 
 func _show_media_conference() -> void:
@@ -1651,10 +1677,25 @@ func _show_media_conference() -> void:
 			UiKit.H2 if wide else UiKit.SMALL, UiKit.MUTED, true)
 	by.name = "MediaByline"
 	prompt.add_child(by)
-	var q := NameInk.label(str(GameState.media_conference.get("question", "")), _league_names(), UiKit.H1 if wide else 16, UiKit.TEXT, wide)
+	# Your standing with him, and what it does to the odds (director 2026-11-06).
+	var standing := GameState.press_standing_lines()
+	if not standing.is_empty():
+		var sl := UiKit.lbl(" ".join(PackedStringArray(standing.filter(func(s): return str(s) != ""))),
+				UiKit.BODY if wide else UiKit.SMALL, UiKit.TEXT, true)
+		sl.name = "MediaStanding"
+		sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		prompt.add_child(sl)
+	var q := NameInk.label(GameState.press_question_text(), _league_names(), UiKit.H1 if wide else 16, UiKit.TEXT, wide)
 	q.name = "MediaQuestion"
 	q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	prompt.add_child(q)
+	# The Stats Geek reads your record (ruling 5.48): the record itself, shown.
+	var record := GameState.press_record_line()
+	if record != "":
+		var rl := UiKit.lbl(record, UiKit.BODY if wide else UiKit.SMALL, UiKit.TEXT)
+		rl.name = "MediaRecord"
+		rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		prompt.add_child(rl)
 	var opts: Array = GameState.media_conference.get("options", [])
 	# Each answer and its line are one group, clearly apart from the next.
 	var group_gap := 16 if wide else 15
@@ -1687,7 +1728,7 @@ func _show_media_conference() -> void:
 		# What the answer can do, under it: both ways it can land, their odds and
 		# sizes (bible §4). In the page's own ink, not faint grey: the coach is
 		# deciding on it.
-		var effect := NameInk.label(MediaConference.odds_line(MediaConference.kind_of(opts[i], i), GameState.press_chance(i)),
+		var effect := NameInk.label(GameState.press_odds_line(i),
 				_league_names(), UiKit.BODY if wide else UiKit.SMALL, UiKit.TEXT)
 		effect.name = "MediaAnswerLine_%d" % i
 		effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

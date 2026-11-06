@@ -2479,6 +2479,8 @@ func _test_press_effects_shown(db) -> void:
 	_state.board["confidence"] = 50
 	var who: Dictionary = _state.my_list[0]
 	who["morale"] = 50
+	who.erase("press_lift")
+	who.erase("press_slow")
 	var hub = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _settle()
@@ -2491,19 +2493,23 @@ func _test_press_effects_shown(db) -> void:
 		var kind: String = MC.kind_of(opts[i], i)
 		var c: int = _state.press_chance(i)
 		var text := "" if line == null else line.text
-		shown = shown and line != null and line.is_visible_in_tree() and text == MC.odds_line(kind, c) 				and text.contains("%d%%" % c) and text.contains("%d%%" % (100 - c))
+		shown = shown and line != null and line.is_visible_in_tree() and text == _state.press_odds_line(i) 				and text.contains("%d%% " % c) and text.contains("%d%% " % (100 - c))
+		# The Muckraker's twist is on the gate (director 2026-11-06).
+		if kind == "criticise":
+			shown = shown and text.contains("The Siren gets read upstairs") and text.contains("(-10%)")
 	_check(shown, "Every press answer shows both ways it can land, with the odds and the sizes")
 	var c0: int = _state.press_chance(0)
 	var landed := "a" if MC.roll(_state.career_seed, _state.season_year, int(_state.media_conference.get("round", 0)),
 			str(_state.media_conference.get("key", "")), 0) <= c0 else "b"
-	var out: Dictionary = MC.ANSWERS["criticise"][landed]
+	var fx: Dictionary = MC.effects("criticise", _state.press_context(0))
+	var out: Dictionary = fx[landed]
 	var answer: Button = hub.find_child("MediaAnswer_0", true, false)
 	var tapped: String = await Tap.tap(answer) if answer != null else "missing"
 	await _settle()
 	var after: Label = hub.find_child("MediaOutcomeLine", true, false)
 	_check(tapped == "" and _state.board_confidence() == 50 + int(out["board"])
 			and int(who["morale"]) == 50 + int(out["morale"]) and after != null and after.is_visible_in_tree()
-			and after.text == MC.after_line("criticise", landed),
+			and after.text == MC.after_line("criticise", landed, fx) and int(out["board"]) == 2,
 			"A real tap on the first answer applies the outcome the press stream drew, and the sheet after says how it landed (%s, %s)" % [tapped, landed])
 	var done: Button = hub.find_child("MediaOutcomeDone", true, false)
 	var closed: String = await Tap.tap(done) if done != null else "missing"
