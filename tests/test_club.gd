@@ -39,6 +39,8 @@ func run() -> void:
 	_t("_test_how_we_play_reads")
 	_t("_test_how_we_play_quiet")
 	_t("_test_how_we_play_unlocks_on_the_third_game")
+	_t("_test_goal_follows_rank_by_clubs")
+	_t("_test_board_goal_said_aloud")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	GameDB.skip_ovr_overrides = false
@@ -1617,3 +1619,137 @@ func _test_fact_talks() -> void:
 	_check(GameState.save_career() and GameState.load_career()
 			and str(GameState.career_facts) + str(GameState.list_player(vid).get("last_game")) == sig,
 			"Sit-downs and the last game come back from a save")
+
+
+## Row 115 (T5.r117): the board goal follows the list's pre-season rank, and
+## the middle band scales with the number of clubs. The bands checked here are
+## the row 115 PROPOSAL, pending the director's T9.Q20 answer: finish outside
+## the bottom third (top 12 of 18, top 13 of 20, top 14 of 21), the finals band
+## kept at the top seven lists, seven wins unscaled. Change them with the ruling.
+func _test_goal_follows_rank_by_clubs() -> void:
+	var want := {
+		18: {1: "Make the finals", 7: "Make the finals", 8: "Finish in the top 12", 12: "Finish in the top 12",
+			13: "Win at least 7 games", 18: "Win at least 7 games"},
+		20: {7: "Make the finals", 8: "Finish in the top 13", 13: "Finish in the top 13", 14: "Win at least 7 games"},
+		21: {1: "Make the finals", 7: "Make the finals", 8: "Finish in the top 14", 12: "Finish in the top 14",
+			14: "Finish in the top 14", 15: "Win at least 7 games", 21: "Win at least 7 games"},
+	}
+	var cases := 0
+	var wrong := []
+	for clubs in want:
+		for rank in want[clubs]:
+			cases += 1
+			var g := ClubLife.board_goal(int(rank), 0, int(clubs))
+			if str(g["text"]) != str(want[clubs][rank]):
+				wrong.append("%d of %d: %s" % [rank, clubs, g["text"]])
+	_check(cases == 17, "Every rank case is checked (%d)" % cases)
+	_check(wrong.is_empty(), "The goal follows the rank at 18, 20 and 21 clubs (%s)" % str(wrong))
+	# The goal's ladder place matches its words, so the season is judged on what was said.
+	_check(int(ClubLife.board_goal(14, 0, 21)["pos"]) == 14 and int(ClubLife.board_goal(12, 0, 18)["pos"]) == 12
+			and ClubLife.goal_met(ClubLife.board_goal(10, 0, 21), 14, 9, 21)
+			and not ClubLife.goal_met(ClubLife.board_goal(10, 0, 21), 15, 9, 21),
+			"At 21 clubs, 14th meets the middle goal and 15th misses it")
+	# Every rank of every size gets one band, in order: never a lower demand for a better list.
+	var order := {"top4": 0, "finals": 1, "top12": 2, "wins7": 3}
+	var monotone := true
+	for clubs in [18, 21]:
+		var last := 0
+		for rank in range(1, clubs + 1):
+			var k := int(order[str(ClubLife.board_goal(rank, 0, clubs)["key"])])
+			monotone = monotone and k >= last
+			last = k
+	_check(monotone, "A weaker list is never asked for more than a stronger one, at 18 or 21 clubs")
+	_check(str(ClubLife.board_goal(2, 3, 21)["key"]) == "top4" and str(ClubLife.board_goal(3, 1, 21)["key"]) == "finals",
+			"Top four is still asked only of a top-two list that was top four last year, at 21 clubs")
+	_check(ClubLife.board_goal(12) == ClubLife.board_goal(12, 0, 18), "Without a club count the board reads 18 clubs")
+	# Said aloud: the reason names the rank and the field, in the board's words.
+	var r6 := ClubLife.goal_reason(ClubLife.board_goal(6, 0, 18), 6, 18)
+	var r14 := ClubLife.goal_reason(ClubLife.board_goal(14, 0, 21), 14, 21)
+	var r21 := ClubLife.goal_reason(ClubLife.board_goal(21, 0, 21), 21, 21)
+	var r1 := ClubLife.goal_reason(ClubLife.board_goal(1, 2, 18), 1, 18)
+	_check(r6.begins_with("Going into the season your list ranked 6th of 18 on paper") and r6.contains("finals"),
+			"The board says where the list ranks (%s)" % r6)
+	_check(r14.begins_with("Going into the season your list ranked 14th of 21 on paper") and r14.contains("bottom third"),
+			"At 21 clubs the middle goal says why: out of the bottom third (%s)" % r14)
+	_check(r21.contains("21st of 21") and r1.contains("1st of 18") and r1.contains("top four last year"),
+			"Edges read right: %s / %s" % [r1, r21])
+	var preachy := []
+	for r in [r6, r14, r21, r1]:
+		for w in ["should", "best option", "recommend", "you must"]:
+			if str(r).to_lower().contains(w):
+				preachy.append(r)
+	_check(preachy.is_empty(), "The board states its view; it never tells the coach what to do (%s)" % str(preachy))
+	_check(not ClubLife.goal_reason({"key": "top12", "pos": 12}, 0, 0).contains("on paper"),
+			"No rank on record: the old sentence, no made-up rank")
+	_check(ClubLife.match_reason(ClubLife.board_goal(10, 0, 21), "Geelong", 12, 0).contains("a top-14 finish"),
+			"After a match the board names the right ladder place")
+
+
+## Row 115: the season's goal is set from every club's list rank among the
+## clubs actually in the competition, said aloud on the Coaching board, and an
+## existing career keeps the goal it was set for the season it is in.
+func _test_board_goal_said_aloud() -> void:
+	GameState.reset()
+	GameState.replay_seed = SUITE_SEED
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	var n: int = GameState.season.ladder.size()
+	_check(n == 18 and int(GameState.board.get("clubs", 0)) == 18, "An 18-club season: the board counts 18 (%d)" % n)
+	var off := []
+	for code in GameState.club_goals:
+		var g: Dictionary = ClubLife.board_goal(int(GameState.club_expect[code]), int(GameState._last_finish.get(code, 0)), n)
+		if g != GameState.club_goals[code]:
+			off.append(code)
+	_check(GameState.club_goals.size() == n and off.is_empty(), "Every club's goal follows its rank of %d (%s)" % [n, str(off)])
+	var rank := int(GameState.board["rank"])
+	var said := GameState.board_goal_reason()
+	_check(said.begins_with("Going into the season your list ranked %s of 18 on paper" % PreSeason.ordinal(rank)),
+			"The board says where your list ranks (%s)" % said)
+	# Three more clubs in the competition (copies of real lists, as a created
+	# club or the expansion sides would be): the goals are set out of 21.
+	var saved_ladder: Dictionary = GameState.season.ladder.duplicate(true)
+	var saved_lists: Dictionary = GameState.season.lists.duplicate()
+	var donors: Array = GameState.season.ladder.keys().slice(0, 3)
+	for i in range(donors.size()):
+		var code := "ZZ%d" % i
+		var donor := str(donors[i])
+		GameState.season.ladder[code] = (GameState.season.ladder[donor] as Dictionary).duplicate(true)
+		GameState.season.lists[code] = GameState.season.lists[donor]
+	GameState._open_board_season()
+	var n21: int = GameState.season.ladder.size()
+	off = []
+	var mids := 0
+	for code in GameState.club_goals:
+		var r := int(GameState.club_expect[code])
+		var g: Dictionary = ClubLife.board_goal(r, int(GameState._last_finish.get(code, 0)), n21)
+		if g != GameState.club_goals[code]:
+			off.append(code)
+		if str(g["key"]) == "top12":
+			mids += 1
+			if int(g["pos"]) != 14:
+				off.append(code + " pos")
+	_check(n21 == 21 and int(GameState.board["clubs"]) == 21 and GameState.club_goals.size() == 21,
+			"With 21 clubs the board ranks 21 lists (%d)" % n21)
+	_check(off.is_empty() and mids == 7, "At 21 clubs ranks 8-14 are asked for the top 14 (%d, %s)" % [mids, str(off)])
+	_check(GameState.board_goal_reason().contains("of 21 on paper"), "The board says it out of 21 (%s)" % GameState.board_goal_reason())
+	GameState.season.ladder = saved_ladder
+	GameState.season.lists = saved_lists
+	GameState._open_board_season()
+	# The Coaching board says it aloud, under the goal.
+	var cs = load("res://scripts/ui/CoachingScene.gd").new()
+	var panel: Control = cs._board()
+	var why: Label = panel.find_child("BoardGoalWhy", true, false) if panel != null else null
+	_check(why != null and why.text == GameState.board_goal_reason() and why.text.contains("on paper"),
+			"The Coaching board shows where the list ranks (%s)" % (why.text if why != null else "missing"))
+	if panel != null:
+		panel.free()
+	cs.free()
+	# An existing career keeps this season's goal, set under the old rule, through a save and load;
+	# a board saved without a club count still says the rank, out of the clubs it ranked.
+	GameState.board["goal"] = {"key": "top12", "text": "Finish in the top 12", "pos": 12}
+	GameState.board.erase("clubs")
+	_check(GameState.save_career() and GameState.load_career(), "The career saves and loads")
+	_check(GameState.board_goal_text() == "Finish in the top 12" and int((GameState.board["goal"] as Dictionary)["pos"]) == 12,
+			"A saved season keeps the goal it was set")
+	_check(GameState.board_goal_reason().contains("of 18 on paper"),
+			"An old board with no club count reads it from the season's rankings (%s)" % GameState.board_goal_reason())
+	GameState.delete_saved_career()
