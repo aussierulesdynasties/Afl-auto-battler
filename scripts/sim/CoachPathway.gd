@@ -30,10 +30,10 @@ extends RefCounted
 ## mostly long-serving veterans (median ~280 games), so the rate is set for
 ## them: about one in five, a little higher for a long career or a medal.
 ## Row 71 (director, T5.Q15): 0.19 let former players hold 86% of the league's
-## coaching jobs by 2058; 0.14 brings that to about 70%, the middle of the
-## 60-80% aim, with outside (state-league) coaches filling the rest
+## coaching jobs by 2058; 0.12 brings that to about 71% in 2058 (still rising
+## then), the middle of the 60-80% aim, with outside (state-league) coaches filling the rest
 ## (coach_rate_impl, docs/COACH_RATE_EVIDENCE_2026-11-06.md).
-const BASE_INTEREST := 0.14
+const BASE_INTEREST := 0.12
 const GAMES_150 := 0.03
 const GAMES_250 := 0.03
 const HONOUR := 0.01

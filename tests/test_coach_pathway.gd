@@ -122,16 +122,16 @@ func _test_identity() -> void:
 
 func _test_interest() -> void:
 	# The tuned odds (row 71, T5.Q15): 0.19 put former players in 86% of the
-	# league's coaching jobs by 2058; 0.14 brings it to about 70%.
+	# league's coaching jobs by 2058; 0.12 brings it to about 71%.
 	var base := {"games": 40}
-	_check(is_equal_approx(CoachPathway.BASE_INTEREST, 0.14), "Base interest tuned to 14% (row 71)")
-	_check(is_equal_approx(CoachPathway.interest_chance(base), 0.14), "Base interest 14%")
-	_check(is_equal_approx(CoachPathway.interest_chance({"games": 160}), 0.17), "150+ games: 17%")
-	_check(is_equal_approx(CoachPathway.interest_chance({"games": 260}), 0.20), "250+ games (a typical retiree here): 20%")
-	_check(is_equal_approx(CoachPathway.interest_chance({"games": 260, "honours": {"brownlow": 1}}), 0.21),
-			"A Brownlow medallist with a long career: 21%, the champion still the likeliest to coach")
-	_check(is_equal_approx(CoachPathway.interest_chance({"games": 300, "honours": {"brownlow": 3, "coleman": 4}}), 0.22),
-			"Medals count up to two: 22% at most")
+	_check(is_equal_approx(CoachPathway.BASE_INTEREST, 0.12), "Base interest tuned to 12% (row 71)")
+	_check(is_equal_approx(CoachPathway.interest_chance(base), 0.12), "Base interest 12%")
+	_check(is_equal_approx(CoachPathway.interest_chance({"games": 160}), 0.15), "150+ games: 15%")
+	_check(is_equal_approx(CoachPathway.interest_chance({"games": 260}), 0.18), "250+ games (a typical retiree here): 18%")
+	_check(is_equal_approx(CoachPathway.interest_chance({"games": 260, "honours": {"brownlow": 1}}), 0.19),
+			"A Brownlow medallist with a long career: 19%, the champion still the likeliest to coach")
+	_check(is_equal_approx(CoachPathway.interest_chance({"games": 300, "honours": {"brownlow": 3, "coleman": 4}}), 0.20),
+			"Medals count up to two: 20% at most")
 	_check(CoachPathway.interest_chance({"games": 300, "honours": {"brownlow": 3, "coleman": 4}}) <= CoachPathway.MAX_INTEREST + 0.0001,
 			"Never above the cap")
 	var same := true
@@ -144,7 +144,7 @@ func _test_interest() -> void:
 		if a:
 			yes += 1
 	_check(same, "The interest roll is deterministic: reloading never rerolls it")
-	_check(yes > 345 and yes < 455, "About one veteran retiree in five goes into coaching (%d of 2000)" % yes)
+	_check(yes > 305 and yes < 415, "About one veteran retiree in five or six goes into coaching (%d of 2000)" % yes)
 
 
 func _test_pathway_and_specialty() -> void:
