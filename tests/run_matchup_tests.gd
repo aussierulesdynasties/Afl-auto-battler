@@ -22,7 +22,7 @@ func _run() -> void:
 	_state = root.get_node("GameState")
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_career.save"
-	_state.settings_path = "user://test_settings.cfg"
+	_state.settings_path = "user://test_matchup_settings.cfg"  # its own: other suites on the machine share test_settings.cfg
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
@@ -1042,15 +1042,20 @@ func _test_fact_options() -> void:
 		hub.queue_free()
 		await _settle()
 
-	# A real tap on an option: the match opens on that call's picker with the
-	# one fact above it, and a pick made there is the call the quarter plays.
+	# A real tap on an option chooses it and never starts the match (director,
+	# 2026-11-06: "If you click them the game just begins. That's a bad bug").
+	# Play match then opens on that call's picker with the one fact above it,
+	# and a pick made there is the call the quarter plays. Skip chosen as the
+	# way to take the match still opens on the call: the button says Play match.
 	_state.set_vignettes_on(false)
 	# Fremantle meet a side with plan responses; Brisbane meet one whose danger man can be tagged.
-	for case in [["FRE", "plan"], ["BRL", "tag"]]:
+	for case in [["FRE", "plan", "watch"], ["BRL", "tag", "watch"], ["BRL", "tag", "skip"]]:
 		var want_call: String = case[1]
+		var way: String = case[2]
 		_reset()
 		_state.set_setting("seen_weekly_loop_intro", true)
 		_state.start_season(str(case[0]), db.club_list(str(case[0])))
+		_state.set_match_way(way)
 		root.size = Vector2i(390, 844)
 		var hub2 := await _open_hub()
 		var nxt2: Dictionary = _state.my_next_opponent()
@@ -1071,13 +1076,68 @@ func _test_fact_options() -> void:
 			hub2.queue_free()
 			await _settle()
 			continue
-		var why: String = await Tap.tap(chosen)
+		var tag := "%s %s (%s)" % [str(case[0]), want_call, way]
+		var play: Button = hub2.find_child("PlayMatch", true, false)
+		_check(play != null and play.text == ("Skip to full time" if way == "skip" else "Play match"),
+				"%s: the one hub button that starts the match says so (%s)" % [tag, play.text if play != null else "none"])
+		# Every option card, a real tap at its centre at 390x844: the hub stays,
+		# no match is set up, and that card alone is chosen, its call held.
+		var cards_ok := true
+		var cards_n := 0
+		var bad := ""
+		for c in hub2.find_children("FactOption_*", "Button", true, false):
+			if (c as Button).disabled:
+				continue
+			cards_n += 1
+			var w: String = await Tap.tap(c)
+			await _settle()
+			var o: Dictionary = c.get_meta("option")
+			var on_n := 0
+			for d in hub2.find_children("FactOption_*", "Button", true, false):
+				on_n += 1 if bool(d.get_meta("chosen", false)) else 0
+			var ok: bool = w == "" and is_instance_valid(hub2) and hub2.is_inside_tree() \
+					and (current_scene == null or current_scene.name != "MatchScene") \
+					and _state.pending_sim == null and bool(c.get_meta("chosen", false)) and on_n == 1 \
+					and str(_state.call_intent.get("call", "")) == str(o["call"]) \
+					and str(_state.call_intent.get("plan", "")) == str(o["plan"])
+			if not ok and bad == "":
+				bad = "%s (%s)" % [c.name, w]
+			cards_ok = cards_ok and ok
+		_check(cards_n > 0 and cards_ok, "%s: a real tap on each of %d option cards stays on the hub, starts no match and shows that one chosen %s" % [tag, cards_n, bad])
+		# A second tap lets the call go again; a third chooses it.
+		var w2: String = await Tap.tap(chosen)
+		await _settle()
+		if not bool(chosen.get_meta("chosen", false)):
+			w2 += await Tap.tap(chosen)
+			await _settle()
+		var w3: String = await Tap.tap(chosen)
+		await _settle()
+		var let_go: bool = _state.call_intent.is_empty() and not bool(chosen.get_meta("chosen", false))
+		var w4: String = await Tap.tap(chosen)
+		await _settle()
+		_check(w2 + w3 + w4 == "" and let_go and bool(chosen.get_meta("chosen", false))
+				and str(_state.call_intent.get("fact", "")) == fact_text and _state.pending_sim == null,
+				"%s: tapping the chosen card again lets it go; tapping it once more chooses it" % tag)
+		_check(play != null and play.text == "Play match",
+				"%s: with a call chosen the start button says Play match (%s)" % [tag, play.text if play != null else "none"])
+		# The way to take the match: a real tap on Watch chooses it and starts nothing.
+		if way == "watch":
+			var watch: Button = hub2.find_child("MatchWay_watch", true, false)
+			var ww: String = await Tap.tap(watch) if watch != null else "no Watch"
+			await _settle()
+			_check(ww == "" and _state.pending_sim == null and (current_scene == null or current_scene.name != "MatchScene")
+					and not _state.call_intent.is_empty(),
+					"%s: a real tap on Watch picks the way and starts no match (%s)" % [tag, ww])
+		var why: String = await Tap.tap(play) if play != null else "no Play match"
 		await _settle()
 		await _settle()
 		var scene: Node = current_scene
 		var box: Node = scene.find_child("CoachBox", true, false) if scene != null else null
 		_check(why == "" and scene != null and scene.name == "MatchScene" and box != null,
-				"A real tap on the %s response opens the match on its calls (%s)" % [want_call, why])
+				"%s: a real tap on Play match opens the match on its calls (%s)" % [tag, why])
+		_check(_state.match_way() == way, "%s: the saved way to take the match is unchanged (%s)" % [tag, _state.match_way()])
+		# The setting outlives _reset: put Watch back for the suites after this one.
+		_state.set_match_way("watch")
 		var restated: Node = box.find_child("CallIntentFact", true, false) if box != null else null
 		var picker_name: String = {"plan": "PlanPicker", "tag": "TagPicker"}[want_call]
 		var picker: Node = box.find_child(picker_name, true, false) if box != null else null
