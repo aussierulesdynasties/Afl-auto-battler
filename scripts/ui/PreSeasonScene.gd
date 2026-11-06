@@ -1114,7 +1114,7 @@ func _actions(stop: String) -> Control:
 		var sim := UiKit.btn("Sim to Round 1", UiKit.BODY)
 		sim.name = "PreSeasonSim"
 		sim.custom_minimum_size = Vector2(0, 44)
-		sim.pressed.connect(_on_sim)
+		sim.pressed.connect(_on_sim_pressed)
 		quiet.add_child(sim)
 	for nav in [["My list", "list", "PreSeasonList"], ["Training", "training", "PreSeasonTraining"]]:
 		var b := UiKit.btn(str(nav[0]), UiKit.BODY)
@@ -1168,6 +1168,39 @@ func _on_sim_practice() -> void:
 	_build()
 
 
+## Sim to Round 1 plays the time trial, the practice match and the papers
+## without you, so it says so first, the way the hub's Sim the week does
+## (and, like it, not once Settings says don't ask).
+func _on_sim_pressed() -> void:
+	if not GameState.confirm_sim_round():
+		_on_sim()
+		return
+	var open := get_node_or_null("PreSeasonSimConfirm")
+	if open != null and not open.is_queued_for_deletion():
+		return
+	var box := UiKit.modal_box(self, 420.0, 290.0)
+	var sheet: Control = box["overlay"]
+	sheet.name = "PreSeasonSimConfirm"
+	var v: VBoxContainer = box["body"]
+	v.add_child(UiKit.heading("Sim to Round 1?", UiKit.H1))
+	var why := UiKit.lbl("The time trial, the practice match and the papers are played out without you. The practice match result goes in the news.", UiKit.BODY, UiKit.TEXT)
+	why.name = "PreSeasonSimWhy"
+	why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(why)
+	var go := UiKit.btn("Sim to Round 1", UiKit.NAME, true)
+	go.name = "PreSeasonSimGo"
+	go.custom_minimum_size = Vector2(0, 48)
+	go.pressed.connect(func():
+		sheet.queue_free()
+		_on_sim())
+	box["footer"].add_child(go)
+	var cancel := UiKit.btn("Cancel", UiKit.NAME)
+	cancel.name = "PreSeasonSimCancel"
+	cancel.custom_minimum_size = Vector2(0, 44)
+	cancel.pressed.connect(sheet.queue_free)
+	box["footer"].add_child(cancel)
+
+
 func _on_sim() -> void:
 	GameState.preseason_sim_to_round1()
 	_after("done")
@@ -1191,6 +1224,10 @@ func handle_back() -> bool:
 	if plan_sheet != null and is_instance_valid(plan_sheet) and not plan_sheet.is_queued_for_deletion():
 		plan_sheet.queue_free()
 		_build()
+		return true
+	var sim_sheet := get_node_or_null("PreSeasonSimConfirm")
+	if sim_sheet != null and is_instance_valid(sim_sheet) and not sim_sheet.is_queued_for_deletion():
+		sim_sheet.queue_free()
 		return true
 	var rule := get_node_or_null("RuleSheet")
 	if rule != null and is_instance_valid(rule) and not rule.is_queued_for_deletion():

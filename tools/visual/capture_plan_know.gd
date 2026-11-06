@@ -86,6 +86,8 @@ func _run() -> void:
 	await _shot(out + "_drill_two.png")
 	await _press("Drill0_defensive")
 	await _press("PreSeasonSim")
+	await _frames(6)
+	await _press("PreSeasonSimGo")
 	await _frames(20)
 	print("scene ", current_scene.name, " after: contest ", state.plan_level(club, "contest"), " attacking ",
 			state.plan_level(club, "attacking"))
