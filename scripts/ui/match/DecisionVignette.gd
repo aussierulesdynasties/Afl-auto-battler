@@ -10,8 +10,6 @@ extends StoppageVignette
 ## Presentation only, like every vignette: it reads who MatchSim says the call is about
 ## (the moment's player_id, defender_id, sub_id, the tagger, the match-up) and what the
 ## ground looks like, and changes nothing. What each choice does is MatchSim's.
-##
-## Behind Features "decision_scenes" (default off): off, the call is the text card it was.
 
 const KINDS := ["tired", "duel", "hot", "momentum", "set_shot"]
 ## Seconds to the freeze, per kind.

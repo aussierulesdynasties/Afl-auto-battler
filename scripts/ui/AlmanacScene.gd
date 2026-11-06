@@ -1,5 +1,5 @@
 extends Control
-## The club almanac (plan step 1c; Almanac.gd, switch "club_almanac"): the
+## The club almanac (plan step 1c; Almanac.gd): the
 ## coach's career, one page per season, newest first. Read-only: everything
 ## here was written at a season's end from what the sim really did.
 
@@ -10,7 +10,7 @@ var _records_club := ""
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	if GameState.season == null or not Almanac.on():
+	if GameState.season == null:
 		Router.replace("hub" if GameState.season != null else "main")
 		return
 	add_child(ClubBackdrop.new().setup(GameState.my_club))

@@ -287,13 +287,11 @@ func _run() -> void:
 	else:
 		_fail("match", "no match to prepare")
 
-	# The pre-season stops (behind a switch that ships off).
-	load("res://scripts/core/Features.gd").set_on("preseason", true)
+	# The pre-season stops.
 	_career(true)
 	_state.open_preseason()
 	scene = await _open("preseason", "res://scenes/PreSeasonScene.tscn")
 	await _close(scene)
-	load("res://scripts/core/Features.gd").set_on("preseason", false)
 
 	# The season played out: its review, then the off-season.
 	_career(true)

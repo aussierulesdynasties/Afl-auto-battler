@@ -51,7 +51,6 @@ func _run() -> void:
 	gs.set_setting("seen_training_intro", true)
 	gs.set_setting("seen_season_stats_intro", true)
 	gs.set_setting("seen_weekly_loop_intro", true)
-	load("res://scripts/core/Features.gd").set_on("international_prospects", true)   # the international beats
 	load("res://scripts/sim/StoryDeck.gd").reload()
 	gs.start_season(club, db.club_list(club))
 	for i in range(3):

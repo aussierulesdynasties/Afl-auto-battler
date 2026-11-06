@@ -17,7 +17,6 @@ const CLUB := "FRE"
 
 func run() -> void:
 	GameState.replay_seed = SUITE_SEED
-	Features.set_on("preseason", true)
 	_t("_test_rules")
 	_t("_test_deck")
 	_t("_test_flow")
@@ -26,9 +25,7 @@ func run() -> void:
 	_t("_test_silence_and_sim")
 	_t("_test_saves")
 	await _t("_test_screen")
-	await _t("_test_switch_off")
 	PreSeason.reload()
-	Features.clear("preseason")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Papers", self))
@@ -416,16 +413,6 @@ func _test_screen() -> void:
 	_check(last_row != null and foot != null and last_row.get_global_rect().end.y <= foot.global_position.y,
 			"On a PC all 18 clubs of the ladder are in view above the footer, no scrolling")
 	tree.root.size = Vector2i(390, 844)
-
-
-func _test_switch_off() -> void:
-	Features.set_on("preseason", false)
-	_career()
-	_check(GameState.preseason.is_empty() and GameState.papers_record().is_empty() and GameState.preseason_stop() == "",
-			"With the pre-season off there are no papers")
-	var f := ClubStories.club_facts(GameState, 1, "regular")
-	_check(int(f["words_behind"]) == 0 and str(f["paper"]) == "", "...and the stories know nothing of them")
-	Features.set_on("preseason", true)
 
 
 func _frames(tree: SceneTree, n: int) -> void:

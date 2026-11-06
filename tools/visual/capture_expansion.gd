@@ -1,6 +1,6 @@
 extends SceneTree
-## What the coach sees of a new club building its list (the feature switch
-## "expansion_package"), for the director's look. Needs a real renderer:
+## What the coach sees of a new club building its list (the expansion
+## package), for the director's look. Needs a real renderer:
 ##   godot --path . --script tools/visual/capture_expansion.gd -- --out /tmp/exp [--club FRE] [--size 1280x720]
 ## Writes:
 ##   <out>_setup.png   the new-career screen with the Canberra choice
@@ -58,10 +58,8 @@ func _run() -> void:
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
 	var router = root.get_node("Router")
-	var features = load("res://scripts/core/Features.gd")
 	var build = load("res://scripts/state/ExpansionBuild.gd")
 	var draft_class = load("res://scripts/sim/Draft.gd")
-	features.set_on("expansion_package", true)
 	state.autosave_enabled = false
 	state.save_path = "user://capture_expansion.save"
 	state.settings_path = "user://capture_expansion_settings.cfg"
@@ -156,5 +154,4 @@ func _run() -> void:
 	if hub.has_method("_show_news"):
 		hub._show_news()
 	await _shot(out + "_news.png")
-	features.clear("expansion_package")
 	quit(0)

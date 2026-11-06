@@ -2,7 +2,7 @@ extends SceneTree
 ## Contact sheet per figure strip for the player looks (register row 6): every frame of the
 ## strip (columns) in every hair style (rows, Appearance.HAIR_STYLES), each row wearing face
 ## (row mod 5), styles wrapped into a grid, through the game's own draw (StoppageVignette.draw_frame, figure.gdshader).
-##   godot --path . --script tools/visual/capture_strip_looks.gd -- --features player_looks \
+##   godot --path . --script tools/visual/capture_strip_looks.gd -- \
 ##       --out tools/output/looks --strips average/ready/front,ruck/tap/back
 ## Writes <out>/<body>_<anim>_<facing>.png. Needs a real renderer and a window.
 

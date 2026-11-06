@@ -4,7 +4,7 @@ extends SceneTree
 ## Writes PREFIX_hub.png and PREFIX_news.png (and PREFIX_call.png when an arc big call is dealt). Dark theme; a fresh career, never a real save.
 ## r1 is the director's Round 1 feed (15 first goals, a fine, an injury, a six-goal haul, a press quote);
 ## mid plays six real rounds and shows the news the game made.
-## flag is the season's end with the switch league_news on (row 76): the premiership item, with its
+## flag is the season's end (row 76): the premiership item, with its
 ## flag-history sentence computed by LeagueNews from data/club_premierships.csv.
 ## fresh is the hub a new career opens on (with coach arcs on, GEE, FRE and COL open with arc news);
 ## call plays on to the first week a coach arc's big call is dealt (at most 30 weeks).
@@ -83,8 +83,6 @@ func _run() -> void:
 			items.append(_item("milestone", "%s kicked his first AFL goal for %s." % [f[0], f[1]]))
 		state.news = items
 	elif mode == "flag":
-		# Loaded at run time: a tool script is compiled before the autoloads exist.
-		load("res://scripts/core/Features.gd").set_on("league_news", true)
 		var year := int(state.season_year)
 		var prem: String = load("res://scripts/state/LeagueNews.gd").premiers_line(_premier, year, state.honour_roll)
 		print("PREMIERS ", prem)

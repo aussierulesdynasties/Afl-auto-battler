@@ -863,7 +863,6 @@
 	{
 		"id": "finals_prelim_week",
 		"category": "media",
-		"feature": "finals_cards_2",
 		"subject": {
 			"kind": "club"
 		},
@@ -921,7 +920,6 @@
 	{
 		"id": "finals_written_off",
 		"category": "media",
-		"feature": "finals_cards_2",
 		"subject": {
 			"kind": "club"
 		},
@@ -974,7 +972,6 @@
 	{
 		"id": "finals_one_week_short",
 		"category": "media",
-		"feature": "finals_cards_2",
 		"subject": {
 			"kind": "club"
 		},

@@ -119,7 +119,7 @@ static func set_table(coaches: Dictionary, clubs: Array, my_club: String) -> voi
 
 
 ## How well each club knows each plan (GameState.plan_known, the same
-## dictionary): club -> {plan: level}. Empty with the pre-season switch off.
+## dictionary): club -> {plan: level}.
 static var known := {}
 
 

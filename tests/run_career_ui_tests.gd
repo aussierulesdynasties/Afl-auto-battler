@@ -1274,7 +1274,11 @@ Your career stays on this device.",
 	await _settle()
 	_check(current_scene.find_child("SimConfirm", true, false) != null and _state.season.round_index == r0,
 			"Sim round asks before playing your match")
-	_check(_screen_text().contains("Sim Round %d?" % (r0 + 1)), "The question names the round")
+	# The round's own name: a themed round (Gather Round, Sir Doug Nicholls
+	# Round) is named as such.
+	var up_label := str(current_scene.call("_upcoming_match").get("label", ""))
+	_check(up_label != "" and _screen_text().contains("Sim %s?" % up_label),
+			"The question names the round (%s)" % up_label)
 	_router.handle_back(true)
 	await _settle()
 	_check(_router.current() == "hub" and current_scene.find_child("SimConfirm", true, false) == null
@@ -1624,32 +1628,9 @@ Your career stays on this device.",
 	var ls: ScrollContainer = current_scene.get("_list_scroll")
 	var trainees: Array = current_scene.find_children("Trainee_*", "Button", true, false)
 	_check(ls != null and trainees.size() >= 2, "The training list has rows to swipe")
-	# The scrollbar is a thumb you can grab: a touch area wider than the
-	# engine's 8 units, a thumb never shorter than a fingertip, and the rows
-	# set clear of it rather than running underneath.
-	if ls != null:
-		var bar := ls.get_v_scroll_bar()
-		_check(bar.visible and bar.size.x >= 20.0 and bar.get_combined_minimum_size().y >= 48.0,
-				"The training list's scrollbar is a finger wide and never shorter than a fingertip (%s)" % str(bar.size))
-		var rows_box := ls.get_child(0) as Control
-		_check(rows_box != null and rows_box.size.x <= ls.size.x - bar.size.x + 0.5,
-				"The training rows stop short of the scrollbar (%.0f of %.0f)" % [rows_box.size.x if rows_box else -1.0, ls.size.x])
-	# The name and plan lines sit level with the role and the rating, not
-	# hugging the top of the row.
-	if not trainees.is_empty():
-		var first_row: Button = trainees[0]
-		var stacks := first_row.find_children("*", "VBoxContainer", true, false)
-		var stack: Control = stacks[0] if not stacks.is_empty() else null
-		var rating: Control = stack.get_parent().get_child(-1) if stack != null else null
-		if stack != null and rating != null and stack.get_child_count() > 0:
-			var top := (stack.get_child(0) as Control).global_position.y
-			var last := stack.get_child(-1) as Control
-			var stack_mid := (top + last.global_position.y + last.size.y) * 0.5
-			var rating_mid := rating.global_position.y + rating.size.y * 0.5
-			_check(absf(stack_mid - rating_mid) <= 2.0,
-					"A training row's name lines sit level with its rating (%.1f against %.1f)" % [stack_mid, rating_mid])
-		else:
-			_check(false, "A training row has its name lines and its rating to compare")
+	# The training grid scrolls as one page with no scrollbar, and its cards
+	# are checked in the training suite (the old list's scrollbar and row
+	# checks went with the list).
 	if ls != null and trainees.size() >= 2:
 		var row: Button = trainees[1]
 		var pid := str(row.name).trim_prefix("Trainee_")
@@ -2791,21 +2772,10 @@ func _find_named(n: Node, named: String, out: Array) -> void:
 		_find_named(c, named, out)
 
 
-## The Canberra choice on New career (director, 2026-10-14), behind the feature
-## switch expansion_package: absent with the switch off; with it on, off by
-## default, and a real tap on "Joins in 2030" puts Canberra in the career.
+## The Canberra choice on New career (director, 2026-10-14): off by default,
+## and a real tap on "Joins in 2030" puts Canberra in the career.
 func _test_new_career_canberra_choice() -> void:
-	var features = load("res://scripts/core/Features.gd")
 	_state.delete_saved_career()
-	_state.reset()
-	_router.stack = []
-	_router.go("main")
-	await _settle()
-	await Tap.tap(current_scene.find_child("NewCareer", true, false))
-	await _settle()
-	_check(current_scene.find_child("Canberra_in", true, false) == null and _db.active_clubs(2030).has("CANB"),
-			"Switch off: New career has no Canberra choice and Canberra joins as it always did")
-	features.set_on("expansion_package", true)
 	for pick_it in [false, true]:
 		_state.reset()
 		_router.stack = []
@@ -2824,10 +2794,8 @@ func _test_new_career_canberra_choice() -> void:
 				and _db.active_clubs(2030).has("CANB") == pick_it,
 				("A tap on Joins in 2030 puts Canberra in the new career (%s %s)" if pick_it
 				else "Left alone, the new career has no Canberra (%s %s)") % [t1, t2])
-	features.clear("expansion_package")
 	_state.reset()
 	_router.stack = []
-	_check(_db.active_clubs(2030).has("CANB"), "The switch back off, Canberra joins again")
 
 
 ## qa web pass, 2026-10-12: starting a new career must not cost the player the

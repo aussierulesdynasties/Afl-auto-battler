@@ -3,7 +3,7 @@ extends RefCounted
 ## game plan well, partly or barely. Drilling a plan in the pre-season moves it
 ## up a step, the off-season slips every plan a step, an unplayed plan fades
 ## slowly, and a plan known less than well gives less of its upside in the
-## match. All of it behind the pre-season switch: off, nothing changes.
+## match.
 
 const Tap := preload("res://tests/tap.gd")
 
@@ -16,8 +16,6 @@ const CLUB := "FRE"
 
 func run() -> void:
 	GameState.replay_seed = SUITE_SEED
-	_t("_test_switch_off")
-	Features.set_on("preseason", true)
 	_t("_test_rules")
 	_t("_test_words")
 	_t("_test_match_effect")
@@ -31,7 +29,6 @@ func run() -> void:
 	_t("_test_group_old_saves")
 	await _t("_test_group_screen")
 	PreSeason.reload()
-	Features.clear("preseason")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Plan familiarity", self))
@@ -119,40 +116,6 @@ func _sim(known0: Dictionary, known1: Dictionary, plan0: String, plan1: String, 
 
 
 # ---------------------------------------------------------------------------
-func _test_switch_off() -> void:
-	PreSeason.reload()
-	_career(false)
-	# The switch ships ON since 1.0.1; this test forces it off to prove the game
-	# without the pre-season is the game as it was.
-	Features.set_on("preseason", false)
-	_check(not Features.on("preseason"), "The pre-season switch can be turned off for a run")
-	GameState.set_club_plan("attacking")
-	GameState._refresh_coach_tactics()
-	_check(GameState.plan_known.is_empty() and CoachEffects.known.is_empty()
-			and GameState.plan_known_line("attacking") == "" and not GameState.plan_known_shown()
-			and GameState.plan_level(CLUB, "attacking") == PreSeason.WELL,
-			"Switched off, no plan has a familiarity record and none is shown")
-	var sq := Squad.new("A", GameDB.club_list("FRE"), true, "FRE")
-	CoachEffects.apply(sq)
-	_check(sq.plan_know.is_empty(), "...so the side's plans work as written")
-	var plain := _sim({}, {}, "attacking", "defensive").run()
-	var again := _sim({}, {}, "attacking", "defensive").run()
-	_check(plain["score"] == again["score"] and str(plain["goals"]) == str(again["goals"]),
-			"...and a same-seed match is the match it always was")
-	var well := PreSeason.familiar_mult(PreSeason.WELL)
-	var ok := _sim({"attacking": well, "defensive": well}, {}, "attacking", "defensive").run()
-	_check(plain["score"] == ok["score"] and str(plain["goals"]) == str(ok["goals"]),
-			"A plan known well plays exactly as today")
-	GameState.save_career()
-	var saved := CareerSave.read(GameState.save_path)
-	_check(not saved.has("plan_known") and not saved.has("plan_idle"), "...and the save holds no familiarity")
-	for i in range(3):
-		GameState.advance()
-	_check(GameState.plan_known.is_empty() and GameState.plan_idle.is_empty(),
-			"Three rounds on, still nothing kept: the game is as it was")
-	Features.set_on("preseason", true)
-
-
 func _test_rules() -> void:
 	PreSeason.reload()
 	_check(PreSeason.LEVELS == ["barely", "partly", "well"] and PreSeason.WELL == 2, "Three levels, well on top")
@@ -385,7 +348,7 @@ func _test_off_season_and_fade() -> void:
 	var idle := _idles()
 	GameState.save_career()
 	var saved := CareerSave.read(GameState.save_path)
-	_check(saved.has("plan_known") and saved.has("plan_idle"), "With the switch on, the save holds the record")
+	_check(saved.has("plan_known") and saved.has("plan_idle"), "The save holds the record")
 	GameState.load_career()
 	_check(_levels() == snapshot and _idles() == idle, "...and it comes back as saved")
 	PreSeason.reload()
@@ -436,12 +399,6 @@ func _test_old_saves() -> void:
 	GameState.load_career()
 	_check(GameState.plan_level(CLUB, "contest") == 2 and GameState.plan_level(CLUB, "attacking") == 0,
 			"A damaged record is clamped, not trusted")
-	Features.set_on("preseason", false)
-	GameState.load_career()
-	GameState._refresh_coach_tactics()
-	_check(CoachEffects.known.is_empty() and GameState.plan_level(CLUB, "attacking") == PreSeason.WELL,
-			"Switched off again, the record is left alone and unread")
-	Features.set_on("preseason", true)
 
 
 func _test_screens() -> void:
@@ -487,13 +444,6 @@ func _test_screens() -> void:
 			and (t_a.find_child("Known", true, false) as Label).text == "Plan fluency: high",
 			"The pre-match plan tiles carry the same line, in the same words")
 	tiles.queue_free()
-	Features.set_on("preseason", false)
-	var off := PlanTiles.grid(2, [], [])
-	tree.root.add_child(off)
-	await _frames(tree, 2)
-	_check(off.find_child("Known", true, false) == null, "Switched off, no tile mentions it")
-	off.queue_free()
-	Features.set_on("preseason", true)
 	# The first break of a coached match: the plan call says it, in full ink.
 	GameState.plan_known[CLUB]["through_stars"] = 0
 	GameState.plan_known[CLUB]["defensive"] = 1

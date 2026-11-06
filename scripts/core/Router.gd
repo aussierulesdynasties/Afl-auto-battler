@@ -61,11 +61,9 @@ func _ease_in() -> void:
 	if scene == null:
 		return
 	scene.modulate.a = 0.0
-	if UiKit.juice():
-		# Never linear (ui_motion): an ease-out, quick at first and settling.
-		scene.create_tween().tween_property(scene, "modulate:a", 1.0, UiKit.Motion.DUR_FAST) 				.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
-		return
-	scene.create_tween().tween_property(scene, "modulate:a", 1.0, 0.18)
+	# Never linear: an ease-out, quick at first and settling.
+	scene.create_tween().tween_property(scene, "modulate:a", 1.0, UiKit.Motion.DUR_FAST) \
+			.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 
 
 ## Replace the current entry instead of pushing - used for boot -> menu.

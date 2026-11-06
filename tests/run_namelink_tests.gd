@@ -101,19 +101,6 @@ func _test_training(club: String, sz: Vector2i) -> void:
 	await _settle()
 	current_scene = scene
 	var wide := sz.x >= 760
-	var other: Dictionary = mine[3]
-	# Every control NameLink-built on Training is thumb sized on the phone: each row's
-	# Profile tap is at least 44 x 44 and none of them reaches into the row's own tap.
-	if not wide:
-		var taps := scene.find_children("Profile_*", "Button", true, false)
-		_check(taps.size() >= 4, "%s: the rows carry Profile taps (%d)" % [tag, taps.size()])
-		for t in taps:
-			var tb := t as Button
-			_check(tb.size.x >= 44.0 and tb.size.y >= 44.0, "%s: %s is at least 44x44 (%s)" % [tag, tb.name, str(tb.size)])
-			var row := tb.get_parent() as Control
-			var rest := row.get_global_rect()
-			_check(tb.get_global_rect().position.x >= rest.position.x and tb.get_global_rect().end.x <= rest.end.x + 0.5,
-					"%s: %s stays inside its row" % [tag, tb.name])
 	# Phone: a row opens the plan first.
 	if not wide:
 		var row: Button = scene.find_child("Trainee_" + str(a["id"]), true, false)
@@ -138,24 +125,11 @@ func _test_training(club: String, sz: Vector2i) -> void:
 		_check(_sheet(scene) == null and str(scene.get("_selected")) == selected,
 				"%s: Back closes the profile and leaves Training on the same player" % tag)
 		_check(is_instance_valid(scene) and scene.is_inside_tree(), "%s: Back stayed on Training" % tag)
-	# A row's Profile tap opens that row's player, not the selected one.
+	# The cards carry no Profile tap of their own: his name at the head of the
+	# plan is the way to his profile (checked above).
 	if not wide:
 		scene.call("handle_back")
 		await _settle()
-	var pbtn: Button = scene.find_child("Profile_" + str(other["id"]), true, false)
-	_check(pbtn != null, "%s: a row has a Profile tap" % tag)
-	if pbtn != null:
-		_check(pbtn.size.x >= 44.0 and pbtn.size.y >= 44.0, "%s: the Profile tap is thumb sized (%s)" % [tag, str(pbtn.size)])
-		var before := str(scene.get("_selected"))
-		var why3: String = await Tap.tap(pbtn)
-		await _settle()
-		var want2: String = _db.player_display_name(other)
-		_check(why3 == "" and _sheet_name(_sheet(scene)) == want2,
-				"%s: a row's Profile tap opens %s (%s, got '%s')" % [tag, want2, why3, _sheet_name(_sheet(scene))])
-		_check(str(scene.get("_selected")) == before, "%s: the Profile tap does not select him for training" % tag)
-		_router.handle_back()
-		await _settle()
-		_check(_sheet(scene) == null, "%s: Back closes it" % tag)
 	# The week's news: a real tap on a name.
 	var news: Node = null
 	var rises_box := scene.find_child("TrainingRises", true, false)

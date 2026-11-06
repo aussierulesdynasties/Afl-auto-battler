@@ -16,7 +16,7 @@ const GOAL_LINE := "goal_line"
 const BOUNDARY_SNAP := "boundary_snap"
 
 const DURATIONS := {
-	SPECCY_FRONT: 2.3,    # (with the "speccy_front" switch on; OLD_FRONT_DURATION without) the mark at 1.5 s, the freeze on the grab at 1.8 s, then it holds half a second
+	SPECCY_FRONT: 2.3,    # (OLD_FRONT_DURATION when the sheets lack its moves) the mark at 1.5 s, the freeze on the grab at 1.8 s, then it holds half a second
 
 	SPECCY_SIDE: 3.6,
 	SPECCY_DEFENSIVE: 3.7,
@@ -123,9 +123,7 @@ func setup(p_kind: String, p_event: Dictionary, p_scene: Dictionary, p_result: D
 		_board = {"codes": [home, away], "goals": event["goals"], "behinds": event["behinds"],
 				"q": int(event.get("q", 0))}
 	if _ui == self:
-		var ov := VignetteGrade.attach(self, weather, _draw_letterbox)
-		if ov != null:
-			_ui = ov
+		_ui = VignetteGrade.attach(self, weather, _draw_letterbox)
 	queue_redraw()
 
 
@@ -142,7 +140,7 @@ func _dress(codes: Array) -> void:
 	material = StoppageVignette.figure_material(_kits + [StoppageVignette.UMPIRE_GEAR], material as ShaderMaterial)
 
 
-## The earlier front speccy shot ran this long: it plays when the "speccy_front" switch is off.
+## The earlier front speccy shot ran this long: it plays when the sheets lack the front-on moves.
 const OLD_FRONT_DURATION := 3.8
 
 
@@ -704,14 +702,13 @@ const SF_HELD := 3                # the ball's frame in his hands: upright, its 
 var _hold := 0.0
 
 
-## Whether the front-on shot plays: the "speccy_front" switch is on and the sheets hold its moves (otherwise the
-## earlier staging plays, exactly as before the new shot existed).
+## Whether the front-on shot plays: the sheets hold its moves (otherwise the earlier side-on staging plays).
 static func _sf_face(anim: String) -> String:
 	return SF_FACE if anim == SF_MARK or anim == SF_BRACE else "front"
 
 
 static func _sf_ready() -> bool:
-	return Features.on("speccy_front") and VignetteFigures.has(BODY, SF_MARK, SF_FACE) and VignetteFigures.has(BODY, SF_BRACE, SF_FACE)
+	return VignetteFigures.has(BODY, SF_MARK, SF_FACE) and VignetteFigures.has(BODY, SF_BRACE, SF_FACE)
 
 
 func _sf_camera() -> Array:

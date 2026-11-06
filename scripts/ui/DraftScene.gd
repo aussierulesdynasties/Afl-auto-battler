@@ -1428,22 +1428,7 @@ func _open_player(id: String) -> void:
 	var type_l := UiKit.lbl(Roles.label(p), UiKit.HEADING, UiKit.TEXT, true)
 	type_l.name = "DetailType"
 	kv.add_child(type_l)
-	var strengths := [] if Features.on("top_attributes") else PlayerProfile.strengths(p)
-	if Features.on("top_attributes"):
-		PlayerSheet.top_attributes_block(kv, p, scouted, 14, UiKit.SECONDARY)
-	elif strengths.is_empty():
-		kv.add_child(UiKit.lbl("No standout strength yet for his position.", UiKit.SECONDARY, UiKit.MUTED))
-	for s in strengths:
-		var row := UiKit.hbox(8)
-		row.name = "Strength_" + str(s["key"])
-		kv.add_child(row)
-		var sl := UiKit.lbl(str(s["label"]), 14, UiKit.TEXT)
-		sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(sl)
-		row.add_child(UiKit.line(str(s["grade"]), 14, UiKit.MUTED))
-	var weak := {} if Features.on("top_attributes") else PlayerProfile.weakness(p)
-	if not weak.is_empty():
-		kv.add_child(UiKit.lbl("Needs work: " + str(weak["label"]).to_lower(), UiKit.SECONDARY, UiKit.MUTED))
+	PlayerSheet.top_attributes_block(kv, p, scouted, 14, UiKit.SECONDARY)
 	var traits: Array = Traits.of(p)
 	if not traits.is_empty():
 		kv.add_child(UiKit.spacer(4))
@@ -1481,7 +1466,7 @@ func _open_player(id: String) -> void:
 			tr.add_child(UiKit.line(Combine.text(key, r), 14, UiKit.TEXT if r >= 0.0 else UiKit.MUTED, r >= 0.0))
 			v.add_child(tr)
 	# Seen in your pre-season match: what he did that day.
-	var seen_line := PreSeason.seen_line(p, _club) if Features.on("preseason") else ""
+	var seen_line := PreSeason.seen_line(p, _club)
 	if seen_line != "":
 		v.add_child(UiKit.spacer(4))
 		var seen_lbl := UiKit.lbl(seen_line, UiKit.SECONDARY, UiKit.TEXT, true)

@@ -869,38 +869,28 @@ class Motion:
 	const EASE_STAMP := Tween.EASE_OUT
 
 
-## The `ui_motion` switch (Features.gd): the new motion is built and tested
-## behind it. Off, every helper below does exactly what it did before.
-static func juice() -> bool:
-	return Features.on("ui_motion")
-
-
 ## One running tween per node and kind ("mod": modulate, "scale", "text"): a
-## second call stops the first, so two never fight over a property. With the
-## switch off this is a plain create_tween, as before.
+## second call stops the first, so two never fight over a property.
 static func _own(c: Node, kind: String) -> Tween:
 	var key := "_motion_" + kind
-	if juice():
-		if c.has_meta(key):
-			var old: Variant = c.get_meta(key)
-			if old is Tween and (old as Tween).is_valid():
-				(old as Tween).kill()
-		var tw := c.create_tween()
-		c.set_meta(key, tw)
-		return tw
-	return c.create_tween()
+	if c.has_meta(key):
+		var old: Variant = c.get_meta(key)
+		if old is Tween and (old as Tween).is_valid():
+			(old as Tween).kill()
+	var tw := c.create_tween()
+	c.set_meta(key, tw)
+	return tw
 
 
 ## Fade `c` up from nothing, `delay` seconds after it is shown.
 static func reveal(c: Control, delay := 0.0) -> void:
 	if not motion_on() or c == null:
 		return
-	c.modulate = Color(1, 1, 1, 0.0) if juice() else Color(c.modulate, 0.0)
+	c.modulate = Color(1, 1, 1, 0.0)
 	var run := func() -> void:
 		if not is_instance_valid(c):
 			return
-		if juice():
-			Feel.moved.append("reveal")
+		Feel.moved.append("reveal")
 		var tw := _own(c, "mod")
 		if delay > 0.0:
 			tw.tween_interval(delay)
@@ -921,8 +911,7 @@ static func count_up(l: Label, to: int, say: Callable, dur := Motion.DUR_COUNT, 
 	var run := func() -> void:
 		if not is_instance_valid(l):
 			return
-		if juice():
-			Feel.moved.append("count_up")
+		Feel.moved.append("count_up")
 		var tw := _own(l, "text")
 		tw.tween_method(func(v: float): l.text = str(say.call(roundi(v))), float(from), float(to), dur) \
 				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE)
@@ -948,7 +937,7 @@ static func land(c: Control, delay := 0.0, sound := true) -> void:
 		if not motion_on() or not is_instance_valid(c):
 			return
 		# The pivot reads the size, so it waits for the first layout.
-		if juice() and c.size.x < 1.0 and c.is_inside_tree():
+		if c.size.x < 1.0 and c.is_inside_tree():
 			await c.get_tree().process_frame
 			if not is_instance_valid(c) or not motion_on():
 				return
@@ -984,7 +973,7 @@ static func attention(c: CanvasItem, delay := 0.45) -> void:
 ## every node here lets a touch through to them.
 static func sheet_in(box: Dictionary) -> void:
 	var overlay: Control = box.get("overlay")
-	if not juice() or not motion_on() or overlay == null:
+	if not motion_on() or overlay == null:
 		return
 	var rise: Control = box.get("rise")
 	if rise == null:
@@ -1006,7 +995,7 @@ static func fill_bar(fill: Control, from: float, to: float) -> void:
 	if fill == null:
 		return
 	fill.anchor_right = clampf(to, 0.0, 1.0)
-	if not juice() or not motion_on() or is_equal_approx(from, to):
+	if not motion_on() or is_equal_approx(from, to):
 		return
 	fill.anchor_right = clampf(from, 0.0, 1.0)
 	_after(fill, 0.0, func() -> void:
@@ -1614,9 +1603,9 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 	var shell := panel(PANEL, 16)
 	if bottom:
 		shell.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	# ui_motion: the sheet rises into place, which a Container would undo, so
+	# The sheet rises into place, which a Container would undo, so
 	# the panel sits on a plain Control the CenterContainer places by its size.
-	var rises := juice() and motion_on()
+	var rises := motion_on()
 	if rises:
 		var wrap := Control.new()
 		wrap.name = "SheetRise"

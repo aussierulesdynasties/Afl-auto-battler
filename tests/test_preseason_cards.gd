@@ -17,7 +17,6 @@ const IDS := ["pre_recruit_behind", "pre_contract_talk", "pre_bulking_up", "pre_
 func run(suite) -> void:
 	s = suite
 	var before: int = s.checks
-	Features.set_on("preseason", true)
 	PreSeason.reload()
 	_t("_test_deck")
 	_t("_test_flow")
@@ -25,7 +24,6 @@ func run(suite) -> void:
 	_t("_test_facts")
 	_t("_test_hands_off_and_save")
 	print("Pre-season cards: %d of the story suite's checks" % (s.checks - before))
-	Features.clear("preseason")
 	PreSeason.reload()
 
 
@@ -234,19 +232,6 @@ func _test_effects() -> void:
 	var was := GameState.plan_level(CLUB, "defensive")
 	_walk(-1)
 	_check(GameState.plan_level(CLUB, "defensive") >= was, "A drill added by a card is counted in with the blocks' when the pre-season ends")
-	# A card answer with the switch off has nothing to act on, and the deck never offers one.
-	var played := 0
-	Features.set_on("preseason", false)
-	GameState.reset()
-	GameState.career_seed = SEED
-	GameState.replay_seed = SEED
-	GameState.start_season(CLUB, GameDB.club_list(CLUB))
-	GameState.open_preseason()
-	_check(not GameState.preseason_active() and ClubStories.phase(GameState) == "regular", "With the switch off there is no pre-season phase and no card")
-	for e in GameState.week_events:
-		played += 1 if IDS.has(str(e["tid"])) else 0
-	_check(played == 0, "...and Round 1's cards are never pre-season ones")
-	Features.set_on("preseason", true)
 
 
 func _snapshot(subj: Dictionary) -> Dictionary:

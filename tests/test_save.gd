@@ -567,9 +567,11 @@ func _test_intake_and_second_season() -> void:
 
 	var late := GameDB.late_draftees.size()
 	var alias_next: int = GameDB._alias_next
+	GameState.advance()
+	GameState.advance()
+	# Read after the two rounds: the pool can move in the season (a
+	# mid-season pick off it), and what is checked is that the save keeps it.
 	var pool := GameState.draftee_pool.size()
-	GameState.advance()
-	GameState.advance()
 	var ladder := _ladder_sig()
 	_check(GameState.save_career(), "A second-season career saves")
 	_check(GameState.load_career(), "The second season loads")
@@ -580,7 +582,7 @@ func _test_intake_and_second_season() -> void:
 	_check(_ladder_sig() == ladder, "The second season's ladder is restored")
 	_check(GameDB.late_draftees.size() == late, "Generated draft classes are restored")
 	_check(GameDB._alias_next == alias_next, "The fictional-name cursor is restored")
-	_check(GameState.draftee_pool.size() == pool, "The prospect pool is restored")
+	_check(GameState.draftee_pool.size() == pool, "The prospect pool is restored (%d of %d)" % [GameState.draftee_pool.size(), pool])
 	var shared := true
 	for p in GameState.draftee_pool:
 		var in_db := false

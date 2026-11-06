@@ -730,7 +730,7 @@ func home_ground(code: String) -> String:
 	return str(GameDB_ref().club(code).get("ground", ""))
 
 
-## This season's Gather Round (GatherRound, switch `gather_round`), 0-based, or -1.
+## This season's Gather Round (GatherRound), 0-based, or -1.
 func gather_round() -> int:
 	return GatherRound.round_of(fixture, clubs, seed)
 

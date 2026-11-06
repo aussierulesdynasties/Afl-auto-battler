@@ -1,6 +1,6 @@
 extends RefCounted
 ## Row 54: the under-18 carnival week and the mid-season rookie draft
-## (MidseasonDraft, switch `midseason_draft`). A seeded career plays to round
+## (MidseasonDraft). A seeded career plays to round
 ## 10 (carnival) and 11 (draft); each beat survives a save and load, the hub
 ## sheets take a real tap, and Sim the week passes an unmade pick.
 ## Run through run_midseason_draft_tests.gd.
@@ -42,10 +42,8 @@ func run(tree: SceneTree) -> void:
 	checks = 0
 	root.size = Vector2i(390, 844)
 	GameState.replay_seed = SEED
-	_t("_test_switch_off")
 	await _t("_test_carnival_and_draft")
 	_check(reached_end, "The carnival-and-draft test ran to its end")
-	Features.set_on(MidseasonDraft.SWITCH, false)
 	GameState.replay_seed = 0
 	print(Ran.line("Midseason draft", self))
 
@@ -63,16 +61,7 @@ func _play_to(round_no: int) -> void:
 		guard += 1
 
 
-func _test_switch_off() -> void:
-	Features.set_on(MidseasonDraft.SWITCH, false)
-	_new_career()
-	_play_to(MidseasonDraft.DRAFT_AFTER)
-	_check(gs.midseason.is_empty(), "Switch off: nothing is written (%s)" % str(gs.midseason))
-	_check(not MidseasonDraft.waiting(gs), "Switch off: no pick waits")
-
-
 func _test_carnival_and_draft() -> void:
-	Features.set_on(MidseasonDraft.SWITCH, true)
 	_new_career()
 	var year: int = gs.season_year
 	# One overlooked prospect from last year's class, so the pool has both kinds.

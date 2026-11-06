@@ -1,7 +1,7 @@
 extends SceneTree
 ## Row 12: a clanger names why it went astray over the player who erred ("Slippery
 ## ball", "Blown off line"). Plays a seeded match through the real PitchView with
-## the clanger_cause switch on and saves one frame at the moment each cause shows
+## the clanger causes shown and saves one frame at the moment each cause shows
 ## (up to --max), with the words on the oval beside it in <out>_log.txt.
 ## Needs a real renderer:
 ##   godot --path . --rendering-method gl_compatibility --script tools/visual/capture_clanger_why.gd -- \
@@ -52,8 +52,6 @@ func _run() -> void:
 	H = int(size_s[1])
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
-	var feats = load("res://scripts/core/Features.gd")
-	feats.set_on("clanger_cause", true)
 	var db = root.get_node("GameDB")
 	db.reload()
 	var SquadC = load("res://scripts/sim/Squad.gd")
@@ -105,5 +103,4 @@ func _run() -> void:
 	f.store_string("\n".join(_log) + "\n")
 	f.close()
 	print("\n".join(_log))
-	feats.clear("clanger_cause")
 	quit(0)

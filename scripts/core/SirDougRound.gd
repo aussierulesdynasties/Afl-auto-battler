@@ -1,7 +1,6 @@
 class_name SirDougRound
 extends RefCounted
-## Sir Doug Nicholls Round (row 75, T5.Q11b; Director Bible 2.73 and #128),
-## behind the switch `sir_doug_round`.
+## Sir Doug Nicholls Round (row 75, T5.Q11b; Director Bible 2.73 and #128).
 ##
 ## Each season one fixed mid-season round is Sir Doug Nicholls Round. It is a
 ## tribute, never a mechanic: it only labels a round the fixture already has.
@@ -17,7 +16,6 @@ extends RefCounted
 ## a pattern or gives artwork a meaning. Once written, a season's record is
 ## read back from the save, so reloading cannot change it.
 
-const SWITCH := "sir_doug_round"
 ## Round 11 (0-based 10): mid-season, inside the bye rounds (Season.BYE_FIRST
 ## to BYE_LAST).
 const ROUND := 10
@@ -28,7 +26,7 @@ const NO_DESIGN := "none"
 
 
 static func active(gs) -> bool:
-	return Features.on(SWITCH) and gs != null and gs.season != null
+	return gs != null and gs.season != null
 
 
 ## This season's record, written once per season (reloads read it back).
@@ -51,7 +49,7 @@ static func ensure(gs) -> Dictionary:
 	return rec
 
 
-## The round (0-based) of this season, or -1 with the switch off.
+## The round (0-based) of this season, or -1 with no season.
 static func round_of(gs) -> int:
 	var rec := ensure(gs)
 	return int(rec.get("round", -1)) if not rec.is_empty() else -1
@@ -80,7 +78,7 @@ static func byes_in(season, ri: int) -> Array:
 
 ## The round (0-based) in which `code` marks Sir Doug Nicholls Round: the round
 ## itself, or the first later round it plays after a bye in it (2.73; at 19 or
-## 21 clubs two byes can fall back to back). -1 with the switch off, or when the
+## 21 clubs two byes can fall back to back). -1 with no season, or when the
 ## club plays no later home-and-away round.
 static func round_for(gs, code: String) -> int:
 	var r := round_of(gs)

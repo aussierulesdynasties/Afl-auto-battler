@@ -16,13 +16,11 @@ func run() -> void:
 	failures.clear()
 	checks = 0
 	GameDB.reload()
-	Features.set_on("kick_range", true)
 	_t("_test_out_of_range_never_chosen")
 	_t("_test_longer_kicker_reaches_further")
 	_t("_test_no_one_in_range_falls_back")
 	_t("_test_paths_pick_the_same_receiver")
 	_t("_test_scores_stay_realistic")
-	Features.clear("kick_range")
 	print(Ran.line("Kick range", self))
 
 
@@ -131,21 +129,16 @@ func _test_paths_pick_the_same_receiver() -> void:
 	_check(same, "same seed, different actors")
 
 
-## Realistic AFL scores with the switch on; prints off/on averages.
+## Realistic AFL scores; prints the average.
 func _test_scores_stay_realistic() -> void:
-	var avg := {}
-	for on in [false, true]:
-		Features.set_on("kick_range", on)
-		var total := 0.0
-		var n := 0
-		for pair in CLUBS:
-			for s in range(SEEDS):
-				var res := _sim(pair[0], pair[1], 500 + s).run()
-				for side in range(2):
-					total += float(res["score"][side]) if res.has("score") else 0.0
-					n += 1
-		avg[on] = total / float(n)
-	Features.set_on("kick_range", true)
-	print("Kick range: mean team score off %.1f, on %.1f (%d team games each)" % [avg[false], avg[true], CLUBS.size() * SEEDS * 2])
-	_check(avg[true] >= 60.0 and avg[true] <= 105.0, "mean team score %.1f outside 60-105" % avg[true])
-	_check(absf(avg[true] - avg[false]) <= 12.0, "kick range moves the mean score %.1f -> %.1f" % [avg[false], avg[true]])
+	var total := 0.0
+	var n := 0
+	for pair in CLUBS:
+		for s in range(SEEDS):
+			var res := _sim(pair[0], pair[1], 500 + s).run()
+			for side in range(2):
+				total += float(res["score"][side]) if res.has("score") else 0.0
+				n += 1
+	var avg := total / float(n)
+	print("Kick range: mean team score %.1f (%d team games)" % [avg, CLUBS.size() * SEEDS * 2])
+	_check(avg >= 60.0 and avg <= 105.0, "mean team score %.1f outside 60-105" % avg)

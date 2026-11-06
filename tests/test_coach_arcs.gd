@@ -3,8 +3,7 @@ extends RefCounted
 ## The coach's career arcs (CoachArcs.gd, ClubArcs.gd; director, 2026-11-03,
 ## phase 1): the arcs file is fit to play, arcs start only from real game
 ## state, beats come only from active arcs, the state persists through save and
-## load (an old save loads empty), and with the switch "coach_arcs" off nothing
-## is written or shown. A 10-season Sim-the-week career dumps its story log to
+## load (an old save loads empty). A 10-season Sim-the-week career dumps its story log to
 ## tests/output/coach_arcs_story.txt (not committed) for a person to read.
 
 var _tree: SceneTree
@@ -57,10 +56,6 @@ func run(tree: SceneTree) -> void:
 	GameState.save_path = "user://test_coach_arcs.save"
 	GameState.settings_path = "user://test_coach_arcs.cfg"
 	GameState.delete_saved_career()
-	_t("_test_ships_on")
-	Features.set_on("coach_arcs", false)
-	_t("_test_switch_off")
-	Features.set_on("coach_arcs", true)
 	_t("_test_file_fit")
 	_t("_test_triggers_from_state")
 	_t("_test_beats_only_active")
@@ -72,37 +67,11 @@ func run(tree: SceneTree) -> void:
 	_t("_test_drought_counts_this_club")
 	_t("_test_assistant_leaves")
 	_t("_test_ten_seasons")
-	Features.clear("coach_arcs")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Coach arcs", self))
 	for f in failures:
 		print("  FAIL: " + f)
-
-
-## Row 108 (T5.Q4, director "Switch on now"): the switch ships on, so a plain
-## run and an exported build start arcs without asking.
-func _test_ships_on() -> void:
-	_check(bool(ProjectSettings.get_setting("features/coach_arcs", false)), "Row 108: the switch ships on (project setting)")
-	_check(Features.on("coach_arcs") and CoachArcs.on(), "Row 108: a run that does not force it has arcs on")
-
-
-func _test_switch_off() -> void:
-	_check(not Features.on("coach_arcs"), "forced off for this test")
-	_fresh()
-	GameState.board["confidence"] = 20
-	var rng := RandomNumberGenerator.new()
-	rng.seed = SUITE_SEED
-	var arc_card := false
-	for i in range(12):
-		_week(rng)
-		for c in GameState.week_events:
-			arc_card = arc_card or str(c.get("coach_arc", "")) != ""
-	_check(GameState.coach_arcs.is_empty(), "off: nothing is written")
-	_check(not arc_card, "off: no arc card shows")
-	_check(ClubArcs.big_call(GameState).is_empty(), "off: no big call")
-	_check(GameState.news.filter(func(n): return str(n["kind"]) == ClubArcs.NEWS_KIND).is_empty(), "off: no arc news")
-	_check(GameState.save_career() and GameState.load_career() and GameState.coach_arcs.is_empty(), "off: the save has no arcs")
 
 
 func _test_file_fit() -> void:
@@ -330,6 +299,15 @@ func _test_sacked_way_back() -> void:
 	CoachArcs.answer(adef, arec, "arc_assist_offer", "block", GameState.story_week() + 4, GameState.season_year)
 	# A goal no side meets: a premiership (+30) cannot save a missed one (0 - 25 + 30 < 30).
 	GameState.board["goal"] = {"key": "wins99", "text": "Win 99 games", "wins": 99}
+	# A rival's approach for him at the end of the home-and-away season would
+	# take him first (he is the man the arc is about): leave it out.
+	var guard := 0
+	while not GameState.season.is_regular_done() and guard < 40:
+		guard += 1
+		GameState.board["confidence"] = 0
+		GameState.board["warned"] = true
+		_week(rng)
+	GameState.coach_approaches = GameState.coach_approaches.filter(func(a): return str(a.get("cid", "")) != sa_id)
 	_play_out(rng, 0)
 	st = GameState.coach_arcs
 	_check(not GameState.is_sacked(), "sacked: the career goes on (no sacked card)")
@@ -514,7 +492,6 @@ func _test_hero_count_trigger() -> void:
 	var errs := CoachArcs.validate(probe)
 	_check(errs.is_empty(), "validate() accepts the new facts: %s" % str(errs))
 	_fresh()
-	Features.set_on("match_story", true)
 	# A kid of 19 on the list who is not a backed high-potential pick.
 	var young: Dictionary = GameState.my_list[GameState.my_list.size() - 1]
 	young["age"] = 19.0
@@ -542,4 +519,3 @@ func _test_hero_count_trigger() -> void:
 	_check(int(f["hero_count"]) == 3 and int(f["hero_streak"]) == 3 and bool(f["hero_is_arc_player"]),
 			"the arc's facts read the match stories (%s)" % str([f["hero_count"], f["hero_streak"], f["hero_is_arc_player"]]))
 	GameState.match_stories = []
-	Features.clear("match_story")

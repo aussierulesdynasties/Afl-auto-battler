@@ -4,9 +4,8 @@
 # AFL 2026 team rates. See tools/balance/README.md.
 #
 #   tools/balance.sh match 1000                         # one arm
-#   tools/balance.sh match 1000 --b "--on clanger_cause" # paired: base vs B
 #   tools/balance.sh match 1000 --a "--weather wet" --b "--weather perfect"
-#   tools/balance.sh match 1000 --a-root ../base-checkout --b ""  # paired: another checkout (e.g. origin/main) vs this one
+#   tools/balance.sh match 1000 --a-root ../main-checkout --b ""  # paired: main (another checkout) vs this branch
 # Env: GODOT (binary), JOBS (workers, default cores-2), OUT (run dir).
 set -euo pipefail
 mode="${1:-match}"; n="${2:-1000}"; shift $(( $# >= 2 ? 2 : $# ))

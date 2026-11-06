@@ -1,10 +1,9 @@
 extends RefCounted
-## Row 75: Sir Doug Nicholls Round (SirDougRound, switch `sir_doug_round`).
+## Row 75: Sir Doug Nicholls Round (SirDougRound).
 ## A seeded career marks Round 11 as the round, a club with a bye in it marks
 ## it the next round (2.73), every club has a design slot ("none" until designs
 ## exist), the record survives a save and reload unchanged, an old save loads,
-## the fixture and match results are the same with the switch on or off, and
-## the fixture page and the hub's match card name the round on a phone.
+## and the fixture page and the hub's match card name the round on a phone.
 ## Run through run_sir_doug_round_tests.gd.
 
 const SEED := 7501
@@ -43,17 +42,15 @@ func run(tree: SceneTree) -> void:
 	checks = 0
 	root.size = Vector2i(390, 844)
 	GameState.replay_seed = SEED
-	_t("_test_switch_off")
 	_t("_test_round_and_slots")
 	_t("_test_bye_next_round")
 	_t("_test_back_to_back_byes")
 	_t("_test_save_reload_keeps_record")
 	_t("_test_old_save")
 	_t("_test_new_season")
-	_t("_test_sim_untouched")
+	_t("_test_round_match_marked")
 	await _t("_test_fixture_page")
 	await _t("_test_hub_card")
-	Features.set_on(SirDougRound.SWITCH, false)
 	GameState.replay_seed = 0
 	print(Ran.line("Sir Doug Nicholls Round", self))
 
@@ -66,17 +63,7 @@ func _new_career() -> void:
 	gs.tutorials = false
 
 
-func _test_switch_off() -> void:
-	Features.set_on(SirDougRound.SWITCH, false)
-	_new_career()
-	_check(SirDougRound.round_of(gs) == -1, "Switch off: no round is marked")
-	_check(not SirDougRound.marks(gs, SirDougRound.ROUND, "ESS", "COL"), "Switch off: no match is marked")
-	_check(gs.save_career() and gs.load_career() and gs.sir_doug.is_empty(),
-			"Switch off: a save and load writes nothing (%s)" % str(gs.sir_doug))
-
-
 func _test_round_and_slots() -> void:
-	Features.set_on(SirDougRound.SWITCH, true)
 	_new_career()
 	_check(SirDougRound.round_of(gs) == 10, "Round 11 is Sir Doug Nicholls Round (%d)" % SirDougRound.round_of(gs))
 	var rec: Dictionary = gs.sir_doug
@@ -102,7 +89,6 @@ func _test_round_and_slots() -> void:
 
 ## 2.73: a club with a bye in the round marks it the next round.
 func _test_bye_next_round() -> void:
-	Features.set_on(SirDougRound.SWITCH, true)
 	_new_career()
 	var r := SirDougRound.round_of(gs)
 	# Give two clubs a bye in the round, whatever the seed drew.
@@ -132,7 +118,6 @@ func _test_bye_next_round() -> void:
 ## keeps them apart only where the rounds allow it): it marks the round in the
 ## first round it plays, and Round 12 does not name it.
 func _test_back_to_back_byes() -> void:
-	Features.set_on(SirDougRound.SWITCH, true)
 	_new_career()
 	var r := SirDougRound.round_of(gs)
 	var rnd: Array = gs.season.fixture[r]
@@ -152,7 +137,6 @@ func _test_back_to_back_byes() -> void:
 
 ## "Store the selected season design in the save so reloading cannot change it."
 func _test_save_reload_keeps_record() -> void:
-	Features.set_on(SirDougRound.SWITCH, true)
 	_new_career()
 	# A record written by another build (another round, a stored design id).
 	gs.sir_doug = {"year": gs.season_year, "round": 12, "designs": {CLUB: "ess-test-01"}}
@@ -164,17 +148,14 @@ func _test_save_reload_keeps_record() -> void:
 
 
 func _test_old_save() -> void:
-	Features.set_on(SirDougRound.SWITCH, false)
 	_new_career()
 	_check(gs.save_career(), "A career saves")
 	# Strip the key, as a save written before row 75 has none.
 	var state := CareerSave.read(gs.save_path)
 	var meta := CareerSave.read_meta(gs.save_path)
-	_check(not state.has("sir_doug"), "Switch off: the save has no sir_doug key (as before row 75)")
 	state.erase("sir_doug")
 	_check(CareerSave.write(state, meta, gs.save_path), "The old-style save is written")
-	Features.set_on(SirDougRound.SWITCH, true)
-	_check(gs.load_career(), "An old save loads with the switch on")
+	_check(gs.load_career(), "An old save loads")
 	_check(gs.sir_doug.is_empty(), "It starts with no record")
 	_check(SirDougRound.round_of(gs) == SirDougRound.ROUND, "The round is set for its season on first use")
 	_check(gs.save_career() and gs.load_career() and int(gs.sir_doug.get("round", -1)) == SirDougRound.ROUND,
@@ -182,28 +163,17 @@ func _test_old_save() -> void:
 
 
 func _test_new_season() -> void:
-	Features.set_on(SirDougRound.SWITCH, true)
 	_new_career()
 	gs.sir_doug = {"year": gs.season_year - 1, "round": 4, "designs": {}}
 	_check(SirDougRound.round_of(gs) == SirDougRound.ROUND and int(gs.sir_doug["year"]) == gs.season_year,
 			"Last season's record is replaced by this season's")
 
 
-## A tribute, never a factor: the fixture and a match play out the same.
-func _test_sim_untouched() -> void:
-	Features.set_on(SirDougRound.SWITCH, false)
+## The round's first fixtured match is marked as in the round.
+func _test_round_match_marked() -> void:
 	_new_career()
-	var fx_off: Array = gs.season.fixture.duplicate(true)
 	var m: Dictionary = gs.season.fixture[SirDougRound.ROUND][0]
-	var off: Dictionary = gs.season.simulate(str(m["home"]), str(m["away"]), 4242)
-	Features.set_on(SirDougRound.SWITCH, true)
-	_new_career()
 	_check(SirDougRound.marks(gs, SirDougRound.ROUND, str(m["home"]), str(m["away"])), "The match is in the round")
-	_check(gs.season.fixture == fx_off, "The fixture (byes, venues, opponents) is the same on and off")
-	var on: Dictionary = gs.season.simulate(str(m["home"]), str(m["away"]), 4242)
-	_check(str(on.get("score")) == str(off.get("score")) and str(on.get("quarters")) == str(off.get("quarters"))
-			and not (on.get("score", []) as Array).is_empty(),
-			"The same seeded match scores the same on and off (%s v %s)" % [str(on.get("score")), str(off.get("score"))])
 
 
 func _labels(n: Node) -> String:
@@ -230,7 +200,6 @@ func _open_fixture(fix, ri: int) -> Control:
 
 
 func _test_fixture_page() -> void:
-	Features.set_on(SirDougRound.SWITCH, true)
 	_new_career()
 	var r := SirDougRound.round_of(gs)
 	var fix = load("res://scripts/ui/stats/StatsFixture.gd")
@@ -264,16 +233,9 @@ func _test_fixture_page() -> void:
 	s.queue_free()
 	await _settle()
 	(gs.season.fixture[r] as Array).append(m)
-	# Switch off: Round 11 says nothing.
-	Features.set_on(SirDougRound.SWITCH, false)
-	s = await _open_fixture(fix, r)
-	_check(not _labels(s).contains("Sir Doug"), "Switch off: Round 11's page is as before")
-	s.queue_free()
-	await _settle()
 
 
 func _test_hub_card() -> void:
-	Features.set_on(SirDougRound.SWITCH, true)
 	_new_career()
 	gs.season.round_index = SirDougRound.round_for(gs, CLUB)
 	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()

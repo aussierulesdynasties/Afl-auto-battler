@@ -1,6 +1,6 @@
 class_name CoachArcs
 extends RefCounted
-## The coach's career arcs (switch "coach_arcs"; director, 2026-11-03, plan
+## The coach's career arcs (director, 2026-11-03, plan
 ## step 1a; docs/research/COACH_ARC_CATALOGUE_2026-11-03.md). Arcs sit beside
 ## the random story deck and do not replace it: a beat of an active arc comes
 ## to the Hub as one more event card, on the deck's card UI and effect ops.
@@ -14,7 +14,7 @@ extends RefCounted
 ## `skip_after` weeks passes unplayed, so no arc stalls.
 ##
 ## Pure rules over the state ClubArcs hands in. The state, saved on GameState
-## as `coach_arcs` only while the switch is on:
+## as `coach_arcs`:
 ##   coach   the player's coach record: seasons, games, flags, last_flag, start,
 ##           seen (last season counted), coached {player id: true}, club (code
 ##           now), clubs [{code, name, from, to, why, chairman}] (every club
@@ -28,7 +28,6 @@ extends RefCounted
 ##   log     [[year, week label, arc id, line]], oldest first
 
 const FILE := "res://data/arcs/coach_arcs.json"
-const FEATURE := "coach_arcs"
 ## Active arcs at once, and arc beats a week (one beat beside the deck's cards).
 const MAX_ACTIVE := 3
 const DEFAULT_GAP := 3
@@ -46,10 +45,6 @@ const ARC_FACTS := ["chairman", "journalist", "rival_club", "father", "seasons_c
 const CLOSE_FACTS := ["sacked", "warned", "premiers", "met", "board", "here", "morale", "ladder_last"]
 
 static var _cache: Array = []
-
-
-static func on() -> bool:
-	return Features.on(FEATURE)
 
 
 static func all() -> Array:

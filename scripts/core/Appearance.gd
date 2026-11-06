@@ -115,13 +115,12 @@ static func full(colours: Dictionary, id: String, generated_player: bool, chosen
 			out[k] = chosen[k].duplicate(true) if chosen[k] is Array else chosen[k]
 	if int(out["beard_colour"]) < 0:
 		out["beard_colour"] = int(out["hair"])
-	if Features.on("player_looks"):
-		out["brows"] = brows_for(id)
+	out["brows"] = brows_for(id)
 	return out
 
 
 ## His brows (register row 6, director 2026-11-03: they vary per player): one of
-## VignetteLooks.FACES, chosen by his id alone, the same every time. Features "player_looks".
+## VignetteLooks.FACES, chosen by his id alone, the same every time.
 static func brows_for(id: String) -> int:
 	return absi(hash("appearance-brows|" + id)) % VignetteLooks.FACES.size()
 
@@ -148,7 +147,7 @@ static func valid(key: String, value) -> bool:
 		"bandage":
 			return value is int and int(value) >= 0 and int(value) < LEVELS
 		"brows":
-			# full() adds it with Features "player_looks" on (brows_for).
+			# full() adds it (brows_for).
 			return value is int and int(value) >= 0 and int(value) < VignetteLooks.FACES.size()
 		"tattoos":
 			if not value is Array:

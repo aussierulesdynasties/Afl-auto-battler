@@ -119,19 +119,7 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 
 	# What he is picked for.
 	v.add_child(UiKit.spacer(4))
-	if Features.on("top_attributes"):
-		top_attributes_block(v, p, false, UiKit.BODY, UiKit.SMALL)
-	else:
-		for st in PlayerProfile.strengths(p):
-			var row := UiKit.hbox(8)
-			var sn := UiKit.lbl(str(st["label"]), UiKit.BODY, UiKit.TEXT)
-			sn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			row.add_child(sn)
-			row.add_child(UiKit.line(str(st["grade"]), UiKit.BODY, UiKit.MUTED))
-			v.add_child(row)
-		var weak := PlayerProfile.weakness(p)
-		if not weak.is_empty():
-			v.add_child(UiKit.lbl("Needs work: " + str(weak["label"]).to_lower(), UiKit.SMALL, UiKit.MUTED))
+	top_attributes_block(v, p, false, UiKit.BODY, UiKit.SMALL)
 	for t in Traits.of(p):
 		var tl := UiKit.lbl("%s. %s" % [Traits.label(str(t)), Traits.scout(str(t))], UiKit.SMALL,
 				UiKit.BAD if Traits.is_bad(str(t)) else UiKit.TEXT)
@@ -254,7 +242,7 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	return overlay
 
 
-## Top attributes and the Needs work line (Features "top_attributes"): his
+## Top attributes and the Needs work line: his
 ## three highest-rated football attributes with their ratings, whatever their
 ## level, then how he sits against players of his position. `hidden` (a draft
 ## prospect whose ratings the club cannot see) names the three with the

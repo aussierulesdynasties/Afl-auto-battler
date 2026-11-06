@@ -43,7 +43,6 @@ func _run() -> void:
 	state.set_setting("seen_training_intro", true)
 	state.replay_seed = 2027
 	state.tutorials = false
-	Features.set_on("training_report", true)
 	state.start_season(club, db.club_list(club))
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
@@ -89,5 +88,4 @@ func _run() -> void:
 	await _shot()
 	(await _shot()).save_png(out + "_training.png")
 	print("wrote ", out)
-	Features.clear("training_report")
 	quit(0)

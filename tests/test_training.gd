@@ -2,8 +2,8 @@ extends RefCounted
 ## Training plans and the stat guide: plans spend a player's XP after every
 ## game (there is no Manual: cut 2026-11-03), single-stat focus touches only that stat, changing a
 ## plan spends banked XP at once, the club plan applies to anyone without his
-## own, plans survive a save, and every stat has a full guide entry. With the
-## stat_focus switch (row 97): one stat focus a season, locked until the next
+## own, plans survive a save, and every stat has a full guide entry. Stat
+## focus (row 97): one stat focus a season, locked until the next
 ## season opens, about a third of his training; old saves keep one focus.
 ## Run through tests/run_training_tests.gd.
 
@@ -48,8 +48,6 @@ func run() -> void:
 	_t("_test_stat_focus_unlocks_next_season")
 	_t("_test_stat_focus_old_saves")
 	_t("_test_stat_focus_club_move")
-	_t("_test_stat_focus_switch_off")
-	Features.clear("stat_focus")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Training", self))
@@ -655,15 +653,9 @@ func _test_dual_role_plans() -> void:
 	_check(bad == 0, "Every role a player plays has a plan of its own (%d missing)" % bad)
 
 
-## A training plan is a plan, not what the player is: the list row says
-## "Training as a key defender", and however hard a medium defender trains
+## A training plan is a plan, not what the player is: however hard a medium defender trains
 ## on that plan he stays a defender who is not typed a key defender.
 func _test_plan_is_not_identity() -> void:
-	var scene = load("res://scripts/ui/TrainingScene.gd")
-	_check(scene._row_plan("key_def") == "Training as a key defender"
-			and scene._row_plan("inside_mid") == "Training as an inside midfielder"
-			and scene._row_plan("position") == "Position plan",
-			"The list row names the plan as a plan (%s)" % scene._row_plan("key_def"))
 	_new_season()
 	var small := {}
 	for p in GameState.my_list:
@@ -1143,7 +1135,6 @@ func _other_focus(p: Dictionary, not_this: String) -> String:
 
 
 func _test_stat_focus_once_a_season() -> void:
-	Features.set_on("stat_focus", true)
 	_new_season()
 	var pick := _focus_subject()
 	var p: Dictionary = pick[0]
@@ -1173,7 +1164,6 @@ func _test_stat_focus_once_a_season() -> void:
 
 
 func _test_stat_focus_split() -> void:
-	Features.set_on("stat_focus", true)
 	_new_season()
 	var pick := _focus_subject()
 	var p: Dictionary = pick[0]
@@ -1209,7 +1199,6 @@ func _test_stat_focus_split() -> void:
 
 
 func _test_stat_focus_unlocks_next_season() -> void:
-	Features.set_on("stat_focus", true)
 	_new_season()
 	var pick := _focus_subject()
 	var p: Dictionary = pick[0]
@@ -1236,7 +1225,6 @@ func _test_stat_focus_unlocks_next_season() -> void:
 
 
 func _test_stat_focus_old_saves() -> void:
-	Features.set_on("stat_focus", true)
 	_new_season()
 	var a: Dictionary = {}
 	var b: Dictionary = {}
@@ -1274,7 +1262,6 @@ func _test_stat_focus_old_saves() -> void:
 
 
 func _test_stat_focus_club_move() -> void:
-	Features.set_on("stat_focus", true)
 	_new_season()
 	var pick := _focus_subject()
 	var p: Dictionary = pick[0]
@@ -1285,21 +1272,6 @@ func _test_stat_focus_club_move() -> void:
 	GameState._join(dest, p)
 	_check(not p.has("train_focus") and not p.has("train_focus_year") and not p.has("focus_ledger"),
 			"A club move clears his focus: the new club's coach decides")
-
-
-func _test_stat_focus_switch_off() -> void:
-	Features.set_on("stat_focus", false)
-	_new_season()
-	var p: Dictionary = GameState.my_list[0]
-	var opts := GameState.focus_options(p)
-	_check(not opts.is_empty(), "He has stats a focus could use")
-	_check(not GameState.set_stat_focus(str(p["id"]), str(opts[0])), "With the switch off no focus can be set")
-	p["xp"] = int(p.get("xp", 0)) + 300
-	GameState.apply_plan_to(p)
-	_check(not p.has("train_focus") and not p.has("focus_ledger"), "With the switch off nothing is written")
-	p["train_focus"] = str(opts[0])
-	_check(GameState.stat_focus(p) == "", "With the switch off a saved focus does nothing")
-	p.erase("train_focus")
 
 
 ## Row 90: the off-season takes the league's training lift back off where each

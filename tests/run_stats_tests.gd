@@ -772,7 +772,8 @@ func _test_fixture(sz: Vector2i) -> void:
 	_check(upcoming, "A round all to come shows the ground, not a score and not Upcoming on every row (%s)" % tag)
 	var grounds := true
 	for i in range(rows.size()):
-		grounds = grounds and _text(rows[i]).contains(season.home_ground(str(season.fixture[season.round_index][i]["home"])))
+		var m: Dictionary = season.fixture[season.round_index][i]
+		grounds = grounds and _text(rows[i]).contains(season.round_venue(season.round_index, str(m["home"]), str(m["away"])))
 	_check(grounds, "Each match shows its ground (%s)" % tag)
 	if sz.x >= 900:
 		var widest := 0.0
@@ -870,7 +871,7 @@ func _test_fixture(sz: Vector2i) -> void:
 		var f0: Dictionary = season.fixture[season.round_index][0]
 		_check(pt.contains(db.club_short(str(f0["home"]))) and pt.contains(db.club_short(str(f0["away"]))),
 				"The preview names both clubs (%s)" % tag)
-		_check(pt.contains(season.home_ground(str(f0["home"]))), "...and the ground (%s)" % tag)
+		_check(pt.contains(season.round_venue(season.round_index, str(f0["home"]), str(f0["away"]))), "...and the ground (%s)" % tag)
 		_check(pt.contains("st ·") or pt.contains("nd ·") or pt.contains("rd ·") or pt.contains("th ·"),
 				"...and where each sits on the ladder (%s)" % tag)
 		_check(pt.contains("Round %d:" % season.round_index) and (pt.contains("won by") or pt.contains("lost by") or pt.contains("drew")),

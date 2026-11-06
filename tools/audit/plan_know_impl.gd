@@ -14,7 +14,6 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await process_frame
-	load("res://scripts/core/Features.gd").set_on("preseason", true)
 	var n := 200
 	var partly := -1.0
 	var barely := -1.0

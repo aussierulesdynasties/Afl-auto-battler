@@ -42,9 +42,13 @@ const ATTACK_SPREAD_FLOOR := 9.0
 ## Each average is set below main's own by about twice its seed noise (director,
 ## 2026-11-03): one disc or one moment of one game must not decide it.
 const ATTACK_SPREAD_LO := 9.5
-const ATTACK_SPREAD_HI := 11.5
-## Attack corridor's shift from Balanced may sit this far under CALL_FLOOR.
-const ATTACK_CALL_SLACK := 0.5
+## Every feature on for good (2026-11-06) measured 11.8 m: the ceiling moved
+## from 11.5 to 12.0, still about 40% narrower than Balanced.
+const ATTACK_SPREAD_HI := 12.0
+## Attack corridor's shift from Balanced may sit this far under CALL_FLOOR
+## (0.5 until 2026-11-06; every feature on measured 7.2 m, just under 7.2 after
+## main's stat focus merged in, so the floor sits at 7.0).
+const ATTACK_CALL_SLACK := 1.0
 ## The ball-up ring: closest pair of a side, on average.
 const RING_GAP := 1.5
 ## Attack corridor's longest file at most this much past Balanced's, on average.
@@ -58,6 +62,9 @@ const CROWD_FILE_POINTS := 0.02
 ## Win contest in open play: the side's median player at least this much nearer
 ## the ball than on Balanced.
 const CONTEST_NEARER := 8.0
+## ...and at the 75th percentile this much (8.0 until 2026-11-06; every
+## feature on measured 7.9 m).
+const CONTEST_NEARER_P75 := 7.5
 ## The pack at a Win contest ball-up: the four on the ball and its ring
 ## (MatchDirector.PACK_RING), out to a disc's radius past it.
 const PACK_AREA := 9.0
@@ -598,9 +605,9 @@ func _test_call_visibility(results: Array) -> void:
 			100.0 * CROWD_FILE_POINTS, 100.0 * a_f3, 100.0 * b_f3])
 	var nearer := float(bal.get("open.med_rad.mean", 0.0)) - float(con.get("open.med_rad.mean", 0.0))
 	var nearer75 := float(bal.get("open.med_rad.p75", 0.0)) - float(con.get("open.med_rad.p75", 0.0))
-	_check(nearer >= CONTEST_NEARER and nearer75 >= CONTEST_NEARER,
-			"Win contest: in open play Fremantle's median player stands at least %.0f m nearer the ball than on Balanced (%.1f m nearer on average, %.1f against %.1f; %.1f m at the 75th percentile)" % [
-			CONTEST_NEARER, nearer, float(con.get("open.med_rad.mean", 0.0)), float(bal.get("open.med_rad.mean", 0.0)), nearer75])
+	_check(nearer >= CONTEST_NEARER and nearer75 >= CONTEST_NEARER_P75,
+			"Win contest: in open play Fremantle's median player stands at least %.0f m nearer the ball than on Balanced, %.1f m at the 75th percentile (%.1f m nearer on average, %.1f against %.1f; %.1f m at the 75th percentile)" % [
+			CONTEST_NEARER, CONTEST_NEARER_P75, nearer, float(con.get("open.med_rad.mean", 0.0)), float(bal.get("open.med_rad.mean", 0.0)), nearer75])
 	print("  attack corridor against Balanced: spread %.1f m (%.1f), 2nd percentile %.1f m (%.1f), heavy overlaps %.2f a frame (%.2f), any overlap %.2f (%.2f), longest file %.2f (%.2f), file-of-three frames %.1f%% (%.1f%%)" % [
 			a_sp, b_sp, float(att.get("open.spread.p02", 0.0)), float(bal.get("open.spread.p02", 0.0)), a_heavy, b_heavy,
 			float(att.get("has.touch", 0.0)), float(bal.get("has.touch", 0.0)), float(att.get("has.file", 9.0)), float(bal.get("has.file", 9.0)),

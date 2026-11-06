@@ -1,6 +1,6 @@
 extends SceneTree
 ## godot --headless --path . --script tests/run_international_tests.gd
-## International prospects in generated draft classes (switch international_prospects).
+## International prospects in generated draft classes.
 ## Run a headless editor import first on a fresh clone to register global classes.
 
 

@@ -2,9 +2,7 @@ class_name Expansion
 extends RefCounted
 ## How a new club builds its list (director's ruling, 2026-10-14, package
 ## "B: real-style, cut to size"). The rules and their sizes live here; what
-## happens to the career's state is in ExpansionBuild. Behind the feature
-## switch "expansion_package" (Features): off, a new club arrives with the 36
-## generated players it always did.
+## happens to the career's state is in ExpansionBuild.
 ##
 ##  - The list starts with state-league and overlooked players: honest
 ##    footballers with little room left to improve, different every career.

@@ -31,8 +31,6 @@ func _run() -> void:
 	await process_frame
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
-	var features = load("res://scripts/core/Features.gd")
-	features.set_on("international_prospects", true)
 	state.autosave_enabled = false
 	state.save_path = "user://capture.save"
 	state.settings_path = "user://capture_settings.cfg"

@@ -1,6 +1,6 @@
 class_name VignetteGrade
 extends RefCounted
-## The broadcast grade over a match vignette (Features "vignette_grade", on since 2026-11-06).
+## The broadcast grade over a match vignette.
 ## attach() adds two children to the vignette: a full-rect ColorRect running
 ## assets/vignette/grade.gdshader over everything the vignette drew (one screen pass),
 ## then an overlay Control the caller draws its names and bars on, so text stays ungraded.
@@ -10,15 +10,10 @@ extends RefCounted
 ##   wet   cooler and flatter: lifted blacks, less saturation, almost no bloom.
 ## Settings > Reduced motion holds the grain still.
 
-const SWITCH := "vignette_grade"
 const SHADER := preload("res://assets/vignette/grade.gdshader")
 
 ## Capture tools only: draw this weather instead of the match's ("" = the match's).
 static var forced_weather := ""
-
-
-static func on() -> bool:
-	return Features.on(SWITCH)
 
 
 static func weather_of(w: String) -> String:
@@ -26,10 +21,8 @@ static func weather_of(w: String) -> String:
 
 
 ## Adds the grade and the overlay to host; returns the overlay, whose draw signal
-## calls ui_draw. Null when the switch is off (draw the UI on the host as before).
+## calls ui_draw.
 static func attach(host: Control, weather: String, ui_draw: Callable) -> Control:
-	if not on():
-		return null
 	var mat := ShaderMaterial.new()
 	mat.shader = SHADER
 	for k in look(weather):

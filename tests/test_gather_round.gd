@@ -1,7 +1,6 @@
 extends RefCounted
-## Row 74 (T5.Q11a): Gather Round (GatherRound, switch `gather_round`). Off, every
-## round is as before. On, one of rounds 3 to 7 is staged at the host's grounds:
-## the fixture itself is unchanged, every match of the round is at a host ground,
+## Row 74 (T5.Q11a): Gather Round (GatherRound). One of rounds 3 to 7 is staged
+## at the host's grounds: every match of the round is at a host ground,
 ## a club has its home edge only at its own ground, a club on a bye sits it out,
 ## the round's name reaches the fixture, the hub and the match, and a seeded
 ## career plays it live and keeps it across a save and load.
@@ -37,11 +36,9 @@ func run(tree: SceneTree) -> void:
 	checks = 0
 	root.size = Vector2i(390, 844)
 	GameState.replay_seed = SUITE_SEED
-	_t("_test_switch_off")
 	_t("_test_round_and_grounds")
 	_t("_test_odd_club_count")
 	await _t("_test_career_live_round")
-	Features.set_on(GatherRound.SWITCH, false)
 	GameState.replay_seed = 0
 	print(Ran.line("Gather round", self))
 
@@ -64,28 +61,8 @@ func _hosts() -> Array:
 	return out
 
 
-func _test_switch_off() -> void:
-	Features.set_on(GatherRound.SWITCH, false)
-	var s := _season(_codes(), 7401)
-	_check(s.gather_round() == -1, "Switch off: no Gather Round (%d)" % s.gather_round())
-	var same := true
-	for r in range(s.fixture.size()):
-		if s.round_label(r) != "Round %d" % (r + 1):
-			same = false
-		for m in s.fixture[r]:
-			if s.round_venue(r, m["home"], m["away"]) != s.home_ground(m["home"]) \
-					or s.round_at_home(r, m["home"], m["away"]) != [true, false]:
-				same = false
-	_check(s.fixture.size() == Season.REGULAR_ROUNDS and same,
-			"Switch off: every round named, staged and edged as before")
-
-
 func _test_round_and_grounds() -> void:
-	Features.set_on(GatherRound.SWITCH, false)
-	var off := _season(_codes(), 7402)
-	Features.set_on(GatherRound.SWITCH, true)
 	var s := _season(_codes(), 7402)
-	_check(str(s.fixture) == str(off.fixture), "The fixture itself is unchanged: every pairing and home game as before")
 	var g := s.gather_round()
 	_check(g >= GatherRound.FIRST and g <= GatherRound.LAST, "Gather Round is one of rounds 3 to 7 (%d)" % (g + 1))
 	_check(_season(_codes(), 7402).gather_round() == g, "The same season seed gives the same Gather Round")
@@ -123,7 +100,6 @@ func _test_round_and_grounds() -> void:
 
 
 func _test_odd_club_count() -> void:
-	Features.set_on(GatherRound.SWITCH, true)
 	var codes := _codes()
 	codes.append("TAS")
 	_check(codes.size() % 2 == 1, "An odd club count (%d)" % codes.size())
@@ -148,7 +124,6 @@ func _test_odd_club_count() -> void:
 
 
 func _test_career_live_round() -> void:
-	Features.set_on(GatherRound.SWITCH, true)
 	gs.reset()
 	gs.start_season("GEE", GameDB.club_list("GEE"))
 	gs.set_setting("seen_weekly_loop_intro", true)
@@ -160,7 +135,6 @@ func _test_career_live_round() -> void:
 		guard += 1
 	_check(gs.season.round_index == g, "Played to Gather Round (round %d)" % (gs.season.round_index + 1))
 	_check(gs.save_career(), "Saved before Gather Round")
-	Features.set_on(GatherRound.SWITCH, true)
 	_check(gs.load_career(), "Loaded")
 	_check(gs.season.gather_round() == g, "After a load it is the same round, from the saved season")
 	# The hub's fixture list names it.

@@ -177,6 +177,8 @@ func _test_entry_gates() -> void:
 # ---------------------------------------------------------------------------
 func _new_first_season() -> Season:
 	GameState.reset()
+	# Canberra is the coach's choice at New career; this career takes it.
+	GameState.set_canberra(true)
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	return GameState.season
 
@@ -381,6 +383,7 @@ func _forge_spec(extra := {}) -> Dictionary:
 
 func _test_created_club_rules() -> void:
 	GameState.reset()
+	GameState.set_canberra(true)
 	_check(ClubForge.locations().size() >= 50, "Club Forge reads the location library")
 	_check(ClubForge.club_problem(_forge_spec()) == "", "A complete spec makes a club")
 	_check(ClubForge.club_problem(_forge_spec({"name": " "})) != "", "A club needs a name")

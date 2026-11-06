@@ -19,10 +19,8 @@ extends RefCounted
 ##     three use the SA row, Adelaide Oval's). No event stat buffs.
 ##
 ## Derived from the season seed and the saved fixture: nothing is saved, and an
-## old save gets its Gather Round from the same rule. Switch `gather_round`; off,
-## every round is as before.
+## old save gets its Gather Round from the same rule.
 
-const SWITCH := "gather_round"
 const NAME := "Gather Round"
 ## The host city and its grounds (the Adelaide grounds of the AFL's Gather Rounds).
 const HOST_STATE := "SA"
@@ -36,13 +34,9 @@ const FIRST := 2
 const LAST := 6
 
 
-static func active() -> bool:
-	return Features.on(SWITCH)
-
-
-## This season's Gather Round (0-based), or -1 (switch off, or too few rounds).
+## This season's Gather Round (0-based), or -1 (too few rounds).
 static func round_of(fixture: Array, clubs: Array, season_seed: int) -> int:
-	if not active() or fixture.size() <= FIRST:
+	if fixture.size() <= FIRST:
 		return -1
 	var best := -1
 	var best_out := 0

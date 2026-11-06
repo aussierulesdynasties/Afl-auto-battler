@@ -36,7 +36,7 @@ static func line(host: Control, on_close: Callable = Callable()) -> Control:
 	var sub: String = Conditioning.PLAN_LABEL[GameState.fitness_plan(GameState.my_club)]
 	var change := "Set it before round 1" if GameState.fitness_week() == 0 else "You can change it this week"
 	if GameState.can_revise_fitness():
-		if Features.on("training_grid") and words.begins_with("Steady"):
+		if words.begins_with("Steady"):
 			# The headline already says steady; do not say it twice.
 			sub = change
 		else:

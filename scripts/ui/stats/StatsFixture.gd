@@ -67,7 +67,7 @@ static func build(host: Control) -> Control:
 	var status := UiKit.subtitle(_status(season, page))
 	status.name = "RoundStatus"
 	v.add_child(status)
-	# Sir Doug Nicholls Round (row 75, switch sir_doug_round): the round's name
+	# Sir Doug Nicholls Round (row 75): the round's name
 	# and one factual line; the round after it names the clubs marking it after
 	# their bye (2.73). Nothing about the matches changes.
 	if not bool(page["finals"]):

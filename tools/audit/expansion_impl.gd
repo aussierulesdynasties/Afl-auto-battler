@@ -9,10 +9,10 @@ extends RefCounted
 ##   DRAFT  seed year club | the picks the club used in that year's National Draft
 ##   EXP    seed year club clubyear | ladder place, wins, strength rank
 ##   SUMMARY at the end: place by club year, first top 8 and first finals (top 10).
-## EXPANSION_PACKAGE=1 in the environment turns the feature switch
-## "expansion_package" on (the real list build: ExpansionBuild) and puts
-## Canberra in the career; without it a new club arrives as it always did.
-## BUILD lines then say what each new club's list is made of.
+## A new club's list is always built by ExpansionBuild. EXPANSION_PACKAGE=1 in
+## the environment also puts Canberra in the career, reads the rule probes
+## EXPANSION_DECIDES / EXPANSION_CAP_FIRST, and prints BUILD lines saying what
+## each new club's list is made of.
 ## Args after the impl name: seeds (comma list) club seasons [package]
 ## (default 301 MEL 8, no package).
 ## godot --headless --path . --script tools/audit/run_audit.gd -- expansion_impl 301,302 MEL 8
@@ -36,7 +36,7 @@ extends RefCounted
 const NEW_CLUBS := ["TAS", "CANB"]
 
 var rows := []   # {seed, code, cy, pos, n, w, l, pct, rank}
-var real_build := false   # the feature switch is on (EXPANSION_PACKAGE=1)
+var real_build := false   # EXPANSION_PACKAGE=1: Canberra, rule probes, BUILD lines
 var pack := {}   # the package estimate, see the header
 var _expiring := []   # [{id, club, ovr}] rivals' out-of-contract players before entry
 var _held := {}  # draft year -> pick history, for the package's picks
@@ -138,7 +138,7 @@ func _entry(seed: int) -> void:
 				_rank_of(code, lists), lists.size(), best, n80, l80 / maxf(1.0, k), n75, n70, young, pot85, _mean_age(arr)])
 
 
-## What the list a new club enters with is made of (the feature switch on).
+## What the list a new club enters with is made of (EXPANSION_PACKAGE=1).
 func _build_line(seed: int, code: String, arr: Array) -> void:
 	if not real_build:
 		return
@@ -420,12 +420,10 @@ func run() -> void:
 	var seasons := int(args[3]) if args.size() > 3 else 8
 	real_build = OS.get_environment("EXPANSION_PACKAGE") == "1"
 	if real_build:
-		Features.set_on("expansion_package", true)
 		Expansion.MATCHED_PLAYER_DECIDES = OS.get_environment("EXPANSION_DECIDES") == "1"
 		Expansion.FIRST_CALL_CAP_SQUEEZED = OS.get_environment("EXPANSION_CAP_FIRST") == "1"
 		print("RULES matched player decides %s, first call on cap-squeezed players %s" % [
 				str(Expansion.MATCHED_PLAYER_DECIDES), str(Expansion.FIRST_CALL_CAP_SQUEEZED)])
-		print("FEATURE expansion_package on")
 	if args.size() > 4:
 		for part in str(args[4]).split(";", false):
 			var kv := part.split("=")

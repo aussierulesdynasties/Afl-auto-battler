@@ -41,7 +41,7 @@ func _run() -> void:
 	await _t("_test_coach")
 	await _t("_test_sim_week_records")
 	await _t("_test_old_save")
-	await _t("_test_switch")
+	await _t("_test_live")
 	print(Ran.line("Milestones", self))
 	for f in _failures:
 		print("  FAIL: " + f)
@@ -203,8 +203,8 @@ func _test_old_save() -> void:
 	_check((_state.milestone_log["log"] as Array).size() == 1, "The record survives the round trip")
 
 
-func _test_switch() -> void:
-	_check(_M.shown() and not Features.KNOWN.has("milestone_games"), "Milestones are live: no switch")
+func _test_live() -> void:
+	_check(_M.shown(), "Milestones are live")
 	_fresh()
 	var p := _complete_player()
 	_state.milestone_log["coach"]["games"] = 49

@@ -1172,43 +1172,33 @@ func _plain(c: Control) -> String:
 	return (c as RichTextLabel).get_parsed_text() if c is RichTextLabel else ""
 
 
-## The switch: on, the profile sheet shows the three with their ratings and
-## the Needs work sentence; off, the sheet is as before.
+## The profile sheet shows the three with their ratings and the Needs work sentence.
 func _test_top_attributes_on_cards() -> void:
 	var tree: SceneTree = self
 	tree.root.size = Vector2i(390, 844)
 	var host := Control.new()
 	host.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tree.root.add_child(host)
-	var features = load("res://scripts/core/Features.gd")
 	var sheet_s = load("res://scripts/ui/PlayerSheet.gd")
 	var profile = load("res://scripts/sim/PlayerProfile.gd")
 	var p := {}
 	for q in root.get_node("GameDB").players:
 		if str(q.get("real_name", "")) == "Wil Dawson":
 			p = q
-	for on in [true, false]:
-		features.set_on("top_attributes", on)
-		var sheet: Control = sheet_s.open(host, p)
-		for i in range(3):
-			await tree.process_frame
-		var top: Array = profile.top_attributes(p)
-		var shown := true
-		for t in top:
-			var row := sheet.find_child("TopAttr_" + str(t["key"]), true, false)
-			shown = shown and row != null and row.is_visible_in_tree()
-		if on:
-			_check(shown and sheet.find_child("TopAttributesHead", true, false) != null,
-					"Switch on: Wil Dawson's profile shows his top three with ratings")
-			var nw := sheet.find_child("NeedsWork", true, false) as Label
-			var want: String = profile.needs_work_line(p)
-			_check((want == "" and nw == null) or (nw != null and nw.text == want),
-					"Switch on: the Needs work line is the positional sentence (%s)" % want)
-		else:
-			_check(sheet.find_child("TopAttributesHead", true, false) == null
-					and sheet.find_child("NeedsWork", true, false) == null,
-					"Switch off: the profile is as before")
-		sheet.queue_free()
+	var sheet: Control = sheet_s.open(host, p)
+	for i in range(3):
 		await tree.process_frame
-	features.clear("top_attributes")
+	var top: Array = profile.top_attributes(p)
+	var shown := true
+	for t in top:
+		var row := sheet.find_child("TopAttr_" + str(t["key"]), true, false)
+		shown = shown and row != null and row.is_visible_in_tree()
+	_check(shown and sheet.find_child("TopAttributesHead", true, false) != null,
+			"Wil Dawson's profile shows his top three with ratings")
+	var nw := sheet.find_child("NeedsWork", true, false) as Label
+	var want: String = profile.needs_work_line(p)
+	_check((want == "" and nw == null) or (nw != null and nw.text == want),
+			"The Needs work line is the positional sentence (%s)" % want)
+	sheet.queue_free()
+	await tree.process_frame
 	host.queue_free()

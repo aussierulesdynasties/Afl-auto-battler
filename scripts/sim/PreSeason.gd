@@ -373,7 +373,7 @@ static func seen_line(p: Dictionary, club: String) -> String:
 
 
 ## How much narrower `club`'s rating read on a prospect is for having seen
-## him play (1.0: not seen, or the pre-season switched off). The rule lives
+## him play (1.0: not seen). The rule lives
 ## with the scouting it changes (DraftScouting.seen_mult).
 static func seen_mult(p: Dictionary, club: String) -> float:
 	data()
