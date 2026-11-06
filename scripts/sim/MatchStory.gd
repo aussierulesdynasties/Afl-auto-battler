@@ -27,19 +27,58 @@ const MAX_REASONS := 3
 const CLOSE := 12
 
 
-## {hero, turning_point, reasons, headline, won, margin, side}. {} for a result
-## with no score. `side` is the point of view (0 home, 1 away).
+## {hero, turning_point, turning_fact, reasons, headline, won, margin, side}.
+## {} for a result with no score. `side` is the point of view (0 home, 1 away).
+## `turning_fact` names the fact the turning point states (MatchNotes'
+## match_factor_items keys), "" when none.
 static func build(res: Dictionary, side: int) -> Dictionary:
 	var score: Array = res.get("score", [])
 	if score.size() < 2:
 		return {}
 	var margin := int(score[side]) - int(score[1 - side])
 	var hero := hero_of(res)
+	var tp := turning_item(res, side)
 	return {
 		"side": side, "margin": margin, "won": margin > 0, "drawn": margin == 0,
-		"hero": hero, "turning_point": turning_point(res, side),
+		"hero": hero, "turning_point": str(tp.get("text", "")), "turning_fact": str(tp.get("fact", "")),
+		"turning_also": tp.get("also", []),
 		"reasons": reasons(res, side), "headline": headline(res, side, hero),
 	}
+
+
+## What a built story has told, for the sections under it to leave out
+## (director's bug report, 2026-11-06: the same fact twice on full time): the
+## turning point's fact, each reason's fact (a quarter's call also as
+## "call:<line>"), and "=" + each sentence normalised (MatchNotes.norm_sentence).
+static func told_facts(st: Dictionary) -> Dictionary:
+	var out := {}
+	if st.is_empty():
+		return out
+	var tp := str(st.get("turning_point", ""))
+	if tp != "":
+		out["=" + MatchNotes.norm_sentence(tp)] = true
+		var tf := str(st.get("turning_fact", ""))
+		if tf != "":
+			out[tf] = true
+		# The comeback and the goal that put a side in front for good are one
+		# moment told two ways: the turning point says it, How it went does not.
+		if tf == "turn" or tf == "turn:lead":
+			out["turn"] = true
+			out["turn:lead"] = true
+		# The goal run the comeback was made of is the same moment again.
+		for f in st.get("turning_also", []):
+			out[str(f)] = true
+	for r in st.get("reasons", []):
+		out["=" + MatchNotes.norm_sentence(str(r.get("text", "")))] = true
+		var stat := str(r.get("stat", ""))
+		if stat == "scoring_shots":
+			out["kicking"] = true
+		elif r.has("quarter"):
+			out["q%d" % int(r["quarter"])] = true
+			out["call:" + str(r.get("call", ""))] = true
+		elif stat != "":
+			out[stat] = true
+	return out
 
 
 ## The clutch goals in a result by player id: goals late in the last quarter
@@ -100,27 +139,66 @@ static func best_of(res: Dictionary, sides: Array) -> Dictionary:
 						"disposals": int(float(st.get("disposals", 0.0))),
 						"tackles": int(float(st.get("tackles", 0.0))),
 						"clearances": int(float(st.get("clearances", 0.0))),
-						"line": MatchNotes.game_line(st)}
-	if not best.is_empty() and int(best["clutch"]) > 0:
-		best["line"] = "%s, %s late with the game in the balance" % [str(best["line"]),
+						"line": MatchNotes.game_line(st), "stat_line": MatchNotes.game_line(st)}
+	if best.is_empty():
+		return best
+	best["late"] = ""
+	if int(best["clutch"]) > 0:
+		best["late"] = "%s late with the game in the balance" % [
 				"a goal" if int(best["clutch"]) == 1 else "%s goals" % MatchNotes.count_word(int(best["clutch"]))]
+		best["line"] = "%s, %s" % [str(best["line"]), str(best["late"])]
 	return best
+
+
+## A best player's line less the numbers another line on screen already
+## gives him (`shown`, e.g. his Best players line "4 goals, 22 disposals"):
+## full time says each fact once (director's bug report, 2026-11-06). The late
+## goals clause always stays. "" when nothing is left.
+static func line_less(best: Dictionary, shown: String) -> String:
+	var have := {}
+	for b in shown.split(", ", false):
+		have[b.strip_edges()] = true
+	var bits := PackedStringArray()
+	for b in str(best.get("stat_line", best.get("line", ""))).split(", ", false):
+		if not have.has(b.strip_edges()):
+			bits.append(b.strip_edges())
+	if str(best.get("late", "")) != "":
+		bits.append(str(best["late"]))
+	var out := ", ".join(bits)
+	return out.left(1).to_upper() + out.substr(1) if out != "" else ""
 
 
 ## The turning point, from the full-time logic (MatchNotes): the comeback, else
 ## the score that put the winners in front for good or a star lost hurt, else a
 ## run of four or more goals. "" for a match that never turned.
 static func turning_point(res: Dictionary, side: int) -> String:
+	return str(turning_item(res, side).get("text", ""))
+
+
+## The turning point with the fact it states: {fact, text, also}, {} for none.
+## `also` lists other facts it covers: a comeback in the quarters of the
+## match's goal run, or the winners going in front for good in the quarter
+## their run began, is that run told another way ("run").
+static func turning_item(res: Dictionary, side: int) -> Dictionary:
+	var run := MatchNotes._longest_run(res.get("events", []))
+	var long_run := int(run["len"]) >= 4
 	var turn := ComebackTelling.turn_facts(res, side)
 	if not turn.is_empty():
-		return str(turn["text"])
-	var tps := MatchNotes.turning_points(res, side)
+		var also := []
+		var t := ComebackTelling.turning_quarter(res, side)
+		if long_run and int(run["side"]) == int(t.get("side", -1)) 				and (turn.get("quarters", []) as Array).has(int(run["q"])):
+			also.append("run")
+		return {"fact": "turn", "text": str(turn["text"]), "also": also}
+	var tps := MatchNotes.turning_point_items(res, side)
 	if not tps.is_empty():
-		return str(tps[0])
-	var run := MatchNotes._longest_run(res.get("events", []))
-	if int(run["len"]) >= 4:
-		return MatchNotes.run_sentence(res, run)
-	return ""
+		var tp: Dictionary = tps[0]
+		var also2 := []
+		if str(tp["fact"]) == "turn:lead" and long_run and int(run["side"]) == int(tp["side"]) 				and int(run["q"]) == int(tp["q"]):
+			also2.append("run")
+		return {"fact": str(tp["fact"]), "text": str(tp["text"]), "also": also2}
+	if long_run:
+		return {"fact": "run", "text": MatchNotes.run_sentence(res, run)}
+	return {}
 
 
 ## Why we won or lost: one to three reasons, the biggest edge in the result's

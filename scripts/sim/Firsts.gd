@@ -92,6 +92,18 @@ static func debut_line(who: String, goals: int) -> String:
 ## `year` the season, `find` looks one of your players up by id. `squad` is your
 ## whole list: a run broken that day belongs to a player who did not play.
 static func match_lines(res: Dictionary, me: int, year: int, find: Callable, squad := []) -> Array:
+	var out := []
+	for it in match_items(res, me, year, find, squad):
+		out.append(str(it["text"]))
+		if out.size() >= MAX_LINES:
+			break
+	return out
+
+
+## match_lines in full, before the cap: [{id, kind, text}] in the same order.
+## kind: "debut", "goal", "run_done", "run_broken". Full time leaves out a
+## debut the Milestones line already says, then caps at MAX_LINES.
+static func match_items(res: Dictionary, me: int, year: int, find: Callable, squad := []) -> Array:
 	var roster: Array = res.get("roster", [])
 	if me < 0 or roster.size() <= me:
 		return []
@@ -106,15 +118,16 @@ static func match_lines(res: Dictionary, me: int, year: int, find: Callable, squ
 		var who := GameDB.player_display_name(p)
 		var goals := int((stats_all.get(id, {}) as Dictionary).get("goals", 0))
 		if in_match(p, "debut", year, label):
-			ranked.append([0 if Backing.debuted_on_run(p) else 2, debut_line(who, goals)])
+			ranked.append([0 if Backing.debuted_on_run(p) else 2, debut_line(who, goals), id, "debut"])
 		elif in_match(p, "goal", year, label):
-			ranked.append([3, "First AFL goal for %s." % who])
+			ranked.append([3, "First AFL goal for %s." % who, id, "goal"])
 		var run := Backing.finished_in(p, year, label)
 		if not run.is_empty():
-			ranked.append([1, "%s's %s-game run is done." % [who, MatchNotes.count_word(int(run["games"]))]])
+			ranked.append([1, "%s's %s-game run is done." % [who, MatchNotes.count_word(int(run["games"]))], id, "run_done"])
 	for p in squad:
 		if not Backing.ended_in(p, year, label, "broken").is_empty():
-			ranked.append([1, "%s was left out. The run you promised him is over." % GameDB.player_display_name(p)])
+			ranked.append([1, "%s was left out. The run you promised him is over." % GameDB.player_display_name(p),
+					str(p.get("id", "")), "run_broken"])
 	# Stable: the roster's order breaks a tie.
 	var order := range(ranked.size())
 	order.sort_custom(func(a, b):
@@ -123,7 +136,5 @@ static func match_lines(res: Dictionary, me: int, year: int, find: Callable, squ
 		return ra < rb or (ra == rb and a < b))
 	var out := []
 	for i in order:
-		out.append(str(ranked[i][1]))
-		if out.size() >= MAX_LINES:
-			break
+		out.append({"id": str(ranked[i][2]), "kind": str(ranked[i][3]), "text": str(ranked[i][1])})
 	return out
