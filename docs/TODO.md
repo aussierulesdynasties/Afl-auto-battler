@@ -37,7 +37,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 105 | Press conference: list every place the code differs from the bible and show him before anything changes (T3.Q6) | list shown to him |
 | 106 | First-goal line in the feed for any player at your club, backed or not (T5.Q8) | line appears once per player, test |
 | 107 | Event cards: every choice gets an upside and a downside, and never-seen cards get a trigger (T5.Q18, row 34) | no no-cost choice, every card reachable in an audit |
-| 108 | Coach arcs switch on (T5.Q4, director "Switch on now") | switch on, suites green |
 | 109 | Screen defects: club ink to 4.5:1 on tinted panels, hub ladder fills the right side at 2560, break notes above 13 px, draft subtitle not cut off (6.Q18) | captures at phone and 2560 |
 | 110 | Vignette defects: boundary-snap curved white line, snap-for-goal hovering ball (6.Q18) | frames checked, captures to him |
 | 111 | Sacked is not the end: choose from a few clubs with open jobs, or retire with the record read out (T5.r22) | choice offered after a sacking, test |
