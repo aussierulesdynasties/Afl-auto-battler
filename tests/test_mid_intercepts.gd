@@ -100,7 +100,9 @@ func _test_on_lifts_midfield_intercepts() -> void:
 				n += 1
 	var off_rate: float = tot[false].x / maxf(1.0, tot[false].y)
 	var on_rate: float = tot[true].x / maxf(1.0, tot[true].y)
-	_check(on_rate > off_rate + 0.4, "midfield intercepts rise: off %.2f, on %.2f a game" % [off_rate, on_rate])
+	# With every other feature on, midfielders already intercept about 2.4 off (2026-11-06 retune), so the
+	# switch tops it up toward 2.5 rather than lifting it from ~2.0.
+	_check(on_rate > off_rate + 0.15, "midfield intercepts rise: off %.2f, on %.2f a game" % [off_rate, on_rate])
 	_check(on_rate > 2.0 and on_rate < 3.0, "on: midfield intercepts %.2f a game (real 2.5)" % on_rate)
 	var mean_pts: float = pts[true] / maxf(1.0, float(n))
 	_check(mean_pts > 70.0 and mean_pts < 100.0, "on: a team scores %.1f a game" % mean_pts)

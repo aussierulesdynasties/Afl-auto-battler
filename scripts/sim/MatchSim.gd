@@ -4353,7 +4353,9 @@ func _clanger_taken(side: int, at: float) -> void:
 ## real 2.5): of general-play kicks that land in the middle third with no
 ## aerial contest, the share one of the other side's midfielders reads and
 ## takes outright. Tuned with tools/balance.sh toward Champion Data 2025.
-const MID_KICK_INTERCEPT := 0.10
+## Retuned with every feature on (2026-11-06): 0.04 gives midfielders 2.58 a game over 1,000 matches
+## (real 2.5), from 3.03 at 0.10.
+const MID_KICK_INTERCEPT := 0.04
 ## The share of a chain's time a midfield intercept gives back (it cut the
 ## passage short). Measured: none drops disposals; a whole chain lifts
 ## clearances and hitouts (more ball-ups).
