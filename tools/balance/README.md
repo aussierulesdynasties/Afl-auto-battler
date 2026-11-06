@@ -17,6 +17,11 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "-
   standard error is small. A change is real when |B - A| > 2 se (the `sig` column).
 - **Arm args.** `--on a,b`, `--off c` (Features switches), `--weather perfect|wet|windy|hot`,
   `--tune KEY=V,...` (sets `MatchSim.tune`, read by `_tv`: size a constant before you fix it).
+- **Generated lists** (`--lists generated`, row 104): every club's list is generated players instead of the
+  real ones, to screen a change to generation in matches (`--a "--lists generated" --b "--lists generated
+  --on gen_traits"`). Classes 2027 on are generated on the game's data, grown five seasons, and each real
+  player's place goes to the next generated player of his position, re-rated to his OVR (the in-career
+  re-anchor). Every worker builds the same league; ~10 s more per worker.
 - **A change with no switch** (a retuned constant): `--a-root <checkout of origin/main> --b ""` plays arm A
   from that other checkout and arm B from this one, on the same seeds. Each worker log starts with
   `project: <path>`, so `head -1 <run>/a_0.log` proves which checkout arm A played.
