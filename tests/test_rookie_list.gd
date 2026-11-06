@@ -47,6 +47,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_rollover_on")
 	_t("_test_upgrade")
 	_t("_test_old_save")
+	_t("_test_nobody_left")
 	await _t("_test_rookie_draft_tap")
 	await _t("_test_list_screen_and_upgrade_tap")
 	_t("_test_release_and_resign")
@@ -197,6 +198,28 @@ func _test_old_save() -> void:
 	_check(RookieList.rookie_count(gs.my_list) == 0 and RookieList.senior_count(gs.my_list) == gs.my_list.size(),
 			"Every existing player is on the senior list")
 	_check(gs.rookie_draft.is_empty() and not RookieList.waiting(gs), "No Rookie Draft waits in an old save")
+
+
+## Nobody left to take: no sheet with only Pass on it (director, 2026-11-07);
+## the pick passes and the news says why.
+func _test_nobody_left() -> void:
+	var draft := _rollover()
+	_check(draft != null and RookieList.waiting(gs), "A rookie pick waits after the rollover (nobody-left test)")
+	if not RookieList.waiting(gs):
+		return
+	gs.free_agents.clear()
+	gs.draftee_pool = gs.draftee_pool.filter(func(q): return int(q.get("draft_year", gs.season_year)) >= gs.season_year)
+	_check(MidseasonDraft.pool(gs).is_empty(), "Nobody left to take")
+	var host := Control.new()
+	root.add_child(host)
+	_check(RookieDraftSheet.open(host, Callable()) == null and host.get_node_or_null(RookieDraftSheet.NAME) == null,
+			"No Rookie Draft sheet opens with nobody to take")
+	host.queue_free()
+	_check(not RookieList.waiting(gs) and bool(gs.rookie_draft.get("done", false)), "The pick passed and the draft ended")
+	_check(gs.news.any(func(n): return str(n["text"]) in [RookieList.NOBODY_LEFT_NEWS, RookieList.NOBODY_AT_ALL_NEWS]), "The news says why")
+	_check(not (gs.news.any(func(n): return str(n["text"]) == "Rookie Draft: no club took a player.")
+			and gs.news.any(func(n): return str(n["text"]) == RookieList.NOBODY_LEFT_NEWS)),
+			"Never 'no club took a player' and 'nobody was left' side by side")
 
 
 ## The Rookie Draft sheet over the pre-season (or the hub): a real tap on Pick.

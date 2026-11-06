@@ -5,7 +5,10 @@ extends SceneTree
 ## --picked: one player tapped, waiting for the second tap. --opp: the oval
 ## flipped to this week's opponent. --guide: the synergy guide with Complete.
 ## --report: the assistant's report. --rounds N: play N rounds first.
-## --oval: (old) scrolled down to the oval. --club CODE; --weeksheet opens the week over the phone's side page.
+## --oval: (old) scrolled down to the oval. --drag: mid-drag, the centre's token
+## pressed and moved by real mouse events (the name preview under the pointer).
+## --strategy KEY: that auto-pick applied, scrolled to its note (BuilderHint).
+## --club CODE; --weeksheet opens the week over the phone's side page.
 ## Writes <out>_sheet.png.
 
 var W := 1280
@@ -19,12 +22,14 @@ func _initialize() -> void:
 func _run() -> void:
 	var out := "/tmp/sel"
 	var picked := false
+	var drag := false
 	var oval := false
 	var mode := ""
 	var club := "COL"
 	var page := ""
 	var rounds := 0
 	var vs := ""
+	var strategy := ""
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		if str(a[i]) == "--out" and i + 1 < a.size():
@@ -41,10 +46,14 @@ func _run() -> void:
 			rounds = int(a[i + 1])
 		if str(a[i]) == "--vs" and i + 1 < a.size():
 			vs = str(a[i + 1])
+		if str(a[i]) == "--strategy" and i + 1 < a.size():
+			strategy = str(a[i + 1])
 		if str(a[i]) == "--picked":
 			picked = true
 		if str(a[i]) == "--oval":
 			oval = true
+		if str(a[i]) == "--drag":
+			drag = true
 		if str(a[i]) in ["--opp", "--guide", "--report", "--weeksheet"]:
 			mode = str(a[i]).trim_prefix("--")
 	await process_frame
@@ -75,6 +84,8 @@ func _run() -> void:
 	while vs != "" and str(state.my_next_opponent().get("code", "")) != vs and guard < 30:
 		state.advance()
 		guard += 1
+	if drag:
+		state.set_setting("seen_selection_intro", true)  # the first-visit card would sit over the oval
 	var ui: Control = load("res://scenes/SelectionScene.tscn").instantiate()
 	if page != "":
 		ui.set("_page", page)
@@ -97,6 +108,17 @@ func _run() -> void:
 			ui.call("_show_report", str(state.my_next_opponent().get("code", "")))
 	for i in range(8):
 		await process_frame
+	if strategy != "":
+		ui.call("_apply_strategy", strategy)
+		for i in range(8):
+			await process_frame
+		var hint: Control = ui.find_child("BuilderHint", true, false)
+		var sc2: ScrollContainer = ui.find_child("SelectionScroll", true, false)
+		if hint != null and sc2 != null:
+			sc2.scroll_vertical = int(hint.global_position.y - sc2.global_position.y + sc2.scroll_vertical - H / 2)
+			for j in range(4):
+				await process_frame
+		print("note: ", hint.get("text") if hint != null else "(none)")
 	if oval:
 		var pitch: Control = ui.find_child("Pitch", true, false)
 		var sc: ScrollContainer = ui.find_child("SelectionScroll", true, false)
@@ -106,6 +128,28 @@ func _run() -> void:
 				for j in range(3):
 					await process_frame
 		print("oval at y ", pitch.global_position.y if pitch != null else -1.0, " pitch ", pitch.size if pitch != null else Vector2.ZERO)
+	if drag:
+		var c: Control = ui.find_child("Spot_C", true, false)
+		if c != null:
+			var from := c.get_global_rect().get_center()
+			var press := InputEventMouseButton.new()
+			press.button_index = MOUSE_BUTTON_LEFT
+			press.pressed = true
+			press.position = from
+			press.global_position = from
+			Input.parse_input_event(press)
+			await process_frame
+			for k in range(1, 9):
+				var mv := InputEventMouseMotion.new()
+				mv.button_mask = MOUSE_BUTTON_MASK_LEFT
+				mv.position = from + Vector2(-6.0 * k, 9.0 * k)
+				mv.global_position = mv.position
+				mv.relative = Vector2(-6.0, 9.0)
+				Input.parse_input_event(mv)
+				await process_frame
+			print("dragging: ", root.gui_is_dragging())
+		for i in range(4):
+			await process_frame
 	var img := root.get_viewport().get_texture().get_image()
 	img.convert(Image.FORMAT_RGBA8)
 	img.save_png(out + "_sheet.png")
