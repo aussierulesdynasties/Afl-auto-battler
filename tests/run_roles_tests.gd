@@ -451,8 +451,9 @@ func _test_selection_pages_tests() -> void:
 		_check(ui.find_child("WeekPage", true, false) != null and sl != null and sl.get_parsed_text() == _synergy_words(),
 				"Phone: the preview's synergies follow the swap (%s)" % tag)
 		var rules: Button = ui.find_child("SynergyRules", true, false)
-		_check(sl != null and rules != null and _gap_x(sl, rules) < 48.0 and _gap_y(sl, rules) < 24.0,
-				"Phone: Synergies sits right under its own line (%s)" % tag)
+		_check(sl != null and rules != null and _gap_x(sl, rules) < 48.0 and _gap_y(sl, rules) < 24.0
+				and rules.get_global_rect().end.y <= sl.get_global_rect().position.y + 0.5,
+				"Phone: Synergies heads its own lines (%s)" % tag)
 		var rep: Button = ui.find_child("AssistantReport", true, false)
 		var cont: Button = ui.find_child("PreviewContinue", true, false)
 		_check(rep != null and rep.size.y >= 48.0 and rules != null and rules.size.y >= 48.0
@@ -492,8 +493,9 @@ func _test_selection_pages_tests() -> void:
 			var rep2: Button = ui.find_child("AssistantReport", true, false)
 			var head2: Control = ui.find_child("WeekHeading", true, false)
 			_check(_gap_x(sl2, rules2) < 48.0 and _gap_y(sl2, rules2) < 24.0
+					and rules2.get_global_rect().end.y <= sl2.get_global_rect().position.y + 0.5
 					and head2 != null and rep2 != null and rep2.size.y >= 48.0,
-					"PC: Synergies is under its own line and the report is thumb-high (%s)" % ptag)
+					"PC: Synergies heads its own lines and the report is thumb-high (%s)" % ptag)
 			var inter2 := ui.find_child("InterchangeRow", true, false)
 			_check(_gap_x(inter2.get_child(0), ui.find_child("SaveBest23", true, false)) < 48.0,
 					"PC: Save as my Best 23 is beside the interchange (%s)" % ptag)

@@ -89,6 +89,8 @@ func fill(v: VBoxContainer) -> void:
 		ch.name = "TeamChanges"
 		notes.add_child(ch)
 	if notes.get_child_count() > 0:
+		# Your own news is not a synergy: a rule sets it apart, no heading.
+		v.add_child(_rule())
 		v.add_child(notes)
 	else:
 		notes.free()
@@ -257,10 +259,15 @@ func _club_sides(opp: String) -> Control:
 
 ## The line synergies your 18 switch on - what the side is good at - any
 ## one it is a single player short of (a fact, never a suggested swap: the
-## choice is yours), and the full rules one tap away, under the line they explain.
+## choice is yours). The full rules are one tap away on the block's own
+## heading, a link like the assistant's report, so it reads as a lookup.
 func _synergy_view() -> Control:
 	var h := UiKit.vbox(8)
 	h.name = "Synergies"
+	var rules := _link_btn("Synergies ›")
+	rules.name = "SynergyRules"
+	rules.pressed.connect(show_synergies)
+	h.add_child(rules)
 	var on: PackedStringArray = []
 	var lit := {}
 	for r in Traits.progress(GameState.my_squad().ground):
@@ -277,10 +284,6 @@ func _synergy_view() -> Control:
 		var s := TraitLink.line(short, UiKit.BODY, UiKit.TEXT)
 		s.name = "SynergyShort"
 		h.add_child(s)
-	var rules := _link_btn("Synergies")
-	rules.name = "SynergyRules"
-	rules.pressed.connect(show_synergies)
-	h.add_child(rules)
 	return h
 
 
