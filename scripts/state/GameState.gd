@@ -5567,6 +5567,7 @@ func _after_round(results: Array) -> void:
 	_record_match_story(results)
 	Almanac.update_club_records(self, results)
 	_note_firsts(results)
+	_note_career_highs(results)
 	OwnProspect.check(self)
 	_draft_class_news()
 	_board_after_round(results)
@@ -10072,6 +10073,59 @@ func _note_firsts(results: Array) -> void:
 			var goals := int((stats_all.get(id, {}) as Dictionary).get("goals", 0))
 			if goals > 0 and career_goals_before(p, goals) == 0:
 				Firsts.note(p, "goal", season_year, label)
+
+
+## Every player's best games, kept on him (CareerHighs), and the week's news
+## for a new career high by one of yours: one per player, his biggest, and at
+## most CareerHighs.MAX_NEWS a round. The tally already holds the match, so his
+## games before it are one fewer than games_played.
+func _note_career_highs(results: Array) -> void:
+	var said := []
+	for res in results:
+		var roster: Array = res.get("roster", [])
+		var stats_all: Dictionary = res.get("players", {})
+		var label := str(res.get("label", ""))
+		var key := Milestones.match_key(season_year, res)
+		var codes := [str(res.get("home", "")), str(res.get("away", ""))]
+		for side in range(mini(2, roster.size())):
+			for r in roster[side]:
+				var id := str(r.get("id", ""))
+				var p := _find_player(id)
+				if p.is_empty():
+					continue
+				var highs := CareerHighs.update(p, stats_all.get(id, {}), maxi(0, games_played(p) - 1),
+						Career.complete(p), season_year, label, key)
+				if highs.is_empty() or my_club == "" or codes[side] != my_club:
+					continue
+				said.append([CareerHighs._step(highs[0]), CareerHighs.news_line(
+						GameDB.player_display_name(p), str(highs[0][0]), int(highs[0][1]),
+						codes[1 - side], label)])
+	said.sort_custom(func(a, b): return float(a[0]) > float(b[0]))
+	for i in range(mini(CareerHighs.MAX_NEWS, said.size())):
+		add_news("milestone", str(said[i][1]))
+
+
+## Players of yours in the match about to be played whose career high the feed
+## could say: {id: {stat: best}}, for a record that holds every game he has
+## played and at least CareerHighs.MIN_GAMES of them (MatchNotes.career_high_lines).
+func career_high_candidates() -> Dictionary:
+	var out := {}
+	if pending_sim == null or pending_match.is_empty() or my_club == "":
+		return out
+	var side := 0 if str(pending_match.get("home", "")) == my_club else 1
+	var squad: Squad = pending_sim.squads[side]
+	for row in squad.ground + squad.bench:
+		var p := list_player(str(row["id"]))
+		if p.is_empty() or not CareerHighs.complete(p) or not Career.complete(p):
+			continue
+		var rec := CareerHighs.get_record(p)
+		if int(rec.get("games", 0)) < CareerHighs.MIN_GAMES or int(rec.get("games", 0)) != games_played(p):
+			continue
+		var bests := {}
+		for stat in CareerHighs.STATS:
+			bests[stat] = CareerHighs.best(p, stat)
+		out[str(p["id"])] = bests
+	return out
 
 
 ## His career goals before the match being played or just played: the record,

@@ -144,6 +144,7 @@ func _ready() -> void:
 	# Whose first AFL goal the feed can say, if it comes today (MatchNotes).
 	if _interactive and not _is_practice(_res):
 		_duel_mem["first_goal"] = GameState.first_goal_candidates()
+		_duel_mem["career_high"] = GameState.career_high_candidates()
 	_pitch.event_played.connect(_on_event)
 	_pitch.finished.connect(_on_finished)
 	_pitch.ends_changed.connect(_on_ends_changed)
@@ -3266,6 +3267,7 @@ func _on_event(ev: Dictionary) -> void:
 	_feed_add(ev)
 	_duel_feed(ev)
 	_story_feed(ev)
+	_career_high_feed(ev)
 	_press_feed(event_index, ev)
 	_call_feed(event_index, ev)
 	if str(ev.get("kind", "")) == "goal":
@@ -4440,6 +4442,13 @@ func _story_feed(ev: Dictionary) -> void:
 	if text != "":
 		_feed_text("%s  %s" % [_clock_text(int(ev.get("q", 1)), int(ev.get("min", 0))), text],
 				UiKit.TEXT, false, "StoryLine")
+
+
+## A career high for one of yours (MatchNotes.career_high_lines).
+func _career_high_feed(ev: Dictionary) -> void:
+	for text in MatchNotes.career_high_lines(_duel_mem, ev, _res):
+		_feed_text("%s  %s" % [_clock_text(int(ev.get("q", 1)), int(ev.get("min", 0))), str(text)],
+				UiKit.TEXT, false, "CareerHighLine")
 
 
 ## The Defensive press taking hold, once a side a match: the first time the

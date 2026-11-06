@@ -1457,6 +1457,65 @@ static func story_feed_line(mem: Dictionary, ev: Dictionary) -> String:
 	return text
 
 
+## A career high for one of yours in the feed (CareerHighs, row 121).
+## mem["career_high"] holds {id: {stat: best}} for the players whose record
+## holds every game (GameState.career_high_candidates), so it is never said of
+## the other side. Goals are said at the goal that passes his best; disposals,
+## marks and tackles at the break where the quarter's count has passed it
+## (`res` is the match so far: its quarter_teams). Each stat once a player a
+## match, one line a player an event, at most MAX_HIGH_LINES a quarter.
+const MAX_HIGH_LINES := 2
+
+static func career_high_lines(mem: Dictionary, ev: Dictionary, res: Dictionary) -> Array:
+	var out := []
+	var cands: Dictionary = mem.get("career_high", {})
+	if cands.is_empty():
+		return out
+	var kind := str(ev.get("kind", ""))
+	var q := int(ev.get("q", 1))
+	var per_q: Dictionary = mem.get("high_q", {})
+	var room := func() -> bool:
+		return int(per_q.get(q, 0)) < MAX_HIGH_LINES
+	var said := func(id: String, stat: String, text: String) -> void:
+		(cands[id] as Dictionary).erase(stat)
+		per_q[q] = int(per_q.get(q, 0)) + 1
+		mem["high_q"] = per_q
+		out.append(text)
+	if kind == "goal":
+		var id := str(ev.get("player_id", ""))
+		if id == "" or str(ev.get("name", "")) == "" or not cands.has(id) or not (cands[id] as Dictionary).has("goals"):
+			return out
+		var kicked: Dictionary = mem.get("high_goals", {})
+		kicked[id] = int(kicked.get(id, 0)) + 1
+		mem["high_goals"] = kicked
+		var n := int(kicked[id])
+		if n > int(cands[id]["goals"]) and n >= int(CareerHighs.FLOORS["goals"]) and room.call():
+			said.call(id, "goals", CareerHighs.feed_line(str(ev.get("name", "")), "goals", n))
+		return out
+	if kind != "quarter":
+		return out
+	var players := {}
+	for snap in res.get("quarter_teams", []):
+		if int((snap as Dictionary).get("quarter", 0)) == q:
+			players = (snap as Dictionary).get("players", {})
+	if players.is_empty():
+		return out
+	for id in cands.keys():
+		var st: Dictionary = players.get(id, {})
+		var who := _pname(id)
+		if who == "":
+			continue
+		for stat in ["disposals", "marks", "tackles"]:
+			if not (cands[id] as Dictionary).has(stat):
+				continue
+			var n := int(float(st.get(stat, 0)))
+			if n > int(cands[id][stat]) and n >= int(CareerHighs.FLOORS[stat]):
+				if room.call():
+					said.call(id, stat, CareerHighs.feed_line(who, stat, n, q < 4))
+				break
+	return out
+
+
 ## The moments a match turned on, from the log, as sentences: the score
 ## that put the winners in front for good (when they had been behind or
 ## level after the first quarter), a star who went off hurt before the last
