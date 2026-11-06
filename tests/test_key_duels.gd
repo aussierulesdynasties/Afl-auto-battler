@@ -77,7 +77,7 @@ func _mean(a: Array) -> float:
 
 
 func _test_switch_ships_off() -> void:
-	Features.clear("key_duels")
+	Features.set_on("key_duels", false)
 	_check(Features.KNOWN.has("key_duels"), "key_duels is a known switch")
 	_check(bool(ProjectSettings.get_setting("features/key_duels", false)), "key_duels ships on")
 	var m := MatchSim.new(Squad.new("COL", GameDB.club_list("COL"), true, "COL"),

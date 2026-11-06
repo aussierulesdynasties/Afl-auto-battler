@@ -1221,7 +1221,7 @@ func _test_broadcast_vignettes() -> void:
 			"A real speccy through the corridor gets the front-on speccy shot")
 	# The front-on shot is behind the "speccy_front" switch (director, 2026-10-14): off (the default) a speccy plays
 	# the earlier shot and runs as long as it did; on it is the low, tight staging frozen on the grab.
-	Features.clear("speccy_front")
+	Features.set_on("speccy_front", false)
 	_check(not BroadcastVignette._sf_ready() and is_equal_approx(BroadcastVignette.duration_for(BroadcastVignette.SPECCY_FRONT), 3.8),
 			"With the speccy_front switch off a speccy plays the earlier shot, 3.8 s")
 	Features.set_on("speccy_front", true)

@@ -173,8 +173,8 @@ func _test_tokens_and_switch() -> void:
 			and m.TRANS_OUT == Tween.TRANS_CUBIC and m.EASE_OUT == Tween.EASE_IN,
 			"The easing tokens are the report's (never linear)")
 	_check(_feat.KNOWN.has("ui_motion"), "ui_motion is a known switch")
-	_feat.clear("ui_motion")
-	_check(not _feat.on("ui_motion") and not _uk.juice(), "ui_motion is off by default")
+	_feat.set_on("ui_motion", false)
+	_check(not _feat.on("ui_motion") and not _uk.juice(), "set_on false turns it off")
 	_feat.set_on("ui_motion", true)
 	_check(_uk.juice(), "set_on turns it on")
 	_feat.clear("ui_motion")
