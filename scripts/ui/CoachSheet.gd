@@ -102,7 +102,8 @@ static func playing_lines(played: Dictionary) -> Array:
 	var h: Dictionary = played.get("honours", {})
 	for pair in [["brownlow", "Brownlow Medal", "Brownlow Medals"], ["coleman", "Coleman Medal", "Coleman Medals"],
 			["coaches", "Coaches Award", "Coaches Awards"], ["rising_star", "Rising Star", ""],
-			["norm_smith", "Norm Smith Medal", "Norm Smith Medals"]]:
+			["norm_smith", "Norm Smith Medal", "Norm Smith Medals"],
+			["golden_fist", Awards.GOLDEN_FIST, "%ss" % Awards.GOLDEN_FIST]]:
 		var n := int(h.get(pair[0], 0))
 		if n > 0:
 			out.append(str(pair[1]) if n == 1 or str(pair[2]) == "" else "%d %s" % [n, pair[2]])

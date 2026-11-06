@@ -174,13 +174,19 @@ extends RefCounted
 ##               round sits it out. The round's name shows on the fixture, the hub, the match
 ##               and the warm-up. Changes match output. Nothing saved. Off, every round is as
 ##               before.
+##   gen_traits   row 104 (4.Q10): generated players carry the special traits at the real
+##               players' rates. A prospect's borrowed shape gets a small per-role nudge
+##               (Prospects.GEN_NUDGE: fewer contested bulls and ruck kings, fewer interceptors,
+##               more defensive forwards) and his discipline is drawn from a real player of his
+##               role, so hotheads roll at the real rate (none did before). Changes new draft
+##               classes and expansion lists only. Off, generation is exactly as before.
 ##   league_news   row 76 (T5.Q11d, the AFL knowledge layer): the premiership item in
 ##               the news feed carries one sentence of the club's flag history (first
 ##               ever, back-to-back or more, or the first in 10+ years), from the save's
 ##               honour roll and data/club_premierships.csv (LeagueNews.gd). Reads only.
 ##               Off, the feed is exactly as before.
 const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries", "momentum_runaway", "key_duels", "set_shots",
-		"sir_doug_round", "gather_round", "league_news"]
+		"sir_doug_round", "gather_round", "league_news", "gen_traits"]
 
 static var _forced := {}
 static var _from_args := {}
