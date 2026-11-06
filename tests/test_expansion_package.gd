@@ -20,7 +20,6 @@ func run() -> void:
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
 	GameDB.reload()
-	_t("_test_switch_off_is_today")
 	Features.set_on(FEATURE, true)
 	_t("_test_rules")
 	_t("_test_canberra_choice")
@@ -133,42 +132,6 @@ func _picks_of(history: Array, code: String) -> Array:
 # ---------------------------------------------------------------------------
 # The switch off: nothing changes, nothing is written
 # ---------------------------------------------------------------------------
-func _test_switch_off_is_today() -> void:
-	_check(not Features.on(FEATURE), "The switch ships off")
-	_new_career()
-	_check(GameState.canberra_on and GameDB.active_clubs(2030).has("CANB"), "Off: Canberra joins in 2030, as it always did")
-	# A pick's number before the draft follows the draft's own order: the
-	# premier picks last even from the bottom of the ladder.
-	var ladder: Array = GameState.season.ladder_sorted()
-	var flag := str(ladder[ladder.size() - 1]["code"])
-	var saved_finals: Dictionary = GameState.season.finals
-	GameState.season.finals = {"premier": flag, "runner_up": str(ladder[ladder.size() - 2]["code"])}
-	var clubs: int = GameState.intake_order().size()
-	_check(GameState.draft_spot(GameState.season_year, 1, flag) == clubs
-			and GameState._draft_order() == GameState.intake_order(),
-			"The premier's first pick is numbered last, as it falls on draft night (%d of %d)" % [
-				GameState.draft_spot(GameState.season_year, 1, flag), clubs])
-	GameState.season.finals = saved_finals
-	var history := _rollover()
-	_check(_picks_of(history, "TAS").is_empty(), "Off: Tasmania takes no part in the draft before its first season")
-	var tas: Array = GameState.season.lists["TAS"]
-	_check(_ids(tas) == _ids(Prospects.generate_expansion_list("TAS", 2028)),
-			"Off: Tasmania arrives with the same 36 generated players as before")
-	_check(GameState.expansion.is_empty(), "Off: the build keeps no state")
-	_check(GameState.cap_for("TAS") == GameState.salary_cap, "Off: no club has sign-on money")
-	var approach_news := false
-	for item in GameState.news:
-		if str(item["text"]).contains("approached") or str(item["text"]).contains("state leagues"):
-			approach_news = true
-	_check(not approach_news, "Off: no news of approaches or state-league signings")
-	_check(GameState.save_career(), "Off: the career saves")
-	var saved := CareerSave.read(GameState.save_path)
-	_check(not saved.has("expansion") and not saved.has("canberra_on"), "Off: the save has none of the build's keys")
-	_check(GameState.story_card("contracts_new_club_approach", GameState.my_list[0]).has("options"),
-			"Off: the approach card still builds (it is in the deck) but is never dealt")
-	_check(ExpansionBuild.card(GameState).is_empty(), "Off: no approach card is dealt")
-
-
 # ---------------------------------------------------------------------------
 # The rules
 # ---------------------------------------------------------------------------

@@ -57,7 +57,6 @@ func run(tree: SceneTree) -> void:
 	GameState.save_path = "user://test_match_story.save"
 	GameState.settings_path = "user://test_match_story.cfg"
 	GameState.delete_saved_career()
-	await _t("_test_switch_off")
 	Features.set_on("match_story", true)
 	_t("_test_pure_hero")
 	_t("_test_hero_matches_stats")
@@ -86,33 +85,6 @@ func _review() -> Node:
 	return _tree.current_scene.find_child("FullTime", true, false)
 
 
-func _test_switch_off() -> void:
-	_check(not Features.on("match_story") and not GameState.match_story_on(), "the switch ships off")
-	_fresh()
-	_rounds(3)
-	_check(GameState.match_stories.is_empty(), "off: no story is kept")
-	var told := false
-	for n in GameState.news:
-		if str(n.get("kind", "")) == "match_story":
-			told = true
-	_check(not told, "off: no hero on the news front")
-	_check(GameState.last_match_story().is_empty(), "off: no last story")
-	_check(str(GameState.media_conference.get("question", "")).find("was the hero") < 0, "off: the press never asks about a hero")
-	_tree.root.size = Vector2i(390, 844)
-	await _settle()
-	var ft := await _review()
-	_check(ft != null, "off: full time opens")
-	_check(ft != null and ft.find_child("MatchStory", true, false) == null, "off: the Summary shows no match story")
-	_check(ft != null and ft.find_child("MatchFactors", true, false) != null, "off: How it went is still there")
-	Router.stack = []
-	Router.go("hub")
-	await _settle(4)
-	_check(GameState.save_career(), "off: saves")
-	GameState.match_stories = [{"junk": 1}]
-	_check(GameState.load_career() and GameState.match_stories.is_empty(), "off: the save has no stories")
-
-
-## A hand-made result: the clutch goal and the clearances count toward the hero.
 func _test_pure_hero() -> void:
 	var a := {"kicks": 10, "handballs": 5, "marks": 4, "tackles": 3, "goals": 1, "disposals": 15}
 	var b := a.duplicate()

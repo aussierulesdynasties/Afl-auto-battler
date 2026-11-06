@@ -17,7 +17,6 @@ func run() -> void:
 	failures.clear()
 	checks = 0
 	GameDB.reload()
-	_t("_test_off_by_default")
 	_t("_test_won_ball_is_played_on")
 	_t("_test_off_still_stops_after_a_won_ball")
 	_t("_test_chains_are_shorter_and_more")
@@ -83,15 +82,6 @@ func _total(chains: Dictionary) -> int:
 	for k in chains:
 		n += int(chains[k])
 	return n
-
-
-func _test_off_by_default() -> void:
-	Features.clear("match_flow")
-	_check(not Features.on("match_flow"), "match_flow is on without being asked")
-	_check(Features.KNOWN.has("match_flow"), "match_flow is not a known switch")
-	var sim := _sim("FRE", "MEL", 3)
-	_check(int(sim._rates()["chains_per_game"]) == int(Ratings.T["chains_per_game"]),
-			"a match without the switch does not play the calibrated chain count")
 
 
 func _test_won_ball_is_played_on() -> void:

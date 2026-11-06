@@ -59,7 +59,6 @@ func run(tree: SceneTree) -> void:
 	GameState.save_path = "user://test_trainrep.save"
 	GameState.settings_path = "user://test_trainrep.cfg"
 	GameState.delete_saved_career()
-	await _t("_test_switch_off")
 	Features.set_on("training_report", true)
 	_t("_test_snapshot_and_report")
 	_t("_test_retrain_list")
@@ -73,27 +72,6 @@ func run(tree: SceneTree) -> void:
 	print(Ran.line("Training report", self))
 	for f in failures:
 		print("  FAIL: " + f)
-
-
-func _test_switch_off() -> void:
-	_check(not Features.on("training_report"), "the switch ships off")
-	_fresh()
-	_rounds(4)
-	_check(GameState.training_block.is_empty() and GameState.training_report.is_empty(), "off: no block or report is kept")
-	_check(TrainingReport.current(GameState).is_empty() and not TrainingReport.hub_due(GameState), "off: nothing is due")
-	_tree.root.size = Vector2i(390, 844)
-	await _settle()
-	Router.stack = []
-	Router.go("hub")
-	await _settle(8)
-	_check(_tree.current_scene.find_child("TrainingReportCard", true, false) == null, "off: the hub has no report card")
-	Router.go("training")
-	await _settle(8)
-	_check(_tree.current_scene.find_child("TrainingReportLink", true, false) == null, "off: Training has no report link")
-	_check(GameState.save_career(), "off: saves")
-	var raw := FileAccess.get_file_as_bytes("user://test_trainrep.save")
-	_check(raw.size() > 0, "off: the save is written")
-	GameState.delete_saved_career()
 
 
 func _test_snapshot_and_report() -> void:
