@@ -88,14 +88,14 @@ static func _option(key: String, row: Array, who: Dictionary, theirs: Array, min
 		"tag":
 			if not who.is_empty():
 				if not _tag_candidate(who):
-					reason = "He plays %s: a tag needs a midfielder." % _where(who)
+					reason = "%s plays %s: a tag needs a midfielder." % [GameDB.player_display_name(who), _where(who)]
 			elif theirs.filter(func(p): return _tag_candidate(p)).is_empty():
 				reason = "None of their midfielders is on the ground."
 		"matchup":
 			var keys := Matchups.key_forwards(theirs)
 			if not who.is_empty():
 				if not keys.any(func(p): return str(p.get("id", "")) == str(who.get("id", ""))):
-					reason = "He is not one of their key forwards."
+					reason = "%s is not one of their key forwards." % GameDB.player_display_name(who)
 			elif keys.is_empty():
 				reason = "They have no key forward."
 			elif Matchups.defenders(mine).is_empty():
@@ -103,7 +103,7 @@ static func _option(key: String, row: Array, who: Dictionary, theirs: Array, min
 		"minder":
 			var spare := Matchups.best_interceptor(theirs)
 			if spare.is_empty() or (not who.is_empty() and str(spare.get("id", "")) != str(who.get("id", ""))):
-				reason = "He is not their loose defender." if not who.is_empty() else "They have no loose defender."
+				reason = ("%s is not their loose defender." % GameDB.player_display_name(who)) if not who.is_empty() else "They have no loose defender."
 			elif Matchups.minder_candidates(mine).is_empty():
 				reason = "You have no forward to send."
 		"loose":
@@ -128,7 +128,7 @@ static func _option(key: String, row: Array, who: Dictionary, theirs: Array, min
 static func _sides(call: String, plan: String, who: Dictionary, theirs: Array, mine: Array, lines: Array) -> Array:
 	match call:
 		"tag":
-			return GateOdds.tag_lines()
+			return GateOdds.tag_lines(GameDB.player_display_name(who) if not who.is_empty() else "")
 		"minder":
 			return GateOdds.minder_lines()
 		"loose":
@@ -148,7 +148,7 @@ static func _sides(call: String, plan: String, who: Dictionary, theirs: Array, m
 			if best.is_empty() or fwd.is_empty():
 				return ["", ""]
 			var nm := GameDB.player_display_name(best)
-			return [GateOdds.MATCHUP_GAIN % [nm, GateOdds.pct(best_p)],
+			return [GateOdds.MATCHUP_GAIN % [nm, GameDB.player_display_name(fwd), GateOdds.pct(best_p)],
 					(GateOdds.MATCHUP_COST_NEXT if keys.size() > 1 else GateOdds.MATCHUP_COST_LOOSE) % nm]
 	return ["", ""]
 
