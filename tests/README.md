@@ -59,6 +59,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `expansion` | Tasmania in 2028 and Canberra in 2030, and a Club Forge club entering with the career |
 | `expansion_package` | How a new club builds its list behind the switch `expansion_package`: off is exactly today; on gives state-league signings, early picks, the traded pick, out-of-contract signings, sign-on money, the Canberra choice, the approach card, saves both ways |
 | `finals` | The wildcard finals bracket, extra time, draws |
+| `gather_round` | Gather Round behind the switch `gather_round`: off is exactly today; on, one of rounds 3 to 7 at the host grounds, the home edge only at a club's own ground, the odd-count bye, its name in the fixture, hub and match, a live round across a save and load |
 | `save` | Saving and loading a career, including old-save migrations and the safe write: a failed or interrupted write never loses the career, and a failed swap leaves the newer save readable |
 | `chronology` | 2026 is history, careers start in 2027, and every system agrees |
 | `career` | Games, goals and club stints across a dynasty |
@@ -80,6 +81,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `awards` | Brownlow, Coleman, best and fairest, All-Australian |
 | `achievements` | Club achievements |
 | `contracts` | Contracts, free agency and trades (seeded: a clock seed once made the pick-limit check flaky) |
+| `recruit_undo` | Undo for a delisting, a free-agent signing and a re-signing (row 119): exact restore of list, cap, contracts, pool and news, newest first, gone once the national draft starts or after a reload, a real tap on Undo at 390 x 844 |
 | `league` | The two difficulty dials (saved, old saves mapped, trade bargaining) and the league news feed |
 | `club` | The board, morale and the weekly event card |
 | `story` | The week's story cards: the deck's checks, cooldowns, arcs, trust, ten seasons of repeats, the save round trip, cards never moving the dice |
@@ -111,7 +113,7 @@ By area:
 - `MatchSim.gd`, `MatchNotes.gd`: `match_game`, `matchday`, `roles`; add `pressure` for pressure changes. `calibration` and `balance` only when you changed scoring or ratings (they are the slow ones).
 - `UiKit.gd` or any screen: `career_ui`, plus that screen's own suite (`draft_ui`, `intake_ui`, `matchday`, `match_visual`).
 - The draft, prospects or potential: `draft`, `intake`, `potential`, `ai`.
-- Contracts, money or trades: `contracts`, `save`.
+- Contracts, money or trades: `contracts`, `recruit_undo`, `save`.
 - Anything stored on a player or a club: `save` as well, so an old career still loads.
 - Coaches and staff: `coaches`, `coach_market`, `coach_pathway`, `coach_effects`.
 

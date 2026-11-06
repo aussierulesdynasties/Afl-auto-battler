@@ -7,8 +7,8 @@ extends RefCounted
 ## never do, so every screen gets it from one place.
 ##
 ## Presentation only: nothing here touches a save or the simulation. Each part
-## has its own Off in Settings (Button sounds, Vibration, Reduced motion), and
-## Mute sounds still silences everything through the Master bus.
+## has its own Off in Settings (Vibration, Reduced motion); sound follows Mute
+## and the one Volume on the Master bus (row 98).
 ## Sounds: assets/audio/feel/, made by tools/audio/build_feel.py.
 
 const DIR := "res://assets/audio/feel/"
@@ -66,12 +66,17 @@ static func press(kind: String) -> void:
 	buzz(kind)
 
 
+## False while Mute is on or Volume is at 0 (row 98).
+static func audible() -> bool:
+	var master := AudioServer.get_bus_index("Master")
+	return master < 0 or not (AudioServer.is_bus_mute(master) or AudioServer.get_bus_volume_db(master) <= -79.0)
+
+
 static func sound(kind: String) -> void:
 	if not SOUNDS.has(kind):
 		return
-	# Button sounds Off mutes the bus: start nothing at all.
-	var bus := AudioServer.get_bus_index(AudioLevels.bus(AudioLevels.INTERFACE))
-	if bus >= 0 and AudioServer.is_bus_mute(bus):
+	# Mute (or Volume at 0) silences everything: start nothing at all.
+	if not audible():
 		return
 	var p := _player(kind == "land" or kind == "end")
 	if p == null:
