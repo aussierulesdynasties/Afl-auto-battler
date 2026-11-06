@@ -216,7 +216,8 @@ func duels(sim: MatchSim, r: Dictionary) -> Array:
 ## GEN_GROW seasons by the development rules; each real 2026 list player's place is
 ## taken by the next unused generated player of his position, re-rated to his OVR on
 ## the harness's own data
-## (GameDB.set_player_ovr, one shift on every attribute), as the in-career league is
+## (GameDB.set_player_ovr, one shift on every rated attribute; discipline kept, as the
+## career's refit keeps it), as the in-career league is
 ## re-anchored to the 2026 spread every rollover. Every worker builds the same league,
 ## and an arm's switch changes only what generation does with the same draws.
 const GEN_CLASSES := 40
@@ -253,7 +254,16 @@ func generated_lists(codes: Array) -> Dictionary:
 			used[t[0]] = at + 1
 			var q: Dictionary = (from[at] as Dictionary).duplicate(true)
 			q["club"] = code
+			# The career's re-anchor (Prospects.fit_attributes) leaves the attributes outside
+			# the rating alone; set_player_ovr shifts them too, so put them back: the league
+			# keeps the temperaments generation rolled (the hothead share the audit measures).
+			var keep := {}
+			for k in Prospects.UNRATED_KEYS:
+				keep[k] = (q["attr"] as Dictionary).get(k)
 			GameDB.set_player_ovr(q, int(t[1]))
+			for k in keep:
+				if keep[k] != null:
+					q["attr"][k] = keep[k]
 			(out[code] as Array).append(q)
 	return out
 
