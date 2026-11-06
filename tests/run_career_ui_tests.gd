@@ -72,6 +72,10 @@ func _test_media_conference_rules() -> void:
 	var close: Dictionary = MediaConferenceScript.pick({"club": "CAR", "opponent_name": "Collingwood", "round": 16,
 			"result": {"home": "COL", "away": "CAR", "score": [84, 86]}}, {})
 	_check(str(close.get("key", "")) == "close_game", "Close finishes can drive the press conference")
+	var drawn: Dictionary = MediaConferenceScript.pick({"club": "CAR", "opponent_name": "Collingwood", "round": 16,
+			"result": {"home": "COL", "away": "CAR", "score": [80, 80], "goals": [12, 12], "behinds": [8, 8]}}, {})
+	_check(str(drawn.get("key", "")) == "close_game" and not str(drawn.get("question", "")).contains("What decided it"),
+			"A draw is never asked what decided it (%s)" % str(drawn.get("question", "")))
 	# Recurring journalists (RPG-002): each question has its own asker, and what
 	# you say can come back.
 	_check(str(heavy.get("journalist", "")) == "muckraker" and str(heavy.get("by", "")) == "Gary Haddon, The Siren"
@@ -2129,11 +2133,27 @@ func _test_remembered() -> void:
 	_check(why_b == "" and scene.find_child("ConfirmRelease", true, false) != null
 			and scene.find_child("ReleaseRemembered", true, false) == null,
 			"With nothing to remember the confirm is quiet (%s)" % why_b)
+	# He was also in the trade builder: releasing him takes him out of it.
+	scene._mine = [str(blank["id"]), str(star_id)]
 	var go: Button = scene.find_child("ConfirmRelease", true, false)
 	var why_g: String = await Tap.tap(go) if go != null else "no confirm"
 	await _settle()
 	_check(why_g == "" and _state.list_player(str(blank["id"])).is_empty() and _state.my_list.size() == list_before - 1,
 			"A finger on Release player lets him go (%s)" % why_g)
+	_check(scene._mine == [str(star_id)], "A released player leaves the trade builder; the rest stay (%s)" % str(scene._mine))
+	# Free-agent talks never start from the last player's term.
+	_check(not _state.free_agents.is_empty(), "The off-season has free agents (%d)" % _state.free_agents.size())
+	if not _state.free_agents.is_empty():
+		var fa_id := str(_state.free_agents[0]["id"])
+		scene._offer_years = 0
+		scene._open_talks(fa_id, true)
+		var own_years := int(scene._offer_years)
+		scene._close_talks()
+		scene._offer_years = 7
+		scene._open_talks(fa_id, true)
+		_check(own_years > 0 and int(scene._offer_years) == own_years,
+				"Free-agent talks start from his own term (%d), not the last player's (%d)" % [own_years, int(scene._offer_years)])
+		scene._close_talks()
 	scene.queue_free()
 	await _settle()
 
