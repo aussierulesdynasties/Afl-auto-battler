@@ -519,6 +519,7 @@ func _controls() -> Control:
 		_break_skip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_break_skip.clip_text = true
 		_break_skip.pressed.connect(_on_skip_to_break)
+		_break_skip.ready.connect(_fit_break_skip, CONNECT_ONE_SHOT)
 		row2.add_child(_break_skip)
 		row2.move_child(_break_skip, 0)
 
@@ -532,6 +533,20 @@ func _controls() -> Control:
 
 	_sync_controls()
 	return v
+
+
+## The break button is never narrower than its longest name: on a 320-wide
+## screen half the row would cut "Skip to three-quarter time" short, so it
+## takes what it needs and Skip to full time the rest.
+func _fit_break_skip() -> void:
+	var fnt := _break_skip.get_theme_font("font")
+	var fs := _break_skip.get_theme_font_size("font_size")
+	var sty := _break_skip.get_theme_stylebox("normal")
+	var pad := (sty.get_margin(SIDE_LEFT) + sty.get_margin(SIDE_RIGHT)) if sty else 0.0
+	var need := 0.0
+	for n in BREAK_NAMES:
+		need = maxf(need, fnt.get_string_size("Skip to " + str(n), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
+	_break_skip.custom_minimum_size.x = ceilf(need + pad + 4.0)
 
 
 func _sync_controls() -> void:

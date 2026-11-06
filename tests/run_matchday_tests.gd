@@ -3741,6 +3741,11 @@ func _play_match_for_skip(skip: bool) -> Dictionary:
 						fnt.get_string_size("Playing on...", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x])
 				_check(need + pad <= sb.size.x, "Q%d: Skip to %s is read in full, not clipped (%.0f of %.0f px)" % [
 						q, names[q - 1], need + pad, sb.size.x if sb else 0.0])
+				# Not only at 390: the button never goes below its own text, so a
+				# 320-wide screen (a small window, a small phone) reads it in full too.
+				_check(sb != null and sb.custom_minimum_size.x >= need + pad,
+						"Q%d: Skip to %s keeps room for its words on any width (min %.0f, needs %.0f)" % [
+						q, names[q - 1], sb.custom_minimum_size.x if sb else 0.0, need + pad])
 				if skip and q == 2:
 					# Half way through a quarter, not only at the bounce: some of
 					# Q2 is watched first (a call on the way is answered as ever).
