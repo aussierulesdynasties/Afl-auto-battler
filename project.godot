@@ -62,9 +62,9 @@ environment/defaults/default_clear_color=Color(0.071, 0.067, 0.063, 1)
 
 [features]
 
-; Feature switches (scripts/core/Features.gd). A feature merged before its
-; patch is ready ships OFF here; its tests and tools turn it on for themselves,
-; and a dev run does with:  godot --path . -- --features preseason
+; Feature switches (scripts/core/Features.gd). Every switch ships ON (director
+; 2026-11-06: "i ALWAYS want them on"). Tests that need the old path force it
+; with Features.set_on(name, false).
 preseason=true
 speccy_front=true
 training_report=true
