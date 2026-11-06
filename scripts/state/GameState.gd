@@ -2471,11 +2471,56 @@ func match_day_setup_open() -> bool:
 
 
 ## The side changed on Team selection before the first bounce: the match is
-## made again from the new side, with the same seed, weather and plan.
+## made again from the new side, with the same seed, weather and plan, and
+## every call you made on the setup that the new side still allows.
 func rebuild_pending_side() -> void:
 	if match_day_setup_open():
+		var old: MatchSim = pending_sim
 		_build_pending_sim()
+		_carry_calls(old, pending_sim)
 	side_from_match = false
+
+
+## Your calls from the old match onto the one made from the new side. A call
+## that needs a player no longer in the side goes back to the assistant's pick
+## for that call only; the rest stay yours.
+func _carry_calls(old: MatchSim, sim: MatchSim) -> void:
+	var side := sim.moment_side
+	var mine: Squad = sim.squads[side]
+	var on_ground := {}
+	for p in mine.ground:
+		on_ground[str(p["id"])] = true
+	# Key match-ups you changed on the setup (the This week ones are already in).
+	var old_own: Dictionary = (old._own[side] as Dictionary)["duels"]
+	var new_own: Dictionary = (sim._own[side] as Dictionary)["duels"]
+	for fid in old_own:
+		var def_id := str((old.duels[side] as Dictionary).get(fid, ""))
+		if def_id == "" or not sim.taking_part(side, def_id) or not sim.taking_part(1 - side, str(fid)):
+			continue
+		if new_own.has(fid) and str((sim.duels[side] as Dictionary).get(fid, "")) == def_id:
+			continue
+		sim.coach_matchup(side, str(fid), def_id)
+	# The loose man: yours stays yours; the assistant's stays his if he still plays.
+	var loose := str(old.interceptor[side])
+	if loose == "" or sim.taking_part(side, loose):
+		if bool((old._own[side] as Dictionary)["interceptor"]):
+			sim.coach_interceptor(side, loose)
+		else:
+			sim.set_interceptor(side, loose, false)
+	# Plan, tag, who tags, the minder on their spare and the pep talk.
+	var t: Dictionary = (old.tactics[side] as Dictionary).duplicate()
+	t.erase("interceptor_id")
+	t.erase("interceptor_set")
+	if str(t.get("tagger_id", "")) != "" and not sim.taking_part(side, str(t["tagger_id"])):
+		t["tagger_id"] = ""
+	if bool(t.get("spare_accountable", false)) and not on_ground.has(str(t.get("spare_minder_id", ""))):
+		var minders := Matchups.minder_candidates(mine.ground)
+		if minders.is_empty():
+			t["spare_accountable"] = false
+			t["spare_minder_id"] = ""
+		else:
+			t["spare_minder_id"] = str(minders[0]["id"])
+	sim.set_tactics(side, t)
 
 
 ## Set when Change the side leaves the match-day setup for Team selection.
