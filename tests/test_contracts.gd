@@ -920,6 +920,21 @@ func _test_compensation_flow() -> void:
 	_check(GameState.finish_intake_draft(), "The draft completes and the season rolls over")
 	_check(GameState.compensation.is_empty() or GameState.offseason_year != GameState.season_year,
 			"Last year's compensation does not carry into the new season")
+	# In season the old list is still there for the wrap; a pick number
+	# must not count it.
+	var stale := GameState.compensation.duplicate(true)
+	if stale.is_empty():
+		stale = [{"club": str(GameState._draft_order()[0]), "player": "stale", "after": 0}]
+	GameState.compensation = stale
+	var order := GameState._draft_order()
+	var clean := true
+	for i in range(order.size()):
+		var said := GameState.draft_spot(GameState.season_year, 1, str(order[i]))
+		var plain := i + 1 + ExpansionBuild.picks_ahead(GameState, GameState.season_year, i + 1, order.size())
+		if said != plain:
+			clean = false
+			print("  in-season draft_spot %s: said %d, expected %d" % [str(order[i]), said, plain])
+	_check(clean, "In season, a pick number ignores last off-season's compensation picks")
 
 
 ## Trade valuation: what a club gets is judged against its own side and
