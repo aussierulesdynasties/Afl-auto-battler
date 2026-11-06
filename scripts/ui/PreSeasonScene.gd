@@ -20,12 +20,12 @@ var _settings: Control
 var _lines := {}        # block index -> {"gain": Label, "cost": Label}
 var _drill_rows := {}   # block index -> the plans it drills (shown on a Game plan block)
 var _drill_buttons := {}   # block index -> {plan: Button}
+## Block index -> the position group its drill row shows and sets ("MID",
+## "DEF", "FWD", "RUCK"), or "" for the whole side. It outlasts a rebuild.
+var _drill_group := {}
+var _drill_split_lines := {}   # block index -> the Label under the group tabs
+var _drill_tabs := {}   # block index -> {"" or group: Button}
 var _choices := {}      # "Load0" / "Focus0" -> {key: Button}
-## The position group whose plan the blocks show and set ("MID", "DEF", "FWD",
-## "RUCK"), or "" for every group at once. It outlasts a rebuild.
-var _group := ""
-var _group_buttons := {}   # "" or a group -> Button
-var _group_key: Label
 var _base_head: Label
 var _base_body: Label
 
@@ -68,8 +68,8 @@ func _build() -> void:
 	_choices = {}
 	_drill_rows = {}
 	_drill_buttons = {}
-	_group_buttons = {}
-	_group_key = null
+	_drill_split_lines = {}
+	_drill_tabs = {}
 	var stop: String = GameState.preseason_stop()
 	var settings := UiKit.btn("Settings", UiKit.SECONDARY)
 	settings.name = "PreSeasonSettings"
@@ -118,7 +118,7 @@ func _build() -> void:
 		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		left.size_flags_stretch_ratio = 0.5
 		cols.add_child(left)
-		var right := _blocks_section(first, true, false)
+		var right := _blocks_section(first, true)
 		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cols.add_child(right)
 		page.add_child(cols)
@@ -660,11 +660,10 @@ func _season_plan_section() -> Control:
 
 ## The blocks from `first` on: on a phone one under another, on a PC side by
 ## side when `across`.
-func _blocks_section(first: int, across: bool, full := true) -> Control:
+func _blocks_section(first: int, across: bool) -> Control:
 	var v := UiKit.vbox(10)
 	v.name = "PreSeasonBlocks"
 	v.add_child(_section_head("Training blocks" if first == 0 else "The weeks to come"))
-	v.add_child(_group_row(full))
 	var holder: BoxContainer = UiKit.hbox(20) if across else UiKit.vbox(UiKit.SECTION)
 	v.add_child(holder)
 	for i in range(first, PreSeason.block_count()):
@@ -679,84 +678,6 @@ func _blocks_section(first: int, across: bool, full := true) -> Control:
 	quiet.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(quiet)
 	return v
-
-
-## Whose plan the blocks below set (director, 2026-11-06, row 101: "split it
-## between position groups"): every group at once, or the mids, defenders,
-## forwards or rucks alone. Three to a row, so each is a thumb's width on a
-## phone. The line under it says who the plan reaches and how many they are.
-func _group_row(full := true) -> Control:
-	var wide := _wide()
-	# On a PC, one line: the label, the five, then the words (its screen is
-	# short). Beside the time trial the column is narrower, so the words go
-	# under the five.
-	var v: BoxContainer = UiKit.hbox(10) if wide and full else UiKit.vbox(6)
-	v.name = "PreSeasonGroups"
-	var line: BoxContainer = v
-	if wide and not full:
-		line = UiKit.hbox(10)
-		v.add_child(line)
-	var head := UiKit.lbl("Plan for", UiKit.BODY, UiKit.TEXT, true)
-	head.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	head.autowrap_mode = TextServer.AUTOWRAP_OFF
-	line.add_child(head)
-	var grid := GridContainer.new()
-	grid.name = "GroupGrid"
-	grid.columns = 5 if wide else 3
-	grid.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if wide else Control.SIZE_EXPAND_FILL
-	grid.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 6)
-	line.add_child(grid)
-	_group_buttons = {}
-	var keys: Array = [""]
-	keys.append_array(PreSeason.GROUPS)
-	for g in keys:
-		var key := str(g)
-		var b := UiKit.btn("Every group" if key == "" else str(PreSeason.GROUP_LABEL[key]), UiKit.BODY)
-		b.name = "Group_%s" % ("ALL" if key == "" else key)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(96, 34) if wide else Vector2(0, 44)
-		b.pressed.connect(func(): _pick_group(key))
-		_group_buttons[key] = b
-		grid.add_child(b)
-	_group_key = UiKit.lbl("", UiKit.SECONDARY, UiKit.TEXT)
-	_group_key.name = "GroupKey"
-	_group_key.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_group_key.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_group_key.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	v.add_child(_group_key)
-	return v
-
-
-func _pick_group(group: String) -> void:
-	_group = group
-	_refresh_words()
-
-
-## The words under "Plan for": who this plan reaches, and which groups have
-## a plan of their own.
-func _group_words() -> String:
-	var own := []
-	for g in PreSeason.GROUPS:
-		if GameState.preseason_group_differs(str(g)):
-			own.append(str(PreSeason.GROUP_LABEL[g]).to_lower())
-	if _group == "":
-		if own.is_empty():
-			return "One plan for the whole list. Pick a group to give it a plan of its own."
-		return "A change here goes to every group. The %s have a plan of their own." % _and_list(own)
-	var n := 0
-	for p in GameState.my_list:
-		if PreSeason.group_of(p) == _group:
-			n += 1
-	return "%s: %d on the list. Their skills work, injury risk and Round 1 legs follow this plan alone. The fitness base and plan fluency are the side's, each group counting by its share of the list." % [
-			str(PreSeason.GROUP_LABEL[_group]), n]
-
-
-static func _and_list(names: Array) -> String:
-	if names.size() <= 1:
-		return "".join(names)
-	return "%s and %s" % [", ".join(names.slice(0, names.size() - 1)), names[names.size() - 1]]
 
 
 ## One block: its weeks, the load, the focus, and what the pair gains and
@@ -775,7 +696,7 @@ func _block(i: int) -> Control:
 	var title := UiKit.lbl(PreSeason.block_title(i), UiKit.NAME, UiKit.TEXT, true)
 	title.name = "BlockTitle_%d" % i
 	v.add_child(title)
-	var blocks: Array = GameState.preseason_blocks("", _group)
+	var blocks: Array = GameState.preseason_blocks()
 	var load_options := []
 	for k in PreSeason.loads():
 		load_options.append([str(k), str(PreSeason.LOAD_LABEL.get(k, k))])
@@ -809,6 +730,33 @@ func _drill_row(i: int) -> Control:
 	key_line.name = "DrillKey%d" % i
 	key_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	h.add_child(key_line)
+	# Who the drills below are for (director, 2026-11-06, row 101: "split it
+	# between position groups"): the whole side, or one group. Tabs, not
+	# outlined choices: picking one changes what the row shows, not training.
+	var tabs := UiKit.hbox(0)
+	tabs.name = "DrillFor%d" % i
+	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var tab_buttons := {}
+	var keys: Array = [""]
+	keys.append_array(PreSeason.GROUPS)
+	for g in keys:
+		var key := str(g)
+		var t := UiKit.tab("All" if key == "" else str(PreSeason.GROUP_LABEL[key]), false)
+		t.name = "DrillFor%d_%s" % [i, "ALL" if key == "" else key]
+		t.custom_minimum_size = Vector2(0, 44)
+		t.add_theme_font_size_override("font_size", UiKit.SECONDARY)
+		t.pressed.connect(func():
+			_drill_group[i] = key
+			_refresh_words())
+		tab_buttons[key] = t
+		tabs.add_child(t)
+	_drill_tabs[i] = tab_buttons
+	h.add_child(tabs)
+	var split_line := UiKit.lbl("", UiKit.SECONDARY, UiKit.TEXT)
+	split_line.name = "DrillSplit%d" % i
+	split_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	h.add_child(split_line)
+	_drill_split_lines[i] = split_line
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -845,7 +793,13 @@ func _knows_words(plan: String) -> String:
 
 
 func _toggle_drill(i: int, plan: String) -> void:
-	var drills: Array = GameState.preseason_drills(i, _group)
+	var group := str(_drill_group.get(i, ""))
+	if group == "" and GameState.preseason_drills_split(i):
+		# The side drills differently by group: a pick here sets every group.
+		GameState.set_preseason_drills(i, [plan])
+		_refresh_words()
+		return
+	var drills: Array = GameState.preseason_drills(i, group)
 	if drills.has(plan):
 		if drills.size() == 1:
 			return   # a Game plan block always drills something
@@ -854,8 +808,61 @@ func _toggle_drill(i: int, plan: String) -> void:
 		drills.append(plan)
 		while drills.size() > int(PreSeason.tune("drill_max_plans")):
 			drills.pop_front()
-	GameState.set_preseason_drills(i, drills, _group)
+	GameState.set_preseason_drills(i, drills, group)
 	_refresh_words()
+
+
+## The line under a Game plan block's group tabs: who the drills shown are
+## for, and how the groups split when they do.
+func _split_words(i: int) -> String:
+	var group := str(_drill_group.get(i, ""))
+	if group != "":
+		var n := 0
+		for p in GameState.my_list:
+			if PreSeason.group_of(p) == group:
+				n += 1
+		var share := 0 if GameState.my_list.is_empty() else roundi(100.0 * n / GameState.my_list.size())
+		return "The %s: %d of the list, %d%% of the side's drilling." % [
+				str(PreSeason.GROUP_LABEL[group]).to_lower(), n, share]
+	if not GameState.preseason_drills_split(i):
+		return "Every group drills the same. Pick a group to give it its own."
+	# Groups by what they drill, in the order of the four.
+	var by := {}
+	var order := []
+	for g in PreSeason.GROUPS:
+		var names := []
+		for d in GameState.preseason_drills(i, str(g)):
+			names.append(CoachReport.plan_label(str(d)))
+		var k := " and ".join(names)
+		if not by.has(k):
+			by[k] = []
+			order.append(k)
+		by[k].append(str(PreSeason.GROUP_LABEL[g]))
+	var parts := []
+	for k in order:
+		parts.append("%s: %s" % [_and_list(by[k]), k])
+	return "Split. %s. A pick here sets every group." % ". ".join(parts)
+
+
+## The kit's tab look, narrower at the sides so the five fit a phone's width.
+static func _paint_group_tab(b: Button, active: bool) -> void:
+	UiKit.paint_tab(b, active)
+	for st in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+		var sb := b.get_theme_stylebox(st) as StyleBoxFlat
+		if sb != null:
+			sb.content_margin_left = 2
+			sb.content_margin_right = 2
+	if active:
+		b.add_theme_font_override("font", UiKit.BOLD)
+	else:
+		b.remove_theme_font_override("font")
+	b.set_meta("chosen", active)
+
+
+static func _and_list(names: Array) -> String:
+	if names.size() <= 1:
+		return "".join(names)
+	return "%s and %s" % [", ".join(names.slice(0, names.size() - 1)), names[names.size() - 1]]
 
 
 ## "Load" or "Focus" in bold beside its options. These are the coach's
@@ -924,9 +931,9 @@ func _stake(into: VBoxContainer, mark: String, node_name: String) -> Label:
 
 
 func _pick(i: int, load: String, focus: String) -> void:
-	var blocks: Array = GameState.preseason_blocks("", _group)
+	var blocks: Array = GameState.preseason_blocks()
 	GameState.set_preseason_block(i, load if load != "" else str(blocks[i][0]),
-			focus if focus != "" else str(blocks[i][1]), _group)
+			focus if focus != "" else str(blocks[i][1]))
 	_refresh_words()
 
 
@@ -971,27 +978,23 @@ func _base_result() -> Control:
 ## The words under every choice, after a pick: no rebuild, so the page stays
 ## where the thumb left it.
 func _refresh_words() -> void:
-	var blocks: Array = GameState.preseason_blocks("", _group)
-	for g in _group_buttons:
-		if is_instance_valid(_group_buttons[g]):
-			_paint_choice(_group_buttons[g], str(g) == _group)
-	if _group_key != null and is_instance_valid(_group_key):
-		_group_key.text = _group_words()
+	var blocks: Array = GameState.preseason_blocks()
 	for i in _lines:
 		var load := str(blocks[i][0])
 		var focus := str(blocks[i][1])
-		# The group shown may train on other choices than the last: repaint.
-		for pair in [["Load%d" % i, load], ["Focus%d" % i, focus]]:
-			var row: Dictionary = _choices.get(pair[0], {})
-			for k in row:
-				_paint_choice(row[k], str(k) == str(pair[1]))
-		(_lines[i]["gain"] as Label).text = PreSeason.gain_line(load, focus, int(i), GameState.preseason_drills(int(i), _group))
+		var group := str(_drill_group.get(i, ""))
+		var whole_split: bool = group == "" and GameState.preseason_drills_split(int(i))
+		(_lines[i]["gain"] as Label).text = PreSeason.gain_line(load, focus, int(i), GameState.preseason_drills(int(i), group))
 		if _drill_rows.has(i):
 			(_drill_rows[i] as Control).visible = focus == "plan"
-			var drills: Array = GameState.preseason_drills(int(i), _group)
+			(_drill_split_lines[i] as Label).text = _split_words(int(i))
+			for k in (_drill_tabs[i] as Dictionary):
+				_paint_group_tab(_drill_tabs[i][k], str(k) == group)
+			var drills: Array = GameState.preseason_drills(int(i), group)
 			for plan in (_drill_buttons[i] as Dictionary):
 				var btn: Button = _drill_buttons[i][plan]
-				_paint_choice(btn, drills.has(str(plan)))
+				# A split side has no one plan to mark in the whole-side view.
+				_paint_choice(btn, drills.has(str(plan)) and not whole_split)
 				btn.text = "%s\n%s" % [CoachReport.plan_label(str(plan)), _knows_words(str(plan))]
 		var cost := PreSeason.cost_line(load, focus, int(i))
 		(_lines[i]["cost"] as Label).text = cost
