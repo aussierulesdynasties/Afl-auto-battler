@@ -68,6 +68,10 @@ static func open(host: Control) -> Control:
 			# The stored order already includes the engine's tiebreak. Do not
 			# invent shared medals by looking only at a tied displayed total.
 			var winner: Dictionary = rows[0]
+			# The Brownlow goes to the first eligible player (Awards'
+			# brownlow_winner), the medallist every other screen names.
+			if metric == "votes" and not (aw.get("brownlow_winner", {}) as Dictionary).is_empty():
+				winner = aw["brownlow_winner"]
 			var code := str(winner.get("club", GameState.my_club))
 			# Vignettes off (Settings): the winner without the stage.
 			if GameState.vignettes_on():
@@ -87,11 +91,15 @@ static func open(host: Control) -> Control:
 			if metric != "goals" and rows.size() > 1:
 				body.add_child(_words("Final placings", UiKit.TEXT, 15, true))
 				# The Golden Fist names its top three, each with his own counts.
-				for i in range(1, mini(3 if metric == "fist" else 5, rows.size())):
-					var row: Dictionary = rows[i]
+				var others := rows.filter(func(r): return str(r.get("id", "")) != str(winner.get("id", "")))
+				for i in range(mini(2 if metric == "fist" else 4, others.size())):
+					var row: Dictionary = others[i]
 					var rc := str(row.get("club", ""))
-					body.add_child(_words("%d. %s · %s" % [i + 1, GameState.award_name(row),
-							_figure(row, metric)], StatsSide.ink(rc), 15, rc == GameState.my_club))
+					body.add_child(_words("%d. %s · %s%s" % [i + 2, GameState.award_name(row),
+							_figure(row, metric),
+							# Brownlow eligibility only: a suspension never touches the club B&F.
+							" (ineligible)" if metric == "votes" and not bool(row.get("brownlow_eligible", true)) else ""],
+							StatsSide.ink(rc), 15, rc == GameState.my_club))
 		var last := int(state["stage"]) == stages.size() - 1
 		next.text = "Season review" if last else "Next award"
 		var animation = state["vignette"]

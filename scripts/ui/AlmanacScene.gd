@@ -105,7 +105,7 @@ func _legends_card(legends: Array) -> Control:
 	for lg in legends:
 		var why: Array = lg.get("why", [])
 		var tail := ", ".join(PackedStringArray(why.map(func(w): return str(w)))) if not why.is_empty() \
-				else "%d games, %d goals" % [int(lg.get("games", 0)), int(lg.get("goals", 0))]
+				else games_goals(int(lg.get("games", 0)), int(lg.get("goals", 0)))
 		_row(v, str(int(lg.get("year", 0))), "%s  ·  %s" % [str(lg.get("name", "")), tail],
 				"LegendRow_" + str(lg.get("id", "")))
 	return card
@@ -188,8 +188,8 @@ func _season_card(e: Dictionary) -> Control:
 	for r in e.get("records", []):
 		_row(v, "Record", str(r), "Record")
 	for lg in e.get("legends", []):
-		_row(v, "Farewell", "%s  ·  %d games, %d goals" % [str(lg.get("name", "")), int(lg.get("games", 0)),
-				int(lg.get("goals", 0))], "Legend")
+		_row(v, "Farewell", "%s  ·  %s" % [str(lg.get("name", "")),
+				games_goals(int(lg.get("games", 0)), int(lg.get("goals", 0)))], "Legend")
 	for r in e.get("club_records_broken", []):
 		_row(v, "Club record", str(r), "ClubRecordBroken")
 	if bool(e.get("partial", false)):
@@ -225,3 +225,8 @@ func _first_name(rows) -> String:
 
 func _name_of(r: Dictionary) -> String:
 	return str(r["name"]) if r.has("name") else GameState.award_name(r)
+
+
+## "250 games, 1 goal": a career line, each count with its own plural.
+static func games_goals(games: int, goals: int) -> String:
+	return "%d game%s, %d goal%s" % [games, "" if games == 1 else "s", goals, "" if goals == 1 else "s"]

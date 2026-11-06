@@ -1784,13 +1784,22 @@ func _history_row(entry: Dictionary) -> Control:
 func _refresh_mine() -> void:
 	UiKit.clear(_mine_box)
 	if _draft.intake_mode:
-		_mine_box.add_child(UiKit.lbl("%d rookies signed · list %d / %d" % [
-			_draft.count(),
-			int(GameState.league_lists.get(_club, []).size()), Ratings.LIST_SIZE],
-			15, UiKit.EMPH, true))
-		_mine_box.add_child(UiKit.lbl(
-			"Rookies join the list you kept. There is no cap here; the draft runs until every list is full or the prospects run out.",
-			13, UiKit.MUTED))
+		if _draft.senior_cap > 0:
+			_mine_box.add_child(UiKit.lbl("%d draftee%s signed · senior list %d / %d" % [
+				_draft.count(), "" if _draft.count() == 1 else "s",
+				RookieList.senior_count(GameState.league_lists.get(_club, [])), _draft.senior_cap],
+				15, UiKit.EMPH, true))
+			_mine_box.add_child(UiKit.lbl(
+				"Draftees join the senior list you kept. The draft runs until every senior list is full or the prospects run out; the Rookie Draft follows.",
+				13, UiKit.MUTED))
+		else:
+			_mine_box.add_child(UiKit.lbl("%d draftee%s signed · list %d / %d" % [
+				_draft.count(), "" if _draft.count() == 1 else "s",
+				int(GameState.league_lists.get(_club, []).size()), Ratings.LIST_SIZE],
+				15, UiKit.EMPH, true))
+			_mine_box.add_child(UiKit.lbl(
+				"Draftees join the list you kept. There is no cap here; the draft runs until every list is full or the prospects run out.",
+				13, UiKit.MUTED))
 	else:
 		_mine_box.add_child(UiKit.lbl("%d / %d signed · %s of %s spent" % [
 			_draft.count(), _draft.target_size, Contracts.money(_draft.spent()), Contracts.money(_draft.budget)], 15, UiKit.EMPH, true))
@@ -2084,7 +2093,8 @@ func _refresh_live(settle := false) -> void:
 	_hang(_club if done else clock_club)
 	if _draft.intake_mode:
 		# Each pick not yet replayed still has its prospect in the pool.
-		_cap.text = "%d prospects left" % (_draft.remaining_pool() + hist.size() - upto)
+		var left := _draft.remaining_pool() + hist.size() - upto
+		_cap.text = "%d prospect%s left" % [left, "" if left == 1 else "s"]
 	if done:
 		_status.text = "Draft complete"
 		_status.add_theme_color_override("font_color", UiKit.GOOD if _draft.is_valid() else UiKit.BAD)

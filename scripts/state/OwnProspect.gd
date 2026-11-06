@@ -114,7 +114,10 @@ static func check(gs, draft_year := 0) -> void:
 		var games: int = gs.games_played(p)
 		if int(seen.get("games", 0)) == 0 and games > 0:
 			_say(gs, "%s made his AFL debut for %s." % [name, GameDB.club_name(club)], club)
-		_season_line(gs, seen, p, club)
+		# The season line belongs to a club he was already at: one that has
+		# just drafted or signed him after the finals had no season of his.
+		if was == "club" and club == was_club:
+			_season_line(gs, seen, p, club)
 	_note_totals(gs, seen, now)
 	gs.custom_prospect_story = seen
 

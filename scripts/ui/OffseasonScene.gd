@@ -91,6 +91,7 @@ func _build() -> void:
 				else _para(_notice, 13, UiKit.GOOD)
 		said.name = "OffseasonNotice"
 		hv.add_child(said)
+	_undo_row(hv)
 	var tabs := UiKit.hbox(4)
 	_root.add_child(tabs)
 	for t in [["contracts", "Contracts"], ["agents", "Agents"], ["trade", "Trade"], ["budget", "Budget"]]:
@@ -119,6 +120,46 @@ func _build() -> void:
 		"budget":
 			_budget(body)
 	UiKit.restore_scroll(_scroll_box, int(_scroll_positions.get(_tab, 0)))
+
+
+## Your last delisting, free-agent signing or re-signing can be taken back
+## until the national draft starts (row 119, P-09). One tap, no confirm: the
+## undo puts everything back as it was, so it is its own safety net.
+func _undo_row(hv: VBoxContainer) -> void:
+	var last := GameState.recruit_undo_last()
+	if last.is_empty():
+		return
+	var name := str(last["name"])
+	var did := ""
+	match str(last["kind"]):
+		"release":
+			did = "You delisted %s." % name
+		"sign":
+			did = "%s signed with you." % name
+		"resign":
+			did = "%s re-signed." % name
+	var row := UiKit.hbox(8)
+	row.name = "UndoLast"
+	hv.add_child(row)
+	# Right after the action its own notice names him; the row then only says
+	# what Undo does, so the same news is not printed twice.
+	var text := "You can undo this until the national draft starts." if _notice.contains(name) \
+			else did + " You can undo it until the national draft starts."
+	var said := _para(text, 13, UiKit.TEXT)
+	said.name = "UndoLastText"
+	said.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(said)
+	var b := UiKit.btn("Undo", 15)
+	b.name = "UndoAction"
+	b.custom_minimum_size = Vector2(88, 48)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.pressed.connect(func():
+		var r := GameState.undo_recruit()
+		_notice = str(r["reason"])
+		_notice_club = ""
+		_notice_club_text = ""
+		_build())
+	row.add_child(b)
 
 
 func _budget(body: VBoxContainer) -> void:
@@ -247,9 +288,13 @@ func _contracts(body: VBoxContainer) -> void:
 	var sorted := GameState.my_list.duplicate()
 	sorted.sort_custom(func(a, b): return int(a.get("salary", 0)) > int(b.get("salary", 0)))
 	for p in sorted:
-		body.add_child(_para("%s  ·  %d OVR  ·  %s  ·  %d season%s left" % [
+		# The season just played still counts in contract_years until the
+		# rollover (Re-signed above says years - 1 too).
+		var left := int(p.get("contract_years", 1)) - 1
+		var term := "out of contract" if left <= 0 else "%d season%s left" % [left, "" if left == 1 else "s"]
+		body.add_child(_para("%s  ·  %d OVR  ·  %s  ·  %s" % [
 				GameDB.player_display_name(p), int(p["overall"]), Contracts.money(int(p.get("salary", 0))),
-				int(p.get("contract_years", 1)), "" if int(p.get("contract_years", 1)) == 1 else "s"], 12, UiKit.TEXT))
+				term], 12, UiKit.TEXT))
 
 
 ## Your players retiring at the end of the off-season. A healthy one can be
@@ -261,8 +306,9 @@ func _retiring(body: VBoxContainer) -> void:
 	body.add_child(UiKit.lbl("Retiring  (%d)" % rows.size(), UiKit.BODY, UiKit.EMPH, true))
 	for r in rows:
 		var p: Dictionary = r["p"]
-		var card := _player_card(p, "%d OVR  ·  age %d  ·  %d games this year" % [
-				int(p["overall"]), int(p.get("age", 0)), GameState.season_games(str(p["id"]))])
+		var g := GameState.season_games(str(p["id"]))
+		var card := _player_card(p, "%d OVR  ·  age %d  ·  %s this year" % [
+				int(p["overall"]), int(p.get("age", 0)), "1 game" if g == 1 else "%d games" % g])
 		card.name = "Retiring_" + str(p["id"])
 		body.add_child(card)
 		var v := card.get_child(0) as VBoxContainer
@@ -308,6 +354,7 @@ func _confirm_release(p: Dictionary) -> void:
 	release.pressed.connect(func():
 		_close_release()
 		_notice = str(GameState.release_player(str(p["id"]))["reason"])
+		_prune_trade()
 		_build())
 	box["footer"].add_child(release)
 	var cancel := UiKit.btn("Cancel", UiKit.NAME)
@@ -351,6 +398,8 @@ func _open_talks(player_id: String, free_agent := false) -> void:
 	var talks: Dictionary = p.get("talks", {})
 	_talk_reply = ""
 	_offer_salary = int(talks.get("counter", want["salary"]))
+	# Never carry the last player's term into these talks.
+	_offer_years = 0
 	if free_agent:
 		# Start from your standing offer, if you have one on the table.
 		for row in GameState.fa_offers(player_id):
@@ -789,6 +838,7 @@ func _offers(body: VBoxContainer) -> void:
 			btn.pressed.connect(func():
 				if accept:
 					_notice = str(GameState.accept_trade_offer(i)["reason"])
+					_prune_trade()
 				else:
 					GameState.decline_trade_offer(i)
 				_build())
@@ -857,6 +907,15 @@ func _package(body: VBoxContainer, title: String, ids: Array, club: String, pref
 			_build())
 		row.add_child(rm)
 		body.add_child(row)
+
+
+## Drop from the trade builder anyone (or any pick) that has since left the
+## club offering it - released, or moved in an accepted trade - so no stale
+## row blocks the next trade.
+func _prune_trade() -> void:
+	_mine = _mine.filter(func(id): return str(GameState._trade_assets([id], GameState.my_club)["code"]) == "")
+	var club := _trade_club
+	_theirs = _theirs.filter(func(id): return club != "" and str(GameState._trade_assets([id], club)["code"]) == "")
 
 
 ## A player or pick in a trade, in a line: "Name, MID 72" or the pick.

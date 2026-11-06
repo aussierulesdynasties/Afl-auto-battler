@@ -120,8 +120,8 @@ func _test_intake_by_taps() -> void:
 		await _press(order_tab, "the draft order")
 		await _settle()
 	var comp_rows := ui.find_children("CompPick", "Label", true, false)
-	_check(comp_rows.size() == 1
-			and str((comp_rows[0] as Label).text).contains("Compensation for losing Sam Example"),
+	# Free agency may award a real one too; the fixture's row must be there.
+	_check(comp_rows.any(func(l): return str((l as Label).text).contains("Compensation for losing Sam Example")),
 			"The draft order shows a compensation pick as compensation, with the player it replaces")
 	var want_via := "From %s, for %s, %d trade period" % [_db.club_name("CAR"), paid_name, first_year]
 	var via_node: Control = ui.find_child("ViaPick", true, false)

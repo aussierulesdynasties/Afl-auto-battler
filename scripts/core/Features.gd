@@ -14,8 +14,9 @@ extends RefCounted
 ##      (several: --features preseason,other);
 ##   3. the project setting features/<name> is true (project.godot). This is
 ##      what an exported build reads. international_prospects ships ON since
-##      2026-10-18 (director: "Names fine, switch on") and clanger_cause since
-##      2026-11-04 (row 81); every other switch ships off.
+##      2026-10-18 (director: "Names fine, switch on"), clanger_cause since
+##      2026-11-04 (row 81) and coach_arcs since 2026-11-06 (row 108, director
+##      "Switch on now"); project.godot [features] lists which others ship on.
 ## Otherwise it is OFF: every test suite that does not ask for it, and a plain
 ## editor run, for any switch whose project setting is false.
 ##
@@ -54,7 +55,8 @@ extends RefCounted
 ##               (CoachArcs.gd, ClubArcs.gd, data/arcs/coach_arcs.json). Phase 2:
 ##               the coach changes clubs (ClubMoves.gd): sacked, he takes a job
 ##               elsewhere; poached, he leaves; his old club and assistant
-##               come back in arcs. Off, no arc starts, no card shows,
+##               come back in arcs. Ships ON (row 108, T5.Q4, director "Switch on
+##               now"). Off, no arc starts, no card shows,
 ##               GameState.coach_arcs stays empty and the sack ends the career.
 ##   finals_cards_2  the finals cards' second slice (rows 35, 36): A3, A9, A14, B7 in
 ##               finals weeks, and one card the week your season ends (A15, A16, B8,
@@ -76,6 +78,10 @@ extends RefCounted
 ##               clangers moves to the last carrier (the player clangers stat, notes and
 ##               ratings); team totals, score and events are unchanged. Ships ON since
 ##               2026-11-04 (row 81, his row 12 ruling).
+##   back_carries   row 92 (T9.Q22, director 2026-11-06): back-zone carrying retuned so a
+##               defender's share of the ball is nearer real AFL (MatchSim.CARRY_BACK_RETUNED,
+##               DEF 1.0 -> 0.55 in the back zone; midfielders drop back for more of it). Changes
+##               match output. Off, CARRY_ROLES["back"] stands.
 ##   match_flow  row 11 (director, 2026-10-10): stoppages come from contests that lock up
 ##               (a held tackle, a rushed kick into a pack, a spoil in the pocket), a won ball
 ##               after an intercept or a free is played on, chains are shorter and more
@@ -115,13 +121,54 @@ extends RefCounted
 ##               rookie draft after round 11 (reverse ladder, one pick per club with a list
 ##               spot, free agents and passed-over prospects, deal to the end of next season,
 ##               no trades). Changes AI lists. Off, nothing runs or is saved.
+##   rookie_list   row 88 (director, 2026-11-06): a senior list (RookieList.SENIOR_SPOTS)
+##               and a Category A rookie list (up to 6, rookie wage, 1-2 year deals) in
+##               every club's list; the National Draft fills the senior list, the Rookie
+##               Draft follows it, the mid-season rookie draft fills rookie spots, and a
+##               rookie is upgraded into a free senior spot (RookieList.gd). Changes AI
+##               lists. Off, there is one list, nothing runs and nothing is written.
 ##   custom_prospect_story   row 64 (4.Q8, Director Bible #135): the prospect you create at New
 ##               Career is followed. His draft-board row and profile say "Created by you"; the
 ##               league news tells his nomination, where he is drafted (or that he was
 ##               overlooked), his debut, club moves and delistings, each season's games and
 ##               goals, and the end of his career. Reads only: no draft, list or rating change.
 ##               Off, nothing is shown, written or saved.
-const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story"]
+##   set_shots   row 77 (director ruling T8.Q9): set shots rise to about 55% of shots. Most
+##               marks inside 50 go back and kick (MatchSim.SET_SHARE_ON), each spot converts
+##               at the real AFL rate for its distance (SET_BANDS_ON), and the general-play
+##               shot off an unmarked entry comes less often (SET_GP_SHOT) so total scoring
+##               holds. Changes match output. Off, a match is exactly as before.
+##   momentum_runaway   row 78 (T8.Q4, director: rare big margins come back through Momentum):
+##               a side with the run of play that also leads by more than 24 wins more of the
+##               ball (up to 11x the momentum edge at 54+, still capped by contest_clamp),
+##               its run fades more slowly, and a goal the other way turns it up to 70% less
+##               (MatchSim.runaway). Changes match output only once a side leads by 24+.
+##               Off, momentum is exactly as before.
+##   mid_intercepts   row 89 (director, 2026-11-06, T8.Q8): a general-play kick through the
+##               middle third with no aerial contest can be read and taken outright by one
+##               of the other side's midfielders (MatchSim.MID_KICK_INTERCEPT), the better
+##               readers more often, and the better readers mark it. Lifts midfield
+##               intercepts toward Champion Data's 2.5 a game. Changes match output. Off,
+##               a match is exactly as before.
+##   key_duels   row 94 (T8.Q6, director 2026-11-06): a key forward and his direct opponent
+##               meet more, so the full-time "beat / held" line rests on more contests.
+##               Sides look for their key forwards more often inside 50
+##               (Matchups.KEY_TARGET_DUELS); a key forward leads up at some marking
+##               contests in his front half (Matchups.KEY_LEAD, MatchSim._key_lead); his
+##               marking contest up the ground is against his man, as a real match-up
+##               follows him (MatchSim._duel_man), and goes in the duel log with the
+##               entries inside 50. Changes match output. Off, the zone's or the line's
+##               defender meets it, the key-forward share is Matchups.KEY_TARGET and no
+##               general-play contest is logged, as before.
+##   gather_round   row 74 (T5.Q11a; Director Bible 2.38, 5.127): one of rounds 3 to 7 each
+##               season is Gather Round, every match staged at the host's grounds (Adelaide
+##               Oval, Norwood Oval, Barossa Park; GatherRound.gd). A club has its home-ground
+##               edge only at its own ground; the weather is Adelaide's (Weather's SA row). A club on a bye that
+##               round sits it out. The round's name shows on the fixture, the hub, the match
+##               and the warm-up. Changes match output. Nothing saved. Off, every round is as
+##               before.
+const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries", "momentum_runaway", "key_duels", "set_shots",
+		"gather_round"]
 
 static var _forced := {}
 static var _from_args := {}

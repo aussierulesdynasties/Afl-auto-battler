@@ -169,14 +169,14 @@ Heeney, Bontempelli, Nick Daicos, Rankine and Pickett as MID/FWD; Greene as
 FWD/MID; Sicily, Blakey and Josh Daicos as DEF/MID. Butters (5 goals) and Cripps
 stay MID. DEF/FWD is allowed by the same gates, but the 2026 pool did not
 produce one — it is not invented. The tag is `MID/FWD`.
-A midfielder on the numbers also keeps the line his club lists him in
-(`real_pos`) as a second position when his own numbers back it up
-(`Ratings.listed_secondary`): a listed forward with 0.35 goals or 0.5 marks
-inside 50 a game, a listed defender with 2 rebound 50s plus one percenters a
-game. That gives 71 MID/FWD and 13 MID/DEF their line back (forward-eligible
-players 141 -> 212, defence 224 -> 237). First positions, ratings and types
-are untouched; listed forwards with no forward numbers (McKercher, Delana,
-Scerri) stay midfielders. Match-day selection
+A listed forward or defender (`real_pos`) is his listed line first
+(`Ratings.listed_primary`; director 2026-11-06, T8.Q11, row 91), whatever one
+season's numbers read; only a ruck reading, gated on real hit-out volume,
+stands. One who also gets plenty of the ball keeps MID second through the
+gates above (Reid, Macdonald, Richards read FWD/MID). Listed midfielders,
+rucks and unlisted players keep the numbers' reading. `Ratings.listed_secondary`
+(a midfielder on the numbers keeps his listed line second) now only matters
+for players the listing does not lead. Match-day selection
 fills each slot from primary players first, then from the secondary. The
 on-ground copy's `role` is the slot, so the oval still groups them; `list_tag`
 keeps the natural tag for the list screen. Draft filters and the two-ruck rule
@@ -186,17 +186,16 @@ sum to the list size.
 Two classifier misreads are corrected by hand (`Ratings.ROLE_CORRECTIONS`:
 Maurice Rioli and Cody Weightman, listed and played as forwards).
 
-**Known issue, deferred (a Ratings/classification task of its own).** The
-broad classifier is still biased to MID: the role scores are not on one scale
-(MID rewards disposals, contested ball and clearances that every busy player
-racks up; FWD leans on goals most players kick few of), so ~85 listed forwards
-and 21 listed defenders read MID - pressure forwards can even read as Wings or
-Taggers. Letting the listed position (`real_pos`) lead fixes it, but broad role
-also drives OVR (`Ratings.rate_overall` scores the role's core and position
-stretch), so that fix moves 122 players, changes 110 OVRs (4 by 10+) and pulls
-the forward median ~7 below midfield. It also shows the FWD core undervalues
-pressure forwards: pressure is not in it although the engine rewards team
-pressure. Classification and the forward rating need to be settled together.
+**Listed positions lead (row 91, 2026-11-06).** The broad classifier is
+biased to MID (its role scores are not on one scale: MID rewards disposals,
+contested ball and clearances every busy player racks up). Measured on the
+2026 pool before this row, the earlier listing rule had already brought it
+down to 6 listed forwards reading MID and 2 reading DEF (the "85 forwards and
+21 defenders" of September predates that rule); row 91 moves those 8 and
+changes their 8 OVRs (largest -5). Forward median OVR 56 against midfield 58.
+The FWD core still undervalues pressure forwards (pressure is not in it).
+`tools/audit/listed_positions_impl.gd` dumps every player's listing, first
+position and OVR to compare two checkouts.
 
 ### Match-day roles (`scripts/sim/Roles.gd`)
 Only jobs the engine rewards:
@@ -660,9 +659,9 @@ table, shot conversion, every best and quiet player with his numbers and
   lists: a compact `played` snapshot (games, goals, club stints, draft, listed
   position, retirement year, in-save Brownlows and Colemans) and nothing
   else - no ratings, contract, training, injuries or stat tables. One roll,
-  seeded by the career and his id, decides once whether he coaches: 19%, 22%
-  from 150 games, 25% from 250, a point per major award, capped at 30% (this
-  game's endings are mostly long-serving veterans, about 19 a season). If he
+  seeded by the career and his id, decides once whether he coaches: 12%, 15%
+  from 150 games, 18% from 250, a point per major award (two at most), capped
+  at 30% (this game's endings are mostly long-serving veterans). If he
   does he becomes `C_P_<player id>` with his real name and exactly his
   fictional alias, spends one to three seasons in the pathways (out of sight,
   a season longer when the market is flooded) and then joins the ordinary
@@ -685,8 +684,16 @@ table, shot conversion, every best and quiet player with his numbers and
   career (actual results, retirements and clubs) goes further: 615 careers
   ended, 23% went into coaching, and by 2058 former players held 102 of the
   119 jobs (86%), with several reaching senior coach by the usual path
-  (development, line, senior assistant). The real career is the evidence to
-  trust; if the share keeps climbing, the coaching rate is the lever.
+  (development, line, senior assistant). Row 71 (director, T5.Q15) lowered the
+  base chance from 19% to 12%: six seeded 32-season autopilot careers
+  (`coach_rate_impl`, a proxy for that career that ends about twice as many
+  careers) went from 86.8% of jobs in 2058 (SE 0.8) to 71.1% (SE 1.6), every
+  seed 65-75%, every job still filled. That is the 2058 level, still rising
+  (seed 301: 45.4% in 2050, 68.9% in 2056, 74.8% in 2058), so longer careers
+  will read higher. Former players still reach senior coach (21 of 114
+  senior jobs in 2058, from 33). About 16% of career endings now go into
+  coaching, below the Phase 4 test band of 20-30%
+  (`docs/COACH_RATE_EVIDENCE_2026-11-06.md`).
 * **Team form** — each club's form (-1..1) is derived from its results this
   season (`Season.club_results`, so it is never saved separately and resets
   at every rollover): the last five, weighted 0.30 / 0.25 / 0.20 / 0.15 / 0.10

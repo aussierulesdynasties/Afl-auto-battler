@@ -656,7 +656,8 @@ func _ballup_phases(k: int) -> Array:
 		# Pinned to the ball (Win contest): no flight to the logged spot, but the
 		# ball-up keeps the time that flight took, so the pack forms and every
 		# later beat runs when it did before the pin.
-		out.append({"t": "wait", "dur": _flight_shape("kick", (_ballup_pin[k] as Vector2).length()).x})
+		out.append({"t": "wait", "dur": _flight_shape("kick", (_ballup_pin[k] as Vector2).length()).x,
+				"drop": at})
 	var nk := _next_real(k)
 	var winner := _actor_id(events[nk]) if nk >= 0 else -1
 	var members := _nearest(at, 0, _pack_n(0), [winner]) + _nearest(at, 1, _pack_n(1), [winner])
@@ -667,7 +668,7 @@ func _ballup_phases(k: int) -> Array:
 		members.append(winner)
 	var extra := _pack_n(0) + _pack_n(1) - 6
 	out += [{"t": "pack", "at": at, "members": members, "min": 0.35, "max": 0.9 + PACK_EXTRA_WAIT * extra,
-				"need": 4 + extra, "mode": "stoppage", "winner": winner},
+				"need": 4 + extra, "mode": "stoppage", "winner": winner, "drop": at},
 			{"t": "throwup", "at": at},
 			{"t": "emit", "log": true}]
 	return out
@@ -1348,6 +1349,8 @@ func _enter(p: Dictionary) -> void:
 			_ball_carry(p["ball_to"])
 			_struct_ball = p["ball_to"]
 		"wait":
+			if p.has("drop"):
+				_drop_held(p["drop"])
 			if p.get("ease", false):
 				for t in tokens:
 					if not _busy.has(int(t["id"])):
@@ -1446,6 +1449,8 @@ func _enter(p: Dictionary) -> void:
 		"pack":
 			mode = str(p.get("mode", "stoppage"))
 			var at2: Vector2 = p["at"]
+			if p.has("drop"):
+				_drop_held(p["drop"])
 			var members: Array = p["members"]
 			if str(p.get("mode", "")) == "stoppage" and (_plan_of(0) == "contest" or _plan_of(1) == "contest"):
 				# Win contest: a ring, not a stack (_pack_ring).
@@ -1729,6 +1734,16 @@ func _ball_carry(to: Vector2) -> void:
 	ball["mode"] = "carry"
 	ball["holder"] = -1
 	ball["to"] = to
+
+
+## A ball-up is a dead ball: a player still holding it (the free kick just
+## paid) gives it back to the umpire's spot instead of walking off with it.
+## The ball travels from his hand to the spot (_ball_carry, a short toss of up
+## to about 3 m) rather than jumping there in one frame.
+func _drop_held(at: Vector2) -> void:
+	if str(ball["mode"]) != "held":
+		return
+	_ball_carry(at)
 
 
 func _update_ball(h: float) -> void:

@@ -40,6 +40,381 @@ def margins(rows):
     return m, h
 
 
+# Set shots against real AFL (docs/research/SET_SHOT_EVIDENCE.md): share of shots
+# from the Champion Data expected-score shot counts [WH] (2026: 5,951 set of
+# 10,859, 55%); goals per shot by distance [ABC] 2021-25, the straight-in-front
+# column (Director Bible #62 names these as the targets), set / general play.
+# [ABC]'s "straight" is within 30 degrees, so the sim's 45 m "slight angle" spot
+# is a straight-column shot. The sim's pocket (15 m, tight angle) is its own row
+# against the 10-20 m wide cells: set 66% and 55% (mean 60.5%), general 21% and 22%.
+REAL_SET_SHARE = 0.55
+# Real shots that score (goals + behinds per shot at goal, [WH] 2026: 9,047 of
+# 10,860). Set and general-play no-score rates are not published apart.
+REAL_SCORING_PER_SHOT = 0.833
+SHOT_BANDS = ["0-10", "10-20", "20-30", "30-40", "40-50", "50+", "pocket"]
+REAL_SET_ACC = {"0-10": 1.00, "10-20": 0.96, "20-30": 0.85, "30-40": 0.71, "40-50": 0.54, "50+": 0.33, "pocket": 0.605}
+REAL_GP_ACC = {"0-10": 0.89, "10-20": 0.63, "20-30": 0.51, "30-40": 0.38, "40-50": 0.39, "50+": 0.34, "pocket": 0.215}
+
+
+def pooled(R, key):
+    return sum(float(t.get(key, 0)) for r in R.values() for t in r["teams"])
+
+
+def share_by_seed(R, scoring=False):
+    """Seed -> set-shot share of that match's shots (both teams), in percent.
+    scoring=True counts only shots that scored (goal or behind) on both sides."""
+    def cnt(t, pre):
+        if scoring:
+            return float(t.get(pre + "_g", 0)) + float(t.get(pre + "_b", 0))
+        return float(t.get(pre + "_n", 0))
+    out = {}
+    for i, r in R.items():
+        n = sum(cnt(t, "sshot") + cnt(t, "gshot") for t in r["teams"])
+        if n:
+            out[i] = 100 * sum(cnt(t, "sshot") for t in r["teams"]) / n
+    return out
+
+
+def shots_section(A, B):
+    """Set-shot share, conversion by distance and scoring shots, per arm."""
+    if not any("sshot_n" in t for r in A.values() for t in r["teams"]):
+        return
+    arms = [("A", A)] + ([("B", B)] if B else [])
+    print("\n## Shots\n")
+    head = "| per team-match | real |" + "".join(f" {k} |" for k, _ in arms) + (" B-A | se |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+
+    def row(label, real, vals, a=None, b=None, fmt="{:.1f}"):
+        line = f"| {label} | {real} |" + "".join(" " + fmt.format(v) + " |" for v in vals)
+        if a is not None and b is not None:
+            common = [i for i in a if i in b]
+            d = [b[i] - a[i] for i in common]
+            se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+            line += " " + ("{:+.2f}".format(st.mean(d))) + f" | {se:.2f} |"
+        print(line)
+    n = {k: len(R) * 2 for k, R in arms}
+    for key, label in (("sshot_n", "set shots"), ("gshot_n", "general-play shots")):
+        row(label, "-", [pooled(R, key) / n[k] for k, R in arms],
+            per_match(A, key) if B else None, per_match(B, key) if B else None)
+    sc = {k: {i: sum(float(t.get("goals", 0)) + float(t.get("behinds", 0)) for t in r["teams"]) / 2
+              for i, r in R.items()} for k, R in arms}
+    row("scoring shots (goals + behinds)", "22.4", [st.mean(sc[k].values()) for k, _ in arms],
+        sc["A"] if B else None, sc.get("B"))
+    sh = {k: share_by_seed(R) for k, R in arms}
+    row("set-shot share of shots (general play counted only when it scores)", f"{100 * REAL_SET_SHARE:.0f}%",
+        [100 * pooled(R, "sshot_n") / max(1, pooled(R, "sshot_n") + pooled(R, "gshot_n")) for k, R in arms],
+        sh["A"] if B else None, sh.get("B"), fmt="{:.1f}")
+
+    def scoring_share(R):
+        ss = pooled(R, "sshot_g") + pooled(R, "sshot_b")
+        return 100 * ss / max(1, ss + pooled(R, "gshot_g") + pooled(R, "gshot_b"))
+    sc_sh = {k: share_by_seed(R, True) for k, R in arms}
+    row("set-shot share of scoring shots", "~55%*", [scoring_share(R) for k, R in arms],
+        sc_sh["A"] if B else None, sc_sh.get("B"), fmt="{:.1f}")
+    print("\nThe sim logs a general-play shot only when it scores, so the first share has a short"
+          " denominator; the scoring-shot share counts both kinds alike. *Real: "
+          f"{100 * REAL_SET_SHARE:.0f}% of shots are set shots and {100 * REAL_SCORING_PER_SHOT:.0f}% of"
+          " shots score [WH]; if both kinds score equally often, set shots are 55% of scoring shots too"
+          " (the two no-score rates are not published apart).")
+    print("\nGoals per shot, pooled over every shot of the arm. Real: [ABC] 2021-25, straight in front"
+          " (within 30 degrees); the pocket row against the 10-20 m wide cells.\n")
+    head = "| shots | real set | real general |" + "".join(f" {k} goals/shot | {k} a team |" for k, _ in arms)
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for band in SHOT_BANDS:
+        label = "set, pocket (15 m, tight angle)" if band == "pocket" else f"set, {band} m"
+        line = f"| {label} | {100 * REAL_SET_ACC[band]:.1f}% | {100 * REAL_GP_ACC[band]:.1f}% |"
+        for k, R in arms:
+            sn = pooled(R, f"sshot_{band}_n")
+            line += (f" {100 * pooled(R, f'sshot_{band}_g') / sn:.0f}% |" if sn else " - |") + f" {sn / n[k]:.2f} |"
+        print(line)
+    for key, label in (("sshot", "all set shots"), ("gshot", "general play (no distance in the sim)")):
+        line = f"| {label} | - | - |"
+        for k, R in arms:
+            sn = pooled(R, key + "_n")
+            line += (f" {100 * pooled(R, key + '_g') / sn:.0f}% |" if sn else " - |") + f" {sn / n[k]:.2f} |"
+        print(line)
+def duel_section(A, B):
+    """Key forward v key defender (row 94): contests per duel per match from the
+    engine's duel log, as the full-time line reads them. A duel is one key
+    forward's match: [contests, marks, most against one defender, verdict]."""
+    if not any("duels" in r for r in A.values()):
+        return
+    arms = [("A", A)] + ([("B", B)] if B else [])
+    stats = {}
+    for name, R in arms:
+        rows = [d for r in R.values() for d in r.get("duels", [])]
+        n = max(1, len(rows))
+        c = sorted(d[0] for d in rows)
+        stats[name] = {
+            "contests": st.mean(c) if c else 0.0,
+            "median": st.median(c) if c else 0.0,
+            "pair": st.mean(d[2] for d in rows) if rows else 0.0,
+            "6+": 100 * sum(d[0] >= 6 for d in rows) / n,
+            "shown": 100 * sum(d[0] >= 4 for d in rows) / n,
+            "mark%": 100 * sum(d[1] for d in rows) / max(1, sum(c)),
+            "beat": 100 * sum(d[0] >= 4 and d[3] > 0 for d in rows) / n,
+            "even": 100 * sum(d[0] >= 4 and d[3] == 0 for d in rows) / n,
+            "held": 100 * sum(d[0] >= 4 and d[3] < 0 for d in rows) / n,
+            "duels": len(rows)}
+    print("\n## Key forward v key defender (contests per duel per match)\n")
+    print("A duel is one key forward's match against his direct opponent(s), from MatchSim.duel_log "
+          "(what the full-time line counts; MatchNotes shows a line from 4 contests). "
+          "beat / even / held: the line's verdict, as a share of all duels.\n")
+    head = "| arm | duels | contests mean | median | v one defender | 6+ contests | line shown (4+) | forward marks | beat / even / held |"
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for name, _ in arms:
+        s = stats[name]
+        print(f"| {name} | {s['duels']} | {s['contests']:.2f} | {s['median']:.0f} | {s['pair']:.2f} | {s['6+']:.0f}% | "
+              f"{s['shown']:.0f}% | {s['mark%']:.1f}% | {s['beat']:.0f} / {s['even']:.0f} / {s['held']:.0f} |")
+    if B:
+        def per(R):
+            return {i: st.mean(d[0] for d in r["duels"]) for i, r in R.items() if r.get("duels")}
+        a, b = per(A), per(B)
+        d = [b[i] - a[i] for i in a if i in b]
+        if len(d) > 1:
+            print(f"\nContests per duel B-A {st.mean(d):+.2f} (se {st.stdev(d) / math.sqrt(len(d)):.2f}, paired by seed).")
+
+
+TAIL = (40, 60, 80, 100, 120)
+ROOT = os.path.dirname(os.path.dirname(HERE))
+
+
+def real_margins():
+    """Real AFL 2026 home-and-away margins from data/raw/fixtures_2026.json (finals left out)."""
+    path = os.path.join(ROOT, "data", "raw", "fixtures_2026.json")
+    if not os.path.exists(path):
+        return []
+    games = json.load(open(path, encoding="utf-8"))["games"]
+    return [abs(g["hscore"] - g["ascore"]) for g in games
+            if g.get("complete") == 100 and not g.get("is_final")]
+
+
+def real_history():
+    """Real AFL 2010-2025, every match with finals (afl_comebacks.json, AFL Tables): (h[4], a[4])."""
+    path = os.path.join(HERE, "afl_comebacks.json")
+    if not os.path.exists(path):
+        return []
+    return [(g["h"], g["a"]) for g in json.load(open(path, encoding="utf-8"))["games"]]
+
+
+def came_back(h, a, k):
+    """The winner was k or more points down at a quarter break (QT, HT or 3QT)."""
+    if h[3] == a[3]:
+        return False
+    s = 1 if h[3] > a[3] else -1
+    return any(s * (a[q] - h[q]) >= k for q in range(3))
+
+
+def wilson(k, n, z=1.96):
+    if n == 0:
+        return 0.0, 0.0
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+    return 100 * (c - h), 100 * (c + h)
+
+
+def margin_tail(A, B):
+    """The margin distribution's tail: share of matches at 40+ .. 120+ points, mean, p90, p99,
+    max, against real AFL 2026; paired runs add B - A per seed with its standard error."""
+    real = real_margins()
+    hist = real_history()
+    hm = [abs(h[3] - a[3]) for h, a in hist]
+    common = [i for i in A if i in B] if B else list(A)
+    ma = {i: abs(A[i]["teams"][0]["score"] - A[i]["teams"][1]["score"]) for i in common}
+    mb = {i: abs(B[i]["teams"][0]["score"] - B[i]["teams"][1]["score"]) for i in common} if B else {}
+    n = len(common)
+    print(f"\n## Margin tail ({n} matches{' per arm, paired' if B else ''})\n")
+    head = f"| margin | real AFL 2026 ({len(real)} H&A games, 95% CI) | real 2010-25 ({len(hm)}) | A |"
+    if B:
+        head += " B | B-A | se | sig |"
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+
+    def row(label, f_real, f_hist, fa, fb, fmt):
+        line = f"| {label} | {f_real} | {f_hist} | {fmt(st.mean(fa))} |"
+        if B:
+            d = [b - a for a, b in zip(fa, fb)]
+            md = st.mean(d)
+            se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+            sig = "yes" if se > 0 and abs(md) > 2 * se else ""
+            line += f" {fmt(st.mean(fb))} | {fmt(md, True)} | {fmt(se)} | {sig} |"
+        print(line)
+    for t in TAIL:
+        k = sum(x >= t for x in real)
+        lo, hi = wilson(k, len(real))
+        rr = f"{100*k/len(real):.1f}% ({k}; {lo:.1f}-{hi:.1f})" if real else "-"
+        fa = [100.0 * (ma[i] >= t) for i in common]
+        fb = [100.0 * (mb[i] >= t) for i in common] if B else []
+        hh = f"{100*sum(x >= t for x in hm)/len(hm):.1f}%" if hm else "-"
+        row(f"{t}+", rr, hh, fa, fb, lambda v, s=False: (f"{v:+.2f}%" if s else f"{v:.2f}%"))
+    rr = f"{st.mean(real):.1f}" if real else "-"
+    row("mean margin", rr, f"{st.mean(hm):.1f}" if hm else "-", [float(ma[i]) for i in common], [float(mb[i]) for i in common] if B else [],
+        lambda v, s=False: (f"{v:+.2f}" if s else f"{v:.2f}"))
+    # Upsets and comebacks (bible principle 2: decisions move the odds, never the certainty).
+    if common and "q_score" in A[common[0]]["teams"][0]:
+        def stronger_won(R, i):
+            t = R[i]["teams"]
+            if t[0]["strength"] == t[1]["strength"] or t[0]["score"] == t[1]["score"]:
+                return None
+            return 100.0 * ((t[0]["strength"] > t[1]["strength"]) == (t[0]["score"] > t[1]["score"]))
+
+        def cb(R, i, k):
+            t = R[i]["teams"]
+            return 100.0 * came_back(t[0]["q_score"], t[1]["q_score"], k)
+        ids = [i for i in common if stronger_won(A, i) is not None and (not B or stronger_won(B, i) is not None)]
+        fmt = lambda v, s=False: (f"{v:+.2f}%" if s else f"{v:.2f}%")
+        row("stronger list wins", "-", "-", [stronger_won(A, i) for i in ids],
+            [stronger_won(B, i) for i in ids] if B else [], fmt)
+        for k in (18, 24, 30):
+            hh = f"{100*sum(came_back(h, a, k) for h, a in hist)/len(hist):.1f}%" if hist else "-"
+            row(f"winner {k}+ down at a break", "-", hh, [cb(A, i, k) for i in common],
+                [cb(B, i, k) for i in common] if B else [], fmt)
+    for name, R in (("A", ma), ("B", mb)):
+        if not R:
+            continue
+        v = sorted(R.values())
+        print(f"\n{name}: p90 {v[int(0.9*(len(v)-1))]}, p99 {v[int(0.99*(len(v)-1))]}, max {v[-1]}"
+              + (f" (real 2026 p90 {sorted(real)[int(0.9*(len(real)-1))]}, max {max(real)}; 2010-25 p99 "
+                 f"{sorted(hm)[int(0.99*(len(hm)-1))]}, max {max(hm)})" if real and hm and name == "A" else ""))
+ROLES = ["DEF", "MID", "FWD", "RUCK"]
+ROLE_REF = {"disposals": "disposals", "kicks": "kicks", "handballs": "handballs", "marks": "marks",
+            "rebounds": "rebound_50s", "inside50": "inside_50s", "clearances": "clearances", "goals": "goals"}
+
+
+def role_rate(r, role, key):
+    """One match's per player-game rate for a line (both sides pooled), or None."""
+    pg = sum(t.get("roles", {}).get(role, {}).get("pg", 0) for t in r["teams"])
+    if pg == 0:
+        return None
+    return sum(t.get("roles", {}).get(role, {}).get(key, 0.0) for t in r["teams"]) / pg
+
+
+def role_share(r, role):
+    """One match's share of both sides' disposals that went to a line."""
+    tot = sum(t.get("roles", {}).get(x, {}).get("disposals", 0.0) for t in r["teams"] for x in t.get("roles", {}))
+    if tot == 0:
+        return None
+    return sum(t.get("roles", {}).get(role, {}).get("disposals", 0.0) for t in r["teams"]) / tot
+
+
+def zone_share(R, zone, role):
+    """Pooled share of a zone's carrier picks that went to a slot role."""
+    n = d = 0
+    for r in R.values():
+        for t in r["teams"]:
+            cz = t.get("carry_zone", {})
+            n += cz.get(f"{zone}|{role}", 0)
+            d += sum(v for k, v in cz.items() if k.startswith(zone + "|"))
+    return None if d == 0 else n / d
+
+
+def paired(A, B, fn):
+    a = {i: fn(r) for i, r in A.items()}
+    a = {i: v for i, v in a.items() if v is not None}
+    if not B:
+        return st.mean(a.values()), None, None, None
+    b = {i: fn(r) for i, r in B.items()}
+    common = [i for i in a if b.get(i) is not None]
+    d = [b[i] - a[i] for i in common]
+    se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+    return st.mean(a.values()), st.mean(b[i] for i in common), st.mean(d), se
+
+
+def role_report(A, B):
+    """Each line's box score per player-game against real 2026 (afl_role_rates.json, grouped by
+    the player's own position as the game derives it) and its share of the side's disposals;
+    then who takes the ball by zone (carrier picks by slot role, no real reference)."""
+    if not any("roles" in t for r in A.values() for t in r["teams"]):
+        return
+    ref = json.load(open(os.path.join(HERE, "afl_role_rates.json")))["roles"]
+    pooled = {x: ref[x]["per_game"]["disposals"] * ref[x]["player_games"] for x in ROLES}
+    real_share = {x: pooled[x] / sum(pooled.values()) for x in ROLES}
+    print("\n## By line, per player-game (real 2026: tools/balance/afl_role_rates.json)\n")
+    head = "| line | stat | real | A |" + (" B | B-A | se | sig |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for role in ROLES:
+        rows = [(k, ref[role]["per_game"][ROLE_REF[k]], lambda r, k=k, role=role: role_rate(r, role, k)) for k in ROLE_REF]
+        rows.append(("share of disposals", real_share[role], lambda r, role=role: role_share(r, role)))
+        for k, real_v, fn in rows:
+            ma, mb, dm, se = paired(A, B, fn)
+            pct = k.startswith("share")
+            f = (lambda v: f"{100*v:.1f}%") if pct else (lambda v: f"{v:.2f}")
+            line = f"| {role} | {k} | {f(real_v)} | {f(ma)} |"
+            if B:
+                sig = "yes" if se and abs(dm) > 2 * se else ""
+                line += f" {f(mb)} | {(100*dm if pct else dm):+.2f}{'pp' if pct else ''} | {(100*se if pct else se):.2f} | {sig} |"
+            print(line)
+    print("\nReal share of disposals pools 2026 player-games by line (DEF %.1f%% of player-games)." %
+          (100 * ref["DEF"]["player_games"] / sum(ref[x]["player_games"] for x in ROLES)))
+    print("\n## Who takes the ball, by zone (share of carrier picks by slot role; no real reference)\n")
+    zones = ["back", "middle", "attack", "inside"]
+    head = "| zone | " + " | ".join(f"{x} A" + (f" | {x} B" if B else "") for x in ROLES) + " |"
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for z in zones:
+        cells = []
+        for x in ROLES:
+            a = zone_share(A, z, x)
+            cells.append("-" if a is None else f"{100*a:.1f}%")
+            if B:
+                b = zone_share(B, z, x)
+                cells.append("-" if b is None else f"{100*b:.1f}%")
+        print(f"| {z} | " + " | ".join(cells) + " |")
+
+
+# Champion Data 2025 (Wheelo), intercepts a game per player by position
+# (docs/research/INTERCEPT_EVIDENCE.md; tools/audit/intercept_impl.gd REAL).
+ROLE_REAL = {"DEF": 4.9, "MID": 2.5, "FWD": 1.1, "RUCK": 2.2}
+
+
+def ic_role_rate(rows, role):
+    """Seed -> intercepts per player-game for one role (both teams pooled)."""
+    out = {}
+    for i, r in rows.items():
+        ic = sum(float(t.get("ic_" + role, 0)) for t in r["teams"])
+        pg = sum(float(t.get("pg_" + role, 0)) for t in r["teams"])
+        if pg > 0:
+            out[i] = (ic, pg)
+    return out
+
+
+def role_table(A, B):
+    """Intercepts a game per player by listed position, against Champion Data."""
+    if not any("pg_MID" in t for r in A.values() for t in r["teams"]):
+        return
+    print("\nIntercepts a game per player, by listed position (Champion Data 2025):\n")
+    head = "| role | real | A | share A |" + (" B | share B | B-A | se | sig |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    tot = {}
+    for arm, R in (("A", A), ("B", B)):
+        tot[arm] = sum(float(t.get("intercepts", 0)) for r in R.values() for t in r["teams"]) or 1.0
+    for role, real in ROLE_REAL.items():
+        a = ic_role_rate(A, role)
+        if not a:
+            continue
+        ra = sum(v[0] for v in a.values()) / sum(v[1] for v in a.values())
+        sa = 100 * sum(v[0] for v in a.values()) / tot["A"]
+        line = f"| {role} | {real:.1f} | {ra:.2f} | {sa:.0f}% |"
+        if B:
+            b = ic_role_rate(B, role)
+            common = [i for i in a if i in b]
+            rb = sum(b[i][0] for i in common) / sum(b[i][1] for i in common)
+            sb = 100 * sum(b[i][0] for i in common) / tot["B"]
+            d = [b[i][0] / b[i][1] - a[i][0] / a[i][1] for i in common]
+            se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+            sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ""
+            line += f" {rb:.2f} | {sb:.0f}% | {rb - ra:+.2f} | {se:.2f} | {sig} |"
+        print(line)
+    print("\nReal shares (Champion Data 2025): DEF 57%, MID 23%, FWD 15%, RUCK 4%; a team intercepts about 63.4 a game.")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -86,6 +461,7 @@ def main():
             sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ("yes" if se == 0 and st.mean(d) != 0 else "")
             line += f" {mb:.1f} | {mark(mb)} | {st.mean(d):+.2f} | {se:.2f} | {sig} |"
         print(line)
+    role_table(A, B)
     for name, R in (("A", A), ("B", B)):
         if not R:
             continue
@@ -96,6 +472,10 @@ def main():
               f"draws {100*sum(x == 0 for x in m)/n:.1f}%, home win {100*sum(x > 0 for x in h)/n:.1f}%, home margin {st.mean(h):+.1f} "
               f"(se {st.stdev(h)/math.sqrt(n):.1f})")
     print("\nReal AFL (docs/LEAGUE_BALANCE.md): 60+ about 15.5%, 100+ about 1.9%, home win 59.3%.")
+    shots_section(A, B)
+    duel_section(A, B)
+    margin_tail(A, B)
+    role_report(A, B)
     print(f"\nOUT of real range (A): {', '.join(outs) if outs else 'none'}")
 
 

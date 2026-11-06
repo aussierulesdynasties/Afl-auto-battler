@@ -169,7 +169,7 @@ static func _candidate(gs, club: String, bars: Dictionary) -> Dictionary:
 		if not _available(gs, p) or role_at(p, bars) == "depth":
 			continue
 		if club != str(gs.my_club):
-			var why := Contracts.ai_release_reason(p, list, gs.cap_for(club))
+			var why: String = gs.ai_release_reason(club, p)
 			if why == "cap" and not Expansion.FIRST_CALL_CAP_SQUEEZED:
 				continue
 			if why == "" and not leaves_if_matched(gs, p, club, bars):
@@ -351,7 +351,7 @@ static func _settle(gs, code: String, st: Dictionary, t: Dictionary) -> void:
 		return
 	var wanted := true
 	if club != str(gs.my_club) or str(t["status"]) == "asked":
-		var why := Contracts.ai_release_reason(p, list, gs.cap_for(club))
+		var why: String = gs.ai_release_reason(club, p)
 		if why == "cap" and not Expansion.FIRST_CALL_CAP_SQUEEZED:
 			t["status"] = "stayed"   # he goes to free agency, as he would have
 			return
@@ -392,7 +392,7 @@ static func _sign(gs, code: String, p: Dictionary, salary: int, years: int) -> v
 	p["club"] = code
 	p["salary"] = salary
 	p["contract_years"] = years
-	for key in ["train_plan", "project", "released_by", "comp_eligible", "resigned", "talks"]:
+	for key in ["train_plan", "project", "released_by", "comp_eligible", "resigned", "talks", "rookie_list"]:
 		p.erase(key)
 	(state(gs, code)["list"] as Array).append(p)
 

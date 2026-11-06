@@ -173,14 +173,15 @@ static func _is_debut_season(ctx: Dictionary, code: String) -> bool:
 
 
 ## The QF-loser path: QF -> SF -> PF -> GF, bracket positions are fixed.
+## The semi winners cross over (Season, #964): W_SF1 plays PF2, W_SF2 plays PF1.
 static func _second_chance(ctx: Dictionary, code: String) -> bool:
 	var s: Dictionary = ctx.get("finals_slots", {})
 	if str(s.get("L_QF1", "")) == code:
 		return str(s.get("W_SF1", "")) == code \
-				and str(s.get("W_PF1", "")) == code and str(s.get("W_GF", "")) == code
+				and str(s.get("W_PF2", "")) == code and str(s.get("W_GF", "")) == code
 	if str(s.get("L_QF2", "")) == code:
 		return str(s.get("W_SF2", "")) == code \
-				and str(s.get("W_PF2", "")) == code and str(s.get("W_GF", "")) == code
+				and str(s.get("W_PF1", "")) == code and str(s.get("W_GF", "")) == code
 	return false
 
 

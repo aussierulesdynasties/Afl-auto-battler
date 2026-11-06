@@ -19,6 +19,7 @@ func run() -> void:
 	_t("_test_stamps")
 	_t("_test_match_effect")
 	_t("_test_career")
+	_t("_test_ai_revisions")
 	_t("_test_words")
 	_t("_test_plan_copy")
 	await _t("_test_screens")
@@ -482,3 +483,43 @@ func _tap(b: Control, what: String) -> bool:
 		if is_instance_valid(b) and b is BaseButton:
 			(b as BaseButton).emit_signal("pressed")
 	return why == ""
+
+
+## AI clubs look again at their plan at every revision point you get (their
+## bye, round 14, the last month) and at no other week.
+func _test_ai_revisions() -> void:
+	var was: bool = GameState.fitness_ai_by_phase
+	GameState.reset()
+	GameState.career_seed = SUITE_SEED
+	GameState.replay_seed = SUITE_SEED
+	GameState.fitness_ai_by_phase = true
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	# Every rival starts on a plan its phase would not choose.
+	for code in GameState.season.lists:
+		if str(code) == "GEE":
+			continue
+		var want := Conditioning.ai_plan(GameState._club_phase(str(code)))
+		var wrong := "develop" if want != "develop" else "fast"
+		GameState.conditioning[str(code)] = Conditioning.revise(GameState.fitness_record(str(code)), 0, wrong)
+	var guard := 0
+	while GameState.fitness_week() <= Conditioning.ROUND_14 and guard < 30:
+		GameState.advance()
+		guard += 1
+	var only_at_points := true
+	var revised := 0
+	var bad := []
+	for code in GameState.season.lists:
+		if str(code) == "GEE":
+			continue
+		var weeks := Conditioning.revision_weeks(GameState.fitness_bye_week(str(code)))
+		for ch in GameState.fitness_record(str(code)).get("changes", []):
+			if int(ch[0]) == 0:
+				continue
+			revised += 1
+			if not weeks.has(int(ch[0])):
+				only_at_points = false
+				bad.append("%s w%d" % [code, int(ch[0])])
+	_check(GameState.fitness_week() > Conditioning.ROUND_14, "The season reaches past round 14 (week %d)" % GameState.fitness_week())
+	_check(only_at_points, "Rivals change plan only at a revision point (%s)" % ", ".join(PackedStringArray(bad)))
+	_check(revised > 0, "Rivals on the wrong plan for their phase change it at the next revision point (%d)" % revised)
+	GameState.fitness_ai_by_phase = was

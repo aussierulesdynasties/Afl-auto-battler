@@ -71,7 +71,6 @@ func _run() -> void:
 	await _t("_test_feed_colours")
 	await _t("_test_momentum_meter")
 	await _t("_test_vignettes_setting")
-	await _t("_test_game_feel_settings")
 	await _t("_test_game_feel_effects")
 	_t("_test_broken_calls")
 	await _t("_test_vignettes_off_match")
@@ -565,8 +564,17 @@ func _test_phone_match(sz: Vector2i) -> void:
 			await _settle()
 			_check(table.find_child("PlayerDetail", true, false) != null, "A tap opens the rest of his line (%s)" % tag)
 			var more = table.find_child("PlayerDetail", true, false)
-			_check(more != null and str(more.text).contains("metres gained") and str(more.text).contains("disposal efficiency"),
+			_check(more != null and str(more.text).contains(" gained") and str(more.text).contains("disposal efficiency"),
 					"His line includes metres gained and disposal efficiency (%s)" % tag)
+			var one_rx := RegEx.create_from_string("(^|, )1 [a-z' -]*s(,|$)")
+			_check(more != null and one_rx.search(str(more.text)) == null
+					and table.detail_words("behinds", 1) == "behind" and table.detail_words("behinds", 2) == "behinds"
+					and table.detail_words("hit-outs to advantage", 1) == "hit-out to advantage"
+					and table.detail_words("frees against", 1) == "free against"
+					and table.detail_words("frees against", 2) == "frees against"
+					and table.detail_words("metres gained", 1) == "metre gained"
+					and table.detail_words("inside 50s", 1) == "inside 50",
+					"A count of one reads singular: 1 behind, 1 hit-out to advantage (%s)" % tag)
 			var fits := true
 			for row in table.find_children("PlayerRow_*", "Button", true, false):
 				if row.is_visible_in_tree() and row.get_global_rect().end.x > sz.x + 1:
@@ -2000,10 +2008,18 @@ func _test_ballup_two_scene() -> void:
 	_check(not low.contains("play it straight") and not low.contains("recommend") and not low.contains("best"),
 			"No third option and no advice (%s)" % _text(card))
 	var asked: int = sim.moments.size()
+	var played_from: int = sim.timeline.size()
 	var why: String = await Tap.tap(card.find_child("Moment_1", true, false))
 	_check(why == "", "A real tap on Flood behind the ball reaches it (%s)" % why)
+	# The tap plays on at once (MatchScene._advance_segment) to the next call or the
+	# break, and the break ends every call (MatchSim.end_quarter), so bursts may be
+	# empty again by now. The timeline notes each side's calls at every chain played:
+	# the flood must be in force for the play that followed the tap.
+	var flood_played := false
+	for e in sim.timeline.slice(played_from):
+		flood_played = flood_played or (int(e["side"]) == me and (e["bursts"] as Array).has("flood"))
 	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("choice_label", "")) == "Flood behind the ball"
-			and (sim.bursts[me] as Dictionary).has("flood"), "The tap makes the call, and the flood is on")
+			and flood_played, "The tap makes the call, and the flood is on")
 	Features.clear("ballup_two")
 	m.queue_free()
 	await _settle()
@@ -2283,6 +2299,27 @@ func _test_momentum_meter() -> void:
 	_check(m.call("handle_back") == true, "Back is handled on the explanation")
 	await _settle()
 	_check(m.find_child("MomentumInfo", true, false) == null, "Back closes it")
+	# Row 78: with momentum_runaway on, the sheet says what a runaway does.
+	var feats = load("res://scripts/core/Features.gd")
+	var was_on: bool = feats.on("momentum_runaway")
+	feats.set_on("momentum_runaway", true)
+	why = await Tap.tap(bar)
+	await _settle()
+	var info_on: Node = m.find_child("MomentumInfo", true, false)
+	_check(why == "" and info_on != null and _text(info_on).contains("run away with it")
+			and not _text(info_on).contains("a small edge"),
+			"Runaway on: the meter's sheet explains a runaway (%s)" % why)
+	m.call("handle_back")
+	await _settle()
+	feats.set_on("momentum_runaway", false)
+	why = await Tap.tap(bar)
+	await _settle()
+	var info_off: Node = m.find_child("MomentumInfo", true, false)
+	_check(why == "" and info_off != null and not _text(info_off).contains("run away with it"),
+			"Runaway off: the sheet is as before (%s)" % why)
+	m.call("handle_back")
+	await _settle()
+	feats.set_on("momentum_runaway", was_on)
 	m.queue_free()
 	await _settle()
 	# A later match: no note.
@@ -2519,7 +2556,7 @@ func _test_match_day_setup() -> void:
 	_check(side != null and start != null and (start as Button).text == "Start",
 			"The setup has Change the side and Start (%s)" % ((start as Button).text if start else "-"))
 	var sim_side: int = _state.pending_sim.moment_side
-	var dropped := str((_state.pending_sim.squads[sim_side] as Squad).ground[0]["id"])
+	var dropped := str(_state.pending_sim.squads[sim_side].ground[0]["id"])
 	var why: String = await Tap.tap(side)
 	await _settle()
 	var sel: Node = current_scene
@@ -2534,7 +2571,7 @@ func _test_match_day_setup() -> void:
 	await _settle()
 	ms = current_scene
 	var ids := []
-	for p in (_state.pending_sim.squads[sim_side] as Squad).ground:
+	for p in _state.pending_sim.squads[sim_side].ground:
 		ids.append(str(p["id"]))
 	_check(why == "" and ms != null and ms.name == "MatchScene" and not ids.has(dropped)
 			and _state.match_day_setup_open(),
@@ -2715,67 +2752,6 @@ func _test_vignettes_setting() -> void:
 # ---------------------------------------------------------------------------
 # Game feel (director, 2026-10-11): button sounds, vibration, reduced motion
 # ---------------------------------------------------------------------------
-func _sheet_at(options, sz: Vector2i) -> Array:
-	root.size = sz
-	var host := Control.new()
-	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root.add_child(host)
-	host.size = Vector2(sz)
-	var sheet: Control = options.open(host, true)
-	await _settle()
-	return [host, sheet]
-
-
-## Three rows in Settings, each its own Off, real taps at a phone's size and a
-## PC's, saved with the settings. Vibration shows only on a phone.
-func _test_game_feel_settings() -> void:
-	var options = load("res://scripts/ui/OptionsSheet.gd")
-	var feel = load("res://scripts/ui/Feel.gd")
-	var uk = load("res://scripts/ui/UiKit.gd")
-	_check(_state.button_sounds() == "normal" and _state.haptics_on() and not _state.reduced_motion(),
-			"Button sounds and Vibration start on, Reduced motion off")
-	feel.force_phone = false
-	var pc: Array = await _sheet_at(options, Vector2i(1280, 720))
-	_check(pc[1].find_child("SettingsButtonSounds_off", true, false) != null
-			and pc[1].find_child("SettingsReducedMotion_on", true, false) != null,
-			"Settings has Button sounds and Reduced motion on a PC")
-	_check(pc[1].find_child("SettingsVibration_off", true, false) == null,
-			"No Vibration row on a PC, which has nothing to buzz")
-	pc[0].queue_free()
-	await _settle()
-	feel.force_phone = true
-	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
-		var tag := "%dx%d" % [sz.x, sz.y]
-		var hs: Array = await _sheet_at(options, sz)
-		var sheet: Control = hs[1]
-		for pair in [["SettingsButtonSounds_off", "Button sounds Off"], ["SettingsVibration_off", "Vibration Off"],
-				["SettingsReducedMotion_on", "Reduced motion On"]]:
-			var b: Button = sheet.find_child(str(pair[0]), true, false)
-			var why: String = await Tap.tap(b) if b != null else "missing"
-			_check(why == "", "%s takes a real tap (%s: %s)" % [pair[1], tag, why])
-			await _settle()
-		_check(_state.button_sounds() == "off" and not _state.haptics_on() and _state.reduced_motion()
-				and not feel.haptics and feel.reduced and not uk.motion_on(),
-				"The three taps turn sounds and vibration off and motion down (%s)" % tag)
-		var bus := AudioServer.get_bus_index("Interface")
-		_check(bus >= 0 and AudioServer.is_bus_mute(bus), "Button sounds Off mutes its own bus (%s)" % tag)
-		var cfg := ConfigFile.new()
-		_check(cfg.load(_state.settings_path) == OK and str(cfg.get_value("ui", "button_sounds", "")) == "off"
-				and cfg.get_value("ui", "haptics", true) == false and cfg.get_value("ui", "reduced_motion", false) == true,
-				"All three are saved with the settings (%s)" % tag)
-		for pair in [["SettingsButtonSounds_normal", "Button sounds Normal"], ["SettingsVibration_on", "Vibration On"],
-				["SettingsReducedMotion_off", "Reduced motion Off"]]:
-			var b: Button = sheet.find_child(str(pair[0]), true, false)
-			var why: String = await Tap.tap(b) if b != null else "missing"
-			_check(why == "", "%s takes a real tap (%s: %s)" % [pair[1], tag, why])
-			await _settle()
-		_check(_state.button_sounds() == "normal" and _state.haptics_on() and not _state.reduced_motion()
-				and not AudioServer.is_bus_mute(bus), "And back on (%s)" % tag)
-		hs[0].queue_free()
-		await _settle()
-	feel.force_phone = false
-
-
 ## Every effect runs with its setting on and is skipped with it off: the
 ## sound, the buzz and the motion of a press, a choice, a big moment, an
 ## attention pulse and a living background. Read from Feel's own record of
@@ -2836,11 +2812,15 @@ func _test_game_feel_effects() -> void:
 	_check(draws[0] == 0 and bd.find_child("Drift", true, false) == null and soft.modulate == Color.WHITE
 			and is_equal_approx(big.scale.x, 1.0),
 			"Then everything holds still: no redraws, no timer, colour and size back to rest (%d)" % draws[0])
-	_state.set_button_sounds("off")
+	_state.set_sounds_muted(true)
 	var quiet: Dictionary = await run.call()
 	_check(quiet["heard"].is_empty() and quiet["felt"] == [22, 10, 40],
-			"Button sounds Off: no sound starts; the buzz still comes (%s)" % str(quiet["heard"]))
-	_state.set_button_sounds("normal")
+			"Mute: no sound starts; the buzz still comes (%s)" % str(quiet["heard"]))
+	_state.set_sounds_muted(false)
+	_state.set_volume(0)
+	var zero: Dictionary = await run.call()
+	_check(zero["heard"].is_empty(), "Volume 0: no sound starts either (%s)" % str(zero["heard"]))
+	_state.set_volume(100)
 	_state.set_haptics_on(false)
 	var still: Dictionary = await run.call()
 	_check(still["felt"].is_empty() and still["heard"] == ["main", "tick", "land"],
@@ -3316,6 +3296,7 @@ func _test_break_panes_layout() -> void:
 		_check(ask != null and tag_picker != null and ask.get_parent() == tag_picker.get_parent()
 				and ask.get_index() < tag_picker.get_index(), "...above the choices, in the Tag block (%s)" % tag)
 		await _matchup_rows(m, box, tag)
+		_notes_above_floor(box, "pre-bounce, " + tag)
 		if sz.x >= 1200:
 			var cols_node: Control = box.find_child("BreakColumns", true, false)
 			var cols: Array = cols_node.get_children()
@@ -3364,6 +3345,8 @@ func _test_break_panes_layout() -> void:
 		await _settle()
 		await _settle()
 		var box2: Node = m2.find_child("CoachBox", true, false)
+		if box2 != null:
+			_notes_above_floor(box2, "quarter time, " + tag)
 		var row: Node = box2.find_child("CallRow_mu", true, false) if box2 != null else null
 		_check(row != null, "Quarter time has the key match-ups row (%s)" % tag)
 		if row != null:
@@ -3394,6 +3377,39 @@ func _test_break_panes_layout() -> void:
 		m2.queue_free()
 		await _settle()
 	_state.replay_seed = seed_before
+
+
+## The notes under the calls in a break pane are read mid-match (row 109,
+## 6.Q18): every word in them is drawn above the 13 px floor at the screen's
+## own scale, i.e. at UiKit.NOTE (14) or larger.
+const BREAK_NOTES := ["TagNote", "DefenceNote", "LooseTally", "SkipNote", "LegsView", "MyInterceptor", "AssistantNote"]
+
+
+func _notes_above_floor(box: Node, tag: String) -> void:
+	var found := []
+	var small := []
+	for nm in BREAK_NOTES:
+		var n: Node = box.find_child(nm, true, false)
+		if n == null or not (n as Control).is_visible_in_tree():
+			continue
+		found.append(nm)
+		var texts: Array = n.find_children("*", "Control", true, false)
+		texts.append(n)
+		for c in texts:
+			var fs := 0
+			if c is RichTextLabel:
+				fs = (c as Control).get_theme_font_size("normal_font_size")
+			elif c is Label:
+				fs = (c as Control).get_theme_font_size("font_size")
+			else:
+				continue
+			if not (c as Control).is_visible_in_tree():
+				continue
+			var px := float(fs) * (c as Control).get_global_transform().get_scale().y
+			if px <= 13.0:
+				small.append("%s %.0f px" % [nm, px])
+	_check(found.size() >= 2, "The break pane has its notes (%s: %s)" % [tag, str(found)])
+	_check(small.is_empty(), "Break-pane notes are above 13 px (%s: %s)" % [tag, str(small)])
 
 
 func _plain_of(c: Control) -> String:

@@ -15,6 +15,10 @@ extends RefCounted
 ## list-management rule.
 var intake_mode := false
 var existing_sizes := {}              # code -> kept list length (intake only)
+## Where the intake calls a list full: 0 is the whole list (Ratings.LIST_SIZE);
+## with the rookie list on (RookieList) the senior list, and existing_sizes
+## counts senior players only.
+var senior_cap := 0
 var existing_role_counts := {}        # code -> {RUCK..FWD} kept players (intake)
 var existing_roles := {}              # code -> [[role, role2], ...] kept players (intake)
 var _fixed_order: Array = []
@@ -356,7 +360,7 @@ func remaining_pool() -> int:
 func _list_full(code: String) -> bool:
 	if not intake_mode:
 		return false
-	return int(existing_sizes.get(code, 0)) + count_for(code) >= Ratings.LIST_SIZE
+	return int(existing_sizes.get(code, 0)) + count_for(code) >= (senior_cap if senior_cap > 0 else Ratings.LIST_SIZE)
 
 
 func _skip_current_pick() -> void:
@@ -1486,6 +1490,9 @@ func release_for_room(id: String) -> bool:
 	entry["released"] = true
 	_pick_by_player.erase(id)
 	pick_sequence.append(user_club)
+	# The parallel arrays stay in step: the extra pick is in the last round.
+	pick_rounds.append(int(pick_rounds[-1]) if not pick_rounds.is_empty() else 1)
+	pick_origin.append(user_club)
 	_reserve_at = -1
 	return true
 

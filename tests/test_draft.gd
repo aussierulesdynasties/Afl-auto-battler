@@ -546,6 +546,9 @@ func _test_stuck_draft_recovery() -> void:
 			"You can release one of your picks when stuck")
 	_check(not d.picked.has(str(dear["id"])) and d.pick_sequence.size() == seq + 1 and d.drafted_by(str(dear["id"])) == "",
 			"He goes back to the pool and you get an extra pick at the end")
+	_check(d.pick_rounds.size() == d.pick_sequence.size() and d.pick_origin.size() == d.pick_sequence.size()
+			and int(d.pick_rounds[-1]) == int(d.pick_rounds[seq - 1]),
+			"The extra pick keeps the round and origin lists in step, in the last round")
 	# Save and reload mid-recovery.
 	GameState.draft = d
 	GameState.my_club = me
@@ -743,8 +746,16 @@ func _test_asset_valuation() -> void:
 			GameDB.active_clubs(2027).duplicate(), 4242)
 	var by_worth: Array = real.pool.duplicate()
 	by_worth.sort_custom(func(a, b): return real._worth(a) > real._worth(b))
-	_check(is_equal_approx(real._eval_certainty(by_worth[0]), Draft.AI_EVAL_TOP_SHARE)
-			and is_equal_approx(real._eval_certainty(by_worth[Draft.AI_EVAL_FULL_RANK + 5]), 1.0),
+	# The consensus order is the draft's own (what a player has shown); test its
+	# 1st and a player well past the full-certainty rank, not the worth order's,
+	# which can differ from it (row 65 moved draft-night ratings).
+	real._eval_certainty(by_worth[0])
+	var at_rank := {}
+	for p in real.pool:
+		at_rank[int(real._consensus_rank.get(str(p["id"]), 0))] = p
+	_check(at_rank.has(1) and at_rank.has(Draft.AI_EVAL_FULL_RANK + 5)
+			and is_equal_approx(real._eval_certainty(at_rank[1]), Draft.AI_EVAL_TOP_SHARE)
+			and is_equal_approx(real._eval_certainty(at_rank[Draft.AI_EVAL_FULL_RANK + 5]), 1.0),
 			"Scouting disagreement shrinks for the consensus best, in full further down")
 	_check(is_zero_approx(real._vorp_weight()), "At the first pick scarcity counts for nothing")
 	real.pick_index = real.clubs.size() * Draft.AI_VORP_FULL_ROUNDS

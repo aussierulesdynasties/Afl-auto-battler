@@ -275,16 +275,17 @@ static func all_stories(page: Dictionary) -> Array:
 # ---------------------------------------------------------------------------
 # Drawing
 # ---------------------------------------------------------------------------
-static func _ink(code: String) -> Color:
-	return UiKit.club_ink(code) if code != "" else UiKit.TEXT
+## A club's ink on `surface` (the lead's club-tinted panel reads it lifted).
+static func _ink(code: String, surface := UiKit.AUTO_COLOUR) -> Color:
+	return UiKit.club_ink(code, surface) if code != "" else UiKit.TEXT
 
 
-static func _headline(st: Dictionary, fs: int) -> Control:
+static func _headline(st: Dictionary, fs: int, surface := UiKit.AUTO_COLOUR) -> Control:
 	var l: Control
 	if str(st["name"]) == "" and str(st["club"]) == "":
 		l = NameInk.label(str(st["headline"]), _names, fs, UiKit.TEXT, true)
 	else:
-		l = UiKit.lbl(str(st["headline"]), fs, _ink(str(st["club"])), true)
+		l = UiKit.lbl(str(st["headline"]), fs, _ink(str(st["club"]), surface), true)
 	l.name = "Headline"
 	return l
 
@@ -299,14 +300,16 @@ static func _yours_tag() -> Label:
 static func _story_block(st: Dictionary, big: bool) -> Control:
 	var v := UiKit.vbox(4)
 	v.name = "Lead" if big else "Story"
+	# The lead sits on its club's tinted panel (_wash); its club ink reads there.
+	var surface := _wash(str(st["club"])) if big and str(st["club"]) != "" else UiKit.AUTO_COLOUR
 	if bool(st["mine"]):
 		v.add_child(_yours_tag())
 	if str(st["club"]) != "" and big:
 		var head := UiKit.hbox(8)
 		head.add_child(UiKit.club_marker(str(st["club"]), 34.0))
-		head.add_child(UiKit.line(GameDB.club_name(str(st["club"])), UiKit.NAME, _ink(str(st["club"])), true))
+		head.add_child(UiKit.line(GameDB.club_name(str(st["club"])), UiKit.NAME, _ink(str(st["club"]), surface), true))
 		v.add_child(head)
-	v.add_child(_headline(st, UiKit.H1 if big else UiKit.NAME))
+	v.add_child(_headline(st, UiKit.H1 if big else UiKit.NAME, surface))
 	if str(st["standfirst"]) != "":
 		v.add_child(UiKit.lbl(str(st["standfirst"]), UiKit.SECONDARY if big else UiKit.SMALL, UiKit.TEXT))
 	if str(st["club"]) == "":
@@ -454,7 +457,7 @@ static func _earlier_line(st: Dictionary) -> Control:
 static func _wash(club: String) -> Color:
 	if club == "":
 		return UiKit.PANEL
-	return UiKit.PANEL.lerp(UiKit.club_ink(club), 0.22)
+	return UiKit.tinted("story", UiKit.club_ink(club))
 
 
 ## The hub's small front page: the lead and up to three more headlines, the
@@ -480,6 +483,7 @@ static func mini(items: Array, my_club: String, on_open: Callable, names := {}) 
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(title)
 	var d := UiKit.lbl(str(page["dateline"]), UiKit.SECONDARY, UiKit.MUTED)
+	d.name = "Dateline"
 	d.autowrap_mode = TextServer.AUTOWRAP_OFF
 	top.add_child(d)
 	top.add_child(UiKit.lbl("›", UiKit.NAME, UiKit.MUTED))

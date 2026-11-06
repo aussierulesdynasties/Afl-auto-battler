@@ -12,7 +12,7 @@ Footy-real (director, 2026-10-11).
 | `sting.wav` | 1.3 s | A big moment lands (the result, your draft pick, your ladder spot moving): a thump and a short crowd lift. |
 
 22050 Hz, mono, 16-bit, each under 60 KB. Played on the `Interface` bus under Master (`scripts/ui/Feel.gd`),
-so Settings > Button sounds sets them and Mute sounds silences them with everything else.
+so Settings > Volume sets them with every other sound and Mute silences them (row 98).
 
 ## How they are made
 
