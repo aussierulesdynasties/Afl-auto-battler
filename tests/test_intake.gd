@@ -1033,7 +1033,8 @@ func _test_real_lists_start() -> void:
 
 
 ## Row 104 (4.Q10), switch gen_traits: generated players carry the special traits at the
-## real players' rates. Eight seeded classes (career seed 4242 + year), each grown five
+## real players' rates. Eight seeded classes (career seed 9000 + year: not the seeds
+## GEN_NUDGE was sized on, so this is out of sample), each grown five
 ## seasons by the development rules; a trait's "matched" share weights the grown players
 ## in each 4-point OVR band by the real 2026 players' mix (the in-career league is
 ## re-anchored to the 2026 spread every rollover). tools/audit/gen_traits_impl runs the
@@ -1043,12 +1044,21 @@ func _test_gen_traits_rates() -> void:
 	# the suites without them), and none of the earlier tests' career changes.
 	var skipped: bool = GameDB.skip_ovr_overrides
 	GameDB.skip_ovr_overrides = false
-	GameDB.reload()
+	# Twice: a list player's projection borrows shapes from the lists loaded before it,
+	# so the second load is the one every later load repeats.
+	for i in 2:
+		Prospects.forget_cache()
+		GameDB.reload()
+	# Reference: real players with senior games (a list player projected from no senior
+	# game got his temperament from the old formula, never a hothead).
 	var real := []
 	for c in GameDB.club_order:
 		for p in GameDB.club_list(c):
-			if not bool(p.get("generated", false)):
+			if not bool(p.get("generated", false)) and not bool(p.get("projected", false)):
 				real.append(p)
+	var listed_attr := {}
+	for p in GameDB.list_additions:
+		listed_attr[str(p["id"])] = (p["attr"] as Dictionary).duplicate()
 	_check(real.size() > 600, "The real 2026 lists give the reference rates (%d players)" % real.size())
 	var bands := {}
 	var real_hot := 0
@@ -1065,7 +1075,7 @@ func _test_gen_traits_rates() -> void:
 		var drafted := []
 		var grown := []
 		for y in range(2027, 2035):
-			for p in Prospects.generate_class(y, 4242 + y):
+			for p in Prospects.generate_class(y, 9000 + y):
 				drafted.append(p.duplicate(true))
 				for k in range(1, 6):
 					Prospects.age_player(p, y + k)
@@ -1099,11 +1109,25 @@ func _test_gen_traits_rates() -> void:
 	# The same seeds give the same prospects: the temperament draw is seeded per player.
 	Features.set_on("gen_traits", true)
 	Prospects.forget_cache()
-	var again: Array = Prospects.generate_class(2027, 4242 + 2027)
+	var again: Array = Prospects.generate_class(2027, 9000 + 2027)
+	# Only generated players change: real-list players projected from no senior game load
+	# the same with the switch on, and a coach's Forge prospect comes out the same.
+	var forge := {"first": "Gabe", "last": "Tester", "role": "MID", "height_cm": 184,
+			"style": "inside", "strengths": ["contested"], "weaknesses": ["running"]}
+	var forge_on: Dictionary = Prospects.make_custom(forge, 2027, 777)
+	Prospects.forget_cache()
+	GameDB.reload()
+	var same_listed := listed_attr.size() > 0
+	for p in GameDB.list_additions:
+		if not listed_attr.has(str(p.get("id", ""))) or p["attr"] != listed_attr[str(p["id"])]:
+			same_listed = false
 	Features.clear("gen_traits")
 	Prospects.forget_cache()
+	var forge_off: Dictionary = Prospects.make_custom(forge, 2027, 777)
 	GameDB.skip_ovr_overrides = skipped
 	GameDB.reload()
+	_check(same_listed, "On, the real-list players projected from no senior game load unchanged (%d)" % listed_attr.size())
+	_check(forge_on["attr"] == forge_off["attr"], "On, a coach's Forge prospect comes out the same as off")
 	_check(again[0]["attr"]["discipline"] == on["disc"][0] and again[1]["attr"]["discipline"] == on["disc"][1],
 			"A seeded class rolls the same temperaments every time")
 

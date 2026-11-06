@@ -167,6 +167,13 @@ extends RefCounted
 ##               entries inside 50. Changes match output. Off, the zone's or the line's
 ##               defender meets it, the key-forward share is Matchups.KEY_TARGET and no
 ##               general-play contest is logged, as before.
+##   stat_focus  row 97 (T1.Q7, director 2026-11-06: "one stat focus per player per season,
+##               drills do the rest"): on the Training screen each of your players can be
+##               given one stat to work on, picked once a season and set until the next
+##               season opens; GameState.FOCUS_SHARE of his training XP goes into it and his
+##               plan spends the rest. Same XP and season ceiling; rival clubs train on their
+##               plans as before. Off, nothing shows, training spends as before and no focus
+##               is written.
 ##   gather_round   row 74 (T5.Q11a; Director Bible 2.38, 5.127): one of rounds 3 to 7 each
 ##               season is Gather Round, every match staged at the host's grounds (Adelaide
 ##               Oval, Norwood Oval, Barossa Park; GatherRound.gd). A club has its home-ground
@@ -178,15 +185,17 @@ extends RefCounted
 ##               players' rates. A prospect's borrowed shape gets a small per-role nudge
 ##               (Prospects.GEN_NUDGE: fewer contested bulls and ruck kings, fewer interceptors,
 ##               more defensive forwards) and his discipline is drawn from a real player of his
-##               role, so hotheads roll at the real rate (none did before). Changes new draft
-##               classes and expansion lists only. Off, generation is exactly as before.
+##               role, so hotheads roll at the real rate (none did before). Changes the
+##               generated players of new draft classes and expansion lists only: real-list
+##               players, the real 2026 draft class and Forge prospects are made as before.
+##               Off, generation is exactly as before.
 ##   league_news   row 76 (T5.Q11d, the AFL knowledge layer): the premiership item in
 ##               the news feed carries one sentence of the club's flag history (first
 ##               ever, back-to-back or more, or the first in 10+ years), from the save's
 ##               honour roll and data/club_premierships.csv (LeagueNews.gd). Reads only.
 ##               Off, the feed is exactly as before.
 const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries", "momentum_runaway", "key_duels", "set_shots",
-		"sir_doug_round", "gather_round", "league_news", "gen_traits"]
+		"sir_doug_round", "gather_round", "stat_focus", "league_news", "gen_traits"]
 
 static var _forced := {}
 static var _from_args := {}

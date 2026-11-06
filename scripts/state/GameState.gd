@@ -7164,6 +7164,8 @@ func _join(code: String, p: Dictionary) -> void:
 	p["club"] = code
 	p["num"] = _next_jumper_number(list)
 	p.erase("train_plan")
+	for key in ["train_focus", "train_focus_year", "focus_ledger"]:
+		p.erase(key)
 	p.erase("project")
 	p.erase("released_by")
 	p.erase("comp_eligible")
@@ -9531,6 +9533,8 @@ func _migrate_train_plans() -> void:
 	default_train_plan = "position"
 	for p in my_list:
 		var own := str(p.get("train_plan", ""))
+		if Features.on("stat_focus"):
+			_migrate_focus(p, own)
 		if own == "manual" or (own == "" and club_manual):
 			var best := _closest_plan(p)
 			if best == "position":
@@ -9540,6 +9544,23 @@ func _migrate_train_plans() -> void:
 			continue
 		if own != "" and not plan_valid_for(p, own):
 			p.erase("train_plan")
+
+
+## Stat focus from older saves (row 97). An old single-stat plan
+## ("focus_marking", cut 2026-11-03) becomes his stat focus, open to change
+## this season, and his plan falls back as before. A save holding several
+## focuses keeps the first his role can use; one he cannot use is dropped.
+func _migrate_focus(p: Dictionary, own: String) -> void:
+	if not p.has("train_focus") and own.begins_with("focus_"):
+		p["train_focus"] = own.trim_prefix("focus_")
+	if not p.has("train_focus"):
+		return
+	var keep := stat_focus(p)
+	if keep == "":
+		p.erase("train_focus")
+		p.erase("train_focus_year")
+	else:
+		p["train_focus"] = keep
 
 
 ## The plan whose spending best matches how a player already is: each plan
@@ -9608,10 +9629,73 @@ func apply_plan_to(p: Dictionary) -> Dictionary:
 		if not learnt.is_empty():
 			mark_dirty()
 		return learnt
-	var gains := _spend_with_weights(p, plan_weights(p), true, season_ceiling(p))
+	var gains := _spend_with_weights(p, plan_weights(p), true, season_ceiling(p), "", stat_focus(p))
 	if not gains.is_empty():
 		mark_dirty()
 	return gains
+
+
+# ---------------------------------------------------------------------------
+# Stat focus (row 97, T1.Q7, director 2026-11-06: "one stat focus per player
+# per season, drills do the rest"). Behind the stat_focus switch.
+# ---------------------------------------------------------------------------
+## The share of a player's training XP that goes into his focus stat over the
+## season; his plan (the club's drills) spends the rest as it always did. The
+## same XP and season ceiling: a focus moves where points go, never how many.
+const FOCUS_SHARE := 1.0 / 3.0
+
+
+## The stats a coach may make a player's focus: any his role uses in a match
+## (stat_useful_for), so a focus never trains something that does nothing.
+func focus_options(p: Dictionary) -> Array:
+	var out := []
+	for row in TRAIN_STATS:
+		if stat_useful_for(p, str(row[0])):
+			out.append(str(row[0]))
+	return out
+
+
+## His focus stat, or "" (none, or the switch is off). A save holding more
+## than one keeps the first his role can use.
+func stat_focus(p: Dictionary) -> String:
+	if not Features.on("stat_focus"):
+		return ""
+	var raw = p.get("train_focus", "")
+	var keys: Array = raw if raw is Array else [raw]
+	var ok := focus_options(p)
+	for k in keys:
+		if ok.has(str(k)):
+			return str(k)
+	return ""
+
+
+## Picked this season: it stays until the next season opens.
+func focus_locked(p: Dictionary) -> bool:
+	return p.has("train_focus") and int(p.get("train_focus_year", -1)) == season_year
+
+
+## Set his focus for the season. False when the switch is off, it is already
+## picked this season, or his role does not use the stat. Banked XP is spent
+## at once, the same as a plan change.
+func set_stat_focus(player_id: String, key: String) -> bool:
+	if not Features.on("stat_focus"):
+		return false
+	var p := list_player(player_id)
+	if p.is_empty() or focus_locked(p) or not focus_options(p).has(key):
+		return false
+	p["train_focus"] = key
+	p["train_focus_year"] = season_year
+	mark_dirty()
+	apply_plan_to(p)
+	return true
+
+
+## [focus XP, drills XP] spent this season while he had a focus.
+func focus_spent(p: Dictionary) -> Array:
+	var led: Array = p.get("focus_ledger", [])
+	if led.size() < 3 or int(led[0]) != season_year:
+		return [0, 0]
+	return [int(led[1]), int(led[2])]
 
 
 ## Whether an attribute does anything for this player's role in a match:
@@ -9657,8 +9741,11 @@ func development_state(p: Dictionary) -> String:
 ## POT prices every point the same way for every club; `ceiling` is a
 ## season limit (SEASON_TRAIN_GAIN, every club alike), not his potential.
 func _spend_with_weights(p: Dictionary, weights: Dictionary, stop_at_pot: bool,
-		ceiling := -1, rate_role := "") -> Dictionary:
+		ceiling := -1, rate_role := "", focus := "") -> Dictionary:
 	var gains := {}
+	# A stat focus takes FOCUS_SHARE of the season's spending; the plan buys
+	# the rest (ledger: [year, focus XP, drills XP]).
+	var spent: Array = focus_spent(p) if focus != "" else [0, 0]
 	var games := float(p.get("gm", 18.0))
 	var attr: Dictionary = p.get("attr", {})
 	var stop_at := ceiling if ceiling >= 0 else int(p.get("potential", 0))
@@ -9682,11 +9769,29 @@ func _spend_with_weights(p: Dictionary, weights: Dictionary, stop_at_pot: bool,
 				best_ratio = ratio
 				best_key = key
 				best_cost = cost
+		var on_focus := false
+		if focus != "" and attr.has(focus) and int(attr[focus]) < 99:
+			# The focus point is due only if buying it keeps his running focus
+			# share at or under FOCUS_SHARE, judged after the purchase, so
+			# neither the first point nor a dear focus point overshoots.
+			var f_cost := _cost_for(int(attr[focus]), games, mult)
+			var s0 := float(spent[0])
+			var total := float(int(spent[0]) + int(spent[1]))
+			var due := s0 + float(f_cost) <= FOCUS_SHARE * (total + float(f_cost))
+			# A due focus point he can't yet afford doesn't stall training:
+			# the plan's cheaper drill point is bought instead.
+			if (due or best_key == "") and int(p.get("xp", 0)) >= f_cost:
+				on_focus = true
+				best_key = focus
+				best_cost = f_cost
 		if best_key == "" or int(p.get("xp", 0)) < best_cost:
 			break
 		p["xp"] = int(p["xp"]) - best_cost
 		attr[best_key] = int(attr[best_key]) + 1
 		gains[best_key] = int(gains.get(best_key, 0)) + 1
+		if focus != "":
+			spent[0 if on_focus else 1] = int(spent[0 if on_focus else 1]) + best_cost
+			p["focus_ledger"] = [season_year, int(spent[0]), int(spent[1])]
 		_recalc_player_overall(p)
 	if not gains.is_empty() and rate_role == "":
 		# The season's training in his own position, kept so the off-season
