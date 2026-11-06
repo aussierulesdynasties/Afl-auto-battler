@@ -56,16 +56,17 @@ func go(key: String) -> void:
 	_swap(key, path, true)
 
 
-## Under full cover: save, wait for the threaded load (the line goes up if it
-## is slow), then swap.
+## Under full cover: save, wait for the threaded load (LOADING goes up if it
+## is slow and no line is on the cover yet), then swap. A named line
+## ("Loading your list...") is never replaced by the generic one.
 func _covered_swap(key: String, path: String, wipe: Node) -> void:
-	if GameState._dirty:
+	if GameState._dirty and not bool(wipe.call("line_visible")):
 		wipe.call("show_line", ScreenTransition.LOADING)
 		await wipe.call("drawn")
 	GameState.autosave_if_dirty()
 	var started := Time.get_ticks_msec()
 	while ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
-		if Time.get_ticks_msec() - started >= SLOW_MS:
+		if Time.get_ticks_msec() - started >= SLOW_MS and not bool(wipe.call("line_visible")):
 			wipe.call("show_line", ScreenTransition.LOADING)
 		await get_tree().process_frame
 	var packed: PackedScene = null

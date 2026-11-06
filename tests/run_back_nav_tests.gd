@@ -862,17 +862,24 @@ func _test_loading_cover() -> void:
 	await _wait_cover(wipe)
 	_check(not bool(wipe.get("busy")) and not line.visible, "loading cover: input and the screen come back")
 
-	# My list: its line is up before the screen is built.
+	# My list: its line is up before the screen is built, and stays its own
+	# through the autosave (a dirty career) instead of turning generic.
 	var list_seen := [false]
+	var texts := {}
 	var watch_list := func():
-		if bool(wipe.call("line_visible")) and line.text == "Loading your list..." and _router.current() == "list" 				and current_scene == hub:
-			list_seen[0] = true
+		if bool(wipe.call("line_visible")):
+			texts[line.text] = true
+			if line.text == "Loading your list..." and _router.current() == "list" and current_scene == hub:
+				list_seen[0] = true
 	hub = current_scene
+	_state.set("_dirty", true)
 	process_frame.connect(watch_list)
 	_router.go("list")
 	await _wait_cover(wipe)
 	process_frame.disconnect(watch_list)
 	_check(list_seen[0], "loading cover: My list says it is loading before the screen is built")
+	_check(texts.keys() == ["Loading your list..."],
+			"loading cover: the named line is never swapped for a generic one (%s)" % [texts.keys()])
 	_check(current_scene != null and current_scene.scene_file_path.ends_with("ListScene.tscn"),
 			"loading cover: My list opens under the cover")
 
