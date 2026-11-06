@@ -7,6 +7,7 @@ extends SceneTree
 ## --report: the assistant's report. --rounds N: play N rounds first.
 ## --oval: (old) scrolled down to the oval. --drag: mid-drag, the centre's token
 ## pressed and moved by real mouse events (the name preview under the pointer).
+## --strategy KEY: that auto-pick applied, scrolled to its note (BuilderHint).
 ## --club CODE. (The phone's week is the match preview now:
 ## tools/visual/capture_match_preview.gd.)
 ## Writes <out>_sheet.png.
@@ -29,6 +30,7 @@ func _run() -> void:
 	var page := ""
 	var rounds := 0
 	var vs := ""
+	var strategy := ""
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		if str(a[i]) == "--out" and i + 1 < a.size():
@@ -45,6 +47,8 @@ func _run() -> void:
 			rounds = int(a[i + 1])
 		if str(a[i]) == "--vs" and i + 1 < a.size():
 			vs = str(a[i + 1])
+		if str(a[i]) == "--strategy" and i + 1 < a.size():
+			strategy = str(a[i + 1])
 		if str(a[i]) == "--picked":
 			picked = true
 		if str(a[i]) == "--oval":
@@ -103,6 +107,17 @@ func _run() -> void:
 			ui.get("_week").show_report(str(state.my_next_opponent().get("code", "")))
 	for i in range(8):
 		await process_frame
+	if strategy != "":
+		ui.call("_apply_strategy", strategy)
+		for i in range(8):
+			await process_frame
+		var hint: Control = ui.find_child("BuilderHint", true, false)
+		var sc2: ScrollContainer = ui.find_child("SelectionScroll", true, false)
+		if hint != null and sc2 != null:
+			sc2.scroll_vertical = int(hint.global_position.y - sc2.global_position.y + sc2.scroll_vertical - H / 2)
+			for j in range(4):
+				await process_frame
+		print("note: ", hint.get("text") if hint != null else "(none)")
 	if oval:
 		var pitch: Control = ui.find_child("Pitch", true, false)
 		var sc: ScrollContainer = ui.find_child("SelectionScroll", true, false)

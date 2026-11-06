@@ -62,12 +62,19 @@ static func start(tree: SceneTree, replace := false) -> bool:
 	if m.is_empty():
 		return false
 	busy = true
-	if not GameState.vignettes_on() or GameState.match_way() == "skip":
+	# A response chosen under a fact opens this match on that call before the
+	# first bounce, so Skip plays it the Watch way this once (the saved choice
+	# stays); the button said "Play match" (HubScene._play_label).
+	var way := GameState.match_way()
+	if way == "skip" and not GameState.call_intent.is_empty():
+		way = "watch"
+	if not GameState.vignettes_on() or way == "skip":
 		# Vignettes off (Settings), or Skip chosen: no banner scene, straight
 		# to the match.
 		if not GameState.prepare_interactive_match():
 			busy = false
 			return false
+		GameState.match_way_live = way
 		_go(replace)
 		return true
 	# The pre-match scene goes up in this frame: a couple of seconds of
@@ -97,6 +104,7 @@ static func start(tree: SceneTree, replace := false) -> bool:
 		scene.get_parent().queue_free()
 		busy = false
 		return false
+	GameState.match_way_live = way
 	scene.play_through(PRE_MATCH_SECONDS)
 	await scene.done
 	_go(replace)
