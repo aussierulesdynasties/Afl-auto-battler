@@ -90,6 +90,8 @@ func run() -> void:
 				times[tid] = int(times.get(tid, 0)) + 1
 		counts.append(shown)
 		print("SEPT %d %s status %s | new finals cards %d | %s" % [year, club, GameState.my_finals_status(), shown, " ".join(line)])
+		# Sacked with a job on offer: the audit takes the first club and goes on.
+		ClubMoves.take_first_offer(GameState)
 		if s == seasons - 1 or GameState.is_sacked():
 			break
 		GameState.open_offseason()
