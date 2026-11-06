@@ -567,7 +567,7 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"milestone_next": _milestone_next(gs, p), "injured_weeks": int(p.get("injury_weeks", 0)),
 			"rushable": int(p.get("injury_weeks", 0)) > 0 and str(p.get("injury_kind", "")) != "concussion",
 			"overall_rank": all_rank, "told_players": gs.story_flag_set(id, "farewell_told"),
-			"new_here": _new_here(gs, p), "trial_place": _trial_place(gs, id),
+			"new_here": _new_here(gs, p), "out_of_side": out_of_side(gs, p), "trial_place": _trial_place(gs, id),
 			"injury_kind": str(p.get("injury_kind", ""))}
 	# International prospects' cards: where he comes from and how far into his career he is.
 	var country: Dictionary = InternationalProspects.country(str(p.get("intl", "")))
@@ -599,6 +599,27 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			out["trial_tail"] = back
 	return out
 
+
+
+## Not getting senior games: out of your last side and either left out of the
+## two rounds before it as well, or picked in fewer than half of this season's
+## rounds. Before your first round only the last side counts. A regular who
+## sat out one week is not "pushing for games".
+const OUT_WEEKS := 2
+
+static func out_of_side(gs, p: Dictionary) -> bool:
+	var id := str(p.get("id", ""))
+	if gs.last_side.has(id):
+		return false
+	if gs.season == null:
+		return true
+	var rounds := int(gs.season.round_index)
+	if rounds <= 0:
+		return true
+	if gs.weeks_without_game(p) >= OUT_WEEKS:
+		return true
+	var played := int((gs.season_tally.get(id, {}) as Dictionary).get("games", 0))
+	return played * 2 < rounds
 
 
 ## Arrived this summer: signed or traded in last off-season, or drafted in it.

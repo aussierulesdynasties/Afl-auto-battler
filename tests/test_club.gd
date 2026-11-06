@@ -24,6 +24,7 @@ func run() -> void:
 	_t("_test_backing_rules")
 	_t("_test_backing_flow")
 	_t("_test_backing_card_guard")
+	_t("_test_pushing_for_games_needs_no_games")
 	_t("_test_fact_talks")
 	_t("_test_backing_lasts_the_season")
 	_t("_test_firsts_rules")
@@ -1194,6 +1195,52 @@ func _test_backing_card_guard() -> void:
 			RandomNumberGenerator.new()).is_empty() else 1
 	_check(drawn > 0 and drawn_backed == 0,
 			"The kid-pushing-for-games card is not drawn for a player on a run (%d v %d)" % [drawn, drawn_backed])
+
+
+## "Pushing for games" (and the finals-gone run home) is only for a kid who is
+## not getting senior games: never one picked every week, even on a week the
+## side for the coming round leaves him out (director, 2026-11-07: "Harry dean
+## already plays every game").
+func _test_pushing_for_games_needs_no_games() -> void:
+	_fresh_season()
+	GameState.season.round_index = 6
+	var y := int(GameState.season_year)
+	var make := func(src: Dictionary, id: String, played: int, last_round: int) -> Dictionary:
+		var p: Dictionary = src.duplicate(true)
+		p["id"] = id
+		p["age"] = 20.0
+		p["potential"] = int(p["overall"]) + 12
+		p.erase("injury_weeks")
+		p.erase("backing")
+		if last_round > 0:
+			p["last_game"] = [y, last_round]
+		else:
+			p.erase("last_game")
+		GameState.season_tally[id] = {"games": played}
+		return p
+	var regular: Dictionary = make.call(GameState.my_list[8], "t_regular", 6, 6)
+	var rested: Dictionary = make.call(GameState.my_list[9], "t_rested", 5, 5)
+	var kid: Dictionary = make.call(GameState.my_list[10], "t_kid", 0, 0)
+	var fringe: Dictionary = make.call(GameState.my_list[11], "t_fringe", 2, 4)
+	GameState.last_side = ["t_regular"]
+	var ctx := ClubStories.context(GameState)
+	for id in ["training_kid_pushing", "finals_gone"]:
+		var card := StoryDeck.by_id(StoryDeck.all(), id)
+		var drawn := func(p: Dictionary) -> bool:
+			# "selected" false for all: the coming round's side can leave out a
+			# regular (the reported bug); his recent games still count.
+			ctx["players"] = [ClubStories.player_fact(GameState, p, false, {}, 30, 0)]
+			return not StoryEngine.eligible_subject(card, ctx, StoryEngine.new_state(), 10,
+					RandomNumberGenerator.new()).is_empty() if id == "training_kid_pushing" 					else StoryEngine.meets(ctx["players"][0], (card["subject"] as Dictionary)["where"], {})
+		_check(not drawn.call(regular), "%s: never a kid picked every week" % id)
+		_check(not drawn.call(rested), "%s: never a regular who sat out one week" % id)
+		_check(drawn.call(kid), "%s: a fit young player left out all season can be" % id)
+		_check(drawn.call(fringe), "%s: a young player out of the last two sides can be" % id)
+	GameState.season_tally.erase("t_regular")
+	GameState.season_tally.erase("t_rested")
+	GameState.season_tally.erase("t_kid")
+	GameState.season_tally.erase("t_fringe")
+	GameState.last_side = []
 
 
 ## A run is saved with the career, waits out a long injury, and lapses with the
