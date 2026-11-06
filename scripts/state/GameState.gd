@@ -9267,6 +9267,11 @@ func auto_pick(strategy: String) -> Dictionary:
 				arr[arr.find(best_swap[1])] = best_swap[2]
 				ins.append("%s for %s" % [GameDB.player_display_name(by_id[best_swap[2]]),
 						GameDB.player_display_name(by_id[best_swap[1]])])
+			# A youngster in for the full-back is not the full-back: the
+			# line is laid out again so the key posts stay with key players.
+			for line in ["DEF", "FWD"]:
+				var laid := Roles.key_post_order((side2[line] as Array).map(func(id): return by_id[str(id)]), line)
+				side2[line] = laid.map(func(p): return str(p["id"]))
 			return {"side": side2, "note": ("Blooding: %s." % "; ".join(ins)) if not ins.is_empty()
 					else "No young player is close enough to a starter's spot: this is your best side."}
 		"mine":

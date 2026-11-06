@@ -94,6 +94,9 @@ func _assign(ground: Array, bench: Array) -> Array:
 	for role in buckets:
 		(buckets[role] as Array).sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
 	buckets["MID"] = _midfield_order(buckets["MID"])
+	# Key defenders and key forwards take the posts (Roles.key_post_order).
+	for line in ["DEF", "FWD"]:
+		buckets[line] = Roles.key_post_order(buckets[line], line)
 	var used := {}
 	var out: Array = []
 	for role in ["RUCK", "MID", "DEF", "FWD"]:
