@@ -90,11 +90,11 @@ func _run() -> void:
 	_save(out + "_selection.png")
 	sel.queue_free()
 	await _frames(2)
-	var prev: Control = load("res://scenes/MatchPreviewScene.tscn").instantiate()
-	root.add_child(prev)
+	var preview: Control = load("res://scenes/MatchPreviewScene.tscn").instantiate()
+	root.add_child(preview)
 	await _frames(15)
 	_save(out + "_week.png")
-	prev.queue_free()
+	preview.queue_free()
 	await _frames(2)
 
 	load("res://scripts/ui/StatsHubScene.gd").current = "fixture"
