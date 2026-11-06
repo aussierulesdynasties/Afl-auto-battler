@@ -20,6 +20,8 @@ func run() -> void:
 	GameDB.reload()
 	_t("_test_entry_gates")
 	_t("_test_fair_fixture")
+	_t("_test_return_spacing")
+	_t("_test_saved_fixture_kept")
 	_t("_test_2026_baseline")
 	_t("_test_rollover_to_2028")
 	_t("_test_2028_season_runs")
@@ -128,6 +130,67 @@ func _test_fair_fixture() -> void:
 			for sd in first_rest:
 				who[first_rest[sd]] = true
 			_check(who.size() >= 2, "%d clubs: who rests first follows the seed, not the club list (%s)" % [codes.size(), str(first_rest)])
+
+
+## A pair that meets twice meets at least RETURN_GAP rounds apart, never a
+## third time, and (nearly always) once in each half - at 18 to 21 clubs over
+## many seeds (director, 2026-11-07: Hawthorn in rounds 1 and 6).
+func _test_return_spacing() -> void:
+	var all_clubs: Array = GameDB.active_clubs(2030)
+	for n in [18, 19, 20, 21]:
+		var codes: Array = all_clubs.slice(0, mini(n, all_clubs.size()))
+		while codes.size() < n:
+			codes.append("NEW%d" % codes.size())
+		_check(codes.size() == n, "%d clubs to draw from" % n)
+		var lists := {}
+		for c in codes:
+			lists[c] = []
+		var closest := Season.REGULAR_ROUNDS
+		var returns := 0
+		var halves := 0
+		var thrice := []
+		for sd in range(1, 121):
+			var s := Season.new(codes, lists, sd * 7919)
+			var meets := {}
+			for ri in range(s.fixture.size()):
+				for m in s.fixture[ri]:
+					var a := str(m["home"])
+					var b := str(m["away"])
+					var key := a + "|" + b if a < b else b + "|" + a
+					if not meets.has(key):
+						meets[key] = []
+					(meets[key] as Array).append(ri)
+			for key in meets:
+				var at: Array = meets[key]
+				if at.size() > 2:
+					thrice.append("seed %d %s %s" % [sd * 7919, key, str(at)])
+				if at.size() == 2:
+					returns += 1
+					closest = mini(closest, int(at[1]) - int(at[0]))
+					if int(at[0]) < Season.REGULAR_ROUNDS / 2 and int(at[1]) >= Season.REGULAR_ROUNDS / 2:
+						halves += 1
+		_check(returns > 0, "%d clubs: some pairs meet twice" % n)
+		_check(closest >= Season.RETURN_GAP, "%d clubs: a pair's two meetings at least %d rounds apart over 120 seeds (closest %d)" % [
+				n, Season.RETURN_GAP, closest])
+		_check(thrice.is_empty(), "%d clubs: no pair meets three times (%s)" % [n, str(thrice.slice(0, 3))])
+		_check(halves * 100 >= returns * 95, "%d clubs: return games split first half / second half (%d of %d)" % [n, halves, returns])
+
+
+## A season already in a save keeps its fixture on loading: the builder can
+## change for new seasons without moving a saved one's games.
+func _test_saved_fixture_kept() -> void:
+	GameState.reset()
+	GameState.career_seed = SUITE_SEED
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	# One the builder never draws: the old round-robin-and-return shape.
+	GameState.season.fixture = GameState.season._legacy_fixture()
+	var saved := str(GameState.season.fixture)
+	_check(saved != str(GameState.season.build_fixture()), "the stand-in fixture differs from a fresh draw")
+	GameState.save_career()
+	GameState.reset()
+	_check(GameState.load_career(), "the career loads")
+	_check(str(GameState.season.fixture) == saved, "the saved fixture comes back unchanged, not redrawn")
+	GameState.delete_saved_career()
 
 
 # ---------------------------------------------------------------------------
@@ -507,11 +570,13 @@ func _test_created_club_career() -> void:
 	var played := 0
 	var home_ground_ok := true
 	for i in range(3):
+		# Gather Round (Rounds 3 to 7) plays every match in one state.
+		var gather := season.round_index == season.gather_round()
 		GameState.advance()
 		for res in GameState.last_results:
 			if str(res.get("home", "")) == "PMB" or str(res.get("away", "")) == "PMB":
 				played += 1
-			if str(res.get("home", "")) == "PMB" and res.has("venue"):
+			if str(res.get("home", "")) == "PMB" and res.has("venue") and not gather:
 				home_ground_ok = home_ground_ok and str(res["venue"]) == "North Port Oval"
 	_check(played >= 2, "The created club plays its matches (%d in three rounds)" % played)
 	_check(home_ground_ok, "Its home games are at its ground")
