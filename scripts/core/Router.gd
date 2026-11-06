@@ -20,25 +20,65 @@ const SCENES := {
 	"almanac": "res://scenes/AlmanacScene.tscn",
 }
 
+## Screens whose opening takes a while on a phone (their _ready builds a lot):
+## the cover says what is coming before the work starts (Android pass,
+## 2026-11-07: My list took 6-16 s on desktop with a frozen screen).
+const LINES := {
+	"list": "Loading your list...",
+	"selection": "Loading the team...",
+	"offseason": "The trade period opens...",
+	"season_review": "Looking back on the season...",
+	"preseason": "Pre-season begins...",
+}
+## A screen load still going after this long shows ScreenTransition.LOADING.
+const SLOW_MS := 150
+
 var stack: Array = []
 
 
 func go(key: String) -> void:
-	# Every screen change is a safe point to save (GameState skips it while a
-	# live match is half played).
-	GameState.autosave_if_dirty()
 	var path := str(SCENES.get(key, key))
 	if not ResourceLoader.exists(path):
 		push_error("Router: scene not found for '%s' (%s)" % [key, path])
 		return
 	stack.append(key)
-	# The wipe (ScreenTransition) swaps the screen under full cover; with motion
-	# off (headless, Reduced motion) the swap is instant, as before.
+	# Under the cover (ScreenTransition; still with Reduced motion) the save
+	# and the swap happen after the cover is drawn, and the scene loads on a
+	# thread while the dots sweep in. A headless test run swaps at once.
 	var wipe := get_node_or_null("/root/ScreenTransition")
-	if wipe != null and bool(wipe.call("should_run")):
-		wipe.call("cover", _swap.bind(key, path, false))
+	if wipe != null and bool(wipe.call("cover_on")):
+		ResourceLoader.load_threaded_request(path)
+		wipe.call("cover", _covered_swap.bind(key, path, wipe), str(LINES.get(key, "")))
 		return
+	# Every screen change is a safe point to save (GameState skips it while a
+	# live match is half played).
+	GameState.autosave_if_dirty()
 	_swap(key, path, true)
+
+
+## Under full cover: save, wait for the threaded load (the line goes up if it
+## is slow), then swap.
+func _covered_swap(key: String, path: String, wipe: Node) -> void:
+	if GameState._dirty:
+		wipe.call("show_line", ScreenTransition.LOADING)
+		await wipe.call("drawn")
+	GameState.autosave_if_dirty()
+	var started := Time.get_ticks_msec()
+	while ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		if Time.get_ticks_msec() - started >= SLOW_MS:
+			wipe.call("show_line", ScreenTransition.LOADING)
+		await get_tree().process_frame
+	var packed: PackedScene = null
+	if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_LOADED:
+		packed = ResourceLoader.load_threaded_get(path) as PackedScene
+	if packed == null:
+		_swap(key, path, false)
+		return
+	var err := get_tree().change_scene_to_packed(packed)
+	if err != OK:
+		push_error("Router: change_scene_to_packed failed (%d) for %s" % [err, path])
+		return
+	MusicManager.set_context(key)
 
 
 func _swap(key: String, path: String, ease_in: bool) -> void:

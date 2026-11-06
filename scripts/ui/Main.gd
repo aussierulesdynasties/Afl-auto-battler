@@ -317,8 +317,14 @@ func _meta_line(meta: Dictionary) -> String:
 
 
 func _on_continue() -> void:
-	if GameState.load_career():
-		Router.go("hub" if GameState.season != null else "draft")
+	# Loading a career takes seconds on a phone: the cover and its line go up
+	# first, and the screen change joins the same cover.
+	var ok := [false]
+	await ScreenTransition.run("Loading your career...", func():
+		ok[0] = GameState.load_career()
+		if ok[0]:
+			Router.go("hub" if GameState.season != null else "draft"))
+	if ok[0]:
 		return
 	var why := GameState.saved_career_problem()
 	_load_error.text = why if why != "" else GameState.SAVE_UNREADABLE
