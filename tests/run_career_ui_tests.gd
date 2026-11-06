@@ -349,6 +349,8 @@ func _run() -> void:
 	await _t("_test_new_career_keeps_the_save")
 	await _t("_test_new_career_canberra_choice")
 	await _t("_test_pc_hub_and_list_layout")
+	for sz in [Vector2i(2560, 1440), Vector2i(1920, 1080), Vector2i(1280, 720)]:
+		await _t("_test_hub_ladder_fills_right", [sz])
 	await _t("_test_list_shape_fits_phones")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_list_words_fit", [sz])
@@ -2782,6 +2784,54 @@ func _test_pc_hub_and_list_layout() -> void:
 	var cap_title: Control = cap.find_child("SectionTitle", true, false) if cap != null else null
 	_check(cap_title != null and cap_title.size.x >= 60.0, "The Captaincy label is visible beside the names (%.0f wide)" % (cap_title.size.x if cap_title != null else -1.0))
 	_check(cap != null and cap.size.x < 640.0 and cap.size.y >= 44.0, "My list's Captaincy row is not a bar across the PC window and is thumb high (%.0f x %.0f)" % [cap.size.x if cap != null else -1.0, cap.size.y if cap != null else -1.0])
+
+
+## The hub's ladder leaves no dead space beside it on a wide window (row 109,
+## 6.Q18: at 2560 the table ended a third of the way across its column). The
+## ladder table ends within a column gap of whatever is right of it: the front
+## page when there is news, the window's edge when there is none.
+func _test_hub_ladder_fills_right(sz: Vector2i) -> void:
+	var tag := "%dx%d" % [sz.x, sz.y]
+	root.size = sz
+	var news := [
+		{"year": 2027, "when": "Round 1", "kind": "game", "text": "Shannon Neale kicked 6 goals for Geelong against Sydney."},
+		{"year": 2027, "when": "Round 1", "kind": "injury", "text": "Josh Battle (Hawthorn) is out for 8 weeks with a hand."},
+	]
+	for with_news in [false, true]:
+		var case := "%s, %s" % [tag, "news" if with_news else "no news"]
+		_state.reset()
+		_state.start_season("COL", _db.club_list("COL"))
+		_state.news = news.duplicate(true) if with_news else []
+		_router.stack = []
+		_router.go("main")
+		await _settle()
+		_router.go("hub")
+		await _settle()
+		await _settle()
+		var section: Control = current_scene.find_child("LadderSection", true, false)
+		var cols: Control = current_scene.find_child("HubColumns", true, false)
+		_check(section != null and cols != null, "The wide hub has its columns and the ladder (%s)" % case)
+		if section == null or cols == null:
+			continue
+		# The table: the section's widest child below its heading.
+		var table_end := 0.0
+		for c in section.get_children():
+			if c is Control and (c as Control).visible:
+				table_end = maxf(table_end, (c as Control).get_global_rect().end.x)
+		var right_of: float = cols.get_global_rect().end.x
+		var host := section.get_parent()
+		var at := section.get_index()
+		if at + 1 < host.get_child_count():
+			right_of = (host.get_child(at + 1) as Control).get_global_rect().position.x
+		var gap := right_of - table_end
+		_check(gap <= 30.0, "The ladder leaves no dead space to its right (%s: %.0f px to %s)" % [
+				case, gap, "the front page" if at + 1 < host.get_child_count() else "the edge"])
+		if with_news:
+			var front: Control = host.get_child(at + 1) as Control if at + 1 < host.get_child_count() else null
+			_check(front != null and front.size.x > section.size.x,
+					"With news, the front page takes the room the ladder leaves (%s: %.0f vs %.0f)" % [
+					case, front.size.x if front != null else -1.0, section.size.x])
+	_state.news = []
 
 
 ## The Shape pane on My list is reachable on a phone (the screen sweep,

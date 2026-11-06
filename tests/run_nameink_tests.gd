@@ -50,6 +50,7 @@ func _run() -> void:
 		_state.set_setting("seen_%s_intro" % key, true)
 	_state.delete_saved_career()
 	_t("_test_helper")
+	_t("_test_tinted_ink")
 	await _t("_test_match_screen")
 	print(Ran.line("Name colour", self))
 	quit(0 if _failures.is_empty() else 1)
@@ -120,6 +121,50 @@ func _test_helper() -> void:
 	_check(worst >= 4.5, "Every club's ink reads on the dark page (lowest %.1f, %s)" % [worst, worst_club])
 	_check(UK.club_ink("ADE").to_html(false).to_upper() == "FFC83A",
 			"Adelaide's name ink is the Crows' gold, not a red that reads as Melbourne or Essendon (director, 2026-10-14)")
+
+
+## Club ink on a club-tinted panel (row 109, 6.Q18): the news lead's panel, a
+## training card and a sheet's wash carry a share of a club's colour, and any
+## club's ink on any of them reads at 4.5:1 or better, both inks, every pairing
+## (a home wash can carry the away side's names).
+func _test_tinted_ink() -> void:
+	var clubs: Array = _db.club_order
+	_check(clubs.size() >= 18, "Every club is in the loop (%d)" % clubs.size())
+	var kinds: Array = UK.TINT_SHARE.keys()
+	_check(kinds.size() == 3, "Three tinted panel kinds: the news lead, a training card, a sheet's wash")
+	for kind in kinds:
+		var worst := 99.0
+		var worst_pair := ""
+		var under_old := 0
+		for tint_club in clubs:
+			var surface: Color = UK.tinted(str(kind), UK.club_ink(str(tint_club)))
+			for code in clubs:
+				for which in 2:
+					var ink: Color = UK.club_ink(str(code), surface) if which == 0 							else UK.club_ink_second(str(code), surface)
+					var ratio: float = UK.contrast(ink, surface)
+					if ratio < worst:
+						worst = ratio
+						worst_pair = "%s ink %d on %s" % [code, which + 1, tint_club]
+					var hand: Color = UK.club_ink(str(code)) if which == 0 else UK.club_ink_second(str(code))
+					if UK.contrast(hand, surface) < 4.5:
+						under_old += 1
+		_check(worst >= 4.5, "Every club's ink reads at 4.5:1 on a %s tinted panel (lowest %.2f, %s)" % [kind, worst, worst_pair])
+		# The check has teeth: the hand-picked inks as they were drawn before
+		# (not lifted for the surface) fall under 4.5:1 here.
+		_check(under_old > 0, "The unlifted inks fall short on a %s panel (%d pairs), so the lift is what passes" % [kind, under_old])
+	# The lift keeps the club's hue: Melbourne's red on its own lead panel stays red.
+	var mel_surface: Color = UK.tinted("story", UK.club_ink("MEL"))
+	var mel: Color = UK.club_ink("MEL", mel_surface)
+	_check(absf(mel.h - UK.club_ink("MEL").h) < 0.02 and mel.s > 0.5,
+			"A lifted ink keeps its club's hue (Melbourne %s)" % mel.to_html(false))
+	# The screens draw these surfaces, not their own mix.
+	var NF = load("res://scripts/ui/NewsFront.gd")
+	_check((NF._wash("NTH") as Color).is_equal_approx(UK.tinted("story", UK.club_ink("NTH"))),
+			"The news lead's panel is the shared story tint")
+	var TS = load("res://scripts/ui/TrainingScene.gd")
+	var card: StyleBoxFlat = TS._card_style(false, UK.club_ink("CAR"))
+	_check(card.bg_color.is_equal_approx(UK.tinted("card", UK.club_ink("CAR"))),
+			"A training card's surface is the shared card tint")
 
 
 func _test_match_screen() -> void:

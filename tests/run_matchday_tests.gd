@@ -3354,6 +3354,7 @@ func _test_break_panes_layout() -> void:
 		_check(ask != null and tag_picker != null and ask.get_parent() == tag_picker.get_parent()
 				and ask.get_index() < tag_picker.get_index(), "...above the choices, in the Tag block (%s)" % tag)
 		await _matchup_rows(m, box, tag)
+		_notes_above_floor(box, "pre-bounce, " + tag)
 		if sz.x >= 1200:
 			var cols_node: Control = box.find_child("BreakColumns", true, false)
 			var cols: Array = cols_node.get_children()
@@ -3402,6 +3403,8 @@ func _test_break_panes_layout() -> void:
 		await _settle()
 		await _settle()
 		var box2: Node = m2.find_child("CoachBox", true, false)
+		if box2 != null:
+			_notes_above_floor(box2, "quarter time, " + tag)
 		var row: Node = box2.find_child("CallRow_mu", true, false) if box2 != null else null
 		_check(row != null, "Quarter time has the key match-ups row (%s)" % tag)
 		if row != null:
@@ -3432,6 +3435,39 @@ func _test_break_panes_layout() -> void:
 		m2.queue_free()
 		await _settle()
 	_state.replay_seed = seed_before
+
+
+## The notes under the calls in a break pane are read mid-match (row 109,
+## 6.Q18): every word in them is drawn above the 13 px floor at the screen's
+## own scale, i.e. at UiKit.NOTE (14) or larger.
+const BREAK_NOTES := ["TagNote", "DefenceNote", "LooseTally", "SkipNote", "LegsView", "MyInterceptor", "AssistantNote"]
+
+
+func _notes_above_floor(box: Node, tag: String) -> void:
+	var found := []
+	var small := []
+	for nm in BREAK_NOTES:
+		var n: Node = box.find_child(nm, true, false)
+		if n == null or not (n as Control).is_visible_in_tree():
+			continue
+		found.append(nm)
+		var texts: Array = n.find_children("*", "Control", true, false)
+		texts.append(n)
+		for c in texts:
+			var fs := 0
+			if c is RichTextLabel:
+				fs = (c as Control).get_theme_font_size("normal_font_size")
+			elif c is Label:
+				fs = (c as Control).get_theme_font_size("font_size")
+			else:
+				continue
+			if not (c as Control).is_visible_in_tree():
+				continue
+			var px := float(fs) * (c as Control).get_global_transform().get_scale().y
+			if px <= 13.0:
+				small.append("%s %.0f px" % [nm, px])
+	_check(found.size() >= 2, "The break pane has its notes (%s: %s)" % [tag, str(found)])
+	_check(small.is_empty(), "Break-pane notes are above 13 px (%s: %s)" % [tag, str(small)])
 
 
 func _plain_of(c: Control) -> String:

@@ -206,7 +206,15 @@ func _test_page() -> void:
 	for lb in b2.find_children("*", "Label", true, false):
 		if (lb as Label).text.contains(melp) and (lb as Label).text.contains("suspended"):
 			mro_row = lb
-	_check(mro_row != null and mro_row.get_theme_color("font_color") == _ui.club_ink("MEL"), "A red club's player is in the club's red, not plain white")
+	# A lead sits on its club's tinted panel, where the red is lifted to read (row 109).
+	var in_lead := false
+	var up: Node = mro_row
+	while up != null and up != b2:
+		in_lead = in_lead or up.name == "Lead"
+		up = up.get_parent()
+	var mel_red: Color = _ui.club_ink("MEL", _nf._wash("MEL")) if in_lead else _ui.club_ink("MEL")
+	_check(mro_row != null and mro_row.get_theme_color("font_color") == mel_red
+			and mel_red != _ui.TEXT, "A red club's player is in the club's red, not plain white")
 	b2.queue_free()
 
 

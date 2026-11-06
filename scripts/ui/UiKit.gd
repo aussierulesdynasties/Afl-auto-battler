@@ -134,6 +134,7 @@ const HEADING := H2         # a section heading
 const NAME := 16            # a player or club name leading a row; button text
 const SECONDARY := 14       # the line under it (14, not 13: the sign face thins out under 14)
 const FINE := 13            # stamps and fine print (13 px is the readability floor, screen lint rule)
+const NOTE := SECONDARY     # a note under a call in the match's panes: read mid-match, so above the floor (6.Q18)
 const RATING := 30          # a rating as a figure (DISPLAY)
 const SCORE := 24           # a match score as a figure (DISPLAY)
 const NUMBER := 22          # a score in a list row (DISPLAY)
@@ -525,9 +526,48 @@ static func readable_ink(colour: Color, surface := AUTO_COLOUR) -> Color:
 	return TEXT
 
 
+## The club-tinted surfaces text sits on, each a base colour with this share of
+## a club's colour mixed in (row 109, director 6.Q18: club ink reaches 4.5:1 on
+## them). "story": the news lead panel; "card": a training player card;
+## "sheet": the top of a sheet's wash (modal_box), its strongest point.
+const TINT_SHARE := {"story": 0.22, "card": 0.18, "sheet": 0.30}
+
+
+## The colour of a club-tinted surface of `kind` (TINT_SHARE) in `tint`. Text
+## in a club's colour on it takes club_ink(code, tinted(kind, tint)).
+static func tinted(kind: String, tint: Color) -> Color:
+	var base := PANEL_ALT if kind == "card" else PANEL
+	return base.lerp(Color(tint, 1.0), float(TINT_SHARE[kind]))
+
+
+## `colour` unchanged when it reads at 4.5:1 on `surface`; else brightened along
+## its own hue to full value, then paled toward white a step at a time, and
+## the first step that reads is kept (a blue stays a blue, only lighter).
+static func _lift_on(colour: Color, surface: Color) -> Color:
+	if contrast(colour, surface) >= 4.5:
+		return colour
+	var h := colour.h
+	var sat := colour.s
+	var val := colour.v
+	for i in 80:
+		if val < 1.0:
+			val = minf(1.0, val + 0.04)
+		else:
+			sat = maxf(0.0, sat - 0.02)
+		var cand := Color.from_hsv(h, sat, val)
+		if contrast(cand, surface) >= 4.5:
+			return cand
+	return TEXT
+
+
 static func _ink(code: String, which: int, surface) -> Color:
-	if CLUB_INKS.has(code) and _appearance == "dark" and surface == AUTO_COLOUR:
-		return Color(str((CLUB_INKS[code] as Array)[which]))
+	if CLUB_INKS.has(code) and _appearance == "dark":
+		var picked := Color(str((CLUB_INKS[code] as Array)[which]))
+		if surface == AUTO_COLOUR:
+			return picked
+		# On a club-tinted surface the hand-picked ink is lifted along its own
+		# hue only as far as it takes to read there.
+		return _lift_on(picked, surface)
 	if surface == AUTO_COLOUR:
 		surface = PANEL
 	var slot := int(INK_SLOT.get(code, 0))
@@ -1600,7 +1640,7 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 	shell.draw.connect(func() -> void:
 		var w := shell.size.x
 		var h := minf(shell.size.y * 0.5, 220.0)
-		var top := Color(lead, 0.30)
+		var top := Color(lead, float(TINT_SHARE["sheet"]))
 		var none := Color(lead, 0.0)
 		shell.draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, h), Vector2(0, h)]),
 				PackedColorArray([top, top, none, none])))
