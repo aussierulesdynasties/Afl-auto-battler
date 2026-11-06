@@ -21,8 +21,9 @@ func run() -> void:
 	_t("_test_weights")
 	_t("_test_defender_leads_the_back_zone")
 	_t("_test_back_carrier_follows_ball_use")
-	_t("_test_rebound_owed_not_credited_at_contest")
-	_t("_test_rebound_to_disposer_out_of_d50")
+	_t("_test_no_rebound_at_the_contest")
+	_t("_test_rebound_is_the_disposal_out_of_d50")
+	_t("_test_no_rebound_outside_d50")
 	_t("_test_spoil_goes_to_ground_ball_winner")
 	print(Ran.line("Back carries", self))
 
@@ -58,9 +59,26 @@ func _picks(sim: MatchSim, fp: float) -> Dictionary:
 
 func _test_weights() -> void:
 	var tuned: Dictionary = MatchSim.CARRY_BACK_RETUNED
-	_check(is_equal_approx(float(tuned["DEF"]), 3.3), "a defender's back-zone weight on ball use is 3.3 (%s)" % tuned["DEF"])
+	_check(is_equal_approx(float(tuned["DEF"]), 0.55), "a defender's back-zone weight is row 92's 0.55 (%s)" % tuned["DEF"])
 	for r in [["MID", 1.0], ["RUCK", 0.3], ["FWD", 0.12]]:
 		_check(is_equal_approx(float(tuned[r[0]]), float(r[1])), "%s back-zone weight is %s" % r)
+	# On ball use, each line's total weight is what row 92's intercept pick
+	# gave it, for every club's list: who in a line gets it changes, not how
+	# much each line gets.
+	var sim := _sim(31)
+	var same := true
+	for club in GameDB.club_order:
+		var ground: Array = (Squad.new(club, GameDB.club_list(club), true, club) as Squad).ground
+		var roles: Dictionary = sim._back_roles(ground)
+		var on_use := {}
+		var on_int := {}
+		for p in ground:
+			var r := str(p["role"])
+			on_use[r] = float(on_use.get(r, 0.0)) + float(roles[r]) * pow(maxf(1.0, sim._ball_use(p)), 2.0)
+			on_int[r] = float(on_int.get(r, 0.0)) + float(tuned[r]) * pow(maxf(1.0, sim._a(p, "intercept")), 2.0)
+		for r in on_int:
+			same = same and absf(float(on_use[r]) - float(on_int[r])) <= 1e-6 * float(on_int[r])
+	_check(same, "each line's back-zone weight on ball use equals its weight on intercept (row 92's split)")
 
 
 ## The pinned behaviour: 4,000 back-zone picks for Fremantle (seed 31): a
@@ -101,9 +119,9 @@ func _test_back_carrier_follows_ball_use() -> void:
 			"ball use is kick_in_taker's carry/disposal blend")
 
 
-## A failed entry: the defence has it, but the rebound 50 is not credited at
-## the contest; it is owed to the defending side (seeded entries).
-func _test_rebound_owed_not_credited_at_contest() -> void:
+## A failed entry: the defence has it, but no rebound 50 is credited at the
+## contest, to the team or to the man who won it (seeded entries).
+func _test_no_rebound_at_the_contest() -> void:
 	var turnovers := 0
 	var clean := true
 	for seed in range(40):
@@ -116,61 +134,68 @@ func _test_rebound_owed_not_credited_at_contest() -> void:
 		turnovers += 1
 		var pid := str((res["actor"] as Dictionary)["id"])
 		clean = clean and float(sim.team_stats[1].get("rebounds", 0.0)) == 0.0 \
-				and float(sim.player_stats.get(pid, {}).get("rebounds", 0.0)) == 0.0 \
-				and sim._rebound_owed == 1
+				and float(sim.player_stats.get(pid, {}).get("rebounds", 0.0)) == 0.0
 	_check(turnovers > 0, "some seeded entries are turned over (%d)" % turnovers)
-	_check(clean, "a turned-over entry credits no rebound 50 at the contest; it is owed to the defence")
+	_check(clean, "a turned-over entry credits no rebound 50 at the contest")
 
 
-## The owed rebound 50 goes to the player whose kick or handball takes it out
-## of defensive 50. The credit draws no dice, so the same seed with nothing
-## owed plays the same chain: the difference is that one disposal.
-func _test_rebound_to_disposer_out_of_d50() -> void:
-	var credited := 0
+## One definition (Champion Data): the rebound 50 is the kick or handball that
+## takes the ball from inside defensive 50 out of it, however the side came by
+## it. Chains for side 1 from deep in its defensive 50 after a turnover, a
+## ball-up there and a kick-in: each credits at most one rebound 50 (a chain
+## only goes forward, so it leaves once), to a side-1 player who disposed of
+## the ball in that chain, and the team count matches; every origin credits some.
+func _test_rebound_is_the_disposal_out_of_d50() -> void:
+	var at_most_one := true
 	var right_man := true
-	var f50 := float(Ratings.T["forward50_line"])
+	var by_origin := {"turnover": 0, "stoppage": 0, "kick_in": 0}
+	for origin in by_origin:
+		for seed in range(60):
+			var c := _chain_from(4300 + seed, origin, 60.0)
+			var total := 0
+			for id in c["reb"]:
+				total += int(c["reb"][id])
+			at_most_one = at_most_one and total <= 1 and int(c["team"]) == total
+			if total == 0:
+				continue
+			by_origin[origin] += 1
+			var id: String = (c["reb"] as Dictionary).keys()[0]
+			var disposed := false
+			for ev in c["events"]:
+				if str(ev.get("player_id", "")) == id and int(ev.get("side", -1)) == 1 \
+						and str(ev.get("kind", "")) in ["kick", "handball", "mark", "kick_in"]:
+					disposed = true
+			right_man = right_man and disposed
+	_check(at_most_one, "a chain out of defensive 50 credits one rebound 50 at most, and the team's matches")
+	_check(right_man, "the rebound 50 is a side-1 player's who disposed of the ball in that chain")
+	for origin in by_origin:
+		_check(int(by_origin[origin]) > 5, "a chain out of defence from a %s credits a rebound 50 (%d of 60)" % [origin, by_origin[origin]])
+
+
+## A chain that starts outside defensive 50 never leaves it, so it credits no
+## rebound 50 (the old band, 67-73 m from goal, counted some of these).
+func _test_no_rebound_outside_d50() -> void:
+	var clean := true
 	for seed in range(60):
-		var with_owed := _chain_from_d50(4300 + seed, true)
-		var without := _chain_from_d50(4300 + seed, false)
-		var diff := {}
-		for id in with_owed["reb"]:
-			var d := int(with_owed["reb"][id]) - int((without["reb"] as Dictionary).get(id, 0))
-			if d != 0:
-				diff[id] = d
-		for id in without["reb"]:
-			if not (with_owed["reb"] as Dictionary).has(id):
-				diff[id] = -int(without["reb"][id])
-		if diff.is_empty():
-			continue
-		credited += 1
-		if diff.size() != 1 or int(diff.values()[0]) != 1:
-			right_man = false
-			continue
-		var id: String = diff.keys()[0]
-		# He disposed of it from inside his defensive 50 in this chain.
-		var from_d50 := false
-		for ev in with_owed["events"]:
-			if str(ev.get("player_id", "")) == id and int(ev.get("side", -1)) == 1 \
-					and str(ev.get("kind", "")) in ["kick", "handball", "mark"] and -float(ev.get("fp", 0.0)) <= f50:
-				from_d50 = true
-		right_man = right_man and from_d50
-	_check(credited > 10, "the owed rebound 50 is credited in most chains out of defence (%d of 60)" % credited)
-	_check(right_man, "it goes to one player, once, who disposed of it inside defensive 50")
+		var c := _chain_from(4700 + seed, "turnover", 30.0)
+		clean = clean and int(c["team"]) == 0 and (c["reb"] as Dictionary).is_empty()
+	_check(clean, "a chain from 30 m out of defensive 50's line credits no rebound 50")
 
 
-## Play one chain for side 1 from a ball won back 50 m out from its own goal
-## (fp 50, side 0 attacking): the rebound 50s it credits (id -> count) and its events.
-func _chain_from_d50(seed: int, owed: bool) -> Dictionary:
+## Play one chain for side 1 (attacking toward negative fp) from fp: after a
+## turnover there, a ball-up there, or a kick-in after side 0's behind.
+## {"reb": id -> rebound 50s, "team": side 1's, "events": the chain's}.
+func _chain_from(seed: int, origin: String, at_fp: float) -> Dictionary:
 	var sim := _sim(seed)
 	sim.begin_quarter()
 	sim.at_centre = false
-	sim.kick_in = false
+	sim.kick_in = origin == "kick_in"
 	sim.boundary_throw_in = false
-	sim.fp = 50.0
-	sim._prev_end = "turnover"
+	sim._prev_locked = origin == "stoppage"
+	sim.fp = sim.kick_in_fp(0) if origin == "kick_in" else at_fp
+	sim._prev_end = "turnover" if origin == "turnover" else "general"
 	sim.next_side = 1
 	sim._won_back = {}
-	sim._rebound_owed = 1 if owed else -1
 	var before := sim.events.size()
 	sim._play_one_chain(sim._rates())
 	var reb := {}
@@ -178,16 +203,18 @@ func _chain_from_d50(seed: int, owed: bool) -> Dictionary:
 		var n := int(sim.player_stats[id].get("rebounds", 0.0))
 		if n > 0:
 			reb[id] = n
-	return {"reb": reb, "events": sim.events.slice(before)}
+	return {"reb": reb, "team": int(sim.team_stats[1].get("rebounds", 0.0)), "events": sim.events.slice(before)}
 
 
 ## A spoiled entry: whoever wins the ground ball has it (the spoiler only some
 ## of the time), the feed names him, and the next chain's first touch is his.
+## The intercept stays the spoiler's: a teammate who gathers is not credited one.
 func _test_spoil_goes_to_ground_ball_winner() -> void:
 	var spoils := 0
 	var other_man := 0
 	var first_touch_ok := true
 	var text_ok := true
+	var intercept_ok := true
 	for seed in range(200):
 		var sim := _sim(4500 + seed)
 		sim.begin_quarter()
@@ -201,7 +228,11 @@ func _test_spoil_goes_to_ground_ball_winner() -> void:
 		spoils += 1
 		var gid := str((res["actor"] as Dictionary)["id"])
 		text_ok = text_ok and str(ev.get("kind", "")) == "rebound" and str(ev.get("player_id", "")) == gid \
-				and bool(sim._won_back.get("gathered", false)) and not bool(sim._won_back.get("marked", false))
+				and str(sim._won_back.get("gatherer", "")) == gid and not bool(sim._won_back.get("marked", false))
+		var sid := str(sim._won_back.get("id", ""))
+		intercept_ok = intercept_ok and float(sim.team_stats[1].get("intercepts", 0.0)) == 1.0 \
+				and float(sim.player_stats.get(sid, {}).get("intercepts", 0.0)) == 1.0 \
+				and (gid == sid or float(sim.player_stats.get(gid, {}).get("intercepts", 0.0)) == 0.0)
 		if not str(ev.get("text", "")).contains("and wins it"):
 			other_man += 1
 		# The next chain starts from him.
@@ -221,3 +252,4 @@ func _test_spoil_goes_to_ground_ball_winner() -> void:
 	_check(text_ok, "the feed names the ground-ball winner as the one who has it, gathered not marked")
 	_check(other_man > 0, "the ground ball is not always the spoiler's (%d of %d to someone else)" % [other_man, spoils])
 	_check(first_touch_ok, "the next chain's first touch is the ground-ball winner's")
+	_check(intercept_ok, "the intercept is the spoiler's; a teammate who gathers it is not credited one")

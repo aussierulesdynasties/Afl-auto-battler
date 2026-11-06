@@ -399,7 +399,7 @@ func _test_free_set_shots_counted() -> void:
 	_check(frees > 0 and counted, "A set shot from a free in 50 counts in the taker's set shots (%d scored)" % frees)
 	_check(no_false_mark, "A free kicked short never says the defender marked it (%d short)" % short_frees)
 	# ...and the defender who gathers a short one is not credited a rebound 50
-	# there: it is owed to whoever takes it out of defensive 50 (director
+	# there: it is whoever's disposal takes it out of defensive 50 (director
 	# 2026-11-07; short frees are rare in a match, so shots are taken from 80 m
 	# until one falls short).
 	var fs := _sim(7900)
@@ -419,10 +419,9 @@ func _test_free_set_shots_counted() -> void:
 			continue
 		var bid := str((res["actor"] as Dictionary)["id"])
 		var team_ok := float(fs.team_stats[1].get("rebounds", 0.0)) == team_before
-		short_ok = team_ok and float(fs.player_stats.get(bid, {}).get("rebounds", 0.0)) == float(his_before.get(bid, 0.0)) \
-				and fs._rebound_owed == 1
+		short_ok = team_ok and float(fs.player_stats.get(bid, {}).get("rebounds", 0.0)) == float(his_before.get(bid, 0.0))
 		break
-	_check(short_ok, "A free kicked short owes the defence its rebound 50 rather than crediting the gatherer")
+	_check(short_ok, "A free kicked short credits the gathering defender no rebound 50 at the contest")
 
 
 ## Row 12: a clanger that ends a chain in the wet or the wind names it and
