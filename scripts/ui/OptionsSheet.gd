@@ -191,6 +191,11 @@ static func _volume_row(v: VBoxContainer) -> void:
 	head.add_child(title)
 	var pct := UiKit.lbl("%d%%" % GameState.volume(), UiKit.BODY, UiKit.TEXT, true)
 	pct.name = "SettingsVolumeValue"
+	# One line, right-aligned and wide enough for "100%", so the number never
+	# wraps a digit per line or nudges as the thumb moves.
+	pct.autowrap_mode = TextServer.AUTOWRAP_OFF
+	pct.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	pct.custom_minimum_size = Vector2(56, 0)
 	head.add_child(pct)
 	v.add_child(head)
 	var s := HSlider.new()
