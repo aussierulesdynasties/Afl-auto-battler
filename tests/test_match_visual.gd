@@ -779,9 +779,10 @@ func _test_truth(res: Dictionary) -> Array:
 ## Yardstick as tools/visual/trace_collect.gd: a collect of 1.5 s or more of
 ## match time. Seed 42: 31 such pauses (4 right after a pressure act, the named
 ## player 40 m off on average) before, 9 (0, 30 m) after; four trace seeds
-## 139 -> 47. The caps leave room for sim changes redrawing the match.
+## 139 -> 47. The caps leave room for sim changes redrawing the match (the
+## 1.0.7 tuning measured 13: 14, director 2026-11-06, loosen to measured).
 const PAUSE_S := 1.5
-const PAUSE_MAX := 12
+const PAUSE_MAX := 14
 const PAUSE_PRESSURE_MAX := 1
 
 
