@@ -97,6 +97,13 @@ var injured_off := [[], []]
 ## goal from a turnover can say whose intercept it came from.
 var _won_back := {}
 var _chain_from := {}
+## The side that won the ball back inside its defensive 50 (a failed entry, a
+## set shot that fell short): its rebound 50 is owed to whoever kicks or
+## handballs it out of there in the next chain (director 2026-11-07), not to
+## the defender who won it. -1 when none is owed. _owe_rebound: still owed
+## in the chain being played.
+var _rebound_owed := -1
+var _owe_rebound := false
 ## The coach's set-shot call while it plays out ({"key"}): every event it
 ## produces carries "choice", and its result also "setshot".
 var _set_choice := {}
@@ -1248,8 +1255,17 @@ const CARRY_ROLES := {
 ## Back-zone carrying retuned (row 92, T9.Q22, director 2026-11-06: defenders
 ## carry the ball more than real AFL). A defender still leads the back zone's
 ## ball, a midfielder drops back to take more of it. The back zone's weights
-## (CARRY_ROLES holds the other zones').
-const CARRY_BACK_RETUNED := {"DEF": 0.55, "MID": 1.0, "RUCK": 0.3, "FWD": 0.12}
+## (CARRY_ROLES holds the other zones'). The defender weight was 0.55 on the
+## intercept rating; picked on ball use (2026-11-07), where a defender rates
+## lower against a midfielder, 3.3 keeps the same defender share of the back
+## zone (63% of carrier weight across all 20 lists, as before).
+const CARRY_BACK_RETUNED := {"DEF": 3.3, "MID": 1.0, "RUCK": 0.3, "FWD": 0.12}
+## The rating a back-zone carrier is picked on (director 2026-11-07): his use
+## of the ball, the carry/disposal blend kick_in_taker uses, not his
+## intercepting, so the best spoiler is not also the one the ball goes to.
+const BALL_USE := "ball_use"
+const BALL_USE_CARRY := 0.58
+const BALL_USE_DISPOSAL := 0.42
 ## Forward archetypes (ARD-M3-002), by size as Training's jobs: a key
 ## forward from 192 cm, a small forward up to 181 cm, a general forward
 ## between. Key forwards present in the air inside 50 and bring the ball to
@@ -1318,7 +1334,8 @@ func _weighted_roles(group: Array, key: String, roles: Dictionary, power := 2.0,
 		ctx["zone"] = zone
 	var weights := []
 	for p in group:
-		var w: float = float(roles.get(str(p["role"]), 0.0)) * pow(maxf(1.0, _a(p, key)), power)
+		var rating := _ball_use(p) if key == BALL_USE else _a(p, key)
+		var w: float = float(roles.get(str(p["role"]), 0.0)) * pow(maxf(1.0, rating), power)
 		if not sizes.is_empty() and str(p["role"]) == "FWD":
 			w *= float(sizes.get(fwd_size(p), 1.0))
 		if side >= 0:
@@ -2583,7 +2600,7 @@ func pick_carrier(side: int, fp: float, among: Array = []):
 	var purpose := "carrier"
 	if atk_fp < -10.0:
 		zone = "back"
-		key = "intercept"
+		key = BALL_USE
 	elif atk_fp > float(T["forward50_line"]):
 		zone = "inside"
 		key = "goalkicking"
@@ -2615,7 +2632,7 @@ func kick_in_taker(side: int):
 	var best = null
 	var best_v := -INF
 	for p in pool:
-		var v := 0.58 * _a(p, "carry") + 0.42 * _a(p, "disposal")
+		var v := _ball_use(p)
 		if best == null or v > best_v or (is_equal_approx(v, best_v)
 				and str(p.get("id", "")) < str(best.get("id", ""))):
 			best = p
@@ -2962,9 +2979,11 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		last_kicker = null
 		if touches == 1 and clearance_keeps and cleared != null and not is_kick_in:
 			carrier = cleared
-		# He marked it, so he takes the kick: the carrier pick is still drawn,
+		# He marked it, so he takes the kick; or he won the ground ball off a
+		# spoil, so the first touch is his. The carrier pick is still drawn,
 		# so the rest of the chain's dice are where they were.
-		if touches == 1 and chain_origin == "turnover" and bool(_chain_from.get("marked", false)):
+		if touches == 1 and chain_origin == "turnover" and (bool(_chain_from.get("marked", false))
+				or bool(_chain_from.get("gathered", false))):
 			var marker := _on_ground(side, str(_chain_from.get("id", "")))
 			if not marker.is_empty():
 				carrier = marker
@@ -3202,6 +3221,16 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		_last_disp["kind"] = disposal_kind
 		_metres(side, carrier, atk_fp - prev_atk_fp)
 		_run_and_carry(side, carrier, atk_fp - prev_atk_fp, rushed or tackled, is_kick_in, disposal_event, prev_atk_fp)
+		# The rebound 50 owed from winning it back in defence: his, if this
+		# kick or handball takes it out of defensive 50 (Champion Data counts
+		# it whatever happens to the ball next). One a disposal: the band
+		# check below does not count it again.
+		var rebounded := false
+		if _owe_rebound and prev_atk_fp <= -f50 and atk_fp > -f50:
+			_owe_rebound = false
+			rebounded = true
+			_t(side, "rebounds")
+			_p(carrier, "rebounds")
 		# By default the next carrier gets it uncontested: a handball
 		# receive, a mark, a kick he gathers with nobody contesting it (the
 		# engine has no contest there; a rushed disposal loses ground, not
@@ -3247,14 +3276,14 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				if not taken.is_empty():
 					# The kick still got it out of his defensive 50: Champion
 					# Data counts the rebound whatever happens to it next.
-					if prev_atk_fp < float(T["rebound_from"]) and atk_fp > float(T["rebound_to"]):
+					if not rebounded and prev_atk_fp < float(T["rebound_from"]) and atk_fp > float(T["rebound_to"]):
 						_t(side, "rebounds")
 						_p(carrier, "rebounds")
 					_last_disp["end"] = "aerial"
 					return taken
 
 		# Rebound 50: winning it out of your own defensive arc.
-		if prev_atk_fp < float(T["rebound_from"]) and atk_fp > float(T["rebound_to"]):
+		if not rebounded and prev_atk_fp < float(T["rebound_from"]) and atk_fp > float(T["rebound_to"]):
 			_t(side, "rebounds")
 			_p(carrier, "rebounds")
 
@@ -3551,14 +3580,31 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 	# Spoiled to the deck in the pocket, nobody clean: a ball-up inside 50.
 	if spoilt and not marked and lockup_rng.randf() < _tv("LOCKUP_SPOIL", LOCKUP_SPOIL):
 		return {"outcome": "stoppage", "fp": fp, "actor": defender}
+	# The defence has it. Its rebound 50 goes to whoever kicks or handballs
+	# it out of defensive 50 in the next chain (director 2026-11-07).
+	_rebound_owed = opp
+	# Spoiled to the deck: whoever wins the ground ball has it, not the
+	# spoiler by right (he can still be the one there). His first touch is
+	# the next chain's first disposal.
+	if spoilt and not marked and spoiler != null:
+		var gatherer = pick_carrier(opp, fp)
+		if gatherer == null:
+			gatherer = spoiler
+		_intercept(opp, gatherer, false)
+		_won_back["gathered"] = true
+		var sn := GameDB.player_display_name(spoiler)
+		var gn := GameDB.player_display_name(gatherer)
+		_emit("rebound", opp, fp, gatherer,
+				("%s spoils it and wins it off the deck" % sn) if gatherer == spoiler
+				else ("%s spoils it, %s wins it off the deck" % [sn, gn]))
+		return {"outcome": "turnover", "fp": fp, "actor": gatherer}
 	# The spare comes away with it only when he got the fist to it; reaching
 	# the contest is not winning it. Otherwise the defender in it does.
 	var taker = roamer if (roaming and spoiler == roamer) else defender
-	_t(opp, "rebounds")
-	_p(taker, "rebounds")
 	_intercept(opp, taker, not spoilt, not matched.is_empty() or roaming)
-	_emit("rebound", opp, fp, taker,
-			"%s rebounds it out of danger" % GameDB.player_display_name(taker))
+	var tn := GameDB.player_display_name(taker)
+	_emit("rebound", opp, fp, taker, ("%s marks it in defence" % tn) if bool(_won_back.get("marked", false))
+			else ("%s wins it back in defence" % tn))
 	return {"outcome": "turnover", "fp": fp, "actor": taker}
 
 
@@ -4207,6 +4253,8 @@ func _play_one_chain(T: Dictionary) -> void:
 	_chain_touch = {}
 	_chain_from = _won_back if chain_origin == "turnover" else {}
 	_won_back = {}
+	_owe_rebound = chain_origin == "turnover" and _rebound_owed == side
+	_rebound_owed = -1
 	_ball_lost_by = _lost_by if chain_origin == "general" else -1
 	_lost_by = -1
 	var res := {}
@@ -4567,6 +4615,12 @@ func _trait(p: Dictionary, key: String) -> bool:
 ## A player's attribute as he is playing right now.
 func _a(p: Dictionary, key: String) -> float:
 	return float(p["attr"][key]) * fit(p)
+
+
+## His use of the ball as he is playing right now: the kick-in taker's and
+## the back-zone carrier's rating (BALL_USE).
+func _ball_use(p: Dictionary) -> float:
+	return BALL_USE_CARRY * _a(p, "carry") + BALL_USE_DISPOSAL * _a(p, "disposal")
 
 
 ## Mean fit of the on-ground midfielders and rucks: who wins the stoppages.
@@ -5758,9 +5812,9 @@ func _free_set_shot(side: int, at_fp: float, taker: Dictionary) -> Dictionary:
 	var opp := 1 - side
 	var backs := _by_roles((squads[opp] as Squad).ground, ["DEF"])
 	var back = _weighted(backs if not backs.is_empty() else (squads[opp] as Squad).ground, "marking", 2.0, opp, "defender")
-	# Not a mark (could_mark is false): the copy must not call it one.
-	_t(opp, "rebounds")
-	_p(back, "rebounds")
+	# Not a mark (could_mark is false): the copy must not call it one. The
+	# rebound 50 is owed to whoever takes it out of defensive 50.
+	_rebound_owed = opp
 	_intercept(opp, back, false)
 	_emit("rebound", opp, fp, back, "%s's set shot falls short; %s gathers it" % [
 			GameDB.player_display_name(taker), GameDB.player_display_name(back)])
@@ -5782,15 +5836,17 @@ const PACK_RUSHED := 0.60        # not gathered: rushed through, else they clear
 
 func _shot_turnover(side: int, defender: Dictionary, text: String, marked := false) -> Dictionary:
 	var opp := 1 - side
-	_t(opp, "rebounds")
+	# The rebound 50 is owed to whoever takes it out of defensive 50.
+	_rebound_owed = opp
 	if not defender.is_empty():
-		_p(defender, "rebounds")
 		_intercept(opp, defender, false)
 		if marked:
 			# He marked it in the pack: the kick out is his.
 			_won_back["marked"] = true
 			_won_back["contested"] = true
-		_emit("rebound", opp, fp, defender, "%s rebounds it out of danger" % GameDB.player_display_name(defender))
+		var dn := GameDB.player_display_name(defender)
+		_emit("rebound", opp, fp, defender, ("%s marks it in defence" % dn) if marked
+				else ("%s wins it back in defence" % dn))
 	_end_moment_chain("turnover", fp, side)
 	return {"points": 0, "text": text + " - no score."}
 

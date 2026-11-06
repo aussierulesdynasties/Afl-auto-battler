@@ -398,8 +398,10 @@ func _test_free_set_shots_counted() -> void:
 			counted = counted and int(st.get("set_shots", 0)) >= int(by_taker[id])
 	_check(frees > 0 and counted, "A set shot from a free in 50 counts in the taker's set shots (%d scored)" % frees)
 	_check(no_false_mark, "A free kicked short never says the defender marked it (%d short)" % short_frees)
-	# ...and the defender who gathers a short one is credited with the rebound
-	# (short frees are rare in a match, so shots are taken from 80 m until one falls short).
+	# ...and the defender who gathers a short one is not credited a rebound 50
+	# there: it is owed to whoever takes it out of defensive 50 (director
+	# 2026-11-07; short frees are rare in a match, so shots are taken from 80 m
+	# until one falls short).
 	var fs := _sim(7900)
 	fs.run()
 	# A finished match has gone past the last quarter: the extra shots count
@@ -416,10 +418,11 @@ func _test_free_set_shots_counted() -> void:
 		if str(res.get("outcome", "")) != "turnover":
 			continue
 		var bid := str((res["actor"] as Dictionary)["id"])
-		var team_ok := float(fs.team_stats[1].get("rebounds", 0.0)) == team_before + 1.0
-		short_ok = team_ok and float(fs.player_stats.get(bid, {}).get("rebounds", 0.0)) == float(his_before.get(bid, 0.0)) + 1.0
+		var team_ok := float(fs.team_stats[1].get("rebounds", 0.0)) == team_before
+		short_ok = team_ok and float(fs.player_stats.get(bid, {}).get("rebounds", 0.0)) == float(his_before.get(bid, 0.0)) \
+				and fs._rebound_owed == 1
 		break
-	_check(short_ok, "A free kicked short counts as the gathering defender's rebound and his team's")
+	_check(short_ok, "A free kicked short owes the defence its rebound 50 rather than crediting the gatherer")
 
 
 ## Row 12: a clanger that ends a chain in the wet or the wind names it and
@@ -1747,10 +1750,13 @@ func _test_loose_man_read() -> void:
 	_check(sim._roam_spoil_p(good) > sim._roam_spoil_p(poor),
 			"A good reader gets a fist to more of the balls his teammate missed")
 	# Getting to the contest is not winning it: when the defender in it gets
-	# the fist (or nobody does), the ball comes out with the defender, not
-	# with the spare who arrived as the extra body.
+	# the fist (or nobody does), the contest is the defender's, not the
+	# spare's who arrived as the extra body. After a spoil the ball goes to
+	# whoever wins it off the deck (director 2026-11-07), so the feed line's
+	# first name, the man who won the contest, is what is checked.
 	sim.set_interceptor(1, str(good["id"]), false)
 	var gid := str(good["id"])
+	var gname := GameDB.player_display_name(good)
 	var reached_lost := 0
 	var lost_to_def := 0
 	var won := 0
@@ -1763,15 +1769,16 @@ func _test_loose_man_read() -> void:
 		var beat := float(after.get("roam_wins", 0.0)) > float(before.get("roam_wins", 0.0))
 		if str(r.get("outcome", "")) != "turnover" or not reached:
 			continue
-		var actor_id := str((r["actor"] as Dictionary).get("id", ""))
+		var line := str((sim.events[sim.events.size() - 1] as Dictionary).get("text", ""))
+		var his := line.begins_with(gname + " ")
 		if not beat:
 			reached_lost += 1
-			if actor_id != gid:
+			if not his:
 				lost_to_def += 1
-		elif actor_id == gid:
+		elif his:
 			won += 1
 	_check(reached_lost > 0 and lost_to_def == reached_lost,
-			"When the defender in the contest wins it, the rebound is his, not the loose man's (%d of %d)" % [lost_to_def, reached_lost])
+			"When the defender in the contest wins it, the contest is his, not the loose man's (%d of %d)" % [lost_to_def, reached_lost])
 	_check(won > 0,
 			"The loose man still comes away with the ones he got the fist to (%d)" % won)
 	(good["attr"] as Dictionary).merge(good_attr, true)
