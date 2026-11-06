@@ -50,19 +50,23 @@ static func apply_volume(pct: int) -> void:
 ## loudest of the three (normal 100%, quiet 30%), so nothing the player still
 ## heard gets quieter; when all three were off the player wanted silence, so
 ## Mute comes on and Volume stays at full for when he turns it off again.
+## The old file held only the levels the player had changed: a missing crowd
+## or button-sounds level was still playing at normal, so it counts as 100.
+## A missing music level is left out, because no music ever played.
 ## Returns {} when there is nothing old to carry over.
 static func from_old(levels: Dictionary) -> Dictionary:
 	var any := false
-	var loudest := -1
 	for k in OLD_KEYS:
-		if not levels.has(k):
-			continue
-		any = true
-		var lv := str(levels[k])
-		var pct := 0 if lv == "off" else (quiet_percent() if lv == "quiet" else 100)
-		loudest = maxi(loudest, pct)
+		any = any or levels.has(k)
 	if not any:
 		return {}
+	var loudest := -1
+	for k in OLD_KEYS:
+		if not levels.has(k) and k == "music_level":
+			continue
+		var lv := str(levels.get(k, "normal"))
+		var pct := 0 if lv == "off" else (quiet_percent() if lv == "quiet" else 100)
+		loudest = maxi(loudest, pct)
 	if loudest == 0:
 		return {"volume": DEFAULT_VOLUME, "mute": true}
 	return {"volume": loudest, "mute": false}
