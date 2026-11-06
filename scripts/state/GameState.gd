@@ -6114,6 +6114,9 @@ func cap_room() -> int:
 # Annual club department budget
 # ---------------------------------------------------------------------------
 func _ensure_department_budget() -> void:
+	# A save from before row 99 still holds the Football department line.
+	if department_budget.has(ClubBudget.OLD_FOOTBALL):
+		department_budget = ClubBudget.fold_football(department_budget)
 	var clean := ClubBudget.defaults()
 	for area in ClubBudget.AREA_ORDER:
 		clean[area] = ClubBudget.clamp_level(int(department_budget.get(area, ClubBudget.STANDARD)))
@@ -10785,10 +10788,15 @@ func _refresh_coach_tactics() -> void:
 		CoachEffects.table = {}
 		return
 	CoachEffects.set_table(coaches, GameDB.active_clubs(season_year), my_club)
-	if CoachEffects.table.has(my_club):
-		var mine: Dictionary = CoachEffects.table[my_club]
-		mine["exec"] = clampf(float(mine.get("exec", 1.0)) * ClubBudget.tactics_mult(
-				department_budget_level("football")), 0.75, 1.35)
+	# High performance sets how sharply the plan is carried out (row 99): your
+	# club's budget, or an audit's level for an AI club; AI clubs otherwise run
+	# Standard and keep their coaches' own figure untouched.
+	for code in CoachEffects.table:
+		var level := fitness_hp_level(str(code))
+		if str(code) != my_club and level == ClubBudget.STANDARD:
+			continue
+		var t: Dictionary = CoachEffects.table[code]
+		t["exec"] = clampf(float(t.get("exec", 1.0)) * ClubBudget.tactics_mult(level), 0.75, 1.35)
 
 
 func _vacancy_open(job: String) -> bool:
