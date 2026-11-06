@@ -29,7 +29,7 @@ func _run() -> void:
 		_state.set_setting("seen_%s_intro" % key, true)
 	_state.replay_seed = SUITE_SEED
 	var original: bool = Features.on("decision_scenes")
-	_check(not original, "The decision scenes ship switched off")
+	_check(original, "The decision scenes ship switched on")
 	for kind in KINDS:
 		await _t("_test_kind", [kind])
 	await _t("_test_card_without_switch")
