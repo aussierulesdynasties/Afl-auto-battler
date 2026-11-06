@@ -91,6 +91,9 @@ var almanac: Array = []          # the club almanac, one page per season (Almana
 ## The club honour board (HonourBoard.gd, row 122): player id -> his row.
 ## An older save builds it once on load from what is on record.
 var honour_board := {}
+## The boards of clubs you coached before a move (HonourBoard.change_club):
+## club code -> {player id: row}.
+var honour_boards := {}
 ## Every coach in the game, once: cid -> record (Coaches.gd). A club's staff
 ## is read from the records, never stored beside them.
 var coaches := {}
@@ -735,6 +738,7 @@ func save_career() -> bool:
 		"honour_roll": honour_roll,
 		"almanac": almanac,
 		"honour_board": honour_board,
+		"honour_boards": honour_boards,
 		"records": records,
 		"rivalry_history": rivalry_history,
 		"finals_counted_since": finals_counted_since,
@@ -1074,6 +1078,7 @@ func load_career() -> bool:
 	# The honour board (row 122): an older save had none, so it is built once
 	# from what the career recorded; never guessed.
 	honour_board = state.get("honour_board", {}) if state.get("honour_board") is Dictionary else {}
+	honour_boards = state.get("honour_boards", {}) if state.get("honour_boards") is Dictionary else {}
 	if not state.has("honour_board"):
 		HonourBoard.backfill(self, func(id: String) -> Dictionary: return _any_player(id))
 	return true
@@ -1453,6 +1458,7 @@ func reset() -> void:
 	honour_roll = []
 	almanac = []
 	honour_board = {}
+	honour_boards = {}
 	records = {}
 	rivalry_history = {}
 	finals_counted_since = 0
@@ -1967,6 +1973,10 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# Undecided assistants stay; then no staff job starts the season empty.
 	_settle_staff_contracts()
 	_fill_open_staff()
+	# The honour board (row 122): anyone who left in the off-season (a trade,
+	# free agency) is stamped with the season he left after, before the year
+	# turns over and before a club move changes whose board it is.
+	HonourBoard.sweep(self)
 	# Coach arcs: a club change decided at the season's close is made now.
 	ClubMoves.apply_move(self)
 	# The season's close normally counted careers already (Career skips a
@@ -8862,10 +8872,13 @@ func _close_free_agency() -> void:
 			# He walked, or you could not fit him: you wanted him, as a rival
 			# that runs out of room does.
 			_release(my_club, p, true)
+			HonourBoard.leave(self, p, "free_agent")
 	_market_test(testing)
 	_resolve_market()
-	# Nobody signed them: their AFL careers end here.
+	# Nobody signed them: their AFL careers end here. One of yours who went out
+	# of contract left as a free agent; one you let go keeps his delisting.
 	for p in free_agents:
+		HonourBoard.leave(self, p, "free_agent")
 		_career_over(p, "delisted")
 	free_agents = []
 	mark_dirty()

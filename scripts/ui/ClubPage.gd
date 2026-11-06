@@ -343,7 +343,7 @@ static func open_board(host: Control) -> Control:
 			% GameDB.club_name(code), UiKit.SMALL, UiKit.MUTED)
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(intro)
-	var rows := HonourBoard.rows(GameState.honour_board)
+	var rows := HonourBoard.rows(GameState.honour_board, GameState.my_list)
 	var table := UiKit.vbox(0)
 	table.name = "BoardTable"
 	body.add_child(table)
@@ -384,7 +384,8 @@ static func _board_row(host: Control, row: Dictionary, wide: bool, i: int) -> Co
 	sb.content_margin_left = 6
 	sb.content_margin_right = 6
 	face.add_theme_stylebox_override("panel", sb)
-	face.custom_minimum_size = Vector2(0, 32 if wide else (24 if head else 40))
+	# A name is a tap: 44 high, as every button in the game.
+	face.custom_minimum_size = Vector2(0, 44 if wide and not head else (32 if wide else (24 if head else 44)))
 	var hb := UiKit.hbox(4)
 	var fs := UiKit.SMALL if head else UiKit.BODY
 	var colour := UiKit.MUTED if head else UiKit.TEXT
@@ -395,6 +396,8 @@ static func _board_row(host: Control, row: Dictionary, wide: bool, i: int) -> Co
 	if wide:
 		face.add_child(hb)
 		hb.add_child(name)
+		if not head:
+			name.custom_minimum_size = Vector2(0, 44)
 	else:
 		# A phone has no room for a name beside five figures: the name takes
 		# its own line, the figures sit under it in the columns.
@@ -403,8 +406,16 @@ static func _board_row(host: Control, row: Dictionary, wide: bool, i: int) -> Co
 		if head:
 			name.free()
 		else:
-			name.custom_minimum_size = Vector2(0, 30)
+			name.custom_minimum_size = Vector2(0, 44)
 			stack.add_child(name)
+			# No room for the Brownlow and All-Australian columns: in words
+			# under his name, so a medallist never reads as a blank row.
+			var extra := _extra_honours(row)
+			if extra != "":
+				var el := UiKit.lbl(extra, UiKit.SMALL, UiKit.MUTED)
+				el.name = "BoardHonours"
+				el.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				stack.add_child(el)
 		stack.add_child(hb)
 		var pad := Control.new()
 		pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -425,6 +436,16 @@ static func _board_row(host: Control, row: Dictionary, wide: bool, i: int) -> Co
 	return face
 
 
+## "Brownlow 2031, All-Australian 2030, 2032": the honours a phone row has no column for.
+static func _extra_honours(row: Dictionary) -> String:
+	var parts := []
+	for pair in [["brownlow", "Brownlow"], ["aa", "All-Australian"]]:
+		var ys: Array = row.get(pair[0], [])
+		if not ys.is_empty():
+			parts.append("%s %s" % [pair[1], ", ".join(ys.map(func(y): return str(y)))])
+	return ", ".join(parts)
+
+
 static func _row_name(row: Dictionary) -> String:
 	return GameDB.player_display_name(row.get("card", {}))
 
@@ -432,8 +453,10 @@ static func _row_name(row: Dictionary) -> String:
 static func _cell(row: Dictionary, key: String) -> String:
 	match key:
 		"years":
+			# His years with you: to his last season here, which a player who
+			# left you and retired elsewhere later still reads right.
 			var a := int(row.get("from", 0))
-			var b := int(row.get("left", row.get("to", 0)))
+			var b := int(row.get("to", 0)) if int(row.get("to", 0)) > 0 else int(row.get("left", 0))
 			if a <= 0:
 				return "to %d" % b if b > 0 else "-"
 			return str(a) if a == b else "%d-%02d" % [a, b % 100]
@@ -461,10 +484,13 @@ static func _tap(c: Control, fn: Callable) -> void:
 			fn.call())
 
 
-## His profile when he is still in the game; his career facts when he has left it.
+## His profile when he is still in the game (a list or the free agents); his
+## career facts when he has left it. Never the league's data record, which
+## would show a retired player as he was in his first season.
 static func open_row(host: Control, row: Dictionary) -> Control:
 	var id := str(row.get("id", ""))
-	if not NameLink.find(id).is_empty():
+	var gone: bool = str(row.get("how", "")) == "retired" or GameState.departed_names.has(id)
+	if not gone and not GameState._any_player(id).is_empty():
 		return ClubLink.keep(host, NameLink.open(host, id))
 	return open_facts(host, row)
 
@@ -530,6 +556,8 @@ static func _how(row: Dictionary) -> String:
 			return "Retired after the %d season." % int(row.get("left", 0))
 		"delisted":
 			return "Delisted after the %d season." % int(row.get("left", 0))
+		"free_agent":
+			return "Left as a free agent after the %d season." % int(row.get("left", 0))
 		"moved":
 			var to := str(row.get("to_club", ""))
 			return "Left for %s after the %d season." % [GameDB.club_name(to), int(row.get("left", 0))] if to != "" \

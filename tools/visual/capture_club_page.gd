@@ -8,7 +8,7 @@ extends SceneTree
 ## tests/run_clublink_tests.gd and run_stats_tests.gd). Writes <out>_rival.png and
 ## <out>_rival_lower.png (a rival's page), <out>_mine.png (your club's page),
 ## <out>_board.png (the honour board) and <out>_facts.png (a retired player's
-## career facts). Never touches a real save.
+## career facts) and <out>_news.png (the news front page). Never touches a real save.
 
 var _w := 390
 var _h := 844
@@ -144,4 +144,15 @@ func _run() -> void:
 		await _frames(12)
 		print("facts open ", s.find_child(CP.FACTS_NAME, true, false) != null)
 	await _shot(out, "facts")
+	# Club names in the news are tappable now: the front page, opened by its handler.
+	s.queue_free()
+	await _frames(4)
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	current_scene = hub
+	await _frames(12)
+	if not gs.news.is_empty():
+		hub._show_news()
+		await _frames(12)
+	await _shot(out, "news")
 	quit(0)

@@ -16,11 +16,16 @@ extends RefCounted
 ##            "from", "to" (his years with you), "games", "goals" (-1: not on
 ##            record, shown as a dash and never guessed), "bf", "flags",
 ##            "brownlow", "aa" ([years]), "left" (the season he left after, 0
-##            while he is still on your list), "how" ("retired", "delisted",
-##            "moved", "" while he is here or when not on record), "to_club"
+##            while he is still on your list), "how" ("retired", "delisted" (you
+##            let him go), "free_agent" (out of contract, he went), "moved", ""
+##            while he is here or when not on record), "to_club"
 ##            (where he went when he moved), "facts" (what the club remembers
 ##            about him, Remembered.sheet_lines, kept from his last day with
 ##            you)}
+##
+## The store is the board of the club you coach now. A coach who changes clubs
+## leaves the old board behind (GameState.honour_boards, by club code) and picks
+## the new club's up (change_club), so two clubs' boards never mix.
 ##
 ## Look-up only: nothing here touches a match or a player.
 
@@ -126,12 +131,30 @@ static func leave(gs: Object, p: Dictionary, how: String, to_club := "") -> void
 	if not store.has(id):
 		return
 	var row: Dictionary = store[id]
+	if int(before.get("left", 0)) == 0 and not _on_list(gs, id):
+		# He left you seasons ago for another club and his career ends there
+		# now (a row first written at his retirement): he left you when his
+		# last spell with you ended, for the club he went to.
+		var his := str(p.get("club", ""))
+		var last := int(row.get("to", 0))
+		if last > 0 and last < int(gs.get("season_year")) and his != "" and his != str(gs.get("my_club")):
+			row["left"] = last
+			row["how"] = "moved"
+			row["to_club"] = his
+			return
 	row["left"] = int(before.get("left", 0)) if int(before.get("left", 0)) > 0 else int(gs.get("season_year"))
 	row["how"] = str(before.get("how", ""))
 	row["to_club"] = str(before.get("to_club", ""))
 	if str(row.get("how", "")) == "" or how == "retired":
 		row["how"] = how
 		row["to_club"] = to_club
+
+
+static func _on_list(gs: Object, id: String) -> bool:
+	for q in gs.get("my_list"):
+		if str(q.get("id", "")) == id:
+			return true
+	return false
 
 
 ## Stamp every row whose player is no longer on your list (a trade, a delisting,
@@ -161,24 +184,54 @@ static func sweep(gs: Object) -> void:
 			row["how"] = ""
 			row["to_club"] = ""
 			continue
+		var elsewhere: bool = where.has(id) and str(where[id]) != str(gs.get("my_club"))
 		if int(row.get("left", 0)) != 0:
+			# Let go or out of contract, then picked up by another club: he
+			# left you for them. His year stays.
+			if elsewhere and ["", "delisted", "free_agent"].has(str(row.get("how", ""))):
+				row["how"] = "moved"
+				row["to_club"] = str(where[id])
 			continue
 		row["left"] = int(gs.get("season_year"))
-		if where.has(id) and str(where[id]) != str(gs.get("my_club")):
+		if elsewhere:
 			row["how"] = "moved"
 			row["to_club"] = str(where[id])
 		elif fa.has(id):
-			row["how"] = "delisted"
+			# Released by you is stamped "delisted" by release_player itself;
+			# anyone else among the free agents ran out of contract.
+			row["how"] = "free_agent"
 		elif gone.has(id):
 			row["how"] = "retired"
 
 
+## The coach moves clubs (ClubMoves.apply_move, before my_club changes): the
+## old club's board is stamped and put away, the new club's (if he coached
+## there before) taken up.
+static func change_club(gs: Object, from: String, to: String) -> void:
+	if from == to:
+		return
+	sweep(gs)
+	var boards: Dictionary = gs.get("honour_boards")
+	var store: Dictionary = gs.get("honour_board")
+	if from != "" and not store.is_empty():
+		boards[from] = store.duplicate(true)
+	var next: Dictionary = (boards.get(to, {}) as Dictionary).duplicate(true)
+	boards.erase(to)
+	store.clear()
+	store.merge(next)
+
+
 ## The board: players who have left, newest departure first, then most games.
-static func rows(store: Dictionary) -> Array:
+## Anyone on `my_list` is left off whatever his row says (a release undone
+## before the next sweep clears it).
+static func rows(store: Dictionary, my_list: Array = []) -> Array:
+	var here := {}
+	for p in my_list:
+		here[str(p.get("id", ""))] = true
 	var out := []
 	for id in store:
 		var row: Dictionary = store[id]
-		if int(row.get("left", 0)) > 0 and qualifies(row):
+		if int(row.get("left", 0)) > 0 and qualifies(row) and not here.has(str(id)):
 			out.append(row)
 	out.sort_custom(func(a, b):
 		if int(a["left"]) != int(b["left"]):
@@ -190,7 +243,8 @@ static func rows(store: Dictionary) -> Array:
 
 
 ## An older save had no board: build it from what is on record and nothing
-## more. Your list through with_us(); then every best and fairest and Brownlow
+## more. Your list through with_us(); everyone at another club or among the free
+## agents who earned a place with you; then every best and fairest and Brownlow
 ## winner at your club the honour roll names who has gone. One still in the game
 ## (at another club) has his full record; one who has left the game is named
 ## from departed_names, his games and goals a dash.
@@ -201,6 +255,27 @@ static func backfill(gs: Object, find: Callable) -> void:
 		return
 	for p in gs.get("my_list"):
 		upsert(gs, p)
+	# Everyone still in the game somewhere else who earned a place with you
+	# (150 games is not on the honour roll): he left you when his last spell
+	# with you ended.
+	var others := []
+	var season = gs.get("season")
+	if season != null:
+		for code in season.lists:
+			if str(code) != my_club:
+				others.append_array(season.lists[code])
+	others.append_array(gs.get("free_agents"))
+	for p in others:
+		var id := str(p.get("id", ""))
+		if id == "" or store.has(id):
+			continue
+		upsert(gs, p)
+		if store.has(id):
+			var row: Dictionary = store[id]
+			row["left"] = int(row.get("to", 0))
+			var his := str(p.get("club", ""))
+			row["how"] = "moved" if his != "" and his != my_club else "free_agent"
+			row["to_club"] = his if row["how"] == "moved" else ""
 	var gone: Dictionary = gs.get("departed_names")
 	var winners := {}
 	for e in gs.get("honour_roll"):

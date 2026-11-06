@@ -80,7 +80,7 @@ static func build(host: Control) -> Control:
 		v.add_child(_player_honours(host, seasons))
 	v.add_child(_tenure_table(host, seasons, in_progress))
 	# The players who left with 150 games or an honour (rulings no. 112).
-	var n := HonourBoard.rows(GameState.honour_board).size()
+	var n := HonourBoard.rows(GameState.honour_board, GameState.my_list).size()
 	var board := UiKit.section_link("Honour board", ("%d %s" % [n, "player" if n == 1 else "players"] if n > 0 			else "No one yet") + "  ›", "HonourBoardLink")
 	board.pressed.connect(func(): ClubPage.open_board(host))
 	v.add_child(board)
