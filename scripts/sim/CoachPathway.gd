@@ -21,7 +21,7 @@ extends RefCounted
 ##   pos      his listed position; pos2 a second one, "" if none
 ##   retired  his last season as a player
 ##   honours  {"brownlow": n, "coleman": n, "rising_star": n, "coaches": n,
-##            "bnf": {club: n}}, in-game wins only, absent if none. The save
+##            "norm_smith": n, "golden_fist": n, "bnf": {club: n}}, in-game wins only, absent if none. The save
 ##            keeps the best and fairest for your club alone, so only yours.
 ## Nothing else from the player is kept: no attributes, ratings, contract,
 ## training, injuries or season stats.
@@ -78,12 +78,14 @@ static func snapshot(p: Dictionary, last_season: int, honour_roll: Array) -> Dic
 
 
 ## The awards he won in this save, from the honour roll, which names each
-## winner by id: Brownlow, Coleman, Rising Star, the Coaches Award and your
+## winner by id: Brownlow, Coleman, Rising Star, the Coaches Award, the Norm
+## Smith, the Golden Fist and your
 ## club's best and fairest (the only club the roll keeps). Premierships
 ## are left out: the game does not record who played in a Grand Final, and a
 ## guess is not an honour.
 const HONOUR_KEYS := {"brownlow": "brownlow", "coleman": "coleman",
-		"rising_star": "rising_star", "coaches_award": "coaches", "norm_smith": "norm_smith"}
+		"rising_star": "rising_star", "coaches_award": "coaches", "norm_smith": "norm_smith",
+		"golden_fist": "golden_fist"}
 
 static func honours(player_id: String, honour_roll: Array) -> Dictionary:
 	var out := {}

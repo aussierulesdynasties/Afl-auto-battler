@@ -5711,6 +5711,12 @@ func _close_season_awards() -> void:
 	var medal := Awards.norm_smith(_grand_final_result())
 	if not medal.is_empty():
 		season_awards["norm_smith"] = medal
+	# The Golden Fist (T5.Q11c), from the season's book. A book begun part way
+	# through (an older save) asks for games in proportion to the rounds it saw.
+	var fist := Awards.golden_fist(season_stats, players, Awards.aa_min_games(
+			maxi(1, Season.REGULAR_ROUNDS - season_stats_from)) if season_stats_from > 0 else Awards.AA_MIN_GAMES)
+	if not fist.is_empty():
+		season_awards["golden_fist"] = fist
 	records = Awards.update_records(records, season_awards, season_log)
 	var mine_bf: Array = (season_awards["best_and_fairest"] as Dictionary).get(my_club, [])
 	if Almanac.on():
@@ -5725,6 +5731,8 @@ func _close_season_awards() -> void:
 		"coaches_award": (season_awards["coaches_award"] as Array).slice(0, 1),
 		# Absent in a season played before the medal existed: never back-filled.
 		"norm_smith": [season_awards["norm_smith"]] if season_awards.has("norm_smith") else [],
+		# Absent in a season played before the Golden Fist existed: never back-filled.
+		"golden_fist": (season_awards.get("golden_fist", []) as Array).slice(0, 1),
 		"my_bf": mine_bf.slice(0, 1),
 		"my_club": my_club,
 		"my_position": my_position(),
@@ -10243,6 +10251,10 @@ func _season_news() -> void:
 	if not gk.is_empty():
 		add_news("award", "%s (%s) won the Coleman Medal with %d goals." % [
 				award_name(gk[0]), GameDB.club_name(str(gk[0]["club"])), int(gk[0]["goals"])])
+	var fist: Array = season_awards.get("golden_fist", [])
+	if not fist.is_empty():
+		add_news("award", "%s (%s) won the %s with %s." % [award_name(fist[0]),
+				GameDB.club_name(str(fist[0]["club"])), Awards.GOLDEN_FIST, Awards.golden_fist_line(fist[0])])
 	var medal: Dictionary = season_awards.get("norm_smith", {})
 	if not medal.is_empty():
 		add_news("award", "Norm Smith Medal: %s (%s), %s" % [award_name(medal),
