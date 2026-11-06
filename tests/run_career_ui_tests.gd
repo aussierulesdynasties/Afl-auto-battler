@@ -2477,6 +2477,7 @@ func _hub_tap(button_name: String) -> Array:
 
 
 func _test_sim_asks_only_before_your_match() -> void:
+	var ask_size_before := root.size
 	root.size = Vector2i(390, 844)
 	_state.set_confirm_sim_round(true)
 	_state.reset()
@@ -2545,6 +2546,7 @@ func _test_sim_asks_only_before_your_match() -> void:
 	_router.stack = ["main"]
 	_router.go("main")
 	await _settle()
+	root.size = ask_size_before
 
 
 func _test_season_awards() -> void:
