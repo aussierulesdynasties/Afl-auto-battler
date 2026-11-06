@@ -723,8 +723,10 @@ func _week_section(season: Season) -> Control:
 			fl.name = "Fact_%d" % i
 			nv.add_child(fl)
 			if i < fact_options.size() and not (fact_options[i] as Array).is_empty():
-				nv.add_child(FactOptionsRow.new().setup(i, fact_options[i], _narrow(),
-						_on_fact_option.bind(str(f["text"]))))
+				var opt_row := FactOptionsRow.new().setup(i, fact_options[i], _narrow(),
+						_on_fact_option.bind(str(f["text"])), str(f["text"]))
+				nv.add_child(opt_row)
+				FactOptionsRow.paint_chosen(opt_row, GameState.call_intent)
 				nv.add_child(UiKit.spacer(2))
 		for i in range(former.size()):
 			var row: Dictionary = former[i]
@@ -963,9 +965,11 @@ func _match_way() -> Control:
 
 
 ## The main button's words: Skip chosen says what the match screen's own
-## control says; Watch and Key moments play the match.
+## control says; Watch and Key moments play the match. A response chosen under
+## a fact opens the match on that call, so Skip gives way to it this once.
 func _play_label() -> String:
-	return "Skip to full time" if GameState.match_way() == "skip" else "Play match"
+	return "Skip to full time" if GameState.match_way() == "skip" and GameState.call_intent.is_empty() \
+			else "Play match"
 
 
 ## The week's decision buttons: the primary action last, where the thumb is.
@@ -1259,7 +1263,13 @@ func _on_play_match() -> void:
 		return
 	if _pre_match != null or _starting_match:
 		return
-	if not GameState.vignettes_on() or GameState.match_way() == "skip":
+	# A response chosen under a fact opens this match on that call before the
+	# first bounce, so Skip plays it the Watch way this once (the saved choice
+	# stays); the button said "Play match" (_play_label).
+	var way := GameState.match_way()
+	if way == "skip" and not GameState.call_intent.is_empty():
+		way = "watch"
+	if not GameState.vignettes_on() or way == "skip":
 		# Vignettes off (Settings), or Skip chosen: no banner scene, straight
 		# to the match.
 		_starting_match = true
@@ -1267,6 +1277,7 @@ func _on_play_match() -> void:
 			_starting_match = false
 			_on_sim_round()
 			return
+		GameState.match_way_live = way
 		Router.go("match")
 		return
 	# The pre-match scene goes up in this frame: a couple of seconds of
@@ -1298,20 +1309,27 @@ func _on_play_match() -> void:
 		_pre_match = null
 		_on_sim_round()
 		return
+	GameState.match_way_live = way
 	_pre_match.play_through(PRE_MATCH_SECONDS)
 	await _pre_match.done
 	Router.go("match")
 
 
-## A response beside an opposition fact was tapped (P-13): the match starts as Play
-## match does, and the pre-bounce pane opens on that call with the fact above it.
-## Nothing is chosen here and nothing is saved.
+## A response beside an opposition fact was tapped (P-13): it is chosen and
+## shown chosen, or let go again when it already was. It never starts the
+## match: Play match does, and the pre-bounce pane then opens on that call with
+## the fact above it. Nothing is saved.
 func _on_fact_option(option: Dictionary, fact_text: String) -> void:
 	if _pre_match != null or _starting_match:
 		return
-	GameState.call_intent = {"call": str(option["call"]), "plan": str(option["plan"]),
+	var intent := {"call": str(option["call"]), "plan": str(option["plan"]),
 			"player_id": str(option["player_id"]), "fact": fact_text}
-	_on_play_match()
+	var again := str(GameState.call_intent.get("fact", "")) == fact_text \
+			and FactOptionsRow.is_chosen(option, GameState.call_intent)
+	GameState.call_intent = {} if again else intent
+	FactOptionsRow.paint_chosen(self, GameState.call_intent)
+	for b in find_children("PlayMatch", "Button", true, false):
+		(b as Button).text = _play_label()
 
 
 ## Every button that sims the week comes here. "Ask before simming" asks only
