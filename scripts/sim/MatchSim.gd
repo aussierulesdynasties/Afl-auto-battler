@@ -794,18 +794,21 @@ func _rematch(def_side: int, fid: String, held: Dictionary) -> void:
 
 
 ## Your assistant's routine calls for the quarter about to start, made at
-## the break so the coach box shows them as your starting point: the plan,
-## pep talk and tag a rival coach would call in your position (ai_tactics,
-## your club's own usual game), the loose defender a rival coach would pick,
-## and a key defender moved off a forward who has had the better of him
-## (_rematch). He acts in your club's best interest, as every coach does.
-## Whatever you have set yourself he leaves alone, and he never moves a
-## defender you have put on someone.
+## the break so the coach box shows them as your starting point: the pep
+## talk and tag a rival coach would call in your position (ai_tactics), the
+## loose defender a rival coach would pick, and a key defender moved off a
+## forward who has had the better of him (_rematch). He acts in your club's
+## best interest, as every coach does. Whatever you have set yourself he
+## leaves alone, and he never moves a defender you have put on someone.
+## The game plan is always the coach's: it stays what you last chose until
+## you change it (director, 2026-11-07: "After every quarter it changes my
+## gameplan from balanced to controlled tempo").
 func _assistant_calls(side: int) -> void:
 	var own: Dictionary = _own[side]
 	var t: Dictionary = (tactics[side] as Dictionary).duplicate()
 	var call := ai_tactics(side)
 	call.erase("interceptor_id")
+	call.erase("gameplan")
 	t.merge(call, true)
 	set_tactics(side, t)
 	if not bool(own["interceptor"]):

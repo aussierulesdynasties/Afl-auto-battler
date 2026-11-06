@@ -83,6 +83,7 @@ func run() -> void:
 	_t("_test_ai_counters_plan")
 	_t("_test_rematch_lowest_mark_chance")
 	_t("_test_assistant_plays_ai_calls")
+	_t("_test_coach_plan_sticks_at_breaks")
 	_t("_test_standing_plan_knowledge")
 	_t("_test_tag_tradeoff")
 	_t("_test_through_stars")
@@ -3833,8 +3834,8 @@ func _test_assistant_plays_ai_calls() -> void:
 	m.team_stats[0] = {"goals": 0.0, "behinds": 60.0}
 	(m.tactics_history[-1]["plans"] as Array)[1] = {"gameplan": "balanced"}
 	m._assistant_calls(0)
-	_check(str(m.tactics[0]["gameplan"]) == "controlled" and str(m.tactics[0].get("focus_id", "")) == "x",
-			"60 up after a quarter your assistant shuts up shop, keeping the rest of your call")
+	_check(str(m.tactics[0]["gameplan"]) == "contest" and str(m.tactics[0].get("focus_id", "")) == "x",
+			"60 up after a quarter your assistant leaves your game plan, and the rest of your call, alone")
 	_check(str(m.interceptor[0]) == mine, "He leaves the loose man you named")
 	m.team_stats[0] = {"goals": 0.0, "behinds": 0.0}
 	_check(str(m.ai_tactics(0)["gameplan"]) == "contest", "Level, he plays the plan your club went in with")
@@ -3844,6 +3845,57 @@ func _test_assistant_plays_ai_calls() -> void:
 	var c_sc := PlanFit.plan_score(sq.ground, "contest", sq.plan_know)
 	var want := "attacking" if a_sc >= c_sc - MatchSim.COUNTER_GIVE else "contest"
 	_check(str(m.ai_tactics(0)["gameplan"]) == want, "He counters their plan for you as a rival would (%s)" % want)
+
+
+## Director, 2026-11-07: "After every quarter it changes my gameplan from
+## balanced to controlled tempo". Your game plan stays what you last chose at
+## every break, however far ahead or behind, until you pick another; the
+## rival coach still picks his own each quarter.
+func _test_coach_plan_sticks_at_breaks() -> void:
+	for lead in [60.0, 12.0, -60.0]:
+		var m := _sim(8461, "GEE", "COL")
+		var sq: Squad = m.squads[0]
+		sq.ai_plans = false
+		sq.assistant = true
+		(m.squads[1] as Squad).ai_plans = true
+		m.set_tactics(0, {"gameplan": "balanced"})
+		var rival := {}
+		for q in range(1, 5):
+			m.begin_quarter()
+			_check(str(m.tactics[0]["gameplan"]) == "balanced",
+					"Q%d plays the Balanced you chose (lead %+d)" % [q, int(lead)])
+			rival[str(m.tactics[1]["gameplan"])] = true
+			while not m.continue_quarter():
+				m.resolve_moment(int(m.pending_moment.get("default", 0)))
+			# Make the margin at the break the one under test.
+			for side in range(2):
+				(m.team_stats[side] as Dictionary)["goals"] = 0.0
+				(m.team_stats[side] as Dictionary)["behinds"] = maxf(0.0, lead if side == 0 else -lead)
+			m.end_quarter()
+			if q < 4:
+				_check(str(m.tactics[0]["gameplan"]) == "balanced",
+						"After Q%d the break still shows your Balanced (lead %+d, got %s)" % [
+						q, int(lead), str(m.tactics[0]["gameplan"])])
+		if lead == 60.0:
+			_check(rival.has("attacking"), "Sixty down, the rival coach still chases with his own plan")
+	# A plan you pick at a break is the one that stays.
+	var p := _sim(8462, "GEE", "COL")
+	(p.squads[0] as Squad).ai_plans = false
+	(p.squads[0] as Squad).assistant = true
+	p.set_tactics(0, {"gameplan": "balanced"})
+	p.run_quarter()
+	var t: Dictionary = (p.tactics[0] as Dictionary).duplicate()
+	t["gameplan"] = "attacking"
+	p.set_tactics(0, t)
+	p.begin_quarter()
+	while not p.continue_quarter():
+		p.resolve_moment(int(p.pending_moment.get("default", 0)))
+	(p.team_stats[0] as Dictionary)["goals"] = 0.0
+	(p.team_stats[0] as Dictionary)["behinds"] = 60.0
+	(p.team_stats[1] as Dictionary)["goals"] = 0.0
+	(p.team_stats[1] as Dictionary)["behinds"] = 0.0
+	p.end_quarter()
+	_check(str(p.tactics[0]["gameplan"]) == "attacking", "Change it yourself and your new plan stays through the break")
 
 
 ## Plan knowledge weighs the usual game, and Controlled tempo can be it.
