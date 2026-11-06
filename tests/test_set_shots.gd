@@ -71,8 +71,8 @@ func _test_off_keeps_the_old_bands() -> void:
 				"Off, band %s converts at its old rate" % str(old[i]["key"]))
 	Features.set_on("set_shots", true)
 	var on := _sim(0)
-	_check(on.set_shots_on and on.set_share() > MatchSim.SET_SHOT_SHARE,
-			"On, more marks inside 50 go back for the kick (%.2f)" % on.set_share())
+	_check(on.set_shots_on and is_equal_approx(on.set_share(), MatchSim.SET_SHARE_ON),
+			"On, a mark inside 50 goes back for the kick at the tuned share (%.2f)" % on.set_share())
 
 
 ## The balance harness reads MatchSim.shot_log: one row per counted shot.
@@ -120,8 +120,8 @@ func _test_closer_set_shot_converts_more() -> void:
 			"Set shots from 20-30 m convert more than 40-50 m, and those more than 50+ m (%s)" % str(rate))
 
 
-## On the same seeds, the switch raises the set-shot share of shots and holds
-## the total score.
+## On the same seeds, with the switch on, set shots stay near the real 55% of
+## shots (director 2026-11-06: tuned back from 63% with every feature on).
 func _test_switch_raises_set_share() -> void:
 	var share := {}
 	var points := {}
@@ -135,10 +135,9 @@ func _test_switch_raises_set_share() -> void:
 		_check(n > MATCHES * 30, "Shots were played with the switch %s (%d)" % ["on" if on else "off", n])
 		share[on] = float(set_n) / maxf(1.0, float(n))
 		points[on] = float(res["points"]) / (2.0 * MATCHES)
-	# Only the rise is this suite's to check: with every other feature on, the level moves with them,
-	# and the level against real AFL is the balance screen's (tools/balance.sh) and the director's call.
-	_check(share[true] > share[false] + 0.03,
-			"The switch raises the set-shot share (off %.3f, on %.3f)" % [share[false], share[true]])
+	# The level against real AFL over a full screen is tools/balance.sh's (55.0% of scoring shots).
+	_check(share[true] > 0.48 and share[true] < 0.60,
+			"With the switch on, set shots are near 55%% of shots (off %.3f, on %.3f)" % [share[false], share[true]])
 	# A gross-regression guard only: the arms' rolls part at the first changed
 	# roll, so 30 matches a side cannot show the score held (sd of the gap about
 	# 5 points); the 1,000-match tools/balance.sh run is that proof.

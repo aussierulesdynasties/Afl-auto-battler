@@ -5352,8 +5352,10 @@ const SET_BANDS_ON := [
 	{"key": "pocket", "spot": "from the pocket, on a tight angle", "metres": 15.0, "acc": 0.605, "share": 0.15},
 	{"key": "long", "spot": "from 55 metres out", "metres": 55.0, "acc": 0.33, "share": 0.10},
 ]
-const SET_SHARE_ON := 0.63
-const SET_GP_SHOT := 0.74
+## Tuned with every feature on (director, 2026-11-06): 0.50 and 0.95 put set shots at 55.0% of scoring
+## shots over 1,000 matches (tools/balance.sh), from 65.5% at 0.63 and 0.74.
+const SET_SHARE_ON := 0.50
+const SET_GP_SHOT := 0.95
 var set_shots_on := false
 
 
