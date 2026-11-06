@@ -213,8 +213,8 @@ func _test_classes(state: Node, db: Node) -> void:
 	_check(m.call("USA", "h") > m.call("IRL", "h") + 5.0, "Americans are taller than the Irish")
 	_check(m.call("USA", "mark") > m.call("NZL", "mark") + 3.0, "Americans mark better than New Zealanders")
 	_check(int(stat["USA"]["ruckfwd"]) * 10 >= int(stat["USA"]["n"]) * 6, "Most Americans are ruck or forward")
-	_check(m.call("KEN", "carry") > dom_carry / float(dom_n) + 1.0,
-			"Kenyans run and carry harder than a home-grown prospect (%.1f vs %.1f)" % [m.call("KEN", "carry"), dom_carry / float(dom_n)])
+	# No Kenyan carry edge over home-grown prospects (director, 2026-11-06: "Internationals don't need
+	# special gameplay. It's just for immersion and realism"); gen traits closes that gap.
 	_check(m.call("IRL", "disp") > dom_disp / float(dom_n) + 1.0, "Irish prospects dispose better than a home-grown prospect")
 	_check(m.call("KEN", "disp") < m.call("IRL", "disp") - 5.0, "Kenyans are rawer with the ball in hand than the Irish")
 
