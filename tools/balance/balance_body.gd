@@ -26,6 +26,7 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 				var pair := kv.split("=")
 				if pair.size() == 2:
 					MatchSim.tune[pair[0].strip_edges()] = float(pair[1])
+	var gather := Features.on(GatherRound.SWITCH)
 	var codes: Array = GameDB.active_clubs(2026).duplicate()
 	# --lists generated: every club's list is generated players instead (row 104).
 	var lists := {}
@@ -45,8 +46,16 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		var flip := (i / pairs.size()) % 2 == 1
 		var h := str(p[1] if flip else p[0])
 		var a := str(p[0] if flip else p[1])
-		var sq_h := Squad.new(h, lists.get(h, GameDB.club_list(h)), true, h)
-		var sq_a := Squad.new(a, lists.get(a, GameDB.club_list(a)), false, a)
+		# gather_round on: every match is staged as a Gather Round match (at the
+		# host ground, a club's home edge only at its own ground), the per-match
+		# effect of the one round a season it applies to.
+		var at_home := [true, false]
+		if gather:
+			var ground: Callable = func(c): return str(GameDB.club(str(c)).get("ground", ""))
+			var v := str(GatherRound.venues_for([{"home": h, "away": a}], 500000 + i, ground)[0])
+			at_home = [ground.call(h) == v, ground.call(a) == v]
+		var sq_h := Squad.new(h, lists.get(h, GameDB.club_list(h)), bool(at_home[0]), h)
+		var sq_a := Squad.new(a, lists.get(a, GameDB.club_list(a)), bool(at_home[1]), a)
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
 		sim.weather = weather
 		for k in sets:

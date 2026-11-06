@@ -17,6 +17,15 @@ const SETTLE_FRAMES := 2
 static func tap(c: Control) -> String:
 	if c == null or not is_instance_valid(c):
 		return "no control"
+	return await tap_at(c, c.size * 0.5, false)
+
+
+## Tap c at `local`, a point in c's own pixels (a spot along a slider).
+## For a control that isn't a button, "" means the touch reached c itself
+## (it was the control under the finger); tap() leaves that unchecked.
+static func tap_at(c: Control, local: Vector2, must_reach := true) -> String:
+	if c == null or not is_instance_valid(c):
+		return "no control"
 	# The tap can close the screen the button is on; keep hold of the tree.
 	var tree := c.get_tree()
 	if not c.is_visible_in_tree():
@@ -29,7 +38,7 @@ static func tap(c: Control) -> String:
 			await tree.process_frame
 			break
 		p = p.get_parent()
-	var at := screen_point(c)
+	var at := c.get_screen_transform() * local
 	var win := c.get_window()
 	if not Rect2(Vector2.ZERO, Vector2(win.size)).has_point(at):
 		return "%s is off the screen at %s" % [c.name, str(at)]
@@ -38,6 +47,13 @@ static func tap(c: Control) -> String:
 	var watch := c is BaseButton
 	if watch:
 		(c as BaseButton).pressed.connect(on_press)
+	var reached := [false]
+	var on_input := func(e: InputEvent):
+		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
+			reached[0] = true
+	var strict := must_reach and not watch
+	if strict:
+		c.gui_input.connect(on_input)
 	for down in [true, false]:
 		var touch := InputEventScreenTouch.new()
 		touch.index = 0
@@ -49,8 +65,15 @@ static func tap(c: Control) -> String:
 			await tree.process_frame
 	if watch and is_instance_valid(c):
 		(c as BaseButton).pressed.disconnect(on_press)
-	if not watch:
+	if not watch and not strict:
 		return ""
+	if strict:
+		if is_instance_valid(c):
+			c.gui_input.disconnect(on_input)
+		if reached[0]:
+			return ""
+		var under := win.gui_get_hovered_control()
+		return "the tap on %s went to %s" % [c.name, under.name if under != null else "nothing"]
 	if hit[0]:
 		return ""
 	var top := win.gui_get_hovered_control()
