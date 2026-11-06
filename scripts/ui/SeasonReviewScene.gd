@@ -40,6 +40,8 @@ func _ready() -> void:
 func handle_back() -> bool:
 	if FirstVisitIntro.close_open(self):
 		return true
+	if DraftSpotsSheet.close_open(self):
+		return true
 	# The awards program closes before the screen is left (Escape, the mouse's
 	# back button and Android Back all land here).
 	if is_instance_valid(_awards_program):
@@ -367,10 +369,19 @@ func _ordinal(n: int) -> String:
 
 ## Continue the career: run the intake draft, or roll on directly when the
 ## prospect pool is empty.
+## The draft button: when a pick of yours has no senior list spot, the sheet
+## says so first (DraftSpotsSheet); otherwise the draft starts.
 func _on_intake_draft() -> void:
 	if GameState.is_sacked():
 		Router.replace("hub")
 		return
+	if DraftSpotsSheet.needed():
+		DraftSpotsSheet.open(self, _start_intake_draft)
+		return
+	_start_intake_draft()
+
+
+func _start_intake_draft() -> void:
 	if GameState.begin_intake_draft():
 		Router.go("draft")
 		return

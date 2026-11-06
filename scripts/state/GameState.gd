@@ -1928,6 +1928,10 @@ func finish_intake_draft() -> bool:
 			arr.append(p)
 			drafted_draftees[id] = code
 	OwnProspect.check(self, season_year)
+	# Your picks that passed for a full list go in the draft-night news.
+	var passed_line: String = draft.user_passed_line()
+	if passed_line != "":
+		add_news("draft", "National Draft: " + passed_line)
 	draft = null
 	if opening_draft:
 		# The 2026 National Draft is done: the first season, 2027, starts on
@@ -8701,11 +8705,96 @@ func list_problem() -> Array:
 	var second := "Your best six average %d years old." % roundi(ages / float(maxi(1, six.size())))
 	if going > 0:
 		second += " %s retiring." % _count_word(going, true)
-	var spots := maxi(0, Contracts.MAX_LIST - my_list.size() + going)
-	var picks := club_picks(my_club).filter(func(pk): return int(pk["year"]) == season_year).size()
-	var third := "%s list spot%s, %s pick%s in the %d draft." % [_count_word(spots, true), "" if spots == 1 else "s",
-			_count_word(picks), "" if picks == 1 else "s", season_year]
-	return [first, second, third]
+	return [first, second, draft_spots_line(going)]
+
+
+## The brief's third line: senior list spots against this year's picks, and
+## which picks pass when there are more picks than spots (the draft's own
+## count, draft_list_spots). `going`: your players retiring at the rollover.
+func draft_spots_line(going: int = -1) -> String:
+	var s := draft_list_spots()
+	if going < 0:
+		going = int(s["retiring"])
+	var spots := int(s["open"])
+	var picks: Array = s["picks"]
+	var line := "%s senior list spot%s, %s pick%s in the %d draft." % [_count_word(spots, true), "" if spots == 1 else "s",
+			_count_word(picks.size()), "" if picks.size() == 1 else "s", season_year]
+	var passing: Array = s["passing"]
+	if not passing.is_empty():
+		line = line.trim_suffix(".") + ": %s %s will pass unless you delist before it starts." % [
+				"pick" if passing.size() == 1 else "picks", Draft.picks_words(passing)]
+	if going > 0:
+		line += " Retiring players hold their spot until the draft is over."
+	return line
+
+
+## The National Draft's list spots for your club: the one count the brief,
+## the draft button and the draft screen all read. Before the draft it is the
+## senior list as it will stand when the draft opens - your senior list now,
+## less the players free agency's close lets go or sends to the market
+## (_fa_close_plan), plus this year's father-son and academy ties. Retiring
+## players still hold their spot: they leave at the rollover, after the draft.
+## On draft night it is the draft's own count (Draft.spots_plan).
+## {"cap", "held", "open", "picks": [pick numbers, in order], "usable",
+##  "passing", "retiring", "resign" (undecided players who re-sign as the
+##  draft opens), "maybe" (players testing the market or holding your offer,
+##  each of whom takes a spot if he signs with you), "ties", "live"}
+func draft_list_spots() -> Dictionary:
+	var out := {"cap": RookieList.SENIOR_SPOTS, "held": 0, "open": 0, "picks": [], "usable": [],
+			"passing": [], "retiring": 0, "resign": 0, "maybe": 0, "ties": 0, "live": false}
+	if season == null or my_club == "":
+		return out
+	out["retiring"] = my_list.filter(func(q): return retiring_now(q)).size()
+	if draft != null and draft.intake_mode:
+		var plan := draft.spots_plan(my_club)
+		out["live"] = true
+		out["cap"] = draft.list_cap()
+		out["open"] = int(plan["open"])
+		out["held"] = draft.list_cap() - int(plan["open"])
+		out["usable"] = plan["usable"]
+		out["passing"] = plan["passing"]
+		out["picks"] = (plan["usable"] as Array) + (plan["passing"] as Array)
+		return out
+	var held := RookieList.senior_count(my_list)
+	var resign := 0
+	var maybe := 0
+	if fa_closed_year != season_year:
+		for step in _fa_close_plan():
+			var p: Dictionary = step[0]
+			match str(step[1]):
+				"test":
+					maybe += 1
+					if not RookieList.is_rookie(p):
+						held -= 1
+				"release":
+					if not RookieList.is_rookie(p):
+						held -= 1
+				_:
+					resign += 1
+		for p in free_agents:
+			if not _offer_of(p, my_club).is_empty():
+				maybe += 1
+	var ties := 0
+	for p in draftee_pool:
+		if not drafted_draftees.has(str(p["id"])) and str(p.get("tied_club", "")) == my_club \
+				and int(p.get("draft_year", 0)) == season_year:
+			ties += 1
+	held += ties
+	var picks := []
+	for pk in club_picks(my_club):
+		if int(pk["year"]) == season_year and int(pk.get("spot", 0)) > 0:
+			picks.append(int(pk["spot"]))
+	picks.sort()
+	var open := maxi(0, int(out["cap"]) - held)
+	out["held"] = held
+	out["open"] = open
+	out["resign"] = resign
+	out["maybe"] = maybe
+	out["ties"] = ties
+	out["picks"] = picks
+	out["usable"] = picks.slice(0, mini(open, picks.size()))
+	out["passing"] = picks.slice(mini(open, picks.size()))
+	return out
 
 
 func _count_word(n: int, capital := false) -> String:
@@ -8899,34 +8988,21 @@ func _close_free_agency() -> void:
 		return
 	open_offseason()
 	fa_closed_year = season_year
-	var best22 := {}
-	var side := Ratings.select_22(my_list)
-	for q in (side["ground"] as Array) + (side["bench"] as Array):
-		best22[str(q["id"])] = true
 	var testing := []
-	# Cap room as you settle them: a standing offer is money you have set
-	# aside, so whoever takes yours can always be paid.
-	var room := salary_cap - my_payroll()
-	for p in Contracts.expiring(my_list).duplicate():
-		if bool(p.get("resigned", false)) or retiring_now(p):
-			continue
-		var walked := bool(p.get("talks", {}).get("walked", false))
-		if walked and my_list.size() <= Contracts.MIN_LIST:
-			_resign(p, 1)
-			continue
-		var rise := Contracts.asking_salary(p) - int(p.get("salary", 0))
-		var fits := rise <= room
-		if not walked and fits and best22.has(str(p["id"])) and my_list.size() > Contracts.MIN_LIST:
-			_release(my_club, p, true, false)
-			testing.append(p)
-			room -= rise
-		elif not walked and (fits or my_list.size() <= Contracts.MIN_LIST):
-			_resign(p, 2)
-			room -= rise
-		else:
-			# He walked, or you could not fit him: you wanted him, as a rival
-			# that runs out of room does.
-			_release(my_club, p, true)
+	for step in _fa_close_plan():
+		var p: Dictionary = step[0]
+		match str(step[1]):
+			"resign1":
+				_resign(p, 1)
+			"resign2":
+				_resign(p, 2)
+			"test":
+				_release(my_club, p, true, false)
+				testing.append(p)
+			_:
+				# He walked, or you could not fit him: you wanted him, as a rival
+				# that runs out of room does.
+				_release(my_club, p, true)
 	_market_test(testing)
 	_resolve_market()
 	# Nobody signed them: their AFL careers end here.
@@ -8934,6 +9010,46 @@ func _close_free_agency() -> void:
 		_career_over(p)
 	free_agents = []
 	mark_dirty()
+
+
+## How free agency's close will settle your undecided players, worked out
+## without changing anything: [[player, "resign1" | "resign2" | "test" |
+## "release"]], in order. A depth player re-signs if the cap allows, one of
+## your best 23 tests the market, one who walked or does not fit is let go
+## (at the list minimum he re-signs instead). _close_free_agency runs this
+## plan and draft_list_spots counts it, so the two never disagree.
+func _fa_close_plan() -> Array:
+	var plan := []
+	if season == null:
+		return plan
+	var best22 := {}
+	var side := Ratings.select_22(my_list)
+	for q in (side["ground"] as Array) + (side["bench"] as Array):
+		best22[str(q["id"])] = true
+	# Cap room as you settle them: a standing offer is money you have set
+	# aside, so whoever takes yours can always be paid.
+	var room := salary_cap - my_payroll()
+	var size := my_list.size()
+	for p in Contracts.expiring(my_list):
+		if bool(p.get("resigned", false)) or retiring_now(p):
+			continue
+		var walked := bool(p.get("talks", {}).get("walked", false))
+		if walked and size <= Contracts.MIN_LIST:
+			plan.append([p, "resign1"])
+			continue
+		var rise := Contracts.asking_salary(p) - int(p.get("salary", 0))
+		var fits := rise <= room
+		if not walked and fits and best22.has(str(p["id"])) and size > Contracts.MIN_LIST:
+			plan.append([p, "test"])
+			size -= 1
+			room -= rise
+		elif not walked and (fits or size <= Contracts.MIN_LIST):
+			plan.append([p, "resign2"])
+			room -= rise
+		else:
+			plan.append([p, "release"])
+			size -= 1
+	return plan
 
 
 ## One of your best 23 you never settled tests the market as free agency

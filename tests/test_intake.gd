@@ -20,6 +20,10 @@ func run() -> void:
 	_t("_test_projection_model")
 	_t("_test_intake_draft_flow")
 	_t("_test_list_cap_skip")
+	_t("_test_full_list_picks_said")
+	_t("_test_room_for_every_pick")
+	_t("_test_career_spots_match_draft")
+	_t("_test_spots_sheet_before_offseason_opens")
 	_t("_test_draft_rules")
 	_t("_test_career_rollover")
 	_t("_test_class_tiers")
@@ -191,6 +195,125 @@ func _test_list_cap_skip() -> void:
 			"Every prospect is signed by a club with room")
 	_check(draft.remaining_pool() == 0,
 			"The prospect the full club passed on goes to a club with room: nobody is wasted")
+
+
+## Director report, 2026-11-07: "I had 4 picks in the draft but it only let
+## me use two. Maybe my list was full, but I had no idea". With two spots and
+## three picks, the draft says before it starts which pick will pass, and
+## records the pass when it happens.
+func _test_full_list_picks_said() -> void:
+	var full := Ratings.LIST_SIZE
+	var d := _blank(["A", "B"], {"A": full - 2, "B": 0}, 6)
+	_check(d.upcoming_picks("A", 0) == [1, 3, 5], "A holds picks 1, 3 and 5 (%s)" % str(d.upcoming_picks("A", 0)))
+	_check(d.open_spots("A") == 2, "Two list spots are open before the draft (%d)" % d.open_spots("A"))
+	var plan := d.spots_plan("A")
+	_check(plan["usable"] == [1, 3] and plan["passing"] == [5],
+			"Picks 1 and 3 have a spot; pick 5 will pass (%s)" % str(plan))
+	d.start_for_user("A")
+	for i in range(20):
+		if d.is_finished():
+			break
+		_check(d.pick_for_me(), "The coach takes the pick on the clock")
+	_check(d.is_finished(), "The draft finishes")
+	_check(d.count_for("A") == 2, "A full list signs only two (%d)" % d.count_for("A"))
+	_check(not d.user_passed.is_empty() and int(d.user_passed[0]["pick"]) == 5,
+			"The pass is recorded at pick 5 (%s)" % str(d.user_passed))
+	_check(d.user_passed_line().begins_with("Pick 5 passed: your list is full (%d)" % full)
+			or d.user_passed_line().begins_with("Picks 5"),
+			"The pass is said in words (%s)" % d.user_passed_line())
+	_check(d.open_spots("A") == 0 and d.spots_plan("A")["usable"].is_empty(), "No spot is left after the draft")
+
+
+## A list with room uses every pick and records no pass.
+func _test_room_for_every_pick() -> void:
+	var d := _blank(["A", "B"], {"A": 30, "B": 0}, 6)
+	var plan := d.spots_plan("A")
+	_check(plan["usable"] == [1, 3, 5] and (plan["passing"] as Array).is_empty(),
+			"Every pick has a spot (%s)" % str(plan))
+	d.start_for_user("A")
+	for i in range(20):
+		if d.is_finished():
+			break
+		_check(d.pick_for_me(), "The coach takes the pick on the clock")
+	_check(d.count_for("A") == 3, "All three picks are used (%d)" % d.count_for("A"))
+	_check(d.user_passed.is_empty() and d.user_passed_line() == "", "No pass is recorded")
+
+
+## An older save can reach the draft button before its off-season opened
+## (begin_intake_draft opens it, and this year's picks only count once it is
+## open): the sheet still says which picks pass.
+func _test_spots_sheet_before_offseason_opens() -> void:
+	GameState.reset()
+	var me := str(GameDB.CLUB_ORDER[0])
+	GameState.start_season(me, GameDB.club_list(me))
+	var season: Season = GameState.season
+	season.round_index = season.fixture.size()
+	var n := 0
+	while RookieList.senior_count(GameState.my_list) < RookieList.SENIOR_SPOTS and n < 60:
+		var copy: Dictionary = (GameState.my_list[n % GameState.my_list.size()] as Dictionary).duplicate(true)
+		copy["id"] = "pad_old_%d" % n
+		copy["rookie_list"] = ""
+		copy["contract_years"] = 3
+		GameState.my_list.append(copy)
+		n += 1
+	for p in GameState.my_list:
+		p["contract_years"] = 3   # nobody out of contract: the list is settled
+	_check(not GameState.offseason_open(), "The off-season has not opened (an older save)")
+	_check(DraftSpotsSheet.needed(), "The sheet shows for a full list before the off-season opens")
+	_check(not (GameState.draft_list_spots()["passing"] as Array).is_empty(),
+			"Every pick of a full list is named as passing (%s)" % str(GameState.draft_list_spots()))
+
+
+## In a career, the count the brief and the pre-draft sheet show matches the
+## picks the coach actually gets to use, and a pass reaches the news.
+func _test_career_spots_match_draft() -> void:
+	GameState.reset()
+	var me := str(GameDB.CLUB_ORDER[0])
+	GameState.start_season(me, GameDB.club_list(me))
+	var season: Season = GameState.season
+	season.round_index = season.fixture.size()
+	GameState.open_offseason()
+	# Fill the senior list to two short of the cap with re-signed players.
+	var cap := RookieList.SENIOR_SPOTS
+	var n := 0
+	while RookieList.senior_count(GameState.my_list) < cap - 2 and n < 40:
+		var src: Dictionary = GameState.my_list[n % GameState.my_list.size()]
+		var copy := src.duplicate(true)
+		copy["id"] = "pad_%d" % n
+		copy["rookie_list"] = ""
+		GameState.my_list.append(copy)
+		n += 1
+	for p in GameState.my_list:
+		p["contract_years"] = 3
+	var s := GameState.draft_list_spots()
+	var picks: Array = s["picks"]
+	_check(picks.size() >= 3, "The coach holds at least three picks (%s)" % str(picks))
+	_check(int(s["open"]) == cap - RookieList.senior_count(GameState.my_list),
+			"Open spots are the senior cap less the senior list (%s)" % str(s))
+	var line := GameState.draft_spots_line()
+	_check(line.contains("will pass"), "The brief names the picks that will pass (%s)" % line)
+	_check(DraftSpotsSheet.needed(), "The pre-draft sheet is shown when picks will pass")
+	var usable: int = (s["usable"] as Array).size()
+	_check(GameState.begin_intake_draft(), "The draft opens")
+	var draft: Draft = GameState.draft
+	for i in range(400):
+		if draft.is_finished():
+			break
+		if draft.is_user_turn():
+			draft.pick_for_me()
+		else:
+			draft.auto_until_user_turn()
+	_check(draft.count_for(me) == usable,
+			"The coach signs as many as the count said (%d of %d)" % [draft.count_for(me), usable])
+	_check(draft.user_passed.size() >= picks.size() - usable,
+			"Every pick without a spot is recorded as passed (%s)" % str(draft.user_passed))
+	var said := draft.user_passed_line()
+	_check(said != "", "The pass is said in words")
+	GameState.finish_intake_draft()
+	var found := false
+	for item in GameState.news:
+		found = found or str(item.get("text", item.get("body", ""))).contains(said) or str(item).contains(said)
+	_check(found, "The pass reaches the news (%s)" % said)
 
 
 func _blank(code_list: Array, sizes: Dictionary, n: int, counts: Dictionary = {}) -> Draft:
