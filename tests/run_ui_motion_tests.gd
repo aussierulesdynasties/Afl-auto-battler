@@ -4,7 +4,8 @@ extends SceneTree
 ## UiKit.Motion tokens, the hardened reveal / count_up / land, the Router's
 ## ease-out, sheet_in on every modal sheet, fill_bar, and the Sim the week
 ## result sheet (the Verdict lands on a win and a loss gets nothing; no text fades; the
-## injury, MRO and Norm Smith lines come in one after another). Proves: it ran
+## injury, MRO and Norm Smith lines come in one after another), and the round's list
+## under it (each game one unit, the winner in full ink, the fade gone at the end). Proves: it ran
 ## (Feel.moved), it was skipped (Reduced motion), the figures are
 ## true on the first frame, and a real finger (tests/tap.gd) reaches Continue
 ## from frame 0, during the landing, and at the edge of a landing element.
@@ -67,6 +68,7 @@ func _run() -> void:
 	await _t("_test_result_sheet_loss")
 	await _t("_test_result_sheet_reduced")
 	await _t("_test_land_edge_tap")
+	await _t("_test_round_list")
 
 	_feel.test_motion = false
 	_feel.force_phone = false
@@ -482,3 +484,148 @@ func _tap_at(c: BaseButton, at: Vector2) -> String:
 		return ""
 	var top := root.gui_get_hovered_control()
 	return "the tap at %s went to %s" % [str(at), top.name if top != null else "nothing"]
+
+
+## The round's list (director, 2026-11-07: "really hard to read and know which game they
+## belong to. And the bottom row is faded by the UI effect"). A simmed week lists your
+## game with the rest; one other game is forced level.
+func _test_round_list() -> void:
+	_prime(true, false)
+	var rest: Array = []
+	var level := ""
+	for r in _state.last_results:
+		var res: Dictionary = r
+		if level == "" and not _state.is_my_match(res):
+			res["goals"] = [11, 12]
+			res["behinds"] = [9, 3]
+			res["score"] = [75, 75]
+			level = str(res["home"])
+		rest.append(res)
+	_state.last_results = rest
+	_state.last_match = {}
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	hub.call("_show_results", _state.last_results)
+	await _settle(8)
+	var sheet: Control = hub.find_child("RoundResults", true, false)
+	var list: Control = sheet.find_child("ResultsList", true, false)
+	_check(list != null, "The round's list is on the sheet")
+	if list == null:
+		hub.queue_free()
+		return
+	var games: Array = []
+	for c in list.get_children():
+		if str(c.name).begins_with("ResultGame_"):
+			games.append(c)
+	_check(games.size() == _state.last_results.size(),
+			"One unit per game: %d of %d" % [games.size(), _state.last_results.size()])
+	# Each unit holds exactly the two clubs of one game, styled by the result.
+	var pairs := {}
+	for r in _state.last_results:
+		pairs[str(r["home"]) + "|" + str(r["away"])] = r
+	var grouped := true
+	var styled := true
+	var saw_draw := false
+	var why := ""
+	for g in games:
+		var rows: Array = (g as Node).find_children("ResultRow_*", "", true, false)
+		if rows.size() != 2:
+			grouped = false
+			why = "%s holds %d rows" % [g.name, rows.size()]
+			continue
+		var key := str(rows[0].name).trim_prefix("ResultRow_") + "|" + str(rows[1].name).trim_prefix("ResultRow_")
+		if not pairs.has(key):
+			grouped = false
+			why = "%s pairs %s, not a game" % [g.name, key]
+			continue
+		var res: Dictionary = pairs[key]
+		for side in [0, 1]:
+			var row: Node = rows[side]
+			var a := int(res["score"][side])
+			var b := int(res["score"][1 - side])
+			var want := "draw" if a == b else ("win" if a > b else "lose")
+			var code_l: Label = row.get_node("Code")
+			var score_l: Label = row.get_node("Score")
+			var ink: Color = _uk.MUTED if want == "lose" else _uk.TEXT
+			var font: Font = _uk.BOLD if want == "win" else _uk.FONT
+			if str(row.get_meta("result", "")) != want \
+					or code_l.get_theme_color("font_color") != ink or score_l.get_theme_color("font_color") != ink \
+					or code_l.get_theme_font("font") != font or score_l.get_theme_font("font") != font:
+				styled = false
+				why = "%s should read as %s" % [row.name, want]
+			if want == "draw":
+				saw_draw = true
+	_check(grouped, "Each game's two clubs sit together in one unit (%s)" % why)
+	_check(styled, "Winner in full ink and bold, loser muted, a draw both alike (%s)" % why)
+	_check(saw_draw, "The level game reads as a draw on both lines")
+	var rules := 0
+	for c in list.get_children():
+		if c is ColorRect:
+			rules += 1
+	_check(rules == games.size() - 1, "A rule between games (%d for %d games)" % [rules, games.size()])
+	# Your game first, edged in your colour; no other game is edged.
+	var edges_ok: bool = games.size() > 1 and bool(games[0].get_meta("mine", false)) \
+			and (games[0].get_node("ClubBar") as ColorRect).color.a > 0.0
+	for i in range(1, games.size()):
+		if bool(games[i].get_meta("mine", false)) or (games[i].get_node("ClubBar") as ColorRect).color.a > 0.0:
+			edges_ok = false
+	_check(edges_ok, "Your game comes first, edged in your club's colour, and only yours")
+	# The score sits by the code, not across the row.
+	var r0: Node = (games[1] as Node).find_children("ResultRow_*", "", true, false)[0]
+	var gap: float = (r0.get_node("Score") as Control).get_global_rect().position.x \
+			- (r0.get_node("Code") as Control).get_global_rect().end.x
+	_check(gap < 24.0, "The score starts within 24 px of the club code (%.0f px)" % gap)
+	# The fade over Continue: there while there is more below, gone at the end.
+	var sc := list.get_parent().get_parent() as ScrollContainer
+	var fade: Control = sheet.find_child("BarFade", true, false)
+	var bar := sc.get_v_scroll_bar()
+	_check(bar.max_value - bar.page > 40.0 and fade.modulate.a > 0.9,
+			"At the top the list runs on below Continue and the fade shows it (alpha %.2f)" % fade.modulate.a)
+	# A real wheel at the list, the way a player scrolls on PC (a phone drag ends the same way).
+	var at := list.get_global_rect().get_center()
+	for i in range(80):
+		if bar.value >= bar.max_value - bar.page - 0.5:
+			break
+		for down in [true, false]:
+			var wheel := InputEventMouseButton.new()
+			wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+			wheel.pressed = down
+			wheel.factor = 1.0
+			wheel.position = at
+			wheel.global_position = at
+			Input.parse_input_event(wheel)
+		Input.flush_buffered_events()
+		await process_frame
+	await _settle(4)
+	_check(bar.value >= bar.max_value - bar.page - 0.5, "Real wheel scrolling reaches the end of the list")
+	_check(is_equal_approx(fade.modulate.a, 0.0), "At the end the fade is gone (alpha %.2f)" % fade.modulate.a)
+	var last_row: Control = (games[games.size() - 1] as Node).find_children("ResultRow_*", "", true, false)[1]
+	var view := sc.get_global_rect()
+	var lr := last_row.get_global_rect()
+	_check(lr.position.y >= view.position.y and lr.end.y <= view.end.y + 0.5,
+			"The last row is wholly inside the list's window at the end (%s in %s)" % [str(lr), str(view)])
+	# Back to the top: the fade returns.
+	sc.scroll_vertical = 0
+	await _settle(3)
+	_check(fade.modulate.a > 0.9, "Scrolled back to the top, the fade is back (alpha %.2f)" % fade.modulate.a)
+	var tapped: String = await Tap.tap(sheet.find_child("ResultsContinue", true, false))
+	await _settle(3)
+	_check(tapped == "" and hub.find_child("RoundResults", true, false) == null,
+			"A real tap on Continue still closes the sheet (%s)" % tapped)
+	# The hub's own page: its fade over the pinned bar also goes at the page's end.
+	await _settle(4)
+	var page_fade: Control = hub.find_child("BarFade", true, false)
+	var page_sc: ScrollContainer = null
+	for n in hub.find_children("*", "ScrollContainer", true, false):
+		if not (n as Node).is_queued_for_deletion() and (n as Control).is_visible_in_tree():
+			page_sc = n
+			break
+	_check(page_fade != null and page_sc != null, "The hub page has its scroll and its fade")
+	if page_fade != null and page_sc != null:
+		page_sc.scroll_vertical = int(page_sc.get_v_scroll_bar().max_value)
+		await _settle(3)
+		_check(is_equal_approx(page_fade.modulate.a, 0.0),
+				"At the hub page's end its fade is gone too (alpha %.2f)" % page_fade.modulate.a)
+	hub.queue_free()
+	await _settle()
