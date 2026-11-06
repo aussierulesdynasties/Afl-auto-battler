@@ -3,7 +3,7 @@ extends SceneTree
 ## call kind on a phone, four beats down the page. Needs a real renderer.
 ##   godot --path . --script tools/visual/capture_decisions.gd -- --out /tmp/decisions
 ## --scale N: render the 390x844 phone at N times the pixels. --window WxH: a desktop window.
-## --kinds tired,duel,...: only those. Prints ART lines: every figure move the scenes drew
+## --kinds tired,duel,...: only those. --weather wet (or windy, hot): the day's weather. Prints ART lines: every figure move the scenes drew
 ## (strip and frames asked for), proof the sheet's moves were used and not a fallback.
 
 var W := 390
@@ -20,11 +20,14 @@ func _run() -> void:
 	var a := OS.get_cmdline_user_args()
 	var scale := 1
 	var kinds := ["tired", "duel", "hot", "momentum", "set_shot"]
+	var weather := ""
 	for i in range(a.size() - 1):
 		if str(a[i]) == "--out":
 			out = str(a[i + 1])
 		if str(a[i]) == "--scale":
 			scale = maxi(1, int(a[i + 1]))
+		if str(a[i]) == "--weather":
+			weather = str(a[i + 1])
 		if str(a[i]) == "--kinds":
 			kinds = str(a[i + 1]).split(",")
 		if str(a[i]) == "--window":
@@ -49,6 +52,8 @@ func _run() -> void:
 	root.content_scale_size = Vector2i(W, H)
 	state.prepare_interactive_match()
 	var sim = state.pending_sim
+	if weather != "":
+		sim.weather = weather
 	var DV = load("res://scripts/ui/match/DecisionVignette.gd")
 	var Stoppage = load("res://scripts/ui/match/StoppageVignette.gd")
 	Stoppage.log_frames = true

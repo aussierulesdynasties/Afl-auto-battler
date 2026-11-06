@@ -15,7 +15,8 @@ const PASS_HUB := "Starting the next round without picking passes it."
 ## Open the sheet over `host` if the Rookie Draft waits on you. `on_done`
 ## runs once the sheet closes for good (your draft over, or Back).
 static func open(host: Control, on_done: Callable, pass_line := PASS_PRESEASON) -> Control:
-	if not RookieList.waiting(GameState):
+	# Nobody left to take is no choice: the pick passes and the news says so.
+	if not RookieList.waiting(GameState) or RookieList.pass_if_nobody_left(GameState):
 		return null
 	var old := host.get_node_or_null(NAME)
 	if old != null and is_instance_valid(old) and not old.is_queued_for_deletion():
@@ -35,8 +36,6 @@ static func open(host: Control, on_done: Callable, pass_line := PASS_PRESEASON) 
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(note)
 	var shown := MidseasonDraft.pool(GameState).slice(0, SHOWN)
-	if shown.is_empty():
-		v.add_child(UiKit.lbl("Nobody is left to take.", 15, UiKit.TEXT))
 	for p in shown:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
