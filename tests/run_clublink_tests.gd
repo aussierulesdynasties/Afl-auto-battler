@@ -27,6 +27,10 @@ var _cs: GDScript
 var _car: GDScript
 
 
+## The seasons this suite starts are the same every run (C15).
+const SUITE_SEED := 2027
+
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -62,6 +66,7 @@ func _run() -> void:
 	_cs = load("res://scripts/state/CareerSave.gd")
 	_car = load("res://scripts/sim/Career.gd")
 	_gs.autosave_enabled = false
+	_gs.replay_seed = SUITE_SEED
 	_gs.save_path = SAVE
 	_gs.settings_path = "user://test_clublink.cfg"
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
@@ -83,6 +88,7 @@ func _run() -> void:
 	await _t("_test_board_taps", [Vector2i(320, 693)])
 	await _t("_test_drag_over_club", [Vector2i(390, 844)])
 	await _t("_test_profile_club_line", [Vector2i(390, 844)])
+	_gs.replay_seed = 0
 	print(Ran.line("Club link", self))
 	for f in _failures:
 		print("  FAIL: " + f)
@@ -215,6 +221,8 @@ func _test_rules() -> void:
 	# A row an old save rebuilt with no figures shows dashes, never a guess.
 	_check(_cp._cell({"games": -1}, "games") == "-" and _cp._cell({"goals": -1}, "goals") == "-",
 			"Games and goals not on record show a dash")
+	_check(_cp._cell({"bf": []}, "bf") == "-" and _cp._cell({"flags": []}, "flags") == "-" 			and _cp._cell({"games": 0}, "games") == "-",
+			"Every column shows none the same way: a dash, never a blank")
 
 
 func _test_save_round_trip() -> void:
@@ -513,7 +521,7 @@ func _test_board_taps(sz: Vector2i) -> void:
 	if ghost_row != null:
 		_check(_text_of(ghost_row).contains("-"), "%s: a games figure not on record is a dash" % tag)
 		var gn: Control = ghost_row.find_child("BoardName", true, false)
-		_check(gn.size.y >= 44.0, "%s: a name on the board is a 44 px tap (%.0f)" % [tag, gn.size.y])
+		_check((ghost_row as Control).size.y >= 44.0, "%s: a row on the board is a 44 px tap (%.0f)" % [tag, (ghost_row as Control).size.y])
 		# No Brownlow column on a phone: his medal is in words under his name.
 		_check(wide_cols or _text_of(ghost_row).contains("Brownlow %d" % (int(_gs.season_year) - 1)),
 				"%s: a Brownlow medallist's medal shows on his row (%s)" % [tag, _text_of(ghost_row)])
@@ -521,7 +529,8 @@ func _test_board_taps(sz: Vector2i) -> void:
 		var need: float = font.get_string_size((gn as Label).text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 				gn.get_theme_font_size("font_size")).x
 		_check(gn.size.x >= need, "%s: a name on the board reads in full (%.0f px for %.0f)" % [tag, gn.size.x, need])
-		var why2: String = await Tap.tap_at(gn, gn.size * 0.5, true)
+		# The tap lands on his name; the row under it takes it.
+		var why2: String = await Tap.tap_at(ghost_row, gn.get_global_rect().get_center() - (ghost_row as Control).global_position, true)
 		await _settle()
 		var facts: Node = screen.get_node_or_null(_cp.FACTS_NAME)
 		_check(why2 == "" and facts != null and _text_of(facts).contains("Old Champion"),
@@ -532,7 +541,7 @@ func _test_board_taps(sz: Vector2i) -> void:
 				"%s: Back closes the facts and leaves the board" % tag)
 	if big_row != null:
 		var bn: Control = big_row.find_child("BoardName", true, false)
-		var why3: String = await Tap.tap_at(bn, bn.size * 0.5, true)
+		var why3: String = await Tap.tap_at(big_row, bn.get_global_rect().get_center() - (big_row as Control).global_position, true)
 		await _settle()
 		var prof: Node = screen.get_node_or_null("PlayerProfile")
 		_check(why3 == "" and prof != null, "%s: a name of a player still in the game opens his profile (%s)" % [tag, why3])
@@ -552,6 +561,9 @@ func _test_board_taps(sz: Vector2i) -> void:
 func _test_trophy_link(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	_board_setup()
+	# The stats hub's first-visit intro is not in FirstVisitIntro.TEXT; seen,
+	# so its overlay does not take the tap meant for the link.
+	_gs.set_setting("seen_season_stats_intro", true)
 	root.size = sz
 	load("res://scripts/ui/StatsHubScene.gd").current = "trophies"
 	var s: Control = load("res://scenes/StatsHubScene.tscn").instantiate()

@@ -121,7 +121,9 @@ static func markup(text: String, index: Dictionary, clubs := true) -> String:
 			continue   # plain words: a ground, or a club where clubs are off
 		named = true
 		out += _escape(text.substr(at, int(s[0]) - at))
-		var col := UiKit.club_name_colour(UiKit.club_ink(str(s[2])))
+		# A club's own name: its strongest real colour (ClubLink.colour); a
+		# player's name: his club's ink.
+		var col := ClubLink.colour(str(s[2])) if id.begins_with(ClubLink.SCHEME) 				else UiKit.club_name_colour(UiKit.club_ink(str(s[2])))
 		var ink := "[color=#%s]%s[/color]" % [col.to_html(false), _escape(shown).replace(" ", NBSP)]
 		out += NameLink.url(ink, id) if id != "" else ink
 		at = int(s[1])

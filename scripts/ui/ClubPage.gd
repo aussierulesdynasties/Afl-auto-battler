@@ -383,8 +383,13 @@ static func _board_row(host: Control, row: Dictionary, wide: bool, i: int) -> Co
 	sb.bg_color = Color(1, 1, 1, 0.04 if i % 2 == 0 and not head else 0.0)
 	sb.content_margin_left = 6
 	sb.content_margin_right = 6
+	if not head and not wide:
+		# A phone row's name, honours and figures sit close as one block, with
+		# its air at the edges of the row, not between its lines.
+		sb.content_margin_top = 6
+		sb.content_margin_bottom = 6
 	face.add_theme_stylebox_override("panel", sb)
-	# A name is a tap: 44 high, as every button in the game.
+	# A row is a tap: 44 high at least, as every button in the game.
 	face.custom_minimum_size = Vector2(0, 44 if wide and not head else (32 if wide else (24 if head else 44)))
 	var hb := UiKit.hbox(4)
 	var fs := UiKit.SMALL if head else UiKit.BODY
@@ -401,12 +406,11 @@ static func _board_row(host: Control, row: Dictionary, wide: bool, i: int) -> Co
 	else:
 		# A phone has no room for a name beside five figures: the name takes
 		# its own line, the figures sit under it in the columns.
-		var stack := UiKit.vbox(4)
+		var stack := UiKit.vbox(2)
 		face.add_child(stack)
 		if head:
 			name.free()
 		else:
-			name.custom_minimum_size = Vector2(0, 44)
 			stack.add_child(name)
 			# No room for the Brownlow and All-Australian columns: in words
 			# under his name, so a medallist never reads as a blank row.
@@ -432,7 +436,8 @@ static func _board_row(host: Control, row: Dictionary, wide: bool, i: int) -> Co
 		return face
 	face.name = "Board_" + str(row["id"])
 	name.name = "BoardName"
-	_tap(name, func(): open_row(host, row))
+	# The whole row opens him: on a phone the name alone is one short line.
+	_tap(face, func(): open_row(host, row))
 	return face
 
 
@@ -450,6 +455,10 @@ static func _row_name(row: Dictionary) -> String:
 	return GameDB.player_display_name(row.get("card", {}))
 
 
+## Every empty cell on the board, whatever the column: none, or none on record.
+const NONE := "-"
+
+
 static func _cell(row: Dictionary, key: String) -> String:
 	match key:
 		"years":
@@ -458,14 +467,15 @@ static func _cell(row: Dictionary, key: String) -> String:
 			var a := int(row.get("from", 0))
 			var b := int(row.get("to", 0)) if int(row.get("to", 0)) > 0 else int(row.get("left", 0))
 			if a <= 0:
-				return "to %d" % b if b > 0 else "-"
+				return "to %d" % b if b > 0 else NONE
 			return str(a) if a == b else "%d-%02d" % [a, b % 100]
 		"games", "goals":
+			# Not on record (an old save's row) or none: the same dash.
 			var n := int(row.get(key, 0))
-			return "-" if n < 0 else str(n)
+			return NONE if n <= 0 else str(n)
 		_:
 			var n := (row.get(key, []) as Array).size()
-			return str(n) if n > 0 else ""
+			return str(n) if n > 0 else NONE
 
 
 ## A tap on a control that is not a button; a swipe still scrolls the board.

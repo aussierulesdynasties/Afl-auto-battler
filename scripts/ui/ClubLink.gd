@@ -22,10 +22,19 @@ static func url(shown: String, code: String) -> String:
 	return "[url=%s%s]%s[/url]" % [SCHEME, code, shown]
 
 
+## A club's name as a link wears its strongest real colour (director
+## 2026-11-06, rulings 51a: never white, never a tint): the same club-code ink
+## as the Season stats lists, read at 4.5:1 on the page, a panel and a pressed
+## row. Every club's name reads in a colour, Essendon's red and Collingwood's
+## grey included, so a name in white is never a club.
+static func colour(code: String) -> Color:
+	return StatsSide.code_ink(code)
+
+
 ## BBCode for a club's name in its ink, bold, as a tap.
 static func ink(code: String, shown := "") -> String:
 	var name := shown if shown != "" else GameDB.club_name(code)
-	return url("[b][color=#%s]%s[/color][/b]" % [StatsSide.ink(code).to_html(false), name.replace("[", "[lb]")], code)
+	return url("[b][color=#%s]%s[/color][/b]" % [colour(code).to_html(false), name.replace("[", "[lb]")], code)
 
 
 ## Make a label that names one club open its page on a tap. A press that turns
