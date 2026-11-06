@@ -1439,6 +1439,8 @@ func handle_back() -> bool:
 		return true
 	if RookieDraftSheet.close_open(self):
 		return true
+	if DraftSpotsSheet.close_open(self):
+		return true
 	# Back skips the press conference, as its Skip button does (natural
 	# Android Back); an overlay opened over it closes first.
 	if _media_overlay != null and is_instance_valid(_media_overlay):
@@ -1936,7 +1938,16 @@ func _result_side(code: String, goals: int, behinds: int, col: Color, verdict: S
 	return h
 
 
+## The draft button: when a pick of yours has no senior list spot, the sheet
+## says so first (DraftSpotsSheet); otherwise the draft starts.
 func _on_intake_draft() -> void:
+	if DraftSpotsSheet.needed():
+		DraftSpotsSheet.open(self, _start_intake_draft)
+		return
+	_start_intake_draft()
+
+
+func _start_intake_draft() -> void:
 	if GameState.begin_intake_draft():
 		Router.go("draft")
 		return
