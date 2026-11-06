@@ -177,6 +177,7 @@ const SCREENS := [
 	["staff", "", "hub"],
 	["stats", "", "hub"],
 	["selection", "", "hub"],
+	["preview", "", "hub"],
 	["offseason", "", "hub"],
 	["season_review", "", "hub"],
 	["forge", "", "hub"],
@@ -387,9 +388,10 @@ func _test_overlays() -> void:
 	await _overlay_case("training: first-visit intro", "training", func(s): s.call("_show_intro"),
 			func(): _state.set_setting("seen_training_intro", false))
 	await _overlay_case("stats: first-visit intro", "stats", func(s): s.call("_show_intro"))
-	await _overlay_case("selection: team report", "selection", func(s): s.call("_show_report", "MEL"))
-	await _overlay_case("selection: synergies", "selection", func(s): s.call("_show_synergies"))
-	await _overlay_case("selection: This week sheet", "selection", func(s): s.call("_open_week"))
+	await _overlay_case("selection: team report", "selection", func(s): s.get("_week").show_report("MEL"))
+	await _overlay_case("selection: synergies", "selection", func(s): s.get("_week").show_synergies())
+	await _overlay_case("preview: team report", "preview", func(s): s.get("_week").show_report("MEL"))
+	await _overlay_case("preview: synergies", "preview", func(s): s.get("_week").show_synergies())
 	await _overlay_case("selection: player profile", "selection", func(s): s.call("_open_profile", pid))
 	await _overlay_case("offseason: talks", "offseason", func(s): s.call("_open_talks", pid))
 	await _overlay_case("season review: awards program", "season_review", func(s): s.call("_open_awards_program"),

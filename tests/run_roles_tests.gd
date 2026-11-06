@@ -175,7 +175,7 @@ func _test_selection_tests() -> void:
 		_check(gtext.contains("Requires 4 Contested bulls on the ground.")
 				and gtext.contains("Requires 2 Aerial threats and 2 Crumbers in the forward line."),
 				"Requirements read in plain words")
-		_check(ui.call("handle_back") == true and not is_instance_valid(ui.get("_synergy_overlay")),
+		_check(ui.call("handle_back") == true and not is_instance_valid(ui.get("_week").get("_overlay")),
 				"Back closes the synergy guide first")
 		await _settle()
 	# Complete synergy: one tap switches it on, says who came in, and can be
@@ -402,16 +402,12 @@ func _test_selection_pages_tests() -> void:
 		# --- phone 390x844 ---
 		root.size = Vector2i(390, 844)
 		var ui := await _open(false)
+		# The week has its own step between Play match and the setup (the match
+		# preview, director 2026-11-07): no link to it here.
 		_check(ui.find_child("SelectionPage_side", true, false) == null and ui.find_child("SelectionPage_week", true, false) == null
 				and ui.find_child("SidePage", true, false) != null and ui.find_child("WeekPage", true, false) == null
-				and ui.find_child("WeekSheet", true, false) == null,
-				"Phone: one page, no tabs; the week is not on it until the row is tapped (%s)" % tag)
-		var row: Button = ui.find_child("WeekRow", true, false)
-		_check(row != null and row.size.y >= 44 and row.text.begins_with("This week ") and row.text.ends_with("›"),
-				"Phone: a thumb-sized This week row sits under the bench (%s)" % tag)
-		var row_ink: Color = row.get_theme_color("font_color") if row != null else Color.BLACK
-		var uk2 = load("res://scripts/ui/UiKit.gd")
-		_check(row != null and uk2.contrast(row_ink, uk2.BG) >= 4.5, "Phone: the row is in readable club ink (%s)" % tag)
+				and ui.find_child("WeekRow", true, false) == null,
+				"Phone: one page, the side; the week is the match preview's, no link to it here (%s)" % tag)
 		_check(_no_scroll(ui.find_child("SelectionScroll", true, false)),
 				"Phone: the page does not scroll for a 23-man side (%s)" % tag)
 		_check(ui.find_child("NotSelectedScroll", true, false) != null,
@@ -442,39 +438,35 @@ func _test_selection_pages_tests() -> void:
 		_check(ui.find_child("BuilderHint", true, false) != null
 				and str(ui.find_child("BuilderHint", true, false).text).contains("swap"),
 				"Phone: the swap is said under the interchange (%s)" % tag)
-		# The week opens over the side from the row and carries the swap.
-		var wk: String = await Tap.tap(ui.find_child("WeekRow", true, false))
+		ui.queue_free()
 		await _settle()
-		_check(wk == "" and ui.find_child("WeekSheet", true, false) != null and ui.find_child("WeekPage", true, false) == null,
-				"Phone: a real tap on the row opens the week over the side (%s %s)" % [tag, wk])
+		# The match preview carries the swap: the week as the side stands now.
+		ui = load("res://scenes/MatchPreviewScene.tscn").instantiate()
+		root.add_child(ui)
+		await _settle()
 		var sl: RichTextLabel = ui.find_child("SynergyLine", true, false)
-		_check(sl != null and sl.get_parsed_text() == _synergy_words(), "Phone: the synergies follow the swap (%s)" % tag)
+		_check(ui.find_child("WeekPage", true, false) != null and sl != null and sl.get_parsed_text() == _synergy_words(),
+				"Phone: the preview's synergies follow the swap (%s)" % tag)
 		var rules: Button = ui.find_child("SynergyRules", true, false)
 		_check(sl != null and rules != null and _gap_x(sl, rules) < 48.0 and _gap_y(sl, rules) < 24.0,
 				"Phone: Synergies sits right under its own line (%s)" % tag)
 		var rep: Button = ui.find_child("AssistantReport", true, false)
-		var head: Control = ui.find_child("WeekHeading", true, false)
-		_check(rep != null and head != null and rep.size.y >= 48.0 and rules != null and rules.size.y >= 48.0
-				and (ui.find_child("WeekClose", true, false) as Control).size.y >= 48.0,
-				"Phone: the report, Synergies and Close are each at least 48 tall (%s)" % tag)
+		var cont: Button = ui.find_child("PreviewContinue", true, false)
+		_check(rep != null and rep.size.y >= 48.0 and rules != null and rules.size.y >= 48.0
+				and cont != null and cont.size.y >= 56.0,
+				"Phone: the report and Synergies are 48 tall or more, Continue 56 (%s)" % tag)
+		var sc: ScrollContainer = ui.find_child("PreviewScroll", true, false)
+		if sc != null and rules != null:
+			sc.ensure_control_visible(rules)
+			await _settle()
 		var why3: String = await Tap.tap(rules)
 		await _settle()
-		_check(why3 == "" and ui.find_child("SynergyGuide", true, false) != null and ui.find_child("WeekSheet", true, false) != null,
-				"Phone: a real tap on Synergies opens the rules over the week, which stays (%s %s)" % [tag, why3])
+		_check(why3 == "" and ui.find_child("SynergyGuide", true, false) != null,
+				"Phone: a real tap on Synergies opens the rules over the preview (%s %s)" % [tag, why3])
 		var back_ok: bool = ui.call("handle_back") == true
 		await _settle()
-		_check(back_ok and ui.find_child("SynergyGuide", true, false) == null, "Phone: Back closes the rules first (%s)" % tag)
-		_check(ui.find_child("WeekSheet", true, false) != null, "Phone: the week is still open under the rules (%s)" % tag)
-		# Close by a real tap, then reopen and close by Back.
-		var why5: String = await Tap.tap(ui.find_child("WeekClose", true, false))
-		await _settle()
-		_check(why5 == "" and ui.find_child("WeekSheet", true, false) == null, "Phone: a real tap on Close shuts the week (%s %s)" % [tag, why5])
-		await Tap.tap(ui.find_child("WeekRow", true, false))
-		await _settle()
-		_check(ui.call("handle_back") == true, "Phone: Back closes the week sheet (%s)" % tag)
-		await _settle()
-		_check(ui.find_child("WeekSheet", true, false) == null and ui.call("handle_back") == false,
-				"Phone: the week is closed, and Back from the side leaves selection (%s)" % tag)
+		_check(back_ok and ui.find_child("SynergyGuide", true, false) == null and ui.call("handle_back") == false,
+				"Phone: Back closes the rules, then leaves the preview (%s)" % tag)
 		ui.queue_free()
 		await _settle()
 		# --- PC: both in view, no toggle, no scroll ---
