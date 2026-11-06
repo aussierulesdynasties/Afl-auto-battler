@@ -1,9 +1,10 @@
 extends SceneTree
 ## The club line's colour on Season stats (director, 2026-11-06), for his look.
 ## Needs a real renderer:
-##   godot --path . --script tools/visual/capture_stats_colour.gd -- --out /tmp/sc [--size 390x844]
-## A fresh Collingwood career plays three rounds. Writes <out>_players.png (the
-## Players list by disposals), <out>_players_goals.png (by goals),
+##   godot --path . --script tools/visual/capture_stats_colour.gd -- --out /tmp/sc [--size 390x844] [--club COL]
+## A fresh career at --club (default Collingwood) plays three rounds. Writes
+## <out>_players.png (the Players list by disposals), <out>_players_goals.png
+## (by goals), <out>_players_mine.png (your own club's rows, on their tint),
 ## <out>_swatches.png (every club's code line as a rival's row on PANEL_ALT and
 ## as your own tinted row, with its worst contrast) and
 ## <out>_trophies.png (your seasons, this one at "Round 3 of 24").
@@ -19,11 +20,13 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var out := "/tmp/sc"
+	var club := "COL"
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		var v := str(a[i + 1]) if i + 1 < a.size() else ""
 		match str(a[i]):
 			"--out": out = v
+			"--club": club = v
 			"--size":
 				W = int(v.split("x")[0])
 				H = int(v.split("x")[1])
@@ -39,14 +42,18 @@ func _run() -> void:
 	state.set_setting("seen_season_stats_intro", true)
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
-	state.start_season("COL", db.club_list("COL"))
+	state.start_season(club, db.club_list(club))
 	for r in range(3):
 		state.advance()
 	var sp = load("res://scripts/ui/stats/StatsPlayers.gd")
 	var hub = load("res://scripts/ui/StatsHubScene.gd")
-	for pass_ in [["disposals", "_players.png"], ["goals", "_players_goals.png"]]:
+	for pass_ in [["disposals", "_players.png", ""], ["goals", "_players_goals.png", ""],
+			["disposals", "_players_mine.png", club]]:
 		sp.reset_view()
+		sp.reset_filters()
 		sp.pick_group(str(pass_[0]))
+		if str(pass_[2]) != "":
+			sp.set_filter("club", str(pass_[2]))
 		hub.current = "players"
 		var ui: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
 		root.add_child(ui)
