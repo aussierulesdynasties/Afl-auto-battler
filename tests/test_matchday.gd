@@ -202,9 +202,6 @@ func _test_standout_levers() -> void:
 	var plain: String = line.call({})
 	_check(plain.contains("was their best this quarter") and not plain.contains("hurting"),
 			"A player no call reaches is stated as a fact, not a problem to answer (%s)" % plain)
-	var mu: String = line.call({"X9": {"kind": "matchup", "who": "Moore"}})
-	_check(mu.contains("is hurting you") and mu.ends_with("Moore is on him."),
-			"A key forward hurting you is named with the defender on him (%s)" % mu)
 	var tagged: String = line.call({"X9": {"kind": "tagged", "who": "Sinclair"}})
 	_check(tagged.contains("with Sinclair tagging him"), "A tagged midfielder names your tagger (%s)" % tagged)
 	var can: String = line.call({"X9": {"kind": "tag"}})

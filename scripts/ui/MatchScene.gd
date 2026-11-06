@@ -82,8 +82,7 @@ var _run_len := 0
 var _press_said := [false, false]  # the Defensive press line, once a side
 var _call_mem := MatchNotes.call_state()  # the structural calls' lines (MatchNotes.call_lines)
 var _name_index := {}           # name -> club for NameInk, built once per match
-var _duel_mem := {}             # the feed's memory of the key match-ups (MatchNotes.duel_feed_line)
-var _matchup_overlay: Control
+var _duel_mem := {}             # the feed's memory of the forward-50 duels (MatchNotes.duel_feed_line)
 var _break_refresh := Callable()   # the one-line break: say each call's answer again after a pick
 var _break_sheets: Array = []      # the one-line break: open sheets, the top one last ({overlay, close})
 ## Key moments (director, 2026-10-18, P-14): your match at top speed, down to
@@ -667,7 +666,7 @@ func _simulate_remaining() -> void:
 const GAMEPLANS := [
 	["balanced", "Balanced"], ["attacking", "Attack corridor"],
 	["defensive", "Defensive press"], ["contest", "Win contest"],
-	["controlled", "Controlled tempo"], ["through_stars", "Through stars"],
+	["controlled", "Controlled tempo"],
 ]
 const PEP_TALKS := [
 	["steady", "Stay composed"], ["fire_up", "Fire them up"], ["calm", "Calm the group"],
@@ -714,7 +713,7 @@ func _show_coach_box() -> void:
 	(band.get_child(0) as ClubDuel).live()   # match day's atmosphere settles in (Feel)
 	v.add_child(band)
 	# Wide (PC, director 2026-10-11: no column scrolls at 1280x720): the
-	# quarter just played and the key match-ups, then the calls in three
+	# quarter just played and the play-through calls, then the calls in three
 	# columns - the plan, the tag and the talk; the defensive set-up. A phone keeps one column, every call
 	# in it.
 	# Below 1200 units the first column sits above the other three.
@@ -817,7 +816,6 @@ func _show_coach_box() -> void:
 		rep.add_child(played)
 		rep.add_child(_quarter_view(q - 1))
 		var did := MatchNotes.calls_lines(_res, _my_side, q - 1) \
-				+ MatchNotes.duel_change_lines(_res, _my_side, q - 1) \
 				+ MatchNotes.tag_drop_lines(_res, _my_side, q - 1) \
 				+ MatchNotes.lasting_moment_lines(_res, q - 1)
 		if not did.is_empty():
@@ -856,6 +854,9 @@ func _show_coach_box() -> void:
 		"tagger_id": str((sim.tactics[_my_side] as Dictionary).get("tagger_id", _last_tactics.get("tagger_id", ""))),
 		"interceptor_id": str(sim.interceptor[_my_side]),
 		"minder_id": str((sim.tactics[_my_side] as Dictionary).get("spare_minder_id", "")) 				if bool((sim.tactics[_my_side] as Dictionary).get("spare_accountable", false)) else "",
+		"focus_mid": str(_last_tactics.get("focus_mid", "")),
+		"focus_fwd": str(_last_tactics.get("focus_fwd", "")),
+		"focus_def": str(_last_tactics.get("focus_def", "")),
 		"pep": "steady",
 	}
 	calls["defence"] = MatchNotes.defence_key(str(calls["interceptor_id"]) != "", str(calls["minder_id"]) != "")
@@ -1023,15 +1024,29 @@ func _show_coach_box() -> void:
 	col_a.add_child(tag_note)
 	group.call("tag", tag_note)
 
-	# Key match-ups: who is on their key forwards, how the contests went last
-	# quarter, and yours against their defenders. Change one in a tap.
-	# In three columns they sit under the quarter just played, so no column
-	# stands half empty (director, 2026-10-10).
-	var mv := _matchups_view(sim, q)
-	if mv != null:
-		mv.set_meta("break_unit", true)
-		(rep if rep != v else col_a).add_child(mv)
-		group.call("tag", mv)  # Tag and Key match-ups stay together (director, 2026-11-03)
+	# Play through, three calls (director, 2026-10-07; back 2026-11-07): each
+	# offers the men who fill that job now, and says what it does or that it
+	# waits. They sit where Key match-ups sat (director, 2026-11-07: "Roles
+	# replace match-ups"): in three columns under the quarter just played, so
+	# no column stands half empty (director, 2026-10-10).
+	var mine := _roster_side(_my_side)
+	for slot in MatchNotes.FOCUS_ORDER:
+		var fits := mine.filter(func(r): return (MatchSim.FOCUS_SLOT_ROLES[slot] as Array).has(
+				str(_focus_player(str(r["id"])).get("role", r.get("role", "")))))
+		var note := UiKit.lbl("", UiKit.NOTE, UiKit.MUTED)
+		note.name = "FocusNote_" + slot
+		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var sync := func(id: String) -> void:
+			note.text = _focus_note_text(slot, id)
+		var text: Array = MatchNotes.FOCUS_SLOT_TEXT[slot]
+		var pick := _player_choice("FocusPicker_" + slot, "No one", fits, _in_the_game(fits, quick if quick > 0 else 3), calls, slot,
+				"Play through: %s" % str(text[0]).to_lower(), sync)
+		var block := _call_block("Play through: %s" % str(text[0]).to_lower(), pick)
+		sync.call(str(calls[slot]))
+		block.add_child(note)
+		(rep if rep != v else col_a).add_child(block)
+		group.call("pt", block)
+
 	# Defensive set-up (director, 2026-11-03: Defensive forward and Loose
 	# interceptor fold into one call). The coach picks the shape; the men are
 	# the ones a coach would send: your loose man stays the one in the job
@@ -1113,9 +1128,8 @@ func _show_coach_box() -> void:
 	group.call("df", def_block)
 
 	# Wide: the pep talk sits under the tag, so every column fits a 720-unit
-	# screen. Rotations and play-through are no longer calls (director,
-	# 2026-11-03): rotations follow the season plan and the legs
-	# (MatchSim.auto_rotation), play-through is the Through stars plan.
+	# screen. Rotations are no longer a call (director, 2026-11-03): they
+	# follow the season plan and the legs (MatchSim.auto_rotation).
 	var tail: VBoxContainer = col_b
 	var pep_note := UiKit.vbox(3)
 	pep_note.name = "PepNote"
@@ -1161,6 +1175,9 @@ func _show_coach_box() -> void:
 	start.pressed.connect(func():
 		var t := {
 			"gameplan": str(calls["gameplan"]),
+			"focus_mid": str(calls["focus_mid"]),
+			"focus_fwd": str(calls["focus_fwd"]),
+			"focus_def": str(calls["focus_def"]),
 			"tag_id": str(calls["tag_id"]),
 			"tagger_id": str(calls["tagger_id"]),
 			"interceptor_id": str(calls["interceptor_id"]),
@@ -1246,7 +1263,7 @@ func _show_coach_box() -> void:
 ## block is brought into view and brightens once, with the one fact that sent
 ## the coach there restated above its picker. Nothing is chosen for him and
 ## nothing else on the pane changes.
-const INTENT_NODES := {"tag": "TagPicker", "matchup": "BreakMatchups", "minder": "DefenceSetupPicker",
+const INTENT_NODES := {"tag": "TagPicker", "minder": "DefenceSetupPicker",
 		"loose": "DefenceSetupPicker", "plan": "PlanPicker"}
 
 
@@ -1260,7 +1277,7 @@ func _land_call_intent(overlay: Control, q: int) -> void:
 		return
 	# The call's own block: the one holding its heading.
 	var block: Node = target
-	while block != null and block != overlay and block.find_child("CallHeading", false, false) == null 			and not (str(block.name) == "BreakMatchups"):
+	while block != null and block != overlay and block.find_child("CallHeading", false, false) == null:
 		block = block.get_parent()
 	if block == null or block == overlay:
 		return
@@ -1281,9 +1298,6 @@ func _show_intent_block(block: Node, player_id: String) -> void:
 	if not is_instance_valid(block):
 		return
 	var shown: Node = block
-	var row: Node = block.find_child("BreakMatchup_" + player_id, true, false) if player_id != "" else null
-	if row != null:
-		shown = row
 	var up: Node = block
 	while up != null and not (up is ScrollContainer):
 		up = up.get_parent()
@@ -1300,8 +1314,9 @@ func _show_intent_block(block: Node, player_id: String) -> void:
 # The break from quarter time on: one line a call (director, 2026-10-14)
 # ---------------------------------------------------------------------------
 ## What a call's sheet is headed, and what its row says it is.
-const CALL_TITLES := {"plan": "Game plan", "pep": "Pep talk", "tag": "Tag", "mu": "Key match-ups",
-		"def": "Defensive set-up"}
+const CALL_TITLES := {"plan": "Game plan", "pep": "Pep talk", "tag": "Tag",
+		"def": "Defensive set-up", "pt": "Play through"}
+const CALL_ROW_LABELS := {"pt": "Play through (forward, midfield, back)"}
 
 
 ## "How it's going" for the Defensive forward and their loose defender, this
@@ -1384,10 +1399,12 @@ func _mount_one_line(c: Dictionary) -> void:
 		if b.get_child_count() == 0:
 			b.free()
 			return
-		# The sheet or the pane says what the call is: its own small heading goes.
-		var h: Node = b.find_child("CallHeading", true, false)
-		if h != null:
-			(h as Control).visible = false
+		# The sheet or the pane says what the call is: its own small heading
+		# goes (the three play-through calls keep theirs: one heading each).
+		if key != "pt":
+			var h: Node = b.find_child("CallHeading", true, false)
+			if h != null:
+				(h as Control).visible = false
 		bodies[key] = b
 		order.append(key)
 		store.add_child(b)
@@ -1440,15 +1457,13 @@ func _mount_one_line(c: Dictionary) -> void:
 		fact = UiKit.lbl(fact_text, UiKit.BODY, UiKit.TEXT)
 		fact.name = "TagFact"
 		fact.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var mu: Control = take.call("BreakMatchups")
-	if mu != null:
-		# Its spacer and its own heading: the sheet or the pane is headed already.
-		for i in range(mini(2, mu.get_child_count())):
-			(mu.get_child(i) as Control).visible = false
 	body.call("plan", [take.call("PlanPicker", true), take.call("PlanNote"), _calls_record("gameplan"), c["syn"]])
 	body.call("pep", [take.call("PepPicker", true), take.call("PepNote"), _calls_record("pep")])
 	body.call("tag", [fact, take.call("TagPicker", true), who_wb if wide else who_line, take.call("TagNote")])
-	body.call("mu", [mu])
+	var through: Array = []
+	for slot in MatchNotes.FOCUS_ORDER:
+		through.append(take.call("FocusPicker_" + str(slot), true))
+	body.call("pt", through)
 	body.call("def", [take.call("DefenceBlock")])
 	((c["who_hook"] as Array)[0] as Callable).call()
 
@@ -1457,7 +1472,7 @@ func _mount_one_line(c: Dictionary) -> void:
 	rows.name = "CallRows"
 	var row_of := {}
 	for key in order:
-		var r := _call_row(str(key), str(CALL_TITLES[key]))
+		var r := _call_row(str(key), str(CALL_ROW_LABELS.get(key, CALL_TITLES[key])))
 		row_of[key] = r
 		rows.add_child(r)
 		rows.add_child(UiKit.rule())
@@ -1701,16 +1716,17 @@ func _call_answer(key: String, calls: Dictionary, c: Dictionary) -> String:
 			var target: String = named.call(str(calls["tag_id"]), "their player")
 			var who = (c["my_mids"] as Dictionary).get(str(calls["tagger_id"]), c["tagger"])
 			return target if who == null else "%s, by %s" % [target, _initial_name(GameDB.player_display_name(who))]
-		"mu":
-			var duels: Dictionary = sim.duels[_my_side]
-			var parts := PackedStringArray()
-			for fid in duels:
-				parts.append("%s on %s" % [_surname(MatchNotes._pname(str(duels[fid]))), _surname(MatchNotes._pname(str(fid)))])
-			if parts.is_empty():
-				return "None on their forwards"
-			return ", ".join(parts.slice(0, 2)) + ("" if parts.size() <= 2 else " +%d" % (parts.size() - 2))
 		"def":
 			return MatchNotes.defence_answer(str(calls["defence"]))
+		"pt":
+			# Same order as the row's label: forward, midfield, back. An empty
+			# slot says "no one", so each name stays under its own heading.
+			var who_through := PackedStringArray()
+			var any_through := false
+			for slot in MatchNotes.FOCUS_ORDER:
+				any_through = any_through or str(calls[slot]) != ""
+				who_through.append(named.call(str(calls[slot]), "no one"))
+			return ", ".join(who_through) if any_through else "No one"
 	return ""
 
 
@@ -1720,14 +1736,13 @@ func _answer_ids(key: String, calls: Dictionary, c: Dictionary) -> Array:
 	var sim: MatchSim = c["sim"]
 	var ids: Array = []
 	match key:
-		"mu":
-			for fid in (sim.duels[_my_side] as Dictionary):
-				ids.append(str(fid))
-				ids.append(str((sim.duels[_my_side] as Dictionary)[fid]))
 		"tag":
 			ids = [str(calls["tag_id"]), str(calls["tagger_id"])]
 		"def":
 			ids = [str(calls["interceptor_id"]), str(calls["minder_id"])]
+		"pt":
+			for slot in MatchNotes.FOCUS_ORDER:
+				ids.append(str(calls[slot]))
 	return ids.filter(func(i): return str(i) != "")
 
 
@@ -2044,15 +2059,14 @@ func _balance_break_columns(cols: Array, again := false) -> void:
 ## Before the first ball-up on a three-column PC sheet the calls are dealt by what
 ## they are (director, 2026-10-15: empty space is a defect; "PC is not a big
 ## phone"): the game plan leads the first column and the tag the second. The
-## rest (the key match-ups, the pep talk, the defensive set-up, and the legs
-## and synergies lines) go where they make the three columns most alike in
-## height, under what fits 720 high (director, 2026-11-03: three columns, none
-## more than a fifth empty; with the tag and the match-ups held together that
-## column alone is ~360 of ~940, so they are dealt apart).
+## rest (the pep talk, the defensive set-up, the three play-through calls, and
+## the legs and synergies lines) go where they make the three columns most
+## alike in height, under what fits 720 high (director, 2026-11-03: three
+## columns, none more than a fifth empty).
 ## Where a call sits is dealt once: a call that opens later (Who tags) grows its
 ## own column and never moves another call.
 const DEAL_FIRST := {"gameplan": 0, "tag": 1}
-const DEAL_ORDER := ["gameplan", "tag", "pep", "df", "facts"]
+const DEAL_ORDER := ["gameplan", "tag", "pep", "df", "pt", "facts"]
 
 
 func _deal_calls(cols: Array, groups: Dictionary) -> void:
@@ -2305,9 +2319,6 @@ func _break_answers() -> Dictionary:
 				continue
 			var id := str(r["id"])
 			out[id] = {"kind": "tagged", "who": GameDB.player_display_name(tagger)} if id == tag_id 					else {"kind": "tag"}
-	var theirs: Dictionary = sim.duels[_my_side]
-	for fid in theirs:
-		out[str(fid)] = {"kind": "matchup", "who": MatchNotes._pname(str(theirs[fid]))}
 	return out
 
 
@@ -3204,6 +3215,43 @@ func _apply_quarter_tactics(t: Dictionary) -> void:
 	sim.set_rotation_policy(1 - _my_side, sim.auto_rotation(1 - _my_side, GameState.fitness_plan(rival)))
 
 
+## The player you play through, with his job this match: the slot he fills on
+## the ground (or filled last, off it) - "Matthew Jefferson our key forward target".
+func _focus_player(id: String) -> Dictionary:
+	var sim: MatchSim = GameState.pending_sim
+	if sim != null:
+		var sq: Squad = sim.squads[_my_side]
+		for p in sq.ground + sq.bench:
+			if str(p["id"]) == id:
+				return p
+	for r in _roster_side(_my_side):
+		if str(r["id"]) == id:
+			return r
+	return {}
+
+
+func _focus_text(id: String) -> String:
+	var p := _focus_player(id)
+	return MatchNotes.focus_role_text(GameDB.player_display_name_by_id(id, "your player"), str(p.get("role", "")))
+
+
+## Under a Play through control: his job and what it does for him; the
+## general description with nobody picked; that it waits while he is off the spot.
+func _focus_note_text(slot: String, id: String) -> String:
+	if id == "":
+		return MatchNotes.focus_slot_note(slot, "", false, false)
+	var who := GameDB.player_display_name_by_id(id, "your player")
+	var on := false
+	var working := false
+	var sim: MatchSim = GameState.pending_sim
+	if sim != null:
+		for p in (sim.squads[_my_side] as Squad).ground:
+			if str(p["id"]) == id:
+				on = true
+				working = (MatchSim.FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"]))
+	return MatchNotes.focus_slot_note(slot, who, working, not on)
+
+
 ## "Defensive press · tagging Walsh": your calls for this quarter, one line.
 func _show_setup(t: Dictionary) -> void:
 	if _setup_line == null or not is_instance_valid(_setup_line):
@@ -3212,6 +3260,14 @@ func _show_setup(t: Dictionary) -> void:
 	var tag_id := str(t.get("tag_id", ""))
 	if tag_id != "":
 		bits.append("tagging " + GameDB.player_display_name_by_id(tag_id, "their player"))
+	for slot in MatchNotes.FOCUS_ORDER:
+		var fid := str(t.get(slot, ""))
+		if fid != "":
+			bits.append("%s %s" % [GameDB.player_display_name_by_id(fid, "your player"),
+					str(MatchNotes.FOCUS_SLOT_TEXT[slot][1])])
+	var legacy := str(t.get("focus_id", ""))
+	if legacy != "":
+		bits.append(_focus_text(legacy))
 	var intercept_id := str(t.get("interceptor_id", ""))
 	if intercept_id != "":
 		bits.append(GameDB.player_display_name_by_id(intercept_id, "your defender") + " loose behind the ball")
@@ -3251,8 +3307,7 @@ func _refresh_rings() -> void:
 	if _pitch == null:
 		return
 	if _interactive and GameState.pending_sim != null:
-		_pitch.set_rings(MatchRings.ids(GameState.pending_sim, _my_side, GameState.my_list,
-				GameState.my_matchups))
+		_pitch.set_rings(MatchRings.ids(GameState.pending_sim, _my_side, GameState.my_list))
 	else:
 		_pitch.set_rings([])
 
@@ -3521,7 +3576,7 @@ func _names() -> Dictionary:
 	return _name_index
 
 
-## A line whose words change later (the break match-up line): always tinted-capable.
+## A line whose words change later: always tinted-capable.
 func _say_live(text: String, fs: int, col: Color, ids := []) -> RichTextLabel:
 	var r := NameInk.rich(fs, col)
 	NameInk.set_line(r, text, _names_named(ids) if not ids.is_empty() else _names())
@@ -3942,10 +3997,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 		_glance_people(v, "Needs a lift", "ReportLift", g["lift"])
 		_glance_section(v, "Coaching notes", "ReportNotes", (g["notes"] as Array).slice(0, 2))
 
-	# The key match-ups: who had the better of whom, from the contests.
 	if mine:
-		var matchup_lines: Array = MatchNotes.interceptor_story(_res, me) + MatchNotes.duel_story(_res, me)
-		_glance_section(v, "Key match-ups", "FullTimeMatchups", matchup_lines.slice(0, 3))
 		# Your synergies: the stat each one shows up in, from this match.
 		_glance_section(v, "Your synergies", "FullTimeSynergies", MatchNotes.synergy_lines(_res, me).slice(0, 3), true)
 
@@ -3953,7 +4005,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 	if mine and _interactive:
 		var did := []
 		for qq in range(1, 5):
-			for t in MatchNotes.calls_lines(_res, me, qq) + MatchNotes.duel_change_lines(_res, me, qq):
+			for t in MatchNotes.calls_lines(_res, me, qq):
 				did.append("Q%d  ·  %s" % [qq, str(t)])
 		if not did.is_empty():
 			_glance_section(v, "Your calls", "FullTimeCalls", did.slice(0, 5))
@@ -4262,176 +4314,6 @@ func _reflow() -> void:
 	_root.move_child(board, 0)
 	_paint_scoreboard()
 
-
-
-# ---------------------------------------------------------------------------
-# Key match-ups (Matchups): the named forward-50 contests
-# ---------------------------------------------------------------------------
-## At a break: their key forwards and who is on them - with last quarter's
-## contests and a tap to change - then yours against their defenders.
-func _matchups_view(sim: MatchSim, q: int) -> Control:
-	var theirs: Dictionary = sim.duels[_my_side]
-	var ours: Dictionary = sim.duels[1 - _my_side]
-	if theirs.is_empty() and ours.is_empty():
-		return null
-	var v := UiKit.vbox(2)
-	v.name = "BreakMatchups"
-	v.add_child(UiKit.lbl("Key match-ups", UiKit.BODY, UiKit.TEXT, true))
-	var their_spare := sim._roaming_interceptor(1 - _my_side)
-	if not their_spare.is_empty():
-		var loose := _say("%s is roaming loose behind their backline." % GameDB.player_display_name(their_spare),
-				UiKit.BODY, UiKit.TEXT)
-		loose.name = "OppInterceptor"
-		loose.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(loose)
-	var our_spare := sim._roaming_interceptor(_my_side)
-	if not our_spare.is_empty():
-		var loose2 := _say("Yours: %s is roaming as the spare." % GameDB.player_display_name(our_spare),
-				UiKit.NOTE, UiKit.MUTED)
-		loose2.name = "MyInterceptor"
-		loose2.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(loose2)
-	v.add_child(_matchup_head("Forward", "On him", q))
-	for fid in theirs.keys():
-		var row := _matchup_row(str(fid), str(theirs[fid]), q, false)
-		row.name = "BreakMatchup_" + str(fid)
-		var cells: Dictionary = row.get_meta("cells")
-		var b := UiKit.text_action("Change", UiKit.SECONDARY)
-		b.name = "ChangeMatchup"
-		b.custom_minimum_size.x = MATCHUP_CHANGE_W
-		var f := str(fid)
-		b.pressed.connect(func(): _show_break_matchup(sim, f, cells, q))
-		row.add_child(b)
-		v.add_child(row)
-	for fid in ours.keys():
-		var row2 := _matchup_row(str(fid), str(ours[fid]), q, true)
-		row2.name = "BreakYours_" + str(fid)
-		var pad := Control.new()
-		pad.custom_minimum_size = Vector2(MATCHUP_CHANGE_W, 0)
-		row2.add_child(pad)
-		v.add_child(row2)
-	# Who made these calls: your assistant, until you make them yourself.
-	if sim.assistant_active(_my_side):
-		var a := UiKit.lbl("Your assistant sets the match-ups and the spare. Change one and it stays your call.",
-				UiKit.NOTE, UiKit.MUTED)
-		a.name = "AssistantNote"
-		a.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(a)
-	return v
-
-
-## The key match-ups as a compact grid: one row a forward, three columns (the
-## forward, the man on him, how the forward went last quarter) and the Change
-## after them. Columns share the same stretch so every row lines up.
-const MATCHUP_COLS := [3.0, 3.0, 3.0]
-
-
-func _matchup_head(first: String, second: String, q: int) -> Control:
-	var h := UiKit.hbox(8)
-	h.name = "MatchupHead"
-	var titles := [first, second] + (["Last quarter"] if q > 1 else [])
-	for i in range(titles.size()):
-		var t := UiKit.lbl(str(titles[i]), UiKit.SMALL, UiKit.MUTED)
-		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		t.size_flags_stretch_ratio = MATCHUP_COLS[i]
-		h.add_child(t)
-	# Room for Change, so the heads sit over their columns.
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(MATCHUP_CHANGE_W, 0)
-	h.add_child(gap)
-	return h
-
-
-const MATCHUP_CHANGE_W := 64.0
-
-
-func _matchup_row(fid: String, did: String, q: int, mine: bool) -> HBoxContainer:
-	# `mine`: your forward against their defender (the forward is yours).
-	var row := UiKit.hbox(8)
-	var inks := UiKit.club_ink_pair(str(_res["home"]), str(_res["away"]))
-	var fwd_side := _my_side if mine else 1 - _my_side
-	var cells := {}
-	var texts := [_surname(MatchNotes._pname(fid)), _surname(MatchNotes._pname(did)) if did != "" else "Nobody"]
-	if q > 1:
-		texts.append(_matchup_marked(fid, q))
-	var keys := ["fwd", "def", "marked"]
-	for i in range(texts.size()):
-		var c: Label
-		if i < 2:
-			var side := fwd_side if i == 0 else 1 - fwd_side
-			c = UiKit.ellipsis(str(texts[i]), UiKit.BODY, UiKit.club_name_colour(inks[side]), true)
-		else:
-			c = UiKit.ellipsis(str(texts[i]), UiKit.SMALL, UiKit.MUTED)
-		c.name = "Matchup_" + str(keys[i])
-		c.size_flags_stretch_ratio = MATCHUP_COLS[i]
-		row.add_child(c)
-		cells[keys[i]] = c
-	row.set_meta("cells", cells)
-	return row
-
-
-## "4 of 6" of last quarter's contests the forward marked, or "No contests".
-func _matchup_marked(fid: String, q: int) -> String:
-	var t := MatchNotes.duel_tally(_res, fid, q - 1)
-	if int(t[0]) == 0:
-		return "No contests"
-	return "marked %d of %d" % [int(t[1]), int(t[0])]
-
-
-func _matchup_text(fid: String, did: String, q: int) -> String:
-	if q <= 1:
-		return MatchNotes.matchup_line(MatchNotes._pname(fid), MatchNotes._pname(did))
-	return MatchNotes.duel_quarter_line(_res, fid, did, q - 1)
-
-
-## Who goes to their forward, from your defenders on the ground. The change
-## is made in the engine at once and takes effect from the next bounce.
-func _show_break_matchup(sim: MatchSim, fid: String, cells: Dictionary, q: int) -> void:
-	if _matchup_overlay != null and is_instance_valid(_matchup_overlay):
-		_matchup_overlay.queue_free()
-	var box := UiKit.modal_box(self, 480.0, 0.0, _wash())
-	_matchup_overlay = box["overlay"]
-	_matchup_overlay.name = "MatchupChooser"
-	var v: VBoxContainer = box["body"]
-	v.add_theme_constant_override("separation", 6)
-	var fwd := sim._on_ground(1 - _my_side, fid)
-	v.add_child(_say("Who goes to %s?" % MatchNotes._pname(fid), UiKit.H1, UiKit.TEXT, true))
-	if not fwd.is_empty():
-		v.add_child(UiKit.lbl(Matchups.describe(fwd), UiKit.SMALL, UiKit.MUTED))
-	var cur := str((sim.duels[_my_side] as Dictionary).get(fid, ""))
-	for p in Matchups.defenders((sim.squads[_my_side] as Squad).ground):
-		# His card: the ratings the duel runs on, then what putting him there
-		# does and costs, sized from the duel rule (GateOdds.duel_lines; G6).
-		var dl := GateOdds.duel_lines(sim, _my_side, fid, p)
-		var b := UiKit.btn("%s\n%s" % [GameDB.player_display_name(p), str(dl[0])], 15)
-		b.name = "Defender_" + str(p["id"])
-		b.custom_minimum_size = Vector2(0, 56)
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		UiKit.paint_choice(b, str(p["id"]) == cur)
-		NameInk.dress_button(b, _names())
-		var pid := str(p["id"])
-		b.pressed.connect(func():
-			sim.coach_matchup(_my_side, fid, pid)
-			(cells["def"] as Label).text = _surname(MatchNotes._pname(pid))
-			(cells["def"] as Label).tooltip_text = MatchNotes._pname(pid)
-			if cells.has("marked"):
-				(cells["marked"] as Label).text = "from next bounce"
-			if _break_refresh.is_valid():
-				_break_refresh.call()
-			_matchup_overlay.queue_free()
-			_matchup_overlay = null)
-		v.add_child(b)
-		for i in [1, 2]:
-			var dline := UiKit.lbl(str(dl[i]), UiKit.SMALL, UiKit.TEXT)
-			dline.name = "DuelGain" if i == 1 else "DuelCost"
-			dline.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			v.add_child(dline)
-	var close := UiKit.btn("Close", UiKit.NAME)
-	close.custom_minimum_size = Vector2(0, 48)
-	close.pressed.connect(func():
-		_matchup_overlay.queue_free()
-		_matchup_overlay = null)
-	box["footer"].add_child(close)
 
 
 ## Injuries and the odd turning point in the feed (MatchNotes.story_feed_line).

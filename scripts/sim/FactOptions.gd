@@ -5,8 +5,9 @@ extends RefCounted
 ## anything about it?"). One place says which responses bear on which kind of
 ## fact (Matchup's "key": danger, interceptor, midfield, ruck, attack,
 ## defence, missing, form), in a fixed order that is not an order of merit:
-## tag, key match-up, defensive set-up (cover their loose man, or a loose
-## defender of your own), plan. Main ruck is no longer a call (2026-11-03).
+## tag, defensive set-up (cover their loose man, or a loose defender of your
+## own), plan. Main ruck is no longer a call (2026-11-03); key match-ups are
+## cut (director, 2026-11-07: "Roles replace match-ups").
 ##
 ## A layout rule over the controls the rules already have. Nothing here is a
 ## new lever, a grade or a recommendation: every response that bears on a
@@ -15,31 +16,29 @@ extends RefCounted
 ## pre-bounce pane already uses (see COST_*).
 
 ## The responses, in the order they are always shown.
-const ORDER := ["tag", "matchup", "minder", "loose", "plan"]
+const ORDER := ["tag", "minder", "loose", "plan"]
 
 ## What each is called: the heading of the call it opens on the pre-bounce pane.
-const NAMES := {"tag": "Tag", "matchup": "Key match-up", "minder": "Defensive set-up: cover him",
+const NAMES := {"tag": "Tag", "minder": "Defensive set-up: cover him",
 		"loose": "Defensive set-up: loose defender"}
 
 ## The cost of each, from the words the pane already uses:
 ## tag: "He gives up his own game." (MatchScene tag note);
-## matchup: the swap a Change makes, the defender moved leaves his man;
 ## minder: "Whoever goes is a target less often himself." (MatchNotes.minder_cost_line);
 ## loose: "if he flies and loses, space opens behind him." (the loose interceptor's note).
 ## A plan's cost is the first clause of its own cost line (CoachReport.PLAN_PARTS).
 const COST := {
 	"tag": "Your tagger gives up his own game",
-	"matchup": "The defender you move leaves his man",
 	"loose": "Space opens behind him if he loses",
 }
 
 ## fact key -> the responses that bear on it, as [call] or ["plan", plan key].
 const TABLE := {
-	"danger": [["tag"], ["matchup"], ["minder"]],
+	"danger": [["tag"], ["minder"]],
 	"interceptor": [["minder"], ["plan", "attacking"], ["plan", "controlled"]],
 	"midfield": [["tag"], ["plan", "contest"], ["plan", "controlled"]],
 	"ruck": [["plan", "contest"]],
-	"attack": [["matchup"], ["loose"], ["plan", "defensive"], ["plan", "controlled"]],
+	"attack": [["loose"], ["plan", "defensive"], ["plan", "controlled"]],
 	"defence": [["plan", "attacking"], ["plan", "controlled"]],
 	# Who is missing and a run of results are facts to know, not to answer.
 	"missing": [],
@@ -91,15 +90,6 @@ static func _option(key: String, row: Array, who: Dictionary, theirs: Array, min
 					reason = "He plays %s: a tag needs a midfielder." % _where(who)
 			elif theirs.filter(func(p): return _tag_candidate(p)).is_empty():
 				reason = "None of their midfielders is on the ground."
-		"matchup":
-			var keys := Matchups.key_forwards(theirs)
-			if not who.is_empty():
-				if not keys.any(func(p): return str(p.get("id", "")) == str(who.get("id", ""))):
-					reason = "He is not one of their key forwards."
-			elif keys.is_empty():
-				reason = "They have no key forward."
-			elif Matchups.defenders(mine).is_empty():
-				reason = "You have no defender to put on him."
 		"minder":
 			var spare := Matchups.best_interceptor(theirs)
 			if spare.is_empty() or (not who.is_empty() and str(spare.get("id", "")) != str(who.get("id", ""))):
@@ -135,21 +125,6 @@ static func _sides(call: String, plan: String, who: Dictionary, theirs: Array, m
 			return GateOdds.loose_lines()
 		"plan":
 			return GateOdds.plan_lines(plan)
-		"matchup":
-			var keys := Matchups.key_forwards(theirs)
-			var fwd: Dictionary = who if not who.is_empty() else (keys[0] if not keys.is_empty() else {})
-			var best := {}
-			var best_p := 2.0
-			for d in Matchups.defenders(mine):
-				var pr := Matchups.mark_chance(fwd, d, float(lines[0]), float(lines[1]))
-				if pr < best_p:
-					best_p = pr
-					best = d
-			if best.is_empty() or fwd.is_empty():
-				return ["", ""]
-			var nm := GameDB.player_display_name(best)
-			return [GateOdds.MATCHUP_GAIN % [nm, GateOdds.pct(best_p)],
-					(GateOdds.MATCHUP_COST_NEXT if keys.size() > 1 else GateOdds.MATCHUP_COST_LOOSE) % nm]
 	return ["", ""]
 
 

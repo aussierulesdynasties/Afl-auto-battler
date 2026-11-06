@@ -222,10 +222,6 @@ var preseason_run_debt: float = 0.0
 ## Matches kept: four seasons' worth, enough for the coach's arcs.
 const MAX_MATCH_STORIES := 120
 var losing_streak := 0
-## Your match-ups for the next match (Matchups): {their forward id: your
-## defender id}, on top of the default set-up. Cleared after each of your
-## matches - every opponent is a new problem.
-var my_matchups := {}
 ## How the prepared match was made, so a change to the side before the first
 ## bounce rebuilds it the same way (rebuild_pending_side).
 var _pending_build := {}
@@ -768,7 +764,6 @@ func save_career() -> bool:
 		"backing_talk": backing_talk,
 		"media_memory": media_memory,
 		"losing_streak": losing_streak,
-		"my_matchups": my_matchups,
 		"last_side": last_side,
 		"db_draftees": GameDB.draftees,
 		"db_late_draftees": GameDB.late_draftees,
@@ -982,7 +977,8 @@ func load_career() -> bool:
 	backing_talk = state.get("backing_talk", {})
 	media_memory = state.get("media_memory", {})
 	losing_streak = int(state.get("losing_streak", 0))
-	my_matchups = state.get("my_matchups", {})
+	# "my_matchups" in an older save is ignored: key match-ups are cut
+	# (director, 2026-11-07: "Roles replace match-ups").
 	last_side = state.get("last_side", [])
 	# A career saved before the dials has only "difficulty" (easy, normal,
 	# hard): it keeps the Fair board (the old setting never touched the board)
@@ -1493,7 +1489,6 @@ func reset() -> void:
 	backing_talk = {}
 	media_memory = {}
 	losing_streak = 0
-	my_matchups = {}
 	last_side = []
 	board_patience = new_career_dial(DifficultyDials.BOARD)
 	rival_recruiting = new_career_dial(DifficultyDials.RIVALS)
@@ -2459,7 +2454,6 @@ func _build_pending_sim() -> void:
 	pending_sim.moment_side = 0 if h == my_club else 1
 	pending_sim.always_offer_bounce = bounce_scene_every_match()
 	pending_sim.set_tactics(pending_sim.moment_side, {"gameplan": club_plan})
-	pending_sim.set_matchups(pending_sim.moment_side, my_matchups)
 	_pending_build["sim"] = pending_sim
 
 
@@ -3828,7 +3822,6 @@ func _practice_build(home: String, away: String, home_invites: Array, away_invit
 		sim.season_plans[side] = fitness_plan(str([home, away][side]))
 		if [home, away][side] == my_club:
 			sim.set_tactics(side, {"gameplan": club_plan})
-			sim.set_matchups(side, my_matchups)
 	var started := {}
 	for p in (h["squad"] as Squad).ground + (a["squad"] as Squad).ground:
 		started[str(p["id"])] = true
@@ -4344,14 +4337,8 @@ func week_changes_text() -> String:
 
 ## Who in a side makes a game plan work, and how they compare with the
 ## league, in one line: "Your pressure players are strong: Viney, Oliver,
-## Petracca, Brayshaw." Through stars names your best three and how far they
-## stand above the rest. "" for Balanced.
+## Petracca, Brayshaw." "" for Balanced.
 func plan_fit_line(ground: Array, plan: String) -> String:
-	if plan == "through_stars":
-		var stars := PackedStringArray()
-		for p in PlanFit.carriers(ground, plan):
-			stars.append(GameDB.player_display_name(p))
-		return "Your best three are %s: %s." % [PlanFit.stars_word(ground), ", ".join(stars)]
 	if not PlanFit.NEEDS.has(plan):
 		return ""
 	var names := PackedStringArray()
@@ -4363,12 +4350,12 @@ func plan_fit_line(ground: Array, plan: String) -> String:
 ## The same facts in two short parts for the game plan panel: how good
 ## the side is for the plan, and the best three for it. {} for Balanced.
 func plan_fit_short(ground: Array, plan: String) -> Dictionary:
-	if plan != "through_stars" and not PlanFit.NEEDS.has(plan):
+	if not PlanFit.NEEDS.has(plan):
 		return {}
 	var names := PackedStringArray()
 	for p in PlanFit.carriers(ground, plan).slice(0, 3):
 		names.append(GameDB.player_display_name(p))
-	var judged := ("Your best three are %s." % PlanFit.stars_word(ground)) if plan == "through_stars" 			else ("Your %s are %s." % [str(PlanFit.NEEDS[plan]["word"]), PlanFit.fit_word(ground, plan)])
+	var judged := "Your %s are %s." % [str(PlanFit.NEEDS[plan]["word"]), PlanFit.fit_word(ground, plan)]
 	return {"judged": judged, "names": ", ".join(names)}
 
 
@@ -4401,36 +4388,6 @@ func usual_plan(code: String) -> String:
 			season.selections.get(code, {})).ground)
 
 
-## This week's key match-ups against `opp`: [{"fwd": their forward, "def":
-## your defender on him, "set": true when you chose it}], their key forwards
-## first. [] without an opponent.
-func week_matchups(opp: String) -> Array:
-	if season == null or opp == "" or not season.lists.has(opp):
-		return []
-	var theirs: Array = Squad.new(opp, season.lists[opp], false, opp, season.selections.get(opp, {})).ground
-	var mine: Array = my_squad().ground
-	var d := Matchups.defaults(theirs, mine)
-	var mine_ids := {}
-	for p in mine:
-		mine_ids[str(p["id"])] = p
-	# Your choices, applied the way the match applies them (a swap).
-	for fid in my_matchups:
-		if not d.has(str(fid)) or not mine_ids.has(str(my_matchups[fid])):
-			continue
-		var want := str(my_matchups[fid])
-		var had := str(d[fid])
-		for other in d.keys():
-			if str(d[other]) == want and str(other) != str(fid):
-				d[other] = had
-		d[fid] = want
-	var out := []
-	for f in Matchups.key_forwards(theirs):
-		var fid := str(f["id"])
-		if d.has(fid) and mine_ids.has(str(d[fid])):
-			out.append({"fwd": f, "def": mine_ids[str(d[fid])], "set": my_matchups.has(fid)})
-	return out
-
-
 ## Both sides' key players for the This week screen: each side's key forwards
 ## and key defenders as they would take the field. {"mine"/"theirs":
 ## {"fwd": [...], "def": [...]}}. Facts only; who plays on whom is set later.
@@ -4443,14 +4400,6 @@ func week_key_players(opp: String) -> Dictionary:
 		"mine": {"fwd": Matchups.key_forwards(mine), "def": Matchups.defenders(mine).slice(0, Matchups.KEY_FORWARDS)},
 		"theirs": {"fwd": Matchups.key_forwards(theirs), "def": Matchups.defenders(theirs).slice(0, Matchups.KEY_FORWARDS)},
 	}
-
-
-## Put your defender `def_id` on their forward `fwd_id` for the next match.
-func set_my_matchup(fwd_id: String, def_id: String) -> void:
-	my_matchups[fwd_id] = def_id
-	_sync_club_plan()
-	mark_dirty()
-
 
 
 ## Compact stored-fact history surfaces. These deliberately read existing
@@ -11102,7 +11051,7 @@ func _fill_open_staff() -> void:
 # Coaching hub: the standing game plan, player form, how the side plays
 # ---------------------------------------------------------------------------
 ## The plans a club can stand on; the same six as the quarter-break calls.
-const CLUB_PLANS := ["balanced", "attacking", "defensive", "contest", "controlled", "through_stars"]
+const CLUB_PLANS := ["balanced", "attacking", "defensive", "contest", "controlled"]
 
 
 ## Your standing game plan: every match starts with it, played or simmed,
@@ -11118,7 +11067,6 @@ func set_club_plan(key: String) -> void:
 func _sync_club_plan() -> void:
 	if season != null:
 		season.plans = {my_club: club_plan} if club_plan != "balanced" else {}
-		season.matchups = {my_club: my_matchups} if not my_matchups.is_empty() else {}
 
 
 ## After each match: your players' last three Player Ratings, and every
@@ -11147,8 +11095,6 @@ func _note_form_and_team(res: Dictionary) -> void:
 	_note_position_ratings(res)
 	if not is_my_match(res):
 		return
-	# This week's match-ups were for this opponent.
-	my_matchups = {}
 	_sync_club_plan()
 	var side := 0 if codes[0] == my_club else 1
 	var roster: Array = res.get("roster", [[], []])
@@ -11330,7 +11276,6 @@ const THEIR_PLAN := {
 	"defensive": "they press high, so they win it back in their half, but there is space behind them when you get through.",
 	"contest": "they put numbers at the stoppages to win the clearances, and the ball moves slower.",
 	"controlled": "they keep the ball and make few errors, but gain less ground.",
-	"through_stars": "their best three see more of the ball, and the pressure goes on them.",
 }
 
 

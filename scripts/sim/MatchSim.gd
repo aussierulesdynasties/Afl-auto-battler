@@ -38,14 +38,12 @@ const BOUNDARY_EXIT_P := 0.008
 const BOUNDARY_RUSHED_BONUS := 0.004
 const OUT_ON_FULL_SHARE := 0.12
 const BOUNDARY_TOUCHED_SHARE := 0.28
-var tactics := [{}, {}]      # per side: gameplan, tag_id, tagger_id, pep
+var tactics := [{}, {}]      # per side: gameplan, focus_mid/fwd/def (focus_id), tag_id, tagger_id, pep
 ## Tags dropped because the man was no longer a midfielder: {side, id, q}.
 var tag_drops: Array = []
 ## How well each side's match-day players suit each plan (PlanFit): the
 ## plan's upside is scaled by it, its costs are not.
 var plan_fit := [{}, {}]
-## Each side's best three at the first bounce: who Through stars goes through.
-var stars := [{}, {}]
 ## The plan each side's list suits as its usual game (PlanFit.standing_plan):
 ## where an AI club starts, and what it goes back to.
 var standing := ["balanced", "balanced"]
@@ -69,11 +67,11 @@ var duel_log := {}
 var roam_pairs := {}
 ## Match-ups changed during the match: [{"q", "side" (defending), "fwd", "def"}].
 var duel_changes: Array = []
-## The calls a side's coach has made himself (coach_interceptor, coach_matchup,
-## his set-up before the bounce): his assistant leaves them alone for the
-## rest of the match (Squad.assistant). {"interceptor": bool, "duels":
-## {forward id: true}}.
-var _own := [{"interceptor": false, "duels": {}}, {"interceptor": false, "duels": {}}]
+## The calls a side's coach has made himself (coach_interceptor): his
+## assistant leaves them alone for the rest of the match (Squad.assistant).
+## The match-ups are always the sim's own: key match-ups are cut (director,
+## 2026-11-07: "Roles replace match-ups").
+var _own := [{"interceptor": false}, {"interceptor": false}]
 ## The contest in play, attached to the score or rebound it produces.
 var _duel := {}
 ## The key forward whose named contest inside 50 was just logged, so the mark
@@ -150,11 +148,7 @@ var _played := [{}, {}]      # side -> id -> true: everyone who took the field
 ## full-time summary, director 2026-10-11); "legs", "traits" and "form" are
 ## the players and the bounce of the ball, with whatever no line measures.
 var impact := [{}, {}]
-const DECISION_CAUSES := ["moments", "gameplan", "loose", "matchups", "tag", "pep", "bursts", "minder"]
-## The defender each of the coach's own match-ups replaced: def side ->
-## {forward id: defender id, "" for none}, from his first change of it. The
-## match-ups line is the contest with his man against this one.
-var _duel_was := [{}, {}]
+const DECISION_CAUSES := ["moments", "gameplan", "loose", "tag", "pep", "bursts", "minder"]
 ## The forward the loose man was on before he was sent loose: def side ->
 ## {"id": loose man, "fwd": forward id}. Without the call he would be on him.
 var _loose_was := [{}, {}]
@@ -367,8 +361,6 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 		duels[side] = Matchups.defaults((squads[1 - side] as Squad).ground, (squads[side] as Squad).ground)
 		for plan in PlanFit.LEAGUE:
 			(plan_fit[side] as Dictionary)[plan] = PlanFit.fit((squads[side] as Squad).ground, plan)
-		for p in PlanFit.carriers((squads[side] as Squad).ground, "through_stars"):
-			(stars[side] as Dictionary)[str(p["id"])] = true
 		for p in (squads[side] as Squad).ground:
 			energy_caps[str(p["id"])] = Workload.energy_cap(p)
 			energy[str(p["id"])] = _start_energy(p)
@@ -457,19 +449,6 @@ func set_matchup(def_side: int, fwd_id: String, def_id: String, during := true) 
 	return true
 
 
-## Your set-up before the bounce: {forward id: defender id} on top of the
-## default. Not a change during the match. These pairings are the coach's
-## own, so his assistant then picks a loose man from the defenders left.
-func set_matchups(def_side: int, m: Dictionary) -> void:
-	for fid in m:
-		((_own[def_side] as Dictionary)["duels"] as Dictionary)[str(fid)] = true
-		_note_duel_was(def_side, str(fid))
-		_note_swapped(def_side, str(m[fid]))
-		set_matchup(def_side, str(fid), str(m[fid]), false)
-	if not m.is_empty() and _assisted(def_side) and not bool((_own[def_side] as Dictionary)["interceptor"]):
-		set_interceptor(def_side, _assistant_interceptor(def_side), false)
-
-
 ## The coach picks the loose defender himself ("" for none): it stays his
 ## call for the rest of the match.
 func coach_interceptor(side: int, def_id: String) -> bool:
@@ -479,55 +458,20 @@ func coach_interceptor(side: int, def_id: String) -> bool:
 	return set_interceptor(side, def_id, current_quarter > 1 or _q_active)
 
 
-## The coach puts `def_id` on their forward `fwd_id` himself: that match-up
-## stays his call for the rest of the match.
-func coach_matchup(def_side: int, fwd_id: String, def_id: String) -> bool:
-	if def_side < 0 or def_side > 1:
-		return false
-	((_own[def_side] as Dictionary)["duels"] as Dictionary)[fwd_id] = true
-	_note_duel_was(def_side, fwd_id)
-	_note_swapped(def_side, def_id)
-	return set_matchup(def_side, fwd_id, def_id)
-
-
-## The forward `def_id` leaves when the coach moves him: his match-up changes
-## too (the swap), so it is the coach's change as well.
-func _note_swapped(def_side: int, def_id: String) -> void:
-	var d: Dictionary = duels[def_side]
-	for f in d:
-		if str(d[f]) == def_id:
-			_note_duel_was(def_side, str(f))
-
-
-## Who was on `fwd_id` before the coach's first change of that match-up.
-func _note_duel_was(def_side: int, fwd_id: String) -> void:
-	var was: Dictionary = _duel_was[def_side]
-	if not was.has(fwd_id):
-		was[fwd_id] = str((duels[def_side] as Dictionary).get(fwd_id, ""))
-
-
 ## Whether the assistant has any routine call left to make for `side`: on
-## your side until you have taken the loose man and every match-up yourself.
+## your side the match-ups always are, and the loose man until you take him.
 func assistant_active(side: int) -> bool:
 	if not _assisted(side):
 		return false
-	var own: Dictionary = _own[side]
-	if not bool(own["interceptor"]):
-		return true
-	for fid in (duels[side] as Dictionary):
-		if not (own["duels"] as Dictionary).has(str(fid)):
-			return true
-	return false
+	return not bool((_own[side] as Dictionary)["interceptor"]) or not (duels[side] as Dictionary).is_empty()
 
 
-## Whether the coach made this call himself, rather than his assistant: the
-## loose defender (`fwd_id` "") or the match-up on `fwd_id`. Always true for
-## a side without an assistant.
-func coach_call(side: int, fwd_id := "") -> bool:
+## Whether the coach named the loose defender himself, rather than his
+## assistant. Always true for a side without an assistant.
+func coach_call(side: int) -> bool:
 	if side < 0 or side > 1 or not _assisted(side):
 		return true
-	var own: Dictionary = _own[side]
-	return bool(own["interceptor"]) if fwd_id == "" else (own["duels"] as Dictionary).has(fwd_id)
+	return bool((_own[side] as Dictionary)["interceptor"])
 
 
 func _assisted(side: int) -> bool:
@@ -799,8 +743,7 @@ func _rematch(def_side: int, fid: String, held: Dictionary) -> void:
 ## your club's own usual game), the loose defender a rival coach would pick,
 ## and a key defender moved off a forward who has had the better of him
 ## (_rematch). He acts in your club's best interest, as every coach does.
-## Whatever you have set yourself he leaves alone, and he never moves a
-## defender you have put on someone.
+## A loose man you have named yourself he leaves alone.
 func _assistant_calls(side: int) -> void:
 	var own: Dictionary = _own[side]
 	var t: Dictionary = (tactics[side] as Dictionary).duplicate()
@@ -812,30 +755,17 @@ func _assistant_calls(side: int) -> void:
 		set_interceptor(side, _assistant_interceptor(side), true)
 	var d: Dictionary = duels[side]
 	var held := {}
-	for fid in (own["duels"] as Dictionary):
-		if d.has(fid):
-			held[str(d[fid])] = true
 	# The loose man stays loose, whoever named him.
 	if str(interceptor[side]) != "":
 		held[str(interceptor[side])] = true
 	for fid in d.keys():
-		if (own["duels"] as Dictionary).has(str(fid)):
-			continue
 		if _beaten(side, str(fid)):
 			_rematch(side, str(fid), held)
 
 
-## The loose defender a rival coach would use (_ai_interceptor), from the
-## defenders you have not put on a forward yourself.
+## The loose defender a rival coach would use (_ai_interceptor).
 func _assistant_interceptor(side: int) -> String:
-	var own_duels: Dictionary = (_own[side] as Dictionary)["duels"]
-	var d: Dictionary = duels[side]
-	var taken := {}
-	for fid in own_duels:
-		if d.has(fid):
-			taken[str(d[fid])] = true
-	var free := (squads[side] as Squad).ground.filter(func(p): return not taken.has(str(p["id"])))
-	return _ai_interceptor(side, free)
+	return _ai_interceptor(side, (squads[side] as Squad).ground)
 
 
 func set_tactics(side: int, t: Dictionary) -> void:
@@ -865,7 +795,6 @@ const PLAN_UPSIDE := {
 	"defensive": ["press", "opp_goal"],
 	"contest": ["contest"],
 	"controlled": ["taken", "clangers", "goal", "pace"],
-	"through_stars": ["star_ball", "star_goal", "clangers"],
 }
 const PLANS := {
 	"attacking": {"goal": 1.05, "gain": 1.06, "clangers": 1.12, "pace": 1.12, "exposed": 1.07},
@@ -874,9 +803,6 @@ const PLANS := {
 	"defensive": {"press": 1.09, "opp_goal": 0.965, "goal": 0.88, "gain": 0.95, "pace": 1.12},
 	"contest": {"contest": 0.025, "gain": 0.95, "exposed": 1.04},
 	"controlled": {"taken": 0.96, "gain": 0.94, "goal": 1.01, "clangers": 0.93, "pace": 0.95},
-	# Through stars: the ball to the best three and their finishing (star_ball,
-	# star_goal), the ball in good hands; but they know where it's going.
-	"through_stars": {"star_ball": 1.3, "star_goal": 1.18, "clangers": 0.92, "taken": 1.04},
 }
 
 
@@ -945,7 +871,9 @@ func _plan(side: int) -> String:
 ## ARD-M4-015 (the director, 2026-10-06: "merge the duplicates"): "Fast
 ## movement" was Attack corridor and "High press" was Defensive press under
 ## older names, the same effects. Old saves and replays map across.
-const PLAN_ALIAS := {"fast": "attacking", "press": "defensive"}
+## Through stars (#874) is cut (director, 2026-11-07: the three play-through
+## calls are back instead): an old save or replay on it plays Balanced.
+const PLAN_ALIAS := {"fast": "attacking", "press": "defensive", "through_stars": "balanced"}
 
 
 static func plan_key(key: String) -> String:
@@ -963,29 +891,35 @@ const FOCUS_SLOTS := ["focus_mid", "focus_fwd", "focus_def"]
 const FOCUS_SLOT_ROLES := {"focus_mid": ["MID", "RUCK"], "focus_fwd": ["FWD"], "focus_def": ["DEF"]}
 
 
-## Who this side plays through, {id: slot}. Play through is part of the
-## Through stars plan (director, 2026-11-03: the separate break call is cut):
-## under that plan each line plays through its best star on the ground, the
-## man a coach would name; under any other plan nobody. Old focus keys
-## (focus_mid/fwd/def, focus_id) in a tactics dict are ignored.
+## Who this side plays through, {id: slot}. The single older call (focus_id,
+## older saves') counts as the slot his role fills, unless that slot has its
+## own call.
 func _focus_slots(side: int) -> Dictionary:
+	var t: Dictionary = tactics[side]
 	var out := {}
-	if _plan(side) != "through_stars":
-		return out
-	var mine: Dictionary = stars[side]
 	for slot in FOCUS_SLOTS:
-		var best = null
-		for p in (squads[side] as Squad).ground:
-			if not mine.has(str(p["id"])) or not (FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"])):
-				continue
-			if best == null or int(p["overall"]) > int(best["overall"]):
-				best = p
-		if best != null:
-			out[str(best["id"])] = slot
+		var id := str(t.get(slot, ""))
+		if id != "":
+			out[id] = slot
+	var legacy := str(t.get("focus_id", ""))
+	if legacy != "" and not out.has(legacy):
+		var p = _ground_player(side, legacy)
+		if p != null:
+			var slot := focus_slot_for(str(p["role"]))
+			if str(t.get(slot, "")) == "":
+				out[legacy] = slot
 	return out
 
 
-## The players this side plays through right now (Through stars only).
+## The play-through slot a ground role fills.
+static func focus_slot_for(role: String) -> String:
+	for slot in FOCUS_SLOT_ROLES:
+		if (FOCUS_SLOT_ROLES[slot] as Array).has(role):
+			return slot
+	return "focus_mid"
+
+
+## The players this side plays through (every pick, working or waiting).
 func focus_ids(side: int) -> Array:
 	return _focus_slots(side).keys() if side >= 0 and side <= 1 else []
 
@@ -993,7 +927,11 @@ func focus_ids(side: int) -> Array:
 ## Whether `slot`'s call is working now: its man is on the ground in a spot
 ## the call works from (a forward target resting on the bench is not).
 func focus_active(side: int, slot: String) -> bool:
-	return (_focus_slots(side).values() as Array).has(slot)
+	var id := str((tactics[side] as Dictionary).get(slot, ""))
+	if id == "":
+		return false
+	var p = _ground_player(side, id)
+	return p != null and (FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"]))
 
 
 func _ground_player(side: int, id: String):
@@ -1352,12 +1290,10 @@ func _pick_ctx(side: int) -> Dictionary:
 		var tagger = tagger_of(side)
 		if tagger != null:
 			tagger_id = str(tagger["id"])
-	var plan := _plan(side)
 	var minder := _spare_minder(side)
 	return {"focus": _focus_slots(side), "their_tag": their_tag, "minder": str(minder.get("id", "")),
 			"tag_share": _tag_share(1 - side) if their_tag != "" else 1.0,
-			"tagger": tagger_id, "stars": plan == "through_stars",
-			"star_ball": _pv(side, "star_ball") if plan == "through_stars" else 1.0}
+			"tagger": tagger_id}
 
 
 func _tactic_player_mult(side: int, p: Dictionary, purpose: String, ctx: Dictionary = {}) -> float:
@@ -1402,8 +1338,6 @@ func _tactic_player_mult(side: int, p: Dictionary, purpose: String, ctx: Diction
 	# Our forward minding their loose defender is up the ground with him.
 	if id == str(ctx.get("minder", "")) and purpose in ["shooter", "aerial_target", "crumb", "carrier"]:
 		out *= MINDER_INVOLVE
-	if bool(ctx["stars"]) and (stars[side] as Dictionary).has(id):
-		out *= float(ctx["star_ball"])
 	if carrying:
 		out *= _usage_mult(p, focused)
 	return out
@@ -1953,13 +1887,6 @@ func _credit_entry(side: int, shooter: Dictionary, feeder, defender, line_def, m
 					_roam_chance(opp, false) if m_roams else 0.0, _roam_go_chance(opp, false) if m_roams else 0.0)
 			worth -= minder_dp * (his - their_ev)
 		_credit(side, "minder", worth)
-	var was: Dictionary = _duel_was[opp]
-	var fid := str(shooter.get("id", ""))
-	if not matched.is_empty() and was.has(fid) and str(was[fid]) != str(matched.get("id", "")):
-		var before := _on_ground(opp, str(was[fid]))
-		var other = before if not before.is_empty() else line_def
-		var cf := _entry_ev(side, shooter, feeder, other, before, roamer, p_r, p_go)
-		_credit(opp, "matchups", cf - actual)
 
 
 ## How much more often the defensive forward would be the target of an entry
@@ -3884,8 +3811,6 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 	# The press closes the corridor: half the attacking plan's edge.
 	if own > 1.0 and _pv(opp, "press") > 1.0:
 		own = 1.0 + (own - 1.0) * 0.5
-	if _plan(side) == "through_stars" and (stars[side] as Dictionary).has(str(shooter.get("id", ""))):
-		own *= _pv(side, "star_goal")
 	goal_p *= own
 	if credit:
 		_credit(side, "gameplan", 6.0 * (goal_p - before))
@@ -4448,7 +4373,6 @@ func result() -> Dictionary:
 	return {
 		"roster": rosters(),
 		"bench": opening_bench.duplicate(true),
-		"stars": [(stars[0] as Dictionary).keys(), (stars[1] as Dictionary).keys()],
 		"score": [s0, s1],
 		"goals": [goals(0), goals(1)],
 		"behinds": [behinds(0), behinds(1)],
@@ -5098,49 +5022,8 @@ func _boundary_moment() -> bool:
 								else "He plays on to the break, slowing as he goes, and starts the next quarter on tired legs."},
 				]})
 			return true
-	# An opposition key forward getting on top: kicked a bag, or won three
-	# contests this quarter against his man. The answer is a match-up.
-	var mine: Dictionary = duels[me]
-	for fid in mine.keys():
-		var hotf := _on_ground(opp, str(fid))
-		var cur := _on_ground(me, str(mine[fid]))
-		if hotf.is_empty() or cur.is_empty():
-			continue
-		var bag := int((player_stats.get(str(fid), {}) as Dictionary).get("goals", 0.0))
-		var wins := 0
-		for c in (duel_log.get(str(fid), {}) as Dictionary).get("contests", []):
-			if int(c[0]) == current_quarter and str(c[1]) == str(cur["id"]) and bool(c[2]):
-				wins += 1
-		var key := "duel|%s|%d" % [str(fid), current_quarter]
-		if (bag < 3 and wins < 3) or _asked.has(key) or _asked.has("bag|" + str(fid)) and wins < 3:
-			continue
-		_asked[key] = true
-		if bag >= 3:
-			_asked["bag|" + str(fid)] = true
-		var fname := GameDB.player_display_name(hotf)
-		var cname := GameDB.player_display_name(cur)
-		var opts := []
-		for p in Matchups.defenders((squads[me] as Squad).ground):
-			if str(p["id"]) == str(cur["id"]) or opts.size() >= 2:
-				continue
-			var dl := GateOdds.duel_lines(self, me, str(fid), p)
-			opts.append({"key": "def:" + str(p["id"]),
-					"label": "Put %s on %s" % [GameDB.player_display_name(p), fname],
-					"detail": Matchups.describe(p), "gain": "%s: %s" % [dl[0], dl[1]], "cost": dl[2]})
-		if opts.is_empty():
-			continue
-		var kl := GateOdds.duel_lines(self, me, str(fid), cur)
-		opts.append({"key": "keep", "label": "Keep %s on %s" % [cname, fname],
-				"detail": Matchups.describe(cur), "gain": "%s: %s" % [kl[0], kl[1]], "cost": kl[2]})
-		_fire({"kind": "duel", "player_id": str(fid), "default": opts.size() - 1,
-			"title": ("%s has kicked %d" % [fname, bag]) if bag >= 3 else ("%s is getting on top" % fname),
-			"text": "%s has won %d contest%s in the air against %s this quarter." % [fname, wins,
-					"" if wins == 1 else "s", cname] if wins > 0 else
-					"%s is on %s. Change the match-up, or back %s in." % [cname, fname, cname],
-			"options": opts})
-		return true
 	# An opposition midfielder kicking a bag: a tag is a midfield job, so
-	# only a midfielder can be answered with one (a forward is a match-up).
+	# only a midfielder can be answered with one.
 	for id in player_stats:
 		var st: Dictionary = player_stats[id]
 		if int(st.get("goals", 0.0)) < 3 or _asked.has("hot|" + str(id)):
@@ -5450,14 +5333,6 @@ func resolve_moment(choice: int) -> Dictionary:
 				outcome = "Tag on. You can call it off at the break."
 			else:
 				outcome = "Structure unchanged."
-		"duel":
-			if key.begins_with("def:"):
-				var did := key.trim_prefix("def:")
-				coach_matchup(side, str(m["player_id"]), did)
-				outcome = "%s goes to %s." % [GameDB.player_display_name(_on_ground(side, did)),
-						GameDB.player_display_name(_on_ground(1 - side, str(m["player_id"])))]
-			else:
-				outcome = "The match-up stays."
 		"momentum", "bounce":
 			if BURSTS.has(key):
 				(bursts[side] as Dictionary)[key] = _chains_for(int(BURSTS[key]["chains"]))
