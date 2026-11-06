@@ -75,6 +75,9 @@ func _run() -> void:
 	state.career_seed = 2031
 	state.replay_seed = 2031
 	state.set_setting("seen_weekly_loop_intro", true)
+	# No first-visit intro over My list: the shot is the list itself.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		state.set_setting("seen_%s_intro" % key, true)
 	# The canvas is the size a player's screen gives the game: 1280x720 on a PC, 390x844 on a
 	# phone. ScreenLayout would scale it by this machine's display density, so undo that here.
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
@@ -120,11 +123,12 @@ func _run() -> void:
 		Culture.change(state.relations, state.my_club, "standards", 4,
 				"The list holds itself to a higher standard than most clubs", y, "Off-season")
 	root.get_node("Router").go("list")
-	for i in range(8):
+	# Past the screen wipe, so the shot is the settled list.
+	for i in range(90):
 		await process_frame
 	await _shot(out + "_list.png")
 	root.get_node("Router").go("list")
-	for i in range(20):
+	for i in range(90):
 		await process_frame
 	var open_btn: Button = current_scene.find_child("CaptaincyOpen", true, false)
 	var why: String = await _tap(open_btn) if W < 760 else "not tapped on the PC canvas"
