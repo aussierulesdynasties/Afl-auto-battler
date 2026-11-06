@@ -267,6 +267,7 @@ func _build() -> void:
 	# for that width, so the record stays beside its club (row-gap rule).
 	var ladder_w := right_w * (1.0 if GameState.news.is_empty() else 0.42)
 	var ladder := _ladder_section(season, -1.0 if _narrow() else ladder_w)
+	var ladder_hugs := false
 	if _narrow():
 		if TrainingReport.hub_due(GameState):
 			page.add_child(TrainingReportSheet.hub_card(self, _go_retrain))
@@ -278,6 +279,7 @@ func _build() -> void:
 		page.add_child(ladder)
 	else:
 		var cols := UiKit.hbox(28)
+		cols.name = "HubColumns"
 		page.add_child(cols)
 		var left := UiKit.vbox(UiKit.SECTION)
 		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -293,9 +295,17 @@ func _build() -> void:
 		right.size_flags_stretch_ratio = 1.25
 		left.size_flags_stretch_ratio = 1.0
 		cols.add_child(right)
-		ladder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		# A table whose club column stops at the names ends at its last column:
+		# the column hugs it and the front page (or, with no news, the week)
+		# takes the rest, so no dead space opens right of the ladder on a wide
+		# screen (6.Q18).
+		ladder_hugs = _ladder_hugs(ladder)
+		ladder.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if ladder_hugs \
+				else Control.SIZE_EXPAND_FILL
 		ladder.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		right.add_child(ladder)
+		if ladder_hugs and GameState.news.is_empty():
+			right.size_flags_horizontal = Control.SIZE_SHRINK_END
 		if not GameState.news.is_empty():
 			var news := _news_card()
 			news.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -330,6 +340,10 @@ func _build() -> void:
 		var row := _footer(season, false)
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.size_flags_stretch_ratio = 1.25
+		if ladder_hugs and GameState.news.is_empty():
+			# The ladder's column hugs its table: the club buttons keep under it.
+			row.size_flags_horizontal = Control.SIZE_SHRINK_END
+			row.custom_minimum_size.x = ladder.get_combined_minimum_size().x
 		foot.add_child(row)
 	# Motion plays once per visit, not on every rebuild after an answer.
 	_settled = true
@@ -373,6 +387,15 @@ func _ladder_section(season: Season, table_width := -1.0) -> Control:
 		width = table_width
 	v.add_child(UiKit.ladder_table(season.ladder_sorted(), GameState.my_club, width, 0, false))
 	return v
+
+
+## True when the ladder table ends at its last column (its club column stops
+## at the names) rather than stretching to the width it was given.
+static func _ladder_hugs(section: Control) -> bool:
+	for c in section.get_children():
+		if c is VBoxContainer and (c as Control).size_flags_horizontal == Control.SIZE_SHRINK_BEGIN:
+			return true
+	return false
 
 
 ## Your season in a few lines: where you sit, your form, the board.
@@ -613,6 +636,9 @@ func _week_section(season: Season) -> Control:
 		# ground, not advice.
 		var wx := str(mine.get("weather", ""))
 		var where_text := "%s · %s" % ["Home" if is_home else "Away", ground]
+		# Gather Round: neither club is at home; the round's name stands in.
+		if str(mine.get("label", "")).ends_with(GatherRound.NAME):
+			where_text = "%s · %s" % [GatherRound.NAME, ground]
 		if wx != "":
 			where_text += " · " + Weather.label(wx)
 		# The week's hero: the match as a poster (director, 2026-10-08).
@@ -1195,9 +1221,12 @@ func _upcoming_match() -> Dictionary:
 		var round_matches: Array = season.fixture[season.round_index]
 		for m in round_matches:
 			if m["home"] == GameState.my_club or m["away"] == GameState.my_club:
-				return {"home": m["home"], "away": m["away"],
-						"label": "Round %d" % (season.round_index + 1), "tag": "",
+				var up := {"home": m["home"], "away": m["away"],
+						"label": season.round_label(season.round_index), "tag": "",
 						"weather": season.weather_for(str(m["home"]), str(m["away"]), season.round_index)}
+				if season.round_index == season.gather_round():
+					up["venue"] = season.round_venue(season.round_index, str(m["home"]), str(m["away"]))
+				return up
 		return {}
 	for m in season.finals_week_matches():
 		if str(m["home"]) == "" or str(m["away"]) == "":
@@ -1251,6 +1280,9 @@ func _on_play_match() -> void:
 	# bowl, milestones (GameState.banner_context).
 	var label := str(m["label"])
 	var banner_ctx := GameState.banner_context(m)
+	# Gather Round: the warm-up is at the host ground the match is staged at.
+	if str(m.get("venue", "")) != "" and label.ends_with(GatherRound.NAME):
+		VignetteGround.use_match(m)
 	_pre_match = PreMatchVignette.open(get_tree().root, mine, opp,
 			GameState.my_squad().ground + GameState.my_squad().bench, opp_ground, heading,
 			PreMatchVignette.is_final(label), banner_ctx)

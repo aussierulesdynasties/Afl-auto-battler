@@ -40,7 +40,7 @@ const GRID_TOUCH := 48.0         # a thumb target: tabs, back, Stat guide
 const CARD_PAD := 10             # inside a card, left and right
 const CARD_PAD_V := 6            # inside a card, top and bottom
 const CARD_BAR := 6.0            # the club's colour down a card's left edge
-const CARD_TINT := 0.18          # how much of the club's colour the card surface carries
+# The card surface carries UiKit.TINT_SHARE["card"] of the club's colour (UiKit.tinted).
 const CARD_FS := 14              # position line on a card
 const CARD_FS_LOW := 13          # trait and status lines on a card
 const CARD_NAME_FS := 15         # every name, whatever its length; only the longest drop a size
@@ -807,7 +807,7 @@ class _Tick extends Control:
 ## The card's surface: the club's colour tinted into the card, square on the
 ## left where the club's bar sits; the chosen one is outlined in the text colour.
 static func _card_style(selected: bool, club: Color) -> StyleBoxFlat:
-	var surface := UiKit.PANEL_ALT.lerp(club, CARD_TINT)
+	var surface := UiKit.tinted("card", club)
 	var sb := UiKit.style(surface, 0, UiKit.RADIUS, UiKit.TEXT if selected else surface)
 	sb.set_border_width_all(2 if selected else 0)
 	sb.corner_radius_top_left = 0
