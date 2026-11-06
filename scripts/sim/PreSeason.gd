@@ -215,6 +215,96 @@ static func planned_run(blocks: Array) -> float:
 	return run
 
 
+# ---------------------------------------------------------------------------
+# Position groups (director, 2026-11-06, row 101: "split it between position
+# groups"). The coach may give the mids, defenders, forwards and rucks each
+# their own plan of blocks; a club entry then carries "groups": {group:
+# blocks}, and a group without one trains on the side's "blocks". A save from
+# before the split has no "groups", so its one plan is every group's plan.
+#
+# What each player gets is his own group's: skills work (development XP), a
+# Heavy week's injury risk, a Light week's faster healing and the heavy or
+# fresh legs into Round 1, each the same size as before. What belongs to the
+# side, the fitness base and plan fluency, is the side's average: each player
+# brings his own group's weeks of running and drilling, so a group's plan
+# counts by its share of the list. Every group on the same plan is exactly the
+# pre-season as it was.
+# ---------------------------------------------------------------------------
+const GROUPS := ["MID", "DEF", "FWD", "RUCK"]
+const GROUP_LABEL := {"MID": "Mids", "DEF": "Defenders", "FWD": "Forwards", "RUCK": "Rucks"}
+
+
+## A player's position group: his listed role (a role outside the four is a mid).
+static func group_of(p: Dictionary) -> String:
+	var r := str(p.get("role", "MID"))
+	return r if GROUPS.has(r) else "MID"
+
+
+## The blocks group `group` trains on in a club entry: its own plan, or the side's.
+static func group_blocks(entry: Dictionary, group: String) -> Array:
+	var groups: Variant = entry.get("groups")
+	if groups is Dictionary and (groups as Dictionary).get(group) is Array:
+		return (groups as Dictionary)[group]
+	return entry.get("blocks", [])
+
+
+## True when a group has a plan of its own that differs from the side's.
+static func group_differs(entry: Dictionary, group: String) -> bool:
+	return str(group_blocks(entry, group)) != str(entry.get("blocks", []))
+
+
+## True when every group trains on the side's plan (the pre-season as before).
+static func groups_same(entry: Dictionary) -> bool:
+	for g in GROUPS:
+		if group_differs(entry, str(g)):
+			return false
+	return true
+
+
+## Each group's share of a list: its players over the list's (each 0 for an
+## empty list). The shares add up to 1.
+static func group_shares(list: Array) -> Dictionary:
+	var out := {}
+	for g in GROUPS:
+		out[g] = 0.0
+	if list.is_empty():
+		return out
+	for p in list:
+		var g := group_of(p)
+		out[g] = float(out[g]) + 1.0
+	for g in GROUPS:
+		out[g] = float(out[g]) / float(list.size())
+	return out
+
+
+## The side's week of running in week `w`: each group's work by its share.
+static func side_week_run(entry: Dictionary, shares: Dictionary, w: int) -> float:
+	var i := block_of_week(w)
+	if i < 0:
+		return 0.0
+	if groups_same(entry):
+		var blocks: Array = entry.get("blocks", [])
+		return work(str(blocks[i][0]), str(blocks[i][1]), "running") if i < blocks.size() else 0.0
+	var run := 0.0
+	for g in GROUPS:
+		var b := group_blocks(entry, str(g))
+		if i < b.size():
+			run += float(shares.get(g, 0.0)) * work(str(b[i][0]), str(b[i][1]), "running")
+	return run
+
+
+## The side's weeks of drilling each plan: each group's drilling by its share.
+static func side_drill_credit(entry: Dictionary, shares: Dictionary) -> Dictionary:
+	if groups_same(entry):
+		return drill_credit(entry.get("blocks", []))
+	var out := {}
+	for g in GROUPS:
+		var credit := drill_credit(group_blocks(entry, str(g)))
+		for plan in credit:
+			out[plan] = float(out.get(plan, 0.0)) + float(shares.get(g, 0.0)) * float(credit[plan])
+	return out
+
+
 ## The fitness base that much running work gives: thin / sound / strong.
 static func base_band(run: float) -> String:
 	if run < float(tune("base_thin_below")):
