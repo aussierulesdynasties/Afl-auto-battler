@@ -1488,9 +1488,9 @@ func _on_fact_option(option: Dictionary, fact_text: String) -> void:
 ## when the sim would play a match you could have played yourself: your
 ## home-and-away round or your final (row 102). A bye, a finals week off, a
 ## finals week you are out of and the off-season sim nothing of yours, so they
-## go straight ahead. The pre-season's Sim to Round 1 (PreSeasonScene) stops
-## before Round 1 and never asks. Settings turns the question back on after
-## Don't ask again.
+## go straight ahead. The pre-season's Sim to Round 1 (PreSeasonScene) asks
+## too, because it plays the practice match, and follows the same setting.
+## Settings turns the question back on after Don't ask again.
 func _sim_asks_first() -> bool:
 	return GameState.confirm_sim_round() and not _upcoming_match().is_empty()
 
@@ -1626,6 +1626,8 @@ func handle_back() -> bool:
 		_close_midseason(true)
 		return true
 	if RookieDraftSheet.close_open(self):
+		return true
+	if DraftSpotsSheet.close_open(self):
 		return true
 	# Back skips the press conference, as its Skip button does (natural
 	# Android Back); an overlay opened over it closes first.
@@ -2152,10 +2154,19 @@ func _result_side(code: String, goals: int, behinds: int, role: String, verdict:
 	return h
 
 
+## The draft button: when a pick of yours has no senior list spot, the sheet
+## says so first (DraftSpotsSheet); otherwise the draft starts.
 func _on_intake_draft() -> void:
 	if GameState.is_sacked():
 		_build()
 		return
+	if DraftSpotsSheet.needed():
+		DraftSpotsSheet.open(self, _start_intake_draft)
+		return
+	_start_intake_draft()
+
+
+func _start_intake_draft() -> void:
 	if GameState.begin_intake_draft():
 		Router.go("draft")
 		return
