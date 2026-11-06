@@ -1293,19 +1293,30 @@ func _test_trade_picks() -> void:
 	_check(GameState.save_career() and GameState.load_career() and GameState.pick_owner_of(year, 1, me) == rival,
 			"Pick ownership survives a save and load")
 
-	# The draft gives the pick to its new owner.
+	# The draft gives the pick to whoever holds it when the draft opens. The
+	# off-season market runs between your trade and the draft, and a club
+	# that got your pick may sell it on: "every club, the user's included,
+	# acts in its own best interest at all times" (director, 2026-11-03), and
+	# picks have "persistent pick ownership". So the holder is read, not
+	# assumed to be the club you traded with.
 	_check(GameState.begin_intake_draft(), "The national draft opens")
+	var holder := GameState.pick_owner_of(year, 1, me)
+	_check(holder != me and holder != "", "Your traded first-round pick is still someone else's when the draft opens (%s)" % holder)
+	if holder != rival:
+		var got: Dictionary = GameState.pick_got.get("%d:1:%s" % [year, me], {})
+		_check(str(got.get("from", "")) == rival and GameState.pick_story(year, 1, me).contains(GameDB.club_name(rival)),
+				"A pick sold on says where it came from (%s got it from %s: %s)" % [holder, str(got.get("from", "")), GameState.pick_story(year, 1, me)])
 	var d: Draft = GameState.draft
 	var at := -1
 	for k in range(d.pick_sequence.size()):
 		if str(d.pick_origin[k]) == me and int(d.pick_rounds[k]) == 1 and d.comp_at(k).is_empty():
 			at = k
-	_check(at >= 0 and str(d.pick_sequence[at]) == rival, "Your traded first-round pick is theirs in the draft order")
-	var my_comps := d.comp_picks.filter(func(c): return str(c["club"]) == me).size()
-	var their_comps := d.comp_picks.filter(func(c): return str(c["club"]) == rival).size()
+	_check(at >= 0 and str(d.pick_sequence[at]) == holder, "Your traded first-round pick is its holder's in the draft order (%s)" % holder)
 	# Picks the AI clubs traded in the off-season market count too: only
-	# this trade's first-rounder is the one pick that should move.
-	var others := {me: 0, rival: 0}
+	# your first-rounder is the one pick that should move from you to its
+	# holder. The club you traded with, if it sold the pick on, comes out
+	# level for it.
+	var others := {me: 0, holder: 0, rival: 0}
 	for key in d.pick_owners:
 		var parts := str(key).split(":")
 		if int(parts[0]) > d.target_size or str(key) == "1:" + me:
@@ -1315,10 +1326,13 @@ func _test_trade_picks() -> void:
 				others[code] += 1
 			if str(parts[1]) == code:
 				others[code] -= 1
-	_check(d.pick_limit(me) == d.target_size - 1 + my_comps + int(others[me])
-			and d.pick_limit(rival) == d.target_size + 1 + their_comps + int(others[rival]),
-			"You make one pick fewer; they make one more (other traded picks %s)" % str(others))
-	_check(GameState.save_career() and GameState.load_career() and str(GameState.draft.pick_sequence[at]) == rival
+	var comps := func(code: String) -> int:
+		return d.comp_picks.filter(func(c): return str(c["club"]) == code).size()
+	_check(d.pick_limit(me) == d.target_size - 1 + comps.call(me) + int(others[me])
+			and d.pick_limit(holder) == d.target_size + 1 + comps.call(holder) + int(others[holder])
+			and (holder == rival or d.pick_limit(rival) == d.target_size + comps.call(rival) + int(others[rival])),
+			"You make one pick fewer; its holder makes one more (holder %s, other traded picks %s)" % [holder, str(others)])
+	_check(GameState.save_career() and GameState.load_career() and str(GameState.draft.pick_sequence[at]) == holder
 			and str(GameState.draft.pick_origin[at]) == me, "The draft keeps the traded pick through a save")
 	d = GameState.draft
 	while not d.is_finished():
@@ -1329,7 +1343,7 @@ func _test_trade_picks() -> void:
 	for id in d.picked:
 		if int(d.pick_details(str(id)).get("pick", 0)) == at + 1:
 			used_by = d.drafted_by(str(id))
-	_check(used_by == rival, "The player taken with the traded pick goes to its new owner")
+	_check(used_by == holder, "The player taken with the traded pick goes to its holder (%s)" % used_by)
 	var spent_year := GameState.season_year
 	var spent_gone := GameState.finish_intake_draft()
 	for key in GameState.pick_owner:
