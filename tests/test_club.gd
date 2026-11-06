@@ -1700,11 +1700,15 @@ func _test_fact_talks() -> void:
 	var news_said := ""
 	for n in GameState.news.slice(0, 12):
 		news_said += str(n["text"]) + " | "
-	if int(GameState.list_player(vid).get("injury_weeks", 0)) <= 0:
+	# Hurt now can mean hurt in the game he was picked for (played) or before
+	# it (injured); fit now, he must have been picked.
+	var hurt := int(GameState.list_player(vid).get("injury_weeks", 0)) > 0
+	if not hurt or str(f[-1]["out"]) == "played":
 		_check(str(f[-1]["out"]) == "played" and news_said.contains("back in the side, as you told him"),
 				"Promised a game and picked: it says so (%s)" % news_said.left(200))
 	else:
-		_check(str(f[-1]["out"]) == "injured", "Hurt before the game: kept as that")
+		_check(str(f[-1]["out"]) == "injured" and news_said.contains("was hurt before his chance came"),
+				"Hurt before the game: kept as that (%s)" % str(f[-1]))
 	# Left out after an explanation: still waiting.
 	var other: Dictionary = {}
 	for q in GameState.my_list:
