@@ -2209,19 +2209,12 @@ static func _job_words(job: String) -> String:
 	return label if job == "SC" or job == "SA" else label + " coach"
 
 
-## Why the board set this season's goal, in a sentence. It reads the list
-## the club has assembled against the rest of the league.
+## Why the board set this season's goal, in a sentence, with where the list
+## ranks on paper (ClubLife.goal_reason). A save from before the board kept
+## the club count reads it from this season's rankings.
 func board_goal_reason() -> String:
-	var rank := int(board.get("rank", 9))
-	match str((board.get("goal", {}) as Dictionary).get("key", "")):
-		"top4":
-			return "One of the best lists in the competition, and top four last year: the board expects it again."
-		"finals":
-			return "The board rates this list among the best few in the competition." if rank <= 2 \
-					else "The board sees a list good enough to play finals."
-		"top12":
-			return "The board sees a list in the middle of the pack."
-	return "The board knows this list is still building."
+	return ClubLife.goal_reason(board.get("goal", {}), int(board.get("rank", 0)),
+			int(board.get("clubs", club_expect.size())))
 
 
 ## Mark the briefing read: the season can begin.
@@ -10045,13 +10038,14 @@ func _open_board_season() -> void:
 	for i in range(ranks.size()):
 		var code := str(ranks[i][0])
 		club_expect[code] = i + 1
-		club_goals[code] = ClubLife.board_goal(i + 1, int(_last_finish.get(code, 0)))
+		club_goals[code] = ClubLife.board_goal(i + 1, int(_last_finish.get(code, 0)), ranks.size())
 		if code == my_club:
 			rank = i + 1
 	if board.is_empty():
 		board = {"confidence": ClubLife.START_CONFIDENCE, "warned": false, "sacked": false, "history": []}
-	board["goal"] = club_goals.get(my_club, ClubLife.board_goal(rank))
+	board["goal"] = club_goals.get(my_club, ClubLife.board_goal(rank, 0, ranks.size()))
 	board["rank"] = rank
+	board["clubs"] = ranks.size()
 	board["last_finish"] = int(_last_finish.get(my_club, 0))
 	board["year"] = season_year
 	board.erase("promise")
@@ -10633,7 +10627,7 @@ func _coach_market_ctx(the_coaches: Dictionary, archive: Dictionary) -> Dictiona
 	for i in range(table.size()):
 		var row: Dictionary = table[i]
 		var code := str(row["code"])
-		var goal: Dictionary = club_goals.get(code, ClubLife.board_goal(int(club_expect.get(code, ClubLife.default_rank(club_count)))))
+		var goal: Dictionary = club_goals.get(code, ClubLife.board_goal(int(club_expect.get(code, ClubLife.default_rank(club_count))), 0, club_count))
 		var pos := i + 1
 		var met := ClubLife.goal_met(goal, pos, int(row.get("w", 0)), club_count)
 		results[code] = {"met": met, "finals": pos <= Season.FINALISTS,

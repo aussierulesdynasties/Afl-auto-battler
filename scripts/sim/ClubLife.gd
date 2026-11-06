@@ -29,31 +29,72 @@ const MORALE_BASE := 70
 
 
 ## The season's goal from where the list ranks pre-season (`rank`, by
-## Squad.strength) and where the club finished last season (`prev`, 0 when
-## there is no last season). Calibrated against replayed seasons
-## (ARD-M6-003): a pre-season list ranking is a rough guide - the best list
-## averages about fifth - so the bands ask for what a list of that rank
-## reaches in most seasons, about four times in five:
+## Squad.strength, among `clubs` clubs) and where the club finished last
+## season (`prev`, 0 when there is no last season). Calibrated against
+## replayed seasons (ARD-M6-003): a pre-season list ranking is a rough guide -
+## the best list averages about fifth - so the bands ask for what a list of
+## that rank reaches in most seasons, about four times in five:
 ##   top four   only a top-two list that also finished top four last year
 ##              (a list ranking alone makes the top four well under half
 ##              the time, so it never sets that demand by itself);
-##   finals     the top seven lists;
-##   top 12     ranks 8-12;
-##   seven wins the rest.
+##   finals     the top seven lists (three inside the finals places, which
+##              are Season.FINALISTS at any number of clubs);
+##   top two-thirds  the rest of the lists outside the bottom third, asked to
+##              finish outside it: top 12 of 18, top 13 of 20, top 14 of 21
+##              (row 115, T9.Q20; key "top12" kept so old saves still read);
+##   seven wins the bottom third.
 const TOP4_LIST_RANK := 2
 const TOP4_LAST_FINISH := 4
 const FINALS_LIST_RANK := 7
-const TOP12_LIST_RANK := 12
 
 
-static func board_goal(rank: int, prev := 0) -> Dictionary:
+## The last ladder place outside the bottom third: 12 of 18, 13 of 20, 14 of 21.
+static func top_two_thirds(clubs: int) -> int:
+	return roundi(clubs * 2.0 / 3.0)
+
+
+static func board_goal(rank: int, prev := 0, clubs := 18) -> Dictionary:
 	if rank <= TOP4_LIST_RANK and prev >= 1 and prev <= TOP4_LAST_FINISH:
 		return {"key": "top4", "text": "Finish in the top four", "pos": 4}
 	if rank <= FINALS_LIST_RANK:
 		return {"key": "finals", "text": "Make the finals", "pos": Season.FINALISTS}
-	if rank <= TOP12_LIST_RANK:
-		return {"key": "top12", "text": "Finish in the top 12", "pos": 12}
+	var mid := top_two_thirds(clubs)
+	if rank <= mid:
+		return {"key": "top12", "text": "Finish in the top %d" % mid, "pos": mid}
 	return {"key": "wins7", "text": "Win at least 7 games", "wins": 7}
+
+
+## Why the board set `goal`, in the board's words, with where the list ranks
+## on paper (`rank` of `clubs`; either 0 leaves the rank out, for a board with
+## no rank on record).
+static func goal_reason(goal: Dictionary, rank: int, clubs: int) -> String:
+	if rank <= 0 or clubs <= 0:
+		return _no_rank_reason(goal, rank)
+	var paper := "Your list ranks %s of %d on paper" % [PreSeason.ordinal(rank), clubs]
+	match str(goal.get("key", "")):
+		"top4":
+			return paper + ", and you finished top four last year: the board expects it again."
+		"finals":
+			if rank <= TOP4_LIST_RANK:
+				return paper + ": the board rates it among the best few in the competition."
+			return paper + ": the board sees a list good enough to play finals."
+		"top12":
+			return paper + ", in the middle of the pack: the board wants it out of the bottom third."
+	return paper + ": the board knows it is still building."
+
+
+## The reason as it read before the rank was said aloud (no rank on record).
+static func _no_rank_reason(goal: Dictionary, rank: int) -> String:
+	match str(goal.get("key", "")):
+		"top4":
+			return "One of the best lists in the competition, and top four last year: the board expects it again."
+		"finals":
+			if rank > 0 and rank <= TOP4_LIST_RANK:
+				return "The board rates this list among the best few in the competition."
+			return "The board sees a list good enough to play finals."
+		"top12":
+			return "The board sees a list in the middle of the pack."
+	return "The board knows this list is still building."
 
 
 static func goal_met(goal: Dictionary, position: int, wins: int, clubs := 18) -> bool:
@@ -114,9 +155,16 @@ const GOAL_PHRASE := {"top4": "a top-four finish", "finals": "a finals spot",
 		"top12": "a top-12 finish", "wins7": "seven wins"}
 
 
+## GOAL_PHRASE for `goal`; the middle band names its own ladder place.
+static func goal_phrase(goal: Dictionary) -> String:
+	if str(goal.get("key", "")) == "top12" and goal.has("pos"):
+		return "a top-%d finish" % int(goal["pos"])
+	return str(GOAL_PHRASE.get(str(goal.get("key", "")), "the season's goal"))
+
+
 ## Why the board moved after a match, in a sentence.
 static func match_reason(goal: Dictionary, opp_name: String, margin: int, losses_in_row: int) -> String:
-	var aim := str(GOAL_PHRASE.get(str(goal.get("key", "")), "the season's goal"))
+	var aim := goal_phrase(goal)
 	if margin < 0 and losses_in_row >= RESTLESS_AFTER:
 		return "%s losses in a row: the board is getting restless about %s." % [
 				MatchNotes.count_word(losses_in_row).capitalize(), aim]
