@@ -1,9 +1,11 @@
 extends SceneTree
 const Tap := preload("res://tests/tap.gd")
-## The Club culture sheet (stories P2-3), over My list, for the
-## director's look. Needs a real renderer:
+## Club culture under the leaders in the Captaincy panel (TODO row 100; the
+## old Culture sheet moved there), over My list, for the director's look. Needs a real renderer:
 ##   godot --path . --script tools/visual/capture_culture.gd -- --out /tmp/cult [--club FRE] [--size 1280x720] [--emblems off]
-## Writes <out>_list.png (My list, the Club culture row), <out>_culture.png (the three strands in words). Plays a season first, so the strands have something to say.
+## Writes <out>_list.png (My list), <out>_captaincy.png (the panel as it opens, the
+## leaders first), <out>_culture.png (scrolled to the culture) and <out>_reasons.png
+## (scrolled to the foot). Plays a season first, so the strands have something to say.
 
 var W := 390
 var H := 844
@@ -57,7 +59,7 @@ func _run() -> void:
 			club = str(a[i + 1])
 		if str(a[i]) == "--emblems" and str(a[i + 1]) == "off":
 			# Loaded here, not named: the screen's script needs the autoloads to compile.
-			load("res://scripts/ui/CultureSheet.gd").set("icon_dir", "res://assets/ui/none")
+			load("res://scripts/ui/CultureSection.gd").set("icon_dir", "res://assets/ui/none")
 		if str(a[i]) == "--size":
 			var wh := str(a[i + 1]).split("x")
 			W = int(wh[0])
@@ -124,20 +126,34 @@ func _run() -> void:
 	root.get_node("Router").go("list")
 	for i in range(20):
 		await process_frame
-	var open_btn: Button = current_scene.find_child("CultureOpen", true, false)
+	var open_btn: Button = current_scene.find_child("CaptaincyOpen", true, false)
 	var why: String = await _tap(open_btn) if W < 760 else "not tapped on the PC canvas"
-	if why != "" or current_scene.find_child("CultureSheet", true, false) == null:
+	if why != "" or current_scene.find_child("CaptaincySheet", true, false) == null:
 		print("tap not mapped here (", why, "): pressing instead")
 		open_btn.emit_signal("pressed")
-	await _shot(out + "_culture.png")
-	var sheet_now: Node = current_scene.find_child("CultureSheet", true, false)
+	await _shot(out + "_captaincy.png")
+	var cap_now: Node = current_scene.find_child("CaptaincySheet", true, false)
+	var sheet_now: Node = cap_now.find_child("CaptaincyCulture", true, false) if cap_now != null else null
+	print("old sheet route: ", current_scene.find_child("CultureOpen", true, false) != null)
+	var sc: ScrollContainer = null
+	var p: Node = sheet_now.get_parent() if sheet_now != null else null
+	while p != null and sc == null:
+		if p is ScrollContainer:
+			sc = p
+		p = p.get_parent()
+	if sc != null:
+		sc.scroll_vertical = int((sheet_now as Control).position.y)
+		await _shot(out + "_culture.png")
+		sc.scroll_vertical = 100000
+		await _shot(out + "_reasons.png")
+		print("clipped text (panel): ", _clipped(cap_now))
 	for ic in (sheet_now.find_children("StrandIcon", "TextureRect", true, false) if sheet_now != null else []):
 		var tr := ic as TextureRect
 		print("emblem ", tr.texture.resource_path, " ", tr.texture.get_size(), " drawn ", tr.size, " tint ", tr.modulate.to_html(false))
 	print("clipped text: ", _clipped(sheet_now))
 	current_scene.handle_back()
 	await process_frame
-	print("back closes: ", current_scene.find_child("CultureSheet", true, false) == null)
+	print("back closes: ", current_scene.find_child("CaptaincySheet", true, false) == null)
 	quit(0)
 
 
