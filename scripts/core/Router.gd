@@ -22,13 +22,15 @@ const SCENES := {
 
 ## Screens whose opening takes a while on a phone (their _ready builds a lot):
 ## the cover says what is coming before the work starts (Android pass,
-## 2026-11-07: My list took 6-16 s on desktop with a frozen screen).
+## 2026-11-07: My list took 6-16 s on desktop with a frozen screen). Every
+## line on the cover says what is happening now, in the same shape:
+## "Loading your list...", "Playing Round 7...", "Starting the new season...".
 const LINES := {
 	"list": "Loading your list...",
 	"selection": "Loading the team...",
-	"offseason": "The trade period opens...",
+	"offseason": "Opening the trade period...",
 	"season_review": "Looking back on the season...",
-	"preseason": "Pre-season begins...",
+	"preseason": "Starting the pre-season...",
 }
 ## A screen load still going after this long shows ScreenTransition.LOADING.
 const SLOW_MS := 150
@@ -50,9 +52,6 @@ func go(key: String) -> void:
 		ResourceLoader.load_threaded_request(path)
 		wipe.call("cover", _covered_swap.bind(key, path, wipe), str(LINES.get(key, "")))
 		return
-	# Every screen change is a safe point to save (GameState skips it while a
-	# live match is half played).
-	GameState.autosave_if_dirty()
 	_swap(key, path, true)
 
 
@@ -83,6 +82,11 @@ func _covered_swap(key: String, path: String, wipe: Node) -> void:
 
 
 func _swap(key: String, path: String, ease_in: bool) -> void:
+	# Every screen change is a safe point to save (GameState skips it while a
+	# live match is half played). With the wipe on, this runs under full
+	# cover, so the dots answer the tap at once and the save happens behind
+	# them, still before the next screen reads anything.
+	GameState.autosave_if_dirty()
 	var err := get_tree().change_scene_to_file(path)
 	if err != OK:
 		push_error("Router: change_scene_to_file failed (%d) for %s" % [err, path])

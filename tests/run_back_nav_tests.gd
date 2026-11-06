@@ -908,6 +908,8 @@ func _test_loading_cover() -> void:
 		_check(_router.current() == "hub" and _state.season != null, "loading cover: Continue lands on the hub")
 	wipe.set("test_cover", false)
 	_state.delete_saved_career()
+	# The setting is saved and later suites read it: put it back.
+	_state.set_confirm_sim_round(true)
 	await _settle()
 
 

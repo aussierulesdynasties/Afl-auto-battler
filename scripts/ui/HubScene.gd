@@ -1557,7 +1557,7 @@ func _sim_line() -> String:
 	if not season.is_regular_done():
 		return "Playing %s..." % season.round_label(season.round_index)
 	var w := int(season.finals.get("week", 1))
-	return ["Playing the wildcard round...", "Playing the finals...", "Playing the semi finals...",
+	return ["Playing the wildcard round...", "Playing the first week of the finals...", "Playing the semi finals...",
 			"Playing the prelims...", "Playing the Grand Final..."][clampi(w - 1, 0, 4)]
 
 
@@ -2167,13 +2167,11 @@ func _on_intake_draft() -> void:
 
 
 func _start_intake_draft() -> void:
-	if GameState.begin_intake_draft():
-		Router.go("draft")
-		return
-	# The rollover takes a couple of seconds on desktop: cover it.
-	ScreenTransition.run("The new season begins...", _start_next_season)
-
-
-func _start_next_season() -> void:
-	if GameState.start_next_season():
-		_build()
+	# The rollover takes a couple of seconds on a phone: the cover and its
+	# line go up first. The draft screen, when there is one, joins the cover.
+	ScreenTransition.run("Starting the new season...", func():
+		if GameState.begin_intake_draft():
+			Router.go("draft")
+			return
+		if GameState.start_next_season():
+			_build())
