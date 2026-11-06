@@ -183,6 +183,10 @@ func _test_folded_sizes() -> void:
 			"Talking him through it lifts him as much as it always did")
 
 
+## The facts only a finals or season-end week fills in (ClubStories.context).
+const FINALS_WEEK_FACTS := ["forecast_line", "last_final_year", "lost_final", "best_line", "history_line", "margin_line"]
+
+
 ## A choice's hint is made from its effects and fully filled in.
 func _test_hints_in_words() -> void:
 	_start()
@@ -195,10 +199,15 @@ func _test_hints_in_words() -> void:
 			# A scripted result card has one button and no effects to describe.
 			if (d == "" and not bool(t.get("scripted", false))) or d.contains("{"):
 				bad.append("%s/%s: %s" % [t["id"], o["key"], d])
-		# A finals card's title and text are filled from that week's facts (the
-		# forecast, the last final's year), which a regular-season week does not have.
-		var regular: bool = (t.get("phase", ["regular"]) as Array).has("regular")
-		if regular and (str(card["title"]).contains("{") or str(card["text"]).contains("{")):
+		# A finals or season-end card may name that week's own facts (the
+		# forecast, the last final's year, the margin), which a regular-season
+		# week does not have: tests/test_finals_cards_2.gd fills those. Any other
+		# placeholder left in it is a fault.
+		var shown := str(card["title"]) + " " + str(card["text"])
+		if not (t.get("phase", ["regular"]) as Array).has("regular"):
+			for k in FINALS_WEEK_FACTS:
+				shown = shown.replace("{%s}" % k, "")
+		if shown.contains("{"):
 			bad.append("%s: %s" % [t["id"], card["title"]])
 	_check(bad.is_empty(), "Every choice says what it does, fully filled in: %s" % " | ".join(PackedStringArray(bad)))
 	var heavy := GameState.story_card("training_extra_session")

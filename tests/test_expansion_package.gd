@@ -26,6 +26,7 @@ func run() -> void:
 	_t("_test_your_player_is_approached")
 	_t("_test_who_a_rival_keeps")
 	_t("_test_save_round_trip")
+	_t("_test_old_saves")
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -532,3 +533,49 @@ func _test_save_round_trip() -> void:
 	_check(GameState.draft != null and extra == 1, "The open draft keeps Tasmania's extra pick through a reload")
 	_run_draft()
 	_check(GameState.finish_intake_draft() and GameState.season_year == 2029, "The reloaded draft finishes")
+
+
+## A save made before the package (expansion_package was off on main until
+## 2026-11-06): no "expansion" or "canberra_on" key, and a Tasmania past 2028
+## that arrived as 36 generated players.
+func _as_old_save(tas: Array = []) -> void:
+	var saved := CareerSave.read(GameState.save_path)
+	saved.erase("expansion")
+	saved.erase("canberra_on")
+	if not tas.is_empty():
+		saved["season"]["lists"]["TAS"] = tas
+	_check(CareerSave.write(saved, CareerSave.read_meta(GameState.save_path), GameState.save_path),
+			"The save is rewritten as an old one")
+
+
+## Ruling 9: a save that has not reached 2028 gets the package when Tasmania
+## arrives; a save past 2028 keeps the Tasmania it has. Either way it keeps
+## Canberra, because the choice did not exist when it was made.
+func _test_old_saves() -> void:
+	_new_career()
+	_check(GameState.save_career(), "An old career, before 2028, saves")
+	_as_old_save()
+	GameState.load_career()
+	_check(GameState.canberra_on and GameDB.active_clubs(2030).has("CANB"), "An old save keeps Canberra")
+	_rollover()
+	_check(_count_prefix(GameState.season.lists["TAS"], "FND_") >= 24 and _count_prefix(GameState.season.lists["TAS"], "EXP_") == 0,
+			"An old save that had not reached 2028 gets the package")
+	_new_career()
+	_rollover()
+	_check(GameState.season_year == 2028 and GameState.save_career(), "An old career, in 2028, saves")
+	var old_tas: Array = Prospects.generate_expansion_list("TAS", 2028)
+	_as_old_save(old_tas)
+	GameState.load_career()
+	_check(_ids(GameState.season.lists["TAS"]) == _ids(old_tas), "A save past 2028 loads the Tasmania it had")
+	_check(GameState.canberra_on and GameState.cap_for("TAS") == GameState.salary_cap,
+			"It keeps Canberra and Tasmania has no sign-on money")
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.begin_intake_draft()
+	var extra := 0
+	for c in GameState.draft.comp_picks:
+		if bool(c.get("concession", false)):
+			extra += 1
+	_run_draft()
+	GameState.finish_intake_draft()
+	_check(extra == 0 and not GameState.expansion.has("TAS"), "A save past 2028 gets no extra pick and no approaches")
+	_check(_count_prefix(GameState.season.lists["TAS"], "EXP_") >= 20, "It keeps the Tasmania it has into 2029")

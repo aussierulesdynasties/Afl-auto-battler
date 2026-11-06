@@ -34,6 +34,13 @@ func _run() -> void:
 			"--weather": weather = str(a[i + 1])
 			"--set": sets = str(a[i + 1])
 			"--start": start = str(a[i + 1])
+	# The feature switches are gone (director, 2026-11-06): an old --on/--off
+	# call would play two identical arms and report B-A of 0, so refuse it.
+	for arg in a:
+		if str(arg) == "--on" or str(arg) == "--off":
+			push_error("balance: --on/--off are gone (no feature switches); pair main vs the branch with --a-root")
+			quit(2)
+			return
 	var body = load("res://tools/balance/balance_body.gd").new()
 	body.start = start
 	var code: int = body.play(from, count, out, weather, body.parse_sets(sets))

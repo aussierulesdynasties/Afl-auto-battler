@@ -359,23 +359,35 @@ func _test_career_rollover() -> void:
 	_check(GameState.begin_intake_draft(), "The intake draft opens after the home-and-away")
 	var draft: Draft = GameState.draft
 	_check(draft != null and draft.intake_mode, "GameState built an intake draft")
-	# Every pick before my turn is logged, or belonged to a club that passed
-	# (a full senior list passes).
+	# Every pick before my turn is logged, or belonged to a club whose senior
+	# list (RookieList.SENIOR_SPOTS) is full: it passes, like a club with no
+	# space under the CBA at the real draft.
 	var logged_at := {}
 	for h in draft.pick_history:
 		logged_at[int(h["pick"])] = true
 	var all_logged := draft.pick_index > 0
 	for i in range(draft.pick_index):
-		if not logged_at.has(i + 1) and not draft.passed_clubs.has(str(draft.pick_sequence[i])):
+		if not logged_at.has(i + 1) and not draft._list_full(str(draft.pick_sequence[i])):
 			all_logged = false
 	_check(all_logged, "Rival picks before my turn are all logged (%d of %d)" % [draft.pick_history.size(), draft.pick_index])
 	_check(GameState.intake_assignments.size() > 0,
 			"Father-son/NGA prospects land before the draft starts")
+	# A club that comes to the draft with a full senior list takes no national draftee.
+	var full_before := PackedStringArray()
+	for code in draft.existing_sizes:
+		if int(draft.existing_sizes[code]) >= draft.senior_cap:
+			full_before.append(str(code))
 	while not draft.is_finished():
 		var candidate := draft._best_ai_pick(draft.current_club())
 		if candidate.is_empty() or not draft._draft_pick(draft.current_club(), candidate):
 			draft._skip_current_pick()
 	_check(draft.is_finished(), "Filling every scheduled pick completes the intake")
+	var full_picked := 0
+	for h in draft.pick_history:
+		if full_before.has(str(h["club"])):
+			full_picked += 1
+	_check(draft.senior_cap == RookieList.SENIOR_SPOTS and full_picked == 0,
+			"A club with a full senior list passes the National Draft (%d full: %s)" % [full_before.size(), ", ".join(full_before)])
 	_check(GameState.finish_intake_draft(), "The rollover commits")
 
 	_check(GameState.season_year == 2028, "The career advances a year")
@@ -1016,6 +1028,12 @@ func _test_real_lists_start() -> void:
 	_check(GameState.save_career() and GameState.load_career() and GameState.opening_draft
 			and GameState.draft != null and GameState.draft.intake_mode and GameState.start_mode == "real",
 			"A real-lists career saves and resumes mid-draft")
+	# A founding club whose real senior list is already full (38) takes no
+	# national draftee in the opening draft: it passes.
+	var full_before := PackedStringArray()
+	for code in GameState.draft.existing_sizes:
+		if int(GameState.draft.existing_sizes[code]) >= GameState.draft.senior_cap:
+			full_before.append(str(code))
 	var guard := 0
 	while not GameState.draft.is_finished() and guard < 400:
 		guard += 1
@@ -1024,6 +1042,12 @@ func _test_real_lists_start() -> void:
 			if board.is_empty() or not GameState.draft.pick(board[0]):
 				break
 	_check(GameState.draft.is_finished(), "The 2026 National Draft runs to the end")
+	var full_picked := 0
+	for h in GameState.draft.pick_history:
+		if full_before.has(str(h["club"])):
+			full_picked += 1
+	_check(GameState.draft.senior_cap == RookieList.SENIOR_SPOTS and not full_before.has(me) and full_picked == 0,
+			"A club with a full senior list passes the opening draft (%d full: %s)" % [full_before.size(), ", ".join(full_before)])
 	_check(GameState.finish_intake_draft() and GameState.season != null and GameState.season_year == GameDB.START_YEAR
 			and not GameState.opening_draft, "Finishing the draft starts the 2027 season")
 	var rookies := 0
@@ -1123,7 +1147,8 @@ func _test_gen_traits_rates() -> void:
 	GameDB.reload()
 	var same_listed := listed_attr.size() > 0
 	for p in GameDB.list_additions:
-		if not listed_attr.has(str(p.get("id", ""))) or p["attr"] != listed_attr[str(p["id"])] 				or (bool(p.get("generated", false)) and not bool(p.get("user_created", false))):
+		if not listed_attr.has(str(p.get("id", ""))) or p["attr"] != listed_attr[str(p["id"])] \
+				or (bool(p.get("generated", false)) and not bool(p.get("user_created", false))):
 			same_listed = false
 	Prospects.forget_cache()
 	var forge_b: Dictionary = Prospects.make_custom(forge, 2027, 777)

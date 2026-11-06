@@ -16,7 +16,7 @@ extends RefCounted
 var intake_mode := false
 var existing_sizes := {}              # code -> kept list length (intake only)
 ## Where the intake calls a list full: 0 is the whole list (Ratings.LIST_SIZE);
-## with the rookie list on (RookieList) the senior list, and existing_sizes
+## a career's intake sets the senior list (RookieList), and existing_sizes
 ## counts senior players only.
 var senior_cap := 0
 var existing_role_counts := {}        # code -> {RUCK..FWD} kept players (intake)

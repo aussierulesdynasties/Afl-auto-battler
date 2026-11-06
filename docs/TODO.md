@@ -118,7 +118,7 @@ Nothing open.
 
 ## Working rules
 - Godot runs off-screen with its own user data (`APPDATA=<scratch dir>`); kill only your own PIDs.
-- Balance: screen every balance-gated row or match-engine change with `tools/balance.sh match 1000` (base vs `--b "--on <switch>"`) before the PR and paste its table in the PR body; extend the harness rather than writing one-off probes (tools/balance/README.md).
+- Balance: screen every balance-gated row or match-engine change with `tools/balance.sh match 1000` (paired: main vs the branch, `--a-root <main checkout> --b ""`) before the PR and paste its table in the PR body; extend the harness rather than writing one-off probes (tools/balance/README.md).
 - Run only the suites your change touches locally; CI runs the rest. Long audits go to `audit.yml`.
 - Revert `.import` and `.uid` churn before committing. Stage by name; never `git add -A`.
 - One worktree per session, from `origin/main`. Don't push to a PR branch while its CI runs unless the merge needs it.

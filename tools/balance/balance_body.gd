@@ -37,7 +37,6 @@ func play(from: int, count: int, out: String, weather: String,
 			class_ids[str(q["id"])] = true
 	var codes: Array = GameDB.active_clubs(2026).duplicate()
 	# --lists generated: every club's list is generated players instead (row 104).
-	var lists := {}
 	for i in range(args.size() - 1):
 		if str(args[i]) == "--lists" and str(args[i + 1]) == "generated":
 			lists = generated_lists(codes)
