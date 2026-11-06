@@ -2323,7 +2323,7 @@ func _test_culture_copy_is_true() -> void:
 		if text.contains("Culture.value(") or text.contains("Culture.words("):
 			readers.append(f.get_file())
 	readers.sort()
-	_check(readers == ["CultureSheet.gd", "GameState.gd"], "Only the screen and the news mover read a strand directly (%s)" % ", ".join(readers))
+	_check(readers == ["CultureSection.gd", "GameState.gd"], "Only the screen and the news mover read a strand directly (%s)" % ", ".join(readers))
 	var gs := FileAccess.get_file_as_string("res://scripts/state/GameState.gd")
 	var at := gs.find("func _culture_move")
 	var body := gs.substr(at, gs.find("

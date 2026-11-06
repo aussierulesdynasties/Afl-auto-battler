@@ -40,7 +40,6 @@ func _test_training_hero() -> void:
 	var gs = root.get_node("GameState")
 	var db = root.get_node("GameDB")
 	var art = load("res://scripts/ui/UiArt.gd")
-	var culture = load("res://scripts/ui/CultureSheet.gd")
 	for club in ["FRE", "MEL"]:
 		for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 			var tag := "%s %dx%d" % [club, sz.x, sz.y]
