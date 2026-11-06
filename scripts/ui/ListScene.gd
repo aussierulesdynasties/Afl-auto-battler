@@ -56,8 +56,8 @@ func _build() -> void:
 	_root.add_child(UiKit.top_bar("My list", true, train))
 
 	# On a phone the Shape pane is the whole page below the title: the board
-	# is 600 px of oval and a bench under a header of standing, captaincy and
-	# culture, taller than the screen, so the page scrolls to the foot of the
+	# is 600 px of oval and a bench under a header of standing and captaincy
+	# (culture sits in the Captaincy panel), taller than the screen, so the page scrolls to the foot of the
 	# oval and the bench (the sweep, 2026-10-18: it ran to y 1005 on 844). A
 	# swipe that starts on a guernsey still scrolls it: the kit lets drags
 	# through every button inside a scroll. The Full list pane scrolls its
@@ -132,13 +132,9 @@ func _build() -> void:
 			chev.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			names_n.get_parent().add_child(chev)
 	host.add_child(cap_link)
-	var culture_link := CultureSheet.entry_row()
-	culture_link.pressed.connect(func(): _open_culture())
-	for link in [cap_link, culture_link]:
-		var value: Node = link.find_child("SectionLeadsTo", true, false)
-		if value is Label:
-			(value as Label).add_theme_color_override("font_color", UiKit.TEXT)
-	host.add_child(culture_link)
+	var value: Node = cap_link.find_child("SectionLeadsTo", true, false)
+	if value is Label:
+		(value as Label).add_theme_color_override("font_color", UiKit.TEXT)
 
 	if _narrow():
 		var tabs := UiKit.hbox(2)
@@ -401,13 +397,6 @@ func _open_profile(id: String) -> void:
 					_build()
 					_open_profile(id)})
 	_profile = PlayerSheet.open(self, p, func(): _profile = null, actions)
-
-
-func _open_culture() -> void:
-	_close_profile()
-	_profile = CultureSheet.open(self, func():
-		_profile = null
-		_build())
 
 
 func _open_captaincy() -> void:

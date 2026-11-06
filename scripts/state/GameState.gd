@@ -11734,7 +11734,7 @@ func _culture_marks() -> Dictionary:
 
 ## Move a club's strand, with the reason. A rival whose strand crosses into a
 ## new named band makes the league news (once a season, neutral words); yours
-## is on your Club culture page.
+## is in the culture under your leaders (the Captaincy panel).
 func _culture_move(code: String, strand: String, d: int, why: String) -> void:
 	var before := Culture.value(relations, code, strand)
 	var when := "Off-season" if season == null or offseason_year == season_year else last_label
