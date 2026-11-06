@@ -236,7 +236,9 @@ static func project(p: Dictionary) -> void:
 	var bias: Dictionary = p.get("attr_bias", {})
 	for key in bias:
 		a[key] = float(a.get(key, target)) + float(bias[key])
-	if Features.on(GEN_TRAITS):
+	# Only the game's own generated players: real-list players projected from no
+	# senior game, the real draft class and a coach's Forge prospect stay as they were.
+	if Features.on(GEN_TRAITS) and bool(p.get("generated", false)) 			and not bool(p.get("user_created", false)):
 		_real_trait_rates(a, p, role)
 
 	a = fit_attributes(a, role, target)
@@ -278,17 +280,20 @@ static func _real_trait_rates(a: Dictionary, p: Dictionary, role: String) -> voi
 		a[key] = float(a.get(key, 0.0)) + float(GEN_NUDGE[role][key])
 	if _shapes.is_empty():
 		_shape_for(role, _rng_for("warm"), 0.0)  # builds the real players' cache
-	var pool: Array = _shapes.get(role, [])
+	var pool: Array = _discs.get(role, [])
 	if pool.is_empty():
 		return
 	var rng := _rng_for("disc|%s|%s" % [str(p.get("id", "")), str(p.get("draft_year", 2026))])
-	a["discipline"] = float((pool[rng.randi_range(0, pool.size() - 1)] as Dictionary)["_disc"])
+	a["discipline"] = float(pool[rng.randi_range(0, pool.size() - 1)])
 
 
 ## Each role's real players' shapes: every attribute less his overall, and that
 ## overall ("_ovr"), from the 2026 lists (GameDB's own rows, in list order, so
 ## it's the same every run).
 static var _shapes := {}
+## Each role's real players' disciplines (row 104), from players with senior games only:
+## a list player projected from no senior game got his from the old rating formula.
+static var _discs := {}
 ## How many of the nearest real players, by overall, a shape is drawn from.
 const SHAPE_NEAREST := 10
 
@@ -296,6 +301,7 @@ const SHAPE_NEAREST := 10
 ## Forget the cached shapes: a new career rebuilds them from the 2026 players.
 static func forget_cache() -> void:
 	_shapes = {}
+	_discs = {}
 
 
 ## The shape of one of the real players of `role` nearest `level` overall,
@@ -314,11 +320,14 @@ static func _shape_for(role: String, rng: RandomNumberGenerator, level: float) -
 					for key in ATTR_KEYS:
 						d[key] = float(at.get(key, 0)) - float(q.get("overall", 0))
 					d["_ovr"] = float(q.get("overall", 0))
-					d["_disc"] = float(at.get("discipline", 50))
 					var r := str(q.get("role", "MID"))
 					if not _shapes.has(r):
 						_shapes[r] = []
 					(_shapes[r] as Array).append(d)
+					if not bool(q.get("projected", false)):
+						if not _discs.has(r):
+							_discs[r] = []
+						(_discs[r] as Array).append(float(at.get("discipline", 50)))
 	var pool: Array = (_shapes.get(role, []) as Array).duplicate()
 	if pool.is_empty():
 		return ROLE_DELTAS.get(role, ROLE_DELTAS["MID"])
@@ -326,7 +335,6 @@ static func _shape_for(role: String, rng: RandomNumberGenerator, level: float) -
 	var d: Dictionary = pool[rng.randi_range(0, mini(SHAPE_NEAREST, pool.size()) - 1)]
 	var out := d.duplicate()
 	out.erase("_ovr")
-	out.erase("_disc")
 	return out
 
 

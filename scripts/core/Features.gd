@@ -171,8 +171,10 @@ extends RefCounted
 ##               players' rates. A prospect's borrowed shape gets a small per-role nudge
 ##               (Prospects.GEN_NUDGE: fewer contested bulls and ruck kings, fewer interceptors,
 ##               more defensive forwards) and his discipline is drawn from a real player of his
-##               role, so hotheads roll at the real rate (none did before). Changes new draft
-##               classes and expansion lists only. Off, generation is exactly as before.
+##               role, so hotheads roll at the real rate (none did before). Changes the
+##               generated players of new draft classes and expansion lists only: real-list
+##               players, the real 2026 draft class and Forge prospects are made as before.
+##               Off, generation is exactly as before.
 ##   league_news   row 76 (T5.Q11d, the AFL knowledge layer): the premiership item in
 ##               the news feed carries one sentence of the club's flag history (first
 ##               ever, back-to-back or more, or the first in 10+ years), from the save's
