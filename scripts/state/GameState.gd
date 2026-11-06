@@ -286,6 +286,7 @@ var draftee_pool: Array = []     # all prospects that have not been drafted yet
 var drafted_draftees := {}       # prospect id -> destination club
 var midseason := {}              # carnival and mid-season rookie draft (MidseasonDraft)
 var rookie_draft := {}           # the Rookie Draft after the National Draft (RookieList; saved once it exists)
+var sir_doug := {}               # this season's Sir Doug Nicholls Round: {year, round, designs} (SirDougRound)
 var intake_assignments: Array = []  # father-son / NGA pre-draft landings
 var intake_summary := {}        # last rollover: retirements and growth
 ## Last game's per-player XP. The training menu reads this so the whole list
@@ -693,6 +694,7 @@ func save_career() -> bool:
 	# The pre-season league draft is spent once the season starts (it holds a
 	# second copy of the whole player pool), so it is not written.
 	var keep_draft := draft != null and not (season != null and not draft.intake_mode)
+	SirDougRound.ensure(self)   # this season's round is written once and read back
 	var state := {
 		"season_year": season_year,
 		"my_club": my_club,
@@ -798,6 +800,8 @@ func save_career() -> bool:
 	}
 	if not rookie_draft.is_empty():
 		state["rookie_draft"] = rookie_draft
+	if not sir_doug.is_empty():   # written only once a record exists (switch off: no key)
+		state["sir_doug"] = sir_doug
 	if not custom_prospect_story.is_empty():
 		state["custom_prospect_story"] = custom_prospect_story
 	# The new-club build writes nothing while its switch is off and the career
@@ -890,6 +894,7 @@ func load_career() -> bool:
 	draftee_pool = state.get("draftee_pool", [])
 	midseason = state.get("midseason", {})
 	rookie_draft = state.get("rookie_draft", {})
+	sir_doug = state.get("sir_doug", {}) if state.get("sir_doug") is Dictionary else {}
 	drafted_draftees = state.get("drafted_draftees", {})
 	intake_assignments = state.get("intake_assignments", [])
 	intake_summary = state.get("intake_summary", {})
@@ -1523,6 +1528,7 @@ func reset() -> void:
 	drafted_draftees = {}
 	midseason = {}
 	rookie_draft = {}
+	sir_doug = {}
 	intake_assignments = []
 	intake_summary = {}
 	# The 2026 class was drafted before the career began (it is in the

@@ -55,6 +55,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `intake` | The National Draft model: the 2026 class, projection, season rollover |
 | `intake_ui` | The National Draft on the shared draft screen |
 | `rookie_list` | The rookie list behind the switch `rookie_list`: the National Draft fills the senior list (38), the Rookie Draft after it fills six rookie spots, upgrading a rookie, old saves, both lists on the list screen, real taps on the sheet and the upgrade |
+| `sir_doug_round` | Sir Doug Nicholls Round behind the switch `sir_doug_round`: Round 11 is marked, a club with a bye in it marks it the next round, a design slot per club ("none"), the record survives save and reload, old saves, the same fixture and match result on and off, the fixture page and match card on a 390-wide phone |
 | `own_prospect` | Row 64 behind the switch `custom_prospect_story`: the prospect you create (Alastair McNeil) in the first National Draft in both starts, the news lines of his career, the marks on his draft row and profile; off is exactly today |
 | `league_news` | Row 76 behind the switch `league_news`: the premiership item's flag-history sentence (first ever, back-to-back, a 10+ year wait) from the honour roll and the sourced pre-career flags, its front-page standfirst, and a seeded season played with the switch off and on (same results, the sentence true) |
 | `expansion` | Tasmania in 2028 and Canberra in 2030, and a Club Forge club entering with the career |
