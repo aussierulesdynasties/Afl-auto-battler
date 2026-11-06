@@ -47,7 +47,7 @@ static var log_frames := false
 static var frame_log: Array = []  # {anim, facing, frames, wanted}
 ## ... and which hair they draw over the figures: {style, texture}.
 static var hair_log: Array = []
-## The faces drawn while log_frames is on (Features "player_looks").
+## The faces drawn while log_frames is on.
 static var face_log: Array = []
 
 var tokens: Array = []      # {side, mine, slot, id, tall, look, name, num, tired, from, to, delay, dur}
@@ -114,14 +114,12 @@ func setup(sim: MatchSim, my_side: int, heading := "") -> void:
 	_frozen = false
 	_dress()
 	if _ui == self:
-		var ov := VignetteGrade.attach(self, weather, _draw_ui)
-		if ov != null:
-			_ui = ov
+		_ui = VignetteGrade.attach(self, weather, _draw_ui)
 	queue_redraw()
 
 
-## Where the names and bars draw: this node, or the overlay above the grade
-## (VignetteGrade, when its switch is on) so text stays ungraded.
+## Where the names and bars draw: this node until setup, then the overlay above the
+## grade (VignetteGrade) so text stays ungraded.
 var _ui: CanvasItem = self
 
 
@@ -568,24 +566,22 @@ static func draw_frame(ci: CanvasItem, feet: Vector2, info: Dictionary, f: int, 
 ## A figure's hair overlay: frame f of its style's hair strip over the figure drawn
 ## at origin (its dest rect's top-left), in his hair colour (or his skin, for a bare
 ## scalp: VignetteFigures.HAIR_TINT_SKIN). colour is the figure's look_colour.
-## With Features "player_looks" on, his face (face >= 0: VignetteLooks.FACES[face], eyes and
-## brows) is drawn first, in his hair colour, and the styles in VignetteLooks.HAIR_STYLES
-## draw their own hair; off, those draw the short crop and no face is drawn.
+## His face (face >= 0: VignetteLooks.FACES[face], eyes and brows) is drawn first, in his
+## hair colour, and the styles in VignetteLooks.HAIR_STYLES draw their own hair.
 static func draw_hair(ci: CanvasItem, origin: Vector2, info: Dictionary, f: int, k: float, colour: Color,
 		hair_style: String, face := -1) -> void:
-	if Features.on("player_looks"):
-		if face >= 0 and face < VignetteLooks.FACES.size():
-			var fc := VignetteLooks.cell(info, VignetteLooks.FACES[face])
-			if log_frames and not fc.is_empty():
-				face_log.append({"texture": VignetteLooks.texture(fc)})
-			_draw_look(ci, origin, fc, f, k, Color(0.0, colour.g, colour.b, colour.a))
-		if hair_style in VignetteLooks.HAIR_STYLES:
-			var c := VignetteLooks.cell(info, hair_style)
-			if not c.is_empty():
-				if log_frames:
-					hair_log.append({"style": hair_style, "texture": VignetteLooks.texture(c)})
-				_draw_look(ci, origin, c, f, k, Color(0.0, colour.g, colour.b, colour.a))
-				return
+	if face >= 0 and face < VignetteLooks.FACES.size():
+		var fc := VignetteLooks.cell(info, VignetteLooks.FACES[face])
+		if log_frames and not fc.is_empty():
+			face_log.append({"texture": VignetteLooks.texture(fc)})
+		_draw_look(ci, origin, fc, f, k, Color(0.0, colour.g, colour.b, colour.a))
+	if hair_style in VignetteLooks.HAIR_STYLES:
+		var c := VignetteLooks.cell(info, hair_style)
+		if not c.is_empty():
+			if log_frames:
+				hair_log.append({"style": hair_style, "texture": VignetteLooks.texture(c)})
+			_draw_look(ci, origin, c, f, k, Color(0.0, colour.g, colour.b, colour.a))
+			return
 	var h := VignetteFigures.hair_for(info, hair_style)
 	if h.is_empty():
 		return
@@ -606,11 +602,9 @@ static func _draw_look(ci: CanvasItem, origin: Vector2, c: Dictionary, f: int, k
 			VignetteFigures.hair_source(c, f), colour)
 
 
-## The face a look draws (draw_frame's face): his brows with Features "player_looks" on
-## (Appearance.brows_for; 0 for a look without them, the umpire's), else -1, none.
+## The face a look draws (draw_frame's face): his brows
+## (Appearance.brows_for; 0 for a look without them, the umpire's).
 static func face_of(look: Dictionary) -> int:
-	if not Features.on("player_looks"):
-		return -1
 	return int(look.get("brows", 0))
 
 

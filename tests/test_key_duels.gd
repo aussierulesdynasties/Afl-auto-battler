@@ -1,16 +1,15 @@
 extends RefCounted
 ## Run by tests/run_key_duels_tests.gd (suite "key_duels").
-## Key forward v key defender (row 94, T8.Q6, director 2026-11-06; switch
-## key_duels): with the switch on a key forward and his direct opponent meet
+## Key forward v key defender (row 94, T8.Q6, director 2026-11-06): a key
+## forward and his direct opponent meet
 ## more often (his marking contests up the ground are against his man, and
 ## sides look for him more inside 50), every contest the full-time line counts
 ## traces to the play, and the line's "N marks from M contests" is the log.
-## Off, no general-play contest is logged and the old key-forward share holds.
 
 var _tree: SceneTree
 var checks := 0
 var failures: Array[String] = []
-## The same seeds and lists with the switch off and on (paired).
+## The seeds and lists the matches are played on.
 const SEEDS := [9401, 9402, 9403, 9404, 9405, 9406, 9407, 9408]
 ## Matches for the contests-per-duel comparison (seeds 9401 on).
 const MORE := 24
@@ -36,21 +35,18 @@ func run(tree: SceneTree) -> void:
 	await _tree.process_frame
 	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
-	_t("_test_switch_ships_off")
+	_t("_test_key_target")
 	_t("_test_more_contests")
 	_t("_test_contests_trace_to_play")
 	_t("_test_no_lead_at_own_kick")
 	_t("_test_line_reads_the_log")
-	_t("_test_switch_off_as_before")
-	Features.clear("key_duels")
 	print(Ran.line("Key duels", self))
 	for f in failures:
 		print("  FAIL: " + f)
 
 
-## One match per seed, with the switch as given: [sim, result].
-func _play(i: int, on: bool) -> Array:
-	Features.set_on("key_duels", on)
+## One match per seed: [sim, result].
+func _play(i: int) -> Array:
 	var p: Array = PAIRS[i % PAIRS.size()]
 	var h := str(p[0])
 	var a := str(p[1])
@@ -76,41 +72,27 @@ func _mean(a: Array) -> float:
 	return s / maxf(1.0, float(a.size()))
 
 
-func _test_switch_ships_off() -> void:
-	Features.clear("key_duels")
-	_check(Features.KNOWN.has("key_duels"), "key_duels is a known switch")
-	_check(not bool(ProjectSettings.get_setting("features/key_duels", false)), "key_duels ships off")
+func _test_key_target() -> void:
 	var m := MatchSim.new(Squad.new("COL", GameDB.club_list("COL"), true, "COL"),
 			Squad.new("CAR", GameDB.club_list("CAR"), false, "CAR"), 1)
-	_check(not m.key_duels_on and is_equal_approx(m.key_target(), Matchups.KEY_TARGET),
-			"Off, a side looks for its key forwards on KEY_TARGET of entries")
-	Features.set_on("key_duels", true)
-	m = MatchSim.new(Squad.new("COL", GameDB.club_list("COL"), true, "COL"),
-			Squad.new("CAR", GameDB.club_list("CAR"), false, "CAR"), 1)
-	_check(m.key_duels_on and is_equal_approx(m.key_target(), Matchups.KEY_TARGET_DUELS)
-			and Matchups.KEY_TARGET_DUELS > Matchups.KEY_TARGET,
-			"On, on KEY_TARGET_DUELS of entries, more than KEY_TARGET")
+	_check(is_equal_approx(m.key_target(), Matchups.KEY_TARGET_DUELS),
+			"A side looks for its key forwards on KEY_TARGET_DUELS of entries")
 
 
-## The row's done-when: more contests per duel with the switch on, same seeds.
+## Every match has duels, and general-play contests reach the duel log.
 func _test_more_contests() -> void:
-	var off := []
 	var on := []
 	var gp_on := 0
 	for i in range(MORE):
-		var a := _play(i, false)
-		var b := _play(i, true)
-		off.append_array(_per_duel(a[0], a[1]))
+		var b := _play(i)
 		on.append_array(_per_duel(b[0], b[1]))
 		for ev in (b[1] as Dictionary)["events"]:
 			if (ev as Dictionary).get("general_play", false) and (ev as Dictionary).has("duel_contest"):
 				gp_on += 1
-	_check(off.size() >= 2 * MORE and on.size() >= 2 * MORE,
-			"Every match has key forwards with direct opponents (%d off, %d on)" % [off.size(), on.size()])
-	print("Key duels: contests per duel %.2f off, %.2f on (%d matches, same seeds)" % [_mean(off), _mean(on), MORE])
-	_check(_mean(on) >= _mean(off) + 0.4,
-			"Contests per duel rise with the switch on: %.2f off, %.2f on" % [_mean(off), _mean(on)])
-	_check(gp_on > 0, "General-play contests reach the duel log with the switch on (%d)" % gp_on)
+	_check(on.size() >= 2 * MORE,
+			"Every match has key forwards with direct opponents (%d)" % on.size())
+	print("Key duels: contests per duel %.2f (%d matches)" % [_mean(on), MORE])
+	_check(gp_on > 0, "General-play contests reach the duel log (%d)" % gp_on)
 
 
 ## Every logged mark is a mark the forward took, against the man the log names;
@@ -118,7 +100,7 @@ func _test_more_contests() -> void:
 func _test_contests_trace_to_play() -> void:
 	var fids := 0
 	for i in range(SEEDS.size()):
-		var g := _play(i, true)
+		var g := _play(i)
 		var r: Dictionary = g[1]
 		var log: Dictionary = r["duels"]
 		for fid in log:
@@ -160,7 +142,7 @@ func _test_no_lead_at_own_kick() -> void:
 	var gp := 0
 	var own := 0
 	for i in range(MORE):
-		var g := _play(i, true)
+		var g := _play(i)
 		var last_kicker := ""
 		for ev in (g[1] as Dictionary)["events"]:
 			var e: Dictionary = ev
@@ -180,7 +162,7 @@ func _test_no_lead_at_own_kick() -> void:
 func _test_line_reads_the_log() -> void:
 	var lines := 0
 	for i in range(SEEDS.size()):
-		var g := _play(i, true)
+		var g := _play(i)
 		var r: Dictionary = g[1]
 		var log: Dictionary = r["duels"]
 		for fid in log:
@@ -202,19 +184,3 @@ func _test_line_reads_the_log() -> void:
 			_check(reads == v, "%s's line reads the verdict the rule gives (%d): %s" % [fid, v, line])
 			lines += 1
 	_check(lines >= SEEDS.size(), "Full-time duel lines checked: %d" % lines)
-
-
-## Off: no contest is tagged and the log holds only the entries inside 50,
-## exactly as before the switch (the same seed plays the same match twice).
-func _test_switch_off_as_before() -> void:
-	var tagged := 0
-	for i in range(3):
-		var a := _play(i, false)
-		var b := _play(i, false)
-		for ev in (a[1] as Dictionary)["events"]:
-			if (ev as Dictionary).has("duel_contest"):
-				tagged += 1
-		_check((a[1] as Dictionary)["score"] == (b[1] as Dictionary)["score"]
-				and (a[1] as Dictionary)["duels"] == (b[1] as Dictionary)["duels"],
-				"Seed %d plays the same match twice with the switch off" % (9401 + i))
-	_check(tagged == 0, "Off, no contest is tagged as a duel contest (%d)" % tagged)

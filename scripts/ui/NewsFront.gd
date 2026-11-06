@@ -128,7 +128,7 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 			return _mine(s, my_club)
 		s["weight"] = 75
 	elif kind == "premiers":
-		# A second sentence is the club's flag history (row 76, switch "league_news").
+		# A second sentence is the club's flag history (row 76).
 		m = _re("prem", "^(.+) are the (\\d+) premiers\\.(?: (.+))?$").search(text)
 		if m != null:
 			var history := m.get_string(3)
@@ -137,14 +137,14 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 					"standfirst": history if history != "" else "The flag is theirs."}, true)
 			return _mine(s, my_club)
 	elif kind == "almanac_story":
-		# The season wrap's front item (switch "club_almanac"): the first sentence
+		# The season wrap's front item: the first sentence
 		# of the story of the season.
 		s.merge({"club": my_club, "weight": 80, "headline": text,
 				"standfirst": "The story of the season is in the club almanac."}, true)
 		s["mine"] = true
 		return s
 	elif kind == "match_story":
-		# Your match's hero (switch "match_story"): "<headline>. <hero>: <his game>."
+		# Your match's hero: "<headline>. <hero>: <his game>."
 		m = _re("hero", "^((.+) stars as (.+?) (?:beat|and) .+?)\\. (.+)$").search(text)
 		if m != null:
 			s.merge({"name": m.get_string(2), "club": code_of(m.get_string(3)), "weight": 62,

@@ -54,13 +54,13 @@ static func pick(gs) -> Array:
 	return cards
 
 
-## The week your season ends (finals_cards_2): knocked out, or the Grand Final
+## The week your season ends: knocked out, or the Grand Final
 ## played. One card, once a season (the story's season counts hold the mark).
 const SEASON_END_MARK := "_season_end"
 
 
 static func season_end_due(gs) -> bool:
-	if not Features.on(StoryDeck.FINALS_2) or gs.season == null or not gs.season.is_regular_done():
+	if gs.season == null or not gs.season.is_regular_done():
 		return false
 	if not ["eliminated", "premier", "runner_up"].has(gs.my_finals_status()):
 		return false
@@ -150,8 +150,7 @@ static func _finals_facts(gs, ph: String) -> Dictionary:
 	if ph == "regular":
 		out["finals_math"] = gs.season.finals_math(gs.my_club)
 		return out
-	if Features.on(StoryDeck.FINALS_2):
-		out.merge(finals_2_facts(gs, ph), true)
+	out.merge(finals_2_facts(gs, ph), true)
 	out["finals_bye"] = gs.my_finals_status() == "bye"
 	var slots: Dictionary = gs.season.finals.get("slots", {})
 	out["lost_last_final"] = str(slots.get("L_QF1", "")) == gs.my_club or str(slots.get("L_QF2", "")) == gs.my_club
@@ -160,7 +159,7 @@ static func _finals_facts(gs, ph: String) -> Dictionary:
 	return out
 
 
-## The finals cards' second slice (finals_cards_2). Only in-save history and
+## The finals cards' second slice. Only in-save history and
 ## data/club_premierships.csv are read (director, 2026-11-03).
 const FINAL_WORDS := {"WC": "wildcard final", "EF": "elimination final", "SF": "semi-final",
 		"PF": "preliminary final", "QF": "qualifying final", "GF": "Grand Final"}

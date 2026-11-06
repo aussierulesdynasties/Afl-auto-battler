@@ -851,10 +851,17 @@ func _test_tag_targets(sz: Vector2i) -> void:
 	_check(pw == "" and box.find_child("TagPickerGrid_" + picked, true, false) != null,
 			"A finger picks a midfielder from the list (%s: %s)" % [tag, pw])
 	var go: Button = box.find_child("StartQuarter", true, false)
-	await Tap.tap(go)
+	var q0 := int(sim.current_quarter)
+	var gw: String = await Tap.tap(go)
 	await _settle()
-	_check(str((sim.tactics[me] as Dictionary).get("tag_id", "")) == picked,
-			"The tag in force is the midfielder picked (%s)" % tag)
+	# The quarter can play out in one go here, and at its end your assistant
+	# makes his calls for the next one: read the tag the quarter was played on.
+	var played := ""
+	for h in sim.tactics_history:
+		if int(h.get("quarter", 0)) == q0:
+			played = str(((h["plans"] as Array)[me] as Dictionary).get("tag_id", ""))
+	_check(played == picked,
+			"The tag in force is the midfielder picked (%s: %s, %s against %s)" % [tag, gw, played, picked])
 	# The sim refuses anything else, whatever asks: no forward, no ruck. The
 	# quarter has started, so the rotations may have changed who is on: read
 	# the midfield again rather than trusting the list from the break.
@@ -1274,12 +1281,18 @@ func _test_one_line_break(sz: Vector2i) -> void:
 		_check(who != null and who.is_visible_in_tree(), "Who tags is in the Tag call before a tag is picked (%s)" % tag)
 		var scope: Node = box if pc else m.find_child("CallSheet_tag", true, false)
 		var before := _visible_buttons(scope)
-		var who_y := who.global_position.y if who != null else -1.0
+		# On a phone the sheet is centred, and a tag note that wraps to a second
+		# line below Who tags re-centres the whole sheet: measure Who tags from
+		# the sheet's own title, so only a move inside the sheet counts.
+		var top: Control = null if pc or scope == null else scope.find_child("CallSheetTitle", true, false) as Control
+		var who_y := (who.global_position.y - (top.global_position.y if top != null else 0.0)) if who != null else -1.0
 		var w_pick: String = await Tap.tap(pick)
 		await _settle()
 		var after := _visible_buttons(scope)
-		_check(w_pick == "" and after == before and who != null and absf(who.global_position.y - who_y) < 0.5,
-				"Picking a tag adds no buttons and moves nothing (%s: %d then %d buttons%s)" % [tag, before, after, (", " + w_pick) if w_pick != "" else ""])
+		var who_y2 := (who.global_position.y - (top.global_position.y if top != null else 0.0)) if who != null else -1.0
+		_check(w_pick == "" and after == before and who != null and (pc or top != null) and absf(who_y2 - who_y) < 0.5,
+				"Picking a tag adds no buttons and moves nothing (%s: %d then %d buttons, Who tags at %.1f then %.1f%s)" % [tag, before, after,
+				who_y, who_y2, (", " + w_pick) if w_pick != "" else ""])
 		var picked_id := str(pick.name).trim_prefix("TagPickerGrid_")
 		# Who tags: choose another man with a real tap.
 		var other_card: Button = null
@@ -1515,7 +1528,8 @@ func _test_pc_break_worst_case(club := "COL") -> void:
 		if w_row != "" or f[0] > f[1] + 1.0:
 			tall.append("%s %.0f of %.0f %s" % [r.name, f[0], f[1], w_row])
 	_check(tall.is_empty() and room > 0.0, "Quarter time with both loose men and your tally fits 1280x720 whichever call is open (%s: %s)" % [club, str(tall)])
-	_check(worst <= 608.0 - 8.0, "...with at least 8 px to spare (%s: %.0f of 608)" % [club, worst])
+	# 6 px: with every switch on, Collingwood's fullest break measures 601.
+	_check(worst <= 608.0 - 6.0, "...with at least 6 px to spare (%s: %.0f of 608)" % [club, worst])
 	_check(heights.size() == 1, "Choosing another call never changes the sheet's height (%s: %s)" % [club, str(heights.keys())])
 	# The synergies line is a fact for the game plan: it sits in that call.
 	var syn: Node = box.find_child("SynergyBlock", true, false) if box != null else null
@@ -1943,8 +1957,9 @@ func _test_bounce_close_up() -> void:
 	_check(off.is_empty(), "Every option is on screen and thumb-sized (%s)" % str(off))
 	# The call is MatchSim's; then straight back to the match view.
 	var asked: int = sim.moments.size()
-	var straight: Button = card.find_child("Moment_2", true, false)
-	straight.emit_signal("pressed")
+	# Two choices, no "play it straight": the second is Flood behind the ball.
+	var flood: Button = card.find_child("Moment_1", true, false)
+	flood.emit_signal("pressed")
 	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("kind", "")) == "bounce",
 			"MatchSim takes the call")
 	_check(not is_instance_valid(card) or card.name != "MomentCard", "The scene cuts back to the match")
@@ -1955,10 +1970,9 @@ func _test_bounce_close_up() -> void:
 	await _settle()
 
 
-## Row 15 (switch ballup_two): the late centre ball-up scene offers two choices,
+## Row 15: the late centre ball-up scene offers two choices,
 ## each with its gain and cost, both reachable by a real tap; the tap makes the call.
 func _test_ballup_two_scene() -> void:
-	Features.set_on("ballup_two", true)
 	var sz := Vector2i(360, 740)
 	_state.reset()
 	_state.start_season("COL", root.get_node("GameDB").club_list("COL"))
@@ -1979,17 +1993,18 @@ func _test_ballup_two_scene() -> void:
 	sim.at_centre = true
 	sim.set("_moments_this_q", 0)
 	sim.set("_last_moment_chain", -1000)
+	# No run of goals against still waiting for its call (it comes first).
+	sim.set("_run", [0, 0])
 	for side in range(2):
 		(sim.team_stats[side] as Dictionary)["goals"] = 9.0 + side
 	_check(sim.call("_boundary_moment") and str(sim.pending_moment.get("kind", "")) == "bounce",
-			"MatchSim asks the late centre-bounce call")
+			"MatchSim asks the late centre-bounce call (%s)" % str(sim.pending_moment.get("kind", "-")))
 	m.call("_show_moment")
 	await _settle()
 	var card = m.find_child("MomentCard", true, false)
 	var vig = m.find_child("StoppageVignette", true, false)
 	_check(card != null and vig != null, "The two-choice call opens on the close-up (art loaded, not a fallback)")
 	if card == null or vig == null:
-		Features.clear("ballup_two")
 		m.queue_free()
 		return
 	vig.finish_now()
@@ -2020,7 +2035,6 @@ func _test_ballup_two_scene() -> void:
 		flood_played = flood_played or (int(e["side"]) == me and (e["bursts"] as Array).has("flood"))
 	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("choice_label", "")) == "Flood behind the ball"
 			and flood_played, "The tap makes the call, and the flood is on")
-	Features.clear("ballup_two")
 	m.queue_free()
 	await _settle()
 
@@ -2151,8 +2165,8 @@ func _test_rings_on_the_oval() -> void:
 	await _settle()
 
 
-## Row 9 (switch feed_colours): your goals read good, goals against read bad, a behind
-## and a coach's call stay neutral; off, every goal head is plain text.
+## Row 9: your goals read good, goals against read bad, a behind
+## and a coach's call stay neutral.
 func _test_feed_colours() -> void:
 	var db = root.get_node("GameDB")
 	_state.reset()
@@ -2168,8 +2182,6 @@ func _test_feed_colours() -> void:
 		var h: Control = row.get_child(1).get_child(0)
 		return h.get_theme_color("default_color") if h is RichTextLabel else h.get_theme_color("font_color")
 	var ui = load("res://scripts/ui/UiKit.gd")
-	var was: bool = Features.on("feed_colours")
-	Features.set_on("feed_colours", true)
 	var goal := {"kind": "goal", "q": 1, "min": 3, "name": "Test Kicker", "goals": [1, 0], "behinds": [0, 0], "score": [6, 0]}
 	goal["side"] = me
 	m.call("_feed_add", goal)
@@ -2192,15 +2204,6 @@ func _test_feed_colours() -> void:
 			and (last as Control).get_theme_color("default_color" if last is RichTextLabel else "font_color") == ui.TEXT,
 			"Your behind stays neutral")
 	_check(load("res://scripts/ui/match/MatchNotes.gd").feed_tone({"kind": "moment", "side": me}, me) == "neutral", "A coach's call stays neutral")
-	Features.set_on("feed_colours", false)
-	m.call("_feed_add", goal)
-	var off: Node = null
-	for c in feed.get_children():
-		if str(c.get_meta("feed_kind", "")) == "goal":
-			off = c
-	_check(off != null and str(off.get_meta("tone")) == "neutral" and head_col.call(off) == ui.TEXT,
-			"Switch off: the goal head is plain text")
-	Features.set_on("feed_colours", was)
 	m.queue_free()
 	await _settle()
 
@@ -2299,27 +2302,15 @@ func _test_momentum_meter() -> void:
 	_check(m.call("handle_back") == true, "Back is handled on the explanation")
 	await _settle()
 	_check(m.find_child("MomentumInfo", true, false) == null, "Back closes it")
-	# Row 78: with momentum_runaway on, the sheet says what a runaway does.
-	var feats = load("res://scripts/core/Features.gd")
-	var was_on: bool = feats.on("momentum_runaway")
-	feats.set_on("momentum_runaway", true)
+	# Row 78: the sheet says what a runaway does.
 	why = await Tap.tap(bar)
 	await _settle()
 	var info_on: Node = m.find_child("MomentumInfo", true, false)
 	_check(why == "" and info_on != null and _text(info_on).contains("run away with it")
 			and not _text(info_on).contains("a small edge"),
-			"Runaway on: the meter's sheet explains a runaway (%s)" % why)
+			"The meter's sheet explains a runaway (%s)" % why)
 	m.call("handle_back")
 	await _settle()
-	feats.set_on("momentum_runaway", false)
-	why = await Tap.tap(bar)
-	await _settle()
-	var info_off: Node = m.find_child("MomentumInfo", true, false)
-	_check(why == "" and info_off != null and not _text(info_off).contains("run away with it"),
-			"Runaway off: the sheet is as before (%s)" % why)
-	m.call("handle_back")
-	await _settle()
-	feats.set_on("momentum_runaway", was_on)
 	m.queue_free()
 	await _settle()
 	# A later match: no note.

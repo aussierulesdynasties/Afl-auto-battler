@@ -373,6 +373,10 @@ func _audit(scene: Node, tag: String) -> void:
 			# so the hub's League news card shows from day one).
 			if b == null or str((b as Label).name) == "Dateline":
 				continue
+			# A training card's corner tag (where he plays) is not the label of the
+			# rating across the card; "OVR" is, and it sits beside its figure.
+			if str((a as Label).name) == "Position" and str((b as Label).text) == "OVR":
+				continue
 			var gap := _text_start(b) - _text_end(a)
 			if gap > worst:
 				worst = gap

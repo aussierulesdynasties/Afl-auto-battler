@@ -1,7 +1,7 @@
 extends SceneTree
 ## Real renderer: godot --path . --rendering-method gl_compatibility --script tools/visual/capture_sir_doug.gd
 ## Environment: CAP_CLUB (default ESS), CAP_W, CAP_H (default 390x844), CAP_OUT (file prefix).
-## Row 75, switch sir_doug_round. Saves <prefix>_hub.png (your match card in the
+## Row 75 (Sir Doug Nicholls Round). Saves <prefix>_hub.png (your match card in the
 ## round's week), <prefix>_fixture.png (Round 11 on the fixture) and, when the
 ## seeded fixture has byes in Round 11, <prefix>_fixture_after_bye.png (Round 12).
 ## Picks the first season seed from 1 whose Round 11 has byes. Never touches a real save.
@@ -16,7 +16,6 @@ func _run() -> void:
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
 	var router = root.get_node("Router")
-	Features.set_on("sir_doug_round", true)
 	state.autosave_enabled = false
 	state.save_path = "user://capture_sir_doug.save"
 	state.settings_path = "user://capture_sir_doug.cfg"

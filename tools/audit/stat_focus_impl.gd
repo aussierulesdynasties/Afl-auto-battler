@@ -2,9 +2,9 @@ extends RefCounted
 ## Stat focus (row 97): what one stat focus a season does to your list's
 ## development. Paired autopilot careers from the same seeds; only the arm
 ## differs:
-##   off  - the stat_focus switch off (today's game)
-##   top  - switch on, every player's focus is the stat his plan weights most
-##   low  - switch on, every player's focus is the stat his plan weights least
+##   off  - no player is given a focus
+##   top  - every player's focus is the stat his plan weights most
+##   low  - every player's focus is the stat his plan weights least
 ## Each season start, every player on your list without a focus locked this
 ## season gets one. Prints one FOCUS line per seed and season: mean OVR change
 ## (all, and age 23 and under at the season start), mean change in the focus
@@ -46,10 +46,8 @@ func run() -> void:
 	club = str(args[3]) if args.size() > 3 else "MEL"
 	var seeds_env := OS.get_environment("FOCUS_SEEDS")
 	var seeds: Array = (seeds_env if seeds_env != "" else "301,302,303").split(",")
-	Features.set_on("stat_focus", arm != "off")
 	for s in seeds:
 		_career(int(s), seasons)
-	Features.clear("stat_focus")
 
 
 func _career(seed: int, seasons: int) -> void:

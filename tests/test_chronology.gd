@@ -47,8 +47,11 @@ func _test_start_year() -> void:
 	_check(GameState.season_year == 2027, "A new career's first season is 2027")
 	_check(GameDB.active_clubs(2027).size() == 18 and not GameDB.active_clubs(2027).has("TAS"),
 			"2027 is the founding eighteen")
-	_check(GameDB.enter_year("TAS") == 2028 and GameDB.enter_year("CANB") == 2030,
-			"Tasmania still enters in 2028, Canberra in 2030")
+	_check(GameDB.enter_year("TAS") == 2028 and GameDB.enter_year("CANB") == Expansion.NEVER,
+			"Tasmania still enters in 2028; Canberra waits for the coach's choice")
+	GameState.set_canberra(true)
+	_check(GameDB.enter_year("CANB") == 2030, "Chosen, Canberra enters in 2030")
+	GameState.reset()
 
 
 ## The 2027 League Draft takes the whole 2026 league: every player and every

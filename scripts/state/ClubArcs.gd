@@ -1,16 +1,16 @@
 class_name ClubArcs
 extends RefCounted
-## GameState's side of the coach's career arcs (CoachArcs; switch
-## "coach_arcs"): triggers read from real game state, the coach's own record,
-## the week's arc beat as a Hub event card, and what an answer moves on.
-## With the switch off every entry point returns at once and writes nothing.
+## GameState's side of the coach's career arcs (CoachArcs): triggers read
+## from real game state, the coach's own record, the week's arc beat as a Hub
+## event card, and what an answer moves on. Without a club every entry point
+## returns at once and writes nothing.
 ## `gs` is GameState; its state lives in gs.coach_arcs.
 
 const NEWS_KIND := "coach_arc"
 
 
 static func on(gs) -> bool:
-	return CoachArcs.on() and str(gs.my_club) != ""
+	return str(gs.my_club) != ""
 
 
 static func _st(gs) -> Dictionary:
@@ -220,11 +220,8 @@ static func _facts(gs, st: Dictionary, rec: Dictionary, club: Dictionary) -> Dic
 	return f
 
 
-## This season's facts from the match stories (MatchStory.arc_facts); all
-## zero while the match story switch is off.
+## This season's facts from the match stories (MatchStory.arc_facts).
 static func hero_facts(gs) -> Dictionary:
-	if not MatchStory.on():
-		return MatchStory.arc_facts([], 0)
 	return MatchStory.arc_facts(gs.match_stories, int(gs.season_year))
 
 
@@ -245,7 +242,7 @@ static func _dry(st: Dictionary) -> int:
 ## True for the week pick made while the rollover builds a season whose
 ## pre-season has not opened yet (GameState.start_season, then open_preseason).
 static func _rollover_pick(gs, st: Dictionary) -> bool:
-	return Features.on("preseason") and int(st["coach"].get("seen", 0)) > 0 and gs.season.round_index == 0 \
+	return int(st["coach"].get("seen", 0)) > 0 and gs.season.round_index == 0 \
 			and not gs.season.is_regular_done() and int(gs.preseason.get("year", 0)) != int(gs.season_year)
 
 

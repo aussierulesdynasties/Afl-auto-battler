@@ -35,19 +35,12 @@ extends RefCounted
 ##   {"year", "order": [club], "next": int, "round": int,
 ##    "passed": {club: true}, "picks": [{"club","id","name","from","round"}],
 ##    "upgrades": [{"club","id","name"}], "done": bool}
-## Behind the switch `rookie_list`: off, nothing here runs or is written, and
-## the National Draft fills the whole list as before.
 
-const SWITCH := "rookie_list"
 const CAT_A_SPOTS := 6
 const SENIOR_SPOTS := Contracts.MAX_LIST - CAT_A_SPOTS
 const KIND := "rookie"
 ## Under this age a Rookie Draft pick signs for two seasons, otherwise one.
 const TWO_YEAR_UNDER := 21.0
-
-
-static func on() -> bool:
-	return Features.on(SWITCH)
 
 
 static func is_rookie(p: Dictionary) -> bool:
@@ -70,10 +63,9 @@ static func senior_count(list: Array) -> int:
 	return list.size() - rookie_count(list)
 
 
-## How full a club's list is for the National Draft: the senior list when
-## the switch is on, the whole list otherwise.
+## How full a club's list is for the National Draft: the senior list.
 static func draft_size(list: Array) -> int:
-	return senior_count(list) if on() else list.size()
+	return senior_count(list)
 
 
 static func senior_spot_free(list: Array) -> bool:
@@ -102,15 +94,13 @@ static func deal_years(p: Dictionary) -> int:
 # A new career
 # ---------------------------------------------------------------------------
 ## Split every club's starting list into its senior and rookie lists (a new
-## career only, switch on). A player the club list data marks as a rookie
+## career only). A player the club list data marks as a rookie
 ## (data/list_additions_2026.csv, `list`) goes on the rookie list first; then,
 ## while a club has more than SENIOR_SPOTS seniors and a rookie spot left, its
 ## youngest senior goes on the rookie list (younger first, then id). A club
 ## still over SENIOR_SPOTS after that takes no National Draft pick until its
 ## senior list is back under the cap. Same rule for every club.
 static func seed_lists(lists: Dictionary) -> void:
-	if not on():
-		return
 	for code in lists:
 		var list: Array = lists[code]
 		for p in list:
@@ -134,8 +124,6 @@ static func seed_lists(lists: Dictionary) -> void:
 # ---------------------------------------------------------------------------
 ## Why this player cannot be upgraded now ("" when he can).
 static func upgrade_block(gs, code: String, player_id: String) -> String:
-	if not on():
-		return "There is no rookie list."
 	var list: Array = _list_of(gs, code)
 	var p := _find(list, player_id)
 	if p.is_empty():
@@ -188,7 +176,7 @@ static func ai_upgrades(gs) -> Array:
 ## Open the Rookie Draft for the season that has just been rolled to.
 ## `order` is the National Draft's club order (worst club first).
 static func open_draft(gs, order: Array) -> void:
-	if not on() or gs.season == null:
+	if gs.season == null:
 		return
 	if int(gs.rookie_draft.get("year", 0)) == gs.season_year:
 		return
@@ -208,7 +196,7 @@ static func open_draft(gs, order: Array) -> void:
 
 
 static func _current(gs) -> Dictionary:
-	if not on() or int(gs.rookie_draft.get("year", 0)) != gs.season_year:
+	if int(gs.rookie_draft.get("year", 0)) != gs.season_year:
 		return {}
 	return gs.rookie_draft
 

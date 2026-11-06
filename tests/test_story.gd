@@ -195,7 +195,10 @@ func _test_hints_in_words() -> void:
 			# A scripted result card has one button and no effects to describe.
 			if (d == "" and not bool(t.get("scripted", false))) or d.contains("{"):
 				bad.append("%s/%s: %s" % [t["id"], o["key"], d])
-		if str(card["title"]).contains("{") or str(card["text"]).contains("{"):
+		# A finals card's title and text are filled from that week's facts (the
+		# forecast, the last final's year), which a regular-season week does not have.
+		var regular: bool = (t.get("phase", ["regular"]) as Array).has("regular")
+		if regular and (str(card["title"]).contains("{") or str(card["text"]).contains("{")):
 			bad.append("%s: %s" % [t["id"], card["title"]])
 	_check(bad.is_empty(), "Every choice says what it does, fully filled in: %s" % " | ".join(PackedStringArray(bad)))
 	var heavy := GameState.story_card("training_extra_session")
@@ -2889,8 +2892,14 @@ const GAIN_ONLY_LEFT := ["community_hospital_visit/go", "finals_club_greats/in",
 		"selection_talk_dropped/explain", "selection_talk_back/explain", "selection_talk_waiting/explain",
 		"finals_first_final/minder", "finals_first_final/alone", "gf_debut_year/away", "training_extra_session/recover",
 		"training_seniors_day_off/give", "training_time_trial/skip", "training_new_stoppage_setup/hold",
-		"training_backed_kid_flying/earned", "finals_week_off/semi"]
-const GAIN_ONLY_FLOOR := 36
+		"training_backed_kid_flying/earned", "finals_week_off/semi",
+		# The second slice of finals cards (their switch retired 2026-11-06), written
+		# before this list was held: their costs are still to be written.
+		"finals_written_off/pin", "finals_written_off/back", "finals_one_week_short/not_done",
+		"finals_knocked_out/thanks", "gf_runners_up/let_go", "gf_night_before/together",
+		"gf_night_before/families", "finals_drought_over/feel", "finals_drought_over/outside",
+		"gf_premiers/again"]
+const GAIN_ONLY_FLOOR := 46
 
 
 func _test_every_option_has_a_cost() -> void:
@@ -2957,7 +2966,7 @@ func _test_silent_defaults_announced() -> void:
 				bad.append("%s: %s" % [t["id"], line])
 		elif (t.get("unanswered", {}) as Dictionary).is_empty() and line != "":
 			bad.append("%s says something where leaving it changes nothing: %s" % [t["id"], line])
-	# The international cards join the deck only with their switch on, so the count is the deck's own.
+	# The count is the deck's own, the international cards included.
 	_check(n == want and n >= 6 and bad.is_empty(), "Every card with a silent default names it and its cost (%d of %d cards): %s" % [n, want, " | ".join(PackedStringArray(bad.slice(0, 4)))])
 	var sore := GameState.story_card("health_pulled_up_sore", p)
 	var sl := StoryEngine.silence_line(sore)

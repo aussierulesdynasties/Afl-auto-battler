@@ -1,5 +1,5 @@
 extends SceneTree
-## Row 14 (switch goal_run_moves): the run-of-goals call over the centre ball-up
+## Row 14: the run-of-goals call over the centre ball-up
 ## scene, and without the scene. Needs a real renderer:
 ##   godot --path . --script tools/visual/capture_goal_run.gd -- --out /tmp/gr [--size 390x844] [--club COL]
 ## Writes <out>_scene_<n>.png (the scene playing in, then frozen with the call up)
@@ -82,7 +82,6 @@ func _run() -> void:
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	await _frames(10)
-	Features.set_on("goal_run_moves", true)
 	var m: Control = await _stage(club, true)
 	var vig = m.find_child("StoppageVignette", true, false)
 	print("scene art: ", vig != null, " tokens ", vig.tokens.size() if vig != null else 0,

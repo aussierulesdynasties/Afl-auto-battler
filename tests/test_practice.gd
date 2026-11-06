@@ -1,8 +1,8 @@
 extends RefCounted
 ## The pre-season practice match (PreSeason.gd, GameState "practice"): who
 ## plays whom, the side and the prospects trialled, what it leaves behind (and
-## what it must not), the AI clubs' matches, saves old and new, the switch off,
-## and the screens by real taps on a phone and a PC. Every season is seeded.
+## what it must not), the AI clubs' matches, saves old and new, and the
+## screens by real taps on a phone and a PC. Every season is seeded.
 
 const Tap := preload("res://tests/tap.gd")
 
@@ -15,7 +15,6 @@ const CLUB := "FRE"
 
 func run() -> void:
 	GameState.replay_seed = SUITE_SEED
-	Features.set_on("preseason", true)
 	_t("_test_pairs")
 	_t("_test_flow")
 	_t("_test_trial")
@@ -26,9 +25,7 @@ func run() -> void:
 	_t("_test_sim_to_round_one")
 	await _t("_test_screens_phone")
 	await _t("_test_screens_pc")
-	_t("_test_switch_off")
 	PreSeason.reload()
-	Features.clear("preseason")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Practice", self))
@@ -589,14 +586,3 @@ func _test_screens_pc() -> void:
 	if tree.current_scene != null:
 		tree.current_scene.queue_free()
 	await _frames(tree, 3)
-
-
-func _test_switch_off() -> void:
-	Features.set_on("preseason", false)
-	_career()
-	_check(GameState.preseason.is_empty() and GameState.preseason_stop() == "" and GameState.preseason_practice().is_empty(),
-			"Switched off, no pre-season and no practice match is opened")
-	_check(not GameState.sim_practice_match() and not GameState.prepare_practice_match() and not GameState.toggle_practice_invite("x")
-			and GameState.preseason.is_empty(),
-			"...and none of its controls does anything")
-	Features.set_on("preseason", true)

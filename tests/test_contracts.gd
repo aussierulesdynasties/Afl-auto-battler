@@ -218,18 +218,25 @@ func _test_offseason_flow() -> void:
 	GameState.start_next_season()
 	var ticked := true
 	var sizes_ok := true
+	var off_sizes := []
 	for code in GameState.season.lists:
 		if GameDB.enter_year(code) > GameState.season_year:
 			# Not an active club yet - its debut list arrives at entry.
 			continue
 		var list: Array = GameState.season.lists[code]
+		# A club in its first season fills its list in the national draft, which
+		# this flow skips (its 30 state-league signings fall short of 32 until
+		# then); expansion_package checks the full debut list after the draft.
+		if GameDB.enter_year(code) == GameState.season_year and list.size() < Contracts.MIN_LIST:
+			continue
 		if list.size() < Contracts.MIN_LIST or list.size() > Contracts.MAX_LIST:
 			sizes_ok = false
+			off_sizes.append("%s %d" % [code, list.size()])
 		for p in list:
 			if int(p.get("contract_years", 0)) < 1 or p.has("resigned"):
 				ticked = false
 	_check(ticked, "Every contract ticks down at the rollover")
-	_check(sizes_ok, "Every list stays between %d and %d" % [Contracts.MIN_LIST, Contracts.MAX_LIST])
+	_check(sizes_ok, "Every list stays between %d and %d (%s)" % [Contracts.MIN_LIST, Contracts.MAX_LIST, ", ".join(off_sizes)])
 	_check(GameState.free_agents.is_empty(), "Unsigned free agents leave at the rollover")
 	_check(is_same(GameState.my_list, GameState.season.lists[GameState.my_club]),
 			"Your list is the season's list after the rollover")
@@ -883,7 +890,8 @@ func _test_compensation_flow() -> void:
 	for c in GameState.compensation:
 		var found := false
 		for e in d.comp_picks:
-			if str(e["player"]) == str(c["player"]):
+			# A new club's extra picks sit in the same list with no player.
+			if str(e.get("player", "")) == str(c["player"]):
 				found = str(d.pick_sequence[int(e["index"])]) == str(c["club"])
 		if not found:
 			placed = false
@@ -1363,12 +1371,12 @@ func _run_draft() -> void:
 ## draft's and the next two drafts'; players never; a rival judges by its own
 ## read; a pick you sell moves you off the clock; the deal survives a save.
 func _test_draft_night_trades() -> void:
-	# A career where rivals deal on the night (seed 2: four deals; still about
-	# one a night across seeds 1-6, three of which have none, after row 65
-	# moved the draft-night ratings and so the seed-3 night).
+	# A career where rivals deal on the night (seed 1: one rival deal. With
+	# every update in the game, seeds 1, 5 and 6 of 1-8 have one and the rest
+	# none, so the seed is pinned to a night that has one.)
 	GameState.reset()
-	GameState.career_seed = 2
-	GameState.replay_seed = 2
+	GameState.career_seed = 1
+	GameState.replay_seed = 1
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	_to_offseason()
 	var me := GameState.my_club
@@ -2226,9 +2234,15 @@ func _test_pick_order_line() -> void:
 		s.ladder[c]["pf"] = 1000
 		s.ladder[c]["pa"] = 1000
 	s.ladder[me]["pts"] = 0
-	_check(GameState.pick_order_line().contains("No. 1."), "Last on the ladder, your first pick would be No. 1: %s" % GameState.pick_order_line())
+	# A new club's extra picks come before the ordinary ones (ExpansionBuild).
+	var y := GameState.season_year
+	var last_no := 1 + ExpansionBuild.picks_ahead(GameState, y, 1, n)
+	var top_no := n + ExpansionBuild.picks_ahead(GameState, y, n, n)
+	_check(GameState.pick_order_line().contains("No. %d." % last_no),
+			"Last on the ladder, your first pick would be the first ordinary pick, No. %d: %s" % [last_no, GameState.pick_order_line()])
 	s.ladder[me]["pts"] = 400
-	_check(GameState.pick_order_line().contains("No. %d." % n), "On top, it would be No. %d: %s" % [n, GameState.pick_order_line()])
+	_check(GameState.pick_order_line().contains("No. %d." % top_no),
+			"On top, it would be the last of the first round, No. %d: %s" % [top_no, GameState.pick_order_line()])
 	# A traded first-rounder is the first pick, and says whose it is.
 	var rival := "COL"
 	GameState.pick_owner = {"%d:1:%s" % [GameState.season_year, me]: rival, "%d:1:%s" % [GameState.season_year, rival]: me}

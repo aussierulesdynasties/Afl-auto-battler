@@ -8,12 +8,8 @@ extends RefCounted
 ## are raw: lower rating today, a bigger ceiling, and recruiters are less sure
 ## of them (DraftScouting widens their range). Once drafted they are ordinary
 ## players. Everything about them sits in data/international_prospects.json.
-##
-## Behind the "international_prospects" switch (Features.gd). Switched off,
-## apply() does nothing and generate_class() is identical to before.
 
 const PATH := "res://data/international_prospects.json"
-const FEATURE := "international_prospects"
 ## A raw prospect's rating today sits this far under his rank's, and his
 ## ceiling this far over (the Potential room), because he is new to the game.
 const RAW_SHIFT := -5.0
@@ -71,7 +67,7 @@ static func note(p: Dictionary) -> String:
 ## once the class exists (after names are handed out). Own seeded dice by year
 ## only, so the rest of the class is untouched.
 static func apply(cls: Array, year: int) -> void:
-	if not Features.on(FEATURE) or cls.is_empty():
+	if cls.is_empty():
 		return
 	var d := data()
 	var all: Array = countries()

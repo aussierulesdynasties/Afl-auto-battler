@@ -1,5 +1,5 @@
 extends RefCounted
-## Row 88: the rookie list (RookieList, switch `rookie_list`). A seeded career
+## Row 88: the rookie list (RookieList). A seeded career
 ## rolls over through the National Draft, which now fills the senior list
 ## only; the Rookie Draft follows and fills the rookie spots. A rookie is
 ## upgraded to the senior list (refused while it is full), an old save loads
@@ -44,7 +44,6 @@ func run(tree: SceneTree) -> void:
 	checks = 0
 	root.size = Vector2i(390, 844)
 	GameState.replay_seed = SEED
-	_t("_test_switch_off")
 	_t("_test_rollover_on")
 	_t("_test_upgrade")
 	_t("_test_old_save")
@@ -54,7 +53,6 @@ func run(tree: SceneTree) -> void:
 	_t("_test_entering_club_seat")
 	_t("_test_midseason_fills_rookie_spots")
 	_t("_test_real_lists_start")
-	Features.set_on(RookieList.SWITCH, false)
 	GameState.replay_seed = 0
 	print(Ran.line("Rookie list", self))
 
@@ -83,29 +81,9 @@ func _rollover() -> Draft:
 	return draft
 
 
-func _test_switch_off() -> void:
-	Features.set_on(RookieList.SWITCH, false)
-	var draft := _rollover()
-	_check(draft != null, "Switch off: the rollover commits")
-	if draft == null:
-		return
-	_check(draft.senior_cap == 0, "Switch off: the National Draft fills the whole list")
-	_check(gs.rookie_draft.is_empty(), "Switch off: no Rookie Draft is written (%s)" % str(gs.rookie_draft))
-	var keyed := 0
-	for code in gs.league_lists:
-		for p in gs.league_lists[code]:
-			if p.has("rookie_list"):
-				keyed += 1
-	_check(keyed == 0, "Switch off: nobody is put on a rookie list (%d)" % keyed)
-	_check(not RookieList.waiting(gs), "Switch off: no pick waits")
-	_check(gs.save_career() and gs.load_career() and gs.rookie_draft.is_empty(),
-			"Switch off: a save and load writes no Rookie Draft")
-
-
 func _test_rollover_on() -> void:
-	Features.set_on(RookieList.SWITCH, true)
 	var draft := _rollover()
-	_check(draft != null, "The rollover commits with the rookie list on")
+	_check(draft != null, "The rollover commits")
 	if draft == null:
 		return
 	_check(draft.senior_cap == RookieList.SENIOR_SPOTS, "The National Draft fills the senior list (38)")
@@ -162,7 +140,6 @@ func _test_rollover_on() -> void:
 
 
 func _test_upgrade() -> void:
-	Features.set_on(RookieList.SWITCH, true)
 	_new_career()
 	var list: Array = gs.my_list
 	_check(list.size() >= RookieList.SENIOR_SPOTS, "A full list to start (%d)" % list.size())
@@ -211,16 +188,12 @@ func _test_upgrade() -> void:
 	gs._join("COL", mover)
 	_check(not RookieList.is_rookie(mover) and str(mover["club"]) == "COL",
 			"A rookie who changes club joins its senior list")
-	Features.set_on(RookieList.SWITCH, false)
-	_check(RookieList.upgrade_block(gs, CLUB, id) == "There is no rookie list.", "Switch off: no upgrade")
 
 
 func _test_old_save() -> void:
-	Features.set_on(RookieList.SWITCH, false)
 	_new_career()
 	_check(gs.save_career(), "An old-style career saves")
-	Features.set_on(RookieList.SWITCH, true)
-	_check(gs.load_career(), "...and loads with the rookie list on")
+	_check(gs.load_career(), "...and loads")
 	_check(RookieList.rookie_count(gs.my_list) == 0 and RookieList.senior_count(gs.my_list) == gs.my_list.size(),
 			"Every existing player is on the senior list")
 	_check(gs.rookie_draft.is_empty() and not RookieList.waiting(gs), "No Rookie Draft waits in an old save")
@@ -228,7 +201,6 @@ func _test_old_save() -> void:
 
 ## The Rookie Draft sheet over the pre-season (or the hub): a real tap on Pick.
 func _test_rookie_draft_tap() -> void:
-	Features.set_on(RookieList.SWITCH, true)
 	var draft := _rollover()
 	_check(draft != null and RookieList.waiting(gs), "A rookie pick waits after the rollover")
 	if not RookieList.waiting(gs):
@@ -272,7 +244,6 @@ func _test_rookie_draft_tap() -> void:
 
 ## The list screen shows both lists, and a rookie's profile offers the upgrade.
 func _test_list_screen_and_upgrade_tap() -> void:
-	Features.set_on(RookieList.SWITCH, true)
 	_new_career()
 	var list: Array = gs.my_list
 	while RookieList.senior_count(list) >= RookieList.SENIOR_SPOTS:
@@ -306,7 +277,6 @@ func _test_list_screen_and_upgrade_tap() -> void:
 ## A delisted rookie is a free agent; whoever signs him, his old club too,
 ## puts him on its senior list.
 func _test_release_and_resign() -> void:
-	Features.set_on(RookieList.SWITCH, true)
 	_new_career()
 	var rl: Array = gs.season.lists["GEE"]
 	var p: Dictionary = rl[rl.size() - 1]
@@ -322,7 +292,6 @@ func _test_release_and_resign() -> void:
 ## A club on no ladder yet (in its first season) still gets a Rookie Draft
 ## seat, at the end of the order.
 func _test_entering_club_seat() -> void:
-	Features.set_on(RookieList.SWITCH, true)
 	_new_career()
 	var order: Array = gs.intake_order()
 	_check(order.has("WCE") and order.size() >= 18, "(setup) WCE is on the ladder (%d clubs)" % order.size())
@@ -340,8 +309,6 @@ func _test_entering_club_seat() -> void:
 ## The mid-season rookie draft fills rookie spots: a club with six rookies is
 ## left out, a club with a free rookie spot is in, and every pick is a rookie.
 func _test_midseason_fills_rookie_spots() -> void:
-	Features.set_on(RookieList.SWITCH, true)
-	Features.set_on(MidseasonDraft.SWITCH, true)
 	_new_career()
 	var year: int = gs.season_year
 	var cls: Array = gs.draftee_pool.filter(func(q): return int(q.get("draft_year", year)) == year)
@@ -369,14 +336,12 @@ func _test_midseason_fills_rookie_spots() -> void:
 	for k in picks:
 		var p := RookieList._find(gs.season.lists.get(str(k["club"]), []), str(k["id"]))
 		_check(RookieList.is_rookie(p), "A mid-season pick lands on the rookie list (%s)" % str(k["id"]))
-	Features.set_on(MidseasonDraft.SWITCH, false)
 
 
-## A real-lists career with the switch on: the starting lists split into
+## A real-lists career: the starting lists split into
 ## senior and rookie lists, the opening National Draft fills the senior list
 ## and the Rookie Draft follows it.
 func _test_real_lists_start() -> void:
-	Features.set_on(RookieList.SWITCH, true)
 	gs.reset()
 	gs.begin_real_lists()
 	var draft: Draft = gs.draft

@@ -32,7 +32,6 @@ var _hold_serial := 0
 ## a tap nor a long press.
 var _press_scroll := 0
 var _press_pos := Vector2.ZERO
-const ROW_PROFILE_W := 56.0
 const GRID_TAB_NAMES := {"": "All", "DEF": "Def", "MID": "Mid", "RUCK": "Ruck", "FWD": "Fwd"}
 const GRID_POS_NAME := {"RUCK": "Ruck", "MID": "Mid", "DEF": "Def", "FWD": "Fwd"}
 const GRID_TRADE_OFF_LINE := "Each game earns XP, and his plan spends it on the stats it names."
@@ -171,19 +170,16 @@ func _build() -> void:
 	guide.pressed.connect(_open_guide)
 	# The top-bar back steps out of the player detail first, then leaves.
 	var bar := UiKit.top_bar("Training", true, guide, Callable(self, "handle_back"))
-	if Features.on("training_grid"):
-		# Opaque behind the title and the button so the club's stripes never
-		# show through the words, and a back and a Stat guide a thumb can hit.
-		guide.custom_minimum_size = Vector2(96, GRID_TOUCH)
-		var back := bar.find_child("TopBarBack", true, false) as Control
-		if back != null:
-			back.custom_minimum_size = Vector2(GRID_TOUCH, GRID_TOUCH)
-		var backing := UiKit.panel(UiKit.PANEL, 4, UiKit.RADIUS)
-		backing.name = "TrainingHeader"
-		backing.add_child(bar)
-		_root.add_child(backing)
-	else:
-		_root.add_child(bar)
+	# Opaque behind the title and the button so the club's stripes never
+	# show through the words, and a back and a Stat guide a thumb can hit.
+	guide.custom_minimum_size = Vector2(96, GRID_TOUCH)
+	var back := bar.find_child("TopBarBack", true, false) as Control
+	if back != null:
+		back.custom_minimum_size = Vector2(GRID_TOUCH, GRID_TOUCH)
+	var backing := UiKit.panel(UiKit.PANEL, 4, UiKit.RADIUS)
+	backing.name = "TrainingHeader"
+	backing.add_child(bar)
+	_root.add_child(backing)
 	if _paged():
 		# Training grid on a phone: the news, the tabs and the cards are one
 		# page that scrolls as a whole (no list scrolling inside a page).
@@ -218,7 +214,7 @@ func _build() -> void:
 
 ## The grid on a phone with the list open: one page, one scroll.
 func _paged() -> bool:
-	return Features.on("training_grid") and not _wide and not (_showing_detail and _selected != "")
+	return not _wide and not (_showing_detail and _selected != "")
 
 
 ## The training gear beside the week's news (director, 2026-10-14: "Bigger,
@@ -226,7 +222,6 @@ func _paged() -> bool:
 ## own colours. It may not push the list down or squeeze the news, so on a
 ## phone it is as tall as the news it stands beside and no wider than before;
 ## on a wide screen it leads the news from the left.
-const TRADE_OFF_LINE := "Games earn the points and each costs more as a stat climbs: a plan is a choice of what he improves."
 const HERO_NARROW := 72.0
 const HERO_WIDE := 96.0
 
@@ -236,7 +231,7 @@ func _summary() -> Control:
 	var v := UiKit.vbox(3)
 	# Training grid on a phone with the list open: the news in a line or two,
 	# no picture and no standing explanation, so the cards get the screen.
-	var compact := Features.on("training_grid") and not _wide and not (_showing_detail and _selected != "")
+	var compact := not _wide and not (_showing_detail and _selected != "")
 	# Decoration: it stands on the panel's foot at the right and takes no tap.
 	# Without the picture the news has the whole width, as before.
 	var hero := UiArt.view("training_gear", HERO_WIDE if _wide else HERO_NARROW) if not compact else null
@@ -288,7 +283,7 @@ func _summary() -> Control:
 	# What it costs and what it buys, in one line (P-63). The compact phone
 	# list leaves it to the intro and the player's page.
 	if not compact:
-		var trade := UiKit.lbl(GRID_TRADE_OFF_LINE if Features.on("training_grid") else TRADE_OFF_LINE, UiKit.SMALL, UiKit.TEXT)
+		var trade := UiKit.lbl(GRID_TRADE_OFF_LINE, UiKit.SMALL, UiKit.TEXT)
 		trade.name = "TrainingTradeOff"
 		trade.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(trade)
@@ -348,20 +343,16 @@ func _list_panel() -> Control:
 	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN if paged else Control.SIZE_EXPAND_FILL
 	if _wide:
 		panel.custom_minimum_size.x = 280
-	var grid := Features.on("training_grid")
 	var v := UiKit.vbox(6)
 	panel.add_child(v)
-	if not grid:
-		v.add_child(UiKit.heading("Your list", UiKit.TITLE))
 	var tabs := UiKit.hbox(2)
 	tabs.name = "RoleTabs"
 	v.add_child(tabs)
 	for item in ROLE_TABS:
 		var key := str(item[0])
 		# Grid: sentence-case names, a thumb tall.
-		var b := UiKit.tab(str(GRID_TAB_NAMES[key]) if grid else str(item[1]), _role == key)
-		if grid:
-			_strengthen_tab(b, _role == key)
+		var b := UiKit.tab(str(GRID_TAB_NAMES[key]), _role == key)
+		_strengthen_tab(b, _role == key)
 		b.pressed.connect(_set_role.bind(key))
 		tabs.add_child(b)
 	var search := UiKit.search_field(_query)
@@ -369,13 +360,13 @@ func _list_panel() -> Control:
 		_query = text
 		_refresh_rows())
 	v.add_child(search)
-	if grid and paged:
+	if paged:
 		var hint := UiKit.lbl(("Touch and hold a player to pick several." if UiKit.view_width(self) < 600.0
 				else "Press and hold a player to pick several.") if _bulk_selected.is_empty()
 				else "Tap a player to add him or take him out.", UiKit.SECONDARY, _soft())
 		hint.name = "GroupHint"
 		v.add_child(hint)
-	elif grid:
+	else:
 		# One slot for the hint and for the group bar: choosing players swaps
 		# one for the other and the cards stay where they are.
 		var slot := UiKit.vbox(0)
@@ -390,11 +381,6 @@ func _list_panel() -> Control:
 			slot.add_child(hint)
 		else:
 			slot.add_child(_bulk_bar())
-	elif _bulk_selected.is_empty():
-		v.add_child(UiKit.lbl("Click and hold a player to select several." if not ScreenLayout.is_touch()
-				else "Long-press a player to select several.", 12, UiKit.MUTED))
-	else:
-		v.add_child(_bulk_panel())
 	var rows := UiKit.vbox(4)
 	rows.name = "TrainingRows"
 	_rows = rows
@@ -423,44 +409,6 @@ static func _strengthen_tab(b: Button, active: bool) -> void:
 func _set_role(role: String) -> void:
 	_role = role
 	_build()
-
-
-## Group training stays deliberately small: select players, then choose one
-## plan that makes sense for every player in the group. A mixed-position
-## group therefore gets Position plan rather than nonsense such as
-## putting a ruck on a key-forward plan.
-func _bulk_panel() -> Control:
-	var panel := UiKit.panel(UiKit.PANEL_ALT, 8, 6)
-	panel.name = "BulkTraining"
-	var v := UiKit.vbox(4)
-	panel.add_child(v)
-	var h := UiKit.hbox(8)
-	v.add_child(h)
-	var count := _bulk_selected.size()
-	var head := UiKit.lbl("%d %s selected" % [count, "player" if count == 1 else "players"],
-			14, UiKit.TEXT, true)
-	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(head)
-	var clear := UiKit.btn("Clear", UiKit.SECONDARY)
-	clear.name = "ClearBulk"
-	clear.custom_minimum_size = Vector2(72, 44)
-	clear.pressed.connect(func():
-		_bulk_selected.clear()
-		_notice = ""
-		_build())
-	h.add_child(clear)
-	v.add_child(UiKit.lbl("Apply one development focus to the group.", 12, UiKit.MUTED))
-	var options := []
-	for key in _bulk_plans():
-		options.append([str(key), GameState.train_plan_label(str(key))])
-	var picker := UiKit.choice_grid("GroupPlan", options, "", 2, _apply_bulk_plan)
-	v.add_child(picker)
-	if _notice != "":
-		var note := UiKit.lbl(_notice, 12, UiKit.GOOD)
-		note.name = "BulkNotice"
-		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(note)
-	return panel
 
 
 ## Grid: the group bar on one row. The count, one outlined button per plan he
@@ -648,42 +596,35 @@ func _fill_rows(rows: Node) -> void:
 		if group.is_empty():
 			continue
 		group.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
-		if Features.on("training_grid"):
-			# A plain heading in the text colour: position is not a state, so
-			# no green or gold here.
-			var head := UiKit.lbl("%s (%d)" % [UiKit.ROLE_LABEL[role], group.size()], UiKit.SECONDARY + 1, UiKit.TEXT, true)
-			head.name = "GroupHead"
-			var air := Control.new()
-			air.name = "GroupAir"
-			air.custom_minimum_size.y = 6
-			air.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			rows.add_child(air)
-			rows.add_child(head)
-			var grid := UiKit.vbox(6)
-			grid.name = "TrainingGrid"
-			rows.add_child(grid)
-			# Two across; an odd one out keeps a half-width card at the left and
-			# its row leaves the other half empty, so every card is one width.
-			for i in range(0, group.size(), 2):
-				var pair: Array = group.slice(i, i + 2)
-				var line := UiKit.hbox(6)
-				line.name = "GridRow"
-				grid.add_child(line)
-				for p in pair:
-					line.add_child(_player_card(p))
-					shown += 1
-				if pair.size() == 1:
-					var hole := Control.new()
-					hole.name = "GridHole"
-					hole.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-					hole.mouse_filter = Control.MOUSE_FILTER_IGNORE
-					line.add_child(hole)
-			continue
-		rows.add_child(UiKit.lbl("%s  (%d)" % [UiKit.ROLE_LABEL[role], group.size()],
-				12, UiKit.ROLE_COLOUR[role], true))
-		for p in group:
-			rows.add_child(_player_row(p))
-			shown += 1
+		# A plain heading in the text colour: position is not a state, so
+		# no green or gold here.
+		var head := UiKit.lbl("%s (%d)" % [UiKit.ROLE_LABEL[role], group.size()], UiKit.SECONDARY + 1, UiKit.TEXT, true)
+		head.name = "GroupHead"
+		var air := Control.new()
+		air.name = "GroupAir"
+		air.custom_minimum_size.y = 6
+		air.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rows.add_child(air)
+		rows.add_child(head)
+		var grid := UiKit.vbox(6)
+		grid.name = "TrainingGrid"
+		rows.add_child(grid)
+		# Two across; an odd one out keeps a half-width card at the left and
+		# its row leaves the other half empty, so every card is one width.
+		for i in range(0, group.size(), 2):
+			var pair: Array = group.slice(i, i + 2)
+			var line := UiKit.hbox(6)
+			line.name = "GridRow"
+			grid.add_child(line)
+			for p in pair:
+				line.add_child(_player_card(p))
+				shown += 1
+			if pair.size() == 1:
+				var hole := Control.new()
+				hole.name = "GridHole"
+				hole.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				hole.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				line.add_child(hole)
 	if shown == 0:
 		rows.add_child(UiKit.lbl("No players match.", UiKit.NAME, UiKit.TEXT, true))
 
@@ -695,13 +636,13 @@ func _matches(p: Dictionary) -> bool:
 	return GameDB.player_search_text(p).to_lower().contains(q)
 
 
-## Training grid (feature training_grid): player cards, two across, every one
+## Training grid: player cards, two across, every one
 ## the same width and height. Top to bottom: his position and rating, his name
 ## (two lines at most, one size), his best trait, then where he is in his
 ## development, which is always the bottom line, so statuses sit level across
 ## a row whatever the names above them do. The club's colour tints the card and
-## runs down its left edge. The whole card selects him exactly as a row does, a
-## long press still starts a group (the chosen ones carry a tick), and his
+## runs down its left edge. A tap on the card selects him, a
+## long press starts a group (the chosen ones carry a tick), and his
 ## profile is one more tap away from his plan page.
 func _player_card(p: Dictionary) -> Control:
 	var id := str(p["id"])
@@ -902,80 +843,6 @@ static func _fit_name(text: String, width: float) -> Array:
 	return [tries.back(), 13]
 
 
-func _player_row(p: Dictionary) -> Control:
-	var id := str(p["id"])
-	var selected := _bulk_selected.has(id) or (_bulk_selected.is_empty() and id == _selected)
-	var b := UiKit.btn("", 14)
-	b.name = "Trainee_" + id
-	b.custom_minimum_size.y = 58
-	# An editorial row (guide §3): no surface, a rule under it; the chosen one outlined.
-	var quiet := UiKit.style(Color.TRANSPARENT, 8, 0)
-	quiet.set_border_width_all(0)
-	quiet.border_width_bottom = 1
-	quiet.border_color = UiKit.LINE
-	for state in ["normal", "hover", "pressed", "hover_pressed"]:
-		b.add_theme_stylebox_override(state, quiet)
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if selected:
-		UiKit.set_selected(b, true)
-	var h := UiKit.hbox(8)
-	h.set_anchors_preset(Control.PRESET_FULL_RECT)
-	h.offset_left = 8
-	# Room at the right for the profile tap.
-	h.offset_right = -ROW_PROFILE_W
-	b.add_child(h)
-	h.add_child(UiKit.role_chip(Ratings.role_tag(p)))
-	var info := UiKit.vbox(1)
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# The name and plan stack is as tall as the row; centre it on the role and
-	# rating rather than leaving it hugging the top.
-	info.alignment = BoxContainer.ALIGNMENT_CENTER
-	h.add_child(info)
-	info.add_child(UiKit.name_label(GameDB.player_display_name(p)))
-	var plan := GameState.plan_for(p)
-	# On the position plan (most of the list) the plan goes without saying: just
-	# where he is. Any other plan is named, then where he is.
-	# "At his peak", not "At his projected peak": a coach's words, and they fit the row.
-	var state := GameState.development_state(p).replace(" his projected peak", " his peak")
-	var under := state if plan == "position" else "%s  ·  %s" % [_row_plan(plan), state]
-	info.add_child(UiKit.ellipsis(under, UiKit.SECONDARY, UiKit.MUTED))
-	var duty := GameState.last_duty(id)
-	if int(p.get("injury_weeks", 0)) > 0:
-		h.add_child(UiKit.line("INJ %dw" % int(p["injury_weeks"]), UiKit.FINE, UiKit.BAD, true))
-	elif duty == "Interchange":
-		h.add_child(UiKit.line("INT", UiKit.FINE, UiKit.MUTED))
-	elif duty == "Reserves":
-		h.add_child(UiKit.line("RES", UiKit.FINE, UiKit.MUTED))
-	elif duty == "Not selected":
-		h.add_child(UiKit.line("OUT", UiKit.FINE, UiKit.MUTED))
-	var rise := _last_rise(id)
-	var ov := UiKit.line(("▲ " if rise.size() > 0 else "") + str(int(p["overall"])), UiKit.NAME,
-			UiKit.GOOD if rise.size() > 0 else UiKit.TEXT, true)
-	ov.custom_minimum_size.x = 48
-	ov.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	h.add_child(ov)
-	_ignore_mouse(h)
-	b.button_down.connect(_begin_player_hold.bind(id))
-	b.button_up.connect(_end_player_hold.bind(id))
-	b.pressed.connect(_press_player.bind(id))
-	b.add_child(_profile_tap(id))
-	return b
-
-
-## The row's own way to his profile: a tap at the right edge, beside his rating.
-## The rest of the row still selects him (and a long press still starts a group).
-func _profile_tap(id: String) -> Control:
-	var t := UiKit.btn("Profile", UiKit.FINE)
-	t.name = "Profile_" + id
-	t.flat = true
-	t.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
-	t.offset_left = -ROW_PROFILE_W
-	t.offset_right = 0
-	t.add_theme_color_override("font_color", UiKit.MUTED)
-	t.pressed.connect(func(): NameLink.open(self, id))
-	return t
-
-
 ## His name at the head of the plan: tap it for his profile.
 func _name_header(p: Dictionary) -> Control:
 	var b := UiKit.btn(GameDB.player_display_name(p) + "  ›", 20)
@@ -1020,18 +887,6 @@ func _rise_list(lines: PackedStringArray) -> Control:
 		r.custom_minimum_size = Vector2(220, 0)
 		grid.add_child(r)
 	return grid
-
-
-## The plan under his name, said as a plan: "Training as a key defender",
-## never a bare "Key defender" that reads as what he is.
-static func _row_plan(plan: String) -> String:
-	var label := GameState.train_plan_label(plan)
-	if plan == "position":
-		return label
-	if plan.begins_with(GameState.LEARN_PREFIX):
-		return "Learning to play %s" % str(GameState.LEARN_JOBS[plan.trim_prefix(GameState.LEARN_PREFIX)]["word"])
-	var noun := label.to_lower()
-	return "Training as %s %s" % ["an" if noun.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a", noun]
 
 
 ## [from, to] if training lifted his OVR after the last game, else [].
@@ -1140,8 +995,7 @@ func _detail_panel() -> Control:
 	fv.add_child(pick)
 	if _notice != "":
 		fv.add_child(UiKit.lbl(_notice, UiKit.SECONDARY, UiKit.GOOD, true))
-	if Features.on("stat_focus"):
-		body.add_child(_stat_focus_panel(p))
+	body.add_child(_stat_focus_panel(p))
 	# What is close, and what happened.
 	var close: Array = Traits.near(p)
 	if not close.is_empty():

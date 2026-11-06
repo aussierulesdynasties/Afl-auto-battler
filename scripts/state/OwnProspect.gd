@@ -13,19 +13,11 @@ extends RefCounted
 ## goals, the end of his career), his draft-board row and his profile marked
 ## "Created by you". Milestones and awards stay the normal ones. Nothing here
 ## touches the draft, the AI, his ratings or any club's list: it only reads.
-##
-## Switch "custom_prospect_story" (off by default). Off, nothing is written,
-## shown or saved, and the game is exactly as before.
 
-const FEATURE := "custom_prospect_story"
 ## The news kind of every line about him (NewsFront gives it a headline).
 const KIND := "own_prospect"
 ## The mark on his draft-board row and profile.
 const TAG := "Created by you"
-
-
-static func on() -> bool:
-	return Features.on(FEATURE)
 
 
 ## Whether `p` is the coach's created prospect (any career, any club).
@@ -33,10 +25,10 @@ static func is_own(p: Dictionary) -> bool:
 	return bool(p.get("user_created", false))
 
 
-## The mark his draft row and profile wear: TAG when the switch is on and he
-## is the created prospect, else "".
+## The mark his draft row and profile wear: TAG when he is the created
+## prospect, else "".
 static func tag(p: Dictionary) -> String:
-	return TAG if on() and is_own(p) else ""
+	return TAG if is_own(p) else ""
 
 
 ## Where he is now: {"at": "club" | "free" | "gone" | "pool" | "", "club",
@@ -76,7 +68,7 @@ static func locate(gs) -> Dictionary:
 ## (`draft_year` > 0: still in the pool means he was overlooked), each
 ## round, a trade and the rollover. The first look only records him.
 static func check(gs, draft_year := 0) -> void:
-	if not on() or gs.custom_prospect_id == "":
+	if gs.custom_prospect_id == "":
 		return
 	var now := locate(gs)
 	var seen: Dictionary = gs.custom_prospect_story

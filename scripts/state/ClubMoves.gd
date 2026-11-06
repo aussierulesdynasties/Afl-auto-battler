@@ -1,8 +1,7 @@
 class_name ClubMoves
 extends RefCounted
-## The coach changes clubs (coach arcs phase 2; switch "coach_arcs";
-## catalogue arcs 2, 3, 7 and 11, docs/research/COACH_ARC_CATALOGUE_2026-11-03.md).
-## Off, the career ends at the sack as before and nothing here runs.
+## The coach changes clubs (coach arcs phase 2; catalogue arcs 2, 3, 7 and
+## 11, docs/research/COACH_ARC_CATALOGUE_2026-11-03.md).
 ##
 ## Two steps, so the season he leaves is played out at the club he leaves:
 ##   season_close  (after the season's close and the coaching offseason): a

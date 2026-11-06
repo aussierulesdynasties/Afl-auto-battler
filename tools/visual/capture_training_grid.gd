@@ -14,7 +14,6 @@ func _run() -> void:
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
 	var router = root.get_node("Router")
-	Features.set_on("training_grid", true)
 	state.autosave_enabled = false
 	state.save_path = "user://capture_training.save"
 	state.settings_path = "user://capture_training.cfg"

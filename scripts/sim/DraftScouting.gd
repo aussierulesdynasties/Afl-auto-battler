@@ -20,10 +20,9 @@ const COMBINE_NOISE := 4.0
 static var seen_uncertainty := 0.7
 
 
-## 1.0 unless `club` has a note on him from its pre-season match (p["seen"])
-## and the pre-season is switched on.
+## 1.0 unless `club` has a note on him from its pre-season match (p["seen"]).
 static func seen_mult(p: Dictionary, club: String) -> float:
-	if not (p.get("seen") is Dictionary) or not (p["seen"] as Dictionary).has(club) or not Features.on("preseason"):
+	if not (p.get("seen") is Dictionary) or not (p["seen"] as Dictionary).has(club):
 		return 1.0
 	return clampf(seen_uncertainty, 0.1, 1.0)
 
@@ -33,7 +32,7 @@ static func projection(p: Dictionary, club: String, seed: int, uncertainty_mult 
 	var pot := maxi(ov, int(p.get("potential", ov)))
 	var certainty := _certainty(p)
 	# A club that saw him in its pre-season match reads him more tightly
-	# (seen_mult; 1.0 for everyone else, and with the switch off).
+	# (seen_mult; 1.0 for everyone else).
 	var u := maxf(0.25, float(uncertainty_mult) * seen_mult(p, club))
 	if p.has("intl"):
 		u *= InternationalProspects.SCOUT_UNCERTAINTY   # raw and unfamiliar: a wider read

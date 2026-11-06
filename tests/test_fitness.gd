@@ -395,7 +395,7 @@ func _test_screens() -> void:
 	var words := hub.find_child("SeasonPlanWords", true, false) as Label
 	_check(line != null and words != null and words.text == "Steady, no peak planned",
 			"The hub says where the legs are at in words")
-	_check(line != null and (hub.find_child("SeasonPlanSub", true, false) as Label).text.contains("set it before round 1"),
+	_check(line != null and (hub.find_child("SeasonPlanSub", true, false) as Label).text.to_lower().contains("set it before round 1"),
 			"In the pre-season the hub line says the plan is yours to set")
 	_check(await _tap(line, "the season plan line"), "A finger's tap on the line opens the plan")
 	await _frames(tree, 4)

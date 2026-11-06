@@ -4,7 +4,7 @@ extends SceneTree
 ## Environment: CAP_W, CAP_H (default 390x844), CAP_OUT (file prefix, default
 ## "stat_focus"). Saves <prefix>_open.png (no focus yet), <prefix>_picked.png (a
 ## stat tapped, Lock in showing) and <prefix>_locked.png: the stat focus panel
-## on a player's Training page (row 97, switch stat_focus). Illustrative
+## on a player's Training page (row 97). Illustrative
 ## fixture only; it never touches a real save.
 
 const SEED := 2027
@@ -21,7 +21,6 @@ func _run() -> void:
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
 	var router = root.get_node("Router")
-	load("res://scripts/core/Features.gd").set_on("stat_focus", true)
 	state.autosave_enabled = false
 	state.save_path = "user://capture_stat_focus.save"
 	state.settings_path = "user://capture_stat_focus.cfg"

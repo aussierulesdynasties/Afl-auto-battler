@@ -664,14 +664,9 @@ func _test_inspect(ui: Control) -> void:
 	var prod: Label = ui.find_child("DetailProduction", true, false)
 	_check(prod != null and prod.text == str(profile.production(p)["line"]) and prod.text.contains("disposals"),
 			"His real season production is shown (%s)" % (prod.text if prod else "-"))
-	var strengths := ui.find_children("Strength_*", "", true, false)
-	var core: Dictionary = load("res://scripts/sim/Ratings.gd").ROLE_WEIGHTS["MID"]
-	var core_only := true
-	for s in strengths:
-		if not core.has(str(s.name).trim_prefix("Strength_")):
-			core_only = false
-	_check(not strengths.is_empty() and strengths.size() <= 3 and core_only,
-			"Strengths are a few of what the engine rewards a midfielder for")
+	var top := ui.find_children("TopAttr_*", "", true, false)
+	_check(ui.find_child("TopAttributesHead", true, false) != null and not top.is_empty() and top.size() <= 3,
+			"His top attributes are listed, three at most (%d)" % top.size())
 	_check(ui.find_children("*", "Label", true, false).filter(func(l): return l.is_visible_in_tree() and l.text.begins_with("Durability")).is_empty(),
 			"The raw rating sheet stays folded away")
 	# Android Back closes the details first.
