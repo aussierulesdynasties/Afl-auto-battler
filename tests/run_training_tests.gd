@@ -37,6 +37,9 @@ func _run() -> void:
 ## short, and a player still opens on a real tap. Without the file the news
 ## has the panel to itself.
 func _test_training_hero() -> void:
+	# The classic layout: the grid hides the picture and this line on a phone (see _test_training_grid).
+	var features = load("res://scripts/core/Features.gd")
+	features.set_on("training_grid", false)
 	var gs = root.get_node("GameState")
 	var db = root.get_node("GameDB")
 	var art = load("res://scripts/ui/UiArt.gd")
@@ -109,6 +112,7 @@ func _test_training_hero() -> void:
 	plain.queue_free()
 	await _settle()
 	art.dir = "res://assets/ui/models"
+	features.clear("training_grid")
 
 
 ## Training grid (row 24, critic round 2026-11-04): two cards across at phone

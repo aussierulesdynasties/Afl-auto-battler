@@ -1232,7 +1232,7 @@ func _test_broadcast_vignettes() -> void:
 	vig_on.setup(BroadcastVignette.SPECCY_FRONT, {"kind": "mark", "side": 0, "num": 4, "speccy": true}, {}, {"home": "FRE", "away": "MEL"})
 	var on_figures := vig_on._sf_ready()
 	vig_on.free()
-	Features.clear("speccy_front")
+	Features.set_on("speccy_front", false)
 	var vig_off := BroadcastVignette.new()
 	vig_off.setup(BroadcastVignette.SPECCY_FRONT, {"kind": "mark", "side": 0, "num": 4, "speccy": true}, {}, {"home": "FRE", "away": "MEL"})
 	var off_figures := vig_off._sf_ready()
