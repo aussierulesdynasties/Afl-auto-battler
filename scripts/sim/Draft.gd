@@ -1490,6 +1490,9 @@ func release_for_room(id: String) -> bool:
 	entry["released"] = true
 	_pick_by_player.erase(id)
 	pick_sequence.append(user_club)
+	# The parallel arrays stay in step: the extra pick is in the last round.
+	pick_rounds.append(int(pick_rounds[-1]) if not pick_rounds.is_empty() else 1)
+	pick_origin.append(user_club)
 	_reserve_at = -1
 	return true
 

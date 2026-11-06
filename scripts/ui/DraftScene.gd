@@ -2093,7 +2093,8 @@ func _refresh_live(settle := false) -> void:
 	_hang(_club if done else clock_club)
 	if _draft.intake_mode:
 		# Each pick not yet replayed still has its prospect in the pool.
-		_cap.text = "%d prospects left" % (_draft.remaining_pool() + hist.size() - upto)
+		var left := _draft.remaining_pool() + hist.size() - upto
+		_cap.text = "%d prospect%s left" % [left, "" if left == 1 else "s"]
 	if done:
 		_status.text = "Draft complete"
 		_status.add_theme_color_override("font_color", UiKit.GOOD if _draft.is_valid() else UiKit.BAD)

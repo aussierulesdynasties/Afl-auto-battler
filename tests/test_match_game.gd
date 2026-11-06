@@ -398,6 +398,25 @@ func _test_free_set_shots_counted() -> void:
 			counted = counted and int(st.get("set_shots", 0)) >= int(by_taker[id])
 	_check(frees > 0 and counted, "A set shot from a free in 50 counts in the taker's set shots (%d scored)" % frees)
 	_check(no_false_mark, "A free kicked short never says the defender marked it (%d short)" % short_frees)
+	# ...and the defender who gathers a short one is credited with the rebound
+	# (short frees are rare in a match, so shots are taken from 80 m until one falls short).
+	var fs := _sim(7900)
+	fs.run()
+	var taker: Dictionary = (fs.squads[0] as Squad).ground[0]
+	var short_ok := false
+	for i in range(200):
+		var team_before := float(fs.team_stats[1].get("rebounds", 0.0))
+		var his_before := {}
+		for id in fs.player_stats:
+			his_before[id] = float(fs.player_stats[id].get("rebounds", 0.0))
+		var res: Dictionary = fs._free_set_shot(0, float(Ratings.T["goal_line"]) - 80.0, taker)
+		if str(res.get("outcome", "")) != "turnover":
+			continue
+		var bid := str((res["actor"] as Dictionary)["id"])
+		var team_ok := float(fs.team_stats[1].get("rebounds", 0.0)) == team_before + 1.0
+		short_ok = team_ok and float(fs.player_stats.get(bid, {}).get("rebounds", 0.0)) == float(his_before.get(bid, 0.0)) + 1.0
+		break
+	_check(short_ok, "A free kicked short counts as the gathering defender's rebound and his team's")
 
 
 ## Row 12: with the clanger_cause switch a clanger that ends a chain in the wet or
@@ -2504,6 +2523,36 @@ func _test_bounce_once() -> void:
 	_check(aid._playtest_bounce(), "(the playtest aid offers it)")
 	aid.pending_moment = {}
 	_check(not aid._bounce_moment(0), "With the playtest aid's call made, the late call does not come too")
+	# The title counts the minutes properly to the end (never "1 minutes").
+	var late := _sim(4403, "MEL", "CAR")
+	late.moment_side = 0
+	late.current_quarter = 4
+	late.current_minute = 119
+	late._fire_bounce(3)
+	var last_t := str(late.pending_moment.get("title", ""))
+	late.current_minute = 110
+	late._fire_bounce(3)
+	var ten_t := str(late.pending_moment.get("title", ""))
+	_check(last_t == "Centre ball-up - 3 up in the last minute" and ten_t == "Centre ball-up - 3 up with 10 minutes left",
+			"The late ball-up title reads naturally to the last minute ('%s', '%s')" % [last_t, ten_t])
+	# The duel card says "1 contest", not "1 contests".
+	var dm := _sim(4404, "MEL", "CAR")
+	dm.moment_side = 0
+	dm.current_quarter = 2
+	dm._chain_no = 200
+	dm._last_moment_chain = 100
+	dm._moments_this_q = 0
+	var fid := str((dm.duels[0] as Dictionary).keys()[0])
+	var cid := str((dm.duels[0] as Dictionary)[fid])
+	if not dm.player_stats.has(fid):
+		dm.player_stats[fid] = {}
+	(dm.player_stats[fid] as Dictionary)["goals"] = 3.0
+	dm.duel_log[fid] = {"side": 1, "contests": [[2, cid, true, false]]}
+	var duel_text := ""
+	if dm._boundary_moment() and str(dm.pending_moment.get("kind", "")) == "duel":
+		duel_text = str(dm.pending_moment.get("text", ""))
+	_check(duel_text.contains(" has won 1 contest in the air against "),
+			"A forward with one aerial win reads '1 contest' ('%s')" % duel_text)
 
 
 func _test_in_match_injuries() -> void:
