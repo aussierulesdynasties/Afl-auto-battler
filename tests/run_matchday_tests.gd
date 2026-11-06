@@ -75,6 +75,8 @@ func _run() -> void:
 	_t("_test_broken_calls")
 	await _t("_test_vignettes_off_match")
 	await _t("_test_match_day_setup")
+	await _t("_test_skip_to_break")
+	await _t("_test_side_keeps_calls")
 	await _t("_test_match_way_poster")
 	_t("_test_appearance")
 	# Battery: nothing is redrawn unless it changes, and never above 60 fps.
@@ -2588,6 +2590,154 @@ func _test_match_day_setup() -> void:
 	await _settle()
 
 
+## Director's bug (2026-11-06): the calls you set on the match-day setup are
+## still set after Change the side, on screen and in the match; a call the new
+## side breaks (a dropped player) goes back to the assistant's pick for that
+## call only. Real taps (tests/tap.gd).
+func _test_side_keeps_calls() -> void:
+	_state.set_vignettes_on(false)
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	root.size = Vector2i(390, 844)
+	router.stack = ["hub"]
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	hub.call("_on_play_match")
+	await _settle()
+	var ms: Node = current_scene
+	var sim = _state.pending_sim
+	var side: int = sim.moment_side
+	var taps := []
+	# Every call away from what the sheet opened with.
+	var plan := "attacking" if _state.club_plan != "attacking" else "contest"
+	await _tap_named(ms, "PlanPicker_" + plan, taps)
+	await _tap_named(ms, "PepPicker_fire_up", taps)
+	var tag := _first_pick(ms.find_child("TagPicker", true, false), "TagPickerGrid_")
+	await _tap_named(ms, "TagPickerGrid_" + tag, taps)
+	var tagger := _first_pick(ms.find_child("TaggerPicker", true, false), "TaggerPickerGrid_")
+	await _tap_named(ms, "TaggerPickerGrid_" + tagger, taps)
+	var def_was := ""
+	var def_key := ""
+	for k in ["both", "man", "loose", "cover"]:
+		if ms.find_child("DefenceSetupPicker_" + k, true, false) == null:
+			continue
+		if _is_chosen(ms, "DefenceSetupPicker_" + k):
+			def_was = k
+		elif def_key == "":
+			def_key = k
+	await _tap_named(ms, "DefenceSetupPicker_" + def_key, taps)
+	# A key match-up changed, to a defender who isn't a loose man.
+	var change: Control = ms.find_child("ChangeMatchup", true, false)
+	var fid := str(change.get_parent().name).trim_prefix("BreakMatchup_") if change != null else ""
+	var avoid := {str(sim.duels[side].get(fid, "")): true, str(sim.interceptor[side]): true}
+	var loose_cands: Array = load("res://scripts/sim/Matchups.gd").interceptor_candidates(load("res://scripts/sim/Matchups.gd").defenders(sim.squads[side].ground))
+	if not loose_cands.is_empty():
+		avoid[str(loose_cands[0]["id"])] = true
+	await _tap_named(ms, "ChangeMatchup", taps)
+	var picked := ""
+	var chooser: Node = ms.find_child("MatchupChooser", true, false)
+	if chooser != null:
+		for b in chooser.find_children("Defender_*", "Button", true, false):
+			var id := str(b.name).trim_prefix("Defender_")
+			if picked == "" and not avoid.has(id):
+				picked = id
+		await _tap_named(chooser, "Defender_" + picked, taps)
+	_check(taps.is_empty() and tag != "" and tagger != "" and def_key != "" and picked != ""
+			and str(sim.duels[side].get(fid, "")) == picked,
+			"Real taps set a plan, pep talk, tag, tagger, defensive set-up (%s, was %s) and a match-up (%s)"
+			% [def_key, def_was, str(taps)])
+	var loose_now := str(sim.interceptor[side])
+	# Change the side, swap one midfielder nobody's call needs, come back.
+	var busy := {tagger: true, picked: true, loose_now: true}
+	var spare := ""
+	for p in sim.squads[side].ground:
+		if spare == "" and not busy.has(str(p["id"])) and str(p.get("role", "")) == "MID":
+			spare = str(p["id"])
+	await _tap_named(ms, "ChangeSide", taps)
+	var sel: Node = current_scene
+	_state.set_selection({"OUT": [spare]})
+	sel.call("_build")
+	await _settle()
+	await _tap_named(sel, "BackToMatchDay", taps)
+	ms = current_scene
+	var nsim = _state.pending_sim
+	var t: Dictionary = nsim.tactics[side]
+	_check(taps.is_empty() and ms != null and ms.name == "MatchScene" and nsim != sim
+			and not nsim.taking_part(side, spare),
+			"Back to match day with the new side (%s)" % str(taps))
+	_check(_is_chosen(ms, "PlanPicker_" + plan) and _is_chosen(ms, "PepPicker_fire_up")
+			and _is_chosen(ms, "TagPickerGrid_" + tag) and _is_chosen(ms, "TaggerPickerGrid_" + tagger)
+			and _is_chosen(ms, "DefenceSetupPicker_" + def_key),
+			"After Change the side every call is still selected on the sheet")
+	var row: Node = ms.find_child("BreakMatchup_" + fid, true, false)
+	var cell: Label = (row.get_meta("cells") as Dictionary)["def"] if row != null else null
+	_check(cell != null and cell.text == ms.call("_surname", load("res://scripts/ui/match/MatchNotes.gd")._pname(picked)),
+			"The changed match-up shows on the sheet (%s)" % (cell.text if cell else "-"))
+	_check(str(t.get("gameplan", "")) == plan and str(t.get("pep", "")) == "fire_up"
+			and str(t.get("tag_id", "")) == tag and str(t.get("tagger_id", "")) == tagger
+			and str(nsim.duels[side].get(fid, "")) == picked
+			and ((nsim._own[side] as Dictionary)["duels"] as Dictionary).has(fid)
+			and str(nsim.interceptor[side]) == loose_now,
+			"The new match holds the same calls (%s, loose %s/%s)" % [str(t), str(nsim.interceptor[side]), loose_now])
+	# Now drop the match-up's defender and the tagger.
+	await _tap_named(ms, "ChangeSide", taps)
+	sel = current_scene
+	_state.set_selection({"OUT": [spare, picked, tagger]})
+	sel.call("_build")
+	await _settle()
+	await _tap_named(sel, "BackToMatchDay", taps)
+	ms = current_scene
+	var nsim2 = _state.pending_sim
+	t = nsim2.tactics[side]
+	_check(taps.is_empty() and nsim2 != nsim and not nsim2.taking_part(side, picked)
+			and not nsim2.taking_part(side, tagger),
+			"Back again without the match-up's defender and the tagger (%s)" % str(taps))
+	_check(str(nsim2.duels[side].get(fid, "")) != picked
+			and not ((nsim2._own[side] as Dictionary)["duels"] as Dictionary).has(fid),
+			"The dropped defender's match-up goes back to the assistant's pick (%s)" % str(nsim2.duels[side].get(fid, "")))
+	_check(_is_chosen(ms, "TaggerPickerGrid_") and str(t.get("tagger_id", "")) == "",
+			"The dropped tagger's job goes back to the assistant's pick")
+	_check(_is_chosen(ms, "PlanPicker_" + plan) and _is_chosen(ms, "PepPicker_fire_up")
+			and _is_chosen(ms, "TagPickerGrid_" + tag) and _is_chosen(ms, "DefenceSetupPicker_" + def_key)
+			and str(t.get("gameplan", "")) == plan and str(t.get("pep", "")) == "fire_up"
+			and str(t.get("tag_id", "")) == tag,
+			"Every other call is kept, the tag on their player included (%s)" % str(t))
+	# The calls reach the match: Start plays them.
+	await _tap_named(ms, "StartQuarter", taps)
+	t = nsim2.tactics[side]
+	_check(taps.is_empty() and not _state.match_day_setup_open() and str(t.get("gameplan", "")) == plan
+			and str(t.get("pep", "")) == "fire_up" and str(t.get("tag_id", "")) == tag,
+			"Start plays the kept calls (%s %s)" % [str(taps), str(t)])
+	router.stack = ["hub"]
+	if current_scene != null:
+		current_scene.queue_free()
+	if is_instance_valid(hub):
+		hub.queue_free()
+	_state.pending_sim = null
+	_state.side_from_match = false
+	await _settle()
+
+
+## A real tap on the named control under `scene`; what went wrong goes in `taps`.
+func _tap_named(scene: Node, node_name: String, taps: Array) -> void:
+	var c: Control = scene.find_child(node_name, true, false) if scene != null else null
+	var why: String = await Tap.tap(c) if c != null else "missing"
+	if why != "":
+		taps.append("%s: %s" % [node_name, why])
+	await _settle()
+
+
+## Whether the named choice is the outlined (chosen) one.
+func _is_chosen(scene: Node, node_name: String) -> bool:
+	var b: Button = scene.find_child(node_name, true, false) if scene != null else null
+	return b != null and b.get_theme_stylebox("normal").border_width_left == 2
+
+
 # ---------------------------------------------------------------------------
 # Vignettes On/Off (Settings, ROADMAP §1.11)
 # ---------------------------------------------------------------------------
@@ -3505,3 +3655,164 @@ func _plain(c: Control) -> String:
 	if c is Label:
 		return (c as Label).text
 	return (c as RichTextLabel).get_parsed_text() if c is RichTextLabel else ""
+
+
+## Skip to the break (director, 2026-11-06): beside Skip to full time in the
+## first three quarters, named for the break it skips to, gone in the last.
+## A real tap rolls the rest of the quarter, every event reaches the feed, and
+## the break comes up with every call. The same match, watched with the same
+## calls, ends with the same result, event for event.
+func _test_skip_to_break() -> void:
+	_state.set_vignettes_on(false)
+	var watched := await _play_match_for_skip(false)
+	var skipped := await _play_match_for_skip(true)
+	_check(not watched.is_empty() and watched == skipped,
+			"Skipping to each break ends the match exactly as watching it does (watched %s, skipped %s)" % [
+			str(watched.get("sig", "")), str(skipped.get("sig", ""))])
+
+
+## One match from the hub at 390x844, the default calls at every break and
+## moment. `skip`: a real tap on Skip to the break at each bounce of Q1-Q3.
+func _play_match_for_skip(skip: bool) -> Dictionary:
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	root.size = Vector2i(390, 844)
+	router.stack = ["hub"]
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	# Settings live in one file every test run on this machine shares: set
+	# vignettes off again right before the match it is meant for.
+	_state.set_vignettes_on(false)
+	hub.call("_on_play_match")
+	await _settle()
+	var m: Node = current_scene
+	if m == null or m.name != "MatchScene":
+		_check(false, "The match opens (skip %s, %s)" % [str(skip), str(m.name) if m != null else "none"])
+		# Leave nothing behind for the next test.
+		for n in [hub, m, root.find_child("PreMatchVignette", true, false)]:
+			if n != null and is_instance_valid(n) and n != root:
+				n.queue_free()
+		_state.pending_sim = null
+		await _settle()
+		return {}
+	var tag := "skip" if skip else "watch"
+	var names := ["quarter time", "half time", "three-quarter time"]
+	var pv = m.get("_pitch")
+	# At each siren the button still names the break that has just sounded:
+	# a tap before the break opens lands on that break, not the next one.
+	var at_siren: Array = []
+	var on_siren := func(ev: Dictionary) -> void:
+		var b: Button = m.find_child("SkipToBreak", true, false)
+		if str(ev.get("kind", "")) == "quarter" and b != null and at_siren.size() < 3:
+			at_siren.append(b.text)
+	if not skip:
+		pv.event_played.connect(on_siren)
+	var guard := 0
+	while not bool(m.get("_finished")) and guard < 20000:
+		guard += 1
+		var sim = _state.pending_sim
+		var box = m.get("_coach_overlay")
+		var mo = m.get("_moment_overlay")
+		if box != null and is_instance_valid(box):
+			var start: Control = m.find_child("StartQuarter", true, false)
+			var why: String = await Tap.tap(start)
+			await _settle()
+			if why != "":
+				_check(false, "A real tap on Start at each break (%s: %s)" % [tag, why])
+				break
+			var q: int = int(m.get("_breaks_played")) + 1
+			var sb: Button = m.find_child("SkipToBreak", true, false)
+			if q < 4:
+				_check(sb != null and sb.is_visible_in_tree() and sb.text == "Skip to " + names[q - 1]
+						and sb.size.y >= 44.0 and sb.get_global_rect().end.x <= 390.0,
+						"Q%d: Skip to %s sits beside Skip to full time, thumb-sized (%s, %s)" % [
+						q, names[q - 1], sb.text if sb else "-", str(sb.get_global_rect()) if sb else "-"])
+				var fnt: Font = sb.get_theme_font("font") if sb else null
+				var fs: int = sb.get_theme_font_size("font_size") if sb else 0
+				var need := fnt.get_string_size(sb.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x if fnt else 9999.0
+				var sty: StyleBox = sb.get_theme_stylebox("normal") if sb else null
+				var pad := (sty.get_margin(SIDE_LEFT) + sty.get_margin(SIDE_RIGHT)) if sty else 0.0
+				print("skip_to_break width Q%d: text %.0f + pad %.0f in %.0f px (busy text %.0f)" % [q, need, pad, sb.size.x,
+						fnt.get_string_size("Playing on...", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x])
+				_check(need + pad <= sb.size.x, "Q%d: Skip to %s is read in full, not clipped (%.0f of %.0f px)" % [
+						q, names[q - 1], need + pad, sb.size.x if sb else 0.0])
+				# Not only at 390: the button never goes below its own text, so a
+				# 320-wide screen (a small window, a small phone) reads it in full too.
+				_check(sb != null and sb.custom_minimum_size.x >= need + pad,
+						"Q%d: Skip to %s keeps room for its words on any width (min %.0f, needs %.0f)" % [
+						q, names[q - 1], sb.custom_minimum_size.x if sb else 0.0, need + pad])
+				if skip and q == 2:
+					# Half way through a quarter, not only at the bounce: some of
+					# Q2 is watched first (a call on the way is answered as ever).
+					var watch_to: int = int(m.get("_playback_event_index")) + 60
+					var g2 := 0
+					while int(m.get("_playback_event_index")) < watch_to and g2 < 2000:
+						g2 += 1
+						var mo2 = m.get("_moment_overlay")
+						if mo2 != null and is_instance_valid(mo2) and not sim.pending_moment.is_empty():
+							m.call("_on_moment_choice", int(sim.pending_moment.get("default", 0)))
+							await process_frame
+							continue
+						pv.set_speed(8.0)
+						if pv.playing:
+							pv._process(0.25)
+						await process_frame
+					var mo3 = m.get("_moment_overlay")
+					if mo3 != null and is_instance_valid(mo3) and not sim.pending_moment.is_empty():
+						m.call("_on_moment_choice", int(sim.pending_moment.get("default", 0)))
+						await process_frame
+				if skip:
+					var feed_before: int = int(m.get("_playback_event_index"))
+					var t0 := Time.get_ticks_usec()
+					var why2: String = await Tap.tap(sb)
+					var ms := (Time.get_ticks_usec() - t0) / 1000.0
+					await _settle()
+					var evs: int = (pv.events as Array).size()
+					_check(why2 == "" and m.get("_coach_overlay") != null and is_instance_valid(m.get("_coach_overlay"))
+							and int(m.get("_playback_event_index")) == evs and int(m.get("_breaks_played")) == q
+							and sim.current_quarter == q + 1 and not sim.quarter_in_progress()
+							and m.find_child("StartQuarter", true, false) != null,
+							"Q%d: a real tap skips to %s: the quarter is played, all %d of its events reached the feed, the break is up with Start (%s)" % [
+							q, names[q - 1], evs - feed_before, why2])
+					print("skip_to_break Q%d: %d events released, tap-to-break %.1f ms" % [q, evs - feed_before, ms])
+					# The scoreboard above the break shows the score at the siren.
+					var qt: Dictionary = sim.quarter_teams[q - 1] if sim.quarter_teams.size() >= q else {}
+					_check(not qt.is_empty() and m.get("_shown_goals") == qt.get("goals")
+							and m.get("_shown_behinds") == qt.get("behinds"),
+							"Q%d: after the skip the scoreboard shows the %s score (%s.%s, sim %s.%s)" % [
+							q, names[q - 1], str(m.get("_shown_goals")), str(m.get("_shown_behinds")),
+							str(qt.get("goals")), str(qt.get("behinds"))])
+			else:
+				_check(sb == null or not sb.is_visible_in_tree(),
+						"The last quarter has Skip to full time only (%s)" % tag)
+			continue
+		if mo != null and is_instance_valid(mo) and sim != null and not sim.pending_moment.is_empty():
+			m.call("_on_moment_choice", int(sim.pending_moment.get("default", 0)))
+			await process_frame
+			continue
+		# Watch, fast: the real playback path, a few seconds of play a step.
+		pv.set_speed(8.0)
+		if pv.playing:
+			pv._process(0.5)
+		await process_frame
+	if not skip:
+		var want := names.map(func(n): return "Skip to " + n)
+		_check(at_siren == want, "At each siren the button names the break just sounded, not the next (%s)" % str(at_siren))
+	var res: Dictionary = m.get("_res")
+	var evs_all: Array = res.get("events", [])
+	var sig := "%s %s %d events, hash %d" % [str(res.get("goals")), str(res.get("behinds")),
+			evs_all.size(), str(evs_all).hash()]
+	_check(bool(m.get("_finished")), "The match reaches full time (%s)" % tag)
+	if is_instance_valid(hub):
+		hub.queue_free()
+	if is_instance_valid(m):
+		m.queue_free()
+	_state.pending_sim = null
+	await _settle()
+	return {"sig": sig, "goals": res.get("goals"), "behinds": res.get("behinds"),
+			"n": evs_all.size(), "h": str(evs_all).hash()}

@@ -116,6 +116,60 @@ static func score_colour(code: String, surface := AUTO_COLOUR) -> Color:
 			return cols[i]
 	return TEXT
 
+
+## A club's line under a name on a Season stats list (director, 2026-11-06):
+## the club's strongest real colour, never white and never the pitch tint.
+## From its real colours (GameDB.club_marker_colours: primary, secondary, and
+## the third only where it is a real club colour), white and greys left out,
+## the most saturated one that reads at 4.5:1 on every surface the line can
+## sit on; when none does, the most saturated one lightened, its hue kept,
+## until it reads (a readable red is allowed here, unlike club_name_colour).
+## A club with no colour but black and white (Collingwood) gets its black
+## lightened to a grey, pending the director's call.
+const CODE_MIN_SAT := 0.25
+static func club_code_colour(code: String, surfaces: Array = []) -> Color:
+	if surfaces.is_empty():
+		surfaces = [PANEL]
+	var real: Array = GameDB.club_marker_colours(code)
+	var best := Color(0, 0, 0, 0)
+	for c in real:
+		var col: Color = c
+		if col.s >= CODE_MIN_SAT and min_contrast(col, surfaces) >= 4.5 and (best.a == 0.0 or col.s > best.s):
+			best = col
+	if best.a > 0.0:
+		return best
+	# Lighten the most saturated real colour that is not white: a Forge club
+	# whose colours are all pale must never fall back to its white.
+	var base := Color(0, 0, 0, 0)
+	for c in real:
+		var col: Color = c
+		if col.v > 0.9 and col.s < 0.15:
+			continue
+		if base.a == 0.0 or col.s > base.s:
+			base = col
+	if base.a == 0.0:
+		base = Color.BLACK
+	# Lighten keeping the hue: value up to full first, then saturation down.
+	var h := base.h
+	var s := base.s
+	var v := base.v
+	var out := Color.from_hsv(h, s, v)
+	while min_contrast(out, surfaces) < 4.5 and (v < 1.0 or s > 0.0):
+		if v < 1.0:
+			v = minf(1.0, v + 0.005)
+		else:
+			s = maxf(0.0, s - 0.005)
+		out = Color.from_hsv(h, s, v)
+	return out
+
+
+## The lowest contrast `c` has against any of `surfaces`.
+static func min_contrast(c: Color, surfaces: Array) -> float:
+	var lo := INF
+	for sf in surfaces:
+		lo = minf(lo, contrast(c, sf))
+	return lo
+
 ## Type scale for a phone. Pick from these before inventing a size.
 const H1 := 24      # screen title / the one big fact on a screen
 const H2 := 18      # section heading
@@ -1574,6 +1628,38 @@ static func cover(parent: Control, scrim := 0.78) -> ColorRect:
 	overlay.offset_right = 0.0
 	overlay.offset_bottom = 0.0
 	return overlay
+
+
+## A long step (a round played out, a new season made) behind a dimmer that
+## says what is happening and eats every tap until the step is done, so a
+## phone never looks frozen and a second tap never lands on the page below.
+## `work` runs once the dimmer has been drawn; returns false (and runs
+## nothing) if a step is already under way on `parent`.
+static func run_covered(parent: Control, text: String, work: Callable) -> bool:
+	if parent.has_meta("busy"):
+		return false
+	parent.set_meta("busy", true)
+	var overlay := cover(parent, 0.7)
+	overlay.name = "BusyCover"
+	var c := CenterContainer.new()
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(c)
+	c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var say := heading(text, H1)
+	say.name = "BusyText"
+	c.add_child(say)
+	var tree := parent.get_tree()
+	# Two frames: one to lay the dimmer out, one to put it on the screen.
+	await tree.process_frame
+	await tree.process_frame
+	work.call()
+	# Taps made during the step arrive now; the dimmer takes them.
+	await tree.process_frame
+	if is_instance_valid(overlay):
+		overlay.queue_free()
+	if is_instance_valid(parent):
+		parent.remove_meta("busy")
+	return true
 
 
 ## Dialog that stays inside the viewport. Body scrolls; footer stays put.
