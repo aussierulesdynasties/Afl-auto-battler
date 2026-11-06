@@ -16,7 +16,9 @@
 # PREFLIGHT_RUNNER_TIMEOUT (default 20 s) until one fails. Exits 1 naming the runner.
 #
 # Then a second pass compiles each runner alone with --check-only --script, the way a
-# suite starts it, before the autoloads exist (see the comment above that pass).
+# suite starts it, before the autoloads exist (see the comment above that pass). With no
+# arguments that pass also covers every other `extends SceneTree` harness under tools/
+# (balance workers, audits, perf probes, captures), which start the same way.
 #
 # The runners are every tests/run_<suite>_tests.gd (tools/list_suites.sh), the same
 # suites tools/run_tests.sh and the CI shards run. The project is imported first, because a fresh
@@ -42,7 +44,12 @@ else
 	fi
 	runners=()
 	for s in $all; do runners+=("tests/run_${s}_tests.gd"); done
+	# Second pass only: the tools/ harnesses run with godot --script too (tools/balance.sh,
+	# audit.yml, captures), so a cast to a class that reaches an autoload breaks them the
+	# same way. They are not loaded in the fast pass, which runs their _initialize().
+	mapfile -t harnesses < <(grep -rlE '^extends SceneTree' tools --include='*.gd' | sort)
 fi
+harnesses=("${harnesses[@]+"${harnesses[@]}"}")
 
 note_error() {  # message
 	if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::error::$1"; else echo "ERROR: $1"; fi
@@ -123,12 +130,13 @@ check_one() {  # runner -> prints "OK <runner>" or "FAIL <runner>: why" plus the
 export -f check_one
 export GODOT RUNNER_LIMIT
 start=$(date +%s)
+scripts=("${runners[@]}" "${harnesses[@]+"${harnesses[@]}"}")
 printf '%s
-' "${runners[@]}" | xargs -P "$jobs" -I{} bash -c 'check_one "$1"' _ {} > "$LOG" 2>&1
+' "${scripts[@]}" | xargs -P "$jobs" -I{} bash -c 'check_one "$1"' _ {} > "$LOG" 2>&1
 bad=$(grep -c '^FAIL ' "$LOG")
-if [ "$bad" != 0 ] || [ "$(grep -c '^OK ' "$LOG")" != "${#runners[@]}" ]; then
+if [ "$bad" != 0 ] || [ "$(grep -c '^OK ' "$LOG")" != "${#scripts[@]}" ]; then
 	grep -vE '^OK ' "$LOG" | head -40
-	note_error "$bad test runner(s) do not compile as godot --script: $hang_hint"
+	note_error "$bad script(s) do not compile as godot --script: $hang_hint"
 	exit 1
 fi
-echo "ok: ${#runners[@]} test runners compile as godot --script ($(( $(date +%s) - start )) s, $jobs at a time)"
+echo "ok: ${#runners[@]} test runners and ${#harnesses[@]} tools harnesses compile as godot --script ($(( $(date +%s) - start )) s, $jobs at a time)"
