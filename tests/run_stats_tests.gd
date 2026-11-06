@@ -582,6 +582,36 @@ func _test_players_section() -> void:
 				spill = str(c.name)
 				break
 		_check(spill == "", "Players fit the screen (%s%s)" % [tag, (": " + spill) if spill != "" else ""])
+		# Show more keeps the player's place (director bug report: a real tap on it
+		# sent the list back to the top): the rows he was reading stay in view,
+		# the next page comes in under them.
+		var more: Button = s.find_child("PlayersMore", true, false)
+		var sc0: ScrollContainer = s.find_child("StatsScroll", true, false)
+		_check(more != null and sc0 != null, "The list has a Show more button under it (%s)" % tag)
+		if more != null and sc0 != null:
+			var shown_before := s.find_children("PlayerRow_*", "Button", true, false).size()
+			sc0.ensure_control_visible(more)
+			await _settle()
+			var before := sc0.scroll_vertical
+			_check(before > 0, "Show more sits below the fold (%s: %d)" % [tag, before])
+			_check((await Tap.tap(more)) == "", "Show more takes a tap (%s)" % tag)
+			for i in range(12):
+				await process_frame
+			var sc1: ScrollContainer = s.find_child("StatsScroll", true, false)
+			var after := sc1.scroll_vertical if sc1 != null else -1
+			var shown_after := s.find_children("PlayerRow_*", "Button", true, false).size()
+			_check(shown_after > shown_before, "Show more adds rows (%s: %d -> %d)" % [tag, shown_before, shown_after])
+			_check(after > 0 and absi(after - before) <= 2,
+					"Show more keeps the list where it was, not back at the top (%s: %d -> %d)" % [tag, before, after])
+			# The first new row is below the ones on show, not above the view.
+			var rows_now := s.find_children("PlayerRow_*", "Button", true, false)
+			if sc1 != null and rows_now.size() > shown_before:
+				var first_new: Control = rows_now[shown_before]
+				_check(first_new.get_global_rect().position.y >= sc1.get_global_rect().position.y,
+						"The new rows come in under the ones on show (%s)" % tag)
+			SP.reset_view()
+			s.call("refresh")
+			await _settle()
 		# A player's season and career, then back.
 		var first: Button = s.find_children("PlayerRow_*", "Button", true, false)[0]
 		_check((await Tap.tap(first)) == "", "A player's row takes a tap (%s)" % tag)
