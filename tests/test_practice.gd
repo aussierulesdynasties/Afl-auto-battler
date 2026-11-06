@@ -450,8 +450,9 @@ func _test_sim_to_round_one() -> void:
 	var rep: Dictionary = GameState.preseason_practice().get("report", {})
 	var g: Array = rep.get("goals", [0, 0])
 	var b: Array = rep.get("behinds", [0, 0])
-	var first := GameDB.player_display_name(GameState.list_player(str((rep.get("stood", [""]) as Array)[0])))
-	_check(lines.size() == 1 and line.contains("Fremantle %d.%d (%d)" % [int(g[0]), int(b[0]), int(g[0]) * 6 + int(b[0])])
+	var stood: Array = rep.get("stood", [])
+	var first := GameDB.player_display_name(GameState.list_player(str(stood[0]))) if not stood.is_empty() else ""
+	_check(lines.size() == 1 and not stood.is_empty() and line.contains("Fremantle %d.%d (%d)" % [int(g[0]), int(b[0]), int(g[0]) * 6 + int(b[0])])
 			and line.contains("West Coast %d.%d (%d)" % [int(g[1]), int(b[1]), int(g[1]) * 6 + int(b[1])])
 			and line.contains("Stood out: " + first) and str(lines[0]["when"]) == "Pre-season",
 			"Simmed past, the practice match's result and who stood out go in the news, once (%s)" % line)
