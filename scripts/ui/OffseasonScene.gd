@@ -73,6 +73,11 @@ func _build() -> void:
 	hv.add_child(UiKit.lbl("Payroll %s of %s  ·  cap room %s  ·  list %d" % [Contracts.money(GameState.my_payroll()),
 			Contracts.money(GameState.salary_cap), Contracts.money(room), GameState.my_list.size()], 15,
 			UiKit.GOOD if room >= 0 else UiKit.BAD, true))
+	# Your challenge's rule, said where it bites: who you may bring in.
+	if Challenge.kind(GameState) in ["youth", "rebuild"]:
+		var rule := _para(Challenge.stated_line(GameState), 13, UiKit.EMPH)
+		rule.name = "ChallengeRule"
+		hv.add_child(rule)
 	if not GameState.offseason_open():
 		hv.add_child(_para("The off-season is closed: trades and contracts open when the season ends, until the national draft starts.", 13, UiKit.MUTED))
 	else:

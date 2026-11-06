@@ -53,6 +53,8 @@ func run(tree: SceneTree) -> void:
 	_t("_test_entering_club_seat")
 	_t("_test_midseason_fills_rookie_spots")
 	_t("_test_real_lists_start")
+	_t("_test_youth_only_drafts")
+	_t("_test_youth_only_midseason")
 	GameState.replay_seed = 0
 	print(Ran.line("Rookie list", self))
 
@@ -383,3 +385,82 @@ func _test_real_lists_start() -> void:
 	for code in gs.season.lists:
 		_check(RookieList.rookie_count(gs.season.lists[code]) <= RookieList.CAT_A_SPOTS,
 				"%s: at most six rookies after it" % code)
+
+
+## Row 114: Youth only binds your club in every draft. The National Draft
+## refuses a player over 24 and says why; the Rookie Draft and the mid-season
+## draft refuse him too, and a 24-year-old goes through.
+func _test_youth_only_drafts() -> void:
+	_new_career()
+	gs.challenge = {"kind": "youth"}
+	gs.season.round_index = gs.season.fixture.size()
+	_check(gs.begin_intake_draft(), "(setup) the National Draft opens")
+	var draft: Draft = gs.draft
+	if draft == null:
+		return
+	_check(draft.user_max_age == Challenge.MAX_AGE, "Youth only: the National Draft carries the age line (%d)" % draft.user_max_age)
+	var old := {"id": "youth_test_old", "age": 25.4, "value": 0, "overall": 99}
+	_check(draft.too_old_for_user(old) and not draft.can_pick_player(old),
+			"Youth only: a 25-year-old cannot be drafted")
+	_check(draft.pick_block_reason(old).begins_with("Youth only: he is 25"),
+			"Youth only: the board says why (%s)" % draft.pick_block_reason(old))
+	_check(not draft.too_old_for_user({"id": "youth_test_ok", "age": 24.9}), "Youth only: a 24-year-old can be drafted")
+	while not draft.is_finished():
+		var candidate := draft._best_ai_pick(draft.current_club())
+		if candidate.is_empty() or not draft._draft_pick(draft.current_club(), candidate):
+			draft._skip_current_pick()
+	var mine: Array = draft.club_lists.get(CLUB, [])
+	var too_old := mine.filter(func(q): return int(floor(float(q.get("age", 0)))) > Challenge.MAX_AGE)
+	_check(not mine.is_empty() and too_old.is_empty(),
+			"Youth only: every pick made for your club is 24 or under (%d picks, %d over)" % [mine.size(), too_old.size()])
+	_check(gs.finish_intake_draft(), "(setup) the rollover commits")
+	_check(RookieList.waiting(gs), "(setup) a Rookie Draft pick waits")
+	if not RookieList.waiting(gs):
+		return
+	var left := MidseasonDraft.pool(gs)
+	_check(not left.is_empty(), "(setup) a Rookie Draft pool")
+	if left.is_empty():
+		return
+	var him: Dictionary = left[0]
+	var age_was = him.get("age", 20)
+	him["age"] = 25
+	_check(not RookieList.choose(gs, str(him["id"])) and RookieList.waiting(gs),
+			"Youth only: the Rookie Draft refuses a 25-year-old and your pick still waits")
+	him["age"] = 22
+	_check(RookieList.choose(gs, str(him["id"])), "Youth only: a 22-year-old can be taken in the Rookie Draft")
+	var p := RookieList._find(gs.season.lists[CLUB], str(him["id"]))
+	_check(not p.is_empty() and str(p.get("drafted_club", "")) == CLUB,
+			"A Rookie Draft pick is home-grown: first drafted by your club (%s)" % str(p.get("drafted_club", "")))
+	him["age"] = age_was
+	gs.challenge = {}
+
+
+func _test_youth_only_midseason() -> void:
+	_new_career()
+	gs.challenge = {"kind": "youth"}
+	var year: int = gs.season_year
+	var cls: Array = gs.draftee_pool.filter(func(q): return int(q.get("draft_year", year)) == year)
+	for i in mini(30, cls.size()):
+		(cls[i] as Dictionary)["draft_year"] = year - 1
+	var mine: Array = gs.season.lists[CLUB]
+	while mine.size() >= Contracts.MAX_LIST:
+		mine.pop_back()
+	MidseasonDraft._record(gs)
+	MidseasonDraft._open_draft(gs)
+	_check(MidseasonDraft.waiting(gs), "(setup) your mid-season pick waits")
+	if not MidseasonDraft.waiting(gs):
+		return
+	var left := MidseasonDraft.pool(gs)
+	_check(left.size() >= 2, "(setup) a mid-season pool")
+	if left.size() < 2:
+		return
+	var old: Dictionary = left[0]
+	var young: Dictionary = left[1]
+	old["age"] = 25
+	young["age"] = 24
+	_check(not MidseasonDraft.choose(gs, str(old["id"])) and MidseasonDraft.waiting(gs),
+			"Youth only: the mid-season draft refuses a 25-year-old")
+	_check(Challenge.block_reason(gs, old).begins_with("Youth only: he is 25"),
+			"Youth only: the reason is said in words (%s)" % Challenge.block_reason(gs, old))
+	_check(MidseasonDraft.choose(gs, str(young["id"])), "Youth only: a 24-year-old can be taken mid-season")
+	gs.challenge = {}

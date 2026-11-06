@@ -29,6 +29,7 @@ func run() -> void:
 	_t("_test_club_records")
 	_t("_test_story_finals_result")
 	_t("_test_story_with_match_story")
+	_t("_test_challenge_goal_marked")
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -292,3 +293,53 @@ func _test_story_finals_result() -> void:
 		if not played and story != "":
 			_check(not story.contains("went out") and not story.contains("Grand Final") or bool(e.get("flag", false)),
 					"A season without a final never says it played one: %s" % story)
+
+
+## Row 114: Your goal is marked in the annual, once, on the season it is met;
+## the coach card says where it stands; a save keeps it; a save from before
+## challenges loads with none.
+func _test_challenge_goal_marked() -> void:
+	GameState.reset()
+	GameState.career_seed = SUITE_SEED
+	GameState.replay_seed = SUITE_SEED
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	GameState.challenge = {"kind": "goal", "goal": "coach_300", "met_year": 0}
+	# 290 games already coached: this season takes him past 300.
+	GameState.almanac = [{"year": GameState.season_year - 1, "club": "GEE", "w": 200, "l": 90, "d": 0}]
+	_check(Challenge.status_line(GameState) == "Coach 300 games. 290 so far.",
+			"Before it is met, the coach card says how far along it is (%s)" % Challenge.status_line(GameState))
+	var guard := 0
+	while not GameState.season.is_season_over() and guard < 40:
+		GameState.advance()
+		guard += 1
+	var year := GameState.season_year
+	var page: Dictionary = GameState.almanac[-1]
+	_check(int(page.get("year", 0)) == year and str(page.get("challenge_met", "")) == "Coach 300 games",
+			"The season the goal is met, its page marks it (%s)" % str(page.get("challenge_met", "")))
+	_check(int(GameState.challenge.get("met_year", 0)) == year, "The goal remembers the year it was met")
+	_check(Challenge.status_line(GameState) == "Coach 300 games. Met in %d." % year,
+			"The coach card says it was met, and when (%s)" % Challenge.status_line(GameState))
+	var next := {"year": year + 1, "club": "GEE", "w": 15, "l": 8, "d": 0}
+	Challenge.mark_season(GameState, next)
+	_check(not next.has("challenge_met"), "A goal already met is never marked again")
+	var scene: Control = load("res://scenes/AlmanacScene.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(scene)
+	var card := scene.find_child("AlmanacSeason_%d" % year, true, false)
+	_check(card != null and card.find_child("ChallengeMet", true, false) != null, "The annual's page for that season shows the goal met")
+	_check(scene.find_child("CoachGoal", true, false) != null, "The coach card shows your goal")
+	scene.queue_free()
+	_check(GameState.save_career() and GameState.load_career(), "(setup) the career saves and loads")
+	_check(str(GameState.challenge.get("kind", "")) == "goal" and int(GameState.challenge.get("met_year", 0)) == year,
+			"The challenge survives a save (%s)" % str(GameState.challenge))
+	var state := CareerSave.read(GameState.save_path)
+	state.erase("challenge")
+	CareerSave.write(state, CareerSave.read_meta(GameState.save_path), GameState.save_path)
+	_check(GameState.load_career() and GameState.challenge.is_empty() and Challenge.kind(GameState) == "",
+			"A save from before challenge starts loads with none")
+	# A flag is not met without a Grand Final side drafted by your club, and a
+	# season without a flag never meets it.
+	GameState.challenge = {"kind": "goal", "goal": "flag_homegrown", "met_year": 0}
+	var plain := {"year": year, "club": "GEE", "flag": false}
+	Challenge.mark_season(GameState, plain)
+	_check(not plain.has("challenge_met"), "No flag: the home-grown flag goal is not met")
+	GameState.challenge = {}

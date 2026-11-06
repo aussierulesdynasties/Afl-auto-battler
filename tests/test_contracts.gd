@@ -46,6 +46,7 @@ func run() -> void:
 	_t("_test_free_agent_reasons")
 	_t("_test_market_reasons_change_nothing")
 	_t("_test_rivals_act_in_their_interest")
+	_t("_test_challenge_gates")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Contracts", self))
@@ -2653,3 +2654,67 @@ func _test_rivals_act_in_their_interest() -> void:
 				== Contracts.club_max(kid, "bench", 1 << 40) + Contracts.SALARY_STEP,
 				"A rebuilding club pays one step more for a young player still growing")
 	_check(GameState.MAX_AI_TRADES >= 40, "Rival trades have only a runaway guard")
+
+
+## Row 114 (Challenge.gd): Youth only refuses a trade for, or an offer to, a
+## player over 24 and lets a 24-year-old through; Rebuild bars the three who
+## walked out. Picks and your own players going out are never barred.
+func _test_challenge_gates() -> void:
+	_new_season()
+	_to_offseason()
+	GameState.challenge = {"kind": "youth"}
+	var me := GameState.my_club
+	var rival := ""
+	var old := {}
+	var young := {}
+	for code in GameState.season.lists:
+		if code == me:
+			continue
+		for q in GameState.season.lists[code]:
+			var age := int(floor(float(q.get("age", 0))))
+			if age >= 25 and old.is_empty():
+				old = q
+			elif age <= 24 and young.is_empty():
+				young = q
+		if not old.is_empty() and not young.is_empty():
+			rival = code
+			break
+		old = {}
+		young = {}
+	_check(rival != "", "(setup) a rival with a player over 24 and one 24 or under")
+	if rival == "":
+		return
+	young["age"] = 24
+	old["age"] = 25
+	var mine := [str(GameState.my_list[0]["id"])]
+	var v_old := GameState.evaluate_trade(rival, mine, [str(old["id"])])
+	_check(not bool(v_old["ok"]) and str(v_old["code"]) == "trade_challenge"
+			and str(v_old["reason"]).begins_with("Youth only: he is 25"),
+			"Youth only: a trade for a 25-year-old is refused, and says why (%s)" % str(v_old.get("reason")))
+	var v_young := GameState.evaluate_trade(rival, mine, [str(young["id"])])
+	_check(str(v_young.get("code", "")) != "trade_challenge",
+			"Youth only: a trade for a 24-year-old is weighed as usual (%s)" % str(v_young.get("reason")))
+	_check(not bool(GameState.make_trade(rival, mine, [str(old["id"])])["ok"]),
+			"Youth only: the trade cannot be pushed through")
+	# Free agency.
+	_check(not GameState.free_agents.is_empty(), "(setup) free agents to offer to")
+	if GameState.free_agents.is_empty():
+		return
+	var fa: Dictionary = GameState.free_agents[0]
+	fa["age"] = 27
+	var r := GameState.offer_free_agent(str(fa["id"]), Contracts.asking_salary(fa) * 2, 2)
+	_check(not bool(r["ok"]) and str(r["reason"]).begins_with("Youth only: he is 27"),
+			"Youth only: no offer to a 27-year-old free agent (%s)" % str(r.get("reason")))
+	r = GameState.sign_free_agent(str(fa["id"]), 2)
+	_check(not bool(r["ok"]) and str(r["reason"]).begins_with("Youth only"), "Youth only: no signing at his price either")
+	fa["age"] = 24
+	r = GameState.offer_free_agent(str(fa["id"]), Contracts.asking_salary(fa) * 2, 2)
+	_check(not str(r.get("reason", "")).begins_with("Youth only"),
+			"Youth only: a 24-year-old free agent can be offered a deal (%s)" % str(r.get("reason")))
+	# Rebuild: the three who walked out never come back.
+	var other: Dictionary = GameState.free_agents[GameState.free_agents.size() - 1]
+	GameState.challenge = {"kind": "rebuild", "club": me, "gone": [{"id": str(other["id"])}]}
+	r = GameState.offer_free_agent(str(other["id"]), Contracts.asking_salary(other) * 2, 2)
+	_check(not bool(r["ok"]) and str(r["reason"]).begins_with("Rebuild:"),
+			"Rebuild: a player who walked out cannot be signed back (%s)" % str(r.get("reason")))
+	GameState.challenge = {}

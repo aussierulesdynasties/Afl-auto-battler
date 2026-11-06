@@ -394,6 +394,13 @@ func _show_board() -> void:
 			_root.add_child(_header("League draft", sub))
 		_board = _live_board()
 		_root.add_child(_board)
+	# Your challenge, said on the board where it bites.
+	var rule := Challenge.stated_line(GameState) if Challenge.kind(GameState) in ["youth", "rebuild"] else ""
+	if rule != "":
+		var said := UiKit.lbl(rule, UiKit.SMALL, UiKit.EMPH)
+		said.name = "ChallengeRule"
+		said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_root.add_child(said)
 	if _short:
 		# No board on a short landscape screen: the reason line sits under the header.
 		_why_box = UiKit.vbox(0)

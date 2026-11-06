@@ -1535,6 +1535,11 @@ func _show_midseason_pick() -> void:
 		var pick := UiKit.btn("Pick", UiKit.NAME)
 		pick.name = "MidseasonPick_%s" % str(p["id"])
 		pick.custom_minimum_size = Vector2(88, 48)
+		# Your challenge bars him (Youth only): said on the button, not hidden.
+		if Challenge.block_reason(GameState, p) != "":
+			pick.text = "Over %d" % Challenge.MAX_AGE if Challenge.over_age(p) else "Barred"
+			pick.disabled = true
+			pick.tooltip_text = Challenge.block_reason(GameState, p)
 		pick.pressed.connect(_midseason_choose.bind(str(p["id"])))
 		row.add_child(pick)
 		v.add_child(row)
