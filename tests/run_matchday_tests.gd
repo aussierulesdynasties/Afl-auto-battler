@@ -355,7 +355,8 @@ func _test_phone_match(sz: Vector2i) -> void:
 		cover.set_anchors_preset(Control.PRESET_FULL_RECT)
 		m.add_child(cover)
 		await _settle()
-		var fnote: Label = box.find_child("FocusNote_focus_mid", true, false)
+		# On a phone the call opens as its own sheet, outside the coach box.
+		var fnote: Label = m.find_child("FocusNote_focus_mid", true, false)
 		var note_was := fnote.text if fnote != null else ""
 		var blocked: String = await Tap.tap(fbtn)
 		_check(blocked != "" and fnote != null and fnote.text == note_was,
@@ -3422,8 +3423,12 @@ func _test_break_panes_layout() -> void:
 				return -1
 			_check(cols.size() == 3, "Three call columns at 1280x720 (%d)" % cols.size())
 			_check(int(col_of.call("PlanPicker")) == 0, "The game plan leads the first column (column %d)" % int(col_of.call("PlanPicker")))
-			_check(int(col_of.call("TagPicker")) == 1 and int(col_of.call("FocusPicker_focus_mid")) == 1,
-					"The tag leads the second column; the play-through picks are in it")
+			# The play-through picks are dealt by height (_deal_calls), the
+			# three of them together in one column.
+			var pt_col := int(col_of.call("FocusPicker_focus_mid"))
+			_check(int(col_of.call("TagPicker")) == 1 and pt_col >= 0
+					and int(col_of.call("FocusPicker_focus_fwd")) == pt_col and int(col_of.call("FocusPicker_focus_def")) == pt_col,
+					"The tag leads the second column; the three play-through picks share a column (%d)" % pt_col)
 			_check(int(col_of.call("PepPicker")) >= 0 and int(col_of.call("DefenceSetupPicker")) >= 0,
 					"The pep talk and the defensive set-up are in the columns")
 			var tallest := 0.0
