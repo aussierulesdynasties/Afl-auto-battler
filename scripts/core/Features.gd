@@ -14,8 +14,9 @@ extends RefCounted
 ##      (several: --features preseason,other);
 ##   3. the project setting features/<name> is true (project.godot). This is
 ##      what an exported build reads. international_prospects ships ON since
-##      2026-10-18 (director: "Names fine, switch on") and clanger_cause since
-##      2026-11-04 (row 81); every other switch ships off.
+##      2026-10-18 (director: "Names fine, switch on"), clanger_cause since
+##      2026-11-04 (row 81) and coach_arcs since 2026-11-06 (row 108, director
+##      "Switch on now"); project.godot [features] lists which others ship on.
 ## Otherwise it is OFF: every test suite that does not ask for it, and a plain
 ## editor run, for any switch whose project setting is false.
 ##
@@ -54,7 +55,8 @@ extends RefCounted
 ##               (CoachArcs.gd, ClubArcs.gd, data/arcs/coach_arcs.json). Phase 2:
 ##               the coach changes clubs (ClubMoves.gd): sacked, he takes a job
 ##               elsewhere; poached, he leaves; his old club and assistant
-##               come back in arcs. Off, no arc starts, no card shows,
+##               come back in arcs. Ships ON (row 108, T5.Q4, director "Switch on
+##               now"). Off, no arc starts, no card shows,
 ##               GameState.coach_arcs stays empty and the sack ends the career.
 ##   finals_cards_2  the finals cards' second slice (rows 35, 36): A3, A9, A14, B7 in
 ##               finals weeks, and one card the week your season ends (A15, A16, B8,
@@ -165,8 +167,15 @@ extends RefCounted
 ##               entries inside 50. Changes match output. Off, the zone's or the line's
 ##               defender meets it, the key-forward share is Matchups.KEY_TARGET and no
 ##               general-play contest is logged, as before.
+##   gather_round   row 74 (T5.Q11a; Director Bible 2.38, 5.127): one of rounds 3 to 7 each
+##               season is Gather Round, every match staged at the host's grounds (Adelaide
+##               Oval, Norwood Oval, Barossa Park; GatherRound.gd). A club has its home-ground
+##               edge only at its own ground; the weather is Adelaide's (Weather's SA row). A club on a bye that
+##               round sits it out. The round's name shows on the fixture, the hub, the match
+##               and the warm-up. Changes match output. Nothing saved. Off, every round is as
+##               before.
 const KNOWN := ["preseason", "speccy_front", "training_report", "international_prospects", "expansion_package", "club_almanac", "match_story", "finals_cards_2", "player_looks", "coach_arcs", "top_attributes", "kick_range", "match_flow", "ballup_two", "goal_run_moves", "clanger_cause", "decision_scenes", "ui_motion", "feed_colours", "training_grid", "midseason_draft", "vignette_grade", "custom_prospect_story", "rookie_list", "mid_intercepts", "back_carries", "momentum_runaway", "key_duels", "set_shots",
-	"sir_doug_round"]
+	"sir_doug_round", "gather_round"]
 
 static var _forced := {}
 static var _from_args := {}

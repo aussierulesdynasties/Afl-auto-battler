@@ -72,6 +72,10 @@ func _test_media_conference_rules() -> void:
 	var close: Dictionary = MediaConferenceScript.pick({"club": "CAR", "opponent_name": "Collingwood", "round": 16,
 			"result": {"home": "COL", "away": "CAR", "score": [84, 86]}}, {})
 	_check(str(close.get("key", "")) == "close_game", "Close finishes can drive the press conference")
+	var drawn: Dictionary = MediaConferenceScript.pick({"club": "CAR", "opponent_name": "Collingwood", "round": 16,
+			"result": {"home": "COL", "away": "CAR", "score": [80, 80], "goals": [12, 12], "behinds": [8, 8]}}, {})
+	_check(str(drawn.get("key", "")) == "close_game" and not str(drawn.get("question", "")).contains("What decided it"),
+			"A draw is never asked what decided it (%s)" % str(drawn.get("question", "")))
 	# Recurring journalists (RPG-002): each question has its own asker, and what
 	# you say can come back.
 	_check(str(heavy.get("journalist", "")) == "muckraker" and str(heavy.get("by", "")) == "Gary Haddon, The Siren"
@@ -309,6 +313,149 @@ func _test_sheets_fit_their_content() -> void:
 	await process_frame
 
 
+# ---------------------------------------------------------------------------
+# Sound settings (row 98, T7.O16): moved from matchday so the PR gate runs them
+# ---------------------------------------------------------------------------
+func _sheet_at(options, sz: Vector2i) -> Array:
+	root.size = sz
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	host.size = Vector2(sz)
+	var sheet: Control = options.open(host, true)
+	await _settle()
+	return [host, sheet]
+
+
+## Sound is Mute and one Volume slider (row 98); Vibration and Reduced motion
+## keep their own Off. Real taps at a phone's size and a PC's, saved with the
+## settings. Vibration shows only on a phone.
+func _test_game_feel_settings() -> void:
+	var before := root.size
+	var options = load("res://scripts/ui/OptionsSheet.gd")
+	var feel = load("res://scripts/ui/Feel.gd")
+	var uk = load("res://scripts/ui/UiKit.gd")
+	_check(not _state.sounds_muted() and _state.volume() == 100 and _state.haptics_on() and not _state.reduced_motion(),
+			"Sound starts on at full volume, Vibration on, Reduced motion off")
+	feel.force_phone = false
+	var pc: Array = await _sheet_at(options, Vector2i(1280, 720))
+	_check(pc[1].find_child("SettingsMuteSounds_on", true, false) != null
+			and pc[1].find_child("SettingsVolume", true, false) is HSlider
+			and pc[1].find_child("SettingsReducedMotion_on", true, false) != null,
+			"Settings has Mute, a Volume slider and Reduced motion on a PC")
+	for gone in ["SettingsMusic", "SettingsCrowd", "SettingsButtonSounds"]:
+		_check(pc[1].find_child(gone, true, false) == null, "No %s row: one Volume does it" % gone)
+	_check(pc[1].find_child("SettingsVibration_off", true, false) == null,
+			"No Vibration row on a PC, which has nothing to buzz")
+	pc[0].queue_free()
+	await _settle()
+	feel.force_phone = true
+	var master := AudioServer.get_bus_index("Master")
+	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+		var tag := "%dx%d" % [sz.x, sz.y]
+		var hs: Array = await _sheet_at(options, sz)
+		var sheet: Control = hs[1]
+		for pair in [["SettingsMuteSounds_on", "Mute On"], ["SettingsVibration_off", "Vibration Off"],
+				["SettingsReducedMotion_on", "Reduced motion On"]]:
+			var b: Button = sheet.find_child(str(pair[0]), true, false)
+			var why: String = await Tap.tap(b) if b != null else "missing"
+			_check(why == "", "%s takes a real tap (%s: %s)" % [pair[1], tag, why])
+			await _settle()
+		# A finger a quarter of the way along the slider sets 25%.
+		var vol: HSlider = sheet.find_child("SettingsVolume", true, false)
+		var why_v: String = await Tap.tap_at(vol, _slider_spot(vol, 0.25)) if vol != null else "missing"
+		await _settle()
+		var shown: Label = sheet.find_child("SettingsVolumeValue", true, false)
+		_check(why_v == "" and _state.volume() == 25 and shown != null and shown.text == "25%",
+				"A tap a quarter along Volume sets 25%% and says so (%s: %s, %d, %s)"
+				% [tag, why_v, _state.volume(), shown.text if shown != null else "no label"])
+		_check(_state.sounds_muted() and AudioServer.is_bus_mute(master)
+				and is_equal_approx(AudioServer.get_bus_volume_db(master), linear_to_db(0.25))
+				and not _state.haptics_on() and _state.reduced_motion()
+				and not feel.haptics and feel.reduced and not uk.motion_on(),
+				"The taps mute every sound, set Master to 25%%, stop the buzz and still the screen (%s)" % tag)
+		var cfg := ConfigFile.new()
+		_check(cfg.load(_state.settings_path) == OK and cfg.get_value("ui", "mute_sounds", false) == true
+				and int(cfg.get_value("ui", "volume", -1)) == 25
+				and cfg.get_value("ui", "haptics", true) == false and cfg.get_value("ui", "reduced_motion", false) == true,
+				"All four are saved with the settings (%s)" % tag)
+		for pair in [["SettingsMuteSounds_off", "Mute Off"], ["SettingsVibration_on", "Vibration On"],
+				["SettingsReducedMotion_off", "Reduced motion Off"]]:
+			var b: Button = sheet.find_child(str(pair[0]), true, false)
+			var why: String = await Tap.tap(b) if b != null else "missing"
+			_check(why == "", "%s takes a real tap (%s: %s)" % [pair[1], tag, why])
+			await _settle()
+		why_v = await Tap.tap_at(vol, _slider_spot(vol, 1.0)) if vol != null else "missing"
+		await _settle()
+		_check(why_v == "" and _state.volume() == 100 and not _state.sounds_muted() and not AudioServer.is_bus_mute(master)
+				and is_equal_approx(AudioServer.get_bus_volume_db(master), 0.0)
+				and _state.haptics_on() and not _state.reduced_motion(),
+				"And back: sound on at full, buzz and motion back (%s: %s)" % [tag, why_v])
+		hs[0].queue_free()
+		await _settle()
+	feel.force_phone = false
+	root.size = before
+	await _settle()
+
+
+## Where along a slider a finger sets `ratio`: Godot centres the thumb on the
+## touch, so the ends sit half a thumb in from the edges.
+func _slider_spot(s: HSlider, ratio: float) -> Vector2:
+	var thumb := float(s.get_theme_icon("grabber").get_width())
+	return Vector2(thumb / 2.0 + ratio * (s.size.x - thumb), s.size.y / 2.0)
+
+
+## An old settings file (a level each for music, crowd and button sounds)
+## comes over as Mute and Volume, once, and the old keys go.
+func _test_old_sound_levels_carry_over() -> void:
+	var keep: String = _state.settings_path
+	_state.settings_path = "user://test_old_sound.cfg"
+	var cases := [
+		[{"music_level": "normal", "crowd_level": "quiet", "button_sounds": "off"}, false, 100, false,
+				"the loudest one he still heard sets Volume"],
+		[{"music_level": "quiet", "crowd_level": "quiet", "button_sounds": "quiet"}, false, 30, false,
+				"all quiet is 30% (-10 dB)"],
+		[{"music_level": "off", "crowd_level": "off", "button_sounds": "off"}, false, 100, true,
+				"all off is Mute on, Volume full for later"],
+		[{"crowd_level": "quiet"}, true, 100, true,
+				"Mute already on stays on; button sounds he never changed were at normal"],
+		[{"crowd_level": "nonsense"}, false, 100, false, "a level it doesn't know counts as normal"],
+		[{"crowd_level": "off"}, false, 100, false,
+				"Crowd alone off keeps the button sounds he never changed: Mute stays off"],
+		[{"button_sounds": "off"}, false, 100, false,
+				"Button sounds alone off keeps the crowd he never changed: Mute stays off"],
+		[{"crowd_level": "off", "button_sounds": "off"}, false, 100, true,
+				"Crowd and button sounds off is silence (no music ever played): Mute on"],
+		[{"music_level": "quiet"}, false, 100, false,
+				"Music alone quiet leaves crowd and button sounds at normal"],
+	]
+	_check(cases.size() == 9, "Nine old settings files to carry over")
+	for c in cases:
+		var cfg := ConfigFile.new()
+		for k in c[0]:
+			cfg.set_value("ui", k, c[0][k])
+		cfg.set_value("ui", "mute_sounds", c[1])
+		cfg.save(_state.settings_path)
+		_state._carry_old_sound_levels(cfg)
+		var back := ConfigFile.new()
+		back.load(_state.settings_path)
+		var left := false
+		for k in ["music_level", "crowd_level", "button_sounds"]:
+			left = left or back.has_section_key("ui", k)
+		_check(_state.volume() == int(c[2]) and _state.sounds_muted() == bool(c[3]) and not left,
+				"Old settings: %s (Volume %d, Mute %s)" % [c[4], _state.volume(), str(_state.sounds_muted())])
+	# A file with nothing old is left alone.
+	var plain := ConfigFile.new()
+	plain.set_value("ui", "volume", 55)
+	plain.save(_state.settings_path)
+	_state._carry_old_sound_levels(plain)
+	_check(_state.volume() == 55, "A new settings file is left as it is")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(_state.settings_path))
+	_state.settings_path = keep
+	_state.set_sounds_muted(false)
+	_state.set_volume(100)
+
+
 func _run() -> void:
 	_t("_test_rivalry_catalogue")
 	await process_frame
@@ -331,11 +478,14 @@ func _run() -> void:
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
 	_t("_test_press_rolls")
+	await _t("_test_game_feel_settings")
+	_t("_test_old_sound_levels_carry_over")
 
 	await _t("_test_menu_and_career")
 	await _t("_test_season_awards")
 	await _t("_test_back_arrow_taps")
 	await _t("_test_finals_card_taps")
+	await _t("_test_sim_asks_only_before_your_match")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
 	_t("_test_type_roles")
@@ -344,6 +494,8 @@ func _run() -> void:
 	await _t("_test_new_career_keeps_the_save")
 	await _t("_test_new_career_canberra_choice")
 	await _t("_test_pc_hub_and_list_layout")
+	for sz in [Vector2i(2560, 1440), Vector2i(1920, 1080), Vector2i(1280, 720)]:
+		await _t("_test_hub_ladder_fills_right", [sz])
 	await _t("_test_list_shape_fits_phones")
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_list_words_fit", [sz])
@@ -511,13 +663,13 @@ Your career stays on this device.",
 	_check(_state.show_real_names, "Choosing Real in Settings shows real names straight away")
 	var mute_on: Button = current_scene.find_child("SettingsMuteSounds_on", true, false)
 	var mute_off: Button = current_scene.find_child("SettingsMuteSounds_off", true, false)
-	_check(mute_on != null and mute_off != null, "Settings offers Mute sounds")
+	_check(mute_on != null and mute_off != null, "Settings offers Mute")
 	if mute_on != null:
 		mute_on.emit_signal("pressed")
 	var master_bus := AudioServer.get_bus_index("Master")
 	_check(_state.sounds_muted()
 			and (master_bus < 0 or AudioServer.is_bus_mute(master_bus)),
-			"Mute sounds immediately mutes the Master audio bus")
+			"Mute immediately mutes the Master audio bus")
 	if mute_off != null:
 		mute_off.emit_signal("pressed")
 	_check(not _state.sounds_muted()
@@ -2126,11 +2278,27 @@ func _test_remembered() -> void:
 	_check(why_b == "" and scene.find_child("ConfirmRelease", true, false) != null
 			and scene.find_child("ReleaseRemembered", true, false) == null,
 			"With nothing to remember the confirm is quiet (%s)" % why_b)
+	# He was also in the trade builder: releasing him takes him out of it.
+	scene._mine = [str(blank["id"]), str(star_id)]
 	var go: Button = scene.find_child("ConfirmRelease", true, false)
 	var why_g: String = await Tap.tap(go) if go != null else "no confirm"
 	await _settle()
 	_check(why_g == "" and _state.list_player(str(blank["id"])).is_empty() and _state.my_list.size() == list_before - 1,
 			"A finger on Release player lets him go (%s)" % why_g)
+	_check(scene._mine == [str(star_id)], "A released player leaves the trade builder; the rest stay (%s)" % str(scene._mine))
+	# Free-agent talks never start from the last player's term.
+	_check(not _state.free_agents.is_empty(), "The off-season has free agents (%d)" % _state.free_agents.size())
+	if not _state.free_agents.is_empty():
+		var fa_id := str(_state.free_agents[0]["id"])
+		scene._offer_years = 0
+		scene._open_talks(fa_id, true)
+		var own_years := int(scene._offer_years)
+		scene._close_talks()
+		scene._offer_years = 7
+		scene._open_talks(fa_id, true)
+		_check(own_years > 0 and int(scene._offer_years) == own_years,
+				"Free-agent talks start from his own term (%d), not the last player's (%d)" % [own_years, int(scene._offer_years)])
+		scene._close_talks()
 	scene.queue_free()
 	await _settle()
 
@@ -2290,6 +2458,117 @@ func _test_finals_card_taps() -> void:
 				rule_btn = n
 	_check(rule_btn != null, "A card that leaves it to the captain offers See the rule")
 	_state.week_events = []
+
+
+## Row 102: "Ask before simming" asks only when Sim the week would play a match
+## the coach could play (your round, your final). A bye, a finals week off, a
+## finals week you are out of and the off-season go straight ahead. Real taps
+## on a 390 phone.
+func _fre_in_finals_at(rank: int) -> void:
+	_state.reset()
+	_state.career_seed = 4402
+	_state.replay_seed = 4402
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var sea = _state.season
+	var codes: Array = sea.ladder.keys()
+	codes.sort()
+	codes.erase("FRE")
+	codes.insert(rank - 1, "FRE")
+	for i in range(codes.size()):
+		var row: Dictionary = sea.ladder[codes[i]]
+		row["w"] = 20 - i
+		row["l"] = 3 + i
+		row["d"] = 0
+		row["p"] = 23
+		row["pf"] = 2400 - i * 20
+		row["pa"] = 2000
+	sea.round_index = sea.fixture.size()
+	sea.recalc_ladder()
+	sea.start_finals()
+	_state.week_events = []
+
+
+func _hub_tap(button_name: String) -> Array:
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var b: Button = current_scene.find_child(button_name, true, false)
+	var why: String = await Tap.tap(b) if b != null else "missing"
+	await _settle()
+	return [why, current_scene.find_child("SimConfirm", true, false) != null]
+
+
+func _test_sim_asks_only_before_your_match() -> void:
+	var ask_size_before := root.size
+	root.size = Vector2i(390, 844)
+	_state.set_confirm_sim_round(true)
+	_state.reset()
+	_state.career_seed = 4402
+	_state.replay_seed = 4402
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var sea = _state.season
+	var bye_round := -1
+	for r in range(sea.fixture.size()):
+		var plays := false
+		for m in sea.fixture[r]:
+			plays = plays or m["home"] == "FRE" or m["away"] == "FRE"
+		if not plays and bye_round < 0:
+			bye_round = r
+	_check(bye_round > 0, "Fremantle has a bye in the home-and-away season (round %d)" % (bye_round + 1))
+	_state.week_events = []
+
+	# A playable round: the question comes up, and nothing is simmed yet.
+	sea.round_index = bye_round - 1
+	var r0: int = sea.round_index
+	var got: Array = await _hub_tap("SimRound")
+	_check(got[0] == "" and got[1] and sea.round_index == r0,
+			"Before a round Fremantle plays, a finger on Sim the week gets the question first (%s)" % got[0])
+	var cancel: Button = current_scene.find_child("SimConfirmCancel", true, false)
+	var cancel_why: String = await Tap.tap(cancel) if cancel != null else "missing"
+	await _settle()
+	_check(cancel_why == "" and sea.round_index == r0 and current_scene.find_child("SimConfirm", true, false) == null,
+			"A finger on Cancel closes it and sims nothing (%s)" % cancel_why)
+
+	# The bye: no match of his to play, so no question; the round goes ahead.
+	sea.round_index = bye_round
+	_state.week_events = []
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	_check(current_scene.find_child("SimRound", true, false) == null, "A bye week has no Sim the week to ask about")
+	var hub = current_scene
+	_check(not bool(hub.call("_sim_asks_first")), "A bye week never asks before simming")
+	got = await _hub_tap("SimByeRound")
+	_check(got[0] == "" and not got[1] and sea.round_index == bye_round + 1,
+			"A finger on Play Round %d during the bye sims it with no question (%s)" % [bye_round + 1, got[0]])
+
+	# Finals: his own final asks; a week off and a week he is out of do not.
+	_fre_in_finals_at(8)
+	got = await _hub_tap("SimRound")
+	_check(got[0] == "" and got[1] and int(_state.season.finals["week"]) == 1,
+			"Eighth plays a wildcard final, so Sim the week asks first (%s)" % got[0])
+	_fre_in_finals_at(1)
+	_check(_state.my_finals_status() == "bye", "Minor premiers sit out the wildcard week")
+	got = await _hub_tap("SimFinalsWeekOff")
+	_check(got[0] == "" and not got[1] and int(_state.season.finals["week"]) == 2,
+			"The finals week off sims with no question (%s)" % got[0])
+	_fre_in_finals_at(14)
+	got = await _hub_tap("SimFinalsWeek")
+	_check(got[0] == "" and not got[1] and int(_state.season.finals["week"]) == 2,
+			"A finals week Fremantle is out of sims with no question (%s)" % got[0])
+
+	# The off-season: nothing to sim, nothing to ask.
+	_state.season.finals["done"] = true
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	hub = current_scene
+	_check(hub.find_child("SimRound", true, false) == null and not bool(hub.call("_sim_asks_first")),
+			"The off-season has no Sim the week and never asks")
+	_router.stack = ["main"]
+	_router.go("main")
+	await _settle()
+	root.size = ask_size_before
 
 
 func _test_season_awards() -> void:
@@ -2650,6 +2929,54 @@ func _test_pc_hub_and_list_layout() -> void:
 	var cap_title: Control = cap.find_child("SectionTitle", true, false) if cap != null else null
 	_check(cap_title != null and cap_title.size.x >= 60.0, "The Captaincy label is visible beside the names (%.0f wide)" % (cap_title.size.x if cap_title != null else -1.0))
 	_check(cap != null and cap.size.x < 640.0 and cap.size.y >= 44.0, "My list's Captaincy row is not a bar across the PC window and is thumb high (%.0f x %.0f)" % [cap.size.x if cap != null else -1.0, cap.size.y if cap != null else -1.0])
+
+
+## The hub's ladder leaves no dead space beside it on a wide window (row 109,
+## 6.Q18: at 2560 the table ended a third of the way across its column). The
+## ladder table ends within a column gap of whatever is right of it: the front
+## page when there is news, the window's edge when there is none.
+func _test_hub_ladder_fills_right(sz: Vector2i) -> void:
+	var tag := "%dx%d" % [sz.x, sz.y]
+	root.size = sz
+	var news := [
+		{"year": 2027, "when": "Round 1", "kind": "game", "text": "Shannon Neale kicked 6 goals for Geelong against Sydney."},
+		{"year": 2027, "when": "Round 1", "kind": "injury", "text": "Josh Battle (Hawthorn) is out for 8 weeks with a hand."},
+	]
+	for with_news in [false, true]:
+		var case := "%s, %s" % [tag, "news" if with_news else "no news"]
+		_state.reset()
+		_state.start_season("COL", _db.club_list("COL"))
+		_state.news = news.duplicate(true) if with_news else []
+		_router.stack = []
+		_router.go("main")
+		await _settle()
+		_router.go("hub")
+		await _settle()
+		await _settle()
+		var section: Control = current_scene.find_child("LadderSection", true, false)
+		var cols: Control = current_scene.find_child("HubColumns", true, false)
+		_check(section != null and cols != null, "The wide hub has its columns and the ladder (%s)" % case)
+		if section == null or cols == null:
+			continue
+		# The table: the section's widest child below its heading.
+		var table_end := 0.0
+		for c in section.get_children():
+			if c is Control and (c as Control).visible:
+				table_end = maxf(table_end, (c as Control).get_global_rect().end.x)
+		var right_of: float = cols.get_global_rect().end.x
+		var host := section.get_parent()
+		var at := section.get_index()
+		if at + 1 < host.get_child_count():
+			right_of = (host.get_child(at + 1) as Control).get_global_rect().position.x
+		var gap := right_of - table_end
+		_check(gap <= 30.0, "The ladder leaves no dead space to its right (%s: %.0f px to %s)" % [
+				case, gap, "the front page" if at + 1 < host.get_child_count() else "the edge"])
+		if with_news:
+			var front: Control = host.get_child(at + 1) as Control if at + 1 < host.get_child_count() else null
+			_check(front != null and front.size.x > section.size.x,
+					"With news, the front page takes the room the ladder leaves (%s: %.0f vs %.0f)" % [
+					case, front.size.x if front != null else -1.0, section.size.x])
+	_state.news = []
 
 
 ## The Shape pane on My list is reachable on a phone (the screen sweep,

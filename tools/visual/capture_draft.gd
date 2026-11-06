@@ -2,7 +2,8 @@ extends SceneTree
 ## The League Draft board, for the director's look at its rows.
 ## Needs a real renderer:
 ##   godot --path . --script tools/visual/capture_draft.gd -- --out /tmp/draft [--size 390x844]
-## Writes <out>_sheet.png.
+## Writes <out>_clubs.png (the club choice, with its line under the grid in view)
+## and <out>_sheet.png.
 
 var W := 390
 var H := 844
@@ -35,6 +36,17 @@ func _run() -> void:
 			db.active_clubs(2027).duplicate(), 12345)
 	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
 	root.add_child(ui)
+	for i in range(12):
+		await process_frame
+	# The club choice, scrolled to its foot so the line under the grid shows.
+	for sc in ui.find_children("*", "ScrollContainer", true, false):
+		(sc as ScrollContainer).scroll_vertical = 100000
+	for i in range(4):
+		await process_frame
+	var clubs := root.get_viewport().get_texture().get_image()
+	clubs.convert(Image.FORMAT_RGBA8)
+	clubs.save_png(out + "_clubs.png")
+	print("wrote ", out + "_clubs.png")
 	ui.call("_on_club_chosen", "COL")
 	for i in range(12):
 		await process_frame

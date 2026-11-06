@@ -149,15 +149,18 @@ static func pages(season: Season) -> Array:
 				if str(r.get("home", "")) == str(m["home"]) and str(r.get("away", "")) == str(m["away"]):
 					res = r
 			matches.append({"home": str(m["home"]), "away": str(m["away"]), "res": res,
-					"venue": season.home_ground(str(m["home"])), "tag": "", "label": "Round %d" % (i + 1)})
+					"venue": season.round_venue(i, str(m["home"]), str(m["away"])), "tag": "",
+					"label": season.round_label(i)})
 			playing[str(m["home"])] = true
 			playing[str(m["away"])] = true
 		var byes := []
 		for c in season.clubs:
 			if not playing.has(str(c)):
 				byes.append(str(c))
+		# The round picker keeps "Round N" (it fits a phone); Gather Round is named
+		# in the status line under it.
 		out.append({"title": "Round %d" % (i + 1), "matches": matches, "played": i < season.results.size(),
-				"byes": byes, "finals": false})
+				"byes": byes, "finals": false, "event": GatherRound.NAME if i == season.gather_round() else ""})
 	if not season.finals.is_empty():
 		var weeks: Array = season.finals.get("weeks", [])
 		var last := weeks.size() + (0 if bool(season.finals.get("done", false)) else 1)
@@ -192,10 +195,12 @@ static func _status(season: Season, page: Dictionary) -> String:
 	if bool(page["finals"]):
 		return "Played" if bool(page["played"]) else "To play"
 	var idx := _page + 1
+	var event := str(page.get("event", ""))
+	var tail := "" if event == "" else " · " + event
 	if bool(page["played"]):
-		return "Played · round %d of %d" % [idx, Season.REGULAR_ROUNDS]
+		return "Played · round %d of %d%s" % [idx, Season.REGULAR_ROUNDS, tail]
 	var what := "Next round" if idx == season.round_index + 1 else "To play"
-	return "%s · round %d of %d" % [what, idx, Season.REGULAR_ROUNDS]
+	return "%s · round %d of %d%s" % [what, idx, Season.REGULAR_ROUNDS, tail]
 
 
 ## One match as a tappable row: the two clubs one over the other, their

@@ -60,6 +60,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `expansion` | Tasmania in 2028 and Canberra in 2030, and a Club Forge club entering with the career |
 | `expansion_package` | How a new club builds its list behind the switch `expansion_package`: off is exactly today; on gives state-league signings, early picks, the traded pick, out-of-contract signings, sign-on money, the Canberra choice, the approach card, saves both ways |
 | `finals` | The wildcard finals bracket, extra time, draws |
+| `gather_round` | Gather Round behind the switch `gather_round`: off is exactly today; on, one of rounds 3 to 7 at the host grounds, the home edge only at a club's own ground, the odd-count bye, its name in the fixture, hub and match, a live round across a save and load |
 | `save` | Saving and loading a career, including old-save migrations and the safe write: a failed or interrupted write never loses the career, and a failed swap leaves the newer save readable |
 | `chronology` | 2026 is history, careers start in 2027, and every system agrees |
 | `career` | Games, goals and club stints across a dynasty |
@@ -81,6 +82,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `awards` | Brownlow, Coleman, best and fairest, All-Australian |
 | `achievements` | Club achievements |
 | `contracts` | Contracts, free agency and trades (seeded: a clock seed once made the pick-limit check flaky) |
+| `recruit_undo` | Undo for a delisting, a free-agent signing and a re-signing (row 119): exact restore of list, cap, contracts, pool and news, newest first, gone once the national draft starts or after a reload, a real tap on Undo at 390 x 844 |
 | `league` | The two difficulty dials (saved, old saves mapped, trade bargaining) and the league news feed |
 | `club` | The board, morale and the weekly event card |
 | `story` | The week's story cards: the deck's checks, cooldowns, arcs, trust, ten seasons of repeats, the save round trip, cards never moving the dice |
@@ -105,14 +107,14 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `trainrep` | The monthly training report: the block snapshot, a known riser with his stats, the retraining list matching the Training menu's own (and the club's two-project limit), the switch off leaving the hub as it was, an old save, and real taps on a phone and a PC (open, a name, a retraining entry, Close, Android Back) |
 | `match_story` | The match makes the story (switch `match_story`): with the switch off nothing shows or is kept; the hero is the winners' best by goals, disposals, tackles, clearances and clutch late goals; every reason traces to a number in the result; one record per match of yours persists through save and load and Sim the week; an old save loads; the Summary shows the story above How it went on a phone and a PC |
 | `key_duels` | Key forward v key defender (switch `key_duels`, row 94): it ships off and leaves the old key-forward share; on the same seeds contests per duel rise with it on; every logged mark is a mark event tagged to that forward, against the man the log names; the full-time line's "N marks from M contests" and its beat / held reading are the log's and the verdict rule's; off, no contest is tagged and a seed plays the same match twice |
-| `coach_arcs` | The coach's career arcs (switch `coach_arcs`): with the switch off nothing is written or shown; all fourteen catalogue arcs pass the deck's card checks; phase 2's club changes: a rival's offer taken (poached) and a sacking each move the coach to another club at the rollover, the other club's coach or his own assistant takes the job he left, the career record (every club, its chairman, every season and player) carries on and persists through save and load with the move pending or made, the way back, the old-club reunion and the assistant arcs trigger, progress and resolve; arcs start only from real game state (a board below 40 by round 8, a trade request); every beat dealt comes from an active arc and is the week's big call; the state persists through save and load and an old save loads empty; a 10-season Sim-the-week career (three on CI; COACH_ARCS_SEASONS overrides) writes its story log to tests/output/coach_arcs_story.txt (not committed) |
+| `coach_arcs` | The coach's career arcs (switch `coach_arcs`): the switch ships on (row 108); with the switch forced off nothing is written or shown; all fourteen catalogue arcs pass the deck's card checks; phase 2's club changes: a rival's offer taken (poached) and a sacking each move the coach to another club at the rollover, the other club's coach or his own assistant takes the job he left, the career record (every club, its chairman, every season and player) carries on and persists through save and load with the move pending or made, the way back, the old-club reunion and the assistant arcs trigger, progress and resolve; arcs start only from real game state (a board below 40 by round 8, a trade request); every beat dealt comes from an active arc and is the week's big call; the state persists through save and load and an old save loads empty; a 10-season Sim-the-week career (three on CI; COACH_ARCS_SEASONS overrides) writes its story log to tests/output/coach_arcs_story.txt (not committed) |
 
 By area:
 
 - `MatchSim.gd`, `MatchNotes.gd`: `match_game`, `matchday`, `roles`; add `pressure` for pressure changes. `calibration` and `balance` only when you changed scoring or ratings (they are the slow ones).
 - `UiKit.gd` or any screen: `career_ui`, plus that screen's own suite (`draft_ui`, `intake_ui`, `matchday`, `match_visual`).
 - The draft, prospects or potential: `draft`, `intake`, `potential`, `ai`.
-- Contracts, money or trades: `contracts`, `save`.
+- Contracts, money or trades: `contracts`, `recruit_undo`, `save`.
 - Anything stored on a player or a club: `save` as well, so an old career still loads.
 - Coaches and staff: `coaches`, `coach_market`, `coach_pathway`, `coach_effects`.
 

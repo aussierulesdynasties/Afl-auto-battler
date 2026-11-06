@@ -694,31 +694,32 @@ func _test_music_player() -> void:
 	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index("Master")), "Mute silences the music")
 	_state.set_sounds_muted(false)
 	_check(not AudioServer.is_bus_mute(AudioServer.get_bus_index("Master")), "Sound back on brings it back")
-	# FL-004: music and crowd levels, each on its own bus under Master, saved.
+	# Row 98: the music keeps its own bus under Master; one Volume on Master sets every sound.
 	_check(player.bus == "Music" and AudioServer.get_bus_send(AudioServer.get_bus_index("Music")) == "Master",
-			"The music has its own level, under Mute sounds")
-	# The Settings sheet (a real control) lists Music only when there is music to turn down.
+			"The music plays on its own bus, under Mute and Volume")
 	var host := Control.new()
 	root.add_child(host)
 	var options = load("res://scripts/ui/OptionsSheet.gd")
 	var sheet: Control = options.open(host, false)
-	var music_row := sheet.find_child("SettingsMusic", true, false)
-	_check(sheet.find_child("SettingsCrowd", true, false) != null, "The Settings sheet is built")
-	_check((music_row == null) == (mm.get("TRACK_PATHS") as Array).is_empty(),
-			"The Music option is hidden while the playlist is empty")
+	_check(sheet.find_child("SettingsVolume", true, false) is HSlider
+			and sheet.find_child("SettingsMusic", true, false) == null
+			and sheet.find_child("SettingsCrowd", true, false) == null
+			and sheet.find_child("SettingsButtonSounds", true, false) == null,
+			"Settings has one Volume slider, no level per sound")
 	host.queue_free()
-	var crowd := AudioServer.get_bus_index(AudioLevels.bus(AudioLevels.CROWD))
-	_state.set_crowd_level("quiet")
-	_check(_state.crowd_level() == "quiet" and is_equal_approx(AudioServer.get_bus_volume_db(crowd), AudioLevels.QUIET_DB)
-			and not AudioServer.is_bus_mute(crowd), "Crowd: quiet turns it down and is remembered")
-	_state.set_crowd_level("off")
-	_check(AudioServer.is_bus_mute(crowd), "Crowd: off silences it")
-	_state.set_music_level("off")
-	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index("Music")) and _state.music_level() == "off", "Music: off silences it")
-	_state.set_crowd_level("nonsense")
-	_check(_state.crowd_level() == "normal" and not AudioServer.is_bus_mute(crowd)
-			and is_equal_approx(AudioServer.get_bus_volume_db(crowd), 0.0), "A level it doesn't know is normal")
-	_state.set_music_level("normal")
+	var master := AudioServer.get_bus_index("Master")
+	_state.set_volume(30)
+	_check(_state.volume() == 30 and is_equal_approx(AudioServer.get_bus_volume_db(master), linear_to_db(0.3)),
+			"Volume 30% turns Master down and is remembered")
+	_state.set_volume(0)
+	_check(AudioServer.get_bus_volume_db(master) <= -79.0, "Volume 0 is silent")
+	_state.set_volume(250)
+	_check(_state.volume() == 100 and is_equal_approx(AudioServer.get_bus_volume_db(master), 0.0),
+			"A volume past full is full")
+	for name in ["Music", "Crowd", "Interface"]:
+		var b := AudioServer.get_bus_index(AudioLevels.bus(name))
+		_check(not AudioServer.is_bus_mute(b) and is_equal_approx(AudioServer.get_bus_volume_db(b), 0.0),
+				"%s plays at full under the one Volume" % name)
 	# The crowd says each thing once, and a behind doesn't cut off a roar.
 	var cs := CrowdSound.new()
 	root.add_child(cs)
