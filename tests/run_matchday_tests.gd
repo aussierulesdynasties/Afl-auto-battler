@@ -75,6 +75,7 @@ func _run() -> void:
 	_t("_test_broken_calls")
 	await _t("_test_vignettes_off_match")
 	await _t("_test_match_day_setup")
+	await _t("_test_side_keeps_calls")
 	await _t("_test_match_way_poster")
 	_t("_test_appearance")
 	# Battery: nothing is redrawn unless it changes, and never above 60 fps.
@@ -2586,6 +2587,154 @@ func _test_match_day_setup() -> void:
 	_state.pending_sim = null
 	_state.side_from_match = false
 	await _settle()
+
+
+## Director's bug (2026-11-06): the calls you set on the match-day setup are
+## still set after Change the side, on screen and in the match; a call the new
+## side breaks (a dropped player) goes back to the assistant's pick for that
+## call only. Real taps (tests/tap.gd).
+func _test_side_keeps_calls() -> void:
+	_state.set_vignettes_on(false)
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	root.size = Vector2i(390, 844)
+	router.stack = ["hub"]
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	hub.call("_on_play_match")
+	await _settle()
+	var ms: Node = current_scene
+	var sim = _state.pending_sim
+	var side: int = sim.moment_side
+	var taps := []
+	# Every call away from what the sheet opened with.
+	var plan := "attacking" if _state.club_plan != "attacking" else "contest"
+	await _tap_named(ms, "PlanPicker_" + plan, taps)
+	await _tap_named(ms, "PepPicker_fire_up", taps)
+	var tag := _first_pick(ms.find_child("TagPicker", true, false), "TagPickerGrid_")
+	await _tap_named(ms, "TagPickerGrid_" + tag, taps)
+	var tagger := _first_pick(ms.find_child("TaggerPicker", true, false), "TaggerPickerGrid_")
+	await _tap_named(ms, "TaggerPickerGrid_" + tagger, taps)
+	var def_was := ""
+	var def_key := ""
+	for k in ["both", "man", "loose", "cover"]:
+		if ms.find_child("DefenceSetupPicker_" + k, true, false) == null:
+			continue
+		if _is_chosen(ms, "DefenceSetupPicker_" + k):
+			def_was = k
+		elif def_key == "":
+			def_key = k
+	await _tap_named(ms, "DefenceSetupPicker_" + def_key, taps)
+	# A key match-up changed, to a defender who isn't a loose man.
+	var change: Control = ms.find_child("ChangeMatchup", true, false)
+	var fid := str(change.get_parent().name).trim_prefix("BreakMatchup_") if change != null else ""
+	var avoid := {str(sim.duels[side].get(fid, "")): true, str(sim.interceptor[side]): true}
+	var loose_cands: Array = load("res://scripts/sim/Matchups.gd").interceptor_candidates(load("res://scripts/sim/Matchups.gd").defenders(sim.squads[side].ground))
+	if not loose_cands.is_empty():
+		avoid[str(loose_cands[0]["id"])] = true
+	await _tap_named(ms, "ChangeMatchup", taps)
+	var picked := ""
+	var chooser: Node = ms.find_child("MatchupChooser", true, false)
+	if chooser != null:
+		for b in chooser.find_children("Defender_*", "Button", true, false):
+			var id := str(b.name).trim_prefix("Defender_")
+			if picked == "" and not avoid.has(id):
+				picked = id
+		await _tap_named(chooser, "Defender_" + picked, taps)
+	_check(taps.is_empty() and tag != "" and tagger != "" and def_key != "" and picked != ""
+			and str(sim.duels[side].get(fid, "")) == picked,
+			"Real taps set a plan, pep talk, tag, tagger, defensive set-up (%s, was %s) and a match-up (%s)"
+			% [def_key, def_was, str(taps)])
+	var loose_now := str(sim.interceptor[side])
+	# Change the side, swap one midfielder nobody's call needs, come back.
+	var busy := {tagger: true, picked: true, loose_now: true}
+	var spare := ""
+	for p in sim.squads[side].ground:
+		if spare == "" and not busy.has(str(p["id"])) and str(p.get("role", "")) == "MID":
+			spare = str(p["id"])
+	await _tap_named(ms, "ChangeSide", taps)
+	var sel: Node = current_scene
+	_state.set_selection({"OUT": [spare]})
+	sel.call("_build")
+	await _settle()
+	await _tap_named(sel, "BackToMatchDay", taps)
+	ms = current_scene
+	var nsim = _state.pending_sim
+	var t: Dictionary = nsim.tactics[side]
+	_check(taps.is_empty() and ms != null and ms.name == "MatchScene" and nsim != sim
+			and not nsim.taking_part(side, spare),
+			"Back to match day with the new side (%s)" % str(taps))
+	_check(_is_chosen(ms, "PlanPicker_" + plan) and _is_chosen(ms, "PepPicker_fire_up")
+			and _is_chosen(ms, "TagPickerGrid_" + tag) and _is_chosen(ms, "TaggerPickerGrid_" + tagger)
+			and _is_chosen(ms, "DefenceSetupPicker_" + def_key),
+			"After Change the side every call is still selected on the sheet")
+	var row: Node = ms.find_child("BreakMatchup_" + fid, true, false)
+	var cell: Label = (row.get_meta("cells") as Dictionary)["def"] if row != null else null
+	_check(cell != null and cell.text == ms.call("_surname", load("res://scripts/ui/match/MatchNotes.gd")._pname(picked)),
+			"The changed match-up shows on the sheet (%s)" % (cell.text if cell else "-"))
+	_check(str(t.get("gameplan", "")) == plan and str(t.get("pep", "")) == "fire_up"
+			and str(t.get("tag_id", "")) == tag and str(t.get("tagger_id", "")) == tagger
+			and str(nsim.duels[side].get(fid, "")) == picked
+			and ((nsim._own[side] as Dictionary)["duels"] as Dictionary).has(fid)
+			and str(nsim.interceptor[side]) == loose_now,
+			"The new match holds the same calls (%s, loose %s/%s)" % [str(t), str(nsim.interceptor[side]), loose_now])
+	# Now drop the match-up's defender and the tagger.
+	await _tap_named(ms, "ChangeSide", taps)
+	sel = current_scene
+	_state.set_selection({"OUT": [spare, picked, tagger]})
+	sel.call("_build")
+	await _settle()
+	await _tap_named(sel, "BackToMatchDay", taps)
+	ms = current_scene
+	var nsim2 = _state.pending_sim
+	t = nsim2.tactics[side]
+	_check(taps.is_empty() and nsim2 != nsim and not nsim2.taking_part(side, picked)
+			and not nsim2.taking_part(side, tagger),
+			"Back again without the match-up's defender and the tagger (%s)" % str(taps))
+	_check(str(nsim2.duels[side].get(fid, "")) != picked
+			and not ((nsim2._own[side] as Dictionary)["duels"] as Dictionary).has(fid),
+			"The dropped defender's match-up goes back to the assistant's pick (%s)" % str(nsim2.duels[side].get(fid, "")))
+	_check(_is_chosen(ms, "TaggerPickerGrid_") and str(t.get("tagger_id", "")) == "",
+			"The dropped tagger's job goes back to the assistant's pick")
+	_check(_is_chosen(ms, "PlanPicker_" + plan) and _is_chosen(ms, "PepPicker_fire_up")
+			and _is_chosen(ms, "TagPickerGrid_" + tag) and _is_chosen(ms, "DefenceSetupPicker_" + def_key)
+			and str(t.get("gameplan", "")) == plan and str(t.get("pep", "")) == "fire_up"
+			and str(t.get("tag_id", "")) == tag,
+			"Every other call is kept, the tag on their player included (%s)" % str(t))
+	# The calls reach the match: Start plays them.
+	await _tap_named(ms, "StartQuarter", taps)
+	t = nsim2.tactics[side]
+	_check(taps.is_empty() and not _state.match_day_setup_open() and str(t.get("gameplan", "")) == plan
+			and str(t.get("pep", "")) == "fire_up" and str(t.get("tag_id", "")) == tag,
+			"Start plays the kept calls (%s %s)" % [str(taps), str(t)])
+	router.stack = ["hub"]
+	if current_scene != null:
+		current_scene.queue_free()
+	if is_instance_valid(hub):
+		hub.queue_free()
+	_state.pending_sim = null
+	_state.side_from_match = false
+	await _settle()
+
+
+## A real tap on the named control under `scene`; what went wrong goes in `taps`.
+func _tap_named(scene: Node, node_name: String, taps: Array) -> void:
+	var c: Control = scene.find_child(node_name, true, false) if scene != null else null
+	var why: String = await Tap.tap(c) if c != null else "missing"
+	if why != "":
+		taps.append("%s: %s" % [node_name, why])
+	await _settle()
+
+
+## Whether the named choice is the outlined (chosen) one.
+func _is_chosen(scene: Node, node_name: String) -> bool:
+	var b: Button = scene.find_child(node_name, true, false) if scene != null else null
+	return b != null and b.get_theme_stylebox("normal").border_width_left == 2
 
 
 # ---------------------------------------------------------------------------
