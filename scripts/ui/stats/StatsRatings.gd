@@ -186,8 +186,8 @@ static func _row(host: Control, row: Dictionary, rank: int, wide: bool) -> Contr
 	if beside:
 		nm.custom_minimum_size.x = name_w
 	top.add_child(nm)
-	# His club in its own colour where it reads (the guernsey beside him says the
-	# side where it does not); yours in bold.
+	# His club in its strongest real colour that reads (director, 2026-11-06);
+	# yours in bold.
 	var club_ink := StatsSide.code_ink(club)
 	if beside:
 		var cl := UiKit.line(club_text, UiKit.SECONDARY, club_ink, mine)

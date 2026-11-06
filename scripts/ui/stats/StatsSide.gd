@@ -23,11 +23,26 @@ static func ink(code: String) -> Color:
 
 
 ## A club's line under a name on a Season stats list: its strongest real
-## colour that reads (director, 2026-11-06), never white or grey.
+## colour that reads (director, 2026-11-06), never white or the pitch tint.
+## Read at 4.5:1 on every surface such a row sits on: the page and its lighter
+## streaks (up to PANEL_ALT), a pressed row (TEXT at 5%), and for your own
+## club its row's tint (its vivid colour at 22%).
 static func code_ink(code: String) -> Color:
 	if code == "" or not GameDB.clubs.has(code):
 		return UiKit.MUTED
-	return UiKit.club_code_colour(code)
+	return UiKit.club_code_colour(code, row_surfaces(code))
+
+
+## The surfaces a club's Season stats row can sit on (see code_ink).
+static func row_surfaces(code: String) -> Array:
+	var out := []
+	for base in [UiKit.BG, UiKit.PANEL, UiKit.PANEL_ALT]:
+		var b: Color = base
+		out.append(b)
+		out.append(b.lerp(UiKit.TEXT, 0.06))
+		if code == GameState.my_club:
+			out.append(b.lerp(UiKit.club_vivid(code), 0.22))
+	return out
 
 
 ## Your club's colour as ink (a section heading), else TEXT.

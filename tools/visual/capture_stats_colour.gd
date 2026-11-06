@@ -4,7 +4,8 @@ extends SceneTree
 ##   godot --path . --script tools/visual/capture_stats_colour.gd -- --out /tmp/sc [--size 390x844]
 ## A fresh Collingwood career plays three rounds. Writes <out>_players.png (the
 ## Players list by disposals), <out>_players_goals.png (by goals),
-## <out>_swatches.png (every club's code line on the panel and the page) and
+## <out>_swatches.png (every club's code line as a rival's row on PANEL_ALT and
+## as your own tinted row, with its worst contrast) and
 ## <out>_trophies.png (your seasons, this one at "Round 3 of 24").
 ## Never touches a real save.
 
@@ -53,7 +54,7 @@ func _run() -> void:
 		_save(out + str(pass_[1]))
 		ui.queue_free()
 		await _frames(2)
-	# Every club's code line, as the Players row sets it, on the panel and the page.
+	# Every club's code line, as the Players row sets it, rival and own.
 	var strip := _swatches(UK, db)
 	root.add_child(strip)
 	await _frames(6)
@@ -74,41 +75,46 @@ func _run() -> void:
 
 
 func _swatches(UK, db) -> Control:
+	var SS = load("res://scripts/ui/stats/StatsSide.gd")
+	var state = root.get_node("GameState")
+	var was: String = state.my_club
 	var bg := ColorRect.new()
 	bg.color = UK.BG
 	bg.size = Vector2(W, H)
 	var v := GridContainer.new()
 	v.columns = 2
-	v.position = Vector2(16, 12)
+	v.position = Vector2(16, 8)
 	v.add_theme_constant_override("h_separation", 0)
 	v.add_theme_constant_override("v_separation", 0)
 	bg.add_child(v)
 	var codes := ["ADE", "BRL", "CAR", "COL", "ESS", "FRE", "GEE", "GCS", "GWS", "HAW", "MEL", "NTH",
 			"PAD", "RIC", "STK", "SYD", "WCE", "WBD", "TAS", "CANB"]
-	for i in range(codes.size()):
-		var code: String = codes[i]
-		var c: Color = UK.club_code_colour(code)
-		var row := PanelContainer.new()
-		var flat := StyleBoxFlat.new()
-		flat.bg_color = UK.PANEL if (i / 2) % 2 == 0 else UK.BG
-		flat.content_margin_left = 8
-		flat.content_margin_right = 8
-		row.add_theme_stylebox_override("panel", flat)
-		row.custom_minimum_size = Vector2((W - 32) / 2.0, 0)
-		row.clip_contents = true
-		var h := HBoxContainer.new()
-		h.add_theme_constant_override("separation", 8)
-		row.add_child(h)
-		h.add_child(UK.club_marker(code, 22.0))
-		var who := VBoxContainer.new()
-		who.add_theme_constant_override("separation", 0)
-		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(who)
-		who.add_child(UK.ellipsis(db.club_short(code), UK.NAME, UK.TEXT, true))
-		who.add_child(UK.line("%s · 3 games" % code, UK.SECONDARY, c))
-		var hexl: Label = UK.line("#%s  %.1f:1" % [c.to_html(false).to_upper(), UK.contrast(c, UK.PANEL)], UK.FINE, UK.MUTED)
-		who.add_child(hexl)
-		v.add_child(row)
+	# Left: a rival's row on the lightest page surface (PANEL_ALT). Right: the
+	# same club as your own row, on its tint. Each with its worst contrast.
+	for code in codes:
+		for own in [false, true]:
+			state.my_club = code if own else ("CAR" if code == "COL" else "COL")
+			var c: Color = SS.code_ink(code)
+			var row := PanelContainer.new()
+			var flat := StyleBoxFlat.new()
+			flat.bg_color = UK.BG.lerp(UK.club_vivid(code), 0.22) if own else UK.PANEL_ALT
+			flat.content_margin_left = 8
+			flat.content_margin_right = 8
+			row.add_theme_stylebox_override("panel", flat)
+			row.custom_minimum_size = Vector2((W - 32) / 2.0, 0)
+			row.clip_contents = true
+			var h := HBoxContainer.new()
+			h.add_theme_constant_override("separation", 6)
+			row.add_child(h)
+			h.add_child(UK.club_marker(code, 18.0))
+			var who := VBoxContainer.new()
+			who.add_theme_constant_override("separation", 0)
+			who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			h.add_child(who)
+			who.add_child(UK.line("%s · %s" % [code, "your row" if own else "3 games"], UK.SECONDARY, c))
+			who.add_child(UK.line("#%s  %.1f:1" % [c.to_html(false).to_upper(), UK.min_contrast(c, SS.row_surfaces(code))], UK.FINE, UK.MUTED))
+			v.add_child(row)
+	state.my_club = was
 	return bg
 
 

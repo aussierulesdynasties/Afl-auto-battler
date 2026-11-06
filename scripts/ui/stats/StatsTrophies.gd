@@ -147,11 +147,6 @@ static func _in_progress() -> bool:
 	return true
 
 
-## The finals names by week, for a week your club did not play in.
-const FINALS_WEEKS := {1: "Wildcard round", 2: "Qualifying finals", 3: "Semi finals",
-		4: "Preliminary finals", 5: "Grand Final"}
-
-
 ## This season's Finals cell while it is being played (director, 2026-11-06):
 ## before the finals, how far the home-and-away season has gone ("Round 3 of
 ## 24"); during them, the final you last played ("Qualifying final"), or the
@@ -179,7 +174,9 @@ static func progress(season, club: String) -> String:
 	for res in weeks[weeks.size() - 1]:
 		if str(res.get("home", "")) == club or str(res.get("away", "")) == club:
 			return str(FINALS.get(str(res.get("tag", "")).substr(0, 2), ""))
-	return str(FINALS_WEEKS.get(weeks.size(), ""))
+	# Not in this week's finals: the week as the Fixture names it.
+	var names: Array = StatsFixture.FINALS_WEEKS
+	return str(names[weeks.size() - 1]) if weeks.size() <= names.size() else ""
 
 
 # ---------------------------------------------------------------------------

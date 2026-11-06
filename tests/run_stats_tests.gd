@@ -1885,35 +1885,55 @@ func _rank(row: Node) -> String:
 
 
 ## Every club's line under a name on the Season stats lists (director,
-## 2026-11-06): its strongest real colour, read at 4.5:1, never white or grey,
-## one of its real colours or one lightened with its hue kept. Collingwood has
-## no colour but black and white: its black, lightened, is the one grey.
+## 2026-11-06): its strongest real colour, never white or the pitch tint, read
+## at 4.5:1 on every surface its row can sit on (the page up to PANEL_ALT, a
+## pressed row, and your own club's tinted row), one of its real colours or
+## one lightened with its hue kept. Collingwood has no colour but black and
+## white: its black, lightened, is the one grey (pending the director).
 func _test_club_code_colours() -> void:
 	var UK = load("res://scripts/ui/UiKit.gd")
+	var SS = load("res://scripts/ui/stats/StatsSide.gd")
 	var db = root.get_node("GameDB")
 	var codes := ["ADE", "BRL", "CAR", "COL", "ESS", "FRE", "GEE", "GCS", "GWS", "HAW", "MEL", "NTH",
 			"PAD", "RIC", "STK", "SYD", "WCE", "WBD", "TAS", "CANB"]
+	var was: String = _state.my_club
 	var line := []
-	for code in codes:
-		var c: Color = UK.club_code_colour(code)
-		line.append("%s #%s" % [code, c.to_html(false).to_upper()])
-		_check(UK.contrast(c, UK.PANEL) >= 4.5 and UK.contrast(c, UK.BG) >= 4.5,
-				"%s's code reads at 4.5:1 on the panel and the page (%.2f)" % [code, UK.contrast(c, UK.PANEL)])
-		var real: Array = db.club_marker_colours(code)
-		var vivid := real.filter(func(r: Color) -> bool: return r.s >= UK.CODE_MIN_SAT)
-		if vivid.is_empty():
-			_check(code == "COL" and c.s < 0.01 and c.v < 0.9, "%s: no colour but black and white, so its black lightened" % code)
-			continue
-		_check(c.s >= UK.CODE_MIN_SAT and not (c.v > 0.9 and c.s < 0.15), "%s's code is a colour, not white or grey" % code)
-		var from_real := false
-		for r in vivid:
-			var col: Color = r
-			if c.is_equal_approx(col) or (absf(c.h - col.h) < 0.01 and c.v >= col.v - 0.01 and c.s <= col.s + 0.01):
-				from_real = true
-		_check(from_real, "%s's code is one of its real colours or one lightened, same hue (#%s)" % [code, c.to_html(false)])
-		_check(not db.club_colours(code)[2].is_equal_approx(c) or db.THREE_COLOUR_CLUBS.has(code),
-				"%s's code is not its pitch tint" % code)
+	# Each club both as a rival's row and as your own (tinted) row.
+	for own in [false, true]:
+		for code in codes:
+			_state.my_club = code if own else ("COL" if code != "COL" else "CAR")
+			var c: Color = SS.code_ink(code)
+			line.append("%s%s #%s" % [code, " (own)" if own else "", c.to_html(false).to_upper()])
+			var lo: float = UK.min_contrast(c, SS.row_surfaces(code))
+			_check(lo >= 4.5, "%s's code reads at 4.5:1 on every row surface%s (%.2f)" % [code, ", own club" if own else "", lo])
+			_check(not (c.v > 0.9 and c.s < 0.15), "%s's code is never white" % code)
+			var real: Array = db.club_marker_colours(code)
+			var vivid := real.filter(func(r: Color) -> bool: return r.s >= UK.CODE_MIN_SAT)
+			if vivid.is_empty():
+				_check(code == "COL" and c.s < 0.01 and c.v < 0.9, "%s: no colour but black and white, so its black lightened" % code)
+				continue
+			_check(c.s >= UK.CODE_MIN_SAT, "%s's code is a colour, not grey" % code)
+			var from_real := false
+			for r in vivid:
+				var col: Color = r
+				if c.is_equal_approx(col) or (absf(c.h - col.h) < 0.01 and c.v >= col.v - 0.01 and c.s <= col.s + 0.01):
+					from_real = true
+			_check(from_real, "%s's code is one of its real colours or one lightened, same hue (#%s)" % [code, c.to_html(false)])
+			_check(not db.club_colours(code)[2].is_equal_approx(c) or db.THREE_COLOUR_CLUBS.has(code),
+					"%s's code is not its pitch tint" % code)
+	_state.my_club = was
 	print("Club code colours: " + ", ".join(line))
+	# A Forge club whose colours are all pale never falls back to its white.
+	db.clubs["ZZF"] = {"code": "ZZF", "custom": true, "primary": Color("ffffff"),
+			"secondary": Color("f4f0e8"), "accent": Color("d8d8d0")}
+	var f: Color = SS.code_ink("ZZF")
+	_check(not (f.v > 0.9 and f.s < 0.15), "A pale Forge club's code is not white (#%s)" % f.to_html(false))
+	_check(UK.min_contrast(f, SS.row_surfaces("ZZF")) >= 4.5, "A pale Forge club's code reads")
+	db.clubs["ZZF"]["secondary"] = Color("1a6b3c")
+	f = SS.code_ink("ZZF")
+	_check(f.s >= UK.CODE_MIN_SAT and absf(f.h - Color("1a6b3c").h) < 0.01,
+			"A Forge club with one real colour among the pale: that colour, lightened (#%s)" % f.to_html(false))
+	db.clubs.erase("ZZF")
 
 
 ## This season's Finals cell in the trophy room: the round before the finals,
@@ -1932,7 +1952,7 @@ func _test_finals_cell() -> void:
 	se.finals["weeks"] = [[{"home": "GEE", "away": "STK", "tag": "WC1"}], [{"home": "COL", "away": "CAR", "tag": "QF1"}]]
 	se.finals["week"] = 3
 	_check(T.progress(se, "COL") == "Qualifying final", "During the finals: the final you played (%s)" % T.progress(se, "COL"))
-	_check(T.progress(se, "ADE") == "Qualifying finals", "Not in it: the week's name (%s)" % T.progress(se, "ADE"))
+	_check(T.progress(se, "ADE") == "Qualifying and elimination finals", "Not in it: the week as the Fixture names it (%s)" % T.progress(se, "ADE"))
 	se.finals["weeks"].append([{"home": "CAR", "away": "GEE", "tag": "SF1"}])
 	se.finals["weeks"].append([{"home": "CAR", "away": "SYD", "tag": "PF1"}])
 	se.finals["weeks"].append([{"home": "COL", "away": "SYD", "tag": "GF"}])
