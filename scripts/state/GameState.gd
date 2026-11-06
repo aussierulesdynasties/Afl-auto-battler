@@ -670,6 +670,10 @@ func saved_career_meta() -> Dictionary:
 ## Save if there is a career and no live match is half played. Mid-match the
 ## rest of the round is already on the ladder but the round has not closed,
 ## so the last save (from before the match) is the consistent one to keep.
+## Full saves written this run: tests count them to keep a tap to one save.
+var saves_written := 0
+
+
 func autosave() -> bool:
 	if not autosave_enabled or not has_career() or not pending_match.is_empty():
 		return false
@@ -691,6 +695,7 @@ func autosave_if_dirty() -> bool:
 func save_career() -> bool:
 	if not has_career():
 		return false
+	saves_written += 1
 	# The pre-season league draft is spent once the season starts (it holds a
 	# second copy of the whole player pool), so it is not written.
 	var keep_draft := draft != null and not (season != null and not draft.intake_mode)
@@ -1332,12 +1337,37 @@ func _season_to_save() -> Dictionary:
 	var sv := CareerSave.object_vars(season)
 	# The season's results keep every match's stat lines (StatBook); the
 	# season log keeps only scores, so no match is saved twice.
-	sv["results"] = CareerSave.slim_results(season.results, true)
+	sv["results"] = _slim_rounds()
 	var fin: Dictionary = season.finals.duplicate()
 	if fin.has("weeks"):
 		fin["weeks"] = CareerSave.slim_results(fin["weeks"], true)
 	sv["finals"] = fin
 	return sv
+
+
+## A played round never changes, so its slim copy (scores plus packed stat
+## lines, StatBook.pack: the bulk of a save's build late in a season) is
+## made once and reused by every later save. A round is looked up by the very
+## array the season holds; a load or a new season holds new arrays.
+var _slim_cache: Array = []   # [{"src": Array, "n": int, "out": Array}] by round
+
+
+func _slim_rounds() -> Array:
+	var out := []
+	var rounds: Array = season.results
+	if _slim_cache.size() > rounds.size():
+		_slim_cache.resize(rounds.size())
+	for i in range(rounds.size()):
+		var src: Array = rounds[i]
+		var hit: Dictionary = _slim_cache[i] if i < _slim_cache.size() else {}
+		if hit.is_empty() or not is_same(hit["src"], src) or int(hit["n"]) != src.size():
+			hit = {"src": src, "n": src.size(), "out": CareerSave.slim_results(src, true)}
+			if i < _slim_cache.size():
+				_slim_cache[i] = hit
+			else:
+				_slim_cache.append(hit)
+		out.append(hit["out"])
+	return out
 
 
 ## Your list and the league lists are, at different points of a career, the
@@ -1394,7 +1424,12 @@ func reset() -> void:
 	# and clearing it let a worker rebuild it and crash (CI 38237786675).
 	Prospects.forget_cache()
 	StoryDeck.reload()
-	GameDB.reload()
+	# Boot already loaded the data and no career has touched it yet (the cold
+	# Continue, or the first New career): reuse it rather than parse every
+	# file again. A career changes the player dicts in place, so it is spent.
+	if not GameDB.pristine:
+		GameDB.reload()
+	GameDB.pristine = false
 	# Nothing of the last career's market or caches carries into this one
 	# (a second career in one process played its off-season differently).
 	market_stats = {}
@@ -1767,6 +1802,7 @@ func choose_real_club(code: String) -> void:
 
 
 func begin_draft() -> void:
+	GameDB.pristine = false   # a career's data from here on: the next reset() reloads
 	var seed := _clock_seed(1)
 	# The clubs of the first playable season (the founding eighteen in 2027;
 	# expansion clubs arrive later with their own lists). The pool is the
@@ -1941,7 +1977,7 @@ func finish_intake_draft() -> bool:
 		draft_meeting_year = 0
 		season_year = GameDB.START_YEAR
 		start_season(my_club, league_lists.get(my_club, []))
-		open_preseason()
+		open_preseason(false)   # saved once, below
 		# The Rookie Draft follows the opening National Draft too, in its order.
 		RookieList.open_draft(self, opening_order(GameDB.active_clubs(season_year)))
 		autosave()
@@ -2114,8 +2150,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	_build_season_wrap(next_year)
 	OwnProspect.check(self)
 	preseason = {}
-	open_preseason()
-	autosave()
+	open_preseason(false)   # the caller saves once, when the rollover is done
 
 
 ## The off-season, wrapped up for your club before Round 1: who came, who
@@ -2266,6 +2301,7 @@ func start_next_season() -> bool:
 		draft = null  # a completed career draft sitting in the slot is spent
 	_ensure_league_lists()
 	_start_next_season(season_year + 1, 0)
+	autosave()
 	return true
 
 
@@ -2375,6 +2411,7 @@ func _next_jumper_number(list: Array) -> int:
 ## Commit the completed league draft and build the season from every club's
 ## new list. Original club lists are only used by the legacy/test fallback.
 func start_season(club_code: String, list: Array) -> void:
+	GameDB.pristine = false   # a career's data from here on: the next reset() reloads
 	my_club = club_code
 	var lists := {}
 	# A league re-draft moves players between clubs: each arrives carrying his
@@ -2929,7 +2966,9 @@ func _stamp_conditioning() -> void:
 ## plan, an AI club's by its phase). Called at the rollover and when a new
 ## career's first season is made; start_season itself stays the plain "build
 ## the season" step tests and tools use. Once a year; never mid-season.
-func open_preseason() -> void:
+## `save`: false when the caller saves once itself at the end of a bigger
+## step (the rollover), so one tap writes the career once, not twice.
+func open_preseason(save := true) -> void:
 	if season == null or season.round_index != 0 or season.is_regular_done():
 		return
 	if int(preseason.get("year", 0)) == season_year:
@@ -2962,7 +3001,8 @@ func open_preseason() -> void:
 		_slip_plan_known()
 	_ensure_plan_known()
 	mark_dirty()
-	autosave()
+	if save:
+		autosave()
 
 
 ## The mean age of the side a club would pick (what _club_phase reads).
@@ -7702,6 +7742,7 @@ var _frozen_fingerprint := ""
 
 func _freeze_league(on: bool) -> void:
 	_frozen_fingerprint = ""
+	TradeValue.remember_bars(on)
 	if on:
 		_frozen_fingerprint = _league_fingerprint()
 

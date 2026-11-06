@@ -1536,10 +1536,11 @@ func _close_sim_confirm() -> void:
 
 
 func _on_sim_round() -> void:
-	GameState.advance()
-	_build()
-	if not GameState.last_results.is_empty():
-		_show_results(GameState.last_results)
+	UiKit.run_covered(self, "Playing the round...", func():
+		GameState.advance()
+		_build()
+		if not GameState.last_results.is_empty():
+			_show_results(GameState.last_results))
 
 
 ## Router back hook: close the results popup before leaving the hub.
@@ -2015,8 +2016,9 @@ func _on_intake_draft() -> void:
 
 
 func _start_intake_draft() -> void:
-	if GameState.begin_intake_draft():
-		Router.go("draft")
-		return
-	if GameState.start_next_season():
-		_build()
+	UiKit.run_covered(self, "Starting the new season...", func():
+		if GameState.begin_intake_draft():
+			Router.go("draft")
+			return
+		if GameState.start_next_season():
+			_build())
