@@ -12,15 +12,17 @@ const GAIN := "Gain: %s"
 const COST := "Cost: %s"
 
 # The hub's options beside an opposition fact (FactOptions).
-const TAG_GAIN := "he keeps %s of his ball on a Tagger, %s on anyone else"
+const TAG_GAIN := "%s keeps %s of his ball on a Tagger, %s on anyone else"
+## Who the tag gain is about when the fact names nobody (a midfield fact).
+const TAG_TARGET_ANY := "the man you tag"
 const TAG_COST := "your tagger gives up %s of his own ball and contest work"
-const MATCHUP_GAIN := "on %s he marks about %s of contested balls"
+const MATCHUP_GAIN := "with %s on him, %s marks about %s of contested balls"
 const MATCHUP_COST_NEXT := "moving %s frees their next forward"
 const MATCHUP_COST_LOOSE := "%s can no longer play loose"
 const MINDER_GAIN := "their loose man reaches %s of his contests, %s with a Defensive forward"
 const MINDER_COST := "your forward is a target %s less often"
 const LOOSE_GAIN := "a top reader gets to %s of their entries"
-const LOOSE_COST := "he leaves his man on %s of entries, and space opens if he is late"
+const LOOSE_COST := "your loose defender leaves his man on %s of entries, and space opens if he is late"
 const PLAN_GAIN := {
 	"attacking": "shots %s more accurate, %s more ground a kick",
 	"defensive": "%s more pressure where they start, their shots %s less accurate",
@@ -108,8 +110,11 @@ static func plan_lines(plan: String) -> Array:
 	return ["", ""]
 
 
-static func tag_lines() -> Array:
-	return [TAG_GAIN % [pct(Roles.TAG_WITH_TAGGER), pct(Roles.TAG_PLAIN)], TAG_COST % tag_gives_pct()]
+## The tag's [gain, cost]; `target` names the man tagged (their player the
+## fact is about), or "" when the fact names nobody.
+static func tag_lines(target := "") -> Array:
+	var who := target if target != "" else TAG_TARGET_ANY
+	return [TAG_GAIN % [who, pct(Roles.TAG_WITH_TAGGER), pct(Roles.TAG_PLAIN)], TAG_COST % tag_gives_pct()]
 
 
 ## The share of his own game a tagger gives up: his contest worth

@@ -826,7 +826,10 @@ func _run() -> void:
 	await _t("_test_season_awards")
 	await _t("_test_back_arrow_taps")
 	await _t("_test_finals_card_taps")
+	await _t("_test_sacked_job_choice_taps")
 	await _t("_test_sim_asks_only_before_your_match")
+	await _t("_test_busy_cover")
+	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
 	_t("_test_type_roles")
@@ -1709,6 +1712,8 @@ Your career stays on this device.",
 	if ft_cont != null:
 		ft_cont.emit_signal("pressed")
 		await _settle()
+	# A press conference still pending opens over the hub as its own screen.
+	await _past_press()
 	var xp_after := 0
 	for p in _state.my_list:
 		xp_after += int(p.get("xp", 0))
@@ -2901,6 +2906,96 @@ func _test_sim_asks_only_before_your_match() -> void:
 	root.size = ask_size_before
 
 
+## Sim the week on a phone (2026-11-07, Android: the hub froze with no sign
+## of life while a round played out): a dimmer says what is happening, takes
+## every tap until the round is done, and plays the round once.
+func _test_busy_cover() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_state.set_confirm_sim_round(false)
+	_state.reset()
+	_state.career_seed = 4402
+	_state.replay_seed = 4402
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_state.week_events = []
+	var sea = _state.season
+	var r0: int = sea.round_index
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var hub := current_scene
+	hub.call("_on_sim_round")
+	await process_frame
+	var cover := hub.find_child("BusyCover", true, false) as Control
+	var say := hub.find_child("BusyText", true, false) as Label
+	_check(cover != null and say != null and say.text == "Playing the round..." and sea.round_index == r0,
+			"Sim the week: the dimmer says the round is being played before the round runs")
+	# The dimmer is over Sim the week and stops a finger there. (A real tap
+	# cannot be timed into the step: the round plays within its settle frames.)
+	var sim := hub.find_child("SimRound", true, false) as Control
+	_check(cover != null and sim != null and cover.mouse_filter == Control.MOUSE_FILTER_STOP
+			and cover.get_global_rect().has_point(Tap.screen_point(sim))
+			and cover.get_index() == cover.get_parent().get_child_count() - 1,
+			"A second tap while the round plays is taken by the dimmer, not Sim the week")
+	await _settle()
+	_check(sea.round_index == r0 + 1 and hub.find_child("BusyCover", true, false) == null,
+			"The round is played once and the dimmer is gone (round %d -> %d)" % [r0, sea.round_index])
+	for i in range(3):
+		if not hub.call("handle_back"):
+			break
+		await _settle()
+	sim = hub.find_child("SimRound", true, false) as Control
+	var why: String = await Tap.tap(sim) if sim != null else "missing"
+	await _settle()
+	_check(why == "" and sea.round_index == r0 + 2 and hub.find_child("BusyCover", true, false) == null,
+			"A finger's tap on Sim the week plays the next round behind the dimmer (%s)" % why)
+	_router.stack = ["main"]
+	_router.go("main")
+	await _settle()
+	root.size = size_before
+	# The setting is saved and later suites read it: put it back.
+	_state.set_confirm_sim_round(true)
+
+
+## My List on a phone: switching between Shape and Full list shows the pane
+## already built instead of building the page again (a perf guard: Android
+## stalled on every switch).
+func _test_list_tabs_kept() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_state.reset()
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_router.stack = ["main", "hub"]
+	_router.go("list")
+	await _settle()
+	var list := current_scene
+	var full := list.find_child("ListTabFull", true, false) as Control
+	var why: String = await Tap.tap(full)
+	await _settle()
+	var added := [0]
+	var count := func(_n): added[0] += 1
+	node_added.connect(count)
+	var shape: Control = null
+	for t in list.find_children("ListTabShape", "", true, false):
+		if (t as Control).is_visible_in_tree():
+			shape = t
+	why += await Tap.tap(shape)
+	await _settle()
+	full = null
+	for t in list.find_children("ListTabFull", "", true, false):
+		if (t as Control).is_visible_in_tree():
+			full = t
+	why += await Tap.tap(full)
+	await _settle()
+	node_added.disconnect(count)
+	_check(why == "" and added[0] < 10 and list.find_child("ShapeScroll", true, false) != null,
+			"A tab switched back and forth on My List builds the page again for neither (%d nodes added; %s)" % [added[0], why])
+	_router.stack = ["main"]
+	_router.go("main")
+	await _settle()
+	root.size = size_before
+
+
 func _test_season_awards() -> void:
 	_state.reset()
 	_state.start_season("COL", _db.club_list("COL"))
@@ -3482,3 +3577,106 @@ func _test_restore_earlier_save_tap() -> void:
 	_check(_router.current() == "hub" and _state.season != null and _state.season.round_index == 0,
 			"Restore opens the career at round 1 again")
 	_state.delete_saved_career()
+
+
+## Row 111: a sacked coach chooses from the clubs with a job open, or retires
+## with his record read out. Real taps on a 390 phone.
+func _sacked_with_offers() -> void:
+	_state.reset()
+	_state.career_seed = 4403
+	_state.replay_seed = 4403
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var arcs = load("res://scripts/sim/CoachArcs.gd")
+	var moves = load("res://scripts/state/ClubMoves.gd")
+	_state.coach_arcs = arcs.ensure(_state.coach_arcs)
+	var st: Dictionary = _state.coach_arcs
+	_state.board["sacked"] = true
+	st["sack"] = {"from": "FRE", "year": int(_state.season_year), "heir": ""}
+	st["offers"] = moves._jobs_after_sack(_state, st)
+	_state.week_events = []
+
+
+## A finished career's hub: the season title, Settings and the record, with
+## no club standing, pick or board above it.
+func _check_record_only(why: String) -> void:
+	for gone in ["SeasonBlock", "LadderPosition", "DraftPickLine", "HubAlmanac", "BoardLine", "BoardWarning", "ReprieveLine"]:
+		_check(current_scene.find_child(gone, true, false) == null, "%s: the hub shows no %s" % [why, gone])
+	_check(current_scene.find_child("HubSettings", true, false) != null and current_scene.find_child("SackedCard", true, false) != null,
+			"%s: Settings and the card stay" % why)
+
+
+func _test_sacked_job_choice_taps() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	var moves = load("res://scripts/state/ClubMoves.gd")
+	_sacked_with_offers()
+	var jobs: Array = moves.offers(_state)
+	_check(jobs.size() == 3, "A sacked coach is offered three clubs with a job open (%d)" % jobs.size())
+	# The board's verdict is in: its old warning and the club's pick are stale.
+	_state.board["warned"] = true
+	_state.board["confidence"] = 25
+	# The carnival week's sheet is the club's business, not a sacked coach's.
+	_state.midseason["year"] = _state.season_year
+	_state.midseason["carnival"] = [{"name": "Riley Bowman", "pos": "midfielder", "state": "Vic Metro"}]
+	_state.midseason["carnival_seen"] = false
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	_check(root.find_child("CarnivalWeek", true, false) == null and current_scene.find_child("CarnivalWeek", true, false) == null,
+			"A sacked coach is not shown the carnival week's sheet")
+	for stale in ["BoardLine", "BoardWarning", "DraftPickLine"]:
+		_check(current_scene.find_child(stale, true, false) == null, "While he chooses, the hub shows no stale %s" % stale)
+	_check(current_scene.find_child("SackedCard", true, false) != null, "The hub leads with the sacked card")
+	_check(current_scene.find_child("SackedSeasonReview", true, false) != null and current_scene.find_child("SackedMainMenu", true, false) != null,
+			"While he chooses, the season review and the main menu are still on the card")
+	for o in jobs:
+		var nm: Label = current_scene.find_child("JobOfferName_%s" % str(o["code"]), true, false)
+		_check(nm != null and nm.get_line_count() == 1 and nm.size.x > 100,
+				"%s's name reads on one line across the card, not a letter at a time" % str(o["name"]))
+	var code: String = str(jobs[-1]["code"]) if not jobs.is_empty() else ""
+	var take: Button = current_scene.find_child("TakeJob_%s" % code, true, false)
+	_check(take != null and take.get_combined_minimum_size().x <= take.size.x + 0.5,
+			"Each club with a job open has a Take button that reads whole on a 390 phone")
+	var why: String = await Tap.tap(take) if take != null else "missing"
+	await _settle()
+	_check(why == "" and not _state.is_sacked() and str(_state.coach_arcs["move"].get("to", "")) == code,
+			"A finger on Take the job ends the sacking and the move is set for %s (%s)" % [code, why])
+	_check(current_scene.find_child("SackedCard", true, false) == null, "The hub rebuilds without the sacked card")
+	# A fresh sacking: retire instead, and the record is read out.
+	_sacked_with_offers()
+	_router.go("hub")
+	await _settle()
+	var retire: Button = current_scene.find_child("RetireCoach", true, false)
+	why = await Tap.tap(retire) if retire != null else "missing"
+	await _settle()
+	var sheet: Control = current_scene.find_child("RetireSheet", true, false)
+	if sheet == null:
+		sheet = root.find_child("RetireSheet", true, false)
+	_check(why == "" and sheet != null, "A finger on Retire from coaching asks first (%s)" % why)
+	var yes: Button = sheet.find_child("RetireConfirm", true, false) if sheet != null else null
+	why = await Tap.tap(yes) if yes != null else "missing"
+	await _settle()
+	_check(why == "" and moves.retired(_state) and _state.is_sacked(), "A finger on the confirm retires the coach (%s)" % why)
+	var rec: Control = current_scene.find_child("CoachRecord", true, false)
+	var parts := []
+	if rec != null:
+		_texts(rec, parts)
+	var text := " | ".join(parts)
+	_check(rec != null and text.contains("Your record") and text.contains(str(_db.club_name("FRE"))) and text.contains("season"),
+			"The retired card reads out his record (%s)" % text.replace("\n", " | "))
+	_check(not _state.start_next_season(), "A retired coach's season does not roll on")
+	_check_record_only("retired")
+	# Sacked with no second chance left: the same, the record alone.
+	_sacked_with_offers()
+	_state.coach_arcs["offers"] = []
+	_state.coach_arcs["coach"]["reprieves"] = 0
+	_state.board["warned"] = true
+	_state.board["confidence"] = 25
+	_router.go("hub")
+	await _settle()
+	_check(moves.career_over(_state) and current_scene.find_child("CoachRecord", true, false) != null,
+			"A career that is over reads out the record")
+	_check_record_only("career over")
+	_state.board["sacked"] = false
+	_state.coach_arcs = {}
+	root.size = size_before

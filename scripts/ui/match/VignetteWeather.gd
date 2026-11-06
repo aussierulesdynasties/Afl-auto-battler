@@ -137,28 +137,79 @@ static func draw_wind_flat(ci: CanvasItem, rect: Rect2, t: float) -> void:
 		ci.draw_polyline_colors(pts, cols, 1.2, true)
 
 
-## Wet turf holds the lights: under each light tower in view, a long faint streak of
-## its light on the grass, running down toward the camera as light on wet grass does.
+## Wet turf holds the lights: for each light tower in view, a soft pool of glare on the
+## grass between the camera and the tower, where light off a wet surface comes back to the
+## eye. A low-contrast patch lying flat on the ground (an ellipse in oval metres, seen in
+## perspective), brightest in the middle and fading to nothing at its edge: no streaks and
+## no edge, so it never reads as a beam, an object or a hole. Drawn with the ground, under
+## the players.
+const GLARE := Color(0.84, 0.9, 1.0)
+const GLARE_ALPHA := 0.14
+## How far from the camera toward the tower the pool lies (0 at the camera, 1 at the
+## boundary), and its size: across the line of sight a share of that distance, and
+## longer along it.
+const GLARE_AT := 0.35
+const GLARE_ACROSS := 0.2
+const GLARE_ALONG := 1.5
+
 static func draw_sheen(ci: CanvasItem, cam: VignetteGround.Cam, towers: Array, a_axis: float, l_axis: float) -> void:
+	var to_oval := cam.to_scene.affine_inverse()
+	var eye: Vector2 = to_oval * cam.pos
+	var points := PackedVector2Array()
+	var colors := PackedColorArray()
+	var indices := PackedInt32Array()
+	var rings := [[0.0, 1.0], [0.4, 0.62], [0.75, 0.22], [1.0, 0.0]]     # radius share, brightness
+	var seg := 32
 	for p in towers:
 		var tower: Vector2 = p
-		# Where the reflection starts: the boundary on the way to the tower.
-		var at: Vector2 = tower.normalized()
-		at = Vector2(at.x * a_axis, at.y * l_axis) * 0.97
-		var s := cam.oval(at, 0.0)
-		if s.z <= 0.0:
+		# Only towers in front of the camera, roughly within its view.
+		var seen := cam.local(cam.to_scene * tower)
+		if seen.y <= 0.0 or absf(seen.x) > seen.y * 1.2:
 			continue
-		# A few thin streaks, not a beam: light broken up by the wet grass.
-		var down := 0.26 * cam.f
-		for k in range(3):
-			var dx := (float(k) - 1.0) * 1.4 * s.z
-			var w := maxf(0.8, 0.35 * s.z)
-			var lit := Color(0.88, 0.92, 1.0, 0.11 - 0.03 * absf(float(k) - 1.0))
-			var none := Color(0.88, 0.92, 1.0, 0.0)
-			var x := s.x + dx
-			ci.draw_polygon(PackedVector2Array([Vector2(x - w, s.y), Vector2(x + w, s.y),
-					Vector2(x + w * 1.6 + dx * 0.5, s.y + down), Vector2(x - w * 1.6 + dx * 0.5, s.y + down)]),
-					PackedColorArray([lit, lit, none, none]))
+		# The boundary on the way to the tower, and the pool part way out to it.
+		var dir := tower.normalized()
+		var edge := Vector2(dir.x * a_axis, dir.y * l_axis)
+		var reach := edge - eye
+		var dist := reach.length()
+		if dist < 8.0:
+			continue
+		var along := reach / dist
+		var across := Vector2(-along.y, along.x)
+		var centre := eye + reach * GLARE_AT
+		var r_across := clampf(dist * GLARE_ACROSS, 5.0, 16.0)
+		var r_along := r_across * GLARE_ALONG
+		var ok := true
+		var base := points.size()
+		for ring in rings:
+			var share: float = ring[0]
+			var c := Color(GLARE, GLARE_ALPHA * float(ring[1]))
+			var n := 1 if share == 0.0 else seg
+			for k in range(n):
+				var ang := TAU * float(k) / float(seg)
+				var at := centre + (along * cos(ang) * r_along + across * sin(ang) * r_across) * share
+				var sp := cam.oval(at, 0.0)
+				if sp.z <= 0.0:
+					ok = false
+					break
+				points.append(Vector2(sp.x, sp.y))
+				colors.append(c)
+			if not ok:
+				break
+		if not ok:
+			points.resize(base)
+			colors.resize(base)
+			continue
+		# The middle fans out to the first ring; each ring joins the next.
+		for k in range(seg):
+			indices.append_array([base, base + 1 + k, base + 1 + (k + 1) % seg])
+		for r in range(1, rings.size() - 1):
+			var inner := base + 1 + (r - 1) * seg
+			var outer := inner + seg
+			for k in range(seg):
+				var k2 := (k + 1) % seg
+				indices.append_array([inner + k, outer + k, outer + k2, inner + k, outer + k2, inner + k2])
+	if not indices.is_empty():
+		RenderingServer.canvas_item_add_triangle_array(ci.get_canvas_item(), indices, points, colors)
 
 
 ## A flag on a pole in a club's colours (the top half colour, the bottom half second),
