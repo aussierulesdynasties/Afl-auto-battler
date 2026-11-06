@@ -191,6 +191,7 @@ func _build() -> void:
 		page.add_child(_summary())
 		page.add_child(_list_panel())
 		_list_scroll = UiKit.scroll(page)
+		_list_scroll.name = "ListScroll"
 		_list_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 		_root.add_child(_list_scroll)
 		if not _bulk_selected.is_empty():
@@ -401,6 +402,7 @@ func _list_panel() -> Control:
 		v.add_child(rows)
 	else:
 		_list_scroll = UiKit.scroll(rows)
+		_list_scroll.name = "ListScroll"
 		v.add_child(_list_scroll)
 	_fill_rows(rows)
 	return panel
@@ -1085,6 +1087,7 @@ func _detail_panel() -> Control:
 		outer.add_child(back)
 	var body := UiKit.vbox(6)
 	_detail_scroll = UiKit.scroll(body)
+	_detail_scroll.name = "DetailScroll"
 	outer.add_child(_detail_scroll)
 	# Who he is and where he stands.
 	body.add_child(_name_header(p))
