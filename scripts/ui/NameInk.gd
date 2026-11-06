@@ -219,10 +219,14 @@ static func rich(fs := UiKit.BODY, color := UiKit.AUTO_COLOUR, bold := false, wr
 	return r
 
 
+## Meta on a container whose whole area is one tap: names inside it open nothing.
+const NO_LINKS := "name_links_off"
+
+
 static func _link_names(r: RichTextLabel) -> void:
 	var n := r.get_parent()
 	while n != null:
-		if n is BaseButton:
+		if n is BaseButton or n.has_meta(NO_LINKS):
 			return
 		n = n.get_parent()
 	NameLink.wire(r)

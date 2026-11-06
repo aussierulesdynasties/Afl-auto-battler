@@ -89,7 +89,8 @@ func _run() -> void:
 	(gs.season.lists["MEL"] as Array).append(big)
 	HB.sweep(gs)
 	gs.honour_roll.append({"year": y - 1, "my_club": "FRE", "premier": "",
-			"my_bf": [{"id": "ghost1", "name": "Jack Hartley"}]})
+			"my_bf": [{"id": "ghost1", "name": "Jack Hartley"}],
+			"brownlow": [{"id": "ghost1", "name": "Jack Hartley", "club": "FRE"}]})
 	gs.departed_names["ghost1"] = {"generic_name": "Jack Hartley", "year": y - 1}
 	HB.backfill(gs, func(id: String) -> Dictionary: return gs._any_player(id))
 
