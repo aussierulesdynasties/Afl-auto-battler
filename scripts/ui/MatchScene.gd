@@ -144,6 +144,7 @@ func _ready() -> void:
 	# Whose first AFL goal the feed can say, if it comes today (MatchNotes).
 	if _interactive and not _is_practice(_res):
 		_duel_mem["first_goal"] = GameState.first_goal_candidates()
+		_duel_mem["career_high"] = GameState.career_high_candidates()
 	_pitch.event_played.connect(_on_event)
 	_pitch.finished.connect(_on_finished)
 	_pitch.ends_changed.connect(_on_ends_changed)
@@ -3273,8 +3274,11 @@ func _on_event(ev: Dictionary) -> void:
 	_update_scoreboard(ev)
 	_track_momentum(ev)
 	_feed_add(ev)
-	_duel_feed(ev)
-	_story_feed(ev)
+	# A career best at a goal is that goal's one extra line: no battle or
+	# story line stacks on it.
+	if not _career_high_feed(ev) or str(ev.get("kind", "")) != "goal":
+		_duel_feed(ev)
+		_story_feed(ev)
 	_press_feed(event_index, ev)
 	_call_feed(event_index, ev)
 	if str(ev.get("kind", "")) == "goal":
@@ -4451,6 +4455,20 @@ func _story_feed(ev: Dictionary) -> void:
 				UiKit.TEXT, false, "StoryLine")
 
 
+## A career best for one of yours, in bold so a once-in-a-career moment is
+## not lost among routine lines (MatchNotes.career_high_lines). True when a
+## line was added.
+func _career_high_feed(ev: Dictionary) -> bool:
+	var sim = GameState.pending_sim
+	var extra := int(ev.get("q", 1)) == 4 and (bool(_res.get("extra_time", false))
+			or (_interactive and sim != null and sim.needs_extra_time()))
+	var lines := MatchNotes.career_high_lines(_duel_mem, ev, _res, extra)
+	for text in lines:
+		_feed_text("%s  %s" % [_clock_text(int(ev.get("q", 1)), int(ev.get("min", 0))), str(text)],
+				UiKit.TEXT, true, "CareerHighLine")
+	return not lines.is_empty()
+
+
 ## The Defensive press taking hold, once a side a match: the first time the
 ## side whose plan it is defends after setting it (V2, press pilot).
 func _press_feed(event_index: int, ev: Dictionary) -> void:
@@ -4465,12 +4483,15 @@ func _press_feed(event_index: int, ev: Dictionary) -> void:
 
 ## A side's game plan starting, carrying on over a break or ending, and a short
 ## call running out (P-12, MatchNotes.call_lines). A break's line comes after
-## the break's own score line.
+## the break's own score line. A plan dropped at the break is said at the
+## next bounce, once the break's calls are made, without the new quarter's clock.
 func _call_feed(event_index: int, ev: Dictionary) -> void:
-	for text in MatchNotes.call_lines(_res.get("timeline", []), event_index, ev, _call_mem,
-			str(_res["home"]), str(_res["away"])):
-		_feed_text("%s  %s" % [_clock_text(int(ev.get("q", 1)), int(ev.get("min", 0))), str(text)],
-				UiKit.TEXT, false, "CallLine")
+	var lines := MatchNotes.call_lines(_res.get("timeline", []), event_index, ev, _call_mem,
+			str(_res["home"]), str(_res["away"]))
+	var unstamped := int(_call_mem.get("break_lines", 0))
+	for i in range(lines.size()):
+		var stamp := "" if i < unstamped else "%s  " % _clock_text(int(ev.get("q", 1)), int(ev.get("min", 0)))
+		_feed_text(stamp + str(lines[i]), UiKit.TEXT, false, "CallLine")
 
 
 ## The battle in the feed, rarely (MatchNotes.duel_feed_line).
