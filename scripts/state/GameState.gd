@@ -1994,6 +1994,9 @@ func _start_next_season(next_year: int, signed: int) -> void:
 			Backing.lapse(p)
 	for p in free_agents:
 		Backing.lapse(p)
+		# Not on a list, so not given back: a stale record must not count
+		# again next season (row 90).
+		p.erase("season_gains")
 	# Brownlow eligibility is season-specific. A new season starts clean.
 	var seen_brownlow := {}
 	for code in league_lists:
@@ -2025,6 +2028,9 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	for code in league_lists:
 		for p in league_lists[code]:
 			listed[str(p["id"])] = p
+	# The season's training, measured on the season's lists before anyone
+	# ages or retires; given back after ageing, before the re-anchor (row 90).
+	var train_unwind := Prospects.training_unwind(league_lists, next_year)
 	intake_summary = Prospects.age_league(league_lists, next_year)
 	intake_summary["signed"] = signed
 	_retirees_to_coaching(intake_summary.get("retired", []), listed)
@@ -2048,6 +2054,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 		league_lists[code] = Prospects.generate_expansion_list(code, next_year)
 		add_news("expansion", "%s (the %s) join the competition for %d, their first season." % [
 				GameDB.club_name(code), GameDB.club_short(code), next_year])
+	Prospects.apply_training_unwind(league_lists, train_unwind)
 	intake_summary["renormalised"] = Prospects.renormalise_league(league_lists,
 		draftee_pool, GameDB.baseline_overall, GameDB.baseline_spread)
 
@@ -2058,6 +2065,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 		lists[code] = league_lists.get(code, [])
 		for p in lists[code]:
 			p["season_start_ov"] = int(p["overall"])
+			p.erase("season_gains")
 	my_list = lists.get(my_club, [])
 	# The season simulates only this year's active clubs; `lists` keeps an
 	# entry for every club so saves and rollovers never miss a key.
@@ -9585,6 +9593,15 @@ func _spend_with_weights(p: Dictionary, weights: Dictionary, stop_at_pot: bool,
 		attr[best_key] = int(attr[best_key]) + 1
 		gains[best_key] = int(gains.get(best_key, 0)) + 1
 		_recalc_player_overall(p)
+	if not gains.is_empty() and rate_role == "":
+		# The season's training in his own position, kept so the off-season
+		# can take the league's lift back off where it went (Prospects.
+		# training_unwind); cleared at rollover. A new position's learning
+		# is not counted: it is his to keep.
+		var season_gains: Dictionary = p.get("season_gains", {})
+		for key in gains:
+			season_gains[key] = int(season_gains.get(key, 0)) + int(gains[key])
+		p["season_gains"] = season_gains
 	return gains
 
 

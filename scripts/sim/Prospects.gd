@@ -428,6 +428,121 @@ static func age_player(p: Dictionary, year: int) -> float:
 	return float(int(p["overall"]) - ov)
 
 
+## The season's training, taken back off where each player put it (row 90).
+## Clubs train a position's core - a midfielder's contested first of all -
+## and the re-anchor used to take the league's lift back evenly off every
+## attribute, so the core climbed against the rest of the game each year and
+## Contested bulls tripled over seven seasons.
+##
+## Each listed player gives back his position's average training lift (in
+## the rating's own blend), out of the attributes he trained himself:
+## - trained past the average: he gives back that share of each of his own
+##   gains and keeps the rest, so a club that trains better keeps its edge;
+## - trained less, or not at all: he gives back all his gains and the rest of
+##   the average evenly, as the re-anchor did.
+## Nobody gives back an attribute he did not train, so a star who spent his
+## points elsewhere keeps his contested (a role-wide average taken off
+## everyone pulled the best ruckmen, interceptors and bulls down and lifted
+## the players still building their core). Points the rating does not count
+## (temperament, an attribute outside his position) are never touched. Measured before ageing; returns {id: {attr: points
+## to take off}} for apply_training_unwind after ageing.
+static func training_unwind(lists: Dictionary, year: int) -> Dictionary:
+	var rows: Array = []
+	var sums := {}
+	var counts := {}
+	for code in lists:
+		for p in lists[code]:
+			var a: Dictionary = p.get("attr", {})
+			if a.is_empty():
+				continue
+			var role := str(p.get("role", "MID"))
+			var g := {}
+			var raw_g: Dictionary = p.get("season_gains", {})
+			for key in raw_g:
+				# Only what the rating counts: temperament, or marking bought
+				# for a midfielder, never lifted the league's rating, so it
+				# stays his.
+				if not a.has(key) or int(raw_g[key]) <= 0 or raw_lift({key: 1}, role) <= 0.0:
+					continue
+				g[key] = int(raw_g[key])
+			var lift := raw_lift(g, role)
+			rows.append([p, role, g, lift])
+			sums[role] = float(sums.get(role, 0.0)) + lift
+			counts[role] = int(counts.get(role, 0)) + 1
+	var plan := {}
+	for row in rows:
+		var p: Dictionary = row[0]
+		var role: String = row[1]
+		var g: Dictionary = row[2]
+		var lift: float = row[3]
+		var mean := float(sums[role]) / float(counts[role])
+		if mean <= 0.0:
+			continue
+		var id := str(p.get("id", ""))
+		var take := {}
+		if lift > mean:
+			var share := mean / lift
+			for key in g:
+				take[key] = _dithered(float(g[key]) * share, id, key, year)
+		else:
+			for key in g:
+				take[key] = int(g[key])
+			var even := mean - lift
+			for key in (p["attr"] as Dictionary):
+				if key in UNRATED_KEYS:
+					continue
+				take[key] = int(take.get(key, 0)) + _dithered(even, id, "even|" + str(key), year)
+		plan[id] = take
+	return plan
+
+
+## A season's gains in the rating's raw blend (Ratings.rate_overall: 70% the
+## position's weighted core, 22% star power, 8% durability).
+static func raw_lift(gains: Dictionary, role: String) -> float:
+	var w: Dictionary = Ratings.ROLE_WEIGHTS.get(role, Ratings.ROLE_WEIGHTS["MID"])
+	var out := 0.0
+	for key in gains:
+		if w.has(key):
+			out += 0.70 * float(w[key]) * float(gains[key])
+		elif key == "star":
+			out += 0.22 * float(gains[key])
+		elif key == "durability":
+			out += 0.08 * float(gains[key])
+	return out
+
+
+## A whole point more or less per player, so the league gives back the
+## average exactly: rounding 0.5 to 0 for everyone would leave it behind
+## every season. Keyed on player, attribute and year: seeded, no clock.
+static func _dithered(v: float, id: String, key: String, year: int) -> int:
+	var dither := float(absi(hash("%s|%s|%d" % [id, key, year])) % 1000) / 1000.0
+	return int(floor(v + dither))
+
+
+## Take the planned points off every player still listed after ageing. The
+## draft pool and a new expansion list never trained, so give nothing back.
+static func apply_training_unwind(lists: Dictionary, plan: Dictionary) -> void:
+	if plan.is_empty():
+		return
+	for code in lists:
+		for p in lists[code]:
+			var take: Dictionary = plan.get(str(p.get("id", "")), {})
+			var a: Dictionary = p.get("attr", {})
+			if take.is_empty() or a.is_empty():
+				continue
+			var role := str(p.get("role", "MID"))
+			var before := int(p.get("overall", 0))
+			for key in take:
+				if a.has(key):
+					a[key] = clampi(int(a[key]) - int(take[key]), 1, 99)
+			p["overall"] = Ratings.rate_overall(a, role, Ratings.effective_games(p))
+			p["value"] = Ratings.salary_value(int(p["overall"]))
+			# POT moves with him, as in the re-anchor: his distance to it is kept.
+			if p.has("potential"):
+				p["potential"] = clampi(int(p["potential"]) + int(p["overall"]) - before,
+						1, Potential.MAX_POT)
+
+
 ## Ratings are relative to the league. Training, development and new
 ## draftees move the league a little every year - up in the middle, and
 ## bunched toward it as stars age out faster than the young ones catch them.
