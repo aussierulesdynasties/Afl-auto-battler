@@ -546,6 +546,9 @@ func _test_stuck_draft_recovery() -> void:
 			"You can release one of your picks when stuck")
 	_check(not d.picked.has(str(dear["id"])) and d.pick_sequence.size() == seq + 1 and d.drafted_by(str(dear["id"])) == "",
 			"He goes back to the pool and you get an extra pick at the end")
+	_check(d.pick_rounds.size() == d.pick_sequence.size() and d.pick_origin.size() == d.pick_sequence.size()
+			and int(d.pick_rounds[-1]) == int(d.pick_rounds[seq - 1]),
+			"The extra pick keeps the round and origin lists in step, in the last round")
 	# Save and reload mid-recovery.
 	GameState.draft = d
 	GameState.my_club = me
