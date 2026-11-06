@@ -186,15 +186,30 @@ func _test_match_effect() -> void:
 	var neutral := _sim(314, Conditioning.stamps(0.0)).run()
 	_check(plain["score"] == neutral["score"] and plain["exertion"] == neutral["exertion"],
 			"A level week plays exactly the match it did before conditioning")
-	var peaked_sim := _sim(314, Conditioning.stamps(1.0))
-	peaked_sim.run()
-	var plain_sim := _sim(314, {})
-	plain_sim.run()
+	# Each side's whole squad (on the ground and on the bench) from its own
+	# match, over a few seeds: the two sims rotate differently, so the final
+	# on-ground players need not be the same men, and one match is one draw.
 	var legs := [0.0, 0.0]
-	for p in plain_sim.squads[0].ground:
-		legs[0] += float(plain_sim.energy[str(p["id"])])
-		legs[1] += float(peaked_sim.energy.get(str(p["id"]), 0.0))
+	for seed in [314, 315, 316, 317]:
+		var plain_sim := _sim(seed, {})
+		plain_sim.run()
+		var peaked_sim := _sim(seed, Conditioning.stamps(1.0))
+		peaked_sim.run()
+		var a := _mean_legs(plain_sim)
+		var b := _mean_legs(peaked_sim)
+		legs[0] += a
+		legs[1] += b
 	_check(legs[1] > legs[0], "A peaked side finishes the match with more in its legs")
+
+
+func _mean_legs(sim: MatchSim) -> float:
+	var sq := sim.squads[0] as Squad
+	var total := 0.0
+	var n := 0
+	for p in sq.ground + sq.bench:
+		total += float(sim.energy.get(str(p["id"]), 100.0))
+		n += 1
+	return total / maxf(1.0, float(n))
 
 
 func _test_career() -> void:
@@ -395,7 +410,7 @@ func _test_screens() -> void:
 	var words := hub.find_child("SeasonPlanWords", true, false) as Label
 	_check(line != null and words != null and words.text == "Steady, no peak planned",
 			"The hub says where the legs are at in words")
-	_check(line != null and (hub.find_child("SeasonPlanSub", true, false) as Label).text.contains("set it before round 1"),
+	_check(line != null and (hub.find_child("SeasonPlanSub", true, false) as Label).text.to_lower().contains("set it before round 1"),
 			"In the pre-season the hub line says the plan is yours to set")
 	_check(await _tap(line, "the season plan line"), "A finger's tap on the line opens the plan")
 	await _frames(tree, 4)
