@@ -4456,12 +4456,15 @@ func _press_feed(event_index: int, ev: Dictionary) -> void:
 
 ## A side's game plan starting, carrying on over a break or ending, and a short
 ## call running out (P-12, MatchNotes.call_lines). A break's line comes after
-## the break's own score line.
+## the break's own score line. A plan dropped at the break is said at the
+## next bounce, once the break's calls are made, without the new quarter's clock.
 func _call_feed(event_index: int, ev: Dictionary) -> void:
-	for text in MatchNotes.call_lines(_res.get("timeline", []), event_index, ev, _call_mem,
-			str(_res["home"]), str(_res["away"])):
-		_feed_text("%s  %s" % [_clock_text(int(ev.get("q", 1)), int(ev.get("min", 0))), str(text)],
-				UiKit.TEXT, false, "CallLine")
+	var lines := MatchNotes.call_lines(_res.get("timeline", []), event_index, ev, _call_mem,
+			str(_res["home"]), str(_res["away"]))
+	var unstamped := int(_call_mem.get("break_lines", 0))
+	for i in range(lines.size()):
+		var stamp := "" if i < unstamped else "%s  " % _clock_text(int(ev.get("q", 1)), int(ev.get("min", 0)))
+		_feed_text(stamp + str(lines[i]), UiKit.TEXT, false, "CallLine")
 
 
 ## The battle in the feed, rarely (MatchNotes.duel_feed_line).
