@@ -336,6 +336,7 @@ func _run() -> void:
 	await _t("_test_season_awards")
 	await _t("_test_back_arrow_taps")
 	await _t("_test_finals_card_taps")
+	await _t("_test_sim_asks_only_before_your_match")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
 	_t("_test_type_roles")
@@ -2290,6 +2291,117 @@ func _test_finals_card_taps() -> void:
 				rule_btn = n
 	_check(rule_btn != null, "A card that leaves it to the captain offers See the rule")
 	_state.week_events = []
+
+
+## Row 102: "Ask before simming" asks only when Sim the week would play a match
+## the coach could play (your round, your final). A bye, a finals week off, a
+## finals week you are out of and the off-season go straight ahead. Real taps
+## on a 390 phone.
+func _fre_in_finals_at(rank: int) -> void:
+	_state.reset()
+	_state.career_seed = 4402
+	_state.replay_seed = 4402
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var sea = _state.season
+	var codes: Array = sea.ladder.keys()
+	codes.sort()
+	codes.erase("FRE")
+	codes.insert(rank - 1, "FRE")
+	for i in range(codes.size()):
+		var row: Dictionary = sea.ladder[codes[i]]
+		row["w"] = 20 - i
+		row["l"] = 3 + i
+		row["d"] = 0
+		row["p"] = 23
+		row["pf"] = 2400 - i * 20
+		row["pa"] = 2000
+	sea.round_index = sea.fixture.size()
+	sea.recalc_ladder()
+	sea.start_finals()
+	_state.week_events = []
+
+
+func _hub_tap(button_name: String) -> Array:
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var b: Button = current_scene.find_child(button_name, true, false)
+	var why: String = await Tap.tap(b) if b != null else "missing"
+	await _settle()
+	return [why, current_scene.find_child("SimConfirm", true, false) != null]
+
+
+func _test_sim_asks_only_before_your_match() -> void:
+	var ask_size_before := root.size
+	root.size = Vector2i(390, 844)
+	_state.set_confirm_sim_round(true)
+	_state.reset()
+	_state.career_seed = 4402
+	_state.replay_seed = 4402
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var sea = _state.season
+	var bye_round := -1
+	for r in range(sea.fixture.size()):
+		var plays := false
+		for m in sea.fixture[r]:
+			plays = plays or m["home"] == "FRE" or m["away"] == "FRE"
+		if not plays and bye_round < 0:
+			bye_round = r
+	_check(bye_round > 0, "Fremantle has a bye in the home-and-away season (round %d)" % (bye_round + 1))
+	_state.week_events = []
+
+	# A playable round: the question comes up, and nothing is simmed yet.
+	sea.round_index = bye_round - 1
+	var r0: int = sea.round_index
+	var got: Array = await _hub_tap("SimRound")
+	_check(got[0] == "" and got[1] and sea.round_index == r0,
+			"Before a round Fremantle plays, a finger on Sim the week gets the question first (%s)" % got[0])
+	var cancel: Button = current_scene.find_child("SimConfirmCancel", true, false)
+	var cancel_why: String = await Tap.tap(cancel) if cancel != null else "missing"
+	await _settle()
+	_check(cancel_why == "" and sea.round_index == r0 and current_scene.find_child("SimConfirm", true, false) == null,
+			"A finger on Cancel closes it and sims nothing (%s)" % cancel_why)
+
+	# The bye: no match of his to play, so no question; the round goes ahead.
+	sea.round_index = bye_round
+	_state.week_events = []
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	_check(current_scene.find_child("SimRound", true, false) == null, "A bye week has no Sim the week to ask about")
+	var hub = current_scene
+	_check(not bool(hub.call("_sim_asks_first")), "A bye week never asks before simming")
+	got = await _hub_tap("SimByeRound")
+	_check(got[0] == "" and not got[1] and sea.round_index == bye_round + 1,
+			"A finger on Play Round %d during the bye sims it with no question (%s)" % [bye_round + 1, got[0]])
+
+	# Finals: his own final asks; a week off and a week he is out of do not.
+	_fre_in_finals_at(8)
+	got = await _hub_tap("SimRound")
+	_check(got[0] == "" and got[1] and int(_state.season.finals["week"]) == 1,
+			"Eighth plays a wildcard final, so Sim the week asks first (%s)" % got[0])
+	_fre_in_finals_at(1)
+	_check(_state.my_finals_status() == "bye", "Minor premiers sit out the wildcard week")
+	got = await _hub_tap("SimFinalsWeekOff")
+	_check(got[0] == "" and not got[1] and int(_state.season.finals["week"]) == 2,
+			"The finals week off sims with no question (%s)" % got[0])
+	_fre_in_finals_at(14)
+	got = await _hub_tap("SimFinalsWeek")
+	_check(got[0] == "" and not got[1] and int(_state.season.finals["week"]) == 2,
+			"A finals week Fremantle is out of sims with no question (%s)" % got[0])
+
+	# The off-season: nothing to sim, nothing to ask.
+	_state.season.finals["done"] = true
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	hub = current_scene
+	_check(hub.find_child("SimRound", true, false) == null and not bool(hub.call("_sim_asks_first")),
+			"The off-season has no Sim the week and never asks")
+	_router.stack = ["main"]
+	_router.go("main")
+	await _settle()
+	root.size = ask_size_before
 
 
 func _test_season_awards() -> void:

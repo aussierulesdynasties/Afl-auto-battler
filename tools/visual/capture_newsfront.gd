@@ -1,11 +1,13 @@
 extends SceneTree
 ## League news front page and its hub card (needs a real renderer):
-##   godot --path . --script tools/visual/capture_newsfront.gd -- --size 1280x720 --out PREFIX --mode r1|mid|flag [--club MEL] [--premier STK]
-## Writes PREFIX_hub.png and PREFIX_news.png. Dark theme; a fresh career, never a real save.
+##   godot --path . --script tools/visual/capture_newsfront.gd -- --size 1280x720 --out PREFIX --mode r1|mid|flag|fresh|call [--club MEL] [--premier STK]
+## Writes PREFIX_hub.png and PREFIX_news.png (and PREFIX_call.png when an arc big call is dealt). Dark theme; a fresh career, never a real save.
 ## r1 is the director's Round 1 feed (15 first goals, a fine, an injury, a six-goal haul, a press quote);
 ## mid plays six real rounds and shows the news the game made.
 ## flag is the season's end with the switch league_news on (row 76): the premiership item, with its
 ## flag-history sentence computed by LeagueNews from data/club_premierships.csv.
+## fresh is the hub a new career opens on (with coach arcs on, GEE, FRE and COL open with arc news);
+## call plays on to the first week a coach arc's big call is dealt (at most 30 weeks).
 
 var _w := 1280
 var _h := 720
@@ -40,6 +42,8 @@ func _run() -> void:
 				_w = int(wh[0])
 				_h = int(wh[1])
 	await process_frame
+	# Loaded here, not named: ClubArcs needs the autoloads this SceneTree script compiles before.
+	var arcs = load("res://scripts/state/ClubArcs.gd")
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
 	var router = root.get_node("Router")
@@ -90,6 +94,15 @@ func _run() -> void:
 		for it in state.news:
 			it["when"] = "Grand Final"
 			it["year"] = year
+	elif mode == "fresh":
+		pass
+	elif mode == "call":
+		var guard := 0
+		while arcs.big_call(state).is_empty() and guard < 30:
+			guard += 1
+			state.advance()
+		state.media_conference = {}
+		print("CALL after ", guard, " weeks: ", arcs.big_call(state).get("text", "none"))
 	else:
 		for i in range(6):
 			state.advance()
@@ -104,10 +117,26 @@ func _run() -> void:
 		if (b as Button).text == "Got it" and (b as Button).is_visible_in_tree():
 			(b as Button).emit_signal("pressed")
 	await _frames(20)
+	print("NEWS ", state.news.slice(0, 3))
+	print("BIG_CALL ", arcs.big_call(state).get("text", "none"))
 	for n in ["ThisWeek", "LadderSection", "NewsCard"]:
 		var c: Control = root.find_child(n, true, false)
 		print("RECT ", n, " ", c.get_global_rect() if c != null else "none")
 	_save(out + "_hub.png")
+	# The arc's big call, scrolled into view where it is dealt on the hub.
+	var call_title := str(arcs.big_call(state).get("text", ""))
+	if call_title != "":
+		for l in root.find_children("*", "Label", true, false):
+			if (l as Label).text == call_title and (l as Label).is_visible_in_tree():
+				for sc in root.find_children("*", "ScrollContainer", true, false):
+					if (sc as ScrollContainer).is_ancestor_of(l):
+						(sc as ScrollContainer).ensure_control_visible(l)
+						await _frames(2)
+						# The whole card, its answers and their gains and costs, not just its title.
+						(sc as ScrollContainer).scroll_vertical += int(sc.size.y * 0.6)
+				await _frames(10)
+				_save(out + "_call.png")
+				break
 	for sc in root.find_children("*", "ScrollContainer", true, false):
 		if (sc as ScrollContainer).is_visible_in_tree() and (sc as ScrollContainer).size.y > 200:
 			(sc as ScrollContainer).scroll_vertical = 100000

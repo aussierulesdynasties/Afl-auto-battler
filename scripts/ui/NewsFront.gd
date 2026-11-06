@@ -482,6 +482,7 @@ static func mini(items: Array, my_club: String, on_open: Callable, names := {}) 
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(title)
 	var d := UiKit.lbl(str(page["dateline"]), UiKit.SECONDARY, UiKit.MUTED)
+	d.name = "Dateline"
 	d.autowrap_mode = TextServer.AUTOWRAP_OFF
 	top.add_child(d)
 	top.add_child(UiKit.lbl("›", UiKit.NAME, UiKit.MUTED))
