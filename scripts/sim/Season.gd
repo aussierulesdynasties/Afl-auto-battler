@@ -494,6 +494,9 @@ func weather_for(home_code: String, away_code: String, round_i: int, finals_m: D
 	var is_final := not finals_m.is_empty()
 	var ground := finals_venue(finals_m) if is_final else home_ground(home_code)
 	var state := str(GameDB_ref().club(home_code).get("state", ""))
+	if not is_final and round_i == gather_round():
+		ground = round_venue(round_i, home_code, away_code)
+		state = GatherRound.HOST_STATE
 	return Weather.condition(ground, Weather.month_of_round(round_i, is_final),
 			hash([seed, round_i, home_code, away_code, "weather"]), state)
 
@@ -515,12 +518,16 @@ func play_round() -> Array:
 	var sims := []
 	for i in range(round_matches.size()):
 		var m: Dictionary = round_matches[i]
-		sims.append(match_sim(m["home"], m["away"], next_seed(i), [true, false], false,
+		sims.append(match_sim(m["home"], m["away"], next_seed(i),
+				round_at_home(round_index, m["home"], m["away"]), false,
 				weather_for(m["home"], m["away"], round_index)))
 	var played := run_all(sims)
+	var gather := round_index == gather_round()
 	for res in played:
 		res["round"] = round_index + 1
-		res["label"] = "Round %d" % (round_index + 1)
+		res["label"] = round_label(round_index)
+		if gather:
+			res["venue"] = round_venue(round_index, str(res["home"]), str(res["away"]))
 		record_regular(res)
 	results.append(played)
 	round_index += 1
@@ -721,6 +728,41 @@ func finals_at_home(m: Dictionary) -> Array:
 
 func home_ground(code: String) -> String:
 	return str(GameDB_ref().club(code).get("ground", ""))
+
+
+## This season's Gather Round (GatherRound, switch `gather_round`), 0-based, or -1.
+func gather_round() -> int:
+	return GatherRound.round_of(fixture, clubs, seed)
+
+
+## Where a home-and-away match is played: the home club's ground, or in Gather
+## Round the host ground the match is staged at.
+func round_venue(round_i: int, home_code: String, away_code: String) -> String:
+	if round_i >= 0 and round_i < fixture.size() and round_i == gather_round():
+		var ms: Array = fixture[round_i]
+		var vs := GatherRound.venues_for(ms, seed, home_ground)
+		for i in range(ms.size()):
+			if str(ms[i]["home"]) == home_code and str(ms[i]["away"]) == away_code:
+				return str(vs[i])
+	return home_ground(home_code)
+
+
+## Which of a home-and-away match's clubs has its home-ground edge: the home
+## club, except in Gather Round, where a club has it only at its own ground
+## (rule 2.38: a relocated club gets none).
+func round_at_home(round_i: int, home_code: String, away_code: String) -> Array:
+	if round_i != gather_round():
+		return [true, false]
+	var v := round_venue(round_i, home_code, away_code)
+	return [home_ground(home_code) == v, home_ground(away_code) == v]
+
+
+## A home-and-away round's name: "Round 5", or "Round 5 · Gather Round".
+func round_label(round_i: int) -> String:
+	var label := "Round %d" % (round_i + 1)
+	if round_i >= 0 and round_i == gather_round():
+		label += " · " + GatherRound.NAME
+	return label
 
 
 ## Stamp a finals result and advance the bracket slots. Extra time settles

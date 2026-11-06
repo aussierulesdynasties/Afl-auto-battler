@@ -185,7 +185,7 @@ func _side_page(auto: bool) -> Control:
 		builder.hint_extra = "Picked for you each week until you move someone." if auto else ""
 		if not _wide and not nxt.is_empty():
 			# A phone: the week is one tap away, in the club's ink, under the bench.
-			var row := UiKit.text_action("This week %s %s ›" % ["v" if str(nxt["venue"]) == "home" else "at",
+			var row := UiKit.text_action("This week %s %s ›" % ["v" if str(nxt["venue"]) != "away" else "at",
 					GameDB.club_name(str(nxt["code"]))], UiKit.NAME)
 			row.name = "WeekRow"
 			row.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -331,8 +331,13 @@ func _fill_week(v: VBoxContainer) -> void:
 		# One phrase, and the opponent is named once: over its own column below.
 		var heading := UiKit.hbox(6)
 		heading.name = "WeekHeading"
-		heading.add_child(UiKit.line("Round %d, %s" % [GameState.season.round_index + 1,
-				"at home" if str(nxt["venue"]) == "home" else "away"], UiKit.TITLE, UiKit.TEXT, true))
+		# Gather Round names the event and the host ground (rule 2.38): "at home"
+		# only for a club at its own ground.
+		var where := ("at home" if str(nxt["venue"]) == "home" else "away")
+		if nxt.has("event"):
+			where = "%s at %s" % [str(nxt["event"]), str(nxt["ground"])]
+		heading.add_child(UiKit.line("Round %d, %s" % [GameState.season.round_index + 1, where],
+				UiKit.TITLE, UiKit.TEXT, true))
 		v.add_child(heading)
 		# Both sides' key forwards and defenders lead the sheet, as facts. Who
 		# goes to each is set before the first ball-up, not here.

@@ -59,6 +59,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `expansion` | Tasmania in 2028 and Canberra in 2030, and a Club Forge club entering with the career |
 | `expansion_package` | How a new club builds its list behind the switch `expansion_package`: off is exactly today; on gives state-league signings, early picks, the traded pick, out-of-contract signings, sign-on money, the Canberra choice, the approach card, saves both ways |
 | `finals` | The wildcard finals bracket, extra time, draws |
+| `gather_round` | Gather Round behind the switch `gather_round`: off is exactly today; on, one of rounds 3 to 7 at the host grounds, the home edge only at a club's own ground, the odd-count bye, its name in the fixture, hub and match, a live round across a save and load |
 | `save` | Saving and loading a career, including old-save migrations and the safe write: a failed or interrupted write never loses the career, and a failed swap leaves the newer save readable |
 | `chronology` | 2026 is history, careers start in 2027, and every system agrees |
 | `career` | Games, goals and club stints across a dynasty |
