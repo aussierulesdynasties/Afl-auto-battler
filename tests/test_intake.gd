@@ -27,6 +27,7 @@ func run() -> void:
 	_t("_test_custom_prospect")
 	_t("_test_panel_fit")
 	_t("_test_real_lists_start")
+	_t("_test_gen_traits_rates")
 	GameState.replay_seed = 0
 	print(Ran.line("Intake", self))
 
@@ -1029,3 +1030,98 @@ func _test_real_lists_start() -> void:
 	GameState.reset()
 	_check(GameState.start_mode == "redraft" and not GameState.opening_draft, "A new career is a redraft unless chosen")
 
+
+
+## Row 104 (4.Q10), switch gen_traits: generated players carry the special traits at the
+## real players' rates. Eight seeded classes (career seed 4242 + year), each grown five
+## seasons by the development rules; a trait's "matched" share weights the grown players
+## in each 4-point OVR band by the real 2026 players' mix (the in-career league is
+## re-anchored to the 2026 spread every rollover). tools/audit/gen_traits_impl runs the
+## full 13-trait table on 30 classes.
+func _test_gen_traits_rates() -> void:
+	# The 2026 lists as the game loads them: the hand-set OVR rows on (run_tests.sh plays
+	# the suites without them), and none of the earlier tests' career changes.
+	var skipped: bool = GameDB.skip_ovr_overrides
+	GameDB.skip_ovr_overrides = false
+	GameDB.reload()
+	var real := []
+	for c in GameDB.club_order:
+		for p in GameDB.club_list(c):
+			if not bool(p.get("generated", false)):
+				real.append(p)
+	_check(real.size() > 600, "The real 2026 lists give the reference rates (%d players)" % real.size())
+	var bands := {}
+	var real_hot := 0
+	var real_bull := 0
+	for p in real:
+		var b := int(p["overall"]) / 4
+		bands[b] = int(bands.get(b, 0)) + 1
+		real_hot += 1 if Traits.of(p).has("hothead") else 0
+		real_bull += 1 if Traits.of(p).has("bull") else 0
+	var arms := {}
+	for arm in ["off", "on"]:
+		Features.set_on("gen_traits", arm == "on")
+		Prospects.forget_cache()
+		var drafted := []
+		var grown := []
+		for y in range(2027, 2035):
+			for p in Prospects.generate_class(y, 4242 + y):
+				drafted.append(p.duplicate(true))
+				for k in range(1, 6):
+					Prospects.age_player(p, y + k)
+				grown.append(p)
+		var ovr := 0.0
+		var hot := 0
+		for i in range(drafted.size()):
+			ovr += float(drafted[i]["overall"])
+			hot += 1 if Traits.of(grown[i]).has("hothead") else 0
+		arms[arm] = {"n": drafted.size(), "ovr": ovr / drafted.size(), "hot": 100.0 * hot / grown.size(),
+				"bull": _matched_share(grown, "bull", bands), "interceptor": _matched_share(grown, "interceptor", bands),
+				"def_forward": _matched_share(grown, "def_forward", bands),
+				"disc": [drafted[0]["attr"]["discipline"], drafted[1]["attr"]["discipline"]]}
+	Features.clear("gen_traits")
+	Prospects.forget_cache()
+	var off: Dictionary = arms["off"]
+	var on: Dictionary = arms["on"]
+	var rh := 100.0 * real_hot / real.size()
+	var rb := 100.0 * real_bull / real.size()
+	_check(off["n"] == on["n"] and off["n"] > 300, "Both arms draw the same classes (%d players)" % off["n"])
+	_check(off["hot"] == 0.0, "Off, generation is as before: no generated player is a hothead (%.1f%%)" % off["hot"])
+	_check(absf(on["hot"] - rh) <= 2.5,
+			"On, hotheads roll at the real rate: %.1f%% generated against %.1f%% real" % [on["hot"], rh])
+	_check(absf(on["bull"] - rb) <= 1.5,
+			"On, contested bulls at a real player's level match the real rate: %.1f%% against %.1f%%" % [on["bull"], rb])
+	_check(on["interceptor"] < off["interceptor"] and on["def_forward"] > off["def_forward"],
+			"On, the overshot interceptors come down (%.1f%% from %.1f%%) and the scarce defensive forwards come up (%.1f%% from %.1f%%)"
+			% [on["interceptor"], off["interceptor"], on["def_forward"], off["def_forward"]])
+	_check(absf(on["ovr"] - off["ovr"]) < 0.5,
+			"The retune moves traits, not quality: mean draft OVR %.1f on, %.1f off" % [on["ovr"], off["ovr"]])
+	# The same seeds give the same prospects: the temperament draw is seeded per player.
+	Features.set_on("gen_traits", true)
+	Prospects.forget_cache()
+	var again: Array = Prospects.generate_class(2027, 4242 + 2027)
+	Features.clear("gen_traits")
+	Prospects.forget_cache()
+	GameDB.skip_ovr_overrides = skipped
+	GameDB.reload()
+	_check(again[0]["attr"]["discipline"] == on["disc"][0] and again[1]["attr"]["discipline"] == on["disc"][1],
+			"A seeded class rolls the same temperaments every time")
+
+
+## The share of grown players with trait t, each 4-point OVR band weighted by the real
+## players in it (bands with no grown player left out).
+func _matched_share(grown: Array, t: String, bands: Dictionary) -> float:
+	var have := {}
+	var tot := {}
+	for q in grown:
+		var b := int(q["overall"]) / 4
+		tot[b] = int(tot.get(b, 0)) + 1
+		if Traits.of(q).has(t):
+			have[b] = int(have.get(b, 0)) + 1
+	var w := 0.0
+	var s := 0.0
+	for b in bands:
+		if int(tot.get(b, 0)) > 0:
+			w += float(bands[b])
+			s += float(bands[b]) * float(have.get(b, 0)) / float(tot[b])
+	return 100.0 * s / maxf(1.0, w)

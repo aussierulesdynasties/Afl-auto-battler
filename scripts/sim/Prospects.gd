@@ -236,6 +236,8 @@ static func project(p: Dictionary) -> void:
 	var bias: Dictionary = p.get("attr_bias", {})
 	for key in bias:
 		a[key] = float(a.get(key, target)) + float(bias[key])
+	if Features.on(GEN_TRAITS):
+		_real_trait_rates(a, p, role)
 
 	a = fit_attributes(a, role, target)
 	for key in a:
@@ -247,6 +249,40 @@ static func project(p: Dictionary) -> void:
 	p["value"] = Ratings.salary_value(int(p["overall"]))
 	p.erase("potential")  # re-projection re-derives it (deterministically)
 	Potential.assign(p)
+
+
+## Row 104 (4.Q10, director): generated players carry each synergy trait at the real
+## players' rate at the same overall, contested bulls included, and a real share of
+## hotheads (there were none: temperament came from his projected rating, never 20 or
+## below). Behind the gen_traits switch; off, a prospect is made exactly as before.
+const GEN_TRAITS := "gen_traits"
+## Per role, points added to an attribute before the fit puts him back on his target
+## (so his overall does not move, only his shape). Sized with tools/audit/gen_traits_impl.gd
+## so a grown generated player carries each trait as often as a real player of his overall:
+## interceptors and aerial forwards came out too often, lockdown and defensive forwards
+## too rarely. (static var, not const, only so tools/audit can try arms in one run.)
+static var GEN_NUDGE := {
+	"DEF": {"intercept": -6.0, "pressure": -0.5, "accuracy": 1.0, "durability": -1.5},
+	"MID": {"contested": -6.0, "disposal": -2.0, "pressure": -1.0, "durability": -1.5},
+	"FWD": {"marking": -3.0, "pressure": 3.5, "accuracy": 1.0, "goalkicking": 1.5, "durability": -1.5},
+	"RUCK": {"ruck": -10.0, "contested": -6.0, "durability": -1.5},
+}
+
+
+## Row 104: his temperament is a real player's of his role (each real player's own
+## discipline, not relative to his rating), so hotheads come at the real share; and the
+## GEN_NUDGE shape correction. Seeded by the prospect alone, on its own dice, so nothing
+## else about him rolls differently.
+static func _real_trait_rates(a: Dictionary, p: Dictionary, role: String) -> void:
+	for key in (GEN_NUDGE.get(role, {}) as Dictionary):
+		a[key] = float(a.get(key, 0.0)) + float(GEN_NUDGE[role][key])
+	if _shapes.is_empty():
+		_shape_for(role, _rng_for("warm"), 0.0)  # builds the real players' cache
+	var pool: Array = _shapes.get(role, [])
+	if pool.is_empty():
+		return
+	var rng := _rng_for("disc|%s|%s" % [str(p.get("id", "")), str(p.get("draft_year", 2026))])
+	a["discipline"] = float((pool[rng.randi_range(0, pool.size() - 1)] as Dictionary)["_disc"])
 
 
 ## Each role's real players' shapes: every attribute less his overall, and that
@@ -278,6 +314,7 @@ static func _shape_for(role: String, rng: RandomNumberGenerator, level: float) -
 					for key in ATTR_KEYS:
 						d[key] = float(at.get(key, 0)) - float(q.get("overall", 0))
 					d["_ovr"] = float(q.get("overall", 0))
+					d["_disc"] = float(at.get("discipline", 50))
 					var r := str(q.get("role", "MID"))
 					if not _shapes.has(r):
 						_shapes[r] = []
@@ -289,6 +326,7 @@ static func _shape_for(role: String, rng: RandomNumberGenerator, level: float) -
 	var d: Dictionary = pool[rng.randi_range(0, mini(SHAPE_NEAREST, pool.size()) - 1)]
 	var out := d.duplicate()
 	out.erase("_ovr")
+	out.erase("_disc")
 	return out
 
 

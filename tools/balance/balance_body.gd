@@ -27,6 +27,11 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 				if pair.size() == 2:
 					MatchSim.tune[pair[0].strip_edges()] = float(pair[1])
 	var codes: Array = GameDB.active_clubs(2026).duplicate()
+	# --lists generated: every club's list is generated players instead (row 104).
+	var lists := {}
+	for i in range(args.size() - 1):
+		if str(args[i]) == "--lists" and str(args[i + 1]) == "generated":
+			lists = generated_lists(codes)
 	var pairs := []
 	for a in range(codes.size()):
 		for b in range(a + 1, codes.size()):
@@ -40,8 +45,8 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		var flip := (i / pairs.size()) % 2 == 1
 		var h := str(p[1] if flip else p[0])
 		var a := str(p[0] if flip else p[1])
-		var sq_h := Squad.new(h, GameDB.club_list(h), true, h)
-		var sq_a := Squad.new(a, GameDB.club_list(a), false, a)
+		var sq_h := Squad.new(h, lists.get(h, GameDB.club_list(h)), true, h)
+		var sq_a := Squad.new(a, lists.get(a, GameDB.club_list(a)), false, a)
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
 		sim.weather = weather
 		for k in sets:
@@ -154,6 +159,54 @@ func duels(sim: MatchSim, r: Dictionary) -> Array:
 
 
 ## "a=1,b=0.5" -> {"a": 1.0, "b": 0.5}
+## --lists generated (row 104): a league of generated players, to screen a change to
+## generation (e.g. --on gen_traits) in matches. Classes 2027 on (career seed 4242 +
+## year) are generated on the game's data (the hand-set OVR rows on) and grown
+## GEN_GROW seasons by the development rules; each real 2026 list player's place is
+## taken by the next unused generated player of his position, re-rated to his OVR on
+## the harness's own data
+## (GameDB.set_player_ovr, one shift on every attribute), as the in-career league is
+## re-anchored to the 2026 spread every rollover. Every worker builds the same league,
+## and an arm's switch changes only what generation does with the same draws.
+const GEN_CLASSES := 40
+const GEN_GROW := 5
+func generated_lists(codes: Array) -> Dictionary:
+	var skipped: bool = GameDB.skip_ovr_overrides
+	GameDB.skip_ovr_overrides = false
+	GameDB.reload()
+	Prospects.forget_cache()
+	var pool := {}
+	for y in range(2027, 2027 + GEN_CLASSES):
+		for q in Prospects.generate_class(y, 4242 + y):
+			for k in range(1, GEN_GROW + 1):
+				Prospects.age_player(q, y + k)
+			var r := str(q.get("role", "MID"))
+			if not pool.has(r):
+				pool[r] = []
+			(pool[r] as Array).append(q)
+	GameDB.skip_ovr_overrides = skipped
+	GameDB.reload()
+	Prospects.forget_cache()
+	var targets := {}
+	for code in codes:
+		targets[code] = []
+		for p in GameDB.club_list(code):
+			(targets[code] as Array).append([str(p.get("role", "MID")), int(p.get("overall", 50))])
+	var used := {}
+	var out := {}
+	for code in codes:
+		out[code] = []
+		for t in targets[code]:
+			var from: Array = pool.get(t[0], pool["MID"])
+			var at := int(used.get(t[0], 0)) % from.size()
+			used[t[0]] = at + 1
+			var q: Dictionary = (from[at] as Dictionary).duplicate(true)
+			q["club"] = code
+			GameDB.set_player_ovr(q, int(t[1]))
+			(out[code] as Array).append(q)
+	return out
+
+
 static func parse_sets(text: String) -> Dictionary:
 	var d := {}
 	for kv in text.split(",", false):
