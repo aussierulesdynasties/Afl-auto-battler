@@ -46,8 +46,9 @@ const ATTACK_SPREAD_LO := 9.5
 ## from 11.5 to 12.0, still about 40% narrower than Balanced.
 const ATTACK_SPREAD_HI := 12.0
 ## Attack corridor's shift from Balanced may sit this far under CALL_FLOOR
-## (0.5 until 2026-11-06; every feature on measured 7.2 m).
-const ATTACK_CALL_SLACK := 0.8
+## (0.5 until 2026-11-06; every feature on measured 7.2 m, just under 7.2 after
+## main's stat focus merged in, so the floor sits at 7.0).
+const ATTACK_CALL_SLACK := 1.0
 ## The ball-up ring: closest pair of a side, on average.
 const RING_GAP := 1.5
 ## Attack corridor's longest file at most this much past Balanced's, on average.
