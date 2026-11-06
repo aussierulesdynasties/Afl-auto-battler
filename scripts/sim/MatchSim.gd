@@ -5050,7 +5050,9 @@ func _playtest_bounce() -> bool:
 func _fire_bounce(margin: int) -> void:
 	var state := "level" if margin == 0 else ("%d up" % margin if margin > 0 else "%d down" % -margin)
 	var left: int = current_quarter * 30 - current_minute
-	var title := "Centre ball-up - %s with %d minutes left" % [state, 120 - current_minute]
+	var to_go := 120 - current_minute
+	var when := "in the last minute" if to_go <= 1 else "with %d minutes left" % to_go
+	var title := "Centre ball-up - %s %s" % [state, when]
 	if Features.on("ballup_two"):
 		# Two distinct calls, each with its own upside and downside and no
 		# "Play it straight" (row 15). Unanswered (skipped, auto-played) is no call.
@@ -5171,8 +5173,8 @@ func _boundary_moment() -> bool:
 				"detail": Matchups.describe(cur), "gain": "%s: %s" % [kl[0], kl[1]], "cost": kl[2]})
 		_fire({"kind": "duel", "player_id": str(fid), "default": opts.size() - 1,
 			"title": ("%s has kicked %d" % [fname, bag]) if bag >= 3 else ("%s is getting on top" % fname),
-			"text": "%s has won %d contests in the air against %s this quarter." % [fname, wins,
-					cname] if wins > 0 else
+			"text": "%s has won %d contest%s in the air against %s this quarter." % [fname, wins,
+					"" if wins == 1 else "s", cname] if wins > 0 else
 					"%s is on %s. Change the match-up, or back %s in." % [cname, fname, cname],
 			"options": opts})
 		return true
@@ -5815,6 +5817,8 @@ func _free_set_shot(side: int, at_fp: float, taker: Dictionary) -> Dictionary:
 	var backs := _by_roles((squads[opp] as Squad).ground, ["DEF"])
 	var back = _weighted(backs if not backs.is_empty() else (squads[opp] as Squad).ground, "marking", 2.0, opp, "defender")
 	# Not a mark (could_mark is false): the copy must not call it one.
+	_t(opp, "rebounds")
+	_p(back, "rebounds")
 	_intercept(opp, back, false)
 	_emit("rebound", opp, fp, back, "%s's set shot falls short; %s gathers it" % [
 			GameDB.player_display_name(taker), GameDB.player_display_name(back)])

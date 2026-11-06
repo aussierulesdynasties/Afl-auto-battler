@@ -567,6 +567,12 @@ func _test_phone_match(sz: Vector2i) -> void:
 			var more = table.find_child("PlayerDetail", true, false)
 			_check(more != null and str(more.text).contains("metres gained") and str(more.text).contains("disposal efficiency"),
 					"His line includes metres gained and disposal efficiency (%s)" % tag)
+			var one_rx := RegEx.create_from_string("(^|, )1 [a-z' -]*s(,|$)")
+			_check(more != null and one_rx.search(str(more.text)) == null
+					and table.detail_words("behinds", 1) == "behind" and table.detail_words("behinds", 2) == "behinds"
+					and table.detail_words("hit-outs to advantage", 1) == "hit-out to advantage"
+					and table.detail_words("inside 50s", 1) == "inside 50",
+					"A count of one reads singular: 1 behind, 1 hit-out to advantage (%s)" % tag)
 			var fits := true
 			for row in table.find_children("PlayerRow_*", "Button", true, false):
 				if row.is_visible_in_tree() and row.get_global_rect().end.x > sz.x + 1:

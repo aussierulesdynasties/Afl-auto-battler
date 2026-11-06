@@ -6203,15 +6203,16 @@ func open_offseason() -> void:
 			if not list.has(p):
 				continue   # already delisted to make cap room for a better player
 			var why := ai_release_reason(code, p)
-			while why == "cap" and list.size() > Contracts.MIN_LIST:
+			if why == "cap" and list.size() > Contracts.MIN_LIST:
 				# Before a wanted player walks for want of cap room, the club
-				# delists its least valuable expiring player it does not pick (one
-				# it could replace or not), then looks again.
-				var spare := _spare_expiring(code, p)
-				if spare.is_empty():
-					break
-				_release(code, spare, false)
-				why = ai_release_reason(code, p)
+				# delists its least valuable expiring players it does not pick
+				# (ones it could replace or not) - but only when that frees
+				# enough room to keep him. Otherwise it keeps them all.
+				var spares := _cap_spares(code, p)
+				for spare in spares:
+					_release(code, spare, false)
+				if not spares.is_empty():
+					why = ai_release_reason(code, p)
 			if why == "" or list.size() <= Contracts.MIN_LIST:
 				# Rivals bargain by the same rules: the least he takes for that term
 				# (a club pushing to win now keeps him a little cheaper, as yours does).
@@ -6280,8 +6281,8 @@ var _repl_class := {}
 
 ## The expiring player `code` would delist first to make cap room for `keep`:
 ## the least valuable one outside its best 22, or {}.
-func _spare_expiring(code: String, keep: Dictionary) -> Dictionary:
-	var list: Array = season.lists.get(code, [])
+func _spare_expiring(code: String, keep: Dictionary, on: Array = []) -> Dictionary:
+	var list: Array = on if not on.is_empty() else season.lists.get(code, [])
 	var spare := {}
 	for q in Contracts.expiring(list):
 		if q == keep or retiring_now(q) or bool(q.get("resigned", false)) or Contracts.needed(q, list):
@@ -6290,6 +6291,24 @@ func _spare_expiring(code: String, keep: Dictionary) -> Dictionary:
 				or (Contracts.worth(q) == Contracts.worth(spare) and str(q["id"]) < str(spare["id"])):
 			spare = q
 	return spare
+
+
+## The expiring players `code` delists, least valuable first, to fit `keep`
+## under its cap: [] when even delisting every one it could (down to the
+## minimum list) would not make the room, so it never loses them for nothing.
+func _cap_spares(code: String, keep: Dictionary) -> Array:
+	var scratch: Array = (season.lists.get(code, []) as Array).duplicate()
+	var asking := Contracts.asking_salary(keep)
+	var out := []
+	while asking > cap_for(code) - Contracts.payroll(scratch) + int(keep.get("salary", 0)):
+		if scratch.size() <= Contracts.MIN_LIST:
+			return []
+		var spare := _spare_expiring(code, keep, scratch)
+		if spare.is_empty():
+			return []
+		scratch.erase(spare)
+		out.append(spare)
+	return out
 
 
 ## Who retires at this rollover is decided now, by the ageing rules, so a
@@ -7253,7 +7272,15 @@ func draft_spot(year: int, rnd: int, origin: String) -> int:
 	var i := order.find(origin)
 	var regular := (rnd - 1) * n + i + 1
 	# A new club's extra picks come first: every pick behind them is later.
-	return regular + ExpansionBuild.picks_ahead(self, year, regular, n)
+	var ahead := ExpansionBuild.picks_ahead(self, year, regular, n)
+	# So do this off-season's free-agency compensation picks, placed as
+	# begin_intake_draft hands them to the draft.
+	if year == season_year:
+		var active := GameDB.active_clubs(season_year)
+		for c in compensation:
+			if active.has(str(c["club"])) and int(c["after"]) < regular:
+				ahead += 1
+	return regular + ahead
 
 
 ## Where a club's pick in next year's draft might fall: [[overall pick,

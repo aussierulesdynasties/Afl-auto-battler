@@ -265,8 +265,9 @@ func _retiring(body: VBoxContainer) -> void:
 	body.add_child(UiKit.lbl("Retiring  (%d)" % rows.size(), UiKit.BODY, UiKit.EMPH, true))
 	for r in rows:
 		var p: Dictionary = r["p"]
-		var card := _player_card(p, "%d OVR  ·  age %d  ·  %d games this year" % [
-				int(p["overall"]), int(p.get("age", 0)), GameState.season_games(str(p["id"]))])
+		var g := GameState.season_games(str(p["id"]))
+		var card := _player_card(p, "%d OVR  ·  age %d  ·  %s this year" % [
+				int(p["overall"]), int(p.get("age", 0)), "1 game" if g == 1 else "%d games" % g])
 		card.name = "Retiring_" + str(p["id"])
 		body.add_child(card)
 		var v := card.get_child(0) as VBoxContainer
@@ -312,6 +313,7 @@ func _confirm_release(p: Dictionary) -> void:
 	release.pressed.connect(func():
 		_close_release()
 		_notice = str(GameState.release_player(str(p["id"]))["reason"])
+		_prune_trade()
 		_build())
 	box["footer"].add_child(release)
 	var cancel := UiKit.btn("Cancel", UiKit.NAME)
@@ -355,6 +357,8 @@ func _open_talks(player_id: String, free_agent := false) -> void:
 	var talks: Dictionary = p.get("talks", {})
 	_talk_reply = ""
 	_offer_salary = int(talks.get("counter", want["salary"]))
+	# Never carry the last player's term into these talks.
+	_offer_years = 0
 	if free_agent:
 		# Start from your standing offer, if you have one on the table.
 		for row in GameState.fa_offers(player_id):
@@ -793,6 +797,7 @@ func _offers(body: VBoxContainer) -> void:
 			btn.pressed.connect(func():
 				if accept:
 					_notice = str(GameState.accept_trade_offer(i)["reason"])
+					_prune_trade()
 				else:
 					GameState.decline_trade_offer(i)
 				_build())
@@ -861,6 +866,15 @@ func _package(body: VBoxContainer, title: String, ids: Array, club: String, pref
 			_build())
 		row.add_child(rm)
 		body.add_child(row)
+
+
+## Drop from the trade builder anyone (or any pick) that has since left the
+## club offering it - released, or moved in an accepted trade - so no stale
+## row blocks the next trade.
+func _prune_trade() -> void:
+	_mine = _mine.filter(func(id): return str(GameState._trade_assets([id], GameState.my_club)["code"]) == "")
+	var club := _trade_club
+	_theirs = _theirs.filter(func(id): return club != "" and str(GameState._trade_assets([id], club)["code"]) == "")
 
 
 ## A player or pick in a trade, in a line: "Name, MID 72" or the pick.
