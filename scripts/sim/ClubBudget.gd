@@ -4,12 +4,14 @@ extends RefCounted
 ## off-season the board gives the same fixed departmental budget and the
 ## coach allocates it for the coming season.
 ##
-## Three buckets, four funding levels each. Standard in all three costs
-## exactly the full annual budget. High performance carries what the old
+## Three buckets, four funding levels each. The board gives $10.5m
+## (director, 2026-11-06): Standard in all three costs $9.0m and leaves one
+## step to spend, so any two lines can be Strong if the third is Minimal.
+## High performance carries what the old
 ## Football department line did (TODO row 99, T9.Q14): one spend for the
 ## legs, the season peak and how sharply the game plan is carried out.
 
-const ANNUAL_M := 9.0
+const ANNUAL_M := 10.5
 const STANDARD := 1
 const YOUNG_AGE := 22.0
 
@@ -95,10 +97,12 @@ static func tactics_mult(level: int) -> float:
 ## level a step (each step is $1.5m on every line). So the other two lines
 ## keep their exact funding, and High performance ends at its old level plus
 ## the Football department's steps from Standard, held to Minimal..Elite.
-## Both at Minimal is the one legal old allocation it may not pay for ($1.5m
-## short when the other two hold more than $7.5m): the best-funded other line
-## drops a step, Recruiting first on a tie. Any allocation still over budget
-## (a hand-edited save) is trimmed the same way until it fits.
+## An old save spent at most $12m on four lines, so the fold spends at most
+## $9m, or $10.5m when both were Minimal (High performance cannot drop below
+## Minimal): every legal old allocation fits the $10.5m, and what it leaves
+## unspent is there to allocate next off-season. Only a hand-edited save can
+## come out over budget; the best-funded line other than High performance then
+## drops a step, Recruiting first on a tie, until it fits.
 static func fold_football(allocation: Dictionary) -> Dictionary:
 	var out := allocation.duplicate()
 	if not out.has(OLD_FOOTBALL):
