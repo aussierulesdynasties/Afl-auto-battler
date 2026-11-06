@@ -418,7 +418,8 @@
 			"where": {
 				"age_max": 21,
 				"fit": true,
-				"selected": false
+				"selected": false,
+				"out_of_side": true
 			},
 			"pick": "highest:potential"
 		},

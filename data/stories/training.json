@@ -57,6 +57,7 @@
 			"where": {
 				"fit": true,
 				"selected": false,
+				"out_of_side": true,
 				"backed": false,
 				"age_max": 21,
 				"pot_gap_min": 8

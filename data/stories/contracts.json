@@ -166,7 +166,8 @@
 			"where": {
 				"fit": true,
 				"age_max": 21,
-				"games_max": 3
+				"games_max": 3,
+				"out_of_side": true
 			},
 			"pick": "random"
 		},
@@ -174,7 +175,7 @@
 			"{name} wants to know where he stands"
 		],
 		"text": [
-			"He's on a rookie deal and hasn't had a senior game. His family are asking questions."
+			"He's on a rookie deal and can't get a senior game. His family are asking questions."
 		],
 		"choices": [
 			{
