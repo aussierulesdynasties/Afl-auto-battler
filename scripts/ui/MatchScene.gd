@@ -857,7 +857,8 @@ func _show_coach_box() -> void:
 		"tagger_id": str((sim.tactics[_my_side] as Dictionary).get("tagger_id", _last_tactics.get("tagger_id", ""))),
 		"interceptor_id": str(sim.interceptor[_my_side]),
 		"minder_id": str((sim.tactics[_my_side] as Dictionary).get("spare_minder_id", "")) 				if bool((sim.tactics[_my_side] as Dictionary).get("spare_accountable", false)) else "",
-		"pep": "steady",
+		# Before the bounce, a talk you set before Change the side is kept.
+		"pep": str((sim.tactics[_my_side] as Dictionary).get("pep", "steady")) if q == 1 else "steady",
 	}
 	calls["defence"] = MatchNotes.defence_key(str(calls["interceptor_id"]) != "", str(calls["minder_id"]) != "")
 	var loose_was := str(calls["interceptor_id"])
@@ -1130,7 +1131,7 @@ func _show_coach_box() -> void:
 	col_a.add_child(pep_note)
 	group.call("pep", pep_block)
 	group.call("pep", pep_note)
-	sync_pep.call("steady")
+	sync_pep.call(str(calls["pep"]))
 
 	if wide:
 		def_block.get_parent().remove_child(def_block)
@@ -1159,8 +1160,8 @@ func _show_coach_box() -> void:
 	var start := UiKit.btn("Start quarter" if q > 1 else "Start", UiKit.HEADING, true)
 	start.name = "StartQuarter"
 	start.custom_minimum_size = Vector2(0, 48)
-	start.pressed.connect(func():
-		var t := {
+	var take_calls := func() -> Dictionary:
+		return {
 			"gameplan": str(calls["gameplan"]),
 			"tag_id": str(calls["tag_id"]),
 			"tagger_id": str(calls["tagger_id"]),
@@ -1170,6 +1171,8 @@ func _show_coach_box() -> void:
 			"spare_minder_id": str(calls["minder_id"]),
 			"pep": str(calls["pep"]),
 		}
+	start.pressed.connect(func():
+		var t: Dictionary = take_calls.call()
 		_close_coach()
 		_simulate_next_quarter(t))
 	# One primary action on the break; the way out is said as words.
@@ -1220,6 +1223,12 @@ func _show_coach_box() -> void:
 		side.name = "ChangeSide"
 		side.custom_minimum_size = skip.custom_minimum_size
 		side.pressed.connect(func():
+			# Your calls go into the match before you leave, so they are still
+			# set when you come back (GameState.rebuild_pending_side).
+			var t: Dictionary = take_calls.call()
+			if bool(t["interceptor_set"]):
+				sim.coach_interceptor(_my_side, str(t["interceptor_id"]))
+			sim.set_tactics(_my_side, t)
 			GameState.side_from_match = true
 			_close_coach()
 			Router.go("selection"))
