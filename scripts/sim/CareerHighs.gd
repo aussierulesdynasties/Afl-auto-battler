@@ -90,13 +90,13 @@ static func count_text(stat: String, n: int) -> String:
 	return "%s %s" % [MatchNotes.count_word(n), stat]
 
 
-## The feed's line: "Career-high four goals for Calder." A count said at a
-## break may still grow: "Career-high 24 disposals for Calder, and counting."
+## The feed's line: "Career-best four goals for Calder." A count said at a
+## break may still grow: "Career-best 24 disposals for Calder, and counting."
 static func feed_line(who: String, stat: String, n: int, counting := false) -> String:
-	return "Career-high %s for %s%s." % [count_text(stat, n), who, ", and counting" if counting else ""]
+	return "Career-best %s for %s%s." % [count_text(stat, n), who, ", and counting" if counting else ""]
 
 
-## The news line: "Calder had a career-high 34 disposals against Carlton in Round 7."
+## The news line: "Calder had a career-best 34 disposals against Carlton in Round 7."
 static func news_line(who: String, stat: String, n: int, opp: String, label: String) -> String:
 	var verb: String = {"goals": "kicked", "marks": "took", "tackles": "laid"}.get(stat, "had")
 	var when := Firsts.when_text({"label": label, "year": 0})
@@ -104,4 +104,4 @@ static func news_line(who: String, stat: String, n: int, opp: String, label: Str
 		when = ""
 	else:
 		when = " " + when.trim_suffix(", 0")
-	return "%s %s a career-high %s against %s%s." % [who, verb, count_text(stat, n), GameDB.club_name(opp), when]
+	return "%s %s a career-best %s against %s%s." % [who, verb, count_text(stat, n), GameDB.club_name(opp), when]

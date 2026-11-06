@@ -3265,9 +3265,11 @@ func _on_event(ev: Dictionary) -> void:
 	_update_scoreboard(ev)
 	_track_momentum(ev)
 	_feed_add(ev)
-	_duel_feed(ev)
-	_story_feed(ev)
-	_career_high_feed(ev)
+	# A career best at a goal is that goal's one extra line: no battle or
+	# story line stacks on it.
+	if not _career_high_feed(ev) or str(ev.get("kind", "")) != "goal":
+		_duel_feed(ev)
+		_story_feed(ev)
 	_press_feed(event_index, ev)
 	_call_feed(event_index, ev)
 	if str(ev.get("kind", "")) == "goal":
@@ -4444,11 +4446,18 @@ func _story_feed(ev: Dictionary) -> void:
 				UiKit.TEXT, false, "StoryLine")
 
 
-## A career high for one of yours (MatchNotes.career_high_lines).
-func _career_high_feed(ev: Dictionary) -> void:
-	for text in MatchNotes.career_high_lines(_duel_mem, ev, _res):
+## A career best for one of yours, in bold so a once-in-a-career moment is
+## not lost among routine lines (MatchNotes.career_high_lines). True when a
+## line was added.
+func _career_high_feed(ev: Dictionary) -> bool:
+	var sim = GameState.pending_sim
+	var extra := int(ev.get("q", 1)) == 4 and (bool(_res.get("extra_time", false))
+			or (_interactive and sim != null and sim.needs_extra_time()))
+	var lines := MatchNotes.career_high_lines(_duel_mem, ev, _res, extra)
+	for text in lines:
 		_feed_text("%s  %s" % [_clock_text(int(ev.get("q", 1)), int(ev.get("min", 0))), str(text)],
-				UiKit.TEXT, false, "CareerHighLine")
+				UiKit.TEXT, true, "CareerHighLine")
+	return not lines.is_empty()
 
 
 ## The Defensive press taking hold, once a side a match: the first time the

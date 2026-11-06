@@ -123,19 +123,19 @@ func _test_rules() -> void:
 
 
 func _test_wording() -> void:
-	_check(_CH.feed_line("Calder", "goals", 4) == "Career-high four goals for Calder.", "Feed, goals")
-	_check(_CH.feed_line("Calder", "disposals", 34, true) == "Career-high 34 disposals for Calder, and counting.",
+	_check(_CH.feed_line("Calder", "goals", 4) == "Career-best four goals for Calder.", "Feed, goals")
+	_check(_CH.feed_line("Calder", "disposals", 34, true) == "Career-best 34 disposals for Calder, and counting.",
 			"Feed, at a break")
 	var db = root.get_node("GameDB")
 	var carlton: String = db.club_name("CAR")
 	_check(_CH.news_line("Calder", "disposals", 34, "CAR", "Round 7")
-			== "Calder had a career-high 34 disposals against %s in Round 7." % carlton, "News, disposals")
+			== "Calder had a career-best 34 disposals against %s in Round 7." % carlton, "News, disposals")
 	_check(_CH.news_line("Calder", "goals", 5, "CAR", "Grand Final")
-			== "Calder kicked a career-high five goals against %s in the Grand Final." % carlton, "News, goals in a final")
+			== "Calder kicked a career-best five goals against %s in the Grand Final." % carlton, "News, goals in a final")
 	_check(_CH.news_line("Calder", "marks", 9, "CAR", "Semi Final 1")
-			== "Calder took a career-high nine marks against %s in a Semi Final." % carlton, "News, marks")
+			== "Calder took a career-best nine marks against %s in a Semi Final." % carlton, "News, marks")
 	_check(_CH.news_line("Calder", "tackles", 8, "CAR", "Round 2")
-			== "Calder laid a career-high eight tackles against %s in Round 2." % carlton, "News, tackles")
+			== "Calder laid a career-best eight tackles against %s in Round 2." % carlton, "News, tackles")
 
 
 ## Sets his tally so that, with this match counted, he has played `games`.
@@ -152,7 +152,7 @@ func _set_games(p: Dictionary, games: int) -> void:
 func _highs_news() -> Array:
 	var out := []
 	for item in _state.news:
-		if str(item.get("kind", "")) == "milestone" and str(item.get("text", "")).contains("career-high"):
+		if str(item.get("kind", "")) == "milestone" and str(item.get("text", "")).contains("career-best"):
 			out.append(str(item["text"]))
 	return out
 
@@ -180,7 +180,7 @@ func _test_round_news() -> void:
 	_state._note_career_highs([res])
 	var said := _highs_news()
 	var who: String = root.get_node("GameDB").player_display_name(mine)
-	var want := "%s had a career-high 25 disposals against %s in Round 7." % [who, root.get_node("GameDB").club_name(opp_code)]
+	var want := "%s had a career-best 25 disposals against %s in Round 7." % [who, root.get_node("GameDB").club_name(opp_code)]
 	_check(said.size() == before + 1 and said[0] == want, "One news item, his (%s)" % str(said.slice(0, 2)))
 	_check(_CH.best(theirs, "disposals") == 30, "Their player's best is kept")
 	_state._note_career_highs([res])
@@ -193,6 +193,43 @@ func _test_round_news() -> void:
 	quiet["roster"] = [[{"id": str(mine["id"])}], []]
 	_state._note_career_highs([quiet])
 	_check(_highs_news().size() == before + 1, "A quiet game says nothing")
+	# Two of yours in one round: the bigger career best leads the news.
+	var pair: Array = []
+	for p in _state.my_list:
+		if Career.complete(p) and p != mine and pair.size() < 2:
+			pair.append(p)
+	_check(pair.size() == 2, "(setup) two more players of yours on a full career")
+	var ids := []
+	for p in pair:
+		p["career"] = {"games": 6, "goals": 0, "stints": [], "through": _state.season_year - 1, "unknown": []}
+		p.erase("highs")
+		_state.season_tally.erase(str(p["id"]))
+		_record(p, 6, {"goals": 2, "disposals": 18, "marks": 5, "tackles": 4})
+		_set_games(p, 7)
+		ids.append(str(p["id"]))
+	var two := {"home": _state.my_club, "away": opp_code, "label": "Round 9", "score": [90, 60],
+			"roster": [[{"id": ids[0]}, {"id": ids[1]}], []],
+			"players": {ids[0]: {"disposals": 21}, ids[1]: {"disposals": 36}}}
+	var n0 := _highs_news().size()
+	_state._note_career_highs([two])
+	var top := _highs_news()
+	var big: String = root.get_node("GameDB").player_display_name(pair[1])
+	_check(top.size() == n0 + 2 and str(top[0]).begins_with(big + " had a career-best 36"),
+			"The bigger career best is on top (%s)" % str(top.slice(0, 2)))
+	# A player the round's news already named for his game gets no second item.
+	for p in pair:
+		_set_games(p, 8)
+	_state._named_this_round = {ids[0]: true}
+	var named := two.duplicate(true)
+	named["label"] = "Round 10"
+	named["players"] = {ids[0]: {"disposals": 30}, ids[1]: {"disposals": 40}}
+	var n1 := _highs_news().size()
+	_state._note_career_highs([named])
+	var after := _highs_news()
+	_check(after.size() == n1 + 1 and str(after[0]).begins_with(big + " "),
+			"Already named this round: no career-best item for him (%s)" % str(after.slice(0, 2)))
+	_check(_CH.best(pair[0], "disposals") == 30, "...though his best is kept")
+	_state._named_this_round = {}
 
 
 ## The record is kept on the player, so a save keeps it.
@@ -222,7 +259,7 @@ func _test_feed_lines() -> void:
 	var said := []
 	for i in range(5):
 		said.append_array(_MN.career_high_lines(mem, goal, {}))
-	_check(said == ["Career-high four goals for Ari Bramble."], "His fourth goal passes his best of three, said once (%s)" % str(said))
+	_check(said == ["Career-best four goals for Ari Bramble."], "His fourth goal passes his best of three, said once (%s)" % str(said))
 	var them := goal.duplicate()
 	them["player_id"] = "b"
 	_check(_MN.career_high_lines(mem, them, {}).is_empty(), "Nothing for a player not given")
@@ -240,9 +277,9 @@ func _test_feed_lines() -> void:
 		return {"kind": "quarter", "q": q, "min": 30, "side": -1}
 	_check(_MN.career_high_lines(mem, qev.call(1), res).is_empty(), "Under his best at quarter time: nothing")
 	var q2: Array = _MN.career_high_lines(mem, qev.call(2), res)
-	_check(q2 == ["Career-high 21 disposals for %s, and counting." % who], "One line a player at a break (%s)" % str(q2))
+	_check(q2 == ["Career-best 21 disposals for %s, and counting." % who], "One line a player at a break (%s)" % str(q2))
 	var q3: Array = _MN.career_high_lines(mem, qev.call(3), res)
-	_check(q3 == ["Career-high seven tackles for %s, and counting." % who], "The other high waits for the next break (%s)" % str(q3))
+	_check(q3 == ["Career-best seven tackles for %s, and counting." % who], "The other high waits for the next break (%s)" % str(q3))
 	_check(_MN.career_high_lines(mem, qev.call(3), res).is_empty(), "Each stat once a match")
 	_check(_MN.career_high_lines({"career_high": {}}, qev.call(3), res).is_empty(), "No candidates, no lines")
 	# The cap: three players over at one break, two lines.
@@ -255,6 +292,14 @@ func _test_feed_lines() -> void:
 	var capped: Array = _MN.career_high_lines(many, qev.call(4), {"quarter_teams": [{"quarter": 4, "players": snap}]})
 	_check(capped.size() == _MN.MAX_HIGH_LINES, "At most %d a quarter (%d)" % [_MN.MAX_HIGH_LINES, capped.size()])
 	_check(not str(capped[0]).contains("and counting"), "At the final siren the count is final")
+	# A level final: the last siren is not the end, so the count may grow.
+	var et := {"career_high": {}}
+	var eid := str(_state.my_list[1]["id"])
+	et["career_high"][eid] = {"disposals": 18}
+	var et_lines: Array = _MN.career_high_lines(et, qev.call(4),
+			{"quarter_teams": [{"quarter": 4, "players": {eid: {"disposals": 22.0}}}]}, true)
+	_check(et_lines.size() == 1 and str(et_lines[0]).ends_with(", and counting."),
+			"Extra time to come: still counting (%s)" % str(et_lines))
 
 
 ## The match screen is told whose career high it could say, only yours, and the
@@ -290,8 +335,14 @@ func _test_match_screen() -> void:
 	for i in range(4):
 		m.call("_career_high_feed", goal)
 	var rows: Array = lines.call()
-	_check(rows.size() == 1 and str(rows[0]).ends_with("Career-high three goals for Test Kicker."),
+	_check(rows.size() == 1 and str(rows[0]).ends_with("Career-best three goals for Test Kicker."),
 			"His third goal reaches the feed, once (%s)" % str(rows))
+	var bold := false
+	for c in feed.get_children():
+		if str(c.get_meta("feed_kind", "")) == "CareerHighLine":
+			var key := "normal_font" if c is RichTextLabel else "font"
+			bold = (c as Control).get_theme_font(key) == load("res://scripts/ui/UiKit.gd").BOLD
+	_check(bold, "The feed line is set in bold")
 	m.queue_free()
 	await _settle()
 

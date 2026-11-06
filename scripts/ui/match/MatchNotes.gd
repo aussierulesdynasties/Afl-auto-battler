@@ -1463,10 +1463,13 @@ static func story_feed_line(mem: Dictionary, ev: Dictionary) -> String:
 ## the other side. Goals are said at the goal that passes his best; disposals,
 ## marks and tackles at the break where the quarter's count has passed it
 ## (`res` is the match so far: its quarter_teams). Each stat once a player a
-## match, one line a player an event, at most MAX_HIGH_LINES a quarter.
+## match, one line a player an event, at most MAX_HIGH_LINES a quarter. A
+## count said before the last siren, or at it when a level final goes to extra
+## time (`extra_time`), may still grow: "and counting".
 const MAX_HIGH_LINES := 2
 
-static func career_high_lines(mem: Dictionary, ev: Dictionary, res: Dictionary) -> Array:
+static func career_high_lines(mem: Dictionary, ev: Dictionary, res: Dictionary,
+		extra_time := false) -> Array:
 	var out := []
 	var cands: Dictionary = mem.get("career_high", {})
 	if cands.is_empty():
@@ -1511,7 +1514,7 @@ static func career_high_lines(mem: Dictionary, ev: Dictionary, res: Dictionary) 
 			var n := int(float(st.get(stat, 0)))
 			if n > int(cands[id][stat]) and n >= int(CareerHighs.FLOORS[stat]):
 				if room.call():
-					said.call(id, stat, CareerHighs.feed_line(who, stat, n, q < 4))
+					said.call(id, stat, CareerHighs.feed_line(who, stat, n, q < 4 or extra_time))
 				break
 	return out
 

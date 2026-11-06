@@ -176,6 +176,9 @@ var department_budget_year := 0
 var season_wrap := {}            # the off-season briefing shown before Round 1 (season_wrap_lines)
 var _wrap_picks: Array = []      # your National Draft picks, carried into the rollover
 var news: Array = []             # league news feed, newest first
+## Players the round's news already named for their game (a milestone or a big
+## game), so a career best does not give him a second item. Not saved.
+var _named_this_round := {}
 var board_patience := "fair"     # this career's board dial (DifficultyDials step)
 var rival_recruiting := "shrewd" # this career's rival dial (DifficultyDials step)
 var tutorials := true            # this career's first-visit menu tips (Tutorials.gd)
@@ -10077,8 +10080,9 @@ func _note_firsts(results: Array) -> void:
 
 ## Every player's best games, kept on him (CareerHighs), and the week's news
 ## for a new career high by one of yours: one per player, his biggest, and at
-## most CareerHighs.MAX_NEWS a round. The tally already holds the match, so his
-## games before it are one fewer than games_played.
+## most CareerHighs.MAX_NEWS a round, and none for a player the round's news
+## already named for his game (_named_this_round). The tally already holds the
+## match, so his games before it are one fewer than games_played.
 func _note_career_highs(results: Array) -> void:
 	var said := []
 	for res in results:
@@ -10095,13 +10099,15 @@ func _note_career_highs(results: Array) -> void:
 					continue
 				var highs := CareerHighs.update(p, stats_all.get(id, {}), maxi(0, games_played(p) - 1),
 						Career.complete(p), season_year, label, key)
-				if highs.is_empty() or my_club == "" or codes[side] != my_club:
+				if highs.is_empty() or my_club == "" or codes[side] != my_club or _named_this_round.has(id):
 					continue
 				said.append([CareerHighs._step(highs[0]), CareerHighs.news_line(
 						GameDB.player_display_name(p), str(highs[0][0]), int(highs[0][1]),
 						codes[1 - side], label)])
+	# The biggest few, added smallest first: news is newest first, so the
+	# biggest ends on top.
 	said.sort_custom(func(a, b): return float(a[0]) > float(b[0]))
-	for i in range(mini(CareerHighs.MAX_NEWS, said.size())):
+	for i in range(mini(CareerHighs.MAX_NEWS, said.size()) - 1, -1, -1):
 		add_news("milestone", str(said[i][1]))
 
 
@@ -10163,6 +10169,7 @@ func _player_milestone_news(res: Dictionary) -> void:
 			var season_goals := int(t.get("goals", 0))
 			var previous_career_goals := career_goals_before(p, goals)
 			if Career.complete(p) and previous_career_goals == 0:
+				_named_this_round[id] = true
 				add_news("milestone", "%s kicked his first AFL goal for %s." % [
 						GameDB.player_display_name(p), GameDB.club_name(code)])
 			if not Career.complete(p):
@@ -10170,15 +10177,18 @@ func _player_milestone_news(res: Dictionary) -> void:
 			var career_goals := previous_career_goals + goals
 			for mark in [100, 200, 300, 400, 500, 600, 700, 800]:
 				if previous_career_goals < mark and career_goals >= mark:
+					_named_this_round[id] = true
 					add_news("milestone", "%s reached %d career goals." % [
 							GameDB.player_display_name(p), mark])
 			for mark in [25, 50, 75, 100]:
 				if season_goals - goals < mark and season_goals >= mark:
+					_named_this_round[id] = true
 					add_news("milestone", "%s reached %d goals for the %d season." % [
 							GameDB.player_display_name(p), mark, season_year])
 
 ## Big games and long injuries to good players from the round just played.
 func _round_news(results: Array) -> void:
+	_named_this_round = {}
 	for res in results:
 		_player_milestone_news(res)
 		var roster: Array = res.get("roster", [])
@@ -10193,6 +10203,7 @@ func _round_news(results: Array) -> void:
 				var p := _find_player(str(r["id"]))
 				if p.is_empty():
 					continue
+				_named_this_round[str(r["id"])] = true
 				if int(st.get("goals", 0)) >= 6:
 					add_news("game", "%s kicked %d goals for %s against %s." % [
 							GameDB.player_display_name(p), int(st["goals"]),
