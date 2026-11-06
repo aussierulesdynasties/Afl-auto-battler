@@ -239,7 +239,8 @@ static func _board(host: Control, list: Array) -> Control:
 		more.custom_minimum_size = Vector2(0, 44)
 		more.pressed.connect(func():
 			_shown += PAGE
-			host.call("refresh"))
+			# The rows on show stay where they are; the next page comes in under them.
+			host.call("refresh", true))
 		v.add_child(UiKit.spacer(8))
 		v.add_child(more)
 	return v
@@ -742,7 +743,8 @@ static func _table(host: Control, list: Array, cols: Array, wide: bool) -> Contr
 		more.custom_minimum_size = Vector2(0, 44)
 		more.pressed.connect(func():
 			_shown += PAGE
-			host.call("refresh"))
+			# The rows on show stay where they are; the next page comes in under them.
+			host.call("refresh", true))
 		v.add_child(UiKit.spacer(8))
 		v.add_child(more)
 	return v

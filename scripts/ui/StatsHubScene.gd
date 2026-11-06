@@ -191,9 +191,19 @@ func _section(key: String) -> Control:
 	return Control.new()
 
 
-## Rebuild the current section (a filter or sort changed).
-func refresh() -> void:
-	_build.call_deferred()
+## Rebuild the current section (a filter or sort changed). keep_place: the
+## page stays where the player had it (Show more adds rows under the ones on
+## show; a rebuild alone would put him back at the top).
+func refresh(keep_place := false) -> void:
+	if keep_place:
+		_rebuild_in_place.call_deferred(UiKit.scroll_places(_root))
+	else:
+		_build.call_deferred()
+
+
+func _rebuild_in_place(places: Array) -> void:
+	_build()
+	UiKit.restore_places(_root, places)
 
 
 ## First visit only: what is here and how it works, in two lines. "Got it"
