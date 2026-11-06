@@ -525,8 +525,18 @@ func _test_hub_round1(size: Vector2i) -> void:
 				last_row = (n as Control).get_child((n as Control).get_child_count() - 1)
 		_check(last_row != null, "%s: found the ladder's rows" % tag)
 		if last_row != null:
+			# On a wide screen the ladder is its own column: when the week
+			# column beside it runs longer (it depends on the round's
+			# opponent, so on the fixture), the end of the page is past the
+			# ladder. The row must still be reachable: scroll it into view.
 			var view2 := sc.get_global_rect()
+			var cols: Control = hub.find_child("HubColumns", true, false)
+			var side_by_side := cols != null and cols.is_ancestor_of(lad)
+			if side_by_side and not view2.grow(1).encloses(last_row.get_global_rect()):
+				sc.ensure_control_visible(last_row)
+				await _settle(4)
 			_check(view2.grow(1).encloses(last_row.get_global_rect()),
-					"%s: the last ladder row is fully inside the page at the end (%s in %s)" % [tag, last_row.get_global_rect(), view2])
+					"%s: the last ladder row is fully inside the page %s (%s in %s)" % [tag,
+					"once scrolled to" if side_by_side else "at the end", last_row.get_global_rect(), view2])
 	if OS.get_environment("HUBSHOT") != "":
 		get_root().get_viewport().get_texture().get_image().save_png("%s_%s_%dx%d.png" % [OS.get_environment("HUBSHOT"), "end", size.x, size.y])
