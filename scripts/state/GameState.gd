@@ -1949,6 +1949,8 @@ func finish_intake_draft() -> bool:
 		draft_meeting_year = 0
 		season_year = GameDB.START_YEAR
 		start_season(my_club, league_lists.get(my_club, []))
+		# Rebuild: the players who walked out sign with rival clubs for 2027.
+		Challenge.place_gone(self)
 		open_preseason()
 		# The Rookie Draft follows the opening National Draft too, in its order.
 		RookieList.open_draft(self, opening_order(GameDB.active_clubs(season_year)))
@@ -2409,6 +2411,13 @@ func start_season(club_code: String, list: Array) -> void:
 		# A re-drafted list of 44 splits into 38 seniors
 		# and six rookies, the youngest.
 		RookieList.seed_lists(lists)
+		# The 2026 draft class had never been drafted: the club that took
+		# him in the League redraft first drafted him (home-grown, Challenge).
+		# Real players keep the club that drafted them in the AFL.
+		for code in lists:
+			for p in lists[code]:
+				if str(p.get("id", "")).begins_with("D2026_") and not p.has("drafted_club"):
+					p["drafted_club"] = code
 	else:
 		# Fallback for tests or old saves: your drafted list plus real AI lists.
 		for code in GameDB.club_order:
@@ -8137,7 +8146,10 @@ func _trade_target(club: String, from_list: Array, skip: Dictionary) -> Dictiona
 ## club would value giving it up - never by what the other side thinks.
 ## Only packages worth no more than `most` to it; cheapest first:
 ## [[assets, value], ...].
-func _bids(buyer: String, most: float, prospects: Dictionary) -> Array:
+## `to`: the club the package would go to. Your challenge (Youth only,
+## Rebuild) bars some players from coming to you, so a bid to you never
+## includes them.
+func _bids(buyer: String, most: float, prospects: Dictionary, to := "") -> Array:
 	var phase := club_phase(buyer)
 	var bars := TradeValue.selection_bars(season.lists[buyer])
 	var proj := TradeValue.selection_bars(season.lists[buyer], true)
@@ -8155,6 +8167,8 @@ func _bids(buyer: String, most: float, prospects: Dictionary) -> Array:
 		var q: Dictionary = list[k]
 		if trade_requests.has(str(q["id"])):
 			continue  # he goes only where he asked to, not as a makeweight
+		if to == my_club and Challenge.block_reason(self, q) != "":
+			continue  # your challenge bars him from coming to you
 		pool.append([q, float(TradeValue.value(q, {"phase": phase, "bars": bars, "proj": proj, "own": true})["total"])])
 	var out := []
 	for i in range(pool.size()):
@@ -8193,7 +8207,7 @@ func _bid(club: String, asset: Dictionary, worth: float, shade: float, prospects
 	if margin < 0.0:
 		margin = float(difficulty_rules()["trade_margin"])
 	var most := worth / (1.0 + margin)
-	var options := _bids(club, most, prospects)
+	var options := _bids(club, most, prospects, other)
 	options.sort_custom(func(x, y):
 		var dx := absf(float(x[1]) - shade * most)
 		var dy := absf(float(y[1]) - shade * most)
@@ -8583,7 +8597,7 @@ func put_on_trade_table(id: String) -> Dictionary:
 	# Suitors: the keenest clubs that have something to offer.
 	var suitors := []
 	for row in keen.slice(0, 6):
-		if not _bids(str(row[0]), float(row[1]) / (1.0 + float(difficulty_rules()["trade_margin"])), prospects).is_empty():
+		if not _bids(str(row[0]), float(row[1]) / (1.0 + float(difficulty_rules()["trade_margin"])), prospects, my_club).is_empty():
 			suitors.append(row)
 	var shade := UNASKED_BID + 0.1 * float(mini(suitors.size(), 3) - 1)
 	var made := 0
@@ -8688,7 +8702,7 @@ func ask_around(id: String) -> Array:
 			else:
 				# He's worth something to them, but less than anything they'd part with:
 				# what else of yours would get their cheapest piece.
-				var cheapest := _bids(club, INF, prospects)
+				var cheapest := _bids(club, INF, prospects, my_club)
 				var counter := {}
 				if not cheapest.is_empty():
 					var theirs: Array = (cheapest[0][0] as Array).map(func(a): return str(a["id"]))
@@ -8756,7 +8770,8 @@ func accept_trade_offer(i: int) -> Dictionary:
 	var o: Dictionary = trade_offers[i]
 	var r := make_trade(str(o["club"]), o["take"], o["give"])
 	o["status"] = "accepted" if bool(r["ok"]) else "off"
-	if not bool(r["ok"]):
+	# Your challenge's own reason stands; anything else means they moved on.
+	if not bool(r["ok"]) and str(r.get("code", "")) != "trade_challenge":
 		r["reason"] = "%s have moved on: the offer is off." % GameDB.club_name(str(o["club"]))
 	mark_dirty()
 	return r

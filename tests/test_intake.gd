@@ -27,6 +27,7 @@ func run() -> void:
 	_t("_test_custom_prospect")
 	_t("_test_panel_fit")
 	_t("_test_real_lists_start")
+	_t("_test_rebuild_walkouts_sign")
 	_t("_test_gen_traits_rates")
 	GameState.replay_seed = 0
 	print(Ran.line("Intake", self))
@@ -1177,3 +1178,48 @@ func _matched_share(grown: Array, t: String, bands: Dictionary) -> float:
 			w += float(bands[b])
 			s += float(bands[b]) * float(have.get(b, 0)) / float(tot[b])
 	return 100.0 * s / maxf(1.0, w)
+
+
+## Row 114, Rebuild: the bottom club's three best walk out before the 2026
+## National Draft, and once it is done they sign with rival clubs for 2027
+## (never with you, never back at the club they left), each on a deal that
+## covers 2027. You take over the bottom club.
+func _test_rebuild_walkouts_sign() -> void:
+	GameState.reset()
+	GameState.replay_seed = 4242
+	GameState.challenge = {"kind": "rebuild"}
+	GameState.begin_real_lists()
+	var club := str(GameState.challenge.get("club", ""))
+	var gone: Array = GameState.challenge.get("gone", [])
+	_check(club != "" and GameState.my_club == club and gone.size() == 3,
+			"Rebuild takes over the bottom club, three gone (%s, %d)" % [club, gone.size()])
+	var guard := 0
+	while GameState.draft != null and not GameState.draft.is_finished() and guard < 400:
+		guard += 1
+		if GameState.draft.is_user_turn():
+			var board: Array = GameState.draft.board("", "", "", "overall", true)
+			if board.is_empty() or not GameState.draft.pick(board[0]):
+				break
+	_check(GameState.finish_intake_draft() and GameState.season != null, "(setup) the 2026 National Draft finishes and 2027 starts")
+	if GameState.season == null:
+		GameState.reset()
+		return
+	var where := {}
+	for code in GameState.season.lists:
+		for q in GameState.season.lists[code]:
+			where[str(q["id"])] = [str(code), q]
+	var placed := 0
+	var wrong := []
+	for g in gone:
+		var at = where.get(str(g["id"]))
+		if at == null:
+			wrong.append("%s unsigned" % str(g["id"]))
+			continue
+		if str(at[0]) == club or str(at[0]) == GameState.my_club or int(at[1].get("contract_years", 0)) < 1:
+			wrong.append("%s at %s" % [str(g["id"]), str(at[0])])
+			continue
+		placed += 1
+	_check(placed == 3 and wrong.is_empty(), "All three sign with rival clubs for 2027 (%s)" % ", ".join(wrong))
+	var still := GameState.free_agents.filter(func(q): return gone.any(func(g): return str(g["id"]) == str(q["id"])))
+	_check(still.is_empty(), "None of them is left in free agency")
+	GameState.reset()

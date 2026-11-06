@@ -30,6 +30,7 @@ func run() -> void:
 	_t("_test_story_finals_result")
 	_t("_test_story_with_match_story")
 	_t("_test_challenge_goal_marked")
+	_t("_test_homegrown_flag")
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -343,3 +344,44 @@ func _test_challenge_goal_marked() -> void:
 	Challenge.mark_season(GameState, plain)
 	_check(not plain.has("challenge_met"), "No flag: the home-grown flag goal is not met")
 	GameState.challenge = {}
+
+
+## Row 114: the home-grown flag is met when every player your club sent out
+## in the Grand Final was first drafted by your club, home side or away, and
+## not when one of them came from elsewhere.
+func _test_homegrown_flag() -> void:
+	GameState.reset()
+	GameState.career_seed = SUITE_SEED
+	GameState.replay_seed = SUITE_SEED
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	var side := []
+	for p in GameState.my_list.slice(0, 23):
+		p["drafted_club"] = "GEE"
+		side.append({"id": str(p["id"])})
+	var theirs := []
+	for p in (GameState.season.lists["COL"] as Array).slice(0, 23):
+		theirs.append({"id": str(p["id"])})
+	var finals_was: Dictionary = GameState.season.finals
+	GameState.season.finals = {"weeks": [[{"tag": "GF", "home": "GEE", "away": "COL", "roster": [side, theirs]}]]}
+	GameState.challenge = {"kind": "goal", "goal": "flag_homegrown", "met_year": 0}
+	_check(Challenge.homegrown_flag(GameState), "A Grand Final side all drafted by your club is home-grown")
+	var page := {"year": GameState.season_year, "club": "GEE", "flag": true}
+	Challenge.mark_season(GameState, page)
+	_check(str(page.get("challenge_met", "")) == "Win a flag with a home-grown 22",
+			"A flag with that side meets the goal (%s)" % str(page.get("challenge_met", "")))
+	GameState.challenge = {"kind": "goal", "goal": "flag_homegrown", "met_year": 0}
+	GameState.season.finals = {"weeks": [[{"tag": "GF", "home": "COL", "away": "GEE", "roster": [theirs, side]}]]}
+	_check(Challenge.homegrown_flag(GameState), "As the away side too")
+	GameState.my_list[5]["drafted_club"] = "COL"
+	_check(not Challenge.homegrown_flag(GameState), "One player first drafted elsewhere and it is not home-grown")
+	GameState.my_list[5].erase("drafted_club")
+	_check(not Challenge.homegrown_flag(GameState), "A player with no drafting club (a save from before) is not home-grown")
+	GameState.season.finals = {"weeks": [[{"tag": "GF", "home": "COL", "away": "RIC", "roster": [theirs, theirs]}]]}
+	_check(not Challenge.homegrown_flag(GameState), "A Grand Final you were not in never counts")
+	GameState.season.finals = finals_was
+	GameState.challenge = {}
+	# Real players carry the club that drafted them: the first club of their
+	# AFL career (Jordan Dawson, Adelaide's #12, was drafted by Sydney).
+	var dawson := GameDB.club_list("ADE").filter(func(q): return str(q["id"]) == "ADE_12")
+	_check(not dawson.is_empty() and str(dawson[0].get("drafted_club", "")) == "SYD",
+			"A real player's drafting club is his first AFL club (%s)" % (str(dawson[0].get("drafted_club", "")) if not dawson.is_empty() else "-"))

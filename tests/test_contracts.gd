@@ -47,6 +47,7 @@ func run() -> void:
 	_t("_test_market_reasons_change_nothing")
 	_t("_test_rivals_act_in_their_interest")
 	_t("_test_challenge_gates")
+	_t("_test_challenge_offers")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Contracts", self))
@@ -2717,4 +2718,60 @@ func _test_challenge_gates() -> void:
 	r = GameState.offer_free_agent(str(other["id"]), Contracts.asking_salary(other) * 2, 2)
 	_check(not bool(r["ok"]) and str(r["reason"]).begins_with("Rebuild:"),
 			"Rebuild: a player who walked out cannot be signed back (%s)" % str(r.get("reason")))
+	GameState.challenge = {}
+
+
+
+## Row 114, Youth only: a rival's bid for your player never includes one of
+## its players over 24, and an offer that somehow does says the real reason
+## when you accept it, not that the club moved on.
+func _test_challenge_offers() -> void:
+	_new_season()
+	_to_offseason()
+	GameState.challenge = {"kind": "youth"}
+	var me := GameState.my_club
+	var prospects := GameState.trade_prospects()
+	var over := 0
+	var any := 0
+	for code in GameState.season.lists:
+		if code == me:
+			continue
+		for o in GameState._bids(code, INF, prospects, me):
+			for a in o[0]:
+				any += 1
+				if Challenge.block_reason(GameState, a) != "":
+					over += 1
+	_check(any > 0 and over == 0, "Youth only: no rival bid to you includes a player over 24 (%d of %d)" % [over, any])
+	var rival := ""
+	var old := {}
+	for code in GameState.season.lists:
+		if code == me:
+			continue
+		for q in GameState.season.lists[code]:
+			if int(floor(float(q.get("age", 0)))) >= 25:
+				old = q
+				rival = code
+				break
+		if rival != "":
+			break
+	_check(rival != "", "(setup) a rival player over 24")
+	if rival == "":
+		GameState.challenge = {}
+		return
+	# Rivals bidding among themselves are not bound.
+	var free_over := 0
+	for o in GameState._bids(rival, INF, prospects, ""):
+		for a in o[0]:
+			if Challenge.block_reason(GameState, a) != "":
+				free_over += 1
+	_check(free_over > 0, "Rival clubs trading with each other are not bound by your challenge (%d)" % free_over)
+	GameState.trade_offers.append({"club": rival, "give": [str(old["id"])],
+			"take": [str(GameState.my_list[GameState.my_list.size() - 1]["id"])], "status": "open"})
+	var i := GameState.trade_offers.size() - 1
+	if GameState.open_trade_offers().has(i):
+		var r := GameState.accept_trade_offer(i)
+		_check(not bool(r["ok"]) and str(r["reason"]).begins_with("Youth only"),
+				"Accepting an offer of a player over 24 says why it can't go through (%s)" % str(r.get("reason")))
+	else:
+		_check(false, "(setup) the hand-made offer is open")
 	GameState.challenge = {}

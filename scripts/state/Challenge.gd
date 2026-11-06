@@ -21,7 +21,8 @@ const MAX_AGE := 24
 ## Rebuild: how many of the bottom club's best leave before you start.
 const REBUILD_GONE := 3
 const COACH_GAMES := 300
-## The goals on offer (ruling 115 names these two), in the order shown.
+## The goals on offer, in the order shown. Ruling 115 asks for a self-set
+## goal and names none; these two are the examples in proposal P-56.
 const GOAL_ORDER := ["flag_homegrown", "coach_300"]
 const GOALS := {
 	"flag_homegrown": "Win a flag with a home-grown 22",
@@ -51,9 +52,11 @@ static func rule_line(k: String) -> String:
 		"youth":
 			return "Youth only: you cannot trade for, sign or draft a player over 24. Re-signing your own players is fine. Rival clubs are not bound."
 		"rebuild":
-			return "Rebuild: you take over the club that finished last in 2026, and its three best players walk out before you start. Real 2026 lists only."
+			var bottom := bottom_club(GameDB.active_clubs(GameDB.START_YEAR))
+			var who := GameDB.club_name(bottom) if bottom != "" else "the club that finished last"
+			return "Rebuild: you take over %s, last in 2026, and its three best players walk out before you start. Real 2026 lists only." % who
 		"goal":
-			return "Your own goal: pick one. Nothing changes in the game; the club annual marks the season you reach it."
+			return "Your goal: pick one. Nothing changes in the game; the club annual marks the season you reach it."
 	return "A normal career, with no extra rule."
 
 
@@ -101,6 +104,14 @@ static func block_reason(gs, p: Dictionary) -> String:
 	return ""
 
 
+## The few words on a disabled button for a player your challenge bars
+## ("" when it doesn't): "Over 24", or "Walked out" for a Rebuild player.
+static func short_tag(gs, p: Dictionary) -> String:
+	if block_reason(gs, p) == "":
+		return ""
+	return "Over %d" % MAX_AGE if kind(gs) == "youth" else "Walked out"
+
+
 # ---------------------------------------------------------------------------
 # Rebuild
 # ---------------------------------------------------------------------------
@@ -135,6 +146,41 @@ static func strip_best(gs, code: String, n: int = REBUILD_GONE) -> Array:
 		gone.append({"id": str(p["id"]), "name": str(p.get("name", "")),
 				"generic_name": str(p.get("generic_name", "")), "real_name": str(p.get("real_name", ""))})
 	return gone
+
+
+## The 2026 National Draft is done and 2027 is set up: the players who walked
+## out go to market among the rival clubs, as free agents do at the close of
+## free agency (GameState._open_market and _decide_fa), so they play 2027
+## somewhere. A player no rival can fit stays a free agent. Their deals start
+## now, with no rollover tick ahead of 2027, so the extra year _resign adds
+## for that tick comes off.
+static func place_gone(gs) -> void:
+	if kind(gs) != "rebuild" or gs.season == null:
+		return
+	var ids := {}
+	for g in gs.challenge.get("gone", []):
+		ids[str(g.get("id", ""))] = true
+	var left := []
+	for p in gs.free_agents:
+		if ids.has(str(p.get("id", ""))):
+			left.append(p)
+	gs._targets_signed = {}
+	for _pass in range(10):
+		if left.is_empty():
+			break
+		for p in left:
+			p.erase("offers")
+		gs._open_market(left)
+		var signed := 0
+		for p in left.duplicate():
+			if gs._decide_fa(p) != "":
+				p["contract_years"] = maxi(1, int(p.get("contract_years", 1)) - 1)
+				left.erase(p)
+				signed += 1
+		if signed == 0:
+			break
+	for p in left:
+		p.erase("offers")
 
 
 static func gone_names(gs) -> String:
@@ -173,6 +219,17 @@ static func goal_met(gs, id: String, entry: Dictionary) -> bool:
 		"flag_homegrown":
 			return bool(entry.get("flag", false)) and homegrown_flag(gs)
 	return false
+
+
+## Home-and-away games your club has played this season, before its annual
+## page is written (0 once it is). Finals count when the season closes.
+static func season_games(gs) -> int:
+	if gs.season == null:
+		return 0
+	for e in gs.almanac:
+		if int(e.get("year", 0)) == int(gs.season_year):
+			return 0
+	return int((gs.season.ladder.get(str(gs.my_club), {}) as Dictionary).get("p", 0))
 
 
 static func coach_games(seasons: Array) -> int:
@@ -231,5 +288,5 @@ static func status_line(gs) -> String:
 	if met > 0:
 		return "%s. Met in %d." % [goal_words(id), met]
 	if id == "coach_300":
-		return "%s. %d so far." % [goal_words(id), coach_games(gs.almanac)]
+		return "%s. %d so far." % [goal_words(id), coach_games(gs.almanac) + season_games(gs)]
 	return "%s. Not met yet." % goal_words(id)
