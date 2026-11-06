@@ -46,6 +46,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_bench_for_back_slot")
 	_t("_test_duel_handed_on_at_interchange")
 	_t("_test_oval_back_line_by_trade")
+	_t("_test_loose_man_leaves_key_forward_covered")
 	print(Ran.line("Key duels", self))
 	for f in failures:
 		print("  FAIL: " + f)
@@ -432,3 +433,37 @@ func _test_oval_back_line_by_trade() -> void:
 					_check(false, "%s v ADE seed %d, event %d: %s (not a defender) minds %s" % [
 							club, int(c[1]), k, str(o["name"]), str(t["name"])])
 	_check(subs > 0 and minded > 0, "Interchanges replayed: %d; forwards minded checked: %d" % [subs, minded])
+
+
+## The loose man a rival coach or your assistant picks is never the key
+## defender a key forward needs: Carlton's best reader of the ball is
+## Weitering, on Fogarty; sending him loose would leave Fogarty (193 cm) to
+## Cowan (188). A key forward is on a key defender whenever one is not
+## already on another key forward.
+func _test_loose_man_leaves_key_forward_covered() -> void:
+	var seen := 0
+	for club in ["CAR", "GEE", "SYD", "ESS", "HAW", "STK"]:
+		var mine := Squad.new(club, GameDB.club_list(club), true, club)
+		mine.assistant = true
+		var theirs := Squad.new("ADE", GameDB.club_list("ADE"), false, "ADE")
+		theirs.ai_plans = true
+		var sim := MatchSim.new(mine, theirs, 1)
+		for side in range(2):
+			var d: Dictionary = sim.duels[side]
+			var kds := Matchups.defenders((sim.squads[side] as Squad).ground).filter(
+					func(p): return PlayerProfile.player_type(p) == "Key defender")
+			var on_key := 0
+			for fid in d:
+				if Matchups._is_key_forward(sim._on_ground(1 - side, str(fid))) 						and PlayerProfile.player_type(sim._on_ground(side, str(d[fid]))) == "Key defender":
+					on_key += 1
+			for fid in d:
+				var f := sim._on_ground(1 - side, str(fid))
+				if not Matchups._is_key_forward(f):
+					continue
+				seen += 1
+				var dp := sim._on_ground(side, str(d[fid]))
+				_check(PlayerProfile.player_type(dp) == "Key defender" or on_key >= kds.size(),
+						"%s v ADE side %d: %s (%d cm) is on %s, %s, with key defender %s loose" % [club, side,
+						str(fid), int(f.get("height_cm", 0)), str(d[fid]), PlayerProfile.player_type(dp),
+						str(sim.interceptor[side])])
+	_check(seen > 0, "Key forwards with a direct opponent checked: %d" % seen)

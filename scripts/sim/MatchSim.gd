@@ -381,7 +381,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	# coach box.
 	for side in range(2):
 		if (squads[side] as Squad).ai_plans:
-			var best := Matchups.best_interceptor((squads[side] as Squad).ground)
+			var best := Matchups.best_interceptor(_loose_pool(side, (squads[side] as Squad).ground))
 			if not best.is_empty():
 				set_interceptor(side, str(best["id"]), false)
 		elif _assisted(side):
@@ -5910,6 +5910,30 @@ func ai_tactics(side: int) -> Dictionary:
 	return t
 
 
+## The men a rival coach (or your assistant) may send loose, from `ground`:
+## a key defender on a key forward stays on him unless a free key defender
+## would take the forward, so a key forward is never left to a smaller man
+## for the loose man's sake. The coach's own pick of the loose man is his.
+func _loose_pool(side: int, ground: Array) -> Array:
+	var d: Dictionary = duels[side]
+	var on := {}
+	for fid in d:
+		on[str(d[fid])] = str(fid)
+	var free_key := false
+	for p in Matchups.defenders((squads[side] as Squad).ground):
+		var pid := str(p["id"])
+		if not on.has(pid) and pid != str(interceptor[side]) \
+				and PlayerProfile.player_type(p) == "Key defender":
+			free_key = true
+	if free_key:
+		return ground
+	return ground.filter(func(p):
+		var fid := str(on.get(str(p["id"]), ""))
+		if fid == "" or PlayerProfile.player_type(p) != "Key defender":
+			return true
+		return not Matchups._is_key_forward(_on_ground(1 - side, fid)))
+
+
 ## A rival coach's loose defender for the quarter, from `ground`: his best
 ## interceptor, unless he is chasing the game late and wants every man on a
 ## forward. "" for none.
@@ -5917,7 +5941,7 @@ func _ai_interceptor(side: int, ground: Array) -> String:
 	var react := 18.0 - 8.0 * float((squads[side] as Squad).tactics_read)
 	var margin := score(side) - score(1 - side)
 	var st := _style(side)
-	var spare := Matchups.best_interceptor(ground)
+	var spare := Matchups.best_interceptor(_loose_pool(side, ground))
 	if spare.is_empty() or (margin <= -react * float(st["loose"]) and current_quarter >= int(st["loose_q"])):
 		return ""
 	return str(spare["id"])
