@@ -250,10 +250,10 @@ var career_seed := 0
 var conditioning := {}
 ## This year's pre-season (PreSeason.gd): {"year", "week" (weeks done, 0..8),
 ## "clubs": {code: {"blocks": [[load, focus] x3], "run"}}, "trial", "trial_seen",
-## A Game plan block is [load, "plan", drills], plus (only once a position
-## group drills something else) a fourth item {group: drills}; a block
+## "done"}. A Game plan block is [load, "plan", drills], plus (only once a
+## position group drills something else) a fourth item {group: drills}; a block
 ## without it drills the same for every group (PreSeason.group_drills).
-## "done"}. Empty means none is running: a career saved before pre-seasons
+## Empty means none is running: a career saved before pre-seasons
 ## existed plays on as it was and gets its first at the next rollover.
 ## The whole feature sits behind Features.on("preseason"): with the switch
 ## off none is ever opened and one already in a save is left alone, unread.
