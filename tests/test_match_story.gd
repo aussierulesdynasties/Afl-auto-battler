@@ -65,10 +65,12 @@ func run(tree: SceneTree) -> void:
 	_t("_test_arc_facts_and_digest")
 	_t("_test_my_best_in_loss")
 	_t("_test_digest_survives_trim")
+	_t("_test_factors_never_repeat")
 	for size in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		_tree.root.size = size
 		await _settle()
 		await _t("_test_summary", [size])
+		await _t("_test_no_repeats", [size])
 	GameState.delete_saved_career()
 	print(Ran.line("Match story", self))
 	for f in failures:
@@ -237,8 +239,10 @@ func _test_summary(size: Vector2i) -> void:
 	var why: Node = box.find_child("WhyReasons", true, false)
 	_check(why != null and why.get_child_count() == (rec["reasons"] as Array).size(), "%s: the reasons are listed" % tag)
 	var factors: Control = ft.find_child("MatchFactors", true, false)
-	_check(factors != null and box.get_global_rect().position.y < factors.get_global_rect().position.y,
-			"%s: the story sits above How it went" % tag)
+	_check(factors != null, "%s: How it went is built" % tag)
+	if factors != null and factors.visible:
+		_check(box.get_global_rect().position.y < factors.get_global_rect().position.y,
+				"%s: the story sits above How it went" % tag)
 	var r := box.get_global_rect()
 	_check(r.position.x >= -0.5 and r.end.x <= size.x + 0.5, "%s: the story fits the screen" % tag)
 	Router.stack = []
@@ -342,3 +346,189 @@ func _test_digest_survives_trim() -> void:
 	_check(GameState.save_career() and GameState.load_career(), "saves and loads with a digest")
 	_check(int((GameState.match_story_digest.get(str(old), {}) as Dictionary).get("played", 0)) == GameState.MAX_MATCH_STORIES,
 			"the digest survives a save and load")
+
+
+# ---------------------------------------------------------------------------
+# Each fact once (director's bug report, 2026-11-06: "Double up of copy in hero
+# of the match and how it went section").
+# ---------------------------------------------------------------------------
+
+func _side(r: Dictionary) -> int:
+	return 0 if str(r["home"]) == GameState.my_club else (1 if str(r["away"]) == GameState.my_club else -1)
+
+
+## Pure: How it went never says a fact the story above it already told, over
+## twelve seeded rounds.
+func _test_factors_never_repeat() -> void:
+	_fresh()
+	_rounds(12)
+	var bad := []
+	var cut := 0
+	for r in _my_matches():
+		var me := _side(r)
+		var st := MatchStory.build(r, me)
+		var told := MatchStory.told_facts(st)
+		var items := MatchNotes.match_factor_items(r, me)
+		var shown := MatchNotes.match_factors(r, me, told)
+		if shown.size() < MatchNotes.match_factors(r, me).size():
+			cut += 1
+		for f in shown:
+			var fact := ""
+			for it in items:
+				if str(it["text"]) == str(f):
+					fact = str(it["fact"])
+			if fact != "" and told.has(fact):
+				bad.append("%s repeats %s" % [str(r["label"]), fact])
+			if told.has("=" + MatchNotes.norm_sentence(str(f))):
+				bad.append("%s repeats the sentence %s" % [str(r["label"]), str(f)])
+			if str(f) == str(st["turning_point"]):
+				bad.append("%s repeats the turning point" % str(r["label"]))
+	# One turning point, from either side's seat: a comeback and the goal that
+	# put a side in front for good are one moment, told once.
+	var comebacks := 0
+	for r in _my_matches():
+		for side in [0, 1]:
+			var st2 := MatchStory.build(r, side)
+			if not ["turn", "turn:lead"].has(str(st2.get("turning_fact", ""))):
+				continue
+			comebacks += 1
+			for f in MatchNotes.match_factors(r, side, MatchStory.told_facts(st2)):
+				if str(f).contains("in front for good") or str(f).contains("turned it in the"):
+					bad.append("%s tells the turning point twice: %s" % [str(r["label"]), str(f)])
+	_check(comebacks > 0, "the seeded season has a turning point that is a lead change (%d)" % comebacks)
+	_check(bad.is_empty(), "How it went never repeats the story's facts (%s)" % str(bad.slice(0, 3)))
+	_check(cut > 0, "the seeded season has matches where the story already said something (%d)" % cut)
+	# No told facts: How it went is as it was for every older caller.
+	var r0: Dictionary = _my_matches()[0]
+	_check(MatchNotes.match_factors(r0, _side(r0)) == MatchNotes.match_factors(r0, _side(r0), {}),
+			"no told facts leaves How it went as before")
+
+
+## The Summary tab's visible text, sentence by sentence, normalised. Only
+## sentences of four words or more: a name or a score alone is not a sentence.
+func _summary_sentences(ft: Node) -> Array:
+	var out := []
+	for l in ft.find_children("*", "Label", true, false):
+		if not (l as Label).is_visible_in_tree():
+			continue
+		for line in str(l.text).split("\n", false):
+			for part in line.split(". ", false):
+				var n := MatchNotes.norm_sentence(part)
+				if n.split(" ", false).size() >= 4:
+					out.append(n)
+	return out
+
+
+func _labels_text(n: Node) -> String:
+	var t := ""
+	if n == null:
+		return t
+	if n is Label:
+		t += str(n.text) + "\n"
+	for l in n.find_children("*", "Label", true, false):
+		t += str(l.text) + "\n"
+	return t
+
+
+## Renders one match's full time and fails on any sentence or fact said twice.
+func _check_once(r: Dictionary, tag: String) -> void:
+	GameState.last_match = r
+	var ft := await _review()
+	_check(ft != null, "%s: full time opens" % tag)
+	if ft == null:
+		return
+	var seen := {}
+	var twice := []
+	for n in _summary_sentences(ft):
+		if seen.has(n):
+			twice.append(n)
+		seen[n] = true
+	_check(twice.is_empty(), "%s: no sentence twice on full time (%s)" % [tag, str(twice.slice(0, 2))])
+	var me := _side(r)
+	var st := MatchStory.build(r, me)
+	var factors: Control = ft.find_child("MatchFactors", true, false)
+	var ftext := _labels_text(factors)
+	var tp := str(st["turning_point"])
+	_check(tp == "" or not ftext.contains(tp), "%s: the turning point is not said again under How it went" % tag)
+	# One turning point: a comeback and the goal that put a side in front for good are the same moment.
+	if ["turn", "turn:lead"].has(str(st.get("turning_fact", ""))):
+		_check(not ftext.contains("in front for good") and not ftext.contains("turned it in the"),
+				"%s: How it went does not tell the turning point a second way (%s)" % [tag, ftext.strip_edges()])
+	for reason in st["reasons"]:
+		if not ["pressure_rating", "clearances", "inside50"].has(str(reason["stat"])):
+			continue
+		var a := int(reason["mine"])
+		var b := int(reason["theirs"])
+		for l in ftext.split("\n", false):
+			_check(not (l.contains("%d to %d" % [a, b]) or l.contains("%d to %d" % [b, a])),
+					"%s: How it went does not repeat the %s numbers (%s)" % [tag, str(reason["stat"]), l])
+	# The coaching notes do not say a reason again in other words.
+	var notes := _labels_text(ft.find_child("ReportNotes", true, false))
+	var topics := {"clearances": "stoppages", "inside50": "going forward", "pressure_rating": "pressure"}
+	for reason in st["reasons"]:
+		var topic := str(topics.get(str(reason["stat"]), ""))
+		_check(topic == "" or not notes.contains(topic),
+				"%s: the coaching notes do not repeat the %s reason (%s)" % [tag, str(reason["stat"]), notes.strip_edges()])
+	var head: Control = ft.find_child("HowItWentHead", true, false)
+	_check(factors != null and head != null, "%s: How it went is built" % tag)
+	if factors != null and head != null:
+		var empty := factors.get_child_count() == 0
+		_check(factors.visible == not empty and head.visible == not empty,
+				"%s: How it went shows only with something left to say (%d lines)" % [tag, factors.get_child_count()])
+	print("  %s: %s" % [tag, " | ".join(_summary_sentences(ft))])
+	Router.stack = []
+	Router.go("hub")
+	await _settle(4)
+
+
+func _test_no_repeats(size: Vector2i) -> void:
+	var tag := "%dx%d" % [size.x, size.y]
+	_fresh()
+	_rounds(8)
+	var win := {}
+	var loss := {}
+	for r in _my_matches():
+		var me := _side(r)
+		var m := int(r["score"][me]) - int(r["score"][1 - me])
+		var told := MatchStory.told_facts(MatchStory.build(r, me))
+		# The director's kind first: the story already told something How it went had.
+		var rich := MatchNotes.match_factors(r, me, told).size() < MatchNotes.match_factors(r, me).size()
+		if m > 0 and (win.is_empty() or (rich and not bool(win["rich"]))):
+			win = {"r": r, "rich": rich}
+		elif m < 0 and (loss.is_empty() or (rich and not bool(loss["rich"]))):
+			loss = {"r": r, "rich": rich}
+	_check(not win.is_empty() and not loss.is_empty(), "%s: eight rounds give a win and a loss" % tag)
+	if not win.is_empty():
+		await _check_once(win["r"], tag + " win")
+	if not loss.is_empty():
+		await _check_once(loss["r"], tag + " loss")
+	# Two debuts in the last match, as the director saw: each said once, in
+	# Milestones, in the fuller words; "made his debut" is gone.
+	var last: Dictionary = _my_matches()[-1]
+	GameState.last_match = last
+	var me := _side(last)
+	var ids := []
+	for row in last["roster"][me]:
+		if ids.size() < 2:
+			ids.append(str(row["id"]))
+	var mk := Milestones.match_key(GameState.season_year, last)
+	GameState.milestone_log["last_match"] = mk
+	var names := []
+	for id in ids:
+		var p: Dictionary = GameState.list_player(id)
+		var nm := str(GameDB.player_display_name(p))
+		names.append(nm)
+		Firsts.note(p, "debut", GameState.season_year, str(last["label"]))
+		(GameState.milestone_log["log"] as Array).append({"who": "player", "kind": "debut", "value": 1, "id": id,
+				"name": nm, "text": "%s made his debut." % nm, "match": mk})
+	var ft := await _review()
+	var said := _labels_text(ft.find_child("MilestoneLine", true, false) if ft != null else null) \
+			+ _labels_text(ft.find_child("PayoffLines", true, false) if ft != null else null)
+	_check(not said.contains("made his debut"), "%s: the debut is said in the fuller words (%s)" % [tag, said])
+	for i in range(names.size()):
+		var goals := int((last["players"].get(ids[i], {}) as Dictionary).get("goals", 0))
+		_check(said.count(str(names[i])) == 1 and said.contains(Firsts.debut_line(str(names[i]), goals)),
+				"%s: %s's debut is said once (%s)" % [tag, str(names[i]), said.strip_edges()])
+	Router.stack = []
+	Router.go("hub")
+	await _settle(4)

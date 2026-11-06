@@ -776,6 +776,18 @@ static func glance(report: Dictionary, full_time := false) -> Dictionary:
 	}
 
 
+## Full time's notes less a fact the story or How it went already said
+## (`said`: MatchStory.told_facts keys): "They have had more of the ball going
+## forward." is not said under "They won the inside 50s 61 to 52."
+static func notes_not_told(notes: Array, said: Dictionary) -> Array:
+	var topics := {"clearances": "stoppages", "inside50": "going forward", "pressure_rating": "pressure"}
+	return notes.filter(func(n):
+		for key in topics:
+			if said.has(key) and str(n).contains(str(topics[key])):
+				return false
+		return true)
+
+
 ## The assistant's notes in plain words: no player lines (they have their
 ## own sections), no score (it is at the top), nothing Match read already
 ## says, and no numbers - just the observation before the colon.

@@ -4802,6 +4802,14 @@ func payoff_lines(res: Dictionary) -> Array:
 	return Firsts.match_lines(res, me, season_year, list_player, my_list)
 
 
+## payoff_lines before the cap, each {id, kind, text} (Firsts.match_items).
+func payoff_items(res: Dictionary) -> Array:
+	if my_club == "":
+		return []
+	var me := 0 if str(res.get("home", "")) == my_club else (1 if str(res.get("away", "")) == my_club else -1)
+	return Firsts.match_items(res, me, season_year, list_player, my_list)
+
+
 ## A club's ladder position in words: "3rd".
 static func ordinal(n: int) -> String:
 	var suffix := "th"

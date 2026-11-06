@@ -587,9 +587,40 @@ static func cooked(rows: Array, limit := 3) -> Array:
 const QUARTER_NAMES := ["first", "second", "third", "last", "extra time"]
 const MAX_FACTORS := 3
 
-## Why the result happened, from `my_side`'s point of view, in two to four
+## Why the result happened, from `my_side`'s point of view, in up to three
 ## sentences. Facts from the result, most telling first; never advice.
-static func match_factors(res: Dictionary, my_side: int) -> Array:
+## `said` holds what the screen has already told (MatchStory.told_facts): a
+## fact key ("run", "pressure_rating", "q3"...) or "=" + a normalised sentence.
+## Those are left out, so full time says each fact once (director's bug report,
+## 2026-11-06); [] when everything was said above.
+static func match_factors(res: Dictionary, my_side: int, said := {}) -> Array:
+	var items := match_factor_items(res, my_side)
+	if items.is_empty():
+		var score: Array = res.get("score", [0, 0])
+		return ["Nothing much between the sides all day." if absi(int(score[0]) - int(score[1])) <= 12
+				else "No single edge: the winners were just better across the ground."]
+	var out := []
+	for it in items:
+		if said.has(str(it["fact"])) or said.has("=" + norm_sentence(str(it["text"]))):
+			continue
+		out.append(str(it["text"]))
+	return out.slice(0, MAX_FACTORS)
+
+
+## A sentence reduced for comparing: lower case, letters, digits and single spaces.
+static func norm_sentence(t: String) -> String:
+	var out := ""
+	for c in t.to_lower():
+		out += c if (c >= "a" and c <= "z") or (c >= "0" and c <= "9") else " "
+	return " ".join(out.split(" ", false))
+
+
+## The sentences match_factors chooses from, each tagged with the fact it
+## states: [{fact, text}] in order, before the cap and with no fallback. Facts:
+## "turn" (the comeback), "turn:lead", "turn:injury", "turn:miss", "run",
+## "q<N>" (a quarter that swung it), "clearances", "inside50", "kicking",
+## "pressure_rating".
+static func match_factor_items(res: Dictionary, my_side: int) -> Array:
 	var out := []
 	var opp := 1 - my_side
 	var codes := [str(res.get("home", "")), str(res.get("away", ""))]
@@ -606,13 +637,13 @@ static func match_factors(res: Dictionary, my_side: int) -> Array:
 	# late miss in a close loss.
 	var turn := ComebackTelling.turn_facts(res, my_side)
 	if not turn.is_empty():
-		out.append(str(turn["text"]))
-	out.append_array(turning_points(res, my_side, str(turn.get("player", ""))))
+		out.append({"fact": "turn", "text": str(turn["text"])})
+	out.append_array(turning_point_items(res, my_side, str(turn.get("player", ""))))
 
 	# 1. The run that decided it: four or more goals in a row.
 	var run := _longest_run(res.get("events", []))
 	if int(run["len"]) >= 4:
-		out.append(run_sentence(res, run))
+		out.append({"fact": "run", "text": run_sentence(res, run)})
 
 	# 2. A quarter that swung it: won by four goals or more.
 	var qg: Array = res.get("q_goals", [])
@@ -628,31 +659,31 @@ static func match_factors(res: Dictionary, my_side: int) -> Array:
 	if best_q >= 0 and absi(best_m) >= 24 and (out.is_empty() or int(run["q"]) != best_q + 1) \
 			and not told_q.has(best_q + 1):
 		var s := 0 if best_m > 0 else 1
-		out.append("%s won the %s quarter %d.%d to %d.%d." % [GameDB.club_name(codes[s]),
+		out.append({"fact": "q%d" % (best_q + 1), "text": "%s won the %s quarter %d.%d to %d.%d." % [GameDB.club_name(codes[s]),
 				QUARTER_NAMES[best_q], int(qg[best_q][s]), int(qb[best_q][s]),
-				int(qg[best_q][1 - s]), int(qb[best_q][1 - s])])
+				int(qg[best_q][1 - s]), int(qb[best_q][1 - s])]})
 
 	# 3. The stoppages.
 	var clr_m := int(float(t_me.get("clearances", 0.0)))
 	var clr_t := int(float(t_op.get("clearances", 0.0)))
 	if clr_t - clr_m >= 6:
-		out.append("You were beaten at the stoppages: clearances %d to %d." % [clr_m, clr_t])
+		out.append({"fact": "clearances", "text": "You were beaten at the stoppages: clearances %d to %d." % [clr_m, clr_t]})
 	elif clr_m - clr_t >= 6:
-		out.append("Your midfield won the stoppages: clearances %d to %d." % [clr_m, clr_t])
+		out.append({"fact": "clearances", "text": "Your midfield won the stoppages: clearances %d to %d." % [clr_m, clr_t]})
 
 	# 4. Territory, read against the result.
 	var i50_m := int(float(t_me.get("inside50", 0.0)))
 	var i50_t := int(float(t_op.get("inside50", 0.0)))
 	if i50_t - i50_m >= 8:
 		if won:
-			out.append("Your defence held firm despite losing the inside 50s %d to %d." % [i50_m, i50_t])
+			out.append({"fact": "inside50", "text": "Your defence held firm despite losing the inside 50s %d to %d." % [i50_m, i50_t]})
 		else:
-			out.append("They had the ball in their forward half far more: %d inside 50s to %d." % [i50_t, i50_m])
+			out.append({"fact": "inside50", "text": "They had the ball in their forward half far more: %d inside 50s to %d." % [i50_t, i50_m]})
 	elif i50_m - i50_t >= 8:
 		if lost:
-			out.append("You won the inside 50s %d to %d but could not make it count." % [i50_m, i50_t])
+			out.append({"fact": "inside50", "text": "You won the inside 50s %d to %d but could not make it count." % [i50_m, i50_t]})
 		else:
-			out.append("You had the ball going forward far more: %d inside 50s to %d." % [i50_m, i50_t])
+			out.append({"fact": "inside50", "text": "You had the ball going forward far more: %d inside 50s to %d." % [i50_m, i50_t]})
 
 	# 5. Kicking for goal.
 	var g_m := int(res.get("goals", [0, 0])[my_side])
@@ -660,25 +691,22 @@ static func match_factors(res: Dictionary, my_side: int) -> Array:
 	var g_t := int(res.get("goals", [0, 0])[opp])
 	var b_t := int(res.get("behinds", [0, 0])[opp])
 	if b_m >= g_m + 3 and g_m + b_m >= 12:
-		out.append("Wayward kicking cost you: %d.%d." % [g_m, b_m])
+		out.append({"fact": "kicking", "text": "Wayward kicking cost you: %d.%d." % [g_m, b_m]})
 	elif b_t >= g_t + 3 and g_t + b_t >= 12:
-		out.append("They let you off the hook in front of goal: %d.%d." % [g_t, b_t])
+		out.append({"fact": "kicking", "text": "They let you off the hook in front of goal: %d.%d." % [g_t, b_t]})
 	elif g_m >= b_m + 8:
-		out.append("You kicked straight: %d.%d." % [g_m, b_m])
+		out.append({"fact": "kicking", "text": "You kicked straight: %d.%d." % [g_m, b_m]})
 
 	# 6. Pressure: the pressure rating, which allows for how much of the
 	# ball each side had to pressure.
 	var pr_m := MatchSim.pressure_rating(t_me, t_op)
 	var pr_t := MatchSim.pressure_rating(t_op, t_me)
 	if pr_m - pr_t >= PRESSURE_GAP:
-		out.append("Your pressure told: a pressure rating of %d to %d." % [pr_m, pr_t])
+		out.append({"fact": "pressure_rating", "text": "Your pressure told: a pressure rating of %d to %d." % [pr_m, pr_t]})
 	elif pr_t - pr_m >= PRESSURE_GAP:
-		out.append("Their pressure told: a pressure rating of %d to %d." % [pr_t, pr_m])
+		out.append({"fact": "pressure_rating", "text": "Their pressure told: a pressure rating of %d to %d." % [pr_t, pr_m]})
 
-	if out.is_empty():
-		out.append("Nothing much between the sides all day." if absi(int(score[0]) - int(score[1])) <= 12
-				else "No single edge: the winners were just better across the ground.")
-	return out.slice(0, MAX_FACTORS)
+	return out
 
 
 ## The run told in full: who, how many, when it began and the score either
@@ -1463,6 +1491,11 @@ static func story_feed_line(mem: Dictionary, ev: Dictionary) -> String:
 ## quarter, and your missed set shot late in a close loss. [] for a match
 ## that never turned.
 static func turning_points(res: Dictionary, my_side: int, skip_kicker := "") -> Array:
+	return turning_point_items(res, my_side, skip_kicker).map(func(it): return str(it["text"]))
+
+
+## turning_points, each tagged with its fact: "turn:lead", "turn:injury", "turn:miss".
+static func turning_point_items(res: Dictionary, my_side: int, skip_kicker := "") -> Array:
 	var out := []
 	var events: Array = res.get("events", [])
 	var codes := [str(res.get("home", "")), str(res.get("away", ""))]
@@ -1482,8 +1515,8 @@ static func turning_points(res: Dictionary, my_side: int, skip_kicker := "") -> 
 			was_ahead = ahead
 		if not took.is_empty() and int(took.get("q", 1)) >= 2 and int(took.get("q", 1)) <= 4 \
 				and str(took.get("name", "")) != "" and (skip_kicker == "" or str(took.get("player_id", "")) != skip_kicker):
-			out.append("%s's %s %s put %s in front for good." % [str(took["name"]), str(took["kind"]),
-					_when(took), GameDB.club_name(codes[winner])])
+			out.append({"fact": "turn:lead", "text": "%s's %s %s put %s in front for good." % [str(took["name"]), str(took["kind"]),
+					_when(took), GameDB.club_name(codes[winner])]})
 	var overall := {}
 	for side in range(2):
 		for r in (res.get("roster", [[], []]) as Array)[side]:
@@ -1492,15 +1525,15 @@ static func turning_points(res: Dictionary, my_side: int, skip_kicker := "") -> 
 		if int(inj.get("q", 4)) >= 4 or int(overall.get(str(inj["id"]), 0)) < MatchSim.STAR_OVR:
 			continue
 		var whose := "You" if int(inj["side"]) == my_side else GameDB.club_name(codes[int(inj["side"])])
-		out.append("%s lost %s to %s in the %s quarter." % [whose, _pname(str(inj["id"])),
-				Injuries.wording(str(inj.get("kind", "injury"))), QUARTER_NAMES[int(inj["q"]) - 1]])
+		out.append({"fact": "turn:injury", "text": "%s lost %s to %s in the %s quarter." % [whose, _pname(str(inj["id"])),
+				Injuries.wording(str(inj.get("kind", "injury"))), QUARTER_NAMES[int(inj["q"]) - 1]]})
 		break
 	if winner != my_side and absi(int(score[0]) - int(score[1])) <= CLOSE_MISS:
 		for ev in events:
 			if str(ev.get("kind", "")) == "behind" and int(ev.get("side", -1)) == my_side \
 					and bool(ev.get("set", false)) and int(ev.get("q", 1)) == 4 \
 					and int(ev.get("min", 0)) - 90 >= 20 and str(ev.get("name", "")) != "":
-				out.append("%s missed a set shot late in the last quarter." % str(ev["name"]))
+				out.append({"fact": "turn:miss", "text": "%s missed a set shot late in the last quarter." % str(ev["name"])})
 				break
 	return out
 

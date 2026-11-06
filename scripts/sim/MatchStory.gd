@@ -27,19 +27,54 @@ const MAX_REASONS := 3
 const CLOSE := 12
 
 
-## {hero, turning_point, reasons, headline, won, margin, side}. {} for a result
-## with no score. `side` is the point of view (0 home, 1 away).
+## {hero, turning_point, turning_fact, reasons, headline, won, margin, side}.
+## {} for a result with no score. `side` is the point of view (0 home, 1 away).
+## `turning_fact` names the fact the turning point states (MatchNotes'
+## match_factor_items keys), "" when none.
 static func build(res: Dictionary, side: int) -> Dictionary:
 	var score: Array = res.get("score", [])
 	if score.size() < 2:
 		return {}
 	var margin := int(score[side]) - int(score[1 - side])
 	var hero := hero_of(res)
+	var tp := turning_item(res, side)
 	return {
 		"side": side, "margin": margin, "won": margin > 0, "drawn": margin == 0,
-		"hero": hero, "turning_point": turning_point(res, side),
+		"hero": hero, "turning_point": str(tp.get("text", "")), "turning_fact": str(tp.get("fact", "")),
 		"reasons": reasons(res, side), "headline": headline(res, side, hero),
 	}
+
+
+## What a built story has told, for the sections under it to leave out
+## (director's bug report, 2026-11-06: the same fact twice on full time): the
+## turning point's fact, each reason's fact (a quarter's call also as
+## "call:<line>"), and "=" + each sentence normalised (MatchNotes.norm_sentence).
+static func told_facts(st: Dictionary) -> Dictionary:
+	var out := {}
+	if st.is_empty():
+		return out
+	var tp := str(st.get("turning_point", ""))
+	if tp != "":
+		out["=" + MatchNotes.norm_sentence(tp)] = true
+		var tf := str(st.get("turning_fact", ""))
+		if tf != "":
+			out[tf] = true
+		# The comeback and the goal that put a side in front for good are one
+		# moment told two ways: the turning point says it, How it went does not.
+		if tf == "turn" or tf == "turn:lead":
+			out["turn"] = true
+			out["turn:lead"] = true
+	for r in st.get("reasons", []):
+		out["=" + MatchNotes.norm_sentence(str(r.get("text", "")))] = true
+		var stat := str(r.get("stat", ""))
+		if stat == "scoring_shots":
+			out["kicking"] = true
+		elif r.has("quarter"):
+			out["q%d" % int(r["quarter"])] = true
+			out["call:" + str(r.get("call", ""))] = true
+		elif stat != "":
+			out[stat] = true
+	return out
 
 
 ## The clutch goals in a result by player id: goals late in the last quarter
@@ -111,16 +146,21 @@ static func best_of(res: Dictionary, sides: Array) -> Dictionary:
 ## the score that put the winners in front for good or a star lost hurt, else a
 ## run of four or more goals. "" for a match that never turned.
 static func turning_point(res: Dictionary, side: int) -> String:
+	return str(turning_item(res, side).get("text", ""))
+
+
+## The turning point with the fact it states: {fact, text}, {} for none.
+static func turning_item(res: Dictionary, side: int) -> Dictionary:
 	var turn := ComebackTelling.turn_facts(res, side)
 	if not turn.is_empty():
-		return str(turn["text"])
-	var tps := MatchNotes.turning_points(res, side)
+		return {"fact": "turn", "text": str(turn["text"])}
+	var tps := MatchNotes.turning_point_items(res, side)
 	if not tps.is_empty():
-		return str(tps[0])
+		return tps[0]
 	var run := MatchNotes._longest_run(res.get("events", []))
 	if int(run["len"]) >= 4:
-		return MatchNotes.run_sentence(res, run)
-	return ""
+		return {"fact": "run", "text": MatchNotes.run_sentence(res, run)}
+	return {}
 
 
 ## Why we won or lost: one to three reasons, the biggest edge in the result's
