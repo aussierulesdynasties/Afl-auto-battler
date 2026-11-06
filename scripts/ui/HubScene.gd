@@ -70,6 +70,10 @@ func _ready() -> void:
 ## The week's one optional ask, if any (director, 2026-10-09: one a week): a
 ## sit-down with a player whose promised run just ended, or the press.
 func _show_week_ask() -> void:
+	# Sacked, the week's asks (carnival, mid-season pick, press) are the club's,
+	# not his: the card is the only thing on the hub.
+	if GameState.is_sacked():
+		return
 	if not MidseasonDraft.carnival_lines(GameState).is_empty():
 		_show_carnival()
 	elif MidseasonDraft.waiting(GameState):
@@ -253,7 +257,10 @@ func _build() -> void:
 		# The jobs on offer and the record run past a phone's height: it scrolls.
 		var sp := UiKit.vbox(UiKit.SECTION)
 		_root.add_child(UiKit.scroll(sp))
-		sp.add_child(_standing_card())
+		# A finished career (retired, or no second chance left) has one job:
+		# the record. The club's standing, pick and board mean nothing now.
+		if not ClubMoves.career_over(GameState):
+			sp.add_child(_standing_card())
 		sp.add_child(_sacked_card())
 		return
 
@@ -438,7 +445,8 @@ func _standing_card() -> Control:
 		tl.name = "MyTeamOutlook"
 		cv.add_child(tl)
 	# The last rounds on: where your first pick falls if the season ended today.
-	var pick_line := GameState.pick_order_line()
+	# Sacked, the pick and the board belong to the club he is leaving.
+	var pick_line := "" if GameState.is_sacked() else GameState.pick_order_line()
 	if pick_line != "":
 		var pl := UiKit.lbl(pick_line, UiKit.SECONDARY, UiKit.TEXT)
 		pl.name = "DraftPickLine"
@@ -456,7 +464,7 @@ func _standing_card() -> Control:
 	alm.pressed.connect(func(): Router.go("almanac"))
 	cv.add_child(alm)
 	# The board lives in Coaching; here only when your job is at risk.
-	if GameState.board_goal_text() != "":
+	if GameState.board_goal_text() != "" and not GameState.is_sacked():
 		var warned := bool(GameState.board.get("warned", false))
 		# The warning fires under ClubLife.POOR_LINE on every board type.
 		var warning := GameState.board_warning()
@@ -471,7 +479,7 @@ func _standing_card() -> Control:
 				warn_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				cv.add_child(warn_l)
 		# What a sacking would mean, plainly (rule 60).
-		if (warned or warning != "") and not GameState.is_sacked():
+		if warned or warning != "":
 			var rep := UiKit.lbl(ClubMoves.reprieve_line(GameState), UiKit.SMALL, UiKit.BAD)
 			rep.name = "ReprieveLine"
 			rep.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

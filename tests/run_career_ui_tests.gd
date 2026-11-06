@@ -3152,6 +3152,15 @@ func _sacked_with_offers() -> void:
 	_state.week_events = []
 
 
+## A finished career's hub: the season title, Settings and the record, with
+## no club standing, pick or board above it.
+func _check_record_only(why: String) -> void:
+	for gone in ["SeasonBlock", "LadderPosition", "DraftPickLine", "HubAlmanac", "BoardLine", "BoardWarning", "ReprieveLine"]:
+		_check(current_scene.find_child(gone, true, false) == null, "%s: the hub shows no %s" % [why, gone])
+	_check(current_scene.find_child("HubSettings", true, false) != null and current_scene.find_child("SackedCard", true, false) != null,
+			"%s: Settings and the card stay" % why)
+
+
 func _test_sacked_job_choice_taps() -> void:
 	var size_before := root.size
 	root.size = Vector2i(390, 844)
@@ -3159,9 +3168,20 @@ func _test_sacked_job_choice_taps() -> void:
 	_sacked_with_offers()
 	var jobs: Array = moves.offers(_state)
 	_check(jobs.size() == 3, "A sacked coach is offered three clubs with a job open (%d)" % jobs.size())
+	# The board's verdict is in: its old warning and the club's pick are stale.
+	_state.board["warned"] = true
+	_state.board["confidence"] = 25
+	# The carnival week's sheet is the club's business, not a sacked coach's.
+	_state.midseason["year"] = _state.season_year
+	_state.midseason["carnival"] = [{"name": "Riley Bowman", "pos": "midfielder", "state": "Vic Metro"}]
+	_state.midseason["carnival_seen"] = false
 	_router.stack = ["main"]
 	_router.go("hub")
 	await _settle()
+	_check(root.find_child("CarnivalWeek", true, false) == null and current_scene.find_child("CarnivalWeek", true, false) == null,
+			"A sacked coach is not shown the carnival week's sheet")
+	for stale in ["BoardLine", "BoardWarning", "DraftPickLine"]:
+		_check(current_scene.find_child(stale, true, false) == null, "While he chooses, the hub shows no stale %s" % stale)
 	_check(current_scene.find_child("SackedCard", true, false) != null, "The hub leads with the sacked card")
 	_check(current_scene.find_child("SackedSeasonReview", true, false) != null and current_scene.find_child("SackedMainMenu", true, false) != null,
 			"While he chooses, the season review and the main menu are still on the card")
@@ -3201,6 +3221,18 @@ func _test_sacked_job_choice_taps() -> void:
 	_check(rec != null and text.contains("Your record") and text.contains(str(_db.club_name("FRE"))) and text.contains("season"),
 			"The retired card reads out his record (%s)" % text.replace("\n", " | "))
 	_check(not _state.start_next_season(), "A retired coach's season does not roll on")
+	_check_record_only("retired")
+	# Sacked with no second chance left: the same, the record alone.
+	_sacked_with_offers()
+	_state.coach_arcs["offers"] = []
+	_state.coach_arcs["coach"]["reprieves"] = 0
+	_state.board["warned"] = true
+	_state.board["confidence"] = 25
+	_router.go("hub")
+	await _settle()
+	_check(moves.career_over(_state) and current_scene.find_child("CoachRecord", true, false) != null,
+			"A career that is over reads out the record")
+	_check_record_only("career over")
 	_state.board["sacked"] = false
 	_state.coach_arcs = {}
 	root.size = size_before

@@ -53,21 +53,23 @@ func _sacked(offers: bool) -> void:
 	_state.career_seed = 4403
 	_state.replay_seed = 4403
 	_state.start_season("FRE", _db.club_list("FRE"))
-	# The season's end, where a sacking comes: the finals played out.
-	_state.season.round_index = _state.season.fixture.size()
-	_state.ensure_finals()
+	# The season played out to its end, where a sacking comes, so the ladder
+	# and this season's line on the record are real.
 	var guard := 0
-	while not _state.season.is_season_over() and guard < 20:
+	while not _state.season.is_season_over() and guard < 40:
 		guard += 1
+		_state.week_events = []
 		_state.advance()
 	_state.coach_arcs = arcs.ensure(_state.coach_arcs)
 	var st: Dictionary = _state.coach_arcs
 	var year := int(_state.season_year)
-	# Three seasons on his record, so the read-out has something to say.
+	# Two earlier seasons at the club, so the read-out has something to say
+	# (this season's line is already on the honour roll).
 	st["coach"]["start"] = year - 2
-	_state.honour_roll.append({"year": year - 2, "my_club": "FRE", "my_record": "13-10-0", "my_finals": "Elimination final", "premier": "GEE"})
-	_state.honour_roll.append({"year": year - 1, "my_club": "FRE", "my_record": "8-15-0", "premier": "BRL"})
-	_state.honour_roll.append({"year": year, "my_club": "FRE", "my_record": "6-17-0", "premier": "HAW"})
+	for h in st["coach"]["clubs"]:
+		h["from"] = year - 2
+	_state.honour_roll.push_front({"year": year - 1, "my_club": "FRE", "my_record": "8-15-0", "premier": "BRL"})
+	_state.honour_roll.push_front({"year": year - 2, "my_club": "FRE", "my_record": "13-10-0", "my_finals": "Elimination final", "premier": "GEE"})
 	_state.board["sacked"] = true
 	st["sack"] = {"from": "FRE", "year": year, "heir": ""}
 	st["offers"] = moves._jobs_after_sack(_state, st) if offers else []

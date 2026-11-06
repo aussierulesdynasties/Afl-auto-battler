@@ -67,6 +67,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_drought_counts_this_club")
 	_t("_test_assistant_leaves")
 	_t("_test_second_sacking_and_retire")
+	_t("_test_real_sacking_record")
 	_t("_test_ten_seasons")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -626,3 +627,38 @@ func _test_hero_count_trigger() -> void:
 	_check(int(f["hero_count"]) == 3 and int(f["hero_streak"]) == 3 and bool(f["hero_is_arc_player"]),
 			"the arc's facts read the match stories (%s)" % str([f["hero_count"], f["hero_streak"], f["hero_is_arc_player"]]))
 	GameState.match_stories = []
+
+
+## Row 111: a real seeded career, two seasons in good standing, sacked at the
+## third season's close. The record reads every season and the club's years
+## from his first season to the sacking ("Fremantle, 2026 to 2028, sacked").
+func _test_real_sacking_record() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SUITE_SEED + 11
+	_fresh()
+	var first := int(GameState.season_year)
+	var old := str(GameState.my_club)
+	for s in range(2):
+		var guard := 0
+		while not GameState.season.is_season_over() and guard < 40:
+			guard += 1
+			GameState.board["confidence"] = 80
+			GameState.board["warned"] = false
+			# A rival's approach would move him on: keep him at his club.
+			GameState.coach_arcs["active"].erase("poached")
+			_week(rng)
+		_check(not GameState.is_sacked() and GameState.start_next_season(), "real career: season %d rolls on" % (s + 1))
+		_check(GameState.my_club == old, "real career: still at %s" % old)
+	GameState.board["goal"] = {"key": "wins99", "text": "Win 99 games", "wins": 99}
+	_play_out(rng, 0)
+	var last := int(GameState.season_year)
+	var lines := ClubMoves.record_lines(GameState)
+	print("real career record (%d to %d): %s" % [first, last, " | ".join(lines)])
+	if GameState.premier() == old:
+		_check(true, "SKIP: %s won the flag, so the sacking never comes" % old)
+		return
+	_check(GameState.is_sacked(), "real career: sacked at the third season's close")
+	_check(last == first + 2 and lines.size() >= 3 and lines[0].begins_with("3 seasons: "),
+			"real career: the record counts all three seasons: %s" % str(lines))
+	_check(lines[-1] == "%s, %d to %d, sacked" % [GameDB.club_name(old), first, last],
+			"real career: the club line runs from his first season to the sacking: %s" % lines[-1])
