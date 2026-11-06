@@ -39,6 +39,7 @@ extends RefCounted
 const CAT_A_SPOTS := 6
 const SENIOR_SPOTS := Contracts.MAX_LIST - CAT_A_SPOTS
 const KIND := "rookie"
+const NOBODY_LEFT_NEWS := "Rookie Draft: nobody was left when your pick came up, so your draft ended."
 ## Under this age a Rookie Draft pick signs for two seasons, otherwise one.
 const TWO_YEAR_UNDER := 21.0
 
@@ -242,8 +243,12 @@ static func _run(gs) -> void:
 		var code := str(order[int(rec["next"])])
 		if _can_pick(gs, rec, code):
 			if code == gs.my_club:
-				gs.mark_dirty()
-				return
+				if not MidseasonDraft.pool(gs).is_empty():
+					gs.mark_dirty()
+					return
+				# Nobody left to take: no choice to make, so the draft ends
+				# without stopping you, and the news says so.
+				rec["nobody_left"] = true
 			var left := MidseasonDraft.pool(gs)
 			if left.is_empty():
 				break
@@ -253,7 +258,7 @@ static func _run(gs) -> void:
 
 
 ## Your pick (player id), or "" to pass, which ends your Rookie Draft. False
-## when it is not your turn or he has gone.
+## when it is not your turn or that player has gone.
 static func choose(gs, player_id: String) -> bool:
 	if not waiting(gs):
 		return false
@@ -271,6 +276,15 @@ static func choose(gs, player_id: String) -> bool:
 	rec["next"] = int(rec["next"]) + 1
 	_run(gs)
 	return true
+
+
+## Your pick waits but nobody is left to take: pass it, and the draft news
+## says why. True if passed.
+static func pass_if_nobody_left(gs) -> bool:
+	if not waiting(gs) or not MidseasonDraft.pool(gs).is_empty():
+		return false
+	gs.rookie_draft["nobody_left"] = true
+	return choose(gs, "")
 
 
 ## Before the pre-season week or the next round: an unmade pick is a pass.
@@ -322,6 +336,8 @@ static func _finish(gs) -> void:
 				bits.append("%s (%s)" % [k["name"], k["from"]])
 			line += " Your rookies: %s." % ", ".join(bits)
 		gs.add_news("draft", line)
+	if bool(rec.get("nobody_left", false)):
+		gs.add_news("draft", NOBODY_LEFT_NEWS)
 	gs.mark_dirty()
 
 

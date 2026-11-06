@@ -959,14 +959,21 @@ func _test_fact_options() -> void:
 	# (bible §4, director 2026-10-18); the templates hold no figure.
 	_gate_odds()
 	# A forward who is only a forward cannot be tagged: the response says why.
-	var fwd := {"id": "x", "role": "FWD", "overall": 80, "attr": {}}
+	var fwd := {"id": "x", "name": "Sam Ridley", "role": "FWD", "overall": 80, "attr": {}}
 	var tagged: Array = FO.options({"key": "danger", "player_id": "x"}, [], [], [fwd])
 	_check(not tagged.is_empty() and str(tagged[0]["call"]) == "tag" and not bool(tagged[0]["enabled"])
-			and str(tagged[0]["reason"]) == "He plays forward: a tag needs a midfielder.",
+			and str(tagged[0]["reason"]) == "Sam Ridley plays forward: a tag needs a midfielder.",
 			"A forward cannot be tagged and the response says why (%s)" % (str(tagged[0]["reason"]) if not tagged.is_empty() else "-"))
 	var mid_fwd := {"id": "y", "role": "FWD", "role2": "MID", "overall": 80, "attr": {}}
 	var rank: Array = FO.options({"key": "danger", "player_id": "y"}, [], [], [mid_fwd])
 	_check(not rank.is_empty() and bool(rank[0]["enabled"]), "A mid/forward can be tagged, as the director asked (A9)")
+	# The tag's gain names the man it is about, never a bare "he" (director, 2026-11-07: "Who is he").
+	var named := {"id": "w", "name": "Jack Moss", "role": "MID", "overall": 80, "attr": {}}
+	var tag_named: Array = FO.options({"key": "danger", "player_id": "w"}, [], [], [named])
+	_check(not tag_named.is_empty() and str(tag_named[0]["gain"]).begins_with("Gain: Jack Moss keeps "),
+			"The tag gain names their player (%s)" % (str(tag_named[0]["gain"]) if not tag_named.is_empty() else "-"))
+	var GOx = load("res://scripts/sim/GateOdds.gd")
+	_check(str(GOx.tag_lines()[0]).begins_with(GOx.TAG_TARGET_ANY + " keeps "), "With nobody named, the tag gain says who it means")
 	var ruck_mid := {"id": "z", "role": "RUCK", "role2": "MID", "overall": 85, "attr": {}}
 	var rm: Array = FO.options({"key": "danger", "player_id": "z"}, [ruck_mid], [], [ruck_mid])
 	_check(not rm.is_empty() and str(rm[0]["call"]) == "tag" and not bool(rm[0]["enabled"]),
