@@ -285,6 +285,18 @@ func skip_to_end() -> void:
 	finished.emit()
 
 
+## Release everything logged at once, each event to the match screen as if it
+## had played (the feed and the scoreboard catch up), without the animation.
+## Unlike skip_to_end the screen hears every event; finished is the caller's.
+func release_all() -> void:
+	playing = false
+	for ev in director.flush():
+		_track_quarter(ev)
+		event_played.emit(ev)
+	_caption = {}
+	queue_redraw()
+
+
 ## Events released to the match screen so far.
 func current_index() -> int:
 	return director.emitted
