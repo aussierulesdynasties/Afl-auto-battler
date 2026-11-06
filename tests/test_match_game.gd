@@ -380,33 +380,43 @@ func _test_free_set_shots_counted() -> void:
 	var counted := true
 	var short_frees := 0
 	var no_false_mark := true
-	var short_rebounds_ok := true
 	for seed in range(8):
 		var sim := _sim(7800 + seed)
 		var evs: Array = sim.run()["events"]
 		var by_taker := {}
-		var short_by := {}
 		for ev in evs:
 			# A free kicked short is gathered, not marked (no mark is counted).
 			if bool(ev.get("from_free", false)) and str(ev.get("kind", "")) == "rebound":
 				short_frees += 1
 				no_false_mark = no_false_mark and not str(ev.get("text", "")).contains("marks it")
-				var bid := str(ev.get("player_id", ""))
-				short_by[bid] = int(short_by.get(bid, 0)) + 1
 			if bool(ev.get("from_free", false)) and str(ev.get("kind", "")) in ["goal", "behind"]:
 				var id := str(ev.get("player_id", ""))
 				by_taker[id] = int(by_taker.get(id, 0)) + 1
 				frees += 1
-		# ...and the defender who gathers it is credited with the rebound.
-		for bid in short_by:
-			var bst: Dictionary = sim.player_stats.get(bid, {})
-			short_rebounds_ok = short_rebounds_ok and int(bst.get("rebounds", 0)) >= int(short_by[bid])
 		for id in by_taker:
 			var st: Dictionary = sim.player_stats.get(id, {})
 			counted = counted and int(st.get("set_shots", 0)) >= int(by_taker[id])
 	_check(frees > 0 and counted, "A set shot from a free in 50 counts in the taker's set shots (%d scored)" % frees)
 	_check(no_false_mark, "A free kicked short never says the defender marked it (%d short)" % short_frees)
-	_check(short_frees > 0 and short_rebounds_ok, "A free kicked short counts as the gathering defender's rebound (%d short)" % short_frees)
+	# ...and the defender who gathers a short one is credited with the rebound
+	# (short frees are rare in a match, so shots are taken from 80 m until one falls short).
+	var fs := _sim(7900)
+	fs.run()
+	var taker: Dictionary = (fs.squads[0] as Squad).ground[0]
+	var short_ok := false
+	for i in range(200):
+		var team_before := float(fs.team_stats[1].get("rebounds", 0.0))
+		var his_before := {}
+		for id in fs.player_stats:
+			his_before[id] = float(fs.player_stats[id].get("rebounds", 0.0))
+		var res: Dictionary = fs._free_set_shot(0, float(Ratings.T["goal_line"]) - 80.0, taker)
+		if str(res.get("outcome", "")) != "turnover":
+			continue
+		var bid := str((res["actor"] as Dictionary)["id"])
+		var team_ok := float(fs.team_stats[1].get("rebounds", 0.0)) == team_before + 1.0
+		short_ok = team_ok and float(fs.player_stats.get(bid, {}).get("rebounds", 0.0)) == float(his_before.get(bid, 0.0)) + 1.0
+		break
+	_check(short_ok, "A free kicked short counts as the gathering defender's rebound and his team's")
 
 
 ## Row 12: with the clanger_cause switch a clanger that ends a chain in the wet or
