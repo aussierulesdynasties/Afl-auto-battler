@@ -1,18 +1,14 @@
 extends SceneTree
 ## godot --headless --path . --script tests/run_league_news_tests.gd
-## The AFL knowledge layer (row 76, T5.Q11d, switch "league_news"): the
-## premiership item in the news feed carries one sentence of the club's flag
-## history, computed from the save's honour roll and the sourced pre-career
-## flags (data/club_premierships.csv). Off, the feed is exactly as before; on
-## or off, the sim is untouched.
-## Seeded by design: SUITE_SEED pins both careers, so the switch-off and
-## switch-on arms play the same season.
+## The AFL knowledge layer (row 76, T5.Q11d): the premiership item in the news
+## feed carries one sentence of the club's flag history, computed from the
+## save's honour roll and the sourced pre-career flags (data/club_premierships.csv).
+## Seeded by design: SUITE_SEED pins the career.
 
 var _state: Node
 var _db: Node
 var _ln: GDScript
 var _nf: GDScript
-var _features: GDScript
 var _ch: GDScript
 var _cs: GDScript
 const SUITE_SEED := 2027
@@ -41,7 +37,6 @@ func _run() -> void:
 	await process_frame
 	_ln = load("res://scripts/state/LeagueNews.gd")
 	_nf = load("res://scripts/ui/NewsFront.gd")
-	_features = load("res://scripts/core/Features.gd")
 	_ch = load("res://scripts/core/ClubHistory.gd")
 	_cs = load("res://scripts/state/ClubStories.gd")
 	_state = root.get_node("GameState")
@@ -54,7 +49,6 @@ func _run() -> void:
 	_t("_test_premiers_line")
 	_t("_test_front_page")
 	_t("_test_season_seeded")
-	_features.clear("league_news")
 	_state.delete_saved_career()
 	print(Ran.line("League news", self))
 	for f in _failures:
@@ -113,13 +107,9 @@ func _test_flag_history() -> void:
 func _test_premiers_line() -> void:
 	_ch.use({"AAA": {"years": [1990], "comps": {}, "also": {}, "none": false}})
 	var base := "%s are the 2030 premiers." % _db.club_name("AAA")
-	_features.set_on("league_news", false)
-	_check(_ln.premiers_line("AAA", 2030, []) == base, "Switch off: the premiership line is exactly as before")
-	_features.set_on("league_news", true)
 	_check(_ln.premiers_line("AAA", 2030, []) == base + " Their first flag since 1990, a 40-year wait.",
-			"Switch on: one sentence of history follows (%s)" % _ln.premiers_line("AAA", 2030, []))
-	_check(_ln.premiers_line("AAA", 2030, _roll([[2027, "AAA", "X"]])) == base, "Switch on, nothing notable: the line stands alone")
-	_features.clear("league_news")
+			"One sentence of history follows (%s)" % _ln.premiers_line("AAA", 2030, []))
+	_check(_ln.premiers_line("AAA", 2030, _roll([[2027, "AAA", "X"]])) == base, "Nothing notable: the line stands alone")
 	_ch.reload()
 
 
@@ -140,9 +130,8 @@ func _test_front_page() -> void:
 			"The premiership leads, once: no second item answers the same question")
 
 
-## Plays the same seeded season to its end twice: with the switch off and on.
-func _play(on: bool) -> Dictionary:
-	_features.set_on("league_news", on)
+## Plays the seeded season to its end.
+func _play() -> Dictionary:
 	_state.replay_seed = SUITE_SEED
 	_state.reset()
 	_state.career_seed = SUITE_SEED
@@ -195,15 +184,11 @@ func _expected(code: String, year: int, roll: Array) -> String:
 
 
 func _test_season_seeded() -> void:
-	var off := _play(false)
-	var on := _play(true)
-	_check(off["premier"] != "" and off["premier"] == on["premier"], "Both arms play to a premier (%s, %s)" % [off["premier"], on["premier"]])
-	_check(off["scores"] == on["scores"] and off["scores"].size() > 0, "Same seed, same results with the switch on: the sim is untouched")
-	_check(off["others"] == on["others"], "Every other news item is the same, in the same order (%d and %d)" % [off["others"].size(), on["others"].size()])
-	var base := "%s are the %d premiers." % [_db.club_name(str(off["premier"])), int(off["year"])]
-	_check(off["prem"] == base, "Switch off: the premiership item is exactly as before (%s)" % off["prem"])
+	var on := _play()
+	_check(on["premier"] != "" and on["scores"].size() > 0, "The season plays to a premier (%s)" % on["premier"])
+	var base := "%s are the %d premiers." % [_db.club_name(str(on["premier"])), int(on["year"])]
 	var want := _expected(str(on["premier"]), int(on["year"]), on["roll"])
-	_check(on["prem"] == (base if want == "" else base + " " + want), "Switch on: the item is true (%s, expected '%s')" % [on["prem"], want])
+	_check(on["prem"] == (base if want == "" else base + " " + want), "The premiership item is true (%s, expected '%s')" % [on["prem"], want])
 	print("  league news: seed %d, %d premiers: %s" % [SUITE_SEED, int(on["year"]), on["prem"]])
 	# Every club, as if it had won this flag: the sentence matches the csv worked out by hand.
 	var bad := []

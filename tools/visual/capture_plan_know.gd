@@ -40,7 +40,6 @@ func _run() -> void:
 			W = int(wh[0])
 			H = int(wh[1])
 	await process_frame
-	load("res://scripts/core/Features.gd").set_on("preseason", true)
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
 	state.autosave_enabled = false

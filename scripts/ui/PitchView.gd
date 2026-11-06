@@ -418,7 +418,7 @@ func _cue_turnover(ev: Dictionary) -> void:
 			"turnover": true, "side": side}
 
 
-## A clanger with a cause (switch clanger_cause) names it over the player who
+## A clanger with a cause names it over the player who
 ## erred, underlined in the club that has the ball now. Without a cause it says
 ## nothing, as before. A goal's name is never covered, and the turnover that
 ## follows does not cover it.

@@ -1,9 +1,8 @@
 extends RefCounted
-## Row 14 (switch goal_run_moves): the run of goals against you offers two
-## concrete football moves over a centre ball-up, each with its gain and cost
-## as percentages, neither called the better; with the switch off the card is
-## the old Throw numbers / Slow it down / Ride it out. Run through
-## tests/run_goal_run_moves_tests.gd. Seeded by design.
+## Row 14: the run of goals against you offers two concrete football moves
+## over a centre ball-up, each with its gain and cost as percentages, neither
+## called the better. Run through tests/run_goal_run_moves_tests.gd. Seeded by
+## design.
 
 const Tap := preload("res://tests/tap.gd")
 const Ran := preload("res://tests/functions_ran.gd")
@@ -26,13 +25,11 @@ func run() -> void:
 	_state.show_real_names = false
 	_state.replay_seed = 2027
 	root.get_node("GameDB").reload()
-	await _t("_test_off_is_the_old_card")
 	await _t("_test_on_offers_two_moves")
 	await _t("_test_each_move_takes_effect")
 	await _t("_test_no_call_in_a_simulated_match")
 	for vignettes in [true, false]:
 		await _t("_test_the_card_on_a_phone", [vignettes])
-	Features.clear("goal_run_moves")
 	print(Ran.line("Goal run moves", self))
 
 
@@ -66,20 +63,7 @@ func _run_against(seed: int) -> MatchSim:
 	return sim
 
 
-func _test_off_is_the_old_card() -> void:
-	Features.set_on("goal_run_moves", false)
-	var sim := _run_against(4500)
-	_check(sim._boundary_moment() and str(sim.pending_moment["kind"]) == "momentum", "The run asks a call")
-	var keys := []
-	for o in sim.pending_moment["options"]:
-		keys.append(str(o["key"]))
-	_check(keys == ["surge", "hold", "none"] and int(sim.pending_moment["default"]) == 2
-			and not sim.pending_moment.has("moves"),
-			"Switch off: Throw numbers / Slow it down / Ride it out, default Ride it out (%s)" % str(keys))
-
-
 func _test_on_offers_two_moves() -> void:
-	Features.set_on("goal_run_moves", true)
 	var sim := _run_against(4500)
 	_check(sim._boundary_moment() and str(sim.pending_moment["kind"]) == "momentum", "The run still asks a call")
 	var opts: Array = sim.pending_moment["options"]
@@ -107,7 +91,6 @@ func _test_on_offers_two_moves() -> void:
 
 
 func _test_each_move_takes_effect() -> void:
-	Features.set_on("goal_run_moves", true)
 	for pick in [0, 1]:
 		var sim := _run_against(4501)
 		sim._boundary_moment()
@@ -121,7 +104,6 @@ func _test_each_move_takes_effect() -> void:
 
 ## A match nobody is coaching (Sim the week, AI v AI) makes no call.
 func _test_no_call_in_a_simulated_match() -> void:
-	Features.set_on("goal_run_moves", true)
 	var sim := _run_against(4502)
 	sim._boundary_moment()
 	var m := sim.resolve_moment(int(sim.pending_moment["default"]))
@@ -134,11 +116,10 @@ func _test_no_call_in_a_simulated_match() -> void:
 			if str((mm as Dictionary).get("kind", "")) == "momentum":
 				_check(int((mm as Dictionary)["choice"]) == -1, "A simulated match makes no run call")
 		played += 1 if res.has("score") else 0
-	_check(played == 6, "Six simulated matches play through with the switch on (%d)" % played)
+	_check(played == 6, "Six simulated matches play through (%d)" % played)
 
 
 func _test_the_card_on_a_phone(vignettes: bool) -> void:
-	Features.set_on("goal_run_moves", true)
 	var tag := "scene" if vignettes else "no scene"
 	_state.set_vignettes_on(vignettes)
 	var db = root.get_node("GameDB")

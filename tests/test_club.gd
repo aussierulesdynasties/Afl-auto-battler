@@ -1364,8 +1364,8 @@ func _test_firsts_flow() -> void:
 		for key in ["injury_weeks", "injury_kind", "suspension_weeks"]:
 			kid.erase(key)
 		GameState.advance()
-	# The real label: "Round 3 · Gather Round" when Gather Round falls there.
-	var last_round := GameState.season.round_label(Backing.RUN_GAMES - 1)
+	# Named as the season names it ("Round 3 · Gather Round" when it is one).
+	var last_round: String = GameState.season.round_label(Backing.RUN_GAMES - 1)
 	_check(not Backing.finished_in(kid, year, last_round).is_empty(),
 			"The run knows it was finished in %s" % last_round)
 	_check(GameState.payoff_lines(GameState.last_match).has("%s's three-game run is done." % who),

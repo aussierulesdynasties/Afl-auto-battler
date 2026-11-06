@@ -1,16 +1,14 @@
 extends RefCounted
-## Club almanac suite (plan step 1c; Almanac.gd, AlmanacScene), behind the
-## switch "club_almanac": a season's page is written at its end from the real
-## results, kept across a save and load, an older save loads and shows only
-## the seasons it has a record of, and with the switch off nothing is written
-## and no way in is shown.
+## Club almanac suite (plan step 1c; Almanac.gd, AlmanacScene): a season's
+## page is written at its end from the real results, kept across a save and
+## load, an older save loads and shows only the seasons it has a record of,
+## and the Hub shows the way in.
 ## Run through tests/run_almanac_tests.gd.
 
 var failures: Array[String] = []
 var checks := 0
 
 const SUITE_SEED := 2031
-const FEATURE := "club_almanac"
 const Ran := preload("res://tests/functions_ran.gd")
 
 var _played := false
@@ -21,8 +19,7 @@ func run() -> void:
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
 	GameDB.reload()
-	_t("_test_switch_off")
-	Features.set_on(FEATURE, true)
+	_t("_test_hub_entry")
 	_t("_test_written_at_season_end")
 	_t("_test_save_round_trip")
 	_t("_test_old_save")
@@ -32,7 +29,6 @@ func run() -> void:
 	_t("_test_club_records")
 	_t("_test_story_finals_result")
 	_t("_test_story_with_match_story")
-	Features.clear(FEATURE)
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -69,15 +65,10 @@ func _hub_has_entry() -> bool:
 	return found
 
 
-func _test_switch_off() -> void:
-	Features.set_on(FEATURE, false)
+func _test_hub_entry() -> void:
 	_play_season()
 	_check(GameState.honour_roll.size() == 1, "The season is played to its end")
-	_check(GameState.almanac.is_empty(), "Switch off: no almanac page is written")
-	_check(GameState.club_records.is_empty(), "Switch off: no club records are kept")
-	_check(not _hub_has_entry(), "Switch off: the Hub shows no way into the almanac")
-	Features.set_on(FEATURE, true)
-	_check(_hub_has_entry(), "Switch on: the Hub shows the way into the almanac")
+	_check(_hub_has_entry(), "The Hub shows the way into the almanac")
 
 
 func _test_written_at_season_end() -> void:
@@ -244,10 +235,9 @@ func _test_club_records() -> void:
 	_check(JSON.stringify(GameState.club_records) == before, "Club records survive a save and load")
 
 
-## With the match story on: the season hero is a named award on the honour
+## The match story: the season hero is a named award on the honour
 ## roll and the almanac, and the story names him; every number traces.
 func _test_story_with_match_story() -> void:
-	Features.set_on("match_story", true)
 	_play_season()
 	var roll: Dictionary = GameState.honour_roll.back()
 	var e: Dictionary = GameState.almanac.back()
@@ -264,7 +254,6 @@ func _test_story_with_match_story() -> void:
 	var story := str(e[Almanac.STORY_KEY])
 	print("  story %d: %s" % [int(e["year"]), story])
 	_trace(story, e, d)
-	Features.clear("match_story")
 
 
 ## Every number in the story appears in the entry or the digest.

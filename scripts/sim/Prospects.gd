@@ -238,7 +238,7 @@ static func project(p: Dictionary) -> void:
 		a[key] = float(a.get(key, target)) + float(bias[key])
 	# Only the game's own generated players: real-list players projected from no
 	# senior game, the real draft class and a coach's Forge prospect stay as they were.
-	if Features.on(GEN_TRAITS) and bool(p.get("generated", false)) 			and not bool(p.get("user_created", false)):
+	if bool(p.get("generated", false)) and not bool(p.get("user_created", false)):
 		_real_trait_rates(a, p, role)
 
 	a = fit_attributes(a, role, target)
@@ -256,8 +256,7 @@ static func project(p: Dictionary) -> void:
 ## Row 104 (4.Q10, director): generated players carry each synergy trait at the real
 ## players' rate at the same overall, contested bulls included, and a real share of
 ## hotheads (there were none: temperament came from his projected rating, never 20 or
-## below). Behind the gen_traits switch; off, a prospect is made exactly as before.
-const GEN_TRAITS := "gen_traits"
+## below).
 ## Per role, points added to an attribute before the fit puts him back on his target
 ## (so his overall does not move, only his shape). Sized with tools/audit/gen_traits_impl.gd
 ## so a grown generated player carries each trait as often as a real player of his overall:

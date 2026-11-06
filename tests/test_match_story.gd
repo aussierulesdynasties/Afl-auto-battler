@@ -3,7 +3,7 @@ extends RefCounted
 ## The match makes the story (MatchStory.gd; director, 2026-11-03, plan step
 ## 1b): the hero is the best by real match stats, every reason traces to a
 ## number in the result, records persist across save and load, an old save
-## loads, and with the switch "match_story" off nothing shows or is kept.
+## loads.
 
 var _tree: SceneTree
 var checks := 0
@@ -57,7 +57,6 @@ func run(tree: SceneTree) -> void:
 	GameState.save_path = "user://test_match_story.save"
 	GameState.settings_path = "user://test_match_story.cfg"
 	GameState.delete_saved_career()
-	Features.set_on("match_story", true)
 	_t("_test_pure_hero")
 	_t("_test_hero_matches_stats")
 	_t("_test_reasons_trace")
@@ -66,12 +65,10 @@ func run(tree: SceneTree) -> void:
 	_t("_test_arc_facts_and_digest")
 	_t("_test_my_best_in_loss")
 	_t("_test_digest_survives_trim")
-	_t("_test_digest_off")
 	for size in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		_tree.root.size = size
 		await _settle()
 		await _t("_test_summary", [size])
-	Features.clear("match_story")
 	GameState.delete_saved_career()
 	print(Ran.line("Match story", self))
 	for f in failures:
@@ -85,6 +82,7 @@ func _review() -> Node:
 	return _tree.current_scene.find_child("FullTime", true, false)
 
 
+## A hand-made result: the clutch goal and the clearances count toward the hero.
 func _test_pure_hero() -> void:
 	var a := {"kicks": 10, "handballs": 5, "marks": 4, "tackles": 3, "goals": 1, "disposals": 15}
 	var b := a.duplicate()
@@ -213,10 +211,8 @@ func _test_records_persist() -> void:
 func _test_old_save() -> void:
 	_fresh()
 	_rounds(2)
-	Features.set_on("match_story", false)
 	GameState.match_stories = []
 	_check(GameState.save_career(), "an old-style save is written")
-	Features.set_on("match_story", true)
 	GameState.match_stories = [{"junk": 1}]
 	_check(GameState.load_career(), "an old save loads")
 	_check(GameState.match_stories.is_empty(), "absent stories load as empty")
@@ -346,15 +342,3 @@ func _test_digest_survives_trim() -> void:
 	_check(GameState.save_career() and GameState.load_career(), "saves and loads with a digest")
 	_check(int((GameState.match_story_digest.get(str(old), {}) as Dictionary).get("played", 0)) == GameState.MAX_MATCH_STORIES,
 			"the digest survives a save and load")
-
-
-## With the switch off the digest is never written or saved.
-func _test_digest_off() -> void:
-	Features.set_on("match_story", false)
-	_fresh()
-	_rounds(2)
-	_check(GameState.match_story_digest.is_empty(), "off: no digest is kept")
-	GameState.save_career()
-	var state := CareerSave.read(GameState.save_path)
-	_check(not state.has("match_story_digest"), "off: the save has no match_story_digest")
-	Features.set_on("match_story", true)

@@ -21,7 +21,7 @@ var _pick_real := true
 var _pick_board := "fair"
 var _pick_rivals := "shrewd"
 var _pick_tutorials := true
-## Canberra joins in 2030 (shown with the feature switch expansion_package).
+## Canberra joins in 2030.
 var _pick_canberra := false
 var _setup_tight := false
 ## How the next career starts (ARD-M5-016): "redraft" or "real" (real 2026 lists).
@@ -359,7 +359,7 @@ func _show_setup() -> void:
 	_content.add_child(above)
 	# A fifth choice (Canberra) no longer fits a phone at the usual spacing, and
 	# the button must stay on screen: on a short screen the rows sit closer.
-	_setup_tight = ExpansionBuild.on() and UiKit.view_height(self) < 900.0
+	_setup_tight = UiKit.view_height(self) < 900.0
 	var form := UiKit.vbox(8 if _setup_tight else UiKit.SECTION)
 	form.name = "NewCareerSetup"
 	form.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -390,12 +390,11 @@ func _show_setup() -> void:
 			func(k): _pick_tutorials = k == "on"))
 	# Canberra, the second new club: a choice made once, here (director,
 	# 2026-10-14). Tasmania joins in 2028 either way.
-	if ExpansionBuild.on():
-		form.add_child(_choice("Canberra", "Canberra", [["out", "19 clubs"], ["in", "Joins in 2030"]],
-				"in" if _pick_canberra else "out",
-				func(k): return ("Tasmania join in 2028 and Canberra in 2030, making 20 clubs. It cannot be changed once the career starts." if k == "in"
-						else "Tasmania join in 2028 and the league stays at 19 clubs. It cannot be changed once the career starts."),
-				func(k): _pick_canberra = k == "in"))
+	form.add_child(_choice("Canberra", "Canberra", [["out", "19 clubs"], ["in", "Joins in 2030"]],
+			"in" if _pick_canberra else "out",
+			func(k): return ("Tasmania join in 2028 and Canberra in 2030, making 20 clubs. It cannot be changed once the career starts." if k == "in"
+					else "Tasmania join in 2028 and the league stays at 19 clubs. It cannot be changed once the career starts."),
+			func(k): _pick_canberra = k == "in"))
 	# Your Club Forge player, if you made one: he enters this career's first
 	# National Draft like any other prospect.
 	var forged := GameState.forge_player()
@@ -534,8 +533,7 @@ func _start_new_career() -> void:
 	# save replaces it: backing out of Choose your club must not cost the player
 	# the career they had (reset() clears memory only).
 	GameState.reset()
-	if ExpansionBuild.on():
-		GameState.set_canberra(_pick_canberra)
+	GameState.set_canberra(_pick_canberra)
 	# A created club has no real 2026 list, so it only joins a League redraft.
 	if _pick_club and _pick_start != "real":
 		var club := GameState.forge_club()

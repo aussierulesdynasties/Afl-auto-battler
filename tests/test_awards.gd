@@ -333,11 +333,10 @@ func _test_full_season() -> void:
 	_check(not fist.is_empty() and fist_news == "%s (%s) won the %s with %s." % [GameState.award_name(fist[0]),
 			GameDB.club_name(str(fist[0]["club"])), Awards.GOLDEN_FIST, Awards.golden_fist_line(fist[0])],
 			"The news names the Golden Fist with what won it (%s)" % fist_news)
-	if Almanac.on():
-		var alm: Dictionary = GameState.almanac.back()
-		_check((alm.get("golden_fist", []) as Array).size() == 1
-				and str(alm["golden_fist"][0].get("id", "")) == fist_id,
-				"The almanac's season page keeps the Golden Fist")
+	var alm: Dictionary = GameState.almanac.back()
+	_check((alm.get("golden_fist", []) as Array).size() == 1
+			and str(alm["golden_fist"][0].get("id", "")) == fist_id,
+			"The almanac's season page keeps the Golden Fist")
 	# An older save: no Golden Fist anywhere loads cleanly and is not back-filled.
 	var kept_awards: Dictionary = GameState.season_awards.duplicate(true)
 	var old2: Array = GameState.honour_roll.duplicate(true)

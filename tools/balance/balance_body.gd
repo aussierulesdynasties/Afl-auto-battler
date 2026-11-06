@@ -16,14 +16,10 @@ extends RefCounted
 var start := ""
 
 
-func play(from: int, count: int, out: String, on: PackedStringArray,
-		off: PackedStringArray, weather: String, sets: Dictionary = {}, echo := false) -> int:
+func play(from: int, count: int, out: String, weather: String,
+		sets: Dictionary = {}, echo := false) -> int:
 	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
-	for f in on:
-		Features.set_on(f, true)
-	for f in off:
-		Features.set_on(f, false)
 	# --tune KEY=V,KEY=V: MatchSim tunables (MatchSim.tune, read through _tv) for
 	# sizing a constant before it is written into the code.
 	var args := OS.get_cmdline_user_args()
@@ -39,7 +35,6 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		lists = real_start_lists()
 		for q in GameDB.draftees:
 			class_ids[str(q["id"])] = true
-	var gather := Features.on(GatherRound.SWITCH)
 	var codes: Array = GameDB.active_clubs(2026).duplicate()
 	# --lists generated: every club's list is generated players instead (row 104).
 	for i in range(args.size() - 1):
@@ -58,14 +53,12 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		var flip := (i / pairs.size()) % 2 == 1
 		var h := str(p[1] if flip else p[0])
 		var a := str(p[0] if flip else p[1])
-		# gather_round on: every match is staged as a Gather Round match (at the
-		# host ground, a club's home edge only at its own ground), the per-match
-		# effect of the one round a season it applies to.
-		var at_home := [true, false]
-		if gather:
-			var ground: Callable = func(c): return str(GameDB.club(str(c)).get("ground", ""))
-			var v := str(GatherRound.venues_for([{"home": h, "away": a}], 500000 + i, ground)[0])
-			at_home = [ground.call(h) == v, ground.call(a) == v]
+		# Every match is staged as a Gather Round match (at the host ground, a
+		# club's home edge only at its own ground), the per-match effect of the
+		# one round a season it applies to.
+		var ground: Callable = func(c): return str(GameDB.club(str(c)).get("ground", ""))
+		var v := str(GatherRound.venues_for([{"home": h, "away": a}], 500000 + i, ground)[0])
+		var at_home := [ground.call(h) == v, ground.call(a) == v]
 		var sq_h := Squad.new(h, lists.get(h, GameDB.club_list(h)), bool(at_home[0]), h)
 		var sq_a := Squad.new(a, lists.get(a, GameDB.club_list(a)), bool(at_home[1]), a)
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
@@ -210,7 +203,7 @@ func duels(sim: MatchSim, r: Dictionary) -> Array:
 
 ## "a=1,b=0.5" -> {"a": 1.0, "b": 0.5}
 ## --lists generated (row 104): a league of generated players, to screen a change to
-## generation (e.g. --on gen_traits) in matches. Classes 2027 on (career seed 4242 +
+## generation in matches (main against the branch). Classes 2027 on (career seed 4242 +
 ## year) are generated on the game's data (the hand-set OVR rows on) and grown
 ## GEN_GROW seasons by the development rules; each real 2026 list player's place is
 ## taken by the next unused generated player of his position, re-rated to his OVR on
@@ -218,7 +211,7 @@ func duels(sim: MatchSim, r: Dictionary) -> Array:
 ## (GameDB.set_player_ovr, one shift on every rated attribute; discipline kept, as the
 ## career's refit keeps it), as the in-career league is
 ## re-anchored to the 2026 spread every rollover. Every worker builds the same league,
-## and an arm's switch changes only what generation does with the same draws.
+## so two checkouts differ only in what generation does with the same draws.
 const GEN_CLASSES := 40
 const GEN_GROW := 5
 func generated_lists(codes: Array) -> Dictionary:

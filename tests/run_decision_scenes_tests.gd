@@ -1,7 +1,7 @@
 extends SceneTree
 ## godot --headless --path . --script tests/run_decision_scenes_tests.gd
 ## TODO row 13: tired, duel, hot, momentum and set shot each open on a scene (DecisionVignette)
-## when Features "decision_scenes" and the Vignettes setting are on, and stay the text card
+## when the Vignettes setting is on, and stay the text card
 ## otherwise. The scene shows the players the call is about, in their own kits and builds,
 ## with the ball only ever at a palm; the call under it is MatchSim's, and takes a real tap.
 
@@ -28,15 +28,12 @@ func _run() -> void:
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
 	_state.replay_seed = SUITE_SEED
-	var original: bool = Features.on("decision_scenes")
-	_check(original, "The decision scenes ship switched on")
 	for kind in KINDS:
 		await _t("_test_kind", [kind])
-	await _t("_test_card_without_switch")
+	await _t("_test_card_without_vignettes")
 	for kind in KINDS:
 		await _t("_test_tap", [kind])
 	await _t("_test_no_chosen_defender")
-	Features.set_on("decision_scenes", original)
 	print(Ran.line("Decision scenes", self))
 	for f in _failures:
 		print("  FAIL: ", f)
@@ -102,7 +99,6 @@ func _test_kind(kind: String) -> void:
 	var sim = ctx["sim"]
 	var me: int = ctx["me"]
 	_state.set_vignettes_on(true)
-	Features.set_on("decision_scenes", true)
 	sim.moment_side = me
 	sim.pending_moment = _moment(sim, me, kind)
 	var call: Dictionary = sim.pending_moment
@@ -197,24 +193,22 @@ func _test_kind(kind: String) -> void:
 	await _settle()
 
 
-## Switch off, or Vignettes off: the call is the text card it always was, for every kind.
-func _test_card_without_switch() -> void:
-	for setting in ["switch", "vignettes"]:
-		for kind in KINDS:
-			var ctx := await _match()
-			var m: Control = ctx["m"]
-			var sim = ctx["sim"]
-			var me: int = ctx["me"]
-			Features.set_on("decision_scenes", setting != "switch")
-			_state.set_vignettes_on(setting != "vignettes")
-			sim.moment_side = me
-			sim.pending_moment = _moment(sim, me, kind)
-			m.call("_show_moment")
-			await _settle()
-			_check(m.find_child("MomentCard", true, false) != null and m.find_child("DecisionVignette", true, false) == null,
-					"%s with %s off: the call is the text card" % [kind, setting])
-			m.queue_free()
-			await _settle()
+## Vignettes off: the call is the text card, for every kind.
+func _test_card_without_vignettes() -> void:
+	for kind in KINDS:
+		var ctx := await _match()
+		var m: Control = ctx["m"]
+		var sim = ctx["sim"]
+		var me: int = ctx["me"]
+		_state.set_vignettes_on(false)
+		sim.moment_side = me
+		sim.pending_moment = _moment(sim, me, kind)
+		m.call("_show_moment")
+		await _settle()
+		_check(m.find_child("MomentCard", true, false) != null and m.find_child("DecisionVignette", true, false) == null,
+				"%s with vignettes off: the call is the text card" % kind)
+		m.queue_free()
+		await _settle()
 	_state.set_vignettes_on(true)
 
 
@@ -226,7 +220,6 @@ func _test_tap(kind: String) -> void:
 	var sim = ctx["sim"]
 	var me: int = ctx["me"]
 	_state.set_vignettes_on(true)
-	Features.set_on("decision_scenes", true)
 	sim.moment_side = me
 	sim.pending_moment = _moment(sim, me, kind)
 	var last: int = (sim.pending_moment["options"] as Array).size() - 1

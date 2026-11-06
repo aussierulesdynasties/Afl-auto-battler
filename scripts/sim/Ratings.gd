@@ -39,13 +39,12 @@ const T := {
 	"contest_clamp": 0.60,           # max stoppage win probability
 }
 
-## Features "match_flow" (row 11, director 2026-10-10): stoppages come from
-## contests that lock up, a won ball is played on, chains are shorter and more
-## numerous. These replace the same keys in T for a match played with the switch
-## on; with it off T is used untouched. Measured against main's current calibration
+## Match flow (row 11, director 2026-10-10): stoppages come from contests that
+## lock up, a won ball is played on, chains are shorter and more numerous. These
+## replace the same keys in T for every match. Measured against main's current calibration
 ## (after #885): docs/research/MATCH_FLOW_AUDIT_2026-11-04.md has the bands, and
 ## three still fall short. These are absolute values, not offsets: a later change
-## to T for these keys does not reach a match_flow match until FLOW is updated too
+## to T for these keys does not reach a match until FLOW is updated too
 ## (tests/test_match_flow.gd checks every key here still exists in T).
 const FLOW := {
 	"chains_per_game": 275,

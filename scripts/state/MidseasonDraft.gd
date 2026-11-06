@@ -9,7 +9,7 @@ extends RefCounted
 ##   no grades. Words only: it changes no rating, board or pick.
 ##
 ##   Mid-season rookie draft, after round DRAFT_AFTER: reverse-ladder order,
-##   one pick per club with a list spot (under Contracts.MAX_LIST), your club
+##   one pick per club with a free rookie spot (RookieList), your club
 ##   included. The pool is the unsigned free agents plus the prospects earlier
 ##   drafts passed over. A pick signs a rookie deal to the end of next season.
 ##   No trades. When your turn comes the draft waits for you; Sim the week
@@ -22,9 +22,7 @@ extends RefCounted
 ##   {"year", "carnival": [{"id","name","pos","state"}], "carnival_seen",
 ##    "order": [club], "next": int, "picks": [{"club","id","name","from"}],
 ##    "done": bool}
-## Behind the switch `midseason_draft`: off, nothing here runs or is written.
 
-const SWITCH := "midseason_draft"
 const CARNIVAL_AFTER := 10
 const DRAFT_AFTER := 11
 const STARS := 3
@@ -37,17 +35,13 @@ const STATE_WORDS := {
 }
 
 
-static func on() -> bool:
-	return Features.on(SWITCH)
-
-
 static func state_word(code: String) -> String:
 	return str(STATE_WORDS.get(code, code if code != "" else "the Allies"))
 
 
 ## Called from GameState._after_round once a home-and-away round is in.
 static func after_round(gs) -> void:
-	if not on() or gs.season == null or gs.last_phase != "regular":
+	if gs.season == null or gs.last_phase != "regular":
 		return
 	var played: int = gs.season.round_index
 	if played == CARNIVAL_AFTER:
@@ -112,7 +106,7 @@ static func carnival_news(stars: Array) -> String:
 
 ## The hub's one-off carnival sheet: its lines, or [] once seen.
 static func carnival_lines(gs) -> Array:
-	if not on() or int(gs.midseason.get("year", 0)) != gs.season_year:
+	if int(gs.midseason.get("year", 0)) != gs.season_year:
 		return []
 	if bool(gs.midseason.get("carnival_seen", true)):
 		return []
@@ -171,8 +165,8 @@ static func _open_draft(gs) -> void:
 		if not gs.season.lists.has(code):
 			continue
 		var list: Array = gs.season.lists[code]
-		# With the rookie list on, a pick fills a rookie spot (RookieList).
-		if (RookieList.rookie_spot_free(list) if RookieList.on() else list.size() < Contracts.MAX_LIST):
+		# A pick fills a rookie spot (RookieList).
+		if RookieList.rookie_spot_free(list):
 			order.append(code)
 	rec["order"] = order
 	rec["next"] = 0
@@ -183,7 +177,7 @@ static func _open_draft(gs) -> void:
 
 ## True while the draft waits on your pick.
 static func waiting(gs) -> bool:
-	if not on() or int(gs.midseason.get("year", 0)) != gs.season_year:
+	if int(gs.midseason.get("year", 0)) != gs.season_year:
 		return false
 	var rec: Dictionary = gs.midseason
 	if bool(rec.get("done", true)) or not rec.has("order"):
@@ -253,8 +247,7 @@ static func _take(gs, code: String, p: Dictionary) -> void:
 	# so two now is "out of contract after next season".
 	p["contract_years"] = 2
 	p["salary"] = Contracts.indexed_money_2027(Contracts.ROOKIE_MIN_2027, gs.season_year)
-	if RookieList.on():
-		p["rookie_list"] = "A"
+	p["rookie_list"] = "A"
 	Workload.reset({code: [p]})
 	(gs.midseason["picks"] as Array).append({"club": code, "id": id,
 			"name": GameDB.player_display_name(p), "from": from})

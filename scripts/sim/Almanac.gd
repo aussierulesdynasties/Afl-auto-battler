@@ -1,6 +1,6 @@
 class_name Almanac
 extends RefCounted
-## The club almanac (plan step 1c, behind the switch "club_almanac"): the
+## The club almanac (plan step 1c): the
 ## keepsake of a coach's career, one page per season. Each entry is written
 ## once at the season's end from what the sim really did (GameState
 ## _close_season_awards), and the legends who retired are added at the
@@ -35,11 +35,6 @@ const STORY_KEY := "story_of_the_season"
 ## The story's parts, kept so a later sentence (legends, a coach arc) can be
 ## added and the story told again (compose).
 const PARTS_KEY := "story_parts"
-const FEATURE := "club_almanac"
-
-
-static func on() -> bool:
-	return Features.on(FEATURE)
 
 
 ## The season just finished, as the almanac keeps it. `gs` is GameState,
@@ -154,8 +149,8 @@ static func add_legends(gs, retired: Array, listed: Dictionary) -> void:
 	if gs.almanac.is_empty():
 		return
 	var entry: Dictionary = gs.almanac.back()
-	# Only onto the page of the season just closed: with the switch turned on
-	# mid-career, the last page may be an older year that these men never saw out.
+	# Only onto the page of the season just closed: in a career begun before the
+	# almanac existed, the last page may be an older year that these men never saw out.
 	if int(entry.get("year", 0)) != int(gs.season_year):
 		return
 	var club := str(entry.get("club", ""))
@@ -275,10 +270,8 @@ static func _bump(hit: Dictionary, id: String, key: String, club: String) -> voi
 
 ## The season hero (director, 2026-11-03): your player with the most match-hero
 ## awards this season, from the match story digest. {id, name, count} or {}
-## (none, or the match story switch off). Ties go to the BF votes.
+## (none). Ties go to the BF votes.
 static func season_hero(gs) -> Dictionary:
-	if not MatchStory.on():
-		return {}
 	var d: Dictionary = gs.match_story_digest.get(str(int(gs.season_year)), {})
 	if d.is_empty():
 		return {}

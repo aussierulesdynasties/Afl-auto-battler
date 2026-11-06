@@ -1,10 +1,9 @@
 extends RefCounted
 ## Run through tests/run_international_tests.gd.
-## International prospects (switch international_prospects): each generated draft
+## International prospects: each generated draft
 ## class has one or two prospects from Ireland, New Zealand, the USA or an
 ## African country, with names from their own country's lists and a raw
 ## ratings profile; one is drafted, kept across a season rollover and a save.
-## Switched off, classes are exactly what they were.
 ## Seeded by design: classes come from their year; the career from replay_seed.
 
 const INTL := preload("res://scripts/sim/InternationalProspects.gd")
@@ -29,11 +28,6 @@ func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
 
-func _digest(p: Dictionary) -> String:
-	return "%s|%s|%d|%d|%s|%s" % [p["id"], p["role"], int(p["overall"]),
-			int(p.get("potential", 0)), str(p["dob"]), str(p["draft_team"])]
-
-
 func run() -> void:
 	_tree = Engine.get_main_loop() as SceneTree
 	var state: Node = _tree.root.get_node("GameState")
@@ -43,48 +37,22 @@ func run() -> void:
 	state.settings_path = "user://test_intl.cfg"
 	_t("_test_classes", [state, db])
 	_t("_test_career", [state, db])
-	Features.clear("international_prospects")
 	state.delete_saved_career()
 	print(Ran.line("International", self))
 	for f in failures:
 		print("FAIL: ", f)
 
 
-## The switch, the generated classes and what the draft shows of him (the checks written in run()).
+## The generated classes and what the draft shows of him (the checks written in run()).
 func _test_classes(state: Node, db: Node) -> void:
-	_check(Features.KNOWN.has("international_prospects"), "The switch is a known feature")
-	_check(Features.on("international_prospects"), "The switch ships on (project setting)")
-	Features.set_on("international_prospects", false)
-
-	# Switch off: nobody is international, and a class is the same every time.
-	var off := {}
-	for y in range(FIRST_YEAR, FIRST_YEAR + 40):
-		var cls: Array = Prospects.generate_class(y, SEED)
-		var digest: Array = []
-		var any := false
-		for p in cls:
-			digest.append(_digest(p))
-			any = any or p.has("intl") or p.has("attr_bias")
-		off[y] = digest
-		_check(not any, "%d switched off: no international in the class" % y)
-	var again: Array = Prospects.generate_class(FIRST_YEAR, SEED)
-	var same := true
-	for i in range(again.size()):
-		same = same and _digest(again[i]) == (off[FIRST_YEAR] as Array)[i]
-	_check(same, "Switched off, a class is the same on a second build")
-
-	# Switch on.
-	Features.set_on("international_prospects", true)
 	var counts := {}
 	var by_country := {}
 	var all_intl: Array = []
-	var changed_other := 0
 	var two := 0
 	var profile_ok := true
 	for y in range(FIRST_YEAR, FIRST_YEAR + YEARS):
 		var cls: Array = Prospects.generate_class(y, SEED)
 		var n := 0
-		var ids := {}
 		var seen_country := {}
 		for i in range(cls.size()):
 			var p: Dictionary = cls[i]
@@ -95,16 +63,10 @@ func _test_classes(state: Node, db: Node) -> void:
 			by_country[str(p["intl"])] = int(by_country.get(str(p["intl"]), 0)) + 1
 			_check(not seen_country.has(str(p["intl"])), "%d: two prospects from one country" % y)
 			seen_country[str(p["intl"])] = true
-			ids[i] = true
 			_check(int(p["draft_rank"]) >= 11, "%d: an international is not a top-ten pick" % y)
 		counts[n] = int(counts.get(n, 0)) + 1
 		if n == 2:
 			two += 1
-		# Everyone else is exactly as before.
-		if y < FIRST_YEAR + 40:
-			for i in range(cls.size()):
-				if not ids.has(i) and _digest(cls[i]) != (off[y] as Array)[i]:
-					changed_other += 1
 	_check(int(counts.get(0, 0)) == 0, "Every class has an international (zero-class count %d)" % int(counts.get(0, 0)))
 	var bad_sizes := 0
 	for k in counts:
@@ -112,7 +74,6 @@ func _test_classes(state: Node, db: Node) -> void:
 			bad_sizes += int(counts[k])
 	_check(bad_sizes == 0, "Never more than two in a class (%s)" % str(counts))
 	_check(two >= YEARS / 10 and two <= YEARS / 2, "Two in a class only sometimes (%d of %d)" % [two, YEARS])
-	_check(changed_other == 0, "The rest of each class is unchanged by the switch (%d differ)" % changed_other)
 	print("INTL counts per class: ", counts, "  by country: ", by_country)
 
 	# Country spread: all seven appear; the three big pathways lead.
@@ -246,24 +207,11 @@ func _test_classes(state: Node, db: Node) -> void:
 			var ln := nm.substr(nm.find(" ") + 1)
 			dup += 1 if seen_last.has(ln) else 0
 			seen_last[ln] = true
-	_check(dup == 0, "With the switch on no class repeats a surname over 150 years (%d)" % dup)
+	_check(dup == 0, "No class repeats a surname over 150 years (%d)" % dup)
 
 
 func _test_career(state: Node, db: Node) -> void:
-	# Old save: a career begun and saved with the switch off loads with it on.
-	Features.set_on("international_prospects", false)
-	state.replay_seed = SEED
-	state.reset()
-	state.start_season("ADE", db.club_list("ADE"))
-	_check(state.save_career(), "A career saves with the switch off")
-	Features.set_on("international_prospects", true)
-	_check(state.load_career(), "...and loads with the switch on")
-	var any_old := false
-	for p in state.draftee_pool:
-		any_old = any_old or p.has("intl")
-	_check(not any_old, "...its draft class has no international (it was made without them)")
-
-	# A new career with the switch on: draft an international, keep him through
+	# A new career: draft an international, keep him through
 	# a rollover, a save and a reload.
 	state.replay_seed = SEED
 	state.reset()
@@ -336,14 +284,6 @@ func _eligible(card: Dictionary, f: Dictionary, round_no: int) -> bool:
 
 
 func _stories(state: Node, mine: Dictionary) -> void:
-	Features.set_on("international_prospects", false)
-	StoryDeck.reload()
-	var off := 0
-	for t in StoryDeck.all():
-		if str(t["id"]).begins_with("intl_"):
-			off += 1
-	_check(off == 0, "Switched off, no international story card is in the deck")
-	Features.set_on("international_prospects", true)
 	StoryDeck.reload()
 	var deck := StoryDeck.all()
 	var cards := []
@@ -439,5 +379,4 @@ func _stories(state: Node, mine: Dictionary) -> void:
 	for k in dealt:
 		only = only and ["intl_first_game", "intl_learning_the_game", "intl_nz_rugby_offer"].has(str(k)) 				and not str(k).begins_with("intl_irish") and not str(k).begins_with("intl_africa")
 	_check(dealt.has("intl_first_game") and only, "The engine deals his first-game card, and only cards fit for him (%s)" % str(dealt.keys()))
-	Features.set_on("international_prospects", false)
 	StoryDeck.reload()

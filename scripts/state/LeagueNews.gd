@@ -2,7 +2,6 @@ class_name LeagueNews
 extends RefCounted
 ## The AFL knowledge layer (row 76, T5.Q11d; Director Bible 5.129 and 8.80):
 ## history the save can prove, told as football news on the existing news feed.
-## Switch "league_news"; off, the feed is exactly as before.
 ##
 ## One placement so far, the smallest the brief allows: the premiership. When a
 ## club wins the flag, the feed's "X are the YEAR premiers." item carries one
@@ -16,12 +15,6 @@ extends RefCounted
 ## honour roll (ClubStories.flag_record, which the Grand Final card also reads).
 ## Where the record cannot know, nothing is said. Reads only: no rating, morale,
 ## list or match changes.
-
-const FEATURE := "league_news"
-
-
-static func on() -> bool:
-	return Features.on(FEATURE)
 
 
 ## The premiers' history in one sentence, or "" when there is nothing true and
@@ -47,10 +40,8 @@ static func flag_history(club: String, year: int, roll: Array) -> String:
 
 
 ## The feed's premiership line: "X are the YEAR premiers." plus the history
-## sentence when the switch is on and there is one.
+## sentence when there is one.
 static func premiers_line(club: String, year: int, roll: Array) -> String:
 	var line := "%s are the %d premiers." % [GameDB.club_name(club), year]
-	if not on():
-		return line
 	var more := flag_history(club, year, roll)
 	return line if more == "" else line + " " + more

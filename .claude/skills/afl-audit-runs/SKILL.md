@@ -26,7 +26,7 @@ scratchpad), `tools/balance/afl_ladders.json`, `data/raw/`.
 via `tools/balance/dynasty.gd`.
 
 - `extends RefCounted` with `func run()`. Read args from
-  `OS.get_cmdline_user_args()` (`[0]` is the impl name) and switches from
+  `OS.get_cmdline_user_args()` (`[0]` is the impl name) and options from
   `OS.get_environment(...)`.
 - **Seed everything:** `GameState.replay_seed` and `career_seed`, and seeded
   drafts and `MatchSim`. Take several seeds as one comma-separated arg so one

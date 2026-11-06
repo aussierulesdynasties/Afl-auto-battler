@@ -772,7 +772,8 @@ func _test_fixture(sz: Vector2i) -> void:
 	_check(upcoming, "A round all to come shows the ground, not a score and not Upcoming on every row (%s)" % tag)
 	var grounds := true
 	for i in range(rows.size()):
-		grounds = grounds and _text(rows[i]).contains(season.round_venue(season.round_index, str(season.fixture[season.round_index][i]["home"]), str(season.fixture[season.round_index][i]["away"])))
+		var m: Dictionary = season.fixture[season.round_index][i]
+		grounds = grounds and _text(rows[i]).contains(season.round_venue(season.round_index, str(m["home"]), str(m["away"])))
 	_check(grounds, "Each match shows its ground (%s)" % tag)
 	if sz.x >= 900:
 		var widest := 0.0

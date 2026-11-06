@@ -4,8 +4,8 @@ Answers "is the match engine inside real AFL numbers, and did my change move it?
 in a minute or two on this PC, without CI.
 
 ```bash
-GODOT=<godot console exe> tools/balance.sh match 1000                          # one arm
-GODOT=<godot console exe> tools/balance.sh match 1000 --b "--on clanger_cause" # base vs switch on
+GODOT=<godot console exe> tools/balance.sh match 1000                                    # one arm
+GODOT=<godot console exe> tools/balance.sh match 1000 --a-root ../main-checkout --b ""   # main vs this branch
 GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "--weather perfect"
 ```
 
@@ -15,15 +15,16 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "-
 - **Pairing.** Seed i is always the same two real 2026 lists (every pairing of 18 clubs comes round, home
   side alternating) on match seed 500000 + i, so arm A and arm B play identical matches and the delta's
   standard error is small. A change is real when |B - A| > 2 se (the `sig` column).
-- **Arm args.** `--on a,b`, `--off c` (Features switches), `--weather perfect|wet|windy|hot`,
+- **Arm args.** `--weather perfect|wet|windy|hot`,
   `--tune KEY=V,...` (sets `MatchSim.tune`, read by `_tv`: size a constant before you fix it).
 - **Generated lists** (`--lists generated`, row 104): every club's list is generated players instead of the
-  real ones, to screen a change to generation in matches (`--a "--lists generated" --b "--lists generated
-  --on gen_traits"`). Classes 2027 on are generated on the game's data, grown five seasons, and each real
+  real ones, to screen a change to generation in matches (`--a-root <main checkout> --a "--lists generated"
+  --b "--lists generated"`). Classes 2027 on are generated on the game's data, grown five seasons, and each real
   player's place goes to the next generated player of his position, re-rated to his OVR (the in-career
   re-anchor). Every worker builds the same league; ~10 s more per worker.
-- **A change with no switch** (a retuned constant): `--a-root <checkout of origin/main> --b ""` plays arm A
-  from that other checkout and arm B from this one, on the same seeds. Each worker log starts with
+- **Main against the branch** (every A/B of a change): `--a-root <checkout of origin/main> --b ""` plays
+  arm A from that other checkout and arm B from this one, on the same seeds. There are no feature switches:
+  a change is in the game once merged, so the only A/B is main against the branch. Each worker log starts with
   `project: <path>`, so `head -1 <run>/a_0.log` proves which checkout arm A played.
 - **Report.** `balance_report.py` prints a markdown page (also saved to `<run>/report.md`): each stat per
   team-match against `afl_team_rates.json` (IN = inside the 18 clubs' lowest..highest, NEAR = within
@@ -42,8 +43,8 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "-
 - **Runs** land in `.balance/<timestamp>/` (git-ignored, `.gdignore`d).
 
 ## When to use it
-Any balance-gated TODO row, any change to MatchSim rates or constants, and any new feature switch that
-touches play: run base vs switch before opening the PR and paste the report table into the PR body.
+Any balance-gated TODO row, any change to MatchSim rates or constants, and any feature that touches play:
+run main vs the branch before opening the PR and paste the report table into the PR body.
 Use `tools/audit/` for deeper single-question audits (season, draft, dynasty); this harness is the quick
 match-level screen.
 

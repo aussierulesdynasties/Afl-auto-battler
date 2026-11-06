@@ -3,7 +3,7 @@ extends RefCounted
 ## The monthly training report (TrainingReport.gd, TrainingReportSheet.gd;
 ## director, 2026-10-14: "A report every 4 rounds"): the block snapshot, a
 ## known riser and his stats, the retraining list against the Training menu's
-## own, the switch off, an old save, and real taps on a phone and a PC.
+## own, an old save, and real taps on a phone and a PC.
 
 var _tree: SceneTree
 var checks := 0
@@ -59,7 +59,6 @@ func run(tree: SceneTree) -> void:
 	GameState.save_path = "user://test_trainrep.save"
 	GameState.settings_path = "user://test_trainrep.cfg"
 	GameState.delete_saved_career()
-	Features.set_on("training_report", true)
 	_t("_test_snapshot_and_report")
 	_t("_test_retrain_list")
 	_t("_test_old_save")
@@ -67,7 +66,6 @@ func run(tree: SceneTree) -> void:
 		_tree.root.size = size
 		await _settle()
 		await _t("_test_taps", [size])
-	Features.clear("training_report")
 	GameState.delete_saved_career()
 	print(Ran.line("Training report", self))
 	for f in failures:
@@ -209,9 +207,13 @@ func _test_old_save() -> void:
 	# A save from before the report has neither key: it loads with safe defaults.
 	_fresh()
 	_rounds(2)
-	Features.set_on("training_report", false)
-	_check(GameState.save_career(), "an old-style save is written")
-	Features.set_on("training_report", true)
+	_check(GameState.save_career(), "a save is written")
+	# Strip both keys, as a save written before the report has neither.
+	var state := CareerSave.read(GameState.save_path)
+	var meta := CareerSave.read_meta(GameState.save_path)
+	state.erase("training_block")
+	state.erase("training_report")
+	_check(CareerSave.write(state, meta, GameState.save_path), "an old-style save is written")
 	GameState.training_block = {"junk": 1}
 	GameState.training_report = {"junk": 1}
 	_check(GameState.load_career(), "an old save loads")

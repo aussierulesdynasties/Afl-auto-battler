@@ -1,9 +1,6 @@
 """One-off: add the finals cards' second slice (A3, A9, A14, A15, A16, B7, B8, B9) to
-data/stories, behind the finals_cards_2 switch. Kept as the record of what was added;
-running it again replaces the cards with these ids. Run from the repo root."""
+data/stories. Kept as the record of what was added; running it again replaces the cards with these ids. Run from the repo root."""
 import json
-
-F = "finals_cards_2"
 
 
 def m(d, who="all"):
@@ -15,7 +12,7 @@ def cul(strand, d, why):
 
 
 def card(id, cat, **kw):
-	c = {"id": id, "category": cat, "feature": F, "subject": {"kind": "club"}}
+	c = {"id": id, "category": cat, "subject": {"kind": "club"}}
 	c.update(kw)
 	return c
 

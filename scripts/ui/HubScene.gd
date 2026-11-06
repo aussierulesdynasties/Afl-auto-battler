@@ -198,20 +198,19 @@ func _show_season_wrap() -> void:
 		v.add_child(why)
 	# With a pre-season to come, the wrap leads into it; a career saved at the
 	# wrap before pre-seasons existed begins its season as it always did.
-	# Last season's page in the club almanac (switch club_almanac).
-	if Almanac.on():
-		var page: Dictionary = GameState.almanac.back() if not GameState.almanac.is_empty() else {}
-		var first := Almanac.first_sentence(str(page.get(Almanac.STORY_KEY, "")))
-		if first != "":
-			var lead := UiKit.lbl(first, 14, UiKit.MUTED)
-			lead.name = "WrapAlmanacStory"
-			lead.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			(box["footer"] as VBoxContainer).add_child(lead)
-		var alm := UiKit.btn("Club almanac", UiKit.BODY)
-		alm.name = "WrapAlmanac"
-		alm.flat = true
-		alm.pressed.connect(func(): Router.go("almanac"))
-		(box["footer"] as VBoxContainer).add_child(alm)
+	# Last season's page in the club almanac.
+	var page: Dictionary = GameState.almanac.back() if not GameState.almanac.is_empty() else {}
+	var first := Almanac.first_sentence(str(page.get(Almanac.STORY_KEY, "")))
+	if first != "":
+		var lead := UiKit.lbl(first, 14, UiKit.MUTED)
+		lead.name = "WrapAlmanacStory"
+		lead.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		(box["footer"] as VBoxContainer).add_child(lead)
+	var alm := UiKit.btn("Club almanac", UiKit.BODY)
+	alm.name = "WrapAlmanac"
+	alm.flat = true
+	alm.pressed.connect(func(): Router.go("almanac"))
+	(box["footer"] as VBoxContainer).add_child(alm)
 	var to_preseason: bool = GameState.preseason_active()
 	var go := UiKit.btn("Start the pre-season" if to_preseason else "Begin season", UiKit.BODY, true)
 	go.name = "BeginSeason"
@@ -447,13 +446,12 @@ func _standing_card() -> Control:
 	var last := _last_match_button()
 	if last != null:
 		cv.add_child(last)
-	# The club almanac: your career, season by season (switch club_almanac).
-	if Almanac.on():
-		var alm := UiKit.text_action("Club almanac  ›", UiKit.SECONDARY)
-		alm.name = "HubAlmanac"
-		alm.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		alm.pressed.connect(func(): Router.go("almanac"))
-		cv.add_child(alm)
+	# The club almanac: your career, season by season.
+	var alm := UiKit.text_action("Club almanac  ›", UiKit.SECONDARY)
+	alm.name = "HubAlmanac"
+	alm.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	alm.pressed.connect(func(): Router.go("almanac"))
+	cv.add_child(alm)
 	# The board lives in Coaching; here only when your job is at risk.
 	if GameState.board_goal_text() != "":
 		var warned := bool(GameState.board.get("warned", false))
@@ -652,7 +650,7 @@ func _week_section(season: Season) -> Control:
 			var marquee_line := UiKit.lbl(str(marquee["name"]), UiKit.SMALL, UiKit.EMPH, true)
 			marquee_line.name = "MarqueeContext"
 			nv.add_child(marquee_line)
-		# Sir Doug Nicholls Round (row 75, switch sir_doug_round): the name only,
+		# Sir Doug Nicholls Round (row 75): the name only,
 		# in the round your club marks it (the factual line lives on the fixture
 		# page, so the week's decision stays in view). A tribute, not a factor.
 		if not GameState.season.is_regular_done() and SirDougRound.round_for(GameState,
@@ -755,15 +753,14 @@ func _week_section(season: Season) -> Control:
 		if ms_card != null:
 			nv.add_child(UiKit.spacer(4))
 			nv.add_child(ms_card)
-	# The week your season ends has its card (finals_cards_2), the Grand Final played or not.
-	if not season.is_season_over() or Features.on(StoryDeck.FINALS_2):
-		for i in range(GameState.week_events.size()):
-			nv.add_child(UiKit.spacer(4))
-			var ev := _event_card(i)
-			nv.add_child(ev)
-			# A question still waiting on the coach: it brightens twice, once.
-			if not bool((GameState.week_events[i] as Dictionary).get("resolved", false)) and not _settled:
-				UiKit.attention(ev)
+	# The week your season ends has its card, the Grand Final played or not.
+	for i in range(GameState.week_events.size()):
+		nv.add_child(UiKit.spacer(4))
+		var ev := _event_card(i)
+		nv.add_child(ev)
+		# A question still waiting on the coach: it brightens twice, once.
+		if not bool((GameState.week_events[i] as Dictionary).get("resolved", false)) and not _settled:
+			UiKit.attention(ev)
 
 	# On a wide screen the week's decisions are pinned under the page beside the
 	# rest of the club (_build), so Play match is never below the fold; on a
@@ -1799,9 +1796,9 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 			30, UiKit.TEXT if drew else UiKit.margin_colour(won), true)
 	verdict.name = "MyVerdict"
 	v.add_child(verdict)
-	# ui_motion: a win lands by scale alone (all text is solid from frame 0, the
+	# A win lands by scale alone (all text is solid from frame 0, the
 	# scores are true at once); a loss and a draw are only shown, sober.
-	if UiKit.juice() and won and not drew:
+	if won and not drew:
 		UiKit.land(verdict, 0.12)
 	for side in [0, 1]:
 		var row := UiKit.hbox(8)

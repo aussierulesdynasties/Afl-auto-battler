@@ -1,11 +1,11 @@
 extends SceneTree
 ## godot --headless --path . --script tests/run_ui_motion_tests.gd
-## Menu juice, first prototype (switch `ui_motion`, director 2026-11-04): the
+## Menu juice, first prototype (director 2026-11-04): the
 ## UiKit.Motion tokens, the hardened reveal / count_up / land, the Router's
 ## ease-out, sheet_in on every modal sheet, fill_bar, and the Sim the week
 ## result sheet (the Verdict lands on a win and a loss gets nothing; no text fades; the
 ## injury, MRO and Norm Smith lines come in one after another). Proves: it ran
-## (Feel.moved), it was skipped (Reduced motion, switch off), the figures are
+## (Feel.moved), it was skipped (Reduced motion), the figures are
 ## true on the first frame, and a real finger (tests/tap.gd) reaches Continue
 ## from frame 0, during the landing, and at the edge of a landing element.
 ## Classes are reached through load() and autoload nodes.
@@ -17,7 +17,6 @@ const SUITE_SEED := 2027
 var _state: Node
 var _uk: Object
 var _feel: Object
-var _feat: Object
 var _checks := 0
 var _failures: Array[String] = []
 
@@ -47,7 +46,6 @@ func _run() -> void:
 	_state = root.get_node("GameState")
 	_uk = load("res://scripts/ui/UiKit.gd")
 	_feel = load("res://scripts/ui/Feel.gd")
-	_feat = load("res://scripts/core/Features.gd")
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_ui_motion.save"
 	_state.settings_path = "user://test_ui_motion.cfg"
@@ -60,17 +58,16 @@ func _run() -> void:
 	_feel.force_phone = true
 	await _settle()
 
-	await _t("_test_tokens_and_switch")
+	await _t("_test_tokens")
 	await _t("_test_helpers_hardened")
 	await _t("_test_router_ease")
 	await _t("_test_fill_bar")
 	await _t("_test_sheet_in")
 	await _t("_test_result_sheet_win")
 	await _t("_test_result_sheet_loss")
-	await _t("_test_result_sheet_reduced_and_off")
+	await _t("_test_result_sheet_reduced")
 	await _t("_test_land_edge_tap")
 
-	_feat.clear("ui_motion")
 	_feel.test_motion = false
 	_feel.force_phone = false
 	_state.set_reduced_motion(false)
@@ -162,7 +159,7 @@ func _all_text_solid(root: Node) -> bool:
 	return ok
 
 
-func _test_tokens_and_switch() -> void:
+func _test_tokens() -> void:
 	var m = _uk.Motion
 	_check(m.DUR_FAST == 0.18 and m.DUR_BASE == 0.32 and m.DUR_COUNT == 0.7 and m.DUR_HERO == 0.5
 			and m.DUR_BAR == 0.45
@@ -172,18 +169,11 @@ func _test_tokens_and_switch() -> void:
 			and m.TRANS_STAMP == Tween.TRANS_BACK and m.TRANS_PULSE == Tween.TRANS_SINE
 			and m.TRANS_OUT == Tween.TRANS_CUBIC and m.EASE_OUT == Tween.EASE_IN,
 			"The easing tokens are the report's (never linear)")
-	_check(_feat.KNOWN.has("ui_motion"), "ui_motion is a known switch")
-	_feat.set_on("ui_motion", false)
-	_check(not _feat.on("ui_motion") and not _uk.juice(), "set_on false turns it off")
-	_feat.set_on("ui_motion", true)
-	_check(_uk.juice(), "set_on turns it on")
-	_feat.clear("ui_motion")
 
 
 ## A second call stops the first; a label that has not been laid out yet still
 ## grows from its own edge; the true figure always ends up on screen.
 func _test_helpers_hardened() -> void:
-	_feat.set_on("ui_motion", true)
 	var host := Control.new()
 	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(host)
@@ -230,45 +220,27 @@ func _test_helpers_hardened() -> void:
 	_check(not scale_tween.is_valid(), "land twice: the earlier tween is killed")
 	await create_timer(0.8).timeout
 	_check(is_equal_approx(l.scale.x, 1.0), "land ends at rest")
-	# Switch off: no metas, no tags, as before.
-	_feat.set_on("ui_motion", false)
-	var o: Label = _uk.lbl("Off", 20)
-	host.add_child(o)
-	_feel.clear()
-	_uk.reveal(o)
-	_uk.count_up(o, 9, func(v): return str(v))
-	_uk.sheet_in({"overlay": o})
-	_uk.fill_bar(o, 0.1, 0.9)
-	await _settle(2)
-	_check(_feel.moved.is_empty() and not o.has_meta("_motion_mod") and not o.has_meta("_motion_text"),
-			"Switch off: reveal, count_up, sheet_in and fill_bar leave no tag and no tween (%s)" % str(_feel.moved))
-	_feat.clear("ui_motion")
 	host.queue_free()
 	await _settle()
 
 
 ## The screen fade eases out: a good way through it is well past the linear
-## position. Off, it is the old linear fade.
+## position.
 func _test_router_ease() -> void:
 	var router: Node = root.get_node("Router")
-	var samples := {}
-	for on in [true, false]:
-		_feat.set_on("ui_motion", on)
-		var scene := Control.new()
-		root.add_child(scene)
-		current_scene = scene
-		router.call("_ease_in")
-		await _settle(3)
-		await create_timer(0.10).timeout
-		samples[on] = scene.modulate.a
-		await create_timer(0.3).timeout
-		_check(is_equal_approx(scene.modulate.a, 1.0), "The screen fade ends fully in (ui_motion %s)" % str(on))
-		scene.queue_free()
-		current_scene = null
-		await _settle()
-	_check(samples[true] > 0.75 and samples[true] > samples[false] + 0.1,
-			"With ui_motion the fade eases out (%.2f at ~0.1 s) rather than linear (%.2f)" % [samples[true], samples[false]])
-	_feat.clear("ui_motion")
+	var scene := Control.new()
+	root.add_child(scene)
+	current_scene = scene
+	router.call("_ease_in")
+	await _settle(3)
+	await create_timer(0.10).timeout
+	var sample: float = scene.modulate.a
+	await create_timer(0.3).timeout
+	_check(is_equal_approx(scene.modulate.a, 1.0), "The screen fade ends fully in")
+	scene.queue_free()
+	current_scene = null
+	await _settle()
+	_check(sample > 0.75, "The fade eases out (%.2f at ~0.1 s)" % sample)
 
 
 func _test_fill_bar() -> void:
@@ -278,7 +250,6 @@ func _test_fill_bar() -> void:
 	var fill := ColorRect.new()
 	fill.set_anchors_preset(Control.PRESET_FULL_RECT)
 	host.add_child(fill)
-	_feat.set_on("ui_motion", true)
 	_feel.clear()
 	_uk.fill_bar(fill, 0.2, 0.8)
 	_check(is_equal_approx(fill.anchor_right, 0.2), "fill_bar starts from the old value (%.2f)" % fill.anchor_right)
@@ -294,11 +265,6 @@ func _test_fill_bar() -> void:
 	_check(is_equal_approx(fill.anchor_right, 0.3) and _feel.moved.is_empty(),
 			"Reduced motion: the bar is at its true value at once, no tag")
 	_state.set_reduced_motion(false)
-	_feat.set_on("ui_motion", false)
-	_feel.clear()
-	_uk.fill_bar(fill, 0.3, 0.6)
-	_check(is_equal_approx(fill.anchor_right, 0.6) and _feel.moved.is_empty(), "Switch off: the bar is at its value at once, no tag")
-	_feat.clear("ui_motion")
 	host.queue_free()
 	await _settle()
 
@@ -307,7 +273,6 @@ func _test_fill_bar() -> void:
 ## plain Control, nothing blocks Continue at frame 0, and every effect node
 ## lets a touch through.
 func _test_sheet_in() -> void:
-	_feat.set_on("ui_motion", true)
 	var host := Control.new()
 	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(host)
@@ -340,26 +305,19 @@ func _test_sheet_in() -> void:
 			"The sheet ends fully in and in place")
 	var sz: Vector2 = (box2["shell"] as Control).size
 	_check(sz.x >= 220.0 and sz.y > 40.0, "The sheet is laid out at its own size (%s)" % str(sz))
-	# Reduced motion and switch off: no wrapper, no fade, no tag.
-	for mode in ["reduced", "off"]:
-		_feel.clear()
-		if mode == "reduced":
-			_state.set_reduced_motion(true)
-		else:
-			_state.set_reduced_motion(false)
-			_feat.set_on("ui_motion", false)
-		var b3: Dictionary = _uk.modal_box(host, 400.0)
-		_check(_feel.moved.is_empty() and not b3.has("rise") and is_equal_approx(b3["overlay"].modulate.a, 1.0),
-				"%s: the sheet opens at once, no tag, no wrapper (%s)" % [mode, str(_feel.moved)])
-		b3["overlay"].queue_free()
+	# Reduced motion: no wrapper, no fade, no tag.
+	_feel.clear()
+	_state.set_reduced_motion(true)
+	var b3: Dictionary = _uk.modal_box(host, 400.0)
+	_check(_feel.moved.is_empty() and not b3.has("rise") and is_equal_approx(b3["overlay"].modulate.a, 1.0),
+			"reduced: the sheet opens at once, no tag, no wrapper (%s)" % str(_feel.moved))
+	b3["overlay"].queue_free()
 	_state.set_reduced_motion(false)
-	_feat.clear("ui_motion")
 	host.queue_free()
 	await _settle()
 
 
 func _test_result_sheet_win() -> void:
-	_feat.set_on("ui_motion", true)
 	var o: Dictionary = await _open_results(true)
 	var hub: Control = o["hub"]
 	# The scores are true on the very first frame, before any tween ticks.
@@ -419,7 +377,6 @@ func _test_result_sheet_win() -> void:
 
 
 func _test_result_sheet_loss() -> void:
-	_feat.set_on("ui_motion", true)
 	var o: Dictionary = await _open_results(false)
 	var hub: Control = o["hub"]
 	_check(_score_text_true(hub), "Loss: both scorelines are true on the first frame")
@@ -440,9 +397,8 @@ func _test_result_sheet_loss() -> void:
 	await _settle()
 
 
-func _test_result_sheet_reduced_and_off() -> void:
-	# Reduced motion with the switch on: no new tag at all, true scores at once.
-	_feat.set_on("ui_motion", true)
+func _test_result_sheet_reduced() -> void:
+	# Reduced motion: no new tag at all, true scores at once.
 	_state.set_reduced_motion(true)
 	var o: Dictionary = await _open_results(true)
 	var hub: Control = o["hub"]
@@ -457,31 +413,12 @@ func _test_result_sheet_reduced_and_off() -> void:
 	hub.queue_free()
 	await _settle()
 	_state.set_reduced_motion(false)
-	# Switch off, motion on: exactly as before: no new tags, nothing hidden.
-	_feat.set_on("ui_motion", false)
-	o = await _open_results(true)
-	hub = o["hub"]
-	mro = hub.find_child("MyMRO", true, false)
-	await create_timer(0.7).timeout
-	var new_tags := ["sheet_in", "reveal", "count_up", "fill_bar", "land"]
-	var seen := []
-	for t in _feel.moved:
-		if new_tags.has(t):
-			seen.append(t)
-	_check(seen.is_empty(), "Switch off: no new tags on the result sheet (%s)" % str(_feel.moved))
-	_check(is_equal_approx(mro.modulate.a, 1.0) and hub.find_child("SheetRise", true, false) == null
-			and is_equal_approx(_alpha_chain(hub.find_child("ResultsContinue", true, false)), 1.0),
-			"Switch off: the sheet shows as it always did")
-	hub.queue_free()
-	await _settle()
-	_feat.clear("ui_motion")
 
 
 ## A finger at the edge of a landing element, mid-overshoot: the scaled element
 ## is hit-tested by its drawn size, so a tap just inside its layout edge and a
 ## tap just outside it (inside the drawn edge) both reach it, and nothing else.
 func _test_land_edge_tap() -> void:
-	_feat.set_on("ui_motion", true)
 	var host := Control.new()
 	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(host)
@@ -523,7 +460,6 @@ func _test_land_edge_tap() -> void:
 		if c is Control and not c is BaseButton and (c as Control).mouse_filter != Control.MOUSE_FILTER_IGNORE:
 			ok = false
 	_check(ok, "Every effect node in the host ignores the mouse")
-	_feat.clear("ui_motion")
 	host.queue_free()
 	await _settle()
 
