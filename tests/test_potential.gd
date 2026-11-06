@@ -209,7 +209,8 @@ func _top_ten(scale: float) -> Array:
 	Prospects.DRAFT_NIGHT_SCALE = scale
 	var out: Array = []
 	for y in range(2027, 2033):
-		for p in Prospects.generate_class(y, 700 + y):
+		# As a career drafts them: after the class's pool year (row 65).
+		for p in Prospects.age_pool(Prospects.generate_class(y, 700 + y), y, {}):
 			if int(p["draft_rank"]) <= 10:
 				out.append(p)
 	Prospects.DRAFT_NIGHT_SCALE = old
@@ -283,7 +284,8 @@ func _test_youth_pace() -> void:
 ## Row 65 (director 4.Q9, 2026-11-04): draftees start lower, picks 1-5 about 60-62 and picks 6-20
 ## about 55-58, POT kept. Bands by consensus rank (the order the AI drafts in, near enough; the
 ## draft audit tools/audit/draftee_bands_impl.gd measures by actual pick), for twelve generated
-## classes and the real 2026 class; POT as on the old curve; listed young players untouched.
+## classes as a career drafts them (after their pool year) and the real 2026 class; POT as on the
+## old curve; listed young players untouched.
 func _band_means(cls: Array) -> Dictionary:
 	var acc := {"top_o": 0.0, "top_p": 0.0, "top_n": 0, "mid_o": 0.0, "mid_p": 0.0, "mid_n": 0,
 			"late_o": 0.0, "late_n": 0}
@@ -304,7 +306,7 @@ func _classes(scale: float) -> Array:
 	Prospects.DRAFT_NIGHT_SCALE = scale
 	var out: Array = []
 	for y in range(2027, 2039):
-		out.append_array(Prospects.generate_class(y, 900 + y))
+		out.append_array(Prospects.age_pool(Prospects.generate_class(y, 900 + y), y, {}))
 	Prospects.DRAFT_NIGHT_SCALE = old
 	return out
 
@@ -355,6 +357,24 @@ func _test_draftee_bands() -> void:
 		if int(at_scale["overall"]) != int(at_one["overall"]) or int(at_scale["potential"]) != int(at_one["potential"]) 				or at_scale.has("night_drop"):
 			same = false
 	_check(same, "Listed young players on the real lists keep their rating and POT whatever the scale")
+	# The pool year (row 65): a generated class is drafted at the rating it was made with, a year
+	# older; a prospect passed over in his own draft develops from then on.
+	var fresh := Prospects.generate_class(2030, 4)
+	var made: Dictionary = (fresh[0] as Dictionary).duplicate(true)
+	var pooled: Array = Prospects.age_pool(fresh, 2030, {})
+	var kid: Dictionary = pooled[0]
+	_check(int(kid["overall"]) == int(made["overall"]) and int(kid["potential"]) == int(made["potential"])
+			and is_equal_approx(float(kid["age"]), float(made["age"]) + 1.0),
+			"His class's pool year ages him a year and leaves his rating (%d v %d)" % [int(kid["overall"]), int(made["overall"])])
+	var grew := 0
+	for q in Prospects.age_pool(pooled.duplicate(true), 2031, {}):
+		var was: Dictionary = {}
+		for r in pooled:
+			if str(r["id"]) == str(q["id"]):
+				was = r
+		if not was.is_empty() and int(q["overall"]) > int(was["overall"]):
+			grew += 1
+	_check(grew >= pooled.size() / 2, "Passed over, a prospect develops the next year (%d of %d grew)" % [grew, pooled.size()])
 
 
 ## Director 2026-10-14, "hold pick values where they are": a pick is read by the player it buys,
