@@ -2,8 +2,7 @@ extends SceneTree
 ## godot --headless --path . --script tests/run_player_looks_tests.gd
 ## Register row 6 (director 2026-10-10: "they look like clones"; 2026-11-03: faces minimal -
 ## eyes, brows, skin tones; brows vary per player): the new hair styles and the face overlay
-## (VignetteLooks), behind Features "player_looks". Off, the figures draw exactly what they
-## drew before; on, the new styles and a face.
+## (VignetteLooks).
 
 ## Loaded at run time: the vignette scripts need the autoloads.
 var SV: GDScript
@@ -24,9 +23,7 @@ func _run() -> void:
 	_t("_test_atlases")
 	_t("_test_cells")
 	_t("_test_brows")
-	await _t("_test_switch_off")
-	await _t("_test_switch_on")
-	Features.clear("player_looks")
+	await _t("_test_looks")
 	print(Ran.line("Player looks", self))
 	for f in _failures:
 		print("ERROR: " + f)
@@ -93,11 +90,8 @@ func _test_brows() -> void:
 		_check(b == Appearance.brows_for(id) and b >= 0 and b < 5, "%s's brows are fixed" % id)
 		seen[b] = true
 	_check(seen.size() == 5, "All five brows are worn (%d)" % seen.size())
-	Features.set_on("player_looks", false)
-	_check(not Appearance.full({"skin": 2, "hair": 1}, "p1", true).has("brows"), "Off, a look has no brows")
-	Features.set_on("player_looks", true)
 	var look := Appearance.full({"skin": 2, "hair": 1}, "p1", true)
-	_check(int(look.get("brows", -1)) == Appearance.brows_for("p1"), "On, a look carries his brows")
+	_check(int(look.get("brows", -1)) == Appearance.brows_for("p1"), "A look carries his brows")
 
 
 class Fig extends Control:
@@ -128,34 +122,21 @@ func _draw_once(style: String, face: int) -> void:
 	SV.log_frames = false
 
 
-## Off: a new style draws the short crop, no face is drawn, and face_of says none.
-func _test_switch_off() -> void:
-	Features.set_on("player_looks", false)
-	_check(SV.face_of({"brows": 3}) == -1, "Off, no face")
-	for id in VignetteLooks.HAIR_STYLES:
-		await _draw_once(id, 3)
-		var h: Array = SV.hair_log
-		_check(h.size() == 1 and h[0]["texture"] == VignetteFigures.HAIR_TEXTURES[VignetteFigures.HAIR_STYLE_INDEX["short_crop"]],
-				"Off, %s draws the short crop as before" % id)
-		_check(SV.face_log.is_empty(), "Off, %s draws no face" % id)
-
-
-## On: each new style draws its own atlas, and his face is drawn from its own.
-func _test_switch_on() -> void:
-	Features.set_on("player_looks", true)
-	_check(SV.face_of({"brows": 3}) == 3 and SV.face_of({}) == 0, "On, face_of gives his brows")
+## Each new style draws its own atlas, and his face is drawn from its own.
+func _test_looks() -> void:
+	_check(SV.face_of({"brows": 3}) == 3 and SV.face_of({}) == 0, "face_of gives his brows")
 	for i in VignetteLooks.HAIR_STYLES.size():
 		var id: String = VignetteLooks.HAIR_STYLES[i]
 		var face := i % VignetteLooks.FACES.size()
 		await _draw_once(id, face)
 		var h: Array = SV.hair_log
 		_check(h.size() == 1 and h[0]["texture"] == VignetteLooks.texture(
-				VignetteLooks.cell(VignetteFigures.strip("average", "idle", "front"), id)), "On, %s draws its own hair" % id)
+				VignetteLooks.cell(VignetteFigures.strip("average", "idle", "front"), id)), "%s draws its own hair" % id)
 		var fl: Array = SV.face_log
 		_check(fl.size() == 1 and fl[0]["texture"] == VignetteLooks.LOOK_TEXTURES[
-				VignetteLooks.LOOK_FILES.find("look_%s.png" % VignetteLooks.FACES[face])], "On, %s wears face %d" % [id, face])
+				VignetteLooks.LOOK_FILES.find("look_%s.png" % VignetteLooks.FACES[face])], "%s wears face %d" % [id, face])
 	# The original styles still draw their own atlases.
 	await _draw_once("dreadlocks", 0)
-	_check(SV.hair_log.size() == 1 and SV.hair_log[0]["texture"] == VignetteFigures.HAIR_TEXTURES[2], "On, dreadlocks as before")
+	_check(SV.hair_log.size() == 1 and SV.hair_log[0]["texture"] == VignetteFigures.HAIR_TEXTURES[2], "Dreadlocks as before")
 	await _draw_once("buzz", 0)
-	_check(SV.hair_log.is_empty() and SV.face_log.size() == 1, "On, buzz has a face and still no hair overlay")
+	_check(SV.hair_log.is_empty() and SV.face_log.size() == 1, "Buzz has a face and still no hair overlay")

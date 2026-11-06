@@ -5,8 +5,6 @@ extends RefCounted
 ## words. Pure: reads a MatchSim result, never writes it. Every number said is
 ## read from the result, and each reason carries the numbers it was built from
 ## ("mine", "theirs") so a test can trace it.
-##
-## Behind the switch "match_story" (Features), which ships off.
 
 ## A goal is clutch when it is kicked 20 minutes or more into the last quarter
 ## with the margin within two goals before it.
@@ -27,10 +25,6 @@ const EDGES := [
 const MAX_REASONS := 3
 ## A close game: decided by two goals or less.
 const CLOSE := 12
-
-
-static func on() -> bool:
-	return Features.on("match_story")
 
 
 ## {hero, turning_point, reasons, headline, won, margin, side}. {} for a result

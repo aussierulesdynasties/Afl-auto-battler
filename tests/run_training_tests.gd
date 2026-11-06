@@ -50,9 +50,17 @@ func _test_training_hero() -> void:
 			root.add_child(scene)
 			await _settle()
 			var trade: Label = scene.find_child("TrainingTradeOff", true, false)
-			_check(trade != null and trade.is_visible_in_tree() and trade.text.contains("costs more as a stat climbs"),
-					"%s: Training says in a line what a plan costs and what it buys (P-63)" % tag)
 			var hero: TextureRect = scene.find_child("TrainingHero", true, false)
+			if sz.x < 600:
+				# The phone list is compact: the news in a line or two, no picture
+				# and no standing explanation, so the cards get the screen.
+				_check(trade == null and hero == null,
+						"%s: the phone list leaves the picture and the plan line to the intro" % tag)
+				scene.queue_free()
+				await _settle()
+				continue
+			_check(trade != null and trade.is_visible_in_tree() and trade.text.contains("his plan spends it on the stats it names"),
+					"%s: Training says in a line what a plan costs and what it buys (P-63)" % tag)
 			var tex: Texture2D = hero.texture if hero != null else null
 			_check(tex != null and tex.resource_path == "res://assets/ui/models/training_gear.png"
 					and float(tex.get_height()) >= 2.0 * hero.size.y and hero.size.y >= 72.0,
@@ -114,228 +122,217 @@ func _test_training_hero() -> void:
 ## width in rows of equal height, every card inside the screen, the same four
 ## slots on every card, sentence-case words a thumb can read, tabs and back a
 ## thumb tall, the club's colour on each card, an opaque header, an outlined
-## group bar, and a real tap on a card opens that player. Off, the list is the
-## full-width rows.
+## group bar, and a real tap on a card opens that player.
 func _test_training_grid() -> void:
 	var gs = root.get_node("GameState")
 	var db = root.get_node("GameDB")
-	var features = load("res://scripts/core/Features.gd")
 	var ui_kit = load("res://scripts/ui/UiKit.gd")
-	for on in [false, true]:
-		features.set_on("training_grid", on)
-		gs.reset()
-		gs.set_setting("seen_training_intro", true)
-		gs.start_season("FRE", db.club_list("FRE"))
-		if on:
-			# A long surname, to prove it is never cut.
-			gs.my_list[0]["generic_name"] = "Alexander Papaioannou-Featherstone"
-			gs.my_list[1]["injury_weeks"] = 3
-		root.size = Vector2i(390, 844)
-		var scene: Control = load("res://scenes/TrainingScene.tscn").instantiate()
-		root.add_child(scene)
-		await _settle()
-		var grids := scene.find_children("TrainingGrid", "", true, false)
-		if not on:
-			_check(grids.is_empty(), "Grid off: Training keeps its full-width rows")
-			scene.queue_free()
-			await _settle()
-			continue
-		var rows := []
-		for g in grids:
-			rows.append_array(g.get_children())
-		var two_across := not rows.is_empty()
-		var equal_heights := true
-		for r in rows:
-			var kids: Array = (r as Control).get_children()
-			if kids.size() > 2 or kids.is_empty():
-				two_across = false
-			for k in kids:
-				if absf((k as Control).size.y - (kids[0] as Control).size.y) > 0.5:
-					equal_heights = false
-		_check(two_across, "Grid on: players sit in rows of two cells")
-		_check(equal_heights, "Grid on: the cards in a row are the same height")
-		var cards := scene.find_children("Trainee_*", "Button", true, false)
-		_check(cards.size() == gs.my_list.size(), "Grid on: every listed player has a card (%d of %d)" % [cards.size(), gs.my_list.size()])
-		var inside := true
-		var whole_words := true
-		var one_line := true
-		var small := ""
-		var shouting := ""
-		var club_bar := true
-		var slots := true
-		var heights := {}
-		for c in cards:
-			var card: Control = (c as Button).get_parent()
-			var r := card.get_global_rect()
-			heights[int(roundf(r.size.y))] = true
-			if r.position.x < -0.5 or r.end.x > 390.5 or r.size.x < 140.0 or r.size.y < 90.0:
-				inside = false
-			if card.find_child("ClubBar", true, false) == null:
-				club_bar = false
-			for slot in ["Position", "Rating", "Name", "Status"]:
-				if card.find_child(slot, true, false) == null:
-					slots = false
-			var nm: Label = card.find_child("Name", true, false)
-			for l in card.find_children("*", "Label", true, false):
-				var lab := l as Label
-				if lab.text == "":
-					continue
-				if not card.get_global_rect().grow(0.5).encloses(lab.get_global_rect()):
-					whole_words = false
-				var fs := lab.get_theme_font_size("font_size")
-				if fs < 13 and small == "":
-					small = "%s at %d" % [lab.text, fs]
-				if lab.text != lab.text.to_lower() and lab.text == lab.text.to_upper() and lab.text.length() > 3 and shouting == "":
-					shouting = lab.text
-				if lab != nm and lab.get_line_count() > 1:
-					one_line = false
-			# The name is whole: no ellipsis, no word cut, at most two lines.
-			if nm != null and (nm.text.ends_with("...") or nm.text.ends_with("…") or nm.get_line_count() > 2):
+	gs.reset()
+	gs.set_setting("seen_training_intro", true)
+	gs.start_season("FRE", db.club_list("FRE"))
+	# A long surname, to prove it is never cut.
+	gs.my_list[0]["generic_name"] = "Alexander Papaioannou-Featherstone"
+	gs.my_list[1]["injury_weeks"] = 3
+	root.size = Vector2i(390, 844)
+	var scene: Control = load("res://scenes/TrainingScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	var grids := scene.find_children("TrainingGrid", "", true, false)
+	var rows := []
+	for g in grids:
+		rows.append_array(g.get_children())
+	var two_across := not rows.is_empty()
+	var equal_heights := true
+	for r in rows:
+		var kids: Array = (r as Control).get_children()
+		if kids.size() > 2 or kids.is_empty():
+			two_across = false
+		for k in kids:
+			if absf((k as Control).size.y - (kids[0] as Control).size.y) > 0.5:
+				equal_heights = false
+	_check(two_across, "Grid: players sit in rows of two cells")
+	_check(equal_heights, "Grid: the cards in a row are the same height")
+	var cards := scene.find_children("Trainee_*", "Button", true, false)
+	_check(cards.size() == gs.my_list.size(), "Grid: every listed player has a card (%d of %d)" % [cards.size(), gs.my_list.size()])
+	var inside := true
+	var whole_words := true
+	var one_line := true
+	var small := ""
+	var shouting := ""
+	var club_bar := true
+	var slots := true
+	var heights := {}
+	for c in cards:
+		var card: Control = (c as Button).get_parent()
+		var r := card.get_global_rect()
+		heights[int(roundf(r.size.y))] = true
+		if r.position.x < -0.5 or r.end.x > 390.5 or r.size.x < 140.0 or r.size.y < 90.0:
+			inside = false
+		if card.find_child("ClubBar", true, false) == null:
+			club_bar = false
+		for slot in ["Position", "Rating", "Name", "Status"]:
+			if card.find_child(slot, true, false) == null:
+				slots = false
+		var nm: Label = card.find_child("Name", true, false)
+		for l in card.find_children("*", "Label", true, false):
+			var lab := l as Label
+			if lab.text == "":
+				continue
+			if not card.get_global_rect().grow(0.5).encloses(lab.get_global_rect()):
 				whole_words = false
-			var pos: Label = card.find_child("Position", true, false)
-			if pos != null and pos.text.contains("/"):
+			var fs := lab.get_theme_font_size("font_size")
+			if fs < 13 and small == "":
+				small = "%s at %d" % [lab.text, fs]
+			if lab.text != lab.text.to_lower() and lab.text == lab.text.to_upper() and lab.text.length() > 3 and shouting == "":
+				shouting = lab.text
+			if lab != nm and lab.get_line_count() > 1:
 				one_line = false
-		# One width for every card (an odd one out keeps a half-width card), a
-		# symmetric gutter, and statuses level across a row.
-		var widths := {}
-		var left_edge := 9999.0
-		var right_edge := 0.0
-		var level := true
-		var level_note := ""
-		for r in rows:
-			var ys := []
-			for k in (r as Control).get_children():
-				if k.name == "GridHole":
-					continue
-				widths[int(roundf((k as Control).size.x))] = true
-				left_edge = minf(left_edge, (k as Control).get_global_rect().position.x)
-				right_edge = maxf(right_edge, (k as Control).get_global_rect().end.x)
-				var stl: Label = k.find_child("Status", true, false)
-				if stl != null:
-					ys.append(stl.get_global_rect().position.y)
-			for y in ys:
-				if absf(y - ys[0]) > 1.0:
-					level = false
-					level_note = "%s vs %s" % [str(y), str(ys[0])]
-		var lone_rows := 0
-		for r in rows:
-			if (r as Control).find_child("GridHole", false, false) != null:
-				lone_rows += 1
-		_check(widths.size() == 1, "Grid on: every card is one width, a lone last card too (%s, %d lone)" % [str(widths.keys()), lone_rows])
-		_check(absf(left_edge - (390.0 - right_edge)) <= 1.0, "Grid on: the cards sit centred, the same margin each side (%.1f left, %.1f right)" % [left_edge, 390.0 - right_edge])
-		_check(level, "Grid on: the status lines sit level across each row (%s)" % level_note)
-		_check(inside, "Grid on: every card is inside the screen, at least 140 wide and 90 tall")
-		_check(heights.size() == 1, "Grid on: every card is the same height (%s)" % str(heights.keys()))
-		_check(slots and club_bar, "Grid on: every card has the club's colour and the same slots: position, rating, name, status (and a trait when he has one)")
-		_check(whole_words, "Grid on: no card's words spill out of it or are cut short")
-		_check(one_line, "Grid on: position, status and trait each stay on one line, and a position is never a slash list")
-		_check(small == "", "Grid on: every word on a card is 13 or larger (%s)" % small)
-		var grey_status := false
-		var tint_ok := false
-		for c in cards:
-			var card2: Control = (c as Button).get_parent()
-			var st2: Label = card2.find_child("Status", true, false)
-			if st2 != null and st2.get_theme_color("font_color").is_equal_approx(ui_kit.MUTED):
-				grey_status = true
-			var surface := (card2 as PanelContainer).get_theme_stylebox("panel") as StyleBoxFlat
-			if surface != null and not surface.bg_color.is_equal_approx(ui_kit.PANEL_ALT):
-				tint_ok = true
-		_check(not grey_status, "Grid on: no development line is in the dim grey")
-		_check(tint_ok, "Grid on: the club's colour tints the card as well as its edge")
-		_check(shouting == "", "Grid on: no all-capitals labels on a card (%s)" % shouting)
-		# The long name is whole on its card.
-		var long_card := scene.find_child("Card_" + str(gs.my_list[0]["id"]), true, false)
-		var long_name: Label = long_card.find_child("Name", true, false) if long_card != null else null
-		_check(long_name != null and long_name.text.ends_with("Papaioannou-Featherstone") and long_name.get_line_count() <= 2,
-				"Grid on: a long surname is shown whole (%s)" % (long_name.text if long_name != null else "no card"))
-		var hurt := scene.find_child("Card_" + str(gs.my_list[1]["id"]), true, false)
-		var hurt_status: Label = hurt.find_child("Status", true, false) if hurt != null else null
-		_check(hurt_status != null and hurt_status.text == "Injured 3 wks", "Grid on: an injury reads in sentence case (%s)" % (hurt_status.text if hurt_status != null else "no card"))
-		# Tabs in sentence case, a thumb tall; back and Stat guide too.
-		var tabs := scene.find_child("RoleTabs", true, false)
-		var tab_ok := tabs != null and tabs.get_child_count() == 5
-		var tab_names := []
-		if tabs != null:
-			for t in tabs.get_children():
-				var tb := t as Button
-				tab_names.append(tb.text)
-				if tb.size.y < 47.5 or tb.text != tb.text.capitalize():
-					tab_ok = false
-		_check(tab_ok, "Grid on: the role tabs are sentence case and 48 tall (%s)" % str(tab_names))
-		var back := scene.find_child("TopBarBack", true, false) as Control
-		_check(back != null and back.size.y >= 47.5 and back.size.x >= 47.5, "Grid on: Back is a thumb target (%s)" % str(back.size if back != null else "missing"))
-		# The words behind the title are opaque, whatever the club.
-		var header := scene.find_child("TrainingHeader", true, false) as PanelContainer
-		var sb := header.get_theme_stylebox("panel") as StyleBoxFlat if header != null else null
-		_check(sb != null and sb.bg_color.a >= 0.99, "Grid on: the title and Stat guide sit on an opaque backing")
-		# The hint, in words a thumb or a mouse can follow.
-		var hint := scene.find_child("GroupHint", true, false) as Label
-		_check(hint != null and hint.text.contains("Touch and hold") and not hint.text.contains("Click"), "Grid on: the group hint says 'Touch and hold' on a phone (%s)" % (hint.text if hint != null else "missing"))
-		# One scroll, the page's: no list scrolling inside a page, and at least
-		# three rows of cards in view at the top.
-		var scroll := scene.get("_list_scroll") as ScrollContainer
-		var scrolls := scene.find_children("*", "ScrollContainer", true, false)
-		_check(scrolls.size() == 1 and scroll != null, "Grid on: the page is the only scroll (%d scrolling areas)" % scrolls.size())
-		var seen_rows := 0
-		var row_tops := []
-		for r in rows:
-			row_tops.append(int((r as Control).get_global_rect().position.y))
-		for r in rows:
-			if (r as Control).get_global_rect().position.y + 40.0 <= 844.0:
-				seen_rows += 1
-		# The squad here is small, so also prove a third row would fit: three row
-		# pitches below the first row's top still end inside the screen.
-		var pitch := 0.0
-		if rows.size() >= 2:
-			pitch = float(row_tops[1] - row_tops[0])
-		var third_fits: bool = rows.size() >= 2 and float(row_tops[0]) + 3.0 * pitch <= 844.0
-		_check(seen_rows >= mini(3, rows.size()) and third_fits, "Grid on: three rows of cards fit in view before any scrolling (%d in view; tops %s)" % [seen_rows, str(row_tops)])
-		var before_y := {}
-		for c in cards:
-			before_y[c.name] = (c as Control).get_global_rect().position.y
-		# The group bar: one outlined row, no extra sentence.
-		var first: Button = cards[0]
-		var first_id: String = first.name.trim_prefix("Trainee_")
-		var second_id: String = str(cards[1].name).trim_prefix("Trainee_")
-		var why: String = await Tap.tap(first)
-		await _settle()
-		_check(why == "" and bool(scene.get("_showing_detail")) and str(scene.get("_selected")) == first_id,
-				"Grid on: a real tap on a card opens that player (%s)" % why)
-		scene.set("_showing_detail", false)
-		scene.set("_bulk_selected", {first_id: true, second_id: true})
-		scene.call("_build")
-		await _settle()
-		var bar := scene.find_child("BulkRow", true, false)
-		var shifted := ""
-		for c in scene.find_children("Trainee_*", "Button", true, false):
-			if before_y.has(c.name) and absf((c as Control).get_global_rect().position.y - float(before_y[c.name])) > 0.5 and (c as Control).get_global_rect().position.y < 600.0:
-				shifted = "%s moved" % c.name
-				break
-		_check(shifted == "", "Grid on: picking a group moves no card (%s)" % shifted)
-		_check(scene.find_children("Ticked", "", true, false).size() == 2, "Grid on: each picked player carries a tick")
-		var plan_buttons := scene.find_children("GroupPlan_*", "Button", true, false)
-		var outlined := not plan_buttons.is_empty()
-		for pb in plan_buttons:
-			var psb := (pb as Button).get_theme_stylebox("normal") as StyleBoxFlat
-			if psb == null or psb.border_width_left < 1 or psb.bg_color.a > 0.01 or (pb as Button).size.y < 47.5:
-				outlined = false
-		_check(bar != null and outlined, "Grid on: the group bar's plans are outlined buttons 48 tall (%d)" % plan_buttons.size())
-		var clear_btn := scene.find_child("ClearBulk", true, false) as Button
-		_check(clear_btn != null and clear_btn.size.y >= 47.5, "Grid on: Clear is 48 tall")
-		var worded := true
-		for pb in plan_buttons:
-			var key: String = str(pb.name).trim_prefix("GroupPlan_")
-			if key != "position" and not (pb as Button).text.begins_with("Train as "):
-				worded = false
-		_check(worded, "Grid on: a role plan in the group bar reads 'Train as ...'")
-		var sentence := false
-		for l in scene.find_children("*", "Label", true, false):
-			if (l as Label).text.contains("Apply one development focus"):
-				sentence = true
-		_check(not sentence, "Grid on: the group bar has no sentence explaining itself")
-		scene.queue_free()
-		await _settle()
-	features.clear("training_grid")
+		# The name is whole: no ellipsis, no word cut, at most two lines.
+		if nm != null and (nm.text.ends_with("...") or nm.text.ends_with("…") or nm.get_line_count() > 2):
+			whole_words = false
+		var pos: Label = card.find_child("Position", true, false)
+		if pos != null and pos.text.contains("/"):
+			one_line = false
+	# One width for every card (an odd one out keeps a half-width card), a
+	# symmetric gutter, and statuses level across a row.
+	var widths := {}
+	var left_edge := 9999.0
+	var right_edge := 0.0
+	var level := true
+	var level_note := ""
+	for r in rows:
+		var ys := []
+		for k in (r as Control).get_children():
+			if k.name == "GridHole":
+				continue
+			widths[int(roundf((k as Control).size.x))] = true
+			left_edge = minf(left_edge, (k as Control).get_global_rect().position.x)
+			right_edge = maxf(right_edge, (k as Control).get_global_rect().end.x)
+			var stl: Label = k.find_child("Status", true, false)
+			if stl != null:
+				ys.append(stl.get_global_rect().position.y)
+		for y in ys:
+			if absf(y - ys[0]) > 1.0:
+				level = false
+				level_note = "%s vs %s" % [str(y), str(ys[0])]
+	var lone_rows := 0
+	for r in rows:
+		if (r as Control).find_child("GridHole", false, false) != null:
+			lone_rows += 1
+	_check(widths.size() == 1, "Grid: every card is one width, a lone last card too (%s, %d lone)" % [str(widths.keys()), lone_rows])
+	_check(absf(left_edge - (390.0 - right_edge)) <= 1.0, "Grid: the cards sit centred, the same margin each side (%.1f left, %.1f right)" % [left_edge, 390.0 - right_edge])
+	_check(level, "Grid: the status lines sit level across each row (%s)" % level_note)
+	_check(inside, "Grid: every card is inside the screen, at least 140 wide and 90 tall")
+	_check(heights.size() == 1, "Grid: every card is the same height (%s)" % str(heights.keys()))
+	_check(slots and club_bar, "Grid: every card has the club's colour and the same slots: position, rating, name, status (and a trait when he has one)")
+	_check(whole_words, "Grid: no card's words spill out of it or are cut short")
+	_check(one_line, "Grid: position, status and trait each stay on one line, and a position is never a slash list")
+	_check(small == "", "Grid: every word on a card is 13 or larger (%s)" % small)
+	var grey_status := false
+	var tint_ok := false
+	for c in cards:
+		var card2: Control = (c as Button).get_parent()
+		var st2: Label = card2.find_child("Status", true, false)
+		if st2 != null and st2.get_theme_color("font_color").is_equal_approx(ui_kit.MUTED):
+			grey_status = true
+		var surface := (card2 as PanelContainer).get_theme_stylebox("panel") as StyleBoxFlat
+		if surface != null and not surface.bg_color.is_equal_approx(ui_kit.PANEL_ALT):
+			tint_ok = true
+	_check(not grey_status, "Grid: no development line is in the dim grey")
+	_check(tint_ok, "Grid: the club's colour tints the card as well as its edge")
+	_check(shouting == "", "Grid: no all-capitals labels on a card (%s)" % shouting)
+	# The long name is whole on its card.
+	var long_card := scene.find_child("Card_" + str(gs.my_list[0]["id"]), true, false)
+	var long_name: Label = long_card.find_child("Name", true, false) if long_card != null else null
+	_check(long_name != null and long_name.text.ends_with("Papaioannou-Featherstone") and long_name.get_line_count() <= 2,
+			"Grid: a long surname is shown whole (%s)" % (long_name.text if long_name != null else "no card"))
+	var hurt := scene.find_child("Card_" + str(gs.my_list[1]["id"]), true, false)
+	var hurt_status: Label = hurt.find_child("Status", true, false) if hurt != null else null
+	_check(hurt_status != null and hurt_status.text == "Injured 3 wks", "Grid: an injury reads in sentence case (%s)" % (hurt_status.text if hurt_status != null else "no card"))
+	# Tabs in sentence case, a thumb tall; back and Stat guide too.
+	var tabs := scene.find_child("RoleTabs", true, false)
+	var tab_ok := tabs != null and tabs.get_child_count() == 5
+	var tab_names := []
+	if tabs != null:
+		for t in tabs.get_children():
+			var tb := t as Button
+			tab_names.append(tb.text)
+			if tb.size.y < 47.5 or tb.text != tb.text.capitalize():
+				tab_ok = false
+	_check(tab_ok, "Grid: the role tabs are sentence case and 48 tall (%s)" % str(tab_names))
+	var back := scene.find_child("TopBarBack", true, false) as Control
+	_check(back != null and back.size.y >= 47.5 and back.size.x >= 47.5, "Grid: Back is a thumb target (%s)" % str(back.size if back != null else "missing"))
+	# The words behind the title are opaque, whatever the club.
+	var header := scene.find_child("TrainingHeader", true, false) as PanelContainer
+	var sb := header.get_theme_stylebox("panel") as StyleBoxFlat if header != null else null
+	_check(sb != null and sb.bg_color.a >= 0.99, "Grid: the title and Stat guide sit on an opaque backing")
+	# The hint, in words a thumb or a mouse can follow.
+	var hint := scene.find_child("GroupHint", true, false) as Label
+	_check(hint != null and hint.text.contains("Touch and hold") and not hint.text.contains("Click"), "Grid: the group hint says 'Touch and hold' on a phone (%s)" % (hint.text if hint != null else "missing"))
+	# One scroll, the page's: no list scrolling inside a page, and at least
+	# three rows of cards in view at the top.
+	var scroll := scene.get("_list_scroll") as ScrollContainer
+	var scrolls := scene.find_children("*", "ScrollContainer", true, false)
+	_check(scrolls.size() == 1 and scroll != null, "Grid: the page is the only scroll (%d scrolling areas)" % scrolls.size())
+	var seen_rows := 0
+	var row_tops := []
+	for r in rows:
+		row_tops.append(int((r as Control).get_global_rect().position.y))
+	for r in rows:
+		if (r as Control).get_global_rect().position.y + 40.0 <= 844.0:
+			seen_rows += 1
+	# The squad here is small, so also prove a third row would fit: three row
+	# pitches below the first row's top still end inside the screen.
+	var pitch := 0.0
+	if rows.size() >= 2:
+		pitch = float(row_tops[1] - row_tops[0])
+	var third_fits: bool = rows.size() >= 2 and float(row_tops[0]) + 3.0 * pitch <= 844.0
+	_check(seen_rows >= mini(3, rows.size()) and third_fits, "Grid: three rows of cards fit in view before any scrolling (%d in view; tops %s)" % [seen_rows, str(row_tops)])
+	var before_y := {}
+	for c in cards:
+		before_y[c.name] = (c as Control).get_global_rect().position.y
+	# The group bar: one outlined row, no extra sentence.
+	var first: Button = cards[0]
+	var first_id: String = first.name.trim_prefix("Trainee_")
+	var second_id: String = str(cards[1].name).trim_prefix("Trainee_")
+	var why: String = await Tap.tap(first)
+	await _settle()
+	_check(why == "" and bool(scene.get("_showing_detail")) and str(scene.get("_selected")) == first_id,
+			"Grid: a real tap on a card opens that player (%s)" % why)
+	scene.set("_showing_detail", false)
+	scene.set("_bulk_selected", {first_id: true, second_id: true})
+	scene.call("_build")
+	await _settle()
+	var bar := scene.find_child("BulkRow", true, false)
+	var shifted := ""
+	for c in scene.find_children("Trainee_*", "Button", true, false):
+		if before_y.has(c.name) and absf((c as Control).get_global_rect().position.y - float(before_y[c.name])) > 0.5 and (c as Control).get_global_rect().position.y < 600.0:
+			shifted = "%s moved" % c.name
+			break
+	_check(shifted == "", "Grid: picking a group moves no card (%s)" % shifted)
+	_check(scene.find_children("Ticked", "", true, false).size() == 2, "Grid: each picked player carries a tick")
+	var plan_buttons := scene.find_children("GroupPlan_*", "Button", true, false)
+	var outlined := not plan_buttons.is_empty()
+	for pb in plan_buttons:
+		var psb := (pb as Button).get_theme_stylebox("normal") as StyleBoxFlat
+		if psb == null or psb.border_width_left < 1 or psb.bg_color.a > 0.01 or (pb as Button).size.y < 47.5:
+			outlined = false
+	_check(bar != null and outlined, "Grid: the group bar's plans are outlined buttons 48 tall (%d)" % plan_buttons.size())
+	var clear_btn := scene.find_child("ClearBulk", true, false) as Button
+	_check(clear_btn != null and clear_btn.size.y >= 47.5, "Grid: Clear is 48 tall")
+	var worded := true
+	for pb in plan_buttons:
+		var key: String = str(pb.name).trim_prefix("GroupPlan_")
+		if key != "position" and not (pb as Button).text.begins_with("Train as "):
+			worded = false
+	_check(worded, "Grid: a role plan in the group bar reads 'Train as ...'")
+	var sentence := false
+	for l in scene.find_children("*", "Label", true, false):
+		if (l as Label).text.contains("Apply one development focus"):
+			sentence = true
+	_check(not sentence, "Grid: the group bar has no sentence explaining itself")
+	scene.queue_free()
+	await _settle()
 
 
 func _settle() -> void:

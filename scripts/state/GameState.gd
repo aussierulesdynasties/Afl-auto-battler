@@ -17,7 +17,7 @@ var new_career_setup_requested := false
 ## The career's custom prospect (Club Forge, ARD-M7-008): his id once made,
 ## one per career. Followed through drafts and career history.
 var custom_prospect_id := ""
-## His story as last told (OwnProspect, switch custom_prospect_story): where
+## His story as last told (OwnProspect): where
 ## he was, his games and goals, which beats are already in the news.
 var custom_prospect_story := {}
 ## How this career began (ARD-M5-016): "redraft" (the League Draft) or "real"
@@ -74,8 +74,7 @@ var form_log := {}               # your player id -> his last three Player Ratin
 ## One player plays his second position for `left` more of your games (see
 ## start_role_trial); optional in a save, absent means no trial.
 var role_trial := {}
-## The monthly training report (TrainingReport.gd; behind Features
-## "training_report"): the ratings at the start of the 4-round block in
+## The monthly training report (TrainingReport.gd): the ratings at the start of the 4-round block in
 ## progress, and the latest report built. Optional in a save, absent = {}.
 var training_block := {}
 var training_report := {}
@@ -88,7 +87,7 @@ var season_awards := {}          # the finished season's awards
 ## from before nominations were recorded starts "from" its next round.
 var rising_star_noms := {"from": 1, "rounds": []}
 var honour_roll: Array = []      # one entry per completed season
-var almanac: Array = []          # the club almanac, one page per season (Almanac.gd; switch club_almanac)
+var almanac: Array = []          # the club almanac, one page per season (Almanac.gd)
 ## Every coach in the game, once: cid -> record (Coaches.gd). A club's staff
 ## is read from the records, never stored beside them.
 var coaches := {}
@@ -150,12 +149,11 @@ var pick_got := {}
 ## them in the offers they put to you. Saved (a new key; an older save has none).
 var untouchable := {}
 var offseason_log: Array = []    # what happened in the off-season, for news
-## New clubs building their lists (ExpansionBuild; the feature switch
-## "expansion_package"): {club code: its state}. Empty, and not saved, while
-## the switch is off.
+## New clubs building their lists (ExpansionBuild): {club code: its state}.
+## Empty, and not saved, while no club is building.
 var expansion := {}
-## Does Canberra join in 2030? A choice at career start once the switch is
-## on (off by default); a career begun before it keeps Canberra.
+## Does Canberra join in 2030? A choice at career start (a new career starts
+## without it); a career saved before the choice existed keeps Canberra.
 var canberra_on := true
 ## Offers rival clubs have made you this off-season: [{"club", "give" (their
 ## player and pick ids), "take" (yours), "status": "open", "accepted",
@@ -204,22 +202,22 @@ var stories_on := true
 var media_conference := {}       # pending post-match press question
 var backing_talk := {}           # a sit-down when a promised run ends (Backing.talk)
 var media_memory := {}           # question key -> {year, round} last asked (legacy: round int)
-## The match makes the story (switch "match_story"): one record per match of
-## yours, oldest first (MatchStory.record). Empty, and not saved, while off.
+## The match makes the story: one record per match of yours, oldest first
+## (MatchStory.record). Empty, and not saved, until the first.
 var match_stories: Array = []
 ## Each season of match stories folded into a digest, keyed by year (a
 ## string), so the almanac keeps a season after the list is trimmed
-## (MatchStory.fold). Empty, and not saved, while off.
+## (MatchStory.fold). Empty, and not saved, until the first.
 var match_story_digest := {}
-## Club records for every club (switch "club_almanac"; Almanac.update_club_records):
+## Club records for every club (Almanac.update_club_records):
 ## code -> {record key: {value, who, year, label}}, plus "_streak" (the run now).
-## Empty, and not saved, while off.
+## Empty, and not saved, until the first round.
 var club_records := {}
-## The coach's career arcs (ClubArcs; switch "coach_arcs"). Empty while off.
+## The coach's career arcs (ClubArcs). Empty until the first.
 var coach_arcs := {}
 ## Weeks of running a season-end card took off next pre-season's fitness base
-## (finals_cards_2, B8 "Celebrate it properly": negative). Read once when the
-## pre-season opens; with the preseason switch off it is carried and never read.
+## (B8 "Celebrate it properly": negative). Read once when the pre-season
+## opens.
 var preseason_run_debt: float = 0.0
 ## Matches kept: four seasons' worth, enough for the coach's arcs.
 const MAX_MATCH_STORIES := 120
@@ -255,13 +253,11 @@ var conditioning := {}
 ## without it drills the same for every group (PreSeason.group_drills).
 ## Empty means none is running: a career saved before pre-seasons
 ## existed plays on as it was and gets its first at the next rollover.
-## The whole feature sits behind Features.on("preseason"): with the switch
-## off none is ever opened and one already in a save is left alone, unread.
 var preseason := {}
 ## How well each club knows each game plan (PreSeason.gd, plan familiarity):
 ## club code -> {plan: 0 barely / 1 partly / 2 well}, and the rounds each plan
-## has gone unplayed. Optional in a save (the key is written only with the
-## pre-season switch on): a save without it gets the defaults, each club's
+## has gone unplayed. Optional in a save (the key is written once a record
+## exists): a save without it gets the defaults, each club's
 ## usual plan well and the rest partly (_ensure_plan_known).
 var plan_known := {}
 var plan_idle := {}
@@ -801,12 +797,12 @@ func save_career() -> bool:
 	}
 	if not rookie_draft.is_empty():
 		state["rookie_draft"] = rookie_draft
-	if not sir_doug.is_empty():   # written only once a record exists (switch off: no key)
+	if not sir_doug.is_empty():   # written only once a record exists
 		state["sir_doug"] = sir_doug
 	if not custom_prospect_story.is_empty():
 		state["custom_prospect_story"] = custom_prospect_story
-	# The new-club build writes nothing while its switch is off and the career
-	# has made no choice about Canberra.
+	# The new-club build writes nothing while no club is building and the
+	# career keeps Canberra.
 	if not expansion.is_empty():
 		state["expansion"] = expansion
 	if not canberra_on:
@@ -821,10 +817,9 @@ func save_career() -> bool:
 		state["coach_arcs"] = coach_arcs
 	if preseason_run_debt != 0.0:
 		state["preseason_run_debt"] = preseason_run_debt
-	if Features.on("training_report"):
-		state["training_block"] = training_block
-		state["training_report"] = training_report
-	if Features.on("preseason") and not plan_known.is_empty():
+	state["training_block"] = training_block
+	state["training_report"] = training_report
+	if not plan_known.is_empty():
 		state["plan_known"] = plan_known
 		state["plan_idle"] = plan_idle
 	var ok := CareerSave.write(state, _save_meta(), save_path)
@@ -1484,7 +1479,7 @@ func reset() -> void:
 	news = []
 	board = {}
 	expansion = {}
-	set_canberra(not ExpansionBuild.on())
+	set_canberra(false)
 	week_events = []
 	week_checks = {}
 	relations = {}
@@ -1674,8 +1669,8 @@ func begin_real_lists() -> void:
 		else:
 			open_pool.append(p)
 	draftee_pool = draftee_pool.filter(func(q): return str(q.get("id", "")) != custom_prospect_id)
-	# Switch rookie_list: the starting lists split into senior and rookie
-	# lists, and the opening National Draft fills the senior list.
+	# The starting lists split into senior and rookie lists, and the opening
+	# National Draft fills the senior list.
 	RookieList.seed_lists(league_lists)
 	var sizes := {}
 	var role_counts := {}
@@ -1694,8 +1689,7 @@ func begin_real_lists() -> void:
 		role_pairs[code] = pairs
 	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
 			_clock_seed(2), sizes, role_counts, role_pairs)
-	if RookieList.on():
-		draft.senior_cap = RookieList.SENIOR_SPOTS
+	draft.senior_cap = RookieList.SENIOR_SPOTS
 	OwnProspect.check(self)
 	mark_dirty()
 
@@ -1858,9 +1852,8 @@ func begin_intake_draft() -> bool:
 	var seed := _clock_seed(2)
 	draft = Draft.build_intake(open_pool, active.duplicate(), order,
 			seed, sizes, role_counts, role_pairs)
-	if RookieList.on():
-		# The National Draft fills the senior list; the Rookie Draft follows.
-		draft.senior_cap = RookieList.SENIOR_SPOTS
+	# The National Draft fills the senior list; the Rookie Draft follows.
+	draft.senior_cap = RookieList.SENIOR_SPOTS
 	ExpansionBuild.seat_guests(self, draft)
 	# Recruiting funding narrows only our club's uncertainty; rivals use the
 	# same scouting model at Standard rather than hidden true ratings.
@@ -1939,17 +1932,15 @@ func finish_intake_draft() -> bool:
 		season_year = GameDB.START_YEAR
 		start_season(my_club, league_lists.get(my_club, []))
 		open_preseason()
-		if RookieList.on():
-			# The Rookie Draft follows the opening National Draft too, in its order.
-			RookieList.open_draft(self, opening_order(GameDB.active_clubs(season_year)))
-			autosave()
-		return true
-	# The Rookie Draft follows in the same order (RookieList, switch rookie_list).
-	var rookie_order := intake_order() if RookieList.on() and season != null else []
-	_start_next_season(next_year, merged)
-	if RookieList.on():
-		RookieList.open_draft(self, rookie_order)
+		# The Rookie Draft follows the opening National Draft too, in its order.
+		RookieList.open_draft(self, opening_order(GameDB.active_clubs(season_year)))
 		autosave()
+		return true
+	# The Rookie Draft follows in the same order (RookieList).
+	var rookie_order := intake_order() if season != null else []
+	_start_next_season(next_year, merged)
+	RookieList.open_draft(self, rookie_order)
+	autosave()
 	return true
 
 
@@ -2048,8 +2039,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	intake_summary = Prospects.age_league(league_lists, next_year)
 	intake_summary["signed"] = signed
 	_retirees_to_coaching(intake_summary.get("retired", []), listed)
-	if Almanac.on():
-		Almanac.add_legends(self, intake_summary.get("retired", []), listed)
+	Almanac.add_legends(self, intake_summary.get("retired", []), listed)
 	for r in intake_summary.get("retired", []):
 		if int(r.get("overall", 0)) >= NEWS_MIN_OVR:
 			add_news("retirement", "%s (%s) has retired at %d." % [
@@ -2394,7 +2384,7 @@ func start_season(club_code: String, list: Array) -> void:
 			# Drafted players arrive in their old clubs' numbers: two 35s can
 			# land on one list (director's PC playtest, 2026-10-07).
 			unique_jumpers(lists[code])
-		# Switch rookie_list: a re-drafted list of 44 splits into 38 seniors
+		# A re-drafted list of 44 splits into 38 seniors
 		# and six rookies, the youngest.
 		RookieList.seed_lists(lists)
 	else:
@@ -2885,7 +2875,7 @@ func _stamp_conditioning() -> void:
 ## career's first season is made; start_season itself stays the plain "build
 ## the season" step tests and tools use. Once a year; never mid-season.
 func open_preseason() -> void:
-	if season == null or not Features.on("preseason") or season.round_index != 0 or season.is_regular_done():
+	if season == null or season.round_index != 0 or season.is_regular_done():
 		return
 	if int(preseason.get("year", 0)) == season_year:
 		return
@@ -2955,7 +2945,7 @@ func preseason_injury_lines(from := 1, to := 99) -> Array:
 
 ## A pre-season is running: opened this year, not finished, Round 1 unplayed.
 func preseason_active() -> bool:
-	return Features.on("preseason") and season != null and not preseason.is_empty() \
+	return season != null and not preseason.is_empty() \
 			and int(preseason.get("year", 0)) == season_year \
 			and not bool(preseason.get("done", true)) \
 			and season.round_index == 0 and not season.is_regular_done()
@@ -3349,7 +3339,7 @@ func papers_on_record(rank: int) -> void:
 
 # ---------------------------------------------------------------------------
 # Plan familiarity (PreSeason.gd): how well each club knows each game plan.
-# Behind the same switch. The rules are PreSeason's; this keeps the record.
+# The rules are PreSeason's; this keeps the record.
 # ---------------------------------------------------------------------------
 ## The plan a club plays as its own: yours is the one you have set; an AI
 ## club's is the one its list suits (PlanFit.standing_plan). "balanced" when none.
@@ -3362,9 +3352,9 @@ func _usual_plan(club: String) -> String:
 
 
 ## Give every club a record it lacks (the defaults), and hand the live record
-## to the match engine's coaching table. With the switch off: nothing kept.
+## to the match engine's coaching table. Without a season: nothing kept.
 func _ensure_plan_known() -> void:
-	if not Features.on("preseason") or season == null:
+	if season == null:
 		CoachEffects.known = {}
 		return
 	for club in season.clubs:
@@ -3398,18 +3388,19 @@ func _clean_plan_known() -> void:
 	plan_idle = idle
 
 
-## How well `club` knows `plan` (0 barely, 1 partly, 2 well). Without the
-## switch: well, as the game has always played them.
+## How well `club` knows `plan` (0 barely, 1 partly, 2 well). Without a
+## season: well.
 func plan_level(club: String, plan: String) -> int:
-	if not Features.on("preseason") or season == null:
+	if season == null:
 		return PreSeason.WELL
 	_ensure_plan_known()
 	return int((plan_known.get(club, {}) as Dictionary).get(plan, PreSeason.WELL))
 
 
-## Your side's plan under its words: "Plan fluency: medium". "" with the switch off.
+## Your side's plan under its words: "Plan fluency: medium". "" without a
+## season or a club.
 func plan_known_line(plan: String) -> String:
-	if not Features.on("preseason") or season == null or my_club == "":
+	if season == null or my_club == "":
 		return ""
 	return PreSeason.known_line(plan_level(my_club, plan))
 
@@ -3429,9 +3420,9 @@ func my_drill_credit() -> Dictionary:
 	return credit
 
 
-## Whether the plans carry a "Plan fluency" line at all (the switch is on).
+## Whether the plans carry a "Plan fluency" line at all (a season and a club).
 func plan_known_shown() -> bool:
-	return Features.on("preseason") and season != null and my_club != ""
+	return season != null and my_club != ""
 
 
 func _slip_plan_known() -> void:
@@ -3471,7 +3462,7 @@ func _finish_drills() -> String:
 ## A round has been played: a plan played keeps its place; one left alone
 ## through fade_rounds rounds slips a step (slowly). Finals do not count.
 func _note_plans_played(results: Array) -> void:
-	if not Features.on("preseason") or plan_known.is_empty():
+	if plan_known.is_empty():
 		return
 	var fade := maxi(1, int(PreSeason.tune("fade_rounds")))
 	for res in results:
@@ -3557,7 +3548,7 @@ func preseason_sim_to_round1() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Pre-season story cards (data/stories, phase "preseason"), behind the same switch
+# Pre-season story cards (data/stories, phase "preseason")
 # ---------------------------------------------------------------------------
 ## The block just finished may stop the pre-season for a card (at most one;
 ## most pre-seasons two or three over the three blocks). Round 1's cards, drawn
@@ -3689,7 +3680,7 @@ func _guest_picks(club: String, n: int, have: Array, scouting_mult: float, skip 
 
 # ---------------------------------------------------------------------------
 # The practice match (PreSeason.gd): end of week 7, one match against another
-# club, behind the same switch. No ladder, no season record, no points.
+# club. No ladder, no season record, no points.
 # ---------------------------------------------------------------------------
 ## Yours, this pre-season: {"opponent", "invites": [prospect ids], "played",
 ## "seen", "report"}. {} before week 7, or when no club was left to play.
@@ -5060,14 +5051,12 @@ func _grant_match_xp(res: Dictionary) -> void:
 	if key == _xp_grant_key:
 		return
 	_xp_grant_key = key
-	if Features.on("training_report"):
-		TrainingReport.before_game(self)
+	TrainingReport.before_game(self)
 	last_training_report = grant_match_xp(res)
 	# Training plans spend the fresh XP straight away.
 	last_training_report["auto"] = apply_train_plans()
 	last_training_report["projects"] = _advance_projects()
-	if Features.on("training_report"):
-		TrainingReport.after_game(self)
+	TrainingReport.after_game(self)
 
 
 ## Every player on the list is paid. Named players and good games earn more;
@@ -5576,8 +5565,7 @@ func _after_round(results: Array) -> void:
 	_nominate_rising_star(results)
 	_round_news(results)
 	_record_match_story(results)
-	if Almanac.on():
-		Almanac.update_club_records(self, results)
+	Almanac.update_club_records(self, results)
 	_note_firsts(results)
 	OwnProspect.check(self)
 	_draft_class_news()
@@ -5683,8 +5671,7 @@ func _close_season_awards() -> void:
 		season_awards["golden_fist"] = fist
 	records = Awards.update_records(records, season_awards, season_log)
 	var mine_bf: Array = (season_awards["best_and_fairest"] as Dictionary).get(my_club, [])
-	if Almanac.on():
-		Almanac.count_honours(self, players)
+	Almanac.count_honours(self, players)
 	honour_roll.append({
 		"year": season_year,
 		"premier": premier(),
@@ -5712,11 +5699,10 @@ func _close_season_awards() -> void:
 	var sh := Almanac.season_hero(self)
 	if not sh.is_empty():
 		honour_roll[-1]["season_hero"] = [sh]
-	if Almanac.on():
-		almanac.append(Almanac.season_entry(self))
-		var first := Almanac.first_sentence(str(almanac[-1].get(Almanac.STORY_KEY, "")))
-		if first != "":
-			add_news("almanac_story", first)
+	almanac.append(Almanac.season_entry(self))
+	var first := Almanac.first_sentence(str(almanac[-1].get(Almanac.STORY_KEY, "")))
+	if first != "":
+		add_news("almanac_story", first)
 	# Achievements first, then the season news, so the premiership line
 	# stays the newest item in the feed.
 	_close_season_achievements()
@@ -6466,7 +6452,7 @@ func _release(code: String, p: Dictionary, wanted := false, announce := true) ->
 	(season.lists[code] as Array).erase(p)
 	p["released_by"] = code
 	# A delisted rookie is a free agent: whoever signs him, his old club
-	# included, puts him on its senior list (row 88, switch rookie_list).
+	# included, puts him on its senior list (row 88).
 	p.erase("rookie_list")
 	p["comp_eligible"] = wanted and comp_tenure_ok(p)
 	p["contract_years"] = 0
@@ -7153,8 +7139,7 @@ func _join(code: String, p: Dictionary) -> void:
 	var list: Array = season.lists[code]
 	if str(p.get("club", "")) != code:
 		p["joined"] = season_year
-		# A move lands him on the new club's senior list (row 88, RookieList:
-		# the key only exists with the switch rookie_list on).
+		# A move lands him on the new club's senior list (row 88, RookieList).
 		p.erase("rookie_list")
 	# A new club ends a project; his season's chance stays spent. The old
 	# club's decision is kept as a career fact, with how it ended.
@@ -10122,7 +10107,7 @@ func _season_news() -> void:
 		add_news("award", "Norm Smith Medal: %s (%s), %s" % [award_name(medal),
 				GameDB.club_name(str(medal["club"])), str(medal["line"])])
 	if premier() != "":
-		# With the switch "league_news", one sentence of the club's flag history (row 76).
+		# Plus one sentence of the club's flag history (row 76).
 		add_news("premiers", LeagueNews.premiers_line(premier(), season_year, honour_roll))
 
 
@@ -10350,15 +10335,10 @@ func _rival_morale_after_round(results: Array) -> void:
 			ClubLife.morale_after_match(list, played, int(score[side]) > int(score[1 - side]), soft, culture_effect(code, "sting"))
 
 
-## Switch "match_story": the setting that gates the match story everywhere.
-func match_story_on() -> bool:
-	return MatchStory.on()
-
-
 ## Keep your match's story (hero, turning point, reasons) and put its
 ## headline on the news front. Played or simmed, the same record.
 func _record_match_story(results: Array) -> void:
-	if not match_story_on() or my_club == "":
+	if my_club == "":
 		return
 	var res := _my_result(results)
 	if res.is_empty():
@@ -10379,9 +10359,9 @@ func _record_match_story(results: Array) -> void:
 		add_news("match_story", line)
 
 
-## The latest match story record, {} when there is none (or the switch is off).
+## The latest match story record, {} when there is none.
 func last_match_story() -> Dictionary:
-	if not match_story_on() or match_stories.is_empty():
+	if match_stories.is_empty():
 		return {}
 	return match_stories[-1]
 
@@ -10412,9 +10392,9 @@ func _prepare_media_conference(results: Array) -> void:
 				star = {"name": GameDB.player_display_name(p) if not p.is_empty() else str(r.get("name", "A player")),
 						"line": "kicked %d goals" % goals if goals >= 6 else "had %d disposals" % disposals}
 				break
-	# The match story's hero (switch "match_story") is asked about when no big
-	# number already put a player in the question.
-	if star.is_empty() and match_story_on():
+	# The match story's hero is asked about when no big number already put a
+	# player in the question.
+	if star.is_empty():
 		var hero := MatchStory.hero_of(res)
 		if not hero.is_empty() and int(hero["side"]) == side:
 			star = {"name": str(hero["name"]), "line": "was the hero: %s" % str(hero["line"])}

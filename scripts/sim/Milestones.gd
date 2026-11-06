@@ -234,7 +234,7 @@ static func summary_line(gs, res: Dictionary) -> String:
 	return "Milestones: " + " ".join(texts) if not texts.is_empty() else ""
 
 
-## The coming week's milestones in the news, one item each (switch on only).
+## The coming week's milestones in the news, one item each.
 static func preview_news(gs) -> void:
 	for u in upcoming(gs):
 		gs.add_news("milestone", "This week: " + str(u["text"]))

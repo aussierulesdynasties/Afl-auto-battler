@@ -448,7 +448,6 @@
 	{
 		"id": "finals_drought_over",
 		"category": "members",
-		"feature": "finals_cards_2",
 		"subject": {
 			"kind": "club"
 		},
@@ -510,7 +509,6 @@
 	{
 		"id": "gf_premiers",
 		"category": "members",
-		"feature": "finals_cards_2",
 		"subject": {
 			"kind": "club"
 		},

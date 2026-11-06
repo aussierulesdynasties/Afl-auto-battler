@@ -1,7 +1,7 @@
 class_name TrainingReport
 extends RefCounted
 ## The monthly training report (director, 2026-10-14: "A report every 4
-## rounds"). Behind Features "training_report". After rounds 4, 8, 12 and so
+## rounds"). After rounds 4, 8, 12 and so
 ## on it says who improved most, with the stats that rose and by how much,
 ## who went backwards, how the reserves did, and who can learn a new position.
 ## It reads ratings only; nothing here touches the sim.
@@ -111,10 +111,8 @@ static func build(gs, b: Dictionary, to: int) -> Dictionary:
 			"reserves": res_row, "new_retrain": new_retrain, "dismissed": false}
 
 
-## Is there a report to show (the switch is on and one has been built)?
+## The report to show ({} until one has been built).
 static func current(gs) -> Dictionary:
-	if not Features.on("training_report"):
-		return {}
 	return gs.training_report
 
 

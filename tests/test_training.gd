@@ -646,15 +646,9 @@ func _test_dual_role_plans() -> void:
 	_check(bad == 0, "Every role a player plays has a plan of its own (%d missing)" % bad)
 
 
-## A training plan is a plan, not what the player is: the list row says
-## "Training as a key defender", and however hard a medium defender trains
+## A training plan is a plan, not what the player is: however hard a medium defender trains
 ## on that plan he stays a defender who is not typed a key defender.
 func _test_plan_is_not_identity() -> void:
-	var scene = load("res://scripts/ui/TrainingScene.gd")
-	_check(scene._row_plan("key_def") == "Training as a key defender"
-			and scene._row_plan("inside_mid") == "Training as an inside midfielder"
-			and scene._row_plan("position") == "Position plan",
-			"The list row names the plan as a plan (%s)" % scene._row_plan("key_def"))
 	_new_season()
 	var small := {}
 	for p in GameState.my_list:

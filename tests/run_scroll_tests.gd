@@ -167,8 +167,14 @@ func _screen(key: String, size: Vector2i) -> void:
 		var sc: ScrollContainer = found[si]
 		var label := "%s #%d (%s)" % [tag, si, sc.name]
 		var res := []
-		await _thumb_drag(sc, label, res)
-		await _drift(sc, label, res)
+		if sc.vertical_scroll_mode == ScrollContainer.SCROLL_MODE_SHOW_NEVER:
+			# A page that shows no bar (Training's card grid on a phone) has no
+			# thumb to drag: the finger and the wheel move it.
+			_check(not sc.get_v_scroll_bar().visible, "%s: a page without a bar shows none" % label)
+			res.append("no thumb (no bar shown)")
+		else:
+			await _thumb_drag(sc, label, res)
+			await _drift(sc, label, res)
 		await _wheel(sc, label, res)
 		await _touch(sc, label, res)
 		await _resize(sc, label, res)

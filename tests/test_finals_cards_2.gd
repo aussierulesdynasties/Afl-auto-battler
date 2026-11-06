@@ -1,10 +1,9 @@
 extends RefCounted
 ## The finals cards' second slice (open requirements 35 and 36; director's rulings
-## 2026-10-13 and 2026-11-03), behind the switch finals_cards_2: A3, A9, A14, A15,
-## A16, B7, B8, B9 and the one card the week your season ends. Each fires on its
-## facts and nowhere else, the facts are true, each choice does what it says, the
-## season-end card comes once, B8's fitness cost reaches the next pre-season's
-## base, and with the switch off the game is exactly as before. Part of the story
+## 2026-10-13 and 2026-11-03): A3, A9, A14, A15, A16, B7, B8, B9 and the one
+## card the week your season ends. Each fires on its facts and nowhere else, the
+## facts are true, each choice does what it says, the season-end card comes once,
+## and B8's fitness cost reaches the next pre-season's base. Part of the story
 ## suite (tests/test_story.gd calls run()).
 
 var s   # the story suite: _check()
@@ -16,8 +15,6 @@ const END_IDS := ["finals_knocked_out", "finals_one_week_short", "gf_premiers", 
 
 func run(suite) -> void:
 	s = suite
-	_t("_test_switch_off")
-	Features.set_on(StoryDeck.FINALS_2, true)
 	_t("_test_deck")
 	_t("_test_season_end_draw")
 	_t("_test_end_facts")
@@ -26,7 +23,6 @@ func run(suite) -> void:
 	_t("_test_week_facts")
 	_t("_test_effects")
 	_t("_test_fitness_debt")
-	Features.clear(StoryDeck.FINALS_2)
 	ClubHistory.reload()
 
 
@@ -95,33 +91,12 @@ func _ids(cards: Array) -> Array:
 	return cards.map(func(c): return str((c as Dictionary).get("tid", "")))
 
 
-func _test_switch_off() -> void:
-	Features.set_on(StoryDeck.FINALS_2, false)
-	var deck := StoryDeck.all()
-	for id in IDS:
-		_check(StoryDeck.by_id(deck, id).is_empty(), "Switch off: %s is not in the deck" % id)
-	_knocked_out(4101, "EF1")
-	GameState._next_week_event()
-	_check(GameState.week_events.is_empty(), "Switch off: knocked out, no card comes (as before)")
-	_check(not (GameState.story["season"] as Dictionary).has(ClubStories.SEASON_END_MARK), "Switch off: nothing is written to the story")
-	var facts: Dictionary = ClubStories.context(GameState)["club"]
-	_check(not facts.has("result") and not facts.has("underdog"), "Switch off: the club facts are as before")
-	_grand_final(4102, true, 20)
-	GameState._next_week_event()
-	_check(GameState.week_events.is_empty() and GameState.preseason_run_debt == 0.0, "Switch off: premiers, no card and no fitness debt")
-	Features.clear(StoryDeck.FINALS_2)
-
-
 func _test_deck() -> void:
 	var deck := StoryDeck.all()
 	for id in IDS:
-		_check(not StoryDeck.by_id(deck, id).is_empty(), "Switch on: %s is in the deck" % id)
+		_check(not StoryDeck.by_id(deck, id).is_empty(), "%s is in the deck" % id)
 	var errs := StoryDeck.validate(deck)
 	_check(errs.is_empty(), "The deck with the second slice passes its checks: %s" % "; ".join(PackedStringArray(errs.slice(0, 4))))
-	var t := StoryDeck.by_id(deck, "gf_premiers").duplicate(true)
-	t["id"] = "x"
-	t["feature"] = "no_such_switch"
-	_check(not StoryDeck.validate([t]).is_empty(), "A card behind an unknown switch is refused")
 	# The rulings, as data: no board reward on any of the eight.
 	var board := []
 	for id in IDS:
@@ -347,8 +322,7 @@ func _test_fitness_debt() -> void:
 	_play("gf_premiers", 0)
 	_check(GameState.preseason_run_debt == -1.0, "B8 'Celebrate': one week of running owed (%s)" % GameState.preseason_run_debt)
 	_check(GameState.save_career() and GameState.load_career() and GameState.preseason_run_debt == -1.0, "The debt survives a reload")
-	# The preseason switch on: the next pre-season opens one week behind.
-	Features.set_on("preseason", true)
+	# The next pre-season opens one week behind.
 	PreSeason.reload()
 	GameState.reset()
 	GameState.career_seed = 4801
@@ -361,6 +335,5 @@ func _test_fitness_debt() -> void:
 	var other: Dictionary = (GameState.preseason.get("clubs", {}) as Dictionary).get("COL", {})
 	_check(float(entry.get("run", 0.0)) == float(other.get("run", 0.0)) - 1.0 and GameState.preseason_run_debt == 0.0,
 			"The pre-season opens a week of running behind, and the debt is paid (%s)" % str(entry.get("run", "?")))
-	Features.clear("preseason")
 	PreSeason.reload()
 	GameState.delete_saved_career()

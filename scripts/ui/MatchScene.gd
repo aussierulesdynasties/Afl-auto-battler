@@ -279,12 +279,7 @@ func _scoreboard() -> Control:
 ## like colours cannot confuse it); a tap explains it, and the first match
 ## you watch says so once, under it.
 const MOMENTUM_EVEN := 0.12
-const MOMENTUM_INFO := [
-	"Momentum is the run of play. A goal swings it toward the side that kicked it, a behind a little; it fades as play goes on and halves at every break.",
-	"The side on top wins a little more of the ball at centre bounces, stoppages and loose balls - a small edge, never a guarantee. A goal the other way turns it.",
-]
-## Row 78 (switch momentum_runaway): the second line no longer holds for a
-## side well ahead, so the sheet says what a runaway does.
+## Row 78: a side well ahead can run away with it, so the sheet says what a runaway does.
 const MOMENTUM_INFO_RUNAWAY := [
 	"Momentum is the run of play. A goal swings it toward the side that kicked it, a behind a little; it fades as play goes on and halves at every break.",
 	"The side on top wins a little more of the ball at centre bounces, stoppages and loose balls - never a guarantee. A goal the other way turns it.",
@@ -293,7 +288,7 @@ const MOMENTUM_INFO_RUNAWAY := [
 
 
 static func momentum_info() -> Array:
-	return MOMENTUM_INFO_RUNAWAY if Features.on("momentum_runaway") else MOMENTUM_INFO
+	return MOMENTUM_INFO_RUNAWAY
 
 
 func _momentum_bar() -> Control:
@@ -2566,9 +2561,8 @@ func _show_moment() -> void:
 	if bounce and GameState.vignettes_on():
 		_show_bounce_moment(m)
 		return
-	# Row 13: every other call is a scene too (Features "decision_scenes"; off, the card).
-	if Features.on("decision_scenes") and GameState.vignettes_on() \
-			and DecisionVignette.has_scene(str(m.get("kind", ""))):
+	# Row 13: every other call with a scene is a scene too.
+	if GameState.vignettes_on() and DecisionVignette.has_scene(str(m.get("kind", ""))):
 		_show_bounce_moment(m)
 		return
 	# Sized for its few lines, not the whole phone.
@@ -3416,7 +3410,7 @@ func _goal_row(ev: Dictionary, stamp: String) -> Control:
 	var names := _names().duplicate()
 	if who != "":
 		names[who] = code
-	var tone := MatchNotes.feed_tone(ev, _my_side) if Features.on("feed_colours") else "neutral"
+	var tone := MatchNotes.feed_tone(ev, _my_side)
 	row.set_meta("tone", tone)
 	var head_col: Color = UiKit.GOOD if tone == "good" else (UiKit.BAD if tone == "bad" else UiKit.TEXT)
 	var hl := NameInk.label(head, names, UiKit.NAME, head_col, true)
@@ -3853,8 +3847,8 @@ func _ft_summary(v: VBoxContainer) -> void:
 	# best, each club in its colour with its crest.
 	_ft_best_players(v, me, mine, winner)
 
-	# The match story (switch "match_story"): the hero, the turning point and why.
-	if mine and MatchStory.on():
+	# The match story: the hero, the turning point and why.
+	if mine:
 		_ft_story(v, me)
 
 	# What it means: finals, the ladder, who is next. (Nothing, for a practice match.)

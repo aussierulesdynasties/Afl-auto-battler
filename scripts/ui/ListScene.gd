@@ -80,10 +80,8 @@ func _build() -> void:
 	head.name = "LineStanding"
 	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	host.add_child(head)
-	var count := "%d players" % GameState.my_list.size()
-	if RookieList.on():
-		count = "%d senior  ·  %d rookie" % [RookieList.senior_count(GameState.my_list),
-				RookieList.rookie_count(GameState.my_list)]
+	var count := "%d senior  ·  %d rookie" % [RookieList.senior_count(GameState.my_list),
+			RookieList.rookie_count(GameState.my_list)]
 	if injured > 0:
 		count += "  ·  %d injured" % injured
 	host.add_child(UiKit.lbl(count, UiKit.SMALL, UiKit.MUTED))
@@ -212,9 +210,6 @@ func _full_list_panel() -> Control:
 	lbox.name = "ListRows"
 	rv.add_child(UiKit.scroll(lbox))
 
-	if not RookieList.on():
-		_role_groups(lbox, GameState.my_list, false)
-		return right
 	# Two lists (row 88): the senior list, then the rookie list, each with its spots.
 	var seniors := RookieList.seniors(GameState.my_list)
 	var rookies := RookieList.rookies(GameState.my_list)
@@ -384,7 +379,7 @@ func _open_profile(id: String) -> void:
 				GameState.set_untouchable(id, not on)
 				_build()
 				_open_profile(id)}]
-	if RookieList.on() and RookieList.is_rookie(p):
+	if RookieList.is_rookie(p):
 		var block := RookieList.upgrade_block(GameState, GameState.my_club, id)
 		var used := RookieList.senior_count(GameState.my_list)
 		actions.append({"name": "Upgrade", "label": "Upgrade to the senior list",
