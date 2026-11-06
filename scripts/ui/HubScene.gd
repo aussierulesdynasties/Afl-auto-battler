@@ -257,7 +257,8 @@ func _build() -> void:
 	# One page that scrolls: this week first, then your season, the news and
 	# the whole ladder at its natural height. Nothing is squeezed to fit.
 	var page := UiKit.vbox(UiKit.SECTION)
-	_root.add_child(UiKit.scroll(page))
+	var page_scroll := UiKit.scroll(page)
+	_root.add_child(page_scroll)
 	var week := _week_section(season)
 	# PC: the ladder and the league's front page stand side by side in the right
 	# column, both in view without scrolling (director, 2026-10-14).
@@ -312,13 +313,13 @@ func _build() -> void:
 			news.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 			right.add_child(news)
 	if _narrow():
-		_root.add_child(_bar_air())
+		_root.add_child(_bar_air(UiKit.BG, page_scroll))
 		_root.add_child(_footer(season))
 	else:
 		# On a wide screen the rest of the club stays pinned, but only under
 		# the ladder column, not stretched across the page (director: no
 		# full-width bars on PC).
-		_root.add_child(_bar_air())
+		_root.add_child(_bar_air(UiKit.BG, page_scroll))
 		var foot := UiKit.hbox(28)
 		foot.name = "HubFooterWide"
 		_root.add_child(foot)
@@ -1015,8 +1016,11 @@ func _sim_round_button() -> Button:
 
 
 ## A little air above a pinned bar and a soft fade over the clip edge, so scrolled
-## content never reads as cut mid-button by the bar (phone and PC).
-func _bar_air(col: Color = UiKit.BG) -> Control:
+## content never reads as cut mid-button by the bar (phone and PC). Given the scroll
+## it sits under, the fade says only that there is more: it thins as the end comes
+## into view and is gone at the end, so it never hides the last real row (director,
+## 2026-11-07: "the bottom row is faded by the UI effect").
+func _bar_air(col: Color = UiKit.BG, sc: ScrollContainer = null) -> Control:
 	var air := Control.new()
 	air.custom_minimum_size = Vector2(0, 10)
 	air.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1042,7 +1046,26 @@ func _bar_air(col: Color = UiKit.BG) -> Control:
 	fade.offset_top = -28
 	fade.offset_bottom = 0
 	air.add_child(fade)
+	if sc != null:
+		_fade_follows(fade, sc)
 	return air
+
+
+## The fade's strength follows what is left below: full while more than its own
+## height is hidden, nothing at the scroll's end (or when nothing scrolls).
+func _fade_follows(fade: Control, sc: ScrollContainer) -> void:
+	var bar := sc.get_v_scroll_bar()
+	var follow := func() -> void:
+		if not is_instance_valid(fade) or not is_instance_valid(bar):
+			return
+		var left := bar.max_value - bar.page - bar.value
+		var span := maxf(1.0, fade.size.y if fade.size.y > 0.0 else 28.0)
+		fade.modulate.a = clampf(left / span, 0.0, 1.0)
+	bar.value_changed.connect(follow.unbind(1))
+	bar.changed.connect(follow)
+	sc.resized.connect(follow)
+	fade.resized.connect(follow)
+	follow.call()
 
 
 ## Everything else, one quiet row pinned under the page.
@@ -1772,7 +1795,7 @@ func _show_results(results: Array) -> void:
 		_show_week_ask())
 	# The list scrolls under Continue: air and a soft edge so a row is never sliced by the button.
 	if not others.is_empty():
-		var air := _bar_air(UiKit.PANEL)
+		var air := _bar_air(UiKit.PANEL, (box["body"] as Control).get_parent() as ScrollContainer)
 		# The fade ends exactly on the scroll's clip edge (8 px above the footer) and is fully
 		# solid there, so a row is eased out, never sliced.
 		var edge: TextureRect = air.get_node("BarFade")
@@ -1875,64 +1898,94 @@ func _review_match() -> void:
 	Router.go("match")
 
 
+## The rest of the round (director, 2026-11-07: "really hard to read and know which game
+## they belong to"). Each game is one unit, a rule between games; the winner's code and
+## score in full ink, the loser's muted, a draw both alike. Your game comes first, edged
+## in your club's colour. The score sits right after the club code, not across the row.
 func _results_list(results: Array) -> Control:
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(UiKit.GAP)
+	v.name = "ResultsList"
 	var narrow := _content_width() < 520.0
+	var ordered: Array = []
 	for res in results:
+		if GameState.is_my_match(res):
+			ordered.append(res)
+	for res in results:
+		if not GameState.is_my_match(res):
+			ordered.append(res)
+	for i in range(ordered.size()):
+		var res: Dictionary = ordered[i]
+		if i > 0:
+			v.add_child(UiKit.rule())
 		var mine: bool = GameState.is_my_match(res)
-		var col := UiKit.TEXT if mine else UiKit.MUTED
 		var s: Array = res["score"]
-		var home_is_me: bool = str(res["home"]) == GameState.my_club
-		var won: bool = (s[0] > s[1] and home_is_me) or (s[1] > s[0] and not home_is_me)
-		var drew: bool = s[0] == s[1]
+		var drew: bool = int(s[0]) == int(s[1])
 		var verdict := ""
+		var vcol := UiKit.MUTED
 		if mine:
+			var me := 0 if str(res["home"]) == GameState.my_club else 1
+			var won: bool = int(s[me]) > int(s[1 - me])
 			verdict = "Draw" if drew else ("Won" if won else "Lost")
-		if narrow:
-			var block := UiKit.vbox(2)
-			var vcol := UiKit.MUTED if drew else UiKit.margin_colour(won)
-			block.add_child(_result_side(str(res["home"]), int(res["goals"][0]),
-					int(res["behinds"][0]), col, verdict if home_is_me else "", vcol))
-			block.add_child(_result_side(str(res["away"]), int(res["goals"][1]),
-					int(res["behinds"][1]), col, verdict if not home_is_me else "", vcol))
-			v.add_child(block)
-		else:
-			var h := UiKit.hbox(6)
-			h.add_child(UiKit.club_badge(str(res["home"]), 13, true, true))
-			var hs := UiKit.line(UiKit.scoreline(int(res["goals"][0]), int(res["behinds"][0])),
-					14, col, true)
-			hs.custom_minimum_size = Vector2(78, 0)
-			h.add_child(hs)
-			# "v", not "def": the home side is listed first, not the winner.
-			h.add_child(UiKit.line("v", 12, UiKit.MUTED))
-			var asc := UiKit.line(UiKit.scoreline(int(res["goals"][1]), int(res["behinds"][1])),
-					14, col, true)
-			asc.custom_minimum_size = Vector2(78, 0)
-			h.add_child(asc)
-			h.add_child(UiKit.club_badge(str(res["away"]), 13, true, true))
-			if verdict != "":
-				var tag := UiKit.line(verdict, UiKit.SECONDARY,
-						UiKit.MUTED if drew else UiKit.margin_colour(won), true)
-				tag.custom_minimum_size = Vector2(48, 0)
-				h.add_child(tag)
-			v.add_child(h)
+			vcol = UiKit.MUTED if drew else UiKit.margin_colour(won)
+		var sides: BoxContainer = UiKit.vbox(2) if narrow else UiKit.hbox(8)
+		sides.name = "Sides"
+		for side in [0, 1]:
+			var code := str(res["home"] if side == 0 else res["away"])
+			var role := "draw" if drew else ("win" if int(s[side]) > int(s[1 - side]) else "lose")
+			var row := _result_side(code, int(res["goals"][side]), int(res["behinds"][side]), role,
+					verdict if mine and code == GameState.my_club else "", vcol, narrow or side == 0)
+			if not narrow and side == 1:
+				# "v", not "def": the home side is listed first, not the winner.
+				sides.add_child(UiKit.line("v", UiKit.SMALL, UiKit.MUTED))
+			sides.add_child(row)
+		# Every game keeps the edge's room, so the columns line up; only yours is inked.
+		var game := HBoxContainer.new()
+		game.name = "ResultGame_%d" % i
+		game.add_theme_constant_override("separation", 8)
+		game.set_meta("mine", mine)
+		var edge := ColorRect.new()
+		edge.name = "ClubBar"
+		edge.color = UiKit.club_ink(GameState.my_club) if mine else Color(0, 0, 0, 0)
+		edge.custom_minimum_size = Vector2(3, 0)
+		edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		game.add_child(edge)
+		sides.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		game.add_child(sides)
+		v.add_child(game)
 	return v
 
 
-func _result_side(code: String, goals: int, behinds: int, col: Color, verdict: String,
-		vcol: Color = UiKit.AUTO_COLOUR) -> Control:
-	if vcol == UiKit.AUTO_COLOUR:
-		vcol = UiKit.TEXT
-	var h := UiKit.hbox(6)
-	h.add_child(UiKit.club_badge(code, 13, true, true))
-	var score := UiKit.line(UiKit.scoreline(goals, behinds), 14, col, true)
-	score.custom_minimum_size = Vector2(78, 0)
+## One club's line of a result: guernsey, code, score right after it, and (your
+## game only) the verdict. `role` is win, lose or draw: the winner in full ink and
+## bold, the loser muted, a draw both in full ink and neither bold.
+func _result_side(code: String, goals: int, behinds: int, role: String, verdict: String,
+		vcol: Color, code_first := true) -> Control:
+	var ink := UiKit.MUTED if role == "lose" else UiKit.TEXT
+	var h := UiKit.hbox(8)
+	h.name = "ResultRow_%s" % code
+	h.set_meta("result", role)
+	var marker := UiKit.club_marker(code)
+	var code_l := UiKit.line(code, UiKit.NAME, ink, role == "win")
+	code_l.name = "Code"
+	code_l.custom_minimum_size = Vector2(46, 0)
+	var score := UiKit.line(UiKit.scoreline(goals, behinds), UiKit.NAME, ink, role == "win")
+	score.name = "Score"
+	score.custom_minimum_size = Vector2(88, 0)
 	score.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	h.add_child(score)
-	# Every row keeps the verdict column, so the scores line up.
-	var tag := UiKit.line(verdict, UiKit.SECONDARY, vcol, true)
-	tag.custom_minimum_size = Vector2(40, 0)
-	h.add_child(tag)
+	if code_first:
+		h.add_child(marker)
+		h.add_child(code_l)
+		h.add_child(score)
+	else:
+		score.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		h.add_child(score)
+		code_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		h.add_child(code_l)
+		h.add_child(marker)
+	if verdict != "":
+		var tag := UiKit.line(verdict, UiKit.SECONDARY, vcol, true)
+		tag.name = "Verdict"
+		h.add_child(tag)
 	return h
 
 
