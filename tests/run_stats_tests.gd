@@ -1181,9 +1181,15 @@ func _test_ladder(sz: Vector2i) -> void:
 	var tapped: String = before[1] if before[0] == mine else before[0]
 	var why2: String = await Tap.tap(s.find_child("Club_" + tapped, true, false))
 	await _settle()
+	# A club's name opens its page (rulings no. 113); the page leads to the side.
+	var page: Node = s.find_child("ClubPage", true, false)
+	_check(why2 == "" and page != null and str(page.get_meta("club_code", "")) == tapped,
+			"A finger on a club opens its page (%s: %s)" % [tag, why2])
+	var why3: String = await Tap.tap(page.find_child("SideOnGround", true, false)) if page != null else "no page"
+	await _settle()
 	var side: Node = s.find_child("ClubSide", true, false)
-	_check(why2 == "" and side != null and side.find_child("TeamBuilder", true, false) != null,
-			"A finger on a club opens its side (%s: %s)" % [tag, why2])
+	_check(why3 == "" and side != null and side.find_child("TeamBuilder", true, false) != null,
+			"The page's button opens the side on the ground (%s: %s)" % [tag, why3])
 	if side != null:
 		var builder: Node = side.find_child("TeamBuilder", true, false)
 		_check(bool(builder.get("_read_only")), "The side is read-only (%s)" % tag)
@@ -1234,7 +1240,11 @@ func _test_ladder(sz: Vector2i) -> void:
 				"...and leaves the side (%s)" % tag)
 	_check(s.call("handle_back") == true, "Back closes the side (%s)" % tag)
 	await _settle()
-	_check(s.find_child("ClubSide", true, false) == null and _row_codes(s) == before
+	_check(s.find_child("ClubSide", true, false) == null and s.find_child("ClubPage", true, false) != null,
+			"...and leaves the club's page (%s)" % tag)
+	_check(s.call("handle_back") == true, "Back closes the club's page (%s)" % tag)
+	await _settle()
+	_check(s.find_child("ClubPage", true, false) == null and _row_codes(s) == before
 			and _text(s.find_child("ActiveState", true, false)).contains("sorted by Pts"),
 			"Back returns to the ladder as it was, sort and filter kept (%s)" % tag)
 	s.queue_free()
@@ -1444,6 +1454,10 @@ func _test_team_rating(sz: Vector2i) -> void:
 	# A tap on a club says its list in full.
 	var mine_row: Button = s.find_child("Club_" + _state.my_club, true, false)
 	_check((await Tap.tap(mine_row)) == "", "A club takes a tap (%s)" % tag)
+	await _settle()
+	var club_page: Node = s.find_child("ClubPage", true, false)
+	_check(club_page != null and (await Tap.tap(club_page.find_child("SideOnGround", true, false))) == "",
+			"Its page leads to its side (%s)" % tag)
 	await _settle()
 	var outlook: Label = s.find_child("TeamOutlook", true, false)
 	_check(outlook != null and outlook.text == str(_state.team_outlook(_state.my_club)["line"])
