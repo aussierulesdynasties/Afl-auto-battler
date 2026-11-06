@@ -42,6 +42,7 @@ func run() -> void:
 	_t("_test_lockdown_midfielder")
 	_t("_test_traits")
 	_t("_test_weather")
+	_t("_test_wet_weather_play")
 	_t("_test_metres_and_efficiency")
 	_t("_test_gps_distance")
 	_t("_test_ruck_integrity")
@@ -1073,6 +1074,48 @@ func _test_weather() -> void:
 			for side in range(2):
 				marks[c] += float((res["team"][side] as Dictionary).get("marks", 0.0))
 	_check(marks[1] < marks[0] * 0.95, "Fewer marks stick in the wet (%.0f against %.0f)" % [marks[1], marks[0]])
+
+
+## Row 120 (director 2026-11-06): the wet brings fumbles, stoppages and tackles, and set
+## shots get harder. Same lists and seeds, perfect day against wet.
+func _test_wet_weather_play() -> void:
+	var dry := _sim(1)
+	_check(dry._wx("set_acc") == 1.0 and dry._wx("fumble", 0.0) == 0.0,
+			"A perfect day has no wet-ball rules at all")
+	var clangers := [0.0, 0.0]
+	var ballups := [0, 0]
+	var tackles := [0.0, 0.0]
+	var set_shots := [0, 0]
+	var set_goals := [0, 0]
+	var fumbles := 0
+	var fumble_named := true
+	for i in range(16):
+		for c in range(2):
+			var s := _sim(700 + i)
+			s.weather = ["perfect", "wet"][c]
+			var res := s.run()
+			for side in range(2):
+				clangers[c] += float((res["team"][side] as Dictionary).get("clangers", 0.0))
+				tackles[c] += float((res["team"][side] as Dictionary).get("tackles", 0.0))
+			for e in res["events"]:
+				if str(e.get("kind", "")) == "ballup":
+					ballups[c] += 1
+				if c == 1 and str(e.get("kind", "")) == "clanger" and bool(e.get("fumble", false)):
+					fumbles += 1
+					if str(e.get("why", "")) != "wet":
+						fumble_named = false
+			for shot in s.shot_log:
+				if int(shot[1]) == 1:
+					set_shots[c] += 1
+					if str(shot[3]) == "goal":
+						set_goals[c] += 1
+	_check(clangers[1] > clangers[0] * 1.04, "More clangers in the wet (%.0f against %.0f)" % [clangers[1], clangers[0]])
+	_check(ballups[1] > ballups[0] * 1.08, "More ball-ups in the wet (%d against %d)" % [ballups[1], ballups[0]])
+	_check(tackles[1] > tackles[0] * 1.06, "More tackles in the wet (%.0f against %.0f)" % [tackles[1], tackles[0]])
+	var acc_dry := float(set_goals[0]) / maxf(1.0, float(set_shots[0]))
+	var acc_wet := float(set_goals[1]) / maxf(1.0, float(set_shots[1]))
+	_check(acc_wet < acc_dry, "Set shots go through less often in the wet (%.2f against %.2f)" % [acc_wet, acc_dry])
+	_check(fumbles > 0 and fumble_named, "A wet fumble is a clanger the game puts down to the wet ball (%d)" % fumbles)
 
 
 func _fake(id: String, role: String, attr: Dictionary) -> Dictionary:

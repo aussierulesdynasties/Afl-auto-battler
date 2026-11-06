@@ -94,7 +94,7 @@ static func condition(venue: String, m: int, key: int, state := "") -> String:
 
 ## The day in a coach's words, for the match report (none on a perfect day).
 const REPORT := {
-	"wet": "A wet day: contested ball counted for more, and fewer marks stuck.",
+	"wet": "A wet day: a greasy ball, plenty of fumbles, tackles and ball-ups, fewer marks stuck and the set shots got harder.",
 	"windy": "A windy day: the breeze end mattered, and the ball was hard to hold.",
 	"hot": "A hot day: open, running footy, and legs went late.",
 }

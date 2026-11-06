@@ -34,6 +34,10 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "-
   (docs/research/SET_SHOT_EVIDENCE.md), from `MatchSim.shot_log`; the pocket set shot has its own row
   against the wide-angle cells, and the set-shot share is also given over scoring shots, because the
   sim logs a general-play shot only when it scores.
+  A "Change B against A" table gives B/A-1 with its se for the contest stats (tackles, clangers,
+  ground-ball gets, contested possessions, one-percenters, marks, stoppages counted from ball-up and
+  throw-in events) and accuracy in points, beside the real wet-against-dry change; read the real column
+  only when B is the wet arm (row 120).
   It also prints intercepts a game per player by his listed position (DEF, MID, FWD, RUCK; the
   definition of tools/audit/intercept_impl.gd) against Champion Data 2025, with B-A and se when paired.
   It also prints key forward v key defender contests per duel per match (row 94), from each match's
