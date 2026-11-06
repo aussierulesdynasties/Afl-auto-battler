@@ -247,7 +247,9 @@ func _test_answers() -> void:
 
 func _test_reckoning() -> void:
 	# A club that is not on top after nine rounds, so it can be behind the 1st it named
-	# (Fremantle's start depends on every rating in the league, draftees included).
+	# (Fremantle's start depends on every rating in the league, draftees included: next year's
+	# draft prospects play the pre-season practice matches as trial guests, so their draft-night
+	# scale moves practice xp and a few seniors by a point, and the ladder after nine rounds).
 	_career("WCE")
 	_to_papers()
 	_force("finish")

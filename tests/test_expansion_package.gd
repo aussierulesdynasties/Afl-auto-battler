@@ -473,6 +473,17 @@ func _test_who_a_rival_keeps() -> void:
 			fa["overall"] = int(p["overall"]) + 6
 			fa["potential"] = maxi(int(fa.get("potential", 0)), int(fa["overall"]))
 			GameState.free_agents.append(fa)
+			# Last season's free agents leave the market before the new club's
+			# approaches settle, so in the off-season the one who beats him is
+			# his club's draft pick. Make every prospect at his position beat
+			# him too, so the case does not rest on how strong this seed's
+			# generated class happens to be (row 65 drafts it at its made
+			# rating, without the pool year's growth that used to lift it).
+			var role := str(p.get("role", ""))
+			for d in GameState._open_class(GameState.season_year):
+				if str(d.get("role", "")) == role or str(d.get("role2", "")) == role:
+					d["overall"] = maxi(int(d["overall"]), int(p["overall"]) + 6)
+					d["potential"] = maxi(int(d.get("potential", 0)), maxi(int(d["overall"]), int(p.get("potential", 0)) + 6))
 		elif case.begins_with("cap"):
 			p["overall"] = maxi(int(p["overall"]), 84)
 			p["potential"] = maxi(int(p.get("potential", 0)), 86)

@@ -1363,11 +1363,12 @@ func _run_draft() -> void:
 ## draft's and the next two drafts'; players never; a rival judges by its own
 ## read; a pick you sell moves you off the clock; the deal survives a save.
 func _test_draft_night_trades() -> void:
-	# A career where rivals deal on the night (seed 3: two deals; about one a
-	# night across seeds 1-6 and 2027).
+	# A career where rivals deal on the night (seed 2: four deals; still about
+	# one a night across seeds 1-6, three of which have none, after row 65
+	# moved the draft-night ratings and so the seed-3 night).
 	GameState.reset()
-	GameState.career_seed = 3
-	GameState.replay_seed = 3
+	GameState.career_seed = 2
+	GameState.replay_seed = 2
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	_to_offseason()
 	var me := GameState.my_club
