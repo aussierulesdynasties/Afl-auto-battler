@@ -147,6 +147,41 @@ static func _in_progress() -> bool:
 	return true
 
 
+## The finals names by week, for a week your club did not play in.
+const FINALS_WEEKS := {1: "Wildcard round", 2: "Qualifying finals", 3: "Semi finals",
+		4: "Preliminary finals", 5: "Grand Final"}
+
+
+## This season's Finals cell while it is being played (director, 2026-11-06):
+## before the finals, how far the home-and-away season has gone ("Round 3 of
+## 24"); during them, the final you last played ("Qualifying final"), or the
+## week's name when you were not in it; once the Grand Final is played, the
+## result, as a past season reads.
+static func progress(season, club: String) -> String:
+	if season == null:
+		return ""
+	var weeks: Array = season.finals.get("weeks", []) if not season.finals.is_empty() else []
+	if weeks.is_empty():
+		var total: int = season.fixture.size() if not season.fixture.is_empty() else Season.REGULAR_ROUNDS
+		return "Round %d of %d" % [clampi(int(season.round_index), 1, total), total]
+	if bool(season.finals.get("done", false)):
+		if str(season.finals.get("premier", "")) == club:
+			return "Premiers"
+		if str(season.finals.get("runner_up", "")) == club:
+			return "Runners-up"
+	var tag := ""
+	for week in weeks:
+		for res in week:
+			if str(res.get("home", "")) == club or str(res.get("away", "")) == club:
+				tag = str(res.get("tag", ""))
+	if bool(season.finals.get("done", false)):
+		return str(FINALS.get(tag.substr(0, 2), ""))
+	for res in weeks[weeks.size() - 1]:
+		if str(res.get("home", "")) == club or str(res.get("away", "")) == club:
+			return str(FINALS.get(str(res.get("tag", "")).substr(0, 2), ""))
+	return str(FINALS_WEEKS.get(weeks.size(), ""))
+
+
 # ---------------------------------------------------------------------------
 # Club honours
 # ---------------------------------------------------------------------------
@@ -384,7 +419,7 @@ static func _tenure_table(host: Control, seasons: Array, in_progress: bool) -> C
 		# Where you sit on the ladder, once there is a ladder to sit on.
 		var played: bool = GameState.my_record() != "0-0-0"
 		var r := _tenure_row([str(GameState.season_year), GameState.ordinal(GameState.my_position()) if played else "",
-				GameState.my_record(), "In progress"], false, false, row_h)
+				GameState.my_record(), progress(GameState.season, GameState.my_club)], false, false, row_h)
 		n += 1
 		r.name = "Season_%d" % GameState.season_year
 		v.add_child(r)

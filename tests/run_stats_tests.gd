@@ -50,6 +50,8 @@ func _run() -> void:
 		await _t("_test_ladder_only_in_season_stats", [sz])
 	await _t("_test_awards_early")
 	await _t("_test_trophies_unplayed")
+	_t("_test_club_code_colours")
+	_t("_test_finals_cell")
 	for i in range(4):
 		_state.advance()
 	await _t("_test_sections")
@@ -1882,6 +1884,67 @@ func _rank(row: Node) -> String:
 	return str((row.get_child(0).get_child(0) as Label).text)
 
 
+## Every club's line under a name on the Season stats lists (director,
+## 2026-11-06): its strongest real colour, read at 4.5:1, never white or grey,
+## one of its real colours or one lightened with its hue kept. Collingwood has
+## no colour but black and white: its black, lightened, is the one grey.
+func _test_club_code_colours() -> void:
+	var UK = load("res://scripts/ui/UiKit.gd")
+	var db = root.get_node("GameDB")
+	var codes := ["ADE", "BRL", "CAR", "COL", "ESS", "FRE", "GEE", "GCS", "GWS", "HAW", "MEL", "NTH",
+			"PAD", "RIC", "STK", "SYD", "WCE", "WBD", "TAS", "CANB"]
+	var line := []
+	for code in codes:
+		var c: Color = UK.club_code_colour(code)
+		line.append("%s #%s" % [code, c.to_html(false).to_upper()])
+		_check(UK.contrast(c, UK.PANEL) >= 4.5 and UK.contrast(c, UK.BG) >= 4.5,
+				"%s's code reads at 4.5:1 on the panel and the page (%.2f)" % [code, UK.contrast(c, UK.PANEL)])
+		var real: Array = db.club_marker_colours(code)
+		var vivid := real.filter(func(r: Color) -> bool: return r.s >= UK.CODE_MIN_SAT)
+		if vivid.is_empty():
+			_check(code == "COL" and c.s < 0.01 and c.v < 0.9, "%s: no colour but black and white, so its black lightened" % code)
+			continue
+		_check(c.s >= UK.CODE_MIN_SAT and not (c.v > 0.9 and c.s < 0.15), "%s's code is a colour, not white or grey" % code)
+		var from_real := false
+		for r in vivid:
+			var col: Color = r
+			if c.is_equal_approx(col) or (absf(c.h - col.h) < 0.01 and c.v >= col.v - 0.01 and c.s <= col.s + 0.01):
+				from_real = true
+		_check(from_real, "%s's code is one of its real colours or one lightened, same hue (#%s)" % [code, c.to_html(false)])
+		_check(not db.club_colours(code)[2].is_equal_approx(c) or db.THREE_COLOUR_CLUBS.has(code),
+				"%s's code is not its pitch tint" % code)
+	print("Club code colours: " + ", ".join(line))
+
+
+## This season's Finals cell in the trophy room: the round before the finals,
+## the final during them, the result after.
+func _test_finals_cell() -> void:
+	var T = load("res://scripts/ui/stats/StatsTrophies.gd")
+	var se = load("res://scripts/sim/Season.gd").new(["COL", "CAR"], {})
+	se.fixture = []
+	for i in range(24):
+		se.fixture.append([])
+	se.round_index = 3
+	_check(T.progress(se, "COL") == "Round 3 of 24", "After round 3: Round 3 of 24 (%s)" % T.progress(se, "COL"))
+	se.round_index = 24
+	se.finals = {"week": 1, "weeks": [], "done": false, "premier": "", "runner_up": ""}
+	_check(T.progress(se, "COL") == "Round 24 of 24", "Finals set but not begun: still Round 24 of 24 (%s)" % T.progress(se, "COL"))
+	se.finals["weeks"] = [[{"home": "GEE", "away": "STK", "tag": "WC1"}], [{"home": "COL", "away": "CAR", "tag": "QF1"}]]
+	se.finals["week"] = 3
+	_check(T.progress(se, "COL") == "Qualifying final", "During the finals: the final you played (%s)" % T.progress(se, "COL"))
+	_check(T.progress(se, "ADE") == "Qualifying finals", "Not in it: the week's name (%s)" % T.progress(se, "ADE"))
+	se.finals["weeks"].append([{"home": "CAR", "away": "GEE", "tag": "SF1"}])
+	se.finals["weeks"].append([{"home": "CAR", "away": "SYD", "tag": "PF1"}])
+	se.finals["weeks"].append([{"home": "COL", "away": "SYD", "tag": "GF"}])
+	se.finals["done"] = true
+	se.finals["premier"] = "COL"
+	se.finals["runner_up"] = "SYD"
+	_check(T.progress(se, "COL") == "Premiers", "Finished: the result, Premiers (%s)" % T.progress(se, "COL"))
+	_check(T.progress(se, "SYD") == "Runners-up", "Finished: Runners-up (%s)" % T.progress(se, "SYD"))
+	_check(T.progress(se, "CAR") == "Preliminary final", "Finished: out in a preliminary final (%s)" % T.progress(se, "CAR"))
+	_check(T.progress(se, "MEL") == "", "Finished without a final: blank, as a past season reads (%s)" % T.progress(se, "MEL"))
+
+
 ## The trophy room through a first season and into a seeded second: empty
 ## and honest at first, then a premiership on the shelf, only your club's
 ## seasons counted, older entries said plainly, taps and Back, save and load.
@@ -1896,7 +1959,8 @@ func _test_trophies_early() -> void:
 	_check(intro != null and intro.text == "Your time at %s: 1 season, from %d." % [root.get_node("GameDB").club_name("COL"), year],
 			"The tenure line counts the season in progress (%s)" % (intro.text if intro else "none"))
 	var now: Node = s.find_child("Season_%d" % year, true, false)
-	_check(now != null and _row_text(now).contains("In progress"), "This season is in the table, in progress")
+	var at := "Round %d of %d" % [maxi(1, _state.season.round_index), _state.season.fixture.size()]
+	_check(now != null and _row_text(now).contains(at), "This season is in the table, at %s (%s)" % [at, _row_text(now) if now else "none"])
 	_check(now != null and _finish(now) != "", "Mid-season it gives where you sit (%s)" % (_finish(now) if now else "none"))
 	s.queue_free()
 	await _settle()

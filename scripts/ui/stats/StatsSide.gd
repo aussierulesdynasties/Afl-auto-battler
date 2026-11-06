@@ -22,6 +22,14 @@ static func ink(code: String) -> Color:
 	return UiKit.club_name_colour(UiKit.score_colour(code))
 
 
+## A club's line under a name on a Season stats list: its strongest real
+## colour that reads (director, 2026-11-06), never white or grey.
+static func code_ink(code: String) -> Color:
+	if code == "" or not GameDB.clubs.has(code):
+		return UiKit.MUTED
+	return UiKit.club_code_colour(code)
+
+
 ## Your club's colour as ink (a section heading), else TEXT.
 static func mine_ink() -> Color:
 	return ink(GameState.my_club)

@@ -188,7 +188,7 @@ static func _row(host: Control, row: Dictionary, rank: int, wide: bool) -> Contr
 	top.add_child(nm)
 	# His club in its own colour where it reads (the guernsey beside him says the
 	# side where it does not); yours in bold.
-	var club_ink := StatsSide.ink(club)
+	var club_ink := StatsSide.code_ink(club)
 	if beside:
 		var cl := UiKit.line(club_text, UiKit.SECONDARY, club_ink, mine)
 		cl.name = "Club"

@@ -116,6 +116,45 @@ static func score_colour(code: String, surface := AUTO_COLOUR) -> Color:
 			return cols[i]
 	return TEXT
 
+
+## A club's line under a name on a Season stats list (director, 2026-11-06):
+## the club's strongest real colour, never white, never grey, never the pitch
+## tint. From its real colours (GameDB.club_marker_colours: primary, secondary,
+## and the third only where it is a real club colour), white and greys left
+## out, the most saturated one that reads at 4.5:1 on `surface`; when none
+## does, the most saturated one lightened, its hue kept, until it reads (a
+## readable red is allowed here, unlike club_name_colour). A club with no
+## colour but black and white (Collingwood) gets its black lightened to a grey.
+const CODE_MIN_SAT := 0.25
+static func club_code_colour(code: String, surface := AUTO_COLOUR) -> Color:
+	if surface == AUTO_COLOUR:
+		surface = PANEL
+	var real: Array = GameDB.club_marker_colours(code)
+	var best := Color(0, 0, 0, 0)
+	for c in real:
+		var col: Color = c
+		if col.s >= CODE_MIN_SAT and contrast(col, surface) >= 4.5 and (best.a == 0.0 or col.s > best.s):
+			best = col
+	if best.a > 0.0:
+		return best
+	var base: Color = real[0]
+	for c in real:
+		var col: Color = c
+		if col.s > base.s:
+			base = col
+	# Lighten keeping the hue: value up to full first, then saturation down.
+	var h := base.h
+	var s := base.s
+	var v := base.v
+	var out := Color.from_hsv(h, s, v)
+	while contrast(out, surface) < 4.5 and (v < 1.0 or s > 0.0):
+		if v < 1.0:
+			v = minf(1.0, v + 0.005)
+		else:
+			s = maxf(0.0, s - 0.005)
+		out = Color.from_hsv(h, s, v)
+	return out
+
 ## Type scale for a phone. Pick from these before inventing a size.
 const H1 := 24      # screen title / the one big fact on a screen
 const H2 := 18      # section heading

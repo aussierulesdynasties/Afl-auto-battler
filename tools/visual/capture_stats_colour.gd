@@ -1,0 +1,125 @@
+extends SceneTree
+## The club line's colour on Season stats (director, 2026-11-06), for his look.
+## Needs a real renderer:
+##   godot --path . --script tools/visual/capture_stats_colour.gd -- --out /tmp/sc [--size 390x844]
+## A fresh Collingwood career plays three rounds. Writes <out>_players.png (the
+## Players list by disposals), <out>_players_goals.png (by goals),
+## <out>_swatches.png (every club's code line on the panel and the page) and
+## <out>_trophies.png (your seasons, this one at "Round 3 of 24").
+## Never touches a real save.
+
+var W := 390
+var H := 844
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
+	var out := "/tmp/sc"
+	var a := OS.get_cmdline_user_args()
+	for i in range(a.size()):
+		var v := str(a[i + 1]) if i + 1 < a.size() else ""
+		match str(a[i]):
+			"--out": out = v
+			"--size":
+				W = int(v.split("x")[0])
+				H = int(v.split("x")[1])
+	await process_frame
+	var state = root.get_node("GameState")
+	var db = root.get_node("GameDB")
+	var UK = load("res://scripts/ui/UiKit.gd")
+	state.autosave_enabled = false
+	state.save_path = "user://capture_stats_colour.save"
+	state.settings_path = "user://capture_stats_colour.cfg"
+	state.replay_seed = 2031
+	state.reset()
+	state.set_setting("seen_season_stats_intro", true)
+	root.size = Vector2i(W, H)
+	DisplayServer.window_set_size(Vector2i(W, H))
+	state.start_season("COL", db.club_list("COL"))
+	for r in range(3):
+		state.advance()
+	var sp = load("res://scripts/ui/stats/StatsPlayers.gd")
+	var hub = load("res://scripts/ui/StatsHubScene.gd")
+	for pass_ in [["disposals", "_players.png"], ["goals", "_players_goals.png"]]:
+		sp.reset_view()
+		sp.pick_group(str(pass_[0]))
+		hub.current = "players"
+		var ui: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
+		root.add_child(ui)
+		await _frames(12)
+		_save(out + str(pass_[1]))
+		ui.queue_free()
+		await _frames(2)
+	# Every club's code line, as the Players row sets it, on the panel and the page.
+	var strip := _swatches(UK, db)
+	root.add_child(strip)
+	await _frames(6)
+	_save(out + "_swatches.png")
+	strip.queue_free()
+	await _frames(2)
+	hub.current = "trophies"
+	var t_ui: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
+	root.add_child(t_ui)
+	await _frames(10)
+	var sc: ScrollContainer = t_ui.find_child("StatsScroll", true, false)
+	var t: Control = t_ui.find_child("Tenure", true, false)
+	if sc != null and t != null:
+		sc.scroll_vertical = int(t.global_position.y - sc.global_position.y) + sc.scroll_vertical - 40
+		await _frames(6)
+	_save(out + "_trophies.png")
+	quit()
+
+
+func _swatches(UK, db) -> Control:
+	var bg := ColorRect.new()
+	bg.color = UK.BG
+	bg.size = Vector2(W, H)
+	var v := GridContainer.new()
+	v.columns = 2
+	v.position = Vector2(16, 12)
+	v.add_theme_constant_override("h_separation", 0)
+	v.add_theme_constant_override("v_separation", 0)
+	bg.add_child(v)
+	var codes := ["ADE", "BRL", "CAR", "COL", "ESS", "FRE", "GEE", "GCS", "GWS", "HAW", "MEL", "NTH",
+			"PAD", "RIC", "STK", "SYD", "WCE", "WBD", "TAS", "CANB"]
+	for i in range(codes.size()):
+		var code: String = codes[i]
+		var c: Color = UK.club_code_colour(code)
+		var row := PanelContainer.new()
+		var flat := StyleBoxFlat.new()
+		flat.bg_color = UK.PANEL if (i / 2) % 2 == 0 else UK.BG
+		flat.content_margin_left = 8
+		flat.content_margin_right = 8
+		row.add_theme_stylebox_override("panel", flat)
+		row.custom_minimum_size = Vector2((W - 32) / 2.0, 0)
+		row.clip_contents = true
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		row.add_child(h)
+		h.add_child(UK.club_marker(code, 22.0))
+		var who := VBoxContainer.new()
+		who.add_theme_constant_override("separation", 0)
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(who)
+		who.add_child(UK.ellipsis(db.club_short(code), UK.NAME, UK.TEXT, true))
+		who.add_child(UK.line("%s · 3 games" % code, UK.SECONDARY, c))
+		var hexl: Label = UK.line("#%s  %.1f:1" % [c.to_html(false).to_upper(), UK.contrast(c, UK.PANEL)], UK.FINE, UK.MUTED)
+		who.add_child(hexl)
+		v.add_child(row)
+	return bg
+
+
+func _frames(n: int) -> void:
+	for i in range(n):
+		await process_frame
+
+
+func _save(path: String) -> void:
+	var img := root.get_viewport().get_texture().get_image()
+	img.convert(Image.FORMAT_RGBA8)
+	if img.save_png(path) != OK:
+		push_error("could not save " + path)
+	print("wrote ", path)
