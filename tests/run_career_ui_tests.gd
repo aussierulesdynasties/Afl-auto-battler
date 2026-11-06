@@ -584,6 +584,15 @@ func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
 
+## A pending press conference opens as its own screen when the hub comes up
+## (row 105): skip it so a flow about something else carries on from the hub.
+func _past_press() -> void:
+	if _router.current() == "press":
+		_router.handle_back(true)
+		await _settle()
+		await _settle()
+
+
 func _settle() -> void:
 	for i in range(4):
 		await process_frame
@@ -1382,7 +1391,7 @@ Your career stays on this device.",
 	if cont != null:
 		cont.emit_signal("pressed")
 		await _settle()
-	_check(_router.current() == "hub", "Continue Career opens the season hub")
+	_check(_router.current() == "hub", "Continue Career opens the season hub (%s)" % _router.current())
 	_check(_state.season != null and _state.season.round_index == 2, "The saved round is loaded")
 	_check(_state.my_club == "SYD", "The saved club is loaded")
 	var intro: Control = current_scene.find_child("WeeklyLoopIntro", true, false)
@@ -1398,6 +1407,9 @@ Your career stays on this device.",
 	_check(current_scene.find_child("WeeklyLoopIntro", true, false) == null
 			and bool(_state.get_setting("seen_weekly_loop_intro", false)),
 			"Skipping onboarding closes it and remembers the choice")
+	# A pending press conference follows the intro as its own screen; skip it.
+	await _past_press()
+	_check(_router.current() == "hub", "After the intro (and any press conference) the hub is up")
 	current_scene.call("_show_weekly_loop_intro")
 	await _settle()
 	_check(current_scene.find_child("WeeklyLoopIntro", true, false) == null,
@@ -1700,6 +1712,8 @@ Your career stays on this device.",
 	if ft_cont != null:
 		ft_cont.emit_signal("pressed")
 		await _settle()
+	# A press conference still pending opens over the hub as its own screen.
+	await _past_press()
 	var xp_after := 0
 	for p in _state.my_list:
 		xp_after += int(p.get("xp", 0))
@@ -1714,6 +1728,7 @@ Your career stays on this device.",
 	_state.load_career()
 	_router.replace("hub")
 	await _settle()
+	await _past_press()
 	again = current_scene.find_child("ReviewLastMatch", true, false)
 	_check(again != null and _state.last_match.has("players"), "Your last match can still be reviewed after a reload")
 	if again != null:
@@ -1769,6 +1784,7 @@ Your career stays on this device.",
 	# --- back on other screens ------------------------------------------------
 	_router.go("hub")
 	await _settle()
+	await _past_press()
 	# Its first-visit sheet would take the first Back; it has been read.
 	_state.set_setting("seen_season_stats_intro", true)
 	_router.go("stats")
@@ -1804,12 +1820,13 @@ Your career stays on this device.",
 	root.size = sel_size_before
 	_router.handle_back(true)
 	await _settle()
+	await _past_press()
 
 	# --- training: one-time intro, stat guide, plan picker -------------------
 	_router.go("training")
 	await _settle()
 	_check(current_scene.find_child("TrainingIntro", true, false) != null,
-			"The training intro shows on the first visit")
+			"The training intro shows on the first visit (%s)" % _router.current())
 	_router.handle_back(true)
 	await _settle()
 	_check(_router.current() == "training"
@@ -2078,6 +2095,8 @@ Your career stays on this device.",
 	_check(_state.pending_match.is_empty(), "Skip still finishes the match")
 	_router.handle_back(true)
 	await _settle()
+	# A conference the match raised opens over the hub as its own screen.
+	await _past_press()
 	_check(_router.current() == "hub", "After full time, back returns to the hub")
 	_check(not (_state.last_match.get("moments", []) as Array).is_empty(),
 			"The played match keeps its calls for the readout")
@@ -3540,6 +3559,7 @@ func _test_restore_earlier_save_tap() -> void:
 	_router.stack = ["main"]
 	_router.go("hub")
 	await _settle()
+	await _past_press()
 	var hub_settings: Button = current_scene.find_child("HubSettings", true, false)
 	if hub_settings != null:
 		hub_settings.emit_signal("pressed")
