@@ -1,5 +1,5 @@
 {
-  "_about": "How each ground looks in the vignettes. Looks only: nothing here reaches the match sim. length and width are the playing surface in metres (published figures). tiers: [inner offset, outer offset, inner height, outer height] beyond the fence, front to back. hill: the front tier is a grass bank with the crowd sitting on it. roof: edge (a thin dark lip), canopy (a pale roof reaching out over the top tier), closed (a roof over the whole ground). towers: mcg (the MCG's six tubular masts), masts (plain masts), none (lights on the roof). screens: 1 or 2 big screens. heritage_board: the old scoreboard at the other end. A ground not listed draws the default.",
+  "_about": "How each ground looks in the vignettes. Looks only: nothing here reaches the match sim. length and width are the playing surface in metres (published figures). tiers: [inner offset, outer offset, inner height, outer height] beyond the fence, front to back. hill: the front tier is a grass bank with the crowd sitting on it. roof: edge (a thin dark lip), canopy (a pale roof reaching out over the top tier), closed (a roof over the whole ground). towers: mcg (the MCG's six tubular masts), masts (plain masts), none (lights on the roof). screens: 1 or 2 big screens. heritage_board: the old scoreboard at the other end. A ground not listed draws the default; a listed ground without a published length and width (Barossa Park) takes the default size. Norwood Oval: 164 x 109, afl.com.au/venues/46.",
   "default": {
     "length": 160, "width": 136,
     "tiers": [[2.0, 26.0, 1.5, 13.0], [30.0, 52.0, 17.0, 34.0]],
@@ -72,6 +72,17 @@
       "tiers": [[2.0, 20.0, 1.4, 7.0], [24.0, 40.0, 10.0, 24.0]],
       "seat": "#2a2d36", "roof": "edge", "roof_colour": "#0f0f12",
       "towers": "masts", "tower_count": 6, "screens": 1, "hill": true
+    },
+    "Norwood Oval": {
+      "length": 164, "width": 109,
+      "tiers": [[2.0, 16.0, 1.2, 6.0], [20.0, 32.0, 8.0, 18.0]],
+      "seat": "#1b2238", "roof": "edge", "roof_colour": "#0f0f12",
+      "towers": "masts", "tower_count": 4, "screens": 1
+    },
+    "Barossa Park": {
+      "tiers": [[2.0, 14.0, 1.2, 4.5], [17.0, 26.0, 6.0, 13.0]],
+      "seat": "#2c3328", "roof": "edge", "roof_colour": "#0f0f12",
+      "towers": "masts", "tower_count": 4, "screens": 1, "hill": true
     }
   }
 }

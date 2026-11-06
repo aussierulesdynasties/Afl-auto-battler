@@ -43,8 +43,67 @@ func _run() -> void:
 	await _t("_test_stage")
 	await _t("_test_league_draft_stays_instant")
 	await _t("_test_rival_why")
+	for sz in [Vector2i(390, 844), Vector2i(360, 800), Vector2i(320, 568), Vector2i(2560, 1440)]:
+		await _t("_test_subtitle_whole", [sz])
 	print(Ran.line("Draft UI", self))
 	quit(0 if _failures.is_empty() else 1)
+
+
+## True when `l` draws less than its whole text: trimmed with an ellipsis,
+## wrapped past its visible lines, or running off the right of the window.
+func _cut(l: Label) -> bool:
+	var w: float = l.get_theme_font("font").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			l.get_theme_font_size("font_size")).x
+	if l.autowrap_mode == TextServer.AUTOWRAP_OFF and l.text_overrun_behavior != TextServer.OVERRUN_NO_TRIMMING 			and w > l.size.x + 1.0:
+		return true
+	if l.autowrap_mode != TextServer.AUTOWRAP_OFF and l.get_visible_line_count() < l.get_line_count():
+		return true
+	return l.get_global_rect().end.x > float(root.size.x) + 1.0
+
+
+## The draft's subtitle is never cut off (row 109, 6.Q18: an ellipsised
+## subtitle on a phone): the header's line under the title on the club choice
+## (a fresh league and the real 2026 lists) and on the board, and the line
+## under the club grid, all whole at phone widths and at 2560.
+func _test_subtitle_whole(sz: Vector2i) -> void:
+	var tag := "%dx%d" % [sz.x, sz.y]
+	var old_size := root.size
+	root.size = sz
+	# The check has teeth: a subtitle trimmed to fit, as it once was, is caught.
+	var probe: Label = load("res://scripts/ui/UiKit.gd").ellipsis("2027  /  A fresh start for all 18 clubs", 14)
+	probe.size = Vector2(120, 20)
+	root.add_child(probe)
+	await process_frame
+	_check(_cut(probe), "A subtitle cut to an ellipsis is caught (%s)" % tag)
+	probe.free()
+	for mode in ["fresh", "real", "board"]:
+		_state.reset()
+		_state.replay_seed = 12345
+		_state.opening_draft = mode == "real"
+		_state.draft = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(),
+				_db.active_clubs(2027).duplicate(), 12345)
+		var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+		root.add_child(ui)
+		await _settle()
+		if mode == "board":
+			ui.call("_on_club_chosen", "COL")
+			await _settle()
+		var subs: Array = []
+		for c in ui.find_children("*", "Label", true, false):
+			var l := c as Label
+			if l.is_visible_in_tree() and (l.name == "DraftSubtitle" or l.text.begins_with("Every club drafts")
+					or l.text.begins_with("Your first pick")):
+				subs.append(l)
+		var short_view: bool = bool(ui.get("_short"))
+		_check(short_view or subs.size() >= 1, "The %s draft screen has its subtitle (%s, %d)" % [mode, tag, subs.size()])
+		for l in subs:
+			_check(not _cut(l), "The %s draft subtitle is whole: \"%s\" (%s, %.0f wide, %d of %d lines)" % [
+					mode, (l as Label).text, tag, (l as Label).size.x,
+					(l as Label).get_visible_line_count(), (l as Label).get_line_count()])
+		ui.queue_free()
+		await _settle()
+	_state.opening_draft = false
+	root.size = old_size
 
 
 ## The board on every viewport: picks, filters, history and reopening (the checks written in _run).

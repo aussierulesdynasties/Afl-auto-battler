@@ -147,6 +147,9 @@ static func valid(key: String, value) -> bool:
 			return value is bool
 		"bandage":
 			return value is int and int(value) >= 0 and int(value) < LEVELS
+		"brows":
+			# full() adds it with Features "player_looks" on (brows_for).
+			return value is int and int(value) >= 0 and int(value) < VignetteLooks.FACES.size()
 		"tattoos":
 			if not value is Array:
 				return false
