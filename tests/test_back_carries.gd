@@ -207,7 +207,8 @@ func _chain_from(seed: int, origin: String, at_fp: float) -> Dictionary:
 
 
 ## A spoiled entry: whoever wins the ground ball has it (the spoiler only some
-## of the time), the feed names him, and the next chain's first touch is his.
+## of the time; always a defender, the men at the fall of the ball in their own
+## 50), the feed names him, and the next chain's first touch is his.
 ## The intercept stays the spoiler's: a teammate who gathers is not credited one.
 func _test_spoil_goes_to_ground_ball_winner() -> void:
 	var spoils := 0
@@ -215,6 +216,7 @@ func _test_spoil_goes_to_ground_ball_winner() -> void:
 	var first_touch_ok := true
 	var text_ok := true
 	var intercept_ok := true
+	var defender_ok := true
 	for seed in range(200):
 		var sim := _sim(4500 + seed)
 		sim.begin_quarter()
@@ -227,6 +229,7 @@ func _test_spoil_goes_to_ground_ball_winner() -> void:
 			continue
 		spoils += 1
 		var gid := str((res["actor"] as Dictionary)["id"])
+		defender_ok = defender_ok and str((res["actor"] as Dictionary).get("role", "")) == "DEF"
 		text_ok = text_ok and str(ev.get("kind", "")) == "rebound" and str(ev.get("player_id", "")) == gid \
 				and str(sim._won_back.get("gatherer", "")) == gid and not bool(sim._won_back.get("marked", false))
 		var sid := str(sim._won_back.get("id", ""))
@@ -251,5 +254,6 @@ func _test_spoil_goes_to_ground_ball_winner() -> void:
 	_check(spoils > 5, "some seeded entries are spoiled to the deck (%d)" % spoils)
 	_check(text_ok, "the feed names the ground-ball winner as the one who has it, gathered not marked")
 	_check(other_man > 0, "the ground ball is not always the spoiler's (%d of %d to someone else)" % [other_man, spoils])
+	_check(defender_ok, "the ground ball in defence goes to a defender, not a man up the ground")
 	_check(first_touch_ok, "the next chain's first touch is the ground-ball winner's")
 	_check(intercept_ok, "the intercept is the spoiler's; a teammate who gathers it is not credited one")

@@ -3573,8 +3573,14 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 	# the next chain's first disposal. Drawn on gather_rng, so every other
 	# pick's dice are where they were.
 	if spoilt and not marked and spoiler != null:
+		# The defenders are the ones at the fall of the ball in their own
+		# 50; the best user of it among them tends to get there first.
+		var near := []
+		for p in (squads[opp] as Squad).ground:
+			if str(p["role"]) == "DEF":
+				near.append(p)
 		_gathering = true
-		var gatherer = pick_carrier(opp, fp)
+		var gatherer = pick_carrier(opp, fp, near)
 		_gathering = false
 		if gatherer == null:
 			gatherer = taker

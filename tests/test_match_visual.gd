@@ -781,8 +781,10 @@ func _test_truth(res: Dictionary) -> Array:
 ## player 40 m off on average) before, 9 (0, 30 m) after; four trace seeds
 ## 139 -> 47. The caps leave room for sim changes redrawing the match (the
 ## 1.0.7 tuning measured 13: 14, director 2026-11-06, loosen to measured).
+## Key defenders (2026-11-07) redrew seed 42 to 19; over trace_collect's 12
+## matches the long collects held level (183 on main, 181 after): 19.
 const PAUSE_S := 1.5
-const PAUSE_MAX := 14
+const PAUSE_MAX := 19
 const PAUSE_PRESSURE_MAX := 1
 
 
