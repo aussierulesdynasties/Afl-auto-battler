@@ -38,6 +38,11 @@ var _margin: MarginContainer
 var _stacked := false
 var _last_tactics := {}
 var _skipping := false
+## Skip to the next break (director, 2026-11-06): beside Skip to full time in
+## the first three quarters. Quarter breaks opened so far (set as each opens).
+var _break_skip: Button
+var _breaks_played := 0
+const BREAK_NAMES := ["quarter time", "half time", "three-quarter time"]
 var _crowd: CrowdSound = null    # FL-004: the crowd (presentation only)
 var _fulltime_shown := false
 ## FL-007: the milestone this match honours after the siren (GameState's banner
@@ -403,7 +408,8 @@ func _track_momentum(ev: Dictionary) -> void:
 	if not ev.has("mom"):
 		return
 	_momentum = clampf(float(ev["mom"]), -1.0, 1.0)
-	_paint_momentum()
+	if not _skipping:
+		_paint_momentum()
 
 
 func _score_column(code: String, home: bool, narrow: bool) -> Control:
@@ -503,6 +509,20 @@ func _controls() -> Control:
 	skip.pressed.connect(_on_skip)
 	row2.add_child(skip)
 
+	# The rest of this quarter at once, then the break and its calls as ever.
+	# Only in a match you coach, and not in the last quarter (it would be
+	# Skip to full time).
+	if _interactive:
+		_break_skip = UiKit.btn("Skip to quarter time", UiKit.SECONDARY)
+		_break_skip.name = "SkipToBreak"
+		_break_skip.custom_minimum_size = Vector2(0, 44)
+		_break_skip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_break_skip.clip_text = true
+		_break_skip.pressed.connect(_on_skip_to_break)
+		_break_skip.ready.connect(_fit_break_skip, CONNECT_ONE_SHOT)
+		row2.add_child(_break_skip)
+		row2.move_child(_break_skip, 0)
+
 	# Your own match cannot be left half way (Back says so); a replay can.
 	if not _interactive:
 		var leave := UiKit.btn("Back to hub", UiKit.SECONDARY)
@@ -513,6 +533,20 @@ func _controls() -> Control:
 
 	_sync_controls()
 	return v
+
+
+## The break button is never narrower than its longest name: on a 320-wide
+## screen half the row would cut "Skip to three-quarter time" short, so it
+## takes what it needs and Skip to full time the rest.
+func _fit_break_skip() -> void:
+	var fnt := _break_skip.get_theme_font("font")
+	var fs := _break_skip.get_theme_font_size("font_size")
+	var sty := _break_skip.get_theme_stylebox("normal")
+	var pad := (sty.get_margin(SIDE_LEFT) + sty.get_margin(SIDE_RIGHT)) if sty else 0.0
+	var need := 0.0
+	for n in BREAK_NAMES:
+		need = maxf(need, fnt.get_string_size("Skip to " + str(n), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
+	_break_skip.custom_minimum_size.x = ceilf(need + pad + 4.0)
 
 
 func _sync_controls() -> void:
@@ -527,6 +561,11 @@ func _sync_controls() -> void:
 		_km_watch.visible = _key_moments
 		UiKit.set_selected(_km_word, true)
 		UiKit.set_selected(_km_watch, false)
+	if _break_skip != null:
+		var at := _breaks_played + 1
+		_break_skip.visible = at < 4 and not _finished
+		if at < 4:
+			_break_skip.text = "Skip to " + str(BREAK_NAMES[at - 1])
 
 
 ## Watch from here on: your usual speed, the speed buttons back.
@@ -610,6 +649,46 @@ func _on_skip() -> void:
 		_pitch.skip_to_end()
 
 
+## Skip to the break: this quarter is rolled to its end exactly as watching it
+## would roll it (MatchSim.run_quarter; a call still to come takes its default,
+## as Skip to full time does), every event reaches the feed and the
+## scoreboard without the animation, and the break comes up with every call.
+func _on_skip_to_break() -> void:
+	var sim: MatchSim = GameState.pending_sim
+	if not _interactive or sim == null or _pitch == null or _skipping or _finished or _breaks_played >= 3:
+		return
+	if _coach_overlay != null and is_instance_valid(_coach_overlay):
+		return
+	_close_moment()
+	# A close-up queued for this frame is dropped with the play it would show,
+	# and a Key moments slow ends with it.
+	_broadcast_pending = false
+	if _key_moments and _km_why != "":
+		_km_fast()
+	# The rest of the quarter takes a moment on a phone: the button says so
+	# and the oval holds still while it is played.
+	_pitch.pause()
+	_skipping = true
+	_break_skip.disabled = true
+	_break_skip.text = "Playing on..."
+	await get_tree().process_frame
+	await get_tree().process_frame
+	# Skip to full time in those two frames has already ended the match.
+	if not is_inside_tree() or GameState.pending_sim != sim or _finished:
+		return
+	if sim.quarter_in_progress():
+		_res = sim.run_quarter()
+		_stamp_match_meta()
+		_append_new_events()
+	# No crowd, close-ups or Key moments stops on the way.
+	_pitch.release_all()
+	_skipping = false
+	_break_skip.disabled = false
+	_refresh_rings()
+	_paint_momentum()
+	_on_finished()
+
+
 func _close_moment() -> void:
 	if _moment_overlay != null and is_instance_valid(_moment_overlay):
 		if _moment_overlay.has_meta("scene") and not _skipping:
@@ -686,9 +765,13 @@ func _show_coach_box() -> void:
 	_break_pack_cols = []
 	_break_reading = []
 	_pitch.pause()
-	_sync_controls()
 	var sim: MatchSim = GameState.pending_sim
 	var q := sim.current_quarter
+	# The skip button names the next break from here. Counted when the break
+	# opens, not at the siren: in the moment between the two, a tap still
+	# lands on the break that has just sounded, and the button says so.
+	_breaks_played = q - 1
+	_sync_controls()
 	if _key_moments:
 		# The break is the stop; the next quarter starts at top speed.
 		if q > 1:
@@ -3270,7 +3353,10 @@ func _refresh_rings() -> void:
 func _on_event(ev: Dictionary) -> void:
 	var event_index := _playback_event_index
 	_playback_event_index += 1
-	_refresh_rings()
+	# Skipping to the break releases a quarter's events at once: the rings and
+	# the meter are painted once at the end, not for every event.
+	if not _skipping:
+		_refresh_rings()
 	_update_scoreboard(ev)
 	_track_momentum(ev)
 	_feed_add(ev)
