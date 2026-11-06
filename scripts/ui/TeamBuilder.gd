@@ -52,6 +52,16 @@ var _search := ""
 var _wide := false
 var _pitch: Control
 var _spot_at := {}        # spot key -> Vector2 (FormationView.SLOTS "at")
+## The pitch size the cards were last laid out for, and a layout waiting for
+## the end of the frame (_queue_place).
+var _placed_for := Vector2(-1, -1)
+var _place_queued := false
+## The cards' positions and sizes while _place_spots moves them.
+var _pos := PackedVector2Array()
+var _sz := PackedVector2Array()
+var _ground := Rect2()
+## Card layouts run, all builders together (the tests count one per open).
+static var layouts := 0
 ## The ground runs across (left to right) only when six cards fit side by side
 ## down its middle; otherwise it runs up the screen, as on a phone, with the
 ## narrower cards and the midfield spread across (_place_spots).
@@ -138,7 +148,8 @@ func _build() -> void:
 		_pitch.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_pitch.mouse_filter = Control.MOUSE_FILTER_PASS
 	_pitch.draw.connect(_draw_pitch)
-	_pitch.resized.connect(_place_spots)
+	_pitch.resized.connect(_queue_place)
+	_placed_for = Vector2(-1, -1)
 	field.add_child(_pitch)
 	for line in ["RUCK", "MID", "WING", "DEF", "FWD"]:
 		var ids: Array = _side[line]
@@ -180,7 +191,7 @@ func _build() -> void:
 		bench.add_child(bc)
 	if after_bench != null:
 		field.add_child(after_bench)
-	_place_spots.call_deferred()
+	_queue_place()
 	if field_only:
 		return
 
@@ -437,8 +448,7 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 	if id != "":
 		b.set_drag_forwarding(
 				func(_at: Vector2):
-					var preview := UiKit.lbl(GameDB.player_display_name(p), 14, UiKit.TEXT, true)
-					b.set_drag_preview(preview)
+					b.set_drag_preview(drag_preview(GameDB.player_display_name(p)))
 					return {"team_builder": id},
 				func(_at: Vector2, data) -> bool:
 					return data is Dictionary and (data as Dictionary).has("team_builder"),
@@ -451,6 +461,18 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 				func(_at: Vector2, data) -> void:
 					_swap(str(data["team_builder"]), "", place))
 	return b
+
+
+## The name that follows a finger while a player is dragged. A drag preview has
+## no parent width, so a wrapping label broke the name into one letter a line
+## (director's screenshot, 2026-11-07): it stays on one line, outlined so it
+## reads over the turf and over the cards.
+static func drag_preview(name: String) -> Label:
+	var l := UiKit.lbl(name, 14, UiKit.TEXT, true)
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.add_theme_color_override("font_outline_color", Color(0.05, 0.05, 0.04, 0.9))
+	l.add_theme_constant_override("outline_size", 4)
+	return l
 
 
 func _player(id: String) -> Dictionary:
@@ -565,8 +587,14 @@ const TURF_LIGHT := Color(0.133, 0.365, 0.149)
 
 
 func _place_spots() -> void:
-	if not is_instance_valid(_pitch):
+	_place_queued = false
+	# A pitch with no width yet (built, not yet sorted into its screen) has
+	# nowhere to put a card: laying 18 out on it never settled and took 7-18
+	# seconds before the screen could draw (director, 2026-11-06).
+	if not is_instance_valid(_pitch) or _pitch.size == _placed_for or _pitch.size.x <= 0.0 or _pitch.size.y <= 0.0:
 		return
+	_placed_for = _pitch.size
+	layouts += 1
 	var r := Rect2(Vector2.ZERO, _pitch.size).grow(-8.0)
 	_across = _wide and r.size.x >= ACROSS_MIN_W
 	for c in _pitch.get_children():
@@ -594,29 +622,45 @@ func _place_spots() -> void:
 		_clear_pockets()
 	# Inside the boundary line where the ground has room for it; a ground
 	# too narrow for three cards abreast (a 320-unit phone) keeps the gap
-	# and lets corners over the line.
-	var start := {}
-	for c in _pitch.get_children():
-		if c.has_meta("spot"):
-			start[c] = (c as Control).position
+	# and lets corners over the line. The cards are moved as numbers and
+	# placed once at the end: moving the Controls themselves a pixel at a
+	# time took seconds to open a screen (director, 2026-11-06).
+	var cards: Array = _pitch.get_children().filter(func(c): return c.has_meta("spot"))
+	_pos = PackedVector2Array()
+	_sz = PackedVector2Array()
+	for c in cards:
+		_pos.append((c as Control).position)
+		_sz.append((c as Control).size)
+	var start := _pos.duplicate()
+	_ground = Rect2(Vector2.ZERO, _pitch.size).grow(-GROUND_INSET)
 	for _round in range(12):
 		_keep_on_ground(r)
 		_spread_tokens(r, true)
 	if not _spread_tokens(r, true):
-		for c in start:
-			(c as Control).position = start[c]
+		_pos = start
 		_spread_tokens(r, false)
 		_ease_on_ground(r)
+	for i in range(cards.size()):
+		(cards[i] as Control).position = _pos[i]
 	_pitch.queue_redraw()
+
+
+## A resize lays the cards out once, when the frame's resizes have settled,
+## and only for a size not laid out already: a pitch resized several times as
+## its screen opened used to lay out every size on the way.
+func _queue_place() -> void:
+	if _place_queued:
+		return
+	_place_queued = true
+	_place_spots.call_deferred()
 
 
 ## Each card's corners inside the white boundary line (the ground _draw_pitch
 ## draws), stepped in a pixel at a time square off the line where it crosses. A corner over
 ## the line read as a card falling off the ground (critic, 2026-11-04).
 func _keep_on_ground(r: Rect2) -> void:
-	for card in _pitch.get_children():
-		if card.has_meta("spot"):
-			_onto_ground(card as Control, r)
+	for i in range(_pos.size()):
+		_onto_ground(i, r)
 
 
 ## After the gap won over the line: each card still over it steps back on
@@ -624,71 +668,74 @@ func _keep_on_ground(r: Rect2) -> void:
 ## the line, straight in across the ground, or straight in along it. Only the
 ## cards with no room left keep a corner over (critic, 2026-11-05).
 func _ease_on_ground(r: Rect2) -> void:
-	var cards: Array = _pitch.get_children().filter(func(c): return c.has_meta("spot"))
 	for _round in range(3):
-		for k in cards:
+		for k in range(_pos.size()):
 			if _corners_off(k) == 0:
 				continue
-			var was: Vector2 = k.position
+			var was: Vector2 = _pos[k]
 			for way in [Vector2.ZERO, Vector2(1, 0), Vector2(0, 1)]:
-				k.position = was
+				_pos[k] = was
 				_onto_ground(k, r, way)
-				if _corners_off(k) == 0 and _clear_of(k, cards):
+				if _corners_off(k) == 0 and _clear_of(k):
 					break
-				k.position = was
+				_pos[k] = was
 			if _corners_off(k) == 0:
 				continue
 			# No room to come all the way on: come in a pixel at a time as far
 			# as the gap allows, so the corner sits as near the line as it can.
 			for _step in range(int(GROUND_INSET) * 4):
-				var at: Vector2 = k.position
+				var at: Vector2 = _pos[k]
 				_onto_ground(k, r, Vector2.ZERO, 1)
-				if k.position == at or not _clear_of(k, cards):
-					k.position = at
+				if _pos[k] == at or not _clear_of(k):
+					_pos[k] = at
 					break
 
 
-func _corners_off(k: Control) -> int:
-	var g := Rect2(Vector2.ZERO, _pitch.size).grow(-GROUND_INSET)
+func _corners_off(k: int) -> int:
+	var c := _ground.get_center()
+	var half := _ground.size * 0.5
+	var p: Vector2 = _pos[k]
+	var s: Vector2 = _sz[k]
 	var n := 0
-	for corner in [k.position, k.position + Vector2(k.size.x, 0), k.position + Vector2(0, k.size.y), k.position + k.size]:
-		var q: Vector2 = (corner - g.get_center()) / (g.size * 0.5)
+	for corner in [p, p + Vector2(s.x, 0), p + Vector2(0, s.y), p + s]:
+		var q: Vector2 = (corner - c) / half
 		if q.length_squared() > 1.0001:
 			n += 1
 	return n
 
 
-func _clear_of(k: Control, cards: Array) -> bool:
-	var rk := Rect2(k.position, k.size).grow(TOKEN_GAP * 0.5)
-	for o in cards:
-		if o != k and rk.intersects(Rect2((o as Control).position, (o as Control).size).grow(TOKEN_GAP * 0.5)):
+func _clear_of(k: int) -> bool:
+	var rk := Rect2(_pos[k], _sz[k]).grow(TOKEN_GAP * 0.5)
+	for o in range(_pos.size()):
+		if o != k and rk.intersects(Rect2(_pos[o], _sz[o]).grow(TOKEN_GAP * 0.5)):
 			return false
 	return true
 
 
 ## `way` zero squares a card off the line; (1, 0) or (0, 1) moves it only
 ## across or only along the ground.
-func _onto_ground(k: Control, r: Rect2, way := Vector2.ZERO, steps := 80) -> void:
-	k.position = k.position.clamp(r.position, r.end - k.size)
-	var g := Rect2(Vector2.ZERO, _pitch.size).grow(-GROUND_INSET)
-	var c := g.get_center()
-	var half := g.size * 0.5
+func _onto_ground(k: int, r: Rect2, way := Vector2.ZERO, steps := 80) -> void:
+	var s: Vector2 = _sz[k]
+	var p: Vector2 = _pos[k].clamp(r.position, r.end - s)
+	var c := _ground.get_center()
+	var half := _ground.size * 0.5
 	for _step in range(steps):
 		var worst := 1.0
 		var normal := Vector2.ZERO
-		for corner in [k.position, k.position + Vector2(k.size.x, 0), k.position + Vector2(0, k.size.y), k.position + k.size]:
+		for corner in [p, p + Vector2(s.x, 0), p + Vector2(0, s.y), p + s]:
 			var q: Vector2 = (corner - c) / half
 			if q.length_squared() > worst:
 				worst = q.length_squared()
 				normal = Vector2(q.x / half.x, q.y / half.y)
 		if normal == Vector2.ZERO:
-			return
+			break
 		# Square off the line where that corner crosses it.
 		if way != Vector2.ZERO:
 			normal *= way
 			if normal == Vector2.ZERO:
-				return
-		k.position -= normal.normalized()
+				break
+		p -= normal.normalized()
+	_pos[k] = p
 
 
 ## Up a narrow screen the pockets' cards reach in over the centre half-back's
@@ -724,23 +771,21 @@ func _clear_pockets() -> void:
 ## against the line holds and its neighbour gives way. True once they all clear. Every pair's push is worked out from the same
 ## positions before any card moves, so a layout that is mirror-even stays even.
 func _spread_tokens(r: Rect2, ground: bool) -> bool:
-	var cards: Array = _pitch.get_children().filter(func(c): return c.has_meta("spot"))
+	var n := _pos.size()
 	for _pass in range(200):
-		var push := []
-		push.resize(cards.size())
+		var push := PackedVector2Array()
+		push.resize(n)
 		push.fill(Vector2.ZERO)
 		var moved := false
-		for i in range(cards.size()):
-			for j in range(i + 1, cards.size()):
-				var a: Control = cards[i]
-				var b: Control = cards[j]
-				var ra := Rect2(a.position, a.size).grow(TOKEN_GAP * 0.5)
-				var rb := Rect2(b.position, b.size).grow(TOKEN_GAP * 0.5)
+		for i in range(n):
+			var ra := Rect2(_pos[i], _sz[i]).grow(TOKEN_GAP * 0.5)
+			for j in range(i + 1, n):
+				var rb := Rect2(_pos[j], _sz[j]).grow(TOKEN_GAP * 0.5)
 				if not ra.intersects(rb):
 					continue
 				var dx := minf(ra.end.x - rb.position.x, rb.end.x - ra.position.x)
 				var dy := minf(ra.end.y - rb.position.y, rb.end.y - ra.position.y)
-				var d := (b.position + b.size * 0.5) - (a.position + a.size * 0.5)
+				var d: Vector2 = (_pos[j] + _sz[j] * 0.5) - (_pos[i] + _sz[i] * 0.5)
 				var p := Vector2.ZERO
 				if dx < dy and d.x != 0.0 or d.y == 0.0:
 					p.x = (dx * 0.5 + 0.05) * (1.0 if d.x > 0.0 else -1.0)
@@ -751,13 +796,12 @@ func _spread_tokens(r: Rect2, ground: bool) -> bool:
 				moved = true
 		if not moved:
 			return true
-		for i in range(cards.size()):
-			var c: Control = cards[i]
-			c.position += push[i]
+		for i in range(n):
+			_pos[i] += push[i]
 			if ground:
-				_onto_ground(c, r)
+				_onto_ground(i, r)
 			else:
-				c.position = c.position.clamp(r.position, r.end - c.size)
+				_pos[i] = _pos[i].clamp(r.position, r.end - _sz[i])
 	return false
 
 
