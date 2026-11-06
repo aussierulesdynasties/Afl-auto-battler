@@ -197,7 +197,8 @@ func _show_home() -> void:
 	# A career file that cannot be continued says why, instead of the menu
 	# quietly looking like there was never a career (T5.Q24). The space above
 	# shrinks so the note sits as close to the tagline as to New career.
-	var why := "" if GameState.has_career() or GameState.has_saved_career() 			else GameState.saved_career_problem()
+	var saved := not GameState.has_career() and GameState.has_saved_career()
+	var why := "" if GameState.has_career() or saved else GameState.saved_career_problem()
 	_content.add_child(UiKit.spacer(28 if why == "" else 6))
 
 	var col := UiKit.vbox(10)
@@ -217,7 +218,6 @@ func _show_home() -> void:
 	var resume_draft := GameState.draft != null and not GameState.draft.user_club.is_empty() \
 			and GameState.season == null
 	var live := resume_draft or GameState.season != null
-	var saved := not GameState.has_career() and GameState.has_saved_career()
 	if live or saved:
 		var cont := UiKit.btn("Continue", UiKit.H2, true)
 		cont.name = "ResumeCareer" if live else "ContinueCareer"

@@ -529,6 +529,19 @@ const PRACTICE_REGION := {
 }
 
 
+## A created club (Club Forge) has no entry above: it takes the region of its
+## home state, the way Tasmania and Canberra do.
+const STATE_REGION := {"VIC": "VIC", "TAS": "VIC", "NSW": "NSW", "ACT": "NSW",
+	"QLD": "QLD", "SA": "SA", "NT": "SA", "WA": "WA"}
+
+
+static func practice_region(code: String) -> String:
+	if PRACTICE_REGION.has(code):
+		return str(PRACTICE_REGION[code])
+	var row: Dictionary = GameDB.clubs.get(code, {})
+	return str(STATE_REGION.get(str(row.get("state", "")), ""))
+
+
 static func practice_week() -> int:
 	return int(tune("practice_week"))
 
@@ -546,7 +559,7 @@ static func practice_guests() -> int:
 ## club in turn takes the club of its region that the year's draw puts first
 ## (a hash of the career seed, the year and the club's code); whoever has no
 ## regional club left is drawn against another such club, and an odd club out
-## has no match. The same career and year always give the same draw.
+## has no match (never yours). The same career and year always give the same draw.
 static func practice_pairs(clubs: Array, my_club: String, career_seed: int, year: int) -> Array:
 	var rank := {}
 	for c in clubs:
@@ -566,11 +579,11 @@ static func practice_pairs(clubs: Array, my_club: String, career_seed: int, year
 	for a in order:
 		if taken.has(a):
 			continue
-		var region := str(PRACTICE_REGION.get(a, ""))
+		var region := practice_region(a)
 		if region == "":
 			continue
 		for b in order:
-			if b != a and not taken.has(b) and str(PRACTICE_REGION.get(b, "")) == region:
+			if b != a and not taken.has(b) and practice_region(b) == region:
 				taken[a] = true
 				taken[b] = true
 				pairs.append([a, b])
@@ -581,6 +594,12 @@ static func practice_pairs(clubs: Array, my_club: String, career_seed: int, year
 			left.append(a)
 	for i in range(0, left.size() - 1, 2):
 		pairs.append([left[i], left[i + 1]])
+	# Your club always has a match: a created club outside every region, left
+	# alone once the regions pair off, takes the last-drawn pair's first club,
+	# and that club's partner is the one without a match.
+	if left.size() == 1 and str(left[0]) == my_club and not pairs.is_empty():
+		var last: Array = pairs.pop_back()
+		pairs.push_front([my_club, last[0]])
 	return pairs
 
 

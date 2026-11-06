@@ -98,6 +98,35 @@ static func contract_factor(p: Dictionary) -> float:
 ## side at what its players are expected to become (`future_rating`: part
 ## of the way to potential, never all of it), for judging future cover.
 static func selection_bars(list: Array, projected := false) -> Dictionary:
+	if not _bars_memo_on:
+		return _selection_bars(list, projected)
+	var key := PackedStringArray(["1" if projected else "0"])
+	for q in list:
+		key.append("%s:%d" % [str(q["id"]), int(q.get("overall", 0))])
+	var k := ",".join(key)
+	if not _bars_memo.has(k):
+		_bars_memo[k] = _selection_bars(list, projected)
+	return (_bars_memo[k] as Dictionary).duplicate()
+
+
+## While the trade market runs, the league is frozen (GameState._freeze_league):
+## no rating, injury or role changes until it closes, so the bars of a given
+## list (same players in the same order) cannot change. The market asks for
+## the same list's bars thousands of times; remember them until it closes.
+## A trade changes the list, so it changes the key: nothing to invalidate.
+static var _bars_memo := {}
+static var _bars_memo_on := false
+## How many times the bars were worked out from scratch (perf guard in tests).
+static var bars_built := 0
+
+
+static func remember_bars(on: bool) -> void:
+	_bars_memo_on = on
+	_bars_memo.clear()
+
+
+static func _selection_bars(list: Array, projected: bool) -> Dictionary:
+	bars_built += 1
 	var side := Ratings.select_22(list)
 	var bars := {}
 	for q in side["ground"]:

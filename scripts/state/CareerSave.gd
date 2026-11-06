@@ -53,12 +53,47 @@ static var fail_at := ""
 ## A usable save at `path`, or one to recover it from.
 static func exists(path := DEFAULT_PATH) -> bool:
 	for p in [path, path + TEMP_SUFFIX, path + BACKUP_SUFFIX]:
-		if not _blob_at(p).is_empty():
+		if bool(_checked(p)["ok"]):
 			return true
 	return false
 
 
+## What a full decode of the file at `path` found: {"ok", "meta"}. The title
+## screen asks exists() and read_meta() of the same save; decoding a big
+## save is a stall on a phone, so each file is decoded once and the answer
+## kept while the file is unchanged (same length and time, and no write
+## through this class since).
+static var _checks := {}
+## Full decodes of a save file for a check (exists, read_meta): tests count them.
+static var check_decodes := 0
+
+
+static func _checked(p: String) -> Dictionary:
+	if not FileAccess.file_exists(p):
+		_checks.erase(p)
+		return {"ok": false, "meta": {}}
+	var stamp := "%d|%d" % [FileAccess.get_modified_time(p), _length(p)]
+	var had: Dictionary = _checks.get(p, {})
+	if str(had.get("stamp", "")) == stamp:
+		return had
+	check_decodes += 1
+	var blob := _blob_at(p)
+	var res := {"stamp": stamp, "ok": not blob.is_empty(), "meta": blob.get("meta", {}) if not blob.is_empty() else {}}
+	_checks[p] = res
+	return res
+
+
+static func _length(p: String) -> int:
+	var f := FileAccess.open(p, FileAccess.READ)
+	if f == null:
+		return -1
+	var n := f.get_length()
+	f.close()
+	return n
+
+
 static func delete(path := DEFAULT_PATH) -> void:
+	_checks.clear()
 	for p in [path, path + TEMP_SUFFIX, path + BACKUP_SUFFIX]:
 		if FileAccess.file_exists(p):
 			DirAccess.remove_absolute(p)
@@ -82,17 +117,26 @@ static func write(state: Dictionary, meta: Dictionary, path := DEFAULT_PATH, ver
 ## Write an already encoded blob through the safe swap. The save it replaces
 ## joins the earlier saves first (_keep_history).
 static func _write_blob(blob: Dictionary, path: String) -> bool:
+	_checks.clear()
 	var tmp := path + TEMP_SUFFIX
 	var bak := path + BACKUP_SUFFIX
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
 	if f == null:
 		push_warning("CareerSave: cannot write %s (%d)" % [tmp, FileAccess.get_open_error()])
 		return false
-	f.store_var(blob)
+	# The same bytes store_var writes (a 32-bit length, then the encoded
+	# value), kept in hand so the check below needs no decode.
+	var bytes := var_to_bytes(blob)
+	var head := PackedByteArray()
+	head.resize(4)
+	head.encode_u32(0, bytes.size())
+	f.store_buffer(head)
+	f.store_buffer(bytes)
 	f.close()
-	# Read it back before trusting it: a short or garbled write never replaces
-	# a good save.
-	if _blob_at(tmp).is_empty():
+	# Check it before trusting it: a short or garbled write never replaces a
+	# good save. The file must be exactly what was meant to be written (its
+	# length and MD5); decoding it back cost a phone seconds on every save.
+	if not _wrote(tmp, head, bytes):
 		push_warning("CareerSave: %s did not read back; the previous save is kept" % tmp)
 		DirAccess.remove_absolute(tmp)
 		return false
@@ -122,6 +166,16 @@ static func _write_blob(blob: Dictionary, path: String) -> bool:
 	return true
 
 
+static func _wrote(p: String, head: PackedByteArray, bytes: PackedByteArray) -> bool:
+	if _length(p) != head.size() + bytes.size():
+		return false
+	var ctx := HashingContext.new()
+	ctx.start(HashingContext.HASH_MD5)
+	ctx.update(head)
+	ctx.update(bytes)
+	return ctx.finish().hex_encode() == FileAccess.get_md5(p)
+
+
 ## The decoded state, or {} if there is no usable save.
 static func read(path := DEFAULT_PATH) -> Dictionary:
 	var blob := _read_blob(path)
@@ -135,8 +189,12 @@ static func read(path := DEFAULT_PATH) -> Dictionary:
 
 ## Just the header (club, year, phase) for the main menu.
 static func read_meta(path := DEFAULT_PATH) -> Dictionary:
-	var blob := _read_blob(path)
-	return blob.get("meta", {}) if not blob.is_empty() else {}
+	# The same order as _read_blob: the newest good save's header.
+	for p in [path + TEMP_SUFFIX, path, path + BACKUP_SUFFIX]:
+		var c := _checked(p)
+		if bool(c["ok"]):
+			return (c["meta"] as Dictionary).duplicate(true)
+	return {}
 
 
 ## Why there is no usable save at `path`: "" (a usable save, or no file at
@@ -569,6 +627,7 @@ static func import_bytes(bytes: PackedByteArray, path := DEFAULT_PATH) -> String
 		return "unreadable"
 	f.store_buffer(bytes)
 	f.close()
+	_checks.clear()
 	var blob := _blob_at(probe)
 	var v := _version_at(probe)
 	DirAccess.remove_absolute(probe)

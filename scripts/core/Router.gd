@@ -24,9 +24,6 @@ var stack: Array = []
 
 
 func go(key: String) -> void:
-	# Every screen change is a safe point to save (GameState skips it while a
-	# live match is half played).
-	GameState.autosave_if_dirty()
 	var path := str(SCENES.get(key, key))
 	if not ResourceLoader.exists(path):
 		push_error("Router: scene not found for '%s' (%s)" % [key, path])
@@ -42,6 +39,11 @@ func go(key: String) -> void:
 
 
 func _swap(key: String, path: String, ease_in: bool) -> void:
+	# Every screen change is a safe point to save (GameState skips it while a
+	# live match is half played). With the wipe on, this runs under full
+	# cover, so the dots answer the tap at once and the save happens behind
+	# them, still before the next screen reads anything.
+	GameState.autosave_if_dirty()
 	var err := get_tree().change_scene_to_file(path)
 	if err != OK:
 		push_error("Router: change_scene_to_file failed (%d) for %s" % [err, path])
