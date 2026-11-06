@@ -8,7 +8,8 @@ extends RefCounted
 ## Each season start, every player on your list without a focus locked this
 ## season gets one. Prints one FOCUS line per seed and season: mean OVR change
 ## (all, and age 23 and under at the season start), mean change in the focus
-## stat (or, for off, in the stat the top arm would pick) and the club's finish.
+## stat (or, for off, in the stat the top arm would pick), mean stat points
+## bought, mean XP still banked at the season's end and the club's finish.
 ## Args after the impl name: arm seasons club. Env FOCUS_SEEDS=a,b,c (default 301,302,303).
 
 var arm := "off"
@@ -63,13 +64,16 @@ func _career(seed: int, seasons: int) -> void:
 		for p in GameState.my_list:
 			var k := str(keys.get(str(p["id"]), ""))
 			start[str(p["id"])] = [int(p["overall"]), float(p.get("age", 25.0)),
-					k, int((p.get("attr", {}) as Dictionary).get(k, 0))]
+					k, int((p.get("attr", {}) as Dictionary).get(k, 0)),
+				(p.get("attr", {}) as Dictionary).duplicate()]
 		while not GameState.season.is_season_over():
 			GameState.advance()
 		var all_d := []
 		var young_d := []
 		var stat_d := []
 		var share := []
+		var points := []
+		var banked := []
 		for p in GameState.my_list:
 			var id := str(p["id"])
 			if not start.has(id):
@@ -81,12 +85,18 @@ func _career(seed: int, seasons: int) -> void:
 				young_d.append(d)
 			if str(st[2]) != "":
 				stat_d.append(int((p.get("attr", {}) as Dictionary).get(str(st[2]), 0)) - int(st[3]))
+			var pts := 0
+			var a0: Dictionary = st[4]
+			for k in a0:
+				pts += maxi(0, int((p.get("attr", {}) as Dictionary).get(k, 0)) - int(a0[k]))
+			points.append(pts)
+			banked.append(int(p.get("xp", 0)))
 			var led := GameState.focus_spent(p)
 			if int(led[0]) + int(led[1]) > 0:
 				share.append(float(led[0]) / float(int(led[0]) + int(led[1])))
-		print("FOCUS arm %s seed %d season %d | OVR all %+.3f (n=%d) young %+.3f (n=%d) | focus stat %+.3f | focus share %.3f (n=%d) | finish %d" % [
+		print("FOCUS arm %s seed %d season %d | OVR all %+.3f (n=%d) young %+.3f (n=%d) | focus stat %+.3f | focus share %.3f (n=%d) | points %.2f banked XP %.1f | finish %d" % [
 				arm, seed, GameState.season_year, _mean(all_d), all_d.size(), _mean(young_d), young_d.size(),
-				_mean(stat_d), _mean(share), share.size(), GameState.club_position(club)])
+				_mean(stat_d), _mean(share), share.size(), _mean(points), _mean(banked), GameState.club_position(club)])
 		if s == seasons - 1:
 			break
 		GameState.open_offseason()
