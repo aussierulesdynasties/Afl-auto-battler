@@ -314,7 +314,9 @@ func _test_marquee_games() -> void:
 func _test_news() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	_check(GameState.news.is_empty(), "A new career has no news yet")
+	# A coach arc may open the career (row 108: coach_arcs ships on; a veteran's
+	# last year at Geelong); the league itself has said nothing yet.
+	_check(GameState.news.filter(func(n): return str(n.get("kind", "")) != ClubArcs.NEWS_KIND).is_empty(), "A new career has no league news yet")
 	var guard := 0
 	while not GameState.season.is_season_over() and guard < 40:
 		GameState.advance()
