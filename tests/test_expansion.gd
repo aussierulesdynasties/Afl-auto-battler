@@ -149,10 +149,24 @@ func _test_return_spacing() -> void:
 		var returns := 0
 		var halves := 0
 		var thrice := []
+		var thin := []
+		var early := []
+		# 120 spread seeds, then the seeds a 1,500-seed audit of an earlier
+		# draft of this builder flagged (a round two short, a bye outside 9-20).
+		var seeds := []
 		for sd in range(1, 121):
-			var s := Season.new(codes, lists, sd * 7919)
+			seeds.append(sd * 7919)
+		seeds.append_array({18: [10263445, 100016198], 20: [68388040, 112688407,
+				133634207, 139184844, 151961782, 53202335, 128239041, 73256316]}.get(n, []))
+		for sd in seeds:
+			var s := Season.new(codes, lists, sd)
 			var meets := {}
 			for ri in range(s.fixture.size()):
+				var size := (s.fixture[ri] as Array).size()
+				if size < n / 2 - 1:
+					thin.append("seed %d round %d: %d matches" % [sd, ri + 1, size])
+				if n % 2 == 0 and size < n / 2 and (ri < Season.BYE_FIRST or ri > Season.BYE_LAST):
+					early.append("seed %d round %d" % [sd, ri + 1])
 				for m in s.fixture[ri]:
 					var a := str(m["home"])
 					var b := str(m["away"])
@@ -163,16 +177,19 @@ func _test_return_spacing() -> void:
 			for key in meets:
 				var at: Array = meets[key]
 				if at.size() > 2:
-					thrice.append("seed %d %s %s" % [sd * 7919, key, str(at)])
+					thrice.append("seed %d %s %s" % [sd, key, str(at)])
 				if at.size() == 2:
 					returns += 1
 					closest = mini(closest, int(at[1]) - int(at[0]))
 					if int(at[0]) < Season.REGULAR_ROUNDS / 2 and int(at[1]) >= Season.REGULAR_ROUNDS / 2:
 						halves += 1
 		_check(returns > 0, "%d clubs: some pairs meet twice" % n)
-		_check(closest >= Season.RETURN_GAP, "%d clubs: a pair's two meetings at least %d rounds apart over 120 seeds (closest %d)" % [
-				n, Season.RETURN_GAP, closest])
+		_check(closest >= Season.RETURN_GAP, "%d clubs: a pair's two meetings at least %d rounds apart over %d seeds (closest %d)" % [
+				n, Season.RETURN_GAP, seeds.size(), closest])
 		_check(thrice.is_empty(), "%d clubs: no pair meets three times (%s)" % [n, str(thrice.slice(0, 3))])
+		_check(thin.is_empty(), "%d clubs: no round two or more matches short (%s)" % [n, str(thin.slice(0, 3))])
+		_check(early.is_empty(), "%d clubs: byes only in rounds %d-%d (%s)" % [
+				n, Season.BYE_FIRST + 1, Season.BYE_LAST + 1, str(early.slice(0, 3))])
 		_check(halves * 100 >= returns * 95, "%d clubs: return games split first half / second half (%d of %d)" % [n, halves, returns])
 
 

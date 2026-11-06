@@ -170,14 +170,27 @@ func build_fixture() -> Array:
 				break
 		if not clash:
 			break
-	# Of a few seeded orders, levelled, the one with every return game spaced
-	# (failing that, the widest closest pair and the fewest close ones), then
-	# fewest byes outside the mid-season rounds (at an even count), then
-	# fewest clubs resting in back-to-back rounds (an odd count rests twice).
+	# Of a few seeded orders, levelled, the best by, in turn: no round two or
+	# more matches short; no bye outside the mid-season rounds (at an even
+	# count); every return game spaced (failing that, the widest closest pair
+	# and the fewest close ones); fewest clubs resting in back-to-back rounds
+	# (an odd count rests twice). Levelling can dead-end on a spaced order, so
+	# if none of those comes out full with its byes mid-season, plain seeded
+	# shuffles (the pre-spacing draw) get their turn too.
 	var best := []
 	var best_score := 1 << 62
-	for attempt in range(24):
-		var order_r := _level_rounds(_spaced_order(base, picked, spare, rng), rng)
+	for attempt in range(96):
+		var start := []
+		if attempt < 80:
+			start = _spaced_order(base, picked, spare, rng)
+		else:
+			for r in base:
+				start.append((r as Array).duplicate())
+			for bi in picked:
+				start.append((base[bi] as Array).duplicate())
+			start = _shuffled(start, rng)
+			start.insert(rng.randi_range(BYE_FIRST, mini(BYE_LAST, start.size())), spare.duplicate())
+		var order_r := _level_rounds(start, rng)
 		var closest := REGULAR_ROUNDS
 		var close := 0
 		var meets := _meet_rounds(order_r)
@@ -188,10 +201,12 @@ func build_fixture() -> Array:
 				if int(at[k]) - int(at[k - 1]) < RETURN_GAP:
 					close += 1
 		var score := maxi(0, RETURN_GAP - closest) * 100000000 + close * 100000
-		if clubs.size() % 2 == 0:
-			for ri in range(order_r.size()):
-				if (ri < BYE_FIRST or ri > BYE_LAST) and (order_r[ri] as Array).size() < clubs.size() / 2:
-					score += 1000
+		for ri in range(order_r.size()):
+			var size := (order_r[ri] as Array).size()
+			if size < clubs.size() / 2 - 1:
+				score += 1000000000000000
+			if clubs.size() % 2 == 0 and (ri < BYE_FIRST or ri > BYE_LAST) and size < clubs.size() / 2:
+				score += 10000000000000
 		var rests := _rests(order_r)
 		for c in rests:
 			var rs: Array = rests[c]
