@@ -219,6 +219,7 @@ func setup(p_result: Dictionary) -> void:
 	_open_leaving = [false, false]
 	_open_wait = [0.0, 0.0]
 	_open_on = [0.0, 0.0]
+	_stop_on = [0.0, 0.0]
 	_mark_ball = Vector2.INF
 	_ev_idx = 0
 	_last_actor = -1
@@ -1080,6 +1081,7 @@ var _open_ring := [{}, {}]
 var _open_leaving := [false, false]   # the open ring easing out after a fast ball
 var _open_wait := [0.0, 0.0]       # match seconds (at 1x) the ball has been at a player's pace in open play
 var _open_on := [0.0, 0.0]         # real seconds the open ring has been showing
+var _stop_on := [0.0, 0.0]         # real seconds the stoppage ring has been showing
 var _mark_ball := Vector2.INF      # where the ball was last frame (its speed)
 ## The layers in the order the last frame drew them (tests: a marking under the discs).
 var drawn_layers: Array = []
@@ -1136,7 +1138,15 @@ func _step_marks(delta: float) -> void:
 		# planted where it is, easing out.
 		if not on_ball and float(_open_fade[side]) > 0.0:
 			_open_leaving[side] = true
-		_stop_fade[side] = move_toward(float(_stop_fade[side]), 1.0 if stop else 0.0, k)
+		# A ball-up cleared in a frame or two (often at 4x) still shows its ring
+		# MARK_OPEN_LEAST in all, easing out where it was planted: never a blink.
+		var sf := float(_stop_fade[side])
+		if stop or sf <= 0.0:
+			_stop_fade[side] = move_toward(sf, 1.0 if stop else 0.0, k)
+		else:
+			var stop_left := MARK_OPEN_LEAST - float(_stop_on[side])
+			_stop_fade[side] = move_toward(sf, 0.0, minf(k, sf * delta / stop_left) if stop_left > delta else k)
+		_stop_on[side] = float(_stop_on[side]) + delta if float(_stop_fade[side]) > 0.0 else 0.0
 		var of := float(_open_fade[side])
 		if on_ball or of <= 0.0:
 			_open_fade[side] = move_toward(of, 1.0 if on_ball else 0.0, k)
