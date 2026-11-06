@@ -37,6 +37,7 @@ func run() -> void:
 	state.settings_path = "user://test_intl.cfg"
 	_t("_test_classes", [state, db])
 	_t("_test_career", [state, db])
+	_t("_test_old_save", [state, db])
 	state.delete_saved_career()
 	print(Ran.line("International", self))
 	for f in failures:
@@ -380,3 +381,24 @@ func _stories(state: Node, mine: Dictionary) -> void:
 		only = only and ["intl_first_game", "intl_learning_the_game", "intl_nz_rugby_offer"].has(str(k)) 				and not str(k).begins_with("intl_irish") and not str(k).begins_with("intl_africa")
 	_check(dealt.has("intl_first_game") and only, "The engine deals his first-game card, and only cards fit for him (%s)" % str(dealt.keys()))
 	StoryDeck.reload()
+
+
+## An old save: its draft class was made before international prospects, so
+## it has none. It loads, and the class stays as it was made.
+func _test_old_save(state: Node, db: Node) -> void:
+	state.replay_seed = SEED
+	state.reset()
+	state.start_season("ADE", db.club_list("ADE"))
+	_check(state.save_career(), "A career saves")
+	var saved := CareerSave.read(state.save_path)
+	for p in saved.get("draftee_pool", []):
+		p.erase("intl")
+		p.erase("attr_bias")
+	_check(CareerSave.write(saved, CareerSave.read_meta(state.save_path), state.save_path),
+			"The save is rewritten as an old one, with no international in its class")
+	_check(state.load_career(), "An old save loads")
+	var any_old := false
+	for p in state.draftee_pool:
+		any_old = any_old or p.has("intl")
+	_check(not state.draftee_pool.is_empty() and not any_old,
+			"Its draft class has no international (it was made without them)")
