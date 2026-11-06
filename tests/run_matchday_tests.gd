@@ -2627,10 +2627,10 @@ func _test_match_preview() -> void:
 	var view := Rect2(Vector2.ZERO, Vector2(root.size))
 	_check(pv != null and pv.find_child("WeekPage", true, false) != null
 			and pv.find_child("WeekHeading", true, false) != null
-			and pv.find_child("KeyMatchups", true, false) != null
+			and pv.find_child("WeekClubs", true, false) != null and pv.find_child("KeyMatchups", true, false) == null
 			and pv.find_child("HeadToHead", true, false) != null
 			and pv.find_child("SynergyLine", true, false) != null,
-			"The preview holds the week: the round, key players, line against line, synergies")
+			"The preview holds the week: the round, you and them, line against line, synergies")
 	_check(cont != null and cont.size.y >= 56.0 and cont.size.x >= 300.0
 			and view.encloses(cont.get_global_rect()),
 			"Continue is thumb-sized, across the page and on screen (%s)" % (str(cont.get_global_rect()) if cont else "-"))

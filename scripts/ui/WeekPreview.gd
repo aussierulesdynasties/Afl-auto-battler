@@ -1,7 +1,7 @@
 class_name WeekPreview
 extends RefCounted
 ## This week: what the match rests on, from the side as arranged now - the
-## round, both sides' key forwards and defenders, the Assistant's report, line
+## round, you and them, the Assistant's report, line
 ## against line in the middle and the ruck, your synergies, your own news and the
 ## team sheet. Facts, never a verdict. One builder for every place it shows: the
 ## match preview, its own step between Play match and the setup (director,
@@ -38,7 +38,7 @@ func fill(v: VBoxContainer) -> void:
 		v.add_child(_strength_line())
 	else:
 		var code := str(nxt["code"])
-		# One phrase, and the opponent is named once: over its own column below.
+		# One phrase, and the opponent is named once: under "Them" below.
 		var heading := UiKit.hbox(6)
 		heading.name = "WeekHeading"
 		# Gather Round names the event and the host ground (rule 2.38): "at home"
@@ -49,12 +49,10 @@ func fill(v: VBoxContainer) -> void:
 		heading.add_child(UiKit.line("Round %d, %s" % [GameState.season.round_index + 1, where],
 				UiKit.TITLE, UiKit.TEXT, true))
 		v.add_child(heading)
-		# Both sides' key forwards and defenders lead the sheet, as facts. Who
-		# goes to each is set before the first ball-up, not here.
-		var kp := GameState.week_key_players(code)
-		if not kp.is_empty():
-			v.add_child(_key_players(kp, code))
-			v.add_child(_rule())
+		# Who plays whom: you and them, each club's ink and guernsey (director,
+		# 2026-11-07: the key forwards and defenders here are cut, "It's pointless").
+		v.add_child(_club_sides(code))
+		v.add_child(_rule())
 		# What your assistant has seen of them - said there, and only there.
 		var report := _link_btn("Assistant's report ›")
 		report.name = "AssistantReport"
@@ -63,8 +61,7 @@ func fill(v: VBoxContainer) -> void:
 		var lines := UiKit.vbox(22)
 		lines.name = "HeadToHead"
 		v.add_child(lines)
-		# Midfield and ruck only: forwards against defenders is what the key
-		# players above already show, side by side.
+		# Midfield and ruck only, as when the key players stood above (cut 2026-11-07).
 		for row in GameState.my_head_to_head(code):
 			if ["midfield", "ruck"].has(str(row["key"])):
 				lines.add_child(_h2h_row(row, code))
@@ -216,25 +213,19 @@ func _crest_tile(code: String) -> Control:
 	return tile
 
 
-## Both sides' key forwards and key defenders, your side on the left (marked
-## "You") and theirs on the right: height and how they mark, one player a line.
-## One rule for both sides: the club's readable colour as a bar over its column
-## and on its name (a red club's name stays plain, as everywhere: red is the bar
-## and the crest), the crest on a light tile. Rows are facts, not buttons.
-func _key_players(kp: Dictionary, opp: String) -> Control:
-	var tight := _roomy()
+## You and them, your club on the left (marked "You") and theirs on the right
+## ("Them"). One rule for both sides: the club's readable colour as a bar over its
+## half and on its name (a red club's name stays plain, as everywhere: red is the
+## bar and the crest), the crest on a light tile. Facts, not buttons.
+func _club_sides(opp: String) -> Control:
 	var cols := UiKit.hbox(GAP)
-	cols.name = "KeyMatchups"
+	cols.name = "WeekClubs"
 	var inks: Array = UiKit.club_ink_pair(GameState.my_club, opp)
 	var at := 0
-	var wrap_head := false
-	for c in [GameState.my_club, opp]:
-		if UiKit.BOLD.get_string_size(GameDB.club_name(str(c)), HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.NAME).x > 112.0:
-			wrap_head = true
 	for side in ["mine", "theirs"]:
 		var code: String = GameState.my_club if side == "mine" else opp
-		var col := UiKit.vbox(6 if tight else GAP)
-		col.name = "KeySide_" + side
+		var col := UiKit.vbox(6)
+		col.name = "ClubSide_" + side
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		col.size_flags_stretch_ratio = 1.0
 		var bar := ColorRect.new()
@@ -256,71 +247,12 @@ func _key_players(kp: Dictionary, opp: String) -> Control:
 		var nm := UiKit.lbl(GameDB.club_name(code), UiKit.NAME, UiKit.club_name_colour(inks[at]), true)
 		nm.name = "ClubName"
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		nm.custom_minimum_size = Vector2(0, 0)
 		who.add_child(nm)
 		head.add_child(who)
-		# Both heads stand as tall as the longer name needs, so the two columns line up.
-		if wrap_head and not tight:
-			head.custom_minimum_size = Vector2(0, 64)
 		col.add_child(head)
-		at += 1
-		for group in [["fwd", "Key forwards, marking"], ["def", "Key defenders, marking"]]:
-			var list: Array = (kp[side] as Dictionary)[group[0]]
-			if list.is_empty():
-				continue
-			var sec := UiKit.vbox(4 if tight else 12)
-			sec.name = "KeySection_" + str(group[0])
-			# 16 before a group label (the column gap), 4 from it to its first row, 12 between rows.
-			var lead := UiKit.vbox(4)
-			lead.add_child(UiKit.lbl(str(group[1]), UiKit.SECONDARY, SOFT, true))
-			sec.add_child(lead)
-			var first := true
-			for p in list:
-				var one := UiKit.vbox(0)
-				one.custom_minimum_size = Vector2(0, 0 if tight else 44)
-				one.name = ("KeyForward_" if group[0] == "fwd" else "KeyDefender_") + str(p["id"])
-				one.add_child(UiKit.ellipsis(GameDB.player_display_name(p), UiKit.NAME, UiKit.TEXT, true))
-				one.add_child(_air_line(p))
-				if first:
-					lead.add_child(one)
-					first = false
-				else:
-					sec.add_child(one)
-			col.add_child(sec)
 		cols.add_child(col)
+		at += 1
 	return cols
-
-
-## "196 cm  strong": the height as plain secondary text, then the grade, which
-## steps up in weight and size as it gets better (elite is the
-## biggest and boldest, average the plainest) in the text colours only, so it is
-## never read as GOOD or BAD. What is graded is said once, in the section label.
-func _air_line(p: Dictionary) -> Control:
-	var flow := HFlowContainer.new()
-	flow.add_theme_constant_override("h_separation", 10)
-	flow.add_theme_constant_override("v_separation", 0)
-	flow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if float(p.get("height_cm", 0.0)) > 0.0:
-		flow.add_child(UiKit.line("%d cm" % int(p["height_cm"]), UiKit.SECONDARY, SOFT))
-	var g := PlayerProfile.grade(PlayerProfile.percentile(p, "marking")).to_lower()
-	if g == "":
-		g = "average"
-	var size := UiKit.SECONDARY
-	var bold := true
-	var ink := UiKit.TEXT
-	match g:
-		"elite":
-			size = UiKit.NAME
-		"good":
-			bold = false
-		"average":
-			bold = false
-			ink = SOFT
-	var gl := UiKit.line(g, size, ink, bold)
-	gl.name = "Grade"
-	flow.add_child(gl)
-	return flow
-
 
 
 ## The line synergies your 18 switch on - what the side is good at - any

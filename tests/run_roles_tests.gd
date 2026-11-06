@@ -85,20 +85,23 @@ func _test_selection_tests() -> void:
 			" | ".join(h2h_lines.map(func(l): return _plain(l))))
 	var mid_line: Control = ui.find_child("H2H_midfield", true, false)
 	_check(mid_line != null and _plain(mid_line).begins_with("Midfield: "), "Midfield sets yours against theirs")
-	# Their key forwards are facts here; who goes to them and the game plan are
-	# asked only in the pre-bounce menu (director, 2026-10-13).
-	var km: Node = ui.find_child("KeyMatchups", true, false)
-	_check(km != null and not km.find_children("KeyForward_*", "Control", true, false).is_empty(),
-			"Selection names their key forwards")
-	_check(km != null and not km.find_children("KeyDefender_*", "Control", true, false).is_empty()
-			and km.find_child("KeySide_mine", true, false) != null and km.find_child("KeySide_theirs", true, false) != null
-			and str(_screen_text(km)).contains("cm") and str(_screen_text(km)).contains("Key forwards, marking"),
-			"Selection shows both sides' key forwards and defenders, side by side, with height and marking")
+	# You and them head the week; the key forwards and defenders are cut
+	# (director, 2026-11-07: "We don't need this section. It's pointless").
+	var km: Node = ui.find_child("WeekClubs", true, false)
+	_check(km != null and km.find_child("ClubSide_mine", true, false) != null
+			and km.find_child("ClubSide_theirs", true, false) != null
+			and str(_screen_text(km)).contains("You") and str(_screen_text(km)).contains("Them"),
+			"The week heads with you and them, side by side")
+	_check(ui.find_child("KeyMatchups", true, false) == null
+			and ui.find_children("KeyForward_*", "Control", true, false).is_empty()
+			and ui.find_children("KeyDefender_*", "Control", true, false).is_empty()
+			and not str(_screen_text(ui)).contains("Key forwards, marking"),
+			"No key forwards or defenders on the week")
 	var small_text := 0
 	for kl in (km.find_children("*", "Label", true, false) if km != null else []):
 		if (kl as Label).get_theme_font_size("font_size") < 13:
 			small_text += 1
-	_check(km != null and small_text == 0, "Key players read at 13 px or more (%d smaller)" % small_text)
+	_check(km != null and small_text == 0, "You and them read at 13 px or more (%d smaller)" % small_text)
 	_check(ui.find_child("ChangeMatchup", true, false) == null and ui.find_child("ChangePlan", true, false) == null
 			and ui.find_child("PlanLine", true, false) == null and km != null
 			and not str(_screen_text(km)).contains(" is on "),
@@ -1129,11 +1132,11 @@ func _test_week_ink_tests() -> void:
 		var opp := str(_state.my_next_opponent().get("code", ""))
 		var h: Label = null
 		for l in ui.find_children("*", "Label", true, false):
-			if str(l.text) == db.club_name(opp) and h == null and ui.find_child("KeySide_theirs", true, false).is_ancestor_of(l):
+			if str(l.text) == db.club_name(opp) and h == null and ui.find_child("ClubSide_theirs", true, false).is_ancestor_of(l):
 				h = l
-		_check(h != null or opp == "", "The opponent is named once, over its column, beside its guernsey (%s)" % str(code))
+		_check(h != null or opp == "", "The opponent is named once, under Them, beside its guernsey (%s)" % str(code))
 		# Both columns carry their club's readable ink as a bar: 4.5:1 on the dark page, for every club.
-		for side in ["KeySide_mine", "KeySide_theirs"]:
+		for side in ["ClubSide_mine", "ClubSide_theirs"]:
 			var col: Node = ui.find_child(side, true, false)
 			var bar: ColorRect = col.find_child("ClubBar", true, false) if col != null else null
 			if bar != null:

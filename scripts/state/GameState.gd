@@ -4479,20 +4479,6 @@ func week_matchups(opp: String) -> Array:
 	return out
 
 
-## Both sides' key players for the This week screen: each side's key forwards
-## and key defenders as they would take the field. {"mine"/"theirs":
-## {"fwd": [...], "def": [...]}}. Facts only; who plays on whom is set later.
-func week_key_players(opp: String) -> Dictionary:
-	if season == null or opp == "" or not season.lists.has(opp):
-		return {}
-	var theirs: Array = Squad.new(opp, season.lists[opp], false, opp, season.selections.get(opp, {})).ground
-	var mine: Array = my_squad().ground
-	return {
-		"mine": {"fwd": Matchups.key_forwards(mine), "def": Matchups.defenders(mine).slice(0, Matchups.KEY_FORWARDS)},
-		"theirs": {"fwd": Matchups.key_forwards(theirs), "def": Matchups.defenders(theirs).slice(0, Matchups.KEY_FORWARDS)},
-	}
-
-
 ## Put your defender `def_id` on their forward `fwd_id` for the next match.
 func set_my_matchup(fwd_id: String, def_id: String) -> void:
 	my_matchups[fwd_id] = def_id
