@@ -41,6 +41,7 @@ static func build(res: Dictionary, side: int) -> Dictionary:
 	return {
 		"side": side, "margin": margin, "won": margin > 0, "drawn": margin == 0,
 		"hero": hero, "turning_point": str(tp.get("text", "")), "turning_fact": str(tp.get("fact", "")),
+		"turning_also": tp.get("also", []),
 		"reasons": reasons(res, side), "headline": headline(res, side, hero),
 	}
 
@@ -64,6 +65,9 @@ static func told_facts(st: Dictionary) -> Dictionary:
 		if tf == "turn" or tf == "turn:lead":
 			out["turn"] = true
 			out["turn:lead"] = true
+		# The goal run the comeback was made of is the same moment again.
+		for f in st.get("turning_also", []):
+			out[str(f)] = true
 	for r in st.get("reasons", []):
 		out["=" + MatchNotes.norm_sentence(str(r.get("text", "")))] = true
 		var stat := str(r.get("stat", ""))
@@ -135,11 +139,33 @@ static func best_of(res: Dictionary, sides: Array) -> Dictionary:
 						"disposals": int(float(st.get("disposals", 0.0))),
 						"tackles": int(float(st.get("tackles", 0.0))),
 						"clearances": int(float(st.get("clearances", 0.0))),
-						"line": MatchNotes.game_line(st)}
-	if not best.is_empty() and int(best["clutch"]) > 0:
-		best["line"] = "%s, %s late with the game in the balance" % [str(best["line"]),
+						"line": MatchNotes.game_line(st), "stat_line": MatchNotes.game_line(st)}
+	if best.is_empty():
+		return best
+	best["late"] = ""
+	if int(best["clutch"]) > 0:
+		best["late"] = "%s late with the game in the balance" % [
 				"a goal" if int(best["clutch"]) == 1 else "%s goals" % MatchNotes.count_word(int(best["clutch"]))]
+		best["line"] = "%s, %s" % [str(best["line"]), str(best["late"])]
 	return best
+
+
+## A best player's line less the numbers another line on screen already
+## gives him (`shown`, e.g. his Best players line "4 goals, 22 disposals"):
+## full time says each fact once (director's bug report, 2026-11-06). The late
+## goals clause always stays. "" when nothing is left.
+static func line_less(best: Dictionary, shown: String) -> String:
+	var have := {}
+	for b in shown.split(", ", false):
+		have[b.strip_edges()] = true
+	var bits := PackedStringArray()
+	for b in str(best.get("stat_line", best.get("line", ""))).split(", ", false):
+		if not have.has(b.strip_edges()):
+			bits.append(b.strip_edges())
+	if str(best.get("late", "")) != "":
+		bits.append(str(best["late"]))
+	var out := ", ".join(bits)
+	return out.left(1).to_upper() + out.substr(1) if out != "" else ""
 
 
 ## The turning point, from the full-time logic (MatchNotes): the comeback, else
@@ -149,16 +175,28 @@ static func turning_point(res: Dictionary, side: int) -> String:
 	return str(turning_item(res, side).get("text", ""))
 
 
-## The turning point with the fact it states: {fact, text}, {} for none.
+## The turning point with the fact it states: {fact, text, also}, {} for none.
+## `also` lists other facts it covers: a comeback in the quarters of the
+## match's goal run, or the winners going in front for good in the quarter
+## their run began, is that run told another way ("run").
 static func turning_item(res: Dictionary, side: int) -> Dictionary:
+	var run := MatchNotes._longest_run(res.get("events", []))
+	var long_run := int(run["len"]) >= 4
 	var turn := ComebackTelling.turn_facts(res, side)
 	if not turn.is_empty():
-		return {"fact": "turn", "text": str(turn["text"])}
+		var also := []
+		var t := ComebackTelling.turning_quarter(res, side)
+		if long_run and int(run["side"]) == int(t.get("side", -1)) 				and (turn.get("quarters", []) as Array).has(int(run["q"])):
+			also.append("run")
+		return {"fact": "turn", "text": str(turn["text"]), "also": also}
 	var tps := MatchNotes.turning_point_items(res, side)
 	if not tps.is_empty():
-		return tps[0]
-	var run := MatchNotes._longest_run(res.get("events", []))
-	if int(run["len"]) >= 4:
+		var tp: Dictionary = tps[0]
+		var also2 := []
+		if str(tp["fact"]) == "turn:lead" and long_run and int(run["side"]) == int(tp["side"]) 				and int(run["q"]) == int(tp["q"]):
+			also2.append("run")
+		return {"fact": str(tp["fact"]), "text": str(tp["text"]), "also": also2}
+	if long_run:
 		return {"fact": "run", "text": MatchNotes.run_sentence(res, run)}
 	return {}
 

@@ -3755,6 +3755,13 @@ func _ft_story(v: VBoxContainer, me: int) -> Dictionary:
 	var box := UiKit.vbox(4)
 	box.name = "MatchStory"
 	box.add_child(UiKit.spacer(UiKit.GAP))
+	# Best players above already gives a player's numbers: the hero's line
+	# keeps only what it adds (director's bug report, 2026-11-06).
+	var shown := {}
+	var votes := MatchNotes.coaches_votes(_res)
+	for side in [0, 1]:
+		for p in MatchNotes.standouts_by_votes(_res, side, 3, votes):
+			shown[str(p["id"])] = str(p["line"])
 	var hero: Dictionary = st["hero"]
 	if not hero.is_empty():
 		box.add_child(UiKit.section("Hero of the match"))
@@ -3763,15 +3770,19 @@ func _ft_story(v: VBoxContainer, me: int) -> Dictionary:
 		hl.name = "MatchHero"
 		hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(hl)
-		var gl := UiKit.lbl(str(hero["line"]), UiKit.BODY, UiKit.TEXT)
-		gl.name = "MatchHeroLine"
-		gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		box.add_child(gl)
+		var hero_line := MatchStory.line_less(hero, str(shown.get(str(hero["id"]), "")))
+		if hero_line != "":
+			var gl := UiKit.lbl(hero_line, UiKit.BODY, UiKit.TEXT)
+			gl.name = "MatchHeroLine"
+			gl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			box.add_child(gl)
 	# A loss: your best player too (director, 2026-11-03).
 	if int(st["margin"]) < 0:
 		var mb := MatchStory.my_best(_res, me)
 		if not mb.is_empty():
-			var ml := UiKit.lbl("Your best: %s, %s" % [str(mb["name"]), str(mb["line"])], UiKit.BODY, UiKit.TEXT)
+			var mb_line := MatchStory.line_less(mb, str(shown.get(str(mb["id"]), "")))
+			var ml := UiKit.lbl("Your best: %s" % str(mb["name"]) + (", " + mb_line.left(1).to_lower() + mb_line.substr(1) if mb_line != "" else ""),
+					UiKit.BODY, UiKit.TEXT)
 			ml.name = "MatchMyBest"
 			ml.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			box.add_child(ml)

@@ -776,11 +776,17 @@ static func glance(report: Dictionary, full_time := false) -> Dictionary:
 	}
 
 
+## The note topic each told fact covers: NOTE_TOPICS, with the full-time
+## pressure reason (the pressure rating) on the same topic as pressure acts.
+static func told_topics() -> Dictionary:
+	return NOTE_TOPICS.merged({"pressure_rating": "pressure"})
+
+
 ## Full time's notes less a fact the story or How it went already said
 ## (`said`: MatchStory.told_facts keys): "They have had more of the ball going
 ## forward." is not said under "They won the inside 50s 61 to 52."
 static func notes_not_told(notes: Array, said: Dictionary) -> Array:
-	var topics := {"clearances": "stoppages", "inside50": "going forward", "pressure_rating": "pressure"}
+	var topics := told_topics()
 	return notes.filter(func(n):
 		for key in topics:
 			if said.has(key) and str(n).contains(str(topics[key])):

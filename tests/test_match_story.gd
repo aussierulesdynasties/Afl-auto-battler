@@ -386,16 +386,31 @@ func _test_factors_never_repeat() -> void:
 	# One turning point, from either side's seat: a comeback and the goal that
 	# put a side in front for good are one moment, told once.
 	var comebacks := 0
+	var run_merged := 0
 	for r in _my_matches():
 		for side in [0, 1]:
 			var st2 := MatchStory.build(r, side)
 			if not ["turn", "turn:lead"].has(str(st2.get("turning_fact", ""))):
 				continue
 			comebacks += 1
+			var run := MatchNotes._longest_run(r.get("events", []))
+			var same_run := false
+			if int(run["len"]) >= 4:
+				var turn := ComebackTelling.turn_facts(r, side)
+				if not turn.is_empty():
+					same_run = int(run["side"]) == int(ComebackTelling.turning_quarter(r, side).get("side", -1)) 							and (turn.get("quarters", []) as Array).has(int(run["q"]))
+				else:
+					var lead: Array = MatchNotes.turning_point_items(r, side).filter(func(it): return str(it["fact"]) == "turn:lead")
+					same_run = not lead.is_empty() and int(lead[0]["side"]) == int(run["side"]) and int(lead[0]["q"]) == int(run["q"])
+			if same_run:
+				run_merged += 1
 			for f in MatchNotes.match_factors(r, side, MatchStory.told_facts(st2)):
 				if str(f).contains("in front for good") or str(f).contains("turned it in the"):
 					bad.append("%s tells the turning point twice: %s" % [str(r["label"]), str(f)])
+				if same_run and str(f) == MatchNotes.run_sentence(r, run):
+					bad.append("%s tells the comeback's goal run again: %s" % [str(r["label"]), str(f)])
 	_check(comebacks > 0, "the seeded season has a turning point that is a lead change (%d)" % comebacks)
+	_check(run_merged > 0, "the seeded season has a turning point made of the match's goal run (%d)" % run_merged)
 	_check(bad.is_empty(), "How it went never repeats the story's facts (%s)" % str(bad.slice(0, 3)))
 	_check(cut > 0, "the seeded season has matches where the story already said something (%d)" % cut)
 	# No told facts: How it went is as it was for every older caller.
@@ -450,11 +465,22 @@ func _check_once(r: Dictionary, tag: String) -> void:
 	var ftext := _labels_text(factors)
 	var tp := str(st["turning_point"])
 	_check(tp == "" or not ftext.contains(tp), "%s: the turning point is not said again under How it went" % tag)
+	if (st.get("turning_also", []) as Array).has("run"):
+		var run2 := MatchNotes._longest_run(r.get("events", []))
+		_check(not ftext.contains(MatchNotes.run_sentence(r, run2)),
+				"%s: the goal run the turning point was made of is not told again (%s)" % [tag, ftext.strip_edges()])
 	# One turning point: a comeback and the goal that put a side in front for good are the same moment.
 	if ["turn", "turn:lead"].has(str(st.get("turning_fact", ""))):
 		_check(not ftext.contains("in front for good") and not ftext.contains("turned it in the"),
 				"%s: How it went does not tell the turning point a second way (%s)" % [tag, ftext.strip_edges()])
+	var codes := [str(r["home"]), str(r["away"])]
 	for reason in st["reasons"]:
+		if str(reason["stat"]) == "scoring_shots":
+			# The no-clear-edge reason quotes both scorelines: How it went does not quote them again.
+			for s in [me, 1 - me]:
+				var sl := "%d.%d" % [int(r["goals"][s]), int(r["behinds"][s])]
+				_check(not ftext.contains(sl), "%s: How it went does not repeat the %s scoreline %s" % [tag, codes[s], sl])
+			continue
 		if not ["pressure_rating", "clearances", "inside50"].has(str(reason["stat"])):
 			continue
 		var a := int(reason["mine"])
@@ -462,9 +488,23 @@ func _check_once(r: Dictionary, tag: String) -> void:
 		for l in ftext.split("\n", false):
 			_check(not (l.contains("%d to %d" % [a, b]) or l.contains("%d to %d" % [b, a])),
 					"%s: How it went does not repeat the %s numbers (%s)" % [tag, str(reason["stat"]), l])
+	# The hero's line (and your best's) never repeats a number his Best players row gives.
+	var rows := {}
+	var votes := MatchNotes.coaches_votes(r)
+	for side in [0, 1]:
+		for p in MatchNotes.standouts_by_votes(r, side, 3, votes):
+			rows[str(p["id"])] = str(p["line"])
+	for pair in [["MatchHeroLine", st["hero"]], ["MatchMyBest", MatchStory.my_best(r, me) if int(st["margin"]) < 0 else {}]]:
+		var node := ft.find_child(str(pair[0]), true, false)
+		var who: Dictionary = pair[1]
+		if node == null or who.is_empty() or not rows.has(str(who["id"])):
+			continue
+		for bit in str(rows[str(who["id"])]).split(", ", false):
+			_check(not str(node.text).to_lower().contains(bit.to_lower()),
+					"%s: %s does not repeat %s from Best players (%s)" % [tag, str(pair[0]), bit, str(node.text)])
 	# The coaching notes do not say a reason again in other words.
 	var notes := _labels_text(ft.find_child("ReportNotes", true, false))
-	var topics := {"clearances": "stoppages", "inside50": "going forward", "pressure_rating": "pressure"}
+	var topics := CoachReport.told_topics()
 	for reason in st["reasons"]:
 		var topic := str(topics.get(str(reason["stat"]), ""))
 		_check(topic == "" or not notes.contains(topic),

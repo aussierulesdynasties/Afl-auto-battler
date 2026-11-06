@@ -596,6 +596,9 @@ const MAX_FACTORS := 3
 static func match_factors(res: Dictionary, my_side: int, said := {}) -> Array:
 	var items := match_factor_items(res, my_side)
 	if items.is_empty():
+		# The fallback ("no single edge") would contradict a reason told above.
+		if not said.is_empty():
+			return []
 		var score: Array = res.get("score", [0, 0])
 		return ["Nothing much between the sides all day." if absi(int(score[0]) - int(score[1])) <= 12
 				else "No single edge: the winners were just better across the ground."]
@@ -1494,7 +1497,8 @@ static func turning_points(res: Dictionary, my_side: int, skip_kicker := "") -> 
 	return turning_point_items(res, my_side, skip_kicker).map(func(it): return str(it["text"]))
 
 
-## turning_points, each tagged with its fact: "turn:lead", "turn:injury", "turn:miss".
+## turning_points, each tagged with its fact: "turn:lead" (with the winners'
+## "side" and the "q" they went in front for good), "turn:injury", "turn:miss".
 static func turning_point_items(res: Dictionary, my_side: int, skip_kicker := "") -> Array:
 	var out := []
 	var events: Array = res.get("events", [])
@@ -1515,7 +1519,8 @@ static func turning_point_items(res: Dictionary, my_side: int, skip_kicker := ""
 			was_ahead = ahead
 		if not took.is_empty() and int(took.get("q", 1)) >= 2 and int(took.get("q", 1)) <= 4 \
 				and str(took.get("name", "")) != "" and (skip_kicker == "" or str(took.get("player_id", "")) != skip_kicker):
-			out.append({"fact": "turn:lead", "text": "%s's %s %s put %s in front for good." % [str(took["name"]), str(took["kind"]),
+			out.append({"fact": "turn:lead", "side": winner, "q": int(took.get("q", 1)),
+					"text": "%s's %s %s put %s in front for good." % [str(took["name"]), str(took["kind"]),
 					_when(took), GameDB.club_name(codes[winner])]})
 	var overall := {}
 	for side in range(2):
