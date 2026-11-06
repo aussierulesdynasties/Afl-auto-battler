@@ -1870,8 +1870,34 @@ func _test_call_lines(res: Dictionary) -> void:
 	var off: Array = walk.call([{"at": 0, "side": 0, "plan": "defensive", "bursts": []}, open[1],
 			{"at": int(qs[0]) + 1, "side": 0, "plan": "balanced", "bursts": []}])
 	_check(off.size() == 2 and str(off[0][1]) == "%s: Defensive press is on until quarter time." % ric
-			and str(off[1][1]) == "%s: Defensive press ends." % ric,
-			"A plan from the first bounce is marked, and so is its end (%s)" % str(off))
+			and str(off[1][1]) == "%s: Defensive press ends at quarter time." % ric
+			and int(off[1][0]) == int(qs[0]) + 1,
+			"A plan from the first bounce is marked, and its end at the break names the break, once (%s)" % str(off))
+	# The director's half-time feed: both coaches drop their plans at the break.
+	# Each end is said once, as the break's (no new-quarter clock), never as
+	# if it ended at the first bounce of the third quarter.
+	var syd := GameDB.club_name("SYD")
+	var mem := MatchNotes.call_state()
+	var tl := [{"at": 0, "side": 0, "plan": "controlled", "bursts": []}, {"at": 0, "side": 1, "plan": "attacking", "bursts": []},
+			{"at": int(qs[1]) + 1, "side": 0, "plan": "balanced", "bursts": []},
+			{"at": int(qs[1]) + 1, "side": 1, "plan": "balanced", "bursts": []}]
+	var ht := []
+	var stamped := 0
+	for i in range(evs.size()):
+		var got: Array = MatchNotes.call_lines(tl, i, evs[i], mem, "RIC", "SYD")
+		for k in range(got.size()):
+			if str(got[k]).contains(" ends"):
+				ht.append([i, str(got[k])])
+				if k >= int(mem["break_lines"]):
+					stamped += 1
+	_check(ht.size() == 2 and int(ht[0][0]) == int(qs[1]) + 1
+			and str(ht[0][1]) == "%s: Controlled tempo ends at half time." % ric
+			and str(ht[1][1]) == "%s: Attack corridor ends at half time." % syd and stamped == 0,
+			"Plans dropped at half time are said once each, as the break's, unclocked (%s, %d clocked)" % [str(ht), stamped])
+	var mid: Array = walk.call([{"at": 0, "side": 0, "plan": "defensive", "bursts": []}, open[1],
+			{"at": int(qs[0]) + 20, "side": 0, "plan": "balanced", "bursts": []}])
+	_check(mid.size() == 3 and str(mid[2][1]) == "%s: Defensive press ends." % ric and int(mid[2][0]) == int(qs[0]) + 20,
+			"A plan dropped during a quarter keeps its plain line, at the play (%s)" % str(mid))
 
 
 ## FL-007: the guard of honour and chaired off after a milestone game. Who it honours,
