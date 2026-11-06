@@ -144,6 +144,7 @@ func _ready() -> void:
 	# Whose first AFL goal the feed can say, if it comes today (MatchNotes).
 	if _interactive and not _is_practice(_res):
 		_duel_mem["first_goal"] = GameState.first_goal_candidates()
+		_duel_mem["career_high"] = GameState.career_high_candidates()
 	_pitch.event_played.connect(_on_event)
 	_pitch.finished.connect(_on_finished)
 	_pitch.ends_changed.connect(_on_ends_changed)
@@ -856,7 +857,8 @@ func _show_coach_box() -> void:
 		"tagger_id": str((sim.tactics[_my_side] as Dictionary).get("tagger_id", _last_tactics.get("tagger_id", ""))),
 		"interceptor_id": str(sim.interceptor[_my_side]),
 		"minder_id": str((sim.tactics[_my_side] as Dictionary).get("spare_minder_id", "")) 				if bool((sim.tactics[_my_side] as Dictionary).get("spare_accountable", false)) else "",
-		"pep": "steady",
+		# Before the bounce, a talk you set before Change the side is kept.
+		"pep": str((sim.tactics[_my_side] as Dictionary).get("pep", "steady")) if q == 1 else "steady",
 	}
 	calls["defence"] = MatchNotes.defence_key(str(calls["interceptor_id"]) != "", str(calls["minder_id"]) != "")
 	var loose_was := str(calls["interceptor_id"])
@@ -1129,7 +1131,7 @@ func _show_coach_box() -> void:
 	col_a.add_child(pep_note)
 	group.call("pep", pep_block)
 	group.call("pep", pep_note)
-	sync_pep.call("steady")
+	sync_pep.call(str(calls["pep"]))
 
 	if wide:
 		def_block.get_parent().remove_child(def_block)
@@ -1158,8 +1160,8 @@ func _show_coach_box() -> void:
 	var start := UiKit.btn("Start quarter" if q > 1 else "Start", UiKit.HEADING, true)
 	start.name = "StartQuarter"
 	start.custom_minimum_size = Vector2(0, 48)
-	start.pressed.connect(func():
-		var t := {
+	var take_calls := func() -> Dictionary:
+		return {
 			"gameplan": str(calls["gameplan"]),
 			"tag_id": str(calls["tag_id"]),
 			"tagger_id": str(calls["tagger_id"]),
@@ -1169,6 +1171,8 @@ func _show_coach_box() -> void:
 			"spare_minder_id": str(calls["minder_id"]),
 			"pep": str(calls["pep"]),
 		}
+	start.pressed.connect(func():
+		var t: Dictionary = take_calls.call()
 		_close_coach()
 		_simulate_next_quarter(t))
 	# One primary action on the break; the way out is said as words.
@@ -1219,6 +1223,12 @@ func _show_coach_box() -> void:
 		side.name = "ChangeSide"
 		side.custom_minimum_size = skip.custom_minimum_size
 		side.pressed.connect(func():
+			# Your calls go into the match before you leave, so they are still
+			# set when you come back (GameState.rebuild_pending_side).
+			var t: Dictionary = take_calls.call()
+			if bool(t["interceptor_set"]):
+				sim.coach_interceptor(_my_side, str(t["interceptor_id"]))
+			sim.set_tactics(_my_side, t)
 			GameState.side_from_match = true
 			_close_coach()
 			Router.go("selection"))
@@ -3264,8 +3274,11 @@ func _on_event(ev: Dictionary) -> void:
 	_update_scoreboard(ev)
 	_track_momentum(ev)
 	_feed_add(ev)
-	_duel_feed(ev)
-	_story_feed(ev)
+	# A career best at a goal is that goal's one extra line: no battle or
+	# story line stacks on it.
+	if not _career_high_feed(ev) or str(ev.get("kind", "")) != "goal":
+		_duel_feed(ev)
+		_story_feed(ev)
 	_press_feed(event_index, ev)
 	_call_feed(event_index, ev)
 	if str(ev.get("kind", "")) == "goal":
@@ -4442,6 +4455,20 @@ func _story_feed(ev: Dictionary) -> void:
 				UiKit.TEXT, false, "StoryLine")
 
 
+## A career best for one of yours, in bold so a once-in-a-career moment is
+## not lost among routine lines (MatchNotes.career_high_lines). True when a
+## line was added.
+func _career_high_feed(ev: Dictionary) -> bool:
+	var sim = GameState.pending_sim
+	var extra := int(ev.get("q", 1)) == 4 and (bool(_res.get("extra_time", false))
+			or (_interactive and sim != null and sim.needs_extra_time()))
+	var lines := MatchNotes.career_high_lines(_duel_mem, ev, _res, extra)
+	for text in lines:
+		_feed_text("%s  %s" % [_clock_text(int(ev.get("q", 1)), int(ev.get("min", 0))), str(text)],
+				UiKit.TEXT, true, "CareerHighLine")
+	return not lines.is_empty()
+
+
 ## The Defensive press taking hold, once a side a match: the first time the
 ## side whose plan it is defends after setting it (V2, press pilot).
 func _press_feed(event_index: int, ev: Dictionary) -> void:
@@ -4456,12 +4483,15 @@ func _press_feed(event_index: int, ev: Dictionary) -> void:
 
 ## A side's game plan starting, carrying on over a break or ending, and a short
 ## call running out (P-12, MatchNotes.call_lines). A break's line comes after
-## the break's own score line.
+## the break's own score line. A plan dropped at the break is said at the
+## next bounce, once the break's calls are made, without the new quarter's clock.
 func _call_feed(event_index: int, ev: Dictionary) -> void:
-	for text in MatchNotes.call_lines(_res.get("timeline", []), event_index, ev, _call_mem,
-			str(_res["home"]), str(_res["away"])):
-		_feed_text("%s  %s" % [_clock_text(int(ev.get("q", 1)), int(ev.get("min", 0))), str(text)],
-				UiKit.TEXT, false, "CallLine")
+	var lines := MatchNotes.call_lines(_res.get("timeline", []), event_index, ev, _call_mem,
+			str(_res["home"]), str(_res["away"]))
+	var unstamped := int(_call_mem.get("break_lines", 0))
+	for i in range(lines.size()):
+		var stamp := "" if i < unstamped else "%s  " % _clock_text(int(ev.get("q", 1)), int(ev.get("min", 0)))
+		_feed_text(stamp + str(lines[i]), UiKit.TEXT, false, "CallLine")
 
 
 ## The battle in the feed, rarely (MatchNotes.duel_feed_line).

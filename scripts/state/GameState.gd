@@ -176,6 +176,9 @@ var department_budget_year := 0
 var season_wrap := {}            # the off-season briefing shown before Round 1 (season_wrap_lines)
 var _wrap_picks: Array = []      # your National Draft picks, carried into the rollover
 var news: Array = []             # league news feed, newest first
+## Players the round's news already named for their game (a milestone or a big
+## game), so a career best does not give him a second item. Not saved.
+var _named_this_round := {}
 var board_patience := "fair"     # this career's board dial (DifficultyDials step)
 var rival_recruiting := "shrewd" # this career's rival dial (DifficultyDials step)
 var tutorials := true            # this career's first-visit menu tips (Tutorials.gd)
@@ -2474,11 +2477,56 @@ func match_day_setup_open() -> bool:
 
 
 ## The side changed on Team selection before the first bounce: the match is
-## made again from the new side, with the same seed, weather and plan.
+## made again from the new side, with the same seed, weather and plan, and
+## every call you made on the setup that the new side still allows.
 func rebuild_pending_side() -> void:
 	if match_day_setup_open():
+		var old: MatchSim = pending_sim
 		_build_pending_sim()
+		_carry_calls(old, pending_sim)
 	side_from_match = false
+
+
+## Your calls from the old match onto the one made from the new side. A call
+## that needs a player no longer in the side goes back to the assistant's pick
+## for that call only; the rest stay yours.
+func _carry_calls(old: MatchSim, sim: MatchSim) -> void:
+	var side := sim.moment_side
+	var mine: Squad = sim.squads[side]
+	var on_ground := {}
+	for p in mine.ground:
+		on_ground[str(p["id"])] = true
+	# Key match-ups you changed on the setup (the This week ones are already in).
+	var old_own: Dictionary = (old._own[side] as Dictionary)["duels"]
+	var new_own: Dictionary = (sim._own[side] as Dictionary)["duels"]
+	for fid in old_own:
+		var def_id := str((old.duels[side] as Dictionary).get(fid, ""))
+		if def_id == "" or not sim.taking_part(side, def_id) or not sim.taking_part(1 - side, str(fid)):
+			continue
+		if new_own.has(fid) and str((sim.duels[side] as Dictionary).get(fid, "")) == def_id:
+			continue
+		sim.coach_matchup(side, str(fid), def_id)
+	# The loose man: yours stays yours; the assistant's stays his if he still plays.
+	var loose := str(old.interceptor[side])
+	if loose == "" or sim.taking_part(side, loose):
+		if bool((old._own[side] as Dictionary)["interceptor"]):
+			sim.coach_interceptor(side, loose)
+		else:
+			sim.set_interceptor(side, loose, false)
+	# Plan, tag, who tags, the minder on their spare and the pep talk.
+	var t: Dictionary = (old.tactics[side] as Dictionary).duplicate()
+	t.erase("interceptor_id")
+	t.erase("interceptor_set")
+	if str(t.get("tagger_id", "")) != "" and not sim.taking_part(side, str(t["tagger_id"])):
+		t["tagger_id"] = ""
+	if bool(t.get("spare_accountable", false)) and not on_ground.has(str(t.get("spare_minder_id", ""))):
+		var minders := Matchups.minder_candidates(mine.ground)
+		if minders.is_empty():
+			t["spare_accountable"] = false
+			t["spare_minder_id"] = ""
+		else:
+			t["spare_minder_id"] = str(minders[0]["id"])
+	sim.set_tactics(side, t)
 
 
 ## Set when Change the side leaves the match-day setup for Team selection.
@@ -5570,6 +5618,7 @@ func _after_round(results: Array) -> void:
 	_record_match_story(results)
 	Almanac.update_club_records(self, results)
 	_note_firsts(results)
+	_note_career_highs(results)
 	OwnProspect.check(self)
 	_draft_class_news()
 	_board_after_round(results)
@@ -10077,6 +10126,62 @@ func _note_firsts(results: Array) -> void:
 				Firsts.note(p, "goal", season_year, label)
 
 
+## Every player's best games, kept on him (CareerHighs), and the week's news
+## for a new career high by one of yours: one per player, his biggest, and at
+## most CareerHighs.MAX_NEWS a round, and none for a player the round's news
+## already named for his game (_named_this_round). The tally already holds the
+## match, so his games before it are one fewer than games_played.
+func _note_career_highs(results: Array) -> void:
+	var said := []
+	for res in results:
+		var roster: Array = res.get("roster", [])
+		var stats_all: Dictionary = res.get("players", {})
+		var label := str(res.get("label", ""))
+		var key := Milestones.match_key(season_year, res)
+		var codes := [str(res.get("home", "")), str(res.get("away", ""))]
+		for side in range(mini(2, roster.size())):
+			for r in roster[side]:
+				var id := str(r.get("id", ""))
+				var p := _find_player(id)
+				if p.is_empty():
+					continue
+				var highs := CareerHighs.update(p, stats_all.get(id, {}), maxi(0, games_played(p) - 1),
+						Career.complete(p), season_year, label, key)
+				if highs.is_empty() or my_club == "" or codes[side] != my_club or _named_this_round.has(id):
+					continue
+				said.append([CareerHighs._step(highs[0]), CareerHighs.news_line(
+						GameDB.player_display_name(p), str(highs[0][0]), int(highs[0][1]),
+						codes[1 - side], label)])
+	# The biggest few, added smallest first: news is newest first, so the
+	# biggest ends on top.
+	said.sort_custom(func(a, b): return float(a[0]) > float(b[0]))
+	for i in range(mini(CareerHighs.MAX_NEWS, said.size()) - 1, -1, -1):
+		add_news("milestone", str(said[i][1]))
+
+
+## Players of yours in the match about to be played whose career high the feed
+## could say: {id: {stat: best}}, for a record that holds every game he has
+## played and at least CareerHighs.MIN_GAMES of them (MatchNotes.career_high_lines).
+func career_high_candidates() -> Dictionary:
+	var out := {}
+	if pending_sim == null or pending_match.is_empty() or my_club == "":
+		return out
+	var side := 0 if str(pending_match.get("home", "")) == my_club else 1
+	var squad: Squad = pending_sim.squads[side]
+	for row in squad.ground + squad.bench:
+		var p := list_player(str(row["id"]))
+		if p.is_empty() or not CareerHighs.complete(p) or not Career.complete(p):
+			continue
+		var rec := CareerHighs.get_record(p)
+		if int(rec.get("games", 0)) < CareerHighs.MIN_GAMES or int(rec.get("games", 0)) != games_played(p):
+			continue
+		var bests := {}
+		for stat in CareerHighs.STATS:
+			bests[stat] = CareerHighs.best(p, stat)
+		out[str(p["id"])] = bests
+	return out
+
+
 ## His career goals before the match being played or just played: the record,
 ## plus this season's goals so far when the record stops short of the season.
 ## `this_match` is what the season's tally already holds of that match (0 before
@@ -10112,6 +10217,7 @@ func _player_milestone_news(res: Dictionary) -> void:
 			var season_goals := int(t.get("goals", 0))
 			var previous_career_goals := career_goals_before(p, goals)
 			if Career.complete(p) and previous_career_goals == 0:
+				_named_this_round[id] = true
 				add_news("milestone", "%s kicked his first AFL goal for %s." % [
 						GameDB.player_display_name(p), GameDB.club_name(code)])
 			if not Career.complete(p):
@@ -10119,15 +10225,18 @@ func _player_milestone_news(res: Dictionary) -> void:
 			var career_goals := previous_career_goals + goals
 			for mark in [100, 200, 300, 400, 500, 600, 700, 800]:
 				if previous_career_goals < mark and career_goals >= mark:
+					_named_this_round[id] = true
 					add_news("milestone", "%s reached %d career goals." % [
 							GameDB.player_display_name(p), mark])
 			for mark in [25, 50, 75, 100]:
 				if season_goals - goals < mark and season_goals >= mark:
+					_named_this_round[id] = true
 					add_news("milestone", "%s reached %d goals for the %d season." % [
 							GameDB.player_display_name(p), mark, season_year])
 
 ## Big games and long injuries to good players from the round just played.
 func _round_news(results: Array) -> void:
+	_named_this_round = {}
 	for res in results:
 		_player_milestone_news(res)
 		var roster: Array = res.get("roster", [])
@@ -10142,6 +10251,7 @@ func _round_news(results: Array) -> void:
 				var p := _find_player(str(r["id"]))
 				if p.is_empty():
 					continue
+				_named_this_round[str(r["id"])] = true
 				if int(st.get("goals", 0)) >= 6:
 					add_news("game", "%s kicked %d goals for %s against %s." % [
 							GameDB.player_display_name(p), int(st["goals"]),

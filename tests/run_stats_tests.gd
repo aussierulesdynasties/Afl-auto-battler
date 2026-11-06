@@ -56,6 +56,8 @@ func _run() -> void:
 	# The awards read the season after four rounds: before anything below
 	# plays it on (the fixture's finals test plays it to the end).
 	await _t("_test_awards_races")
+	await _t("_test_awards_unchanged")
+	await _t("_test_awards_open_fast")
 	await _t("_test_awards_ties")
 	_t("_test_rising_star_rules")
 	await _t("_test_rising_star_saves")
@@ -582,6 +584,36 @@ func _test_players_section() -> void:
 				spill = str(c.name)
 				break
 		_check(spill == "", "Players fit the screen (%s%s)" % [tag, (": " + spill) if spill != "" else ""])
+		# Show more keeps the player's place (director bug report: a real tap on it
+		# sent the list back to the top): the rows he was reading stay in view,
+		# the next page comes in under them.
+		var more: Button = s.find_child("PlayersMore", true, false)
+		var sc0: ScrollContainer = s.find_child("StatsScroll", true, false)
+		_check(more != null and sc0 != null, "The list has a Show more button under it (%s)" % tag)
+		if more != null and sc0 != null:
+			var shown_before := s.find_children("PlayerRow_*", "Button", true, false).size()
+			sc0.ensure_control_visible(more)
+			await _settle()
+			var before := sc0.scroll_vertical
+			_check(before > 0, "Show more sits below the fold (%s: %d)" % [tag, before])
+			_check((await Tap.tap(more)) == "", "Show more takes a tap (%s)" % tag)
+			for i in range(12):
+				await process_frame
+			var sc1: ScrollContainer = s.find_child("StatsScroll", true, false)
+			var after := sc1.scroll_vertical if sc1 != null else -1
+			var shown_after := s.find_children("PlayerRow_*", "Button", true, false).size()
+			_check(shown_after > shown_before, "Show more adds rows (%s: %d -> %d)" % [tag, shown_before, shown_after])
+			_check(after > 0 and absi(after - before) <= 2,
+					"Show more keeps the list where it was, not back at the top (%s: %d -> %d)" % [tag, before, after])
+			# The first new row is below the ones on show, not above the view.
+			var rows_now := s.find_children("PlayerRow_*", "Button", true, false)
+			if sc1 != null and rows_now.size() > shown_before:
+				var first_new: Control = rows_now[shown_before]
+				_check(first_new.get_global_rect().position.y >= sc1.get_global_rect().position.y,
+						"The new rows come in under the ones on show (%s)" % tag)
+			SP.reset_view()
+			s.call("refresh")
+			await _settle()
 		# A player's season and career, then back.
 		var first: Button = s.find_children("PlayerRow_*", "Button", true, false)[0]
 		_check((await Tap.tap(first)) == "", "A player's row takes a tap (%s)" % tag)
@@ -1719,6 +1751,90 @@ func _test_awards_races() -> void:
 	_check(team.size() == 23 and ids.size() == 23, "The projected All-Australian team is 23 different players (%d)" % team.size())
 	_check(slots == {"RUCK": 1, "MID": 5, "DEF": 6, "FWD": 6, "BENCH": 5} and ok,
 			"Every projected All-Australian plays his position and has the games (%s)" % str(slots))
+
+
+## The Awards tab after four rounds of the suite's seeded season, read off the
+## screen: every race row, every Rising Star row and every card on the
+## All-Australian oval with where it sits. Recorded from main before the
+## Awards speed-up (AWARDS_SNAPSHOT_WRITE=1 rewrites it); the faster tab must
+## show exactly the same thing.
+const AWARDS_SNAPSHOT := "res://tests/fixtures/awards_round4_snapshot.txt"
+
+
+func _awards_snapshot(s: Control, tag: String) -> PackedStringArray:
+	var out := PackedStringArray()
+	var sec: Node = s.find_child("StatsAwards", true, false)
+	if sec == null:
+		return out
+	for b in sec.find_children("*", "Button", true, false):
+		var words := PackedStringArray()
+		for l in (b as Node).find_children("*", "Label", true, false):
+			words.append((l as Label).text)
+		var line := "%s %s | %s" % [tag, str(b.name), " | ".join(words)]
+		if str(b.name).contains("Spot_"):
+			var c := b as Control
+			line += " | id %s at %.2f,%.2f size %.2f,%.2f" % [str(c.get_meta("id", "")),
+					c.position.x, c.position.y, c.size.x, c.size.y]
+		out.append(line)
+	return out
+
+
+func _test_awards_unchanged() -> void:
+	var now := PackedStringArray()
+	for sz in [Vector2i(390, 844), Vector2i(360, 800), Vector2i(1280, 720)]:
+		var s := await _open_awards(sz)
+		now.append_array(_awards_snapshot(s, "%dx%d" % [sz.x, sz.y]))
+		await _close(s)
+	_check(now.size() > 60, "The Awards tab has its races, nominations and oval to compare (%d lines)" % now.size())
+	if OS.get_environment("AWARDS_SNAPSHOT_WRITE") == "1":
+		var f := FileAccess.open(ProjectSettings.globalize_path(AWARDS_SNAPSHOT), FileAccess.WRITE)
+		f.store_string("\n".join(now) + "\n")
+		f.close()
+		print("Wrote %s (%d lines)" % [AWARDS_SNAPSHOT, now.size()])
+		return
+	var want := FileAccess.get_file_as_string(AWARDS_SNAPSHOT).strip_edges().split("\n")
+	var first := ""
+	for i in range(maxi(want.size(), now.size())):
+		var a: String = want[i] if i < want.size() else "(none)"
+		var b: String = now[i] if i < now.size() else "(none)"
+		if a != b:
+			first = "line %d: want '%s', got '%s'" % [i + 1, a, b]
+			break
+	_check(first == "", "The Awards tab shows exactly what it did before the speed-up (%d lines; %s)" % [now.size(), first])
+
+
+## The director's report: the Awards tab was slow to open. A tap on the tab
+## builds the section and lays out the oval's cards once (not again for every
+## size the page passes through on its way to the screen), well inside a
+## frame budget a phone can live with.
+func _test_awards_open_fast() -> void:
+	root.size = Vector2i(390, 844)
+	load("res://scripts/ui/StatsHubScene.gd").current = "ladder"
+	var s: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
+	root.add_child(s)
+	await _settle()
+	var tab: Button = s.find_child("Section_awards", true, false)
+	_check(tab != null, "Season stats has its Awards tab")
+	if tab == null:
+		await _close(s)
+		return
+	var tb = load("res://scripts/ui/TeamBuilder.gd")
+	tb.layouts = 0
+	var t0 := Time.get_ticks_usec()
+	_check((await Tap.tap(tab)) == "", "The Awards tab takes a tap")
+	var team: Node = null
+	for i in range(30):
+		await process_frame
+		team = s.find_child("AATeam", true, false)
+		if team != null:
+			break
+	await process_frame
+	var ms := (Time.get_ticks_usec() - t0) / 1000.0
+	print("PERF awards tab tap to drawn: %.0f ms, %d oval layouts" % [ms, int(tb.layouts)])
+	_check(team != null, "The tap opens the Awards tab with its oval")
+	_check(int(tb.layouts) == 1, "The oval's cards are laid out once on the way in (%d)" % int(tb.layouts))
+	_check(ms < 400.0, "The Awards tab opens inside 400 ms here (%.0f ms; it took over 20 s before the fix)" % ms)
+	await _close(s)
 
 
 ## Level counts share a rank; a tie across the cut is summed up, never split.
