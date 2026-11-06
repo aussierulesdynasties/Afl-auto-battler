@@ -120,6 +120,10 @@ var achievements := {}
 ## G7: the career's durable facts, {player id: [row, ...]} (CareerFacts.gd).
 ## Saved with the career; a player leaving the lists does not take them.
 var career_facts := {}
+## Undo steps for your last delistings, free-agent signings and re-signings
+## (RecruitUndo, row 119). Session only, never saved; cleared when the week
+## moves on.
+var recruit_undo: Array = []
 var milestone_log := Milestones.empty()   # milestone games (Milestones.gd)
 ## Players who have left the game: id -> his name card (CareerFacts.name_card),
 ## so an honour-roll or record line can still name him.
@@ -1391,6 +1395,7 @@ func reset() -> void:
 	market_stats = {}
 	_targets_signed = {}
 	fa_lost = []
+	recruit_undo = []
 	_bars = {}
 	_fa_phase = {}
 	_repl_class = {}
@@ -1783,6 +1788,7 @@ func begin_intake_draft() -> bool:
 	if draft != null and draft.intake_mode:
 		return true  # resume the draft in progress
 	open_offseason()
+	recruit_undo.clear()
 	_close_free_agency()
 	if draftee_pool.is_empty() and season_year == GameDB.DATA_SEASON:
 		# A career begun in 2026 (before 2027 starts) still drafts the real
@@ -2683,6 +2689,7 @@ func ensure_finals() -> void:
 func advance() -> String:
 	if season == null:
 		return "none"
+	recruit_undo.clear()
 	preseason_sim_to_round1()
 	_settle_week_event()
 	MidseasonDraft.settle(self)
@@ -6415,6 +6422,7 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 	if my_payroll() - int(p.get("salary", 0)) + salary > salary_cap:
 		return {"ok": false, "answer": "", "reason": "Not enough cap room for %s a season." % Contracts.money(salary)}
 	var name := GameDB.player_display_name(p)
+	var snap := RecruitUndo.snapshot(self, player_id)
 	var reply := Contracts.respond(p, salary, years, int(talks.get("failed", 0)),
 			-culture_resign_discount(my_club, p, years))
 	var out := {"ok": false, "answer": str(reply["answer"]), "salary": int(reply["salary"])}
@@ -6436,7 +6444,24 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 			out["reason"] = "Talks have broken down: %s will test free agency." % name
 	if bool(reply["insult"]):
 		ClubLife.add_morale(p, -Contracts.INSULT_MORALE)
+	if bool(out["ok"]):
+		RecruitUndo.push(self, snap, "resign", p)
 	mark_dirty()
+	return out
+
+
+## The step Undo would reverse ({"kind": "release" | "sign" | "resign", "id",
+## "name"}), or {} when there is none (RecruitUndo).
+func recruit_undo_last() -> Dictionary:
+	return RecruitUndo.last(self)
+
+
+## Reverse your last delisting, free-agent signing or re-signing, exactly as
+## things stood before it. Returns {"ok", "kind", "reason"}.
+func undo_recruit() -> Dictionary:
+	var out := RecruitUndo.undo(self)
+	if bool(out["ok"]):
+		mark_dirty()
 	return out
 
 
@@ -6446,8 +6471,13 @@ func release_player(player_id: String) -> Dictionary:
 		return {"ok": false, "reason": "Players can only be released in the off-season."}
 	if my_list.size() <= Contracts.MIN_LIST:
 		return {"ok": false, "reason": "Your list cannot go below %d." % Contracts.MIN_LIST}
+	# A player whose career ends at this rollover leaves the game when he is
+	# let go (_open_market), so that one cannot be undone.
+	var snap := {} if retiring_now(p) else RecruitUndo.snapshot(self, player_id)
 	_release(my_club, p, false)
 	_open_market([p])
+	if not snap.is_empty():
+		RecruitUndo.push(self, snap, "release", p)
 	mark_dirty()
 	return {"ok": true, "reason": "%s released." % GameDB.player_display_name(p)}
 
@@ -6896,6 +6926,7 @@ func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 		mark_dirty()
 		return out
 	# A real offer: on the table, beside any rival's.
+	var snap := RecruitUndo.snapshot(self, player_id)
 	_bars = {}
 	_fa_phase = {}
 	var mine := _offer_of(p, my_club)
@@ -6915,6 +6946,7 @@ func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 			rivals_left = true
 	if not rivals_left:
 		_sign_fa(p, my_club, salary, years)
+		RecruitUndo.push(self, snap, "sign", p)
 		mark_dirty()
 		return {"ok": true, "answer": "signed", "salary": salary,
 				"reason": "%s signs for %d season%s at %s." % [name, years, "" if years == 1 else "s", Contracts.money(salary)], "responses": []}
@@ -6941,6 +6973,8 @@ func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 	else:
 		var lead := Contracts.best_offer(p, p["offers"])
 		out["reason"] = "Your offer leads." if lead == mine else "%s's offer leads." % GameDB.club_name(str(lead["club"]))
+	if str(out["answer"]) == "signed":
+		RecruitUndo.push(self, snap, "sign", p)
 	mark_dirty()
 	return out
 
