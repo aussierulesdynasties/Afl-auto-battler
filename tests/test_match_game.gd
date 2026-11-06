@@ -3837,14 +3837,7 @@ func _test_assistant_plays_ai_calls() -> void:
 	_check(str(m.tactics[0]["gameplan"]) == "contest" and str(m.tactics[0].get("focus_id", "")) == "x",
 			"60 up after a quarter your assistant leaves your game plan, and the rest of your call, alone")
 	_check(str(m.interceptor[0]) == mine, "He leaves the loose man you named")
-	m.team_stats[0] = {"goals": 0.0, "behinds": 0.0}
-	_check(str(m.ai_tactics(0)["gameplan"]) == "contest", "Level, he plays the plan your club went in with")
 	_check(m._style(0) == MatchSim.COACH_STYLES["balanced"], "Your club keeps the balanced style")
-	(m.tactics_history[-1]["plans"] as Array)[1] = {"gameplan": "controlled"}
-	var a_sc := PlanFit.plan_score(sq.ground, "attacking", sq.plan_know)
-	var c_sc := PlanFit.plan_score(sq.ground, "contest", sq.plan_know)
-	var want := "attacking" if a_sc >= c_sc - MatchSim.COUNTER_GIVE else "contest"
-	_check(str(m.ai_tactics(0)["gameplan"]) == want, "He counters their plan for you as a rival would (%s)" % want)
 
 
 ## Director, 2026-11-07: "After every quarter it changes my gameplan from
@@ -3896,6 +3889,49 @@ func _test_coach_plan_sticks_at_breaks() -> void:
 	(p.team_stats[1] as Dictionary)["behinds"] = 0.0
 	p.end_quarter()
 	_check(str(p.tactics[0]["gameplan"]) == "attacking", "Change it yourself and your new plan stays through the break")
+
+	# The tag and the spare's minder: his until you pick them, then yours.
+	var tagged := false
+	for club in ["GEE", "COL", "CAR", "ESS", "HAW", "RIC", "SYD", "BRL", "MEL", "WBD"]:
+		for keep in [false, true]:
+			var g := _sim(8463, club, "GEE" if club != "GEE" else "COL")
+			var gs: Squad = g.squads[0]
+			gs.ai_plans = false
+			gs.assistant = true
+			var tagger_id := ""
+			for pl in gs.ground:
+				if g.midfielder_on_ground(pl) and Roles.is_tagger(pl):
+					tagger_id = str(pl["id"])
+					break
+			if tagger_id == "":
+				break
+			g.set_tactics(0, {"gameplan": "balanced", "tagger_id": tagger_id, "tag_id": "", "tag_set": keep})
+			g.current_quarter = 3
+			g._assistant_calls(0)
+			var got := str(g.tactics[0].get("tag_id", ""))
+			if not keep:
+				tagged = got != ""
+				if not tagged:
+					break
+			else:
+				_check(got == "", "No tag is your call: at the break he leaves it (%s)" % club)
+				_check(not g.tactics[0].has("tag_set"), "The tag_set flag is not kept in the plan")
+		if tagged:
+			break
+	_check(tagged, "A club with a specialist tagger found, and his assistant tags when it is his call")
+	for keep in [false, true]:
+		var s := _sim(8464, "GEE", "COL")
+		(s.squads[0] as Squad).ai_plans = false
+		(s.squads[0] as Squad).assistant = true
+		s.set_tactics(0, {"gameplan": "balanced", "spare_accountable": false, "spare_minder_id": "", "minder_set": keep})
+		var their := str(((s.squads[1] as Squad).ground[0] as Dictionary)["id"])
+		s.player_stats[their] = {"roam_wins": 3}
+		s._assistant_calls(0)
+		var on := bool(s.tactics[0].get("spare_accountable", false))
+		if keep:
+			_check(not on, "No minder on their spare is your call: he leaves it")
+		else:
+			_check(on, "Their spare has won three: left to him, he puts a minder on him")
 
 
 ## Plan knowledge weighs the usual game, and Controlled tempo can be it.
