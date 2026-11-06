@@ -338,8 +338,8 @@ static func _player_row(host: Control, id: String, club: String, rank: String, f
 			bold or club == GameState.my_club)
 	who.name = "Name"
 	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# His club in its own colour where it reads; otherwise the rule beside it.
-	var c := UiKit.ellipsis(GameDB.club_short(club), 14, StatsSide.ink(club), club == GameState.my_club)
+	# His club in its strongest real colour that reads (director, 2026-11-06).
+	var c := UiKit.ellipsis(GameDB.club_short(club), 14, StatsSide.code_ink(club), club == GameState.my_club)
 	c.name = "Club"
 	if stack:
 		var both := UiKit.vbox(0)
