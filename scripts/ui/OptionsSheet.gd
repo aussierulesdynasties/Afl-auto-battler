@@ -30,20 +30,11 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 	_row(v, "Player names", "SettingsNames", NAME_OPTIONS,
 			"real" if GameState.show_real_names else "generated", NAMES_INFO,
 			func(k): GameState.set_show_real_names(k == "real"))
-	_row(v, "Mute sounds", "SettingsMuteSounds", [["off", "Off"], ["on", "On"]],
+	_row(v, "Mute", "SettingsMuteSounds", [["off", "Off"], ["on", "On"]],
 			"on" if GameState.sounds_muted() else "off",
-			"Mutes all music and sound effects.",
+			"Silences all music and sound. Matches tell you the same either way.",
 			func(k): GameState.set_sounds_muted(k == "on"))
-	# No row for a control that does nothing: it returns with the director's tracks.
-	if not MusicManager.TRACK_PATHS.is_empty():
-		_row(v, "Music", "SettingsMusic", AudioLevels.LEVELS, GameState.music_level(),
-				"The music between matches.", func(k): GameState.set_music_level(k))
-	_row(v, "Crowd", "SettingsCrowd", AudioLevels.LEVELS, GameState.crowd_level(),
-			"The crowd at a match you watch. The match tells you the same either way.",
-			func(k): GameState.set_crowd_level(k))
-	_row(v, "Button sounds", "SettingsButtonSounds", AudioLevels.LEVELS, GameState.button_sounds(),
-			"A boot through the ball when you press a button, a stud tap on a choice, the siren at the end of a match or a draft, and the crowd when a result lands.",
-			func(k): GameState.set_button_sounds(k))
+	_volume_row(v)
 	if Feel.phone():
 		_row(v, "Vibration", "SettingsVibration", [["on", "On"], ["off", "Off"]],
 				"on" if GameState.haptics_on() else "off",
@@ -188,6 +179,69 @@ static func _row(v: VBoxContainer, title: String, node_name: String, options: Ar
 	var l := UiKit.lbl(note, UiKit.SMALL, UiKit.MUTED)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(l)
+
+
+## Volume (row 98): one slider for every sound - music, the crowd and button
+## sounds - with the level written beside its name.
+static func _volume_row(v: VBoxContainer) -> void:
+	v.add_child(UiKit.spacer(4))
+	var head := UiKit.hbox(8)
+	var title := UiKit.lbl("Volume", UiKit.BODY, UiKit.TEXT, true)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(title)
+	var pct := UiKit.lbl("%d%%" % GameState.volume(), UiKit.BODY, UiKit.TEXT, true)
+	pct.name = "SettingsVolumeValue"
+	# One line, right-aligned and wide enough for "100%", so the number never
+	# wraps a digit per line or nudges as the thumb moves.
+	pct.autowrap_mode = TextServer.AUTOWRAP_OFF
+	pct.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	pct.custom_minimum_size = Vector2(56, 0)
+	head.add_child(pct)
+	v.add_child(head)
+	var s := HSlider.new()
+	s.name = "SettingsVolume"
+	s.min_value = 0
+	s.max_value = 100
+	s.step = 5
+	s.value = GameState.volume()
+	s.custom_minimum_size = Vector2(0, 44)
+	s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	s.focus_mode = Control.FOCUS_NONE
+	_paint_slider(s)
+	s.value_changed.connect(func(x: float):
+		pct.text = "%d%%" % int(x)
+		GameState.set_volume(int(x)))
+	v.add_child(s)
+	var l := UiKit.lbl("Music, the crowd and button sounds, all together.", UiKit.SMALL, UiKit.MUTED)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(l)
+
+
+## The slider in the sheet's own terms: a thin track, the filled part in the
+## text colour (as a chosen option is outlined), a round thumb big enough for
+## a thumb.
+static func _paint_slider(s: HSlider) -> void:
+	var track := UiKit.style(UiKit.LINE, 3, 3)
+	track.set_border_width_all(0)
+	var fill := UiKit.style(UiKit.TEXT, 3, 3)
+	fill.set_border_width_all(0)
+	s.add_theme_stylebox_override("slider", track)
+	s.add_theme_stylebox_override("grabber_area", fill)
+	s.add_theme_stylebox_override("grabber_area_highlight", fill)
+	var dot := _dot(26, UiKit.TEXT)
+	s.add_theme_icon_override("grabber", dot)
+	s.add_theme_icon_override("grabber_highlight", dot)
+	s.add_theme_icon_override("grabber_disabled", dot)
+
+
+static func _dot(d: int, c: Color) -> ImageTexture:
+	var img := Image.create(d, d, false, Image.FORMAT_RGBA8)
+	var r := d / 2.0
+	for y in d:
+		for x in d:
+			var dist := Vector2(x + 0.5 - r, y + 0.5 - r).length()
+			img.set_pixel(x, y, Color(c, clampf(r - dist, 0.0, 1.0)))
+	return ImageTexture.create_from_image(img)
 
 
 ## Backups and earlier saves (row 57): write the career to a file the coach
