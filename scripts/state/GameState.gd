@@ -1786,7 +1786,10 @@ func begin_draft() -> void:
 ## in reversed-ladder order (worst club first) like the real national draft.
 ## Returns false when there is nothing to draft.
 func begin_intake_draft() -> bool:
-	if season == null:
+	# Sacked: the Hub and the season review hold the draft until he has
+	# chosen a job, so a run that gets here sacked is headless and takes the
+	# first club offered (_sacking_settled). A finished career has no draft.
+	if season == null or not _sacking_settled():
 		return false
 	if not (season.is_season_over() or season.is_regular_done()):
 		return false
@@ -2251,7 +2254,7 @@ func needs_season_wrap() -> bool:
 ## Roll on without an intake (no prospects available, or the manager skipped
 ## the draft). Same ageing and rebuild, zero new signings.
 func start_next_season() -> bool:
-	if season == null:
+	if season == null or not _sacking_settled():
 		return false
 	if not (season.is_season_over() or season.is_regular_done()):
 		return false
@@ -2478,11 +2481,56 @@ func match_day_setup_open() -> bool:
 
 
 ## The side changed on Team selection before the first bounce: the match is
-## made again from the new side, with the same seed, weather and plan.
+## made again from the new side, with the same seed, weather and plan, and
+## every call you made on the setup that the new side still allows.
 func rebuild_pending_side() -> void:
 	if match_day_setup_open():
+		var old: MatchSim = pending_sim
 		_build_pending_sim()
+		_carry_calls(old, pending_sim)
 	side_from_match = false
+
+
+## Your calls from the old match onto the one made from the new side. A call
+## that needs a player no longer in the side goes back to the assistant's pick
+## for that call only; the rest stay yours.
+func _carry_calls(old: MatchSim, sim: MatchSim) -> void:
+	var side := sim.moment_side
+	var mine: Squad = sim.squads[side]
+	var on_ground := {}
+	for p in mine.ground:
+		on_ground[str(p["id"])] = true
+	# Key match-ups you changed on the setup (the This week ones are already in).
+	var old_own: Dictionary = (old._own[side] as Dictionary)["duels"]
+	var new_own: Dictionary = (sim._own[side] as Dictionary)["duels"]
+	for fid in old_own:
+		var def_id := str((old.duels[side] as Dictionary).get(fid, ""))
+		if def_id == "" or not sim.taking_part(side, def_id) or not sim.taking_part(1 - side, str(fid)):
+			continue
+		if new_own.has(fid) and str((sim.duels[side] as Dictionary).get(fid, "")) == def_id:
+			continue
+		sim.coach_matchup(side, str(fid), def_id)
+	# The loose man: yours stays yours; the assistant's stays his if he still plays.
+	var loose := str(old.interceptor[side])
+	if loose == "" or sim.taking_part(side, loose):
+		if bool((old._own[side] as Dictionary)["interceptor"]):
+			sim.coach_interceptor(side, loose)
+		else:
+			sim.set_interceptor(side, loose, false)
+	# Plan, tag, who tags, the minder on their spare and the pep talk.
+	var t: Dictionary = (old.tactics[side] as Dictionary).duplicate()
+	t.erase("interceptor_id")
+	t.erase("interceptor_set")
+	if str(t.get("tagger_id", "")) != "" and not sim.taking_part(side, str(t["tagger_id"])):
+		t["tagger_id"] = ""
+	if bool(t.get("spare_accountable", false)) and not on_ground.has(str(t.get("spare_minder_id", ""))):
+		var minders := Matchups.minder_candidates(mine.ground)
+		if minders.is_empty():
+			t["spare_accountable"] = false
+			t["spare_minder_id"] = ""
+		else:
+			t["spare_minder_id"] = str(minders[0]["id"])
+	sim.set_tactics(side, t)
 
 
 ## Set when Change the side leaves the match-day setup for Team selection.
@@ -4807,6 +4855,14 @@ func payoff_lines(res: Dictionary) -> Array:
 		return []
 	var me := 0 if str(res.get("home", "")) == my_club else (1 if str(res.get("away", "")) == my_club else -1)
 	return Firsts.match_lines(res, me, season_year, list_player, my_list)
+
+
+## payoff_lines before the cap, each {id, kind, text} (Firsts.match_items).
+func payoff_items(res: Dictionary) -> Array:
+	if my_club == "":
+		return []
+	var me := 0 if str(res.get("home", "")) == my_club else (1 if str(res.get("away", "")) == my_club else -1)
+	return Firsts.match_items(res, me, season_year, list_player, my_list)
 
 
 ## A club's ladder position in words: "3rd".
@@ -9280,10 +9336,10 @@ func _as_selection(ground: Array, bench: Array) -> Dictionary:
 ##   rest   the same with anyone who needs a break left out, if the list can
 ##          cover him
 ##   youth  the best side, then up to three young players (21 and under) in
-##          for the lowest-rated starter in their line, when within 6 of him
+##          for the lowest-rated older starter in their line, when within 6 of him
 ##   mine   your saved Best 23, with anyone unavailable replaced by the best
 ##          available player of his line
-const YOUTH_AGE := 21.0
+const YOUTH_AGE := 21
 const YOUTH_GAP := 6
 const YOUTH_MAX := 3
 
@@ -9309,37 +9365,7 @@ func auto_pick(strategy: String) -> Dictionary:
 			return {"side": side, "note": note}
 		"youth":
 			var sel2 := Ratings.select_22(pool, dual)
-			var side2 := _as_selection(sel2["ground"], sel2["bench"])
-			var ins: PackedStringArray = []
-			var by_id := {}
-			for p in pool:
-				by_id[str(p["id"])] = p
-			for _n in range(YOUTH_MAX):
-				var used := _ids_in(side2)
-				var best_swap := []
-				for line in ["DEF", "MID", "WING", "FWD"]:
-					var weakest := ""
-					for id in side2[line]:
-						if weakest == "" or int(by_id[str(id)]["overall"]) < int(by_id[weakest]["overall"]):
-							weakest = str(id)
-					if weakest == "":
-						continue
-					var role: String = "MID" if line == "WING" else line
-					for p in pool:
-						var pid := str(p["id"])
-						if used.has(pid) or float(p.get("age", 30.0)) > YOUTH_AGE or not Ratings.plays_role(p, role):
-							continue
-						var gap := int(by_id[weakest]["overall"]) - int(p["overall"])
-						if gap <= YOUTH_GAP and (best_swap.is_empty() or int(p["overall"]) > int(by_id[str(best_swap[2])]["overall"])):
-							best_swap = [line, weakest, pid]
-				if best_swap.is_empty():
-					break
-				var arr: Array = side2[best_swap[0]]
-				arr[arr.find(best_swap[1])] = best_swap[2]
-				ins.append("%s for %s" % [GameDB.player_display_name(by_id[best_swap[2]]),
-						GameDB.player_display_name(by_id[best_swap[1]])])
-			return {"side": side2, "note": ("Blooding: %s." % "; ".join(ins)) if not ins.is_empty()
-					else "No young player is close enough to a starter's spot: this is your best side."}
+			return blood_youth(_as_selection(sel2["ground"], sel2["bench"]), pool)
 		"mine":
 			if best23.is_empty():
 				return {"side": {}, "note": "No saved Best 23 yet: arrange a side and save it."}
@@ -9371,6 +9397,88 @@ func auto_pick(strategy: String) -> Dictionary:
 					else "Your Best 23."}
 	var sel4 := Ratings.select_22(pool, dual)
 	return {"side": _as_selection(sel4["ground"], sel4["bench"]), "note": "Best side by rating and position."}
+
+
+## The youth pick on `side_in`: up to YOUTH_MAX young players (YOUTH_AGE and
+## under) from `pool`, each in for the lowest-rated older starter of a line
+## he plays, when within YOUTH_GAP of him. Returns {"side", "note"}.
+func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
+	var side2: Dictionary = side_in.duplicate(true)
+	var by_id := {}
+	for p in pool:
+		by_id[str(p["id"])] = p
+	# Blooding brings young players in for older ones: a youngster who came
+	# in is never the next one out, and nobody young is dropped, so each
+	# swap is a real change and the note names only what changed.
+	var brought: Array = []
+	var dropped: Array = []
+	for _n in range(YOUTH_MAX):
+		var used := _ids_in(side2)
+		var best_swap := []
+		for line in ["DEF", "MID", "WING", "FWD"]:
+			var weakest := ""
+			for id in side2[line]:
+				var w = by_id.get(str(id))
+				if w == null or brought.has(str(id)) or is_young(w):
+					continue
+				if weakest == "" or int(w["overall"]) < int(by_id[weakest]["overall"]):
+					weakest = str(id)
+			if weakest == "":
+				continue
+			var role: String = "MID" if line == "WING" else line
+			for p in pool:
+				var pid := str(p["id"])
+				if used.has(pid) or brought.has(pid) or not is_young(p) \
+						or not Ratings.plays_role(p, role):
+					continue
+				var gap := int(by_id[weakest]["overall"]) - int(p["overall"])
+				if gap <= YOUTH_GAP and (best_swap.is_empty() or int(p["overall"]) > int(by_id[str(best_swap[2])]["overall"])):
+					best_swap = [line, weakest, pid]
+		if best_swap.is_empty():
+			break
+		var arr: Array = side2[best_swap[0]]
+		arr[arr.find(best_swap[1])] = best_swap[2]
+		dropped.append(str(best_swap[1]))
+		brought.append(str(best_swap[2]))
+	return {"side": side2, "note": _blooding_note(brought, dropped, by_id) if not brought.is_empty()
+			else "No young player is close enough to a starter's spot: this is your best side."}
+
+
+## Young for this pick: YOUTH_AGE or under in whole years, as the game shows
+## age (a player of 21.6 shows as 21), so a 21-year-old is never dropped.
+static func is_young(p: Dictionary) -> bool:
+	return int(floor(float(p.get("age", 30.0)))) <= YOUTH_AGE
+
+
+## The longest blooding note, in characters: two lines of the note at the
+## 390 px phone width (about 4.8 px a character over 358 px a line).
+const BLOODING_NOTE_MAX := 130
+
+
+## The youth pick in one sentence, each young player named with the man he
+## replaces, the same way for one or three: "Blooding Harry Armstrong for Ben
+## Smith." / "Blooding Harry Armstrong for Ben Smith and Josh Dolan for Tom
+## Jones." Surnames when full names would run past two lines.
+static func _blooding_note(brought: Array, dropped: Array, by_id: Dictionary) -> String:
+	var note := _blooding_pairs(brought, dropped, by_id, false)
+	if note.length() > BLOODING_NOTE_MAX:
+		note = _blooding_pairs(brought, dropped, by_id, true)
+	return note
+
+
+static func _blooding_pairs(brought: Array, dropped: Array, by_id: Dictionary, surnames: bool) -> String:
+	var name := func(p: Dictionary) -> String:
+		return GameDB.card_surname(p) if surnames else GameDB.player_display_name(p)
+	var pairs: Array = []
+	for i in range(brought.size()):
+		pairs.append("%s for %s" % [name.call(by_id[brought[i]]), name.call(by_id[dropped[i]])])
+	return "Blooding %s." % _and_list(pairs)
+
+
+static func _and_list(names: Array) -> String:
+	if names.size() <= 1:
+		return "".join(names)
+	return "%s and %s" % [", ".join(names.slice(0, names.size() - 1)), names[names.size() - 1]]
 
 
 func _ids_in(side: Dictionary) -> Dictionary:
@@ -9407,7 +9515,12 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 	var by_id := {}
 	for p in my_list:
 		by_id[str(p["id"])] = p
-	var ins: PackedStringArray = []
+	# Each swap as [in, out]. A player brought in is never the next one out,
+	# so no swap undoes another. One left out for lacking one trait may come
+	# back for another the synergy needs: then his two swaps fold into one
+	# (Y in for him, him in for W reads "Y in for W"), so the note is the net change.
+	var swaps: Array = []
+	var brought := {}
 	for _guard in range(8):
 		var ground := _ground_for(work)
 		if Traits.active(ground).has(key):
@@ -9445,7 +9558,7 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 			for tl in targets:
 				for id in work[tl]:
 					var vp = by_id.get(str(id))
-					if vp == null or str(id) == str(cand["id"]):
+					if vp == null or str(id) == str(cand["id"]) or brought.has(str(id)):
 						continue
 					if Traits.of(vp).has(need_t):
 						continue
@@ -9458,6 +9571,7 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 		if victim == "":
 			return {"side": side, "note": "", "lost": [], "problem": "No spot to free without losing another %s." % Traits.label(need_t).to_lower()}
 		var cid := str(cand["id"])
+		brought[cid] = true
 		var bench: Array = work["BENCH"]
 		for tl in targets:
 			var arr: Array = work[tl]
@@ -9468,7 +9582,14 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 		var bi := bench.find(cid)
 		if bi >= 0:
 			bench[bi] = victim
-		ins.append("%s in for %s" % [GameDB.player_display_name(cand), GameDB.player_display_name(by_id[victim])])
+		var folded := false
+		for sw in swaps:
+			if str(sw[1]) == cid:
+				sw[1] = victim
+				folded = true
+				break
+		if not folded:
+			swaps.append([cid, victim])
 	var after: Array = Traits.active(_ground_for(work))
 	if not after.has(key):
 		return {"side": side, "note": "", "lost": [], "problem": "Your list can't complete it this week."}
@@ -9476,6 +9597,9 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 	for k3 in before:
 		if not after.has(k3):
 			lost.append(str(Traits.SYNERGIES[k3]["label"]))
+	var ins: PackedStringArray = []
+	for sw in swaps:
+		ins.append("%s in for %s" % [GameDB.player_display_name(by_id[sw[0]]), GameDB.player_display_name(by_id[sw[1]])])
 	var note := "%s on: %s." % [str(syn["label"]), "; ".join(ins)]
 	if not lost.is_empty():
 		note += " Lost: %s." % ", ".join(lost)
@@ -10473,6 +10597,18 @@ func board_goal_text() -> String:
 
 func is_sacked() -> bool:
 	return bool(board.get("sacked", false))
+
+
+## Can the season roll on after a sacking? Not when the coaching career is
+## over (no reprieve left, or he retired). A choice of jobs still open when
+## the season rolls on (only a headless run gets here: the Hub's sacked card
+## and begin_intake_draft stand in the way) takes the first club offered
+## (ClubMoves).
+func _sacking_settled() -> bool:
+	if not is_sacked():
+		return true
+	ClubMoves.take_first_offer(self)
+	return not is_sacked()
 
 
 func _my_result(results: Array) -> Dictionary:

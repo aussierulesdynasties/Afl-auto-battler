@@ -216,7 +216,9 @@ func _build() -> void:
 	page.add_child(ctrl)
 
 	# The season ends the way the real AFL year does: with the national draft.
-	var draft_btn := UiKit.btn("%d National Draft" % GameState.season_year, UiKit.HEADING, true)
+	# Sacked: the next move is made on the Hub (a job, or retirement), so the
+	# draft waits there.
+	var draft_btn := UiKit.btn("Back" if GameState.is_sacked() else "%d National Draft" % GameState.season_year, UiKit.HEADING, true)
 	draft_btn.name = "NationalDraft"
 	draft_btn.custom_minimum_size = Vector2(0, 48)
 	draft_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -370,6 +372,9 @@ func _ordinal(n: int) -> String:
 ## The draft button: when a pick of yours has no senior list spot, the sheet
 ## says so first (DraftSpotsSheet); otherwise the draft starts.
 func _on_intake_draft() -> void:
+	if GameState.is_sacked():
+		Router.replace("hub")
+		return
 	if DraftSpotsSheet.needed():
 		DraftSpotsSheet.open(self, _start_intake_draft)
 		return
