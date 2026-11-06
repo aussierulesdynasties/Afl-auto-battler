@@ -424,17 +424,18 @@ def role_table(A, B):
     print("\nReal shares (Champion Data 2025): DEF 57%, MID 23%, FWD 15%, RUCK 4%; a team intercepts about 63.4 a game.")
 
 
-def wet_section(A, B):
-    """Paired change in percent (B / A - 1) beside the real wet v dry change, plus
-    accuracy and set-shot accuracy in points (row 120)."""
+def wet_section(A, B, wet):
+    """Paired change in percent (B / A - 1), plus accuracy and set-shot accuracy
+    in points (row 120). The real wet v dry column shows only when B is the wet
+    arm and A is not (wet=True), so no other screen is read against it."""
     if not B:
         return
     common = [i for i in A if i in B]
     if not common:
         return
-    print("\n## Change B against A, percent (real column: wet against dry)\n")
-    print("| stat | A | B | B/A-1 | se | real wet v dry |")
-    print("|---|---|---|---|---|---|")
+    print("\n## Change B against A, percent" + (" (real column: wet against dry)" if wet else "") + "\n")
+    print("| stat | A | B | B/A-1 | se |" + (" real wet v dry |" if wet else ""))
+    print("|---|---|---|---|---|" + ("---|" if wet else ""))
     for k in list(REAL_WET):
         a = per_match(A, k)
         b = per_match(B, k)
@@ -443,8 +444,9 @@ def wet_section(A, B):
             continue
         mb = st.mean(b[i] for i in common)
         d = [(b[i] - a[i]) / ma for i in common]
-        se = st.stdev(d) / math.sqrt(len(d))
-        print(f"| {k} | {ma:.1f} | {mb:.1f} | {100 * (mb / ma - 1):+.1f}% | {100 * se:.1f}% | {REAL_WET[k]} |")
+        se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+        print(f"| {k} | {ma:.1f} | {mb:.1f} | {100 * (mb / ma - 1):+.1f}% | {100 * se:.1f}% |"
+              + (f" {REAL_WET[k]} |" if wet else ""))
 
     def acc(r, g, b):
         gg = sum(float(t.get(g, 0)) for t in r["teams"])
@@ -472,7 +474,7 @@ def wet_section(A, B):
                 float(t.get(g, 0)) + float(t.get(b, 0)) for i in common for t in B[i]["teams"])
         d = [fb[i] - fa[i] for i in common if fa[i] is not None and fb[i] is not None]
         se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
-        print(f"| {label} | {pa:.1f} | {pb:.1f} | {pb - pa:+.1f} pts | {se:.1f} | {real} |")
+        print(f"| {label} | {pa:.1f} | {pb:.1f} | {pb - pa:+.1f} pts | {se:.1f} |" + (f" {real} |" if wet else ""))
 
 
 def main():
@@ -521,7 +523,7 @@ def main():
             sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ("yes" if se == 0 and st.mean(d) != 0 else "")
             line += f" {mb:.1f} | {mark(mb)} | {st.mean(d):+.2f} | {se:.2f} | {sig} |"
         print(line)
-    wet_section(A, B)
+    wet_section(A, B, "--weather wet" in (o.b or "") and "--weather wet" not in o.a)
     role_table(A, B)
     for name, R in (("A", A), ("B", B)):
         if not R:

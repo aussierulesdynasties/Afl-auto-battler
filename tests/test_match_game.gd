@@ -1089,6 +1089,7 @@ func _test_wet_weather_play() -> void:
 	var set_goals := [0, 0]
 	var fumbles := 0
 	var fumble_named := true
+	var fumble_ballups := 0
 	for i in range(16):
 		for c in range(2):
 			var s := _sim(700 + i)
@@ -1097,13 +1098,17 @@ func _test_wet_weather_play() -> void:
 			for side in range(2):
 				clangers[c] += float((res["team"][side] as Dictionary).get("clangers", 0.0))
 				tackles[c] += float((res["team"][side] as Dictionary).get("tackles", 0.0))
-			for e in res["events"]:
+			var evs: Array = res["events"]
+			for j in range(evs.size()):
+				var e: Dictionary = evs[j]
 				if str(e.get("kind", "")) == "ballup":
 					ballups[c] += 1
 				if c == 1 and str(e.get("kind", "")) == "clanger" and bool(e.get("fumble", false)):
 					fumbles += 1
-					if str(e.get("why", "")) != "wet":
+					if str(e.get("text", "")) != MatchSim.CLANGER_WHY["wet"] % str(e.get("name", "")) 							or str(e.get("name", "")) == "":
 						fumble_named = false
+					if j + 1 < evs.size() and str((evs[j + 1] as Dictionary).get("kind", "")) == "ballup":
+						fumble_ballups += 1
 			for shot in s.shot_log:
 				if int(shot[1]) == 1:
 					set_shots[c] += 1
@@ -1116,6 +1121,26 @@ func _test_wet_weather_play() -> void:
 	var acc_wet := float(set_goals[1]) / maxf(1.0, float(set_shots[1]))
 	_check(acc_wet < acc_dry, "Set shots go through less often in the wet (%.2f against %.2f)" % [acc_wet, acc_dry])
 	_check(fumbles > 0 and fumble_named, "A wet fumble is a clanger the game puts down to the wet ball (%d)" % fumbles)
+	_check(fumble_ballups > 0 and fumble_ballups < fumbles,
+			"Some wet fumbles go straight to a ball-up, the rest spill loose (%d of %d)" % [fumble_ballups, fumbles])
+	# The set shot itself is 0.97 as likely to go through in the wet, band by band.
+	var wet := _sim(2)
+	wet.weather = "wet"
+	var scaled := true
+	var picked := 0
+	for k in range(400):
+		var gp := 0.25 + 0.5 * float(k % 10) / 10.0
+		var split: Dictionary = wet._set_shot_split(gp, 0.3)
+		if (split["band"] as Dictionary).is_empty():
+			continue
+		picked += 1
+		var hit := false
+		for b in MatchSim.set_bands(gp):
+			if is_equal_approx(float(split["goal"]), clampf(float(b["goal"]) * 0.97, 0.03, 0.97)):
+				hit = true
+		if not hit:
+			scaled = false
+	_check(picked > 0 and scaled, "Every wet set shot is 0.97 as likely to go through (%d shots)" % picked)
 
 
 func _fake(id: String, role: String, attr: Dictionary) -> Dictionary:

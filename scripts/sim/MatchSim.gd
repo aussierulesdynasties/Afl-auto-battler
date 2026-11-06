@@ -327,10 +327,10 @@ func _rates() -> Dictionary:
 const WET_FUMBLE_HELD := 0.5
 
 
-## A ground ball fumbled in the wet (row 120, director 2026-11-06): he wins it
+## A ground ball fumbled in the wet (row 120, director 2026-11-06), at the first
+## touch of a chain (the only ground-ball gather play_chain has): he wins it
 ## off the deck and loses it before he can dispose of it, a clanger, and the
-## ball spills, either
-## into a ball-up or loose for either side to win off the deck. Likelier for a poor
+## ball spills, either into a ball-up or loose for either side to win off the deck. Likelier for a poor
 ## contested player; a Wet-weather player fumbles WET_CLANGERS as often, as he
 ## makes fewer clangers. {} when he gathers it cleanly. Dice: fumble_rng only.
 func _wet_fumble(side: int, carrier, at_fp: float) -> Dictionary:
@@ -3044,10 +3044,12 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		_chain_touch[str(carrier["id"])] = carrier
 		# Who a clanger would be blamed on, and how his touch ended (clanger_why).
 		_last_disp = {"carrier": carrier, "kind": "", "end": ""}
-		# The wet ball (row 120): a ground ball can be fumbled at the gather.
-		if weather == "wet" and not is_kick_in:
-			var how := next_gain if touches > 1 else _first_gain(carrier, cleared, is_kick_in)
-			if how == "gb":
+		# The wet ball (row 120): the first touch of a chain, when it is a
+		# ground ball (a loose turnover, a general contest, a stoppage with
+		# no clean clearance), can be fumbled at the gather. Later touches
+		# come by hand or foot, so they are never ground balls.
+		if weather == "wet" and not is_kick_in and touches == 1:
+			if _first_gain(carrier, cleared, is_kick_in) == "gb":
 				var fumbled := _wet_fumble(side, carrier, fp)
 				if not fumbled.is_empty():
 					return fumbled
