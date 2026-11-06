@@ -57,8 +57,10 @@ func _play() -> Dictionary:
 
 func _test_marks_go_back_for_the_kick() -> void:
 	var sim := _sim(0)
-	_check(sim.set_share() > MatchSim.SET_SHOT_SHARE,
-			"More marks inside 50 go back for the kick (%.2f)" % sim.set_share())
+	# Tuned (director, 2026-11-06) so set shots are 55% of scoring shots, the
+	# real rate: at least half the marks inside 50 go back for the kick.
+	_check(sim.set_share() >= 0.5,
+			"At least half the marks inside 50 go back for the kick (%.2f)" % sim.set_share())
 
 
 ## The balance harness reads MatchSim.shot_log: one row per counted shot.

@@ -26,7 +26,7 @@ const T := {
 	"inside50_behind": 0.180,
 	"stoppage_share": 0.42,          # chains that begin at a genuine stoppage
 	"hitouts_per_stoppage": 0.78,    # split between the two rucks
-	"clearance_per_stoppage": 0.815,  # to the team that wins the stoppage
+	"clearance_per_stoppage": 0.76,  # to the team that wins the stoppage (0.815 before every feature was on: 38.9 a team, real 36.1)
 	"one_percenter_share": 0.83,     # of inside-50 entries that yield a 1%
 	"rebound_on_exit": 0.55,         # defensive-half chains that yield a reb50
 	"shooter_power": 0.5,            # how strongly shots go to the best kicks

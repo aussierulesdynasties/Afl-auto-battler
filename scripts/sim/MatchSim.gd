@@ -4325,7 +4325,9 @@ func _clanger_taken(side: int, at: float) -> void:
 ## real 2.5): of general-play kicks that land in the middle third with no
 ## aerial contest, the share one of the other side's midfielders reads and
 ## takes outright. Tuned with tools/balance.sh toward Champion Data 2025.
-const MID_KICK_INTERCEPT := 0.10
+## Retuned with every feature on (2026-11-06): 0.04 gives midfielders 2.58 a game over 1,000 matches
+## (real 2.5), from 3.03 at 0.10.
+const MID_KICK_INTERCEPT := 0.04
 ## The share of a chain's time a midfield intercept gives back (it cut the
 ## passage short). Measured: none drops disposals; a whole chain lifts
 ## clearances and hitouts (more ball-ups).
@@ -5278,7 +5280,7 @@ const SET_SHOT_SHARE := 0.55
 const SET_MISS_BEHIND := 0.70
 ## Row 77 (director ruling T8.Q9): real set shots are about 55% of shots
 ## (Champion Data shot counts, 2026: 5,951 of 10,859; SET_SHOT_EVIDENCE.md
-## [WH]), so most marks inside 50 go back and kick (SET_SHARE_ON), and each
+## [WH]), so half the marks inside 50 go back and kick (SET_SHARE_ON), and each
 ## band converts at the real rate for its distance and angle: goals per set
 ## shot 2021-25 [ABC], straight in front 20-30 m 85%, 30-40 m 71%, 40-50 m 54%,
 ## over 50 m 33%; the pocket (10-20 m, wide) the mean of the two wide cells,
@@ -5291,8 +5293,10 @@ const SET_BANDS_ON := [
 	{"key": "pocket", "spot": "from the pocket, on a tight angle", "metres": 15.0, "acc": 0.605, "share": 0.15},
 	{"key": "long", "spot": "from 55 metres out", "metres": 55.0, "acc": 0.33, "share": 0.10},
 ]
-const SET_SHARE_ON := 0.63
-const SET_GP_SHOT := 0.74
+## Tuned with every feature on (director, 2026-11-06): 0.50 and 0.95 put set shots at 55.0% of scoring
+## shots over 1,000 matches (tools/balance.sh), from 65.5% at 0.63 and 0.74.
+const SET_SHARE_ON := 0.50
+const SET_GP_SHOT := 0.95
 
 
 ## The share of marks inside 50 that end in a set shot from the mark.
