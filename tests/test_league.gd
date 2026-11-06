@@ -329,8 +329,11 @@ func _test_news() -> void:
 	_check(kinds.has("award") and kinds.has("premiers"), "The awards and the premiers make the news")
 	_check(kinds.has("game") or kinds.has("injury") or kinds.has("development"),
 			"Big games, injuries or rival development make the news (%s)" % str(kinds.keys()))
-	var newest: Dictionary = GameState.news[0]
-	_check(str(newest["text"]).contains("premiers"), "Newest first: the premiers top the feed")
+	# Your club's own coach arc can open after the flag (a player out of
+	# contract): newest of the league's news, as above.
+	var league_news: Array = GameState.news.filter(func(n): return str(n.get("kind", "")) != ClubArcs.NEWS_KIND)
+	_check(not league_news.is_empty() and str(league_news[0]["text"]).contains("premiers"),
+			"Newest first: the premiers top the league's news (%s)" % (str(league_news[0]["text"]) if not league_news.is_empty() else "-"))
 	_check(GameState.save_career() and GameState.load_career() and not GameState.news.is_empty(),
 			"The news survives a save and load")
 
