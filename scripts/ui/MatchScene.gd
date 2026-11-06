@@ -39,7 +39,7 @@ var _stacked := false
 var _last_tactics := {}
 var _skipping := false
 ## Skip to the next break (director, 2026-11-06): beside Skip to full time in
-## the first three quarters. Quarter breaks the oval has played so far.
+## the first three quarters. Quarter breaks opened so far (set as each opens).
 var _break_skip: Button
 var _breaks_played := 0
 const BREAK_NAMES := ["quarter time", "half time", "three-quarter time"]
@@ -658,7 +658,8 @@ func _on_skip_to_break() -> void:
 	_break_skip.text = "Playing on..."
 	await get_tree().process_frame
 	await get_tree().process_frame
-	if not is_inside_tree() or GameState.pending_sim != sim:
+	# Skip to full time in those two frames has already ended the match.
+	if not is_inside_tree() or GameState.pending_sim != sim or _finished:
 		return
 	if sim.quarter_in_progress():
 		_res = sim.run_quarter()
@@ -749,9 +750,13 @@ func _show_coach_box() -> void:
 	_break_pack_cols = []
 	_break_reading = []
 	_pitch.pause()
-	_sync_controls()
 	var sim: MatchSim = GameState.pending_sim
 	var q := sim.current_quarter
+	# The skip button names the next break from here. Counted when the break
+	# opens, not at the siren: in the moment between the two, a tap still
+	# lands on the break that has just sounded, and the button says so.
+	_breaks_played = q - 1
+	_sync_controls()
 	if _key_moments:
 		# The break is the stop; the next quarter starts at top speed.
 		if q > 1:
@@ -3338,9 +3343,6 @@ func _on_event(ev: Dictionary) -> void:
 		_story_feed(ev)
 	_press_feed(event_index, ev)
 	_call_feed(event_index, ev)
-	if str(ev.get("kind", "")) == "quarter":
-		_breaks_played += 1
-		_sync_controls()
 	if str(ev.get("kind", "")) == "goal":
 		_flash_score(int(ev.get("side", 0)))
 		_track_run(int(ev.get("side", 0)))

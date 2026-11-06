@@ -3554,6 +3554,15 @@ func _play_match_for_skip(skip: bool) -> Dictionary:
 	var tag := "skip" if skip else "watch"
 	var names := ["quarter time", "half time", "three-quarter time"]
 	var pv = m.get("_pitch")
+	# At each siren the button still names the break that has just sounded:
+	# a tap before the break opens lands on that break, not the next one.
+	var at_siren: Array = []
+	var on_siren := func(ev: Dictionary) -> void:
+		var b: Button = m.find_child("SkipToBreak", true, false)
+		if str(ev.get("kind", "")) == "quarter" and b != null and at_siren.size() < 3:
+			at_siren.append(b.text)
+	if not skip:
+		pv.event_played.connect(on_siren)
 	var guard := 0
 	while not bool(m.get("_finished")) and guard < 20000:
 		guard += 1
@@ -3637,6 +3646,9 @@ func _play_match_for_skip(skip: bool) -> Dictionary:
 		if pv.playing:
 			pv._process(0.5)
 		await process_frame
+	if not skip:
+		var want := names.map(func(n): return "Skip to " + n)
+		_check(at_siren == want, "At each siren the button names the break just sounded, not the next (%s)" % str(at_siren))
 	var res: Dictionary = m.get("_res")
 	var evs_all: Array = res.get("events", [])
 	var sig := "%s %s %d events, hash %d" % [str(res.get("goals")), str(res.get("behinds")),
