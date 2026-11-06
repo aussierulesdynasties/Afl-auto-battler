@@ -401,7 +401,7 @@ static func _board_row(host: Control, row: Dictionary, wide: bool, i: int) -> Co
 	else:
 		# A phone has no room for a name beside five figures: the name takes
 		# its own line, the figures sit under it in the columns.
-		var stack := UiKit.vbox(0)
+		var stack := UiKit.vbox(4)
 		face.add_child(stack)
 		if head:
 			name.free()
