@@ -128,11 +128,13 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 			return _mine(s, my_club)
 		s["weight"] = 75
 	elif kind == "premiers":
-		m = _re("prem", "^(.+) are the (\\d+) premiers\\.$").search(text)
+		# A second sentence is the club's flag history (row 76, switch "league_news").
+		m = _re("prem", "^(.+) are the (\\d+) premiers\\.(?: (.+))?$").search(text)
 		if m != null:
+			var history := m.get_string(3)
 			s.merge({"club": code_of(m.get_string(1)), "weight": 100,
 					"headline": "%s are the %s premiers" % [m.get_string(1), m.get_string(2)],
-					"standfirst": "The flag is theirs."}, true)
+					"standfirst": history if history != "" else "The flag is theirs."}, true)
 			return _mine(s, my_club)
 	elif kind == "almanac_story":
 		# The season wrap's front item (switch "club_almanac"): the first sentence
