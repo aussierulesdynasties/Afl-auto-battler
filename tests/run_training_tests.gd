@@ -27,6 +27,7 @@ func _run() -> void:
 	_failures.append_array(suite.failures)
 	await _t("_test_training_hero")
 	await _t("_test_training_grid")
+	await _t("_test_stat_focus_tap")
 	print(Ran.line("Training", self, [suite]))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -337,6 +338,65 @@ func _test_training_grid() -> void:
 		await _settle()
 	features.clear("training_grid")
 
+
+## Stat focus (row 97): on a phone, a real tap picks a stat, a second real tap
+## locks it in, every target is a thumb tall and inside the screen, and once
+## locked the picker is gone until next season.
+func _test_stat_focus_tap() -> void:
+	var gs = root.get_node("GameState")
+	var db = root.get_node("GameDB")
+	var features = load("res://scripts/core/Features.gd")
+	features.set_on("stat_focus", true)
+	gs.reset()
+	gs.replay_seed = 2027
+	gs.set_setting("seen_training_intro", true)
+	gs.start_season("FRE", db.club_list("FRE"))
+	var p: Dictionary = {}
+	for q in gs.my_list:
+		if gs.project_job(q) == "" and gs.focus_options(q).size() >= 2:
+			p = q
+			break
+	_check(not p.is_empty(), "Stat focus tap: a player with stats to focus on")
+	if p.is_empty():
+		features.clear("stat_focus")
+		return
+	var id := str(p["id"])
+	root.size = Vector2i(390, 844)
+	var scene: Control = load("res://scenes/TrainingScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	scene.call("_open_player", id)
+	await _settle()
+	var opts: Array = gs.focus_options(p)
+	var key := str(opts[opts.size() - 1])
+	var picks: Array = scene.find_children("StatFocusPick_*", "Button", true, false)
+	var thumb := picks.size() == opts.size()
+	for b in picks:
+		var r: Rect2 = (b as Control).get_global_rect()
+		if r.size.y < 44.0 or r.position.x < 0.0 or r.end.x > 390.0:
+			thumb = false
+	_check(thumb, "Stat focus tap: one button per stat he can use (%d of %d), each a thumb tall and on screen" % [picks.size(), opts.size()])
+	_check(scene.find_child("StatFocusLock", true, false) == null, "Stat focus tap: nothing to lock in before a stat is picked")
+	var pick: Button = scene.find_child("StatFocusPick_" + key, true, false)
+	var why: String = await Tap.tap(pick) if pick != null else "no button"
+	await _settle()
+	_check(why == "" and str(scene.get("_focus_choice")) == key and not gs.focus_locked(gs.list_player(id)),
+			"Stat focus tap: a real tap picks %s without locking it (%s)" % [key, why])
+	var lock: Button = scene.find_child("StatFocusLock", true, false)
+	_check(lock != null and lock.size.y >= 44.0 and lock.text.to_lower().contains(gs.train_stat_label(key).to_lower()),
+			"Stat focus tap: a thumb-tall Lock in button names the stat (%s)" % [lock.text if lock != null else "missing"])
+	why = await Tap.tap(lock) if lock != null else "no button"
+	await _settle()
+	var after: Dictionary = gs.list_player(id)
+	_check(why == "" and gs.focus_locked(after) and gs.stat_focus(after) == key,
+			"Stat focus tap: a real tap on Lock in sets his focus for the season (%s)" % why)
+	var locked: Label = scene.find_child("StatFocusLocked", true, false)
+	_check(locked != null and locked.is_visible_in_tree() and locked.text.contains(str(int(gs.season_year) + 1))
+			and scene.find_children("StatFocusPick_*", "Button", true, false).is_empty(),
+			"Stat focus tap: once locked the picker is gone and the page says when it opens again")
+	scene.queue_free()
+	await _settle()
+	features.clear("stat_focus")
 
 func _settle() -> void:
 	for i in range(6):

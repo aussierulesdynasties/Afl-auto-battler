@@ -163,7 +163,21 @@ func _screen(key: String, size: Vector2i) -> void:
 	if found.is_empty():
 		_table.append("%s | no long scroller" % tag)
 		return
+	var names: Array = found.map(func(n): return String((n as Node).name))
 	for si in range(found.size()):
+		# a resize may rebuild the page and free the scrollers found before it:
+		# find this one again, by name, in the page as it is now
+		if not is_instance_valid(found[si]):
+			var now: Array = []
+			_scrollers(current_scene, now)
+			found[si] = null
+			for c in now:
+				if String((c as Node).name) == names[si]:
+					found[si] = c
+					break
+			if found[si] == null:
+				_check(false, "%s %dx%d: scroller %s is gone after a resize" % [key, size.x, size.y, names[si]])
+				continue
 		var sc: ScrollContainer = found[si]
 		var label := "%s #%d (%s)" % [tag, si, sc.name]
 		var res := []
