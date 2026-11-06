@@ -419,6 +419,16 @@ func _awards_panel() -> Control:
 	var rising: Array = aw.get("rising_star", [])
 	if not rising.is_empty():
 		v.add_child(_award_line("Rising Star", rising[0], "age %d" % int(rising[0]["age"]), false))
+	var fist: Array = aw.get("golden_fist", [])
+	if not fist.is_empty():
+		var gf := _award_line(Awards.GOLDEN_FIST, fist[0], Awards.golden_fist_line(fist[0]), true)
+		gf.name = "GoldenFist"
+		v.add_child(gf)
+		var frest := []
+		for r in fist.slice(1, 3):
+			frest.append("%s (%s)" % [GameState.award_name(r), Awards.golden_fist_line(r)])
+		if not frest.is_empty():
+			v.add_child(_small("Then: " + ", ".join(frest)))
 	var norm_smith: Dictionary = aw.get("norm_smith", {})
 	if not norm_smith.is_empty():
 		var ns := _award_line("Norm Smith Medal", norm_smith, str(norm_smith.get("line", "")), true)
@@ -549,6 +559,13 @@ func _open_awards_program() -> void:
 	if not rising.is_empty():
 		body.add_child(StatsSide.heading("Rising Star"))
 		body.add_child(_award_line("Winner", rising[0], "age %d" % int(rising[0]["age"]), true))
+	var fist: Array = aw.get("golden_fist", [])
+	if not fist.is_empty():
+		body.add_child(StatsSide.heading(Awards.GOLDEN_FIST))
+		for i in range(mini(3, fist.size())):
+			var r: Dictionary = fist[i]
+			body.add_child(_small("%d. %s (%s) — %s" % [i + 1, GameState.award_name(r),
+					GameDB.club_short(str(r["club"])), Awards.golden_fist_line(r)], str(r["club"])))
 	var coaches: Array = aw.get("coaches_award", [])
 	if not coaches.is_empty():
 		body.add_child(StatsSide.heading("Coaches Award"))

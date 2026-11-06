@@ -181,6 +181,10 @@ func _season_card(e: Dictionary) -> Control:
 	if not bl.is_empty():
 		var b: Dictionary = bl[0]
 		_row(v, "Brownlow Medal", "%s (%s)" % [_name_of(b), GameDB.club_name(str(b.get("club", "")))], "Brownlow")
+	var gfist: Array = e.get("golden_fist", [])
+	if not gfist.is_empty():
+		var f: Dictionary = gfist[0]
+		_row(v, Awards.GOLDEN_FIST_SHORT, "%s (%s)" % [_name_of(f), GameDB.club_name(str(f.get("club", "")))], "GoldenFist")
 	for r in e.get("records", []):
 		_row(v, "Record", str(r), "Record")
 	for lg in e.get("legends", []):

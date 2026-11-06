@@ -27,6 +27,7 @@ const PLAYER_HONOURS := [
 	["coleman", "leading_goalkicker_medal", "Coleman Medal", "goals", "goal"],
 	["rising_star", "rising_star", "Rising Star", "", ""],
 	["norm_smith", "norm_smith_medal", "Norm Smith Medal", "", ""],
+	["golden_fist", "golden_fist", Awards.GOLDEN_FIST, "", ""],
 	["coaches_award", "coaches_award", "Coaches Award", "coaches", "vote"],
 	["my_bf", "club_bnf", "Best and fairest", "bf", "best and fairest vote"],
 ]
@@ -41,6 +42,7 @@ const AWARD_KINDS := [
 	["all_australian", "All-Australian"],
 	["rising_star", "Rising Star"],
 	["norm_smith", "Norm Smith Medal"],
+	["golden_fist", Awards.GOLDEN_FIST],
 	["coaches_award", "Coaches Award"],
 	["my_bf", "Best and fairest"],
 ]
@@ -293,6 +295,9 @@ static func player_honours(seasons: Array) -> Array:
 			if str(h[3]) != "":
 				var n := int(r.get(str(h[3]), 0))
 				count = "%d %s" % [n, str(h[4]) if n == 1 else str(h[4]) + "s"]
+			elif str(h[0]) == "golden_fist":
+				# What won it: his season's counts on his own path.
+				count = Awards.golden_fist_line(r)
 			out.append({"key": str(h[0]), "art": str(h[1]), "name": honour_name(str(h[0]), str(h[2])), "id": str(r.get("id", "")),
 					"year": year, "count": count})
 		for id in e.get("my_aa", []):
