@@ -3,16 +3,19 @@ extends HFlowContainer
 ## The responses beside one opposition fact (FactOptions), as a short row under
 ## it: each its name in bold, what it does for you and what it costs; an
 ## unsuitable one is dimmed and disabled, its reason in the phrase's place. A
-## fixed order, nothing marked best. A tap says which response it was; the hub
-## decides what that opens.
+## fixed order, nothing marked best. A tap chooses that response (or lets it go
+## again) and shows it chosen; it never starts the match. The hub's Play match
+## button starts it, opening on the chosen call (HubScene._on_fact_option).
 
 const MIN_W_NARROW := 130.0
 const MIN_W_WIDE := 330.0
 
 
 ## `options` are FactOptions.options; `on_pick` gets the option's dictionary.
-func setup(fact_index: int, options: Array, narrow: bool, on_pick: Callable) -> FactOptionsRow:
+## `fact` is the fact's own words, which the chosen intent names.
+func setup(fact_index: int, options: Array, narrow: bool, on_pick: Callable, fact := "") -> FactOptionsRow:
 	name = "FactOptions_%d" % fact_index
+	set_meta("fact", fact)
 	add_theme_constant_override("h_separation", 5)
 	add_theme_constant_override("v_separation", 5)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -69,3 +72,30 @@ func _button(fact_index: int, o: Dictionary, narrow: bool, on_pick: Callable) ->
 		sub.modulate.a = 0.8
 	b.pressed.connect(func(): on_pick.call(o))
 	return wrap
+
+
+## Whether option `o` is the response `intent` (GameState.call_intent) holds.
+static func is_chosen(o: Dictionary, intent: Dictionary) -> bool:
+	return not intent.is_empty() and str(o["call"]) == str(intent.get("call", "")) \
+			and str(o["plan"]) == str(intent.get("plan", "")) \
+			and str(o["player_id"]) == str(intent.get("player_id", ""))
+
+
+## Paint every option card under `root`: the one `intent` holds (under the fact
+## `fact_text` it answers) chosen, the rest as built.
+static func paint_chosen(root: Node, intent: Dictionary) -> void:
+	for n in root.find_children("FactOption_*", "Button", true, false):
+		var b := n as Button
+		var row := b.get_parent().get_parent() as FactOptionsRow
+		var on := row != null and str(row.get_meta("fact", "")) == str(intent.get("fact", "")) \
+				and is_chosen(b.get_meta("option"), intent)
+		if on == bool(b.get_meta("chosen", false)):
+			continue
+		b.set_meta("chosen", on)
+		if on:
+			UiKit.set_selected(b, true)
+		else:
+			# Back to the card as built (style_button raises a card's height to 44).
+			var tall := b.custom_minimum_size.y
+			UiKit.style_button(b, UiKit.SECONDARY)
+			b.custom_minimum_size.y = tall
