@@ -31,7 +31,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 98 | Audio settings become Mute and one Volume slider (T7.O16) | settings show the two controls, real-tap test |
 | 99 | Football department budget merges into High performance: one spend (T9.Q14) | one spend line, old saves load |
 | 100 | Culture sheet moves into the Captaincy panel | culture shown with the leaders, old sheet gone |
-| 101 | Pre-season drill plan split by position group: mids, defenders, forwards, rucks (director: "split it between position groups") | four group plans, test |
 | 103 | Synergies within reach: draft, trade and free-agent screens show which synergy a player would complete, and a player can grow a trait over seasons through training (4.Q10); balance-gated | both shown in play, paired table |
 | 104 | Generated players get synergy traits at the real-player rate and contested bulls at the real 3.5% (4.Q10; drift side is row 90); balance-gated | generation audit shows both rates |
 | 105 | Press conference: list every place the code differs from the bible and show him before anything changes (T3.Q6) | list shown to him |
