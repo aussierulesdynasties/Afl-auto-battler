@@ -32,6 +32,7 @@ func run() -> void:
 	_t("_test_fifth_interchange")
 	_t("_test_dual_ruck")
 	_t("_test_merit_second_position")
+	_t("_test_drag_preview_one_line")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	GameDB.skip_ovr_overrides = false
@@ -449,3 +450,23 @@ func _test_merit_second_position() -> void:
 	_check(where == "FWD", "On merit, a player who has learned forward is picked there ahead of a weaker forward")
 	_check(after["ground"].size() == 18 and after["bench"].size() == Ratings.bench_size and ruck_a == ruck_b,
 			"The ruck and the bench's size are untouched")
+
+
+## Dragging a player shows his name on one line, not a column of single
+## letters (director's screenshot, 2026-11-07): the preview never wraps and is
+## as wide as the whole name.
+func _test_drag_preview_one_line() -> void:
+	var name := "Xavier Taylor"
+	var l: Label = load("res://scripts/ui/TeamBuilder.gd").drag_preview(name)
+	_check(l.autowrap_mode == TextServer.AUTOWRAP_OFF, "The drag preview never wraps")
+	var font: Font = l.get_theme_font("font")
+	var fs := l.get_theme_font_size("font_size")
+	var w := font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var one: Label = load("res://scripts/ui/TeamBuilder.gd").drag_preview("X")
+	var line_h := one.get_minimum_size().y
+	one.free()
+	var min_size := l.get_minimum_size()
+	_check(min_size.x >= w - 0.5, "The drag preview is as wide as the whole name (%.0f >= %.0f)" % [min_size.x, w])
+	_check(is_equal_approx(min_size.y, line_h), "The drag preview is one line tall (%.0f, one line is %.0f)" % [min_size.y, line_h])
+	_check(l.get_theme_constant("outline_size") >= 3, "The drag preview is outlined so it reads over the turf")
+	l.free()
