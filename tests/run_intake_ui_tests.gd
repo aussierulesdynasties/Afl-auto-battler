@@ -720,8 +720,14 @@ func _test_draft_night_screen(size: Vector2i) -> void:
 			"The board has Fremantle on the clock in words (%s: %s)" % [tag, status.text if status else "-"])
 	_check(yours != null and yours.is_visible_in_tree() and yours.text == "You're on the clock",
 			"The board shows your pick (%s: %s)" % [tag, yours.text if yours else "-"])
-	var recent := ui.find_children("RecentPick_*", "Control", true, false)
-	var rows_want := mini(3 if size.y >= 780 or size.x >= 760 else 2, draft.pick_history.size())
+	# A rivals' trade struck on the night takes a row of the strip like a pick.
+	var recent: Array = ui.find_children("RecentPick_*", "Control", true, false) \
+			+ ui.find_children("RecentTrade_*", "Control", true, false)
+	var events: int = draft.pick_history.size()
+	for t in draft.night_trades:
+		if int(t["at"]) <= draft.pick_index + 1:
+			events += 1
+	var rows_want := mini(3 if size.y >= 780 or size.x >= 760 else 2, events)
 	_check(recent.size() == rows_want, "The last picks are under it: three, two on a shorter screen (%s: %d)" % [tag, recent.size()])
 	var strip: Control = ui.find_child("RecentPicks", true, false)
 	if size.x >= 760:
