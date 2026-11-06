@@ -14,8 +14,9 @@ extends RefCounted
 ##      (several: --features preseason,other);
 ##   3. the project setting features/<name> is true (project.godot). This is
 ##      what an exported build reads. international_prospects ships ON since
-##      2026-10-18 (director: "Names fine, switch on") and clanger_cause since
-##      2026-11-04 (row 81); every other switch ships off.
+##      2026-10-18 (director: "Names fine, switch on"), clanger_cause since
+##      2026-11-04 (row 81) and coach_arcs since 2026-11-06 (row 108, director
+##      "Switch on now"); project.godot [features] lists which others ship on.
 ## Otherwise it is OFF: every test suite that does not ask for it, and a plain
 ## editor run, for any switch whose project setting is false.
 ##
@@ -54,7 +55,8 @@ extends RefCounted
 ##               (CoachArcs.gd, ClubArcs.gd, data/arcs/coach_arcs.json). Phase 2:
 ##               the coach changes clubs (ClubMoves.gd): sacked, he takes a job
 ##               elsewhere; poached, he leaves; his old club and assistant
-##               come back in arcs. Off, no arc starts, no card shows,
+##               come back in arcs. Ships ON (row 108, T5.Q4, director "Switch on
+##               now"). Off, no arc starts, no card shows,
 ##               GameState.coach_arcs stays empty and the sack ends the career.
 ##   finals_cards_2  the finals cards' second slice (rows 35, 36): A3, A9, A14, B7 in
 ##               finals weeks, and one card the week your season ends (A15, A16, B8,

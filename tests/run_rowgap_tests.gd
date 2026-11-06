@@ -368,7 +368,10 @@ func _audit(scene: Node, tag: String) -> void:
 					break
 				if (kids[j] as Control).size.x > 1.0 or kids[j] is Label:
 					break
-			if b == null:
+			# A card's dateline (NewsFront "Dateline") dates the page; it is not a
+			# figure of the title beside it (row 108: arc news opens a new career,
+			# so the hub's League news card shows from day one).
+			if b == null or str((b as Label).name) == "Dateline":
 				continue
 			var gap := _text_start(b) - _text_end(a)
 			if gap > worst:

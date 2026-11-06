@@ -57,6 +57,8 @@ func run(tree: SceneTree) -> void:
 	GameState.save_path = "user://test_coach_arcs.save"
 	GameState.settings_path = "user://test_coach_arcs.cfg"
 	GameState.delete_saved_career()
+	_t("_test_ships_on")
+	Features.set_on("coach_arcs", false)
 	_t("_test_switch_off")
 	Features.set_on("coach_arcs", true)
 	_t("_test_file_fit")
@@ -78,8 +80,15 @@ func run(tree: SceneTree) -> void:
 		print("  FAIL: " + f)
 
 
+## Row 108 (T5.Q4, director "Switch on now"): the switch ships on, so a plain
+## run and an exported build start arcs without asking.
+func _test_ships_on() -> void:
+	_check(bool(ProjectSettings.get_setting("features/coach_arcs", false)), "Row 108: the switch ships on (project setting)")
+	_check(Features.on("coach_arcs") and CoachArcs.on(), "Row 108: a run that does not force it has arcs on")
+
+
 func _test_switch_off() -> void:
-	_check(not Features.on("coach_arcs"), "the switch ships off")
+	_check(not Features.on("coach_arcs"), "forced off for this test")
 	_fresh()
 	GameState.board["confidence"] = 20
 	var rng := RandomNumberGenerator.new()
