@@ -1487,9 +1487,9 @@ func _on_fact_option(option: Dictionary, fact_text: String) -> void:
 ## when the sim would play a match you could have played yourself: your
 ## home-and-away round or your final (row 102). A bye, a finals week off, a
 ## finals week you are out of and the off-season sim nothing of yours, so they
-## go straight ahead. The pre-season's Sim to Round 1 (PreSeasonScene) stops
-## before Round 1 and never asks. Settings turns the question back on after
-## Don't ask again.
+## go straight ahead. The pre-season's Sim to Round 1 (PreSeasonScene) asks
+## too, because it plays the practice match, and follows the same setting.
+## Settings turns the question back on after Don't ask again.
 func _sim_asks_first() -> bool:
 	return GameState.confirm_sim_round() and not _upcoming_match().is_empty()
 
