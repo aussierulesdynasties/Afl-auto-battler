@@ -86,9 +86,15 @@ static func ensure(st: Dictionary) -> Dictionary:
 	for k in fresh:
 		if not st.has(k) or typeof(st[k]) != typeof(fresh[k]):
 			st[k] = fresh[k]
+	var pre_reprieves := not (st["coach"] as Dictionary).has("reprieves")
 	for k in fresh["coach"]:
 		if not (st["coach"] as Dictionary).has(k):
 			st["coach"][k] = fresh["coach"][k]
+	# A save from before second chances: a coach already sacked once has had
+	# his (he went straight on to another club), so the next sacking ends it.
+	# The board's warning card says so plainly before it can happen (rule 60).
+	if pre_reprieves and int(st["coach"]["sackings"]) >= 1:
+		st["coach"]["reprieves"] = 0
 	return st
 
 

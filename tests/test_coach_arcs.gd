@@ -249,7 +249,12 @@ func _test_poached_moves_club() -> void:
 	CoachArcs.answer(def, rec, "arc_poach_offer", "take", GameState.story_week() + 3, GameState.season_year)
 	CoachArcs.answer(def, rec, "arc_poach_captain", "truth", GameState.story_week() + 5, GameState.season_year)
 	_check((rec["flags"] as Dictionary).has("taking") and int(rec["beat"]) == 3, "poached: the offer is taken and every beat played")
-	_play_out(rng)
+	# The board sacks him at the same close (row 111): the signed job stands,
+	# the sacking is on his record, and no second chance is spent.
+	_play_out(rng, 0)
+	_check(not GameState.is_sacked() and int(st["coach"]["sackings"]) == 1 and int(st["coach"]["reprieves"]) == 1
+			and (st["offers"] as Array).is_empty(),
+			"poached and sacked: he still goes, the sacking counts, the second chance is kept: %s" % str(st["coach"]))
 	_check(str(st["move"].get("to", "")) == suitor and str(st["move"].get("why", "")) == "poached", "poached: the move waits for the rollover: %s" % str(st["move"]))
 	_check(str(st["done"].get("poached", {}).get("ending", "")) == "left", "poached: it resolves 'left': %s" % str(st["done"].get("poached", {})))
 	_check(st["active"].is_empty(), "poached: every arc ends at the club he leaves: %s" % str(st["active"].keys()))
@@ -285,6 +290,8 @@ func _test_sacked_way_back() -> void:
 	rng.seed = SUITE_SEED + 5
 	var st: Dictionary = GameState.coach_arcs
 	var old := str(GameState.my_club)
+	# The career carries on from the poached test, which may hold a sacking.
+	var sacks_before := int(st["coach"]["sackings"])
 	for i in range(3):
 		_week(rng)
 	# An assistant with a name, after the job: arc 11 runs as the board sinks.
@@ -325,13 +332,13 @@ func _test_sacked_way_back() -> void:
 	_check(jobs.all(func(o): return int(o["finish"]) > 0 and str(o["goal"]) != "" and str(o["list"]) != "" and str(o["why_open"]) != ""),
 			"sacked: each offer states where they finished, the list, the board's goal and why the job is open: %s" % str(jobs))
 	_check((st["move"] as Dictionary).is_empty() and int(st["coach"]["reprieves"]) == 1, "sacked: no move until he chooses; one reprieve left")
-	_check(not GameState.begin_intake_draft() and GameState.is_sacked(), "sacked: the draft waits for his choice")
 	_check(not ClubMoves.take_job(GameState, old), "sacked: he cannot take a job that was not offered")
 	var to := str(jobs[-1]["code"]) if not jobs.is_empty() else ""
 	_check(ClubMoves.take_job(GameState, to), "sacked: he takes the job at %s" % to)
 	_check(not GameState.is_sacked(), "sacked: the career goes on (no sacked card)")
 	_check(str(st["move"].get("why", "")) == "sacked" and str(st["move"].get("to", "")) == to, "sacked: a job at another club: %s" % str(st["move"]))
-	_check(int(st["coach"]["sackings"]) == 1 and int(st["coach"]["reprieves"]) == 0, "sacked: the sacking is on his record and the reprieve is spent")
+	_check(int(st["coach"]["sackings"]) == sacks_before + 1 and int(st["coach"]["reprieves"]) == 0,
+			"sacked: the sacking is on his record and the reprieve is spent: %s" % str(st["coach"]))
 	_check((st["offers"] as Array).is_empty(), "sacked: the offers are gone once he chooses")
 	_check(str(st["done"].get("assistant", {}).get("ending", "")) == "took_job", "assistant: resolves 'took_job': %s" % str(st["done"].get("assistant", {})))
 	_check(GameState.start_next_season(), "sacked: the season rolls on")
@@ -380,6 +387,16 @@ func _test_second_sacking_and_retire() -> void:
 	CoachArcs.ensure(bare)
 	_check(int(bare["coach"]["reprieves"]) == 1 and int(bare["coach"]["retired"]) == 0 and bare["offers"] is Array,
 			"an old save gets one reprieve and no offers")
+	# An old save whose coach was already sacked once has had his second chance.
+	var once := CoachArcs.new_state()
+	(once["coach"] as Dictionary).erase("reprieves")
+	once["coach"]["sackings"] = 1
+	CoachArcs.ensure(once)
+	_check(int(once["coach"]["reprieves"]) == 0, "an old save already sacked once has no second chance left")
+	CoachArcs.ensure(once)
+	once["coach"]["reprieves"] = 1
+	CoachArcs.ensure(once)
+	_check(int(once["coach"]["reprieves"]) == 1, "a reprieve earned back after the change is kept on reload")
 	# No reprieve left: the sacking ends the career.
 	GameState.board["goal"] = {"key": "wins99", "text": "Win 99 games", "wins": 99}
 	_play_out(rng, 0)
@@ -389,12 +406,15 @@ func _test_second_sacking_and_retire() -> void:
 		print("SKIP: %s won the flag, so the sacking never comes" % old)
 	else:
 		_check(GameState.is_sacked() and (st["offers"] as Array).size() == ClubMoves.OFFERS, "first sacking: jobs on offer")
+		var sacks := int(st["coach"]["sackings"])
 		# Spend the reprieve and sack him again at the same close.
 		st["coach"]["reprieves"] = 0
 		st["offers"] = []
 		ClubMoves.season_close(GameState)
 		_check(GameState.is_sacked() and (st["offers"] as Array).is_empty() and ClubMoves.career_over(GameState),
 				"no reprieve left: no offers, the coaching career is over")
+		_check(int(st["coach"]["sackings"]) == sacks + 1, "a sacking that ends the career is on his record")
+		_check(not GameState.begin_intake_draft(), "a career that is over has no draft")
 		_check((st["move"] as Dictionary).is_empty() and not GameState.start_next_season() and GameState.my_club == old,
 				"a career that is over does not roll on")
 	# A premiership puts the reprieve back, one at most.

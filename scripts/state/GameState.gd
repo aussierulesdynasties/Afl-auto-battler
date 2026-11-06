@@ -1783,8 +1783,10 @@ func begin_draft() -> void:
 ## in reversed-ladder order (worst club first) like the real national draft.
 ## Returns false when there is nothing to draft.
 func begin_intake_draft() -> bool:
-	# Sacked: the draft waits for his choice of job (or the career is over).
-	if season == null or is_sacked():
+	# Sacked: the Hub and the season review hold the draft until he has
+	# chosen a job, so a run that gets here sacked is headless and takes the
+	# first club offered (_sacking_settled). A finished career has no draft.
+	if season == null or not _sacking_settled():
 		return false
 	if not (season.is_season_over() or season.is_regular_done()):
 		return false

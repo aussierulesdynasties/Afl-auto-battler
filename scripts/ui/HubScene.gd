@@ -542,23 +542,28 @@ func _sacked_card() -> Control:
 	card.add_child(v)
 	var retired := ClubMoves.retired(GameState)
 	var jobs := ClubMoves.offers(GameState)
-	v.add_child(UiKit.lbl("You have retired" if retired else "You have been sacked", UiKit.TITLE, UiKit.MUTED if retired else UiKit.BAD, true))
+	v.add_child(UiKit.lbl("You have retired" if retired else "You have been sacked", UiKit.TITLE, UiKit.TEXT if retired else UiKit.BAD, true))
 	var club := GameDB.club_name(GameState.my_club)
 	var why := "Two seasons short of the board's goals. Your time at %s is over." % club
 	if retired:
 		why = "Sacked by %s, you chose to retire from coaching." % club
 	elif jobs.is_empty():
-		why += " You had no second chance left: your coaching career is over."
+		why += " You had used your second chance. That's the end of your coaching career."
 	var t := UiKit.lbl(why, UiKit.BODY, UiKit.TEXT)
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(t)
 	if not jobs.is_empty():
 		_job_offers(v, jobs)
-		return card
-	v.add_child(UiKit.rule())
-	_record(v)
-	v.add_child(_nav_button("Season review", func(): Router.go("season_review")))
-	v.add_child(_nav_button("Main menu", func(): Router.to_main_menu(), true))
+	else:
+		v.add_child(UiKit.rule())
+		_record(v)
+	var review := _nav_button("Season review", func(): Router.go("season_review"))
+	review.name = "SackedSeasonReview"
+	v.add_child(review)
+	# While he is choosing, the jobs are the main move, not the way out.
+	var menu := _nav_button("Main menu", func(): Router.to_main_menu(), jobs.is_empty())
+	menu.name = "SackedMainMenu"
+	v.add_child(menu)
 	return card
 
 
@@ -579,6 +584,10 @@ func _job_offers(v: VBoxContainer, jobs: Array) -> void:
 		var name_row := UiKit.hbox(8)
 		name_row.add_child(UiKit.club_marker(code))
 		var nm := UiKit.lbl(str(o["name"]), UiKit.NAME, UiKit.club_vivid(code), true)
+		# A wrapping label in a row takes no width of its own: it fills the row.
+		nm.name = "JobOfferName_%s" % code
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		name_row.add_child(nm)
 		row.add_child(name_row)
 		row.add_child(_offer_line("Finished %s of %d. %s" % [GameState.ordinal(int(o["finish"])), int(o["clubs"]), str(o["why_open"])], UiKit.TEXT))
@@ -630,7 +639,7 @@ func _confirm_retire() -> void:
 	var body: VBoxContainer = box["body"]
 	var q := UiKit.lbl("Retire from coaching?", UiKit.H2, UiKit.TEXT, true)
 	body.add_child(q)
-	var warn := UiKit.lbl("Your coaching career ends here. This save stays as your finished career.", UiKit.SECONDARY, UiKit.MUTED)
+	var warn := UiKit.lbl("Your coaching career ends here. You can still look back over it.", UiKit.SECONDARY, UiKit.MUTED)
 	warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(warn)
 	_record(body)

@@ -3163,6 +3163,12 @@ func _test_sacked_job_choice_taps() -> void:
 	_router.go("hub")
 	await _settle()
 	_check(current_scene.find_child("SackedCard", true, false) != null, "The hub leads with the sacked card")
+	_check(current_scene.find_child("SackedSeasonReview", true, false) != null and current_scene.find_child("SackedMainMenu", true, false) != null,
+			"While he chooses, the season review and the main menu are still on the card")
+	for o in jobs:
+		var nm: Label = current_scene.find_child("JobOfferName_%s" % str(o["code"]), true, false)
+		_check(nm != null and nm.get_line_count() == 1 and nm.size.x > 100,
+				"%s's name reads on one line across the card, not a letter at a time" % str(o["name"]))
 	var code: String = str(jobs[-1]["code"]) if not jobs.is_empty() else ""
 	var take: Button = current_scene.find_child("TakeJob_%s" % code, true, false)
 	_check(take != null and take.get_combined_minimum_size().x <= take.size.x + 0.5,

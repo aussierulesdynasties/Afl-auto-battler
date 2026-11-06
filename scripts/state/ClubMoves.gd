@@ -57,6 +57,14 @@ static func season_close(gs) -> void:
 	var heir_id := str((st["active"].get("assistant", {}) as Dictionary).get("mem", {}).get("assistant_id", ""))
 	_close_for_move(gs, st)
 	st["move"] = {"to": to, "why": "poached", "from": str(gs.my_club), "year": year, "heir": heir_id}
+	if sacked:
+		# Sacked while already leaving for a rival: the signed job stands and
+		# no second chance is spent, but the sacking is on his record.
+		CoachArcs.log_line(st, year, "Season end", "move", "Sacked by %s, already on his way to %s." % [
+				GameDB.club_name(gs.my_club), GameDB.club_name(to)])
+		st["coach"]["sackings"] = int(st["coach"]["sackings"]) + 1
+		gs.board["sacked"] = false
+		gs.board["verdict"] = "Sacked. You were already leaving for %s." % GameDB.club_name(to)
 	gs.add_news(ClubArcs.NEWS_KIND, "You leave %s for %s at season's end." % [GameDB.club_name(gs.my_club), GameDB.club_name(to)])
 
 
@@ -73,6 +81,7 @@ static func _sacked(gs, st: Dictionary) -> void:
 	_close_for_move(gs, st)
 	st["sack"] = {"from": str(gs.my_club), "year": year, "heir": heir_id}
 	st["offers"] = jobs
+	st["coach"]["sackings"] = int(st["coach"]["sackings"]) + 1
 	var club := GameDB.club_name(gs.my_club)
 	if jobs.is_empty():
 		CoachArcs.log_line(st, year, "Season end", "move", "Sacked by %s. His coaching career is over." % club)
@@ -126,7 +135,6 @@ static func take_job(gs, code: String) -> bool:
 	var from := str(sk.get("from", gs.my_club))
 	st["move"] = {"to": code, "why": "sacked", "from": from, "year": year, "heir": str(sk.get("heir", ""))}
 	st["offers"] = []
-	st["coach"]["sackings"] = int(st["coach"]["sackings"]) + 1
 	st["coach"]["reprieves"] = maxi(0, int(st["coach"]["reprieves"]) - 1)
 	CoachArcs.log_line(st, year, "Season end", "move", "Takes the senior job at %s." % GameDB.club_name(code))
 	gs.board["sacked"] = false
