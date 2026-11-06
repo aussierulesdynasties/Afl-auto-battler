@@ -5,11 +5,14 @@ extends RefCounted
 ## no training, no league re-anchor). For a before/after, run it on main and on the
 ## branch (same classes, same seeds).
 ##
-##   godot --headless --path . --script tools/audit/run_audit.gd -- gen_traits_impl [classes] [grow]
-##   (default 30 classes from 2027, career seed 4242 + year; grow 5)
+##   godot --headless --path . --script tools/audit/run_audit.gd -- gen_traits_impl [classes] [grow] [seed_base]
+##   (default 30 classes from 2027, career seed seed_base + year, seed_base 4242 (the seeds
+##   GEN_NUDGE was sized on; 9000 is held out); grow 5)
 ##
 ## Lines:
-##   REAL <trait> <pct> (<n>/<N>)                     every real listed player
+##   REAL <trait> <pct> (<n>/<N>)                     every real listed player with a senior
+##     game (a list player projected from no senior game is left out: his temperament
+##     came from the old formula)
 ##   GEN <trait> draft <pct> grown <pct> matched <pct> (<n>/<N>)
 ##     "matched" weights the grown players' share in each 4-point OVR band by the real
 ##     players' OVR mix, so it is the rate a generated player carries at a real player's
@@ -26,6 +29,8 @@ func run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var classes := int(args[1]) if args.size() > 1 else 30
 	var grow := int(args[2]) if args.size() > 2 else 5
+	var seed_base := int(args[3]) if args.size() > 3 else 4242
+	print("SEEDS career seed %d + year, %d classes, grown %d" % [seed_base, classes, grow])
 	var real := _real_players()
 	var real_bands := _bands(real)
 	var real_share := {}
@@ -39,7 +44,7 @@ func run() -> void:
 	var drafted := []
 	var grown := []
 	for y in range(2027, 2027 + classes):
-		for p in Prospects.generate_class(y, 4242 + y):
+		for p in Prospects.generate_class(y, seed_base + y):
 			drafted.append(p.duplicate(true))
 			var q: Dictionary = p
 			for k in range(1, grow + 1):
@@ -70,12 +75,12 @@ func run() -> void:
 		print("RATE | %s | %.1f%% | %.1f%%, %.1f%%, %.1f%%" % [t, real_share[t], n[0], n[1], n[2]])
 
 
-## Every real (curated) player on the 2026 lists.
+## Every real (curated) player on the 2026 lists with a senior game.
 func _real_players() -> Array:
 	var out := []
 	for c in GameDB.club_order:
 		for p in GameDB.club_list(c):
-			if not bool(p.get("generated", false)):
+			if not bool(p.get("generated", false)) and not bool(p.get("projected", false)):
 				out.append(p)
 	return out
 

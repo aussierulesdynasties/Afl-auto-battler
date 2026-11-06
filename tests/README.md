@@ -74,7 +74,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `potential` | Potential (POT) rules, rehab years, draft pedigree |
 | `ratings` | The overall rating model |
 | `ai` | Rival clubs' drafting and selection |
-| `training` | Training plans and the stat guide |
+| `training` | Training plans and the stat guide; the stat focus (row 97): once a season, the lock, unlock at rollover, old saves, a club move, real taps at 390x844 |
 | `selection` | Team selection and named sides |
 | `matchup` | This week's opponent facts |
 | `matchday` | Match-day wording: the feed, quarter breaks, full time, the match screen |
@@ -194,7 +194,11 @@ The training suite checks the Position plan trains most of the list after a
 game (a ruck only ruck stats), Manual banks XP, a single-stat focus touches
 only that stat, switching a player's or the club plan spends banked XP at
 once, a player's own plan beats the club plan, plans survive a save, and every
-stat has a full guide entry. The career UI suite also checks the one-time
+stat has a full guide entry. A player takes one stat
+focus a season (a second pick refused, still locked after a reload), it takes
+about a third of his training, the next season unlocks it, an old
+`focus_<stat>` plan becomes his focus, a club move clears it, and real taps
+pick and lock one on a phone. The career UI suite also checks the one-time
 training intro, the stat guide (and Back closing it) and the plan picker.
 
 The achievements suite checks every club's achievement is detectable from

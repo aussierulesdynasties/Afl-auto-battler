@@ -385,7 +385,7 @@ static func _sign(gs, code: String, p: Dictionary, salary: int, years: int) -> v
 	p["club"] = code
 	p["salary"] = salary
 	p["contract_years"] = years
-	for key in ["train_plan", "project", "released_by", "comp_eligible", "resigned", "talks", "rookie_list"]:
+	for key in ["train_plan", "train_focus", "train_focus_year", "focus_ledger", "project", "released_by", "comp_eligible", "resigned", "talks", "rookie_list"]:
 		p.erase(key)
 	(state(gs, code)["list"] as Array).append(p)
 

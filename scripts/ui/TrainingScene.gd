@@ -18,6 +18,9 @@ var _selected := ""
 var _showing_detail := false
 var _notice := ""
 var _advanced := false
+## The stat focus tapped but not yet locked in (row 97).
+var _focus_choice := ""
+var _focus_notice := ""
 var _wide := false
 ## Long-press one player to enter group selection. Once active, ordinary
 ## taps add/remove players; the group picker only offers plans valid for all.
@@ -184,6 +187,7 @@ func _build() -> void:
 		page.add_child(_summary())
 		page.add_child(_list_panel())
 		_list_scroll = UiKit.scroll(page)
+		_list_scroll.name = "ListScroll"
 		_list_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 		_root.add_child(_list_scroll)
 		if not _bulk_selected.is_empty():
@@ -384,6 +388,7 @@ func _list_panel() -> Control:
 		v.add_child(rows)
 	else:
 		_list_scroll = UiKit.scroll(rows)
+		_list_scroll.name = "ListScroll"
 		v.add_child(_list_scroll)
 	_fill_rows(rows)
 	return panel
@@ -903,6 +908,8 @@ func _open_player(id: String) -> void:
 	_showing_detail = true
 	_notice = ""
 	_advanced = false
+	_focus_choice = ""
+	_focus_notice = ""
 	_build()
 
 
@@ -935,6 +942,7 @@ func _detail_panel() -> Control:
 		outer.add_child(back)
 	var body := UiKit.vbox(6)
 	_detail_scroll = UiKit.scroll(body)
+	_detail_scroll.name = "DetailScroll"
 	outer.add_child(_detail_scroll)
 	# Who he is and where he stands.
 	body.add_child(_name_header(p))
@@ -987,6 +995,7 @@ func _detail_panel() -> Control:
 	fv.add_child(pick)
 	if _notice != "":
 		fv.add_child(UiKit.lbl(_notice, UiKit.SECONDARY, UiKit.GOOD, true))
+	body.add_child(_stat_focus_panel(p))
 	# What is close, and what happened.
 	var close: Array = Traits.near(p)
 	if not close.is_empty():
@@ -1031,6 +1040,69 @@ func _detail_panel() -> Control:
 		for r in rows:
 			body.add_child(_stat_row(p, str(r[0]), str(r[1]), bool(r[2])))
 	return panel
+
+
+## One stat a season gets extra work (row 97, director 2026-11-06: "one stat
+## focus per player per season, drills do the rest"). Tap a stat, then lock it
+## in; it stays until the next season opens.
+func _stat_focus_panel(p: Dictionary) -> Control:
+	var box := UiKit.panel(UiKit.PANEL_ALT, 10, 8)
+	box.name = "StatFocus"
+	var v := UiKit.vbox(6)
+	box.add_child(v)
+	var year := GameState.season_year
+	v.add_child(UiKit.lbl("Stat focus  ·  %d season" % year, 12, UiKit.MUTED, true))
+	var current := GameState.stat_focus(p)
+	if GameState.project_job(p) != "" and GameState.plan_for(p) == GameState.LEARN_PREFIX + GameState.project_job(p):
+		var hold := UiKit.lbl("On hold while he learns a position: all his training goes into the new role.", 13, UiKit.TEXT)
+		hold.name = "StatFocusHold"
+		hold.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(hold)
+		return box
+	var attr: Dictionary = p.get("attr", {})
+	if GameState.focus_locked(p) and current != "":
+		var name_l := UiKit.lbl("%s  %d" % [GameState.train_stat_label(current), int(attr.get(current, 0))],
+				UiKit.HEADING, UiKit.EMPH, true)
+		name_l.name = "StatFocusName"
+		v.add_child(name_l)
+		var locked := UiKit.lbl("Locked in for %d. About a third of his training goes into %s; his plan's drills get the rest. You can change it when the %d season opens." % [
+				year, GameState.train_stat_label(current).to_lower(), year + 1], 13, UiKit.TEXT)
+		locked.name = "StatFocusLocked"
+		locked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(locked)
+		if _focus_notice != "":
+			v.add_child(UiKit.lbl(_focus_notice, UiKit.SECONDARY, UiKit.GOOD, true))
+		return box
+	var intro := "Extra work on one stat: about a third of his training goes into it, the rest into his plan's drills. Points on one stat get dearer as it climbs, so his OVR grows more slowly than on his plan alone. Locked in until the %d season." % [
+			year + 1]
+	if current != "":
+		intro = "Last season's focus, %s, carries on until you lock one in for %d. " % [
+				GameState.train_stat_label(current).to_lower(), year] + intro
+	var il := UiKit.lbl(intro, 13, UiKit.TEXT)
+	il.name = "StatFocusIntro"
+	il.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(il)
+	var options := []
+	for key in GameState.focus_options(p):
+		options.append([key, "%s %d" % [GameState.train_stat_label(key), int(attr.get(key, 0))]])
+	var chosen := _focus_choice if _focus_choice != "" else current
+	v.add_child(UiKit.choice_grid("StatFocusPick", options, chosen, 2, func(key: String):
+		_focus_choice = key
+		_build()))
+	if chosen != "":
+		var lock := UiKit.btn("Lock in %s for %d" % [GameState.train_stat_label(chosen).to_lower(), year], 15, true)
+		lock.name = "StatFocusLock"
+		lock.custom_minimum_size = Vector2(0, GRID_TOUCH)
+		var pid := str(p["id"])
+		lock.pressed.connect(func():
+			var before := int(GameState.list_player(pid).get("overall", 0))
+			if GameState.set_stat_focus(pid, chosen):
+				var after := int(GameState.list_player(pid).get("overall", 0))
+				_focus_notice = "Banked XP lifted him from %d to %d." % [before, after] if after > before else ""
+			_focus_choice = ""
+			_build())
+		v.add_child(lock)
+	return box
 
 
 ## "Week 3 of 8. As a key forward he rates 66, his own game 71: within 3 by
