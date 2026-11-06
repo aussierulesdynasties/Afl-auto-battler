@@ -4855,29 +4855,48 @@ func _auto_rotate(side: int) -> void:
 
 
 ## The freshest bench player (at or above `min_energy`) for a ground role,
-## or -1. Natural or secondary role first; any bench player as a fallback.
+## or -1. Natural or secondary role first (his own positions, never the slot
+## he last filled); any bench player as a fallback.
+## A back slot waits for a defender: one short of `min_energy` (by up to
+## DEF_TIRED_GAP) still goes on before a fresh man from another line, and
+## while a defender on the bench is more tired than that, a routine change in
+## the back line waits. Another line's player goes into the back line only
+## with no defender on the bench.
 ## `rotation`: a routine interchange, which leaves a rested star on the bench.
 ## The coach's named tagger goes back on only in a midfielder's place, and
 ## first when one comes off, so he picks the tag up again (tagger_of).
+const DEF_TIRED_GAP := 25.0
+
+
 func _bench_for(side: int, role: String, min_energy: float, rotation := false) -> int:
 	var sq: Squad = squads[side]
 	var named := str((tactics[side] as Dictionary).get("tagger_id", "")) if _tag_id(side) != "" else ""
 	var best := -1
 	var best_score := -1.0
+	var best_fits := false
+	var def_waiting := false
 	for i in range(sq.bench.size()):
 		var p: Dictionary = sq.bench[i]
 		var e := float(energy.get(str(p["id"]), 100.0))
-		if e < min_energy or (rotation and str(_held.get(str(p["id"]), "")) == "rest"):
+		if rotation and str(_held.get(str(p["id"]), "")) == "rest":
 			continue
+		var fits := Traits.plays(p, role)
+		if e < min_energy:
+			if role != "DEF" or not fits:
+				continue
+			if e < min_energy - DEF_TIRED_GAP:
+				def_waiting = true
+				continue
 		var is_named := rotation and named != "" and str(p["id"]) == named
 		if is_named and role != "MID":
 			continue
-		var fits := str(p.get("role", "")) == role or Traits.plays(p, role) \
-				or str(p.get("list_tag", "")) == role
 		var score := e + (100.0 if fits else 0.0) + (200.0 if is_named else 0.0)
 		if score > best_score:
 			best = i
 			best_score = score
+			best_fits = fits
+	if role == "DEF" and def_waiting and not best_fits:
+		return -1
 	return best
 
 
@@ -4890,6 +4909,7 @@ func _swap(side: int, gi: int, bi: int) -> void:
 	sq.ground[gi] = on_slot
 	sq.bench[bi] = off
 	interchanges[side] += 1
+	_hand_on_duel(side, str(off["id"]), on_slot)
 	_played[side][str(on["id"])] = true
 	events.append({
 		"q": current_quarter, "min": current_minute, "kind": "sub", "side": side, "fp": fp,
@@ -4902,6 +4922,36 @@ func _swap(side: int, gi: int, bi: int) -> void:
 	})
 	# The man who came on may be filling a slot that is not the midfield.
 	_recheck_tags()
+
+
+## A defender going to the bench hands his forward on: to the man taking his
+## place when that man is a defender by trade, else to the next free defender
+## in the back line (Matchups.defenders); with none free, the forward goes
+## without a direct opponent. A player on the bench keeps no forward.
+func _hand_on_duel(side: int, off_id: String, on_slot: Dictionary) -> void:
+	var d: Dictionary = duels[side]
+	for fid in d.keys():
+		if str(d[fid]) != off_id:
+			continue
+		var used := {}
+		for f in d:
+			used[str(d[f])] = true
+		used[str(interceptor[side])] = true
+		var defs := Matchups.defenders((squads[side] as Squad).ground)
+		var on_id := str(on_slot.get("id", ""))
+		var next := ""
+		for p in defs:
+			if str(p["id"]) == on_id and not used.has(on_id):
+				next = on_id
+		if next == "":
+			for p in defs:
+				if not used.has(str(p["id"])):
+					next = str(p["id"])
+					break
+		if next == "":
+			d.erase(fid)
+		else:
+			d[fid] = next
 
 
 ## Energy for one side, most tired first: [{id, name, num, role, overall,
