@@ -1783,7 +1783,8 @@ func begin_draft() -> void:
 ## in reversed-ladder order (worst club first) like the real national draft.
 ## Returns false when there is nothing to draft.
 func begin_intake_draft() -> bool:
-	if season == null:
+	# Sacked: the draft waits for his choice of job (or the career is over).
+	if season == null or is_sacked():
 		return false
 	if not (season.is_season_over() or season.is_regular_done()):
 		return false
@@ -2244,7 +2245,7 @@ func needs_season_wrap() -> bool:
 ## Roll on without an intake (no prospects available, or the manager skipped
 ## the draft). Same ageing and rebuild, zero new signings.
 func start_next_season() -> bool:
-	if season == null:
+	if season == null or not _sacking_settled():
 		return false
 	if not (season.is_season_over() or season.is_regular_done()):
 		return false
@@ -10292,6 +10293,18 @@ func board_goal_text() -> String:
 
 func is_sacked() -> bool:
 	return bool(board.get("sacked", false))
+
+
+## Can the season roll on after a sacking? Not when the coaching career is
+## over (no reprieve left, or he retired). A choice of jobs still open when
+## the season rolls on (only a headless run gets here: the Hub's sacked card
+## and begin_intake_draft stand in the way) takes the first club offered
+## (ClubMoves).
+func _sacking_settled() -> bool:
+	if not is_sacked():
+		return true
+	ClubMoves.take_first_offer(self)
+	return not is_sacked()
 
 
 func _my_result(results: Array) -> Dictionary:

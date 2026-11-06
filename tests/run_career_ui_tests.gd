@@ -485,6 +485,7 @@ func _run() -> void:
 	await _t("_test_season_awards")
 	await _t("_test_back_arrow_taps")
 	await _t("_test_finals_card_taps")
+	await _t("_test_sacked_job_choice_taps")
 	await _t("_test_sim_asks_only_before_your_match")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
@@ -3132,3 +3133,68 @@ func _test_restore_earlier_save_tap() -> void:
 	_check(_router.current() == "hub" and _state.season != null and _state.season.round_index == 0,
 			"Restore opens the career at round 1 again")
 	_state.delete_saved_career()
+
+
+## Row 111: a sacked coach chooses from the clubs with a job open, or retires
+## with his record read out. Real taps on a 390 phone.
+func _sacked_with_offers() -> void:
+	_state.reset()
+	_state.career_seed = 4403
+	_state.replay_seed = 4403
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var arcs = load("res://scripts/sim/CoachArcs.gd")
+	var moves = load("res://scripts/state/ClubMoves.gd")
+	_state.coach_arcs = arcs.ensure(_state.coach_arcs)
+	var st: Dictionary = _state.coach_arcs
+	_state.board["sacked"] = true
+	st["sack"] = {"from": "FRE", "year": int(_state.season_year), "heir": ""}
+	st["offers"] = moves._jobs_after_sack(_state, st)
+	_state.week_events = []
+
+
+func _test_sacked_job_choice_taps() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	var moves = load("res://scripts/state/ClubMoves.gd")
+	_sacked_with_offers()
+	var jobs: Array = moves.offers(_state)
+	_check(jobs.size() == 3, "A sacked coach is offered three clubs with a job open (%d)" % jobs.size())
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	_check(current_scene.find_child("SackedCard", true, false) != null, "The hub leads with the sacked card")
+	var code: String = str(jobs[-1]["code"]) if not jobs.is_empty() else ""
+	var take: Button = current_scene.find_child("TakeJob_%s" % code, true, false)
+	_check(take != null and take.get_combined_minimum_size().x <= take.size.x + 0.5,
+			"Each club with a job open has a Take button that reads whole on a 390 phone")
+	var why: String = await Tap.tap(take) if take != null else "missing"
+	await _settle()
+	_check(why == "" and not _state.is_sacked() and str(_state.coach_arcs["move"].get("to", "")) == code,
+			"A finger on Take the job ends the sacking and the move is set for %s (%s)" % [code, why])
+	_check(current_scene.find_child("SackedCard", true, false) == null, "The hub rebuilds without the sacked card")
+	# A fresh sacking: retire instead, and the record is read out.
+	_sacked_with_offers()
+	_router.go("hub")
+	await _settle()
+	var retire: Button = current_scene.find_child("RetireCoach", true, false)
+	why = await Tap.tap(retire) if retire != null else "missing"
+	await _settle()
+	var sheet: Control = current_scene.find_child("RetireSheet", true, false)
+	if sheet == null:
+		sheet = root.find_child("RetireSheet", true, false)
+	_check(why == "" and sheet != null, "A finger on Retire from coaching asks first (%s)" % why)
+	var yes: Button = sheet.find_child("RetireConfirm", true, false) if sheet != null else null
+	why = await Tap.tap(yes) if yes != null else "missing"
+	await _settle()
+	_check(why == "" and moves.retired(_state) and _state.is_sacked(), "A finger on the confirm retires the coach (%s)" % why)
+	var rec: Control = current_scene.find_child("CoachRecord", true, false)
+	var parts := []
+	if rec != null:
+		_texts(rec, parts)
+	var text := " | ".join(parts)
+	_check(rec != null and text.contains("Your record") and text.contains(str(_db.club_name("FRE"))) and text.contains("season"),
+			"The retired card reads out his record (%s)" % text.replace("\n", " | "))
+	_check(not _state.start_next_season(), "A retired coach's season does not roll on")
+	_state.board["sacked"] = false
+	_state.coach_arcs = {}
+	root.size = size_before

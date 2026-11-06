@@ -250,8 +250,11 @@ func _build() -> void:
 	settings.pressed.connect(func(): _settings = OptionsSheet.open(self, true))
 	_root.add_child(UiKit.top_bar(_week_title(season), false, settings))
 	if GameState.is_sacked():
-		_root.add_child(_standing_card())
-		_root.add_child(_sacked_card())
+		# The jobs on offer and the record run past a phone's height: it scrolls.
+		var sp := UiKit.vbox(UiKit.SECTION)
+		_root.add_child(UiKit.scroll(sp))
+		sp.add_child(_standing_card())
+		sp.add_child(_sacked_card())
 		return
 
 	# One page that scrolls: this week first, then your season, the news and
@@ -467,6 +470,12 @@ func _standing_card() -> Control:
 				warn_l.name = "BoardWarning"
 				warn_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 				cv.add_child(warn_l)
+		# What a sacking would mean, plainly (rule 60).
+		if (warned or warning != "") and not GameState.is_sacked():
+			var rep := UiKit.lbl(ClubMoves.reprieve_line(GameState), UiKit.SMALL, UiKit.BAD)
+			rep.name = "ReprieveLine"
+			rep.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			cv.add_child(rep)
 	return cv
 
 
@@ -531,13 +540,111 @@ func _sacked_card() -> Control:
 	card.name = "SackedCard"
 	var v := UiKit.vbox(8)
 	card.add_child(v)
-	v.add_child(UiKit.lbl("You have been sacked", UiKit.TITLE, UiKit.BAD, true))
-	var t := UiKit.lbl("Two seasons short of the board's goals. Your time at %s is over. Start a new career and prove them wrong." % GameDB.club_name(GameState.my_club), 14, UiKit.TEXT)
+	var retired := ClubMoves.retired(GameState)
+	var jobs := ClubMoves.offers(GameState)
+	v.add_child(UiKit.lbl("You have retired" if retired else "You have been sacked", UiKit.TITLE, UiKit.MUTED if retired else UiKit.BAD, true))
+	var club := GameDB.club_name(GameState.my_club)
+	var why := "Two seasons short of the board's goals. Your time at %s is over." % club
+	if retired:
+		why = "Sacked by %s, you chose to retire from coaching." % club
+	elif jobs.is_empty():
+		why += " You had no second chance left: your coaching career is over."
+	var t := UiKit.lbl(why, UiKit.BODY, UiKit.TEXT)
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(t)
+	if not jobs.is_empty():
+		_job_offers(v, jobs)
+		return card
+	v.add_child(UiKit.rule())
+	_record(v)
 	v.add_child(_nav_button("Season review", func(): Router.go("season_review")))
 	v.add_child(_nav_button("Main menu", func(): Router.to_main_menu(), true))
 	return card
+
+
+## The clubs with a job open after a sacking: facts only (where they
+## finished, the list, the board's goal, why the job is open), each with its
+## own button, in ladder order. Then what the next sacking would mean, and
+## the way out: retire, with the record read out first.
+func _job_offers(v: VBoxContainer, jobs: Array) -> void:
+	var head := UiKit.lbl("Clubs with a job open", UiKit.H2, UiKit.TEXT, true)
+	head.name = "JobOffersHead"
+	v.add_child(head)
+	for o in jobs:
+		var code := str(o["code"])
+		var row := UiKit.vbox(3)
+		row.name = "JobOffer_%s" % code
+		v.add_child(UiKit.rule())
+		v.add_child(row)
+		var name_row := UiKit.hbox(8)
+		name_row.add_child(UiKit.club_marker(code))
+		var nm := UiKit.lbl(str(o["name"]), UiKit.NAME, UiKit.club_vivid(code), true)
+		name_row.add_child(nm)
+		row.add_child(name_row)
+		row.add_child(_offer_line("Finished %s of %d. %s" % [GameState.ordinal(int(o["finish"])), int(o["clubs"]), str(o["why_open"])], UiKit.TEXT))
+		if str(o.get("list", "")) != "":
+			row.add_child(_offer_line("The list: " + str(o["list"]), UiKit.TEXT))
+		row.add_child(_offer_line("The board's goal: " + str(o["goal"]), UiKit.TEXT))
+		var take := _nav_button("Take the %s job" % GameDB.club_short(code), func():
+			if ClubMoves.take_job(GameState, code):
+				_build())
+		take.name = "TakeJob_%s" % code
+		row.add_child(take)
+	v.add_child(UiKit.rule())
+	var left := ClubMoves.reprieves(GameState) - 1
+	var line := "Take a job and it is your last chance: sacked again and your coaching career is over. A premiership earns you another." \
+			if left <= 0 else "Take a job and you still have a second chance left after it."
+	var rl := UiKit.lbl(line, UiKit.SECONDARY, UiKit.BAD)
+	rl.name = "ReprieveLine"
+	rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(rl)
+	var retire := _nav_button("Retire from coaching", _confirm_retire)
+	retire.name = "RetireCoach"
+	v.add_child(retire)
+
+
+func _offer_line(text: String, colour: Color) -> Label:
+	var l := UiKit.lbl(text, UiKit.SECONDARY, colour)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return l
+
+
+## Your coaching record, read out.
+func _record(v: VBoxContainer) -> void:
+	var rec := UiKit.vbox(3)
+	rec.name = "CoachRecord"
+	rec.add_child(UiKit.lbl("Your record", UiKit.H2, UiKit.TEXT, true))
+	var lines := ClubMoves.record_lines(GameState)
+	for i in range(lines.size()):
+		var l := UiKit.lbl(lines[i], UiKit.BODY if i < 2 else UiKit.SECONDARY, UiKit.TEXT if i < 2 else UiKit.MUTED, i == 0)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rec.add_child(l)
+	v.add_child(rec)
+
+
+## Retiring ends the career for good: the record is read out before he says so.
+func _confirm_retire() -> void:
+	var box := UiKit.modal_box(self, 560.0)
+	var overlay: Control = box["overlay"]
+	overlay.name = "RetireSheet"
+	var body: VBoxContainer = box["body"]
+	var q := UiKit.lbl("Retire from coaching?", UiKit.H2, UiKit.TEXT, true)
+	body.add_child(q)
+	var warn := UiKit.lbl("Your coaching career ends here. This save stays as your finished career.", UiKit.SECONDARY, UiKit.MUTED)
+	warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(warn)
+	_record(body)
+	var row := UiKit.hbox(8)
+	var no := _nav_button("Not yet", func(): overlay.queue_free())
+	no.name = "RetireNotYet"
+	var yes := _nav_button("Retire", func():
+		ClubMoves.retire_coach(GameState)
+		overlay.queue_free()
+		_build(), true)
+	yes.name = "RetireConfirm"
+	row.add_child(no)
+	row.add_child(yes)
+	(box["footer"] as VBoxContainer).add_child(row)
 
 
 ## Every club's players by name, from the season's lists (they follow trades),
@@ -1937,6 +2044,9 @@ func _result_side(code: String, goals: int, behinds: int, col: Color, verdict: S
 
 
 func _on_intake_draft() -> void:
+	if GameState.is_sacked():
+		_build()
+		return
 	if GameState.begin_intake_draft():
 		Router.go("draft")
 		return
