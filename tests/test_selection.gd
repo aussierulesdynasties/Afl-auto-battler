@@ -26,6 +26,8 @@ func run() -> void:
 	_t("_test_formation_layout")
 	_t("_test_complete_synergy")
 	_t("_test_blooding_net_change")
+	_t("_test_blooding_note_fits")
+	_t("_test_complete_synergy_reentry")
 	_t("_test_gaps_and_overflow")
 	_t("_test_left_out_player_sits_out")
 	_t("_test_selection_saved")
@@ -148,7 +150,9 @@ func _test_formation_layout() -> void:
 ## young player comes in once, for an older starter; a youngster brought in is
 ## never the next one out, a young starter is never dropped, and the note is
 ## the net change in one sentence. This list used to cycle: Y1 in for the
-## 21-year-old, Y2 in for Y1, Y1 back in for Y2.
+## 21-year-old, Y2 in for Y1, Y1 back in for Y2. Ages are fractional (days
+## to the season start over 365.25) and the game shows whole years: the
+## starter here is 21.6, shown as "21", and a youngster of 21.4 counts as 21.
 func _test_blooding_net_change() -> void:
 	_new_season()
 	var side := GameState.current_side()
@@ -164,7 +168,7 @@ func _test_blooding_net_change() -> void:
 	var young_starter: Dictionary = GameState.list_player(str(fwd[0]))
 	var w1: Dictionary = GameState.list_player(str(fwd[1]))
 	var w2: Dictionary = GameState.list_player(str(fwd[2]))
-	young_starter["age"] = 21
+	young_starter["age"] = 21.6
 	young_starter["overall"] = 60
 	w1["overall"] = 65
 	w2["overall"] = 66
@@ -179,7 +183,7 @@ func _test_blooding_net_change() -> void:
 	var y2: Dictionary = youngs[1]
 	y1["age"] = 19
 	y1["overall"] = 64
-	y2["age"] = 20
+	y2["age"] = 21.4
 	y2["overall"] = 63
 	var pool: Array = GameState.my_list.filter(func(p): return Ratings.available(p))
 	var r: Dictionary = GameState.blood_youth(side, pool)
@@ -194,17 +198,83 @@ func _test_blooding_net_change() -> void:
 	_check(n == 23 and ids.size() == 23, "Blooding still names 23 different players")
 	_check(ids.has(str(y1["id"])) and ids.has(str(y2["id"])), "Both young forwards come in")
 	_check(not ids.has(str(w1["id"])) and not ids.has(str(w2["id"])), "The two weakest older forwards go out")
-	_check(ids.has(str(young_starter["id"])), "A 21-year-old starter is never dropped to blood another youngster")
-	_check(str(r["note"]) == "Blooding %s and %s, in place of %s and %s." % [name.call(y1), name.call(y2),
-			name.call(w1), name.call(w2)], "Blooding names the net change once: %s" % r["note"])
-	y2["age"] = 28
+	_check(ids.has(str(young_starter["id"])), "A starter of 21.6 (shown as 21) is never dropped to blood another youngster")
+	_check(str(r["note"]) == "Blooding %s for %s and %s for %s." % [name.call(y1), name.call(w1),
+			name.call(y2), name.call(w2)], "Blooding names each youngster with the man he replaces, once: %s" % r["note"])
+	y2["age"] = 22.0
 	r = GameState.blood_youth(side, pool)
-	_check(str(r["note"]) == "Blooding %s (19) in place of %s." % [name.call(y1), name.call(w1)],
-			"One youngster in: his age and who he replaces (%s)" % r["note"])
+	_check(str(r["note"]) == "Blooding %s for %s." % [name.call(y1), name.call(w1)],
+			"One youngster in, the same sentence: who he replaces (%s)" % r["note"])
+	_check(not GameState.is_young(y2) and GameState.is_young({"age": 21.99}) and GameState.is_young({"age": 18.0}),
+			"Young is 21 and under in whole years, as the game shows age")
 	y1["age"] = 28
 	r = GameState.blood_youth(side, pool)
 	_check(str(r["note"]) == "No young player is close enough to a starter's spot: this is your best side."
 			and r["side"] == side, "Nobody young close enough: the best side, and it says so")
+
+
+## The blooding note stays within two lines at the 390 px phone width
+## (GameState.BLOODING_NOTE_MAX characters) with three of the longest real
+## names each way: full names when they fit, surnames when they don't.
+func _test_blooding_note_fits() -> void:
+	var names := ["Nasiah Wanganeen-Milera", "Archer Day-Wicks", "Lachlan Schultz-Ash",
+			"Bailey Laurie-Macdonald", "Jamarra Ugle-Hagan", "Christopher Petracca"]
+	var by_id := {}
+	for i in range(names.size()):
+		var parts: PackedStringArray = names[i].split(" ")
+		by_id["L%d" % i] = {"id": "L%d" % i, "name": names[i], "generic_name": names[i], "real_name": names[i],
+				"last": parts[1]}
+	var note := GameState._blooding_note(["L0", "L1", "L2"], ["L3", "L4", "L5"], by_id)
+	_check(note.length() <= GameState.BLOODING_NOTE_MAX and note.begins_with("Blooding Wanganeen-Milera for Laurie-Macdonald, ")
+			and note.ends_with(" and Schultz-Ash for Petracca."),
+			"Three long names each way fall back to surnames within %d characters (%d: %s)" % [
+			GameState.BLOODING_NOTE_MAX, note.length(), note])
+	note = GameState._blooding_note(["L1"], ["L5"], by_id)
+	_check(note == "Blooding Archer Day-Wicks for Christopher Petracca.", "One each way keeps full names (%s)" % note)
+
+
+## Complete synergy: a player left out for lacking one trait can come back
+## for another the synergy needs. Tall-small needs two aerial forwards and
+## two crumbers; the forward line's only crumber is its weakest man, so he is
+## the one out while the aerials come in, and the list has one other crumber.
+## He must come back (not "Not enough crumbers"), and the note is the net change.
+func _test_complete_synergy_reentry() -> void:
+	_new_season()
+	var side := GameState.current_side()
+	var in23 := {}
+	for k in side:
+		for id in side[k]:
+			in23[str(id)] = true
+	for p in GameState.my_list:
+		p["injury_weeks"] = 0
+		p["overall"] = 70 if in23.has(str(p["id"])) else 40
+		var attr: Dictionary = p.get("attr", {})
+		attr["marking"] = 40
+		attr["goalkicking"] = 40
+		p["attr"] = attr
+	var crumber: Dictionary = GameState.list_player(str(side["FWD"][0]))
+	crumber["overall"] = 50
+	crumber["attr"]["goalkicking"] = 60
+	var spare: Array = []
+	for p in GameState.my_list:
+		if spare.size() < 3 and not in23.has(str(p["id"])):
+			p["role"] = "FWD"
+			p["overall"] = 72
+			spare.append(p)
+	_check(spare.size() == 3, "(three players outside the 23)")
+	if spare.size() < 3:
+		return
+	spare[0]["attr"]["marking"] = 80
+	spare[1]["attr"]["marking"] = 80
+	spare[2]["attr"]["goalkicking"] = 60
+	_check(Traits.of(crumber).has("crumber") and Traits.of(spare[0]).has("aerial") and Traits.of(spare[2]).has("crumber"),
+			"(one crumber in the side, two aerials and a crumber outside it)")
+	var r: Dictionary = GameState.complete_synergy("tall_small", side)
+	var ids := GameState._ids_in(r["side"])
+	_check(str(r["problem"]) == "" and Traits.active(GameState._ground_for(r["side"])).has("tall_small"),
+			"The crumber left out for an aerial comes back: tall-small is on (%s%s)" % [r["problem"], r["note"]])
+	_check(ids.has(str(crumber["id"])) and not str(r["note"]).contains(GameDB.player_display_name(crumber)),
+			"He is in the side, and the note is the net change without him (%s)" % r["note"])
 
 
 ## Complete synergy (director, 2026-10-07): it switches the synergy on with a

@@ -9163,7 +9163,7 @@ func _as_selection(ground: Array, bench: Array) -> Dictionary:
 ##          for the lowest-rated older starter in their line, when within 6 of him
 ##   mine   your saved Best 23, with anyone unavailable replaced by the best
 ##          available player of his line
-const YOUTH_AGE := 21.0
+const YOUTH_AGE := 21
 const YOUTH_GAP := 6
 const YOUTH_MAX := 3
 
@@ -9243,7 +9243,7 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 			var weakest := ""
 			for id in side2[line]:
 				var w = by_id.get(str(id))
-				if w == null or brought.has(str(id)) or float(w.get("age", 30.0)) <= YOUTH_AGE:
+				if w == null or brought.has(str(id)) or is_young(w):
 					continue
 				if weakest == "" or int(w["overall"]) < int(by_id[weakest]["overall"]):
 					weakest = str(id)
@@ -9252,7 +9252,7 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 			var role: String = "MID" if line == "WING" else line
 			for p in pool:
 				var pid := str(p["id"])
-				if used.has(pid) or brought.has(pid) or float(p.get("age", 30.0)) > YOUTH_AGE \
+				if used.has(pid) or brought.has(pid) or not is_young(p) \
 						or not Ratings.plays_role(p, role):
 					continue
 				var gap := int(by_id[weakest]["overall"]) - int(p["overall"])
@@ -9268,15 +9268,35 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 			else "No young player is close enough to a starter's spot: this is your best side."}
 
 
-## The youth pick in one sentence a coach would say: "Blooding Harry
-## Armstrong (19) in place of Ben Smith." or, for more than one, "Blooding
-## Harry Armstrong and Josh Dolan, in place of Ben Smith and Tom Jones."
+## Young for this pick: YOUTH_AGE or under in whole years, as the game shows
+## age (a player of 21.6 shows as 21), so a 21-year-old is never dropped.
+static func is_young(p: Dictionary) -> bool:
+	return int(floor(float(p.get("age", 30.0)))) <= YOUTH_AGE
+
+
+## The longest blooding note, in characters: two lines of the note at the
+## 390 px phone width (about 4.8 px a character over 358 px a line).
+const BLOODING_NOTE_MAX := 130
+
+
+## The youth pick in one sentence, each young player named with the man he
+## replaces, the same way for one or three: "Blooding Harry Armstrong for Ben
+## Smith." / "Blooding Harry Armstrong for Ben Smith and Josh Dolan for Tom
+## Jones." Surnames when full names would run past two lines.
 static func _blooding_note(brought: Array, dropped: Array, by_id: Dictionary) -> String:
-	var ins: Array = brought.map(func(id): return GameDB.player_display_name(by_id[id]))
-	var outs: Array = dropped.map(func(id): return GameDB.player_display_name(by_id[id]))
-	if ins.size() == 1:
-		return "Blooding %s (%d) in place of %s." % [ins[0], int(by_id[brought[0]].get("age", 0)), outs[0]]
-	return "Blooding %s, in place of %s." % [_and_list(ins), _and_list(outs)]
+	var note := _blooding_pairs(brought, dropped, by_id, false)
+	if note.length() > BLOODING_NOTE_MAX:
+		note = _blooding_pairs(brought, dropped, by_id, true)
+	return note
+
+
+static func _blooding_pairs(brought: Array, dropped: Array, by_id: Dictionary, surnames: bool) -> String:
+	var name := func(p: Dictionary) -> String:
+		return GameDB.card_surname(p) if surnames else GameDB.player_display_name(p)
+	var pairs: Array = []
+	for i in range(brought.size()):
+		pairs.append("%s for %s" % [name.call(by_id[brought[i]]), name.call(by_id[dropped[i]])])
+	return "Blooding %s." % _and_list(pairs)
 
 
 static func _and_list(names: Array) -> String:
@@ -9319,11 +9339,12 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 	var by_id := {}
 	for p in my_list:
 		by_id[str(p["id"])] = p
-	var ins: PackedStringArray = []
-	# A player brought in is never the next one out, and one left out never
-	# comes back: the swaps can't undo each other, and the note is the net change.
+	# Each swap as [in, out]. A player brought in is never the next one out,
+	# so no swap undoes another. One left out for lacking one trait may come
+	# back for another the synergy needs: then his two swaps fold into one
+	# (Y in for him, him in for W reads "Y in for W"), so the note is the net change.
+	var swaps: Array = []
 	var brought := {}
-	var dropped := {}
 	for _guard in range(8):
 		var ground := _ground_for(work)
 		if Traits.active(ground).has(key):
@@ -9345,7 +9366,7 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 		var cand = null
 		for p in my_list:
 			var pid := str(p["id"])
-			if on_ground.has(pid) or dropped.has(pid) or not Ratings.available(p) or not Traits.of(p).has(need_t):
+			if on_ground.has(pid) or not Ratings.available(p) or not Traits.of(p).has(need_t):
 				continue
 			if line != "" and not Ratings.plays_role(p, line):
 				continue
@@ -9375,7 +9396,6 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 			return {"side": side, "note": "", "lost": [], "problem": "No spot to free without losing another %s." % Traits.label(need_t).to_lower()}
 		var cid := str(cand["id"])
 		brought[cid] = true
-		dropped[victim] = true
 		var bench: Array = work["BENCH"]
 		for tl in targets:
 			var arr: Array = work[tl]
@@ -9386,7 +9406,14 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 		var bi := bench.find(cid)
 		if bi >= 0:
 			bench[bi] = victim
-		ins.append("%s in for %s" % [GameDB.player_display_name(cand), GameDB.player_display_name(by_id[victim])])
+		var folded := false
+		for sw in swaps:
+			if str(sw[1]) == cid:
+				sw[1] = victim
+				folded = true
+				break
+		if not folded:
+			swaps.append([cid, victim])
 	var after: Array = Traits.active(_ground_for(work))
 	if not after.has(key):
 		return {"side": side, "note": "", "lost": [], "problem": "Your list can't complete it this week."}
@@ -9394,6 +9421,9 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 	for k3 in before:
 		if not after.has(k3):
 			lost.append(str(Traits.SYNERGIES[k3]["label"]))
+	var ins: PackedStringArray = []
+	for sw in swaps:
+		ins.append("%s in for %s" % [GameDB.player_display_name(by_id[sw[0]]), GameDB.player_display_name(by_id[sw[1]])])
 	var note := "%s on: %s." % [str(syn["label"]), "; ".join(ins)]
 	if not lost.is_empty():
 		note += " Lost: %s." % ", ".join(lost)
