@@ -1525,8 +1525,8 @@ func pick_block_reason(p: Dictionary) -> String:
 		return "Drafted #%d by %s." % [int(entry.get("pick", 0)),
 				Engine.get_main_loop().root.get_node("GameDB").club_name(club)]
 	if too_old_for_user(p):
-		return "Youth only: he is %d, and you cannot draft a player over %d." % [
-				int(floor(float(p.get("age", 0)))), user_max_age]
+		return "Youth only: %s is %d, and you cannot draft a player over %d." % [
+				Challenge.surname(p), int(floor(float(p.get("age", 0)))), user_max_age]
 	if league_mode:
 		if is_finished():
 			return "The draft is complete."

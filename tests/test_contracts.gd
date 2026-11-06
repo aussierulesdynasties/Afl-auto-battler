@@ -2690,7 +2690,7 @@ func _test_challenge_gates() -> void:
 	var mine := [str(GameState.my_list[0]["id"])]
 	var v_old := GameState.evaluate_trade(rival, mine, [str(old["id"])])
 	_check(not bool(v_old["ok"]) and str(v_old["code"]) == "trade_challenge"
-			and str(v_old["reason"]).begins_with("Youth only: he is 25"),
+			and str(v_old["reason"]).contains(" is 25, and you cannot"),
 			"Youth only: a trade for a 25-year-old is refused, and says why (%s)" % str(v_old.get("reason")))
 	var v_young := GameState.evaluate_trade(rival, mine, [str(young["id"])])
 	_check(str(v_young.get("code", "")) != "trade_challenge",
@@ -2704,7 +2704,7 @@ func _test_challenge_gates() -> void:
 	var fa: Dictionary = GameState.free_agents[0]
 	fa["age"] = 27
 	var r := GameState.offer_free_agent(str(fa["id"]), Contracts.asking_salary(fa) * 2, 2)
-	_check(not bool(r["ok"]) and str(r["reason"]).begins_with("Youth only: he is 27"),
+	_check(not bool(r["ok"]) and str(r["reason"]).contains(" is 27, and you cannot"),
 			"Youth only: no offer to a 27-year-old free agent (%s)" % str(r.get("reason")))
 	r = GameState.sign_free_agent(str(fa["id"]), 2)
 	_check(not bool(r["ok"]) and str(r["reason"]).begins_with("Youth only"), "Youth only: no signing at his price either")

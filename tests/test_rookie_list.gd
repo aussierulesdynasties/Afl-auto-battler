@@ -402,7 +402,7 @@ func _test_youth_only_drafts() -> void:
 	var old := {"id": "youth_test_old", "age": 25.4, "value": 0, "overall": 99}
 	_check(draft.too_old_for_user(old) and not draft.can_pick_player(old),
 			"Youth only: a 25-year-old cannot be drafted")
-	_check(draft.pick_block_reason(old).begins_with("Youth only: he is 25"),
+	_check(draft.pick_block_reason(old).contains(" is 25, and you cannot"),
 			"Youth only: the board says why (%s)" % draft.pick_block_reason(old))
 	_check(not draft.too_old_for_user({"id": "youth_test_ok", "age": 24.9}), "Youth only: a 24-year-old can be drafted")
 	while not draft.is_finished():
@@ -460,7 +460,7 @@ func _test_youth_only_midseason() -> void:
 	young["age"] = 24
 	_check(not MidseasonDraft.choose(gs, str(old["id"])) and MidseasonDraft.waiting(gs),
 			"Youth only: the mid-season draft refuses a 25-year-old")
-	_check(Challenge.block_reason(gs, old).begins_with("Youth only: he is 25"),
+	_check(Challenge.block_reason(gs, old).contains(" is 25, and you cannot"),
 			"Youth only: the reason is said in words (%s)" % Challenge.block_reason(gs, old))
 	_check(MidseasonDraft.choose(gs, str(young["id"])), "Youth only: a 24-year-old can be taken mid-season")
 	gs.challenge = {}

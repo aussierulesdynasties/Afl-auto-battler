@@ -94,14 +94,20 @@ static func block_reason(gs, p: Dictionary) -> String:
 	match kind(gs):
 		"youth":
 			if over_age(p):
-				return "Youth only: he is %d, and you cannot bring in a player over %d." % [
-						int(floor(float(p.get("age", 0)))), MAX_AGE]
+				return "Youth only: %s is %d, and you cannot bring in a player over %d." % [
+						surname(p), int(floor(float(p.get("age", 0)))), MAX_AGE]
 		"rebuild":
 			var id := str(p.get("id", ""))
 			for g in gs.challenge.get("gone", []):
 				if str(g.get("id", "")) == id:
-					return "Rebuild: he walked out when you took over, and he will not come back."
+					return "Rebuild: %s walked out when you took over and will not come back." % surname(p)
 	return ""
+
+
+## The player's surname, so the reason never leans on an unnamed "he".
+static func surname(p: Dictionary) -> String:
+	var parts := str(p.get("name", "")).strip_edges().split(" ", false)
+	return parts[parts.size() - 1] if parts.size() > 0 else "This player"
 
 
 ## The few words on a disabled button for a player your challenge bars
