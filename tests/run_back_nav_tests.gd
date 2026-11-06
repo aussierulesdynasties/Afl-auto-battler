@@ -379,6 +379,11 @@ func _test_overlays() -> void:
 				break
 		await process_frame
 		s.call("_on_sim_round")
+		# The round plays under a cover (deferred): wait for its results, then skip.
+		for i in range(60):
+			if s.find_child("RoundResults", true, false) != null:
+				break
+			await process_frame
 		_state.skip_media_conference())
 	await _overlay_case("hub: season plan", "hub", func(s): await _tap_named(s, "SeasonPlanLine"))
 	await _overlay_case("list: player profile", "list", func(s): s.call("_open_profile", pid))
