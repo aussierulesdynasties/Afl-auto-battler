@@ -30,6 +30,7 @@ func run() -> void:
 	_t("_test_firsts_flow")
 	_t("_test_firsts_goals")
 	_t("_test_first_goal_candidates")
+	_t("_test_first_goal_any_player_once")
 	_t("_test_sacking")
 	_t("_test_board_patience")
 	_t("_test_board_warning_line")
@@ -1459,6 +1460,58 @@ func _test_first_goal_candidates() -> void:
 	_check(cand.has(str(fresh_kid["id"])), "A player with no goals on a complete career is a candidate")
 	_check(not cand.has(str(scorer["id"])) and not cand.has(str(unknown["id"])) and not cand.has(str(this_year["id"])),
 			"Not a goalkicker, a career not on record in full, or a goal already this season")
+	GameState.delete_saved_career()
+
+
+## Row 106 (T5.Q8): the first-goal line is for any player at your club, backed
+## or not, and said once in his career. A player you never backed kicks his first:
+## the feed says it once, it is kept on him through a save and reload, and the
+## next live match does not offer it again.
+func _test_first_goal_any_player_once() -> void:
+	_fresh_season()
+	_check(GameState.prepare_interactive_match(), "A live match is set up (row 106)")
+	var me := 0 if str(GameState.pending_match["home"]) == GameState.my_club else 1
+	var ground: Array = GameState.pending_sim.squads[me].ground
+	_check(ground.size() >= 18, "Your side is named (%d on the ground)" % ground.size())
+	var pid := str((ground[0] as Dictionary)["id"])
+	var p := _kid(GameState.list_player(pid), 4)
+	GameState.season_tally.erase(pid)
+	_check(Backing.current(p).is_empty(), "He was never backed: no run on him")
+	var cand := GameState.first_goal_candidates()
+	_check(cand.has(pid), "A player you never backed is a candidate for the line")
+	var who := GameDB.player_display_name(p)
+	var goal := {"kind": "goal", "q": 1, "min": 4, "side": me, "player_id": pid, "name": who, "score": [6, 0]}
+	var mem := {"first_goal": cand}
+	_check(MatchNotes.story_feed_line(mem, goal) == "First AFL goal for %s." % who,
+			"The feed says it for him (%s)" % who)
+	_check(MatchNotes.story_feed_line(mem, goal) != "First AFL goal for %s." % who,
+			"...once in the match")
+	# The match is recorded: the goal is his, and the first is kept on him.
+	var res := {"home": str(GameState.pending_match["home"]), "away": str(GameState.pending_match["away"]),
+			"label": "Round 1", "roster": [[], []], "players": {pid: {"goals": 1}}}
+	(res["roster"] as Array)[me] = [{"id": pid}]
+	Awards.tally_match(GameState.season_tally, res, true)
+	GameState._note_firsts([res])
+	_check(Firsts.in_match(p, "goal", GameState.season_year, "Round 1"), "His first goal is kept on him")
+	# Through a save and reload, the record and the tally both hold it.
+	GameState.save_career()
+	_check(GameState.load_career(), "The career loads (row 106)")
+	var back := GameState.list_player(pid)
+	_check(Firsts.in_match(back, "goal", GameState.season_year, "Round 1"),
+			"The first goal survives a save and reload")
+	_check(GameState.career_goals_before(back) == 1, "...and so does the goal itself")
+	# The next live match: he is no longer a candidate, so the line is never said twice.
+	_check(GameState.prepare_interactive_match(), "The next live match is set up")
+	var me2 := 0 if str(GameState.pending_match["home"]) == GameState.my_club else 1
+	var named := []
+	for row in GameState.pending_sim.squads[me2].ground + GameState.pending_sim.squads[me2].bench:
+		named.append(str(row["id"]))
+	_check(named.has(pid), "He is named again, so the next check is about his record")
+	_check(Career.complete(GameState.list_player(pid)), "...and his career is still fully on record")
+	var again := GameState.first_goal_candidates()
+	_check(not again.has(pid), "Once said, never again in his career")
+	_check(MatchNotes.story_feed_line({"first_goal": again}, goal) != "First AFL goal for %s." % who,
+			"...and his next goal gets no first-goal line")
 	GameState.delete_saved_career()
 
 
