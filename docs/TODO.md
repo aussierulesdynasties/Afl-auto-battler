@@ -22,25 +22,21 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 74 | Gather Round as a shared league event at host venues, with a policy for odd club counts (T5.Q11a) | built |
 | 75 | Sir Doug Nicholls Round as a real annual event, design stored in the save (T5.Q11b) | built |
 | 76 | AFL news layer: generated news items from the save (T5.Q11d) | items appear |
-| 77 | Set shots rise from about 37.5% to the real ~55% of shots, conversion set by distance, total scoring held flat (T8.Q9) | audit shows both |
 | 78 | Rare big margins come back through Momentum (100+ about 0.5% against real 1.9%); balance-gated (T8.Q4) | audit shows the blowout rate |
 | 84 | Togetherness at tight and cliques is felt in matches (director 2026-11-06, after the row 68 review); balance-gated, his playtest judges | audit shows the effect, he has played it |
 | 89 | Midfield intercepts close the gap now: sim 1.4 per team per game against real 2.5 (T8.Q8); balance-gated, `tools/balance.sh match 1000`, his playtest judges | audit shows the intercept rate near real |
 | 90 | Development drift fixed now, cause first: contested bull 3.5% to about 11% and hothead 6.2% to 32.1% over seven seasons (T8.Q10) | cause shown, then a seven-season audit holds the shares |
-| 91 | Listed positions via real_pos: about 85 forwards and 21 defenders stop reading MID; moves 122 players and 110 OVRs (T8.Q11); balance-gated | listed positions match real roles, OVR changes reported |
 | 92 | Back-zone carries retuned (CARRY_ROLES) so defenders carry the ball like real AFL (T9.Q22); balance-gated, paired 1,000-match table in the PR | carry share near real, his playtest judges |
 | 97 | Training: one stat focus per player per season, drills do the rest (T1.Q7, director 2026-11-06) | focus picked once a season, test |
 | 98 | Audio settings become Mute and one Volume slider (T7.O16) | settings show the two controls, real-tap test |
 | 99 | Football department budget merges into High performance: one spend (T9.Q14) | one spend line, old saves load |
 | 100 | Culture sheet moves into the Captaincy panel | culture shown with the leaders, old sheet gone |
 | 101 | Pre-season drill plan split by position group: mids, defenders, forwards, rucks (director: "split it between position groups") | four group plans, test |
-| 102 | "Ask before simming" asks only when Sim the week would sim a match you could play | prompt only before a playable match, test |
 | 103 | Synergies within reach: draft, trade and free-agent screens show which synergy a player would complete, and a player can grow a trait over seasons through training (4.Q10); balance-gated | both shown in play, paired table |
 | 104 | Generated players get synergy traits at the real-player rate and contested bulls at the real 3.5% (4.Q10; drift side is row 90); balance-gated | generation audit shows both rates |
 | 105 | Press conference: list every place the code differs from the bible and show him before anything changes (T3.Q6) | list shown to him |
 | 106 | First-goal line in the feed for any player at your club, backed or not (T5.Q8) | line appears once per player, test |
 | 107 | Event cards: every choice gets an upside and a downside, and never-seen cards get a trigger (T5.Q18, row 34) | no no-cost choice, every card reachable in an audit |
-| 108 | Coach arcs switch on (T5.Q4, director "Switch on now") | switch on, suites green |
 | 109 | Screen defects: club ink to 4.5:1 on tinted panels, hub ladder fills the right side at 2560, break notes above 13 px, draft subtitle not cut off (6.Q18) | captures at phone and 2560 |
 | 110 | Vignette defects: boundary-snap curved white line, snap-for-goal hovering ball (6.Q18) | frames checked, captures to him |
 | 111 | Sacked is not the end: choose from a few clubs with open jobs, or retire with the record read out (T5.r22) | choice offered after a sacking, test |

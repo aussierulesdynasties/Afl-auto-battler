@@ -2770,6 +2770,20 @@ func _test_momentum_runaway() -> void:
 	_check(lift > 0.05, "Run away with it: the side 54 up with the run wins %.1f%% more of the ball" % (100.0 * lift))
 	_check(float(wins[1]) / 20000.0 < float(Ratings.T["contest_clamp"]) + 0.02,
 			"Never past the contest cap (%.3f)" % (float(wins[1]) / 20000.0))
+	# The trailing coach's call still bites at full runaway: the cap is applied
+	# to the runaway before the calls, so Throw numbers at it (surge) and a
+	# stacked stoppage win the home side, 54 down, more of the ball.
+	var called := 0
+	sim.bursts[0] = {"surge": 5, "stack": 5}
+	sim.rng.seed = 787878
+	for i in range(20000):
+		if sim.contest_winner(false, 0.0) == 0:
+			called += 1
+	sim.bursts[0] = {}
+	var call_lift := float(called - (20000 - wins[1])) / 20000.0
+	var promised := MatchSim.SURGE_CONTEST + MatchSim.STACK_CONTEST
+	_check(call_lift > promised * 0.6,
+			"A call by the side 54 down still lifts its contest share by about %.1f%% (%.1f%%)" % [100.0 * promised, 100.0 * call_lift])
 	sim.team_stats[1]["goals"] = 0.0
 	sim.team_stats[0]["goals"] = 9.0
 	sim.momentum = 0.8

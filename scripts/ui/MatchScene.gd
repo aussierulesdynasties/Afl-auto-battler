@@ -283,6 +283,17 @@ const MOMENTUM_INFO := [
 	"Momentum is the run of play. A goal swings it toward the side that kicked it, a behind a little; it fades as play goes on and halves at every break.",
 	"The side on top wins a little more of the ball at centre bounces, stoppages and loose balls - a small edge, never a guarantee. A goal the other way turns it.",
 ]
+## Row 78 (switch momentum_runaway): the second line no longer holds for a
+## side well ahead, so the sheet says what a runaway does.
+const MOMENTUM_INFO_RUNAWAY := [
+	"Momentum is the run of play. A goal swings it toward the side that kicked it, a behind a little; it fades as play goes on and halves at every break.",
+	"The side on top wins a little more of the ball at centre bounces, stoppages and loose balls - never a guarantee. A goal the other way turns it.",
+	"A side more than four goals up with the run of play can run away with it: the further ahead, the more of the ball it wins, the longer the run lasts and the more goals it takes to turn. A call to win the ball back still counts in full.",
+]
+
+
+static func momentum_info() -> Array:
+	return MOMENTUM_INFO_RUNAWAY if Features.on("momentum_runaway") else MOMENTUM_INFO
 
 
 func _momentum_bar() -> Control:
@@ -348,7 +359,7 @@ func _show_momentum_info() -> void:
 	_sheet_overlay = overlay
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Momentum", UiKit.TITLE))
-	for line in MOMENTUM_INFO:
+	for line in momentum_info():
 		var l := UiKit.lbl(line, UiKit.BODY, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
