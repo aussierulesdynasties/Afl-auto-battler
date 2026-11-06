@@ -25,6 +25,7 @@ func run() -> void:
 	_t("_test_named_side")
 	_t("_test_formation_layout")
 	_t("_test_complete_synergy")
+	_t("_test_blooding_net_change")
 	_t("_test_gaps_and_overflow")
 	_t("_test_left_out_player_sits_out")
 	_t("_test_selection_saved")
@@ -141,6 +142,69 @@ func _test_formation_layout() -> void:
 	var keep: Dictionary = GameState.best23.duplicate(true)
 	GameState.reset()
 	_check(GameState.load_career() and GameState.best23 == keep, "Your Best 23 survives a save and load")
+
+
+## Blooding (director, 2026-11-07: "a bit of a circular word salad"): each
+## young player comes in once, for an older starter; a youngster brought in is
+## never the next one out, a young starter is never dropped, and the note is
+## the net change in one sentence. This list used to cycle: Y1 in for the
+## 21-year-old, Y2 in for Y1, Y1 back in for Y2.
+func _test_blooding_net_change() -> void:
+	_new_season()
+	var side := GameState.current_side()
+	var in23 := {}
+	for k in side:
+		for id in side[k]:
+			in23[str(id)] = true
+	for p in GameState.my_list:
+		p["age"] = 28
+		p["injury_weeks"] = 0
+		p["overall"] = 72 if in23.has(str(p["id"])) else 40
+	var fwd: Array = side["FWD"]
+	var young_starter: Dictionary = GameState.list_player(str(fwd[0]))
+	var w1: Dictionary = GameState.list_player(str(fwd[1]))
+	var w2: Dictionary = GameState.list_player(str(fwd[2]))
+	young_starter["age"] = 21
+	young_starter["overall"] = 60
+	w1["overall"] = 65
+	w2["overall"] = 66
+	var youngs: Array = []
+	for p in GameState.my_list:
+		if youngs.size() < 2 and not in23.has(str(p["id"])) and str(p["role"]) == "FWD":
+			youngs.append(p)
+	_check(youngs.size() == 2, "(two forwards outside the 23)")
+	if youngs.size() < 2:
+		return
+	var y1: Dictionary = youngs[0]
+	var y2: Dictionary = youngs[1]
+	y1["age"] = 19
+	y1["overall"] = 64
+	y2["age"] = 20
+	y2["overall"] = 63
+	var pool: Array = GameState.my_list.filter(func(p): return Ratings.available(p))
+	var r: Dictionary = GameState.blood_youth(side, pool)
+	var out: Dictionary = r["side"]
+	var ids := {}
+	var n := 0
+	for k in out:
+		for id in out[k]:
+			ids[str(id)] = true
+			n += 1
+	var name := func(p): return GameDB.player_display_name(p)
+	_check(n == 23 and ids.size() == 23, "Blooding still names 23 different players")
+	_check(ids.has(str(y1["id"])) and ids.has(str(y2["id"])), "Both young forwards come in")
+	_check(not ids.has(str(w1["id"])) and not ids.has(str(w2["id"])), "The two weakest older forwards go out")
+	_check(ids.has(str(young_starter["id"])), "A 21-year-old starter is never dropped to blood another youngster")
+	_check(str(r["note"]) == "Blooding %s and %s, in place of %s and %s." % [name.call(y1), name.call(y2),
+			name.call(w1), name.call(w2)], "Blooding names the net change once: %s" % r["note"])
+	y2["age"] = 28
+	r = GameState.blood_youth(side, pool)
+	_check(str(r["note"]) == "Blooding %s (19) in place of %s." % [name.call(y1), name.call(w1)],
+			"One youngster in: his age and who he replaces (%s)" % r["note"])
+	y1["age"] = 28
+	r = GameState.blood_youth(side, pool)
+	_check(str(r["note"]) == "No young player is close enough to a starter's spot: this is your best side."
+			and r["side"] == side, "Nobody young close enough: the best side, and it says so")
 
 
 ## Complete synergy (director, 2026-10-07): it switches the synergy on with a

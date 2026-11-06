@@ -9189,37 +9189,7 @@ func auto_pick(strategy: String) -> Dictionary:
 			return {"side": side, "note": note}
 		"youth":
 			var sel2 := Ratings.select_22(pool, dual)
-			var side2 := _as_selection(sel2["ground"], sel2["bench"])
-			var ins: PackedStringArray = []
-			var by_id := {}
-			for p in pool:
-				by_id[str(p["id"])] = p
-			for _n in range(YOUTH_MAX):
-				var used := _ids_in(side2)
-				var best_swap := []
-				for line in ["DEF", "MID", "WING", "FWD"]:
-					var weakest := ""
-					for id in side2[line]:
-						if weakest == "" or int(by_id[str(id)]["overall"]) < int(by_id[weakest]["overall"]):
-							weakest = str(id)
-					if weakest == "":
-						continue
-					var role: String = "MID" if line == "WING" else line
-					for p in pool:
-						var pid := str(p["id"])
-						if used.has(pid) or float(p.get("age", 30.0)) > YOUTH_AGE or not Ratings.plays_role(p, role):
-							continue
-						var gap := int(by_id[weakest]["overall"]) - int(p["overall"])
-						if gap <= YOUTH_GAP and (best_swap.is_empty() or int(p["overall"]) > int(by_id[str(best_swap[2])]["overall"])):
-							best_swap = [line, weakest, pid]
-				if best_swap.is_empty():
-					break
-				var arr: Array = side2[best_swap[0]]
-				arr[arr.find(best_swap[1])] = best_swap[2]
-				ins.append("%s for %s" % [GameDB.player_display_name(by_id[best_swap[2]]),
-						GameDB.player_display_name(by_id[best_swap[1]])])
-			return {"side": side2, "note": ("Blooding: %s." % "; ".join(ins)) if not ins.is_empty()
-					else "No young player is close enough to a starter's spot: this is your best side."}
+			return blood_youth(_as_selection(sel2["ground"], sel2["bench"]), pool)
 		"mine":
 			if best23.is_empty():
 				return {"side": {}, "note": "No saved Best 23 yet: arrange a side and save it."}
@@ -9251,6 +9221,68 @@ func auto_pick(strategy: String) -> Dictionary:
 					else "Your Best 23."}
 	var sel4 := Ratings.select_22(pool, dual)
 	return {"side": _as_selection(sel4["ground"], sel4["bench"]), "note": "Best side by rating and position."}
+
+
+## The youth pick on `side_in`: up to YOUTH_MAX young players (YOUTH_AGE and
+## under) from `pool`, each in for the lowest-rated older starter of a line
+## he plays, when within YOUTH_GAP of him. Returns {"side", "note"}.
+func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
+	var side2: Dictionary = side_in.duplicate(true)
+	var by_id := {}
+	for p in pool:
+		by_id[str(p["id"])] = p
+	# Blooding brings young players in for older ones: a youngster who came
+	# in is never the next one out, and nobody young is dropped, so each
+	# swap is a real change and the note names only what changed.
+	var brought: Array = []
+	var dropped: Array = []
+	for _n in range(YOUTH_MAX):
+		var used := _ids_in(side2)
+		var best_swap := []
+		for line in ["DEF", "MID", "WING", "FWD"]:
+			var weakest := ""
+			for id in side2[line]:
+				var w = by_id.get(str(id))
+				if w == null or brought.has(str(id)) or float(w.get("age", 30.0)) <= YOUTH_AGE:
+					continue
+				if weakest == "" or int(w["overall"]) < int(by_id[weakest]["overall"]):
+					weakest = str(id)
+			if weakest == "":
+				continue
+			var role: String = "MID" if line == "WING" else line
+			for p in pool:
+				var pid := str(p["id"])
+				if used.has(pid) or brought.has(pid) or float(p.get("age", 30.0)) > YOUTH_AGE \
+						or not Ratings.plays_role(p, role):
+					continue
+				var gap := int(by_id[weakest]["overall"]) - int(p["overall"])
+				if gap <= YOUTH_GAP and (best_swap.is_empty() or int(p["overall"]) > int(by_id[str(best_swap[2])]["overall"])):
+					best_swap = [line, weakest, pid]
+		if best_swap.is_empty():
+			break
+		var arr: Array = side2[best_swap[0]]
+		arr[arr.find(best_swap[1])] = best_swap[2]
+		dropped.append(str(best_swap[1]))
+		brought.append(str(best_swap[2]))
+	return {"side": side2, "note": _blooding_note(brought, dropped, by_id) if not brought.is_empty()
+			else "No young player is close enough to a starter's spot: this is your best side."}
+
+
+## The youth pick in one sentence a coach would say: "Blooding Harry
+## Armstrong (19) in place of Ben Smith." or, for more than one, "Blooding
+## Harry Armstrong and Josh Dolan, in place of Ben Smith and Tom Jones."
+static func _blooding_note(brought: Array, dropped: Array, by_id: Dictionary) -> String:
+	var ins: Array = brought.map(func(id): return GameDB.player_display_name(by_id[id]))
+	var outs: Array = dropped.map(func(id): return GameDB.player_display_name(by_id[id]))
+	if ins.size() == 1:
+		return "Blooding %s (%d) in place of %s." % [ins[0], int(by_id[brought[0]].get("age", 0)), outs[0]]
+	return "Blooding %s, in place of %s." % [_and_list(ins), _and_list(outs)]
+
+
+static func _and_list(names: Array) -> String:
+	if names.size() <= 1:
+		return "".join(names)
+	return "%s and %s" % [", ".join(names.slice(0, names.size() - 1)), names[names.size() - 1]]
 
 
 func _ids_in(side: Dictionary) -> Dictionary:
@@ -9288,6 +9320,10 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 	for p in my_list:
 		by_id[str(p["id"])] = p
 	var ins: PackedStringArray = []
+	# A player brought in is never the next one out, and one left out never
+	# comes back: the swaps can't undo each other, and the note is the net change.
+	var brought := {}
+	var dropped := {}
 	for _guard in range(8):
 		var ground := _ground_for(work)
 		if Traits.active(ground).has(key):
@@ -9309,7 +9345,7 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 		var cand = null
 		for p in my_list:
 			var pid := str(p["id"])
-			if on_ground.has(pid) or not Ratings.available(p) or not Traits.of(p).has(need_t):
+			if on_ground.has(pid) or dropped.has(pid) or not Ratings.available(p) or not Traits.of(p).has(need_t):
 				continue
 			if line != "" and not Ratings.plays_role(p, line):
 				continue
@@ -9325,7 +9361,7 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 			for tl in targets:
 				for id in work[tl]:
 					var vp = by_id.get(str(id))
-					if vp == null or str(id) == str(cand["id"]):
+					if vp == null or str(id) == str(cand["id"]) or brought.has(str(id)):
 						continue
 					if Traits.of(vp).has(need_t):
 						continue
@@ -9338,6 +9374,8 @@ func complete_synergy(key: String, side: Dictionary) -> Dictionary:
 		if victim == "":
 			return {"side": side, "note": "", "lost": [], "problem": "No spot to free without losing another %s." % Traits.label(need_t).to_lower()}
 		var cid := str(cand["id"])
+		brought[cid] = true
+		dropped[victim] = true
 		var bench: Array = work["BENCH"]
 		for tl in targets:
 			var arr: Array = work[tl]
