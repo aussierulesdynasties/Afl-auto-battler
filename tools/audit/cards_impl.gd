@@ -99,6 +99,8 @@ func run() -> void:
 		seasons_played += 1
 		print("CARDS seed %d %s season %d | cards so far %d | distinct so far %d" % [seed, club, GameState.season_year,
 				_sum(seen), seen.size()])
+		# Sacked with a job on offer: the audit takes the first club and goes on.
+		ClubMoves.take_first_offer(GameState)
 		if s == seasons - 1 or GameState.is_sacked():
 			break
 		GameState.open_offseason()

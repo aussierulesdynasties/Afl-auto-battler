@@ -123,6 +123,8 @@ func run() -> void:
 			if GameState.media_conference_pending():
 				GameState.skip_media_conference()
 			GameState.advance()
+		# Sacked with a job on offer: the audit takes the first club and goes on.
+		ClubMoves.take_first_offer(GameState)
 		if s == seasons - 1 or GameState.is_sacked():
 			break
 		GameState.open_offseason()
