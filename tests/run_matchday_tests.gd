@@ -565,12 +565,15 @@ func _test_phone_match(sz: Vector2i) -> void:
 			await _settle()
 			_check(table.find_child("PlayerDetail", true, false) != null, "A tap opens the rest of his line (%s)" % tag)
 			var more = table.find_child("PlayerDetail", true, false)
-			_check(more != null and str(more.text).contains("metres gained") and str(more.text).contains("disposal efficiency"),
+			_check(more != null and str(more.text).contains(" gained") and str(more.text).contains("disposal efficiency"),
 					"His line includes metres gained and disposal efficiency (%s)" % tag)
 			var one_rx := RegEx.create_from_string("(^|, )1 [a-z' -]*s(,|$)")
 			_check(more != null and one_rx.search(str(more.text)) == null
 					and table.detail_words("behinds", 1) == "behind" and table.detail_words("behinds", 2) == "behinds"
 					and table.detail_words("hit-outs to advantage", 1) == "hit-out to advantage"
+					and table.detail_words("frees against", 1) == "free against"
+					and table.detail_words("frees against", 2) == "frees against"
+					and table.detail_words("metres gained", 1) == "metre gained"
 					and table.detail_words("inside 50s", 1) == "inside 50",
 					"A count of one reads singular: 1 behind, 1 hit-out to advantage (%s)" % tag)
 			var fits := true
@@ -2006,10 +2009,18 @@ func _test_ballup_two_scene() -> void:
 	_check(not low.contains("play it straight") and not low.contains("recommend") and not low.contains("best"),
 			"No third option and no advice (%s)" % _text(card))
 	var asked: int = sim.moments.size()
+	var played_from: int = sim.timeline.size()
 	var why: String = await Tap.tap(card.find_child("Moment_1", true, false))
 	_check(why == "", "A real tap on Flood behind the ball reaches it (%s)" % why)
+	# The tap plays on at once (MatchScene._advance_segment) to the next call or the
+	# break, and the break ends every call (MatchSim.end_quarter), so bursts may be
+	# empty again by now. The timeline notes each side's calls at every chain played:
+	# the flood must be in force for the play that followed the tap.
+	var flood_played := false
+	for e in sim.timeline.slice(played_from):
+		flood_played = flood_played or (int(e["side"]) == me and (e["bursts"] as Array).has("flood"))
 	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("choice_label", "")) == "Flood behind the ball"
-			and (sim.bursts[me] as Dictionary).has("flood"), "The tap makes the call, and the flood is on")
+			and flood_played, "The tap makes the call, and the flood is on")
 	Features.clear("ballup_two")
 	m.queue_free()
 	await _settle()
@@ -2546,7 +2557,7 @@ func _test_match_day_setup() -> void:
 	_check(side != null and start != null and (start as Button).text == "Start",
 			"The setup has Change the side and Start (%s)" % ((start as Button).text if start else "-"))
 	var sim_side: int = _state.pending_sim.moment_side
-	var dropped := str((_state.pending_sim.squads[sim_side] as Squad).ground[0]["id"])
+	var dropped := str(_state.pending_sim.squads[sim_side].ground[0]["id"])
 	var why: String = await Tap.tap(side)
 	await _settle()
 	var sel: Node = current_scene
@@ -2561,7 +2572,7 @@ func _test_match_day_setup() -> void:
 	await _settle()
 	ms = current_scene
 	var ids := []
-	for p in (_state.pending_sim.squads[sim_side] as Squad).ground:
+	for p in _state.pending_sim.squads[sim_side].ground:
 		ids.append(str(p["id"]))
 	_check(why == "" and ms != null and ms.name == "MatchScene" and not ids.has(dropped)
 			and _state.match_day_setup_open(),

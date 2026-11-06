@@ -7276,8 +7276,10 @@ func draft_spot(year: int, rnd: int, origin: String) -> int:
 	# A new club's extra picks come first: every pick behind them is later.
 	var ahead := ExpansionBuild.picks_ahead(self, year, regular, n)
 	# So do this off-season's free-agency compensation picks, placed as
-	# begin_intake_draft hands them to the draft.
-	if year == season_year:
+	# begin_intake_draft hands them to the draft. The list outlives the
+	# rollover (the season wrap reads it), so count it only while this
+	# season's off-season is open.
+	if year == season_year and offseason_year == season_year:
 		var active := GameDB.active_clubs(season_year)
 		for c in compensation:
 			if active.has(str(c["club"])) and int(c["after"]) < regular:
