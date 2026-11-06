@@ -164,8 +164,14 @@ func _test_press_rolls() -> void:
 	# Every number on the gate comes from the constants: no digits in a template.
 	var digit := RegEx.create_from_string("[0-9]")
 	var words: Array = [MC.ODDS_TEMPLATE, MC.MORALE_SIZE, MC.BOARD_SIZE, MC.AFTER_MORALE, MC.AFTER_BOARD,
-			MC.HIS_SIZE, MC.AFTER_HIS, MC.NO_BOARD, MC.LIKES, MC.DISLIKES, MC.STANDING_EFFECT]
+			MC.HIS_SIZE, MC.AFTER_HIS, MC.NO_BOARD, MC.LIKES, MC.DISLIKES, MC.STANDING_EFFECT,
+			MC.REASON, MC.FADE_NOTE, MC.SLOW_FADE_NOTE]
 	words.append_array(MC.RECORD_CLAUSE.values())
+	words.append_array(MC.RECORD_REASON.values())
+	for j in MC.PERSONA.values():
+		for k in ["odds_note", "board_note", "named_note", "slow_note"]:
+			if (j as Dictionary).has(k):
+				words.append(j[k])
 	words.append_array(MC.STANDING_WORDS.values())
 	for pair in MC.LEAD_INS.values():
 		words.append_array(pair)
@@ -276,6 +282,16 @@ func _test_press_caps_and_fade() -> void:
 		slow_trail.append(int(slow["morale"]))
 	_check(slow_trail == [72, 71, 71, 70, 70] and MC.fade_rounds(2, true) == 4 and MC.fade_rounds(2, false) == 2,
 			"After the Philosopher the lift fades at half pace (%s)" % str(slow_trail))
+	# Counted from the presser, not the round number: set on an odd round it
+	# still takes exactly fade_rounds rounds.
+	var odd := {"morale": 70}
+	MC.apply_lift(odd, 2, MC.LIST_CAP, true)
+	var odd_trail := []
+	for r in range(4, 8):
+		MC.fade_lift(odd, r)
+		odd_trail.append(int(odd["morale"]))
+	_check(odd_trail == [72, 71, 71, 70] and not odd.has("press_lift") and not odd.has("press_wait"),
+			"The Philosopher's lift takes exactly fade_rounds rounds whichever round it starts (%s)" % str(odd_trail))
 	var low := {"morale": 6}
 	var moved: int = MC.apply_lift(low, -2, MC.LIST_CAP, false)
 	MC.fade_lift(low, 1)
@@ -287,6 +303,25 @@ func _test_press_caps_and_fade() -> void:
 	MC.apply_lift(q, 2, MC.LIST_CAP, false)
 	_state._fade_press_lifts()
 	_check(int(q["morale"]) == 71 and int(q["press_lift"]) == 1, "GameState fades every listed player's press lift a round")
+	# The board's press move fades too, and stacking never passes its cap.
+	_press_reset()
+	var up: int = _state._press_board(2)
+	var more: int = _state._press_board(2)
+	_check(up == 2 and more == 0 and _state.board_confidence() == 52 and int(_state.media_memory.get("board_lift", 0)) == 2,
+			"Two press answers in a row move the board no further than its cap (%d)" % _state.board_confidence())
+	var board_trail := []
+	for r in range(3):
+		_state._fade_press_lifts()
+		board_trail.append(_state.board_confidence())
+	_check(board_trail == [51, 50, 50] and not _state.media_memory.has("board_lift"),
+			"The board's press move wears off a point a round, then the trace is gone (%s)" % str(board_trail))
+	_press_reset()
+	_state.media_conference = {"key": "heavy_loss", "journalist": "muckraker", "round": 8, "question": "q",
+			"options": [{"label": "x", "kind": "method"}]}
+	var res: Dictionary = _state.resolve_media_conference(0)
+	var b_moved: int = _state.board_confidence() - 50
+	_check(absi(b_moved) == 2 and int(_state.media_memory.get("board_lift", 0)) == b_moved and int(res["fade_rounds"]) == 2,
+			"An answer's board move is kept to fade, and the outcome says how long (%d, %s rounds)" % [b_moved, str(res.get("fade_rounds"))])
 
 
 ## (a) Standing -2..+2 with each journalist: answers move it, it moves the odds
@@ -322,12 +357,17 @@ func _test_press_standing() -> void:
 	_check(asked.begins_with(str(MC.LEAD_INS["muckraker"][0])) and asked.ends_with(str(conf["question"]))
 			and MC.lead_in("muckraker", 0) == "",
 			"A cool journalist adds a lead-in; the question itself is unchanged (%s)" % asked)
-	var lines: Array = _state.press_standing_lines()
-	_check(lines.size() == 2 and str(lines[0]) == "Cool on you" and str(lines[1]).contains("-5%"),
-			"The sheet names the standing and what it does to the odds (%s)" % str(lines))
-	_check(_state.press_odds_line(0).contains("Gary will like that (standing +1)")
-			and _state.press_odds_line(2).contains("Gary won't like that (standing -1)"),
-			"Each answer says how it moves your standing with him")
+	var st_line: String = _state.press_standing_line()
+	_check(st_line == "Gary is cool on you: every answer is 5% less likely to land well.",
+			"The sheet says how he stands with you and what it does to the odds (%s)" % st_line)
+	_check(MC.standing_effect("muckraker", 0) == "" and MC.standing_word(0, "philosopher") == "takes you as she finds you",
+			"Even standing adds no line; its word names her")
+	_check(_state.press_odds_line(0).contains("Gary will like that: answers to him land well 5% more often after it.")
+			and _state.press_odds_line(2).contains("Gary won't like that: answers to him land well 5% less often after it."),
+			"Each answer says how it moves your standing with him, as odds (%s)" % _state.press_odds_line(0))
+	_state.media_memory = {"standing": {"muckraker": 2}, "standing_year": int(_state.season_year)}
+	_check(not _state.press_odds_line(0).contains("will like that"),
+			"In his corner already, an answer he likes says nothing it cannot do")
 	_state.media_conference = {}
 
 
@@ -336,17 +376,35 @@ func _test_press_personas() -> void:
 	var MC = load("res://scripts/sim/MediaConference.gd")
 	var muck: Dictionary = MC.effects("criticise", {"journalist": "muckraker"})
 	var plain: Dictionary = MC.effects("criticise", {})
-	_check(int(muck["a"]["board"]) == int(plain["a"]["board"]) + 1 and str(muck["notes"]).contains("The Siren gets read upstairs")
+	var muck_m: Dictionary = MC.effects("method", {"journalist": "muckraker"})
+	_check(int(muck["a"]["board"]) == int(plain["a"]["board"]) and int(muck["b"]["board"]) == int(plain["b"]["board"])
+			and not str(muck["notes"]).contains("Siren")
+			and int(muck_m["a"]["board"]) == 2 and int(muck_m["b"]["board"]) == -2 and str(muck_m["notes"]).contains("The Siren gets read upstairs")
 			and MC.chance("criticise", {"journalist": "muckraker"}) == MC.chance("criticise", {}) - 10,
-			"The Muckraker: the board size grows by one and criticism lands 10 worse, both said")
+			"The Muckraker: a board move that depends on how it lands grows by one, a sure one never does")
+	var m_ctx := {"journalist": "muckraker", "facts": {"journalist": "muckraker"}}
+	_check(MC.odds_line("criticise", 40, MC.effects("criticise", m_ctx), m_ctx).contains("The players read his headline: 10% less likely to land well."),
+			"The Muckraker's odds twist is named on the gate with its size")
+	var y_ctx := {"journalist": "sycophant", "facts": {"journalist": "sycophant"}}
 	_check(MC.chance("back", {"journalist": "sycophant"}) == MC.chance("back", {}) - 5
-			and MC.odds_line("back", 55, MC.effects("back", {"journalist": "sycophant"}), {"journalist": "sycophant"}).contains("(-5%)"),
+			and MC.odds_line("back", 55, MC.effects("back", y_ctx), y_ctx).contains("Praise after a thumping is what everyone expects: 5% less likely to land well."),
 			"The Sycophant: backing the players lands 5 worse, and the gate says so")
+	var heavy := {"key": "heavy_loss", "young": MC.YOUNG_SIDE, "morale": 50.0, "verdict": "contradicted"}
+	var why := ""
+	for kind in ["method", "back"]:
+		var ctx := {"facts": heavy, "verdict": "contradicted"}
+		why += MC.odds_line(kind, 50, MC.effects(kind, ctx), ctx)
+	_check(why.contains("After a heavy loss: 15% less likely to land well.") and why.contains("It's a young side: 10% more likely to land well.")
+			and why.contains("The group is flat: 10% more likely to land well.") and why.contains("The record says otherwise: 10% less likely to land well."),
+			"Every odds twist is named on the gate with its size (%s)" % why)
 	var bogan: Dictionary = MC.effects("back_named", {"journalist": "bogan", "name": "Jack"})
 	_check(int(bogan["a"]["his"]) == 3 and int(bogan["b"]["his"]) == -2 and str(bogan["notes"]).contains("listen to his show"),
 			"The Bogan: a named player's sizes grow by one (%d / %d)" % [int(bogan["a"]["his"]), int(bogan["b"]["his"])])
-	_check(str(MC.effects("back", {"journalist": "philosopher"})["notes"]).contains("half the pace"),
-			"The Philosopher: the gate says her morale move lingers")
+	var p_ctx := {"journalist": "philosopher"}
+	var p_line: String = MC.odds_line("back", 55, MC.effects("back", p_ctx), p_ctx)
+	_check(p_line.contains("Her piece lingers: the players' moves wear off a point every second round.")
+			and p_line.contains(MC.SLOW_FADE_NOTE) and not p_line.contains(MC.FADE_NOTE),
+			"The Philosopher: the gate says her morale move lingers (%s)" % p_line)
 	_check(MC.standing_move("stats", "back", "supported") == 1 and MC.standing_move("stats", "back", "contradicted") == -1
 			and MC.standing_move("stats", "back", "neutral") == 0 and MC.standing_move("bogan", "method") == -1,
 			"The Stats Geek's standing follows the record, the others' their likes")

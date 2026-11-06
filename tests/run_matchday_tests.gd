@@ -2496,7 +2496,7 @@ func _test_press_effects_shown(db) -> void:
 		shown = shown and line != null and line.is_visible_in_tree() and text == _state.press_odds_line(i) 				and text.contains("%d%% " % c) and text.contains("%d%% " % (100 - c))
 		# The Muckraker's twist is on the gate (director 2026-11-06).
 		if kind == "criticise":
-			shown = shown and text.contains("The Siren gets read upstairs") and text.contains("(-10%)")
+			shown = shown and text.contains("The players read his headline: 10% less likely to land well.") 					and not text.contains("The Siren gets read upstairs") and text.contains(MC.FADE_NOTE)
 	_check(shown, "Every press answer shows both ways it can land, with the odds and the sizes")
 	var c0: int = _state.press_chance(0)
 	var landed := "a" if MC.roll(_state.career_seed, _state.season_year, int(_state.media_conference.get("round", 0)),
@@ -2509,7 +2509,7 @@ func _test_press_effects_shown(db) -> void:
 	var after: Label = hub.find_child("MediaOutcomeLine", true, false)
 	_check(tapped == "" and _state.board_confidence() == 50 + int(out["board"])
 			and int(who["morale"]) == 50 + int(out["morale"]) and after != null and after.is_visible_in_tree()
-			and after.text == MC.after_line("criticise", landed, fx) and int(out["board"]) == 2,
+			and after.text == MC.after_line("criticise", landed, fx) and int(out["board"]) == 1,
 			"A real tap on the first answer applies the outcome the press stream drew, and the sheet after says how it landed (%s, %s)" % [tapped, landed])
 	var done: Button = hub.find_child("MediaOutcomeDone", true, false)
 	var closed: String = await Tap.tap(done) if done != null else "missing"
@@ -2520,6 +2520,38 @@ func _test_press_effects_shown(db) -> void:
 		hub.queue_free()
 	_state.media_conference = {}
 	await _settle()
+
+
+## The press is its own full screen (ruling 3.52): the hub routes to it, a
+## real tap answers, the result shows in the scene, and Done returns to the hub.
+func _test_press_scene_routed() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var router = root.get_node("Router")
+	_state.media_conference = MC.pick({"club": "COL", "opponent_name": "Carlton", "round": 8,
+			"result": {"home": "COL", "away": "CAR", "score": [55, 101]}}, {})
+	router.stack = []
+	router.go("hub")
+	await _settle()
+	await _settle()
+	var press: Node = current_scene
+	_check(press != null and press.name == "PressScene" and router.current() == "press"
+			and press.find_child("MediaQuestion", true, false) != null,
+			"A pending question opens the press conference as its own screen (%s, %s)" % [press.name if press else "-", router.current()])
+	var answer: Button = press.find_child("MediaAnswer_0", true, false) if press != null else null
+	var tapped: String = await Tap.tap(answer) if answer != null else "missing"
+	await _settle()
+	var line: Label = current_scene.find_child("MediaOutcomeLine", true, false)
+	_check(tapped == "" and current_scene == press and line != null and line.is_visible_in_tree()
+			and not _state.media_conference_pending(),
+			"A real tap answers and the result shows in the press screen (%s)" % tapped)
+	var done: Button = current_scene.find_child("MediaOutcomeDone", true, false)
+	var closed: String = await Tap.tap(done) if done != null else "missing"
+	await _settle()
+	await _settle()
+	_check(closed == "" and router.current() == "hub" and current_scene != null and current_scene.name == "HubScene"
+			and current_scene.find_child("MediaConference", true, false) == null,
+			"A real tap on Done returns to the hub (%s, %s)" % [closed, router.current()])
+	_state.media_conference = {}
 
 
 func _settle() -> void:
@@ -2938,6 +2970,7 @@ func _test_vignettes_off_match() -> void:
 	_state.media_conference = {}
 	await _settle()
 	await _t("_test_press_effects_shown", [db])
+	await _t("_test_press_scene_routed")
 	# A promised run just ended: the sit-down is the week's one ask, and a real
 	# tap on Done closes it.
 	_state.backing_talk = {"player_id": "calder", "title": "Sit-down with Calder",

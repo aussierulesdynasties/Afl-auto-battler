@@ -18,6 +18,7 @@ const SCENES := {
 	"forge": "res://scenes/ClubForgeScene.tscn",
 	"preseason": "res://scenes/PreSeasonScene.tscn",
 	"almanac": "res://scenes/AlmanacScene.tscn",
+	"press": "res://scenes/PressScene.tscn",
 }
 
 var stack: Array = []

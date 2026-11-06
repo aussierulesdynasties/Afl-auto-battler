@@ -10588,6 +10588,34 @@ func _fade_press_lifts() -> void:
 	var round_no := season.round_index if last_phase == "regular" else Season.REGULAR_ROUNDS + int((season.finals.get("weeks", []) as Array).size())
 	for p in my_list:
 		MediaConference.fade_lift(p, round_no)
+	# The board's press move fades the same way (a point a round).
+	var lift := int(media_memory.get("board_lift", 0))
+	if lift != 0:
+		if not board.is_empty():
+			board["confidence"] = clampi(board_confidence() - signi(lift), 0, 100)
+		lift -= signi(lift)
+		if lift == 0:
+			media_memory.erase("board_lift")
+		else:
+			media_memory["board_lift"] = lift
+
+
+## Moves board confidence by a press answer's `delta`, through the board's
+## press lift (media_memory "board_lift"): stacked answers never pass BOARD_CAP
+## and only what really moved is kept to fade. Returns the change applied.
+func _press_board(delta: int) -> int:
+	if board.is_empty() or delta == 0:
+		return 0
+	var old := int(media_memory.get("board_lift", 0))
+	var want := clampi(old + delta, mini(-MediaConference.BOARD_CAP, old), maxi(MediaConference.BOARD_CAP, old))
+	var before := board_confidence()
+	board["confidence"] = clampi(before + want - old, 0, 100)
+	var moved := board_confidence() - before
+	if old + moved == 0:
+		media_memory.erase("board_lift")
+	else:
+		media_memory["board_lift"] = old + moved
+	return moved
 
 
 ## The record the Stats Geek reads (ruling 5.48): ladder, place, form and the
@@ -10642,6 +10670,7 @@ func press_facts(option := -1) -> Dictionary:
 		if not his.is_empty():
 			f["his_morale"] = float(ClubLife.morale(his))
 			f["his_age"] = float(his.get("age", 30.0))
+			f["name"] = GameDB.player_display_name(his)
 	return f
 
 
@@ -10661,8 +10690,8 @@ func press_chance(option: int) -> int:
 	return MediaConference.chance(MediaConference.kind_of(opts[option], option), press_facts(option))
 
 
-## {"journalist", "verdict", "name"} for answer `option`: what its effects and
-## its line follow.
+## {"journalist", "verdict", "name", "standing", "facts"} for answer
+## `option`: what its effects and its line follow.
 func press_context(option: int) -> Dictionary:
 	var opts: Array = media_conference.get("options", [])
 	if option < 0 or option >= opts.size():
@@ -10673,7 +10702,9 @@ func press_context(option: int) -> Dictionary:
 	var his := list_player(str(o.get("player", "")))
 	if not his.is_empty():
 		name = GameDB.player_display_name(his)
-	return {"journalist": str(media_conference.get("journalist", "")), "verdict": press_verdict(kind), "name": name}
+	var j := str(media_conference.get("journalist", ""))
+	return {"journalist": j, "verdict": press_verdict(kind), "name": name,
+			"standing": press_standing(j) if MediaConference.JOURNALISTS.has(j) else 0, "facts": press_facts(option)}
 
 
 ## The line under answer `option` (MediaConference.odds_line).
@@ -10693,13 +10724,13 @@ func press_question_text() -> String:
 	return q if lead == "" else "%s %s" % [lead, q]
 
 
-## Under the byline: ["Warm to you", "His write-up: +5% on every answer landing well."].
-func press_standing_lines() -> Array:
+## Under the byline: "Gary is warm to you: every answer is 5% more likely to
+## land well."; "" when he takes you as he finds you.
+func press_standing_line() -> String:
 	var j := str(media_conference.get("journalist", ""))
 	if not MediaConference.JOURNALISTS.has(j):
-		return []
-	var v := press_standing(j)
-	return [MediaConference.standing_word(v), MediaConference.standing_effect(j, v)]
+		return ""
+	return MediaConference.standing_effect(j, press_standing(j))
 
 
 ## The Stats Geek's record line, "" for anyone else.
@@ -10732,11 +10763,11 @@ func resolve_media_conference(option: int) -> Dictionary:
 	var j := str(media_conference.get("journalist", ""))
 	var landed := "a" if MediaConference.roll(career_seed, season_year, round_no, key, option) <= odds else "b"
 	var out: Dictionary = fx[landed]
-	if not board.is_empty() and int(out["board"]) != 0:
-		board["confidence"] = clampi(board_confidence() + int(out["board"]), 0, 100)
+	var board_moved := _press_board(int(out["board"]))
+	if board_moved != 0:
 		# Added to the board's match reason, never in place of it (director 2026-11-06).
 		board["why"] = (str(board.get("why", "")).strip_edges() + " "
-				+ MediaConference.board_sentence(j, int(out["board"]))).strip_edges()
+				+ MediaConference.board_sentence(j, board_moved)).strip_edges()
 	var slow := bool((MediaConference.PERSONA.get(j, {}) as Dictionary).get("slow", false))
 	var morale_delta := int(out["morale"])
 	if morale_delta != 0:
@@ -10761,7 +10792,7 @@ func resolve_media_conference(option: int) -> Dictionary:
 	var size := maxi(absi(int(out["morale"])), absi(int(out["his"])))
 	return {"kind": kind, "landed": landed, "chance": odds, "line": line, "journalist": j,
 			"standing": [before, after], "verdict": str(ctx.get("verdict", "")), "effects": out,
-			"fade_rounds": MediaConference.fade_rounds(size, slow)}
+			"fade_rounds": maxi(MediaConference.fade_rounds(size, slow), MediaConference.fade_rounds(board_moved, false))}
 
 
 
