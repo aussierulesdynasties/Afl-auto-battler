@@ -26,6 +26,11 @@ func run() -> void:
 	_t("_test_off_season_and_fade")
 	_t("_test_old_saves")
 	await _t("_test_screens")
+	_t("_test_group_plans")
+	_t("_test_group_reach")
+	_t("_test_group_side_and_legs")
+	_t("_test_group_old_saves")
+	await _t("_test_group_screen")
 	PreSeason.reload()
 	Features.clear("preseason")
 	GameState.delete_saved_career()
@@ -508,6 +513,192 @@ func _test_screens() -> void:
 				"...and the line follows it, at full strength: " + note.text)
 		await _tap(match_scene.find_child("PlanPicker_defensive", true, false) as Button, "Defensive press at the break")
 		_check(note.text == "Plan fluency: medium", "...in the same three words: " + note.text)
+
+
+# ---------------------------------------------------------------------------
+# Row 101 (director, 2026-11-06: "split it between position groups"): a plan
+# for the mids, the defenders, the forwards and the rucks, each reaching only
+# its own players.
+# ---------------------------------------------------------------------------
+func _groups_of_list() -> Dictionary:
+	var out := {}
+	for g in PreSeason.GROUPS:
+		out[g] = []
+	for p in GameState.my_list:
+		(out[PreSeason.group_of(p)] as Array).append(str(p["id"]))
+	return out
+
+
+func _test_group_plans() -> void:
+	PreSeason.reload()
+	_career()
+	var side: Array = GameState.preseason_blocks().duplicate(true)
+	var same := true
+	for g in PreSeason.GROUPS:
+		same = same and GameState.preseason_blocks("", g) == side and not GameState.preseason_group_differs(g)
+	_check(same and not GameState.preseason["clubs"][CLUB].has("groups"),
+			"A new pre-season: every group trains on the one plan, and the save holds just that plan")
+	_check(GameState.set_preseason_block(0, "heavy", "skills", "FWD"), "The forwards' first block can be set on its own")
+	_check(GameState.set_preseason_block(1, "solid", "plan", "MID") and GameState.set_preseason_drills(1, ["contest"], "MID"),
+			"...the mids' second block drills a plan of its own")
+	_check(GameState.set_preseason_block(0, "light", "running", "DEF"), "...the defenders' first block is light")
+	_check(GameState.set_preseason_block(2, "heavy", "running", "RUCK"), "...and the rucks' last block is heavy")
+	var plans := {}
+	for g in PreSeason.GROUPS:
+		plans[str(GameState.preseason_blocks("", g))] = g
+	_check(plans.size() == 4, "Four group plans exist, each its own: %s" % str(plans.values()))
+	_check(GameState.preseason_blocks() == side, "...and the side's plan is as it was")
+	_check(GameState.preseason_blocks("", "FWD")[0] == ["heavy", "skills"]
+			and GameState.preseason_blocks("", "MID")[0] == side[0] and GameState.preseason_blocks("", "RUCK")[0] == side[0],
+			"A group's change reaches its plan only")
+	_check(GameState.preseason_drills(1, "MID") == ["contest"] and GameState.preseason_drills(1, "FWD").is_empty(),
+			"...a group's drilling too")
+	# A change for every group goes to every group's plan.
+	_check(GameState.set_preseason_block(0, "solid", "skills"), "A change for every group")
+	var all_first := true
+	for g in PreSeason.GROUPS:
+		all_first = all_first and GameState.preseason_blocks("", g)[0] == ["solid", "skills"]
+	_check(all_first, "...reaches every group's plan, their own included")
+	# Every group back on the side's plan: the groups go from the save.
+	for i in range(PreSeason.block_count()):
+		GameState.set_preseason_block(i, str(side[i][0]), str(side[i][1]))
+	_check(not GameState.preseason["clubs"][CLUB].has("groups"), "Every group back on one plan: the save holds one plan again")
+	_check(not GameState.set_preseason_block(0, "heavy", "skills", "WING"), "A group the game does not have is refused")
+
+
+## One week of your pre-season with the first block as given for each group
+## (`plan` maps a group to [load, focus]), and what it left on each player:
+## XP, overall, attributes, injury.
+func _week_one(plan: Dictionary) -> Dictionary:
+	_career()
+	for g in plan:
+		GameState.set_preseason_block(0, str(plan[g][0]), str(plan[g][1]), str(g))
+	GameState.preseason_step_week()
+	var out := {}
+	for p in GameState.my_list:
+		out[str(p["id"])] = "%d/%d/%s/%d/%s" % [int(p.get("xp", 0)), int(p.get("overall", 0)),
+				str(hash(str(p.get("attr", {})))), int(p.get("injury_weeks", 0)), str(p.get("injury_kind", ""))]
+	return out
+
+
+func _test_group_reach() -> void:
+	PreSeason.reload()
+	_career()
+	var ids := _groups_of_list()
+	var sizes := []
+	for g in PreSeason.GROUPS:
+		sizes.append((ids[g] as Array).size())
+	_check(not sizes.has(0), "Every position group has players on the list: %s" % str(sizes))
+	var base_plan := {}
+	var all_heavy := {}
+	for g in PreSeason.GROUPS:
+		base_plan[g] = ["light", "running"]
+		all_heavy[g] = ["heavy", "skills"]
+	var before := _week_one(base_plan)
+	var after := _week_one(all_heavy)
+	for g in PreSeason.GROUPS:
+		var one := base_plan.duplicate(true)
+		one[g] = ["heavy", "skills"]
+		var mixed := _week_one(one)
+		var others_same := true
+		var mine_as_all := true
+		var mine_moved := 0
+		for id in mixed:
+			if (ids[g] as Array).has(id):
+				mine_as_all = mine_as_all and mixed[id] == after[id]
+				mine_moved += 1 if mixed[id] != before[id] else 0
+			else:
+				others_same = others_same and mixed[id] == before[id]
+		_check(others_same, "%s on Heavy skills: no other group's player is touched" % PreSeason.GROUP_LABEL[g])
+		_check(mine_moved > 0, "...its own players got the week (%d of %d moved)" % [mine_moved, (ids[g] as Array).size()])
+		_check(mine_as_all, "...each exactly as if the whole list had trained that way (a player's work is not split)")
+
+
+func _test_group_side_and_legs() -> void:
+	PreSeason.reload()
+	_career()
+	var shares := PreSeason.group_shares(GameState.my_list)
+	var total := 0.0
+	for g in shares:
+		total += float(shares[g])
+	_check(is_equal_approx(total, 1.0), "The group shares add up to the list")
+	var even := GameState.preseason_run_forecast()
+	var side0: Array = GameState.preseason_blocks()[0]
+	var gap := PreSeason.work("heavy", "running", "running") - PreSeason.work(str(side0[0]), str(side0[1]), "running")
+	GameState.set_preseason_block(0, "heavy", "running", "MID")
+	_check(is_equal_approx(GameState.preseason_run_forecast(), even + float(shares["MID"]) * gap * 3.0),
+			"The side's running is each group's by its share: the mids' heavy running adds their share of it")
+	GameState.set_preseason_block(1, "solid", "plan", "DEF")
+	GameState.set_preseason_drills(1, ["contest"], "DEF")
+	var credit := float(GameState.my_drill_credit().get("contest", 0.0))
+	_check(is_equal_approx(credit, float(shares["DEF"]) * 2.0),
+			"The side's drilling is too: two weeks of the defenders' work count by their share (%.2f)" % credit)
+	GameState.set_preseason_block(2, "heavy", "skills", "RUCK")
+	GameState.set_preseason_block(2, "light", "skills", "FWD")
+	GameState.preseason_sim_to_round1()
+	var wrong := 0
+	var rucks := 0
+	for p in GameState.my_list:
+		var g := PreSeason.group_of(p)
+		var want := "heavy_legs" if g == "RUCK" else ("fresh" if g == "FWD" else "")
+		var has := "heavy_legs" if p.get("heavy_legs", false) else ("fresh" if p.get("fresh", false) else "")
+		wrong += 0 if has == want else 1
+		rucks += 1 if g == "RUCK" else 0
+	_check(rucks > 0 and wrong == 0,
+			"Into Round 1 each player carries his own group's last block: rucks heavy legs, forwards fresh, the rest neither (%d wrong)" % wrong)
+
+
+func _test_group_old_saves() -> void:
+	PreSeason.reload()
+	_career()
+	GameState.set_preseason_block(0, "heavy", "skills")
+	GameState.set_preseason_block(1, "light", "running", "FWD")
+	GameState.save_career()
+	var state := CareerSave.read(GameState.save_path)
+	(state["preseason"]["clubs"][CLUB] as Dictionary).erase("groups")
+	CareerSave.write(state, GameState._save_meta(), GameState.save_path)
+	_check(GameState.load_career(), "A save from before the split loads")
+	var side: Array = GameState.preseason_blocks()
+	var every: bool = side[0] == ["heavy", "skills"]
+	for g in PreSeason.GROUPS:
+		every = every and GameState.preseason_blocks("", g) == side and not GameState.preseason_group_differs(g)
+	_check(every, "...and its one plan is every group's plan")
+	GameState.preseason_step_week()
+	_check(GameState.preseason_week() == 1, "...and its pre-season trains on")
+	GameState.set_preseason_block(1, "light", "running", "FWD")
+	GameState.save_career()
+	_check(GameState.load_career() and GameState.preseason_blocks("", "FWD")[1] == ["light", "running"]
+			and GameState.preseason_blocks("", "MID")[1] == side[1],
+			"A group's own plan is kept through a save and a load")
+
+
+func _test_group_screen() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.size = Vector2i(360, 800)
+	PreSeason.reload()
+	_career(false)
+	GameState.open_preseason()
+	GameState.set_setting("seen_weekly_loop_intro", true)
+	var scene: Control = await _open(tree)
+	_check(scene != null and scene.name == "PreSeasonScene", "The pre-season opens")
+	var every := scene.find_child("Group_ALL", true, false) as Button
+	var fwd := scene.find_child("Group_FWD", true, false) as Button
+	_check(every != null and fwd != null and bool(every.get_meta("chosen", false)),
+			"The plan is for every group until the coach picks one")
+	_check(_label(scene, "GroupKey").begins_with("One plan for the whole list"), "...and the line under it says so")
+	_check(await _tap(fwd, "Forwards"), "A finger picks the forwards")
+	_check(bool(fwd.get_meta("chosen", false)) and _label(scene, "GroupKey").begins_with("Forwards: "),
+			"...the forwards are chosen and the line says how many: " + _label(scene, "GroupKey"))
+	var heavy := scene.find_child("Load0_heavy", true, false) as Button
+	_check(await _tap(heavy, "Heavy for the forwards' first block"), "A finger sets the forwards' first block to Heavy")
+	_check(GameState.preseason_blocks("", "FWD")[0][0] == "heavy" and GameState.preseason_blocks("", "MID")[0][0] != "heavy"
+			and GameState.preseason_blocks()[0][0] != "heavy",
+			"...which reaches the forwards' plan alone")
+	_check(await _tap(every, "Every group"), "A finger goes back to every group")
+	_check(not bool(heavy.get_meta("chosen", false)), "...and the blocks show the side's plan again")
+	_check("The forwards have a plan of their own" in _label(scene, "GroupKey"),
+			"...and the line names the group with its own: " + _label(scene, "GroupKey"))
+	_check(_fits(scene, 360.0), "...and nothing runs off a phone's width")
 
 
 func _frames(tree: SceneTree, n: int) -> void:
