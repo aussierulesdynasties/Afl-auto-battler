@@ -1253,6 +1253,9 @@ func _test_screens() -> void:
 	scene = await _open(tree)
 	_check(await _tap(scene.find_child("PreSeasonSim", true, false), "Sim to Round 1"),
 			"A finger's tap sims to Round 1")
+	await _frames(tree, 6)
+	_check(await _tap(scene.find_child("PreSeasonSimGo", true, false), "Sim to Round 1 in the question"),
+			"A finger's tap answers the question (it plays the practice match without you)")
 	await _frames(tree, 10)
 	scene = tree.current_scene as Control
 	_check(scene != null and scene.name == "HubScene" and not GameState.preseason_active()

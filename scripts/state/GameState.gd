@@ -3539,8 +3539,12 @@ func preseason_sim_to_round1() -> void:
 		if preseason_stop() == "story":
 			_end_preseason_cards()
 		if preseason_stop() == "practice":
-			if not practice_played():
-				sim_practice_match()
+			# Simmed here, the match is never shown, so its result goes in the
+			# news (a match already coached live has its report shown).
+			if not practice_played() and sim_practice_match():
+				var line := practice_news_line()
+				if line != "":
+					add_news("preseason", line, "Pre-season")
 			(preseason["practice"] as Dictionary)["seen"] = true
 		if preseason_stop() == "papers":
 			papers_say_nothing()
@@ -3989,6 +3993,35 @@ func _practice_done(built: Dictionary, res: Dictionary) -> void:
 	pr["played"] = true
 
 
+## The practice match's result in one news line, from the stored report:
+## "Practice match: Fremantle 9.8 (62) beat West Coast 7.10 (52). Stood out:
+## A, B." "" when there is no report.
+func practice_news_line() -> String:
+	var rep: Dictionary = preseason_practice().get("report", {})
+	if rep.is_empty():
+		return ""
+	var names: Array = rep.get("names", [GameDB.club_name(my_club), GameDB.club_name(practice_opponent())])
+	var goals: Array = rep.get("goals", [0, 0])
+	var behinds: Array = rep.get("behinds", [0, 0])
+	var sides := []
+	for i in range(2):
+		var g := int(goals[i])
+		var b := int(behinds[i])
+		sides.append("%s %d.%d (%d)" % [str(names[i]), g, b, g * 6 + b])
+	var mine := int(goals[0]) * 6 + int(behinds[0])
+	var theirs := int(goals[1]) * 6 + int(behinds[1])
+	var verb := "drew with" if mine == theirs else ("beat" if mine > theirs else "lost to")
+	var line := "Practice match: %s %s %s." % [sides[0], verb, sides[1]]
+	var stood := []
+	for id in rep.get("stood", []):
+		var p := list_player(str(id))
+		if not p.is_empty():
+			stood.append(GameDB.player_display_name(p))
+	if not stood.is_empty():
+		line += " Stood out: %s." % ", ".join(PackedStringArray(stood))
+	return line
+
+
 ## Your practice match, simmed on the side and the trial as they stand.
 func sim_practice_match() -> bool:
 	if preseason_stop() != "practice" or practice_played():
@@ -4006,6 +4039,9 @@ var _practice_built := {}     # the live practice match being coached (never sav
 func prepare_practice_match() -> bool:
 	if preseason_stop() != "practice" or practice_played():
 		return false
+	# Key moments carries over; Skip does not ("Coach the match" was pressed,
+	# and Sim the match is beside it).
+	match_way_live = "key" if match_way() == "key" else "watch"
 	_clear_pending()
 	_practice_built = _practice_mine()
 	pending_sim = _practice_built["sim"]
