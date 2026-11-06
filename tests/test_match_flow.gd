@@ -183,7 +183,7 @@ func _test_rushed_kick_intercept_mark() -> void:
 
 
 func _test_rotation_cadence_scales_with_chains() -> void:
-	Features.clear("match_flow")
+	Features.set_on("match_flow", false)
 	var off := _sim("FRE", "MEL", 3)
 	_check(off._chains_for(3) == 3, "the cadence moved with the switch off")
 	Features.set_on("match_flow", true)
