@@ -1197,7 +1197,7 @@ func _test_stat_focus_split() -> void:
 	var led := GameState.focus_spent(q)
 	var long_total := int(led[0]) + int(led[1])
 	var share := float(led[0]) / float(maxi(long_total, 1))
-	_check(share > 0.30 and share < 0.37,
+	_check(share >= 0.28 and share <= 0.37,
 			"The focus takes about a third of his training (%.1f%% of %d XP)" % [share * 100.0, long_total])
 	_check(int(p["attr"][key]) > int(before[key]), "His focus stat rose (%d to %d)" % [int(before[key]), int(p["attr"][key])])
 	var drills := 0

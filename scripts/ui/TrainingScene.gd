@@ -1195,7 +1195,6 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 	box.add_child(v)
 	var year := GameState.season_year
 	v.add_child(UiKit.lbl("Stat focus  ·  %d season" % year, 12, UiKit.MUTED, true))
-	var share := roundi(GameState.FOCUS_SHARE * 100.0)
 	var current := GameState.stat_focus(p)
 	if GameState.project_job(p) != "" and GameState.plan_for(p) == GameState.LEARN_PREFIX + GameState.project_job(p):
 		var hold := UiKit.lbl("On hold while he learns a position: all his training goes into the new role.", 13, UiKit.TEXT)
@@ -1209,16 +1208,16 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 				UiKit.HEADING, UiKit.EMPH, true)
 		name_l.name = "StatFocusName"
 		v.add_child(name_l)
-		var locked := UiKit.lbl("Locked in for %d. About %d%% of his training goes into %s; his plan's drills get the rest. You can change it when the %d season opens." % [
-				year, share, GameState.train_stat_label(current).to_lower(), year + 1], 13, UiKit.TEXT)
+		var locked := UiKit.lbl("Locked in for %d. About a third of his training goes into %s; his plan's drills get the rest. You can change it when the %d season opens." % [
+				year, GameState.train_stat_label(current).to_lower(), year + 1], 13, UiKit.TEXT)
 		locked.name = "StatFocusLocked"
 		locked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(locked)
 		if _focus_notice != "":
 			v.add_child(UiKit.lbl(_focus_notice, UiKit.SECONDARY, UiKit.GOOD, true))
 		return box
-	var intro := "Extra work on one stat: about %d%% of his training goes into it, the rest into his plan's drills. Points on one stat get dearer as it climbs, so his OVR grows more slowly than on his plan alone. Locked in until the %d season." % [
-			share, year + 1]
+	var intro := "Extra work on one stat: about a third of his training goes into it, the rest into his plan's drills. Points on one stat get dearer as it climbs, so his OVR grows more slowly than on his plan alone. Locked in until the %d season." % [
+			year + 1]
 	if current != "":
 		intro = "Last season's focus, %s, carries on until you lock one in for %d. " % [
 				GameState.train_stat_label(current).to_lower(), year] + intro
