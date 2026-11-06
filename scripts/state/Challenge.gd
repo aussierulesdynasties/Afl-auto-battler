@@ -104,9 +104,10 @@ static func block_reason(gs, p: Dictionary) -> String:
 	return ""
 
 
-## The player's surname, so the reason never leans on an unnamed "he".
+## The surname the screen shows (real or generated names), so the reason never
+## leans on an unnamed "he" or names someone the card does not.
 static func surname(p: Dictionary) -> String:
-	var parts := str(p.get("name", "")).strip_edges().split(" ", false)
+	var parts := GameDB.player_display_name(p).strip_edges().split(" ", false)
 	return parts[parts.size() - 1] if parts.size() > 0 else "This player"
 
 
