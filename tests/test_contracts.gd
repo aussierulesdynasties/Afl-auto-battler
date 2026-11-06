@@ -889,6 +889,19 @@ func _test_compensation_flow() -> void:
 			placed = false
 	_check(placed and d.pick_rounds.size() == d.pick_sequence.size(),
 			"Each compensation pick sits in the draft order under the club that lost the player")
+	# The pick number a trade shows (draft_spot) is the number called on the
+	# night, compensation picks ahead of it included.
+	var spots_ok := GameState.compensation.size() > 0
+	var spots_seen := 0
+	for k in range(d.pick_sequence.size()):
+		if int(d.pick_rounds[k]) == 1 and d.comp_at(k).is_empty():
+			spots_seen += 1
+			var said := GameState.draft_spot(GameState.season_year, 1, str(d.pick_origin[k]))
+			if said != k + 1:
+				spots_ok = false
+				print("  draft_spot %s: said %d, called %d" % [str(d.pick_origin[k]), said, k + 1])
+	_check(spots_ok and spots_seen == GameState._draft_order().size(),
+			"Every round-one pick number counts the compensation picks ahead of it (%d picks)" % spots_seen)
 	_check(GameState.save_career() and GameState.load_career() and GameState.draft != null
 			and GameState.draft.comp_picks.size() == d.comp_picks.size(), "The draft keeps its compensation picks through a save")
 	d = GameState.draft
@@ -2558,6 +2571,35 @@ func _test_rivals_act_in_their_interest() -> void:
 	_check(Contracts.ai_term(star, list) == int(Contracts.wants(star)["years"]),
 			"A player it picks gets the term he wants")
 	_check(Contracts.ai_term(fringe, list) == Contracts.ai_years(fringe), "The rest get its usual term")
+	# Cap room for a wanted player: the club delists spare expiring players only
+	# when that makes the room, never for nothing.
+	var spare_a: Dictionary = ranked[ranked.size() - 1]
+	var spare_b: Dictionary = ranked[ranked.size() - 2]
+	var years_before := {}
+	for q in list:
+		years_before[str(q["id"])] = q.get("contract_years", null)
+		q["contract_years"] = 1 if (q == spare_a or q == spare_b) else 3
+	var cap_before := GameState.salary_cap
+	var relief := GameState.cap_for(club) - GameState.salary_cap
+	var base := Contracts.payroll(list) - int(star.get("salary", 0)) + Contracts.asking_salary(star) - relief
+	var sa := int(spare_a.get("salary", 0))
+	var sb := int(spare_b.get("salary", 0))
+	GameState.salary_cap = base - mini(sa, sb)
+	var one: Array = GameState._cap_spares(club, star)
+	GameState.salary_cap = base - sa - sb - 1
+	var none: Array = GameState._cap_spares(club, star)
+	GameState.salary_cap = base
+	var fits: Array = GameState._cap_spares(club, star)
+	GameState.salary_cap = cap_before
+	for q in list:
+		if years_before[str(q["id"])] == null:
+			q.erase("contract_years")
+		else:
+			q["contract_years"] = years_before[str(q["id"])]
+	_check(one.size() == 1 and (one[0] == spare_a or one[0] == spare_b) and fits.is_empty(),
+			"A club short of room delists just the spare it needs (%d), and none when he already fits" % one.size())
+	_check(none.is_empty() and list.size() == ranked.size(),
+			"When delisting every spare still would not fit him, it delists none of them")
 	var kid := fringe.duplicate(true)
 	kid["age"] = 20.0
 	var grows := Contracts.growth_premium(kid, "rebuilding")
