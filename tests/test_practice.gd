@@ -24,6 +24,8 @@ func run() -> void:
 	_t("_test_saves")
 	_t("_test_sim_to_round_one")
 	await _t("_test_screens_phone")
+	await _t("_test_sim_to_round_one_taps")
+	await _t("_test_match_way")
 	await _t("_test_screens_pc")
 	await _t("_test_created_club")
 	PreSeason.reload()
@@ -429,11 +431,46 @@ func _test_saves() -> void:
 			"...and pressing on meets the practice match at the end of week 7")
 
 
+## The news lines naming the practice match's result (not its injuries, whose
+## line also says "practice match").
+func _practice_news() -> Array:
+	var out := []
+	for n in GameState.news:
+		if str(n.get("kind", "")) == "preseason" and str(n.get("text", "")).begins_with("Practice match: "):
+			out.append(n)
+	return out
+
+
 func _test_sim_to_round_one() -> void:
 	_career()
 	GameState.preseason_sim_to_round1()
 	_check(not GameState.preseason_active() and GameState.practice_played() and bool(GameState.preseason_practice()["seen"]),
 			"Sim to Round 1 plays the practice match on the settings in force and does not stop for it")
+	var lines := _practice_news()
+	var line := str(lines[0]["text"]) if lines.size() == 1 else ""
+	var rep: Dictionary = GameState.preseason_practice().get("report", {})
+	var g: Array = rep.get("goals", [0, 0])
+	var b: Array = rep.get("behinds", [0, 0])
+	var stood: Array = rep.get("stood", [])
+	var first := GameDB.player_display_name(GameState.list_player(str(stood[0]))) if not stood.is_empty() else ""
+	_check(lines.size() == 1 and not stood.is_empty() and line.contains("Fremantle %d.%d (%d)" % [int(g[0]), int(b[0]), int(g[0]) * 6 + int(b[0])])
+			and line.contains("West Coast %d.%d (%d)" % [int(g[1]), int(b[1]), int(g[1]) * 6 + int(b[1])])
+			and line.contains("Stood out: " + first) and str(lines[0]["when"]) == "Pre-season",
+			"Simmed past, the practice match's result and who stood out go in the news, once (%s)" % line)
+	# Round 1 set up with the pre-season still running (the hub's safety net) does the same.
+	_career()
+	GameState.preseason_advance()
+	_check(GameState.prepare_interactive_match() and GameState.practice_played() and not GameState.preseason_active()
+			and _practice_news().size() == 1,
+			"Round 1 set up mid pre-season sims the practice match and puts its result in the news")
+	GameState._clear_pending()
+	# Already played and its report shown at the stop: no news line on top.
+	_career()
+	_to_practice()
+	GameState.sim_practice_match()
+	GameState.preseason_sim_to_round1()
+	_check(not GameState.preseason_active() and _practice_news().is_empty(),
+			"A practice match already played and shown adds no news line on the way to Round 1")
 	_career("MEL")
 	_to_practice()
 	var opp := GameState.practice_opponent()
@@ -544,6 +581,92 @@ func _test_screens_phone() -> void:
 	_check(GameState.practice_played() and _label(scene, "PracticeSide_0") == "Fremantle",
 			"Phone: simming shows the report")
 	Router.stack = []
+
+
+## Sim to Round 1 by real taps on a phone: it says first what it plays without
+## you; Cancel and Back keep the pre-season; going on reaches the hub with the
+## practice match's result in the news.
+func _test_sim_to_round_one_taps() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.size = Vector2i(390, 844)
+	_career()
+	GameState.set_setting("seen_weekly_loop_intro", true)
+	GameState.set_setting("seen_training_intro", true)
+	GameState.set_confirm_sim_round(true)
+	var scene: Control = await _open(tree)
+	_check(scene != null and scene.name == "PreSeasonScene" and GameState.preseason_stop() == "plan",
+			"Phone: a new career opens on the pre-season plan")
+	_check(await _tap(scene.find_child("PreSeasonSim", true, false), "Sim to Round 1"), "Phone: a finger's tap on Sim to Round 1")
+	await _frames(tree, 6)
+	var sheet := scene.get_node_or_null("PreSeasonSimConfirm") as Control
+	var why := _label(scene, "PreSeasonSimWhy")
+	_check(sheet != null and sheet.is_visible_in_tree() and GameState.preseason_active() and why.contains("practice match")
+			and why.contains("time trial") and _fits(scene, 390.0),
+			"Phone: it asks first, naming the time trial and the practice match (%s)" % why)
+	var go := scene.find_child("PreSeasonSimGo", true, false) as Control
+	var cancel := scene.find_child("PreSeasonSimCancel", true, false) as Control
+	_check(go != null and cancel != null and go.size.y >= 44.0 and cancel.size.y >= 44.0,
+			"Phone: both answers are thumb-sized")
+	_check(await _tap(cancel, "Cancel"), "Phone: a finger's tap on Cancel")
+	await _frames(tree, 4)
+	_check(scene.get_node_or_null("PreSeasonSimConfirm") == null and GameState.preseason_active()
+			and GameState.preseason_stop() == "plan" and not GameState.practice_played(),
+			"Phone: Cancel closes it and nothing is played")
+	await _tap(scene.find_child("PreSeasonSim", true, false), "Sim to Round 1 again")
+	await _frames(tree, 6)
+	Router.handle_back()
+	await _frames(tree, 4)
+	_check(Router.current() == "preseason" and scene.get_node_or_null("PreSeasonSimConfirm") == null
+			and GameState.preseason_active(),
+			"Phone: Back closes the question and stays on the pre-season")
+	await _tap(scene.find_child("PreSeasonSim", true, false), "Sim to Round 1 a third time")
+	await _frames(tree, 6)
+	_check(await _tap(scene.find_child("PreSeasonSimGo", true, false), "Sim to Round 1 in the question"),
+			"Phone: a finger's tap goes on")
+	await _frames(tree, 12)
+	scene = tree.current_scene as Control
+	_check(scene != null and scene.name == "HubScene" and not GameState.preseason_active() and GameState.practice_played()
+			and _practice_news().size() == 1,
+			"Phone: the hub opens at Round 1 with the practice match played and its result in the news")
+	Router.stack = []
+
+
+## The practice match keeps the coach's Key moments; Skip does not carry over,
+## because the coach pressed Coach the match (Sim the match is beside it).
+func _test_match_way() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.size = Vector2i(390, 844)
+	var was := GameState.match_way()
+	for way in ["key", "skip", "watch"]:
+		_career()
+		GameState.set_match_way(way)
+		_to_practice()
+		GameState.match_way_live = "watch" if way == "key" else "key"   # a leftover from another match
+		_check(GameState.prepare_practice_match() and GameState.match_way_live == ("key" if way == "key" else "watch"),
+				"The practice match plays as %s says (%s)" % [way, GameState.match_way_live])
+		GameState._clear_pending()
+	_career()
+	GameState.set_match_way("key")
+	GameState.set_setting("seen_weekly_loop_intro", true)
+	GameState.set_setting("seen_training_intro", true)
+	var scene: Control = await _tap_to_practice(tree)
+	_check(await _tap(scene.find_child("PreSeasonGo", true, false), "Coach the match"), "Phone: a finger's tap goes to coach the match")
+	var m: Control = null
+	for i in range(120):
+		await tree.process_frame
+		m = tree.current_scene as Control
+		if m != null and m.name == "MatchScene" and m.find_child("KeyMomentsState", true, false) != null:
+			break
+	var word := m.find_child("KeyMomentsState", true, false) as Control if m != null else null
+	_check(m != null and m.name == "MatchScene" and bool(m.get("_key_moments")) and word != null and word.is_visible_in_tree(),
+			"Phone: with Key moments set, the practice match opens on Key moments (scene %s, live %s, km %s, word %s)" % [
+			str(m.name) if m != null else "none", GameState.match_way_live, str(m.get("_key_moments")) if m != null else "",
+			str(word.is_visible_in_tree()) if word != null else "none"])
+	GameState._clear_pending()
+	GameState.set_match_way(was)
+	Router.stack = []
+	Router.replace("hub")
+	await _frames(tree, 4)
 
 
 func _test_screens_pc() -> void:
@@ -671,6 +794,10 @@ func _test_created_club() -> void:
 	scene = await _open(tree)
 	_check(await _tap(scene.find_child("PreSeasonSim", true, false), "Sim to Round 1"),
 			"Created club: a finger's tap sims to Round 1")
+	await _frames(tree, 4)
+	# Ask before simming (#1101): the question's Sim to Round 1, when it asks.
+	if scene.get_node_or_null("PreSeasonSimConfirm") != null:
+		await _tap(scene.find_child("PreSeasonSimGo", true, false), "Sim to Round 1 in the question")
 	await _frames(tree, 10)
 	_check(not GameState.preseason_active() and GameState.practice_played()
 			and not (GameState.preseason_practice().get("report", {}) as Dictionary).is_empty(),
