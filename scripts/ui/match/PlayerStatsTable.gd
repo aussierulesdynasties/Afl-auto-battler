@@ -36,8 +36,11 @@ const DETAIL := [
 	["one_percenters", "one percenters"], ["spoils", "spoils"], ["hitouts", "hit-outs"], ["hitouts_adv", "hit-outs to advantage"],
 	["clangers", "clangers"], ["frees_against", "frees against"],
 ]
-# The one label whose plural is not at its end.
-const DETAIL_ONE := {"hit-outs to advantage": "hit-out to advantage"}
+# Labels whose plural is not at their end (or has no trailing s).
+const DETAIL_ONE := {
+	"hit-outs to advantage": "hit-out to advantage", "frees against": "free against",
+	"metres gained": "metre gained",
+}
 
 
 ## A DETAIL label for a count: "1 behind", "2 behinds".
