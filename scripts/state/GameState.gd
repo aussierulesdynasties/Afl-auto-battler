@@ -9160,7 +9160,7 @@ func _as_selection(ground: Array, bench: Array) -> Dictionary:
 ##   rest   the same with anyone who needs a break left out, if the list can
 ##          cover him
 ##   youth  the best side, then up to three young players (21 and under) in
-##          for the lowest-rated starter in their line, when within 6 of him
+##          for the lowest-rated older starter in their line, when within 6 of him
 ##   mine   your saved Best 23, with anyone unavailable replaced by the best
 ##          available player of his line
 const YOUTH_AGE := 21.0
