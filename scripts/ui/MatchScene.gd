@@ -1968,7 +1968,7 @@ func _open_break_sheet(node_name: String, title: String, parts: Array, home: Nod
 		# Done is the one primary action, in the club fill.
 		_club_fill_button(done)
 		box["footer"].add_child(done)
-		var wash_best := UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
+		var wash_best := UiKit.team_wash() if _wash() == UiKit.AUTO_COLOUR else _wash()
 		UiKit.edge_fade(box["body"].get_parent() as ScrollContainer, Color(wash_best, 0.2))
 		_break_sheets.append({"overlay": ov, "close": _best_close(parts, home, ov)})
 		return
@@ -1976,7 +1976,7 @@ func _open_break_sheet(node_name: String, title: String, parts: Array, home: Nod
 	v.add_child(UiKit.spacer(8))
 	_club_fill_button(done)
 	box["footer"].add_child(done)
-	var wash_col := UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
+	var wash_col := UiKit.team_wash() if _wash() == UiKit.AUTO_COLOUR else _wash()
 	UiKit.edge_fade(box["body"].get_parent() as ScrollContainer, Color(wash_col, 0.2))
 	_break_sheets.append({"overlay": ov, "close": _best_close(parts, home, ov)})
 
@@ -3122,7 +3122,7 @@ func _wash() -> Color:
 
 ## The sheet's wash colour, resolved (AUTO is your club's colour).
 func _wash_col() -> Color:
-	return UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
+	return UiKit.team_wash() if _wash() == UiKit.AUTO_COLOUR else _wash()
 
 
 func _close_sheet() -> void:
@@ -3418,6 +3418,20 @@ func _append_new_events() -> void:
 # ---------------------------------------------------------------------------
 # Playback hooks
 # ---------------------------------------------------------------------------
+## Tired and hurt players carry a short mark on the oval and the bench strip
+## (PlayerMarks): the hurt from the injuries played so far, either side; the
+## tired from your own side's legs, in a match you coach.
+func _refresh_marks() -> void:
+	var injuries: Array = _res.get("injuries", [])
+	var energy := {}
+	var sim_now = GameState.pending_sim if _interactive else null
+	if sim_now != null:
+		injuries = sim_now.injuries
+		for r in sim_now.legs(_my_side):
+			energy[str(r["id"])] = float(r["energy"])
+	_pitch.set_marks(PlayerMarks.build(_pitch.events, _pitch.current_index(), injuries, energy))
+
+
 ## The ring on the oval: the players of yours you have made a call on or
 ## promised a run (MatchRings). Calls change at the breaks and at the moments,
 ## so it is read again with every event: a few lookups, and the view only
@@ -3425,6 +3439,7 @@ func _append_new_events() -> void:
 func _refresh_rings() -> void:
 	if _pitch == null:
 		return
+	_refresh_marks()
 	if _interactive and GameState.pending_sim != null:
 		_pitch.set_rings(MatchRings.ids(GameState.pending_sim, _my_side, GameState.my_list))
 	else:
@@ -3859,7 +3874,7 @@ func _show_fulltime() -> void:
 	_ft_tabs.name = "ReviewTabs"
 	outer.add_child(_ft_tabs)
 	outer.move_child(_ft_tabs, 0)
-	var wash_col := UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
+	var wash_col := UiKit.team_wash() if _wash() == UiKit.AUTO_COLOUR else _wash()
 	UiKit.edge_fade(box["body"].get_parent() as ScrollContainer, Color(wash_col, 0.2))
 
 	var home: String = _res["home"]

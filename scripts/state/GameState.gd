@@ -4560,12 +4560,15 @@ func league_grounds() -> Dictionary:
 
 
 ## The plan a club's list suits as its usual game (PlanFit.standing_plan),
-## from the side it would field this week.
+## from the side it would field this week, weighed by how well the club knows
+## each plan: the same inputs the match engine opens with (MatchSim standing).
 func usual_plan(code: String) -> String:
 	if season == null or code == "" or not season.lists.has(code):
 		return "balanced"
-	return PlanFit.standing_plan(Squad.new(code, season.lists[code], false, code,
-			season.selections.get(code, {})).ground)
+	var sq := Squad.new(code, season.lists[code], false, code, season.selections.get(code, {}))
+	_ensure_plan_known()
+	CoachEffects.apply(sq)
+	return PlanFit.standing_plan(sq.ground, sq.plan_know)
 
 
 ## Compact stored-fact history surfaces. These deliberately read existing
