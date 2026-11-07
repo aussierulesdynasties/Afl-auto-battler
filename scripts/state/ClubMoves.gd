@@ -421,6 +421,8 @@ static func apply_move(gs) -> void:
 	# nothing left over from the old club's office.
 	var hist: Array = gs.board.get("history", [])
 	gs.board = {}
+	# The old club's honour board is put away and the new club's taken up.
+	HonourBoard.change_club(gs, from, to)
 	gs.my_club = to
 	gs.board = {"confidence": ClubLife.START_CONFIDENCE, "warned": false, "sacked": false, "history": hist}
 	gs.staff_vacancies = []

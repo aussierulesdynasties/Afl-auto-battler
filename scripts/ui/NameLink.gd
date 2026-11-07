@@ -218,10 +218,12 @@ static func _still(label: Control, at: Vector2) -> bool:
 
 static func _on_meta(meta: Variant, label: RichTextLabel) -> void:
 	var s := str(meta)
-	# A trait's name in the same line (TraitLink) takes the same tap; its id keeps its scheme.
-	if not (s.begins_with(SCHEME) or s.begins_with(TraitLink.SCHEME)):
+	# A trait's name (TraitLink) or a club's (ClubLink) in the same line takes the
+	# same tap; its id keeps its scheme.
+	var other := s.begins_with(TraitLink.SCHEME) or s.begins_with(ClubLink.SCHEME)
+	if not (s.begins_with(SCHEME) or other):
 		return
-	var id := s if s.begins_with(TraitLink.SCHEME) else s.substr(SCHEME.length())
+	var id := s if other else s.substr(SCHEME.length())
 	if int(label.get_meta("name_link_up_frame", -1)) == Engine.get_process_frames():
 		# Reported as the finger lifted.
 		if _still(label, label.get_global_mouse_position()):
@@ -250,6 +252,8 @@ static func find(id: String) -> Dictionary:
 static func open(from: Node, id: String) -> Control:
 	if id.begins_with(TraitLink.SCHEME):
 		return TraitLink.open(from, id.substr(TraitLink.SCHEME.length()))
+	if id.begins_with(ClubLink.SCHEME):
+		return ClubLink.open(from, id.substr(ClubLink.SCHEME.length()))
 	var p := find(id)
 	if p.is_empty() or from == null or not from.is_inside_tree():
 		return null
@@ -338,8 +342,14 @@ static func close_open(scene: Node) -> bool:
 		return false
 	if TraitLink.close_open(scene):
 		return true
-	for c in scene.get_children():
-		if c.name == SHEET_NAME and c.has_meta("name_link") and not c.is_queued_for_deletion():
+	# The newest first: a profile opened from a club page closes before the page,
+	# a club page opened from a profile before the profile (ClubLink).
+	var kids := scene.get_children()
+	for i in range(kids.size() - 1, -1, -1):
+		var c: Node = kids[i]
+		if c.is_queued_for_deletion():
+			continue
+		if (c.name == SHEET_NAME and c.has_meta("name_link")) or c.has_meta("club_link"):
 			c.queue_free()
 			return true
 	return false

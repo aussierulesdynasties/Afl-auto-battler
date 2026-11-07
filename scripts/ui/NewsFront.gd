@@ -313,7 +313,7 @@ static func _story_block(st: Dictionary, big: bool) -> Control:
 		v.add_child(head)
 	v.add_child(_headline(st, UiKit.H1 if big else UiKit.NAME, surface))
 	if str(st["standfirst"]) != "":
-		v.add_child(UiKit.lbl(str(st["standfirst"]), UiKit.SECONDARY if big else UiKit.SMALL, UiKit.TEXT))
+		v.add_child(NameInk.label(str(st["standfirst"]), _names, UiKit.SECONDARY if big else UiKit.SMALL, UiKit.TEXT))
 	if str(st["club"]) == "":
 		return v
 	return UiKit.club_section_body(str(st["club"]), v, UiKit.club_ink(str(st["club"])))
@@ -360,7 +360,7 @@ static func _brief_row(st: Dictionary, key: String) -> Control:
 		l = NameInk.label(t, _names, UiKit.SECONDARY, UiKit.TEXT)
 	row.add_child(l)
 	if str(st["standfirst"]) != "" and key != _FIRST_GOAL:
-		row.add_child(UiKit.lbl(str(st["standfirst"]), UiKit.SMALL, UiKit.TEXT))
+		row.add_child(NameInk.label(str(st["standfirst"]), _names, UiKit.SMALL, UiKit.TEXT))
 	return row
 
 
@@ -469,6 +469,8 @@ static func mini(items: Array, my_club: String, on_open: Callable, names := {}) 
 	var page := build(latest_round(items), my_club)
 	var card := MarginContainer.new()
 	card.name = "NewsCard"
+	# The whole card is one tap: names in it are inked but open nothing (NameInk).
+	card.set_meta(NameInk.NO_LINKS, true)
 	var tap := Button.new()
 	tap.name = "NewsMore"
 	tap.flat = true

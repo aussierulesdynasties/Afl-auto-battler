@@ -125,7 +125,8 @@ static func score_colour(code: String, surface := AUTO_COLOUR) -> Color:
 ## sit on; when none does, the most saturated one lightened, its hue kept,
 ## until it reads (a readable red is allowed here, unlike club_name_colour).
 ## A club with no colour but black and white (Collingwood) gets its black
-## lightened to a grey, pending the director's call.
+## lightened to a grey here; its name and headings are a black tag instead
+## (club_title).
 const CODE_MIN_SAT := 0.25
 static func club_code_colour(code: String, surfaces: Array = []) -> Color:
 	if surfaces.is_empty():
@@ -161,6 +162,64 @@ static func club_code_colour(code: String, surfaces: Array = []) -> Color:
 			s = maxf(0.0, s - 0.005)
 		out = Color.from_hsv(h, s, v)
 	return out
+
+
+## A club whose real colours are black and white only (Collingwood): its
+## strongest real colour is its black, and no text reads in black on the dark
+## page. Such a club's name or heading is a black tag with white text on it
+## (club_title), never its black lightened to a grey (director 2026-11-07,
+## "fix Pies").
+static func club_is_black(code: String) -> bool:
+	var real: Array = GameDB.club_marker_colours(code)
+	var dark := false
+	for c in real:
+		var col: Color = c
+		if col.s >= CODE_MIN_SAT:
+			return false
+		if col.v < 0.3:
+			dark = true
+	return dark
+
+
+## The black a black-and-white club wears (its darkest real colour).
+static func club_black(code: String) -> Color:
+	var out := Color.BLACK
+	var first := true
+	for c in GameDB.club_marker_colours(code):
+		var col: Color = c
+		if first or col.v < out.v:
+			out = col
+			first = false
+	return out
+
+
+## A club's name or a section's heading in the club's strongest real colour,
+## bold: its ink on `surface`, or for a black-and-white club (club_is_black) a
+## black tag with white text and a light rim, so the black reads on the dark
+## page. The tag hugs its words; its text is the child named "Text".
+static func club_title(text: String, fs: int, code: String, surface := AUTO_COLOUR) -> Control:
+	if surface == AUTO_COLOUR:
+		surface = PANEL
+	if not club_is_black(code):
+		return lbl(text, fs, club_ink(code, surface), true)
+	var tag := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = club_black(code)
+	sb.border_color = TEXT
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(4)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 4
+	tag.add_theme_stylebox_override("panel", sb)
+	tag.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := lbl(text, fs, TEXT, true)
+	l.name = "Text"
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	tag.add_child(l)
+	return tag
 
 
 ## The lowest contrast `c` has against any of `surfaces`.

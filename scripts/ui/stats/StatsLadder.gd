@@ -366,7 +366,7 @@ static func _row(host: Control, r: Dictionary, specs: Array, width: float, band 
 			l.add_theme_stylebox_override("normal", pad)
 		row.add_child(l)
 	_ignore(row)
-	b.pressed.connect(func(): _side_sheet(host, code))
+	b.pressed.connect(func(): ClubLink.open(host, code))
 	return b
 
 
@@ -621,7 +621,7 @@ static func _team_row(host: Control, r: Dictionary, rank: int, best: float, bar_
 	_ignore(m)
 	# A button does not grow with its child: the row asks for what it holds.
 	b.custom_minimum_size.y = maxf(64.0, m.get_combined_minimum_size().y)
-	b.pressed.connect(func(): _side_sheet(host, code))
+	b.pressed.connect(func(): ClubLink.open(host, code))
 	return b
 
 
@@ -743,50 +743,3 @@ static func visible_rows(season: Season, mine: String, filter: String, sort: Str
 	return out
 
 
-# ---------------------------------------------------------------------------
-# A club's side
-# ---------------------------------------------------------------------------
-## The side as it would take the field, on the shared field view and read-only.
-## A sheet over the ladder, so Back returns to it as it was; a player opens his
-## profile over the side.
-static func _side_sheet(host: Control, code: String) -> void:
-	var season: Season = GameState.season
-	var box := UiKit.modal_box(host, 900.0, 0.0)
-	var overlay: Control = box["overlay"]
-	overlay.name = "ClubSide"
-	UiKit.close_on_outside_tap(box)
-	host.call("open_sheet", overlay)
-	var body: VBoxContainer = box["body"]
-	body.add_child(UiKit.ellipsis(GameDB.club_name(code), UiKit.H2, UiKit.TEXT, true))
-	var outlook := GameState.team_outlook(code)
-	if not outlook.is_empty():
-		var tl := UiKit.lbl(str(outlook["line"]), UiKit.BODY, UiKit.TEXT)
-		tl.name = "TeamOutlook"
-		body.add_child(tl)
-	var mine: bool = code == GameState.my_club
-	var named: bool = mine or not (season.selections.get(code, {}) as Dictionary).is_empty()
-	var note := "Your side as it stands" if mine else \
-			("Side named for this round" if named else "Projected side: picked on match day")
-	var n := UiKit.lbl(note, UiKit.SMALL, UiKit.MUTED)
-	n.name = "SideNote"
-	body.add_child(n)
-	var builder := TeamBuilder.new()
-	builder.name = "TeamBuilder"
-	builder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.add_child(builder)
-	var their: Dictionary
-	if mine:
-		their = {"side": GameState.current_side(), "list": GameState.my_list}
-	else:
-		their = GameState.opponent_side(code)
-	builder.setup(their["side"], bool(host.call("wide")), their["list"], true)
-	builder.inspect.connect(func(id: String):
-		for p in their["list"]:
-			if str(p["id"]) == id:
-				host.call("open_sheet", PlayerSheet.open(host, p, Callable(), []))
-				return)
-	var close := UiKit.btn("Close", UiKit.BODY)
-	close.name = "CloseSide"
-	close.custom_minimum_size = Vector2(0, 44)
-	close.pressed.connect(func(): host.call("close_sheet"))
-	(box["footer"] as Control).add_child(close)

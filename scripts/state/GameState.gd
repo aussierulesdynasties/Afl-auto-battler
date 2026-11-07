@@ -88,6 +88,12 @@ var season_awards := {}          # the finished season's awards
 var rising_star_noms := {"from": 1, "rounds": []}
 var honour_roll: Array = []      # one entry per completed season
 var almanac: Array = []          # the club almanac, one page per season (Almanac.gd)
+## The club honour board (HonourBoard.gd, row 122): player id -> his row.
+## An older save builds it once on load from what is on record.
+var honour_board := {}
+## The boards of clubs you coached before a move (HonourBoard.change_club):
+## club code -> {player id: row}.
+var honour_boards := {}
 ## Every coach in the game, once: cid -> record (Coaches.gd). A club's staff
 ## is read from the records, never stored beside them.
 var coaches := {}
@@ -696,6 +702,7 @@ func save_career() -> bool:
 	# second copy of the whole player pool), so it is not written.
 	var keep_draft := draft != null and not (season != null and not draft.intake_mode)
 	SirDougRound.ensure(self)   # this season's round is written once and read back
+	HonourBoard.sweep(self)   # anyone who has left your list since the last save
 	var state := {
 		"season_year": season_year,
 		"my_club": my_club,
@@ -734,6 +741,8 @@ func save_career() -> bool:
 		"rising_star_noms": rising_star_noms,
 		"honour_roll": honour_roll,
 		"almanac": almanac,
+		"honour_board": honour_board,
+		"honour_boards": honour_boards,
 		"records": records,
 		"rivalry_history": rivalry_history,
 		"finals_counted_since": finals_counted_since,
@@ -1070,6 +1079,12 @@ func load_career() -> bool:
 	# it: this week's card is drawn again from the deck, once.
 	if season != null and week_event_pending() and str(week_event.get("tid", "")) == "":
 		_next_week_event()
+	# The honour board (row 122): an older save had none, so it is built once
+	# from what the career recorded; never guessed.
+	honour_board = state.get("honour_board", {}) if state.get("honour_board") is Dictionary else {}
+	honour_boards = state.get("honour_boards", {}) if state.get("honour_boards") is Dictionary else {}
+	if not state.has("honour_board"):
+		HonourBoard.backfill(self, func(id: String) -> Dictionary: return _any_player(id))
 	return true
 
 
@@ -1476,6 +1491,8 @@ func reset() -> void:
 	rising_star_noms = {"from": 1, "rounds": []}
 	honour_roll = []
 	almanac = []
+	honour_board = {}
+	honour_boards = {}
 	records = {}
 	rivalry_history = {}
 	finals_counted_since = 0
@@ -1997,6 +2014,10 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# Undecided assistants stay; then no staff job starts the season empty.
 	_settle_staff_contracts()
 	_fill_open_staff()
+	# The honour board (row 122): anyone who left in the off-season (a trade,
+	# free agency) is stamped with the season he left after, before the year
+	# turns over and before a club move changes whose board it is.
+	HonourBoard.sweep(self)
 	# Coach arcs: a club change decided at the season's close is made now.
 	ClubMoves.apply_move(self)
 	# The season's close normally counted careers already (Career skips a
@@ -5075,6 +5096,20 @@ func pot_view(p: Dictionary) -> Dictionary:
 			"text": str(rg[0]) if int(rg[0]) == int(rg[1]) else DraftScouting.range_text(rg)}
 
 
+## Anyone in the game by id: your list, the season's lists, then the free
+## agents. {} when he has left the game.
+func _any_player(player_id: String) -> Dictionary:
+	var p := list_player(player_id)
+	if not p.is_empty():
+		return p
+	if season != null:
+		for code in season.lists:
+			for q in season.lists[code]:
+				if str(q.get("id", "")) == player_id:
+					return q
+	return free_agent(player_id)
+
+
 func list_player(player_id: String) -> Dictionary:
 	for p in my_list:
 		if str(p.get("id", "")) == player_id:
@@ -5783,6 +5818,11 @@ func _close_season_awards() -> void:
 	if not sh.is_empty():
 		honour_roll[-1]["season_hero"] = [sh]
 	almanac.append(Almanac.season_entry(self))
+	# The honour board (row 122): every player of yours, read afresh from the
+	# season just closed, and anyone who has gone since the last close.
+	for p in my_list:
+		HonourBoard.upsert(self, p)
+	HonourBoard.sweep(self)
 	var first := Almanac.first_sentence(str(almanac[-1].get(Almanac.STORY_KEY, "")))
 	if first != "":
 		add_news("almanac_story", first)
@@ -6632,6 +6672,7 @@ func release_player(player_id: String) -> Dictionary:
 	# let go (_open_market), so that one cannot be undone.
 	var snap := {} if retiring_now(p) else RecruitUndo.snapshot(self, player_id)
 	_release(my_club, p, false)
+	HonourBoard.leave(self, p, "delisted")
 	_open_market([p])
 	if not snap.is_empty():
 		RecruitUndo.push(self, snap, "release", p)
@@ -8987,11 +9028,14 @@ func _close_free_agency() -> void:
 				# He walked, or you could not fit him: you wanted him, as a rival
 				# that runs out of room does.
 				_release(my_club, p, true)
+				HonourBoard.leave(self, p, "free_agent")
 	_market_test(testing)
 	_resolve_market()
-	# Nobody signed them: their AFL careers end here.
+	# Nobody signed them: their AFL careers end here. One of yours who went out
+	# of contract left as a free agent; one you let go keeps his delisting.
 	for p in free_agents:
-		_career_over(p)
+		HonourBoard.leave(self, p, "free_agent")
+		_career_over(p, "delisted")
 	free_agents = []
 	mark_dirty()
 
@@ -11292,8 +11336,9 @@ func _retirees_to_coaching(retired: Array, listed: Dictionary) -> void:
 
 ## A playing career has ended - retired, or delisted and not picked up - and
 ## this is the last moment the player is in hand.
-func _career_over(p: Dictionary) -> void:
+func _career_over(p: Dictionary, how := "retired") -> void:
 	var gone_id := str(p.get("id", ""))
+	HonourBoard.leave(self, p, how)
 	if gone_id != "" and not departed_names.has(gone_id):
 		var card := CareerFacts.name_card(p)
 		# What a later generated son needs of him: his age, the year and his club.

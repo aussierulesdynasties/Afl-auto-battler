@@ -72,7 +72,25 @@ static func _index(lists: Array) -> Dictionary:
 	for k in clash:
 		out.erase(k)
 		out.erase("#" + str(k))
+	_add_clubs(out)
 	return out
+
+
+## Every club's name in the same index: in its colours and a tap to its page
+## (ClubLink; rulings no. 113, "reached by tapping any club name"). All clubs,
+## so "North Melbourne" claims its words before "Melbourne" can. A ground named
+## for a city ("Adelaide Oval") is held as plain words so its city is not read
+## as the club. A player's name already in the index keeps its place.
+static func _add_clubs(out: Dictionary) -> void:
+	for code in GameDB.clubs:
+		var name := GameDB.club_name(str(code))
+		if name.length() >= 3 and not out.has(name):
+			out[name] = str(code)
+			out["#" + name] = ClubLink.SCHEME + str(code)
+	for code in GameDB.clubs:
+		var ground := str((GameDB.clubs[code] as Dictionary).get("ground", ""))
+		if ground != "" and not out.has(ground):
+			out[ground] = ""
 
 
 ## `key` is a name that is his club's; "#<key>" beside it is his id, so a tap on
@@ -89,21 +107,28 @@ static func _add(out: Dictionary, clash: Dictionary, key: String, club: String, 
 
 
 ## `text` as BBCode: each name in `index` wrapped in its club's ink, the rest
-## escaped. Empty when the text names no one in the index.
-static func markup(text: String, index: Dictionary) -> String:
+## escaped. Empty when the text names no one in the index. `clubs` false leaves
+## club names as plain words (a button, whose own tap is the point).
+static func markup(text: String, index: Dictionary, clubs := true) -> String:
 	var spans := spans_in(text, index)
-	if spans.is_empty():
-		return ""
 	var out := ""
 	var at := 0
+	var named := false
 	for s in spans:
-		out += _escape(text.substr(at, int(s[0]) - at))
-		var col := UiKit.club_name_colour(UiKit.club_ink(str(s[2])))
 		var shown := text.substr(int(s[0]), int(s[1]) - int(s[0]))
-		var ink := "[color=#%s]%s[/color]" % [col.to_html(false), _escape(shown).replace(" ", NBSP)]
 		var id := str(index.get("#" + shown, ""))
+		if str(s[2]) == "" or (not clubs and id.begins_with(ClubLink.SCHEME)):
+			continue   # plain words: a ground, or a club where clubs are off
+		named = true
+		out += _escape(text.substr(at, int(s[0]) - at))
+		# A club's own name: its strongest real colour (ClubLink.colour); a
+		# player's name: his club's ink.
+		var col := ClubLink.colour(str(s[2])) if id.begins_with(ClubLink.SCHEME) 				else UiKit.club_name_colour(UiKit.club_ink(str(s[2])))
+		var ink := "[color=#%s]%s[/color]" % [col.to_html(false), _escape(shown).replace(" ", NBSP)]
 		out += NameLink.url(ink, id) if id != "" else ink
 		at = int(s[1])
+	if not named:
+		return ""
 	return out + _escape(text.substr(at))
 
 
@@ -196,10 +221,14 @@ static func rich(fs := UiKit.BODY, color := UiKit.AUTO_COLOUR, bold := false, wr
 	return r
 
 
+## Meta on a container whose whole area is one tap: names inside it open nothing.
+const NO_LINKS := "name_links_off"
+
+
 static func _link_names(r: RichTextLabel) -> void:
 	var n := r.get_parent()
 	while n != null:
-		if n is BaseButton:
+		if n is BaseButton or n.has_meta(NO_LINKS):
 			return
 		n = n.get_parent()
 	NameLink.wire(r)
@@ -217,7 +246,7 @@ static func set_line(r: RichTextLabel, text: String, index: Dictionary) -> void:
 ## screen reader or a test reads) with its colour made clear. Nothing changes
 ## for a button naming no one in the index. Call after the button is styled.
 static func dress_button(b: Button, index: Dictionary) -> void:
-	var bb := markup(b.text, index)
+	var bb := markup(b.text, index, false)
 	if bb == "":
 		return
 	var fs := b.get_theme_font_size("font_size")
