@@ -88,6 +88,12 @@ var season_awards := {}          # the finished season's awards
 var rising_star_noms := {"from": 1, "rounds": []}
 var honour_roll: Array = []      # one entry per completed season
 var almanac: Array = []          # the club almanac, one page per season (Almanac.gd)
+## The club honour board (HonourBoard.gd, row 122): player id -> his row.
+## An older save builds it once on load from what is on record.
+var honour_board := {}
+## The boards of clubs you coached before a move (HonourBoard.change_club):
+## club code -> {player id: row}.
+var honour_boards := {}
 ## Every coach in the game, once: cid -> record (Coaches.gd). A club's staff
 ## is read from the records, never stored beside them.
 var coaches := {}
@@ -696,6 +702,7 @@ func save_career() -> bool:
 	# second copy of the whole player pool), so it is not written.
 	var keep_draft := draft != null and not (season != null and not draft.intake_mode)
 	SirDougRound.ensure(self)   # this season's round is written once and read back
+	HonourBoard.sweep(self)   # anyone who has left your list since the last save
 	var state := {
 		"season_year": season_year,
 		"my_club": my_club,
@@ -734,6 +741,8 @@ func save_career() -> bool:
 		"rising_star_noms": rising_star_noms,
 		"honour_roll": honour_roll,
 		"almanac": almanac,
+		"honour_board": honour_board,
+		"honour_boards": honour_boards,
 		"records": records,
 		"rivalry_history": rivalry_history,
 		"finals_counted_since": finals_counted_since,
@@ -1070,6 +1079,12 @@ func load_career() -> bool:
 	# it: this week's card is drawn again from the deck, once.
 	if season != null and week_event_pending() and str(week_event.get("tid", "")) == "":
 		_next_week_event()
+	# The honour board (row 122): an older save had none, so it is built once
+	# from what the career recorded; never guessed.
+	honour_board = state.get("honour_board", {}) if state.get("honour_board") is Dictionary else {}
+	honour_boards = state.get("honour_boards", {}) if state.get("honour_boards") is Dictionary else {}
+	if not state.has("honour_board"):
+		HonourBoard.backfill(self, func(id: String) -> Dictionary: return _any_player(id))
 	return true
 
 
@@ -1476,6 +1491,8 @@ func reset() -> void:
 	rising_star_noms = {"from": 1, "rounds": []}
 	honour_roll = []
 	almanac = []
+	honour_board = {}
+	honour_boards = {}
 	records = {}
 	rivalry_history = {}
 	finals_counted_since = 0
@@ -1997,6 +2014,10 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# Undecided assistants stay; then no staff job starts the season empty.
 	_settle_staff_contracts()
 	_fill_open_staff()
+	# The honour board (row 122): anyone who left in the off-season (a trade,
+	# free agency) is stamped with the season he left after, before the year
+	# turns over and before a club move changes whose board it is.
+	HonourBoard.sweep(self)
 	# Coach arcs: a club change decided at the season's close is made now.
 	ClubMoves.apply_move(self)
 	# The season's close normally counted careers already (Career skips a
@@ -4513,20 +4534,6 @@ func usual_plan(code: String) -> String:
 			season.selections.get(code, {})).ground)
 
 
-## Both sides' key players for the This week screen: each side's key forwards
-## and key defenders as they would take the field. {"mine"/"theirs":
-## {"fwd": [...], "def": [...]}}. Facts only; who plays on whom is set later.
-func week_key_players(opp: String) -> Dictionary:
-	if season == null or opp == "" or not season.lists.has(opp):
-		return {}
-	var theirs: Array = Squad.new(opp, season.lists[opp], false, opp, season.selections.get(opp, {})).ground
-	var mine: Array = my_squad().ground
-	return {
-		"mine": {"fwd": Matchups.key_forwards(mine), "def": Matchups.defenders(mine).slice(0, Matchups.KEY_FORWARDS)},
-		"theirs": {"fwd": Matchups.key_forwards(theirs), "def": Matchups.defenders(theirs).slice(0, Matchups.KEY_FORWARDS)},
-	}
-
-
 ## Compact stored-fact history surfaces. These deliberately read existing
 ## records/honour_roll rather than reconstructing or inventing old seasons.
 ## "quarter time", "half time" or "three-quarter time" for break 0, 1 or 2.
@@ -5073,6 +5080,20 @@ func pot_view(p: Dictionary) -> Dictionary:
 	var rg: Array = r["range"]
 	return {"mid": int(r["mid"]), "range": rg, "exact": false,
 			"text": str(rg[0]) if int(rg[0]) == int(rg[1]) else DraftScouting.range_text(rg)}
+
+
+## Anyone in the game by id: your list, the season's lists, then the free
+## agents. {} when he has left the game.
+func _any_player(player_id: String) -> Dictionary:
+	var p := list_player(player_id)
+	if not p.is_empty():
+		return p
+	if season != null:
+		for code in season.lists:
+			for q in season.lists[code]:
+				if str(q.get("id", "")) == player_id:
+					return q
+	return free_agent(player_id)
 
 
 func list_player(player_id: String) -> Dictionary:
@@ -5654,6 +5675,7 @@ func _after_round(results: Array) -> void:
 	_draft_class_news()
 	_board_after_round(results)
 	_rival_morale_after_round(results)
+	_fade_press_lifts()
 	_prepare_media_conference(results)
 	# One optional ask a week (director, 2026-10-09, G1): a sit-down takes the
 	# week's slot and the press question waits for another week.
@@ -5783,6 +5805,11 @@ func _close_season_awards() -> void:
 	if not sh.is_empty():
 		honour_roll[-1]["season_hero"] = [sh]
 	almanac.append(Almanac.season_entry(self))
+	# The honour board (row 122): every player of yours, read afresh from the
+	# season just closed, and anyone who has gone since the last close.
+	for p in my_list:
+		HonourBoard.upsert(self, p)
+	HonourBoard.sweep(self)
 	var first := Almanac.first_sentence(str(almanac[-1].get(Almanac.STORY_KEY, "")))
 	if first != "":
 		add_news("almanac_story", first)
@@ -6632,6 +6659,7 @@ func release_player(player_id: String) -> Dictionary:
 	# let go (_open_market), so that one cannot be undone.
 	var snap := {} if retiring_now(p) else RecruitUndo.snapshot(self, player_id)
 	_release(my_club, p, false)
+	HonourBoard.leave(self, p, "delisted")
 	_open_market([p])
 	if not snap.is_empty():
 		RecruitUndo.push(self, snap, "release", p)
@@ -8987,11 +9015,14 @@ func _close_free_agency() -> void:
 				# He walked, or you could not fit him: you wanted him, as a rival
 				# that runs out of room does.
 				_release(my_club, p, true)
+				HonourBoard.leave(self, p, "free_agent")
 	_market_test(testing)
 	_resolve_market()
-	# Nobody signed them: their AFL careers end here.
+	# Nobody signed them: their AFL careers end here. One of yours who went out
+	# of contract left as a free agent; one you let go keeps his delisting.
 	for p in free_agents:
-		_career_over(p)
+		HonourBoard.leave(self, p, "free_agent")
+		_career_over(p, "delisted")
 	free_agents = []
 	mark_dirty()
 
@@ -10821,10 +10852,13 @@ func _prepare_media_conference(results: Array) -> void:
 	var side := 0 if str(res["home"]) == my_club else 1
 	var opp := str(res["away"] if side == 0 else res["home"])
 	var injuries := []
+	var hurt := {}
 	for inj in last_injuries:
 		if str(inj.get("club", "")) == my_club:
 			var p := _find_player(str(inj.get("id", "")))
-			injuries.append({"name": GameDB.player_display_name(p) if not p.is_empty() else "a player"})
+			hurt[str(inj.get("id", ""))] = true
+			injuries.append({"name": GameDB.player_display_name(p) if not p.is_empty() else "a player",
+					"id": str(inj.get("id", "")) if not list_player(str(inj.get("id", ""))).is_empty() else ""})
 	var star := {}
 	var roster: Array = res.get("roster", [[], []])
 	var stats: Dictionary = res.get("players", {})
@@ -10836,33 +10870,138 @@ func _prepare_media_conference(results: Array) -> void:
 			if goals >= 6 or disposals >= 40:
 				var p := _find_player(str(r.get("id", "")))
 				star = {"name": GameDB.player_display_name(p) if not p.is_empty() else str(r.get("name", "A player")),
-						"line": "kicked %d goals" % goals if goals >= 6 else "had %d disposals" % disposals}
+						"line": "kicked %d goals" % goals if goals >= 6 else "had %d disposals" % disposals,
+						"id": str(r.get("id", "")) if not list_player(str(r.get("id", ""))).is_empty() else ""}
 				break
-	# The match story's hero is asked about when no big number already put a
-	# player in the question.
-	if star.is_empty():
-		var hero := MatchStory.hero_of(res)
-		if not hero.is_empty() and int(hero["side"]) == side:
-			star = {"name": str(hero["name"]), "line": "was the hero: %s" % str(hero["line"])}
-		elif not hero.is_empty():
-			# A loss: your best player (director, 2026-11-03).
-			var mb := MatchStory.my_best(res, side)
-			if not mb.is_empty():
-				star = {"name": str(mb["name"]), "line": "was your best: %s" % str(mb["line"])}
+	# Only a real standout (6 goals or 40 disposals) is a star question: an
+	# ordinary game asks nothing (director 2026-11-06; ruling 5.52, never a
+	# schedule). MatchStory keeps its hero and "your best" for the match copy.
 	var round_no := season.round_index if last_phase == "regular" else Season.REGULAR_ROUNDS + int((season.finals.get("weeks", []) as Array).size())
 	# How many of your side were young enough for the Philosopher to ask.
 	var young := 0
 	if roster.size() > side:
 		for r in roster[side]:
 			var p := _find_player(str(r.get("id", "")))
-			if not p.is_empty() and float(p.get("age", 30.0)) <= MediaConference.YOUNG_AGE:
+			if not p.is_empty() and MediaConference.is_young(float(p.get("age", 30.0))):
 				young += 1
 	media_conference = MediaConference.pick({
 		"result": res, "club": my_club, "opponent_name": GameDB.club_name(opp),
 		"round": round_no, "injuries": injuries, "star": star, "year": season_year, "young": young,
+		"named": _press_named(res, side, hurt),
 	}, media_memory)
 	if not media_conference.is_empty():
 		media_conference["opp"] = GameDB.club_name(opp)
+		# How he asks follows your standing with him (director 2026-11-06, Q1);
+		# the question itself stays as it was.
+		var j := str(media_conference.get("journalist", ""))
+		media_conference["lead"] = MediaConference.lead_in(j, press_standing(j))
+
+
+## Who a named answer can be about, per question: after a heavy loss your
+## lowest-rated player who played (not one hurt in the match), after a big win
+## your best, with a young side the lowest-rated who played at 21 or under.
+## Listed players only; a question with nobody gets no fourth answer.
+func _press_named(res: Dictionary, side: int, hurt: Dictionary) -> Dictionary:
+	var out := {}
+	var rated := MatchNotes.rated_players(res, side)
+	for i in range(rated.size() - 1, -1, -1):
+		var id := str(rated[i]["id"])
+		var p := list_player(id)
+		if p.is_empty() or hurt.has(id):
+			continue
+		if not out.has("heavy_loss"):
+			out["heavy_loss"] = {"id": id, "name": GameDB.player_display_name(p)}
+		if not out.has("young_side") and MediaConference.is_young(float(p.get("age", 30.0))):
+			out["young_side"] = {"id": id, "name": GameDB.player_display_name(p)}
+	var mb := MatchStory.my_best(res, side)
+	if not mb.is_empty() and not list_player(str(mb["id"])).is_empty():
+		out["big_win"] = {"id": str(mb["id"]), "name": GameDB.player_display_name(list_player(str(mb["id"])))}
+	return out
+
+
+## Your standing with a journalist, -2..+2 (director 2026-11-06, Q1). Absent
+## means even. It fades one step toward even a season, applied the first time
+## it is read in a new season (no rollover code).
+func press_standing(journalist: String) -> int:
+	_press_standing_decay()
+	var st: Dictionary = media_memory.get("standing", {}) if media_memory.get("standing") is Dictionary else {}
+	return clampi(int(st.get(journalist, 0)), MediaConference.STANDING_MIN, MediaConference.STANDING_MAX)
+
+
+func _press_standing_decay() -> void:
+	if not (media_memory.get("standing") is Dictionary):
+		return
+	var year := int(media_memory.get("standing_year", season_year))
+	if year >= season_year:
+		media_memory["standing_year"] = maxi(year, season_year)
+		return
+	var st: Dictionary = media_memory["standing"]
+	for j in st.keys():
+		var v := MediaConference.standing_decayed(int(st[j]), season_year - year)
+		if v == 0:
+			st.erase(j)
+		else:
+			st[j] = v
+	media_memory["standing_year"] = season_year
+
+
+func _set_press_standing(journalist: String, v: int) -> void:
+	_press_standing_decay()
+	var st: Dictionary = media_memory.get("standing", {}) if media_memory.get("standing") is Dictionary else {}
+	if v == 0:
+		st.erase(journalist)
+	else:
+		st[journalist] = v
+	media_memory["standing"] = st
+	media_memory["standing_year"] = season_year
+
+
+## Press morale fades a point a round (every second round after the
+## Philosopher), before this week's question forms (ruling 5.54: effects decay).
+func _fade_press_lifts() -> void:
+	if season == null:
+		return
+	var round_no := season.round_index if last_phase == "regular" else Season.REGULAR_ROUNDS + int((season.finals.get("weeks", []) as Array).size())
+	for p in my_list:
+		MediaConference.fade_lift(p, round_no)
+	# The board's press move fades the same way (a point a round).
+	var lift := int(media_memory.get("board_lift", 0))
+	if lift != 0:
+		if not board.is_empty():
+			board["confidence"] = clampi(board_confidence() - signi(lift), 0, 100)
+		lift -= signi(lift)
+		if lift == 0:
+			media_memory.erase("board_lift")
+		else:
+			media_memory["board_lift"] = lift
+
+
+## Moves board confidence by a press answer's `delta`, through the board's
+## press lift (media_memory "board_lift"): stacked answers never pass BOARD_CAP
+## and only what really moved is kept to fade. Returns the change applied.
+func _press_board(delta: int) -> int:
+	if board.is_empty() or delta == 0:
+		return 0
+	var old := int(media_memory.get("board_lift", 0))
+	var want := clampi(old + delta, mini(-MediaConference.BOARD_CAP, old), maxi(MediaConference.BOARD_CAP, old))
+	var before := board_confidence()
+	board["confidence"] = clampi(before + want - old, 0, 100)
+	var moved := board_confidence() - before
+	if old + moved == 0:
+		media_memory.erase("board_lift")
+	else:
+		media_memory["board_lift"] = old + moved
+	return moved
+
+
+## The record the Stats Geek reads (ruling 5.48): ladder, place, form and the
+## losing run, all already saved.
+func press_record() -> Dictionary:
+	var row := my_ladder_row()
+	var form := club_form_info(my_club)
+	return {"w": int(row.get("w", 0)), "l": int(row.get("l", 0)), "d": int(row.get("d", 0)),
+			"pct": float(row.get("pct", 0.0)), "pos": my_position(), "form": float(form.get("value", 0.0)),
+			"last": str(form.get("last", "")), "streak": losing_streak}
 
 
 func backing_talk_pending() -> bool:
@@ -10889,14 +11028,33 @@ func skip_media_conference() -> void:
 
 
 ## What a press answer's odds follow (MediaConference.chance): the group's
-## mood, a young side, who asked and what the question is about.
-func press_facts() -> Dictionary:
+## mood, a young side, who asked, what the question is about, your standing
+## with him, and for answer `option` the record check and the named player.
+func press_facts(option := -1) -> Dictionary:
 	var total := 0
 	for p in my_list:
 		total += ClubLife.morale(p)
-	return {"morale": float(total) / float(maxi(1, my_list.size())) if not my_list.is_empty() else float(ClubLife.MORALE_BASE),
-			"young": int(media_conference.get("young", 0)), "journalist": str(media_conference.get("journalist", "")),
-			"key": str(media_conference.get("key", ""))}
+	var j := str(media_conference.get("journalist", ""))
+	var f := {"morale": float(total) / float(maxi(1, my_list.size())) if not my_list.is_empty() else float(ClubLife.MORALE_BASE),
+			"young": int(media_conference.get("young", 0)), "journalist": j,
+			"key": str(media_conference.get("key", "")), "standing": press_standing(j)}
+	var opts: Array = media_conference.get("options", [])
+	if option >= 0 and option < opts.size():
+		var kind := MediaConference.kind_of(opts[option], option)
+		f["verdict"] = press_verdict(kind)
+		var his := list_player(str((opts[option] as Dictionary).get("player", "")))
+		if not his.is_empty():
+			f["his_morale"] = float(ClubLife.morale(his))
+			f["his_age"] = float(his.get("age", 30.0))
+			f["name"] = GameDB.player_display_name(his)
+	return f
+
+
+## The Stats Geek's verdict on an answer ("" for anyone else).
+func press_verdict(kind: String) -> String:
+	if not bool((MediaConference.PERSONA.get(str(media_conference.get("journalist", "")), {}) as Dictionary).get("record", false)):
+		return ""
+	return MediaConference.record_verdict(kind, press_record())
 
 
 ## The chance (percent) that the pending question's answer `option` lands its
@@ -10905,7 +11063,61 @@ func press_chance(option: int) -> int:
 	var opts: Array = media_conference.get("options", [])
 	if option < 0 or option >= opts.size():
 		return 0
-	return MediaConference.chance(MediaConference.kind_of(opts[option], option), press_facts())
+	return MediaConference.chance(MediaConference.kind_of(opts[option], option), press_facts(option))
+
+
+## {"journalist", "verdict", "name", "standing", "facts"} for answer
+## `option`: what its effects and its line follow.
+func press_context(option: int) -> Dictionary:
+	var opts: Array = media_conference.get("options", [])
+	if option < 0 or option >= opts.size():
+		return {}
+	var o: Dictionary = opts[option]
+	var kind := MediaConference.kind_of(o, option)
+	var name := str(o.get("name", ""))
+	var his := list_player(str(o.get("player", "")))
+	if not his.is_empty():
+		name = GameDB.player_display_name(his)
+	var j := str(media_conference.get("journalist", ""))
+	return {"journalist": j, "verdict": press_verdict(kind), "name": name,
+			"standing": press_standing(j) if MediaConference.JOURNALISTS.has(j) else 0, "facts": press_facts(option),
+			"lost": MediaConference.after_loss(media_conference)}
+
+
+## The line under answer `option` (MediaConference.odds_line).
+func press_odds_line(option: int) -> String:
+	var opts: Array = media_conference.get("options", [])
+	if option < 0 or option >= opts.size():
+		return ""
+	var kind := MediaConference.kind_of(opts[option], option)
+	var ctx := press_context(option)
+	return MediaConference.odds_line(kind, press_chance(option), MediaConference.effects(kind, ctx), ctx)
+
+
+## The question as asked: his lead-in, then the question.
+func press_question_text() -> String:
+	var lead := str(media_conference.get("lead", ""))
+	var q := str(media_conference.get("question", ""))
+	return q if lead == "" else "%s %s" % [lead, q]
+
+
+## Under the byline: "Gary is warm to you: every answer is 5% more likely to
+## land well."; "" when he takes you as he finds you.
+func press_standing_line() -> String:
+	var j := str(media_conference.get("journalist", ""))
+	if not MediaConference.JOURNALISTS.has(j):
+		return ""
+	return MediaConference.standing_effect(j, press_standing(j))
+
+
+## The Stats Geek's record line, "" for anyone else.
+func press_record_line() -> String:
+	if not bool((MediaConference.PERSONA.get(str(media_conference.get("journalist", "")), {}) as Dictionary).get("record", false)):
+		return ""
+	var rec := press_record()
+	if int(rec["w"]) + int(rec["l"]) + int(rec["d"]) < MediaConference.RECORD_MIN_GAMES:
+		return str(MediaConference.RECORD_CLAUSE["early"])
+	return MediaConference.record_line(rec)
 
 
 ## The answer is a roll (bible; director 2026-10-18, ch. 30 row 33): drawn
@@ -10921,27 +11133,45 @@ func resolve_media_conference(option: int) -> Dictionary:
 	var picked: Dictionary = opts[option]
 	var kind := MediaConference.kind_of(picked, option)
 	var odds := press_chance(option)
+	var ctx := press_context(option)
+	var fx := MediaConference.effects(kind, ctx)
 	var key := str(media_conference.get("key", ""))
 	var round_no := int(media_conference.get("round", 0))
+	var j := str(media_conference.get("journalist", ""))
 	var landed := "a" if MediaConference.roll(career_seed, season_year, round_no, key, option) <= odds else "b"
-	var out: Dictionary = (MediaConference.ANSWERS[kind] as Dictionary)[landed]
-	if not board.is_empty() and int(out["board"]) != 0:
-		board["confidence"] = clampi(board_confidence() + int(out["board"]), 0, 100)
-		board["why"] = "Your post-match comments were noted by the board."
+	var out: Dictionary = fx[landed]
+	var board_moved := _press_board(int(out["board"]))
+	if board_moved != 0:
+		# Added to the board's match reason, never in place of it (director 2026-11-06).
+		board["why"] = (str(board.get("why", "")).strip_edges() + " "
+				+ MediaConference.board_sentence(j, board_moved)).strip_edges()
+	var slow := bool((MediaConference.PERSONA.get(j, {}) as Dictionary).get("slow", false))
 	var morale_delta := int(out["morale"])
+	# After a loss a lift stops just below what a win gave (director 2026-11-07).
+	var up := MediaConference.LOSS_LIFT_CAP if bool(ctx.get("lost", false)) else -1
 	if morale_delta != 0:
 		for p in my_list:
-			ClubLife.add_morale(p, morale_delta)
+			MediaConference.apply_lift(p, morale_delta, MediaConference.LIST_CAP, slow, up)
+	var his := list_player(str(picked.get("player", "")))
+	if int(out["his"]) != 0 and not his.is_empty():
+		MediaConference.apply_lift(his, int(out["his"]), MediaConference.NAMED_CAP, slow, up)
+	var before := press_standing(j)
+	var after := MediaConference.standing_after(before, MediaConference.standing_move(j, kind, str(ctx.get("verdict", ""))))
+	if MediaConference.JOURNALISTS.has(j) and after != before:
+		_set_press_standing(j, after)
 	media_memory[key] = {"year": season_year, "round": round_no}
 	# What you said, so a journalist can hold you to it later this season.
 	media_memory["said|" + key] = {"year": season_year, "option": option,
 			"opp": str(media_conference.get("opp", "")), "round": round_no}
-	var line := MediaConference.after_line(kind, landed)
+	var line := MediaConference.after_line(kind, landed, fx, str(ctx.get("name", "")))
 	add_news("media", "Post-match: '%s' %s" % [str(picked.get("label", "")), line])
 	media_conference = {}
 	mark_dirty()
 	autosave()
-	return {"kind": kind, "landed": landed, "chance": odds, "line": line}
+	var size := maxi(absi(int(out["morale"])), absi(int(out["his"])))
+	return {"kind": kind, "landed": landed, "chance": odds, "line": line, "journalist": j,
+			"standing": [before, after], "verdict": str(ctx.get("verdict", "")), "effects": out,
+			"fade_rounds": maxi(MediaConference.fade_rounds(size, slow), MediaConference.fade_rounds(board_moved, false))}
 
 
 
@@ -11301,8 +11531,9 @@ func _retirees_to_coaching(retired: Array, listed: Dictionary) -> void:
 
 ## A playing career has ended - retired, or delisted and not picked up - and
 ## this is the last moment the player is in hand.
-func _career_over(p: Dictionary) -> void:
+func _career_over(p: Dictionary, how := "retired") -> void:
 	var gone_id := str(p.get("id", ""))
+	HonourBoard.leave(self, p, how)
 	if gone_id != "" and not departed_names.has(gone_id):
 		var card := CareerFacts.name_card(p)
 		# What a later generated son needs of him: his age, the year and his club.

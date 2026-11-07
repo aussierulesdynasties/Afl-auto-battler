@@ -67,11 +67,12 @@ var duel_log := {}
 var roam_pairs := {}
 ## Match-ups changed during the match: [{"q", "side" (defending), "fwd", "def"}].
 var duel_changes: Array = []
-## The calls a side's coach has made himself (coach_interceptor): his
-## assistant leaves them alone for the rest of the match (Squad.assistant).
-## The match-ups are always the sim's own: key match-ups are cut (director,
-## 2026-11-07: "Roles replace match-ups").
-var _own := [{"interceptor": false}, {"interceptor": false}]
+## The calls a side's coach has made himself (coach_interceptor, his tag
+## and the spare's minder): his assistant leaves them alone for the rest of
+## the match (Squad.assistant). The match-ups are always the sim's own: key
+## match-ups are cut (director, 2026-11-07: "Roles replace match-ups").
+var _own := [{"interceptor": false, "tag": false, "minder": false},
+		{"interceptor": false, "tag": false, "minder": false}]
 ## The contest in play, attached to the score or rebound it produces.
 var _duel := {}
 ## The key forward whose named contest inside 50 was just logged, so the mark
@@ -801,17 +802,27 @@ func _rematch(def_side: int, fid: String, held: Dictionary) -> void:
 
 
 ## Your assistant's routine calls for the quarter about to start, made at
-## the break so the coach box shows them as your starting point: the plan,
-## pep talk and tag a rival coach would call in your position (ai_tactics,
-## your club's own usual game), the loose defender a rival coach would pick,
-## and a key defender moved off a forward who has had the better of him
-## (_rematch). He acts in your club's best interest, as every coach does.
-## A loose man you have named yourself he leaves alone.
+## the break so the coach box shows them as your starting point: the pep
+## talk and tag a rival coach would call in your position (ai_tactics), the
+## loose defender a rival coach would pick, and a key defender moved off a
+## forward who has had the better of him (_rematch). He acts in your club's
+## best interest, as every coach does. Whatever you have set yourself he
+## leaves alone: a loose man you have named, and the tag and the spare's
+## minder once you have picked them (set_tactics' tag_set / minder_set).
+## The game plan is always the coach's: it stays what you last chose until
+## you change it (director, 2026-11-07: "After every quarter it changes my
+## gameplan from balanced to controlled tempo").
 func _assistant_calls(side: int) -> void:
 	var own: Dictionary = _own[side]
 	var t: Dictionary = (tactics[side] as Dictionary).duplicate()
 	var call := ai_tactics(side)
 	call.erase("interceptor_id")
+	call.erase("gameplan")
+	if bool(own["tag"]):
+		call.erase("tag_id")
+	if bool(own["minder"]):
+		call.erase("spare_accountable")
+		call.erase("spare_minder_id")
 	t.merge(call, true)
 	set_tactics(side, t)
 	if not bool(own["interceptor"]):
@@ -831,10 +842,17 @@ func _assistant_interceptor(side: int) -> String:
 	return _ai_interceptor(side, (squads[side] as Squad).ground)
 
 
+## `t` may carry tag_set / minder_set: the coach picked the tag or the
+## spare's minder himself, so from then on they are his call, not his
+## assistant's (_assistant_calls).
 func set_tactics(side: int, t: Dictionary) -> void:
 	if side < 0 or side > 1:
 		return
 	tactics[side] = t.duplicate()
+	for key in ["tag", "minder"]:
+		if bool((tactics[side] as Dictionary).get(key + "_set", false)):
+			(_own[side] as Dictionary)[key] = true
+		(tactics[side] as Dictionary).erase(key + "_set")
 	if t.has("interceptor_id"):
 		set_interceptor(side, str(t.get("interceptor_id", "")), current_quarter > 1 or _q_active)
 	# A tag needs its man still in the match, and a midfielder.
@@ -5926,13 +5944,9 @@ const COACH_STYLES := {
 }
 
 
-## `side`'s usual game: the plan your club went in with on your side (the
-## first quarter's call), otherwise the plan its list suits (standing).
+## `side`'s usual game: the plan its list suits (standing). Only an AI club
+## picks its plan this way; yours is always your own call.
 func _usual(side: int) -> String:
-	if _assisted(side) and not tactics_history.is_empty():
-		var first: Dictionary = (tactics_history[0]["plans"] as Array)[side]
-		if first.has("gameplan"):
-			return plan_key(str(first["gameplan"]))
 	return str(standing[side])
 
 
