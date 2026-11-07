@@ -739,6 +739,25 @@ func _test_club_per_game() -> void:
 	_check(cp > 0.0 and is_equal_approx(cp, float(row["contested_possessions"]) / float(g)),
 			"A club's contested possessions a game is its total over its games (%.1f)" % cp)
 	_check(_state.club_per_game("NOPE", "disposals") == -1.0, "A club with no games has no figure")
+	# A book begun part way through (an older save, one round ago) ranks a player
+	# who played the one game it saw.
+	var played := int((_state.season.ladder.get(code, {}) as Dictionary).get("p", 0))
+	var pid := str(_state.my_list[0]["id"])
+	var had = _state.season_stats.get(pid)
+	var from_was := int(_state.season_stats_from)
+	_state.season_stats[pid] = {"club": code, "clubs": [code], "games": 1, "s": {}}
+	_state.season_stats_from = played - 1
+	var his := {}
+	for r in load("res://scripts/ui/stats/StatsRatings.gd").rows():
+		if str(r["id"]) == pid:
+			his = r
+	_state.season_stats_from = from_was
+	if had == null:
+		_state.season_stats.erase(pid)
+	else:
+		_state.season_stats[pid] = had
+	_check(played >= 3 and bool(his.get("qualified", false)),
+			"A part-season book ranks a player on the games it saw (%d played, %s)" % [played, str(his.get("qualified", "missing"))])
 
 
 ## Rates come from their counts; nothing under a rate is no rate, not zero.

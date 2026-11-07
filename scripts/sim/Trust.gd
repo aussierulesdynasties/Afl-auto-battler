@@ -66,6 +66,8 @@ static func change(rel: Dictionary, key: String, d: int, why: String, year: int,
 	var entry: Dictionary = rel.get(key, {})
 	var before := int(entry.get("t", 0))
 	var after := clampi(before + clampi(d, -STEP_MAX, STEP_MAX), LOWEST, HIGHEST)
+	if after == before:
+		return 0   # already at the end of the scale: nothing moved, nothing to keep
 	entry["t"] = after
 	var log: Array = entry.get("log", [])
 	log.append({"y": year, "w": when, "d": after - before, "why": why})

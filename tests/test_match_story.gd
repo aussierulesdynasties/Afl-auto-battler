@@ -428,6 +428,21 @@ func _test_factors_never_repeat() -> void:
 	var r0: Dictionary = _my_matches()[0]
 	_check(MatchNotes.match_factors(r0, _side(r0)) == MatchNotes.match_factors(r0, _side(r0), {}),
 			"no told facts leaves How it went as before")
+	# A five-goal second quarter with no run of four is still told when a turning
+	# point comes first: only a told run covers its quarter.
+	var evs := []
+	var sc := [0, 0]
+	var seq := [[1, 1], [0, 2], [0, 2], [0, 2], [1, 2], [0, 2], [0, 2], [0, 2]]
+	for i in seq.size():
+		var s: int = seq[i][0]
+		sc[s] += 6
+		evs.append({"kind": "goal", "side": s, "q": int(seq[i][1]), "min": int(seq[i][1]) * 30 - 25 + i,
+				"score": sc.duplicate(), "name": "Kicker %d" % i, "player_id": "k%d" % i})
+	var q2 := {"home": "GEE", "away": "MEL", "score": sc.duplicate(), "events": evs, "team": [{}, {}],
+			"q_goals": [[0, 1], [6, 1], [0, 0], [0, 0]], "q_behinds": [[0, 0], [0, 0], [0, 0], [0, 0]]}
+	var q2_facts := MatchNotes.match_factor_items(q2, 0).map(func(it): return str(it["fact"]))
+	_check(int(MatchNotes._longest_run(evs)["len"]) == 3 and q2_facts.has("turn:lead") and q2_facts.has("q2"),
+			"a big quarter is told unless a told run covers it (%s)" % str(q2_facts))
 
 
 ## The Summary tab's visible text, sentence by sentence, normalised. Only

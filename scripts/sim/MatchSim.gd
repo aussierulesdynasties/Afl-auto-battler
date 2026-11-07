@@ -389,7 +389,6 @@ const FORM_CONTEST := 0.010
 
 func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	squads = [home, away]
-	mid_ic_rng.seed = seed * 109 + 113
 	_clanger_seed = seed
 	# Who starts on the bench, for the match view's bench strip (read only).
 	for sq in squads:
@@ -417,6 +416,9 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	lockup_rng.seed = seed * 107 + 109
 	fumble_rng.seed = seed * 127 + 131
 	lead_rng.seed = seed * 109 + 113
+	# Its own seed: it once shared lead_rng's, so the mid-kick intercept dice
+	# replayed the key-lead dice. Every stream here needs a seed of its own.
+	mid_ic_rng.seed = seed * 137 + 139
 	injury_rng.seed = seed * 13 + 7
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
 	for side in range(2):
