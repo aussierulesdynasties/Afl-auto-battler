@@ -13,8 +13,12 @@ extends RefCounted
 
 const COOLDOWN_ROUNDS := 3
 ## Players this young in your side, this many of them, and the Philosopher asks.
+## "21 or younger" counts a player until his 22nd birthday (is_young).
 const YOUNG_AGE := 21.0
 const YOUNG_SIDE := 5
+## She writes the long piece, so she asks less often than the others: about one
+## conference in six (director 2026-11-07; tools/audit/press_impl.gd measures it).
+const YOUNG_SIDE_COOLDOWN := 7
 ## A gap this wide in inside 50s or clearances is worth a Stats Geek question.
 const STAT_GAP := 8
 
@@ -25,6 +29,12 @@ const JOURNALISTS := {
 	"bogan": {"name": "Kev Pollard", "outlet": "Outer Wing Radio"},
 	"philosopher": {"name": "Margaret Ashby", "outlet": "The Long Kick", "her": true},
 }
+
+
+## Whether a player of this age is "21 or younger": ages are fractional, so a
+## 21-and-a-half-year-old still counts.
+static func is_young(age: float) -> bool:
+	return age < YOUNG_AGE + 1.0
 
 
 ## "Gary Haddon, The Siren"
@@ -55,9 +65,9 @@ static func pick(ctx: Dictionary, recent: Dictionary) -> Dictionary:
 	if not injuries.is_empty() and margin < 0:
 		candidates.append(_q("injury", "bogan", "Tough blow losing %s. How much did that hurt you out there?" %
 				str(injuries[0].get("name", "a player")), round_no,
-				"No excuses. The blokes who came in weren't up to it.", "The group had to adjust, but that's footy.",
-				"Losing %s cost us the game. Nothing more to it." % str(injuries[0].get("name", "him")),
-				_named(injuries[0], "back_named", "We'll get %s right, and he'll come back better.")))
+				"The blokes who came in fell short.", "We had to adjust. That's footy.",
+				"That injury cost us the game.",
+				_named(injuries[0], "back_named", "%s will come back better.")))
 	if margin <= -40:
 		# What you told the Sycophant after a big win this season comes back.
 		var said: Dictionary = recent["said|big_win"] if recent.get("said|big_win") is Dictionary else {}
@@ -65,41 +75,41 @@ static func pick(ctx: Dictionary, recent: Dictionary) -> Dictionary:
 			candidates.append(_q("heavy_loss", "muckraker",
 					"After beating %s you said your method was the standard. Where was it today against %s?" % [
 					str(said.get("opp", "them")), opp], round_no,
-					"Fair question. The players didn't live up to it today.", "One bad day doesn't change the method.",
-					"The players believe in it. I won't blame them for one bad day.",
-					_named(named.get("heavy_loss", {}), "criticise_named", "%s went missing today, and he knows it.")))
+					"The players didn't live up to it.", "One bad day doesn't change it.",
+					"The players still believe in it.",
+					_named(named.get("heavy_loss", {}), "criticise_named", "%s went missing today.")))
 		else:
 			candidates.append(_q("heavy_loss", "muckraker", "%s beat you by %d. Was that acceptable?" % [opp, -margin],
-					round_no, "That was soft from the players. It wasn't good enough.",
-					"The system held up in patches; our execution didn't.", "Don't blame the players. They'll respond.",
-					_named(named.get("heavy_loss", {}), "criticise_named", "%s went missing today, and he knows it.")))
+					round_no, "That was soft from the players.",
+					"Our execution let the system down.", "The players will respond.",
+					_named(named.get("heavy_loss", {}), "criticise_named", "%s went missing today.")))
 	elif margin >= 40:
 		candidates.append(_q("big_win", "sycophant", "That was a clinic against %s. Is this the best side in the competition?" % opp,
-				round_no, "Don't get carried away. Some of it was sloppy, and the players know it.", "Our method stood up. That's the standard.",
-				"All credit to the players. It wasn't down to the system.",
-				_named(named.get("big_win", {}), "back_named", "%s was enormous, and he's only getting better.")))
+				round_no, "Plenty of it was sloppy.", "Our method's the standard now.",
+				"All credit to the players.",
+				_named(named.get("big_win", {}), "back_named", "%s was enormous today.")))
 	elif absi(margin) <= 6:
 		candidates.append(_q("close_game", "stats", _close_question(res, side, margin, opp), round_no,
-				"We left too much to chance. Some players weren't good enough when it counted.", "A handful of contests. That's how tight games go.",
-				"The players did everything right. I won't take a thing off them."))
+				"Too many went missing late.", "That's how tight games go.",
+				"The players did everything right."))
 
 	var star: Dictionary = ctx.get("star", {})
 	if not star.is_empty():
 		var line := str(star.get("line", "had a huge night"))
 		candidates.append(_q("star", "bogan", "%s %s. Is there a better player in the comp right now?" %
 				[str(star.get("name", "One of your players")), line], round_no,
-				"He was good, but too many others were passengers.", "We put him in positions to influence the game.",
-				"Credit to him and the whole group. I won't hear a word against them.",
-				_named(star, "back_named", "%s's the best in the comp, and I'll say it every week.")))
+				"Too many others were passengers.", "Our structure set him up.",
+				"Credit to him and the whole group.",
+				_named(star, "back_named", "%s's the best in the comp.")))
 
 	var young := int(ctx.get("young", 0))
 	if young >= YOUNG_SIDE:
 		candidates.append(_q("young_side", "philosopher",
 				"%s of your side today were %d or younger. Is this the club you're building?" % [
 				MatchNotes.count_word(young).capitalize(), int(YOUNG_AGE)], round_no,
-				"They're here on merit, and the ones who don't perform will be dropped.", "It's where the club is going, and we'll wear the bad days.",
-				"They've earned it, and I won't have them criticised. I'm proud of them.",
-				_named(named.get("young_side", {}), "criticise_named", "%s has to learn quicker than that.")))
+				"Perform or they'll be dropped.", "We'll wear the bad days for it.",
+				"I'm proud of every one of them.",
+				_named(named.get("young_side", {}), "criticise_named", "%s has to learn quicker.")))
 
 	# Not every ordinary match earns a conference. A notable factual trigger is required.
 	for q in candidates:
@@ -110,9 +120,12 @@ static func pick(ctx: Dictionary, recent: Dictionary) -> Dictionary:
 			last = int(last.get("round", -999)) if int(last.get("year", 0)) == int(ctx.get("year", 0)) else -999
 		if typeof(last) != TYPE_INT and typeof(last) != TYPE_FLOAT:
 			last = -999
-		if round_no - int(last) > COOLDOWN_ROUNDS:
+		var wait := YOUNG_SIDE_COOLDOWN if key == "young_side" else COOLDOWN_ROUNDS
+		if round_no - int(last) > wait:
 			# A young side moves the odds of every answer (see chance()).
 			q["young"] = young
+			# The result, so a lift after a loss can be held under a win's.
+			q["margin"] = margin
 			return q
 	return {}
 
@@ -161,15 +174,20 @@ static func _close_question(res: Dictionary, side: int, margin: int, opp: String
 const KINDS := ["criticise", "method", "back"]
 const NAMED_KINDS := ["back_named", "criticise_named"]
 
-## Caps (ruling 5.54: effects are modest and cannot outweigh results; director
-## 2026-11-06, Q4: an answer's morale move is capped below the match result's).
-## These sizes are the build's, not the director's: how "below the result's
-## own" is measured is still his call (a loss moves a player who played by +1,
-## a win by +4, ClubLife.morale_after_match; the board by 1 to 4,
-## ClubLife.after_match). Every press move fades (FADE_ROUNDS).
+## Caps. Every press move fades (FADE_ROUNDS). Sizes and stacking stay inside
+## these; none is tied to what the match itself moved.
 const LIST_CAP := 2
 const NAMED_CAP := 3
-const BOARD_CAP := 2
+## The board (director 2026-11-07): a press answer can move the board's view
+## further than the match result moved it (a win moves it +2 or +3,
+## ClubLife.after_match). This only stops stacked answers running away.
+const BOARD_CAP := 3
+## Morale after a loss (director 2026-11-07, replacing the 2026-11-06 "below
+## the match result's own" cap): an answer can lift a player up to just below
+## what a win would have given him. A player who played gets
+## ClubLife.MATCH_MORALE_LOSS for a loss and MATCH_MORALE_WIN for a win, so the
+## press lift after a loss stops one short of that gap (+2 today).
+const LOSS_LIFT_CAP := 2   # ClubLife.MATCH_MORALE_WIN - MATCH_MORALE_LOSS - 1 (tests pin it)
 
 ## Per answer: the chance of outcome "a" before the facts move it ("base"),
 ## which way the mood moves it ("pull": +1 a settled player or group takes it
@@ -292,6 +310,14 @@ static func kind_of(option: Dictionary, index: int) -> String:
 	return str(KINDS[clampi(index, 0, KINDS.size() - 1)])
 
 
+## Whether the pending conference followed a loss. A save from before the
+## margin was kept reads it from the question: only a loss asks these.
+static func after_loss(mc: Dictionary) -> bool:
+	if mc.has("margin"):
+		return int(mc["margin"]) < 0
+	return ["heavy_loss", "injury"].has(str(mc.get("key", "")))
+
+
 static func is_named(kind: String) -> bool:
 	return NAMED_KINDS.has(kind)
 
@@ -327,7 +353,7 @@ static func chance_parts(kind: String, facts: Dictionary) -> Array:
 		var feel := "up and about" if mood > 0.0 else "flat"
 		out.append({"pct": m, "why": ("%s is %s" % [name, feel]) if named else ("The group is %s" % feel)})
 	if named:
-		if float(facts.get("his_age", 30.0)) <= YOUNG_AGE and int(s["young"]) != 0:
+		if is_young(float(facts.get("his_age", 30.0))) and int(s["young"]) != 0:
 			out.append({"pct": int(s["young"]), "why": "%s is still young" % name})
 	elif int(facts.get("young", 0)) >= YOUNG_SIDE and int(s["young"]) != 0:
 		out.append({"pct": int(s["young"]), "why": "It's a young side"})
@@ -354,7 +380,8 @@ static func reason_line(part: Dictionary) -> String:
 ## What an answer does once the journalist's personality and the record check
 ## have had their say: {"a": {board, morale, his, odds, after}, "b": ..., "both",
 ## "notes": the twists that changed it, in words}. `ctx`: {"journalist",
-## "verdict", "name": the named player}. Every size stays inside its cap.
+## "verdict", "name": the named player, "lost": the match was a loss}. Every
+## size stays inside its cap (LOSS_LIFT_CAP for a lift after a loss).
 static func effects(kind: String, ctx: Dictionary = {}) -> Dictionary:
 	var s: Dictionary = ANSWERS.get(kind, ANSWERS["method"])
 	var j: Dictionary = PERSONA.get(str(ctx.get("journalist", "")), {})
@@ -378,6 +405,10 @@ static func effects(kind: String, ctx: Dictionary = {}) -> Dictionary:
 				o["morale"] = clampi(int(o["morale"]) + 1, -LIST_CAP, LIST_CAP)
 		elif verdict == "contradicted":
 			o["board"] = clampi(int(o["board"]) - 1, -BOARD_CAP, BOARD_CAP)
+		if bool(ctx.get("lost", false)):
+			# After a loss, a lift stops just below what a win gave.
+			o["morale"] = mini(int(o["morale"]), LOSS_LIFT_CAP)
+			o["his"] = mini(int(o["his"]), LOSS_LIFT_CAP)
 		if is_named(kind):
 			o["odds"] = str(o["odds"]) % name
 			o["after"] = str(o["after"]) % name
@@ -588,13 +619,14 @@ static func board_sentence(journalist: String, board: int) -> String:
 
 ## Moves one player's press lift by `delta` within `cap`, through his morale:
 ## stacking can never pass the cap, and only what really moved his morale is
-## kept to fade. Returns the change applied.
-static func apply_lift(p: Dictionary, delta: int, cap: int, slow: bool) -> int:
+## kept to fade. `up` (>= 0) caps a lift lower than `cap`: LOSS_LIFT_CAP after
+## a loss. Returns the change applied.
+static func apply_lift(p: Dictionary, delta: int, cap: int, slow: bool, up := -1) -> int:
 	if delta == 0:
 		return 0
 	var old := int(p.get("press_lift", 0))
 	var lo := mini(-cap, old)
-	var hi := maxi(cap, old)
+	var hi := maxi(mini(cap, up) if up >= 0 else cap, old)
 	var want := clampi(clampi(old + delta, lo, hi), -NAMED_CAP, NAMED_CAP)
 	var before := ClubLife.morale(p)
 	ClubLife.add_morale(p, want - old)

@@ -97,6 +97,21 @@ func _test_media_conference_rules() -> void:
 			"result": {"home": "COL", "away": "CAR", "score": [88, 72]}}, {})
 	_check(str(kids.get("key", "")) == "young_side" and str(kids.get("journalist", "")) == "philosopher",
 			"A young side brings the Philosopher")
+	# She waits longer than the others between questions (director 2026-11-07:
+	# about one conference in six), and "21 or younger" counts to his 22nd birthday.
+	var MCY = load("res://scripts/sim/MediaConference.gd")
+	var kid_ctx := {"club": "COL", "opponent_name": "Carlton", "young": 6, "year": 2027,
+			"result": {"home": "COL", "away": "CAR", "score": [88, 72]}}
+	var asked := []
+	for r in [15 + MCY.COOLDOWN_ROUNDS + 1, 15 + MCY.YOUNG_SIDE_COOLDOWN, 15 + MCY.YOUNG_SIDE_COOLDOWN + 1]:
+		var c := kid_ctx.duplicate(true)
+		c["round"] = r
+		asked.append(not MCY.pick(c, {"young_side": {"year": 2027, "round": 15}}).is_empty())
+	_check(asked == [false, false, true] and MCY.YOUNG_SIDE_COOLDOWN > MCY.COOLDOWN_ROUNDS,
+			"The Philosopher waits %d rounds between questions (%s)" % [MCY.YOUNG_SIDE_COOLDOWN, str(asked)])
+	_check(MCY.is_young(21.9) and MCY.is_young(19.0) and not MCY.is_young(22.0),
+			"A player counts as 21 or younger until his 22nd birthday")
+	_check(int(kids.get("margin", 0)) == 16, "The question keeps the margin it came from")
 	# An injury in a win never gets the answer that the injury cost the game.
 	var hurt_win: Dictionary = MediaConferenceScript.pick({"club": "COL", "opponent_name": "Carlton", "round": 15,
 			"injuries": [{"name": "Jack Smith"}], "result": {"home": "COL", "away": "CAR", "score": [88, 72]}}, {})
@@ -243,8 +258,8 @@ func _press_conf(key_result: Array) -> Dictionary:
 			"year": int(_state.season_year), "result": {"home": "FRE", "away": "CAR", "score": key_result}}, {})
 
 
-## (g) Caps (ruling 5.54): no answer, journalist or record check takes a size
-## past list 2, named 3, board 2; stacked answers never pass the cap, and the
+## (g) Caps: no answer, journalist or record check takes a size past list 2,
+## named 3, board 3; stacked answers never pass the cap, and the
 ## lift fades back a point a round (half pace after the Philosopher).
 func _test_press_caps_and_fade() -> void:
 	var MC = load("res://scripts/sim/MediaConference.gd")
@@ -258,8 +273,8 @@ func _test_press_caps_and_fade() -> void:
 					worst[1] = maxi(worst[1], absi(int(fx[w]["his"])))
 					worst[2] = maxi(worst[2], absi(int(fx[w]["board"])))
 	_check(worst[0] <= MC.LIST_CAP and worst[1] <= MC.NAMED_CAP and worst[2] <= MC.BOARD_CAP
-			and MC.LIST_CAP == 2 and MC.NAMED_CAP == 3 and MC.BOARD_CAP == 2,
-			"Every press size stays inside its cap: list 2, named 3, board 2 (largest %s)" % str(worst))
+			and MC.LIST_CAP == 2 and MC.NAMED_CAP == 3 and MC.BOARD_CAP == 3,
+			"Every press size stays inside its cap: list 2, named 3, board 3 (largest %s)" % str(worst))
 	var p := {"morale": 70}
 	for i in range(5):
 		MC.apply_lift(p, 2, MC.LIST_CAP, false)
@@ -307,13 +322,20 @@ func _test_press_caps_and_fade() -> void:
 	_press_reset()
 	var up: int = _state._press_board(2)
 	var more: int = _state._press_board(2)
-	_check(up == 2 and more == 0 and _state.board_confidence() == 52 and int(_state.media_memory.get("board_lift", 0)) == 2,
+	_check(up == 2 and more == 1 and _state.board_confidence() == 53 and int(_state.media_memory.get("board_lift", 0)) == 3,
 			"Two press answers in a row move the board no further than its cap (%d)" % _state.board_confidence())
+	# Director 2026-11-07: the press can move the board further than the match
+	# did. A win moves it +2 (ClubLife.after_match); the press lift is not held
+	# under that.
+	var win_move := int(load("res://scripts/sim/ClubLife.gd").after_match(50, 10)["delta"])
+	_check(win_move == 2 and int(_state.media_memory.get("board_lift", 0)) > win_move,
+			"The press can move the board further than the match result did (press %d, win %d)" % [
+			int(_state.media_memory.get("board_lift", 0)), win_move])
 	var board_trail := []
-	for r in range(3):
+	for r in range(4):
 		_state._fade_press_lifts()
 		board_trail.append(_state.board_confidence())
-	_check(board_trail == [51, 50, 50] and not _state.media_memory.has("board_lift"),
+	_check(board_trail == [52, 51, 50, 50] and not _state.media_memory.has("board_lift"),
 			"The board's press move wears off a point a round, then the trace is gone (%s)" % str(board_trail))
 	_press_reset()
 	_state.media_conference = {"key": "heavy_loss", "journalist": "muckraker", "round": 8, "question": "q",
@@ -481,13 +503,55 @@ func _test_press_board_reason() -> void:
 			"The board's reason keeps the match and adds what you told the press (%s)" % why)
 
 
+## (h) Morale after a loss (director 2026-11-07): a press answer can lift a
+## player up to just below what a win would have given him, never level with it.
+func _test_press_loss_lift() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var CL = load("res://scripts/sim/ClubLife.gd")
+	var gap: int = CL.MATCH_MORALE_WIN - CL.MATCH_MORALE_LOSS
+	_check(MC.LOSS_LIFT_CAP == gap - 1 and MC.LOSS_LIFT_CAP == 2,
+			"After a loss a press lift stops one below a win's extra morale (%d, gap %d)" % [MC.LOSS_LIFT_CAP, gap])
+	var p := {"id": "x", "morale": 70}
+	CL.morale_after_match([p], {"x": true}, false)
+	var w := {"id": "y", "morale": 70}
+	CL.morale_after_match([w], {"y": true}, true)
+	_check(int(p["morale"]) == 70 + CL.MATCH_MORALE_LOSS and int(w["morale"]) == 70 + CL.MATCH_MORALE_WIN,
+			"A player who played gets +%d for a loss, +%d for a win" % [CL.MATCH_MORALE_LOSS, CL.MATCH_MORALE_WIN])
+	for i in range(3):
+		MC.apply_lift(p, 3, MC.NAMED_CAP, false, MC.LOSS_LIFT_CAP)
+	_check(int(p["morale"]) < int(w["morale"]) and int(p["morale"]) == int(w["morale"]) - 1,
+			"Stacked lifts after a loss stop just below the win (%d vs %d)" % [int(p["morale"]), int(w["morale"])])
+	var down := {"morale": 70}
+	MC.apply_lift(down, -3, MC.NAMED_CAP, false, MC.LOSS_LIFT_CAP)
+	_check(int(down["morale"]) == 67, "The loss cap only holds lifts; a drop keeps its full size (%d)" % int(down["morale"]))
+	# The gate shows the held size: the Bogan's named answer is +3, +2 after a loss.
+	var won: Dictionary = MC.effects("back_named", {"journalist": "bogan", "name": "Jack"})
+	var lost: Dictionary = MC.effects("back_named", {"journalist": "bogan", "name": "Jack", "lost": true})
+	_check(int(won["a"]["his"]) == 3 and int(lost["a"]["his"]) == MC.LOSS_LIFT_CAP and int(lost["b"]["his"]) == int(won["b"]["his"]),
+			"The gate shows a lift after a loss held under a win's (%d, was %d)" % [int(lost["a"]["his"]), int(won["a"]["his"])])
+	_check(MC.after_loss({"margin": -3}) and not MC.after_loss({"margin": 0}) and MC.after_loss({"key": "heavy_loss"})
+			and not MC.after_loss({"key": "big_win"}), "A conference knows whether it followed a loss")
+	# Through GameState: an answer after a loss never lifts a player past a win's.
+	_press_reset()
+	_state.media_conference = _press_conf([55, 101]).duplicate(true)
+	_check(int(_state.media_conference.get("margin", 0)) == -46, "The conference keeps the result's margin")
+	var before := {}
+	for q in _state.my_list:
+		before[str(q["id"])] = int(q["morale"])
+	_state.resolve_media_conference(2)
+	var most := 0
+	for q in _state.my_list:
+		most = maxi(most, int(q["morale"]) - int(before[str(q["id"])]))
+	_check(most <= MC.LOSS_LIFT_CAP, "After a loss no answer lifts a player past %d (%d)" % [MC.LOSS_LIFT_CAP, most])
+
+
 ## (f) Only a real standout (6 goals or 40 disposals) is a star question.
 func _test_press_standout_only() -> void:
 	var MC = load("res://scripts/sim/MediaConference.gd")
 	_press_reset()
 	var ids := []
 	for p in _state.my_list:
-		if float(p.get("age", 30.0)) > MC.YOUNG_AGE and ids.size() < 3:
+		if not MC.is_young(float(p.get("age", 30.0))) and ids.size() < 3:
 			ids.append(str(p["id"]))
 	var make := func(goals: int) -> Dictionary:
 		var players := {}
@@ -812,6 +876,7 @@ func _run() -> void:
 		_state.set_setting("seen_%s_intro" % key, true)
 	_t("_test_press_rolls")
 	_t("_test_press_caps_and_fade")
+	_t("_test_press_loss_lift")
 	_t("_test_press_standing")
 	_t("_test_press_personas")
 	_t("_test_press_named")

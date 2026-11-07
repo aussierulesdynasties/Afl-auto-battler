@@ -10900,7 +10900,7 @@ func _prepare_media_conference(results: Array) -> void:
 	if roster.size() > side:
 		for r in roster[side]:
 			var p := _find_player(str(r.get("id", "")))
-			if not p.is_empty() and float(p.get("age", 30.0)) <= MediaConference.YOUNG_AGE:
+			if not p.is_empty() and MediaConference.is_young(float(p.get("age", 30.0))):
 				young += 1
 	media_conference = MediaConference.pick({
 		"result": res, "club": my_club, "opponent_name": GameDB.club_name(opp),
@@ -10929,7 +10929,7 @@ func _press_named(res: Dictionary, side: int, hurt: Dictionary) -> Dictionary:
 			continue
 		if not out.has("heavy_loss"):
 			out["heavy_loss"] = {"id": id, "name": GameDB.player_display_name(p)}
-		if not out.has("young_side") and float(p.get("age", 30.0)) <= MediaConference.YOUNG_AGE:
+		if not out.has("young_side") and MediaConference.is_young(float(p.get("age", 30.0))):
 			out["young_side"] = {"id": id, "name": GameDB.player_display_name(p)}
 	var mb := MatchStory.my_best(res, side)
 	if not mb.is_empty() and not list_player(str(mb["id"])).is_empty():
@@ -11098,7 +11098,8 @@ func press_context(option: int) -> Dictionary:
 		name = GameDB.player_display_name(his)
 	var j := str(media_conference.get("journalist", ""))
 	return {"journalist": j, "verdict": press_verdict(kind), "name": name,
-			"standing": press_standing(j) if MediaConference.JOURNALISTS.has(j) else 0, "facts": press_facts(option)}
+			"standing": press_standing(j) if MediaConference.JOURNALISTS.has(j) else 0, "facts": press_facts(option),
+			"lost": MediaConference.after_loss(media_conference)}
 
 
 ## The line under answer `option` (MediaConference.odds_line).
@@ -11164,12 +11165,14 @@ func resolve_media_conference(option: int) -> Dictionary:
 				+ MediaConference.board_sentence(j, board_moved)).strip_edges()
 	var slow := bool((MediaConference.PERSONA.get(j, {}) as Dictionary).get("slow", false))
 	var morale_delta := int(out["morale"])
+	# After a loss a lift stops just below what a win gave (director 2026-11-07).
+	var up := MediaConference.LOSS_LIFT_CAP if bool(ctx.get("lost", false)) else -1
 	if morale_delta != 0:
 		for p in my_list:
-			MediaConference.apply_lift(p, morale_delta, MediaConference.LIST_CAP, slow)
+			MediaConference.apply_lift(p, morale_delta, MediaConference.LIST_CAP, slow, up)
 	var his := list_player(str(picked.get("player", "")))
 	if int(out["his"]) != 0 and not his.is_empty():
-		MediaConference.apply_lift(his, int(out["his"]), MediaConference.NAMED_CAP, slow)
+		MediaConference.apply_lift(his, int(out["his"]), MediaConference.NAMED_CAP, slow, up)
 	var before := press_standing(j)
 	var after := MediaConference.standing_after(before, MediaConference.standing_move(j, kind, str(ctx.get("verdict", ""))))
 	if MediaConference.JOURNALISTS.has(j) and after != before:
