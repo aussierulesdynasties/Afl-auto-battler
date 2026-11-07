@@ -173,6 +173,22 @@ func _test_page() -> void:
 			present = false
 			push_error("missing on page: " + needle)
 	_check(present, "Every item of the feed is on the page (round and earlier)")
+	# The older round's story sits only under Earlier, not on the front page too.
+	var old_lines := 0
+	var old_on_front := 0
+	for lb in body.find_children("*", "Label", true, false) + body.find_children("*", "RichTextLabel", true, false):
+		var t := (lb as Label).text if lb is Label else (lb as RichTextLabel).get_parsed_text()
+		if not t.contains("Old Hand"):
+			continue
+		old_lines += 1
+		var earlier := false
+		var up: Node = lb
+		while up != null and up != body:
+			earlier = earlier or str(up.name).contains("EarlierLine")
+			up = up.get_parent()
+		if not earlier:
+			old_on_front += 1
+	_check(old_lines >= 1 and old_on_front == 0, "An older round's story is only under Earlier (%d lines, %d on the front)" % [old_lines, old_on_front])
 	_check(blob.contains("Your club"), "Your own item is marked as yours")
 	_check(body.find_child("LeadStory", true, false) != null and body.find_child("SecondaryStories", true, false) != null, "Lead and secondary stories are there")
 	var firsts := 0

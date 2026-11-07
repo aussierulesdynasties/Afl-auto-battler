@@ -714,7 +714,8 @@ static func match_factor_items(res: Dictionary, my_side: int) -> Array:
 			best_m = m
 			best_q = i
 	var told_q: Array = turn.get("quarters", [])
-	if best_q >= 0 and absi(best_m) >= 24 and (out.is_empty() or int(run["q"]) != best_q + 1) \
+	# Not said again when the run told above (four goals or more) started in that quarter.
+	if best_q >= 0 and absi(best_m) >= 24 and (int(run["len"]) < 4 or int(run["q"]) != best_q + 1) \
 			and not told_q.has(best_q + 1):
 		var s := 0 if best_m > 0 else 1
 		out.append({"fact": "q%d" % (best_q + 1), "text": "%s won the %s quarter %d.%d to %d.%d." % [GameDB.club_name(codes[s]),

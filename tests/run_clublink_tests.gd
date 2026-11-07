@@ -371,6 +371,12 @@ func _test_left_game_opens_facts(sz: Vector2i) -> void:
 	await _settle()
 	_check(opened != null and opened.name == _cp.FACTS_NAME and screen.get_node_or_null("PlayerProfile") == null,
 			"A retired player in the league's data opens his career facts (%s)" % (str(opened.name) if opened != null else "null"))
+	var one := row.duplicate()
+	one["games"] = 1
+	one["goals"] = 1
+	var head: String = _cp._facts_head(one)
+	_check(head.ends_with(": 1 game, 1 goal") and str(_cp._facts_head(row)).ends_with(": 160 games, 10 goals"),
+			"The facts heading counts one game and one goal in the singular (%s)" % head)
 	_router.handle_back()
 	await _settle()
 	screen.queue_free()
@@ -456,7 +462,16 @@ func _test_club_tap(sz: Vector2i) -> void:
 	var lab: Label = screen.find_child("ClubLabel", true, false)
 	_check(lab.get_line_count() == 1 and lab.size.x >= _text_w(lab),
 			"%s: a club's name as a link reads on one line (%d lines, %.0f px for %.0f)" % [tag, lab.get_line_count(), lab.size.x, _text_w(lab)])
-	var why: String = await Tap.tap(lab)
+	# A name that does not wrap is as wide as its words already: the link
+	# leaves its caller's flags alone.
+	var flat := Label.new()
+	flat.text = _db.club_name("MEL")
+	flat.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_cl.tappable(flat, "MEL")
+	_check(flat.size_flags_horizontal == Control.SIZE_SHRINK_BEGIN,
+			"%s: a club's name that does not wrap keeps its own width" % tag)
+	flat.free()
+	var why: String = await _tap_words(lab)
 	await _settle()
 	var page := _page(screen)
 	_check(why == "" and page != null and str(page.get_meta("club_code", "")) == "MEL",
@@ -680,7 +695,7 @@ func _test_drag_over_club(sz: Vector2i) -> void:
 	await _settle()
 
 
-## The player's profile names his club on one line in his ink, and the name is
+## The player's profile names his club on one line, readable, and the name is
 ## a tap.
 func _test_profile_club_line(sz: Vector2i, code := "MEL") -> void:
 	var tag := "%s %dx%d" % [code, sz.x, sz.y]
@@ -694,7 +709,7 @@ func _test_profile_club_line(sz: Vector2i, code := "MEL") -> void:
 	_check(cl != null and (cl as Label).text == _db.club_name(code), "%s: a profile names his club" % tag)
 	if cl != null:
 		_club_line_ok(prof, cl as Label, tag)
-		var why: String = await Tap.tap_at(cl, cl.size * 0.5, true)
+		var why: String = await _tap_words(cl as Label)
 		await _settle()
 		var page := _page(screen)
 		_check(why == "" and page != null and str(page.get_meta("club_code", "")) == code,
@@ -713,7 +728,7 @@ func _test_profile_club_line(sz: Vector2i, code := "MEL") -> void:
 ## The director's report (2026-11-08): on the profile opened over the match,
 ## "Port Adelaide" printed one letter per line down the left edge. Every way a
 ## finger opens a profile (the match, the hub, another club's page, My list)
-## ends in one sheet: his club reads on one line in his ink, and a tap on it
+## ends in one sheet: his club reads on one line, readable, and a tap on it
 ## opens his club's page over the profile.
 func _test_sheet_club_line_everywhere(sz: Vector2i) -> void:
 	await _from_match(sz)
@@ -841,7 +856,7 @@ func _from_list(sz: Vector2i) -> void:
 		await _sheet_club_tap(prof, tag)
 
 
-## The sheet a finger opened: his club on one line in his ink, and a finger on
+## The sheet a finger opened: his club on one line, readable, and a finger on
 ## it opens that club's page over the profile. Back closes the page, then the
 ## profile.
 func _sheet_club_tap(prof: Control, tag: String) -> void:
@@ -859,7 +874,7 @@ func _sheet_club_tap(prof: Control, tag: String) -> void:
 	if cl == null or code == "":
 		return
 	_club_line_ok(prof, cl, tag)
-	var why: String = await Tap.tap(cl)
+	var why: String = await _tap_words(cl)
 	await _settle()
 	var page := _open_node(_cp.SHEET_NAME)
 	_check(why == "" and page != null and str(page.get_meta("club_code", "")) == code,
@@ -874,16 +889,19 @@ func _sheet_club_tap(prof: Control, tag: String) -> void:
 
 
 ## His club under his name: one line, as wide as its words, no taller than a
-## thumb's 44 px, in the ink of his name. And no other words on the profile
+## thumb's 44 px, readable on the sheet. And no other words on the profile
 ## squeezed into a column of letters.
 func _club_line_ok(prof: Control, cl: Label, tag: String) -> void:
 	var need := _text_w(cl)
 	_check(cl.get_line_count() == 1 and cl.size.x >= need and cl.size.y <= 44.5,
 			"%s: '%s' reads on one line (%d lines, %.0f px wide for %.0f, %.0f tall)" % [
 					tag, cl.text, cl.get_line_count(), cl.size.x, need, cl.size.y])
-	var name_l: Label = prof.find_child("ProfileName", true, false)
-	_check(name_l != null and cl.get_theme_color("font_color") == name_l.get_theme_color("font_color"),
-			"%s: his club reads in the ink of his name" % tag)
+	# Readable, whichever colour it wears: his name's ink (as now) or the club
+	# link's ink is the director's open question, and both read at 4.5:1 on the
+	# sheet's panel.
+	var ink := cl.get_theme_color("font_color")
+	_check(_ui.contrast(ink, _ui.PANEL) >= 4.5,
+			"%s: his club reads on the sheet (%s, %.1f:1)" % [tag, ink.to_html(false), _ui.contrast(ink, _ui.PANEL)])
 	# A wrapping label narrower than its longest word breaks that word into
 	# pieces, down to one letter a line.
 	var squeezed := []
@@ -906,6 +924,20 @@ func _club_line_ok(prof: Control, cl: Label, tag: String) -> void:
 func _text_w(l: Label) -> float:
 	return l.get_theme_font("font").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 			l.get_theme_font_size("font_size")).x
+
+
+## A finger on a club's name itself: the middle of its letters, not the empty
+## end of a wide line, and the touch must reach the label.
+func _tap_words(l: Label) -> String:
+	if l == null:
+		return "no label"
+	var w := minf(_text_w(l), l.size.x)
+	var x := w * 0.5
+	if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER:
+		x = l.size.x * 0.5
+	elif l.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT:
+		x = l.size.x - w * 0.5
+	return await Tap.tap_at(l, Vector2(x, l.size.y * 0.5), true)
 
 
 ## The open sheet of that name anywhere on screen (not one closing).

@@ -103,6 +103,18 @@ static func find(first: String, last: String, dob: String) -> Dictionary:
 		for q in arr:
 			if q is Dictionary and not bool(q.get("generated", false)) and _player_key(q) == k:
 				return {"p": q, "club": str(q.get("club", "")), "prospect": false}
+	if GameState.season != null or not GameState.league_lists.is_empty():
+		# Inside a career only its own people count: the 2026 file would show
+		# a retired relative at his 2026 club, with his 2026 ratings. A
+		# prospect is one still in a pool to be drafted.
+		var pools: Array = [GameState.draftee_pool]
+		if GameState.draft != null:
+			pools.append(GameState.draft.pool)
+		for arr in pools:
+			for q in arr:
+				if q is Dictionary and not bool(q.get("generated", false)) and _player_key(q) == k:
+					return {"p": q, "club": "", "prospect": true}
+		return {}
 	for q in GameDB.players:
 		if _player_key(q) == k:
 			return {"p": q, "club": str(q.get("club", "")), "prospect": false}

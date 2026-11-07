@@ -259,12 +259,15 @@ const MATCH_MORALE_WIN := 4
 const MATCH_MORALE_LOSS := 1
 
 
-static func morale_after_match(list: Array, played: Dictionary, won: bool, soften: Dictionary = {}, culture_s := 0.0) -> void:
+## `unavailable`: ids who could not play this game (injured or suspended
+## before the week ticked down): not picked is not left out.
+static func morale_after_match(list: Array, played: Dictionary, won: bool, soften: Dictionary = {}, culture_s := 0.0,
+		unavailable: Dictionary = {}) -> void:
 	for p in list:
 		var id := str(p["id"])
 		if played.has(id):
 			add_morale(p, MATCH_MORALE_WIN if won else MATCH_MORALE_LOSS)
-		elif int(p.get("injury_weeks", 0)) <= 0:
+		elif int(p.get("injury_weeks", 0)) <= 0 and not unavailable.has(id):
 			var loss := 6 if int(p.get("overall", 0)) >= 78 else 3
 			add_morale(p, -CoachEffects.softened(loss, _sting_share(float(soften.get(id, 0.0)), culture_s)))
 		else:
