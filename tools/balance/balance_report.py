@@ -442,7 +442,7 @@ def spoils_section(A, B):
         if b["lo"] <= v <= b["hi"]:
             return "IN"
         return "NEAR" if abs(v - b["mean"]) <= 2 * b["sd"] else "OUT"
-    print("\n## Spoils a team a game, by zone (spoiling side's end; real zones are an estimate)\n")
+    print("\n\n## Spoils a team a game, by zone (spoiling side's end; real zones are an estimate)\n")
     head = "| zone | AFL mean | AFL range | A | A/real | mark |" + (" B | mark | B-A | se | sig |" if B else "")
     print(head)
     print("|" + "---|" * (head.count("|") - 1))
