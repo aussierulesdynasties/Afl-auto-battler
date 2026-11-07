@@ -137,6 +137,9 @@ func _ready() -> void:
 	if _res.is_empty():
 		Router.replace("hub")
 		return
+	# Report a problem (Settings) quotes this match's last feed lines.
+	ProblemReport.start_feed("%s, %s v %s" % [str(_res.get("label", "")),
+			GameDB.club_name(str(_res["home"])), GameDB.club_name(str(_res["away"]))])
 	# The ground the vignettes draw: the MCG has its own stands (FL-003); every other
 	# venue keeps the plain ground. Set every match, as the static outlives the scene.
 	VignetteGround.use_match(_res)
@@ -3670,6 +3673,7 @@ func _feed_add(ev: Dictionary) -> void:
 	var stamp := _clock_text(int(ev.get("q", 1)), int(ev.get("min", 0)))
 	if str(line["tier"]) == "goal":
 		_feed.add_child(_goal_row(ev, stamp))
+		ProblemReport.note_feed("%s  %s" % [stamp, str(line["text"])])
 		_trim_feed()
 	elif str(line["tier"]) == "break":
 		_feed_text(str(line["text"]), UiKit.TEXT, true, "BreakLine")
@@ -3721,6 +3725,7 @@ func _feed_text(text: String, col: Color, strong: bool, node_name: String) -> vo
 	l.set_meta("feed_kind", node_name)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_feed.add_child(l)
+	ProblemReport.note_feed(text)
 	_trim_feed()
 
 
