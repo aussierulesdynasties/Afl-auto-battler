@@ -19,7 +19,6 @@ const COACH_SHIRT := Color(0.93, 0.93, 0.95)
 const COACH_LOOK := {"skin": 1, "hair": 2, "hair_style": "short_crop"}
 const BODY := "coach"
 var club := ""
-var heading := "Post-match press conference"
 var _colours := []
 var _t := 0.0
 var _ready := false
@@ -98,15 +97,8 @@ func _draw() -> void:
 	var f := fmod(_t + 0.3, 1.9)
 	if _t > 0.5 and f < 0.07:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(1, 1, 1, 0.18 * (1.0 - f / 0.07)), true)
-	# Same cinematic letterbox language as StoppageVignette.
-	var bar := h * 0.075 * (1.0 - pow(1.0 - fade, 3.0))
-	draw_rect(Rect2(0, 0, w, bar), Color.BLACK, true)
-	draw_rect(Rect2(0, h - bar, w, bar), Color.BLACK, true)
-	if fade >= 1.0:
-		var font: Font = UiKit.BOLD
-		var fs := int(clampf(w / 24.0, 13.0, 18.0))
-		var tw := font.get_string_size(heading, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		draw_string(font, Vector2((w - tw) * 0.5, bar * 0.5 + fs * 0.36), heading, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.92))
+	# No letterbox and no caption: the room fills its frame edge to edge (the black
+	# bands, director's question), and the screen's own title already names it.
 	if fade < 1.0:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 1.0 - fade), true)
 
@@ -124,22 +116,23 @@ func _coach(feet: Vector2, pm: float, anim: String, facing: String, frame: int) 
 ## The media wall: a step-and-repeat of plain club-colour tiles (no invented logos),
 ## lit from the front, and the room's dark edges.
 func _draw_wall(w: float, h: float, desk_y: float) -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.05, 0.05, 0.06), true)
-	var wall := Rect2(w * 0.04, h * 0.1, w * 0.92, desk_y - h * 0.06)
-	draw_rect(wall, Color(0.12, 0.12, 0.14), true)
+	# The wall runs to every edge of the frame, so no dark strip shows as the camera moves.
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.12, 0.12, 0.14), true)
+	var grid := Rect2(w * 0.04, h * 0.1, w * 0.92, desk_y - h * 0.06)
+	var wall := Rect2(0.0, 0.0, w, grid.end.y)
 	var a: Color = _colours[0] if not _colours.is_empty() else Color(0.3, 0.3, 0.32)
 	var b: Color = _colours[1] if _colours.size() > 1 else a.lightened(0.3)
-	var tw := wall.size.x / 7.0
-	var th := wall.size.y / 3.5
-	for row in range(4):
-		for col in range(8):
-			var off := tw * 0.5 if row % 2 == 1 else 0.0
-			var r := Rect2(wall.position + Vector2(col * tw - off + tw * 0.12, row * th + th * 0.18), Vector2(tw * 0.76, th * 0.64))
+	var tw := grid.size.x / 7.0
+	var th := grid.size.y / 3.5
+	for row in range(-1, 4):
+		for col in range(-1, 9):
+			var off := tw * 0.5 if posmod(row, 2) == 1 else 0.0
+			var r := Rect2(grid.position + Vector2(col * tw - off + tw * 0.12, row * th + th * 0.18), Vector2(tw * 0.76, th * 0.64))
 			r = r.intersection(wall)
 			if r.size.x <= 1.0 or r.size.y <= 1.0:
 				continue
 			# Muted, so a white or yellow club doesn't glare over the coach.
-			var c := (a if (row + col) % 2 == 0 else b).darkened(0.55)
+			var c := (a if posmod(row + col, 2) == 0 else b).darkened(0.55)
 			draw_rect(r, Color(c, 0.55), true)
 			draw_rect(Rect2(r.position + r.size * Vector2(0.3, 0.42), r.size * Vector2(0.4, 0.16)), Color(1, 1, 1, 0.07), true)
 	# Key light on the wall behind his chair.
