@@ -71,7 +71,7 @@ func _run() -> void:
 	_vs(state, club, "STK" if club == "FRE" else "WBD")
 	state.open_preseason()
 	# For the look: a side that knows its plans unevenly.
-	state.plan_known[club]["contest"] = 0
+	state.plan_known[club]["defensive"] = 0
 	state.plan_known[club]["controlled"] = 1
 	state.plan_known[club]["defensive"] = 1
 	root.get_node("Router").go("hub")
@@ -86,11 +86,13 @@ func _run() -> void:
 	await _shot(out + "_drill_two.png")
 	await _press("Drill0_defensive")
 	await _press("PreSeasonSim")
+	await _frames(6)
+	await _press("PreSeasonSimGo")
 	await _frames(20)
 	print("scene ", current_scene.name, " after: contest ", state.plan_level(club, "contest"), " attacking ",
 			state.plan_level(club, "attacking"))
 	state.plan_known[club]["controlled"] = 1
-	state.plan_known[club]["through_stars"] = 0
+	state.plan_known[club]["defensive"] = 0
 	root.get_node("Router").go("coaching")
 	await _frames(12)
 	await _scroll_to("ClubPlan")
@@ -98,7 +100,7 @@ func _run() -> void:
 	if state.prepare_interactive_match():
 		root.get_node("Router").go("match")
 		await _frames(40)
-		await _press("PlanPicker_through_stars")
+		await _press("PlanPicker_defensive")
 		await _scroll_to("PlanNote")
 		await _shot(out + "_break.png")
 	quit(0)

@@ -27,6 +27,10 @@ const CARNIVAL_AFTER := 10
 const DRAFT_AFTER := 11
 const STARS := 3
 const KIND := "midseason"
+const NOBODY_LEFT_NEWS := "Mid-season rookie draft: nobody was left when your pick came up, so it passed."
+## Nobody to take from the start: one line, not "no club took a player" and
+## "nobody was left" side by side.
+const NOBODY_AT_ALL_NEWS := "Mid-season rookie draft: there was nobody to take, so no club made a pick, yours included."
 
 const STATE_WORDS := {
 	"VICM": "Vic Metro", "VICC": "Vic Country", "SA": "South Australia",
@@ -193,8 +197,12 @@ static func _run(gs) -> void:
 	while int(rec["next"]) < order.size():
 		var code := str(order[int(rec["next"])])
 		if code == gs.my_club:
-			gs.mark_dirty()
-			return
+			if not pool(gs).is_empty():
+				gs.mark_dirty()
+				return
+			# Nobody left to take: no choice to make, so the pick passes
+			# without stopping the hub, and the news says so.
+			rec["nobody_left"] = true
 		var left := pool(gs)
 		if not left.is_empty():
 			_take(gs, code, left[0])
@@ -202,8 +210,8 @@ static func _run(gs) -> void:
 	_finish(gs)
 
 
-## Your pick (player id) or "" to pass. False when it is not your turn or he
-## has gone.
+## Your pick (player id) or "" to pass. False when it is not your turn or
+## that player has gone.
 static func choose(gs, player_id: String) -> bool:
 	if not waiting(gs):
 		return false
@@ -212,12 +220,21 @@ static func choose(gs, player_id: String) -> bool:
 		for p in pool(gs):
 			if str(p["id"]) == player_id:
 				hit = p
-		if hit.is_empty():
+		if hit.is_empty() or Challenge.block_reason(gs, hit) != "":
 			return false
 		_take(gs, gs.my_club, hit)
 	gs.midseason["next"] = int(gs.midseason["next"]) + 1
 	_run(gs)
 	return true
+
+
+## Your pick waits but nobody is left to take (a free agent you signed was
+## the last of them): pass it, and the draft news says why. True if passed.
+static func pass_if_nobody_left(gs) -> bool:
+	if not waiting(gs) or not pool(gs).is_empty():
+		return false
+	gs.midseason["nobody_left"] = true
+	return choose(gs, "")
 
 
 ## Before the next round is played: an unmade pick is passed.
@@ -238,7 +255,7 @@ static func _take(gs, code: String, p: Dictionary) -> void:
 	else:
 		gs.draftee_pool.erase(p)
 		gs.drafted_draftees[id] = code
-		gs._mark_drafted(p, KIND, 0)
+		gs._mark_drafted(p, KIND, 0, code)
 	if not p.has("xp"):
 		p["xp"] = 0
 		p["xp_games"] = 0
@@ -257,12 +274,15 @@ static func _finish(gs) -> void:
 	var rec: Dictionary = gs.midseason
 	rec["done"] = true
 	var picks: Array = rec.get("picks", [])
+	var nobody := bool(rec.get("nobody_left", false))
 	if picks.is_empty():
-		gs.add_news("draft", "Mid-season rookie draft: no club took a player.")
+		gs.add_news("draft", NOBODY_AT_ALL_NEWS if nobody else "Mid-season rookie draft: no club took a player.")
 	else:
 		var bits: PackedStringArray = []
 		for k in picks:
 			bits.append("%s: %s (%s)" % [GameDB.club_short(str(k["club"])), k["name"], k["from"]])
 		gs.add_news("draft", "Mid-season rookie draft, %d pick%s. %s." % [picks.size(),
 				"" if picks.size() == 1 else "s", "; ".join(bits)])
+		if nobody:
+			gs.add_news("draft", NOBODY_LEFT_NEWS)
 	gs.mark_dirty()

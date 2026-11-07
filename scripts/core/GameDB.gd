@@ -156,6 +156,9 @@ var late_draftees := []    # generated future classes registered at runtime
 var appearance := {}       # "first|last|dob" -> {skin, hair, status, club}: curated looks
 var skin_mix: Array = Appearance.DEFAULT_SKIN_MIX
 var loaded := false
+## True from a reload until a career takes the data (GameState.reset() clears it):
+## a career mutates the player dicts in place, so only an untouched load is reused.
+var pristine := false
 ## The 2026 league's mean overall. Each rollover re-anchors the league to it
 ## (Prospects.renormalise_league), so ratings stay relative to the league.
 var baseline_overall := 0.0
@@ -180,7 +183,12 @@ func _ready() -> void:
 	reload()
 
 
+## Full loads of the data files this run: tests count them.
+var reloads := 0
+
+
 func reload() -> void:
+	reloads += 1
 	clubs = _load_clubs()
 	club_order = CLUB_ORDER.duplicate()
 	_alias_candidates = []
@@ -198,6 +206,17 @@ func reload() -> void:
 		Potential.assign(p)
 	_apply_ovr_overrides(players)
 	_apply_potential_overrides(players)
+	# The lists first: the prospects below borrow their shapes from these players
+	# (Prospects._shape_for). Built later, the boot load drew them from nothing and
+	# every reload from the lists of the load before it.
+	players_by_club = {}
+	for code in club_order:
+		players_by_club[code] = []
+	for p in players:
+		if not players_by_club.has(p["club"]):
+			players_by_club[p["club"]] = []
+		players_by_club[p["club"]].append(p)
+	Prospects.forget_cache()
 	draftees = _load_draftees()
 	list_additions = _load_list_additions()
 	# List additions become real players here, so the hand-set numbers reach
@@ -210,15 +229,9 @@ func reload() -> void:
 	mark_unicorns(players + draftees)
 	late_draftees = []
 
-	players_by_club = {}
-	for code in club_order:
-		players_by_club[code] = []
-	for p in players:
-		if not players_by_club.has(p["club"]):
-			players_by_club[p["club"]] = []
-		players_by_club[p["club"]].append(p)
 
 	loaded = not players.is_empty()
+	pristine = loaded
 	baseline_overall = 0.0
 	for p in players:
 		baseline_overall += float(p["overall"])
@@ -272,6 +285,7 @@ func club_marker_colours(code: String) -> Array:
 ## Add a created club (ClubForge.make_club) to the competition, after the
 ## clubs that ship. Registering it again replaces it.
 func register_club(row: Dictionary) -> void:
+	pristine = false
 	var code := str(row.get("code", ""))
 	if code == "":
 		return
@@ -284,6 +298,7 @@ func register_club(row: Dictionary) -> void:
 
 ## Take every created club out again (a new career, or loading another save).
 func unregister_custom_clubs() -> void:
+	pristine = false
 	for code in clubs.keys():
 		if bool(clubs[code].get("custom", false)):
 			clubs.erase(code)
@@ -369,6 +384,7 @@ func player_by_id(id: String):
 ## Generated future classes register here so pick logs and box scores can still
 ## resolve their names by stable id after a season rollover.
 func register_draftees(list: Array) -> void:
+	pristine = false
 	# A class made again (a new seed) replaces its first version, by id.
 	var ids := {}
 	for p in list:
@@ -478,6 +494,7 @@ const UNICORNS := ["Luke Jackson", "Sam Darcy", "Mark Blicavs", "Xavier Ladbrook
 ## his name wherever the draft sends him), never a generated player. A save
 ## from before the flag gets it back on load (GameState).
 func mark_unicorns(list: Array) -> void:
+	pristine = false
 	for p in list:
 		if bool(p.get("generated", false)):
 			continue
@@ -947,6 +964,7 @@ func data_enter_year(code: String) -> int:
 ## career leaves out gets a year that never comes). reload() puts the data's
 ## own year back.
 func set_enter_year(code: String, year: int) -> void:
+	pristine = false
 	if clubs.has(code):
 		(clubs[code] as Dictionary)["enter"] = year
 
@@ -973,6 +991,7 @@ func _assign_fictional_names(list: Array) -> void:
 ## name per player. Adding the loop index on top of the cursor skips names
 ## quadratically, exhausts the pool, and used to fall back to "Squadmate 001".
 func assign_aliases(list: Array) -> void:
+	pristine = false
 	_ensure_alias_pool()
 	# A real listed player's name is never handed out as an alias.
 	for p in list:
@@ -1161,6 +1180,15 @@ func _apply_history_rows(list: Array) -> void:
 			p["drafted_year"] = int(str(cells[idx["draft_year"]]))
 			p["drafted_type"] = str(cells[idx["draft_type"]])
 			p["drafted_pick"] = int(pick)
+			# The club that drafted him is the first club in his AFL career
+			# (club:from:to:games:goals stints, oldest first): what home-grown
+			# means for a Challenge goal (Challenge.homegrown_flag).
+			if idx.has("career"):
+				var first := str(cells[idx["career"]]).split(";", false)
+				if not first.is_empty():
+					var code := str(first[0]).split(":")[0].strip_edges()
+					if code != "" and code != "?":
+						p["drafted_club"] = code
 		var hist := []
 		for chunk in str(cells[idx["seasons"]]).split(";", false):
 			var parts := chunk.split(":")

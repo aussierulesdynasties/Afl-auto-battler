@@ -19,6 +19,9 @@ var existing_sizes := {}              # code -> kept list length (intake only)
 ## a career's intake sets the senior list (RookieList), and existing_sizes
 ## counts senior players only.
 var senior_cap := 0
+## Youth only (Challenge.gd): your club may not take a player older than this.
+## 0 for no limit. Rival clubs are never bound.
+var user_max_age := 0
 var existing_role_counts := {}        # code -> {RUCK..FWD} kept players (intake)
 var existing_roles := {}              # code -> [[role, role2], ...] kept players (intake)
 var _fixed_order: Array = []
@@ -26,6 +29,10 @@ var _fixed_order: Array = []
 ## had nobody it could take). A passed club is skipped for the rest of the
 ## draft and left out of the extra rounds.
 var passed_clubs := {}
+## Intake: the coach's picks that passed because his list was full, in order:
+## [{"pick": overall pick number, "why": "list_full"}]. Saved with the draft;
+## the draft screen and the draft-night news say each one.
+var user_passed: Array = []
 ## Intake: how many slots the planned rounds hold (the extra rounds come after).
 var _planned_len := 0
 
@@ -360,7 +367,52 @@ func remaining_pool() -> int:
 func _list_full(code: String) -> bool:
 	if not intake_mode:
 		return false
-	return int(existing_sizes.get(code, 0)) + count_for(code) >= (senior_cap if senior_cap > 0 else Ratings.LIST_SIZE)
+	return int(existing_sizes.get(code, 0)) + count_for(code) >= list_cap()
+
+
+## Intake: where a list is full for this draft (the senior list in a career).
+func list_cap() -> int:
+	return senior_cap if senior_cap > 0 else Ratings.LIST_SIZE
+
+
+## Intake: the list spots `code` still has open tonight.
+func open_spots(code: String) -> int:
+	return maxi(0, list_cap() - int(existing_sizes.get(code, 0)) - count_for(code))
+
+
+## Intake: `code`'s picks still to come, split by whether a list spot is left
+## for each: {"open": spots, "usable": [pick numbers], "passing": [pick
+## numbers]}. A club with a full list passes its picks.
+func spots_plan(code: String) -> Dictionary:
+	var open := open_spots(code)
+	var picks := [] if passed_clubs.has(code) else upcoming_picks(code, 0)
+	return {"open": open, "usable": picks.slice(0, mini(open, picks.size())),
+			"passing": picks.slice(mini(open, picks.size()))}
+
+
+## Pick numbers in words: "40", "40 and 58", "40, 58 and 76".
+static func picks_words(picks: Array) -> String:
+	var bits: PackedStringArray = []
+	for n in picks:
+		bits.append(str(int(n)))
+	if bits.size() <= 1:
+		return "".join(bits)
+	return "%s and %s" % [", ".join(bits.slice(0, bits.size() - 1)), bits[bits.size() - 1]]
+
+
+## The line that says your picks passed for a full list ("" when none did):
+## "Pick 49 passed: your senior list is full (38)."
+func user_passed_line() -> String:
+	if user_passed.is_empty():
+		return ""
+	var nums := user_passed.map(func(e): return int(e["pick"]))
+	return "%s %s passed: your %slist is full (%d)." % ["Pick" if nums.size() == 1 else "Picks",
+			picks_words(nums), "senior " if senior_cap > 0 else "", list_cap()]
+
+
+func _note_user_pass(code: String) -> void:
+	if intake_mode and code == user_club and _list_full(code):
+		user_passed.append({"pick": pick_index + 1, "why": "list_full"})
 
 
 func _skip_current_pick() -> void:
@@ -431,11 +483,14 @@ func auto_until_user_turn() -> void:
 	while not is_finished():
 		var code := current_club()
 		if passed_clubs.has(code):
+			_note_user_pass(code)
 			_skip_current_pick()
 			continue
 		if _list_full(code):
 			# The club is at the list cap: pass, like a club with no space
-			# under the CBA at the real draft.
+			# under the CBA at the real draft. Your own pass is recorded,
+			# so the draft screen can say it.
+			_note_user_pass(code)
 			_skip_current_pick()
 			continue
 		if code == user_club:
@@ -789,9 +844,12 @@ func _best_ai_pick(code: String, why := {}) -> Dictionary:
 	var best_score := -INF
 	var watch := AiReasons.enabled and not wanted().is_empty()
 	var scored := {}   # wanted id -> [score, detail]
+	var mine := code == user_club and user_max_age > 0
 	for p in pool:
 		var id := str(p["id"])
 		if picked.has(id):
+			continue
+		if mine and too_old_for_user(p):
 			continue
 		if forced_role != "" and not Ratings.plays_role(p, forced_role):
 			if watch and wanted().has(id):
@@ -819,6 +877,8 @@ func _best_ai_pick(code: String, why := {}) -> Dictionary:
 		for p in pool:
 			var id := str(p["id"])
 			if picked.has(id):
+				continue
+			if mine and too_old_for_user(p):
 				continue
 			if not _can_afford_for(code, p):
 				continue
@@ -1441,7 +1501,14 @@ func has(id: String) -> bool:
 	return picked.has(id)
 
 
+## Over your Youth only age line (user_max_age)?
+func too_old_for_user(p: Dictionary) -> bool:
+	return user_max_age > 0 and int(floor(float(p.get("age", 0)))) > user_max_age
+
+
 func can_pick_player(p: Dictionary) -> bool:
+	if too_old_for_user(p):
+		return false
 	if league_mode:
 		if not is_user_turn() or picked.has(str(p["id"])) or not _can_afford_for(user_club, p):
 			return false
@@ -1509,6 +1576,9 @@ func pick_block_reason(p: Dictionary) -> String:
 			return "Already on your list."
 		return "Drafted #%d by %s." % [int(entry.get("pick", 0)),
 				Engine.get_main_loop().root.get_node("GameDB").club_name(club)]
+	if too_old_for_user(p):
+		return "Youth only: %s is %d, and you cannot draft a player over %d." % [
+				Challenge.surname(p), int(floor(float(p.get("age", 0)))), user_max_age]
 	if league_mode:
 		if is_finished():
 			return "The draft is complete."
@@ -1544,7 +1614,7 @@ func pick(p: Dictionary) -> bool:
 		auto_until_user_turn()
 		return true
 
-	if picked.has(p["id"]):
+	if picked.has(p["id"]) or too_old_for_user(p):
 		return false
 	if count() >= target_size:
 		return false

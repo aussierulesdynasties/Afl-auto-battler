@@ -15,7 +15,8 @@ const PASS_HUB := "Starting the next round without picking passes it."
 ## Open the sheet over `host` if the Rookie Draft waits on you. `on_done`
 ## runs once the sheet closes for good (your draft over, or Back).
 static func open(host: Control, on_done: Callable, pass_line := PASS_PRESEASON) -> Control:
-	if not RookieList.waiting(GameState):
+	# Nobody left to take is no choice: the pick passes and the news says so.
+	if not RookieList.waiting(GameState) or RookieList.pass_if_nobody_left(GameState):
 		return null
 	var old := host.get_node_or_null(NAME)
 	if old != null and is_instance_valid(old) and not old.is_queued_for_deletion():
@@ -35,8 +36,6 @@ static func open(host: Control, on_done: Callable, pass_line := PASS_PRESEASON) 
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(note)
 	var shown := MidseasonDraft.pool(GameState).slice(0, SHOWN)
-	if shown.is_empty():
-		v.add_child(UiKit.lbl("Nobody is left to take.", 15, UiKit.TEXT))
 	for p in shown:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
@@ -48,9 +47,20 @@ static func open(host: Control, on_done: Callable, pass_line := PASS_PRESEASON) 
 		var pick := UiKit.btn("Pick", UiKit.NAME)
 		pick.name = "RookiePick_%s" % str(p["id"])
 		pick.custom_minimum_size = Vector2(88, 48)
+		# Your challenge bars him: said on the button and in a line under
+		# him, never only on hover (a phone has none).
+		var barred := Challenge.block_reason(GameState, p)
+		if barred != "":
+			pick.text = Challenge.short_tag(GameState, p)
+			pick.disabled = true
 		pick.pressed.connect(_choose.bind(host, overlay, str(p["id"]), on_done, pass_line))
 		row.add_child(pick)
 		v.add_child(row)
+		if barred != "":
+			var why := UiKit.lbl(barred, UiKit.SMALL, UiKit.MUTED)
+			why.name = "ChallengeWhy_%s" % str(p["id"])
+			why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			v.add_child(why)
 	var pass_btn := UiKit.btn("Pass", UiKit.NAME, true)
 	pass_btn.name = "RookiePass"
 	pass_btn.custom_minimum_size = Vector2(0, 48)

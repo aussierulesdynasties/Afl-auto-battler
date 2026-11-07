@@ -38,14 +38,12 @@ const BOUNDARY_EXIT_P := 0.008
 const BOUNDARY_RUSHED_BONUS := 0.004
 const OUT_ON_FULL_SHARE := 0.12
 const BOUNDARY_TOUCHED_SHARE := 0.28
-var tactics := [{}, {}]      # per side: gameplan, tag_id, tagger_id, pep
+var tactics := [{}, {}]      # per side: gameplan, focus_mid/fwd/def (focus_id), tag_id, tagger_id, pep
 ## Tags dropped because the man was no longer a midfielder: {side, id, q}.
 var tag_drops: Array = []
 ## How well each side's match-day players suit each plan (PlanFit): the
 ## plan's upside is scaled by it, its costs are not.
 var plan_fit := [{}, {}]
-## Each side's best three at the first bounce: who Through stars goes through.
-var stars := [{}, {}]
 ## The plan each side's list suits as its usual game (PlanFit.standing_plan):
 ## where an AI club starts, and what it goes back to.
 var standing := ["balanced", "balanced"]
@@ -69,11 +67,12 @@ var duel_log := {}
 var roam_pairs := {}
 ## Match-ups changed during the match: [{"q", "side" (defending), "fwd", "def"}].
 var duel_changes: Array = []
-## The calls a side's coach has made himself (coach_interceptor, coach_matchup,
-## his set-up before the bounce): his assistant leaves them alone for the
-## rest of the match (Squad.assistant). {"interceptor": bool, "duels":
-## {forward id: true}}.
-var _own := [{"interceptor": false, "duels": {}}, {"interceptor": false, "duels": {}}]
+## The calls a side's coach has made himself (coach_interceptor, his tag
+## and the spare's minder): his assistant leaves them alone for the rest of
+## the match (Squad.assistant). The match-ups are always the sim's own: key
+## match-ups are cut (director, 2026-11-07: "Roles replace match-ups").
+var _own := [{"interceptor": false, "tag": false, "minder": false},
+		{"interceptor": false, "tag": false, "minder": false}]
 ## The contest in play, attached to the score or rebound it produces.
 var _duel := {}
 ## The key forward whose named contest inside 50 was just logged, so the mark
@@ -150,11 +149,7 @@ var _played := [{}, {}]      # side -> id -> true: everyone who took the field
 ## full-time summary, director 2026-10-11); "legs", "traits" and "form" are
 ## the players and the bounce of the ball, with whatever no line measures.
 var impact := [{}, {}]
-const DECISION_CAUSES := ["moments", "gameplan", "loose", "matchups", "tag", "pep", "bursts", "minder"]
-## The defender each of the coach's own match-ups replaced: def side ->
-## {forward id: defender id, "" for none}, from his first change of it. The
-## match-ups line is the contest with his man against this one.
-var _duel_was := [{}, {}]
+const DECISION_CAUSES := ["moments", "gameplan", "loose", "tag", "pep", "bursts", "minder"]
 ## The forward the loose man was on before he was sent loose: def side ->
 ## {"id": loose man, "fwd": forward id}. Without the call he would be on him.
 var _loose_was := [{}, {}]
@@ -210,6 +205,9 @@ var boundary_rng := RandomNumberGenerator.new()
 ## A contest that locks up into a ball-up (match flow, 2026-10-10): its own
 ## stream, so the calibrated play RNG is not re-rolled by it.
 var lockup_rng := RandomNumberGenerator.new()
+## The wet ball's fumbles (row 120): their own stream, drawn only on a wet day,
+## so every other day's dice are where they were.
+var fumble_rng := RandomNumberGenerator.new()
 ## The last chain ended in a ball-up called in play (a tackle held, a contest
 ## locked up): the next chain starts at that stoppage.
 var _prev_locked := false
@@ -250,12 +248,29 @@ var weather := "perfect":
 		weather = v if WEATHER_RATES.has(v) or v == "perfect" else "perfect"
 		_rates_cache = {}
 const WEATHER_RATES := {
-	"wet": {"mark_share_of_kicks": 0.90, "pressure_base": 1.18, "clanger_per_chain": 1.15,
-			"stoppage_share": 1.05, "inside50_goal": 0.98, "inside50_behind": 1.07,
+	# Row 120: the wet's tackles come from tackle_share (WEATHER_SIM), not from
+	# more pressure, which cost scoring past the evidence; behinds 1.07 -> 1.03 as
+	# the set shots now carry their own share of the accuracy drop.
+	"wet": {"mark_share_of_kicks": 0.90, "clanger_per_chain": 1.15,
+			"stoppage_share": 1.05, "inside50_goal": 0.98, "inside50_behind": 1.03,
 			"one_percenter_share": 1.4, "metres_gain_mean": 1.12},
 	"windy": {"mark_share_of_kicks": 0.92, "clanger_per_chain": 1.06,
 			"metres_gain_mean": 1.03},
 	"hot": {"pressure_base": 0.97, "stoppage_share": 0.95, "metres_gain_mean": 1.03},
+}
+## Row 120 (director 2026-11-06): the wet is more fumbles, more stoppages and
+## harder set shots, with tackles toward the real +12% (row 61). Rates for the
+## sim's own named constants, read through _wx (WEATHER_RATES holds Ratings.T
+## multipliers only). A condition with no row, a perfect day included, plays
+## every one at 1.0 and draws no extra dice.
+## - set_acc: goals per set shot, on every band and on a free's set shot.
+## - lockup: LOCKUP_PRESS and LOCKUP_SPOIL, more contests locking up for a ball-up.
+## - tackle_spill: TACKLE_SPILL, so more held tackles are ball-ups.
+## - fumble: the chance a ground ball is fumbled at the gather (_wet_fumble).
+## - tackle_share: PRESS_TACKLE_SHARE, more of the pressure a tackle and less
+##   a rushed disposal (pressure acts unchanged).
+const WEATHER_SIM := {
+	"wet": {"set_acc": 0.97, "lockup": 1.0, "tackle_spill": 0.85, "fumble": 0.08, "tackle_share": 1.27},
 }
 ## A windy day has a breeze end (the "five-goal breeze"): shots kicked with
 ## it are a little easier, against it much harder, about 5% fewer goals overall
@@ -270,6 +285,15 @@ var breeze_side := 0
 ## Whether `side` kicks with the breeze this quarter (windy days only).
 func with_breeze(side: int) -> bool:
 	return (side == breeze_side) == (current_quarter % 2 == 1)
+
+
+## The day's rate for a WEATHER_SIM key: `default` when the condition has no
+## row or the row leaves it out. An audit sizes it with tune "WX_<key>".
+func _wx(key: String, default := 1.0) -> float:
+	var row: Dictionary = WEATHER_SIM.get(weather, {})
+	if row.is_empty():
+		return default
+	return _tv("WX_" + key, float(row.get(key, default)))
 
 
 ## Hot days: legs go faster (the Heat Policy's longer breaks don't undo it).
@@ -291,6 +315,39 @@ func _rates() -> Dictionary:
 		for k in mult:
 			_rates_cache[k] = float(_rates_cache[k]) * float(mult[k])
 	return _rates_cache
+
+
+## Of the wet-day fumbles, the share where the pack forms on it and the umpire
+## calls a ball-up; the rest is a loose ball either side can win off the deck.
+const WET_FUMBLE_HELD := 0.5
+
+
+## A ground ball fumbled in the wet (row 120, director 2026-11-06), at the first
+## touch of a chain (the only ground-ball gather play_chain has): he wins it
+## off the deck and loses it before he can dispose of it, a clanger, and the
+## ball spills, either into a ball-up or loose for either side to win off the deck. Likelier for a poor
+## contested player; a Wet-weather player fumbles WET_CLANGERS as often, as he
+## makes fewer clangers. {} when he gathers it cleanly. Dice: fumble_rng only.
+func _wet_fumble(side: int, carrier, at_fp: float) -> Dictionary:
+	var p := _wx("fumble", 0.0) * (1.30 - 0.60 * _a(carrier, "contested") / 100.0)
+	if _trait(carrier, "wet_weather"):
+		p *= Traits.WET_CLANGERS
+	if p <= 0.0 or fumble_rng.randf() >= p:
+		return {}
+	# He got to it first (a contested ground-ball get), then lost it before he
+	# could dispose of it: not a disposal.
+	_gain(side, carrier, "gb")
+	_t(side, "clangers")
+	_p(carrier, "clangers")
+	_emit("clanger", side, at_fp, carrier, CLANGER_WHY["wet"] % GameDB.player_display_name(carrier))
+	events[events.size() - 1]["why"] = "wet"
+	events[events.size() - 1]["fumble"] = true
+	_last_disp = {"carrier": carrier, "kind": "", "end": "fumble"}
+	if fumble_rng.randf() < WET_FUMBLE_HELD:
+		return {"outcome": "stoppage", "fp": at_fp, "actor": carrier}
+	return {"outcome": "loose", "fp": at_fp, "actor": carrier}
+
+
 ## Momentum: who has the run of play, -1 (away on top) .. 1 (home on top).
 ## A goal swings it to the scorers, a behind a little; the swing shrinks as
 ## it nears the cap and a goal the other way pulls it back harder, so it can
@@ -358,6 +415,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	_speccy_quota = speccy_quota(seed)
 	boundary_rng.seed = seed * 17 + 19
 	lockup_rng.seed = seed * 107 + 109
+	fumble_rng.seed = seed * 127 + 131
 	lead_rng.seed = seed * 109 + 113
 	injury_rng.seed = seed * 13 + 7
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
@@ -367,8 +425,6 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 		duels[side] = Matchups.defaults((squads[1 - side] as Squad).ground, (squads[side] as Squad).ground)
 		for plan in PlanFit.LEAGUE:
 			(plan_fit[side] as Dictionary)[plan] = PlanFit.fit((squads[side] as Squad).ground, plan)
-		for p in PlanFit.carriers((squads[side] as Squad).ground, "through_stars"):
-			(stars[side] as Dictionary)[str(p["id"])] = true
 		for p in (squads[side] as Squad).ground:
 			energy_caps[str(p["id"])] = Workload.energy_cap(p)
 			energy[str(p["id"])] = _start_energy(p)
@@ -381,7 +437,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	# coach box.
 	for side in range(2):
 		if (squads[side] as Squad).ai_plans:
-			var best := Matchups.best_interceptor((squads[side] as Squad).ground)
+			var best := Matchups.best_interceptor(_loose_pool(side, (squads[side] as Squad).ground))
 			if not best.is_empty():
 				set_interceptor(side, str(best["id"]), false)
 		elif _assisted(side):
@@ -457,19 +513,6 @@ func set_matchup(def_side: int, fwd_id: String, def_id: String, during := true) 
 	return true
 
 
-## Your set-up before the bounce: {forward id: defender id} on top of the
-## default. Not a change during the match. These pairings are the coach's
-## own, so his assistant then picks a loose man from the defenders left.
-func set_matchups(def_side: int, m: Dictionary) -> void:
-	for fid in m:
-		((_own[def_side] as Dictionary)["duels"] as Dictionary)[str(fid)] = true
-		_note_duel_was(def_side, str(fid))
-		_note_swapped(def_side, str(m[fid]))
-		set_matchup(def_side, str(fid), str(m[fid]), false)
-	if not m.is_empty() and _assisted(def_side) and not bool((_own[def_side] as Dictionary)["interceptor"]):
-		set_interceptor(def_side, _assistant_interceptor(def_side), false)
-
-
 ## The coach picks the loose defender himself ("" for none): it stays his
 ## call for the rest of the match.
 func coach_interceptor(side: int, def_id: String) -> bool:
@@ -479,55 +522,20 @@ func coach_interceptor(side: int, def_id: String) -> bool:
 	return set_interceptor(side, def_id, current_quarter > 1 or _q_active)
 
 
-## The coach puts `def_id` on their forward `fwd_id` himself: that match-up
-## stays his call for the rest of the match.
-func coach_matchup(def_side: int, fwd_id: String, def_id: String) -> bool:
-	if def_side < 0 or def_side > 1:
-		return false
-	((_own[def_side] as Dictionary)["duels"] as Dictionary)[fwd_id] = true
-	_note_duel_was(def_side, fwd_id)
-	_note_swapped(def_side, def_id)
-	return set_matchup(def_side, fwd_id, def_id)
-
-
-## The forward `def_id` leaves when the coach moves him: his match-up changes
-## too (the swap), so it is the coach's change as well.
-func _note_swapped(def_side: int, def_id: String) -> void:
-	var d: Dictionary = duels[def_side]
-	for f in d:
-		if str(d[f]) == def_id:
-			_note_duel_was(def_side, str(f))
-
-
-## Who was on `fwd_id` before the coach's first change of that match-up.
-func _note_duel_was(def_side: int, fwd_id: String) -> void:
-	var was: Dictionary = _duel_was[def_side]
-	if not was.has(fwd_id):
-		was[fwd_id] = str((duels[def_side] as Dictionary).get(fwd_id, ""))
-
-
 ## Whether the assistant has any routine call left to make for `side`: on
-## your side until you have taken the loose man and every match-up yourself.
+## your side the match-ups always are, and the loose man until you take him.
 func assistant_active(side: int) -> bool:
 	if not _assisted(side):
 		return false
-	var own: Dictionary = _own[side]
-	if not bool(own["interceptor"]):
-		return true
-	for fid in (duels[side] as Dictionary):
-		if not (own["duels"] as Dictionary).has(str(fid)):
-			return true
-	return false
+	return not bool((_own[side] as Dictionary)["interceptor"]) or not (duels[side] as Dictionary).is_empty()
 
 
-## Whether the coach made this call himself, rather than his assistant: the
-## loose defender (`fwd_id` "") or the match-up on `fwd_id`. Always true for
-## a side without an assistant.
-func coach_call(side: int, fwd_id := "") -> bool:
+## Whether the coach named the loose defender himself, rather than his
+## assistant. Always true for a side without an assistant.
+func coach_call(side: int) -> bool:
 	if side < 0 or side > 1 or not _assisted(side):
 		return true
-	var own: Dictionary = _own[side]
-	return bool(own["interceptor"]) if fwd_id == "" else (own["duels"] as Dictionary).has(fwd_id)
+	return bool((_own[side] as Dictionary)["interceptor"])
 
 
 func _assisted(side: int) -> bool:
@@ -794,54 +802,57 @@ func _rematch(def_side: int, fid: String, held: Dictionary) -> void:
 
 
 ## Your assistant's routine calls for the quarter about to start, made at
-## the break so the coach box shows them as your starting point: the plan,
-## pep talk and tag a rival coach would call in your position (ai_tactics,
-## your club's own usual game), the loose defender a rival coach would pick,
-## and a key defender moved off a forward who has had the better of him
-## (_rematch). He acts in your club's best interest, as every coach does.
-## Whatever you have set yourself he leaves alone, and he never moves a
-## defender you have put on someone.
+## the break so the coach box shows them as your starting point: the pep
+## talk and tag a rival coach would call in your position (ai_tactics), the
+## loose defender a rival coach would pick, and a key defender moved off a
+## forward who has had the better of him (_rematch). He acts in your club's
+## best interest, as every coach does. Whatever you have set yourself he
+## leaves alone: a loose man you have named, and the tag and the spare's
+## minder once you have picked them (set_tactics' tag_set / minder_set).
+## The game plan is always the coach's: it stays what you last chose until
+## you change it (director, 2026-11-07: "After every quarter it changes my
+## gameplan from balanced to controlled tempo").
 func _assistant_calls(side: int) -> void:
 	var own: Dictionary = _own[side]
 	var t: Dictionary = (tactics[side] as Dictionary).duplicate()
 	var call := ai_tactics(side)
 	call.erase("interceptor_id")
+	call.erase("gameplan")
+	if bool(own["tag"]):
+		call.erase("tag_id")
+	if bool(own["minder"]):
+		call.erase("spare_accountable")
+		call.erase("spare_minder_id")
 	t.merge(call, true)
 	set_tactics(side, t)
 	if not bool(own["interceptor"]):
 		set_interceptor(side, _assistant_interceptor(side), true)
 	var d: Dictionary = duels[side]
 	var held := {}
-	for fid in (own["duels"] as Dictionary):
-		if d.has(fid):
-			held[str(d[fid])] = true
 	# The loose man stays loose, whoever named him.
 	if str(interceptor[side]) != "":
 		held[str(interceptor[side])] = true
 	for fid in d.keys():
-		if (own["duels"] as Dictionary).has(str(fid)):
-			continue
 		if _beaten(side, str(fid)):
 			_rematch(side, str(fid), held)
 
 
-## The loose defender a rival coach would use (_ai_interceptor), from the
-## defenders you have not put on a forward yourself.
+## The loose defender a rival coach would use (_ai_interceptor).
 func _assistant_interceptor(side: int) -> String:
-	var own_duels: Dictionary = (_own[side] as Dictionary)["duels"]
-	var d: Dictionary = duels[side]
-	var taken := {}
-	for fid in own_duels:
-		if d.has(fid):
-			taken[str(d[fid])] = true
-	var free := (squads[side] as Squad).ground.filter(func(p): return not taken.has(str(p["id"])))
-	return _ai_interceptor(side, free)
+	return _ai_interceptor(side, (squads[side] as Squad).ground)
 
 
+## `t` may carry tag_set / minder_set: the coach picked the tag or the
+## spare's minder himself, so from then on they are his call, not his
+## assistant's (_assistant_calls).
 func set_tactics(side: int, t: Dictionary) -> void:
 	if side < 0 or side > 1:
 		return
 	tactics[side] = t.duplicate()
+	for key in ["tag", "minder"]:
+		if bool((tactics[side] as Dictionary).get(key + "_set", false)):
+			(_own[side] as Dictionary)[key] = true
+		(tactics[side] as Dictionary).erase(key + "_set")
 	if t.has("interceptor_id"):
 		set_interceptor(side, str(t.get("interceptor_id", "")), current_quarter > 1 or _q_active)
 	# A tag needs its man still in the match, and a midfielder.
@@ -865,7 +876,6 @@ const PLAN_UPSIDE := {
 	"defensive": ["press", "opp_goal"],
 	"contest": ["contest"],
 	"controlled": ["taken", "clangers", "goal", "pace"],
-	"through_stars": ["star_ball", "star_goal", "clangers"],
 }
 const PLANS := {
 	"attacking": {"goal": 1.05, "gain": 1.06, "clangers": 1.12, "pace": 1.12, "exposed": 1.07},
@@ -874,9 +884,6 @@ const PLANS := {
 	"defensive": {"press": 1.09, "opp_goal": 0.965, "goal": 0.88, "gain": 0.95, "pace": 1.12},
 	"contest": {"contest": 0.025, "gain": 0.95, "exposed": 1.04},
 	"controlled": {"taken": 0.96, "gain": 0.94, "goal": 1.01, "clangers": 0.93, "pace": 0.95},
-	# Through stars: the ball to the best three and their finishing (star_ball,
-	# star_goal), the ball in good hands; but they know where it's going.
-	"through_stars": {"star_ball": 1.3, "star_goal": 1.18, "clangers": 0.92, "taken": 1.04},
 }
 
 
@@ -945,7 +952,9 @@ func _plan(side: int) -> String:
 ## ARD-M4-015 (the director, 2026-10-06: "merge the duplicates"): "Fast
 ## movement" was Attack corridor and "High press" was Defensive press under
 ## older names, the same effects. Old saves and replays map across.
-const PLAN_ALIAS := {"fast": "attacking", "press": "defensive"}
+## Through stars (#874) is cut (director, 2026-11-07: the three play-through
+## calls are back instead): an old save or replay on it plays Balanced.
+const PLAN_ALIAS := {"fast": "attacking", "press": "defensive", "through_stars": "balanced"}
 
 
 static func plan_key(key: String) -> String:
@@ -963,29 +972,35 @@ const FOCUS_SLOTS := ["focus_mid", "focus_fwd", "focus_def"]
 const FOCUS_SLOT_ROLES := {"focus_mid": ["MID", "RUCK"], "focus_fwd": ["FWD"], "focus_def": ["DEF"]}
 
 
-## Who this side plays through, {id: slot}. Play through is part of the
-## Through stars plan (director, 2026-11-03: the separate break call is cut):
-## under that plan each line plays through its best star on the ground, the
-## man a coach would name; under any other plan nobody. Old focus keys
-## (focus_mid/fwd/def, focus_id) in a tactics dict are ignored.
+## Who this side plays through, {id: slot}. The single older call (focus_id,
+## older saves') counts as the slot his role fills, unless that slot has its
+## own call.
 func _focus_slots(side: int) -> Dictionary:
+	var t: Dictionary = tactics[side]
 	var out := {}
-	if _plan(side) != "through_stars":
-		return out
-	var mine: Dictionary = stars[side]
 	for slot in FOCUS_SLOTS:
-		var best = null
-		for p in (squads[side] as Squad).ground:
-			if not mine.has(str(p["id"])) or not (FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"])):
-				continue
-			if best == null or int(p["overall"]) > int(best["overall"]):
-				best = p
-		if best != null:
-			out[str(best["id"])] = slot
+		var id := str(t.get(slot, ""))
+		if id != "":
+			out[id] = slot
+	var legacy := str(t.get("focus_id", ""))
+	if legacy != "" and not out.has(legacy):
+		var p = _ground_player(side, legacy)
+		if p != null:
+			var slot := focus_slot_for(str(p["role"]))
+			if str(t.get(slot, "")) == "":
+				out[legacy] = slot
 	return out
 
 
-## The players this side plays through right now (Through stars only).
+## The play-through slot a ground role fills.
+static func focus_slot_for(role: String) -> String:
+	for slot in FOCUS_SLOT_ROLES:
+		if (FOCUS_SLOT_ROLES[slot] as Array).has(role):
+			return slot
+	return "focus_mid"
+
+
+## The players this side plays through (every pick, working or waiting).
 func focus_ids(side: int) -> Array:
 	return _focus_slots(side).keys() if side >= 0 and side <= 1 else []
 
@@ -993,7 +1008,11 @@ func focus_ids(side: int) -> Array:
 ## Whether `slot`'s call is working now: its man is on the ground in a spot
 ## the call works from (a forward target resting on the bench is not).
 func focus_active(side: int, slot: String) -> bool:
-	return (_focus_slots(side).values() as Array).has(slot)
+	var id := str((tactics[side] as Dictionary).get(slot, ""))
+	if id == "":
+		return false
+	var p = _ground_player(side, id)
+	return p != null and (FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"]))
 
 
 func _ground_player(side: int, id: String):
@@ -1352,12 +1371,10 @@ func _pick_ctx(side: int) -> Dictionary:
 		var tagger = tagger_of(side)
 		if tagger != null:
 			tagger_id = str(tagger["id"])
-	var plan := _plan(side)
 	var minder := _spare_minder(side)
 	return {"focus": _focus_slots(side), "their_tag": their_tag, "minder": str(minder.get("id", "")),
 			"tag_share": _tag_share(1 - side) if their_tag != "" else 1.0,
-			"tagger": tagger_id, "stars": plan == "through_stars",
-			"star_ball": _pv(side, "star_ball") if plan == "through_stars" else 1.0}
+			"tagger": tagger_id}
 
 
 func _tactic_player_mult(side: int, p: Dictionary, purpose: String, ctx: Dictionary = {}) -> float:
@@ -1402,8 +1419,6 @@ func _tactic_player_mult(side: int, p: Dictionary, purpose: String, ctx: Diction
 	# Our forward minding their loose defender is up the ground with him.
 	if id == str(ctx.get("minder", "")) and purpose in ["shooter", "aerial_target", "crumb", "carrier"]:
 		out *= MINDER_INVOLVE
-	if bool(ctx["stars"]) and (stars[side] as Dictionary).has(id):
-		out *= float(ctx["star_ball"])
 	if carrying:
 		out *= _usage_mult(p, focused)
 	return out
@@ -1953,13 +1968,6 @@ func _credit_entry(side: int, shooter: Dictionary, feeder, defender, line_def, m
 					_roam_chance(opp, false) if m_roams else 0.0, _roam_go_chance(opp, false) if m_roams else 0.0)
 			worth -= minder_dp * (his - their_ev)
 		_credit(side, "minder", worth)
-	var was: Dictionary = _duel_was[opp]
-	var fid := str(shooter.get("id", ""))
-	if not matched.is_empty() and was.has(fid) and str(was[fid]) != str(matched.get("id", "")):
-		var before := _on_ground(opp, str(was[fid]))
-		var other = before if not before.is_empty() else line_def
-		var cf := _entry_ev(side, shooter, feeder, other, before, roamer, p_r, p_go)
-		_credit(opp, "matchups", cf - actual)
 
 
 ## How much more often the defensive forward would be the target of an entry
@@ -2981,6 +2989,15 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		_chain_touch[str(carrier["id"])] = carrier
 		# Who a clanger would be blamed on, and how his touch ended (clanger_why).
 		_last_disp = {"carrier": carrier, "kind": "", "end": ""}
+		# The wet ball (row 120): the first touch of a chain, when it is a
+		# ground ball (a loose turnover, a general contest, a stoppage with
+		# no clean clearance), can be fumbled at the gather. Later touches
+		# come by hand or foot, so they are never ground balls.
+		if weather == "wet" and not is_kick_in and touches == 1:
+			if _first_gain(carrier, cleared, is_kick_in) == "gb":
+				var fumbled := _wet_fumble(side, carrier, fp)
+				if not fumbled.is_empty():
+					return fumbled
 		# Champion Data: a kick straight from the goal square is a team
 		# kick-in, not a player disposal. Once the taker plays on it is his
 		# disposal like ordinary play.
@@ -3069,7 +3086,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var press_roll := rng.randf()
 		var rushed := false
 		var tackled := false
-		if press_roll < pressure * PRESS_TACKLE_SHARE:
+		if press_roll < pressure * PRESS_TACKLE_SHARE * _wx("tackle_share"):
 			var tackler = _pick_presser(opp, zone)
 			_maybe_report(opp, tackler, carrier)
 			_t(opp, "tackles")
@@ -3109,7 +3126,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_last_disp["kind"] = disposal_kind
 			# Knocked loose in the tackle: whoever is there for the other side gathers
 			# it (an intercept possession). Otherwise it is held in: a ball-up.
-			if lockup_rng.randf() < _tv("TACKLE_SPILL", TACKLE_SPILL):
+			if lockup_rng.randf() < _tv("TACKLE_SPILL", TACKLE_SPILL) * _wx("tackle_spill"):
 				var taker = _aerial_defender(opp, fp)
 				if taker == null:
 					taker = tackler
@@ -3136,7 +3153,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			if rng.randf() < turn_p:
 				# Rushed into a pack: sometimes nobody gets it clean and the
 				# umpire calls a ball-up where it locked up.
-				if lockup_rng.randf() < _tv("LOCKUP_PRESS", LOCKUP_PRESS):
+				if lockup_rng.randf() < _tv("LOCKUP_PRESS", LOCKUP_PRESS) * _wx("lockup"):
 					return {"outcome": "stoppage", "fp": fp, "actor": presser}
 				_t(opp, "pressure_wins")
 				# A rushed handball is picked off by the man on him; a rushed kick
@@ -3549,7 +3566,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 			return crumb
 
 	# Spoiled to the deck in the pocket, nobody clean: a ball-up inside 50.
-	if spoilt and not marked and lockup_rng.randf() < _tv("LOCKUP_SPOIL", LOCKUP_SPOIL):
+	if spoilt and not marked and lockup_rng.randf() < _tv("LOCKUP_SPOIL", LOCKUP_SPOIL) * _wx("lockup"):
 		return {"outcome": "stoppage", "fp": fp, "actor": defender}
 	# The spare comes away with it only when he got the fist to it; reaching
 	# the contest is not winning it. Otherwise the defender in it does.
@@ -3884,8 +3901,6 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 	# The press closes the corridor: half the attacking plan's edge.
 	if own > 1.0 and _pv(opp, "press") > 1.0:
 		own = 1.0 + (own - 1.0) * 0.5
-	if _plan(side) == "through_stars" and (stars[side] as Dictionary).has(str(shooter.get("id", ""))):
-		own *= _pv(side, "star_goal")
 	goal_p *= own
 	if credit:
 		_credit(side, "gameplan", 6.0 * (goal_p - before))
@@ -4448,7 +4463,6 @@ func result() -> Dictionary:
 	return {
 		"roster": rosters(),
 		"bench": opening_bench.duplicate(true),
-		"stars": [(stars[0] as Dictionary).keys(), (stars[1] as Dictionary).keys()],
 		"score": [s0, s1],
 		"goals": [goals(0), goals(1)],
 		"behinds": [behinds(0), behinds(1)],
@@ -4855,29 +4869,48 @@ func _auto_rotate(side: int) -> void:
 
 
 ## The freshest bench player (at or above `min_energy`) for a ground role,
-## or -1. Natural or secondary role first; any bench player as a fallback.
+## or -1. Natural or secondary role first (his own positions, never the slot
+## he last filled); any bench player as a fallback.
+## A back slot waits for a defender: one short of `min_energy` (by up to
+## DEF_TIRED_GAP) still goes on before a fresh man from another line, and
+## while a defender on the bench is more tired than that, a routine change in
+## the back line waits. Another line's player goes into the back line only
+## with no defender on the bench.
 ## `rotation`: a routine interchange, which leaves a rested star on the bench.
 ## The coach's named tagger goes back on only in a midfielder's place, and
 ## first when one comes off, so he picks the tag up again (tagger_of).
+const DEF_TIRED_GAP := 25.0
+
+
 func _bench_for(side: int, role: String, min_energy: float, rotation := false) -> int:
 	var sq: Squad = squads[side]
 	var named := str((tactics[side] as Dictionary).get("tagger_id", "")) if _tag_id(side) != "" else ""
 	var best := -1
 	var best_score := -1.0
+	var best_fits := false
+	var def_waiting := false
 	for i in range(sq.bench.size()):
 		var p: Dictionary = sq.bench[i]
 		var e := float(energy.get(str(p["id"]), 100.0))
-		if e < min_energy or (rotation and str(_held.get(str(p["id"]), "")) == "rest"):
+		if rotation and str(_held.get(str(p["id"]), "")) == "rest":
 			continue
+		var fits := Traits.plays(p, role)
+		if e < min_energy:
+			if role != "DEF" or not fits:
+				continue
+			if e < min_energy - DEF_TIRED_GAP:
+				def_waiting = true
+				continue
 		var is_named := rotation and named != "" and str(p["id"]) == named
 		if is_named and role != "MID":
 			continue
-		var fits := str(p.get("role", "")) == role or Traits.plays(p, role) \
-				or str(p.get("list_tag", "")) == role
 		var score := e + (100.0 if fits else 0.0) + (200.0 if is_named else 0.0)
 		if score > best_score:
 			best = i
 			best_score = score
+			best_fits = fits
+	if role == "DEF" and def_waiting and not best_fits:
+		return -1
 	return best
 
 
@@ -5098,49 +5131,8 @@ func _boundary_moment() -> bool:
 								else "He plays on to the break, slowing as he goes, and starts the next quarter on tired legs."},
 				]})
 			return true
-	# An opposition key forward getting on top: kicked a bag, or won three
-	# contests this quarter against his man. The answer is a match-up.
-	var mine: Dictionary = duels[me]
-	for fid in mine.keys():
-		var hotf := _on_ground(opp, str(fid))
-		var cur := _on_ground(me, str(mine[fid]))
-		if hotf.is_empty() or cur.is_empty():
-			continue
-		var bag := int((player_stats.get(str(fid), {}) as Dictionary).get("goals", 0.0))
-		var wins := 0
-		for c in (duel_log.get(str(fid), {}) as Dictionary).get("contests", []):
-			if int(c[0]) == current_quarter and str(c[1]) == str(cur["id"]) and bool(c[2]):
-				wins += 1
-		var key := "duel|%s|%d" % [str(fid), current_quarter]
-		if (bag < 3 and wins < 3) or _asked.has(key) or _asked.has("bag|" + str(fid)) and wins < 3:
-			continue
-		_asked[key] = true
-		if bag >= 3:
-			_asked["bag|" + str(fid)] = true
-		var fname := GameDB.player_display_name(hotf)
-		var cname := GameDB.player_display_name(cur)
-		var opts := []
-		for p in Matchups.defenders((squads[me] as Squad).ground):
-			if str(p["id"]) == str(cur["id"]) or opts.size() >= 2:
-				continue
-			var dl := GateOdds.duel_lines(self, me, str(fid), p)
-			opts.append({"key": "def:" + str(p["id"]),
-					"label": "Put %s on %s" % [GameDB.player_display_name(p), fname],
-					"detail": Matchups.describe(p), "gain": "%s: %s" % [dl[0], dl[1]], "cost": dl[2]})
-		if opts.is_empty():
-			continue
-		var kl := GateOdds.duel_lines(self, me, str(fid), cur)
-		opts.append({"key": "keep", "label": "Keep %s on %s" % [cname, fname],
-				"detail": Matchups.describe(cur), "gain": "%s: %s" % [kl[0], kl[1]], "cost": kl[2]})
-		_fire({"kind": "duel", "player_id": str(fid), "default": opts.size() - 1,
-			"title": ("%s has kicked %d" % [fname, bag]) if bag >= 3 else ("%s is getting on top" % fname),
-			"text": "%s has won %d contest%s in the air against %s this quarter." % [fname, wins,
-					"" if wins == 1 else "s", cname] if wins > 0 else
-					"%s is on %s. Change the match-up, or back %s in." % [cname, fname, cname],
-			"options": opts})
-		return true
 	# An opposition midfielder kicking a bag: a tag is a midfield job, so
-	# only a midfielder can be answered with one (a forward is a match-up).
+	# only a midfielder can be answered with one.
 	for id in player_stats:
 		var st: Dictionary = player_stats[id]
 		if int(st.get("goals", 0.0)) < 3 or _asked.has("hot|" + str(id)):
@@ -5329,12 +5321,20 @@ func _set_shot_split(goal_p: float, behind_p: float) -> Dictionary:
 		e_behind += float(b["share"]) * float(b["behind"])
 	if shot_rng.randf() < share:
 		var r := shot_rng.randf()
+		var pick: Dictionary = bands[bands.size() - 1]
 		for b in bands:
 			r -= float(b["share"])
 			if r < 0.0:
-				return {"band": b, "goal": b["goal"], "behind": b["behind"]}
-		var last: Dictionary = bands[bands.size() - 1]
-		return {"band": last, "goal": last["goal"], "behind": last["behind"]}
+				pick = b
+				break
+		# The wet makes the kick itself harder (row 120), after the expected
+		# value above, so the general-play shot does not make it back.
+		var sa := _wx("set_acc")
+		if sa != 1.0:
+			pick = pick.duplicate()
+			pick["goal"] = clampf(float(pick["goal"]) * sa, 0.03, 0.97)
+			pick["behind"] = (1.0 - float(pick["goal"])) * SET_MISS_BEHIND
+		return {"band": pick, "goal": pick["goal"], "behind": pick["behind"]}
 	var rest := 1.0 - share
 	return {"band": {},
 			"goal": maxf(0.0, (goal_p - share * e_goal) / rest),
@@ -5450,14 +5450,6 @@ func resolve_moment(choice: int) -> Dictionary:
 				outcome = "Tag on. You can call it off at the break."
 			else:
 				outcome = "Structure unchanged."
-		"duel":
-			if key.begins_with("def:"):
-				var did := key.trim_prefix("def:")
-				coach_matchup(side, str(m["player_id"]), did)
-				outcome = "%s goes to %s." % [GameDB.player_display_name(_on_ground(side, did)),
-						GameDB.player_display_name(_on_ground(1 - side, str(m["player_id"])))]
-			else:
-				outcome = "The match-up stays."
 		"momentum", "bounce":
 			if BURSTS.has(key):
 				(bursts[side] as Dictionary)[key] = _chains_for(int(BURSTS[key]["chains"]))
@@ -5727,7 +5719,8 @@ func _free_set_shot(side: int, at_fp: float, taker: Dictionary) -> Dictionary:
 	_chain_touch[str(taker["id"])] = taker
 	fp = at_fp
 	var metres := float(Ratings.T["goal_line"]) - (at_fp if side == 0 else -at_fp)
-	var goal_p := clampf(free_set_acc(metres) * shot_chance(side, taker, true, false) / SET_REF, 0.03, 0.97)
+	var goal_p := clampf(free_set_acc(metres) * shot_chance(side, taker, true, false) / SET_REF
+			* _wx("set_acc"), 0.03, 0.97)
 	var behind_p := (1.0 - goal_p) * SET_MISS_BEHIND
 	var roll := rng.randf()
 	# His shot, as any set shot is counted (shots, set shots, their result).
@@ -5891,6 +5884,30 @@ func ai_tactics(side: int) -> Dictionary:
 	return t
 
 
+## The men a rival coach (or your assistant) may send loose, from `ground`:
+## a key defender on a key forward stays on him unless a free key defender
+## would take the forward, so a key forward is never left to a smaller man
+## for the loose man's sake. The coach's own pick of the loose man is his.
+func _loose_pool(side: int, ground: Array) -> Array:
+	var d: Dictionary = duels[side]
+	var on := {}
+	for fid in d:
+		on[str(d[fid])] = str(fid)
+	var free_key := false
+	for p in Matchups.defenders((squads[side] as Squad).ground):
+		var pid := str(p["id"])
+		if not on.has(pid) and pid != str(interceptor[side]) \
+				and PlayerProfile.player_type(p) == "Key defender":
+			free_key = true
+	if free_key:
+		return ground
+	return ground.filter(func(p):
+		var fid := str(on.get(str(p["id"]), ""))
+		if fid == "" or PlayerProfile.player_type(p) != "Key defender":
+			return true
+		return not Matchups._is_key_forward(_on_ground(1 - side, fid)))
+
+
 ## A rival coach's loose defender for the quarter, from `ground`: his best
 ## interceptor, unless he is chasing the game late and wants every man on a
 ## forward. "" for none.
@@ -5898,7 +5915,7 @@ func _ai_interceptor(side: int, ground: Array) -> String:
 	var react := 18.0 - 8.0 * float((squads[side] as Squad).tactics_read)
 	var margin := score(side) - score(1 - side)
 	var st := _style(side)
-	var spare := Matchups.best_interceptor(ground)
+	var spare := Matchups.best_interceptor(_loose_pool(side, ground))
 	if spare.is_empty() or (margin <= -react * float(st["loose"]) and current_quarter >= int(st["loose_q"])):
 		return ""
 	return str(spare["id"])
@@ -5927,13 +5944,9 @@ const COACH_STYLES := {
 }
 
 
-## `side`'s usual game: the plan your club went in with on your side (the
-## first quarter's call), otherwise the plan its list suits (standing).
+## `side`'s usual game: the plan its list suits (standing). Only an AI club
+## picks its plan this way; yours is always your own call.
 func _usual(side: int) -> String:
-	if _assisted(side) and not tactics_history.is_empty():
-		var first: Dictionary = (tactics_history[0]["plans"] as Array)[side]
-		if first.has("gameplan"):
-			return plan_key(str(first["gameplan"]))
 	return str(standing[side])
 
 

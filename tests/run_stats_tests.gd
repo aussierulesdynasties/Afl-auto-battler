@@ -50,6 +50,8 @@ func _run() -> void:
 		await _t("_test_ladder_only_in_season_stats", [sz])
 	await _t("_test_awards_early")
 	await _t("_test_trophies_unplayed")
+	_t("_test_club_code_colours")
+	_t("_test_finals_cell")
 	for i in range(4):
 		_state.advance()
 	await _t("_test_sections")
@@ -1213,9 +1215,15 @@ func _test_ladder(sz: Vector2i) -> void:
 	var tapped: String = before[1] if before[0] == mine else before[0]
 	var why2: String = await Tap.tap(s.find_child("Club_" + tapped, true, false))
 	await _settle()
+	# A club's name opens its page (rulings no. 113); the page leads to the side.
+	var page: Node = s.find_child("ClubPage", true, false)
+	_check(why2 == "" and page != null and str(page.get_meta("club_code", "")) == tapped,
+			"A finger on a club opens its page (%s: %s)" % [tag, why2])
+	var why3: String = await Tap.tap(page.find_child("SideOnGround", true, false)) if page != null else "no page"
+	await _settle()
 	var side: Node = s.find_child("ClubSide", true, false)
-	_check(why2 == "" and side != null and side.find_child("TeamBuilder", true, false) != null,
-			"A finger on a club opens its side (%s: %s)" % [tag, why2])
+	_check(why3 == "" and side != null and side.find_child("TeamBuilder", true, false) != null,
+			"The page's button opens the side on the ground (%s: %s)" % [tag, why3])
 	if side != null:
 		var builder: Node = side.find_child("TeamBuilder", true, false)
 		_check(bool(builder.get("_read_only")), "The side is read-only (%s)" % tag)
@@ -1266,7 +1274,11 @@ func _test_ladder(sz: Vector2i) -> void:
 				"...and leaves the side (%s)" % tag)
 	_check(s.call("handle_back") == true, "Back closes the side (%s)" % tag)
 	await _settle()
-	_check(s.find_child("ClubSide", true, false) == null and _row_codes(s) == before
+	_check(s.find_child("ClubSide", true, false) == null and s.find_child("ClubPage", true, false) != null,
+			"...and leaves the club's page (%s)" % tag)
+	_check(s.call("handle_back") == true, "Back closes the club's page (%s)" % tag)
+	await _settle()
+	_check(s.find_child("ClubPage", true, false) == null and _row_codes(s) == before
 			and _text(s.find_child("ActiveState", true, false)).contains("sorted by Pts"),
 			"Back returns to the ladder as it was, sort and filter kept (%s)" % tag)
 	s.queue_free()
@@ -1476,6 +1488,10 @@ func _test_team_rating(sz: Vector2i) -> void:
 	# A tap on a club says its list in full.
 	var mine_row: Button = s.find_child("Club_" + _state.my_club, true, false)
 	_check((await Tap.tap(mine_row)) == "", "A club takes a tap (%s)" % tag)
+	await _settle()
+	var club_page: Node = s.find_child("ClubPage", true, false)
+	_check(club_page != null and (await Tap.tap(club_page.find_child("SideOnGround", true, false))) == "",
+			"Its page leads to its side (%s)" % tag)
 	await _settle()
 	var outlook: Label = s.find_child("TeamOutlook", true, false)
 	_check(outlook != null and outlook.text == str(_state.team_outlook(_state.my_club)["line"])
@@ -1998,6 +2014,87 @@ func _rank(row: Node) -> String:
 	return str((row.get_child(0).get_child(0) as Label).text)
 
 
+## Every club's line under a name on the Season stats lists (director,
+## 2026-11-06): its strongest real colour, never white or the pitch tint, read
+## at 4.5:1 on every surface its row can sit on (the page up to PANEL_ALT, a
+## pressed row, and your own club's tinted row), one of its real colours or
+## one lightened with its hue kept. Collingwood has no colour but black and
+## white: its black, lightened, is the one grey (pending the director).
+func _test_club_code_colours() -> void:
+	var UK = load("res://scripts/ui/UiKit.gd")
+	var SS = load("res://scripts/ui/stats/StatsSide.gd")
+	var db = root.get_node("GameDB")
+	var codes := ["ADE", "BRL", "CAR", "COL", "ESS", "FRE", "GEE", "GCS", "GWS", "HAW", "MEL", "NTH",
+			"PAD", "RIC", "STK", "SYD", "WCE", "WBD", "TAS", "CANB"]
+	var was: String = _state.my_club
+	var line := []
+	# Each club both as a rival's row and as your own (tinted) row.
+	for own in [false, true]:
+		for code in codes:
+			_state.my_club = code if own else ("COL" if code != "COL" else "CAR")
+			var c: Color = SS.code_ink(code)
+			line.append("%s%s #%s" % [code, " (own)" if own else "", c.to_html(false).to_upper()])
+			var lo: float = UK.min_contrast(c, SS.row_surfaces(code))
+			_check(lo >= 4.5, "%s's code reads at 4.5:1 on every row surface%s (%.2f)" % [code, ", own club" if own else "", lo])
+			_check(not (c.v > 0.9 and c.s < 0.15), "%s's code is never white" % code)
+			var real: Array = db.club_marker_colours(code)
+			var vivid := real.filter(func(r: Color) -> bool: return r.s >= UK.CODE_MIN_SAT)
+			if vivid.is_empty():
+				_check(code == "COL" and c.s < 0.01 and c.v < 0.9, "%s: no colour but black and white, so its black lightened" % code)
+				continue
+			_check(c.s >= UK.CODE_MIN_SAT, "%s's code is a colour, not grey" % code)
+			var from_real := false
+			for r in vivid:
+				var col: Color = r
+				if c.is_equal_approx(col) or (absf(c.h - col.h) < 0.01 and c.v >= col.v - 0.01 and c.s <= col.s + 0.01):
+					from_real = true
+			_check(from_real, "%s's code is one of its real colours or one lightened, same hue (#%s)" % [code, c.to_html(false)])
+			_check(not db.club_colours(code)[2].is_equal_approx(c) or db.THREE_COLOUR_CLUBS.has(code),
+					"%s's code is not its pitch tint" % code)
+	_state.my_club = was
+	print("Club code colours: " + ", ".join(line))
+	# A Forge club whose colours are all pale never falls back to its white.
+	db.clubs["ZZF"] = {"code": "ZZF", "custom": true, "primary": Color("ffffff"),
+			"secondary": Color("f4f0e8"), "accent": Color("d8d8d0")}
+	var f: Color = SS.code_ink("ZZF")
+	_check(not (f.v > 0.9 and f.s < 0.15), "A pale Forge club's code is not white (#%s)" % f.to_html(false))
+	_check(UK.min_contrast(f, SS.row_surfaces("ZZF")) >= 4.5, "A pale Forge club's code reads")
+	db.clubs["ZZF"]["secondary"] = Color("1a6b3c")
+	f = SS.code_ink("ZZF")
+	_check(f.s >= UK.CODE_MIN_SAT and absf(f.h - Color("1a6b3c").h) < 0.01,
+			"A Forge club with one real colour among the pale: that colour, lightened (#%s)" % f.to_html(false))
+	db.clubs.erase("ZZF")
+
+
+## This season's Finals cell in the trophy room: the round before the finals,
+## the final during them, the result after.
+func _test_finals_cell() -> void:
+	var T = load("res://scripts/ui/stats/StatsTrophies.gd")
+	var se = load("res://scripts/sim/Season.gd").new(["COL", "CAR"], {})
+	se.fixture = []
+	for i in range(24):
+		se.fixture.append([])
+	se.round_index = 3
+	_check(T.progress(se, "COL") == "Round 3 of 24", "After round 3: Round 3 of 24 (%s)" % T.progress(se, "COL"))
+	se.round_index = 24
+	se.finals = {"week": 1, "weeks": [], "done": false, "premier": "", "runner_up": ""}
+	_check(T.progress(se, "COL") == "Round 24 of 24", "Finals set but not begun: still Round 24 of 24 (%s)" % T.progress(se, "COL"))
+	se.finals["weeks"] = [[{"home": "GEE", "away": "STK", "tag": "WC1"}], [{"home": "COL", "away": "CAR", "tag": "QF1"}]]
+	se.finals["week"] = 3
+	_check(T.progress(se, "COL") == "Qualifying final", "During the finals: the final you played (%s)" % T.progress(se, "COL"))
+	_check(T.progress(se, "ADE") == "Qualifying and elimination finals", "Not in it: the week as the Fixture names it (%s)" % T.progress(se, "ADE"))
+	se.finals["weeks"].append([{"home": "CAR", "away": "GEE", "tag": "SF1"}])
+	se.finals["weeks"].append([{"home": "CAR", "away": "SYD", "tag": "PF1"}])
+	se.finals["weeks"].append([{"home": "COL", "away": "SYD", "tag": "GF"}])
+	se.finals["done"] = true
+	se.finals["premier"] = "COL"
+	se.finals["runner_up"] = "SYD"
+	_check(T.progress(se, "COL") == "Premiers", "Finished: the result, Premiers (%s)" % T.progress(se, "COL"))
+	_check(T.progress(se, "SYD") == "Runners-up", "Finished: Runners-up (%s)" % T.progress(se, "SYD"))
+	_check(T.progress(se, "CAR") == "Preliminary final", "Finished: out in a preliminary final (%s)" % T.progress(se, "CAR"))
+	_check(T.progress(se, "MEL") == "", "Finished without a final: blank, as a past season reads (%s)" % T.progress(se, "MEL"))
+
+
 ## The trophy room through a first season and into a seeded second: empty
 ## and honest at first, then a premiership on the shelf, only your club's
 ## seasons counted, older entries said plainly, taps and Back, save and load.
@@ -2012,7 +2109,8 @@ func _test_trophies_early() -> void:
 	_check(intro != null and intro.text == "Your time at %s: 1 season, from %d." % [root.get_node("GameDB").club_name("COL"), year],
 			"The tenure line counts the season in progress (%s)" % (intro.text if intro else "none"))
 	var now: Node = s.find_child("Season_%d" % year, true, false)
-	_check(now != null and _row_text(now).contains("In progress"), "This season is in the table, in progress")
+	var at := "Round %d of %d" % [maxi(1, _state.season.round_index), _state.season.fixture.size()]
+	_check(now != null and _row_text(now).contains(at), "This season is in the table, at %s (%s)" % [at, _row_text(now) if now else "none"])
 	_check(now != null and _finish(now) != "", "Mid-season it gives where you sit (%s)" % (_finish(now) if now else "none"))
 	s.queue_free()
 	await _settle()
@@ -2072,7 +2170,7 @@ func _test_trophies() -> void:
 	entry["my_position"] = 1
 	entry["my_aa"] = [ids[2]]
 	entry["brownlow"] = [{"id": ids[0], "club": "COL", "votes": 31}]
-	for key in ["coleman", "rising_star", "coaches_award", "my_bf", "norm_smith"]:
+	for key in ["coleman", "rising_star", "coaches_award", "my_bf", "norm_smith", "golden_fist"]:
 		entry[key] = []
 	var old := {"year": year - 1, "my_club": "COL", "premier": "GEE", "runner_up": "COL", "my_position": 3,
 		"brownlow": [], "coleman": [{"id": "far_away", "club": "CAR", "goals": 70}], "rising_star": [],

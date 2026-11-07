@@ -26,6 +26,14 @@ var _pick_canberra := false
 var _setup_tight := false
 ## How the next career starts (ARD-M5-016): "redraft" or "real" (real 2026 lists).
 var _pick_start := "redraft"
+## A challenge start (row 114, Challenge.gd): "none", "youth", "rebuild" or
+## "goal"; the goal itself starts unpicked (no recommended goal).
+var _pick_challenge := "none"
+var _pick_goal := ""
+var _start_row: VBoxContainer
+var _challenge_row: VBoxContainer
+var _goal_row: VBoxContainer
+var _start_btn: Button
 var _pick_prospect := false
 var _pick_club := false
 ## The web build's one line when the browser refuses to keep the save (P-71), or "".
@@ -197,7 +205,8 @@ func _show_home() -> void:
 	# A career file that cannot be continued says why, instead of the menu
 	# quietly looking like there was never a career (T5.Q24). The space above
 	# shrinks so the note sits as close to the tagline as to New career.
-	var why := "" if GameState.has_career() or GameState.has_saved_career() 			else GameState.saved_career_problem()
+	var saved := not GameState.has_career() and GameState.has_saved_career()
+	var why := "" if GameState.has_career() or saved else GameState.saved_career_problem()
 	_content.add_child(UiKit.spacer(28 if why == "" else 6))
 
 	var col := UiKit.vbox(10)
@@ -217,7 +226,6 @@ func _show_home() -> void:
 	var resume_draft := GameState.draft != null and not GameState.draft.user_club.is_empty() \
 			and GameState.season == null
 	var live := resume_draft or GameState.season != null
-	var saved := not GameState.has_career() and GameState.has_saved_career()
 	if live or saved:
 		var cont := UiKit.btn("Continue", UiKit.H2, true)
 		cont.name = "ResumeCareer" if live else "ContinueCareer"
@@ -317,9 +325,18 @@ func _meta_line(meta: Dictionary) -> String:
 
 
 func _on_continue() -> void:
-	if GameState.load_career():
-		Router.go("hub" if GameState.season != null else "draft")
-		return
+	# Loading a career takes seconds on a phone: the cover and its line go up
+	# first, and the screen change joins the same cover. Nothing here awaits
+	# the cover: this screen is freed by the change, and a function resumed
+	# after that errors ("class instance is gone").
+	ScreenTransition.run("Loading your career...", func():
+		if GameState.load_career():
+			Router.go("hub" if GameState.season != null else "draft")
+		else:
+			_show_load_error())
+
+
+func _show_load_error() -> void:
 	var why := GameState.saved_career_problem()
 	_load_error.text = why if why != "" else GameState.SAVE_UNREADABLE
 	_load_error.visible = true
@@ -331,6 +348,8 @@ func _on_new_career() -> void:
 	_pick_rivals = GameState.new_career_dial(DifficultyDials.RIVALS)
 	_pick_tutorials = GameState.new_career_tutorials()
 	_pick_canberra = false
+	_pick_challenge = "none"
+	_pick_goal = ""
 	_pick_prospect = not GameState.forge_player().is_empty()
 	_pick_club = not GameState.forge_club().is_empty()
 	_mode = "setup"
@@ -370,11 +389,30 @@ func _show_setup() -> void:
 	# A little more under the title than between the sections.
 	title.custom_minimum_size.y = (UiKit.H1 * 1.15) if _setup_tight else (UiKit.H1 * 1.4 + 6)
 	form.add_child(title)
-	form.add_child(_choice("Start", "StartMode", [["redraft", "League redraft"], ["real", "Real 2026 lists"]],
+	_start_row = _choice("Start", "StartMode", [["redraft", "League redraft"], ["real", "Real 2026 lists"]],
 			_pick_start,
 			func(k): return ("Every club keeps its real end-of-2026 list. You run your club through the 2026 National Draft, then play 2027." if k == "real"
 					else "The whole league re-drafts from one player pool before 2027, in a random snake order."),
-			func(k): _pick_start = k))
+			_on_pick_start)
+	form.add_child(_start_row)
+	# A challenge start (ruling 115): one rule, said here before you begin.
+	_challenge_row = _choice("Challenge", "Challenge",
+			[["none", "None"], ["youth", "Youth only"], ["rebuild", "Rebuild"], ["goal", "Your goal"]],
+			_pick_challenge, func(k): return Challenge.rule_line(str(k)), _on_pick_challenge)
+	(_challenge_row.get_node("ChallengeNote") as Label).visible = true
+	form.add_child(_challenge_row)
+	# Your goal: none is picked for you, and Choose your club waits for one.
+	var goals := []
+	for id in Challenge.GOAL_ORDER:
+		goals.append([id, GOAL_BUTTONS.get(id, id)])
+	_goal_row = _choice("Your goal", "Goal", goals, _pick_goal,
+			func(k): return Challenge.goal_detail(str(k)) if str(k) != "" else "Pick the goal you are setting yourself.",
+			func(k):
+				_pick_goal = k
+				_refresh_start())
+	(_goal_row.get_node("GoalNote") as Label).visible = true
+	_goal_row.visible = _pick_challenge == "goal"
+	form.add_child(_goal_row)
 	form.add_child(_choice("Player names", "NameMode", NAME_OPTIONS,
 			"real" if _pick_real else "generated",
 			func(_k): return NAMES_INFO + " You can change this later in Settings.",
@@ -417,7 +455,8 @@ func _show_setup() -> void:
 	start.name = "StartCareer"
 	start.custom_minimum_size = Vector2(_column_width(440.0), 52)
 	start.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	start.disabled = not GameDB.loaded
+	_start_btn = start
+	_refresh_start()
 	start.pressed.connect(_on_start)
 	var cta := MarginContainer.new()
 	cta.add_theme_constant_override("margin_top", 6)
@@ -427,6 +466,49 @@ func _show_setup() -> void:
 	below.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	below.size_flags_stretch_ratio = SETUP_BELOW
 	_content.add_child(below)
+
+
+## The goal buttons' short names (the full goal is in Challenge.GOALS).
+const GOAL_BUTTONS := {"flag_homegrown": "Home-grown flag", "coach_300": "300 games"}
+
+
+## Rebuild takes over the bottom club of the real 2026 ladder, so it needs
+## Real 2026 lists: choosing a League redraft drops it.
+func _on_pick_start(k: String) -> void:
+	_pick_start = k
+	if k != "real" and _pick_challenge == "rebuild":
+		_pick_challenge = "none"
+		(_challenge_row.get_meta("select") as Callable).call("none")
+	_refresh_start()
+
+
+func _on_pick_challenge(k: String) -> void:
+	_pick_challenge = k
+	if k == "rebuild" and _pick_start != "real":
+		_pick_start = "real"
+		(_start_row.get_meta("select") as Callable).call("real")
+	if is_instance_valid(_goal_row):
+		_goal_row.visible = k == "goal"
+	_refresh_start()
+
+
+## Choose your club waits for the data, and for a goal when you set one.
+func _refresh_start() -> void:
+	if not is_instance_valid(_start_btn):
+		return
+	_start_btn.disabled = not GameDB.loaded or (_pick_challenge == "goal" and _pick_goal == "")
+
+
+## The challenge as GameState keeps it ({} for none).
+func _challenge_state() -> Dictionary:
+	match _pick_challenge:
+		"youth":
+			return {"kind": "youth"}
+		"rebuild":
+			return {"kind": "rebuild"}
+		"goal":
+			return {"kind": "goal", "goal": _pick_goal, "met_year": 0}
+	return {}
 
 
 ## A labelled row of options, the current one outlined, with a "?" that
@@ -470,6 +552,10 @@ func _choice(title: String, prefix: String, options: Array, current: String,
 		row.add_child(b)
 		buttons[key] = b
 	paint.call()
+	# Another row may move this one's pick (Rebuild needs Real 2026 lists).
+	v.set_meta("select", func(k):
+		state["key"] = k
+		paint.call())
 	return v
 
 
@@ -534,6 +620,9 @@ func _start_new_career() -> void:
 	# the career they had (reset() clears memory only).
 	GameState.reset()
 	GameState.set_canberra(_pick_canberra)
+	GameState.challenge = _challenge_state()
+	if _pick_challenge == "rebuild":
+		_pick_start = "real"
 	# A created club has no real 2026 list, so it only joins a League redraft.
 	if _pick_club and _pick_start != "real":
 		var club := GameState.forge_club()

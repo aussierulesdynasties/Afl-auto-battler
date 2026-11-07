@@ -12,15 +12,14 @@ const GAIN := "Gain: %s"
 const COST := "Cost: %s"
 
 # The hub's options beside an opposition fact (FactOptions).
-const TAG_GAIN := "he keeps %s of his ball on a Tagger, %s on anyone else"
+const TAG_GAIN := "%s keeps %s of his ball on a Tagger, %s on anyone else"
+## Who the tag gain is about when the fact names nobody (a midfield fact).
+const TAG_TARGET_ANY := "the man you tag"
 const TAG_COST := "your tagger gives up %s of his own ball and contest work"
-const MATCHUP_GAIN := "on %s he marks about %s of contested balls"
-const MATCHUP_COST_NEXT := "moving %s frees their next forward"
-const MATCHUP_COST_LOOSE := "%s can no longer play loose"
 const MINDER_GAIN := "their loose man reaches %s of his contests, %s with a Defensive forward"
 const MINDER_COST := "your forward is a target %s less often"
 const LOOSE_GAIN := "a top reader gets to %s of their entries"
-const LOOSE_COST := "he leaves his man on %s of entries, and space opens if he is late"
+const LOOSE_COST := "your loose defender leaves his man on %s of entries, and space opens if he is late"
 const PLAN_GAIN := {
 	"attacking": "shots %s more accurate, %s more ground a kick",
 	"defensive": "%s more pressure where they start, their shots %s less accurate",
@@ -39,17 +38,8 @@ const TAG_GIVES := "%s of his own ball and contest work"
 const TAG_NOTE := "%s tags %s: he gives up %s of his own game."
 
 # Skip to full time.
-const SKIP_FIRST := "Skip plays the match on the plan you took in, no tag, no talk. Only a match-up changed here is kept; every call in the match takes 'no change'."
-const SKIP_LATER := "Skip plays the rest on last quarter's calls and talk. Only a match-up changed here is kept; every call in the match takes 'no change'."
-
-# Key match-ups (break chooser and the in-match card).
-const BACK_STATS := "Intercept %d · Marking %d"
-const BACK_CM := " · %d cm"
-const DUEL_GAIN := "on him %s marks about %s of contested balls"
-const DUEL_COST_SWAP := "%s then goes to %s, who marks about %s on him"
-const DUEL_COST_LOOSE := "he stops roaming as your spare"
-const DUEL_COST_FREE := "%s comes off him and plays the line"
-const DUEL_COST_KEEP := "no change: the contest stays as it is"
+const SKIP_FIRST := "Skip plays the match on the plan you took in, no tag, no talk. Nothing changed here is kept; every call in the match takes 'no change'."
+const SKIP_LATER := "Skip plays the rest on last quarter's calls and talk. Nothing changed here is kept; every call in the match takes 'no change'."
 
 # The in-match risk cards.
 const BURST_GAIN := {
@@ -108,8 +98,11 @@ static func plan_lines(plan: String) -> Array:
 	return ["", ""]
 
 
-static func tag_lines() -> Array:
-	return [TAG_GAIN % [pct(Roles.TAG_WITH_TAGGER), pct(Roles.TAG_PLAIN)], TAG_COST % tag_gives_pct()]
+## The tag's [gain, cost]; `target` names the man tagged (their player the
+## fact is about), or "" when the fact names nobody.
+static func tag_lines(target := "") -> Array:
+	var who := target if target != "" else TAG_TARGET_ANY
+	return [TAG_GAIN % [who, pct(Roles.TAG_WITH_TAGGER), pct(Roles.TAG_PLAIN)], TAG_COST % tag_gives_pct()]
 
 
 ## The share of his own game a tagger gives up: his contest worth
@@ -151,14 +144,6 @@ static func skip_line(q: int) -> String:
 	return SKIP_FIRST if q <= 1 else SKIP_LATER
 
 
-## "Intercept 74 · Marking 68 · 192 cm": the ratings the duel runs on.
-static func back_stats(p: Dictionary) -> String:
-	var a: Dictionary = p.get("attr", {})
-	var h := int(float(p.get("height_cm", 0.0)))
-	return BACK_STATS % [roundi(float(a.get("intercept", 0))), roundi(float(a.get("marking", 0)))] \
-			+ (BACK_CM % h if h > 0 else "")
-
-
 ## How long a burst lasts: every call ends at the break, so one that outlasts
 ## the quarter runs to the break (the siren in the last quarter).
 static func burst_time(kind: String, minutes_left: int, last := true) -> String:
@@ -186,34 +171,3 @@ static func burst_lines(kind: String, minutes_left := -1, last := true) -> Array
 			return [BURST_GAIN[kind] % pct(1.0 - MatchSim.FLOOD_OPP_GOAL) + t,
 					BURST_COST[kind] % [pct(1.0 - MatchSim.FLOOD_GOAL), pct(1.0 - MatchSim.BACK_GAIN)]]
 	return ["", ""]
-
-
-## A back's card for their forward `fid` (break chooser, in-match card):
-## [stats line, gain, cost]. The gain is the engine's mark chance for that
-## forward on him (Matchups.mark_chance, the two lines in); the cost is what
-## the move leaves: the swap, his loose role, or his man.
-static func duel_lines(sim: MatchSim, my_side: int, fid: String, p: Dictionary) -> Array:
-	var fwd := sim._on_ground(1 - my_side, fid)
-	var fl := float((sim.squads[1 - my_side] as Squad).fwd_mark)
-	var dl := float((sim.squads[my_side] as Squad).def_intercept)
-	var duels: Dictionary = sim.duels[my_side]
-	var pid := str(p.get("id", ""))
-	var cur := sim._on_ground(my_side, str(duels.get(fid, "")))
-	var g := DUEL_GAIN % [GameDB.player_display_name(fwd), pct(Matchups.mark_chance(fwd, p, fl, dl))] if not fwd.is_empty() else ""
-	var c := DUEL_COST_KEEP
-	if pid != str(cur.get("id", "")):
-		var other := ""
-		for f in duels:
-			if str(duels[f]) == pid and str(f) != fid:
-				other = str(f)
-		if other != "" and not cur.is_empty():
-			var of := sim._on_ground(1 - my_side, other)
-			c = DUEL_COST_SWAP % [GameDB.player_display_name(cur), GameDB.player_display_name(of),
-					pct(Matchups.mark_chance(of, cur, fl, dl))] if not of.is_empty() else MATCHUP_COST_NEXT % GameDB.player_display_name(p)
-		elif other != "":
-			c = MATCHUP_COST_NEXT % GameDB.player_display_name(p)
-		elif str(sim.interceptor[my_side]) == pid:
-			c = DUEL_COST_LOOSE
-		elif not cur.is_empty():
-			c = DUEL_COST_FREE % GameDB.player_display_name(cur)
-	return [back_stats(p), gain(g), cost(c)]

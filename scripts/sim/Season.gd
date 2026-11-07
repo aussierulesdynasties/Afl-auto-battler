@@ -32,7 +32,6 @@ var seed := 0
 var finals := {}               # finals series state, empty until started
 var selections := {}           # code -> chosen match-day side (empty = auto)
 var plans := {}                # code -> standing game plan (absent = balanced)
-var matchups := {}             # code -> {their forward id: your defender id} (Matchups)
 
 
 func _init(club_codes: Array, club_lists: Dictionary, p_seed: int = 0) -> void:
@@ -92,6 +91,12 @@ const FAIR_FIXTURE_MAX := 21
 ## opening rounds and the run home are full at an even count.
 const BYE_FIRST := 8
 const BYE_LAST := 19
+## A pair that meets twice meets at least this many rounds apart, the first
+## meeting in the first half of the season and the return in the second, as
+## the AFL draws it (director, 2026-11-07: Hawthorn in rounds 1 and 6 was
+## wrong). Ten holds at 18 to 21 clubs: the return rounds' first meetings
+## go in rounds 1 to 12 and their returns in rounds 13 to 24.
+const RETURN_GAP := 10
 
 
 ## Every club plays the same number of games, home and away within one game
@@ -102,15 +107,21 @@ const BYE_LAST := 19
 ##    count, so 23 each cannot be done).
 ##  - a round-robin, then a seeded choice of its rounds again (return
 ##    games). At an odd count the clubs those return rounds rest are paired
-##    off with each other; at an even count no one needs it.
-##  - the rounds go in a seeded order, then matches move into the thin
-##    round until no round is more than one match short (21 clubs: fifteen
-##    rounds of ten and nine of nine). The thinned rounds are mid-season
-##    (rounds 9 to 20, as the AFL's byes are), and a club's two byes apart
-##    where the rounds allow it.
+##    off with each other (never a pair the return rounds already bring
+##    back); at an even count no one needs it.
+##  - the return games are spaced (_spaced_order, RETURN_GAP): a return
+##    round's first meeting in the first half, its copy at least ten rounds
+##    later in the second; the other rounds fill the rest in a seeded order.
+##  - then matches move into the thin round until no round is more than one
+##    match short (21 clubs: fifteen rounds of ten and nine of nine). The
+##    thinned rounds are mid-season (rounds 9 to 20, as the AFL's byes are),
+##    a club's two byes apart where the rounds allow it, and a moved match
+##    keeps its pair's two meetings spaced.
 ##  - venues: a pair met twice plays once at each ground; the pairs met once
 ##    are oriented along an Euler circuit, so every club is home in half of
 ##    them (within one game).
+## A saved season keeps the fixture it was saved with (load_career restores
+## it over this one), so only a new season is drawn this way.
 func build_fixture() -> Array:
 	if clubs.size() > FAIR_FIXTURE_MAX or clubs.size() < 2:
 		return _legacy_fixture()
@@ -122,45 +133,79 @@ func build_fixture() -> Array:
 	for r in round_robin(order):
 		base.append(r.map(func(m): return [str(m["home"]), str(m["away"])]))
 	var target := REGULAR_ROUNDS - 1 if clubs.size() % 2 == 0 else REGULAR_ROUNDS - 2
-	var picks := _shuffled(range(base.size()), rng)
-	var rounds := []
-	for r in base:
-		rounds.append((r as Array).duplicate())
-	var rested := []
-	# Each club meets every other once (n - 1 games), then the return rounds.
-	for k in range(target - (clubs.size() - 1)):
-		var again: Array = (base[picks[k % picks.size()]] as Array).duplicate()
-		rounds.append(again)
-		var playing := {}
-		for m in again:
-			playing[m[0]] = true
-			playing[m[1]] = true
-		for c in clubs:
-			if not playing.has(c):
-				rested.append(str(c))
-	# The last round: the rested clubs of the return rounds, paired off.
+	# Each club meets every other once (n - 1 games), then the return rounds:
+	# base rounds picked again. The last round pairs off the clubs those
+	# return rounds rest - never a pair they already bring back (a third
+	# meeting); if no pairing of them avoids it, another pick of rounds.
+	var picked := []
 	var spare := []
-	rested = _shuffled(rested, rng)
-	for i in range(0, rested.size() - 1, 2):
-		if rested[i] != rested[i + 1]:
-			spare.append([rested[i], rested[i + 1]])
-	# A seeded order of rounds, levelled; of a few, the one with fewest
-	# byes outside the mid-season rounds (at an even count), then fewest
-	# clubs resting in back-to-back rounds (an odd count rests twice).
+	for pick_try in range(8):
+		var picks := _shuffled(range(base.size()), rng)
+		picked = []
+		var rested := []
+		var twice := {}
+		for k in range(target - (clubs.size() - 1)):
+			var bi: int = picks[k % picks.size()]
+			picked.append(bi)
+			var playing := {}
+			for m in base[bi]:
+				playing[m[0]] = true
+				playing[m[1]] = true
+				twice[_pair_key(m)] = true
+			for c in clubs:
+				if not playing.has(c):
+					rested.append(str(c))
+		var clash := true
+		for attempt in range(6):
+			spare = []
+			clash = false
+			var mixed := _shuffled(rested, rng)
+			for i in range(0, mixed.size() - 1, 2):
+				if mixed[i] != mixed[i + 1]:
+					var m := [mixed[i], mixed[i + 1]]
+					spare.append(m)
+					clash = clash or twice.has(_pair_key(m))
+			if not clash:
+				break
+		if not clash:
+			break
+	# Of a few seeded orders, levelled, the best by, in turn: no round two or
+	# more matches short; no bye outside the mid-season rounds (at an even
+	# count); every return game spaced (failing that, the widest closest pair
+	# and the fewest close ones); fewest clubs resting in back-to-back rounds
+	# (an odd count rests twice). Levelling can dead-end on a spaced order, so
+	# if none of those comes out full with its byes mid-season, plain seeded
+	# shuffles (the pre-spacing draw) get their turn too.
 	var best := []
-	var best_score := 1 << 30
-	for attempt in range(16):
-		var order_r := []
-		for r in _shuffled(rounds, rng):
-			order_r.append((r as Array).duplicate())
-		if not spare.is_empty() or order_r.size() < REGULAR_ROUNDS:
-			order_r.insert(rng.randi_range(BYE_FIRST, mini(BYE_LAST, order_r.size())), spare.duplicate())
-		order_r = _level_rounds(order_r, rng)
-		var score := 0
-		if clubs.size() % 2 == 0:
-			for ri in range(order_r.size()):
-				if (ri < BYE_FIRST or ri > BYE_LAST) and (order_r[ri] as Array).size() < clubs.size() / 2:
-					score += 1000
+	var best_score := 1 << 62
+	for attempt in range(96):
+		var start := []
+		if attempt < 80:
+			start = _spaced_order(base, picked, spare, rng)
+		else:
+			for r in base:
+				start.append((r as Array).duplicate())
+			for bi in picked:
+				start.append((base[bi] as Array).duplicate())
+			start = _shuffled(start, rng)
+			start.insert(rng.randi_range(BYE_FIRST, mini(BYE_LAST, start.size())), spare.duplicate())
+		var order_r := _level_rounds(start, rng)
+		var closest := REGULAR_ROUNDS
+		var close := 0
+		var meets := _meet_rounds(order_r)
+		for key in meets:
+			var at: Array = meets[key]
+			for k in range(1, at.size()):
+				closest = mini(closest, int(at[k]) - int(at[k - 1]))
+				if int(at[k]) - int(at[k - 1]) < RETURN_GAP:
+					close += 1
+		var score := maxi(0, RETURN_GAP - closest) * 100000000 + close * 100000
+		for ri in range(order_r.size()):
+			var size := (order_r[ri] as Array).size()
+			if size < clubs.size() / 2 - 1:
+				score += 1000000000000000
+			if clubs.size() % 2 == 0 and (ri < BYE_FIRST or ri > BYE_LAST) and size < clubs.size() / 2:
+				score += 10000000000000
 		var rests := _rests(order_r)
 		for c in rests:
 			var rs: Array = rests[c]
@@ -173,6 +218,109 @@ func build_fixture() -> Array:
 		if score == 0:
 			break
 	return _assign_venues(best, rng)
+
+
+func _pair_key(m: Array) -> String:
+	return "%s|%s" % ([m[0], m[1]] if str(m[0]) < str(m[1]) else [m[1], m[0]])
+
+
+## Pair key -> the rounds the pair meets in, in order.
+func _meet_rounds(rounds: Array) -> Dictionary:
+	var out := {}
+	for ri in range(rounds.size()):
+		for m in rounds[ri]:
+			var key := _pair_key(m)
+			if not out.has(key):
+				out[key] = []
+			(out[key] as Array).append(ri)
+	return out
+
+
+## A seeded order of the season's rounds (the round-robin, the return copies
+## of `picked`, the spare round) with the return games spaced: the spare
+## round mid-season and the base rounds holding its pairs at least
+## RETURN_GAP away across halfway; each picked round in the first half and
+## its copy at least RETURN_GAP later in the second; the other rounds fill
+## the gaps in a seeded order. Where the rounds can't hold that (a tiny
+## league plays one round many times), a plain seeded shuffle.
+func _spaced_order(base: Array, picked: Array, spare: Array, rng: RandomNumberGenerator) -> Array:
+	var total := base.size() + picked.size() + 1
+	var half := total / 2
+	var s := rng.randi_range(BYE_FIRST, mini(BYE_LAST, total - 1))
+	var slot := {s: spare.duplicate()}    # slot -> round
+	var placed := {}                      # base index -> true
+	var ok := true
+	var once := {}
+	for bi in picked:
+		ok = ok and not once.has(bi)      # a round played three times can't be spaced
+		once[bi] = true
+	# The spare pairs' first meetings: far from the spare round, across halfway.
+	for m in spare if ok else []:
+		var key := _pair_key(m)
+		var bi := -1
+		for i in range(base.size()):
+			for bm in base[i]:
+				if _pair_key(bm) == key:
+					bi = i
+		if bi < 0 or placed.has(bi) or picked.has(bi):
+			continue
+		var far := []
+		var across := []
+		for i in range(total):
+			if not slot.has(i) and absi(i - s) >= RETURN_GAP:
+				far.append(i)
+				if (i < half) != (s < half):
+					across.append(i)
+		var pool: Array = across if not across.is_empty() else far
+		if pool.is_empty():
+			ok = false
+			break
+		slot[pool[rng.randi_range(0, pool.size() - 1)]] = (base[bi] as Array).duplicate()
+		placed[bi] = true
+	# The return rounds: first meeting in the first half, the copy in the
+	# second. Latest first meeting first: its choices are a subset of every
+	# earlier one's, so taking any of them never blocks the rest.
+	var firsts := []
+	for i in range(half):
+		if not slot.has(i):
+			firsts.append(i)
+	firsts = _shuffled(firsts, rng)
+	ok = ok and firsts.size() >= picked.size()
+	if ok:
+		firsts = firsts.slice(0, picked.size())
+		firsts.sort()
+		firsts.reverse()
+		var late := picked.duplicate()
+		for k in range(late.size()):
+			var bi: int = late[k]
+			var at: int = firsts[k]
+			var pool := []
+			for i in range(half, total):
+				if not slot.has(i) and i - at >= RETURN_GAP:
+					pool.append(i)
+			if pool.is_empty() or placed.has(bi):
+				ok = false
+				break
+			slot[at] = (base[bi] as Array).duplicate()
+			slot[pool[rng.randi_range(0, pool.size() - 1)]] = (base[bi] as Array).duplicate()
+			placed[bi] = true
+	var out := []
+	if not ok:
+		for r in base:
+			out.append((r as Array).duplicate())
+		for bi in picked:
+			out.append((base[bi] as Array).duplicate())
+		out = _shuffled(out, rng)
+		out.insert(s, spare.duplicate())
+		return out
+	var rest := []
+	for i in range(base.size()):
+		if not placed.has(i):
+			rest.append((base[i] as Array).duplicate())
+	rest = _shuffled(rest, rng)
+	for i in range(total):
+		out.append(slot[i] if slot.has(i) else rest.pop_back())
+	return out
 
 
 func _shuffled(arr: Array, rng: RandomNumberGenerator) -> Array:
@@ -205,13 +353,17 @@ func _level_rounds(rounds: Array, rng: RandomNumberGenerator) -> Array:
 			busy[m[0]] = true
 			busy[m[1]] = true
 		var rests := _rests(rounds)
+		var meets := _meet_rounds(rounds)
 		var best := []
-		# Byes in the mid-season window and apart first; then anywhere but
-		# round 1 and the last two; anywhere when nothing else moves.
-		for pass_i in range(4):
-			var apart := pass_i == 0
-			var span := range(BYE_FIRST, mini(BYE_LAST + 1, last)) if pass_i <= 1 \
-					else (range(1, last) if pass_i == 2 else range(rounds.size()))
+		# Byes in the mid-season window, apart, with the moved pair's
+		# meetings still RETURN_GAP apart first; then dropping the apart,
+		# then the spacing; then anywhere but round 1 and the last two;
+		# anywhere when nothing else moves.
+		for pass_i in range(7):
+			var apart := pass_i == 0 or pass_i == 2
+			var spaced := pass_i == 0 or pass_i == 1 or pass_i == 4
+			var span := range(BYE_FIRST, mini(BYE_LAST + 1, last)) if pass_i <= 3 \
+					else (range(1, last) if pass_i <= 5 else range(rounds.size()))
 			for fi in _shuffled(span, rng):
 				if fi == ti or (rounds[fi] as Array).size() < full:
 					continue
@@ -219,6 +371,13 @@ func _level_rounds(rounds: Array, rng: RandomNumberGenerator) -> Array:
 					var m: Array = rounds[fi][mi]
 					if busy.has(m[0]) or busy.has(m[1]):
 						continue
+					if spaced:
+						var crowded := false
+						for r in meets[_pair_key(m)]:
+							if int(r) != fi and absi(int(r) - ti) < RETURN_GAP:
+								crowded = true
+						if crowded:
+							continue
 					var near := false
 					if apart:
 						for c in m:
@@ -356,7 +515,7 @@ func simulate(home_code: String, away_code: String, match_seed: int,
 
 
 ## The match, set up and ready to run: both sides, their form, coaching,
-## plans and match-ups.
+## plans.
 func match_sim(home_code: String, away_code: String, match_seed: int,
 		at_home := [true, false], is_final := false, weather := "perfect") -> MatchSim:
 	var home := Squad.new(GameDB_ref().club_name(home_code),
@@ -376,9 +535,6 @@ func match_sim(home_code: String, away_code: String, match_seed: int,
 		var plan := str(plans.get([home_code, away_code][side], ""))
 		if plan != "":
 			sim.set_tactics(side, {"gameplan": plan})
-		var mu: Dictionary = matchups.get([home_code, away_code][side], {})
-		if not mu.is_empty():
-			sim.set_matchups(side, mu)
 	return sim
 
 
