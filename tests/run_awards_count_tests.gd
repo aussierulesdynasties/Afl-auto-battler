@@ -23,6 +23,8 @@ const Count := preload("res://scripts/sim/AwardsCount.gd")
 const PHONE := Vector2i(390, 844)
 ## Live, the clock runs this many times faster, so a season reads in seconds.
 const FAST := 30.0
+## The season under the hand-made record is seeded, so each run is the same.
+const SUITE_SEED := 2026
 
 
 func _initialize() -> void:
@@ -53,6 +55,7 @@ func _run() -> void:
 	_state.autosave_enabled = false
 	_state.save_path = "user://test_awards_count.save"
 	_state.settings_path = "user://test_awards_count.cfg"
+	_state.replay_seed = SUITE_SEED
 	_state.delete_saved_career()
 	root.size = PHONE
 	await _settle()
