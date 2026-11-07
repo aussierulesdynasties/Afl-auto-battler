@@ -947,53 +947,171 @@ func _skip_season_button() -> Button:
 	return b
 
 
-## What Skip to next season decides for you, in the club's words: facts and
-## the rule, no advice. [node name, text, bold].
-static func skip_lines(season: Season, year: int) -> Array:
+## The survey before the skip (row 70, T5.Q20; director, 2026-11-07: "I do
+## want the survey"): one question a step, each option with what it does for
+## you and what it costs (SkipOrders), opened on the club's current answers;
+## then the sheet that says what is left and asks. Back steps back a question.
+var _skip_answers := {}
+var _skip_step := 0
+
+
+## Facts a question's lead names: your out-of-contract players and how many
+## of them are veterans.
+static func skip_facts() -> Dictionary:
+	var n := 0
+	var vets := 0
+	for p in Contracts.expiring(GameState.my_list):
+		if bool(p.get("resigned", false)) or GameState.retiring_now(p):
+			continue
+		n += 1
+		if int(floor(float(p.get("age", 0)))) >= SkipOrders.VETERAN_AGE:
+			vets += 1
+	return {"expiring": n, "veterans": vets}
+
+
+## The confirm sheet's lines: what is left, your answers, and what nobody
+## asked you about. [node name, text, bold].
+static func skip_lines(season: Season, year: int, answers: Dictionary) -> Array:
 	var left := "the rest of the finals"
 	if not season.is_regular_done():
 		var n := season.fixture.size() - season.round_index
 		left = "%d round%s and the finals" % [n, "" if n == 1 else "s"]
-	return [
-		["SkipLeft", "The rest of the %d season is played out without you: %s." % [year, left], true],
-		["SkipSelection", "Selection: your side as it stands, with anyone unavailable replaced each week.", false],
-		["SkipQuestions", "Questions during the week: the club's usual answer where it has one. The rest go unanswered, which can cost the board's confidence or a player's trust.", false],
-		["SkipContracts", "Out-of-contract players: depth players re-sign if the cap allows, your best 23 test the market, the rest are let go.", false],
-		["SkipTrades", "Trades: you make none.", false],
-		["SkipDraft", "National Draft: your recruiters take the best available at each of your picks.", false],
-		["SkipStop", "It stops at the start of the %d pre-season, with the ladder, the awards, your draft picks and who left. If the board sacks you, it stops there." % (year + 1), false],
-	]
+	var qs := SkipOrders.questions(skip_facts())
+	var out := [["SkipLeft", "The rest of the %d season is played out without you: %s." % [year, left], true]]
+	for q in qs:
+		var k := str(q["key"])
+		out.append(["SkipAnswer_" + k, "%s: %s" % [str(SkipOrders.SHORT[k]),
+				SkipOrders.label(qs, k, str(answers.get(k, "")))], false])
+	out.append(["SkipTrades", "Trades: you make none.", false])
+	out.append(["SkipStop", "It stops at the start of the %d pre-season, with the ladder, the awards, your draft picks and who left. If the board sacks you, it stops there." % (year + 1), false])
+	return out
 
 
 func _open_skip_confirm() -> void:
 	var season: Season = GameState.season
 	if season == null or season.is_season_over() or GameState.is_sacked():
 		return
+	_skip_answers = SkipOrders.defaults(GameState.club_plan)
+	_skip_show(0)
+
+
+func _skip_show(step: int) -> void:
 	_close_skip_confirm()
+	_skip_step = step
+	var qs := SkipOrders.questions(skip_facts())
 	var year := GameState.season_year
 	var box := UiKit.modal_box(self, 460.0, 0.0)
 	_skip_confirm = box["overlay"]
-	_skip_confirm.name = "SkipSeasonConfirm"
 	var v: VBoxContainer = box["body"]
-	v.add_child(UiKit.heading("Skip to the %d season?" % (year + 1), UiKit.H1))
-	for line in skip_lines(season, year):
-		var l := UiKit.lbl(str(line[1]), UiKit.BODY if bool(line[2]) else 14, UiKit.TEXT, bool(line[2]))
-		l.name = str(line[0])
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(l)
-		if bool(line[2]):
-			v.add_child(UiKit.spacer(2))
-			v.add_child(UiKit.lbl("Decided for you", 14, UiKit.MUTED, true))
-	var go := UiKit.btn("Skip the season", UiKit.NAME, true)
-	go.name = "SkipSeasonGo"
-	go.custom_minimum_size = Vector2(0, 48)
-	go.pressed.connect(_on_skip_season)
-	box["footer"].add_child(go)
-	var cancel := UiKit.btn("Cancel", UiKit.NAME)
-	cancel.name = "SkipSeasonCancel"
-	cancel.custom_minimum_size = Vector2(0, 48)
-	cancel.pressed.connect(_close_skip_confirm)
-	box["footer"].add_child(cancel)
+	var footer: VBoxContainer = box["footer"]
+	var back := UiKit.btn("Cancel" if step == 0 else "Back", UiKit.NAME)
+	back.name = "SkipSeasonCancel" if step == 0 else "SkipBack"
+	back.custom_minimum_size = Vector2(0, 48)
+	back.pressed.connect(_skip_back)
+	if step >= qs.size():
+		_skip_confirm.name = "SkipSeasonConfirm"
+		v.add_child(UiKit.heading("Skip to the %d season?" % (year + 1), UiKit.H1))
+		for line in skip_lines(GameState.season, year, _skip_answers):
+			var l := UiKit.lbl(str(line[1]), UiKit.BODY if bool(line[2]) else UiKit.SECONDARY, UiKit.TEXT, bool(line[2]))
+			l.name = str(line[0])
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			v.add_child(l)
+			if bool(line[2]):
+				v.add_child(UiKit.spacer(2))
+				v.add_child(UiKit.lbl("Your calls", UiKit.SECONDARY, UiKit.MUTED, true))
+		footer.add_child(back)
+		var go := UiKit.btn("Skip the season", UiKit.NAME, true)
+		go.name = "SkipSeasonGo"
+		go.custom_minimum_size = Vector2(0, 48)
+		go.pressed.connect(_on_skip_season)
+		footer.add_child(go)
+		return
+	_skip_confirm.name = "SkipSeasonSurvey"
+	var q: Dictionary = qs[step]
+	var key := str(q["key"])
+	var count := UiKit.lbl("Before you skip · %d of %d" % [step + 1, qs.size()], UiKit.SECONDARY, UiKit.MUTED, true)
+	count.name = "SkipStepCount"
+	v.add_child(count)
+	var head := UiKit.heading(str(q["title"]), UiKit.H1)
+	head.name = "SkipQuestion"
+	v.add_child(head)
+	var lead := UiKit.lbl(str(q["lead"]), UiKit.BODY, UiKit.TEXT)
+	lead.name = "SkipLead"
+	lead.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(lead)
+	v.add_child(UiKit.spacer(2))
+	var opts := UiKit.vbox(6)
+	opts.name = "SkipOptions_" + key
+	v.add_child(opts)
+	for o in q["options"]:
+		opts.add_child(_skip_option(key, o as Dictionary, opts))
+	footer.add_child(back)
+	var next := UiKit.btn("Next", UiKit.NAME, true)
+	next.name = "SkipNext"
+	next.custom_minimum_size = Vector2(0, 48)
+	next.pressed.connect(func(): _skip_show(_skip_step + 1))
+	footer.add_child(next)
+
+
+## One answer: its name, then what it does for you and what it costs; a tap
+## chooses it (outlined) and moves nothing on.
+func _skip_option(q: String, o: Dictionary, group: Control) -> Control:
+	var key := str(o["key"])
+	var wrap := MarginContainer.new()
+	wrap.name = "SkipOptionWrap_%s_%s" % [q, key]
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var b := UiKit.btn("", UiKit.SECONDARY)
+	b.name = "SkipOption_%s_%s" % [q, key]
+	b.custom_minimum_size.y = 48
+	b.set_meta("key", key)
+	wrap.add_child(b)
+	var pad := MarginContainer.new()
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "right"]:
+		pad.add_theme_constant_override("margin_" + side, 12)
+	for side in ["top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, 8)
+	wrap.add_child(pad)
+	var col := UiKit.vbox(2)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad.add_child(col)
+	var name_l := UiKit.lbl(str(o["label"]), UiKit.NAME, UiKit.TEXT, true)
+	name_l.name = "OptionName"
+	col.add_child(name_l)
+	for part in [["Gain", "gain"], ["Cost", "cost"]]:
+		var row := UiKit.hbox(6)
+		row.name = "Option" + str(part[0])
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var tag := UiKit.lbl(str(part[0]), UiKit.SECONDARY, UiKit.MUTED, true)
+		tag.custom_minimum_size.x = 38
+		tag.autowrap_mode = TextServer.AUTOWRAP_OFF
+		tag.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		tag.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		var words := UiKit.lbl(str(o[part[1]]), UiKit.SECONDARY, UiKit.TEXT)
+		words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		for l in [tag, words]:
+			(l as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(l)
+		col.add_child(row)
+	b.pressed.connect(func():
+		_skip_answers[q] = key
+		_skip_paint(group, q))
+	UiKit.set_selected(b, str(_skip_answers.get(q, "")) == key)
+	return wrap
+
+
+func _skip_paint(group: Control, q: String) -> void:
+	for n in group.find_children("SkipOption_*", "Button", true, false):
+		UiKit.set_selected(n as Button, str((n as Button).get_meta("key", "")) == str(_skip_answers.get(q, "")))
+
+
+## Back (the button or Android Back): the question before, or out from the first.
+func _skip_back() -> void:
+	if _skip_step <= 0:
+		_close_skip_confirm()
+	else:
+		_skip_show(_skip_step - 1)
 
 
 func _close_skip_confirm() -> void:
@@ -1003,12 +1121,13 @@ func _close_skip_confirm() -> void:
 
 
 func _on_skip_season() -> void:
+	var orders := _skip_answers.duplicate()
 	_close_skip_confirm()
-	ScreenTransition.run("Playing out the %d season..." % GameState.season_year, _skip_season)
+	ScreenTransition.run("Playing out the %d season..." % GameState.season_year, _skip_season.bind(orders))
 
 
-func _skip_season() -> void:
-	GameState.skip_season()
+func _skip_season(orders := {}) -> void:
+	GameState.skip_season(orders)
 	_build()
 	if GameState.needs_season_wrap():
 		_show_season_wrap()
@@ -1645,7 +1764,7 @@ func handle_back() -> bool:
 		_close_finals()
 		return true
 	if _skip_confirm != null and is_instance_valid(_skip_confirm):
-		_close_skip_confirm()
+		_skip_back()
 		return true
 	if _onboarding_overlay != null and is_instance_valid(_onboarding_overlay):
 		_close_weekly_loop_intro()

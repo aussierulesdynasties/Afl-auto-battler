@@ -1,7 +1,7 @@
 extends SceneTree
 ## Review capture for Skip to next season (director, 2026-11-07), dark: the
-## quiet button under the week on the hub, the sheet that says what is decided
-## for you, and the season wrap after the skip (the season you skipped, then
+## quiet button under the week on the hub, each question of the survey before
+## the skip, the sheet that says what is decided for you, and the season wrap after the skip (the season you skipped, then
 ## your draft picks and who left). Needs a real renderer:
 ##   godot --windowed --path . --script tools/visual/capture_season_skip.gd
 ## Environment: CAP_DIR (default "."), CAP_CLUB (default "FRE"), CAP_W / CAP_H
@@ -75,9 +75,14 @@ func _run() -> void:
 	else:
 		await _scroll_to(hub, b, int(size.y * 0.6))
 	await _shot("%s/skip_hub_%dx%d.png" % [dir, size.x, size.y])
+	# The survey (row 70): each question, then the sheet that asks.
 	hub.call("_open_skip_confirm")
-	await _frames(10)
-	await _shot("%s/skip_confirm_%dx%d.png" % [dir, size.x, size.y])
+	var keys: Array = load("res://scripts/sim/SkipOrders.gd").KEYS
+	for i in range(keys.size() + 1):
+		hub.call("_skip_show", i)
+		await _frames(10)
+		var name := "skip_confirm" if i == keys.size() else "skip_q%d_%s" % [i + 1, keys[i]]
+		await _shot("%s/%s_%dx%d.png" % [dir, name, size.x, size.y])
 	hub.call("_close_skip_confirm")
 	var res: Dictionary = state.skip_season()
 	print("skip: ", res, " | facts: ", state.season_wrap.get("skipped", {}))

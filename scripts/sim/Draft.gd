@@ -22,6 +22,9 @@ var senior_cap := 0
 ## Youth only (Challenge.gd): your club may not take a player older than this.
 ## 0 for no limit. Rival clubs are never bound.
 var user_max_age := 0
+## Your recruiters' lean when a skip drafts for you (SkipOrders.DRAFT_POT): the
+## share of a draftee's worth that is his ceiling. Below 0, the usual blend.
+var user_pot_weight := -1.0
 var existing_role_counts := {}        # code -> {RUCK..FWD} kept players (intake)
 var existing_roles := {}              # code -> [[role, role2], ...] kept players (intake)
 var _fixed_order: Array = []
@@ -1028,7 +1031,8 @@ func scouting_mult_for(code: String) -> float:
 ## score: {"role", "need", "second_star", "penalty"} (P-18 reasons).
 func _ai_score(code: String, p: Dictionary, detail = null) -> float:
 	_refresh_ai_cache()
-	var base := DraftScouting.scouted_worth(p, code, seed, AI_POT_WEIGHT_INTAKE,
+	var pot_w := user_pot_weight if code == user_club and user_pot_weight >= 0.0 else AI_POT_WEIGHT_INTAKE
+	var base := DraftScouting.scouted_worth(p, code, seed, pot_w,
 			scouting_mult_for(code)) if intake_mode else _club_worth(code, p)
 	var err := _eval_error(code, p)
 	var best := -INF

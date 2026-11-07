@@ -681,6 +681,9 @@ var saves_written := 0
 ## alone and the skip saves once at the end (a save every round was a quarter of
 ## the skip's time). Killed mid-skip, the career is where the skip began.
 var _batching := false
+## The coach's answers to the survey before Skip to next season (SkipOrders),
+## held only while the skip runs; {} the rest of the time.
+var _skip_orders := {}
 
 
 func autosave() -> bool:
@@ -9096,6 +9099,7 @@ func _fa_close_plan() -> Array:
 	# aside, so whoever takes yours can always be paid.
 	var room := salary_cap - my_payroll()
 	var size := my_list.size()
+	var policy := str(_skip_orders.get("contracts", "usual"))
 	for p in Contracts.expiring(my_list):
 		if bool(p.get("resigned", false)) or retiring_now(p):
 			continue
@@ -9105,7 +9109,18 @@ func _fa_close_plan() -> Array:
 			continue
 		var rise := Contracts.asking_salary(p) - int(p.get("salary", 0))
 		var fits := rise <= room
+		# The survey before a skip (SkipOrders) can move the veterans on, or
+		# keep your best 23 at their price instead of testing the market.
+		if policy == "veterans" and not walked and size > Contracts.MIN_LIST \
+				and int(floor(float(p.get("age", 0)))) >= SkipOrders.VETERAN_AGE:
+			plan.append([p, "release"])
+			size -= 1
+			continue
 		if not walked and fits and best22.has(str(p["id"])) and size > Contracts.MIN_LIST:
+			if policy == "keep":
+				plan.append([p, "resign2"])
+				room -= rise
+				continue
 			plan.append([p, "test"])
 			size -= 1
 			room -= rise
@@ -11269,19 +11284,29 @@ func _next_week_event() -> void:
 ## the off-season wrap opens with the skipped season's facts (season_wrap
 ## "skipped"). Sacked on the way, it stops there. Saved once, at the end.
 ## Returns {"ok", "year", "weeks", "reason": "done" | "sacked" | "none"}.
-func skip_season() -> Dictionary:
+func skip_season(orders := {}) -> Dictionary:
 	if season == null or is_sacked() or season.is_season_over():
 		return {"ok": false, "year": season_year, "weeks": 0, "reason": "none"}
 	var year := season_year
 	var weeks := 0
 	_batching = true
+	_skip_orders = SkipOrders.defaults(club_plan)
+	_skip_orders.merge(orders, true)
+	# The survey's answers (SkipOrders): the game plan stands as your plan; a
+	# run for the kids needs auto-pick, which names a promised player.
+	set_club_plan(str(_skip_orders["game_plan"]))
+	if str(_skip_orders["youth"]) == "kids" and not my_selection().is_empty():
+		set_selection({})
 	while season != null and not season.is_season_over() and weeks < 80:
+		if str(_skip_orders["youth"]) == "kids":
+			_skip_back_kids()
 		advance()
 		weeks += 1
 		if is_sacked():
 			break
 	if is_sacked() or season == null or not season.is_season_over():
 		_batching = false
+		_skip_orders = {}
 		autosave()
 		return {"ok": false, "year": year, "weeks": weeks, "reason": "sacked"}
 	# The season's last card goes unanswered, as the next Sim the week would leave it.
@@ -11289,16 +11314,41 @@ func skip_season() -> Dictionary:
 	var facts := skipped_season_facts()
 	open_offseason()
 	if begin_intake_draft():
+		draft.user_pot_weight = float(SkipOrders.DRAFT_POT.get(str(_skip_orders["draft"]), -1.0))
 		_draft_for_me(draft)
+		draft.user_pot_weight = -1.0
 		finish_intake_draft()
 	else:
 		start_next_season()
 	if not season_wrap.is_empty() and int(season_wrap.get("year", 0)) == season_year:
 		season_wrap["skipped"] = facts
 	_batching = false
+	_skip_orders = {}
 	mark_dirty()
 	autosave()
 	return {"ok": true, "year": year, "weeks": weeks, "reason": "done"}
+
+
+## "Give the kids a run" (SkipOrders): before each week of the skip, your
+## best players with few senior games are promised runs (Backing) until
+## SkipOrders.YOUTH_RUNS are on at once; auto-pick names them.
+func _skip_back_kids() -> void:
+	var on := 0
+	var kids := []
+	for p in my_list:
+		if Backing.is_active(p):
+			on += 1
+		elif can_back(p):
+			kids.append(p)
+	kids.sort_custom(func(a, b):
+		if int(a["overall"]) != int(b["overall"]):
+			return int(a["overall"]) > int(b["overall"])
+		return str(a["id"]) < str(b["id"]))
+	for p in kids:
+		if on >= SkipOrders.YOUTH_RUNS:
+			break
+		_start_backing(p)
+		on += 1
 
 
 ## Your National Draft picks taken the "Pick for me" way, the rivals' as they
@@ -11352,6 +11402,11 @@ func _settle_week_event() -> void:
 	for i in range(week_events.size()):
 		var card: Dictionary = week_events[i]
 		if bool(card.get("resolved", false)):
+			continue
+		# Away on a skip, the survey's answer to the week's questions (SkipOrders).
+		var pick := SkipOrders.card_choice(card, str(_skip_orders.get("questions", "usual")))
+		if pick >= 0:
+			resolve_card(i, pick)
 			continue
 		var d := int(card.get("default", -1))
 		if d >= 0:

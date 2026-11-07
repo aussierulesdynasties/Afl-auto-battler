@@ -644,6 +644,12 @@ func _check(condition: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+
+
+## Game rules loaded when the test runs, not when this runner compiles (they
+## reach autoloads a --script runner can't name yet).
+func _rules(name: String):
+	return load("res://scripts/sim/%s.gd" % name)
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -894,6 +900,7 @@ func _run() -> void:
 	await _t("_test_sacked_job_choice_taps")
 	await _t("_test_sim_asks_only_before_your_match")
 	await _t("_test_skip_season")
+	await _t("_test_skip_orders")
 	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
@@ -3826,20 +3833,53 @@ func _test_skip_season() -> void:
 	_check(b != null and b.text == "Skip to the %d season" % (year + 1), "The hub offers Skip to the %d season" % (year + 1))
 	var why: String = await Tap.tap(b) if b != null else "missing"
 	await _settle()
-	var sheet: Node = current_scene.find_child("SkipSeasonConfirm", true, false)
+	var sheet: Node = current_scene.find_child("SkipSeasonSurvey", true, false)
 	_check(why == "" and sheet != null and _state.season_year == year,
-			"A finger on it opens the sheet and skips nothing yet (%s)" % why)
-	for n in ["SkipLeft", "SkipSelection", "SkipContracts", "SkipTrades", "SkipDraft", "SkipStop"]:
-		_check(current_scene.find_child(n, true, false) != null, "The sheet says what is decided for you: %s" % n)
+			"A finger on it opens the survey and skips nothing yet (%s)" % why)
 	var cancel: Button = current_scene.find_child("SkipSeasonCancel", true, false)
 	why = await Tap.tap(cancel) if cancel != null else "missing"
 	await _settle()
-	_check(why == "" and current_scene.find_child("SkipSeasonConfirm", true, false) == null
+	_check(why == "" and current_scene.find_child("SkipSeasonSurvey", true, false) == null
 			and _state.season_year == year and not _state.season.is_season_over(),
 			"A finger on Cancel closes it and skips nothing (%s)" % why)
 
+	# The survey by finger: each question opens on the club's answer; a tap
+	# chooses another, Back steps back with it kept, Next walks on.
 	b = current_scene.find_child("SkipSeason", true, false)
 	why = await Tap.tap(b) if b != null else "missing"
+	await _settle()
+	var plan_before: String = _state.club_plan
+	var steps := []
+	for q in _rules("SkipOrders").KEYS:
+		var count: Label = current_scene.find_child("SkipStepCount", true, false)
+		steps.append(count.text if count != null else "")
+		var chosen: Button = current_scene.find_child("SkipOption_%s_%s" % [q, str(_rules("SkipOrders").defaults(plan_before)[q])], true, false)
+		_check(chosen != null and current_scene.find_child("SkipOptions_" + q, true, false) != null,
+				"The survey asks %s, opened on the club's answer" % q)
+		var nx: Button = current_scene.find_child("SkipNext", true, false)
+		why = await Tap.tap(nx) if nx != null else "missing"
+		await _settle()
+		_check(why == "", "A finger on Next walks on from %s (%s)" % [q, why])
+	_check(steps[0] == "Before you skip · 1 of 5" and steps[4] == "Before you skip · 5 of 5", "The survey counts its steps (%s)" % [steps])
+	_check(current_scene.find_child("SkipSeasonConfirm", true, false) != null, "After the last question the sheet asks")
+	for n in ["SkipLeft", "SkipAnswer_game_plan", "SkipAnswer_youth", "SkipAnswer_questions",
+			"SkipAnswer_contracts", "SkipAnswer_draft", "SkipTrades", "SkipStop"]:
+		_check(current_scene.find_child(n, true, false) != null, "The sheet says what is decided: %s" % n)
+	# Android Back steps back a question; a finger picks another answer there.
+	current_scene.handle_back()
+	await _settle()
+	var other: Button = current_scene.find_child("SkipOption_draft_ceiling", true, false)
+	_check(current_scene.find_child("SkipSeasonSurvey", true, false) != null and other != null,
+			"Back from the sheet returns to the last question")
+	why = await Tap.tap(other) if other != null else "missing"
+	await _settle()
+	_check(why == "" and current_scene._skip_answers.get("draft") == "ceiling", "A finger on Back the ceiling chooses it (%s)" % why)
+	var best: Button = current_scene.find_child("SkipOption_draft_best", true, false)
+	why = await Tap.tap(best) if best != null else "missing"
+	await _settle()
+	_check(why == "" and current_scene._skip_answers.get("draft") == "best", "A finger on Best available chooses it again (%s)" % why)
+	var nx2: Button = current_scene.find_child("SkipNext", true, false)
+	why = await Tap.tap(nx2) if nx2 != null else "missing"
 	await _settle()
 	var go: Button = current_scene.find_child("SkipSeasonGo", true, false)
 	why = await Tap.tap(go) if go != null else "missing"
@@ -3866,3 +3906,69 @@ func _test_skip_season() -> void:
 			"A reload keeps the skipped season and its facts")
 	_state.set_confirm_sim_round(ask_before)
 	root.size = size_before
+
+
+## The survey's answers reach the skip (row 70): the same seed skipped with
+## two sets of answers ends in a different place for each answer.
+func _skip_orders_run(orders: Dictionary) -> Dictionary:
+	_state.reset()
+	_state.career_seed = 7301
+	_state.replay_seed = 7301
+	# Hawthorn's list (40) has room above the minimum, so its veterans can go.
+	_state.start_season("HAW", _db.club_list("HAW"))
+	_state.week_events = []
+	_state.season.round_index = _state.season.fixture.size() - 8
+	var vets := []
+	for p in _rules("Contracts").expiring(_state.my_list):
+		if int(floor(float(p.get("age", 0)))) >= int(_rules("SkipOrders").VETERAN_AGE) and not _state.retiring_now(p) \
+				and not bool(p.get("talks", {}).get("walked", false)):
+			vets.append(str(p["id"]))
+	var year: int = _state.season_year
+	var res: Dictionary = _state.skip_season(orders)
+	var runs := 0
+	var kept := 0
+	var picks := []
+	var lean := 0.0
+	for p in _state.my_list:
+		if vets.has(str(p["id"])):
+			kept += 1
+	for p in _state.my_list:
+		for r in _rules("Backing").ledger(p):
+			if int(r.get("year", 0)) == year:
+				runs += 1
+	for row in _state.season_wrap.get("ins", []):
+		var p: Dictionary = _state.list_player(str((row as Dictionary).get("id", "")))
+		if not p.is_empty() and str((row as Dictionary).get("how", "")).begins_with("pick"):
+			picks.append(str(p["id"]))
+			lean += float(int(p.get("potential", 0)) - int(p.get("overall", 0)))
+	return {"ok": bool(res["ok"]), "runs": runs, "vets": vets.size(), "kept": kept, "picks": picks,
+			"lean": lean / maxf(1.0, float(picks.size())), "plan": _state.club_plan}
+
+
+func _test_skip_orders() -> void:
+	var a := _skip_orders_run({"draft": "ready"})
+	var b := _skip_orders_run({"game_plan": "attacking", "youth": "kids", "questions": "players",
+			"contracts": "veterans", "draft": "ceiling"})
+	_check(a["ok"] and b["ok"], "Both skips play out (%s / %s)" % [a, b])
+	_check(a["plan"] == "balanced" and b["plan"] == "attacking", "The game plan answer is the plan the skip played (%s, %s)" % [a["plan"], b["plan"]])
+	_check(int(a["runs"]) == 0 and int(b["runs"]) >= 2, "Give the kids a run promises runs; best side on form none (%d vs %d)" % [a["runs"], b["runs"]])
+	_check(int(b["vets"]) > 0 and int(b["kept"]) == 0 and int(a["kept"]) > int(b["kept"]),
+			"Move on the veterans lets every out-of-contract veteran go (%d of %d kept, %d the usual way)" % [b["kept"], b["vets"], a["kept"]])
+	_check((a["picks"] as Array).size() > 0 and (b["picks"] as Array).size() > 0 and a["picks"] != b["picks"]
+			and float(b["lean"]) > float(a["lean"]),
+			"Back the ceiling drafts further from ready than Ready to play (%.1f vs %.1f points of growth left)" % [b["lean"], a["lean"]])
+	# The week's questions: the answer the survey gave picks the card's option.
+	var card := {"title": "t", "options": [
+			{"label": "Promise a win", "effects": [{"op": "board", "d": 3}], "result": "a"},
+			{"label": "Back the group", "effects": [{"op": "morale", "d": 5, "who": "all"}], "result": "b"}],
+			"default": -1, "facts": {}}
+	var picked := {}
+	for pol in ["usual", "players", "board"]:
+		_state.week_events = [card.duplicate(true)]
+		_state._skip_orders = {"questions": pol}
+		_state._settle_week_event()
+		picked[pol] = int((_state.week_events[0] as Dictionary).get("choice", -2))
+	_state._skip_orders = {}
+	_state.week_events = []
+	_check(picked == {"usual": -1, "players": 1, "board": 0},
+			"Questions during the week: unanswered, the players' answer, the board's answer (%s)" % picked)
