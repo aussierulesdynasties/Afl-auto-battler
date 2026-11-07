@@ -38,12 +38,12 @@ static func facts(p: Dictionary, store: Dictionary, club: String, with_us: Dicti
 		return out
 	for y in with_us.get("flags", []):
 		out.append(_f(int(y) * 1000 + 200, TIER_FLAG, "Premiership, %d." % int(y),
-				"He was with you for the %d premiership." % int(y)))
+				"He was with you for the %d premiership." % int(y), "flag:%d" % int(y)))
 	var bf_name := BestAndFairest.award_name(club)
 	var bf_said := BestAndFairest.won_phrase(club, "your best and fairest")
 	for y in with_us.get("bf", []):
 		out.append(_f(int(y) * 1000 + 150, TIER_BF, "%s, %d." % [bf_name, int(y)],
-				"He won %s in %d." % [bf_said, int(y)]))
+				"He won %s in %d." % [bf_said, int(y)], "bf:%d" % int(y)))
 	var d := Firsts.get_one(p, "debut")
 	var g := Firsts.get_one(p, "goal")
 	var same := not d.is_empty() and not g.is_empty() and int(d.get("year", 0)) == int(g.get("year", 0)) \
@@ -53,7 +53,7 @@ static func facts(p: Dictionary, store: Dictionary, club: String, with_us: Dicti
 		var and_goal := ", and kicked his first goal" if same else ""
 		out.append(_f(_time(int(d.get("year", 0)), str(d.get("label", ""))), TIER_DEBUT,
 				"Debuted %s%s%s." % [Firsts.when_text(d), on_run, and_goal],
-				"He debuted for you %s%s%s." % [Firsts.when_text(d), on_run, and_goal]))
+				"He debuted for you %s%s%s." % [Firsts.when_text(d), on_run, and_goal], "debut"))
 	if not g.is_empty() and not same:
 		out.append(_f(_time(int(g.get("year", 0)), str(g.get("label", ""))), TIER_LATER,
 				"First goal %s." % Firsts.when_text(g),
@@ -122,11 +122,28 @@ static func facts(p: Dictionary, store: Dictionary, club: String, with_us: Dicti
 ## first.
 static func sheet_lines(p: Dictionary, store: Dictionary, club: String, with_us: Dictionary,
 		jobs: Dictionary = {}, limit := SHOWN) -> Array:
+	return _sheet_top(p, store, club, with_us, jobs, limit).map(func(f): return str(f["sheet"]))
+
+
+## Which of the sheet's lines are his debut, a flag or a best and fairest with
+## you ({"debut": true, "flag:2030": true, "bf:2029": true}), so the Career
+## section (CareerRecord) does not say the same fact twice.
+static func sheet_keys(p: Dictionary, store: Dictionary, club: String, with_us: Dictionary,
+		jobs: Dictionary = {}, limit := SHOWN) -> Dictionary:
+	var out := {}
+	for f in _sheet_top(p, store, club, with_us, jobs, limit):
+		if str(f["key"]) != "":
+			out[str(f["key"])] = true
+	return out
+
+
+static func _sheet_top(p: Dictionary, store: Dictionary, club: String, with_us: Dictionary,
+		jobs: Dictionary, limit: int) -> Array:
 	var all := facts(p, store, club, with_us, jobs)
 	all.sort_custom(_more_important)
 	var top := all.slice(0, limit)
 	top.sort_custom(func(a, b): return int(a["t"]) > int(b["t"]))
-	return top.map(func(f): return str(f["sheet"]))
+	return top
 
 
 ## The one fact the release confirm says, or "": the biggest, newest first among
@@ -156,8 +173,8 @@ static func _more_important(a: Dictionary, b: Dictionary) -> bool:
 	return int(a["t"]) > int(b["t"])
 
 
-static func _f(t: int, tier: int, sheet: String, said: String) -> Dictionary:
-	return {"t": t, "tier": tier, "sheet": sheet, "said": said}
+static func _f(t: int, tier: int, sheet: String, said: String, key := "") -> Dictionary:
+	return {"t": t, "tier": tier, "sheet": sheet, "said": said, "key": key}
 
 
 ## A sortable moment: the season, then the match in it ("Round 7" is 7, a final
