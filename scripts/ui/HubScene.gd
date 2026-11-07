@@ -16,6 +16,7 @@ var _midseason_overlay: Control
 var _news_overlay: Control
 var _rule_overlay: Control
 var _sim_confirm: Control
+var _skip_confirm: Control
 var _onboarding_overlay: Control
 
 
@@ -137,6 +138,7 @@ func _show_season_wrap() -> void:
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.lbl("Off-season complete", 20, UiKit.TEXT, true))
 	v.add_child(UiKit.lbl("Your %d list is set." % int(w.get("year", GameState.season_year)), 14, UiKit.MUTED))
+	_skipped_season(v, w.get("skipped", {}))
 	for part in [["In", "ins", "WrapIn"], ["Out", "outs", "WrapOut"]]:
 		var rows: Array = w.get(part[1], [])
 		if rows.is_empty():
@@ -223,6 +225,40 @@ func _show_season_wrap() -> void:
 		if to_preseason:
 			Router.replace("preseason"))
 	(box["footer"] as VBoxContainer).add_child(go)
+
+
+## After Skip to next season, the season you skipped comes first in the wrap:
+## the premiers and the medals (the line at the foot says where you finished).
+## Facts only; the In and Out lists below carry your draft picks and who left.
+func _skipped_season(v: VBoxContainer, f: Dictionary) -> void:
+	if f.is_empty():
+		return
+	v.add_child(UiKit.spacer(4))
+	var head := UiKit.lbl("The %d season, skipped" % int(f.get("year", 0)), 14, UiKit.MUTED, true)
+	head.name = "WrapSkippedHead"
+	v.add_child(head)
+	# Every club's name in its colours, and each medallist in his club's ink.
+	var ink: Dictionary = NameInk.from_lists({})
+	var lines := []
+	var prem := str(f.get("premier", ""))
+	if prem != "":
+		lines.append(["WrapSkippedPremiers", "Premiers: %s" % GameDB.club_name(prem)])
+	for k in [["brownlow", "Brownlow Medal", "votes"], ["coleman", "Coleman Medal", "goals"]]:
+		var a: Dictionary = f.get(k[0], {})
+		if not a.is_empty():
+			ink[str(a["name"])] = str(a.get("club", ""))
+			lines.append(["WrapSkipped_" + str(k[0]), "%s: %s, %s, %d %s" % [k[1], str(a["name"]),
+					GameDB.club_name(str(a.get("club", ""))), int(a.get("n", 0)), k[2]]])
+	var bf: Dictionary = f.get("bf", {})
+	if not bf.is_empty():
+		ink[str(bf["name"])] = str(bf.get("club", ""))
+		lines.append(["WrapSkipped_bf", "Club best and fairest: %s" % str(bf["name"])])
+	for line in lines:
+		var l: Control = NameInk.label(str(line[1]), ink, 14, UiKit.TEXT)
+		l.name = str(line[0])
+		if l is Label:
+			(l as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(l)
 
 
 func _on_resize() -> void:
@@ -893,7 +929,89 @@ func _week_section(season: Season) -> Control:
 	if _narrow():
 		nv.add_child(UiKit.spacer(4))
 		nv.add_child(_with_jobs_note(_week_actions(season)))
+	if not season.is_season_over():
+		nv.add_child(_skip_season_button())
 	return nv
+
+
+## Skip to next season (director, 2026-11-07): a quiet word under the week,
+## never the main move. A tap opens the sheet that says what is decided for
+## you; nothing is skipped until its own button is pressed.
+func _skip_season_button() -> Button:
+	var b := UiKit.text_action("Skip to the %d season" % (GameState.season_year + 1), UiKit.BODY)
+	b.name = "SkipSeason"
+	b.add_theme_color_override("font_color", UiKit.MUTED)
+	b.custom_minimum_size = Vector2(0, 48)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	b.pressed.connect(_open_skip_confirm)
+	return b
+
+
+## What Skip to next season decides for you, in the club's words: facts and
+## the rule, no advice. [node name, text, bold].
+static func skip_lines(season: Season, year: int) -> Array:
+	var left := "the rest of the finals"
+	if not season.is_regular_done():
+		var n := season.fixture.size() - season.round_index
+		left = "%d round%s and the finals" % [n, "" if n == 1 else "s"]
+	return [
+		["SkipLeft", "The rest of the %d season is played out without you: %s." % [year, left], true],
+		["SkipSelection", "Selection: your side as it stands, with anyone unavailable replaced each week.", false],
+		["SkipQuestions", "Questions during the week: the club's usual answer where it has one. The rest go unanswered, which can cost the board's confidence or a player's trust.", false],
+		["SkipContracts", "Out-of-contract players: depth players re-sign if the cap allows, your best 23 test the market, the rest are let go.", false],
+		["SkipTrades", "Trades: you make none.", false],
+		["SkipDraft", "National Draft: your recruiters take the best available at each of your picks.", false],
+		["SkipStop", "It stops at the start of the %d pre-season, with the ladder, the awards, your draft picks and who left. If the board sacks you, it stops there." % (year + 1), false],
+	]
+
+
+func _open_skip_confirm() -> void:
+	var season: Season = GameState.season
+	if season == null or season.is_season_over() or GameState.is_sacked():
+		return
+	_close_skip_confirm()
+	var year := GameState.season_year
+	var box := UiKit.modal_box(self, 460.0, 0.0)
+	_skip_confirm = box["overlay"]
+	_skip_confirm.name = "SkipSeasonConfirm"
+	var v: VBoxContainer = box["body"]
+	v.add_child(UiKit.heading("Skip to the %d season?" % (year + 1), UiKit.H1))
+	for line in skip_lines(season, year):
+		var l := UiKit.lbl(str(line[1]), UiKit.BODY if bool(line[2]) else 14, UiKit.TEXT, bool(line[2]))
+		l.name = str(line[0])
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(l)
+		if bool(line[2]):
+			v.add_child(UiKit.spacer(2))
+			v.add_child(UiKit.lbl("Decided for you", 14, UiKit.MUTED, true))
+	var go := UiKit.btn("Skip the season", UiKit.NAME, true)
+	go.name = "SkipSeasonGo"
+	go.custom_minimum_size = Vector2(0, 48)
+	go.pressed.connect(_on_skip_season)
+	box["footer"].add_child(go)
+	var cancel := UiKit.btn("Cancel", UiKit.NAME)
+	cancel.name = "SkipSeasonCancel"
+	cancel.custom_minimum_size = Vector2(0, 48)
+	cancel.pressed.connect(_close_skip_confirm)
+	box["footer"].add_child(cancel)
+
+
+func _close_skip_confirm() -> void:
+	if _skip_confirm != null and is_instance_valid(_skip_confirm):
+		_skip_confirm.queue_free()
+	_skip_confirm = null
+
+
+func _on_skip_season() -> void:
+	_close_skip_confirm()
+	ScreenTransition.run("Playing out the %d season..." % GameState.season_year, _skip_season)
+
+
+func _skip_season() -> void:
+	GameState.skip_season()
+	_build()
+	if GameState.needs_season_wrap():
+		_show_season_wrap()
 
 
 ## The week's milestones (Milestones.gd), always shown:
@@ -1525,6 +1643,9 @@ func handle_back() -> bool:
 		return true
 	if _finals_overlay != null and is_instance_valid(_finals_overlay):
 		_close_finals()
+		return true
+	if _skip_confirm != null and is_instance_valid(_skip_confirm):
+		_close_skip_confirm()
 		return true
 	if _onboarding_overlay != null and is_instance_valid(_onboarding_overlay):
 		_close_weekly_loop_intro()

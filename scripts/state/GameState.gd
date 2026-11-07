@@ -677,10 +677,14 @@ func saved_career_meta() -> Dictionary:
 ## so the last save (from before the match) is the consistent one to keep.
 ## Full saves written this run: tests count them to keep a tap to one save.
 var saves_written := 0
+## Set while Skip to next season plays a season out: each round leaves the save
+## alone and the skip saves once at the end (a save every round was a quarter of
+## the skip's time). Killed mid-skip, the career is where the skip began.
+var _batching := false
 
 
 func autosave() -> bool:
-	if not autosave_enabled or not has_career() or not pending_match.is_empty():
+	if _batching or not autosave_enabled or not has_career() or not pending_match.is_empty():
 		return false
 	return save_career()
 
@@ -11254,6 +11258,83 @@ func _next_week_event() -> void:
 		return
 	week_events = ClubStories.pick(self)
 	ClubArcs.week(self)
+
+
+## Skip to next season (director, 2026-11-07: "We need to bring back the
+## ability to skip full seasons"). Every week left is played out without you,
+## exactly as Sim the week plays it; then the off-season runs on what the club
+## already does when you leave it alone: out-of-contract players settled the
+## free-agency way (_fa_close_plan), no trades of yours, and "Pick for me" at
+## each of your National Draft picks. It stops at the next pre-season, where
+## the off-season wrap opens with the skipped season's facts (season_wrap
+## "skipped"). Sacked on the way, it stops there. Saved once, at the end.
+## Returns {"ok", "year", "weeks", "reason": "done" | "sacked" | "none"}.
+func skip_season() -> Dictionary:
+	if season == null or is_sacked() or season.is_season_over():
+		return {"ok": false, "year": season_year, "weeks": 0, "reason": "none"}
+	var year := season_year
+	var weeks := 0
+	_batching = true
+	while season != null and not season.is_season_over() and weeks < 80:
+		advance()
+		weeks += 1
+		if is_sacked():
+			break
+	if is_sacked() or season == null or not season.is_season_over():
+		_batching = false
+		autosave()
+		return {"ok": false, "year": year, "weeks": weeks, "reason": "sacked"}
+	# The season's last card goes unanswered, as the next Sim the week would leave it.
+	_settle_week_event()
+	var facts := skipped_season_facts()
+	open_offseason()
+	if begin_intake_draft():
+		_draft_for_me(draft)
+		finish_intake_draft()
+	else:
+		start_next_season()
+	if not season_wrap.is_empty() and int(season_wrap.get("year", 0)) == season_year:
+		season_wrap["skipped"] = facts
+	_batching = false
+	mark_dirty()
+	autosave()
+	return {"ok": true, "year": year, "weeks": weeks, "reason": "done"}
+
+
+## Your National Draft picks taken the "Pick for me" way, the rivals' as they
+## always are; a pick with nobody you can take passes.
+func _draft_for_me(d: Draft) -> void:
+	var guard := 0
+	while d != null and not d.is_finished() and guard < 5000:
+		guard += 1
+		d.auto_until_user_turn()
+		if d.is_finished():
+			break
+		if not d.pick_for_me():
+			d._skip_current_pick()
+
+
+## The finished season in facts, kept with the wrap so a reload still shows
+## them: where you finished, your record and finals, the premiers and the
+## league's and your club's medals. Names are written in now, while every
+## player is still on a list.
+func skipped_season_facts() -> Dictionary:
+	if season == null:
+		return {}
+	var facts := {"year": season_year, "ladder": my_position(), "of": season.ladder.size(),
+			"record": my_record(), "premier": premier(),
+			"finals": Almanac.finals_text(_my_last_final(), premier() == my_club,
+					str(season.finals.get("runner_up", "")) == my_club)}
+	var bw: Dictionary = season_awards.get("brownlow_winner", {})
+	if not bw.is_empty():
+		facts["brownlow"] = {"name": award_name(bw), "club": str(bw.get("club", "")), "n": int(bw.get("votes", 0))}
+	var gk: Array = season_awards.get("coleman", [])
+	if not gk.is_empty():
+		facts["coleman"] = {"name": award_name(gk[0]), "club": str(gk[0].get("club", "")), "n": int(gk[0].get("goals", 0))}
+	var bf: Array = (season_awards.get("best_and_fairest", {}) as Dictionary).get(my_club, [])
+	if not bf.is_empty():
+		facts["bf"] = {"name": award_name(bf[0]), "club": my_club}
+	return facts
 
 
 func week_event_pending() -> bool:

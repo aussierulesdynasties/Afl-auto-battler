@@ -893,6 +893,7 @@ func _run() -> void:
 	await _t("_test_finals_card_taps")
 	await _t("_test_sacked_job_choice_taps")
 	await _t("_test_sim_asks_only_before_your_match")
+	await _t("_test_skip_season")
 	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
@@ -2428,6 +2429,7 @@ Your career stays on this device.",
 	# --- Hub rating lines --------------------------------------------------
 	_state.reset()
 	_state.start_season("SYD", _db.club_list("SYD"))
+	var ask_before: bool = _state.confirm_sim_round()
 	_state.set_confirm_sim_round(false)
 	_router.go("hub")
 	await _settle()
@@ -3768,4 +3770,99 @@ func _test_sacked_job_choice_taps() -> void:
 	_check_record_only("career over")
 	_state.board["sacked"] = false
 	_state.coach_arcs = {}
+	root.size = size_before
+
+
+## Skip to next season (director, 2026-11-07): a finger on the quiet button
+## asks first, Cancel skips nothing, and the skip lands on the same pre-season
+## a played-out season reaches, which survives a save and a reload.
+func _skip_shape() -> Dictionary:
+	var w: Dictionary = _state.season_wrap
+	var keys: Array = w.keys()
+	keys.erase("skipped")
+	keys.sort()
+	return {"year": _state.season_year, "pre": _state.preseason_active(), "wrap": _state.needs_season_wrap(),
+			"round": _state.season.round_index if _state.season != null else -1,
+			"list": _state.my_list.size() > 0, "roll": _state.honour_roll.size(), "wrap_keys": keys}
+
+
+func _skip_start(seed: int) -> void:
+	_state.reset()
+	_state.career_seed = seed
+	_state.replay_seed = seed
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_state.week_events = []
+	_state.season.round_index = _state.season.fixture.size() - 1
+
+
+func _test_skip_season() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	var ask_before: bool = _state.confirm_sim_round()
+	_state.set_confirm_sim_round(false)
+
+	# Played out the long way: every week, the off-season, the draft.
+	_skip_start(5511)
+	var year: int = _state.season_year
+	var guard := 0
+	while not _state.season.is_season_over() and guard < 80:
+		_state.advance()
+		_state._settle_week_event()
+		guard += 1
+	_state.open_offseason()
+	if _state.begin_intake_draft():
+		_state._draft_for_me(_state.draft)
+		_state.finish_intake_draft()
+	else:
+		_state.start_next_season()
+	var played := _skip_shape()
+
+	# Skipped: the button asks first.
+	_skip_start(5511)
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var b: Button = current_scene.find_child("SkipSeason", true, false)
+	_check(b != null and b.text == "Skip to the %d season" % (year + 1), "The hub offers Skip to the %d season" % (year + 1))
+	var why: String = await Tap.tap(b) if b != null else "missing"
+	await _settle()
+	var sheet: Node = current_scene.find_child("SkipSeasonConfirm", true, false)
+	_check(why == "" and sheet != null and _state.season_year == year,
+			"A finger on it opens the sheet and skips nothing yet (%s)" % why)
+	for n in ["SkipLeft", "SkipSelection", "SkipContracts", "SkipTrades", "SkipDraft", "SkipStop"]:
+		_check(current_scene.find_child(n, true, false) != null, "The sheet says what is decided for you: %s" % n)
+	var cancel: Button = current_scene.find_child("SkipSeasonCancel", true, false)
+	why = await Tap.tap(cancel) if cancel != null else "missing"
+	await _settle()
+	_check(why == "" and current_scene.find_child("SkipSeasonConfirm", true, false) == null
+			and _state.season_year == year and not _state.season.is_season_over(),
+			"A finger on Cancel closes it and skips nothing (%s)" % why)
+
+	b = current_scene.find_child("SkipSeason", true, false)
+	why = await Tap.tap(b) if b != null else "missing"
+	await _settle()
+	var go: Button = current_scene.find_child("SkipSeasonGo", true, false)
+	why = await Tap.tap(go) if go != null else "missing"
+	guard = 0
+	while _state.season_year == year and guard < 600:
+		await process_frame
+		guard += 1
+	for i in range(30):
+		await process_frame
+	_check(why == "" and _state.season_year == year + 1, "A finger on Skip the season plays it out to %d (%s)" % [year + 1, why])
+	var skipped := _skip_shape()
+	_check(skipped == played, "A skipped season lands where a played one does (%s vs %s)" % [skipped, played])
+	var f: Dictionary = _state.season_wrap.get("skipped", {})
+	_check(int(f.get("year", 0)) == year and int(f.get("ladder", 0)) > 0 and str(f.get("premier", "")) != ""
+			and not f.get("brownlow", {}).is_empty(), "The wrap keeps the skipped season's facts (%s)" % f)
+	for n in ["WrapSkippedHead", "WrapSkippedPremiers", "WrapSkipped_brownlow", "WrapSkipped_coleman"]:
+		_check(current_scene.find_child(n, true, false) != null, "After the skip the wrap shows %s" % n)
+
+	# A save and a reload keep it.
+	_check(_state.save_career(), "The skipped career saves")
+	_state.season_wrap = {}
+	_check(_state.load_career(), "The skipped career loads")
+	_check(_skip_shape() == skipped and _state.season_wrap.get("skipped", {}) == f,
+			"A reload keeps the skipped season and its facts")
+	_state.set_confirm_sim_round(ask_before)
 	root.size = size_before
