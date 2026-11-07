@@ -19,6 +19,9 @@ var existing_sizes := {}              # code -> kept list length (intake only)
 ## a career's intake sets the senior list (RookieList), and existing_sizes
 ## counts senior players only.
 var senior_cap := 0
+## Youth only (Challenge.gd): your club may not take a player older than this.
+## 0 for no limit. Rival clubs are never bound.
+var user_max_age := 0
 var existing_role_counts := {}        # code -> {RUCK..FWD} kept players (intake)
 var existing_roles := {}              # code -> [[role, role2], ...] kept players (intake)
 var _fixed_order: Array = []
@@ -841,9 +844,12 @@ func _best_ai_pick(code: String, why := {}) -> Dictionary:
 	var best_score := -INF
 	var watch := AiReasons.enabled and not wanted().is_empty()
 	var scored := {}   # wanted id -> [score, detail]
+	var mine := code == user_club and user_max_age > 0
 	for p in pool:
 		var id := str(p["id"])
 		if picked.has(id):
+			continue
+		if mine and too_old_for_user(p):
 			continue
 		if forced_role != "" and not Ratings.plays_role(p, forced_role):
 			if watch and wanted().has(id):
@@ -871,6 +877,8 @@ func _best_ai_pick(code: String, why := {}) -> Dictionary:
 		for p in pool:
 			var id := str(p["id"])
 			if picked.has(id):
+				continue
+			if mine and too_old_for_user(p):
 				continue
 			if not _can_afford_for(code, p):
 				continue
@@ -1493,7 +1501,14 @@ func has(id: String) -> bool:
 	return picked.has(id)
 
 
+## Over your Youth only age line (user_max_age)?
+func too_old_for_user(p: Dictionary) -> bool:
+	return user_max_age > 0 and int(floor(float(p.get("age", 0)))) > user_max_age
+
+
 func can_pick_player(p: Dictionary) -> bool:
+	if too_old_for_user(p):
+		return false
 	if league_mode:
 		if not is_user_turn() or picked.has(str(p["id"])) or not _can_afford_for(user_club, p):
 			return false
@@ -1561,6 +1576,9 @@ func pick_block_reason(p: Dictionary) -> String:
 			return "Already on your list."
 		return "Drafted #%d by %s." % [int(entry.get("pick", 0)),
 				Engine.get_main_loop().root.get_node("GameDB").club_name(club)]
+	if too_old_for_user(p):
+		return "Youth only: %s is %d, and you cannot draft a player over %d." % [
+				Challenge.surname(p), int(floor(float(p.get("age", 0)))), user_max_age]
 	if league_mode:
 		if is_finished():
 			return "The draft is complete."
@@ -1596,7 +1614,7 @@ func pick(p: Dictionary) -> bool:
 		auto_until_user_turn()
 		return true
 
-	if picked.has(p["id"]):
+	if picked.has(p["id"]) or too_old_for_user(p):
 		return false
 	if count() >= target_size:
 		return false

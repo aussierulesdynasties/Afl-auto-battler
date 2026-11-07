@@ -907,6 +907,7 @@ func _run() -> void:
 	_state.delete_saved_career()
 	await _t("_test_new_career_keeps_the_save")
 	await _t("_test_new_career_canberra_choice")
+	await _t("_test_new_career_challenge_taps")
 	await _t("_test_pc_hub_and_list_layout")
 	for sz in [Vector2i(2560, 1440), Vector2i(1920, 1080), Vector2i(1280, 720)]:
 		await _t("_test_hub_ladder_fills_right", [sz])
@@ -3257,6 +3258,81 @@ func _test_new_career_canberra_choice() -> void:
 				and _db.active_clubs(2030).has("CANB") == pick_it,
 				("A tap on Joins in 2030 puts Canberra in the new career (%s %s)" if pick_it
 				else "Left alone, the new career has no Canberra (%s %s)") % [t1, t2])
+	_state.reset()
+	_router.stack = []
+
+
+## Row 114: the challenge starts on New career, by real taps. Your goal holds
+## Start until a goal is picked (none is chosen for you); Rebuild switches the
+## start to the real 2026 lists and starts at the bottom club, its three best
+## gone, with the rule stated on the draft board.
+func _test_new_career_challenge_taps() -> void:
+	# By path: a runner naming a class whose load chain reaches an autoload
+	# does not compile before the autoloads exist.
+	var CH = load("res://scripts/state/Challenge.gd")
+	_state.delete_saved_career()
+	_state.reset()
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	await _settle()
+	var start := current_scene.find_child("StartCareer", true, false) as Button
+	var note := current_scene.find_child("ChallengeNote", true, false) as Label
+	_check(current_scene.find_child("Challenge_none", true, false) != null and note != null
+			and note.text == CH.rule_line("none"), "New career offers the challenge starts, None by default")
+	_check(current_scene.find_child("Goal_coach_300", true, false) == null
+			or not (current_scene.find_child("Goal_coach_300", true, false) as Control).is_visible_in_tree(),
+			"The goals are hidden until Your goal is picked")
+	var t1: String = await Tap.tap(current_scene.find_child("Challenge_goal", true, false))
+	await _settle()
+	start = current_scene.find_child("StartCareer", true, false) as Button
+	note = current_scene.find_child("ChallengeNote", true, false) as Label
+	_check(t1 == "" and start != null and start.disabled and note != null and note.text == CH.rule_line("goal"),
+			"Your goal: Start waits until a goal is picked, and the rule is said (%s)" % t1)
+	var t2: String = await Tap.tap(current_scene.find_child("Goal_coach_300", true, false))
+	await _settle()
+	start = current_scene.find_child("StartCareer", true, false) as Button
+	_check(t2 == "" and start != null and not start.disabled, "Picking a goal frees Start (%s)" % t2)
+	var t3: String = await Tap.tap(current_scene.find_child("Challenge_youth", true, false))
+	await _settle()
+	note = current_scene.find_child("ChallengeNote", true, false) as Label
+	_check(t3 == "" and note != null and note.text == CH.rule_line("youth"), "Youth only states its rule (%s)" % t3)
+	var t4: String = await Tap.tap(current_scene.find_child("Challenge_rebuild", true, false))
+	await _settle()
+	_check(t4 == "" and str(current_scene.get("_pick_start")) == "real",
+			"Rebuild switches the start to the real 2026 lists (%s, %s)" % [t4, str(current_scene.get("_pick_start"))])
+	var t5: String = await Tap.tap(current_scene.find_child("StartCareer", true, false))
+	await _settle()
+	await _settle()
+	var ch: Dictionary = _state.challenge
+	var gone: Array = ch.get("gone", [])
+	var club := str(ch.get("club", ""))
+	_check(t5 == "" and str(ch.get("kind", "")) == "rebuild" and club == "ESS" and _state.my_club == club and gone.size() == 3,
+			"Start on Rebuild takes over the bottom club with three gone (%s %s %s)" % [t5, club, str(_state.my_club)])
+	var listed := {}
+	for q in _state.league_lists.get(club, []):
+		listed[str(q["id"])] = true
+	var freed := {}
+	for q in _state.free_agents:
+		freed[str(q["id"])] = q
+	var all_gone := true
+	for g in gone:
+		if listed.has(str(g["id"])) or not freed.has(str(g["id"])):
+			all_gone = false
+	_check(all_gone, "The three are off the list and in free agency")
+	var best_left := 0
+	for q in _state.league_lists.get(club, []):
+		best_left = maxi(best_left, int(q.get("overall", 0)))
+	var worst_gone := 999
+	for g in gone:
+		worst_gone = mini(worst_gone, int(freed.get(str(g["id"]), {}).get("overall", 0)))
+	_check(worst_gone >= best_left, "They were the club's three best (%d gone, %d left)" % [worst_gone, best_left])
+	var back: Dictionary = freed.get(str(gone[0]["id"]), {}) if not gone.is_empty() else {}
+	_check(not back.is_empty() and CH.block_reason(_state, back).begins_with("Rebuild:"),
+			"You can never sign one of them back")
+	_check(_router.current() == "draft" and current_scene.find_child("ChallengeRule", true, false) != null,
+			"The draft board states the Rebuild (at %s)" % _router.current())
 	_state.reset()
 	_router.stack = []
 
