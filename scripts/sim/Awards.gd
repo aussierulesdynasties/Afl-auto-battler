@@ -214,8 +214,9 @@ static func tally_match(tally: Dictionary, res: Dictionary, regular: bool) -> vo
 
 ## The Norm Smith Medal for one Grand Final result: the most influential
 ## player on the ground, from either side (CoachReport.influence, the measure
-## the best-and-fairest and coaches' votes use). A level count goes to the home side's player who
-## comes first in the roster, so the same match always names the same man.
+## the best-and-fairest and coaches' votes use). A level count goes to the home
+## side's player who comes first in the roster, so the same match always names
+## the same man.
 ## Returns {id, club, influence, line} (`line` is his stat line that day), or
 ## {} when the match kept no player stats.
 static func norm_smith(res: Dictionary) -> Dictionary:
