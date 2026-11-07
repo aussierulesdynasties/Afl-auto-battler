@@ -2170,7 +2170,7 @@ func _test_trophies() -> void:
 	entry["my_position"] = 1
 	entry["my_aa"] = [ids[2]]
 	entry["brownlow"] = [{"id": ids[0], "club": "COL", "votes": 31}]
-	for key in ["coleman", "rising_star", "coaches_award", "my_bf", "norm_smith"]:
+	for key in ["coleman", "rising_star", "coaches_award", "my_bf", "norm_smith", "golden_fist"]:
 		entry[key] = []
 	var old := {"year": year - 1, "my_club": "COL", "premier": "GEE", "runner_up": "COL", "my_position": 3,
 		"brownlow": [], "coleman": [{"id": "far_away", "club": "CAR", "goals": 70}], "rising_star": [],
