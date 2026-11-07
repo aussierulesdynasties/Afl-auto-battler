@@ -2461,6 +2461,7 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 			return {"outcome": "turnover", "fp": mark_fp, "actor": defender}
 		_t(opp, "spoils")
 		_p(defender, "spoils")
+		_log_spoil(opp, mark_fp)
 		_t(opp, "one_percenters")
 		_p(defender, "one_percenters")
 		_emit("spoil", opp, mark_fp, defender,
@@ -2533,6 +2534,17 @@ static func clanger_why(disp: Dictionary, weather_now: String, outcome := "stopp
 ## Carrier picks per side, "zone|slot role" -> count. Bookkeeping for the
 ## balance harness (carry share by zone); no dice.
 var carry_log := [{}, {}]
+## Spoils per side by where they happened, from the spoiling side's end:
+## "d50_entry" (a forward-50 entry or goal-square pack), "d50_play", "mid",
+## "f50" (general play). Bookkeeping for the balance harness (T2.29); no dice.
+var spoil_log := [{}, {}]
+
+
+func _log_spoil(side: int, at_fp: float, entry := false) -> void:
+	var x := at_fp if side == 0 else -at_fp
+	var f50 := float(Ratings.T["forward50_line"])
+	var k := "d50_entry" if entry else ("d50_play" if x < -f50 else ("f50" if x > f50 else "mid"))
+	spoil_log[side][k] = int((spoil_log[side] as Dictionary).get(k, 0)) + 1
 ## Reach in metres: 30 + 0.35 x his disposal (kicking) rating, so a 40 kicker
 ## reaches 44 m, a 70 kicker 54.5 m, a 95 kicker 63 m. The ground is 170 m
 ## goal to goal (Ratings goal_line 85), forward 50 at 35 m from the centre.
@@ -2716,6 +2728,7 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 	if spoilt:
 		_t(opp, "spoils")
 		_p(defender, "spoils")
+		_log_spoil(opp, mark_fp)
 		_t(opp, "one_percenters")
 		_p(defender, "one_percenters")
 		_emit("spoil", opp, mark_fp, defender,
@@ -3460,6 +3473,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 		# He got a fist to it: a spoil (a credit only).
 		_t(opp, "spoils")
 		_p(spoiler, "spoils")
+		_log_spoil(opp, fp, true)
 		if roaming and spoiler == roamer:
 			_roam_note(roamer, shooter, true)
 	if rng.randf() < float(T["one_percenter_share"]):
@@ -5635,6 +5649,7 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 		else:
 			_t(opp, "spoils")
 			_p(back, "spoils")
+			_log_spoil(opp, fp, true)
 			_t(opp, "one_percenters")
 			_p(back, "one_percenters")
 			_pack_event(side, sq_fp, back, "defence", {"defender_id": str(back["id"])},
@@ -5643,6 +5658,7 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 	# Spoiled to the deck: first to it is a forward, more often than not.
 	_t(opp, "spoils")
 	_p(back, "spoils")
+	_log_spoil(opp, fp, true)
 	_t(opp, "one_percenters")
 	_p(back, "one_percenters")
 	var crumber = _ground_forward(side, "" if marker == null else str(marker["id"]))
