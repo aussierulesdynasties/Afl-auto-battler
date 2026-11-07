@@ -311,6 +311,26 @@ const FADE_NOTE := "Morale moves wear off a point every second round, board move
 const LIKES := "%s warms to you (+%d%% next time)"
 const DISLIKES := "%s cools on you (-%d%% next time)"
 
+## A named answer stays with him (director 2026-11-07: "And it should weigh on
+## future contract choices"): whichever way it lands, his price to re-sign with
+## you moves by this share - dearer once you called him out, cheaper once you
+## backed him. Full for the rest of this season (its off-season talks and any
+## early extension), half the next season, then gone. The newest named answer
+## about him replaces an older one. His price is Contracts.asking_salary, so his
+## ask, his lowest and an early extension all move by the same share.
+const CONTRACT_PCT := {"criticise_named": 4, "back_named": -2}
+## On the gate, in the "either way" slot of a named answer: the talks it
+## reaches - this year's and next year's when his deal ends this season, only
+## next year's when it ends next season.
+const CONTRACT_LINE := "Re-signing him: %d%% %s this year, %d%% next"
+const CONTRACT_LINE_NEXT := "Re-signing him next year: %d%% %s"
+## In contract talks: why his price moved - what you said, when, and the
+## share now.
+const CONTRACT_MEMORY := "Remembers you %s %s, so he %s."
+const CONTRACT_MORE := "wants %d%% more"
+const CONTRACT_LESS := "will take %d%% less"
+const CONTRACT_SAID := {"criticise_named": "called him out", "back_named": "backed him"}
+
 
 ## The answer an option is. A save from before the roll kept fixed effects on
 ## its pending options; those map by their place in the list.
@@ -439,7 +459,86 @@ static func effects(kind: String, ctx: Dictionary = {}) -> Dictionary:
 		notes.append(str(j["named_note"]))
 	if verdict == "contradicted":
 		notes.append(_cap_first(RECORD_BOARD_NOTE))
+	# A named answer weighs on his next contract (CONTRACT_PCT), said only when
+	# a re-signing falls inside the two seasons it lasts (his deal has at most
+	# two seasons left, counting this one).
+	if CONTRACT_PCT.has(kind) and int(ctx.get("contract_years", 1)) <= 2:
+		out["contract"] = int(CONTRACT_PCT[kind])
+		out["both"] = contract_line(kind, int(ctx.get("contract_years", 1)))
 	return out
+
+
+## "Re-signing him: 4% dearer this year, 2% next" (his deal ends this
+## season) or "Re-signing him next year: 2% dearer" (it ends next season).
+static func contract_line(kind: String, contract_years := 1) -> String:
+	var pct := int(CONTRACT_PCT.get(kind, 0))
+	var way := "dearer" if pct > 0 else "cheaper"
+	if contract_years >= 2:
+		return CONTRACT_LINE_NEXT % [absi(contract_pct_after(pct, 1)), way]
+	return CONTRACT_LINE % [absi(pct), way, absi(contract_pct_after(pct, 1))]
+
+
+## The share left `seasons` rollovers after the answer: full, half, then 0.
+static func contract_pct_after(full: int, seasons: int) -> int:
+	if seasons <= 0:
+		return full
+	return full / 2 if seasons == 1 else 0
+
+
+## He remembers a named answer: kept on him with your club, the season and
+## round, and how it landed. Any other answer leaves him as he was.
+static func remember(p: Dictionary, kind: String, landed: String, club: String, year: int, round_no: int) -> void:
+	if not CONTRACT_PCT.has(kind) or p.is_empty():
+		return
+	var pct := int(CONTRACT_PCT[kind])
+	p["press_memory"] = {"kind": kind, "landed": landed, "club": club, "year": year, "round": round_no,
+			"full": pct, "pct": pct}
+
+
+## The share his price to re-sign moves now (+ dearer, - cheaper); 0 when he
+## remembers nothing, or what he remembers was said at another club. An
+## older save has no memory, so 0.
+static func contract_pct(p: Dictionary) -> int:
+	var m = p.get("press_memory")
+	if not (m is Dictionary) or str(m.get("club", "")) != str(p.get("club", "")):
+		return 0
+	return int(m.get("pct", 0))
+
+
+## At the rollover: the memory halves after its first season and is gone after
+## its second; it is dropped at once when he is not at `my_club` or it was said
+## at another club (a trade, or a coach who moved on).
+static func age_memory(p: Dictionary, my_club: String) -> void:
+	var m = p.get("press_memory")
+	if not (m is Dictionary):
+		p.erase("press_memory")
+		return
+	var full := int(m.get("full", 0))
+	var now := int(m.get("pct", 0))
+	if str(m.get("club", "")) != my_club or str(p.get("club", "")) != my_club or now != full:
+		p.erase("press_memory")
+		return
+	now = contract_pct_after(full, 1)
+	if now == 0:
+		p.erase("press_memory")
+	else:
+		m["pct"] = now
+
+
+## His line in contract talks, "" when he remembers nothing: "Remembers you
+## called him out in round 8, so he wants 4% more." `year` is the
+## season now.
+static func contract_memory_line(p: Dictionary, year: int) -> String:
+	var pct := contract_pct(p)
+	if pct == 0:
+		return ""
+	var m: Dictionary = p["press_memory"]
+	var said := int(m.get("round", 0))
+	var when := "in the finals" if said > Season.REGULAR_ROUNDS else "in round %d" % said
+	if int(m.get("year", year)) < year:
+		when += " last season"
+	return CONTRACT_MEMORY % [str(CONTRACT_SAID.get(str(m.get("kind", "")), "spoke about him")), when,
+			(CONTRACT_MORE if pct > 0 else CONTRACT_LESS) % absi(pct)]
 
 
 ## How your standing with the journalist who asked moves when you give this

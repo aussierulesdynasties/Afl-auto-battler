@@ -634,6 +634,91 @@ func _test_press_old_save() -> void:
 	_state.delete_saved_career()
 
 
+## A named answer weighs on his next contract (director 2026-11-07: "And it
+## should weigh on future contract choices"): the gate says by how much and
+## for how long, his price to re-sign moves by exactly that, the talks say why,
+## it fades a season, stays with your club, and an old save has none.
+func _test_press_contract_memory() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var CT = load("res://scripts/sim/Contracts.gd")
+	var hit: Dictionary = MC.effects("criticise_named", {"name": "Jack", "contract_years": 1})
+	_check(str(hit["both"]) == "Re-signing him: 4% dearer this year, 2% next" and int(hit["contract"]) == 4,
+			"Calling him out says the contract weight on the gate (%s)" % str(hit["both"]))
+	var backed: Dictionary = MC.effects("back_named", {"name": "Jack", "contract_years": 1})
+	_check(str(backed["both"]) == "Re-signing him: 2% cheaper this year, 1% next",
+			"Backing him says it too (%s)" % str(backed["both"]))
+	_check(str(MC.effects("criticise_named", {"name": "Jack", "contract_years": 2})["both"]) == "Re-signing him next year: 2% dearer",
+			"With a season to run after this one, only next year's talks are named")
+	var long: Dictionary = MC.effects("criticise_named", {"name": "Jack", "contract_years": 3})
+	_check(not long.has("contract") and str(long["both"]) == "Nothing else moves",
+			"A deal that outlasts the memory names no contract weight (%s)" % str(long["both"]))
+	# Calling him out, through the game: his price rises by the stated 4%.
+	_press_reset()
+	var him: Dictionary = _state.my_list[0]
+	him["contract_years"] = 1
+	var ask0: int = CT.asking_salary(him)
+	var conf: Dictionary = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 8, "year": int(_state.season_year),
+			"named": {"heavy_loss": {"id": str(him["id"]), "name": "Jack Smith"}},
+			"result": {"home": "FRE", "away": "CAR", "score": [55, 101]}}, {})
+	_state.media_conference = conf.duplicate(true)
+	var gate: String = _state.press_odds_line(3)
+	_check(gate.contains("Re-signing him: 4% dearer this year, 2% next"), "The named answer's line carries the contract weight (%s)" % gate)
+	_state.resolve_media_conference(3)
+	var ask1: int = CT.asking_salary(him)
+	_check(him.has("press_memory") and ask1 == ceili(ask0 * 1.04),
+			"Called out, his price to re-sign is 4%% dearer (%d -> %d)" % [ask0, ask1])
+	var talk: String = MC.contract_memory_line(him, int(_state.season_year))
+	_check(talk == "Remembers you called him out in round 8, so he wants 4% more.",
+			"Contract talks say why (%s)" % talk)
+	_check(_state.save_career() and _state.load_career(), "A career with a press memory saves and loads")
+	him = _state.list_player(str(him["id"]))
+	_check(CT.asking_salary(him) == ask1, "The memory survives a save and reload")
+	# A season on: half, said as last season; the season after: gone.
+	MC.age_memory(him, _state.my_club)
+	var half: String = MC.contract_memory_line(him, int(_state.season_year) + 1)
+	_check(MC.contract_pct(him) == 2 and half == "Remembers you called him out in round 8 last season, so he wants 2% more.",
+			"A season later it is half (%s)" % half)
+	MC.age_memory(him, _state.my_club)
+	_check(not him.has("press_memory") and CT.asking_salary(him) == ask0, "Two seasons later it is gone")
+	# Backing him by name: his price falls by the stated 2%.
+	_press_reset()
+	var star: Dictionary = _state.my_list[1]
+	star["contract_years"] = 1
+	var base: int = CT.asking_salary(star)
+	_state.media_conference = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 8, "year": int(_state.season_year),
+			"named": {"big_win": {"id": str(star["id"]), "name": "Jack Smith"}},
+			"result": {"home": "FRE", "away": "CAR", "score": [101, 55]}}, {}).duplicate(true)
+	var opts: Array = _state.media_conference.get("options", [])
+	var at := -1
+	for i in range(opts.size()):
+		if str(opts[i].get("kind", "")) == "back_named":
+			at = i
+	_check(at >= 0, "A big win offers an answer backing him by name")
+	if at >= 0:
+		_state.resolve_media_conference(at)
+	_check(CT.asking_salary(star) == ceili(base * 0.98),
+			"Backed, his price to re-sign is 2%% cheaper (%d -> %d)" % [base, CT.asking_salary(star)])
+	var warm: String = MC.contract_memory_line(star, int(_state.season_year))
+	_check(warm == "Remembers you backed him in round 8, so he will take 2% less.", "Talks say it when you backed him (%s)" % warm)
+	# It was said to him at your club: elsewhere it counts for nothing.
+	var gone := star.duplicate(true)
+	gone["club"] = "CAR"
+	_check(MC.contract_pct(gone) == 0 and MC.contract_memory_line(gone, int(_state.season_year)) == "",
+			"At another club he is priced as anyone else")
+	MC.age_memory(gone, _state.my_club)
+	_check(not gone.has("press_memory"), "The rollover drops a memory he took to another club")
+	# An old save: no memory, no change to anyone's price.
+	_press_reset()
+	var plain: Dictionary = _state.my_list[0]
+	var p0: int = CT.asking_salary(plain)
+	_check(_state.save_career() and _state.load_career(), "An old-shaped career saves and loads")
+	plain = _state.list_player(str(plain["id"]))
+	_check(not plain.has("press_memory") and CT.asking_salary(plain) == p0
+			and MC.contract_memory_line(plain, int(_state.season_year)) == "",
+			"An old save loads with no press memory and his price unchanged")
+	_state.delete_saved_career()
+
+
 func _test_player_goal_milestones() -> void:
 	var p := {"id": "milestone_test", "name": "Milestone Test", "club": "MEL",
 			"career": {"games": 12, "goals": 0, "stints": [], "through": _state.season_year - 1, "unknown": []}}
@@ -922,6 +1007,7 @@ func _run() -> void:
 	_t("_test_press_board_reason")
 	_t("_test_press_standout_only")
 	_t("_test_press_old_save")
+	_t("_test_press_contract_memory")
 	await _t("_test_game_feel_settings")
 	_t("_test_old_sound_levels_carry_over")
 
@@ -2248,6 +2334,18 @@ Your career stays on this device.",
 				and _screen_text().contains("Cap room after this deal"),
 				"Talks open a sheet with salary, term and the cap consequence")
 		_check(_state.my_payroll() == payroll_before, "Opening talks signs nothing")
+		_check(current_scene.find_child("TalksPress", true, false) == null, "Talks with a player you never named say nothing of the press")
+		# Called out in round 8: the talks say why his price moved.
+		var talked: Dictionary = _state.list_player(str(current_scene.get("_talk_id")))
+		load("res://scripts/sim/MediaConference.gd").remember(talked, "criticise_named", "b", _state.my_club,
+				int(_state.season_year), 8)
+		current_scene.call("_show_talks")
+		await _settle()
+		var said: Control = current_scene.find_child("TalksPress", true, false)
+		var said_text := str(said.get_meta("plain", said.get("text"))) if said != null else "none"
+		_check(said_text == "Remembers you called him out in round 8, so he wants 4% more.",
+				"Talks say what he remembers of your press and its size (%s)" % said_text)
+		talked.erase("press_memory")
 		_router.handle_back(true)
 		await _settle()
 		_check(_router.current() == "offseason" and current_scene.find_child("ContractTalks", true, false) == null,
