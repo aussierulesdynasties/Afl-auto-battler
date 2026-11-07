@@ -6,6 +6,7 @@ extends SceneTree
 ## shown by colour alone (P-10): every GOOD/BAD (or win/loss) colour choice in
 ## the screens is listed here with the word, mark or number that says the same
 ## thing, so a new one has to name its second cue.
+## Seeded by design: no career, draft or match is started; only the main menu and Settings.
 
 const Tap := preload("res://tests/tap.gd")
 const Ran := preload("res://tests/functions_ran.gd")
