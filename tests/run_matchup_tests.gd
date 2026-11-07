@@ -972,9 +972,12 @@ func _play_tap_routes() -> void:
 		var why: String = await Tap.tap(play) if play != null else "missing"
 		var want := "MatchPreviewScene" if way == "watch" else "MatchScene"
 		var at: Node = null
+		var saw_box := false
 		for i in range(120):
 			await process_frame
 			at = get_current_scene()
+			if at != null and at.name == "MatchScene":
+				saw_box = saw_box or at.find_child("CoachBox", true, false) != null
 			# A skip is let run to its full time before the screen is put away.
 			if at != null and at.name == want and (way == "watch" or bool(at.get("_fulltime_shown"))):
 				break
@@ -984,9 +987,12 @@ func _play_tap_routes() -> void:
 					"Watch chosen: a real tap on Play match opens the match preview (%s, %s)" % [
 						why, str(at.name) if at != null else "none"])
 		else:
-			_check(why == "" and landed and _state.match_way_live == "skip" and bool(at.get("_fulltime_shown")),
-					"Skip chosen: a real tap on Skip to full time takes your match straight to full time (%s, %s, live %s)" % [
-						why, str(at.name) if at != null else "none", _state.match_way_live])
+			# MatchScene takes the skip and puts the live way back to Watch, so
+			# the proof is the screen: full time, no coach box on the way.
+			var ft := landed and bool(at.get("_fulltime_shown"))
+			_check(why == "" and ft and not saw_box and _state.pending_sim == null,
+					"Skip chosen: a real tap on Skip to full time takes your match straight to full time (%s, %s, full time %s, coach box %s)" % [
+						why, str(at.name) if at != null else "none", str(ft), str(saw_box)])
 		if at != null:
 			at.queue_free()
 		_state.pending_sim = null
