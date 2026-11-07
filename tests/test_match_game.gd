@@ -1610,7 +1610,11 @@ func _test_play_through_three() -> void:
 	_check(on["dk"] > base["dk"], "Distributor: more of the ball (%.1f v %.1f a game)" % [on["dk"] / n, base["dk"] / n])
 	_check(absf(on["td"] - base["td"]) / base["td"] < 0.03,
 			"The calls move who gets it, not how much the side has (%.0f v %.0f disposals)" % [on["td"] / n, base["td"] / n])
-	_check(on["top"] < 45.0, "Nobody becomes the only one who gets it (most in a game %d)" % int(on["top"]))
+	# 45 was set when a side had 358 disposals a game; the defensive-50
+	# clearing kick (2026-11-07) gives a side 384 (real 367.6), so the same
+	# share is 48. Over these 80 games the pillar's two 40+ games are 42 and 46
+	# (38 on main); the real one-game record is 54.
+	_check(on["top"] < 48.0, "Nobody becomes the only one who gets it (most in a game %d)" % int(on["top"]))
 
 
 ## Main ruck (director, 2026-10-07, dual-ruck sides): the man you name goes up

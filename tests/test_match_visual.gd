@@ -1343,8 +1343,14 @@ func _test_set_shot_calls() -> void:
 	var pack_ok := 0
 	var pack_seen := 0
 	var outcomes := {}
-	for key in ["pass", "bomb"]:
-		var res := _set_call_match(String(key))
+	# A bomb's pack can end several ways; a match whose bombs all end the
+	# same way is followed by the next one (up to three) until two show.
+	var runs := [["pass", 0], ["bomb", 0]]
+	var r := -1
+	while r + 1 < runs.size():
+		r += 1
+		var key := str(runs[r][0])
+		var res := _set_call_match(key, int(runs[r][1]))
 		if res.is_empty():
 			played_all = false
 			continue
@@ -1385,6 +1391,8 @@ func _test_set_shot_calls() -> void:
 		var played := _play(res, evs, 1.0 / 60.0 * 4.0, false)
 		if played["stalled"] or (played["out"] as Array).size() != evs.size():
 			played_all = false
+		if key == "bomb" and outcomes.size() < 2 and runs.size() < 4:
+			runs.append(["bomb", int(res["seed_i"]) + 1])
 	_check(pass_seen > 0 and pass_ok == pass_seen,
 			"Playing on is a kick to the teammate leading up, or to the man who cuts it off (%d of %d)" % [pass_ok, pass_seen])
 	_check(pack_seen > 0 and pack_ok == pack_seen and outcomes.size() >= 2,
@@ -1394,8 +1402,8 @@ func _test_set_shot_calls() -> void:
 
 
 ## A live match where the home coach makes `key` at every set shot offered.
-func _set_call_match(key: String) -> Dictionary:
-	for i in range(40):
+func _set_call_match(key: String, from := 0) -> Dictionary:
+	for i in range(from, 40):
 		var sim := _sim(600 + i)
 		sim.moment_side = 0
 		var picked := 0
@@ -1419,6 +1427,7 @@ func _set_call_match(key: String) -> Dictionary:
 			res["home"] = "RIC"
 			res["away"] = "SYD"
 			res["label"] = "Round 1"
+			res["seed_i"] = i
 			return res
 	return {}
 
