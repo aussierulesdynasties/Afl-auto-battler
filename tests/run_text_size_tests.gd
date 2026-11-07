@@ -14,6 +14,13 @@ var _checks := 0
 var _failures: Array = []
 var _gs: Node
 var _router: Node
+## Loaded once the autoloads are up: these classes name GameDB and GameState,
+## which a --script runner has not made yet when it compiles.
+var UK
+var NI
+var NL
+var TL
+var TR
 
 
 func _initialize() -> void:
@@ -40,6 +47,11 @@ func _run() -> void:
 	await process_frame
 	_gs = root.get_node("GameState")
 	_router = root.get_node("Router")
+	UK = load("res://scripts/ui/UiKit.gd")
+	NI = load("res://scripts/ui/NameInk.gd")
+	NL = load("res://scripts/ui/NameLink.gd")
+	TL = load("res://scripts/ui/TraitLink.gd")
+	TR = load("res://scripts/sim/Traits.gd")
 	_gs.autosave_enabled = false
 	_gs.save_path = "user://test_text_size.save"
 	_gs.settings_path = "user://test_text_size.cfg"
@@ -53,7 +65,7 @@ func _run() -> void:
 	await _t("_test_one_place")
 	await _t("_test_colour_has_words")
 	await _t("_test_weakness_mark")
-	UiKit.apply_text_size("standard")
+	UK.apply_text_size("standard")
 	print(Ran.line("Text size", self))
 	for f in _failures:
 		print("  FAIL: " + f)
@@ -62,19 +74,19 @@ func _run() -> void:
 
 ## Each size is its step; anything unknown reads as Standard.
 func _test_scale() -> void:
-	for row in UiKit.TEXT_SIZES:
+	for row in UK.TEXT_SIZES:
 		var key := str(row[0])
-		UiKit.apply_text_size(key)
-		var s := float(UiKit.TEXT_SCALE[key])
-		_check(is_equal_approx(UiKit.text_scale, s), "%s: scale %.2f (got %.2f)" % [key, s, UiKit.text_scale])
-		_check(UiKit.text_size() == key, "%s: UiKit reports it" % key)
-		for fs in [UiKit.FINE, UiKit.BODY, UiKit.NAME, UiKit.H1, 44]:
-			_check(UiKit.px(fs) == roundi(fs * s), "%s: %d px renders at %d" % [key, fs, UiKit.px(fs)])
-			_check(UiKit.px(fs) >= fs, "%s: no size shrinks (%d)" % [key, fs])
-	_check(is_equal_approx(UiKit.TEXT_SCALE["standard"], 1.0), "Standard leaves every size as it was")
-	UiKit.apply_text_size("huge")
-	_check(UiKit.text_size() == "standard" and is_equal_approx(UiKit.text_scale, 1.0), "an unknown size reads as Standard")
-	UiKit.apply_text_size("standard")
+		UK.apply_text_size(key)
+		var s := float(UK.TEXT_SCALE[key])
+		_check(is_equal_approx(UK.text_scale, s), "%s: scale %.2f (got %.2f)" % [key, s, UK.text_scale])
+		_check(UK.text_size() == key, "%s: UiKit reports it" % key)
+		for fs in [UK.FINE, UK.BODY, UK.NAME, UK.H1, 44]:
+			_check(UK.px(fs) == roundi(fs * s), "%s: %d px renders at %d" % [key, fs, UK.px(fs)])
+			_check(UK.px(fs) >= fs, "%s: no size shrinks (%d)" % [key, fs])
+	_check(is_equal_approx(UK.TEXT_SCALE["standard"], 1.0), "Standard leaves every size as it was")
+	UK.apply_text_size("huge")
+	_check(UK.text_size() == "standard" and is_equal_approx(UK.text_scale, 1.0), "an unknown size reads as Standard")
+	UK.apply_text_size("standard")
 
 
 ## The choice is saved under ui/text_size and the next start reads it back.
@@ -89,13 +101,13 @@ func _test_kept() -> void:
 	_check(cfg.load(_gs.settings_path) == OK, "the settings file is written")
 	_check(str(cfg.get_value("ui", "text_size", "")) == "largest", "ui/text_size holds largest")
 	# The next start: the static scale begins at Standard, as in a new process.
-	UiKit.apply_text_size("standard")
+	UK.apply_text_size("standard")
 	var gs_script: GDScript = load("res://scripts/state/GameState.gd")
 	var next = gs_script.new()
 	next.settings_path = _gs.settings_path
 	next._ready()
-	_check(UiKit.text_size() == "largest" and is_equal_approx(UiKit.text_scale, 1.3),
-			"the next start opens at Largest (%s, %.2f)" % [UiKit.text_size(), UiKit.text_scale])
+	_check(UK.text_size() == "largest" and is_equal_approx(UK.text_scale, 1.3),
+			"the next start opens at Largest (%s, %.2f)" % [UK.text_size(), UK.text_scale])
 	next.free()
 	# A file holding a size the game no longer knows opens at Standard.
 	cfg.set_value("ui", "text_size", "giant")
@@ -104,7 +116,7 @@ func _test_kept() -> void:
 	var odd = gs_script.new()
 	odd.settings_path = _gs.settings_path
 	odd._ready()
-	_check(is_equal_approx(UiKit.text_scale, 1.0), "an unknown saved size starts at Standard")
+	_check(is_equal_approx(UK.text_scale, 1.0), "an unknown saved size starts at Standard")
 	odd.free()
 	_gs.set_text_size("standard")
 
@@ -116,42 +128,42 @@ func _fs(c: Object, key := "font_size") -> int:
 ## Every builder grows a size once: a size read back from a control that already
 ## has it (a button's words redrawn over it) is not grown again.
 func _test_no_double_scale() -> void:
-	UiKit.apply_text_size("largest")
+	UK.apply_text_size("largest")
 	var made: Array = []
-	var l := UiKit.lbl("Kick", UiKit.BODY)
-	_check(_fs(l) == UiKit.px(UiKit.BODY), "a label: %d, want %d" % [_fs(l), UiKit.px(UiKit.BODY)])
-	var nl := UiKit.name_label("Marcus Bontempelli")
-	_check(_fs(nl) == UiKit.px(UiKit.NAME), "a name: %d, want %d" % [_fs(nl), UiKit.px(UiKit.NAME)])
-	var h := UiKit.heading("Settings", UiKit.H1)
-	_check(_fs(h) == UiKit.px(mini(UiKit.H1, 30)), "a heading: %d, want %d" % [_fs(h), UiKit.px(mini(UiKit.H1, 30))])
-	var b := UiKit.btn("Play", 16)
-	_check(_fs(b) == UiKit.px(16), "a button: %d, want %d" % [_fs(b), UiKit.px(16)])
-	var r := NameInk.rich(UiKit.BODY)
+	var l: Control = UK.lbl("Kick", UK.BODY)
+	_check(_fs(l) == UK.px(UK.BODY), "a label: %d, want %d" % [_fs(l), UK.px(UK.BODY)])
+	var nl: Control = UK.name_label("Marcus Bontempelli")
+	_check(_fs(nl) == UK.px(UK.NAME), "a name: %d, want %d" % [_fs(nl), UK.px(UK.NAME)])
+	var h: Control = UK.heading("Settings", UK.H1)
+	_check(_fs(h) == UK.px(mini(UK.H1, 30)), "a heading: %d, want %d" % [_fs(h), UK.px(mini(UK.H1, 30))])
+	var b: Control = UK.btn("Play", 16)
+	_check(_fs(b) == UK.px(16), "a button: %d, want %d" % [_fs(b), UK.px(16)])
+	var r: Control = NI.rich(UK.BODY)
 	for k in ["normal_font_size", "bold_font_size"]:
-		_check(_fs(r, k) == UiKit.px(UiKit.BODY), "a name line's %s: %d, want %d" % [k, _fs(r, k), UiKit.px(UiKit.BODY)])
-	var link := NameLink.line("Kicked by Jack Smith", {}, UiKit.BODY, UiKit.TEXT)
-	_check(_fs(link, "normal_font_size") == UiKit.px(UiKit.BODY), "a linked line: %d, want %d"
-			% [_fs(link, "normal_font_size"), UiKit.px(UiKit.BODY)])
+		_check(_fs(r, k) == UK.px(UK.BODY), "a name line's %s: %d, want %d" % [k, _fs(r, k), UK.px(UK.BODY)])
+	var link: Control = NL.line("Kicked by Jack Smith", {}, UK.BODY, UK.TEXT)
+	_check(_fs(link, "normal_font_size") == UK.px(UK.BODY), "a linked line: %d, want %d"
+			% [_fs(link, "normal_font_size"), UK.px(UK.BODY)])
 	# A button naming a player: his name drawn over it at the button's own size.
-	var named := UiKit.btn("Pick Jack Smith", 16)
-	NameInk.dress_button(named, {"Jack Smith": "MEL"})
+	var named: Control = UK.btn("Pick Jack Smith", 16)
+	NI.dress_button(named, {"Jack Smith": "MEL"})
 	var over := named.find_children("*", "RichTextLabel", true, false)
 	_check(over.size() == 1, "a button naming a player carries his name in ink")
 	if over.size() == 1:
-		_check(_fs(over[0], "normal_font_size") == _fs(named) and _fs(named) == UiKit.px(16),
-				"the inked name matches its button (%d and %d, want %d)" % [_fs(over[0], "normal_font_size"), _fs(named), UiKit.px(16)])
+		_check(_fs(over[0], "normal_font_size") == _fs(named) and _fs(named) == UK.px(16),
+				"the inked name matches its button (%d and %d, want %d)" % [_fs(over[0], "normal_font_size"), _fs(named), UK.px(16)])
 	# Already at size: passed through as it is.
 	var kept := Label.new()
-	UiKit.set_font_size(kept, 21, "font_size", true)
+	UK.set_font_size(kept, 21, "font_size", true)
 	_check(_fs(kept) == 21, "a size already grown is not grown again (%d)" % _fs(kept))
 	# A button's drop-down menu is a window, not a control.
 	var menu := PopupMenu.new()
-	UiKit.set_font_size(menu, UiKit.BODY)
-	_check(_fs(menu) == UiKit.px(UiKit.BODY), "a drop-down menu: %d, want %d" % [_fs(menu), UiKit.px(UiKit.BODY)])
+	UK.set_font_size(menu, UK.BODY)
+	_check(_fs(menu) == UK.px(UK.BODY), "a drop-down menu: %d, want %d" % [_fs(menu), UK.px(UK.BODY)])
 	made.append_array([l, nl, h, b, r, link, named, kept, menu])
 	for n in made:
 		n.free()
-	UiKit.apply_text_size("standard")
+	UK.apply_text_size("standard")
 
 
 func _named(from: Node, name: String) -> Control:
@@ -194,7 +206,7 @@ func _test_settings_tap(sz: Vector2i) -> void:
 		_check(why == "", "%s: a touch on %s lands (%s)" % [tag, key, why])
 		await _settle(12)
 		_check(str(_gs.get_setting("text_size", "")) == key, "%s: %s is saved" % [tag, key])
-		_check(is_equal_approx(UiKit.text_scale, float(step[1])), "%s: the words are at %s (%.2f)" % [tag, key, UiKit.text_scale])
+		_check(is_equal_approx(UK.text_scale, float(step[1])), "%s: the words are at %s (%.2f)" % [tag, key, UK.text_scale])
 		_check(current_scene != null and current_scene.get_instance_id() != before,
 				"%s: the screen rebuilds at %s" % [tag, key])
 		_check(_router.current() == "main", "%s: still on the main menu" % tag)
@@ -206,11 +218,11 @@ func _test_settings_tap(sz: Vector2i) -> void:
 		if sheet == null:
 			return
 		var title := _settings_title(sheet)
-		var want := UiKit.px(mini(UiKit.H1, 30))
+		var want: int = UK.px(mini(UK.H1, 30))
 		_check(title != null and _fs(title) == want, "%s: the sheet's title is %d px at %s (got %d)"
 				% [tag, want, key, _fs(title) if title != null else -1])
 		var shown := _named(sheet, "SettingsTextSize_" + key) as Button
-		_check(shown != null and _fs(shown) == UiKit.px(14), "%s: the %s choice's words are %d px" % [tag, key, UiKit.px(14)])
+		_check(shown != null and _fs(shown) == UK.px(14), "%s: the %s choice's words are %d px" % [tag, key, UK.px(14)])
 		sheet.queue_free()
 		await _settle(4)
 	root.size = Vector2i(390, 844)
@@ -355,15 +367,15 @@ func _test_colour_has_words() -> void:
 func _test_weakness_mark() -> void:
 	var bad := ""
 	var good := ""
-	for key in Traits.DEFS:
-		if Traits.is_bad(str(key)) and bad == "":
+	for key in TR.DEFS:
+		if TR.is_bad(str(key)) and bad == "":
 			bad = str(key)
-		elif not Traits.is_bad(str(key)) and good == "":
+		elif not TR.is_bad(str(key)) and good == "":
 			good = str(key)
 	_check(bad != "" and good != "", "there is a weakness and a trait to show")
-	_check(UiKit.trait_label(bad) == UiKit.WEAKNESS_MARK + Traits.label(bad), "a weakness carries its mark: %s" % UiKit.trait_label(bad))
-	_check(UiKit.trait_label(good) == Traits.label(good), "a trait carries none: %s" % UiKit.trait_label(good))
-	_check(TraitLink.sheet_lines(bad).has("Weakness"), "a weakness's sheet says Weakness")
-	_check(not TraitLink.sheet_lines(good).has("Weakness"), "a trait's sheet does not")
-	for ch in [UiKit.WEAKNESS_MARK.strip_edges(), "▲"]:
-		_check(UiKit.FONT.has_char(ch.unicode_at(0)), "the game's face draws %s" % ch)
+	_check(UK.trait_label(bad) == UK.WEAKNESS_MARK + TR.label(bad), "a weakness carries its mark: %s" % UK.trait_label(bad))
+	_check(UK.trait_label(good) == TR.label(good), "a trait carries none: %s" % UK.trait_label(good))
+	_check(TL.sheet_lines(bad).has("Weakness"), "a weakness's sheet says Weakness")
+	_check(not TL.sheet_lines(good).has("Weakness"), "a trait's sheet does not")
+	for ch in [UK.WEAKNESS_MARK.strip_edges(), "▲"]:
+		_check(UK.FONT.has_char(ch.unicode_at(0)), "the game's face draws %s" % ch)
