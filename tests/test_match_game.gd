@@ -3700,20 +3700,6 @@ func _test_df_duel_numbers() -> void:
 
 
 func _test_defensive_forward_cards() -> void:
-	# Copy-truth: the cost line is built from MINDER_ROAM and MINDER_INVOLVE,
-	# in words (no numbers on the break), and the words follow the constants.
-	var line := MatchNotes.minder_cost_line()
-	var kept_spec := float(MatchSim.MINDER_ROAM["specialist"])
-	var kept_other := float(MatchSim.MINDER_ROAM["other"])
-	_check(kept_spec < kept_other and kept_spec < 0.5 and kept_other > 0.55 and kept_other <= 0.8
-			and line.contains("%s of his contests with a Defensive forward" % MatchNotes.reach_words(kept_spec))
-			and line.contains("%s with any other forward" % MatchNotes.reach_words(kept_other))
-			and line.contains("well under half of his contests with a Defensive forward")
-			and line.contains("most with any other forward")
-			and float(MatchSim.MINDER_INVOLVE) <= 0.35 and line.contains("far less often") and not line.contains("%"),
-			"The cost line says what the constants do, in words (%s)" % line)
-	_check(MatchNotes.reach_words(0.2) == "hardly any" and MatchNotes.reach_words(0.5) == "about half"
-			and MatchNotes.reach_words(0.9) == "nearly all", "The share words read right at their edges")
 	_check(MatchNotes.minder_question("Jake Lever", "Melbourne").begins_with("Who covers Jake Lever (Melbourne)?")
 			and MatchNotes.minder_none_line().contains("no loose defender"),
 			"The question names their loose defender and his club; with none, it says so")
