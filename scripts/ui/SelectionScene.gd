@@ -9,7 +9,7 @@ extends Control
 ## feel good"): "The side" is the oval, the interchange and the players not
 ## picked; "This week" (WeekPreview) is what the choice rests on. A PC shows
 ## both, side by side; a phone shows the side, and the week has its own step
-## between Play match and the setup (the match preview, director 2026-11-07). Match-ups,
+## between Play match and the setup (the match preview, director 2026-11-07). Player roles,
 ## game plan and tags are not asked here: they are set on the match-day setup
 ## before Start (director, 2026-10-13), which opens this screen through
 ## Change the side and comes back to it with the new side (TODO row 25).

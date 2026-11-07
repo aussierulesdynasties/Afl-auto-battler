@@ -1574,10 +1574,8 @@ func _gate_odds() -> void:
 	var RT = load("res://scripts/sim/Ratings.gd")
 	var MU = load("res://scripts/sim/Matchups.gd")
 	var digits := RegEx.create_from_string("[0-9]")
-	var templates := [GO.GAIN, GO.COST, GO.TAG_GAIN, GO.TAG_COST, GO.MATCHUP_GAIN, GO.MATCHUP_COST_NEXT,
-			GO.MATCHUP_COST_LOOSE, GO.MINDER_GAIN, GO.MINDER_COST, GO.LOOSE_GAIN,
-			GO.LOOSE_COST, GO.TAG_GIVES, GO.TAG_NOTE, GO.SKIP_FIRST, GO.SKIP_LATER, GO.BACK_STATS, GO.BACK_CM,
-			GO.DUEL_GAIN, GO.DUEL_COST_SWAP, GO.DUEL_COST_LOOSE, GO.DUEL_COST_FREE, GO.DUEL_COST_KEEP,
+	var templates := [GO.GAIN, GO.COST, GO.TAG_GAIN, GO.TAG_COST, GO.MINDER_GAIN, GO.MINDER_COST, GO.LOOSE_GAIN,
+			GO.LOOSE_COST, GO.TAG_GIVES, GO.TAG_NOTE, GO.SKIP_FIRST, GO.SKIP_LATER,
 			GO.FOR_MINUTES, GO.TO_SIREN, GO.TO_BREAK, GO.NONE_GAIN, GO.NONE_COST_RUN, GO.NONE_COST_BOUNCE]
 	for d in [GO.PLAN_GAIN, GO.PLAN_COST, GO.BURST_GAIN, GO.BURST_COST]:
 		templates.append_array((d as Dictionary).values())
@@ -1602,7 +1600,7 @@ func _gate_odds() -> void:
 			"Defensive press: both sides from PLANS and the press zones (%s / %s)" % dfn)
 	_check(str(GO.plan_lines("contest")[0]).contains(pct.call(float(Ms.PLANS["contest"]["contest"]))), "Win contest: its stoppage edge")
 	_check(GO.skip_line(1).contains("plan you took in") and GO.skip_line(3).contains("last quarter's calls")
-			and GO.skip_line(3).contains("no change") and GO.skip_line(1).contains("Only a match-up changed here is kept"),
+			and GO.skip_line(3).contains("no change") and GO.skip_line(1).contains("Nothing changed here is kept"),
 			"Skip says what it plays with and that the sheet's other changes are not kept")
 	var mins := func(k: String) -> String: return str(roundi(float(Ms.BURSTS[k]["chains"]) * float(Ms.GAME_MINUTES) / float(RT.T["chains_per_game"])))
 	var surge: Array = GO.burst_lines("surge", 60)
@@ -1625,5 +1623,5 @@ func _gate_odds() -> void:
 	var edge: float = MU.AERIAL_EDGE if load("res://scripts/sim/Traits.gd").has(fwd, "aerial") else 0.0
 	var want := clampf(MU.MARK_BASE + edge + (MU.forward_air(fwd) - MU.defender_air(back) - MU.DUEL_CENTRE) / MU.DUEL_SCALE,
 			MU.MARK_FLOOR, MU.DUEL_CAP)
-	_check(is_equal_approx(MU.mark_chance(fwd, back), want) and GO.back_stats(back) == "Intercept 74 · Marking 68 · 192 cm",
-			"A back's card: Intercept, Marking and height, and the mark chance the duel rule gives (%.3f, %s)" % [want, GO.back_stats(back)])
+	_check(is_equal_approx(MU.mark_chance(fwd, back), want),
+			"The mark chance is the duel rule's (%.3f)" % want)

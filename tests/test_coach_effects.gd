@@ -260,20 +260,6 @@ func _test_assistant() -> void:
 	on._assistant_calls(0)
 	_check((str((on.duels[0] as Dictionary).get(fid, "")) != beaten) == better,
 			"Your assistant moves a key defender who lost three of four contests last quarter when a better match-up exists")
-	# One you put there yourself stays, whatever the contests say.
-	var kept: MatchSim = make.call(true)
-	var mine := str((kept.duels[0] as Dictionary)[fid])
-	kept.coach_matchup(0, fid, mine)
-	kept.duel_log[fid] = {"side": 1, "contests": [[1, mine, true, false], [1, mine, true, true], [1, mine, true, false],
-			[1, mine, false, false]]}
-	kept.current_quarter = 2
-	kept._assistant_calls(0)
-	_check(str((kept.duels[0] as Dictionary).get(fid, "")) == mine, "A match-up you set yourself is never moved")
-	# Your set-up before the bounce is yours, and he picks the spare around it.
-	var setup: MatchSim = make.call(true)
-	setup.set_matchups(0, {fid: str(best["id"])})
-	_check(str((setup.duels[0] as Dictionary).get(fid, "")) == str(best["id"]) and str(setup.interceptor[0]) != str(best["id"]),
-			"He picks the loose defender from the defenders you have not put on someone")
 	# A loose defender you choose, or no loose defender, stays your call.
 	var loose: MatchSim = make.call(true)
 	loose.coach_interceptor(0, "")

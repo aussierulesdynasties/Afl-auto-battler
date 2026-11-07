@@ -1,13 +1,13 @@
 class_name PlanTiles
 extends RefCounted
-## The six game plans as tiles, each with the List profile strength it runs on
+## The five game plans as tiles, each with the List profile strength it runs on
 ## and your list's word for it (director, 2026-10-09: "each strength profile
 ## marries to a gameplan"). Coaching and the plan chooser on team selection
 ## show the same tiles. Facts only: nothing says which plan to pick.
 
 ## plan -> the List profile strength it runs on (PlanFit.NEEDS = ListProfile's
-## Contest, Running power, Pressure and Control). Through stars runs on the
-## side's best three; Balanced on nothing in particular.
+## Contest, Running power, Pressure and Control). Balanced runs on nothing
+## in particular.
 const PLAN_STRENGTH := {"contest": "contest", "attacking": "running", "defensive": "pressure",
 		"controlled": "control"}
 
@@ -20,14 +20,10 @@ static func words(profile: Array) -> Dictionary:
 	return out
 
 
-static func strength_line(key: String, words_by_dim: Dictionary, ground: Array) -> String:
+static func strength_line(key: String, words_by_dim: Dictionary, _ground: Array) -> String:
 	if PLAN_STRENGTH.has(key):
 		var dim := str(PLAN_STRENGTH[key])
 		return "%s · %s" % [ListProfile.LABEL[dim], str(words_by_dim.get(dim, ""))]
-	if key == "through_stars":
-		var e := PlanFit.edge(ground, "through_stars")
-		var w := "Elite" if e >= 1.2 else ("Strong" if e >= 0.4 else ("Average" if e > -0.4 else "Weak"))
-		return "Best three · %s" % w
 	return "Plays it straight"
 
 

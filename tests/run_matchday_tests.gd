@@ -39,7 +39,7 @@ func _run() -> void:
 	_checks += suite.checks
 	_failures.append_array(suite.failures)
 	# A fixed season seed: the clock would pick a different opponent each run,
-	# and some field no key forward at quarter time (no match-up to change).
+	# and the break would differ from run to run.
 	_state.replay_seed = 2026
 	for sz in [Vector2i(420, 860), Vector2i(360, 740)]:
 		await _t("_test_phone_match", [sz])
@@ -332,54 +332,44 @@ func _test_phone_match(sz: Vector2i) -> void:
 			"Every call is in view at the break, with no More calls button (%s)" % tag)
 	_check((box.find_child("BreakColumns", true, false) != null) == bool(m.call("_wide_break")),
 			"A wide PC window lays the break out in columns; a phone keeps one (%s)" % tag)
-	# Key match-ups: their key forwards and who is on them, changed in a tap
-	# - and the change is the engine's from the next bounce.
-	var qsim = _state.pending_sim
-	var myside := int(m.get("_my_side"))
-	var bm: Node = box.find_child("BreakMatchups", true, false)
-	_check(bm != null, "The break shows the key match-ups (%s)" % tag)
-	_check(bm != null and bm.find_child("AssistantNote", true, false) != null and qsim.assistant_active(myside),
-			"The break shows your assistant's set-up as your starting point (%s)" % tag)
-	var ch: Button = bm.find_child("ChangeMatchup", true, false) if bm != null else null
-	# Required: without a Change button the checks below would be skipped.
-	_check(ch != null, "The break offers a Change for their key forward (%s)" % tag)
-	if ch != null:
-		var fid := str((qsim.duels[myside] as Dictionary).keys()[0])
-		var cur := str(qsim.duels[myside][fid])
+	# Play through (director, 2026-11-07: back, in the slot Key match-ups had):
+	# a finger picks the midfield pillar, and the note under it says what the
+	# pick does or that it waits.
+	var fp: Node = box.find_child("FocusPicker_focus_mid", true, false)
+	_check(fp != null and box.find_child("FocusPicker_focus_fwd", true, false) != null
+			and box.find_child("FocusPicker_focus_def", true, false) != null,
+			"The break offers the three play-through picks (%s)" % tag)
+	var fbtn: Button = null
+	if fp != null:
+		for b2 in fp.find_children("FocusPicker_focus_midGrid_*", "Button", true, false):
+			if str(b2.name) != "FocusPicker_focus_midGrid_" and fbtn == null:
+				fbtn = b2
+	# Required: without a player to pick the checks below would be skipped.
+	_check(fbtn != null, "The midfield pick offers a player (%s)" % tag)
+	if fbtn != null:
 		# Real taps from here (tests/tap.gd): a touch on the screen, not a call
 		# to the handler. First, the tool itself: a sheet over the button must
 		# take the tap.
-		await _open_call_of(m, ch)
+		await _open_call_of(m, fbtn)
 		var cover := ColorRect.new()
 		cover.color = Color(0, 0, 0, 0)
 		cover.set_anchors_preset(Control.PRESET_FULL_RECT)
 		m.add_child(cover)
 		await _settle()
-		var blocked: String = await Tap.tap(ch)
-		_check(blocked != "" and m.find_child("MatchupChooser", true, false) == null,
+		# On a phone the call opens as its own sheet, outside the coach box.
+		var fnote: Label = m.find_child("FocusNote_focus_mid", true, false)
+		var note_was := fnote.text if fnote != null else ""
+		var blocked: String = await Tap.tap(fbtn)
+		_check(blocked != "" and fnote != null and fnote.text == note_was,
 				"A tap on a covered button doesn't reach it (%s: %s)" % [tag, blocked])
 		cover.queue_free()
 		await _settle()
-		var why: String = await Tap.tap(ch)
-		_check(why == "", "A finger's tap on Change reaches it (%s: %s)" % [tag, why])
+		var fid := str(fbtn.name).trim_prefix("FocusPicker_focus_midGrid_")
+		var why: String = await Tap.tap(fbtn)
+		_check(why == "", "A finger's tap picks the midfield pillar (%s: %s)" % [tag, why])
 		await _settle()
-		var chooser: Node = m.find_child("MatchupChooser", true, false)
-		var pick: Button = null
-		if chooser != null:
-			for b2 in chooser.find_children("Defender_*", "Button", true, false):
-				if str(b2.name) != "Defender_" + cur and pick == null:
-					pick = b2
-		_check(pick != null, "Your defenders are offered for their forward (%s)" % tag)
-		if pick != null:
-			var picked := str(pick.name).trim_prefix("Defender_")
-			var why2: String = await Tap.tap(pick)
-			_check(why2 == "", "A finger's tap picks the defender (%s: %s)" % [tag, why2])
-			await _settle()
-			_check(str(qsim.duels[myside][fid]) == picked
-					and int(qsim.duel_changes[qsim.duel_changes.size() - 1]["from"]) == 2,
-					"The defender goes to him from the next quarter (%s)" % tag)
-			_check(((qsim._own[myside] as Dictionary)["duels"] as Dictionary).has(fid),
-					"A match-up you change stays your call (%s)" % tag)
+		_check(fnote != null and fnote.text != "" and fnote.text == str(m.call("_focus_note_text", "focus_mid", fid)),
+				"The note under the pick says what it does or that it waits (%s: %s)" % [tag, fnote.text if fnote != null else "none"])
 	var small := []
 	for b in box.find_children("*", "Button", true, false):
 		if b.is_visible_in_tree() and b.size.y < 40:
@@ -1128,21 +1118,23 @@ func _test_one_line_break(sz: Vector2i) -> void:
 	for r in box.find_children("CallRow_*", "Button", true, false):
 		keys.append(str(r.name).trim_prefix("CallRow_"))
 	# Every decision the break had is still a row: none is lost.
-	var want := ["plan", "pep", "tag", "def"]
-	if not (sim.duels[me] as Dictionary).is_empty():
-		want.append("mu")
-	_check(not keys.has("rot") and not keys.has("pt") and not keys.has("ruck") and not keys.has("minder") and not keys.has("loose"),
-			"No Rotations, Play through, Main ruck or split defensive rows (%s: %s)" % [tag, str(keys)])
+	var want := ["plan", "pep", "tag", "pt", "def"]
+	_check(not keys.has("rot") and not keys.has("mu") and not keys.has("ruck") and not keys.has("minder") and not keys.has("loose"),
+			"No Rotations, Key match-ups, Main ruck or split defensive rows (%s: %s)" % [tag, str(keys)])
 	var lost := want.filter(func(k): return not keys.has(k))
 	_check(lost.is_empty(), "Every call has its row at the break (%s; missing %s)" % [tag, str(lost)])
 	# Each call's own controls are still there, behind its row.
 	var controls := {"plan": "PlanPicker", "pep": "PepPicker", "tag": "TagPicker",
-			"def": "DefenceSetupPicker", "mu": "ChangeMatchup"}
+			"def": "DefenceSetupPicker", "pt": "FocusPicker_focus_fwd"}
 	var orphan := []
 	for k in keys:
 		var body: Node = m.find_child("CallBody_" + str(k), true, false)
 		if body == null or body.find_child(str(controls.get(k, "")), true, false) == null:
 			orphan.append(k)
+	for slot in ["focus_mid", "focus_def"]:
+		var pt_body: Node = m.find_child("CallBody_pt", true, false)
+		if pt_body == null or pt_body.find_child("FocusPicker_" + slot, true, false) == null:
+			orphan.append(slot)
 	_check(orphan.is_empty(), "Every call keeps its own choices behind its row (%s; without %s)" % [tag, str(orphan)])
 	# A row says its answer now.
 	var plan_row: Button = box.find_child("CallRow_plan", true, false)
@@ -2104,19 +2096,17 @@ func _test_rings_on_the_oval() -> void:
 	var me := int(m.get("_my_side"))
 	_check(pitch.rings.is_empty(), "No one is ringed before you have made a call")
 	var box: Node = m.find_child("CoachBox", true, false)
+	var focus_id := _first_pick(box, "FocusPicker_focus_midGrid_")
 	var tag_id := _first_pick(box, "TagPickerGrid_")
-	var stars_b: Node = box.find_child("PlanPicker_through_stars", true, false)
-	_check(stars_b != null and tag_id != "", "Through stars and a tag are on offer")
-	if stars_b == null or tag_id == "":
+	_check(focus_id != "" and tag_id != "", "A play-through and a tag are on offer")
+	if focus_id == "" or tag_id == "":
 		m.queue_free()
 		return
-	stars_b.emit_signal("pressed")
+	box.find_child("FocusPicker_focus_midGrid_" + focus_id, true, false).emit_signal("pressed")
 	box.find_child("TagPickerGrid_" + tag_id, true, false).emit_signal("pressed")
 	box.find_child("StartQuarter", true, false).emit_signal("pressed")
 	await _settle()
-	var played: Array = sim.focus_ids(me)
-	_check(not played.is_empty() and played.all(func(id): return pitch.ringed(str(id))),
-			"Through stars: the stars you play through are ringed from the bounce (%s)" % str(played))
+	_check(pitch.ringed(focus_id), "The player you play through is ringed from the bounce")
 	var tagger = load("res://scripts/sim/MatchSim.gd").tagger_for(sim.squads[me].ground)
 	_check(tagger != null and pitch.ringed(str(tagger["id"])), "So is the player who goes to your tag")
 	# Who tags is the coach's call: another midfielder on the ground takes the
@@ -2708,25 +2698,18 @@ func _test_side_keeps_calls() -> void:
 		elif def_key == "":
 			def_key = k
 	await _tap_named(ms, "DefenceSetupPicker_" + def_key, taps)
-	# A key match-up changed, to a defender who isn't a loose man.
-	var change: Control = ms.find_child("ChangeMatchup", true, false)
-	var fid := str(change.get_parent().name).trim_prefix("BreakMatchup_") if change != null else ""
-	var avoid := {str(sim.duels[side].get(fid, "")): true, str(sim.interceptor[side]): true}
-	var loose_cands: Array = load("res://scripts/sim/Matchups.gd").interceptor_candidates(load("res://scripts/sim/Matchups.gd").defenders(sim.squads[side].ground))
-	if not loose_cands.is_empty():
-		avoid[str(loose_cands[0]["id"])] = true
-	await _tap_named(ms, "ChangeMatchup", taps)
+	# A forward to play through, who isn't the tagger.
 	var picked := ""
-	var chooser: Node = ms.find_child("MatchupChooser", true, false)
-	if chooser != null:
-		for b in chooser.find_children("Defender_*", "Button", true, false):
-			var id := str(b.name).trim_prefix("Defender_")
-			if picked == "" and not avoid.has(id):
+	var fp: Node = ms.find_child("FocusPicker_focus_fwd", true, false)
+	if fp != null:
+		for b in fp.find_children("FocusPicker_focus_fwdGrid_*", "Button", true, false):
+			var id := str(b.name).trim_prefix("FocusPicker_focus_fwdGrid_")
+			if picked == "" and id != "" and id != tagger:
 				picked = id
-		await _tap_named(chooser, "Defender_" + picked, taps)
+	await _tap_named(ms, "FocusPicker_focus_fwdGrid_" + picked, taps)
 	_check(taps.is_empty() and tag != "" and tagger != "" and def_key != "" and picked != ""
-			and str(sim.duels[side].get(fid, "")) == picked,
-			"Real taps set a plan, pep talk, tag, tagger, defensive set-up (%s, was %s) and a match-up (%s)"
+			and _is_chosen(ms, "FocusPicker_focus_fwdGrid_" + picked),
+			"Real taps set a plan, pep talk, tag, tagger, defensive set-up (%s, was %s) and a forward to play through (%s)"
 			% [def_key, def_was, str(taps)])
 	var loose_now := str(sim.interceptor[side])
 	# Change the side, swap one midfielder nobody's call needs, come back.
@@ -2749,19 +2732,14 @@ func _test_side_keeps_calls() -> void:
 			"Back to match day with the new side (%s)" % str(taps))
 	_check(_is_chosen(ms, "PlanPicker_" + plan) and _is_chosen(ms, "PepPicker_fire_up")
 			and _is_chosen(ms, "TagPickerGrid_" + tag) and _is_chosen(ms, "TaggerPickerGrid_" + tagger)
-			and _is_chosen(ms, "DefenceSetupPicker_" + def_key),
+			and _is_chosen(ms, "DefenceSetupPicker_" + def_key) and _is_chosen(ms, "FocusPicker_focus_fwdGrid_" + picked),
 			"After Change the side every call is still selected on the sheet")
-	var row: Node = ms.find_child("BreakMatchup_" + fid, true, false)
-	var cell: Label = (row.get_meta("cells") as Dictionary)["def"] if row != null else null
-	_check(cell != null and cell.text == ms.call("_surname", load("res://scripts/ui/match/MatchNotes.gd")._pname(picked)),
-			"The changed match-up shows on the sheet (%s)" % (cell.text if cell else "-"))
 	_check(str(t.get("gameplan", "")) == plan and str(t.get("pep", "")) == "fire_up"
 			and str(t.get("tag_id", "")) == tag and str(t.get("tagger_id", "")) == tagger
-			and str(nsim.duels[side].get(fid, "")) == picked
-			and ((nsim._own[side] as Dictionary)["duels"] as Dictionary).has(fid)
+			and str(t.get("focus_fwd", "")) == picked
 			and str(nsim.interceptor[side]) == loose_now,
 			"The new match holds the same calls (%s, loose %s/%s)" % [str(t), str(nsim.interceptor[side]), loose_now])
-	# Now drop the match-up's defender and the tagger.
+	# Now drop the forward played through and the tagger.
 	await _tap_named(ms, "ChangeSide", taps)
 	sel = current_scene
 	_state.set_selection({"OUT": [spare, picked, tagger]})
@@ -2773,10 +2751,9 @@ func _test_side_keeps_calls() -> void:
 	t = nsim2.tactics[side]
 	_check(taps.is_empty() and nsim2 != nsim and not nsim2.taking_part(side, picked)
 			and not nsim2.taking_part(side, tagger),
-			"Back again without the match-up's defender and the tagger (%s)" % str(taps))
-	_check(str(nsim2.duels[side].get(fid, "")) != picked
-			and not ((nsim2._own[side] as Dictionary)["duels"] as Dictionary).has(fid),
-			"The dropped defender's match-up goes back to the assistant's pick (%s)" % str(nsim2.duels[side].get(fid, "")))
+			"Back again without the forward played through and the tagger (%s)" % str(taps))
+	_check(str(t.get("focus_fwd", "")) == "" and _is_chosen(ms, "FocusPicker_focus_fwdGrid_"),
+			"The dropped forward's Play through pick goes back to no one (%s)" % str(t.get("focus_fwd", "")))
 	_check(_is_chosen(ms, "TaggerPickerGrid_") and str(t.get("tagger_id", "")) == "",
 			"The dropped tagger's job goes back to the assistant's pick")
 	_check(_is_chosen(ms, "PlanPicker_" + plan) and _is_chosen(ms, "PepPicker_fire_up")
@@ -3460,12 +3437,10 @@ func _check(condition: bool, message: String) -> void:
 
 ## The call panes, Fremantle v Melbourne (the lead's captures of 2026-10-18, seed 2050).
 ## Before the first ball-up: "Tag which player?" is drawn over the tag choices; on a
-## PC the game plan leads the first column, the tag and the key match-ups share one, the
-## pep talk and the defensive forward share one, the columns are alike in height and the
-## pane does not scroll; each key match-up's Change sits right after its sentence and no
-## player's name is broken across two lines. At quarter time each surname the key
-## match-ups row names wears his own club's ink (two clubs share "McDonald"), and Best so
-## far's names wear their clubs' ink (director A1, 2026-10-14).
+## PC the game plan leads the first column, the tag and the play-through picks share one,
+## the pep talk and the defensive forward share one, the columns are alike in height and
+## the pane does not scroll. At quarter time the play-through row is there (key match-ups
+## cut, director 2026-11-07), and Best so far's names are plain white.
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
@@ -3513,7 +3488,6 @@ func _test_break_panes_layout() -> void:
 				"Tag which player? is drawn over the tag choices (%s)" % tag)
 		_check(ask != null and tag_picker != null and ask.get_parent() == tag_picker.get_parent()
 				and ask.get_index() < tag_picker.get_index(), "...above the choices, in the Tag block (%s)" % tag)
-		await _matchup_rows(m, box, tag)
 		_notes_above_floor(box, "pre-bounce, " + tag)
 		if sz.x >= 1200:
 			var cols_node: Control = box.find_child("BreakColumns", true, false)
@@ -3526,8 +3500,12 @@ func _test_break_panes_layout() -> void:
 				return -1
 			_check(cols.size() == 3, "Three call columns at 1280x720 (%d)" % cols.size())
 			_check(int(col_of.call("PlanPicker")) == 0, "The game plan leads the first column (column %d)" % int(col_of.call("PlanPicker")))
-			_check(int(col_of.call("TagPicker")) == 1 and int(col_of.call("BreakMatchups")) == 1,
-					"The tag leads the second column; the key match-ups are in the columns")
+			# The play-through picks are dealt by height (_deal_calls), the
+			# three of them together in one column.
+			var pt_col := int(col_of.call("FocusPicker_focus_mid"))
+			_check(int(col_of.call("TagPicker")) == 1 and pt_col >= 0
+					and int(col_of.call("FocusPicker_focus_fwd")) == pt_col and int(col_of.call("FocusPicker_focus_def")) == pt_col,
+					"The tag leads the second column; the three play-through picks share a column (%d)" % pt_col)
 			_check(int(col_of.call("PepPicker")) >= 0 and int(col_of.call("DefenceSetupPicker")) >= 0,
 					"The pep talk and the defensive set-up are in the columns")
 			var tallest := 0.0
@@ -3545,7 +3523,7 @@ func _test_break_panes_layout() -> void:
 			for t in heights:
 				worst = maxf(worst, (tallest - float(t)) / tallest)
 			# Three columns before the bounce (director, 2026-11-03): no column
-			# stands more than 30% empty, with Tag and Key match-ups kept together.
+			# stands more than 30% empty, with Tag and Play through kept together.
 			_check(worst <= 0.30, "No column stands more than 30%% empty (%.0f%%: %s %s)" % [worst * 100.0, str(heights), str(parts)])
 			var bsc: ScrollContainer = null
 			var up: Node = cols_node
@@ -3565,23 +3543,8 @@ func _test_break_panes_layout() -> void:
 		var box2: Node = m2.find_child("CoachBox", true, false)
 		if box2 != null:
 			_notes_above_floor(box2, "quarter time, " + tag)
-		var row: Node = box2.find_child("CallRow_mu", true, false) if box2 != null else null
-		_check(row != null, "Quarter time has the key match-ups row (%s)" % tag)
-		if row != null:
-			var ans: RichTextLabel = row.get_meta("answer") as RichTextLabel
-			var mine := int(sim.moment_side)
-			var named := 0
-			for fid in (sim.duels[mine] as Dictionary):
-				var duel_id := str((sim.duels[mine] as Dictionary)[fid])
-				for pair in [[str(fid), str(sim.squads[1 - mine].code)], [duel_id, str(sim.squads[mine].code)]]:
-					var full: String = db.player_display_name_by_id(str(pair[0]), "")
-					var sur: String = full.split(" ", false, 1)[1] if full.contains(" ") else full
-					if not _plain_of(ans).contains(sur):
-						continue
-					named += 1
-					_check(ans.text.contains("[color=#%s]%s" % [UK.club_name_colour(UK.club_ink(str(pair[1]))).to_html(false), sur.replace(" ", NB)]),
-							"%s wears %s's ink on the key match-ups row (%s)" % [sur, pair[1], tag])
-			_check(named >= 2, "The key match-ups row names players (%d, %s)" % [named, tag])
+		_check(box2 != null and box2.find_child("CallRow_pt", true, false) != null and box2.find_child("CallRow_mu", true, false) == null,
+				"Quarter time has the play-through row and no key match-ups row (%s)" % tag)
 		var inks: Array = UK.club_ink_pair(str(sim.squads[0].code), str(sim.squads[1].code))
 		for side in [0, 1]:
 			var wrap: Node = box2.find_child("BestSide_%d" % side, true, false) if box2 != null else null
@@ -3634,28 +3597,6 @@ func _plain_of(c: Control) -> String:
 	return str(c.get_meta("plain")) if c.has_meta("plain") else (c as Label).text
 
 
-## The key match-ups are a compact grid: every row's columns line up under the
-## head and Change sits after them inside the pane.
-func _matchup_rows(m: Control, box: Node, tag: String) -> void:
-	var rows := box.find_children("BreakMatchup_*", "HBoxContainer", true, false)
-	_check(not rows.is_empty(), "The key match-ups have rows (%s)" % tag)
-	_check(box.find_child("MatchupHead", true, false) != null, "The match-up grid has a head over its columns (%s)" % tag)
-	var xs := {}
-	for r in rows:
-		var fwd := r.find_child("Matchup_fwd", true, false) as Label
-		var dfd := r.find_child("Matchup_def", true, false) as Label
-		var change: Button = r.find_child("ChangeMatchup", true, false) as Button
-		if fwd == null or dfd == null or change == null:
-			_check(false, "A match-up row has forward, defender and Change (%s)" % tag)
-			continue
-		xs[snappedf(fwd.get_global_rect().position.x, 1.0)] = true
-		xs[snappedf(dfd.get_global_rect().position.x, 1.0) + 100000.0] = true
-		_check(dfd.get_global_rect().end.x <= change.get_global_rect().position.x + 1.0
-				and change.get_global_rect().end.x <= m.get_viewport().get_visible_rect().size.x + 1.0,
-				"Change sits after the columns and inside the pane (%s: %s)" % [tag, dfd.text])
-	_check(xs.size() <= 2, "Every match-up row's columns line up (%s: %s)" % [tag, str(xs.keys())])
-
-
 ## Tapping a tag target brings "Who tags" in; no other section changes column
 ## or moves sideways, and nothing lies off the screen (director, 2026-10-14).
 ## Before the first ball-up nobody has played, so there is no Best so far.
@@ -3672,7 +3613,7 @@ func _test_tag_tap_keeps_columns(sz: Vector2i) -> void:
 	var box: Node = m.find_child("CoachBox", true, false)
 	_check(box != null and box.find_child("BestSoFar", true, false) == null and box.find_child("BestSoFarOpen", true, false) == null,
 			"Before the first ball-up there is no Best so far (%s)" % tag)
-	var names := ["PlanPicker", "TagPicker", "PepPicker", "DefenceSetupPicker", "BreakMatchups", "LegsView"]
+	var names := ["PlanPicker", "TagPicker", "PepPicker", "DefenceSetupPicker", "FocusPicker_focus_mid", "LegsView"]
 	var before := {}
 	for n in names:
 		var c: Control = box.find_child(n, true, false) if box != null else null
