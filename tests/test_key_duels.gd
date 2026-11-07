@@ -454,11 +454,11 @@ func _test_loose_man_leaves_key_forward_covered() -> void:
 					func(p): return PlayerProfile.player_type(p) == "Key defender")
 			var on_key := 0
 			for fid in d:
-				if Matchups._is_key_forward(sim._on_ground(1 - side, str(fid))) 						and PlayerProfile.player_type(sim._on_ground(side, str(d[fid]))) == "Key defender":
+				if Matchups.is_key_forward(sim._on_ground(1 - side, str(fid))) 						and PlayerProfile.player_type(sim._on_ground(side, str(d[fid]))) == "Key defender":
 					on_key += 1
 			for fid in d:
 				var f := sim._on_ground(1 - side, str(fid))
-				if not Matchups._is_key_forward(f):
+				if not Matchups.is_key_forward(f):
 					continue
 				seen += 1
 				var dp := sim._on_ground(side, str(d[fid]))

@@ -781,8 +781,10 @@ func _test_truth(res: Dictionary) -> Array:
 ## player 40 m off on average) before, 9 (0, 30 m) after; four trace seeds
 ## 139 -> 47. The caps leave room for sim changes redrawing the match (the
 ## 1.0.7 tuning measured 13: 14, director 2026-11-06, loosen to measured).
+## Key posts (2026-11-07) re-lay each line, which redraws seed 42 to 18; over
+## seeds 42 and 1-5 the total is unchanged (96 before, 95 after): 18.
 const PAUSE_S := 1.5
-const PAUSE_MAX := 14
+const PAUSE_MAX := 18
 const PAUSE_PRESSURE_MAX := 1
 
 

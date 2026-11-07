@@ -36,6 +36,9 @@ func run() -> void:
 	_t("_test_dual_ruck")
 	_t("_test_merit_second_position")
 	_t("_test_drag_preview_one_line")
+	_t("_test_key_posts")
+	_t("_test_key_posts_match_sim")
+	_t("_test_youth_no_cycle")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	GameDB.skip_ovr_overrides = false
@@ -604,3 +607,235 @@ func _test_drag_preview_one_line() -> void:
 	_check(is_equal_approx(min_size.y, line_h), "The drag preview is one line tall (%.0f, one line is %.0f)" % [min_size.y, line_h])
 	_check(l.get_theme_constant("outline_size") >= 3, "The drag preview is outlined so it reads over the turf")
 	l.free()
+
+
+## Key posts (director, 2026-11-07: "Small defenders placed in key defender
+## spots"). The auto-pick puts the line's key position players at full-back
+## and centre half-back, full-forward and centre half-forward (index 0 and 5
+## of the line, TeamBuilder.SPOTS); a line short of them puts its tallest
+## there; a coach's own placement is kept as he set it.
+func _key_posts_held(line_ids: Array, line: String, by_id: Dictionary) -> bool:
+	var keys := 0
+	for id in line_ids:
+		if Roles.is_key_post(by_id[str(id)], line):
+			keys += 1
+	if line_ids.size() < 6:
+		return false
+	var posts := [str(line_ids[0]), str(line_ids[5])]
+	var held := 0
+	for id in posts:
+		if Roles.is_key_post(by_id[id], line):
+			held += 1
+	return held == mini(keys, 2)
+
+
+func _test_key_posts() -> void:
+	# The spot order the rule lays out against.
+	var spots: Dictionary = load("res://scripts/ui/TeamBuilder.gd").SPOTS
+	_check(str(spots["DEF"][0]) == "FB" and str(spots["DEF"][5]) == "CB"
+			and str(spots["FWD"][0]) == "FF" and str(spots["FWD"][5]) == "HFF",
+			"The line's first and last spots are the key posts")
+	# Every club's auto-picked side, as the AI picks it.
+	var lines_with_keys := 0
+	for code in GameDB.club_order:
+		var list: Array = GameDB.club_list(code)
+		if list.size() < 23:
+			continue  # an expansion club, no list until it is drafted
+		var by_id := {}
+		for p in list:
+			by_id[str(p["id"])] = p
+		var sel := Ratings.select_22(list)
+		for line in ["DEF", "FWD"]:
+			var ids := []
+			for p in sel["ground"]:
+				if str(p["role"]) == line:
+					ids.append(str(p["id"]))
+			for id in ids:
+				if Roles.is_key_post(by_id[id], line):
+					lines_with_keys += 1
+					break
+			_check(_key_posts_held(ids, line, by_id),
+					"%s %s: the key players hold the key posts (%s)" % [code, line, str(ids.map(func(i): return "%s%s" % [GameDB.player_display_name(by_id[i]), "*" if Roles.is_key_post(by_id[i], line) else ""]))])
+	_check(lines_with_keys >= 20, "Most lines on real lists have a key player to place (%d)" % lines_with_keys)
+
+	# Your side: every auto-pick strategy, and an AI club's side as you see it.
+	_new_season()
+	var mine := {}
+	for p in GameState.my_list:
+		mine[str(p["id"])] = p
+	for strat in ["best", "rest", "youth"]:
+		var side: Dictionary = GameState.auto_pick(strat)["side"]
+		for line in ["DEF", "FWD"]:
+			_check(_key_posts_held(side[line], line, mine), "Auto-pick %s: %s key posts held" % [strat, line])
+	var cur := GameState.current_side()
+	_check(_key_posts_held(cur["DEF"], "DEF", mine) and _key_posts_held(cur["FWD"], "FWD", mine),
+			"Your side before you touch it: key posts held")
+	var opp: Dictionary = GameState.opponent_side("COL")
+	var theirs := {}
+	for p in opp["list"]:
+		theirs[str(p["id"])] = p
+	_check(_key_posts_held(opp["side"]["DEF"], "DEF", theirs) and _key_posts_held(opp["side"]["FWD"], "FWD", theirs),
+			"An AI club's side: key posts held")
+
+	# A coach's own placement is never re-shuffled: a flanker named at
+	# full-back stays at full-back, through the match-day squad and back.
+	var named: Dictionary = cur.duplicate(true)
+	var defs: Array = named["DEF"]
+	var fb := str(defs[0])
+	defs[0] = defs[1]
+	defs[1] = fb
+	GameState.set_selection(named)
+	var order := []
+	for p in GameState.my_squad().ground:
+		if str(p["role"]) == "DEF":
+			order.append(str(p["id"]))
+	_check(order == (named["DEF"] as Array) and GameState.current_side()["DEF"] == named["DEF"],
+			"Your own placement plays and shows as you set it")
+	_check(GameState.save_career() and GameState.load_career() and GameState.current_side()["DEF"] == named["DEF"],
+			"Your placement survives a save and load unchanged")
+	GameState.set_selection({})
+
+	# Lines built from real players: key defenders and non-key defenders.
+	var keys: Array = []
+	var smalls: Array = []
+	for code in GameDB.club_order:
+		for p in GameDB.club_list(code):
+			if str(p.get("role", "")) != "DEF":
+				continue
+			if Roles.is_key_post(p, "DEF"):
+				keys.append(p)
+			elif smalls.size() < 6:
+				smalls.append(p)
+	_check(keys.size() >= 2 and smalls.size() == 6, "(real key and non-key defenders to build lines from)")
+	if keys.size() < 2 or smalls.size() < 6:
+		return
+
+	# A line with no key players: the tallest two take the posts, the better
+	# rated first, everyone else keeps his order.
+	var line := []
+	var heights := [180.0, 195.0, 182.0, 190.0, 185.0, 183.0]
+	for i in range(6):
+		var c: Dictionary = (smalls[i] as Dictionary).duplicate()
+		c["id"] = "k%d" % i
+		c["overall"] = 70 - i
+		c["height_cm"] = heights[i]
+		line.append(c)
+	_check(line.all(func(c): return not Roles.is_key_post(c, "DEF")), "(the made-up line has no key defender)")
+	var laid: Array = Roles.key_post_order(line, "DEF").map(func(p): return str(p["id"]))
+	_check(laid == ["k1", "k0", "k2", "k4", "k5", "k3"],
+			"Short of key players, the tallest take the posts (%s)" % str(laid))
+
+	# Five defenders: there is no centre half-back spot (TeamBuilder.SPOTS
+	# index 5), so only the full-back post is laid out. The second key
+	# defender keeps his own place, never pushed into the back pocket.
+	var k1: Dictionary = (keys[0] as Dictionary).duplicate()
+	var k2: Dictionary = (keys[1] as Dictionary).duplicate()
+	k1["id"] = "K1"
+	k1["overall"] = 80
+	k2["id"] = "K2"
+	k2["overall"] = 75
+	var five := [line[0], k2, line[2], k1, line[4]]
+	laid = Roles.key_post_order(five, "DEF").map(func(p): return str(p["id"]))
+	_check(laid == ["K1", "k0", "K2", "k2", "k4"],
+			"Five defenders: the best key defender at full-back, the rest in order (%s)" % str(laid))
+	# Six: the second key defender goes to centre half-back, index 5.
+	var six := [line[0], k2, line[2], k1, line[4], line[5]]
+	laid = Roles.key_post_order(six, "DEF").map(func(p): return str(p["id"]))
+	_check(laid == ["K1", "k0", "k2", "k4", "k5", "K2"] and Roles.SECOND_POST == 5,
+			"Six defenders: key defenders at full-back and centre half-back (%s)" % str(laid))
+
+
+## The key posts read key players the way the match does (Matchups): for
+## every player on every club list, in both lines, Roles.is_key_post on the
+## list player agrees with Matchups on his match-day copy in that line.
+func _test_key_posts_match_sim() -> void:
+	var n := 0
+	var bad: Array = []
+	for code in GameDB.club_order:
+		for p in GameDB.club_list(code):
+			for line in ["DEF", "FWD"]:
+				var copy := Ratings._for_slot(p, line)
+				var sim := Matchups.is_key_defender(copy) if line == "DEF" else Matchups.is_key_forward(copy)
+				n += 1
+				if Roles.is_key_post(p, line) != sim:
+					bad.append("%s %s" % [GameDB.player_display_name(p), line])
+	_check(n > 1000 and bad.is_empty(), "Key posts and the match agree on every player in both lines (%d, off: %s)" % [n, str(bad.slice(0, 5))])
+
+	# The default duel goes to whoever stands in the post: name a non-key
+	# defender at full-back and he takes their best key forward.
+	_new_season()
+	var named: Dictionary = GameState.current_side().duplicate(true)
+	var defs: Array = named["DEF"]
+	var fb := str(defs[0])
+	var flank := str(defs[1])
+	defs[0] = flank
+	defs[1] = fb
+	GameState.set_selection(named)
+	var their_ground: Array = Squad.new("COL", GameDB.club_list("COL"), false, "COL").ground
+	var mine: Array = GameState.my_squad().ground
+	var d := Matchups.defaults(their_ground, mine)
+	var first := Matchups.key_forwards(their_ground)
+	_check(not first.is_empty() and str(d.get(str(first[0]["id"]), "")) == flank,
+			"The man you name at full-back takes their best key forward by default")
+	var posts := Matchups.duel_defenders(mine)
+	var line_ids := []
+	for p in mine:
+		if str(p["role"]) == "DEF":
+			line_ids.append(str(p["id"]))
+	_check(str(posts[0]["id"]) == str(line_ids[0]) and str(posts[1]["id"]) == str(line_ids[5]),
+			"The duel defenders are the full-back, then the centre half-back")
+
+	# The desktop oval keeps your placement: the full-back you named is drawn
+	# at FB, not re-sorted by rating or by the key posts.
+	var ov := FormationView.new()
+	var sq := GameState.my_squad()
+	var placed: Array = ov._assign(sq.ground, sq.bench, true)
+	var at := {}
+	for e in placed:
+		if not bool(e["bench"]):
+			at[str(e["slot"]["key"])] = str(e["player"]["id"])
+	var mids: Array = named["MID"]
+	_check(at.get("FB", "") == flank and at.get("CB", "") == str(defs[5]) and at.get("FF", "") == str(named["FWD"][0])
+			and at.get("C", "") == str(mids[0]),
+			"The desktop oval draws your side in your order (FB %s, C %s)" % [at.get("FB", ""), at.get("C", "")])
+	ov.free()
+	GameState.set_selection({})
+
+
+## Youth auto-pick never cycles (director's screenshot: "Harry Armstrong for
+## Ethan Read; Josh Dolan for Harry Armstrong; Harry Armstrong for Josh
+## Dolan"): with a crowd of young players level with the starters, each
+## youngster comes in once, nobody swapped out comes back, and the note names
+## exactly the net change.
+func _test_youth_no_cycle() -> void:
+	_new_season()
+	var best: Dictionary = GameState.auto_pick("best")["side"]
+	var in23 := {}
+	for k in best:
+		for id in best[k]:
+			in23[str(id)] = true
+	for p in GameState.my_list:
+		p["injury_weeks"] = 0
+		p["age"] = 28.0 if in23.has(str(p["id"])) else 19.0
+		p["overall"] = 72 if in23.has(str(p["id"])) else 70
+	var r: Dictionary = GameState.auto_pick("youth")
+	var after := {}
+	for k in r["side"]:
+		for id in r["side"][k]:
+			after[str(id)] = true
+	var came: Array = after.keys().filter(func(id): return not in23.has(id))
+	var went: Array = in23.keys().filter(func(id): return not after.has(id))
+	_check(after.size() == 23 and came.size() == went.size() and came.size() >= 1 and came.size() <= GameState.YOUTH_MAX,
+			"Blooding swaps up to %d in for as many out (%d in, %d out)" % [GameState.YOUTH_MAX, came.size(), went.size()])
+	var note := str(r["note"])
+	var once := true
+	# Full names, or surnames when three pairs run past two lines.
+	var surnames := false
+	if not came.is_empty():
+		surnames = not note.contains(GameDB.player_display_name(GameState.list_player(came[0])))
+	for id in came + went:
+		var p: Dictionary = GameState.list_player(id)
+		var nm := GameDB.card_surname(p) if surnames else GameDB.player_display_name(p)
+		if note.count(nm) != 1:
+			once = false
+	_check(once and note.count(" for ") == came.size(), "Each youngster and each man out is named once, no swap back: %s" % note)
