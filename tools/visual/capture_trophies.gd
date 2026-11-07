@@ -1,23 +1,28 @@
 extends SceneTree
-## Visual review tool for Season stats > Trophy room (the Stats patch, ROADMAP
-## §1.11). Needs a real renderer; capture.yml runs it:
+## Visual review tool for a club's trophies, opened from its club page (rulings
+## 118, 118a; moved from Season stats 2026-11-06). Needs a real renderer;
+## capture.yml runs it:
 ##   gh workflow run capture.yml --ref <branch> -f tool=capture_trophies \
 ##       -f args="--size 390x844"
 ## A fresh Collingwood career plays its first season out, then the honour roll
 ## is seeded so every shelf has something on it: that season made a
 ## premiership (with a Brownlow and an All-Australian), plus an older season
 ## from before the room recorded records and All-Australians. Writes
-## <out>_empty.png (before the first game), <out>.png, <out>_lower.png
-## (scrolled to your seasons), <out>_flag.png and <out>_medal.png (the sheets)
-## and <out>_filtered.png (the All-Australians alone).
+## <out>_empty.png (before the first game), <out>_page.png (your club's page at
+## its Trophies link), <out>.png, <out>_lower.png (scrolled to your seasons),
+## <out>_flag.png and <out>_medal.png (the sheets), <out>_filtered.png (the
+## All-Australians alone), <out>_rival_page.png and <out>_rival.png (--rival's
+## page and trophies) and <out>_stats.png (Season stats, its tabs).
 ##   --size WxH   window size (default 390x844)    --light   light appearance
 ##   --club CODE  the club to coach (default COL; use a coloured club for a look)
 ##   --history    show a stand-in "Before you" row for that club (fixture, not data)
+##   --rival CODE another club to show (default GWS, which has won nothing)
 ## Never touches a real save.
 
 var _w := 390
 var _h := 844
 var _club := "COL"
+var _rival := "GWS"
 
 
 func _initialize() -> void:
@@ -40,6 +45,8 @@ func _run() -> void:
 				mode = "light"
 			"--club":
 				_club = str(a[i + 1])
+			"--rival":
+				_rival = str(a[i + 1])
 			"--history":
 				# A stand-in table, to see the "Before you" row (not real data).
 				var fake := {}
@@ -63,9 +70,11 @@ func _run() -> void:
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	var hub_script = load("res://scripts/ui/StatsHubScene.gd")
-	hub_script.current = "trophies"
+	hub_script.current = "ladder"
 	var scene: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
 	root.add_child(scene)
+	await _frames(10)
+	load("res://scripts/ui/ClubPage.gd").open_trophies(scene, _club)
 	await _frames(10)
 	_save(out + "_empty.png")
 	scene.queue_free()
@@ -93,9 +102,15 @@ func _run() -> void:
 	scene = load("res://scenes/StatsHubScene.tscn").instantiate()
 	root.add_child(scene)
 	await _frames(10)
+	_save(out + "_stats.png")
+	load("res://scripts/ui/ClubLink.gd").open(scene, _club)
+	await _frames(10)
+	await _show(scene.find_child("TrophiesLink", true, false))
+	_save(out + "_page.png")
+	await _tap(scene, "TrophiesLink")
 	_save(out + ".png")
-	var sc: ScrollContainer = scene.find_child("StatsScroll", true, false)
 	var t: Control = scene.find_child("Tenure", true, false)
+	var sc: ScrollContainer = _scroller(t)
 	if sc != null and t != null:
 		sc.scroll_vertical = int(t.global_position.y - sc.global_position.y) + sc.scroll_vertical
 		await _frames(6)
@@ -119,8 +134,36 @@ func _run() -> void:
 				opt.item_selected.emit(i)
 		await _frames(10)
 		_save(out + "_filtered.png")
-		load("res://scripts/ui/stats/StatsTrophies.gd").award_filter = ""
+		load("res://scripts/ui/ClubTrophies.gd").award_filter = ""
+	# A rival's page and its trophies: only what the season records for it.
+	scene.queue_free()
+	await _frames(2)
+	scene = load("res://scenes/StatsHubScene.tscn").instantiate()
+	root.add_child(scene)
+	await _frames(10)
+	load("res://scripts/ui/ClubLink.gd").open(scene, _rival)
+	await _frames(10)
+	await _show(scene.find_child("TrophiesLink", true, false))
+	_save(out + "_rival_page.png")
+	await _tap(scene, "TrophiesLink")
+	_save(out + "_rival.png")
 	quit()
+
+
+## The scroll a node sits in, if any.
+func _scroller(n: Node) -> ScrollContainer:
+	var at: Node = n.get_parent() if n != null else null
+	while at != null and not (at is ScrollContainer):
+		at = at.get_parent()
+	return at as ScrollContainer
+
+
+## Scroll n into view in its scroll.
+func _show(n: Control) -> void:
+	var sc := _scroller(n)
+	if sc != null:
+		sc.ensure_control_visible(n)
+		await _frames(6)
 
 
 func _tap(scene: Node, node_name: String) -> void:

@@ -1,6 +1,6 @@
 extends SceneTree
 ## Visual review of the Golden Fist (T5.Q11c): the best defender of the season
-## in the awards ceremony, the Stats > Awards honours table and the trophy room.
+## in the awards ceremony, the Stats > Awards honours table and the club's trophies.
 ## Needs a real renderer, e.g.:
 ##   godot --path . --rendering-method gl_compatibility \
 ##       --script tools/visual/capture_golden_fist.gd -- --out /tmp/fist --size 390x844
@@ -110,9 +110,11 @@ func _run() -> void:
 				break
 		shelf["club"] = _club
 	entry["golden_fist"] = [shelf]
-	hub_script.current = "trophies"
+	hub_script.current = "ladder"
 	hub = load("res://scenes/StatsHubScene.tscn").instantiate()
 	root.add_child(hub)
+	await _frames(10)
+	load("res://scripts/ui/ClubPage.gd").open_trophies(hub, _club)
 	await _frames(10)
 	var shelf_b = hub.find_child("Honour_golden_fist_%d" % year, true, false)
 	if shelf_b != null:
@@ -139,7 +141,7 @@ func _run() -> void:
 				opt.item_selected.emit(i)
 		await _frames(10)
 		_save(out + "_trophies_filtered.png")
-	load("res://scripts/ui/stats/StatsTrophies.gd").award_filter = ""
+	load("res://scripts/ui/ClubTrophies.gd").award_filter = ""
 	quit()
 
 

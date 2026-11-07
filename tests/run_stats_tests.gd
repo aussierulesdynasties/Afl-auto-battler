@@ -354,16 +354,17 @@ func _test_sections() -> void:
 		await _settle()
 		if sz.x < 900:
 			var all_in := true
-			for key in ["ladder", "players", "ratings", "awards", "fixture", "trophies"]:
+			for key in ["ladder", "players", "ratings", "awards", "fixture"]:
 				var tb: Control = s.find_child("Section_" + key, true, false)
 				if tb == null or tb.get_global_rect().end.x > sz.x + 1 or tb.get_global_rect().position.x < -1:
 					all_in = false
 			_check(all_in and s.find_child("SectionStrip", true, false) == null,
-					"Six short tabs fit one row on a phone, none cut and no sideways scroll (%dx%d)" % [sz.x, sz.y])
-			_check(s.find_child("Section_trophies", true, false).text == "Trophies"
-					and s.find_child("Section_players", true, false).text == "Players",
-					"...with short names: Players, Trophies (%dx%d)" % [sz.x, sz.y])
-		for key in ["ladder", "players", "ratings", "awards", "fixture", "trophies"]:
+					"Five short tabs fit one row on a phone, none cut and no sideways scroll (%dx%d)" % [sz.x, sz.y])
+			_check(s.find_child("Section_players", true, false).text == "Players",
+					"...with short names: Players (%dx%d)" % [sz.x, sz.y])
+		_check(s.find_child("Section_trophies", true, false) == null,
+				"The trophies are on the club's page now, not a Season stats tab (%dx%d)" % [sz.x, sz.y])
+		for key in ["ladder", "players", "ratings", "awards", "fixture"]:
 			var t: Button = s.find_child("Section_" + key, true, false)
 			_check(t != null, "Season stats has a %s section (%dx%d)" % [key, sz.x, sz.y])
 			if t == null:
@@ -938,13 +939,16 @@ func _open_awards(sz: Vector2i) -> Control:
 
 
 # ---------------------------------------------------------------------------
-# Trophy room
+# Trophies (on the club's page since 2026-11-06, rulings 118 and 118a)
 # ---------------------------------------------------------------------------
+## Your club's trophies, opened over Season stats as its club page opens them.
 func _open_trophies(sz: Vector2i) -> Control:
 	root.size = sz
-	load("res://scripts/ui/StatsHubScene.gd").current = "trophies"
+	load("res://scripts/ui/StatsHubScene.gd").current = "ladder"
 	var s: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
 	root.add_child(s)
+	await _settle()
+	load("res://scripts/ui/ClubPage.gd").open_trophies(s, _state.my_club)
 	await _settle()
 	return s
 
@@ -2069,7 +2073,7 @@ func _test_club_code_colours() -> void:
 ## This season's Finals cell in the trophy room: the round before the finals,
 ## the final during them, the result after.
 func _test_finals_cell() -> void:
-	var T = load("res://scripts/ui/stats/StatsTrophies.gd")
+	var T = load("res://scripts/ui/ClubTrophies.gd")
 	var se = load("res://scripts/sim/Season.gd").new(["COL", "CAR"], {})
 	se.fixture = []
 	for i in range(24):
@@ -2253,7 +2257,7 @@ func _test_trophies() -> void:
 		_check(old_row != null and _row_text(old_row).contains("Runners-up"), "The older season reads Runners-up (%s)" % tag)
 		# Everything fits the screen across.
 		var fits := true
-		for c in s.find_child("StatsTrophies", true, false).find_children("*", "Control", true, false):
+		for c in s.find_child("ClubTrophies", true, false).find_children("*", "Control", true, false):
 			if (c as Control).is_visible_in_tree() and (c as Control).get_global_rect().end.x > sz.x + 1:
 				fits = false
 		_check(fits, "The trophy room fits across the screen (%s)" % tag)
@@ -2278,8 +2282,11 @@ func _test_trophies() -> void:
 			_check(inside, "The cup and flag fit the sheet across the screen (%s)" % tag)
 			_check(s.call("handle_back"), "Back closes the sheet first (%s)" % tag)
 			await _settle()
-			_check(s.find_child("ClubHonourSheet", true, false) == null and not s.call("handle_back"),
-					"The sheet is gone, and the next Back leaves (%s)" % tag)
+			_check(s.find_child("ClubHonourSheet", true, false) == null and s.call("handle_back"),
+					"The sheet is gone, and the next Back closes the trophies (%s)" % tag)
+			await _settle()
+			_check(s.find_child("ClubTrophiesSheet", true, false) == null and not s.call("handle_back"),
+					"The trophies are gone, and the next Back leaves (%s)" % tag)
 		var medal: Button = s.find_child("Honour_brownlow_%d" % year, true, false)
 		if medal != null:
 			_check((await Tap.tap(medal)) == "", "The Brownlow takes a tap (%s)" % tag)

@@ -2,16 +2,18 @@ class_name ClubPage
 extends RefCounted
 ## A club's page (C-PC-15, P-53; rulings 5.11 no. 113): what a supporter knows
 ## about a club, opened by tapping its name anywhere (ClubLink). Its colours,
-## ground, coach and captain, the best 22 in words, the last five, its flags and
-## the players it has swapped with you. Public facts only: a rival's ratings,
-## moods and plans stay hidden (#759). Your own club's page leads to the honour
-## board (rulings no. 112, HonourBoard).
+## ground, coach and captain, its trophies, the last five, the best 22 in words
+## and the players it has swapped with you. Public facts only: a rival's
+## ratings, moods and plans stay hidden (#759). Your own club's page leads to
+## the honour board (rulings no. 112, HonourBoard). The trophies (ClubTrophies)
+## moved here from Season stats (director, 2026-11-06).
 ##
 ## Look-up only; nothing here touches a match or a player.
 
 const SHEET_NAME := "ClubPage"
 const BOARD_NAME := "HonourBoardSheet"
 const FACTS_NAME := "HonourFacts"
+const TROPHIES_NAME := "ClubTrophiesSheet"
 ## The best 22 in words, back to front as a team sheet reads.
 const LINES := [["DEF", "Defence"], ["MID", "Midfield"], ["WING", "Wings"], ["RUCK", "Ruck"],
 		["FWD", "Forwards"], ["BENCH", "Interchange"]]
@@ -41,7 +43,11 @@ static func open(host: Control, code: String) -> Control:
 		body.add_child(_fact("Home ground", ground, "Ground"))
 	body.add_child(_fact("Senior coach", _coach(code, mine), "Coach"))
 	body.add_child(_leaders(code))
-	body.add_child(_fact("Premierships", _flags(code), "Flags"))
+
+	body.add_child(UiKit.spacer(UiKit.SECTION - 8))
+	var trophies := UiKit.section_link("Trophies", _flags(code) + "  ›", "TrophiesLink")
+	trophies.pressed.connect(func(): open_trophies(host, code))
+	body.add_child(trophies)
 
 	body.add_child(UiKit.spacer(UiKit.SECTION - 8))
 	body.add_child(UiKit.section("Last five"))
@@ -144,7 +150,7 @@ static func _leaders(code: String) -> Control:
 	return r
 
 
-## How many flags, and the last: this career's, then the club's history before it.
+## How many flags: this career's and the club's history before it.
 static func _flags(code: String) -> String:
 	var years := {}
 	for y in GameState.premiership_years(code):
@@ -153,11 +159,44 @@ static func _flags(code: String) -> String:
 	for y in hist.get("years", []):
 		years[int(y)] = true
 	if years.is_empty():
-		return "None on record"
-	var last := 0
-	for y in years:
-		last = maxi(last, int(y))
-	return "%d, the last in %d" % [years.size(), last] if years.size() > 1 else "1, in %d" % last
+		return "No premierships on record"
+	return "%d %s" % [years.size(), "premiership" if years.size() == 1 else "premierships"]
+
+
+# ---------------------------------------------------------------------------
+# Trophies (rulings 118, 118a)
+# ---------------------------------------------------------------------------
+## The club's trophies over its page: the flags and the players' honours of
+## this career after the flags before it; for your club, your time there too.
+static func open_trophies(host: Control, code: String) -> Control:
+	var box := UiKit.modal_box(host, 760.0, 0.0, _wash(code))
+	var overlay: Control = box["overlay"]
+	overlay.name = TROPHIES_NAME
+	overlay.set_meta("club_link", true)
+	UiKit.close_on_outside_tap(box)
+	ClubLink.keep(host, overlay)
+	var body: VBoxContainer = box["body"]
+	body.add_child(_strip(code))
+	var title := UiKit.club_title(GameDB.club_name(code), UiKit.H1, code, UiKit.PANEL)
+	title.name = "TrophiesTitle"
+	body.add_child(title)
+	var holder := UiKit.vbox(0)
+	holder.name = "TrophiesBody"
+	body.add_child(holder)
+	# A filter lays the trophies out afresh in place.
+	var fill := [Callable()]
+	fill[0] = func() -> void:
+		for c in holder.get_children():
+			holder.remove_child(c)
+			c.queue_free()
+		holder.add_child(ClubTrophies.build(host, code, func(): (fill[0] as Callable).call_deferred()))
+	(fill[0] as Callable).call()
+	var close := UiKit.btn("Close", UiKit.BODY)
+	close.name = "CloseTrophies"
+	close.custom_minimum_size = Vector2(0, 44)
+	close.pressed.connect(func(): overlay.queue_free())
+	(box["footer"] as Control).add_child(close)
+	return overlay
 
 
 static func _list(code: String) -> Array:

@@ -1,9 +1,15 @@
-class_name StatsTrophies
+class_name ClubTrophies
 extends RefCounted
-## Season stats > Trophy room: your time at your club. Three groups, kept
-## apart: the club's honours (premierships, minor premierships, its
-## achievement), your players' honours (each player, his awards under him),
-## and your own seasons in charge. A filter shows one kind of honour.
+## A club's trophies, opened from its page (director, 2026-11-06: "Trophies ->
+## club page"; rulings 118 and 118a). Every club has them; only what this save
+## recorded is shown, never guessed.
+##
+## Your club: your time there. Three groups, kept apart: the club's honours
+## (premierships, minor premierships, its achievement), your players' honours
+## (each player, his awards under him), and your own seasons in charge.
+## Another club: its premierships and its players' league honours in the
+## seasons of this career, after the flags it won before it. A filter shows
+## one kind of honour.
 ##
 ## Tenure: a coach stays with the club he starts a career at (the sack ends
 ## the career), and every honour roll entry records the club you coached
@@ -20,6 +26,8 @@ const TABLE_W := 600.0
 const ROW_H := 32
 ## On a phone a row is a thumb's target: taller.
 const ROW_H_PHONE := 40
+## From this width the seasons table keeps its desktop column and rows.
+const WIDE := 900.0
 ## The honours a player can win, as the honour roll stores them: the entry's
 ## key, the art's id, the honour's name, the count's key and its unit.
 const PLAYER_HONOURS := [
@@ -31,6 +39,8 @@ const PLAYER_HONOURS := [
 	["coaches_award", "coaches_award", "Coaches Award", "coaches", "vote"],
 	["my_bf", "club_bnf", "Best and fairest", "bf", "best and fairest vote"],
 ]
+## Kept for your club alone: its best and fairest and its All-Australians.
+const MINE_ONLY := ["my_bf", "all_australian", "minor_premiership"]
 const FINALS := {"WC": "Wildcard round", "QF": "Qualifying final", "EF": "Elimination final",
 		"SF": "Semi final", "PF": "Preliminary final", "GF": "Grand Final"}
 ## Every kind of honour, in the filter's order: its key and its name.
@@ -53,50 +63,64 @@ const CLUB_KINDS := ["premiership", "minor_premiership"]
 static var award_filter := ""
 
 
-static func build(host: Control) -> Control:
+## The trophies of `code`. `rebuild` lays them out afresh (the filter changed).
+static func build(host: Control, code: String, rebuild: Callable) -> Control:
 	var v := UiKit.vbox(6)
-	v.name = "StatsTrophies"
-	var club := GameState.my_club
-	var seasons := tenure()
-	var in_progress := _in_progress()
-	var first: int = int(seasons[0]["year"]) if not seasons.is_empty() else GameState.season_year
-	var count := seasons.size() + (1 if in_progress else 0)
-	var intro := _para("Your time at %s: %d %s, from %d." % [GameDB.club_name(club), count,
-			"season" if count == 1 else "seasons", first], UiKit.TEXT)
-	intro.name = "TrophiesTenure"
-	# The page's one headline fact, in your colour where it reads.
-	intro.add_theme_font_override("font", UiKit.BOLD)
-	intro.add_theme_font_size_override("font_size", UiKit.BODY)
-	intro.add_theme_color_override("font_color", StatsSide.mine_ink())
-	v.add_child(intro)
-	var kinds := kinds_won(seasons)
+	v.name = "ClubTrophies"
+	var mine := code == GameState.my_club
+	var wide := UiKit.view_width(host) >= WIDE
+	var seasons := tenure() if mine else seasons_of_career()
+	var in_progress := mine and _in_progress()
+	var first := career_start()
+	if mine:
+		first = int(seasons[0]["year"]) if not seasons.is_empty() else GameState.season_year
+		var count := seasons.size() + (1 if in_progress else 0)
+		var intro := _para("Your time at %s: %d %s, from %d." % [GameDB.club_name(code), count,
+				"season" if count == 1 else "seasons", first], UiKit.TEXT)
+		intro.name = "TrophiesTenure"
+		# The page's one headline fact, in your colour where it reads.
+		intro.add_theme_font_override("font", UiKit.BOLD)
+		intro.add_theme_font_size_override("font_size", UiKit.BODY)
+		intro.add_theme_color_override("font_color", StatsSide.mine_ink())
+		v.add_child(intro)
+	var kinds := kinds_won(seasons, code)
 	if not kinds.has(award_filter):
 		award_filter = ""
 	if kinds.size() > 1:
-		v.add_child(_filter(host, kinds))
+		v.add_child(_filter(kinds, code, rebuild))
 	if award_filter == "" or CLUB_KINDS.has(award_filter):
-		v.add_child(_club_honours(host, seasons))
+		v.add_child(_club_honours(host, seasons, code, first))
 	if award_filter == "" or not CLUB_KINDS.has(award_filter):
-		v.add_child(_player_honours(host, seasons))
-	v.add_child(_tenure_table(host, seasons, in_progress))
-	# The players who left with 150 games or an honour (rulings no. 112).
-	var n := HonourBoard.rows(GameState.honour_board, GameState.my_list).size()
-	var board := UiKit.section_link("Honour board", ("%d %s" % [n, "player" if n == 1 else "players"] if n > 0 			else "No one yet") + "  ›", "HonourBoardLink")
-	board.pressed.connect(func(): ClubPage.open_board(host))
-	v.add_child(board)
+		v.add_child(_player_honours(host, seasons, code))
+	if mine:
+		v.add_child(_tenure_table(wide, seasons, in_progress))
 	return v
 
 
-## The kinds of honour won in your time, in the filter's order.
-static func kinds_won(seasons: Array) -> Array:
-	var club := GameState.my_club
+## Every completed season of this career, oldest first (the honour roll).
+static func seasons_of_career() -> Array:
+	var out: Array = GameState.honour_roll.duplicate()
+	out.sort_custom(func(a, b): return int(a["year"]) < int(b["year"]))
+	return out
+
+
+## The first season of this career: the honour roll holds nothing before it.
+static func career_start() -> int:
+	var first := GameState.season_year
+	for e in GameState.honour_roll:
+		first = mini(first, int(e.get("year", first)))
+	return first
+
+
+## The kinds of honour a club won in these seasons, in the filter's order.
+static func kinds_won(seasons: Array, club := GameState.my_club) -> Array:
 	var have := {}
 	for e in seasons:
 		if str(e.get("premier", "")) == club:
 			have["premiership"] = true
-		if int(e.get("my_position", 0)) == 1:
+		if club == GameState.my_club and int(e.get("my_position", 0)) == 1:
 			have["minor_premiership"] = true
-	for it in player_honours(seasons):
+	for it in player_honours(seasons, club):
 		have[str(it["key"])] = true
 	var out := []
 	for k in AWARD_KINDS:
@@ -107,12 +131,12 @@ static func kinds_won(seasons: Array) -> Array:
 
 ## An honour's name as the coach knows it: the club best and fairest carries
 ## the club's own medal name (BestAndFairest); the rest keep their league names.
-static func honour_name(key: String, name: String) -> String:
-	return BestAndFairest.award_name(GameState.my_club) if key == "my_bf" else name
+static func honour_name(key: String, name: String, club := GameState.my_club) -> String:
+	return BestAndFairest.award_name(club) if key == "my_bf" else name
 
 
 ## All honours, or one kind of them.
-static func _filter(host: Control, kinds: Array) -> Control:
+static func _filter(kinds: Array, club: String, rebuild: Callable) -> Control:
 	var o := UiKit.option()
 	o.name = "AwardFilter"
 	o.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -121,12 +145,12 @@ static func _filter(host: Control, kinds: Array) -> Control:
 	o.add_item("All honours", 0)
 	for k in AWARD_KINDS:
 		if kinds.has(str(k[0])):
-			o.add_item(honour_name(str(k[0]), str(k[1])), keys.size())
+			o.add_item(honour_name(str(k[0]), str(k[1]), club), keys.size())
 			keys.append(str(k[0]))
 	o.select(maxi(0, keys.find(award_filter)))
 	o.item_selected.connect(func(i: int):
 		award_filter = str(keys[i])
-		host.call("refresh"))
+		rebuild.call())
 	return o
 
 
@@ -187,11 +211,11 @@ static func progress(season, club: String) -> String:
 # ---------------------------------------------------------------------------
 # Club honours
 # ---------------------------------------------------------------------------
-static func _club_honours(host: Control, seasons: Array) -> Control:
+static func _club_honours(host: Control, seasons: Array, club: String, first: int) -> Control:
 	var v := UiKit.vbox(6)
 	v.name = "ClubHonours"
 	_title(v, "Club honours")
-	var club := GameState.my_club
+	var mine := club == GameState.my_club
 	var items := []
 	var flags := 0
 	for i in range(seasons.size() - 1, -1, -1):
@@ -200,16 +224,22 @@ static func _club_honours(host: Control, seasons: Array) -> Control:
 		if str(e.get("premier", "")) == club:
 			flags += 1
 			if award_filter != "minor_premiership":
-				items.append({"kind": "premiership", "year": year, "entry": e})
-		if int(e.get("my_position", 0)) == 1 and award_filter != "premiership":
-			items.append({"kind": "minor_premiership", "year": year, "entry": e})
-	# The club's flags from before your time, kept quieter than your own.
-	var history := _history(club) if award_filter == "" or award_filter == "premiership" else null
+				items.append({"kind": "premiership", "year": year, "entry": e, "club": club})
+		if mine and int(e.get("my_position", 0)) == 1 and award_filter != "premiership":
+			items.append({"kind": "minor_premiership", "year": year, "entry": e, "club": club})
+	# The club's flags from before your time, kept quieter than the career's.
+	# A rival that has never won one says so once, not before and since.
+	var past := ClubHistory.before_career(club)
+	var never: bool = not mine and flags == 0 and bool(past["known"]) \
+			and (past["years"] as Array).is_empty() and (past.get("also", {}) as Dictionary).is_empty()
+	var history := _history(club, "Before you" if mine else "Before %d" % first) \
+			if not never and (award_filter == "" or award_filter == "premiership") else null
 	if history != null:
 		v.add_child(history)
-		var mine := UiKit.lbl("Your premierships", UiKit.BODY, UiKit.club_name_colour(UiKit.club_ink(club)), true)
-		mine.name = "YourPremierships"
-		v.add_child(mine)
+		var since := UiKit.lbl("Your premierships" if mine else "Since %d" % first, UiKit.BODY,
+				UiKit.club_name_colour(UiKit.club_ink(club)), true)
+		since.name = "YourPremierships"
+		v.add_child(since)
 	if flags == 0:
 		var none := _para("No premierships yet.")
 		none.name = "NoPremierships"
@@ -219,7 +249,7 @@ static func _club_honours(host: Control, seasons: Array) -> Control:
 		for it in items:
 			shelf.add_child(_club_item(host, it))
 		v.add_child(shelf)
-	var ach := _achievement(seasons) if award_filter == "" else null
+	var ach := _achievement(seasons) if mine and award_filter == "" else null
 	if ach != null:
 		v.add_child(ach)
 	return v
@@ -228,7 +258,7 @@ static func _club_honours(host: Control, seasons: Array) -> Control:
 ## "Before you": the premierships the club won before the career began
 ## (data/club_premierships.csv), as a quiet line and its years. Null when the
 ## file has nothing for the club yet: nothing is guessed.
-static func _history(club: String) -> Control:
+static func _history(club: String, before: String) -> Control:
 	var h := ClubHistory.before_career(club)
 	if not bool(h["known"]):
 		return null
@@ -237,18 +267,18 @@ static func _history(club: String) -> Control:
 	var years: Array = h["years"]
 	var also: Dictionary = h.get("also", {})
 	if years.is_empty() and not also.is_empty():
-		var lead := UiKit.lbl("Before you", UiKit.SMALL, UiKit.MUTED, true)
+		var lead := UiKit.lbl(before, UiKit.SMALL, UiKit.MUTED, true)
 		lead.name = "HistoryTitle"
 		v.add_child(lead)
 	elif years.is_empty():
-		var none := UiKit.lbl("Before you", UiKit.SMALL, UiKit.MUTED, true)
+		var none := UiKit.lbl(before, UiKit.SMALL, UiKit.MUTED, true)
 		none.name = "HistoryTitle"
 		v.add_child(none)
 		var words := _para("No premierships yet.")
 		words.name = "HistoryNone"
 		v.add_child(words)
 	else:
-		var title := UiKit.lbl("Before you: %d %s" % [years.size(), "premiership" if years.size() == 1 else "premierships"],
+		var title := UiKit.lbl("%s: %d %s" % [before, years.size(), "premiership" if years.size() == 1 else "premierships"],
 				UiKit.SMALL, UiKit.MUTED, true)
 		title.name = "HistoryTitle"
 		v.add_child(title)
@@ -272,7 +302,7 @@ static func _history(club: String) -> Control:
 
 
 static func _club_item(host: Control, it: Dictionary) -> Button:
-	var club := GameState.my_club
+	var club := str(it["club"])
 	var year := int(it["year"])
 	var art: Control
 	var label := ""
@@ -313,16 +343,17 @@ static func _achievement(seasons: Array) -> Control:
 # ---------------------------------------------------------------------------
 # Players' honours
 # ---------------------------------------------------------------------------
-## Your club's players' honours in your seasons, newest first.
-static func player_honours(seasons: Array) -> Array:
-	var club := GameState.my_club
+## A club's players' honours in these seasons, newest first. Its best and
+## fairest and All-Australians are kept for your club alone.
+static func player_honours(seasons: Array, club := GameState.my_club) -> Array:
+	var mine := club == GameState.my_club
 	var out := []
 	for i in range(seasons.size() - 1, -1, -1):
 		var e: Dictionary = seasons[i]
 		var year := int(e["year"])
 		for h in PLAYER_HONOURS:
 			var rows: Array = e.get(str(h[0]), [])
-			if rows.is_empty():
+			if rows.is_empty() or (not mine and MINE_ONLY.has(str(h[0]))):
 				continue
 			var r: Dictionary = rows[0]
 			# The club best and fairest is always one of yours.
@@ -335,11 +366,11 @@ static func player_honours(seasons: Array) -> Array:
 			elif str(h[0]) == "golden_fist":
 				# What won it: his season's counts on his own path.
 				count = Awards.golden_fist_line(r)
-			out.append({"key": str(h[0]), "art": str(h[1]), "name": honour_name(str(h[0]), str(h[2])), "id": str(r.get("id", "")),
-					"year": year, "count": count})
-		for id in e.get("my_aa", []):
+			out.append({"key": str(h[0]), "art": str(h[1]), "name": honour_name(str(h[0]), str(h[2]), club),
+					"id": str(r.get("id", "")), "year": year, "count": count, "club": club})
+		for id in e.get("my_aa", []) if mine else []:
 			out.append({"key": "all_australian", "art": "all_australian", "name": "All-Australian",
-					"id": str(id), "year": year, "count": ""})
+					"id": str(id), "year": year, "count": "", "club": club})
 	return out
 
 
@@ -367,11 +398,11 @@ static func by_player(items: Array) -> Array:
 	return out
 
 
-static func _player_honours(host: Control, seasons: Array) -> Control:
+static func _player_honours(host: Control, seasons: Array, club: String) -> Control:
 	var v := UiKit.vbox(6)
 	v.name = "PlayerHonours"
 	_title(v, "Players' honours")
-	var items := player_honours(seasons)
+	var items := player_honours(seasons, club)
 	if award_filter != "":
 		items = items.filter(func(it): return str(it["key"]) == award_filter)
 	if items.is_empty():
@@ -386,7 +417,7 @@ static func _player_honours(host: Control, seasons: Array) -> Control:
 		block.add_child(who)
 		var shelf := _shelf("PlayerShelf")
 		for it in g["items"]:
-			var art := HonoursArt.view(str(it["art"]), SHELF_ART, GameState.my_club, int(it["year"]), str(it["name"]))
+			var art := HonoursArt.view(str(it["art"]), SHELF_ART, club, int(it["year"]), str(it["name"]))
 			var b := _item(art, str(it["name"]), str(it["year"]), true)
 			b.name = "Honour_%s_%d" % [str(it["key"]), int(it["year"])]
 			b.pressed.connect(func(): _open_player(host, it))
@@ -394,7 +425,7 @@ static func _player_honours(host: Control, seasons: Array) -> Control:
 		block.add_child(shelf)
 		v.add_child(block)
 	var missing := []
-	for e in seasons:
+	for e in seasons if club == GameState.my_club else []:
 		if not e.has("my_aa"):
 			missing.append(int(e["year"]))
 	if not missing.is_empty() and (award_filter == "" or award_filter == "all_australian"):
@@ -407,21 +438,21 @@ static func _player_honours(host: Control, seasons: Array) -> Control:
 # ---------------------------------------------------------------------------
 # Your seasons
 # ---------------------------------------------------------------------------
-static func _tenure_table(host: Control, seasons: Array, in_progress: bool) -> Control:
+static func _tenure_table(wide: bool, seasons: Array, in_progress: bool) -> Control:
 	var v := UiKit.vbox(0)
 	v.name = "Tenure"
-	if bool(host.call("wide")):
+	if wide:
 		v.custom_minimum_size.x = TABLE_W
 		v.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_title(v, "Your seasons")
-	v.add_child(_tenure_row(["Season", "Finish", "Record", "Finals"], true))
-	var row_h := ROW_H if bool(host.call("wide")) else ROW_H_PHONE
+	v.add_child(_tenure_row(["Season", "Finish", "Record", "Finals"], true, false, ROW_H, not wide))
+	var row_h := ROW_H if wide else ROW_H_PHONE
 	var n := 0
 	if in_progress:
 		# Where you sit on the ladder, once there is a ladder to sit on.
 		var played: bool = GameState.my_record() != "0-0-0"
 		var r := _tenure_row([str(GameState.season_year), GameState.ordinal(GameState.my_position()) if played else "",
-				GameState.my_record(), progress(GameState.season, GameState.my_club)], false, false, row_h)
+				GameState.my_record(), progress(GameState.season, GameState.my_club)], false, false, row_h, not wide)
 		n += 1
 		r.name = "Season_%d" % GameState.season_year
 		v.add_child(r)
@@ -454,7 +485,7 @@ static func _tenure_table(host: Control, seasons: Array, in_progress: bool) -> C
 				d += int(parts[2])
 		var pos := int(e.get("my_position", 0))
 		var r := _tenure_row([str(year), GameState.ordinal(pos) if pos > 0 else "", rec, finals], false,
-				n % 2 == 1, row_h)
+				n % 2 == 1, row_h, not wide)
 		n += 1
 		r.name = "Season_%d" % year
 		v.add_child(r)
@@ -479,7 +510,9 @@ static func _tenure_table(host: Control, seasons: Array, in_progress: bool) -> C
 	return v
 
 
-static func _tenure_row(cols: Array, head: bool, band := false, row_h := ROW_H) -> Control:
+## narrow: a phone's sheet, where the columns close up and the finals wrap
+## rather than push the sheet past the screen's edge.
+static func _tenure_row(cols: Array, head: bool, band := false, row_h := ROW_H, narrow := false) -> Control:
 	var p := PanelContainer.new()
 	# A premiership season is marked as the ladder marks your row: a wash of
 	# your colour and a rule down its left.
@@ -490,10 +523,10 @@ static func _tenure_row(cols: Array, head: bool, band := false, row_h := ROW_H) 
 	flat.content_margin_left = StatsSide.RULE_INSET + 2   # clear of the rule, in every row so the columns line up
 	flat.content_margin_right = 4
 	p.add_theme_stylebox_override("panel", flat)
-	var h := UiKit.hbox(8)
+	var h := UiKit.hbox(6 if narrow else 8)
 	h.custom_minimum_size.y = 24 if head else row_h
 	p.add_child(h)
-	var widths := [56, 56, 72, 0]
+	var widths := [46, 42, 62, 0] if narrow else [56, 56, 72, 0]
 	for i in range(cols.size()):
 		var text := str(cols[i])
 		# The season and where you finished lead each row; the column heads are quiet.
@@ -503,6 +536,8 @@ static func _tenure_row(cols: Array, head: bool, band := false, row_h := ROW_H) 
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		if i == 3:
 			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			if narrow:
+				l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		h.add_child(l)
 	return p
 
@@ -566,7 +601,7 @@ static func _item(art: Control, top: String, bottom: String, wrap_top := false) 
 static func _open_club(host: Control, it: Dictionary) -> void:
 	var year := int(it["year"])
 	var e: Dictionary = it["entry"]
-	var club := GameState.my_club
+	var club := str(it["club"])
 	var lines := []
 	var art: Control
 	var title := ""
@@ -581,7 +616,7 @@ static func _open_club(host: Control, it: Dictionary) -> void:
 		var opp := str(e.get("runner_up", ""))
 		if opp != "":
 			lines.append("Beat %s in the Grand Final." % GameDB.club_name(opp))
-		var pos := int(e.get("my_position", 0))
+		var pos := int(e.get("my_position", 0)) if club == GameState.my_club else 0
 		if pos > 0:
 			lines.append("Finished %s on the ladder." % GameState.ordinal(pos))
 	else:
@@ -595,7 +630,7 @@ static func _open_club(host: Control, it: Dictionary) -> void:
 
 
 static func _open_player(host: Control, it: Dictionary) -> void:
-	var art := HonoursArt.view(str(it["art"]), minf(SHEET_ART, _sheet_w(host)), GameState.my_club,
+	var art := HonoursArt.view(str(it["art"]), minf(SHEET_ART, _sheet_w(host)), str(it["club"]),
 			int(it["year"]), str(it["name"]))
 	var lines := [GameState.award_name({"id": str(it["id"])})]
 	var count := str(it["count"])
@@ -613,6 +648,8 @@ static func _sheet(host: Control, node: String, art: Control, title: String, lin
 	var box := UiKit.modal_box(host, SHEET_MAX_W, 0.0)
 	var overlay: Control = box["overlay"]
 	overlay.name = node
+	# Over the trophies, as they are over the club's page: Back closes the newest.
+	overlay.set_meta("club_link", true)
 	UiKit.close_on_outside_tap(box)
 	var body: VBoxContainer = box["body"]
 	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -631,13 +668,8 @@ static func _sheet(host: Control, node: String, art: Control, title: String, lin
 	close.custom_minimum_size.y = 48
 	var footer: VBoxContainer = box["footer"]
 	footer.add_child(close)
-	close.pressed.connect(func():
-		if host.has_method("close_sheet"):
-			host.call("close_sheet")
-		else:
-			overlay.queue_free())
-	if host.has_method("open_sheet"):
-		host.call("open_sheet", overlay)
+	close.pressed.connect(func(): overlay.queue_free())
+	ClubLink.keep(host, overlay)
 
 
 ## A section's title, with 16 px of air above it.

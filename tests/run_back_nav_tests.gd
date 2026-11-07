@@ -581,7 +581,7 @@ const CRAWL_VIEWS := [
 	["hub", []], ["list", []], ["training", []], ["coaching", []], ["staff", []], ["selection", []],
 	["season_review", []],
 	["stats", ["Section_ladder"]], ["stats", ["Section_players"]], ["stats", ["Section_ratings"]],
-	["stats", ["Section_awards"]], ["stats", ["Section_fixture"]], ["stats", ["Section_trophies"]],
+	["stats", ["Section_awards"]], ["stats", ["Section_fixture"]],
 	["offseason", []], ["offseason", ["Tab_agents"]], ["offseason", ["Tab_trade"]],
 	["draft", ["Choose_COL"]], ["draft", ["Choose_COL", "Tab_picks"]],
 ]

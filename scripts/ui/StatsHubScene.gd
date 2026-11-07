@@ -1,13 +1,13 @@
 extends Control
 ## Season stats (director, 2026-10-07: the Stats patch, ROADMAP §1.11): the
 ## hub's way into the whole season - the full ladder, every player's numbers,
-## the awards races, the fixture and results, and your trophy room. One tab
+## the awards races, and the fixture and results. One tab
 ## row, one section at a time; each section is its own builder
 ## (scripts/ui/stats/), handed this scene as its host.
 
 const SECTIONS := [
 	["ladder", "Ladder"], ["players", "Players"], ["ratings", "Ratings"], ["awards", "Awards"],
-	["fixture", "Fixture"], ["trophies", "Trophies"],
+	["fixture", "Fixture"],
 ]
 ## The section you were on, kept for the visit after a drill-down (a player's
 ## bio, a team's field view) brings you back.
@@ -51,7 +51,7 @@ func _on_resize() -> void:
 ## its content (director, 2026-10-07: "centre the content mid screen rather
 ## than anchored left"); the tables that use the width keep all of it.
 const SECTION_W := {"ladder": 880.0, "players": 1240.0, "ratings": 720.0, "awards": 980.0,
-		"fixture": 1240.0, "trophies": 1240.0}
+		"fixture": 1240.0}
 
 
 func _full_width() -> float:
@@ -186,8 +186,6 @@ func _section(key: String) -> Control:
 			return StatsAwards.build(self)
 		"fixture":
 			return StatsFixture.build(self)
-		"trophies":
-			return StatsTrophies.build(self)
 	return Control.new()
 
 
@@ -217,7 +215,7 @@ func _show_intro() -> void:
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Season stats", UiKit.TITLE))
 	for line in [
-		"The whole season in one place: the ladder, every player's numbers, the awards races, every match, and your club's trophy room.",
+		"The whole season in one place: the ladder, every player's numbers, the awards races, and every match.",
 		"Pick a stat to rank the players or the clubs by it. Tap a player, a club or a match to open it.",
 	]:
 		var l := UiKit.lbl(line, 14, UiKit.TEXT)
