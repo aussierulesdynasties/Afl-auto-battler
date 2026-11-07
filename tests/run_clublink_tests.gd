@@ -371,6 +371,12 @@ func _test_left_game_opens_facts(sz: Vector2i) -> void:
 	await _settle()
 	_check(opened != null and opened.name == _cp.FACTS_NAME and screen.get_node_or_null("PlayerProfile") == null,
 			"A retired player in the league's data opens his career facts (%s)" % (str(opened.name) if opened != null else "null"))
+	var one := row.duplicate()
+	one["games"] = 1
+	one["goals"] = 1
+	var head: String = _cp._facts_head(one)
+	_check(head.ends_with(": 1 game, 1 goal") and str(_cp._facts_head(row)).ends_with(": 160 games, 10 goals"),
+			"The facts heading counts one game and one goal in the singular (%s)" % head)
 	_router.handle_back()
 	await _settle()
 	screen.queue_free()

@@ -42,6 +42,18 @@ func _test_rivalry_catalogue() -> void:
 			"score": [77, 73], "label": "Grand Final", "is_final": true}, 2032)
 	_check(Rivalries.state(dynamic, "ADE", "GEE") == "rivals",
 			"Repeated high-stakes meetings can create a full dynamic rivalry")
+	_check(Rivalries.context(dynamic, "ADE", "GEE") == "A rivalry forged over 2 finals meetings and 4 close games.",
+			"Close finals count as finals meetings, not twice: " + Rivalries.context(dynamic, "ADE", "GEE"))
+	var no_finals := {}
+	for i in range(8):
+		Rivalries.record_match(no_finals, {"home": "BRL", "away": "SYD",
+				"score": [80, 75], "label": "Round %d" % (i + 1)}, 2027 + i)
+	_check(Rivalries.context(no_finals, "BRL", "SYD") == "A rivalry forged over 8 close games.",
+			"No finals: the line leaves the finals out: " + Rivalries.context(no_finals, "BRL", "SYD"))
+	var old_rec: Dictionary = (Rivalries.dynamic(dynamic, "ADE", "GEE") as Dictionary).duplicate(true)
+	old_rec.erase("close_finals")
+	_check(Rivalries.context({Rivalries.pair_key("ADE", "GEE"): old_rec}, "ADE", "GEE") == Rivalries.context(dynamic, "ADE", "GEE"),
+			"An older save's rivalry reads its close finals from the meetings it kept")
 	var before := int((Rivalries.dynamic(dynamic, "ADE", "GEE") as Dictionary)["score"])
 	Rivalries.record_match(dynamic, {"home": "GEE", "away": "ADE",
 			"score": [77, 73], "label": "Grand Final", "is_final": true}, 2032)

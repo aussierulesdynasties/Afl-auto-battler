@@ -114,7 +114,9 @@ static func rows() -> Array:
 		var name := GameDB.player_display_name(p) if not p.is_empty() \
 				else GameDB.player_display_name_by_id(str(id), "Player")
 		out.append({"id": str(id), "name": name, "club": club, "games": games, "total": total,
-				"per_game": total / float(games), "qualified": games * 2 >= club_games(club)})
+				"per_game": total / float(games),
+				# A book begun part way through (an older save) asks half the games it saw.
+				"qualified": games * 2 >= maxi(1, club_games(club) - int(GameState.season_stats_from))})
 	out.sort_custom(func(a, b):
 		if bool(a["qualified"]) != bool(b["qualified"]):
 			return bool(a["qualified"])

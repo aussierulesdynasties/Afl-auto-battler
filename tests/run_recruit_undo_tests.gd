@@ -336,6 +336,24 @@ func _test_undo_by_a_finger() -> void:
 	var own := _text(said) if said != null else "none"
 	_check(own.begins_with("You delisted ") and own.contains(_db.player_display_name(p)),
 			"On its own the row names the delisting it undoes (%s)" % own)
+	# A signing put into the trade you are building, then undone, leaves the trade too.
+	var deal := _signable()
+	_check(not deal.is_empty(), "A free agent to sign and offer in a trade")
+	if not deal.is_empty():
+		var fa_id := str(deal[0]["id"])
+		var signed: Dictionary = _state.offer_free_agent(fa_id, int(deal[1]), int(deal[2]))
+		scene.set("_mine", [fa_id])
+		scene.set("_notice", "")
+		scene.call("_build")
+		await _settle()
+		var ub := scene.find_child("UndoAction", true, false) as Button
+		var why2 := "no Undo"
+		if ub != null:
+			why2 = await Tap.tap(ub)
+		await _settle()
+		_check(str(signed["answer"]) == "signed" and why2 == "" and not _state.free_agent(fa_id).is_empty()
+				and (scene.get("_mine") as Array).is_empty(),
+				"Undoing a signing takes him out of the trade being built (%s, %s)" % [why2, str(scene.get("_mine"))])
 	scene.queue_free()
 	await _settle()
 

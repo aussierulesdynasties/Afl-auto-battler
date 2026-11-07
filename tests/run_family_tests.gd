@@ -195,6 +195,24 @@ func _test_relations() -> void:
 	_check(card1 != null and card1.find_child("FamilyTies", true, false) == null,
 			"A draft card with no tie has no family line")
 
+	# Inside a career: a prospect still in the draft pool keeps his note, and a
+	# relative who has left every list (retired) is "former <club>", never found
+	# at his 2026 club from the database.
+	var jacob_c: Dictionary = _rel.find("Jacob", "van Rooyen", "2003-04-16").get("p", {})
+	_check(_rel.line(jacob_c) == "Brother of Benji van Rooyen (2026 draft prospect)",
+			"In a career's draft, Jacob's bio: " + _rel.line(jacob_c))
+	var oli: Dictionary = _rel.find("Oliver", "Henry", "2002-07-29")
+	var oli_list: Array = _state.league_lists.get(str(oli.get("club", "")), [])
+	var oli_at: int = oli_list.find(oli.get("p", {}))
+	_check(oli_at >= 0, "Oliver Henry is on his career list")
+	if oli_at >= 0:
+		oli_list.remove_at(oli_at)
+		var jack_c: Dictionary = _rel.find("Jack", "Henry", "1998-08-29").get("p", {})
+		_check(_rel.find("Oliver", "Henry", "2002-07-29").is_empty()
+				and _rel.line(jack_c) == "Brother of Oliver Henry (former Geelong)",
+				"A retired relative reads 'former' in a career: " + _rel.line(jack_c))
+		oli_list.insert(oli_at, oli["p"])
+
 	# --- Generated families (bio only) ---
 	var fties = load("res://scripts/sim/FamilyTies.gd")
 	var pros = load("res://scripts/sim/Prospects.gd")
