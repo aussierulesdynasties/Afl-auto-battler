@@ -211,7 +211,9 @@ func _press(scene: Node, node_name: String) -> void:
 
 ## Save the screen and say whether each scrolling list on the break fits its room.
 func _shot(scene: Node, out: String, shot: String) -> void:
-	for o in scene.get_children():
+	# The break and its sheets open under the scoreboard (MatchScene "UnderScoreboard").
+	var host: Node = scene.get_node_or_null("UnderScoreboard")
+	for o in (host if host != null else scene).get_children():
 		if not (o is Control) or not (str(o.name) == "CoachBox" or str(o.name).begins_with("CallSheet_")):
 			continue
 		for sc in o.find_children("*", "ScrollContainer", true, false):

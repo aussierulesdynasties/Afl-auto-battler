@@ -105,7 +105,8 @@ func _run() -> void:
 						await _frames(10)
 						await _shot(out, "half_" + key)
 						# Back to the break for the next call.
-						for o in scene.get_children():
+						var host: Node = scene.get_node_or_null("UnderScoreboard")
+						for o in (host if host != null else scene).get_children():
 							if o is Control and (str(o.name).begins_with("CallSheet_") or str(o.name) == "PlayerSheet"):
 								o.queue_free()
 						await _frames(6)
