@@ -62,7 +62,7 @@ static func record_match(store: Dictionary, result: Dictionary, year: int) -> Di
 	var key := pair_key(a, b)
 	var rec: Dictionary = store.get(key, {
 		"clubs": key.split("|"), "score": 0, "meetings": 0, "close": 0,
-		"finals": 0, "grand_finals": 0, "last_year": 0, "events": []
+		"finals": 0, "close_finals": 0, "grand_finals": 0, "last_year": 0, "events": []
 	})
 	var uid := "%d:%s:%s:%s" % [year, str(result.get("label", result.get("round", ""))), a, b]
 	for e in rec.get("events", []):
@@ -94,6 +94,8 @@ static func record_match(store: Dictionary, result: Dictionary, year: int) -> Di
 		rec["close"] = int(rec["close"]) + 1
 	if is_final:
 		rec["finals"] = int(rec["finals"]) + 1
+		if margin <= CLOSE_MARGIN:
+			rec["close_finals"] = _close_finals(rec) + 1
 	rec["score"] = int(rec["score"]) + points
 	rec["last_year"] = year
 	var events: Array = rec["events"]
@@ -137,9 +139,31 @@ static func context(store: Dictionary, a: String, b: String) -> String:
 		return ""
 	match state(store, a, b):
 		"rivals":
-			return "A rivalry forged over %d finals meeting%s and %d close game%s." % [
-				int(rec.get("finals", 0)), "" if int(rec.get("finals", 0)) == 1 else "s",
-				int(rec.get("close", 0)), "" if int(rec.get("close", 0)) == 1 else "s"]
+			# Close finals are finals meetings, not also close games; a part
+			# with nothing in it is left out.
+			var finals := int(rec.get("finals", 0))
+			var close := int(rec.get("close", 0)) - _close_finals(rec)
+			var parts: PackedStringArray = []
+			if finals > 0:
+				parts.append("%d finals meeting%s" % [finals, "" if finals == 1 else "s"])
+			if close > 0:
+				parts.append("%d close game%s" % [close, "" if close == 1 else "s"])
+			if parts.is_empty():
+				return ""
+			return "A rivalry forged over %s." % " and ".join(parts)
 		"brewing":
 			return "A rivalry is brewing after repeated high-stakes meetings."
 	return ""
+
+
+## How many of the close meetings were finals. A record from an older save
+## has no count: read it from the meetings it kept.
+static func _close_finals(rec: Dictionary) -> int:
+	if rec.has("close_finals"):
+		return int(rec["close_finals"])
+	var n := 0
+	for e in rec.get("events", []):
+		var why := str((e as Dictionary).get("reason", ""))
+		if why == "close final" or (why == "Grand Final meeting" and int(e.get("margin", 999)) <= CLOSE_MARGIN):
+			n += 1
+	return n

@@ -33,6 +33,9 @@ var _interactive := false
 ## to full time, nothing played or applied again.
 var _review := false
 var _event_cursor := 0
+## Your side's legs (id -> energy) when the stretch now playing was simulated:
+## the tired marks read these until the oval catches up with the sim.
+var _legs_seen := {}
 var _my_side := 0
 var _margin: MarginContainer
 var _stacked := false
@@ -1272,59 +1275,6 @@ func _show_coach_box() -> void:
 				UiKit.attention(row as CanvasItem)
 		elif found != null:
 			UiKit.attention(found.get_parent() as CanvasItem)
-	_land_call_intent(overlay, q)
-
-
-## A response tapped beside an opposition fact on the hub (P-13,
-## GameState.call_intent) lands here, before the first ball-up: that call's
-## block is brought into view and brightens once, with the one fact that sent
-## the coach there restated above its picker. Nothing is chosen for him and
-## nothing else on the pane changes.
-const INTENT_NODES := {"tag": "TagPicker", "minder": "DefenceSetupPicker",
-		"loose": "DefenceSetupPicker", "plan": "PlanPicker"}
-
-
-func _land_call_intent(overlay: Control, q: int) -> void:
-	var intent: Dictionary = GameState.call_intent
-	GameState.call_intent = {}
-	if q != 1 or intent.is_empty():
-		return
-	var target: Node = overlay.find_child(str(INTENT_NODES.get(str(intent.get("call", "")), "-")), true, false)
-	if target == null:
-		return
-	# The call's own block: the one holding its heading.
-	var block: Node = target
-	while block != null and block != overlay and block.find_child("CallHeading", false, false) == null:
-		block = block.get_parent()
-	if block == null or block == overlay:
-		return
-	var line := _say(str(intent.get("fact", "")), UiKit.BODY, UiKit.TEXT, true)
-	line.name = "CallIntentFact"
-	if line is Label:
-		(line as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	block.add_child(line)
-	var heading: Node = block.find_child("CallHeading", false, false)
-	block.move_child(line, (heading.get_index() + 1) if heading != null else mini(2, block.get_child_count() - 1))
-	_show_intent_block.call_deferred(block, str(intent.get("player_id", "")))
-
-
-func _show_intent_block(block: Node, player_id: String) -> void:
-	# The columns of a PC pane are dealt a frame after the break is built.
-	for i in range(4):
-		await get_tree().process_frame
-	if not is_instance_valid(block):
-		return
-	var shown: Node = block
-	var up: Node = block
-	while up != null and not (up is ScrollContainer):
-		up = up.get_parent()
-	if up != null:
-		# The block's top (its heading and the fact) at the top of the pane; a
-		# long block would otherwise be shown by its end.
-		var sc := up as ScrollContainer
-		var top := (block as Control).global_position.y - (sc.get_child(0) as Control).global_position.y
-		sc.scroll_vertical = maxi(0, int(top) - 8)
-	UiKit.attention(shown as CanvasItem)
 
 
 # ---------------------------------------------------------------------------
@@ -3182,6 +3132,7 @@ func _simulate_next_quarter(t: Dictionary) -> void:
 ## Simulate on to the end of the quarter or the next moment, then play it.
 func _advance_segment() -> void:
 	var sim: MatchSim = GameState.pending_sim
+	_legs_seen = _legs_now(sim)
 	if sim.continue_quarter():
 		_res = sim.end_quarter()
 	else:
@@ -3305,9 +3256,18 @@ func _refresh_marks() -> void:
 	var sim_now = GameState.pending_sim if _interactive else null
 	if sim_now != null:
 		injuries = sim_now.injuries
-		for r in sim_now.legs(_my_side):
-			energy[str(r["id"])] = float(r["energy"])
+		# The sim has run ahead of the oval: its legs now are the end of the stretch
+		# still playing, so the marks use the legs from when that stretch began.
+		energy = _legs_now(sim_now) if _pitch.current_index() >= _pitch.events.size() else _legs_seen
 	_pitch.set_marks(PlayerMarks.build(_pitch.events, _pitch.current_index(), injuries, energy))
+
+
+## Your side's legs in the sim right now: id -> energy.
+func _legs_now(sim: MatchSim) -> Dictionary:
+	var out := {}
+	for r in sim.legs(_my_side):
+		out[str(r["id"])] = float(r["energy"])
+	return out
 
 
 ## The ring on the oval: the players of yours you have made a call on or
@@ -3652,6 +3612,7 @@ func _on_finished() -> void:
 	# A level final plays on: extra time is rolled now and fed to the pitch.
 	if _interactive and not _skipping and GameState.pending_sim != null \
 			and GameState.pending_sim.needs_extra_time():
+		_legs_seen = _legs_now(GameState.pending_sim)
 		_res = GameState.pending_sim.run_extra_time()
 		_stamp_match_meta()
 		_append_new_events()
