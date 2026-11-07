@@ -11006,8 +11006,8 @@ func _set_press_standing(journalist: String, v: int) -> void:
 	media_memory["standing_year"] = season_year
 
 
-## Press morale fades a point every second round (every third after the
-## Philosopher), before this week's question forms (ruling 5.54: effects decay).
+## Press morale fades a point every second round, whoever asked, before this
+## week's question forms (ruling 5.54: effects decay).
 func _fade_press_lifts() -> void:
 	if season == null:
 		return
