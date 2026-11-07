@@ -51,6 +51,7 @@ func _run() -> void:
 	_state.delete_saved_career()
 	_t("_test_helper")
 	_t("_test_tinted_ink")
+	_t("_test_club_names")
 	await _t("_test_match_screen")
 	print(Ran.line("Name colour", self))
 	quit(0 if _failures.is_empty() else 1)
@@ -127,6 +128,26 @@ func _test_helper() -> void:
 ## training card and a sheet's wash carry a share of a club's colour, and any
 ## club's ink on any of them reads at 4.5:1 or better, both inks, every pairing
 ## (a home wash can carry the away side's names).
+## Every club's name in running text wears a colour of its own (director
+## 2026-11-06, rulings 51a): its strongest real colour, never white, read at
+## 4.5:1 on the page and a panel. Essendon, St Kilda and Melbourne are red.
+func _test_club_names() -> void:
+	var idx: Dictionary = NI.from_clubs([])
+	var whites := []
+	for code in _db.clubs:
+		var name: String = _db.club_name(str(code))
+		var m: String = NI.markup("A win against %s." % name, idx)
+		var want: Color = load("res://scripts/ui/ClubLink.gd").colour(str(code))
+		if not m.contains("[color=#%s]" % want.to_html(false)):
+			whites.append("%s (%s)" % [name, m])
+			continue
+		if want.is_equal_approx(UK.TEXT) or (want.v > 0.9 and want.s < 0.15) 				or UK.contrast(want, UK.BG) < 4.5 or UK.contrast(want, UK.PANEL) < 4.5:
+			whites.append("%s #%s" % [name, want.to_html(false)])
+	_check(whites.is_empty(), "Every club's name is in its strongest real colour, never white (%s)" % ", ".join(whites))
+	var ess: Color = load("res://scripts/ui/ClubLink.gd").colour("ESS")
+	_check(ess.s > 0.4 and (ess.h < 0.06 or ess.h > 0.92), "Essendon's name is red, not white (#%s)" % ess.to_html(false))
+
+
 func _test_tinted_ink() -> void:
 	var clubs: Array = _db.club_order
 	_check(clubs.size() >= 18, "Every club is in the loop (%d)" % clubs.size())
