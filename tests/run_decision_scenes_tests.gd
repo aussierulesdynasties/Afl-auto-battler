@@ -30,6 +30,7 @@ func _run() -> void:
 	_state.replay_seed = SUITE_SEED
 	for kind in KINDS:
 		await _t("_test_kind", [kind])
+	await _t("_test_set_spots")
 	await _t("_test_card_without_vignettes")
 	for kind in KINDS:
 		await _t("_test_tap", [kind])
@@ -191,6 +192,77 @@ func _test_kind(kind: String) -> void:
 	_check(not said.contains("%") and not said.to_lower().contains("recommend"), "%s: no stats or advice over the scene" % kind)
 	m.queue_free()
 	await _settle()
+
+
+## Director bug, 2026-11-08: the call said 25 metres out and the scene showed him at the
+## 50. Every spot MatchSim names (SET_BANDS_ON) is staged where the call says: the man on
+## the mark on the call's metres, the kicker a step behind him, in the cell of the ground the
+## words name, with both posts in the picture above the call and his name over his head.
+func _test_set_spots() -> void:
+	var VG = load("res://scripts/ui/match/VignetteGround.gd")
+	var V = load("res://scripts/ui/match/DecisionVignette.gd")
+	_check(str(V.set_spot("")["key"]) == "front" and str(V.set_spot("mystery")["key"]) == "front",
+			"set_shot without a spot: straight in front, 35 out")
+	var bands: Array = (load("res://scripts/sim/MatchSim.gd") as GDScript).get_script_constant_map()["SET_BANDS_ON"]
+	for band in bands:
+		var key := str(band["key"])
+		var metres := float(band["metres"])
+		_check(V.SET_SPOTS.has(key), "set_shot %s: the scene has a spot for it" % key)
+		var ctx := await _match()
+		var m: Control = ctx["m"]
+		var sim = ctx["sim"]
+		var me: int = ctx["me"]
+		_state.set_vignettes_on(true)
+		sim.moment_side = me
+		var shot := _moment(sim, me, "set_shot")
+		shot["band_key"] = key
+		shot["title"] = "He marks %s" % str(band["spot"])
+		sim.pending_moment = shot
+		m.call("_show_moment")
+		await _settle()
+		var vig = m.find_child("DecisionVignette", true, false)
+		_check(vig != null, "set_shot %s: the call opens on its scene" % key)
+		if vig == null:
+			m.queue_free()
+			await _settle()
+			continue
+		vig.finish_now()
+		await _settle()
+		var goal := Vector2(0.0, float(VG.GOAL_Y))
+		var kicker: Vector2 = vig.spot_of(vig.token_of("kicker"))
+		var mark: Vector2 = vig.spot_of(vig.token_of("on_the_mark"))
+		var out := kicker.distance_to(goal)
+		_check(absf(out - metres) <= 2.0, "set_shot %s: the kicker is %.1f m out, within 2 m of the call's %d" % [key, out, int(metres)])
+		_check(absf(mark.distance_to(goal) - metres) < 0.5 and mark.distance_to(goal) < out,
+				"set_shot %s: the man on the mark stands on the call's metres, between him and the goals" % key)
+		var off_line := func(p: Vector2) -> float:
+			return rad_to_deg(atan2(absf(p.x - goal.x), goal.y - p.y))
+		var angle: float = off_line.call(kicker)
+		_check(absf(float(off_line.call(mark)) - float(V.SET_SPOTS[key])) < 0.5 and (angle > 60.0 if key == "pocket" else angle < 30.0),
+				"set_shot %s: his angle (%.1f deg) is in the cell the call names (straight under 30, tight over 60)" % [key, angle])
+		_check((out > 50.0) == (key == "long"), "set_shot %s: the 50 m arc is %s him" % [key, "in front of" if key == "long" else "behind"])
+		# In the picture: both posts and both men between the title bar and the call, with
+		# room over each head for his name.
+		var panel: Control = m.find_child("BounceCall", true, false)
+		var bottom: float = vig.size.y
+		if panel != null:
+			bottom = panel.get_global_rect().position.y - vig.get_global_rect().position.y
+		var bar: float = vig.size.y * 0.075
+		var cam = vig.ground_cam()
+		var seen := true
+		for x in [-0.5, 0.5]:
+			var p: Vector3 = cam.oval(Vector2(x * float(VG.GOAL_GAP), goal.y))
+			seen = seen and p.z > 0.0 and p.x > 0.0 and p.x < vig.size.x and p.y > bar and p.y < bottom
+		_check(seen, "set_shot %s: both goal posts stand in the scene, above the call" % key)
+		var men := true
+		for role in ["kicker", "on_the_mark"]:
+			var t: Dictionary = vig.token_of(role)
+			var feet: Vector3 = vig.call("_project", vig.call("_pos", t), vig.call("_lift", t))
+			var head: Vector3 = vig.call("_project", vig.call("_pos", t), float(vig.call("_lift", t)) + float(vig.call("_figure_top", t)))
+			men = men and feet.y < bottom and head.y > bar + 24.0 and feet.x > 0.0 and feet.x < vig.size.x
+		_check(men, "set_shot %s: both men stand above the call, their names clear of the title bar" % key)
+		m.queue_free()
+		await _settle()
 
 
 ## Vignettes off: the call is the text card, for every kind.
