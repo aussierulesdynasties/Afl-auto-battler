@@ -421,6 +421,19 @@ def union(deck, careers):
         cid = t["id"]
         if not allp["card"][cid]:
             print("UNEVER %s %s %s trigger_weeks %d" % (cid, t["category"], "private" if t.get("private") else "-", allp["cond"][cid]))
+    # Real names are on in a new game (GameState.real_names), and a private card is
+    # never dealt about a real-named player, so the reach of the game as it starts is
+    # the real-name careers alone: each names setting is counted on its own as well.
+    for names in sorted({c["names"] for c in careers if c["names"]}):
+        sub = [c for c in careers if c["names"] == names]
+        p = pool(sub)
+        print("UNAMES %s careers %d | seasons %d | weeks %d | distinct %d of %d" % (
+            names, len(sub), p["seasons"], p["weeks"], sum(1 for t in deck if p["card"][t["id"]]), len(deck)))
+        for t in deck:
+            cid = t["id"]
+            if not p["card"][cid]:
+                print("UNEVER_NAMES %s %s %s %s trigger_weeks %d" % (names, cid, t["category"],
+                      "private" if t.get("private") else "-", p["cond"][cid]))
 
 
 if __name__ == "__main__":

@@ -6,8 +6,9 @@ costs (a 10-20% chance of a slow start, a selection promise that stings, board c
 development forgone). The cost line is generated from the effect as a percentage, as on the 17. Nothing is dropped.
 Docs only: no code or balance changes until he rules.
 
-Sources: the gain-only list is `GAIN_ONLY_LEFT` in tests/test_story.gd (36 options today; the ruling said 33, and the
-floor `GAIN_ONLY_FLOOR` is 36); the club list is audit §5 "Club decisions"
+Sources: the gain-only list was `GAIN_ONLY_LEFT` in tests/test_story.gd (36 options on 2026-11-06; the ruling said 33).
+Row 107 folded it into `BOTH_SIDES_LEFT`, which also holds the cost-only and do-nothing choices (floor
+`BOTH_SIDES_FLOOR`); the club list is audit §5 "Club decisions"
 (DECISION_TRANSPARENCY_AUDIT_2026-10-18.md) checked against data/stories/*.json and GameState.gd on main today.
 
 ## Sheet 1: club dominant options (T5.Q2)
@@ -85,7 +86,7 @@ Cost lines for the two new ones:
 - `forgo_xp` is worded for one player today; rows 3, 5, 13, 17, 22, 31-34 need it for "all" or "side" (a wording change only).
 - Row 10 needs a cost on the captain while {vice_name} is the subject; row 14 fills the `failed` branch.
 - C1 and C2 are code, not card data (GameState challenge/appeal, a file another PR is editing now).
-- When built, each row comes off `GAIN_ONLY_LEFT` and the floor drops to 0.
+- When built, each row comes off `BOTH_SIDES_LEFT` and `BOTH_SIDES_FLOOR` drops by one.
 
 ## Questions for the director
 

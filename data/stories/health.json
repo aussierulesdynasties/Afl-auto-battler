@@ -398,7 +398,8 @@
 			"where": {
 				"injured_weeks_min": 1,
 				"injured_weeks_max": 6,
-				"rushable": true
+				"rushable": true,
+				"pre_rush_gain_min": 1
 			},
 			"pick": "highest:overall"
 		},
@@ -431,6 +432,9 @@
 					{
 						"op": "morale",
 						"d": -3
+					},
+					{
+						"op": "keep_out"
 					}
 				],
 				"result": "{first} does as the physio says, and grumbles about it."

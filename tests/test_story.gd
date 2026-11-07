@@ -33,6 +33,7 @@ func run() -> void:
 	_t("_test_every_choice_has_both_sides")
 	_t("_test_no_dead_story_flags")
 	_t("_test_arc_middle_before_end")
+	_t("_test_captain_contract_talk_dealt")
 	_t("_test_silent_defaults_announced")
 	_t("_test_every_line_has_a_size")
 	_t("_test_line_numbers_match_effects")
@@ -2886,7 +2887,7 @@ func _test_vacancy_is_filled() -> void:
 
 ## The choices still short of a gain or a cost on the card (2026-11-08): 46 gain only,
 ## 14 cost only, 11 that do nothing or only spare another choice's cost. Their missing
-## sides wait on the director (row 63's second cost sheet and the questions of row 107).
+## sides are drafted on row 63's second cost sheet and row 107's (docs/research).
 ## This list may only shrink: a choice that gets its missing side comes off, and no new
 ## one may join.
 const BOTH_SIDES_LEFT := ["training_extra_session/recover", "training_seniors_day_off/give",
@@ -2911,6 +2912,21 @@ const BOTH_SIDES_LEFT := ["training_extra_session/recover", "training_seniors_da
 		"gf_premiers/again", "selection_talk_dropped/explain", "selection_talk_back/explain",
 		"selection_talk_waiting/explain", "finals_first_final/minder", "finals_first_final/alone", "gf_debut_year/away"]
 const BOTH_SIDES_FLOOR := 71
+## The choices whose card shows a cost and no gain, and whose only upside is the other
+## choice's cost that they spare (StoryEngine.card_lines: "No 15% chance of a slow
+## start."). No screen prints that line since #837 (the hub card moved into EventCardView,
+## which prints stakes_lines), so the coach sees a cost only. Counted on their own until
+## the director rules whether the spared line counts as an upside. Shrink only.
+const SPARED_GAIN_LEFT := ["health_pulled_up_sore/play", "family_baby_due/play", "family_dad_in_hospital/stay",
+		"family_brothers_wedding/play", "family_partner_job_offer/footy", "media_radio_spray/ignore",
+		"media_newspaper_column/no", "media_papers_again/stand", "contracts_waited_manager_calls/market",
+		"leadership_senior_runs_session/no", "captain_leaders_meeting/sit", "captain_leaders_meeting/notweek",
+		"captain_rest_ask/play", "captain_slump_mid/leave", "captain_contract_start/wait",
+		"community_country_clinic/no", "community_junior_club_fire/jumper", "community_school_visit/no",
+		"board_wants_answers/patience", "board_sponsor_shoot/no", "board_billboards/no", "board_savings/fight",
+		"members_cheer_squad/no", "selection_talk_dropped/call", "selection_talk_back/call",
+		"selection_talk_waiting/call", "selection_finals_experience/stick"]
+const SPARED_GAIN_FLOOR := 27
 ## The choices with no lasting effect (only a story flag, or nothing at all): the 2026-10-12
 ## audit's "a choice that does nothing" (rule 38). Shrink only.
 const DOES_NOTHING_LEFT := ["captain_young_player/notyet", "captain_holding_group/letbe",
@@ -2920,10 +2936,11 @@ const DOES_NOTHING_LEFT := ["captain_young_player/notyet", "captain_holding_grou
 
 
 ## Every choice on every card shows a Gain line and a Cost line under its button
-## (bible principle 4), the international and pre-season cards included. A choice whose
-## own effects gain nothing may state, as its gain, another choice's cost it does not
-## carry (StoryEngine.card_lines). Built with every choice the card is written with, so a
-## choice the week's facts hide (the semi-final week off) is checked too.
+## (bible principle 4), the international and pre-season cards included. The lines are
+## the ones the coach reads: StoryEngine.stakes_lines of the choice's own effects, as
+## EventCardView prints them on the hub and pre-season cards. Built with every choice the
+## card is written with, so a choice the week's facts hide (the semi-final week off) is
+## checked too.
 func _test_every_choice_has_both_sides() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[4]
@@ -2933,7 +2950,11 @@ func _test_every_choice_has_both_sides() -> void:
 		ids[str(t["id"])] = true
 	_check(deck.size() >= 135 and ids.has("intl_homesick") and ids.has("pre_knee_return"),
 			"The check sees the whole deck, the international and pre-season cards included (%d cards)" % deck.size())
+	var view := FileAccess.get_file_as_string("res://scripts/ui/EventCardView.gd")
+	_check(view.contains("StoryEngine.stakes_lines(") and not view.contains("card_lines("),
+			"The card on screen prints stakes_lines, the lines this check reads")
 	var short := []
+	var spared := []
 	var nothing := []
 	var n := 0
 	for t in deck:
@@ -2949,12 +2970,14 @@ func _test_every_choice_has_both_sides() -> void:
 			var lasting := (o.get("effects", []) as Array).filter(func(e): return not ["flag", "talk_note"].has(str(e.get("op", ""))))
 			if lasting.is_empty():
 				nothing.append(key)
-			var g := false
-			var c := false
-			for l in StoryEngine.card_lines(full, i):
-				g = g or l.begins_with(StoryEngine.GAIN_MARK)
-				c = c or l.begins_with(StoryEngine.COST_MARK)
-			if not (g and c):
+			var screen := StoryEngine.stakes_lines(o.get("effects", []), card.get("facts", {}))
+			var g := _has_mark(screen, StoryEngine.GAIN_MARK)
+			var c := _has_mark(screen, StoryEngine.COST_MARK)
+			if g and c:
+				continue
+			if c and _has_mark(StoryEngine.card_lines(full, i), StoryEngine.GAIN_MARK):
+				spared.append(key)
+			else:
 				short.append(key)
 	var new_ones := short.filter(func(k): return not BOTH_SIDES_LEFT.has(k))
 	var gone := BOTH_SIDES_LEFT.filter(func(k): return not short.has(k))
@@ -2962,35 +2985,61 @@ func _test_every_choice_has_both_sides() -> void:
 			% ", ".join(PackedStringArray(new_ones)))
 	_check(gone.is_empty() and BOTH_SIDES_LEFT.size() <= BOTH_SIDES_FLOOR,
 			"The one-sided list only shrinks: take off the choices that now show both sides (%s)" % ", ".join(PackedStringArray(gone)))
-	_check(n >= 290 and n - short.size() >= 219, "%d of %d choices show a gain and a cost" % [n - short.size(), n])
+	var new_spared := spared.filter(func(k): return not SPARED_GAIN_LEFT.has(k))
+	var spared_gone := SPARED_GAIN_LEFT.filter(func(k): return not spared.has(k))
+	_check(new_spared.is_empty() and spared_gone.is_empty() and SPARED_GAIN_LEFT.size() <= SPARED_GAIN_FLOOR,
+			"The list of choices that show only a cost and spare the other's only shrinks (new: %s; gone: %s)"
+			% [", ".join(PackedStringArray(new_spared)), ", ".join(PackedStringArray(spared_gone))])
+	var both := n - short.size() - spared.size()
+	_check(n >= 290 and both >= 192, "%d of %d choices show a gain and a cost on screen (%d more show a cost and only spare the other's)"
+			% [both, n, spared.size()])
 	var new_nothing := nothing.filter(func(k): return not DOES_NOTHING_LEFT.has(k))
 	var nothing_gone := DOES_NOTHING_LEFT.filter(func(k): return not nothing.has(k))
 	_check(new_nothing.is_empty() and nothing_gone.is_empty(),
 			"No new choice is without a lasting effect, and one that now has one comes off the list (new: %s; gone: %s)"
 			% [", ".join(PackedStringArray(new_nothing)), ", ".join(PackedStringArray(nothing_gone))])
-	# The check bites: a gain-only choice with nothing to spare shows no Cost line...
-	var bite := StoryEngine.card_lines({"options": [{"key": "a", "effects": [{"op": "morale", "d": 4}]},
-			{"key": "b", "effects": [{"op": "morale", "d": 4}]}], "facts": {}}, 0)
-	var bite_cost := false
-	for l in bite:
-		bite_cost = bite_cost or l.begins_with(StoryEngine.COST_MARK)
-	_check(not bite.is_empty() and not bite_cost, "A gain-only choice shows no Cost line, so the check would catch it (%s)" % " / ".join(bite))
-	# ...and a cost the other choice carries is said as this one's gain.
-	var spared := StoryEngine.card_lines({"options": [{"key": "a", "effects": [{"op": "morale", "d": -2}]},
+	# The check bites: a gain-only choice shows no Cost line...
+	var bite := StoryEngine.stakes_lines([{"op": "morale", "d": 4}], {})
+	_check(not bite.is_empty() and not _has_mark(bite, StoryEngine.COST_MARK),
+			"A gain-only choice shows no Cost line, so the check would catch it (%s)" % " / ".join(bite))
+	# ...and a choice that only spares the other's cost shows its cost alone on screen.
+	var spare_only := [{"op": "morale", "d": -2}]
+	var on_screen := StoryEngine.stakes_lines(spare_only, {})
+	var with_spared := StoryEngine.card_lines({"options": [{"key": "a", "effects": spare_only},
 			{"key": "b", "effects": [{"op": "slow_start", "chance": 15}]}], "facts": {}}, 0)
-	var spared_gain := false
-	for l in spared:
-		spared_gain = spared_gain or l.begins_with(StoryEngine.GAIN_MARK)
-	_check(spared_gain, "A choice that spares another's cost states it as its gain (%s)" % " / ".join(spared))
+	_check(not _has_mark(on_screen, StoryEngine.GAIN_MARK) and _has_mark(with_spared, StoryEngine.GAIN_MARK),
+			"A choice whose only gain is the cost it spares shows no Gain line on screen, so it is not counted as both sides (%s)"
+			% " / ".join(on_screen))
 
 
 ## Every story flag a choice sets is read: by a follow-up's needs, a subject or choice
 ## condition (flag / no_flag), or the game's code (story_flag_set). A flag nothing
 ## reads is a choice whose promised consequence never comes.
 func _test_no_dead_story_flags() -> void:
+	var code := _code_flag_reads("res://scripts")
+	_check(code.has("farewell_told"), "A flag the game's code reads by name is found (farewell_told)")
+	var r := _dead_flags(StoryDeck.all(), code)
+	_check((r["set"] as Dictionary).size() >= 9, "The deck sets its story flags (%d)" % (r["set"] as Dictionary).size())
+	_check((r["dead"] as Array).is_empty(), "Every story flag a choice sets is read somewhere: %s" % ", ".join(PackedStringArray(r["dead"])))
+	# The check bites: in a made-up deck, the flag nothing reads is reported, and the
+	# ones a follow-up's needs, a choice's condition or the code by name reads are not.
+	var found := _code_flag_names('if gs.story_flag_set(id, "t_code"):')
+	_check(found == ["t_code"], "The code scan finds a flag read by name (%s)" % ", ".join(PackedStringArray(found)))
+	var deck := [
+		{"id": "a", "choices": [{"key": "x", "effects": [{"op": "flag", "name": "t_unread"}, {"op": "flag", "name": "t_needs"},
+				{"op": "flag", "name": "t_choice"}, {"op": "flag", "name": "t_code"}]}]},
+		{"id": "b", "needs": {"flag": "t_needs", "after": 1}, "choices": [{"key": "y", "when": {"no_flag": "t_choice"}, "effects": []}]}]
+	var bite := _dead_flags(deck, found)
+	_check(bite["dead"] == ["t_unread (set by a/x)"],
+			"A flag nothing reads is caught, and only that one: %s" % ", ".join(PackedStringArray(bite["dead"])))
+
+
+## The flags a deck's choices set ({name: "card/choice"}) and the ones nothing reads:
+## no follow-up's needs, subject or choice condition, nor the code (`code_reads`).
+func _dead_flags(deck: Array, code_reads: Array) -> Dictionary:
 	var set_by := {}
 	var read := {}
-	for t in StoryDeck.all():
+	for t in deck:
 		for o in t["choices"]:
 			for e in o.get("effects", []):
 				if str(e.get("op", "")) == "flag":
@@ -2999,15 +3048,13 @@ func _test_no_dead_story_flags() -> void:
 		var rest: Dictionary = (t as Dictionary).duplicate(true)
 		rest.erase("choices")
 		_flag_reads(rest, read)
-	_check(set_by.size() >= 9, "The deck sets its story flags (%d)" % set_by.size())
-	for f in _code_flag_reads("res://scripts"):
+	for f in code_reads:
 		read[f] = true
-	_check(read.has("farewell_told"), "A flag the game's code reads by name is found (farewell_told)")
 	var dead := []
 	for f in set_by:
 		if not read.has(f):
 			dead.append("%s (set by %s)" % [f, set_by[f]])
-	_check(dead.is_empty(), "Every story flag a choice sets is read somewhere: %s" % ", ".join(PackedStringArray(dead)))
+	return {"set": set_by, "dead": dead}
 
 
 ## An arc's middle beat can come: it opens before any end beat of the same arc,
@@ -3032,6 +3079,44 @@ func _test_arc_middle_before_end() -> void:
 				"%s opens (week %d) before its arc's first end beat (week %d)" % [m[2], m[1], int(first_end.get(m[0], -1))])
 
 
+## The captain's contract talk is dealt in a real season (row 107): once the story has
+## begun (cc_start), the engine deals captain_contract_wait three weeks on, before
+## either ending (signed or open, due at four), so the story's middle is met in play.
+func _test_captain_contract_talk_dealt() -> void:
+	_start()
+	var cap := {}
+	for p in GameState.my_list:
+		if Captaincy.role_of(GameState.captaincy_record("GEE"), str(p["id"])) == "captain":
+			cap = p
+	_check(not cap.is_empty(), "Geelong have a captain for the contract story")
+	if cap.is_empty():
+		return
+	var w0 := GameState.story_week()
+	StoryEngine.record_choice(GameState.story, GameState.story_card("captain_contract_start", cap), 1, w0)   # "Wait until later"
+	_check(GameState.story_flag_set(str(cap["id"]), "cc_start"), "The contract story has begun for the captain this week")
+	var first := ""
+	var at := -1
+	for r in range(10):
+		if GameState.week_event_pending():
+			GameState.resolve_week_event(0)
+		GameState.advance()
+		for c in GameState.week_events:
+			if first == "" and str(c.get("tid", "")).begins_with("captain_contract"):
+				first = str(c["tid"])
+				at = GameState.story_week() - w0
+		if first != "":
+			break
+	_check(first == "captain_contract_wait" and at >= 3,
+			"The engine deals the contract talk %d weeks on, before either ending (first dealt: %s)" % [at, first])
+
+
+func _has_mark(lines: PackedStringArray, mark: String) -> bool:
+	for l in lines:
+		if l.begins_with(mark):
+			return true
+	return false
+
+
 func _flag_reads(v, out: Dictionary) -> void:
 	if v is Dictionary:
 		for k in v:
@@ -3054,10 +3139,18 @@ func _code_flag_reads(dir: String) -> Array:
 		return out
 	for f in d.get_files():
 		if f.ends_with(".gd"):
-			for m in re.search_all(FileAccess.get_file_as_string(dir.path_join(f))):
-				out.append(m.get_string(1))
+			out.append_array(_code_flag_names(FileAccess.get_file_as_string(dir.path_join(f))))
 	for sub in d.get_directories():
 		out.append_array(_code_flag_reads(dir.path_join(sub)))
+	return out
+
+
+func _code_flag_names(text: String) -> Array:
+	var out := []
+	var re := RegEx.new()
+	re.compile("story_flag_set\\([^,()]+,\\s*\"([a-z_]+)\"")
+	for m in re.search_all(text):
+		out.append(m.get_string(1))
 	return out
 
 

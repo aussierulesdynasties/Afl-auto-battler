@@ -22,6 +22,7 @@ func run(suite) -> void:
 	_t("_test_flow")
 	_t("_test_effects")
 	_t("_test_facts")
+	_t("_test_running_again")
 	_t("_test_hands_off_and_save")
 	print("Pre-season cards: %d of the story suite's checks" % (s.checks - before))
 	PreSeason.reload()
@@ -326,6 +327,93 @@ func _test_facts() -> void:
 				bad.append("%s says %s" % [id, w])
 	_check(bad.is_empty(), "The pre-season cards read as football, not as engine: %s" % " | ".join(PackedStringArray(bad)))
 
+
+## The running-again card (row 107) in the pre-season's own words: clearing him gains
+## the training and the Round 1 he would miss on the physio's plan, on the club's blocks;
+## it costs soreness to Round 1 and the Heavy weeks he would have sat out; the physio's
+## plan costs that training. A player back next week anyway brings no card. In play, a
+## Heavy first block hurts players on the track and a story stop deals the card about one.
+func _test_running_again() -> void:
+	var kt := StoryDeck.by_id(StoryDeck.all(), "pre_knee_return")
+	_career()
+	GameState.preseason_advance()   # the week 3 stop
+	_check(GameState.set_preseason_block(1, "heavy", "skills"), "Weeks 4 to 5 go Heavy")
+	for q in GameState.my_list:
+		q["injury_weeks"] = 0
+		q.erase("injury_kind")
+	var p: Dictionary = GameState.my_list[6]
+	p["injury_weeks"] = 4
+	p["injury_kind"] = "hamstring"
+	var b2: Array = GameState.preseason_blocks()[2]
+	var want := 2 * PreSeason.week_xp("heavy", "skills") + PreSeason.week_xp(str(b2[0]), str(b2[1]))
+	var card := GameState.story_card("pre_knee_return", p)
+	var f: Dictionary = card["facts"]
+	_check(int(f["pre_miss_xp"]) == want and int(f["pre_miss_heavy"]) == 2 and int(f["pre_miss_rounds"]) == 0,
+			"Four weeks out after week 3, he misses weeks 4 to 6: %d XP (want %d), %d Heavy weeks, %d rounds"
+			% [int(f["pre_miss_xp"]), want, int(f["pre_miss_heavy"]), int(f["pre_miss_rounds"])])
+	var rush := " / ".join(StoryEngine.stakes_lines(card["options"][0]["effects"], f))
+	_check(rush.contains("about %d XP of pre-season development" % want) and rush.contains("sore until Round 1")
+			and rush.contains("the pre-season match and Round 1") and rush.contains("two Heavy weeks")
+			and not rush.contains("you name him"), "Clearing him reads as the pre-season: %s" % rush)
+	var physio := " / ".join(StoryEngine.stakes_lines(card["options"][1]["effects"], f))
+	_check(physio.contains("goes without about %d XP of pre-season development" % want), "The physio's plan names the training it costs: %s" % physio)
+	GameState.week_events = [card]
+	var said := GameState.resolve_card(0, 0)
+	_check(int(p.get("injury_weeks", 0)) == 0 and bool(p.get("sore", false)) and str(said).contains("trains with the group"),
+			"Cleared, he is sore and trains with the group: %s" % said)
+	# Out past the pre-season: Round 1 is the gain and the cost.
+	p["injury_weeks"] = 8
+	p["injury_kind"] = "hamstring"
+	p.erase("sore")
+	card = GameState.story_card("pre_knee_return", p)
+	_check(int(card["facts"]["pre_miss_rounds"]) == 3 and " ".join(StoryEngine.stakes_lines(card["options"][0]["effects"], card["facts"])).contains("right for Round 1")
+			and " ".join(StoryEngine.stakes_lines(card["options"][1]["effects"], card["facts"])).contains("still out at Round 1, with three weeks to run"),
+			"Eight weeks out, the physio's plan keeps him out of Round 1 and clearing him makes him right for it")
+	# Back next week anyway: clearing him gains nothing, so the card does not come.
+	p["injury_weeks"] = 1
+	_check(StoryEngine.eligible_subject(kt, ClubStories.context(GameState), GameState.story, 100, RandomNumberGenerator.new()).is_empty(),
+			"A player back next week anyway brings no running-again card")
+	p["injury_weeks"] = 0
+	p.erase("injury_kind")
+	# In play: a Heavy first block, walked stop by stop. At each card stop, a player hurt
+	# on the track and still out meets the card's trigger (checked on a fresh story, so
+	# the week's own draw and the quiet weeks do not hide it), and nobody else does; a
+	# deal of the card is about such a player. Whether a stop deals it is the draw's call.
+	PreSeason.data()["heavy_week_injury"] = 0.1
+	var hurt_careers := 0
+	var met := []
+	var dealt := []
+	var off_track := []
+	for seed in range(SEED, SEED + 10):
+		_career(seed)
+		for q in GameState.my_list:
+			q["injury_weeks"] = 0
+			q.erase("injury_kind")
+		GameState.set_preseason_block(0, "heavy", "running")
+		var guard := 0
+		var hurt := {}
+		while GameState.preseason_active() and guard < 30:
+			guard += 1
+			if GameState.preseason_stop() == "story":
+				for row in GameState.preseason.get("injuries", []):
+					if str(row["club"]) == CLUB:
+						hurt[str(row["id"])] = true
+				var at := "%d@%d" % [seed, GameState.preseason_week()]
+				var ctx := ClubStories.context(GameState)
+				var who := StoryEngine.eligible_subject(kt, ctx, StoryEngine.ensure({}),
+						StoryEngine.week_abs(int(ctx["year"]), int(ctx["week"])), RandomNumberGenerator.new())
+				if not who.is_empty():
+					(met if hurt.has(str(who["id"])) else off_track).append(at)
+				for c in GameState.week_events:
+					if str(c.get("tid", "")) == "pre_knee_return":
+						(dealt if hurt.has(str(c["player_id"])) else off_track).append(at)
+			GameState.preseason_advance()
+		hurt_careers += 1 if not hurt.is_empty() else 0
+	PreSeason.reload()
+	_check(hurt_careers >= 5, "A Heavy first block hurts players on the track (%d of 10 careers, the risk raised for the test)" % hurt_careers)
+	_check(not met.is_empty() and off_track.is_empty(),
+			"...and at a card stop one of them meets the running-again trigger (%s; dealt at %s), nobody else does (%s)" % [
+			", ".join(PackedStringArray(met)), ", ".join(PackedStringArray(dealt)), ", ".join(PackedStringArray(off_track))])
 
 func _test_hands_off_and_save() -> void:
 	_career(SEED + 3)

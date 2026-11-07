@@ -528,6 +528,7 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 	for x in recent:
 		form += int(x)
 	form = int(round(float(form) / float(recent.size()))) if not recent.is_empty() else 0
+	var miss := preseason_miss(gs, p)
 	var lead := Leadership.of(p)
 	var band := Trust.band(t)
 	var holds: bool = lead >= StoryDeck.HOLDS_AT or (lead >= StoryDeck.HOLDS_WITH_TRUST and (band == "trusts" or band == "close"))
@@ -569,7 +570,11 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"overall_rank": all_rank, "told_players": gs.story_flag_set(id, "farewell_told"),
 			"new_here": _new_here(gs, p), "out_of_side": out_of_side(gs, p), "trial_place": _trial_place(gs, id),
 			"injury_kind": str(p.get("injury_kind", "")),
-			"injury_word": Injuries.wording(str(p.get("injury_kind", ""))) if int(p.get("injury_weeks", 0)) > 0 else ""}
+			"injury_word": Injuries.wording(str(p.get("injury_kind", ""))) if int(p.get("injury_weeks", 0)) > 0 else "",
+			# Injured in the pre-season: what the physio's plan costs him, and whether
+			# clearing him now gains anything (preseason_miss).
+			"pre_miss_xp": int(miss["xp"]), "pre_miss_heavy": int(miss["heavy"]), "pre_miss_rounds": int(miss["rounds"]),
+			"pre_rush_gain": 1 if int(miss["xp"]) > 0 or int(miss["rounds"]) > 0 else 0}
 	# International prospects' cards: where he comes from and how far into his career he is.
 	var country: Dictionary = InternationalProspects.country(str(p.get("intl", "")))
 	var career := Career.of(p)
@@ -652,6 +657,32 @@ static func _new_here(gs, p: Dictionary) -> bool:
 
 
 ## Where he finished in this pre-season's time trial: "best", "worst" or "".
+## What the physio's plan costs a player injured in the pre-season, on the club's
+## blocks as set: the development of the weeks he sits out (a week passes for him,
+## then the week is trained, as GameState.preseason_step_week does; PreSeason.week_xp,
+## before his coaches' touch), the Heavy weeks among them, and the injury weeks still
+## to run at Round 1. All 0 outside the pre-season or for a concussion.
+static func preseason_miss(gs, p: Dictionary) -> Dictionary:
+	var out := {"xp": 0, "heavy": 0, "rounds": 0}
+	var left := int(p.get("injury_weeks", 0))
+	if not gs.preseason_active() or left <= 0 or str(p.get("injury_kind", "")) == "concussion":
+		return out
+	var blocks: Array = gs.preseason_blocks()
+	for w in range(gs.preseason_week() + 1, PreSeason.weeks() + 1):
+		left -= 1
+		var i := PreSeason.block_of_week(w)
+		var block: Array = blocks[i] if i >= 0 and i < blocks.size() else []
+		if not block.is_empty() and str(block[0]) == "light":
+			left -= int(PreSeason.tune("light_heal_extra"))
+		if left <= 0:
+			return out
+		if not block.is_empty():
+			out["xp"] = int(out["xp"]) + PreSeason.week_xp(str(block[0]), str(block[1]))
+			out["heavy"] = int(out["heavy"]) + (1 if str(block[0]) == "heavy" else 0)
+	out["rounds"] = left
+	return out
+
+
 static func _trial_place(gs, id: String) -> String:
 	var tr: Dictionary = gs.preseason_trial()
 	if (tr.get("best", []) as Array).has(id):
@@ -854,6 +885,8 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			p["injury_weeks"] = 0
 			p.erase("injury_kind")
 			p["sore"] = true
+			if gs.preseason_active():
+				return "%s is cleared and trains with the group from now." % name
 			return "%s is cleared to play. Name him in the side." % name
 		"on_record":
 			gs.papers_on_record(int(facts.get("claim_rank", 0)))

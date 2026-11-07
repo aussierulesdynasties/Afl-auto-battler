@@ -58,6 +58,9 @@ const OPS := {
 	# talk put off names the early premium it does not pay; a choice that holds a
 	# player back names the development (`d`, XP) the other choice would give him.
 	"open_price": true, "forgo_xp": true,
+	# The physio's plan for a player injured in the pre-season: the training and the
+	# Round 1 he misses while the injury runs (ClubStories.preseason_miss).
+	"keep_out": true,
 }
 ## The biggest step a card may give a culture strand, and the most weeks of
 ## running or drilling it may add or take.
@@ -92,6 +95,9 @@ const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "over
 		# finished in the time trial ("best", "worst" or ""), what he is injured with
 		# (the stored kind, and the words for it: "a hamstring strain").
 		"new_here", "trial_place", "injury_kind", "injury_word",
+		# Injured in the pre-season: the development, Heavy weeks and Round 1 weeks the
+		# physio's plan costs him, and whether clearing him gains any of it (1 or 0).
+		"pre_miss_xp", "pre_miss_heavy", "pre_miss_rounds", "pre_rush_gain",
 		# International prospects (international.json): who he is, and where he is in his career.
 		"intl", "intl_region", "from", "demonym", "home_club", "seasons_listed", "goals",
 		# The extension card: what waiting for the off-season can cost (ClubLife.wait_words).

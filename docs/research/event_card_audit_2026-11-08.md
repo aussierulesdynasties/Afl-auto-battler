@@ -4,8 +4,9 @@ TODO row 107 (T5.Q18, row 34): every event-card choice gets an upside and a down
 has seen gets a trigger it can meet. Two questions, two methods:
 
 1. **Does every choice say what it gives and what it costs?** A test builds all 135 cards with every choice
-   they are written with and reads the Gain and Cost lines each button shows (`StoryEngine.card_lines`, the
-   lines the hub card prints). `tests/test_story.gd` `_test_every_choice_has_both_sides`.
+   they are written with and reads the Gain and Cost lines each button shows on screen
+   (`StoryEngine.stakes_lines`, the lines EventCardView prints). `tests/test_story.gd`
+   `_test_every_choice_has_both_sides`; `tools/audit/sides_impl.gd` lists them all.
 2. **Can every card come up?** Seeded careers on GitHub's runners (`tools/audit/cards_impl.gd` through
    `audit.yml`), pooled with `python tools/audit/card_audit_report.py union RUN_DIR...`: for each card, the
    careers that drew it, how often, and the weeks its trigger held.
@@ -15,18 +16,22 @@ has seen gets a trigger it can meet. Two questions, two methods:
 | | Count |
 |---|---|
 | Cards / choices | 135 / 290 |
-| Choices that show a gain and a cost | 219 (192 with both in their own effects, 27 whose gain is the cost they spare) |
+| Choices that show a gain and a cost on screen | 192 |
+| Choices that show a cost only, whose one upside is the other choice's cost they spare | 27 (that line is written, `StoryEngine.card_lines`, but no screen prints it) |
 | Choices short of a side | 71: 46 gain only, 14 cost only, 2 that only spare a cost, 9 that do nothing |
 | Cards drawn at least once, four grids pooled (136 careers, 925 seasons) | 132 of 135 |
+| With real names, the default game (44 careers, 286 seasons; grids 1 and 2 only) | 119 of 135 |
+| With fictional names (92 careers, 639 seasons) | 130 of 135 |
 | Cards never drawn | 3: the Grand Final eve (its trigger held in all 10 Grand Final weeks), the Irish international torn about home (held 15 weeks), the New Zealand rugby offer (never held) |
 | Triggers fixed in this branch | 2 (the captain's contract talk, the running-again card) |
 
 ## 1. Upside and downside on every choice
 
-The test now fails if a choice joins the short list, and fails until a choice that gains its missing side
-comes off it (`BOTH_SIDES_LEFT`, floor 71; `DOES_NOTHING_LEFT`, 11). No card copy or effect changed for this
-half: every missing side is a design call that waits on the director (row 63's second cost sheet and the
-questions in the PR).
+The test now fails if a choice joins the short list or the spared list, and fails until a choice that gains
+its missing side comes off it (`BOTH_SIDES_LEFT`, floor 71; `SPARED_GAIN_LEFT`, floor 27; `DOES_NOTHING_LEFT`,
+11). No card copy or effect changed for this half. Every missing side is drafted on a cost sheet for the
+director to rule on: row 63's second sheet (`COST_SHEETS_CLUB_AND_GAIN_ONLY_2026-11-06.md`, 36 gain-only
+choices) and this row's sheets (`COST_SHEETS_ROW107_2026-11-08.md`, the other 35).
 
 **Cost only (14):** the choice says what it costs and gives nothing back.
 media_young_feature/no, media_team_leak/let, media_cameras_in_rooms/no, media_papers_fronts_group/private,
@@ -35,10 +40,9 @@ captain_group_flat/hard, captain_harder_session/keep, captain_contract_wait/ride
 members_signing_session/no, members_forum/results, members_finals_tickets/ceo.
 
 **Gain only (46):** 36 are on row 63's second cost sheet (`docs/research/COST_SHEETS_CLUB_AND_GAIN_ONLY_2026-11-06.md`);
-10 are finals and Grand Final choices with no sheet yet: finals_week_off/semi, finals_written_off/pin,
-finals_written_off/back, finals_one_week_short/not_done, finals_last_season/quiet, finals_second_chance/burn,
-finals_captain_last_word/him, gf_last_game/him, gf_last_game/calm, finals_club_greats/in (the full list is in
-the test).
+10 are finals and Grand Final choices on this row's sheet C: finals_written_off/pin, finals_written_off/back,
+finals_one_week_short/not_done, finals_knocked_out/thanks, gf_runners_up/let_go, gf_night_before/together,
+gf_night_before/families, finals_drought_over/feel, finals_drought_over/outside, gf_premiers/again.
 
 **Only spares a cost (2):** captain_young_player/notyet, captain_slump_flat/nerve. Their one line is the other
 choice's cost they avoid.
@@ -48,9 +52,11 @@ captain_holding_group/letbe, captain_slump_good/letbe, captain_contract_wait/han
 captain_contract_open/understood, captain_succession_start/notyet, captain_succession_next/later. Most are the
 "I hear you" answer that closes an arc.
 
-**The spared line (27 choices pass only by it):** a choice whose own effects gain nothing states the other
-choice's cost it does not carry as its gain ("Gain: no slow start"). Whether that counts as an upside is a
-director question.
+**The spared line (27 choices, counted on their own):** a choice whose own effects gain nothing has the
+other choice's cost it does not carry written as its gain ("No 15% chance of a slow start.",
+`StoryEngine.card_lines`). No screen has printed that line since #837 moved the hub card into EventCardView,
+which prints `stakes_lines`, so on screen these 27 show a cost only. Whether the line counts as an upside, and
+so should be printed again, is a director question; if it does not, each needs a gain of its own.
 
 ## 2. Can every card come up
 
@@ -82,23 +88,54 @@ the African visa card (2).
 | intl_irish_torn (the Irish player torn between a new deal and home) | 15 | Needs an Irish international with two seasons on the list, rated 80 or more and in his last contract year (the early-extension rule); the trigger held but the draw missed it | `tests/test_international.gd` |
 | intl_nz_rugby_offer (a rugby offer for the New Zealander) | 0 | The same bar for a New Zealander: none of the 101 the coach drafted reached 80 in his last contract year | `tests/test_international.gd` |
 
-**Real names (44 careers):** with real names on, the captain's slump (4 cards) and the captain's succession (2)
-never come: they are private cards and the captain is a real player. The family and international cards still
-come, because their subjects are fictional players.
+**Real names, the default game (44 careers, 286 seasons): 119 of 135.** These are grids 1 and 2 only (the
+coach answers at random), and both ran before the running-again fix. The 16 cards not drawn there:
+
+| Cards | Why |
+|---|---|
+| The captain's slump (captain_slump_start, _mid, _good, _flat) and succession (captain_succession_start, _next): 6 | Private cards skip a real-named player (`StoryEngine.eligible_subject`), and the captain is a real player, so their trigger never held. They come only once a fictional player (a draftee) is captain. With fictional names they came 127 times. |
+| The Irish, New Zealand and African visa cards (intl_irish_torn, intl_nz_rugby_offer, intl_africa_visa): 3 | Their trigger held 0, 0 and 1 weeks: the random coach drafts few internationals. Their subjects are fictional, so real names do not bar them. |
+| The running-again card (pre_knee_return) | Run before its fix. |
+| Last year's premiers, the Grand Final week, its eve, the injury race and the flag (pre_flag_hangover, gf_week, gf_night_before, gf_racing_the_clock, gf_premiers): 5 | The random coach seldom reaches a Grand Final. |
+| finals_gone | Its trigger held 95 weeks; it came twice in 416 trigger weeks over all four grids. |
+
+The family cards, also private, still came with real names on (25 to 68 times each): their subjects are the
+fictional players the club drafts. The skip is the director's rule of 2026-10-11 (a card that invents a private
+life is never about a player under his real name).
 
 ## 3. Triggers fixed in this branch
 
 - **The captain's contract talk (captain_contract_wait).** It opened six weeks after the captain's contract
   arc began, but the arc's end beats are due at four, so an end always came first and closed the arc. It now
-  opens at three. `_test_arc_middle_before_end` holds every arc's middle beat before its first end beat.
+  opens at three. `_test_arc_middle_before_end` holds every arc's middle beat before its first end beat, and
+  `_test_captain_contract_talk_dealt` begins the story for Geelong's captain and advances real weeks: the
+  engine deals the talk three weeks on, before either ending. Two of its three answers are short of a side
+  (sheet A1 and B1 of `COST_SHEETS_ROW107_2026-11-08.md`).
 - **The running-again card (pre_knee_return).** Written for a knee coming back in the pre-season, but every
   injury heals over the off-season and the pre-season's own training injuries are soft tissue (hamstring, calf,
   groin, quad), so no knee was ever there to come back from. It now comes up for any injury the physio is
   managing that can be rushed (not a concussion), titled "{name} is running again", and names the injury
-  ("after a hamstring strain"). The choices and their effects are unchanged. `tests/test_preseason_cards.gd`
-  `_test_facts` checks the trigger, the words and the concussion bar. Only a Heavy pre-season week injures, so
-  a club that trains Solid all summer never sees it: in grid 4, where the coach's first block is Heavy Running,
-  its trigger held 96 weeks and it came up 10 times.
+  ("after a hamstring strain"). Only a Heavy pre-season week injures, so a club that trains Solid all summer
+  never sees it: in grid 4, where the coach's first block is Heavy Running, its trigger held 96 weeks and it
+  came up 10 times.
+
+  Its choices now speak of the pre-season, not a match week. Both are worked out from the club's blocks as
+  set (`ClubStories.preseason_miss`: the weeks he would sit out, what each would have trained, and the
+  injury weeks still to run at Round 1):
+  - **Clear him to play.** Gain: he trains with the group from now, about N XP of pre-season development he
+    would otherwise miss; when the physio's plan runs past the pre-season, he is right for Round 1. Cost: he
+    is sore until Round 1 (the chance he is hurt in the pre-season match, if it is still to come, and in
+    Round 1, and he starts each short of fresh legs), and he trains through the Heavy weeks he would have sat out. The result reads "{name} is
+    cleared and trains with the group from now."
+  - **Follow the physio's plan.** Its trust gain and morale cost are unchanged; it now also names what it
+    costs (new op `keep_out`, no effect of its own): the same XP, and the weeks he is still out at Round 1.
+
+  The trigger now also needs clearing him to gain something (`pre_rush_gain`): a player back next week
+  anyway brings no card. Grid 4 ran before this narrowing. `tests/test_preseason_cards.gd`: `_test_facts`
+  checks the trigger, the words and the concussion bar; `_test_running_again` checks the numbers and lines
+  on the club's blocks, the cleared result, the Round 1 case, the no-gain bar, and, walking ten pre-seasons
+  with a Heavy first block (the injury risk raised for the test), that at a card stop a player hurt on the
+  track meets the trigger and nobody else does.
 
 ## Not exercised
 
