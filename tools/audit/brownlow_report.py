@@ -6,14 +6,16 @@ and marks each number IN / NEAR / OUT of the real range in
 tools/balance/afl_brownlow.json (built by tools/balance/build_brownlow_rates.py):
 
   IN    inside the real seasons' min..max
-  NEAR  outside it by no more than 2 x max(sd, 10% of the mean)
+  NEAR  outside it, but within 2 sd of the real mean (as balance_report.py)
   OUT   further away
 
-Roles follow the real reference: 7+ hit-outs a game is a ruck, otherwise the
-player's real position (RUC -> RUCK), otherwise his list role. Per-player
-rates count men with 12+ games, as the reference does.
+Roles follow the real reference's "listed" split (role_share_listed): 7+
+hit-outs a game is a ruck, otherwise the player's listed position
+(data/players_enriched_2026.csv real_pos; a listed ruck under the gate plays
+forward), otherwise his list role. Per-player rates count men with 12+ games,
+as the reference does.
 
-    python tools/audit/brownlow_report.py [--votes old|fitwin|umpire] base_real.log [after_real.log]
+    python tools/audit/brownlow_report.py [--votes shared|nowin|drawn] base_real.log [after_real.log]
 
 --votes counts each tally from the log's alt column instead of the game's own
 votes (the same matches, another way to give the 3-2-1: see ALT in the impl);
@@ -33,7 +35,7 @@ WATCH = ["Mark Blicavs", "Max Gawn"]
 
 def load(path, votes=""):
     seasons = defaultdict(list)
-    wins, wsh, vrd = {}, {}, defaultdict(lambda: {"n": 0, "sum": 0.0, "sq": 0.0, "bins": [0] * 7})
+    wins, wsh = {}, {}
     mode = ""
     with open(path, encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -58,14 +60,8 @@ def load(path, votes=""):
                 wsh[int(c[2])] = (int(c[3]), int(c[4]))
             elif c[0] == "WSA" and votes and c[3] == votes:
                 wsh[int(c[2])] = (int(c[4]), int(c[5]))
-            elif c[0] == "VRD":
-                v = vrd[c[3]]
-                v["n"] += int(c[4])
-                v["sum"] += float(c[5])
-                v["sq"] += float(c[6])
-                v["bins"] = [a + int(b) for a, b in zip(v["bins"], c[7].split(","))]
     return {"mode": mode + (" (%s votes)" % votes if votes else ""), "seasons": dict(seasons),
-            "wins": wins, "wsh": wsh, "vrd": dict(vrd)}
+            "wins": wins, "wsh": wsh}
 
 
 def role_of(r):
@@ -73,7 +69,7 @@ def role_of(r):
         return "RUCK"
     rp = r["real_pos"]
     if rp == "RUC":
-        return "RUCK"
+        return "FWD"   # a listed ruck under the gate plays forward, as the reference has it
     if rp in ("MID", "FWD", "DEF"):
         return rp
     return r["role"] if r["role"] in ROLES else "MID"
@@ -85,8 +81,7 @@ def mark(v, ref):
     lo, hi = ref["min"], ref["max"]
     if lo <= v <= hi:
         return "IN"
-    tol = 2 * max(ref.get("sd", 0) or 0, 0.1 * abs(ref.get("mean", 0) or 0))
-    return "NEAR" if (lo - tol) <= v <= (hi + tol) else "OUT"
+    return "NEAR" if abs(v - ref["mean"]) <= 2 * (ref.get("sd", 0) or 0) else "OUT"
 
 
 def q(xs, p):
@@ -103,14 +98,17 @@ def season_numbers(rows):
     v = [r["votes"] for r in by]
     tot = sum(v) or 1
     share = defaultdict(float)
+    coaches = defaultdict(float)
+    ctot = sum(r["coaches"] for r in rows) or 1
     for r in rows:
         share[role_of(r)] += r["votes"] / tot
+        coaches[role_of(r)] += r["coaches"] / ctot
     out = {
         "winner": v[0] if v else 0, "2nd": v[1] if len(v) > 1 else 0,
         "5th": v[4] if len(v) > 4 else 0, "10th": v[9] if len(v) > 9 else 0,
         "polled": sum(1 for x in v if x > 0), "polled_10": sum(1 for x in v if x >= 10),
         "polled_20": sum(1 for x in v if x >= 20), "ruck_share": share["RUCK"],
-        "share": dict(share), "top": by[:10],
+        "share": dict(share), "coaches_share": dict(coaches), "top": by[:10],
         "winner_role": role_of(by[0]) if by else "",
         "games_max": max((r["games"] for r in rows), default=0),
     }
@@ -201,15 +199,17 @@ def main():
     wv = ref["matches"]["winners_vote_share"]
     print("| votes to the winning side | %.3f (2023-25) | %s |" % (wv, " | ".join("%.3f" % s["wsh"] for s in sums)))
 
-    print("\n## Vote share by role (hit-out gate, then real position; real = 2025-26)\n")
-    print("| role | real mean (range) | %s |" % " | ".join(heads))
-    print("|---|---|%s" % ("---|" * len(heads)))
-    for role in ROLES:
-        vals = []
-        for s in sums:
-            xs = [p["share"].get(role, 0.0) for p in s["per"].values()]
-            vals.append((mean(xs), min(xs) if xs else 0, max(xs) if xs else 0))
-        row(role, vals, pooled["role_share"].get(role), 3)
+    for key, refkey, label in (("share", "role_share_listed", "Brownlow vote share"),
+                               ("coaches_share", "coaches_role_share_listed", "Coaches' vote share")):
+        print("\n## %s by role (hit-out gate, then listed position; real = 2025-26)\n" % label)
+        print("| role | real mean (range) | %s |" % " | ".join(heads))
+        print("|---|---|%s" % ("---|" * len(heads)))
+        for role in ROLES:
+            vals = []
+            for s in sums:
+                xs = [p[key].get(role, 0.0) for p in s["per"].values()]
+                vals.append((mean(xs), min(xs) if xs else 0, max(xs) if xs else 0))
+            row(role, vals, pooled[refkey].get(role), 3)
     for h, s in zip(heads, sums):
         roles = defaultdict(int)
         for p in s["per"].values():
@@ -218,7 +218,8 @@ def main():
 
     for key, refkey, label in (("tackles", "tackles_pg_by_role", "Tackles a game"),
                                ("pressure", "pressure_acts_pg_by_role", "Pressure acts a game")):
-        print("\n## %s, per player (12+ games; sim season mean, real 2025-26 range)\n" % label)
+        print("\n## %s, per player (12+ games; sim season mean, real range: ALL 2021-26, by line 2025-26)\n"
+              % label)
         print("| role | stat | real (range) | %s |" % " | ".join(heads))
         print("|---|---|---|%s" % ("---|" * len(heads)))
         for role in ["ALL"] + ROLES:
@@ -231,22 +232,6 @@ def main():
                     cells.append("%.2f %s" % (v, mark(v, refb)))
                 rr = "%.2f (%.2f-%.2f)" % (refb["mean"], refb["min"], refb["max"]) if refb else ""
                 print("| %s | %s | %s | %s |" % (role, st, rr, " | ".join(cells)))
-
-    edges = ["Dominant (8+)", "Influential (4-8)", "Busy (1-4)", "Par (-1-1)", "Down (-3--1)",
-             "Quiet (-6--3)", "Very quiet (-6 or less)"]
-    for h, lg in zip(heads, logs):
-        if not lg["vrd"]:
-            continue
-        print("\n## %s: the coach's full-time read (influence less expected, every man a match)\n" % h)
-        print("| measure | n | mean | sd | %s |" % " | ".join(edges))
-        print("|---|---|---|---|%s" % ("---|" * len(edges)))
-        for key in sorted(lg["vrd"], key=lambda k: (k != "old", k)):
-            v = lg["vrd"][key]
-            n = max(1, v["n"])
-            m = v["sum"] / n
-            sd = max(0.0, v["sq"] / n - m * m) ** 0.5
-            print("| %s | %d | %.2f | %.2f | %s |" % (key, v["n"], m, sd,
-                                                       " | ".join("%.1f%%" % (100.0 * b / n) for b in v["bins"])))
 
     print("\n## Watched players\n")
     print("| player | %s |" % " | ".join("%s wins / top 5 / mean votes / median rank" % h for h in heads))

@@ -220,49 +220,91 @@
     "sd": 0.0019
    }
   },
-  "tackles_pg_by_role": {
-   "ALL": {
-    "max": {
-     "n": 2,
-     "max": 8.92,
-     "p99": 8.9,
-     "p90": 8.73,
-     "p50": 7.96,
-     "min": 7.0,
-     "mean": 7.96,
-     "sd": 0.96
-    },
-    "p99": {
-     "n": 2,
-     "max": 7.73,
-     "p99": 7.72,
-     "p90": 7.6,
-     "p50": 7.1,
-     "min": 6.46,
-     "mean": 7.1,
-     "sd": 0.64
-    },
-    "p90": {
-     "n": 2,
-     "max": 4.39,
-     "p99": 4.39,
-     "p90": 4.38,
-     "p50": 4.32,
-     "min": 4.25,
-     "mean": 4.32,
-     "sd": 0.07
-    },
-    "p50": {
-     "n": 2,
-     "max": 2.31,
-     "p99": 2.31,
-     "p90": 2.3,
-     "p50": 2.27,
-     "min": 2.22,
-     "mean": 2.27,
-     "sd": 0.04
-    }
+  "role_share_listed": {
+   "MID": {
+    "n": 2,
+    "max": 0.6771,
+    "p99": 0.6765,
+    "p90": 0.6712,
+    "p50": 0.6474,
+    "min": 0.6176,
+    "mean": 0.6474,
+    "sd": 0.0297
    },
+   "FWD": {
+    "n": 2,
+    "max": 0.1812,
+    "p99": 0.1811,
+    "p90": 0.1806,
+    "p50": 0.1784,
+    "min": 0.1755,
+    "mean": 0.1784,
+    "sd": 0.0029
+   },
+   "DEF": {
+    "n": 2,
+    "max": 0.1337,
+    "p99": 0.1332,
+    "p90": 0.1282,
+    "p50": 0.1063,
+    "min": 0.0789,
+    "mean": 0.1063,
+    "sd": 0.0274
+   },
+   "RUCK": {
+    "n": 2,
+    "max": 0.0733,
+    "p99": 0.0732,
+    "p90": 0.0723,
+    "p50": 0.068,
+    "min": 0.0628,
+    "mean": 0.068,
+    "sd": 0.0053
+   }
+  },
+  "coaches_role_share_listed": {
+   "MID": {
+    "n": 2,
+    "max": 0.5145,
+    "p99": 0.5143,
+    "p90": 0.5127,
+    "p50": 0.5053,
+    "min": 0.4962,
+    "mean": 0.5053,
+    "sd": 0.0091
+   },
+   "FWD": {
+    "n": 2,
+    "max": 0.2052,
+    "p99": 0.2052,
+    "p90": 0.2047,
+    "p50": 0.2029,
+    "min": 0.2005,
+    "mean": 0.2029,
+    "sd": 0.0023
+   },
+   "DEF": {
+    "n": 2,
+    "max": 0.2174,
+    "p99": 0.2172,
+    "p90": 0.2155,
+    "p50": 0.2077,
+    "min": 0.1981,
+    "mean": 0.2077,
+    "sd": 0.0097
+   },
+   "RUCK": {
+    "n": 2,
+    "max": 0.0859,
+    "p99": 0.0859,
+    "p90": 0.0855,
+    "p50": 0.084,
+    "min": 0.0822,
+    "mean": 0.084,
+    "sd": 0.0019
+   }
+  },
+  "tackles_pg_by_role": {
    "MID": {
     "max": {
      "n": 2,
@@ -430,8 +472,58 @@
      "mean": 2.74,
      "sd": 0.41
     }
+   },
+   "ALL": {
+    "max": {
+     "n": 6,
+     "max": 9.5,
+     "p99": 9.47,
+     "p90": 9.21,
+     "p50": 8.46,
+     "min": 7.0,
+     "mean": 8.39,
+     "sd": 0.78
+    },
+    "p99": {
+     "n": 6,
+     "max": 7.73,
+     "p99": 7.71,
+     "p90": 7.49,
+     "p50": 6.88,
+     "min": 6.46,
+     "mean": 6.97,
+     "sd": 0.43
+    },
+    "p90": {
+     "n": 6,
+     "max": 4.62,
+     "p99": 4.62,
+     "p90": 4.62,
+     "p50": 4.48,
+     "min": 4.25,
+     "mean": 4.47,
+     "sd": 0.14
+    },
+    "p50": {
+     "n": 6,
+     "max": 2.35,
+     "p99": 2.35,
+     "p90": 2.35,
+     "p50": 2.28,
+     "min": 2.22,
+     "mean": 2.29,
+     "sd": 0.05
+    }
    }
   },
+  "tackles_pg_all_seasons": [
+   2021,
+   2022,
+   2023,
+   2024,
+   2025,
+   2026
+  ],
   "pressure_acts_pg_by_role": {
    "ALL": {
     "max": {
@@ -704,31 +796,50 @@
   "vote_fit": {
    "model": "Plackett-Luce on the umpires' 3-2-1 order, every voted home-and-away match 2023-2025; weights per unit of the stat, a disposal = 1.0",
    "matches": 621,
-   "per_disposal_logit": 0.1921,
+   "per_disposal_logit": 0.1938,
    "weights": {
     "disposals": 1.0,
-    "goals": 5.412,
-    "marks": 0.378,
-    "inside50": 0.401,
+    "goals": 5.367,
+    "marks": 0.366,
+    "inside50": 0.403,
     "tackles": 0.306,
-    "hitouts": 0.079,
-    "clearances": 0.864,
-    "one_percenters": 0.631,
-    "clangers": 0.104
+    "hitouts": 0.081,
+    "clearances": 0.858,
+    "one_percenters": 0.626
    },
    "with_result": {
     "weights": {
      "disposals": 1.0,
-     "goals": 4.966,
-     "marks": 0.272,
-     "inside50": 0.294,
-     "tackles": 0.275,
-     "hitouts": 0.087,
-     "clearances": 0.808,
-     "one_percenters": 0.582,
-     "clangers": 0.188
+     "goals": 4.896,
+     "marks": 0.256,
+     "inside50": 0.299,
+     "tackles": 0.277,
+     "hitouts": 0.092,
+     "clearances": 0.8,
+     "one_percenters": 0.575
     },
-    "won_in_disposals": 7.45
+    "won_in_disposals": 7.3,
+    "per_disposal_logit": 0.2098,
+    "replay": {
+     "top_pick_is_real_3vote": 0.5185,
+     "winner_by_season": {
+      "2023": {
+       "winner": 33,
+       "10th": 22,
+       "polled": 195
+      },
+      "2024": {
+       "winner": 36,
+       "10th": 25,
+       "polled": 191
+      },
+      "2025": {
+       "winner": 38,
+       "10th": 22,
+       "polled": 198
+      }
+     }
+    }
    },
    "wide": {
     "disposals": 1.0,
@@ -750,17 +861,17 @@
    },
    "pressure_acts": "no match-level source; not fitted",
    "replay": {
-    "top_pick_is_real_3vote": 0.4638,
+    "top_pick_is_real_3vote": 0.4622,
     "winner_by_season": {
      "2023": {
       "winner": 35,
-      "10th": 23,
+      "10th": 22,
       "polled": 182
      },
      "2024": {
       "winner": 41,
       "10th": 25,
-      "polled": 177
+      "polled": 179
      },
      "2025": {
       "winner": 33,
@@ -2311,6 +2422,19 @@
     "DEF": 0.2388,
     "RUCK": 0.0859
    },
+   "role_share_listed": {
+    "MID": 0.6176,
+    "FWD": 0.1755,
+    "DEF": 0.1337,
+    "RUCK": 0.0733
+   },
+   "coaches_role_share_listed": {
+    "MID": 0.4962,
+    "FWD": 0.2005,
+    "DEF": 0.2174,
+    "RUCK": 0.0859
+   },
+   "listed_found": 528,
    "cd_matched": 667,
    "cd_unmatched": 1,
    "pressure_acts_pg": {
@@ -2544,6 +2668,19 @@
     "DEF": 0.1981,
     "RUCK": 0.0822
    },
+   "role_share_listed": {
+    "MID": 0.6771,
+    "FWD": 0.1812,
+    "DEF": 0.0789,
+    "RUCK": 0.0628
+   },
+   "coaches_role_share_listed": {
+    "MID": 0.5145,
+    "FWD": 0.2052,
+    "DEF": 0.1981,
+    "RUCK": 0.0822
+   },
+   "listed_found": 663,
    "cd_matched": 669,
    "cd_unmatched": 0,
    "pressure_acts_pg": {
