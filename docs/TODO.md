@@ -25,6 +25,7 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 116 | Awards night: round-by-round Brownlow count, live or one round at a time, plus your club's best and fairest (T5.Q23b) | count watchable both ways, real-tap test |
 | 117 | Coaching staff: head coach, head assistant, assistants; counter-offer (not money) when a rival poaches one (T5.Q16) | approach, counter and departure tested |
 | 118 | Text size setting (Standard, Larger, Largest) and no state shown by colour alone (T3.R10) | every screen at Largest, no colour-only state |
+| 120 | A tag by a player who is not a specialist tagger puts no pressure on the man he tags: the tag shows on the ground but does nothing (measured 42% of tags, director 2026-11-08 "Yes, new row"). Decide how much a non-specialist tag should do, then build it; balance-gated | tag pressure from every tagger, paired table, his playtest |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
 
 ## B. Built and ON: his playtest judges
