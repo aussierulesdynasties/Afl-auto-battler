@@ -86,10 +86,10 @@ func _run() -> void:
 	quit(0)
 
 
-## Find a node under the root, waiting up to 120 frames for the scene to build
-## (a phone-sized window lays out slower than the first press).
+## Find a node under the root, waiting up to 900 frames for the scene to build
+## (the screen transition and a phone-sized layout take longer than the first press).
 func _find(node_name: String) -> Node:
-	for i in range(120):
+	for i in range(900):
 		var n: Node = root.find_child(node_name, true, false)
 		if n != null:
 			return n
