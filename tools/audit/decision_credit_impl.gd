@@ -9,12 +9,11 @@ extends RefCounted
 ##             ledger changes no result (run on main and on the branch).
 ##   validate  seeds call [first]: the call (loose, tag, minder) on and off
 ##             over seeds first..first+seeds-1; prints raw sums to pool shards.
-## Both clubs run their AI calls (plan, loose man, tags, defensive forward);
-## the home coach also moves one defender onto their best key forward.
+## Both clubs run their AI calls (plan, loose man, tags, defensive forward).
 ## Moments take their default call (no bursts, no set-shot calls).
 
 const PAIRS := [["MEL", "CAR"], ["GEE", "COL"], ["SYD", "WCE"], ["BRL", "ADE"], ["HAW", "ESS"], ["FRE", "STK"]]
-const CAUSES := ["moments", "gameplan", "loose", "matchups", "tag", "pep", "bursts", "minder"]
+const CAUSES := ["moments", "gameplan", "loose", "tag", "pep", "bursts", "minder"]
 
 
 func _play(h: String, a: String, seed: int) -> MatchSim:
@@ -24,22 +23,6 @@ func _play(h: String, a: String, seed: int) -> MatchSim:
 	away.ai_plans = true
 	var sim := MatchSim.new(home, away, seed)
 	sim.moment_side = 0
-	# The home coach's own match-up: his best defender in the air on their
-	# best key forward, when that is not who the default put there.
-	var d: Dictionary = sim.duels[0]
-	var best_def := {}
-	for p in home.ground:
-		if str(p["role"]) == "DEF" and (best_def.is_empty() or Matchups.defender_air(p) > Matchups.defender_air(best_def)):
-			best_def = p
-	var best_fwd := ""
-	var best_air := -1.0
-	for fid in d:
-		for p in away.ground:
-			if str(p["id"]) == str(fid) and Matchups.forward_air(p) > best_air:
-				best_air = Matchups.forward_air(p)
-				best_fwd = str(fid)
-	if best_fwd != "" and not best_def.is_empty() and str(d[best_fwd]) != str(best_def["id"]):
-		sim.set_matchups(0, {best_fwd: str(best_def["id"])})
 	while sim.current_quarter <= 4:
 		sim.begin_quarter()
 		while not sim.continue_quarter():
