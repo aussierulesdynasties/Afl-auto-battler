@@ -11,7 +11,8 @@ extends RefCounted
 ##
 ## Prints per season: PRESS_SEASON <year> pressers <n> games <n> keys <k=n,...>
 ## journalists <j=n,...> named <n> distinct_text <n> standing <j=v,...>
-## max_lift <n>; then PRESS_TOTAL lines and SUMMARY.
+## max_lift <n>; then PRESS_TOTAL lines (with how many games fielded each
+## count of young players, MediaConference.is_young) and SUMMARY.
 ## Measurement only: it never changes a rule.
 
 func run() -> void:
@@ -35,6 +36,7 @@ func run() -> void:
 	var tot_named := 0
 	var tot_games := 0
 	var max_lift_all := 0
+	var young_hist := {}
 	var per_season: Array = []
 	var played := 0
 	for s in range(seasons):
@@ -73,6 +75,16 @@ func run() -> void:
 			for p in GameState.my_list:
 				max_lift = maxi(max_lift, absi(int(p.get("press_lift", 0))))
 			GameState.advance()
+			var res := GameState._my_result(GameState.last_results)
+			var roster: Array = res.get("roster", [])
+			if roster.size() >= 2:
+				var side := 0 if str(res.get("home", "")) == GameState.my_club else 1
+				var young := 0
+				for r in roster[side]:
+					var yp: Dictionary = GameState._find_player(str(r.get("id", "")))
+					if not yp.is_empty() and MediaConference.is_young(float(yp.get("age", 30.0))):
+						young += 1
+				young_hist[young] = int(young_hist.get(young, 0)) + 1
 		played += 1
 		var st := []
 		for j in MediaConference.JOURNALISTS.keys():
@@ -106,15 +118,17 @@ func run() -> void:
 	print("PRESS_TOTAL journalists %s" % _fmt(tot_j))
 	print("PRESS_TOTAL answers %s" % _fmt(tot_kinds))
 	print("PRESS_TOTAL landed %s" % _fmt(tot_landed))
+	print("PRESS_TOTAL young_in_side %s" % _fmt(young_hist))
 	var lo := 999
 	var hi := 0
 	for n in per_season:
 		lo = mini(lo, int(n))
 		hi = maxi(hi, int(n))
-	print("SUMMARY seed %d %s | seasons %d | games %d | pressers %d (%.1f a season, min %d max %d, %.0f%% of games) | named offered %d | distinct question texts %d | max press lift %d (cap %d)" % [
+	var phil := int(tot_j.get("philosopher", 0))
+	print("SUMMARY seed %d %s | seasons %d | games %d | pressers %d (%.1f a season, min %d max %d, %.0f%% of games) | named offered %d | distinct question texts %d | max press lift %d (cap %d) | philosopher %d (one in %.1f)" % [
 			seed, club, played, tot_games, tot_press, float(tot_press) / float(maxi(1, played)), lo, hi,
 			100.0 * float(tot_press) / float(maxi(1, tot_games)), tot_named, tot_texts.size(), max_lift_all,
-			MediaConference.NAMED_CAP])
+			MediaConference.NAMED_CAP, phil, float(tot_press) / float(maxi(1, phil))])
 
 
 func _fmt(d: Dictionary) -> String:

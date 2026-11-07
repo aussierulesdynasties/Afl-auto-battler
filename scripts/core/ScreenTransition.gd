@@ -1,24 +1,41 @@
 extends CanvasLayer
 ## ScreenTransition (autoload) - the wipe between screens (director,
-## 2026-11-05: "Yes, add it"). A field of dots sweeps across left to right in
-## the raised surface colour, the screen swaps under full cover, then the dots
-## sweep away. Router.go() is the only caller. Presentation only.
+## 2026-11-05: "Yes, add it"), and the cover for every long wait. A field of
+## dots sweeps across left to right in the raised surface colour, the work
+## (a screen swap, a week's sim, loading a career) runs under full cover, then
+## the dots sweep away. Presentation only.
 ##
-## Off (an instant swap) in headless runs and with Reduced motion on, the same
-## rule as every other motion (UiKit.motion_on()). While the dots cover any of
-## the screen, no tap, click or key reaches the game.
+## A long wait shows one line on the cover ("Playing Round 7...") drawn before
+## the work starts, so a phone never sits on a dead screen (Android pass,
+## 2026-11-07). With Reduced motion on the cover still goes up, still: a line
+## saying the game is busy is information, not motion. Headless test runs skip
+## the cover (instant, as before) unless a test turns `test_cover` on. While
+## the cover is up no tap, click or key reaches the game, so a second tap on
+## Sim the week cannot start a second week.
 
 const SHADER := preload("res://assets/shaders/transition.gdshader")
 ## Each way: cover, then reveal. The brief's 0.25-0.35 s band.
 const DUR := 0.28
 ## About one dot per this many pixels, at any window size.
 const DOT_PX := 36.0
+## The line a slow screen load shows when the caller gave none.
+const LOADING := "Loading..."
+
+## Tests: put the cover up in a headless run (still, as with Reduced motion).
+static var test_cover := false
+
+enum Phase { IDLE, COVERING, HELD, REVEALING }
 
 var busy := false
+## How many lines were drawn on the cover; tests read it.
+var lines_shown := 0
+var _phase := Phase.IDLE
 var _rect: ColorRect
+var _label: Label
 var _mat: ShaderMaterial
 var _tween: Tween
 var _swap := Callable()
+var _text := ""
 var _ramp_in: GradientTexture2D
 var _ramp_out: GradientTexture2D
 
@@ -44,57 +61,140 @@ func _ready() -> void:
 	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_rect.visible = false
 	add_child(_rect)
+	# The one line on a long wait: the house heading type, in your club's
+	# colour, centred on the cover.
+	_label = UiKit.lbl("", UiKit.H1, UiKit.TEXT, true)
+	_label.name = "CoverLine"
+	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_label.offset_left = 16.0
+	_label.offset_right = -16.0
+	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_label.visible = false
+	add_child(_label)
 	get_viewport().size_changed.connect(_fit)
 	_fit()
 
 
-## Whether a screen change wipes or cuts.
+## Whether the cover sweeps (motion) or simply goes up (Reduced motion).
 func should_run() -> bool:
 	return UiKit.motion_on()
 
 
-## Cover the screen, call swap under full cover, then reveal. A second call
-## while covering replaces the pending swap (the last screen asked for wins);
-## during the reveal it covers again from where the dots are.
-func cover(swap: Callable) -> void:
+## Whether a cover goes up at all: everywhere but a headless test run.
+func cover_on() -> bool:
+	return DisplayServer.get_name() != "headless" or Feel.test_motion or test_cover
+
+
+## Cover the screen, call swap under full cover, then reveal. `text`, when
+## given, is drawn on the full cover before swap runs; swap may await (Router
+## polls a threaded load). A second call while covering or held replaces the
+## pending swap (the last screen asked for wins) and runs under the same
+## cover; during the reveal it covers again from where the dots are.
+func cover(swap: Callable, text := "") -> void:
 	_swap = swap
-	if busy and _tween != null and _tween.is_valid() and _covering:
+	_text = text
+	if _phase == Phase.COVERING or _phase == Phase.HELD:
 		return
 	_start()
 
 
-var _covering := false
+## Blocking work the player started with a tap (a week's sim, loading a
+## career): the cover and `text` go up and are drawn, then work runs, then the
+## screen comes back. With no cover (headless) work runs at once, so a caller
+## that does not await still sees it done. A call while the cover is up is
+## ignored: that is a second tap. Work that changes screen (Router.go) joins
+## the same cover.
+func run(text: String, work: Callable) -> void:
+	if not cover_on():
+		work.call()
+		return
+	if busy and _phase != Phase.REVEALING:
+		return
+	var finished := [false]
+	cover(func():
+		await work.call()
+		finished[0] = true, text)
+	while not finished[0]:
+		await get_tree().process_frame
+
+
+## Draw `text` on the cover (a load that turned out slow shows LOADING).
+func show_line(text: String) -> void:
+	if _phase != Phase.HELD or text == "":
+		return
+	if _label.visible and _label.text == text:
+		return
+	_label.text = text
+	var club := str(GameState.my_club)
+	_label.add_theme_color_override("font_color",
+			UiKit.club_ink(club, UiKit.PANEL_ALT) if club != "" else UiKit.TEXT)
+	_label.visible = true
+	lines_shown += 1
+
+
+## Whether the line is on the cover; tests read it.
+func line_visible() -> bool:
+	return _label.visible and _rect.visible
+
+
+## Wait until a frame with the line on it has reached the screen. A headless
+## run draws nothing, so two process frames stand in.
+func drawn() -> void:
+	if DisplayServer.get_name() == "headless":
+		await get_tree().process_frame
+		await get_tree().process_frame
+		return
+	await RenderingServer.frame_post_draw
 
 
 func _start() -> void:
 	busy = true
-	_covering = true
+	_phase = Phase.COVERING
 	_fit()
 	_mat.set_shader_parameter("base_color", UiKit.PANEL_ALT)
 	_rect.visible = true
 	_rect.mouse_filter = Control.MOUSE_FILTER_STOP
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
+	if not should_run():
+		_hold()     # Reduced motion: the cover is simply up
+		return
 	# Mid-reveal, cover again from about as much as the dots still cover.
 	var from: float = float(_mat.get_shader_parameter("factor"))
 	_mat.set_shader_parameter("gradient_texture", _ramp_in)
 	_tween = create_tween()
 	_tween.tween_method(_set_factor, from, 1.0, DUR * (1.0 - from)) \
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	_tween.tween_callback(_at_full_cover)
+	_tween.tween_callback(_hold)
 
 
-func _at_full_cover() -> void:
-	_covering = false
-	var swap := _swap
-	_swap = Callable()
-	if swap.is_valid():
-		swap.call()
+## Full cover: run every pending swap (one asked for meanwhile joins this
+## cover), each after its line is on screen, then reveal.
+func _hold() -> void:
+	_phase = Phase.HELD
+	_set_factor(1.0)
+	while _swap.is_valid():
+		var swap := _swap
+		var text := _text
+		_swap = Callable()
+		_text = ""
+		if text != "":
+			show_line(text)
+			await drawn()
+		await swap.call()
 	# Two frames for the new screen to lay itself out before it shows.
 	await get_tree().process_frame
 	await get_tree().process_frame
-	if _covering:
-		return    # another change started meanwhile; it owns the wipe now
+	if _swap.is_valid():
+		_hold()     # asked for during those frames
+		return
+	_label.visible = false
+	if not should_run():
+		_done()
+		return
+	_phase = Phase.REVEALING
 	# The reversed ramp clears the left first, so the dots carry on to the
 	# right instead of rewinding.
 	_mat.set_shader_parameter("gradient_texture", _ramp_out)
@@ -105,8 +205,11 @@ func _at_full_cover() -> void:
 
 
 func _done() -> void:
+	_phase = Phase.IDLE
 	_rect.visible = false
+	_label.visible = false
 	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_set_factor(0.0)
 	busy = false
 
 
@@ -114,7 +217,7 @@ func _set_factor(f: float) -> void:
 	_mat.set_shader_parameter("factor", f)
 
 
-## Keys and touches never reach the game under the dots.
+## Keys and touches never reach the game under the cover.
 func _input(event: InputEvent) -> void:
 	if busy:
 		get_viewport().set_input_as_handled()

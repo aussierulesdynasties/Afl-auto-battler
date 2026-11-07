@@ -110,14 +110,9 @@ var _out: Array = []
 var _timeline: Array = []
 var _tl_i := 0
 var _tac := [{}, {}]
-## Each side's three stars (MatchSim result "stars", PlanFit's Through stars
-## carriers) by player id: the men a Through stars side plays through.
-var _stars := [{}, {}]
-## Through stars: each side's tilt toward its star nearest the ball-carrier
-## (per refresh), where across that star stood, and which star it is.
-var _star_tilt := [0.0, 0.0]
-var _star_y := [0.0, 0.0]
-var _star_pick := [-1, -1]
+## pid -> {def: a defender by trade, h: height in cm}, from the result's
+## roster (its list_role) or the player's record (_who).
+var _trade := {}
 ## Attack corridor: each player's lane across the ground (token id -> y), fixed by
 ## his line's slot order (_attack_lanes), so the side narrows as a whole team.
 var _lane := {}
@@ -153,14 +148,13 @@ func setup(result: Dictionary, p_events: Array) -> void:
 	_timeline = result.get("timeline", [])
 	_tl_i = 0
 	_tac = [{}, {}]
-	_stars = [{}, {}]
-	var star_ids: Array = result.get("stars", [])
-	for side in range(mini(2, star_ids.size())):
-		for pid in (star_ids[side] as Array):
-			(_stars[side] as Dictionary)[str(pid)] = true
 	# Presentation stream: seeded from the fixture, never from MatchSim.
 	_rng.seed = hash("%s|%s|%s|view" % [result.get("home", ""), result.get("away", ""),
 			result.get("label", "")])
+	_trade = {}
+	for side_roster in result.get("roster", []):
+		for p in (side_roster as Array):
+			_trade[str(p.get("id", ""))] = _trade_of(str(p.get("id", "")), str(p.get("list_role", "")))
 	_build_tokens(_starting_roster(result.get("roster", []), events))
 	_lane = {}
 	_attack_lanes(0)
@@ -275,6 +269,8 @@ func _build_tokens(roster: Array) -> void:
 					t["match"] = int(o["id"])
 					break
 		t["slot_match"] = t["match"]
+	# Only a defender by trade minds a forward (_fit_defence).
+	_assign()
 
 
 func _make_token(p: Dictionary, side: int, role: String, slot: String, base: Vector2) -> Dictionary:
@@ -449,7 +445,6 @@ func _start_beat(k: int) -> void:
 	var bp := _struct_ball
 	if _phases.size() > 0 and str((_phases[0] as Dictionary).get("t", "")) == "flight":
 		bp = (_phases[0] as Dictionary)["to"]
-	_note_star_side(k, bp, _actor_id(ev))
 	_pick_shadows(bp)
 	_refresh_structure()
 	# Who works around the ball is settled once a beat, so the role does not
@@ -1265,18 +1260,15 @@ func _lead_receivers(k: int, cur: int) -> void:
 			var tok: Dictionary = tokens[a]
 			# The next two receivers always lead (as before); further ones start
 			# once the time left is about what they need to get there.
-			# Through stars: the ball is going to the stars, so a star named
-			# to get it leads first, whenever it is.
-			var star_lead := _plan_of(int(tok["side"])) == "through_stars" and _is_star(tok)
 			# Slow it down: shorter, slower leads, each starting only when it must.
 			var held := _burst_on(int(tok["side"]), "hold")
-			if _lead.has(a) or (n < 2 and not held) or star_lead or MatchMotion.eta(tok, loc) + LEAD_SLACK >= t:
+			if _lead.has(a) or (n < 2 and not held) or MatchMotion.eta(tok, loc) + LEAD_SLACK >= t:
 				_lead[a] = j
 				# A lead is a run, never a stroll: from a stride-out up to a
 				# sprint when time is short.
 				var top := float(tok["top"])
 				var need := (tok["pos"] as Vector2).distance_to(loc) / maxf(0.3, t - float(tok["reaction"]))
-				var u := clampf((need / top - MatchMotion.JOG_SHARE) / (1.0 - MatchMotion.JOG_SHARE) + 0.35, 0.85 if star_lead else 0.6, 1.0)
+				var u := clampf((need / top - MatchMotion.JOG_SHARE) / (1.0 - MatchMotion.JOG_SHARE) + 0.35, 0.6, 1.0)
 				if held:
 					u *= HOLD_LEAD
 				MatchMotion.set_goal(tok, _clear_of_pack(loc), u)
@@ -1803,10 +1795,9 @@ func _apply_timeline(k: int) -> void:
 
 ## Who plays on whom, from the match's own calls where it recorded them: the
 ## named match-ups, the tagger on his man, the loose defender off his, and the
-## forward sent to make him accountable. Slot pairs fill in the rest.
+## forward sent to make him accountable. Slot pairs fill in the rest, and
+## the back line is then fitted to the forwards it faces (_fit_defence).
 func _assign() -> void:
-	if _tac[0].is_empty() and _tac[1].is_empty():
-		return
 	var by_pid := {}
 	for t in tokens:
 		by_pid[str(t["pid"])] = int(t["id"])
@@ -1814,14 +1805,21 @@ func _assign() -> void:
 		t["loose"] = false
 		t["tagging"] = false
 		t["chasing"] = -1
+	# Pairs the match recorded (its duels, the tag) and the loose men: the
+	# back line's fitting leaves these alone. A match-up shows while its
+	# defender stands in the back line and its forward up forward; one
+	# rotated into another line plays there until he is back.
+	var held := {}
 	for side in range(2):
 		var e: Dictionary = _tac[side]
 		var duels: Dictionary = e.get("duels", {})
 		for fid in duels:
 			var f := int(by_pid.get(str(fid), -1))
 			var d := int(by_pid.get(str(duels[fid]), -1))
-			if f >= 0 and d >= 0:
+			if f >= 0 and d >= 0 and str(tokens[d]["role"]) == "DEF" and str(tokens[f]["role"]) == "FWD":
 				_pair(d, f)
+				held[f] = true
+				held[d] = true
 	for side in range(2):
 		var e: Dictionary = _tac[side]
 		var tagger := int(by_pid.get(str(e.get("tagger", "")), -1))
@@ -1829,10 +1827,14 @@ func _assign() -> void:
 		if tagger >= 0 and target >= 0:
 			_pair(tagger, target)
 			tokens[tagger]["tagging"] = true
+			held[tagger] = true
+			held[target] = true
 		var loose := int(by_pid.get(str(e.get("loose", "")), -1))
 		if loose >= 0:
 			_unpair(loose)
 			tokens[loose]["loose"] = true
+			held[loose] = true
+	_fit_defence(held)
 	# A forward sent to the other side's loose man: the forward left without
 	# a direct opponent goes with him.
 	for side in range(2):
@@ -1845,6 +1847,71 @@ func _assign() -> void:
 			if int(t["side"]) == side and str(t["role"]) == "FWD" and int(t["match"]) < 0:
 				t["chasing"] = their_loose
 				break
+
+
+## The back line against the forwards it faces, after the recorded pairs:
+## a player in a back slot minds a forward only when he is a defender by
+## trade (a forward or a midfielder rotated into a back pocket plays the space
+## and the ball). A defender keeps the forward his slot faces; a forward left
+## without one is picked up by a free defender, the tallest free defender on
+## the tallest such forward. A forward still left over has no direct
+## opponent. `held`: token ids to leave.
+func _fit_defence(held: Dictionary) -> void:
+	for side in range(2):
+		var fwds := []
+		var defs := []
+		var kept := {}
+		for t in tokens:
+			var id := int(t["id"])
+			if held.has(id) or int(t["side"]) != side or str(t["role"]) != "DEF":
+				continue
+			var o := int(t["match"])
+			var minds := o >= 0 and str(tokens[o]["role"]) == "FWD" and not held.has(o)
+			if bool(_who(str(t["pid"]))["def"]):
+				if minds:
+					kept[o] = true
+				else:
+					defs.append(t)
+			elif minds:
+				_unpair(id)
+		for t in tokens:
+			var id := int(t["id"])
+			if int(t["side"]) == side or str(t["role"]) != "FWD" or held.has(id) or kept.has(id):
+				continue
+			var o := int(t["match"])
+			if o >= 0 and str(tokens[o]["role"]) == "DEF":
+				_unpair(id)
+			if int(t["match"]) < 0:
+				fwds.append(t)
+		var taller := func(a, b):
+			var ha := float(_who(str(a["pid"]))["h"])
+			var hb := float(_who(str(b["pid"]))["h"])
+			if ha != hb:
+				return ha > hb
+			return int(a["id"]) < int(b["id"])
+		fwds.sort_custom(taller)
+		defs.sort_custom(taller)
+		for i in range(mini(fwds.size(), defs.size())):
+			_pair(int(defs[i]["id"]), int(fwds[i]["id"]))
+
+
+## A player's trade and size for the back line's fitting: a defender when his
+## own position (the result's list_role, else his record) or a second or
+## learned one is in the back line.
+func _who(pid: String) -> Dictionary:
+	if not _trade.has(pid):
+		_trade[pid] = _trade_of(pid, "")
+	return _trade[pid]
+
+
+static func _trade_of(pid: String, list_role: String) -> Dictionary:
+	var pl = GameDB.player_by_id(pid)
+	var rec: Dictionary = pl if pl is Dictionary else {}
+	var own := list_role if list_role != "" else str(rec.get("role", ""))
+	var def := own == "DEF"
+	if not def and not rec.is_empty():
+		def = Ratings.second_positions(rec).has("DEF")
+	return {"def": def, "h": float(rec.get("height_cm", 0.0))}
 
 
 ## ARD-M8-003, persistent identity for important live roles (the director,
@@ -1886,7 +1953,6 @@ func _refresh_structure() -> void:
 	if tokens.is_empty():
 		return
 	var ball_p := _struct_ball
-	_star_tilt = [_tilt_of(0), _tilt_of(1)]
 	var crash := _stoppage_on()
 	# The side in possession first, so the other side can mark up on them.
 	for side in [_poss, 1 - _poss]:
@@ -2174,15 +2240,6 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 	if has and chase >= 0:
 		# Sent to their loose man: he stands where the spare would sit.
 		world = world.lerp((tokens[chase]["goal"] as Vector2), 0.6)
-	if has and plan == "through_stars" and _is_star(t):
-		# Through stars: the ball goes to the best three, so they stand
-		# closest to it, on a lead ahead of the ball.
-		var near := Vector2(ball_p.x + STAR_AHEAD * dir, lerpf(ball_p.y, world.y, 0.4))
-		world = world.lerp(near, STAR_PULL)
-	elif has and plan == "through_stars":
-		# ...and the rest of the side sets up on the side of the ground the
-		# ball is going to: the star nearest it.
-		world.y += float(_star_tilt[side])
 	if plan == "contest" and _stoppage_on() and CONTEST_CRASH.has(slot):
 		# Win contest at a stoppage: the wings and both half-lines crash in
 		# round the contest, each from his own side of it.
@@ -2205,15 +2262,10 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			world = world.lerp(hole, 0.75)
 		elif o >= 0:
 			var og: Vector2 = tokens[o]["goal"]
-			# Through stars: they know where the ball is going, so the man
-			# on a star goes with him wherever he leads.
-			var star_watch := _plan_of(1 - side) == "through_stars" and _is_star(tokens[o])
-			if og.distance_to(world) < 35.0 or star_watch:
+			if og.distance_to(world) < 35.0:
 				var mark := og + (own_goal - og).normalized() * 2.5
 				var w := 0.65 if role == "DEF" else (0.45 if role == "MID" else 0.3)
-				if star_watch:
-					w = maxf(w, STAR_TIGHT)
-				elif plan == "contest" and (mid or shadowing):
+				if plan == "contest" and (mid or shadowing):
 					w *= CONTEST_MAN   # Win contest: the midfield hunts the ball, not the man
 				if press_up:
 					w *= 0.1   # the press holds its band; it does not follow men back
@@ -2413,10 +2465,6 @@ func _flooding(side: int) -> bool:
 #   kept until the ball is up). The pack is a ring, not a stack: two a side on
 #   the ball, the rest PACK_RING round it, the crash outside that. The engine
 #   gives the plan no edge in a marking contest, so neither does the oval.
-# - Through stars (the ball to the best three, who are expected): with the
-#   ball the three stand closest to it and lead first whenever the log has
-#   one getting it next, their opponents stay glued to them, and the rest
-#   set up on the side of the ground of the star nearest the ball-carrier.
 # - Throw numbers at it (an edge at the contest, more shots, faster legs, more
 #   goals against when the other side gets out): with the ball the midfield
 #   and the half-back line run past where the chain is going, the forwards
@@ -2484,11 +2532,6 @@ const CONTEST_RING := 13.0         # ...round the pack, outside its ring
 const CONTEST_CRASH_SHARE := 1.0
 const CONTEST_STAGGER := 0.35      # the half-lines go this long after the wings
 const CONTEST_KEEP := 13.0         # nobody but the pack inside this of the ball: the numbers stay readable
-const STAR_PULL := 0.75            # a star goes this share of the way to the ball
-const STAR_AHEAD := 10.0           # ...to a lead this far ahead of it
-const STAR_TIGHT := 0.95           # how tightly his opponent plays him
-const STAR_KEEP := 20.0           # metres nearer another star must be to take over
-const STAR_TILT := 30.0            # the rest set up this far toward the star's side
 const SURGE_AHEAD := 32.0          # the midfield runs at least this far ahead of the ball
 const SURGE_PUSH := 18.0           # the half-back line pushes up at least this far...
 const SURGE_HB_AHEAD := 20.0       # ...and past the ball
@@ -2729,50 +2772,6 @@ func _pack_ring(at: Vector2, members: Array, winner: int) -> Dictionary:
 		spots[int(r[1])] = at + Vector2.from_angle(float(free[best])) * PACK_RING
 		free.remove_at(best)
 	return spots
-
-
-func _is_star(t: Dictionary) -> bool:
-	return (_stars[int(t["side"])] as Dictionary).has(str(t["pid"]))
-
-
-## Through stars: how far across `side` sets up toward its star nearest the
-## ball-carrier, the whole tilt once that star is 3 m off the centre line.
-## 0 for any other plan.
-func _tilt_of(side: int) -> float:
-	if _plan_of(side) != "through_stars":
-		return 0.0
-	return STAR_TILT * clampf(float(_star_y[side]) / 3.0, -1.0, 1.0)
-
-
-## Where across the ground a side's star nearest the ball-carrier is, read
-## when the side wins the ball (so it does not sway between two stars through
-## the passage): from where that first possession is taken, never the
-## carrier himself.
-func _note_star_side(k: int, at: Vector2, carrier: int) -> void:
-	var ev: Dictionary = events[k]
-	var side := int(ev.get("side", -1))
-	if side < 0 or not _possession(str(ev.get("kind", ""))):
-		return
-	var pk := _prev_real(k)
-	if pk >= 0 and int((events[pk] as Dictionary).get("side", -1)) == side \
-			and _possession(str((events[pk] as Dictionary).get("kind", ""))):
-		return
-	var best := INF
-	var pick := -1
-	for t in tokens:
-		if int(t["side"]) != side or not _is_star(t) or int(t["id"]) == carrier:
-			continue
-		var dd := (t["pos"] as Vector2).distance_to(at)
-		# The star the side last played toward keeps it unless another is
-		# clearly nearer, so the shape does not swing across for a few metres.
-		if int(t["id"]) == int(_star_pick[side]):
-			dd -= STAR_KEEP
-		if dd < best:
-			best = dd
-			pick = int(t["id"])
-	if pick >= 0:
-		_star_pick[side] = pick
-		_star_y[side] = (tokens[pick]["pos"] as Vector2).y
 
 
 ## A stoppage is on: a ball-up or throw-in being set, and the clearance out

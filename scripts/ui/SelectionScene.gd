@@ -8,7 +8,7 @@ extends Control
 ## No scrolling (director, 2026-10-13: "team selection being scrollable doesnt
 ## feel good"): "The side" is the oval, the interchange and the players not
 ## picked; "This week" is what the choice rests on. A phone shows one at a
-## time with a tap between them; a PC shows both, side by side. Match-ups,
+## time with a tap between them; a PC shows both, side by side. Player roles,
 ## game plan and tags are not asked here: they are set on the match-day setup
 ## before Start (director, 2026-10-13), which opens this screen through
 ## Change the side and comes back to it with the new side (TODO row 25).
@@ -339,8 +339,7 @@ func _fill_week(v: VBoxContainer) -> void:
 		heading.add_child(UiKit.line("Round %d, %s" % [GameState.season.round_index + 1, where],
 				UiKit.TITLE, UiKit.TEXT, true))
 		v.add_child(heading)
-		# Both sides' key forwards and defenders lead the sheet, as facts. Who
-		# goes to each is set before the first ball-up, not here.
+		# Both sides' key forwards and defenders lead the sheet, as facts.
 		var kp := GameState.week_key_players(code)
 		if not kp.is_empty():
 			v.add_child(_key_players(kp, code))
