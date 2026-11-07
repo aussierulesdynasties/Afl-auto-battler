@@ -33,6 +33,9 @@ var _interactive := false
 ## to full time, nothing played or applied again.
 var _review := false
 var _event_cursor := 0
+## Your side's legs (id -> energy) when the stretch now playing was simulated:
+## the tired marks read these until the oval catches up with the sim.
+var _legs_seen := {}
 var _my_side := 0
 var _margin: MarginContainer
 var _stacked := false
@@ -91,22 +94,6 @@ var _name_index := {}           # name -> club for NameInk, built once per match
 var _duel_mem := {}             # the feed's memory of the forward-50 duels (MatchNotes.duel_feed_line)
 var _break_refresh := Callable()   # the one-line break: say each call's answer again after a pick
 var _break_sheets: Array = []      # the one-line break: open sheets, the top one last ({overlay, close})
-## Key moments (director, 2026-10-18, P-14): your match at top speed, down to
-## 1x for your calls, each goal and the breaks, then on again. Playback only:
-## the sim, its log and the result are the same as watching.
-const KM_HOLD := 1.8                 # real seconds at 1x after a goal or a call (a goal's name runs as long)
-var km_hold_seconds := KM_HOLD       # tests shorten it; what stops the match is the same
-var _key_moments := false
-var _km_why := ""                    # what holds 1x now: "goal", "moment" or ""
-var _km_hold := 0.0                  # real seconds of 1x left (counted only while play runs)
-var _km_await := ""                  # 1x, the hold not yet counting, until this event is released
-var _km_goal_at := -1                # the goal (event index) a stop has already slowed for
-## Every stop, in order: {"kind": "goal"|"moment"|"break", "event": index, "q": quarter}.
-var km_stops: Array = []
-## Every released event while in Key moments: [kind, speed, why] (tests).
-var km_trace: Array = []
-var _km_word: Button
-var _km_watch: Button
 
 
 func _ready() -> void:
@@ -126,7 +113,6 @@ func _ready() -> void:
 		_pos_before = GameState.my_position()
 		# A pre-season practice match is nobody's debut, farewell or first goal.
 		_farewell = {} if _is_practice(GameState.pending_match) else _farewell_for(GameState.pending_match)
-		_key_moments = GameState.match_way_live == "key"
 	else:
 		_res = GameState.last_match
 		_review = GameState.review_requested
@@ -218,9 +204,6 @@ func _mount_body(stack: bool) -> void:
 	if _pitch == null:
 		_pitch = PitchView.new()
 		_pitch.speed = GameState.match_speed()
-		if _key_moments:
-			_pitch.speed = SPEEDS.back()
-			set_process(true)
 	# A phone follows the ball close up because its screen is small (and so does
 	# any narrow, stacked window); a wide window shows the whole ground whatever
 	# the platform (director, 2026-10-09; the web build on a PC, 2026-10-12).
@@ -494,24 +477,6 @@ func _controls() -> Control:
 	_play_btn.pressed.connect(_on_toggle)
 	row.add_child(_play_btn)
 
-	# Key moments shows its name where the speeds sit, in the poster's order
-	# (Watch, then Key moments): Watch drops back to watching at your usual
-	# speed and the speeds come back.
-	_km_watch = UiKit.btn("Watch", UiKit.SECONDARY)
-	_km_watch.name = "KeyMomentsWatch"
-	_km_watch.custom_minimum_size = Vector2(0, 44)
-	_km_watch.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_km_watch.clip_text = true
-	_km_watch.pressed.connect(_on_km_watch)
-	row.add_child(_km_watch)
-	_km_word = UiKit.btn("Key moments", UiKit.SECONDARY)
-	_km_word.name = "KeyMomentsState"
-	_km_word.custom_minimum_size = Vector2(0, 44)
-	_km_word.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_km_word.size_flags_stretch_ratio = 2.0
-	_km_word.clip_text = true
-	row.add_child(_km_word)
-
 	for s in SPEEDS:
 		var b := UiKit.btn("%dx" % int(s), UiKit.SECONDARY)
 		b.custom_minimum_size = Vector2(0, 44)
@@ -575,78 +540,11 @@ func _sync_controls() -> void:
 	_play_btn.text = "Play" if not _pitch.playing else "Pause"
 	for i in range(SPEEDS.size()):
 		UiKit.set_selected(_speed_btns[i], is_equal_approx(_pitch.speed, SPEEDS[i]))
-		_speed_btns[i].visible = not _key_moments
-	if _km_word != null:
-		_km_word.visible = _key_moments
-		_km_watch.visible = _key_moments
-		UiKit.set_selected(_km_word, true)
-		UiKit.set_selected(_km_watch, false)
 	if _break_skip != null:
 		var at := _breaks_played + 1
 		_break_skip.visible = at < 4 and not _finished
 		if at < 4:
 			_break_skip.text = "Skip to " + str(BREAK_NAMES[at - 1])
-
-
-## Watch from here on: your usual speed, the speed buttons back.
-func _on_km_watch() -> void:
-	_key_moments = false
-	_km_why = ""
-	_km_await = ""
-	set_process(false)
-	_pitch.set_speed(GameState.match_speed())
-	_sync_controls()
-
-
-## Key moments: down to 1x for a stop. `await_kind` holds 1x, uncounted,
-## until that event is released (the goal a shot is heading for, the line of a
-## call just answered); the hold counts down from there.
-func _km_slow(why: String, await_kind := "") -> void:
-	_km_why = why
-	_km_await = await_kind
-	_km_hold = km_hold_seconds
-	_pitch.set_speed(SPEEDS[0])
-
-
-## Key moments: back to top speed.
-func _km_fast() -> void:
-	_km_why = ""
-	_km_await = ""
-	_pitch.set_speed(SPEEDS.back())
-
-
-## The hold after a stop runs on real seconds of play: a close-up or a call
-## over the paused oval does not use it up.
-func _process(delta: float) -> void:
-	if not _key_moments or _km_why == "" or _km_await != "" or _pitch == null or not _pitch.playing:
-		return
-	_km_hold -= delta
-	if _km_hold <= 0.0:
-		_km_fast()
-
-
-## Key moments, on each released event: a goal is slowed for from the play
-## before it (the shot is seen at 1x) and held after it; a call's line is held
-## after it reaches the feed.
-func _km_event(ev: Dictionary, event_index: int) -> void:
-	if not _key_moments or _skipping:
-		return
-	var kind := str(ev.get("kind", ""))
-	if kind == "goal":
-		if _km_goal_at != event_index:
-			_km_goal_at = event_index
-			km_stops.append({"kind": "goal", "event": event_index, "q": int(ev.get("q", 0))})
-		_km_slow("goal")
-	elif kind == "moment" and _km_await == "moment":
-		_km_slow("moment")
-	km_trace.append([kind, _pitch.speed, _km_why])
-	var next := event_index + 1
-	var next_goal := next < _pitch.events.size() \
-			and str((_pitch.events[next] as Dictionary).get("kind", "")) == "goal"
-	if next_goal and _km_goal_at != next:
-		_km_goal_at = next
-		km_stops.append({"kind": "goal", "event": next, "q": int((_pitch.events[next] as Dictionary).get("q", 0))})
-		_km_slow("goal", "goal")
 
 
 func _on_toggle() -> void:
@@ -680,11 +578,8 @@ func _on_skip_to_break() -> void:
 	if _coach_overlay != null and is_instance_valid(_coach_overlay):
 		return
 	_close_moment()
-	# A close-up queued for this frame is dropped with the play it would show,
-	# and a Key moments slow ends with it.
+	# A close-up queued for this frame is dropped with the play it would show.
 	_broadcast_pending = false
-	if _key_moments and _km_why != "":
-		_km_fast()
 	# The rest of the quarter takes a moment on a phone: the button says so
 	# and the oval holds still while it is played.
 	_pitch.pause()
@@ -700,7 +595,7 @@ func _on_skip_to_break() -> void:
 		_res = sim.run_quarter()
 		_stamp_match_meta()
 		_append_new_events()
-	# No crowd, close-ups or Key moments stops on the way.
+	# No crowd or close-ups on the way.
 	_pitch.release_all()
 	_skipping = false
 	_break_skip.disabled = false
@@ -792,11 +687,6 @@ func _show_coach_box() -> void:
 	# lands on the break that has just sounded, and the button says so.
 	_breaks_played = q - 1
 	_sync_controls()
-	if _key_moments:
-		# The break is the stop; the next quarter starts at top speed.
-		if q > 1:
-			km_stops.append({"kind": "break", "event": _playback_event_index, "q": q})
-		_km_fast()
 	# The calls fill the screen at every break, so the actions sit at the
 	# bottom with the choices just above them.
 	# On a PC the break is a wide landscape sheet with every call in view
@@ -1385,59 +1275,6 @@ func _show_coach_box() -> void:
 				UiKit.attention(row as CanvasItem)
 		elif found != null:
 			UiKit.attention(found.get_parent() as CanvasItem)
-	_land_call_intent(overlay, q)
-
-
-## A response tapped beside an opposition fact on the hub (P-13,
-## GameState.call_intent) lands here, before the first ball-up: that call's
-## block is brought into view and brightens once, with the one fact that sent
-## the coach there restated above its picker. Nothing is chosen for him and
-## nothing else on the pane changes.
-const INTENT_NODES := {"tag": "TagPicker", "minder": "DefenceSetupPicker",
-		"loose": "DefenceSetupPicker", "plan": "PlanPicker"}
-
-
-func _land_call_intent(overlay: Control, q: int) -> void:
-	var intent: Dictionary = GameState.call_intent
-	GameState.call_intent = {}
-	if q != 1 or intent.is_empty():
-		return
-	var target: Node = overlay.find_child(str(INTENT_NODES.get(str(intent.get("call", "")), "-")), true, false)
-	if target == null:
-		return
-	# The call's own block: the one holding its heading.
-	var block: Node = target
-	while block != null and block != overlay and block.find_child("CallHeading", false, false) == null:
-		block = block.get_parent()
-	if block == null or block == overlay:
-		return
-	var line := _say(str(intent.get("fact", "")), UiKit.BODY, UiKit.TEXT, true)
-	line.name = "CallIntentFact"
-	if line is Label:
-		(line as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	block.add_child(line)
-	var heading: Node = block.find_child("CallHeading", false, false)
-	block.move_child(line, (heading.get_index() + 1) if heading != null else mini(2, block.get_child_count() - 1))
-	_show_intent_block.call_deferred(block, str(intent.get("player_id", "")))
-
-
-func _show_intent_block(block: Node, player_id: String) -> void:
-	# The columns of a PC pane are dealt a frame after the break is built.
-	for i in range(4):
-		await get_tree().process_frame
-	if not is_instance_valid(block):
-		return
-	var shown: Node = block
-	var up: Node = block
-	while up != null and not (up is ScrollContainer):
-		up = up.get_parent()
-	if up != null:
-		# The block's top (its heading and the fact) at the top of the pane; a
-		# long block would otherwise be shown by its end.
-		var sc := up as ScrollContainer
-		var top := (block as Control).global_position.y - (sc.get_child(0) as Control).global_position.y
-		sc.scroll_vertical = maxi(0, int(top) - 8)
-	UiKit.attention(shown as CanvasItem)
 
 
 # ---------------------------------------------------------------------------
@@ -2689,12 +2526,6 @@ func _group_energy(side: int) -> float:
 func _show_moment() -> void:
 	_close_moment()
 	_pitch.pause()
-	if _key_moments:
-		var last: Dictionary = km_stops.back() if not km_stops.is_empty() else {}
-		if str(last.get("kind", "")) != "moment" or int(last.get("event", -1)) != _playback_event_index:
-			km_stops.append({"kind": "moment", "event": _playback_event_index,
-					"q": int(GameState.pending_sim.pending_moment.get("q", 0))})
-		_km_slow("moment")
 	var m: Dictionary = GameState.pending_sim.pending_moment
 	# The late centre ball-up call, and the run of goals against (row 14), both
 	# put to the coach over a centre ball-up.
@@ -2836,9 +2667,6 @@ func _on_moment_choice(i: int) -> void:
 	# The call and how it came off reach the feed as the "moment" event,
 	# when play reaches it.
 	sim.resolve_moment(i)
-	if _key_moments:
-		# 1x until the call's line reaches the feed, then a moment more.
-		_km_slow("moment", "moment")
 	_advance_segment()
 
 
@@ -3304,6 +3132,7 @@ func _simulate_next_quarter(t: Dictionary) -> void:
 ## Simulate on to the end of the quarter or the next moment, then play it.
 func _advance_segment() -> void:
 	var sim: MatchSim = GameState.pending_sim
+	_legs_seen = _legs_now(sim)
 	if sim.continue_quarter():
 		_res = sim.end_quarter()
 	else:
@@ -3427,9 +3256,18 @@ func _refresh_marks() -> void:
 	var sim_now = GameState.pending_sim if _interactive else null
 	if sim_now != null:
 		injuries = sim_now.injuries
-		for r in sim_now.legs(_my_side):
-			energy[str(r["id"])] = float(r["energy"])
+		# The sim has run ahead of the oval: its legs now are the end of the stretch
+		# still playing, so the marks use the legs from when that stretch began.
+		energy = _legs_now(sim_now) if _pitch.current_index() >= _pitch.events.size() else _legs_seen
 	_pitch.set_marks(PlayerMarks.build(_pitch.events, _pitch.current_index(), injuries, energy))
+
+
+## Your side's legs in the sim right now: id -> energy.
+func _legs_now(sim: MatchSim) -> Dictionary:
+	var out := {}
+	for r in sim.legs(_my_side):
+		out[str(r["id"])] = float(r["energy"])
+	return out
 
 
 ## The ring on the oval: the players of yours you have made a call on or
@@ -3468,7 +3306,6 @@ func _on_event(ev: Dictionary) -> void:
 		_track_run(int(ev.get("side", 0)))
 	if _crowd != null and not _skipping:
 		_crowd.event(str(ev.get("kind", "")))
-	_km_event(ev, event_index)
 	_queue_broadcast(ev, event_index)
 
 
@@ -3499,9 +3336,6 @@ func _queue_broadcast(ev: Dictionary, event_index: int) -> void:
 		return
 	# Vignettes off (Settings): no replays. They decide nothing.
 	if not GameState.vignettes_on():
-		return
-	# Key moments stops for goals only: a goal's own close-up plays, nothing else.
-	if _key_moments and str(ev.get("kind", "")) != "goal":
 		return
 	var prev_ev := {}
 	var next_ev := {}
@@ -3778,6 +3612,7 @@ func _on_finished() -> void:
 	# A level final plays on: extra time is rolled now and fed to the pitch.
 	if _interactive and not _skipping and GameState.pending_sim != null \
 			and GameState.pending_sim.needs_extra_time():
+		_legs_seen = _legs_now(GameState.pending_sim)
 		_res = GameState.pending_sim.run_extra_time()
 		_stamp_match_meta()
 		_append_new_events()

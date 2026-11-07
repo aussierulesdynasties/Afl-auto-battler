@@ -95,6 +95,11 @@ func _test_rules() -> void:
 	ClubLife.morale_after_match([star, kid], {"k": true}, true)
 	_check(int(star["morale"]) == 64 and int(kid["morale"]) == 74,
 			"Playing and winning lifts morale; a star left out sulks")
+	# Suspended, or healed only as the week ticked over: he could not play,
+	# so he was not left out.
+	var banned := {"id": "b", "overall": 85, "morale": 70}
+	ClubLife.morale_after_match([banned], {"k": true}, true, {}, 0.0, {"b": true})
+	_check(int(banned["morale"]) == 70, "A star who could not play this week does not sulk (%d)" % int(banned["morale"]))
 	star["morale"] = 30
 	var unhappy_price := Contracts.asking_salary(star)
 	star["morale"] = 70

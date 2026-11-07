@@ -714,7 +714,8 @@ static func match_factor_items(res: Dictionary, my_side: int) -> Array:
 			best_m = m
 			best_q = i
 	var told_q: Array = turn.get("quarters", [])
-	if best_q >= 0 and absi(best_m) >= 24 and (out.is_empty() or int(run["q"]) != best_q + 1) \
+	# Not said again when the run told above (four goals or more) started in that quarter.
+	if best_q >= 0 and absi(best_m) >= 24 and (int(run["len"]) < 4 or int(run["q"]) != best_q + 1) \
 			and not told_q.has(best_q + 1):
 		var s := 0 if best_m > 0 else 1
 		out.append({"fact": "q%d" % (best_q + 1), "text": "%s won the %s quarter %d.%d to %d.%d." % [GameDB.club_name(codes[s]),
@@ -838,40 +839,13 @@ static func game_line(st: Dictionary) -> String:
 	return ", ".join(bits)
 
 
-## Assign defensive forward (the break): the words around the control. The
-## effect numbers come straight from MatchSim's constants, never typed twice.
+## Assign defensive forward (the break): the words around the control.
 static func minder_question(opp_name: String, club: String) -> String:
 	return "Who covers %s (%s)? He roams behind the ball; your forward goes up the ground with him." % [opp_name, club]
 
 
 static func minder_none_line() -> String:
 	return "They have no loose defender this quarter, so there is nobody to cover."
-
-
-## What the choice does and costs, in one line and in words (no numbers on
-## the break): how much of the contests the loose defender would reach he
-## still reaches with a Defensive forward on him and with any other forward
-## (MatchSim.MINDER_ROAM), and how much less often the forward sent is a
-## target himself (MatchSim.MINDER_INVOLVE).
-static func minder_cost_line() -> String:
-	var roam: Dictionary = MatchSim.MINDER_ROAM
-	var involve := float(MatchSim.MINDER_INVOLVE)
-	var often := "far less often" if involve <= 0.35 else ("less often" if involve <= 0.7 else "a little less often")
-	return "He reaches %s of his contests with a Defensive forward on him, %s with any other forward. Whoever goes is a target %s himself." % [
-			reach_words(float(roam["specialist"])), reach_words(float(roam["other"])), often]
-
-
-## A share kept, in words: 0.40 is "well under half", 0.70 is "most".
-static func reach_words(kept: float) -> String:
-	if kept <= 0.25:
-		return "hardly any"
-	if kept <= 0.45:
-		return "well under half"
-	if kept <= 0.55:
-		return "about half"
-	if kept <= 0.8:
-		return "most"
-	return "nearly all"
 
 
 ## Defensive set-up (director, 2026-11-03): one call for the loose defender
