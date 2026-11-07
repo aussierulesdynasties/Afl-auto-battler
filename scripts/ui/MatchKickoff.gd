@@ -1,8 +1,8 @@
 class_name MatchKickoff
 extends RefCounted
 ## Play match: the one way into your live match, from the hub (Skip to full
-## time, a response tapped beside an opposition fact) and from the match preview's
-## Continue (director, 2026-11-07: the preview is its own step before the setup).
+## time) and from the match preview's Continue (director, 2026-11-07: the preview
+## is its own step before the setup).
 ## The pre-match scene goes up while the match is set up underneath, then the
 ## match-day setup opens.
 
