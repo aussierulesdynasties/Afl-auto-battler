@@ -635,7 +635,7 @@ func _test_award_count_rounds() -> void:
 	var tied := AwardsCount.board(level, 2, 0, ["y", "x"])
 	_check(str(tied[0]["id"]) == "y" and int(tied[0]["rank"]) == 1 and int(tied[1]["rank"]) == 1
 			and bool(tied[0]["shared"]) and int(tied[2]["rank"]) == 3 and int(tied[0]["last"]) == 3,
-			"Level totals share a rank, listed in the stored order; the last round's gain is kept")
+			"Level totals share a rank, listed in the order given; the last round's gain is kept")
 
 
 ## A season played from Round 1: every round recorded, the rounds add up to
@@ -676,13 +676,13 @@ func _award_count_season_checks() -> void:
 				played += 1
 	_check(bf_off.is_empty() and finals == played,
 			"Your club's count adds up to its best and fairest, its %d finals included (%s)" % [played, str(bf_off.slice(0, 3))])
-	var order := []
-	for r in GameState.season_awards.get("brownlow", []):
-		order.append(str(r["id"]))
-	var board := AwardsCount.board(steps, steps.size(), 0, order)
+	# Level players are listed by name, never by the result, so the stored
+	# leader is among those on top, on the same total.
+	var board := AwardsCount.board(steps, steps.size(), 0)
 	var top: Dictionary = (GameState.season_awards.get("brownlow", []) as Array)[0]
-	_check(str(board[0]["id"]) == str(top["id"]) and int(board[0]["total"]) == int(top["votes"]),
-			"The count ends on the stored leader (%s, %d votes)" % [GameState.award_name(top), int(top["votes"])])
+	var leaders := board.filter(func(r): return int(r["rank"]) == 1).map(func(r): return str(r["id"]))
+	_check(leaders.has(str(top["id"])) and int(board[0]["total"]) == int(top["votes"]),
+			"The count ends with the stored leader on top (%s, %d votes)" % [GameState.award_name(top), int(top["votes"])])
 	GameState.season_awards["count_at"] = {"stage": 0, "round": 7, "match": 2}
 	var kept := rec.duplicate(true)
 	GameState.save_career()
@@ -708,3 +708,16 @@ func _test_award_count_late_start() -> void:
 			"A record from another season starts again at the next round (Round %d)" % next)
 	_check(not AwardsCount.complete(rec, GameState.season_year, "GEE", GameState.season.fixture.size()),
 			"A season recorded part way is not counted round by round")
+	# A save written before the record existed: it loads with an empty record
+	# that starts at the next round, never back-filled.
+	GameState.save_career()
+	var old := CareerSave.read(GameState.save_path)
+	old.erase("award_counts")
+	CareerSave.write(old, CareerSave.read_meta(GameState.save_path), GameState.save_path)
+	_check(GameState.load_career(), "A save from before the count's record loads")
+	var loaded: Dictionary = GameState.award_counts
+	var first := GameState.season.round_index + 1
+	_check(int(loaded.get("from", 0)) == first and int(loaded.get("year", 0)) == GameState.season_year
+			and str(loaded.get("club", "")) == "GEE" and (loaded.get("rounds", []) as Array).is_empty()
+			and not AwardsCount.complete(loaded, GameState.season_year, "GEE", GameState.season.fixture.size()),
+			"An older save starts its record empty at the next round (Round %d) and is not counted" % first)

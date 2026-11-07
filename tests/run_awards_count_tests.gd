@@ -21,6 +21,7 @@ const Tap := preload("res://tests/tap.gd")
 const Fixture := preload("res://tests/award_count_fixture.gd")
 const Count := preload("res://scripts/sim/AwardsCount.gd")
 const PHONE := Vector2i(390, 844)
+const BOLD_FONT := preload("res://assets/fonts/ARDSignwriter-Bold.ttf")
 ## Live, the clock runs this many times faster, so a season reads in seconds.
 const FAST := 30.0
 ## The season under the hand-made record is seeded, so each run is the same.
@@ -62,6 +63,7 @@ func _run() -> void:
 
 	await _t("_test_round_at_a_time")
 	await _t("_test_live")
+	await _t("_test_skip_before_the_break")
 	await _t("_test_club_count")
 	await _t("_test_fits_a_phone")
 	await _t("_test_resume")
@@ -156,6 +158,23 @@ func _top(c: Node) -> Array:
 	return [str(_find(row, "Name").text), int(str(_find(row, "Total").text))]
 
 
+## The names on top of the board as drawn, level ones included ("1" or "=1"):
+## level players are listed by name, so the stored leader is among them.
+func _leaders(c: Node) -> Array:
+	var out := []
+	var board = _find(c, "CountBoard")
+	if board == null:
+		return out
+	for row in board.find_children("CountRow_*", "PanelContainer", true, false):
+		if str(_find(row, "Rank").text) in ["1", "=1"]:
+			out.append(str(_find(row, "Name").text))
+	return out
+
+
+func _bold(l: Node) -> bool:
+	return l is Label and (l as Label).get_theme_font("font") == BOLD_FONT
+
+
 # ---------------------------------------------------------------------------
 # The tests
 
@@ -214,8 +233,8 @@ func _test_round_at_a_time() -> void:
 			"The last round read stays up over the final count (%s, %s)" % [_text(c, "CountRound"), _text(c, "CountBoardHeading")])
 	var stored: Dictionary = _state.season_awards["brownlow"][0]
 	top = await _top(c)
-	_check(top[0] == _name(str(stored["id"])) and top[1] == int(stored["votes"]),
-			"The count ends on the stored leader (%s %d)" % [top[0], top[1]])
+	_check(_leaders(c).has(_name(str(stored["id"]))) and top[1] == int(stored["votes"]),
+			"The count ends with the stored leader on top (%s %d)" % [str(_leaders(c)), top[1]])
 	_check(_text(c, "AwardsNext") == "Reveal winner" and not _shown(c, "CountWatch") and not _shown(c, "CountSkipAll"),
 			"With the count read, the one way on is Reveal winner")
 
@@ -266,17 +285,46 @@ func _test_live() -> void:
 	Engine.time_scale = 1.0
 	why = await _tap(c, "CountSkipAll")
 	_check(why == "" and view.done() and not view.live and _text(c, "CountRound") == "Final count"
-			and _text(c, "CountBoardHeading") == "Final count" and _find(c, "CountLatest") == null,
-			"Skip to the result shows the final board alone (%s)" % why)
+			and _find(c, "CountBoardHeading") == null and _find(c, "CountLatest") == null
+			and _find(c, "CountRisingStar") == null,
+			"Skip to the result after the break shows the final board alone, one Final count (%s)" % why)
 	var stored: Dictionary = _state.season_awards["brownlow"][0]
 	var top := await _top(c)
-	_check(top[0] == _name(str(stored["id"])) and top[1] == int(stored["votes"]),
-			"The final board's leader is the stored one (%s %d)" % [top[0], top[1]])
+	_check(_leaders(c).has(_name(str(stored["id"]))) and top[1] == int(stored["votes"]),
+			"The final board's leaders include the stored one (%s %d)" % [str(_leaders(c)), top[1]])
 	why = await _tap(c, "AwardsNext")
 	var winner: Dictionary = _state.season_awards["brownlow_winner"]
 	await _settle()
 	_check(why == "" and _words(c).contains(_name(str(winner["id"]))) and _find(c, "AwardsCount") == null,
 			"Reveal winner names the stored medallist (%s)" % _name(str(winner["id"])))
+
+
+## Skip to the result before the halfway break: the Rising Star is still
+## presented, over the final board, and stays there when the night is picked
+## up again after a save; one tap on goes to the winner.
+func _test_skip_before_the_break() -> void:
+	var c := await _open()
+	await _tap(c, "AwardsNext")
+	var why := await _tap(c, "CountSkipAll")
+	var view = _find(c, "AwardsCount")
+	var star: Dictionary = _state.season_awards["rising_star"][0]
+	var card := _words(_find(c, "CountRisingStar"))
+	_check(why == "" and view.done() and card.contains(_name(str(star["id"])))
+			and card.contains("nominated in Round %d" % Fixture.RISING_ROUND)
+			and _text(c, "CountRound") == "Final count" and _find(c, "CountBoardHeading") == null
+			and _text(c, "AwardsNext") == "Reveal winner",
+			"Skipped before the break, the Rising Star is presented over the final board (%s)" % card)
+	_state.save_career()
+	_host.free()
+	_state.load_career()
+	c = await _show()
+	_check(_find(c, "CountRisingStar") != null and _text(c, "CountRound") == "Final count",
+			"Picked up again, the skipped night still shows the Rising Star over the final board")
+	why = await _tap(c, "AwardsNext")
+	await _settle()
+	var winner: Dictionary = _state.season_awards["brownlow_winner"]
+	_check(why == "" and _find(c, "AwardsCount") == null and _words(c).contains(_name(str(winner["id"]))),
+			"One tap on from there reveals the medallist")
 
 
 ## Your club's best and fairest: after the league's awards, its games one at
@@ -300,18 +348,30 @@ func _test_club_count() -> void:
 			"The club count reads a game at a tap; Skip round is not offered (%s)" % _text(c, "AwardsNext"))
 	var games: int = view.steps.size()
 	var first := ""
+	var marked := []
 	for i in range(games):
 		await _tap(c, "AwardsNext")
 		if i == 0:
 			first = _text(c, "CountRoundLine")
+		if i == 2:
+			# Every name is yours: none is marked out as yours, only the leader in bold.
+			for row in view.find_children("CountRow_*", "PanelContainer", true, false):
+				var flat := (row as PanelContainer).get_theme_stylebox("panel") as StyleBoxFlat
+				if flat.border_width_left != 3 \
+						or (_bold(_find(row, "Name")) and str(_find(row, "Rank").text) not in ["1", "=1"]):
+					marked.append(str(row.name))
+			for l in _find(c, "CountLatest").find_children("*", "Label", true, false):
+				if _bold(l) and not (l as Label).text.is_valid_int():
+					marked.append((l as Label).text)
+	_check(marked.is_empty(), "The club count marks no name out as yours, the leader alone in bold (%s)" % str(marked))
 	_check(first.begins_with("v ") and _text(c, "CountRound") == Fixture.FINAL_LABEL
 			and _text(c, "CountRoundLine") == "v %s" % _db.club_name(Fixture.FINAL_VS)
 			and _text(c, "CountBoardHeading") == "Final count",
 			"Each game reads against its opponent, the final last (%s; %s)" % [first, _text(c, "CountRound")])
 	var stored: Dictionary = _state.season_awards["best_and_fairest"]["COL"][0]
 	var top := await _top(c)
-	_check(top[0] == _name(str(stored["id"])) and top[1] == int(stored["bf"]),
-			"The club count ends on the stored winner (%s %d)" % [top[0], top[1]])
+	_check(_leaders(c).has(_name(str(stored["id"]))) and top[1] == int(stored["bf"]),
+			"The club count ends with the stored winner on top (%s %d)" % [str(_leaders(c)), top[1]])
 	await _tap(c, "AwardsNext")
 	await _settle()
 	_check(_words(c).contains(_name(str(stored["id"]))), "Reveal winner presents the club's winner")
@@ -429,10 +489,12 @@ func _test_resume() -> void:
 
 
 ## Skip to season review, by a real tap, ends the night at once and marks it
-## seen; so does Android Back on the season review (tests/run_back_nav_tests.gd).
+## seen. Android Back on the season review closes it and keeps its place, as a
+## tap outside it does (tests/run_back_nav_tests.gd drives Back itself).
 func _test_back() -> void:
 	var c := await _open()
 	await _tap(c, "AwardsNext")
+	_check(bool(c.get_meta("keeps_place", false)), "A counted night keeps its place when Back closes it")
 	var why := await _tap(c, "AwardsSkip")
 	await _settle()
 	_check(why == "" and not is_instance_valid(c) and bool(_state.season_awards.get("presentation_seen", false))

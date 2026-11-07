@@ -49,6 +49,12 @@ func handle_back() -> bool:
 		_awards_program = null
 		return true
 	if is_instance_valid(_awards_overlay):
+		# A counted night closes and keeps its place, as a tap outside it
+		# does (Replay awards picks it up); the older reveal is skipped.
+		if bool(_awards_overlay.get_meta("keeps_place", false)):
+			_awards_overlay.queue_free()
+			_awards_overlay = null
+			return true
 		var skip = _awards_overlay.find_child("AwardsSkip", true, false)
 		if skip != null:
 			skip.emit_signal("pressed")

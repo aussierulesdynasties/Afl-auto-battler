@@ -170,7 +170,8 @@ static func totals(steps: Array, rounds: int, matches: int) -> Dictionary:
 
 ## The board: [{id, club, total, last, rank}] by total, level totals sharing a
 ## rank. `order` ([ids]) settles who is listed first among level players (the
-## stored final placings), then the id, so a board never shuffles.
+## night lists them A to Z by name, never by the final result, which would
+## give it away), then the id, so a board never shuffles.
 static func board(steps: Array, rounds: int, matches: int, order: Array = []) -> Array:
 	var t := totals(steps, rounds, matches)
 	var first := {}

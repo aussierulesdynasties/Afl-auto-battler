@@ -8,7 +8,8 @@ extends SceneTree
 ## taps are proven in tests/run_awards_count_tests.gd). Writes <out>_<shot>.png:
 ## opening, live (part way through Round 7), paused, break (the Rising Star at the
 ## halfway mark), last_round and last_round_lower (the last round read over the
-## final count), skipped (Skip to the result), winner, club_mid and club_end
+## final count), skipped and skipped_lower (Skip to the result before the
+## halfway break: the Rising Star over the final board), winner, club_mid and club_end
 ## (your club's count part way, and at the end with its finals). Never touches a
 ## real save.
 
@@ -140,6 +141,9 @@ func _run() -> void:
 	await _press(c, "CountSkipAll")
 	await _secs(1.0)
 	await _shot("skipped")
+	await _scroll(c, 100000)
+	await _shot("skipped_lower")
+	await _scroll(c, 0)
 	await _press(c, "AwardsNext")
 	await _secs(3.0)
 	await _shot("winner")

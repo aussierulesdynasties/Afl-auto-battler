@@ -410,6 +410,23 @@ func _test_overlays() -> void:
 		await _settle(3)
 		await _click_named(s, "AwardsNext"),
 			func(): load("res://tests/award_count_fixture.gd").build(_state, "COL"))
+	# Android Back keeps the count's place, as a tap outside it does: the night
+	# is not marked seen, and Replay awards picks it up there.
+	_fresh_career()
+	load("res://tests/award_count_fixture.gd").build(_state, "COL")
+	await _open("season_review")
+	var review := current_scene
+	var night: Control = load("res://scripts/ui/SeasonAwards.gd").open(review)
+	review.set("_awards_overlay", night)
+	await _settle(3)
+	await _click_named(review, "AwardsNext")
+	await _settle(3)
+	_router.notification(Node.NOTIFICATION_WM_GO_BACK_REQUEST)
+	await _settle(8)
+	var at: Dictionary = _state.season_awards.get("count_at", {})
+	_check(not is_instance_valid(night) and _router.current() == "season_review"
+			and not bool(_state.season_awards.get("presentation_seen", false)) and int(at.get("round", -1)) == 1,
+			"season review: Android Back closes the awards night and keeps its place (%s)" % str(at))
 
 
 # ---------------------------------------------------------------------------

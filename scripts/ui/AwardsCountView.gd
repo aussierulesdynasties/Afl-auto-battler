@@ -9,9 +9,10 @@ extends VBoxContainer
 ## The position moved: a game or a round read, the break, Watch or Pause.
 signal moved
 
-## A game's votes, read out live: a round of nine about 3.7 s with the pause
-## after it, the season about 90 s.
-const GAME_PACE := 0.3
+## A game's votes, read out live, long enough to read its three names: a round
+## of nine about 19 s with the pause after it, the season about 7 minutes.
+## Skip round and Next round are the quicker ways through.
+const GAME_PACE := 2.0
 ## The pause after each round, live, before the next is read.
 const ROUND_PAUSE := 1.0
 ## Your club's count, live: one game at a time.
@@ -47,8 +48,15 @@ var break_seen := false
 var live := false
 ## Skip to the result was taken: the final board alone, no round on it.
 var skipped := false
-## The stored final placings (ids): who is listed first among level totals.
+## Skip to the result came before the Rising Star: he is presented over the
+## final board.
+var rising_with_result := false
+## Who is listed first among level totals (ids, A to Z by name): never the
+## final placings, which would give the result away part way through.
 var order: Array = []
+## id -> his Brownlow eligibility as stored with the season's awards; a player
+## not in them falls back to his flag in the lists.
+var eligible := {}
 var title := ""
 var subtitle := ""
 ## The honour's picture on the opening card (HonoursArt id), and its lines.
@@ -81,7 +89,7 @@ func _init() -> void:
 ## Where the count has got to, for the save (season_awards["count_at"]).
 func position() -> Dictionary:
 	return {"round": rounds, "match": matches, "break": break_seen, "at_break": at_break,
-			"skipped": skipped}
+			"skipped": skipped, "rising_with_result": rising_with_result}
 
 
 ## Back to a saved position, never past the end.
@@ -95,6 +103,7 @@ func restore(at: Dictionary) -> void:
 	at_break = bool(at.get("at_break", false)) and break_after >= 0 and rounds == break_after \
 			and matches == 0 and not break_seen
 	skipped = bool(at.get("skipped", false)) and rounds >= steps.size()
+	rising_with_result = bool(at.get("rising_with_result", false)) and skipped and break_after > 0
 
 
 ## Every round read and the break past: the board is the final count.
@@ -141,10 +150,12 @@ func skip_round() -> void:
 			_clock.start(_wait())
 
 
-## The rest of the count at once: the final board.
+## The rest of the count at once: the final board, with the Rising Star over
+## it when the count had not reached him yet.
 func skip_all() -> void:
 	live = false
 	_clock.stop()
+	rising_with_result = break_after > 0 and not break_seen and not at_break
 	rounds = steps.size()
 	matches = 0
 	at_break = false
@@ -232,11 +243,14 @@ func render() -> void:
 		_opening_card()
 		return
 	# The last round read stays up under the final count; Skip to the result
-	# shows the final board alone.
+	# shows the final board alone, under its own "Final count", with the Rising
+	# Star over it when the count had not reached him.
+	if skipped and rising_with_result:
+		_break_card()
 	_round_heading()
 	if not skipped:
 		_latest_game()
-	_board_section("Final count" if done() else "Leaderboard")
+	_board_section("" if skipped else ("Final count" if done() else "Leaderboard"))
 	if kind == "votes" and not skipped:
 		_earlier_games()
 	var now := {}
@@ -322,8 +336,8 @@ func _earlier_games() -> void:
 
 
 ## One game: "Carlton v Essendon", then its votes a line each, the most first
-## ("3  Name  Club"), your club's names in bold and each club's short name in
-## that club's ink.
+## ("3  Name  Club"), on the Brownlow your club's names in bold and each club's
+## short name in that club's ink (your club's own count: every name is yours).
 func _game(m: Dictionary, teams: bool) -> Control:
 	var v := UiKit.vbox(2)
 	if teams:
@@ -342,6 +356,7 @@ func _game(m: Dictionary, teams: bool) -> Control:
 		votes.add_child(UiKit.line("No votes", UiKit.BODY, UiKit.MUTED))
 	for vote in list:
 		var club := str(vote[2])
+		var mine := kind == "votes" and club == GameState.my_club
 		var one := UiKit.hbox(6)
 		one.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var pts := UiKit.line(str(int(vote[1])), UiKit.BODY, UiKit.TEXT, true)
@@ -349,10 +364,9 @@ func _game(m: Dictionary, teams: bool) -> Control:
 		pts.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		one.add_child(pts)
 		one.add_child(UiKit.line(GameState.award_name({"id": str(vote[0])}), UiKit.BODY,
-				UiKit.TEXT, club == GameState.my_club))
+				UiKit.TEXT, mine))
 		if kind == "votes":
-			one.add_child(UiKit.line(GameDB.club_short(club), UiKit.SECONDARY, StatsSide.code_ink(club),
-					club == GameState.my_club))
+			one.add_child(UiKit.line(GameDB.club_short(club), UiKit.SECONDARY, StatsSide.code_ink(club), mine))
 		votes.add_child(one)
 	v.add_child(votes)
 	return v
@@ -366,10 +380,11 @@ func _board_section(heading: String) -> void:
 	var box := UiKit.vbox(0)
 	box.name = "CountBoard"
 	box.add_child(_gap(10))
-	var h := _words(heading, UiKit.TEXT, UiKit.HEADING, true)
-	h.name = "CountBoardHeading"
-	box.add_child(h)
-	box.add_child(_gap(4))
+	if heading != "":
+		var h := _words(heading, UiKit.TEXT, UiKit.HEADING, true)
+		h.name = "CountBoardHeading"
+		box.add_child(h)
+		box.add_child(_gap(4))
 	_page.add_child(box)
 	if rows.is_empty():
 		box.add_child(_words("No votes yet.", UiKit.MUTED, UiKit.BODY))
@@ -409,11 +424,12 @@ func _board_section(heading: String) -> void:
 ## One player on the board: rank, name, total, and what the round being read
 ## gave him. On the Brownlow's board his club, and "ineligible" for a player
 ## suspended this season, sit under his name so the name shows whole on a
-## phone; your club's own count leaves the club off (every name is yours).
+## phone; your club's own count leaves the club off and marks none out as
+## yours (every name is yours).
 func _row(r: Dictionary, band: bool) -> Control:
 	var club := str(r["club"])
 	var id := str(r["id"])
-	var mine := club == GameState.my_club
+	var mine := kind == "votes" and club == GameState.my_club
 	var p := PanelContainer.new()
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var flat := StatsSide.row_style(club, band, mine)
@@ -493,8 +509,12 @@ func _break_card() -> void:
 	UiKit.reveal(box)
 
 
-## Is he ineligible for the Brownlow (suspended this season)?
+## Is he ineligible for the Brownlow (suspended this season)? As stored with
+## the season's awards when he is in them, so a later change to his flag never
+## rewrites the night.
 func _ineligible(id: String) -> bool:
+	if eligible.has(id):
+		return not bool(eligible[id])
 	var season: Season = GameState.season
 	if season != null:
 		for code in season.lists:

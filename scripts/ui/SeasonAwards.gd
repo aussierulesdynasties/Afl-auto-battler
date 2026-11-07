@@ -25,6 +25,9 @@ static func open(host: Control) -> Control:
 	var overlay: Control = box["overlay"]
 	overlay.name = "SeasonAwards"
 	UiKit.close_on_outside_tap(box)
+	# Leaving a counted night (a tap outside it, or Back) keeps its place;
+	# Replay awards picks it up there.
+	overlay.set_meta("keeps_place", counted)
 	var body: VBoxContainer = box["body"]
 	var footer: VBoxContainer = box["footer"]
 	var club_award := BestAndFairest.award_name(GameState.my_club)
@@ -62,10 +65,16 @@ static func open(host: Control) -> Control:
 			return
 		var pos := {"stage": int(state["stage"]), "revealed": bool(state["revealed"])}
 		var view = state["view"]
+		# Watched live, the place is marked for the save a round at a time (and
+		# at the break), not every game; the latest is always the one held.
+		var settle := true
 		if is_instance_valid(view):
-			pos.merge((view as AwardsCountView).position())
+			var v: AwardsCountView = view
+			pos.merge(v.position())
+			settle = not v.live or v.matches == 0 or v.at_break
 		GameState.season_awards["count_at"] = pos
-		GameState.mark_dirty()
+		if settle:
+			GameState.mark_dirty()
 	var done := func() -> void:
 		GameState.season_awards["presentation_seen"] = true
 		GameState.season_awards.erase("count_at")
@@ -270,8 +279,14 @@ static func _count_view(count: String, stage: Array, aw: Dictionary, record: Dic
 	view.title = str(stage[0])
 	view.subtitle = str(stage[1])
 	view.year = int(aw.get("year", GameState.season_year))
-	for row in stage[2]:
-		view.order.append(str(row.get("id", "")))
+	# Eligibility as stored with the season's awards (the board's "ineligible").
+	for key in aw:
+		var rows = aw[key]
+		if not (rows is Array):
+			continue
+		for row in rows:
+			if row is Dictionary and (row as Dictionary).has("brownlow_eligible"):
+				view.eligible[str(row.get("id", ""))] = bool(row["brownlow_eligible"])
 	if count == "votes":
 		view.steps = AwardsCount.brownlow_steps(record)
 		view.art = "league_bnf_medal"
@@ -293,6 +308,18 @@ static func _count_view(count: String, stage: Array, aw: Dictionary, record: Dic
 		view.steps = AwardsCount.club_steps(record)
 		view.art = "club_bnf"
 		view.opening = ["Votes from every game, finals included, read one game at a time."]
+	# Level players are listed A to Z by name: the final placings would give
+	# the result away part way through.
+	var names := {}
+	for st in view.steps:
+		for m in st["matches"]:
+			for v in m["votes"]:
+				names[str(v[0])] = GameState.award_name({"id": str(v[0])})
+	var ids := names.keys()
+	ids.sort_custom(func(a, c):
+		var by := str(names[a]).naturalnocasecmp_to(str(names[c]))
+		return by < 0 if by != 0 else str(a) < str(c))
+	view.order = ids
 	return view
 
 
