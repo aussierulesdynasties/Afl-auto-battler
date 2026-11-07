@@ -7,6 +7,7 @@ const SCENES := {
 	"draft": "res://scenes/DraftScene.tscn",
 	"hub": "res://scenes/HubScene.tscn",
 	"match": "res://scenes/MatchScene.tscn",
+	"preview": "res://scenes/MatchPreviewScene.tscn",
 	"stats": "res://scenes/StatsHubScene.tscn",
 	"list": "res://scenes/ListScene.tscn",
 	"selection": "res://scenes/SelectionScene.tscn",

@@ -290,10 +290,14 @@ static func rating_word(rank: int, n: int) -> String:
 	return "good" if rank * 2 <= n + 1 else "average"
 
 
-## This week, line against line, in the sheet's rating words for both sides:
-## midfield v midfield, ruck v ruck, your forwards v their defence and your
-## defence v their forwards. `own` is your side as picked now, so a change of
-## selection shows. [{"key", "text"}], [] without the opponent.
+## This week, team against team and line against line, for both sides: the
+## overall team rank first (Squad.strength, the list strength the board's goal
+## and ladder seeding rank by, here on each side as picked), then midfield v
+## midfield, ruck v ruck, your forwards v their defence and your defence v their
+## forwards in the sheet's rating words, each with its league rank. `own` is
+## your side as picked now, so a change of selection shows. [] without the
+## opponent. Each row: {"key", "label", "text", "mine_rank", "theirs_rank", "n"}
+## plus "mine_word" and "theirs_word" for a line (overall has no word).
 static func head_to_head(mine: String, opp: String, lists: Dictionary, selections: Dictionary,
 		own: Squad) -> Array:
 	if not lists.has(opp) or (lists[opp] as Array).is_empty():
@@ -307,25 +311,34 @@ static func head_to_head(mine: String, opp: String, lists: Dictionary, selection
 	var values := {}
 	for c in squads:
 		values[c] = line_values(squads[c])
+		values[c]["overall"] = (squads[c] as Squad).strength()
 	var n := squads.size()
-	var word := func(code: String, key: String) -> String:
+	var rank := func(code: String, key: String) -> int:
 		var better := 0
 		for c in squads:
 			if str(c) != code and float(values[c][key]) > float(values[code][key]):
 				better += 1
-		return rating_word(better + 1, n)
-	# One reading for every row: "Midfield: yours good, theirs average."; when
-	# the two match, "Midfield: even, both average." (never the same words twice).
-	var say := func(label: String, mine_w: String, theirs_w: String) -> String:
-		if mine_w == theirs_w:
-			return "%s: even, both %s." % [label, mine_w]
-		return "%s: yours %s, theirs %s." % [label, mine_w, theirs_w]
-	return [
-		{"key": "midfield", "text": say.call("Midfield", word.call(mine, "midfield"), word.call(opp, "midfield"))},
-		{"key": "ruck", "text": say.call("Ruck", word.call(mine, "ruck"), word.call(opp, "ruck"))},
-		{"key": "attack", "text": say.call("Your forwards against their defence", word.call(mine, "attack"), word.call(opp, "defence"))},
-		{"key": "defence", "text": say.call("Your defence against their forwards", word.call(mine, "defence"), word.call(opp, "attack"))},
-	]
+		return better + 1
+	var mr: int = rank.call(mine, "overall")
+	var tr: int = rank.call(opp, "overall")
+	var out := [{"key": "overall", "label": "Overall", "mine_rank": mr, "theirs_rank": tr, "n": n,
+			"text": "Overall: yours %s, theirs %s of %d." % [Almanac.ordinal(mr), Almanac.ordinal(tr), n]}]
+	# One reading for every line: "Midfield: yours good (5th), theirs average (11th).";
+	# when the words match, "Midfield: even, both average (5th, 11th)." (never the
+	# same words twice).
+	for row in [["midfield", "Midfield", "midfield", "midfield"], ["ruck", "Ruck", "ruck", "ruck"],
+			["attack", "Your forwards against their defence", "attack", "defence"],
+			["defence", "Your defence against their forwards", "defence", "attack"]]:
+		var m_rank: int = rank.call(mine, str(row[2]))
+		var t_rank: int = rank.call(opp, str(row[3]))
+		var m_word := rating_word(m_rank, n)
+		var t_word := rating_word(t_rank, n)
+		var text := "%s: yours %s (%s), theirs %s (%s)." % [row[1], m_word, Almanac.ordinal(m_rank), t_word, Almanac.ordinal(t_rank)]
+		if m_word == t_word:
+			text = "%s: even, both %s (%s, %s)." % [row[1], m_word, Almanac.ordinal(m_rank), Almanac.ordinal(t_rank)]
+		out.append({"key": str(row[0]), "label": str(row[1]), "text": text, "n": n,
+				"mine_rank": m_rank, "theirs_rank": t_rank, "mine_word": m_word, "theirs_word": t_word})
+	return out
 
 
 ## The people behind this week, not the lines: their danger, their best

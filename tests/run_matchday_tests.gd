@@ -75,6 +75,7 @@ func _run() -> void:
 	_t("_test_broken_calls")
 	await _t("_test_vignettes_off_match")
 	await _t("_test_match_day_setup")
+	await _t("_test_match_preview")
 	await _t("_test_skip_to_break")
 	await _t("_test_side_keeps_calls")
 	await _t("_test_match_way_poster")
@@ -2709,6 +2710,82 @@ func _test_match_day_setup() -> void:
 		hub.queue_free()
 	_state.pending_sim = null
 	_state.side_from_match = false
+	await _settle()
+
+
+## The match preview (director, 2026-11-07: "It deserves its own place in the pre
+## game flow"; "Own step before setup"). Real taps on a phone: Play match opens
+## the preview, nothing prepared; its Back and Android Back return to the hub with
+## nothing started; Continue opens the match-day setup, and full time's way back
+## is the hub (the preview is not left under the match).
+func _test_match_preview() -> void:
+	_state.set_vignettes_on(false)
+	_state.set_match_way("watch")
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	_state.tutorials = false
+	root.size = Vector2i(390, 844)
+	var round_at: int = _state.season.round_index
+	var open_preview := func() -> String:
+		router.stack = []
+		router.go("hub")
+		await _settle()
+		var hub: Node = current_scene
+		var play: Button = hub.find_child("PlayMatch", true, false) if hub != null else null
+		if play == null:
+			return "no Play match"
+		var why: String = await Tap.tap(play)
+		await _settle()
+		return why
+	var why: String = await open_preview.call()
+	var pv: Node = current_scene
+	_check(why == "" and pv != null and pv.name == "MatchPreviewScene" and _state.pending_sim == null
+			and router.current() == "preview",
+			"A real tap on Play match opens the match preview, nothing set up yet (%s)" % why)
+	var cont: Button = pv.find_child("PreviewContinue", true, false) if pv != null else null
+	var view := Rect2(Vector2.ZERO, Vector2(root.size))
+	_check(pv != null and pv.find_child("WeekPage", true, false) != null
+			and pv.find_child("WeekHeading", true, false) != null
+			and pv.find_child("WeekClubs", true, false) != null and pv.find_child("KeyMatchups", true, false) == null
+			and pv.find_child("HeadToHead", true, false) != null
+			and pv.find_child("SynergyLine", true, false) != null,
+			"The preview holds the week: the round, you and them, line against line, synergies")
+	_check(cont != null and cont.size.y >= 56.0 and cont.size.x >= 300.0
+			and view.encloses(cont.get_global_rect()),
+			"Continue is thumb-sized, across the page and on screen (%s)" % (str(cont.get_global_rect()) if cont else "-"))
+	# Back (the top bar's, a real tap): the hub, nothing started.
+	var back: Control = pv.find_child("TopBarBack", true, false) if pv != null else null
+	why = await Tap.tap(back)
+	await _settle()
+	_check(why == "" and current_scene != null and current_scene.name == "HubScene" and _state.pending_sim == null
+			and _state.season.round_index == round_at,
+			"A real tap on Back returns to the hub with nothing started (%s)" % why)
+	# Android Back: the same.
+	why = await open_preview.call()
+	_check(why == "" and current_scene != null and current_scene.name == "MatchPreviewScene",
+			"Play match opens the preview again (%s)" % why)
+	router.handle_back(true)
+	await _settle()
+	_check(current_scene != null and current_scene.name == "HubScene" and _state.pending_sim == null,
+			"Android Back returns to the hub with nothing started")
+	# Continue: the match-day setup, the preview off the back stack.
+	why = await open_preview.call()
+	cont = current_scene.find_child("PreviewContinue", true, false) if current_scene != null else null
+	why = await Tap.tap(cont)
+	await _settle()
+	var ms: Node = current_scene
+	_check(why == "" and ms != null and ms.name == "MatchScene" and _state.match_day_setup_open()
+			and ms.find_child("StartQuarter", true, false) != null,
+			"A real tap on Continue opens the match-day setup, nothing bounced yet (%s)" % why)
+	_check(router.stack == ["hub", "match"], "The preview is not left under the match: %s" % str(router.stack))
+	if ms != null:
+		ms.queue_free()
+	_state.pending_sim = null
+	_state.pending_match = {}
 	await _settle()
 
 

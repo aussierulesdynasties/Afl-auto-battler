@@ -1130,6 +1130,15 @@ func _test_fact_options() -> void:
 					"%s: a real tap on Watch picks the way and starts no match (%s)" % [tag, ww])
 		var why: String = await Tap.tap(play) if play != null else "no Play match"
 		await _settle()
+		# Play match opens the match preview (its own step, director 2026-11-07),
+		# with the call still held; a real tap on its Continue starts the match.
+		var pv: Node = current_scene
+		var cont: Control = pv.find_child("PreviewContinue", true, false) \
+				if pv != null and pv.name == "MatchPreviewScene" else null
+		_check(cont != null and not _state.call_intent.is_empty() and _state.pending_sim == null,
+				"%s: Play match opens the match preview, the call still held" % tag)
+		why += await Tap.tap(cont) if cont != null else "no Continue"
+		await _settle()
 		await _settle()
 		var scene: Node = current_scene
 		var box: Node = scene.find_child("CoachBox", true, false) if scene != null else null
@@ -1484,8 +1493,22 @@ func _test_pre_match_scene() -> void:
 		var hub: Control = await _open_hub()
 		var play := _button(hub.find_child("WeekActions", true, false), "Play match")
 		play.emit_signal("pressed")
+		# Play match opens the match preview first (director, 2026-11-07: its own
+		# step before the setup); its Continue starts the match.
+		var cont: Button = null
+		for i in range(30):
+			await process_frame
+			var pv := get_current_scene()
+			cont = pv.find_child("PreviewContinue", true, false) if pv != null and pv.name == "MatchPreviewScene" else null
+			if cont != null:
+				break
+		_check(cont != null, "Play match opens the match preview, Continue on it")
+		if cont == null:
+			hub.queue_free()
+			return
+		cont.emit_signal("pressed")
 		var vig = root.find_child("PreMatchVignette", true, false)
-		_check(vig != null, "Play match cuts to the pre-match scene in the same frame")
+		_check(vig != null, "Continue cuts to the pre-match scene in the same frame")
 		if vig == null:
 			hub.queue_free()
 			return
