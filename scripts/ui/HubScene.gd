@@ -17,13 +17,6 @@ var _news_overlay: Control
 var _rule_overlay: Control
 var _sim_confirm: Control
 var _onboarding_overlay: Control
-var _pre_match: PreMatchVignette    # the scene over the wait after Play match
-var _starting_match := false        # Play match with vignettes off: on the way to the match
-## How long the pre-match scene runs before the side goes through the banner: a
-## moment of the warm-up, time to jog in to the huddle unhurried and stand together,
-## then the run - still a couple of seconds of match day, not a wait (a tap goes straight
-## to the run).
-const PRE_MATCH_SECONDS := 3.8
 
 
 func _ready() -> void:
@@ -38,6 +31,7 @@ func _ready() -> void:
 		return
 	# A response tapped last time that never reached a match does not wait here.
 	GameState.call_intent = {}
+	MatchKickoff.reset()
 	_warm_pre_match.call_deferred()
 
 	add_child(ClubBackdrop.new().setup(GameState.my_club).live())
@@ -1130,7 +1124,7 @@ func _week_actions(season: Season) -> Control:
 		buttons.append(week)
 	else:
 		buttons.append(_nav_button("Pick the side", func(): Router.go("selection")))
-		var play := _nav_button(_play_label(), _on_play_match, true)
+		var play := _nav_button(_play_label(), _on_play_pressed, true)
 		play.name = "PlayMatch"
 		buttons.append(play)
 	var row := UiKit.hbox(8)
@@ -1374,30 +1368,7 @@ func _warm_pre_match() -> void:
 
 
 func _upcoming_match() -> Dictionary:
-	var season: Season = GameState.season
-	if season == null or season.is_season_over():
-		return {}
-	if not season.is_regular_done():
-		var round_matches: Array = season.fixture[season.round_index]
-		for m in round_matches:
-			if m["home"] == GameState.my_club or m["away"] == GameState.my_club:
-				var up := {"home": m["home"], "away": m["away"],
-						"label": season.round_label(season.round_index), "tag": "",
-						"weather": season.weather_for(str(m["home"]), str(m["away"]), season.round_index)}
-				if season.round_index == season.gather_round():
-					up["venue"] = season.round_venue(season.round_index, str(m["home"]), str(m["away"]))
-				return up
-		return {}
-	for m in season.finals_week_matches():
-		if str(m["home"]) == "" or str(m["away"]) == "":
-			continue
-		if m["home"] == GameState.my_club or m["away"] == GameState.my_club:
-			return {"home": m["home"], "away": m["away"],
-					"label": str(m["label"]), "tag": str(m["tag"]),
-					"venue": season.finals_venue(m),
-					"weather": season.weather_for(str(m["home"]), str(m["away"]),
-							Season.REGULAR_ROUNDS + int(season.finals["week"]), m)}
-	return {}
+	return MatchKickoff.upcoming_match()
 
 
 func _ladder_grid(_limit: int) -> Control:
@@ -1408,63 +1379,21 @@ func _ladder_grid(_limit: int) -> Control:
 # ---------------------------------------------------------------------------
 # Round control
 # ---------------------------------------------------------------------------
+## Play match: the match preview first, its own step before the setup (director,
+## 2026-11-07: "It deserves its own place in the pre game flow"); its Continue
+## starts the match. Skip to full time has no setup to read for, so it starts here.
+func _on_play_pressed() -> void:
+	if MatchKickoff.busy or _upcoming_match().is_empty() \
+			or (GameState.match_way() == "skip" and GameState.call_intent.is_empty()):
+		_on_play_match()
+		return
+	Router.go("preview")
+
+
+## Start the match now (MatchKickoff): the pre-match scene, then the match-day setup.
 func _on_play_match() -> void:
-	if _upcoming_match().is_empty():
+	if not await MatchKickoff.start(get_tree()):
 		_on_sim_round()
-		return
-	if _pre_match != null or _starting_match:
-		return
-	# A response chosen under a fact opens this match on that call before the
-	# first bounce, so Skip plays it the Watch way this once (the saved choice
-	# stays); the button said "Play match" (_play_label).
-	var way := GameState.match_way()
-	if way == "skip" and not GameState.call_intent.is_empty():
-		way = "watch"
-	if not GameState.vignettes_on() or way == "skip":
-		# Vignettes off (Settings), or Skip chosen: no banner scene, straight
-		# to the match.
-		_starting_match = true
-		ScreenTransition.run("Heading to the ground...", func():
-			if not GameState.prepare_interactive_match():
-				_starting_match = false
-				_sim_week()
-				return
-			GameState.match_way_live = way
-			Router.go("match"))
-		return
-	# The pre-match scene goes up in this frame: a couple of seconds of
-	# match day (warm-up, final words, through the banner) while the match
-	# is set up underneath. A tap sends them through the banner at once.
-	var m := _upcoming_match()
-	var mine := GameState.my_club
-	var opp := str(m["away"]) if str(m["home"]) == mine else str(m["home"])
-	var season: Season = GameState.season
-	# Everyone named runs out: the 18 on the ground and the interchange.
-	var opp_squad := Squad.new(opp, season.lists[opp], false, opp, season.selections.get(opp, {}))
-	var opp_ground: Array = opp_squad.ground + opp_squad.bench
-	var heading := "%s  ·  %s v %s" % [str(m["label"]), GameDB.club_name(str(m["home"])),
-			GameDB.club_name(str(m["away"]))]
-	# The banner's occasion (Banners.pick): finals week, marquee game, must-win, spoon
-	# bowl, milestones (GameState.banner_context).
-	var label := str(m["label"])
-	var banner_ctx := GameState.banner_context(m)
-	# Gather Round: the warm-up is at the host ground the match is staged at.
-	if str(m.get("venue", "")) != "" and label.ends_with(GatherRound.NAME):
-		VignetteGround.use_match(m)
-	_pre_match = PreMatchVignette.open(get_tree().root, mine, opp,
-			GameState.my_squad().ground + GameState.my_squad().bench, opp_ground, heading,
-			PreMatchVignette.is_final(label), banner_ctx)
-	# Home-and-away rounds and finals both play live with the coach box.
-	await get_tree().process_frame
-	if not GameState.prepare_interactive_match():
-		_pre_match.get_parent().queue_free()
-		_pre_match = null
-		_on_sim_round()
-		return
-	GameState.match_way_live = way
-	_pre_match.play_through(PRE_MATCH_SECONDS)
-	await _pre_match.done
-	Router.go("match")
 
 
 ## A response beside an opposition fact was tapped (P-13): it is chosen and
@@ -1472,7 +1401,7 @@ func _on_play_match() -> void:
 ## match: Play match does, and the pre-bounce pane then opens on that call with
 ## the fact above it. Nothing is saved.
 func _on_fact_option(option: Dictionary, fact_text: String) -> void:
-	if _pre_match != null or _starting_match:
+	if MatchKickoff.busy:
 		return
 	var intent := {"call": str(option["call"]), "plan": str(option["plan"]),
 			"player_id": str(option["player_id"]), "fact": fact_text}
@@ -1585,7 +1514,7 @@ func _close_finals() -> void:
 
 
 func handle_back() -> bool:
-	if _pre_match != null:
+	if MatchKickoff.busy:
 		return true     # the side is on its way out
 	if TrainingReportSheet.close_top(self):
 		return true
@@ -1631,12 +1560,8 @@ func handle_back() -> bool:
 		return true
 	# Back skips the press conference, as its Skip button does (natural
 	# Android Back); an overlay opened over it closes first.
-	if _media_overlay != null and is_instance_valid(_media_overlay):
-		GameState.skip_media_conference()
-		_media_overlay.queue_free()
-		_media_overlay = null
-		_build()
-		return true
+	if _media_overlay != null and is_instance_valid(_media_overlay) and _media_overlay is PressScene:
+		return (_media_overlay as PressScene).handle_back()
 	return false
 
 
@@ -1769,153 +1694,24 @@ func _close_backing_talk() -> void:
 	_build()
 
 
-## How the answer landed (the bible: "the effect is visible afterwards"):
-## one line, and Done (or Back) closes it.
-func _show_press_outcome(landed: Dictionary) -> void:
-	if landed.is_empty():
-		return
-	var box := UiKit.modal_box(self, 520.0, 0.0)
-	_media_overlay = box["overlay"]
-	_media_overlay.name = "MediaOutcome"
-	var v: VBoxContainer = box["body"]
-	v.add_child(UiKit.heading("After the press conference", UiKit.TITLE))
-	var l := UiKit.lbl(str(landed.get("line", "")), 15, UiKit.TEXT)
-	l.name = "MediaOutcomeLine"
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	v.add_child(l)
-	var ok := UiKit.btn("Done", UiKit.NAME, true)
-	ok.name = "MediaOutcomeDone"
-	ok.custom_minimum_size = Vector2(0, 48)
-	ok.pressed.connect(func():
-		if _media_overlay != null and is_instance_valid(_media_overlay):
-			_media_overlay.queue_free()
-		_media_overlay = null
-		_build())
-	(box["footer"] as VBoxContainer).add_child(ok)
-
-
+## The press conference is its own full screen (ruling 3.52; director
+## 2026-11-06, Q4): the hub hands over to PressScene, which shows the result in
+## the room and comes back here. A hub built by hand (not the running scene)
+## lays the same screen over itself.
 func _show_media_conference() -> void:
 	if not GameState.media_conference_pending():
 		return
 	if _media_overlay != null and is_instance_valid(_media_overlay):
 		return
-	# A PC (director, 2026-10-14: "post match interview screen is so small"): the
-	# sheet takes most of the screen, the press room on the left, the question and
-	# the answers in a column on the right. A phone keeps the stacked sheet.
-	var vw := UiKit.view_width(self)
-	var vh := UiKit.view_height(self)
-	var wide := ScreenLayout.roomy(vw, vh)
-	var box := UiKit.modal_box(self, vw * 0.88 if wide else 560.0, vh * 0.88 if wide else 0.0)
-	_media_overlay = box["overlay"]
-	_media_overlay.name = "MediaConference"
-	var v: VBoxContainer = box["body"]
-	var footer: VBoxContainer = box["footer"]
-	# The room's picture keeps its proportions: a fixed ratio on a PC, the
-	# phone's strip otherwise.
-	var stage: Control = null
-	var scene: MediaConferenceVignette = null
-	var answers: VBoxContainer = footer
-	var prompt := UiKit.vbox(10 if wide else 6)
-	var row: HBoxContainer = null
-	if wide:
-		row = UiKit.hbox(24)
-		row.name = "MediaRow"
-		v.add_child(row)
-		answers = UiKit.vbox(16)
-		answers.name = "MediaAnswers"
-		answers.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		answers.add_child(prompt)
-		# Vignettes off (Settings): no stage, the column fills the sheet.
-		if GameState.vignettes_on():
-			var stage_w := minf(vw * 0.88 * 0.56, (vh * 0.88 - 60.0) * 1.6)
-			stage = Control.new()
-			stage.name = "MediaConferenceStage"
-			stage.custom_minimum_size = Vector2(stage_w, stage_w / 1.6)
-			stage.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-			stage.clip_contents = true
-			row.add_child(stage)
-			scene = MediaConferenceVignette.open(stage, GameState.my_club)
-		row.add_child(answers)
-		footer.visible = false
-	elif GameState.vignettes_on():
-		stage = Control.new()
-		stage.name = "MediaConferenceStage"
-		stage.custom_minimum_size = Vector2(0, minf(300.0, vh * 0.38))
-		v.add_child(stage)
-		scene = MediaConferenceVignette.open(stage, GameState.my_club)
-	if not wide:
-		v.add_child(prompt)
-	prompt.visible = scene == null
-	var by := UiKit.lbl(str(GameState.media_conference.get("by", "Journalist")),
-			UiKit.H2 if wide else UiKit.SMALL, UiKit.MUTED, true)
-	by.name = "MediaByline"
-	prompt.add_child(by)
-	var q := NameInk.label(str(GameState.media_conference.get("question", "")), _league_names(), UiKit.H1 if wide else 16, UiKit.TEXT, wide)
-	q.name = "MediaQuestion"
-	q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	prompt.add_child(q)
-	var opts: Array = GameState.media_conference.get("options", [])
-	# Each answer and its line are one group, clearly apart from the next.
-	var group_gap := 16 if wide else 15
-	if wide:
-		answers.add_theme_constant_override("separation", group_gap)
-	else:
-		footer.add_theme_constant_override("separation", group_gap)
-		footer.visible = false
-	var shown_items: Array = [prompt]
-	for i in range(opts.size()):
-		var group := UiKit.vbox(4 if wide else 3)
-		group.name = "MediaAnswerGroup_%d" % i
-		group.visible = scene == null
-		answers.add_child(group)
-		shown_items.append(group)
-		var b := UiKit.btn(str((opts[i] as Dictionary).get("label", "")), UiKit.H2 if wide else 15)
-		b.name = "MediaAnswer_%d" % i
-		b.custom_minimum_size = Vector2(0, 56 if wide else 48)
-		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		NameInk.dress_button(b, _league_names())
-		var choice := i
-		b.pressed.connect(func():
-			var landed := GameState.resolve_media_conference(choice)
-			_media_overlay.queue_free()
-			_media_overlay = null
-			_build()
-			_show_press_outcome(landed))
-		group.add_child(b)
-		# What the answer can do, under it: both ways it can land, their odds and
-		# sizes (bible §4). In the page's own ink, not faint grey: the coach is
-		# deciding on it.
-		var effect := NameInk.label(MediaConference.odds_line(MediaConference.kind_of(opts[i], i), GameState.press_chance(i)),
-				_league_names(), UiKit.BODY if wide else UiKit.SMALL, UiKit.TEXT)
-		effect.name = "MediaAnswerLine_%d" % i
-		effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		group.add_child(effect)
-	var skip := UiKit.btn("Skip press conference", 14)
-	skip.name = "MediaSkip"
-	if wide:
-		skip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		skip.custom_minimum_size = Vector2(240, 44)
-		skip.visible = scene == null
-		answers.add_child(skip)
-		shown_items.append(skip)
-	else:
-		skip.flat = true
-		skip.custom_minimum_size = Vector2(0, 44)
-		footer.add_child(skip)
-	skip.pressed.connect(func():
-		GameState.skip_media_conference()
-		_media_overlay.queue_free()
+	if is_inside_tree() and get_tree().current_scene == self:
+		_media_overlay = self
+		Router.go.call_deferred("press")
+		return
+	var press := PressScene.embed(self)
+	_media_overlay = press
+	press.closed.connect(func():
 		_media_overlay = null
 		_build())
-	if scene == null:
-		footer.visible = not wide
-		return
-	scene.ready_for_question.connect(func():
-		for it in shown_items:
-			(it as Control).visible = true
-		footer.visible = not wide)
-
 
 func _show_results(results: Array) -> void:
 	if _results_overlay != null and is_instance_valid(_results_overlay):

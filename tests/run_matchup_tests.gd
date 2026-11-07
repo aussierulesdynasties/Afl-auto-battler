@@ -1130,6 +1130,15 @@ func _test_fact_options() -> void:
 					"%s: a real tap on Watch picks the way and starts no match (%s)" % [tag, ww])
 		var why: String = await Tap.tap(play) if play != null else "no Play match"
 		await _settle()
+		# Play match opens the match preview (its own step, director 2026-11-07),
+		# with the call still held; a real tap on its Continue starts the match.
+		var pv: Node = current_scene
+		var cont: Control = pv.find_child("PreviewContinue", true, false) \
+				if pv != null and pv.name == "MatchPreviewScene" else null
+		_check(cont != null and not _state.call_intent.is_empty() and _state.pending_sim == null,
+				"%s: Play match opens the match preview, the call still held" % tag)
+		why += await Tap.tap(cont) if cont != null else "no Continue"
+		await _settle()
 		await _settle()
 		var scene: Node = current_scene
 		var box: Node = scene.find_child("CoachBox", true, false) if scene != null else null
@@ -1484,8 +1493,22 @@ func _test_pre_match_scene() -> void:
 		var hub: Control = await _open_hub()
 		var play := _button(hub.find_child("WeekActions", true, false), "Play match")
 		play.emit_signal("pressed")
+		# Play match opens the match preview first (director, 2026-11-07: its own
+		# step before the setup); its Continue starts the match.
+		var cont: Button = null
+		for i in range(30):
+			await process_frame
+			var pv := get_current_scene()
+			cont = pv.find_child("PreviewContinue", true, false) if pv != null and pv.name == "MatchPreviewScene" else null
+			if cont != null:
+				break
+		_check(cont != null, "Play match opens the match preview, Continue on it")
+		if cont == null:
+			hub.queue_free()
+			return
+		cont.emit_signal("pressed")
 		var vig = root.find_child("PreMatchVignette", true, false)
-		_check(vig != null, "Play match cuts to the pre-match scene in the same frame")
+		_check(vig != null, "Continue cuts to the pre-match scene in the same frame")
 		if vig == null:
 			hub.queue_free()
 			return
@@ -1551,10 +1574,8 @@ func _gate_odds() -> void:
 	var RT = load("res://scripts/sim/Ratings.gd")
 	var MU = load("res://scripts/sim/Matchups.gd")
 	var digits := RegEx.create_from_string("[0-9]")
-	var templates := [GO.GAIN, GO.COST, GO.TAG_GAIN, GO.TAG_COST, GO.MATCHUP_GAIN, GO.MATCHUP_COST_NEXT,
-			GO.MATCHUP_COST_LOOSE, GO.MINDER_GAIN, GO.MINDER_COST, GO.LOOSE_GAIN,
-			GO.LOOSE_COST, GO.TAG_GIVES, GO.TAG_NOTE, GO.SKIP_FIRST, GO.SKIP_LATER, GO.BACK_STATS, GO.BACK_CM,
-			GO.DUEL_GAIN, GO.DUEL_COST_SWAP, GO.DUEL_COST_LOOSE, GO.DUEL_COST_FREE, GO.DUEL_COST_KEEP,
+	var templates := [GO.GAIN, GO.COST, GO.TAG_GAIN, GO.TAG_COST, GO.MINDER_GAIN, GO.MINDER_COST, GO.LOOSE_GAIN,
+			GO.LOOSE_COST, GO.TAG_GIVES, GO.TAG_NOTE, GO.SKIP_FIRST, GO.SKIP_LATER,
 			GO.FOR_MINUTES, GO.TO_SIREN, GO.TO_BREAK, GO.NONE_GAIN, GO.NONE_COST_RUN, GO.NONE_COST_BOUNCE]
 	for d in [GO.PLAN_GAIN, GO.PLAN_COST, GO.BURST_GAIN, GO.BURST_COST]:
 		templates.append_array((d as Dictionary).values())
@@ -1579,7 +1600,7 @@ func _gate_odds() -> void:
 			"Defensive press: both sides from PLANS and the press zones (%s / %s)" % dfn)
 	_check(str(GO.plan_lines("contest")[0]).contains(pct.call(float(Ms.PLANS["contest"]["contest"]))), "Win contest: its stoppage edge")
 	_check(GO.skip_line(1).contains("plan you took in") and GO.skip_line(3).contains("last quarter's calls")
-			and GO.skip_line(3).contains("no change") and GO.skip_line(1).contains("Only a match-up changed here is kept"),
+			and GO.skip_line(3).contains("no change") and GO.skip_line(1).contains("Nothing changed here is kept"),
 			"Skip says what it plays with and that the sheet's other changes are not kept")
 	var mins := func(k: String) -> String: return str(roundi(float(Ms.BURSTS[k]["chains"]) * float(Ms.GAME_MINUTES) / float(RT.T["chains_per_game"])))
 	var surge: Array = GO.burst_lines("surge", 60)
@@ -1602,5 +1623,5 @@ func _gate_odds() -> void:
 	var edge: float = MU.AERIAL_EDGE if load("res://scripts/sim/Traits.gd").has(fwd, "aerial") else 0.0
 	var want := clampf(MU.MARK_BASE + edge + (MU.forward_air(fwd) - MU.defender_air(back) - MU.DUEL_CENTRE) / MU.DUEL_SCALE,
 			MU.MARK_FLOOR, MU.DUEL_CAP)
-	_check(is_equal_approx(MU.mark_chance(fwd, back), want) and GO.back_stats(back) == "Intercept 74 · Marking 68 · 192 cm",
-			"A back's card: Intercept, Marking and height, and the mark chance the duel rule gives (%.3f, %s)" % [want, GO.back_stats(back)])
+	_check(is_equal_approx(MU.mark_chance(fwd, back), want),
+			"The mark chance is the duel rule's (%.3f)" % want)

@@ -178,6 +178,7 @@ const SCREENS := [
 	["staff", "", "hub"],
 	["stats", "", "hub"],
 	["selection", "", "hub"],
+	["preview", "", "hub"],
 	["offseason", "", "hub"],
 	["season_review", "", "hub"],
 	["forge", "", "hub"],
@@ -370,16 +371,22 @@ func _test_overlays() -> void:
 	var pid := _first_player_id()
 	await _overlay_case("hub: settings sheet", "hub", func(s): await _click_named(s, "HubSettings"))
 	await _overlay_case("hub: news", "hub", func(s): s.call("_show_news"))
-	# Continue (the click way) hands a pending press conference to the hub, and
-	# it stays open under the next way: whether one is pending depends on the
-	# seeded results, so each way starts with it cleared and this case stays
-	# about the results popup.
+	# Closing the results hands a pending press conference to its own screen
+	# (Router "press"): whether one is pending depends on the seeded results, so
+	# it is skipped here and this case stays about the results popup. The press
+	# screen's own Back is checked in the matchday suite.
 	await _overlay_case("hub: results popup", "hub", func(s):
 		for i in range(3):
 			if not s.call("handle_back"):
 				break
 		await process_frame
-		s.call("_on_sim_round"))
+		s.call("_on_sim_round")
+		# The round plays under a cover (deferred): wait for its results, then skip.
+		for i in range(60):
+			if s.find_child("RoundResults", true, false) != null:
+				break
+			await process_frame
+		_state.skip_media_conference())
 	await _overlay_case("hub: season plan", "hub", func(s): await _tap_named(s, "SeasonPlanLine"))
 	await _overlay_case("list: player profile", "list", func(s): s.call("_open_profile", pid))
 	await _overlay_case("list: captaincy sheet", "list", func(s): s.call("_open_captaincy"))
@@ -388,9 +395,10 @@ func _test_overlays() -> void:
 	await _overlay_case("training: first-visit intro", "training", func(s): s.call("_show_intro"),
 			func(): _state.set_setting("seen_training_intro", false))
 	await _overlay_case("stats: first-visit intro", "stats", func(s): s.call("_show_intro"))
-	await _overlay_case("selection: team report", "selection", func(s): s.call("_show_report", "MEL"))
-	await _overlay_case("selection: synergies", "selection", func(s): s.call("_show_synergies"))
-	await _overlay_case("selection: This week sheet", "selection", func(s): s.call("_open_week"))
+	await _overlay_case("selection: team report", "selection", func(s): s.get("_week").show_report("MEL"))
+	await _overlay_case("selection: synergies", "selection", func(s): s.get("_week").show_synergies())
+	await _overlay_case("preview: team report", "preview", func(s): s.get("_week").show_report("MEL"))
+	await _overlay_case("preview: synergies", "preview", func(s): s.get("_week").show_synergies())
 	await _overlay_case("selection: player profile", "selection", func(s): s.call("_open_profile", pid))
 	await _overlay_case("offseason: talks", "offseason", func(s): s.call("_open_talks", pid))
 	await _overlay_case("season review: awards program", "season_review", func(s): s.call("_open_awards_program"),
@@ -551,6 +559,9 @@ func _test_match() -> void:
 			# A tap skips a farewell; then Continue is clear.
 			await _click(vignette as Control)
 			await _settle(30)
+		# A press conference the result raised would open its own screen over
+		# the hub; this case is about leaving full time, so it is skipped.
+		_state.skip_media_conference()
 		var why3: String = await _leave(way, cont)
 		await _settle(10)
 		var left_over: bool = root.find_child("FarewellVignette", true, false) != null and _router.current() == "hub"
