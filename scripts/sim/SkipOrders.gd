@@ -1,44 +1,34 @@
 class_name SkipOrders
 extends RefCounted
-## The survey before Skip to next season (row 70, bible T5.Q20; director,
-## 2026-11-07: "I do want the survey"). The coach answers a short run of
-## questions and the skip follows each answer (GameState.skip_season):
+## The survey before the season skip (row 70, bible T5.Q20; director,
+## 2026-11-07: "I do want the survey"; 2026-11-08: "It's just skipping games,
+## no off season skipping"). The skip plays out only the rest of the season's
+## matches, so the survey asks only about them. The coach answers a short run
+## of questions and the skip follows each answer (GameState.skip_season):
 ##   game_plan  the standing plan every match is played with (set_club_plan)
 ##   youth      selection: best side, or promised runs for players with few
 ##              senior games (Backing, through auto-pick)
 ##   questions  how the week's cards are answered while he is away
-##   contracts  how free agency's close settles his out-of-contract players
-##              (GameState._fa_close_plan)
-##   draft      how his recruiters weigh a draftee's ceiling (Draft.user_pot_weight)
 ## Each option says what it does for him and what it costs, never which is
 ## better (bible principle 4). Pure rules and words; GameState applies them.
 
 ## Promised runs kept going at once under "Give the kids a run".
 const YOUTH_RUNS := 2
-## Out-of-contract players this old or older go under "Move on the veterans".
-const VETERAN_AGE := 30
-## How much of a draftee's worth is his ceiling, per draft answer. "best" is the
-## recruiters' own blend (Draft.AI_POT_WEIGHT_INTAKE), so it changes nothing.
-const DRAFT_POT := {"ceiling": 0.9, "ready": 0.3}
-
-const KEYS := ["game_plan", "youth", "questions", "contracts", "draft"]
+const KEYS := ["game_plan", "youth", "questions"]
 ## Each question in a word or two, for the sheet that sums up your answers.
-const SHORT := {"game_plan": "Game plan", "youth": "Selection", "questions": "Questions during the week",
-		"contracts": "Out-of-contract players", "draft": "National Draft"}
+const SHORT := {"game_plan": "Game plan", "youth": "Selection", "questions": "Questions during the week"}
 
 
 ## The answers the survey opens on: the club's plan as it stands, and for the
 ## rest what the skip does when nobody asks (so a straight run of Next changes
 ## nothing the club already does).
 static func defaults(club_plan: String) -> Dictionary:
-	return {"game_plan": club_plan, "youth": "form", "questions": "usual",
-			"contracts": "usual", "draft": "best"}
+	return {"game_plan": club_plan, "youth": "form", "questions": "usual"}
 
 
 ## The questions in order: {"key", "title", "lead", "options": [{"key",
-## "label", "gain", "cost"}]}. `facts` carries what a lead line names:
-## {"expiring": int, "veterans": int}.
-static func questions(facts := {}) -> Array:
+## "label", "gain", "cost"}]}.
+static func questions() -> Array:
 	var plans := []
 	for k in ["balanced", "attacking", "defensive", "contest", "controlled"]:
 		var part: Dictionary = CoachReport.PLAN_PARTS[k]
@@ -48,11 +38,6 @@ static func questions(facts := {}) -> Array:
 			gain = "Nothing for them to exploit."
 			cost = "No extra edge."
 		plans.append({"key": k, "label": str(CoachReport.PLAN_NAMES[k]), "gain": gain, "cost": cost})
-	var expiring := int(facts.get("expiring", 0))
-	var vets := int(facts.get("veterans", 0))
-	var out_line := "None of your players is out of contract this year." if expiring == 0 else \
-			"%d of your players %s out of contract this year, %d of them %d or older." % [
-				expiring, "is" if expiring == 1 else "are", vets, VETERAN_AGE]
 	return [
 		{"key": "game_plan", "title": "How do we play?",
 			"lead": "Your game plan for every match left this season.", "options": plans},
@@ -77,31 +62,6 @@ static func questions(facts := {}) -> Array:
 				{"key": "board", "label": "Keep the board onside",
 					"gain": "Each card answered the way that does most for the board's confidence.",
 					"cost": "Players' mood and trust can slip."},
-			]},
-		{"key": "contracts", "title": "Out-of-contract players",
-			"lead": out_line + " Settled as free agency closes.", "options": [
-				{"key": "usual", "label": "The usual",
-					"gain": "Depth players re-sign if the cap allows.",
-					"cost": "Your best 23 test the market, and a rival can outbid you."},
-				{"key": "keep", "label": "Keep the core",
-					"gain": "Your best 23 re-sign at their asking price for two years, while the cap allows.",
-					"cost": "Less cap room, and fewer list spots for draft picks."},
-				{"key": "veterans", "label": "Move on the veterans",
-					"gain": "Players %d and older are let go, as far as the %d-player list minimum allows, freeing list spots and cap room for the draft." % [
-							VETERAN_AGE, Contracts.MIN_LIST],
-					"cost": "Their experience leaves with them. The rest are settled the usual way."},
-			]},
-		{"key": "draft", "title": "National Draft",
-			"lead": "What your recruiters look for at each of your picks.", "options": [
-				{"key": "best", "label": "Best available",
-					"gain": "The recruiters' usual blend of what a player is now and what he could become.",
-					"cost": "Neither the readiest kid nor the biggest ceiling."},
-				{"key": "ceiling", "label": "Back the ceiling",
-					"gain": "Kids who could become stars.",
-					"cost": "Further from senior footy, and some never get there."},
-				{"key": "ready", "label": "Ready to play",
-					"gain": "Kids closer to playing senior footy now.",
-					"cost": "Lower ceilings."},
 			]},
 	]
 

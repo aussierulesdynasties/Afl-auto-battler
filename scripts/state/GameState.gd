@@ -677,11 +677,11 @@ func saved_career_meta() -> Dictionary:
 ## so the last save (from before the match) is the consistent one to keep.
 ## Full saves written this run: tests count them to keep a tap to one save.
 var saves_written := 0
-## Set while Skip to next season plays a season out: each round leaves the save
+## Set while the season skip plays the season out: each round leaves the save
 ## alone and the skip saves once at the end (a save every round was a quarter of
 ## the skip's time). Killed mid-skip, the career is where the skip began.
 var _batching := false
-## The coach's answers to the survey before Skip to next season (SkipOrders),
+## The coach's answers to the survey before the season skip (SkipOrders),
 ## held only while the skip runs; {} the rest of the time.
 var _skip_orders := {}
 
@@ -9099,7 +9099,6 @@ func _fa_close_plan() -> Array:
 	# aside, so whoever takes yours can always be paid.
 	var room := salary_cap - my_payroll()
 	var size := my_list.size()
-	var policy := str(_skip_orders.get("contracts", "usual"))
 	for p in Contracts.expiring(my_list):
 		if bool(p.get("resigned", false)) or retiring_now(p):
 			continue
@@ -9109,18 +9108,7 @@ func _fa_close_plan() -> Array:
 			continue
 		var rise := Contracts.asking_salary(p) - int(p.get("salary", 0))
 		var fits := rise <= room
-		# The survey before a skip (SkipOrders) can move the veterans on, or
-		# keep your best 23 at their price instead of testing the market.
-		if policy == "veterans" and not walked and size > Contracts.MIN_LIST \
-				and int(floor(float(p.get("age", 0)))) >= SkipOrders.VETERAN_AGE:
-			plan.append([p, "release"])
-			size -= 1
-			continue
 		if not walked and fits and best22.has(str(p["id"])) and size > Contracts.MIN_LIST:
-			if policy == "keep":
-				plan.append([p, "resign2"])
-				room -= rise
-				continue
 			plan.append([p, "test"])
 			size -= 1
 			room -= rise
@@ -11275,14 +11263,15 @@ func _next_week_event() -> void:
 	ClubArcs.week(self)
 
 
-## Skip to next season (director, 2026-11-07: "We need to bring back the
-## ability to skip full seasons"). Every week left is played out without you,
-## exactly as Sim the week plays it; then the off-season runs on what the club
-## already does when you leave it alone: out-of-contract players settled the
-## free-agency way (_fa_close_plan), no trades of yours, and "Pick for me" at
-## each of your National Draft picks. It stops at the next pre-season, where
-## the off-season wrap opens with the skipped season's facts (season_wrap
-## "skipped"). Sacked on the way, it stops there. Saved once, at the end.
+## Skip to the end of the season (director, 2026-11-07: "We need to bring back
+## the ability to skip full seasons"; 2026-11-08: "It's just skipping games, no
+## off season skipping"). Every week left, the finals included, is played out
+## without you, exactly as Sim the week plays it, following the survey's
+## answers (SkipOrders). It stops once the season is over, where the last Sim
+## the week stops (the last match opens the off-season, so rivals settle their
+## contracts as always): re-signings, trades, free agency and the draft stay yours.
+## The last week's card is left for you, as after Sim the week. Sacked on the
+## way, it stops there. Saved once, at the end.
 ## Returns {"ok", "year", "weeks", "reason": "done" | "sacked" | "none"}.
 func skip_season(orders := {}) -> Dictionary:
 	if season == null or is_sacked() or season.is_season_over():
@@ -11309,19 +11298,6 @@ func skip_season(orders := {}) -> Dictionary:
 		_skip_orders = {}
 		autosave()
 		return {"ok": false, "year": year, "weeks": weeks, "reason": "sacked"}
-	# The season's last card goes unanswered, as the next Sim the week would leave it.
-	_settle_week_event()
-	var facts := skipped_season_facts()
-	open_offseason()
-	if begin_intake_draft():
-		draft.user_pot_weight = float(SkipOrders.DRAFT_POT.get(str(_skip_orders["draft"]), -1.0))
-		_draft_for_me(draft)
-		draft.user_pot_weight = -1.0
-		finish_intake_draft()
-	else:
-		start_next_season()
-	if not season_wrap.is_empty() and int(season_wrap.get("year", 0)) == season_year:
-		season_wrap["skipped"] = facts
 	_batching = false
 	_skip_orders = {}
 	mark_dirty()
@@ -11349,42 +11325,6 @@ func _skip_back_kids() -> void:
 			break
 		_start_backing(p)
 		on += 1
-
-
-## Your National Draft picks taken the "Pick for me" way, the rivals' as they
-## always are; a pick with nobody you can take passes.
-func _draft_for_me(d: Draft) -> void:
-	var guard := 0
-	while d != null and not d.is_finished() and guard < 5000:
-		guard += 1
-		d.auto_until_user_turn()
-		if d.is_finished():
-			break
-		if not d.pick_for_me():
-			d._skip_current_pick()
-
-
-## The finished season in facts, kept with the wrap so a reload still shows
-## them: where you finished, your record and finals, the premiers and the
-## league's and your club's medals. Names are written in now, while every
-## player is still on a list.
-func skipped_season_facts() -> Dictionary:
-	if season == null:
-		return {}
-	var facts := {"year": season_year, "ladder": my_position(), "of": season.ladder.size(),
-			"record": my_record(), "premier": premier(),
-			"finals": Almanac.finals_text(_my_last_final(), premier() == my_club,
-					str(season.finals.get("runner_up", "")) == my_club)}
-	var bw: Dictionary = season_awards.get("brownlow_winner", {})
-	if not bw.is_empty():
-		facts["brownlow"] = {"name": award_name(bw), "club": str(bw.get("club", "")), "n": int(bw.get("votes", 0))}
-	var gk: Array = season_awards.get("coleman", [])
-	if not gk.is_empty():
-		facts["coleman"] = {"name": award_name(gk[0]), "club": str(gk[0].get("club", "")), "n": int(gk[0].get("goals", 0))}
-	var bf: Array = (season_awards.get("best_and_fairest", {}) as Dictionary).get(my_club, [])
-	if not bf.is_empty():
-		facts["bf"] = {"name": award_name(bf[0]), "club": my_club}
-	return facts
 
 
 func week_event_pending() -> bool:

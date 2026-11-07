@@ -1,8 +1,9 @@
 extends SceneTree
-## Review capture for Skip to next season (director, 2026-11-07), dark: the
-## quiet button under the week on the hub, each question of the survey before
-## the skip, the sheet that says what is decided for you, and the season wrap after the skip (the season you skipped, then
-## your draft picks and who left). Needs a real renderer:
+## Review capture for the season skip (director, 2026-11-07; 2026-11-08: games
+## only, no off-season), dark: the quiet button under the week on the hub, each
+## question of the survey before the skip, the sheet that says what is decided
+## for you, and the hub after the skip, the season over and the off-season still
+## yours. Needs a real renderer:
 ##   godot --windowed --path . --script tools/visual/capture_season_skip.gd
 ## Environment: CAP_DIR (default "."), CAP_CLUB (default "FRE"), CAP_W / CAP_H
 ## (default 390 x 844). Never touches a real save.
@@ -85,18 +86,11 @@ func _run() -> void:
 		await _shot("%s/%s_%dx%d.png" % [dir, name, size.x, size.y])
 	hub.call("_close_skip_confirm")
 	var res: Dictionary = state.skip_season()
-	print("skip: ", res, " | facts: ", state.season_wrap.get("skipped", {}))
+	print("skip: ", res)
 	hub.queue_free()
 	await _frames(2)
 	hub = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _frames(12)
-	if hub.find_child("SeasonWrap", true, false) == null:
-		hub.call("_show_season_wrap")
-		await _frames(8)
-	await _shot("%s/skip_wrap_%dx%d.png" % [dir, size.x, size.y])
-	var fin: Control = hub.find_child("WrapSkipped_bf", true, false)
-	if fin != null:
-		await _scroll_to(hub, fin, 120)
-		await _shot("%s/skip_wrap_lists_%dx%d.png" % [dir, size.x, size.y])
+	await _shot("%s/skip_after_%dx%d.png" % [dir, size.x, size.y])
 	quit()
