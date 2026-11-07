@@ -8,6 +8,11 @@
 # GITHUB_TOKEN start no CI; workflow_dispatch is allowed, and changed_files=docs/TODO.md
 # makes it a seconds-long docs-only pass). Needs the repo setting "Allow GitHub Actions
 # to create and approve pull requests". No matching row: a warning, nothing else.
+#
+# Since 2026-11-06 GitHub holds the PR's own Tests run (pull_request event, opened by
+# github-actions[bot]) at "action_required", and the dispatched run's checks are not
+# linked to the PR, so the required "test" never reported and every close PR sat
+# BLOCKED (#1060-#1113). The last step approves that held run.
 name: Roadmap close
 on:
   pull_request:
@@ -55,3 +60,16 @@ jobs:
           gh pr merge "$url" --auto --squash --delete-branch
           gh workflow run tests.yml --ref "$branch" -f changed_files=docs/TODO.md
           echo "Opened $url"
+          # Approve the PR's held Tests run (see the note at the top). Best effort.
+          for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            run=$(gh run list --branch "$branch" --event pull_request --json databaseId,conclusion               --jq '[.[] | select(.conclusion == "action_required")][0].databaseId // empty')
+            if [ -n "$run" ]; then
+              if gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$run/approve" >/dev/null; then
+                echo "Approved Tests run $run"
+              else
+                echo "::warning::Could not approve Tests run $run; approve it by hand or the PR stays BLOCKED"
+              fi
+              break
+            fi
+            sleep 10
+          done
