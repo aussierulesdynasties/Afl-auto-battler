@@ -109,7 +109,7 @@ func _test_selection_tests() -> void:
 		var mine_s: float = _state.my_squad().strength()
 		for c in _state.season.lists:
 			if str(c) != _state.my_club and not (_state.season.lists[c] as Array).is_empty() \
-					and Squad.new(str(c), _state.season.lists[c], false, str(c), _state.season.selections.get(c, {})).strength() > mine_s:
+					and load("res://scripts/sim/Squad.gd").new(str(c), _state.season.lists[c], false, str(c), _state.season.selections.get(c, {})).strength() > mine_s:
 				better += 1
 		ranks_ok = int(rows_h2h[0]["mine_rank"]) == better + 1
 	_check(ranks_ok, "Every rank is a league place, the overall one by list strength (%s)" %
