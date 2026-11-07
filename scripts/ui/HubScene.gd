@@ -29,8 +29,6 @@ func _ready() -> void:
 	if GameState.preseason_active() and not GameState.needs_season_wrap():
 		Router.replace("preseason")
 		return
-	# A response tapped last time that never reached a match does not wait here.
-	GameState.call_intent = {}
 	MatchKickoff.reset()
 	_warm_pre_match.call_deferred()
 
@@ -836,21 +834,14 @@ func _week_section(season: Season) -> Control:
 		if not facts.is_empty() or not notes.is_empty() or not former.is_empty() or not old_club.is_empty():
 			nv.add_child(UiKit.spacer(4))
 		# The first fact leads (the danger man, the thing to plan for); the
-		# rest follow in body copy, so three lines are not three equals.
-		# Every response the rules allow sits under the fact it answers (P-13): all
-		# shown, in a fixed order, none marked best (FactOptions).
-		var fact_options := GameState.opponent_fact_options(opp, facts)
+		# rest follow in body copy, so three lines are not three equals. Facts
+		# only: the calls that answer them (tag, defensive set-up, game plan)
+		# live on the pre-bounce setup (director, 2026-11-08, P-13 cut).
 		for i in range(facts.size()):
 			var f: Dictionary = facts[i]
 			var fl := NameInk.label(str(f["text"]), _league_names(), UiKit.NAME if i == 0 else UiKit.BODY, UiKit.TEXT, i == 0)
 			fl.name = "Fact_%d" % i
 			nv.add_child(fl)
-			if i < fact_options.size() and not (fact_options[i] as Array).is_empty():
-				var opt_row := FactOptionsRow.new().setup(i, fact_options[i], _narrow(),
-						_on_fact_option.bind(str(f["text"])), str(f["text"]))
-				nv.add_child(opt_row)
-				FactOptionsRow.paint_chosen(opt_row, GameState.call_intent)
-				nv.add_child(UiKit.spacer(2))
 		for i in range(former.size()):
 			var row: Dictionary = former[i]
 			var gl := NameInk.label(FormerPlayers.poster_line(row, GameDB.player_display_name(row["p"]),
@@ -1088,11 +1079,9 @@ func _match_way() -> Control:
 
 
 ## The main button's words: Skip chosen says what the match screen's own
-## control says; Watch and Key moments play the match. A response chosen under
-## a fact opens the match on that call, so Skip gives way to it this once.
+## control says; Watch and Key moments play the match.
 func _play_label() -> String:
-	return "Skip to full time" if GameState.match_way() == "skip" and GameState.call_intent.is_empty() \
-			else "Play match"
+	return "Skip to full time" if GameState.match_way() == "skip" else "Play match"
 
 
 ## The week's decision buttons: the primary action last, where the thumb is.
@@ -1383,8 +1372,7 @@ func _ladder_grid(_limit: int) -> Control:
 ## 2026-11-07: "It deserves its own place in the pre game flow"); its Continue
 ## starts the match. Skip to full time has no setup to read for, so it starts here.
 func _on_play_pressed() -> void:
-	if MatchKickoff.busy or _upcoming_match().is_empty() \
-			or (GameState.match_way() == "skip" and GameState.call_intent.is_empty()):
+	if MatchKickoff.busy or _upcoming_match().is_empty() or GameState.match_way() == "skip":
 		_on_play_match()
 		return
 	Router.go("preview")
@@ -1394,23 +1382,6 @@ func _on_play_pressed() -> void:
 func _on_play_match() -> void:
 	if not await MatchKickoff.start(get_tree()):
 		_on_sim_round()
-
-
-## A response beside an opposition fact was tapped (P-13): it is chosen and
-## shown chosen, or let go again when it already was. It never starts the
-## match: Play match does, and the pre-bounce pane then opens on that call with
-## the fact above it. Nothing is saved.
-func _on_fact_option(option: Dictionary, fact_text: String) -> void:
-	if MatchKickoff.busy:
-		return
-	var intent := {"call": str(option["call"]), "plan": str(option["plan"]),
-			"player_id": str(option["player_id"]), "fact": fact_text}
-	var again := str(GameState.call_intent.get("fact", "")) == fact_text \
-			and FactOptionsRow.is_chosen(option, GameState.call_intent)
-	GameState.call_intent = {} if again else intent
-	FactOptionsRow.paint_chosen(self, GameState.call_intent)
-	for b in find_children("PlayMatch", "Button", true, false):
-		(b as Button).text = _play_label()
 
 
 ## Every button that sims the week comes here. "Ask before simming" asks only

@@ -1433,7 +1433,7 @@ The design bible (docs/DESIGN_BIBLE.md) carries no release, CI, spend or team te
 87. **Pass-2 decisions.** "All eight theme bundles: yes." Build each theme's Tier A and B in listed order, skip Tier C. "P-52: Yes, carnival first. P-43: yes. P-36 and P-57: not yet." Bundle 1 (match day on a phone): P-25 to P-29 yes, P-30 skipped. Bundle 7 (trust, saves, store): P-70 to P-74 yes, P-75 skipped. (2026-10-18; PASS2#Directors-decisions; roadmap/29)
 88. **Two readable difficulty dials.** "Yes, two named difficulty dials; I set the sizes in playtest." How hard opposition coaches play against you; how tough the board is. Agents build the dials and copy; sizes are his. (2026-10-18; roadmap/28#4)
 89. **Transparency ship order.** "Order stands": key match-up ratings, risk-card multipliers, Who tags and Skip copy, draft leak, story cards, club gates, other no-downside options, one or two lanes at a time. Proposed continuation (not yet ruled): M3, M4, M6, M7, M2 copy first; L1 after Q3 then L2 with Q4; M1 after Q2; C2 copy; M5 after #850; L4, C1, S1 cost sheets after Q5, Q6, Q9; S2 after Q8; L3 free-agency weights after measuring. (2026-10-18; roadmap/30#29; DECISION_TRANSPARENCY_RULINGS)
-90. **Decision transparency kept.** The three proposals built without a recorded yes are kept: "Keep all three" (P-13 #804, P-15 draft night #805, P-18 other club says why #806); #804 and #805 still come to him for a look. Grep the chapters for his yes before any proposal lane; "awaits his selection" is a no. (2026-10-18; roadmap/30#32)
+90. **Decision transparency kept.** The three proposals built without a recorded yes are kept: "Keep all three" (P-13 #804, P-15 draft night #805, P-18 other club says why #806); #804 and #805 still come to him for a look. P-13's option cards were cut on 2026-11-08 (9.S entry 23). Grep the chapters for his yes before any proposal lane; "awaits his selection" is a no. (2026-10-18; roadmap/30#32)
 91. **Pre-season slice order.** (1) exists, blocks, time trial, sim to round 1; (2) plan familiarity; (3) practice match; (4) the papers ("Predict, and you answer"); (5) story cards at block stops with a card sheet for card-by-card ruling. Pre-season is "a glaring hole in our game". (2026-10-13, 2026-10-14; roadmap/26#2; roadmap/27#C4-C5; AUDIT#10)
 92. **Inherited start accepted (ARD-M5-016).** Inherited end-of-season 2026 lists, then the 2026 National Draft, then first playable season 2027. Needs a dedicated opening-intake boundary that starts 2027 once (GameDB dates ages to March 2027; the normal rollover would cause a ghost season, double ageing, repeated 2026 history and duplicate rookies); persist the start choice and progress; old saves keep their existing interpretation; both starts need Android checks; no other start years, no league customisation, no new economy, no reserves competition. (2026-10-05, 2026-10-06; roadmap/01#0.4.2; 08-m5#ARD-M5-016; GENRE#6)
 93. **Real names and rights.** Existing club names and nicknames ship verbatim only if the project is comfortable with the licensing position; otherwise place and football tradition inspire and the created club's name stays editable. Rights to real names and the licence register come before anything public. Fictional-names option (show_real_names, M8-009) is the fallback. (2026-10-18; roadmap/10-05; plan Q4)
@@ -1514,7 +1514,7 @@ The design bible (docs/DESIGN_BIBLE.md) carries no release, CI, spend or team te
 
 ## 7.P2 Settled one-off decisions (done, kept as history)
 
-D1. 2026-10-18 "Keep all three": P-13, P-15 and P-18 stay (also rule 7.90).
+D1. 2026-10-18 "Keep all three": P-13, P-15 and P-18 stay (also rule 7.90). P-13's option cards cut 2026-11-08 (9.S entry 23).
 D2. 2026-10-18 "Yes, ship it": overnight build pushed to itch and devlog posted (roadmap/30#1).
 D3. 2026-10-18 "I'll run butler login": itch username changed to aussierulesdynasties; builds 0.1.0-54290c9 and 0.1.0-67185d8 pushed (roadmap/30#12).
 D4. 2026-10-18 itch page public since 2026-10-17; builds 0.1.1 db0cfdc (12 Oct) to 0.1.12 60a1bd4 (18 Oct) were pushed; posts live for visitors: 0.1.2, 0.1.3, 0.1.5, 0.1.6, 0.1.9, 0.1.10, 0.1.12.
@@ -1871,10 +1871,11 @@ Precedence used here: a later director decision wins; the 2026-11-03 story-first
 16. Bible open question "How does weather affect a match?" and the audit's proposal to drop it as answered by ARD-M4-016: proposed, awaiting consent (record 69 still lists it as blocking scope freeze; see Open).
 17. A26 "done" on line 62: premature; fix exists only in open PR #759 until merged.
 18. Culture young-ceiling and Ruthless board warning level "left open": the warning level was answered (rows 34/37 of roadmap/30); young-ceiling stays open.
-19. P-13, P-15, P-18: later kept (roadmap/30 row 32), no longer awaiting selection.
+19. P-13, P-15, P-18: later kept (roadmap/30 row 32), no longer awaiting selection. P-13's option cards later cut (entry 23).
 20. #291 "open" record: corrected to closed via #433.
 21. Items #303 (later merged) and #385 (later "looks great"): no longer awaiting the director.
 22. Copy-review question on humour and whether a loss is flavoured: answered by 2026-10-09 humour limits.
+23. P-13 option cards under opposition facts cut, director 2026-11-08: "I still don't understand the point of these buttons. Why is only 1 selectable at a time? Why are only two game plans shown? No game plans should be shown here imo. Just roles", then "I actually think we should remove these buttons entirely. These functions all belong to the pregame so it's just repetitive". The facts stay on the hub; tag, defensive set-up and game plan stay on the pre-bounce setup. Supersedes the P-13 part of rule 7.90, D1 and entry 19.
 
 ## 9.Q Open for the director
 
