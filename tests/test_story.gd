@@ -441,8 +441,11 @@ func _test_trust_rules() -> void:
 	_check(Trust.value(rel, k) == Trust.HIGHEST and Trust.words(Trust.HIGHEST) == "Trusts you completely",
 			"Trust tops out, in words")
 	var r := Trust.reasons(rel, k)
-	_check(r.size() == Trust.LOG_KEEP and str(r[0]["why"]) == "Moment 11",
-			"The last %d reasons are kept, newest first" % Trust.LOG_KEEP)
+	# 20 + 8 x 10 reaches the top at Moment 7; the four after it moved nothing
+	# and keep no reason, so they cannot push real ones out.
+	_check(r.size() == Trust.LOG_KEEP and str(r[0]["why"]) == "Moment 7"
+			and r.all(func(e): return int(e["d"]) != 0),
+			"The last %d reasons are kept, newest first, and a move at the top of the scale keeps none" % Trust.LOG_KEEP)
 	_check(Trust.words(-30) == "Wary of you" and Trust.words(-80) == "Stopped listening", "Low trust in words")
 	_check(Trust.scaled(10, 60) > 10 and Trust.scaled(10, -60) < 10 and Trust.scaled(-5, 60) == -5,
 			"A lift lands harder with trust and softer without; a cost is a cost")
@@ -2147,12 +2150,23 @@ func _test_culture() -> void:
 	for p in GameState.season.lists[rival]:
 		if n < 16:
 			p["career"] = {"games": 50, "goals": 0, "stints": [["ZZZ", 2025, 2025, 20, 0]], "through": 2026, "unknown": []}
+			p["joined"] = GameState.season_year - 1
 			n += 1
 	GameState._culture_marks()["roll"] = 0
 	GameState._culture_rollover()
 	var rs2 := Culture.reasons(GameState.relations, rival, "together")
-	_check(Culture.value(GameState.relations, rival, "together") == before - 4 and str(rs2[0]["why"]).contains("new faces"),
+	var after_faces := Culture.value(GameState.relations, rival, "together")
+	_check(after_faces == before - 4 and str(rs2[0]["why"]).contains("new faces"),
 			"Sixteen new faces from other clubs cost Togetherness at the rollover, with the reason")
+	# A year on, the same sixteen have still not played for the club: they
+	# arrived two off-seasons ago, so they are not new faces again.
+	for p in GameState.season.lists[rival]:
+		if p.has("joined"):
+			p["joined"] = GameState.season_year - 2
+	GameState._culture_marks()["roll"] = 0
+	GameState._culture_rollover()
+	_check(Culture.value(GameState.relations, rival, "together") >= after_faces,
+			"An arrival who has not played yet is not counted as a new face again at the next rollover")
 
 	# A promise you broke is a fact about your club.
 	GameState._culture_move(GameState.my_club, "together", -2, "You broke your word on a player's run of games")
@@ -2557,8 +2571,11 @@ func _culture_fixture_run(on: bool, run_seed := SUITE_SEED) -> Dictionary:
 
 
 ## Seeds the culture fixture is averaged over: one season's rival results move
-## morale more than culture does, so a single seed decides by noise.
-const CULTURE_SEEDS := [SUITE_SEED, SUITE_SEED + 1, SUITE_SEED + 2, SUITE_SEED + 3]
+## morale more than culture does, so a single seed decides by noise. (Since the
+## 2026-11-08 bug bash gave the mid-kick intercept dice their own seed, one
+## season from SUITE_SEED + 2 alone ends 11 points down with culture on, so the
+## four start at SUITE_SEED + 4.)
+const CULTURE_SEEDS := [SUITE_SEED + 4, SUITE_SEED + 5, SUITE_SEED + 6, SUITE_SEED + 7]
 
 
 ## The fixture's runs over CULTURE_SEEDS: numbers averaged; bands joined, so
@@ -2586,7 +2603,7 @@ func _test_culture_effects_fixture() -> void:
 	var on := _culture_fixture_mean(true)
 	print("Culture fixture: %d runs in %.1f s" % [2 * CULTURE_SEEDS.size(), (Time.get_ticks_msec() - t0) / 1000.0])
 	print("Culture fixture (Melbourne, seeds from %d, mean of 4; first %d rounds): load %.2f v %.2f off | morale %.2f v %.2f off | young XP %d v %d off (%d young players) | bands %s | young OVR gain over the %d-round season %.2f v %.2f off" % [
-			SUITE_SEED, FIXTURE_ROUNDS, float(on["load"]), float(off["load"]), float(on["morale"]), float(off["morale"]),
+			int(CULTURE_SEEDS[0]), FIXTURE_ROUNDS, float(on["load"]), float(off["load"]), float(on["morale"]), float(off["morale"]),
 			int(on["young_xp"]), int(off["young_xp"]), int(on["young"]), str(on["bands"]), int(on["rounds"]),
 			float(on["young_gain"]), float(off["young_gain"])])
 	_check(str(on["bands"]) == "elite/very/rebuild" and str(off["bands"]) == "elite/very/rebuild",

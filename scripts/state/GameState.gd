@@ -239,6 +239,9 @@ var last_side: Array = []       # ids of your players who took the field in your
 ## down, so a player healed by this very round is not "left out while fit".
 ## Not saved: it is rebuilt every round.
 var _backing_unavailable := {}
+## The same for every listed player at every club: injured or suspended for
+## this round's game, so not "left out while fit" (morale, a promised game).
+var _round_unavailable := {}
 
 ## Career loop: season 1 is the 2026 season. Every completed season ends with
 ## a national intake draft (keep your list, sign the rookies), then the same
@@ -5660,6 +5663,11 @@ func _after_round(results: Array) -> void:
 	for p in my_list:
 		if Backing.is_active(p) and not Backing.fit(p):
 			_backing_unavailable[str(p["id"])] = true
+	_round_unavailable = {}
+	for arr in ([my_list] + (season.lists.values() if season != null else [])):
+		for p in arr:
+			if not Backing.fit(p):
+				_round_unavailable[str(p["id"])] = true
 	if season != null:
 		var regular := last_phase == "regular"
 		var week := "%d|%s|%d" % [season_year, "R" if regular else "F",
@@ -7004,7 +7012,7 @@ func _fa_phase_of(code: String) -> String:
 
 
 ## Rivals behind `leader` answer it once, all at the same moment, so no
-## club's turn comes first. Returns sentences such as "Carlton improve: 8
+## club's turn comes first. Returns sentences such as "Carlton improve: $650k
 ## for 3 seasons." and "Brisbane, Sydney and 3 more withdraw."
 func _rival_round(p: Dictionary, leader: Dictionary) -> Array:
 	var lines := []
@@ -7025,8 +7033,8 @@ func _rival_round(p: Dictionary, leader: Dictionary) -> Array:
 			"improve", "match":
 				o["salary"] = int(r["salary"])
 				o["years"] = int(r["years"])
-				lines.append("%s %s: %d for %d season%s." % [name, "improve" if str(r["action"]) == "improve" else "match",
-						int(r["salary"]), int(r["years"]), "" if int(r["years"]) == 1 else "s"])
+				lines.append("%s %s: %s for %d season%s." % [name, "improve" if str(r["action"]) == "improve" else "match",
+						Contracts.money(int(r["salary"])), int(r["years"]), "" if int(r["years"]) == 1 else "s"])
 			"withdraw":
 				o["withdrawn"] = true
 				gone.append(name)
@@ -7638,6 +7646,9 @@ func _trade_assets(ids: Array, owner: String) -> Dictionary:
 			if found.is_empty():
 				var fc := "trade_not_their_player" if owner != my_club else "trade_not_your_player"
 				return {"assets": [], "error": AiReasons.line(fc), "code": fc}
+			if retiring_now(found):
+				# His career ends at the rollover: there is nobody to trade.
+				return {"assets": [], "error": AiReasons.line("trade_retiring"), "code": "trade_retiring"}
 			out.append(found)
 	return {"assets": out, "error": "", "code": ""}
 
@@ -8262,6 +8273,8 @@ func _bids(buyer: String, most: float, prospects: Dictionary, to := "") -> Array
 		var q: Dictionary = list[k]
 		if trade_requests.has(str(q["id"])):
 			continue  # he goes only where he asked to, not as a makeweight
+		if retiring_now(q):
+			continue  # he retires at the rollover: nobody to send
 		if to == my_club and Challenge.block_reason(self, q) != "":
 			continue  # your challenge bars him from coming to you
 		pool.append([q, float(TradeValue.value(q, {"phase": phase, "bars": bars, "proj": proj, "own": true})["total"])])
@@ -8534,8 +8547,8 @@ func _requested_trades(prospects: Dictionary) -> void:
 func _trade_pool(buyer: String, seller: String) -> Array:
 	var pool: Array = season.lists[seller] if club_phase(buyer) == "contending" \
 			and club_phase(seller) == "rebuilding" else _fringe(seller)
-	return pool.filter(func(q): return not trade_requests.has(str(q["id"])) \
-			or (trade_requests[str(q["id"])]["to"] as Array).has(buyer))
+	return pool.filter(func(q): return not retiring_now(q) and (not trade_requests.has(str(q["id"])) \
+			or (trade_requests[str(q["id"])]["to"] as Array).has(buyer)))
 
 
 ## The players outside a club's starting side (its bench and beyond) - who
@@ -10778,7 +10791,7 @@ func _board_after_round(results: Array) -> void:
 		var staff: Dictionary = club_staff(my_club)
 		for p in my_list:
 			soft[str(p["id"])] = CoachEffects.soften(staff, p)
-	ClubLife.morale_after_match(my_list, played, margin > 0, soft, culture_effect(my_club, "sting"))
+	ClubLife.morale_after_match(my_list, played, margin > 0, soft, culture_effect(my_club, "sting"), _round_unavailable)
 	# A player promised a run (Backing): each game he plays counts towards it.
 	# Left out while fit, the promise breaks and it stings, once, and the run
 	# is over; unable to play, the run waits. His one-week expectation is
@@ -10804,7 +10817,8 @@ func _board_after_round(results: Array) -> void:
 		if p.has("expects_game"):
 			var sting := int(p["expects_game"]) if typeof(p["expects_game"]) == TYPE_INT else 12
 			p.erase("expects_game")
-			if not played.has(str(p["id"])) and int(p.get("injury_weeks", 0)) <= 0:
+			if not played.has(str(p["id"])) and int(p.get("injury_weeks", 0)) <= 0 \
+					and not _round_unavailable.has(str(p["id"])):
 				ClubLife.add_morale(p, -CoachEffects.softened(sting, float(soft.get(str(p["id"]), 0.0))))
 				Trust.change(relations, Trust.player_key(str(p["id"])), ClubStories.BROKEN_PROMISE_TRUST,
 						"You promised him a game and left him out", season_year, last_label)
@@ -10839,7 +10853,8 @@ func _rival_morale_after_round(results: Array) -> void:
 			if not staff.is_empty():
 				for p in list:
 					soft[str(p["id"])] = CoachEffects.soften(staff, p)
-			ClubLife.morale_after_match(list, played, int(score[side]) > int(score[1 - side]), soft, culture_effect(code, "sting"))
+			ClubLife.morale_after_match(list, played, int(score[side]) > int(score[1 - side]), soft, culture_effect(code, "sting"),
+					_round_unavailable)
 
 
 ## Keep your match's story (hero, turning point, reasons) and put its
@@ -12525,7 +12540,10 @@ func _culture_rollover() -> void:
 			if not (c is Dictionary):
 				continue
 			var stints: Array = (c as Dictionary).get("stints", [])
-			if not stints.is_empty() and str((stints[stints.size() - 1] as Array)[0]) != str(code):
+			# Only an arrival since the last rollover: a recruit who has not
+			# played for his new club yet is not a new face again next year.
+			if not stints.is_empty() and str((stints[stints.size() - 1] as Array)[0]) != str(code) \
+					and int(p.get("joined", -1)) >= season_year - 1:
 				n += 1
 		faces[str(code)] = n
 		counts.append(n)
