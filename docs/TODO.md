@@ -35,7 +35,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 110 | Vignette defects: boundary-snap curved white line, snap-for-goal hovering ball (6.Q18) | frames checked, captures to him |
 | 112 | Rival board letter after a strong season (T5.r23) | letter only after a strong season, accept and decline tested |
 | 113 | Start at the end of 2026: real lists, the real 2026 National Draft with each club's real picks, then play 2027 (T5.r134) | start option, sourced pick ownership, test |
-| 114 | Challenge starts: Youth only, Rebuild (bottom club), your own goal (T5.r115) | three starts selectable, test |
 | 115 | Board goal set from where the list ranks pre-season, and said aloud; scales with the number of clubs (T9.Q20, T5.r117) | goal follows rank at 18 and 21 clubs, test |
 | 116 | Awards night: round-by-round Brownlow count, live or one round at a time, plus your club's best and fairest (T5.Q23b) | count watchable both ways, real-tap test |
 | 117 | Coaching staff: head coach, head assistant, assistants; counter-offer (not money) when a rival poaches one (T5.Q16) | approach, counter and departure tested |
