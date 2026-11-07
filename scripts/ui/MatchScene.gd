@@ -946,6 +946,10 @@ func _show_coach_box() -> void:
 	}
 	calls["defence"] = MatchNotes.defence_key(str(calls["interceptor_id"]) != "", str(calls["minder_id"]) != "")
 	var loose_was := str(calls["interceptor_id"])
+	# A tag or a minder you change here is yours from then on: the assistant
+	# stops making that call at the breaks (MatchSim._assistant_calls).
+	var tag_was := str(calls["tag_id"])
+	var minder_was := str(calls["minder_id"])
 	var narrow := UiKit.view_width(self) < 560.0
 
 	var plan_known := UiKit.lbl("", UiKit.SECONDARY, UiKit.TEXT, true)
@@ -1269,6 +1273,8 @@ func _show_coach_box() -> void:
 			"interceptor_set": str(calls["interceptor_id"]) != loose_was,
 			"spare_accountable": str(calls["minder_id"]) != "",
 			"spare_minder_id": str(calls["minder_id"]),
+			"tag_set": str(calls["tag_id"]) != tag_was,
+			"minder_set": str(calls["minder_id"]) != minder_was,
 			"pep": str(calls["pep"]),
 		}
 	start.pressed.connect(func():
