@@ -40,7 +40,6 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	if his_club != "" and GameDB.clubs.has(his_club):
 		var club_l := UiKit.lbl(GameDB.club_name(his_club), UiKit.SECONDARY, name_ink, true)
 		club_l.name = "ProfileClub"
-		club_l.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		club_l.custom_minimum_size.y = 44
 		club_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		ClubLink.tappable(club_l, his_club)
