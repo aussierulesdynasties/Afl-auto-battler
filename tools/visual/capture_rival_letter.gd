@@ -45,8 +45,10 @@ var _dir := "."
 var _size := Vector2i(390, 844)
 
 
-## A season played out at Fremantle, finals reached and the board's goal met,
-## and the rival board's letter written at the close.
+## A season played out at Fremantle and put top of the ladder before the last
+## home-and-away round (two losses, the rest wins), so they play the finals and
+## meet the board's goal: the season's own close writes the rival board's letter
+## and holds the off-season.
 func _season_with_letter() -> void:
 	var arcs = load("res://scripts/sim/CoachArcs.gd")
 	var moves = load("res://scripts/state/ClubMoves.gd")
@@ -54,33 +56,27 @@ func _season_with_letter() -> void:
 	_state.career_seed = 4411
 	_state.replay_seed = 4411
 	_state.start_season("FRE", _db.club_list("FRE"))
+	_state.coach_arcs = arcs.ensure(_state.coach_arcs)
+	var season = _state.season
 	var guard := 0
-	while not _state.season.is_season_over() and guard < 40:
+	while not season.is_season_over() and guard < 40:
 		guard += 1
+		if season.round_index == season.fixture.size() - 1:
+			# A believable minor premier: two losses so far, the rest won.
+			var row: Dictionary = season.ladder["FRE"]
+			var played := int(row["w"]) + int(row["l"]) + int(row["d"])
+			row["w"] = played - 2
+			row["l"] = 2
+			row["d"] = 0
+			season.recalc_ladder()
 		_state.week_events = []
 		_state.advance()
-	_state.coach_arcs = arcs.ensure(_state.coach_arcs)
-	var st: Dictionary = _state.coach_arcs
-	var year := int(_state.season_year)
-	_state.board["sacked"] = false
-	st["move"] = {}
-	st["letter"] = {}
-	st["active"].erase("poached")
-	st["done"].erase("poached")
-	var hist: Array = _state.board.get("history", [])
-	if hist.is_empty() or int(hist[-1].get("year", 0)) != year:
-		hist.append({"year": year})
-		_state.board["history"] = hist
-	hist[-1]["met"] = true
-	if _state.honour_roll.is_empty() or int(_state.honour_roll[-1].get("year", 0)) != year:
-		_state.honour_roll.append({"year": year, "my_club": "FRE"})
-	_state.honour_roll[-1]["my_club"] = "FRE"
-	_state.honour_roll[-1]["my_finals"] = "Qualifying final"
-	moves._rival_letter(_state, st)
-	# The carnival sheet is its own capture: seen, so it does not cover the letter.
+	# The carnival sheet and the finals press conference are their own
+	# captures: cleared, so they do not cover the letter.
 	_state.midseason["carnival_seen"] = true
+	_state.media_conference = {}
 	_state.week_events = []
-	print("letter: ", moves.letter(_state))
+	print("letter: ", moves.letter(_state), " off-season open: ", _state.offseason_open())
 
 
 func _hub():

@@ -12,7 +12,8 @@ extends RefCounted
 ##                 his coaching career is over (TODO T5.r22, Director Bible
 ##                 5.2.19-5.2.22). Every running arc ends at the old club, and
 ##                 the move waits in coach_arcs.move.
-##   apply_move    (at the rollover, before the new lists are built): he is the
+##   apply_move    (at the rollover, before the new lists are built; at once
+##                 when he takes a rival board's letter): he is the
 ##                 new club's coach. That club's AI senior coach takes the job
 ##                 he left (or, when his assistant was after it, the assistant
 ##                 does and the AI coach is let go). His career record (seasons,
@@ -615,9 +616,10 @@ static func _coached_at(st: Dictionary, code: String) -> bool:
 ## senior coach left at this off-season, else a bottom-half club (seeded, so a
 ## reload agrees); never his own or a club that sacked him. Facts only: where
 ## they finished, why the job is open, the list in words and the goal their
-## board would set, then the risk. Taking it moves him at the rollover
-## (apply_move) and the old club carries on under a new coach; declining
-## changes nothing.
+## board would set, then the risk. The off-season waits for his answer
+## (GameState.open_offseason). Taking it moves him straight away (apply_move):
+## he runs the new club's off-season (contracts, trades, the draft) and the old
+## club carries on under the new club's old coach. Declining changes nothing.
 static func _rival_letter(gs, st: Dictionary) -> void:
 	var year := int(gs.season_year)
 	if gs.is_sacked() or not (st["move"] as Dictionary).is_empty() or int(st["letter"].get("year", 0)) == year:
@@ -709,9 +711,10 @@ static func letter_risk(gs) -> PackedStringArray:
 	return out
 
 
-## He takes the job: the move waits for the rollover like any other, and every
-## running arc ends at the club he is leaving. One club at a time: once he has
-## signed, nothing else can move him.
+## He takes the job and moves now: every running arc ends at the club he is
+## leaving, he becomes the new club's coach (apply_move, as at a rollover) and
+## the off-season opens there. One club at a time: once he has signed, nothing
+## else can move him.
 static func accept_letter(gs) -> bool:
 	if not letter_open(gs):
 		return false
@@ -723,7 +726,14 @@ static func accept_letter(gs) -> bool:
 	l["answer"] = "taken"
 	st["move"] = {"to": str(l["code"]), "why": "poached", "from": str(gs.my_club), "year": year, "heir": heir_id}
 	CoachArcs.log_line(st, year, "Season end", "letter", "Takes the senior job at %s." % str(l["name"]))
-	gs.add_news(ClubArcs.NEWS_KIND, "You leave %s for %s. You start there in %d." % [GameDB.club_name(gs.my_club), str(l["name"]), year + 1])
+	var from := str(gs.my_club)
+	apply_move(gs)
+	# Your list is the new club's from now (a rollover rebuilds it anyway).
+	if gs.season != null:
+		gs.my_list = gs.season.lists.get(str(gs.my_club), [])
+	var successor := _senior_coach(gs, from)
+	l["successor"] = GameDB.player_display_name(successor) if not successor.is_empty() else ""
+	gs.open_offseason()
 	return true
 
 
@@ -734,6 +744,8 @@ static func decline_letter(gs) -> bool:
 	var st := ClubArcs._st(gs)
 	st["letter"]["answer"] = "declined"
 	CoachArcs.log_line(st, int(st["letter"]["year"]), "Season end", "letter", "Turns down %s." % str(st["letter"]["name"]))
+	# The off-season waited for his answer: it opens at his club.
+	gs.open_offseason(true)
 	return true
 
 

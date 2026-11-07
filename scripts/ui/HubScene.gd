@@ -1103,11 +1103,11 @@ func _week_actions(season: Season) -> Control:
 	var buttons: Array = []
 	if season.is_season_over():
 		var resume := GameState.draft != null and GameState.draft.intake_mode
-		if not resume:
-			buttons.append(_nav_button("Trades & Contracts", func(): Router.go("offseason")))
-		# A rival's letter is answered before the draft: its two buttons are
-		# the week's move until then.
+		# A rival's letter is answered before the off-season opens: its two
+		# buttons are the week's move until then.
 		if not ClubMoves.letter_open(GameState):
+			if not resume:
+				buttons.append(_nav_button("Trades & Contracts", func(): Router.go("offseason")))
 			buttons.append(_nav_button("Resume national draft" if resume
 					else "%d National Draft" % GameState.season_year, _on_intake_draft, true))
 	elif _regular_bye(season):
@@ -1317,8 +1317,11 @@ func _letter_card() -> Control:
 	v.name = "RivalLetter"
 	var answer := str(l.get("answer", ""))
 	if answer != "":
-		var done := "You have taken the senior job at %s from %d. You see out the off-season at %s." % [
-				str(l["name"]), int(l["year"]) + 1, mine] if answer == "taken" \
+		var old := GameDB.club_name(str(l["from"]))
+		var after := ("%s coaches %s now." % [str(l["successor"]), old]) if str(l.get("successor", "")) != "" \
+				else "%s carries on under a new coach." % old
+		var done := "You are %s's senior coach now: their contracts, trades and draft are yours this off-season. %s" % [
+				str(l["name"]), after] if answer == "taken" \
 				else "You turned %s down. You stay at %s." % [str(l["name"]), mine]
 		var dl := UiKit.lbl(done, UiKit.BODY, UiKit.TEXT if answer == "taken" else UiKit.MUTED)
 		dl.name = "RivalLetterAnswered"
@@ -1334,7 +1337,7 @@ func _letter_card() -> Control:
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_row.add_child(nm)
 	v.add_child(name_row)
-	v.add_child(_offer_line("%s, their president, offers you the senior job from %d." % [str(l["president"]), int(l["year"]) + 1], UiKit.TEXT))
+	v.add_child(_offer_line("%s, their president, offers you the senior job. You would start now, with their contracts, trades and draft." % str(l["president"]), UiKit.TEXT))
 	v.add_child(_offer_line("Finished %s of %d. %s" % [GameState.ordinal(int(l["finish"])), int(l["clubs"]), str(l["why_open"])], UiKit.TEXT))
 	if str(l.get("list", "")) != "":
 		v.add_child(_offer_line("Their list: " + str(l["list"]), UiKit.TEXT))

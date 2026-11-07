@@ -218,7 +218,7 @@ func _build() -> void:
 	# The season ends the way the real AFL year does: with the national draft.
 	# Sacked: the next move is made on the Hub (a job, or retirement), so the
 	# draft waits there.
-	# A rival board's letter waits on the Hub too: it is answered before the draft.
+	# A rival board's letter waits on the Hub too: it is answered before the off-season opens.
 	var letter := ClubMoves.letter(GameState) if ClubMoves.letter_open(GameState) else {}
 	var draft_text := "%d National Draft" % GameState.season_year
 	if GameState.is_sacked():
