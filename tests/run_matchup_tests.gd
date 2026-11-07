@@ -882,10 +882,14 @@ func _tap_scan(label: Control, host: Node) -> bool:
 ## The opposition facts on the hub are facts only (director, 2026-11-08: "These
 ## functions all belong to the pregame so it's just repetitive"): each fact the
 ## hub states is its line from opponent_facts, with no response cards under it
-## and no gap where they were. Tag, defensive set-up and game plan stay on the
-## pre-bounce setup.
+## and no gap where they were, and every name in it wears his club's ink. Tag,
+## defensive set-up and game plan stay on the pre-bounce setup. Play match
+## takes a real tap: with Watch chosen it opens the match preview, with Skip
+## chosen it opens your match skipped.
 func _test_facts_without_options() -> void:
 	var db = root.get_node("GameDB")
+	var NI = load("res://scripts/ui/NameInk.gd")
+	var kit = load("res://scripts/ui/UiKit.gd")
 	for club in ["FRE", "BRL"]:
 		_reset()
 		_state.set_setting("seen_weekly_loop_intro", true)
@@ -895,9 +899,15 @@ func _test_facts_without_options() -> void:
 			root.size = sz
 			_state.set_match_way("watch")
 			var hub := await _open_hub()
-			var facts: Array = _state.opponent_facts(str(_state.my_next_opponent()["code"]))
+			var opp := str(_state.my_next_opponent()["code"])
+			var facts: Array = _state.opponent_facts(opp)
+			var index: Dictionary = NI.from_lists(_state.season.lists)
+			var opp_ink := "[color=#%s]" % kit.club_name_colour(kit.club_ink(opp)).to_html(false)
 			var said := true
 			var close := true
+			var inked := true
+			var named := 0
+			var opp_named := 0
 			var bad := ""
 			for i in range(facts.size()):
 				var fl: Control = hub.find_child("Fact_%d" % i, true, false)
@@ -905,12 +915,23 @@ func _test_facts_without_options() -> void:
 				if not ok and bad == "":
 					bad = "Fact_%d: %s" % [i, _plain(fl) if fl != null else "missing"]
 				said = said and ok
+				# A name in the fact wears his club's ink: the line is the
+				# NameInk markup of its words, the opponent's in theirs.
+				var want: String = NI.markup(str(facts[i]["text"]), index)
+				if want != "":
+					named += 1
+					inked = inked and fl is RichTextLabel and (fl as RichTextLabel).text == want
+					if want.contains(opp_ink):
+						opp_named += 1
 				if i > 0 and fl != null:
 					var before: Control = hub.find_child("Fact_%d" % (i - 1), true, false)
 					close = close and before != null and before.get_parent() == fl.get_parent() \
 							and fl.get_index() == before.get_index() + 1
 			_check(facts.size() >= 2 and said, "%s: each opposition fact is on the hub, word for word (%d facts) %s" % [tag, facts.size(), bad])
 			_check(close, "%s: each fact follows the one before it, nothing left between them" % tag)
+			_check(named > 0 and inked and opp_named > 0,
+					"%s: each name in a fact wears his club's ink, %s's own in theirs (%d named, %d in %s ink)" % [
+						tag, opp, named, opp_named, opp])
 			var cards := hub.find_children("FactOption*", "", true, false)
 			_check(cards.is_empty(), "%s: no response cards under the facts (%d found)" % [tag, cards.size()])
 			hub.queue_free()
@@ -927,6 +948,53 @@ func _test_facts_without_options() -> void:
 		# The setting outlives _reset: put Watch back for the suites after this one.
 		_state.set_match_way("watch")
 	root.size = Vector2i(390, 844)
+	await _play_tap_routes()
+
+
+## A real tap on the hub's main button, the way a finger reaches it: with Watch
+## chosen, Play match opens the match preview; with Skip chosen, Skip to full
+## time opens your match, taken as a skip (director, 2026-11-08: the hub's
+## facts carry no response cards, so nothing turns a Skip into a Watch).
+func _play_tap_routes() -> void:
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	var vignettes_were: bool = _state.vignettes_on()
+	for way in ["watch", "skip"]:
+		_reset()
+		_state.set_vignettes_on(false)
+		_state.start_season("FRE", db.club_list("FRE"))
+		_state.set_match_way(way)
+		router.stack = []
+		router.go("hub")
+		await _settle()
+		var hub: Node = get_current_scene()
+		var play: Button = hub.find_child("PlayMatch", true, false) if hub != null else null
+		var why: String = await Tap.tap(play) if play != null else "missing"
+		var want := "MatchPreviewScene" if way == "watch" else "MatchScene"
+		var at: Node = null
+		for i in range(120):
+			await process_frame
+			at = get_current_scene()
+			# A skip is let run to its full time before the screen is put away.
+			if at != null and at.name == want and (way == "watch" or bool(at.get("_fulltime_shown"))):
+				break
+		var landed := at != null and at.name == want
+		if way == "watch":
+			_check(why == "" and landed and at.find_child("PreviewContinue", true, false) != null,
+					"Watch chosen: a real tap on Play match opens the match preview (%s, %s)" % [
+						why, str(at.name) if at != null else "none"])
+		else:
+			_check(why == "" and landed and _state.match_way_live == "skip" and bool(at.get("_fulltime_shown")),
+					"Skip chosen: a real tap on Skip to full time takes your match straight to full time (%s, %s, live %s)" % [
+						why, str(at.name) if at != null else "none", _state.match_way_live])
+		if at != null:
+			at.queue_free()
+		_state.pending_sim = null
+		_state.pending_match = {}
+		router.stack = []
+		await _settle()
+	_state.set_match_way("watch")
+	_state.set_vignettes_on(vignettes_were)
 
 
 ## No one tags ruckmen (director, 2026-10-18): across every club's list, a
