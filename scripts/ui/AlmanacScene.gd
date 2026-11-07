@@ -131,6 +131,10 @@ func _coach_card(t: Dictionary) -> Control:
 	line.name = "CoachLine"
 	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(line)
+	# The goal you set yourself at New career, and where it stands.
+	var goal := Challenge.status_line(GameState)
+	if goal != "":
+		_row(v, "Your goal", goal, "CoachGoal")
 	return card
 
 
@@ -167,6 +171,9 @@ func _season_card(e: Dictionary) -> Control:
 		l.name = "SeasonLine"
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
+	# The season your own goal was met (Challenge): marked once, in its year.
+	if str(e.get("challenge_met", "")) != "":
+		_row(v, "Your goal", "Met: %s" % str(e["challenge_met"]), "ChallengeMet")
 	if str(e.get("premier", "")) != "" and not flag:
 		_row(v, "Premiers", GameDB.club_name(str(e["premier"])), "Premiers")
 	_row(v, BestAndFairest.award_name(club), _first_name(e.get("bf", [])), "BestAndFairest")
