@@ -621,7 +621,7 @@ static func practice_opponent(pairs: Array, code: String) -> String:
 # ---------------------------------------------------------------------------
 const LEVELS := ["barely", "partly", "well"]
 const WELL := 2
-const DRILL_PLANS := ["attacking", "defensive", "contest", "controlled", "through_stars"]
+const DRILL_PLANS := ["attacking", "defensive", "contest", "controlled"]
 
 
 static func clamp_level(l: int) -> int:

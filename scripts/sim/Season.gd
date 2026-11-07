@@ -32,7 +32,6 @@ var seed := 0
 var finals := {}               # finals series state, empty until started
 var selections := {}           # code -> chosen match-day side (empty = auto)
 var plans := {}                # code -> standing game plan (absent = balanced)
-var matchups := {}             # code -> {their forward id: your defender id} (Matchups)
 
 
 func _init(club_codes: Array, club_lists: Dictionary, p_seed: int = 0) -> void:
@@ -516,7 +515,7 @@ func simulate(home_code: String, away_code: String, match_seed: int,
 
 
 ## The match, set up and ready to run: both sides, their form, coaching,
-## plans and match-ups.
+## plans.
 func match_sim(home_code: String, away_code: String, match_seed: int,
 		at_home := [true, false], is_final := false, weather := "perfect") -> MatchSim:
 	var home := Squad.new(GameDB_ref().club_name(home_code),
@@ -536,9 +535,6 @@ func match_sim(home_code: String, away_code: String, match_seed: int,
 		var plan := str(plans.get([home_code, away_code][side], ""))
 		if plan != "":
 			sim.set_tactics(side, {"gameplan": plan})
-		var mu: Dictionary = matchups.get([home_code, away_code][side], {})
-		if not mu.is_empty():
-			sim.set_matchups(side, mu)
 	return sim
 
 

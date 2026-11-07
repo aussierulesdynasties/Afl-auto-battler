@@ -136,17 +136,6 @@ func _measure(scene: Node, tag: String) -> void:
 		var inner := sc.get_child(0) as Control
 		print(tag, " SCROLL room ", int(sc.size.y), " holds ", int(inner.get_combined_minimum_size().y),
 				" overflow ", int(inner.get_combined_minimum_size().y - sc.size.y))
-	for r in box.find_children("BreakMatchup_*", "HBoxContainer", true, false):
-		var ml := r.find_child("MatchupLine", true, false) as RichTextLabel
-		var mc := r.find_child("ChangeMatchup", true, false) as Button
-		if ml != null and mc != null:
-			var last := ml.get_line_count() - 1
-			var rng := ml.get_line_range(last)
-			var shown := ml.get_parsed_text().substr(rng.x, rng.y - rng.x).strip_edges(false, true)
-			var ends := ml.get_global_rect().position.x + ml.get_theme_font("normal_font").get_string_size(
-					shown, HORIZONTAL_ALIGNMENT_LEFT, -1, ml.get_theme_font_size("normal_font_size")).x
-			print(tag, " MATCHUP ", r.name, " lines ", ml.get_line_count(), " row ", r.get_global_rect(), " line ", ml.get_global_rect(),
-					" change ", mc.get_global_rect(), " gap from sentence end ", snappedf(mc.get_global_rect().position.x - ends, 0.1))
 	var cols: Node = box.find_child("BreakColumns", true, false)
 	if cols == null:
 		return

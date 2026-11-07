@@ -616,9 +616,9 @@ func _test_ball_in_the_ring(res: Dictionary, speed: float) -> void:
 	pv.free()
 
 
-## Balanced and the other four calls (and the press) mark nothing.
+## Balanced and the other calls (and the press) mark nothing.
 func _test_other_calls(res: Dictionary) -> void:
-	for c in [["balanced", []], ["controlled", []], ["through_stars", []], ["balanced", ["surge"]],
+	for c in [["balanced", []], ["controlled", []], ["balanced", ["surge"]],
 			["balanced", ["hold"]], ["defensive", []]]:
 		var r2 := _with_call(res, str(c[0]), c[1], 160)
 		var pv := _phone(r2, 4.0)

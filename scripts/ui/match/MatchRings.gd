@@ -5,26 +5,25 @@ extends RefCounted
 ## nothing here decides or changes anything in the match.
 ##
 ## The order is what survives the cap. The people with a story come first (a
-## run you promised, Backing), then the calls: the star the Through stars plan
-## plays through, the tagger, the spare, the defenders on the forwards you matched up. Your
-## own players only: a ring means one of yours that you have a say about, so
-## the match-ups the sim sets up by itself, the calls your assistant makes for
-## you (MatchSim.coach_call), and the man you tag, are not ringed.
+## run you promised, Backing), then the calls: the players you play through,
+## the tagger, the spare. Your own players only: a ring means one of yours
+## that you have a say about, so the match-ups the sim sets up by itself, the
+## calls your assistant makes for you (MatchSim.coach_call), and the man you
+## tag, are not ringed.
 
 ## The most rings on the oval at once.
 const MAX := 6
 
 
 ## Player ids, most important first, at most MAX. `side` is yours, `my_list`
-## your list (for the runs) and `my_matchups` the match-ups you set before the
-## bounce ({their forward id: your defender id}).
-static func ids(sim: MatchSim, side: int, my_list: Array, my_matchups := {}) -> Array:
+## your list (for the runs).
+static func ids(sim: MatchSim, side: int, my_list: Array) -> Array:
 	var out := []
 	for p in my_list:
 		if Backing.is_active(p):
 			_add(out, str(p["id"]))
 	var t: Dictionary = sim.tactics[side]
-	# Who the side plays through (Through stars): the engine's own pick.
+	# The three play-through picks (and an older save's single call).
 	for id in sim.focus_ids(side):
 		_add(out, str(id))
 	# The tagger is the midfielder who goes to the man you are tagging.
@@ -34,18 +33,6 @@ static func ids(sim: MatchSim, side: int, my_list: Array, my_matchups := {}) -> 
 			_add(out, str(tagger["id"]))
 	if sim.coach_call(side):
 		_add(out, str(sim.interceptor[side]))
-	# The forwards you made a call on, before the bounce or during the match;
-	# whoever is on each now.
-	var chosen := {}
-	for fid in my_matchups:
-		chosen[str(fid)] = true
-	for ch in sim.duel_changes:
-		if int(ch["side"]) == side and sim.coach_call(side, str(ch["fwd"])):
-			chosen[str(ch["fwd"])] = true
-	var duels: Dictionary = sim.duels[side]
-	for fid in chosen:
-		if duels.has(fid):
-			_add(out, str(duels[fid]))
 	return out.slice(0, MAX)
 
 

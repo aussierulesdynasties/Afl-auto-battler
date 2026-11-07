@@ -13,7 +13,6 @@ const PLAN_NAMES := {
 	"defensive": "Defensive press",
 	"contest": "Win contest",
 	"controlled": "Controlled tempo",
-	"through_stars": "Through stars",
 }
 
 const PEP_NAMES := {
@@ -51,9 +50,6 @@ const PLAN_PARTS := {
 			"gain": "Fewer errors, less rattled by pressure, fresher legs.",
 			"cost": "Less ground gained.",
 			"beats": "Plays through a Defensive press. Attack corridor runs past it."},
-	"through_stars": {"does": "Go through your best three. Worth more the further they stand above the rest.",
-			"gain": "They see more of the ball and finish better, with fewer errors.",
-			"cost": "They know where it's going and the pressure comes."},
 }
 
 const PEP_SUMMARY := {
@@ -81,7 +77,7 @@ const TEAM_COMPARE := [
 const IMPACT_LABELS := {
 	"gameplan": "gameplan", "pep": "pep talk",
 	"legs": "legs (fatigue and rotations)", "bursts": "in-game calls",
-	"moments": "calls at the moments", "loose": "loose defender", "matchups": "match-ups",
+	"moments": "calls at the moments", "loose": "loose defender",
 	"tag": "tag", "minder": "defensive forward",
 	"traits": "traits and synergies", "form": "team form",
 }
@@ -501,8 +497,8 @@ static func _split_plans(res: Dictionary, my_side: int, opp_side: int, quarters:
 
 
 static func _plan_entry(q: int, t: Dictionary) -> Dictionary:
-	# Old reports kept the play-through calls (midfield, forward, back line,
-	# or the older single call); they still read as one.
+	# The three play-through calls (midfield, forward, back line), or the
+	# older single call from an old save; all of them are named.
 	var focus_ids := []
 	for key in ["focus_mid", "focus_fwd", "focus_def", "focus_id"]:
 		var fid := str(t.get(key, ""))

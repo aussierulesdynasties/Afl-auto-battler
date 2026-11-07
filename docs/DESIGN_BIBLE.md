@@ -110,7 +110,7 @@ footy: a visual simulation of the obtuse stats that sit behind every sports sim.
 | Kind of move | Examples | How the player sees it |
 | --- | --- | --- |
 | Structural | Game plan, flooding the backline, stacking the contest | The visual sim changes greatly |
-| Individual | A matchup, a positional switch | The matchup shows on the ground; the game feed and post-quarter and post-match copy explain how effective it was |
+| Individual | A player role, a positional switch | The role shows on the ground; the game feed and post-quarter and post-match copy explain how effective it was |
 
 ## Immersion and the art standard
 

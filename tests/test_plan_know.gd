@@ -121,7 +121,7 @@ func _test_rules() -> void:
 	_check(PreSeason.LEVELS == ["barely", "partly", "well"] and PreSeason.WELL == 2, "Three levels, well on top")
 	var start := PreSeason.start_levels("defensive")
 	_check(int(start["defensive"]) == 2 and int(start["balanced"]) == 2 and int(start["attacking"]) == 1
-			and int(start["contest"]) == 1 and int(start["through_stars"]) == 1,
+			and int(start["contest"]) == 1 and int(start["controlled"]) == 1,
 			"A club starts knowing its usual plan and Balanced well, the others partly")
 	var slipped := PreSeason.slip_levels(start)
 	_check(int(slipped["defensive"]) == 1 and int(slipped["attacking"]) == 0 and int(slipped["balanced"]) == 2,
@@ -232,19 +232,19 @@ func _test_drilling() -> void:
 	_check(not GameState.set_preseason_drills(1, ["contest"]), "A block not on Game plan drills nothing")
 	_check(not GameState.set_preseason_drills(0, ["balanced"]) and GameState.preseason_drills(0) == ["contest", "controlled"],
 			"...and Balanced cannot be drilled")
-	_check(GameState.plan_level_after_drills("contest") == 1 and GameState.plan_level_after_drills("through_stars") == 1,
+	_check(GameState.plan_level_after_drills("contest") == 1 and GameState.plan_level_after_drills("controlled") == 1,
 			"Three weeks shared by two plans moves neither (the page says so before it is trained)")
 	_check(GameState.set_preseason_drills(0, ["contest"]) and GameState.plan_level_after_drills("contest") == 2,
 			"...but three weeks on one plan lifts it to well")
 	GameState.set_preseason_block(1, "solid", "plan")
-	GameState.set_preseason_drills(1, ["through_stars"])
-	_check(GameState.plan_level_after_drills("through_stars") == 2, "Two weeks on a plan lifts it a step")
+	GameState.set_preseason_drills(1, ["defensive"])
+	_check(GameState.plan_level_after_drills("defensive") == 2, "Two weeks on a plan lifts it a step")
 	GameState.preseason_step_week()
 	_check(GameState.plan_level(CLUB, "contest") == 1, "A plan is not known better until the pre-season is done")
 	_check(not GameState.set_preseason_drills(0, ["controlled"]) and GameState.preseason_drills(0) == ["contest"],
 			"...and a block that has started cannot be changed")
 	_press_on()
-	_check(GameState.plan_level(CLUB, "contest") == 2 and GameState.plan_level(CLUB, "through_stars") == 2
+	_check(GameState.plan_level(CLUB, "contest") == 2 and GameState.plan_level(CLUB, "defensive") == 2
 			and GameState.plan_level(CLUB, "controlled") == 1 and GameState.plan_level(CLUB, "attacking") == 2,
 			"Drilled plans are known well by Round 1; the rest are as they were")
 	var news := ""
@@ -355,10 +355,10 @@ func _test_off_season_and_fade() -> void:
 	GameState.set_club_plan("controlled")
 	_finish_season()
 	GameState.plan_known[CLUB]["controlled"] = 2
-	GameState.plan_known[CLUB]["through_stars"] = 1
+	GameState.plan_known[CLUB]["contest"] = 1
 	GameState.plan_known[CLUB]["defensive"] = 2
 	_roll()
-	_check(GameState.plan_level(CLUB, "through_stars") == 0 and GameState.plan_level(CLUB, "defensive") == 1
+	_check(GameState.plan_level(CLUB, "contest") == 0 and GameState.plan_level(CLUB, "defensive") == 1
 			and GameState.plan_level(CLUB, "balanced") == 2,
 			"Over the off-season every plan slips a step, and nothing but Balanced is safe")
 	_check(GameState.preseason_blocks()[2] == ["solid", "plan", ["controlled"]],
@@ -423,11 +423,11 @@ func _test_screens() -> void:
 	_check(contest != null and contest.text == "Win contest\nmedium", "Each plan says how well the side knows it")
 	_check(await _tap(contest, "Win contest to drill"), "A finger adds a plan to drill")
 	_check(GameState.preseason_drills(0) == ["attacking", "contest"], "...two at most")
-	var through := scene.find_child("Drill0_through_stars", true, false) as Button
-	_check(await _tap(through, "a third plan"), "A third takes the first's place")
-	_check(GameState.preseason_drills(0) == ["contest", "through_stars"], "...so the block drills the last two chosen")
+	var third := scene.find_child("Drill0_controlled", true, false) as Button
+	_check(await _tap(third, "a third plan"), "A third takes the first's place")
+	_check(GameState.preseason_drills(0) == ["contest", "controlled"], "...so the block drills the last two chosen")
 	_check(contest.text == "Win contest\nmedium", "Three weeks shared by two plans: neither is lifted")
-	await _tap(scene.find_child("Drill0_through_stars", true, false) as Button, "let a plan go")
+	await _tap(scene.find_child("Drill0_controlled", true, false) as Button, "let a plan go")
 	_check(GameState.preseason_drills(0) == ["contest"], "A tap on a chosen plan lets it go")
 	_check(contest.text == "Win contest\nmedium, high by Round 1", "...and with one plan drilled the button says where it ends up")
 	_check((scene.find_child("Drill0_attacking", true, false) as Button).text == "Attack corridor\nhigh",
@@ -445,7 +445,7 @@ func _test_screens() -> void:
 			"The pre-match plan tiles carry the same line, in the same words")
 	tiles.queue_free()
 	# The first break of a coached match: the plan call says it, in full ink.
-	GameState.plan_known[CLUB]["through_stars"] = 0
+	GameState.plan_known[CLUB]["contest"] = 0
 	GameState.plan_known[CLUB]["defensive"] = 1
 	_check(GameState.prepare_interactive_match(), "A match is ready to coach")
 	Router.stack = ["main"]
@@ -453,11 +453,11 @@ func _test_screens() -> void:
 	await _frames(tree, 40)
 	var match_scene := tree.current_scene as Control
 	var note := match_scene.find_child("PlanKnown", true, false) as Label if match_scene != null else null
-	var pick_stars := match_scene.find_child("PlanPicker_through_stars", true, false) as Button if match_scene != null else null
+	var pick_stars := match_scene.find_child("PlanPicker_contest", true, false) as Button if match_scene != null else null
 	_check(note != null and pick_stars != null, "The break has the plan call and a line for how well the side knows it")
 	if note != null and pick_stars != null:
 		_check(note.text == "Plan fluency: high", "...on the plan the side opens on: " + note.text)
-		_check(await _tap(pick_stars, "Through stars at the break"), "A finger picks another plan")
+		_check(await _tap(pick_stars, "Win contest at the break"), "A finger picks another plan")
 		_check(note.text == "Plan fluency: low" and note.visible and note.get_theme_color("font_color") == UiKit.TEXT,
 				"...and the line follows it, at full strength: " + note.text)
 		await _tap(match_scene.find_child("PlanPicker_defensive", true, false) as Button, "Defensive press at the break")
@@ -479,13 +479,13 @@ func _test_group_drills() -> void:
 		same = same and GameState.preseason_drills(1, g) == side
 	_check(same and (GameState.preseason_blocks()[1] as Array).size() == 3,
 			"Every group drills the block's plan, and the save holds just that")
-	var want := {"MID": ["contest"], "DEF": ["defensive"], "FWD": ["attacking", "through_stars"], "RUCK": ["controlled"]}
+	var want := {"MID": ["contest"], "DEF": ["defensive"], "FWD": ["attacking", "contest"], "RUCK": ["controlled"]}
 	for g in want:
 		_check(GameState.set_preseason_drills(1, want[g], g), "The %s get their own drills" % str(PreSeason.GROUP_LABEL[g]).to_lower())
 	var plans := {}
 	for g in PreSeason.GROUPS:
 		plans[str(GameState.preseason_drills(1, g))] = g
-	_check(plans.size() == 4 and GameState.preseason_drills(1, "FWD") == ["attacking", "through_stars"],
+	_check(plans.size() == 4 and GameState.preseason_drills(1, "FWD") == ["attacking", "contest"],
 			"Four group drill plans, each its own: %s" % str(plans.keys()))
 	_check(GameState.preseason_drills(1) == side, "...and the whole side's line is as it was")
 	_check(GameState.set_preseason_block(1, "heavy", "plan") and GameState.preseason_drills(1, "DEF") == ["defensive"],

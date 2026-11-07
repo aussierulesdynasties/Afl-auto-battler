@@ -198,8 +198,8 @@ const STYLE_WORD := {"defensive": "pressure", "attacking": "running", "contest":
 ## "Suits our pressure game." when your plan leans on a kind of player
 ## (PlanFit.NEEDS, the attributes List Profile's Pressure, Running power,
 ## Contest and Control rows rate) and his football is at least an average
-## AFL carrier's on them (PlanFit.LEAGUE's mean). Balanced and Through stars
-## lean on no kind of player, so they say nothing.
+## AFL carrier's on them (PlanFit.LEAGUE's mean). Balanced leans
+## on no kind of player, so they say nothing.
 static func style_line(p: Dictionary, plan: String) -> String:
 	if not PlanFit.NEEDS.has(plan) or not STYLE_WORD.has(plan):
 		return ""

@@ -11,7 +11,7 @@ extends RefCounted
 ##
 ## Args after the impl name: arms seeds
 ##   arms   comma list (default all): plan_attacking, plan_defensive,
-##          plan_contest, plan_controlled, plan_through_stars
+##          plan_contest, plan_controlled
 ##          h2h_<plan>: the press head to head with <plan> (home press v away
 ##          <plan>, against home <plan> v away press, same seeds; margin > 0
 ##          means the press wins the matchup)
@@ -20,7 +20,7 @@ extends RefCounted
 ## attacking goal (MatchSim.fp), so higher = further up the ground for home.
 
 const PAIRS := [["MEL", "CAR"], ["GEE", "COL"], ["SYD", "WCE"], ["BRL", "ADE"], ["HAW", "ESS"], ["FRE", "STK"]]
-const ALL := ["plan_attacking", "plan_defensive", "plan_contest", "plan_controlled", "plan_through_stars"]
+const ALL := ["plan_attacking", "plan_defensive", "plan_contest", "plan_controlled"]
 ## Events where a side has the ball in hand.
 const POSS := ["kick", "handball", "mark", "receive", "pass", "rebound"]
 ## Events after which the next possession is a restart, not a turnover.

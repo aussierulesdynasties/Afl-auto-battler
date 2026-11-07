@@ -8,14 +8,14 @@ extends RefCounted
 ##
 ## Args after the impl name: arms seeds
 ##   arms   comma list (default all): plan_attacking, plan_defensive,
-##          plan_contest, plan_controlled, plan_through_stars, pep_fire_up,
+##          plan_contest, plan_controlled, pep_fire_up,
 ##          pep_calm, rot_hard, rot_stars, tag, loose
 ##   seeds  per pairing (default 40); six pairings
 ## One line per arm: the paired home margin and the process the copy names,
 ## each as mean ± standard error of the paired difference.
 
 const PAIRS := [["MEL", "CAR"], ["GEE", "COL"], ["SYD", "WCE"], ["BRL", "ADE"], ["HAW", "ESS"], ["FRE", "STK"]]
-const ALL := ["plan_attacking", "plan_defensive", "plan_contest", "plan_controlled", "plan_through_stars",
+const ALL := ["plan_attacking", "plan_defensive", "plan_contest", "plan_controlled",
 		"pep_fire_up", "pep_calm", "rot_hard", "rot_stars", "tag", "loose"]
 
 
@@ -97,7 +97,6 @@ const PROCESS := {
 	"plan_defensive": ["margin", "pressure"],
 	"plan_contest": ["margin", "clearances"],
 	"plan_controlled": ["margin", "clangers"],
-	"plan_through_stars": ["margin", "star_share"],
 	"pep_fire_up": ["margin", "contested", "clangers"],
 	"pep_calm": ["margin", "clangers"],
 	"rot_hard": ["margin", "star_time"],

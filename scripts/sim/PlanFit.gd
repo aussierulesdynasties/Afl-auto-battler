@@ -35,11 +35,7 @@ const LEAGUE := {
 	"defensive": [49.8, 2.4],
 	"contest": [80.3, 3.8],
 	"controlled": [57.9, 1.6],
-	# Through stars: how far the side's best three stand above its average.
-	"through_stars": [15.1, 2.3],
 }
-## Through stars goes through this many of the side's best players.
-const STAR_N := 3
 ## How far one spread from the league moves a plan's upside, and its limits:
 ## the best-suited list gets about half as much again, the worst about half.
 const PER_SPREAD := 0.32
@@ -58,16 +54,8 @@ static func _value(p: Dictionary, weights: Dictionary) -> float:
 	return v
 
 
-## The players who carry `plan` in this side, best first: for Through stars
-## the best three by overall ([] for Balanced).
+## The players who carry `plan` in this side, best first ([] for Balanced).
 static func carriers(ground: Array, plan: String) -> Array:
-	if plan == "through_stars":
-		var best := ground.duplicate()
-		best.sort_custom(func(a, b):
-			if int(a["overall"]) != int(b["overall"]):
-				return int(a["overall"]) > int(b["overall"])
-			return str(a.get("id", "")) < str(b.get("id", "")))
-		return best.slice(0, STAR_N)
 	if not NEEDS.has(plan):
 		return []
 	var need: Dictionary = NEEDS[plan]
@@ -93,17 +81,6 @@ static func carriers(ground: Array, plan: String) -> Array:
 ## The side's raw score for `plan`: its carriers' average on what the plan
 ## needs (the ruck's tap work counts for a quarter of a contest).
 static func score(ground: Array, plan: String) -> float:
-	if plan == "through_stars":
-		if ground.is_empty():
-			return 0.0
-		var all := 0.0
-		for p in ground:
-			all += float(p["overall"])
-		var top := 0.0
-		var stars := carriers(ground, plan)
-		for p in stars:
-			top += float(p["overall"])
-		return top / float(stars.size()) - all / float(ground.size())
 	if not NEEDS.has(plan):
 		return 0.0
 	var need: Dictionary = NEEDS[plan]
@@ -162,20 +139,6 @@ static func plan_score(ground: Array, plan: String, know := {}) -> float:
 
 
 ## How the side's carriers for `plan` compare with the league, in words.
-## How far a side's best three stand above the rest, in words (Through stars).
-static func stars_word(ground: Array) -> String:
-	var e := edge(ground, "through_stars")
-	if e >= 1.2:
-		return "far above the rest"
-	if e >= 0.4:
-		return "well above the rest"
-	if e > -0.4:
-		return "above the rest, as most sides' are"
-	if e > -1.2:
-		return "not far above the rest"
-	return "barely above the rest"
-
-
 static func fit_word(ground: Array, plan: String) -> String:
 	var e := edge(ground, plan)
 	if e >= 1.2:

@@ -56,8 +56,9 @@ const Ran := preload("res://tests/functions_ran.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 ## Old calls (director, 2026-11-03 cuts): a saved set of calls that still
-## carries main_ruck, focus_* or rotation loads cleanly; Start sends none of
-## them to the engine, and the rotations are the automatic ones.
+## carries main_ruck or rotation loads cleanly; Start sends neither to the
+## engine, and the rotations are the automatic ones. The three Play through
+## picks are back (director, 2026-11-07): Start sends them.
 func _test_old_calls_load_and_rotations_are_automatic() -> void:
 	var db = root.get_node("GameDB")
 	root.size = Vector2i(420, 860)
@@ -72,14 +73,18 @@ func _test_old_calls_load_and_rotations_are_automatic() -> void:
 	await _settle()
 	m.set("_last_tactics", {"main_ruck": anyone, "focus_mid": anyone, "focus_fwd": anyone, "focus_id": anyone, "rotation": "stars"})
 	var box: Node = m.find_child("CoachBox", true, false)
-	for gone in ["MainRuckPicker", "RotationPicker", "FocusPicker_focus_mid", "InterceptorPicker", "SpareMinderPicker"]:
+	for gone in ["MainRuckPicker", "RotationPicker", "InterceptorPicker", "SpareMinderPicker"]:
 		_check(m.find_child(gone, true, false) == null, "No %s at the break any more" % gone)
+	for slot in ["focus_mid", "focus_fwd", "focus_def"]:
+		_check(m.find_child("FocusPicker_" + slot, true, false) != null, "A Play through picker for %s at the break" % slot)
 	_check(m.find_child("DefenceSetupPicker", true, false) != null, "One Defensive set-up call in its place")
 	var gw: String = await Tap.tap(box.find_child("StartQuarter", true, false))
 	await _settle()
 	var t: Dictionary = sim.tactics[me]
-	_check(gw == "" and not t.has("main_ruck") and not t.has("rotation") and not t.has("focus_mid"),
-			"Start sends no main ruck, rotation or play-through call (%s)" % str(t.keys()))
+	_check(gw == "" and not t.has("main_ruck") and not t.has("rotation"),
+			"Start sends no main ruck or rotation call (%s)" % str(t.keys()))
+	_check(t.has("focus_mid") and t.has("focus_fwd") and t.has("focus_def"),
+			"Start sends the three Play through picks (%s)" % str(t.keys()))
 	_check(str(sim.rotation_policy[me]) == sim.auto_rotation(me, _state.fitness_plan(str(_state.my_club))),
 			"The rotations are the automatic ones (%s)" % str(sim.rotation_policy[me]))
 	m.queue_free()
