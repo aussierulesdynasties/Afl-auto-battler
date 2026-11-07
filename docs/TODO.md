@@ -39,7 +39,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 107 | Event cards: every choice gets an upside and a downside, and never-seen cards get a trigger (T5.Q18, row 34) | no no-cost choice, every card reachable in an audit |
 | 109 | Screen defects: club ink to 4.5:1 on tinted panels, hub ladder fills the right side at 2560, break notes above 13 px, draft subtitle not cut off (6.Q18) | captures at phone and 2560 |
 | 110 | Vignette defects: boundary-snap curved white line, snap-for-goal hovering ball (6.Q18) | frames checked, captures to him |
-| 111 | Sacked is not the end: choose from a few clubs with open jobs, or retire with the record read out (T5.r22) | choice offered after a sacking, test |
 | 112 | Rival board letter after a strong season (T5.r23) | letter only after a strong season, accept and decline tested |
 | 113 | Start at the end of 2026: real lists, the real 2026 National Draft with each club's real picks, then play 2027 (T5.r134) | start option, sourced pick ownership, test |
 | 114 | Challenge starts: Youth only, Rebuild (bottom club), your own goal (T5.r115) | three starts selectable, test |
