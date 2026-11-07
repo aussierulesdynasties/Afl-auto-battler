@@ -2211,8 +2211,9 @@ const TACKLE_SPILL := 0.5
 ## forwards get to him this much less often, a rushed disposal there turns
 ## over this much as often, and he keeps it through a tackle this much more
 ## often. Measured on tools/balance.sh match 1000 against main: team rebound
-## 50s 26.8 -> 39.4 (real 39.3), with every other team rate still inside the
-## clubs' range. Rebound 50s keep the Champion Data definition (_rebound_exit).
+## 50s 26.8 -> 38.2 (real 39.3), with every other team rate still inside the
+## clubs' range once marks per kick, one-percenters and goals per entry were
+## recalibrated (Ratings, 2026-11-07). Rebound 50s keep the Champion Data definition (_rebound_exit).
 const D50_KICK_GAIN := 3.0
 const D50_HANDBALL := 0.7
 const D50_PRESSURE := 0.65
