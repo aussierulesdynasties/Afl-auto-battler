@@ -1,9 +1,11 @@
 extends SceneTree
 ## Real renderer: godot --path . --rendering-method gl_compatibility --script tools/visual/capture_training_rows.gd
 ## Environment: CAP_W, CAP_H (default 390x800), CAP_OUT (file prefix, default
-## "training_rows"). Saves <prefix>_list.png and <prefix>_group.png: the Training
-## list with a long name, an injury stamp, an archetype plan and a short name, then
-## the same list with a group selected. Illustrative fixture only; it never
+## "training_rows"). Saves <prefix>_list.png, <prefix>_cards.png and <prefix>_group.png:
+## the Training list with a long name, an injury stamp, an archetype plan and a short
+## name, the list scrolled to the cards, then the same list with a group selected.
+## Needs --windowed and an override.cfg; waits on timers, not frame_post_draw, which
+## an unfocused window may never send. Illustrative fixture only; it never
 ## touches a real save.
 
 
@@ -34,17 +36,27 @@ func _run() -> void:
 	list[1]["injury_weeks"] = 3
 	state.set_player_plan(str(list[2]["id"]), str(state.plans_for(list[2])[1]) if state.plans_for(list[2]).size() > 1 else "position")
 	state.set_setting("seen_training_intro", true)
-	router.go("training")
-	for i in range(8):
+	# Straight onto the screen, not through the router's threaded load (it stalls
+	# a --script run's main loop).
+	var scene: Node = load(router.SCENES["training"]).instantiate()
+	root.add_child(scene)
+	current_scene = scene
+	for i in range(20):
 		await process_frame
-	await RenderingServer.frame_post_draw
+	await create_timer(2.0).timeout
 	root.get_texture().get_image().save_png(prefix + "_list.png")
-	var scene = current_scene
+	# A wide window shows little of the list at the top: scroll the cards in.
+	var scroll := scene.get("_list_scroll") as ScrollContainer
+	var first_card := scene.find_child("Card_" + str(list[0]["id"]), true, false) as Control
+	if scroll != null and first_card != null:
+		scroll.scroll_vertical = int(first_card.get_global_rect().position.y - scroll.get_global_rect().position.y) - 40
+		await create_timer(1.0).timeout
+		root.get_texture().get_image().save_png(prefix + "_cards.png")
 	scene.set("_bulk_selected", {str(list[1]["id"]): true, str(list[3]["id"]): true})
 	scene.call("_build")
 	for i in range(6):
 		await process_frame
-	await RenderingServer.frame_post_draw
+	await create_timer(2.0).timeout
 	root.get_texture().get_image().save_png(prefix + "_group.png")
 	print("CAPTURE saved ", prefix, " at ", w, "x", h)
 	quit()
