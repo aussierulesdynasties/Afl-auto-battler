@@ -61,10 +61,10 @@ func fill(v: VBoxContainer) -> void:
 		var lines := UiKit.vbox(22)
 		lines.name = "HeadToHead"
 		v.add_child(lines)
-		# Midfield and ruck only, as when the key players stood above (cut 2026-11-07).
+		# The overall team rank, then every line, each side's league rank beside
+		# its word (director, 2026-11-07: "show every line and overall team rank too").
 		for row in GameState.my_head_to_head(code):
-			if ["midfield", "ruck"].has(str(row["key"])):
-				lines.add_child(_h2h_row(row, code))
+			lines.add_child(_h2h_row(row, code))
 	v.add_child(_synergy_view())
 	# What the week says about your own people, set apart from the facts above.
 	var notes := UiKit.vbox(8)
@@ -146,34 +146,29 @@ func _outline_btn(text: String) -> Button:
 ## columns that match the header above: yours under your club's colour, theirs
 ## under theirs. "Even, both average" stays one line.
 func _h2h_row(row: Dictionary, opp: String) -> Control:
-	var text := str(row["text"])
-	var cut := text.find(": ")
 	var one := UiKit.vbox(4)
 	one.name = "H2H_" + str(row["key"])
-	one.set_meta("plain", text)
-	if cut < 0:
-		one.add_child(para(text, UiKit.SECONDARY, UiKit.TEXT))
-		return one
-	one.add_child(UiKit.lbl(text.substr(0, cut), UiKit.NAME, UiKit.TEXT, true))
-	var rest := text.substr(cut + 2).trim_suffix(".")
-	var at := rest.find(", theirs ")
-	if not rest.begins_with("yours ") or at < 0:
-		one.add_child(para(rest.substr(0, 1).to_upper() + rest.substr(1) + ".", UiKit.SECONDARY, SOFT))
-		return one
+	one.set_meta("plain", str(row["text"]))
+	one.add_child(UiKit.lbl(str(row["label"]), UiKit.NAME, UiKit.TEXT, true))
 	var inks: Array = UiKit.club_ink_pair(GameState.my_club, opp)
 	var cols := UiKit.hbox(GAP)
-	var parts := [["Yours", rest.substr(6, at - 6), inks[0]], ["Theirs", rest.substr(at + 9), inks[1]]]
-	for part in parts:
+	# Each side: its word (a line) and its league rank, "Yours good · 5th".
+	var sides := [["Yours", "mine", inks[0]], ["Theirs", "theirs", inks[1]]]
+	for side in sides:
+		var said := "%s %s" % [side[0], Almanac.ordinal(int(row[side[1] + "_rank"]))]
+		if row.has(side[1] + "_word"):
+			said = "%s %s · %s" % [side[0], str(row[side[1] + "_word"]),
+					Almanac.ordinal(int(row[side[1] + "_rank"]))]
 		var c := UiKit.vbox(4)
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var bar := ColorRect.new()
-		bar.color = part[2]
+		bar.color = side[2]
 		bar.custom_minimum_size = Vector2(0, 3)
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		c.add_child(bar)
-		# Yours in weight (the verdict you decide on), theirs plain.
-		c.add_child(UiKit.lbl("%s %s" % [part[0], part[1]], UiKit.SECONDARY,
-				UiKit.club_name_colour(part[2]), true))
+		var l := UiKit.lbl(said, UiKit.SECONDARY, UiKit.club_name_colour(side[2]), true)
+		l.name = "H2H_" + str(side[1])
+		c.add_child(l)
 		cols.add_child(c)
 	one.add_child(cols)
 	return one

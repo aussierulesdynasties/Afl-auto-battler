@@ -77,14 +77,43 @@ func _test_selection_tests() -> void:
 	# This week, line against line: both sides in the same words.
 	var h2h: Node = ui.find_child("HeadToHead", true, false)
 	var h2h_lines: Array = h2h.get_children() if h2h != null else []
-	var h2h_ok := h2h_lines.size() == 2
+	# The overall team rank first, then every line (director, 2026-11-07: "show
+	# every line and overall team rank too"), each side with its league rank.
+	var h2h_keys: Array = h2h_lines.map(func(l): return str(l.name))
+	var h2h_ok := h2h_keys == ["H2H_overall", "H2H_midfield", "H2H_ruck", "H2H_attack", "H2H_defence"]
+	var rank_rx := RegEx.new()
+	rank_rx.compile("^(Yours|Theirs) [^0-9]*[0-9]+(st|nd|rd|th)$")
 	for l in h2h_lines:
 		if not (_plain(l).contains("yours") or _plain(l).contains("even, both")):
 			h2h_ok = false
-	_check(h2h_ok, "The matchup reads line against line (%s)" %
+		for side in ["H2H_mine", "H2H_theirs"]:
+			var said: Label = l.find_child(side, true, false)
+			if said == null or rank_rx.search(said.text) == null:
+				h2h_ok = false
+		if str(l.name) != "H2H_overall" and not (l.find_child("H2H_mine", true, false) as Label).text.contains(" · "):
+			h2h_ok = false
+	_check(h2h_ok, "The matchup reads overall, then every line, each side with its league rank (%s)" %
 			" | ".join(h2h_lines.map(func(l): return _plain(l))))
 	var mid_line: Control = ui.find_child("H2H_midfield", true, false)
 	_check(mid_line != null and _plain(mid_line).begins_with("Midfield: "), "Midfield sets yours against theirs")
+	# The ranks are the league's: each between 1st and the number of clubs, and
+	# the overall rank is the list strength's (Squad.strength) on the side as picked.
+	var rows_h2h: Array = _state.my_head_to_head(str(_state.my_next_opponent().get("code", "")))
+	var ranks_ok := rows_h2h.size() == 5
+	for r in rows_h2h:
+		for k in ["mine_rank", "theirs_rank"]:
+			if int(r[k]) < 1 or int(r[k]) > int(r["n"]):
+				ranks_ok = false
+	if ranks_ok:
+		var better := 0
+		var mine_s: float = _state.my_squad().strength()
+		for c in _state.season.lists:
+			if str(c) != _state.my_club and not (_state.season.lists[c] as Array).is_empty() \
+					and Squad.new(str(c), _state.season.lists[c], false, str(c), _state.season.selections.get(c, {})).strength() > mine_s:
+				better += 1
+		ranks_ok = int(rows_h2h[0]["mine_rank"]) == better + 1
+	_check(ranks_ok, "Every rank is a league place, the overall one by list strength (%s)" %
+			str(rows_h2h.map(func(r): return [r["key"], r["mine_rank"], r["theirs_rank"]])))
 	# You and them head the week; the key forwards and defenders are cut
 	# (director, 2026-11-07: "We don't need this section. It's pointless").
 	var km: Node = ui.find_child("WeekClubs", true, false)
