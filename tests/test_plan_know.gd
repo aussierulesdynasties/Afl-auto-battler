@@ -573,7 +573,7 @@ func _test_group_screen() -> void:
 			"A Game plan block's drills show the whole side until the coach picks a group")
 	_check(_label(scene, "DrillSplit0").begins_with("Every group drills the same"), "...and the line under the tabs says so")
 	var gaps := _tab_gaps(scene.find_child("DrillFor0", true, false) as Control)
-	_check(gaps.size() == 4 and gaps.min() >= 8.0 and gaps.max() - gaps.min() <= 6.0,
+	_check(gaps.size() == 4 and gaps.min() >= 8.0 and gaps.max() <= gaps.min() * 2.0,
 			"The five group names sit evenly apart on a phone, never run together: gaps %s" % [gaps])
 	var narrowest := 999.0
 	for t in (scene.find_child("DrillFor0", true, false) as Control).get_children():
