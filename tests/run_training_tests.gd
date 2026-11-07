@@ -216,6 +216,34 @@ func _test_training_grid() -> void:
 			if absf(y - ys[0]) > 1.0:
 				level = false
 				level_note = "%s vs %s" % [str(y), str(ys[0])]
+	# The name and the trait under it sit centred in the room between the top
+	# line and the status, on the same left edge as both (the old full-width
+	# row's name stack sat off centre: CLAUDE.md's confirmed defect).
+	var centred := true
+	var centred_note := ""
+	for c in cards:
+		var card3: Control = (c as Button).get_parent()
+		var mid: Control = card3.find_child("CardMiddle", true, false)
+		var top_line: Control = (card3.find_child("Position", true, false) as Control).get_parent()
+		var st3: Label = card3.find_child("Status", true, false)
+		var nm3: Label = card3.find_child("Name", true, false)
+		if mid == null or st3 == null or nm3 == null:
+			centred = false
+			centred_note = "%s: no name stack" % card3.name
+			continue
+		var stack_top := 99999.0
+		var stack_end := -99999.0
+		for k in mid.get_children():
+			stack_top = minf(stack_top, (k as Control).get_global_rect().position.y)
+			stack_end = maxf(stack_end, (k as Control).get_global_rect().end.y)
+		var room_top := top_line.get_global_rect().end.y
+		var room_end := st3.get_global_rect().position.y
+		var off := (stack_top + stack_end) * 0.5 - (room_top + room_end) * 0.5
+		var left_off := nm3.get_global_rect().position.x - st3.get_global_rect().position.x
+		if absf(off) > 1.5 or stack_top < room_top - 0.5 or stack_end > room_end + 0.5 or absf(left_off) > 0.5:
+			centred = false
+			centred_note = "%s: %.1f off centre, %.1f off the left edge" % [card3.name, off, left_off]
+	_check(centred, "Grid: each name and trait sit centred between the top line and the status, on one left edge (%s)" % centred_note)
 	var lone_rows := 0
 	for r in rows:
 		if (r as Control).find_child("GridHole", false, false) != null:

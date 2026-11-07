@@ -424,6 +424,66 @@ def role_table(A, B):
     print("\nReal shares (Champion Data 2025): DEF 57%, MID 23%, FWD 15%, RUCK 4%; a team intercepts about 63.4 a game.")
 
 
+def spoil_zone_rate(rows, keys):
+    """Seed -> spoils a team-match in the zone keys (from each team's spoil_zone)."""
+    return {i: sum(float(t.get("spoil_zone", {}).get(k, 0)) for t in r["teams"] for k in keys) / 2
+            for i, r in rows.items()}
+
+
+def spoils_section(A, B):
+    """Spoils a team a game by zone and by listed position (T2.29, TODO row 11), against
+    Champion Data 2026 (afl_spoil_zones.json; the zone split is an estimate, see its source)."""
+    if not any("spoil_zone" in t for r in A.values() for t in r["teams"]):
+        return
+    ref = json.load(open(os.path.join(HERE, "afl_spoil_zones.json")))
+    real = ref["per_team_match"]
+
+    def mark(v, b):
+        if b["lo"] <= v <= b["hi"]:
+            return "IN"
+        return "NEAR" if abs(v - b["mean"]) <= 2 * b["sd"] else "OUT"
+    print("\n\n## Spoils a team a game, by zone (spoiling side's end; real zones are an estimate)\n")
+    head = "| zone | AFL mean | AFL range | A | A/real | mark |" + (" B | mark | B-A | se | sig |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    rows = [("total", ["d50_entry", "d50_play", "mid", "f50"], "total"),
+            ("d50 (all)", ["d50_entry", "d50_play"], "d50"),
+            ("  d50: entries and packs", ["d50_entry"], None),
+            ("  d50: general play", ["d50_play"], None),
+            ("mid (between the arcs)", ["mid"], "mid"),
+            ("f50 (own forward 50)", ["f50"], "f50"),
+            ("outside d50 (mid + f50)", ["mid", "f50"], None)]
+    for label, keys, rk in rows:
+        a = spoil_zone_rate(A, keys)
+        ma = st.mean(a.values())
+        b0 = real.get(rk) if rk else None
+        if rk is None and keys == ["mid", "f50"]:
+            b0 = {"mean": real["mid"]["mean"] + real["f50"]["mean"], "lo": real["mid"]["lo"] + real["f50"]["lo"],
+                  "hi": real["mid"]["hi"] + real["f50"]["hi"], "sd": math.hypot(real["mid"]["sd"], real["f50"]["sd"])}
+        line = (f"| {label} | {b0['mean']:.1f} | {b0['lo']:.1f}-{b0['hi']:.1f} | {ma:.1f} | {ma / b0['mean']:.2f} | {mark(ma, b0)} |"
+                if b0 else f"| {label} | - | - | {ma:.1f} | - | - |")
+        if B:
+            b = spoil_zone_rate(B, keys)
+            common = [i for i in a if i in b]
+            d = [b[i] - a[i] for i in common]
+            mb = st.mean(b[i] for i in common)
+            se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+            sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ""
+            line += f" {mb:.1f} | {mark(mb, b0) if b0 else '-'} | {st.mean(d):+.2f} | {se:.2f} | {sig} |"
+        print(line)
+    print("\nSpoils a game per player, by listed position (measured, Champion Data 2026):\n")
+    print("| role | real | A | real share | share A |")
+    print("|---|---|---|---|---|")
+    tot = sum(float(t.get("sp_" + r_, 0)) for r in A.values() for t in r["teams"] for r_ in ref["by_role"]) or 1.0
+    for role, rr in ref["by_role"].items():
+        sp = sum(float(t.get("sp_" + role, 0)) for r in A.values() for t in r["teams"])
+        pg = sum(float(t.get("pg_" + role, 0)) for r in A.values() for t in r["teams"])
+        if pg <= 0:
+            continue
+        print(f"| {role} | {rr['per_player_game']:.2f} | {sp / pg:.2f} | {100 * rr['share']:.0f}% | {100 * sp / tot:.0f}% |")
+    print(f"\nReal: {ref['source']}")
+
+
 def wet_section(A, B, wet):
     """Paired change in percent (B / A - 1), plus accuracy and set-shot accuracy
     in points (row 120). The real wet v dry column shows only when B is the wet
@@ -743,6 +803,7 @@ def main():
         print(line)
     wet_section(A, B, "--weather wet" in (o.b or "") and "--weather wet" not in o.a)
     role_table(A, B)
+    spoils_section(A, B)
     for name, R in (("A", A), ("B", B)):
         if not R:
             continue
