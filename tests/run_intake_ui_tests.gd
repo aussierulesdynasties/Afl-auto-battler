@@ -550,6 +550,9 @@ func _test_full_list_before_and_during_draft() -> void:
 	var spots: Dictionary = _state.draft_list_spots()
 	_check((spots["passing"] as Array).size() >= 1, "Some picks have no spot (%s)" % str(spots))
 	root.size = Vector2i(390, 844)
+	# A coach past his first week: the hub's one-off intro (a setting, so it
+	# carries over from whichever suite ran before) would sit over the button.
+	_state.set_setting("seen_weekly_loop_intro", true)
 	for round_trip in ["delist", "start"]:
 		var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 		root.add_child(hub)
