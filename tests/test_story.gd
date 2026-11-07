@@ -30,7 +30,9 @@ func run() -> void:
 	_t("_test_folded_sizes")
 	_t("_test_hints_in_words")
 	_t("_test_choice_stakes_are_stated")
-	_t("_test_every_option_has_a_cost")
+	_t("_test_every_choice_has_both_sides")
+	_t("_test_no_dead_story_flags")
+	_t("_test_arc_middle_before_end")
 	_t("_test_silent_defaults_announced")
 	_t("_test_every_line_has_a_size")
 	_t("_test_line_numbers_match_effects")
@@ -2879,78 +2881,184 @@ func _test_vacancy_is_filled() -> void:
 
 
 # --- Decision gates (director, 2026-10-18: every option states its upside and
-# downside with the size and the odds; an option with no downside is a design fault) ---
+# downside with the size and the odds; an option with no downside is a design fault.
+# Row 107, T5.Q18: every event-card choice gets an upside and a downside) ---
 
-## The 16 cards whose kind option used to win every number: every option now costs something.
-## (17 until contracts_rivals_circling was cut, row 96: private lives stay out of the game.)
-const GATED := ["board_billboards", "contracts_kid_wants_clarity",
-		"contracts_waited_manager_calls", "family_partner_job_offer", "family_newborn_no_sleep",
-		"family_partner_graduation", "family_house_settlement", "health_veteran_rehab_mentor",
-		"leadership_senior_runs_session", "captain_leaders_meeting", "captain_slump_start",
-		"captain_slump_mid", "captain_contract_start", "media_in_the_papers", "media_papers_again",
-		"members_cheer_squad"]
-## Options that still gain without a cost (2026-10-18). Their costs are a later sheet; this
-## list may only shrink: an entry that gains a cost must come off it, and no new one may join.
-const GAIN_ONLY_LEFT := ["community_hospital_visit/go", "finals_club_greats/in", "health_finals_light_week/light",
-		"captain_selection_word/talk", "captain_group_flat/dayoff", "captain_big_week/speak",
-		"captain_holding_group/noticed", "captain_slump_good/noticed", "captain_contract_signed/good",
-		"captain_succession_start/handover", "captain_succession_start/asks", "finals_last_season/quiet",
-		"finals_second_chance/burn", "finals_captain_last_word/him", "gf_last_game/him", "gf_last_game/calm",
-		"members_open_training/open", "members_open_training/closed", "finals_in/enjoy", "gf_milestone/banner",
-		"gf_milestone/club", "rivals_spy_at_training/let", "rivals_mouthing_off/calm", "gf_the_opponent/us",
-		"selection_talk_dropped/explain", "selection_talk_back/explain", "selection_talk_waiting/explain",
-		"finals_first_final/minder", "finals_first_final/alone", "gf_debut_year/away", "training_extra_session/recover",
-		"training_seniors_day_off/give", "training_time_trial/skip", "training_new_stoppage_setup/hold",
-		"training_backed_kid_flying/earned", "finals_week_off/semi",
-		# The second slice of finals cards (their switch retired 2026-11-06), written
-		# before this list was held: their costs are still to be written.
-		"finals_written_off/pin", "finals_written_off/back", "finals_one_week_short/not_done",
-		"finals_knocked_out/thanks", "gf_runners_up/let_go", "gf_night_before/together",
-		"gf_night_before/families", "finals_drought_over/feel", "finals_drought_over/outside",
-		"gf_premiers/again"]
-const GAIN_ONLY_FLOOR := 46
+## The choices still short of a gain or a cost on the card (2026-11-08): 46 gain only,
+## 14 cost only, 11 that do nothing or only spare another choice's cost. Their missing
+## sides wait on the director (row 63's second cost sheet and the questions of row 107).
+## This list may only shrink: a choice that gets its missing side comes off, and no new
+## one may join.
+const BOTH_SIDES_LEFT := ["training_extra_session/recover", "training_seniors_day_off/give",
+		"training_time_trial/skip", "training_new_stoppage_setup/hold", "training_backed_kid_flying/earned",
+		"finals_week_off/semi", "health_finals_light_week/light", "media_young_feature/no", "media_team_leak/let",
+		"media_cameras_in_rooms/no", "media_papers_fronts_group/private", "media_trial_worked/ok",
+		"media_trial_not_yet/ok", "finals_written_off/pin", "finals_written_off/back", "finals_one_week_short/not_done",
+		"contracts_wants_to_extend/wait", "contracts_manager_noise/ignore", "captain_selection_word/talk",
+		"captain_selection_word/coaches", "captain_group_flat/dayoff", "captain_group_flat/hard",
+		"captain_harder_session/keep", "captain_young_player/notyet", "captain_big_week/speak",
+		"captain_holding_group/noticed", "captain_holding_group/letbe", "captain_slump_good/noticed",
+		"captain_slump_good/letbe", "captain_slump_flat/nerve", "captain_contract_wait/hand", "captain_contract_wait/ride",
+		"captain_contract_signed/good", "captain_contract_signed/letbe", "captain_contract_open/understood",
+		"captain_succession_start/handover", "captain_succession_start/asks", "captain_succession_start/notyet",
+		"captain_succession_next/later", "finals_last_season/quiet", "finals_second_chance/burn",
+		"finals_captain_last_word/him", "gf_last_game/him", "gf_last_game/calm", "finals_knocked_out/thanks",
+		"gf_runners_up/let_go", "community_hospital_visit/go", "finals_club_greats/in", "gf_night_before/together",
+		"gf_night_before/families", "rivals_spy_at_training/let", "rivals_mouthing_off/calm", "gf_the_opponent/us",
+		"board_president_lunch/no", "members_open_training/open", "members_open_training/closed",
+		"members_signing_session/no", "members_forum/results", "members_finals_tickets/ceo", "finals_in/enjoy",
+		"gf_milestone/banner", "gf_milestone/club", "finals_drought_over/feel", "finals_drought_over/outside",
+		"gf_premiers/again", "selection_talk_dropped/explain", "selection_talk_back/explain",
+		"selection_talk_waiting/explain", "finals_first_final/minder", "finals_first_final/alone", "gf_debut_year/away"]
+const BOTH_SIDES_FLOOR := 71
+## The choices with no lasting effect (only a story flag, or nothing at all): the 2026-10-12
+## audit's "a choice that does nothing" (rule 38). Shrink only.
+const DOES_NOTHING_LEFT := ["captain_young_player/notyet", "captain_holding_group/letbe",
+		"captain_slump_good/letbe", "captain_slump_flat/nerve", "captain_contract_wait/hand",
+		"captain_contract_signed/letbe", "captain_contract_open/understood", "captain_succession_start/notyet",
+		"captain_succession_next/later", "media_trial_worked/ok", "media_trial_not_yet/ok"]
 
 
-func _test_every_option_has_a_cost() -> void:
+## Every choice on every card shows a Gain line and a Cost line under its button
+## (bible principle 4), the international and pre-season cards included. A choice whose
+## own effects gain nothing may state, as its gain, another choice's cost it does not
+## carry (StoryEngine.card_lines). Built with every choice the card is written with, so a
+## choice the week's facts hide (the semi-final week off) is checked too.
+func _test_every_choice_has_both_sides() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[4]
-	var gain_only := []
-	var gated_bad := []
-	for t in StoryDeck.all():
-		var card := GameState.story_card(str(t["id"]), p if str(t["subject"].get("kind", "")) == "player" else {})
-		# Every choice the card is written with, whether or not this week's facts show it.
+	var deck := StoryDeck.all()
+	var ids := {}
+	for t in deck:
+		ids[str(t["id"])] = true
+	_check(deck.size() >= 135 and ids.has("intl_homesick") and ids.has("pre_knee_return"),
+			"The check sees the whole deck, the international and pre-season cards included (%d cards)" % deck.size())
+	var short := []
+	var nothing := []
+	var n := 0
+	for t in deck:
+		var subj := str((t["subject"] as Dictionary).get("kind", ""))
+		var card := GameState.story_card(str(t["id"]), p if subj == "player" else {})
+		var full := {"options": [], "facts": card.get("facts", {})}
 		for o in t["choices"]:
-			var lines := StoryEngine.stakes_lines(o.get("effects", []), card["facts"])
-			var gain := false
-			var cost := false
-			for l in lines:
-				gain = gain or l.begins_with(StoryEngine.GAIN_MARK)
-				cost = cost or l.begins_with(StoryEngine.COST_MARK)
+			(full["options"] as Array).append({"key": str(o["key"]), "effects": (o.get("effects", []) as Array).duplicate(true)})
+		for i in range((t["choices"] as Array).size()):
+			n += 1
+			var o: Dictionary = t["choices"][i]
 			var key := "%s/%s" % [t["id"], o["key"]]
-			if gain and not cost:
-				gain_only.append(key)
-			if GATED.has(str(t["id"])) and not cost:
-				gated_bad.append(key)
-		# On the card itself every option of the 16 shows a gain and a cost (bible §4).
-		if GATED.has(str(t["id"])):
-			for i in range((card["options"] as Array).size()):
-				var shown := StoryEngine.card_lines(card, i)
-				var g := false
-				var c := false
-				for l in shown:
-					g = g or l.begins_with(StoryEngine.GAIN_MARK)
-					c = c or l.begins_with(StoryEngine.COST_MARK)
-				if not (g and c):
-					gated_bad.append("%s/%s on the card (%s)" % [t["id"], card["options"][i]["key"], " ".join(shown)])
-	_check(gated_bad.is_empty(), "Every option on the %d gated cards states a cost, and on the card a gain too: %s" % [GATED.size(), ", ".join(PackedStringArray(gated_bad))])
-	var new_ones := gain_only.filter(func(k): return not GAIN_ONLY_LEFT.has(k))
-	var gone := GAIN_ONLY_LEFT.filter(func(k): return not gain_only.has(k))
-	_check(new_ones.is_empty(), "No option joins the gain-only list (a new card states a cost): %s" % ", ".join(PackedStringArray(new_ones)))
-	_check(gone.is_empty() and GAIN_ONLY_LEFT.size() <= GAIN_ONLY_FLOOR,
-			"The gain-only list only shrinks: take off the ones that now cost something (%s)" % ", ".join(PackedStringArray(gone)))
-	# The check bites: a gain-only option on a gated card is caught.
-	var bite := StoryEngine.stakes_lines([{"op": "morale", "d": 4}], {})
-	_check(bite.size() == 1 and bite[0].begins_with(StoryEngine.GAIN_MARK), "A gain-only option shows no Cost line, so the check would catch it")
+			var lasting := (o.get("effects", []) as Array).filter(func(e): return not ["flag", "talk_note"].has(str(e.get("op", ""))))
+			if lasting.is_empty():
+				nothing.append(key)
+			var g := false
+			var c := false
+			for l in StoryEngine.card_lines(full, i):
+				g = g or l.begins_with(StoryEngine.GAIN_MARK)
+				c = c or l.begins_with(StoryEngine.COST_MARK)
+			if not (g and c):
+				short.append(key)
+	var new_ones := short.filter(func(k): return not BOTH_SIDES_LEFT.has(k))
+	var gone := BOTH_SIDES_LEFT.filter(func(k): return not short.has(k))
+	_check(new_ones.is_empty(), "No choice joins the one-sided list: a new or changed choice states a gain and a cost (%s)"
+			% ", ".join(PackedStringArray(new_ones)))
+	_check(gone.is_empty() and BOTH_SIDES_LEFT.size() <= BOTH_SIDES_FLOOR,
+			"The one-sided list only shrinks: take off the choices that now show both sides (%s)" % ", ".join(PackedStringArray(gone)))
+	_check(n >= 290 and n - short.size() >= 219, "%d of %d choices show a gain and a cost" % [n - short.size(), n])
+	var new_nothing := nothing.filter(func(k): return not DOES_NOTHING_LEFT.has(k))
+	var nothing_gone := DOES_NOTHING_LEFT.filter(func(k): return not nothing.has(k))
+	_check(new_nothing.is_empty() and nothing_gone.is_empty(),
+			"No new choice is without a lasting effect, and one that now has one comes off the list (new: %s; gone: %s)"
+			% [", ".join(PackedStringArray(new_nothing)), ", ".join(PackedStringArray(nothing_gone))])
+	# The check bites: a gain-only choice with nothing to spare shows no Cost line...
+	var bite := StoryEngine.card_lines({"options": [{"key": "a", "effects": [{"op": "morale", "d": 4}]},
+			{"key": "b", "effects": [{"op": "morale", "d": 4}]}], "facts": {}}, 0)
+	var bite_cost := false
+	for l in bite:
+		bite_cost = bite_cost or l.begins_with(StoryEngine.COST_MARK)
+	_check(not bite.is_empty() and not bite_cost, "A gain-only choice shows no Cost line, so the check would catch it (%s)" % " / ".join(bite))
+	# ...and a cost the other choice carries is said as this one's gain.
+	var spared := StoryEngine.card_lines({"options": [{"key": "a", "effects": [{"op": "morale", "d": -2}]},
+			{"key": "b", "effects": [{"op": "slow_start", "chance": 15}]}], "facts": {}}, 0)
+	var spared_gain := false
+	for l in spared:
+		spared_gain = spared_gain or l.begins_with(StoryEngine.GAIN_MARK)
+	_check(spared_gain, "A choice that spares another's cost states it as its gain (%s)" % " / ".join(spared))
+
+
+## Every story flag a choice sets is read: by a follow-up's needs, a subject or choice
+## condition (flag / no_flag), or the game's code (story_flag_set). A flag nothing
+## reads is a choice whose promised consequence never comes.
+func _test_no_dead_story_flags() -> void:
+	var set_by := {}
+	var read := {}
+	for t in StoryDeck.all():
+		for o in t["choices"]:
+			for e in o.get("effects", []):
+				if str(e.get("op", "")) == "flag":
+					set_by[str(e["name"])] = "%s/%s" % [t["id"], o["key"]]
+			_flag_reads(o.get("when", {}), read)
+		var rest: Dictionary = (t as Dictionary).duplicate(true)
+		rest.erase("choices")
+		_flag_reads(rest, read)
+	_check(set_by.size() >= 9, "The deck sets its story flags (%d)" % set_by.size())
+	for f in _code_flag_reads("res://scripts"):
+		read[f] = true
+	_check(read.has("farewell_told"), "A flag the game's code reads by name is found (farewell_told)")
+	var dead := []
+	for f in set_by:
+		if not read.has(f):
+			dead.append("%s (set by %s)" % [f, set_by[f]])
+	_check(dead.is_empty(), "Every story flag a choice sets is read somewhere: %s" % ", ".join(PackedStringArray(dead)))
+
+
+## An arc's middle beat can come: it opens before any end beat of the same arc,
+## since an end beat that is due comes first and closes the arc (row 107: the
+## captain's contract talk opened at 6 weeks, after the ends at 4, so it never came).
+func _test_arc_middle_before_end() -> void:
+	var first_end := {}
+	var middles := []
+	for t in StoryDeck.all():
+		var needs: Dictionary = t.get("needs", {})
+		if needs.is_empty():
+			continue
+		var k := "%s|%s" % [str(t.get("arc", "")), str(needs.get("flag", ""))]
+		var after := int(needs.get("after", 1))
+		if str(t.get("beat", "")) == "end":
+			first_end[k] = mini(int(first_end.get(k, after)), after)
+		elif str(t.get("beat", "")) == "middle":
+			middles.append([k, after, str(t["id"])])
+	_check(middles.size() >= 2, "The deck has its middle beats (%d)" % middles.size())
+	for m in middles:
+		_check(not first_end.has(m[0]) or int(m[1]) < int(first_end[m[0]]),
+				"%s opens (week %d) before its arc's first end beat (week %d)" % [m[2], m[1], int(first_end.get(m[0], -1))])
+
+
+func _flag_reads(v, out: Dictionary) -> void:
+	if v is Dictionary:
+		for k in v:
+			if (str(k) == "flag" or str(k) == "no_flag") and v[k] is String:
+				out[str(v[k])] = true
+			else:
+				_flag_reads(v[k], out)
+	elif v is Array:
+		for x in v:
+			_flag_reads(x, out)
+
+
+## The flag names the game's code asks for by name: story_flag_set(holder, "name").
+func _code_flag_reads(dir: String) -> Array:
+	var out := []
+	var re := RegEx.new()
+	re.compile("story_flag_set\\([^,()]+,\\s*\"([a-z_]+)\"")
+	var d := DirAccess.open(dir)
+	if d == null:
+		return out
+	for f in d.get_files():
+		if f.ends_with(".gd"):
+			for m in re.search_all(FileAccess.get_file_as_string(dir.path_join(f))):
+				out.append(m.get_string(1))
+	for sub in d.get_directories():
+		out.append_array(_code_flag_reads(dir.path_join(sub)))
+	return out
 
 
 ## A card that settles itself if the coach sims past it says so on its face, in

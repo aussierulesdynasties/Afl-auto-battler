@@ -13,7 +13,9 @@ extends RefCounted
 ##
 ## The coach walks every pre-season stop (as a player who does not sim to Round 1
 ## does), so the pre-season's cards are dealt, and the card the week a season ends
-## brings (knocked out, or the Grand Final played) is answered too.
+## brings (knocked out, or the Grand Final played) is answered too. At the papers
+## he answers the paper's question with a seeded random choice, or says nothing
+## (one chance more than the card has choices), so the papers arc can follow.
 ##
 ## Prints per career: CARD <id> <times>, CHOICE <id> <key> <times>, COND <id>
 ## <weeks the trigger was met>, NEVER <id> <trigger weeks> for a card not dealt
@@ -150,7 +152,7 @@ func _deal() -> void:
 
 
 ## The pre-season, stop by stop: the time trial, the pre-season match, the papers
-## (said nothing) and the card stops after each block, answered like any card.
+## and the card stops after each block, answered like any card.
 ## Its triggers are asked on the card weeks it stops at (a card week that brings
 ## no card and no other stop passes unasked), so a pre-season COND is a floor.
 func _walk_preseason() -> void:
@@ -165,7 +167,27 @@ func _walk_preseason() -> void:
 			_count_cond(ClubStories.context(GameState))
 		if GameState.preseason_stop() == "story":
 			_deal()
+		elif GameState.preseason_stop() == "papers":
+			_answer_papers()
 		GameState.preseason_advance()
+
+
+## The paper's card (the finish it tips, the pressure, a breakout): counted as
+## dealt, then answered with one of its choices or with nothing said.
+func _answer_papers() -> void:
+	var card := GameState.papers_card()
+	if card.is_empty() or bool(GameState.papers_record().get("answered", false)):
+		return
+	var tid := str(card.get("tid", card.get("key", "")))
+	seen[tid] = int(seen.get(tid, 0)) + 1
+	var opts: Array = card.get("options", [])
+	var pick := answer.randi_range(0, opts.size())
+	if pick >= opts.size():
+		took["%s nothing" % tid] = int(took.get("%s nothing" % tid, 0)) + 1
+		return   # preseason_advance says nothing
+	var ck := "%s %s" % [tid, str((opts[pick] as Dictionary).get("key", pick))]
+	took[ck] = int(took.get(ck, 0)) + 1
+	GameState.papers_answer(pick)
 
 
 ## The week a season ends (knocked out, or the Grand Final played): the

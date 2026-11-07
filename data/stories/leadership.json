@@ -1178,7 +1178,7 @@
 		"beat": "middle",
 		"needs": {
 			"flag": "cc_start",
-			"after": 6,
+			"after": 3,
 			"within": 20
 		},
 		"choice_notes": true,
