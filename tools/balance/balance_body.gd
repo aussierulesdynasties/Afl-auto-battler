@@ -106,6 +106,7 @@ func play(from: int, count: int, out: String, weather: String,
 			t["q_score"] = q_score[side]
 			t["roles"] = role_lines(rosters[side], r["players"])
 			t["carry_zone"] = (sim.carry_log[side] as Dictionary).duplicate()
+			t["spoil_zone"] = (sim.spoil_log[side] as Dictionary).duplicate()
 			if not class_ids.is_empty():
 				var sq: Squad = sq_h if side == 0 else sq_a
 				var n_new := 0
@@ -122,6 +123,7 @@ func play(from: int, count: int, out: String, weather: String,
 				var role := str(pl.get("list_role", pl.get("role", "")))
 				t["ic_" + role] = float(t.get("ic_" + role, 0.0)) + float(st.get("intercepts", 0.0))
 				t["pg_" + role] = int(t.get("pg_" + role, 0)) + 1
+				t["sp_" + role] = float(t.get("sp_" + role, 0.0)) + float(st.get("spoils", 0.0))
 			teams.append(t)
 		var line := JSON.stringify({"i": i, "home": h, "away": a, "teams": teams, "duels": duels(sim, r)})
 		fh.store_line(line)
