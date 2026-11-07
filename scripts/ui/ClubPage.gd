@@ -25,16 +25,15 @@ const BOARD_WIDE := 640.0
 # ---------------------------------------------------------------------------
 static func open(host: Control, code: String) -> Control:
 	var mine := code == GameState.my_club
-	var box := UiKit.modal_box(host, 620.0, 0.0, UiKit.club_vivid(code))
+	var box := UiKit.modal_box(host, 620.0, 0.0, _wash(code))
 	var overlay: Control = box["overlay"]
 	overlay.name = SHEET_NAME
 	overlay.set_meta("club_code", code)
 	UiKit.close_on_outside_tap(box)
 	var body: VBoxContainer = box["body"]
 	body.add_child(_strip(code))
-	var title := UiKit.lbl(GameDB.club_name(code), UiKit.H1, UiKit.club_ink(code, UiKit.PANEL), true)
+	var title := UiKit.club_title(GameDB.club_name(code), UiKit.H1, code, UiKit.PANEL)
 	title.name = "ClubName"
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(title)
 	var c: Dictionary = GameDB.clubs.get(code, {})
 	var ground := str(c.get("ground", ""))
@@ -75,14 +74,28 @@ static func open(host: Control, code: String) -> Control:
 	return overlay
 
 
-## The club's colours as a band under the wash: the guernsey before the name.
+## The wash at the top of a club's sheet: its vivid colour, or the black of a
+## black-and-white club, never the grey of its third colour (director
+## 2026-11-07, "fix Pies").
+static func _wash(code: String) -> Color:
+	return UiKit.club_black(code) if UiKit.club_is_black(code) else UiKit.club_vivid(code)
+
+
+## The club's real colours as a band under the wash: the guernsey before the
+## name. Black on the dark page keeps a light rim so it reads as black.
 static func _strip(code: String) -> Control:
 	var hb := UiKit.hbox(0)
 	hb.name = "ClubColours"
 	hb.custom_minimum_size = Vector2(0, 8)
-	for col in GameDB.club_colours(code):
-		var r := ColorRect.new()
-		r.color = col
+	for c in GameDB.club_marker_colours(code):
+		var col: Color = c
+		var r := Panel.new()
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = col
+		if UiKit.contrast(col, UiKit.PANEL) < 1.5:
+			sb.border_color = UiKit.TEXT
+			sb.set_border_width_all(1)
+		r.add_theme_stylebox_override("panel", sb)
 		r.custom_minimum_size = Vector2(0, 8)
 		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -275,14 +288,17 @@ const SIDE_SHEET := "ClubSide"
 static func open_side(host: Control, code: String) -> Control:
 	var season: Season = GameState.season
 	var mine := code == GameState.my_club
-	var box := UiKit.modal_box(host, 900.0, 0.0, UiKit.club_vivid(code))
+	var box := UiKit.modal_box(host, 900.0, 0.0, _wash(code))
 	var overlay: Control = box["overlay"]
 	overlay.name = SIDE_SHEET
 	overlay.set_meta("club_link", true)
 	UiKit.close_on_outside_tap(box)
 	ClubLink.keep(host, overlay)
 	var body: VBoxContainer = box["body"]
-	body.add_child(UiKit.ellipsis(GameDB.club_name(code), UiKit.H2, UiKit.club_ink(code, UiKit.PANEL), true))
+	if UiKit.club_is_black(code):
+		body.add_child(UiKit.club_title(GameDB.club_name(code), UiKit.H2, code, UiKit.PANEL))
+	else:
+		body.add_child(UiKit.ellipsis(GameDB.club_name(code), UiKit.H2, UiKit.club_ink(code, UiKit.PANEL), true))
 	var outlook := GameState.team_outlook(code)
 	if not outlook.is_empty():
 		var tl := UiKit.lbl(str(outlook["line"]), UiKit.BODY, UiKit.TEXT)
@@ -328,7 +344,7 @@ static func _side_note(mine: bool, named: bool) -> String:
 ## Brownlow or a flag, newest departure first. A name opens his career facts.
 static func open_board(host: Control) -> Control:
 	var code := GameState.my_club
-	var box := UiKit.modal_box(host, 760.0, 0.0, UiKit.club_vivid(code))
+	var box := UiKit.modal_box(host, 760.0, 0.0, _wash(code))
 	var overlay: Control = box["overlay"]
 	overlay.name = BOARD_NAME
 	overlay.set_meta("club_link", true)
@@ -336,7 +352,7 @@ static func open_board(host: Control) -> Control:
 	ClubLink.keep(host, overlay)
 	var body: VBoxContainer = box["body"]
 	body.add_child(_strip(code))
-	var title := UiKit.lbl("Honour board", UiKit.H1, UiKit.club_ink(code, UiKit.PANEL), true)
+	var title := UiKit.club_title("Honour board", UiKit.H1, code, UiKit.PANEL)
 	title.name = "BoardTitle"
 	body.add_child(title)
 	var intro := UiKit.lbl("Players who left %s with 150 games, a best and fairest, a Brownlow or a flag." \
@@ -507,7 +523,7 @@ static func open_row(host: Control, row: Dictionary) -> Control:
 
 static func open_facts(host: Control, row: Dictionary) -> Control:
 	var code := GameState.my_club
-	var box := UiKit.modal_box(host, 520.0, 640.0, UiKit.club_vivid(code))
+	var box := UiKit.modal_box(host, 520.0, 640.0, _wash(code))
 	var overlay: Control = box["overlay"]
 	overlay.name = FACTS_NAME
 	overlay.set_meta("club_link", true)
@@ -518,9 +534,8 @@ static func open_facts(host: Control, row: Dictionary) -> Control:
 	name.name = "FactsName"
 	name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(name)
-	var head := UiKit.lbl(_facts_head(row), UiKit.BODY, UiKit.club_ink(code, UiKit.PANEL), true)
+	var head := UiKit.club_title(_facts_head(row), UiKit.BODY, code, UiKit.PANEL)
 	head.name = "FactsHead"
-	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(head)
 	var how := _how(row)
 	if how != "":

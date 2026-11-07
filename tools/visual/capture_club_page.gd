@@ -12,6 +12,8 @@ extends SceneTree
 
 var _w := 390
 var _h := 844
+## Your club (--club, default Fremantle).
+var _club := "FRE"
 
 
 func _initialize() -> void:
@@ -41,6 +43,8 @@ func _run() -> void:
 		match str(a[i]):
 			"--out":
 				out = str(a[i + 1])
+			"--club":
+				_club = str(a[i + 1])
 			"--size":
 				var wh := str(a[i + 1]).split("x")
 				_w = int(wh[0])
@@ -71,14 +75,14 @@ func _run() -> void:
 	gs.set_setting("seen_season_stats_intro", true)
 	gs.career_seed = 2026
 	gs.replay_seed = 2026
-	gs.start_season("FRE", db.club_list("FRE"))
+	gs.start_season(_club, db.club_list(_club))
 	for i in range(6):
 		gs.advance()
 	# Two players gone with a place on the board.
 	var y := int(gs.season_year)
 	var big: Dictionary = gs.my_list[3]
 	var c: Dictionary = Car.fresh()
-	c["stints"] = [["FRE", y - 9, y, 168, 211]]
+	c["stints"] = [[_club, y - 9, y, 168, 211]]
 	c["through"] = y
 	big["career"] = c
 	HB.upsert(gs, big)
@@ -88,9 +92,9 @@ func _run() -> void:
 	big["club"] = "MEL"
 	(gs.season.lists["MEL"] as Array).append(big)
 	HB.sweep(gs)
-	gs.honour_roll.append({"year": y - 1, "my_club": "FRE", "premier": "",
+	gs.honour_roll.append({"year": y - 1, "my_club": _club, "premier": "",
 			"my_bf": [{"id": "ghost1", "name": "Jack Hartley"}],
-			"brownlow": [{"id": "ghost1", "name": "Jack Hartley", "club": "FRE"}]})
+			"brownlow": [{"id": "ghost1", "name": "Jack Hartley", "club": _club}]})
 	gs.departed_names["ghost1"] = {"generic_name": "Jack Hartley", "year": y - 1}
 	HB.backfill(gs, func(id: String) -> Dictionary: return gs._any_player(id))
 
@@ -101,7 +105,7 @@ func _run() -> void:
 	await _frames(12)
 	var rival := ""
 	for r in gs.season.ladder_sorted():
-		if str(r["code"]) != "FRE":
+		if str(r["code"]) != _club:
 			rival = str(r["code"])
 			break
 	var CL = load("res://scripts/ui/ClubLink.gd")
@@ -123,7 +127,7 @@ func _run() -> void:
 	if close != null:
 		(close as Button).emit_signal("pressed")
 		await _frames(10)
-	CL.open(s.find_child("Club_FRE", true, false), "FRE")
+	CL.open(s.find_child("Club_" + _club, true, false), _club)
 	await _frames(12)
 	page = s.find_child("ClubPage", true, false)
 	await _shot(out, "mine")
