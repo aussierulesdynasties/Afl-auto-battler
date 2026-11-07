@@ -1,0 +1,48 @@
+{
+ "source": "Champion Data 2026 via Wheelo Ratings (docs/research/wheelo/afl_player_stats_2026.json), 18 clubs, 436 team-games, finals included. Total and by position are measured; the zone split is an estimate (each player's spoils spread over his zones in the share of his possessions there; Champion Data does not publish spoil locations). Built by tools/balance/build_spoil_zones.py.",
+ "team_games": 436,
+ "per_team_match": {
+  "total": {
+   "mean": 30.73,
+   "lo": 26.09,
+   "hi": 37.88,
+   "sd": 2.95
+  },
+  "d50": {
+   "mean": 10.9,
+   "lo": 8.59,
+   "hi": 14.53,
+   "sd": 1.7
+  },
+  "mid": {
+   "mean": 17.1,
+   "lo": 14.52,
+   "hi": 20.2,
+   "sd": 1.46
+  },
+  "f50": {
+   "mean": 2.72,
+   "lo": 2.15,
+   "hi": 3.52,
+   "sd": 0.37
+  }
+ },
+ "by_role": {
+  "DEF": {
+   "per_player_game": 2.74,
+   "share": 0.676
+  },
+  "MID": {
+   "per_player_game": 0.46,
+   "share": 0.088
+  },
+  "FWD": {
+   "per_player_game": 0.58,
+   "share": 0.151
+  },
+  "RUCK": {
+   "per_player_game": 1.77,
+   "share": 0.084
+  }
+ }
+}
