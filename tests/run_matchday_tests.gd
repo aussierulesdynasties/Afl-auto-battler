@@ -692,10 +692,19 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 		_check(dflt != null and dflt.get_parent().find_child("CardPick", true, false) != null
 				and cards.filter(func(cd): return cd.find_child("CardPick", true, false) != null).size() == 1,
 				"Only your assistant's pick carries the pick label (%s)" % tag)
-		if sz.x >= 800 and cards.size() >= 2:
-			# A narrow half of a column, so two to a row: the first two share one.
-			_check(absf((cards[1] as Control).global_position.y - (cards[0] as Control).global_position.y) < 2.0,
-					"On a PC the Who tags cards sit side by side, not in a phone column (%s)" % tag)
+		if cards.size() >= 2:
+			# One man to a row, the column's full width, so no fact wraps a
+			# word to a line (A2: half-width cards stacked "57 / their / man").
+			_check((cards[1] as Control).global_position.y > (cards[0] as Control).global_position.y + 10.0
+					and absf((cards[1] as Control).global_position.x - (cards[0] as Control).global_position.x) < 2.0,
+					"The Who tags cards are one man to a row (%s)" % tag)
+			var tall := []
+			for cd in cards:
+				for f in (cd as Node).find_child("CardFacts", true, false).get_children():
+					for l in (f as Node).get_children():
+						if l is Label and (l as Label).get_line_count() > 1:
+							tall.append((l as Label).text)
+			_check(tall.is_empty(), "No Who tags fact wraps inside itself (%s: %s)" % [tag, str(tall)])
 		if sz.x < 800:
 			var short := []
 			for pk in ["TagPicker", "TaggerPicker"]:
@@ -3734,8 +3743,9 @@ func _plain_of(c: Control) -> String:
 	return str(c.get_meta("plain")) if c.has_meta("plain") else (c as Label).text
 
 
-## Tapping a tag target brings "Who tags" in; no other section changes column
-## or moves sideways, and nothing lies off the screen (director, 2026-10-14).
+## Tapping a tag target opens "Who tags", which was there, shut, from the start;
+## no section moves, sideways or down, and nothing lies off the screen
+## (director, 2026-10-14, A2: "heinous, awful UI design").
 ## Before the first ball-up nobody has played, so there is no Best so far.
 func _test_tag_tap_keeps_columns(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
@@ -3755,7 +3765,14 @@ func _test_tag_tap_keeps_columns(sz: Vector2i) -> void:
 	for n in names:
 		var c: Control = box.find_child(n, true, false) if box != null else null
 		if c != null and c.is_visible_in_tree():
-			before[n] = c.get_global_rect().position.x
+			before[n] = c.get_global_rect().position
+	# Who tags is there before any tag, shut (A2: nothing appears and shoves).
+	var who0: Node = box.find_child("TaggerPicker", true, false)
+	var shut := who0 != null and (who0 as Control).is_visible_in_tree()
+	if who0 != null:
+		for wb in who0.find_children("*", "Button", true, false):
+			shut = shut and (wb as Button).disabled
+	_check(shut, "Who tags is on the break before a tag, shut until there is one (%s)" % tag)
 	var named: Button = null
 	for b in box.find_child("TagPicker", true, false).find_children("TagPickerGrid_*", "Button", true, false):
 		if str(b.name) != "TagPickerGrid_":
@@ -3768,11 +3785,15 @@ func _test_tag_tap_keeps_columns(sz: Vector2i) -> void:
 		_check(why == "", "A real tap picks the tag target (%s: %s)" % [tag, why])
 		for n in before:
 			var c2: Control = box.find_child(n, true, false)
-			_check(c2 != null and absf(c2.get_global_rect().position.x - float(before[n])) < 6.0,
-					"%s stays in its column after the tag tap (%s: %s -> %s)" % [n, tag, str(before[n]),
-					str(c2.get_global_rect().position.x if c2 else -1)])
+			_check(c2 != null and (c2.get_global_rect().position - (before[n] as Vector2)).length() < 6.0,
+					"%s stays where it was after the tag tap, not sideways and not down (%s: %s -> %s)" % [n, tag,
+					str(before[n]), str(c2.get_global_rect().position if c2 else Vector2(-1, -1))])
 		var who: Control = box.find_child("TaggerPicker", true, false)
-		_check(who != null, "Who tags is there after the tag tap (%s)" % tag)
+		var open := who != null
+		if who != null:
+			for wb in who.find_children("*", "Button", true, false):
+				open = open and not (wb as Button).disabled
+		_check(open, "Who tags opens after the tag tap (%s)" % tag)
 		var out := []
 		for c3 in box.find_children("*", "Control", true, false):
 			var cc := c3 as Control

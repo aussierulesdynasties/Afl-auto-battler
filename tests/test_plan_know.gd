@@ -572,6 +572,13 @@ func _test_group_screen() -> void:
 	_check(whole != null and fwd != null and bool(whole.get_meta("chosen", false)),
 			"A Game plan block's drills show the whole side until the coach picks a group")
 	_check(_label(scene, "DrillSplit0").begins_with("Every group drills the same"), "...and the line under the tabs says so")
+	var gaps := _tab_gaps(scene.find_child("DrillFor0", true, false) as Control)
+	_check(gaps.size() == 4 and gaps.min() >= 8.0 and gaps.max() <= gaps.min() * 2.0,
+			"The five group names sit evenly apart on a phone, never run together: gaps %s" % [gaps])
+	var narrowest := 999.0
+	for t in (scene.find_child("DrillFor0", true, false) as Control).get_children():
+		narrowest = minf(narrowest, (t as Control).size.x)
+	_check(narrowest >= 36.0, "...and each is a thumb wide at least (narrowest %.0f)" % narrowest)
 	_check(await _tap(fwd, "Forwards"), "A finger picks the forwards")
 	_check(bool(fwd.get_meta("chosen", false)) and _label(scene, "DrillSplit0").begins_with("The forwards: "),
 			"...the forwards' tab is on and the line says how many: " + _label(scene, "DrillSplit0"))
@@ -584,6 +591,24 @@ func _test_group_screen() -> void:
 	_check(not bool(contest.get_meta("chosen", false)) and "Forwards: Attack corridor and Win contest" in _label(scene, "DrillSplit0"),
 			"...which marks no plan and names the split: " + _label(scene, "DrillSplit0"))
 	_check(_fits(scene, 360.0), "...and nothing runs off a phone's width")
+
+
+## The space between one tab's name and the next, left to right (each name
+## is centred on its tab).
+func _tab_gaps(row: Control) -> Array:
+	var out := []
+	if row == null:
+		return out
+	var prev_right := NAN
+	for t in row.get_children():
+		var b := t as Button
+		var w := b.get_theme_font("font").get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				b.get_theme_font_size("font_size")).x
+		var left := b.position.x + (b.size.x - w) / 2.0
+		if not is_nan(prev_right):
+			out.append(snappedf(left - prev_right, 0.1))
+		prev_right = left + w
+	return out
 
 
 func _frames(tree: SceneTree, n: int) -> void:
