@@ -356,6 +356,29 @@ func _test_nickname_line(label: String, phone: bool, size: Vector2i) -> void:
 	await Tap.tap(edit)
 	await _settle()
 	_check(nl.text == "\"Jeff\"" and not field.visible, "%s nickname: Save keeps the new nickname" % label)
+	# From no nickname, the one you add shows on the profile at once.
+	var old_sheet := current_scene.find_child("PlayerProfile", true, false)
+	if old_sheet != null:
+		old_sheet.queue_free()
+	await _settle()
+	_state.set_player_nickname(str(p["id"]), "")
+	load("res://scripts/ui/PlayerSheet.gd").open(current_scene, p)
+	await _settle()
+	var add: Button = current_scene.find_child("NicknameEdit", true, false)
+	var f2: LineEdit = current_scene.find_child("NicknameField", true, false)
+	var none_yet: Label = current_scene.find_child("NicknameText", true, false)
+	_check(add != null and f2 != null and add.text == "Add a nickname" and (none_yet == null or not none_yet.is_visible_in_tree()),
+			"%s nickname: with none, Add a nickname and no empty line" % label)
+	if add == null or f2 == null:
+		return
+	await Tap.tap(add)
+	await _settle()
+	f2.text = "Jeffo"
+	await Tap.tap(add)
+	await _settle()
+	var shown: Label = current_scene.find_child("NicknameText", true, false)
+	_check(shown != null and shown.is_visible_in_tree() and shown.text == "\"Jeffo\"" and add.text == "Change",
+			"%s nickname: one added from none shows on the profile (%s)" % [label, shown.text if shown != null else "no line"])
 
 
 ## Any other screen with a text field: tap it, keyboard up and down, type.

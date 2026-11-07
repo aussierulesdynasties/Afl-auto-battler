@@ -68,7 +68,9 @@ static func _count_last_season(gs, st: Dictionary) -> void:
 		var wld := str(h.get("my_record", "0-0-0")).split("-")
 		for n in wld:
 			c["games"] = int(c["games"]) + int(n)
-		if str(h.get("premier", "")) == str(gs.my_club):
+		# The flag counts for the club he coached that season, not the one he
+		# has just moved to (a move at the rollover lands before this count).
+		if str(h.get("premier", "")) == str(h.get("my_club", "")):
 			c["flags"] = int(c["flags"]) + 1
 			c["last_flag"] = y
 		c["seen"] = y

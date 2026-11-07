@@ -657,6 +657,7 @@ func _on_pass() -> void:
 	_finish_night()
 	var before := _draft.pick_history.size()
 	if _draft.user_pass():
+		GameState.mark_dirty()
 		_last_batch_start = before
 		_refresh()
 		_start_replay(before)
@@ -1293,6 +1294,11 @@ func handle_back() -> bool:
 	# Back first cuts draft night's show to the end: the stage and the replay.
 	if is_instance_valid(_beat) or replaying():
 		_finish_night()
+		return true
+	# The trade sheet closes back to the board, as its own button does.
+	if is_instance_valid(_trade_sheet) and not _trade_sheet.is_queued_for_deletion():
+		_trade_sheet.queue_free()
+		_trade_sheet = null
 		return true
 	# The recruiting meeting closes before the draft is left.
 	if is_instance_valid(_meeting):
