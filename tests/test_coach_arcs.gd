@@ -68,6 +68,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_assistant_leaves")
 	_t("_test_second_sacking_and_retire")
 	_t("_test_real_sacking_record")
+	_t("_test_rival_letter")
 	_t("_test_ten_seasons")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -662,3 +663,104 @@ func _test_real_sacking_record() -> void:
 			"real career: the record counts all three seasons: %s" % str(lines))
 	_check(lines[-1] == "%s, %d to %d, sacked" % [GameDB.club_name(old), first, last],
 			"real career: the club line runs from his first season to the sacking: %s" % lines[-1])
+
+
+## Row 112 (T5.r23): after a strong season (finals and the board's goal met)
+## one rival board writes; a weak season brings none. Declined, nothing
+## changes; taken, he moves at the rollover and the old club carries on under
+## a new coach. One letter a season; it saves and loads open or answered.
+func _letters_in_news() -> int:
+	var n := 0
+	for item in GameState.news:
+		if str(item.get("text", "")).begins_with("A letter from"):
+			n += 1
+	return n
+
+
+func _test_rival_letter() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SUITE_SEED + 11
+	_fresh()
+	_play_out(rng)
+	var st: Dictionary = GameState.coach_arcs
+	var year := int(GameState.season_year)
+	# The facts of the season, set plainly so the test reads either way.
+	GameState.board["sacked"] = false
+	st["move"] = {}
+	st["active"].erase("poached")
+	st["done"].erase("poached")
+	var hist: Array = GameState.board["history"]
+	var h: Dictionary = GameState.honour_roll[-1]
+	# A weak season: no finals. No letter.
+	h["my_finals"] = ""
+	hist[-1]["met"] = true
+	st["letter"] = {}
+	ClubMoves._rival_letter(GameState, st)
+	_check(not ClubMoves.strong_season(GameState) and ClubMoves.letter(GameState).is_empty(), "no finals: no letter")
+	# Finals, but the board's goal missed: still no letter.
+	h["my_finals"] = "QF"
+	hist[-1]["met"] = false
+	ClubMoves._rival_letter(GameState, st)
+	_check(ClubMoves.letter(GameState).is_empty(), "the board's goal missed: no letter")
+	# Sacked: no letter.
+	hist[-1]["met"] = true
+	GameState.board["sacked"] = true
+	ClubMoves._rival_letter(GameState, st)
+	_check(ClubMoves.letter(GameState).is_empty(), "sacked: no letter")
+	GameState.board["sacked"] = false
+	# A strong season: one letter.
+	ClubMoves._rival_letter(GameState, st)
+	var l := ClubMoves.letter(GameState)
+	var code := str(l.get("code", ""))
+	_check(ClubMoves.strong_season(GameState) and ClubMoves.letter_open(GameState), "a strong season: a letter waits for an answer")
+	_check(code != "" and code != "FRE" and int(l["finish"]) > 0 and str(l["list"]) != "" and str(l["goal"]) != ""
+			and str(l["why_open"]) != "" and str(l["president"]) != "",
+			"the letter states the club, where they finished, the list, the board's goal and why the job is open: %s" % str(l))
+	var risk := ClubMoves.letter_risk(GameState)
+	_check(risk.size() == 3 and risk[0].find("60 out of 100") >= 0 and risk[2].begins_with("Sacked there"),
+			"the letter states the risk: %s" % str(risk))
+	var once := JSON.stringify(st["letter"])
+	var letters := _letters_in_news()
+	ClubMoves._rival_letter(GameState, st)
+	_check(JSON.stringify(st["letter"]) == once and _letters_in_news() == letters, "one letter a season, however often the close is read")
+	var their_coach := _senior_at(code)
+	var their_id := str(their_coach.get("id", ""))
+	_check(not their_coach.is_empty(), "the club that wrote has a senior coach to make way")
+	# Saves and loads with the letter open.
+	_check(GameState.save_career() and GameState.load_career(), "the open letter saves and loads")
+	st = GameState.coach_arcs
+	_check(JSON.stringify(st["letter"]) == once and ClubMoves.letter_open(GameState), "the open letter comes back as it was")
+	var fre_before := JSON.stringify(_senior_at("FRE").get("id", ""))
+	# Decline: nothing changes, and he cannot take it after.
+	_check(ClubMoves.decline_letter(GameState), "he can say no")
+	_check(not ClubMoves.letter_open(GameState) and (st["move"] as Dictionary).is_empty() and not ClubMoves.accept_letter(GameState),
+			"declined: no move, and the letter cannot be taken after")
+	_check(GameState.save_career() and GameState.load_career() and str(GameState.coach_arcs["letter"].get("answer", "")) == "declined",
+			"the answer saves and loads")
+	_check(GameState.start_next_season() and GameState.my_club == "FRE" and str(_senior_at(code).get("id", "")) == their_id,
+			"declined: he starts the next season at Fremantle and %s keep their coach" % code)
+	_check(ClubMoves.letter(GameState).is_empty(), "last season's letter is gone at the new season")
+	# Take it (from the save made with the letter answered "declined", reopened).
+	_check(GameState.load_career(), "back to the season's close")
+	st = GameState.coach_arcs
+	st["letter"]["answer"] = ""
+	_check(ClubMoves.accept_letter(GameState), "he can take the job")
+	_check(str(st["move"].get("to", "")) == code and not ClubMoves.letter_open(GameState) and not ClubMoves.decline_letter(GameState),
+			"taken: the move waits for the rollover and the answer stands: %s" % str(st["move"]))
+	_check(GameState.save_career() and GameState.load_career() and str(GameState.coach_arcs["move"].get("to", "")) == code,
+			"taken: the pending move survives a reload")
+	their_coach = _senior_at(code)
+	_check(GameState.start_next_season(), "taken: the season rolls on")
+	_check(GameState.my_club == code and GameState.my_list == GameState.season.lists[code], "taken: he coaches %s now" % code)
+	_check(_senior_at(code).is_empty(), "taken: one senior coach at %s, and it is him" % code)
+	var fre_coach := _senior_at("FRE")
+	_check(not fre_coach.is_empty() and str(fre_coach.get("id", "")) == str(their_coach.get("id", ""))
+			and (GameState.season.lists["FRE"] as Array).size() > 0,
+			"taken: Fremantle carry on under %s's old coach (was %s)" % [code, fre_before])
+	# A headless draft says no to a letter left unanswered.
+	_check(GameState.load_career(), "back to the season's close again")
+	GameState.coach_arcs["letter"]["answer"] = ""
+	GameState.coach_arcs["move"] = {}
+	GameState.begin_intake_draft()
+	_check(str(GameState.coach_arcs["letter"].get("answer", "")) == "declined" and GameState.my_club == "FRE",
+			"a draft started with the letter unanswered: he stays")

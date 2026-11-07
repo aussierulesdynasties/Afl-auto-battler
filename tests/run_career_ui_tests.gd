@@ -892,6 +892,7 @@ func _run() -> void:
 	await _t("_test_back_arrow_taps")
 	await _t("_test_finals_card_taps")
 	await _t("_test_sacked_job_choice_taps")
+	await _t("_test_rival_letter_taps")
 	await _t("_test_sim_asks_only_before_your_match")
 	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
@@ -3768,4 +3769,78 @@ func _test_sacked_job_choice_taps() -> void:
 	_check_record_only("career over")
 	_state.board["sacked"] = false
 	_state.coach_arcs = {}
+	root.size = size_before
+
+
+## A season played out at Fremantle with a strong finish: a rival board's
+## letter waits on the hub (row 112).
+func _season_with_letter() -> void:
+	_state.reset()
+	_state.career_seed = 4411
+	_state.replay_seed = 4411
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var arcs = load("res://scripts/sim/CoachArcs.gd")
+	var moves = load("res://scripts/state/ClubMoves.gd")
+	_state.coach_arcs = arcs.ensure(_state.coach_arcs)
+	var season = _state.season
+	season.round_index = season.fixture.size()
+	_state.ensure_finals()
+	while not season.is_season_over():
+		_state.advance()
+	_state.week_events = []
+	var year := int(_state.season_year)
+	var st: Dictionary = _state.coach_arcs
+	_state.board["sacked"] = false
+	st["move"] = {}
+	st["letter"] = {}
+	st["active"].erase("poached")
+	st["done"].erase("poached")
+	var hist: Array = _state.board.get("history", [])
+	if hist.is_empty() or int(hist[-1].get("year", 0)) != year:
+		hist.append({"year": year})
+		_state.board["history"] = hist
+	hist[-1]["met"] = true
+	if _state.honour_roll.is_empty() or int(_state.honour_roll[-1].get("year", 0)) != year:
+		_state.honour_roll.append({"year": year, "my_club": "FRE"})
+	_state.honour_roll[-1]["my_club"] = "FRE"
+	_state.honour_roll[-1]["my_finals"] = "QF"
+	moves._rival_letter(_state, st)
+
+
+func _test_rival_letter_taps() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	var moves = load("res://scripts/state/ClubMoves.gd")
+	_season_with_letter()
+	_check(moves.letter_open(_state), "A strong season ends with a rival board's letter")
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var card: Control = current_scene.find_child("RivalLetter", true, false)
+	_check(card != null and current_scene.find_child("RivalLetterRisk", true, false) != null,
+			"The hub shows the letter and its risk")
+	_check(not _screen_text().contains("National Draft"), "While the letter is open, the draft waits for his answer")
+	var stay: Button = current_scene.find_child("RivalLetterStay", true, false)
+	var take: Button = current_scene.find_child("RivalLetterTake", true, false)
+	_check(stay != null and take != null and stay.get_combined_minimum_size().x <= stay.size.x + 0.5
+			and take.get_combined_minimum_size().x <= take.size.x + 0.5,
+			"Stay and Take read whole on a 390 phone")
+	var why: String = await Tap.tap(stay) if stay != null else "missing"
+	await _settle()
+	_check(why == "" and str(moves.letter(_state).get("answer", "")) == "declined" and (_state.coach_arcs["move"] as Dictionary).is_empty(),
+			"A finger on Stay turns the job down and nothing moves (%s)" % why)
+	_check(current_scene.find_child("RivalLetterAnswered", true, false) != null and _screen_text().contains("National Draft"),
+			"After the answer the hub says so and the draft is back")
+	# The same letter, taken.
+	_season_with_letter()
+	var code := str(moves.letter(_state).get("code", ""))
+	_router.go("hub")
+	await _settle()
+	take = current_scene.find_child("RivalLetterTake", true, false)
+	why = await Tap.tap(take) if take != null else "missing"
+	await _settle()
+	_check(why == "" and str(_state.coach_arcs["move"].get("to", "")) == code and _state.my_club == "FRE",
+			"A finger on Take sets the move to %s for the rollover (%s)" % [code, why])
+	_check(current_scene.find_child("RivalLetterAnswered", true, false) != null and _screen_text().contains("National Draft"),
+			"After taking it the hub says so and the off-season goes on")
 	root.size = size_before

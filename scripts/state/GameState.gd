@@ -1860,6 +1860,9 @@ func begin_intake_draft() -> bool:
 		return false
 	if draft != null and draft.intake_mode:
 		return true  # resume the draft in progress
+	# A rival's letter waits on the Hub; a run that drafts with it unanswered
+	# (headless) says no, so nothing changes (ClubMoves).
+	ClubMoves.settle_letter(self)
 	open_offseason()
 	recruit_undo.clear()
 	_close_free_agency()
