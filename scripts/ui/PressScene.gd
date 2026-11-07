@@ -197,6 +197,12 @@ func _question(wide: bool) -> Array:
 		rl.name = "MediaRecord"
 		rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		prompt.add_child(rl)
+	# How long the moves last and what his personality does to their size,
+	# said once here rather than under every answer (director 2026-11-07).
+	var rules := UiKit.lbl(MediaConference.rules_line(j), UiKit.SMALL, UiKit.TEXT)
+	rules.name = "MediaRules"
+	rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	prompt.add_child(rules)
 	var shown: Array = [prompt]
 	var opts: Array = GameState.media_conference.get("options", [])
 	for i in range(opts.size()):
