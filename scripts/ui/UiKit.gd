@@ -1630,38 +1630,6 @@ static func cover(parent: Control, scrim := 0.78) -> ColorRect:
 	return overlay
 
 
-## A long step (a round played out, a new season made) behind a dimmer that
-## says what is happening and eats every tap until the step is done, so a
-## phone never looks frozen and a second tap never lands on the page below.
-## `work` runs once the dimmer has been drawn; returns false (and runs
-## nothing) if a step is already under way on `parent`.
-static func run_covered(parent: Control, text: String, work: Callable) -> bool:
-	if parent.has_meta("busy"):
-		return false
-	parent.set_meta("busy", true)
-	var overlay := cover(parent, 0.7)
-	overlay.name = "BusyCover"
-	var c := CenterContainer.new()
-	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay.add_child(c)
-	c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var say := heading(text, H1)
-	say.name = "BusyText"
-	c.add_child(say)
-	var tree := parent.get_tree()
-	# Two frames: one to lay the dimmer out, one to put it on the screen.
-	await tree.process_frame
-	await tree.process_frame
-	work.call()
-	# Taps made during the step arrive now; the dimmer takes them.
-	await tree.process_frame
-	if is_instance_valid(overlay):
-		overlay.queue_free()
-	if is_instance_valid(parent):
-		parent.remove_meta("busy")
-	return true
-
-
 ## Dialog that stays inside the viewport. Body scrolls; footer stays put.
 ## `wash` tints the top of the sheet; by default your club's colour (match
 ## day passes the opponent's, from `opponent_wash`). `scrim` is how much of the
