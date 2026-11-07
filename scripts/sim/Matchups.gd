@@ -115,25 +115,39 @@ static func key_forwards(ground: Array) -> Array:
 	return keys.slice(0, KEY_FORWARDS)
 
 
-## The defenders a coach can put on a forward: the defenders on the ground.
+## A defender by trade: his own position, a second one or one he has learned
+## is in the back line. The match-day slot does not count: a forward or a
+## ruck rotated into a back pocket is still a forward or a ruck.
+static func is_defender(p: Dictionary) -> bool:
+	return Ratings.positions(p).has("DEF")
+
+
+## The defenders a coach can put on a forward: the defenders by trade standing
+## in the back line. Key defenders first, then the best in the air (reading the
+## ball, marking, size), then rating.
 static func defenders(ground: Array) -> Array:
 	var out := []
 	for p in ground:
-		if str(p.get("role", "")) == "DEF":
+		if str(p.get("role", "")) == "DEF" and is_defender(p):
 			out.append(p)
 	out.sort_custom(func(a, b):
 		var ka := PlayerProfile.player_type(a) == "Key defender"
 		var kb := PlayerProfile.player_type(b) == "Key defender"
 		if ka != kb:
 			return ka
+		var aa := defender_air(a)
+		var ab := defender_air(b)
+		if not is_equal_approx(aa, ab):
+			return aa > ab
 		if int(a["overall"]) != int(b["overall"]):
 			return int(a["overall"]) > int(b["overall"])
 		return str(a["id"]) < str(b["id"]))
 	return out
 
 
-## The default set-up: key defenders by rating on their key forwards by
-## rating. {forward id: defender id}.
+## The default set-up: key defenders (the best in the air first) on their key
+## forwards by rating; only defenders by trade, so a forward left over goes
+## without a direct opponent. {forward id: defender id}.
 static func defaults(attack_ground: Array, defence_ground: Array) -> Dictionary:
 	var out := {}
 	var defs := defenders(defence_ground)
