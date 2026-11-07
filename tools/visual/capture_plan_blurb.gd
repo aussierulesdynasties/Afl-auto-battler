@@ -95,7 +95,7 @@ func _run() -> void:
 		if row != null:
 			row.emit_signal("pressed")
 			await _frames(10)
-		for k in ["balanced", "attacking", "defensive", "contest", "controlled", "through_stars"]:
+		for k in ["balanced", "attacking", "defensive", "contest", "controlled"]:
 			var b: Button = scene.find_child("PlanPicker_" + k, true, false)
 			if b == null:
 				push_error("no plan button " + k)

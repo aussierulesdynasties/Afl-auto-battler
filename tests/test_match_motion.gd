@@ -309,8 +309,8 @@ func _motion_calls(res: Dictionary) -> Dictionary:
 		if int(e["at"]) == 0:
 			opening[int(e["side"])] = e
 	var calls := [[["attacking", ["surge"]], ["contest", ["hold"]]],
-			[["controlled", ["hold"]], ["through_stars", ["surge"]]],
-			[["through_stars", []], ["attacking", ["flood"]]],
+			[["controlled", ["hold"]], ["defensive", ["surge"]]],
+			[["balanced", []], ["attacking", ["flood"]]],
 			[["contest", ["surge"]], ["controlled", []]]]
 	var tl := []
 	for k in range(calls.size()):
@@ -554,7 +554,6 @@ func _test_call_visibility(results: Array) -> void:
 	var cases := [["Attack corridor (in possession, spread across)", "attacking", [], "has.spread", -1.0],
 			["Controlled tempo (in possession, front to back)", "controlled", [], "has.span", -1.0],
 			["Win contest (at a stoppage, the median player from the ball)", "contest", [], "stop.med_rad", -1.0],
-			["Through stars (in possession, toward the star nearest the carrier)", "through_stars", [], "has.tilt", 1.0],
 			["Throw numbers at it (in possession, centroid up the ground from the ball)", "balanced", ["surge"], "has.cen_ball", 1.0],
 			["Throw numbers at it (in possession, median player from the ball)", "balanced", ["surge"], "has.med_ball", 1.0],
 			["Throw numbers at it (in possession, centroid from Melbourne's)", "balanced", ["surge"], "has.cen_opp", 1.0],
@@ -697,7 +696,7 @@ func _shape_of(r: Dictionary, events := -1, crowd := false) -> Dictionary:
 			span += absf(float(x) - c.x) / float(xs.size())
 		var tag := "stop" if stop else ("has" if d._poss == 0 else "not")
 		var m := {"cen_ball": c.x - b.x, "med_ball": _median(xs) - b.x, "cen_opp": c.x - opp,
-				"spread": _sd(ys), "span": span, "tilt": c.y * signf(float(d._star_y[0])),
+				"spread": _sd(ys), "span": span,
 				"med_rad": _median(rads)}
 		if crowd:
 			# How crowded Fremantle's discs are as drawn: pairs overlapping at

@@ -531,17 +531,14 @@ func _test_selection_pages_tests() -> void:
 
 
 ## A coach who skips the match: the plan he last used (set in the pre-bounce
-## menu) is the plan the sim plays, and the match-ups are the assistant's
-## until he changes one.
+## menu) is the plan the sim plays; the match-ups are always the sim's own
+## (key match-ups cut, director 2026-11-07).
 func _test_skip_match_tests() -> void:
 	var db = root.get_node("GameDB")
 	_state.reset()
 	_state.start_season("FRE", db.club_list("FRE"))
 	_state.set_club_plan("contest")
-	_check(_state.season.plans.get("FRE", "") == "contest" and _state.my_matchups.is_empty() and not _state.season.matchups.has("FRE"),
-			"The standing plan reaches the sim and the match-ups are left to the assistant")
-	var rows: Array = _state.week_matchups(str(_state.my_next_opponent()["code"]))
-	_check(rows.is_empty() or not bool(rows[0]["set"]), "Until he changes one, the match-ups shown are the assistant's")
+	_check(_state.season.plans.get("FRE", "") == "contest", "The standing plan reaches the sim")
 	var out: String = _state.advance()
 	_check(out != "none" and _state.club_plan == "contest" and _state.season.plans.get("FRE", "") == "contest",
 			"Skipping the match plays the round and keeps the plan he last used")

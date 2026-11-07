@@ -31,7 +31,7 @@ extends SceneTree
 ##   --noshape       the sim keeps every call, the oval draws none of their shapes
 ##   --stack SIDE    that side stacks every centre ball-up
 ##   --plan SIDE:KEY that side plays the plan KEY all match (attacking, contest,
-##                   controlled, through_stars, defensive, balanced)
+##                   controlled, defensive, balanced)
 ##   --surge SIDE / --hold SIDE  that side throws numbers at it / slows it down
 ##                   (held on until the first break, as --flood)
 ##   --kside S       with --kind, only events by side S
