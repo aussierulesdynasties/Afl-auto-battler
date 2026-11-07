@@ -41,6 +41,8 @@ func run() -> void:
 	_t("_test_other_calls", [res])
 	_t("_test_moves_nobody", [res])
 	await _t("_test_under_the_discs", [res])
+	_t("_test_player_marks_built", [res])
+	await _t("_test_player_marks_long_press", [res])
 	GameState.replay_seed = 0
 	print(Ran.line("Match marks", self))
 
@@ -687,3 +689,118 @@ func _test_under_the_discs(res: Dictionary) -> void:
 					"%s, %s: the marking is drawn over the turf and under the discs (%s)" % [str(setup[0]), plan, str(layers)])
 			pv.queue_free()
 			await tree.process_frame
+
+
+# ---------------------------------------------------------------------------
+# Tired and hurt players (T3.R10, PlayerMarks)
+# ---------------------------------------------------------------------------
+## Tired comes from your side's legs under MatchNotes.EMPTY, hurt from the
+## injuries already played, and hurt outranks tired; the words never give a
+## fatigue percentage (director 2026-10-18).
+func _test_player_marks_built(_res: Dictionary) -> void:
+	var evs := [{"kind": "kick", "player_id": "a"},
+			{"kind": "injury", "player_id": "b", "side": 0},
+			{"kind": "injury", "player_id": "c", "side": 1}]
+	var inj := [{"id": "b", "kind": "hamstring"}, {"id": "c", "kind": "concussion"}]
+	var m := PlayerMarks.build(evs, 2, inj, {"a": 40.0, "b": 30.0, "d": 80.0})
+	_check(str(m.get("a", {}).get("mark", "")) == PlayerMarks.TIRED, "legs under empty carry the tired mark (%s)" % str(m))
+	_check(not m.has("d"), "fresh legs carry no mark")
+	_check(str(m.get("b", {}).get("mark", "")) == PlayerMarks.HURT, "a hurt man's mark outranks tired")
+	_check(not m.has("c"), "an injury not yet played carries no mark")
+	_check(PlayerMarks.words(m["b"], true) == "Injured: hamstring strain, out for the day",
+			"hurt words on the bench: %s" % PlayerMarks.words(m["b"], true))
+	_check(PlayerMarks.words(m["b"], false) == "Injured: hamstring strain, playing on",
+			"hurt words on the ground: %s" % PlayerMarks.words(m["b"], false))
+	_check(PlayerMarks.words(m["a"], false) == "Tired: running on empty", "tired words")
+	_check(not PlayerMarks.words(m["a"], false).contains("%"), "no fatigue percentage")
+
+
+## A real finger: held on a marked disc (and on a marked bench disc) the words
+## come up; a quick tap and a hold on an unmarked disc bring none.
+func _test_player_marks_long_press(res: Dictionary) -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	# A headless window is tiny: a phone's, so the finger lands on the view.
+	var was := tree.root.size
+	tree.root.size = Vector2i(390, 640)
+	var pv := PitchView.new()
+	pv.camera_enabled = false
+	pv.upright = true
+	tree.root.add_child(pv)
+	pv.position = Vector2.ZERO
+	pv.size = Vector2(390, 640)
+	pv.setup(_with_call(res, "attacking", [], 60))
+	pv.playing = false
+	for i in range(3):
+		await tree.process_frame
+	var tr := pv.token_radius()
+	var pos := pv.disc_positions()
+	# A disc well inside the view, the one on top where a finger lands on it.
+	var pick := -1
+	for id in range(pos.size()):
+		var p: Vector2 = pos[id]
+		if Rect2(Vector2(40, 60), pv.size - Vector2(80, 160)).has_point(p) and pv.disc_at_point(p) == id:
+			pick = id
+			break
+	_check(pick >= 0, "a disc on top, inside the view, to press")
+	if pick < 0:
+		pv.queue_free()
+		tree.root.size = was
+		return
+	var pid := str(pv.director.tokens[pick]["pid"])
+	var spots := pv.bench_spots(tr)
+	_check(not spots.is_empty(), "the bench strip is drawn")
+	var bpid := str(spots[0]["pid"]) if not spots.is_empty() else ""
+	pv.set_marks({pid: {"mark": PlayerMarks.TIRED, "words": "Tired: running on empty"},
+			bpid: {"mark": PlayerMarks.HURT, "words": "Injured: calf strain"}})
+	# A quick tap: nothing.
+	await _touch(pv, pos[pick], 0.1)
+	_check(pv.tip.is_empty(), "a quick tap brings no words")
+	# A hold on the tired disc.
+	await _touch(pv, pos[pick], 0.7, true)
+	_check(str(pv.tip.get("text", "")) == "Tired: running on empty",
+			"a long press on a tired disc says so (%s)" % str(pv.tip))
+	await _touch_up(pv, pos[pick])
+	pv.tip = {}
+	# A hold on the hurt bench disc.
+	if bpid != "":
+		await _touch(pv, spots[0]["pos"], 0.7, true)
+		_check(str(pv.tip.get("text", "")) == "Injured: calf strain, out for the day",
+				"a long press on a hurt bench disc says so (%s)" % str(pv.tip))
+		await _touch_up(pv, spots[0]["pos"])
+		pv.tip = {}
+	# A hold on a disc with no mark: nothing.
+	pv.set_marks({})
+	await _touch(pv, pos[pick], 0.7, true)
+	_check(pv.tip.is_empty(), "a long press on an unmarked disc brings no words")
+	await _touch_up(pv, pos[pick])
+	pv.queue_free()
+	await tree.process_frame
+	tree.root.size = was
+
+
+## A finger down on the view at `local` for `secs` (real time), then lifted
+## unless `keep`.
+func _touch(c: Control, local: Vector2, secs: float, keep := false) -> void:
+	var tree := c.get_tree()
+	var at := c.get_screen_transform() * local
+	var t := InputEventScreenTouch.new()
+	t.index = 0
+	t.position = at
+	t.pressed = true
+	Input.parse_input_event(t)
+	Input.flush_buffered_events()
+	await tree.create_timer(secs).timeout
+	await tree.process_frame
+	if not keep:
+		await _touch_up(c, local)
+
+
+func _touch_up(c: Control, local: Vector2) -> void:
+	var t := InputEventScreenTouch.new()
+	t.index = 0
+	t.position = c.get_screen_transform() * local
+	t.pressed = false
+	Input.parse_input_event(t)
+	Input.flush_buffered_events()
+	await c.get_tree().process_frame
+	await c.get_tree().process_frame

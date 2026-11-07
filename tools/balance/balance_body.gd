@@ -12,8 +12,20 @@ extends RefCounted
 ## every club picking as the AI does, career and replay seed 2026), so the real 2026 class
 ## plays where it is picked; each team line then also carries "draftees", the 2026
 ## draftees in its 23.
+## `setup` (--setup, fatigue parity): "" plays both sides as before (no coaching table);
+## "league" plays both as a career's background match does (Season.match_sim: rival coaches
+## pick their plans, every club rotates on a Steady season plan); "coached" makes one side
+## your club as a coached match you skip through (side i % 2, so home and away each get it
+## half the time): its assistant takes the calls, moments take their default answer, and
+## both sides' rotations are set before every quarter as MatchScene sets them.
+## Every team line carries its legs: "legs_q" mean energy of the 18 on the ground and
+## "tank_q" how many of them are under TANK, at the end of each quarter, "interchanges",
+## "exertion" (MatchSim.exertion summed over the side), and "coached".
 
 var start := ""
+var setup := ""
+## Energy under which a player on the ground is running on empty (fit 0.90 or less).
+const TANK := 40.0
 
 
 func play(from: int, count: int, out: String, weather: String,
@@ -61,14 +73,41 @@ func play(from: int, count: int, out: String, weather: String,
 		var at_home := [ground.call(h) == v, ground.call(a) == v]
 		var sq_h := Squad.new(h, lists.get(h, GameDB.club_list(h)), bool(at_home[0]), h)
 		var sq_a := Squad.new(a, lists.get(a, GameDB.club_list(a)), bool(at_home[1]), a)
+		var coached := i % 2 if setup == "coached" else -1
+		if setup == "league" or setup == "coached":
+			for side in range(2):
+				var sq: Squad = sq_h if side == 0 else sq_a
+				sq.ai_plans = side != coached
+				sq.assistant = side == coached
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
 		sim.weather = weather
+		if setup == "league":
+			sim.season_plans = ["steady", "steady"]
+		elif setup == "coached":
+			sim.moment_side = coached
 		for k in sets:
 			if not str(k) in sim:
 				push_error("balance: MatchSim has no var " + str(k))
 				return 1
 			sim.set(str(k), float(sets[k]))
-		var r: Dictionary = sim.run()
+		# MatchSim.run(), a quarter at a time, reading each side's legs at the siren.
+		var legs := [[], []]
+		var tank := [[], []]
+		while sim.current_quarter <= 4:
+			if coached >= 0:
+				# MatchScene._apply_quarter_tactics: the assistant sets your rotations,
+				# the rival coach its plan and rotations.
+				sim.set_rotation_policy(coached, sim.auto_rotation(coached, "steady"))
+				sim.set_tactics(1 - coached, sim.ai_tactics(1 - coached))
+				sim.set_rotation_policy(1 - coached, sim.auto_rotation(1 - coached, "steady"))
+			sim.run_quarter()
+			for side in range(2):
+				var e := _legs(sim, side)
+				legs[side].append(e[0])
+				tank[side].append(e[1])
+		if sim.needs_extra_time():
+			sim.run_extra_time()
+		var r: Dictionary = sim.result()
 		# Each side's score at the end of each quarter (for comebacks), from the
 		# running score every event carries.
 		var q_score := [[0, 0, 0, 0], [0, 0, 0, 0]]
@@ -109,6 +148,14 @@ func play(from: int, count: int, out: String, weather: String,
 			t["types"] = type_lines(rosters[side], r["players"])
 			t["type_src"] = srcs[side]
 			t["carry_zone"] = (sim.carry_log[side] as Dictionary).duplicate()
+			t["legs_q"] = legs[side]
+			t["tank_q"] = tank[side]
+			t["interchanges"] = int(sim.interchanges[side])
+			t["coached"] = side == coached
+			var ex := 0.0
+			for pl in (r["roster"][side] as Array):
+				ex += float((r["exertion"] as Dictionary).get(str(pl["id"]), 0.0))
+			t["exertion"] = snappedf(ex, 0.1)
 			t["spoil_zone"] = (sim.spoil_log[side] as Dictionary).duplicate()
 			if not class_ids.is_empty():
 				var sq: Squad = sq_h if side == 0 else sq_a
@@ -136,6 +183,18 @@ func play(from: int, count: int, out: String, weather: String,
 			print("BAL " + line)
 	fh.close()
 	return 0
+
+
+## [mean energy of the side's players on the ground, how many of them are under TANK].
+func _legs(sim: MatchSim, side: int) -> Array:
+	var ground: Array = (sim.squads[side] as Squad).ground
+	var total := 0.0
+	var low := 0
+	for p in ground:
+		var e := float(sim.energy.get(str(p["id"]), 100.0))
+		total += e
+		low += 1 if e < TANK else 0
+	return [snappedf(total / maxf(1.0, float(ground.size())), 0.01), low]
 
 
 ## The 2027 round-1 lists of a real-lists career: the real end-of-2026 lists, the 2026

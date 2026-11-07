@@ -32,7 +32,7 @@ func run() -> void:
 	_t("_test_impact_and_ai")
 	_t("_test_decision_credits")
 	_t("_test_pep_talks")
-	_t("_test_tired_call_holds")
+	_t("_test_fatigue_parity")
 	_t("_test_play_through")
 	_t("_test_play_through_by_job")
 	_t("_test_play_through_three")
@@ -793,8 +793,8 @@ func _test_impact_and_ai() -> void:
 		var has_now: bool = now_t != null and Roles.is_tagger(now_t)
 		_check((str(s2.ai_tactics(1).get("tag_id", "")) != "") == has_now,
 				"%s %s a tag in the second half" % [str(pair[0]), "calls" if has_now else "does not call"])
-	# A tired star: under Normal rotations the rotations handle him, with no
-	# call; riding the stars brings one call a match, and resting him works.
+	# A tired star: the rotations handle him under every policy, with no call
+	# (Director Bible 2.60: rotations are automatic for both sides).
 	for policy in ["normal", "stars"]:
 		var tired := _sim(902)
 		tired.moment_side = 0
@@ -807,90 +807,61 @@ func _test_impact_and_ai() -> void:
 			_check(false, "Club 902 fields a star")
 			continue
 		tired.begin_quarter()
-		tired.energy[str(star["id"])] = 40.0      # after the break's recovery
+		tired.energy[str(star["id"])] = 20.0      # after the break's recovery: cooked
 		var calls := 0
 		var guard := 0
 		while guard < 40:
-			tired.continue_quarter()
-			var m := tired.pending_moment
-			if m.is_empty():
+			if tired.continue_quarter():
 				break
+			var m := tired.pending_moment
 			if str(m.get("kind", "")) == "tired":
 				calls += 1
-				if calls == 1:
-					tired.resolve_moment(0)
-					var still_on := false
-					for p in tired.squads[0].ground:
-						if str(p["id"]) == str(star["id"]):
-							still_on = true
-					_check(not still_on, "Resting him takes him off the ground")
-					# Cooked again later: still only the one call.
-					for p in tired.squads[0].ground:
-						if int(p["overall"]) >= MatchSim.STAR_OVR:
-							tired.energy[str(p["id"])] = 30.0
-					continue
 			tired.resolve_moment(int(m.get("default", 0)))
 			guard += 1
-		if policy == "normal":
-			var subbed := false
-			for ev in tired.events:
-				if str(ev["kind"]) == "sub" and int(ev["side"]) == 0 and int(ev.get("off_num", -1)) == int(star["num"]):
-					subbed = true
-			_check(calls == 0, "Normal rotations: no running-on-empty call")
-			_check(subbed, "Normal rotations take the cooked star off by themselves")
-		else:
-			_check(calls == 1, "Riding the stars: one tired call a match, not one a quarter (%d)" % calls)
+		var subbed := false
+		for ev in tired.events:
+			if str(ev["kind"]) == "sub" and int(ev["side"]) == 0 and int(ev.get("off_num", -1)) == int(star["num"]):
+				subbed = true
+		_check(calls == 0, "%s rotations: no running-on-empty call" % policy)
+		_check(subbed, "%s rotations take the cooked star off by themselves" % policy)
 
 
-## The tired-star call is a real choice because each answer holds to the
-## break: rested, he stays on the bench even once fresh; kept on, the
-## rotations leave him out there however cooked. The card names who comes on.
-## Director decision 2026-10-05 (roadmap M4-001).
-func _test_tired_call_holds() -> void:
-	for answer in ["rest", "keep"]:
+## Fatigue parity (T3.F-defects): your side and the rival's rotate on one rule.
+## Riding the stars, a cooked star comes off at the same line on either side,
+## whether or not you are coaching; the tired-star call that held yours on is gone
+## (Director Bible 2.60, 2.63 superseded).
+func _test_fatigue_parity() -> void:
+	for mine in range(2):
 		var sim := _sim(902)
-		sim.moment_side = 0
-		sim.set_rotation_policy(0, "stars")
-		var star: Dictionary = {}
-		for p in sim.squads[0].ground:
-			if int(p["overall"]) >= MatchSim.STAR_OVR:
-				star = p
-		if star.is_empty():
-			_check(false, "Club 902 fields a star")
+		sim.moment_side = mine
+		var stars := [{}, {}]
+		for side in range(2):
+			sim.set_rotation_policy(side, "stars")
+			for p in sim.squads[side].ground:
+				if int(p["overall"]) >= MatchSim.STAR_OVR:
+					stars[side] = p
+		if stars[0].is_empty() or stars[1].is_empty():
+			_check(false, "Both sides field a star")
 			return
-		var sid := str(star["id"])
 		sim.begin_quarter()
-		sim.energy[sid] = 40.0
-		var fired := {}
+		for side in range(2):
+			sim.energy[str(stars[side]["id"])] = 20.0
+		var tired_calls := 0
 		var guard := 0
 		while guard < 60:
 			if sim.continue_quarter():
 				break
-			var m := sim.pending_moment
-			if str(m.get("kind", "")) == "tired" and fired.is_empty():
-				fired = m.duplicate(true)
-				sim.resolve_moment(0 if answer == "rest" else 1)
-				if answer == "keep":
-					sim.energy[sid] = 12.0   # cooked: the rotations would take him
-			else:
-				sim.resolve_moment(int(m.get("default", 0)))
+			if str(sim.pending_moment.get("kind", "")) == "tired":
+				tired_calls += 1
+			sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
 			guard += 1
-		_check(not fired.is_empty(), "Riding the stars, a cooked star brings the call (%s)" % answer)
-		if fired.is_empty():
-			continue
-		var on_ground := not sim._on_ground(0, sid).is_empty()
-		if answer == "rest":
-			var sub_name := GameDB.player_display_name_by_id(str(fired.get("sub_id", "")), "")
-			var detail := str((fired["options"] as Array)[0]["detail"])
-			_check(sub_name != "" and detail.begins_with(sub_name + " comes on."),
-					"Rest names who comes on (%s)" % detail)
-			_check(not on_ground and float(sim.energy.get(sid, 0.0)) >= 85.0,
-					"Rested, he sits out the quarter even once fresh (energy %.0f)" % float(sim.energy.get(sid, 0.0)))
-		else:
-			_check(on_ground, "Kept on, he is still out there at the break however cooked")
-		sim.end_quarter()
-		sim.begin_quarter()
-		_check(sim._held.is_empty(), "The call ends at the break (%s)" % answer)
+		_check(tired_calls == 0, "No tired-star call for your side (side %d)" % mine)
+		for side in range(2):
+			var subbed := false
+			for ev in sim.events:
+				if str(ev["kind"]) == "sub" and int(ev["side"]) == side and int(ev.get("off_num", -1)) == int(stars[side]["num"]):
+					subbed = true
+			_check(subbed, "Side %d's cooked star is rotated off with side %d coached" % [side, mine])
 
 
 ## Calm the group is a live option: a milder, quarter-long Slow it down,

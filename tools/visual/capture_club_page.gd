@@ -2,7 +2,7 @@ extends SceneTree
 ## Review capture for row 122 (a page for every club, the honour board), dark.
 ## Needs a real renderer and a window (keep it off screen with an override.cfg):
 ##   godot --path . --script tools/visual/capture_club_page.gd -- --size 390x844 --out <prefix>
-## Fremantle, six rounds played, two players gone with a place on the board (a
+## Fremantle (--club), six rounds played, two players gone with a place on the board (a
 ## 160-gamer traded to Melbourne, a best and fairest winner who has retired).
 ## Opens each sheet by its handler (the real taps are proven in
 ## tests/run_clublink_tests.gd and run_stats_tests.gd). Writes <out>_rival.png and
@@ -14,6 +14,8 @@ var _w := 390
 var _h := 844
 ## Your club (--club, default Fremantle).
 var _club := "FRE"
+## The rival whose page is shot (--rival; default the top of the ladder).
+var _rival := ""
 
 
 func _initialize() -> void:
@@ -45,6 +47,8 @@ func _run() -> void:
 				out = str(a[i + 1])
 			"--club":
 				_club = str(a[i + 1])
+			"--rival":
+				_rival = str(a[i + 1])
 			"--size":
 				var wh := str(a[i + 1]).split("x")
 				_w = int(wh[0])
@@ -103,8 +107,8 @@ func _run() -> void:
 	root.add_child(s)
 	current_scene = s
 	await _frames(12)
-	var rival := ""
-	for r in gs.season.ladder_sorted():
+	var rival := _rival
+	for r in ([] if rival != "" else gs.season.ladder_sorted()):
 		if str(r["code"]) != _club:
 			rival = str(r["code"])
 			break

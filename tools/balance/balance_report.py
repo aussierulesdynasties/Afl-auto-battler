@@ -629,6 +629,83 @@ def wet_section(A, B, wet):
         print(f"| {label} | {pa:.1f} | {pb:.1f} | {pb - pa:+.1f} pts | {se:.1f} |" + (f" {real} |" if wet else ""))
 
 
+def _mse(d):
+    d = list(d)
+    if not d:
+        return 0.0, 0.0
+    return st.mean(d), (st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0)
+
+
+def _fmt(d):
+    m, se = _mse(d)
+    sig = " *" if se > 0 and abs(m) > 2 * se else ""
+    return f"{m:+.2f} ({se:.2f}){sig}"
+
+
+LEGS_ROWS = ([("legs at Q%d siren" % (q + 1), "legs_q", q) for q in range(4)]
+             + [("under 40 at Q%d siren" % (q + 1), "tank_q", q) for q in range(4)]
+             + [("interchanges", "interchanges", None), ("exertion", "exertion", None)])
+
+
+def _lv(t, key, q):
+    v = t.get(key)
+    if v is None:
+        return None
+    return float(v[q]) if q is not None else float(v)
+
+
+def legs_section(A, B):
+    """Fatigue parity (T3.F-defects): each side's legs by venue and, under
+    --setup coached, your coached side against the rival; a paired run also
+    gives the coached side and the rival each against the same side, same seed, in A."""
+    if not any("legs_q" in t for r in A.values() for t in r["teams"]):
+        return
+    print("\n## Legs (fatigue parity)\n")
+    print("Legs: mean energy (0-100) of the 18 on the ground. Under 40: how many of them (fit 0.90 or less)."
+          " Exertion: energy spent on the ground, whole side. Differences are per match, mean (se); * past 2 se.\n")
+    for name, R in (("A", A), ("B", B)):
+        if not R:
+            continue
+        coached = any(t.get("coached") for r in R.values() for t in r["teams"])
+        head = f"| {name} | home | away | home-away |" + (" coached | rival | coached-rival |" if coached else "")
+        print(head)
+        print("|" + "---|" * (head.count("|") - 1))
+        for label, key, q in LEGS_ROWS:
+            rows = [r for r in R.values() if _lv(r["teams"][0], key, q) is not None]
+            if not rows:
+                continue
+            h = [_lv(r["teams"][0], key, q) for r in rows]
+            a = [_lv(r["teams"][1], key, q) for r in rows]
+            line = f"| {label} | {st.mean(h):.2f} | {st.mean(a):.2f} | {_fmt(x - y for x, y in zip(h, a))} |"
+            if coached:
+                c = [_lv(t, key, q) for r in rows for t in r["teams"] if t.get("coached")]
+                o = [_lv(t, key, q) for r in rows for t in r["teams"] if not t.get("coached")]
+                line += f" {st.mean(c):.2f} | {st.mean(o):.2f} | {_fmt(x - y for x, y in zip(c, o))} |"
+            print(line)
+        print()
+    if B and any(t.get("coached") for r in B.values() for t in r["teams"]):
+        print("Same team, same seed, B against A: the side coached in B, and its rival.\n")
+        print("| stat | coached B-A | rival B-A | (coached - rival) B-A |")
+        print("|---|---|---|---|")
+        for label, key, q in LEGS_ROWS:
+            dc, dr, dd = [], [], []
+            for i, rb in B.items():
+                ra = A.get(i)
+                if ra is None:
+                    continue
+                cs = [s for s in range(2) if rb["teams"][s].get("coached")]
+                if not cs or _lv(ra["teams"][0], key, q) is None:
+                    continue
+                c = cs[0]
+                x = _lv(rb["teams"][c], key, q) - _lv(ra["teams"][c], key, q)
+                y = _lv(rb["teams"][1 - c], key, q) - _lv(ra["teams"][1 - c], key, q)
+                dc.append(x)
+                dr.append(y)
+                dd.append(x - y)
+            if dc:
+                print(f"| {label} | {_fmt(dc)} | {_fmt(dr)} | {_fmt(dd)} |")
+
+
 # Ruck integrity (T2.31): hit-outs per team and per number-one ruck, hit-outs to
 # advantage, the club spread and the match duel spread, against Champion Data 2025 and
 # 2026 (afl_ruck_rates.json, built by build_ruck_rates.py from the Wheelo cache).
@@ -835,6 +912,7 @@ def main():
     margin_tail(A, B)
     role_report(A, B)
     type_report(A, B)
+    legs_section(A, B)
     print(f"\nOUT of real range (A): {', '.join(outs) if outs else 'none'}")
 
 
