@@ -198,7 +198,7 @@ func _test_kind(kind: String) -> void:
 	# The big screen, when the scene shows it, shows whole: inside the picture, its writing
 	# under the title bar.
 	vig.call("_set_camera")
-	var sr: Rect2 = VignetteGround.screen_rect(vig.ground_cam())
+	var sr: Rect2 = load("res://scripts/ui/match/VignetteGround.gd").screen_rect(vig.ground_cam())
 	if not bool(vig.call("_screen_board", vig.ground_cam()).get("off", false)) and sr.has_area():
 		_check(sr.position.x >= 0.0 and sr.end.x <= vig.size.x and sr.position.y + sr.size.y * 0.15 >= vig.size.y * 0.075,
 				"%s: the big screen shows whole (%s)" % [kind, str(sr)])
@@ -307,7 +307,8 @@ func _test_set_spots() -> void:
 			var d: Vector3 = body["on_the_mark"]
 			_check(d.x - k.x > k.z + d.z, "%s: the man on the mark shows past the kicker's right shoulder, his head clear" % at)
 			# The big screen: decided once for the scene, never popping out mid-scene; when it
-			# shows, the title bar never cuts into its writing from the cut-in to the freeze.
+			# shows, neither the title bar nor a side of the picture cuts it, from the cut-in to
+			# the freeze.
 			var shown_off: bool = bool(vig.call("_screen_board", cam).get("off", false))
 			var end: float = float(vig.get("_end"))
 			var cuts := 0
@@ -316,7 +317,7 @@ func _test_set_spots() -> void:
 			for j in range(1, 41):
 				cuts += 1 if bool(vig.screen_cut_at(end, 0.01 * float(j))) else 0
 			_check(shown_off == first_off, "%s: the big screen is the same at the cut-in as on the freeze" % at)
-			_check(shown_off == (cuts > 0), "%s: the big screen is left out only when the title bar would cut it (%d frames)" % [at, cuts])
+			_check(shown_off == (cuts > 0), "%s: the big screen is left out only when the title bar or a side would cut it (%d frames)" % [at, cuts])
 			if phone == Vector2i(390, 844) and key == "close":
 				_check(shown_off, "%s: 25 out the big screen rises under the title bar, so it is left out" % at)
 			var sr: Rect2 = VG.screen_rect(cam)
