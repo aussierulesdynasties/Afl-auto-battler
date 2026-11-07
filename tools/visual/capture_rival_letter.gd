@@ -45,10 +45,33 @@ var _dir := "."
 var _size := Vector2i(390, 844)
 
 
-## A season played out at Fremantle and put top of the ladder before the last
-## home-and-away round (two losses, the rest wins), so they play the finals and
-## meet the board's goal: the season's own close writes the rival board's letter
-## and holds the off-season.
+## Brownlow votes as the count would read them in a believable year: the season's
+## top midfielder on votes polls 33 and nobody else reaches him (the rest scaled
+## to match, capped at 31). Set in the season tally before the close, so the
+## count, the honours and the wrap all come from it.
+func _believable_brownlow(season) -> void:
+	var roles := {}
+	for code in season.lists:
+		for p in season.lists[code]:
+			roles[str(p["id"])] = str(p.get("role", ""))
+	var tally: Dictionary = _state.season_tally
+	var best := ""
+	for id in tally:
+		if roles.get(str(id), "") == "MID" and (best == "" or int(tally[id]["votes"]) > int(tally[best]["votes"])):
+			best = str(id)
+	if best == "":
+		return
+	var scale := 33.0 / float(maxi(1, int(tally[best]["votes"])))
+	for id in tally:
+		var t: Dictionary = tally[id]
+		var votes := 33 if str(id) == best else mini(roundi(float(t["votes"]) * scale), 31)
+		t["votes"] = votes
+		t["polled"] = clampi(int(t.get("polled", 0)), ceili(votes / 3.0), votes)
+
+
+## A season played out at Fremantle as it falls on this seed: fifth, 16-7, into
+## the finals with the board's goal met, a strong season, so the season's own
+## close writes the rival board's letter and holds the off-season.
 func _season_with_letter() -> void:
 	var arcs = load("res://scripts/sim/CoachArcs.gd")
 	var moves = load("res://scripts/state/ClubMoves.gd")
@@ -59,16 +82,12 @@ func _season_with_letter() -> void:
 	_state.coach_arcs = arcs.ensure(_state.coach_arcs)
 	var season = _state.season
 	var guard := 0
+	var counted := false
 	while not season.is_season_over() and guard < 40:
 		guard += 1
-		if season.round_index == season.fixture.size() - 1:
-			# A believable minor premier: two losses so far, the rest won.
-			var row: Dictionary = season.ladder["FRE"]
-			var played := int(row["w"]) + int(row["l"]) + int(row["d"])
-			row["w"] = played - 2
-			row["l"] = 2
-			row["d"] = 0
-			season.recalc_ladder()
+		if season.is_regular_done() and not counted:
+			_believable_brownlow(season)
+			counted = true
 		_state.week_events = []
 		_state.advance()
 	# The carnival sheet and the finals press conference are their own
@@ -76,7 +95,10 @@ func _season_with_letter() -> void:
 	_state.midseason["carnival_seen"] = true
 	_state.media_conference = {}
 	_state.week_events = []
+	var row: Dictionary = season.ladder["FRE"]
 	print("letter: ", moves.letter(_state), " off-season open: ", _state.offseason_open())
+	print("FRE %d-%d-%d " % [int(row["w"]), int(row["l"]), int(row["d"])], _state.form_line(_state.club_form_info("FRE")),
+			" brownlow: ", _state.season_awards.get("brownlow_winner", {}))
 
 
 func _hub():
@@ -133,6 +155,7 @@ func _run() -> void:
 	# 3: taken.
 	_season_with_letter()
 	moves.accept_letter(_state)
+	print("taken: ", _state.team_outlook(_state.my_club).get("line", ""))
 	hub = await _hub()
 	await _at(hub, "RivalLetter", int(_size.y * 0.35), "3_taken")
 	await _done(hub)
