@@ -15,7 +15,16 @@ MAP = {"disposals": "disposals", "kicks": "kicks", "handballs": "handballs",
        "inside50": "inside_50s", "clearances": "clearances", "hitouts": "hitouts",
        "frees_for": "frees_for", "goals": "goals", "behinds": "behinds",
        "rebound50": "rebound_50s", "rebounds": "rebound_50s"}
-EXTRA = ["score", "clangers", "intercepts", "one_percenters", "metres_gained", "strength", "draftees"]
+EXTRA = ["score", "clangers", "intercepts", "one_percenters", "metres_gained", "strength", "draftees",
+         "contested_possessions", "ground_ball_gets", "pressure_acts", "ball_ups", "throw_ins", "stoppages"]
+# Real wet against dry, match totals 2022-25 (docs/research/WEATHER_EVIDENCE.md [ABC];
+# scoring [BB] modern era, accuracy [BB]/[SI] in points). Shown for a paired run as B against A,
+# so it reads as the real reference when A is a perfect day and B a wet one.
+REAL_WET = {"tackles": "+12%", "clangers": "+9%", "ground_ball_gets": "+9%",
+            "contested_possessions": "+7%", "one_percenters": "+15%", "marks": "-13%",
+            "contested_marks": "-10%", "kicks": "0%", "handballs": "-1%", "goals": "-",
+            "score": "about -5%", "stoppages": "more (no public count)",
+            "ball_ups": "more (no public count)", "throw_ins": "-"}
 
 
 def load(run, arm):
@@ -507,6 +516,59 @@ def role_table(A, B):
     print("\nReal shares (Champion Data 2025): DEF 57%, MID 23%, FWD 15%, RUCK 4%; a team intercepts about 63.4 a game.")
 
 
+def wet_section(A, B, wet):
+    """Paired change in percent (B / A - 1), plus accuracy and set-shot accuracy
+    in points (row 120). The real wet v dry column shows only when B is the wet
+    arm and A is not (wet=True), so no other screen is read against it."""
+    if not B:
+        return
+    common = [i for i in A if i in B]
+    if not common:
+        return
+    print("\n## Change B against A, percent" + (" (real column: wet against dry)" if wet else "") + "\n")
+    print("| stat | A | B | B/A-1 | se |" + (" real wet v dry |" if wet else ""))
+    print("|---|---|---|---|---|" + ("---|" if wet else ""))
+    for k in list(REAL_WET):
+        a = per_match(A, k)
+        b = per_match(B, k)
+        ma = st.mean(a[i] for i in common)
+        if ma == 0:
+            continue
+        mb = st.mean(b[i] for i in common)
+        d = [(b[i] - a[i]) / ma for i in common]
+        se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+        print(f"| {k} | {ma:.1f} | {mb:.1f} | {100 * (mb / ma - 1):+.1f}% | {100 * se:.1f}% |"
+              + (f" {REAL_WET[k]} |" if wet else ""))
+
+    def acc(r, g, b):
+        gg = sum(float(t.get(g, 0)) for t in r["teams"])
+        bb = sum(float(t.get(b, 0)) for t in r["teams"])
+        return 100 * gg / (gg + bb) if gg + bb else None
+    for label, g, b, real in (("accuracy, goals per scoring shot (points)", "goals", "behinds", "-1 to -2"),
+                              ("set-shot goals per set shot (points)", "sshot_g", None, "-"),
+                              ("general-play goals per logged shot (points)", "gshot_g", None, "-")):
+        if b is None:
+            n = g.replace("_g", "_n")
+            fa = {i: (100 * sum(float(t.get(g, 0)) for t in A[i]["teams"])
+                      / max(1.0, sum(float(t.get(n, 0)) for t in A[i]["teams"]))) for i in common}
+            fb = {i: (100 * sum(float(t.get(g, 0)) for t in B[i]["teams"])
+                      / max(1.0, sum(float(t.get(n, 0)) for t in B[i]["teams"]))) for i in common}
+            pa = 100 * sum(float(t.get(g, 0)) for i in common for t in A[i]["teams"]) / max(1.0, sum(
+                float(t.get(n, 0)) for i in common for t in A[i]["teams"]))
+            pb = 100 * sum(float(t.get(g, 0)) for i in common for t in B[i]["teams"]) / max(1.0, sum(
+                float(t.get(n, 0)) for i in common for t in B[i]["teams"]))
+        else:
+            fa = {i: acc(A[i], g, b) for i in common}
+            fb = {i: acc(B[i], g, b) for i in common}
+            pa = 100 * sum(float(t.get(g, 0)) for i in common for t in A[i]["teams"]) / sum(
+                float(t.get(g, 0)) + float(t.get(b, 0)) for i in common for t in A[i]["teams"])
+            pb = 100 * sum(float(t.get(g, 0)) for i in common for t in B[i]["teams"]) / sum(
+                float(t.get(g, 0)) + float(t.get(b, 0)) for i in common for t in B[i]["teams"])
+        d = [fb[i] - fa[i] for i in common if fa[i] is not None and fb[i] is not None]
+        se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+        print(f"| {label} | {pa:.1f} | {pb:.1f} | {pb - pa:+.1f} pts | {se:.1f} |" + (f" {real} |" if wet else ""))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -553,6 +615,7 @@ def main():
             sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ("yes" if se == 0 and st.mean(d) != 0 else "")
             line += f" {mb:.1f} | {mark(mb)} | {st.mean(d):+.2f} | {se:.2f} | {sig} |"
         print(line)
+    wet_section(A, B, "--weather wet" in (o.b or "") and "--weather wet" not in o.a)
     role_table(A, B)
     for name, R in (("A", A), ("B", B)):
         if not R:
