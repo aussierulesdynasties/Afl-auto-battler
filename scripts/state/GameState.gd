@@ -612,10 +612,11 @@ func set_match_speed(s: float) -> void:
 
 
 ## How you take your own match, chosen on the hub's poster and kept for the
-## next one (director, 2026-10-18, P-14): Watch it, Key moments (top speed,
-## stopping for your calls, the goals and the breaks) or Skip to full time.
+## next one (director, 2026-10-18, P-14): Watch it or Skip to full time.
 ## Watch for anyone who has never chosen. Playback only: the match is the same.
-const MATCH_WAYS := ["watch", "key", "skip"]
+## Key moments, once a third way, is cut (director, 2026-11-08: "it's just
+## noise"): a settings file that still holds it reads as Watch.
+const MATCH_WAYS := ["watch", "skip"]
 
 
 func match_way() -> String:
@@ -4170,9 +4171,9 @@ var _practice_built := {}     # the live practice match being coached (never sav
 func prepare_practice_match() -> bool:
 	if preseason_stop() != "practice" or practice_played():
 		return false
-	# Key moments carries over; Skip does not ("Coach the match" was pressed,
-	# and Sim the match is beside it).
-	match_way_live = "key" if match_way() == "key" else "watch"
+	# The practice match is always watched: Skip does not carry over ("Coach
+	# the match" was pressed, and Sim the match is beside it).
+	match_way_live = "watch"
 	_clear_pending()
 	_practice_built = _practice_mine()
 	pending_sim = _practice_built["sim"]
