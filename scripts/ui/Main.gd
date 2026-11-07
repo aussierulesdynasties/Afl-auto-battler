@@ -317,9 +317,18 @@ func _meta_line(meta: Dictionary) -> String:
 
 
 func _on_continue() -> void:
-	if GameState.load_career():
-		Router.go("hub" if GameState.season != null else "draft")
-		return
+	# Loading a career takes seconds on a phone: the cover and its line go up
+	# first, and the screen change joins the same cover. Nothing here awaits
+	# the cover: this screen is freed by the change, and a function resumed
+	# after that errors ("class instance is gone").
+	ScreenTransition.run("Loading your career...", func():
+		if GameState.load_career():
+			Router.go("hub" if GameState.season != null else "draft")
+		else:
+			_show_load_error())
+
+
+func _show_load_error() -> void:
 	var why := GameState.saved_career_problem()
 	_load_error.text = why if why != "" else GameState.SAVE_UNREADABLE
 	_load_error.visible = true
