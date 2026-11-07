@@ -2058,9 +2058,15 @@ func _test_club_code_colours() -> void:
 	var pw: Color = UK.team_wash()
 	_check(pw.s < 0.05 and not pw.is_equal_approx(UK.ACCENT) and pw.get_luminance() > 0.1,
 			"Collingwood's sheet wash is a neutral grey (#%s)" % pw.to_html(false))
+	var pb: Color = UK.team_button()
+	_check(pb.s < 0.05 and not pb.is_equal_approx(UK.ACCENT) and pb.get_luminance() >= UK.SURFACE.get_luminance() + 0.15,
+			"Collingwood's buttons are a grey clear of the quiet buttons (#%s)" % pb.to_html(false))
+	_check(UK.ink_on(pb).is_equal_approx(UK.TEXT) or UK.min_contrast(UK.ink_on(pb), [pb]) >= 4.5,
+			"Collingwood's button label reads")
 	for code in ["CAR", "RIC", "ESS", "MEL"]:
 		_state.my_club = code
 		_check(UK.team_wash().is_equal_approx(UK.team_colour()), "%s's sheet wash is its own colour" % code)
+		_check(UK.team_button().is_equal_approx(UK.team_colour()), "%s's buttons are its own colour" % code)
 	_state.my_club = was
 	print("Club code colours: " + ", ".join(line))
 	# A Forge club whose colours are all pale never falls back to its white.

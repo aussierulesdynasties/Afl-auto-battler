@@ -1243,7 +1243,7 @@ static func style_button(b: Button, fs := 16, primary := false, danger := false)
 	b.add_theme_color_override("font_focus_color", ink)
 	b.add_theme_color_override("font_disabled_color", FAINT)
 	var sb: StyleBoxFlat
-	var lead := team_colour()
+	var lead := team_button()
 	if primary:
 		sb = style(lead, 8, RADIUS)
 		sb.set_border_width_all(0)
@@ -1316,6 +1316,19 @@ static func team_wash() -> Color:
 	var club := str(gs.my_club) if gs != null else ""
 	if club != "" and GameDB.clubs.has(club) and club_is_black(club):
 		return ClubBackdrop.lifted(club_black(club))
+	return team_colour()
+
+
+## Your club's colour on a primary button: team_colour, but a black-and-white
+## club's button is its black lifted to a mid grey that stands clear of the
+## quiet SURFACE buttons beside it, never the accent's red (director
+## 2026-11-08, "Grey buttons too").
+const BLACK_CLUB_BUTTON_LUM := 0.38
+static func team_button() -> Color:
+	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
+	var club := str(gs.my_club) if gs != null else ""
+	if club != "" and GameDB.clubs.has(club) and club_is_black(club):
+		return ClubBackdrop.lifted(club_black(club), BLACK_CLUB_BUTTON_LUM)
 	return team_colour()
 
 
