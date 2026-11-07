@@ -75,6 +75,7 @@ func _run() -> void:
 	_t("_test_broken_calls")
 	await _t("_test_vignettes_off_match")
 	await _t("_test_match_day_setup")
+	await _t("_test_match_preview")
 	await _t("_test_skip_to_break")
 	await _t("_test_side_keeps_calls")
 	await _t("_test_match_way_poster")
@@ -2471,6 +2472,8 @@ func _test_press_effects_shown(db) -> void:
 	_state.board["confidence"] = 50
 	var who: Dictionary = _state.my_list[0]
 	who["morale"] = 50
+	who.erase("press_lift")
+	who.erase("press_slow")
 	var hub = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _settle()
@@ -2483,19 +2486,23 @@ func _test_press_effects_shown(db) -> void:
 		var kind: String = MC.kind_of(opts[i], i)
 		var c: int = _state.press_chance(i)
 		var text := "" if line == null else line.text
-		shown = shown and line != null and line.is_visible_in_tree() and text == MC.odds_line(kind, c) 				and text.contains("%d%%" % c) and text.contains("%d%%" % (100 - c))
+		shown = shown and line != null and line.is_visible_in_tree() and text == _state.press_odds_line(i) 				and text.contains("%d%% " % c) and text.contains("%d%% " % (100 - c))
+		# The Muckraker's twist is on the gate (director 2026-11-06).
+		if kind == "criticise":
+			shown = shown and text.contains("The players read his headline: 10% less likely to land well.") 					and not text.contains("The Siren gets read upstairs") and text.contains(MC.FADE_NOTE)
 	_check(shown, "Every press answer shows both ways it can land, with the odds and the sizes")
 	var c0: int = _state.press_chance(0)
 	var landed := "a" if MC.roll(_state.career_seed, _state.season_year, int(_state.media_conference.get("round", 0)),
 			str(_state.media_conference.get("key", "")), 0) <= c0 else "b"
-	var out: Dictionary = MC.ANSWERS["criticise"][landed]
+	var fx: Dictionary = MC.effects("criticise", _state.press_context(0))
+	var out: Dictionary = fx[landed]
 	var answer: Button = hub.find_child("MediaAnswer_0", true, false)
 	var tapped: String = await Tap.tap(answer) if answer != null else "missing"
 	await _settle()
 	var after: Label = hub.find_child("MediaOutcomeLine", true, false)
 	_check(tapped == "" and _state.board_confidence() == 50 + int(out["board"])
 			and int(who["morale"]) == 50 + int(out["morale"]) and after != null and after.is_visible_in_tree()
-			and after.text == MC.after_line("criticise", landed),
+			and after.text == str(load("res://scripts/ui/PressScene.gd").outcome_parts(MC.after_line("criticise", landed, fx))[0]) and int(out["board"]) == 1,
 			"A real tap on the first answer applies the outcome the press stream drew, and the sheet after says how it landed (%s, %s)" % [tapped, landed])
 	var done: Button = hub.find_child("MediaOutcomeDone", true, false)
 	var closed: String = await Tap.tap(done) if done != null else "missing"
@@ -2506,6 +2513,132 @@ func _test_press_effects_shown(db) -> void:
 		hub.queue_free()
 	_state.media_conference = {}
 	await _settle()
+
+
+## The press is its own full screen (ruling 3.52): the hub routes to it, a
+## real tap answers, the result shows in the scene, and Done returns to the hub.
+func _test_press_scene_routed() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var router = root.get_node("Router")
+	_state.media_conference = MC.pick({"club": "COL", "opponent_name": "Carlton", "round": 8,
+			"result": {"home": "COL", "away": "CAR", "score": [55, 101]}}, {})
+	router.stack = []
+	router.go("hub")
+	await _settle()
+	await _settle()
+	var press: Node = current_scene
+	_check(press != null and press.name == "PressScene" and router.current() == "press"
+			and press.find_child("MediaQuestion", true, false) != null,
+			"A pending question opens the press conference as its own screen (%s, %s)" % [press.name if press else "-", router.current()])
+	var answer: Button = press.find_child("MediaAnswer_0", true, false) if press != null else null
+	var tapped: String = await Tap.tap(answer) if answer != null else "missing"
+	await _settle()
+	var line: Label = current_scene.find_child("MediaOutcomeLine", true, false)
+	_check(tapped == "" and current_scene == press and line != null and line.is_visible_in_tree()
+			and not _state.media_conference_pending(),
+			"A real tap answers and the result shows in the press screen (%s)" % tapped)
+	var done: Button = current_scene.find_child("MediaOutcomeDone", true, false)
+	var closed: String = await Tap.tap(done) if done != null else "missing"
+	await _settle()
+	await _settle()
+	_check(closed == "" and router.current() == "hub" and current_scene != null and current_scene.name == "HubScene"
+			and current_scene.find_child("MediaConference", true, false) == null,
+			"A real tap on Done returns to the hub (%s, %s)" % [closed, router.current()])
+	_state.media_conference = {}
+
+
+## The press screen at phone size, by real taps (director 2026-11-06, Q4):
+## each of the four answers to the Muckraker (the fourth names a player) lands
+## in the room and Continue returns to the hub; the Stats Geek shows the
+## record; the bottom Skip, the top Skip and Android Back each skip without
+## moving anything; Back after an answer leaves.
+func _test_press_scene_taps() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var router = root.get_node("Router")
+	_state.set_vignettes_on(false)
+	root.size = Vector2i(390, 844)
+	var named: Dictionary = _state.my_list[3]
+	var other: Dictionary = _state.my_list[4]
+	var muck := func() -> Dictionary:
+		return MC.pick({"club": "COL", "opponent_name": "Carlton", "round": 8, "year": _state.season_year,
+				"result": {"home": "COL", "away": "CAR", "score": [55, 101]},
+				"named": {"heavy_loss": {"id": str(named["id"]), "name": str(root.get_node("GameDB").player_display_name(named))}}}, {})
+	var open := func(conf: Dictionary) -> Node:
+		_state.media_conference = conf
+		_state.media_conference["opp"] = "Carlton"
+		router.stack = []
+		router.go("hub")
+		await _settle()
+		await _settle()
+		return current_scene
+	_check((muck.call() as Dictionary).get("options", []).size() == 4,
+			"The Muckraker's heavy-loss question offers a fourth answer naming a player")
+	for i in range(4):
+		for p in _state.my_list:
+			p.erase("press_lift")
+			p.erase("press_slow")
+			p.erase("press_wait")
+		var press: Node = await open.call(muck.call())
+		var label := str((_state.media_conference.get("options", [])[i] as Dictionary).get("label", ""))
+		var where: Label = press.find_child("MediaWhere", true, false)
+		var answer: Button = press.find_child("MediaAnswer_%d" % i, true, false)
+		var tapped: String = await Tap.tap(answer) if answer != null else "missing"
+		await _settle()
+		var head: Label = press.find_child("MediaOutcomeLine", true, false)
+		var chance: Label = press.find_child("MediaOutcomeChance", true, false)
+		var said: Control = press.find_child("MediaSaid", true, false)
+		var named_only := i != 3 or (int(named.get("press_lift", 0)) != 0 and not other.has("press_lift"))
+		_check(tapped == "" and press.name == "PressScene" and not _state.media_conference_pending()
+				and where != null and where.text == "Round 8 · v Carlton"
+				and head != null and head.is_visible_in_tree() and chance != null and chance.text.ends_with("% chance.")
+				and said != null and said.is_visible_in_tree() and press.find_child("MediaAnswer_0", true, false) == null
+				and press.find_child("MediaTopSkip", true, false).disabled and named_only,
+				"A real tap on answer %d lands it in the press screen, with its odds and only what it moves (%s; %s)" % [i, tapped, label])
+		var done: Button = press.find_child("MediaOutcomeDone", true, false)
+		var closed: String = await Tap.tap(done) if done != null else "missing"
+		await _settle()
+		await _settle()
+		_check(closed == "" and router.current() == "hub" and current_scene.name == "HubScene",
+				"A real tap on Continue after answer %d returns to the hub (%s)" % [i, closed])
+	# The Stats Geek reads the record on the gate.
+	var geek: Dictionary = MC.pick({"club": "COL", "opponent_name": "Carlton", "round": 16, "year": _state.season_year,
+			"result": {"home": "COL", "away": "CAR", "score": [80, 83],
+			"team": [{"inside50": 54, "clearances": 36}, {"inside50": 41, "clearances": 38}]}}, {})
+	var gp: Node = await open.call(geek)
+	var rec: Label = gp.find_child("MediaRecord", true, false)
+	var jn: Label = gp.find_child("MediaJournalist", true, false)
+	var g1: Button = gp.find_child("MediaAnswer_1", true, false)
+	_check(rec != null and rec.is_visible_in_tree() and jn != null and jn.text == "Dev Mehta"
+			and gp.find_child("MediaAnswer_3", true, false) == null,
+			"The Stats Geek's gate shows who asks and the record line, with three answers")
+	var gt: String = await Tap.tap(g1) if g1 != null else "missing"
+	await _settle()
+	_check(gt == "" and gp.find_child("MediaOutcomeLine", true, false) != null,
+			"A real tap answers the Stats Geek in the room (%s)" % gt)
+	router.handle_back(true)
+	await _settle()
+	await _settle()
+	_check(router.current() == "hub", "Back after an answer leaves the press screen for the hub")
+	# Each way of saying nothing: nothing moves and his standing stays.
+	var ways := ["MediaSkip", "MediaTopSkip", "back"]
+	for way in ways:
+		var before: int = _state.press_standing("muckraker")
+		var conf: Dictionary = muck.call()
+		var key := str(conf.get("key", ""))
+		_state.media_memory.erase(key)
+		var sp: Node = await open.call(conf)
+		var why := ""
+		if way == "back":
+			router.handle_back(true)
+		else:
+			var b: Button = sp.find_child(way, true, false)
+			why = await Tap.tap(b) if b != null else "missing"
+		await _settle()
+		await _settle()
+		_check(why == "" and router.current() == "hub" and not _state.media_conference_pending()
+				and _state.media_memory.has(key) and _state.press_standing("muckraker") == before,
+				"%s skips the press: back to the hub, nothing moved (%s)" % ["Android Back" if way == "back" else way, why])
+	_state.media_conference = {}
 
 
 func _settle() -> void:
@@ -2577,6 +2710,82 @@ func _test_match_day_setup() -> void:
 		hub.queue_free()
 	_state.pending_sim = null
 	_state.side_from_match = false
+	await _settle()
+
+
+## The match preview (director, 2026-11-07: "It deserves its own place in the pre
+## game flow"; "Own step before setup"). Real taps on a phone: Play match opens
+## the preview, nothing prepared; its Back and Android Back return to the hub with
+## nothing started; Continue opens the match-day setup, and full time's way back
+## is the hub (the preview is not left under the match).
+func _test_match_preview() -> void:
+	_state.set_vignettes_on(false)
+	_state.set_match_way("watch")
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	_state.tutorials = false
+	root.size = Vector2i(390, 844)
+	var round_at: int = _state.season.round_index
+	var open_preview := func() -> String:
+		router.stack = []
+		router.go("hub")
+		await _settle()
+		var hub: Node = current_scene
+		var play: Button = hub.find_child("PlayMatch", true, false) if hub != null else null
+		if play == null:
+			return "no Play match"
+		var why: String = await Tap.tap(play)
+		await _settle()
+		return why
+	var why: String = await open_preview.call()
+	var pv: Node = current_scene
+	_check(why == "" and pv != null and pv.name == "MatchPreviewScene" and _state.pending_sim == null
+			and router.current() == "preview",
+			"A real tap on Play match opens the match preview, nothing set up yet (%s)" % why)
+	var cont: Button = pv.find_child("PreviewContinue", true, false) if pv != null else null
+	var view := Rect2(Vector2.ZERO, Vector2(root.size))
+	_check(pv != null and pv.find_child("WeekPage", true, false) != null
+			and pv.find_child("WeekHeading", true, false) != null
+			and pv.find_child("WeekClubs", true, false) != null and pv.find_child("KeyMatchups", true, false) == null
+			and pv.find_child("HeadToHead", true, false) != null
+			and pv.find_child("SynergyLine", true, false) != null,
+			"The preview holds the week: the round, you and them, line against line, synergies")
+	_check(cont != null and cont.size.y >= 56.0 and cont.size.x >= 300.0
+			and view.encloses(cont.get_global_rect()),
+			"Continue is thumb-sized, across the page and on screen (%s)" % (str(cont.get_global_rect()) if cont else "-"))
+	# Back (the top bar's, a real tap): the hub, nothing started.
+	var back: Control = pv.find_child("TopBarBack", true, false) if pv != null else null
+	why = await Tap.tap(back)
+	await _settle()
+	_check(why == "" and current_scene != null and current_scene.name == "HubScene" and _state.pending_sim == null
+			and _state.season.round_index == round_at,
+			"A real tap on Back returns to the hub with nothing started (%s)" % why)
+	# Android Back: the same.
+	why = await open_preview.call()
+	_check(why == "" and current_scene != null and current_scene.name == "MatchPreviewScene",
+			"Play match opens the preview again (%s)" % why)
+	router.handle_back(true)
+	await _settle()
+	_check(current_scene != null and current_scene.name == "HubScene" and _state.pending_sim == null,
+			"Android Back returns to the hub with nothing started")
+	# Continue: the match-day setup, the preview off the back stack.
+	why = await open_preview.call()
+	cont = current_scene.find_child("PreviewContinue", true, false) if current_scene != null else null
+	why = await Tap.tap(cont)
+	await _settle()
+	var ms: Node = current_scene
+	_check(why == "" and ms != null and ms.name == "MatchScene" and _state.match_day_setup_open()
+			and ms.find_child("StartQuarter", true, false) != null,
+			"A real tap on Continue opens the match-day setup, nothing bounced yet (%s)" % why)
+	_check(router.stack == ["hub", "match"], "The preview is not left under the match: %s" % str(router.stack))
+	if ms != null:
+		ms.queue_free()
+	_state.pending_sim = null
+	_state.pending_match = {}
 	await _settle()
 
 
@@ -3059,6 +3268,8 @@ func _test_vignettes_off_match() -> void:
 	_state.media_conference = {}
 	await _settle()
 	await _t("_test_press_effects_shown", [db])
+	await _t("_test_press_scene_routed")
+	await _t("_test_press_scene_taps")
 	# A promised run just ended: the sit-down is the week's one ask, and a real
 	# tap on Done closes it.
 	_state.backing_talk = {"player_id": "calder", "title": "Sit-down with Calder",

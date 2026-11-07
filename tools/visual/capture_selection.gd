@@ -8,7 +8,8 @@ extends SceneTree
 ## --oval: (old) scrolled down to the oval. --drag: mid-drag, the centre's token
 ## pressed and moved by real mouse events (the name preview under the pointer).
 ## --strategy KEY: that auto-pick applied, scrolled to its note (BuilderHint).
-## --club CODE; --weeksheet opens the week over the phone's side page.
+## --club CODE. (The phone's week is the match preview now:
+## tools/visual/capture_match_preview.gd.)
 ## Writes <out>_sheet.png.
 
 var W := 1280
@@ -54,7 +55,7 @@ func _run() -> void:
 			oval = true
 		if str(a[i]) == "--drag":
 			drag = true
-		if str(a[i]) in ["--opp", "--guide", "--report", "--weeksheet"]:
+		if str(a[i]) in ["--opp", "--guide", "--report"]:
 			mode = str(a[i]).trim_prefix("--")
 	await process_frame
 	var state = root.get_node("GameState")
@@ -101,11 +102,9 @@ func _run() -> void:
 			ui.set("_view", "opp")
 			ui.call("_build")
 		"guide":
-			ui.call("_show_synergies")
-		"weeksheet":
-			ui.call("_open_week")
+			ui.get("_week").show_synergies()
 		"report":
-			ui.call("_show_report", str(state.my_next_opponent().get("code", "")))
+			ui.get("_week").show_report(str(state.my_next_opponent().get("code", "")))
 	for i in range(8):
 		await process_frame
 	if strategy != "":

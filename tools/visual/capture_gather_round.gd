@@ -83,15 +83,18 @@ func _run() -> void:
 	hub.queue_free()
 	await _frames(2)
 
-	# Match prep: the week sheet names the event and the host ground.
+	# Match prep: the match preview names the event and the host ground.
 	var sel: Control = load("res://scenes/SelectionScene.tscn").instantiate()
 	root.add_child(sel)
 	await _frames(15)
 	_save(out + "_selection.png")
-	sel.call("_open_week")
+	sel.queue_free()
+	await _frames(2)
+	var preview: Control = load("res://scenes/MatchPreviewScene.tscn").instantiate()
+	root.add_child(preview)
 	await _frames(15)
 	_save(out + "_week.png")
-	sel.queue_free()
+	preview.queue_free()
 	await _frames(2)
 
 	load("res://scripts/ui/StatsHubScene.gd").current = "fixture"

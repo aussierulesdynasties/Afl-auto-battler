@@ -42,6 +42,17 @@ func _rounds(n: int) -> void:
 		GameState.advance()
 
 
+func _has_win_and_loss() -> bool:
+	var won := false
+	var lost := false
+	for r in _my_matches():
+		var me := _side(r)
+		var m := int(r["score"][me]) - int(r["score"][1 - me])
+		won = won or m > 0
+		lost = lost or m < 0
+	return won and lost
+
+
 func _my_matches() -> Array:
 	var out := []
 	for r in GameState.season_log:
@@ -529,6 +540,12 @@ func _test_no_repeats(size: Vector2i) -> void:
 	var tag := "%dx%d" % [size.x, size.y]
 	_fresh()
 	_rounds(8)
+	# Play on until the season has both a win and a loss to read: how many
+	# rounds that takes is the sim's business, not this test's.
+	var extra := 0
+	while extra < 12 and not _has_win_and_loss():
+		_rounds(1)
+		extra += 1
 	var win := {}
 	var loss := {}
 	for r in _my_matches():
@@ -541,7 +558,7 @@ func _test_no_repeats(size: Vector2i) -> void:
 			win = {"r": r, "rich": rich}
 		elif m < 0 and (loss.is_empty() or (rich and not bool(loss["rich"]))):
 			loss = {"r": r, "rich": rich}
-	_check(not win.is_empty() and not loss.is_empty(), "%s: eight rounds give a win and a loss" % tag)
+	_check(not win.is_empty() and not loss.is_empty(), "%s: the season gives a win and a loss" % tag)
 	if not win.is_empty():
 		await _check_once(win["r"], tag + " win")
 	if not loss.is_empty():
