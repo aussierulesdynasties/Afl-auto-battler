@@ -24,6 +24,9 @@ var custom_prospect_story := {}
 ## (every club keeps its real end-of-2026 list and the 2026 National Draft is
 ## run before 2027). Older saves have no field and are redrafts.
 var start_mode := "redraft"
+## A challenge start (row 114, Challenge.gd): {} for none, else
+## {"kind": "youth" | "rebuild" | "goal", ...}. Older saves have none.
+var challenge := {}
 ## The 2026 National Draft of a real-lists career is under way (no season yet).
 var opening_draft := false
 ## Your dual-ruck call (ARD-M5-001): off until you make it, kept across
@@ -800,6 +803,7 @@ func save_career() -> bool:
 		"class_tiers": class_tiers,
 		"custom_prospect_id": custom_prospect_id,
 		"start_mode": start_mode,
+		"challenge": challenge,
 		"opening_draft": opening_draft,
 		"custom_club": custom_club,
 		"best23": best23,
@@ -1027,6 +1031,8 @@ func load_career() -> bool:
 	var own_story = state.get("custom_prospect_story", {})
 	custom_prospect_story = own_story if own_story is Dictionary else {}
 	start_mode = str(state.get("start_mode", "redraft"))
+	var ch = state.get("challenge", {})
+	challenge = ch if ch is Dictionary else {}
 	opening_draft = bool(state.get("opening_draft", false))
 	user_dual_ruck = bool(state.get("user_dual_ruck", false))
 	_sync_dual()
@@ -1569,6 +1575,7 @@ func reset() -> void:
 	_dirty = false
 	default_train_plan = "position"
 	start_mode = "redraft"
+	challenge = {}
 	opening_draft = false
 	season_year = GameDB.START_YEAR
 	drafted_draftees = {}
@@ -1705,6 +1712,11 @@ func begin_real_lists() -> void:
 			joined[str(mv["to"])] = true
 	for code in joined:
 		unique_jumpers(league_lists[code])
+	# Rebuild (Challenge): the bottom club of 2026 is yours, less its three best.
+	if Challenge.kind(self) == "rebuild":
+		var bottom := Challenge.bottom_club(active)
+		challenge["club"] = bottom
+		challenge["gone"] = Challenge.strip_best(self, bottom)
 	intake_assignments = []
 	# The real 2026 class, and the career's own prospect if it has one.
 	var cls: Array = _career_copies(GameDB.draftees)
@@ -1740,7 +1752,11 @@ func begin_real_lists() -> void:
 	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
 			_clock_seed(2), sizes, role_counts, role_pairs)
 	draft.senior_cap = RookieList.SENIOR_SPOTS
+	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
+	if Challenge.kind(self) == "rebuild" and str(challenge.get("club", "")) != "":
+		choose_real_club(str(challenge["club"]))
+		add_news("challenge", "%s The 2026 National Draft is next." % Challenge.stated_line(self))
 	mark_dirty()
 
 
@@ -1823,6 +1839,7 @@ func begin_draft() -> void:
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
 	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
 	draft = Draft.new(pool, GameDB.active_clubs(season_year).duplicate(), seed)
+	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
 
 
@@ -1908,6 +1925,7 @@ func begin_intake_draft() -> bool:
 			seed, sizes, role_counts, role_pairs)
 	# The National Draft fills the senior list; the Rookie Draft follows.
 	draft.senior_cap = RookieList.SENIOR_SPOTS
+	draft.user_max_age = Challenge.max_age(self)
 	ExpansionBuild.seat_guests(self, draft)
 	# Recruiting funding narrows only our club's uncertainty; rivals use the
 	# same scouting model at Standard rather than hidden true ratings.
@@ -1989,6 +2007,8 @@ func finish_intake_draft() -> bool:
 		draft_meeting_year = 0
 		season_year = GameDB.START_YEAR
 		start_season(my_club, league_lists.get(my_club, []))
+		# Rebuild: the players who walked out sign with rival clubs for 2027.
+		Challenge.place_gone(self)
 		open_preseason(false)   # saved once, below
 		# The Rookie Draft follows the opening National Draft too, in its order.
 		RookieList.open_draft(self, opening_order(GameDB.active_clubs(season_year)))
@@ -2371,9 +2391,13 @@ func _assign_draftee(code: String, p: Dictionary, kind: String) -> void:
 ## drafted_pick), so a career draftee's story reads like anyone's: "Pick 31,
 ## 2028 national draft". A pre-listed (father-son, academy) player has no
 ## pick. His potential was set when he was projected and is not re-derived.
-func _mark_drafted(p: Dictionary, kind: String, pick: int) -> void:
+func _mark_drafted(p: Dictionary, kind: String, pick: int, club := "") -> void:
 	p["drafted_year"] = season_year
 	p["drafted_type"] = kind
+	# The club that first drafted him: a home-grown player (Challenge goals).
+	# Older saves lack it, and a player is only ever marked once.
+	if not p.has("drafted_club"):
+		p["drafted_club"] = club if club != "" else str(p.get("club", ""))
 	if pick > 0:
 		p["drafted_pick"] = pick
 	else:
@@ -2450,6 +2474,13 @@ func start_season(club_code: String, list: Array) -> void:
 		# A re-drafted list of 44 splits into 38 seniors
 		# and six rookies, the youngest.
 		RookieList.seed_lists(lists)
+		# The 2026 draft class had never been drafted: the club that took
+		# him in the League redraft first drafted him (home-grown, Challenge).
+		# Real players keep the club that drafted them in the AFL.
+		for code in lists:
+			for p in lists[code]:
+				if str(p.get("id", "")).begins_with("D2026_") and not p.has("drafted_club"):
+					p["drafted_club"] = code
 	else:
 		# Fallback for tests or old saves: your drafted list plus real AI lists.
 		for code in GameDB.club_order:
@@ -5804,7 +5835,9 @@ func _close_season_awards() -> void:
 	var sh := Almanac.season_hero(self)
 	if not sh.is_empty():
 		honour_roll[-1]["season_hero"] = [sh]
-	almanac.append(Almanac.season_entry(self))
+	var page := Almanac.season_entry(self)
+	Challenge.mark_season(self, page)   # your own goal, the season it is met
+	almanac.append(page)
 	# The honour board (row 122): every player of yours, read afresh from the
 	# season just closed, and anyone who has gone since the last close.
 	for p in my_list:
@@ -7078,6 +7111,9 @@ func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 	var p := free_agent(player_id)
 	if p.is_empty():
 		return {"ok": false, "answer": "", "reason": "He has already signed elsewhere."}
+	var barred := Challenge.block_reason(self, p)
+	if barred != "":
+		return {"ok": false, "answer": "", "code": "challenge", "reason": barred}
 	if my_list.size() >= Contracts.MAX_LIST:
 		return {"ok": false, "answer": "", "reason": "Your list is full (%d)." % Contracts.MAX_LIST}
 	var talks: Dictionary = p.get("talks", {})
@@ -7644,6 +7680,11 @@ func evaluate_trade(club: String, mine: Array, theirs: Array) -> Dictionary:
 		wont = _wont_go(take, club)
 	if wont != "":
 		return {"ok": false, "code": "trade_asked_elsewhere", "reason": wont}
+	# Your challenge (Youth only, Rebuild) binds what comes in, never what goes.
+	for p in give:
+		var barred := Challenge.block_reason(self, p)
+		if barred != "":
+			return {"ok": false, "code": "trade_challenge", "reason": barred}
 	var ctx := trade_context(club)
 	var names := {}
 	for p in give + take:
@@ -8217,7 +8258,10 @@ func _trade_target(club: String, from_list: Array, skip: Dictionary) -> Dictiona
 ## club would value giving it up - never by what the other side thinks.
 ## Only packages worth no more than `most` to it; cheapest first:
 ## [[assets, value], ...].
-func _bids(buyer: String, most: float, prospects: Dictionary) -> Array:
+## `to`: the club the package would go to. Your challenge (Youth only,
+## Rebuild) bars some players from coming to you, so a bid to you never
+## includes them.
+func _bids(buyer: String, most: float, prospects: Dictionary, to := "") -> Array:
 	var phase := club_phase(buyer)
 	var bars := TradeValue.selection_bars(season.lists[buyer])
 	var proj := TradeValue.selection_bars(season.lists[buyer], true)
@@ -8235,6 +8279,8 @@ func _bids(buyer: String, most: float, prospects: Dictionary) -> Array:
 		var q: Dictionary = list[k]
 		if trade_requests.has(str(q["id"])):
 			continue  # he goes only where he asked to, not as a makeweight
+		if to == my_club and Challenge.block_reason(self, q) != "":
+			continue  # your challenge bars him from coming to you
 		pool.append([q, float(TradeValue.value(q, {"phase": phase, "bars": bars, "proj": proj, "own": true})["total"])])
 	var out := []
 	for i in range(pool.size()):
@@ -8273,7 +8319,7 @@ func _bid(club: String, asset: Dictionary, worth: float, shade: float, prospects
 	if margin < 0.0:
 		margin = float(difficulty_rules()["trade_margin"])
 	var most := worth / (1.0 + margin)
-	var options := _bids(club, most, prospects)
+	var options := _bids(club, most, prospects, other)
 	options.sort_custom(func(x, y):
 		var dx := absf(float(x[1]) - shade * most)
 		var dy := absf(float(y[1]) - shade * most)
@@ -8663,7 +8709,7 @@ func put_on_trade_table(id: String) -> Dictionary:
 	# Suitors: the keenest clubs that have something to offer.
 	var suitors := []
 	for row in keen.slice(0, 6):
-		if not _bids(str(row[0]), float(row[1]) / (1.0 + float(difficulty_rules()["trade_margin"])), prospects).is_empty():
+		if not _bids(str(row[0]), float(row[1]) / (1.0 + float(difficulty_rules()["trade_margin"])), prospects, my_club).is_empty():
 			suitors.append(row)
 	var shade := UNASKED_BID + 0.1 * float(mini(suitors.size(), 3) - 1)
 	var made := 0
@@ -8853,7 +8899,7 @@ func ask_around(id: String) -> Array:
 			else:
 				# He's worth something to them, but less than anything they'd part with:
 				# what else of yours would get their cheapest piece.
-				var cheapest := _bids(club, INF, prospects)
+				var cheapest := _bids(club, INF, prospects, my_club)
 				var counter := {}
 				if not cheapest.is_empty():
 					var theirs: Array = (cheapest[0][0] as Array).map(func(a): return str(a["id"]))
@@ -8921,7 +8967,8 @@ func accept_trade_offer(i: int) -> Dictionary:
 	var o: Dictionary = trade_offers[i]
 	var r := make_trade(str(o["club"]), o["take"], o["give"])
 	o["status"] = "accepted" if bool(r["ok"]) else "off"
-	if not bool(r["ok"]):
+	# Your challenge's own reason stands; anything else means they moved on.
+	if not bool(r["ok"]) and str(r.get("code", "")) != "trade_challenge":
 		r["reason"] = "%s have moved on: the offer is off." % GameDB.club_name(str(o["club"]))
 	mark_dirty()
 	return r
@@ -9459,8 +9506,9 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 	for p in pool:
 		by_id[str(p["id"])] = p
 	# Blooding brings young players in for older ones: a youngster who came
-	# in is never the next one out, and nobody young is dropped, so each
-	# swap is a real change and the note names only what changed.
+	# in is never the next one out, a man swapped out never comes back, and
+	# nobody young is dropped, so each swap is a real change and the note
+	# names only what changed.
 	var brought: Array = []
 	var dropped: Array = []
 	for _n in range(YOUTH_MAX):
@@ -9479,7 +9527,7 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 			var role: String = "MID" if line == "WING" else line
 			for p in pool:
 				var pid := str(p["id"])
-				if used.has(pid) or brought.has(pid) or not is_young(p) \
+				if used.has(pid) or brought.has(pid) or dropped.has(pid) or not is_young(p) \
 						or not Ratings.plays_role(p, role):
 					continue
 				var gap := int(by_id[weakest]["overall"]) - int(p["overall"])
@@ -9491,6 +9539,14 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 		arr[arr.find(best_swap[1])] = best_swap[2]
 		dropped.append(str(best_swap[1]))
 		brought.append(str(best_swap[2]))
+	# A youngster in for the full-back is not the full-back: the line is
+	# laid out again so the key posts stay with key players.
+	if not brought.is_empty():
+		for line in ["DEF", "FWD"]:
+			var ids: Array = side2[line]
+			if ids.all(func(id): return by_id.has(str(id))):
+				var laid := Roles.key_post_order(ids.map(func(id): return by_id[str(id)]), line)
+				side2[line] = laid.map(func(p): return str(p["id"]))
 	return {"side": side2, "note": _blooding_note(brought, dropped, by_id) if not brought.is_empty()
 			else "No young player is close enough to a starter's spot: this is your best side."}
 

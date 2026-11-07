@@ -17,7 +17,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 67 | Management pays: trade period at real volume, recruiters' edge and development projects (4.Q11); balance-gated | audit across 8-10 seasons |
 | 69 | Hub leads with one hero element, shown on the hub first (6.Q2) | hub capture, critics clean |
 | 70 | Pre-timeskip: the full survey, not the simpler version (T5.Q20) | survey built |
-| 71 | Former-player coaches: lower the coaching rate toward the 60-80% aspiration (86% by 2058 now) (T5.Q15) | audit shows the lower rate |
 | 73 | Premiership-year tattoos at a restrained, configurable rate; zero gameplay effect (6.Q16; see G 6.63) | tattoos on, rate in one place |
 | 74 | Gather Round as a shared league event at host venues, with a policy for odd club counts (T5.Q11a) | built |
 | 75 | Sir Doug Nicholls Round as a real annual event, design stored in the save (T5.Q11b) | built |
@@ -25,32 +24,22 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 78 | Rare big margins come back through Momentum (100+ about 0.5% against real 1.9%); balance-gated (T8.Q4) | audit shows the blowout rate |
 | 84 | Togetherness at tight and cliques is felt in matches (director 2026-11-06, after the row 68 review); balance-gated, his playtest judges | audit shows the effect, he has played it |
 | 89 | Midfield intercepts close the gap now: sim 1.4 per team per game against real 2.5 (T8.Q8); balance-gated, `tools/balance.sh match 1000`, his playtest judges | audit shows the intercept rate near real |
-| 90 | Development drift fixed now, cause first: contested bull 3.5% to about 11% and hothead 6.2% to 32.1% over seven seasons (T8.Q10) | cause shown, then a seven-season audit holds the shares |
 | 92 | Back-zone carries retuned (CARRY_ROLES) so defenders carry the ball like real AFL (T9.Q22); balance-gated, paired 1,000-match table in the PR | carry share near real, his playtest judges |
 | 97 | Training: one stat focus per player per season, drills do the rest (T1.Q7, director 2026-11-06) | focus picked once a season, test |
 | 98 | Audio settings become Mute and one Volume slider (T7.O16) | settings show the two controls, real-tap test |
 | 99 | Football department budget merges into High performance: one spend (T9.Q14) | one spend line, old saves load |
-| 100 | Culture sheet moves into the Captaincy panel | culture shown with the leaders, old sheet gone |
-| 101 | Pre-season drill plan split by position group: mids, defenders, forwards, rucks (director: "split it between position groups") | four group plans, test |
 | 103 | Synergies within reach: draft, trade and free-agent screens show which synergy a player would complete, and a player can grow a trait over seasons through training (4.Q10); balance-gated | both shown in play, paired table |
-| 104 | Generated players get synergy traits at the real-player rate and contested bulls at the real 3.5% (4.Q10; drift side is row 90); balance-gated | generation audit shows both rates |
 | 105 | Press conference: list every place the code differs from the bible and show him before anything changes (T3.Q6) | list shown to him |
 | 106 | First-goal line in the feed for any player at your club, backed or not (T5.Q8) | line appears once per player, test |
 | 107 | Event cards: every choice gets an upside and a downside, and never-seen cards get a trigger (T5.Q18, row 34) | no no-cost choice, every card reachable in an audit |
-| 109 | Screen defects: club ink to 4.5:1 on tinted panels, hub ladder fills the right side at 2560, break notes above 13 px, draft subtitle not cut off (6.Q18) | captures at phone and 2560 |
 | 110 | Vignette defects: boundary-snap curved white line, snap-for-goal hovering ball (6.Q18) | frames checked, captures to him |
-| 111 | Sacked is not the end: choose from a few clubs with open jobs, or retire with the record read out (T5.r22) | choice offered after a sacking, test |
 | 112 | Rival board letter after a strong season (T5.r23) | letter only after a strong season, accept and decline tested |
 | 113 | Start at the end of 2026: real lists, the real 2026 National Draft with each club's real picks, then play 2027 (T5.r134) | start option, sourced pick ownership, test |
-| 114 | Challenge starts: Youth only, Rebuild (bottom club), your own goal (T5.r115) | three starts selectable, test |
 | 115 | Board goal set from where the list ranks pre-season, and said aloud; scales with the number of clubs (T9.Q20, T5.r117) | goal follows rank at 18 and 21 clubs, test |
 | 116 | Awards night: round-by-round Brownlow count, live or one round at a time, plus your club's best and fairest (T5.Q23b) | count watchable both ways, real-tap test |
 | 117 | Coaching staff: head coach, head assistant, assistants; counter-offer (not money) when a rival poaches one (T5.Q16) | approach, counter and departure tested |
 | 118 | Text size setting (Standard, Larger, Largest) and no state shown by colour alone (T3.R10) | every screen at Largest, no colour-only state |
 | 119 | Undo for delist, free-agent signing and contract offer until Sim the week (4.R76) | Undo shown and works, real-tap test |
-| 120 | Wet weather: more fumbles, more stoppages, lower set-shot accuracy (director 2026-11-06); balance-gated | paired wet v dry table |
-| 121 | Career highs shown once each in the match feed and weekly news (T5.r152) | shown once, never repeated, test |
-| 122 | Club honour board and a page for every club reached by tapping its name (T5.r112-113) | both built, real-tap test |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
 
 ## B. Built and OFF: waiting for his playtest, then the switch goes on
@@ -147,7 +136,6 @@ Ids point at `docs/DIRECTOR_BIBLE.md`. Verified against the code on 2026-11-04.
 | T3.F-defects | Open defects: fatigue parity doubt, implausible generated veteran, goal-line scramble he called nonsense, stray curved line in the boundary-snap vignette, tag moving left (his words: "heinous, awful UI design", A2). Bye bug fixed in #210 and press tint in #767, so left out. | Each defect is reproduced, fixed and covered by a test or capture; the tag-left screen is redone and shown to him. |
 | 4.R75 | Fewer, stronger, situational traits. The director's audit line: 'fewer, stronger, situational traits'. The forming side against the league (Matchup.standing), the 50/100/150/200 milestones and With us history are already in, and momentum is a real match edge (MOMENTUM_EDGE 0.04). Only the trait trim is left. | The trait list is cut to a short set where each trait switches on in a stated situation. A test pins the new list and old saves map to the nearest trait. |
 | 4.R76 | Undo for a delisting, a free-agent signing and a contract offer until the week moves on (P-09), after the director's 'important decisions never resolve from one accidental tap'. | Delist, FA sign and contract offer each show Undo until Sim the week, and the undo restores list, cap and offers. A real-tap check and a save/reload test cover it. Onboarding is already in (Tutorials On/Off, #572). |
-| T5.Q11c | Add the Danny Frawley Golden Fist for the best defender of the season: "Add the Danny Frawley Golden Fist award for the best defender of the season." Role-aware rule from tracked defensive stats (intercept marks, spoils, one-percenters, contests) so lockdown and intercept defenders both have a path. | Awarded each season with deterministic tiebreaks, kept in history, shown in awards and trophy room, no untracked stats used; test covers both defender types. |
 | T5.Q16 | Coaching hierarchy (Head coach, Head assistant, other assistants) plus opportunity-based retention: when a rival approaches one of your coaches you can make a counter-offer or allow departure. "This retention negotiation is not a monetary bidding system". | One head assistant per club, rival approach held and resolved once, counter-offer is a role or succession promise with a stated timeframe, unmet promises cost trust visibly, AI clubs follow the same rules, test proves it. |
 | T5.Q23b | Round-by-round Brownlow count and your club's own best and fairest count on awards night: "give it a bespoke staggered, round-by-round awards-night count, watchable continuously in real time or advanced one round at a time". Awards race, trophy room and fixture history already exist; the awards program today steps through four stages, not rounds. | Brownlow and club B&F reveal round by round from the stored votes (continuous, pause, next round, skip round, skip all), only revealed votes shown, no re-roll; real tap check on a phone. |
 | T5.Q25 | Coach as the new club: take the job at a different club (director ruling 8: "yes, built after the package (not built yet)"). | A career can be started or continued as coach of a chosen new club with the rest of the save consistent; test and phone check. |

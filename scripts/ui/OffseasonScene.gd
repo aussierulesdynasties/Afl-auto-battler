@@ -73,6 +73,11 @@ func _build() -> void:
 	hv.add_child(UiKit.lbl("Payroll %s of %s  ·  cap room %s  ·  list %d" % [Contracts.money(GameState.my_payroll()),
 			Contracts.money(GameState.salary_cap), Contracts.money(room), GameState.my_list.size()], 15,
 			UiKit.GOOD if room >= 0 else UiKit.BAD, true))
+	# Your challenge's rule, said where it bites: who you may bring in.
+	if Challenge.kind(GameState) in ["youth", "rebuild"]:
+		var rule := _para(Challenge.stated_line(GameState), 13, UiKit.EMPH)
+		rule.name = "ChallengeRule"
+		hv.add_child(rule)
 	if not GameState.offseason_open():
 		hv.add_child(_para("The off-season is closed: trades and contracts open when the season ends, until the national draft starts.", 13, UiKit.MUTED))
 	else:
@@ -644,8 +649,19 @@ func _agents(body: VBoxContainer) -> void:
 		row.name = "Agent_" + str(p["id"])
 		_action_slot(card).add_child(row)
 		var talks: Dictionary = p.get("talks", {})
+		var barred := Challenge.block_reason(GameState, p)
 		if bool(talks.get("walked", false)):
 			row.add_child(UiKit.line("Talks broke down: he'll look elsewhere", UiKit.SECONDARY, UiKit.BAD, true))
+		elif barred != "":
+			# Your challenge bars him: said before any talks, not after.
+			(card.get_child(0) as VBoxContainer).add_child(_para(barred, 12, UiKit.MUTED))
+			var shut := UiKit.btn(Challenge.short_tag(GameState, p), UiKit.SECONDARY)
+			shut.name = "FreeAgentBarred"
+			shut.custom_minimum_size = Vector2(0, 44)
+			shut.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			shut.disabled = true
+			_compact_actions(row, shut)
+			row.add_child(shut)
 		else:
 			if talks.has("counter"):
 				(card.get_child(0) as VBoxContainer).add_child(_para("He'd sign for %s over %d season%s." % [
@@ -976,10 +992,15 @@ func _pick_grid(body: VBoxContainer, list: Array, chosen: Array, prefix: String)
 		return str(a["id"]) < str(b["id"]))
 	for p in sorted:
 		var id := str(p["id"])
-		var b := _asset_button("%s  ·  %s  ·  %d OVR  ·  %s POT  ·  %d%s" % [GameDB.player_display_name(p),
+		# Their players your challenge bars from coming to you: the tag sits
+		# by his name, where a trimmed row still shows it, and he can't be added.
+		var tag := Challenge.short_tag(GameState, p) if prefix == "Their_" else ""
+		var b := _asset_button("%s%s  ·  %s  ·  %d OVR  ·  %s POT  ·  %d%s" % [GameDB.player_display_name(p),
+				"  ·  " + tag if tag != "" else "",
 				Ratings.role_tag(p), int(p["overall"]), str(GameState.pot_view(p)["text"]),
 				int(p.get("age", 0)), "  ·  Untouchable" if GameState.is_untouchable(id) else ""], chosen.has(id))
 		b.name = prefix + id
+		b.disabled = tag != "" and not chosen.has(id)
 		b.pressed.connect(func():
 			if not NameLink.on_profile_tap(b):
 				_toggle(chosen, id))

@@ -743,8 +743,24 @@ static func select_22(list_players: Array, dual := -1) -> Dictionary:
 			used[spare_ruck["id"]] = true
 
 	ground = ground.slice(0, 18)
+	key_posts(ground)
 	Roles.mark_wings(ground)
 	return {"ground": ground, "bench": bench}
+
+
+## The auto-pick's key posts (Roles.key_post_order): each line's players are
+## re-laid in their own places in `ground`, so the line reads in spot order.
+static func key_posts(ground: Array) -> void:
+	for line in ["DEF", "FWD"]:
+		var at: Array = []
+		var line_players: Array = []
+		for i in range(ground.size()):
+			if str(ground[i].get("role", "")) == line:
+				at.append(i)
+				line_players.append(ground[i])
+		var laid := Roles.key_post_order(line_players, line)
+		for k in range(at.size()):
+			ground[at[k]] = laid[k]
 
 
 ## True when a player can take the field (not injured, suspended or rested).

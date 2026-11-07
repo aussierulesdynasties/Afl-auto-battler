@@ -1180,6 +1180,15 @@ func _apply_history_rows(list: Array) -> void:
 			p["drafted_year"] = int(str(cells[idx["draft_year"]]))
 			p["drafted_type"] = str(cells[idx["draft_type"]])
 			p["drafted_pick"] = int(pick)
+			# The club that drafted him is the first club in his AFL career
+			# (club:from:to:games:goals stints, oldest first): what home-grown
+			# means for a Challenge goal (Challenge.homegrown_flag).
+			if idx.has("career"):
+				var first := str(cells[idx["career"]]).split(";", false)
+				if not first.is_empty():
+					var code := str(first[0]).split(":")[0].strip_edges()
+					if code != "" and code != "?":
+						p["drafted_club"] = code
 		var hist := []
 		for chunk in str(cells[idx["seasons"]]).split(";", false):
 			var parts := chunk.split(":")

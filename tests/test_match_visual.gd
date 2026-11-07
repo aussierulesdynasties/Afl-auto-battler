@@ -781,10 +781,13 @@ func _test_truth(res: Dictionary) -> Array:
 ## player 40 m off on average) before, 9 (0, 30 m) after; four trace seeds
 ## 139 -> 47. The caps leave room for sim changes redrawing the match (the
 ## 1.0.7 tuning measured 13: 14, director 2026-11-06, loosen to measured).
-## Key defenders (2026-11-07) redrew seed 42 to 19; over trace_collect's 12
-## matches the long collects held level (183 on main, 181 after): 19.
+## Key posts (2026-11-07) re-lay each line, which redraws seed 42 to 18; over
+## seeds 42 and 1-5 the total is unchanged (96 before, 95 after): 18.
+## Clearing it out of defence (2026-11-07) kicks long from defensive 50 and a
+## kick may hang longer for its receiver (MatchDirector KICK_HANG_MAX): seed
+## 42 has 11; over trace_collect's 12 matches 166 long collects (main 162): 11.
 const PAUSE_S := 1.5
-const PAUSE_MAX := 19
+const PAUSE_MAX := 11
 const PAUSE_PRESSURE_MAX := 1
 
 
