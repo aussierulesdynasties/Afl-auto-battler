@@ -48,7 +48,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 117 | Coaching staff: head coach, head assistant, assistants; counter-offer (not money) when a rival poaches one (T5.Q16) | approach, counter and departure tested |
 | 118 | Text size setting (Standard, Larger, Largest) and no state shown by colour alone (T3.R10) | every screen at Largest, no colour-only state |
 | 119 | Undo for delist, free-agent signing and contract offer until Sim the week (4.R76) | Undo shown and works, real-tap test |
-| 120 | Wet weather: more fumbles, more stoppages, lower set-shot accuracy (director 2026-11-06); balance-gated | paired wet v dry table |
 | 121 | Career highs shown once each in the match feed and weekly news (T5.r152) | shown once, never repeated, test |
 | 122 | Club honour board and a page for every club reached by tapping its name (T5.r112-113) | both built, real-tap test |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
