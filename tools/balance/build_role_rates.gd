@@ -43,12 +43,15 @@ func _run() -> void:
 	# "Defender", "Small defender", "Wing", "Key forward", ...), with the spread of
 	# the type's disposals a player-game across the 18 clubs (each club's pooled
 	# rate) so the report can mark the sim IN / NEAR / OUT as it does team stats.
+	# Roles is loaded by path: naming the class here would compile its
+	# autoload chain before the autoloads exist (preflight).
+	var roles_lib = load("res://scripts/sim/Roles.gd")
 	var tacc := {}
 	for p in db.players:
 		var g := int(p.get("gm", 0))
 		if g < MIN_GAMES:
 			continue
-		var ty := Roles.label(p)
+		var ty := str(roles_lib.label(p))
 		if not tacc.has(ty):
 			tacc[ty] = {"players": 0, "games": 0, "sum": {}, "club": {}}
 		var a: Dictionary = tacc[ty]

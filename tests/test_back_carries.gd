@@ -139,9 +139,9 @@ func _test_no_rebound_at_the_contest() -> void:
 	_check(clean, "a turned-over entry credits no rebound 50 at the contest")
 
 
-## One definition (Champion Data): the rebound 50 is the kick or handball that
-## takes the ball from inside defensive 50 out of it, however the side came by
-## it. Chains for side 1 from deep in its defensive 50 after a turnover, a
+## One definition (Champion Data): the rebound 50 is the kick, handball or run
+## through a tackle that takes the ball from inside defensive 50 out of it,
+## however the side came by it. Chains for side 1 from deep in its defensive 50 after a turnover, a
 ## ball-up there and a kick-in: each credits at most one rebound 50 (a chain
 ## only goes forward, so it leaves once), to a side-1 player who disposed of
 ## the ball in that chain, and the team count matches; every origin credits some.

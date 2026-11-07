@@ -3109,6 +3109,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				var before_fp := fp
 				fp = clampf(fp + rng.randf_range(4.0, 12.0) * dir, -gline, gline)
 				_metres(side, carrier, (fp - before_fp) * dir)
+				# Carried out of defensive 50 through the tackle: his rebound 50.
+				_rebound_exit(side, carrier, before_fp * dir, fp * dir)
 				var how := _break_kind(carrier)
 				_t(side, how)
 				_p(carrier, how)
@@ -3223,10 +3225,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		# Rebound 50 (Champion Data): his kick or handball takes the ball from
 		# inside his defensive 50 out of it, however his side came by it (a
 		# kick-in, a stoppage, an intercept, a failed entry) and whatever
-		# happens to it next. The one place a rebound 50 is counted.
-		if prev_atk_fp <= -f50 and atk_fp > -f50:
-			_t(side, "rebounds")
-			_p(carrier, "rebounds")
+		# happens to it next.
+		_rebound_exit(side, carrier, prev_atk_fp, atk_fp)
 		# By default the next carrier gets it uncontested: a handball
 		# receive, a mark, a kick he gathers with nobody contesting it (the
 		# engine has no contest there; a rushed disposal loses ground, not
@@ -4621,6 +4621,18 @@ func _back_roles(group: Array) -> Dictionary:
 		var w := float(CARRY_BACK_RETUNED[r])
 		out[r] = w * float(by_int[r]) / float(by_use[r]) if by_use.has(r) else w
 	return out
+
+
+## Rebound 50 (Champion Data: moving the ball from the defensive 50 into the
+## midfield), director 2026-11-07 "credit rebounds": every exit counts, by
+## whoever takes it out, his kick, his handball or his run through a tackle.
+## `from_atk` and `to_atk` are the ball's spot before and after, from the
+## side's own view. The one place a rebound 50 is credited.
+func _rebound_exit(side: int, carrier, from_atk: float, to_atk: float) -> void:
+	var f50 := float(Ratings.T["forward50_line"])
+	if from_atk <= -f50 and to_atk > -f50:
+		_t(side, "rebounds")
+		_p(carrier, "rebounds")
 
 
 ## His use of the ball as he is playing right now: the kick-in taker's and
