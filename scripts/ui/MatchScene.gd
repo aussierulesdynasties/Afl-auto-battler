@@ -1076,8 +1076,12 @@ func _show_coach_box() -> void:
 		for r in opp_listed:
 			if str(r["id"]) == bid and not tag_first.any(func(x): return str(x["id"]) == bid):
 				tag_first.append(r)
+	# On a PC break the Tag pane is the tallest call and the sheet keeps its room
+	# (_settle_call_pane): its names sit three to a row there, so the break
+	# still fits 720 high with Who tags under them.
 	var tag := _player_choice("TagPicker", "No tag", opp_listed, tag_first, calls, "tag_id",
-			MatchNotes.tag_question(), sync_tag, Callable(), Callable(), "Other player…", true)
+			MatchNotes.tag_question(), sync_tag, Callable(), Callable(), "Other player…", true,
+			3 if wide and one_line else 2)
 	# The question is drawn over the choices, as the loose interceptor's is.
 	var tag_block := _call_block("Tag", tag)
 	var tag_ask := UiKit.lbl(MatchNotes.tag_question(), UiKit.BODY, UiKit.TEXT, true)
@@ -1660,7 +1664,10 @@ func _mount_one_line(c: Dictionary) -> void:
 			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			col.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 			cols.add_child(col)
-		right.size_flags_stretch_ratio = 1.15
+		# The rows need little width; the chosen call needs the most (the Who
+		# tags cards wrap less there, so the Tag call, the tallest, fits 720 high).
+		mid.size_flags_stretch_ratio = 0.9
+		right.size_flags_stretch_ratio = 1.3
 		for n in [quarter_head, facts, legs]:
 			put.call(left, n)
 		if did_head != null:
@@ -2868,7 +2875,7 @@ func _ink_choices(grid: Node) -> void:
 func _player_choice(node_name: String, none_label: String, roster: Array, first: Array,
 		calls: Dictionary, field: String, sheet_title: String, on_change: Callable = Callable(),
 		detail: Callable = Callable(), card: Callable = Callable(), other_label := "Other player…",
-		rest_only := false) -> Control:
+		rest_only := false, columns := 2) -> Control:
 	var box := UiKit.vbox(0)
 	box.name = node_name
 	var rebuild := func(self_ref: Callable) -> void:
@@ -2883,7 +2890,7 @@ func _player_choice(node_name: String, none_label: String, roster: Array, first:
 			for r in roster:
 				if str(r["id"]) == cur:
 					shown.append([cur, _card_text(r, detail)])
-		var grid := _choice_grid(node_name + "Grid", shown, calls, field, 2, on_change)
+		var grid := _choice_grid(node_name + "Grid", shown, calls, field, columns, on_change)
 		box.add_child(grid)
 		# rest_only: the list behind the button is who is not already a button
 		# here, and with nobody left there is no button.
