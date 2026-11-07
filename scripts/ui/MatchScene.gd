@@ -33,6 +33,9 @@ var _interactive := false
 ## to full time, nothing played or applied again.
 var _review := false
 var _event_cursor := 0
+## Your side's legs (id -> energy) when the stretch now playing was simulated:
+## the tired marks read these until the oval catches up with the sim.
+var _legs_seen := {}
 var _my_side := 0
 var _margin: MarginContainer
 var _stacked := false
@@ -3304,6 +3307,7 @@ func _simulate_next_quarter(t: Dictionary) -> void:
 ## Simulate on to the end of the quarter or the next moment, then play it.
 func _advance_segment() -> void:
 	var sim: MatchSim = GameState.pending_sim
+	_legs_seen = _legs_now(sim)
 	if sim.continue_quarter():
 		_res = sim.end_quarter()
 	else:
@@ -3427,9 +3431,18 @@ func _refresh_marks() -> void:
 	var sim_now = GameState.pending_sim if _interactive else null
 	if sim_now != null:
 		injuries = sim_now.injuries
-		for r in sim_now.legs(_my_side):
-			energy[str(r["id"])] = float(r["energy"])
+		# The sim has run ahead of the oval: its legs now are the end of the stretch
+		# still playing, so the marks use the legs from when that stretch began.
+		energy = _legs_now(sim_now) if _pitch.current_index() >= _pitch.events.size() else _legs_seen
 	_pitch.set_marks(PlayerMarks.build(_pitch.events, _pitch.current_index(), injuries, energy))
+
+
+## Your side's legs in the sim right now: id -> energy.
+func _legs_now(sim: MatchSim) -> Dictionary:
+	var out := {}
+	for r in sim.legs(_my_side):
+		out[str(r["id"])] = float(r["energy"])
+	return out
 
 
 ## The ring on the oval: the players of yours you have made a call on or
@@ -3778,6 +3791,7 @@ func _on_finished() -> void:
 	# A level final plays on: extra time is rolled now and fed to the pitch.
 	if _interactive and not _skipping and GameState.pending_sim != null \
 			and GameState.pending_sim.needs_extra_time():
+		_legs_seen = _legs_now(GameState.pending_sim)
 		_res = GameState.pending_sim.run_extra_time()
 		_stamp_match_meta()
 		_append_new_events()

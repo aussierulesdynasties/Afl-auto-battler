@@ -2116,6 +2116,26 @@ func _test_rings_on_the_oval() -> void:
 	box.find_child("StartQuarter", true, false).emit_signal("pressed")
 	await _settle()
 	_check(pitch.ringed(focus_id), "The player you play through is ringed from the bounce")
+	# The sim has played the stretch ahead of the oval: legs it has spent by the
+	# stretch's end carry no tired mark while the oval is still behind.
+	var legs_id := ""
+	for r in sim.squads[me].ground:
+		if not pitch.marks.has(str(r["id"])):
+			legs_id = str(r["id"])
+			break
+	var behind: bool = pitch.current_index() < pitch.events.size()
+	var legs_had: bool = sim.energy.has(legs_id)
+	var legs_was = sim.energy.get(legs_id, 100.0)
+	sim.energy[legs_id] = 10.0
+	m.call("_refresh_marks")
+	var ahead_marked: bool = pitch.marks.has(legs_id)
+	if legs_had:
+		sim.energy[legs_id] = legs_was
+	else:
+		sim.energy.erase(legs_id)
+	m.call("_refresh_marks")
+	_check(legs_id != "" and behind and not ahead_marked,
+			"Tired marks follow the oval, not the sim ahead of it (%s, behind %s, marked %s)" % [legs_id, behind, ahead_marked])
 	var tagger = load("res://scripts/sim/MatchSim.gd").tagger_for(sim.squads[me].ground)
 	_check(tagger != null and pitch.ringed(str(tagger["id"])), "So is the player who goes to your tag")
 	# Who tags is the coach's call: another midfielder on the ground takes the
