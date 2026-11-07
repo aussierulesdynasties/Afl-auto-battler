@@ -50,6 +50,14 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "-
   player by listed position. Real: `afl_spoil_zones.json` (Champion Data 2026 via Wheelo, built by
   `build_spoil_zones.py`); the total and the by-position rates are measured, the zone split is an
   estimate, because Champion Data does not publish where a spoil happens.
+  A Rucks section (T2.31) sets team hit-outs, hit-outs to advantage and the number-one ruck's hit-outs,
+  to-advantage rate, share of his side's hit-outs and hit-outs per ruck contest against Champion Data
+  2025 and 2026 (`afl_ruck_rates.json`, built by `build_ruck_rates.py` from docs/research/wheelo/);
+  the club spread (each club's average over the run against the real 18 clubs' lowest..highest, sd and
+  the correlation with its real figure); and the per-match duel spread (team hit-out margin 10+/20+/30+,
+  number-one rucks 10+/20+ apart, one side winning 60/65/70%+ of the hit-outs), which has no real
+  per-match reference yet. Each team line carries `club` and `ruck1` [hit-outs, to advantage,
+  ruck contests, ruck rating] for this.
 - **Runs** land in `.balance/<timestamp>/` (git-ignored, `.gdignore`d).
 
 ## When to use it

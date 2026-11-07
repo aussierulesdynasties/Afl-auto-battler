@@ -124,6 +124,8 @@ func play(from: int, count: int, out: String, weather: String,
 				t["ic_" + role] = float(t.get("ic_" + role, 0.0)) + float(st.get("intercepts", 0.0))
 				t["pg_" + role] = int(t.get("pg_" + role, 0)) + 1
 				t["sp_" + role] = float(t.get("sp_" + role, 0.0)) + float(st.get("spoils", 0.0))
+			t["club"] = h if side == 0 else a
+			t["ruck1"] = ruck1(r["roster"][side], stats, sq_h if side == 0 else sq_a)
 			teams.append(t)
 		var line := JSON.stringify({"i": i, "home": h, "away": a, "teams": teams, "duels": duels(sim, r)})
 		fh.store_line(line)
@@ -216,6 +218,23 @@ func duels(sim: MatchSim, r: Dictionary) -> Array:
 			top = maxi(top, int(per[d]))
 		out.append([n, won, top, MatchNotes.duel_verdict(won, n)])
 	return out
+
+
+## The side's number-one ruck in this match (T2.31): the man with the most hit-outs
+## (ties to the first in the roster), as [hit-outs, hit-outs to advantage, ruck
+## contests, his ruck rating]. [0, 0, 0, 0] when nobody on the side had a hit-out.
+static func ruck1(roster: Array, stats: Dictionary, sq: Squad) -> Array:
+	var rating := {}
+	for pl in sq.ground + sq.bench:
+		rating[str(pl["id"])] = int((pl.get("attr", {}) as Dictionary).get("ruck", 0))
+	var best := [0, 0, 0, 0]
+	for pl in roster:
+		var st: Dictionary = stats.get(str(pl["id"]), {})
+		var ho := int(st.get("hitouts", 0))
+		if ho > int(best[0]):
+			best = [ho, int(st.get("hitouts_adv", 0)), int(st.get("ruck_contests", 0)),
+				int(rating.get(str(pl["id"]), 0))]
+	return best
 
 
 ## "a=1,b=0.5" -> {"a": 1.0, "b": 0.5}
