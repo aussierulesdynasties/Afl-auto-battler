@@ -2240,7 +2240,7 @@ func _pick_presser(side: int, zone: int):
 	var group: Array = (squads[side] as Squad).ground
 	var weights := []
 	var ctx := _pick_ctx(side)
-	var pw := _tv("press_pick_pow", PRESS_PICK_POW)
+	var pw := _tv("PRESS_PICK_POW", PRESS_PICK_POW)
 	for p in group:
 		weights.append(float(w.get(str(p["role"]), 0.0))
 				* pow(maxf(1.0, _a(p, "pressure")), pw)

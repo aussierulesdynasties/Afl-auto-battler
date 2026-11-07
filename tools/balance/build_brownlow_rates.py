@@ -19,10 +19,15 @@ report set the game against. Sources, all free and public:
 
 Per season:
   - tallies: winner, 2nd, 3rd, 5th and 10th; players who polled, polled 10+ and 20+;
-  - vote share: rucks (hit-out gate) for every season; MID / FWD / DEF / RUCK for 2025-26
-    (Champion Data position; Mid-Forward counts as a forward, as build_spoil_zones.py has it;
-    anyone over the hit-out gate is a ruck);
-  - tackles a game per player (players with 12+ games): max, p99, p90, p50, by role;
+  - vote share: rucks (hit-out gate) for every season; MID / FWD / DEF / RUCK for 2025-26, two
+    ways: "role_share" by Champion Data position (Mid-Forward counts as a forward, as
+    build_spoil_zones.py has it) and "role_share_listed" by the game's own listing
+    (data/players_enriched_2026.csv real_pos, the position the Brownlow audit reads; a man not
+    on the 2026 lists falls back to his Champion Data position). Either way anyone over the
+    hit-out gate is a ruck and a listed ruck under it counts as a forward;
+  - tackles a game per player (players with 12+ games): max, p99, p90, p50, by role. The pooled
+    "ALL" line spans 2021-26 (TACKLE_SEASONS: the stand-rule era); the lines by position can
+    only span 2025-26;
   - pressure acts a game per player and coaches' votes share by position (2025-26).
 The 2020 season was 17 rounds of 16-minute quarters: it is flagged and left out of the pooled
 reference ranges.
@@ -31,10 +36,13 @@ From the match pages (2023-2025 home-and-away):
   - per player-game tackles (p50 / p90 / p99 / max) and each side's top tackler a match;
   - the share of votes that go to the winning side;
   - vote_fit: a Plackett-Luce fit of the umpires' 3-2-1 order on each player's match line, the
-    terms CoachReport.influence uses. The weights are per unit of the stat, scaled so a disposal
-    is 1.0 (the influence scale). Pressure acts are not on AFL Tables match lines, so they get no
-    fitted weight. "replay" re-votes every real match deterministically (top three by the fitted
-    weights) and reports the winning tallies that gives, against the real ones.
+    terms Awards.umpire_score uses. The weights are per unit of the stat, scaled so a disposal
+    is 1.0. "with_result" adds the result (a win = 1, a draw or loss = 0): those are the game's
+    Brownlow weights (Awards.UMPIRE_WEIGHTS, UMPIRE_WIN). Pressure acts are not on AFL Tables
+    match lines, so they get no fitted weight; clangers are left out because, fitted, they come
+    out slightly positive (they ride on the disposal) and a vote for a mistake reads wrong.
+    "replay" re-votes every real match deterministically (top three by the fitted weights) and
+    reports the winning tallies that gives, against the real ones.
 
     python tools/balance/build_brownlow_rates.py            # fetch what is missing, then build
     python tools/balance/build_brownlow_rates.py --offline  # cached pages only
@@ -64,6 +72,8 @@ MATCH_SEASONS = [2023, 2024, 2025]
 SHORT_SEASONS = {2020: "17 rounds of 16-minute quarters (COVID)"}
 RUCK_GATE = 7.0          # hit-outs a game: the game's ruck gate (Ratings.derive_all)
 MIN_GAMES = 12           # per-player rate distributions
+TACKLE_SEASONS = [2021, 2022, 2023, 2024, 2025, 2026]   # the pooled ALL-line tackle band
+LISTING = os.path.join(ROOT, "data", "players_enriched_2026.csv")
 CD_ROLE = {"Midfielder": "MID", "Mid-Forward": "FWD", "Gen. Forward": "FWD", "Key Forward": "FWD",
            "Gen. Defender": "DEF", "Key Defender": "DEF", "Ruck": "RUCK"}
 WHEELO_TEAM = {"Adelaide": "ADE", "Brisbane Lions": "BRL", "Brisbane": "BRL", "Carlton": "CAR",
@@ -76,12 +86,13 @@ WHEELO_TEAM = {"Adelaide": "ADE", "Brisbane Lions": "BRL", "Brisbane": "BRL", "C
 # Match-line columns on an AFL Tables game page, after # and Player.
 GAME_COLS = ["ki", "mk", "hb", "di", "gl", "bh", "ho", "tk", "rb", "if50", "cl", "cg", "ff", "fa",
              "br", "cp", "up", "cm", "mi", "onepct", "bo", "ga", "pctp"]
-# CoachReport.influence terms (sim stat key -> AFL Tables column). Pressure acts have no column.
+# Awards.umpire_score terms (sim stat key -> AFL Tables column). Pressure acts have no column;
+# clangers fit slightly positive (see the docstring) and are left out.
 FIT_TERMS = [("disposals", "di"), ("goals", "gl"), ("marks", "mk"), ("inside50", "if50"),
              ("tackles", "tk"), ("hitouts", "ho"), ("clearances", "cl"),
-             ("one_percenters", "onepct"), ("clangers", "cg")]
+             ("one_percenters", "onepct")]
 # A wider fit, reported for reference only (not what the game uses).
-WIDE_EXTRA = [("contested_possessions", "cp"), ("behinds", "bh"), ("goal_assists", "ga"),
+WIDE_EXTRA = [("clangers", "cg"), ("contested_possessions", "cp"), ("behinds", "bh"), ("goal_assists", "ga"),
               ("rebounds", "rb"), ("frees_for", "ff"), ("frees_against", "fa"),
               ("contested_marks", "cm")]
 
@@ -256,6 +267,21 @@ def cd_lookup(rows: list[dict]) -> dict:
     return {"full": full, "last": last}
 
 
+def listing() -> dict:
+    """(club, normalised full name) -> the game's listed line (MID, FWD, DEF, RUCK), from
+    data/players_enriched_2026.csv real_pos (RUC -> RUCK)."""
+    import csv
+    out = {}
+    if not os.path.exists(LISTING):
+        return out
+    with open(LISTING, encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            pos = {"RUC": "RUCK"}.get(r.get("real_pos", ""), r.get("real_pos", ""))
+            if pos in ("MID", "FWD", "DEF", "RUCK"):
+                out[(r["club"], norm(r["first"] + r["last"]))] = pos
+    return out
+
+
 def cd_row(look: dict, club: str, first: str, lastn: str) -> dict | None:
     r = look["full"].get((club, norm(first + lastn)))
     if r is None:
@@ -281,6 +307,7 @@ def season_block(year: int, offline: bool) -> dict | None:
     if not rows:
         return None
     look = cd_lookup(wheelo(year)) if year in (2025, 2026) else None
+    listed = listing() if look is not None else {}
     votes = sorted((p.stats["br"] for p in rows), reverse=True)
     total = sum(votes)
     tallies = {"winner": votes[0], "2nd": votes[1], "3rd": votes[2], "5th": votes[4], "10th": votes[9]}
@@ -290,6 +317,9 @@ def season_block(year: int, offline: bool) -> dict | None:
     ruck_votes = 0.0
     by_role = {"MID": 0.0, "FWD": 0.0, "DEF": 0.0, "RUCK": 0.0}
     coaches = {"MID": 0.0, "FWD": 0.0, "DEF": 0.0, "RUCK": 0.0}
+    by_listed = {"MID": 0.0, "FWD": 0.0, "DEF": 0.0, "RUCK": 0.0}
+    coaches_listed = {"MID": 0.0, "FWD": 0.0, "DEF": 0.0, "RUCK": 0.0}
+    listed_found = 0
     matched = unmatched = 0
     tk = {"ALL": [], "RUCK": [], "MID": [], "FWD": [], "DEF": []}
     pa = {"ALL": [], "RUCK": [], "MID": [], "FWD": [], "DEF": []}
@@ -313,6 +343,15 @@ def season_block(year: int, offline: bool) -> dict | None:
                         role = "FWD"   # a listed ruck under the gate plays forward
                 by_role[role] += p.stats["br"]
                 coaches[role] += num(cd.get("CoachesVotes_Total"))
+                lr = "RUCK" if ruck else listed.get((p.club, norm(p.first + p.last)), "")
+                if lr:
+                    listed_found += 1
+                    if lr == "RUCK" and not ruck:
+                        lr = "FWD"   # the same rule: a listed ruck under the gate plays forward
+                else:
+                    lr = role
+                by_listed[lr] += p.stats["br"]
+                coaches_listed[lr] += num(cd.get("CoachesVotes_Total"))
         if gm >= MIN_GAMES:
             r = p.stats["tk"] / gm
             tk["ALL"].append(r)
@@ -345,6 +384,9 @@ def season_block(year: int, offline: bool) -> dict | None:
         out["role_share"] = {k: round(v / total, 4) for k, v in by_role.items()}
         out["role_share_votes_matched"] = int(sum(by_role.values()))
         out["coaches_role_share"] = {k: round(v / cv, 4) for k, v in coaches.items()} if cv else {}
+        out["role_share_listed"] = {k: round(v / total, 4) for k, v in by_listed.items()}
+        out["coaches_role_share_listed"] = {k: round(v / cv, 4) for k, v in coaches_listed.items()} if cv else {}
+        out["listed_found"] = listed_found
         out["cd_matched"] = matched
         out["cd_unmatched"] = unmatched
         out["pressure_acts_pg"] = {k: dist(v) for k, v in pa.items() if v}
@@ -495,9 +537,10 @@ def _solve(a: list[list[float]], b: list[float]) -> list[float]:
     return [m[i][n] / m[i][i] for i in range(n)]
 
 
-def replay(matches: list[dict], terms: list[tuple[str, str]], w: list[float]) -> dict:
-    """Re-vote every real match deterministically (top three by the weights): the winning
-    tally per season that gives, and how often the real 3-vote player tops the weights."""
+def replay(matches: list[dict], terms: list[tuple[str, str]], w: list[float], win_w: float = 0.0) -> dict:
+    """Re-vote every real match deterministically (top three by the weights, plus win_w for a
+    man on the winning side): the winning tally per season that gives, and how often the real
+    3-vote player tops the weights."""
     tallies, hit3 = {}, 0
     n = 0
     for g in matches:
@@ -505,9 +548,11 @@ def replay(matches: list[dict], terms: list[tuple[str, str]], w: list[float]) ->
             continue
         n += 1
         rows = []
-        for t in g["teams"]:
+        a, b = g["teams"]
+        for side, t in enumerate(g["teams"]):
+            won = a["score"] != b["score"] and (a["score"] > b["score"]) == (side == 0)
             for pl in t["players"]:
-                sc = sum(w[j] * pl["stats"][c] for j, (_, c) in enumerate(terms))
+                sc = sum(w[j] * pl["stats"][c] for j, (_, c) in enumerate(terms)) + (win_w if won else 0.0)
                 rows.append((sc, t["name"] + "|" + pl["name"], int(pl["stats"]["br"])))
         rows.sort(reverse=True)
         hit3 += 1 if rows[0][2] == 3 else 0
@@ -555,9 +600,16 @@ def main() -> int:
         pooled["role_share"] = {r: dist([b["role_share"][r] for b in cd_years]) for r in ("MID", "FWD", "DEF", "RUCK")}
         pooled["coaches_role_share"] = {r: dist([b["coaches_role_share"][r] for b in cd_years])
                                         for r in ("MID", "FWD", "DEF", "RUCK")}
+        pooled["role_share_listed"] = {r: dist([b["role_share_listed"][r] for b in cd_years])
+                                       for r in ("MID", "FWD", "DEF", "RUCK")}
+        pooled["coaches_role_share_listed"] = {r: dist([b["coaches_role_share_listed"][r] for b in cd_years])
+                                               for r in ("MID", "FWD", "DEF", "RUCK")}
         qs = ("max", "p99", "p90", "p50")
         pooled["tackles_pg_by_role"] = {r: {q: dist([b["tackles_pg"][r][q] for b in cd_years]) for q in qs}
-                                        for r in ("ALL", "MID", "FWD", "DEF", "RUCK")}
+                                        for r in ("MID", "FWD", "DEF", "RUCK")}
+        tk_years = [seasons[str(y)] for y in TACKLE_SEASONS if str(y) in seasons]
+        pooled["tackles_pg_by_role"]["ALL"] = {q: dist([b["tackles_pg"]["ALL"][q] for b in tk_years]) for q in qs}
+        pooled["tackles_pg_all_seasons"] = [y for y in TACKLE_SEASONS if str(y) in seasons]
         pooled["pressure_acts_pg_by_role"] = {r: {q: dist([b["pressure_acts_pg"][r][q] for b in cd_years])
                                                   for q in qs} for r in ("ALL", "MID", "FWD", "DEF", "RUCK")}
     matches = load_matches(args.offline)
@@ -580,7 +632,10 @@ def main() -> int:
             "per_disposal_logit": round(unit, 4),
             "weights": weights,
             "with_result": {"weights": {name: round(ww[j] / ww[0], 3) for j, (name, _) in enumerate(FIT_TERMS)},
-                            "won_in_disposals": round(ww[k] / ww[0], 2)},
+                            "won_in_disposals": round(ww[k] / ww[0], 2),
+                            "per_disposal_logit": round(ww[0], 4),
+                            "replay": replay(matches, FIT_TERMS, [round(ww[j] / ww[0], 3) for j in range(k)],
+                                             round(ww[k] / ww[0], 2))},
             "wide": {name: round(wv[j] / wv[0], 3) for j, (name, _) in enumerate(wide)},
             "pressure_acts": "no match-level source; not fitted",
             "replay": replay(matches, FIT_TERMS, [weights[n] for n, _ in FIT_TERMS]),

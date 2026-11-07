@@ -1,7 +1,7 @@
 extends RefCounted
 ## Brownlow realism: who wins and who polls, over seeded home-and-away seasons
 ## through Season.play_round -> MatchSim, votes from Awards.tally_match (the game's
-## own 3-2-1 rule). Set ratings (data/ovr_overrides.csv) are ON, as in a career:
+## own 3-2-1 rule, on Awards.umpire_score). Set ratings (data/ovr_overrides.csv) are ON, as in a career:
 ## never run it with AFL_SKIP_OVR_ROWS=1.
 ##
 ## Args: mode first last.
@@ -22,33 +22,27 @@ extends RefCounted
 ##   WIN  mode season id votes
 ##   WSH  mode season votes_to_winning_side all_votes   (drawn matches left out)
 ##   WSA  mode season alt_key votes_to_winning_side all_votes   (the same, per ALT)
-##   VRD  mode season measure n sum_delta sum_delta_sq bins  (the coach's full-time
-##        read of each man, influence less expected_influence at four quarters:
-##        "old" is the pre-fit weights and expectation, "s<k>" the game's own
-##        measure times k; bins split at the verdict edges 8 4 1 -1 -3 -6)
 ##   SET / UNSET / GEN / RSUM  (ratings mode)
 
-## influence's weights before the umpires' fit; the season totals in ROW are these stats.
+## CoachReport.influence's terms: the season totals in ROW are these stats.
 const COMP := {"disposals": 1.0, "goals": 5.0, "marks": 0.8, "inside50": 2.0, "tackles": 0.5,
 		"pressure_acts": 0.3, "hitouts": 0.7, "clearances": 1.2, "one_percenters": 0.6, "clangers": -2.0}
 ## Other ways to give the 3-2-1, counted on the same matches for comparison only
-## (the game's votes are Awards.tally_match's, on CoachReport.influence):
-##   old     the weights influence had before the umpires' fit (COMP)
-##   fitwin  the umpires' 2023-25 fit with the result in it
-##           (tools/balance/afl_brownlow.json matches.vote_fit.with_result): a
-##           player on the winning side gets won_in_disposals more
-##   umpire  the fit without the result, drawn the way the fit says umpires vote
-##           (Plackett-Luce, per_disposal_logit 0.1921 a unit) instead of always the
-##           top three: the umpires' own unpredictability, seeded per season
+## (the game's votes are Awards.tally_match's, on Awards.umpire_score):
+##   shared  CoachReport.influence, the best-on-ground measure every other award
+##           uses (and the Brownlow used before the umpires' fit)
+##   nowin   the umpires' fit without the result
+##           (tools/balance/afl_brownlow.json matches.vote_fit.weights)
+##   drawn   Awards.umpire_score drawn the way the fit says umpires vote
+##           (Plackett-Luce, with_result per_disposal_logit 0.2098 a unit) instead
+##           of always the top three: the umpires' own unpredictability, seeded
+##           per season
 const ALT := {
-	"old": COMP,
-	"fitwin": {"disposals": 1.0, "goals": 4.966, "marks": 0.272, "inside50": 0.294, "tackles": 0.275,
-			"hitouts": 0.087, "clearances": 0.808, "one_percenters": 0.582, "clangers": 0.188, "won": 7.45},
-	"umpire": {"disposals": 1.0, "goals": 5.412, "marks": 0.378, "inside50": 0.401, "tackles": 0.306,
-			"hitouts": 0.079, "clearances": 0.864, "one_percenters": 0.631, "clangers": 0.104, "noise": 0.1921},
+	"shared": {"measure": "influence"},
+	"nowin": {"weights": {"disposals": 1.0, "goals": 5.367, "marks": 0.366, "inside50": 0.403,
+			"tackles": 0.306, "hitouts": 0.081, "clearances": 0.858, "one_percenters": 0.626}},
+	"drawn": {"measure": "umpire", "noise": 0.2098},
 }
-const VRD_EDGES := [8.0, 4.0, 1.0, -1.0, -3.0, -6.0]
-const VRD_SCALES := [1.0, 1.2, 1.4, 1.6]
 const LINES := ["MID", "DEF", "FWD", "RUCK"]
 const GAP := 5
 
@@ -79,7 +73,6 @@ func run() -> void:
 		var comp := {}  # id -> {stat: season total}
 		var win_votes := 0
 		var all_votes := 0
-		var vrd := {}
 		var wsa := {}
 		var rng := RandomNumberGenerator.new()
 		rng.seed = s * 104729 + 7
@@ -97,7 +90,6 @@ func run() -> void:
 					if wv >= 0:
 						var a: Array = wsa.get(key, [0, 0])
 						wsa[key] = [int(a[0]) + wv, int(a[1]) + 6]
-				_verdicts(vrd, res, players)
 				var w := _vote_sides(res)
 				if w[0] >= 0:
 					win_votes += w[1]
@@ -125,15 +117,11 @@ func run() -> void:
 		print("WSH|%s|%d|%d|%d" % [mode, s, win_votes, all_votes])
 		for key in wsa:
 			print("WSA|%s|%d|%s|%d|%d" % [mode, s, key, int(wsa[key][0]), int(wsa[key][1])])
-		for key in vrd:
-			var v: Dictionary = vrd[key]
-			print("VRD|%s|%d|%s|%d|%.1f|%.1f|%s" % [mode, s, key, int(v["n"]), float(v["sum"]),
-					float(v["sq"]), ",".join((v["bins"] as Array).map(func(x): return str(x)))])
 		print("season %s %d done (%d s)" % [mode, s, (Time.get_ticks_msec() - t0) / 1000])
 
 
 ## [winning side (0/1, -1 for a draw), votes that side got], with the same top
-## three Awards.tally_match picks (most influence on the ground).
+## three Awards.tally_match picks (highest Awards.umpire_score on the ground).
 static func _vote_sides(res: Dictionary) -> Array:
 	var sc: Array = res.get("score", [0, 0])
 	if int(sc[0]) == int(sc[1]):
@@ -144,7 +132,7 @@ static func _vote_sides(res: Dictionary) -> Array:
 	var everyone := []
 	for side in range(mini(2, roster.size())):
 		for r in roster[side]:
-			everyone.append([side, CoachReport.influence(st_all.get(str(r["id"]), {}))])
+			everyone.append([side, Awards.umpire_score(st_all.get(str(r["id"]), {}), side == won)])
 	everyone.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
 	var v := 0
 	for i in range(mini(3, everyone.size())):
@@ -165,10 +153,16 @@ static func _alt_votes(alt: Dictionary, key: String, res: Dictionary, rng: Rando
 		var won := int(sc[side]) > int(sc[1 - side])
 		for r in roster[side]:
 			var st: Dictionary = st_all.get(str(r["id"]), {})
-			var v := float(wt.get("won", 0.0)) if won else 0.0
-			for k in wt:
-				if k != "won" and k != "noise":
-					v += float(wt[k]) * float(st.get(k, 0.0))
+			var v := 0.0
+			match str(wt.get("measure", "")):
+				"influence":
+					v = CoachReport.influence(st)
+				"umpire":
+					v = Awards.umpire_score(st, won)
+				_:
+					var ws: Dictionary = wt["weights"]
+					for k in ws:
+						v += float(ws[k]) * float(st.get(k, 0.0))
 			everyone.append([str(r["id"]), v, won])
 	everyone.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
 	if wt.has("noise"):
@@ -203,36 +197,6 @@ static func _draw_three(everyone: Array, noise: float, rng: RandomNumberGenerato
 		out.append(left[pick])
 		left.remove_at(pick)
 	return out
-
-
-## The coach's full-time read of every man in one match, added to vrd[measure].
-static func _verdicts(vrd: Dictionary, res: Dictionary, players: Dictionary) -> void:
-	var st_all: Dictionary = res.get("players", {})
-	var roster: Array = res.get("roster", [])
-	for side in range(mini(2, roster.size())):
-		for r in roster[side]:
-			var id := str(r["id"])
-			var st: Dictionary = st_all.get(id, {})
-			var ov := int((players.get(id, r) as Dictionary).get("overall", 50))
-			var old := 0.0
-			for k in COMP:
-				old += float(COMP[k]) * float(st.get(k, 0.0))
-			_vrd_add(vrd, "old", old - maxf(1.5, 4.5 + (float(ov) - 50.0) * 0.16) * 4.0)
-			var d := (CoachReport.influence(st) - CoachReport.expected_influence(ov, 4)) / CoachReport.INFLUENCE_SCALE
-			for k in VRD_SCALES:
-				_vrd_add(vrd, "s%.1f" % k, d * float(k))
-
-
-static func _vrd_add(vrd: Dictionary, key: String, d: float) -> void:
-	var v: Dictionary = vrd.get(key, {"n": 0, "sum": 0.0, "sq": 0.0, "bins": [0, 0, 0, 0, 0, 0, 0]})
-	v["n"] = int(v["n"]) + 1
-	v["sum"] = float(v["sum"]) + d
-	v["sq"] = float(v["sq"]) + d * d
-	var b := 0
-	while b < VRD_EDGES.size() and (d < float(VRD_EDGES[b]) if b < 3 else d <= float(VRD_EDGES[b])):
-		b += 1
-	(v["bins"] as Array)[b] = int((v["bins"] as Array)[b]) + 1
-	vrd[key] = v
 
 
 ## His rating in each line: his own overall in his own line, else what his

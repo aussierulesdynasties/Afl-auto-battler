@@ -770,32 +770,40 @@ def _q(v, q):
     return s[lo] + (s[hi] - s[lo]) * (i - lo)
 
 
-def _block_rates(R, idx):
+def _block_seasons(R, idx):
     """Per-player rate of stat idx (0 tackles, 1 pressure acts) over 22-game blocks, in seed order,
-    by list_role: {role: [rates]} plus "ALL"."""
+    grouped as seasons: block k of every man is season k, so each season holds about as many men
+    as a real one (about 420 with 12+ games) and its max and tail compare like for like. Returns
+    [{role: [rates], "ALL": [...]}], one per season, leaving out a last season with under 80% of
+    the men of the fullest."""
     games = {}
     for i in sorted(R):
         for t in R[i]["teams"]:
             for pid, v in t.get("tp", {}).items():
                 games.setdefault(pid, [v[2], []])[1].append(v[idx])
-    out = {"ALL": []}
+    seasons = []
     for role, g in games.values():
-        for k in range(0, len(g), BLOCK):
+        for b, k in enumerate(range(0, len(g), BLOCK)):
             blk = g[k:k + BLOCK]
             if len(blk) >= MIN_BLOCK:
+                while len(seasons) <= b:
+                    seasons.append({"ALL": []})
                 r = sum(blk) / len(blk)
-                out["ALL"].append(r)
-                out.setdefault(role, []).append(r)
-    return out
+                seasons[b]["ALL"].append(r)
+                seasons[b].setdefault(role, []).append(r)
+    full = max((len(x["ALL"]) for x in seasons), default=0)
+    return [x for x in seasons if len(x["ALL"]) >= 0.8 * full]
+
+
+def _season_q(seasons, role, q, qv):
+    """The mean over the run's seasons of one quantile of one line."""
+    v = [(max(x[role]) if q == "max" else _q(x[role], qv)) for x in seasons if x.get(role)]
+    return st.mean(v) if v else 0.0
 
 
 def _range_mark(v, rr):
-    """IN inside the real seasons' lowest..highest; NEAR within mean +-2 sd (sd at least 10% of the
-    mean, since some references have two seasons); OUT."""
-    if rr["min"] <= v <= rr["max"]:
-        return "IN"
-    sd = max(rr.get("sd", 0.0), 0.1 * abs(rr["mean"]))
-    return "NEAR" if abs(v - rr["mean"]) <= 2 * sd else "OUT"
+    """IN inside the real seasons' lowest..highest; NEAR within mean +-2 sd; OUT (as _mark)."""
+    return _mark(v, rr)
 
 
 def _tops(R):
@@ -818,22 +826,26 @@ def tackle_section(A, B):
     ref = json.load(open(path, encoding="utf-8"))
     pool = ref["pooled"]
     print("\n## Tackles and pressure acts per player (real: tools/balance/afl_brownlow.json)\n")
-    print("Per player a game over 22-game blocks of the run (a block counts with 12+ games), by listed line;"
-          " real: every 2025 and 2026 player with 12+ games (AFL Tables tackles, Champion Data pressure acts"
-          " and positions via Wheelo). IN inside the two seasons' range, NEAR within 2 sd (at least 10%), OUT.\n")
+    sa_, sb_ = _block_seasons(A, 0), (_block_seasons(B, 0) if B else [])
+    print(f"Per player a game over 22-game blocks of the run (a block counts with 12+ games), by listed line;"
+          f" block k of every man makes season k ({len(sa_)} seasons in A"
+          + (f", {len(sb_)} in B" if B else "") + f", about {st.mean(len(x['ALL']) for x in sa_):.0f} men each),"
+          " and each figure is the mean over those seasons. Real: every player with 12+ games, ALL 2021-26"
+          " (AFL Tables), by line 2025-26 (Champion Data positions and pressure acts via Wheelo)."
+          " IN inside the real seasons' range, NEAR within mean +-2 sd, OUT.\n")
     head = "| stat | line | quantile | real range | A | mark |" + (" B | mark | B-A |" if B else "")
     print(head)
     print("|" + "---|" * (head.count("|") - 1))
     for label, idx, key in (("tackles", 0, "tackles_pg_by_role"), ("pressure acts", 1, "pressure_acts_pg_by_role")):
-        ra = _block_rates(A, idx)
-        rb = _block_rates(B, idx) if B else {}
+        ra = _block_seasons(A, idx)
+        rb = _block_seasons(B, idx) if B else []
         for role in ("ALL", "MID", "FWD", "DEF", "RUCK"):
             for q, qv in (("max", 1.0), ("p99", 0.99), ("p90", 0.90), ("p50", 0.50)):
                 rr = pool[key][role][q]
-                va = max(ra.get(role, [0])) if q == "max" else _q(ra.get(role, []), qv)
+                va = _season_q(ra, role, q, qv)
                 line = f"| {label} | {role} | {q} | {rr['min']:.2f}-{rr['max']:.2f} | {va:.2f} | {_range_mark(va, rr)} |"
                 if B:
-                    vb = max(rb.get(role, [0])) if q == "max" else _q(rb.get(role, []), qv)
+                    vb = _season_q(rb, role, q, qv)
                     line += f" {vb:.2f} | {_range_mark(vb, rr)} | {vb - va:+.2f} |"
                 print(line)
     seasons = ref["matches"].get("by_season", {})
