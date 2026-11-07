@@ -124,13 +124,15 @@ static func score_colour(code: String, surface := AUTO_COLOUR) -> Color:
 ## the most saturated one that reads at 4.5:1 on every surface the line can
 ## sit on; when none does, the most saturated one lightened, its hue kept,
 ## until it reads (a readable red is allowed here, unlike club_name_colour).
-## A club with no colour but black and white (Collingwood) gets its black
-## lightened to a grey here; its name and headings are a black tag instead
-## (club_title).
+## A club with no colour but black and white (Collingwood, club_is_black)
+## reads plain white here, never its black lightened to a grey (director
+## 2026-11-07, "white"); its headings are a black tag instead (club_title).
 const CODE_MIN_SAT := 0.25
 static func club_code_colour(code: String, surfaces: Array = []) -> Color:
 	if surfaces.is_empty():
 		surfaces = [PANEL]
+	if club_is_black(code):
+		return TEXT
 	var real: Array = GameDB.club_marker_colours(code)
 	var best := Color(0, 0, 0, 0)
 	for c in real:
@@ -1241,7 +1243,7 @@ static func style_button(b: Button, fs := 16, primary := false, danger := false)
 	b.add_theme_color_override("font_focus_color", ink)
 	b.add_theme_color_override("font_disabled_color", FAINT)
 	var sb: StyleBoxFlat
-	var lead := team_colour()
+	var lead := team_button()
 	if primary:
 		sb = style(lead, 8, RADIUS)
 		sb.set_border_width_all(0)
@@ -1304,6 +1306,30 @@ static func team_colour() -> Color:
 		if best.a == 0.0 or col.s * col.v > best.s * best.v:
 			best = col
 	return ClubBackdrop.lifted(best) if best.a > 0.0 else ACCENT
+
+
+## The wash of your club's colour from the top of a sheet: team_colour, but a
+## black-and-white club (club_is_black) washes in its black lifted to a
+## neutral grey, never the accent's red-brown (director 2026-11-07, "fix now").
+static func team_wash() -> Color:
+	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
+	var club := str(gs.my_club) if gs != null else ""
+	if club != "" and GameDB.clubs.has(club) and club_is_black(club):
+		return ClubBackdrop.lifted(club_black(club))
+	return team_colour()
+
+
+## Your club's colour on a primary button: team_colour, but a black-and-white
+## club's button is its black lifted to a mid grey that stands clear of the
+## quiet SURFACE buttons beside it, never the accent's red (director
+## 2026-11-08, "Grey buttons too").
+const BLACK_CLUB_BUTTON_LUM := 0.38
+static func team_button() -> Color:
+	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
+	var club := str(gs.my_club) if gs != null else ""
+	if club != "" and GameDB.clubs.has(club) and club_is_black(club):
+		return ClubBackdrop.lifted(club_black(club), BLACK_CLUB_BUTTON_LUM)
+	return team_colour()
 
 
 ## Match day's sheet wash: the opponent's colour, the atmosphere you play
@@ -1738,7 +1764,7 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 		center.add_child(shell)
 	# Not boring (director, 2026-10-08): a wash of your club's colour from the
 	# top of every sheet, fading before the content needs the contrast.
-	var lead := team_colour() if wash == AUTO_COLOUR else wash
+	var lead := team_wash() if wash == AUTO_COLOUR else wash
 	shell.draw.connect(func() -> void:
 		var w := shell.size.x
 		var h := minf(shell.size.y * 0.5, 220.0)

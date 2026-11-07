@@ -23,7 +23,8 @@ static func ink(code: String) -> Color:
 
 
 ## A club's line under a name on a Season stats list: its strongest real
-## colour that reads (director, 2026-11-06), never white or the pitch tint.
+## colour that reads (director, 2026-11-06), never white or the pitch tint;
+## a black-and-white club (Collingwood) plain white (director, 2026-11-07).
 ## Read at 4.5:1 on every surface such a row sits on: the page and its lighter
 ## streaks (up to PANEL_ALT), a pressed row (TEXT at 5%), and for your own
 ## club its row's tint (its vivid colour at 22%).
