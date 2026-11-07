@@ -2204,6 +2204,20 @@ const LOCKUP_SPOIL := 0.35
 ## Of the tackles that stop a carrier without a free, the share where the ball is
 ## knocked free and the other side gathers it (a turnover); the rest are ball-ups.
 const TACKLE_SPILL := 0.5
+## Getting it out of defence (director 2026-11-07, "Play change": defenders
+## get the ball out of their 50 more often). Inside his own defensive 50 a
+## defender clears it rather than chipping it around: his kick goes this much
+## further (still within his kick range), he handballs this much less, the
+## forwards get to him this much less often, a rushed disposal there turns
+## over this much as often, and he keeps it through a tackle this much more
+## often. Measured on tools/balance.sh match 1000 against main: team rebound
+## 50s 26.8 -> 39.4 (real 39.3), with every other team rate still inside the
+## clubs' range. Rebound 50s keep the Champion Data definition (_rebound_exit).
+const D50_KICK_GAIN := 3.0
+const D50_HANDBALL := 0.7
+const D50_PRESSURE := 0.65
+const D50_TURNOVER := 0.15
+const D50_RETAIN := 2.0
 
 
 ## A named constant, or its audit override (tune).
@@ -3033,13 +3047,16 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		pending = carrier if counts_disposal else null
 
 		var disposal_event := -1
+		# Inside his own defensive 50: he looks to clear it (D50_*).
+		var in_d50 := (fp if side == 0 else -fp) <= -f50
 		var hb_bias: float = (0.85
 				+ 0.30 * (100.0 - _a(carrier, "marking")) / 100.0)
 		var disposal_kind := "handball"
 		var marked := false
 		# A kick-in is kicked: no handball roll for its first disposal.
 		if not (from_kick_in and touches == 1) \
-				and rng.randf() < float(T["handball_share"]) * hb_bias:
+				and rng.randf() < float(T["handball_share"]) * hb_bias \
+				* (_tv("D50_HANDBALL", D50_HANDBALL) if in_d50 else 1.0):
 			_t(side, "handballs")
 			_p(carrier, "handballs")
 			_emit("handball", side, fp, carrier, "%s handballs" % GameDB.player_display_name(carrier))
@@ -3075,6 +3092,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var pressure: float = (float(T["pressure_base"])
 				* (0.72 + 0.56 * _zone_pressure(opp, zone) / 100.0))
 		pressure *= 1.10 if atk_fp < 0.0 else 0.95
+		if in_d50:
+			pressure *= _tv("D50_PRESSURE", D50_PRESSURE)
 		if is_kick_in:
 			# The conservative exit buys space; playing on gains ground but
 			# exposes the taker to more immediate pressure.
@@ -3122,6 +3141,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 					* (0.75 + 0.50 * _a(carrier, "contested") / 100.0))
 			if _trait(carrier, "bull"):
 				retain *= 1.10
+			if in_d50:
+				retain *= _tv("D50_RETAIN", D50_RETAIN)
 			if rng.randf() < retain:
 				var before_fp := fp
 				fp = clampf(fp + rng.randf_range(4.0, 12.0) * dir, -gline, gline)
@@ -3170,6 +3191,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 					* (1.20 - 0.40 * _a(carrier, "disposal") / 100.0))
 			if zone == 0 and _pv(opp, "press") > 1.0:
 				turn_p *= PRESS_ZONE_TURNOVER
+			if in_d50:
+				turn_p *= _tv("D50_TURNOVER", D50_TURNOVER)
 			if rng.randf() < turn_p:
 				# Rushed into a pack: sometimes nobody gets it clean and the
 				# umpire calls a ball-up where it locked up.
@@ -3224,6 +3247,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			gain *= BACK_GAIN
 		gain *= rng.randf_range(0.45, 1.75)
 		if disposal_kind == "kick":
+			if in_d50:
+				gain *= _tv("D50_KICK_GAIN", D50_KICK_GAIN)
 			gain = minf(gain, kick_range(carrier))
 		if is_kick_in:
 			gain *= 0.82 if not kick_in_play_on else 1.12
