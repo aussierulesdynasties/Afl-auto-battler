@@ -174,6 +174,7 @@ func _offers() -> void:
 					_notice = str(r["reason"])
 					if bool(r["ok"]):
 						_changed()
+						_prune()
 				else:
 					GameState.decline_trade_offer(i)
 				_build())
@@ -265,6 +266,18 @@ static func pick_label(pk: Dictionary, with_via := true) -> String:
 func _changed() -> void:
 	if _on_change.is_valid():
 		_on_change.call()
+
+
+## After an accepted offer, a pick in either package may have changed hands or
+## been used: only picks each side still holds stay in its package.
+func _prune() -> void:
+	var held := func(ids: Array, code: String) -> Array:
+		var live := {}
+		for pk in GameState.club_picks(code):
+			live[str(pk["id"])] = true
+		return ids.filter(func(id): return live.has(str(id)))
+	_mine = held.call(_mine, GameState.my_club)
+	_theirs = held.call(_theirs, _club)
 
 
 func _para(text: String, fs: int, colour: Color) -> Label:

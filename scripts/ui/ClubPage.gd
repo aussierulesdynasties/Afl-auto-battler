@@ -611,7 +611,7 @@ static func _facts_head(row: Dictionary) -> String:
 	var years := _cell(row, "years")
 	if g < 0:
 		return "With the club until %d" % int(row.get("left", 0))
-	return "%s: %d games, %d goals" % [years, g, k]
+	return "%s: %d game%s, %d goal%s" % [years, g, "" if g == 1 else "s", k, "" if k == 1 else "s"]
 
 
 static func _how(row: Dictionary) -> String:
