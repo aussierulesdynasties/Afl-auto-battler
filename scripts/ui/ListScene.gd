@@ -293,14 +293,16 @@ func _role_groups(lbox: Control, players: Array, skip_empty: bool) -> void:
 func _team_row(p: Dictionary, ground: bool) -> Control:
 	var h := UiKit.hbox(6)
 	h.add_child(_guernsey(p))
-	var nm := UiKit.lbl(GameDB.player_display_name(p), UiKit.SECONDARY, UiKit.TEXT if ground else UiKit.MUTED)
-	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	nm.autowrap_mode = TextServer.AUTOWRAP_OFF
-	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	# His name whole: it wraps to a second line rather than cut.
+	var nm := UiKit.name_label(GameDB.player_display_name(p), UiKit.SECONDARY, UiKit.TEXT if ground else UiKit.MUTED, false)
 	h.add_child(nm)
 	h.add_child(UiKit.role_chip(_player_tag(p)))
 	if int(p.get("injury_weeks", 0)) > 0:
 		h.add_child(UiKit.line("INJ", UiKit.FINE, UiKit.BAD, true))
+	# A rehab year (his rating back up to his POT next off-season) says so in
+	# words beside the POT in GOOD.
+	if bool(p.get("rehab", false)):
+		h.add_child(UiKit.line("REHAB", UiKit.FINE, UiKit.GOOD, true))
 	h.add_child(UiKit.line(str(int(p["overall"])), 14, UiKit.EMPH, true))
 	h.add_child(UiKit.line("/%d" % int(p.get("potential", p["overall"])), 11,
 			UiKit.GOOD if bool(p.get("rehab", false)) else UiKit.MUTED))

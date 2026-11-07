@@ -902,9 +902,16 @@ func _player_row(p: Dictionary) -> Control:
 	inspect.add_child(face)
 	var top := UiKit.hbox(8)
 	face.add_child(top)
-	top.add_child(UiKit.role_chip(Ratings.role_tag(p)))
+	var chip := UiKit.role_chip(Ratings.role_tag(p))
 	var info := UiKit.vbox(2)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if UiKit.text_scale > 1.0 and not _wide:
+		# At a larger text size (Settings) a phone puts his role over his name,
+		# so the name has the row's width: "McCluggage" is never cut short.
+		chip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		info.add_child(chip)
+	else:
+		top.add_child(chip)
 	top.add_child(info)
 	info.add_child(UiKit.name_label(GameDB.player_display_name(p)))
 	var taken := _draft.has(str(p["id"]))
@@ -1747,7 +1754,10 @@ func _history_row(entry: Dictionary) -> Control:
 	var info := UiKit.vbox(3)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(info)
-	info.add_child(UiKit.ellipsis(_entry_player_name(entry), UiKit.NAME, UiKit.TEXT, true))
+	# His name whole: it wraps to a second line rather than cut, and the row grows.
+	info.add_child(UiKit.name_label(_entry_player_name(entry), UiKit.NAME, UiKit.TEXT))
+	h.minimum_size_changed.connect(func():
+		tap.custom_minimum_size.y = maxf(54.0, h.get_combined_minimum_size().y))
 	var club_row := UiKit.hbox(6)
 	info.add_child(club_row)
 	club_row.add_child(UiKit.club_badge(str(entry["club"]), UiKit.SMALL, true))

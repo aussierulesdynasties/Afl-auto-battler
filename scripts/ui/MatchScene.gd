@@ -269,7 +269,9 @@ func _fit_side_panel() -> void:
 		return
 	if _stacked:
 		var short := UiKit.view_height(self) < 520.0
-		_side_panel.custom_minimum_size = Vector2(0, 120 if short else 168)
+		# Grown with the text size (Settings), so a larger size keeps the same
+		# lines of the feed in view above the buttons.
+		_side_panel.custom_minimum_size = Vector2(0, UiKit.px(120 if short else 168))
 		_side_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_side_panel.size_flags_stretch_ratio = 1.0
 	else:
@@ -1064,7 +1066,7 @@ func _show_coach_box() -> void:
 	# lines and "No tag..." to one: it keeps room for two, so a tag tap never
 	# pushes the calls below it down (A2).
 	if not _pc_break:
-		tag_note.custom_minimum_size.y = ceilf(UiKit.FONT.get_height(UiKit.NOTE) * 2.0)
+		tag_note.custom_minimum_size.y = ceilf(UiKit.FONT.get_height(UiKit.px(UiKit.NOTE)) * 2.0)
 	# Who goes to him is only a question once there is a him: shown faded and
 	# shut with no tag, so it never appears and shoves the calls below it.
 	var who_block: Array = []
@@ -2760,6 +2762,7 @@ func _show_bounce_moment(m: Dictionary) -> void:
 		vignette.name = "DecisionVignette"
 	overlay.add_child(vignette)
 	vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vignette.clip_contents = true   # its stand and light towers stay off the scoreboard
 	if vignette is DecisionVignette:
 		(vignette as DecisionVignette).setup_decision(GameState.pending_sim, _my_side, m)
 	else:
@@ -2812,6 +2815,7 @@ func _show_bounce_moment(m: Dictionary) -> void:
 		if not is_instance_valid(margin):
 			return
 		panel.modulate.a = 1.0
+		vignette.call_room = panel.size.y
 		var tw := margin.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tw.tween_method(func(v: float) -> void: margin.add_theme_constant_override("margin_bottom", int(v)),
 				-600.0, 0.0, 0.3))
@@ -3600,7 +3604,7 @@ func _goal_row(ev: Dictionary, stamp: String) -> Control:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(v)
 	var who := str(ev.get("name", ""))
-	var head := "Goal  " + (who if who != "" else GameDB.club_short(code))
+	var head := MatchNotes.goal_head(who, code)
 	# The scorer's club is the event's own, whatever the index knows.
 	var names := _names().duplicate()
 	if who != "":

@@ -174,8 +174,8 @@ static func _row(host: Control, row: Dictionary, rank: int, wide: bool) -> Contr
 	who.add_child(top)
 	var name_text := str(row["name"])
 	var club_text := GameDB.club_short(club) if club != "" else ""
-	var name_w := UiKit.BOLD.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.NAME).x + 2.0
-	var club_w := UiKit.BOLD.get_string_size(club_text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.SECONDARY).x + 2.0
+	var name_w := UiKit.BOLD.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(UiKit.NAME)).x + 2.0
+	var club_w := UiKit.BOLD.get_string_size(club_text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(UiKit.SECONDARY)).x + 2.0
 	# Beside his name while both fit; a long name puts the club on the line
 	# under it, never cut to a letter.
 	var room := float(host.call("content_width")) - (16.0 + RANK_W + 24.0 + FIG_W + 40.0)

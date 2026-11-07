@@ -1214,7 +1214,7 @@ func _footer(season: Season, with_sim := true) -> Control:
 	var row := UiKit.hbox(4 if tight else 6)
 	row.name = "HubFooter"
 	for b in buttons:
-		b.add_theme_font_size_override("font_size", 13 if tight else 15)
+		UiKit.set_font_size(b, 13 if tight else 15)
 		b.custom_minimum_size = Vector2(0, 44)
 		if tight:
 			for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:

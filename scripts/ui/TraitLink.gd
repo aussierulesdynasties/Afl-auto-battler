@@ -75,7 +75,8 @@ static func sheet_lines(key: String) -> Array:
 		out.append(str(s.get("about", "")))
 		out.append(Traits.requirement_text(key))
 	else:
-		out.append("Trait")
+		# A weakness says so in words, not in BAD alone.
+		out.append("Weakness" if Traits.is_bad(key) else "Trait")
 		out.append(Traits.text(key))
 		var e := earn_text(key)
 		if e != "":

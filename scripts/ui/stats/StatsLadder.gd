@@ -143,7 +143,7 @@ static func build(host: Control) -> Control:
 
 	var shown := visible_rows(season, GameState.my_club, _filter, _sort, _desc, _view)
 	# Only when something is filtered or sorted: the whole ladder says so itself.
-	var specs := columns(_view, wide, width)
+	var specs := fit(columns(_view, wide, width), rows(season))
 	if _filter != "all" or _sort != "":
 		var status := _status(host, shown.size())
 		if wide:
@@ -182,6 +182,27 @@ static func columns(view: String, wide: bool, width := 9999.0) -> Array:
 	if wide:
 		return LADDER_WIDE
 	return LADDER_TIGHT if width < PHONE_TIGHT else LADDER_PHONE
+
+
+## Each fixed column as wide as its title and its widest figure need at the
+## text size (Settings): a larger size widens the columns and the club column,
+## which takes what is left, gives up the room. Never narrower than its spec.
+static func fit(specs: Array, rows: Array) -> Array:
+	var fs := UiKit.px(UiKit.FINE)
+	var out := []
+	for c in specs:
+		var key := str(c[0])
+		var w := int(c[2])
+		if w > 0 and key != "club" and key != "form":
+			var need := UiKit.BOLD.get_string_size(str(c[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			for r in rows:
+				need = maxf(need, UiKit.BOLD.get_string_size(cell_text(r, key),
+						HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
+			if c == specs[-1] and not _all_fixed(specs):
+				need += END_PAD
+			w = maxi(w, ceili(need) + 2)
+		out.append([c[0], c[1], w])
+	return out
 
 
 ## The least width of a table of these columns: the sum the rows are sized to.
@@ -254,7 +275,7 @@ static func _header(host: Control, specs: Array, width: float, wide := false) ->
 		b.mouse_filter = Control.MOUSE_FILTER_PASS
 		b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		b.add_theme_font_override("font", UiKit.BOLD if key == _sort else UiKit.FONT)
-		b.add_theme_font_size_override("font_size", UiKit.FINE)
+		UiKit.set_font_size(b, UiKit.FINE)
 		var on: bool = key == _sort
 		for col in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 			b.add_theme_color_override(col, UiKit.TEXT if on else UiKit.MUTED)

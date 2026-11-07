@@ -3,6 +3,7 @@ extends SceneTree
 ## screen critic would measure. Headless is fine (no pixels needed):
 ##   godot --headless --path . --script tools/visual/screen_lint.gd -- --screen hub|draft|prebounce|res://x.tscn
 ##         [--size 390x844] [--club FRE] [--setup res://my_setup.gd] [--fixture]
+##         [--text-size standard|larger|largest]
 ## --setup names a script with `static func lint_setup(tree: SceneTree, scene: Node) -> void` (runs after the
 ## screen is up, to open a sheet or pick a tab). --fixture adds a deliberate 40 px button, two 11 px lines and
 ## a pair of disagreeing counts to the screen, to prove the lint catches them.
@@ -33,6 +34,7 @@ func _run() -> void:
 	var club := "FRE"
 	var setup := ""
 	var fixture := false
+	var text_size := "standard"
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		match str(a[i]):
@@ -40,6 +42,7 @@ func _run() -> void:
 			"--screen": screen = str(a[i + 1])
 			"--club": club = str(a[i + 1])
 			"--setup": setup = str(a[i + 1])
+			"--text-size": text_size = str(a[i + 1])
 			"--size":
 				var wh := str(a[i + 1]).split("x")
 				_w = int(wh[0])
@@ -53,6 +56,7 @@ func _run() -> void:
 	state.settings_path = "user://screenlint.cfg"
 	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
 	state.reset()
+	state.set_text_size(text_size)
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	var scene: Node = null

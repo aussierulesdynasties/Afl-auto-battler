@@ -348,8 +348,11 @@ func _draw_decision_names() -> void:
 		var nw := font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var y := head.y - 6.0 - fs
 		if head.y < size.y * 0.24:
-			# Too near the scoreboard: the name goes under his feet instead.
-			y = _project(_pos(t), _lift(t)).y + 6.0
+			# Too near the scoreboard: the name goes under his feet instead, unless
+			# the call covers his feet (a taller call at a larger text size).
+			var under := _project(_pos(t), _lift(t)).y + 6.0
+			if under + fs + 2.0 <= size.y - call_room:
+				y = under
 		var box := Rect2(Vector2(clampf(head.x - nw * 0.5, 4.0, size.x - nw - 4.0), y), Vector2(nw, fs + 2))
 		var tries := 0
 		while tries < 4 and placed.any(func(q): return q.intersects(box)):

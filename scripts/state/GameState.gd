@@ -352,6 +352,7 @@ func _ready() -> void:
 	if cfg.load(settings_path) == OK:
 		show_real_names = bool(cfg.get_value("display", "real_names", true))
 	UiKit.apply_appearance(str(cfg.get_value("ui", "appearance", "dark")))
+	UiKit.apply_text_size(str(cfg.get_value("ui", "text_size", "standard")))
 	_carry_old_sound_levels(cfg)
 	_apply_sound_mute(bool(cfg.get_value("ui", "mute_sounds", false)))
 	AudioLevels.apply_volume(AudioLevels.valid(cfg.get_value("ui", "volume", AudioLevels.DEFAULT_VOLUME)))
@@ -426,6 +427,24 @@ func set_appearance(mode: String) -> bool:
 	var changed := appearance() != mode
 	set_setting("appearance", mode)
 	UiKit.apply_appearance(mode)
+	return changed
+
+
+## Standard, Larger or Largest (row 118): an unknown saved value reads as
+## Standard.
+func text_size() -> String:
+	var key := str(get_setting("text_size", "standard"))
+	return key if UiKit.TEXT_SCALE.has(key) else "standard"
+
+
+## Sets the size of the game's words. The caller rebuilds the current screen
+## when this returns true, so no control keeps the old size.
+func set_text_size(key: String) -> bool:
+	if not UiKit.TEXT_SCALE.has(key):
+		return false
+	var changed := text_size() != key
+	set_setting("text_size", key)
+	UiKit.apply_text_size(key)
 	return changed
 
 

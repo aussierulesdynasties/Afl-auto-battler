@@ -3211,7 +3211,7 @@ func _type(node_name: String, text: String) -> void:
 func _test_type_roles() -> void:
 	var sizes: Array = load("res://scripts/ui/UiKit.gd").SIZES
 	var call := RegEx.new()
-	call.compile("UiKit\\.(lbl|line|ellipsis|figure|heading|btn|name_label)\\(")
+	call.compile("UiKit\\.(lbl|line|ellipsis|figure|heading|btn|name_label|set_font_size)\\(")
 	var num := RegEx.new()
 	num.compile("[,(]\\s*(\\d{1,2})\\s*[,)]")
 	var override := RegEx.new()
