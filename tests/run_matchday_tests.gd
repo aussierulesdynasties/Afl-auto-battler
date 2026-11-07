@@ -2482,7 +2482,6 @@ func _test_press_effects_shown(db) -> void:
 	var who: Dictionary = _state.my_list[0]
 	who["morale"] = 50
 	who.erase("press_lift")
-	who.erase("press_slow")
 	var hub = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _settle()
@@ -2588,7 +2587,6 @@ func _test_press_scene_taps() -> void:
 	for i in range(4):
 		for p in _state.my_list:
 			p.erase("press_lift")
-			p.erase("press_slow")
 			p.erase("press_wait")
 		var press: Node = await open.call(muck.call())
 		var label := str((_state.media_conference.get("options", [])[i] as Dictionary).get("label", ""))

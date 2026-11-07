@@ -224,8 +224,7 @@ const ANSWERS := {
 ## changes what an answer does, shown openly on the gate). "likes" and
 ## "dislikes" move your standing with him by one; "odds" moves outcome "a";
 ## "board_up" adds one to every board size (to the cap), "named_up" one to
-## every named size (to the cap), "slow" stretches the morale fade to every
-## third round (SLOW_FADE_ROUNDS);
+## every named size (to the cap);
 ## "record" means the record check decides his standing and odds.
 const PERSONA := {
 	"muckraker": {"likes": ["criticise", "criticise_named"], "dislikes": ["back", "back_named"],
@@ -239,8 +238,7 @@ const PERSONA := {
 	"bogan": {"likes": ["back"], "dislikes": ["method"], "odds": {},
 		"named_up": true, "named_note": "The players listen to his show",
 		"rule": "The players listen to his show: a named player's move is a point bigger."},
-	"philosopher": {"likes": ["method"], "dislikes": ["criticise", "criticise_named"], "odds": {},
-		"slow": true, "slow_note": "Her piece lingers: morale moves wear off a point every third round, board moves a point a round."},
+	"philosopher": {"likes": ["method"], "dislikes": ["criticise", "criticise_named"], "odds": {}},
 }
 
 ## Standing with each journalist, -2..+2 (director 2026-11-06, Q1): each step
@@ -283,10 +281,9 @@ const ODDS_MIN := 20
 const ODDS_MAX := 80
 ## How many rounds each point of a press move lasts (director 2026-11-07,
 ## "Fade every 2nd round"): a player's morale move fades a point every second
-## round (+1 lasts 2 rounds, -2 lasts 4), every third after the Philosopher;
-## the board's fades a point a round.
+## round (+1 lasts 2 rounds, -2 lasts 4), whoever asked (director 2026-11-07:
+## no journalist slows it); the board's fades a point a round.
 const FADE_ROUNDS := 2
-const SLOW_FADE_ROUNDS := 3
 const BOARD_FADE_ROUNDS := 1
 
 ## The gate's templates: no digits here, every number comes from the tables.
@@ -501,8 +498,8 @@ static func is_woman(journalist: String) -> bool:
 
 ## How many rounds a player's press lift of this size takes to fade (fade_lift
 ## counts its rounds from the presser, so this is exact).
-static func fade_rounds(size: int, slow: bool) -> int:
-	return absi(size) * (SLOW_FADE_ROUNDS if slow else FADE_ROUNDS)
+static func fade_rounds(size: int) -> int:
+	return absi(size) * FADE_ROUNDS
 
 
 ## How many rounds the board's press move of this size takes to fade.
@@ -592,10 +589,7 @@ static func odds_line(kind: String, chance_a: int, fx: Dictionary = {}, ctx: Dic
 ## Said once on the gate, above the answers: how long a press move lasts, and
 ## what this journalist's personality does to the sizes.
 static func rules_line(journalist: String) -> String:
-	var j: Dictionary = PERSONA.get(journalist, {})
-	if bool(j.get("slow", false)):
-		return str(j["slow_note"])
-	var rule := str(j.get("rule", ""))
+	var rule := str((PERSONA.get(journalist, {}) as Dictionary).get("rule", ""))
 	return FADE_NOTE if rule == "" else "%s %s" % [rule, FADE_NOTE]
 
 
@@ -629,7 +623,7 @@ static func board_sentence(journalist: String, board: int) -> String:
 ## stacking can never pass the cap, and only what really moved his morale is
 ## kept to fade. `up` (>= 0) caps a lift lower than `cap`: LOSS_LIFT_CAP after
 ## a loss. Returns the change applied.
-static func apply_lift(p: Dictionary, delta: int, cap: int, slow: bool, up := -1) -> int:
+static func apply_lift(p: Dictionary, delta: int, cap: int, up := -1) -> int:
 	if delta == 0:
 		return 0
 	var old := int(p.get("press_lift", 0))
@@ -643,23 +637,21 @@ static func apply_lift(p: Dictionary, delta: int, cap: int, slow: bool, up := -1
 	p.erase("press_wait")
 	if now == 0:
 		p.erase("press_lift")
-		p.erase("press_slow")
 	else:
 		p["press_lift"] = now
-		p["press_slow"] = slow
 	return moved
 
 
 ## One round's fade of a player's press lift: a point back toward where he was
-## every FADE_ROUNDS rounds (SLOW_FADE_ROUNDS after the Philosopher), counted
-## from when it was set. True when it moved.
+## every FADE_ROUNDS rounds, counted from when it was set. True when it moved.
 static func fade_lift(p: Dictionary, _round_no: int) -> bool:
+	p.erase("press_slow")  # an old save's Philosopher flag: every lift now fades at the one pace
 	var lift := int(p.get("press_lift", 0))
 	if lift == 0:
 		return false
 	# "press_wait" counts the rounds since the last step (an old save's true reads as 1).
 	var waited := int(p.get("press_wait", 0)) + 1
-	if waited < (SLOW_FADE_ROUNDS if bool(p.get("press_slow", false)) else FADE_ROUNDS):
+	if waited < FADE_ROUNDS:
 		p["press_wait"] = waited
 		return false
 	p.erase("press_wait")
@@ -667,7 +659,6 @@ static func fade_lift(p: Dictionary, _round_no: int) -> bool:
 	lift -= signi(lift)
 	if lift == 0:
 		p.erase("press_lift")
-		p.erase("press_slow")
 		p.erase("press_wait")
 	else:
 		p["press_lift"] = lift
