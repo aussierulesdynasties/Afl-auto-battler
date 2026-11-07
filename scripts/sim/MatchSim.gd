@@ -4527,8 +4527,6 @@ const GPS_FOCUS_MULT := 1.06
 const GPS_TAGGER_MULT := 1.08
 const GPS_TAGGED_MULT := 1.06
 const STAR_OVR := 80
-## Riding the stars, a star this cooked brings the one tired call of the match.
-const TIRED_CALL := 45.0
 ## Energy below which a player is rotated off: stars are ridden harder.
 const ROTATION_POLICIES := {
 	"hard": {"label": "Protect freshness", "role": 80.0, "star": 68.0,
@@ -5089,7 +5087,7 @@ func _late_bounce_ready() -> bool:
 			and _chain_no - _last_moment_chain >= MOMENT_GAP
 
 
-## Situations spotted between chains: a tired star, a hot opposition
+## Situations spotted between chains: a hot opposition
 ## forward, a run of goals against, a tight last-quarter centre bounce.
 func _boundary_moment() -> bool:
 	if _playtest_bounce():
@@ -5104,33 +5102,10 @@ func _boundary_moment() -> bool:
 	var me := moment_side
 	var opp := 1 - me
 	var margin := score(me) - score(opp)
-	# A star running on empty - only when you have chosen to ride your stars.
-	# Under Balanced rotations or Protect freshness the rotations take tired players
-	# off by themselves (_auto_rotate); riding them is the one policy that
-	# leaves a star out there cooked, so it may bring one call a match.
-	for p in (squads[me] as Squad).ground if rotation_policy[me] == "stars" else []:
-		var id := str(p["id"])
-		var e := float(energy.get(id, 100.0))
-		if int(p["overall"]) >= STAR_OVR and e < TIRED_CALL and not _asked.has("tired"):
-			# Only a real choice: someone on the bench has to be able to come on.
-			var bi := _bench_for(me, str(p["role"]), 0.0)
-			if bi < 0:
-				continue
-			_asked["tired"] = true
-			var sub: Dictionary = (squads[me] as Squad).bench[bi]
-			var last := current_quarter >= 4
-			_fire({"kind": "tired", "player_id": id, "default": 1, "sub_id": str(sub["id"]),
-				"title": "%s is running on empty" % GameDB.player_display_name(p),
-				"text": "Your star's legs are gone. Tired players win less of the ball and kick fewer goals.",
-				"options": [
-					{"key": "rest", "label": "Rest him now",
-						"detail": ("%s comes on. He sits out the rest of the match." if last
-								else "%s comes on. He sits out the rest of the quarter and starts the next one fresh.") % GameDB.player_display_name(sub)},
-					{"key": "keep", "label": "Keep him out there",
-						"detail": "He plays on to the final siren, slowing as he goes." if last
-								else "He plays on to the break, slowing as he goes, and starts the next quarter on tired legs."},
-				]})
-			return true
+	# No tired-star call: rotations are automatic for both sides (Director Bible
+	# 2.60, 2.63 superseded 2026-11-03). Its Keep answer, also the skipped default,
+	# held your star on past the line the rival's rotations take theirs off at
+	# (fatigue parity, T3.F-defects), so your side now rotates on the same rule.
 	# An opposition midfielder kicking a bag: a tag is a midfield job, so
 	# only a midfielder can be answered with one.
 	for id in player_stats:
