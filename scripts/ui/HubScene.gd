@@ -17,13 +17,6 @@ var _news_overlay: Control
 var _rule_overlay: Control
 var _sim_confirm: Control
 var _onboarding_overlay: Control
-var _pre_match: PreMatchVignette    # the scene over the wait after Play match
-var _starting_match := false        # Play match with vignettes off: on the way to the match
-## How long the pre-match scene runs before the side goes through the banner: a
-## moment of the warm-up, time to jog in to the huddle unhurried and stand together,
-## then the run - still a couple of seconds of match day, not a wait (a tap goes straight
-## to the run).
-const PRE_MATCH_SECONDS := 3.8
 
 
 func _ready() -> void:
@@ -38,6 +31,7 @@ func _ready() -> void:
 		return
 	# A response tapped last time that never reached a match does not wait here.
 	GameState.call_intent = {}
+	MatchKickoff.reset()
 	_warm_pre_match.call_deferred()
 
 	add_child(ClubBackdrop.new().setup(GameState.my_club).live())
@@ -1130,7 +1124,7 @@ func _week_actions(season: Season) -> Control:
 		buttons.append(week)
 	else:
 		buttons.append(_nav_button("Pick the side", func(): Router.go("selection")))
-		var play := _nav_button(_play_label(), _on_play_match, true)
+		var play := _nav_button(_play_label(), _on_play_pressed, true)
 		play.name = "PlayMatch"
 		buttons.append(play)
 	var row := UiKit.hbox(8)
@@ -1374,30 +1368,7 @@ func _warm_pre_match() -> void:
 
 
 func _upcoming_match() -> Dictionary:
-	var season: Season = GameState.season
-	if season == null or season.is_season_over():
-		return {}
-	if not season.is_regular_done():
-		var round_matches: Array = season.fixture[season.round_index]
-		for m in round_matches:
-			if m["home"] == GameState.my_club or m["away"] == GameState.my_club:
-				var up := {"home": m["home"], "away": m["away"],
-						"label": season.round_label(season.round_index), "tag": "",
-						"weather": season.weather_for(str(m["home"]), str(m["away"]), season.round_index)}
-				if season.round_index == season.gather_round():
-					up["venue"] = season.round_venue(season.round_index, str(m["home"]), str(m["away"]))
-				return up
-		return {}
-	for m in season.finals_week_matches():
-		if str(m["home"]) == "" or str(m["away"]) == "":
-			continue
-		if m["home"] == GameState.my_club or m["away"] == GameState.my_club:
-			return {"home": m["home"], "away": m["away"],
-					"label": str(m["label"]), "tag": str(m["tag"]),
-					"venue": season.finals_venue(m),
-					"weather": season.weather_for(str(m["home"]), str(m["away"]),
-							Season.REGULAR_ROUNDS + int(season.finals["week"]), m)}
-	return {}
+	return MatchKickoff.upcoming_match()
 
 
 func _ladder_grid(_limit: int) -> Control:
@@ -1408,63 +1379,21 @@ func _ladder_grid(_limit: int) -> Control:
 # ---------------------------------------------------------------------------
 # Round control
 # ---------------------------------------------------------------------------
+## Play match: the match preview first, its own step before the setup (director,
+## 2026-11-07: "It deserves its own place in the pre game flow"); its Continue
+## starts the match. Skip to full time has no setup to read for, so it starts here.
+func _on_play_pressed() -> void:
+	if MatchKickoff.busy or _upcoming_match().is_empty() \
+			or (GameState.match_way() == "skip" and GameState.call_intent.is_empty()):
+		_on_play_match()
+		return
+	Router.go("preview")
+
+
+## Start the match now (MatchKickoff): the pre-match scene, then the match-day setup.
 func _on_play_match() -> void:
-	if _upcoming_match().is_empty():
+	if not await MatchKickoff.start(get_tree()):
 		_on_sim_round()
-		return
-	if _pre_match != null or _starting_match:
-		return
-	# A response chosen under a fact opens this match on that call before the
-	# first bounce, so Skip plays it the Watch way this once (the saved choice
-	# stays); the button said "Play match" (_play_label).
-	var way := GameState.match_way()
-	if way == "skip" and not GameState.call_intent.is_empty():
-		way = "watch"
-	if not GameState.vignettes_on() or way == "skip":
-		# Vignettes off (Settings), or Skip chosen: no banner scene, straight
-		# to the match.
-		_starting_match = true
-		ScreenTransition.run("Heading to the ground...", func():
-			if not GameState.prepare_interactive_match():
-				_starting_match = false
-				_sim_week()
-				return
-			GameState.match_way_live = way
-			Router.go("match"))
-		return
-	# The pre-match scene goes up in this frame: a couple of seconds of
-	# match day (warm-up, final words, through the banner) while the match
-	# is set up underneath. A tap sends them through the banner at once.
-	var m := _upcoming_match()
-	var mine := GameState.my_club
-	var opp := str(m["away"]) if str(m["home"]) == mine else str(m["home"])
-	var season: Season = GameState.season
-	# Everyone named runs out: the 18 on the ground and the interchange.
-	var opp_squad := Squad.new(opp, season.lists[opp], false, opp, season.selections.get(opp, {}))
-	var opp_ground: Array = opp_squad.ground + opp_squad.bench
-	var heading := "%s  ·  %s v %s" % [str(m["label"]), GameDB.club_name(str(m["home"])),
-			GameDB.club_name(str(m["away"]))]
-	# The banner's occasion (Banners.pick): finals week, marquee game, must-win, spoon
-	# bowl, milestones (GameState.banner_context).
-	var label := str(m["label"])
-	var banner_ctx := GameState.banner_context(m)
-	# Gather Round: the warm-up is at the host ground the match is staged at.
-	if str(m.get("venue", "")) != "" and label.ends_with(GatherRound.NAME):
-		VignetteGround.use_match(m)
-	_pre_match = PreMatchVignette.open(get_tree().root, mine, opp,
-			GameState.my_squad().ground + GameState.my_squad().bench, opp_ground, heading,
-			PreMatchVignette.is_final(label), banner_ctx)
-	# Home-and-away rounds and finals both play live with the coach box.
-	await get_tree().process_frame
-	if not GameState.prepare_interactive_match():
-		_pre_match.get_parent().queue_free()
-		_pre_match = null
-		_on_sim_round()
-		return
-	GameState.match_way_live = way
-	_pre_match.play_through(PRE_MATCH_SECONDS)
-	await _pre_match.done
-	Router.go("match")
 
 
 ## A response beside an opposition fact was tapped (P-13): it is chosen and
@@ -1472,7 +1401,7 @@ func _on_play_match() -> void:
 ## match: Play match does, and the pre-bounce pane then opens on that call with
 ## the fact above it. Nothing is saved.
 func _on_fact_option(option: Dictionary, fact_text: String) -> void:
-	if _pre_match != null or _starting_match:
+	if MatchKickoff.busy:
 		return
 	var intent := {"call": str(option["call"]), "plan": str(option["plan"]),
 			"player_id": str(option["player_id"]), "fact": fact_text}
@@ -1585,7 +1514,7 @@ func _close_finals() -> void:
 
 
 func handle_back() -> bool:
-	if _pre_match != null:
+	if MatchKickoff.busy:
 		return true     # the side is on its way out
 	if TrainingReportSheet.close_top(self):
 		return true

@@ -4534,20 +4534,6 @@ func usual_plan(code: String) -> String:
 			season.selections.get(code, {})).ground)
 
 
-## Both sides' key players for the This week screen: each side's key forwards
-## and key defenders as they would take the field. {"mine"/"theirs":
-## {"fwd": [...], "def": [...]}}. Facts only; who plays on whom is set later.
-func week_key_players(opp: String) -> Dictionary:
-	if season == null or opp == "" or not season.lists.has(opp):
-		return {}
-	var theirs: Array = Squad.new(opp, season.lists[opp], false, opp, season.selections.get(opp, {})).ground
-	var mine: Array = my_squad().ground
-	return {
-		"mine": {"fwd": Matchups.key_forwards(mine), "def": Matchups.defenders(mine).slice(0, Matchups.KEY_FORWARDS)},
-		"theirs": {"fwd": Matchups.key_forwards(theirs), "def": Matchups.defenders(theirs).slice(0, Matchups.KEY_FORWARDS)},
-	}
-
-
 ## Compact stored-fact history surfaces. These deliberately read existing
 ## records/honour_roll rather than reconstructing or inventing old seasons.
 ## "quarter time", "half time" or "three-quarter time" for break 0, 1 or 2.
