@@ -31,7 +31,12 @@ extends RefCounted
 ##   is taken first;
 ## - KEEP=1: every expiring player under 31 in the best 30 of the list is offered two
 ##   more seasons at his asking price, and his counter if he makes one, so the list does
-##   not run down and the draft still has spots to fill.
+##   not run down and the draft still has spots to fill;
+## - HEAVY=1: the first block of every pre-season is trained Heavy (Running), as the
+##   game's contending clubs train it, so pre-season training can injure;
+## - ANSWER=card:key,card:key: those cards are always answered with that choice (when
+##   it is on the card), so an arc's rarer branch can be followed to its end.
+## Each season also prints FINISH <year> <club> ladder <position> finals <status>.
 ## Measurement only: it never changes a rule.
 
 var deck: Array = []
@@ -45,6 +50,18 @@ var probe := RandomNumberGenerator.new()
 var cover := OS.get_environment("COVER") == "1"
 var intl := OS.get_environment("INTL") == "1"
 var keep := OS.get_environment("KEEP") == "1"
+var heavy := OS.get_environment("HEAVY") == "1"
+var fixed := _answers(OS.get_environment("ANSWER"))
+
+
+## ANSWER's "card:key,card:key" as {card: key}.
+static func _answers(env: String) -> Dictionary:
+	var out := {}
+	for pair in env.split(",", false):
+		var kv := pair.split(":")
+		if kv.size() == 2:
+			out[kv[0].strip_edges()] = kv[1].strip_edges()
+	return out
 
 
 func _run_draft(d: Draft) -> void:
@@ -74,6 +91,10 @@ func _intl_pick(d: Draft) -> Dictionary:
 
 ## The choice to take: seeded random, or under COVER the one this career has taken least.
 func _choose(tid: String, opts: Array, extra := 0) -> int:
+	if fixed.has(tid):
+		for i in range(opts.size()):
+			if str((opts[i] as Dictionary).get("key", "")) == str(fixed[tid]):
+				return i
 	if not cover:
 		return answer.randi_range(0, opts.size() - 1 + extra)
 	var best := []
@@ -156,6 +177,8 @@ func run() -> void:
 			_season_end_cond()
 		_deal()
 		seasons_played += 1
+		print("FINISH %d %s ladder %d finals %s" % [GameState.season_year, GameState.my_club, GameState.my_position(),
+				GameState.my_finals_status() if GameState.my_finals_status() != "" else "out"])
 		print("CARDS seed %d %s season %d | cards so far %d | distinct so far %d" % [seed, club, GameState.season_year,
 				_sum(seen), seen.size()])
 		if intl:
@@ -190,7 +213,8 @@ func run() -> void:
 	print("SEASONS %d" % seasons_played)
 	print("SUMMARY seed %d %s %s names %s%s | seasons %d | weeks %d | cards %d | distinct %d of %d" % [seed, club,
 			"lists" if args.has("lists") else "redraft", "real" if real else "fictional",
-			(" coach" + (" cover" if cover else "") + (" intl" if intl else "") + (" keep" if keep else "")) if cover or intl or keep else "",
+			(" coach" + (" cover" if cover else "") + (" intl" if intl else "") + (" keep" if keep else "")
+					+ (" heavy" if heavy else "") + (" answer" if not fixed.is_empty() else "")) if cover or intl or keep or heavy or not fixed.is_empty() else "",
 			seasons_played, weeks,
 			_sum(seen), seen.size(), deck.size()])
 
@@ -226,6 +250,8 @@ func _deal() -> void:
 func _walk_preseason() -> void:
 	var guard := 0
 	var counted := -1
+	if heavy:
+		GameState.set_preseason_block(0, "heavy", "running")
 	while GameState.preseason_active() and guard < 100:
 		guard += 1
 		var pw := GameState.preseason_week()
