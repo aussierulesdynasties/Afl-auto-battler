@@ -568,7 +568,8 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"rushable": int(p.get("injury_weeks", 0)) > 0 and str(p.get("injury_kind", "")) != "concussion",
 			"overall_rank": all_rank, "told_players": gs.story_flag_set(id, "farewell_told"),
 			"new_here": _new_here(gs, p), "out_of_side": out_of_side(gs, p), "trial_place": _trial_place(gs, id),
-			"injury_kind": str(p.get("injury_kind", ""))}
+			"injury_kind": str(p.get("injury_kind", "")),
+			"injury_word": Injuries.wording(str(p.get("injury_kind", ""))) if int(p.get("injury_weeks", 0)) > 0 else ""}
 	# International prospects' cards: where he comes from and how far into his career he is.
 	var country: Dictionary = InternationalProspects.country(str(p.get("intl", "")))
 	var career := Career.of(p)

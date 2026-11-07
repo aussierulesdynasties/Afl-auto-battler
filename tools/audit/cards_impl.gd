@@ -23,6 +23,15 @@ extends RefCounted
 ## WEEKS <weeks in play>, SEASONS, then SUMMARY. WEEKS counts the weeks a card
 ## could come: the regular season, the finals while alive or on the week off, the
 ## pre-season's card weeks and the week the season ends.
+## Three ways of coaching, each the coach's own call (row 107: to reach the cards a
+## random coach seldom does), set by env and off by default:
+## - COVER=1: every card is answered with the choice this career has taken least
+##   (a tie goes to the seeded dice), so every branch of an arc gets its turn;
+## - INTL=1: at the club's own draft picks, any international prospect on the board
+##   is taken first;
+## - KEEP=1: every expiring player under 31 in the best 30 of the list is offered two
+##   more seasons at his asking price, and his counter if he makes one, so the list does
+##   not run down and the draft still has spots to fill.
 ## Measurement only: it never changes a rule.
 
 var deck: Array = []
@@ -33,15 +42,68 @@ var weeks := 0
 var end_counted := 0
 var answer := RandomNumberGenerator.new()
 var probe := RandomNumberGenerator.new()
+var cover := OS.get_environment("COVER") == "1"
+var intl := OS.get_environment("INTL") == "1"
+var keep := OS.get_environment("KEEP") == "1"
 
 
 func _run_draft(d: Draft) -> void:
 	var guard := 0
 	while not d.is_finished() and guard < 5000:
 		guard += 1
-		var c := d._best_ai_pick(d.current_club())
-		if c.is_empty() or not d._draft_pick(d.current_club(), c):
+		var code := d.current_club()
+		var at := d.pick_index + 1
+		var c := _intl_pick(d) if intl and code == d.user_club else {}
+		if not c.is_empty() and d._draft_pick(code, c):
+			print("INTL drafted %s from %s at pick %d for %s" % [str(c["id"]), str(c["intl"]), at, code])
+			continue
+		c = d._best_ai_pick(code)
+		if c.is_empty() or not d._draft_pick(code, c):
 			d._skip_current_pick()
+
+
+## The first international prospect still on the board that the club can take, or {}.
+func _intl_pick(d: Draft) -> Dictionary:
+	for p in d.pool:
+		if not InternationalProspects.is_international(p) or d.picked.has(str(p["id"])):
+			continue
+		if d._can_afford_for(d.user_club, p) and not (d.user_max_age > 0 and d.too_old_for_user(p)):
+			return p
+	return {}
+
+
+## The choice to take: seeded random, or under COVER the one this career has taken least.
+func _choose(tid: String, opts: Array, extra := 0) -> int:
+	if not cover:
+		return answer.randi_range(0, opts.size() - 1 + extra)
+	var best := []
+	var low := 1 << 30
+	for i in range(opts.size() + extra):
+		var k := "%s %s" % [tid, str((opts[i] as Dictionary).get("key", i)) if i < opts.size() else "nothing"]
+		var n := int(took.get(k, 0))
+		if n < low:
+			low = n
+			best = [i]
+		elif n == low:
+			best.append(i)
+	return int(best[answer.randi_range(0, best.size() - 1)])
+
+
+## KEEP: every expiring player of yours under 31 and in the list's best 30 offered two
+## seasons at his asking price, then his counter if he makes one.
+func _keep_list() -> void:
+	if not keep or not GameState.offseason_open():
+		return
+	var best := GameState.my_list.duplicate()
+	best.sort_custom(func(a, b): return float(a.get("overall", 0)) > float(b.get("overall", 0)))
+	best = best.slice(0, 30)
+	for p in Contracts.expiring(GameState.my_list).duplicate():
+		if float(p.get("age", 30)) >= 31.0 or not best.has(p):
+			continue
+		var id := str(p["id"])
+		var r: Dictionary = GameState.resign_player(id, 2)
+		if str(r.get("answer", "")) == "counter":
+			GameState.offer_contract(id, int(r.get("salary", 0)), 2)
 
 
 func run() -> void:
@@ -96,11 +158,15 @@ func run() -> void:
 		seasons_played += 1
 		print("CARDS seed %d %s season %d | cards so far %d | distinct so far %d" % [seed, club, GameState.season_year,
 				_sum(seen), seen.size()])
+		if intl:
+			print("INTL on list %d at %s" % [GameState.my_list.filter(func(q): return InternationalProspects.is_international(q)).size(),
+					GameState.my_club])
 		# Sacked with a job on offer: the audit takes the first club and goes on.
 		ClubMoves.take_first_offer(GameState)
 		if s == seasons - 1 or GameState.is_sacked():
 			break
 		GameState.open_offseason()
+		_keep_list()
 		if GameState.begin_intake_draft():
 			_run_draft(GameState.draft)
 			GameState.finish_intake_draft()
@@ -122,8 +188,10 @@ func run() -> void:
 		print("CHOICE %s %d" % [k, int(took[k])])
 	print("WEEKS %d" % weeks)
 	print("SEASONS %d" % seasons_played)
-	print("SUMMARY seed %d %s %s names %s | seasons %d | weeks %d | cards %d | distinct %d of %d" % [seed, club,
-			"lists" if args.has("lists") else "redraft", "real" if real else "fictional", seasons_played, weeks,
+	print("SUMMARY seed %d %s %s names %s%s | seasons %d | weeks %d | cards %d | distinct %d of %d" % [seed, club,
+			"lists" if args.has("lists") else "redraft", "real" if real else "fictional",
+			(" coach" + (" cover" if cover else "") + (" intl" if intl else "") + (" keep" if keep else "")) if cover or intl or keep else "",
+			seasons_played, weeks,
 			_sum(seen), seen.size(), deck.size()])
 
 
@@ -145,7 +213,7 @@ func _deal() -> void:
 		var opts: Array = c.get("options", [])
 		if opts.is_empty():
 			continue
-		var pick := answer.randi_range(0, opts.size() - 1)
+		var pick := _choose(tid, opts)
 		var ck := "%s %s" % [tid, str((opts[pick] as Dictionary).get("key", pick))]
 		took[ck] = int(took.get(ck, 0)) + 1
 		GameState.resolve_card(i, pick)
@@ -181,7 +249,7 @@ func _answer_papers() -> void:
 	var tid := str(card.get("tid", card.get("key", "")))
 	seen[tid] = int(seen.get(tid, 0)) + 1
 	var opts: Array = card.get("options", [])
-	var pick := answer.randi_range(0, opts.size())
+	var pick := _choose(tid, opts, 1)
 	if pick >= opts.size():
 		took["%s nothing" % tid] = int(took.get("%s nothing" % tid, 0)) + 1
 		return   # preseason_advance says nothing

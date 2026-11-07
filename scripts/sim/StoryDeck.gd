@@ -89,8 +89,9 @@ const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "over
 		"last_season", "finals_games", "save_debut", "debut_year", "milestone_next",
 		"injured_weeks", "rushable", "overall_rank", "told_players",
 		# The pre-season cards: arrived this summer (a recruit or a draftee), where he
-		# finished in the time trial ("best", "worst" or ""), what he is injured with.
-		"new_here", "trial_place", "injury_kind",
+		# finished in the time trial ("best", "worst" or ""), what he is injured with
+		# (the stored kind, and the words for it: "a hamstring strain").
+		"new_here", "trial_place", "injury_kind", "injury_word",
 		# International prospects (international.json): who he is, and where he is in his career.
 		"intl", "intl_region", "from", "demonym", "home_club", "seasons_listed", "goals",
 		# The extension card: what waiting for the off-season can cost (ClubLife.wait_words).

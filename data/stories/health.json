@@ -396,7 +396,6 @@
 		"subject": {
 			"kind": "player",
 			"where": {
-				"injury_kind": "knee",
 				"injured_weeks_min": 1,
 				"injured_weeks_max": 6,
 				"rushable": true
@@ -404,10 +403,10 @@
 			"pick": "highest:overall"
 		},
 		"title": [
-			"{name}'s knee"
+			"{name} is running again"
 		],
 		"text": [
-			"{first} is running again after his knee. The physio hasn't cleared him yet, but he is asking to join full sessions and reckons he is ready."
+			"{first} is running again after {injury_word}. The physio hasn't cleared him yet, but he is asking to join full sessions and reckons he is ready."
 		],
 		"choices": [
 			{
@@ -427,7 +426,7 @@
 					{
 						"op": "trust",
 						"d": 3,
-						"why": "You kept to the physio's plan for his knee"
+						"why": "You kept to the physio's plan for his comeback"
 					},
 					{
 						"op": "morale",

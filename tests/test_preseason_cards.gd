@@ -262,7 +262,7 @@ func _subject_for(id: String) -> Dictionary:
 			p["age"] = 29.0
 		"pre_knee_return":
 			p["injury_weeks"] = 3
-			p["injury_kind"] = "knee"
+			p["injury_kind"] = "hamstring"
 	return p
 
 
@@ -296,6 +296,26 @@ func _test_facts() -> void:
 	_check(StoryEngine.eligible_subject(t, ctx, GameState.story, 100, RandomNumberGenerator.new()).is_empty(), "The flag card stays away from a club that did not win one")
 	(ctx["club"] as Dictionary)["premiers"] = true
 	_check(not StoryEngine.eligible_subject(t, ctx, GameState.story, 100, RandomNumberGenerator.new()).is_empty(), "...and is there for the premiers")
+	# The running-again card (row 107): written for a knee no pre-season ever had, it now
+	# comes up for whatever the physio is managing, the track's own soft-tissue injuries
+	# included, and the card names the injury.
+	var kt := StoryDeck.by_id(StoryDeck.all(), "pre_knee_return")
+	var hurt: Dictionary = GameState.my_list[6]
+	for q in GameState.my_list:
+		q["injury_weeks"] = 0
+		q.erase("injury_kind")
+	hurt["injury_weeks"] = 2
+	hurt["injury_kind"] = "hamstring"
+	var ks := StoryEngine.eligible_subject(kt, ClubStories.context(GameState), GameState.story, 100, RandomNumberGenerator.new())
+	_check(str(ks.get("id", "")) == str(hurt["id"]), "The running-again card comes up for a hamstring picked up on the track, not a knee alone")
+	var ktext := str(GameState.story_card("pre_knee_return", hurt).get("text", ""))
+	_check(ktext.contains(Injuries.wording("hamstring")) and not ktext.contains("knee") and not ktext.contains("{"),
+			"...and the card names his injury: %s" % ktext)
+	hurt["injury_kind"] = "concussion"
+	_check(StoryEngine.eligible_subject(kt, ClubStories.context(GameState), GameState.story, 100, RandomNumberGenerator.new()).is_empty(),
+			"...but never a concussion, which no player can be rushed back from")
+	hurt["injury_weeks"] = 0
+	hurt.erase("injury_kind")
 	# Words: nothing in the deck reads as engine talk.
 	var bad := []
 	for id in IDS:
