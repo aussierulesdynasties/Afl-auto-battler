@@ -6,8 +6,9 @@ extends SceneTree
 ## kept), its save round trip and an old save's backfill. Real touches at
 ## 390x844 and 1280x720: a club's name opens its page, Back closes it, a swipe
 ## that starts on a club's name still scrolls, the page leads to the honour
-## board and a name on the board opens his facts; the trophy room's link. A
-## rival's page shows nothing hidden (#759).
+## board and a name on the board opens his facts; every club's page opens its
+## trophies (rulings 118, 118a), a rival with none says so. A rival's page
+## shows nothing hidden (#759).
 
 const Tap := preload("res://tests/tap.gd")
 const SAVE := "user://test_clublink.save"
@@ -83,7 +84,7 @@ func _run() -> void:
 	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		await _t("_test_club_tap", [sz])
 		await _t("_test_board_taps", [sz])
-		await _t("_test_trophy_link", [sz])
+		await _t("_test_trophies", [sz])
 	# The narrowest phone the game lays out for.
 	await _t("_test_board_taps", [Vector2i(320, 693)])
 	await _t("_test_drag_over_club", [Vector2i(390, 844)])
@@ -453,7 +454,7 @@ func _test_club_tap(sz: Vector2i) -> void:
 			"%s: a finger on a club's name opens its page (%s)" % [tag, why])
 	if page != null:
 		var txt := _text_of(page)
-		for want in [_db.club_name("MEL"), "Home ground", "Senior coach", "Premierships", "Last five", "Best 22"]:
+		for want in [_db.club_name("MEL"), "Home ground", "Senior coach", "Trophies", "Last five", "Best 22"]:
 			_check(txt.contains(want), "%s: the page shows %s" % [tag, want])
 		_check(page.find_child("LineMID", true, false) != null, "%s: the best 22 is named by line" % tag)
 		# #759: a rival's page shows public facts only.
@@ -540,11 +541,22 @@ func _test_board_taps(sz: Vector2i) -> void:
 		_check(screen.get_node_or_null(_cp.FACTS_NAME) == null and screen.get_node_or_null(_cp.BOARD_NAME) != null,
 				"%s: Back closes the facts and leaves the board" % tag)
 	if big_row != null:
+		# His career facts on record (T5.r110): a flag and a medal, read on the
+		# profile a real tap opens.
+		var y := int(_gs.season_year)
+		_gs.honour_roll.append({"year": y - 2, "my_club": "FRE", "premier": "FRE",
+				"coleman": [{"id": str(big["id"]), "club": "FRE", "goals": 70}]})
 		var bn: Control = big_row.find_child("BoardName", true, false)
 		var why3: String = await Tap.tap_at(big_row, bn.get_global_rect().get_center() - (big_row as Control).global_position, true)
 		await _settle()
 		var prof: Node = screen.get_node_or_null("PlayerProfile")
 		_check(why3 == "" and prof != null, "%s: a name of a player still in the game opens his profile (%s)" % [tag, why3])
+		var ptext := _text_of(prof) if prof != null else ""
+		_check(ptext.contains("Debuted in %d, for Fremantle." % (y - 8))
+				and ptext.contains("At Fremantle for the %d premiership." % (y - 2))
+				and ptext.contains("Coleman Medal %d." % (y - 2)),
+				"%s: his profile's Career section lists his debut, flag and medal on record (%s)" % [tag, ptext.replace("\n", " | ")])
+		_gs.honour_roll.pop_back()
 		_router.handle_back()
 		await _settle()
 	_router.handle_back()
@@ -558,37 +570,74 @@ func _test_board_taps(sz: Vector2i) -> void:
 	await _settle()
 
 
-func _test_trophy_link(sz: Vector2i) -> void:
+func _test_trophies(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	_board_setup()
-	# The stats hub's first-visit intro is not in FirstVisitIntro.TEXT; seen,
-	# so its overlay does not take the tap meant for the link.
-	_gs.set_setting("seen_season_stats_intro", true)
-	root.size = sz
-	load("res://scripts/ui/StatsHubScene.gd").current = "trophies"
-	var s: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
-	root.add_child(s)
-	current_scene = s
+	var y := int(_gs.season_year)
+	var screen := _screen(sz)
 	await _settle()
-	var link: Control = s.find_child("HonourBoardLink", true, false)
-	_check(link != null, "%s: the trophy room links to the honour board" % tag)
-	if link != null:
-		# A player scrolls down to it first; let the scroll settle before the tap.
-		var anc: Node = link.get_parent()
-		while anc != null and not (anc is ScrollContainer):
-			anc = anc.get_parent()
-		if anc != null:
-			(anc as ScrollContainer).ensure_control_visible(link)
-		await _settle()
-		var why: String = await Tap.tap(link)
-		await _settle()
-		_check(why == "" and s.find_child(_cp.BOARD_NAME, true, false) != null,
-				"%s: a finger on the link opens the board (%s)" % [tag, why])
-		_check(s.call("handle_back") == true, "%s: the stats hub's Back closes the board" % tag)
-		await _settle()
-		_check(s.find_child(_cp.BOARD_NAME, true, false) == null, "%s: ...and it is gone" % tag)
-	s.queue_free()
+	# Your own page: the trophies, your time there and the Brownlow won.
+	_cl.open(screen, "FRE")
 	await _settle()
+	var sheet := await _tap_trophies(screen, tag + " your club")
+	_check(sheet != null and sheet.find_child("TrophiesTenure", true, false) != null
+			and sheet.find_child("Tenure", true, false) != null,
+			"%s: your trophies give your time at the club and your seasons" % tag)
+	_check(sheet != null and not sheet.find_children("PlayerGroup_*", "", true, false).is_empty(),
+			"%s: ...and the Brownlow your player won in %d" % [tag, y - 1])
+	_check(sheet != null and sheet.find_child("HonourBoardLink", true, false) == null,
+			"%s: the trophies leave the honour board to its own button" % tag)
+	_router.handle_back()
+	await _settle()
+	_check(screen.get_node_or_null(_cp.TROPHIES_NAME) == null and _page(screen) != null,
+			"%s: Back closes the trophies and leaves the club's page" % tag)
+	_router.handle_back()
+	await _settle()
+	_check(_page(screen) == null, "%s: the next Back closes the page" % tag)
+	# A rival that has won nothing: an honest empty state, none of your records.
+	_cl.open(screen, "GWS")
+	await _settle()
+	var link: Button = screen.find_child("TrophiesLink", true, false)
+	_check(link != null and _text_of(link).contains("No premierships on record"),
+			"%s: a rival's link says it has no premierships on record" % tag)
+	sheet = await _tap_trophies(screen, tag + " rival")
+	if sheet != null:
+		var txt := _text_of(sheet)
+		_check(txt.contains(_db.club_name("GWS")) and sheet.find_child("NoPremierships", true, false) != null
+				and sheet.find_child("ClubHistory", true, false) == null
+				and sheet.find_child("NoPlayerHonours", true, false) != null,
+				"%s: the rival's trophies say once, plainly, there are none" % tag)
+		_check(sheet.find_child("TrophiesTenure", true, false) == null and sheet.find_child("Tenure", true, false) == null
+				and sheet.find_child("AwardFilter", true, false) == null,
+				"%s: ...with no time of yours and nothing to filter" % tag)
+		var close: Button = sheet.find_child("CloseTrophies", true, false)
+		var why: String = await Tap.tap(close) if close != null else "no close"
+		await _settle()
+		_check(why == "" and screen.get_node_or_null(_cp.TROPHIES_NAME) == null and _page(screen) != null,
+				"%s: Close closes the trophies, the page stays (%s)" % [tag, why])
+	_router.handle_back()
+	await _settle()
+	screen.queue_free()
+	await _settle()
+
+
+## Scroll the club page to its Trophies link and tap it as a finger would.
+func _tap_trophies(screen: Control, tag: String) -> Control:
+	var link: Control = screen.find_child("TrophiesLink", true, false)
+	_check(link != null, "%s: the club's page has a Trophies link" % tag)
+	if link == null:
+		return null
+	var anc: Node = link.get_parent()
+	while anc != null and not (anc is ScrollContainer):
+		anc = anc.get_parent()
+	if anc != null:
+		(anc as ScrollContainer).ensure_control_visible(link)
+	await _settle()
+	var why: String = await Tap.tap(link)
+	await _settle()
+	var sheet := screen.get_node_or_null(_cp.TROPHIES_NAME) as Control
+	_check(why == "" and sheet != null, "%s: a finger on Trophies opens them (%s)" % [tag, why])
+	return sheet
 
 
 ## A swipe that begins on a club's name scrolls and opens nothing.

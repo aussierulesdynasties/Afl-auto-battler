@@ -378,7 +378,7 @@ func _ladder_section(season: Season, table_width := -1.0) -> Control:
 	var head := UiKit.hbox(8)
 	v.add_child(head)
 	# The heading is the way in: the whole season (ladder, every player's
-	# numbers, awards, fixture, trophy room; director, 2026-10-07) sits
+	# numbers, awards, fixture; director, 2026-10-07) sits
 	# behind "Ladder". One nav idiom on the hub (audit §8 Phase 1.1): the
 	# footer row and this heading, no third kind of button.
 	var full := UiKit.section_link("Ladder", "Season stats ›", "SeasonStats")

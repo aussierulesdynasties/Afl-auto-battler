@@ -7,7 +7,8 @@ extends RefCounted
 const APPEARANCE_OPTIONS := [["dark", "Dark"], ["light", "Light"]]
 const NAME_OPTIONS := [["generated", "Generated"], ["real", "Real"]]
 const NAMES_INFO := "Real shows each player's AFL name; generated names are invented. Ratings and results are the same either way."
-const SPEED_OPTIONS := [["1", "1x"], ["2", "2x"], ["4", "4x"], ["8", "8x"]]
+const REPORT_INFO := "Copies the build, your round, this screen and the last twenty lines of the match feed, ready to paste into a message. Nothing is sent from the game."
+const SPEED_OPTIONS :=[["1", "1x"], ["2", "2x"], ["4", "4x"], ["8", "8x"]]
 
 
 ## Opens the sheet over `host`. `in_career` adds Main menu and Delete this
@@ -150,6 +151,8 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 		dials.name = "OptionsCareerDials"
 		v.add_child(dials)
 
+	_report(v, host)
+
 	v.add_child(UiKit.spacer(UiKit.GAP))
 	var ver := UiKit.lbl("Version %s" % BuildInfo.label(),
 			UiKit.SMALL, UiKit.MUTED)
@@ -167,6 +170,48 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 		q.pressed.connect(func(): host.get_tree().quit())
 		box["footer"].add_child(q)
 	return overlay
+
+
+## Report a problem (T3.R43): one tap copies a note for the developer (build,
+## seed, round, screen, the last twenty match-feed lines). Nothing is sent.
+static func _report(v: VBoxContainer, host: Control) -> void:
+	v.add_child(UiKit.spacer(UiKit.GAP))
+	v.add_child(UiKit.rule())
+	var b := UiKit.btn("Report a problem", UiKit.NAME)
+	b.name = "ReportProblem"
+	b.custom_minimum_size = Vector2(0, 44)
+	b.pressed.connect(func():
+		var screen := Router.current()
+		if screen == "":
+			screen = str(host.name)
+		ProblemReport.copy(screen)
+		_toast(b, "Copied"))
+	v.add_child(b)
+	var note := UiKit.lbl(REPORT_INFO, UiKit.SMALL, UiKit.MUTED)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(note)
+
+
+## A short word laid over the button just tapped, in light ink-on-paper so it
+## reads as the answer to that tap, and gone again in a moment.
+static func _toast(over: Control, text: String) -> void:
+	var old := over.get_node_or_null("Toast")
+	if old != null:
+		old.free()
+	var t := PanelContainer.new()
+	t.name = "Toast"
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	t.add_theme_stylebox_override("panel", UiKit.style(UiKit.TEXT, 8, UiKit.RADIUS))
+	var l := UiKit.lbl(text, UiKit.NAME, UiKit.BG, true)
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	t.add_child(l)
+	over.add_child(t)
+	t.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	over.get_tree().create_timer(1.6).timeout.connect(func():
+		if is_instance_valid(t):
+			t.queue_free())
 
 
 ## A labelled row of choices, the current one outlined, with its one-line
