@@ -204,6 +204,9 @@ var boundary_rng := RandomNumberGenerator.new()
 ## A contest that locks up into a ball-up (match flow, 2026-10-10): its own
 ## stream, so the calibrated play RNG is not re-rolled by it.
 var lockup_rng := RandomNumberGenerator.new()
+## The wet ball's fumbles (row 120): their own stream, drawn only on a wet day,
+## so every other day's dice are where they were.
+var fumble_rng := RandomNumberGenerator.new()
 ## The last chain ended in a ball-up called in play (a tackle held, a contest
 ## locked up): the next chain starts at that stoppage.
 var _prev_locked := false
@@ -244,12 +247,29 @@ var weather := "perfect":
 		weather = v if WEATHER_RATES.has(v) or v == "perfect" else "perfect"
 		_rates_cache = {}
 const WEATHER_RATES := {
-	"wet": {"mark_share_of_kicks": 0.90, "pressure_base": 1.18, "clanger_per_chain": 1.15,
-			"stoppage_share": 1.05, "inside50_goal": 0.98, "inside50_behind": 1.07,
+	# Row 120: the wet's tackles come from tackle_share (WEATHER_SIM), not from
+	# more pressure, which cost scoring past the evidence; behinds 1.07 -> 1.03 as
+	# the set shots now carry their own share of the accuracy drop.
+	"wet": {"mark_share_of_kicks": 0.90, "clanger_per_chain": 1.15,
+			"stoppage_share": 1.05, "inside50_goal": 0.98, "inside50_behind": 1.03,
 			"one_percenter_share": 1.4, "metres_gain_mean": 1.12},
 	"windy": {"mark_share_of_kicks": 0.92, "clanger_per_chain": 1.06,
 			"metres_gain_mean": 1.03},
 	"hot": {"pressure_base": 0.97, "stoppage_share": 0.95, "metres_gain_mean": 1.03},
+}
+## Row 120 (director 2026-11-06): the wet is more fumbles, more stoppages and
+## harder set shots, with tackles toward the real +12% (row 61). Rates for the
+## sim's own named constants, read through _wx (WEATHER_RATES holds Ratings.T
+## multipliers only). A condition with no row, a perfect day included, plays
+## every one at 1.0 and draws no extra dice.
+## - set_acc: goals per set shot, on every band and on a free's set shot.
+## - lockup: LOCKUP_PRESS and LOCKUP_SPOIL, more contests locking up for a ball-up.
+## - tackle_spill: TACKLE_SPILL, so more held tackles are ball-ups.
+## - fumble: the chance a ground ball is fumbled at the gather (_wet_fumble).
+## - tackle_share: PRESS_TACKLE_SHARE, more of the pressure a tackle and less
+##   a rushed disposal (pressure acts unchanged).
+const WEATHER_SIM := {
+	"wet": {"set_acc": 0.97, "lockup": 1.0, "tackle_spill": 0.85, "fumble": 0.08, "tackle_share": 1.27},
 }
 ## A windy day has a breeze end (the "five-goal breeze"): shots kicked with
 ## it are a little easier, against it much harder, about 5% fewer goals overall
@@ -264,6 +284,15 @@ var breeze_side := 0
 ## Whether `side` kicks with the breeze this quarter (windy days only).
 func with_breeze(side: int) -> bool:
 	return (side == breeze_side) == (current_quarter % 2 == 1)
+
+
+## The day's rate for a WEATHER_SIM key: `default` when the condition has no
+## row or the row leaves it out. An audit sizes it with tune "WX_<key>".
+func _wx(key: String, default := 1.0) -> float:
+	var row: Dictionary = WEATHER_SIM.get(weather, {})
+	if row.is_empty():
+		return default
+	return _tv("WX_" + key, float(row.get(key, default)))
 
 
 ## Hot days: legs go faster (the Heat Policy's longer breaks don't undo it).
@@ -285,6 +314,39 @@ func _rates() -> Dictionary:
 		for k in mult:
 			_rates_cache[k] = float(_rates_cache[k]) * float(mult[k])
 	return _rates_cache
+
+
+## Of the wet-day fumbles, the share where the pack forms on it and the umpire
+## calls a ball-up; the rest is a loose ball either side can win off the deck.
+const WET_FUMBLE_HELD := 0.5
+
+
+## A ground ball fumbled in the wet (row 120, director 2026-11-06), at the first
+## touch of a chain (the only ground-ball gather play_chain has): he wins it
+## off the deck and loses it before he can dispose of it, a clanger, and the
+## ball spills, either into a ball-up or loose for either side to win off the deck. Likelier for a poor
+## contested player; a Wet-weather player fumbles WET_CLANGERS as often, as he
+## makes fewer clangers. {} when he gathers it cleanly. Dice: fumble_rng only.
+func _wet_fumble(side: int, carrier, at_fp: float) -> Dictionary:
+	var p := _wx("fumble", 0.0) * (1.30 - 0.60 * _a(carrier, "contested") / 100.0)
+	if _trait(carrier, "wet_weather"):
+		p *= Traits.WET_CLANGERS
+	if p <= 0.0 or fumble_rng.randf() >= p:
+		return {}
+	# He got to it first (a contested ground-ball get), then lost it before he
+	# could dispose of it: not a disposal.
+	_gain(side, carrier, "gb")
+	_t(side, "clangers")
+	_p(carrier, "clangers")
+	_emit("clanger", side, at_fp, carrier, CLANGER_WHY["wet"] % GameDB.player_display_name(carrier))
+	events[events.size() - 1]["why"] = "wet"
+	events[events.size() - 1]["fumble"] = true
+	_last_disp = {"carrier": carrier, "kind": "", "end": "fumble"}
+	if fumble_rng.randf() < WET_FUMBLE_HELD:
+		return {"outcome": "stoppage", "fp": at_fp, "actor": carrier}
+	return {"outcome": "loose", "fp": at_fp, "actor": carrier}
+
+
 ## Momentum: who has the run of play, -1 (away on top) .. 1 (home on top).
 ## A goal swings it to the scorers, a behind a little; the swing shrinks as
 ## it nears the cap and a goal the other way pulls it back harder, so it can
@@ -352,6 +414,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	_speccy_quota = speccy_quota(seed)
 	boundary_rng.seed = seed * 17 + 19
 	lockup_rng.seed = seed * 107 + 109
+	fumble_rng.seed = seed * 127 + 131
 	lead_rng.seed = seed * 109 + 113
 	injury_rng.seed = seed * 13 + 7
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
@@ -2908,6 +2971,15 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		_chain_touch[str(carrier["id"])] = carrier
 		# Who a clanger would be blamed on, and how his touch ended (clanger_why).
 		_last_disp = {"carrier": carrier, "kind": "", "end": ""}
+		# The wet ball (row 120): the first touch of a chain, when it is a
+		# ground ball (a loose turnover, a general contest, a stoppage with
+		# no clean clearance), can be fumbled at the gather. Later touches
+		# come by hand or foot, so they are never ground balls.
+		if weather == "wet" and not is_kick_in and touches == 1:
+			if _first_gain(carrier, cleared, is_kick_in) == "gb":
+				var fumbled := _wet_fumble(side, carrier, fp)
+				if not fumbled.is_empty():
+					return fumbled
 		# Champion Data: a kick straight from the goal square is a team
 		# kick-in, not a player disposal. Once the taker plays on it is his
 		# disposal like ordinary play.
@@ -2996,7 +3068,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var press_roll := rng.randf()
 		var rushed := false
 		var tackled := false
-		if press_roll < pressure * PRESS_TACKLE_SHARE:
+		if press_roll < pressure * PRESS_TACKLE_SHARE * _wx("tackle_share"):
 			var tackler = _pick_presser(opp, zone)
 			_maybe_report(opp, tackler, carrier)
 			_t(opp, "tackles")
@@ -3036,7 +3108,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_last_disp["kind"] = disposal_kind
 			# Knocked loose in the tackle: whoever is there for the other side gathers
 			# it (an intercept possession). Otherwise it is held in: a ball-up.
-			if lockup_rng.randf() < _tv("TACKLE_SPILL", TACKLE_SPILL):
+			if lockup_rng.randf() < _tv("TACKLE_SPILL", TACKLE_SPILL) * _wx("tackle_spill"):
 				var taker = _aerial_defender(opp, fp)
 				if taker == null:
 					taker = tackler
@@ -3063,7 +3135,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			if rng.randf() < turn_p:
 				# Rushed into a pack: sometimes nobody gets it clean and the
 				# umpire calls a ball-up where it locked up.
-				if lockup_rng.randf() < _tv("LOCKUP_PRESS", LOCKUP_PRESS):
+				if lockup_rng.randf() < _tv("LOCKUP_PRESS", LOCKUP_PRESS) * _wx("lockup"):
 					return {"outcome": "stoppage", "fp": fp, "actor": presser}
 				_t(opp, "pressure_wins")
 				# A rushed handball is picked off by the man on him; a rushed kick
@@ -3476,7 +3548,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 			return crumb
 
 	# Spoiled to the deck in the pocket, nobody clean: a ball-up inside 50.
-	if spoilt and not marked and lockup_rng.randf() < _tv("LOCKUP_SPOIL", LOCKUP_SPOIL):
+	if spoilt and not marked and lockup_rng.randf() < _tv("LOCKUP_SPOIL", LOCKUP_SPOIL) * _wx("lockup"):
 		return {"outcome": "stoppage", "fp": fp, "actor": defender}
 	# The spare comes away with it only when he got the fist to it; reaching
 	# the contest is not winning it. Otherwise the defender in it does.
@@ -5231,12 +5303,20 @@ func _set_shot_split(goal_p: float, behind_p: float) -> Dictionary:
 		e_behind += float(b["share"]) * float(b["behind"])
 	if shot_rng.randf() < share:
 		var r := shot_rng.randf()
+		var pick: Dictionary = bands[bands.size() - 1]
 		for b in bands:
 			r -= float(b["share"])
 			if r < 0.0:
-				return {"band": b, "goal": b["goal"], "behind": b["behind"]}
-		var last: Dictionary = bands[bands.size() - 1]
-		return {"band": last, "goal": last["goal"], "behind": last["behind"]}
+				pick = b
+				break
+		# The wet makes the kick itself harder (row 120), after the expected
+		# value above, so the general-play shot does not make it back.
+		var sa := _wx("set_acc")
+		if sa != 1.0:
+			pick = pick.duplicate()
+			pick["goal"] = clampf(float(pick["goal"]) * sa, 0.03, 0.97)
+			pick["behind"] = (1.0 - float(pick["goal"])) * SET_MISS_BEHIND
+		return {"band": pick, "goal": pick["goal"], "behind": pick["behind"]}
 	var rest := 1.0 - share
 	return {"band": {},
 			"goal": maxf(0.0, (goal_p - share * e_goal) / rest),
@@ -5621,7 +5701,8 @@ func _free_set_shot(side: int, at_fp: float, taker: Dictionary) -> Dictionary:
 	_chain_touch[str(taker["id"])] = taker
 	fp = at_fp
 	var metres := float(Ratings.T["goal_line"]) - (at_fp if side == 0 else -at_fp)
-	var goal_p := clampf(free_set_acc(metres) * shot_chance(side, taker, true, false) / SET_REF, 0.03, 0.97)
+	var goal_p := clampf(free_set_acc(metres) * shot_chance(side, taker, true, false) / SET_REF
+			* _wx("set_acc"), 0.03, 0.97)
 	var behind_p := (1.0 - goal_p) * SET_MISS_BEHIND
 	var roll := rng.randf()
 	# His shot, as any set shot is counted (shots, set shots, their result).

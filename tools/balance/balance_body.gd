@@ -79,12 +79,27 @@ func play(from: int, count: int, out: String, weather: String,
 				for k in range(clampi(q, 1, 4) - 1, 4):
 					q_score[0][k] = int(sc[0])
 					q_score[1][k] = int(sc[1])
+		# Stoppages in play (row 120), counted from the event log, match totals on
+		# both team lines (not StatBook keys, which are saved and append-only):
+		# ball-ups where play locked up and boundary throw-ins. Centre bounces are
+		# the team key "centre_bounces".
+		var ball_ups := 0
+		var throw_ins := 0
+		for ev in r["events"]:
+			var kind := str((ev as Dictionary).get("kind", ""))
+			if kind == "ballup":
+				ball_ups += 1
+			elif kind == "throwin":
+				throw_ins += 1
 		var teams := []
 		var rosters: Array = sim.rosters()
 		var stats: Dictionary = r["players"]
 		for side in range(2):
 			var t: Dictionary = (r["team"][side] as Dictionary).duplicate()
 			t["score"] = int(r["score"][side])
+			t["ball_ups"] = ball_ups
+			t["throw_ins"] = throw_ins
+			t["stoppages"] = ball_ups + throw_ins
 			_shot_counts(t, sim.shot_log, side)
 			t["strength"] = snappedf((sq_h if side == 0 else sq_a).strength(), 0.01)
 			q_score[side][3] = int(r["score"][side])
