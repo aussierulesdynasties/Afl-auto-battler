@@ -139,7 +139,7 @@ How to read this chapter: each rule carries its date and a source tag. Text in q
 
 How to read this chapter. Each rule is numbered, dated and tagged with its source. Words in quotation marks are the director's own, copied unaltered from the record. Where no quote exists the rule is stated plainly. Date "undated" means the source record carries no date. Status words: DONE (built and merged), ACTIVE (standing rule), HELD (director said later or not yet).
 
-Precedence used throughout: a later director decision beats an earlier one, and the 2026-11-03 story-first order ranks everything: 1) story generator, 2) deep simulator, 3) approachable game. In this chapter that means the match story and the truthful simulation outrank convenience features such as Key moments or simplified call menus. Where the existing Design Bible and a record agree they are merged. Agent recommendations (audits, research) are marked as such and are not rulings.
+Precedence used throughout: a later director decision beats an earlier one, and the 2026-11-03 story-first order ranks everything: 1) story generator, 2) deep simulator, 3) approachable game. In this chapter that means the match story and the truthful simulation outrank convenience features such as Key moments (cut 2026-11-08, 2.50) or simplified call menus. Where the existing Design Bible and a record agree they are merged. Agent recommendations (audits, research) are marked as such and are not rulings.
 
 Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 28, 29, 30, 32; ORQ = open-requirements.md; ARD-xx = roadmap item ids; MV = MATCH_VIEW.md; DES = DESIGN.md; SRA = System Reality Audit; cNN = session transcript tags.
 
@@ -255,9 +255,9 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 
 ---
 
-## 2.D Taking a match: watch, key moments, skip, sim the week
+## 2.D Taking a match: watch, skip, sim the week
 
-**2.50** Three ways to take your match (P-14): Watch, Key moments, Skip. "Yes, add Key moments beside Watch and Skip." Key moments runs at 8x and drops to 1x at each goal, each coach's call and each quarter break; Skip goes straight to full time on the plan taken in (hub button "Skip to full time"; this is one match's playback, not a season fast path: Sim the week is the only fast path across rounds, "Play to Grand Final" being cut, roadmap 32 row 8). Playback only, the sim, log and result are the same; it never answers a call for the coach; setting match_way, Watch default. "Merge as shown" (#803). Rank: approachable layer, never alters the sim. (2026-10-18; RM28 #3, RM30 #21)
+**2.50** Two ways to take your match (P-14): Watch and Skip. Key moments is cut (2026-11-08: "I also think we should remove 'key moments' it's just noise and not really good"): the hub's poster offers Watch and Skip only, the match screen has no Key moments control, and a settings file that still holds Key moments opens as Watch. No switch. From 2026-10-18 to 2026-11-08 there were three ways ("Yes, add Key moments beside Watch and Skip."): Key moments ran at 8x and dropped to 1x at each goal, each coach's call and each quarter break. Skip goes straight to full time on the plan taken in (hub button "Skip to full time"; this is one match's playback, not a season fast path: Sim the week is the only fast path across rounds, "Play to Grand Final" being cut, roadmap 32 row 8). Playback only, the sim, log and result are the same; it never answers a call for the coach; setting match_way, Watch default. "Merge as shown" (#803). Rank: approachable layer, never alters the sim. (2026-10-18; RM28 #3, RM30 #21)
 
 **2.51** Skipping rolls unsimulated quarters using the last coach-box plan then drains the log. Ordinary watching and skipping must run through the same authoritative sim. (undated; DES, genre research)
 
@@ -348,6 +348,7 @@ Source tags: DB = DESIGN_BIBLE; RM26/27/28/29/30/32 = roadmap chapters 26, 27, 2
 23. Cut audit rows 2-5 as shipped (#874): old call keys ignored, live no switch.
 24. Tired star Rest/Keep prompt (rule 2.63, TIRED_CALL_AUDIT 2026-10-05): replaced by automatic rotations for both sides (2026-11-03).
 25. Half-time assistant report (earlier reading of 2.69): replaced by full stats at every break (5.164; #507).
+26. Key moments, the third way to take a match (2.50, P-14, 2026-10-18): cut 2026-11-08 ("it's just noise and not really good"); Watch and Skip remain, and an old Key moments setting opens as Watch.
 
 ---
 
