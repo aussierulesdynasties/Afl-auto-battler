@@ -541,11 +541,22 @@ func _test_board_taps(sz: Vector2i) -> void:
 		_check(screen.get_node_or_null(_cp.FACTS_NAME) == null and screen.get_node_or_null(_cp.BOARD_NAME) != null,
 				"%s: Back closes the facts and leaves the board" % tag)
 	if big_row != null:
+		# His career facts on record (T5.r110): a flag and a medal, read on the
+		# profile a real tap opens.
+		var y := int(_gs.season_year)
+		_gs.honour_roll.append({"year": y - 2, "my_club": "FRE", "premier": "FRE",
+				"coleman": [{"id": str(big["id"]), "club": "FRE", "goals": 70}]})
 		var bn: Control = big_row.find_child("BoardName", true, false)
 		var why3: String = await Tap.tap_at(big_row, bn.get_global_rect().get_center() - (big_row as Control).global_position, true)
 		await _settle()
 		var prof: Node = screen.get_node_or_null("PlayerProfile")
 		_check(why3 == "" and prof != null, "%s: a name of a player still in the game opens his profile (%s)" % [tag, why3])
+		var ptext := _text_of(prof) if prof != null else ""
+		_check(ptext.contains("Debuted in %d, for Fremantle." % (y - 8))
+				and ptext.contains("At Fremantle for the %d premiership." % (y - 2))
+				and ptext.contains("Coleman Medal %d." % (y - 2)),
+				"%s: his profile's Career section lists his debut, flag and medal on record (%s)" % [tag, ptext.replace("\n", " | ")])
+		_gs.honour_roll.pop_back()
 		_router.handle_back()
 		await _settle()
 	_router.handle_back()
