@@ -219,7 +219,10 @@ func _test_assistant() -> void:
 		return MatchSim.new(a, Squad.new("SYD", GameDB.club_list("SYD"), false, "SYD"), 321)
 	var off: MatchSim = make.call(false)
 	var on: MatchSim = make.call(true)
-	var best := Matchups.best_interceptor((on.squads[0] as Squad).ground)
+	# A rival coach's pick (the AI side's): his best interceptor, never a key
+	# defender a key forward needs (MatchSim._loose_pool).
+	var rival: MatchSim = make.call(false, true)
+	var best := rival._on_ground(0, str(rival.interceptor[0]))
 	_check(not best.is_empty(), "Geelong has a defender good enough to play loose")
 	_check(str(off.interceptor[0]) == "" and not off.assistant_active(0),
 			"Without an assistant your side starts with no loose defender")

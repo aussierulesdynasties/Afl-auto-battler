@@ -373,7 +373,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	# coach box.
 	for side in range(2):
 		if (squads[side] as Squad).ai_plans:
-			var best := Matchups.best_interceptor((squads[side] as Squad).ground)
+			var best := Matchups.best_interceptor(_loose_pool(side, (squads[side] as Squad).ground))
 			if not best.is_empty():
 				set_interceptor(side, str(best["id"]), false)
 		elif _assisted(side):
@@ -4779,29 +4779,48 @@ func _auto_rotate(side: int) -> void:
 
 
 ## The freshest bench player (at or above `min_energy`) for a ground role,
-## or -1. Natural or secondary role first; any bench player as a fallback.
+## or -1. Natural or secondary role first (his own positions, never the slot
+## he last filled); any bench player as a fallback.
+## A back slot waits for a defender: one short of `min_energy` (by up to
+## DEF_TIRED_GAP) still goes on before a fresh man from another line, and
+## while a defender on the bench is more tired than that, a routine change in
+## the back line waits. Another line's player goes into the back line only
+## with no defender on the bench.
 ## `rotation`: a routine interchange, which leaves a rested star on the bench.
 ## The coach's named tagger goes back on only in a midfielder's place, and
 ## first when one comes off, so he picks the tag up again (tagger_of).
+const DEF_TIRED_GAP := 25.0
+
+
 func _bench_for(side: int, role: String, min_energy: float, rotation := false) -> int:
 	var sq: Squad = squads[side]
 	var named := str((tactics[side] as Dictionary).get("tagger_id", "")) if _tag_id(side) != "" else ""
 	var best := -1
 	var best_score := -1.0
+	var best_fits := false
+	var def_waiting := false
 	for i in range(sq.bench.size()):
 		var p: Dictionary = sq.bench[i]
 		var e := float(energy.get(str(p["id"]), 100.0))
-		if e < min_energy or (rotation and str(_held.get(str(p["id"]), "")) == "rest"):
+		if rotation and str(_held.get(str(p["id"]), "")) == "rest":
 			continue
+		var fits := Traits.plays(p, role)
+		if e < min_energy:
+			if role != "DEF" or not fits:
+				continue
+			if e < min_energy - DEF_TIRED_GAP:
+				def_waiting = true
+				continue
 		var is_named := rotation and named != "" and str(p["id"]) == named
 		if is_named and role != "MID":
 			continue
-		var fits := str(p.get("role", "")) == role or Traits.plays(p, role) \
-				or str(p.get("list_tag", "")) == role
 		var score := e + (100.0 if fits else 0.0) + (200.0 if is_named else 0.0)
 		if score > best_score:
 			best = i
 			best_score = score
+			best_fits = fits
+	if role == "DEF" and def_waiting and not best_fits:
+		return -1
 	return best
 
 
@@ -5766,6 +5785,30 @@ func ai_tactics(side: int) -> Dictionary:
 	return t
 
 
+## The men a rival coach (or your assistant) may send loose, from `ground`:
+## a key defender on a key forward stays on him unless a free key defender
+## would take the forward, so a key forward is never left to a smaller man
+## for the loose man's sake. The coach's own pick of the loose man is his.
+func _loose_pool(side: int, ground: Array) -> Array:
+	var d: Dictionary = duels[side]
+	var on := {}
+	for fid in d:
+		on[str(d[fid])] = str(fid)
+	var free_key := false
+	for p in Matchups.defenders((squads[side] as Squad).ground):
+		var pid := str(p["id"])
+		if not on.has(pid) and pid != str(interceptor[side]) \
+				and PlayerProfile.player_type(p) == "Key defender":
+			free_key = true
+	if free_key:
+		return ground
+	return ground.filter(func(p):
+		var fid := str(on.get(str(p["id"]), ""))
+		if fid == "" or PlayerProfile.player_type(p) != "Key defender":
+			return true
+		return not Matchups._is_key_forward(_on_ground(1 - side, fid)))
+
+
 ## A rival coach's loose defender for the quarter, from `ground`: his best
 ## interceptor, unless he is chasing the game late and wants every man on a
 ## forward. "" for none.
@@ -5773,7 +5816,7 @@ func _ai_interceptor(side: int, ground: Array) -> String:
 	var react := 18.0 - 8.0 * float((squads[side] as Squad).tactics_read)
 	var margin := score(side) - score(1 - side)
 	var st := _style(side)
-	var spare := Matchups.best_interceptor(ground)
+	var spare := Matchups.best_interceptor(_loose_pool(side, ground))
 	if spare.is_empty() or (margin <= -react * float(st["loose"]) and current_quarter >= int(st["loose_q"])):
 		return ""
 	return str(spare["id"])
