@@ -1579,14 +1579,20 @@ func _test_play_through_three() -> void:
 	_check(off.focus_active(0, "focus_fwd") == false and probe.focus_active(0, "focus_fwd"),
 			"...and the screen can tell a working call from a waiting one")
 	# Real matches, paired seeds: each man gets more of his job, none an absurd share.
-	var n := 24
+	# 80 games: over 24 the target's shots are inside the noise.
+	var n := 80
 	var on := {"md": 0.0, "fs": 0.0, "dk": 0.0, "td": 0.0, "top": 0.0}
 	var base := {"md": 0.0, "fs": 0.0, "dk": 0.0, "td": 0.0}
+	# Both arms coach the same plan, the club's usual game: the plan is the
+	# coach's and stays his all match, so only the three calls differ.
 	for i in range(n):
 		var a := _sim(900 + i)
-		a.set_tactics(0, three)
+		var b := _sim(900 + i)
+		var plan := {"gameplan": str(b.standing[0])}
+		a.set_tactics(0, plan.merged(three))
+		b.set_tactics(0, plan)
 		var ra := a.run()
-		var rb := _sim(900 + i).run()
+		var rb := b.run()
 		for pair in [[ra, on], [rb, base]]:
 			var pl: Dictionary = pair[0]["players"]
 			var acc: Dictionary = pair[1]
