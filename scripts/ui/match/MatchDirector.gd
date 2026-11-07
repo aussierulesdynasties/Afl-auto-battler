@@ -36,10 +36,13 @@ const SLOTS := {
 	"RUCK": [["R", Vector2(-2, 3)]],
 	"MID": [["C", Vector2(3, -5)], ["RR", Vector2(-6, 9)], ["RV", Vector2(-9, -9)],
 			["WL", Vector2(0, -40)], ["WR", Vector2(0, 40)]],
-	"DEF": [["FB", Vector2(-68, 0)], ["BPL", Vector2(-62, -20)], ["BPR", Vector2(-62, 20)],
-			["CHB", Vector2(-44, 0)], ["HBL", Vector2(-40, -30)], ["HBR", Vector2(-40, 30)]],
-	"FWD": [["FF", Vector2(66, 0)], ["FPL", Vector2(60, -20)], ["FPR", Vector2(60, 20)],
-			["CHF", Vector2(42, 0)], ["HFL", Vector2(38, -30)], ["HFR", Vector2(38, 30)]],
+	# In the selection's spot order (TeamBuilder.SPOTS): the goal-square post,
+	# the flanks, the pockets, the centre half post - so the key posts the
+	# selection gives its key players are the ones he stands in.
+	"DEF": [["FB", Vector2(-68, 0)], ["HBL", Vector2(-40, -30)], ["HBR", Vector2(-40, 30)],
+			["BPL", Vector2(-62, -20)], ["BPR", Vector2(-62, 20)], ["CHB", Vector2(-44, 0)]],
+	"FWD": [["FF", Vector2(66, 0)], ["HFL", Vector2(38, -30)], ["HFR", Vector2(38, 30)],
+			["FPL", Vector2(60, -20)], ["FPR", Vector2(60, 20)], ["CHF", Vector2(42, 0)]],
 }
 const EXTRA_SLOTS := [Vector2(-20, -16), Vector2(20, 16), Vector2(-20, 16),
 		Vector2(20, -16), Vector2(-28, 0), Vector2(28, 0), Vector2(0, -24), Vector2(0, 24)]

@@ -9506,8 +9506,9 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 	for p in pool:
 		by_id[str(p["id"])] = p
 	# Blooding brings young players in for older ones: a youngster who came
-	# in is never the next one out, and nobody young is dropped, so each
-	# swap is a real change and the note names only what changed.
+	# in is never the next one out, a man swapped out never comes back, and
+	# nobody young is dropped, so each swap is a real change and the note
+	# names only what changed.
 	var brought: Array = []
 	var dropped: Array = []
 	for _n in range(YOUTH_MAX):
@@ -9526,7 +9527,7 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 			var role: String = "MID" if line == "WING" else line
 			for p in pool:
 				var pid := str(p["id"])
-				if used.has(pid) or brought.has(pid) or not is_young(p) \
+				if used.has(pid) or brought.has(pid) or dropped.has(pid) or not is_young(p) \
 						or not Ratings.plays_role(p, role):
 					continue
 				var gap := int(by_id[weakest]["overall"]) - int(p["overall"])
@@ -9538,6 +9539,14 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 		arr[arr.find(best_swap[1])] = best_swap[2]
 		dropped.append(str(best_swap[1]))
 		brought.append(str(best_swap[2]))
+	# A youngster in for the full-back is not the full-back: the line is
+	# laid out again so the key posts stay with key players.
+	if not brought.is_empty():
+		for line in ["DEF", "FWD"]:
+			var ids: Array = side2[line]
+			if ids.all(func(id): return by_id.has(str(id))):
+				var laid := Roles.key_post_order(ids.map(func(id): return by_id[str(id)]), line)
+				side2[line] = laid.map(func(p): return str(p["id"]))
 	return {"side": side2, "note": _blooding_note(brought, dropped, by_id) if not brought.is_empty()
 			else "No young player is close enough to a starter's spot: this is your best side."}
 

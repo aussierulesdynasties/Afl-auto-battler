@@ -191,7 +191,14 @@ func _test_season_flow() -> void:
 	var hist: Array = GameState.board.get("history", [])
 	_check(hist.size() == 1 and str(GameState.board.get("verdict", "")) != "",
 			"The board gives its verdict at season's end")
-	_check(GameState.week_event.is_empty(), "No event cards once the season is over")
+	# The one card the week your season ends (a Grand Final side's comes with
+	# the last game) is allowed; nothing else.
+	var after_cards := []
+	for c in GameState.week_events:
+		var t := StoryDeck.by_id(StoryDeck.all(), str(c.get("tid", "")))
+		if not (t.get("phase", []) as Array).has("season_end"):
+			after_cards.append(str(c.get("tid", "")))
+	_check(after_cards.is_empty(), "No event cards once the season is over, bar the season-end one (%s, %s)" % [str(after_cards), GameState.my_finals_status()])
 
 
 func _test_events() -> void:

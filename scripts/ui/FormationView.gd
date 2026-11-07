@@ -63,12 +63,15 @@ func _ready() -> void:
 	_ensure_callout()
 
 
-func setup(ground: Array, bench: Array, club: String) -> void:
+## `chosen`: the side is one the coach named (a stored selection), so every
+## line stays in his own order; otherwise it is the auto-pick, laid out by
+## rating with the key posts (Roles.key_post_order).
+func setup(ground: Array, bench: Array, club: String, chosen := false) -> void:
 	_ground = ground
 	_bench = bench
 	_club = club
 	_selected = -1
-	_placed = _assign(ground, bench)
+	_placed = _assign(ground, bench, chosen)
 	_hide_callout()
 	queue_redraw()
 
@@ -79,7 +82,7 @@ func _on_names() -> void:
 		_show_callout(_selected)
 
 
-func _assign(ground: Array, bench: Array) -> Array:
+func _assign(ground: Array, bench: Array, chosen := false) -> Array:
 	var by_key := {}
 	for slot in SLOTS:
 		by_key[str(slot["key"])] = slot
@@ -91,9 +94,16 @@ func _assign(ground: Array, bench: Array) -> Array:
 			buckets[role].append(p)
 		else:
 			overflow.append(p)
-	for role in buckets:
-		(buckets[role] as Array).sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
-	buckets["MID"] = _midfield_order(buckets["MID"])
+	# A placement the coach made is never rearranged: his lines keep his
+	# order. Only an auto-picked side is sorted and given its key posts.
+	if not chosen:
+		for role in buckets:
+			(buckets[role] as Array).sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	buckets["MID"] = _midfield_order(buckets["MID"], chosen)
+	if not chosen:
+		# Key defenders and key forwards take the posts (Roles.key_post_order).
+		for line in ["DEF", "FWD"]:
+			buckets[line] = Roles.key_post_order(buckets[line], line)
 	var used := {}
 	var out: Array = []
 	for role in ["RUCK", "MID", "DEF", "FWD"]:
@@ -121,8 +131,9 @@ func _assign(ground: Array, bench: Array) -> Array:
 ## the ones the match plays there - Roles.mark_wings, already marked on the
 ## match-day copies as line "WING" - so the oval never contradicts the
 ## match. A ground that has not been through selection is marked the same
-## way on copies. The centre goes to the best centre-square fit.
-static func _midfield_order(mids: Array) -> Array:
+## way on copies. The centre goes to the best centre-square fit, or on a
+## side the coach named (`chosen`), to the man he named there first.
+static func _midfield_order(mids: Array, chosen := false) -> Array:
 	var marked := false
 	for p in mids:
 		if Roles.on_wing(p):
@@ -147,7 +158,8 @@ static func _midfield_order(mids: Array) -> Array:
 			wings.append(p)
 		else:
 			inside.append(p)
-	inside.sort_custom(func(a, b): return Roles.centre_fit(a) > Roles.centre_fit(b))
+	if not chosen:
+		inside.sort_custom(func(a, b): return Roles.centre_fit(a) > Roles.centre_fit(b))
 	# C, W, W, IM, IM - any spare wing spot goes to the next inside player.
 	var out: Array = []
 	if not inside.is_empty():

@@ -705,7 +705,7 @@ const NAMED := ["Max Hall", "Sam Darcy", "Cody Walker", "Jagga Smith", "Max Gawn
 
 
 static func _kind(p: Dictionary) -> String:
-	if Matchups._is_key_forward(p):
+	if Matchups.is_key_forward(p):
 		return "KPF"
 	return str(p.get("role", ""))
 
