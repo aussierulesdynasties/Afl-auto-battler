@@ -50,6 +50,7 @@ var _fulltime_shown := false
 var _farewell := {}
 var _coach_overlay: Control
 var _sheet_overlay: Control
+var _over: Control   # T3.R42: every sheet, call and scene opens here, under the scoreboard
 var _reflow_queued := false
 var _shown_goals := [0, 0]
 var _shown_behinds := [0, 0]
@@ -182,6 +183,22 @@ func _build() -> void:
 	_root.add_child(_scoreboard())
 	_mount_body(UiKit.view_width(self) < 640.0)
 	_root.add_child(_body)
+	# T3.R42 (P-26): on a phone the score and the clock never leave the screen.
+	# Breaks, sheets, calls and scenes open in the space under the scoreboard.
+	_over = Control.new()
+	_over.name = "UnderScoreboard"
+	_over.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_over)
+	_over.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+
+## The overlays' top: the scoreboard's foot on a phone; a wide screen's break
+## keeps the whole height (its band carries the score).
+func _fit_over() -> void:
+	if _over == null or _root == null or _root.get_child_count() == 0:
+		return
+	var board := _root.get_child(0) as Control
+	_over.offset_top = board.get_global_rect().end.y - get_global_rect().position.y if _stacked else 0.0
 
 
 func _mount_body(stack: bool) -> void:
@@ -273,6 +290,7 @@ func _scoreboard() -> Control:
 	h.add_child(_score_middle(narrow))
 	h.add_child(_score_column(str(_res["away"]), false, narrow))
 	v.add_child(_momentum_bar())
+	p.item_rect_changed.connect(_fit_over)
 	return p
 
 
@@ -353,7 +371,7 @@ func _paint_momentum() -> void:
 
 func _show_momentum_info() -> void:
 	_close_sheet()
-	var box := UiKit.modal_box(self, 520.0, 0.0, _wash())
+	var box := UiKit.modal_box(_over, 520.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
 	overlay.name = "MomentumInfo"
 	_sheet_overlay = overlay
@@ -783,7 +801,7 @@ func _show_coach_box() -> void:
 	var wide := _wide_break()
 	_pc_break = wide
 	var stats_pc: Button = null
-	var box := UiKit.modal_box(self, minf(UiKit.view_width(self) - 48.0, 1560.0) if wide else 640.0, 0.0, _wash())
+	var box := UiKit.modal_box(_over, minf(UiKit.view_width(self) - 48.0, 1560.0) if wide else 640.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
 	overlay.name = "CoachBox"
 	_coach_overlay = overlay
@@ -1911,7 +1929,7 @@ func _skip_note(q: int, wide: bool) -> Label:
 
 func _open_break_sheet(node_name: String, title: String, parts: Array, home: Node) -> void:
 	# Best so far is a bottom sheet: the thumb's end of the screen, not floating.
-	var box := UiKit.modal_box(self, 640.0, 0.0, _wash(), node_name == "best", node_name == "best")
+	var box := UiKit.modal_box(_over, 640.0, 0.0, _wash(), node_name == "best", node_name == "best")
 	var ov: Control = box["overlay"]
 	ov.name = "CallSheet_" + node_name
 	# The break behind a sheet is out of sight: nothing of it reads, or shows
@@ -2676,7 +2694,7 @@ func _show_moment() -> void:
 		_show_bounce_moment(m)
 		return
 	# Sized for its few lines, not the whole phone.
-	var box := UiKit.modal_box(self, 560.0, 440.0, _wash())
+	var box := UiKit.modal_box(_over, 560.0, 440.0, _wash())
 	_moment_overlay = box["overlay"]
 	_moment_overlay.name = "MomentCard"
 	var v: VBoxContainer = box["body"]
@@ -2715,7 +2733,7 @@ func _show_moment() -> void:
 ## back to the match. The options and what they do are MatchSim's; the scene
 ## only shows the state of the match.
 func _show_bounce_moment(m: Dictionary) -> void:
-	var overlay := UiKit.cover(self)
+	var overlay := UiKit.cover(_over)
 	overlay.color = Color(0, 0, 0, 0)
 	overlay.name = "MomentCard"
 	overlay.set_meta("scene", true)
@@ -3041,7 +3059,7 @@ func _short_name(r: Dictionary) -> String:
 ## marked. Back or Close leaves it as it was.
 func _player_sheet(title: String, roster: Array, current: String, detail: Callable, on_pick: Callable) -> void:
 	_close_sheet()
-	var box := UiKit.modal_box(self, 480.0, 0.0, _wash())
+	var box := UiKit.modal_box(_over, 480.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
 	overlay.name = "PlayerSheet"
 	_sheet_overlay = overlay
@@ -3166,7 +3184,7 @@ func _roster_side(side: int) -> Array:
 ## clubs, any quarter on its own. Close (or Back) returns to your calls.
 func _show_break_stats(players_first := false) -> void:
 	_close_report()
-	var box := UiKit.modal_box(self, SHEET_MAX_W if _stats_wide() else 640.0, 0.0, _wash())
+	var box := UiKit.modal_box(_over, SHEET_MAX_W if _stats_wide() else 640.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
 	overlay.name = "BreakStatsSheet"
 	_report_overlay = overlay
@@ -3508,7 +3526,7 @@ func _show_broadcast(kind: String, ev: Dictionary, snap: Dictionary) -> void:
 		return
 	_broadcast_pending = false
 	_broadcast_busy = true
-	var overlay := UiKit.cover(self)
+	var overlay := UiKit.cover(_over)
 	overlay.name = "BroadcastVignetteOverlay"
 	overlay.color = Color(0.015, 0.018, 0.02, 1.0)
 	_broadcast_overlay = overlay
@@ -3775,6 +3793,8 @@ func _on_finished() -> void:
 		var v := FarewellVignette.open(get_tree().root, _farewell["ms"], _farewell["man"],
 				GameState.my_club, str(_farewell["opp"]), _farewell["mine"], _farewell["theirs"],
 				"Full time", str(GameState.pending_match.get("weather", "")) == "wet")
+		v.offset_top = _over.offset_top   # under the scoreboard, as every scene (T3.R42)
+		v.clip_contents = true            # its stand's roof stays off the scoreboard
 		_farewell = {}
 		var wv: WeakRef = weakref(v)   # not the node: it frees itself when it ends
 		tree_exiting.connect(func():            # Back out of the match: it goes too
@@ -3824,7 +3844,7 @@ func _farewell_for(match: Dictionary) -> Dictionary:
 func _show_fulltime() -> void:
 	# A PC's Stats tab holds the score and the team numbers side by side, so the
 	# sheet is wider there; the Summary keeps its own reading width inside it.
-	var box := UiKit.modal_box(self, SHEET_MAX_W if _stats_wide() else 640.0, 0.0, _wash())
+	var box := UiKit.modal_box(_over, SHEET_MAX_W if _stats_wide() else 640.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
 	overlay.name = "FullTime"
 	_ft_box = box
