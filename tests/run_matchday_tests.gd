@@ -985,7 +985,8 @@ func _test_best_so_far(sz: Vector2i) -> void:
 	# breaking a tie; the subline is the player's two best stats.
 	var votes_all: Dictionary = notes.coaches_votes(res)
 	var want := []
-	var per_side := 3 if sz.x >= 900 else 99
+	# Three a side on both (MatchScene: standouts_by_votes(_res, side, 3, votes)).
+	var per_side := 3
 	for side in [me, 1 - me]:
 		for r in notes.standouts_by_votes(res, side, per_side, votes_all):
 			want.append(r)
@@ -1499,7 +1500,8 @@ func _test_pc_break_worst_case(club := "COL") -> void:
 	for q in (sim.squads[me] as Object).ground:
 		if str(q["role"]) == "DEF" and (mine.is_empty() or db.player_display_name(q).length() > db.player_display_name(mine).length()):
 			mine = q
-	sim.set_interceptor(me, str(mine.get("id", "")), false)
+	# Your own call, so the assistant keeps him loose at quarter time.
+	sim.coach_interceptor(me, str(mine.get("id", "")))
 	sim.run_quarter()
 	(sim.player_stats.get(str(mine["id"]), {}) as Dictionary)["intercepts"] = 12.0
 	if not sim.player_stats.has(str(mine["id"])):
