@@ -18,6 +18,7 @@ const SCENES := {
 	"forge": "res://scenes/ClubForgeScene.tscn",
 	"preseason": "res://scenes/PreSeasonScene.tscn",
 	"almanac": "res://scenes/AlmanacScene.tscn",
+	"press": "res://scenes/PressScene.tscn",
 }
 
 ## Screens whose opening takes a while on a phone (their _ready builds a lot):
