@@ -940,8 +940,19 @@ func _token_by_pid(pid: String) -> int:
 	return -1
 
 
+## Won back straight after a free kick: the free kick's set shot fell short
+## and a back gathers it. The free itself never moves the ball, so the kick
+## is drawn from where the ball is to his logged spot; without it he took it
+## where the free was given away (seed 42: 16 m off its spot).
 func _rebound_phases(k: int) -> Array:
-	return _receive(k, _actor_id(events[k]))
+	var a := _actor_id(events[k])
+	if _restart(k) == "free":
+		var loc := _loc(k)
+		var d := (ball["pos"] as Vector2).distance_to(loc)
+		if d > 1.0:
+			var shape := _flight_shape("kick", d)
+			return [{"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y, "recv": a}] + _receive(k, a)
+	return _receive(k, a)
 
 
 func _clanger_phases(k: int) -> Array:

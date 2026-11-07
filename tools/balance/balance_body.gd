@@ -148,6 +148,8 @@ func play(from: int, count: int, out: String, weather: String,
 			t["types"] = type_lines(rosters[side], r["players"])
 			t["type_src"] = srcs[side]
 			t["carry_zone"] = (sim.carry_log[side] as Dictionary).duplicate()
+			if "rebound_log" in sim:
+				t["reb_route"] = (sim.rebound_log[side] as Dictionary).duplicate()
 			t["legs_q"] = legs[side]
 			t["tank_q"] = tank[side]
 			t["interchanges"] = int(sim.interchanges[side])
@@ -447,4 +449,25 @@ static func type_sources(sim: MatchSim, r: Dictionary) -> Array:
 			out[side][ty] = d
 		if kind != "":
 			prev = e
+	# Who takes the ball straight after a rebound 50 (MatchSim.exit_rx_log),
+	# "rx" in all and "rx_<zone>" by where he took it.
+	# Every touch later in a chain that had a rebound 50 (post_exit_log): "px"
+	# and "px_<zone>".
+	for lg in [["exit_rx_log", "rx"], ["post_exit_log", "px"]]:
+		if not (str(lg[0]) in sim):
+			continue
+		for side in 2:
+			var log: Dictionary = sim.get(str(lg[0]))[side]
+			for k in log:
+				var parts := str(k).split("|")
+				var id := parts[1]
+				if not _type_of.has(id):
+					var rec = GameDB.player_by_id(id)
+					_type_of[id] = Roles.label(rec) if rec is Dictionary else "?"
+				var ty := str(_type_of[id])
+				var n := int(log[k])
+				var d: Dictionary = out[side].get(ty, {})
+				d[lg[1]] = int(d.get(lg[1], 0)) + n
+				d[str(lg[1]) + "_" + parts[0]] = int(d.get(str(lg[1]) + "_" + parts[0], 0)) + n
+				out[side][ty] = d
 	return out

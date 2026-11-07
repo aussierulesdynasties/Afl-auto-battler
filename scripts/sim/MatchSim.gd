@@ -1263,10 +1263,18 @@ static func _by_roles(group: Array, roles: Array) -> Array:
 ## that could always do it keep full weight.
 ## Carrying by zone (from the carrying side's view).
 ## Middle zone calibrated 2026-10-06 against real 2026 per-role disposals: a
-## defender carries less through the middle (0.45), a forward more (0.6).
+## forward carries less through the middle than a midfielder (0.6).
+## Defenders run on with it (2026-11-08): once they clear the ball out of
+## their 50 (D50_KICK_GAIN) a half-back keeps running with the play through
+## the middle (0.9) and into the forward half (0.6). At the old 0.45 / 0.2 the
+## ball they cleared went almost only to midfielders, wings and small
+## forwards: defenders had 32% of their side's disposals (real 35.9%), and
+## wings, taggers and small forwards went over the clubs' range. Measured on
+## tools/balance.sh match 1000 (league setup): defenders back to 36%, wings
+## 22.3, taggers 17.8, small forwards 14.9, all inside the range.
 const CARRY_ROLES := {
-	"middle": {"MID": 1.0, "RUCK": 1.0, "DEF": 0.45, "FWD": 0.6},
-	"attack": {"MID": 1.0, "FWD": 1.0, "DEF": 0.2, "RUCK": 0.3},
+	"middle": {"MID": 1.0, "RUCK": 1.0, "DEF": 0.9, "FWD": 0.6},
+	"attack": {"MID": 1.0, "FWD": 1.0, "DEF": 0.6, "RUCK": 0.3},
 	"inside": {"FWD": 1.0, "MID": 1.0, "RUCK": 0.3, "DEF": 0.05},
 }
 ## Back-zone carrying retuned (row 92, T9.Q22, director 2026-11-06: defenders
@@ -2208,17 +2216,19 @@ const TACKLE_SPILL := 0.5
 ## get the ball out of their 50 more often). Inside his own defensive 50 a
 ## defender clears it rather than chipping it around: his kick goes this much
 ## further (still within his kick range), he handballs this much less, the
-## forwards get to him this much less often, a rushed disposal there turns
-## over this much as often, and he keeps it through a tackle this much more
-## often. Measured on tools/balance.sh match 1000 against main: team rebound
-## 50s 26.8 -> 38.2 (real 39.3), with every other team rate still inside the
-## clubs' range once marks per kick, one-percenters and goals per entry were
-## recalibrated (Ratings, 2026-11-07). Rebound 50s keep the Champion Data definition (_rebound_exit).
+## forwards get to him this much less often, and a rushed disposal there
+## turns over this much as often. Breaking a tackle is not how the ball gets
+## out: about 2 exits in 100 come through one (kicks 77%, handballs 21%), so
+## a tackle inside 50 gets no special treatment (director 2026-11-08). Measured
+## on tools/balance.sh match 1000: team rebound 50s 26.8 -> 37.2 (real 39.3,
+## clubs 37.0-41.9), with every other team rate inside the clubs' range once
+## marks per kick, one-percenters and goals per entry were recalibrated
+## (Ratings, 2026-11-07). Rebound 50s keep the Champion Data definition
+## (_rebound_exit).
 const D50_KICK_GAIN := 3.0
 const D50_HANDBALL := 0.7
 const D50_PRESSURE := 0.65
 const D50_TURNOVER := 0.15
-const D50_RETAIN := 2.0
 
 
 ## A named constant, or its audit override (tune).
@@ -2564,6 +2574,19 @@ static func clanger_why(disp: Dictionary, weather_now: String, outcome := "stopp
 ## Carrier picks per side, "zone|slot role" -> count. Bookkeeping for the
 ## balance harness (carry share by zone); no dice.
 var carry_log := [{}, {}]
+## Each side's rebound 50s by how the ball left defensive 50 ("kick",
+## "handball", "tackle": carried out through a broken tackle). Bookkeeping
+## for the balance harness, not a saved stat; no dice.
+var rebound_log := [{}, {}]
+## Who takes the ball straight after each rebound 50 (the next touch of the
+## same chain), "zone|player id" -> count, the zone where he takes it from his
+## side's view. Bookkeeping for the balance harness; no dice.
+var exit_rx_log := [{}, {}]
+var _exit_open := false
+## Every touch later in a chain that has had a rebound 50, "zone|player id"
+## -> count, as exit_rx_log. Bookkeeping for the balance harness; no dice.
+var post_exit_log := [{}, {}]
+var _post_exit := false
 ## Spoils per side by where they happened, from the spoiling side's end:
 ## "d50_entry" (a forward-50 entry or goal-square pack), "d50_play", "mid",
 ## "f50" (general play). Bookkeeping for the balance harness (T2.29); no dice.
@@ -2984,6 +3007,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 
 	_t(side, "chains")
 	_broke_press = -1
+	_exit_open = false
+	_post_exit = false
 	var atk_fp := fp if side == 0 else -fp
 	var cleared = _stoppage(side, opp, from_bounce, atk_fp >= f50)
 	# A chain that starts inside its forward 50 (a ball-up won there) goes
@@ -3033,6 +3058,15 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_p(carrier, "intercepts")
 			_chain_from = {"side": side, "id": str(carrier.get("id", ""))}
 		_chain_touch[str(carrier["id"])] = carrier
+		if _post_exit:
+			var rx_atk := fp * dir
+			var rx_zone := "back" if rx_atk < -10.0 else ("middle" if rx_atk <= 5.0
+					else ("attack" if rx_atk <= f50 else "inside"))
+			var rk := rx_zone + "|" + str(carrier.get("id", ""))
+			post_exit_log[side][rk] = int((post_exit_log[side] as Dictionary).get(rk, 0)) + 1
+			if _exit_open:
+				_exit_open = false
+				exit_rx_log[side][rk] = int((exit_rx_log[side] as Dictionary).get(rk, 0)) + 1
 		# Who a clanger would be blamed on, and how his touch ended (clanger_why).
 		_last_disp = {"carrier": carrier, "kind": "", "end": ""}
 		# The wet ball (row 120): the first touch of a chain, when it is a
@@ -3155,14 +3189,12 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 					* (0.75 + 0.50 * _a(carrier, "contested") / 100.0))
 			if _trait(carrier, "bull"):
 				retain *= 1.10
-			if in_d50:
-				retain *= _tv("D50_RETAIN", D50_RETAIN)
 			if rng.randf() < retain:
 				var before_fp := fp
 				fp = clampf(fp + rng.randf_range(4.0, 12.0) * dir, -gline, gline)
 				_metres(side, carrier, (fp - before_fp) * dir)
 				# Carried out of defensive 50 through the tackle: his rebound 50.
-				_rebound_exit(side, carrier, before_fp * dir, fp * dir)
+				_rebound_exit(side, carrier, before_fp * dir, fp * dir, "tackle")
 				var how := _break_kind(carrier)
 				_t(side, how)
 				_p(carrier, how)
@@ -3282,7 +3314,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		# inside his defensive 50 out of it, however his side came by it (a
 		# kick-in, a stoppage, an intercept, a failed entry) and whatever
 		# happens to it next.
-		_rebound_exit(side, carrier, prev_atk_fp, atk_fp)
+		_rebound_exit(side, carrier, prev_atk_fp, atk_fp, disposal_kind)
 		# By default the next carrier gets it uncontested: a handball
 		# receive, a mark, a kick he gathers with nobody contesting it (the
 		# engine has no contest there; a rushed disposal loses ground, not
@@ -4679,12 +4711,16 @@ func _back_roles(group: Array) -> Dictionary:
 ## midfield), director 2026-11-07 "credit rebounds": every exit counts, by
 ## whoever takes it out, his kick, his handball or his run through a tackle.
 ## `from_atk` and `to_atk` are the ball's spot before and after, from the
-## side's own view. The one place a rebound 50 is credited.
-func _rebound_exit(side: int, carrier, from_atk: float, to_atk: float) -> void:
+## side's own view; `how` is the exit route (rebound_log). The one place a
+## rebound 50 is credited.
+func _rebound_exit(side: int, carrier, from_atk: float, to_atk: float, how: String) -> void:
 	var f50 := float(Ratings.T["forward50_line"])
 	if from_atk <= -f50 and to_atk > -f50:
 		_t(side, "rebounds")
 		_p(carrier, "rebounds")
+		rebound_log[side][how] = int((rebound_log[side] as Dictionary).get(how, 0)) + 1
+		_exit_open = true
+		_post_exit = true
 
 
 ## His use of the ball as he is playing right now: the kick-in taker's and

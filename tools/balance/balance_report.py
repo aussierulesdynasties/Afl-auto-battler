@@ -334,6 +334,42 @@ def paired(A, B, fn):
     return st.mean(a.values()), st.mean(b[i] for i in common), st.mean(d), se
 
 
+def reb_route_section(A, B):
+    """Rebound 50s a team a game by how the ball left defensive 50 (MatchSim.rebound_log:
+    a kick, a handball, or carried out through a broken tackle). No real reference:
+    Champion Data does not publish the split. An arm whose checkout has no rebound_log
+    (main before the D50 change) shows "-"."""
+    routes = ("kick", "handball", "tackle")
+
+    def per(r, k):
+        ts = r["teams"]
+        if not all("reb_route" in t for t in ts):
+            return None
+        if k == "all":
+            return sum(t["reb_route"].get(x, 0) for t in ts for x in routes) / len(ts)
+        return sum(t["reb_route"].get(k, 0) for t in ts) / len(ts)
+
+    has = {n: bool(R) and any(per(r, "all") is not None for r in R.values()) for n, R in (("A", A), ("B", B))}
+    if not (has["A"] or has["B"]):
+        return
+    both = has["A"] and has["B"]
+    print("\n## Rebound 50s by exit route (a team a game; no real reference)\n")
+    head = "| route | A | share A |" + (" B | share B |" if B else "") + (" B-A | se | sig |" if both else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    mean = lambda R, k: st.mean(v for v in (per(r, k) for r in R.values()) if v is not None)
+    for k in routes + ("all",):
+        line = "| " + k + " |"
+        for n, R in (("A", A), ("B", B)):
+            if n == "B" and not B:
+                continue
+            line += f" {mean(R, k):.2f} | {100 * mean(R, k) / mean(R, 'all'):.0f}% |" if has[n] else " - | - |"
+        if both:
+            _, _, d, se = paired(A, B, lambda r, k=k: per(r, k))
+            line += f" {d:+.2f} | {se:.2f} | {'yes' if se and abs(d) > 2 * se else ''} |"
+        print(line)
+
+
 def role_report(A, B):
     """Each line's box score per player-game against real 2026 (afl_role_rates.json, grouped by
     the player's own position as the game derives it) and its share of the side's disposals;
@@ -398,17 +434,21 @@ def type_report(A, B):
         return None if pg == 0 else sum(t.get("types", {}).get(ty, {}).get(k, 0.0) for t in r["teams"]) / pg
     print("\n## By type, per player-game (real 2026: afl_role_rates.json types; Roles.label)\n")
     head = "| type | real di | clubs range | A di | mark | A kicks | A hb | A marks | A reb50 | A kick-ins |" \
-        + (" B di | B-A | se | sig |" if B else "")
+        + (" B di | mark | B-A | se | sig |" if B else "")
     print(head)
     print("|" + "---|" * (head.count("|") - 1))
     for ty in names:
         rr = ref.get(ty)
         ma, mb, dm, se = paired(A, B, lambda r, ty=ty: rate(r, ty, "disposals"))
+        def mark(v, rr=rr):
+            if not rr:
+                return "-"
+            c = rr["disposals_clubs"]
+            return "IN" if c["min"] <= v <= c["max"] else                 ("NEAR" if abs(v - rr["per_game"]["disposals"]) <= 2 * c["sd"] else "OUT")
         if rr:
             c = rr["disposals_clubs"]
             real = rr["per_game"]["disposals"]
-            mk = "IN" if c["min"] <= ma <= c["max"] else ("NEAR" if abs(ma - real) <= 2 * c["sd"] else "OUT")
-            line = f"| {ty} | {real:.2f} | {c['min']:.1f}-{c['max']:.1f} | {ma:.2f} | {mk} |"
+            line = f"| {ty} | {real:.2f} | {c['min']:.1f}-{c['max']:.1f} | {ma:.2f} | {mark(ma)} |"
         else:
             line = f"| {ty} | - | - | {ma:.2f} | - |"
         for k in TYPE_STATS[1:]:
@@ -416,17 +456,25 @@ def type_report(A, B):
             line += f" {st.mean(v):.2f} |"
         if B:
             sig = "yes" if se and abs(dm) > 2 * se else ""
-            line += f" {mb:.2f} | {dm:+.2f} | {se:.2f} | {sig} |"
+            line += f" {mb:.2f} | {mark(mb)} | {dm:+.2f} | {se:.2f} | {sig} |"
         print(line)
-    if any("type_src" in t for r in A.values() for t in r["teams"]):
-        print("\n## Where each type's disposals happen (run A, event log: share by zone from his side's view,"
-              " and share that were his first touch after his own rebound 50; no real reference)\n")
-        print("| type | per game (events) | back | middle | attack | inside | after own reb50 |")
-        print("|---|---|---|---|---|---|---|")
+    for arm, R in (("A", A), ("B", B)):
+        if not R or not any("type_src" in t for r in R.values() for t in r["teams"]):
+            continue
+        rx_all = sum(t.get("type_src", {}).get(ty, {}).get("rx", 0)
+                     for r in R.values() for t in r["teams"] for ty in names)
+        print(f"\n## Where each type's disposals happen (run {arm}, event log: share by zone from his side's view,"
+              " share that were his first touch after his own rebound 50, and who takes the ball straight after"
+              " a rebound 50: a game, share of all, and where he takes it; then his touches a game anywhere"
+              " later in a chain that had a rebound 50, all and by zone; no real reference)\n")
+        print("| type | per game (events) | back | middle | attack | inside | after own reb50 |"
+              " takes the exit (a game) | share of exits | exit taken back | middle | attack |"
+              " after a reb50 (a game) | back | middle | attack | inside |")
+        print("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
         for ty in names:
             tot = {}
             pg = 0
-            for r in A.values():
+            for r in R.values():
                 for t in r["teams"]:
                     pg += t.get("types", {}).get(ty, {}).get("pg", 0)
                     for k, v in t.get("type_src", {}).get(ty, {}).items():
@@ -435,7 +483,11 @@ def type_report(A, B):
             if not ev or not pg:
                 continue
             cells = " | ".join(f"{100*tot.get(z, 0)/ev:.0f}%" for z in ["back", "middle", "attack", "inside", "reb"])
-            print(f"| {ty} | {ev/pg:.2f} | {cells} |")
+            rx = tot.get("rx", 0)
+            rxc = " | ".join(f"{100*tot.get('rx_' + z, 0)/rx:.0f}%" if rx else "-" for z in ["back", "middle", "attack"])
+            print(f"| {ty} | {ev/pg:.2f} | {cells} | {rx/pg:.2f} | "
+                  f"{(100*rx/rx_all) if rx_all else 0:.0f}% | {rxc} | {tot.get('px', 0)/pg:.2f} | "
+                  + " | ".join(f"{tot.get('px_' + z, 0)/pg:.2f}" for z in ["back", "middle", "attack", "inside"]) + " |")
     for ty in TOP_TYPES:
         acc = {}
         for r in A.values():
@@ -912,6 +964,7 @@ def main():
     margin_tail(A, B)
     role_report(A, B)
     type_report(A, B)
+    reb_route_section(A, B)
     legs_section(A, B)
     print(f"\nOUT of real range (A): {', '.join(outs) if outs else 'none'}")
 
