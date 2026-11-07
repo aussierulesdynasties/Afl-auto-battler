@@ -64,6 +64,7 @@ var _order_scroll: ScrollContainer
 ## your pick, and the board's replay of the rival picks that followed it.
 var _board: PanelContainer
 var _your_pick: Label
+var _passed_line: Label   # your picks that passed for a full list (YourPicksPassed)
 var _recent_box: VBoxContainer
 var _stage_pick := -1          # while the stage reads your pick, the board holds on it
 var _pool_rows_n := 0         # rows the pool shows (its filter line's count)
@@ -484,6 +485,11 @@ func _live_board() -> PanelContainer:
 	_your_pick.name = "YourNextPick"
 	_your_pick.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(_your_pick)
+	_passed_line = UiKit.lbl("", UiKit.SECONDARY, UiKit.BAD, true)
+	_passed_line.name = "YourPicksPassed"
+	_passed_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_passed_line.visible = false
+	v.add_child(_passed_line)
 	_recent_box = UiKit.vbox(2)
 	_recent_box.name = "RecentPicks"
 	if _wide:
@@ -1770,13 +1776,25 @@ func _refresh_mine() -> void:
 	UiKit.clear(_mine_box)
 	if _draft.intake_mode:
 		if _draft.senior_cap > 0:
-			_mine_box.add_child(UiKit.lbl("%d draftee%s signed · senior list %d / %d" % [
+			var open := _draft.open_spots(_club)
+			var head := UiKit.lbl("%d draftee%s signed · senior list %d / %d · %d spot%s open" % [
 				_draft.count(), "" if _draft.count() == 1 else "s",
-				RookieList.senior_count(GameState.league_lists.get(_club, [])), _draft.senior_cap],
-				15, UiKit.EMPH, true))
-			_mine_box.add_child(UiKit.lbl(
-				"Draftees join the senior list you kept. The draft runs until every senior list is full or the prospects run out; the Rookie Draft follows.",
-				13, UiKit.MUTED))
+				_draft.list_cap() - open, _draft.list_cap(), open, "" if open == 1 else "s"],
+				15, UiKit.EMPH, true)
+			head.name = "DraftListSpots"
+			head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			_mine_box.add_child(head)
+			var said := _spots_words()
+			if said != "":
+				var pl := UiKit.lbl(said, 14, UiKit.BAD, true)
+				pl.name = "DraftPassingPicks"
+				pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				_mine_box.add_child(pl)
+			var rule := UiKit.lbl(
+				"Draftees join the senior list you kept. A club with a full senior list passes its picks, and players you kept cannot be delisted during the draft. The Rookie Draft follows.",
+				13, UiKit.MUTED)
+			rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			_mine_box.add_child(rule)
 		else:
 			_mine_box.add_child(UiKit.lbl("%d draftee%s signed · list %d / %d" % [
 				_draft.count(), "" if _draft.count() == 1 else "s",
@@ -2101,6 +2119,7 @@ func _refresh_live(settle := false) -> void:
 	if is_instance_valid(_your_pick):
 		_your_pick.text = "" if _stage_pick >= 0 else _your_pick_words(clock_pick, done)
 		_your_pick.visible = _your_pick.text != ""
+	_refresh_passed(clock_pick, done)
 	if is_instance_valid(_recent_box):
 		_recent_rows(hist, upto, settle)
 		_recent_box.visible = _recent_wanted()
@@ -2110,14 +2129,56 @@ func _refresh_live(settle := false) -> void:
 func _your_pick_words(clock_pick: int, done: bool) -> String:
 	if done:
 		return ""
+	if not _draft.user_passed.is_empty() and _draft.passed_clubs.has(_club):
+		return ""   # the pass line on the board says it (_refresh_passed)
 	if _draft.passed_clubs.has(_club):
 		return "You have passed: no more picks"
 	if _draft._list_full(_club):
-		return "Your list is full"
+		var left := _draft.upcoming_picks(_club, 0)
+		if left.is_empty():
+			return "Your list is full"
+		return "Your list is full: %s %s will pass" % ["pick" if left.size() == 1 else "picks",
+				Draft.picks_words(left)]
 	var upcoming := _draft.upcoming_picks(_club, 1)
 	if upcoming.is_empty():
 		return "No picks left"
-	return DraftNight.your_pick_line(int(upcoming[0]), clock_pick)
+	var line := DraftNight.your_pick_line(int(upcoming[0]), clock_pick)
+	var said := _spots_words()
+	return line + ("\n" + said if said != "" else "")
+
+
+## Your picks still to come that have no list spot, in words ("" when every
+## pick has one): "1 spot open: pick 49 will pass".
+func _spots_words() -> String:
+	if not _draft.intake_mode or _draft.is_finished():
+		return ""
+	var plan := _draft.spots_plan(_club)
+	var passing: Array = plan["passing"]
+	if passing.is_empty():
+		return ""
+	var open := int(plan["open"])
+	return "%d spot%s open: %s %s will pass" % [open, "" if open == 1 else "s",
+			"pick" if passing.size() == 1 else "picks", Draft.picks_words(passing)]
+
+
+## The moment a pick of yours passes for a full list, the board says so, and
+## keeps saying it (a rival's pick shows the same way): "Pick 49 passed: your
+## senior list is full (38)."
+## While the board replays the rival picks, a pass shows once the replay
+## reaches it (`clock_pick`: the pick the board is on; `done`: replay over).
+func _refresh_passed(clock_pick: int, done: bool) -> void:
+	if not is_instance_valid(_passed_line):
+		return
+	var seen := []
+	for e in _draft.user_passed:
+		if done or int(e["pick"]) < clock_pick:
+			seen.append(int(e["pick"]))
+	var text := ""
+	if _draft.intake_mode and not seen.is_empty():
+		text = "%s %s passed: your %slist is full (%d)." % ["Pick" if seen.size() == 1 else "Picks",
+				Draft.picks_words(seen), "senior " if _draft.senior_cap > 0 else "", _draft.list_cap()]
+	_passed_line.text = text
+	_passed_line.visible = text != ""
 
 
 ## The last three picks the board shows, newest first: number, guernsey, name
@@ -2341,6 +2402,13 @@ func _story_line(text: String) -> Control:
 	return l
 
 
+func _passed_for_room(pick_no: int) -> bool:
+	for e in _draft.user_passed:
+		if int(e["pick"]) == pick_no:
+			return true
+	return false
+
+
 ## Your picks in this draft, each with how you got it and who you took with
 ## it. National Draft only.
 func _my_picks() -> void:
@@ -2361,7 +2429,8 @@ func _my_picks() -> void:
 		var taken := ""
 		if index < _draft.pick_index:
 			var entry: Dictionary = by_pick.get(index + 1, {})
-			taken = _entry_player_name(entry) if not entry.is_empty() else "passed"
+			taken = _entry_player_name(entry) if not entry.is_empty() \
+					else ("passed: list full" if _passed_for_room(index + 1) else "passed")
 		var row := UiKit.vbox(1)
 		row.name = "MyPick_%d" % (index + 1)
 		row.add_child(UiKit.lbl("No. %d  ·  Round %d%s" % [index + 1, int(_draft.pick_rounds[index]),
