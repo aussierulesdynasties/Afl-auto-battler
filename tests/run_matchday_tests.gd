@@ -76,6 +76,7 @@ func _run() -> void:
 	await _t("_test_vignettes_off_match")
 	await _t("_test_match_day_setup")
 	await _t("_test_match_preview")
+	await _t("_test_skip_to_break")
 	await _t("_test_side_keeps_calls")
 	await _t("_test_match_way_poster")
 	_t("_test_appearance")
@@ -3731,3 +3732,164 @@ func _plain(c: Control) -> String:
 	if c is Label:
 		return (c as Label).text
 	return (c as RichTextLabel).get_parsed_text() if c is RichTextLabel else ""
+
+
+## Skip to the break (director, 2026-11-06): beside Skip to full time in the
+## first three quarters, named for the break it skips to, gone in the last.
+## A real tap rolls the rest of the quarter, every event reaches the feed, and
+## the break comes up with every call. The same match, watched with the same
+## calls, ends with the same result, event for event.
+func _test_skip_to_break() -> void:
+	_state.set_vignettes_on(false)
+	var watched := await _play_match_for_skip(false)
+	var skipped := await _play_match_for_skip(true)
+	_check(not watched.is_empty() and watched == skipped,
+			"Skipping to each break ends the match exactly as watching it does (watched %s, skipped %s)" % [
+			str(watched.get("sig", "")), str(skipped.get("sig", ""))])
+
+
+## One match from the hub at 390x844, the default calls at every break and
+## moment. `skip`: a real tap on Skip to the break at each bounce of Q1-Q3.
+func _play_match_for_skip(skip: bool) -> Dictionary:
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", db.club_list("COL"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	root.size = Vector2i(390, 844)
+	router.stack = ["hub"]
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	# Settings live in one file every test run on this machine shares: set
+	# vignettes off again right before the match it is meant for.
+	_state.set_vignettes_on(false)
+	hub.call("_on_play_match")
+	await _settle()
+	var m: Node = current_scene
+	if m == null or m.name != "MatchScene":
+		_check(false, "The match opens (skip %s, %s)" % [str(skip), str(m.name) if m != null else "none"])
+		# Leave nothing behind for the next test.
+		for n in [hub, m, root.find_child("PreMatchVignette", true, false)]:
+			if n != null and is_instance_valid(n) and n != root:
+				n.queue_free()
+		_state.pending_sim = null
+		await _settle()
+		return {}
+	var tag := "skip" if skip else "watch"
+	var names := ["quarter time", "half time", "three-quarter time"]
+	var pv = m.get("_pitch")
+	# At each siren the button still names the break that has just sounded:
+	# a tap before the break opens lands on that break, not the next one.
+	var at_siren: Array = []
+	var on_siren := func(ev: Dictionary) -> void:
+		var b: Button = m.find_child("SkipToBreak", true, false)
+		if str(ev.get("kind", "")) == "quarter" and b != null and at_siren.size() < 3:
+			at_siren.append(b.text)
+	if not skip:
+		pv.event_played.connect(on_siren)
+	var guard := 0
+	while not bool(m.get("_finished")) and guard < 20000:
+		guard += 1
+		var sim = _state.pending_sim
+		var box = m.get("_coach_overlay")
+		var mo = m.get("_moment_overlay")
+		if box != null and is_instance_valid(box):
+			var start: Control = m.find_child("StartQuarter", true, false)
+			var why: String = await Tap.tap(start)
+			await _settle()
+			if why != "":
+				_check(false, "A real tap on Start at each break (%s: %s)" % [tag, why])
+				break
+			var q: int = int(m.get("_breaks_played")) + 1
+			var sb: Button = m.find_child("SkipToBreak", true, false)
+			if q < 4:
+				_check(sb != null and sb.is_visible_in_tree() and sb.text == "Skip to " + names[q - 1]
+						and sb.size.y >= 44.0 and sb.get_global_rect().end.x <= 390.0,
+						"Q%d: Skip to %s sits beside Skip to full time, thumb-sized (%s, %s)" % [
+						q, names[q - 1], sb.text if sb else "-", str(sb.get_global_rect()) if sb else "-"])
+				var fnt: Font = sb.get_theme_font("font") if sb else null
+				var fs: int = sb.get_theme_font_size("font_size") if sb else 0
+				var need := fnt.get_string_size(sb.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x if fnt else 9999.0
+				var sty: StyleBox = sb.get_theme_stylebox("normal") if sb else null
+				var pad := (sty.get_margin(SIDE_LEFT) + sty.get_margin(SIDE_RIGHT)) if sty else 0.0
+				print("skip_to_break width Q%d: text %.0f + pad %.0f in %.0f px (busy text %.0f)" % [q, need, pad, sb.size.x,
+						fnt.get_string_size("Playing on...", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x])
+				_check(need + pad <= sb.size.x, "Q%d: Skip to %s is read in full, not clipped (%.0f of %.0f px)" % [
+						q, names[q - 1], need + pad, sb.size.x if sb else 0.0])
+				# Not only at 390: the button never goes below its own text, so a
+				# 320-wide screen (a small window, a small phone) reads it in full too.
+				_check(sb != null and sb.custom_minimum_size.x >= need + pad,
+						"Q%d: Skip to %s keeps room for its words on any width (min %.0f, needs %.0f)" % [
+						q, names[q - 1], sb.custom_minimum_size.x if sb else 0.0, need + pad])
+				if skip and q == 2:
+					# Half way through a quarter, not only at the bounce: some of
+					# Q2 is watched first (a call on the way is answered as ever).
+					var watch_to: int = int(m.get("_playback_event_index")) + 60
+					var g2 := 0
+					while int(m.get("_playback_event_index")) < watch_to and g2 < 2000:
+						g2 += 1
+						var mo2 = m.get("_moment_overlay")
+						if mo2 != null and is_instance_valid(mo2) and not sim.pending_moment.is_empty():
+							m.call("_on_moment_choice", int(sim.pending_moment.get("default", 0)))
+							await process_frame
+							continue
+						pv.set_speed(8.0)
+						if pv.playing:
+							pv._process(0.25)
+						await process_frame
+					var mo3 = m.get("_moment_overlay")
+					if mo3 != null and is_instance_valid(mo3) and not sim.pending_moment.is_empty():
+						m.call("_on_moment_choice", int(sim.pending_moment.get("default", 0)))
+						await process_frame
+				if skip:
+					var feed_before: int = int(m.get("_playback_event_index"))
+					var t0 := Time.get_ticks_usec()
+					var why2: String = await Tap.tap(sb)
+					var ms := (Time.get_ticks_usec() - t0) / 1000.0
+					await _settle()
+					var evs: int = (pv.events as Array).size()
+					_check(why2 == "" and m.get("_coach_overlay") != null and is_instance_valid(m.get("_coach_overlay"))
+							and int(m.get("_playback_event_index")) == evs and int(m.get("_breaks_played")) == q
+							and sim.current_quarter == q + 1 and not sim.quarter_in_progress()
+							and m.find_child("StartQuarter", true, false) != null,
+							"Q%d: a real tap skips to %s: the quarter is played, all %d of its events reached the feed, the break is up with Start (%s)" % [
+							q, names[q - 1], evs - feed_before, why2])
+					print("skip_to_break Q%d: %d events released, tap-to-break %.1f ms" % [q, evs - feed_before, ms])
+					# The scoreboard above the break shows the score at the siren.
+					var qt: Dictionary = sim.quarter_teams[q - 1] if sim.quarter_teams.size() >= q else {}
+					_check(not qt.is_empty() and m.get("_shown_goals") == qt.get("goals")
+							and m.get("_shown_behinds") == qt.get("behinds"),
+							"Q%d: after the skip the scoreboard shows the %s score (%s.%s, sim %s.%s)" % [
+							q, names[q - 1], str(m.get("_shown_goals")), str(m.get("_shown_behinds")),
+							str(qt.get("goals")), str(qt.get("behinds"))])
+			else:
+				_check(sb == null or not sb.is_visible_in_tree(),
+						"The last quarter has Skip to full time only (%s)" % tag)
+			continue
+		if mo != null and is_instance_valid(mo) and sim != null and not sim.pending_moment.is_empty():
+			m.call("_on_moment_choice", int(sim.pending_moment.get("default", 0)))
+			await process_frame
+			continue
+		# Watch, fast: the real playback path, a few seconds of play a step.
+		pv.set_speed(8.0)
+		if pv.playing:
+			pv._process(0.5)
+		await process_frame
+	if not skip:
+		var want := names.map(func(n): return "Skip to " + n)
+		_check(at_siren == want, "At each siren the button names the break just sounded, not the next (%s)" % str(at_siren))
+	var res: Dictionary = m.get("_res")
+	var evs_all: Array = res.get("events", [])
+	var sig := "%s %s %d events, hash %d" % [str(res.get("goals")), str(res.get("behinds")),
+			evs_all.size(), str(evs_all).hash()]
+	_check(bool(m.get("_finished")), "The match reaches full time (%s)" % tag)
+	if is_instance_valid(hub):
+		hub.queue_free()
+	if is_instance_valid(m):
+		m.queue_free()
+	_state.pending_sim = null
+	await _settle()
+	return {"sig": sig, "goals": res.get("goals"), "behinds": res.get("behinds"),
+			"n": evs_all.size(), "h": str(evs_all).hash()}

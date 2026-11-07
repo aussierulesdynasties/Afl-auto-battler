@@ -71,11 +71,18 @@ static func start(tree: SceneTree, replace := false) -> bool:
 	if not GameState.vignettes_on() or way == "skip":
 		# Vignettes off (Settings), or Skip chosen: no banner scene, straight
 		# to the match.
-		if not GameState.prepare_interactive_match():
+		# The set-up takes a moment on a phone: the cover and its line go up
+		# first (ScreenTransition); the match screen joins the cover.
+		var ok := [false]
+		await ScreenTransition.run("Heading to the ground...", func():
+			if not GameState.prepare_interactive_match():
+				return
+			ok[0] = true
+			GameState.match_way_live = way
+			_go(replace))
+		if not ok[0]:
 			busy = false
 			return false
-		GameState.match_way_live = way
-		_go(replace)
 		return true
 	# The pre-match scene goes up in this frame: a couple of seconds of
 	# match day (warm-up, final words, through the banner) while the match
