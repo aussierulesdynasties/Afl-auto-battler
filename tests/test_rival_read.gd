@@ -82,8 +82,9 @@ func _test_calls_unchanged() -> void:
 		elif first == "":
 			first = "%s: was %s, now %s" % [str((want[i] as Dictionary).get("match", i)),
 					JSON.stringify(want[i]).left(300), got.left(300)]
-	_check(same == Identity.MATCHES, "Every seeded match plays as before, every call the same (%d of %d; %s)" % [
-			same, Identity.MATCHES, first])
+	_check(same == Identity.MATCHES, ("Every seeded match plays as before, every call the same (%d of %d; %s)."
+			+ " A change meant to move the match re-records the fixture: godot --headless --path ."
+			+ " --script tools/rival_identity_dump.gd") % [same, Identity.MATCHES, first])
 
 
 ## Each break read says what the rule then plays: his mood exactly when the
@@ -380,11 +381,17 @@ func _test_in_career() -> void:
 	GameState._refresh_coach_tactics()
 	var opp := str(GameState.my_next_opponent().get("code", ""))
 	_check(opp != "", "There is a next opponent")
-	tree.root.size = Vector2i(1280, 720)
-	var ui: Control = load("res://scenes/SelectionScene.tscn").instantiate()
+	# On a phone, the match preview (the reference design).
+	var was := tree.root.size
+	tree.root.size = Vector2i(390, 844)
+	var ui: Control = load("res://scenes/MatchPreviewScene.tscn").instantiate()
 	tree.root.add_child(ui)
 	await _settle()
 	var btn: Button = ui.find_child("AssistantReport", true, false)
+	var sc: ScrollContainer = ui.find_child("PreviewScroll", true, false)
+	if sc != null and btn != null:
+		sc.ensure_control_visible(btn)
+		await _settle()
 	var why := "no report button" if btn == null else str(await Tap.tap(btn))
 	_check(why == "", "A tap opens the Assistant's report (%s)" % why)
 	await _settle()
@@ -395,6 +402,7 @@ func _test_in_career() -> void:
 			heads.append(str((l as Label).text))
 	_check(heads.has("Their coach") and heads.has("Who matters"), "It reads their coach and who matters: %s" % [heads])
 	ui.queue_free()
+	tree.root.size = was
 	await _settle()
 	# The tagger and loose man it names are the men the match plays.
 	var rep := GameState.opponent_report(opp)
