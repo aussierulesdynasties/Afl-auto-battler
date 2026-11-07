@@ -1424,12 +1424,13 @@ func _on_play_match() -> void:
 		# Vignettes off (Settings), or Skip chosen: no banner scene, straight
 		# to the match.
 		_starting_match = true
-		if not GameState.prepare_interactive_match():
-			_starting_match = false
-			_on_sim_round()
-			return
-		GameState.match_way_live = way
-		Router.go("match")
+		ScreenTransition.run("Heading to the ground...", func():
+			if not GameState.prepare_interactive_match():
+				_starting_match = false
+				_sim_week()
+				return
+			GameState.match_way_live = way
+			Router.go("match"))
 		return
 	# The pre-match scene goes up in this frame: a couple of seconds of
 	# match day (warm-up, final words, through the banner) while the match
@@ -1487,9 +1488,9 @@ func _on_fact_option(option: Dictionary, fact_text: String) -> void:
 ## when the sim would play a match you could have played yourself: your
 ## home-and-away round or your final (row 102). A bye, a finals week off, a
 ## finals week you are out of and the off-season sim nothing of yours, so they
-## go straight ahead. The pre-season's Sim to Round 1 (PreSeasonScene) stops
-## before Round 1 and never asks. Settings turns the question back on after
-## Don't ask again.
+## go straight ahead. The pre-season's Sim to Round 1 (PreSeasonScene) asks
+## too, because it plays the practice match, and follows the same setting.
+## Settings turns the question back on after Don't ask again.
 func _sim_asks_first() -> bool:
 	return GameState.confirm_sim_round() and not _upcoming_match().is_empty()
 
@@ -1536,10 +1537,28 @@ func _close_sim_confirm() -> void:
 
 
 func _on_sim_round() -> void:
+	# The week's sim takes seconds on a phone: the cover and its line are on
+	# screen first, and a second tap meanwhile is ignored (ScreenTransition).
+	ScreenTransition.run(_sim_line(), _sim_week)
+
+
+func _sim_week() -> void:
 	GameState.advance()
 	_build()
 	if not GameState.last_results.is_empty():
 		_show_results(GameState.last_results)
+
+
+## What the cover says while the week is simmed.
+func _sim_line() -> String:
+	var season: Season = GameState.season
+	if season == null or season.is_season_over():
+		return "Simming the week..."
+	if not season.is_regular_done():
+		return "Playing %s..." % season.round_label(season.round_index)
+	var w := int(season.finals.get("week", 1))
+	return ["Playing the wildcard round...", "Playing the first week of the finals...", "Playing the semi finals...",
+			"Playing the prelims...", "Playing the Grand Final..."][clampi(w - 1, 0, 4)]
 
 
 ## Router back hook: close the results popup before leaving the hub.
@@ -1607,6 +1626,8 @@ func handle_back() -> bool:
 		_close_midseason(true)
 		return true
 	if RookieDraftSheet.close_open(self):
+		return true
+	if DraftSpotsSheet.close_open(self):
 		return true
 	# Back skips the press conference, as its Skip button does (natural
 	# Android Back); an overlay opened over it closes first.
@@ -2133,12 +2154,24 @@ func _result_side(code: String, goals: int, behinds: int, role: String, verdict:
 	return h
 
 
+## The draft button: when a pick of yours has no senior list spot, the sheet
+## says so first (DraftSpotsSheet); otherwise the draft starts.
 func _on_intake_draft() -> void:
 	if GameState.is_sacked():
 		_build()
 		return
-	if GameState.begin_intake_draft():
-		Router.go("draft")
+	if DraftSpotsSheet.needed():
+		DraftSpotsSheet.open(self, _start_intake_draft)
 		return
-	if GameState.start_next_season():
-		_build()
+	_start_intake_draft()
+
+
+func _start_intake_draft() -> void:
+	# The rollover takes a couple of seconds on a phone: the cover and its
+	# line go up first. The draft screen, when there is one, joins the cover.
+	ScreenTransition.run("Starting the new season...", func():
+		if GameState.begin_intake_draft():
+			Router.go("draft")
+			return
+		if GameState.start_next_season():
+			_build())
