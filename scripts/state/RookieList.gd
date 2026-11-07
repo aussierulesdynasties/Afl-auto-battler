@@ -272,7 +272,7 @@ static func choose(gs, player_id: String) -> bool:
 		for p in MidseasonDraft.pool(gs):
 			if str(p["id"]) == player_id:
 				hit = p
-		if hit.is_empty():
+		if hit.is_empty() or Challenge.block_reason(gs, hit) != "":
 			return false
 		_take(gs, gs.my_club, hit)
 	rec["next"] = int(rec["next"]) + 1
@@ -308,7 +308,7 @@ static func _take(gs, code: String, p: Dictionary) -> void:
 	else:
 		gs.draftee_pool.erase(p)
 		gs.drafted_draftees[id] = code
-		gs._mark_drafted(p, KIND, 0)
+		gs._mark_drafted(p, KIND, 0, code)
 	if not p.has("xp"):
 		p["xp"] = 0
 		p["xp_games"] = 0

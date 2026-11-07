@@ -18,6 +18,8 @@ extends RefCounted
 ##   story_of_the_season (3 to 5 sentences, story_parts + compose) and
 ##   story_parts {result, hero, match, turn, arc, legends}: "arc" stays ""
 ##   until plan step 1a writes a coach-arc sentence into it and recomposes.
+##   challenge_met (the words of your own goal, Challenge.gd) only on the page
+##   of the season it was first met.
 
 ## A retiring player is a club legend at any one of these marks (director,
 ## 2026-11-03): goals or games for the club, club best-and-fairests, Brownlows,
