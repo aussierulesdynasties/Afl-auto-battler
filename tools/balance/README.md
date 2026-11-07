@@ -22,6 +22,15 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "-
   --b "--lists generated"`). Classes 2027 on are generated on the game's data, grown five seasons, and each real
   player's place goes to the next generated player of his position, re-rated to his OVR (the in-career
   re-anchor). Every worker builds the same league; ~10 s more per worker.
+- **Match setup** (`--setup league|coached`, fatigue parity, T3.F-defects): `league` plays both sides
+  as a career's background match (rival coaches pick their plans, Steady-plan rotations each quarter);
+  `coached` makes side `i % 2` your club in a coached match you skip through (assistant calls, every
+  moment on its default answer, rotations set before each quarter as MatchScene sets them). Pair them
+  (`--a "--setup league" --b "--setup coached"`) to see whether your side is treated as an AI club is.
+  The report's Legs section gives each side's mean energy on the ground and how many are under 40 at
+  each siren, interchanges and exertion: home against away, coached against rival, and for a paired run
+  the coached side and its rival each against the same side on the same seed in A. Use a multiple of
+  306 matches (`918`) so every club is home and away equally often.
 - **Main against the branch** (every A/B of a change): `--a-root <checkout of origin/main> --b ""` plays
   arm A from that other checkout and arm B from this one, on the same seeds. There are no feature switches:
   a change is in the game once merged, so the only A/B is main against the branch. Each worker log starts with
