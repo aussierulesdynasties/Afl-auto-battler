@@ -21,7 +21,7 @@ var form := 0.0
 var tactics_exec := 1.0
 var tactics_read := 0.0
 ## How much of each plan's upside the side keeps for how well it knows the plan
-## (plan familiarity, behind the pre-season switch): plan -> 0..1. Empty = every
+## (plan familiarity, from the pre-season): plan -> 0..1. Empty = every
 ## plan as written. Worked out before the match starts (CoachEffects.apply).
 var plan_know := {}
 var ai_plans := false

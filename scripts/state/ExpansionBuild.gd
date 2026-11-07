@@ -1,8 +1,7 @@
 class_name ExpansionBuild
 extends RefCounted
 ## GameState's side of a new club's list build (the rules are in Expansion).
-## `gs` is GameState. Everything here is behind the feature switch
-## "expansion_package": off, none of it runs and gs.expansion stays empty.
+## `gs` is GameState.
 ##
 ## A club entering in year E:
 ##   season E-1, late   approach(): it names the out-of-contract players it
@@ -26,20 +25,14 @@ extends RefCounted
 ## are the seams.
 
 
-static func on() -> bool:
-	return Features.on("expansion_package")
-
-
-## Clubs whose first season is next year and that build their list this way:
-## every such club while the switch is on, and one whose build is already
-## saved in the career even if the switch has since been turned off (a build
-## under way is finished, never dropped half done).
+## Clubs whose first season is next year and that build their list this way
+## (every such club).
 static func building(gs) -> Array:
 	var out := []
 	if gs.season == null:
 		return out
 	for code in GameDB.club_order:
-		if GameDB.enter_year(str(code)) == int(gs.season_year) + 1 and (on() or has_package(gs, str(code))):
+		if GameDB.enter_year(str(code)) == int(gs.season_year) + 1:
 			out.append(str(code))
 	return out
 
@@ -392,7 +385,7 @@ static func _sign(gs, code: String, p: Dictionary, salary: int, years: int) -> v
 	p["club"] = code
 	p["salary"] = salary
 	p["contract_years"] = years
-	for key in ["train_plan", "project", "released_by", "comp_eligible", "resigned", "talks", "rookie_list"]:
+	for key in ["train_plan", "train_focus", "train_focus_year", "focus_ledger", "project", "released_by", "comp_eligible", "resigned", "talks", "rookie_list"]:
 		p.erase(key)
 	(state(gs, code)["list"] as Array).append(p)
 
@@ -518,9 +511,8 @@ static func forced_trade(gs, code: String, picks: Array) -> void:
 # Entry, and the sign-on money
 # ---------------------------------------------------------------------------
 ## The rollover into a club's first season: the list it built becomes its
-## list, before the league ages a year. False when it built none (the switch
-## is off, or the career was saved past its build): the caller generates the
-## old list.
+## list, before the league ages a year. False when it built none (the career
+## was saved past its build): the caller generates the old list.
 static func enter(gs, code: String) -> bool:
 	if not has_package(gs, code):
 		return false

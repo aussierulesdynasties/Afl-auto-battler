@@ -1,8 +1,8 @@
 extends SceneTree
-## Visual review tool for Gather Round (row 74, switch `gather_round`). Needs a real
+## Visual review tool for Gather Round (row 74). Needs a real
 ## renderer (a windowed Godot, or capture.yml):
 ##   godot --path . --script tools/visual/capture_gather_round.gd -- --out tmp/row74-caps/gr
-## A seeded Geelong career with the switch on, played to the week of Gather Round.
+## A seeded Geelong career, played to the week of Gather Round.
 ## Writes <out>_hub.png (the week's match poster), <out>_fixture.png (the fixture list
 ## open on Gather Round), <out>_match.png (the live match's header) and
 ## <out>_results.png (the fixture list after the round), <out>_warmup_<ground>.png
@@ -29,8 +29,6 @@ func _run() -> void:
 				_w = int(wh[0])
 				_h = int(wh[1])
 	await process_frame
-	var F = load("res://scripts/core/Features.gd")
-	F.set_on("gather_round", true)
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
 	var UK = load("res://scripts/ui/UiKit.gd")
@@ -85,15 +83,18 @@ func _run() -> void:
 	hub.queue_free()
 	await _frames(2)
 
-	# Match prep: the week sheet names the event and the host ground.
+	# Match prep: the match preview names the event and the host ground.
 	var sel: Control = load("res://scenes/SelectionScene.tscn").instantiate()
 	root.add_child(sel)
 	await _frames(15)
 	_save(out + "_selection.png")
-	sel.call("_open_week")
+	sel.queue_free()
+	await _frames(2)
+	var preview: Control = load("res://scenes/MatchPreviewScene.tscn").instantiate()
+	root.add_child(preview)
 	await _frames(15)
 	_save(out + "_week.png")
-	sel.queue_free()
+	preview.queue_free()
 	await _frames(2)
 
 	load("res://scripts/ui/StatsHubScene.gd").current = "fixture"

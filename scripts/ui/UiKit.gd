@@ -116,6 +116,119 @@ static func score_colour(code: String, surface := AUTO_COLOUR) -> Color:
 			return cols[i]
 	return TEXT
 
+
+## A club's line under a name on a Season stats list (director, 2026-11-06):
+## the club's strongest real colour, never white and never the pitch tint.
+## From its real colours (GameDB.club_marker_colours: primary, secondary, and
+## the third only where it is a real club colour), white and greys left out,
+## the most saturated one that reads at 4.5:1 on every surface the line can
+## sit on; when none does, the most saturated one lightened, its hue kept,
+## until it reads (a readable red is allowed here, unlike club_name_colour).
+## A club with no colour but black and white (Collingwood) gets its black
+## lightened to a grey here; its name and headings are a black tag instead
+## (club_title).
+const CODE_MIN_SAT := 0.25
+static func club_code_colour(code: String, surfaces: Array = []) -> Color:
+	if surfaces.is_empty():
+		surfaces = [PANEL]
+	var real: Array = GameDB.club_marker_colours(code)
+	var best := Color(0, 0, 0, 0)
+	for c in real:
+		var col: Color = c
+		if col.s >= CODE_MIN_SAT and min_contrast(col, surfaces) >= 4.5 and (best.a == 0.0 or col.s > best.s):
+			best = col
+	if best.a > 0.0:
+		return best
+	# Lighten the most saturated real colour that is not white: a Forge club
+	# whose colours are all pale must never fall back to its white.
+	var base := Color(0, 0, 0, 0)
+	for c in real:
+		var col: Color = c
+		if col.v > 0.9 and col.s < 0.15:
+			continue
+		if base.a == 0.0 or col.s > base.s:
+			base = col
+	if base.a == 0.0:
+		base = Color.BLACK
+	# Lighten keeping the hue: value up to full first, then saturation down.
+	var h := base.h
+	var s := base.s
+	var v := base.v
+	var out := Color.from_hsv(h, s, v)
+	while min_contrast(out, surfaces) < 4.5 and (v < 1.0 or s > 0.0):
+		if v < 1.0:
+			v = minf(1.0, v + 0.005)
+		else:
+			s = maxf(0.0, s - 0.005)
+		out = Color.from_hsv(h, s, v)
+	return out
+
+
+## A club whose real colours are black and white only (Collingwood): its
+## strongest real colour is its black, and no text reads in black on the dark
+## page. Such a club's name or heading is a black tag with white text on it
+## (club_title), never its black lightened to a grey (director 2026-11-07,
+## "fix Pies").
+static func club_is_black(code: String) -> bool:
+	var real: Array = GameDB.club_marker_colours(code)
+	var dark := false
+	for c in real:
+		var col: Color = c
+		if col.s >= CODE_MIN_SAT:
+			return false
+		if col.v < 0.3:
+			dark = true
+	return dark
+
+
+## The black a black-and-white club wears (its darkest real colour).
+static func club_black(code: String) -> Color:
+	var out := Color.BLACK
+	var first := true
+	for c in GameDB.club_marker_colours(code):
+		var col: Color = c
+		if first or col.v < out.v:
+			out = col
+			first = false
+	return out
+
+
+## A club's name or a section's heading in the club's strongest real colour,
+## bold: its ink on `surface`, or for a black-and-white club (club_is_black) a
+## black tag with white text and a light rim, so the black reads on the dark
+## page. The tag hugs its words; its text is the child named "Text".
+static func club_title(text: String, fs: int, code: String, surface := AUTO_COLOUR) -> Control:
+	if surface == AUTO_COLOUR:
+		surface = PANEL
+	if not club_is_black(code):
+		return lbl(text, fs, club_ink(code, surface), true)
+	var tag := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = club_black(code)
+	sb.border_color = TEXT
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(4)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 4
+	tag.add_theme_stylebox_override("panel", sb)
+	tag.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := lbl(text, fs, TEXT, true)
+	l.name = "Text"
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	tag.add_child(l)
+	return tag
+
+
+## The lowest contrast `c` has against any of `surfaces`.
+static func min_contrast(c: Color, surfaces: Array) -> float:
+	var lo := INF
+	for sf in surfaces:
+		lo = minf(lo, contrast(c, sf))
+	return lo
+
 ## Type scale for a phone. Pick from these before inventing a size.
 const H1 := 24      # screen title / the one big fact on a screen
 const H2 := 18      # section heading
@@ -869,38 +982,28 @@ class Motion:
 	const EASE_STAMP := Tween.EASE_OUT
 
 
-## The `ui_motion` switch (Features.gd): the new motion is built and tested
-## behind it. Off, every helper below does exactly what it did before.
-static func juice() -> bool:
-	return Features.on("ui_motion")
-
-
 ## One running tween per node and kind ("mod": modulate, "scale", "text"): a
-## second call stops the first, so two never fight over a property. With the
-## switch off this is a plain create_tween, as before.
+## second call stops the first, so two never fight over a property.
 static func _own(c: Node, kind: String) -> Tween:
 	var key := "_motion_" + kind
-	if juice():
-		if c.has_meta(key):
-			var old: Variant = c.get_meta(key)
-			if old is Tween and (old as Tween).is_valid():
-				(old as Tween).kill()
-		var tw := c.create_tween()
-		c.set_meta(key, tw)
-		return tw
-	return c.create_tween()
+	if c.has_meta(key):
+		var old: Variant = c.get_meta(key)
+		if old is Tween and (old as Tween).is_valid():
+			(old as Tween).kill()
+	var tw := c.create_tween()
+	c.set_meta(key, tw)
+	return tw
 
 
 ## Fade `c` up from nothing, `delay` seconds after it is shown.
 static func reveal(c: Control, delay := 0.0) -> void:
 	if not motion_on() or c == null:
 		return
-	c.modulate = Color(1, 1, 1, 0.0) if juice() else Color(c.modulate, 0.0)
+	c.modulate = Color(1, 1, 1, 0.0)
 	var run := func() -> void:
 		if not is_instance_valid(c):
 			return
-		if juice():
-			Feel.moved.append("reveal")
+		Feel.moved.append("reveal")
 		var tw := _own(c, "mod")
 		if delay > 0.0:
 			tw.tween_interval(delay)
@@ -921,8 +1024,7 @@ static func count_up(l: Label, to: int, say: Callable, dur := Motion.DUR_COUNT, 
 	var run := func() -> void:
 		if not is_instance_valid(l):
 			return
-		if juice():
-			Feel.moved.append("count_up")
+		Feel.moved.append("count_up")
 		var tw := _own(l, "text")
 		tw.tween_method(func(v: float): l.text = str(say.call(roundi(v))), float(from), float(to), dur) \
 				.set_trans(Motion.TRANS_SETTLE).set_ease(Motion.EASE_SETTLE)
@@ -948,7 +1050,7 @@ static func land(c: Control, delay := 0.0, sound := true) -> void:
 		if not motion_on() or not is_instance_valid(c):
 			return
 		# The pivot reads the size, so it waits for the first layout.
-		if juice() and c.size.x < 1.0 and c.is_inside_tree():
+		if c.size.x < 1.0 and c.is_inside_tree():
 			await c.get_tree().process_frame
 			if not is_instance_valid(c) or not motion_on():
 				return
@@ -984,7 +1086,7 @@ static func attention(c: CanvasItem, delay := 0.45) -> void:
 ## every node here lets a touch through to them.
 static func sheet_in(box: Dictionary) -> void:
 	var overlay: Control = box.get("overlay")
-	if not juice() or not motion_on() or overlay == null:
+	if not motion_on() or overlay == null:
 		return
 	var rise: Control = box.get("rise")
 	if rise == null:
@@ -1006,7 +1108,7 @@ static func fill_bar(fill: Control, from: float, to: float) -> void:
 	if fill == null:
 		return
 	fill.anchor_right = clampf(to, 0.0, 1.0)
-	if not juice() or not motion_on() or is_equal_approx(from, to):
+	if not motion_on() or is_equal_approx(from, to):
 		return
 	fill.anchor_right = clampf(from, 0.0, 1.0)
 	_after(fill, 0.0, func() -> void:
@@ -1614,9 +1716,9 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 	var shell := panel(PANEL, 16)
 	if bottom:
 		shell.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	# ui_motion: the sheet rises into place, which a Container would undo, so
+	# The sheet rises into place, which a Container would undo, so
 	# the panel sits on a plain Control the CenterContainer places by its size.
-	var rises := juice() and motion_on()
+	var rises := motion_on()
 	if rises:
 		var wrap := Control.new()
 		wrap.name = "SheetRise"

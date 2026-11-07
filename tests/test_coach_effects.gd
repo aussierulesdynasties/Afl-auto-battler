@@ -219,7 +219,10 @@ func _test_assistant() -> void:
 		return MatchSim.new(a, Squad.new("SYD", GameDB.club_list("SYD"), false, "SYD"), 321)
 	var off: MatchSim = make.call(false)
 	var on: MatchSim = make.call(true)
-	var best := Matchups.best_interceptor((on.squads[0] as Squad).ground)
+	# A rival coach's pick (the AI side's): his best interceptor, never a key
+	# defender a key forward needs (MatchSim._loose_pool).
+	var rival: MatchSim = make.call(false, true)
+	var best := rival._on_ground(0, str(rival.interceptor[0]))
 	_check(not best.is_empty(), "Geelong has a defender good enough to play loose")
 	_check(str(off.interceptor[0]) == "" and not off.assistant_active(0),
 			"Without an assistant your side starts with no loose defender")
@@ -257,20 +260,6 @@ func _test_assistant() -> void:
 	on._assistant_calls(0)
 	_check((str((on.duels[0] as Dictionary).get(fid, "")) != beaten) == better,
 			"Your assistant moves a key defender who lost three of four contests last quarter when a better match-up exists")
-	# One you put there yourself stays, whatever the contests say.
-	var kept: MatchSim = make.call(true)
-	var mine := str((kept.duels[0] as Dictionary)[fid])
-	kept.coach_matchup(0, fid, mine)
-	kept.duel_log[fid] = {"side": 1, "contests": [[1, mine, true, false], [1, mine, true, true], [1, mine, true, false],
-			[1, mine, false, false]]}
-	kept.current_quarter = 2
-	kept._assistant_calls(0)
-	_check(str((kept.duels[0] as Dictionary).get(fid, "")) == mine, "A match-up you set yourself is never moved")
-	# Your set-up before the bounce is yours, and he picks the spare around it.
-	var setup: MatchSim = make.call(true)
-	setup.set_matchups(0, {fid: str(best["id"])})
-	_check(str((setup.duels[0] as Dictionary).get(fid, "")) == str(best["id"]) and str(setup.interceptor[0]) != str(best["id"]),
-			"He picks the loose defender from the defenders you have not put on someone")
 	# A loose defender you choose, or no loose defender, stays your call.
 	var loose: MatchSim = make.call(true)
 	loose.coach_interceptor(0, "")
@@ -286,16 +275,16 @@ func _test_assistant() -> void:
 func _test_in_career() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
-	GameState.department_budget["football"] = 0
+	GameState.department_budget["high_performance"] = 0
 	GameState._refresh_coach_tactics()
 	var lean_exec := float((CoachEffects.table[GameState.my_club] as Dictionary)["exec"])
-	GameState.department_budget["football"] = 3
+	GameState.department_budget["high_performance"] = 3
 	GameState._refresh_coach_tactics()
 	var elite_exec := float((CoachEffects.table[GameState.my_club] as Dictionary)["exec"])
 	_check(elite_exec > lean_exec,
-			"Football department funding directly changes gameplan execution (%.2f to %.2f)" % [
+			"High performance funding directly changes gameplan execution (%.2f to %.2f)" % [
 			lean_exec, elite_exec])
-	GameState.department_budget["football"] = ClubBudget.STANDARD
+	GameState.department_budget["high_performance"] = ClubBudget.STANDARD
 	GameState.advance()
 	_check(not CoachEffects.table.is_empty() and CoachEffects.table.has("SYD") and bool(CoachEffects.table["SYD"]["ai"])
 			and not bool(CoachEffects.table["GEE"]["ai"]), "Every club's tactics are read from its staff; yours are your calls")

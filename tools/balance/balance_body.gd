@@ -7,16 +7,19 @@ extends RefCounted
 ## `sets` puts values on each MatchSim's own vars (--set name=value,...) to
 ## screen a tuning knob without editing the sim; a name the sim lacks fails.
 ## `echo` also prints each line as "BAL <json>" (tools/audit/balance_match_impl.gd).
+## `start` "real" (--start real, row 65 follow-up): the lists are the 2027 round-1 lists of a
+## real-lists career instead (GameState.begin_real_lists, the 2026 National Draft run with
+## every club picking as the AI does, career and replay seed 2026), so the real 2026 class
+## plays where it is picked; each team line then also carries "draftees", the 2026
+## draftees in its 23.
+
+var start := ""
 
 
-func play(from: int, count: int, out: String, on: PackedStringArray,
-		off: PackedStringArray, weather: String, sets: Dictionary = {}, echo := false) -> int:
+func play(from: int, count: int, out: String, weather: String,
+		sets: Dictionary = {}, echo := false) -> int:
 	GameDB.skip_ovr_overrides = true
 	GameDB.reload()
-	for f in on:
-		Features.set_on(f, true)
-	for f in off:
-		Features.set_on(f, false)
 	# --tune KEY=V,KEY=V: MatchSim tunables (MatchSim.tune, read through _tv) for
 	# sizing a constant before it is written into the code.
 	var args := OS.get_cmdline_user_args()
@@ -26,8 +29,17 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 				var pair := kv.split("=")
 				if pair.size() == 2:
 					MatchSim.tune[pair[0].strip_edges()] = float(pair[1])
-	var gather := Features.on(GatherRound.SWITCH)
+	var lists := {}
+	var class_ids := {}
+	if start == "real":
+		lists = real_start_lists()
+		for q in GameDB.draftees:
+			class_ids[str(q["id"])] = true
 	var codes: Array = GameDB.active_clubs(2026).duplicate()
+	# --lists generated: every club's list is generated players instead (row 104).
+	for i in range(args.size() - 1):
+		if str(args[i]) == "--lists" and str(args[i + 1]) == "generated":
+			lists = generated_lists(codes)
 	var pairs := []
 	for a in range(codes.size()):
 		for b in range(a + 1, codes.size()):
@@ -41,16 +53,14 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 		var flip := (i / pairs.size()) % 2 == 1
 		var h := str(p[1] if flip else p[0])
 		var a := str(p[0] if flip else p[1])
-		# gather_round on: every match is staged as a Gather Round match (at the
-		# host ground, a club's home edge only at its own ground), the per-match
-		# effect of the one round a season it applies to.
-		var at_home := [true, false]
-		if gather:
-			var ground: Callable = func(c): return str(GameDB.club(str(c)).get("ground", ""))
-			var v := str(GatherRound.venues_for([{"home": h, "away": a}], 500000 + i, ground)[0])
-			at_home = [ground.call(h) == v, ground.call(a) == v]
-		var sq_h := Squad.new(h, GameDB.club_list(h), bool(at_home[0]), h)
-		var sq_a := Squad.new(a, GameDB.club_list(a), bool(at_home[1]), a)
+		# Every match is staged as a Gather Round match (at the host ground, a
+		# club's home edge only at its own ground), the per-match effect of the
+		# one round a season it applies to.
+		var ground: Callable = func(c): return str(GameDB.club(str(c)).get("ground", ""))
+		var v := str(GatherRound.venues_for([{"home": h, "away": a}], 500000 + i, ground)[0])
+		var at_home := [ground.call(h) == v, ground.call(a) == v]
+		var sq_h := Squad.new(h, lists.get(h, GameDB.club_list(h)), bool(at_home[0]), h)
+		var sq_a := Squad.new(a, lists.get(a, GameDB.club_list(a)), bool(at_home[1]), a)
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
 		sim.weather = weather
 		for k in sets:
@@ -69,18 +79,39 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 				for k in range(clampi(q, 1, 4) - 1, 4):
 					q_score[0][k] = int(sc[0])
 					q_score[1][k] = int(sc[1])
+		# Stoppages in play (row 120), counted from the event log, match totals on
+		# both team lines (not StatBook keys, which are saved and append-only):
+		# ball-ups where play locked up and boundary throw-ins. Centre bounces are
+		# the team key "centre_bounces".
+		var ball_ups := 0
+		var throw_ins := 0
+		for ev in r["events"]:
+			var kind := str((ev as Dictionary).get("kind", ""))
+			if kind == "ballup":
+				ball_ups += 1
+			elif kind == "throwin":
+				throw_ins += 1
 		var teams := []
 		var rosters: Array = sim.rosters()
 		var stats: Dictionary = r["players"]
 		for side in range(2):
 			var t: Dictionary = (r["team"][side] as Dictionary).duplicate()
 			t["score"] = int(r["score"][side])
+			t["ball_ups"] = ball_ups
+			t["throw_ins"] = throw_ins
+			t["stoppages"] = ball_ups + throw_ins
 			_shot_counts(t, sim.shot_log, side)
 			t["strength"] = snappedf((sq_h if side == 0 else sq_a).strength(), 0.01)
 			q_score[side][3] = int(r["score"][side])
 			t["q_score"] = q_score[side]
 			t["roles"] = role_lines(rosters[side], r["players"])
 			t["carry_zone"] = (sim.carry_log[side] as Dictionary).duplicate()
+			if not class_ids.is_empty():
+				var sq: Squad = sq_h if side == 0 else sq_a
+				var n_new := 0
+				for pl in sq.ground + sq.bench:
+					n_new += 1 if class_ids.has(str(pl["id"])) else 0
+				t["draftees"] = n_new
 			# Intercepts by each man's listed position (DEF, MID, FWD, RUCK), as
 			# tools/audit/intercept_impl.gd counts them: "ic_MID" intercepts and
 			# "pg_MID" player-games (every man who played and has a stat line).
@@ -98,6 +129,27 @@ func play(from: int, count: int, out: String, on: PackedStringArray,
 			print("BAL " + line)
 	fh.close()
 	return 0
+
+
+## The 2027 round-1 lists of a real-lists career: the real end-of-2026 lists, the 2026
+## list decisions, trades and free agency, then the 2026 National Draft with every club
+## (MEL included) picking as the AI does. Same seeds every run, so two checkouts pair.
+func real_start_lists() -> Dictionary:
+	GameState.reset()
+	GameState.autosave_enabled = false
+	GameState.career_seed = 2026
+	GameState.replay_seed = 2026
+	GameState.begin_real_lists()
+	GameState.choose_real_club("MEL")
+	var d: Draft = GameState.draft
+	var guard := 0
+	while not d.is_finished() and guard < 5000:
+		guard += 1
+		var c := d._best_ai_pick(d.current_club())
+		if c.is_empty() or not d._draft_pick(d.current_club(), c):
+			d._skip_current_pick()
+	GameState.finish_intake_draft()
+	return GameState.season.lists
 
 
 ## Set-shot bands by metres out, as docs/research/SET_SHOT_EVIDENCE.md gives them.
@@ -134,6 +186,8 @@ func _shot_counts(t: Dictionary, shots: Array, side: int) -> void:
 				t[k + "_g"] += 1
 			elif res == "behind":
 				t[k + "_b"] += 1
+
+
 ## Key forward v key defender (row 94): one row per key forward who had a
 ## direct opponent, contests from the engine's duel log (what the full-time
 ## line reads). [contests, marks, most contests against one defender,
@@ -163,6 +217,64 @@ func duels(sim: MatchSim, r: Dictionary) -> Array:
 
 
 ## "a=1,b=0.5" -> {"a": 1.0, "b": 0.5}
+## --lists generated (row 104): a league of generated players, to screen a change to
+## generation in matches (main against the branch). Classes 2027 on (career seed 4242 +
+## year) are generated on the game's data (the hand-set OVR rows on) and grown
+## GEN_GROW seasons by the development rules; each real 2026 list player's place is
+## taken by the next unused generated player of his position, re-rated to his OVR on
+## the harness's own data
+## (GameDB.set_player_ovr, one shift on every rated attribute; discipline kept, as the
+## career's refit keeps it), as the in-career league is
+## re-anchored to the 2026 spread every rollover. Every worker builds the same league,
+## so two checkouts differ only in what generation does with the same draws.
+const GEN_CLASSES := 40
+const GEN_GROW := 5
+func generated_lists(codes: Array) -> Dictionary:
+	var skipped: bool = GameDB.skip_ovr_overrides
+	GameDB.skip_ovr_overrides = false
+	GameDB.reload()
+	Prospects.forget_cache()
+	var pool := {}
+	for y in range(2027, 2027 + GEN_CLASSES):
+		for q in Prospects.generate_class(y, 4242 + y):
+			for k in range(1, GEN_GROW + 1):
+				Prospects.age_player(q, y + k)
+			var r := str(q.get("role", "MID"))
+			if not pool.has(r):
+				pool[r] = []
+			(pool[r] as Array).append(q)
+	GameDB.skip_ovr_overrides = skipped
+	GameDB.reload()
+	Prospects.forget_cache()
+	var targets := {}
+	for code in codes:
+		targets[code] = []
+		for p in GameDB.club_list(code):
+			(targets[code] as Array).append([str(p.get("role", "MID")), int(p.get("overall", 50))])
+	var used := {}
+	var out := {}
+	for code in codes:
+		out[code] = []
+		for t in targets[code]:
+			var from: Array = pool.get(t[0], pool["MID"])
+			var at := int(used.get(t[0], 0)) % from.size()
+			used[t[0]] = at + 1
+			var q: Dictionary = (from[at] as Dictionary).duplicate(true)
+			q["club"] = code
+			# The career's re-anchor (Prospects.fit_attributes) leaves the attributes outside
+			# the rating alone; set_player_ovr shifts them too, so put them back: the league
+			# keeps the temperaments generation rolled (the hothead share the audit measures).
+			var keep := {}
+			for k in Prospects.UNRATED_KEYS:
+				keep[k] = (q["attr"] as Dictionary).get(k)
+			GameDB.set_player_ovr(q, int(t[1]))
+			for k in keep:
+				if keep[k] != null:
+					q["attr"][k] = keep[k]
+			(out[code] as Array).append(q)
+	return out
+
+
 static func parse_sets(text: String) -> Dictionary:
 	var d := {}
 	for kv in text.split(",", false):

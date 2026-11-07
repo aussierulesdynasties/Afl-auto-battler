@@ -19,7 +19,7 @@ const DIR := "res://data/stories/"
 const CATEGORIES := ["training", "health", "family", "media", "contracts", "leadership",
 		"community", "rivals", "board", "members", "selection"]
 ## "season_end": the one card the week your season ends (knocked out, premiers or
-## runners-up), behind the finals_cards_2 switch (ClubStories.pick).
+## runners-up) (ClubStories.pick).
 const PHASES := ["regular", "finals", "preseason", "season_end"]
 const BEATS := ["start", "middle", "end"]
 
@@ -78,7 +78,7 @@ const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "over
 		"pot_gap", "contract_years", "morale", "trust", "trust_band", "discipline", "backed",
 		"fit_rank", "talk_case", "kpi", "kpi_or_need", "explain_label", "talk_text", "sore_odds",
 		"sore_pct", "injury_pct", "trial_ovr", "ask", "early_price", "more_seasons", "extension_ok", "job", "real_named",
-		"form", "form_games", "has_role2", "starting", "form_low", "role_avg", "role_word", "trial_word", "trial_home", "trial_avg", "trial_par", "trial_tail",
+		"form", "form_games", "has_role2", "out_of_side", "starting", "form_low", "role_avg", "role_word", "trial_word", "trial_home", "trial_avg", "trial_par", "trial_tail",
 		"leadership", "captain", "delegate_holds", "holds_at", "holds_trust_at",
 		"new_club", "keep_price", "keep_seasons", "keep_note", "comp_line",
 		# The finals cards: the ageing rule says this is his last season, the finals he has
@@ -111,7 +111,7 @@ const CLUB_FACTS := ["club", "opp", "round", "year", "losing_run", "winning_run"
 		"finals_math", "finals_bye", "lost_last_final", "gf_run", "gf_run_word", "gf_again", "rival",
 		# The pre-season cards: weeks of it done (0 outside it) and the flag won last year.
 		"pre_week", "premiers",
-		# The finals cards' second slice (switch finals_cards_2): this week's opponent
+		# The finals cards' second slice: this week's opponent
 		# finished above you; seasons since your last final in this save and its year;
 		# the Grand Final's forecast; and the week your season ends, how it ended
 		# ("eliminated", "premier", "runner_up"), the final you lost, and the Grand
@@ -122,29 +122,17 @@ const CLUB_FACTS := ["club", "opp", "round", "year", "losing_run", "winning_run"
 const DEFAULTS := {"weight": 1, "cooldown": 40, "subject_cooldown": 8, "per_season": 0,
 		"phase": ["regular"], "default": -1, "bye": false, "priority": false}
 
-## The international prospects' cards (data/stories/international.json), played only with
-## the "international_prospects" switch on.
+## The international prospects' cards (data/stories/international.json).
 const INTERNATIONAL_FILE := "res://data/stories/international.json"
 
 static var _cache: Array = []
-static var _cache_intl := false
-static var _cache_f2 := false
-
-## A card marked "feature": "<switch>" is dealt only with that switch on.
-const FINALS_2 := "finals_cards_2"
 
 
 ## Every card in the game, loaded once.
 static func all() -> Array:
-	var with_intl := Features.on(InternationalProspects.FEATURE)
-	var with_f2 := Features.on(FINALS_2)
-	if _cache.is_empty() or with_intl != _cache_intl or with_f2 != _cache_f2:
+	if _cache.is_empty():
 		_cache = load_dir(DIR)
-		if with_intl:
-			_cache.append_array(load_file(INTERNATIONAL_FILE))
-		_cache = _cache.filter(func(t): return str(t.get("feature", "")) == "" or Features.on(str(t["feature"])))
-		_cache_intl = with_intl
-		_cache_f2 = with_f2
+		_cache.append_array(load_file(INTERNATIONAL_FILE))
 	return _cache
 
 
@@ -247,9 +235,6 @@ static func _check_card(t: Dictionary) -> Array:
 	if kind != "player" and kind != "club":
 		errs.append("%s: subject kind must be player or club" % id)
 	var player := kind == "player"
-	var feat := str(t.get("feature", ""))
-	if feat != "" and not Features.KNOWN.has(feat):
-		errs.append("%s: unknown feature switch '%s'" % [id, feat])
 	if bool(t.get("private", false)) and not player:
 		errs.append("%s: a private card must be about a player" % id)
 	for ph in t.get("phase", []):

@@ -43,6 +43,7 @@ func run() -> void:
 	_t("_test_bad_backup_leaves_career")
 	_t("_test_old_save_backup_imports")
 	_t("_test_earlier_saves_restore")
+	_t("_test_save_costs")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Save", self))
@@ -567,9 +568,11 @@ func _test_intake_and_second_season() -> void:
 
 	var late := GameDB.late_draftees.size()
 	var alias_next: int = GameDB._alias_next
+	GameState.advance()
+	GameState.advance()
+	# Read after the two rounds: the pool can move in the season (a
+	# mid-season pick off it), and what is checked is that the save keeps it.
 	var pool := GameState.draftee_pool.size()
-	GameState.advance()
-	GameState.advance()
 	var ladder := _ladder_sig()
 	_check(GameState.save_career(), "A second-season career saves")
 	_check(GameState.load_career(), "The second season loads")
@@ -580,7 +583,7 @@ func _test_intake_and_second_season() -> void:
 	_check(_ladder_sig() == ladder, "The second season's ladder is restored")
 	_check(GameDB.late_draftees.size() == late, "Generated draft classes are restored")
 	_check(GameDB._alias_next == alias_next, "The fictional-name cursor is restored")
-	_check(GameState.draftee_pool.size() == pool, "The prospect pool is restored")
+	_check(GameState.draftee_pool.size() == pool, "The prospect pool is restored (%d of %d)" % [GameState.draftee_pool.size(), pool])
 	var shared := true
 	for p in GameState.draftee_pool:
 		var in_db := false
@@ -1249,3 +1252,56 @@ func _test_earlier_saves_restore() -> void:
 	_check(GameState.saved_career_history().is_empty()
 			and not FileAccess.file_exists(GameState.save_path + ".old1"),
 			"Deleting the career deletes its earlier saves too")
+
+
+## Perf guards for Android (2026-11-07): the title screen decodes a save
+## once, not once per question; a new season is saved once per tap; a
+## Continue from a fresh start does not parse the data files twice; and a
+## the new save is read, not a remembered answer.
+func _test_save_costs() -> void:
+	var path := "user://test_save_costs_%d.save" % OS.get_process_id()
+	CareerSave.delete(path)
+	CareerSave.write({"which": "A"}, {"club": "GEE", "year": 2027}, path)
+	var d0 := CareerSave.check_decodes
+	var there := CareerSave.exists(path)
+	var meta := CareerSave.read_meta(path)
+	var again := CareerSave.exists(path) and str(CareerSave.read_meta(path).get("club", "")) == "GEE"
+	_check(there and again and str(meta.get("club", "")) == "GEE" and CareerSave.check_decodes - d0 == 1,
+			"The title screen's questions of one save decode it once (%d decodes)" % (CareerSave.check_decodes - d0))
+	CareerSave.write({"which": "B"}, {"club": "COL", "year": 2028}, path)
+	_check(str(CareerSave.read_meta(path).get("club", "")) == "COL" and str(CareerSave.read(path).get("which", "")) == "B",
+			"A new save is read afresh, never the remembered answer")
+	CareerSave.delete(path)
+
+	GameState.autosave_enabled = true
+	_new_season("ADE")
+	GameState.season.round_index = GameState.season.fixture.size()
+	var s0: int = GameState.saves_written
+	var rolled := GameState.start_next_season()
+	_check(rolled and GameState.saves_written - s0 == 1,
+			"Rolling into a new season saves the career once (%d saves)" % (GameState.saves_written - s0))
+	_new_season("ADE")
+	GameState.season.round_index = GameState.season.fixture.size()
+	if GameState.begin_intake_draft():
+		var draft: Draft = GameState.draft
+		while not draft.is_finished():
+			var c := draft._best_ai_pick(draft.current_club())
+			if c.is_empty() or not draft._draft_pick(draft.current_club(), c):
+				draft._skip_current_pick()
+		s0 = GameState.saves_written
+		_check(GameState.finish_intake_draft() and GameState.saves_written - s0 == 1,
+				"Finishing the draft rolls into the new season with one save (%d saves)" % (GameState.saves_written - s0))
+	GameState.autosave_enabled = false
+	GameState.delete_saved_career()
+
+	GameDB.reload()
+	var r0: int = GameDB.reloads
+	GameState.reset()
+	_check(GameDB.reloads == r0, "A career started on freshly loaded data does not load it all again")
+	GameState.reset()
+	_check(GameDB.reloads == r0 + 1, "...but a second career does, after the first changed it")
+	GameDB.reload()
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	var r1: int = GameDB.reloads
+	GameState.reset()
+	_check(GameDB.reloads == r1 + 1, "...and so does a career after a season was started without a reset")

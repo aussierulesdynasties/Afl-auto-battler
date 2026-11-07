@@ -1,8 +1,6 @@
 extends RefCounted
 ## Expansion package suite: how a new club builds its list (director's
-## ruling, 2026-10-14; Expansion and ExpansionBuild), behind the feature switch
-## "expansion_package". With the switch off a new club arrives exactly as it
-## always did and nothing of the build is written; with it on, the club brings
+## ruling, 2026-10-14; Expansion and ExpansionBuild): the club brings
 ## state-league signings, early draft picks, a senior player for the pick it
 ## must trade, and out-of-contract players from rival clubs.
 ## Run through tests/run_expansion_package_tests.gd.
@@ -12,7 +10,6 @@ var checks := 0
 
 ## Every season and draft here is seeded: a clock seed plays a different league.
 const SUITE_SEED := 2027
-const FEATURE := "expansion_package"
 
 
 func run() -> void:
@@ -20,8 +17,7 @@ func run() -> void:
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
 	GameDB.reload()
-	_t("_test_switch_off_is_today")
-	Features.set_on(FEATURE, true)
+	_t("_test_premier_picks_last")
 	_t("_test_rules")
 	_t("_test_canberra_choice")
 	_t("_test_draft_seats")
@@ -31,7 +27,6 @@ func run() -> void:
 	_t("_test_who_a_rival_keeps")
 	_t("_test_save_round_trip")
 	_t("_test_old_saves")
-	Features.clear(FEATURE)
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -131,12 +126,10 @@ func _picks_of(history: Array, code: String) -> Array:
 
 
 # ---------------------------------------------------------------------------
-# The switch off: nothing changes, nothing is written
+# The draft order
 # ---------------------------------------------------------------------------
-func _test_switch_off_is_today() -> void:
-	_check(not Features.on(FEATURE), "The switch ships off")
+func _test_premier_picks_last() -> void:
 	_new_career()
-	_check(GameState.canberra_on and GameDB.active_clubs(2030).has("CANB"), "Off: Canberra joins in 2030, as it always did")
 	# A pick's number before the draft follows the draft's own order: the
 	# premier picks last even from the bottom of the ladder.
 	var ladder: Array = GameState.season.ladder_sorted()
@@ -144,29 +137,13 @@ func _test_switch_off_is_today() -> void:
 	var saved_finals: Dictionary = GameState.season.finals
 	GameState.season.finals = {"premier": flag, "runner_up": str(ladder[ladder.size() - 2]["code"])}
 	var clubs: int = GameState.intake_order().size()
+	# A new club's extra picks come first, so the premier's number counts them.
+	clubs += ExpansionBuild.picks_ahead(GameState, GameState.season_year, clubs, clubs)
 	_check(GameState.draft_spot(GameState.season_year, 1, flag) == clubs
 			and GameState._draft_order() == GameState.intake_order(),
 			"The premier's first pick is numbered last, as it falls on draft night (%d of %d)" % [
 				GameState.draft_spot(GameState.season_year, 1, flag), clubs])
 	GameState.season.finals = saved_finals
-	var history := _rollover()
-	_check(_picks_of(history, "TAS").is_empty(), "Off: Tasmania takes no part in the draft before its first season")
-	var tas: Array = GameState.season.lists["TAS"]
-	_check(_ids(tas) == _ids(Prospects.generate_expansion_list("TAS", 2028)),
-			"Off: Tasmania arrives with the same 36 generated players as before")
-	_check(GameState.expansion.is_empty(), "Off: the build keeps no state")
-	_check(GameState.cap_for("TAS") == GameState.salary_cap, "Off: no club has sign-on money")
-	var approach_news := false
-	for item in GameState.news:
-		if str(item["text"]).contains("approached") or str(item["text"]).contains("state leagues"):
-			approach_news = true
-	_check(not approach_news, "Off: no news of approaches or state-league signings")
-	_check(GameState.save_career(), "Off: the career saves")
-	var saved := CareerSave.read(GameState.save_path)
-	_check(not saved.has("expansion") and not saved.has("canberra_on"), "Off: the save has none of the build's keys")
-	_check(GameState.story_card("contracts_new_club_approach", GameState.my_list[0]).has("options"),
-			"Off: the approach card still builds (it is in the deck) but is never dealt")
-	_check(ExpansionBuild.card(GameState).is_empty(), "Off: no approach card is dealt")
 
 
 # ---------------------------------------------------------------------------
@@ -251,7 +228,7 @@ func _run_plain(d: Draft) -> void:
 
 
 # ---------------------------------------------------------------------------
-# A career with the switch on
+# A career with the package
 # ---------------------------------------------------------------------------
 func _test_build_and_entry() -> void:
 	_new_career()
@@ -473,6 +450,17 @@ func _test_who_a_rival_keeps() -> void:
 			fa["overall"] = int(p["overall"]) + 6
 			fa["potential"] = maxi(int(fa.get("potential", 0)), int(fa["overall"]))
 			GameState.free_agents.append(fa)
+			# Last season's free agents leave the market before the new club's
+			# approaches settle, so in the off-season the one who beats him is
+			# his club's draft pick. Make every prospect at his position beat
+			# him too, so the case does not rest on how strong this seed's
+			# generated class happens to be (row 65 drafts it at its made
+			# rating, without the pool year's growth that used to lift it).
+			var role := str(p.get("role", ""))
+			for d in GameState._open_class(GameState.season_year):
+				if str(d.get("role", "")) == role or str(d.get("role2", "")) == role:
+					d["overall"] = maxi(int(d["overall"]), int(p["overall"]) + 6)
+					d["potential"] = maxi(int(d.get("potential", 0)), maxi(int(d["overall"]), int(p.get("potential", 0)) + 6))
 		elif case.begins_with("cap"):
 			p["overall"] = maxi(int(p["overall"]), 84)
 			p["potential"] = maxi(int(p.get("potential", 0)), 86)
@@ -525,7 +513,7 @@ func _test_save_round_trip() -> void:
 	var list_ids := _ids(before["list"])
 	_check(GameState.save_career(), "A career saves mid-build")
 	GameState.load_career()
-	_check(Features.on(FEATURE) and GameState.canberra_on and GameDB.active_clubs(2030).has("CANB"), "The loaded career keeps its Canberra choice")
+	_check(GameState.canberra_on and GameDB.active_clubs(2030).has("CANB"), "The loaded career keeps its Canberra choice")
 	var after: Dictionary = GameState.expansion.get("TAS", {})
 	_check(_ids(after.get("list", [])) == list_ids, "The list being built survives the round trip")
 	_check((after.get("targets", []) as Array).size() == n_targets and ExpansionBuild._approached(after, 2027),
@@ -547,27 +535,40 @@ func _test_save_round_trip() -> void:
 	_check(GameState.finish_intake_draft() and GameState.season_year == 2029, "The reloaded draft finishes")
 
 
+## A save made before the package (expansion_package was off on main until
+## 2026-11-06): no "expansion" or "canberra_on" key, and a Tasmania past 2028
+## that arrived as 36 generated players.
+func _as_old_save(tas: Array = []) -> void:
+	var saved := CareerSave.read(GameState.save_path)
+	saved.erase("expansion")
+	saved.erase("canberra_on")
+	if not tas.is_empty():
+		saved["season"]["lists"]["TAS"] = tas
+	_check(CareerSave.write(saved, CareerSave.read_meta(GameState.save_path), GameState.save_path),
+			"The save is rewritten as an old one")
+
+
 ## Ruling 9: a save that has not reached 2028 gets the package when Tasmania
 ## arrives; a save past 2028 keeps the Tasmania it has. Either way it keeps
 ## Canberra, because the choice did not exist when it was made.
 func _test_old_saves() -> void:
-	Features.set_on(FEATURE, false)
 	_new_career()
 	_check(GameState.save_career(), "An old career, before 2028, saves")
-	Features.set_on(FEATURE, true)
+	_as_old_save()
 	GameState.load_career()
 	_check(GameState.canberra_on and GameDB.active_clubs(2030).has("CANB"), "An old save keeps Canberra")
 	_rollover()
 	_check(_count_prefix(GameState.season.lists["TAS"], "FND_") >= 24 and _count_prefix(GameState.season.lists["TAS"], "EXP_") == 0,
 			"An old save that had not reached 2028 gets the package")
-	Features.set_on(FEATURE, false)
 	_new_career()
 	_rollover()
-	var old_ids := _ids(GameState.season.lists["TAS"])
-	_check(GameState.save_career(), "An old career, in 2028, saves")
-	Features.set_on(FEATURE, true)
+	_check(GameState.season_year == 2028 and GameState.save_career(), "An old career, in 2028, saves")
+	var old_tas: Array = Prospects.generate_expansion_list("TAS", 2028)
+	_as_old_save(old_tas)
 	GameState.load_career()
-	_check(_ids(GameState.season.lists["TAS"]) == old_ids, "A save past 2028 loads the Tasmania it had")
+	_check(_ids(GameState.season.lists["TAS"]) == _ids(old_tas), "A save past 2028 loads the Tasmania it had")
+	_check(GameState.canberra_on and GameState.cap_for("TAS") == GameState.salary_cap,
+			"It keeps Canberra and Tasmania has no sign-on money")
 	GameState.season.round_index = GameState.season.fixture.size()
 	GameState.begin_intake_draft()
 	var extra := 0
@@ -578,46 +579,3 @@ func _test_old_saves() -> void:
 	GameState.finish_intake_draft()
 	_check(extra == 0 and not GameState.expansion.has("TAS"), "A save past 2028 gets no extra pick and no approaches")
 	_check(_count_prefix(GameState.season.lists["TAS"], "EXP_") >= 20, "It keeps the Tasmania it has into 2029")
-	# A career saved mid-build with the switch on, loaded with it off: the build
-	# is finished, not dropped (W7 on #745).
-	_new_career()
-	GameState.season.round_index = Season.REGULAR_ROUNDS - Expansion.APPROACH_ROUNDS_LEFT
-	GameState._next_week_event()
-	GameState.season.round_index = GameState.season.fixture.size()
-	GameState.open_offseason()
-	_check(GameState.begin_intake_draft(), "Mid-build: the draft before entry opens")
-	var built: Array = _ids(ExpansionBuild.list_of(GameState, "TAS"))
-	_check(GameState.save_career(), "A career saves mid-build, with the draft open")
-	Features.set_on(FEATURE, false)
-	GameState.load_career()
-	_run_draft()
-	var mine := _picks_of(GameState.draft.pick_history, "TAS")
-	GameState.finish_intake_draft()
-	var tas_now: Array = GameState.season.lists["TAS"]
-	var kept_all := true
-	for id in built:
-		if not _ids(tas_now).has(id):
-			kept_all = false
-	var twice := 0
-	var seen := {}
-	for code in GameState.season.lists:
-		for q in GameState.season.lists[code]:
-			if seen.has(str(q["id"])):
-				twice += 1
-			seen[str(q["id"])] = true
-	_check(kept_all and mine.has(1) and _count_prefix(tas_now, "EXP_") == 0 and twice == 0,
-			"Loaded with the switch off, the build finishes: every player it had and its draftees, nobody twice (picks %s)" % str(mine))
-	Features.set_on(FEATURE, true)
-	# A save written with the switch on still loads with it off: it carries on as an ordinary career.
-	_new_career()
-	_rollover()
-	_check(GameState.save_career(), "A career with the package saves")
-	Features.set_on(FEATURE, false)
-	GameState.load_career()
-	_check(GameState.season_year == 2028 and _count_prefix(GameState.season.lists["TAS"], "FND_") >= 24,
-			"A save made with the switch on loads with it off")
-	_check(GameState.cap_for("TAS") == GameState.salary_cap, "With the switch off no sign-on money applies")
-	_rollover()
-	_check(GameState.season_year == 2029 and (GameState.season.lists["TAS"] as Array).size() >= Prospects.MIN_LIST,
-			"And it plays on")
-	Features.set_on(FEATURE, true)

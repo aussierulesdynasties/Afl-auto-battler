@@ -221,20 +221,23 @@ static func card_items(gs) -> Array:
 ## The full-time screen's one line for this match ("" when nothing). Reads the
 ## record once the round is in; before that, what the match will record.
 static func summary_line(gs, res: Dictionary) -> String:
-	var ml: Dictionary = gs.milestone_log
-	var mk := match_key(gs.season_year, res)
 	var texts := []
-	if str(ml.get("last_match", "")) == mk:
-		for e in ml.get("log", []):
-			if str(e.get("match", "")) == mk:
-				texts.append(str(e["text"]))
-	else:
-		for e in _entries(gs, res, false, ml.get("coach", {"games": 0, "wins": 0, "finals": 0})):
-			texts.append(str(e["text"]))
+	for e in summary_items(gs, res):
+		texts.append(str(e["text"]))
 	return "Milestones: " + " ".join(texts) if not texts.is_empty() else ""
 
 
-## The coming week's milestones in the news, one item each (switch on only).
+## summary_line's entries: [{kind, id, text, ...}] (the _e shape), so full time
+## can word a debut once, in the Firsts form.
+static func summary_items(gs, res: Dictionary) -> Array:
+	var ml: Dictionary = gs.milestone_log
+	var mk := match_key(gs.season_year, res)
+	if str(ml.get("last_match", "")) == mk:
+		return (ml.get("log", []) as Array).filter(func(e): return str(e.get("match", "")) == mk)
+	return _entries(gs, res, false, ml.get("coach", {"games": 0, "wins": 0, "finals": 0}))
+
+
+## The coming week's milestones in the news, one item each.
 static func preview_news(gs) -> void:
 	for u in upcoming(gs):
 		gs.add_news("milestone", "This week: " + str(u["text"]))

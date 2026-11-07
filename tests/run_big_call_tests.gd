@@ -52,7 +52,6 @@ func _run() -> void:
 	await _t("_test_hub_row")
 	await _t("_test_every_kind_routes")
 	_state.set_setting(WC.SETTING, false)
-	Features.set_on("coach_arcs", false)
 	_state.delete_saved_career()
 	print(Ran.line("Big call", self))
 	for f in _failures:
@@ -60,10 +59,9 @@ func _run() -> void:
 	quit(1 if not _failures.is_empty() else 0)
 
 
-func _fresh(checklist: bool, arcs: bool) -> void:
+func _fresh(checklist: bool) -> void:
 	_state.reset()
 	_state.set_setting(WC.SETTING, checklist)
-	Features.set_on("coach_arcs", arcs)
 	_state.career_seed = SUITE_SEED
 	_state.replay_seed = SUITE_SEED
 	_state.start_season("MEL", _db.club_list("MEL"))
@@ -78,16 +76,13 @@ func _next_week() -> void:
 
 
 func _test_off_is_empty() -> void:
-	_fresh(false, true)
+	_fresh(false)
 	_check(WC.big_call(_state).is_empty(), "Checklist off: no big call")
 	_check(not (_state.week_checks as Dictionary).has("big_call"), "Checklist off: nothing written")
-	_fresh(true, false)
-	_check(WC.big_call(_state).is_empty(), "Arcs off: no big call (as before)")
-	_check(not (_state.week_checks as Dictionary).has("big_call"), "Arcs off: nothing written")
 
 
 func _test_backing_from_state() -> void:
-	_fresh(true, true)
+	_fresh(true)
 	# Out of the box no MEL youngster is near the side: no backing call.
 	var young: Dictionary = BigCalls.ready_to_back(_state)
 	var kid := {}
@@ -122,7 +117,7 @@ func _test_backing_from_state() -> void:
 
 
 func _test_priority_and_one_per_week() -> void:
-	_fresh(true, true)
+	_fresh(true)
 	var cid := ""
 	for k in _state.coaches:
 		if str(_state.coaches[k].get("club", "")) == "MEL":
@@ -146,7 +141,7 @@ func _test_priority_and_one_per_week() -> void:
 
 
 func _test_captaincy() -> void:
-	_fresh(true, true)
+	_fresh(true)
 	if not _state.captaincy.has("MEL"):
 		_state._captaincy_refresh()
 	var rec: Dictionary = _state.captaincy.get("MEL", {})
@@ -172,7 +167,7 @@ func _test_captaincy() -> void:
 
 
 func _test_arc_beat_first() -> void:
-	_fresh(true, true)
+	_fresh(true)
 	_state.week_events = [{"coach_arc": "hot_seat", "title": "The board wants a word", "resolved": false}]
 	var c := WC.big_call(_state)
 	_check(str(c.get("text", "")) == "The board wants a word" and c.has("card"),
@@ -182,7 +177,7 @@ func _test_arc_beat_first() -> void:
 
 
 func _test_save_load() -> void:
-	_fresh(true, true)
+	_fresh(true)
 	_state.media_conference = {"key": "x", "round": 1}
 	_check(str(WC.big_call(_state).get("kind", "")) == "press", "Press call before save")
 	_state.media_conference = {}
@@ -196,7 +191,7 @@ func _test_save_load() -> void:
 
 
 func _test_hub_row() -> void:
-	_fresh(true, true)
+	_fresh(true)
 	var rec: Dictionary = _state.captaincy.get("MEL", {})
 	rec["slots"] = []
 	rec["seeded"] = true
@@ -214,7 +209,7 @@ func _test_hub_row() -> void:
 
 ## Every big-call kind has a route the Router knows, so its Hub row can be tapped.
 func _test_every_kind_routes() -> void:
-	_fresh(true, true)
+	_fresh(true)
 	var cid := ""
 	for k in _state.coaches:
 		if str(_state.coaches[k].get("club", "")) == "MEL":

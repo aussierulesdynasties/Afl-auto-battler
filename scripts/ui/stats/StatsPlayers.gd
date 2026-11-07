@@ -239,7 +239,8 @@ static func _board(host: Control, list: Array) -> Control:
 		more.custom_minimum_size = Vector2(0, 44)
 		more.pressed.connect(func():
 			_shown += PAGE
-			host.call("refresh"))
+			# The rows on show stay where they are; the next page comes in under them.
+			host.call("refresh", true))
 		v.add_child(UiKit.spacer(8))
 		v.add_child(more)
 	return v
@@ -283,9 +284,8 @@ static func _board_row(host: Control, row: Dictionary, rank: int) -> Control:
 	var meta := "%s · %d %s" % [club, games, "game" if games == 1 else "games"]
 	if bool(row["moved"]):
 		meta += " · two clubs"
-	# His club's code in its colour where it reads, else the quiet grey.
-	var club_ink := StatsSide.ink(club)
-	var sub := UiKit.line(meta, UiKit.SECONDARY, UiKit.MUTED if club_ink == UiKit.TEXT else club_ink)
+	# His club's code in its strongest real colour that reads (2026-11-06).
+	var sub := UiKit.line(meta, UiKit.SECONDARY, StatsSide.code_ink(club))
 	sub.name = "Meta"
 	who.add_child(sub)
 	var key := _sort
@@ -742,7 +742,8 @@ static func _table(host: Control, list: Array, cols: Array, wide: bool) -> Contr
 		more.custom_minimum_size = Vector2(0, 44)
 		more.pressed.connect(func():
 			_shown += PAGE
-			host.call("refresh"))
+			# The rows on show stay where they are; the next page comes in under them.
+			host.call("refresh", true))
 		v.add_child(UiKit.spacer(8))
 		v.add_child(more)
 	return v

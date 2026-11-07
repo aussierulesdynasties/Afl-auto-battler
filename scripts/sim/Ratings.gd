@@ -26,7 +26,7 @@ const T := {
 	"inside50_behind": 0.180,
 	"stoppage_share": 0.42,          # chains that begin at a genuine stoppage
 	"hitouts_per_stoppage": 0.78,    # split between the two rucks
-	"clearance_per_stoppage": 0.815,  # to the team that wins the stoppage
+	"clearance_per_stoppage": 0.76,  # to the team that wins the stoppage (0.815 before every feature was on: 38.9 a team, real 36.1)
 	"one_percenter_share": 0.83,     # of inside-50 entries that yield a 1%
 	"rebound_on_exit": 0.55,         # defensive-half chains that yield a reb50
 	"shooter_power": 0.5,            # how strongly shots go to the best kicks
@@ -39,13 +39,12 @@ const T := {
 	"contest_clamp": 0.60,           # max stoppage win probability
 }
 
-## Features "match_flow" (row 11, director 2026-10-10): stoppages come from
-## contests that lock up, a won ball is played on, chains are shorter and more
-## numerous. These replace the same keys in T for a match played with the switch
-## on; with it off T is used untouched. Measured against main's current calibration
+## Match flow (row 11, director 2026-10-10): stoppages come from contests that
+## lock up, a won ball is played on, chains are shorter and more numerous. These
+## replace the same keys in T for every match. Measured against main's current calibration
 ## (after #885): docs/research/MATCH_FLOW_AUDIT_2026-11-04.md has the bands, and
 ## three still fall short. These are absolute values, not offsets: a later change
-## to T for these keys does not reach a match_flow match until FLOW is updated too
+## to T for these keys does not reach a match until FLOW is updated too
 ## (tests/test_match_flow.gd checks every key here still exists in T).
 const FLOW := {
 	"chains_per_game": 275,

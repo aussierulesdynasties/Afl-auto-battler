@@ -1,6 +1,6 @@
 class_name CoachArcs
 extends RefCounted
-## The coach's career arcs (switch "coach_arcs"; director, 2026-11-03, plan
+## The coach's career arcs (director, 2026-11-03, plan
 ## step 1a; docs/research/COACH_ARC_CATALOGUE_2026-11-03.md). Arcs sit beside
 ## the random story deck and do not replace it: a beat of an active arc comes
 ## to the Hub as one more event card, on the deck's card UI and effect ops.
@@ -14,12 +14,18 @@ extends RefCounted
 ## `skip_after` weeks passes unplayed, so no arc stalls.
 ##
 ## Pure rules over the state ClubArcs hands in. The state, saved on GameState
-## as `coach_arcs` only while the switch is on:
+## as `coach_arcs`:
 ##   coach   the player's coach record: seasons, games, flags, last_flag, start,
 ##           seen (last season counted), coached {player id: true}, club (code
 ##           now), clubs [{code, name, from, to, why, chairman}] (every club
-##           coached, oldest first), sackings, moved {year, why, from, to}
+##           coached, oldest first), sackings, moved {year, why, from, to},
+##           reprieves (second chances left: a sacking with one left offers
+##           jobs elsewhere; with none the coaching career is over), retired
+##           (the year he retired, 0 while coaching)
 ##   move    a club change decided at a season's close, made at the rollover
+##   offers  the clubs with a job open for him after a sacking, until he takes
+##           one or retires: [{code, name, finish, list, goal, why_open}]
+##   sack    the sacking those offers follow: {from, year, heir}
 ##   people  named people who are not players: chairman, journalist
 ##   active  {arc id: {start, start_w, beat, last_w, last_year, wait_from, who,
 ##           mem {remembered names}, flags {arc flag: week}}}
@@ -28,7 +34,6 @@ extends RefCounted
 ##   log     [[year, week label, arc id, line]], oldest first
 
 const FILE := "res://data/arcs/coach_arcs.json"
-const FEATURE := "coach_arcs"
 ## Active arcs at once, and arc beats a week (one beat beside the deck's cards).
 const MAX_ACTIVE := 3
 const DEFAULT_GAP := 3
@@ -46,10 +51,6 @@ const ARC_FACTS := ["chairman", "journalist", "rival_club", "father", "seasons_c
 const CLOSE_FACTS := ["sacked", "warned", "premiers", "met", "board", "here", "morale", "ladder_last"]
 
 static var _cache: Array = []
-
-
-static func on() -> bool:
-	return Features.on(FEATURE)
 
 
 static func all() -> Array:
@@ -74,8 +75,9 @@ static func by_id(defs: Array, id: String) -> Dictionary:
 
 static func new_state() -> Dictionary:
 	return {"coach": {"seasons": 0, "games": 0, "flags": 0, "last_flag": 0, "start": 0, "seen": 0, "coached": {},
-			"club": "", "clubs": [], "sackings": 0, "moved": {}},
-			"people": {}, "active": {}, "done": {}, "counts": {"year": 0, "refusals": 0, "statements": 0}, "log": [], "move": {}}
+			"club": "", "clubs": [], "sackings": 0, "moved": {}, "reprieves": 1, "retired": 0},
+			"people": {}, "active": {}, "done": {}, "counts": {"year": 0, "refusals": 0, "statements": 0}, "log": [], "move": {},
+			"offers": [], "sack": {}}
 
 
 ## An older or partial state: every key present.
@@ -84,9 +86,15 @@ static func ensure(st: Dictionary) -> Dictionary:
 	for k in fresh:
 		if not st.has(k) or typeof(st[k]) != typeof(fresh[k]):
 			st[k] = fresh[k]
+	var pre_reprieves := not (st["coach"] as Dictionary).has("reprieves")
 	for k in fresh["coach"]:
 		if not (st["coach"] as Dictionary).has(k):
 			st["coach"][k] = fresh["coach"][k]
+	# A save from before second chances: a coach already sacked once has had
+	# his (he went straight on to another club), so the next sacking ends it.
+	# The board's warning card says so plainly before it can happen (rule 60).
+	if pre_reprieves and int(st["coach"]["sackings"]) >= 1:
+		st["coach"]["reprieves"] = 0
 	return st
 
 

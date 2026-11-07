@@ -128,21 +128,23 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 			return _mine(s, my_club)
 		s["weight"] = 75
 	elif kind == "premiers":
-		m = _re("prem", "^(.+) are the (\\d+) premiers\\.$").search(text)
+		# A second sentence is the club's flag history (row 76).
+		m = _re("prem", "^(.+) are the (\\d+) premiers\\.(?: (.+))?$").search(text)
 		if m != null:
+			var history := m.get_string(3)
 			s.merge({"club": code_of(m.get_string(1)), "weight": 100,
 					"headline": "%s are the %s premiers" % [m.get_string(1), m.get_string(2)],
-					"standfirst": "The flag is theirs."}, true)
+					"standfirst": history if history != "" else "The flag is theirs."}, true)
 			return _mine(s, my_club)
 	elif kind == "almanac_story":
-		# The season wrap's front item (switch "club_almanac"): the first sentence
+		# The season wrap's front item: the first sentence
 		# of the story of the season.
 		s.merge({"club": my_club, "weight": 80, "headline": text,
 				"standfirst": "The story of the season is in the club almanac."}, true)
 		s["mine"] = true
 		return s
 	elif kind == "match_story":
-		# Your match's hero (switch "match_story"): "<headline>. <hero>: <his game>."
+		# Your match's hero: "<headline>. <hero>: <his game>."
 		m = _re("hero", "^((.+) stars as (.+?) (?:beat|and) .+?)\\. (.+)$").search(text)
 		if m != null:
 			s.merge({"name": m.get_string(2), "club": code_of(m.get_string(3)), "weight": 62,
@@ -311,7 +313,7 @@ static func _story_block(st: Dictionary, big: bool) -> Control:
 		v.add_child(head)
 	v.add_child(_headline(st, UiKit.H1 if big else UiKit.NAME, surface))
 	if str(st["standfirst"]) != "":
-		v.add_child(UiKit.lbl(str(st["standfirst"]), UiKit.SECONDARY if big else UiKit.SMALL, UiKit.TEXT))
+		v.add_child(NameInk.label(str(st["standfirst"]), _names, UiKit.SECONDARY if big else UiKit.SMALL, UiKit.TEXT))
 	if str(st["club"]) == "":
 		return v
 	return UiKit.club_section_body(str(st["club"]), v, UiKit.club_ink(str(st["club"])))
@@ -358,7 +360,7 @@ static func _brief_row(st: Dictionary, key: String) -> Control:
 		l = NameInk.label(t, _names, UiKit.SECONDARY, UiKit.TEXT)
 	row.add_child(l)
 	if str(st["standfirst"]) != "" and key != _FIRST_GOAL:
-		row.add_child(UiKit.lbl(str(st["standfirst"]), UiKit.SMALL, UiKit.TEXT))
+		row.add_child(NameInk.label(str(st["standfirst"]), _names, UiKit.SMALL, UiKit.TEXT))
 	return row
 
 
@@ -467,6 +469,8 @@ static func mini(items: Array, my_club: String, on_open: Callable, names := {}) 
 	var page := build(latest_round(items), my_club)
 	var card := MarginContainer.new()
 	card.name = "NewsCard"
+	# The whole card is one tap: names in it are inked but open nothing (NameInk).
+	card.set_meta(NameInk.NO_LINKS, true)
 	var tap := Button.new()
 	tap.name = "NewsMore"
 	tap.flat = true

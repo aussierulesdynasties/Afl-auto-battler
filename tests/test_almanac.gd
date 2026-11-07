@@ -1,16 +1,14 @@
 extends RefCounted
-## Club almanac suite (plan step 1c; Almanac.gd, AlmanacScene), behind the
-## switch "club_almanac": a season's page is written at its end from the real
-## results, kept across a save and load, an older save loads and shows only
-## the seasons it has a record of, and with the switch off nothing is written
-## and no way in is shown.
+## Club almanac suite (plan step 1c; Almanac.gd, AlmanacScene): a season's
+## page is written at its end from the real results, kept across a save and
+## load, an older save loads and shows only the seasons it has a record of,
+## and the Hub shows the way in.
 ## Run through tests/run_almanac_tests.gd.
 
 var failures: Array[String] = []
 var checks := 0
 
 const SUITE_SEED := 2031
-const FEATURE := "club_almanac"
 const Ran := preload("res://tests/functions_ran.gd")
 
 var _played := false
@@ -21,8 +19,7 @@ func run() -> void:
 	checks = 0
 	GameState.replay_seed = SUITE_SEED
 	GameDB.reload()
-	_t("_test_switch_off")
-	Features.set_on(FEATURE, true)
+	_t("_test_hub_entry")
 	_t("_test_written_at_season_end")
 	_t("_test_save_round_trip")
 	_t("_test_old_save")
@@ -32,7 +29,8 @@ func run() -> void:
 	_t("_test_club_records")
 	_t("_test_story_finals_result")
 	_t("_test_story_with_match_story")
-	Features.clear(FEATURE)
+	_t("_test_challenge_goal_marked")
+	_t("_test_homegrown_flag")
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -69,15 +67,10 @@ func _hub_has_entry() -> bool:
 	return found
 
 
-func _test_switch_off() -> void:
-	Features.set_on(FEATURE, false)
+func _test_hub_entry() -> void:
 	_play_season()
 	_check(GameState.honour_roll.size() == 1, "The season is played to its end")
-	_check(GameState.almanac.is_empty(), "Switch off: no almanac page is written")
-	_check(GameState.club_records.is_empty(), "Switch off: no club records are kept")
-	_check(not _hub_has_entry(), "Switch off: the Hub shows no way into the almanac")
-	Features.set_on(FEATURE, true)
-	_check(_hub_has_entry(), "Switch on: the Hub shows the way into the almanac")
+	_check(_hub_has_entry(), "The Hub shows the way into the almanac")
 
 
 func _test_written_at_season_end() -> void:
@@ -244,10 +237,9 @@ func _test_club_records() -> void:
 	_check(JSON.stringify(GameState.club_records) == before, "Club records survive a save and load")
 
 
-## With the match story on: the season hero is a named award on the honour
+## The match story: the season hero is a named award on the honour
 ## roll and the almanac, and the story names him; every number traces.
 func _test_story_with_match_story() -> void:
-	Features.set_on("match_story", true)
 	_play_season()
 	var roll: Dictionary = GameState.honour_roll.back()
 	var e: Dictionary = GameState.almanac.back()
@@ -264,7 +256,6 @@ func _test_story_with_match_story() -> void:
 	var story := str(e[Almanac.STORY_KEY])
 	print("  story %d: %s" % [int(e["year"]), story])
 	_trace(story, e, d)
-	Features.clear("match_story")
 
 
 ## Every number in the story appears in the entry or the digest.
@@ -303,3 +294,94 @@ func _test_story_finals_result() -> void:
 		if not played and story != "":
 			_check(not story.contains("went out") and not story.contains("Grand Final") or bool(e.get("flag", false)),
 					"A season without a final never says it played one: %s" % story)
+
+
+## Row 114: Your goal is marked in the annual, once, on the season it is met;
+## the coach card says where it stands; a save keeps it; a save from before
+## challenges loads with none.
+func _test_challenge_goal_marked() -> void:
+	GameState.reset()
+	GameState.career_seed = SUITE_SEED
+	GameState.replay_seed = SUITE_SEED
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	GameState.challenge = {"kind": "goal", "goal": "coach_300", "met_year": 0}
+	# 290 games already coached: this season takes him past 300.
+	GameState.almanac = [{"year": GameState.season_year - 1, "club": "GEE", "w": 200, "l": 90, "d": 0}]
+	_check(Challenge.status_line(GameState) == "Coach 300 games. 290 so far.",
+			"Before it is met, the coach card says how far along it is (%s)" % Challenge.status_line(GameState))
+	var guard := 0
+	while not GameState.season.is_season_over() and guard < 40:
+		GameState.advance()
+		guard += 1
+	var year := GameState.season_year
+	var page: Dictionary = GameState.almanac[-1]
+	_check(int(page.get("year", 0)) == year and str(page.get("challenge_met", "")) == "Coach 300 games",
+			"The season the goal is met, its page marks it (%s)" % str(page.get("challenge_met", "")))
+	_check(int(GameState.challenge.get("met_year", 0)) == year, "The goal remembers the year it was met")
+	_check(Challenge.status_line(GameState) == "Coach 300 games. Met in %d." % year,
+			"The coach card says it was met, and when (%s)" % Challenge.status_line(GameState))
+	var next := {"year": year + 1, "club": "GEE", "w": 15, "l": 8, "d": 0}
+	Challenge.mark_season(GameState, next)
+	_check(not next.has("challenge_met"), "A goal already met is never marked again")
+	var scene: Control = load("res://scenes/AlmanacScene.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(scene)
+	var card := scene.find_child("AlmanacSeason_%d" % year, true, false)
+	_check(card != null and card.find_child("ChallengeMet", true, false) != null, "The annual's page for that season shows the goal met")
+	_check(scene.find_child("CoachGoal", true, false) != null, "The coach card shows your goal")
+	scene.queue_free()
+	_check(GameState.save_career() and GameState.load_career(), "(setup) the career saves and loads")
+	_check(str(GameState.challenge.get("kind", "")) == "goal" and int(GameState.challenge.get("met_year", 0)) == year,
+			"The challenge survives a save (%s)" % str(GameState.challenge))
+	var state := CareerSave.read(GameState.save_path)
+	state.erase("challenge")
+	CareerSave.write(state, CareerSave.read_meta(GameState.save_path), GameState.save_path)
+	_check(GameState.load_career() and GameState.challenge.is_empty() and Challenge.kind(GameState) == "",
+			"A save from before challenge starts loads with none")
+	# A flag is not met without a Grand Final side drafted by your club, and a
+	# season without a flag never meets it.
+	GameState.challenge = {"kind": "goal", "goal": "flag_homegrown", "met_year": 0}
+	var plain := {"year": year, "club": "GEE", "flag": false}
+	Challenge.mark_season(GameState, plain)
+	_check(not plain.has("challenge_met"), "No flag: the home-grown flag goal is not met")
+	GameState.challenge = {}
+
+
+## Row 114: the home-grown flag is met when every player your club sent out
+## in the Grand Final was first drafted by your club, home side or away, and
+## not when one of them came from elsewhere.
+func _test_homegrown_flag() -> void:
+	GameState.reset()
+	GameState.career_seed = SUITE_SEED
+	GameState.replay_seed = SUITE_SEED
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	var side := []
+	for p in GameState.my_list.slice(0, 23):
+		p["drafted_club"] = "GEE"
+		side.append({"id": str(p["id"])})
+	var theirs := []
+	for p in (GameState.season.lists["COL"] as Array).slice(0, 23):
+		theirs.append({"id": str(p["id"])})
+	var finals_was: Dictionary = GameState.season.finals
+	GameState.season.finals = {"weeks": [[{"tag": "GF", "home": "GEE", "away": "COL", "roster": [side, theirs]}]]}
+	GameState.challenge = {"kind": "goal", "goal": "flag_homegrown", "met_year": 0}
+	_check(Challenge.homegrown_flag(GameState), "A Grand Final side all drafted by your club is home-grown")
+	var page := {"year": GameState.season_year, "club": "GEE", "flag": true}
+	Challenge.mark_season(GameState, page)
+	_check(str(page.get("challenge_met", "")) == "Win a flag with a home-grown 22",
+			"A flag with that side meets the goal (%s)" % str(page.get("challenge_met", "")))
+	GameState.challenge = {"kind": "goal", "goal": "flag_homegrown", "met_year": 0}
+	GameState.season.finals = {"weeks": [[{"tag": "GF", "home": "COL", "away": "GEE", "roster": [theirs, side]}]]}
+	_check(Challenge.homegrown_flag(GameState), "As the away side too")
+	GameState.my_list[5]["drafted_club"] = "COL"
+	_check(not Challenge.homegrown_flag(GameState), "One player first drafted elsewhere and it is not home-grown")
+	GameState.my_list[5].erase("drafted_club")
+	_check(not Challenge.homegrown_flag(GameState), "A player with no drafting club (a save from before) is not home-grown")
+	GameState.season.finals = {"weeks": [[{"tag": "GF", "home": "COL", "away": "RIC", "roster": [theirs, theirs]}]]}
+	_check(not Challenge.homegrown_flag(GameState), "A Grand Final you were not in never counts")
+	GameState.season.finals = finals_was
+	GameState.challenge = {}
+	# Real players carry the club that drafted them: the first club of their
+	# AFL career (Jordan Dawson, Adelaide's #12, was drafted by Sydney).
+	var dawson := GameDB.club_list("ADE").filter(func(q): return str(q["id"]) == "ADE_12")
+	_check(not dawson.is_empty() and str(dawson[0].get("drafted_club", "")) == "SYD",
+			"A real player's drafting club is his first AFL club (%s)" % (str(dawson[0].get("drafted_club", "")) if not dawson.is_empty() else "-"))

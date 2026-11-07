@@ -13,6 +13,10 @@ func run() -> void:
 	GameState.replay_seed = SUITE_SEED
 	_t("_test_budget_model")
 	_t("_test_budget_allocation_state")
+	_t("_test_budget_fold_rule")
+	_t("_test_budget_old_save_both_keys")
+	_t("_test_budget_old_save_only_football")
+	_t("_test_budget_one_spend_drives_plan")
 	_t("_test_recovery")
 	_t("_test_match")
 	_t("_test_selection")
@@ -48,21 +52,45 @@ func _t(test: String, args := []) -> Variant:
 
 func _test_budget_model() -> void:
 	var standard := ClubBudget.defaults()
-	_check(is_equal_approx(ClubBudget.total_m(standard), ClubBudget.ANNUAL_M),
-			"Standard funding in all four departments exactly fills the annual budget")
-	var rebuild := {
-		"recruiting": 2, "development": 2,
-		"high_performance": 0, "football": 0,
-	}
+	_check(is_equal_approx(ClubBudget.total_m(standard), 9.0)
+			and is_equal_approx(ClubBudget.remaining_m(standard), 1.5),
+			"Standard funding in all three departments costs $9.0m and leaves one $1.5m step to spend")
+	_check(ClubBudget.AREA_ORDER.size() == 3 and not ClubBudget.AREA_ORDER.has("football")
+			and not ClubBudget.AREA_LABEL.values().has("Football department")
+			and is_equal_approx(ClubBudget.ANNUAL_M, 10.5),
+			"One spend: Recruiting, Development and High performance, $10.5m in all (row 99, director 2026-11-06)")
+	var rebuild := {"recruiting": 2, "development": 2, "high_performance": 0}
 	_check(is_equal_approx(ClubBudget.total_m(rebuild), ClubBudget.ANNUAL_M),
-			"A rebuild can fund Recruiting and Development strongly by cutting the other two")
+			"A rebuild can fund Recruiting and Development strongly by cutting High performance")
+	# Every three-line allocation: legal exactly when it fits $10.5m, which is
+	# any two lines Strong with the third Minimal, never Elite beside Strong.
+	var fits := 0
+	var sweep_ok := true
+	for r in range(4):
+		for d in range(4):
+			for h in range(4):
+				var a := {"recruiting": r, "development": d, "high_performance": h}
+				var legal := ClubBudget.total_m(a) <= ClubBudget.ANNUAL_M + 0.001
+				if legal:
+					fits += 1
+				var levels := [r, d, h]
+				levels.sort()
+				if levels == [0, 2, 2] and not legal:
+					sweep_ok = false
+				if levels.has(3) and levels.has(2) and legal:
+					sweep_ok = false
+	_check(sweep_ok and fits == 32,
+			"%d of 64 allocations fit $10.5m: any two lines Strong with the third Minimal, never Elite beside Strong" % fits)
 	_check(ClubBudget.development_mult(3) > ClubBudget.development_mult(2)
 			and ClubBudget.development_mult(2) > ClubBudget.development_mult(1)
 			and ClubBudget.development_mult(1) > ClubBudget.development_mult(0),
 			"More Development funding always has a larger, diminishing XP benefit")
 	_check(ClubBudget.benefit_text("recruiting", 2).contains("20% narrower")
-			and ClubBudget.benefit_text("high_performance", 3).contains("Legs recover 20% faster"),
-			"Funding benefits are stated as exact effects, not hidden scores")
+			and ClubBudget.benefit_text("high_performance", 3).contains("Legs recover 20% faster")
+			and ClubBudget.benefit_text("high_performance", 3).contains("gives 8% more of what it is built for")
+			and ClubBudget.benefit_text("high_performance", 0).contains("gives 5% less of what it is built for")
+			and ClubBudget.benefit_text("high_performance", 1).contains("Game plans give what they are built for"),
+			"Funding benefits are stated as exact effects, not hidden scores, the game plan's edge with them")
 
 	var normal := {"id": "normal", "age": 25, "attr": {"durability": 70}, "workload": 50.0}
 	var funded := {"id": "funded", "age": 25, "attr": {"durability": 70}, "workload": 50.0}
@@ -78,20 +106,134 @@ func _test_budget_allocation_state() -> void:
 	GameState.season.round_index = GameState.season.fixture.size()
 	GameState.open_offseason()
 	_check(GameState.department_budget_year == GameState.season_year + 1
-			and is_equal_approx(GameState.department_budget_spent_m(), ClubBudget.ANNUAL_M),
-			"The off-season opens a fresh Standard allocation for the coming year")
-	var blocked := GameState.set_department_budget("recruiting", 2)
+			and GameState.department_budget == ClubBudget.defaults()
+			and is_equal_approx(GameState.department_budget_spent_m(), 9.0)
+			and is_equal_approx(GameState.department_budget_remaining_m(), 1.5),
+			"The off-season opens a fresh Standard allocation for the coming year, $1.5m of the $10.5m left")
+	var blocked := GameState.set_department_budget("recruiting", 3)
 	_check(not bool(blocked.get("ok", true)),
 			"You cannot raise a department above the fixed annual budget")
+	var spare := GameState.set_department_budget("recruiting", 2)
+	var full := GameState.set_department_budget("development", 2)
+	_check(bool(spare.get("ok", false)) and not bool(full.get("ok", true))
+			and is_equal_approx(GameState.department_budget_remaining_m(), 0.0),
+			"The spare $1.5m lifts one line to Strong; a second needs money from elsewhere")
 	var cut := GameState.set_department_budget("high_performance", 0)
-	var raised := GameState.set_department_budget("recruiting", 2)
+	var raised := GameState.set_department_budget("development", 2)
 	_check(bool(cut.get("ok", false)) and bool(raised.get("ok", false))
 			and is_equal_approx(GameState.department_budget_remaining_m(), 0.0),
-			"Cutting one department creates room to fund another")
+			"Cutting one department creates room to fund another: two Strong, one Minimal")
 	var snapshot: Dictionary = GameState.department_budget.duplicate()
 	_check(GameState.save_career() and GameState.load_career()
 			and GameState.department_budget == snapshot,
 			"The annual department allocation survives save/load")
+
+
+## The fold of an old save's Football department into High performance
+## (ClubBudget.fold_football), over every allocation an old save could hold.
+func _test_budget_fold_rule() -> void:
+	var legal := 0
+	for r in range(4):
+		for d in range(4):
+			for h in range(4):
+				for f in range(4):
+					var old := {"recruiting": r, "development": d, "high_performance": h, "football": f}
+					var old_m := ClubBudget.cost_m(r) + ClubBudget.cost_m(d) + ClubBudget.cost_m(h) + ClubBudget.cost_m(f)
+					if old_m > 12.001:
+						continue
+					legal += 1
+					var got := ClubBudget.fold_football(old)
+					var want_h := clampi(h + f - ClubBudget.STANDARD, 0, 3)
+					var ok: bool = not got.has("football") and got.size() == 3 \
+							and ClubBudget.total_m(got) <= ClubBudget.ANNUAL_M + 0.001 \
+							and int(got["high_performance"]) == want_h
+					# Every legal old save fits $10.5m (at most $9m, or $10.5m when
+					# both were Minimal): the other two lines keep their exact funding.
+					ok = ok and int(got["recruiting"]) == r and int(got["development"]) == d
+					if not ok:
+						_check(false, "Fold of %s gave %s" % [old, got])
+						return
+	_check(legal == 66,
+			"Every allocation an old save could hold (%d of 256 fit $12m) folds into a legal three-line one, High performance at its level plus the Football department's steps from Standard" % legal)
+	var both_min := ClubBudget.fold_football({"recruiting": 3, "development": 1, "high_performance": 0, "football": 0})
+	_check(int(both_min["recruiting"]) == 3 and int(both_min["development"]) == 1
+			and int(both_min["high_performance"]) == 0
+			and is_equal_approx(ClubBudget.total_m(both_min), ClubBudget.ANNUAL_M),
+			"Both at Minimal with Recruiting Elite: High performance Minimal, Recruiting keeps Elite, exactly $10.5m")
+	var no_old := {"recruiting": 2, "development": 1, "high_performance": 0}
+	_check(ClubBudget.fold_football(no_old) == no_old, "A new save is left exactly as it is")
+
+
+## Saves an off-season career, rewrites its budget to `old` in the file, reloads it.
+func _reload_with_old_budget(old: Dictionary) -> bool:
+	GameState.reset()
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	GameState.season.round_index = GameState.season.fixture.size()
+	GameState.open_offseason()
+	if not GameState.save_career():
+		return false
+	var state := CareerSave.read(GameState.save_path)
+	if not state.has("department_budget"):
+		return false
+	state["department_budget"] = old
+	return CareerSave.write(state, CareerSave.read_meta(GameState.save_path), GameState.save_path) \
+			and GameState.load_career()
+
+
+func _test_budget_old_save_both_keys() -> void:
+	# An old save: High performance Elite, Football department Minimal,
+	# Recruiting Minimal, Development Standard ($6m + $1.5m + $1.5m + $3m).
+	var loaded := _reload_with_old_budget(
+			{"recruiting": 0, "development": 1, "high_performance": 3, "football": 0})
+	_check(loaded, "A save holding both High performance and Football department loads")
+	_check(GameState.department_budget == {"recruiting": 0, "development": 1, "high_performance": 2},
+			"Football department Minimal folds into High performance: Elite becomes Strong, the rest as saved (%s)"
+			% GameState.department_budget)
+	_check(is_equal_approx(GameState.department_budget_spent_m(), 9.0)
+			and is_equal_approx(GameState.department_budget_remaining_m(), 1.5)
+			and GameState.fitness_hp_level(GameState.my_club) == 2,
+			"The folded allocation keeps its $9.0m, leaves $1.5m of the $10.5m and drives the season plan's department level")
+	_check(GameState.save_career() and GameState.load_career()
+			and GameState.department_budget == {"recruiting": 0, "development": 1, "high_performance": 2},
+			"Saved again, the career holds only the three lines")
+
+
+func _test_budget_old_save_only_football() -> void:
+	# Only the old key: Football department Minimal, nothing else saved.
+	var loaded := _reload_with_old_budget({"football": 0})
+	_check(loaded, "A save holding only the Football department line loads")
+	_check(GameState.department_budget == {"recruiting": 1, "development": 1, "high_performance": 0},
+			"Football department Minimal folds into High performance Minimal; missing lines read Standard (%s)"
+			% GameState.department_budget)
+	_check(is_equal_approx(GameState.department_budget_remaining_m(), 3.0),
+			"The $1.5m it freed and the board's extra $1.5m are there to spend")
+	var raised := GameState.set_department_budget("high_performance", 1)
+	_check(bool(raised.get("ok", false)) and GameState.department_budget_level("high_performance") == 1,
+			"The folded line can be changed like any other in the off-season")
+	# Held by no legal old save, but a hand-edited one still lands inside the budget.
+	var odd := ClubBudget.fold_football({"football": 3})
+	_check(odd == {"recruiting": 0, "development": 1, "high_performance": 3},
+			"An over-budget old allocation is trimmed to fit, Recruiting first (%s)" % odd)
+
+
+func _test_budget_one_spend_drives_plan() -> void:
+	GameState.reset()
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	var execs := []
+	for level in range(4):
+		GameState.department_budget["high_performance"] = level
+		GameState._refresh_coach_tactics()
+		var t: Dictionary = CoachEffects.table.get(GameState.my_club, {})
+		execs.append(float(t.get("exec", 0.0)))
+	GameState.department_budget["high_performance"] = ClubBudget.STANDARD
+	GameState._refresh_coach_tactics()
+	var base := float((CoachEffects.table.get(GameState.my_club, {}) as Dictionary).get("exec", 0.0))
+	var ok := base > 0.0
+	for level in range(4):
+		ok = ok and is_equal_approx(float(execs[level]),
+				clampf(base * ClubBudget.tactics_mult(level), 0.75, 1.35))
+	_check(ok and float(execs[3]) > float(execs[0]),
+			"High performance funding sets how sharply the game plan is carried out (%s)" % [execs])
 
 
 func _test_recovery() -> void:
@@ -324,8 +466,9 @@ func _test_ui() -> void:
 	var next_benefit := offseason.find_child("BudgetNext_recruiting", true, false) as Label
 	var lower := offseason.find_child("BudgetLower_recruiting", true, false) as Button
 	var raise := offseason.find_child("BudgetRaise_recruiting", true, false) as Button
-	_check(budget_summary != null and budget_summary.text.contains("$12.0m allocated"),
-			"The Budget tab states exactly how much is allocated")
+	_check(budget_summary != null and budget_summary.text.contains("$9.0m allocated")
+			and budget_summary.text.contains("$1.5m remaining"),
+			"The Budget tab states exactly how much is allocated and what is left of the $10.5m")
 	_check(benefit != null and benefit.text.contains("standard")
 			and next_benefit != null and next_benefit.text.contains("20% narrower"),
 			"Current and next Recruiting effects are visible before spending")
@@ -333,5 +476,40 @@ func _test_ui() -> void:
 			and lower != null and raise != null
 			and lower.custom_minimum_size.y >= 44 and raise.custom_minimum_size.y >= 44,
 			"Budget choices wrap cleanly and keep phone-sized touch targets")
+	# Row 99: the one spend line. A finger lowers Recruiting, then raises High performance.
+	_check(offseason.find_child("Budget_football", true, false) == null
+			and offseason.find_child("Budget_high_performance", true, false) != null,
+			"The Budget tab has one High performance line and no Football department")
+	if lower != null:
+		await _press(lower, "Lower Recruiting")
+		for i in range(4):
+			await tree.process_frame
+	var hp_raise := offseason.find_child("BudgetRaise_high_performance", true, false) as Button
+	_check(hp_raise != null and not hp_raise.disabled, "With Recruiting cut, High performance can be raised")
+	if hp_raise != null:
+		await _press(hp_raise, "Raise High performance")
+		for i in range(4):
+			await tree.process_frame
+	var hp_benefit := offseason.find_child("BudgetBenefit_high_performance", true, false) as Label
+	_check(GameState.department_budget_level("high_performance") == 2
+			and hp_benefit != null and hp_benefit.text.contains("gives 5% more of what it is built for"),
+			"Tapped to Strong, High performance states the game plan's edge it now carries")
+	# The director's $10.5m: with Recruiting at Minimal, a finger lifts
+	# Development to Strong too, and the budget is full.
+	var dev_raise := offseason.find_child("BudgetRaise_development", true, false) as Button
+	_check(dev_raise != null and not dev_raise.disabled,
+			"With $1.5m left, Development can be raised as well")
+	if dev_raise != null:
+		await _press(dev_raise, "Raise Development")
+		for i in range(4):
+			await tree.process_frame
+	budget_summary = offseason.find_child("BudgetSummary", true, false) as Label
+	hp_raise = offseason.find_child("BudgetRaise_high_performance", true, false) as Button
+	_check(GameState.department_budget_level("development") == 2
+			and GameState.department_budget_level("recruiting") == 0
+			and budget_summary != null and budget_summary.text.contains("$10.5m allocated")
+			and budget_summary.text.contains("$0.0m remaining")
+			and hp_raise != null and hp_raise.disabled,
+			"Two lines Strong and Recruiting Minimal fill the $10.5m; nothing more can be raised")
 	offseason.queue_free()
 	await tree.process_frame

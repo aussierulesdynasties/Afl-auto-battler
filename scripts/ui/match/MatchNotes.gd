@@ -153,7 +153,6 @@ static func moment_line(m: Dictionary) -> String:
 ## The calls made in the moment that still matter at the break: resting a
 ## tired player (or keeping him out there) and tagging a hot one. A set shot,
 ## a centre bounce or a run of goals has played out in the feed already.
-## (A match-up change has its own line, from duel_change_lines.)
 const LASTING_MOMENTS := ["tired", "hot"]
 
 
@@ -229,13 +228,20 @@ static func press_trigger(timeline: Array, event_index: int, ev: Dictionary, sai
 ## ("Coach's call: Flood behind the ball for the rest of the quarter."), so it
 ## gets no second one. Read from the match's recorded calls (timeline); a plan
 ## is in force until the next break at least, when the coach can change it.
-## Every short call ends at the break (MatchSim.end_quarter).
+## Every short call ends at the break (MatchSim.end_quarter). A plan dropped at
+## a break was the coach's call at that break (both sides pick their plans on
+## the break screen, after the break line is out), so its line names the break
+## ("Sydney: Attack corridor ends at half time.") and comes first at the next
+## bounce; state["break_lines"] says how many of the lines are the break's, so
+## the feed shows them without the new quarter's clock.
 const PLAN_UNTIL := {1: "quarter time", 2: "half time", 3: "three-quarter time", 4: "the final siren"}
+const BREAK_NAME := {1: "quarter time", 2: "half time", 3: "three-quarter time", 4: "full time"}
 
 
 ## A fresh memory for call_lines, one a match.
 static func call_state() -> Dictionary:
-	return {"i": 0, "plan": ["", ""], "bursts": [[], []], "break": false, "changed": [false, false]}
+	return {"i": 0, "plan": ["", ""], "bursts": [[], []], "break": false, "changed": [false, false],
+			"break_lines": 0, "break_q": 0}
 
 
 ## The feed lines the event at `event_index` brings ([] for none), in order.
@@ -243,6 +249,8 @@ static func call_state() -> Dictionary:
 static func call_lines(timeline: Array, event_index: int, ev: Dictionary, state: Dictionary,
 		home: String, away: String) -> Array:
 	var out := []
+	var at_break := []  # plans dropped at the break just gone
+	state["break_lines"] = 0
 	var clubs := [GameDB.club_name(home), GameDB.club_name(away)]
 	var kind := str(ev.get("kind", ""))
 	var q := int(ev.get("q", 1))
@@ -255,11 +263,14 @@ static func call_lines(timeline: Array, event_index: int, ev: Dictionary, state:
 				out.append("%s: %s ends at the break." % [clubs[side], _burst_label(str(b))])
 			bursts[side] = []
 		state["break"] = true
+		state["break_q"] = q
 		state["changed"] = [false, false]
 		return out
 	if kind == "final":
 		return out
 	var changed: Array = state["changed"]
+	var in_break := bool(state["break"])  # the break's calls are not said yet
+	var first_after_break := in_break and kind != "sub" and kind != "injury"
 	while int(state["i"]) < timeline.size() 			and int((timeline[int(state["i"])] as Dictionary).get("at", 0)) <= event_index:
 		var e: Dictionary = timeline[int(state["i"])]
 		state["i"] = int(state["i"]) + 1
@@ -273,21 +284,29 @@ static func call_lines(timeline: Array, event_index: int, ev: Dictionary, state:
 			if plan != "balanced":
 				out.append("%s: %s is on until %s." % [clubs[side], CoachReport.plan_label(plan), _until(q)])
 			elif was != "" and was != "balanced":
-				out.append("%s: %s ends." % [clubs[side], CoachReport.plan_label(was)])
+				if in_break:
+					at_break.append("%s: %s ends at %s." % [clubs[side], CoachReport.plan_label(was), _break_name(int(state["break_q"]))])
+				else:
+					out.append("%s: %s ends." % [clubs[side], CoachReport.plan_label(was)])
 			plans[side] = plan
 		var now: Array = e.get("bursts", [])
 		for b in (bursts[side] as Array):
 			if not now.has(b):
 				out.append("%s: %s ends." % [clubs[side], _burst_label(str(b))])
 		bursts[side] = now.duplicate()
-	if bool(state["break"]) and kind != "sub" and kind != "injury":
+	if first_after_break:
 		# The first play after a break: a plan kept on for the new quarter.
 		state["break"] = false
 		for side in range(2):
 			var kept := str(plans[side])
 			if not changed[side] and kept != "" and kept != "balanced" and q <= 4:
 				out.append("%s: %s stays on until %s." % [clubs[side], CoachReport.plan_label(kept), _until(q)])
-	return out
+	state["break_lines"] = at_break.size()
+	return at_break + out
+
+
+static func _break_name(q: int) -> String:
+	return str(BREAK_NAME.get(q, "the break"))
 
 
 static func _until(q: int) -> String:
@@ -304,9 +323,9 @@ static func _burst_label(kind: String) -> String:
 ## Up to MAX_FACTS things that stood out in quarter `q` (1-4), from the
 ## quarter snapshots MatchSim records. Problems and strengths, never advice.
 ## answers: what you can do about their players right now, by player id -
-## {"kind": "matchup", "who": your defender on him}, {"kind": "tagged", "who":
-## your tagger} or {"kind": "tag"} - so a player hurting you is named with the
-## lever that reaches him, and one no call reaches is stated as a fact.
+## {"kind": "tagged", "who": your tagger} or {"kind": "tag"} - so a player
+## hurting you is named with the lever that reaches him, and one no call
+## reaches is stated as a fact.
 static func quarter_facts(res: Dictionary, my_side: int, q: int, answers := {}) -> Array:
 	var snaps: Array = res.get("quarter_teams", [])
 	if q < 1 or snaps.size() < q:
@@ -424,8 +443,6 @@ static func _standout(res: Dictionary, now: Dictionary, was: Dictionary, side: i
 	var did := " and ".join(bits)
 	var answer: Dictionary = answers.get(str(best["id"]), {})
 	match str(answer.get("kind", "")):
-		"matchup":
-			return "%s is hurting you: %s this quarter. %s is on him." % [who, did, str(answer.get("who", ""))]
 		"tagged":
 			return "%s is hurting you: %s this quarter, with %s tagging him." % [who, did, str(answer.get("who", ""))]
 		"tag":
@@ -478,12 +495,9 @@ static func calls_lines(res: Dictionary, my_side: int, q: int) -> Array:
 		"controlled":
 			out.append(("%s: %d clangers" % [label, n.call(mine, "clangers")])
 					+ ((", from %d%s." % [n.call(p_mine, "clangers"), prev]) if q >= 2 else "."))
-		"through_stars":
-			var stars := _stars_disposals(res, now, was, my_side)
-			if stars >= 0:
-				out.append(("%s: your stars had %d disposals" % [label, stars])
-						+ ((", from %d%s." % [_stars_disposals(res, was, before, my_side), prev]) if q >= 2 else "."))
-	for key in [["tag_id", "Tag on %s: %d disposal%s", opp]]:
+	for key in [["tag_id", "Tag on %s: %d disposal%s", opp], ["focus_mid", "Through %s: %d disposal%s", my_side],
+			["focus_fwd", "Through %s: %d disposal%s", my_side], ["focus_def", "Through %s: %d disposal%s", my_side],
+			["focus_id", "Through %s: %d disposal%s", my_side]]:
 		var id := str(calls.get(key[0], ""))
 		if id == "":
 			continue
@@ -505,16 +519,57 @@ static func _player_delta(now: Dictionary, was: Dictionary, id: String, key: Str
 	return int(float(a.get(key, 0.0)) - float(b.get(key, 0.0)))
 
 
-## Disposals by your stars (the three Through stars goes through) between
-## two snapshots (-1: none).
-static func _stars_disposals(res: Dictionary, now: Dictionary, was: Dictionary, side: int) -> int:
-	var stars: Array = res.get("stars", [[], []])
-	if stars.size() <= side or (stars[side] as Array).is_empty() or now.is_empty():
-		return -1
-	var total := 0
-	for id in stars[side]:
-		total += _player_delta(now, was, str(id), "disposals")
-	return total
+## A player picked to play through, by the slot he fills: "Matthew Jefferson
+## our key forward target". The engine favours him by that job (MatchSim
+## _focus_mult): the ball up forward and the shots for a forward, first use out
+## of the back half for a defender, the ball in the chain for a midfielder or ruck.
+const FOCUS_ROLES := {
+	"MID": ["our key midfielder", "the ball goes to him more often through the midfield"],
+	"FWD": ["our key forward target", "more of the ball up forward and more of the shots at goal"],
+	"DEF": ["our key distributor", "first use of the ball out of the back half"],
+	"RUCK": ["our key man in the middle", "the ball goes to him more often"],
+}
+
+
+## The three play-through calls (director, 2026-10-07; back 2026-11-07):
+## [heading, his job, what it does, with nobody picked, the spot it works from].
+const FOCUS_ORDER := ["focus_fwd", "focus_mid", "focus_def"]  # forward, midfield, back: the order everywhere the coach reads them
+const FOCUS_SLOT_TEXT := {
+	"focus_mid": ["Midfield pillar", "our midfield pillar",
+			"the ball goes to him more often through the midfield",
+			"Nobody: the midfield shares the ball.", "the midfield"],
+	"focus_fwd": ["Forward target", "our key forward target",
+			"more of the ball up forward and more of the shots at goal",
+			"Nobody: the forwards share the entries.", "the forward line"],
+	"focus_def": ["Backline distributor", "our backline distributor",
+			"first use of the ball out of the back half",
+			"Nobody: the backs share the ball out of defence.", "the back line"],
+}
+
+
+## Under a play-through call: his job and what it does; with nobody, what that
+## means; and, when he is not in the spot the call works from, that it waits.
+static func focus_slot_note(slot: String, name: String, working: bool, benched: bool) -> String:
+	var t: Array = FOCUS_SLOT_TEXT[slot]
+	if name == "":
+		return str(t[3])
+	if benched:
+		return "%s is on the bench: the call waits until he is back on." % name
+	if not working:
+		return "%s is not in %s now: the call waits until he is back there." % [name, str(t[4])]
+	return "%s is %s: %s." % [name, str(t[1]), str(t[2])]
+
+
+static func focus_role_text(name: String, role: String) -> String:
+	if not FOCUS_ROLES.has(role):
+		return name
+	return "%s %s" % [name, str(FOCUS_ROLES[role][0])]
+
+
+static func focus_effect_text(role: String) -> String:
+	if not FOCUS_ROLES.has(role):
+		return "more of the ball in the chains"
+	return str(FOCUS_ROLES[role][1])
 
 
 ## Your tag that ended in quarter q because the man was no longer a
@@ -587,9 +642,43 @@ static func cooked(rows: Array, limit := 3) -> Array:
 const QUARTER_NAMES := ["first", "second", "third", "last", "extra time"]
 const MAX_FACTORS := 3
 
-## Why the result happened, from `my_side`'s point of view, in two to four
+## Why the result happened, from `my_side`'s point of view, in up to three
 ## sentences. Facts from the result, most telling first; never advice.
-static func match_factors(res: Dictionary, my_side: int) -> Array:
+## `said` holds what the screen has already told (MatchStory.told_facts): a
+## fact key ("run", "pressure_rating", "q3"...) or "=" + a normalised sentence.
+## Those are left out, so full time says each fact once (director's bug report,
+## 2026-11-06); [] when everything was said above.
+static func match_factors(res: Dictionary, my_side: int, said := {}) -> Array:
+	var items := match_factor_items(res, my_side)
+	if items.is_empty():
+		# The fallback ("no single edge") would contradict a reason told above.
+		if not said.is_empty():
+			return []
+		var score: Array = res.get("score", [0, 0])
+		return ["Nothing much between the sides all day." if absi(int(score[0]) - int(score[1])) <= 12
+				else "No single edge: the winners were just better across the ground."]
+	var out := []
+	for it in items:
+		if said.has(str(it["fact"])) or said.has("=" + norm_sentence(str(it["text"]))):
+			continue
+		out.append(str(it["text"]))
+	return out.slice(0, MAX_FACTORS)
+
+
+## A sentence reduced for comparing: lower case, letters, digits and single spaces.
+static func norm_sentence(t: String) -> String:
+	var out := ""
+	for c in t.to_lower():
+		out += c if (c >= "a" and c <= "z") or (c >= "0" and c <= "9") else " "
+	return " ".join(out.split(" ", false))
+
+
+## The sentences match_factors chooses from, each tagged with the fact it
+## states: [{fact, text}] in order, before the cap and with no fallback. Facts:
+## "turn" (the comeback), "turn:lead", "turn:injury", "turn:miss", "run",
+## "q<N>" (a quarter that swung it), "clearances", "inside50", "kicking",
+## "pressure_rating".
+static func match_factor_items(res: Dictionary, my_side: int) -> Array:
 	var out := []
 	var opp := 1 - my_side
 	var codes := [str(res.get("home", "")), str(res.get("away", ""))]
@@ -606,13 +695,13 @@ static func match_factors(res: Dictionary, my_side: int) -> Array:
 	# late miss in a close loss.
 	var turn := ComebackTelling.turn_facts(res, my_side)
 	if not turn.is_empty():
-		out.append(str(turn["text"]))
-	out.append_array(turning_points(res, my_side, str(turn.get("player", ""))))
+		out.append({"fact": "turn", "text": str(turn["text"])})
+	out.append_array(turning_point_items(res, my_side, str(turn.get("player", ""))))
 
 	# 1. The run that decided it: four or more goals in a row.
 	var run := _longest_run(res.get("events", []))
 	if int(run["len"]) >= 4:
-		out.append(run_sentence(res, run))
+		out.append({"fact": "run", "text": run_sentence(res, run)})
 
 	# 2. A quarter that swung it: won by four goals or more.
 	var qg: Array = res.get("q_goals", [])
@@ -628,31 +717,31 @@ static func match_factors(res: Dictionary, my_side: int) -> Array:
 	if best_q >= 0 and absi(best_m) >= 24 and (out.is_empty() or int(run["q"]) != best_q + 1) \
 			and not told_q.has(best_q + 1):
 		var s := 0 if best_m > 0 else 1
-		out.append("%s won the %s quarter %d.%d to %d.%d." % [GameDB.club_name(codes[s]),
+		out.append({"fact": "q%d" % (best_q + 1), "text": "%s won the %s quarter %d.%d to %d.%d." % [GameDB.club_name(codes[s]),
 				QUARTER_NAMES[best_q], int(qg[best_q][s]), int(qb[best_q][s]),
-				int(qg[best_q][1 - s]), int(qb[best_q][1 - s])])
+				int(qg[best_q][1 - s]), int(qb[best_q][1 - s])]})
 
 	# 3. The stoppages.
 	var clr_m := int(float(t_me.get("clearances", 0.0)))
 	var clr_t := int(float(t_op.get("clearances", 0.0)))
 	if clr_t - clr_m >= 6:
-		out.append("You were beaten at the stoppages: clearances %d to %d." % [clr_m, clr_t])
+		out.append({"fact": "clearances", "text": "You were beaten at the stoppages: clearances %d to %d." % [clr_m, clr_t]})
 	elif clr_m - clr_t >= 6:
-		out.append("Your midfield won the stoppages: clearances %d to %d." % [clr_m, clr_t])
+		out.append({"fact": "clearances", "text": "Your midfield won the stoppages: clearances %d to %d." % [clr_m, clr_t]})
 
 	# 4. Territory, read against the result.
 	var i50_m := int(float(t_me.get("inside50", 0.0)))
 	var i50_t := int(float(t_op.get("inside50", 0.0)))
 	if i50_t - i50_m >= 8:
 		if won:
-			out.append("Your defence held firm despite losing the inside 50s %d to %d." % [i50_m, i50_t])
+			out.append({"fact": "inside50", "text": "Your defence held firm despite losing the inside 50s %d to %d." % [i50_m, i50_t]})
 		else:
-			out.append("They had the ball in their forward half far more: %d inside 50s to %d." % [i50_t, i50_m])
+			out.append({"fact": "inside50", "text": "They had the ball in their forward half far more: %d inside 50s to %d." % [i50_t, i50_m]})
 	elif i50_m - i50_t >= 8:
 		if lost:
-			out.append("You won the inside 50s %d to %d but could not make it count." % [i50_m, i50_t])
+			out.append({"fact": "inside50", "text": "You won the inside 50s %d to %d but could not make it count." % [i50_m, i50_t]})
 		else:
-			out.append("You had the ball going forward far more: %d inside 50s to %d." % [i50_m, i50_t])
+			out.append({"fact": "inside50", "text": "You had the ball going forward far more: %d inside 50s to %d." % [i50_m, i50_t]})
 
 	# 5. Kicking for goal.
 	var g_m := int(res.get("goals", [0, 0])[my_side])
@@ -660,25 +749,22 @@ static func match_factors(res: Dictionary, my_side: int) -> Array:
 	var g_t := int(res.get("goals", [0, 0])[opp])
 	var b_t := int(res.get("behinds", [0, 0])[opp])
 	if b_m >= g_m + 3 and g_m + b_m >= 12:
-		out.append("Wayward kicking cost you: %d.%d." % [g_m, b_m])
+		out.append({"fact": "kicking", "text": "Wayward kicking cost you: %d.%d." % [g_m, b_m]})
 	elif b_t >= g_t + 3 and g_t + b_t >= 12:
-		out.append("They let you off the hook in front of goal: %d.%d." % [g_t, b_t])
+		out.append({"fact": "kicking", "text": "They let you off the hook in front of goal: %d.%d." % [g_t, b_t]})
 	elif g_m >= b_m + 8:
-		out.append("You kicked straight: %d.%d." % [g_m, b_m])
+		out.append({"fact": "kicking", "text": "You kicked straight: %d.%d." % [g_m, b_m]})
 
 	# 6. Pressure: the pressure rating, which allows for how much of the
 	# ball each side had to pressure.
 	var pr_m := MatchSim.pressure_rating(t_me, t_op)
 	var pr_t := MatchSim.pressure_rating(t_op, t_me)
 	if pr_m - pr_t >= PRESSURE_GAP:
-		out.append("Your pressure told: a pressure rating of %d to %d." % [pr_m, pr_t])
+		out.append({"fact": "pressure_rating", "text": "Your pressure told: a pressure rating of %d to %d." % [pr_m, pr_t]})
 	elif pr_t - pr_m >= PRESSURE_GAP:
-		out.append("Their pressure told: a pressure rating of %d to %d." % [pr_t, pr_m])
+		out.append({"fact": "pressure_rating", "text": "Their pressure told: a pressure rating of %d to %d." % [pr_t, pr_m]})
 
-	if out.is_empty():
-		out.append("Nothing much between the sides all day." if absi(int(score[0]) - int(score[1])) <= 12
-				else "No single edge: the winners were just better across the ground.")
-	return out.slice(0, MAX_FACTORS)
+	return out
 
 
 ## The run told in full: who, how many, when it began and the score either
@@ -1169,28 +1255,6 @@ static func matchup_line(fwd_name: String, def_name: String) -> String:
 	return "%s is on %s." % [def_name, fwd_name]
 
 
-## What a match-up change at the break did in quarter q: "Moore onto Curnow:
-## Curnow marked 1 of 4, from 4 of 6 in the first." [] when you made none.
-static func duel_change_lines(res: Dictionary, my_side: int, q: int) -> Array:
-	var out := []
-	for ch in res.get("duel_changes", []):
-		if int(ch.get("from", ch.get("q", 0))) != q or int(ch.get("side", -1)) != my_side:
-			continue
-		var fid := str(ch["fwd"])
-		var now := duel_tally(res, fid, q)
-		var was := duel_tally(res, fid, q - 1) if q > 1 else [0, 0, 0]
-		var line := "%s onto %s: " % [_pname(str(ch["def"])), _pname(fid)]
-		if int(now[0]) == 0:
-			line += "no contests yet."
-		else:
-			line += "%s marked %d of %d" % [_pname(fid), int(now[1]), int(now[0])]
-			if int(was[0]) > 0:
-				line += ", from %d of %d in %s" % [int(was[1]), int(was[0]), str(QUARTER_WORDS.get(q - 1, "the quarter before"))]
-			line += "."
-		out.append(line)
-	return out
-
-
 ## The key match-ups at full time, one honest line each, theirs first:
 ## who had the better of whom, and - where you moved a defender - whether
 ## the contests changed. Quiet match-ups (fewer than MIN_DUELS) stay quiet.
@@ -1457,12 +1521,80 @@ static func story_feed_line(mem: Dictionary, ev: Dictionary) -> String:
 	return text
 
 
+## A career high for one of yours in the feed (CareerHighs, row 121).
+## mem["career_high"] holds {id: {stat: best}} for the players whose record
+## holds every game (GameState.career_high_candidates), so it is never said of
+## the other side. Goals are said at the goal that passes his best; disposals,
+## marks and tackles at the break where the quarter's count has passed it
+## (`res` is the match so far: its quarter_teams). Each stat once a player a
+## match, one line a player an event, at most MAX_HIGH_LINES a quarter. A
+## count said before the last siren, or at it when a level final goes to extra
+## time (`extra_time`), may still grow: "and counting".
+const MAX_HIGH_LINES := 2
+
+static func career_high_lines(mem: Dictionary, ev: Dictionary, res: Dictionary,
+		extra_time := false) -> Array:
+	var out := []
+	var cands: Dictionary = mem.get("career_high", {})
+	if cands.is_empty():
+		return out
+	var kind := str(ev.get("kind", ""))
+	var q := int(ev.get("q", 1))
+	var per_q: Dictionary = mem.get("high_q", {})
+	var room := func() -> bool:
+		return int(per_q.get(q, 0)) < MAX_HIGH_LINES
+	var said := func(id: String, stat: String, text: String) -> void:
+		(cands[id] as Dictionary).erase(stat)
+		per_q[q] = int(per_q.get(q, 0)) + 1
+		mem["high_q"] = per_q
+		out.append(text)
+	if kind == "goal":
+		var id := str(ev.get("player_id", ""))
+		if id == "" or str(ev.get("name", "")) == "" or not cands.has(id) or not (cands[id] as Dictionary).has("goals"):
+			return out
+		var kicked: Dictionary = mem.get("high_goals", {})
+		kicked[id] = int(kicked.get(id, 0)) + 1
+		mem["high_goals"] = kicked
+		var n := int(kicked[id])
+		if n > int(cands[id]["goals"]) and n >= int(CareerHighs.FLOORS["goals"]) and room.call():
+			said.call(id, "goals", CareerHighs.feed_line(str(ev.get("name", "")), "goals", n))
+		return out
+	if kind != "quarter":
+		return out
+	var players := {}
+	for snap in res.get("quarter_teams", []):
+		if int((snap as Dictionary).get("quarter", 0)) == q:
+			players = (snap as Dictionary).get("players", {})
+	if players.is_empty():
+		return out
+	for id in cands.keys():
+		var st: Dictionary = players.get(id, {})
+		var who := _pname(id)
+		if who == "":
+			continue
+		for stat in ["disposals", "marks", "tackles"]:
+			if not (cands[id] as Dictionary).has(stat):
+				continue
+			var n := int(float(st.get(stat, 0)))
+			if n > int(cands[id][stat]) and n >= int(CareerHighs.FLOORS[stat]):
+				if room.call():
+					said.call(id, stat, CareerHighs.feed_line(who, stat, n, q < 4 or extra_time))
+				break
+	return out
+
+
 ## The moments a match turned on, from the log, as sentences: the score
 ## that put the winners in front for good (when they had been behind or
 ## level after the first quarter), a star who went off hurt before the last
 ## quarter, and your missed set shot late in a close loss. [] for a match
 ## that never turned.
 static func turning_points(res: Dictionary, my_side: int, skip_kicker := "") -> Array:
+	return turning_point_items(res, my_side, skip_kicker).map(func(it): return str(it["text"]))
+
+
+## turning_points, each tagged with its fact: "turn:lead" (with the winners'
+## "side" and the "q" they went in front for good), "turn:injury", "turn:miss".
+static func turning_point_items(res: Dictionary, my_side: int, skip_kicker := "") -> Array:
 	var out := []
 	var events: Array = res.get("events", [])
 	var codes := [str(res.get("home", "")), str(res.get("away", ""))]
@@ -1482,8 +1614,9 @@ static func turning_points(res: Dictionary, my_side: int, skip_kicker := "") -> 
 			was_ahead = ahead
 		if not took.is_empty() and int(took.get("q", 1)) >= 2 and int(took.get("q", 1)) <= 4 \
 				and str(took.get("name", "")) != "" and (skip_kicker == "" or str(took.get("player_id", "")) != skip_kicker):
-			out.append("%s's %s %s put %s in front for good." % [str(took["name"]), str(took["kind"]),
-					_when(took), GameDB.club_name(codes[winner])])
+			out.append({"fact": "turn:lead", "side": winner, "q": int(took.get("q", 1)),
+					"text": "%s's %s %s put %s in front for good." % [str(took["name"]), str(took["kind"]),
+					_when(took), GameDB.club_name(codes[winner])]})
 	var overall := {}
 	for side in range(2):
 		for r in (res.get("roster", [[], []]) as Array)[side]:
@@ -1492,15 +1625,15 @@ static func turning_points(res: Dictionary, my_side: int, skip_kicker := "") -> 
 		if int(inj.get("q", 4)) >= 4 or int(overall.get(str(inj["id"]), 0)) < MatchSim.STAR_OVR:
 			continue
 		var whose := "You" if int(inj["side"]) == my_side else GameDB.club_name(codes[int(inj["side"])])
-		out.append("%s lost %s to %s in the %s quarter." % [whose, _pname(str(inj["id"])),
-				Injuries.wording(str(inj.get("kind", "injury"))), QUARTER_NAMES[int(inj["q"]) - 1]])
+		out.append({"fact": "turn:injury", "text": "%s lost %s to %s in the %s quarter." % [whose, _pname(str(inj["id"])),
+				Injuries.wording(str(inj.get("kind", "injury"))), QUARTER_NAMES[int(inj["q"]) - 1]]})
 		break
 	if winner != my_side and absi(int(score[0]) - int(score[1])) <= CLOSE_MISS:
 		for ev in events:
 			if str(ev.get("kind", "")) == "behind" and int(ev.get("side", -1)) == my_side \
 					and bool(ev.get("set", false)) and int(ev.get("q", 1)) == 4 \
 					and int(ev.get("min", 0)) - 90 >= 20 and str(ev.get("name", "")) != "":
-				out.append("%s missed a set shot late in the last quarter." % str(ev["name"]))
+				out.append({"fact": "turn:miss", "text": "%s missed a set shot late in the last quarter." % str(ev["name"])})
 				break
 	return out
 
@@ -1565,4 +1698,9 @@ static func broken_calls(res: Dictionary, injuries: Array, my_side: int, q: int,
 		var id := str(last.get(key, ""))
 		if id != "" and hurt.has(id) and not out.has("DefenceSetupPicker"):
 			out.append("DefenceSetupPicker")
+	# A play-through pick hurt in the quarter: that picker.
+	for slot in FOCUS_ORDER:
+		var id := str(last.get(slot, ""))
+		if id != "" and hurt.has(id):
+			out.append("FocusPicker_" + slot)
 	return out

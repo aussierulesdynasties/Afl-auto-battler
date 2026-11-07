@@ -20,6 +20,10 @@ func run() -> void:
 	_t("_test_projection_model")
 	_t("_test_intake_draft_flow")
 	_t("_test_list_cap_skip")
+	_t("_test_full_list_picks_said")
+	_t("_test_room_for_every_pick")
+	_t("_test_career_spots_match_draft")
+	_t("_test_spots_sheet_before_offseason_opens")
 	_t("_test_draft_rules")
 	_t("_test_career_rollover")
 	_t("_test_class_tiers")
@@ -27,6 +31,8 @@ func run() -> void:
 	_t("_test_custom_prospect")
 	_t("_test_panel_fit")
 	_t("_test_real_lists_start")
+	_t("_test_rebuild_walkouts_sign")
+	_t("_test_gen_traits_rates")
 	GameState.replay_seed = 0
 	print(Ran.line("Intake", self))
 
@@ -192,6 +198,125 @@ func _test_list_cap_skip() -> void:
 			"The prospect the full club passed on goes to a club with room: nobody is wasted")
 
 
+## Director report, 2026-11-07: "I had 4 picks in the draft but it only let
+## me use two. Maybe my list was full, but I had no idea". With two spots and
+## three picks, the draft says before it starts which pick will pass, and
+## records the pass when it happens.
+func _test_full_list_picks_said() -> void:
+	var full := Ratings.LIST_SIZE
+	var d := _blank(["A", "B"], {"A": full - 2, "B": 0}, 6)
+	_check(d.upcoming_picks("A", 0) == [1, 3, 5], "A holds picks 1, 3 and 5 (%s)" % str(d.upcoming_picks("A", 0)))
+	_check(d.open_spots("A") == 2, "Two list spots are open before the draft (%d)" % d.open_spots("A"))
+	var plan := d.spots_plan("A")
+	_check(plan["usable"] == [1, 3] and plan["passing"] == [5],
+			"Picks 1 and 3 have a spot; pick 5 will pass (%s)" % str(plan))
+	d.start_for_user("A")
+	for i in range(20):
+		if d.is_finished():
+			break
+		_check(d.pick_for_me(), "The coach takes the pick on the clock")
+	_check(d.is_finished(), "The draft finishes")
+	_check(d.count_for("A") == 2, "A full list signs only two (%d)" % d.count_for("A"))
+	_check(not d.user_passed.is_empty() and int(d.user_passed[0]["pick"]) == 5,
+			"The pass is recorded at pick 5 (%s)" % str(d.user_passed))
+	_check(d.user_passed_line().begins_with("Pick 5 passed: your list is full (%d)" % full)
+			or d.user_passed_line().begins_with("Picks 5"),
+			"The pass is said in words (%s)" % d.user_passed_line())
+	_check(d.open_spots("A") == 0 and d.spots_plan("A")["usable"].is_empty(), "No spot is left after the draft")
+
+
+## A list with room uses every pick and records no pass.
+func _test_room_for_every_pick() -> void:
+	var d := _blank(["A", "B"], {"A": 30, "B": 0}, 6)
+	var plan := d.spots_plan("A")
+	_check(plan["usable"] == [1, 3, 5] and (plan["passing"] as Array).is_empty(),
+			"Every pick has a spot (%s)" % str(plan))
+	d.start_for_user("A")
+	for i in range(20):
+		if d.is_finished():
+			break
+		_check(d.pick_for_me(), "The coach takes the pick on the clock")
+	_check(d.count_for("A") == 3, "All three picks are used (%d)" % d.count_for("A"))
+	_check(d.user_passed.is_empty() and d.user_passed_line() == "", "No pass is recorded")
+
+
+## An older save can reach the draft button before its off-season opened
+## (begin_intake_draft opens it, and this year's picks only count once it is
+## open): the sheet still says which picks pass.
+func _test_spots_sheet_before_offseason_opens() -> void:
+	GameState.reset()
+	var me := str(GameDB.CLUB_ORDER[0])
+	GameState.start_season(me, GameDB.club_list(me))
+	var season: Season = GameState.season
+	season.round_index = season.fixture.size()
+	var n := 0
+	while RookieList.senior_count(GameState.my_list) < RookieList.SENIOR_SPOTS and n < 60:
+		var copy: Dictionary = (GameState.my_list[n % GameState.my_list.size()] as Dictionary).duplicate(true)
+		copy["id"] = "pad_old_%d" % n
+		copy["rookie_list"] = ""
+		copy["contract_years"] = 3
+		GameState.my_list.append(copy)
+		n += 1
+	for p in GameState.my_list:
+		p["contract_years"] = 3   # nobody out of contract: the list is settled
+	_check(not GameState.offseason_open(), "The off-season has not opened (an older save)")
+	_check(DraftSpotsSheet.needed(), "The sheet shows for a full list before the off-season opens")
+	_check(not (GameState.draft_list_spots()["passing"] as Array).is_empty(),
+			"Every pick of a full list is named as passing (%s)" % str(GameState.draft_list_spots()))
+
+
+## In a career, the count the brief and the pre-draft sheet show matches the
+## picks the coach actually gets to use, and a pass reaches the news.
+func _test_career_spots_match_draft() -> void:
+	GameState.reset()
+	var me := str(GameDB.CLUB_ORDER[0])
+	GameState.start_season(me, GameDB.club_list(me))
+	var season: Season = GameState.season
+	season.round_index = season.fixture.size()
+	GameState.open_offseason()
+	# Fill the senior list to two short of the cap with re-signed players.
+	var cap := RookieList.SENIOR_SPOTS
+	var n := 0
+	while RookieList.senior_count(GameState.my_list) < cap - 2 and n < 40:
+		var src: Dictionary = GameState.my_list[n % GameState.my_list.size()]
+		var copy := src.duplicate(true)
+		copy["id"] = "pad_%d" % n
+		copy["rookie_list"] = ""
+		GameState.my_list.append(copy)
+		n += 1
+	for p in GameState.my_list:
+		p["contract_years"] = 3
+	var s := GameState.draft_list_spots()
+	var picks: Array = s["picks"]
+	_check(picks.size() >= 3, "The coach holds at least three picks (%s)" % str(picks))
+	_check(int(s["open"]) == cap - RookieList.senior_count(GameState.my_list),
+			"Open spots are the senior cap less the senior list (%s)" % str(s))
+	var line := GameState.draft_spots_line()
+	_check(line.contains("will pass"), "The brief names the picks that will pass (%s)" % line)
+	_check(DraftSpotsSheet.needed(), "The pre-draft sheet is shown when picks will pass")
+	var usable: int = (s["usable"] as Array).size()
+	_check(GameState.begin_intake_draft(), "The draft opens")
+	var draft: Draft = GameState.draft
+	for i in range(400):
+		if draft.is_finished():
+			break
+		if draft.is_user_turn():
+			draft.pick_for_me()
+		else:
+			draft.auto_until_user_turn()
+	_check(draft.count_for(me) == usable,
+			"The coach signs as many as the count said (%d of %d)" % [draft.count_for(me), usable])
+	_check(draft.user_passed.size() >= picks.size() - usable,
+			"Every pick without a spot is recorded as passed (%s)" % str(draft.user_passed))
+	var said := draft.user_passed_line()
+	_check(said != "", "The pass is said in words")
+	GameState.finish_intake_draft()
+	var found := false
+	for item in GameState.news:
+		found = found or str(item.get("text", item.get("body", ""))).contains(said) or str(item).contains(said)
+	_check(found, "The pass reaches the news (%s)" % said)
+
+
 func _blank(code_list: Array, sizes: Dictionary, n: int, counts: Dictionary = {}) -> Draft:
 	return Draft.build_intake(_tiny_pool(n), code_list, code_list, 5, sizes, counts)
 
@@ -303,7 +428,16 @@ func _tiny_pool(n: int) -> Array:
 func _test_career_rollover() -> void:
 	GameState.reset()
 	_check(GameState.season_year == 2027, "A new career starts in 2027")
-	GameState.start_season("ADE", GameDB.club_list("ADE"))
+	# The coach's club needs room on its senior list (RookieList.SENIOR_SPOTS)
+	# to take a national draftee: the club with the most room is his.
+	var me := ""
+	for code in GameDB.CLUB_ORDER:
+		if GameDB.enter_year(code) > GameState.season_year:
+			continue
+		if me == "" or RookieList.draft_size(GameDB.club_list(code)) < RookieList.draft_size(GameDB.club_list(me)):
+			me = code
+	GameState.start_season(me, GameDB.club_list(me))
+	_check(RookieList.senior_spot_free(GameState.my_list), "%s has room on its senior list" % me)
 	# An established player in his prime and still under contract next year,
 	# so neither the off-season market nor retirement can move him.
 	var vet_id := ""
@@ -322,12 +456,12 @@ func _test_career_rollover() -> void:
 	# did, and it joins through the League Draft). Plant one to prove a tie
 	# still lands with its club before the snake starts.
 	var tied: Dictionary = GameState.draftee_pool[0]
-	tied["tied_club"] = "ADE"
+	tied["tied_club"] = me
 	tied["tied_type"] = "father-son"
 	# And an academy (NGA) tie, so both pre-listed kinds are checked at the
 	# rollover below (row 86).
 	var academy: Dictionary = GameState.draftee_pool[1]
-	academy["tied_club"] = "ADE"
+	academy["tied_club"] = me
 	academy["tied_type"] = "NGA"
 	_check(int(tied.get("draft_year", 0)) == 2027 and int(academy.get("draft_year", 0)) == 2027,
 			"The planted father-son and NGA prospects belong to this year's draft")
@@ -349,19 +483,35 @@ func _test_career_rollover() -> void:
 	_check(GameState.begin_intake_draft(), "The intake draft opens after the home-and-away")
 	var draft: Draft = GameState.draft
 	_check(draft != null and draft.intake_mode, "GameState built an intake draft")
-	var logged := draft.pick_history.size() + draft.count()
-	_check(logged == draft.pick_index, "Rival picks before my turn are all logged")
+	# Every pick before my turn is logged, or belonged to a club whose senior
+	# list (RookieList.SENIOR_SPOTS) is full: it passes, like a club with no
+	# space under the CBA at the real draft.
+	var logged_at := {}
+	for h in draft.pick_history:
+		logged_at[int(h["pick"])] = true
+	var all_logged := draft.pick_index > 0
+	for i in range(draft.pick_index):
+		if not logged_at.has(i + 1) and not draft._list_full(str(draft.pick_sequence[i])):
+			all_logged = false
+	_check(all_logged, "Rival picks before my turn are all logged (%d of %d)" % [draft.pick_history.size(), draft.pick_index])
 	_check(GameState.intake_assignments.size() > 0,
 			"Father-son/NGA prospects land before the draft starts")
-
-	var list_sizes := {}
-	for code in GameDB.CLUB_ORDER:
-		list_sizes[code] = (GameState.league_lists.get(code, []) as Array).size()
+	# A club that comes to the draft with a full senior list takes no national draftee.
+	var full_before := PackedStringArray()
+	for code in draft.existing_sizes:
+		if int(draft.existing_sizes[code]) >= draft.senior_cap:
+			full_before.append(str(code))
 	while not draft.is_finished():
 		var candidate := draft._best_ai_pick(draft.current_club())
 		if candidate.is_empty() or not draft._draft_pick(draft.current_club(), candidate):
 			draft._skip_current_pick()
 	_check(draft.is_finished(), "Filling every scheduled pick completes the intake")
+	var full_picked := 0
+	for h in draft.pick_history:
+		if full_before.has(str(h["club"])):
+			full_picked += 1
+	_check(draft.senior_cap == RookieList.SENIOR_SPOTS and full_picked == 0,
+			"A club with a full senior list passes the National Draft (%d full: %s)" % [full_before.size(), ", ".join(full_before)])
 	_check(GameState.finish_intake_draft(), "The rollover commits")
 
 	_check(GameState.season_year == 2028, "The career advances a year")
@@ -391,7 +541,7 @@ func _test_career_rollover() -> void:
 				and int(p.get("drafted_year", 0)) == 2027:
 			mine_drafted += 1
 	_check(picks.size() == mine_drafted, "Every draft pick is in the wrap with its number (%d of %d)" % [picks.size(), mine_drafted])
-	var retired_here := (GameState.intake_summary.get("retired", []) as Array).filter(func(r): return str(r["club"]) == "ADE").size()
+	var retired_here := (GameState.intake_summary.get("retired", []) as Array).filter(func(r): return str(r["club"]) == me).size()
 	var retired_wrap := (wrap.get("outs", []) as Array).filter(func(r): return str(r["how"]) == "retired").size()
 	_check(retired_here == retired_wrap, "Every retirement from the list is in the wrap (%d)" % retired_here)
 	_check((wrap.get("ins", []) as Array).any(func(r): return str(r["id"]) == str(tied["id"])),
@@ -417,7 +567,8 @@ func _test_career_rollover() -> void:
 			# Not active yet, or an expansion club whose debut list just
 			# arrived (Tasmania in 2028): nothing was signed through the draft.
 			continue
-		total_signed += arr.size() - int(list_sizes[code])
+		# Retirements leave at the same rollover, so count the draftees themselves.
+		total_signed += arr.filter(func(q): return int(q.get("drafted_year", 0)) == 2027).size()
 		_check(arr.size() >= Prospects.MIN_LIST, "No club drops below the minimum list")
 		_check(arr.size() <= Ratings.LIST_SIZE, "No club exceeds the 44-man list cap")
 		for p in arr:
@@ -984,17 +1135,29 @@ func _test_real_lists_start() -> void:
 	var want := active.duplicate()
 	want.sort()
 	_check(same == want, "The draft order is every founding club once (%d)" % order.size())
+	# A national draftee needs room on the senior list (RookieList.SENIOR_SPOTS):
+	# the coach takes the founding club with the most room.
+	var me := ""
+	for code in active:
+		if me == "" or RookieList.draft_size(GameState.league_lists[code]) < RookieList.draft_size(GameState.league_lists[me]):
+			me = code
 	var vet: Dictionary = {}
-	for q in GameDB.club_list("GEE"):
+	for q in GameDB.club_list(me):
 		if GameDB.departure_kind(q) == "":
 			vet = q
 			break
-	GameState.choose_real_club("GEE")
-	_check(GameState.my_club == "GEE" and GameState.draft.user_club == "GEE" and GameState.has_career(),
+	GameState.choose_real_club(me)
+	_check(GameState.my_club == me and GameState.draft.user_club == me and GameState.has_career(),
 			"Choosing a club takes its real list; the career can now be saved")
 	_check(GameState.save_career() and GameState.load_career() and GameState.opening_draft
 			and GameState.draft != null and GameState.draft.intake_mode and GameState.start_mode == "real",
 			"A real-lists career saves and resumes mid-draft")
+	# A founding club whose real senior list is already full (38) takes no
+	# national draftee in the opening draft: it passes.
+	var full_before := PackedStringArray()
+	for code in GameState.draft.existing_sizes:
+		if int(GameState.draft.existing_sizes[code]) >= GameState.draft.senior_cap:
+			full_before.append(str(code))
 	var guard := 0
 	while not GameState.draft.is_finished() and guard < 400:
 		guard += 1
@@ -1003,6 +1166,12 @@ func _test_real_lists_start() -> void:
 			if board.is_empty() or not GameState.draft.pick(board[0]):
 				break
 	_check(GameState.draft.is_finished(), "The 2026 National Draft runs to the end")
+	var full_picked := 0
+	for h in GameState.draft.pick_history:
+		if full_before.has(str(h["club"])):
+			full_picked += 1
+	_check(GameState.draft.senior_cap == RookieList.SENIOR_SPOTS and not full_before.has(me) and full_picked == 0,
+			"A club with a full senior list passes the opening draft (%d full: %s)" % [full_before.size(), ", ".join(full_before)])
 	_check(GameState.finish_intake_draft() and GameState.season != null and GameState.season_year == GameDB.START_YEAR
 			and not GameState.opening_draft, "Finishing the draft starts the 2027 season")
 	var rookies := 0
@@ -1029,3 +1198,151 @@ func _test_real_lists_start() -> void:
 	GameState.reset()
 	_check(GameState.start_mode == "redraft" and not GameState.opening_draft, "A new career is a redraft unless chosen")
 
+
+
+## Row 104 (4.Q10): generated players carry the special traits at the
+## real players' rates. Eight seeded classes (career seed 9000 + year: not the seeds
+## GEN_NUDGE was sized on, so this is out of sample), each grown five
+## seasons by the development rules; a trait's "matched" share weights the grown players
+## in each 4-point OVR band by the real 2026 players' mix (the in-career league is
+## re-anchored to the 2026 spread every rollover). tools/audit/gen_traits_impl runs the
+## full 13-trait table on 30 classes.
+func _test_gen_traits_rates() -> void:
+	# The 2026 lists as the game loads them: the hand-set OVR rows on (run_tests.sh plays
+	# the suites without them), and none of the earlier tests' career changes.
+	var skipped: bool = GameDB.skip_ovr_overrides
+	GameDB.skip_ovr_overrides = false
+	# Twice: a list player's projection borrows shapes from the lists loaded before it,
+	# so the second load is the one every later load repeats.
+	for i in 2:
+		Prospects.forget_cache()
+		GameDB.reload()
+	# Reference: real players with senior games (a list player projected from no senior
+	# game got his temperament from the old formula, never a hothead).
+	var real := []
+	for c in GameDB.club_order:
+		for p in GameDB.club_list(c):
+			if not bool(p.get("generated", false)) and not bool(p.get("projected", false)):
+				real.append(p)
+	var listed_attr := {}
+	for p in GameDB.list_additions:
+		listed_attr[str(p["id"])] = (p["attr"] as Dictionary).duplicate()
+	_check(real.size() > 600, "The real 2026 lists give the reference rates (%d players)" % real.size())
+	var bands := {}
+	var real_hot := 0
+	var real_bull := 0
+	for p in real:
+		var b := int(p["overall"]) / 4
+		bands[b] = int(bands.get(b, 0)) + 1
+		real_hot += 1 if Traits.of(p).has("hothead") else 0
+		real_bull += 1 if Traits.of(p).has("bull") else 0
+	Prospects.forget_cache()
+	var drafted := []
+	var grown := []
+	for y in range(2027, 2035):
+		for p in Prospects.generate_class(y, 9000 + y):
+			drafted.append(p.duplicate(true))
+			for k in range(1, 6):
+				Prospects.age_player(p, y + k)
+			grown.append(p)
+	var hot := 0
+	for i in range(drafted.size()):
+		hot += 1 if Traits.of(grown[i]).has("hothead") else 0
+	var on := {"n": drafted.size(), "hot": 100.0 * hot / grown.size(),
+			"bull": _matched_share(grown, "bull", bands),
+			"disc": [drafted[0]["attr"]["discipline"], drafted[1]["attr"]["discipline"]]}
+	Prospects.forget_cache()
+	var rh := 100.0 * real_hot / real.size()
+	var rb := 100.0 * real_bull / real.size()
+	_check(on["n"] > 300, "Eight classes are drawn (%d players)" % on["n"])
+	_check(absf(on["hot"] - rh) <= 2.5,
+			"Hotheads roll at the real rate: %.1f%% generated against %.1f%% real" % [on["hot"], rh])
+	_check(absf(on["bull"] - rb) <= 1.5,
+			"Contested bulls at a real player's level match the real rate: %.1f%% against %.1f%%" % [on["bull"], rb])
+	# The same seeds give the same prospects: the temperament draw is seeded per player.
+	Prospects.forget_cache()
+	var again: Array = Prospects.generate_class(2027, 9000 + 2027)
+	# Only generated players take the real rates: real-list players projected from no
+	# senior game load the same every time, and a coach's Forge prospect is his own.
+	var forge := {"first": "Gabe", "last": "Tester", "role": "MID", "height_cm": 184,
+			"style": "inside", "strengths": ["contested"], "weaknesses": ["running"]}
+	var forge_a: Dictionary = Prospects.make_custom(forge, 2027, 777)
+	Prospects.forget_cache()
+	GameDB.reload()
+	var same_listed := listed_attr.size() > 0
+	for p in GameDB.list_additions:
+		if not listed_attr.has(str(p.get("id", ""))) or p["attr"] != listed_attr[str(p["id"])] \
+				or (bool(p.get("generated", false)) and not bool(p.get("user_created", false))):
+			same_listed = false
+	Prospects.forget_cache()
+	var forge_b: Dictionary = Prospects.make_custom(forge, 2027, 777)
+	GameDB.skip_ovr_overrides = skipped
+	GameDB.reload()
+	_check(same_listed, "The real-list players projected from no senior game are not generated and load unchanged (%d)" % listed_attr.size())
+	_check(bool(forge_a.get("user_created", false)) and forge_a["attr"] == forge_b["attr"],
+			"A coach's Forge prospect is his own and comes out the same every time")
+	_check(again[0]["attr"]["discipline"] == on["disc"][0] and again[1]["attr"]["discipline"] == on["disc"][1],
+			"A seeded class rolls the same temperaments every time")
+
+## The share of grown players with trait t, each 4-point OVR band weighted by the real
+## players in it (bands with no grown player left out).
+func _matched_share(grown: Array, t: String, bands: Dictionary) -> float:
+	var have := {}
+	var tot := {}
+	for q in grown:
+		var b := int(q["overall"]) / 4
+		tot[b] = int(tot.get(b, 0)) + 1
+		if Traits.of(q).has(t):
+			have[b] = int(have.get(b, 0)) + 1
+	var w := 0.0
+	var s := 0.0
+	for b in bands:
+		if int(tot.get(b, 0)) > 0:
+			w += float(bands[b])
+			s += float(bands[b]) * float(have.get(b, 0)) / float(tot[b])
+	return 100.0 * s / maxf(1.0, w)
+
+
+## Row 114, Rebuild: the bottom club's three best walk out before the 2026
+## National Draft, and once it is done they sign with rival clubs for 2027
+## (never with you, never back at the club they left), each on a deal that
+## covers 2027. You take over the bottom club.
+func _test_rebuild_walkouts_sign() -> void:
+	GameState.reset()
+	GameState.replay_seed = 4242
+	GameState.challenge = {"kind": "rebuild"}
+	GameState.begin_real_lists()
+	var club := str(GameState.challenge.get("club", ""))
+	var gone: Array = GameState.challenge.get("gone", [])
+	_check(club != "" and GameState.my_club == club and gone.size() == 3,
+			"Rebuild takes over the bottom club, three gone (%s, %d)" % [club, gone.size()])
+	var guard := 0
+	while GameState.draft != null and not GameState.draft.is_finished() and guard < 400:
+		guard += 1
+		if GameState.draft.is_user_turn():
+			var board: Array = GameState.draft.board("", "", "", "overall", true)
+			if board.is_empty() or not GameState.draft.pick(board[0]):
+				break
+	_check(GameState.finish_intake_draft() and GameState.season != null, "(setup) the 2026 National Draft finishes and 2027 starts")
+	if GameState.season == null:
+		GameState.reset()
+		return
+	var where := {}
+	for code in GameState.season.lists:
+		for q in GameState.season.lists[code]:
+			where[str(q["id"])] = [str(code), q]
+	var placed := 0
+	var wrong := []
+	for g in gone:
+		var at = where.get(str(g["id"]))
+		if at == null:
+			wrong.append("%s unsigned" % str(g["id"]))
+			continue
+		if str(at[0]) == club or str(at[0]) == GameState.my_club or int(at[1].get("contract_years", 0)) < 1:
+			wrong.append("%s at %s" % [str(g["id"]), str(at[0])])
+			continue
+		placed += 1
+	_check(placed == 3 and wrong.is_empty(), "All three sign with rival clubs for 2027 (%s)" % ", ".join(wrong))
+	var still := GameState.free_agents.filter(func(q): return gone.any(func(g): return str(g["id"]) == str(q["id"])))
+	_check(still.is_empty(), "None of them is left in free agency")
+	GameState.reset()

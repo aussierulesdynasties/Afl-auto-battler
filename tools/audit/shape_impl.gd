@@ -5,7 +5,7 @@ extends RefCounted
 ## seed 1234) and prints, per team a game: the stats the calibration suite
 ## guards, the contest and turnover stats it doesn't, stoppages, where the
 ## points came from, and how chains started (MatchSim.audit_chains).
-## Measurement only. Env: SHAPE_MATCHES (default 400), SHAPE_FLOW=1 for match_flow on.
+## Measurement only. Env: SHAPE_MATCHES (default 400).
 
 ## Real 2026 per team a game, Champion Data via Wheelo
 ## (docs/research/wheelo/afl_player_stats_2026.json, 436 team-games).
@@ -33,9 +33,6 @@ func run() -> void:
 		if kv.size() == 2:
 			MatchSim.tune[kv[0]] = float(kv[1])
 	print("TUNE ", MatchSim.tune)
-	# SHAPE_FLOW=1 plays with the match_flow switch on (row 11); default off.
-	Features.set_on("match_flow", OS.get_environment("SHAPE_FLOW") == "1")
-	print("match_flow ", Features.on("match_flow"))
 	var codes: Array = GameDB.active_clubs(2026)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 1234
@@ -61,7 +58,6 @@ func run() -> void:
 		tg += 2
 	MatchSim.audit_chains_on = false
 	MatchSim.tune = {}
-	Features.set_on("match_flow", false)
 	print("shape_impl: %d matches" % n)
 	print("SHAPE %-26s %8s %8s %6s" % ["stat (team a game)", "sim", "real", "ratio"])
 	print("SHAPE %-26s %8.1f" % ["score", score / float(tg)])

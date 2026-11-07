@@ -17,19 +17,15 @@ extends RefCounted
 const KEY_FORWARDS := 2
 ## The share of a side's entries inside 50 that look for one of its key
 ## forwards, into his match-up (the rest go wherever the play takes them).
-## Kept small so goals still spread as in the real game: a club's top
-## goalkicker kicks about 16% of its goals (run_calibration_tests).
-const KEY_TARGET := 0.06
-## With key_duels on (row 94, T8.Q6): sides look for their key forwards a
-## little more, so a key forward and his direct opponent meet more often. The
-## bar is T8.Q6's own: 6 contests, the minimum it asked the line to need. With
-## the switch on the typical duel clears it (median 7, about 70% of duels on 6
-## or more, against median 6 and 58% off). It is held at 0.10 because every
+## Row 94 (T8.Q6): set so a key forward and his direct opponent meet often
+## enough. The bar is T8.Q6's own: 6 contests, the minimum it asked the line to
+## need. The typical duel clears it (median 7, about 70% of duels on 6 or
+## more, against median 6 and 58% at the earlier 0.06). It is held at 0.10 because every
 ## entry to him is also his shot at goal: a club's top goalkicker then kicks
 ## 18% of its goals (real 16%, run_calibration_tests allows 18.4%); 0.16 gave
 ## more contests but 21%, outside it.
 const KEY_TARGET_DUELS := 0.10
-## With key_duels on: the share of general-play marking contests in a side's
+## The share of general-play marking contests in a side's
 ## front half that fall to one of its key forwards leading up at the ball,
 ## into his match-up (MatchSim._key_lead). Few contests up the ground are
 ## aerial ones, so this adds about 0.2 a match.
@@ -119,25 +115,39 @@ static func key_forwards(ground: Array) -> Array:
 	return keys.slice(0, KEY_FORWARDS)
 
 
-## The defenders a coach can put on a forward: the defenders on the ground.
+## A defender by trade: his own position, a second one or one he has learned
+## is in the back line. The match-day slot does not count: a forward or a
+## ruck rotated into a back pocket is still a forward or a ruck.
+static func is_defender(p: Dictionary) -> bool:
+	return Ratings.positions(p).has("DEF")
+
+
+## The defenders a coach can put on a forward: the defenders by trade standing
+## in the back line. Key defenders first, then the best in the air (reading the
+## ball, marking, size), then rating.
 static func defenders(ground: Array) -> Array:
 	var out := []
 	for p in ground:
-		if str(p.get("role", "")) == "DEF":
+		if str(p.get("role", "")) == "DEF" and is_defender(p):
 			out.append(p)
 	out.sort_custom(func(a, b):
 		var ka := PlayerProfile.player_type(a) == "Key defender"
 		var kb := PlayerProfile.player_type(b) == "Key defender"
 		if ka != kb:
 			return ka
+		var aa := defender_air(a)
+		var ab := defender_air(b)
+		if not is_equal_approx(aa, ab):
+			return aa > ab
 		if int(a["overall"]) != int(b["overall"]):
 			return int(a["overall"]) > int(b["overall"])
 		return str(a["id"]) < str(b["id"]))
 	return out
 
 
-## The default set-up: key defenders by rating on their key forwards by
-## rating. {forward id: defender id}.
+## The default set-up: key defenders (the best in the air first) on their key
+## forwards by rating; only defenders by trade, so a forward left over goes
+## without a direct opponent. {forward id: defender id}.
 static func defaults(attack_ground: Array, defence_ground: Array) -> Dictionary:
 	var out := {}
 	var defs := defenders(defence_ground)

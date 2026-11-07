@@ -236,6 +236,10 @@ static func project(p: Dictionary) -> void:
 	var bias: Dictionary = p.get("attr_bias", {})
 	for key in bias:
 		a[key] = float(a.get(key, target)) + float(bias[key])
+	# Only the game's own generated players: real-list players projected from no
+	# senior game, the real draft class and a coach's Forge prospect stay as they were.
+	if bool(p.get("generated", false)) and not bool(p.get("user_created", false)):
+		_real_trait_rates(a, p, role)
 
 	a = fit_attributes(a, role, target)
 	for key in a:
@@ -249,10 +253,46 @@ static func project(p: Dictionary) -> void:
 	Potential.assign(p)
 
 
+## Row 104 (4.Q10, director): generated players carry each synergy trait at the real
+## players' rate at the same overall, contested bulls included, and a real share of
+## hotheads (there were none: temperament came from his projected rating, never 20 or
+## below).
+## Per role, points added to an attribute before the fit puts him back on his target
+## (so his overall does not move, only his shape). Sized with tools/audit/gen_traits_impl.gd
+## so a grown generated player carries each trait as often as a real player of his overall:
+## interceptors and aerial forwards came out too often, lockdown and defensive forwards
+## too rarely. (static var, not const, only so tools/audit can try arms in one run.)
+static var GEN_NUDGE := {
+	"DEF": {"intercept": -6.0, "pressure": -0.5, "accuracy": 1.0, "durability": -1.5},
+	"MID": {"contested": -6.0, "disposal": -2.0, "pressure": -1.0, "durability": -1.5},
+	"FWD": {"marking": -3.0, "pressure": 3.5, "accuracy": 1.0, "goalkicking": 1.5, "durability": -1.5},
+	"RUCK": {"ruck": -10.0, "contested": -6.0, "durability": -1.5},
+}
+
+
+## Row 104: his temperament is a real player's of his role (each real player's own
+## discipline, not relative to his rating), so hotheads come at the real share; and the
+## GEN_NUDGE shape correction. Seeded by the prospect alone, on its own dice, so nothing
+## else about him rolls differently.
+static func _real_trait_rates(a: Dictionary, p: Dictionary, role: String) -> void:
+	for key in (GEN_NUDGE.get(role, {}) as Dictionary):
+		a[key] = float(a.get(key, 0.0)) + float(GEN_NUDGE[role][key])
+	if _shapes.is_empty():
+		_shape_for(role, _rng_for("warm"), 0.0)  # builds the real players' cache
+	var pool: Array = _discs.get(role, [])
+	if pool.is_empty():
+		return
+	var rng := _rng_for("disc|%s|%s" % [str(p.get("id", "")), str(p.get("draft_year", 2026))])
+	a["discipline"] = float(pool[rng.randi_range(0, pool.size() - 1)])
+
+
 ## Each role's real players' shapes: every attribute less his overall, and that
 ## overall ("_ovr"), from the 2026 lists (GameDB's own rows, in list order, so
 ## it's the same every run).
 static var _shapes := {}
+## Each role's real players' disciplines (row 104), from players with senior games only:
+## a list player projected from no senior game got his from the old rating formula.
+static var _discs := {}
 ## How many of the nearest real players, by overall, a shape is drawn from.
 const SHAPE_NEAREST := 10
 
@@ -260,6 +300,7 @@ const SHAPE_NEAREST := 10
 ## Forget the cached shapes: a new career rebuilds them from the 2026 players.
 static func forget_cache() -> void:
 	_shapes = {}
+	_discs = {}
 
 
 ## The shape of one of the real players of `role` nearest `level` overall,
@@ -282,6 +323,10 @@ static func _shape_for(role: String, rng: RandomNumberGenerator, level: float) -
 					if not _shapes.has(r):
 						_shapes[r] = []
 					(_shapes[r] as Array).append(d)
+					if not bool(q.get("projected", false)):
+						if not _discs.has(r):
+							_discs[r] = []
+						(_discs[r] as Array).append(float(at.get("discipline", 50)))
 	var pool: Array = (_shapes.get(role, []) as Array).duplicate()
 	if pool.is_empty():
 		return ROLE_DELTAS.get(role, ROLE_DELTAS["MID"])
@@ -606,7 +651,14 @@ static func age_pool(pool: Array, year: int, drafted: Dictionary) -> Array:
 		var id := str(p["id"])
 		if drafted.has(id):
 			continue
-		age_player(p, year)
+		if int(p.get("draft_year", 0)) == year:
+			# A generated class is made a year ahead; that year in the pool ages it but does not
+			# develop it, so it is drafted at the rating it was made with, as the real 2026 class
+			# is (row 65: one pool year of growth put picks 1-5 at 65-69, above the 4.Q9 bands).
+			# A prospect passed over in his own draft grows from then on, like anyone else.
+			p["age"] = float(p.get("age", 18.0)) + 1.0
+		else:
+			age_player(p, year)
 		if float(p.get("age", 18.0)) >= 22.0:
 			continue  # aged out of draft eligibility
 		out.append(p)

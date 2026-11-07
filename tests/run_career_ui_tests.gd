@@ -97,6 +97,21 @@ func _test_media_conference_rules() -> void:
 			"result": {"home": "COL", "away": "CAR", "score": [88, 72]}}, {})
 	_check(str(kids.get("key", "")) == "young_side" and str(kids.get("journalist", "")) == "philosopher",
 			"A young side brings the Philosopher")
+	# She waits longer than the others between questions (director 2026-11-07:
+	# about one conference in six), and "21 or younger" counts to his 22nd birthday.
+	var MCY = load("res://scripts/sim/MediaConference.gd")
+	var kid_ctx := {"club": "COL", "opponent_name": "Carlton", "young": 6, "year": 2027,
+			"result": {"home": "COL", "away": "CAR", "score": [88, 72]}}
+	var asked := []
+	for r in [15 + MCY.COOLDOWN_ROUNDS + 1, 15 + MCY.YOUNG_SIDE_COOLDOWN, 15 + MCY.YOUNG_SIDE_COOLDOWN + 1]:
+		var c := kid_ctx.duplicate(true)
+		c["round"] = r
+		asked.append(not MCY.pick(c, {"young_side": {"year": 2027, "round": 15}}).is_empty())
+	_check(asked == [false, false, true] and MCY.YOUNG_SIDE_COOLDOWN > MCY.COOLDOWN_ROUNDS,
+			"The Philosopher waits %d rounds between questions (%s)" % [MCY.YOUNG_SIDE_COOLDOWN, str(asked)])
+	_check(MCY.is_young(21.9) and MCY.is_young(19.0) and not MCY.is_young(22.0),
+			"A player counts as 21 or younger until his 22nd birthday")
+	_check(int(kids.get("margin", 0)) == 16, "The question keeps the margin it came from")
 	# An injury in a win never gets the answer that the injury cost the game.
 	var hurt_win: Dictionary = MediaConferenceScript.pick({"club": "COL", "opponent_name": "Carlton", "round": 15,
 			"injuries": [{"name": "Jack Smith"}], "result": {"home": "COL", "away": "CAR", "score": [88, 72]}}, {})
@@ -131,7 +146,10 @@ func _test_press_rolls() -> void:
 	var run := func(seed: int, answer: bool) -> Array:
 		for i in range(_state.my_list.size()):
 			_state.my_list[i]["morale"] = snap[i]
+			_state.my_list[i].erase("press_lift")
+			_state.my_list[i].erase("press_slow")
 		_state.board["confidence"] = 50
+		_state.media_memory = {}
 		_state.career_seed = seed
 		_state.media_conference = conf.duplicate(true)
 		# Untyped, so the same check runs (and fails) against the old fixed answers.
@@ -160,10 +178,22 @@ func _test_press_rolls() -> void:
 	_state.media_conference = {}
 	# Every number on the gate comes from the constants: no digits in a template.
 	var digit := RegEx.create_from_string("[0-9]")
-	var words: Array = [MC.ODDS_TEMPLATE, MC.MORALE_SIZE, MC.BOARD_SIZE, MC.AFTER_MORALE, MC.AFTER_BOARD]
-	for kind in MC.KINDS:
+	var words: Array = [MC.ODDS_TEMPLATE, MC.MORALE_SIZE, MC.BOARD_SIZE, MC.AFTER_MORALE, MC.AFTER_BOARD,
+			MC.HIS_SIZE, MC.AFTER_HIS, MC.NO_BOARD, MC.LIKES, MC.DISLIKES, MC.STANDING_EFFECT,
+			MC.REASON, MC.FADE_NOTE, MC.SLOW_FADE_NOTE]
+	words.append_array(MC.RECORD_CLAUSE.values())
+	words.append_array(MC.RECORD_REASON.values())
+	for j in MC.PERSONA.values():
+		for k in ["odds_note", "board_note", "named_note", "slow_note"]:
+			if (j as Dictionary).has(k):
+				words.append(j[k])
+	words.append_array(MC.STANDING_WORDS.values())
+	for pair in MC.LEAD_INS.values():
+		words.append_array(pair)
+	for kind in MC.KINDS + MC.NAMED_KINDS:
 		var s: Dictionary = MC.ANSWERS[kind]
-		words.append_array([s["both"], s["a"]["odds"], s["a"]["after"], s["b"]["odds"], s["b"]["after"]])
+		words.append_array((s["both"] as Dictionary).values())
+		words.append_array([s["a"]["odds"], s["a"]["after"], s["b"]["odds"], s["b"]["after"]])
 	var bare := true
 	for w in words:
 		bare = bare and digit.search(str(w)) == null
@@ -177,7 +207,7 @@ func _test_press_rolls() -> void:
 		var b: Dictionary = s["b"]
 		for c in [MC.ODDS_MIN, 35, 50, 65, MC.ODDS_MAX]:
 			var line: String = MC.odds_line(kind, c)
-			var ok := line.contains("%d%% %s" % [c, a["odds"]]) and line.contains("%d%% %s" % [100 - c, b["odds"]]) 					and line.contains(str(s["both"]))
+			var ok := line.contains("%d%% %s" % [c, a["odds"]]) and line.contains("%d%% %s" % [100 - c, b["odds"]]) 					and line.contains(str(MC.effects(kind)["both"]))
 			for lever in [["morale", MC.MORALE_SIZE], ["board", MC.BOARD_SIZE]]:
 				for o in [a, b]:
 					if int(o[lever[0]]) != 0:
@@ -206,6 +236,364 @@ func _test_press_rolls() -> void:
 			"The board buys talk of the method after a big win more than after a thrashing")
 	_check(MC.chance("back", {"morale": 50.0}) > MC.chance("back", {"morale": 90.0}),
 			"Backing the players lifts a flat group more often than one already flying")
+
+
+## A fresh FRE career with every press trace cleared and morale at the line.
+func _press_reset() -> void:
+	_state.reset()
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_state.career_seed = 2027
+	_state.media_memory = {}
+	_state.last_injuries = []
+	_state.board["confidence"] = 50
+	_state.board["why"] = ""
+	for p in _state.my_list:
+		p["morale"] = 70
+		p.erase("press_lift")
+		p.erase("press_slow")
+
+
+func _press_conf(key_result: Array) -> Dictionary:
+	return load("res://scripts/sim/MediaConference.gd").pick({"club": "FRE", "opponent_name": "Carlton", "round": 8,
+			"year": int(_state.season_year), "result": {"home": "FRE", "away": "CAR", "score": key_result}}, {})
+
+
+## (g) Caps: no answer, journalist or record check takes a size past list 2,
+## named 3, board 3; stacked answers never pass the cap, and the
+## lift fades back a point a round (half pace after the Philosopher).
+func _test_press_caps_and_fade() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var worst := [0, 0, 0]
+	for kind in MC.KINDS + MC.NAMED_KINDS:
+		for j in MC.JOURNALISTS.keys() + [""]:
+			for verdict in ["", "early", "neutral", "supported", "contradicted"]:
+				var fx: Dictionary = MC.effects(kind, {"journalist": j, "verdict": verdict, "name": "Jack"})
+				for w in ["a", "b"]:
+					worst[0] = maxi(worst[0], absi(int(fx[w]["morale"])))
+					worst[1] = maxi(worst[1], absi(int(fx[w]["his"])))
+					worst[2] = maxi(worst[2], absi(int(fx[w]["board"])))
+	_check(worst[0] <= MC.LIST_CAP and worst[1] <= MC.NAMED_CAP and worst[2] <= MC.BOARD_CAP
+			and MC.LIST_CAP == 2 and MC.NAMED_CAP == 3 and MC.BOARD_CAP == 3,
+			"Every press size stays inside its cap: list 2, named 3, board 3 (largest %s)" % str(worst))
+	var p := {"morale": 70}
+	for i in range(5):
+		MC.apply_lift(p, 2, MC.LIST_CAP, false)
+	_check(int(p["morale"]) == 72 and int(p["press_lift"]) == 2,
+			"Five list-wide lifts in a row stop at the list cap (morale %d)" % int(p["morale"]))
+	MC.apply_lift(p, 3, MC.NAMED_CAP, false)
+	_check(int(p["morale"]) == 73 and int(p["press_lift"]) == 3,
+			"A named lift on top stops at the named cap, never list plus named (morale %d)" % int(p["morale"]))
+	var trail := []
+	for r in range(1, 5):
+		MC.fade_lift(p, r)
+		trail.append(int(p["morale"]))
+	_check(trail == [72, 71, 70, 70] and not p.has("press_lift"),
+			"The lift fades a point a round back to where he was, then the trace is gone (%s)" % str(trail))
+	var slow := {"morale": 70}
+	MC.apply_lift(slow, 2, MC.LIST_CAP, true)
+	var slow_trail := []
+	for r in range(1, 6):
+		MC.fade_lift(slow, r)
+		slow_trail.append(int(slow["morale"]))
+	_check(slow_trail == [72, 71, 71, 70, 70] and MC.fade_rounds(2, true) == 4 and MC.fade_rounds(2, false) == 2,
+			"After the Philosopher the lift fades at half pace (%s)" % str(slow_trail))
+	# Counted from the presser, not the round number: set on an odd round it
+	# still takes exactly fade_rounds rounds.
+	var odd := {"morale": 70}
+	MC.apply_lift(odd, 2, MC.LIST_CAP, true)
+	var odd_trail := []
+	for r in range(4, 8):
+		MC.fade_lift(odd, r)
+		odd_trail.append(int(odd["morale"]))
+	_check(odd_trail == [72, 71, 71, 70] and not odd.has("press_lift") and not odd.has("press_wait"),
+			"The Philosopher's lift takes exactly fade_rounds rounds whichever round it starts (%s)" % str(odd_trail))
+	var low := {"morale": 6}
+	var moved: int = MC.apply_lift(low, -2, MC.LIST_CAP, false)
+	MC.fade_lift(low, 1)
+	_check(moved == -1 and int(low["morale"]) == 6 and not low.has("press_lift"),
+			"At the morale floor only what really moved is kept, so the fade never overshoots (%d)" % int(low["morale"]))
+	# The round's fade runs in GameState before the next question forms.
+	_press_reset()
+	var q: Dictionary = _state.my_list[0]
+	MC.apply_lift(q, 2, MC.LIST_CAP, false)
+	_state._fade_press_lifts()
+	_check(int(q["morale"]) == 71 and int(q["press_lift"]) == 1, "GameState fades every listed player's press lift a round")
+	# The board's press move fades too, and stacking never passes its cap.
+	_press_reset()
+	var up: int = _state._press_board(2)
+	var more: int = _state._press_board(2)
+	_check(up == 2 and more == 1 and _state.board_confidence() == 53 and int(_state.media_memory.get("board_lift", 0)) == 3,
+			"Two press answers in a row move the board no further than its cap (%d)" % _state.board_confidence())
+	# Director 2026-11-07: the press can move the board further than the match
+	# did. A win moves it +2 (ClubLife.after_match); the press lift is not held
+	# under that.
+	var win_move := int(load("res://scripts/sim/ClubLife.gd").after_match(50, 10)["delta"])
+	_check(win_move == 2 and int(_state.media_memory.get("board_lift", 0)) > win_move,
+			"The press can move the board further than the match result did (press %d, win %d)" % [
+			int(_state.media_memory.get("board_lift", 0)), win_move])
+	var board_trail := []
+	for r in range(4):
+		_state._fade_press_lifts()
+		board_trail.append(_state.board_confidence())
+	_check(board_trail == [52, 51, 50, 50] and not _state.media_memory.has("board_lift"),
+			"The board's press move wears off a point a round, then the trace is gone (%s)" % str(board_trail))
+	_press_reset()
+	_state.media_conference = {"key": "heavy_loss", "journalist": "muckraker", "round": 8, "question": "q",
+			"options": [{"label": "x", "kind": "method"}]}
+	var res: Dictionary = _state.resolve_media_conference(0)
+	var b_moved: int = _state.board_confidence() - 50
+	_check(absi(b_moved) == 2 and int(_state.media_memory.get("board_lift", 0)) == b_moved and int(res["fade_rounds"]) == 2,
+			"An answer's board move is kept to fade, and the outcome says how long (%d, %s rounds)" % [b_moved, str(res.get("fade_rounds"))])
+
+
+## (a) Standing -2..+2 with each journalist: answers move it, it moves the odds
+## 5 a step, fades a step a season, and changes how he asks, never the question.
+func _test_press_standing() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	_press_reset()
+	var conf := _press_conf([55, 101])
+	_state.media_conference = conf.duplicate(true)
+	var landed: Dictionary = _state.resolve_media_conference(0)
+	_check(_state.press_standing("muckraker") == 1 and landed["standing"] == [0, 1],
+			"Criticising the players to the Muckraker warms him a step (%s)" % str(landed.get("standing")))
+	_state.media_conference = conf.duplicate(true)
+	_state.resolve_media_conference(2)
+	_check(_state.press_standing("muckraker") == 0, "Backing them to him cools him again")
+	_check(MC.standing_after(2, 1) == 2 and MC.standing_after(-2, -1) == -2, "Standing stays inside -2..+2")
+	var base: int = MC.chance("method", {"key": "close_game"})
+	_check(MC.chance("method", {"key": "close_game", "standing": 2}) == base + 10
+			and MC.chance("method", {"key": "close_game", "standing": -1}) == base - 5,
+			"Each step of standing moves every answer's odds by 5")
+	_state.media_memory = {"standing": {"muckraker": 2, "bogan": -1}, "standing_year": int(_state.season_year) - 1}
+	_check(_state.press_standing("muckraker") == 1 and _state.press_standing("bogan") == 0
+			and not (_state.media_memory["standing"] as Dictionary).has("bogan")
+			and int(_state.media_memory["standing_year"]) == int(_state.season_year),
+			"Standing fades a step toward even each new season, once (%s)" % str(_state.media_memory))
+	_check(_state.press_standing("muckraker") == 1, "Reading it again the same season does not fade it twice")
+	_state.media_memory = {"standing": {"muckraker": 2}, "standing_year": int(_state.season_year) - 3}
+	_check(_state.press_standing("muckraker") == 0, "Three seasons away and he is even again")
+	_state.media_memory = {"standing": {"muckraker": -1}, "standing_year": int(_state.season_year)}
+	_state.media_conference = conf.duplicate(true)
+	_state.media_conference["lead"] = MC.lead_in("muckraker", -1)
+	var asked: String = _state.press_question_text()
+	_check(asked.begins_with(str(MC.LEAD_INS["muckraker"][0])) and asked.ends_with(str(conf["question"]))
+			and MC.lead_in("muckraker", 0) == "",
+			"A cool journalist adds a lead-in; the question itself is unchanged (%s)" % asked)
+	var st_line: String = _state.press_standing_line()
+	_check(st_line == "Gary is cool on you: every answer is 5% less likely to land well.",
+			"The sheet says how he stands with you and what it does to the odds (%s)" % st_line)
+	_check(MC.standing_effect("muckraker", 0) == "" and MC.standing_word(0, "philosopher") == "takes you as she finds you",
+			"Even standing adds no line; its word names her")
+	_check(_state.press_odds_line(0).contains("Gary will like that: answers to him land well 5% more often after it.")
+			and _state.press_odds_line(2).contains("Gary won't like that: answers to him land well 5% less often after it."),
+			"Each answer says how it moves your standing with him, as odds (%s)" % _state.press_odds_line(0))
+	_state.media_memory = {"standing": {"muckraker": 2}, "standing_year": int(_state.season_year)}
+	_check(not _state.press_odds_line(0).contains("will like that"),
+			"In his corner already, an answer he likes says nothing it cannot do")
+	_state.media_conference = {}
+
+
+## (b) Personality changes what an answer does, shown on the gate.
+func _test_press_personas() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var muck: Dictionary = MC.effects("criticise", {"journalist": "muckraker"})
+	var plain: Dictionary = MC.effects("criticise", {})
+	var muck_m: Dictionary = MC.effects("method", {"journalist": "muckraker"})
+	_check(int(muck["a"]["board"]) == int(plain["a"]["board"]) and int(muck["b"]["board"]) == int(plain["b"]["board"])
+			and not str(muck["notes"]).contains("Siren")
+			and int(muck_m["a"]["board"]) == 2 and int(muck_m["b"]["board"]) == -2 and str(muck_m["notes"]).contains("The Siren gets read upstairs")
+			and MC.chance("criticise", {"journalist": "muckraker"}) == MC.chance("criticise", {}) - 10,
+			"The Muckraker: a board move that depends on how it lands grows by one, a sure one never does")
+	var m_ctx := {"journalist": "muckraker", "facts": {"journalist": "muckraker"}}
+	_check(MC.odds_line("criticise", 40, MC.effects("criticise", m_ctx), m_ctx).contains("The players read his headline: 10% less likely to land well."),
+			"The Muckraker's odds twist is named on the gate with its size")
+	var y_ctx := {"journalist": "sycophant", "facts": {"journalist": "sycophant"}}
+	_check(MC.chance("back", {"journalist": "sycophant"}) == MC.chance("back", {}) - 5
+			and MC.odds_line("back", 55, MC.effects("back", y_ctx), y_ctx).contains("Praise after a thumping is what everyone expects: 5% less likely to land well."),
+			"The Sycophant: backing the players lands 5 worse, and the gate says so")
+	var heavy := {"key": "heavy_loss", "young": MC.YOUNG_SIDE, "morale": 50.0, "verdict": "contradicted"}
+	var why := ""
+	for kind in ["method", "back"]:
+		var ctx := {"facts": heavy, "verdict": "contradicted"}
+		why += MC.odds_line(kind, 50, MC.effects(kind, ctx), ctx)
+	_check(why.contains("After a heavy loss: 15% less likely to land well.") and why.contains("It's a young side: 10% more likely to land well.")
+			and why.contains("The group is flat: 10% more likely to land well.") and why.contains("The record says otherwise: 10% less likely to land well."),
+			"Every odds twist is named on the gate with its size (%s)" % why)
+	var bogan: Dictionary = MC.effects("back_named", {"journalist": "bogan", "name": "Jack"})
+	_check(int(bogan["a"]["his"]) == 3 and int(bogan["b"]["his"]) == -2 and str(bogan["notes"]).contains("listen to his show"),
+			"The Bogan: a named player's sizes grow by one (%d / %d)" % [int(bogan["a"]["his"]), int(bogan["b"]["his"])])
+	var p_ctx := {"journalist": "philosopher"}
+	var p_line: String = MC.odds_line("back", 55, MC.effects("back", p_ctx), p_ctx)
+	_check(p_line.contains("Her piece lingers: the players' moves wear off a point every second round.")
+			and p_line.contains(MC.SLOW_FADE_NOTE) and not p_line.contains(MC.FADE_NOTE),
+			"The Philosopher: the gate says her morale move lingers (%s)" % p_line)
+	_check(MC.standing_move("stats", "back", "supported") == 1 and MC.standing_move("stats", "back", "contradicted") == -1
+			and MC.standing_move("stats", "back", "neutral") == 0 and MC.standing_move("bogan", "method") == -1,
+			"The Stats Geek's standing follows the record, the others' their likes")
+
+
+## (c) A named answer moves one player only.
+func _test_press_named() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	_press_reset()
+	var him: Dictionary = _state.my_list[0]
+	var conf: Dictionary = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 8, "year": int(_state.season_year),
+			"named": {"heavy_loss": {"id": str(him["id"]), "name": "Jack Smith"}},
+			"result": {"home": "FRE", "away": "CAR", "score": [55, 101]}}, {})
+	var opts: Array = conf.get("options", [])
+	_check(opts.size() == 4 and str(opts[3]["kind"]) == "criticise_named" and str(opts[3]["player"]) == str(him["id"])
+			and str(opts[3]["label"]).contains("Jack Smith"),
+			"After a heavy loss a fourth answer names one player (%s)" % str(opts.back() if not opts.is_empty() else {}))
+	var close: Dictionary = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 8,
+			"named": {"heavy_loss": {"id": "x", "name": "X"}, "big_win": {"id": "x", "name": "X"}},
+			"result": {"home": "FRE", "away": "CAR", "score": [80, 83]}}, {})
+	_check((close["options"] as Array).size() == 3, "A close game has no named answer")
+	var others := 0
+	for p in _state.my_list:
+		others += int(p["morale"])
+	_state.media_conference = conf.duplicate(true)
+	var landed: Dictionary = _state.resolve_media_conference(3)
+	var after := 0
+	for p in _state.my_list:
+		after += int(p["morale"])
+	var his_move := int(him["morale"]) - 70
+	var want := 1 if str(landed["landed"]) == "a" else -3
+	_check(his_move == want and after - others == his_move,
+			"Only the named player's morale moves (%+d, list total %+d)" % [his_move, after - others])
+	_check(str(landed["line"]).contains(str(_db.player_display_name(him))), "The outcome line names him (%s)" % str(landed["line"]))
+
+
+## (d) The Stats Geek reads the record: supported lands better and harder,
+## contradicted worse and costs the board either way.
+func _test_press_record() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	_check(MC.record_verdict("back", {"w": 2, "l": 1}) == "early"
+			and MC.record_verdict("back", {"w": 7, "l": 2}) == "supported"
+			and MC.record_verdict("back", {"w": 2, "l": 7}) == "contradicted"
+			and MC.record_verdict("method", {"w": 5, "l": 3, "pct": 100.0, "form": 0.0}) == "neutral"
+			and MC.record_verdict("criticise", {"w": 3, "l": 3, "streak": 3, "form": -0.5}) == "supported",
+			"The record check reads wins, losses, percentage and form, and stays out under four games")
+	var base: int = MC.chance("back", {})
+	_check(MC.chance("back", {"verdict": "supported"}) == base + 10 and MC.chance("back", {"verdict": "contradicted"}) == base - 10,
+			"A claim the record backs lands 10 better; one it contradicts 10 worse")
+	var c: Dictionary = MC.effects("method", {"journalist": "stats", "verdict": "contradicted"})
+	var s: Dictionary = MC.effects("criticise", {"journalist": "stats", "verdict": "supported"})
+	_check(int(c["a"]["board"]) == 0 and int(c["b"]["board"]) == -2 and str(c["notes"]).contains("Ladder Watch")
+			and int(s["a"]["morale"]) == 2,
+			"Contradicted costs the board a point both ways; supported adds one to the lead size")
+	_check(MC.record_line({"w": 7, "l": 3, "pct": 118.4, "pos": 4, "last": "WWLWW"}) == "Your record: 7-3, 4th, 118%, form WWLWW.",
+			"The record is shown as it stands")
+	_press_reset()
+	_state.media_conference = {"key": "close_game", "journalist": "stats", "options": [{"label": "x", "kind": "back"}]}
+	_check(_state.press_verdict("back") == "early" and _state.press_record_line() == str(MC.RECORD_CLAUSE["early"]),
+			"Before four games the Stats Geek says it is too early")
+	_state.media_conference = {"key": "heavy_loss", "journalist": "muckraker", "options": [{"label": "x", "kind": "back"}]}
+	_check(_state.press_verdict("back") == "" and _state.press_record_line() == "", "Only the Stats Geek reads the record")
+	_state.media_conference = {}
+
+
+## (e) The press answer adds to the board's match reason, never replaces it.
+func _test_press_board_reason() -> void:
+	_press_reset()
+	_state.board["why"] = "Beat Carlton by 46."
+	_state.media_conference = _press_conf([55, 101]).duplicate(true)
+	_state.resolve_media_conference(0)
+	var why := str(_state.board["why"])
+	_check(why.begins_with("Beat Carlton by 46.") and why.contains("Gary Haddon") and why.contains("confidence"),
+			"The board's reason keeps the match and adds what you told the press (%s)" % why)
+
+
+## (h) Morale after a loss (director 2026-11-07): a press answer can lift a
+## player up to just below what a win would have given him, never level with it.
+func _test_press_loss_lift() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var CL = load("res://scripts/sim/ClubLife.gd")
+	var gap: int = CL.MATCH_MORALE_WIN - CL.MATCH_MORALE_LOSS
+	_check(MC.LOSS_LIFT_CAP == gap - 1 and MC.LOSS_LIFT_CAP == 2,
+			"After a loss a press lift stops one below a win's extra morale (%d, gap %d)" % [MC.LOSS_LIFT_CAP, gap])
+	var p := {"id": "x", "morale": 70}
+	CL.morale_after_match([p], {"x": true}, false)
+	var w := {"id": "y", "morale": 70}
+	CL.morale_after_match([w], {"y": true}, true)
+	_check(int(p["morale"]) == 70 + CL.MATCH_MORALE_LOSS and int(w["morale"]) == 70 + CL.MATCH_MORALE_WIN,
+			"A player who played gets +%d for a loss, +%d for a win" % [CL.MATCH_MORALE_LOSS, CL.MATCH_MORALE_WIN])
+	for i in range(3):
+		MC.apply_lift(p, 3, MC.NAMED_CAP, false, MC.LOSS_LIFT_CAP)
+	_check(int(p["morale"]) < int(w["morale"]) and int(p["morale"]) == int(w["morale"]) - 1,
+			"Stacked lifts after a loss stop just below the win (%d vs %d)" % [int(p["morale"]), int(w["morale"])])
+	var down := {"morale": 70}
+	MC.apply_lift(down, -3, MC.NAMED_CAP, false, MC.LOSS_LIFT_CAP)
+	_check(int(down["morale"]) == 67, "The loss cap only holds lifts; a drop keeps its full size (%d)" % int(down["morale"]))
+	# The gate shows the held size: the Bogan's named answer is +3, +2 after a loss.
+	var won: Dictionary = MC.effects("back_named", {"journalist": "bogan", "name": "Jack"})
+	var lost: Dictionary = MC.effects("back_named", {"journalist": "bogan", "name": "Jack", "lost": true})
+	_check(int(won["a"]["his"]) == 3 and int(lost["a"]["his"]) == MC.LOSS_LIFT_CAP and int(lost["b"]["his"]) == int(won["b"]["his"]),
+			"The gate shows a lift after a loss held under a win's (%d, was %d)" % [int(lost["a"]["his"]), int(won["a"]["his"])])
+	_check(MC.after_loss({"margin": -3}) and not MC.after_loss({"margin": 0}) and MC.after_loss({"key": "heavy_loss"})
+			and not MC.after_loss({"key": "big_win"}), "A conference knows whether it followed a loss")
+	# Through GameState: an answer after a loss never lifts a player past a win's.
+	_press_reset()
+	_state.media_conference = _press_conf([55, 101]).duplicate(true)
+	_check(int(_state.media_conference.get("margin", 0)) == -46, "The conference keeps the result's margin")
+	var before := {}
+	for q in _state.my_list:
+		before[str(q["id"])] = int(q["morale"])
+	_state.resolve_media_conference(2)
+	var most := 0
+	for q in _state.my_list:
+		most = maxi(most, int(q["morale"]) - int(before[str(q["id"])]))
+	_check(most <= MC.LOSS_LIFT_CAP, "After a loss no answer lifts a player past %d (%d)" % [MC.LOSS_LIFT_CAP, most])
+
+
+## (f) Only a real standout (6 goals or 40 disposals) is a star question.
+func _test_press_standout_only() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	_press_reset()
+	var ids := []
+	for p in _state.my_list:
+		if not MC.is_young(float(p.get("age", 30.0))) and ids.size() < 3:
+			ids.append(str(p["id"]))
+	var make := func(goals: int) -> Dictionary:
+		var players := {}
+		for i in range(ids.size()):
+			players[ids[i]] = {"goals": goals if i == 0 else 1, "disposals": 25 - i * 5, "kicks": 15, "marks": 5, "tackles": 3}
+		return {"home": "FRE", "away": "CAR", "score": [80, 70], "goals": [12, 10], "behinds": [8, 10],
+				"roster": [ids.map(func(id): return {"id": id}), []], "players": players}
+	_state._prepare_media_conference([make.call(3)])
+	_check(_state.media_conference.is_empty(),
+			"An ordinary 10-point win with no standout asks nothing (%s)" % str(_state.media_conference.get("question", "")))
+	_state.media_memory = {"standing": {"bogan": 1}, "standing_year": int(_state.season_year)}
+	_state._prepare_media_conference([make.call(6)])
+	var opts: Array = _state.media_conference.get("options", [])
+	_check(str(_state.media_conference.get("key", "")) == "star" and opts.size() == 4
+			and str(opts[3]["kind"]) == "back_named" and str(opts[3]["player"]) == str(ids[0]),
+			"Six goals make a star question, with a fourth answer backing him (%s)" % str(_state.media_conference.get("question", "")))
+	_check(_state.press_question_text().begins_with(str(MC.LEAD_INS["bogan"][1])),
+			"A journalist warm to you asks with his warm lead-in (%s)" % _state.press_question_text())
+	_state.media_conference = {}
+
+
+## An old save (no standing, no press lift, a pending question from before the
+## answer kinds) loads, plays and keeps working.
+func _test_press_old_save() -> void:
+	_press_reset()
+	_state.media_memory = {"heavy_loss": 3, "said|big_win": {"year": int(_state.season_year), "option": 1, "opp": "Carlton"}}
+	var conf := _press_conf([55, 101])
+	for o in conf["options"]:
+		(o as Dictionary).erase("kind")
+	_state.media_conference = conf
+	_check(_state.save_career(), "The old-shaped career saves")
+	_state.reset()
+	_check(_state.load_career(), "The old-shaped career loads")
+	_check(_state.media_conference_pending() and _state.press_standing("muckraker") == 0
+			and not _state.my_list[0].has("press_lift"), "An old save loads with every journalist even and no press lift")
+	var line: String = _state.press_odds_line(0)
+	var landed: Dictionary = _state.resolve_media_conference(0)
+	_check(line != "" and str(landed.get("kind", "")) == "criticise" and _state.press_standing("muckraker") == 1,
+			"Its pending question plays by place in the list, and standing starts from there (%s)" % str(landed.get("kind", "")))
+	_check(_state.save_career() and _state.load_career() and _state.press_standing("muckraker") == 1,
+			"The new standing survives a save and reload")
+	_state.delete_saved_career()
 
 
 func _test_player_goal_milestones() -> void:
@@ -258,6 +646,15 @@ func _check(condition: bool, message: String) -> void:
 const Ran := preload("res://tests/functions_ran.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
+
+
+## A pending press conference opens as its own screen when the hub comes up
+## (row 105): skip it so a flow about something else carries on from the hub.
+func _past_press() -> void:
+	if _router.current() == "press":
+		_router.handle_back(true)
+		await _settle()
+		await _settle()
 
 
 func _settle() -> void:
@@ -478,6 +875,15 @@ func _run() -> void:
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
 	_t("_test_press_rolls")
+	_t("_test_press_caps_and_fade")
+	_t("_test_press_loss_lift")
+	_t("_test_press_standing")
+	_t("_test_press_personas")
+	_t("_test_press_named")
+	_t("_test_press_record")
+	_t("_test_press_board_reason")
+	_t("_test_press_standout_only")
+	_t("_test_press_old_save")
 	await _t("_test_game_feel_settings")
 	_t("_test_old_sound_levels_carry_over")
 
@@ -485,7 +891,9 @@ func _run() -> void:
 	await _t("_test_season_awards")
 	await _t("_test_back_arrow_taps")
 	await _t("_test_finals_card_taps")
+	await _t("_test_sacked_job_choice_taps")
 	await _t("_test_sim_asks_only_before_your_match")
+	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
 	_t("_test_type_roles")
@@ -493,6 +901,7 @@ func _run() -> void:
 	_state.delete_saved_career()
 	await _t("_test_new_career_keeps_the_save")
 	await _t("_test_new_career_canberra_choice")
+	await _t("_test_new_career_challenge_taps")
 	await _t("_test_pc_hub_and_list_layout")
 	for sz in [Vector2i(2560, 1440), Vector2i(1920, 1080), Vector2i(1280, 720)]:
 		await _t("_test_hub_ladder_fills_right", [sz])
@@ -1047,7 +1456,7 @@ Your career stays on this device.",
 	if cont != null:
 		cont.emit_signal("pressed")
 		await _settle()
-	_check(_router.current() == "hub", "Continue Career opens the season hub")
+	_check(_router.current() == "hub", "Continue Career opens the season hub (%s)" % _router.current())
 	_check(_state.season != null and _state.season.round_index == 2, "The saved round is loaded")
 	_check(_state.my_club == "SYD", "The saved club is loaded")
 	var intro: Control = current_scene.find_child("WeeklyLoopIntro", true, false)
@@ -1063,6 +1472,9 @@ Your career stays on this device.",
 	_check(current_scene.find_child("WeeklyLoopIntro", true, false) == null
 			and bool(_state.get_setting("seen_weekly_loop_intro", false)),
 			"Skipping onboarding closes it and remembers the choice")
+	# A pending press conference follows the intro as its own screen; skip it.
+	await _past_press()
+	_check(_router.current() == "hub", "After the intro (and any press conference) the hub is up")
 	current_scene.call("_show_weekly_loop_intro")
 	await _settle()
 	_check(current_scene.find_child("WeeklyLoopIntro", true, false) == null,
@@ -1274,7 +1686,11 @@ Your career stays on this device.",
 	await _settle()
 	_check(current_scene.find_child("SimConfirm", true, false) != null and _state.season.round_index == r0,
 			"Sim round asks before playing your match")
-	_check(_screen_text().contains("Sim Round %d?" % (r0 + 1)), "The question names the round")
+	# The round's own name: a themed round (Gather Round, Sir Doug Nicholls
+	# Round) is named as such.
+	var up_label := str(current_scene.call("_upcoming_match").get("label", ""))
+	_check(up_label != "" and _screen_text().contains("Sim %s?" % up_label),
+			"The question names the round (%s)" % up_label)
 	_router.handle_back(true)
 	await _settle()
 	_check(_router.current() == "hub" and current_scene.find_child("SimConfirm", true, false) == null
@@ -1361,6 +1777,8 @@ Your career stays on this device.",
 	if ft_cont != null:
 		ft_cont.emit_signal("pressed")
 		await _settle()
+	# A press conference still pending opens over the hub as its own screen.
+	await _past_press()
 	var xp_after := 0
 	for p in _state.my_list:
 		xp_after += int(p.get("xp", 0))
@@ -1375,6 +1793,7 @@ Your career stays on this device.",
 	_state.load_career()
 	_router.replace("hub")
 	await _settle()
+	await _past_press()
 	again = current_scene.find_child("ReviewLastMatch", true, false)
 	_check(again != null and _state.last_match.has("players"), "Your last match can still be reviewed after a reload")
 	if again != null:
@@ -1430,6 +1849,7 @@ Your career stays on this device.",
 	# --- back on other screens ------------------------------------------------
 	_router.go("hub")
 	await _settle()
+	await _past_press()
 	# Its first-visit sheet would take the first Back; it has been read.
 	_state.set_setting("seen_season_stats_intro", true)
 	_router.go("stats")
@@ -1465,12 +1885,13 @@ Your career stays on this device.",
 	root.size = sel_size_before
 	_router.handle_back(true)
 	await _settle()
+	await _past_press()
 
 	# --- training: one-time intro, stat guide, plan picker -------------------
 	_router.go("training")
 	await _settle()
 	_check(current_scene.find_child("TrainingIntro", true, false) != null,
-			"The training intro shows on the first visit")
+			"The training intro shows on the first visit (%s)" % _router.current())
 	_router.handle_back(true)
 	await _settle()
 	_check(_router.current() == "training"
@@ -1624,32 +2045,9 @@ Your career stays on this device.",
 	var ls: ScrollContainer = current_scene.get("_list_scroll")
 	var trainees: Array = current_scene.find_children("Trainee_*", "Button", true, false)
 	_check(ls != null and trainees.size() >= 2, "The training list has rows to swipe")
-	# The scrollbar is a thumb you can grab: a touch area wider than the
-	# engine's 8 units, a thumb never shorter than a fingertip, and the rows
-	# set clear of it rather than running underneath.
-	if ls != null:
-		var bar := ls.get_v_scroll_bar()
-		_check(bar.visible and bar.size.x >= 20.0 and bar.get_combined_minimum_size().y >= 48.0,
-				"The training list's scrollbar is a finger wide and never shorter than a fingertip (%s)" % str(bar.size))
-		var rows_box := ls.get_child(0) as Control
-		_check(rows_box != null and rows_box.size.x <= ls.size.x - bar.size.x + 0.5,
-				"The training rows stop short of the scrollbar (%.0f of %.0f)" % [rows_box.size.x if rows_box else -1.0, ls.size.x])
-	# The name and plan lines sit level with the role and the rating, not
-	# hugging the top of the row.
-	if not trainees.is_empty():
-		var first_row: Button = trainees[0]
-		var stacks := first_row.find_children("*", "VBoxContainer", true, false)
-		var stack: Control = stacks[0] if not stacks.is_empty() else null
-		var rating: Control = stack.get_parent().get_child(-1) if stack != null else null
-		if stack != null and rating != null and stack.get_child_count() > 0:
-			var top := (stack.get_child(0) as Control).global_position.y
-			var last := stack.get_child(-1) as Control
-			var stack_mid := (top + last.global_position.y + last.size.y) * 0.5
-			var rating_mid := rating.global_position.y + rating.size.y * 0.5
-			_check(absf(stack_mid - rating_mid) <= 2.0,
-					"A training row's name lines sit level with its rating (%.1f against %.1f)" % [stack_mid, rating_mid])
-		else:
-			_check(false, "A training row has its name lines and its rating to compare")
+	# The training grid scrolls as one page with no scrollbar, and its cards
+	# are checked in the training suite (the old list's scrollbar and row
+	# checks went with the list).
 	if ls != null and trainees.size() >= 2:
 		var row: Button = trainees[1]
 		var pid := str(row.name).trim_prefix("Trainee_")
@@ -1762,6 +2160,8 @@ Your career stays on this device.",
 	_check(_state.pending_match.is_empty(), "Skip still finishes the match")
 	_router.handle_back(true)
 	await _settle()
+	# A conference the match raised opens over the hub as its own screen.
+	await _past_press()
 	_check(_router.current() == "hub", "After full time, back returns to the hub")
 	_check(not (_state.last_match.get("moments", []) as Array).is_empty(),
 			"The played match keeps its calls for the readout")
@@ -2571,6 +2971,45 @@ func _test_sim_asks_only_before_your_match() -> void:
 	root.size = ask_size_before
 
 
+## My List on a phone: switching between Shape and Full list shows the pane
+## already built instead of building the page again (a perf guard: Android
+## stalled on every switch).
+func _test_list_tabs_kept() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_state.reset()
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_router.stack = ["main", "hub"]
+	_router.go("list")
+	await _settle()
+	var list := current_scene
+	var full := list.find_child("ListTabFull", true, false) as Control
+	var why: String = await Tap.tap(full)
+	await _settle()
+	var added := [0]
+	var count := func(_n): added[0] += 1
+	node_added.connect(count)
+	var shape: Control = null
+	for t in list.find_children("ListTabShape", "", true, false):
+		if (t as Control).is_visible_in_tree():
+			shape = t
+	why += await Tap.tap(shape)
+	await _settle()
+	full = null
+	for t in list.find_children("ListTabFull", "", true, false):
+		if (t as Control).is_visible_in_tree():
+			full = t
+	why += await Tap.tap(full)
+	await _settle()
+	node_added.disconnect(count)
+	_check(why == "" and added[0] < 10 and list.find_child("ShapeScroll", true, false) != null,
+			"A tab switched back and forth on My List builds the page again for neither (%d nodes added; %s)" % [added[0], why])
+	_router.stack = ["main"]
+	_router.go("main")
+	await _settle()
+	root.size = size_before
+
+
 func _test_season_awards() -> void:
 	_state.reset()
 	_state.start_season("COL", _db.club_list("COL"))
@@ -2791,21 +3230,10 @@ func _find_named(n: Node, named: String, out: Array) -> void:
 		_find_named(c, named, out)
 
 
-## The Canberra choice on New career (director, 2026-10-14), behind the feature
-## switch expansion_package: absent with the switch off; with it on, off by
-## default, and a real tap on "Joins in 2030" puts Canberra in the career.
+## The Canberra choice on New career (director, 2026-10-14): off by default,
+## and a real tap on "Joins in 2030" puts Canberra in the career.
 func _test_new_career_canberra_choice() -> void:
-	var features = load("res://scripts/core/Features.gd")
 	_state.delete_saved_career()
-	_state.reset()
-	_router.stack = []
-	_router.go("main")
-	await _settle()
-	await Tap.tap(current_scene.find_child("NewCareer", true, false))
-	await _settle()
-	_check(current_scene.find_child("Canberra_in", true, false) == null and _db.active_clubs(2030).has("CANB"),
-			"Switch off: New career has no Canberra choice and Canberra joins as it always did")
-	features.set_on("expansion_package", true)
 	for pick_it in [false, true]:
 		_state.reset()
 		_router.stack = []
@@ -2824,10 +3252,83 @@ func _test_new_career_canberra_choice() -> void:
 				and _db.active_clubs(2030).has("CANB") == pick_it,
 				("A tap on Joins in 2030 puts Canberra in the new career (%s %s)" if pick_it
 				else "Left alone, the new career has no Canberra (%s %s)") % [t1, t2])
-	features.clear("expansion_package")
 	_state.reset()
 	_router.stack = []
-	_check(_db.active_clubs(2030).has("CANB"), "The switch back off, Canberra joins again")
+
+
+## Row 114: the challenge starts on New career, by real taps. Your goal holds
+## Start until a goal is picked (none is chosen for you); Rebuild switches the
+## start to the real 2026 lists and starts at the bottom club, its three best
+## gone, with the rule stated on the draft board.
+func _test_new_career_challenge_taps() -> void:
+	# By path: a runner naming a class whose load chain reaches an autoload
+	# does not compile before the autoloads exist.
+	var CH = load("res://scripts/state/Challenge.gd")
+	_state.delete_saved_career()
+	_state.reset()
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	await _settle()
+	var start := current_scene.find_child("StartCareer", true, false) as Button
+	var note := current_scene.find_child("ChallengeNote", true, false) as Label
+	_check(current_scene.find_child("Challenge_none", true, false) != null and note != null
+			and note.text == CH.rule_line("none"), "New career offers the challenge starts, None by default")
+	_check(current_scene.find_child("Goal_coach_300", true, false) == null
+			or not (current_scene.find_child("Goal_coach_300", true, false) as Control).is_visible_in_tree(),
+			"The goals are hidden until Your goal is picked")
+	var t1: String = await Tap.tap(current_scene.find_child("Challenge_goal", true, false))
+	await _settle()
+	start = current_scene.find_child("StartCareer", true, false) as Button
+	note = current_scene.find_child("ChallengeNote", true, false) as Label
+	_check(t1 == "" and start != null and start.disabled and note != null and note.text == CH.rule_line("goal"),
+			"Your goal: Start waits until a goal is picked, and the rule is said (%s)" % t1)
+	var t2: String = await Tap.tap(current_scene.find_child("Goal_coach_300", true, false))
+	await _settle()
+	start = current_scene.find_child("StartCareer", true, false) as Button
+	_check(t2 == "" and start != null and not start.disabled, "Picking a goal frees Start (%s)" % t2)
+	var t3: String = await Tap.tap(current_scene.find_child("Challenge_youth", true, false))
+	await _settle()
+	note = current_scene.find_child("ChallengeNote", true, false) as Label
+	_check(t3 == "" and note != null and note.text == CH.rule_line("youth"), "Youth only states its rule (%s)" % t3)
+	var t4: String = await Tap.tap(current_scene.find_child("Challenge_rebuild", true, false))
+	await _settle()
+	_check(t4 == "" and str(current_scene.get("_pick_start")) == "real",
+			"Rebuild switches the start to the real 2026 lists (%s, %s)" % [t4, str(current_scene.get("_pick_start"))])
+	var t5: String = await Tap.tap(current_scene.find_child("StartCareer", true, false))
+	await _settle()
+	await _settle()
+	var ch: Dictionary = _state.challenge
+	var gone: Array = ch.get("gone", [])
+	var club := str(ch.get("club", ""))
+	_check(t5 == "" and str(ch.get("kind", "")) == "rebuild" and club == "ESS" and _state.my_club == club and gone.size() == 3,
+			"Start on Rebuild takes over the bottom club with three gone (%s %s %s)" % [t5, club, str(_state.my_club)])
+	var listed := {}
+	for q in _state.league_lists.get(club, []):
+		listed[str(q["id"])] = true
+	var freed := {}
+	for q in _state.free_agents:
+		freed[str(q["id"])] = q
+	var all_gone := true
+	for g in gone:
+		if listed.has(str(g["id"])) or not freed.has(str(g["id"])):
+			all_gone = false
+	_check(all_gone, "The three are off the list and in free agency")
+	var best_left := 0
+	for q in _state.league_lists.get(club, []):
+		best_left = maxi(best_left, int(q.get("overall", 0)))
+	var worst_gone := 999
+	for g in gone:
+		worst_gone = mini(worst_gone, int(freed.get(str(g["id"]), {}).get("overall", 0)))
+	_check(worst_gone >= best_left, "They were the club's three best (%d gone, %d left)" % [worst_gone, best_left])
+	var back: Dictionary = freed.get(str(gone[0]["id"]), {}) if not gone.is_empty() else {}
+	_check(not back.is_empty() and CH.block_reason(_state, back).begins_with("Rebuild:"),
+			"You can never sign one of them back")
+	_check(_router.current() == "draft" and current_scene.find_child("ChallengeRule", true, false) != null,
+			"The draft board states the Rebuild (at %s)" % _router.current())
+	_state.reset()
+	_router.stack = []
 
 
 ## qa web pass, 2026-10-12: starting a new career must not cost the player the
@@ -3147,6 +3648,7 @@ func _test_restore_earlier_save_tap() -> void:
 	_router.stack = ["main"]
 	_router.go("hub")
 	await _settle()
+	await _past_press()
 	var hub_settings: Button = current_scene.find_child("HubSettings", true, false)
 	if hub_settings != null:
 		hub_settings.emit_signal("pressed")
@@ -3164,3 +3666,106 @@ func _test_restore_earlier_save_tap() -> void:
 	_check(_router.current() == "hub" and _state.season != null and _state.season.round_index == 0,
 			"Restore opens the career at round 1 again")
 	_state.delete_saved_career()
+
+
+## Row 111: a sacked coach chooses from the clubs with a job open, or retires
+## with his record read out. Real taps on a 390 phone.
+func _sacked_with_offers() -> void:
+	_state.reset()
+	_state.career_seed = 4403
+	_state.replay_seed = 4403
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var arcs = load("res://scripts/sim/CoachArcs.gd")
+	var moves = load("res://scripts/state/ClubMoves.gd")
+	_state.coach_arcs = arcs.ensure(_state.coach_arcs)
+	var st: Dictionary = _state.coach_arcs
+	_state.board["sacked"] = true
+	st["sack"] = {"from": "FRE", "year": int(_state.season_year), "heir": ""}
+	st["offers"] = moves._jobs_after_sack(_state, st)
+	_state.week_events = []
+
+
+## A finished career's hub: the season title, Settings and the record, with
+## no club standing, pick or board above it.
+func _check_record_only(why: String) -> void:
+	for gone in ["SeasonBlock", "LadderPosition", "DraftPickLine", "HubAlmanac", "BoardLine", "BoardWarning", "ReprieveLine"]:
+		_check(current_scene.find_child(gone, true, false) == null, "%s: the hub shows no %s" % [why, gone])
+	_check(current_scene.find_child("HubSettings", true, false) != null and current_scene.find_child("SackedCard", true, false) != null,
+			"%s: Settings and the card stay" % why)
+
+
+func _test_sacked_job_choice_taps() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	var moves = load("res://scripts/state/ClubMoves.gd")
+	_sacked_with_offers()
+	var jobs: Array = moves.offers(_state)
+	_check(jobs.size() == 3, "A sacked coach is offered three clubs with a job open (%d)" % jobs.size())
+	# The board's verdict is in: its old warning and the club's pick are stale.
+	_state.board["warned"] = true
+	_state.board["confidence"] = 25
+	# The carnival week's sheet is the club's business, not a sacked coach's.
+	_state.midseason["year"] = _state.season_year
+	_state.midseason["carnival"] = [{"name": "Riley Bowman", "pos": "midfielder", "state": "Vic Metro"}]
+	_state.midseason["carnival_seen"] = false
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	_check(root.find_child("CarnivalWeek", true, false) == null and current_scene.find_child("CarnivalWeek", true, false) == null,
+			"A sacked coach is not shown the carnival week's sheet")
+	for stale in ["BoardLine", "BoardWarning", "DraftPickLine"]:
+		_check(current_scene.find_child(stale, true, false) == null, "While he chooses, the hub shows no stale %s" % stale)
+	_check(current_scene.find_child("SackedCard", true, false) != null, "The hub leads with the sacked card")
+	_check(current_scene.find_child("SackedSeasonReview", true, false) != null and current_scene.find_child("SackedMainMenu", true, false) != null,
+			"While he chooses, the season review and the main menu are still on the card")
+	for o in jobs:
+		var nm: Label = current_scene.find_child("JobOfferName_%s" % str(o["code"]), true, false)
+		_check(nm != null and nm.get_line_count() == 1 and nm.size.x > 100,
+				"%s's name reads on one line across the card, not a letter at a time" % str(o["name"]))
+	var code: String = str(jobs[-1]["code"]) if not jobs.is_empty() else ""
+	var take: Button = current_scene.find_child("TakeJob_%s" % code, true, false)
+	_check(take != null and take.get_combined_minimum_size().x <= take.size.x + 0.5,
+			"Each club with a job open has a Take button that reads whole on a 390 phone")
+	var why: String = await Tap.tap(take) if take != null else "missing"
+	await _settle()
+	_check(why == "" and not _state.is_sacked() and str(_state.coach_arcs["move"].get("to", "")) == code,
+			"A finger on Take the job ends the sacking and the move is set for %s (%s)" % [code, why])
+	_check(current_scene.find_child("SackedCard", true, false) == null, "The hub rebuilds without the sacked card")
+	# A fresh sacking: retire instead, and the record is read out.
+	_sacked_with_offers()
+	_router.go("hub")
+	await _settle()
+	var retire: Button = current_scene.find_child("RetireCoach", true, false)
+	why = await Tap.tap(retire) if retire != null else "missing"
+	await _settle()
+	var sheet: Control = current_scene.find_child("RetireSheet", true, false)
+	if sheet == null:
+		sheet = root.find_child("RetireSheet", true, false)
+	_check(why == "" and sheet != null, "A finger on Retire from coaching asks first (%s)" % why)
+	var yes: Button = sheet.find_child("RetireConfirm", true, false) if sheet != null else null
+	why = await Tap.tap(yes) if yes != null else "missing"
+	await _settle()
+	_check(why == "" and moves.retired(_state) and _state.is_sacked(), "A finger on the confirm retires the coach (%s)" % why)
+	var rec: Control = current_scene.find_child("CoachRecord", true, false)
+	var parts := []
+	if rec != null:
+		_texts(rec, parts)
+	var text := " | ".join(parts)
+	_check(rec != null and text.contains("Your record") and text.contains(str(_db.club_name("FRE"))) and text.contains("season"),
+			"The retired card reads out his record (%s)" % text.replace("\n", " | "))
+	_check(not _state.start_next_season(), "A retired coach's season does not roll on")
+	_check_record_only("retired")
+	# Sacked with no second chance left: the same, the record alone.
+	_sacked_with_offers()
+	_state.coach_arcs["offers"] = []
+	_state.coach_arcs["coach"]["reprieves"] = 0
+	_state.board["warned"] = true
+	_state.board["confidence"] = 25
+	_router.go("hub")
+	await _settle()
+	_check(moves.career_over(_state) and current_scene.find_child("CoachRecord", true, false) != null,
+			"A career that is over reads out the record")
+	_check_record_only("career over")
+	_state.board["sacked"] = false
+	_state.coach_arcs = {}
+	root.size = size_before

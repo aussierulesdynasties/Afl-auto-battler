@@ -47,7 +47,7 @@ func _test_plan_lines() -> void:
 	_check(box != null, "The pre-bounce box opens (plan lines)")
 	if box != null:
 			# The plan under the buttons: short separate lines, each plan with its parts.
-			for pk in ["balanced", "attacking", "defensive", "contest", "controlled", "through_stars"]:
+			for pk in ["balanced", "attacking", "defensive", "contest", "controlled"]:
 				var pb: Button = box.find_child("PlanPicker_" + pk, true, false)
 				if pb == null:
 					_check(false, "Plan button %s exists" % pk)

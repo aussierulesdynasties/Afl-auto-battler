@@ -9,7 +9,7 @@ extends RefCounted
 ##   no grades. Words only: it changes no rating, board or pick.
 ##
 ##   Mid-season rookie draft, after round DRAFT_AFTER: reverse-ladder order,
-##   one pick per club with a list spot (under Contracts.MAX_LIST), your club
+##   one pick per club with a free rookie spot (RookieList), your club
 ##   included. The pool is the unsigned free agents plus the prospects earlier
 ##   drafts passed over. A pick signs a rookie deal to the end of next season.
 ##   No trades. When your turn comes the draft waits for you; Sim the week
@@ -22,13 +22,15 @@ extends RefCounted
 ##   {"year", "carnival": [{"id","name","pos","state"}], "carnival_seen",
 ##    "order": [club], "next": int, "picks": [{"club","id","name","from"}],
 ##    "done": bool}
-## Behind the switch `midseason_draft`: off, nothing here runs or is written.
 
-const SWITCH := "midseason_draft"
 const CARNIVAL_AFTER := 10
 const DRAFT_AFTER := 11
 const STARS := 3
 const KIND := "midseason"
+const NOBODY_LEFT_NEWS := "Mid-season rookie draft: nobody was left when your pick came up, so it passed."
+## Nobody to take from the start: one line, not "no club took a player" and
+## "nobody was left" side by side.
+const NOBODY_AT_ALL_NEWS := "Mid-season rookie draft: there was nobody to take, so no club made a pick, yours included."
 
 const STATE_WORDS := {
 	"VICM": "Vic Metro", "VICC": "Vic Country", "SA": "South Australia",
@@ -37,17 +39,13 @@ const STATE_WORDS := {
 }
 
 
-static func on() -> bool:
-	return Features.on(SWITCH)
-
-
 static func state_word(code: String) -> String:
 	return str(STATE_WORDS.get(code, code if code != "" else "the Allies"))
 
 
 ## Called from GameState._after_round once a home-and-away round is in.
 static func after_round(gs) -> void:
-	if not on() or gs.season == null or gs.last_phase != "regular":
+	if gs.season == null or gs.last_phase != "regular":
 		return
 	var played: int = gs.season.round_index
 	if played == CARNIVAL_AFTER:
@@ -112,7 +110,7 @@ static func carnival_news(stars: Array) -> String:
 
 ## The hub's one-off carnival sheet: its lines, or [] once seen.
 static func carnival_lines(gs) -> Array:
-	if not on() or int(gs.midseason.get("year", 0)) != gs.season_year:
+	if int(gs.midseason.get("year", 0)) != gs.season_year:
 		return []
 	if bool(gs.midseason.get("carnival_seen", true)):
 		return []
@@ -171,8 +169,8 @@ static func _open_draft(gs) -> void:
 		if not gs.season.lists.has(code):
 			continue
 		var list: Array = gs.season.lists[code]
-		# With the rookie list on, a pick fills a rookie spot (RookieList).
-		if (RookieList.rookie_spot_free(list) if RookieList.on() else list.size() < Contracts.MAX_LIST):
+		# A pick fills a rookie spot (RookieList).
+		if RookieList.rookie_spot_free(list):
 			order.append(code)
 	rec["order"] = order
 	rec["next"] = 0
@@ -183,7 +181,7 @@ static func _open_draft(gs) -> void:
 
 ## True while the draft waits on your pick.
 static func waiting(gs) -> bool:
-	if not on() or int(gs.midseason.get("year", 0)) != gs.season_year:
+	if int(gs.midseason.get("year", 0)) != gs.season_year:
 		return false
 	var rec: Dictionary = gs.midseason
 	if bool(rec.get("done", true)) or not rec.has("order"):
@@ -199,8 +197,12 @@ static func _run(gs) -> void:
 	while int(rec["next"]) < order.size():
 		var code := str(order[int(rec["next"])])
 		if code == gs.my_club:
-			gs.mark_dirty()
-			return
+			if not pool(gs).is_empty():
+				gs.mark_dirty()
+				return
+			# Nobody left to take: no choice to make, so the pick passes
+			# without stopping the hub, and the news says so.
+			rec["nobody_left"] = true
 		var left := pool(gs)
 		if not left.is_empty():
 			_take(gs, code, left[0])
@@ -208,8 +210,8 @@ static func _run(gs) -> void:
 	_finish(gs)
 
 
-## Your pick (player id) or "" to pass. False when it is not your turn or he
-## has gone.
+## Your pick (player id) or "" to pass. False when it is not your turn or
+## that player has gone.
 static func choose(gs, player_id: String) -> bool:
 	if not waiting(gs):
 		return false
@@ -218,12 +220,21 @@ static func choose(gs, player_id: String) -> bool:
 		for p in pool(gs):
 			if str(p["id"]) == player_id:
 				hit = p
-		if hit.is_empty():
+		if hit.is_empty() or Challenge.block_reason(gs, hit) != "":
 			return false
 		_take(gs, gs.my_club, hit)
 	gs.midseason["next"] = int(gs.midseason["next"]) + 1
 	_run(gs)
 	return true
+
+
+## Your pick waits but nobody is left to take (a free agent you signed was
+## the last of them): pass it, and the draft news says why. True if passed.
+static func pass_if_nobody_left(gs) -> bool:
+	if not waiting(gs) or not pool(gs).is_empty():
+		return false
+	gs.midseason["nobody_left"] = true
+	return choose(gs, "")
 
 
 ## Before the next round is played: an unmade pick is passed.
@@ -244,7 +255,7 @@ static func _take(gs, code: String, p: Dictionary) -> void:
 	else:
 		gs.draftee_pool.erase(p)
 		gs.drafted_draftees[id] = code
-		gs._mark_drafted(p, KIND, 0)
+		gs._mark_drafted(p, KIND, 0, code)
 	if not p.has("xp"):
 		p["xp"] = 0
 		p["xp_games"] = 0
@@ -253,8 +264,7 @@ static func _take(gs, code: String, p: Dictionary) -> void:
 	# so two now is "out of contract after next season".
 	p["contract_years"] = 2
 	p["salary"] = Contracts.indexed_money_2027(Contracts.ROOKIE_MIN_2027, gs.season_year)
-	if RookieList.on():
-		p["rookie_list"] = "A"
+	p["rookie_list"] = "A"
 	Workload.reset({code: [p]})
 	(gs.midseason["picks"] as Array).append({"club": code, "id": id,
 			"name": GameDB.player_display_name(p), "from": from})
@@ -264,12 +274,15 @@ static func _finish(gs) -> void:
 	var rec: Dictionary = gs.midseason
 	rec["done"] = true
 	var picks: Array = rec.get("picks", [])
+	var nobody := bool(rec.get("nobody_left", false))
 	if picks.is_empty():
-		gs.add_news("draft", "Mid-season rookie draft: no club took a player.")
+		gs.add_news("draft", NOBODY_AT_ALL_NEWS if nobody else "Mid-season rookie draft: no club took a player.")
 	else:
 		var bits: PackedStringArray = []
 		for k in picks:
 			bits.append("%s: %s (%s)" % [GameDB.club_short(str(k["club"])), k["name"], k["from"]])
 		gs.add_news("draft", "Mid-season rookie draft, %d pick%s. %s." % [picks.size(),
 				"" if picks.size() == 1 else "s", "; ".join(bits)])
+		if nobody:
+			gs.add_news("draft", NOBODY_LEFT_NEWS)
 	gs.mark_dirty()

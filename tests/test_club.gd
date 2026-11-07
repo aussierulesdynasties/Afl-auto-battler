@@ -24,6 +24,7 @@ func run() -> void:
 	_t("_test_backing_rules")
 	_t("_test_backing_flow")
 	_t("_test_backing_card_guard")
+	_t("_test_pushing_for_games_needs_no_games")
 	_t("_test_fact_talks")
 	_t("_test_backing_lasts_the_season")
 	_t("_test_firsts_rules")
@@ -1196,6 +1197,65 @@ func _test_backing_card_guard() -> void:
 			"The kid-pushing-for-games card is not drawn for a player on a run (%d v %d)" % [drawn, drawn_backed])
 
 
+## "Pushing for games" (and the finals-gone run home) is only for a kid who is
+## not getting senior games: never one picked every week, even on a week the
+## side for the coming round leaves him out (director, 2026-11-07: "Harry dean
+## already plays every game").
+func _test_pushing_for_games_needs_no_games() -> void:
+	_fresh_season()
+	GameState.season.round_index = 6
+	var y := int(GameState.season_year)
+	var make := func(src: Dictionary, id: String, played: int, last_round: int) -> Dictionary:
+		var p: Dictionary = src.duplicate(true)
+		p["id"] = id
+		p["age"] = 20.0
+		p["potential"] = int(p["overall"]) + 12
+		p.erase("injury_weeks")
+		p.erase("backing")
+		if last_round > 0:
+			p["last_game"] = [y, last_round]
+		else:
+			p.erase("last_game")
+		GameState.season_tally[id] = {"games": played}
+		return p
+	var regular: Dictionary = make.call(GameState.my_list[8], "t_regular", 6, 6)
+	var rested: Dictionary = make.call(GameState.my_list[9], "t_rested", 5, 5)
+	var kid: Dictionary = make.call(GameState.my_list[10], "t_kid", 0, 0)
+	var fringe: Dictionary = make.call(GameState.my_list[11], "t_fringe", 2, 4)
+	# Picked in Rounds 1-3, hurt in Round 3, missed three weeks, fit again:
+	# a regular who lost his spot to injury, not a kid pushing for games.
+	var mended: Dictionary = make.call(GameState.my_list[12], "t_mended", 3, 3)
+	CareerFacts.add(GameState.career_facts, "t_mended",
+			CareerFacts.row(y, "Round 3", "injury", GameState.my_club, "", "hamstring"))
+	# His one senior game was Round 3 and he was hurt in it; fit again and
+	# still out: the injury did not cost him a regular spot.
+	var fringe_hurt: Dictionary = make.call(GameState.my_list[13], "t_fringe_hurt", 1, 3)
+	CareerFacts.add(GameState.career_facts, "t_fringe_hurt",
+			CareerFacts.row(y, "Round 3", "injury", GameState.my_club, "", "ankle"))
+	GameState.last_side = ["t_regular"]
+	var ctx := ClubStories.context(GameState)
+	for id in ["training_kid_pushing", "finals_gone"]:
+		var card := StoryDeck.by_id(StoryDeck.all(), id)
+		var drawn := func(p: Dictionary) -> bool:
+			# "selected" false for all: the coming round's side can leave out a
+			# regular (the reported bug); his recent games still count.
+			ctx["players"] = [ClubStories.player_fact(GameState, p, false, {}, 30, 0)]
+			if id == "training_kid_pushing":
+				return not StoryEngine.eligible_subject(card, ctx, StoryEngine.new_state(), 10,
+						RandomNumberGenerator.new()).is_empty()
+			return StoryEngine.meets(ctx["players"][0], (card["subject"] as Dictionary)["where"], {})
+		_check(not drawn.call(regular), "%s: never a kid picked every week" % id)
+		_check(not drawn.call(rested), "%s: never a regular who sat out one week" % id)
+		_check(not drawn.call(mended), "%s: never a regular back from injury" % id)
+		_check(drawn.call(kid), "%s: a fit young player left out all season can be" % id)
+		_check(drawn.call(fringe), "%s: a young player out of the last two sides can be" % id)
+		_check(drawn.call(fringe_hurt), "%s: a fringe player back from injury can be" % id)
+	for tid in ["t_regular", "t_rested", "t_kid", "t_fringe", "t_mended", "t_fringe_hurt"]:
+		GameState.season_tally.erase(tid)
+		GameState.career_facts.erase(tid)
+	GameState.last_side = []
+
+
 ## A run is saved with the career, waits out a long injury, and lapses with the
 ## season: it never carries into the next one.
 func _test_backing_lasts_the_season() -> void:
@@ -1364,7 +1424,8 @@ func _test_firsts_flow() -> void:
 		for key in ["injury_weeks", "injury_kind", "suspension_weeks"]:
 			kid.erase(key)
 		GameState.advance()
-	var last_round := "Round %d" % Backing.RUN_GAMES
+	# Named as the season names it ("Round 3 · Gather Round" when it is one).
+	var last_round: String = GameState.season.round_label(Backing.RUN_GAMES - 1)
 	_check(not Backing.finished_in(kid, year, last_round).is_empty(),
 			"The run knows it was finished in %s" % last_round)
 	_check(GameState.payoff_lines(GameState.last_match).has("%s's three-game run is done." % who),
@@ -1639,11 +1700,15 @@ func _test_fact_talks() -> void:
 	var news_said := ""
 	for n in GameState.news.slice(0, 12):
 		news_said += str(n["text"]) + " | "
-	if int(GameState.list_player(vid).get("injury_weeks", 0)) <= 0:
+	# Branch on whether he was picked, not on his injury after the round:
+	# a man hurt in the match itself still played.
+	if GameState.last_side.has(vid):
 		_check(str(f[-1]["out"]) == "played" and news_said.contains("back in the side, as you told him"),
 				"Promised a game and picked: it says so (%s)" % news_said.left(200))
-	else:
+	elif int(GameState.list_player(vid).get("injury_weeks", 0)) > 0:
 		_check(str(f[-1]["out"]) == "injured", "Hurt before the game: kept as that")
+	else:
+		_check(str(f[-1]["out"]) == "waiting", "Left out and fit: still waiting (%s)" % str(f[-1]))
 	# Left out after an explanation: still waiting.
 	var other: Dictionary = {}
 	for q in GameState.my_list:

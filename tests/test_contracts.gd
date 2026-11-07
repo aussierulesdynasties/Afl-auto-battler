@@ -46,6 +46,9 @@ func run() -> void:
 	_t("_test_free_agent_reasons")
 	_t("_test_market_reasons_change_nothing")
 	_t("_test_rivals_act_in_their_interest")
+	_t("_test_challenge_gates")
+	_t("_test_challenge_offers")
+	_t("_test_selection_bars_remembered")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Contracts", self))
@@ -218,18 +221,25 @@ func _test_offseason_flow() -> void:
 	GameState.start_next_season()
 	var ticked := true
 	var sizes_ok := true
+	var off_sizes := []
 	for code in GameState.season.lists:
 		if GameDB.enter_year(code) > GameState.season_year:
 			# Not an active club yet - its debut list arrives at entry.
 			continue
 		var list: Array = GameState.season.lists[code]
+		# A club in its first season fills its list in the national draft, which
+		# this flow skips (its 30 state-league signings fall short of 32 until
+		# then); expansion_package checks the full debut list after the draft.
+		if GameDB.enter_year(code) == GameState.season_year and list.size() < Contracts.MIN_LIST:
+			continue
 		if list.size() < Contracts.MIN_LIST or list.size() > Contracts.MAX_LIST:
 			sizes_ok = false
+			off_sizes.append("%s %d" % [code, list.size()])
 		for p in list:
 			if int(p.get("contract_years", 0)) < 1 or p.has("resigned"):
 				ticked = false
 	_check(ticked, "Every contract ticks down at the rollover")
-	_check(sizes_ok, "Every list stays between %d and %d" % [Contracts.MIN_LIST, Contracts.MAX_LIST])
+	_check(sizes_ok, "Every list stays between %d and %d (%s)" % [Contracts.MIN_LIST, Contracts.MAX_LIST, ", ".join(off_sizes)])
 	_check(GameState.free_agents.is_empty(), "Unsigned free agents leave at the rollover")
 	_check(is_same(GameState.my_list, GameState.season.lists[GameState.my_club]),
 			"Your list is the season's list after the rollover")
@@ -883,7 +893,8 @@ func _test_compensation_flow() -> void:
 	for c in GameState.compensation:
 		var found := false
 		for e in d.comp_picks:
-			if str(e["player"]) == str(c["player"]):
+			# A new club's extra picks sit in the same list with no player.
+			if str(e.get("player", "")) == str(c["player"]):
 				found = str(d.pick_sequence[int(e["index"])]) == str(c["club"])
 		if not found:
 			placed = false
@@ -1363,11 +1374,12 @@ func _run_draft() -> void:
 ## draft's and the next two drafts'; players never; a rival judges by its own
 ## read; a pick you sell moves you off the clock; the deal survives a save.
 func _test_draft_night_trades() -> void:
-	# A career where rivals deal on the night (seed 3: two deals; about one a
-	# night across seeds 1-6 and 2027).
+	# A career where rivals deal on the night (seed 1: one rival deal. With
+	# every update in the game, seeds 1, 5 and 6 of 1-8 have one and the rest
+	# none, so the seed is pinned to a night that has one.)
 	GameState.reset()
-	GameState.career_seed = 3
-	GameState.replay_seed = 3
+	GameState.career_seed = 1
+	GameState.replay_seed = 1
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	_to_offseason()
 	var me := GameState.my_club
@@ -2225,9 +2237,15 @@ func _test_pick_order_line() -> void:
 		s.ladder[c]["pf"] = 1000
 		s.ladder[c]["pa"] = 1000
 	s.ladder[me]["pts"] = 0
-	_check(GameState.pick_order_line().contains("No. 1."), "Last on the ladder, your first pick would be No. 1: %s" % GameState.pick_order_line())
+	# A new club's extra picks come before the ordinary ones (ExpansionBuild).
+	var y := GameState.season_year
+	var last_no := 1 + ExpansionBuild.picks_ahead(GameState, y, 1, n)
+	var top_no := n + ExpansionBuild.picks_ahead(GameState, y, n, n)
+	_check(GameState.pick_order_line().contains("No. %d." % last_no),
+			"Last on the ladder, your first pick would be the first ordinary pick, No. %d: %s" % [last_no, GameState.pick_order_line()])
 	s.ladder[me]["pts"] = 400
-	_check(GameState.pick_order_line().contains("No. %d." % n), "On top, it would be No. %d: %s" % [n, GameState.pick_order_line()])
+	_check(GameState.pick_order_line().contains("No. %d." % top_no),
+			"On top, it would be the last of the first round, No. %d: %s" % [top_no, GameState.pick_order_line()])
 	# A traded first-rounder is the first pick, and says whose it is.
 	var rival := "COL"
 	GameState.pick_owner = {"%d:1:%s" % [GameState.season_year, me]: rival, "%d:1:%s" % [GameState.season_year, rival]: me}
@@ -2638,3 +2656,153 @@ func _test_rivals_act_in_their_interest() -> void:
 				== Contracts.club_max(kid, "bench", 1 << 40) + Contracts.SALARY_STEP,
 				"A rebuilding club pays one step more for a young player still growing")
 	_check(GameState.MAX_AI_TRADES >= 40, "Rival trades have only a runaway guard")
+
+
+## Row 114 (Challenge.gd): Youth only refuses a trade for, or an offer to, a
+## player over 24 and lets a 24-year-old through; Rebuild bars the three who
+## walked out. Picks and your own players going out are never barred.
+func _test_challenge_gates() -> void:
+	_new_season()
+	_to_offseason()
+	GameState.challenge = {"kind": "youth"}
+	var me := GameState.my_club
+	var rival := ""
+	var old := {}
+	var young := {}
+	for code in GameState.season.lists:
+		if code == me:
+			continue
+		for q in GameState.season.lists[code]:
+			var age := int(floor(float(q.get("age", 0))))
+			if age >= 25 and old.is_empty():
+				old = q
+			elif age <= 24 and young.is_empty():
+				young = q
+		if not old.is_empty() and not young.is_empty():
+			rival = code
+			break
+		old = {}
+		young = {}
+	_check(rival != "", "(setup) a rival with a player over 24 and one 24 or under")
+	if rival == "":
+		return
+	young["age"] = 24
+	old["age"] = 25
+	var mine := [str(GameState.my_list[0]["id"])]
+	var v_old := GameState.evaluate_trade(rival, mine, [str(old["id"])])
+	_check(not bool(v_old["ok"]) and str(v_old["code"]) == "trade_challenge"
+			and str(v_old["reason"]).contains(" is 25, and you cannot"),
+			"Youth only: a trade for a 25-year-old is refused, and says why (%s)" % str(v_old.get("reason")))
+	var v_young := GameState.evaluate_trade(rival, mine, [str(young["id"])])
+	_check(str(v_young.get("code", "")) != "trade_challenge",
+			"Youth only: a trade for a 24-year-old is weighed as usual (%s)" % str(v_young.get("reason")))
+	_check(not bool(GameState.make_trade(rival, mine, [str(old["id"])])["ok"]),
+			"Youth only: the trade cannot be pushed through")
+	# Free agency.
+	_check(not GameState.free_agents.is_empty(), "(setup) free agents to offer to")
+	if GameState.free_agents.is_empty():
+		return
+	var fa: Dictionary = GameState.free_agents[0]
+	fa["age"] = 27
+	var r := GameState.offer_free_agent(str(fa["id"]), Contracts.asking_salary(fa) * 2, 2)
+	_check(not bool(r["ok"]) and str(r["reason"]).contains(" is 27, and you cannot"),
+			"Youth only: no offer to a 27-year-old free agent (%s)" % str(r.get("reason")))
+	r = GameState.sign_free_agent(str(fa["id"]), 2)
+	_check(not bool(r["ok"]) and str(r["reason"]).begins_with("Youth only"), "Youth only: no signing at his price either")
+	fa["age"] = 24
+	r = GameState.offer_free_agent(str(fa["id"]), Contracts.asking_salary(fa) * 2, 2)
+	_check(not str(r.get("reason", "")).begins_with("Youth only"),
+			"Youth only: a 24-year-old free agent can be offered a deal (%s)" % str(r.get("reason")))
+	# Rebuild: the three who walked out never come back.
+	var other: Dictionary = GameState.free_agents[GameState.free_agents.size() - 1]
+	GameState.challenge = {"kind": "rebuild", "club": me, "gone": [{"id": str(other["id"])}]}
+	r = GameState.offer_free_agent(str(other["id"]), Contracts.asking_salary(other) * 2, 2)
+	_check(not bool(r["ok"]) and str(r["reason"]).begins_with("Rebuild:"),
+			"Rebuild: a player who walked out cannot be signed back (%s)" % str(r.get("reason")))
+	GameState.challenge = {}
+
+
+
+## Row 114, Youth only: a rival's bid for your player never includes one of
+## its players over 24, and an offer that somehow does says the real reason
+## when you accept it, not that the club moved on.
+func _test_challenge_offers() -> void:
+	_new_season()
+	_to_offseason()
+	GameState.challenge = {"kind": "youth"}
+	var me := GameState.my_club
+	var prospects := GameState.trade_prospects()
+	var over := 0
+	var any := 0
+	for code in GameState.season.lists:
+		if code == me:
+			continue
+		for o in GameState._bids(code, INF, prospects, me):
+			for a in o[0]:
+				any += 1
+				if Challenge.block_reason(GameState, a) != "":
+					over += 1
+	_check(any > 0 and over == 0, "Youth only: no rival bid to you includes a player over 24 (%d of %d)" % [over, any])
+	var rival := ""
+	var old := {}
+	for code in GameState.season.lists:
+		if code == me:
+			continue
+		for q in GameState.season.lists[code]:
+			if int(floor(float(q.get("age", 0)))) >= 25:
+				old = q
+				rival = code
+				break
+		if rival != "":
+			break
+	_check(rival != "", "(setup) a rival player over 24")
+	if rival == "":
+		GameState.challenge = {}
+		return
+	# Rivals bidding among themselves are not bound.
+	var free_over := 0
+	for o in GameState._bids(rival, INF, prospects, ""):
+		for a in o[0]:
+			if Challenge.block_reason(GameState, a) != "":
+				free_over += 1
+	_check(free_over > 0, "Rival clubs trading with each other are not bound by your challenge (%d)" % free_over)
+	GameState.trade_offers.append({"club": rival, "give": [str(old["id"])],
+			"take": [str(GameState.my_list[GameState.my_list.size() - 1]["id"])], "status": "open"})
+	var i := GameState.trade_offers.size() - 1
+	if GameState.open_trade_offers().has(i):
+		var r := GameState.accept_trade_offer(i)
+		_check(not bool(r["ok"]) and str(r["reason"]).begins_with("Youth only"),
+				"Accepting an offer of a player over 24 says why it can't go through (%s)" % str(r.get("reason")))
+	else:
+		_check(false, "(setup) the hand-made offer is open")
+	GameState.challenge = {}
+
+
+## Perf guard (Android, 2026-11-07: a trade-period week took seconds): while
+## the market is frozen a club's selection bars are worked out once per list
+## and reused, with the very same answer; a changed list is worked out again,
+## and nothing is remembered once the market moves.
+func _test_selection_bars_remembered() -> void:
+	var list: Array = GameDB.club_list("GEE").duplicate(true)
+	TradeValue.remember_bars(false)
+	var plain := TradeValue.selection_bars(list)
+	var b0 := TradeValue.bars_built
+	TradeValue.selection_bars(list)
+	_check(TradeValue.bars_built - b0 == 1, "With the market open, every ask works the bars out")
+	TradeValue.remember_bars(true)
+	b0 = TradeValue.bars_built
+	var first := TradeValue.selection_bars(list)
+	var second := TradeValue.selection_bars(list)
+	_check(TradeValue.bars_built - b0 == 1 and str(first) == str(plain) and str(second) == str(plain),
+			"Frozen, the same list is worked out once and gives the same bars")
+	second["x"] = 1
+	_check(str(TradeValue.selection_bars(list)) == str(plain), "A caller changing its copy changes nothing remembered")
+	list[0]["overall"] = int(list[0].get("overall", 0)) + 9
+	b0 = TradeValue.bars_built
+	TradeValue.selection_bars(list)
+	_check(TradeValue.bars_built - b0 == 1, "A changed list is worked out again")
+	TradeValue.remember_bars(false)
+	b0 = TradeValue.bars_built
+	TradeValue.selection_bars(list)
+	TradeValue.selection_bars(list)
+	_check(TradeValue.bars_built - b0 == 2, "Once the market moves, nothing is remembered")

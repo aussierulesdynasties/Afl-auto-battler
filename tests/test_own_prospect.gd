@@ -1,14 +1,16 @@
 extends RefCounted
 ## Row 64 (4.Q8): the prospect you create at New Career, Alastair McNeil,
-## enters the first National Draft and his story is told (OwnProspect, switch
-## custom_prospect_story). Off, nothing is written, shown or saved.
+## enters the first National Draft and his story is told (OwnProspect).
 ## Run through tests/run_own_prospect_tests.gd.
 
 var failures: Array[String] = []
 var checks := 0
 
 const SEED := 6464
-const FEATURE := "custom_prospect_story"
+## The real-lists club the coach takes: Adelaide start with room under the
+## 38 senior spots, so they pick in the opening National Draft (a full club,
+## Geelong among them, passes every pick).
+const CLUB := "ADE"
 
 
 const Tap := preload("res://tests/tap.gd")
@@ -18,16 +20,13 @@ func run() -> void:
 	failures.clear()
 	checks = 0
 	_t("_test_spec")
-	_t("_test_switch_off")
 	_t("_test_redraft_first_draft")
 	_t("_test_real_lists_first_draft")
-	_t("_test_draft_untouched")
 	_t("_test_career_beats")
 	_t("_test_real_paths")
 	_t("_test_news_front")
 	_t("_test_save_reload")
 	await _t("_test_marks_on_screen")
-	Features.clear(FEATURE)
 	GameState.replay_seed = 0
 	GameState.reset()
 	print(Ran.line("Own prospect", self))
@@ -56,9 +55,8 @@ func _gs():
 	return GameState
 
 
-## A fresh career with Alastair made, the switch as given.
-func _fresh(on: bool) -> void:
-	Features.set_on(FEATURE, on)
+## A fresh career with Alastair made.
+func _fresh() -> void:
 	var gs = _gs()
 	gs.reset()
 	gs.replay_seed = SEED
@@ -75,14 +73,23 @@ func _own(gs) -> Dictionary:
 
 
 ## Run the National Draft on the board: the user's club takes the top of the
-## board, the AI does the rest. No preference for him either way.
-func _run_draft(gs) -> void:
+## board, the AI does the rest. No preference for him either way, unless
+## `take_him`: then the user's first pick is him. An overlooked prospect of
+## the opening real-lists draft leaves the game with the draft's pool, so the
+## tests that follow his career have your club take him.
+func _run_draft(gs, take_him := false) -> void:
 	var guard := 0
 	while not gs.draft.is_finished() and guard < 600:
 		guard += 1
 		if gs.draft.is_user_turn():
 			var board: Array = gs.draft.board("", "", "", "overall", true)
-			if board.is_empty() or not gs.draft.pick(board[0]):
+			var pick: Dictionary = board[0] if not board.is_empty() else {}
+			if take_him:
+				for c in board:
+					if str(c.get("id", "")) == str(gs.custom_prospect_id):
+						pick = c
+						take_him = false
+			if pick.is_empty() or not gs.draft.pick(pick):
 				break
 		else:
 			var club: String = gs.draft.current_club()
@@ -99,20 +106,8 @@ func _test_spec() -> void:
 			"He keeps his name and is marked as created")
 
 
-func _test_switch_off() -> void:
-	_fresh(false)
-	var gs = _gs()
-	gs.begin_draft()
-	var p := _own(gs)
-	_check(not p.is_empty() and OwnProspect.tag(p) == "", "Off: no mark on him")
-	_check(_mine(gs).is_empty() and gs.custom_prospect_story.is_empty(),
-			"Off: nothing is written to the news or kept for the save")
-	OwnProspect.check(gs)
-	_check(_mine(gs).is_empty() and gs.custom_prospect_story.is_empty(), "Off: a look does nothing")
-
-
 func _test_redraft_first_draft() -> void:
-	_fresh(true)
+	_fresh()
 	var gs = _gs()
 	gs.begin_draft()
 	var ids: Array = gs.draft.pool.map(func(q): return str(q["id"]))
@@ -143,7 +138,7 @@ func _test_redraft_first_draft() -> void:
 
 
 func _test_real_lists_first_draft() -> void:
-	_fresh(true)
+	_fresh()
 	var gs = _gs()
 	gs.begin_real_lists()
 	var told := _mine(gs)
@@ -151,8 +146,8 @@ func _test_real_lists_first_draft() -> void:
 			"Real lists: he nominates for the 2026 National Draft (%s)" % str(told))
 	var ids: Array = gs.draft.pool.map(func(q): return str(q["id"]))
 	_check(ids.has(gs.custom_prospect_id), "Real lists: he is in the opening National Draft pool")
-	gs.choose_real_club("GEE")
-	_run_draft(gs)
+	gs.choose_real_club(CLUB)
+	_run_draft(gs, true)
 	_check(gs.draft.is_finished() and gs.finish_intake_draft(), "(setup) the opening draft finishes")
 	_draft_beat(gs, GameDB.DATA_SEASON, "real lists")
 
@@ -180,30 +175,14 @@ func _draft_beat(gs, year: int, label: String) -> void:
 	_check(_mine(gs).size() == n, "%s: nothing is told twice" % label)
 
 
-## The story only reads: the opening draft goes exactly the same with the
-## switch on or off.
-func _test_draft_untouched() -> void:
-	var picks := []
-	for on in [false, true]:
-		_fresh(on)
-		var gs = _gs()
-		gs.begin_real_lists()
-		gs.choose_real_club("GEE")
-		_run_draft(gs)
-		picks.append(gs.draft.pick_history.map(func(e): return "%s:%s" % [str(e.get("club", "")), str(e.get("player_id", ""))]))
-		gs.finish_intake_draft()
-	_check(picks[0].size() >= 40 and picks[0] == picks[1],
-			"The same seed drafts the same players with the story on or off (%d picks)" % picks[0].size())
-
-
 ## His career from the news: taken, debut, a move, delisted, re-signed, a
 ## season, retired. The moves are made by hand; the lines are the system's.
 func _test_career_beats() -> void:
-	_fresh(true)
+	_fresh()
 	var gs = _gs()
 	gs.begin_real_lists()
-	gs.choose_real_club("GEE")
-	_run_draft(gs)
+	gs.choose_real_club(CLUB)
+	_run_draft(gs, true)
 	gs.finish_intake_draft()
 	var id: String = gs.custom_prospect_id
 	var p := _own(gs)
@@ -270,11 +249,11 @@ func _test_career_beats() -> void:
 ## National Draft and the rollover he retires at. The news keeps only the
 ## latest lines, so each of his is gathered as it is told.
 func _test_real_paths() -> void:
-	_fresh(true)
+	_fresh()
 	var gs = _gs()
 	gs.begin_real_lists()
-	gs.choose_real_club("GEE")
-	_run_draft(gs)
+	gs.choose_real_club(CLUB)
+	_run_draft(gs, true)
 	gs.finish_intake_draft()
 	var id: String = gs.custom_prospect_id
 	var p := _own(gs)
@@ -299,14 +278,14 @@ func _test_real_paths() -> void:
 	gs.advance()
 	_gather(gs, told)
 	_check(gs.games_played(p) >= 1, "(setup) he plays the round")
-	_check(_has(told, "made his AFL debut for Geelong") == 1, "A round played tells his debut (%s)" % str(told))
+	_check(_has(told, "made his AFL debut for Adelaide") == 1, "A round played tells his debut (%s)" % str(told))
 	gs.advance()
 	_gather(gs, told)
 	_check(_has(told, "debut") == 1, "The next round does not tell it again (%s)" % str(told))
-	# A trade: Geelong send him to Carlton.
+	# A trade: Adelaide send him to Carlton.
 	gs._execute_trade(gs.my_club, "CAR", [p], [])
 	_gather(gs, told)
-	_check(_has(told, "has moved from Geelong to Carlton") == 1, "A trade tells his move (%s)" % str(told))
+	_check(_has(told, "has moved from Adelaide to Carlton") == 1, "A trade tells his move (%s)" % str(told))
 	# The season to its end: one line with his year at Carlton.
 	var guard := 0
 	while not gs.season.is_season_over() and guard < 60:
@@ -389,10 +368,10 @@ func _test_news_front() -> void:
 
 
 func _test_save_reload() -> void:
-	_fresh(true)
+	_fresh()
 	var gs = _gs()
 	gs.begin_real_lists()
-	gs.choose_real_club("GEE")
+	gs.choose_real_club(CLUB)
 	var before: Dictionary = gs.custom_prospect_story.duplicate(true)
 	_check(not before.is_empty() and gs.save_career() and gs.load_career(), "(setup) save and reload mid-draft")
 	_check(gs.custom_prospect_story == before, "His story survives a reload (%s)" % str(gs.custom_prospect_story))
@@ -419,51 +398,44 @@ func _test_save_reload() -> void:
 
 
 ## His draft-board row and his profile say "Created by you"; a finger's tap on
-## the row opens him. Off, neither mark is there.
+## the row opens him.
 func _test_marks_on_screen() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		GameState.set_setting("seen_%s_intro" % key, true)
-	for on in [true, false]:
-		_fresh(on)
-		GameState.begin_real_lists()
-		GameState.choose_real_club("GEE")
-		var id: String = GameState.custom_prospect_id
-		tree.root.size = Vector2i(390, 844)
-		var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
-		tree.root.add_child(ui)
+	_fresh()
+	GameState.begin_real_lists()
+	GameState.choose_real_club(CLUB)
+	var id: String = GameState.custom_prospect_id
+	tree.root.size = Vector2i(390, 844)
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	tree.root.add_child(ui)
+	await _settle(tree)
+	var done = ui.find_child("MeetingDone", true, false)
+	if done != null:
+		await Tap.tap(done)
 		await _settle(tree)
-		var done = ui.find_child("MeetingDone", true, false)
-		if done != null:
-			await Tap.tap(done)
-			await _settle(tree)
-		ui.set("_search", "McNeil")
-		ui.call("_refresh_board", true)
+	ui.set("_search", "McNeil")
+	ui.call("_refresh_board", true)
+	await _settle(tree)
+	var mark: Label = ui.find_child("Own_" + id, true, false)
+	var inspect: Button = ui.find_child("Inspect_" + id, true, false)
+	_check(inspect != null, "His row is on the board when searched")
+	_check(mark != null and mark.text == OwnProspect.TAG and mark.is_visible_in_tree(),
+			"His draft row says %s" % OwnProspect.TAG)
+	if inspect != null:
+		var why: String = await Tap.tap(inspect)
+		_check(why == "", "A finger's tap on his row reaches it (%s)" % why)
 		await _settle(tree)
-		var mark: Label = ui.find_child("Own_" + id, true, false)
-		var inspect: Button = ui.find_child("Inspect_" + id, true, false)
-		_check(inspect != null, "(%s) his row is on the board when searched" % ("on" if on else "off"))
-		if on:
-			_check(mark != null and mark.text == OwnProspect.TAG and mark.is_visible_in_tree(),
-					"His draft row says %s" % OwnProspect.TAG)
-			if inspect != null:
-				var why: String = await Tap.tap(inspect)
-				_check(why == "", "A finger's tap on his row reaches it (%s)" % why)
-				await _settle(tree)
-				_check(ui.find_child("PlayerDetail", true, false) != null, "The tap opens his details")
-		else:
-			_check(mark == null, "Off: his draft row has no mark")
-		ui.queue_free()
-		await _settle(tree)
-		var box := VBoxContainer.new()
-		PlayerSheet._identity(box, _own(GameState))
-		var line: Label = box.find_child("ProfileCreatedByYou", true, false)
-		if on:
-			_check(line != null and line.text == "Created by you at the start of this career.",
-					"His profile says he is the player you created")
-		else:
-			_check(line == null, "Off: his profile has no mark")
-		box.free()
+		_check(ui.find_child("PlayerDetail", true, false) != null, "The tap opens his details")
+	ui.queue_free()
+	await _settle(tree)
+	var box := VBoxContainer.new()
+	PlayerSheet._identity(box, _own(GameState))
+	var line: Label = box.find_child("ProfileCreatedByYou", true, false)
+	_check(line != null and line.text == "Created by you at the start of this career.",
+			"His profile says he is the player you created")
+	box.free()
 
 
 func _settle(tree: SceneTree) -> void:

@@ -1,6 +1,6 @@
 class_name Almanac
 extends RefCounted
-## The club almanac (plan step 1c, behind the switch "club_almanac"): the
+## The club almanac (plan step 1c): the
 ## keepsake of a coach's career, one page per season. Each entry is written
 ## once at the season's end from what the sim really did (GameState
 ## _close_season_awards), and the legends who retired are added at the
@@ -11,13 +11,15 @@ extends RefCounted
 ## Entry keys (all saved; older entries may lack any of them):
 ##   year, club, ladder, of, w, l, d, finals_tag, finals_text, finals_w,
 ##   finals_l, premier (code), runner_up (code), flag (bool: your club won it),
-##   bf, brownlow, coleman ([{id, name, club, ...}] 0 or 1 row),
+##   bf, brownlow, coleman, golden_fist ([{id, name, club, ...}] 0 or 1 row),
 ##   goalkicker ({id, name, goals} or {}), records ([text]), legends
 ##   ([{id, name, games, goals, why}]), club_records_broken ([text]),
 ##   season_hero ([{id, name, count}], with the match story on),
 ##   story_of_the_season (3 to 5 sentences, story_parts + compose) and
 ##   story_parts {result, hero, match, turn, arc, legends}: "arc" stays ""
 ##   until plan step 1a writes a coach-arc sentence into it and recomposes.
+##   challenge_met (the words of your own goal, Challenge.gd) only on the page
+##   of the season it was first met.
 
 ## A retiring player is a club legend at any one of these marks (director,
 ## 2026-11-03): goals or games for the club, club best-and-fairests, Brownlows,
@@ -35,11 +37,6 @@ const STORY_KEY := "story_of_the_season"
 ## The story's parts, kept so a later sentence (legends, a coach arc) can be
 ## added and the story told again (compose).
 const PARTS_KEY := "story_parts"
-const FEATURE := "club_almanac"
-
-
-static func on() -> bool:
-	return Features.on(FEATURE)
 
 
 ## The season just finished, as the almanac keeps it. `gs` is GameState,
@@ -80,6 +77,7 @@ static func season_entry(gs) -> Dictionary:
 		"bf": _named(gs, roll.get("my_bf", [])),
 		"brownlow": _named(gs, roll.get("brownlow", [])),
 		"coleman": _named(gs, roll.get("coleman", [])),
+		"golden_fist": _named(gs, roll.get("golden_fist", [])),
 		"goalkicker": _goalkicker(gs, my),
 		"records": _records_broken(gs),
 		"legends": [],
@@ -153,8 +151,8 @@ static func add_legends(gs, retired: Array, listed: Dictionary) -> void:
 	if gs.almanac.is_empty():
 		return
 	var entry: Dictionary = gs.almanac.back()
-	# Only onto the page of the season just closed: with the switch turned on
-	# mid-career, the last page may be an older year that these men never saw out.
+	# Only onto the page of the season just closed: in a career begun before the
+	# almanac existed, the last page may be an older year that these men never saw out.
 	if int(entry.get("year", 0)) != int(gs.season_year):
 		return
 	var club := str(entry.get("club", ""))
@@ -274,10 +272,8 @@ static func _bump(hit: Dictionary, id: String, key: String, club: String) -> voi
 
 ## The season hero (director, 2026-11-03): your player with the most match-hero
 ## awards this season, from the match story digest. {id, name, count} or {}
-## (none, or the match story switch off). Ties go to the BF votes.
+## (none). Ties go to the BF votes.
 static func season_hero(gs) -> Dictionary:
-	if not MatchStory.on():
-		return {}
 	var d: Dictionary = gs.match_story_digest.get(str(int(gs.season_year)), {})
 	if d.is_empty():
 		return {}
@@ -468,7 +464,7 @@ static func rows(almanac: Array, honour_roll: Array) -> Array:
 				"premier": str(h.get("premier", "")), "runner_up": str(h.get("runner_up", "")),
 				"flag": my != "" and str(h.get("premier", "")) == my,
 				"bf": h.get("my_bf", []), "brownlow": h.get("brownlow", []),
-				"coleman": h.get("coleman", []), "partial": true}
+				"coleman": h.get("coleman", []), "golden_fist": h.get("golden_fist", []), "partial": true}
 		if rec.size() == 3:
 			e["w"] = int(rec[0])
 			e["l"] = int(rec[1])

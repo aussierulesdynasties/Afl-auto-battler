@@ -163,12 +163,32 @@ func _screen(key: String, size: Vector2i) -> void:
 	if found.is_empty():
 		_table.append("%s | no long scroller" % tag)
 		return
+	var names: Array = found.map(func(n): return String((n as Node).name))
 	for si in range(found.size()):
+		# a resize may rebuild the page and free the scrollers found before it:
+		# find this one again, by name, in the page as it is now
+		if not is_instance_valid(found[si]):
+			var now: Array = []
+			_scrollers(current_scene, now)
+			found[si] = null
+			for c in now:
+				if String((c as Node).name) == names[si]:
+					found[si] = c
+					break
+			if found[si] == null:
+				_check(false, "%s %dx%d: scroller %s is gone after a resize" % [key, size.x, size.y, names[si]])
+				continue
 		var sc: ScrollContainer = found[si]
 		var label := "%s #%d (%s)" % [tag, si, sc.name]
 		var res := []
-		await _thumb_drag(sc, label, res)
-		await _drift(sc, label, res)
+		if sc.vertical_scroll_mode == ScrollContainer.SCROLL_MODE_SHOW_NEVER:
+			# A page that shows no bar (Training's card grid on a phone) has no
+			# thumb to drag: the finger and the wheel move it.
+			_check(not sc.get_v_scroll_bar().visible, "%s: a page without a bar shows none" % label)
+			res.append("no thumb (no bar shown)")
+		else:
+			await _thumb_drag(sc, label, res)
+			await _drift(sc, label, res)
 		await _wheel(sc, label, res)
 		await _touch(sc, label, res)
 		await _resize(sc, label, res)
@@ -505,8 +525,18 @@ func _test_hub_round1(size: Vector2i) -> void:
 				last_row = (n as Control).get_child((n as Control).get_child_count() - 1)
 		_check(last_row != null, "%s: found the ladder's rows" % tag)
 		if last_row != null:
+			# On a wide screen the ladder is its own column: when the week
+			# column beside it runs longer (it depends on the round's
+			# opponent, so on the fixture), the end of the page is past the
+			# ladder. The row must still be reachable: scroll it into view.
 			var view2 := sc.get_global_rect()
+			var cols: Control = hub.find_child("HubColumns", true, false)
+			var side_by_side := cols != null and cols.is_ancestor_of(lad)
+			if side_by_side and not view2.grow(1).encloses(last_row.get_global_rect()):
+				sc.ensure_control_visible(last_row)
+				await _settle(4)
 			_check(view2.grow(1).encloses(last_row.get_global_rect()),
-					"%s: the last ladder row is fully inside the page at the end (%s in %s)" % [tag, last_row.get_global_rect(), view2])
+					"%s: the last ladder row is fully inside the page %s (%s in %s)" % [tag,
+					"once scrolled to" if side_by_side else "at the end", last_row.get_global_rect(), view2])
 	if OS.get_environment("HUBSHOT") != "":
 		get_root().get_viewport().get_texture().get_image().save_png("%s_%s_%dx%d.png" % [OS.get_environment("HUBSHOT"), "end", size.x, size.y])

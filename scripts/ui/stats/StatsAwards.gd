@@ -149,6 +149,8 @@ static func _honours(host: Control, aw: Dictionary) -> Control:
 		["Coleman Medal", _first(aw.get("coleman", [])), "goals", "goal"],
 		["Coaches Award", _first(aw.get("coaches_award", [])), "coaches", "vote"],
 		["Rising Star", _first(aw.get("rising_star", [])), "", ""],
+		# The best defender: his counts are in the season review, too long for this column.
+		[Awards.GOLDEN_FIST_SHORT, _first(aw.get("golden_fist", [])), "", ""],
 	]
 	var rows := []
 	var fig_w := 0.0
@@ -336,8 +338,8 @@ static func _player_row(host: Control, id: String, club: String, rank: String, f
 			bold or club == GameState.my_club)
 	who.name = "Name"
 	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# His club in its own colour where it reads; otherwise the rule beside it.
-	var c := UiKit.ellipsis(GameDB.club_short(club), 14, StatsSide.ink(club), club == GameState.my_club)
+	# His club in its strongest real colour that reads (director, 2026-11-06).
+	var c := UiKit.ellipsis(GameDB.club_short(club), 14, StatsSide.code_ink(club), club == GameState.my_club)
 	c.name = "Club"
 	if stack:
 		var both := UiKit.vbox(0)

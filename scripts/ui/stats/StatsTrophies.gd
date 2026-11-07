@@ -27,6 +27,7 @@ const PLAYER_HONOURS := [
 	["coleman", "leading_goalkicker_medal", "Coleman Medal", "goals", "goal"],
 	["rising_star", "rising_star", "Rising Star", "", ""],
 	["norm_smith", "norm_smith_medal", "Norm Smith Medal", "", ""],
+	["golden_fist", "golden_fist", Awards.GOLDEN_FIST, "", ""],
 	["coaches_award", "coaches_award", "Coaches Award", "coaches", "vote"],
 	["my_bf", "club_bnf", "Best and fairest", "bf", "best and fairest vote"],
 ]
@@ -41,6 +42,7 @@ const AWARD_KINDS := [
 	["all_australian", "All-Australian"],
 	["rising_star", "Rising Star"],
 	["norm_smith", "Norm Smith Medal"],
+	["golden_fist", Awards.GOLDEN_FIST],
 	["coaches_award", "Coaches Award"],
 	["my_bf", "Best and fairest"],
 ]
@@ -77,6 +79,11 @@ static func build(host: Control) -> Control:
 	if award_filter == "" or not CLUB_KINDS.has(award_filter):
 		v.add_child(_player_honours(host, seasons))
 	v.add_child(_tenure_table(host, seasons, in_progress))
+	# The players who left with 150 games or an honour (rulings no. 112).
+	var n := HonourBoard.rows(GameState.honour_board, GameState.my_list).size()
+	var board := UiKit.section_link("Honour board", ("%d %s" % [n, "player" if n == 1 else "players"] if n > 0 			else "No one yet") + "  ›", "HonourBoardLink")
+	board.pressed.connect(func(): ClubPage.open_board(host))
+	v.add_child(board)
 	return v
 
 
@@ -143,6 +150,38 @@ static func _in_progress() -> bool:
 		if int(e.get("year", 0)) == GameState.season_year:
 			return false
 	return true
+
+
+## This season's Finals cell while it is being played (director, 2026-11-06):
+## before the finals, how far the home-and-away season has gone ("Round 3 of
+## 24"); during them, the final you last played ("Qualifying final"), or the
+## week's name when you were not in it; once the Grand Final is played, the
+## result, as a past season reads.
+static func progress(season, club: String) -> String:
+	if season == null:
+		return ""
+	var weeks: Array = season.finals.get("weeks", []) if not season.finals.is_empty() else []
+	if weeks.is_empty():
+		var total: int = season.fixture.size() if not season.fixture.is_empty() else Season.REGULAR_ROUNDS
+		return "Round %d of %d" % [clampi(int(season.round_index), 1, total), total]
+	if bool(season.finals.get("done", false)):
+		if str(season.finals.get("premier", "")) == club:
+			return "Premiers"
+		if str(season.finals.get("runner_up", "")) == club:
+			return "Runners-up"
+	var tag := ""
+	for week in weeks:
+		for res in week:
+			if str(res.get("home", "")) == club or str(res.get("away", "")) == club:
+				tag = str(res.get("tag", ""))
+	if bool(season.finals.get("done", false)):
+		return str(FINALS.get(tag.substr(0, 2), ""))
+	for res in weeks[weeks.size() - 1]:
+		if str(res.get("home", "")) == club or str(res.get("away", "")) == club:
+			return str(FINALS.get(str(res.get("tag", "")).substr(0, 2), ""))
+	# Not in this week's finals: the week as the Fixture names it.
+	var names: Array = StatsFixture.FINALS_WEEKS
+	return str(names[weeks.size() - 1]) if weeks.size() <= names.size() else ""
 
 
 # ---------------------------------------------------------------------------
@@ -293,6 +332,9 @@ static func player_honours(seasons: Array) -> Array:
 			if str(h[3]) != "":
 				var n := int(r.get(str(h[3]), 0))
 				count = "%d %s" % [n, str(h[4]) if n == 1 else str(h[4]) + "s"]
+			elif str(h[0]) == "golden_fist":
+				# What won it: his season's counts on his own path.
+				count = Awards.golden_fist_line(r)
 			out.append({"key": str(h[0]), "art": str(h[1]), "name": honour_name(str(h[0]), str(h[2])), "id": str(r.get("id", "")),
 					"year": year, "count": count})
 		for id in e.get("my_aa", []):
@@ -379,7 +421,7 @@ static func _tenure_table(host: Control, seasons: Array, in_progress: bool) -> C
 		# Where you sit on the ladder, once there is a ladder to sit on.
 		var played: bool = GameState.my_record() != "0-0-0"
 		var r := _tenure_row([str(GameState.season_year), GameState.ordinal(GameState.my_position()) if played else "",
-				GameState.my_record(), "In progress"], false, false, row_h)
+				GameState.my_record(), progress(GameState.season, GameState.my_club)], false, false, row_h)
 		n += 1
 		r.name = "Season_%d" % GameState.season_year
 		v.add_child(r)

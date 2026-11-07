@@ -48,6 +48,7 @@ func _run() -> void:
 	await _t("_test_draft_night_screen", [Vector2i(1280, 720)])
 	await _t("_test_trade_picks_sheet", [Vector2i(390, 844)])
 	await _t("_test_trade_picks_sheet", [Vector2i(1280, 720)])
+	await _t("_test_full_list_before_and_during_draft")
 	print(Ran.line("Intake UI", self))
 	_state.replay_seed = 0
 	quit(0 if _failures.is_empty() else 1)
@@ -521,6 +522,113 @@ func _test_pick_order_and_untouchable_ui() -> void:
 	await _settle()
 
 
+## Director report, 2026-11-07: "I had 4 picks in the draft but it only let
+## me use two. Maybe my list was full, but I had no idea". With a nearly full
+## senior list, the draft button first says which picks will pass, offers the
+## off-season screen to delist, and the draft screen says a pass when it
+## happens. Real taps at a phone size.
+func _test_full_list_before_and_during_draft() -> void:
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("COL", _db.club_list("COL"))
+	var s = _state.season
+	s.round_index = s.fixture.size()
+	# The season is over (the hub offers the draft only then): finals done.
+	s.finals = {"done": true, "premier": "CAR", "runner_up": "ESS"}
+	_state.open_offseason()
+	var cap: int = load("res://scripts/state/RookieList.gd").SENIOR_SPOTS
+	var rl = load("res://scripts/state/RookieList.gd")
+	var n := 0
+	while rl.senior_count(_state.my_list) < cap - 1 and n < 40:
+		var copy: Dictionary = (_state.my_list[n % _state.my_list.size()] as Dictionary).duplicate(true)
+		copy["id"] = "pad_%d" % n
+		copy["rookie_list"] = ""
+		_state.my_list.append(copy)
+		n += 1
+	for p in _state.my_list:
+		p["contract_years"] = 3
+	var spots: Dictionary = _state.draft_list_spots()
+	_check((spots["passing"] as Array).size() >= 1, "Some picks have no spot (%s)" % str(spots))
+	root.size = Vector2i(390, 844)
+	for round_trip in ["delist", "start"]:
+		var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+		root.add_child(hub)
+		await _settle()
+		var go: Button = null
+		for b in hub.find_children("*", "Button", true, false):
+			if (b as Button).text == "%d National Draft" % int(_state.season_year):
+				go = b
+		_check(go != null, "The hub offers the National Draft")
+		if go == null:
+			hub.queue_free()
+			return
+		await _press(go, "the National Draft button")
+		await _settle()
+		var sheet: Control = hub.find_child("DraftSpots", true, false)
+		_check(sheet != null, "The draft button first opens the list-spots sheet")
+		_check(_state.draft == null or not _state.draft.intake_mode, "The draft has not started yet")
+		var passing: Label = hub.find_child("DraftSpotsPassing", true, false)
+		var want := "%s %s will pass." % ["Pick" if (spots["passing"] as Array).size() == 1 else "Picks",
+				load("res://scripts/sim/Draft.gd").picks_words(spots["passing"])]
+		_check(passing != null and passing.text == want,
+				"The sheet names the picks that will pass: %s" % (passing.text if passing else "-"))
+		var rule: Label = hub.find_child("DraftSpotsRule", true, false)
+		_check(rule != null and rule.text.contains("delisted before the draft starts"), "The sheet states the rule")
+		var said := ""
+		for l in sheet.find_children("*", "Label", true, false) if sheet else []:
+			said += (l as Label).text.to_lower() + " "
+		for w in ["you should", "recommend", "best", "must"]:
+			_check(not said.contains(w), "The sheet never tells the coach what to do (%s)" % w)
+		var vp := Rect2(Vector2.ZERO, Vector2(root.size))
+		for bn in ["DraftSpotsDelist", "DraftSpotsStart"]:
+			var b: Button = hub.find_child(bn, true, false)
+			_check(b != null and vp.grow(1).encloses(b.get_global_rect()) and b.size.y >= 44,
+					"%s is on screen and thumb-sized" % bn)
+		var tap: Button = hub.find_child("DraftSpotsDelist" if round_trip == "delist" else "DraftSpotsStart", true, false)
+		if tap == null:
+			hub.queue_free()
+			return
+		await _press(tap, tap.text)
+		for i in range(20):
+			await process_frame
+		var cur := current_scene
+		if round_trip == "delist":
+			_check(cur != null and cur.scene_file_path.ends_with("OffseasonScene.tscn"),
+					"Delist players opens the off-season screen (%s)" % (cur.scene_file_path if cur else "-"))
+			_check(_state.offseason_open(), "Players can still be delisted: the off-season is open")
+		else:
+			_check(_state.draft != null and _state.draft.intake_mode, "Start the draft starts it")
+			_check(cur != null and cur.scene_file_path.ends_with("DraftScene.tscn"), "The draft screen opens")
+		hub.queue_free()
+		if cur != null and cur != hub:
+			cur.queue_free()
+		await _settle()
+	var draft = _state.draft
+	if draft == null:
+		return
+	for i in range(400):
+		if draft.is_finished() or not draft.user_passed.is_empty():
+			break
+		if draft.is_user_turn():
+			draft.pick_for_me()
+		else:
+			draft.auto_until_user_turn()
+	_check(not draft.user_passed.is_empty(), "A pick passed for a full list")
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	var done: Button = ui.find_child("MeetingDone", true, false)
+	if done != null:
+		await _press(done, "Done in the recruiting meeting")
+		await _settle()
+	var said_pass: Label = ui.find_child("YourPicksPassed", true, false)
+	_check(said_pass != null and said_pass.is_visible_in_tree() and said_pass.text == draft.user_passed_line()
+			or (said_pass != null and draft.is_finished() and said_pass.text != ""),
+			"The draft screen says the pass when it happens: %s" % (said_pass.text if said_pass else "-"))
+	ui.queue_free()
+	await _settle()
+
+
 ## UiKit's body ink (loaded when asked: UiKit needs the GameDB autoload).
 func _text_ink() -> Color:
 	return load("res://scripts/ui/UiKit.gd").TEXT
@@ -720,8 +828,14 @@ func _test_draft_night_screen(size: Vector2i) -> void:
 			"The board has Fremantle on the clock in words (%s: %s)" % [tag, status.text if status else "-"])
 	_check(yours != null and yours.is_visible_in_tree() and yours.text == "You're on the clock",
 			"The board shows your pick (%s: %s)" % [tag, yours.text if yours else "-"])
-	var recent := ui.find_children("RecentPick_*", "Control", true, false)
-	var rows_want := mini(3 if size.y >= 780 or size.x >= 760 else 2, draft.pick_history.size())
+	# A rivals' trade struck on the night takes a row of the strip like a pick.
+	var recent: Array = ui.find_children("RecentPick_*", "Control", true, false) \
+			+ ui.find_children("RecentTrade_*", "Control", true, false)
+	var events: int = draft.pick_history.size()
+	for t in draft.night_trades:
+		if int(t["at"]) <= draft.pick_index + 1:
+			events += 1
+	var rows_want := mini(3 if size.y >= 780 or size.x >= 760 else 2, events)
 	_check(recent.size() == rows_want, "The last picks are under it: three, two on a shorter screen (%s: %d)" % [tag, recent.size()])
 	var strip: Control = ui.find_child("RecentPicks", true, false)
 	if size.x >= 760:

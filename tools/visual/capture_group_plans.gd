@@ -1,11 +1,11 @@
 extends SceneTree
-## The pre-season plan by position group (row 101), for the director's look.
+## The pre-season drill plan by position group (row 101), for the director's look.
 ## Needs a real renderer and a window (keep it out of the way with an override.cfg):
 ##   godot --path . --script tools/visual/capture_group_plans.gd -- --out /tmp/gp --club FRE [--size 360x800]
-## Writes <out>_every.png (the "Plan for" choice on every group, the first
-## block under it), <out>_forwards.png (the forwards picked, their first block
-## set to Heavy; _forwards_block.png scrolled to that block) and <out>_back.png (every group again, the line naming the
-## group with a plan of its own). Nothing here touches a real save.
+## Weeks 1 to 3 go on Game plan. Writes <out>_whole.png (the drill row on the
+## whole side), <out>_forwards.png (the forwards' tab, Win contest added to
+## their drills) and <out>_split.png (the whole side again, the line naming
+## the split). Nothing here touches a real save.
 
 var W := 360
 var H := 800
@@ -40,7 +40,6 @@ func _run() -> void:
 			W = int(wh[0])
 			H = int(wh[1])
 	await process_frame
-	load("res://scripts/core/Features.gd").set_on("preseason", true)
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
 	state.autosave_enabled = false
@@ -73,19 +72,29 @@ func _run() -> void:
 	state.open_preseason()
 	root.get_node("Router").go("hub")
 	await _frames(10)
-	await _scroll_to("PreSeasonGroups")
-	await _shot(out + "_every.png")
-	await _press("Group_FWD")
-	await _press("Load0_heavy")
-	await _scroll_to("PreSeasonGroups")
+	await _press("Focus0_plan")
+	await _scroll_to("Drill0")
+	await _shot(out + "_whole.png")
+	await _press("DrillFor0_FWD")
+	await _press("Drill0_contest")
+	await _scroll_to("Drill0")
 	await _shot(out + "_forwards.png")
-	await _scroll_to("Block_0")
-	await _shot(out + "_forwards_block.png")
-	await _press("Group_ALL")
-	await _scroll_to("PreSeasonGroups")
-	await _shot(out + "_back.png")
-	print("forwards ", state.preseason_blocks("", "FWD")[0], " mids ", state.preseason_blocks("", "MID")[0])
+	await _press("DrillFor0_ALL")
+	await _scroll_to("Drill0")
+	await _shot(out + "_split.png")
+	print("forwards ", state.preseason_drills(0, "FWD"), " mids ", state.preseason_drills(0, "MID"))
 	quit(0)
+
+
+## Find a node under the root, waiting up to 120 frames for the scene to build
+## (a phone-sized window lays out slower than the first press).
+func _find(node_name: String) -> Node:
+	for i in range(120):
+		var n: Node = root.find_child(node_name, true, false)
+		if n != null:
+			return n
+		await process_frame
+	return null
 
 
 func _frames(n: int) -> void:
@@ -96,7 +105,7 @@ func _frames(n: int) -> void:
 ## Bring a node to the top of whatever scroll holds it.
 func _scroll_to(node_name: String) -> void:
 	await _frames(4)
-	var n: Node = current_scene.find_child(node_name, true, false)
+	var n: Node = await _find(node_name)
 	var p: Node = n.get_parent() if n != null else null
 	while p != null and not (p is ScrollContainer):
 		p = p.get_parent()
@@ -110,7 +119,7 @@ func _scroll_to(node_name: String) -> void:
 
 func _press(node_name: String) -> void:
 	await _frames(3)
-	var b: Node = current_scene.find_child(node_name, true, false)
+	var b: Node = await _find(node_name)
 	if b is Button:
 		(b as Button).emit_signal("pressed")
 	else:

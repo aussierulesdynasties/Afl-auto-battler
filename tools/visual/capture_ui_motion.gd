@@ -1,7 +1,7 @@
 extends SceneTree
-## Visual review tool for the menu-motion prototype (ui_motion switch). Windowed:
+## Visual review tool for the menu motion. Windowed:
 ##   godot --windowed --path . --script tools/visual/capture_ui_motion.gd -- --out <prefix> --size 390x844
-## Writes, for a win and for a loss of the week result sheet with ui_motion ON:
+## Writes, for a win and for a loss of the week result sheet:
 ## <out>_win_mid.png (about 60 ms in, mid fade and rise), <out>_win_rest.png (settled),
 ## <out>_loss_mid.png, <out>_loss_rest.png. Never touches a real save.
 
@@ -34,7 +34,6 @@ func _run() -> void:
 	var db = root.get_node("GameDB")
 	var UK = load("res://scripts/ui/UiKit.gd")
 	var feel = load("res://scripts/ui/Feel.gd")
-	var feat = load("res://scripts/core/Features.gd")
 	state.autosave_enabled = false
 	state.save_path = "user://capture_ui_motion.save"
 	state.settings_path = "user://capture_ui_motion.cfg"
@@ -45,7 +44,6 @@ func _run() -> void:
 	root.size = Vector2i(_w, _h)
 	DisplayServer.window_set_size(Vector2i(_w, _h))
 	feel.force_phone = true
-	feat.set_on("ui_motion", true)
 	for win in [true, false]:
 		var tag := "win" if win else "loss"
 		state.reset()
@@ -82,7 +80,6 @@ func _run() -> void:
 		print(tag, " Feel.moved: ", feel.moved)
 		hub.queue_free()
 		await _frames(4)
-	feat.clear("ui_motion")
 	quit(0)
 
 

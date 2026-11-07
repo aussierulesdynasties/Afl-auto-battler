@@ -2,7 +2,9 @@ extends RefCounted
 ## Training plans and the stat guide: plans spend a player's XP after every
 ## game (there is no Manual: cut 2026-11-03), single-stat focus touches only that stat, changing a
 ## plan spends banked XP at once, the club plan applies to anyone without his
-## own, plans survive a save, and every stat has a full guide entry.
+## own, plans survive a save, and every stat has a full guide entry. Stat
+## focus (row 97): one stat focus a season, locked until the next
+## season opens, about a third of his training; old saves keep one focus.
 ## Run through tests/run_training_tests.gd.
 
 var failures: Array[String] = []
@@ -41,6 +43,11 @@ func run() -> void:
 	_t("_test_retraining_is_additive")
 	_t("_test_training_lift_unwound")
 	_t("_test_teaching_moves_the_ceiling")
+	_t("_test_stat_focus_once_a_season")
+	_t("_test_stat_focus_split")
+	_t("_test_stat_focus_unlocks_next_season")
+	_t("_test_stat_focus_old_saves")
+	_t("_test_stat_focus_club_move")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Training", self))
@@ -646,15 +653,9 @@ func _test_dual_role_plans() -> void:
 	_check(bad == 0, "Every role a player plays has a plan of its own (%d missing)" % bad)
 
 
-## A training plan is a plan, not what the player is: the list row says
-## "Training as a key defender", and however hard a medium defender trains
+## A training plan is a plan, not what the player is: however hard a medium defender trains
 ## on that plan he stays a defender who is not typed a key defender.
 func _test_plan_is_not_identity() -> void:
-	var scene = load("res://scripts/ui/TrainingScene.gd")
-	_check(scene._row_plan("key_def") == "Training as a key defender"
-			and scene._row_plan("inside_mid") == "Training as an inside midfielder"
-			and scene._row_plan("position") == "Position plan",
-			"The list row names the plan as a plan (%s)" % scene._row_plan("key_def"))
 	_new_season()
 	var small := {}
 	for p in GameState.my_list:
@@ -1104,6 +1105,173 @@ func _test_retraining_is_additive() -> void:
 	var after := Ratings.positions(back)
 	_check(after.has(first) and after.has(learned_roles[0]) and after.has(learned_roles[1]),
 			"Every learned position survives a save (%s)" % str(after))
+
+
+# --- Stat focus (row 97, T1.Q7, director 2026-11-06) -------------------------
+
+## A young player with room to grow and a stat his role uses that his plan
+## weights least, so the focus visibly changes where his points go.
+func _focus_subject() -> Array:
+	for q in GameState.my_list:
+		if str(q.get("role2", "")) != "" or int(q.get("age", 30)) > 24:
+			continue
+		if int(q.get("potential", 0)) - int(q["overall"]) < 6:
+			continue
+		var w: Dictionary = GameState.plan_weights(q)
+		var low := ""
+		for k in GameState.focus_options(q):
+			if low == "" or float(w.get(k, 0.0)) < float(w.get(low, 0.0)):
+				low = k
+		if low != "":
+			return [q, low]
+	return [{}, ""]
+
+
+func _other_focus(p: Dictionary, not_this: String) -> String:
+	for k in GameState.focus_options(p):
+		if k != not_this:
+			return k
+	return ""
+
+
+func _test_stat_focus_once_a_season() -> void:
+	_new_season()
+	var pick := _focus_subject()
+	var p: Dictionary = pick[0]
+	var key := str(pick[1])
+	_check(not p.is_empty(), "A young developing player with a focusable stat exists")
+	if p.is_empty():
+		return
+	var id := str(p["id"])
+	_check(not GameState.focus_locked(p), "No focus is locked before the coach picks one")
+	var cant := ""
+	for row in GameState.TRAIN_STATS:
+		if not GameState.focus_options(p).has(str(row[0])):
+			cant = str(row[0])
+	if cant != "":
+		_check(not GameState.set_stat_focus(id, cant), "A stat his role does not use cannot be his focus (%s)" % cant)
+	_check(GameState.set_stat_focus(id, key), "The coach locks in a focus (%s)" % key)
+	_check(GameState.stat_focus(p) == key and GameState.focus_locked(p), "His focus is set and locked this season")
+	var other := _other_focus(p, key)
+	_check(other != "", "He has a second stat to try")
+	_check(not GameState.set_stat_focus(id, other), "A second pick in the same season is refused")
+	_check(GameState.stat_focus(p) == key, "The first focus stands after a refused change")
+	GameState.save_career()
+	GameState.load_career()
+	var p2 := GameState.list_player(id)
+	_check(GameState.stat_focus(p2) == key and GameState.focus_locked(p2), "The focus and its lock survive a save")
+	_check(not GameState.set_stat_focus(id, other), "Still locked after a reload")
+
+
+func _test_stat_focus_split() -> void:
+	_new_season()
+	var pick := _focus_subject()
+	var p: Dictionary = pick[0]
+	var key := str(pick[1])
+	var id := str(p["id"])
+	var before: Dictionary = (p["attr"] as Dictionary).duplicate()
+	_check(GameState.set_stat_focus(id, key), "Focus set for the split test")
+	# Bank a season's worth of XP and let the plan spend it.
+	p["xp"] = int(p.get("xp", 0)) + 3000
+	GameState.apply_plan_to(p)
+	var spent := GameState.focus_spent(p)
+	var total := int(spent[0]) + int(spent[1])
+	_check(total > 0, "Training spent XP with a focus set (%s)" % [spent])
+	# The season ceiling stops this after a few points, so the share is
+	# measured on a long run without the ceiling: about a third, never the
+	# 35-43% the first version overshot to.
+	var q: Dictionary = p.duplicate(true)
+	q.erase("focus_ledger")
+	q["xp"] = 6000
+	GameState._spend_with_weights(q, GameState.plan_weights(q), false, -1, "", key)
+	var led := GameState.focus_spent(q)
+	var long_total := int(led[0]) + int(led[1])
+	var share := float(led[0]) / float(maxi(long_total, 1))
+	_check(share >= 0.28 and share <= 0.37,
+			"The focus takes about a third of his training (%.1f%% of %d XP)" % [share * 100.0, long_total])
+	_check(int(p["attr"][key]) > int(before[key]), "His focus stat rose (%d to %d)" % [int(before[key]), int(p["attr"][key])])
+	var drills := 0
+	for k in before:
+		if k != key and int(p["attr"][k]) > int(before[k]):
+			drills += int(p["attr"][k]) - int(before[k])
+	_check(drills > 0, "The drills still bought points on his plan (%d)" % drills)
+	_check(int(p["overall"]) <= GameState.season_ceiling(p), "The season ceiling still holds with a focus")
+
+
+func _test_stat_focus_unlocks_next_season() -> void:
+	_new_season()
+	var pick := _focus_subject()
+	var p: Dictionary = pick[0]
+	var key := str(pick[1])
+	var id := str(p["id"])
+	_check(GameState.set_stat_focus(id, key), "Focus set before the rollover")
+	p["xp"] = int(p.get("xp", 0)) + 600
+	GameState.apply_plan_to(p)
+	_check(int(GameState.focus_spent(p)[0]) > 0, "Focus XP counted this season")
+	var year := GameState.season_year
+	GameState._ensure_league_lists()
+	GameState._start_next_season(year + 1, 0)
+	var p2 := GameState.list_player(id)
+	_check(GameState.season_year == year + 1, "The next season opened (%d after %d)" % [GameState.season_year, year])
+	_check(not p2.is_empty(), "He is still on the list in the new season (%s, %s)" % [id, str(p.get("club", ""))])
+	if p2.is_empty():
+		return
+	_check(not GameState.focus_locked(p2), "The new season unlocks his focus")
+	_check(GameState.stat_focus(p2) == key, "Last season's focus carries on until the coach picks again")
+	_check(GameState.focus_spent(p2) == [0, 0], "The share starts fresh each season")
+	var other := _other_focus(p2, key)
+	_check(GameState.set_stat_focus(id, other), "A new focus can be picked in the new season (%s)" % other)
+	_check(GameState.focus_locked(p2) and GameState.stat_focus(p2) == other, "And it locks again")
+
+
+func _test_stat_focus_old_saves() -> void:
+	_new_season()
+	var a: Dictionary = {}
+	var b: Dictionary = {}
+	for q in GameState.my_list:
+		if str(q.get("role2", "")) != "":
+			continue
+		if a.is_empty() and GameState.focus_options(q).has("marking"):
+			a = q
+		elif b.is_empty() and GameState.focus_options(q).size() >= 2:
+			b = q
+	_check(not a.is_empty() and not b.is_empty(), "Two players for the old-save test")
+	if a.is_empty() or b.is_empty():
+		return
+	# An old single-stat plan (cut 2026-11-03).
+	a["train_plan"] = "focus_marking"
+	# A save holding several focuses: the first his role can use stays.
+	var opts: Array = GameState.focus_options(b)
+	var useless := ""
+	for row in GameState.TRAIN_STATS:
+		if not opts.has(str(row[0])):
+			useless = str(row[0])
+	var several := [useless] if useless != "" else []
+	several.append_array([opts[1], opts[0]])
+	b["train_focus"] = several
+	GameState.save_career()
+	GameState.load_career()
+	var a2 := GameState.list_player(str(a["id"]))
+	var b2 := GameState.list_player(str(b["id"]))
+	_check(GameState.plan_for(a2) == "position", "The old focus plan still falls back to Position plan")
+	_check(GameState.stat_focus(a2) == "marking" and str(a2.get("train_focus", "")) == "marking",
+			"His old marking plan becomes his stat focus")
+	_check(not GameState.focus_locked(a2), "A migrated focus is open to change this season")
+	_check(b2.get("train_focus") is String and str(b2["train_focus"]) == str(opts[1]),
+			"Several focuses keep the first he can use (%s)" % [b2.get("train_focus")])
+
+
+func _test_stat_focus_club_move() -> void:
+	_new_season()
+	var pick := _focus_subject()
+	var p: Dictionary = pick[0]
+	_check(GameState.set_stat_focus(str(p["id"]), str(pick[1])), "Focus set before the move")
+	p["xp"] = int(p.get("xp", 0)) + 300
+	GameState.apply_plan_to(p)
+	var dest := "COL" if GameState.my_club != "COL" else "CAR"
+	GameState._join(dest, p)
+	_check(not p.has("train_focus") and not p.has("train_focus_year") and not p.has("focus_ledger"),
+			"A club move clears his focus: the new club's coach decides")
 
 
 ## Row 90: the off-season takes the league's training lift back off where each

@@ -1,15 +1,18 @@
 extends SceneTree
 ## League news front page and its hub card (needs a real renderer):
-##   godot --path . --script tools/visual/capture_newsfront.gd -- --size 1280x720 --out PREFIX --mode r1|mid|fresh|call [--club MEL]
+##   godot --path . --script tools/visual/capture_newsfront.gd -- --size 1280x720 --out PREFIX --mode r1|mid|flag|fresh|call [--club MEL] [--premier STK]
 ## Writes PREFIX_hub.png and PREFIX_news.png (and PREFIX_call.png when an arc big call is dealt). Dark theme; a fresh career, never a real save.
 ## r1 is the director's Round 1 feed (15 first goals, a fine, an injury, a six-goal haul, a press quote);
 ## mid plays six real rounds and shows the news the game made.
+## flag is the season's end (row 76): the premiership item, with its
+## flag-history sentence computed by LeagueNews from data/club_premierships.csv.
 ## fresh is the hub a new career opens on (with coach arcs on, GEE, FRE and COL open with arc news);
 ## call plays on to the first week a coach arc's big call is dealt (at most 30 weeks).
 
 var _w := 1280
 var _h := 720
 var _club := "MEL"
+var _premier := "STK"
 
 
 func _initialize() -> void:
@@ -32,6 +35,8 @@ func _run() -> void:
 				mode = str(a[i + 1])
 			"--club":
 				_club = str(a[i + 1])
+			"--premier":
+				_premier = str(a[i + 1])
 			"--size":
 				var wh := str(a[i + 1]).split("x")
 				_w = int(wh[0])
@@ -77,6 +82,16 @@ func _run() -> void:
 		for f in firsts:
 			items.append(_item("milestone", "%s kicked his first AFL goal for %s." % [f[0], f[1]]))
 		state.news = items
+	elif mode == "flag":
+		var year := int(state.season_year)
+		var prem: String = load("res://scripts/state/LeagueNews.gd").premiers_line(_premier, year, state.honour_roll)
+		print("PREMIERS ", prem)
+		state.news = [
+			_item("premiers", prem),
+		]
+		for it in state.news:
+			it["when"] = "Grand Final"
+			it["year"] = year
 	elif mode == "fresh":
 		pass
 	elif mode == "call":

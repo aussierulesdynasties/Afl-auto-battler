@@ -217,18 +217,12 @@ static func planned_run(blocks: Array) -> float:
 
 # ---------------------------------------------------------------------------
 # Position groups (director, 2026-11-06, row 101: "split it between position
-# groups"). The coach may give the mids, defenders, forwards and rucks each
-# their own plan of blocks; a club entry then carries "groups": {group:
-# blocks}, and a group without one trains on the side's "blocks". A save from
-# before the split has no "groups", so its one plan is every group's plan.
-#
-# What each player gets is his own group's: skills work (development XP), a
-# Heavy week's injury risk, a Light week's faster healing and the heavy or
-# fresh legs into Round 1, each the same size as before. What belongs to the
-# side, the fitness base and plan fluency, is the side's average: each player
-# brings his own group's weeks of running and drilling, so a group's plan
-# counts by its share of the list. Every group on the same plan is exactly the
-# pre-season as it was.
+# groups"). A Game plan block's drill plan can differ for the mids,
+# defenders, forwards and rucks. The block is [load, "plan", drills], plus
+# (once a group drills something else) a fourth item {group: drills}; a group
+# not in it drills the block's own plans. Load and focus stay the side's.
+# Plan fluency is the side's, so a split block's weeks of drilling count each
+# group by its share of the list. A block with no split is exactly as before.
 # ---------------------------------------------------------------------------
 const GROUPS := ["MID", "DEF", "FWD", "RUCK"]
 const GROUP_LABEL := {"MID": "Mids", "DEF": "Defenders", "FWD": "Forwards", "RUCK": "Rucks"}
@@ -240,25 +234,25 @@ static func group_of(p: Dictionary) -> String:
 	return r if GROUPS.has(r) else "MID"
 
 
-## The blocks group `group` trains on in a club entry: its own plan, or the side's.
-static func group_blocks(entry: Dictionary, group: String) -> Array:
-	var groups: Variant = entry.get("groups")
-	if groups is Dictionary and (groups as Dictionary).get(group) is Array:
-		return (groups as Dictionary)[group]
-	return entry.get("blocks", [])
-
-
-## True when a group has a plan of its own that differs from the side's.
-static func group_differs(entry: Dictionary, group: String) -> bool:
-	return str(group_blocks(entry, group)) != str(entry.get("blocks", []))
-
-
-## True when every group trains on the side's plan (the pre-season as before).
-static func groups_same(entry: Dictionary) -> bool:
+## A Game plan block's drills for groups of their own, cleaned: {group: drills}
+## ({} when every group drills the block's plans).
+static func block_split(block: Array) -> Dictionary:
+	var out := {}
+	if block.size() < 4 or str(block[1]) != "plan" or not (block[3] is Dictionary):
+		return out
 	for g in GROUPS:
-		if group_differs(entry, str(g)):
-			return false
-	return true
+		var d := clean_drills((block[3] as Dictionary).get(g, []))
+		if not d.is_empty():
+			out[g] = d
+	return out
+
+
+## What `group` drills in a Game plan block: its own plans, or the block's.
+static func group_drills(block: Array, group: String) -> Array:
+	if block.size() < 3 or str(block[1]) != "plan":
+		return []
+	var split := block_split(block)
+	return split[group] if split.has(group) else clean_drills(block[2])
 
 
 ## Each group's share of a list: its players over the list's (each 0 for an
@@ -274,34 +268,6 @@ static func group_shares(list: Array) -> Dictionary:
 		out[g] = float(out[g]) + 1.0
 	for g in GROUPS:
 		out[g] = float(out[g]) / float(list.size())
-	return out
-
-
-## The side's week of running in week `w`: each group's work by its share.
-static func side_week_run(entry: Dictionary, shares: Dictionary, w: int) -> float:
-	var i := block_of_week(w)
-	if i < 0:
-		return 0.0
-	if groups_same(entry):
-		var blocks: Array = entry.get("blocks", [])
-		return work(str(blocks[i][0]), str(blocks[i][1]), "running") if i < blocks.size() else 0.0
-	var run := 0.0
-	for g in GROUPS:
-		var b := group_blocks(entry, str(g))
-		if i < b.size():
-			run += float(shares.get(g, 0.0)) * work(str(b[i][0]), str(b[i][1]), "running")
-	return run
-
-
-## The side's weeks of drilling each plan: each group's drilling by its share.
-static func side_drill_credit(entry: Dictionary, shares: Dictionary) -> Dictionary:
-	if groups_same(entry):
-		return drill_credit(entry.get("blocks", []))
-	var out := {}
-	for g in GROUPS:
-		var credit := drill_credit(group_blocks(entry, str(g)))
-		for plan in credit:
-			out[plan] = float(out.get(plan, 0.0)) + float(shares.get(g, 0.0)) * float(credit[plan])
 	return out
 
 
@@ -407,7 +373,7 @@ static func seen_line(p: Dictionary, club: String) -> String:
 
 
 ## How much narrower `club`'s rating read on a prospect is for having seen
-## him play (1.0: not seen, or the pre-season switched off). The rule lives
+## him play (1.0: not seen). The rule lives
 ## with the scouting it changes (DraftScouting.seen_mult).
 static func seen_mult(p: Dictionary, club: String) -> float:
 	data()
@@ -563,6 +529,19 @@ const PRACTICE_REGION := {
 }
 
 
+## A created club (Club Forge) has no entry above: it takes the region of its
+## home state, the way Tasmania and Canberra do.
+const STATE_REGION := {"VIC": "VIC", "TAS": "VIC", "NSW": "NSW", "ACT": "NSW",
+	"QLD": "QLD", "SA": "SA", "NT": "SA", "WA": "WA"}
+
+
+static func practice_region(code: String) -> String:
+	if PRACTICE_REGION.has(code):
+		return str(PRACTICE_REGION[code])
+	var row: Dictionary = GameDB.clubs.get(code, {})
+	return str(STATE_REGION.get(str(row.get("state", "")), ""))
+
+
 static func practice_week() -> int:
 	return int(tune("practice_week"))
 
@@ -580,7 +559,7 @@ static func practice_guests() -> int:
 ## club in turn takes the club of its region that the year's draw puts first
 ## (a hash of the career seed, the year and the club's code); whoever has no
 ## regional club left is drawn against another such club, and an odd club out
-## has no match. The same career and year always give the same draw.
+## has no match (never yours). The same career and year always give the same draw.
 static func practice_pairs(clubs: Array, my_club: String, career_seed: int, year: int) -> Array:
 	var rank := {}
 	for c in clubs:
@@ -600,11 +579,11 @@ static func practice_pairs(clubs: Array, my_club: String, career_seed: int, year
 	for a in order:
 		if taken.has(a):
 			continue
-		var region := str(PRACTICE_REGION.get(a, ""))
+		var region := practice_region(a)
 		if region == "":
 			continue
 		for b in order:
-			if b != a and not taken.has(b) and str(PRACTICE_REGION.get(b, "")) == region:
+			if b != a and not taken.has(b) and practice_region(b) == region:
 				taken[a] = true
 				taken[b] = true
 				pairs.append([a, b])
@@ -615,6 +594,12 @@ static func practice_pairs(clubs: Array, my_club: String, career_seed: int, year
 			left.append(a)
 	for i in range(0, left.size() - 1, 2):
 		pairs.append([left[i], left[i + 1]])
+	# Your club always has a match: a created club outside every region, left
+	# alone once the regions pair off, takes the last-drawn pair's first club,
+	# and that club's partner is the one without a match.
+	if left.size() == 1 and str(left[0]) == my_club and not pairs.is_empty():
+		var last: Array = pairs.pop_back()
+		pairs.push_front([my_club, last[0]])
 	return pairs
 
 
@@ -636,7 +621,7 @@ static func practice_opponent(pairs: Array, code: String) -> String:
 # ---------------------------------------------------------------------------
 const LEVELS := ["barely", "partly", "well"]
 const WELL := 2
-const DRILL_PLANS := ["attacking", "defensive", "contest", "controlled", "through_stars"]
+const DRILL_PLANS := ["attacking", "defensive", "contest", "controlled"]
 
 
 static func clamp_level(l: int) -> int:
@@ -713,20 +698,33 @@ static func default_drill(usual: String, levels: Dictionary) -> Array:
 
 
 ## The weeks of drilling each plan gets from a whole plan of blocks: a block's
-## weeks are shared between the plans it drills.
-static func drill_credit(blocks: Array) -> Dictionary:
+## weeks are shared between the plans it drills. A block split between the
+## position groups counts each group's plans by its share in `shares`
+## (group_shares); without shares (or an empty list) the block's own plans.
+static func drill_credit(blocks: Array, shares := {}) -> Dictionary:
+	var total := 0.0
+	for g in shares:
+		total += float(shares[g])
 	var out := {}
 	for i in range(mini(blocks.size(), block_count())):
 		var b: Array = blocks[i]
 		if str(b[1]) != "plan" or b.size() < 3:
 			continue
-		var drills := clean_drills(b[2])
-		if drills.is_empty():
-			continue
 		var w := block_weeks(i)
-		var weeks := float(int(w[1]) - int(w[0]) + 1) / float(drills.size())
-		for plan in drills:
-			out[plan] = float(out.get(plan, 0.0)) + weeks
+		var span := float(int(w[1]) - int(w[0]) + 1)
+		var parts := []   # [weight, drills]
+		if total > 0.0 and not block_split(b).is_empty():
+			for g in GROUPS:
+				parts.append([float(shares.get(g, 0.0)) / total, group_drills(b, str(g))])
+		else:
+			parts.append([1.0, clean_drills(b[2])])
+		for part in parts:
+			var drills: Array = part[1]
+			if drills.is_empty() or float(part[0]) <= 0.0:
+				continue
+			var weeks := span * float(part[0]) / float(drills.size())
+			for plan in drills:
+				out[plan] = float(out.get(plan, 0.0)) + weeks
 	return out
 
 

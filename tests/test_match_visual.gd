@@ -560,7 +560,7 @@ func _test_tactical_timeline() -> void:
 		if int(e["at"]) == 0:
 			starts[int(e["side"])] = true
 	_check(starts[0] and starts[1], "Both sides' calls are recorded from the first bounce")
-	# A match-up changed at quarter time shows from the next quarter.
+	# A match-up the sim changes at quarter time shows from the next quarter.
 	var sim := _sim(5)
 	sim.run_quarter()
 	var duels: Dictionary = sim.duels[0]
@@ -575,7 +575,7 @@ func _test_tactical_timeline() -> void:
 		if fwd != "":
 			break
 	var cut := sim.events.size()
-	_check(fwd != "" and sim.coach_matchup(0, fwd, def), "A defender can be moved onto a forward at the break")
+	_check(fwd != "" and sim.set_matchup(0, fwd, def), "A defender can be moved onto a forward at the break")
 	while sim.current_quarter <= 4:
 		sim.run_quarter()
 	var full := sim.result()
@@ -779,9 +779,10 @@ func _test_truth(res: Dictionary) -> Array:
 ## Yardstick as tools/visual/trace_collect.gd: a collect of 1.5 s or more of
 ## match time. Seed 42: 31 such pauses (4 right after a pressure act, the named
 ## player 40 m off on average) before, 9 (0, 30 m) after; four trace seeds
-## 139 -> 47. The caps leave room for sim changes redrawing the match.
+## 139 -> 47. The caps leave room for sim changes redrawing the match (the
+## 1.0.7 tuning measured 13: 14, director 2026-11-06, loosen to measured).
 const PAUSE_S := 1.5
-const PAUSE_MAX := 12
+const PAUSE_MAX := 14
 const PAUSE_PRESSURE_MAX := 1
 
 
@@ -975,40 +976,33 @@ func _test_oval_people(res: Dictionary) -> void:
 	for p in GameDB.club_list("RIC"):
 		list.append((p as Dictionary).duplicate(true))
 	var tagger_id := str(MatchSim.tagger_for(mine)["id"])
-	# Play through is the Through stars plan (director, 2026-11-03): with him
-	# the side's one star, he is the man played through.
-	sim.stars[me] = {str(focus["id"]): true}
-	sim.set_tactics(me, {"gameplan": "through_stars",
+	# Play through, the forward target (back 2026-11-07).
+	sim.set_tactics(me, {"gameplan": "balanced", "focus_fwd": str(focus["id"]),
 			"tag_id": str(their_mid["id"]), "pep": "steady"})
 	# The sim sets up its own match-ups; those are not your calls, so not ringed.
 	_check(MatchRings.ids(sim, me, list) == [str(focus["id"]), tagger_id],
 			"With a play-through and a tag, the player and the tagger are ringed, not the default match-ups (%s)" % str(MatchRings.ids(sim, me, list)))
-	_check(sim.set_interceptor(me, str(defenders[0]["id"]), false)
-			and sim.set_matchup(me, str(their_fwds[0]["id"]), str(defenders[1]["id"]), false),
-			"A spare and a match-up are set on the sim")
+	_check(sim.set_interceptor(me, str(defenders[0]["id"]), false), "A spare is set on the sim")
 	var kid := {}
 	for p in list:
 		if not on_sim.has(str(p["id"])):
 			kid = p
 			break
 	Backing.start(kid, 2027, 1, 0)
-	var picks := {str(their_fwds[0]["id"]): str(defenders[1]["id"])}
-	var ids := MatchRings.ids(sim, me, list, picks)
-	_check(ids == [str(kid["id"]), str(focus["id"]), tagger_id, str(defenders[0]["id"]), str(defenders[1]["id"])],
-			"A run comes first, then the calls: play-through, tagger, spare, match-up (%s)" % str(ids))
-	# A defender not already on that forward, so it is a change (the sim records
-	# only a real one).
+	var ids := MatchRings.ids(sim, me, list)
+	_check(ids == [str(kid["id"]), str(focus["id"]), tagger_id, str(defenders[0]["id"])],
+			"A run comes first, then the calls: play-through, tagger, spare (%s)" % str(ids))
+	# A match-up the sim makes is never a call of yours, so never ringed.
 	var on_him := str((sim.duels[me] as Dictionary).get(str(their_fwds[1]["id"]), ""))
 	var switched := {}
 	for p in defenders:
 		var pid := str(p["id"])
-		if switched.is_empty() and pid != on_him and pid != str(defenders[0]["id"]) \
-				and pid != str(defenders[1]["id"]):
+		if switched.is_empty() and pid != on_him and pid != str(defenders[0]["id"]):
 			switched = p
-	var changed := sim.set_matchup(me, str(their_fwds[1]["id"]), str(switched["id"]), true)
-	ids = MatchRings.ids(sim, me, list, picks)
-	_check(changed and ids.has(str(switched["id"])) and ids.size() == 6,
-			"A match-up changed during the match is ringed too (%s)" % str(ids))
+	sim.set_matchup(me, str(their_fwds[1]["id"]), str(switched["id"]), true)
+	ids = MatchRings.ids(sim, me, list)
+	_check(not ids.has(str(switched["id"])) and ids.size() == 4,
+			"A match-up the sim makes is not ringed (%s)" % str(ids))
 	var theirs_ids := {}
 	for p in (sim.squads[1] as Squad).ground + (sim.squads[1] as Squad).bench:
 		theirs_ids[str(p["id"])] = true
@@ -1017,7 +1011,9 @@ func _test_oval_people(res: Dictionary) -> void:
 		if theirs_ids.has(str(id)):
 			only_mine = false
 	_check(only_mine, "Only your own players are ringed, never the man you tag or the forward you match up")
-	(sim.stars[me] as Dictionary)[str(defenders[0]["id"])] = true
+	var tt: Dictionary = sim.tactics[me]
+	tt["focus_def"] = str(defenders[0]["id"])
+	sim.set_tactics(me, tt)
 	_check(MatchRings.ids(sim, me, list).count(str(defenders[0]["id"])) == 1,
 			"A player with two calls on him is ringed once")
 	for i in range(12):
@@ -1219,25 +1215,15 @@ func _test_broadcast_vignettes() -> void:
 			"An ordinary crowded mark is not silently promoted to a speccy")
 	_check(BroadcastVignette.pick_kind(mark, {}, {}, front) == BroadcastVignette.SPECCY_FRONT,
 			"A real speccy through the corridor gets the front-on speccy shot")
-	# The front-on shot is behind the "speccy_front" switch (director, 2026-10-14): off (the default) a speccy plays
-	# the earlier shot and runs as long as it did; on it is the low, tight staging frozen on the grab.
-	Features.clear("speccy_front")
-	_check(not BroadcastVignette._sf_ready() and is_equal_approx(BroadcastVignette.duration_for(BroadcastVignette.SPECCY_FRONT), 3.8),
-			"With the speccy_front switch off a speccy plays the earlier shot, 3.8 s")
-	Features.set_on("speccy_front", true)
-	_check(BroadcastVignette._sf_ready(), "With the switch on the sheets hold the front-on speccy moves (the low, tight staging)")
+	# The front-on shot (director, 2026-10-14) is the low, tight staging frozen on the grab.
+	_check(BroadcastVignette._sf_ready(), "The sheets hold the front-on speccy moves (the low, tight staging)")
 	_check(BroadcastVignette.duration_for(BroadcastVignette.SPECCY_FRONT) > BroadcastVignette.SF_FREEZE,
-			"On, the front-on speccy runs past the grab, so the still holds on it")
+			"The front-on speccy runs past the grab, so the still holds on it")
 	var vig_on := BroadcastVignette.new()
 	vig_on.setup(BroadcastVignette.SPECCY_FRONT, {"kind": "mark", "side": 0, "num": 4, "speccy": true}, {}, {"home": "FRE", "away": "MEL"})
 	var on_figures := vig_on._sf_ready()
 	vig_on.free()
-	Features.clear("speccy_front")
-	var vig_off := BroadcastVignette.new()
-	vig_off.setup(BroadcastVignette.SPECCY_FRONT, {"kind": "mark", "side": 0, "num": 4, "speccy": true}, {}, {"home": "FRE", "away": "MEL"})
-	var off_figures := vig_off._sf_ready()
-	vig_off.free()
-	_check(on_figures and not off_figures, "The same speccy event draws the new shot with the switch on and the earlier one with it off")
+	_check(on_figures, "A speccy event draws the front-on shot")
 	_check(BroadcastVignette.pick_kind(mark, {}, {}, flank) == BroadcastVignette.SPECCY_SIDE,
 			"A crowded mark near the flank gets the side-sit speccy shot")
 	_check(BroadcastVignette.pick_kind(mark, {}, {}, defensive) == BroadcastVignette.SPECCY_DEFENSIVE,
@@ -1678,7 +1664,6 @@ func _test_call_shapes(res: Dictionary) -> void:
 		var deep := 0.0
 		var ahead := 0
 		var mid_gap := 0.0
-		var star_gap := 0.0
 		var span := 0.0
 		var back := 0.0
 		var n := 0
@@ -1701,12 +1686,10 @@ func _test_call_shapes(res: Dictionary) -> void:
 					mid_gap += p.distance_to(bp)
 				if str(t["role"]) == "DEF":
 					back += p.x
-				if d._is_star(t):
-					star_gap += p.distance_to(bp)
 			span += front - rear
 		d._tac[side] = {}
 		return {"pos": pos, "wide": wide / n, "deep": deep / n, "ahead": ahead, "mid_gap": mid_gap,
-				"star_gap": star_gap / 9.0, "span": span / 3.0, "back": back}
+				"span": span / 3.0, "back": back}
 	var same := func(a: Dictionary, b: Dictionary) -> bool:
 		for i in range((a["pos"] as Array).size()):
 			if ((a["pos"] as Array)[i] as Vector2).distance_to((b["pos"] as Array)[i]) > 0.01:
@@ -1754,26 +1737,6 @@ func _test_call_shapes(res: Dictionary) -> void:
 	_check(centre_ok and bu >= 0 and int(pack_ctn[0]) > int(pack_bal[0]) and int(pack_ctn[0]) >= 3 + MatchDirector.CONTEST_PACK and int(pack_ctn[1]) == int(pack_bal[1]),
 			"Win contest sends extra numbers to every stoppage: a stacked centre bounce, a ball-up pack of %d against %d (the other side's %d unchanged)" % [int(pack_ctn[0]), int(pack_bal[0]), int(pack_ctn[1])])
 	d._tac[0] = {}
-	# Through stars: the three stars stand closest to the ball, with it only.
-	var st: Dictionary = stand.call({"plan": "through_stars", "bursts": []}, 0)
-	_check(float(st["star_gap"]) <= float(bal_has["star_gap"]) - 10.0 and same.call(stand.call({"plan": "through_stars", "bursts": []}, 1), bal_not),
-			"Through stars brings its three stars at least 10 m closer to the ball (%.0f m against %.0f), only with the ball" % [float(st["star_gap"]), float(bal_has["star_gap"])])
-	# ...and the men on them play them tighter (they know where it's going).
-	var tight := func(plan: String) -> float:
-		d._tac[0] = {"side": 0, "plan": plan, "bursts": []}
-		var gap := 0.0
-		for t in d.tokens:
-			if int(t["side"]) == 0 and d._is_star(t):
-				t["goal"] = d._structure_spot(t, balls[1], 0)
-		for t in d.tokens:
-			var o := int(t["match"])
-			if int(t["side"]) == 1 and o >= 0 and d._is_star(d.tokens[o]):
-				gap += (d._structure_spot(t, balls[1], 0) as Vector2).distance_to(d.tokens[o]["goal"])
-		d._tac[0] = {}
-		return gap
-	var gap_bal: float = tight.call("balanced")
-	var gap_st: float = tight.call("through_stars")
-	_check(gap_st < gap_bal - 3.0, "Their opponents stand tighter on the stars (%.0f m in all against %.0f)" % [gap_st, gap_bal])
 	# Throw numbers at it: numbers ahead of the ball with it, the backs high without it.
 	var sg_has: Dictionary = stand.call({"plan": "balanced", "bursts": ["surge"]}, 0)
 	var sg_not: Dictionary = stand.call({"plan": "balanced", "bursts": ["surge"]}, 1)
@@ -1797,7 +1760,6 @@ func _test_call_shapes(res: Dictionary) -> void:
 	# Only the recorded call: another side's call, a call with no shape here
 	# (the stack) and the capture switch all leave Balanced as it was.
 	var only := true
-	# (Through stars is left out: the men on its stars answering it is the point.)
 	for c in [{"plan": "attacking", "bursts": []}, {"plan": "controlled", "bursts": ["hold"]}, {"plan": "contest", "bursts": ["surge"]}]:
 		d._tac[1] = c.duplicate()
 		only = only and same.call(stand.call(plain, 0), bal_has) and same.call(stand.call(plain, 1), bal_not)
@@ -1820,8 +1782,8 @@ func _test_call_playback(res: Dictionary) -> void:
 		if int(e["at"]) == 0:
 			opening[int(e["side"])] = e
 	var calls := [[["attacking", ["surge"]], ["contest", ["hold"]]],
-			[["controlled", ["hold"]], ["through_stars", ["surge"]]],
-			[["through_stars", []], ["attacking", ["flood"]]],
+			[["controlled", ["hold"]], ["defensive", ["surge"]]],
+			[["balanced", []], ["attacking", ["flood"]]],
 			[["contest", ["surge"]], ["controlled", []]]]
 	var tl := []
 	for k in range(calls.size()):
@@ -1879,8 +1841,34 @@ func _test_call_lines(res: Dictionary) -> void:
 	var off: Array = walk.call([{"at": 0, "side": 0, "plan": "defensive", "bursts": []}, open[1],
 			{"at": int(qs[0]) + 1, "side": 0, "plan": "balanced", "bursts": []}])
 	_check(off.size() == 2 and str(off[0][1]) == "%s: Defensive press is on until quarter time." % ric
-			and str(off[1][1]) == "%s: Defensive press ends." % ric,
-			"A plan from the first bounce is marked, and so is its end (%s)" % str(off))
+			and str(off[1][1]) == "%s: Defensive press ends at quarter time." % ric
+			and int(off[1][0]) == int(qs[0]) + 1,
+			"A plan from the first bounce is marked, and its end at the break names the break, once (%s)" % str(off))
+	# The director's half-time feed: both coaches drop their plans at the break.
+	# Each end is said once, as the break's (no new-quarter clock), never as
+	# if it ended at the first bounce of the third quarter.
+	var syd := GameDB.club_name("SYD")
+	var mem := MatchNotes.call_state()
+	var tl := [{"at": 0, "side": 0, "plan": "controlled", "bursts": []}, {"at": 0, "side": 1, "plan": "attacking", "bursts": []},
+			{"at": int(qs[1]) + 1, "side": 0, "plan": "balanced", "bursts": []},
+			{"at": int(qs[1]) + 1, "side": 1, "plan": "balanced", "bursts": []}]
+	var ht := []
+	var stamped := 0
+	for i in range(evs.size()):
+		var got: Array = MatchNotes.call_lines(tl, i, evs[i], mem, "RIC", "SYD")
+		for k in range(got.size()):
+			if str(got[k]).contains(" ends"):
+				ht.append([i, str(got[k])])
+				if k >= int(mem["break_lines"]):
+					stamped += 1
+	_check(ht.size() == 2 and int(ht[0][0]) == int(qs[1]) + 1
+			and str(ht[0][1]) == "%s: Controlled tempo ends at half time." % ric
+			and str(ht[1][1]) == "%s: Attack corridor ends at half time." % syd and stamped == 0,
+			"Plans dropped at half time are said once each, as the break's, unclocked (%s, %d clocked)" % [str(ht), stamped])
+	var mid: Array = walk.call([{"at": 0, "side": 0, "plan": "defensive", "bursts": []}, open[1],
+			{"at": int(qs[0]) + 20, "side": 0, "plan": "balanced", "bursts": []}])
+	_check(mid.size() == 3 and str(mid[2][1]) == "%s: Defensive press ends." % ric and int(mid[2][0]) == int(qs[0]) + 20,
+			"A plan dropped during a quarter keeps its plain line, at the play (%s)" % str(mid))
 
 
 ## FL-007: the guard of honour and chaired off after a milestone game. Who it honours,
