@@ -224,7 +224,8 @@ const ANSWERS := {
 ## changes what an answer does, shown openly on the gate). "likes" and
 ## "dislikes" move your standing with him by one; "odds" moves outcome "a";
 ## "board_up" adds one to every board size (to the cap), "named_up" one to
-## every named size (to the cap), "slow" makes the morale fade at half pace;
+## every named size (to the cap), "slow" stretches the morale fade to every
+## third round (SLOW_FADE_ROUNDS);
 ## "record" means the record check decides his standing and odds.
 const PERSONA := {
 	"muckraker": {"likes": ["criticise", "criticise_named"], "dislikes": ["back", "back_named"],
@@ -239,7 +240,7 @@ const PERSONA := {
 		"named_up": true, "named_note": "The players listen to his show",
 		"rule": "The players listen to his show: a named player's move is a point bigger."},
 	"philosopher": {"likes": ["method"], "dislikes": ["criticise", "criticise_named"], "odds": {},
-		"slow": true, "slow_note": "Her piece lingers: the players' moves wear off a point every second round, the board's a point a round."},
+		"slow": true, "slow_note": "Her piece lingers: morale moves wear off a point every third round, board moves a point a round."},
 }
 
 ## Standing with each journalist, -2..+2 (director 2026-11-06, Q1): each step
@@ -248,11 +249,11 @@ const PERSONA := {
 const STANDING_MIN := -2
 const STANDING_MAX := 2
 const STANDING_ODDS := 5
-## How he stands with you, after his name ("Gary is warm to you").
-const STANDING_WORDS := {-2: "has it in for you", -1: "is cool on you", 0: "takes you as %s finds you",
-		1: "is warm to you", 2: "is in your corner"}
-## Under the byline: "Gary is warm to you: every answer is 5% more likely to land well."
-const STANDING_EFFECT := "%s %s: every answer is %d%% %s likely to land well."
+## His opinion of you, one word per step (director 2026-11-07: "it should
+## read opinion of you: neutral"; he chose the five words).
+const STANDING_WORDS := {-2: "Hostile", -1: "Wary", 0: "Neutral", 1: "Warm", 2: "Firm fan"}
+## "Gary's opinion of you is Wary: every answer is 5% less likely to land well."
+const STANDING_EFFECT := "%s's opinion of you is %s: every answer is %d%% %s likely to land well."
 ## The question body never changes (5.50); standing only adds a lead-in.
 const LEAD_INS := {
 	"muckraker": ["You ducked me last time, so I'll try again.", "You've always fronted up, so here goes."],
@@ -280,10 +281,13 @@ const MORALE_CAP := 10.0
 const ODDS_STEP := 5
 const ODDS_MIN := 20
 const ODDS_MAX := 80
-## Every press move (morale and the board) fades a point a round; the
-## Philosopher's morale moves a point every second round.
-const FADE_ROUNDS := 1
-const SLOW_FADE_ROUNDS := 2
+## How many rounds each point of a press move lasts (director 2026-11-07,
+## "Fade every 2nd round"): a player's morale move fades a point every second
+## round (+1 lasts 2 rounds, -2 lasts 4), every third after the Philosopher;
+## the board's fades a point a round.
+const FADE_ROUNDS := 2
+const SLOW_FADE_ROUNDS := 3
+const BOARD_FADE_ROUNDS := 1
 
 ## The gate's templates: no digits here, every number comes from the tables.
 ## One answer's line (director 2026-11-07, "Trim odds lines"): "40% resolve
@@ -302,7 +306,7 @@ const AFTER_BOARD := "board confidence %+d%%"
 ## One odds twist on the gate: "Heavy loss: 15% less likely".
 const REASON := "%s: %d%% %s likely"
 ## Said once on the screen, not under every answer: how long the moves last.
-const FADE_NOTE := "Every press move wears off a point a round."
+const FADE_NOTE := "Morale moves wear off a point every second round, board moves a point a round."
 ## Your standing with him moves: what that does to his later questions.
 const LIKES := "%s warms to you (+%d%% next time)"
 const DISLIKES := "%s cools on you (-%d%% next time)"
@@ -463,18 +467,17 @@ static func standing_decayed(v: int, years: int) -> int:
 	return v - signi(v) * mini(absi(v), years)
 
 
-## "is warm to you", after his first name.
-static func standing_word(v: int, journalist := "") -> String:
-	var w := str(STANDING_WORDS.get(clampi(v, STANDING_MIN, STANDING_MAX), ""))
-	return w % ("she" if is_woman(journalist) else "he") if w.contains("%s") else w
+## His opinion of you in one word: "Warm".
+static func standing_word(v: int) -> String:
+	return str(STANDING_WORDS.get(clampi(v, STANDING_MIN, STANDING_MAX), ""))
 
 
-## "Gary is warm to you: every answer is 5% more likely to land well."; ""
-## when he takes you as he finds you.
+## "Gary's opinion of you is Warm: every answer is 5% more likely to land
+## well."; "" when Neutral.
 static func standing_effect(journalist: String, v: int) -> String:
 	if v == 0:
 		return ""
-	return STANDING_EFFECT % [first_name(journalist), standing_word(v, journalist), absi(v) * STANDING_ODDS,
+	return STANDING_EFFECT % [first_name(journalist), standing_word(v), absi(v) * STANDING_ODDS,
 			"more" if v > 0 else "less"]
 
 
@@ -496,10 +499,15 @@ static func is_woman(journalist: String) -> bool:
 	return bool(JOURNALISTS.get(journalist, {}).get("her", false))
 
 
-## How many rounds a press lift of this size takes to fade (fade_lift steps a
-## slow lift every second round counted from the presser, so this is exact).
+## How many rounds a player's press lift of this size takes to fade (fade_lift
+## counts its rounds from the presser, so this is exact).
 static func fade_rounds(size: int, slow: bool) -> int:
 	return absi(size) * (SLOW_FADE_ROUNDS if slow else FADE_ROUNDS)
+
+
+## How many rounds the board's press move of this size takes to fade.
+static func board_fade_rounds(size: int) -> int:
+	return absi(size) * BOARD_FADE_ROUNDS
 
 
 ## The record the Stats Geek reads: {"w", "l", "d", "pct", "pos", "form" (-1..1),
@@ -642,18 +650,19 @@ static func apply_lift(p: Dictionary, delta: int, cap: int, slow: bool, up := -1
 	return moved
 
 
-## One round's fade of a player's press lift: a point back toward where he was,
-## every round (every second round after the Philosopher). True when it moved.
+## One round's fade of a player's press lift: a point back toward where he was
+## every FADE_ROUNDS rounds (SLOW_FADE_ROUNDS after the Philosopher), counted
+## from when it was set. True when it moved.
 static func fade_lift(p: Dictionary, _round_no: int) -> bool:
 	var lift := int(p.get("press_lift", 0))
 	if lift == 0:
 		return false
-	# A slow lift waits every other round, counted from when it was set.
-	if bool(p.get("press_slow", false)):
-		if not bool(p.get("press_wait", false)):
-			p["press_wait"] = true
-			return false
-		p.erase("press_wait")
+	# "press_wait" counts the rounds since the last step (an old save's true reads as 1).
+	var waited := int(p.get("press_wait", 0)) + 1
+	if waited < (SLOW_FADE_ROUNDS if bool(p.get("press_slow", false)) else FADE_ROUNDS):
+		p["press_wait"] = waited
+		return false
+	p.erase("press_wait")
 	ClubLife.add_morale(p, -signi(lift))
 	lift -= signi(lift)
 	if lift == 0:

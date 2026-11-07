@@ -259,8 +259,9 @@ func _press_conf(key_result: Array) -> Dictionary:
 
 
 ## (g) Caps: no answer, journalist or record check takes a size past list 2,
-## named 3, board 3; stacked answers never pass the cap, and the
-## lift fades back a point a round (half pace after the Philosopher).
+## named 3, board 3; stacked answers never pass the cap, and the lift fades
+## back a point every second round (every third after the Philosopher), the
+## board's a point a round.
 func _test_press_caps_and_fade() -> void:
 	var MC = load("res://scripts/sim/MediaConference.gd")
 	var worst := [0, 0, 0]
@@ -284,32 +285,49 @@ func _test_press_caps_and_fade() -> void:
 	_check(int(p["morale"]) == 73 and int(p["press_lift"]) == 3,
 			"A named lift on top stops at the named cap, never list plus named (morale %d)" % int(p["morale"]))
 	var trail := []
-	for r in range(1, 5):
+	for r in range(1, 8):
 		MC.fade_lift(p, r)
 		trail.append(int(p["morale"]))
-	_check(trail == [72, 71, 70, 70] and not p.has("press_lift"),
-			"The lift fades a point a round back to where he was, then the trace is gone (%s)" % str(trail))
+	_check(trail == [73, 72, 72, 71, 71, 70, 70] and not p.has("press_lift") and not p.has("press_wait"),
+			"The lift fades a point every second round back to where he was, then the trace is gone (%s)" % str(trail))
+	# Director 2026-11-07: +1 lasts 2 rounds, -2 lasts 4.
+	var one := {"morale": 70}
+	MC.apply_lift(one, 1, MC.LIST_CAP, false)
+	var one_trail := []
+	for r in range(1, 4):
+		MC.fade_lift(one, r)
+		one_trail.append(int(one["morale"]))
+	var two := {"morale": 70}
+	MC.apply_lift(two, -2, MC.LIST_CAP, false)
+	var two_trail := []
+	for r in range(1, 6):
+		MC.fade_lift(two, r)
+		two_trail.append(int(two["morale"]))
+	_check(one_trail == [71, 70, 70] and two_trail == [68, 69, 69, 70, 70]
+			and MC.fade_rounds(1, false) == 2 and MC.fade_rounds(-2, false) == 4,
+			"A morale +1 lasts 2 rounds and a -2 lasts 4 (%s, %s)" % [str(one_trail), str(two_trail)])
 	var slow := {"morale": 70}
 	MC.apply_lift(slow, 2, MC.LIST_CAP, true)
 	var slow_trail := []
-	for r in range(1, 6):
+	for r in range(1, 8):
 		MC.fade_lift(slow, r)
 		slow_trail.append(int(slow["morale"]))
-	_check(slow_trail == [72, 71, 71, 70, 70] and MC.fade_rounds(2, true) == 4 and MC.fade_rounds(2, false) == 2,
-			"After the Philosopher the lift fades at half pace (%s)" % str(slow_trail))
+	_check(slow_trail == [72, 72, 71, 71, 71, 70, 70] and MC.fade_rounds(2, true) == 6 and MC.fade_rounds(2, false) == 4,
+			"After the Philosopher the lift fades a point every third round (%s)" % str(slow_trail))
 	# Counted from the presser, not the round number: set on an odd round it
 	# still takes exactly fade_rounds rounds.
 	var odd := {"morale": 70}
 	MC.apply_lift(odd, 2, MC.LIST_CAP, true)
 	var odd_trail := []
-	for r in range(4, 8):
+	for r in range(4, 10):
 		MC.fade_lift(odd, r)
 		odd_trail.append(int(odd["morale"]))
-	_check(odd_trail == [72, 71, 71, 70] and not odd.has("press_lift") and not odd.has("press_wait"),
+	_check(odd_trail == [72, 72, 71, 71, 71, 70] and not odd.has("press_lift") and not odd.has("press_wait"),
 			"The Philosopher's lift takes exactly fade_rounds rounds whichever round it starts (%s)" % str(odd_trail))
 	var low := {"morale": 6}
 	var moved: int = MC.apply_lift(low, -2, MC.LIST_CAP, false)
 	MC.fade_lift(low, 1)
+	MC.fade_lift(low, 2)
 	_check(moved == -1 and int(low["morale"]) == 6 and not low.has("press_lift"),
 			"At the morale floor only what really moved is kept, so the fade never overshoots (%d)" % int(low["morale"]))
 	# The round's fade runs in GameState before the next question forms.
@@ -317,7 +335,10 @@ func _test_press_caps_and_fade() -> void:
 	var q: Dictionary = _state.my_list[0]
 	MC.apply_lift(q, 2, MC.LIST_CAP, false)
 	_state._fade_press_lifts()
-	_check(int(q["morale"]) == 71 and int(q["press_lift"]) == 1, "GameState fades every listed player's press lift a round")
+	var held := int(q["morale"])
+	_state._fade_press_lifts()
+	_check(held == 72 and int(q["morale"]) == 71 and int(q["press_lift"]) == 1,
+			"GameState fades every listed player's press lift a point every second round (%d, %d)" % [held, int(q["morale"])])
 	# The board's press move fades too, and stacking never passes its cap.
 	_press_reset()
 	var up: int = _state._press_board(2)
@@ -342,7 +363,8 @@ func _test_press_caps_and_fade() -> void:
 			"options": [{"label": "x", "kind": "method"}]}
 	var res: Dictionary = _state.resolve_media_conference(0)
 	var b_moved: int = _state.board_confidence() - 50
-	_check(absi(b_moved) == 2 and int(_state.media_memory.get("board_lift", 0)) == b_moved and int(res["fade_rounds"]) == 2,
+	_check(absi(b_moved) == 2 and int(_state.media_memory.get("board_lift", 0)) == b_moved and int(res["fade_rounds"]) == 2
+			and int(res["fade_board"]) == 2 and int(res["fade_morale"]) == 0,
 			"An answer's board move is kept to fade, and the outcome says how long (%d, %s rounds)" % [b_moved, str(res.get("fade_rounds"))])
 
 
@@ -380,10 +402,20 @@ func _test_press_standing() -> void:
 			and MC.lead_in("muckraker", 0) == "",
 			"A cool journalist adds a lead-in; the question itself is unchanged (%s)" % asked)
 	var st_line: String = _state.press_standing_line()
-	_check(st_line == "Gary is cool on you: every answer is 5% less likely to land well.",
+	_check(st_line == "Gary's opinion of you is Wary: every answer is 5% less likely to land well.",
 			"The sheet says how he stands with you and what it does to the odds (%s)" % st_line)
-	_check(MC.standing_effect("muckraker", 0) == "" and MC.standing_word(0, "philosopher") == "takes you as she finds you",
-			"Even standing adds no line; its word names her")
+	_check(MC.standing_effect("muckraker", 0) == "" and MC.standing_word(0) == "Neutral"
+			and [-2, -1, 0, 1, 2].map(func(v): return MC.standing_word(v)) == ["Hostile", "Wary", "Neutral", "Warm", "Firm fan"],
+			"His opinion of you reads Hostile / Wary / Neutral / Warm / Firm fan; Neutral adds no line")
+	var PS = load("res://scripts/ui/PressScene.gd")
+	var rows: Array = PS.press_outcome_rows({"journalist": "muckraker", "standing": [0, 1],
+			"fade_rounds": 4, "fade_morale": 4, "fade_board": 2}, "")
+	var texts := rows.map(func(r): return str(r[1]))
+	_check(texts.has("Gary Haddon's opinion of you: Neutral → Warm") and texts.has("Morale wears off over 4 rounds, the board over 2.")
+			and PS.OPINION % MC.standing_word(0) == "Opinion of you: Neutral",
+			"The gate and the result say his opinion of you, and both fade lengths when they differ (%s)" % str(texts))
+	var one_fade: Array = PS.press_outcome_rows({"fade_rounds": 2, "fade_morale": 2, "fade_board": 0}, "")
+	_check(str(one_fade[0][1]) == "It wears off over 2 rounds.", "One fade length is said once (%s)" % str(one_fade))
 	_check(_state.press_odds_line(0).contains("Gary warms to you (+5% next time)")
 			and _state.press_odds_line(2).contains("Gary cools on you (-5% next time)"),
 			"Each answer says how it moves your standing with him, as odds (%s)" % _state.press_odds_line(0))
@@ -423,7 +455,7 @@ func _test_press_personas() -> void:
 	_check(int(bogan["a"]["his"]) == 3 and int(bogan["b"]["his"]) == -2 and str(bogan["notes"]).contains("listen to his show"),
 			"The Bogan: a named player's sizes grow by one (%d / %d)" % [int(bogan["a"]["his"]), int(bogan["b"]["his"])])
 	var p_line: String = MC.rules_line("philosopher")
-	_check(p_line == "Her piece lingers: the players' moves wear off a point every second round, the board's a point a round."
+	_check(p_line == "Her piece lingers: morale moves wear off a point every third round, board moves a point a round."
 			and MC.rules_line("sycophant") == MC.FADE_NOTE and MC.rules_line("muckraker").begins_with("The Siren gets read upstairs")
 			and MC.rules_line("muckraker").ends_with(MC.FADE_NOTE),
 			"The gate says once how long the moves last, and her morale move lingers (%s)" % p_line)

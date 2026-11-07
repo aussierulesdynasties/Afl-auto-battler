@@ -11003,7 +11003,7 @@ func _set_press_standing(journalist: String, v: int) -> void:
 	media_memory["standing_year"] = season_year
 
 
-## Press morale fades a point a round (every second round after the
+## Press morale fades a point every second round (every third after the
 ## Philosopher), before this week's question forms (ruling 5.54: effects decay).
 func _fade_press_lifts() -> void:
 	if season == null:
@@ -11148,8 +11148,8 @@ func press_question_text() -> String:
 	return q if lead == "" else "%s %s" % [lead, q]
 
 
-## Under the byline: "Gary is warm to you: every answer is 5% more likely to
-## land well."; "" when he takes you as he finds you.
+## Under the byline: "Gary's opinion of you is Warm: every answer is 5% more
+## likely to land well."; "" when Neutral.
 func press_standing_line() -> String:
 	var j := str(media_conference.get("journalist", ""))
 	if not MediaConference.JOURNALISTS.has(j):
@@ -11218,7 +11218,8 @@ func resolve_media_conference(option: int) -> Dictionary:
 	var size := maxi(absi(int(out["morale"])), absi(int(out["his"])))
 	return {"kind": kind, "landed": landed, "chance": odds, "line": line, "journalist": j,
 			"standing": [before, after], "verdict": str(ctx.get("verdict", "")), "effects": out,
-			"fade_rounds": maxi(MediaConference.fade_rounds(size, slow), MediaConference.fade_rounds(board_moved, false))}
+			"fade_rounds": maxi(MediaConference.fade_rounds(size, slow), MediaConference.board_fade_rounds(board_moved)),
+			"fade_morale": MediaConference.fade_rounds(size, slow), "fade_board": MediaConference.board_fade_rounds(board_moved)}
 
 
 
