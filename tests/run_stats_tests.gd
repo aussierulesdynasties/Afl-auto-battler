@@ -2019,7 +2019,7 @@ func _rank(row: Node) -> String:
 ## at 4.5:1 on every surface its row can sit on (the page up to PANEL_ALT, a
 ## pressed row, and your own club's tinted row), one of its real colours or
 ## one lightened with its hue kept. Collingwood has no colour but black and
-## white: its black, lightened, is the one grey (pending the director).
+## white: it reads plain white (director 2026-11-07, "white").
 func _test_club_code_colours() -> void:
 	var UK = load("res://scripts/ui/UiKit.gd")
 	var SS = load("res://scripts/ui/stats/StatsSide.gd")
@@ -2036,12 +2036,12 @@ func _test_club_code_colours() -> void:
 			line.append("%s%s #%s" % [code, " (own)" if own else "", c.to_html(false).to_upper()])
 			var lo: float = UK.min_contrast(c, SS.row_surfaces(code))
 			_check(lo >= 4.5, "%s's code reads at 4.5:1 on every row surface%s (%.2f)" % [code, ", own club" if own else "", lo])
-			_check(not (c.v > 0.9 and c.s < 0.15), "%s's code is never white" % code)
 			var real: Array = db.club_marker_colours(code)
 			var vivid := real.filter(func(r: Color) -> bool: return r.s >= UK.CODE_MIN_SAT)
 			if vivid.is_empty():
-				_check(code == "COL" and c.s < 0.01 and c.v < 0.9, "%s: no colour but black and white, so its black lightened" % code)
+				_check(code == "COL" and c.is_equal_approx(UK.TEXT), "%s: no colour but black and white, so plain white (#%s)" % [code, c.to_html(false)])
 				continue
+			_check(not (c.v > 0.9 and c.s < 0.15), "%s's code is never white" % code)
 			_check(c.s >= UK.CODE_MIN_SAT, "%s's code is a colour, not grey" % code)
 			var from_real := false
 			for r in vivid:
@@ -2051,6 +2051,16 @@ func _test_club_code_colours() -> void:
 			_check(from_real, "%s's code is one of its real colours or one lightened, same hue (#%s)" % [code, c.to_html(false)])
 			_check(not db.club_colours(code)[2].is_equal_approx(c) or db.THREE_COLOUR_CLUBS.has(code),
 					"%s's code is not its pitch tint" % code)
+	# A sheet's wash (director 2026-11-07, "fix now"): Collingwood's is its
+	# black lifted to a neutral grey, never the accent's red-brown; every
+	# other club keeps its own colour.
+	_state.my_club = "COL"
+	var pw: Color = UK.team_wash()
+	_check(pw.s < 0.05 and not pw.is_equal_approx(UK.ACCENT) and pw.get_luminance() > 0.1,
+			"Collingwood's sheet wash is a neutral grey (#%s)" % pw.to_html(false))
+	for code in ["CAR", "RIC", "ESS", "MEL"]:
+		_state.my_club = code
+		_check(UK.team_wash().is_equal_approx(UK.team_colour()), "%s's sheet wash is its own colour" % code)
 	_state.my_club = was
 	print("Club code colours: " + ", ".join(line))
 	# A Forge club whose colours are all pale never falls back to its white.
