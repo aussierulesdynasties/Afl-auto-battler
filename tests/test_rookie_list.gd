@@ -1,5 +1,6 @@
 extends RefCounted
-## Row 88: the rookie list (RookieList). A seeded career
+## Row 88: the rookie list (RookieList). Row 64: a prospect the National
+## Draft passed over gets his rookie list chance in the Rookie Draft. A seeded career
 ## rolls over through the National Draft, which now fills the senior list
 ## only; the Rookie Draft follows and fills the rookie spots. A rookie is
 ## upgraded to the senior list (refused while it is full), an old save loads
@@ -56,6 +57,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_real_lists_start")
 	_t("_test_youth_only_drafts")
 	_t("_test_youth_only_midseason")
+	await _t("_test_undrafted_chance")
 	GameState.replay_seed = 0
 	print(Ran.line("Rookie list", self))
 
@@ -496,3 +498,124 @@ func _test_youth_only_midseason() -> void:
 			"Youth only: the reason is said in words (%s)" % Challenge.block_reason(gs, old))
 	_check(MidseasonDraft.choose(gs, str(young["id"])), "Youth only: a 24-year-old can be taken mid-season")
 	gs.challenge = {}
+
+
+## Row 64 (director, 2026-11-06): an undrafted prospect gets a rookie list
+## chance. Every prospect the National Draft just passed over (and still
+## young enough to stay in the pool) is in the Rookie Draft that follows it;
+## you offer one a spot with a real tap, rivals take them by the same rule,
+## the list limits hold, and a save and load keeps it all.
+func _test_undrafted_chance() -> void:
+	_new_career()
+	gs.season.round_index = gs.season.fixture.size()
+	var year: int = gs.season_year
+	_check(gs.begin_intake_draft(), "(setup) the National Draft opens")
+	var draft: Draft = gs.draft
+	if draft == null:
+		return
+	while not draft.is_finished():
+		var candidate := draft._best_ai_pick(draft.current_club())
+		if candidate.is_empty() or not draft._draft_pick(draft.current_club(), candidate):
+			draft._skip_current_pick()
+	var taken := {}
+	for code in draft.club_lists:
+		for q in (draft.club_lists[code] as Array):
+			taken[str(q["id"])] = true
+	# The prospects this National Draft passed over (its own class).
+	var undrafted := {}
+	for q in gs.draftee_pool:
+		if int(q.get("draft_year", 0)) == year and not taken.has(str(q["id"])) \
+				and not gs.drafted_draftees.has(str(q["id"])):
+			undrafted[str(q["id"])] = q
+	_check(undrafted.size() > 0, "(setup) the National Draft passed over prospects (%d)" % undrafted.size())
+	_check(gs.finish_intake_draft(), "The National Draft commits")
+	_check(RookieList.waiting(gs), "The Rookie Draft follows and waits on your pick")
+	if not RookieList.waiting(gs):
+		return
+	# Every one of them is in the Rookie Draft, unless he aged out (22).
+	var ids := {}
+	for q in MidseasonDraft.pool(gs):
+		ids[str(q["id"])] = true
+	for k in (gs.rookie_draft.get("picks", []) as Array):
+		ids[str(k["id"])] = true
+	var missing := []
+	for id in undrafted:
+		if float((undrafted[id] as Dictionary).get("age", 0.0)) < 22.0 and not ids.has(id):
+			missing.append(id)
+	_check(missing.is_empty(), "Every prospect the National Draft passed over is in the Rookie Draft (%s)" % str(missing))
+	# Your path: offer one of them a spot with a real tap on the sheet.
+	if gs.needs_season_wrap():
+		gs.begin_season_from_wrap()
+	var scene_path := "res://scenes/PreSeasonScene.tscn" if gs.preseason_active() else "res://scenes/HubScene.tscn"
+	var scene: Control = load(scene_path).instantiate()
+	root.add_child(scene)
+	await _settle()
+	var sheet := scene.get_node_or_null(RookieDraftSheet.NAME)
+	_check(sheet != null, "The Rookie Draft sheet opens")
+	var pid := ""
+	for q in MidseasonDraft.pool(gs).slice(0, RookieDraftSheet.SHOWN):
+		if undrafted.has(str(q["id"])):
+			pid = str(q["id"])
+			break
+	_check(pid != "", "A prospect passed over in this National Draft is on the sheet")
+	if sheet == null or pid == "":
+		scene.queue_free()
+		return
+	var from_line := "passed over in %d" % year
+	var who := GameDB.player_display_name(undrafted[pid])
+	var said := sheet.find_children("*", "Label", true, false).any(
+			func(l): return (l as Label).text.contains(who) and (l as Label).text.contains(from_line))
+	_check(said, "The sheet says he was %s" % from_line)
+	var rookies_before := RookieList.rookie_count(gs.my_list)
+	var btn := sheet.find_child("RookiePick_%s" % pid, true, false) as Button
+	_check(btn != null and not btn.disabled, "He has a Pick button")
+	var why: String = await Tap.tap(btn)
+	_check(why == "", "A real tap on Pick reaches it (%s)" % why)
+	await _settle()
+	var mine := RookieList._find(gs.my_list, pid)
+	_check(not mine.is_empty() and RookieList.is_rookie(mine), "He joins your rookie list")
+	_check(RookieList.rookie_count(gs.my_list) == rookies_before + 1, "He takes one rookie spot")
+	_check(int(mine.get("salary", 0)) == RookieList.wage(gs.season_year), "He is on the rookie wage")
+	_check(int(mine.get("contract_years", 0)) == RookieList.deal_years(mine),
+			"He is on a rookie deal (%d)" % int(mine.get("contract_years", 0)))
+	_check(str(gs.drafted_draftees.get(pid, "")) == CLUB and not gs.draftee_pool.has(mine),
+			"He leaves the prospect pool as your pick")
+	# Pass the rest; the rivals finish the draft by the same rule.
+	var guard := 0
+	while RookieList.waiting(gs) and guard < 10:
+		guard += 1
+		var again := scene.get_node_or_null(RookieDraftSheet.NAME)
+		var pass_btn: Button = again.find_child("RookiePass", true, false) as Button if again != null else null
+		if pass_btn == null:
+			RookieList.choose(gs, "")
+			break
+		await Tap.tap(pass_btn)
+		await _settle()
+	scene.queue_free()
+	await _settle()
+	_check(bool(gs.rookie_draft.get("done", false)), "The Rookie Draft runs to its end")
+	# AI path: rivals pick up prospects the National Draft passed over.
+	var rival_undrafted := (gs.rookie_draft.get("picks", []) as Array).filter(
+			func(k): return str(k["club"]) != CLUB and undrafted.has(str(k["id"])))
+	_check(rival_undrafted.size() > 0, "Rivals give undrafted prospects a rookie spot too (%d)" % rival_undrafted.size())
+	for k in rival_undrafted:
+		var q := RookieList._find(gs.league_lists.get(str(k["club"]), []), str(k["id"]))
+		_check(RookieList.is_rookie(q) and int(q.get("salary", 0)) == RookieList.wage(gs.season_year)
+				and str(gs.drafted_draftees.get(str(k["id"]), "")) == str(k["club"]),
+				"%s: a rival's undrafted pick is on its rookie list on the rookie wage" % str(k["id"]))
+		_check(str(k["from"]).begins_with(from_line), "A rival's pick says he was %s (%s)" % [from_line, str(k["from"])])
+	# The rookie list limits hold for every club.
+	for code in gs.league_lists:
+		var arr: Array = gs.league_lists[code]
+		_check(RookieList.rookie_count(arr) <= RookieList.CAT_A_SPOTS and arr.size() <= Contracts.MAX_LIST,
+				"%s: six rookies and 44 players at most (%d, %d)" % [code, RookieList.rookie_count(arr), arr.size()])
+	# Save and load: your undrafted rookie stays yours.
+	_check(gs.save_career() and gs.load_career(), "The career saves and loads")
+	var back := RookieList._find(gs.my_list, pid)
+	_check(not back.is_empty() and RookieList.is_rookie(back)
+			and int(back.get("salary", 0)) == RookieList.wage(gs.season_year),
+			"After a load he is still on your rookie list on the rookie wage")
+	_check(not MidseasonDraft.pool(gs).any(func(q): return str(q["id"]) == pid), "...and out of the pool")
+	_check((gs.rookie_draft.get("picks", []) as Array).any(
+			func(k): return str(k["id"]) == pid and str(k["club"]) == CLUB),
+			"...and the Rookie Draft record keeps your pick")

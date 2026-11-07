@@ -54,7 +54,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `draft_ui` | The draft screen's layout and state: containers, widths, rotate and resume |
 | `intake` | The National Draft model: the 2026 class, projection, season rollover |
 | `intake_ui` | The National Draft on the shared draft screen |
-| `rookie_list` | The rookie list: the National Draft fills the senior list (38), the Rookie Draft after it fills six rookie spots, upgrading a rookie, old saves, both lists on the list screen, real taps on the sheet and the upgrade |
+| `rookie_list` | The rookie list: the National Draft fills the senior list (38), the Rookie Draft after it fills six rookie spots, upgrading a rookie, old saves, both lists on the list screen, real taps on the sheet and the upgrade, and (row 64) every prospect the National Draft passed over gets his rookie list chance |
 | `sir_doug_round` | Sir Doug Nicholls Round: Round 11 is marked, a club with a bye in it marks it the next round, a design slot per club ("none"), the record survives save and reload, old saves, the fixture page and match card on a 390-wide phone |
 | `own_prospect` | Row 64: the prospect you create (Alastair McNeil) in the first National Draft in both starts, the news lines of his career, the marks on his draft row and profile |
 | `league_news` | Row 76: the premiership item's flag-history sentence (first ever, back-to-back, a 10+ year wait) from the honour roll and the sourced pre-career flags, its front-page standfirst, and a seeded season played through (the sentence true) |
