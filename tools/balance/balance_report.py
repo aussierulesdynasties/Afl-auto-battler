@@ -554,6 +554,147 @@ def legs_section(A, B):
                 print(f"| {label} | {_fmt(dc)} | {_fmt(dr)} | {_fmt(dd)} |")
 
 
+# Ruck integrity (T2.31): hit-outs per team and per number-one ruck, hit-outs to
+# advantage, the club spread and the match duel spread, against Champion Data 2025 and
+# 2026 (afl_ruck_rates.json, built by build_ruck_rates.py from the Wheelo cache).
+RUCK_DUEL = (10, 20, 30)
+
+
+def _ratio(num, den):
+    def f(r):
+        d = sum(den(t) for t in r["teams"])
+        return None if d == 0 else 100 * sum(num(t) for t in r["teams"]) / d
+    return f
+
+
+RUCK_ROWS = [
+    ("team hit-outs", "team_hitouts", lambda r: sum(float(t.get("hitouts", 0)) for t in r["teams"]) / 2, ""),
+    ("team hit-outs to advantage", "team_hta", lambda r: sum(float(t.get("hitouts_adv", 0)) for t in r["teams"]) / 2, ""),
+    ("to advantage, % of hit-outs", "team_hta_pct",
+     _ratio(lambda t: float(t.get("hitouts_adv", 0)), lambda t: float(t.get("hitouts", 0))), "%"),
+    ("number-one ruck: hit-outs", "ruck1_hitouts", lambda r: sum(t["ruck1"][0] for t in r["teams"]) / 2, ""),
+    ("number-one ruck: to advantage", "ruck1_hta", lambda r: sum(t["ruck1"][1] for t in r["teams"]) / 2, ""),
+    ("number-one ruck: to advantage %", "ruck1_hta_pct", _ratio(lambda t: t["ruck1"][1], lambda t: t["ruck1"][0]), "%"),
+    ("number-one ruck: share of team hit-outs", "ruck1_share",
+     _ratio(lambda t: t["ruck1"][0], lambda t: float(t.get("hitouts", 0))), "%"),
+    ("number-one ruck: ruck contests*", "ruck1_contests", lambda r: sum(t["ruck1"][2] for t in r["teams"]) / 2, ""),
+    ("number-one ruck: hit-outs per ruck contest*", "ruck1_win_pct",
+     _ratio(lambda t: t["ruck1"][0], lambda t: t["ruck1"][2]), "%"),
+]
+
+
+def _mark(v, rr):
+    if rr["min"] <= v <= rr["max"]:
+        return "IN"
+    return "NEAR" if abs(v - rr["mean"]) <= 2 * rr["sd"] else "OUT"
+
+
+def ruck_section(A, B):
+    if not any("ruck1" in t for r in A.values() for t in r["teams"]):
+        return
+    path = os.path.join(HERE, "afl_ruck_rates.json")
+    if not os.path.exists(path):
+        return
+    ref = json.load(open(path, encoding="utf-8"))
+    r26, r25 = ref["2026"]["league"], ref["2025"]["league"]
+    print("\n## Rucks (T2.31; real: Champion Data via Wheelo, tools/balance/afl_ruck_rates.json)\n")
+    print("Number-one ruck: the side's man with the most hit-outs in the match (real: the club's listed ruck with "
+          "the most season hit-outs, per game he played). Mark against 2026's 18 clubs: IN inside lowest..highest, "
+          "NEAR within mean +-2 sd, OUT.\n")
+    head = "| per team-match | real 2026 mean | 2026 range | real 2025 mean | A | mark |" + (" B | B-A | se | sig |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for label, key, fn, unit in RUCK_ROWS:
+        ma, mb, dm, se = paired(A, B, fn)
+        rr = r26[key]
+        line = (f"| {label} | {rr['mean']:.1f}{unit} | {rr['min']:.1f}-{rr['max']:.1f} | {r25[key]['mean']:.1f}{unit} |"
+                f" {ma:.1f}{unit} | {_mark(ma, rr)} |")
+        if B:
+            sig = "yes" if se and abs(dm) > 2 * se else ""
+            line += f" {mb:.1f}{unit} | {dm:+.2f} | {se:.2f} | {sig} |"
+        print(line)
+    print("\n*The sim counts a ruck contest only when someone wins the tap, so its hit-outs per contest is the"
+          " share of won taps (the two rucks sum to 100%); real ruck contests include taps nobody wins."
+          " Read those two rows' marks with this in mind.")
+    ruck_clubs(A, B, ref)
+    ruck_duels(A, B)
+
+
+def ruck_clubs(A, B, ref):
+    """Feast or famine at club level: each club's sim average against the real 18 clubs' spread."""
+    r26 = ref["2026"]["league"]
+    names = {}
+    with open(os.path.join(ROOT, "data", "clubs.csv"), encoding="utf-8") as f:
+        for line in f.read().splitlines()[1:]:
+            c = line.split(",")
+            names[c[1]] = c[0]
+    real_club = {names.get(k, k): v for k, v in ref["2026"]["clubs"].items()}
+    for name, R in (("A", A), ("B", B)):
+        if not R:
+            continue
+        acc = {}
+        for r in R.values():
+            for t in r["teams"]:
+                c = acc.setdefault(t.get("club", "?"), [0, 0.0, 0, 0, 0])
+                c[0] += 1
+                c[1] += float(t.get("hitouts", 0))
+                c[2] += t["ruck1"][0]
+                c[3] += t["ruck1"][2]
+                c[4] += t["ruck1"][3]
+        club = {k: {"team_hitouts": v[1] / v[0], "ruck1_hitouts": v[2] / v[0],
+                    "ruck1_win_pct": 100 * v[2] / max(1, v[3]), "rating": v[4] / v[0]} for k, v in acc.items()}
+        common = [k for k in club if k in real_club]
+        print(f"\n### Club spread, arm {name} (each club over {min(acc[k][0] for k in common)}+ team-matches)\n")
+        print("| club average | real lowest | real highest | real sd | sim lowest | sim highest | sim sd | r with real club |")
+        print("|---|---|---|---|---|---|---|---|")
+        for key, label in (("team_hitouts", "team hit-outs"), ("ruck1_hitouts", "number-one ruck hit-outs"),
+                           ("ruck1_win_pct", "number-one ruck hit-outs per contest*")):
+            v = [club[k][key] for k in common]
+            rv = [real_club[k][key] for k in common]
+            rr = r26[key]
+            corr = st.correlation(v, rv) if len(v) > 2 and st.pstdev(v) > 0 else float("nan")
+            print(f"| {label} | {rr['min']:.1f} | {rr['max']:.1f} | {rr['sd']:.2f} | {min(v):.1f} | {max(v):.1f} |"
+                  f" {st.pstdev(v):.2f} | {corr:+.2f} |")
+        if name == "A":
+            print("\n| club | sim no.1 ruck rating | sim team hit-outs | real 2026 | sim no.1 ruck | real no.1 ruck |")
+            print("|---|---|---|---|---|---|")
+            for k in sorted(common, key=lambda k: -club[k]["team_hitouts"]):
+                rc = real_club[k]
+                print(f"| {k} | {club[k]['rating']:.0f} | {club[k]['team_hitouts']:.1f} | {rc['team_hitouts']:.1f} |"
+                      f" {club[k]['ruck1_hitouts']:.1f} | {rc['ruck1_hitouts']:.1f} ({rc['ruck1']}) |")
+
+
+def ruck_duels(A, B):
+    """How often one side wins the match's hit-outs by a big margin (sim only)."""
+    arms = [R for R in (A, B) if R]
+    print("\n### Duel spread per match (no real per-match reference in the repo)\n")
+    head = "| per match | A |" + (" B |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+
+    def tm(r):
+        return abs(float(r["teams"][0].get("hitouts", 0)) - float(r["teams"][1].get("hitouts", 0)))
+
+    def rm(r):
+        return abs(r["teams"][0]["ruck1"][0] - r["teams"][1]["ruck1"][0])
+
+    def top(r):
+        h = [float(t.get("hitouts", 0)) for t in r["teams"]]
+        return max(h) / sum(h) if sum(h) else 0.5
+
+    def share(R, test):
+        return 100 * sum(test(r) for r in R.values()) / len(R)
+    print("| mean team hit-out margin |" + "".join(f" {st.mean(tm(r) for r in R.values()):.1f} |" for R in arms))
+    for k in RUCK_DUEL:
+        print(f"| team hit-out margin {k}+ |" + "".join(f" {share(R, lambda r: tm(r) >= k):.1f}% |" for R in arms))
+    for k in RUCK_DUEL[:2]:
+        print(f"| number-one rucks {k}+ hit-outs apart |" + "".join(f" {share(R, lambda r: rm(r) >= k):.1f}% |" for R in arms))
+    for s in (0.60, 0.65, 0.70):
+        print(f"| one side wins {100 * s:.0f}%+ of the match's hit-outs |"
+              + "".join(f" {share(R, lambda r: top(r) >= s):.1f}% |" for R in arms))
+    print("\nReal per-match hit-out splits are not in the repo; the club spread above is the sourced check.")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -614,6 +755,7 @@ def main():
     print("\nReal AFL (docs/LEAGUE_BALANCE.md): 60+ about 15.5%, 100+ about 1.9%, home win 59.3%.")
     shots_section(A, B)
     duel_section(A, B)
+    ruck_section(A, B)
     margin_tail(A, B)
     role_report(A, B)
     legs_section(A, B)
