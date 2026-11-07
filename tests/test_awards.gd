@@ -402,7 +402,7 @@ func _test_full_season() -> void:
 	GameState.load_career()
 	_check(not (GameState.honour_roll[0] as Dictionary).has("golden_fist")
 			and not GameState.season_awards.has("golden_fist")
-			and StatsTrophies.player_honours(GameState.honour_roll).all(func(it): return str(it["key"]) != "golden_fist"),
+			and ClubTrophies.player_honours(GameState.honour_roll).all(func(it): return str(it["key"]) != "golden_fist"),
 			"An old save with no Golden Fist loads and shows none")
 	GameState.honour_roll = kept_roll
 	GameState.season_awards = kept_awards
@@ -516,13 +516,13 @@ func _test_golden_fist_trophy_room() -> void:
 			{"year": 2027, "my_club": "GEE", "golden_fist": [{"id": "gf2", "club": "CAR", "path": "lockdown",
 				"counts": {"spoils": 70}}]},
 			{"year": 2028, "my_club": "GEE"}]
-	var items := StatsTrophies.player_honours(seasons)
+	var items := ClubTrophies.player_honours(seasons)
 	var fists := items.filter(func(it): return str(it["key"]) == "golden_fist")
 	_check(fists.size() == 1 and str(fists[0]["id"]) == "gf1" and int(fists[0]["year"]) == 2026
 			and str(fists[0]["name"]) == Awards.GOLDEN_FIST
 			and str(fists[0]["count"]) == "14 intercept marks, 40 intercepts and 31 rebound 50s in 22 games",
 			"Your Golden Fist is on the shelf with its counts; another club's is not (%s)" % str(fists))
-	_check(StatsTrophies.kinds_won(seasons).has("golden_fist"), "The trophy room's filter offers the Golden Fist")
+	_check(ClubTrophies.kinds_won(seasons).has("golden_fist"), "The trophy room's filter offers the Golden Fist")
 	GameState.my_club = keep_club
 
 

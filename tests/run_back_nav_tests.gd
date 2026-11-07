@@ -263,7 +263,8 @@ func _new_roots(scene: Node, before: Dictionary) -> Array:
 	for c in scene.find_children("*", "Control", true, false):
 		if before.has(c.get_instance_id()):
 			continue
-		if c.get_parent() != scene:
+		# The match screen opens its sheets in a host under the scoreboard (T3.R42).
+		if c.get_parent() != scene and not (c.get_parent().get_parent() == scene and c.get_parent().name == "UnderScoreboard"):
 			continue
 		if c.is_queued_for_deletion() or not c.is_visible_in_tree():
 			continue
@@ -581,7 +582,7 @@ const CRAWL_VIEWS := [
 	["hub", []], ["list", []], ["training", []], ["coaching", []], ["staff", []], ["selection", []],
 	["season_review", []],
 	["stats", ["Section_ladder"]], ["stats", ["Section_players"]], ["stats", ["Section_ratings"]],
-	["stats", ["Section_awards"]], ["stats", ["Section_fixture"]], ["stats", ["Section_trophies"]],
+	["stats", ["Section_awards"]], ["stats", ["Section_fixture"]],
 	["offseason", []], ["offseason", ["Tab_agents"]], ["offseason", ["Tab_trade"]],
 	["draft", ["Choose_COL"]], ["draft", ["Choose_COL", "Tab_picks"]],
 ]
