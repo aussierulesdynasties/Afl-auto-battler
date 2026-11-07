@@ -29,6 +29,10 @@ var _fixed_order: Array = []
 ## had nobody it could take). A passed club is skipped for the rest of the
 ## draft and left out of the extra rounds.
 var passed_clubs := {}
+## Intake: the coach's picks that passed because his list was full, in order:
+## [{"pick": overall pick number, "why": "list_full"}]. Saved with the draft;
+## the draft screen and the draft-night news say each one.
+var user_passed: Array = []
 ## Intake: how many slots the planned rounds hold (the extra rounds come after).
 var _planned_len := 0
 
@@ -363,7 +367,52 @@ func remaining_pool() -> int:
 func _list_full(code: String) -> bool:
 	if not intake_mode:
 		return false
-	return int(existing_sizes.get(code, 0)) + count_for(code) >= (senior_cap if senior_cap > 0 else Ratings.LIST_SIZE)
+	return int(existing_sizes.get(code, 0)) + count_for(code) >= list_cap()
+
+
+## Intake: where a list is full for this draft (the senior list in a career).
+func list_cap() -> int:
+	return senior_cap if senior_cap > 0 else Ratings.LIST_SIZE
+
+
+## Intake: the list spots `code` still has open tonight.
+func open_spots(code: String) -> int:
+	return maxi(0, list_cap() - int(existing_sizes.get(code, 0)) - count_for(code))
+
+
+## Intake: `code`'s picks still to come, split by whether a list spot is left
+## for each: {"open": spots, "usable": [pick numbers], "passing": [pick
+## numbers]}. A club with a full list passes its picks.
+func spots_plan(code: String) -> Dictionary:
+	var open := open_spots(code)
+	var picks := [] if passed_clubs.has(code) else upcoming_picks(code, 0)
+	return {"open": open, "usable": picks.slice(0, mini(open, picks.size())),
+			"passing": picks.slice(mini(open, picks.size()))}
+
+
+## Pick numbers in words: "40", "40 and 58", "40, 58 and 76".
+static func picks_words(picks: Array) -> String:
+	var bits: PackedStringArray = []
+	for n in picks:
+		bits.append(str(int(n)))
+	if bits.size() <= 1:
+		return "".join(bits)
+	return "%s and %s" % [", ".join(bits.slice(0, bits.size() - 1)), bits[bits.size() - 1]]
+
+
+## The line that says your picks passed for a full list ("" when none did):
+## "Pick 49 passed: your senior list is full (38)."
+func user_passed_line() -> String:
+	if user_passed.is_empty():
+		return ""
+	var nums := user_passed.map(func(e): return int(e["pick"]))
+	return "%s %s passed: your %slist is full (%d)." % ["Pick" if nums.size() == 1 else "Picks",
+			picks_words(nums), "senior " if senior_cap > 0 else "", list_cap()]
+
+
+func _note_user_pass(code: String) -> void:
+	if intake_mode and code == user_club and _list_full(code):
+		user_passed.append({"pick": pick_index + 1, "why": "list_full"})
 
 
 func _skip_current_pick() -> void:
@@ -434,11 +483,14 @@ func auto_until_user_turn() -> void:
 	while not is_finished():
 		var code := current_club()
 		if passed_clubs.has(code):
+			_note_user_pass(code)
 			_skip_current_pick()
 			continue
 		if _list_full(code):
 			# The club is at the list cap: pass, like a club with no space
-			# under the CBA at the real draft.
+			# under the CBA at the real draft. Your own pass is recorded,
+			# so the draft screen can say it.
+			_note_user_pass(code)
 			_skip_current_pick()
 			continue
 		if code == user_club:

@@ -69,6 +69,7 @@ func _run() -> void:
 	await _t("_test_rest")
 	await _t("_test_new_career_flow")
 	await _t("_test_screen_wipe")
+	await _t("_test_loading_cover")
 
 	print("BACKTABLE")
 	for line in _table:
@@ -785,9 +786,10 @@ func _test_screen_wipe() -> void:
 		_check(bool(wipe.get("busy")) and rect.visible, "the wipe starts on a screen change at %s" % size)
 		_check(rect.mouse_filter == Control.MOUSE_FILTER_STOP, "taps are blocked under the wipe at %s" % size)
 		_check(current_scene == before, "the old screen stays until full cover at %s" % size)
-		for i in range(120):
-			if not bool(wipe.get("busy")):
-				break
+		# The scene loads on a thread under the cover, so wait on time, not a
+		# frame count (a headless frame is about a millisecond).
+		var t0 := Time.get_ticks_msec()
+		while bool(wipe.get("busy")) and Time.get_ticks_msec() - t0 < 10000:
 			await process_frame
 		_check(not bool(wipe.get("busy")), "the wipe ends at %s" % size)
 		_check(current_scene != before and current_scene != null and _router.current() == "main",
@@ -797,3 +799,125 @@ func _test_screen_wipe() -> void:
 	feel.test_motion = false
 	root.size = Vector2i(1280, 720)
 	await _settle()
+
+
+## The loading cover (Android pass, 2026-11-07): a real tap on Sim the week puts
+## the cover and its line on screen before the week is simmed, a second tap
+## under the cover is ignored, Continue shows its line before the career loads,
+## and a slow screen (My list) says so before it is built. Run with the cover
+## up still, as Reduced motion has it.
+func _test_loading_cover() -> void:
+	var wipe: Node = root.get_node("ScreenTransition")
+	var line: Label = wipe.get_node("CoverLine")
+	wipe.set("test_cover", true)
+	_fresh_career()
+	_state.set_confirm_sim_round(false)
+	_router.stack = []
+	_router.go("hub")
+	await _wait_cover(wipe)
+	await _settle()
+	var hub := current_scene
+	var sim: Control = hub.find_child("SimRound", true, false)
+	_check(sim != null, "loading cover: the hub shows Sim the week")
+	if sim == null:
+		wipe.set("test_cover", false)
+		return
+	var start_round: int = _state.season.round_index
+	# Frame by frame: was the line up while the week was still unplayed?
+	var seen := {"before": false, "after": false}
+	var watch := func():
+		if bool(wipe.call("line_visible")):
+			if _state.season.round_index == start_round:
+				seen["before"] = true
+			else:
+				seen["after"] = true
+	process_frame.connect(watch)
+	var why: String = await Tap.tap(sim)
+	_check(why == "", "loading cover: a real tap reaches Sim the week (%s)" % why)
+	_check(bool(wipe.get("busy")), "loading cover: the cover is up on the frames after the tap")
+	await _wait_cover(wipe)
+	process_frame.disconnect(watch)
+	_check(seen["before"], "loading cover: the line is drawn before the week is simmed")
+	_check(line.text.begins_with("Playing Round"), "loading cover: the line names the round (%s)" % line.text)
+	_check(_state.season.round_index == start_round + 1, "loading cover: one tap sims one week (round %d -> %d)"
+			% [start_round, _state.season.round_index])
+	for i in range(4):
+		if not current_scene.call("handle_back"):
+			break
+		await process_frame
+	await _settle()
+
+	# A second tap while the cover is up never reaches the game.
+	var held := [true]
+	wipe.call("cover", func():
+		while held[0]:
+			await process_frame, "Playing Round 9...")
+	await _settle(2)
+	var sim2: Control = current_scene.find_child("SimRound", true, false)
+	var r2: int = _state.season.round_index
+	if sim2 != null:
+		var why2: String = await Tap.tap(sim2)
+		_check(why2 != "", "loading cover: a tap under the cover does not press Sim the week")
+	_check(_state.season.round_index == r2, "loading cover: no week is simmed under the cover")
+	held[0] = false
+	await _wait_cover(wipe)
+	_check(not bool(wipe.get("busy")) and not line.visible, "loading cover: input and the screen come back")
+
+	# My list: its line is up before the screen is built, and stays its own
+	# through the autosave (a dirty career) instead of turning generic. The
+	# hub is held by id: it is freed while the watch still runs.
+	var hub_id := current_scene.get_instance_id()
+	var list_seen := [false]
+	var texts := {}
+	var watch_list := func():
+		if bool(wipe.call("line_visible")):
+			texts[line.text] = true
+			if line.text == "Loading your list..." and _router.current() == "list" 					and current_scene != null and current_scene.get_instance_id() == hub_id:
+				list_seen[0] = true
+	_state.set("_dirty", true)
+	process_frame.connect(watch_list)
+	_router.go("list")
+	await _wait_cover(wipe)
+	process_frame.disconnect(watch_list)
+	_check(list_seen[0], "loading cover: My list says it is loading before the screen is built")
+	_check(texts.keys() == ["Loading your list..."],
+			"loading cover: the named line is never swapped for a generic one (%s)" % [texts.keys()])
+	_check(current_scene != null and current_scene.scene_file_path.ends_with("ListScene.tscn"),
+			"loading cover: My list opens under the cover")
+
+	# Continue: the line is up before the career is read from disk.
+	_check(_state.save_career(), "(setup) the career is saved for Continue")
+	_state.reset()
+	_router.stack = []
+	_router.go("main")
+	await _wait_cover(wipe)
+	await _settle()
+	var cont: Control = current_scene.find_child("ContinueCareer", true, false)
+	_check(cont != null, "loading cover: the title offers Continue")
+	if cont != null:
+		var loaded_seen := {"before": false}
+		var watch_load := func():
+			if bool(wipe.call("line_visible")) and _state.season == null:
+				loaded_seen["before"] = true
+		process_frame.connect(watch_load)
+		var why3: String = await Tap.tap(cont)
+		_check(why3 == "", "loading cover: a real tap reaches Continue (%s)" % why3)
+		await _wait_cover(wipe)
+		process_frame.disconnect(watch_load)
+		_check(loaded_seen["before"], "loading cover: Continue shows its line before the career loads")
+		_check(_router.current() == "hub" and _state.season != null, "loading cover: Continue lands on the hub")
+	wipe.set("test_cover", false)
+	_state.delete_saved_career()
+	# The setting is saved and later suites read it: put it back.
+	_state.set_confirm_sim_round(true)
+	await _settle()
+
+
+func _wait_cover(wipe: Node) -> void:
+	await process_frame
+	var t0 := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 20000:
+		if not bool(wipe.get("busy")):
+			return
+		await process_frame
+	_check(false, "loading cover: the cover comes down")

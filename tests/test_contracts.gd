@@ -48,6 +48,7 @@ func run() -> void:
 	_t("_test_rivals_act_in_their_interest")
 	_t("_test_challenge_gates")
 	_t("_test_challenge_offers")
+	_t("_test_selection_bars_remembered")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Contracts", self))
@@ -2775,3 +2776,33 @@ func _test_challenge_offers() -> void:
 	else:
 		_check(false, "(setup) the hand-made offer is open")
 	GameState.challenge = {}
+
+
+## Perf guard (Android, 2026-11-07: a trade-period week took seconds): while
+## the market is frozen a club's selection bars are worked out once per list
+## and reused, with the very same answer; a changed list is worked out again,
+## and nothing is remembered once the market moves.
+func _test_selection_bars_remembered() -> void:
+	var list: Array = GameDB.club_list("GEE").duplicate(true)
+	TradeValue.remember_bars(false)
+	var plain := TradeValue.selection_bars(list)
+	var b0 := TradeValue.bars_built
+	TradeValue.selection_bars(list)
+	_check(TradeValue.bars_built - b0 == 1, "With the market open, every ask works the bars out")
+	TradeValue.remember_bars(true)
+	b0 = TradeValue.bars_built
+	var first := TradeValue.selection_bars(list)
+	var second := TradeValue.selection_bars(list)
+	_check(TradeValue.bars_built - b0 == 1 and str(first) == str(plain) and str(second) == str(plain),
+			"Frozen, the same list is worked out once and gives the same bars")
+	second["x"] = 1
+	_check(str(TradeValue.selection_bars(list)) == str(plain), "A caller changing its copy changes nothing remembered")
+	list[0]["overall"] = int(list[0].get("overall", 0)) + 9
+	b0 = TradeValue.bars_built
+	TradeValue.selection_bars(list)
+	_check(TradeValue.bars_built - b0 == 1, "A changed list is worked out again")
+	TradeValue.remember_bars(false)
+	b0 = TradeValue.bars_built
+	TradeValue.selection_bars(list)
+	TradeValue.selection_bars(list)
+	_check(TradeValue.bars_built - b0 == 2, "Once the market moves, nothing is remembered")

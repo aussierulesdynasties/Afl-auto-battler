@@ -221,18 +221,26 @@ func _test_fixture_page() -> void:
 			"Round 4's page says nothing about it")
 	s.queue_free()
 	await _settle()
-	# A club with a bye in Round 11: Round 12's page names it (2.73).
-	var m: Dictionary = (gs.season.fixture[r] as Array).pop_back()
+	# A club with a bye in Round 11: Round 12's page names it (2.73). The
+	# seed's fixture may already rest two clubs there; if not, one match is
+	# taken out so two do (as an 18-club bye round has).
+	var m := {}
+	var resting := SirDougRound.byes_in(gs.season, r)
+	if resting.is_empty():
+		m = (gs.season.fixture[r] as Array).pop_back()
+		resting = [str(m["home"]), str(m["away"])]
+	_check(resting.size() == 2, "Two clubs rest in Round 11 (%s)" % str(resting))
 	s = await _open_fixture(fix, r + 1)
 	var late: Label = s.find_child("SirDougAfterBye", true, false)
 	_check(late != null and late.text.begins_with("Sir Doug Nicholls Round after the bye: ") and late.get_line_count() == 1
-			and late.text.contains(GameDB.club_short(str(m["home"]))) and late.text.contains(GameDB.club_short(str(m["away"])))
+			and late.text.contains(GameDB.club_short(str(resting[0]))) and late.text.contains(GameDB.club_short(str(resting[1])))
 			and late.text.contains(" and "),
 			"Round 12's page names the clubs marking it after their bye (%s)" % (late.text if late else "-"))
 	_check(late != null and _inside(late, 390), "...within a 390-wide phone")
 	s.queue_free()
 	await _settle()
-	(gs.season.fixture[r] as Array).append(m)
+	if not m.is_empty():
+		(gs.season.fixture[r] as Array).append(m)
 
 
 func _test_hub_card() -> void:
