@@ -67,7 +67,7 @@ func _run() -> void:
 			await _t("_test_calls_seeds", [size])
 		for key in SCREENS:
 			await _screen(str(key), size)
-		for section in ["ladder", "players", "ratings", "awards", "trophies"]:
+		for section in ["ladder", "players", "ratings", "awards"]:
 			load("res://scripts/ui/StatsHubScene.gd").current = section
 			await _open("stats")
 			_audit(current_scene, "stats %s %dx%d" % [section, size.x, size.y])

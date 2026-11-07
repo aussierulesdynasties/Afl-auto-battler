@@ -5823,7 +5823,7 @@ func _close_season_awards() -> void:
 		"my_bf": mine_bf.slice(0, 1),
 		"my_club": my_club,
 		"my_position": my_position(),
-		# Your season for the trophy room (Season stats): the home-and-away
+		# Your season for the trophy room (the club page): the home-and-away
 		# record, the last final you played ("" for no finals; its tag, e.g.
 		# "PF1") and your All-Australians. Older entries lack these keys.
 		"my_record": my_record(),
