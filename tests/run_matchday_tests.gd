@@ -2501,7 +2501,7 @@ func _test_press_effects_shown(db) -> void:
 	var after: Label = hub.find_child("MediaOutcomeLine", true, false)
 	_check(tapped == "" and _state.board_confidence() == 50 + int(out["board"])
 			and int(who["morale"]) == 50 + int(out["morale"]) and after != null and after.is_visible_in_tree()
-			and after.text == MC.after_line("criticise", landed, fx) and int(out["board"]) == 1,
+			and after.text == str(load("res://scripts/ui/PressScene.gd").outcome_parts(MC.after_line("criticise", landed, fx))[0]) and int(out["board"]) == 1,
 			"A real tap on the first answer applies the outcome the press stream drew, and the sheet after says how it landed (%s, %s)" % [tapped, landed])
 	var done: Button = hub.find_child("MediaOutcomeDone", true, false)
 	var closed: String = await Tap.tap(done) if done != null else "missing"
@@ -2543,6 +2543,100 @@ func _test_press_scene_routed() -> void:
 	_check(closed == "" and router.current() == "hub" and current_scene != null and current_scene.name == "HubScene"
 			and current_scene.find_child("MediaConference", true, false) == null,
 			"A real tap on Done returns to the hub (%s, %s)" % [closed, router.current()])
+	_state.media_conference = {}
+
+
+## The press screen at phone size, by real taps (director 2026-11-06, Q4):
+## each of the four answers to the Muckraker (the fourth names a player) lands
+## in the room and Continue returns to the hub; the Stats Geek shows the
+## record; the bottom Skip, the top Skip and Android Back each skip without
+## moving anything; Back after an answer leaves.
+func _test_press_scene_taps() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var router = root.get_node("Router")
+	_state.set_vignettes_on(false)
+	root.size = Vector2i(390, 844)
+	var named: Dictionary = _state.my_list[3]
+	var other: Dictionary = _state.my_list[4]
+	var muck := func() -> Dictionary:
+		return MC.pick({"club": "COL", "opponent_name": "Carlton", "round": 8, "year": _state.season_year,
+				"result": {"home": "COL", "away": "CAR", "score": [55, 101]},
+				"named": {"heavy_loss": {"id": str(named["id"]), "name": str(root.get_node("GameDB").player_display_name(named))}}}, {})
+	var open := func(conf: Dictionary) -> Node:
+		_state.media_conference = conf
+		_state.media_conference["opp"] = "Carlton"
+		router.stack = []
+		router.go("hub")
+		await _settle()
+		await _settle()
+		return current_scene
+	_check((muck.call() as Dictionary).get("options", []).size() == 4,
+			"The Muckraker's heavy-loss question offers a fourth answer naming a player")
+	for i in range(4):
+		for p in _state.my_list:
+			p.erase("press_lift")
+			p.erase("press_slow")
+			p.erase("press_wait")
+		var press: Node = await open.call(muck.call())
+		var label := str((_state.media_conference.get("options", [])[i] as Dictionary).get("label", ""))
+		var where: Label = press.find_child("MediaWhere", true, false)
+		var answer: Button = press.find_child("MediaAnswer_%d" % i, true, false)
+		var tapped: String = await Tap.tap(answer) if answer != null else "missing"
+		await _settle()
+		var head: Label = press.find_child("MediaOutcomeLine", true, false)
+		var chance: Label = press.find_child("MediaOutcomeChance", true, false)
+		var said: Control = press.find_child("MediaSaid", true, false)
+		var named_only := i != 3 or (int(named.get("press_lift", 0)) != 0 and not other.has("press_lift"))
+		_check(tapped == "" and press.name == "PressScene" and not _state.media_conference_pending()
+				and where != null and where.text == "Round 8 · v Carlton"
+				and head != null and head.is_visible_in_tree() and chance != null and chance.text.ends_with("% chance.")
+				and said != null and said.is_visible_in_tree() and press.find_child("MediaAnswer_0", true, false) == null
+				and press.find_child("MediaTopSkip", true, false).disabled and named_only,
+				"A real tap on answer %d lands it in the press screen, with its odds and only what it moves (%s; %s)" % [i, tapped, label])
+		var done: Button = press.find_child("MediaOutcomeDone", true, false)
+		var closed: String = await Tap.tap(done) if done != null else "missing"
+		await _settle()
+		await _settle()
+		_check(closed == "" and router.current() == "hub" and current_scene.name == "HubScene",
+				"A real tap on Continue after answer %d returns to the hub (%s)" % [i, closed])
+	# The Stats Geek reads the record on the gate.
+	var geek: Dictionary = MC.pick({"club": "COL", "opponent_name": "Carlton", "round": 16, "year": _state.season_year,
+			"result": {"home": "COL", "away": "CAR", "score": [80, 83],
+			"team": [{"inside50": 54, "clearances": 36}, {"inside50": 41, "clearances": 38}]}}, {})
+	var gp: Node = await open.call(geek)
+	var rec: Label = gp.find_child("MediaRecord", true, false)
+	var jn: Label = gp.find_child("MediaJournalist", true, false)
+	var g1: Button = gp.find_child("MediaAnswer_1", true, false)
+	_check(rec != null and rec.is_visible_in_tree() and jn != null and jn.text == "Dev Mehta"
+			and gp.find_child("MediaAnswer_3", true, false) == null,
+			"The Stats Geek's gate shows who asks and the record line, with three answers")
+	var gt: String = await Tap.tap(g1) if g1 != null else "missing"
+	await _settle()
+	_check(gt == "" and gp.find_child("MediaOutcomeLine", true, false) != null,
+			"A real tap answers the Stats Geek in the room (%s)" % gt)
+	router.handle_back(true)
+	await _settle()
+	await _settle()
+	_check(router.current() == "hub", "Back after an answer leaves the press screen for the hub")
+	# Each way of saying nothing: nothing moves and his standing stays.
+	var ways := ["MediaSkip", "MediaTopSkip", "back"]
+	for way in ways:
+		var before: int = _state.press_standing("muckraker")
+		var conf: Dictionary = muck.call()
+		var key := str(conf.get("key", ""))
+		_state.media_memory.erase(key)
+		var sp: Node = await open.call(conf)
+		var why := ""
+		if way == "back":
+			router.handle_back(true)
+		else:
+			var b: Button = sp.find_child(way, true, false)
+			why = await Tap.tap(b) if b != null else "missing"
+		await _settle()
+		await _settle()
+		_check(why == "" and router.current() == "hub" and not _state.media_conference_pending()
+				and _state.media_memory.has(key) and _state.press_standing("muckraker") == before,
+				"%s skips the press: back to the hub, nothing moved (%s)" % ["Android Back" if way == "back" else way, why])
 	_state.media_conference = {}
 
 
@@ -3098,6 +3192,7 @@ func _test_vignettes_off_match() -> void:
 	await _settle()
 	await _t("_test_press_effects_shown", [db])
 	await _t("_test_press_scene_routed")
+	await _t("_test_press_scene_taps")
 	# A promised run just ended: the sit-down is the week's one ask, and a real
 	# tap on Done closes it.
 	_state.backing_talk = {"player_id": "calder", "title": "Sit-down with Calder",
