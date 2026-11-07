@@ -68,20 +68,28 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "-
   per-match reference yet. Each team line carries `club` and `ruck1` [hit-outs, to advantage,
   ruck contests, ruck rating] for this.
   A "Tackles and pressure acts per player" section gives each listed line's max, p99, p90 and median
-  tackles and pressure acts a game (22-game blocks of the run, 12+ games) against every 2025-26 player
-  with 12+ games, then each side's top tackler a match and tackles per player-game against every
-  2023-25 match line. Each team line carries `tp` (per player id [tackles, pressure acts, line]) for
+  tackles and pressure acts a game, over 22-game blocks of the run (12+ games). Block k of every man
+  makes season k, so a sim season holds about as many men as a real one (about 410 against 420) and
+  each figure is the mean over those seasons; the real range is every player with 12+ games, 2021-26
+  for all players and 2025-26 by line. The mark is the strict one (IN, NEAR within mean +-2 sd,
+  OUT). Then each side's top tackler a match and tackles per player-game against every 2023-25
+  match line. Each team line carries `tp` (per player id [tackles, pressure acts, line]) for
   this. The harness plays without the set ratings (data/ovr_overrides.csv), so a set-rating effect
   (a Blicavs) shows only in `tools/audit/brownlow_impl.gd`.
 - **Brownlow and tackle reference.** `afl_brownlow.json`, built by `build_brownlow_rates.py`
   (`--offline` to use only the cached pages in data/cache): every season 2015-26 from AFL Tables
   (winner, 2nd, 5th, 10th, men polled, polled 10+ and 20+, the ruck share, 7+ hit-outs a game being a
-  ruck), vote and coaches'-vote shares by line and pressure acts from Champion Data 2025-26 via
-  docs/research/wheelo, and from every 2023-25 match page the per-match tackle spread, the winning
-  side's share of the votes and `matches.vote_fit`: a Plackett-Luce fit of every 3-2-1 on the stats
-  CoachReport.influence counts. Its weights are the game's (CoachReport.influence); `with_result` adds
-  the result, `wide` more stats (reference only), and `replay` re-votes the real matches by the fit
-  (top three each match) to show the fit gives real tallies from real stat lines.
+  ruck; 2020's short season is kept but left out of the pooled ranges), vote and coaches'-vote shares
+  by line and pressure acts from Champion Data 2025-26 via docs/research/wheelo (`role_share` by
+  Champion Data position, `role_share_listed` by the game's own listing in
+  data/players_enriched_2026.csv, which the Brownlow audit uses), and from every 2023-25 match page
+  the per-match tackle spread, the winning side's share of the votes and `matches.vote_fit`: a
+  Plackett-Luce fit of every umpires' 3-2-1 on disposals, goals, marks, inside 50s, tackles,
+  hit-outs, clearances and one-percenters (clangers fit slightly positive and are left out; pressure
+  acts have no match record). `with_result` adds the result: those are the game's Brownlow weights
+  (Awards.UMPIRE_WEIGHTS and UMPIRE_WIN; every other award stays on CoachReport.influence). `wide`
+  adds more stats (reference only), and `replay` re-votes the real matches by the fit (top three
+  each match) to show the fit gives real tallies from real stat lines.
 - **Runs** land in `.balance/<timestamp>/` (git-ignored, `.gdignore`d).
 
 ## When to use it
