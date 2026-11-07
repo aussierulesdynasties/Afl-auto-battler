@@ -1,0 +1,3962 @@
+[
+	{
+		"match": "ADE v FRE, seed 9100, balanced/reactive, box -0.75/-0.20",
+		"q_behinds": "[[3, 0], [4, 3], [1, 1], [4, 2]]",
+		"q_goals": "[[5, 0], [5, 3], [6, 1], [4, 2]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "FRE_13",
+					"loose": "FRE_13",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "FRE_13",
+					"loose": "FRE_13",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ADE_28",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ADE_28",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			132,
+			42
+		]
+	},
+	{
+		"match": "BRL v GEE, seed 9101, stubborn/gambler, box -0.20/1.00",
+		"q_behinds": "[[5, 2], [4, 0], [2, 2], [0, 5]]",
+		"q_goals": "[[5, 3], [3, 8], [3, 5], [4, 3]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_44",
+					"loose": "GEE_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "BRL_1",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GEE_44",
+					"loose": "GEE_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "GEE_33",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "BRL_1",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_44",
+					"loose": "GEE_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "GEE_33",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "BRL_1",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_44",
+					"loose": "GEE_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "GEE_33",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			101,
+			123
+		]
+	},
+	{
+		"match": "CAR v GCS, seed 9102, reactive/cautious, box 0.39/0.39",
+		"q_behinds": "[[4, 0], [4, 4], [6, 3], [3, 5]]",
+		"q_goals": "[[3, 4], [1, 1], [3, 2], [4, 5]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "CAR_26",
+					"loose": "CAR_26",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "CAR_26",
+					"loose": "CAR_26",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "CAR_26",
+					"loose": "CAR_26",
+					"pep": "steady",
+					"rotation": "stars",
+					"spare_accountable": "true",
+					"spare_minder_id": "CAR_35",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "stars",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			83,
+			84
+		]
+	},
+	{
+		"match": "COL v GWS, seed 9103, gambler/balanced, box 0.40/-0.75",
+		"q_behinds": "[[2, 2], [6, 2], [2, 4], [0, 5]]",
+		"q_goals": "[[5, 1], [1, 0], [1, 1], [4, 3]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "COL_31",
+					"tag_id": "GWS_16"
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "COL_3",
+					"loose": "COL_3",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "COL_30",
+					"tag_id": "GWS_1"
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "COL_31",
+					"tag_id": "GWS_1"
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			76,
+			43
+		]
+	},
+	{
+		"match": "ESS v HAW, seed 9104, cautious/stubborn, box 1.00/0.40",
+		"q_behinds": "[[4, 1], [2, 0], [2, 2], [1, 2]]",
+		"q_goals": "[[3, 2], [4, 3], [6, 4], [1, 5]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "balanced",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "HAW_6",
+					"loose": "HAW_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "HAW_6",
+					"loose": "HAW_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ESS_26",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "HAW_6",
+					"loose": "HAW_6",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "ESS_7",
+					"loose": "ESS_7",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ESS_26",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			93,
+			89
+		]
+	},
+	{
+		"match": "FRE v MEL, seed 9105, balanced/reactive, box -0.75/-0.20",
+		"q_behinds": "[[3, 5], [0, 4], [0, 3], [1, 3]]",
+		"q_goals": "[[4, 2], [3, 3], [1, 4], [3, 1]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "FRE_13",
+					"loose": "FRE_13",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "FRE_13",
+					"loose": "FRE_13",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "MEL_37",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "FRE_13",
+					"loose": "FRE_13",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "MEL_37",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "FRE_13",
+					"loose": "FRE_13",
+					"pep": "fire_up",
+					"rotation": "stars",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "stars",
+					"spare_accountable": "true",
+					"spare_minder_id": "MEL_47",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			70,
+			75
+		]
+	},
+	{
+		"match": "GEE v NTH, seed 9106, stubborn/gambler, box -0.20/1.00",
+		"q_behinds": "[[2, 2], [3, 3], [2, 3], [2, 1]]",
+		"q_goals": "[[3, 2], [6, 1], [2, 3], [2, 6]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_44",
+					"loose": "GEE_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "NTH_26",
+					"loose": "NTH_26",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_44",
+					"loose": "GEE_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "NTH_26",
+					"loose": "NTH_26",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_14",
+					"loose": "GEE_14",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_14",
+					"loose": "GEE_14",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "NTH_25",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			87,
+			81
+		]
+	},
+	{
+		"match": "GCS v PAD, seed 9107, reactive/cautious, box 0.39/0.39",
+		"q_behinds": "[[2, 1], [3, 1], [8, 1], [3, 1]]",
+		"q_goals": "[[9, 2], [4, 3], [6, 2], [4, 3]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "PAD_28",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "PAD_35",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			154,
+			64
+		]
+	},
+	{
+		"match": "GWS v RIC, seed 9108, gambler/balanced, box 0.40/-0.75",
+		"q_behinds": "[[1, 2], [3, 3], [3, 6], [3, 3]]",
+		"q_goals": "[[6, 0], [2, 2], [3, 4], [1, 1]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "contest",
+					"interceptor_id": "RIC_12",
+					"loose": "RIC_12",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "GWS_15",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "RIC_12",
+					"loose": "RIC_12",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "RIC_42",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "GWS_15",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "RIC_5",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "GWS_15",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "RIC_12",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			82,
+			56
+		]
+	},
+	{
+		"match": "HAW v STK, seed 9109, cautious/stubborn, box 1.00/0.40",
+		"q_behinds": "[[5, 4], [3, 2], [3, 1], [2, 4]]",
+		"q_goals": "[[3, 3], [7, 1], [4, 1], [2, 1]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "HAW_6",
+					"loose": "HAW_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "HAW_24",
+					"loose": "HAW_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "HAW_24",
+					"loose": "HAW_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "HAW_24",
+					"loose": "HAW_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			109,
+			47
+		]
+	},
+	{
+		"match": "MEL v SYD, seed 9110, balanced/reactive, box -0.75/-0.20",
+		"q_behinds": "[[1, 3], [1, 1], [3, 0], [5, 4]]",
+		"q_goals": "[[4, 3], [4, 4], [6, 0], [4, 1]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "SYD_14",
+					"loose": "SYD_14",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "SYD_30",
+					"loose": "SYD_30",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "SYD_24",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "MEL_36",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "SYD_30",
+					"loose": "SYD_30",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "SYD_24",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "SYD_8",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			118,
+			56
+		]
+	},
+	{
+		"match": "NTH v WCE, seed 9111, stubborn/gambler, box -0.20/1.00",
+		"q_behinds": "[[1, 3], [1, 5], [2, 2], [4, 3]]",
+		"q_goals": "[[2, 3], [2, 5], [0, 3], [3, 4]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "NTH_26",
+					"loose": "NTH_26",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "NTH_26",
+					"loose": "NTH_26",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "WCE_1",
+					"tag_id": "NTH_3"
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "WCE_1",
+					"tag_id": "NTH_9"
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "NTH_3"
+				}
+			]
+		],
+		"score": [
+			50,
+			103
+		]
+	},
+	{
+		"match": "PAD v WBD, seed 9112, reactive/cautious, box 0.39/0.39",
+		"q_behinds": "[[3, 0], [5, 2], [1, 4], [2, 3]]",
+		"q_goals": "[[3, 2], [3, 7], [0, 5], [4, 7]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "contest",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			71,
+			135
+		]
+	},
+	{
+		"match": "RIC v ADE, seed 9113, gambler/balanced, box 0.40/-0.75",
+		"q_behinds": "[[0, 5], [0, 2], [0, 3], [5, 2]]",
+		"q_goals": "[[0, 4], [2, 4], [1, 5], [1, 2]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "contest",
+					"interceptor_id": "RIC_12",
+					"loose": "RIC_12",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "RIC_12",
+					"loose": "RIC_12",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ADE_28",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ADE_28",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "RIC_25",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ADE_28",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			29,
+			102
+		]
+	},
+	{
+		"match": "STK v BRL, seed 9114, cautious/stubborn, box 1.00/0.40",
+		"q_behinds": "[[2, 2], [1, 2], [1, 4], [1, 1]]",
+		"q_goals": "[[2, 2], [4, 6], [0, 6], [1, 5]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "STK_39",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "STK_39",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "STK_40",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			47,
+			123
+		]
+	},
+	{
+		"match": "SYD v CAR, seed 9115, balanced/reactive, box -0.75/-0.20",
+		"q_behinds": "[[2, 5], [5, 2], [2, 2], [4, 1]]",
+		"q_goals": "[[6, 1], [7, 0], [5, 2], [4, 3]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "SYD_14",
+					"loose": "SYD_14",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "SYD_14",
+					"loose": "SYD_14",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "SYD_30",
+					"loose": "SYD_30",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "SYD_30",
+					"loose": "SYD_30",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "CAR_6"
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			145,
+			46
+		]
+	},
+	{
+		"match": "WCE v COL, seed 9116, stubborn/gambler, box -0.20/1.00",
+		"q_behinds": "[[1, 3], [4, 2], [3, 1], [1, 3]]",
+		"q_goals": "[[1, 4], [2, 1], [6, 5], [1, 4]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "WCE_6"
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "COL_25"
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "COL_3",
+					"loose": "COL_3",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "WCE_9"
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "stars",
+					"spare_accountable": "true",
+					"spare_minder_id": "WCE_25",
+					"tag_id": "COL_44"
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "stars",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "WCE_1"
+				}
+			]
+		],
+		"score": [
+			69,
+			93
+		]
+	},
+	{
+		"match": "WBD v ESS, seed 9117, reactive/cautious, box 0.39/0.39",
+		"q_behinds": "[[6, 1], [5, 0], [4, 3], [3, 1]]",
+		"q_goals": "[[5, 5], [6, 2], [2, 3], [4, 3]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "contest",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "balanced",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "contest",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "balanced",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			120,
+			83
+		]
+	},
+	{
+		"match": "ADE v GEE, seed 9118, gambler/balanced, box 0.40/-0.75",
+		"q_behinds": "[[2, 2], [1, 5], [1, 1], [3, 2]]",
+		"q_goals": "[[3, 5], [2, 6], [4, 4], [1, 6]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_44",
+					"loose": "GEE_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_44",
+					"loose": "GEE_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ADE_28",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_14",
+					"loose": "GEE_14",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ADE_28",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_14",
+					"loose": "GEE_14",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			67,
+			136
+		]
+	},
+	{
+		"match": "BRL v GCS, seed 9119, cautious/stubborn, box 1.00/0.40",
+		"q_behinds": "[[3, 2], [5, 4], [6, 2], [4, 5]]",
+		"q_goals": "[[3, 0], [3, 4], [6, 1], [2, 3]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "GCS_28",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "BRL_1",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "GCS_18",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "GCS_18",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			102,
+			61
+		]
+	},
+	{
+		"match": "CAR v GWS, seed 9120, balanced/reactive, box -0.75/-0.20",
+		"q_behinds": "[[2, 2], [0, 1], [3, 4], [2, 0]]",
+		"q_goals": "[[2, 4], [6, 3], [1, 3], [2, 3]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "CAR_23",
+					"loose": "CAR_23",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "CAR_44",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "CAR_23",
+					"loose": "CAR_23",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "CAR_44",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "CAR_23",
+					"loose": "CAR_23",
+					"pep": "steady",
+					"rotation": "stars",
+					"spare_accountable": "true",
+					"spare_minder_id": "CAR_9",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "stars",
+					"spare_accountable": "true",
+					"spare_minder_id": "GWS_11",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			73,
+			85
+		]
+	},
+	{
+		"match": "COL v HAW, seed 9121, stubborn/gambler, box -0.20/1.00",
+		"q_behinds": "[[1, 6], [6, 1], [1, 2], [5, 4]]",
+		"q_goals": "[[1, 3], [6, 3], [8, 3], [2, 2]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "HAW_6",
+					"loose": "HAW_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "HAW_6",
+					"loose": "HAW_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "COL_3",
+					"loose": "COL_3",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "HAW_25"
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "HAW_24",
+					"loose": "HAW_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "HAW_25"
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "HAW_9",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			115,
+			79
+		]
+	},
+	{
+		"match": "ESS v MEL, seed 9122, reactive/cautious, box 0.39/0.39",
+		"q_behinds": "[[1, 5], [1, 3], [1, 2], [1, 3]]",
+		"q_goals": "[[0, 6], [3, 4], [3, 5], [3, 2]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "balanced",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "ESS_31",
+					"loose": "ESS_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ESS_26",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ESS_31",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			58,
+			115
+		]
+	},
+	{
+		"match": "FRE v NTH, seed 9123, gambler/balanced, box 0.40/-0.75",
+		"q_behinds": "[[0, 5], [4, 2], [4, 2], [3, 4]]",
+		"q_goals": "[[0, 4], [5, 5], [5, 3], [3, 5]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "FRE_13",
+					"loose": "FRE_13",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "NTH_26",
+					"loose": "NTH_26",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "FRE_13",
+					"loose": "FRE_13",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "NTH_26",
+					"loose": "NTH_26",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "NTH_26",
+					"loose": "NTH_26",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "stars",
+					"spare_accountable": "true",
+					"spare_minder_id": "FRE_11",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "NTH_26",
+					"loose": "NTH_26",
+					"pep": "steady",
+					"rotation": "stars",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			89,
+			115
+		]
+	},
+	{
+		"match": "GEE v PAD, seed 9124, cautious/stubborn, box 1.00/0.40",
+		"q_behinds": "[[3, 1], [3, 3], [3, 0], [3, 1]]",
+		"q_goals": "[[9, 4], [1, 1], [5, 2], [5, 2]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_44",
+					"loose": "GEE_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_44",
+					"loose": "GEE_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_44",
+					"loose": "GEE_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GEE_44",
+					"loose": "GEE_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			132,
+			59
+		]
+	},
+	{
+		"match": "GCS v RIC, seed 9125, balanced/reactive, box -0.75/-0.20",
+		"q_behinds": "[[4, 1], [4, 1], [5, 1], [5, 2]]",
+		"q_goals": "[[2, 4], [3, 1], [2, 0], [7, 0]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "contest",
+					"interceptor_id": "RIC_12",
+					"loose": "RIC_12",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "RIC_12",
+					"loose": "RIC_12",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "GCS_1",
+					"loose": "GCS_1",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "GCS_9",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "RIC_12",
+					"loose": "RIC_12",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "RIC_7",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GCS_1",
+					"loose": "GCS_1",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "RIC_10",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			102,
+			35
+		]
+	},
+	{
+		"match": "GWS v STK, seed 9126, stubborn/gambler, box -0.20/1.00",
+		"q_behinds": "[[1, 3], [1, 4], [0, 3], [2, 4]]",
+		"q_goals": "[[7, 6], [0, 6], [0, 5], [5, 3]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "STK_44",
+					"loose": "STK_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "STK_44",
+					"loose": "STK_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "STK_39",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "STK_44",
+					"loose": "STK_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "STK_40",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			76,
+			134
+		]
+	},
+	{
+		"match": "HAW v SYD, seed 9127, reactive/cautious, box 0.39/0.39",
+		"q_behinds": "[[2, 2], [1, 4], [0, 7], [3, 3]]",
+		"q_goals": "[[1, 4], [4, 4], [0, 3], [2, 3]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "HAW_6",
+					"loose": "HAW_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "SYD_14",
+					"loose": "SYD_14",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "HAW_6",
+					"loose": "HAW_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "SYD_14",
+					"loose": "SYD_14",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "HAW_9",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "SYD_22",
+					"loose": "SYD_22",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "SYD_29",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "SYD_22",
+					"loose": "SYD_22",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "SYD_29",
+					"tag_id": "HAW_3"
+				}
+			]
+		],
+		"score": [
+			48,
+			100
+		]
+	},
+	{
+		"match": "MEL v WCE, seed 9128, gambler/balanced, box 0.40/-0.75",
+		"q_behinds": "[[0, 10], [1, 3], [2, 2], [0, 2]]",
+		"q_goals": "[[1, 3], [3, 2], [4, 3], [0, 5]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "WCE_1",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "WCE_1",
+					"tag_id": "MEL_7"
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "stars",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "stars",
+					"spare_accountable": "true",
+					"spare_minder_id": "WCE_15",
+					"tag_id": "MEL_9"
+				}
+			]
+		],
+		"score": [
+			51,
+			95
+		]
+	},
+	{
+		"match": "NTH v WBD, seed 9129, cautious/stubborn, box 1.00/0.40",
+		"q_behinds": "[[0, 1], [6, 2], [4, 0], [2, 3]]",
+		"q_goals": "[[5, 3], [1, 1], [4, 5], [3, 1]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "NTH_26",
+					"loose": "NTH_26",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "contest",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "NTH_26",
+					"loose": "NTH_26",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "NTH_26",
+					"loose": "NTH_26",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "WBD_4",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "NTH_26",
+					"loose": "NTH_26",
+					"pep": "steady",
+					"rotation": "stars",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "stars",
+					"spare_accountable": "true",
+					"spare_minder_id": "WBD_4",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			90,
+			66
+		]
+	},
+	{
+		"match": "PAD v ADE, seed 9130, balanced/reactive, box -0.75/-0.20",
+		"q_behinds": "[[1, 3], [4, 1], [3, 1], [1, 2]]",
+		"q_goals": "[[2, 5], [6, 4], [1, 5], [1, 2]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "PAD_28",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "PAD_28",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "ADE_48",
+					"loose": "ADE_48",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			69,
+			103
+		]
+	},
+	{
+		"match": "RIC v BRL, seed 9131, stubborn/gambler, box -0.20/1.00",
+		"q_behinds": "[[1, 5], [1, 3], [0, 5], [1, 3]]",
+		"q_goals": "[[0, 2], [0, 8], [0, 3], [2, 7]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "contest",
+					"interceptor_id": "RIC_12",
+					"loose": "RIC_12",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "RIC_12",
+					"loose": "RIC_12",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "BRL_1",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "RIC_50",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "BRL_1",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "RIC_50",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "BRL_1",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			15,
+			136
+		]
+	},
+	{
+		"match": "STK v CAR, seed 9132, reactive/cautious, box 0.39/0.39",
+		"q_behinds": "[[3, 1], [5, 2], [7, 0], [5, 3]]",
+		"q_goals": "[[3, 3], [5, 0], [5, 4], [3, 4]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "STK_44",
+					"loose": "STK_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "STK_44",
+					"loose": "STK_44",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			116,
+			72
+		]
+	},
+	{
+		"match": "SYD v COL, seed 9133, gambler/balanced, box 0.40/-0.75",
+		"q_behinds": "[[3, 2], [1, 1], [1, 3], [3, 2]]",
+		"q_goals": "[[1, 5], [1, 5], [3, 4], [2, 1]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "SYD_30",
+					"loose": "SYD_30",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "SYD_30",
+					"loose": "SYD_30",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "SYD_24",
+					"tag_id": "COL_35"
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "COL_3",
+					"loose": "COL_3",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "COL_8",
+					"tag_id": "SYD_5"
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "SYD_8",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "COL_8",
+					"tag_id": "SYD_21"
+				}
+			]
+		],
+		"score": [
+			50,
+			98
+		]
+	},
+	{
+		"match": "WCE v ESS, seed 9134, cautious/stubborn, box 1.00/0.40",
+		"q_behinds": "[[1, 5], [2, 5], [5, 0], [2, 1]]",
+		"q_goals": "[[3, 3], [4, 3], [6, 0], [4, 3]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "balanced",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "ESS_7"
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "ESS_22"
+				},
+				{
+					"gameplan": "balanced",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "ESS_3"
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			112,
+			65
+		]
+	},
+	{
+		"match": "WBD v FRE, seed 9135, balanced/reactive, box -0.75/-0.20",
+		"q_behinds": "[[1, 2], [5, 0], [1, 5], [5, 2]]",
+		"q_goals": "[[6, 5], [4, 2], [3, 4], [5, 1]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "contest",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "FRE_13",
+					"loose": "FRE_13",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "WBD_8",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "FRE_13",
+					"loose": "FRE_13",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "WBD_8",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "stars",
+					"spare_accountable": "true",
+					"spare_minder_id": "WBD_21",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "FRE_13",
+					"loose": "FRE_13",
+					"pep": "fire_up",
+					"rotation": "stars",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			120,
+			81
+		]
+	},
+	{
+		"match": "ADE v GCS, seed 9136, stubborn/gambler, box -0.20/1.00",
+		"q_behinds": "[[4, 1], [4, 2], [3, 5], [1, 0]]",
+		"q_goals": "[[5, 2], [3, 2], [3, 4], [6, 5]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ADE_28",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GCS_6",
+					"loose": "GCS_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "ADE_24",
+					"loose": "ADE_24",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "ADE_28",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "ADE_48",
+					"loose": "ADE_48",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			114,
+			86
+		]
+	},
+	{
+		"match": "BRL v GWS, seed 9137, reactive/cautious, box 0.39/0.39",
+		"q_behinds": "[[4, 1], [3, 2], [3, 4], [4, 1]]",
+		"q_goals": "[[8, 1], [2, 2], [2, 2], [9, 3]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "GWS_39",
+					"loose": "GWS_39",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "BRL_1",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "BRL_31",
+					"loose": "BRL_31",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "BRL_1",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "GWS_11",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			140,
+			56
+		]
+	},
+	{
+		"match": "CAR v HAW, seed 9138, gambler/balanced, box 0.40/-0.75",
+		"q_behinds": "[[4, 1], [2, 2], [2, 2], [4, 0]]",
+		"q_goals": "[[5, 1], [7, 5], [1, 4], [2, 2]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "HAW_6",
+					"loose": "HAW_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "HAW_6",
+					"loose": "HAW_6",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "HAW_6",
+					"loose": "HAW_6",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			102,
+			77
+		]
+	},
+	{
+		"match": "COL v MEL, seed 9139, cautious/stubborn, box 1.00/0.40",
+		"q_behinds": "[[1, 2], [2, 2], [5, 0], [1, 4]]",
+		"q_goals": "[[2, 5], [2, 3], [3, 2], [2, 3]]",
+		"quarters": [
+			[
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "COL_38",
+					"loose": "COL_38",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "MEL_36"
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "true",
+					"spare_minder_id": "MEL_37",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": "MEL_7"
+				},
+				{
+					"gameplan": "controlled",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "normal",
+					"spare_accountable": "",
+					"spare_minder_id": "",
+					"tag_id": ""
+				}
+			],
+			[
+				{
+					"gameplan": "attacking",
+					"interceptor_id": "",
+					"loose": "",
+					"pep": "fire_up",
+					"rotation": "stars",
+					"spare_accountable": "true",
+					"spare_minder_id": "COL_16",
+					"tag_id": "MEL_7"
+				},
+				{
+					"gameplan": "defensive",
+					"interceptor_id": "MEL_8",
+					"loose": "MEL_8",
+					"pep": "steady",
+					"rotation": "stars",
+					"spare_accountable": "true",
+					"spare_minder_id": "MEL_36",
+					"tag_id": ""
+				}
+			]
+		],
+		"score": [
+			63,
+			86
+		]
+	}
+]
