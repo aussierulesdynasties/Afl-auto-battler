@@ -48,6 +48,13 @@ func _run() -> void:
 		DisplayServer.window_set_size(Vector2i(int(w * factor), int(h * factor)))
 		for i in range(10):
 			await process_frame
+	# A window the monitor cannot grow keeps a scaled view: shrink the content
+	# scale until the view is the size asked for, so the layout is the real one.
+	var vis := root.get_visible_rect().size
+	if vis.x < w - 1:
+		root.content_scale_factor = root.content_scale_factor * vis.x / float(w)
+		for i in range(10):
+			await process_frame
 	print("visible ", root.get_visible_rect().size)
 	var scene = load("res://scenes/MatchScene.tscn").instantiate()
 	root.add_child(scene)
@@ -62,4 +69,15 @@ func _run() -> void:
 	for i in range(12):
 		await process_frame
 	root.get_texture().get_image().save_png(out + "_after.png")
+	# Who tags, scrolled into view, so its cards can be read whole.
+	var who: Control = scene.find_child("TaggerPicker", true, false)
+	if who != null:
+		var up: Node = who.get_parent()
+		while up != null and not (up is ScrollContainer):
+			up = up.get_parent()
+		if up != null:
+			(up as ScrollContainer).ensure_control_visible(who)
+		for i in range(12):
+			await process_frame
+		root.get_texture().get_image().save_png(out + "_who.png")
 	quit()

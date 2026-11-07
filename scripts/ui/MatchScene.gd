@@ -1039,18 +1039,28 @@ func _show_coach_box() -> void:
 	var tag_note := NameInk.rich(UiKit.NOTE, UiKit.MUTED)
 	tag_note.name = "TagNote"
 	tag_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# Who goes to him is only a question once there is a him: hidden with no
-	# tag (the fullest PC break then still fits without scrolling).
+	# On a phone the note with a tag ("X tags Y: he gives up...") runs to two
+	# lines and "No tag..." to one: it keeps room for two, so a tag tap never
+	# pushes the calls below it down (A2).
+	if not _pc_break:
+		tag_note.custom_minimum_size.y = ceilf(UiKit.FONT.get_height(UiKit.NOTE) * 2.0)
+	# Who goes to him is only a question once there is a him: shown faded and
+	# shut with no tag, so it never appears and shoves the calls below it.
 	var who_block: Array = []
 	var who_wb: Control = null
 	var who_hook: Array = [Callable()]
 	var sync_tag := func(_key: String) -> void:
 		if (who_hook[0] as Callable).is_valid():
 			(who_hook[0] as Callable).call()
+		# Who tags is always there, under the tag (A2, director 2026-10-14: the
+		# tag screen jumping about was "heinous, awful UI design"): faded and
+		# shut until there is a man to tag, so picking one moves nothing, not
+		# sideways and not down.
+		var has_tag := str(calls["tag_id"]) != ""
 		for b in who_block:
-			(b as Control).visible = str(calls["tag_id"]) != ""
-		# The columns are dealt once, with Who tags counted in its room (see
-		# _unit_heights): a call never changes column when it expands.
+			(b as Control).modulate.a = 1.0 if has_tag else 0.4
+			for wbtn in (b as Node).find_children("*", "Button", true, false):
+				(wbtn as Button).disabled = not has_tag
 		var who = my_mids.get(str(calls["tagger_id"]), tagger)
 		var target := GameDB.player_display_name_by_id(str(calls["tag_id"]), "")
 		if str(calls["tag_id"]) == "":
@@ -2909,9 +2919,10 @@ func _player_choice(node_name: String, none_label: String, roster: Array, first:
 						_break_refresh.call()))
 			grid.add_child(other)
 		if card.is_valid():
-			# Cards set their own facts (_dress_tagger_card): one to a line on
-			# a phone, side by side on a PC, "Other player..." last.
-			grid.columns = 2 if _pc_break else 1
+			# Cards set their own facts (_dress_tagger_card): one man to a
+			# row, the column's full width, so his facts never wrap a word to a
+			# line (A2); "Other player..." last.
+			grid.columns = 1
 			for gb in grid.get_children().duplicate():
 				if gb is Button and gb != other:
 					card.call(gb, str(gb.name).trim_prefix(node_name + "Grid_"))
@@ -2937,16 +2948,15 @@ func _card_text(r: Dictionary, detail: Callable) -> String:
 
 
 ## A "Who tags" card (director, 2026-10-13: it must read at a glance): his name
-## in bold with where he plays small beside it, then three short facts, one to
-## a line, label quiet and value clear (his Pressure, his legs, what he gives
-## up of his own game). Your club's colour is the rule down the left edge;
+## in bold with where he plays small beside it, then his Pressure, what their
+## man keeps and his legs along one line (label quiet, value clear), and what
+## he gives up of his own game under them. One man to a row, the column's full
+## width (A2). Your club's colour is the rule down the left edge;
 ## selection stays the button's own text outline. The button stays the card's
 ## background and its tap target, under the words; its words are kept in the
 ## "card_text" meta for the tests.
 func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: bool) -> void:
 	var gives_value := str(c["gives"]).left(1).to_upper() + str(c["gives"]).substr(1)
-	# The hold sits beside his Pressure (it is his Pressure and legs that set
-	# it), so the card keeps its three rows and the PC break still fits.
 	var press_value := "%s · their man keeps %s" % [c["pressure"], c["holds"]]
 	var plain := "%s\n%s\nPressure %s\nLegs %s\n%s %s" % [who_name, c["where"], press_value, c["legs"],
 			c["gives_label"], gives_value]
@@ -2992,36 +3002,25 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 	where.name = "CardWhere"
 	head.add_child(where)
 	col.add_child(head)
-	var rows := [["Pressure", press_value, false], ["Legs", str(c["legs"]), bool(c["legs_bad"])],
-			[str(c["gives_label"]), gives_value, false]]
-	# A phone card is wide: label and value in two columns. A PC's card is a
-	# narrow half of a column: the label above the long value instead.
-	var facts: Container = VBoxContainer.new() if _pc_break else GridContainer.new()
-	if _pc_break:
-		facts.add_theme_constant_override("separation", 2)
-	else:
-		(facts as GridContainer).columns = 2
-		facts.add_theme_constant_override("h_separation", 10)
-		facts.add_theme_constant_override("v_separation", 2)
-	for f in rows:
-		var k := UiKit.line(str(f[0]), UiKit.SECONDARY, UiKit.MUTED)
-		k.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		var v := UiKit.lbl(str(f[1]), UiKit.BODY, UiKit.BAD if bool(f[2]) else UiKit.TEXT)
-		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		if _pc_break and str(f[0]) != str(c["gives_label"]):
-			var one := HBoxContainer.new()
-			one.add_theme_constant_override("separation", 8)
-			one.add_child(k)
-			one.add_child(v)
-			facts.add_child(one)
-		elif _pc_break:
-			facts.add_child(k)
-			facts.add_child(v)
-		else:
-			facts.add_child(k)
-			facts.add_child(v)
+	# The short facts flow along one line, each label quiet beside its value,
+	# and wrap whole (never a word to a line, A2); what he gives up is the
+	# long one, a sentence of its own under them.
+	var rows := [["Pressure", str(c["pressure"]), false], [str(c["holds_label"]), str(c["holds"]), false],
+			["Legs", str(c["legs"]), bool(c["legs_bad"])]]
+	var facts := HFlowContainer.new()
 	facts.name = "CardFacts"
+	facts.add_theme_constant_override("h_separation", 16)
+	facts.add_theme_constant_override("v_separation", 0)
+	for f in rows:
+		var one := UiKit.hbox(5)
+		one.add_child(UiKit.line(str(f[0]), UiKit.SECONDARY, UiKit.MUTED))
+		one.add_child(UiKit.line(str(f[1]), UiKit.BODY, UiKit.BAD if bool(f[2]) else UiKit.TEXT))
+		facts.add_child(one)
 	col.add_child(facts)
+	var gives := UiKit.lbl("%s %s" % [c["gives_label"], c["gives"]], UiKit.SECONDARY, UiKit.TEXT)
+	gives.name = "CardGives"
+	gives.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(gives)
 	if is_pick:
 		var pick := UiKit.line("Your assistant's pick", UiKit.SECONDARY, UiKit.MUTED)
 		pick.name = "CardPick"
