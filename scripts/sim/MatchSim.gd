@@ -5931,7 +5931,7 @@ func _loose_pool(side: int, ground: Array) -> Array:
 		var fid := str(on.get(str(p["id"]), ""))
 		if fid == "" or PlayerProfile.player_type(p) != "Key defender":
 			return true
-		return not Matchups._is_key_forward(_on_ground(1 - side, fid)))
+		return not Matchups.is_key_forward(_on_ground(1 - side, fid)))
 
 
 ## A rival coach's loose defender for the quarter, from `ground`: his best
