@@ -382,7 +382,9 @@ func _on_intake_draft() -> void:
 
 
 func _start_intake_draft() -> void:
-	UiKit.run_covered(self, "Starting the new season...", func():
+	# The rollover takes a couple of seconds on a phone: the cover and its
+	# line go up first (ScreenTransition), and the next screen joins it.
+	ScreenTransition.run("Starting the new season...", func():
 		if GameState.begin_intake_draft():
 			Router.go("draft")
 			return
