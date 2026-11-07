@@ -25,8 +25,8 @@ static func url(shown: String, code: String) -> String:
 ## A club's name as a link wears its strongest real colour (director
 ## 2026-11-06, rulings 51a: never white, never a tint): the same club-code ink
 ## as the Season stats lists, read at 4.5:1 on the page, a panel and a pressed
-## row. Every club's name reads in a colour, Essendon's red and Collingwood's
-## grey included, so a name in white is never a club.
+## row. Every club's name reads in a colour, Essendon's red included; a
+## black-and-white club (Collingwood) reads plain white (director 2026-11-07).
 static func colour(code: String) -> Color:
 	return StatsSide.code_ink(code)
 

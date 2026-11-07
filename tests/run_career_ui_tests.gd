@@ -840,6 +840,66 @@ func _slider_spot(s: HSlider, ratio: float) -> Vector2:
 	return Vector2(thumb / 2.0 + ratio * (s.size.x - thumb), s.size.y / 2.0)
 
 
+## Report a problem (T3.R43): one real tap in Settings copies a plain note -
+## build, seed, round, screen, the last twenty match-feed lines - says
+## "Copied", and sends nothing.
+func _test_report_a_problem() -> void:
+	var before := root.size
+	var options = load("res://scripts/ui/OptionsSheet.gd")
+	var report = load("res://scripts/core/ProblemReport.gd")
+	report.start_feed("Round 3, Carlton v Collingwood")
+	for i in range(25):
+		report.note_feed("Q1 %d'  Line %d" % [i, i])
+	var lines: PackedStringArray = report.text("hub").split("
+")
+	_check(lines[0] == "Aussie Rules Dynasties: problem report" and lines[1].begins_with("What happened:"),
+			"The note opens with its title and a line for what happened")
+	var want := ["Build: %s" % BuildInfo.label(), "Seed: ", "Round: ", "Screen: hub",
+			"Match feed (last 20 lines, Round 3, Carlton v Collingwood):"]
+	var at := 3
+	for w in want:
+		_check(lines[at].begins_with(str(w)), "Note line %d starts '%s' (%s)" % [at, w, lines[at]])
+		at += 1
+	_check(lines.size() == at + 20 + 1 and lines[at] == "Q1 5'  Line 5" and lines[at + 19] == "Q1 24'  Line 24",
+			"The last twenty feed lines, oldest first, then nothing more (%d lines)" % lines.size())
+	report.start_feed("x")
+	_check(report.text("").contains("Match feed: no match watched this session")
+			and report.text("").contains("Screen: main menu"),
+			"With no match watched it says so, and an empty screen reads as the main menu")
+	report.start_feed("Round 3, Carlton v Collingwood")
+	report.note_feed("Q2 4'  A line")
+	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+		var tag := "%dx%d" % [sz.x, sz.y]
+		var hs: Array = await _sheet_at(options, sz)
+		var sheet: Control = hs[1]
+		var b: Button = sheet.find_child("ReportProblem", true, false)
+		_check(b != null and b.size.y >= 44.0 and b.text == "Report a problem",
+				"Settings has a thumb-sized Report a problem (%s)" % tag)
+		if b == null:
+			hs[0].queue_free()
+			continue
+		var sc := b.get_parent()
+		while sc != null and not sc is ScrollContainer:
+			sc = sc.get_parent()
+		if sc != null:
+			(sc as ScrollContainer).ensure_control_visible(b)
+		await _settle()
+		DisplayServer.clipboard_set("")
+		var why: String = await Tap.tap(b)
+		await _settle()
+		var toast: Control = sheet.find_child("Toast", true, false)
+		_check(why == "" and toast != null and toast.visible
+				and (toast.find_children("*", "Label", true, false)[0] as Label).text == "Copied",
+				"A real tap says Copied (%s: %s)" % [tag, why])
+		if DisplayServer.get_name() != "headless":
+			_check(DisplayServer.clipboard_get().contains("Q2 4'  A line"),
+					"The clipboard holds the note (%s)" % tag)
+		hs[0].queue_free()
+		await _settle()
+	root.size = before
+	await _settle()
+
+
 ## An old settings file (a level each for music, crowd and button sounds)
 ## comes over as Mute and Volume, once, and the old keys go.
 func _test_old_sound_levels_carry_over() -> void:
@@ -924,6 +984,7 @@ func _run() -> void:
 	_t("_test_press_old_save")
 	await _t("_test_game_feel_settings")
 	_t("_test_old_sound_levels_carry_over")
+	await _t("_test_report_a_problem")
 
 	await _t("_test_menu_and_career")
 	await _t("_test_season_awards")
