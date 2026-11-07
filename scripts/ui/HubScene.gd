@@ -1075,20 +1075,20 @@ func _form_colour(f: float) -> Color:
 	return UiKit.MUTED
 
 
-## How you take the match (director, 2026-10-18, P-14): Watch it, Key moments
-## (top speed, stopping for your calls, the goals and the breaks) or Skip
-## straight to full time. The last one chosen comes up chosen; the main button
-## takes the match that way and says so (_play_label).
+## How you take the match (director, 2026-10-18, P-14): Watch it or Skip
+## straight to full time (Key moments cut, director 2026-11-08). The last one
+## chosen comes up chosen; the main button takes the match that way and says
+## so (_play_label).
 func _match_way() -> Control:
-	return UiKit.choice_grid("MatchWay", [["watch", "Watch"], ["key", "Key moments"], ["skip", "Skip"]],
-			GameState.match_way(), 3, func(key: String) -> void:
+	return UiKit.choice_grid("MatchWay", [["watch", "Watch"], ["skip", "Skip"]],
+			GameState.match_way(), 2, func(key: String) -> void:
 				GameState.set_match_way(key)
 				for b in find_children("PlayMatch", "Button", true, false):
 					(b as Button).text = _play_label())
 
 
 ## The main button's words: Skip chosen says what the match screen's own
-## control says; Watch and Key moments play the match. A response chosen under
+## control says; Watch plays the match. A response chosen under
 ## a fact opens the match on that call, so Skip gives way to it this once.
 func _play_label() -> String:
 	return "Skip to full time" if GameState.match_way() == "skip" and GameState.call_intent.is_empty() \
