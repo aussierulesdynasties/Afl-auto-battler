@@ -17,7 +17,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 67 | Management pays: trade period at real volume, recruiters' edge and development projects (4.Q11); balance-gated | audit across 8-10 seasons |
 | 69 | Hub leads with one hero element, shown on the hub first (6.Q2) | hub capture, critics clean |
 | 70 | Pre-timeskip: the full survey, not the simpler version (T5.Q20) | survey built |
-| 71 | Former-player coaches: lower the coaching rate toward the 60-80% aspiration (86% by 2058 now) (T5.Q15) | audit shows the lower rate |
 | 73 | Premiership-year tattoos at a restrained, configurable rate; zero gameplay effect (6.Q16; see G 6.63) | tattoos on, rate in one place |
 | 74 | Gather Round as a shared league event at host venues, with a policy for odd club counts (T5.Q11a) | built |
 | 75 | Sir Doug Nicholls Round as a real annual event, design stored in the save (T5.Q11b) | built |
