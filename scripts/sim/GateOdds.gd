@@ -6,32 +6,10 @@ extends RefCounted
 ## options carrying positives and negatives"). Every figure is worked out from
 ## the constant the sim itself uses; no template here holds a number of its
 ## own (tests/run_matchup_tests.gd, _gate_odds). Nothing here says which
-## option is better. A plan's gain is as written, for a list that suits it.
+## option is better.
 
 const GAIN := "Gain: %s"
 const COST := "Cost: %s"
-
-# The hub's options beside an opposition fact (FactOptions).
-const TAG_GAIN := "%s keeps %s of his ball on a Tagger, %s on anyone else"
-## Who the tag gain is about when the fact names nobody (a midfield fact).
-const TAG_TARGET_ANY := "the man you tag"
-const TAG_COST := "your tagger gives up %s of his own ball and contest work"
-const MINDER_GAIN := "their loose man reaches %s of his contests, %s with a Defensive forward"
-const MINDER_COST := "your forward is a target %s less often"
-const LOOSE_GAIN := "a top reader gets to %s of their entries"
-const LOOSE_COST := "your loose defender leaves his man on %s of entries, and space opens if he is late"
-const PLAN_GAIN := {
-	"attacking": "shots %s more accurate, %s more ground a kick",
-	"defensive": "%s more pressure where they start, their shots %s less accurate",
-	"contest": "a %s better chance at every stoppage",
-	"controlled": "%s fewer clangers, %s less pressure felt, legs %s fresher",
-}
-const PLAN_COST := {
-	"attacking": "%s more clangers, legs tire %s faster, their shots %s more accurate",
-	"defensive": "your shots %s less accurate, legs tire %s faster, %s less pressure in your back third",
-	"contest": "%s less ground a kick, their shots %s more accurate",
-	"controlled": "%s less ground a kick",
-}
 
 # Who tags (the pre-bounce and break sheets).
 const TAG_GIVES := "%s of his own ball and contest work"
@@ -74,37 +52,6 @@ static func cost(s: String) -> String:
 	return COST % s
 
 
-static func _plan_v(plan: String, key: String, fallback := 1.0) -> float:
-	return float((MatchSim.PLANS.get(plan, {}) as Dictionary).get(key, fallback))
-
-
-## A plan's gain and cost as written: [gain, cost] ("" when it has none here).
-static func plan_lines(plan: String) -> Array:
-	var v := func(k: String) -> float: return _plan_v(plan, k) - 1.0
-	match plan:
-		"attacking":
-			return [PLAN_GAIN[plan] % [pct(v.call("goal")), pct(v.call("gain"))],
-					PLAN_COST[plan] % [pct(v.call("clangers")), pct(v.call("pace")), pct(v.call("exposed"))]]
-		"defensive":
-			var zone: Array = MatchSim.PRESS_PLAN_ZONE
-			return [PLAN_GAIN[plan] % [pct(float(zone[0]) - 1.0), pct(v.call("opp_goal"))],
-					PLAN_COST[plan] % [pct(v.call("goal")), pct(v.call("pace")), pct(1.0 - float(zone[2]))]]
-		"contest":
-			return [PLAN_GAIN[plan] % pct(_plan_v(plan, "contest", 0.0)),
-					PLAN_COST[plan] % [pct(v.call("gain")), pct(v.call("exposed"))]]
-		"controlled":
-			return [PLAN_GAIN[plan] % [pct(v.call("clangers")), pct(v.call("taken")), pct(v.call("pace"))],
-					PLAN_COST[plan] % pct(v.call("gain"))]
-	return ["", ""]
-
-
-## The tag's [gain, cost]; `target` names the man tagged (their player the
-## fact is about), or "" when the fact names nobody.
-static func tag_lines(target := "") -> Array:
-	var who := target if target != "" else TAG_TARGET_ANY
-	return [TAG_GAIN % [who, pct(Roles.TAG_WITH_TAGGER), pct(Roles.TAG_PLAIN)], TAG_COST % tag_gives_pct()]
-
-
 ## The share of his own game a tagger gives up: his contest worth
 ## (TAGGER_COST) and his ball (1 - TAGGER_BALL), one figure when they agree.
 static func tag_gives_pct() -> String:
@@ -126,18 +73,6 @@ static func tag_kept(tagger: Dictionary, legs: float) -> float:
 ## his own card, MatchNotes.tagger_card).
 static func tag_note(who_name: String, target_name: String) -> String:
 	return TAG_NOTE % [who_name, target_name, tag_gives_pct()]
-
-
-static func minder_lines() -> Array:
-	var roam: Dictionary = MatchSim.MINDER_ROAM
-	return [MINDER_GAIN % [pct(float(roam["other"])), pct(float(roam["specialist"]))],
-			MINDER_COST % pct(1.0 - float(MatchSim.MINDER_INVOLVE))]
-
-
-static func loose_lines() -> Array:
-	var reach := MatchSim.ROAM_REACH if MatchSim.zone_intercepts else 1.0
-	return [LOOSE_GAIN % pct((MatchSim.LOOSE_REACH_MIN + MatchSim.LOOSE_REACH_RANGE) * reach),
-			LOOSE_COST % pct(MatchSim.LOOSE_GO * reach)]
 
 
 static func skip_line(q: int) -> String:
