@@ -113,6 +113,9 @@ var _out: Array = []
 var _timeline: Array = []
 var _tl_i := 0
 var _tac := [{}, {}]
+## pid -> {def: a defender by trade, h: height in cm}, from the result's
+## roster (its list_role) or the player's record (_who).
+var _trade := {}
 ## Each side's three stars (MatchSim result "stars", PlanFit's Through stars
 ## carriers) by player id: the men a Through stars side plays through.
 var _stars := [{}, {}]
@@ -164,6 +167,10 @@ func setup(result: Dictionary, p_events: Array) -> void:
 	# Presentation stream: seeded from the fixture, never from MatchSim.
 	_rng.seed = hash("%s|%s|%s|view" % [result.get("home", ""), result.get("away", ""),
 			result.get("label", "")])
+	_trade = {}
+	for side_roster in result.get("roster", []):
+		for p in (side_roster as Array):
+			_trade[str(p.get("id", ""))] = _trade_of(str(p.get("id", "")), str(p.get("list_role", "")))
 	_build_tokens(_starting_roster(result.get("roster", []), events))
 	_lane = {}
 	_attack_lanes(0)
@@ -278,6 +285,8 @@ func _build_tokens(roster: Array) -> void:
 					t["match"] = int(o["id"])
 					break
 		t["slot_match"] = t["match"]
+	# Only a defender by trade minds a forward (_fit_defence).
+	_assign()
 
 
 func _make_token(p: Dictionary, side: int, role: String, slot: String, base: Vector2) -> Dictionary:
@@ -1806,10 +1815,9 @@ func _apply_timeline(k: int) -> void:
 
 ## Who plays on whom, from the match's own calls where it recorded them: the
 ## named match-ups, the tagger on his man, the loose defender off his, and the
-## forward sent to make him accountable. Slot pairs fill in the rest.
+## forward sent to make him accountable. Slot pairs fill in the rest, and
+## the back line is then fitted to the forwards it faces (_fit_defence).
 func _assign() -> void:
-	if _tac[0].is_empty() and _tac[1].is_empty():
-		return
 	var by_pid := {}
 	for t in tokens:
 		by_pid[str(t["pid"])] = int(t["id"])
@@ -1817,14 +1825,21 @@ func _assign() -> void:
 		t["loose"] = false
 		t["tagging"] = false
 		t["chasing"] = -1
+	# Pairs the match recorded (its duels, the tag) and the loose men: the
+	# back line's fitting leaves these alone. A match-up shows while its
+	# defender stands in the back line and its forward up forward; one
+	# rotated into another line plays there until he is back.
+	var held := {}
 	for side in range(2):
 		var e: Dictionary = _tac[side]
 		var duels: Dictionary = e.get("duels", {})
 		for fid in duels:
 			var f := int(by_pid.get(str(fid), -1))
 			var d := int(by_pid.get(str(duels[fid]), -1))
-			if f >= 0 and d >= 0:
+			if f >= 0 and d >= 0 and str(tokens[d]["role"]) == "DEF" and str(tokens[f]["role"]) == "FWD":
 				_pair(d, f)
+				held[f] = true
+				held[d] = true
 	for side in range(2):
 		var e: Dictionary = _tac[side]
 		var tagger := int(by_pid.get(str(e.get("tagger", "")), -1))
@@ -1832,10 +1847,14 @@ func _assign() -> void:
 		if tagger >= 0 and target >= 0:
 			_pair(tagger, target)
 			tokens[tagger]["tagging"] = true
+			held[tagger] = true
+			held[target] = true
 		var loose := int(by_pid.get(str(e.get("loose", "")), -1))
 		if loose >= 0:
 			_unpair(loose)
 			tokens[loose]["loose"] = true
+			held[loose] = true
+	_fit_defence(held)
 	# A forward sent to the other side's loose man: the forward left without
 	# a direct opponent goes with him.
 	for side in range(2):
@@ -1848,6 +1867,71 @@ func _assign() -> void:
 			if int(t["side"]) == side and str(t["role"]) == "FWD" and int(t["match"]) < 0:
 				t["chasing"] = their_loose
 				break
+
+
+## The back line against the forwards it faces, after the recorded pairs:
+## a player in a back slot minds a forward only when he is a defender by
+## trade (a forward or a midfielder rotated into a back pocket plays the space
+## and the ball). A defender keeps the forward his slot faces; a forward left
+## without one is picked up by a free defender, the tallest free defender on
+## the tallest such forward. A forward still left over has no direct
+## opponent. `held`: token ids to leave.
+func _fit_defence(held: Dictionary) -> void:
+	for side in range(2):
+		var fwds := []
+		var defs := []
+		var kept := {}
+		for t in tokens:
+			var id := int(t["id"])
+			if held.has(id) or int(t["side"]) != side or str(t["role"]) != "DEF":
+				continue
+			var o := int(t["match"])
+			var minds := o >= 0 and str(tokens[o]["role"]) == "FWD" and not held.has(o)
+			if bool(_who(str(t["pid"]))["def"]):
+				if minds:
+					kept[o] = true
+				else:
+					defs.append(t)
+			elif minds:
+				_unpair(id)
+		for t in tokens:
+			var id := int(t["id"])
+			if int(t["side"]) == side or str(t["role"]) != "FWD" or held.has(id) or kept.has(id):
+				continue
+			var o := int(t["match"])
+			if o >= 0 and str(tokens[o]["role"]) == "DEF":
+				_unpair(id)
+			if int(t["match"]) < 0:
+				fwds.append(t)
+		var taller := func(a, b):
+			var ha := float(_who(str(a["pid"]))["h"])
+			var hb := float(_who(str(b["pid"]))["h"])
+			if ha != hb:
+				return ha > hb
+			return int(a["id"]) < int(b["id"])
+		fwds.sort_custom(taller)
+		defs.sort_custom(taller)
+		for i in range(mini(fwds.size(), defs.size())):
+			_pair(int(defs[i]["id"]), int(fwds[i]["id"]))
+
+
+## A player's trade and size for the back line's fitting: a defender when his
+## own position (the result's list_role, else his record) or a second or
+## learned one is in the back line.
+func _who(pid: String) -> Dictionary:
+	if not _trade.has(pid):
+		_trade[pid] = _trade_of(pid, "")
+	return _trade[pid]
+
+
+static func _trade_of(pid: String, list_role: String) -> Dictionary:
+	var pl = GameDB.player_by_id(pid)
+	var rec: Dictionary = pl if pl is Dictionary else {}
+	var own := list_role if list_role != "" else str(rec.get("role", ""))
+	var def := own == "DEF"
+	if not def and not rec.is_empty():
+		def = Ratings.second_positions(rec).has("DEF")
+	return {"def": def, "h": float(rec.get("height_cm", 0.0))}
 
 
 ## ARD-M8-003, persistent identity for important live roles (the director,

@@ -27,6 +27,7 @@ func run() -> void:
 	await _t("_test_sim_to_round_one_taps")
 	await _t("_test_match_way")
 	await _t("_test_screens_pc")
+	await _t("_test_created_club")
 	PreSeason.reload()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -709,3 +710,97 @@ func _test_screens_pc() -> void:
 	if tree.current_scene != null:
 		tree.current_scene.queue_free()
 	await _frames(tree, 3)
+
+
+## A career with a created club (Club Forge): its own League Draft, then the
+## pre-season opened on the seed. Before 2026-11-07 a created club had no
+## region, was the odd club out of 19 and never got its practice match.
+func _created_career() -> void:
+	GameState.reset()
+	GameState.career_seed = SUITE_SEED
+	GameState.replay_seed = SUITE_SEED
+	GameState.create_club({"name": "Port Melbourne", "short": "Borough", "code": "PMB",
+			"location": "port-melbourne", "primary": "#1B3A8C", "secondary": "#C8102E",
+			"accent": "#FFFFFF", "design": "hoops", "kit": "p/s/a"})
+	GameState.begin_draft()
+	var draft: Draft = GameState.draft
+	draft.start_for_user("PMB")
+	var guard := 0
+	while not draft.is_finished() and guard < 5000:
+		guard += 1
+		var cand := draft._best_ai_pick(draft.current_club())
+		if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
+			draft._skip_current_pick()
+	GameState.start_season("PMB", draft.list())
+	GameState.stories_on = false
+	GameState.set_setting("seen_weekly_loop_intro", true)
+	GameState.set_setting("seen_training_intro", true)
+	GameState.open_preseason()
+
+
+## Every way through the pre-season plays the created club's practice match
+## and shows its report: coached from the box, simmed from the stop, pressed
+## on without playing, and Sim to Round 1. Real taps on a phone.
+func _test_created_club() -> void:
+	var all := []
+	for c in GameDB.club_order.slice(0, 18):
+		all.append(str(c))
+	var alone := all.duplicate()
+	alone.append("ZZZ")
+	var p19 := PreSeason.practice_pairs(alone, "ZZZ", SUITE_SEED, 2027)
+	_check(PreSeason.practice_opponent(p19, "ZZZ") != "" and p19.size() == 9,
+			"A club outside every region, left alone once the regions pair off, still has a match")
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.size = Vector2i(390, 844)
+	# Coached.
+	_created_career()
+	var scene: Control = await _tap_to_practice(tree)
+	var opp := GameState.practice_opponent()
+	_check(GameState.preseason_stop() == "practice" and PreSeason.PRACTICE_REGION.get(opp, "") == "VIC"
+			and _label(scene, "PracticeHome") == "Port Melbourne",
+			"A created club from Port Melbourne stops for its practice match, against a Victorian club (%s)" % opp)
+	_check(await _tap(scene.find_child("PreSeasonGo", true, false), "Coach the match"),
+			"Created club: a finger's tap goes to coach the match")
+	await _frames(tree, 30)
+	var m := tree.current_scene as Control
+	_check(m != null and m.name == "MatchScene" and GameState.pending_phase == "practice",
+			"Created club: the practice match opens in the match view")
+	if m != null and m.name == "MatchScene":
+		m.call("_on_skip")
+		await _frames(tree, 40)
+		await _tap(m.find_child("FullTimeContinue", true, false), "Continue at full time")
+		await _frames(tree, 12)
+	scene = tree.current_scene as Control
+	_check(GameState.practice_played() and scene != null and scene.name == "PreSeasonScene"
+			and _label(scene, "PracticeSide_0") == "Port Melbourne",
+			"Created club, coached: the match is played and its report shown")
+	# Simmed from the stop.
+	_created_career()
+	scene = await _tap_to_practice(tree)
+	_check(await _tap(scene.find_child("PracticeSim", true, false), "Sim the match"),
+			"Created club: a finger's tap sims the match")
+	await _frames(tree, 6)
+	scene = tree.current_scene as Control
+	_check(GameState.practice_played() and _label(scene, "PracticeSide_0") == "Port Melbourne",
+			"Created club, simmed: the match is played and its report shown")
+	# Pressed on without playing.
+	_created_career()
+	_to_practice()
+	_check(GameState.preseason_advance() == "practice" and GameState.practice_played()
+			and GameState.preseason_stop() == "practice",
+			"Created club, pressed on: the match is simmed and the report waits")
+	# Sim to Round 1 from the plan.
+	_created_career()
+	scene = await _open(tree)
+	_check(await _tap(scene.find_child("PreSeasonSim", true, false), "Sim to Round 1"),
+			"Created club: a finger's tap sims to Round 1")
+	await _frames(tree, 4)
+	# Ask before simming (#1101): the question's Sim to Round 1, when it asks.
+	if scene.get_node_or_null("PreSeasonSimConfirm") != null:
+		await _tap(scene.find_child("PreSeasonSimGo", true, false), "Sim to Round 1 in the question")
+	await _frames(tree, 10)
+	_check(not GameState.preseason_active() and GameState.practice_played()
+			and not (GameState.preseason_practice().get("report", {}) as Dictionary).is_empty(),
+			"Created club, Sim to Round 1: the match is played on the way and its report kept")
+	Router.stack = []
+	GameDB.unregister_custom_clubs()

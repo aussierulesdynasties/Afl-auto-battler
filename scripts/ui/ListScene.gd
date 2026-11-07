@@ -8,6 +8,11 @@ var _root: VBoxContainer
 var _squad: Squad = null
 var _pane := "shape"
 var _profile: Control
+## Built panes by key ("shape", "list" on a phone, "wide" on PC): a tab tap
+## shows the other pane, building it the first time, and never rebuilds.
+var _panes := {}
+var _built_narrow := false
+var _built_width := 0.0
 
 
 func _ready() -> void:
@@ -29,6 +34,11 @@ func _ready() -> void:
 	margin.add_child(_root)
 	get_viewport().size_changed.connect(func():
 		if is_inside_tree() and not UiKit.keyboard_resize(self):
+			# A phone's system bars showing or hiding change the height only:
+			# the page is the same, so it is not rebuilt (a rebuild is a stall
+			# on a phone). Width matters across the phone/PC line, and on PC.
+			if _narrow() == _built_narrow and (_narrow() or UiKit.view_width(self) == _built_width):
+				return
 			var places := UiKit.scroll_places(_root)
 			_build()
 			UiKit.restore_places(_root, places))
@@ -48,12 +58,32 @@ func _narrow() -> bool:
 	return UiKit.view_width(self) < 760.0
 
 
+## Rebuild the page from the career (after a change to the list): the panes
+## built so far are dropped and only the one on show is built again.
 func _build() -> void:
 	UiKit.clear(_root)
+	_panes = {}
+	_built_narrow = _narrow()
+	_built_width = UiKit.view_width(self)
 	var train := UiKit.btn("Train", 14)
 	train.custom_minimum_size = Vector2(72, 44)
 	train.pressed.connect(func(): Router.go("training"))
 	_root.add_child(UiKit.top_bar("My list", true, train))
+	_show_pane()
+
+
+## Show the pane the tabs ask for, building it the first time it is shown.
+func _show_pane() -> void:
+	var key := _pane if _narrow() else "wide"
+	if not _panes.has(key):
+		_panes[key] = _build_pane()
+		_root.add_child(_panes[key])
+	for k in _panes:
+		(_panes[k] as Control).visible = k == key
+
+
+func _build_pane() -> Control:
+	var pane_root: Control
 
 	# On a phone the Shape pane is the whole page below the title: the board
 	# is 600 px of oval and a bench under a header of standing and captaincy
@@ -62,14 +92,19 @@ func _build() -> void:
 	# swipe that starts on a guernsey still scrolls it: the kit lets drags
 	# through every button inside a scroll. The Full list pane scrolls its
 	# own rows.
-	var host: BoxContainer = _root
+	var host: BoxContainer
 	if _narrow() and _pane == "shape":
 		var page := UiKit.vbox(9)
 		page.name = "ShapePage"
 		var page_scroll := UiKit.scroll(page)
 		page_scroll.name = "ShapeScroll"
-		_root.add_child(page_scroll)
+		pane_root = page_scroll
 		host = page
+	else:
+		host = UiKit.vbox(9)
+		host.name = "ListPage" if _narrow() else "WidePage"
+		host.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		pane_root = host
 
 	# How the side stacks up, in words, and who is available.
 	var injured := 0
@@ -138,14 +173,16 @@ func _build() -> void:
 		var tabs := UiKit.hbox(2)
 		host.add_child(tabs)
 		var shape_tab := UiKit.tab("Shape", _pane == "shape")
+		shape_tab.name = "ListTabShape"
 		shape_tab.pressed.connect(func():
 			_pane = "shape"
-			_build())
+			_show_pane())
 		tabs.add_child(shape_tab)
 		var list_tab := UiKit.tab("Full list", _pane == "list")
+		list_tab.name = "ListTabFull"
 		list_tab.pressed.connect(func():
 			_pane = "list"
-			_build())
+			_show_pane())
 		tabs.add_child(list_tab)
 
 	var body: BoxContainer
@@ -160,6 +197,7 @@ func _build() -> void:
 		body.add_child(_shape_panel())
 	if not _narrow() or _pane == "list":
 		body.add_child(_full_list_panel())
+	return pane_root
 
 
 func _shape_panel() -> Control:

@@ -487,6 +487,7 @@ func _run() -> void:
 	await _t("_test_finals_card_taps")
 	await _t("_test_sacked_job_choice_taps")
 	await _t("_test_sim_asks_only_before_your_match")
+	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
 	_t("_test_type_roles")
@@ -2551,6 +2552,45 @@ func _test_sim_asks_only_before_your_match() -> void:
 	_router.go("main")
 	await _settle()
 	root.size = ask_size_before
+
+
+## My List on a phone: switching between Shape and Full list shows the pane
+## already built instead of building the page again (a perf guard: Android
+## stalled on every switch).
+func _test_list_tabs_kept() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_state.reset()
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_router.stack = ["main", "hub"]
+	_router.go("list")
+	await _settle()
+	var list := current_scene
+	var full := list.find_child("ListTabFull", true, false) as Control
+	var why: String = await Tap.tap(full)
+	await _settle()
+	var added := [0]
+	var count := func(_n): added[0] += 1
+	node_added.connect(count)
+	var shape: Control = null
+	for t in list.find_children("ListTabShape", "", true, false):
+		if (t as Control).is_visible_in_tree():
+			shape = t
+	why += await Tap.tap(shape)
+	await _settle()
+	full = null
+	for t in list.find_children("ListTabFull", "", true, false):
+		if (t as Control).is_visible_in_tree():
+			full = t
+	why += await Tap.tap(full)
+	await _settle()
+	node_added.disconnect(count)
+	_check(why == "" and added[0] < 10 and list.find_child("ShapeScroll", true, false) != null,
+			"A tab switched back and forth on My List builds the page again for neither (%d nodes added; %s)" % [added[0], why])
+	_router.stack = ["main"]
+	_router.go("main")
+	await _settle()
+	root.size = size_before
 
 
 func _test_season_awards() -> void:
