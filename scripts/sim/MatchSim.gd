@@ -239,46 +239,69 @@ var synergies := [[], []]    # side -> active synergy keys (the starting 18)
 ## match) changes nothing, and it draws nothing from the RNG.
 var form := [0.0, 0.0]
 ## The day's weather (Weather.CONDITIONS, ARD-M4-016): the rates the match is
-## played at. "perfect" is the calibrated game, unchanged. The multipliers are
-## fitted to docs/research/WEATHER_EVIDENCE.md (wet: marks -13%, tackles +12%,
-## turnovers +11%, contested ball +7%, accuracy a point or two down; windy:
-## fewer marks, more turnovers, accuracy down; hot: freer early, heavier legs).
+## played at. "perfect" is the calibrated game, unchanged. Every size is fitted
+## (row 61) to real AFL games against a perfect day, 2016-25, in
+## tools/balance/afl_weather_rates.json (AFL Tables match stats with Open-Meteo's
+## weather in the match window; tools/balance/build_weather_rates.py), and
+## checked with tools/balance.sh match 1000 --a "--weather perfect" --b "--weather <c>":
+## - wet (0.3 mm of rain or more, 215 games): marks -13%, tackles +12%, clangers
+##   +10%, one-percenters +13%, contested ball +7%, disposals and kicks level,
+##   bounces -25%, goals -8.5%, accuracy -1.8 points.
+## - windy (a mean 20 km/h or more, 179 games): marks -3%, tackles +4%, clangers
+##   +2%, goals -5%, accuracy -1 point, and a breeze end (BREEZE_WITH).
+## - hot (25 C or more by day, 43 games): tackles -4%, clangers -3%, disposals
+##   and scoring within a few per cent; no measurable late fade (HOT_DRAIN).
 var weather := "perfect":
 	set(v):
 		weather = v if WEATHER_RATES.has(v) or v == "perfect" else "perfect"
 		_rates_cache = {}
+## Ratings.T multipliers, applied in _rates() after the match-flow overrides.
+## chains_per_game scales the quarter's chains, the bursts and the rotation
+## cadence together, so legs per game are unchanged: the wet's shorter chains
+## (more turnovers) make about 5% more of them with disposals held level, the
+## heat about 2.5% fewer (a slower game: fewer tackles, clangers and stoppages).
+## The wet's inside50_goal also lowers set-shot accuracy (WEATHER_SIM set_acc
+## is the rest of it); its stoppages come from fumbles (WEATHER_SIM fumble).
 const WEATHER_RATES := {
-	# Row 120: the wet's tackles come from tackle_share (WEATHER_SIM), not from
-	# more pressure, which cost scoring past the evidence; behinds 1.07 -> 1.03 as
-	# the set shots now carry their own share of the accuracy drop.
-	"wet": {"mark_share_of_kicks": 0.90, "clanger_per_chain": 1.15,
-			"stoppage_share": 1.05, "inside50_goal": 0.98, "inside50_behind": 1.03,
-			"one_percenter_share": 1.4, "metres_gain_mean": 1.12},
-	"windy": {"mark_share_of_kicks": 0.92, "clanger_per_chain": 1.06,
-			"metres_gain_mean": 1.03},
-	"hot": {"pressure_base": 0.97, "stoppage_share": 0.95, "metres_gain_mean": 1.03},
+	"wet": {"chains_per_game": 1.05, "handball_share": 0.97,
+			"mark_share_of_kicks": 0.81, "clanger_per_chain": 1.06,
+			"stoppage_share": 1.0, "inside50_goal": 0.945, "inside50_behind": 0.93,
+			"one_percenter_share": 1.11, "metres_gain_mean": 1.04},
+	"windy": {"chains_per_game": 1.01, "mark_share_of_kicks": 0.945, "metres_gain_mean": 1.015},
+	"hot": {"chains_per_game": 0.975, "pressure_base": 0.97, "stoppage_share": 0.95, "clanger_per_chain": 0.97},
 }
-## Row 120 (director 2026-11-06): the wet is more fumbles, more stoppages and
-## harder set shots, with tackles toward the real +12% (row 61). Rates for the
-## sim's own named constants, read through _wx (WEATHER_RATES holds Ratings.T
-## multipliers only). A condition with no row, a perfect day included, plays
-## every one at 1.0 and draws no extra dice.
+## Rates for the sim's own named constants, read through _wx (WEATHER_RATES
+## holds Ratings.T multipliers only), sized like WEATHER_RATES (row 61). A
+## condition with no row, a perfect day included, plays every one at 1.0 and
+## draws no extra dice.
 ## - set_acc: goals per set shot, on every band and on a free's set shot.
-## - lockup: LOCKUP_PRESS and LOCKUP_SPOIL, more contests locking up for a ball-up.
-## - tackle_spill: TACKLE_SPILL, so more held tackles are ball-ups.
+## - miss_behind: the share of missed set shots that still score a behind
+##   (SET_MISS_BEHIND); the wind carries more of them out of bounds.
+## - lockup: LOCKUP_PRESS and LOCKUP_SPOIL, contests locking up for a ball-up.
+## - tackle_spill: TACKLE_SPILL, held tackles that are ball-ups.
+##   (Both 1.0 in the wet: its extra stoppages come from fumbles, and more
+##   would push the chains, and so the disposals, past the real figure.)
 ## - fumble: the chance a ground ball is fumbled at the gather (_wet_fumble).
 ## - tackle_share: PRESS_TACKLE_SHARE, more of the pressure a tackle and less
 ##   a rushed disposal (pressure acts unchanged).
+## - aerial: the chance a contested or inside-50 kick is marked (general play,
+##   the forward's one-on-one and the entry), as mark_share_of_kicks does for
+##   the uncontested ones: a greasy ball is dropped in a pack too.
+## - run: the chance a carry takes a running bounce (cosmetic, the gain unchanged).
 const WEATHER_SIM := {
-	"wet": {"set_acc": 0.97, "lockup": 1.0, "tackle_spill": 0.85, "fumble": 0.08, "tackle_share": 1.27},
+	"wet": {"set_acc": 0.975, "lockup": 1.0, "tackle_spill": 1.0, "fumble": 0.06, "tackle_share": 1.12,
+			"aerial": 0.83, "run": 0.76},
+	"windy": {"tackle_share": 1.03, "miss_behind": 0.96},
 }
-## A windy day has a breeze end (the "five-goal breeze"): shots kicked with
-## it are a little easier, against it much harder, about 5% fewer goals overall
-## (OUW: about -5 points a game at 20 km/h and over). The sides change ends each
+## A windy day has a breeze end (the "five-goal breeze"): shots kicked with it
+## are a little easier, against it much harder. The sides change ends each
 ## quarter, so it helps one side in the first and third, the other in the
-## second and fourth; which one starts with it comes from the match seed.
-const BREEZE_WITH := 1.04
-const BREEZE_AGAINST := 0.89
+## second and fourth; which one starts with it comes from the match seed. Sized
+## to the real swing: in windy games the margin moves about 3.7 points a quarter
+## toward one end (the quarter-by-quarter margins' extra spread against a
+## perfect day, afl_weather_rates.json "breeze"), with goals about 5% down.
+const BREEZE_WITH := 1.05
+const BREEZE_AGAINST := 0.83
 var breeze_side := 0
 
 
@@ -297,6 +320,9 @@ func _wx(key: String, default := 1.0) -> float:
 
 
 ## Hot days: legs go faster (the Heat Policy's longer breaks don't undo it).
+## Real hot days show no late fade in the scoring (last quarter's share +0.2
+## points, se 1.0, afl_weather_rates.json); with the drain the sim's is -0.1
+## (se 0.3), the same within the noise.
 const HOT_DRAIN := 1.12
 var _rates_cache := {}
 
@@ -2423,7 +2449,7 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 	var receive := _a(receiver, "marking")
 	var stop := 0.62 * _a(defender, "intercept") + 0.38 * _a(defender, "marking")
 	var mark_p := clampf(0.34 + (receive - stop) / 240.0
-			+ (0.05 if _trait(receiver, "aerial") else 0.0), 0.16, 0.55)
+			+ (0.05 if _trait(receiver, "aerial") else 0.0), 0.16, 0.55) * _wx("aerial")
 	var roll := aerial_rng.randf()
 	if roll < mark_p:
 		_t(side, "marks")
@@ -2493,11 +2519,15 @@ var _last_disp := {}
 ## The match seed, for the clanger-cause share below (a hash, never the dice).
 var _clanger_seed := 0
 ## The weather is blamed only for its own share of clangers: the extra it adds
-## (WEATHER_RATES clanger_per_chain), so 0.15 / 1.15 in the wet, 0.06 / 1.06 in
-## the wind. Picked by a hash of seed and event count so the dice are untouched.
+## over a perfect day, as the paired balance runs measure it (row 61: the wet
+## +10%, so 0.10 / 1.10; the wind +2%, so 0.02 / 1.02; the heat makes fewer).
+## The extra comes from fumbles, tackles and contests as well as the bad kick
+## itself, so it is the day's total, not WEATHER_RATES clanger_per_chain.
+## Picked by a hash of seed and event count so the dice are untouched.
+const CLANGER_BLAME := {"wet": 0.10, "windy": 0.02}
 static func clanger_blame_share(weather_now: String) -> float:
-	var m := float((WEATHER_RATES.get(weather_now, {}) as Dictionary).get("clanger_per_chain", 1.0))
-	return maxf(0.0, (m - 1.0) / m)
+	var rise := float(CLANGER_BLAME.get(weather_now, 0.0))
+	return rise / (1.0 + rise)
 ## Why a clanger went astray: the words after the player's name, by cause. The
 ## cause is the event's "why"; MatchNotes.clanger_caption has the short form.
 const CLANGER_WHY := {
@@ -2696,7 +2726,7 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 		mark_edge += 0.05
 	if roaming:
 		mark_edge += _roam_mark_shift(roamer)
-	var mark_p := clampf(0.42 + mark_edge, 0.18, 0.70)
+	var mark_p := clampf(0.42 + mark_edge, 0.18, 0.70) * _wx("aerial")
 	if aerial_rng.randf() < mark_p:
 		_t(side, "marks")
 		_p(target, "marks")
@@ -3410,7 +3440,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 		air_shift = (Matchups.forward_air(shooter) - FWD_AIR_CENTRE) / FWD_AIR_SCALE
 	var marked := rng.randf() < clampf(
 			Matchups.MARK_BASE + (atk.fwd_mark - dfn.def_intercept) / Matchups.MARK_LINES + mark_edge + duel_shift + air_shift
-			+ roam_shift, 0.10, mark_cap)
+			+ roam_shift, 0.10, mark_cap) * _wx("aerial")
 	# A third-man arrival is not credited to the direct defender's 1v1 log.
 	# Interceptor contests have their own evidence/stats and story.
 	if not matched.is_empty() and not roaming:
@@ -3752,7 +3782,7 @@ func _run_and_carry(side: int, carrier, gained: float, pressed: bool, is_kick_in
 	if atk_fp >= float(_rates()["forward50_line"]):
 		return
 	var carry := _a(carrier, "carry") / 100.0
-	if run_rng.randf() >= RUN_P * (0.3 + 1.4 * carry):
+	if run_rng.randf() >= RUN_P * (0.3 + 1.4 * carry) * _wx("run"):
 		return
 	# Rounded first, so the bounces credited are the ones the event's run says (29.96 m
 	# was one bounce in the stats and two on the event).
@@ -5319,10 +5349,11 @@ func _set_shot_split(goal_p: float, behind_p: float) -> Dictionary:
 		# The wet makes the kick itself harder (row 120), after the expected
 		# value above, so the general-play shot does not make it back.
 		var sa := _wx("set_acc")
-		if sa != 1.0:
+		var mb := _wx("miss_behind")
+		if sa != 1.0 or mb != 1.0:
 			pick = pick.duplicate()
 			pick["goal"] = clampf(float(pick["goal"]) * sa, 0.03, 0.97)
-			pick["behind"] = (1.0 - float(pick["goal"])) * SET_MISS_BEHIND
+			pick["behind"] = (1.0 - float(pick["goal"])) * SET_MISS_BEHIND * mb
 		return {"band": pick, "goal": pick["goal"], "behind": pick["behind"]}
 	var rest := 1.0 - share
 	return {"band": {},
@@ -5609,7 +5640,7 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 		_pack_event(side, sq_fp, marker, "marked", {"marker_id": str(marker["id"])},
 				"%s marks in the goal square" % GameDB.player_display_name(marker))
 		var g := clampf(PACK_MARK_ACC * shot_chance(side, marker, true, false) / SET_REF, 0.5, 0.97)
-		return _set_result(side, marker, shooter, back, g, (1.0 - g) * SET_MISS_BEHIND, false)
+		return _set_result(side, marker, shooter, back, g, (1.0 - g) * SET_MISS_BEHIND * _wx("miss_behind"), false)
 	if r < p_mark + p_def:
 		# The defence wins it: a mark, or a fist that clears it - a good
 		# marker takes it, others punch it clear.
@@ -5712,7 +5743,7 @@ func _free_set_shot(side: int, at_fp: float, taker: Dictionary) -> Dictionary:
 	var metres := float(Ratings.T["goal_line"]) - (at_fp if side == 0 else -at_fp)
 	var goal_p := clampf(free_set_acc(metres) * shot_chance(side, taker, true, false) / SET_REF
 			* _wx("set_acc"), 0.03, 0.97)
-	var behind_p := (1.0 - goal_p) * SET_MISS_BEHIND
+	var behind_p := (1.0 - goal_p) * SET_MISS_BEHIND * _wx("miss_behind")
 	var roll := rng.randf()
 	# His shot, as any set shot is counted (shots, set shots, their result).
 	_shot(side, taker, true, "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""), metres, "free")

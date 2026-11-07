@@ -44,6 +44,8 @@ func run() -> void:
 	_t("_test_traits")
 	_t("_test_weather")
 	_t("_test_wet_weather_play")
+	_t("_test_wind_and_heat")
+	_t("_test_weather_follows_the_real_games")
 	_t("_test_metres_and_efficiency")
 	_t("_test_gps_distance")
 	_t("_test_ruck_integrity")
@@ -469,7 +471,9 @@ func _test_clanger_cause() -> void:
 	_check(MatchSim.clanger_why({"kind": "handball", "end": "pressure"}, "windy", "turnover") == "", "Wind blames kicks only")
 	_check(MatchSim.clanger_why({"kind": "kick", "end": "aerial"}, "wet", "turnover") == "", "A kick read and marked has its own line")
 	_check(MatchSim.clanger_why({"kind": "kick", "end": ""}, "wet", "score") == "", "A score is nobody's clanger")
-	_check(absf(MatchSim.clanger_blame_share("wet") - 0.15 / 1.15) < 0.001 and MatchSim.clanger_blame_share("perfect") == 0.0,
+	_check(absf(MatchSim.clanger_blame_share("wet") - 0.10 / 1.10) < 0.001
+			and absf(MatchSim.clanger_blame_share("windy") - 0.02 / 1.02) < 0.001
+			and MatchSim.clanger_blame_share("hot") == 0.0 and MatchSim.clanger_blame_share("perfect") == 0.0,
 			"The weather takes only its own share of the blame")
 
 
@@ -1057,6 +1061,9 @@ func _test_wet_weather_play() -> void:
 	var clangers := [0.0, 0.0]
 	var ballups := [0, 0]
 	var tackles := [0.0, 0.0]
+	var disposals := [0.0, 0.0]
+	var kicks := [0.0, 0.0]
+	var marks := [0.0, 0.0]
 	var set_shots := [0, 0]
 	var set_goals := [0, 0]
 	var fumbles := 0
@@ -1070,6 +1077,9 @@ func _test_wet_weather_play() -> void:
 			for side in range(2):
 				clangers[c] += float((res["team"][side] as Dictionary).get("clangers", 0.0))
 				tackles[c] += float((res["team"][side] as Dictionary).get("tackles", 0.0))
+				disposals[c] += float((res["team"][side] as Dictionary).get("disposals", 0.0))
+				kicks[c] += float((res["team"][side] as Dictionary).get("kicks", 0.0))
+				marks[c] += float((res["team"][side] as Dictionary).get("marks", 0.0))
 			var evs: Array = res["events"]
 			for j in range(evs.size()):
 				var e: Dictionary = evs[j]
@@ -1088,14 +1098,24 @@ func _test_wet_weather_play() -> void:
 						set_goals[c] += 1
 	_check(clangers[1] > clangers[0] * 1.04, "More clangers in the wet (%.0f against %.0f)" % [clangers[1], clangers[0]])
 	_check(ballups[1] > ballups[0] * 1.08, "More ball-ups in the wet (%d against %d)" % [ballups[1], ballups[0]])
-	_check(tackles[1] > tackles[0] * 1.06, "More tackles in the wet (%.0f against %.0f)" % [tackles[1], tackles[0]])
+	# Row 61: real wet games have 12% more tackles and the game about 10% (balance.sh);
+	# over these 16 matches that rise has a standard error near 2.5%, so this asks
+	# for a clear rise, not the real size.
+	_check(tackles[1] > tackles[0] * 1.04, "More tackles in the wet (%.0f against %.0f)" % [tackles[1], tackles[0]])
+	# Row 61: real wet games hold their disposals and kicks (-0.5%, +1.3%) and lose
+	# 13% of their marks (tools/balance/afl_weather_rates.json).
+	_check(absf(disposals[1] / disposals[0] - 1.0) < 0.04 and absf(kicks[1] / kicks[0] - 1.0) < 0.04,
+			"The wet holds the disposals and kicks (%.0f against %.0f, %.0f against %.0f)"
+			% [disposals[1], disposals[0], kicks[1], kicks[0]])
+	_check(marks[1] < marks[0] * 0.92, "Far fewer marks stick in the wet (%.0f against %.0f)" % [marks[1], marks[0]])
 	var acc_dry := float(set_goals[0]) / maxf(1.0, float(set_shots[0]))
 	var acc_wet := float(set_goals[1]) / maxf(1.0, float(set_shots[1]))
 	_check(acc_wet < acc_dry, "Set shots go through less often in the wet (%.2f against %.2f)" % [acc_wet, acc_dry])
 	_check(fumbles > 0 and fumble_named, "A wet fumble is a clanger the game puts down to the wet ball (%d)" % fumbles)
 	_check(fumble_ballups > 0 and fumble_ballups < fumbles,
 			"Some wet fumbles go straight to a ball-up, the rest spill loose (%d of %d)" % [fumble_ballups, fumbles])
-	# The set shot itself is 0.97 as likely to go through in the wet, band by band.
+	# The set shot itself is set_acc as likely to go through in the wet, band by band.
+	var sa := float(MatchSim.WEATHER_SIM["wet"]["set_acc"])
 	var wet := _sim(2)
 	wet.weather = "wet"
 	var scaled := true
@@ -1108,11 +1128,89 @@ func _test_wet_weather_play() -> void:
 		picked += 1
 		var hit := false
 		for b in MatchSim.set_bands(gp):
-			if is_equal_approx(float(split["goal"]), clampf(float(b["goal"]) * 0.97, 0.03, 0.97)):
+			if is_equal_approx(float(split["goal"]), clampf(float(b["goal"]) * sa, 0.03, 0.97)):
 				hit = true
 		if not hit:
 			scaled = false
-	_check(picked > 0 and scaled, "Every wet set shot is 0.97 as likely to go through (%d shots)" % picked)
+	_check(picked > 0 and scaled, "Every wet set shot is %.3f as likely to go through (%d shots)" % [sa, picked])
+
+
+## Row 61: wind and heat at real size. The wind takes marks, adds tackles, sends more
+## missed set shots out on the full and gives one end a breeze; the heat makes a
+## slower game with fewer tackles and clangers. A perfect day is untouched.
+func _test_wind_and_heat() -> void:
+	var dry := _sim(5)
+	var windy := _sim(5)
+	windy.weather = "windy"
+	var hot := _sim(5)
+	hot.weather = "hot"
+	var d := dry._rates()
+	var w := windy._rates()
+	var h := hot._rates()
+	_check(float(w["mark_share_of_kicks"]) < float(d["mark_share_of_kicks"]), "Fewer kicks are marked in the wind")
+	_check(windy._wx("tackle_share") > 1.0 and dry._wx("tackle_share") == 1.0, "More of the pressure is a tackle in the wind")
+	_check(float(h["chains_per_game"]) < float(d["chains_per_game"]) and float(h["pressure_base"]) < float(d["pressure_base"])
+			and float(h["clanger_per_chain"]) < float(d["clanger_per_chain"]),
+			"A hot day is a slower game, with less pressure and fewer clangers")
+	# The wind carries more missed set shots out on the full: fewer behinds per miss.
+	var miss_ok := true
+	var banded := 0
+	var want := MatchSim.SET_MISS_BEHIND * windy._wx("miss_behind")
+	for k in range(200):
+		var sp: Dictionary = windy._set_shot_split(0.3 + 0.04 * float(k % 10), 0.3)
+		if (sp["band"] as Dictionary).is_empty():
+			continue
+		banded += 1
+		if not is_equal_approx(float(sp["behind"]) / (1.0 - float(sp["goal"])), want):
+			miss_ok = false
+	_check(banded > 0 and miss_ok and want < MatchSim.SET_MISS_BEHIND,
+			"A missed set shot scores a behind less often in the wind (%.3f of misses against %.3f, %d shots)"
+			% [want, MatchSim.SET_MISS_BEHIND, banded])
+	# The breeze: with it a shot is easier, against it harder, fewer goals on the day.
+	var shooter: Dictionary = windy.squads[0].ground[0]
+	windy.current_quarter = 1
+	dry.current_quarter = 1
+	var side_with := 0 if windy.with_breeze(0) else 1
+	var p_with := windy.shot_chance(side_with, shooter, true, false)
+	var p_against := windy.shot_chance(1 - side_with, shooter, true, false)
+	var p_still := dry.shot_chance(side_with, shooter, true, false)
+	var p_still_b := dry.shot_chance(1 - side_with, shooter, true, false)
+	_check(p_with > p_still and p_against < p_still_b,
+			"The breeze helps one end and hurts the other (%.3f, %.3f against %.3f, %.3f)"
+			% [p_with, p_against, p_still, p_still_b])
+	_check(MatchSim.BREEZE_WITH + MatchSim.BREEZE_AGAINST < 2.0, "A breeze costs goals over the day")
+	windy.current_quarter = 2
+	_check(windy.with_breeze(1 - side_with), "The sides change ends at the break")
+
+
+## Row 61: every weather size points the way the real games do
+## (tools/balance/afl_weather_rates.json, 2016-25 against a perfect day).
+func _test_weather_follows_the_real_games() -> void:
+	var f := FileAccess.open("res://tools/balance/afl_weather_rates.json", FileAccess.READ)
+	_check(f != null, "The real weather reference is saved")
+	if f == null:
+		return
+	var ref: Dictionary = JSON.parse_string(f.get_as_text())
+	var real: Dictionary = ref["change_vs_perfect"]
+	_check(int(ref["n"]["wet"]) >= 100 and int(ref["n"]["windy"]) >= 100 and int(ref["n"]["hot_day"]) >= 30,
+			"The reference rests on enough games (%s)" % str(ref["n"]))
+	var gate: Dictionary = ref["validation_abc_wet"]["stats"]
+	var held := 0
+	for k in gate:
+		if bool(gate[k]["within_2se"]):
+			held += 1
+	_check(held >= gate.size() - 1, "The method reproduces ABC's wet-game table (%d of %d)" % [held, gate.size()])
+	var rd := _sim(6)._rates()
+	for cond in ["wet", "windy", "hot"]:
+		var s := _sim(6)
+		s.weather = cond
+		var r := s._rates()
+		var c: Dictionary = real[cond]
+		if float(c["marks"]["change"]) < -0.025:
+			_check(float(r["mark_share_of_kicks"]) < float(rd["mark_share_of_kicks"]), "%s: fewer marks, as in the real games" % cond)
+		var sim_more := s._wx("tackle_share") > 1.0
+		var sim_fewer := float(r["pressure_base"]) < float(rd["pressure_base"])
+		_check(sim_more if float(c["tackles"]["change"]) > 0.0 else sim_fewer, "%s: tackles go the way the real games' do" % cond)
 
 
 func _fake(id: String, role: String, attr: Dictionary) -> Dictionary:
