@@ -7,7 +7,7 @@ extends SceneTree
 ## (by goals), <out>_players_mine.png (your own club's rows, on their tint),
 ## <out>_swatches.png (every club's code line as a rival's row on PANEL_ALT and
 ## as your own tinted row, with its worst contrast) and
-## <out>_trophies.png (your seasons, this one at "Round 3 of 24").
+## <out>_trophies.png (your club's trophies, its seasons, this one at "Round 3 of 24").
 ## Never touches a real save.
 
 var W := 390
@@ -68,12 +68,17 @@ func _run() -> void:
 	_save(out + "_swatches.png")
 	strip.queue_free()
 	await _frames(2)
-	hub.current = "trophies"
+	hub.current = "ladder"
 	var t_ui: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
 	root.add_child(t_ui)
 	await _frames(10)
-	var sc: ScrollContainer = t_ui.find_child("StatsScroll", true, false)
+	load("res://scripts/ui/ClubPage.gd").open_trophies(t_ui, state.my_club)
+	await _frames(10)
 	var t: Control = t_ui.find_child("Tenure", true, false)
+	var at: Node = t.get_parent() if t != null else null
+	while at != null and not (at is ScrollContainer):
+		at = at.get_parent()
+	var sc := at as ScrollContainer
 	if sc != null and t != null:
 		sc.scroll_vertical = int(t.global_position.y - sc.global_position.y) + sc.scroll_vertical - 40
 		await _frames(6)
