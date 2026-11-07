@@ -1,10 +1,12 @@
 extends SceneTree
-## Key moments (P-14) for the director's look: the hub's poster with its three
-## ways to take the match, and your match part-way through in Key moments.
+## The two ways to take your match (Watch, Skip; Key moments cut, director
+## 2026-11-08) for the director's look: the hub's poster with each chosen, and
+## your match watched, the first quarter under way, with its top bar.
 ## Needs a real renderer:
-##   godot --path . --script tools/visual/capture_key_moments.gd -- --out /tmp/km [--size 390x844] [--club FRE] [--opp MEL] [--way key]
-## Writes <out>_poster.png (the hub, the poster and its choices) and <out>_match.png
-## (the match screen in Key moments, the first quarter under way).
+##   godot --path . --script tools/visual/capture_match_way.gd -- --out /tmp/way [--size 390x844] [--club FRE] [--opp MEL]
+## Writes <out>_watch.png and <out>_skip.png (the hub, the poster with Watch or
+## Skip chosen) and <out>_match.png (the match screen watched, the first quarter
+## under way). Prints each button's size and place.
 
 var W := 390
 var H := 844
@@ -19,6 +21,18 @@ func _frames(n: int) -> void:
 		await process_frame
 
 
+## Waits for the Router's threaded load to put `scene_name` up (slow on a busy
+## machine), then a few frames more for it to lay out.
+func _await_scene(scene_name: String) -> Node:
+	for i in range(1200):
+		if current_scene != null and current_scene.name == scene_name:
+			break
+		await process_frame
+	await _frames(20)
+	print("scene ", current_scene.name if current_scene != null else "none")
+	return current_scene
+
+
 func _shot(path: String) -> void:
 	await _frames(10)
 	var img := root.get_viewport().get_texture().get_image()
@@ -30,16 +44,33 @@ func _shot(path: String) -> void:
 	# The thumb targets this capture shows, measured (at least 44 px tall).
 	for b in root.find_children("*", "Button", true, false):
 		var t := (b as Button).text
-		if (b as Button).is_visible_in_tree() and t in ["Watch", "Key moments", "Skip", "Pause",
-				"Skip to full time", "Play match", "Pick the side"]:
+		if (b as Button).is_visible_in_tree() and t in ["Watch", "Skip", "Pause", "Play", "1x", "2x", "4x", "8x",
+				"Skip to full time", "Skip to quarter time", "Play match", "Pick the side"]:
 			print("  button '", t, "' ", (b as Button).size, " at ", (b as Button).global_position)
+	var grid := root.find_child("MatchWay", true, false) as Control
+	if grid != null and grid.is_visible_in_tree():
+		print("  MatchWay grid ", grid.get_global_rect())
+
+
+## The hub with the poster's choices in view, `way` chosen by a press on it.
+func _poster(way: String, path: String) -> void:
+	var b := root.find_child("MatchWay_" + way, true, false) as Button
+	if b != null:
+		var p := b.get_parent()
+		while p != null:
+			if p is ScrollContainer:
+				(p as ScrollContainer).ensure_control_visible(b)
+				break
+			p = p.get_parent()
+		b.emit_signal("pressed")
+	await _frames(20)
+	await _shot(path)
 
 
 func _run() -> void:
-	var out := "/tmp/km"
+	var out := "/tmp/way"
 	var club := "FRE"
 	var opp := "MEL"
-	var way := "key"
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size() - 1):
 		match str(a[i]):
@@ -49,8 +80,6 @@ func _run() -> void:
 				club = str(a[i + 1])
 			"--opp":
 				opp = str(a[i + 1])
-			"--way":
-				way = str(a[i + 1])
 			"--size":
 				var wh := str(a[i + 1]).split("x")
 				W = int(wh[0])
@@ -59,8 +88,8 @@ func _run() -> void:
 	var state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
 	state.autosave_enabled = false
-	state.save_path = "user://capture_km.save"
-	state.settings_path = "user://capture_km_settings.cfg"
+	state.save_path = "user://capture_way.save"
+	state.settings_path = "user://capture_way_settings.cfg"
 	state.show_real_names = true
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(Vector2i(W, H))
@@ -88,31 +117,35 @@ func _run() -> void:
 			found = true
 			break
 	print("opponent ", opp, " found ", found)
-	state.set_match_way(way)
+	state.set_match_way("watch")
 	var router = root.get_node("Router")
 	router.go("hub")
-	await _frames(20)
+	await _await_scene("HubScene")
 	for b in root.find_children("*", "Button", true, false):
 		if (b as Button).text == "Got it" and (b as Button).is_visible_in_tree():
 			(b as Button).emit_signal("pressed")
 	await _frames(40)
-	await _shot(out + "_poster.png")
-	# Your match in Key moments, the first quarter under way.
-	state.set_match_way("key")
+	await _poster("watch", out + "_watch.png")
+	await _poster("skip", out + "_skip.png")
+	# Your match watched, the first quarter under way.
+	state.set_match_way("watch")
 	state.set_vignettes_on(false)
 	state.prepare_interactive_match()
 	router.go("match")
-	await _frames(30)
-	var scene := current_scene
+	var scene := await _await_scene("MatchScene")
+	if scene == null:
+		quit(1)
+		return
 	var start = scene.find_child("StartQuarter", true, false)
 	if start != null:
 		start.emit_signal("pressed")
 	await _frames(20)
 	var pitch = scene.get("_pitch")
-	for i in range(400):
-		if pitch != null and pitch.playing and float(pitch.speed) >= 8.0 and int(pitch.current_index()) > 60:
+	for i in range(900):
+		if pitch != null and pitch.playing and int(pitch.current_index()) > 30:
 			break
 		await process_frame
-	print("speed ", pitch.speed if pitch != null else -1, " events ", pitch.current_index() if pitch != null else -1)
+	print("way ", state.match_way_live, " speed ", pitch.speed if pitch != null else -1,
+			" events ", pitch.current_index() if pitch != null else -1)
 	await _shot(out + "_match.png")
 	quit(0)
