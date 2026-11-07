@@ -269,6 +269,13 @@ var preseason := {}
 ## usual plan well and the rest partly (_ensure_plan_known).
 var plan_known := {}
 var plan_idle := {}
+## The plans each rival coach has called this season, quarter by quarter, and
+## why (RivalRead.record_row; MatchSim.ai_why), for the Assistant's report
+## (rival coach read, director 2026-11-08): {"year": season_year, "clubs":
+## {code: [row, ...]}}, a row per match in the order played. This season
+## only; optional in a save (written once a row exists), so a save from
+## before it loads empty and the report says nothing of their record.
+var rival_plans := {}
 ## Who leads each club (Captaincy.gd): club code -> its record. A club with
 ## no entry has named no one; an older save has none for anyone.
 var captaincy := {}
@@ -838,6 +845,8 @@ func save_career() -> bool:
 	if not plan_known.is_empty():
 		state["plan_known"] = plan_known
 		state["plan_idle"] = plan_idle
+	if not rival_plans.is_empty():
+		state["rival_plans"] = rival_plans
 	var ok := CareerSave.write(state, _save_meta(), save_path)
 	if ok:
 		_dirty = false
@@ -1025,6 +1034,7 @@ func load_career() -> bool:
 	plan_known = state.get("plan_known", {}) if state.get("plan_known") is Dictionary else {}
 	plan_idle = state.get("plan_idle", {}) if state.get("plan_idle") is Dictionary else {}
 	_clean_plan_known()
+	rival_plans = state.get("rival_plans", {}) if state.get("rival_plans") is Dictionary else {}
 	captaincy = state.get("captaincy", {})
 	class_tiers = state.get("class_tiers", {})
 	custom_prospect_id = str(state.get("custom_prospect_id", ""))
@@ -1563,6 +1573,7 @@ func reset() -> void:
 	preseason = {}
 	plan_known = {}
 	plan_idle = {}
+	rival_plans = {}
 	CoachEffects.known = {}
 	captaincy = {}
 	class_tiers = {}
@@ -2107,6 +2118,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	trial_result = {}
 	pos_ratings = {}
 	season_team = {}
+	rival_plans = {}
 	season_awards = {}
 	rising_star_noms = {"from": 1, "rounds": []}
 	# Everyone listed before ageing: a retiree leaves the lists inside
@@ -3624,6 +3636,37 @@ func _note_plans_played(results: Array) -> void:
 	mark_dirty()
 
 
+## A round has been played: each rival coach's plans and why, quarter by
+## quarter, join his club's record for the season (rival_plans), finals too,
+## before the results are slimmed for the save (which drops the plans).
+func _note_rival_plans(results: Array) -> void:
+	if not rival_plans.is_empty() and int(rival_plans.get("year", 0)) != season_year:
+		rival_plans = {}
+	for res in results:
+		if not (res is Dictionary):
+			continue
+		for side in range(2):
+			var row := RivalRead.record_row(res, side)
+			if row.is_empty():
+				continue
+			if rival_plans.is_empty():
+				rival_plans = {"year": season_year, "clubs": {}}
+			var clubs: Dictionary = rival_plans["clubs"]
+			var code := str([res.get("home", ""), res.get("away", "")][side])
+			if not clubs.has(code):
+				clubs[code] = []
+			(clubs[code] as Array).append(row)
+
+
+## `code`'s rival coach's record this season (RivalRead.record_row rows, in
+## the order played); [] for another season's record or none.
+func rival_rows(code: String) -> Array:
+	if int(rival_plans.get("year", 0)) != season_year or not (rival_plans.get("clubs") is Dictionary):
+		return []
+	var rows = (rival_plans["clubs"] as Dictionary).get(code, [])
+	return rows if rows is Array else []
+
+
 ## Press on from where the pre-season is waiting, to the next stop or to
 ## Round 1. Returns "trial" or "done".
 func preseason_advance() -> String:
@@ -4384,18 +4427,33 @@ func opponent_people(code: String) -> Array:
 
 
 ## The assistant's report on an opponent (director, 2026-10-07): what has
-## been seen of them, in two parts, each fact said once - [["How they play",
-## [lines]], ["Who matters", [lines]]], a part left out when it has nothing.
-## How they play: their usual game, their style, a run of results. Who
-## matters: their best player missing, their danger, a roaming interceptor
-## (when he is not the danger). Facts only, never how to beat them.
+## been seen of them, each fact said once - [["How they play", [lines]],
+## ["Who matters", [lines]], ["Their coach", [lines]]], a part left out when
+## it has nothing.
+## How they play: their usual game and what it costs their legs, which plan
+## their list suits and how well they know each, their style, a run of
+## results, their plans this season and against you (rival_plans).
+## Who matters: their best player missing, their danger, their tagger, the
+## loose man their coach starts with (when he is not the danger) and his
+## minder rule.
+## Their coach (a rival coach's club only): his habit with the scoreboard and
+## the fire-up, his box's sharpness and tag timing, his counter rule.
+## Rival coach read (director, 2026-11-08): every line is RivalRead, from the
+## rules MatchSim.ai_tactics plays. Facts only, never how to beat them.
 func opponent_report(code: String) -> Array:
 	if season == null or code == "" or not season.lists.has(code):
 		return []
+	var sq := _rival_squad(code)
 	var play := []
-	var usual := usual_plan(code)
+	var usual := PlanFit.standing_plan(sq.ground, sq.plan_know)
 	if THEIR_PLAN.has(usual):
-		play.append("Their usual game, %s: %s" % [CoachReport.plan_label(usual), THEIR_PLAN[usual]])
+		var legs := RivalRead.legs_clause(usual)
+		play.append("Their usual game, %s: %s%s" % [CoachReport.plan_label(usual), THEIR_PLAN[usual],
+				" " + legs if legs != "" else ""])
+	var levels := {}
+	for plan in PreSeason.DRILL_PLANS:
+		levels[plan] = plan_level(code, str(plan))
+	play.append("%s %s" % [RivalRead.fit_line(sq.ground), RivalRead.know_line(levels)])
 	play.append_array(their_style(code, 3))
 	var people := []
 	var danger_id := ""
@@ -4406,12 +4464,31 @@ func opponent_report(code: String) -> Array:
 			people.append(str(f["text"]))
 			if str(f["key"]) == "danger":
 				danger_id = str(f.get("player_id", ""))
-	var spare := Matchup.interceptor(code, season.lists, season.selections)
-	if not spare.is_empty() and str(spare.get("player_id", "")) != danger_id:
-		people.append(str(spare["text"]))
+	var rows := rival_rows(code)
+	for line in [RivalRead.season_line(rows), RivalRead.vs_line(rows, my_club)]:
+		if line != "":
+			play.append(line)
+	var mine := my_squad()
+	var tagger = MatchSim.tagger_for(sq.ground)
+	var has_tagger: bool = tagger != null and Roles.is_tagger(tagger)
+	if has_tagger:
+		people.append(RivalRead.tagger_line(GameDB.player_display_name(tagger)))
+	var loose := MatchSim.loose_pick(sq.ground, mine.ground)
+	if not loose.is_empty() and str(loose.get("id", "")) != danger_id:
+		people.append(RivalRead.loose_line(GameDB.player_display_name(loose), sq.coach_style))
+	if not MatchSim.loose_pick(mine.ground, sq.ground).is_empty() \
+			and not Matchups.minder_candidates(sq.ground).is_empty():
+		people.append(RivalRead.minder_line())
+	var coach := []
+	if sq.ai_plans:
+		var sc: Dictionary = club_staff(code).get("SC", {})
+		coach.append(RivalRead.coach_line(GameDB.player_display_name(sc) if not sc.is_empty() else "",
+				sq.coach_style))
+		coach.append(RivalRead.box_line(sq.tactics_read, has_tagger))
+		coach.append(RivalRead.counter_line())
 	var out := []
 	var seen := {}
-	for part in [["How they play", play], ["Who matters", people]]:
+	for part in [["How they play", play], ["Who matters", people], ["Their coach", coach]]:
 		var lines := []
 		for t in part[1]:
 			if not seen.has(str(t)):
@@ -4562,10 +4639,17 @@ func league_grounds() -> Dictionary:
 func usual_plan(code: String) -> String:
 	if season == null or code == "" or not season.lists.has(code):
 		return "balanced"
+	var sq := _rival_squad(code)
+	return PlanFit.standing_plan(sq.ground, sq.plan_know)
+
+
+## `code`'s side as the match engine will field it this week, with its
+## coaching (CoachEffects: plan knowledge, box, coach's tendency).
+func _rival_squad(code: String) -> Squad:
 	var sq := Squad.new(code, season.lists[code], false, code, season.selections.get(code, {}))
 	_ensure_plan_known()
 	CoachEffects.apply(sq)
-	return PlanFit.standing_plan(sq.ground, sq.plan_know)
+	return sq
 
 
 ## Compact stored-fact history surfaces. These deliberately read existing
@@ -5674,6 +5758,7 @@ func _short_name(id: String) -> String:
 ## the Grand Final has just been played - the season's awards.
 func _after_round(results: Array) -> void:
 	_note_plans_played(results)
+	_note_rival_plans(results)
 	MidseasonDraft.after_round(self)
 	# Who on a promised run could not play this week, before anything ticks.
 	_backing_unavailable = {}
@@ -11948,8 +12033,10 @@ const STYLE_PART_OF := {
 
 
 ## An opponent's usual game plan, said as what it does on the field (the
-## same trade-offs as CoachReport.PLAN_PARTS, from their side).
+## same trade-offs as CoachReport.PLAN_PARTS, from their side). What it
+## costs their legs follows it (RivalRead.legs_clause).
 const THEIR_PLAN := {
+	"balanced": "they play it straight, with no plan's extra edge and none of its costs.",
 	"attacking": "they run it through the corridor for ground and better shots, and turn it over more.",
 	"defensive": "they press high, so they win it back in their half, but there is space behind them when you get through.",
 	"contest": "they put numbers at the stoppages to win the clearances, and the ball moves slower.",

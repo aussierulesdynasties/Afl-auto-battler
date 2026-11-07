@@ -2422,8 +2422,8 @@ func _quarter_view(q: int) -> Control:
 	var opp_last := _opp_last_plan()
 	if opp_last != "":
 		lines = lines.slice(0, MatchNotes.MAX_FACTS - 1)
-		lines.append("They played a balanced game." if opp_last == "balanced"
-				else "They played %s." % CoachReport.plan_label(opp_last))
+		# What they played, their answer to yours, their mood (RivalRead).
+		lines.append(RivalRead.break_line(GameState.pending_sim, _my_side))
 	if lines.is_empty():
 		lines.append("An even quarter.")
 	for t in lines:
@@ -2661,8 +2661,8 @@ func _tag_line(q: int) -> String:
 func _legs_view() -> Control:
 	var v := UiKit.vbox(2)
 	v.name = "LegsView"
-	var l := UiKit.lbl(MatchNotes.legs_line(_group_energy(_my_side), _group_energy(1 - _my_side)),
-			UiKit.NOTE, UiKit.MUTED)
+	var l := UiKit.lbl(MatchNotes.legs_line(_group_energy(_my_side), _group_energy(1 - _my_side),
+			_opp_legs_reason()), UiKit.NOTE, UiKit.MUTED)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(l)
 	var cooked := MatchNotes.cooked(GameState.pending_sim.legs(_my_side))
@@ -2671,6 +2671,12 @@ func _legs_view() -> Control:
 		c.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(c)
 	return v
+
+
+## Why their legs are going (RivalRead.legs_reason): the plans they have run
+## that cost legs, from their plans so far. "" when their last cost none.
+func _opp_legs_reason() -> String:
+	return RivalRead.legs_reason(RivalRead.plans_of(GameState.pending_sim, 1 - _my_side))
 
 
 func _group_energy(side: int) -> float:

@@ -618,11 +618,19 @@ static func legs_word(energy: float) -> String:
 
 
 ## "Your midfield is fresh; theirs is tiring." from two group energies, or
-## "Both midfields are tiring." when they are the same.
-static func legs_line(mine: float, theirs: float) -> String:
+## "Both midfields are tiring." when they are the same. `reason` (RivalRead.
+## legs_reason) follows when theirs are the more tired: "...; theirs is
+## tiring: they've pressed since quarter time."
+static func legs_line(mine: float, theirs: float, reason := "") -> String:
 	if legs_word(mine) == legs_word(theirs):
 		return "Both midfields are %s." % legs_word(mine)
-	return "Your midfield is %s; theirs is %s." % [legs_word(mine), legs_word(theirs)]
+	var tail := ": " + reason if reason != "" and _legs_rank(theirs) > _legs_rank(mine) else ""
+	return "Your midfield is %s; theirs is %s%s." % [legs_word(mine), legs_word(theirs), tail]
+
+
+## 0 fresh, 1 tiring, 2 running on empty.
+static func _legs_rank(energy: float) -> int:
+	return 0 if energy >= FRESH else (1 if energy >= TIRING else 2)
 
 
 ## Names of your on-ground players below EMPTY energy, most tired first.

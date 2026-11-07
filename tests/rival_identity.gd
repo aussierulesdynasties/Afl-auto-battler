@@ -16,7 +16,8 @@ const READS := [-0.75, -0.2, 0.39, 0.4, 1.0]
 const KEYS := ["gameplan", "pep", "interceptor_id", "spare_accountable", "spare_minder_id", "tag_id"]
 
 
-static func play(i: int) -> Dictionary:
+## Match i, set up and not yet bounced.
+static func stage(i: int) -> MatchSim:
 	var order: Array = GameDB.active_clubs(2026)
 	var h := str(order[i % order.size()])
 	var a := str(order[(i + 5 + i / order.size()) % order.size()])
@@ -32,6 +33,22 @@ static func play(i: int) -> Dictionary:
 	# A league match as the balance harness stages it (tools/balance).
 	sim.season_plans = ["steady", "steady"]
 	sim.moment_side = -1
+	return sim
+
+
+## Plays the rest of the quarter begun, taking every moment's default.
+static func finish_quarter(sim: MatchSim) -> void:
+	while not sim.continue_quarter():
+		sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
+	sim.end_quarter()
+
+
+static func play(i: int) -> Dictionary:
+	var sim := stage(i)
+	var home: Squad = sim.squads[0]
+	var away: Squad = sim.squads[1]
+	var h := home.code
+	var a := away.code
 	var quarters := []
 	while sim.current_quarter <= 4:
 		sim.begin_quarter()
@@ -46,9 +63,7 @@ static func play(i: int) -> Dictionary:
 			calls["rotation"] = str((rec["rotations"] as Array)[side])
 			row.append(calls)
 		quarters.append(row)
-		while not sim.continue_quarter():
-			sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
-		sim.end_quarter()
+		finish_quarter(sim)
 	var res: Dictionary = sim.result()
 	return {
 		"match": "%s v %s, seed %d, %s/%s, box %.2f/%.2f" % [h, a, 9100 + i, home.coach_style, away.coach_style, home.tactics_read, away.tactics_read],
