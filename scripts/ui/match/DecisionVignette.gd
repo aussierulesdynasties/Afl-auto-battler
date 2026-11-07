@@ -16,22 +16,24 @@ const KINDS := ["tired", "duel", "hot", "momentum", "set_shot"]
 const END := {"tired": 3.2, "duel": 3.2, "hot": 3.0, "momentum": 3.0, "set_shot": 2.6}
 ## Where each scene sits on the ground (oval metres: x across, y along towards your goal)
 ## and the camera's distance behind, height above and offset across from that spot. The set
-## shot has no fixed spot: it stands where the call says he marked (set_spot).
+## shot has no fixed spot: it stands where the call says he marked (set_spot). Its camera
+## stands off his right shoulder, so the man on the mark shows past him, far enough across
+## that no goal or behind post rises from behind either man at any spot; "lead" is how far
+## left of the middle the kicker stands, in focal lengths, so the goals fit right of him.
 const STAGE := {
 	"tired": {"at": Vector2(46.0, 10.0), "d": 6.5, "h": 1.5, "x": 0.0, "zoom": 1.0},
 	"duel": {"at": Vector2(8.0, -52.0), "d": 9.0, "h": 2.2, "x": 0.0, "zoom": 1.0},
 	"hot": {"at": Vector2(0.0, 18.0), "d": 6.0, "h": 1.6, "x": 0.0, "zoom": 1.0},
 	"momentum": {"at": Vector2(0.0, 0.0), "d": 14.0, "h": 3.2, "x": 0.0, "zoom": 1.0},
-	"set_shot": {"at": Vector2.ZERO, "d": 9.0, "h": 1.9, "x": -0.7, "zoom": 0.78, "feet": [0.55, 0.505]},
+	"set_shot": {"at": Vector2.ZERO, "d": 9.0, "h": 1.9, "x": 5.2, "zoom": 0.78, "feet": [0.55, 0.505], "lead": 0.24},
 }
 ## The set shot's spots (MatchSim.SET_BANDS_ON, by key): degrees off the line through the
 ## middle of the goals. Champion Data's cells: straight in front is under 30, a tight angle
 ## over 60. The distance is the spot's own metres.
 const SET_SPOTS := {"close": 0.0, "front": 0.0, "long": 0.0, "angle": 20.0, "pocket": 65.0}
-## The man on the mark stands on the mark; the kicker stands this far back from it, and this
-## far to its left as he looks at the goals, so the man on the mark is not hidden behind him.
-const KICKER_BACK := 1.5
-const KICKER_ACROSS := 1.2
+## The man on the mark stands on the mark; the kicker stands this far back from it, on the
+## line from the middle of the goals through the mark, so his kick goes over the mark.
+const KICKER_BACK := 1.8
 
 var kind := ""
 var _end := 3.0
@@ -40,6 +42,10 @@ var _stage: Dictionary = STAGE["tired"]
 ## the goals.
 var spot := {}
 var _shot_to_scene := Transform2D.IDENTITY
+## Whether this scene leaves the big screen out (1) or shows it (0), decided once for the
+## scene at this size (-1: not yet); see _screen_board.
+var _screen_off := -1
+var _screen_off_size := Vector2.ZERO
 
 
 static func has_scene(k: String) -> bool:
@@ -60,10 +66,8 @@ static func set_spot(band_key: String) -> Dictionary:
 	var goal := Vector2(0.0, VignetteGround.GOAL_Y)
 	var out := Vector2(sin(deg_to_rad(angle)), -cos(deg_to_rad(angle)))
 	var mark := goal + out * metres
-	# His left as he faces the goal (along -out).
-	var left := Vector2(out.y, -out.x)
 	return {"key": key, "metres": metres, "angle": angle, "goal": goal, "mark": mark,
-			"kicker": mark + out * KICKER_BACK + left * KICKER_ACROSS}
+			"kicker": mark + out * KICKER_BACK}
 
 
 func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary) -> void:
@@ -129,9 +133,9 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary) -> void:
 						"to": Vector2(-5.0 + 5.0 * i, 5.0 + 1.5 * i), "delay": 0.25 * i, "dur": 2.4, "face": "front"})
 		"set_shot":
 			var def := _pick(sim, them, str(moment.get("defender_id", "")))
-			# From behind the kicker, looking past him at the goals from where the call
-			# says he marked: his back to us, the ball in his hands; the man on the mark
-			# runs in to the mark and faces him.
+			# From off his right shoulder, looking past him at the goals from where the
+			# call says he marked: his back to us, the ball in his hands; the man on the
+			# mark runs in to the mark, between him and the goals, and faces him.
 			spot = set_spot(str(moment.get("band_key", "")))
 			_shot_to_scene = _shot_frame(spot)
 			_add(me, my_side, true, wet, {"role": "kicker", "from": Vector2.ZERO, "to": Vector2.ZERO,
@@ -144,6 +148,7 @@ func setup_decision(sim: MatchSim, my_side: int, moment: Dictionary) -> void:
 	_t = 0.0
 	_hold = 0.0
 	_frozen = false
+	_screen_off = -1
 	_dress()
 	queue_redraw()
 
@@ -276,8 +281,8 @@ func _set_camera() -> void:
 	_focal = base * _zoom
 	_pan = 0.0
 	if kind == "set_shot":
-		# Turned a touch so the kicker stands right of centre, the goals left of him.
-		_pan = _focal * -_cam_x / _cam_d - size.x * 0.08
+		# The kicker left of the middle, the goals right of him, clear of his body.
+		_pan = _focal * (float(_stage.get("lead", 0.0)) - _cam_x / _cam_d)
 	# The subject sits in the upper half, clear of the call that takes the bottom.
 	var at: Array = [0.62, 0.56] if size.x > size.y else _stage.get("feet", [0.66, 0.6])
 	_horizon = size.y * lerpf(at[0], at[1], punch) - _focal * _cam_h / _cam_d
@@ -291,13 +296,37 @@ func _ground_to_scene() -> Transform2D:
 	return Transform2D(Vector2(1, 0), Vector2(0, 1), -at)
 
 
-## Close to the goals the big screen rises under the title bar, and half a screen reads as
-## a fault: a camera that would cut into its writing (below its top 15%) leaves it out.
-func _screen_board(cam: VignetteGround.Cam) -> Dictionary:
-	var r := VignetteGround.screen_rect(cam)
-	if r.has_area() and r.position.y + r.size.y * 0.15 < size.y * 0.075:
-		return {"off": true}
-	return _board
+## Close to the goals the big screen rises under the title bar, or past the side of the
+## picture, and half a screen reads as a fault. A scene whose camera would cut into it at any
+## point, from the cut-in to the settled freeze, leaves it out from first frame to last, so it
+## never vanishes mid-scene.
+func _screen_board(_cam: VignetteGround.Cam) -> Dictionary:
+	if _screen_off < 0 or _screen_off_size != size:
+		_screen_off_size = size
+		var cut := false
+		for i in range(21):
+			cut = cut or screen_cut_at(_end * float(i) / 20.0, 0.0)
+		for i in range(1, 9):
+			cut = cut or screen_cut_at(_end, 0.05 * float(i))
+		_screen_off = 1 if cut else 0
+	return {"off": true} if _screen_off == 1 else _board
+
+
+## Whether the big screen would be cut, by the title bar (into its writing, below its top
+## 15%) or by either side of the picture, with the camera where it is at that time into the
+## play-in and that far into the freeze's punch.
+func screen_cut_at(t: float, hold: float) -> bool:
+	var keep := Vector2(_t, _hold)
+	_t = t
+	_hold = hold
+	_set_camera()
+	var r := VignetteGround.screen_rect(ground_cam())
+	_t = keep.x
+	_hold = keep.y
+	_set_camera()
+	if not r.has_area():
+		return false
+	return r.position.y + r.size.y * 0.15 < size.y * 0.075 or r.position.x < 0.0 or r.end.x > size.x
 
 
 ## The set shot's ground: the kicker's spot is the scene's origin and the scene's +y runs

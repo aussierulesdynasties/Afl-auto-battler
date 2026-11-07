@@ -4,13 +4,15 @@ extends SceneTree
 ## call (MatchSim._offer_set_shot), so the headline is the one a match shows. Needs a
 ## real renderer (windowed, through C:/kt/gpu_slot.sh on this machine):
 ##   godot --path . --script tools/visual/capture_set_shot.gd -- --out /tmp/ss [--size 390x844]
-##       [--club COL] [--bands close,front,angle,pocket,long] [--venue MCG] [--topdown]
+##       [--club COL] [--bands close,front,angle,pocket,long] [--venue MCG] [--topdown] [--clip]
 ## Writes <out>_<band>.png (frozen, the call up) and prints a MEASURE line per band: where
 ## the kicker and the man on the mark stand on the oval, metres to the middle of the goal
 ## line, the angle off the line through the goals, and whether the 50 m arc lies between
 ## the kicker and the goal. --topdown also writes <out>_topdown.png: the attacking end
 ## drawn to scale from above, every spot's kicker, mark and camera where the scene put them.
 ## ART lines name every figure move drawn (the sheet's own moves, not a fallback).
+## --clip also writes every frame from the cut to the settled call, <out>_<band>_clip/NNN.png:
+## run Godot with --fixed-fps 30 so the frames are 1/30 s apart, then stitch them.
 
 var W := 390
 var H := 844
@@ -54,7 +56,12 @@ func _stage(club: String, key: String, venue: String) -> Control:
 	await _frames(8)
 	(m.find_child("StartQuarter", true, false) as Button).emit_signal("pressed")
 	await _frames(8)
-	m.get("_pitch").pause()
+	# The way a live call comes up: the oval has played everything the sim has rolled, so the
+	# scoreboard and the big screen show the same score (MatchScene._on_finished, as Skip to
+	# the break releases it).
+	m.set("_skipping", true)
+	m.get("_pitch").release_all()
+	m.set("_skipping", false)
 	if venue != "":
 		_VG.venue = venue
 	var sim = state.pending_sim
@@ -82,11 +89,14 @@ func _run() -> void:
 	var venue := ""
 	var bands := ["close", "front", "angle", "pocket", "long"]
 	var topdown := false
+	var clip := false
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		match str(a[i]):
 			"--topdown":
 				topdown = true
+			"--clip":
+				clip = true
 		if i + 1 >= a.size():
 			continue
 		match str(a[i]):
@@ -130,8 +140,11 @@ func _run() -> void:
 			print("NO SCENE for ", key)
 			m.queue_free()
 			continue
-		vig.finish_now()
-		await _frames(40)
+		if clip:
+			await _clip(m, vig, "%s_%s_clip" % [_out, key])
+		else:
+			vig.finish_now()
+			await _frames(40)
 		print("TITLE ", key, " ", vig.title)
 		print("VENUE ", key, " ", _VG.venue, " goal line ", snappedf(_VG.GOAL_Y, 0.01))
 		await _shot("%s_%s.png" % [_out, key])
@@ -154,6 +167,28 @@ func _run() -> void:
 	quit(0)
 
 
+## Every frame from the cut until the scene has settled on its freeze and the call has slid all
+## the way up, and 15 more.
+func _clip(m: Control, vig, dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	var panel: Control = m.find_child("BounceCall", true, false)
+	var margin: Control = panel.get_parent().get_parent() if panel != null else null
+	var n := 0
+	var after := -1
+	while n < 200 and after != 0:
+		var img := root.get_viewport().get_texture().get_image()
+		img.convert(Image.FORMAT_RGBA8)
+		img.save_png("%s/%03d.png" % [dir, n])
+		n += 1
+		var settled: bool = float(vig.get("_hold")) >= 0.4 and (margin == null or margin.get_theme_constant("margin_bottom") == 0)
+		if settled and after < 0:
+			after = 15
+		elif after > 0:
+			after -= 1
+		await process_frame
+	print("CLIP ", dir, " ", n, " frames")
+
+
 ## Where the scene stood everyone, read back from the scene itself (oval metres).
 func _measure(vig, key: String) -> Dictionary:
 	var goal := Vector2(0.0, _VG.GOAL_Y)
@@ -170,10 +205,13 @@ func _measure(vig, key: String) -> Dictionary:
 	var angle := rad_to_deg(atan2(absf(off.x), off.y))
 	# The arc lies between him and the goal when he stands outside it.
 	var arc_between: bool = kick.distance_to(goal) > _VG.ARC
-	print("MEASURE %s label %.0f m | kicker %.1f m, %.1f deg | mark %s | camera %.1f m behind him | arc between: %s" % [
+	# The camera against his line to the goals: how far back from him, how far to the side.
+	var ahead := off.normalized()
+	var rel := cam - kick
+	print("MEASURE %s label %.0f m | kicker %.1f m, %.1f deg | mark %s | camera %.1f m behind him, %.1f m across | arc between: %s" % [
 			key, metres, kick.distance_to(goal), angle,
 			("%.1f m" % mark.distance_to(goal)) if mark != Vector2.INF else "none",
-			cam.distance_to(kick), "yes" if arc_between else "no"])
+			-rel.dot(ahead), absf(rel.cross(ahead)), "yes" if arc_between else "no"])
 	# The ground as the scene drew it (the statics go back to the default ground with the match).
 	return {"key": key, "metres": metres, "kick": kick, "mark": mark, "cam": cam,
 			"ground": [float(_VG.A), float(_VG.L), float(_VG.GOAL_Y), str(_VG.venue)]}
@@ -202,6 +240,9 @@ func _frame_line(m: Control, vig, key: String) -> void:
 		var foot: Vector2 = at.call(cam.oval(Vector2(x * _VG.GOAL_GAP, _VG.GOAL_Y)))
 		var tip: Vector2 = at.call(cam.oval(Vector2(x * _VG.GOAL_GAP, _VG.GOAL_Y), _VG.GOAL_H))
 		line += " | post %.0f,%.0f top %.0f" % [foot.x, foot.y, tip.y]
+	for x in [-1.5, 1.5]:
+		var foot: Vector2 = at.call(cam.oval(Vector2(x * _VG.GOAL_GAP, _VG.GOAL_Y)))
+		line += " | behind post %.0f" % foot.x
 	var screen: Rect2 = _VG.screen_rect(cam)
 	if not screen.has_area():
 		line += " | big screen behind the camera"
