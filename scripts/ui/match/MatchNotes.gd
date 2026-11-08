@@ -1092,9 +1092,10 @@ static func rated_players(res: Dictionary, side: int) -> Array:
 
 
 ## What a hit-out is worth to a coach picking his five. The match rating gives a
-## tap 1, but coaches rate what a ruck does around the ground, and the AFL's
-## rucks poll 8.4% of the coaches' votes (2025-26). Measured with brownlow_impl.
-const COACHES_HITOUT_POINTS := 0.5
+## tap 1, which leaves rucks on 6.9% of the coaches' votes; the AFL's poll 8.4%
+## (2025-26). Coaches rate a ruck's tap work above the stat sheet, and this
+## number puts their share there. Measured with brownlow_impl.
+const COACHES_HITOUT_POINTS := 1.2
 
 
 ## The coaches' votes, as the AFL gives them: each coach names his five best
