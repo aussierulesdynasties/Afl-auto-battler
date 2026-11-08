@@ -4,6 +4,11 @@ careers of tools/audit/cards_impl.gd, written as docs/research/event_card_audit_
 
   python tools/audit/card_audit_report.py static
   python tools/audit/card_audit_report.py report RUN_DIR [RUN_DIR ...] --out docs/research/x.md --date 2026-10-12
+  python tools/audit/card_audit_report.py union RUN_DIR [RUN_DIR ...]
+
+"union" (row 107) pools many careers and prints, card by card, how many careers dealt it, how
+often in all, and how many weeks its trigger held; then every card no career dealt (NEVER),
+with its trigger weeks: 0 means the trigger never held, more means it held and was not drawn.
 
 Each RUN_DIR holds one audit-cards_impl artifact (the cards_impl log). The judgements a person
 makes (premises a trigger does not check, promises not kept, copy proposals) live in
@@ -21,6 +26,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 ROOT = os.path.join(HERE, "..", "..")
 CATS = ["training", "health", "family", "media", "contracts", "leadership", "community", "rivals", "board", "members", "selection"]
+# The deck's files: the international cards have their own file and are filed under family.
+FILES = CATS + ["international"]
 
 # Post-match press questions (scripts/sim/MediaConference.gd): key, journalist, the question in short.
 # Every question has the same three answers: accountable (board +1, players -1), tactical (0, 0),
@@ -37,7 +44,7 @@ PRESS = [
 
 def load_deck():
     deck = []
-    for cat in CATS:
+    for cat in FILES:
         p = os.path.join(ROOT, "data", "stories", cat + ".json")
         if os.path.exists(p):
             deck.extend(json.load(open(p, encoding="utf-8")))
@@ -81,8 +88,30 @@ def weak(c):
     return True
 
 
+def flag_reads(v, out):
+    """Every flag a card reads: needs, a subject or choice condition (flag / no_flag)."""
+    if isinstance(v, dict):
+        for k, x in v.items():
+            if k in ("flag", "no_flag") and isinstance(x, str):
+                out.add(x)
+            elif k != "effects":
+                flag_reads(x, out)
+    elif isinstance(v, list):
+        for x in v:
+            flag_reads(x, out)
+    return out
+
+
+def code_flag_reads():
+    """The flags the game's code asks for by name: story_flag_set(holder, "name")."""
+    out = set()
+    for f in glob.glob(os.path.join(ROOT, "scripts", "**", "*.gd"), recursive=True):
+        out.update(re.findall(r'story_flag_set\([^,()]+,\s*"([a-z_]+)"', open(f, encoding="utf-8").read()))
+    return out
+
+
 def static_flags(deck):
-    needed = {t["needs"]["flag"] for t in deck if t.get("needs")}
+    needed = flag_reads(deck, set()) | code_flag_reads()
     out = {}
     for t in deck:
         fl = []
@@ -264,7 +293,7 @@ def write_report(deck, fl, careers, out_path, date, run_ids):
     zero = [t["id"] for t in deck if real["card"][t["id"]] == 0]
     kinds = collections.Counter()
     for t in deck:
-        for f in fl[t["id"]] + PROPOSALS[t["id"]]["flags"]:
+        for f in fl[t["id"]] + PROPOSALS.get(t["id"], {"flags": []})["flags"]:
             kinds[f.split()[0]] += 1
     ncopy = sum(len(v["copy"]) for v in PROPOSALS.values())
     no_trade = [t["id"] for t in deck if any(f.startswith("DOMINATED") for f in fl[t["id"]])]
@@ -373,11 +402,47 @@ except ImportError:
     pass
 
 
+def union(deck, careers):
+    """Every card over all careers: careers that dealt it, times dealt, trigger weeks."""
+    allp = pool(careers)
+    dealt_in = collections.Counter()
+    for c in careers:
+        for k, n in c["card"].items():
+            if n:
+                dealt_in[k] += 1
+    print("UNION careers %d | seasons %d | weeks %d | cards dealt %d | distinct %d of %d" % (
+        len(careers), allp["seasons"], allp["weeks"], sum(allp["card"].values()),
+        sum(1 for t in deck if allp["card"][t["id"]]), len(deck)))
+    for t in deck:
+        cid = t["id"]
+        print("UCARD %s %s %s careers %d times %d trigger_weeks %d" % (cid, t["category"], "private" if t.get("private") else "-",
+              dealt_in[cid], allp["card"][cid], allp["cond"][cid]))
+    for t in deck:
+        cid = t["id"]
+        if not allp["card"][cid]:
+            print("UNEVER %s %s %s trigger_weeks %d" % (cid, t["category"], "private" if t.get("private") else "-", allp["cond"][cid]))
+    # Real names are on in a new game (GameState.real_names), and a private card is
+    # never dealt about a real-named player, so the reach of the game as it starts is
+    # the real-name careers alone: each names setting is counted on its own as well.
+    for names in sorted({c["names"] for c in careers if c["names"]}):
+        sub = [c for c in careers if c["names"] == names]
+        p = pool(sub)
+        print("UNAMES %s careers %d | seasons %d | weeks %d | distinct %d of %d" % (
+            names, len(sub), p["seasons"], p["weeks"], sum(1 for t in deck if p["card"][t["id"]]), len(deck)))
+        for t in deck:
+            cid = t["id"]
+            if not p["card"][cid]:
+                print("UNEVER_NAMES %s %s %s %s trigger_weeks %d" % (names, cid, t["category"],
+                      "private" if t.get("private") else "-", p["cond"][cid]))
+
+
 if __name__ == "__main__":
     deck = load_deck()
     mode = sys.argv[1] if len(sys.argv) > 1 else "static"
     fl = static_flags(deck)
-    if mode == "static":
+    if mode == "union":
+        union(deck, parse_runs(sys.argv[2:]))
+    elif mode == "static":
         print("cards %d choices %d" % (len(deck), sum(len(t["choices"]) for t in deck)))
         for t in deck:
             if fl[t["id"]]:

@@ -109,6 +109,10 @@
 						"op": "morale",
 						"d": -2,
 						"who": "all"
+					},
+					{
+						"op": "board",
+						"d": 2
 					}
 				],
 				"result": "You say nothing. The rooms hear it all week anyway."
@@ -168,6 +172,10 @@
 						"op": "trust",
 						"d": -3,
 						"why": "You knocked back his newspaper column"
+					},
+					{
+						"op": "xp",
+						"d": 3
 					}
 				],
 				"result": "{name} turns the paper down."
@@ -220,6 +228,10 @@
 					{
 						"op": "morale",
 						"d": -3
+					},
+					{
+						"op": "xp",
+						"d": 4
 					}
 				],
 				"result": "No feature. {first} would have liked it."
@@ -262,6 +274,12 @@
 					{
 						"op": "board",
 						"d": -3
+					},
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "Nobody in the group was put under suspicion over the leak"
 					}
 				],
 				"result": "You let it go. The board isn't happy."
@@ -304,6 +322,12 @@
 					{
 						"op": "board",
 						"d": -2
+					},
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "You kept the rooms the players'"
 					}
 				],
 				"result": "No cameras. The network isn't happy."
@@ -370,6 +394,11 @@
 						"op": "trust",
 						"d": -2,
 						"why": "You kept it between you two when he asked for the group"
+					},
+					{
+						"op": "morale",
+						"d": 1,
+						"who": "side"
 					}
 				],
 				"result": "You talk it through with {name} alone."
@@ -414,6 +443,12 @@
 						"op": "trust",
 						"d": -4,
 						"why": "You said no when he asked to try the move"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You kept selection off the radio"
 					}
 				],
 				"result": "{name} stays in his role."
@@ -466,7 +501,16 @@
 			{
 				"key": "ok",
 				"label": "Good to hear",
-				"effects": [],
+				"effects": [
+					{
+						"op": "morale",
+						"d": 3
+					},
+					{
+						"op": "expects_game",
+						"sting": 6
+					}
+				],
 				"result": "{name} is back in his usual spot."
 			}
 		]
@@ -494,7 +538,17 @@
 			{
 				"key": "ok",
 				"label": "Fair enough",
-				"effects": [],
+				"effects": [
+					{
+						"op": "trust",
+						"d": 2,
+						"why": "You were straight with him that the move hasn't landed yet"
+					},
+					{
+						"op": "morale",
+						"d": -2
+					}
+				],
 				"result": "{name} is back in his usual spot."
 			}
 		]
@@ -945,6 +999,11 @@
 						"op": "morale",
 						"d": 5,
 						"who": "side"
+					},
+					{
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10
 					}
 				],
 				"result": "Every tip for {opp} goes on the noticeboard. The players read them twice."
@@ -963,6 +1022,10 @@
 						"strand": "together",
 						"d": 2,
 						"why": "You backed your players in the press before a final"
+					},
+					{
+						"op": "board",
+						"d": -2
 					}
 				],
 				"result": "\"We finished below them. We've beaten better sides.\" The players notice."
@@ -1006,6 +1069,12 @@
 						"strand": "ambition",
 						"d": 2,
 						"why": "You told the press this group isn't done"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": -1,
+						"why": "No spot was put on notice after the prelim"
 					}
 				],
 				"result": "\"We'll be back here, and we'll go one better.\""

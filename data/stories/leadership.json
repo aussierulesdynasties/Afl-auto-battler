@@ -98,6 +98,12 @@
 					{
 						"op": "morale",
 						"d": -3
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You kept development with the coaches"
 					}
 				],
 				"result": "The coaches keep the session."
@@ -296,6 +302,11 @@
 						"op": "morale",
 						"d": 2,
 						"who": "subject"
+					},
+					{
+						"op": "morale",
+						"d": -1,
+						"who": "all"
 					}
 				],
 				"result": "{name} takes it back to the group."
@@ -340,6 +351,12 @@
 						"op": "trust",
 						"d": -2,
 						"why": "You told him selection was the coaches' call"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You kept selection the coaches' call"
 					}
 				],
 				"result": "{name} says he understands."
@@ -374,6 +391,11 @@
 						"op": "morale",
 						"d": 3,
 						"who": "all"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 4,
+						"who": "all"
 					}
 				],
 				"result": "A day off, and the group's brighter."
@@ -385,6 +407,11 @@
 					{
 						"op": "morale",
 						"d": -2,
+						"who": "all"
+					},
+					{
+						"op": "xp",
+						"d": 4,
 						"who": "all"
 					}
 				],
@@ -468,6 +495,11 @@
 						"op": "morale",
 						"d": -2,
 						"who": "subject"
+					},
+					{
+						"op": "morale",
+						"d": 1,
+						"who": "all"
 					}
 				],
 				"result": "{name} accepts it."
@@ -544,7 +576,19 @@
 			{
 				"key": "notyet",
 				"label": "Not yet",
-				"effects": [],
+				"effects": [
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "The young player waits to earn his game"
+					},
+					{
+						"op": "trust",
+						"d": -2,
+						"why": "You didn't take his word on the young player"
+					}
+				],
 				"result": "{name} tells {kid_name} to keep going.",
 				"note": "Nothing changes."
 			}
@@ -602,6 +646,10 @@
 						"op": "trust",
 						"d": -1,
 						"why": "You sat in on the leaders' meeting"
+					},
+					{
+						"op": "board",
+						"d": 1
 					}
 				],
 				"result": "You sat in. It was a short meeting."
@@ -614,6 +662,11 @@
 						"op": "trust",
 						"d": -2,
 						"why": "You put the leaders' meeting off"
+					},
+					{
+						"op": "xp",
+						"d": 2,
+						"who": "side"
 					}
 				],
 				"result": "{name} takes it on the chin."
@@ -653,6 +706,11 @@
 						"op": "trust",
 						"d": 3,
 						"why": "You let him speak to the group"
+					},
+					{
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10
 					}
 				],
 				"result": "{name} spoke well."
@@ -715,6 +773,11 @@
 						"op": "trust",
 						"d": 4,
 						"why": "You told him his leadership was noticed"
+					},
+					{
+						"op": "morale",
+						"d": -1,
+						"who": "all"
 					}
 				],
 				"result": "{name} says thanks."
@@ -722,7 +785,18 @@
 			{
 				"key": "letbe",
 				"label": "Let it be",
-				"effects": [],
+				"effects": [
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "You left the group's run to the group"
+					},
+					{
+						"op": "morale",
+						"d": -1
+					}
+				],
 				"result": "Nothing needs saying.",
 				"note": "Nothing changes."
 			}
@@ -776,6 +850,12 @@
 						"op": "trust",
 						"d": -2,
 						"why": "You played him on heavy legs"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "The captain played on through heavy legs"
 					}
 				],
 				"result": "{name} plays on."
@@ -942,6 +1022,10 @@
 						"op": "morale",
 						"d": -2,
 						"who": "subject"
+					},
+					{
+						"op": "xp",
+						"d": 3
 					}
 				],
 				"result": "{name} keeps his head down."
@@ -991,6 +1075,10 @@
 						"op": "trust",
 						"d": 3,
 						"why": "You told him you'd noticed his form"
+					},
+					{
+						"op": "expects_game",
+						"sting": 6
 					}
 				],
 				"result": "{name} grins."
@@ -998,7 +1086,18 @@
 			{
 				"key": "letbe",
 				"label": "Let it be",
-				"effects": [],
+				"effects": [
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "You left the group's form to the group"
+					},
+					{
+						"op": "morale",
+						"d": -1
+					}
+				],
 				"result": "He doesn't need telling.",
 				"note": "Nothing changes."
 			}
@@ -1037,7 +1136,17 @@
 			{
 				"key": "nerve",
 				"label": "Hold your nerve",
-				"effects": [],
+				"effects": [
+					{
+						"op": "trust",
+						"d": 2,
+						"why": "You backed him to find his form"
+					},
+					{
+						"op": "morale",
+						"d": -2
+					}
+				],
 				"result": "You back him to come good.",
 				"note": "He's left to find it himself."
 			},
@@ -1113,6 +1222,10 @@
 						"why": "You told him you'd wait on his contract"
 					},
 					{
+						"op": "board",
+						"d": 1
+					},
+					{
 						"op": "flag",
 						"name": "cc_start"
 					}
@@ -1156,7 +1269,17 @@
 			{
 				"key": "hand",
 				"label": "Tell the group it's in hand",
-				"effects": [],
+				"effects": [
+					{
+						"op": "morale",
+						"d": 2,
+						"who": "all"
+					},
+					{
+						"op": "board",
+						"d": -2
+					}
+				],
 				"result": "The group takes you at your word.",
 				"note": "Nothing changes yet."
 			},
@@ -1168,6 +1291,11 @@
 						"op": "morale",
 						"d": -1,
 						"who": "all"
+					},
+					{
+						"op": "trust",
+						"d": 2,
+						"why": "You kept his contract between him and the club"
 					}
 				],
 				"result": "The group will have to wait."
@@ -1178,7 +1306,7 @@
 		"beat": "middle",
 		"needs": {
 			"flag": "cc_start",
-			"after": 6,
+			"after": 3,
 			"within": 20
 		},
 		"choice_notes": true,
@@ -1216,6 +1344,11 @@
 						"op": "trust",
 						"d": 3,
 						"why": "You re-signed your captain"
+					},
+					{
+						"op": "morale",
+						"d": -1,
+						"who": "all"
 					}
 				],
 				"result": "{name} is happy to stay."
@@ -1223,7 +1356,18 @@
 			{
 				"key": "letbe",
 				"label": "Let it be",
-				"effects": [],
+				"effects": [
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "You kept the captain's deal quiet while others are unsigned"
+					},
+					{
+						"op": "morale",
+						"d": -1
+					}
+				],
 				"result": "Nothing more to say.",
 				"note": "Nothing changes."
 			}
@@ -1261,7 +1405,15 @@
 			{
 				"key": "understood",
 				"label": "Understood",
-				"effects": [],
+				"effects": [
+					{
+						"op": "open_price"
+					},
+					{
+						"op": "morale",
+						"d": -2
+					}
+				],
 				"result": "It waits for the end of the season.",
 				"note": "It waits for the end of the season."
 			},
@@ -1316,6 +1468,10 @@
 						"why": "You talked about what comes next"
 					},
 					{
+						"op": "morale",
+						"d": -3
+					},
+					{
 						"op": "flag",
 						"name": "su_start"
 					}
@@ -1332,6 +1488,10 @@
 						"why": "You told him the armband's his as long as he wants"
 					},
 					{
+						"op": "board",
+						"d": -2
+					},
+					{
 						"op": "flag",
 						"name": "su_start"
 					}
@@ -1343,11 +1503,19 @@
 				"label": "Not yet",
 				"effects": [
 					{
+						"op": "morale",
+						"d": 2
+					},
+					{
+						"op": "board",
+						"d": -2
+					},
+					{
 						"op": "flag",
 						"name": "su_start"
 					}
 				],
-				"result": "Nothing changes.",
+				"result": "{name} keeps leading the group as he is.",
 				"note": "Nothing changes."
 			}
 		],
@@ -1391,8 +1559,18 @@
 			{
 				"key": "later",
 				"label": "Not yet",
-				"effects": [],
-				"result": "Nothing changes now.",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 2
+					},
+					{
+						"op": "morale",
+						"d": -2,
+						"who": "vice"
+					}
+				],
+				"result": "{name} keeps the armband for now.",
 				"note": "The card ends. You can make the change on the Captaincy page."
 			}
 		],
@@ -1478,6 +1656,10 @@
 						"op": "trust",
 						"d": 6,
 						"why": "You kept his news quiet until the season was over"
+					},
+					{
+						"op": "board",
+						"d": -2
 					}
 				],
 				"result": "Nobody else hears it until the season's over."
@@ -1535,6 +1717,11 @@
 					{
 						"op": "morale",
 						"d": 4,
+						"who": "side"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 6,
 						"who": "side"
 					}
 				],
@@ -1614,7 +1801,13 @@
 								"who": "side"
 							}
 						],
-						"failed": [],
+						"failed": [
+							{
+								"op": "morale",
+								"d": -2,
+								"who": "side"
+							}
+						],
 						"held_result": "You say your piece early. {name} sends them out, and the group hangs on every word.",
 						"failed_result": "You say your piece early. {name} sends them out, but the group has its mind on the game."
 					}
@@ -1690,6 +1883,12 @@
 						"op": "trust",
 						"d": 2,
 						"why": "You made the Grand Final about him"
+					},
+					{
+						"op": "loss_sting",
+						"who": "side",
+						"chance": 20,
+						"d": -8
 					}
 				],
 				"result": "It's said once, in the rooms on Tuesday: this one's for him. After that it doesn't need saying."
@@ -1707,6 +1906,11 @@
 						"op": "trust",
 						"d": 6,
 						"why": "You kept the farewell talk away from him in Grand Final week"
+					},
+					{
+						"op": "morale",
+						"d": -1,
+						"who": "side"
 					}
 				],
 				"result": "No farewell talk this week. He's just the captain until the siren."
@@ -1901,6 +2105,12 @@
 						"strand": "together",
 						"d": 2,
 						"why": "You thanked the players when the season ended"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": -1,
+						"why": "The bar for next year wasn't set after the finals exit"
 					}
 				],
 				"result": "You go round the room, one by one. A few heads come up."
@@ -1956,6 +2166,12 @@
 						"strand": "together",
 						"d": 2,
 						"why": "You told the players to be proud of their year"
+					},
+					{
+						"op": "culture",
+						"strand": "ambition",
+						"d": -1,
+						"why": "The year was settled for, not chased"
 					}
 				],
 				"result": "You tell them to be proud of the year. Summer can start."

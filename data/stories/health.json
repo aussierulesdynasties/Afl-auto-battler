@@ -44,6 +44,10 @@
 				"effects": [
 					{
 						"op": "sore"
+					},
+					{
+						"op": "morale",
+						"d": 2
 					}
 				],
 				"result": "{name} plays. Fingers crossed."
@@ -171,6 +175,11 @@
 				"effects": [
 					{
 						"op": "fresh",
+						"who": "all"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 6,
 						"who": "all"
 					}
 				],
@@ -396,7 +405,6 @@
 		"subject": {
 			"kind": "player",
 			"where": {
-				"injury_kind": "knee",
 				"injured_weeks_min": 1,
 				"injured_weeks_max": 6,
 				"rushable": true
@@ -404,10 +412,10 @@
 			"pick": "highest:overall"
 		},
 		"title": [
-			"{name}'s knee"
+			"{name} is running again"
 		],
 		"text": [
-			"{first} is running again after his knee. The physio hasn't cleared him yet, but he is asking to join full sessions and reckons he is ready."
+			"{first} is running again after {injury_word}. The physio hasn't cleared him yet, but he is asking to join full sessions and reckons he is ready."
 		],
 		"choices": [
 			{
@@ -427,11 +435,14 @@
 					{
 						"op": "trust",
 						"d": 3,
-						"why": "You kept to the physio's plan for his knee"
+						"why": "You kept to the physio's plan for his comeback"
 					},
 					{
 						"op": "morale",
 						"d": -3
+					},
+					{
+						"op": "keep_out"
 					}
 				],
 				"result": "{first} does as the physio says, and grumbles about it."

@@ -25,6 +25,11 @@
 						"op": "morale",
 						"d": 3,
 						"who": "all"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 4,
+						"who": "all"
 					}
 				],
 				"result": "The members loved it."
@@ -37,6 +42,10 @@
 						"op": "xp",
 						"d": 8,
 						"who": "all"
+					},
+					{
+						"op": "board",
+						"d": -2
 					}
 				],
 				"result": "A closed session. The coaches got their work done."
@@ -79,6 +88,11 @@
 					{
 						"op": "board",
 						"d": -2
+					},
+					{
+						"op": "morale",
+						"d": 1,
+						"who": "all"
 					}
 				],
 				"result": "The signing session is put off."
@@ -121,6 +135,12 @@
 					{
 						"op": "board",
 						"d": -3
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You let the club answer with its football"
 					}
 				],
 				"result": "You stay at the club."
@@ -176,6 +196,10 @@
 					{
 						"op": "morale",
 						"d": -2
+					},
+					{
+						"op": "xp",
+						"d": 2
 					}
 				],
 				"result": "The banner gets painted without him."
@@ -218,6 +242,11 @@
 					{
 						"op": "board",
 						"d": -2
+					},
+					{
+						"op": "xp",
+						"d": 2,
+						"who": "side"
 					}
 				],
 				"result": "The CEO handles it."
@@ -303,6 +332,12 @@
 						"op": "morale",
 						"d": 5,
 						"who": "all"
+					},
+					{
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10,
+						"on": "week"
 					}
 				],
 				"result": "A few quiet ones at the club. They turn up on Monday walking taller."
@@ -368,6 +403,12 @@
 						"op": "trust",
 						"d": 4,
 						"why": "You let the cheer squad put his name on the Grand Final banner"
+					},
+					{
+						"op": "slow_start",
+						"who": "subject",
+						"chance": 20,
+						"on": "grand_final"
 					}
 				],
 				"result": "His name runs across the bottom of the banner. He'll keep a piece of it forever."
@@ -380,6 +421,10 @@
 						"op": "morale",
 						"d": 3,
 						"who": "side"
+					},
+					{
+						"op": "morale",
+						"d": -2
 					}
 				],
 				"result": "The banner is all club. His milestone gets its moment after the siren."
@@ -482,6 +527,11 @@
 						"strand": "together",
 						"d": 2,
 						"why": "The players shared the first final in years with the supporters"
+					},
+					{
+						"op": "slow_start",
+						"who": "side",
+						"chance": 15
 					}
 				],
 				"result": "The players walk the queue after training, signing whatever's handed to them."
@@ -500,6 +550,11 @@
 						"strand": "standards",
 						"d": 1,
 						"why": "You kept the first final in years a week like any other"
+					},
+					{
+						"op": "morale",
+						"d": -1,
+						"who": "all"
 					}
 				],
 				"result": "Same drills, same meetings, same Thursday. The doors stay shut."
@@ -564,6 +619,10 @@
 						"strand": "ambition",
 						"d": 2,
 						"why": "One week of celebrations, then you set the next target"
+					},
+					{
+						"op": "board",
+						"d": -2
 					}
 				],
 				"result": "One week, then the talk turns to doing it again."

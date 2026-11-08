@@ -19,6 +19,8 @@ var _event_overlay: Control
 var _sim_confirm: Control
 var _skip_confirm: Control
 var _onboarding_overlay: Control
+var _backdrop: Control
+var _margin: MarginContainer
 
 
 func _ready() -> void:
@@ -34,8 +36,10 @@ func _ready() -> void:
 	MatchKickoff.reset()
 	_warm_pre_match.call_deferred()
 
-	add_child(ClubBackdrop.new().setup(GameState.my_club).live())
+	_backdrop = ClubBackdrop.new().setup(GameState.my_club).live()
+	add_child(_backdrop)
 	var margin := MarginContainer.new()
+	_margin = margin
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
@@ -84,11 +88,13 @@ func _show_week_ask() -> void:
 	elif MidseasonDraft.waiting(GameState):
 		_show_midseason_pick()
 	elif RookieList.waiting(GameState):
-		RookieDraftSheet.open(self, _build, RookieDraftSheet.PASS_HUB)
+		RookieDraftSheet.open(self, _after_ask, RookieDraftSheet.PASS_HUB)
 	elif GameState.backing_talk_pending():
 		_show_backing_talk()
 	elif GameState.media_conference_pending():
 		_show_media_conference()
+	else:
+		_show_training_report()
 
 
 ## A short first-hub orientation, shown where the weekly loop actually lives
@@ -287,8 +293,6 @@ func _build() -> void:
 	if _narrow():
 		if waiting != null:
 			page.add_child(waiting)
-		if TrainingReport.hub_due(GameState):
-			page.add_child(TrainingReportSheet.hub_card(self, _go_retrain))
 		page.add_child(week)
 		page.add_child(UiKit.rule())
 		page.add_child(_standing_card())
@@ -304,8 +308,6 @@ func _build() -> void:
 		cols.add_child(left)
 		if waiting != null:
 			left.add_child(waiting)
-		if TrainingReport.hub_due(GameState):
-			left.add_child(TrainingReportSheet.hub_card(self, _go_retrain))
 		left.add_child(week)
 		left.add_child(UiKit.rule())
 		left.add_child(_standing_card())
@@ -367,6 +369,43 @@ func _build() -> void:
 		foot.add_child(row)
 	# Motion plays once per visit, not on every rebuild after an answer.
 	_settled = true
+
+
+## A new training report opens over the hub once, behind the week's asks and
+## never over another popup (director, 2026-11-08: "should be dismissable popups
+## rather than an unheralded line in the UI"). A card or press conference still
+## to come goes first: the report then opens from _show_week_ask on the way back.
+func _show_training_report() -> void:
+	if not TrainingReport.hub_due(GameState) or GameState.is_sacked() or _popup_open():
+		return
+	if GameState.media_conference_pending():
+		return
+	if GameState.event_sheets:
+		for card in GameState.week_events:
+			if not bool(card.get("resolved", false)) and not bool(card.get("popped", false)):
+				return
+	TrainingReport.dismiss(GameState)
+	TrainingReportSheet.open(self, _go_retrain)
+
+
+## An ask closed that does not lead on to the next: the hub, then the report.
+func _after_ask() -> void:
+	_build()
+	_show_training_report()
+
+
+## Something already sits over the hub, or the hub is handing over.
+func _popup_open() -> bool:
+	if MatchKickoff.busy or Router.current() != "hub" and get_tree().current_scene == self:
+		return true
+	if _media_overlay != null and is_instance_valid(_media_overlay):
+		return true
+	for c in get_children():
+		if c == _backdrop or c == _margin or not (c is Control):
+			continue
+		if (c as Control).visible and not c.is_queued_for_deletion():
+			return true
+	return false
 
 
 ## From the training report: Training, at that player's choice.
@@ -1888,7 +1927,7 @@ func handle_back() -> bool:
 	if _results_overlay != null and is_instance_valid(_results_overlay):
 		_results_overlay.queue_free()
 		_results_overlay = null
-		_build()
+		_after_ask()
 		return true
 	if _talk_overlay != null and is_instance_valid(_talk_overlay):
 		_close_backing_talk()
@@ -2025,7 +2064,7 @@ func _close_midseason(_back: bool) -> void:
 			MidseasonDraft.close_carnival(GameState)
 		_midseason_overlay.queue_free()
 	_midseason_overlay = null
-	_build()
+	_after_ask()
 
 
 func _close_backing_talk() -> void:
@@ -2033,7 +2072,7 @@ func _close_backing_talk() -> void:
 	if _talk_overlay != null and is_instance_valid(_talk_overlay):
 		_talk_overlay.queue_free()
 	_talk_overlay = null
-	_build()
+	_after_ask()
 
 
 ## The press conference is its own full screen (ruling 3.52; director
