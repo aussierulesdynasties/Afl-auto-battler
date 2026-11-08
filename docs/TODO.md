@@ -1,6 +1,6 @@
 ﻿# TODO: everything not done yet
 
-The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed after merge from the PR's `Closes row N` line (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call. There are no feature switches (director 2026-11-06): work goes straight into the game and his playtest judges it (section B). Updated 2026-11-08 against main `5efa0aac`. Live on itch: 1.0.8 (73115dc).
+The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed after merge from the PR's `Closes row N` line (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call. There are no feature switches (director 2026-11-06): work goes straight into the game and his playtest judges it (section B). Updated 2026-11-08 against main `1358f093`. Live on itch: 1.0.9 (1358f09).
 
 ## Itch builds
 
@@ -10,13 +10,13 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 
 | # | What | Done looks like |
 |---|---|---|
-| 61 | Weather at full effect, wind and heat (rain is in, #1089): wind and heat change ball handling, kicking, tackling and scoring at audited sizes; wet disposals and kicks are still short of real (#1089). Balance stays his call; the look never touches the sim | audit bands, rules in code, his playtest |
 | 67 | Management pays: trade period at real volume, recruiters' edge and development projects (4.Q11); balance-gated | audit across 8-10 seasons |
 | 69 | Hub leads with one hero element, shown on the hub first (6.Q2) | hub capture, his look |
 | 73 | Premiership-year tattoos at a restrained, configurable rate; zero gameplay effect (6.Q16; see G 6.63) | tattoos on, rate in one place |
 | 75 | Sir Doug Nicholls Round designs: the annual round and its saved record are in (#1034); left are the design library, selection and rotation, and the guernsey drawn on match day (T5.Q11b) | a design is stored and drawn for the round |
 | 84 | Togetherness at tight and cliques is felt in matches (director 2026-11-06, after the row 68 review); balance-gated, his playtest judges | audit shows the effect, he has played it |
 | 103 | Synergies within reach: draft, trade and free-agent screens show which synergy a player would complete, and a player can grow a trait over seasons through training (4.Q10); balance-gated | both shown in play, paired table |
+| 107 | Event cards: every choice gets an upside and a downside, and never-seen cards get a trigger (T5.Q18, row 34) | no no-cost choice, every card reachable in an audit |
 | 113 | Start at the end of 2026: real lists, the real 2026 National Draft with each club's real picks, then play 2027 (T5.r134) | start option, sourced pick ownership, test |
 | 117 | Coaching staff: head coach, head assistant, assistants; counter-offer (not money) when a rival poaches one (T5.Q16) | approach, counter and departure tested |
 | 119 | Coach name and appointment interview (director 2026-11-07, after itch 1.0.8). New save: pick any club, type your coach's name, then your first press conference (canon, director: you beat James Hird for the job, mentioned once in the interview, neutral wording, nothing about his past) in the same press room with the real journalists, not skippable: "<Name>, congrats on your appointment as Demons Head Coach", then questions on your coaching style, recruitment approach, strength and conditioning and more, ending with "what do you predict for the season to come?". Your answers set your coaching archetype, like an RPG. The archetype moves match play too, and it shifts over seasons with how you actually coach and answer the press. The season prediction shapes the archetype only (the board sets its own expectation). First step: draft the archetype list with each one's exact match effect for the director to approve, cut or rename; build nothing before that. | save start asks name then interview, every answer moves the archetype, archetype effect on match play measured with tools/balance.sh, drift over seasons tested, real-tap check on phone |
@@ -34,6 +34,7 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 
 | # | Feature | PRs | Open |
 |---|---|---|---|
+| 61 | Weather at real size: wet, wind and heat fitted to 2016-25 AFL games (#1150, live in 1.0.9). Balance stays his call; the look never touches the sim | his playtest |
 | 1 | Top three attributes on cards, Needs work benchmark, scout grade word for hidden prospects | #863 | |
 | 9 | Feed colours: your goals good, goals against bad, behinds and calls neutral | #918 | |
 | 10 | Kick range caps receiver choice; Sim the week shares the same pick | #857 #879 | |
