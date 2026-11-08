@@ -93,4 +93,11 @@ func _run() -> void:
 	root.add_child(hub)
 	await _frames(12)
 	await _shot("%s/skip_after_%dx%d.png" % [dir, size.x, size.y])
+	# A card the skip left for the coach (as Sim the week leaves it): closed,
+	# the hub under it.
+	var done: Button = hub.find_child("CarnivalDone", true, false)
+	if done != null:
+		done.pressed.emit()
+		await _frames(12)
+		await _shot("%s/skip_after_hub_%dx%d.png" % [dir, size.x, size.y])
 	quit()

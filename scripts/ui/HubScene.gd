@@ -961,12 +961,11 @@ func _skip_show(step: int) -> void:
 			if bool(line[2]):
 				v.add_child(UiKit.spacer(2))
 				v.add_child(UiKit.lbl("Your calls", UiKit.SECONDARY, UiKit.MUTED, true))
-		footer.add_child(back)
 		var go := UiKit.btn("Skip the season", UiKit.NAME, true)
 		go.name = "SkipSeasonGo"
 		go.custom_minimum_size = Vector2(0, 48)
 		go.pressed.connect(_on_skip_season)
-		footer.add_child(go)
+		footer.add_child(_skip_pair(back, go))
 		return
 	_skip_confirm.name = "SkipSeasonSurvey"
 	var q: Dictionary = qs[step]
@@ -987,12 +986,23 @@ func _skip_show(step: int) -> void:
 	v.add_child(opts)
 	for o in q["options"]:
 		opts.add_child(_skip_option(key, o as Dictionary, opts))
-	footer.add_child(back)
 	var next := UiKit.btn("Next", UiKit.NAME, true)
 	next.name = "SkipNext"
 	next.custom_minimum_size = Vector2(0, 48)
 	next.pressed.connect(func(): _skip_show(_skip_step + 1))
-	footer.add_child(next)
+	footer.add_child(_skip_pair(back, next))
+
+
+## Back and the way on, side by side (the way on at the right), so the game
+## plan's five answers fit a phone without a scroll.
+func _skip_pair(back: Button, on: Button) -> Control:
+	var row := UiKit.hbox(8)
+	row.name = "SkipButtons"
+	for b in [back, on]:
+		(b as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		(b as Control).size_flags_stretch_ratio = 1.0
+		row.add_child(b)
+	return row
 
 
 ## One answer: its name, then what it does for you and what it costs; a tap
