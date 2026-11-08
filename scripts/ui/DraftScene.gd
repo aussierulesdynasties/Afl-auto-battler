@@ -1459,7 +1459,7 @@ func _open_player(id: String) -> void:
 	if not traits.is_empty():
 		kv.add_child(UiKit.spacer(4))
 		for t in traits:
-			var tl := UiKit.lbl("%s. %s" % [Traits.label(str(t)), Traits.scout(str(t))], 13,
+			var tl := UiKit.lbl("%s. %s" % [UiKit.trait_label(str(t)), Traits.scout(str(t))], 13,
 					UiKit.BAD if Traits.is_bad(str(t)) else UiKit.TEXT)
 			tl.name = "Trait_" + str(t)
 			tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

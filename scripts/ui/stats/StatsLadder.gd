@@ -141,9 +141,12 @@ static func build(host: Control) -> Control:
 		v.add_child(views)
 		v.add_child(filters)
 
-	var shown := visible_rows(season, GameState.my_club, _filter, _sort, _desc, _view)
+	# Every club's row, built once: the columns fit all of them, so a filter
+	# never changes their widths.
+	var all := rows(season)
+	var shown := visible_rows(season, GameState.my_club, _filter, _sort, _desc, _view, all)
+	var specs := fit(columns(_view, wide, width), all)
 	# Only when something is filtered or sorted: the whole ladder says so itself.
-	var specs := fit(columns(_view, wide, width), rows(season))
 	if _filter != "all" or _sort != "":
 		var status := _status(host, shown.size())
 		if wide:
@@ -736,8 +739,8 @@ static func sort_value(r: Dictionary, key: String) -> Variant:
 ## The clubs on show: filtered from the true ladder, then sorted ("" keeps
 ## the true order). Ties keep their ladder order.
 static func visible_rows(season: Season, mine: String, filter: String, sort: String, desc: bool,
-		view := "ladder") -> Array:
-	var all := rows(season)
+		view := "ladder", built: Array = []) -> Array:
+	var all := built if not built.is_empty() else rows(season)
 	var out := []
 	var my_pos := 0
 	for r in all:

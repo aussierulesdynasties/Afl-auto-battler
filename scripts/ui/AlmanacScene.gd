@@ -64,7 +64,7 @@ func _records_card() -> Control:
 	v.add_child(UiKit.section("Club records"))
 	var codes: Array = GameState.club_records.keys()
 	codes.sort_custom(func(a, b): return GameDB.club_name(str(a)) < GameDB.club_name(str(b)))
-	var pick := OptionButton.new()
+	var pick := UiKit.option()
 	pick.name = "ClubRecordsPick"
 	for i in range(codes.size()):
 		pick.add_item(GameDB.club_name(str(codes[i])), i)

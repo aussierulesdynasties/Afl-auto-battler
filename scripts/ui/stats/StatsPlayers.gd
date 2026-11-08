@@ -382,14 +382,12 @@ static func _filter_row(host: Control) -> Control:
 
 
 static func _dropdown(host: Control, key: String, options: Array) -> OptionButton:
-	var o := OptionButton.new()
+	# The game's picker: its list is sized with the text-size setting.
+	# Sized by the row, not by its longest option (Greater Western Sydney).
+	var o := UiKit.option()
 	o.name = "Filter_" + key
-	UiKit.style_button(o, 14)
 	o.custom_minimum_size = Vector2(150, 44)
 	o.clip_text = true
-	o.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	# Sized by the row, not by its longest option (Greater Western Sydney).
-	o.fit_to_longest_item = false
 	for i in range(options.size()):
 		o.add_item(str(options[i][1]), i)
 		if str(options[i][0]) == str(_filters[key]):

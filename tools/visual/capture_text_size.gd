@@ -1,10 +1,12 @@
 extends SceneTree
 ## The screens the sweep (sweep_screens.gd --png) does not open, at a Settings
 ## text size (row 118): the Settings sheet itself, the match preview, the match
-## live after the bounce, its first call, the press conference and the almanac.
+## live after the bounce, its first call, the press conference, the almanac
+## and its club picker, the players' stats filters and Selection's search.
 ##   godot --path . --rendering-method gl_compatibility --script tools/visual/capture_text_size.gd -- --size 390x844 --text-size largest --out DIR
 ## Writes DIR/settings.png, preview.png, match_live.png, match_call.png,
-## press.png and almanac.png. A windowed run (headless draws no image). Seeded Melbourne
+## press.png, almanac.png, almanac_pick.png, stats_filters.png,
+## stats_filter_list.png and selection.png. A windowed run (headless draws no image). Seeded Melbourne
 ## career; never touches a real save.
 
 const SEED := 2031
@@ -145,9 +147,35 @@ func _run() -> void:
 	if await _wait_for("MediaQuestion") != null:
 		await _shot("press")
 
-	# The almanac.
+	# The almanac a round in, its club picker open.
 	_career()
+	_state.advance()
 	await _go("almanac")
 	await _shot("almanac")
+	var pick := await _wait_for("ClubRecordsPick") as OptionButton
+	if pick != null:
+		pick.show_popup()
+		await _frames(20)
+		await _shot("almanac_pick")
+
+	# The players' stats: the filters sheet, then the club filter's list.
+	var stats_script: GDScript = load("res://scripts/ui/StatsHubScene.gd")
+	stats_script.set("current", "players")
+	await _go("stats")
+	var filters := await _wait_for("FiltersToggle") as Button
+	if filters != null:
+		filters.emit_signal("pressed")
+		var club_pick := await _wait_for("Filter_club") as OptionButton
+		if club_pick != null:
+			await _shot("stats_filters")
+			club_pick.show_popup()
+			await _frames(20)
+			await _shot("stats_filter_list")
+	stats_script.set("current", "ladder")
+
+	# Selection: the search field beside the line tabs.
+	await _go("selection")
+	if await _wait_for("BuilderSearch") != null:
+		await _shot("selection")
 	_state.set_text_size("standard")
 	quit(0)

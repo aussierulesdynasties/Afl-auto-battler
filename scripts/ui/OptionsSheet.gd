@@ -8,7 +8,7 @@ const APPEARANCE_OPTIONS := [["dark", "Dark"], ["light", "Light"]]
 const NAME_OPTIONS := [["generated", "Generated"], ["real", "Real"]]
 const NAMES_INFO := "Real shows each player's AFL name; generated names are invented. Ratings and results are the same either way."
 const REPORT_INFO := "Copies the build, your round, this screen and the last twenty lines of the match feed, ready to paste into a message. Nothing is sent from the game."
-const TEXT_SIZE_INFO := "Makes the game's words bigger. Pictures and the ground stay the same size."
+const TEXT_SIZE_INFO := "Makes the game's words bigger."
 const SPEED_OPTIONS :=[["1", "1x"], ["2", "2x"], ["4", "4x"], ["8", "8x"]]
 
 
