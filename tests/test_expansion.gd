@@ -853,6 +853,11 @@ func _test_real_lists_tasmania_2028() -> void:
 	_check(signed_tas > 0 and signed_tas <= Expansion.SIGNINGS, "The player chooses, so Tasmania sign out-of-contract players (%d)" % signed_tas)
 	_check((GameState.expansion["TAS"]["traded_picks"] as Array).size() == 4, "Picks 5, 7, 11 and 13 are traded for senior players")
 	_check(tas_list.size() + tas_picks.size() <= RookieList.SENIOR_SPOTS, "Every pick they hold fits on the list (%d + %d)" % [tas_list.size(), tas_picks.size()])
+	var top_signed := 0
+	for p in tas_list:
+		if (GameState.expansion["TAS"]["signings"] as Array).has(str(p["id"])):
+			top_signed = maxi(top_signed, int(p["overall"]))
+	_check(top_signed > 0 and top_signed < Expansion.STAR_STAYS_OVERALL + 4, "Rivals' stars stay put: their best signing is rated %d" % top_signed)
 	var academy_ok := true
 	for row in GameState.intake_assignments:
 		if str(row["kind"]) == "NGA" and str(row["club"]) != "TAS":

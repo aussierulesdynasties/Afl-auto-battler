@@ -1027,6 +1027,8 @@ func _week_section(season: Season) -> Control:
 		nv.add_child(UiKit.spacer(4))
 		nv.add_child(_with_jobs_note(_week_actions(season)))
 	if not season.is_season_over():
+		if not season.is_regular_done():
+			nv.add_child(_skip_home_away_button())
 		nv.add_child(_skip_season_button())
 	return nv
 
@@ -1036,12 +1038,22 @@ func _week_section(season: Season) -> Control:
 ## never the main move. A tap opens the sheet that says what is decided for
 ## you; nothing is skipped until its own button is pressed.
 func _skip_season_button() -> Button:
-	var b := UiKit.text_action("Skip to the end of the %d season" % GameState.season_year, UiKit.BODY)
-	b.name = "SkipSeason"
+	return _skip_button("Skip to the end of the %d season" % GameState.season_year, "SkipSeason", "season")
+
+
+## Skip just the home and away (director, 2026-11-09): the same survey, stopping
+## after the last round so the finals are yours to coach.
+func _skip_home_away_button() -> Button:
+	return _skip_button("Skip the rest of the home and away", "SkipHomeAway", "home_away")
+
+
+func _skip_button(text: String, node_name: String, to: String) -> Button:
+	var b := UiKit.text_action(text, UiKit.BODY)
+	b.name = node_name
 	b.add_theme_color_override("font_color", UiKit.MUTED)
 	b.custom_minimum_size = Vector2(0, 48)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	b.pressed.connect(_open_skip_confirm)
+	b.pressed.connect(_open_skip_confirm.bind(to))
 	return b
 
 
@@ -1051,29 +1063,43 @@ func _skip_season_button() -> Button:
 ## then the sheet that says what is left and asks. Back steps back a question.
 var _skip_answers := {}
 var _skip_step := 0
+var _skip_to := "season"	# How far this skip goes: "season" or "home_away".
 
 
 ## The confirm sheet's lines: what is left, your answers, and where it
 ## stops. [node name, text, bold].
-static func skip_lines(season: Season, year: int, answers: Dictionary) -> Array:
+static func skip_lines(season: Season, year: int, answers: Dictionary, to := "season") -> Array:
+	var home_away := to == "home_away"
 	var left := "the rest of the finals"
 	if not season.is_regular_done():
 		var n := season.fixture.size() - season.round_index
-		left = "%d round%s and the finals" % [n, "" if n == 1 else "s"]
-	var qs := SkipOrders.questions()
-	var out := [["SkipLeft", "The rest of the %d season is played out without you: %s." % [year, left], true]]
+		left = "%d round%s" % [n, "" if n == 1 else "s"]
+		if not home_away:
+			left += " and the finals"
+	var qs := GameState.skip_questions(to)
+	var out := [["SkipLeft", "The rest of the %d %s is played out without you: %s." % [
+			year, "home and away season" if home_away else "season", left], true]]
 	for q in qs:
 		var k := str(q["key"])
 		out.append(["SkipAnswer_" + k, "%s: %s" % [str(SkipOrders.SHORT[k]),
 				SkipOrders.label(qs, k, str(answers.get(k, "")))], false])
-	out.append(["SkipStop", "It stops after the last match of the season: re-signings, trades, free agency and the draft stay yours. If the board sacks you, it stops there.", false])
+	var stop := "It stops after the last match of the season: re-signings, trades, free agency and the national draft stay yours. If the board sacks you, it stops there."
+	if home_away:
+		stop = "It stops after the last home and away round: if you make the finals, you coach them. Re-signings, trades, free agency and the national draft stay yours."
+	# A pick left unmade passes when the next round is played (MidseasonDraft, RookieList).
+	if season.round_index < MidseasonDraft.DRAFT_AFTER or MidseasonDraft.waiting(GameState) or RookieList.waiting(GameState):
+		stop += " Any rookie pick that comes up along the way is passed."
+	out.append(["SkipStop", stop, false])
 	return out
 
 
-func _open_skip_confirm() -> void:
+func _open_skip_confirm(to := "season") -> void:
 	var season: Season = GameState.season
 	if season == null or season.is_season_over() or GameState.is_sacked():
 		return
+	if to == "home_away" and season.is_regular_done():
+		return
+	_skip_to = to
 	_skip_answers = SkipOrders.defaults(GameState.club_plan)
 	_skip_show(0)
 
@@ -1081,8 +1107,9 @@ func _open_skip_confirm() -> void:
 func _skip_show(step: int) -> void:
 	_close_skip_confirm()
 	_skip_step = step
-	var qs := SkipOrders.questions()
+	var qs := GameState.skip_questions(_skip_to)
 	var year := GameState.season_year
+	var home_away := _skip_to == "home_away"
 	var box := UiKit.modal_box(self, 460.0, 0.0)
 	_skip_confirm = box["overlay"]
 	var v: VBoxContainer = box["body"]
@@ -1093,8 +1120,9 @@ func _skip_show(step: int) -> void:
 	back.pressed.connect(_skip_back)
 	if step >= qs.size():
 		_skip_confirm.name = "SkipSeasonConfirm"
-		v.add_child(UiKit.heading("Skip to the end of the %d season?" % year, UiKit.H1))
-		for line in skip_lines(GameState.season, year, _skip_answers):
+		v.add_child(UiKit.heading("Skip the rest of the home and away?" if home_away
+				else "Skip to the end of the %d season?" % year, UiKit.H1))
+		for line in skip_lines(GameState.season, year, _skip_answers, _skip_to):
 			var l := UiKit.lbl(str(line[1]), UiKit.BODY if bool(line[2]) else UiKit.SECONDARY, UiKit.TEXT, bool(line[2]))
 			l.name = str(line[0])
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1102,7 +1130,7 @@ func _skip_show(step: int) -> void:
 			if bool(line[2]):
 				v.add_child(UiKit.spacer(2))
 				v.add_child(UiKit.lbl("Your calls", UiKit.SECONDARY, UiKit.MUTED, true))
-		var go := UiKit.btn("Skip the season", UiKit.NAME, true)
+		var go := UiKit.btn("Skip the home and away" if home_away else "Skip the season", UiKit.NAME, true)
 		go.name = "SkipSeasonGo"
 		go.custom_minimum_size = Vector2(0, 48)
 		go.pressed.connect(_on_skip_season)
@@ -1216,11 +1244,12 @@ func _close_skip_confirm() -> void:
 func _on_skip_season() -> void:
 	var orders := _skip_answers.duplicate()
 	_close_skip_confirm()
-	ScreenTransition.run("Playing out the %d season..." % GameState.season_year, _skip_season.bind(orders))
+	var what := "home and away season" if _skip_to == "home_away" else "season"
+	ScreenTransition.run("Playing out the %d %s..." % [GameState.season_year, what], _skip_season.bind(orders, _skip_to))
 
 
-func _skip_season(orders := {}) -> void:
-	GameState.skip_season(orders)
+func _skip_season(orders := {}, to := "season") -> void:
+	GameState.skip_season(orders, to)
 	_build()
 	# The last week's card and asks come up as after Sim the week.
 	_show_week_ask()

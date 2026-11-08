@@ -11799,9 +11799,12 @@ func _next_week_event() -> void:
 ## contracts as always): re-signings, trades, free agency and the draft stay yours.
 ## The last week's card is left for you, as after Sim the week. Sacked on the
 ## way, it stops there. Saved once, at the end.
+## `to` (director, 2026-11-09: "the option to skip just the home and away
+## season"): "home_away" stops after the last home-and-away round, with the
+## finals drawn and yours to coach; "season" plays on to the end of the finals.
 ## Returns {"ok", "year", "weeks", "reason": "done" | "sacked" | "none"}.
-func skip_season(orders := {}) -> Dictionary:
-	if season == null or is_sacked() or season.is_season_over():
+func skip_season(orders := {}, to := "season") -> Dictionary:
+	if season == null or is_sacked() or _skip_reached(to):
 		return {"ok": false, "year": season_year, "weeks": 0, "reason": "none"}
 	var year := season_year
 	var weeks := 0
@@ -11811,16 +11814,16 @@ func skip_season(orders := {}) -> Dictionary:
 	# The survey's answers (SkipOrders): the game plan stands as your plan; a
 	# run for the kids needs auto-pick, which names a promised player.
 	set_club_plan(str(_skip_orders["game_plan"]))
-	if str(_skip_orders["youth"]) == "kids" and not my_selection().is_empty():
+	if str(_skip_orders["youth"]) == "kids" and not season.is_regular_done() and not my_selection().is_empty():
 		set_selection({})
-	while season != null and not season.is_season_over() and weeks < 80:
+	while season != null and not _skip_reached(to) and weeks < 80:
 		if str(_skip_orders["youth"]) == "kids":
-			_skip_back_kids()
+			_skip_back_kids(to)
 		advance()
 		weeks += 1
 		if is_sacked():
 			break
-	if is_sacked() or season == null or not season.is_season_over():
+	if is_sacked() or season == null or not _skip_reached(to):
 		_batching = false
 		_skip_orders = {}
 		autosave()
@@ -11832,10 +11835,51 @@ func skip_season(orders := {}) -> Dictionary:
 	return {"ok": true, "year": year, "weeks": weeks, "reason": "done"}
 
 
+## Has the skip got where it was going?
+func _skip_reached(to: String) -> bool:
+	return season.is_regular_done() if to == "home_away" else season.is_season_over()
+
+
+## Your matches left in the home and away, the bye not counted.
+func _home_away_games_left() -> int:
+	var n := 0
+	for r in range(season.round_index, season.fixture.size()):
+		for m in season.fixture[r]:
+			if m["home"] == my_club or m["away"] == my_club:
+				n += 1
+				break
+	return n
+
+
+## The survey's questions for this skip, only those it can still act on: with
+## the home and away done no new run can start, and with no match left there is
+## no plan to set; the week's cards always remain.
+func skip_questions(to := "season") -> Array:
+	var done := season.is_regular_done()
+	var status := my_finals_status()
+	var has_match := not done or status not in ["", "eliminated", "premier", "runner_up"]
+	var out := []
+	for q in SkipOrders.questions(to):
+		match str(q["key"]):
+			"game_plan":
+				if has_match:
+					out.append(q)
+			"youth":
+				if not done and (to != "home_away" or _home_away_games_left() >= Backing.RUN_GAMES):
+					out.append(q)
+			_:
+				out.append(q)
+	return out
+
+
 ## "Give the kids a run" (SkipOrders): before each week of the skip, your
 ## best players with few senior games are promised runs (Backing) until
-## SkipOrders.YOUTH_RUNS are on at once; auto-pick names them.
-func _skip_back_kids() -> void:
+## SkipOrders.YOUTH_RUNS are on at once; auto-pick names them. A skip that stops
+## at the home and away starts no run it cannot finish: the finals are the
+## coach's own, so a promise made for him must not bind his side there.
+func _skip_back_kids(to := "season") -> void:
+	if to == "home_away" and _home_away_games_left() < Backing.RUN_GAMES:
+		return
 	var on := 0
 	var kids := []
 	for p in my_list:
