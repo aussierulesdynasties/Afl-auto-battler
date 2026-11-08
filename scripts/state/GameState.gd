@@ -271,9 +271,12 @@ var plan_idle := {}
 ## The plans each rival coach has called this season, quarter by quarter, and
 ## why (RivalRead.record_row; MatchSim.ai_why), for the Assistant's report
 ## (rival coach read, director 2026-11-08): {"year": season_year, "clubs":
-## {code: [row, ...]}}, a row per match in the order played. This season
-## only; optional in a save (written once a row exists), so a save from
-## before it loads empty and the report says nothing of their record.
+## {code: [row, ...]}, "usual": {code: plan}}, a row per match in the order
+## played. "usual" is each rival coach's usual game for the season, settled
+## at the season's first round (_settle_usual_plans) and kept all year. This
+## season only; optional in a save (written once a row or a usual game
+## exists), so a save from before it loads empty: the report says nothing of
+## their record, and each coach settles his usual game at the next round.
 var rival_plans := {}
 ## Who leads each club (Captaincy.gd): club code -> its record. A club with
 ## no entry has named no one; an older save has none for anyone.
@@ -1035,6 +1038,7 @@ func load_career() -> bool:
 	plan_idle = state.get("plan_idle", {}) if state.get("plan_idle") is Dictionary else {}
 	_clean_plan_known()
 	rival_plans = state.get("rival_plans", {}) if state.get("rival_plans") is Dictionary else {}
+	CoachEffects.usual = _season_usuals()
 	captaincy = state.get("captaincy", {})
 	class_tiers = state.get("class_tiers", {})
 	custom_prospect_id = str(state.get("custom_prospect_id", ""))
@@ -1575,6 +1579,7 @@ func reset() -> void:
 	plan_idle = {}
 	rival_plans = {}
 	CoachEffects.known = {}
+	CoachEffects.usual = {}
 	captaincy = {}
 	class_tiers = {}
 	last_training_report = {}
@@ -2119,6 +2124,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	pos_ratings = {}
 	season_team = {}
 	rival_plans = {}
+	CoachEffects.usual = {}
 	season_awards = {}
 	rising_star_noms = {"from": 1, "rounds": []}
 	# Everyone listed before ageing: a retiree leaves the lists inside
@@ -2647,6 +2653,7 @@ func prepare_interactive_match() -> bool:
 	# The coaching table first: the round's other matches use it (it is not
 	# saved, so on the first live week after loading it would be empty).
 	_refresh_coach_tactics()
+	_settle_usual_plans()
 	# This week's conditioning, before any of the week's matches is built.
 	_stamp_conditioning()
 	var round_matches: Array = season.fixture[season.round_index]
@@ -2703,6 +2710,7 @@ func _prepare_interactive_final() -> bool:
 	# The coaching table first: the week's other finals use it too (it is not
 	# saved, so after loading it would be empty), as on the regular-round path.
 	_refresh_coach_tactics()
+	_settle_usual_plans()
 	var others := []
 	var index := []
 	for i in range(matches.size()):
@@ -2850,6 +2858,8 @@ func advance() -> String:
 	RookieList.settle(self)
 	_sync_club_plan()
 	_refresh_coach_tactics()
+	if not season.is_season_over():
+		_settle_usual_plans()
 	_stamp_conditioning()
 	last_results = []
 	last_match = {}
@@ -3667,6 +3677,44 @@ func rival_rows(code: String) -> Array:
 	return rows if rows is Array else []
 
 
+## Each rival coach's usual game this season (rival_plans "usual"): club ->
+## plan; {} for another season's record or none.
+func _season_usuals() -> Dictionary:
+	if int(rival_plans.get("year", 0)) != season_year or not (rival_plans.get("usual") is Dictionary):
+		return {}
+	return rival_plans["usual"]
+
+
+## Before a round is played: a rival coach with no usual game yet this season
+## settles on one, the plan the side he would field this week suits best,
+## weighed by how well his club knows it (PlanFit.standing_plan, as the match
+## engine used to work out every week), and keeps it all year. A coach
+## re-picking it each week off a changed side or a plan his side had let slip
+## spent most of a season on plans that were not his usual game, and his
+## report contradicted itself (director's note, 2026-11-08). The match engine reads it as each AI
+## club's usual game (CoachEffects.usual, Squad.usual_plan).
+func _settle_usual_plans() -> void:
+	if season == null:
+		return
+	if not rival_plans.is_empty() and int(rival_plans.get("year", 0)) != season_year:
+		rival_plans = {}
+	var usual := _season_usuals()
+	for club in season.clubs:
+		var code := str(club)
+		if code == my_club or usual.has(code) or not season.lists.has(code):
+			continue
+		var sq := _rival_squad(code)
+		if not sq.ai_plans:
+			continue
+		if rival_plans.is_empty():
+			rival_plans = {"year": season_year, "clubs": {}}
+		if not (rival_plans.get("usual") is Dictionary):
+			rival_plans["usual"] = {}
+		usual = rival_plans["usual"]
+		usual[code] = PlanFit.standing_plan(sq.ground, sq.plan_know)
+	CoachEffects.usual = usual
+
+
 ## Press on from where the pre-season is waiting, to the next stop or to
 ## Round 1. Returns "trial" or "done".
 func preseason_advance() -> String:
@@ -4428,11 +4476,12 @@ func opponent_report(code: String) -> Array:
 		return []
 	var sq := _rival_squad(code)
 	var play := []
-	var usual := PlanFit.standing_plan(sq.ground, sq.plan_know)
+	var usual := _squad_usual(sq)
 	if THEIR_PLAN.has(usual):
 		var legs := RivalRead.legs_clause(usual)
-		play.append("Their usual game, %s: %s%s" % [CoachReport.plan_label(usual), THEIR_PLAN[usual],
-				" " + legs if legs != "" else ""])
+		var what := str(THEIR_PLAN[usual])
+		play.append("Their usual game plan is %s. %s%s%s" % [RivalRead.called(usual),
+				what.left(1).to_upper(), what.substr(1), " " + legs if legs != "" else ""])
 	var levels := {}
 	for plan in PreSeason.DRILL_PLANS:
 		levels[plan] = plan_level(code, str(plan))
@@ -4448,7 +4497,7 @@ func opponent_report(code: String) -> Array:
 			if str(f["key"]) == "danger":
 				danger_id = str(f.get("player_id", ""))
 	var rows := rival_rows(code)
-	for line in [RivalRead.season_line(rows), RivalRead.vs_line(rows, my_club)]:
+	for line in [RivalRead.season_line(rows, usual), RivalRead.vs_line(rows, my_club)]:
 		if line != "":
 			play.append(line)
 	var mine := my_squad()
@@ -4616,14 +4665,14 @@ func league_grounds() -> Dictionary:
 	return grounds
 
 
-## The plan a club's list suits as its usual game (PlanFit.standing_plan),
-## from the side it would field this week, weighed by how well the club knows
-## each plan: the same inputs the match engine opens with (MatchSim standing).
+## A club's usual game as the match engine opens with it (MatchSim standing):
+## the one its coach settled on this season (_settle_usual_plans), or before
+## that the plan the side it would field this week suits (PlanFit.standing_plan),
+## weighed by how well the club knows each plan.
 func usual_plan(code: String) -> String:
 	if season == null or code == "" or not season.lists.has(code):
 		return "balanced"
-	var sq := _rival_squad(code)
-	return PlanFit.standing_plan(sq.ground, sq.plan_know)
+	return _squad_usual(_rival_squad(code))
 
 
 ## `code`'s side as the match engine will field it this week, with its
@@ -4639,7 +4688,14 @@ func _rival_squad(code: String) -> Squad:
 	_ensure_plan_known()
 	if not coaches.is_empty():
 		CoachEffects.apply_row(sq, CoachEffects.row(CoachEffects.staffs(coaches).get(code, {}), code == my_club))
+		sq.usual_plan = str(_season_usuals().get(code, "")) if sq.ai_plans else ""
 	return sq
+
+
+## The usual game the match engine opens `sq` with (MatchSim standing): its
+## coach's for the season once settled, else the plan its side suits.
+static func _squad_usual(sq: Squad) -> String:
+	return sq.usual_plan if sq.usual_plan != "" else PlanFit.standing_plan(sq.ground, sq.plan_know)
 
 
 ## Compact stored-fact history surfaces. These deliberately read existing
@@ -11693,6 +11749,7 @@ func _career_over(p: Dictionary, how := "retired") -> void:
 ## the coach records each time and never saved.
 func _refresh_coach_tactics() -> void:
 	_ensure_plan_known()
+	CoachEffects.usual = _season_usuals()
 	if coaches.is_empty() or season == null:
 		CoachEffects.table = {}
 		return

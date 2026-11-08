@@ -44,8 +44,9 @@ var tag_drops: Array = []
 ## How well each side's match-day players suit each plan (PlanFit): the
 ## plan's upside is scaled by it, its costs are not.
 var plan_fit := [{}, {}]
-## The plan each side's list suits as its usual game (PlanFit.standing_plan):
-## where an AI club starts, and what it goes back to.
+## Each side's usual game: where an AI club starts, and what it goes back to.
+## The plan its coach settled on for the season (Squad.usual_plan), or, with
+## none, the one its list suits (PlanFit.standing_plan).
 var standing := ["balanced", "balanced"]
 ## Named match-ups (Matchups, Gate 1.12): per defending side, which defender
 ## stands on each of the other side's key forwards. {forward id: defender id}.
@@ -457,7 +458,8 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
 	for side in range(2):
 		synergies[side] = Traits.active((squads[side] as Squad).ground)
-		standing[side] = PlanFit.standing_plan((squads[side] as Squad).ground, (squads[side] as Squad).plan_know)
+		standing[side] = (squads[side] as Squad).usual_plan if (squads[side] as Squad).usual_plan != "" \
+				else PlanFit.standing_plan((squads[side] as Squad).ground, (squads[side] as Squad).plan_know)
 		duels[side] = Matchups.defaults((squads[1 - side] as Squad).ground, (squads[side] as Squad).ground)
 		for plan in PlanFit.LEAGUE:
 			(plan_fit[side] as Dictionary)[plan] = PlanFit.fit((squads[side] as Squad).ground, plan)
@@ -5859,8 +5861,8 @@ func _score_run(side: int) -> void:
 # ---------------------------------------------------------------------------
 # The rival coach (live matches)
 # ---------------------------------------------------------------------------
-## The opposition's plan for the coming quarter: its usual game (the plan
-## its list suits, PlanFit.standing_plan), protecting a big lead or chasing
+## The opposition's plan for the coming quarter: its usual game (standing:
+## the plan its coach settled on for the season), protecting a big lead or chasing
 ## a big deficit (ai_mood). From the second quarter it reads the plan you ran
 ## last quarter and, when it is one of the main three, switches to the plan
 ## that beats it (COUNTER) if that plan is worth nearly as much to it as its
@@ -6086,8 +6088,9 @@ const COACH_STYLES := {
 }
 
 
-## `side`'s usual game: the plan its list suits (standing). Only an AI club
-## picks its plan this way; yours is always your own call.
+## `side`'s usual game (standing): the plan its coach settled on for the
+## season, or the one its list suits. Only an AI club picks its plan this
+## way; yours is always your own call.
 func _usual(side: int) -> String:
 	return str(standing[side])
 

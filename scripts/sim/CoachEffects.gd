@@ -134,6 +134,10 @@ static func row(staff: Dictionary, mine: bool) -> Dictionary:
 ## dictionary): club -> {plan: level}.
 static var known := {}
 
+## Each AI club's usual game this season (GameState.rival_plans "usual", the
+## same dictionary): club -> plan. Read into the squad (Squad.usual_plan).
+static var usual := {}
+
 
 static func for_club(code: String) -> Dictionary:
 	return table.get(code, {})
@@ -148,6 +152,7 @@ static func apply(sq: Squad) -> void:
 static func apply_row(sq: Squad, t: Dictionary) -> void:
 	if t.is_empty():
 		return
+	sq.usual_plan = str(usual.get(sq.code, "")) if bool(t["ai"]) else ""
 	sq.plan_know = {}
 	var levels: Dictionary = known.get(sq.code, {})
 	for plan in levels:

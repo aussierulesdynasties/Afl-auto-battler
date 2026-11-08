@@ -108,8 +108,11 @@ static func counter_line() -> String:
 # ---------------------------------------------------------------------------
 # Their list
 # ---------------------------------------------------------------------------
-## Which plan their list suits most and least (PlanFit.edge), or that none
-## stands out (no edge reaches PlanFit.STANDING_EDGE).
+## Which plan the side they would field this week suits most and least
+## (PlanFit.edge), or that none stands out (no edge reaches
+## PlanFit.STANDING_EDGE). It is this week's side, not their usual game: a
+## coach keeps his plan all season (GameState._settle_usual_plans) while his
+## side changes, so the line says "this week's side".
 static func fit_line(ground: Array) -> String:
 	var best := ""
 	var worst := ""
@@ -126,8 +129,8 @@ static func fit_line(ground: Array) -> String:
 			lo = e
 			worst = plan
 	if best == "" or hi < PlanFit.STANDING_EDGE:
-		return "No plan suits their list over the others."
-	return "Their list suits %s best and %s least." % [CoachReport.plan_label(best), CoachReport.plan_label(worst)]
+		return "This week's side suits no plan over the others."
+	return "This week's side suits %s best and %s least." % [called(best), called(worst)]
 
 
 ## How well they know each plan (`levels`: plan -> PreSeason level), in the
@@ -285,6 +288,18 @@ static func phrase(plan: String) -> String:
 	return "a balanced game" if k == "balanced" else CoachReport.plan_label(k)
 
 
+## The plans said with "the" ("Their usual game plan is the Defensive press.",
+## director, 2026-11-08); Win contest reads without it.
+const THE := {"attacking": true, "defensive": true, "controlled": true}
+
+
+## A plan as the report names it: "the Defensive press", "Win contest", "a
+## balanced game".
+static func called(plan: String) -> String:
+	var k := MatchSim.plan_key(plan)
+	return ("the " if THE.has(k) else "") + phrase(k)
+
+
 ## "in the third quarter" for quarter q (1-4), "in extra time" after.
 static func in_quarter(q: int) -> String:
 	if q >= 1 and q <= QUARTER_WORDS.size():
@@ -306,10 +321,10 @@ static func plan_story(subject: String, plans: Array, span := "game") -> String:
 	if segs.size() == 1:
 		if str(segs[0][0]) == "balanced":
 			return ""
-		return "%s played %s all %s." % [subject, phrase(str(segs[0][0])), span]
-	var s := "%s started with %s" % [subject, phrase(str(segs[0][0]))]
+		return "%s played %s all %s." % [subject, called(str(segs[0][0])), span]
+	var s := "%s started with %s" % [subject, called(str(segs[0][0]))]
 	for j in range(1, segs.size()):
-		var bit := "%s %s" % [phrase(str(segs[j][0])), in_quarter(int(segs[j][1]))]
+		var bit := "%s %s" % [called(str(segs[j][0])), in_quarter(int(segs[j][1]))]
 		if segs.size() == 2:
 			s += " and switched to " + bit
 		elif j == 1:
@@ -343,43 +358,37 @@ static func record_row(res: Dictionary, side: int) -> Dictionary:
 			"p": p, "w": w}
 
 
-## "This season: mostly A. When chasing, B; when in front, C." from a club's
-## record rows (record_row); "" before SEASON_MIN matches.
-static func season_line(rows: Array) -> String:
+## What the scoreboard has had them play this season, from a club's record
+## rows (record_row): "This season they've gone to the Attack corridor when
+## chasing and the Controlled tempo when in front." A part is left out when it
+## is their usual game (`usual`, the plan the report names first, which their
+## coach keeps all season: GameState._settle_usual_plans), and so is the line
+## when nothing is left or before SEASON_MIN matches.
+static func season_line(rows: Array, usual: String) -> String:
 	if rows.size() < SEASON_MIN:
 		return ""
-	var usual := {}
 	var chase := {}
 	var front := {}
-	var all := {}
 	for r in rows:
 		var p: Array = (r as Dictionary).get("p", [])
 		var w: Array = (r as Dictionary).get("w", [])
 		for i in range(mini(p.size(), w.size())):
 			var plan := str(p[i])
-			all[plan] = int(all.get(plan, 0)) + 1
 			match str(w[i]):
-				"usual", "counter":
-					usual[plan] = int(usual.get(plan, 0)) + 1
 				"chase", "lost_q":
 					chase[plan] = int(chase.get(plan, 0)) + 1
 				"protect":
 					front[plan] = int(front.get(plan, 0)) + 1
-	var most := _top(usual if not usual.is_empty() else all)
-	if most == "":
-		return ""
 	var bits := []
 	var c := _top(chase)
-	if c != "" and c != most:
-		bits.append("when chasing, " + phrase(c))
+	if c != "" and c != MatchSim.plan_key(usual):
+		bits.append("%s when chasing" % called(c))
 	var f := _top(front)
-	if f != "" and f != most:
-		bits.append("when in front, " + phrase(f))
-	var s := "This season: mostly %s." % phrase(most)
-	if not bits.is_empty():
-		var tail := "; ".join(bits)
-		s += " %s%s." % [tail.left(1).to_upper(), tail.substr(1)]
-	return s
+	if f != "" and f != MatchSim.plan_key(usual):
+		bits.append("%s when in front" % called(f))
+	if bits.is_empty():
+		return ""
+	return "This season they've gone to %s." % " and ".join(bits)
 
 
 ## Their last match against you this season, as a story: "Against you in
