@@ -15,7 +15,7 @@ hit-outs a game is a ruck, otherwise the player's listed position
 forward), otherwise his list role. Per-player rates count men with 12+ games,
 as the reference does.
 
-    python tools/audit/brownlow_report.py [--votes shared|nowin|drawn] base_real.log [after_real.log]
+    python tools/audit/brownlow_report.py [--votes shared|nowin|top3] base_real.log [after_real.log]
 
 --votes counts each tally from the log's alt column instead of the game's own
 votes (the same matches, another way to give the 3-2-1: see ALT in the impl);

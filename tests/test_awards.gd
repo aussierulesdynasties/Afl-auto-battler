@@ -20,6 +20,7 @@ func run() -> void:
 	GameDB.reload()
 	_t("_test_vote_arithmetic")
 	_t("_test_umpires_measure")
+	_t("_test_umpires_draw")
 	_t("_test_brownlow_eligibility")
 	_t("_test_norm_smith_rules")
 	_t("_test_comeback_records")
@@ -220,7 +221,7 @@ func _test_umpires_measure() -> void:
 		away.append({"id": "a%d" % i})
 	var res := {"home": "GEE", "away": "HAW", "score": [80, 70], "roster": [home, away], "players": players}
 	var tally := {}
-	Awards.tally_match(tally, res, true)
+	Awards.tally_match(tally, res, true, false)
 	_check(int(tally["mid"]["votes"]) == 3 and int(tally["ruck"]["votes"]) == 2,
 			"The umpires give the mid 3 votes and the ruck 2")
 	_check(int(tally["ruck"]["coaches"]) == 5 and int(tally["mid"]["coaches"]) == 4
@@ -232,10 +233,47 @@ func _test_umpires_measure() -> void:
 	var drawn := res.duplicate(true)
 	drawn["score"] = [70, 70]
 	var dt := {}
-	Awards.tally_match(dt, drawn, true)
+	Awards.tally_match(dt, drawn, true, false)
 	_check(int(dt["loser"]["votes"]) == 1 and int(dt["winner"]["votes"]) == 0,
 			"A draw is no win for either side: the busier man takes the last vote")
 	_check(_sum(dt, "votes") == 6 and _sum(dt, "coaches") == 15, "Still 3-2-1 and 5-4-3-2-1 in a draw")
+
+
+## The game's 3-2-1 is drawn the way the fit says umpires choose
+## (Awards.brownlow_three): the same match always polls the same men, the
+## clear best man usually gets the 3 but not always, and the counted three are
+## three different men.
+func _test_umpires_draw() -> void:
+	var res := _one_match()
+	var a := {}
+	var b := {}
+	Awards.tally_match(a, res, true)
+	Awards.tally_match(b, res.duplicate(true), true)
+	_check(_sum(a, "votes") == 6 and _sum(a, "polled") == 3, "The drawn count still hands out 3-2-1 to three men")
+	var same := true
+	for id in a:
+		same = same and int(a[id]["votes"]) == int(b.get(id, {}).get("votes", -1))
+	_check(same, "The same match result always polls the same men")
+	# Two men 5 apart in umpire_score and 20 others 30 behind: the best gets
+	# the 3 with chance 1 / (1 + exp(-5u) + 20 exp(-30u)) = 0.72 (u =
+	# UMPIRE_DRAW). Over 2,000 seeded matches, about that.
+	var firsts := 0
+	var distinct := true
+	var n := 2000
+	for k in range(n):
+		var scored := [["best", 30.0], ["next", 25.0]]
+		for j in range(20):
+			scored.append(["p%d" % j, 0.0])
+		var three := Awards.brownlow_three(scored, {"home": "GEE", "away": "HAW", "round": k + 1, "score": [k, 0]})
+		if str(three[0][0]) == "best":
+			firsts += 1
+		distinct = (distinct and three.size() == 3 and str(three[0][0]) != str(three[1][0])
+				and str(three[1][0]) != str(three[2][0]) and str(three[0][0]) != str(three[2][0]))
+	_check(distinct, "Every drawn 3-2-1 goes to three different men")
+	var u := Awards.UMPIRE_DRAW
+	var want := 1.0 / (1.0 + exp(-5.0 * u) + 20.0 * exp(-30.0 * u))
+	_check(absf(float(firsts) / n - want) < 0.035,
+			"The better man by 5 gets the 3 about %.2f of the time (%.3f)" % [want, float(firsts) / n])
 
 
 ## Ineligibility changes only who can receive the medal. Votes remain in

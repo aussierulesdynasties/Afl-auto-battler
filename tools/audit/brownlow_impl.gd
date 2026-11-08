@@ -1,7 +1,7 @@
 extends RefCounted
 ## Brownlow realism: who wins and who polls, over seeded home-and-away seasons
 ## through Season.play_round -> MatchSim, votes from Awards.tally_match (the game's
-## own 3-2-1 rule, on Awards.umpire_score). Set ratings (data/ovr_overrides.csv) are ON, as in a career:
+## own 3-2-1 rule: Awards.umpire_score drawn by Awards.brownlow_three). Set ratings (data/ovr_overrides.csv) are ON, as in a career:
 ## never run it with AFL_SKIP_OVR_ROWS=1.
 ##
 ## Args: mode first last.
@@ -33,15 +33,13 @@ const COMP := {"disposals": 1.0, "goals": 5.0, "marks": 0.8, "inside50": 2.0, "t
 ##           uses (and the Brownlow used before the umpires' fit)
 ##   nowin   the umpires' fit without the result
 ##           (tools/balance/afl_brownlow.json matches.vote_fit.weights)
-##   drawn   Awards.umpire_score drawn the way the fit says umpires vote
-##           (Plackett-Luce, with_result per_disposal_logit 0.2098 a unit) instead
-##           of always the top three: the umpires' own unpredictability, seeded
-##           per season
+##   top3    Awards.umpire_score's top three outright, without the umpires'
+##           draw (Awards.brownlow_three)
 const ALT := {
 	"shared": {"measure": "influence"},
 	"nowin": {"weights": {"disposals": 1.0, "goals": 5.367, "marks": 0.366, "inside50": 0.403,
 			"tackles": 0.306, "hitouts": 0.081, "clearances": 0.858, "one_percenters": 0.626}},
-	"drawn": {"measure": "umpire", "noise": 0.2098},
+	"top3": {"measure": "umpire"},
 }
 const LINES := ["MID", "DEF", "FWD", "RUCK"]
 const GAP := 5
@@ -74,8 +72,6 @@ func run() -> void:
 		var win_votes := 0
 		var all_votes := 0
 		var wsa := {}
-		var rng := RandomNumberGenerator.new()
-		rng.seed = s * 104729 + 7
 		while not season.is_regular_done():
 			for res in season.play_round():
 				Awards.tally_match(tally, res, true)
@@ -86,7 +82,7 @@ func run() -> void:
 						c[k] = float(c.get(k, 0.0)) + float((st_all[id] as Dictionary).get(k, 0.0))
 					comp[str(id)] = c
 				for key in ALT:
-					var wv := _alt_votes(alt, key, res, rng)
+					var wv := _alt_votes(alt, key, res)
 					if wv >= 0:
 						var a: Array = wsa.get(key, [0, 0])
 						wsa[key] = [int(a[0]) + wv, int(a[1]) + 6]
@@ -120,8 +116,8 @@ func run() -> void:
 		print("season %s %d done (%d s)" % [mode, s, (Time.get_ticks_msec() - t0) / 1000])
 
 
-## [winning side (0/1, -1 for a draw), votes that side got], with the same top
-## three Awards.tally_match picks (highest Awards.umpire_score on the ground).
+## [winning side (0/1, -1 for a draw), votes that side got], with the same three
+## Awards.tally_match polls (Awards.brownlow_three on Awards.umpire_score).
 static func _vote_sides(res: Dictionary) -> Array:
 	var sc: Array = res.get("score", [0, 0])
 	if int(sc[0]) == int(sc[1]):
@@ -130,20 +126,22 @@ static func _vote_sides(res: Dictionary) -> Array:
 	var st_all: Dictionary = res.get("players", {})
 	var roster: Array = res.get("roster", [])
 	var everyone := []
+	var side_of := {}
 	for side in range(mini(2, roster.size())):
 		for r in roster[side]:
-			everyone.append([side, Awards.umpire_score(st_all.get(str(r["id"]), {}), side == won)])
-	everyone.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
+			side_of[str(r["id"])] = side
+			everyone.append([str(r["id"]), Awards.umpire_score(st_all.get(str(r["id"]), {}), side == won)])
+	var three := Awards.brownlow_three(everyone, res)
 	var v := 0
-	for i in range(mini(3, everyone.size())):
-		if int(everyone[i][0]) == won:
+	for i in range(three.size()):
+		if int(side_of[str(three[i][0])]) == won:
 			v += 3 - i
 	return [won, v]
 
 
 ## The 3-2-1 of one match under ALT[key], added to alt[id][key]. Returns the
 ## votes the winning side got, or -1 for a draw.
-static func _alt_votes(alt: Dictionary, key: String, res: Dictionary, rng: RandomNumberGenerator) -> int:
+static func _alt_votes(alt: Dictionary, key: String, res: Dictionary) -> int:
 	var wt: Dictionary = ALT[key]
 	var sc: Array = res.get("score", [0, 0])
 	var st_all: Dictionary = res.get("players", {})
@@ -165,8 +163,6 @@ static func _alt_votes(alt: Dictionary, key: String, res: Dictionary, rng: Rando
 						v += float(ws[k]) * float(st.get(k, 0.0))
 			everyone.append([str(r["id"]), v, won])
 	everyone.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
-	if wt.has("noise"):
-		everyone = _draw_three(everyone, float(wt["noise"]), rng)
 	var to_winner := 0
 	for i in range(mini(3, everyone.size())):
 		var d: Dictionary = alt.get(everyone[i][0], {})
@@ -175,28 +171,6 @@ static func _alt_votes(alt: Dictionary, key: String, res: Dictionary, rng: Rando
 		if everyone[i][2]:
 			to_winner += 3 - i
 	return -1 if int(sc[0]) == int(sc[1]) else to_winner
-
-
-## Three draws without replacement, each man's chance exp(noise x measure) of
-## those left (Plackett-Luce): the 3, then the 2, then the 1.
-static func _draw_three(everyone: Array, noise: float, rng: RandomNumberGenerator) -> Array:
-	var left := everyone.duplicate()
-	var out := []
-	for _i in range(mini(3, left.size())):
-		var top := float(left[0][1])
-		var tot := 0.0
-		for e in left:
-			tot += exp(noise * (float(e[1]) - top))
-		var x := rng.randf() * tot
-		var pick := left.size() - 1
-		for j in range(left.size()):
-			x -= exp(noise * (float(left[j][1]) - top))
-			if x <= 0.0:
-				pick = j
-				break
-		out.append(left[pick])
-		left.remove_at(pick)
-	return out
 
 
 ## His rating in each line: his own overall in his own line, else what his

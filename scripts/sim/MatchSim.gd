@@ -2262,11 +2262,12 @@ func _zone_pressure(side: int, zone: int) -> float:
 
 
 ## Who applies the pressure: zone opportunity x Pressure to this power, so the
-## best pressers do more of it without doing all of it. Fitted on the real
-## spread of tackles a game among each line's players (2025-26, 12+ games) and
-## each side's top tackler a match (2023-25), with team tackles unchanged:
+## best pressers do more of it without doing all of it. Of 2, 1.75, 1.5 and
+## 1.25, 1.5 puts the most tackle rows IN of real AFL (the spread of tackles a
+## game among each line's players, 2025-26, 12+ games, and each side's top
+## tackler a match, 2023-25), with team tackles unchanged:
 ## tools/balance.sh match, "Tackles and pressure acts per player".
-const PRESS_PICK_POW := 1.25
+const PRESS_PICK_POW := 1.5
 
 
 func _pick_presser(side: int, zone: int):
