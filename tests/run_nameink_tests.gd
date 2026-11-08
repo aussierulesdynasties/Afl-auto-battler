@@ -131,6 +131,8 @@ func _test_helper() -> void:
 ## Every club's name in running text wears a colour of its own (director
 ## 2026-11-06, rulings 51a): its strongest real colour, never white, read at
 ## 4.5:1 on the page and a panel. Essendon, St Kilda and Melbourne are red.
+## A black-and-white club (Collingwood) reads plain white (director
+## 2026-11-07, "white").
 func _test_club_names() -> void:
 	var idx: Dictionary = NI.from_clubs([])
 	var whites := []
@@ -140,6 +142,10 @@ func _test_club_names() -> void:
 		var want: Color = load("res://scripts/ui/ClubLink.gd").colour(str(code))
 		if not m.contains("[color=#%s]" % want.to_html(false)):
 			whites.append("%s (%s)" % [name, m])
+			continue
+		if UK.club_is_black(str(code)):
+			if not want.is_equal_approx(UK.TEXT):
+				whites.append("%s not white #%s" % [name, want.to_html(false)])
 			continue
 		if want.is_equal_approx(UK.TEXT) or (want.v > 0.9 and want.s < 0.15) 				or UK.contrast(want, UK.BG) < 4.5 or UK.contrast(want, UK.PANEL) < 4.5:
 			whites.append("%s #%s" % [name, want.to_html(false)])

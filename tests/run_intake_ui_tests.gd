@@ -342,10 +342,12 @@ func _test_pass_and_pick_for_me(size: Vector2i) -> void:
 	await _settle()
 	if draft.is_user_turn():
 		var taken: int = draft.count()
+		_state.set("_dirty", false)
 		await _press(pass_b, "Pass (%s)" % tag)
 		await _settle()
 		_check(draft.count() == taken and draft.passed_clubs.has(draft.user_club),
 				"A tap on Pass signs nobody and leaves the draft (%s)" % tag)
+		_check(bool(_state.get("_dirty")), "Passing is kept: the career is marked for saving (%s)" % tag)
 		_check(draft.is_finished() or not draft.is_user_turn(), "A passed coach is not asked again (%s)" % tag)
 	ui.queue_free()
 	await _settle()
@@ -436,6 +438,30 @@ func _test_trade_picks_sheet(size: Vector2i) -> void:
 		await _settle()
 	_check(ui.find_child("TradeSheet", true, false) == null and draft.is_user_turn(),
 			"The sheet closes and you are still on the clock (%s)" % tag)
+	# Android Back closes the sheet too, and stays on the draft.
+	await _press(trade, "Trade picks again (%s)" % tag)
+	await _settle()
+	var reopened_sheet: Control = ui.find_child("TradeSheet", true, false)
+	var reopened: bool = reopened_sheet != null
+	# After an accepted offer, a pick that changed hands leaves the package.
+	if reopened:
+		var obj = reopened_sheet.get_meta("sheet")
+		var own: Array = _state.club_picks(_state.my_club)
+		var rival_pick := ""
+		for pk in _state.club_picks(str(obj.get("_club"))):
+			rival_pick = str(pk["id"])
+			break
+		_check(not own.is_empty() and rival_pick != "", "Both sides hold picks to test with (%s)" % tag)
+		if not own.is_empty() and rival_pick != "":
+			obj.set("_mine", [str(own[0]["id"]), rival_pick])
+			obj.set("_theirs", [rival_pick, str(own[0]["id"])])
+			obj.call("_prune")
+			_check(obj.get("_mine") == [str(own[0]["id"])] and obj.get("_theirs") == [rival_pick],
+					"Only picks each side still holds stay in its package (%s)" % tag)
+	var handled: bool = ui.call("handle_back")
+	await _settle()
+	_check(reopened and handled and ui.find_child("TradeSheet", true, false) == null and draft.is_user_turn(),
+			"Back closes the trade sheet and keeps you on the clock (%s)" % tag)
 	ui.queue_free()
 	await _settle()
 
@@ -550,6 +576,9 @@ func _test_full_list_before_and_during_draft() -> void:
 	var spots: Dictionary = _state.draft_list_spots()
 	_check((spots["passing"] as Array).size() >= 1, "Some picks have no spot (%s)" % str(spots))
 	root.size = Vector2i(390, 844)
+	# A coach past his first week: the hub's one-off intro (a setting, so it
+	# carries over from whichever suite ran before) would sit over the button.
+	_state.set_setting("seen_weekly_loop_intro", true)
 	for round_trip in ["delist", "start"]:
 		var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 		root.add_child(hub)

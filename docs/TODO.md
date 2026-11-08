@@ -1,6 +1,6 @@
 ﻿# TODO: everything not done yet
 
-The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed after merge from the PR's `Closes row N` line (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call. There are no feature switches (director 2026-11-06): work goes straight into the game and his playtest judges it (section B). Updated 2026-11-07 against main `a07c5cc3`. Live on itch: 1.0.7 (65552d1).
+The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed after merge from the PR's `Closes row N` line (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call. There are no feature switches (director 2026-11-06): work goes straight into the game and his playtest judges it (section B). Updated 2026-11-08 against main `187a3fa7`. Live on itch: 1.0.8 (73115dc).
 
 ## Itch builds
 
@@ -20,12 +20,13 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 84 | Togetherness at tight and cliques is felt in matches (director 2026-11-06, after the row 68 review); balance-gated, his playtest judges | audit shows the effect, he has played it |
 | 103 | Synergies within reach: draft, trade and free-agent screens show which synergy a player would complete, and a player can grow a trait over seasons through training (4.Q10); balance-gated | both shown in play, paired table |
 | 107 | Event cards: every choice gets an upside and a downside, and never-seen cards get a trigger (T5.Q18, row 34) | no no-cost choice, every card reachable in an audit |
-| 110 | Vignette defects: boundary-snap curved white line, snap-for-goal hovering ball (6.Q18) | frames checked, captures to him |
 | 112 | Rival board letter after a strong season (T5.r23). The poached coach arc (top four twice or a flag, take the job or say no; in since #1036) already covers part of it | letter only after a strong season, accept and decline tested |
 | 113 | Start at the end of 2026: real lists, the real 2026 National Draft with each club's real picks, then play 2027 (T5.r134) | start option, sourced pick ownership, test |
 | 116 | Awards night: round-by-round Brownlow count, live or one round at a time, plus your club's best and fairest (T5.Q23b) | count watchable both ways, real-tap test |
 | 117 | Coaching staff: head coach, head assistant, assistants; counter-offer (not money) when a rival poaches one (T5.Q16) | approach, counter and departure tested |
 | 118 | Text size setting (Standard, Larger, Largest) and no state shown by colour alone (T3.R10) | every screen at Largest, no colour-only state |
+| 119 | Coach name and appointment interview (director 2026-11-07, after itch 1.0.8). New save: pick any club, type your coach's name, then your first press conference (canon, director: you beat James Hird for the job, mentioned once in the interview, neutral wording, nothing about his past) in the same press room with the real journalists, not skippable: "<Name>, congrats on your appointment as Demons Head Coach", then questions on your coaching style, recruitment approach, strength and conditioning and more, ending with "what do you predict for the season to come?". Your answers set your coaching archetype, like an RPG. The archetype moves match play too, and it shifts over seasons with how you actually coach and answer the press. The season prediction shapes the archetype only (the board sets its own expectation). First step: draft the archetype list with each one's exact match effect for the director to approve, cut or rename; build nothing before that. | save start asks name then interview, every answer moves the archetype, archetype effect on match play measured with tools/balance.sh, drift over seasons tested, real-tap check on phone |
+| 120 | A tag by a player who is not a specialist tagger puts no pressure on the man he tags: the tag shows on the ground but does nothing (measured 42% of tags, director 2026-11-08 "Yes, new row"). Decide how much a non-specialist tag should do, then build it; balance-gated | tag pressure from every tagger, paired table, his playtest |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
 
 ## B. Built and ON: his playtest judges
