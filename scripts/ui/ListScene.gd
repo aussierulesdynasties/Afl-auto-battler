@@ -290,23 +290,6 @@ func _role_groups(lbox: Control, players: Array, skip_empty: bool) -> void:
 		lbox.add_child(UiKit.spacer(6))
 
 
-func _team_row(p: Dictionary, ground: bool) -> Control:
-	var h := UiKit.hbox(6)
-	h.add_child(_guernsey(p))
-	var nm := UiKit.lbl(GameDB.player_display_name(p), UiKit.SECONDARY, UiKit.TEXT if ground else UiKit.MUTED)
-	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	nm.autowrap_mode = TextServer.AUTOWRAP_OFF
-	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	h.add_child(nm)
-	h.add_child(UiKit.role_chip(_player_tag(p)))
-	if int(p.get("injury_weeks", 0)) > 0:
-		h.add_child(UiKit.line("INJ", UiKit.FINE, UiKit.BAD, true))
-	h.add_child(UiKit.line(str(int(p["overall"])), 14, UiKit.EMPH, true))
-	h.add_child(UiKit.line("/%d" % int(p.get("potential", p["overall"])), 11,
-			UiKit.GOOD if bool(p.get("rehab", false)) else UiKit.MUTED))
-	return h
-
-
 ## His number on your club's guernsey: everyone on this list plays for you,
 ## whatever club he came from (p["club"] can be his source club after a
 ## league re-draft).
@@ -456,13 +439,6 @@ func handle_back() -> bool:
 		_close_profile()
 		return true
 	return false
-
-
-func _player_tag(p: Dictionary) -> String:
-	var saved := str(p.get("list_tag", ""))
-	if saved != "":
-		return saved
-	return Ratings.role_tag(p)
 
 
 func _attr_columns() -> int:
