@@ -14,7 +14,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 63 | One cost sheet per club dominant option and one for the 33 gain-only story options, same look as the 17 story cards; nothing is dropped (T5.Q2, T5.Q3) | every option shows a real cost |
 | 67 | Management pays: trade period at real volume, recruiters' edge and development projects (4.Q11); balance-gated | audit across 8-10 seasons |
 | 69 | Hub leads with one hero element, shown on the hub first (6.Q2) | hub capture, his look |
-| 70 | Pre-timeskip: the full survey, not the simpler version (T5.Q20) | survey built |
 | 73 | Premiership-year tattoos at a restrained, configurable rate; zero gameplay effect (6.Q16; see G 6.63) | tattoos on, rate in one place |
 | 75 | Sir Doug Nicholls Round designs: the annual round and its saved record are in (#1034); left are the design library, selection and rotation, and the guernsey drawn on match day (T5.Q11b) | a design is stored and drawn for the round |
 | 84 | Togetherness at tight and cliques is felt in matches (director 2026-11-06, after the row 68 review); balance-gated, his playtest judges | audit shows the effect, he has played it |
