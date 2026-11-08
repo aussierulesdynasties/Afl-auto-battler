@@ -34,7 +34,7 @@ var _press_scroll := 0
 var _press_pos := Vector2.ZERO
 const GRID_TAB_NAMES := {"": "All", "DEF": "Def", "MID": "Mid", "RUCK": "Ruck", "FWD": "Fwd"}
 const GRID_POS_NAME := {"RUCK": "Ruck", "MID": "Mid", "DEF": "Def", "FWD": "Fwd"}
-const GRID_TRADE_OFF_LINE := "Each game earns XP, and his plan spends it on the stats it names."
+const GRID_TRADE_OFF_LINE := "Each game earns XP, and what he is developing as decides the stats it buys."
 const GRID_TOUCH := 48.0         # a thumb target: tabs, back, Stat guide
 const CARD_PAD := 10             # inside a card, left and right
 const CARD_PAD_V := 6            # inside a card, top and bottom
@@ -128,8 +128,8 @@ func _show_intro() -> void:
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("How training works", UiKit.TITLE))
 	for line in [
-		"Pick what kind of footballer each player should become. His plan spends the XP he earns after every game on exactly that - an inside midfielder on winning the ball, a key forward on marking and goals.",
-		"Position plan is the safe default: it trains what his position is judged on. Change a plan whenever you like; banked XP is spent straight away.",
+		"Pick what kind of footballer each player should become. The XP he earns after every game goes on exactly that - an inside midfielder on winning the ball, a key forward on marking and goals.",
+		"By position is the safe default: it trains what his position is judged on. Change it whenever you like; banked XP is spent straight away.",
 		"Playing senior football develops a player fastest. Fit players you leave out develop in the reserves at about half the rate; injured and rested players barely at all.",
 		"Young players with room below their potential improve quickest.",
 	]:
@@ -300,7 +300,7 @@ func _plan_picker(p: Dictionary, on_pick: Callable) -> Control:
 	for key in GameState.plans_for(p):
 		var label := GameState.train_plan_label(key)
 		if key == "position" and dual:
-			label = "Position plan (%s)" % PlayerProfile.role_word(first).to_lower()
+			label = "By position (%s)" % PlayerProfile.role_word(first).to_lower()
 		elif key.begins_with(GameState.LEARN_PREFIX):
 			label = "Learn " + str(GameState.LEARN_JOBS[key.trim_prefix(GameState.LEARN_PREFIX)]["word"])
 		options.append([key, label])
@@ -309,10 +309,10 @@ func _plan_picker(p: Dictionary, on_pick: Callable) -> Control:
 
 func _spend_notice(gains: Dictionary, ov_before: int, ov_after: int) -> String:
 	if ov_after > ov_before:
-		return "Plan updated. Banked XP lifted him from %d to %d." % [ov_before, ov_after]
+		return "Development changed. Banked XP lifted him from %d to %d." % [ov_before, ov_after]
 	if not gains.is_empty():
-		return "Plan updated. Banked XP went straight into it."
-	return "Plan updated. It takes effect after the next game."
+		return "Development changed. Banked XP went straight into it."
+	return "Development changed. It takes effect after the next game."
 
 
 ## The season plan row as a button: outlined, a thumb tall, its second line in
@@ -453,7 +453,7 @@ func _bulk_bar() -> Control:
 	return panel
 
 
-## What a group button says: "Position plan" as it is; a role plan as the job
+## What a group button says: "By position" as it is; a role plan as the job
 ## it is, "Train as ruck", so it cannot be read as "set them to Ruck".
 func _group_button_word(key: String) -> String:
 	var label := GameState.train_plan_label(key)
@@ -1065,7 +1065,7 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 				UiKit.HEADING, UiKit.EMPH, true)
 		name_l.name = "StatFocusName"
 		v.add_child(name_l)
-		var locked := UiKit.lbl("Locked in for %d. About a third of his training goes into %s; his plan's drills get the rest. You can change it when the %d season opens." % [
+		var locked := UiKit.lbl("Locked in for %d. About a third of his training goes into %s; his development drills get the rest. You can change it when the %d season opens." % [
 				year, GameState.train_stat_label(current).to_lower(), year + 1], 13, UiKit.TEXT)
 		locked.name = "StatFocusLocked"
 		locked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1073,7 +1073,7 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 		if _focus_notice != "":
 			v.add_child(UiKit.lbl(_focus_notice, UiKit.SECONDARY, UiKit.GOOD, true))
 		return box
-	var intro := "Extra work on one stat: about a third of his training goes into it, the rest into his plan's drills. Points on one stat get dearer as it climbs, so his OVR grows more slowly than on his plan alone. Locked in until the %d season." % [
+	var intro := "Extra work on one stat: about a third of his training goes into it, the rest into his development drills. Points on one stat get dearer as it climbs, so his OVR grows more slowly than on his plan alone. Locked in until the %d season." % [
 			year + 1]
 	if current != "":
 		intro = "Last season's focus, %s, carries on until you lock one in for %d. " % [
