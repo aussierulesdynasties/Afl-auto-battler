@@ -345,6 +345,9 @@ func _test_screens_at_largest() -> void:
 		guard += 1
 		_gs.advance()
 	_check(_gs.season.round_index >= 1, "a round is played (%d)" % _gs.season.round_index)
+	# Whether the round calls a press conference depends on the seeded result:
+	# one would take the hub straight to the press room.
+	_gs.skip_media_conference()
 	_gs.set_text_size("largest")
 	var stats_script: GDScript = load("res://scripts/ui/StatsHubScene.gd")
 	var stats_was := str(stats_script.get("current"))
@@ -357,7 +360,7 @@ func _test_screens_at_largest() -> void:
 		_router.go(screen)
 		await _settle(10)
 		var scene := current_scene
-		_check(scene != null and _router.current() == screen, "%s opens at Largest" % key)
+		_check(scene != null and _router.current() == screen, "%s opens at Largest (now on %s)" % [key, _router.current()])
 		if scene == null:
 			continue
 		var bare := _unsized(scene)
