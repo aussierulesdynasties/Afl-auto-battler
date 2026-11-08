@@ -12507,11 +12507,11 @@ func talk_job(p: Dictionary) -> String:
 func _explain_outcome(name: String, e: Dictionary) -> String:
 	var kpi := str(e.get("kpi", ""))
 	if kpi == "":
-		return "You tell %s what a %s has to show: %s. Nothing is promised." % [
+		return "You tell %s what a %s has to show: %s. He expects a game this week." % [
 				name, str(e.get("job", "player")), str(e.get("need", ""))]
 	if str(e.get("verdict", "")) == "good":
-		return "You go through his season with %s: %s He doesn't see why he's out. Nothing is promised." % [name, kpi]
-	return "You go through his season with %s: %s Nothing is promised." % [name, kpi]
+		return "You go through his season with %s: %s He doesn't see why he's out, and he expects a game this week." % [name, kpi]
+	return "You go through his season with %s: %s He expects a game this week." % [name, kpi]
 
 
 ## Keep the sit-down as a career fact (G7, kind "talk"): d is what opened it
