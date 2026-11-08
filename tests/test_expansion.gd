@@ -35,6 +35,7 @@ func run() -> void:
 	_t("_test_redraft_equal_entry")
 	_t("_test_redraft_entry_saved")
 	_t("_test_real_lists_play_to_2030")
+	_t("_test_real_lists_tasmania_2028")
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -812,6 +813,75 @@ func _test_redraft_entry_saved() -> void:
 ## club AI-run; you choose any club, Tasmania and Canberra included, at the
 ## 2029 National Draft and start in 2030. Canberra taken by you keeps the
 ## exact build its own staff would have had.
+## Real lists, Canberra No (director, 2026-11-09): "Yes, start 2028". Tasmania
+## can be taken at the 2026 draft: 2027 plays without you, and you build the
+## club at the 2027 National Draft with the same deal as under its own staff.
+func _test_real_lists_tasmania_2028() -> void:
+	GameState.reset()
+	GameState.set_canberra(false)
+	GameState.challenge = {"kind": "youth"}
+	GameState.begin_real_lists()
+	_check(GameState.waiting_club() == "TAS" and not GameState.draft.clubs.has("TAS"),
+			"At the 2026 draft Tasmania can be waited for, and are not in that draft")
+	_check(not GameState.begin_wait_for_club("COL"), "Only the club that joins next can be waited for")
+	_check(GameState.begin_wait_for_club("TAS") and GameState.sim_ahead and not GameState.has_career()
+			and not GameState.save_career() and GameState.challenge.is_empty(),
+			"Waiting is not a career yet: nothing is saved, and the challenge is held")
+	var steps := 0
+	var lines := []
+	while steps < 200:
+		steps += 1
+		var line := GameState.sim_ahead_step()
+		if line == "":
+			break
+		lines.append(line)
+	_check(GameState.choosing_club() and GameState.season_year == 2027 and GameState.season.is_season_over(),
+			"2027 is played and the 2027 National Draft waits (%d steps, %d)" % [steps, GameState.season_year])
+	_check(lines.has("Playing 2027: the Grand Final...") and GameState.draft.user_club == "" and GameState.draft.pick_index == 0,
+			"The cover names the weeks, and no pick is made before you take over")
+	var draft: Draft = GameState.draft
+	_check(draft.clubs.has("TAS") and draft.clubs.size() == 19, "All 19 clubs are in this draft (%d)" % draft.clubs.size())
+	_check(ExpansionBuild.has_package(GameState, "TAS"), "Tasmania have their new-club build")
+	var tas_picks := draft.upcoming_picks("TAS", 0)
+	var col_picks := draft.upcoming_picks("COL", 0)
+	_check(tas_picks.size() > col_picks.size(), "Tasmania have their priority picks (%s; Collingwood %s)" % [str(tas_picks), str(col_picks)])
+	_check(GameState.choose_sim_ahead_club("TAS") and GameState.my_club == "TAS" and not GameState.sim_ahead
+			and GameState.has_career() and draft.user_club == "TAS" and str(GameState.challenge.get("kind", "")) == "youth",
+			"Tasmania are yours, and your challenge starts now")
+	_check(draft.upcoming_picks("TAS", 0) == tas_picks, "Taken by you, Tasmania keep the same picks")
+	_check(GameState.club_yet_to_play(), "Their first draft comes before any season of theirs, so Continue returns to it")
+	_check(GameState.save_career(), "Their first draft saves")
+	GameState.reset()
+	_check(GameState.load_career() and GameState.club_yet_to_play() and GameState.draft != null
+			and GameState.draft.user_club == "TAS" and GameState.draft.intake_mode, "It reloads at that draft")
+	draft = GameState.draft
+	_check(load("res://scripts/sim/Almanac.gd").rows(GameState.almanac, GameState.honour_roll).is_empty(),
+			"2027 is not on your record: you did not coach it")
+	_ai_finish(draft)
+	GameState.finish_intake_draft()
+	print("TAS 2028 list %d, picks %s" % [GameState.my_list.size(), str(tas_picks)])
+	_check(GameState.season_year == 2028 and GameState.season != null and GameState.season.ladder.size() == 19
+			and GameState.season.ladder.has("TAS") and GameState.my_club == "TAS",
+			"Your first season is 2028, on a 19-club ladder (%d)" % GameState.season_year)
+	_check(GameState.my_list.size() >= Prospects.MIN_LIST, "Tasmania have a full list (%d)" % GameState.my_list.size())
+	_check(not GameState.club_yet_to_play(), "Tasmania play 2028, so the Hub is home")
+	_check(GameState.save_career(), "The 2028 career saves")
+	GameState.reset()
+	_check(GameState.load_career() and GameState.my_club == "TAS" and not GameState.sim_ahead and GameState.season_year == 2028,
+			"It loads as a 2028 Tasmania career")
+	GameState.reset()
+	GameState.set_canberra(true)
+	GameState.begin_sim_ahead()
+	_check(GameState.waiting_club() == "" and GameState.sim_ahead_to == 2030, "Real lists with Canberra still wait for 2030")
+	GameState.reset()
+	GameState.set_canberra(false)
+	GameState.challenge = {"kind": "rebuild"}
+	GameState.begin_real_lists()
+	_check(GameState.waiting_club() == "", "A rebuild needs a club's real list, so it cannot wait for Tasmania")
+	GameState.reset()
+	_check(GameState.sim_ahead_to == 2030, "A reset clears it")
+
+
 func _test_real_lists_play_to_2030() -> void:
 	GameState.reset()
 	GameState.set_canberra(true)

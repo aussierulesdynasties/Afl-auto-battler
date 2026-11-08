@@ -459,6 +459,8 @@ static func rows(almanac: Array, honour_roll: Array) -> Array:
 		if have.has(y):
 			continue
 		var my := str(h.get("my_club", ""))
+		if h.has("my_club") and my == "":
+			continue   # a year played without you is not on your record
 		var rec := str(h.get("my_record", "")).split("-")
 		var e := {"year": y, "club": my, "ladder": int(h.get("my_position", 0)),
 				"premier": str(h.get("premier", "")), "runner_up": str(h.get("runner_up", "")),
