@@ -29,6 +29,8 @@ func _run() -> void:
 	_aw = load("res://scripts/sim/Awards.gd")
 	_cs = load("res://scripts/state/CareerSave.gd")
 	_state.autosave_enabled = false
+	# These tests drive the hub for other things: no club card opens over it.
+	_state.event_sheets = false
 	_state.save_path = "user://test_stats.save"
 	_state.settings_path = "user://test_stats_settings.cfg"
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
