@@ -2282,6 +2282,12 @@ Your career stays on this device.",
 	_state.ensure_finals()
 	while not season.is_season_over():
 		_state.advance()
+	# A strong season ends with a rival board's letter that holds the
+	# off-season (ClubMoves, its own test below); this part is about the
+	# off-season at his club, so he stays put.
+	var moves = load("res://scripts/state/ClubMoves.gd")
+	if moves.letter_open(_state):
+		moves.decline_letter(_state)
 	_router.go("hub")
 	await _settle()
 	_check(_screen_text().contains("Trades & Contracts"), "The hub offers Trades & Contracts after the season")
