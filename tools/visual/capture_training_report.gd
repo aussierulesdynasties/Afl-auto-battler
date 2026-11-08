@@ -1,8 +1,10 @@
 extends SceneTree
 ## Visual review tool for the monthly training report. Needs a real renderer:
 ##   godot --path . --script tools/visual/capture_training_report.gd -- --club FRE --w 390 --h 844 --out /tmp/tr
-## Writes <out>_hub.png (the hub card), <out>_sheet.png (the report),
-## <out>_sheet_end.png (its foot: retraining) and <out>_training.png (the link).
+## Writes <out>_popup.png (the new report over the hub), <out>_sheet_end.png
+## (its foot: retraining), <out>_hub.png (the hub once it is closed),
+## <out>_training.png (the line on Training) and <out>_training_sheet.png (the
+## report opened from it).
 
 var W := 390
 var H := 844
@@ -19,6 +21,16 @@ func _shot() -> Image:
 	var img := root.get_viewport().get_texture().get_image()
 	img.convert(Image.FORMAT_RGBA8)
 	return img
+
+
+## Until the screen has swapped in under the cover and the cover has gone.
+func _arrive(scene: String) -> void:
+	for i in range(600):
+		await process_frame
+		if current_scene != null and current_scene.scene_file_path.ends_with(scene + ".tscn"):
+			break
+	for i in range(90):
+		await process_frame
 
 
 func _run() -> void:
@@ -62,17 +74,16 @@ func _run() -> void:
 	state.skip_media_conference()
 	router.stack = ["main"]
 	router.go("hub")
-	await _shot()
-	(await _shot()).save_png(out + "_hub.png")
+	await _arrive("HubScene")
 	var hub := current_scene
-	var opener = hub.find_child("TrainingReportOpen", true, false)
-	if opener == null:
-		print("no card")
+	var sheet = hub.find_child("TrainingReportSheet", true, false)
+	if sheet == null:
+		print("no popup")
 		quit(1)
 		return
-	opener.emit_signal("pressed")
-	(await _shot()).save_png(out + "_sheet.png")
-	var sheet = hub.find_child("TrainingReportSheet", true, false)
+	for i in range(30):
+		await process_frame
+	(await _shot()).save_png(out + "_popup.png")
 	if OS.get_environment("TRDEBUG") != "":
 		for c in sheet.find_children("*", "Control", true, false):
 			var m: Vector2 = c.get_combined_minimum_size()
@@ -84,8 +95,18 @@ func _run() -> void:
 		sc.scroll_vertical = int(sc.get_v_scroll_bar().max_value)
 	(await _shot()).save_png(out + "_sheet_end.png")
 	sheet.queue_free()
+	(await _shot()).save_png(out + "_hub.png")
 	router.go("training")
-	await _shot()
+	await _arrive("TrainingScene")
 	(await _shot()).save_png(out + "_training.png")
+	var link = current_scene.find_child("TrainingReportLink", true, false)
+	if link == null:
+		print("no link")
+		quit(1)
+		return
+	link.emit_signal("pressed")
+	for i in range(30):
+		await process_frame
+	(await _shot()).save_png(out + "_training_sheet.png")
 	print("wrote ", out)
 	quit(0)

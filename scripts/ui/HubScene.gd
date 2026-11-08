@@ -17,6 +17,8 @@ var _news_overlay: Control
 var _rule_overlay: Control
 var _sim_confirm: Control
 var _onboarding_overlay: Control
+var _backdrop: Control
+var _margin: MarginContainer
 
 
 func _ready() -> void:
@@ -32,8 +34,10 @@ func _ready() -> void:
 	MatchKickoff.reset()
 	_warm_pre_match.call_deferred()
 
-	add_child(ClubBackdrop.new().setup(GameState.my_club).live())
+	_backdrop = ClubBackdrop.new().setup(GameState.my_club).live()
+	add_child(_backdrop)
 	var margin := MarginContainer.new()
+	_margin = margin
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 12)
 	add_child(margin)
@@ -275,8 +279,6 @@ func _build() -> void:
 	var ladder := _ladder_section(season, -1.0 if _narrow() else ladder_w)
 	var ladder_hugs := false
 	if _narrow():
-		if TrainingReport.hub_due(GameState):
-			page.add_child(TrainingReportSheet.hub_card(self, _go_retrain))
 		page.add_child(week)
 		page.add_child(UiKit.rule())
 		page.add_child(_standing_card())
@@ -290,8 +292,6 @@ func _build() -> void:
 		var left := UiKit.vbox(UiKit.SECTION)
 		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cols.add_child(left)
-		if TrainingReport.hub_due(GameState):
-			left.add_child(TrainingReportSheet.hub_card(self, _go_retrain))
 		left.add_child(week)
 		left.add_child(UiKit.rule())
 		left.add_child(_standing_card())
@@ -353,6 +353,31 @@ func _build() -> void:
 		foot.add_child(row)
 	# Motion plays once per visit, not on every rebuild after an answer.
 	_settled = true
+
+
+## A new monthly training report (director, 2026-11-08: "dismissable popups
+## rather than an unheralded line"): it opens over the hub once, when nothing
+## else is up. The week's card, the round's results or a press conference come
+## first; it never stacks on one. Read once, it lives on in Training.
+func _process(_delta: float) -> void:
+	if _root == null or not TrainingReport.hub_due(GameState) or GameState.is_sacked() or _popup_open():
+		return
+	TrainingReport.dismiss(GameState)
+	TrainingReportSheet.open(self, _go_retrain)
+
+
+## Something already sits over the hub, or the hub is handing over.
+func _popup_open() -> bool:
+	if MatchKickoff.busy or Router.current() != "hub" and get_tree().current_scene == self:
+		return true
+	if _media_overlay != null and is_instance_valid(_media_overlay):
+		return true
+	for c in get_children():
+		if c == _backdrop or c == _margin or not (c is Control):
+			continue
+		if (c as Control).visible and not c.is_queued_for_deletion():
+			return true
+	return false
 
 
 ## From the training report: Training, at that player's choice.
