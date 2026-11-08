@@ -5,7 +5,7 @@ extends SceneTree
 ## answer calling a player out scrolled into view with both outcomes and their
 ## sizes), DIR/opinion_press_result.png (answered, he took it personally: his
 ## opinion of you moving), DIR/opinion_talks.png (the season over, contract
-## talks with him at 44/100: the chance he won't re-sign) and
+## talks with him at 45/100: the chance he won't re-sign) and
 ## DIR/opinion_sheet.png (his profile: "Opinion of you", the rule and his
 ## reasons). Seeded; never touches a real save.
 
@@ -150,14 +150,14 @@ func _run() -> void:
 	print("result: ", _text(op))
 	_shot(out.path_join("opinion_press_result.png"))
 	state.media_conference = {}
-	# The season played out; contract talks with him at 44/100.
+	# The season played out; contract talks with him at 45/100.
 	var season = state.season
 	season.round_index = season.fixture.size()
 	state.ensure_finals()
 	while not season.is_season_over():
 		state.advance()
 	state.relations.erase(key)
-	Trust.change(state.relations, key, -4, "You called him out in the press", state.season_year, "Round 8")
+	Trust.change(state.relations, key, -MC.CALLOUT_OPINION_DROP * Trust.PER_POINT, "You called him out in the press", state.season_year, "Round 8")
 	Trust.change(state.relations, key, -8, "You promised him a game and left him out", state.season_year, "Round 14")
 	named.erase("talks")
 	router.stack = []

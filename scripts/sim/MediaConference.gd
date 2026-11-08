@@ -193,7 +193,7 @@ const LOSS_LIFT_CAP := 2   # ClubLife.MATCH_MORALE_WIN - MATCH_MORALE_LOSS - 1 (
 ## point whichever way it lands; if he takes it personally, his opinion of you
 ## (Trust.opinion, out of 100) also falls this many points. Backing him by name
 ## later gives those points back (GameState.resolve_media_conference).
-const CALLOUT_OPINION_DROP := 2
+const CALLOUT_OPINION_DROP := 1
 
 ## Per answer: the chance of outcome "a" before the facts move it ("base"),
 ## which way the mood moves it ("pull": +1 a settled player or group takes it
@@ -626,7 +626,7 @@ static func after_line(kind: String, landed: String, fx: Dictionary = {}, name :
 	return "%s: %s." % [str(o["after"]), tail] if tail != "" else str(o["after"]) + "."
 
 
-## "Jack Smith's opinion of you: 50 → 48/100." from GameState's {"name",
+## "Jack Smith's opinion of you: 50 → 49/100." from GameState's {"name",
 ## "from", "to"}; "" when it did not move.
 static func opinion_after(moved: Dictionary) -> String:
 	if moved.is_empty() or int(moved.get("from", 0)) == int(moved.get("to", 0)):
