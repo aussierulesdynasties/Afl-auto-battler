@@ -176,7 +176,14 @@ func _test_vote_arithmetic() -> void:
 	var tally := {}
 	Awards.tally_match(tally, res, true)
 	_check(_sum(tally, "votes") == 6, "A home-and-away match hands out 3-2-1 votes")
-	_check(_sum(tally, "coaches") == 15, "A home-and-away match hands out 5-4-3-2-1 coaches votes")
+	_check(_sum(tally, "coaches") == 30, "A home-and-away match hands out 5-4-3-2-1 coaches votes from each coach")
+	# The Coaches Award adds up exactly the votes shown at full time.
+	var cv := MatchNotes.coaches_votes(res)
+	var same := cv.size() > 0
+	for id in tally:
+		if int(tally[id]["coaches"]) != int(cv.get(id, 0)):
+			same = false
+	_check(same, "The season's coaches votes are the ones full time shows")
 	_check(_sum(tally, "bf", "GEE") == 15 and _sum(tally, "bf", "HAW") == 15,
 			"Each side hands out 5-4-3-2-1 best-and-fairest points")
 	var finals := {}

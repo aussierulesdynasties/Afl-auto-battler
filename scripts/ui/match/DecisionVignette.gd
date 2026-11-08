@@ -450,11 +450,14 @@ func _draw_decision_names() -> void:
 		var name := str(t["name"])
 		var nw := font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var y := head.y - 6.0 - fs
-		# Too near the scoreboard: the name goes under his feet instead. The set shot's camera
-		# keeps both heads under the title bar and the big screen, and under their feet the
-		# names would sit behind the call, so there they stay over the heads.
+		# Too near the scoreboard: the name goes under his feet instead, unless the call
+		# covers his feet (a taller call at a larger text size). The set shot's camera keeps
+		# both heads under the title bar and the big screen, and under their feet the names
+		# would sit behind the call, so there they stay over the heads.
 		if head.y < size.y * 0.24 and kind != "set_shot":
-			y = _project(_pos(t), _lift(t)).y + 6.0
+			var under := _project(_pos(t), _lift(t)).y + 6.0
+			if under + fs + 2.0 <= size.y - call_room:
+				y = under
 		var box := Rect2(Vector2(clampf(head.x - nw * 0.5, 4.0, size.x - nw - 4.0), y), Vector2(nw, fs + 2))
 		var tries := 0
 		while tries < 4 and placed.any(func(q): return q.intersects(box)):
