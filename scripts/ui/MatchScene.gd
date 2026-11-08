@@ -229,6 +229,11 @@ func _mount_body(stack: bool) -> void:
 		_feed = UiKit.vbox(4)
 		_feed.name = "Feed"
 		_feed_scroll = UiKit.scroll(_feed)
+		# Following the play, a line cut off at the top would leave a stray end of
+		# a sentence ("time.") over the newest lines: see _hide_cut_rows.
+		var bar := _feed_scroll.get_v_scroll_bar()
+		bar.value_changed.connect(func(_v: float) -> void: _hide_cut_rows())
+		bar.changed.connect(_hide_cut_rows)
 		sv.add_child(_feed_scroll)
 		sv.add_child(_controls())
 	_fit_side_panel()
@@ -3591,6 +3596,23 @@ func _trim_feed() -> void:
 	await get_tree().process_frame
 	if is_instance_valid(_feed_scroll):
 		_feed_scroll.scroll_vertical = int(_feed_scroll.get_v_scroll_bar().max_value)
+		_hide_cut_rows()
+
+
+## While the feed sits at its newest line, a row whose top has scrolled out of
+## view is not drawn, so the feed never opens on the tail of a wrapped line
+## (at a larger text size a two-line row showed only its last word). Scrolled
+## back up by the coach, every row shows as it is.
+func _hide_cut_rows() -> void:
+	if not is_instance_valid(_feed_scroll) or not is_instance_valid(_feed):
+		return
+	var bar := _feed_scroll.get_v_scroll_bar()
+	var top := float(_feed_scroll.scroll_vertical)
+	var following := top >= bar.max_value - bar.page - 1.0
+	for c in _feed.get_children():
+		if c is CanvasItem:
+			var cut := following and (c as Control).position.y < top - 0.5
+			(c as CanvasItem).modulate.a = 0.0 if cut else 1.0
 
 
 func _on_finished() -> void:

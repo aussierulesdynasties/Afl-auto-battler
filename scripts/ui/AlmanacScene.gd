@@ -211,10 +211,15 @@ func _season_card(e: Dictionary) -> Control:
 func _row(v: VBoxContainer, what: String, text: String, node: String) -> void:
 	if text == "":
 		return
-	var h := UiKit.hbox(8)
+	# At a larger text size on a phone the heading goes over its line: beside it,
+	# a long heading ("Most disposals in a match") outgrows the column and
+	# pushes its line out of step with the rows above.
+	var stacked := UiKit.text_scale > 1.0 and UiKit.view_width(self) < 640.0
+	var h: BoxContainer = UiKit.vbox(0) if stacked else UiKit.hbox(8)
 	h.name = node
 	var a := UiKit.lbl(what, UiKit.SECONDARY, UiKit.MUTED)
-	a.custom_minimum_size.x = 150
+	if not stacked:
+		a.custom_minimum_size.x = 150
 	a.autowrap_mode = TextServer.AUTOWRAP_OFF
 	h.add_child(a)
 	var b := UiKit.lbl(text, UiKit.SECONDARY, UiKit.TEXT)

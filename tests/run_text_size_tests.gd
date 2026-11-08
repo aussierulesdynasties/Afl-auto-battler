@@ -75,6 +75,7 @@ func _run() -> void:
 	await _t("_test_settings_tap", [Vector2i(390, 844)])
 	await _t("_test_career_settings_tap")
 	await _t("_test_screens_at_largest")
+	await _t("_test_feed_whole_lines")
 	await _t("_test_one_place")
 	await _t("_test_colour_has_words")
 	await _t("_test_weakness_mark")
@@ -379,6 +380,52 @@ func _test_screens_at_largest() -> void:
 		_check(seen.has(nm), "the walk reaches %s" % nm)
 	_gs.set_text_size("standard")
 	_router.stack = []
+
+
+## The live feed at Largest on a phone, following the play: no line shows
+## only its tail at the top (a wrapped row cut to "time."). Scrolled back up,
+## every line is drawn.
+func _test_feed_whole_lines() -> void:
+	root.size = Vector2i(390, 844)
+	_career()
+	_gs.set_text_size("largest")
+	_check(_gs.prepare_interactive_match(), "a live match is prepared")
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle(10)
+	var feed: Node = m.find_child("Feed", true, false)
+	var sc := m.get("_feed_scroll") as ScrollContainer
+	_check(feed != null and sc != null, "the match has its feed")
+	if feed == null or sc == null:
+		m.queue_free()
+		_gs.set_text_size("standard")
+		return
+	var cut_seen := false
+	for i in range(14):
+		m.call("_feed_text", "Q1 %d'  Geelong: Controlled tempo is on until quarter time, line %d." % [i + 1, i],
+				Color.WHITE, false, "PlayLine")
+		await _settle(3)
+		var top := float(sc.scroll_vertical)
+		var bar := sc.get_v_scroll_bar()
+		_check(top >= bar.max_value - bar.page - 1.0, "line %d: the feed follows the newest line" % i)
+		for c in feed.get_children():
+			var r := c as Control
+			if r.position.y < top - 0.5:
+				cut_seen = cut_seen or r.position.y + r.size.y > top + 0.5
+				_check(r.modulate.a == 0.0, "line %d: a row cut at the top (y %.0f, view from %.0f) is not drawn" % [i, r.position.y, top])
+			else:
+				_check(r.modulate.a == 1.0, "line %d: a whole row in view is drawn" % i)
+	_check(cut_seen, "the walk reaches a row cut at the top edge")
+	sc.scroll_vertical = 0
+	await _settle(3)
+	var hidden := 0
+	for c in feed.get_children():
+		if (c as Control).modulate.a < 1.0:
+			hidden += 1
+	_check(hidden == 0, "scrolled back up, every row is drawn (%d hidden)" % hidden)
+	m.queue_free()
+	await _settle(2)
+	_gs.set_text_size("standard")
 
 
 func _seen(scene: Node) -> Dictionary:
