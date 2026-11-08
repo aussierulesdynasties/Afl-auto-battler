@@ -17,6 +17,7 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 75 | Sir Doug Nicholls Round designs: the annual round and its saved record are in (#1034); left are the design library, selection and rotation, and the guernsey drawn on match day (T5.Q11b) | a design is stored and drawn for the round |
 | 84 | Togetherness at tight and cliques is felt in matches (director 2026-11-06, after the row 68 review); balance-gated, his playtest judges | audit shows the effect, he has played it |
 | 103 | Synergies within reach: draft, trade and free-agent screens show which synergy a player would complete, and a player can grow a trait over seasons through training (4.Q10); balance-gated | both shown in play, paired table |
+| 107 | Event cards: every choice gets an upside and a downside, and never-seen cards get a trigger (T5.Q18, row 34) | no no-cost choice, every card reachable in an audit |
 | 113 | Start at the end of 2026: real lists, the real 2026 National Draft with each club's real picks, then play 2027 (T5.r134) | start option, sourced pick ownership, test |
 | 116 | Awards night: round-by-round Brownlow count, live or one round at a time, plus your club's best and fairest (T5.Q23b) | count watchable both ways, real-tap test |
 | 117 | Coaching staff: head coach, head assistant, assistants; counter-offer (not money) when a rival poaches one (T5.Q16) | approach, counter and departure tested |
