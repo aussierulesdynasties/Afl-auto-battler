@@ -213,7 +213,10 @@ func _test_match_effect() -> void:
 		var ra := _sim({}, {}, "contest", "balanced", 900 + s).run()
 		var rb := _sim({"contest": barely}, {}, "contest", "balanced", 900 + s).run()
 		diff += float(int(ra["score"][0]) - int(ra["score"][1])) - float(int(rb["score"][0]) - int(rb["score"][1]))
-	_check(diff / float(n) > -3.0, "Over %d matches, knowing a plan well is not worse than barely (margin %+.1f)" % [n, diff / float(n)])
+	# A smoke test on real matches; the checks above prove the rule itself. The paired margin swings
+	# 14 points a match (standard error 2.9 over 24), so this bar sits three errors under the
+	# measured +2.4 (tools/audit/plan_know_impl.gd, 200 seeds): only a real inversion trips it.
+	_check(diff / float(n) > -6.2, "Over %d matches, knowing a plan well is not worse than barely (margin %+.1f)" % [n, diff / float(n)])
 
 
 func _test_drilling() -> void:

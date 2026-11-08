@@ -29,6 +29,8 @@ func _run() -> void:
 	_aw = load("res://scripts/sim/Awards.gd")
 	_cs = load("res://scripts/state/CareerSave.gd")
 	_state.autosave_enabled = false
+	# These tests drive the hub for other things: no club card opens over it.
+	_state.event_sheets = false
 	_state.save_path = "user://test_stats.save"
 	_state.settings_path = "user://test_stats_settings.cfg"
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
@@ -1839,6 +1841,9 @@ func _test_awards_unchanged() -> void:
 		if a != b:
 			first = "line %d: want '%s', got '%s'" % [i + 1, a, b]
 			break
+	if first != "":
+		for line in now:
+			print("AWARDS_FIXTURE|", line)
 	_check(first == "", "The Awards tab shows exactly what it did before the speed-up (%d lines; %s)" % [now.size(), first])
 
 

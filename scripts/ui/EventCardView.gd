@@ -4,16 +4,21 @@ extends RefCounted
 ## its Gain and Cost lines under it, "See the rule" where a rule exists, and the
 ## outcome once answered. Shared by the hub (the week's cards) and the
 ## pre-season stops. `rebuild` redraws the host after an answer; `show_rule`
-## opens the rule sheet.
+## opens the rule sheet. `bare`: the card without its own panel, its title
+## larger, for the sheet a new card opens in over the hub (HubScene), so it is
+## not a box inside a box.
 
 
-static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callable, names := {}) -> Control:
+static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callable, names := {}, bare := false) -> Control:
 	var e: Dictionary = GameState.week_events[index]
-	var card := UiKit.panel(UiKit.PANEL, 12)
+	var card: Control = UiKit.vbox(0) if bare else UiKit.panel(UiKit.PANEL, 12)
 	card.name = "WeekEvent" if index == 0 else "WeekEvent_%d" % index
-	var v := UiKit.vbox(6)
+	var v := UiKit.vbox(8 if bare else 6)
 	card.add_child(v)
-	v.add_child(NameInk.label(str(e.get("title", "")), names, UiKit.BODY, UiKit.TEXT, true))
+	var title := NameInk.label(str(e.get("title", "")), names, UiKit.TITLE if bare else UiKit.BODY, UiKit.TEXT, true)
+	if bare and title is Label:
+		(title as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(title)
 	if not bool(e.get("resolved", false)):
 		var t := NameInk.label(str(e.get("text", "")), names, 12, UiKit.TEXT)
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
