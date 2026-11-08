@@ -70,6 +70,10 @@ func run(tree: SceneTree) -> void:
 		await _t("_test_taps", [size])
 		await _t("_test_after_results", [size])
 		await _t("_test_after_event_card", [size])
+		await _t("_test_after_results_back", [size])
+		await _t("_test_after_press", [size])
+		await _t("_test_after_sit_down", [size])
+		await _t("_test_after_carnival", [size])
 	GameState.delete_saved_career()
 	print(Ran.line("Training report", self))
 	for f in failures:
@@ -294,6 +298,7 @@ func _test_taps(size: Vector2i) -> void:
 	var rt := TrainingReport.retrain_list(GameState, GameState.training_report)
 	var entries: Array = rt["entries"]
 	_check(not entries.is_empty(), "%s: somebody can retrain" % tag)
+	_check(entries.is_empty() or sheet != null, "%s: the report reopens for the retraining entry" % tag)
 	if not entries.is_empty() and sheet != null:
 		var id0 := str(entries[0]["id"])
 		var row: Control = sheet.find_child("Retrain_" + id0, true, false)
@@ -389,4 +394,107 @@ func _test_after_event_card(size: Vector2i) -> void:
 	_check(await Tap.tap(later) == "", "%s: a finger taps Later" % tag)
 	await _settle(4)
 	_check(hub.find_child("EventSheet", true, false) == null, "%s: the card closes" % tag)
+	_check(hub.find_child("TrainingReportSheet", true, false) != null, "%s: then the report opens" % tag)
+
+
+## Android Back on the round's results: the report still opens after them.
+func _test_after_results_back(size: Vector2i) -> void:
+	var tag := "%dx%d results, Back" % [size.x, size.y]
+	_fresh()
+	_rounds(3)
+	GameState.skip_media_conference()
+	var hub := await _hub()
+	var sim: Control = hub.find_child("SimRound", true, false)
+	_check(sim != null, "%s: Sim the week is there" % tag)
+	if sim == null:
+		return
+	for sc in hub.find_children("*", "ScrollContainer", true, false):
+		(sc as ScrollContainer).ensure_control_visible(sim)
+	await _settle(2)
+	_check(await Tap.tap(sim) == "", "%s: a finger taps Sim the week" % tag)
+	await _settle(4)
+	var go: Control = hub.find_child("SimConfirmGo", true, false)
+	if go != null:
+		_check(await Tap.tap(go) == "", "%s: a finger confirms the sim" % tag)
+	for i in range(40):
+		await _tree.process_frame
+	_check(hub.find_child("RoundResults", true, false) != null, "%s: the round's results open" % tag)
+	_check(hub.find_child("TrainingReportSheet", true, false) == null, "%s: the report waits behind them" % tag)
+	GameState.skip_media_conference()
+	Router.handle_back()
+	await _settle(6)
+	_check(_tree.current_scene == hub, "%s: Back stays on the hub" % tag)
+	_check(hub.find_child("RoundResults", true, false) == null, "%s: Back closes the results" % tag)
+	_check(hub.find_child("TrainingReportSheet", true, false) != null, "%s: then the report opens" % tag)
+
+
+## The usual way a report lands: a match played, then the press conference on
+## its own screen. The report waits for it and opens when the hub comes back.
+func _test_after_press(size: Vector2i) -> void:
+	var tag := "%dx%d press" % [size.x, size.y]
+	_fresh()
+	_rounds(4)
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	GameState.media_conference = MC.pick({"club": "FRE", "opponent_name": "Melbourne", "round": 4,
+			"result": {"home": "FRE", "away": "MEL", "score": [55, 101]}}, {})
+	_check(GameState.media_conference_pending(), "%s: a question is waiting" % tag)
+	var scene := await _hub()
+	await _settle(30)
+	scene = _tree.current_scene
+	_check(scene.find_child("MediaConference", true, false) != null or scene.name == "MediaConference", "%s: the press conference comes first (%s)" % [tag, scene.name])
+	_check(TrainingReport.hub_due(GameState), "%s: the report is still unread" % tag)
+	var skip: Control = scene.find_child("MediaTopSkip", true, false)
+	_check(skip != null, "%s: Skip is there" % tag)
+	if skip == null:
+		return
+	_check(await Tap.tap(skip) == "", "%s: a finger taps Skip" % tag)
+	for i in range(60):
+		await _tree.process_frame
+	await _settle(10)
+	var hub := _tree.current_scene
+	_check(Router.current() == "hub", "%s: back on the hub (%s)" % [tag, Router.current()])
+	var sheet := hub.find_child("TrainingReportSheet", true, false)
+	_check(sheet != null, "%s: then the report opens" % tag)
+	if sheet != null:
+		_check(await Tap.tap(hub.find_child("TrainingReportClose", true, false)) == "", "%s: a finger taps Close" % tag)
+		await _settle(3)
+		_check(hub.find_child("TrainingReportSheet", true, false) == null, "%s: Close closes it" % tag)
+
+
+## A sit-down in the same visit: the sit-down first, the report after Done.
+func _test_after_sit_down(size: Vector2i) -> void:
+	var tag := "%dx%d sit-down" % [size.x, size.y]
+	_fresh()
+	_rounds(4)
+	GameState.skip_media_conference()
+	GameState.backing_talk = {"player_id": str(GameState.my_list[0]["id"]), "title": "Sit-down", "lines": ["He took it well."]}
+	var hub := await _hub()
+	_check(hub.find_child("BackingTalk", true, false) != null, "%s: the sit-down opens first" % tag)
+	_check(hub.find_child("TrainingReportSheet", true, false) == null, "%s: the report waits behind it" % tag)
+	var done: Control = hub.find_child("BackingTalkDone", true, false)
+	if done == null:
+		return
+	_check(await Tap.tap(done) == "", "%s: a finger taps Done" % tag)
+	await _settle(4)
+	_check(hub.find_child("BackingTalk", true, false) == null, "%s: the sit-down closes" % tag)
+	_check(hub.find_child("TrainingReportSheet", true, false) != null, "%s: then the report opens" % tag)
+
+
+## The carnival in the same visit: the carnival first, the report after Done.
+func _test_after_carnival(size: Vector2i) -> void:
+	var tag := "%dx%d carnival" % [size.x, size.y]
+	_fresh()
+	_rounds(4)
+	GameState.skip_media_conference()
+	GameState.midseason = {"year": GameState.season_year, "carnival_seen": false,
+			"carnival": [{"name": "Riley Bowman", "pos": "midfielder", "state": "Vic Metro"}]}
+	var hub := await _hub()
+	_check(hub.find_child("CarnivalWeek", true, false) != null, "%s: the carnival opens first" % tag)
+	_check(hub.find_child("TrainingReportSheet", true, false) == null, "%s: the report waits behind it" % tag)
+	var done: Control = hub.find_child("CarnivalDone", true, false)
+	if done == null:
+		return
+	_check(await Tap.tap(done) == "", "%s: a finger taps Done" % tag)
+	await _settle(4)
+	_check(hub.find_child("CarnivalWeek", true, false) == null, "%s: the carnival closes" % tag)
 	_check(hub.find_child("TrainingReportSheet", true, false) != null, "%s: then the report opens" % tag)
