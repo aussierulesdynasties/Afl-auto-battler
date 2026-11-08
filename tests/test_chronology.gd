@@ -80,6 +80,7 @@ func _test_league_draft_pool() -> void:
 	# Tasmania drafts with the founding eighteen (director, 2026-11-08).
 	_check(d.clubs.size() == 19 and d.clubs.has("TAS") and d.target_size == mini(Ratings.LIST_SIZE, d.pool.size() / 19),
 			"Nineteen clubs, Tasmania with them, draft %d-player lists" % d.target_size)
+	_check(d.target_size == Ratings.LIST_SIZE, "State-leaguers fill the pool so every club drafts a full list (%d)" % d.target_size)
 	var later := false
 	for p in d.pool:
 		if int(p.get("draft_year", GameDB.DATA_SEASON)) > GameDB.DATA_SEASON:
