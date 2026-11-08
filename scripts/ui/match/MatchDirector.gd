@@ -404,7 +404,7 @@ func _start_beat(k: int) -> void:
 			mode = "break"
 			_phases = [{"t": "emit"}, {"t": "wait", "dur": 1.6, "ease": true}]
 		"free":
-			_phases = [{"t": "emit"}, {"t": "wait", "dur": 0.5, "ease": true}]
+			_phases = _free_phases(k)
 		"last_disposal", "out_on_full":
 			_phases = _boundary_free_phases(k)
 		"fifty":
@@ -940,10 +940,28 @@ func _token_by_pid(pid: String) -> int:
 	return -1
 
 
+## A free paid off a kick or handball (a block in the marking contest) is given
+## where that ball came down, and the log has no landing of its own. So the
+## disposal is drawn to the free's spot here; without it the ball stayed on the
+## boot and reached the free's taker on a 0.4 s rocket, back past him (seed 43:
+## 36 m, a defender's clearing kick).
+func _free_phases(k: int) -> Array:
+	var out := []
+	var pk := _prev_real(k)
+	var pkind := "" if pk < 0 else str((events[pk] as Dictionary).get("kind", ""))
+	if pkind in ["kick", "handball"]:
+		var loc := _loc(k)
+		var d := (ball["pos"] as Vector2).distance_to(loc)
+		if d > 1.0:
+			var shape := _flight_shape("handball" if pkind == "handball" and d < 18.0 else "kick", d)
+			out.append({"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y})
+	return out + [{"t": "emit"}, {"t": "wait", "dur": 0.5, "ease": true}]
+
+
 ## Won back straight after a free kick: the free kick's set shot fell short
-## and a back gathers it. The free itself never moves the ball, so the kick
-## is drawn from where the ball is to his logged spot; without it he took it
-## where the free was given away (seed 42: 16 m off its spot).
+## and a back gathers it. The set shot is drawn from where the ball is to his
+## logged spot; without it he took it where the free was given away (seed 42:
+## 16 m off its spot).
 func _rebound_phases(k: int) -> Array:
 	var a := _actor_id(events[k])
 	if _restart(k) == "free":

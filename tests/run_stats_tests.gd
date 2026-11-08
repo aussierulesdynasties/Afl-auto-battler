@@ -1842,6 +1842,8 @@ func _test_awards_unchanged() -> void:
 			first = "line %d: want '%s', got '%s'" % [i + 1, a, b]
 			break
 	if first != "":
+		# Any redraw of the seeded season changes this fixture. The whole new snapshot goes to the
+		# log (CI artifact test-logs-shard-N, stats.log), so it can be refreshed without a local run.
 		for line in now:
 			print("AWARDS_FIXTURE|", line)
 	_check(first == "", "The Awards tab shows exactly what it did before the speed-up (%d lines; %s)" % [now.size(), first])
