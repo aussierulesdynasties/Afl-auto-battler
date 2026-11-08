@@ -9,7 +9,7 @@ var failures: Array[String] = []
 var checks := 0
 
 const CLUBS := [["FRE", "MEL"], ["GEE", "COL"], ["SYD", "CAR"], ["BRL", "ESS"], ["HAW", "ADE"], ["WBD", "GWS"]]
-const MATCHES := 30
+const MATCHES := 120
 
 
 func run() -> void:

@@ -4402,7 +4402,10 @@ func _test_skip_season() -> void:
 			"A finger on Skip the season plays out the %d season (%s)" % [year, why])
 	# The last match opens the off-season as it does after Sim the week (rivals
 	# settle their contracts); nothing of the coach's own is done for him.
-	_check(_state.offseason_open() and not _state.needs_season_wrap() and _state.draft == null,
+	# A strong season can end in a rival board's letter (row 112), which holds
+	# the off-season until he answers, as it does after Sim the week.
+	var held: bool = load("res://scripts/state/ClubMoves.gd").letter_open(_state)
+	_check((_state.offseason_open() or held) and not _state.needs_season_wrap() and _state.draft == null,
 			"It stops where the last Sim the week does: re-signings, trades and the draft are still the coach's")
 	var skipped := _skip_shape()
 	_check(skipped == played, "A skipped season lands where a played one does (%s vs %s)" % [skipped, played])

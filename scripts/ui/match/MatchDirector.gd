@@ -404,7 +404,7 @@ func _start_beat(k: int) -> void:
 			mode = "break"
 			_phases = [{"t": "emit"}, {"t": "wait", "dur": 1.6, "ease": true}]
 		"free":
-			_phases = [{"t": "emit"}, {"t": "wait", "dur": 0.5, "ease": true}]
+			_phases = _free_phases(k)
 		"last_disposal", "out_on_full":
 			_phases = _boundary_free_phases(k)
 		"fifty":
@@ -531,6 +531,8 @@ func _possession_phases(k: int) -> Array:
 	var shape := _flight_shape("handball" if hb else "kick", d)
 	var flight := {"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y, "recv": a,
 			"adapt": true, "h1": 2.4 if kind == "mark" else 1.0}
+	if hb:
+		flight["hang"] = HANDBALL_HANG_MAX
 	if not prev.is_empty() and int(prev.get("side", -1)) != int(ev.get("side", -1)):
 		# Possession changed hands without an event (the chain broke down):
 		# show the ball won in a contest.
@@ -938,8 +940,37 @@ func _token_by_pid(pid: String) -> int:
 	return -1
 
 
+## A free paid off a kick or handball (a block in the marking contest) is given
+## where that ball came down, and the log has no landing of its own. So the
+## disposal is drawn to the free's spot here; without it the ball stayed on the
+## boot and reached the free's taker on a 0.4 s rocket, back past him (seed 43:
+## 36 m, a defender's clearing kick).
+func _free_phases(k: int) -> Array:
+	var out := []
+	var pk := _prev_real(k)
+	var pkind := "" if pk < 0 else str((events[pk] as Dictionary).get("kind", ""))
+	if pkind in ["kick", "handball"]:
+		var loc := _loc(k)
+		var d := (ball["pos"] as Vector2).distance_to(loc)
+		if d > 1.0:
+			var shape := _flight_shape("handball" if pkind == "handball" and d < 18.0 else "kick", d)
+			out.append({"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y})
+	return out + [{"t": "emit"}, {"t": "wait", "dur": 0.5, "ease": true}]
+
+
+## Won back straight after a free kick: the free kick's set shot fell short
+## and a back gathers it. The set shot is drawn from where the ball is to his
+## logged spot; without it he took it where the free was given away (seed 42:
+## 16 m off its spot).
 func _rebound_phases(k: int) -> Array:
-	return _receive(k, _actor_id(events[k]))
+	var a := _actor_id(events[k])
+	if _restart(k) == "free":
+		var loc := _loc(k)
+		var d := (ball["pos"] as Vector2).distance_to(loc)
+		if d > 1.0:
+			var shape := _flight_shape("kick", d)
+			return [{"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y, "recv": a}] + _receive(k, a)
+	return _receive(k, a)
 
 
 func _clanger_phases(k: int) -> Array:
@@ -1160,6 +1191,15 @@ func _scrap(p: Dictionary, who: int) -> void:
 
 ## The longest a player is left collecting before the ball is his.
 const COLLECT_LIMIT := 6.0
+## How much longer than its flat flight a kick may hang so its receiver gets
+## under it: a 50 m kick up to about 2.9 s, a 20 m one 1.5 s, a real long
+## kick's hang time. Defenders clearing their 50 (MatchSim D50_*) kick long to
+## a team-mate up the ground; at 1.8 the ball beat him there and play waited
+## (12 trace_collect matches: 214 collects of 1.5 s or more, 166 at 3.0, 162 on
+## main before the clearing kicks).
+const KICK_HANG_MAX := 3.0
+## A handball stays flat: it never hangs more than this much longer.
+const HANDBALL_HANG_MAX := 1.8
 ## A receiver still short of a ball this close gets one bobble toward him.
 const ROLL_REACH := 8.0
 ## The share of the gap that bobble covers: it is aimed once, at release, and
@@ -1390,8 +1430,9 @@ func _enter(p: Dictionary) -> void:
 				_busy[recv] = true
 				if p.get("adapt", false):
 					# Hang the ball long enough for the receiver to get there,
-					# within what a kick of that length can plausibly take.
-					dur = clampf(MatchMotion.eta(r, to) * 0.9, dur, dur * 1.8)
+					# within what a kick of that length can plausibly take
+					# (KICK_HANG_MAX).
+					dur = clampf(MatchMotion.eta(r, to) * 0.9, dur, dur * float(p.get("hang", KICK_HANG_MAX)))
 				if p.get("contest", false):
 					_contest(to, recv, 1.0)
 			var h0 := float(p.get("h0", 1.0 if int(ball["holder"]) >= 0 else float(ball["h"])))
