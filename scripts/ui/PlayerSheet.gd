@@ -127,7 +127,7 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	nums.add_child(dev)
 	var plan := GameState.train_plan_label(GameState.plan_for(p))
 	if plan != "" and not rival:
-		v.add_child(UiKit.lbl("Training plan: %s" % plan, UiKit.SMALL, UiKit.MUTED))
+		v.add_child(UiKit.lbl("Development: %s" % plan, UiKit.SMALL, UiKit.MUTED))
 
 	# What he is picked for.
 	v.add_child(UiKit.spacer(4))
