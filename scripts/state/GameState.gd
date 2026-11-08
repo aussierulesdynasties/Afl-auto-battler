@@ -6787,6 +6787,9 @@ func open_offseason(keep_staff := false) -> void:
 	free_agents = []
 	# A new club's approaches are settled first: it had first call.
 	ExpansionBuild.resolve(self)
+	# No rating or injury moves while rivals re-sign: each list's best 22 only
+	# needs working out again when the list itself changes.
+	TradeValue.remember_bars(true)
 	for code in season.lists:
 		if code == my_club:
 			continue
@@ -6816,6 +6819,7 @@ func open_offseason(keep_staff := false) -> void:
 				# A player they wanted but could not fit can earn them a pick;
 				# one they delisted cannot.
 				_release(code, p, why == "cap")
+	TradeValue.remember_bars(false)
 	# Rival clubs trade first, so their free-agent offers are made from the
 	# lists they'll actually have.
 	trade_offers = []
