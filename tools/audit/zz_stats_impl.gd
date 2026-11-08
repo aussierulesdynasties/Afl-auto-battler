@@ -1,7 +1,7 @@
 extends RefCounted
 func run() -> void:
 	var out := []
-	var code := OS.execute(OS.get_executable_path(), ["--headless", "--path", ".", "--script", "res://tests/run_stats_tests.gd"], out, true)
+	var code := OS.execute(OS.get_executable_path(), ["--headless", "--fixed-fps", "60", "--path", ".", "--script", "res://tests/run_stats_tests.gd"], out, true)
 	print("STATS exit ", code)
 	for chunk in out:
 		for l in str(chunk).split("\n"):
