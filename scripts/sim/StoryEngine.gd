@@ -776,6 +776,8 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 					["cost", "Taking it off {name} mid-season: his morale falls %s and his opinion of you falls %d. It uses your one change this season." % [
 						_pct(absi(Captaincy.STRIPPED_MORALE)), -Trust.opinion_move(int(facts.get("trust", 0)), Captaincy.STRIPPED_TRUST)]]]
 		"rush_back":
+			if int(facts.get("pre_week", 0)) > 0:
+				return _rush_preseason(facts)
 			return [["gain", "He is cleared to play, and you name him."],
 					["cost", "He plays sore: %s chance he is hurt again (any injury, not only this one; %s), and he starts %s short of fresh legs." % [
 						_sore_chance(facts), _injury_length_words(), _pct(100 - roundi(ClubLife.SORE_LEGS))]]]
@@ -801,8 +803,49 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 			return [["gain", "No %s early premium: his price waits on his form, lower if it drops, higher if he improves." % _pct(EARLY_PREMIUM_PCT)]]
 		# A choice that holds a player back from development the other choice gives.
 		"forgo_xp":
-			return [] if d <= 0 else [["cost", "Slower growth: he goes without %d XP of development (a senior game gives %d)." % [d, SENIOR_GAME_XP]]]
+			var without: String = {"side": "each player in the side goes", "all": "every player goes",
+					"others": "each of the others goes"}.get(who, "he goes")
+			return [] if d <= 0 else [["cost", "Slower growth: %s without %d XP of development (a senior game gives %d)." % [without, d, SENIOR_GAME_XP]]]
+		# The physio's plan in the pre-season: he stays out as long as the injury runs.
+		"keep_out":
+			var out := []
+			if int(facts.get("pre_miss_xp", 0)) > 0:
+				out.append(["cost", "Slower growth: he goes without about %d XP of pre-season development while he recovers (a senior game gives %d)." % [
+						int(facts["pre_miss_xp"]), SENIOR_GAME_XP]])
+			if int(facts.get("pre_miss_rounds", 0)) > 0:
+				out.append(["cost", "He is still out at Round 1, with %s to run." % _weeks_of(int(facts["pre_miss_rounds"]))])
+			return out
 	return []
+
+
+## Clearing a player the physio still has in the pre-season (pre_knee_return): the
+## training and the Round 1 he would miss on the physio's plan (ClubStories.preseason_miss),
+## against carrying soreness to Round 1 and the Heavy weeks he would have sat out.
+static func _rush_preseason(facts: Dictionary) -> Array:
+	var out := []
+	var xp := int(facts.get("pre_miss_xp", 0))
+	var rounds := int(facts.get("pre_miss_rounds", 0))
+	var heavy := int(facts.get("pre_miss_heavy", 0))
+	if xp > 0:
+		out.append(["gain", "He trains with the group from now: about %d XP of pre-season development he would otherwise miss (a senior game gives %d)." % [
+				xp, SENIOR_GAME_XP]])
+	if rounds > 0:
+		out.append(["gain", "He is right for Round 1, where on the physio's plan he would still be out with %s to run." % _weeks_of(rounds)])
+	if xp <= 0 and rounds <= 0:
+		# Nearly right anyway (director 2026-11-08: the card comes every time).
+		out.append(["gain", "He trains with the group from now. On the physio's plan he is back for next week's training anyway, so clearing him gains no development and no Round 1 game."])
+	# The card comes after the week's time trial or pre-season match (GameState.preseason_advance).
+	var games := "Round 1" if int(facts.get("pre_week", 0)) >= int(PreSeason.tune("practice_week")) else "the pre-season match and Round 1"
+	out.append(["cost", "He is sore until Round 1: %s chance he is hurt in %s (any injury, not only this one; %s), and he starts each %s short of fresh legs." % [
+			_sore_chance(facts), games, _injury_length_words(), _pct(100 - roundi(ClubLife.SORE_LEGS))]])
+	if heavy > 0:
+		out.append(["cost", "He trains through %s he would have sat out, with a Heavy week's injury risk." % (
+				"a Heavy week" if heavy == 1 else "%s Heavy weeks" % _count(heavy))])
+	return out
+
+
+static func _weeks_of(n: int) -> String:
+	return "%s week%s" % [_count(n), "" if n == 1 else "s"]
 
 
 ## A finish put on the record (the papers, pre-season): when the papers can come
@@ -1012,6 +1055,8 @@ static func _morale_words(d: int, who: String) -> String:
 	var move := "%s %s" % ["up" if d > 0 else "down", _pct(absi(d))]
 	if who == "subject":
 		return "His morale %s." % move
+	if who == "vice":
+		return "{vice_name}'s morale %s." % move
 	var group: String = {"side": "across the side", "all": "across the whole list", "others": "in the rest of the group"}.get(who, "in the group")
 	return "Morale %s %s." % [move, group]
 

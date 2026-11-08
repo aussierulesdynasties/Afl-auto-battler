@@ -34,7 +34,7 @@
 			{
 				"key": "wait",
 				"label": "Wait for the off-season",
-				"note": "No premium now. {wait_price}",
+				"note": "{wait_price}",
 				"effects": [
 					{
 						"op": "morale",
@@ -44,6 +44,9 @@
 						"op": "trust",
 						"d": -3,
 						"why": "You made him wait on a new deal"
+					},
+					{
+						"op": "open_price"
 					},
 					{
 						"op": "flag",
@@ -99,6 +102,11 @@
 					{
 						"op": "board",
 						"d": -2
+					},
+					{
+						"op": "trust",
+						"d": 2,
+						"why": "You didn't go round him to his manager"
 					}
 				],
 				"result": "You leave it. The board doesn't like reading it."
@@ -270,6 +278,10 @@
 						"op": "trust",
 						"d": -6,
 						"why": "You let him test the market"
+					},
+					{
+						"op": "board",
+						"d": 2
 					}
 				],
 				"result": "{name}'s manager starts taking calls."
