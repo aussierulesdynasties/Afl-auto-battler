@@ -382,14 +382,12 @@ static func _filter_row(host: Control) -> Control:
 
 
 static func _dropdown(host: Control, key: String, options: Array) -> OptionButton:
-	var o := OptionButton.new()
+	# The game's picker: its list is sized with the text-size setting.
+	# Sized by the row, not by its longest option (Greater Western Sydney).
+	var o := UiKit.option()
 	o.name = "Filter_" + key
-	UiKit.style_button(o, 14)
 	o.custom_minimum_size = Vector2(150, 44)
 	o.clip_text = true
-	o.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	# Sized by the row, not by its longest option (Greater Western Sydney).
-	o.fit_to_longest_item = false
 	for i in range(options.size()):
 		o.add_item(str(options[i][1]), i)
 		if str(options[i][0]) == str(_filters[key]):
@@ -754,7 +752,7 @@ static func _name_w(list: Array) -> float:
 	var widest := 120.0
 	for i in range(mini(_shown, list.size())):
 		var n := str(list[i]["name"])
-		widest = maxf(widest, UiKit.BOLD.get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.SMALL).x)
+		widest = maxf(widest, UiKit.BOLD.get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(UiKit.SMALL)).x)
 	return ceilf(widest) + 24.0
 
 
@@ -785,7 +783,7 @@ static func _sort_button(host: Control, key: String, text: String, full: String,
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	b.add_theme_font_size_override("font_size", UiKit.SMALL)
+	UiKit.set_font_size(b, UiKit.SMALL)
 	b.add_theme_color_override("font_color", UiKit.TEXT if key == _sort else UiKit.MUTED)
 	# The same face as the plain headings beside it; the sort key in bold.
 	b.add_theme_font_override("font", UiKit.BOLD if key == _sort else UiKit.FONT)

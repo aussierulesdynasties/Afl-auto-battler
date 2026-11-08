@@ -708,7 +708,7 @@ func _player_card(p: Dictionary) -> Control:
 	mid.add_child(nm)
 	var trait_keys := Traits.of(p)
 	if not trait_keys.is_empty():
-		var tr := UiKit.ellipsis(Traits.label(trait_keys[0]), CARD_FS_LOW,
+		var tr := UiKit.ellipsis(UiKit.trait_label(trait_keys[0]), CARD_FS_LOW,
 				UiKit.BAD if Traits.is_bad(trait_keys[0]) else UiKit.TEXT, true)
 		tr.name = "Trait"
 		mid.add_child(tr)
@@ -760,15 +760,15 @@ static func _card_style(selected: bool, club: Color) -> StyleBoxFlat:
 
 ## One line of card text, with its breathing room.
 static func _card_line_h() -> float:
-	return ceilf(UiKit.FONT.get_height(CARD_FS_LOW)) + 1.0
+	return ceilf(UiKit.FONT.get_height(UiKit.px(CARD_FS_LOW))) + 1.0
 
 
 ## The same for every card: the room the fullest one needs (two lines of name,
 ## a trait, a status, and the top row), so no row differs from another.
 static func _card_height() -> float:
 	# Two lines of the label, with the gap the label puts between them.
-	var name_h := ceilf(UiKit.BOLD.get_height(CARD_NAME_FS)) * 2.0 + 4.0
-	return ceilf(2.0 * CARD_PAD_V + 22.0 + name_h + 2.0 + _card_line_h() + _card_line_h())
+	var name_h := ceilf(UiKit.BOLD.get_height(UiKit.px(CARD_NAME_FS))) * 2.0 + 4.0
+	return ceilf(2.0 * CARD_PAD_V + UiKit.px(22) + name_h + 2.0 + _card_line_h() + _card_line_h())
 
 
 ## How wide a card's words can run: the page less its margins and the list
@@ -818,7 +818,7 @@ func _card_status(p: Dictionary, id: String, width: float) -> Array:
 		options.append(duty)
 	options.append_array(texts)
 	for o in options:
-		if UiKit.FONT.get_string_size(str(o), HORIZONTAL_ALIGNMENT_LEFT, -1, CARD_FS_LOW).x <= width:
+		if UiKit.FONT.get_string_size(str(o), HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(CARD_FS_LOW)).x <= width:
 			return [o, _soft()]
 	return [options.back(), _soft()]
 
@@ -837,8 +837,8 @@ static func _fit_name(text: String, width: float) -> Array:
 		tries.append(short + parts[parts.size() - 1])
 	for t in tries:
 		for fs in sizes:
-			var size := UiKit.BOLD.get_multiline_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, width, fs)
-			if size.x <= width + 0.5 and size.y <= UiKit.BOLD.get_height(fs) * 2.0 + 1.0:
+			var size := UiKit.BOLD.get_multiline_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, width, UiKit.px(fs))
+			if size.x <= width + 0.5 and size.y <= UiKit.BOLD.get_height(UiKit.px(fs)) * 2.0 + 1.0:
 				return [t, fs]
 	return [tries.back(), 13]
 
