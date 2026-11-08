@@ -94,7 +94,7 @@ func _run() -> void:
 	var db = root.get_node("GameDB")
 	var router = root.get_node("Router")
 	var MC = load("res://scripts/sim/MediaConference.gd")
-	var club := "COL"
+	var club := "FRE"
 	state.autosave_enabled = false
 	state.save_path = "user://capture_press_opinion.save"
 	state.settings_path = "user://capture_press_opinion.cfg"
