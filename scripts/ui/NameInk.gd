@@ -198,8 +198,9 @@ static func label(text: String, index: Dictionary, fs := UiKit.BODY, color := Ui
 
 
 ## An empty RichTextLabel set up like UiKit.lbl, for a line whose words change
-## (set them with `set_line`).
-static func rich(fs := UiKit.BODY, color := UiKit.AUTO_COLOUR, bold := false, wrap := true) -> RichTextLabel:
+## (set them with `set_line`). `fs` is a role, grown with the text size; a size
+## read back from a control that already has it passes `scaled`.
+static func rich(fs := UiKit.BODY, color := UiKit.AUTO_COLOUR, bold := false, wrap := true, scaled := false) -> RichTextLabel:
 	if color == UiKit.AUTO_COLOUR:
 		color = UiKit.TEXT
 	var r := RichTextLabel.new()
@@ -215,8 +216,8 @@ static func rich(fs := UiKit.BODY, color := UiKit.AUTO_COLOUR, bold := false, wr
 	r.tree_entered.connect(func() -> void: _link_names(r))
 	r.add_theme_font_override("normal_font", UiKit.BOLD if bold else UiKit.FONT)
 	r.add_theme_font_override("bold_font", UiKit.BOLD)
-	r.add_theme_font_size_override("normal_font_size", fs)
-	r.add_theme_font_size_override("bold_font_size", fs)
+	UiKit.set_font_size(r, fs, "normal_font_size", scaled)
+	UiKit.set_font_size(r, fs, "bold_font_size", scaled)
 	r.add_theme_color_override("default_color", color)
 	return r
 
@@ -250,7 +251,7 @@ static func dress_button(b: Button, index: Dictionary) -> void:
 	if bb == "":
 		return
 	var fs := b.get_theme_font_size("font_size")
-	var r := rich(fs, b.get_theme_color("font_color"), false, b.autowrap_mode != TextServer.AUTOWRAP_OFF)
+	var r := rich(fs, b.get_theme_color("font_color"), false, b.autowrap_mode != TextServer.AUTOWRAP_OFF, true)
 	r.add_theme_font_override("normal_font", b.get_theme_font("font"))
 	r.text = bb
 	r.set_meta("plain", b.text)

@@ -311,8 +311,9 @@ static func outcome_parts(line: String) -> Array:
 	return [line.substr(0, at), line.substr(at + 2).trim_suffix(".")]
 
 
-## The lines under how it landed: the sizes, the standing change, the record's
-## verdict and how long it lasts, each [node name, text].
+## The lines under how it landed: the sizes, the standing change, a named
+## player's opinion of you, the record's verdict and how long it lasts, each
+## [node name, text].
 static func press_outcome_rows(landed: Dictionary, sizes: String) -> Array:
 	var rows: Array = []
 	if sizes != "":
@@ -332,6 +333,11 @@ static func press_outcome_rows(landed: Dictionary, sizes: String) -> Array:
 		rows.append(["MediaOutcomeFade", FADE_BOTH % [m, "" if m == 1 else "s", b]])
 	elif rounds > 0:
 		rows.append(["MediaOutcomeFade", FADE_ONE % [rounds, "" if rounds == 1 else "s"]])
+	# A named player's opinion of you, when the answer moved it (director
+	# 2026-11-08). Last, after the fade: his opinion of you never wears off.
+	var op := MediaConference.opinion_after(landed.get("opinion", {}))
+	if op != "":
+		rows.append(["MediaOutcomeOpinion", op.trim_suffix(".")])
 	return rows
 
 

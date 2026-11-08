@@ -80,7 +80,7 @@ static func build(host: Control, code: String, rebuild: Callable) -> Control:
 		intro.name = "TrophiesTenure"
 		# The page's one headline fact, in your colour where it reads.
 		intro.add_theme_font_override("font", UiKit.BOLD)
-		intro.add_theme_font_size_override("font_size", UiKit.BODY)
+		UiKit.set_font_size(intro, UiKit.BODY)
 		intro.add_theme_color_override("font_color", StatsSide.mine_ink())
 		v.add_child(intro)
 	var kinds := kinds_won(seasons, code)
