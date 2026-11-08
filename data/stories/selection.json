@@ -41,10 +41,8 @@
 						"why": "You talked him through being dropped"
 					},
 					{
-						"op": "culture",
-						"strand": "standards",
-						"d": -1,
-						"why": "You opened selection up for discussion"
+						"op": "expects_game",
+						"sting": 4
 					},
 					{
 						"op": "talk_note",
@@ -146,10 +144,8 @@
 						"why": "You told him where he stood after his injury"
 					},
 					{
-						"op": "culture",
-						"strand": "standards",
-						"d": -1,
-						"why": "You opened selection up for discussion"
+						"op": "expects_game",
+						"sting": 4
 					},
 					{
 						"op": "talk_note",
@@ -251,10 +247,8 @@
 						"why": "You told him what he has to show for a game"
 					},
 					{
-						"op": "culture",
-						"strand": "standards",
-						"d": -1,
-						"why": "You opened selection up for discussion"
+						"op": "expects_game",
+						"sting": 4
 					},
 					{
 						"op": "talk_note",

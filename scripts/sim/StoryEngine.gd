@@ -915,7 +915,7 @@ static func _record_words(facts: Dictionary) -> String:
 ## captain's outcome read this).
 static func _effect_words(e: Dictionary, facts: Dictionary) -> String:
 	if str(e.get("op", "")) == "explain":
-		return "{kpi_or_need} Nothing is promised."
+		return "{kpi_or_need}"
 	var out: PackedStringArray = []
 	for part in _effect_parts(e, facts):
 		if str(part[0]) != "note":

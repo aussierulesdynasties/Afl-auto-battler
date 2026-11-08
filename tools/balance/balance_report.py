@@ -337,7 +337,8 @@ def margin_tail(A, B):
                  f"{sorted(hm)[int(0.99*(len(hm)-1))]}, max {max(hm)})" if real and hm and name == "A" else ""))
 ROLES = ["DEF", "MID", "FWD", "RUCK"]
 ROLE_REF = {"disposals": "disposals", "kicks": "kicks", "handballs": "handballs", "marks": "marks",
-            "rebounds": "rebound_50s", "inside50": "inside_50s", "clearances": "clearances", "goals": "goals"}
+            "rebounds": "rebound_50s", "inside50": "inside_50s", "clearances": "clearances", "goals": "goals",
+            "tackles": "tackles"}
 
 
 def role_rate(r, role, key):
@@ -838,6 +839,123 @@ def ruck_duels(A, B):
     print("\nReal per-match hit-out splits are not in the repo; the club spread above is the sourced check.")
 
 
+BLOCK = 22      # per-player rates are taken over 22-game blocks of the run, as a season is
+MIN_BLOCK = 12  # a block counts with 12+ games, as the real reference counts 12+ game seasons
+
+
+def _q(v, q):
+    s = sorted(v)
+    if not s:
+        return 0.0
+    i = q * (len(s) - 1)
+    lo = int(i)
+    hi = min(len(s) - 1, lo + 1)
+    return s[lo] + (s[hi] - s[lo]) * (i - lo)
+
+
+def _block_seasons(R, idx):
+    """Per-player rate of stat idx (0 tackles, 1 pressure acts) over 22-game blocks, in seed order,
+    grouped as seasons: block k of every man is season k, so each season holds about as many men
+    as a real one (about 420 with 12+ games) and its max and tail compare like for like. Returns
+    [{role: [rates], "ALL": [...]}], one per season, leaving out a last season with under 80% of
+    the men of the fullest."""
+    games = {}
+    for i in sorted(R):
+        for t in R[i]["teams"]:
+            for pid, v in t.get("tp", {}).items():
+                games.setdefault(pid, [v[2], []])[1].append(v[idx])
+    seasons = []
+    for role, g in games.values():
+        for b, k in enumerate(range(0, len(g), BLOCK)):
+            blk = g[k:k + BLOCK]
+            if len(blk) >= MIN_BLOCK:
+                while len(seasons) <= b:
+                    seasons.append({"ALL": []})
+                r = sum(blk) / len(blk)
+                seasons[b]["ALL"].append(r)
+                seasons[b].setdefault(role, []).append(r)
+    full = max((len(x["ALL"]) for x in seasons), default=0)
+    return [x for x in seasons if len(x["ALL"]) >= 0.8 * full]
+
+
+def _season_q(seasons, role, q, qv):
+    """The mean over the run's seasons of one quantile of one line."""
+    v = [(max(x[role]) if q == "max" else _q(x[role], qv)) for x in seasons if x.get(role)]
+    return st.mean(v) if v else 0.0
+
+
+def _range_mark(v, rr):
+    """IN inside the real seasons' lowest..highest; NEAR within mean +-2 sd; OUT (as _mark)."""
+    return _mark(v, rr)
+
+
+def _tops(R):
+    return [max((v[0] for v in t.get("tp", {}).values()), default=0) for r in R.values() for t in r["teams"]]
+
+
+def _pgs(R):
+    return [v[0] for r in R.values() for t in r["teams"] for v in t.get("tp", {}).values()]
+
+
+def tackle_section(A, B):
+    """How tackles and pressure acts are spread over the players (Brownlow realism, 2026-11-08):
+    per-player rates a game by line against real 2025-26, and each side's top tackler a match
+    against real 2023-25 match lines (tools/balance/afl_brownlow.json)."""
+    if not any("tp" in t for r in A.values() for t in r["teams"]):
+        return
+    path = os.path.join(HERE, "afl_brownlow.json")
+    if not os.path.exists(path):
+        return
+    ref = json.load(open(path, encoding="utf-8"))
+    pool = ref["pooled"]
+    print("\n## Tackles and pressure acts per player (real: tools/balance/afl_brownlow.json)\n")
+    sa_, sb_ = _block_seasons(A, 0), (_block_seasons(B, 0) if B else [])
+    print(f"Per player a game over 22-game blocks of the run (a block counts with 12+ games), by listed line;"
+          f" block k of every man makes season k ({len(sa_)} seasons in A"
+          + (f", {len(sb_)} in B" if B else "") + f", about {st.mean(len(x['ALL']) for x in sa_):.0f} men each),"
+          " and each figure is the mean over those seasons. Real: every player with 12+ games, ALL 2021-26"
+          " (AFL Tables), by line 2025-26 (Champion Data positions and pressure acts via Wheelo)."
+          " IN inside the real seasons' range, NEAR within mean +-2 sd, OUT.\n")
+    head = "| stat | line | quantile | real range | A | mark |" + (" B | mark | B-A |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for label, idx, key in (("tackles", 0, "tackles_pg_by_role"), ("pressure acts", 1, "pressure_acts_pg_by_role")):
+        ra = _block_seasons(A, idx)
+        rb = _block_seasons(B, idx) if B else []
+        for role in ("ALL", "MID", "FWD", "DEF", "RUCK"):
+            for q, qv in (("max", 1.0), ("p99", 0.99), ("p90", 0.90), ("p50", 0.50)):
+                rr = pool[key][role][q]
+                va = _season_q(ra, role, q, qv)
+                line = f"| {label} | {role} | {q} | {rr['min']:.2f}-{rr['max']:.2f} | {va:.2f} | {_range_mark(va, rr)} |"
+                if B:
+                    vb = _season_q(rb, role, q, qv)
+                    line += f" {vb:.2f} | {_range_mark(vb, rr)} | {vb - va:+.2f} |"
+                print(line)
+    seasons = ref["matches"].get("by_season", {})
+    if not seasons:
+        return
+    print("\nEach side's top tackler a match, and tackles per player-game (real: every 2023-25 home-and-away"
+          " match line, players with 50%+ game time).\n")
+    head = "| per match | real 2023-25 range | A | mark |" + (" B | mark | B-A |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    rows = (("top tackler, mean", "top_tackler_mean", lambda R: st.mean(_tops(R))),
+            ("top tackler, p90", "top_tackler_p90", lambda R: _q(_tops(R), 0.9)),
+            ("top tackler, max", "top_tackler_max", lambda R: max(_tops(R))),
+            ("player-game, p90", "player_game_p90", lambda R: _q(_pgs(R), 0.9)),
+            ("player-game, p99", "player_game_p99", lambda R: _q(_pgs(R), 0.99)))
+    for label, k, fn in rows:
+        v = [float(x[k]) for x in seasons.values()]
+        rr = {"min": min(v), "max": max(v), "mean": st.mean(v), "sd": st.pstdev(v)}
+        va = fn(A)
+        line = f"| {label} | {rr['min']:.2f}-{rr['max']:.2f} | {va:.2f} | {_range_mark(va, rr)} |"
+        if B:
+            vb = fn(B)
+            line += f" {vb:.2f} | {_range_mark(vb, rr)} | {vb - va:+.2f} |"
+        print(line)
+    print("\nThe sim's player-game counts every man who played; the real one counts men with 50%+ game time.")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -907,6 +1025,7 @@ def main():
     ruck_section(A, B)
     margin_tail(A, B)
     role_report(A, B)
+    tackle_section(A, B)
     legs_section(A, B)
     print(f"\nOUT of real range (A): {', '.join(outs) if outs else 'none'}")
 

@@ -20,6 +20,9 @@ func _run() -> void:
 	await process_frame
 	_state = root.get_node("GameState")
 	_state.autosave_enabled = false
+	# These tests drive the hub for other things: no club card opens over it
+	# (_test_event_card_then_the_week turns it back on for its own case).
+	_state.event_sheets = false
 	_state.save_path = "user://test_career.save"
 	_state.settings_path = "user://test_settings.cfg"
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
@@ -83,6 +86,8 @@ func _run() -> void:
 	await _t("_test_side_keeps_calls")
 	await _t("_test_match_way_poster")
 	await _t("_test_old_key_moments_setting")
+	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+		await _t("_test_event_card_then_the_week", [sz])
 	_t("_test_appearance")
 	# Battery: nothing is redrawn unless it changes, and never above 60 fps.
 	_t("_test_battery")
@@ -1614,7 +1619,8 @@ func _test_pc_break_worst_case(club := "COL") -> void:
 	for q in (sim.squads[me] as Object).ground:
 		if str(q["role"]) == "DEF" and (mine.is_empty() or db.player_display_name(q).length() > db.player_display_name(mine).length()):
 			mine = q
-	sim.set_interceptor(me, str(mine.get("id", "")), false)
+	# Your own call, so the assistant keeps him loose at quarter time.
+	sim.coach_interceptor(me, str(mine.get("id", "")))
 	sim.run_quarter()
 	(sim.player_stats.get(str(mine["id"]), {}) as Dictionary)["intercepts"] = 12.0
 	if not sim.player_stats.has(str(mine["id"])):
@@ -3760,6 +3766,56 @@ func _test_old_key_moments_setting() -> void:
 	_state.settings_path = real_path
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(old_path))
 	_state.set_vignettes_on(true)
+	await _settle()
+
+
+## A new club card over the hub holds a finger until it closes (director,
+## 2026-11-08: event cards open as popups); once it closes, real taps reach
+## Sim the week and Play match on the rebuilt hub.
+func _test_event_card_then_the_week(sz: Vector2i) -> void:
+	var tag := "%dx%d" % [sz.x, sz.y]
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("FRE", db.club_list("FRE"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	_state.tutorials = false
+	_state.event_sheets = true
+	_state.week_events = [_state.story_card("members_open_training")]
+	root.size = sz
+	router.stack = []
+	router.go("hub")
+	await _settle()
+	var hub: Node = current_scene
+	var sheet: Node = hub.find_child("EventSheet", true, false)
+	_check(sheet != null, "A new card opens over the hub (%s)" % tag)
+	var under: Button = hub.find_child("PlayMatch", true, false)
+	var blocked: String = await Tap.tap(under)
+	await _settle()
+	_check(blocked.contains("EventSheet") and _state.pending_sim == null and router.current() == "hub",
+			"While the card is up it takes the tap, not Play match (%s: %s)" % [tag, blocked])
+	var later: Button = sheet.find_child("EventLater", true, false) if sheet != null else null
+	var why: String = await Tap.tap(later)
+	await _settle()
+	_check(why == "" and hub.find_child("EventSheet", true, false) == null,
+			"A real tap on Later closes the card (%s: %s)" % [tag, why])
+	var sim: Button = hub.find_child("SimRound", true, false)
+	why = await Tap.tap(sim)
+	await _settle()
+	var ask: Node = hub.find_child("SimConfirm", true, false)
+	_check(why == "" and ask != null, "With the card closed Sim the week takes a real tap (%s: %s)" % [tag, why])
+	var cancel: Button = ask.find_child("SimConfirmCancel", true, false) if ask != null else null
+	await Tap.tap(cancel)
+	await _settle()
+	var play: Button = hub.find_child("PlayMatch", true, false)
+	why = await Tap.tap(play)
+	await _settle()
+	_check(why == "" and router.current() == "preview",
+			"With the card closed Play match takes a real tap (%s: %s, on %s)" % [tag, why, router.current()])
+	_state.event_sheets = false
+	router.stack = []
+	router.go("hub")
 	await _settle()
 
 
