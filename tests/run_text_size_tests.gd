@@ -64,6 +64,8 @@ func _run() -> void:
 	OFF = load("res://scripts/ui/OffseasonScene.gd")
 	CT = load("res://scripts/sim/Contracts.gd")
 	_gs.autosave_enabled = false
+	# These tests drive the hub for other things: no club card opens over it.
+	_gs.event_sheets = false
 	_gs.save_path = "user://test_text_size.save"
 	_gs.settings_path = "user://test_text_size.cfg"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(_gs.settings_path))

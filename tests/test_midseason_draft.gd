@@ -96,6 +96,9 @@ func _test_carnival_and_draft() -> void:
 	_check(not MidseasonDraft.carnival_lines(gs).is_empty(), "Unseen after a load, so the hub still shows it")
 
 	# The hub sheet, by a real tap.
+	# The week's club cards have already opened over the hub (Later).
+	for popped_card in gs.week_events:
+		(popped_card as Dictionary)["popped"] = true
 	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _settle()
@@ -162,6 +165,9 @@ func _test_carnival_and_draft() -> void:
 	if left.is_empty():
 		return
 	var top: Dictionary = left[0]
+	# The week's club cards have already opened over the hub (Later).
+	for popped_card in gs.week_events:
+		(popped_card as Dictionary)["popped"] = true
 	hub = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _settle()
@@ -190,6 +196,9 @@ func _test_carnival_and_draft() -> void:
 	gs.free_agents.clear()
 	gs.draftee_pool = gs.draftee_pool.filter(func(q): return int(q.get("draft_year", gs.season_year)) >= gs.season_year)
 	_check(MidseasonDraft.pool(gs).is_empty(), "Nobody left to take")
+	# The week's club cards have already opened over the hub (Later).
+	for popped_card in gs.week_events:
+		(popped_card as Dictionary)["popped"] = true
 	hub = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _settle()

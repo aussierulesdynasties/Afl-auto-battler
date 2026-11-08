@@ -30,6 +30,8 @@ func _run() -> void:
 	_state = root.get_node("GameState")
 	# Never touch a real career save or settings file from a test run.
 	_state.autosave_enabled = false
+	# These tests drive the hub for other things: no club card opens over it.
+	_state.event_sheets = false
 	_state.save_path = "user://test_career.save"
 	_state.settings_path = "user://test_settings.cfg"
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.

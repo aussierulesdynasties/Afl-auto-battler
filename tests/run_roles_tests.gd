@@ -912,6 +912,8 @@ func _test_captain_card_ui_tests() -> void:
 		return
 	_state.set_setting("seen_weekly_loop_intro", true)
 	var card: Dictionary = _state.story_card("captain_group_flat", cap)
+	# Already opened over the hub (Later): this test is the card on the page.
+	card["popped"] = true
 	_state.week_events = [card]
 	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
