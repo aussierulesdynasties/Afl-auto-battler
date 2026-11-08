@@ -1220,6 +1220,8 @@ func _on_skip_season() -> void:
 func _skip_season(orders := {}) -> void:
 	GameState.skip_season(orders)
 	_build()
+	# The last week's card and asks come up as after Sim the week.
+	_show_week_ask()
 
 
 ## The week's milestones (Milestones.gd), always shown:
@@ -1927,7 +1929,9 @@ func handle_back() -> bool:
 	if _results_overlay != null and is_instance_valid(_results_overlay):
 		_results_overlay.queue_free()
 		_results_overlay = null
-		_after_ask()
+		# Back is Continue here: the new card and the week's asks come next.
+		_build()
+		_show_week_ask()
 		return true
 	if _talk_overlay != null and is_instance_valid(_talk_overlay):
 		_close_backing_talk()
