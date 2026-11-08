@@ -507,6 +507,46 @@ func _test_phone_match(sz: Vector2i) -> void:
 			or verdict.text == "Draw"), "Full time leads with the result (%s: %s)" % [tag, verdict.text if verdict else "-"])
 	for n in ["MatchFactors", "BestPlayers", "KeyStats", "FinalScore_0", "FinalScore_1", "StandoutVotes"]:
 		_check(ft_box != null and ft_box.find_child(n, true, false) != null, "Full time shows %s (%s)" % [n, tag])
+	# The coaches' votes as the AFL gives them (director, 2026-11-08): every
+	# player either coach voted for is listed with his total.
+	if ft_box != null:
+		var ft_votes: Dictionary = load("res://scripts/ui/match/MatchNotes.gd").coaches_votes(m.get("_res"))
+		var vote_bad := []
+		for id in ft_votes:
+			var vrow: Node = ft_box.find_child("BestRow_%s" % str(id), true, false)
+			var vl: Label = vrow.find_child("StandoutVotes", true, false) if vrow != null else null
+			var n_v := int(ft_votes[id])
+			if vl == null or not vl.visible or vl.text != "%d vote%s" % [n_v, "" if n_v == 1 else "s"]:
+				vote_bad.append("%s %s" % [str(id), vl.text if vl != null else "missing"])
+		_check(ft_votes.size() >= 5 and vote_bad.is_empty(),
+				"Full time lists all %d players the coaches voted for, each with his votes (%s: %s)" % [ft_votes.size(), tag, str(vote_bad)])
+		# One ranked list across both clubs, most votes first, each name in its
+		# club's colour beside its club's bar (director, 2026-11-08).
+		var best: Node = ft_box.find_child("BestPlayers", true, false)
+		var rank_bad := []
+		var last := 99
+		var pair: Array = load("res://scripts/ui/UiKit.gd").club_ink_pair(str(m.get("_res")["home"]), str(m.get("_res")["away"]))
+		var uk2 = load("res://scripts/ui/UiKit.gd")
+		var ranked := 0
+		for wrap in (best.get_children() if best != null else []):
+			var row: Node = (wrap as Node).find_child("BestRow_*", true, false)
+			if row == null:
+				continue
+			ranked += 1
+			var id := str(row.name).trim_prefix("BestRow_")
+			var nv := int(ft_votes.get(id, 0))
+			if nv > last:
+				rank_bad.append("%s (%d) after %d" % [id, nv, last])
+			last = nv
+			var side := int(row.get_meta("side", -1))
+			var bar: ColorRect = (wrap as Node).find_child("ClubBar", true, false)
+			if side < 0 or bar == null or bar.color != pair[side]:
+				rank_bad.append("%s bar" % id)
+			var nm: Label = row.find_child("StandoutName", true, false)
+			if nm == null or uk2.contrast(nm.get_theme_color("font_color"), uk2.BG) < 4.5:
+				rank_bad.append("%s name ink" % id)
+		_check(best != null and best.find_child("BestSide_0", true, false) == null and ranked == ft_votes.size() and rank_bad.is_empty(),
+				"Full time's votes are one ranked list across both clubs, club colour on each name (%s: %d rows, %s)" % [tag, ranked, str(rank_bad)])
 	_check(RegEx.create_from_string("\\bpts\\b").search(ft) == null and not ft.contains("Expected points")
 			and not ft.contains("Possession chains"),
 			"The full-time screen keeps the analysis a tap away (%s)" % tag)
@@ -982,13 +1022,11 @@ func _test_best_so_far(sz: Vector2i) -> void:
 		_check((await Tap.tap(best_open)) == "" and (block as Control).is_visible_in_tree(),
 				"On a phone Best so far opens from the break with a real tap (%s)" % tag)
 		await _settle()
-	# The top three of each side, most coaches' votes first, the match rating
-	# breaking a tie; the subline is the player's two best stats.
-	var votes_all: Dictionary = notes.coaches_votes(res)
+	# The top three of each side by match rating so far; no votes at a break
+	# (the coaches vote at full time); the subline is the player's two best stats.
 	var want := []
-	var per_side := 3 if sz.x >= 900 else 99
 	for side in [me, 1 - me]:
-		for r in notes.standouts_by_votes(res, side, per_side, votes_all):
+		for r in notes.best_so_far(res, side, 3):
 			want.append(r)
 	var bad := []
 	var found := 0
@@ -1001,13 +1039,8 @@ func _test_best_so_far(sz: Vector2i) -> void:
 			continue
 		found += 1
 		var votes_l: Label = row.find_child("StandoutVotes", true, false)
-		var want_votes: String = notes.votes_text(votes_all, str(r["id"]))
-		if want_votes == "–":
-			bad.append("%s is listed with no votes" % str(r["id"]))
-		# Only the leader's total is written ("10 votes"); the rest read in order.
-		var is_lead: bool = int(votes_all.get(str(r["id"]), 0)) == int(votes_all.values().max())
-		if votes_l == null or (is_lead and votes_l.text != "%s votes" % want_votes) or (not is_lead and votes_l.visible):
-			bad.append("%s votes %s v %s" % [str(r["id"]), votes_l.text if votes_l else "-", want_votes])
+		if votes_l != null and votes_l.visible:
+			bad.append("%s shows votes at a break (%s)" % [str(r["id"]), votes_l.text])
 		var line_l: Label = row.find_child("StandoutLine", true, false)
 		if line_l == null or line_l.text != str(r["line"]):
 			bad.append("%s line %s v %s" % [str(r["id"]), line_l.text if line_l else "-", str(r["line"])])
@@ -1018,7 +1051,7 @@ func _test_best_so_far(sz: Vector2i) -> void:
 	# block sits below the controls, so the next quarter's choices are never
 	# pushed under the pinned Start button.
 	_check(block.find_child("BestClub_%d" % me, true, false) != null and block.find_child("BestClub_%d" % (1 - me), true, false) != null
-			and found > 0, "Best so far has a heading per club and lists every voted player (%s: %d rows)" % [tag, found])
+			and found > 0, "Best so far has a heading per club and lists its best (%s: %d rows)" % [tag, found])
 	for r in block.find_children("StandoutVotes", "Label", true, false):
 		_check((r as Label).text != "–", "No row shows a dash for votes (%s)" % tag)
 	# Every touch target in the sheet is a full 48 px bar.
@@ -1027,7 +1060,7 @@ func _test_best_so_far(sz: Vector2i) -> void:
 		if lk != null and sz.x < 900 and lk.is_visible_in_tree():
 			_check(lk.size.y >= 47.5, "%s is at least 48 px tall (%s: %.0f)" % [nm, tag, lk.size.y])
 	_check(block.find_children("RatingHeading", "Label", true, false).is_empty(), "Best so far carries no rating column (%s)" % tag)
-	_check(block.find_children("VotesHeading", "Label", true, false).size() == 1, "Best so far says what the votes are once, over both clubs (%s)" % tag)
+	_check(block.find_children("VotesHeading", "Label", true, false).is_empty(), "Best so far gives no coaches' votes: they come at full time (%s)" % tag)
 	var pair_inks: Array = load("res://scripts/ui/UiKit.gd").club_ink_pair(str(res["home"]), str(res["away"]))
 	# Allegiance: each side has its club-colour bar; its name and ratings are in
 	# the club's readable colour (4.5:1 on the break) or plain text, never a

@@ -3038,8 +3038,9 @@ func _show_break_stats(players_first := false) -> void:
 
 
 ## Best so far, on the break: the three best of each side by match rating so
-## far (yours first), each with his rating and the numbers that stand out, as
-## full time's best players read; "All player stats" opens the full table.
+## far (yours first), each with the numbers that stand out, as full time's best
+## players read, but no votes (they come at full time); "All player stats"
+## opens the full table.
 # A PC break is tight (the fullest one, GWS with both loose men, has 8 px to
 # spare and Best so far may be at most ~213 px tall), so the rows sit 4 px apart
 # there; a phone scrolls and has room for more.
@@ -3063,7 +3064,6 @@ func _best_so_far() -> Control:
 	if _pc_break:
 		head.add_child(all)
 	box.add_child(head)
-	box.add_child(_votes_header())
 	# Your club first, then theirs, each under its own name, best rated first;
 	# the same number each side: three, as on a phone, and on a PC the third
 	# goes (row meta best_third) when the break would not fit 720 high with it.
@@ -3072,11 +3072,12 @@ func _best_so_far() -> Control:
 	# One screen, both clubs: the pair helper gives the away side its second ink
 	# when the two first inks look alike (a clash guernsey).
 	var inks := UiKit.club_ink_pair(str(_res["home"]), str(_res["away"]))
-	var votes := MatchNotes.coaches_votes(_res)
+	# No votes yet: the coaches give theirs once, at full time (director,
+	# 2026-11-08). The break ranks each side by match rating so far.
 	for side in [_my_side, 1 - _my_side]:
 		var code := str(_res["home"] if side == 0 else _res["away"])
-		var players := MatchNotes.standouts_by_votes(_res, side, 3, votes)
-		var wrap := _votes_side(code, inks[side], players, votes, _pc_break)
+		var players := MatchNotes.best_so_far(_res, side, 3)
+		var wrap := _votes_side(code, inks[side], players, {}, _pc_break)
 		wrap.name = "BestSide_%d" % side
 		(wrap.find_child("ClubName", true, false) as Node).name = "BestClub_%d" % side
 		(wrap.get_child(1) as Node).name = "BestSideBox_%d" % side
@@ -3820,7 +3821,7 @@ func _ft_story(v: VBoxContainer, me: int) -> Dictionary:
 	var shown := {}
 	var votes := MatchNotes.coaches_votes(_res)
 	for side in [0, 1]:
-		for p in MatchNotes.standouts_by_votes(_res, side, 3, votes):
+		for p in MatchNotes.standouts_by_votes(_res, side, 99, votes):
 			shown[str(p["id"])] = str(p["line"])
 	var hero: Dictionary = st["hero"]
 	if not hero.is_empty():
@@ -4142,51 +4143,109 @@ func _votes_side(code: String, ink: Color, players: Array, votes: Dictionary, pc
 		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		row.add_child(sub)
 		rows_box.add_child(row)
+	# At full time a club neither coach voted for still has its block, saying so.
+	if players.is_empty() and not votes.is_empty():
+		var none := UiKit.lbl("No votes", UiKit.BODY, UiKit.MUTED)
+		none.name = "NoVotes"
+		rows_box.add_child(none)
 	side_box.add_child(rows_box)
 	return UiKit.club_section_body(code, side_box, ink, VOTES_BAR_W)
 
 
 ## What the votes are, said once over both clubs: who voted, how the list runs.
 func _votes_header() -> Control:
-	var l := UiKit.lbl("Coaches' votes, best first", UiKit.SECONDARY if _pc_break else UiKit.BODY, UiKit.TEXT)
+	var l := UiKit.lbl("Coaches' votes: each coach gives his best five 5, 4, 3, 2, 1", UiKit.BODY, UiKit.TEXT)
 	l.name = "VotesHeading"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
 
 
-## The coaches' votes, said once: the leader's total ("10 votes") sits at the
-## right of his row; the rest read in order, with no numbers. Plain text colour:
-## club colour says who, not how well.
+## A player's coaches' votes at the right of his row, as the AFL publishes
+## them: every player either coach voted for, with his total ("10 votes",
+## "1 vote"). Hidden on a row with none (Best so far at a break). Plain text
+## colour: club colour says who, not how well.
 func _votes_figure(votes: Dictionary, id: String) -> Label:
-	var top := 0
-	for k in votes:
-		top = maxi(top, int(votes[k]))
-	var lead := votes.has(id) and int(votes[id]) == top and top > 0
-	var l := UiKit.line("%d votes" % int(votes[id]) if lead else "", UiKit.BODY, UiKit.TEXT, true)
+	var n := int(votes.get(id, 0))
+	var l := UiKit.line("%d vote%s" % [n, "" if n == 1 else "s"] if n > 0 else "", UiKit.BODY, UiKit.TEXT, true)
 	l.name = "StandoutVotes"
-	l.visible = lead
+	l.visible = n > 0
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	return l
 
 
-## Best players, from the coaches' votes: every player either coach voted for,
-## your club first, most votes first (the match rating breaks a tie).
-func _ft_best_players(v: VBoxContainer, me: int, mine: bool, winner: int) -> void:
+## Best players, from the coaches' votes, as the AFL publishes them (director,
+## 2026-11-08: "One ranked list"): every player either coach voted for, from
+## both clubs in one list, most votes first (his side's match-rating order
+## breaks a tie). Each name is in its club's colour beside its club's bar.
+func _ft_best_players(v: VBoxContainer, _me: int, _mine: bool, _winner: int) -> void:
 	v.add_child(UiKit.spacer(UiKit.GAP))
 	v.add_child(UiKit.section("Best players"))
 	v.add_child(_votes_header())
 	var best_box := UiKit.vbox(VOTES_STEP)
 	best_box.name = "BestPlayers"
-	var first := me if mine else (winner if winner >= 0 else 0)
 	var votes := MatchNotes.coaches_votes(_res)
 	var inks := UiKit.club_ink_pair(str(_res["home"]), str(_res["away"]))
-	for side in [first, 1 - first]:
-		var code := str(_res["home"] if side == 0 else _res["away"])
-		var players := MatchNotes.standouts_by_votes(_res, side, 3, votes)
-		var wrap := _votes_side(code, inks[side], players, votes, false, true)
-		wrap.name = "BestSide_%d" % side
-		best_box.add_child(wrap)
+	for r in _ranked_votes(votes):
+		best_box.add_child(_ranked_row(r, votes, inks[int(r["side"])]))
 	v.add_child(best_box)
+
+
+## Both clubs' voted players in one list: most votes first; a tie keeps each
+## side's own order (match rating) and, between sides, the home club first.
+func _ranked_votes(votes: Dictionary) -> Array:
+	var all := []
+	for side in [0, 1]:
+		var k := 0
+		for p in MatchNotes.standouts_by_votes(_res, side, 99, votes):
+			var r: Dictionary = (p as Dictionary).duplicate()
+			r["side"] = side
+			r["order"] = k
+			k += 1
+			all.append(r)
+	all.sort_custom(func(a, b):
+		var va := int(votes.get(str(a["id"]), 0))
+		var vb := int(votes.get(str(b["id"]), 0))
+		if va != vb:
+			return va > vb
+		if int(a["order"]) != int(b["order"]):
+			return int(a["order"]) < int(b["order"])
+		return int(a["side"]) < int(b["side"]))
+	return all
+
+
+## One row of the ranked list: the club's bar, the name in the club's colour
+## with the votes at the right, and the player's two best stats under it.
+func _ranked_row(p: Dictionary, votes: Dictionary, ink: Color) -> Control:
+	var side := int(p["side"])
+	var code := str(_res["home"] if side == 0 else _res["away"])
+	var row := UiKit.vbox(0)
+	row.name = "BestRow_%s" % str(p["id"])
+	row.set_meta("side", side)
+	var top := UiKit.hbox(8)
+	var name_ink := UiKit.readable_ink(UiKit.club_name_colour(ink), UiKit.tinted("sheet", _wash_col()))
+	var pn := UiKit.lbl(str(p["name"]), UiKit.NAME, name_ink, true)
+	pn.name = "StandoutName"
+	pn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	pn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pn.size_flags_vertical = Control.SIZE_SHRINK_END
+	top.add_child(pn)
+	var fig := _votes_figure(votes, str(p["id"]))
+	fig.size_flags_vertical = Control.SIZE_SHRINK_END
+	top.add_child(fig)
+	var gap := Control.new()
+	gap.name = "VotesGutter"
+	gap.custom_minimum_size.x = VOTES_GUTTER
+	top.add_child(gap)
+	row.add_child(top)
+	var sub_ink := UiKit.readable_ink(VOTES_SUB, UiKit.tinted("sheet", ink))
+	sub_ink = UiKit.readable_ink(sub_ink, UiKit.tinted("sheet", _wash_col()))
+	var sub := UiKit.lbl("%s  ·  %s" % [GameDB.club_short(code), str(p["line"])], UiKit.SECONDARY, sub_ink)
+	sub.name = "StandoutLine"
+	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	row.add_child(sub)
+	var wrap := UiKit.club_section_body(code, row, ink, VOTES_BAR_W)
+	wrap.name = "BestRank_%s" % str(p["id"])
+	return wrap
 
 
 func _key_stats_view(me: int) -> Control:
