@@ -7,6 +7,9 @@ extends RefCounted
 ## to the screen underneath exactly as it was. Used by My list and Team
 ## selection.
 
+## What his opinion of you does, under the Why button (REFUSE_BELOW, REFUSE_PER_POINT).
+const OPINION_RULE := "The higher his opinion of you, the more a talk lifts his mood. Under %d, he may refuse to re-sign with you: %d%% for every point under."
+
 const ATTR_ROWS := [
 	["disposal", "Disposal"], ["contested", "Contested"], ["marking", "Marking"],
 	["pressure", "Pressure"], ["intercept", "Intercept"], ["carry", "Carry"],
@@ -124,13 +127,13 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	nums.add_child(dev)
 	var plan := GameState.train_plan_label(GameState.plan_for(p))
 	if plan != "" and not rival:
-		v.add_child(UiKit.lbl("Training plan: %s" % plan, UiKit.SMALL, UiKit.MUTED))
+		v.add_child(UiKit.lbl("Development: %s" % plan, UiKit.SMALL, UiKit.MUTED))
 
 	# What he is picked for.
 	v.add_child(UiKit.spacer(4))
 	top_attributes_block(v, p, false, UiKit.BODY, UiKit.SMALL)
 	for t in Traits.of(p):
-		var tl := UiKit.lbl("%s. %s" % [Traits.label(str(t)), Traits.scout(str(t))], UiKit.SMALL,
+		var tl := UiKit.lbl("%s. %s" % [UiKit.trait_label(str(t)), Traits.scout(str(t))], UiKit.SMALL,
 				UiKit.BAD if Traits.is_bad(str(t)) else UiKit.TEXT)
 		tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		tl.name = "Trait_" + str(t)
@@ -383,8 +386,9 @@ static func attr_colour(v: float) -> Color:
 	return UiKit.BAD
 
 
-## How far your player trusts you (Trust.gd), in words, with his reasons one tap
-## away. Only your own players, and only once something has passed between you.
+## Your player's opinion of you out of 100 (Trust.opinion; 50 until something
+## passes between you), with the rule and his reasons one tap away. Only your
+## own players.
 ## A player on another club: his load, mood and promises are private to that club.
 static func is_rival(p: Dictionary) -> bool:
 	var c := str(p.get("club", ""))
@@ -396,12 +400,9 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 	if GameState.list_player(id).is_empty():
 		return
 	var key := Trust.player_key(id)
-	var says := Trust.profile_words(GameState.relations, key)
-	if says == "":
-		return
 	var row := UiKit.hbox(8)
 	row.name = "ProfileTrust"
-	var tl := UiKit.lbl(says + ".", UiKit.BODY, UiKit.TEXT)
+	var tl := UiKit.lbl(Trust.opinion_line(Trust.value(GameState.relations, key)) + ".", UiKit.BODY, UiKit.TEXT)
 	tl.name = "TrustWords"
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -415,7 +416,7 @@ static func _trust(v: VBoxContainer, p: Dictionary) -> void:
 	var list := UiKit.vbox(4)
 	list.name = "TrustReasons"
 	list.visible = false
-	var rule := UiKit.lbl("The more he trusts you, the more a talk lifts his mood.", UiKit.SMALL, UiKit.MUTED)
+	var rule := UiKit.lbl(OPINION_RULE % [Contracts.REFUSE_BELOW, Contracts.REFUSE_PER_POINT], UiKit.SMALL, UiKit.MUTED)
 	rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	list.add_child(rule)
 	for r in Trust.reasons(GameState.relations, key):

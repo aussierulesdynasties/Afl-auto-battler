@@ -134,6 +134,41 @@ func _test_media_conference_rules() -> void:
 			and str(hurt_loss.get("key", "")) == "injury"
 			and str((hurt_loss["options"] as Array)[2]["label"]).contains("cost us the game"),
 			"The injury question, whose answers blame a loss, is asked after a loss only (%s)" % win_lines)
+	# More questions for variety (director 2026-11-07): written versions take
+	# turns, and the day's other stories each have a journalist of their own.
+	var hl_ctx := {"club": "COL", "opponent_name": "Carlton", "round": 8, "year": 2027,
+			"result": {"home": "COL", "away": "CAR", "score": [55, 101], "goals": [8, 15], "behinds": [7, 11]}}
+	var v0: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 2}})
+	var v1: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 1}})
+	_check(str(v0.get("qid", "")) == "heavy_loss.0" and str(v1.get("qid", "")) == "heavy_loss.1"
+			and str(v1.get("question", "")) == "Carlton kicked 15 goals to your 8. Where do you even start?",
+			"A question's two versions take turns (%s / %s)" % [str(v0.get("question", "")), str(v1.get("question", ""))])
+	var bw_ctx := {"club": "COL", "opponent_name": "Carlton", "round": 8, "year": 2027,
+			"result": {"home": "COL", "away": "CAR", "score": [122, 42]}}
+	var bw: Dictionary = MCY.pick(bw_ctx, {"asked": {"big_win": 1}})
+	_check(str(bw.get("question", "")).begins_with("An 80-point win over Carlton"),
+			"The big-win question says 'An 80-point win' (%s)" % str(bw.get("question", "")))
+	var run_ctx := {"club": "COL", "opponent_name": "Carlton", "round": 12, "year": 2027, "losing_run": 3,
+			"result": {"home": "COL", "away": "CAR", "score": [70, 85]}}
+	var run_q: Dictionary = MCY.pick(run_ctx, {})
+	var held: Dictionary = MCY.pick(run_ctx, {"star": {"year": 2027, "round": 11}})
+	_check(str(run_q.get("key", "")) == "losing_run" and str(run_q.get("journalist", "")) == "muckraker"
+			and str(run_q.get("question", "")).begins_with("That's three losses in a row") and held.is_empty(),
+			"A losing run brings the Muckraker, but not the week after a conference")
+	var upset: Dictionary = MCY.pick({"club": "COL", "opponent_name": "Carlton", "round": 10, "year": 2027,
+			"my_pos": 15, "opp_pos": 2, "result": {"home": "COL", "away": "CAR", "score": [85, 70]}}, {})
+	_check(str(upset.get("key", "")) == "upset_win" and str(upset.get("question", "")).contains("You're 15th, Carlton are 2nd"),
+			"An upset win quotes the ladder (%s)" % str(upset.get("question", "")))
+	var back_from: Dictionary = MCY.pick({"club": "COL", "opponent_name": "Carlton", "round": 10, "year": 2027,
+			"result": {"home": "COL", "away": "CAR", "score": [90, 78], "quarters": [[10, 20], [5, 18], [40, 20], [35, 20]]}}, {})
+	_check(str(back_from.get("key", "")) == "comeback"
+			and str(back_from.get("question", "")) == "You trailed by 23 at half-time and won by 12. What changed?",
+			"A comeback from a break is asked with the real deficit (%s)" % str(back_from.get("question", "")))
+	var out_of_it: Dictionary = MCY.pick({"club": "COL", "opponent_name": "Carlton", "round": 25, "year": 2027,
+			"final": {"label": "semi final", "status": "eliminated"},
+			"result": {"home": "COL", "away": "CAR", "score": [70, 75]}}, {})
+	_check(str(out_of_it.get("key", "")) == "final_loss" and str(out_of_it.get("question", "")).contains("semi final"),
+			"A finals exit is asked about first")
 	var stage = VignetteScript.new()
 	stage.size = Vector2(390, 300)
 	stage.club = "COL"
@@ -190,7 +225,7 @@ func _test_press_rolls() -> void:
 	# Every number on the gate comes from the constants: no digits in a template.
 	var digit := RegEx.create_from_string("[0-9]")
 	var words: Array = [MC.ODDS_TEMPLATE, MC.MORALE_SIZE, MC.BOARD_SIZE, MC.AFTER_MORALE, MC.AFTER_BOARD,
-			MC.HIS_SIZE, MC.AFTER_HIS, MC.NO_BOARD, MC.LIKES, MC.DISLIKES, MC.STANDING_EFFECT,
+			MC.HIS_SIZE, MC.AFTER_HIS, MC.OPINION_SIZE, MC.NO_BOARD, MC.LIKES, MC.DISLIKES, MC.STANDING_EFFECT,
 			MC.REASON, MC.FADE_NOTE, MC.EITHER_WAY, MC.SEP]
 	words.append_array(MC.RECORD_CLAUSE.values())
 	words.append_array(MC.RECORD_REASON.values())
@@ -505,11 +540,133 @@ func _test_press_named() -> void:
 	for p in _state.my_list:
 		after += int(p["morale"])
 	var his_move := int(him["morale"]) - 70
-	var want := 1 if str(landed["landed"]) == "a" else -3
-	_check(his_move == want and after - others == his_move,
-			"Only the named player's morale moves (%+d, list total %+d)" % [his_move, after - others])
+	# Up a point whichever way it lands (director 2026-11-08).
+	_check(his_move == 1 and after - others == his_move,
+			"Only the named player's morale moves, up a point (%+d, list total %+d)" % [his_move, after - others])
 	_check(str(landed["line"]).contains(str(_db.player_display_name(him))), "The outcome line names him (%s)" % str(landed["line"]))
 
+
+## Calling a player out by name (director 2026-11-08): his morale goes up a
+## point whichever way it lands; if he takes it personally his opinion of you
+## also falls CALLOUT_OPINION_DROP points, the result says so, and backing him
+## by name later gives it back. Skipping the question moves nothing.
+func _test_press_opinion() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var PS = load("res://scripts/ui/PressScene.gd")
+	_press_reset()
+	var him: Dictionary = _state.my_list[0]
+	var pid := str(him["id"])
+	var key := Trust.player_key(pid)
+	var name := str(_db.player_display_name(him))
+	var drop: int = MC.CALLOUT_OPINION_DROP
+	var call_out: Dictionary = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 8, "year": int(_state.season_year),
+			"named": {"heavy_loss": {"id": pid, "name": name}},
+			"result": {"home": "FRE", "away": "CAR", "score": [55, 101]}}, {})
+	var at := (call_out["options"] as Array).size() - 1
+	_check(str(call_out["options"][at]["kind"]) == "criticise_named", "The heavy loss names him")
+	_state.relations.erase(key)
+	_state.media_conference = call_out.duplicate(true)
+	var gate: String = _state.press_odds_line(at)
+	_check(gate.contains("resolve tightens, his morale +1%") and gate.contains(
+			"he takes it personally, his morale +1%%, his opinion of you -%d" % drop) and not gate.contains("either way")
+			and not gate.contains("+0"),
+			"The call-out's gate shows both outcomes with every size (%s)" % gate)
+	var seen := {}
+	var bad: Array = []
+	var took: Dictionary = {}
+	var took_news := ""
+	for seed in range(1, 41):
+		_state.relations.erase(key)
+		_state.media_memory = {}
+		him["morale"] = 70
+		him.erase("press_lift")
+		_state.career_seed = seed
+		_state.media_conference = call_out.duplicate(true)
+		var landed: Dictionary = _state.resolve_media_conference(at)
+		var w := str(landed.get("landed", ""))
+		seen[w] = true
+		var t := Trust.value(_state.relations, key)
+		var owed: Array = (_state.media_memory.get("callouts", {}) as Dictionary).get(pid, [])
+		var ok := int(him["morale"]) == 71
+		if w == "b":
+			ok = (ok and t == -drop * Trust.PER_POINT and _state.opinion_of_you(pid) == 50 - drop
+					and landed["opinion"] == {"name": name, "from": 50, "to": 50 - drop} and owed == [t])
+			took = landed
+			took_news = str(_state.news[0].get("text", ""))
+		else:
+			ok = ok and t == 0 and (landed["opinion"] as Dictionary).is_empty() and owed.is_empty()
+		if not ok:
+			bad.append("seed %d %s: morale %d, trust %d, %s" % [seed, w, int(him["morale"]), t, str(landed.get("opinion"))])
+	_check(seen.has("a") and seen.has("b") and bad.is_empty(),
+			"Called out: his morale +1 either way; taking it personally also costs %d of his opinion of you (%s)" % [drop, str(bad)])
+	# The result screen and the news say what it did to his opinion of you.
+	var rows: Array = PS.press_outcome_rows(took, "")
+	var opinion_row := ""
+	for r in rows:
+		if str(r[0]) == "MediaOutcomeOpinion":
+			opinion_row = str(r[1])
+	# Last, after "it wears off": his opinion of you never does.
+	_check(opinion_row == "%s's opinion of you: 50 → %d/100" % [name, 50 - drop]
+			and str(rows[rows.size() - 1][0]) == "MediaOutcomeOpinion",
+			"The press result shows his opinion of you moving, on its last line (%s)" % opinion_row)
+	_check(took_news.ends_with("%s's opinion of you: 50 → %d/100." % [name, 50 - drop]),
+			"The news line says it too (%s)" % took_news)
+	# Backing him by name gives it back, whichever way the backing lands.
+	var backing: Dictionary = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 12, "year": int(_state.season_year),
+			"named": {"big_win": {"id": pid, "name": name}},
+			"result": {"home": "FRE", "away": "CAR", "score": [101, 55]}}, {})
+	var bat := (backing["options"] as Array).size() - 1
+	_check(str(backing["options"][bat]["kind"]) == "back_named", "The big win can back him by name")
+	var owed_now: Dictionary = {pid: [-drop * Trust.PER_POINT]}
+	var back_bad: Array = []
+	for seed in range(1, 21):
+		_state.relations.erase(key)
+		Trust.change(_state.relations, key, -drop * Trust.PER_POINT, "You called him out in the press", _state.season_year, "Round 8")
+		_state.media_memory = {"callouts": owed_now.duplicate(true)}
+		_state.career_seed = seed
+		_state.media_conference = backing.duplicate(true)
+		var bgate: String = _state.press_odds_line(bat)
+		var landed: Dictionary = _state.resolve_media_conference(bat)
+		if not (bgate.contains("his opinion of you +%d" % drop) and Trust.value(_state.relations, key) == 0
+				and landed["opinion"] == {"name": name, "from": 50 - drop, "to": 50} and not _state.media_memory.has("callouts")):
+			back_bad.append("seed %d: %s / %s" % [seed, bgate, str(landed.get("opinion"))])
+	_check(back_bad.is_empty(), "Backing him by name cancels the call-out's cost, and the gate says so (%s)" % str(back_bad))
+	# Nothing to cancel: backing him moves no opinion and the gate names none.
+	_state.relations.erase(key)
+	_state.media_memory = {}
+	_state.media_conference = backing.duplicate(true)
+	var plain: String = _state.press_odds_line(bat)
+	var none: Dictionary = _state.resolve_media_conference(bat)
+	_check(not plain.contains("opinion of you") and Trust.value(_state.relations, key) == 0
+			and (none["opinion"] as Dictionary).is_empty() and not _state.relations.has(key),
+			"Backing a player you never called out moves no opinion (%s)" % plain)
+	# Skipping the question moves nothing at all.
+	_press_reset()
+	Trust.change(_state.relations, key, -drop * Trust.PER_POINT, "You called him out in the press", _state.season_year, "Round 8")
+	_state.media_memory = {"callouts": {pid: [-drop * Trust.PER_POINT]}}
+	var morale := []
+	for p in _state.my_list:
+		morale.append([int(p["morale"]), p.get("press_lift")])
+	var rel: Dictionary = _state.relations.duplicate(true)
+	var board_before: int = _state.board_confidence()
+	var standing: Dictionary = {}
+	for j in MC.JOURNALISTS:
+		standing[j] = _state.press_standing(j)
+	_state.media_conference = backing.duplicate(true)
+	_state.skip_media_conference()
+	var morale_after := []
+	for p in _state.my_list:
+		morale_after.append([int(p["morale"]), p.get("press_lift")])
+	var standing_after: Dictionary = {}
+	for j in MC.JOURNALISTS:
+		standing_after[j] = _state.press_standing(j)
+	_check(morale_after == morale and _state.relations == rel and _state.board_confidence() == board_before
+			and standing_after == standing and _state.media_memory["callouts"] == {pid: [-drop * Trust.PER_POINT]}
+			and _state.media_conference.is_empty(),
+			"Skipping the press conference moves no morale, opinion, board or standing")
+	_state.media_conference = {}
+	_state.relations.erase(key)
+	_state.media_memory = {}
 
 ## (d) The Stats Geek reads the record: supported lands better and harder,
 ## contradicted worse and costs the board either way.
@@ -692,6 +849,12 @@ func _check(condition: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+
+
+## Game rules loaded when the test runs, not when this runner compiles (they
+## reach autoloads a --script runner can't name yet).
+func _rules(name: String):
+	return load("res://scripts/sim/%s.gd" % name)
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -988,6 +1151,7 @@ func _run() -> void:
 	_t("_test_press_standing")
 	_t("_test_press_personas")
 	_t("_test_press_named")
+	_t("_test_press_opinion")
 	_t("_test_press_record")
 	_t("_test_press_board_reason")
 	_t("_test_press_standout_only")
@@ -1003,6 +1167,8 @@ func _run() -> void:
 	await _t("_test_sacked_job_choice_taps")
 	await _t("_test_rival_letter_taps")
 	await _t("_test_sim_asks_only_before_your_match")
+	await _t("_test_skip_season")
+	await _t("_test_skip_orders")
 	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
@@ -1750,9 +1916,9 @@ Your career stays on this device.",
 	_check(cost_tap == "" and bool(_state.week_events[0].get("resolved", false)),
 			"A real tap on the answer that costs a game answers the card (%s)" % cost_tap)
 	_state.week_events = []
-	# His trust on the profile, at phone size: the words, and a finger on Why
-	# shows his reasons, newest first. A player you've had nothing to do with
-	# shows no trust line.
+	# His opinion of you on the profile, at phone size: the number, and a finger
+	# on Why shows the rule and his reasons, newest first. A player you've had
+	# nothing to do with is at 50/100.
 	var trusted: Dictionary = _state.my_list[0]
 	var stranger: Dictionary = _state.my_list[1]
 	var saved_rel: Dictionary = _state.relations.duplicate(true)
@@ -1765,19 +1931,22 @@ Your career stays on this device.",
 	var twords: Label = tsheet.find_child("TrustWords", true, false)
 	var twhy: Button = tsheet.find_child("TrustWhy", true, false)
 	var treasons: Control = tsheet.find_child("TrustReasons", true, false)
-	_check(twords != null and twords.text == "Trusts you." and treasons != null and not treasons.visible,
-			"The profile says he trusts you, with the reasons folded away")
+	_check(twords != null and twords.text == "Opinion of you 61/100." and treasons != null and not treasons.visible,
+			"The profile shows his opinion of you out of 100, with the reasons folded away (%s)" % (twords.text if twords != null else "missing"))
 	var why_tap: String = await Tap.tap(twhy) if twhy != null else "missing"
 	await _settle()
 	var first_reason: Label = treasons.get_child(1) if treasons != null and treasons.get_child_count() > 2 else null
 	_check(why_tap == "" and treasons.visible and twhy.size.y >= 44 and first_reason != null
-			and first_reason.text.begins_with("Round 5, ") and first_reason.text.ends_with("Trust rose."),
-			"A tap on Why shows his reasons, newest first (%s)" % why_tap)
+			and first_reason.text.begins_with("Round 5, ") and first_reason.text.ends_with("Opinion of you +5.")
+			and (treasons.get_child(0) as Label).text.contains("he may refuse to re-sign with you"),
+			"A tap on Why shows the rule, then his reasons newest first with their size (%s, %s)" % [why_tap,
+					first_reason.text if first_reason != null else "missing"])
 	tsheet.queue_free()
 	var ssheet: Control = load("res://scripts/ui/PlayerSheet.gd").open(current_scene, stranger)
 	await _settle()
-	_check(ssheet.find_child("ProfileTrust", true, false) == null,
-			"A player you've had nothing to do with shows no trust line")
+	var swords: Label = ssheet.find_child("TrustWords", true, false)
+	_check(swords != null and swords.text == "Opinion of you 50/100.",
+			"A player you've had nothing to do with is at 50/100 (%s)" % (swords.text if swords != null else "missing"))
 	ssheet.queue_free()
 	_state.relations = saved_rel
 	await _settle()
@@ -2330,6 +2499,35 @@ Your career stays on this device.",
 		await _settle()
 		_check(_router.current() == "offseason" and current_scene.find_child("ContractTalks", true, false) == null,
 				"Back closes the talks and stays on Trades & Contracts")
+		# Under 50/100 the talks say the chance he won't re-sign before any offer;
+		# at 50 they say nothing about it.
+		var trow: Node = talk.get_parent()
+		while trow != null and not str(trow.name).begins_with("Contract_"):
+			trow = trow.get_parent()
+		var tid := str(trow.name).trim_prefix("Contract_") if trow != null else ""
+		var tkey := Trust.player_key(tid)
+		var rel_before: Dictionary = _state.relations.duplicate(true)
+		_state.relations.erase(tkey)
+		current_scene.call("_open_talks", tid)
+		await _settle()
+		var at_fifty: bool = current_scene.find_child("TalksRefuse", true, false) == null
+		_router.handle_back(true)
+		await _settle()
+		Trust.change(_state.relations, tkey, -12, "You dropped him", _state.season_year, "Round 3")
+		current_scene.call("_open_talks", tid)
+		await _settle()
+		var refuse: Control = current_scene.find_child("TalksRefuse", true, false)
+		var refuse_text := ""
+		if refuse is RichTextLabel:
+			refuse_text = (refuse as RichTextLabel).get_parsed_text()
+		elif refuse != null:
+			refuse_text = str(refuse.get("text"))
+		_check(tid != "" and at_fifty and refuse != null and refuse.is_visible_in_tree()
+				and refuse_text == "His opinion of you: 44/100. 6% he won't re-sign with you.",
+				"Talks at 44/100 say the chance he won't re-sign before you offer, and at 50 say nothing (%s)" % refuse_text)
+		_router.handle_back(true)
+		await _settle()
+		_state.relations = rel_before
 	for tab in ["Tab_agents", "Tab_trade"]:
 		var tb: Button = current_scene.find_child(tab, true, false)
 		tb.emit_signal("pressed")
@@ -2544,6 +2742,7 @@ Your career stays on this device.",
 	# --- Hub rating lines --------------------------------------------------
 	_state.reset()
 	_state.start_season("SYD", _db.club_list("SYD"))
+	var ask_before: bool = _state.confirm_sim_round()
 	_state.set_confirm_sim_round(false)
 	_router.go("hub")
 	await _settle()
@@ -3266,7 +3465,7 @@ func _type(node_name: String, text: String) -> void:
 func _test_type_roles() -> void:
 	var sizes: Array = load("res://scripts/ui/UiKit.gd").SIZES
 	var call := RegEx.new()
-	call.compile("UiKit\\.(lbl|line|ellipsis|figure|heading|btn|name_label)\\(")
+	call.compile("UiKit\\.(lbl|line|ellipsis|figure|heading|btn|name_label|set_font_size)\\(")
 	var num := RegEx.new()
 	num.compile("[,(]\\s*(\\d{1,2})\\s*[,)]")
 	var override := RegEx.new()
@@ -3958,3 +4157,167 @@ func _test_rival_letter_taps() -> void:
 			"After taking it the hub says so, who replaced him at Fremantle and where from, and his new club's trades, contracts and draft are open (%s)"
 			% (answered.text if answered != null else "missing"))
 	root.size = size_before
+
+
+## Skip to the end of the season (director, 2026-11-07; 2026-11-08: "It's just
+## skipping games, no off season skipping"): a finger on the quiet button asks
+## first, Cancel skips nothing, and the skip lands on the same finished season
+## Sim the week reaches, before the off-season, which survives a save and a reload.
+func _skip_shape() -> Dictionary:
+	return {"year": _state.season_year, "over": _state.season.is_season_over(), "off": _state.offseason_year,
+			"pre": _state.preseason_active(), "wrap": _state.needs_season_wrap(),
+			"round": _state.season.round_index, "premier": _state.premier(),
+			"ladder": _state.my_position(), "record": _state.my_record(), "list": _state.my_list.size()}
+
+
+func _skip_start(seed: int) -> void:
+	_state.reset()
+	_state.career_seed = seed
+	_state.replay_seed = seed
+	_state.start_season("FRE", _db.club_list("FRE"))
+	_state.week_events = []
+	_state.season.round_index = _state.season.fixture.size() - 1
+
+
+func _test_skip_season() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	var ask_before: bool = _state.confirm_sim_round()
+	_state.set_confirm_sim_round(false)
+
+	# Played out the long way: Sim the week until the season is over.
+	_skip_start(5511)
+	var year: int = _state.season_year
+	var guard := 0
+	while not _state.season.is_season_over() and guard < 80:
+		_state.advance()
+		guard += 1
+	var played := _skip_shape()
+
+	# Skipped: the button asks first.
+	_skip_start(5511)
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var b: Button = current_scene.find_child("SkipSeason", true, false)
+	_check(b != null and b.text == "Skip to the end of the %d season" % year, "The hub offers Skip to the end of the %d season" % year)
+	var why: String = await Tap.tap(b) if b != null else "missing"
+	await _settle()
+	var sheet: Node = current_scene.find_child("SkipSeasonSurvey", true, false)
+	_check(why == "" and sheet != null and _state.season_year == year,
+			"A finger on it opens the survey and skips nothing yet (%s)" % why)
+	var cancel: Button = current_scene.find_child("SkipSeasonCancel", true, false)
+	why = await Tap.tap(cancel) if cancel != null else "missing"
+	await _settle()
+	_check(why == "" and current_scene.find_child("SkipSeasonSurvey", true, false) == null
+			and _state.season_year == year and not _state.season.is_season_over(),
+			"A finger on Cancel closes it and skips nothing (%s)" % why)
+
+	# The survey by finger: each question opens on the club's answer; a tap
+	# chooses another, Back steps back with it kept, Next walks on.
+	b = current_scene.find_child("SkipSeason", true, false)
+	why = await Tap.tap(b) if b != null else "missing"
+	await _settle()
+	var plan_before: String = _state.club_plan
+	var steps := []
+	for q in _rules("SkipOrders").KEYS:
+		var count: Label = current_scene.find_child("SkipStepCount", true, false)
+		steps.append(count.text if count != null else "")
+		var chosen: Button = current_scene.find_child("SkipOption_%s_%s" % [q, str(_rules("SkipOrders").defaults(plan_before)[q])], true, false)
+		_check(chosen != null and current_scene.find_child("SkipOptions_" + q, true, false) != null,
+				"The survey asks %s, opened on the club's answer" % q)
+		var nx: Button = current_scene.find_child("SkipNext", true, false)
+		why = await Tap.tap(nx) if nx != null else "missing"
+		await _settle()
+		_check(why == "", "A finger on Next walks on from %s (%s)" % [q, why])
+	_check(steps == ["Before you skip · 1 of 3", "Before you skip · 2 of 3", "Before you skip · 3 of 3"], "The survey counts its steps (%s)" % [steps])
+	_check(current_scene.find_child("SkipSeasonConfirm", true, false) != null, "After the last question the sheet asks")
+	for n in ["SkipLeft", "SkipAnswer_game_plan", "SkipAnswer_youth", "SkipAnswer_questions", "SkipStop"]:
+		_check(current_scene.find_child(n, true, false) != null, "The sheet says what is decided: %s" % n)
+	for n in ["SkipAnswer_contracts", "SkipAnswer_draft", "SkipTrades"]:
+		_check(current_scene.find_child(n, true, false) == null, "The sheet asks nothing of the off-season: no %s" % n)
+	# Android Back steps back a question; a finger picks another answer there.
+	current_scene.handle_back()
+	await _settle()
+	var other: Button = current_scene.find_child("SkipOption_questions_players", true, false)
+	_check(current_scene.find_child("SkipSeasonSurvey", true, false) != null and other != null,
+			"Back from the sheet returns to the last question")
+	why = await Tap.tap(other) if other != null else "missing"
+	await _settle()
+	_check(why == "" and current_scene._skip_answers.get("questions") == "players", "A finger on Back the players chooses it (%s)" % why)
+	var best: Button = current_scene.find_child("SkipOption_questions_usual", true, false)
+	why = await Tap.tap(best) if best != null else "missing"
+	await _settle()
+	_check(why == "" and current_scene._skip_answers.get("questions") == "usual", "A finger on the club's usual answer chooses it again (%s)" % why)
+	var nx2: Button = current_scene.find_child("SkipNext", true, false)
+	why = await Tap.tap(nx2) if nx2 != null else "missing"
+	await _settle()
+	var go: Button = current_scene.find_child("SkipSeasonGo", true, false)
+	why = await Tap.tap(go) if go != null else "missing"
+	guard = 0
+	while not _state.season.is_season_over() and guard < 600:
+		await process_frame
+		guard += 1
+	for i in range(30):
+		await process_frame
+	_check(why == "" and _state.season.is_season_over() and _state.season_year == year,
+			"A finger on Skip the season plays out the %d season (%s)" % [year, why])
+	# The last match opens the off-season as it does after Sim the week (rivals
+	# settle their contracts); nothing of the coach's own is done for him.
+	_check(_state.offseason_open() and not _state.needs_season_wrap() and _state.draft == null,
+			"It stops where the last Sim the week does: re-signings, trades and the draft are still the coach's")
+	var skipped := _skip_shape()
+	_check(skipped == played, "A skipped season lands where a played one does (%s vs %s)" % [skipped, played])
+	_check(current_scene.find_child("SkipSeason", true, false) == null and current_scene.find_child("SeasonWrap", true, false) == null,
+			"The hub shows the season over, with nothing more to skip and no off-season wrap")
+
+	# A save and a reload keep it.
+	_check(_state.save_career(), "The skipped career saves")
+	_check(_state.load_career(), "The skipped career loads")
+	_check(_skip_shape() == skipped, "A reload keeps the skipped season")
+	_state.set_confirm_sim_round(ask_before)
+	root.size = size_before
+
+
+## The survey's answers reach the skip (row 70): the same seed skipped with
+## two sets of answers ends in a different place for each answer.
+func _skip_orders_run(orders: Dictionary) -> Dictionary:
+	_state.reset()
+	_state.career_seed = 7301
+	_state.replay_seed = 7301
+	_state.start_season("HAW", _db.club_list("HAW"))
+	_state.week_events = []
+	_state.season.round_index = _state.season.fixture.size() - 8
+	var year: int = _state.season_year
+	var res: Dictionary = _state.skip_season(orders)
+	var runs := 0
+	for p in _state.my_list:
+		for r in _rules("Backing").ledger(p):
+			if int(r.get("year", 0)) == year:
+				runs += 1
+	return {"ok": bool(res["ok"]), "runs": runs, "plan": _state.club_plan,
+			"over": _state.season.is_season_over(), "off": _state.offseason_open(), "draft": _state.draft != null}
+
+
+func _test_skip_orders() -> void:
+	var a := _skip_orders_run({})
+	var b := _skip_orders_run({"game_plan": "attacking", "youth": "kids", "questions": "players"})
+	_check(a["ok"] and b["ok"] and a["over"] and b["over"] and a["off"] and b["off"] and not a["draft"] and not b["draft"],
+			"Both skips play out the season and stop where the last Sim the week does, the draft not begun (%s / %s)" % [a, b])
+	_check(a["plan"] == "balanced" and b["plan"] == "attacking", "The game plan answer is the plan the skip played (%s, %s)" % [a["plan"], b["plan"]])
+	_check(int(a["runs"]) == 0 and int(b["runs"]) >= 2, "Give the kids a run promises runs; best side on form none (%d vs %d)" % [a["runs"], b["runs"]])
+	# The week's questions: the answer the survey gave picks the card's option.
+	var card := {"title": "t", "options": [
+			{"label": "Promise a win", "effects": [{"op": "board", "d": 3}], "result": "a"},
+			{"label": "Back the group", "effects": [{"op": "morale", "d": 5, "who": "all"}], "result": "b"}],
+			"default": -1, "facts": {}}
+	var picked := {}
+	for pol in ["usual", "players", "board"]:
+		_state.week_events = [card.duplicate(true)]
+		_state._skip_orders = {"questions": pol}
+		_state._settle_week_event()
+		picked[pol] = int((_state.week_events[0] as Dictionary).get("choice", -2))
+	_state._skip_orders = {}
+	_state.week_events = []
+	_check(picked == {"usual": -1, "players": 1, "board": 0},
+			"Questions during the week: unanswered, the players' answer, the board's answer (%s)" % picked)

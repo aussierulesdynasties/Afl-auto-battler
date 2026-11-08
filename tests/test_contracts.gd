@@ -20,6 +20,8 @@ func run() -> void:
 	_t("_test_market_test")
 	_t("_test_negotiation_rules")
 	_t("_test_negotiation")
+	_t("_test_refuse_to_resign")
+	_t("_test_opinion_never_drifts")
 	_t("_test_free_agent_terms")
 	_t("_test_free_agents")
 	_t("_test_compensation_rules")
@@ -445,6 +447,170 @@ func _test_negotiation() -> void:
 		_check(int(b["contract_years"]) >= 1 and GameState.my_list.has(b),
 				"At the list minimum he stays a season")
 
+
+## A career seed where his draw this season comes out `refuses`, or -1.
+func _seed_where(p: Dictionary, refuses: bool) -> int:
+	for sd in range(1, 400):
+		GameState.career_seed = sd
+		if GameState.resign_refused(p) == refuses:
+			return sd
+	return -1
+
+
+## Did free agency's close let him go from your list, as one you wanted?
+func _let_go_wanted(id: String) -> bool:
+	for e in GameState.offseason_log:
+		if str(e.get("kind", "")) == "released" and str(e.get("club", "")) == GameState.my_club \
+				and str(e.get("id", "")) == id and bool(e.get("wanted", false)):
+			return true
+	return false
+
+
+## News lines naming him: [refusal lines, "let ... go to free agency" lines].
+func _refusal_news(p: Dictionary) -> Array:
+	var who := GameDB.player_display_name(p)
+	var out := [0, 0]
+	for n in GameState.news:
+		var text := str(n.get("text", ""))
+		if text.begins_with(who + " won't re-sign with you"):
+			out[0] += 1
+		if text.contains("let " + who + " (OVR"):
+			out[1] += 1
+	return out
+
+
+## Refusing to re-sign (director 2026-11-08): under 50/100 a player may refuse
+## to re-sign with you, 1% for every point under, drawn once a season from the
+## career seed. He walks to free agency and the news says why in one line.
+func _test_refuse_to_resign() -> void:
+	_check(Contracts.refuse_chance(50) == 0 and Contracts.refuse_chance(60) == 0 and Contracts.refuse_chance(49) == 1
+			and Contracts.refuse_chance(46) == 4 and Contracts.refuse_chance(40) == 10 and Contracts.refuse_chance(25) == 25
+			and Contracts.refuse_chance(0) == 50, "1% for every point under 50/100, never at 50 or over")
+	_new_season()
+	# Extending early in the season: the same draw.
+	var e: Dictionary = {}
+	for q in GameState.my_list:
+		if int(q.get("contract_years", 1)) == 1:
+			e = q
+			break
+	_check(not e.is_empty(), "One of your players is out of contract this season")
+	if e.is_empty():
+		return
+	GameState.salary_cap += 5000000
+	var ekey := Trust.player_key(str(e["id"]))
+	GameState.relations[ekey] = {"t": -100, "log": []}
+	_seed_where(e, true)
+	var salary_was := int(e["salary"])
+	var said: String = ClubStories._extend(GameState, e, GameDB.player_display_name(e))
+	_check(said == "%s %s" % [Contracts.REFUSED % [GameDB.player_display_name(e), 0], Contracts.REFUSED_SEASON_END]
+			and int(e["salary"]) == salary_was and int(e["contract_years"]) == 1 and int(e["talks"]["refused"]) == 0
+			and str(GameState.news[0]["text"]) == said,
+			"Asked to extend at 0/100, he can refuse; the news says why (%s)" % said)
+	GameState.relations.erase(ekey)
+	e.erase("talks")
+	_seed_where(e, false)
+	said = ClubStories._extend(GameState, e, GameDB.player_display_name(e))
+	_check(said.contains("signs on") and int(e["contract_years"]) > 1, "At 50/100 he never refuses (%s)" % said)
+
+	_new_season()
+	_to_offseason()
+	GameState.salary_cap += 5000000
+	var out: Array = []
+	for q in Contracts.expiring(GameState.my_list):
+		if not bool(q.get("resigned", false)) and not GameState.retiring_now(q) and not q.has("talks"):
+			out.append(q)
+	_check(out.size() >= 3, "Three of your players are out of contract (%d)" % out.size())
+	if out.size() < 3:
+		return
+	var a: Dictionary = out[0]
+	var aid := str(a["id"])
+	var akey := Trust.player_key(aid)
+	GameState.relations[akey] = {"t": -8, "log": []}
+	_check(GameState.opinion_of_you(aid) == 46 and GameState.resign_refuse_chance(a) == 4,
+			"At 46/100 he is 4% to refuse")
+	GameState.relations[akey] = {"t": -100, "log": []}
+	var same := true
+	var refused := 0
+	for sd in range(1, 201):
+		GameState.career_seed = sd
+		var r := GameState.resign_refused(a)
+		if r != GameState.resign_refused(a) or r != StoryEngine.risk_hit(sd, GameState.season_year, 0, "resign_refuse|" + aid, 50):
+			same = false
+		if r:
+			refused += 1
+	_check(same and refused > 70 and refused < 130,
+			"At 0/100 about half refuse, one fixed draw a season from the career seed (%d of 200)" % refused)
+	GameState.relations.erase(akey)
+	var none := 0
+	for sd in range(1, 201):
+		GameState.career_seed = sd
+		if GameState.resign_refused(a):
+			none += 1
+	_check(none == 0 and GameState.resign_refuse_chance(a) == 0, "At 50/100 nobody refuses (%d)" % none)
+	# Talks: he refuses whatever you offer, and walks.
+	GameState.relations[akey] = {"t": -100, "log": []}
+	_seed_where(a, true)
+	var years := int(Contracts.wants(a)["years"])
+	var res := GameState.offer_contract(aid, Contracts.asking_salary(a) * 2, years)
+	var line := "%s %s" % [Contracts.REFUSED % [GameDB.player_display_name(a), 0], Contracts.REFUSED_GOES]
+	_check(not bool(res["ok"]) and str(res["answer"]) == "walk" and str(res["reason"]) == Contracts.REFUSED_TALKS % 0
+			and bool(GameState.contract_talks(aid).get("walked", false)) and int(GameState.contract_talks(aid)["refused"]) == 0
+			and str(GameState.news[0]["text"]) == line,
+			"At 0/100 he can refuse even a generous offer; the news says why (%s / %s)" % [str(res["reason"]), str(GameState.news[0]["text"])])
+	_check(str(GameState.offer_contract(aid, Contracts.asking_salary(a), years)["reason"]) == Contracts.REFUSED_TALKS % 0,
+			"Once he has refused, talks stay closed")
+	# Another at 0/100 whose draw says yes signs as usual.
+	var b: Dictionary = out[1]
+	var bid := str(b["id"])
+	GameState.relations[Trust.player_key(bid)] = {"t": -100, "log": []}
+	_seed_where(b, false)
+	res = GameState.offer_contract(bid, Contracts.asking_salary(b), int(Contracts.wants(b)["years"]))
+	_check(bool(res["ok"]) and bool(b.get("resigned", false)), "A player whose draw says yes signs as usual (%s)" % str(res["reason"]))
+	# One you never offered: free agency's close asks him, and he refuses there.
+	var c: Dictionary = out[2]
+	var cid := str(c["id"])
+	GameState.relations[Trust.player_key(cid)] = {"t": -100, "log": []}
+	_seed_where(c, true)
+	var size_before := GameState.my_list.size()
+	GameState._close_free_agency()
+	if size_before > Contracts.MIN_LIST + 3:
+		var na := _refusal_news(a)
+		var nc := _refusal_news(c)
+		_check(GameState.list_player(aid).is_empty() and GameState.list_player(cid).is_empty()
+				and _let_go_wanted(aid) and _let_go_wanted(cid) and na == [1, 0] and nc == [1, 0],
+				"Both go to free agency, each with one plain news line saying why (%s, %s)" % [str(na), str(nc)])
+	else:
+		_check(true, "At the list minimum he stays a season")
+	GameState.relations.erase(akey)
+	GameState.relations.erase(Trust.player_key(bid))
+	GameState.relations.erase(Trust.player_key(cid))
+
+
+## Only your choices move his opinion of you (director 2026-11-08): nothing
+## drifts it back toward 50, through a season and into the next one.
+func _test_opinion_never_drifts() -> void:
+	_new_season()
+	var given := {}
+	var moves := [30, -30, -8, 60, -60]
+	for i in range(moves.size()):
+		var q: Dictionary = GameState.my_list[i]
+		var key := Trust.player_key(str(q["id"]))
+		GameState.relations[key] = {"t": int(moves[i]), "log": []}
+		given[key] = int(moves[i])
+	_to_offseason()
+	var year := GameState.season_year
+	GameState.start_next_season()
+	var drifted: Array = []
+	for key in given:
+		var entry: Dictionary = GameState.relations.get(key, {})
+		var logged := 0
+		for l in entry.get("log", []):
+			logged += int(l.get("d", 0))
+		# Any move came with a reason (a choice); nothing else moved him.
+		if Trust.value(GameState.relations, key) != int(given[key]) + logged:
+			drifted.append("%s %d -> %d (logged %+d)" % [key, int(given[key]), Trust.value(GameState.relations, key), logged])
+	_check(GameState.season_year == year + 1, "The season rolled over")
+	_check(drifted.is_empty(), "No player's opinion of you drifts on its own over a season and a rollover (%s)" % str(drifted))
 
 ## Part 2: a free agent weighs your club against his options, from facts the
 ## player can see. Cap room alone never signs anyone.

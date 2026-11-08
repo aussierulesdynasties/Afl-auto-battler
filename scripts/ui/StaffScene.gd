@@ -217,7 +217,7 @@ func _candidate_row(job: String, c: Dictionary, i: int) -> Control:
 	who.text = GameDB.player_display_name(c)
 	who.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	who.add_theme_font_override("font", UiKit.BOLD)
-	who.add_theme_font_size_override("font_size", UiKit.BODY)
+	UiKit.set_font_size(who, UiKit.BODY)
 	who.custom_minimum_size.y = 32
 	who.pressed.connect(func(): _sheet = CoachSheet.open(self, c))
 	info.add_child(who)

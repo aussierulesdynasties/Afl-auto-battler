@@ -351,6 +351,7 @@ func _ready() -> void:
 	if cfg.load(settings_path) == OK:
 		show_real_names = bool(cfg.get_value("display", "real_names", true))
 	UiKit.apply_appearance(str(cfg.get_value("ui", "appearance", "dark")))
+	UiKit.apply_text_size(str(cfg.get_value("ui", "text_size", "standard")))
 	_carry_old_sound_levels(cfg)
 	_apply_sound_mute(bool(cfg.get_value("ui", "mute_sounds", false)))
 	AudioLevels.apply_volume(AudioLevels.valid(cfg.get_value("ui", "volume", AudioLevels.DEFAULT_VOLUME)))
@@ -425,6 +426,24 @@ func set_appearance(mode: String) -> bool:
 	var changed := appearance() != mode
 	set_setting("appearance", mode)
 	UiKit.apply_appearance(mode)
+	return changed
+
+
+## Standard, Larger or Largest (row 118): an unknown saved value reads as
+## Standard.
+func text_size() -> String:
+	var key := str(get_setting("text_size", "standard"))
+	return key if UiKit.TEXT_SCALE.has(key) else "standard"
+
+
+## Sets the size of the game's words. The caller rebuilds the current screen
+## when this returns true, so no control keeps the old size.
+func set_text_size(key: String) -> bool:
+	if not UiKit.TEXT_SCALE.has(key):
+		return false
+	var changed := text_size() != key
+	set_setting("text_size", key)
+	UiKit.apply_text_size(key)
 	return changed
 
 
@@ -677,10 +696,17 @@ func saved_career_meta() -> Dictionary:
 ## so the last save (from before the match) is the consistent one to keep.
 ## Full saves written this run: tests count them to keep a tap to one save.
 var saves_written := 0
+## Set while the season skip plays the season out: each round leaves the save
+## alone and the skip saves once at the end (a save every round was a quarter of
+## the skip's time). Killed mid-skip, the career is where the skip began.
+var _batching := false
+## The coach's answers to the survey before the season skip (SkipOrders),
+## held only while the skip runs; {} the rest of the time.
+var _skip_orders := {}
 
 
 func autosave() -> bool:
-	if not autosave_enabled or not has_career() or not pending_match.is_empty():
+	if _batching or not autosave_enabled or not has_career() or not pending_match.is_empty():
 		return false
 	return save_career()
 
@@ -5278,7 +5304,7 @@ func _club_xp(club: String, p: Dictionary, base: int, staff: Dictionary, on_grou
 ## Manual (spend XP by hand) was cut 2026-11-03: old saves map to the
 ## closest plan (_closest_plan).
 const TRAIN_PLANS := [
-	{"key": "position", "label": "Position plan", "roles": []},
+	{"key": "position", "label": "By position", "roles": []},
 	{"key": "inside_mid", "label": "Inside midfielder", "roles": ["MID"],
 			"text": "Wins the ball at stoppages and keeps it in the tackle.",
 			"weights": {"contested": 3.0, "disposal": 1.0}},
@@ -6633,6 +6659,40 @@ func contract_talks(player_id: String) -> Dictionary:
 	return list_player(player_id).get("talks", {})
 
 
+## His opinion of you, 0..100, as the game shows it (Trust.opinion).
+func opinion_of_you(player_id: String) -> int:
+	return Trust.opinion(Trust.value(relations, Trust.player_key(player_id)))
+
+
+## How likely he is to refuse to re-sign with you, in percent: 1% for every
+## point his opinion of you is under 50 (director 2026-11-08).
+func resign_refuse_chance(p: Dictionary) -> int:
+	return Contracts.refuse_chance(opinion_of_you(str(p.get("id", ""))))
+
+
+## Does he refuse to re-sign with you this season? One draw per player a
+## season, seeded from the career, so asking again never changes his answer;
+## only a different opinion of you does.
+func resign_refused(p: Dictionary) -> bool:
+	var chance := resign_refuse_chance(p)
+	return chance > 0 and StoryEngine.risk_hit(career_seed, season_year, 0,
+			"resign_refuse|" + str(p.get("id", "")), chance)
+
+
+## He refuses: talks are over and the news says why in one line, `tail`
+## saying where he goes. Returns the line.
+func refuse_resign(p: Dictionary, tail: String) -> String:
+	var opinion := opinion_of_you(str(p.get("id", "")))
+	var talks: Dictionary = p.get("talks", {})
+	talks["walked"] = true
+	talks["refused"] = opinion
+	p["talks"] = talks
+	var line := "%s %s" % [Contracts.REFUSED % [GameDB.player_display_name(p), opinion], tail]
+	add_news("contract", line)
+	mark_dirty()
+	return line
+
+
 ## Offer your expiring player `salary` a season for `years` seasons. Returns
 ## {"ok", "answer": "accept" | "counter" | "walk" | "", "salary", "reason"}.
 ## The cap is checked first, so an offer you cannot afford costs nothing.
@@ -6643,12 +6703,18 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 	if p.is_empty() or not offseason_open() or not Contracts.expiring(my_list).has(p):
 		return {"ok": false, "answer": "", "reason": "Contracts can only be settled in the off-season."}
 	var talks: Dictionary = p.get("talks", {})
+	if talks.has("refused"):
+		return {"ok": false, "answer": "walk", "reason": Contracts.REFUSED_TALKS % int(talks["refused"])}
 	if bool(talks.get("walked", false)):
 		return {"ok": false, "answer": "walk", "reason": "Talks have broken down: he will test free agency."}
 	years = clampi(years, 1, Contracts.MAX_YEARS)
 	salary = maxi(Contracts.SENIOR_MIN_2027, salary)
 	if my_payroll() - int(p.get("salary", 0)) + salary > salary_cap:
 		return {"ok": false, "answer": "", "reason": "Not enough cap room for %s a season." % Contracts.money(salary)}
+	# Under 50, he may refuse you whatever you offer (director 2026-11-08).
+	if resign_refused(p):
+		refuse_resign(p, Contracts.REFUSED_GOES)
+		return {"ok": false, "answer": "walk", "reason": Contracts.REFUSED_TALKS % int(p["talks"]["refused"])}
 	var name := GameDB.player_display_name(p)
 	var snap := RecruitUndo.snapshot(self, player_id)
 	var reply := Contracts.respond(p, salary, years, int(talks.get("failed", 0)),
@@ -7128,8 +7194,14 @@ func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 	if my_list.size() >= Contracts.MAX_LIST:
 		return {"ok": false, "answer": "", "reason": "Your list is full (%d)." % Contracts.MAX_LIST}
 	var talks: Dictionary = p.get("talks", {})
+	if talks.has("refused"):
+		return {"ok": false, "answer": "walk", "reason": Contracts.REFUSED_TALKS % int(talks["refused"])}
 	if bool(talks.get("walked", false)):
 		return {"ok": false, "answer": "walk", "reason": "He has stopped talking to you."}
+	# One you let go is re-signing with you: the same draw as in talks.
+	if str(p.get("released_by", "")) == my_club and resign_refused(p):
+		refuse_resign(p, Contracts.REFUSED_STAYS)
+		return {"ok": false, "answer": "walk", "reason": Contracts.REFUSED_TALKS % int(p["talks"]["refused"])}
 	if int(p.get("market_round", 0)) >= Contracts.FA_ROUNDS:
 		return {"ok": false, "answer": "", "reason": "You have made your final offer."}
 	years = clampi(years, 1, Contracts.MAX_YEARS)
@@ -9066,6 +9138,11 @@ func _close_free_agency() -> void:
 	var testing := []
 	for step in _fa_close_plan():
 		var p: Dictionary = step[0]
+		var talks: Dictionary = p.get("talks", {})
+		var told := talks.has("refused")
+		if str(step[1]) == "release" and not bool(talks.get("walked", false)) and resign_refused(p):
+			refuse_resign(p, Contracts.REFUSED_GOES)
+			told = true
 		match str(step[1]):
 			"resign1":
 				_resign(p, 1)
@@ -9075,9 +9152,10 @@ func _close_free_agency() -> void:
 				_release(my_club, p, true, false)
 				testing.append(p)
 			_:
-				# He walked, or you could not fit him: you wanted him, as a rival
-				# that runs out of room does.
-				_release(my_club, p, true)
+				# He walked or refused you, or you could not fit him: you wanted
+				# him, as a rival that runs out of room does. A refusal already
+				# said so in the news.
+				_release(my_club, p, true, not told)
 				HonourBoard.leave(self, p, "free_agent")
 	_market_test(testing)
 	_resolve_market()
@@ -9093,8 +9171,9 @@ func _close_free_agency() -> void:
 ## How free agency's close will settle your undecided players, worked out
 ## without changing anything: [[player, "resign1" | "resign2" | "test" |
 ## "release"]], in order. A depth player re-signs if the cap allows, one of
-## your best 23 tests the market, one who walked or does not fit is let go
-## (at the list minimum he re-signs instead). _close_free_agency runs this
+## your best 23 tests the market, one who walked, refuses to re-sign with you
+## (resign_refused) or does not fit is let go (at the list minimum he re-signs
+## instead). _close_free_agency runs this
 ## plan and draft_list_spots counts it, so the two never disagree.
 func _fa_close_plan() -> Array:
 	var plan := []
@@ -9111,7 +9190,7 @@ func _fa_close_plan() -> Array:
 	for p in Contracts.expiring(my_list):
 		if bool(p.get("resigned", false)) or retiring_now(p):
 			continue
-		var walked := bool(p.get("talks", {}).get("walked", false))
+		var walked := bool(p.get("talks", {}).get("walked", false)) or resign_refused(p)
 		if walked and size <= Contracts.MIN_LIST:
 			plan.append([p, "resign1"])
 			continue
@@ -9785,7 +9864,7 @@ func _plan_row(key: String) -> Dictionary:
 
 func train_plan_label(key: String) -> String:
 	var row := _plan_row(key)
-	return str(row.get("label", "Position plan")) if not row.is_empty() else "Position plan"
+	return str(row.get("label", "By position")) if not row.is_empty() else "By position"
 
 
 ## What the plan makes of him, in football terms. The Position plan reads
@@ -10949,12 +11028,46 @@ func _prepare_media_conference(results: Array) -> void:
 			var p := _find_player(str(r.get("id", "")))
 			if not p.is_empty() and MediaConference.is_young(float(p.get("age", 30.0))):
 				young += 1
+	# A listed player's first game, or a career milestone, on the day: only for
+	# a career on record in full, so the count is true.
+	var debut := {}
+	var milestone := {}
+	if roster.size() > side:
+		for r in roster[side]:
+			var p := list_player(str(r.get("id", "")))
+			if p.is_empty() or not Career.complete(p):
+				continue
+			var g := games_played(p)
+			var who := {"id": str(p.get("id", "")), "name": GameDB.player_display_name(p), "games": g}
+			if g == 1 and debut.is_empty():
+				debut = who
+			elif BANNER_MILESTONES.has(g) and g >= 100 and g > int(milestone.get("games", 0)):
+				milestone = who
+	var fin := {}
+	if res.has("tag"):
+		var lbl := str(res.get("label", "final"))
+		if lbl.length() > 2 and lbl.right(1).is_valid_int():
+			lbl = lbl.left(lbl.length() - 2)
+		fin = {"label": lbl if lbl == "Grand Final" else lbl.to_lower(), "status": my_finals_status()}
+	var won_run := 0
+	var form: Array = season.club_results(my_club)
+	for i in range(form.size() - 1, -1, -1):
+		if str(form[i]) != "W":
+			break
+		won_run += 1
 	media_conference = MediaConference.pick({
 		"result": res, "club": my_club, "opponent_name": GameDB.club_name(opp),
 		"round": round_no, "injuries": injuries, "star": star, "year": season_year, "young": young,
-		"named": _press_named(res, side, hurt),
+		"named": _press_named(res, side, hurt), "debut": debut, "milestone": milestone, "final": fin,
+		"losing_run": losing_streak, "winning_run": won_run, "my_pos": my_position(), "opp_pos": club_position(opp),
 	}, media_memory)
 	if not media_conference.is_empty():
+		# How often each question has come up this career: its written
+		# versions take turns (MediaConference._turn).
+		var asked: Dictionary = media_memory["asked"] if media_memory.get("asked") is Dictionary else {}
+		var key := str(media_conference.get("key", ""))
+		asked[key] = int(asked.get(key, 0)) + 1
+		media_memory["asked"] = asked
 		media_conference["opp"] = GameDB.club_name(opp)
 		# How he asks follows your standing with him (director 2026-11-06, Q1);
 		# the question itself stays as it was.
@@ -11144,9 +11257,14 @@ func press_context(option: int) -> Dictionary:
 	if not his.is_empty():
 		name = GameDB.player_display_name(his)
 	var j := str(media_conference.get("journalist", ""))
+	# Backing a player you called out gives back his opinion of you (director 2026-11-08).
+	var restore := 0
+	var owed: Array = (media_memory.get("callouts", {}) as Dictionary).get(str(o.get("player", "")), [])
+	if kind == "back_named" and not owed.is_empty():
+		restore = Trust.opinion_move(Trust.value(relations, Trust.player_key(str(o["player"]))), -int(owed.back()))
 	return {"journalist": j, "verdict": press_verdict(kind), "name": name,
 			"standing": press_standing(j) if MediaConference.JOURNALISTS.has(j) else 0, "facts": press_facts(option),
-			"lost": MediaConference.after_loss(media_conference)}
+			"lost": MediaConference.after_loss(media_conference), "restore": restore}
 
 
 ## The line under answer `option` (MediaConference.odds_line).
@@ -11219,6 +11337,7 @@ func resolve_media_conference(option: int) -> Dictionary:
 	var his := list_player(str(picked.get("player", "")))
 	if int(out["his"]) != 0 and not his.is_empty():
 		MediaConference.apply_lift(his, int(out["his"]), MediaConference.NAMED_CAP, up)
+	var opinion := _press_opinion(kind, his, int(out.get("opinion", 0)), round_no)
 	var before := press_standing(j)
 	var after := MediaConference.standing_after(before, MediaConference.standing_move(j, kind, str(ctx.get("verdict", ""))))
 	if MediaConference.JOURNALISTS.has(j) and after != before:
@@ -11228,16 +11347,51 @@ func resolve_media_conference(option: int) -> Dictionary:
 	media_memory["said|" + key] = {"year": season_year, "option": option,
 			"opp": str(media_conference.get("opp", "")), "round": round_no}
 	var line := MediaConference.after_line(kind, landed, fx, str(ctx.get("name", "")))
-	add_news("media", "Post-match: '%s' %s" % [str(picked.get("label", "")), line])
+	add_news("media", ("Post-match: '%s' %s %s" % [str(picked.get("label", "")), line,
+			MediaConference.opinion_after(opinion)]).strip_edges())
 	media_conference = {}
 	mark_dirty()
 	autosave()
 	var size := maxi(absi(int(out["morale"])), absi(int(out["his"])))
 	return {"kind": kind, "landed": landed, "chance": odds, "line": line, "journalist": j,
-			"standing": [before, after], "verdict": str(ctx.get("verdict", "")), "effects": out,
+			"standing": [before, after], "verdict": str(ctx.get("verdict", "")), "effects": out, "opinion": opinion,
 			"fade_rounds": maxi(MediaConference.fade_rounds(size), MediaConference.board_fade_rounds(board_moved)),
 			"fade_morale": MediaConference.fade_rounds(size), "fade_board": MediaConference.board_fade_rounds(board_moved)}
 
+
+
+## A named answer and his opinion of you (director 2026-11-08). Calling him
+## out and his taking it personally costs `move` points (trust twice that),
+## kept in media_memory["callouts"] so backing him by name later gives the
+## latest one back, whichever way the backing lands. Returns {"name", "from",
+## "to"} (out of 100) when it moved, else {}.
+func _press_opinion(kind: String, his: Dictionary, move: int, round_no: int) -> Dictionary:
+	if his.is_empty():
+		return {}
+	var pid := str(his.get("id", ""))
+	var key := Trust.player_key(pid)
+	var from := Trust.value(relations, key)
+	var when := last_label if last_label != "" else "Round %d" % round_no
+	var callouts: Dictionary = media_memory.get("callouts", {})
+	var owed: Array = callouts.get(pid, [])
+	if kind == "criticise_named" and move < 0:
+		var d := Trust.change(relations, key, move * Trust.PER_POINT, "You called him out in the press", season_year, when)
+		if d != 0:
+			owed.append(d)
+	elif kind == "back_named" and not owed.is_empty():
+		Trust.change(relations, key, -int(owed.pop_back()), "You backed him in the press after calling him out", season_year, when)
+	if owed.is_empty():
+		callouts.erase(pid)
+	else:
+		callouts[pid] = owed
+	if callouts.is_empty():
+		media_memory.erase("callouts")
+	else:
+		media_memory["callouts"] = callouts
+	var to := Trust.value(relations, key)
+	if to == from:
+		return {}
+	return {"name": GameDB.player_display_name(his), "from": Trust.opinion(from), "to": Trust.opinion(to)}
 
 
 ## Season over: did you meet the goal? Miss it badly twice and you are gone.
@@ -11274,6 +11428,70 @@ func _next_week_event() -> void:
 	ClubArcs.week(self)
 
 
+## Skip to the end of the season (director, 2026-11-07: "We need to bring back
+## the ability to skip full seasons"; 2026-11-08: "It's just skipping games, no
+## off season skipping"). Every week left, the finals included, is played out
+## without you, exactly as Sim the week plays it, following the survey's
+## answers (SkipOrders). It stops once the season is over, where the last Sim
+## the week stops (the last match opens the off-season, so rivals settle their
+## contracts as always): re-signings, trades, free agency and the draft stay yours.
+## The last week's card is left for you, as after Sim the week. Sacked on the
+## way, it stops there. Saved once, at the end.
+## Returns {"ok", "year", "weeks", "reason": "done" | "sacked" | "none"}.
+func skip_season(orders := {}) -> Dictionary:
+	if season == null or is_sacked() or season.is_season_over():
+		return {"ok": false, "year": season_year, "weeks": 0, "reason": "none"}
+	var year := season_year
+	var weeks := 0
+	_batching = true
+	_skip_orders = SkipOrders.defaults(club_plan)
+	_skip_orders.merge(orders, true)
+	# The survey's answers (SkipOrders): the game plan stands as your plan; a
+	# run for the kids needs auto-pick, which names a promised player.
+	set_club_plan(str(_skip_orders["game_plan"]))
+	if str(_skip_orders["youth"]) == "kids" and not my_selection().is_empty():
+		set_selection({})
+	while season != null and not season.is_season_over() and weeks < 80:
+		if str(_skip_orders["youth"]) == "kids":
+			_skip_back_kids()
+		advance()
+		weeks += 1
+		if is_sacked():
+			break
+	if is_sacked() or season == null or not season.is_season_over():
+		_batching = false
+		_skip_orders = {}
+		autosave()
+		return {"ok": false, "year": year, "weeks": weeks, "reason": "sacked"}
+	_batching = false
+	_skip_orders = {}
+	mark_dirty()
+	autosave()
+	return {"ok": true, "year": year, "weeks": weeks, "reason": "done"}
+
+
+## "Give the kids a run" (SkipOrders): before each week of the skip, your
+## best players with few senior games are promised runs (Backing) until
+## SkipOrders.YOUTH_RUNS are on at once; auto-pick names them.
+func _skip_back_kids() -> void:
+	var on := 0
+	var kids := []
+	for p in my_list:
+		if Backing.is_active(p):
+			on += 1
+		elif can_back(p):
+			kids.append(p)
+	kids.sort_custom(func(a, b):
+		if int(a["overall"]) != int(b["overall"]):
+			return int(a["overall"]) > int(b["overall"])
+		return str(a["id"]) < str(b["id"]))
+	for p in kids:
+		if on >= SkipOrders.YOUTH_RUNS:
+			break
+		_start_backing(p)
+		on += 1
+
+
 func week_event_pending() -> bool:
 	for c in week_events:
 		if not bool((c as Dictionary).get("resolved", false)):
@@ -11289,6 +11507,11 @@ func _settle_week_event() -> void:
 	for i in range(week_events.size()):
 		var card: Dictionary = week_events[i]
 		if bool(card.get("resolved", false)):
+			continue
+		# Away on a skip, the survey's answer to the week's questions (SkipOrders).
+		var pick := SkipOrders.card_choice(card, str(_skip_orders.get("questions", "usual")))
+		if pick >= 0:
+			resolve_card(i, pick)
 			continue
 		var d := int(card.get("default", -1))
 		if d >= 0:
