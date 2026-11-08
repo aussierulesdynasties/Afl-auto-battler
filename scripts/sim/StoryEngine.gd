@@ -153,6 +153,10 @@ static func pick_week(deck: Array, ctx: Dictionary, story: Dictionary) -> Array:
 	# September always has something to say (finals weeks); the rest of the year is as quiet as it was.
 	# The week your season ends always has its card too (finals_cards_2).
 	var quiet := rng.randf() >= EVENT_CHANCE and not ["finals", "season_end"].has(str(ctx.get("phase", "regular")))
+	# A card written to come every time takes the week, quiet or not.
+	var due := _due_cards(deck, ctx, story, rng, w)
+	if not due.is_empty():
+		return due
 	var out := []
 	var first := _pick_one(deck, ctx, story, rng, w, quiet, "", "")
 	if first.is_empty():
@@ -166,6 +170,28 @@ static func pick_week(deck: Array, ctx: Dictionary, story: Dictionary) -> Array:
 			out.append(second)
 			_record_pick(story, second, w)
 	return out
+
+
+## The cards marked `always` (director 2026-11-08, the running-again card "comes every
+## time"): one for each player who fits, each player once a season. Never drawn or held
+## back by the week's mix; the season's counts hold who has had his.
+static func _due_cards(deck: Array, ctx: Dictionary, story: Dictionary, rng: RandomNumberGenerator, w: int) -> Array:
+	var out := []
+	for t in deck:
+		if not bool(t.get("always", false)):
+			continue
+		var subj := eligible_subject(t, ctx, story, w, rng)
+		while not subj.is_empty():
+			var card := build(deck, t, subj, ctx.get("club", {}), rng, w)
+			out.append(card)
+			_record_pick(story, card, w)
+			story["season"][_always_key(str(t["id"]), str(subj["id"]))] = 1
+			subj = eligible_subject(t, ctx, story, w, rng)
+	return out
+
+
+static func _always_key(id: String, pid: String) -> String:
+	return "%s|%s" % [id, pid]
 
 
 static func _pick_one(deck: Array, ctx: Dictionary, story: Dictionary, rng: RandomNumberGenerator, w: int,
@@ -226,7 +252,7 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 	if per > 0 and int(story["season"].get(id, 0)) >= per:
 		return {}
 	# A priority card (September's) is not held back by the mix of the last five weeks.
-	if category_count(story, str(t["category"]), w) >= DIVERSITY_MAX and not bool(t.get("priority", false)):
+	if category_count(story, str(t["category"]), w) >= DIVERSITY_MAX and not bool(t.get("priority", false)) and not bool(t.get("always", false)):
 		return {}
 	var club: Dictionary = ctx.get("club", {})
 	if not meets(club, t.get("when", {}), story["flags"].get("club", {})):
@@ -241,7 +267,12 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 		var pid := str(p["id"])
 		if pid == skip_pid:
 			continue
-		if played_between(int(story["subj"].get(pid, NEVER)), w) < int(t.get("subject_cooldown", 0)):
+		if bool(t.get("always", false)) and story["season"].has(_always_key(id, pid)):
+			continue
+		# No wait means no wait: Round 1's cards are drawn when the season is made, so
+		# their stamp is later than a pre-season week and the gap reads negative.
+		var wait := int(t.get("subject_cooldown", 0))
+		if wait > 0 and played_between(int(story["subj"].get(pid, NEVER)), w) < wait:
 			continue
 		if not meets(p, subject.get("where", {}), story["flags"].get(pid, {})):
 			continue
@@ -835,9 +866,15 @@ static func _rush_preseason(facts: Dictionary) -> Array:
 		# Nearly right anyway (director 2026-11-08: the card comes every time).
 		out.append(["gain", "He trains with the group from now. On the physio's plan he is back for next week's training anyway, so clearing him gains no development and no Round 1 game."])
 	# The card comes after the week's time trial or pre-season match (GameState.preseason_advance).
-	var games := "Round 1" if int(facts.get("pre_week", 0)) >= int(PreSeason.tune("practice_week")) else "the pre-season match and Round 1"
-	out.append(["cost", "He is sore until Round 1: %s chance he is hurt in %s (any injury, not only this one; %s), and he starts each %s short of fresh legs." % [
-			_sore_chance(facts), games, _injury_length_words(), _pct(100 - roundi(ClubLife.SORE_LEGS))]])
+	# The pre-season match carries a share of a normal match's risk (GameState._practice_squad).
+	var games := "Round 1"
+	var starts := "it"
+	if int(facts.get("pre_week", 0)) < int(PreSeason.tune("practice_week")):
+		var share := float(PreSeason.tune("practice_injury_rate"))
+		starts = "each match"
+		games += " and %s in the pre-season match" % ("half that" if is_equal_approx(share, 0.5) else "%s of that" % _pct(roundi(share * 100.0)))
+	out.append(["cost", "He is sore until Round 1: %s chance he is hurt in %s (any injury, not only this one; %s), and he starts %s %s short of fresh legs." % [
+			_sore_chance(facts), games, _injury_length_words(), starts, _pct(100 - roundi(ClubLife.SORE_LEGS))]])
 	if heavy > 0:
 		out.append(["cost", "He trains through %s he would have sat out, with a Heavy week's injury risk." % (
 				"a Heavy week" if heavy == 1 else "%s Heavy weeks" % _count(heavy))])
