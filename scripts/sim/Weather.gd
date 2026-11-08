@@ -6,24 +6,25 @@ extends RefCounted
 ## what's played. Evidence and conclusions: docs/research/WEATHER_EVIDENCE.md.
 ##
 ## Likelihoods come from Bureau of Meteorology monthly means per venue
-## (data/weather_by_venue.json):
-##  - wet: the share of days with 1 mm of rain or more, x WET_K. With the roofed
-##    ground always dry that makes about 1 match in 5 wet league-wide (SI
-##    335/1,625; BB 630/2,819);
+## (data/weather_by_venue.json), fitted (row 61) so each condition comes up as
+## often as it did at the real outdoor grounds, 2016-25, by the same measure its
+## effects were sized on (tools/balance/afl_weather_rates.json: wet 0.3 mm or
+## more in the match window, then windy, then hot):
+##  - wet: the share of days with 1 mm of rain or more, x WET_K: 14.4% of
+##    outdoor matches, about 1 in 9 league-wide with the roofed ground dry;
 ##  - windy: a soft cut-off on the mean 3 pm wind (WIND_CUT, capped at
-##    WIND_CAP a venue-month), fitted to about 14% of outdoor matches (OUW
-##    382/2,640);
-##  - hot: a soft cut-off on the mean maximum (HOT_CUT), which puts about 70%
-##    of hot days in March and April (the Heat Policy, ABC).
+##    WIND_CAP a venue-month): 12.0% of outdoor matches;
+##  - hot: a soft cut-off on the mean maximum (HOT_CUT): 3.8% of outdoor
+##    matches, about 70% of them in March and April (the Heat Policy, ABC).
 ## The cut-offs are fitted in tools/balance/weather_cutoffs.py.
 
 const CONDITIONS := ["perfect", "wet", "windy", "hot"]
 const LABELS := {"perfect": "Perfect day", "wet": "Wet", "windy": "Windy", "hot": "Hot"}
 const DATA_PATH := "res://data/weather_by_venue.json"
 const MONTHS := ["Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"]
-const WET_K := 1.03
-const WIND_CUT := 21.5      # km/h, mean 3 pm wind
-const HOT_CUT := 28.6       # C, mean maximum
+const WET_K := 0.52
+const WIND_CUT := 21.6      # km/h, mean 3 pm wind
+const HOT_CUT := 31.0       # C, mean maximum
 const SOFT := 3.0           # width of both soft cut-offs
 const WIND_CAP := 0.35
 ## A created club's ground has no station of its own: the state's AFL venue
@@ -96,7 +97,7 @@ static func condition(venue: String, m: int, key: int, state := "") -> String:
 const REPORT := {
 	"wet": "A wet day: a greasy ball, contested footy counted for more, fewer marks stuck and set shots were harder.",
 	"windy": "A windy day: the breeze end mattered, and the ball was hard to hold.",
-	"hot": "A hot day: open, running footy, and legs went late.",
+	"hot": "A hot day: a slower game with fewer tackles and stoppages, and legs tired sooner.",
 }
 
 

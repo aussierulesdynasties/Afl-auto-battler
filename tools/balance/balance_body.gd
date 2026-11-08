@@ -12,8 +12,20 @@ extends RefCounted
 ## every club picking as the AI does, career and replay seed 2026), so the real 2026 class
 ## plays where it is picked; each team line then also carries "draftees", the 2026
 ## draftees in its 23.
+## `setup` (--setup, fatigue parity): "" plays both sides as before (no coaching table);
+## "league" plays both as a career's background match does (Season.match_sim: rival coaches
+## pick their plans, every club rotates on a Steady season plan); "coached" makes one side
+## your club as a coached match you skip through (side i % 2, so home and away each get it
+## half the time): its assistant takes the calls, moments take their default answer, and
+## both sides' rotations are set before every quarter as MatchScene sets them.
+## Every team line carries its legs: "legs_q" mean energy of the 18 on the ground and
+## "tank_q" how many of them are under TANK, at the end of each quarter, "interchanges",
+## "exertion" (MatchSim.exertion summed over the side), and "coached".
 
 var start := ""
+var setup := ""
+## Energy under which a player on the ground is running on empty (fit 0.90 or less).
+const TANK := 40.0
 
 
 func play(from: int, count: int, out: String, weather: String,
@@ -61,14 +73,41 @@ func play(from: int, count: int, out: String, weather: String,
 		var at_home := [ground.call(h) == v, ground.call(a) == v]
 		var sq_h := Squad.new(h, lists.get(h, GameDB.club_list(h)), bool(at_home[0]), h)
 		var sq_a := Squad.new(a, lists.get(a, GameDB.club_list(a)), bool(at_home[1]), a)
+		var coached := i % 2 if setup == "coached" else -1
+		if setup == "league" or setup == "coached":
+			for side in range(2):
+				var sq: Squad = sq_h if side == 0 else sq_a
+				sq.ai_plans = side != coached
+				sq.assistant = side == coached
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
 		sim.weather = weather
+		if setup == "league":
+			sim.season_plans = ["steady", "steady"]
+		elif setup == "coached":
+			sim.moment_side = coached
 		for k in sets:
 			if not str(k) in sim:
 				push_error("balance: MatchSim has no var " + str(k))
 				return 1
 			sim.set(str(k), float(sets[k]))
-		var r: Dictionary = sim.run()
+		# MatchSim.run(), a quarter at a time, reading each side's legs at the siren.
+		var legs := [[], []]
+		var tank := [[], []]
+		while sim.current_quarter <= 4:
+			if coached >= 0:
+				# MatchScene._apply_quarter_tactics: the assistant sets your rotations,
+				# the rival coach its plan and rotations.
+				sim.set_rotation_policy(coached, sim.auto_rotation(coached, "steady"))
+				sim.set_tactics(1 - coached, sim.ai_tactics(1 - coached))
+				sim.set_rotation_policy(1 - coached, sim.auto_rotation(1 - coached, "steady"))
+			sim.run_quarter()
+			for side in range(2):
+				var e := _legs(sim, side)
+				legs[side].append(e[0])
+				tank[side].append(e[1])
+		if sim.needs_extra_time():
+			sim.run_extra_time()
+		var r: Dictionary = sim.result()
 		# Each side's score at the end of each quarter (for comebacks), from the
 		# running score every event carries.
 		var q_score := [[0, 0, 0, 0], [0, 0, 0, 0]]
@@ -85,12 +124,21 @@ func play(from: int, count: int, out: String, weather: String,
 		# the team key "centre_bounces".
 		var ball_ups := 0
 		var throw_ins := 0
+		# Marks inside 50 (row 61), each side's, from the event log too: a mark
+		# (or a lead mark played on to) taken inside that side's forward 50, and
+		# a forward's mark in the goal-square pack.
+		var mi50 := [0, 0]
+		var f50 := float(Ratings.T["forward50_line"])
 		for ev in r["events"]:
 			var kind := str((ev as Dictionary).get("kind", ""))
 			if kind == "ballup":
 				ball_ups += 1
 			elif kind == "throwin":
 				throw_ins += 1
+			elif kind == "mark" or kind == "receive" or (kind == "pack" and str(ev.get("outcome", "")) == "marked"):
+				var s := int(ev.get("side", 0))
+				if float(ev.get("fp", 0.0)) * (1.0 if s == 0 else -1.0) >= f50:
+					mi50[s] += 1
 		var teams := []
 		var rosters: Array = sim.rosters()
 		var stats: Dictionary = r["players"]
@@ -100,12 +148,22 @@ func play(from: int, count: int, out: String, weather: String,
 			t["ball_ups"] = ball_ups
 			t["throw_ins"] = throw_ins
 			t["stoppages"] = ball_ups + throw_ins
+			t["marks_inside_50"] = mi50[side]
 			_shot_counts(t, sim.shot_log, side)
 			t["strength"] = snappedf((sq_h if side == 0 else sq_a).strength(), 0.01)
 			q_score[side][3] = int(r["score"][side])
 			t["q_score"] = q_score[side]
 			t["roles"] = role_lines(rosters[side], r["players"])
 			t["carry_zone"] = (sim.carry_log[side] as Dictionary).duplicate()
+			t["legs_q"] = legs[side]
+			t["tank_q"] = tank[side]
+			t["interchanges"] = int(sim.interchanges[side])
+			t["coached"] = side == coached
+			var ex := 0.0
+			for pl in (r["roster"][side] as Array):
+				ex += float((r["exertion"] as Dictionary).get(str(pl["id"]), 0.0))
+			t["exertion"] = snappedf(ex, 0.1)
+			t["spoil_zone"] = (sim.spoil_log[side] as Dictionary).duplicate()
 			if not class_ids.is_empty():
 				var sq: Squad = sq_h if side == 0 else sq_a
 				var n_new := 0
@@ -122,6 +180,9 @@ func play(from: int, count: int, out: String, weather: String,
 				var role := str(pl.get("list_role", pl.get("role", "")))
 				t["ic_" + role] = float(t.get("ic_" + role, 0.0)) + float(st.get("intercepts", 0.0))
 				t["pg_" + role] = int(t.get("pg_" + role, 0)) + 1
+				t["sp_" + role] = float(t.get("sp_" + role, 0.0)) + float(st.get("spoils", 0.0))
+			t["club"] = h if side == 0 else a
+			t["ruck1"] = ruck1(r["roster"][side], stats, sq_h if side == 0 else sq_a)
 			teams.append(t)
 		var line := JSON.stringify({"i": i, "home": h, "away": a, "teams": teams, "duels": duels(sim, r)})
 		fh.store_line(line)
@@ -129,6 +190,18 @@ func play(from: int, count: int, out: String, weather: String,
 			print("BAL " + line)
 	fh.close()
 	return 0
+
+
+## [mean energy of the side's players on the ground, how many of them are under TANK].
+func _legs(sim: MatchSim, side: int) -> Array:
+	var ground: Array = (sim.squads[side] as Squad).ground
+	var total := 0.0
+	var low := 0
+	for p in ground:
+		var e := float(sim.energy.get(str(p["id"]), 100.0))
+		total += e
+		low += 1 if e < TANK else 0
+	return [snappedf(total / maxf(1.0, float(ground.size())), 0.01), low]
 
 
 ## The 2027 round-1 lists of a real-lists career: the real end-of-2026 lists, the 2026
@@ -214,6 +287,23 @@ func duels(sim: MatchSim, r: Dictionary) -> Array:
 			top = maxi(top, int(per[d]))
 		out.append([n, won, top, MatchNotes.duel_verdict(won, n)])
 	return out
+
+
+## The side's number-one ruck in this match (T2.31): the man with the most hit-outs
+## (ties to the first in the roster), as [hit-outs, hit-outs to advantage, ruck
+## contests, his ruck rating]. [0, 0, 0, 0] when nobody on the side had a hit-out.
+static func ruck1(roster: Array, stats: Dictionary, sq: Squad) -> Array:
+	var rating := {}
+	for pl in sq.ground + sq.bench:
+		rating[str(pl["id"])] = int((pl.get("attr", {}) as Dictionary).get("ruck", 0))
+	var best := [0, 0, 0, 0]
+	for pl in roster:
+		var st: Dictionary = stats.get(str(pl["id"]), {})
+		var ho := int(st.get("hitouts", 0))
+		if ho > int(best[0]):
+			best = [ho, int(st.get("hitouts_adv", 0)), int(st.get("ruck_contests", 0)),
+				int(rating.get(str(pl["id"]), 0))]
+	return best
 
 
 ## "a=1,b=0.5" -> {"a": 1.0, "b": 0.5}

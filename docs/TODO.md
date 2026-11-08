@@ -1,6 +1,6 @@
 ﻿# TODO: everything not done yet
 
-The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed after merge from the PR's `Closes row N` line (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call; nothing ships on without his playtest. Updated 2026-11-04 against main `7af1db8f`. Live on itch: 1.0.2 (7af1db8).
+The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed after merge from the PR's `Closes row N` line (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call. There are no feature switches (director 2026-11-06): work goes straight into the game and his playtest judges it (section B). Updated 2026-11-08 against main `187a3fa7`. Live on itch: 1.0.8 (73115dc).
 
 ## Itch builds
 
@@ -10,57 +10,49 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 
 | # | What | Done looks like |
 |---|---|---|
-| 35 | Finals bespoke cards: slice 2 built behind `finals_cards_2`; ships when he has played it | see section B |
-| 61 | Weather at full effect: rain, wind and heat change ball handling, kicking, tackling and scoring (wet tackles toward the real +12%); sizes come from a seeded audit and balance stays his call. Its look never touches the sim | audit bands, rules in code, his playtest |
+| 61 | Weather at full effect, wind and heat (rain is in, #1089): wind and heat change ball handling, kicking, tackling and scoring at audited sizes; wet disposals and kicks are still short of real (#1089). Balance stays his call; the look never touches the sim | audit bands, rules in code, his playtest |
 | 63 | One cost sheet per club dominant option and one for the 33 gain-only story options, same look as the 17 story cards; nothing is dropped (T5.Q2, T5.Q3) | every option shows a real cost |
-| 65 | Draftees start lower: picks 1-5 about 60-62, 6-20 about 55-58, POT kept; his playtest still judges (4.Q9) | draft audit bands |
 | 67 | Management pays: trade period at real volume, recruiters' edge and development projects (4.Q11); balance-gated | audit across 8-10 seasons |
-| 69 | Hub leads with one hero element, shown on the hub first (6.Q2) | hub capture, critics clean |
+| 69 | Hub leads with one hero element, shown on the hub first (6.Q2) | hub capture, his look |
 | 70 | Pre-timeskip: the full survey, not the simpler version (T5.Q20) | survey built |
 | 73 | Premiership-year tattoos at a restrained, configurable rate; zero gameplay effect (6.Q16; see G 6.63) | tattoos on, rate in one place |
-| 74 | Gather Round as a shared league event at host venues, with a policy for odd club counts (T5.Q11a) | built |
-| 75 | Sir Doug Nicholls Round as a real annual event, design stored in the save (T5.Q11b) | built |
-| 76 | AFL news layer: generated news items from the save (T5.Q11d) | items appear |
-| 78 | Rare big margins come back through Momentum (100+ about 0.5% against real 1.9%); balance-gated (T8.Q4) | audit shows the blowout rate |
+| 75 | Sir Doug Nicholls Round designs: the annual round and its saved record are in (#1034); left are the design library, selection and rotation, and the guernsey drawn on match day (T5.Q11b) | a design is stored and drawn for the round |
 | 84 | Togetherness at tight and cliques is felt in matches (director 2026-11-06, after the row 68 review); balance-gated, his playtest judges | audit shows the effect, he has played it |
-| 89 | Midfield intercepts close the gap now: sim 1.4 per team per game against real 2.5 (T8.Q8); balance-gated, `tools/balance.sh match 1000`, his playtest judges | audit shows the intercept rate near real |
-| 92 | Back-zone carries retuned (CARRY_ROLES) so defenders carry the ball like real AFL (T9.Q22); balance-gated, paired 1,000-match table in the PR | carry share near real, his playtest judges |
-| 97 | Training: one stat focus per player per season, drills do the rest (T1.Q7, director 2026-11-06) | focus picked once a season, test |
-| 98 | Audio settings become Mute and one Volume slider (T7.O16) | settings show the two controls, real-tap test |
-| 99 | Football department budget merges into High performance: one spend (T9.Q14) | one spend line, old saves load |
 | 103 | Synergies within reach: draft, trade and free-agent screens show which synergy a player would complete, and a player can grow a trait over seasons through training (4.Q10); balance-gated | both shown in play, paired table |
-| 105 | Press conference: list every place the code differs from the bible and show him before anything changes (T3.Q6) | list shown to him |
-| 106 | First-goal line in the feed for any player at your club, backed or not (T5.Q8) | line appears once per player, test |
 | 107 | Event cards: every choice gets an upside and a downside, and never-seen cards get a trigger (T5.Q18, row 34) | no no-cost choice, every card reachable in an audit |
-| 110 | Vignette defects: boundary-snap curved white line, snap-for-goal hovering ball (6.Q18) | frames checked, captures to him |
-| 112 | Rival board letter after a strong season (T5.r23) | letter only after a strong season, accept and decline tested |
+| 112 | Rival board letter after a strong season (T5.r23). The poached coach arc (top four twice or a flag, take the job or say no; in since #1036) already covers part of it | letter only after a strong season, accept and decline tested |
 | 113 | Start at the end of 2026: real lists, the real 2026 National Draft with each club's real picks, then play 2027 (T5.r134) | start option, sourced pick ownership, test |
-| 115 | Board goal set from where the list ranks pre-season, and said aloud; scales with the number of clubs (T9.Q20, T5.r117) | goal follows rank at 18 and 21 clubs, test |
 | 116 | Awards night: round-by-round Brownlow count, live or one round at a time, plus your club's best and fairest (T5.Q23b) | count watchable both ways, real-tap test |
 | 117 | Coaching staff: head coach, head assistant, assistants; counter-offer (not money) when a rival poaches one (T5.Q16) | approach, counter and departure tested |
 | 118 | Text size setting (Standard, Larger, Largest) and no state shown by colour alone (T3.R10) | every screen at Largest, no colour-only state |
-| 119 | Undo for delist, free-agent signing and contract offer until Sim the week (4.R76) | Undo shown and works, real-tap test |
+| 119 | Coach name and appointment interview (director 2026-11-07, after itch 1.0.8). New save: pick any club, type your coach's name, then your first press conference (canon, director: you beat James Hird for the job, mentioned once in the interview, neutral wording, nothing about his past) in the same press room with the real journalists, not skippable: "<Name>, congrats on your appointment as Demons Head Coach", then questions on your coaching style, recruitment approach, strength and conditioning and more, ending with "what do you predict for the season to come?". Your answers set your coaching archetype, like an RPG. The archetype moves match play too, and it shifts over seasons with how you actually coach and answer the press. The season prediction shapes the archetype only (the board sets its own expectation). First step: draft the archetype list with each one's exact match effect for the director to approve, cut or rename; build nothing before that. | save start asks name then interview, every answer moves the archetype, archetype effect on match play measured with tools/balance.sh, drift over seasons tested, real-tap check on phone |
+| 120 | A tag by a player who is not a specialist tagger puts no pressure on the man he tags: the tag shows on the ground but does nothing (measured 42% of tags, director 2026-11-08 "Yes, new row"). Decide how much a non-specialist tag should do, then build it; balance-gated | tag pressure from every tagger, paired table, his playtest |
 | 83 | After the story work: Brownlow viewer controls, the Combine screen and the first-postseason intro to their recorded specs (T3.Q18) | built |
 
-## B. Built and OFF: waiting for his playtest, then the switch goes on
+## B. Built and ON: his playtest judges
 
-| # | Feature | Switch | PRs |
+Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont want any switches"). These are in the game and wait on his playtest; balance-gated rows stay open until it passes.
+
+| # | Feature | PRs | Open |
 |---|---|---|---|
-| 1 | Top three attributes on cards, Needs work benchmark, scout grade word for hidden prospects | `top_attributes` | #863 |
-| 6 | Player faces, 15 hair styles, 30 strips re-rendered | `player_looks` | #873 |
-| 9 | Feed colours: your goals good, goals against bad, behinds and calls neutral | `feed_colours` | #918 |
-| 10 | Kick range caps receiver choice; Sim the week shares the same pick | `kick_range` | #857 #879 |
-| 48 | Coach career arcs | `coach_arcs` | #867 #877 #881 #886 |
-| 49 | Match hero, turning point, reasons | `match_story` | #853 #890 |
-| 50 | Club almanac | see Features.gd | #855 #890 |
-| 51 | Weekly checklist with one big arc call (Hub "no weekly checklist" text goes when on) | `weekly_checklist` | #859 #861 #867 #877 #881 |
-| 35, 36 | Finals cards slice 2 and Grand Final cards | `finals_cards_2` | #864 |
-| 52 | Expansion package, training report, speccy front | `expansion_package`, `training_report`, `speccy_front` | #745 #741 |
-| 11 | Stoppages from contests, play on after a won ball. Only partly met with the switch on: spoils 0.57 of real, intercept marks 0.76, ground ball gets 0.71 (`docs/research/MATCH_FLOW_AUDIT_2026-11-04.md`); a spilled tackle is counted as an intercept. Open: another tuning pass, or his playtest first | `match_flow` | #897 #901 |
-| 13 | Every in-match decision opens on a vignette scene. Time pauses at a decision, so scenes do not fight live speed. Parked behind the section 1.11 playtest gate by his ruling | `decision_scenes` | #902 #908 |
-| 14 | Opposition goal run as two football moves over the centre ball-up | `goal_run_moves` | #903 |
-| 15 | Late-game centre ball-up: two distinct choices | `ballup_two` | #895 |
-| 24 | Training as a compact player card grid with roles and traits | `training_grid` | #928 |
+| 1 | Top three attributes on cards, Needs work benchmark, scout grade word for hidden prospects | #863 | |
+| 9 | Feed colours: your goals good, goals against bad, behinds and calls neutral | #918 | |
+| 10 | Kick range caps receiver choice; Sim the week shares the same pick | #857 #879 | |
+| 49, 50 | Match hero, turning point, reasons; club almanac | #853 #855 #890 | |
+| 51 | Weekly checklist with one big arc call | #859 #861 #867 #877 #881 | |
+| 35, 36 | Finals cards slice 2 and Grand Final cards | #864 | |
+| 52 | Expansion package, training report, speccy front | #745 #741 | |
+| 11 | Stoppages from contests, play on after a won ball | #897 #901 | Only partly met: spoils 0.57 of real, intercept marks 0.76, ground ball gets 0.71 (`docs/research/MATCH_FLOW_AUDIT_2026-11-04.md`); a spilled tackle counts as an intercept. Another tuning pass, or his playtest first |
+| 13 | Every in-match decision opens on a vignette scene; time pauses at a decision | #902 #908 | his 1.11 playtest gate |
+| 14 | Opposition goal run as two football moves over the centre ball-up | #903 | |
+| 15 | Late-game centre ball-up: two distinct choices | #895 | |
+| 24 | Training as a compact player card grid with roles and traits | #928 | |
+| 65 | Draftees start lower: picks 1-5 about 62, 6-20 about 56, POT kept (4.Q9) | #1031 #1050 | |
+| 78 | Rare big margins come back through Momentum (T8.Q4) | #1029 #1038 | balance-gated |
+| 89 | Midfield intercepts (T8.Q8) | #1024 | balance-gated; the suite ceiling is 3.2 a game against real about 2.5 |
+| 92 | Back-zone carries retuned (T9.Q22) | #1023 | balance-gated |
+
+Never balance-screened together (#1074): match_flow, kick_range, set_shots, key_duels, mid_intercepts, back_carries and momentum_runaway; set-shot share is 0.63 against the real 55%. His playtest judges the combined match.
 
 ## C. Needs his look or call (shown, then ask)
 
@@ -94,6 +86,7 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 - 43 More Tripo emblems (15,000 credits set aside; first slice done, none further assigned).
 - 44 State of Origin (not for 1.0; scope interview first).
 - 41 Club Forge game-plan builder.
+- T3.R41 Team selection as two screens on phone, side by side on PC, no scroll (ruled later, 2026-11-06).
 - Player personality types and captaincy meaning (composure, late-game stability): both wanted, later (T5.Q12, T5.Q13).
 - 6.Q14 Indigenous Round art is parked; the First Nations artists are his to choose and pay.
 - Presentation wishlist: away/clash and heritage guernseys, coach appearance, finals bracket, premiership guernsey
@@ -101,9 +94,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
   archive gallery, club museum, retirement variants, dynamic crowd, custom typography, season poster, stadium
   identity, user guernseys and logos, Coach of the Year.
 - Deferred by ruling: weather at the quarter break, announce the cap step, league rule changes.
-
-## In flight
-Nothing open.
 
 ## Working rules
 - Godot runs off-screen with its own user data (`APPDATA=<scratch dir>`); kill only your own PIDs.
@@ -115,39 +105,31 @@ Nothing open.
 
 ## G. From the Bible check (2026-11-04): open and not built
 
-Ids point at `docs/DIRECTOR_BIBLE.md`. Verified against the code on 2026-11-04.
+Ids point at `docs/DIRECTOR_BIBLE.md`. Verified against the code on 2026-11-04, re-checked against main on 2026-11-07.
 
 | Id | What | Done looks like |
 |---|---|---|
 | T1.R26 | Finish the decision-transparency job on the gates still open after #835: "I want full transparency behind each decision and the impact it will have"; "RNG is still okay, as long as the risks are clearly defined in the decision gate." Every remaining gate (pep talk, rotations, play through, plans, defensive forward, in-match cards, draft and rival reads, list and club dominant options, 33 gain-only story options, press conference) shows what each option gives, what it costs and the odds, in football words. | Each gate on the #851 rulings sheet (M1-M7, L1-L4, C1-C2, S1-S2) shows a gain, a cost and its odds in the ruled label wording, and no gate is left with a dominant option. This starts after he answers the five sheet questions. |
 | T2.4 | Release 1.0 Phase 3, players react to your calls: each structural call visibly changes where players stand and move. Director: "the single biggest thing to improve the game feel". | Paired-seed audit shows each call shifts positions, a capture shows it, and the director plays a full match on PC and phone and says the calls matter. |
-| T2.24 | Finish set shots (M4-013): bring the set-shot share to real AFL. Director: "should be 3 visibly different sequences, but also add a pack contest, also gives an opportunity for a crumber to pick up a spoiled ball if it is not marked." Sim #467, view #471 and frees-in-50 #484 are merged. | Seeded audit puts set-shot share within the real AFL range, with a motion clip of the three sequences, the pack contest and a crumber chance. |
-| T2.25 | Kick lanes (M4-014): corridor, switch and down the line chosen by game plan in place of the random 10% switch. Director: "lanes are recorded and affect play, not presentation only." Work sits on origin/claude/kick-lanes and claude/kick-lanes-cal (sim, view and lanes audit commits) with no PR and nothing on main. | PR merged on green with the lane recorded per kick, play affected by plan, a paired-seed lanes audit and a motion clip of the three lanes. |
+| T2.24 | Finish set shots (M4-013). Set shots by distance are in (#1027), but the share now runs over real (0.63 against 55%, #1074). Director: "should be 3 visibly different sequences, but also add a pack contest, also gives an opportunity for a crumber to pick up a spoiled ball if it is not marked." Sim #467, view #471, frees-in-50 #484 and set shots by distance #1027 are merged. | Seeded audit puts set-shot share within the real AFL range, with a motion clip of the three sequences, the pack contest and a crumber chance. |
+| T2.25 | Kick lanes (M4-014): corridor, switch and down the line chosen by game plan in place of the random 10% switch. Director: "lanes are recorded and affect play, not presentation only." The old claude/kick-lanes branches are gone from origin and nothing is on main. | PR merged on green with the lane recorded per kick, play affected by plan, a paired-seed lanes audit and a motion clip of the three lanes. |
 | T2.31 | Ruck integrity (M1-002): diagnose first, then check hit-outs against AFL ranges and feast-or-famine ruck duels; show hit-outs to advantage in detailed ruck stats only; do not make clearances deterministic. Hit-outs to the ruckman (#60) and to advantage (#145) exist; the audit and ranges check do not. | Audit doc compares hit-outs per ruck and per team with real AFL ranges and the duel spread, any tune follows the diagnosis, clearances stay random, and detailed ruck stats list hit-outs to advantage. |
 | T2.29 | General-play spoils (M3-003): bring spoils outside the forward 50 in line with real AFL (forward 50 spoils are done at 15.2 per team per game). Overlaps the spoils recalibration in TODO row 11. | Seeded audit shows general-play spoils per team per game inside the real AFL range, recorded against row 11 so it is not done twice. |
 | T2.42 | Find and fix the simulation freeze or stall in play, a separate defect from the collection pauses fixed in #857. Director: "despite repeated requests to remove this behaviour". | Cause found and shown by trace or capture, fixed, and a long run of seeded matches shows no stall; the director sees none in his own playtest. |
 | T2.48 | Recompose the centre ball-up vignette wider so the stoppage, ruck and mids read before any close-up. Director: "virtually impossioble for me to tell from still iomages", so proof is motion clips. | Motion clip on PC and phone sizes, with the decision UI showing, honours the Vignettes toggle, and the director passes the look. |
 | T3.R10 | Accessibility: a text size setting (Standard, Larger, Largest) and no state shown by colour alone. A tired or injured player is told apart on the live view and bench strip without a tap, with words on long press. Kit clash is checked under colour-blind simulation (P-04, P-06, P-10, P-34). Nothing of this exists yet. | Text size setting changes every screen and a shared test passes at all three sizes. The live view and bench strip show a short mark for tired or injured with words on long press. A colour-blind kit-clash check runs in CI. |
-| T3.R42 | One thumb on match day: every live-play control sits in the lower part of the portrait screen. The score and clock never leave the match screen through a call, break panel, stats view or vignette (P-25, P-26, C-PC-01). | A phone-size screenshot test asserts score and clock are visible in every match-day state, and the live controls sit in the lower part of the screen with no scroll while the ball is in play. |
 | T3.R43 | Navigation economy (bundle 6, director said Yes): each weekly fact at most two taps from the hub; long-press any football word for its exact rule (P-61); search any player or club from the hub and shortlist by long-press (P-65); a 'When I sim the week' standing-orders sheet (P-66); one-tap 'Report a problem' that copies build, seed, round, screen and the last twenty feed lines; one overflow check at every text size (P-77). None of these exist yet; only First-visit intros and the Sim the week label are built. | A tap-count test fails if a weekly fact is more than two taps from the hub. Hub search finds players and clubs. The standing-orders sheet is saved and followed when simming. Report a problem copies the data and sends nothing. The overflow test walks every screen at phone size and each text size. |
 | T3.R9 | Readability sweep, one screen per PR in the order he sees them: hub, match view, breaks, team builder, training, draft, contracts and trades, profile, stats, menus. Then the match-view centrepiece pass ('looks like PowerPoint'). His words: "readability and intuitive interfaces are a core pillar of this project, paramount to its success". Batches 1 and 2 are merged; the rest is open. | Each screen has before/after captures at 390 and 1920 px that the director has looked at, and the match view has been reworked and shown to him. |
 | T3.R56 | Onboarding checked on fresh saves: his words, "Walk through genuinely fresh saves with full onboarding enabled, not a mature save with tutorial flags already set." Cover the initial draft, weekly loop, first postseason, early elimination, reload, skip, off and replay. First-visit intros exist (#856), but trade, contract and Combine tutorials and the first-postseason intro are not found in code. | A fresh-save walkthrough record exists for each case, the missing trade, contract and Combine tutorials and the first-postseason intro are built, and any unimplemented mode is written down honestly. |
-| T3.R41 | Team selection as two screens on phone and side by side on PC, no scroll. His words: "team selection being scrollable doesnt feel good, i think it should be 2 screens". Keep scroll position after every action. Check every screen at 960x540 and 390x844 for a scrollbar. | No scrollbar on team selection at both sizes, scroll position is kept after each action, and a test walks every screen at both sizes and lists any scrollbar. |
 | T3.F-defects | Open defects: fatigue parity doubt, implausible generated veteran, goal-line scramble he called nonsense, stray curved line in the boundary-snap vignette, tag moving left (his words: "heinous, awful UI design", A2). Bye bug fixed in #210 and press tint in #767, so left out. | Each defect is reproduced, fixed and covered by a test or capture; the tag-left screen is redone and shown to him. |
 | 4.R75 | Fewer, stronger, situational traits. The director's audit line: 'fewer, stronger, situational traits'. The forming side against the league (Matchup.standing), the 50/100/150/200 milestones and With us history are already in, and momentum is a real match edge (MOMENTUM_EDGE 0.04). Only the trait trim is left. | The trait list is cut to a short set where each trait switches on in a stated situation. A test pins the new list and old saves map to the nearest trait. |
-| 4.R76 | Undo for a delisting, a free-agent signing and a contract offer until the week moves on (P-09), after the director's 'important decisions never resolve from one accidental tap'. | Delist, FA sign and contract offer each show Undo until Sim the week, and the undo restores list, cap and offers. A real-tap check and a save/reload test cover it. Onboarding is already in (Tutorials On/Off, #572). |
 | T5.Q16 | Coaching hierarchy (Head coach, Head assistant, other assistants) plus opportunity-based retention: when a rival approaches one of your coaches you can make a counter-offer or allow departure. "This retention negotiation is not a monetary bidding system". | One head assistant per club, rival approach held and resolved once, counter-offer is a role or succession promise with a stated timeframe, unmet promises cost trust visibly, AI clubs follow the same rules, test proves it. |
 | T5.Q23b | Round-by-round Brownlow count and your club's own best and fairest count on awards night: "give it a bespoke staggered, round-by-round awards-night count, watchable continuously in real time or advanced one round at a time". Awards race, trophy room and fixture history already exist; the awards program today steps through four stages, not rounds. | Brownlow and club B&F reveal round by round from the stored votes (continuous, pause, next round, skip round, skip all), only revealed votes shown, no re-roll; real tap check on a phone. |
 | T5.Q25 | Coach as the new club: take the job at a different club (director ruling 8: "yes, built after the package (not built yet)"). | A career can be started or continued as coach of a chosen new club with the rest of the save consistent; test and phone check. |
-| T5.r22 | Sacked is not the end: after a sacking the hub offers "A choice of a few" clubs with open jobs (facts only) or retirement with the record read out. Today the sacked card offers only Season review and Main menu. One second chance, a premiership restores it. | Sacked card lists a few open jobs or retire; taking one starts the new club's career with the reprieve count stated plainly; a second sacking ends the coaching career. |
 | T5.r23 | Other clubs come calling: after a strong season a rival board writes one letter (club, list in words, board goal, risk). Take it and the old club carries on; decline and nothing changes. | Letter appears only after a strong season, accept moves you and the old club keeps living, decline changes nothing, no coaching two clubs; test covers both paths. |
-| T5.r110 | People remembered: stored career facts reach a screen. Facts are written but only Retirement.gd reads them. Put them on the player sheet, the drop, your ledger and an honour board (P-37 to P-45, director "Yes"). | Each listed screen shows its facts from CareerFacts, no fabricated lines, honest empty states, real-tap check. |
-| T5.r112-113 | Club honour board (150 games, B&F, Brownlow or flag as columns, newest first, names open career facts) and a page for every club reached by tapping any club name (colours, ground, coach, captain, best 22 in words, last five, flags, players swapped; never rivals' hidden ratings). | Both screens reachable from the named taps, only recorded facts shown, no retired jumper numbers or museum scene, phone capture checked. |
-| T5.r115 | Challenge starts beside League redraft and Real lists: Youth only (no trades or signings over 24), Rebuild (bottom club, three best gone), and a self-set goal the annual marks when met; no recommended goal. | Three starts selectable at new career, rules enforced and stated, self-set goal marked in the annual; test proves each. |
-| T5.r117 | Say the pre-season list rank aloud against the board goal (P-38): the board goal is already set from list rank, the rank just needs to be shown. | Hub or board screen states where the list ranks and the goal that follows, in football words. |
+| T5.r110 | People remembered: stored career facts reach a screen. The honour board reads them (#1100). Left: the player sheet, the drop and your ledger (P-37 to P-45, director "Yes"). | Each listed screen shows its facts from CareerFacts, no fabricated lines, honest empty states, real-tap check. |
 | T5.r134 | Inherited-list career start: "promote this to the next major career-start feature priority ahead of unrelated content/presentation expansion." Inherit 2026 lists for all 18 clubs (before off-season changes, including zero-appearance players), prepare for the 2026 National Draft with sourced pick ownership, play 2027. | New-career setup offers Inherit 2026 lists beside League redraft; draft runs on the 2026 cohort; no fictional fillers or silent cuts; test and playthrough. |
 | T5.r91-93 | RPG programme first slices: the sit-down with a backed player when his three-game run ends (about what he actually did), private selection conversations growing out of the weekly unhappy card, and development conversations tied to training or retraining plans. | Each conversation fires from real facts, shares the one weekly optional slot, has factual follow-through, copy shown to the director first. |
-| T5.r152 | Career-high milestone surfacing (match-to-date stats at every break are already built): career highs shown lightly in match and weekly flow, once each, "Do not spam routine milestones." | Career highs recorded and surfaced once from real stats, nothing for quiet games, test covers a career high and a non-event. |
 | T5.r158 | One rival club's identity across generations (RC-007, accepted): one earlier-versus-current squad or pattern comparison on an existing club surface, only where recorded data supports it. | Comparison line appears on an existing club surface only when data supports it; quiet clubs show nothing; match balance untouched. |
 | T5.r164 | Story beats for international players: bespoke events and story beats for international players (second PR, C2). | International players trigger their own events from real facts, with costs and gains stated, test and phone check. |
 | 6.29 | Finish the new scoreboard typeface: tidy the numerals and check 1/I/l, 6/8/9 and 0/O read apart; make scores like 12.8 (80) and money fit without clipping. | A capture of every score and money form on the phone shows no clipped or confusable digits. |
@@ -159,14 +141,14 @@ Ids point at `docs/DIRECTOR_BIBLE.md`. Verified against the code on 2026-11-04.
 | 6.49 | Oval-broadcast bundle 2 (P-34, P-31, P-32, P-33; P-35 skipped): breeze end shown, crowd, and a skippable post-full-time goals replay from the event log. | All four show in a played match and the replay skips with one tap, proven with a real tap. |
 | 6.51 | Crowd knows the score: crowd noise rises with goal runs, home crowd louder than away, siren at every quarter end, and the gap between event and sound measured. | A match audio check shows each behaviour and a measured event-to-sound gap. |
 | 6.53 | Free shader polish and lighting: restrained figure shadow and highlight, soft contact shadows, baked lighting first; idle and battery audits reported before any change. | Before and after captures plus the audit numbers are reported. |
-| 6.58 | Roll out the hair library after prototypes (afro, mullets, curly, long, dreadlocks, Fritsch-inspired, Bald explicit) and hand beards and boots back to the art agent. | The player_looks switch is on with every hair style drawn on the figures and the director has approved the look. |
+| 6.58 | Hair library: all 16 styles draw (#998, on), but about ten short styles (buzz, crew, side part, messy medium, curly, afro) look alike at figure scale; beards and boots go back to the art work. | Each style reads apart at figure scale and the director has approved the look. |
 | 6.62 | Indigenous Round original guernseys: 5-10 per club over time, each labelled original with its cultural-review state, plus import/export so players can add their own designs ('you design it yourself, ask the boss to add import/export functionality'). | Guernseys appear for the round with labels and review state, and a player can import and export a design. |
 | 6.63 | Tattoos: original artwork, premiership-year tattoo adoption stored once per player, cosmetic only. | Tattoos draw on figures, are saved once, and change no match result. |
 | 6.64 | Club Forge appearance options (socks, headbands, bandaging, tattoos, boots, hair and beard colours, skin tone, dominant foot, preferred number, nickname) and Forge import/export as a 256x128 PNG. | Each option is drawn on the figures and saved, and a PNG round-trips through import and export. |
 | 6.36 | App icon: one coherent Aussie Rules Dynasties identity from the director's reference, with the old branding removed. | The icon is shown at icon scale for the director's approval and no legacy branding remains in the build. |
 | T7.O10 | Correct docs/ITCH_UPLOAD.md: it still says "You upload; nobody else needs your itch login or keys." Sessions push builds with butler and post the devlog; the director only runs butler login and holds the keys. | ITCH_UPLOAD.md says sessions push and post, the director holds the login, and no line contradicts rule 73. |
-| T7.R84 | Release engineering for saves: the game already keeps a .bak swap on save, but there is no "Restore last good save" button, no frozen old-version save fixtures (a 0.1.0 career must still load), no "newer save kept and the player told" message, and no quiet version line with patch notes shown once. | Frozen 0.1.0 and later fixtures load in a test; a corrupt or newer save leaves the file untouched and shows plain words; Restore last good save works from the menu; patch notes show once per version. |
-| T7.R87 | Pass-2 bundles the director said yes to ("All eight theme bundles: yes"), Tier A and B in listed order. P-12 (oval answers a structural call, #784 and #800) and P-70 and P-71 (offline promise, backup, #779) are built. Still to build: P-25 to P-29 match day on a phone, P-72 patch notes name the football change, P-73 answer every review within a week, P-74 the Not in this game page, P-43, and P-52 under-18 carnival first ("P-52: Yes, carnival first"). | One row per remaining P-number in open-requirements.md with a PR, each proved on a phone-width capture or a test; P-30 and P-75 stay skipped. |
+| T7.R84 | Release engineering for saves. In: back up, load a backup and earlier saves (#973), a newer save kept with the player told, one frozen v1 fixture (`tests/fixtures/career_v1_2026-09-30.save.gz`). Left: a "Restore last good save" from the .bak, frozen fixtures for later versions, and a quiet version line with patch notes shown once. | Frozen 0.1.0 and later fixtures load in a test; a corrupt or newer save leaves the file untouched and shows plain words; Restore last good save works from the menu; patch notes show once per version. |
+| T7.R87 | Pass-2 bundles the director said yes to ("All eight theme bundles: yes"), Tier A and B in listed order. P-12 (oval answers a structural call, #784 and #800) and P-70 and P-71 (offline promise, backup, #779) are built. Still to build: P-25 to P-29 match day on a phone, P-72 patch notes name the football change, P-73 answer every review within a week, P-74 the Not in this game page and P-43 (P-52 carnival built in #969). | One row per remaining P-number in open-requirements.md with a PR, each proved on a phone-width capture or a test; P-30 and P-75 stay skipped. |
 | T7.R95 | Indigenous round guernseys: the design audit and guardrails exist (#520), but no data-driven catalogue is in the code. Needs every active club to have "at least five distinct Indigenous-round designs available before the feature is marked complete", with provenance, rights and cultural-review fields. | A catalogue file with provenance, rights and cultural-review fields, at least five designs for each active club, a phone-review sample from every club, and the director's look before it is marked complete. |
 | T8.Q20 | Make the weekly sim faster. Director: "#888 sim 35% slower is accepted for now; optimise the weekly AI in a later PR (next task = the sim-speed PR); the coach pool of 57 is fine as is." Win back the lost time in the weekly AI work, with the same results. | 3-season bench of weeks is back near main's pre-#888 146 s (from 225 s); seeded results byte-identical before and after; coach pool stays at 57. |
 | T8.78 | P-78: a time budget for each player action (tap to screen, Sim the week, rollover), checked by a test. Director: "Yes" (Q8, audits that protect the fun, 2026-10-18). | One budget table in a data file, a check that fails when an action runs over its budget, and the first baseline run recorded. |
@@ -175,10 +157,7 @@ Ids point at `docs/DIRECTOR_BIBLE.md`. Verified against the code on 2026-11-04.
 | T8.88 | P-80: fun floor beside the realism floor. A dynasty bot plays 20 seasons on many seeds and records how often it makes finals within five seasons and wins a flag within fifteen. Director: "Yes" (Q8, 2026-10-18). Feeds the dial sizes, never declares balance done. | A CI audit and an evidence doc giving the finals-in-five and flag-in-fifteen rates against the director's 'a flag every 8-10 seasons'; no constants changed. |
 | T8.83 | Long-career integrity soak. Director: "Test decades-long / 100+ year careers." Start with 5, 10 and 20-year careers, then 8 careers x 20 seasons x 4 policies. The old long_career audit only measures lists and retirements. | CI run shows zero integrity violations (duplicate history, ghost players, impossible lists), season-20 save under 3x season-2, round time under 1.5x. |
 | T8.50 | Potential inflation: show how many 90+ ceilings there are by age, role and club, and what long careers do with them. No blanket nerf. The existing audit covers age band, position and source only. | Evidence doc with distributions by age, role, club and source plus long-career outcomes; any change goes to the director first. |
-| T9.Q20 | Board goal 'Finish in the top 12' is hard-coded (ClubLife.gd) and means two-thirds up the ladder at 18 clubs but a little over half at 21. Make it scale with the number of clubs, using the director's answer on what it should be. | The board goal is worked out from the club count, a test covers 18, 20 and 21 clubs, and the director has signed off the wording. |
-| T9.R21 | TODO row 14 says 'odds in football words'. The director's 2026-10-18 ruling is: "I still want the football language, but I also want full transparency behind each decision and the impact it will have". Reword the row to say upside, downside, size and odds in percentages, in football language. | docs/TODO.md row 14 matches bible principle 4 and what #821, #833 and #835 shipped. |
-| T9.R26 | Roadmap 10-05 still says Create-a-club gets 'an expansion-list establishment package'. The ruling (2026-10-06) is that a created club drafts in the League Draft like every club, with no concession. Correct the stale bullet at line 156. | The bullet in docs/roadmap/10-05-ard-m7-009-expansion-clubs-canberra-toggle-club-forge.md says League Draft, no concession package, and nothing else in the roadmap promises one. |
-| T9.R23 | Fix the stale role and state wording: roadmap W3 still lists 'running a check' as a state, and the style guide, STATUS.md and AGENT_TEAMS.md still talk about the lead's QC and art-qa-critic. The director's rules are no roles (2026-10-29), no 'running a check' (2026-10-31) and independent Art QA critics (2026-11-03). | W3 lists only working (with the live job named), awaiting director, blocked and available, and no doc names a lead or lead's QC. |
+| T9.R23 | Fix the stale role wording: `docs/VISUAL_STYLE_GUIDE.md` still names the lead's QC and the `art-qa-critic` pass (the roadmap, STATUS.md and AGENT_TEAMS.md are gone since #896). The director's rules are no roles (2026-10-29) and no critic agents: all visual work goes to him after the session's own frame check (2026-11-05). | No doc names a lead, the lead's QC or a critic pass. |
 
 ## V. Visual direction (rulings 2026-11-04)
 
@@ -192,33 +171,32 @@ Director's answers. Style guide updated to match (rulings 1-4); the reports behi
 - V-R6 The live match stays a refined diagram; the vignettes are the showpiece. No following camera, no 3D restart plan, no Clay Oval proof now.
 - V-R7 Lowest supported phone: a recent mid-range, about 2023.
 - V-R8 Figure sheets and the eight vignette scenes are kept; any deletion waits for a future decision.
-- V-R9 Nav icons and the wordmark are AI-assisted candidates; critics check them and the director approves or rejects.
+- V-R9 Nav icons and the wordmark are AI-assisted candidates; the director approves or rejects.
 
 | Id | What | Done looks like |
 |---|---|---|
-| V1 | Motion tokens and the `sheet_in` / `fill_bar` prototype, behind switch `ui_motion` (already in flight) | tokens in UiKit, a sheet slides in and a bar fills with the switch on, nothing moves with it off, headless sees the final state |
 | V2 | Premiership streamers in club colours | plays once on the premiership screen only, a capture frame shows both club colours |
 | V3 | Brownlow winner reveal: 24 gold sparkles | plays once on the winner reveal only, 24 sparkles, a capture frame |
 | V4 | Elevation scale and an automatic contrast test | surface steps are tokens, a test fails any text or club fill under the contrast floor, including each club's primary fill against BAD |
 | V5 | Training results is the proof screen for the new look, then the hub, then the other screens | director approves Training results on his phone before the hub starts, then the hub before the rest |
 | V6 | Match chrome: scorebug 56 to 72 px, bottom decision sheet about a third of the height, one-button transport, goal and siren poster card | captures at 390x844, the oval gets the freed height, every decision reachable with a real tap |
-| V7 | Navigation icon set (AI-assisted candidates) | one icon per hub destination, critics clean, director approves or rejects |
+| V7 | Navigation icon set (AI-assisted candidates) | one icon per hub destination, director approves or rejects |
 | V8 | Refresh captures of every screen on current main (the newest are 2026-10-07 to 10-11) | one capture per screen at 390x844, dated, in the audit folder |
-| V9 | Housekeeping: placeholder logo name, the unreferenced 67.5 MB `The MCG.glb` in the repo root, stale worktrees | logo name is final or marked placeholder in one place, the file is removed or referenced, `git worktree list` shows only live ones |
+| V9 | Housekeeping: placeholder logo name, stale worktrees (`The MCG.glb` is already out of the repo) | logo name is final or marked placeholder in one place, `git worktree list` shows only live ones |
 
 ## Rulings (director, 2026-11-04)
 
 Settled answers that are not build rows. The bible stays as it is unless he consents to a change.
 
 - A TODO row is authorisation to build it; a roadmap entry alone is not. With no task, work the TODO.
-- Critics repeat until clean, any doubt is a fail. This fully replaces the 2026-10-18 "don't chase marginal gains" line.
+- Any doubt is a fail (critic agents are gone since 2026-11-05: every visual goes to him after the session's own frame check). This fully replaces the 2026-10-18 "don't chase marginal gains" line.
 - Game, simulation and story carry equal importance. Secondary buttons are outlines.
 - Press answers are seeded rolls with the odds and both outcomes shown (the bible line stands; already shipped).
 - Polish goal 1 (player agency in matchups and rotation changes) stays open as written.
 - Teaching is XP scaling, not the season-ceiling point.
 - Personality types and captaincy are both wanted, later (section F). Culture sizes are reviewed now (row 68).
 - 4.Q5 (Ask around, untouchable, pick order from round 18, pick trade on draft night) are still candidates, not assigned.
-- Row 13 gets all five scenes, stays off and waits for the 1.11 playtest gate. Time pauses at a decision, so scenes never fight live speed.
+- Row 13 gets all five scenes and waits for the 1.11 playtest gate (on since #1074, no switches). Time pauses at a decision, so scenes never fight live speed.
 - Weather has full effect on play (T1.Q2, T2.Q2, 6.Q10, T8.Q7): wet tackles move toward the real +12% (row 61); how it looks never touches the sim. Weather is off the bible's open list.
 - Ladder goes into Season stats (T3.Q13, T9.Q29): the hub nav bar loses Ladder, no other nav change (shipped).
 - Price: free for now. Platforms: web, Windows and an Android APK on itch; Google Play only on his written yes (US$25 fee and signing key).
@@ -263,3 +241,4 @@ Each line is a question he has not answered yet. Answered ones are in Rulings or
 - Does the transparency continuation order stand (M3, M4, M6, M7, M2 copy first; L1 after Q3, L2 with Q4; M1 after Q2; C2 copy; M5 after #850; L4, C1, S1 after Q5, Q6, Q9; S2 after Q8; L3 after measuring), or does he re-order it? (T7.R89)
 - Keep "League Draft board shows scouted estimates" and the branch's rival scouting error cut to 0-4, or both together (may overcorrect)? (T9.Q15)
 - Which of P-01 to P-11, P-16, P-19, P-21, P-22 and P-24 does he take? (T9.Q31)
+- Is "outside the bottom third" (top 12, 13 and 14 at 18, 20 and 21 clubs) the board's middle goal? Built that way in #1053 as a proposal. (T9.Q20)

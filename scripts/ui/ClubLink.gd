@@ -25,8 +25,8 @@ static func url(shown: String, code: String) -> String:
 ## A club's name as a link wears its strongest real colour (director
 ## 2026-11-06, rulings 51a: never white, never a tint): the same club-code ink
 ## as the Season stats lists, read at 4.5:1 on the page, a panel and a pressed
-## row. Every club's name reads in a colour, Essendon's red and Collingwood's
-## grey included, so a name in white is never a club.
+## row. Every club's name reads in a colour, Essendon's red included; a
+## black-and-white club (Collingwood) reads plain white (director 2026-11-07).
 static func colour(code: String) -> Color:
 	return StatsSide.code_ink(code)
 
@@ -37,9 +37,17 @@ static func ink(code: String, shown := "") -> String:
 	return url("[b][color=#%s]%s[/color][/b]" % [colour(code).to_html(false), name.replace("[", "[lb]")], code)
 
 
-## Make a label that names one club open its page on a tap. A press that turns
-## into a swipe does nothing, so it still scrolls the page.
+## Make a label that names one club open its page on a tap. The label is the
+## target; a press that turns into a swipe does nothing, so it still scrolls the
+## page. A label that wraps takes the whole width of its line (below), so set
+## its size flags before this call, never after.
 static func tappable(c: Control, code: String) -> Control:
+	# A wrapping label left to shrink is given one pixel and prints the club one
+	# letter a line (director, 2026-11-08): it takes its line's width and still
+	# wraps at whole words. A label that does not wrap is already as wide as its
+	# words and keeps its caller's flags.
+	if c is Label and (c as Label).autowrap_mode != TextServer.AUTOWRAP_OFF:
+		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	c.set_meta("name_link_wired", true)
 	c.set_meta("club_code", code)
 	c.mouse_filter = Control.MOUSE_FILTER_PASS

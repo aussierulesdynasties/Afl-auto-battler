@@ -9,6 +9,7 @@
 		"trade_not_your_pick": "That pick isn't yours to trade.",
 		"trade_not_their_player": "That player isn't on their list.",
 		"trade_not_your_player": "That player isn't on your list.",
+		"trade_retiring": "That player has announced his retirement.",
 		"trade_asked_elsewhere": "{player} has asked to go to {to}.",
 		"trade_list_over": "That would take a list past {n} players.",
 		"trade_list_under": "That would take a list below {n} players.",

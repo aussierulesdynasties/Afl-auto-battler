@@ -1,0 +1,566 @@
+{
+ "source": "Champion Data per-player season averages, 2025 and 2026 (finals included), as served by Wheelo: docs/research/wheelo/afl_player_stats_<year>.json. Team figures sum every player's average x games over the club's games; ruck1 is the club's listed Ruck with the most season hit-outs, his figures per game he played. Win % is hit-outs per ruck contest (Champion Data HitoutsWinPercentage). League = mean, lowest, highest and sd of the 18 clubs. No per-match split is in the repo. Regenerate with tools/balance/build_ruck_rates.py.",
+ "keys": {
+  "team_hitouts": "team hit-outs a game",
+  "team_hta": "team hit-outs to advantage a game",
+  "team_hta_pct": "share of the team's hit-outs that went to advantage, %",
+  "ruck1_hitouts": "number-one ruck's hit-outs a game",
+  "ruck1_hta": "his hit-outs to advantage a game",
+  "ruck1_hta_pct": "his share of hit-outs to advantage, %",
+  "ruck1_contests": "his ruck contests a game",
+  "ruck1_win_pct": "his hit-outs per ruck contest, %",
+  "ruck1_share": "his share of the club's season hit-outs, %"
+ },
+ "2025": {
+  "league": {
+   "team_hitouts": {
+    "mean": 39.19,
+    "min": 32.52,
+    "max": 48.16,
+    "sd": 4.22
+   },
+   "team_hta": {
+    "mean": 10.43,
+    "min": 8.04,
+    "max": 12.32,
+    "sd": 1.26
+   },
+   "team_hta_pct": {
+    "mean": 26.66,
+    "min": 21.92,
+    "max": 30.57,
+    "sd": 2.11
+   },
+   "ruck1_hitouts": {
+    "mean": 31.29,
+    "min": 21.81,
+    "max": 43.33,
+    "sd": 6.0
+   },
+   "ruck1_hta": {
+    "mean": 8.57,
+    "min": 5.32,
+    "max": 11.29,
+    "sd": 1.69
+   },
+   "ruck1_hta_pct": {
+    "mean": 27.42,
+    "min": 21.35,
+    "max": 30.27,
+    "sd": 2.19
+   },
+   "ruck1_contests": {
+    "mean": 72.02,
+    "min": 49.48,
+    "max": 85.9,
+    "sd": 9.75
+   },
+   "ruck1_win_pct": {
+    "mean": 43.34,
+    "min": 35.05,
+    "max": 50.68,
+    "sd": 4.77
+   },
+   "ruck1_share": {
+    "mean": 72.05,
+    "min": 46.59,
+    "max": 87.41,
+    "sd": 14.61
+   }
+  },
+  "clubs": {
+   "Adelaide": {
+    "team_hitouts": 46.36,
+    "team_hta": 11.84,
+    "team_hta_pct": 25.54,
+    "ruck1": "Reilly O'Brien",
+    "ruck1_hitouts": 38.88,
+    "ruck1_hta": 10.6,
+    "ruck1_hta_pct": 27.26,
+    "ruck1_contests": 80.52,
+    "ruck1_win_pct": 48.29,
+    "ruck1_share": 83.87
+   },
+   "Brisbane": {
+    "team_hitouts": 40.37,
+    "team_hta": 9.85,
+    "team_hta_pct": 24.4,
+    "ruck1": "Darcy Fort",
+    "ruck1_hitouts": 29.62,
+    "ruck1_hta": 7.52,
+    "ruck1_hta_pct": 25.4,
+    "ruck1_contests": 70.14,
+    "ruck1_win_pct": 42.23,
+    "ruck1_share": 57.06
+   },
+   "Carlton": {
+    "team_hitouts": 34.7,
+    "team_hta": 10.61,
+    "team_hta_pct": 30.57,
+    "ruck1": "Tom De Koning",
+    "ruck1_hitouts": 23.27,
+    "ruck1_hta": 7.04,
+    "ruck1_hta_pct": 30.27,
+    "ruck1_contests": 62.77,
+    "ruck1_win_pct": 37.08,
+    "ruck1_share": 64.16
+   },
+   "Collingwood": {
+    "team_hitouts": 36.4,
+    "team_hta": 10.12,
+    "team_hta_pct": 27.8,
+    "ruck1": "Darcy Cameron",
+    "ruck1_hitouts": 28.32,
+    "ruck1_hta": 7.92,
+    "ruck1_hta_pct": 27.97,
+    "ruck1_contests": 70.24,
+    "ruck1_win_pct": 40.32,
+    "ruck1_share": 77.8
+   },
+   "Essendon": {
+    "team_hitouts": 37.65,
+    "team_hta": 10.3,
+    "team_hta_pct": 27.37,
+    "ruck1": "Todd Goldstein",
+    "ruck1_hitouts": 26.69,
+    "ruck1_hta": 7.94,
+    "ruck1_hta_pct": 29.74,
+    "ruck1_contests": 60.94,
+    "ruck1_win_pct": 43.8,
+    "ruck1_share": 49.31
+   },
+   "Fremantle": {
+    "team_hitouts": 40.96,
+    "team_hta": 12.0,
+    "team_hta_pct": 29.3,
+    "ruck1": "Luke Jackson",
+    "ruck1_hitouts": 21.81,
+    "ruck1_hta": 6.52,
+    "ruck1_hta_pct": 29.91,
+    "ruck1_contests": 49.48,
+    "ruck1_win_pct": 44.08,
+    "ruck1_share": 46.59
+   },
+   "Geelong": {
+    "team_hitouts": 38.96,
+    "team_hta": 8.54,
+    "team_hta_pct": 21.92,
+    "ruck1": "Rhys Stanley",
+    "ruck1_hitouts": 24.89,
+    "ruck1_hta": 5.32,
+    "ruck1_hta_pct": 21.35,
+    "ruck1_contests": 58.26,
+    "ruck1_win_pct": 42.73,
+    "ruck1_share": 46.69
+   },
+   "Gold Coast": {
+    "team_hitouts": 48.16,
+    "team_hta": 12.32,
+    "team_hta_pct": 25.58,
+    "ruck1": "Jarrod Witts",
+    "ruck1_hitouts": 43.33,
+    "ruck1_hta": 11.29,
+    "ruck1_hta_pct": 26.06,
+    "ruck1_contests": 85.5,
+    "ruck1_win_pct": 50.68,
+    "ruck1_share": 86.38
+   },
+   "Greater Western Sydney": {
+    "team_hitouts": 35.83,
+    "team_hta": 10.37,
+    "team_hta_pct": 28.95,
+    "ruck1": "Kieren Briggs",
+    "ruck1_hitouts": 28.45,
+    "ruck1_hta": 8.5,
+    "ruck1_hta_pct": 29.88,
+    "ruck1_contests": 63.0,
+    "ruck1_win_pct": 45.16,
+    "ruck1_share": 66.16
+   },
+   "Hawthorn": {
+    "team_hitouts": 43.77,
+    "team_hta": 11.42,
+    "team_hta_pct": 26.1,
+    "ruck1": "Lloyd Meek",
+    "ruck1_hitouts": 37.92,
+    "ruck1_hta": 10.2,
+    "ruck1_hta_pct": 26.9,
+    "ruck1_contests": 84.8,
+    "ruck1_win_pct": 44.72,
+    "ruck1_share": 83.3
+   },
+   "Melbourne": {
+    "team_hitouts": 41.09,
+    "team_hta": 11.52,
+    "team_hta_pct": 28.04,
+    "ruck1": "Max Gawn",
+    "ruck1_hitouts": 35.91,
+    "ruck1_hta": 10.0,
+    "ruck1_hta_pct": 27.85,
+    "ruck1_contests": 75.17,
+    "ruck1_win_pct": 47.77,
+    "ruck1_share": 87.41
+   },
+   "North Melbourne": {
+    "team_hitouts": 36.39,
+    "team_hta": 10.3,
+    "team_hta_pct": 28.32,
+    "ruck1": "Tristan Xerri",
+    "ruck1_hitouts": 34.95,
+    "ruck1_hta": 10.25,
+    "ruck1_hta_pct": 29.33,
+    "ruck1_contests": 85.9,
+    "ruck1_win_pct": 40.69,
+    "ruck1_share": 83.51
+   },
+   "Port Adelaide": {
+    "team_hitouts": 41.87,
+    "team_hta": 10.7,
+    "team_hta_pct": 25.55,
+    "ruck1": "Jordon Sweet",
+    "ruck1_hitouts": 37.26,
+    "ruck1_hta": 9.63,
+    "ruck1_hta_pct": 25.85,
+    "ruck1_contests": 74.84,
+    "ruck1_win_pct": 49.79,
+    "ruck1_share": 73.52
+   },
+   "Richmond": {
+    "team_hitouts": 37.0,
+    "team_hta": 9.7,
+    "team_hta_pct": 26.21,
+    "ruck1": "Toby Nankervis",
+    "ruck1_hitouts": 33.05,
+    "ruck1_hta": 8.96,
+    "ruck1_hta_pct": 27.1,
+    "ruck1_contests": 76.82,
+    "ruck1_win_pct": 43.02,
+    "ruck1_share": 85.43
+   },
+   "St Kilda": {
+    "team_hitouts": 32.52,
+    "team_hta": 8.04,
+    "team_hta_pct": 24.73,
+    "ruck1": "Rowan Marshall",
+    "ruck1_hitouts": 27.26,
+    "ruck1_hta": 6.83,
+    "ruck1_hta_pct": 25.04,
+    "ruck1_contests": 77.35,
+    "ruck1_win_pct": 35.24,
+    "ruck1_share": 83.82
+   },
+   "Sydney": {
+    "team_hitouts": 43.43,
+    "team_hta": 12.09,
+    "team_hta_pct": 27.83,
+    "ruck1": "Brodie Grundy",
+    "ruck1_hitouts": 36.68,
+    "ruck1_hta": 10.73,
+    "ruck1_hta_pct": 29.24,
+    "ruck1_contests": 72.55,
+    "ruck1_win_pct": 50.56,
+    "ruck1_share": 80.78
+   },
+   "West Coast": {
+    "team_hitouts": 34.61,
+    "team_hta": 8.26,
+    "team_hta_pct": 23.87,
+    "ruck1": "Matt Flynn",
+    "ruck1_hitouts": 24.61,
+    "ruck1_hta": 6.44,
+    "ruck1_hta_pct": 26.18,
+    "ruck1_contests": 70.22,
+    "ruck1_win_pct": 35.05,
+    "ruck1_share": 55.65
+   },
+   "Western Bulldogs": {
+    "team_hitouts": 35.43,
+    "team_hta": 9.83,
+    "team_hta_pct": 27.73,
+    "ruck1": "Tim English",
+    "ruck1_hitouts": 30.26,
+    "ruck1_hta": 8.52,
+    "ruck1_hta_pct": 28.16,
+    "ruck1_contests": 77.87,
+    "ruck1_win_pct": 38.86,
+    "ruck1_share": 85.4
+   }
+  }
+ },
+ "2026": {
+  "league": {
+   "team_hitouts": {
+    "mean": 35.73,
+    "min": 28.16,
+    "max": 43.96,
+    "sd": 5.16
+   },
+   "team_hta": {
+    "mean": 10.28,
+    "min": 7.67,
+    "max": 13.35,
+    "sd": 1.92
+   },
+   "team_hta_pct": {
+    "mean": 28.72,
+    "min": 23.37,
+    "max": 33.12,
+    "sd": 2.66
+   },
+   "ruck1_hitouts": {
+    "mean": 26.35,
+    "min": 18.2,
+    "max": 34.88,
+    "sd": 4.78
+   },
+   "ruck1_hta": {
+    "mean": 7.8,
+    "min": 5.15,
+    "max": 10.88,
+    "sd": 1.71
+   },
+   "ruck1_hta_pct": {
+    "mean": 29.57,
+    "min": 24.29,
+    "max": 33.57,
+    "sd": 3.08
+   },
+   "ruck1_contests": {
+    "mean": 61.82,
+    "min": 46.5,
+    "max": 73.0,
+    "sd": 7.24
+   },
+   "ruck1_win_pct": {
+    "mean": 42.47,
+    "min": 33.92,
+    "max": 51.81,
+    "sd": 4.45
+   },
+   "ruck1_share": {
+    "mean": 62.1,
+    "min": 41.15,
+    "max": 81.01,
+    "sd": 12.06
+   }
+  },
+  "clubs": {
+   "Adelaide": {
+    "team_hitouts": 41.6,
+    "team_hta": 10.4,
+    "team_hta_pct": 25.0,
+    "ruck1": "Lachlan McAndrew",
+    "ruck1_hitouts": 32.12,
+    "ruck1_hta": 8.33,
+    "ruck1_hta_pct": 25.94,
+    "ruck1_contests": 72.12,
+    "ruck1_win_pct": 44.54,
+    "ruck1_share": 74.13
+   },
+   "Brisbane": {
+    "team_hitouts": 36.56,
+    "team_hta": 10.78,
+    "team_hta_pct": 29.48,
+    "ruck1": "Sam Draper",
+    "ruck1_hitouts": 21.19,
+    "ruck1_hta": 7.12,
+    "ruck1_hta_pct": 33.57,
+    "ruck1_contests": 50.54,
+    "ruck1_win_pct": 41.93,
+    "ruck1_share": 55.83
+   },
+   "Carlton": {
+    "team_hitouts": 28.16,
+    "team_hta": 9.16,
+    "team_hta_pct": 32.53,
+    "ruck1": "Marc Pittonet",
+    "ruck1_hitouts": 23.73,
+    "ruck1_hta": 7.54,
+    "ruck1_hta_pct": 31.8,
+    "ruck1_contests": 63.32,
+    "ruck1_win_pct": 37.47,
+    "ruck1_share": 74.15
+   },
+   "Collingwood": {
+    "team_hitouts": 30.37,
+    "team_hta": 7.67,
+    "team_hta_pct": 25.24,
+    "ruck1": "Darcy Cameron",
+    "ruck1_hitouts": 24.39,
+    "ruck1_hta": 6.0,
+    "ruck1_hta_pct": 24.6,
+    "ruck1_contests": 65.13,
+    "ruck1_win_pct": 37.45,
+    "ruck1_share": 76.96
+   },
+   "Essendon": {
+    "team_hitouts": 33.17,
+    "team_hta": 9.26,
+    "team_hta_pct": 27.91,
+    "ruck1": "Nick Bryan",
+    "ruck1_hitouts": 24.15,
+    "ruck1_hta": 6.77,
+    "ruck1_hta_pct": 28.02,
+    "ruck1_contests": 57.54,
+    "ruck1_win_pct": 41.98,
+    "ruck1_share": 41.15
+   },
+   "Fremantle": {
+    "team_hitouts": 41.67,
+    "team_hta": 12.56,
+    "team_hta_pct": 30.13,
+    "ruck1": "Luke Jackson",
+    "ruck1_hitouts": 26.52,
+    "ruck1_hta": 7.85,
+    "ruck1_hta_pct": 29.61,
+    "ruck1_contests": 61.33,
+    "ruck1_win_pct": 43.24,
+    "ruck1_share": 63.64
+   },
+   "Geelong": {
+    "team_hitouts": 36.28,
+    "team_hta": 8.48,
+    "team_hta_pct": 23.37,
+    "ruck1": "Mitchell Edwards",
+    "ruck1_hitouts": 21.2,
+    "ruck1_hta": 5.15,
+    "ruck1_hta_pct": 24.29,
+    "ruck1_contests": 52.4,
+    "ruck1_win_pct": 40.46,
+    "ruck1_share": 46.75
+   },
+   "Gold Coast": {
+    "team_hitouts": 43.96,
+    "team_hta": 12.87,
+    "team_hta_pct": 29.28,
+    "ruck1": "Ned Moyle",
+    "ruck1_hitouts": 34.88,
+    "ruck1_hta": 10.88,
+    "ruck1_hta_pct": 31.18,
+    "ruck1_contests": 67.31,
+    "ruck1_win_pct": 51.81,
+    "ruck1_share": 55.19
+   },
+   "Greater Western Sydney": {
+    "team_hitouts": 34.35,
+    "team_hta": 10.61,
+    "team_hta_pct": 30.89,
+    "ruck1": "Kieren Briggs",
+    "ruck1_hitouts": 24.06,
+    "ruck1_hta": 8.0,
+    "ruck1_hta_pct": 33.26,
+    "ruck1_contests": 59.39,
+    "ruck1_win_pct": 40.51,
+    "ruck1_share": 54.81
+   },
+   "Hawthorn": {
+    "team_hitouts": 42.84,
+    "team_hta": 12.8,
+    "team_hta_pct": 29.88,
+    "ruck1": "Lloyd Meek",
+    "ruck1_hitouts": 26.08,
+    "ruck1_hta": 7.48,
+    "ruck1_hta_pct": 28.68,
+    "ruck1_contests": 54.08,
+    "ruck1_win_pct": 48.23,
+    "ruck1_share": 60.88
+   },
+   "Melbourne": {
+    "team_hitouts": 40.58,
+    "team_hta": 13.04,
+    "team_hta_pct": 32.14,
+    "ruck1": "Max Gawn",
+    "ruck1_hitouts": 32.88,
+    "ruck1_hta": 10.62,
+    "ruck1_hta_pct": 32.32,
+    "ruck1_contests": 67.62,
+    "ruck1_win_pct": 48.61,
+    "ruck1_share": 81.01
+   },
+   "North Melbourne": {
+    "team_hitouts": 30.87,
+    "team_hta": 8.0,
+    "team_hta_pct": 25.92,
+    "ruck1": "Tristan Xerri",
+    "ruck1_hitouts": 21.32,
+    "ruck1_hta": 5.74,
+    "ruck1_hta_pct": 26.91,
+    "ruck1_contests": 62.84,
+    "ruck1_win_pct": 33.92,
+    "ruck1_share": 57.04
+   },
+   "Port Adelaide": {
+    "team_hitouts": 40.3,
+    "team_hta": 13.35,
+    "team_hta_pct": 33.12,
+    "ruck1": "Jordon Sweet",
+    "ruck1_hitouts": 30.18,
+    "ruck1_hta": 9.96,
+    "ruck1_hta_pct": 32.98,
+    "ruck1_contests": 64.77,
+    "ruck1_win_pct": 46.6,
+    "ruck1_share": 71.63
+   },
+   "Richmond": {
+    "team_hitouts": 28.7,
+    "team_hta": 7.87,
+    "team_hta_pct": 27.43,
+    "ruck1": "Toby Nankervis",
+    "ruck1_hitouts": 26.17,
+    "ruck1_hta": 7.42,
+    "ruck1_hta_pct": 28.34,
+    "ruck1_contests": 63.83,
+    "ruck1_win_pct": 40.99,
+    "ruck1_share": 47.58
+   },
+   "St Kilda": {
+    "team_hitouts": 30.52,
+    "team_hta": 8.96,
+    "team_hta_pct": 29.34,
+    "ruck1": "Tom De Koning",
+    "ruck1_hitouts": 18.2,
+    "ruck1_hta": 5.55,
+    "ruck1_hta_pct": 30.49,
+    "ruck1_contests": 46.5,
+    "ruck1_win_pct": 39.14,
+    "ruck1_share": 51.85
+   },
+   "Sydney": {
+    "team_hitouts": 39.24,
+    "team_hta": 11.56,
+    "team_hta_pct": 29.46,
+    "ruck1": "Brodie Grundy",
+    "ruck1_hitouts": 34.04,
+    "ruck1_hta": 10.78,
+    "ruck1_hta_pct": 31.67,
+    "ruck1_contests": 73.0,
+    "ruck1_win_pct": 46.63,
+    "ruck1_share": 79.82
+   },
+   "West Coast": {
+    "team_hitouts": 34.26,
+    "team_hta": 8.96,
+    "team_hta_pct": 26.14,
+    "ruck1": "Bailey J. Williams",
+    "ruck1_hitouts": 30.0,
+    "ruck1_hta": 7.58,
+    "ruck1_hta_pct": 25.26,
+    "ruck1_contests": 71.0,
+    "ruck1_win_pct": 42.25,
+    "ruck1_share": 72.34
+   },
+   "Western Bulldogs": {
+    "team_hitouts": 29.68,
+    "team_hta": 8.8,
+    "team_hta_pct": 29.65,
+    "ruck1": "Tim English",
+    "ruck1_hitouts": 23.18,
+    "ruck1_hta": 7.71,
+    "ruck1_hta_pct": 33.25,
+    "ruck1_contests": 60.0,
+    "ruck1_win_pct": 38.63,
+    "ruck1_share": 53.1
+   }
+  }
+ }
+}

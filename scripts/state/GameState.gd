@@ -40,10 +40,6 @@ var draft: Draft = null
 var league_lists := {}
 var pending_match: Dictionary = {}
 var pending_sim: MatchSim = null
-## A fact on the hub's next-match card whose response was tapped (P-13): which call
-## the pre-bounce pane opens on, and the fact it restates above it. {"call", "plan",
-## "player_id", "fact"}. Never saved; the match screen takes it once.
-var call_intent: Dictionary = {}
 ## How the match now being set up is taken (MATCH_WAYS): the poster's choice,
 ## read once when the live match is prepared. The pre-season match is always
 ## watched. The match screen reads it; it never reaches the sim.
@@ -243,6 +239,9 @@ var last_side: Array = []       # ids of your players who took the field in your
 ## down, so a player healed by this very round is not "left out while fit".
 ## Not saved: it is rebuilt every round.
 var _backing_unavailable := {}
+## The same for every listed player at every club: injured or suspended for
+## this round's game, so not "left out while fit" (morale, a promised game).
+var _round_unavailable := {}
 
 ## Career loop: season 1 is the 2026 season. Every completed season ends with
 ## a national intake draft (keep your list, sign the rookies), then the same
@@ -612,10 +611,11 @@ func set_match_speed(s: float) -> void:
 
 
 ## How you take your own match, chosen on the hub's poster and kept for the
-## next one (director, 2026-10-18, P-14): Watch it, Key moments (top speed,
-## stopping for your calls, the goals and the breaks) or Skip to full time.
+## next one (director, 2026-10-18, P-14): Watch it or Skip to full time.
 ## Watch for anyone who has never chosen. Playback only: the match is the same.
-const MATCH_WAYS := ["watch", "key", "skip"]
+## Key moments, once a third way, is cut (director, 2026-11-08: "it's just
+## noise"): a settings file that still holds it reads as Watch.
+const MATCH_WAYS := ["watch", "skip"]
 
 
 func match_way() -> String:
@@ -4170,9 +4170,9 @@ var _practice_built := {}     # the live practice match being coached (never sav
 func prepare_practice_match() -> bool:
 	if preseason_stop() != "practice" or practice_played():
 		return false
-	# Key moments carries over; Skip does not ("Coach the match" was pressed,
-	# and Sim the match is beside it).
-	match_way_live = "key" if match_way() == "key" else "watch"
+	# The practice match is always watched: Skip does not carry over ("Coach
+	# the match" was pressed, and Sim the match is beside it).
+	match_way_live = "watch"
 	_clear_pending()
 	_practice_built = _practice_mine()
 	pending_sim = _practice_built["sim"]
@@ -4286,23 +4286,6 @@ func opponent_facts(code: String) -> Array:
 	if season == null or code == "" or not season.lists.has(code):
 		return []
 	return Matchup.facts(code, season.lists, season.selections, season.club_results(code))
-
-
-## The responses beside each of `facts` (FactOptions), from the sides the
-## engine will field: one array of options per fact, in the same order. Only the
-## ones the coach can take, unless `every`.
-func opponent_fact_options(code: String, facts: Array, every := false) -> Array:
-	var out := []
-	if season == null or code == "" or not season.lists.has(code):
-		return out
-	var their_sq := Squad.new(code, season.lists[code], false, code, season.selections.get(code, {}))
-	var my_sq: Squad = my_squad()
-	var theirs: Array = their_sq.ground
-	var mine: Array = my_sq.ground
-	for f in facts:
-		var all := FactOptions.options(f, theirs, mine, season.lists[code], [float(their_sq.fwd_mark), float(my_sq.def_intercept)])
-		out.append(all if every else FactOptions.takeable(all))
-	return out
 
 
 ## Your former players on `code`'s list (FormerPlayers.against): who left
@@ -4557,12 +4540,15 @@ func league_grounds() -> Dictionary:
 
 
 ## The plan a club's list suits as its usual game (PlanFit.standing_plan),
-## from the side it would field this week.
+## from the side it would field this week, weighed by how well the club knows
+## each plan: the same inputs the match engine opens with (MatchSim standing).
 func usual_plan(code: String) -> String:
 	if season == null or code == "" or not season.lists.has(code):
 		return "balanced"
-	return PlanFit.standing_plan(Squad.new(code, season.lists[code], false, code,
-			season.selections.get(code, {})).ground)
+	var sq := Squad.new(code, season.lists[code], false, code, season.selections.get(code, {}))
+	_ensure_plan_known()
+	CoachEffects.apply(sq)
+	return PlanFit.standing_plan(sq.ground, sq.plan_know)
 
 
 ## Compact stored-fact history surfaces. These deliberately read existing
@@ -5677,6 +5663,11 @@ func _after_round(results: Array) -> void:
 	for p in my_list:
 		if Backing.is_active(p) and not Backing.fit(p):
 			_backing_unavailable[str(p["id"])] = true
+	_round_unavailable = {}
+	for arr in ([my_list] + (season.lists.values() if season != null else [])):
+		for p in arr:
+			if not Backing.fit(p):
+				_round_unavailable[str(p["id"])] = true
 	if season != null:
 		var regular := last_phase == "regular"
 		var week := "%d|%s|%d" % [season_year, "R" if regular else "F",
@@ -5823,7 +5814,7 @@ func _close_season_awards() -> void:
 		"my_bf": mine_bf.slice(0, 1),
 		"my_club": my_club,
 		"my_position": my_position(),
-		# Your season for the trophy room (Season stats): the home-and-away
+		# Your season for the trophy room (the club page): the home-and-away
 		# record, the last final you played ("" for no finals; its tag, e.g.
 		# "PF1") and your All-Australians. Older entries lack these keys.
 		"my_record": my_record(),
@@ -7021,7 +7012,7 @@ func _fa_phase_of(code: String) -> String:
 
 
 ## Rivals behind `leader` answer it once, all at the same moment, so no
-## club's turn comes first. Returns sentences such as "Carlton improve: 8
+## club's turn comes first. Returns sentences such as "Carlton improve: $650k
 ## for 3 seasons." and "Brisbane, Sydney and 3 more withdraw."
 func _rival_round(p: Dictionary, leader: Dictionary) -> Array:
 	var lines := []
@@ -7042,8 +7033,8 @@ func _rival_round(p: Dictionary, leader: Dictionary) -> Array:
 			"improve", "match":
 				o["salary"] = int(r["salary"])
 				o["years"] = int(r["years"])
-				lines.append("%s %s: %d for %d season%s." % [name, "improve" if str(r["action"]) == "improve" else "match",
-						int(r["salary"]), int(r["years"]), "" if int(r["years"]) == 1 else "s"])
+				lines.append("%s %s: %s for %d season%s." % [name, "improve" if str(r["action"]) == "improve" else "match",
+						Contracts.money(int(r["salary"])), int(r["years"]), "" if int(r["years"]) == 1 else "s"])
 			"withdraw":
 				o["withdrawn"] = true
 				gone.append(name)
@@ -7655,6 +7646,9 @@ func _trade_assets(ids: Array, owner: String) -> Dictionary:
 			if found.is_empty():
 				var fc := "trade_not_their_player" if owner != my_club else "trade_not_your_player"
 				return {"assets": [], "error": AiReasons.line(fc), "code": fc}
+			if retiring_now(found):
+				# His career ends at the rollover: there is nobody to trade.
+				return {"assets": [], "error": AiReasons.line("trade_retiring"), "code": "trade_retiring"}
 			out.append(found)
 	return {"assets": out, "error": "", "code": ""}
 
@@ -8279,6 +8273,8 @@ func _bids(buyer: String, most: float, prospects: Dictionary, to := "") -> Array
 		var q: Dictionary = list[k]
 		if trade_requests.has(str(q["id"])):
 			continue  # he goes only where he asked to, not as a makeweight
+		if retiring_now(q):
+			continue  # he retires at the rollover: nobody to send
 		if to == my_club and Challenge.block_reason(self, q) != "":
 			continue  # your challenge bars him from coming to you
 		pool.append([q, float(TradeValue.value(q, {"phase": phase, "bars": bars, "proj": proj, "own": true})["total"])])
@@ -8551,8 +8547,8 @@ func _requested_trades(prospects: Dictionary) -> void:
 func _trade_pool(buyer: String, seller: String) -> Array:
 	var pool: Array = season.lists[seller] if club_phase(buyer) == "contending" \
 			and club_phase(seller) == "rebuilding" else _fringe(seller)
-	return pool.filter(func(q): return not trade_requests.has(str(q["id"])) \
-			or (trade_requests[str(q["id"])]["to"] as Array).has(buyer))
+	return pool.filter(func(q): return not retiring_now(q) and (not trade_requests.has(str(q["id"])) \
+			or (trade_requests[str(q["id"])]["to"] as Array).has(buyer)))
 
 
 ## The players outside a club's starting side (its bench and beyond) - who
@@ -10795,7 +10791,7 @@ func _board_after_round(results: Array) -> void:
 		var staff: Dictionary = club_staff(my_club)
 		for p in my_list:
 			soft[str(p["id"])] = CoachEffects.soften(staff, p)
-	ClubLife.morale_after_match(my_list, played, margin > 0, soft, culture_effect(my_club, "sting"))
+	ClubLife.morale_after_match(my_list, played, margin > 0, soft, culture_effect(my_club, "sting"), _round_unavailable)
 	# A player promised a run (Backing): each game he plays counts towards it.
 	# Left out while fit, the promise breaks and it stings, once, and the run
 	# is over; unable to play, the run waits. His one-week expectation is
@@ -10821,7 +10817,8 @@ func _board_after_round(results: Array) -> void:
 		if p.has("expects_game"):
 			var sting := int(p["expects_game"]) if typeof(p["expects_game"]) == TYPE_INT else 12
 			p.erase("expects_game")
-			if not played.has(str(p["id"])) and int(p.get("injury_weeks", 0)) <= 0:
+			if not played.has(str(p["id"])) and int(p.get("injury_weeks", 0)) <= 0 \
+					and not _round_unavailable.has(str(p["id"])):
 				ClubLife.add_morale(p, -CoachEffects.softened(sting, float(soft.get(str(p["id"]), 0.0))))
 				Trust.change(relations, Trust.player_key(str(p["id"])), ClubStories.BROKEN_PROMISE_TRUST,
 						"You promised him a game and left him out", season_year, last_label)
@@ -10856,7 +10853,8 @@ func _rival_morale_after_round(results: Array) -> void:
 			if not staff.is_empty():
 				for p in list:
 					soft[str(p["id"])] = CoachEffects.soften(staff, p)
-			ClubLife.morale_after_match(list, played, int(score[side]) > int(score[1 - side]), soft, culture_effect(code, "sting"))
+			ClubLife.morale_after_match(list, played, int(score[side]) > int(score[1 - side]), soft, culture_effect(code, "sting"),
+					_round_unavailable)
 
 
 ## Keep your match's story (hero, turning point, reasons) and put its
@@ -11003,8 +11001,8 @@ func _set_press_standing(journalist: String, v: int) -> void:
 	media_memory["standing_year"] = season_year
 
 
-## Press morale fades a point a round (every second round after the
-## Philosopher), before this week's question forms (ruling 5.54: effects decay).
+## Press morale fades a point every second round, whoever asked, before this
+## week's question forms (ruling 5.54: effects decay).
 func _fade_press_lifts() -> void:
 	if season == null:
 		return
@@ -11148,8 +11146,8 @@ func press_question_text() -> String:
 	return q if lead == "" else "%s %s" % [lead, q]
 
 
-## Under the byline: "Gary is warm to you: every answer is 5% more likely to
-## land well."; "" when he takes you as he finds you.
+## Under the byline: "Gary's opinion of you is Warm: every answer is 5% more
+## likely to land well."; "" when Neutral.
 func press_standing_line() -> String:
 	var j := str(media_conference.get("journalist", ""))
 	if not MediaConference.JOURNALISTS.has(j):
@@ -11192,16 +11190,15 @@ func resolve_media_conference(option: int) -> Dictionary:
 		# Added to the board's match reason, never in place of it (director 2026-11-06).
 		board["why"] = (str(board.get("why", "")).strip_edges() + " "
 				+ MediaConference.board_sentence(j, board_moved)).strip_edges()
-	var slow := bool((MediaConference.PERSONA.get(j, {}) as Dictionary).get("slow", false))
 	var morale_delta := int(out["morale"])
 	# After a loss a lift stops just below what a win gave (director 2026-11-07).
 	var up := MediaConference.LOSS_LIFT_CAP if bool(ctx.get("lost", false)) else -1
 	if morale_delta != 0:
 		for p in my_list:
-			MediaConference.apply_lift(p, morale_delta, MediaConference.LIST_CAP, slow, up)
+			MediaConference.apply_lift(p, morale_delta, MediaConference.LIST_CAP, up)
 	var his := list_player(str(picked.get("player", "")))
 	if int(out["his"]) != 0 and not his.is_empty():
-		MediaConference.apply_lift(his, int(out["his"]), MediaConference.NAMED_CAP, slow, up)
+		MediaConference.apply_lift(his, int(out["his"]), MediaConference.NAMED_CAP, up)
 	var before := press_standing(j)
 	var after := MediaConference.standing_after(before, MediaConference.standing_move(j, kind, str(ctx.get("verdict", ""))))
 	if MediaConference.JOURNALISTS.has(j) and after != before:
@@ -11218,7 +11215,8 @@ func resolve_media_conference(option: int) -> Dictionary:
 	var size := maxi(absi(int(out["morale"])), absi(int(out["his"])))
 	return {"kind": kind, "landed": landed, "chance": odds, "line": line, "journalist": j,
 			"standing": [before, after], "verdict": str(ctx.get("verdict", "")), "effects": out,
-			"fade_rounds": maxi(MediaConference.fade_rounds(size, slow), MediaConference.fade_rounds(board_moved, false))}
+			"fade_rounds": maxi(MediaConference.fade_rounds(size), MediaConference.board_fade_rounds(board_moved)),
+			"fade_morale": MediaConference.fade_rounds(size), "fade_board": MediaConference.board_fade_rounds(board_moved)}
 
 
 
@@ -12542,7 +12540,10 @@ func _culture_rollover() -> void:
 			if not (c is Dictionary):
 				continue
 			var stints: Array = (c as Dictionary).get("stints", [])
-			if not stints.is_empty() and str((stints[stints.size() - 1] as Array)[0]) != str(code):
+			# Only an arrival since the last rollover: a recruit who has not
+			# played for his new club yet is not a new face again next year.
+			if not stints.is_empty() and str((stints[stints.size() - 1] as Array)[0]) != str(code) \
+					and int(p.get("joined", -1)) >= season_year - 1:
 				n += 1
 		faces[str(code)] = n
 		counts.append(n)

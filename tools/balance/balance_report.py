@@ -17,14 +17,59 @@ MAP = {"disposals": "disposals", "kicks": "kicks", "handballs": "handballs",
        "rebound50": "rebound_50s", "rebounds": "rebound_50s"}
 EXTRA = ["score", "clangers", "intercepts", "one_percenters", "metres_gained", "strength", "draftees",
          "contested_possessions", "ground_ball_gets", "pressure_acts", "ball_ups", "throw_ins", "stoppages"]
-# Real wet against dry, match totals 2022-25 (docs/research/WEATHER_EVIDENCE.md [ABC];
-# scoring [BB] modern era, accuracy [BB]/[SI] in points). Shown for a paired run as B against A,
-# so it reads as the real reference when A is a perfect day and B a wet one.
-REAL_WET = {"tackles": "+12%", "clangers": "+9%", "ground_ball_gets": "+9%",
-            "contested_possessions": "+7%", "one_percenters": "+15%", "marks": "-13%",
-            "contested_marks": "-10%", "kicks": "0%", "handballs": "-1%", "goals": "-",
-            "score": "about -5%", "stoppages": "more (no public count)",
-            "ball_ups": "more (no public count)", "throw_ins": "-"}
+# Real weather against a perfect day, AFL 2016-25 without 2020 (afl_weather_rates.json,
+# built by build_weather_rates.py from AFL Tables match totals and Open-Meteo weather at
+# the ground). Shown for a paired run when B is a weather arm and A is not, so it reads
+# as the real reference for B against A. sim stat -> afl_weather_rates key.
+WEATHER_KEYS = {"disposals": "disposals", "kicks": "kicks", "handballs": "handballs",
+                "marks": "marks", "contested_marks": "contested_marks", "tackles": "tackles",
+                "contested_possessions": "contested_possessions",
+                "uncontested_possessions": "uncontested_possessions", "clangers": "clangers",
+                "one_percenters": "one_percenters", "inside50": "inside_50s",
+                "clearances": "clearances", "frees_for": "frees_for", "hitouts": "hitouts",
+                "running_bounces": "bounces", "goal_assists": "goal_assists",
+                "rebounds": "rebound_50s", "marks_inside_50": "marks_inside_50",
+                "goals": "goals", "behinds": "behinds", "score": "score",
+                "ground_ball_gets": None, "stoppages": None, "ball_ups": None}
+# [ABC] wet against dry 2022-25 for ground-ball gets, which AFL Tables does not count.
+REAL_WET_ABC = {"ground_ball_gets": (0.09, 0.03)}
+
+
+def weather_ref():
+    p = os.path.join(HERE, "afl_weather_rates.json")
+    return json.load(open(p, encoding="utf-8")) if os.path.exists(p) else None
+
+
+def weather_mark(sim, sim_se, real, real_se):
+    """IN within 2 combined standard errors of the real change, NEAR within 4, else OUT."""
+    s = math.sqrt(sim_se ** 2 + real_se ** 2)
+    if abs(sim - real) <= 2 * s:
+        return "IN"
+    return "NEAR" if abs(sim - real) <= 4 * s else "OUT"
+
+
+def odd_even(r):
+    """Margin in the odd quarters less the even ones, from both teams' quarter scores."""
+    q = [[t["q_score"][k] - (t["q_score"][k - 1] if k else 0) for k in range(4)] for t in r["teams"]]
+    m = [q[0][k] - q[1][k] for k in range(4)]
+    return (m[0] + m[2]) - (m[1] + m[3])
+
+
+def q4_share(r):
+    tot = sum(t["q_score"][3] for t in r["teams"])
+    return 100.0 * sum(t["q_score"][3] - t["q_score"][2] for t in r["teams"]) / tot if tot else None
+
+
+def breeze_size(sa, sb, n_boot=1000):
+    """Breeze worth B points of margin a quarter: Var(odd-even, B) - Var(odd-even, A) = 16 B^2.
+    Returns B and its bootstrap standard error (seeded, so the report is stable)."""
+    import random
+    rng = random.Random(61)
+
+    def b_of(x, y):
+        return math.sqrt(max(0.0, st.variance(x) - st.variance(y))) / 4.0
+    boots = [b_of(rng.choices(sb, k=len(sb)), rng.choices(sa, k=len(sa))) for _ in range(n_boot)]
+    return b_of(sb, sa), st.stdev(boots)
 
 
 def load(run, arm):
@@ -424,19 +469,85 @@ def role_table(A, B):
     print("\nReal shares (Champion Data 2025): DEF 57%, MID 23%, FWD 15%, RUCK 4%; a team intercepts about 63.4 a game.")
 
 
-def wet_section(A, B, wet):
-    """Paired change in percent (B / A - 1), plus accuracy and set-shot accuracy
-    in points (row 120). The real wet v dry column shows only when B is the wet
-    arm and A is not (wet=True), so no other screen is read against it."""
+def spoil_zone_rate(rows, keys):
+    """Seed -> spoils a team-match in the zone keys (from each team's spoil_zone)."""
+    return {i: sum(float(t.get("spoil_zone", {}).get(k, 0)) for t in r["teams"] for k in keys) / 2
+            for i, r in rows.items()}
+
+
+def spoils_section(A, B):
+    """Spoils a team a game by zone and by listed position (T2.29, TODO row 11), against
+    Champion Data 2026 (afl_spoil_zones.json; the zone split is an estimate, see its source)."""
+    if not any("spoil_zone" in t for r in A.values() for t in r["teams"]):
+        return
+    ref = json.load(open(os.path.join(HERE, "afl_spoil_zones.json")))
+    real = ref["per_team_match"]
+
+    def mark(v, b):
+        if b["lo"] <= v <= b["hi"]:
+            return "IN"
+        return "NEAR" if abs(v - b["mean"]) <= 2 * b["sd"] else "OUT"
+    print("\n\n## Spoils a team a game, by zone (spoiling side's end; real zones are an estimate)\n")
+    head = "| zone | AFL mean | AFL range | A | A/real | mark |" + (" B | mark | B-A | se | sig |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    rows = [("total", ["d50_entry", "d50_play", "mid", "f50"], "total"),
+            ("d50 (all)", ["d50_entry", "d50_play"], "d50"),
+            ("  d50: entries and packs", ["d50_entry"], None),
+            ("  d50: general play", ["d50_play"], None),
+            ("mid (between the arcs)", ["mid"], "mid"),
+            ("f50 (own forward 50)", ["f50"], "f50"),
+            ("outside d50 (mid + f50)", ["mid", "f50"], None)]
+    for label, keys, rk in rows:
+        a = spoil_zone_rate(A, keys)
+        ma = st.mean(a.values())
+        b0 = real.get(rk) if rk else None
+        if rk is None and keys == ["mid", "f50"]:
+            b0 = {"mean": real["mid"]["mean"] + real["f50"]["mean"], "lo": real["mid"]["lo"] + real["f50"]["lo"],
+                  "hi": real["mid"]["hi"] + real["f50"]["hi"], "sd": math.hypot(real["mid"]["sd"], real["f50"]["sd"])}
+        line = (f"| {label} | {b0['mean']:.1f} | {b0['lo']:.1f}-{b0['hi']:.1f} | {ma:.1f} | {ma / b0['mean']:.2f} | {mark(ma, b0)} |"
+                if b0 else f"| {label} | - | - | {ma:.1f} | - | - |")
+        if B:
+            b = spoil_zone_rate(B, keys)
+            common = [i for i in a if i in b]
+            d = [b[i] - a[i] for i in common]
+            mb = st.mean(b[i] for i in common)
+            se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+            sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ""
+            line += f" {mb:.1f} | {mark(mb, b0) if b0 else '-'} | {st.mean(d):+.2f} | {se:.2f} | {sig} |"
+        print(line)
+    print("\nSpoils a game per player, by listed position (measured, Champion Data 2026):\n")
+    print("| role | real | A | real share | share A |")
+    print("|---|---|---|---|---|")
+    tot = sum(float(t.get("sp_" + r_, 0)) for r in A.values() for t in r["teams"] for r_ in ref["by_role"]) or 1.0
+    for role, rr in ref["by_role"].items():
+        sp = sum(float(t.get("sp_" + role, 0)) for r in A.values() for t in r["teams"])
+        pg = sum(float(t.get("pg_" + role, 0)) for r in A.values() for t in r["teams"])
+        if pg <= 0:
+            continue
+        print(f"| {role} | {rr['per_player_game']:.2f} | {sp / pg:.2f} | {100 * rr['share']:.0f}% | {100 * sp / tot:.0f}% |")
+    print(f"\nReal: {ref['source']}")
+
+
+def weather_section(A, B, cond):
+    """Paired change in percent (B / A - 1), plus accuracy in points, the last
+    quarter's share of the scoring and the breeze split (row 61). The real column
+    shows only when B is a weather arm (cond = wet, windy or hot) and A is not, so no
+    other screen is read against it; each row is then marked IN/NEAR/OUT by
+    weather_mark."""
     if not B:
         return
     common = [i for i in A if i in B]
     if not common:
         return
-    print("\n## Change B against A, percent" + (" (real column: wet against dry)" if wet else "") + "\n")
-    print("| stat | A | B | B/A-1 | se |" + (" real wet v dry |" if wet else ""))
-    print("|---|---|---|---|---|" + ("---|" if wet else ""))
-    for k in list(REAL_WET):
+    ref = weather_ref() if cond else None
+    col = ref["change_vs_perfect"][cond] if ref else None
+    real = col is not None
+    print("\n## Change B against A, percent" + (f" (real column: {cond} against a perfect day, "
+          "AFL 2016-25, afl_weather_rates.json)" if real else "") + "\n")
+    print("| stat | A | B | B/A-1 | se |" + (" real | se | mark |" if real else ""))
+    print("|---|---|---|---|---|" + ("---|---|---|" if real else ""))
+    for k, rk in WEATHER_KEYS.items():
         a = per_match(A, k)
         b = per_match(B, k)
         ma = st.mean(a[i] for i in common)
@@ -445,36 +556,286 @@ def wet_section(A, B, wet):
         mb = st.mean(b[i] for i in common)
         d = [(b[i] - a[i]) / ma for i in common]
         se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
-        print(f"| {k} | {ma:.1f} | {mb:.1f} | {100 * (mb / ma - 1):+.1f}% | {100 * se:.1f}% |"
-              + (f" {REAL_WET[k]} |" if wet else ""))
+        line = f"| {k} | {ma:.1f} | {mb:.1f} | {100 * (mb / ma - 1):+.1f}% | {100 * se:.1f}% |"
+        if real:
+            rv = col.get(rk) if rk else None
+            if rv is None and cond == "wet" and k in REAL_WET_ABC:
+                rv = {"change": REAL_WET_ABC[k][0], "se": REAL_WET_ABC[k][1]}
+            if rv is None:
+                line += " - | - | - |"
+            else:
+                line += (f" {100 * rv['change']:+.1f}% | {100 * rv['se']:.1f}% |"
+                         f" {weather_mark(mb / ma - 1, se, rv['change'], rv['se'])} |")
+        print(line)
 
-    def acc(r, g, b):
-        gg = sum(float(t.get(g, 0)) for t in r["teams"])
-        bb = sum(float(t.get(b, 0)) for t in r["teams"])
-        return 100 * gg / (gg + bb) if gg + bb else None
-    for label, g, b, real in (("accuracy, goals per scoring shot (points)", "goals", "behinds", "-1 to -2"),
-                              ("set-shot goals per set shot (points)", "sshot_g", None, "-"),
-                              ("general-play goals per logged shot (points)", "gshot_g", None, "-")):
-        if b is None:
-            n = g.replace("_g", "_n")
-            fa = {i: (100 * sum(float(t.get(g, 0)) for t in A[i]["teams"])
-                      / max(1.0, sum(float(t.get(n, 0)) for t in A[i]["teams"]))) for i in common}
-            fb = {i: (100 * sum(float(t.get(g, 0)) for t in B[i]["teams"])
-                      / max(1.0, sum(float(t.get(n, 0)) for t in B[i]["teams"]))) for i in common}
-            pa = 100 * sum(float(t.get(g, 0)) for i in common for t in A[i]["teams"]) / max(1.0, sum(
-                float(t.get(n, 0)) for i in common for t in A[i]["teams"]))
-            pb = 100 * sum(float(t.get(g, 0)) for i in common for t in B[i]["teams"]) / max(1.0, sum(
-                float(t.get(n, 0)) for i in common for t in B[i]["teams"]))
-        else:
-            fa = {i: acc(A[i], g, b) for i in common}
-            fb = {i: acc(B[i], g, b) for i in common}
-            pa = 100 * sum(float(t.get(g, 0)) for i in common for t in A[i]["teams"]) / sum(
-                float(t.get(g, 0)) + float(t.get(b, 0)) for i in common for t in A[i]["teams"])
-            pb = 100 * sum(float(t.get(g, 0)) for i in common for t in B[i]["teams"]) / sum(
-                float(t.get(g, 0)) + float(t.get(b, 0)) for i in common for t in B[i]["teams"])
+    def counts(rows, ids, g, n):
+        """Goals (g) and their base over both teams of the matches in ids: shots of
+        that kind (n), or goals and behinds when n is None."""
+        gg = sum(float(t.get(g, 0)) for i in ids for t in rows[i]["teams"])
+        nn = sum(float(t.get(n or "behinds", 0)) for i in ids for t in rows[i]["teams"])
+        return gg, (nn + gg if n is None else nn)
+
+    def ratio(rows, ids, g, n):
+        gg, nn = counts(rows, ids, g, n)
+        return 100 * gg / nn if nn else None
+    # The set-shot and general-play rows (balance_body's sshot_* and gshot_*) have no
+    # real weather column: the reference counts goals and behinds, not shots by kind.
+    for label, g, n, rkey in (("accuracy, goals per scoring shot (points)", "goals", None, "accuracy"),
+                              ("set-shot goals per set shot (points)", "sshot_g", "sshot_n", None),
+                              ("general-play goals per logged shot (points)", "gshot_g", "gshot_n", None)):
+        if n is not None and not any(n in t for i in common for t in A[i]["teams"]):
+            continue
+        fa = {i: ratio(A, [i], g, n) for i in common}
+        fb = {i: ratio(B, [i], g, n) for i in common}
         d = [fb[i] - fa[i] for i in common if fa[i] is not None and fb[i] is not None]
-        se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
-        print(f"| {label} | {pa:.1f} | {pb:.1f} | {pb - pa:+.1f} pts | {se:.1f} |" + (f" {real} |" if wet else ""))
+        m, se = _mse(d)
+        pa, pb = ratio(A, common, g, n) or 0.0, ratio(B, common, g, n) or 0.0
+        line = f"| {label} | {pa:.1f} | {pb:.1f} | {m:+.1f} pts | {se:.1f} |"
+        if real and rkey and rkey in col:
+            rv = col[rkey]
+            line += f" {rv['change_points']:+.1f} pts | {rv['se']:.1f} | {weather_mark(m, se, rv['change_points'], rv['se'])} |"
+        elif real:
+            line += " - | - | - |"
+        print(line)
+    if "q_score" not in A[common[0]]["teams"][0]:
+        return
+    qa = {i: q4_share(A[i]) for i in common}
+    qb = {i: q4_share(B[i]) for i in common}
+    d = [qb[i] - qa[i] for i in common if qa[i] is not None and qb[i] is not None]
+    m, se = _mse(d)
+    line = (f"| last quarter's share of the scoring (points) | {st.mean(v for v in qa.values() if v is not None):.1f}% | "
+            f"{st.mean(v for v in qb.values() if v is not None):.1f}% | {m:+.2f} pts | {se:.2f} |")
+    if real:
+        rv = col["q4_share"]
+        line += f" {rv['change_points']:+.2f} pts | {rv['se']:.2f} | {weather_mark(m, se, rv['change_points'], rv['se'])} |"
+    print(line)
+    sa = [odd_even(A[i]) for i in common]
+    sb = [odd_even(B[i]) for i in common]
+    bz, bse = breeze_size(sa, sb)
+    line = (f"| breeze, margin points a quarter to the side kicking with it | sd {st.stdev(sa):.1f} | "
+            f"sd {st.stdev(sb):.1f} | {bz:.2f} | {bse:.2f} |")
+    if real:
+        rv = col["breeze"]
+        line += f" {rv['points_a_quarter']:.2f} | {rv['se']:.2f} | {weather_mark(bz, bse, rv['points_a_quarter'], rv['se'])} |"
+    print(line)
+
+
+def _mse(d):
+    d = list(d)
+    if not d:
+        return 0.0, 0.0
+    return st.mean(d), (st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0)
+
+
+def _fmt(d):
+    m, se = _mse(d)
+    sig = " *" if se > 0 and abs(m) > 2 * se else ""
+    return f"{m:+.2f} ({se:.2f}){sig}"
+
+
+LEGS_ROWS = ([("legs at Q%d siren" % (q + 1), "legs_q", q) for q in range(4)]
+             + [("under 40 at Q%d siren" % (q + 1), "tank_q", q) for q in range(4)]
+             + [("interchanges", "interchanges", None), ("exertion", "exertion", None)])
+
+
+def _lv(t, key, q):
+    v = t.get(key)
+    if v is None:
+        return None
+    return float(v[q]) if q is not None else float(v)
+
+
+def legs_section(A, B):
+    """Fatigue parity (T3.F-defects): each side's legs by venue and, under
+    --setup coached, your coached side against the rival; a paired run also
+    gives the coached side and the rival each against the same side, same seed, in A."""
+    if not any("legs_q" in t for r in A.values() for t in r["teams"]):
+        return
+    print("\n## Legs (fatigue parity)\n")
+    print("Legs: mean energy (0-100) of the 18 on the ground. Under 40: how many of them (fit 0.90 or less)."
+          " Exertion: energy spent on the ground, whole side. Differences are per match, mean (se); * past 2 se.\n")
+    for name, R in (("A", A), ("B", B)):
+        if not R:
+            continue
+        coached = any(t.get("coached") for r in R.values() for t in r["teams"])
+        head = f"| {name} | home | away | home-away |" + (" coached | rival | coached-rival |" if coached else "")
+        print(head)
+        print("|" + "---|" * (head.count("|") - 1))
+        for label, key, q in LEGS_ROWS:
+            rows = [r for r in R.values() if _lv(r["teams"][0], key, q) is not None]
+            if not rows:
+                continue
+            h = [_lv(r["teams"][0], key, q) for r in rows]
+            a = [_lv(r["teams"][1], key, q) for r in rows]
+            line = f"| {label} | {st.mean(h):.2f} | {st.mean(a):.2f} | {_fmt(x - y for x, y in zip(h, a))} |"
+            if coached:
+                c = [_lv(t, key, q) for r in rows for t in r["teams"] if t.get("coached")]
+                o = [_lv(t, key, q) for r in rows for t in r["teams"] if not t.get("coached")]
+                line += f" {st.mean(c):.2f} | {st.mean(o):.2f} | {_fmt(x - y for x, y in zip(c, o))} |"
+            print(line)
+        print()
+    if B and any(t.get("coached") for r in B.values() for t in r["teams"]):
+        print("Same team, same seed, B against A: the side coached in B, and its rival.\n")
+        print("| stat | coached B-A | rival B-A | (coached - rival) B-A |")
+        print("|---|---|---|---|")
+        for label, key, q in LEGS_ROWS:
+            dc, dr, dd = [], [], []
+            for i, rb in B.items():
+                ra = A.get(i)
+                if ra is None:
+                    continue
+                cs = [s for s in range(2) if rb["teams"][s].get("coached")]
+                if not cs or _lv(ra["teams"][0], key, q) is None:
+                    continue
+                c = cs[0]
+                x = _lv(rb["teams"][c], key, q) - _lv(ra["teams"][c], key, q)
+                y = _lv(rb["teams"][1 - c], key, q) - _lv(ra["teams"][1 - c], key, q)
+                dc.append(x)
+                dr.append(y)
+                dd.append(x - y)
+            if dc:
+                print(f"| {label} | {_fmt(dc)} | {_fmt(dr)} | {_fmt(dd)} |")
+
+
+# Ruck integrity (T2.31): hit-outs per team and per number-one ruck, hit-outs to
+# advantage, the club spread and the match duel spread, against Champion Data 2025 and
+# 2026 (afl_ruck_rates.json, built by build_ruck_rates.py from the Wheelo cache).
+RUCK_DUEL = (10, 20, 30)
+
+
+def _ratio(num, den):
+    def f(r):
+        d = sum(den(t) for t in r["teams"])
+        return None if d == 0 else 100 * sum(num(t) for t in r["teams"]) / d
+    return f
+
+
+RUCK_ROWS = [
+    ("team hit-outs", "team_hitouts", lambda r: sum(float(t.get("hitouts", 0)) for t in r["teams"]) / 2, ""),
+    ("team hit-outs to advantage", "team_hta", lambda r: sum(float(t.get("hitouts_adv", 0)) for t in r["teams"]) / 2, ""),
+    ("to advantage, % of hit-outs", "team_hta_pct",
+     _ratio(lambda t: float(t.get("hitouts_adv", 0)), lambda t: float(t.get("hitouts", 0))), "%"),
+    ("number-one ruck: hit-outs", "ruck1_hitouts", lambda r: sum(t["ruck1"][0] for t in r["teams"]) / 2, ""),
+    ("number-one ruck: to advantage", "ruck1_hta", lambda r: sum(t["ruck1"][1] for t in r["teams"]) / 2, ""),
+    ("number-one ruck: to advantage %", "ruck1_hta_pct", _ratio(lambda t: t["ruck1"][1], lambda t: t["ruck1"][0]), "%"),
+    ("number-one ruck: share of team hit-outs", "ruck1_share",
+     _ratio(lambda t: t["ruck1"][0], lambda t: float(t.get("hitouts", 0))), "%"),
+    ("number-one ruck: ruck contests*", "ruck1_contests", lambda r: sum(t["ruck1"][2] for t in r["teams"]) / 2, ""),
+    ("number-one ruck: hit-outs per ruck contest*", "ruck1_win_pct",
+     _ratio(lambda t: t["ruck1"][0], lambda t: t["ruck1"][2]), "%"),
+]
+
+
+def _mark(v, rr):
+    if rr["min"] <= v <= rr["max"]:
+        return "IN"
+    return "NEAR" if abs(v - rr["mean"]) <= 2 * rr["sd"] else "OUT"
+
+
+def ruck_section(A, B):
+    if not any("ruck1" in t for r in A.values() for t in r["teams"]):
+        return
+    path = os.path.join(HERE, "afl_ruck_rates.json")
+    if not os.path.exists(path):
+        return
+    ref = json.load(open(path, encoding="utf-8"))
+    r26, r25 = ref["2026"]["league"], ref["2025"]["league"]
+    print("\n## Rucks (T2.31; real: Champion Data via Wheelo, tools/balance/afl_ruck_rates.json)\n")
+    print("Number-one ruck: the side's man with the most hit-outs in the match (real: the club's listed ruck with "
+          "the most season hit-outs, per game he played). Mark against 2026's 18 clubs: IN inside lowest..highest, "
+          "NEAR within mean +-2 sd, OUT.\n")
+    head = "| per team-match | real 2026 mean | 2026 range | real 2025 mean | A | mark |" + (" B | B-A | se | sig |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+    for label, key, fn, unit in RUCK_ROWS:
+        ma, mb, dm, se = paired(A, B, fn)
+        rr = r26[key]
+        line = (f"| {label} | {rr['mean']:.1f}{unit} | {rr['min']:.1f}-{rr['max']:.1f} | {r25[key]['mean']:.1f}{unit} |"
+                f" {ma:.1f}{unit} | {_mark(ma, rr)} |")
+        if B:
+            sig = "yes" if se and abs(dm) > 2 * se else ""
+            line += f" {mb:.1f}{unit} | {dm:+.2f} | {se:.2f} | {sig} |"
+        print(line)
+    print("\n*The sim counts a ruck contest only when someone wins the tap, so its hit-outs per contest is the"
+          " share of won taps (the two rucks sum to 100%); real ruck contests include taps nobody wins."
+          " Read those two rows' marks with this in mind.")
+    ruck_clubs(A, B, ref)
+    ruck_duels(A, B)
+
+
+def ruck_clubs(A, B, ref):
+    """Feast or famine at club level: each club's sim average against the real 18 clubs' spread."""
+    r26 = ref["2026"]["league"]
+    names = {}
+    with open(os.path.join(ROOT, "data", "clubs.csv"), encoding="utf-8") as f:
+        for line in f.read().splitlines()[1:]:
+            c = line.split(",")
+            names[c[1]] = c[0]
+    real_club = {names.get(k, k): v for k, v in ref["2026"]["clubs"].items()}
+    for name, R in (("A", A), ("B", B)):
+        if not R:
+            continue
+        acc = {}
+        for r in R.values():
+            for t in r["teams"]:
+                c = acc.setdefault(t.get("club", "?"), [0, 0.0, 0, 0, 0])
+                c[0] += 1
+                c[1] += float(t.get("hitouts", 0))
+                c[2] += t["ruck1"][0]
+                c[3] += t["ruck1"][2]
+                c[4] += t["ruck1"][3]
+        club = {k: {"team_hitouts": v[1] / v[0], "ruck1_hitouts": v[2] / v[0],
+                    "ruck1_win_pct": 100 * v[2] / max(1, v[3]), "rating": v[4] / v[0]} for k, v in acc.items()}
+        common = [k for k in club if k in real_club]
+        print(f"\n### Club spread, arm {name} (each club over {min(acc[k][0] for k in common)}+ team-matches)\n")
+        print("| club average | real lowest | real highest | real sd | sim lowest | sim highest | sim sd | r with real club |")
+        print("|---|---|---|---|---|---|---|---|")
+        for key, label in (("team_hitouts", "team hit-outs"), ("ruck1_hitouts", "number-one ruck hit-outs"),
+                           ("ruck1_win_pct", "number-one ruck hit-outs per contest*")):
+            v = [club[k][key] for k in common]
+            rv = [real_club[k][key] for k in common]
+            rr = r26[key]
+            corr = st.correlation(v, rv) if len(v) > 2 and st.pstdev(v) > 0 else float("nan")
+            print(f"| {label} | {rr['min']:.1f} | {rr['max']:.1f} | {rr['sd']:.2f} | {min(v):.1f} | {max(v):.1f} |"
+                  f" {st.pstdev(v):.2f} | {corr:+.2f} |")
+        if name == "A":
+            print("\n| club | sim no.1 ruck rating | sim team hit-outs | real 2026 | sim no.1 ruck | real no.1 ruck |")
+            print("|---|---|---|---|---|---|")
+            for k in sorted(common, key=lambda k: -club[k]["team_hitouts"]):
+                rc = real_club[k]
+                print(f"| {k} | {club[k]['rating']:.0f} | {club[k]['team_hitouts']:.1f} | {rc['team_hitouts']:.1f} |"
+                      f" {club[k]['ruck1_hitouts']:.1f} | {rc['ruck1_hitouts']:.1f} ({rc['ruck1']}) |")
+
+
+def ruck_duels(A, B):
+    """How often one side wins the match's hit-outs by a big margin (sim only)."""
+    arms = [R for R in (A, B) if R]
+    print("\n### Duel spread per match (no real per-match reference in the repo)\n")
+    head = "| per match | A |" + (" B |" if B else "")
+    print(head)
+    print("|" + "---|" * (head.count("|") - 1))
+
+    def tm(r):
+        return abs(float(r["teams"][0].get("hitouts", 0)) - float(r["teams"][1].get("hitouts", 0)))
+
+    def rm(r):
+        return abs(r["teams"][0]["ruck1"][0] - r["teams"][1]["ruck1"][0])
+
+    def top(r):
+        h = [float(t.get("hitouts", 0)) for t in r["teams"]]
+        return max(h) / sum(h) if sum(h) else 0.5
+
+    def share(R, test):
+        return 100 * sum(test(r) for r in R.values()) / len(R)
+    print("| mean team hit-out margin |" + "".join(f" {st.mean(tm(r) for r in R.values()):.1f} |" for R in arms))
+    for k in RUCK_DUEL:
+        print(f"| team hit-out margin {k}+ |" + "".join(f" {share(R, lambda r: tm(r) >= k):.1f}% |" for R in arms))
+    for k in RUCK_DUEL[:2]:
+        print(f"| number-one rucks {k}+ hit-outs apart |" + "".join(f" {share(R, lambda r: rm(r) >= k):.1f}% |" for R in arms))
+    for s in (0.60, 0.65, 0.70):
+        print(f"| one side wins {100 * s:.0f}%+ of the match's hit-outs |"
+              + "".join(f" {share(R, lambda r: top(r) >= s):.1f}% |" for R in arms))
+    print("\nReal per-match hit-out splits are not in the repo; the club spread above is the sourced check.")
 
 
 def main():
@@ -523,8 +884,14 @@ def main():
             sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ("yes" if se == 0 and st.mean(d) != 0 else "")
             line += f" {mb:.1f} | {mark(mb)} | {st.mean(d):+.2f} | {se:.2f} | {sig} |"
         print(line)
-    wet_section(A, B, "--weather wet" in (o.b or "") and "--weather wet" not in o.a)
+    # The real column reads B's weather against a perfect day, so A must be one:
+    # no --weather (the worker's default) or --weather perfect.
+    a_perfect = "--weather" not in (o.a or "") or "--weather perfect" in (o.a or "")
+    cond = (next((c for c in ("wet", "windy", "hot") if f"--weather {c}" in (o.b or "")), None)
+            if a_perfect else None)
+    weather_section(A, B, cond)
     role_table(A, B)
+    spoils_section(A, B)
     for name, R in (("A", A), ("B", B)):
         if not R:
             continue
@@ -537,8 +904,10 @@ def main():
     print("\nReal AFL (docs/LEAGUE_BALANCE.md): 60+ about 15.5%, 100+ about 1.9%, home win 59.3%.")
     shots_section(A, B)
     duel_section(A, B)
+    ruck_section(A, B)
     margin_tail(A, B)
     role_report(A, B)
+    legs_section(A, B)
     print(f"\nOUT of real range (A): {', '.join(outs) if outs else 'none'}")
 
 
