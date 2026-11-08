@@ -469,6 +469,10 @@ def type_report(A, B):
     for that type, NEAR = within the mean +-2 sd, else OUT); then the top key defenders by
     disposals a game over the run, as a SEASON_GAMES-game season."""
     if not any("types" in t for r in A.values() for t in r["teams"]):
+        # Arm A's checkout (main, before this harness logged types) has none: show B alone.
+        if B and any("types" in t for r in B.values() for t in r["teams"]):
+            print("\n(Arm A's checkout does not log types; the by-type table below is arm B alone.)")
+            type_report(B, None)
         return
     ref = json.load(open(os.path.join(HERE, "afl_role_rates.json"))).get("types", {})
     names = sorted({k for r in A.values() for t in r["teams"] for k in t.get("types", {}) if k != "pl"},
