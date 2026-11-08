@@ -357,7 +357,7 @@ func _test_screens_at_largest() -> void:
 		_router.go(screen)
 		await _settle(10)
 		var scene := current_scene
-		_check(scene != null and _router.current() == screen, "%s opens at Largest" % key)
+		_check(scene != null and _router.current() == screen, "%s opens at Largest (now on %s, stack %s, pending %s)" % [key, _router.current(), str(_router.stack), str(_gs.get("pending_events"))])
 		if scene == null:
 			continue
 		var bare := _unsized(scene)
