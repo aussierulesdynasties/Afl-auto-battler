@@ -13,7 +13,8 @@ config/description="Build an Australian rules football dynasty: shape your list,
 config/version="1.0.9"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.7")
-config/icon="res://icon.svg"
+config/icon="res://assets/ui/app_icon/app_icon_512.png"
+config/windows_native_icon="res://assets/ui/app_icon/app_icon.ico"
 ; Android's back button goes through Router.handle_back() instead of quitting.
 config/quit_on_go_back=false
 ; Battery: redraw only when something on screen changes (an idle hub or
