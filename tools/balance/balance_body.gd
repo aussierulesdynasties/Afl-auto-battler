@@ -124,12 +124,21 @@ func play(from: int, count: int, out: String, weather: String,
 		# the team key "centre_bounces".
 		var ball_ups := 0
 		var throw_ins := 0
+		# Marks inside 50 (row 61), each side's, from the event log too: a mark
+		# (or a lead mark played on to) taken inside that side's forward 50, and
+		# a forward's mark in the goal-square pack.
+		var mi50 := [0, 0]
+		var f50 := float(Ratings.T["forward50_line"])
 		for ev in r["events"]:
 			var kind := str((ev as Dictionary).get("kind", ""))
 			if kind == "ballup":
 				ball_ups += 1
 			elif kind == "throwin":
 				throw_ins += 1
+			elif kind == "mark" or kind == "receive" or (kind == "pack" and str(ev.get("outcome", "")) == "marked"):
+				var s := int(ev.get("side", 0))
+				if float(ev.get("fp", 0.0)) * (1.0 if s == 0 else -1.0) >= f50:
+					mi50[s] += 1
 		var teams := []
 		var rosters: Array = sim.rosters()
 		var stats: Dictionary = r["players"]
@@ -139,6 +148,7 @@ func play(from: int, count: int, out: String, weather: String,
 			t["ball_ups"] = ball_ups
 			t["throw_ins"] = throw_ins
 			t["stoppages"] = ball_ups + throw_ins
+			t["marks_inside_50"] = mi50[side]
 			_shot_counts(t, sim.shot_log, side)
 			t["strength"] = snappedf((sq_h if side == 0 else sq_a).strength(), 0.01)
 			q_score[side][3] = int(r["score"][side])
