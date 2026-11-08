@@ -152,6 +152,12 @@ func _test_flow() -> void:
 			"What you tell the papers does not change the first match's result")
 
 
+## A stake with its size: a percentage, or his opinion of you in points out of
+## 100 ("down 1, to 49/100", director 2026-11-08).
+func _sized(line: String) -> bool:
+	return line.contains("%") or line.contains("/100")
+
+
 func _lines(card: Dictionary, i: int) -> PackedStringArray:
 	return StoryEngine.stakes_lines((card["options"][i] as Dictionary).get("effects", []), card["facts"])
 
@@ -173,13 +179,13 @@ func _test_answers() -> void:
 			for l in lines:
 				gain = gain or l.begins_with("Gain: ")
 				cost = cost or l.begins_with("Cost: ")
-				sized = sized and l.contains("%")
+				sized = sized and _sized(l)
 			every = every and gain and cost
 		_check(every, "%s: every answer says what it gains and what it costs" % kind)
 		# Bible section 4 (director, 2026-10-18): every side carries its size, saying nothing too.
 		var quiet := StoryEngine.silence_line(card)
-		_check(sized and quiet.begins_with("Say nothing") and quiet.contains("%"),
-				"%s: every Gain and Cost line and the silence line carry a percentage (%s)" % [kind, quiet])
+		_check(sized and quiet.begins_with("Say nothing") and _sized(quiet),
+				"%s: every Gain and Cost line and the silence line carry a size (%s)" % [kind, quiet])
 		var text: String = str(card["title"]) + " " + str(card["text"])
 		for i in range(3):
 			text += " " + str(card["options"][i]["label"]) + " " + " ".join(_lines(card, i))
