@@ -3,13 +3,16 @@
 check them against the committed baseline.
 
   python3 tools/screen_sweep.py --phone out/sweep_phone.json --pc out/sweep_pc.json \
+      [--phone-larger out/sweep_phone_larger.json --phone-largest out/sweep_phone_largest.json] \
       --baseline tools/visual/screen_sweep_baseline.json \
       --doc docs/research/SCREEN_SWEEP_2026-10-18.md [--write-baseline] [--tighten]
 
-The JSONs come from tools/visual/sweep_screens.gd (one run per window size).
-Exit status 1 when any screen got worse than the baseline: a smaller smallest
-font, more controls off screen, more clipped labels, more small targets, or a
-screen that built before and does not now. The floor only tightens: --tighten
+The JSONs come from tools/visual/sweep_screens.gd (one run per window size, and
+on the phone one per Settings text size: row 118). A size left out of a run is
+not checked. Exit status 1 when any screen got worse than the baseline: a
+smaller smallest font, more controls off screen, more clipped labels, more small
+targets, more words drawn over words, or a screen that built before and does
+not now. The floor only tightens: --tighten
 rewrites the baseline with the better of the old and new value per figure and
 never a worse one; --write-baseline writes it fresh (the first run).
 """
@@ -17,9 +20,10 @@ import argparse
 import json
 import sys
 
-SIZES = ["phone", "pc"]
-COUNTS = ["offscreen", "clipped", "small"]
-LABELS = {"offscreen": "Off screen", "clipped": "Clipped text", "small": "Targets under 44 px"}
+SIZES = ["phone", "pc", "phone_larger", "phone_largest"]
+COUNTS = ["offscreen", "clipped", "small", "overlap"]
+LABELS = {"offscreen": "Off screen", "clipped": "Clipped text", "small": "Targets under 44 px",
+          "overlap": "Text over text"}
 
 
 def load(path):
@@ -28,17 +32,19 @@ def load(path):
 
 
 def figures(entry):
-    """The four numbers the baseline holds for one screen at one size."""
+    """The five numbers the baseline holds for one screen at one size."""
     if not entry.get("built", False):
         return {"built": False}
     return {"built": True, "min_font": entry["min_font"], "offscreen": entry["offscreen"],
-            "clipped": entry["clipped"], "small": entry["small"]}
+            "clipped": entry["clipped"], "small": entry["small"], "overlap": entry.get("overlap", 0)}
 
 
 def compare(base, now):
     """Regressions of `now` against `base`: a list of sentences."""
     bad = []
     for size in SIZES:
+        if size not in now:
+            continue
         for key, b in base.get(size, {}).items():
             n = now.get(size, {}).get(key)
             if n is None:
@@ -52,15 +58,17 @@ def compare(base, now):
             if n["min_font"] < b["min_font"] - 0.01:
                 bad.append("%s %s: smallest font %.1f px, baseline %.1f px" % (size, key, n["min_font"], b["min_font"]))
             for c in COUNTS:
-                if n[c] > b[c]:
-                    bad.append("%s %s: %s %d, baseline %d" % (size, key, LABELS[c].lower(), n[c], b[c]))
+                if n.get(c, 0) > b.get(c, 0):
+                    bad.append("%s %s: %s %d, baseline %d" % (size, key, LABELS[c].lower(), n.get(c, 0), b.get(c, 0)))
     return bad
 
 
 def tighten(base, now):
     """Per figure the better of old and new; new screens added as they come."""
-    out = {s: dict(base.get(s, {})) for s in SIZES}
+    out = {s: dict(base.get(s, {})) for s in SIZES if s in base or s in now}
     for size in SIZES:
+        if size not in now:
+            continue
         for key, n in now.get(size, {}).items():
             b = out[size].get(key)
             if b is None or (not b.get("built") and n.get("built")):
@@ -68,22 +76,23 @@ def tighten(base, now):
             elif b.get("built") and n.get("built"):
                 b["min_font"] = max(b["min_font"], n["min_font"])
                 for c in COUNTS:
-                    b[c] = min(b[c], n[c])
+                    b[c] = min(b.get(c, n.get(c, 0)), n.get(c, 0))
     return out
 
 
 def worst(shots, n=5):
     """The n screens with most findings, each with its first example."""
     rows = []
-    for size in SIZES:
+    for size in shots:
         for key, e in shots[size]["screens"].items():
             if not e.get("built"):
                 rows.append((10 ** 6, size, key, "did not build: " + e.get("error", "")))
                 continue
-            score = e["offscreen"] + e["clipped"] + e["small"]
+            score = e["offscreen"] + e["clipped"] + e["small"] + e.get("overlap", 0)
             ex = ""
-            for c, tag in (("clipped", "clipped"), ("offscreen", "off screen"), ("small", "small target")):
-                if e[c]:
+            for c, tag in (("clipped", "clipped"), ("overlap", "text over text"), ("offscreen", "off screen"),
+                           ("small", "small target")):
+                if e.get(c):
                     ex = "%s: %s" % (tag, e[c + "_examples"][0])
                     break
             rows.append((score, size, key, ex))
@@ -96,17 +105,20 @@ def write_doc(path, date, shots, regressions, baseline_note):
     L.append("# Screen sweep, %s" % date)
     L.append("")
     L.append("P-77 \"One sweep of every screen\" (director yes 2026-10-18). Every screen in `Router.SCENES`, opened on one "
-             "seeded Melbourne career (seed 2031), dark theme, at the Android phone reference and the wide desktop. "
+             "seeded Melbourne career (seed 2031), dark theme, at the Android phone reference and the wide desktop, "
+             "and on the phone again at the Larger and Largest text sizes (row 118). "
              "Made by `tools/visual/sweep_screens.gd` and `tools/screen_sweep.py`; the check against the committed "
              "baseline (`tools/visual/screen_sweep_baseline.json`) runs in the UI review sheets workflow.")
     L.append("")
-    for size in SIZES:
+    for size in shots:
         s = shots[size]
-        L.append("- %s: window %s, %s UI units, %s px per unit." % (size, s["size"], s["units"], s["px_per_unit"]))
+        L.append("- %s: window %s, %s UI units, %s px per unit, text size %s." % (
+            size, s["size"], s["units"], s["px_per_unit"], s.get("text_size", "standard")))
     L.append("")
     L.append("Figures: the smallest font on the screen in rendered px; controls whose rect leaves the viewport "
              "(sideways always, up or down only outside a scroll area); labels and buttons whose text is cut or "
-             "ellipsised; buttons and tappable rows under 44 px in either direction. Inline name links are player "
+             "ellipsised; buttons and tappable rows under 44 px in either direction; text over text, two pieces of text "
+             "whose inked areas cross. Inline name links are player "
              "names in running text that open his profile (NameLink): text at line height like a web link, counted "
              "here for the record and never compared to the baseline. Examples are the first few found, not all.")
     L.append("")
@@ -121,26 +133,27 @@ def write_doc(path, date, shots, regressions, baseline_note):
     L.append("")
     L.append("## The table")
     L.append("")
-    L.append("| Screen | Size | Smallest font (px) | Off screen | Clipped | Targets under 44 px | Inline name links |")
-    L.append("|---|---|---|---|---|---|---|")
+    L.append("| Screen | Size | Smallest font (px) | Off screen | Clipped | Targets under 44 px | Text over text | Inline name links |")
+    L.append("|---|---|---|---|---|---|---|---|")
     keys = []
-    for size in SIZES:
+    for size in shots:
         for k in shots[size]["screens"]:
             if k not in keys:
                 keys.append(k)
     for k in keys:
-        for size in SIZES:
+        for size in shots:
             e = shots[size]["screens"].get(k)
             if e is None:
                 continue
             if not e.get("built"):
-                L.append("| %s | %s | did not build: %s | | | | |" % (k, size, e.get("error", "")))
+                L.append("| %s | %s | did not build: %s | | | | | |" % (k, size, e.get("error", "")))
             else:
-                L.append("| %s | %s | %.1f | %d | %d | %d | %d |" % (k, size, e["min_font"], e["offscreen"], e["clipped"], e["small"], e.get("inline", 0)))
+                L.append("| %s | %s | %.1f | %d | %d | %d | %d | %d |" % (
+                    k, size, e["min_font"], e["offscreen"], e["clipped"], e["small"], e.get("overlap", 0), e.get("inline", 0)))
     L.append("")
     L.append("## Worst five findings")
     L.append("")
-    L.append("The five screen and size pairs with the most findings (off screen + clipped + small targets), with the first example of each.")
+    L.append("The five screen and size pairs with the most findings (off screen + clipped + small targets + text over text), with the first example of each.")
     L.append("")
     for score, size, key, ex in worst(shots):
         L.append("- **%s at %s**, %s findings. %s" % (key, size, score if score < 10 ** 6 else "-", ex))
@@ -150,7 +163,7 @@ def write_doc(path, date, shots, regressions, baseline_note):
     L.append("Where the smallest text sits, smallest first (both sizes).")
     L.append("")
     small = []
-    for size in SIZES:
+    for size in shots:
         for key, e in shots[size]["screens"].items():
             if e.get("built"):
                 small.append((e["min_font"], size, key, e["min_font_node"]))
@@ -160,13 +173,13 @@ def write_doc(path, date, shots, regressions, baseline_note):
     L.append("")
     L.append("## Examples")
     L.append("")
-    for size in SIZES:
+    for size in shots:
         for key, e in shots[size]["screens"].items():
             if not e.get("built"):
                 continue
             lines = []
             for c in COUNTS:
-                for ex in e[c + "_examples"][:3]:
+                for ex in e.get(c + "_examples", [])[:3]:
                     lines.append("  - %s: %s" % (LABELS[c].lower(), ex))
             if lines:
                 L.append("- %s at %s" % (key, size))
@@ -176,7 +189,7 @@ def write_doc(path, date, shots, regressions, baseline_note):
     L.append("")
     L.append("- One state per screen: the first view, not every tab, sheet, popup or scrolled position. A screen with "
              "several states (the hub across a season, the match through its quarters) is measured once.")
-    L.append("- Text sizes other than the default: P-04's text-size setting does not exist yet, so the sweep runs at one.")
+    L.append("- The Larger and Largest text sizes on the desktop: the phone is measured at all three, the desktop at Standard.")
     L.append("- A tap is not made: a target is judged by the size of its rect, not by whether another control covers it.")
     L.append("- Wrapped text that is simply too long for a screen is not a finding unless it is cut; only a person looking at the sheets sees that.")
     L.append("- The light theme (parked by the director, 2026-10-13) and the club colour choice: one club, dark only.")
@@ -190,6 +203,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--phone", required=True)
     ap.add_argument("--pc", required=True)
+    ap.add_argument("--phone-larger", default="")
+    ap.add_argument("--phone-largest", default="")
     ap.add_argument("--baseline", required=True)
     ap.add_argument("--doc", default="")
     ap.add_argument("--date", default="")
@@ -198,7 +213,11 @@ def main():
     a = ap.parse_args()
 
     shots = {"phone": load(a.phone), "pc": load(a.pc)}
-    now = {s: {k: figures(e) for k, e in shots[s]["screens"].items()} for s in SIZES}
+    if a.phone_larger:
+        shots["phone_larger"] = load(a.phone_larger)
+    if a.phone_largest:
+        shots["phone_largest"] = load(a.phone_largest)
+    now = {s: {k: figures(e) for k, e in shots[s]["screens"].items()} for s in shots}
     regressions = []
     if a.write_baseline:
         with open(a.baseline, "w", encoding="utf-8") as f:

@@ -226,7 +226,8 @@ static func preview(rec: Dictionary, new_slots: Array, roster: Array, year: int,
 		for id in removed:
 			out["morale"][id] = STRIPPED_MORALE
 			out["trust"][id] = STRIPPED_TRUST
-			(out["lines"] as Array).append("Taking the armband off %s mid-season costs him: his mood drops and he trusts you less. It is your one change this season." % name_of.call(id))
+			(out["lines"] as Array).append("Taking the armband off %s mid-season costs him: his mood drops and his opinion of you falls %d. It is your one change this season." % [
+					name_of.call(id), -Trust.opinion_move(0, STRIPPED_TRUST)])
 	# A senior player passed over: stings once.
 	var added := []
 	for id in new_caps:
@@ -253,7 +254,8 @@ static func preview(rec: Dictionary, new_slots: Array, roster: Array, year: int,
 			out["morale"][pid] = PASSED_MORALE
 			out["trust"][pid] = PASSED_TRUST
 			(out["passed"] as Array).append(pid)
-			(out["lines"] as Array).append("Overlooking %s costs him a little mood and trust, once: he is a senior player and rates higher on Leadership than your new captain." % name_of.call(pid))
+			(out["lines"] as Array).append("Overlooking %s costs him a little mood, and his opinion of you falls %d, once: he is a senior player and rates higher on Leadership than your new captain." % [
+					name_of.call(pid), -Trust.opinion_move(0, PASSED_TRUST)])
 	return out
 
 
@@ -261,7 +263,7 @@ static func preview(rec: Dictionary, new_slots: Array, roster: Array, year: int,
 static func rules_text() -> Array:
 	return [
 		"A club has a captain and up to two vice-captains. Two or three captains can share the job.",
-		"Overlooking a senior player with more leadership than your new captain costs him a little mood and trust, once.",
+		"Overlooking a senior player with more leadership than your new captain costs him a little mood, and his opinion of you falls %d, once." % -Trust.opinion_move(0, PASSED_TRUST),
 		"Taking the armband off a captain mid-season costs him, and you only get one change a season. Before round 1 changes are free.",
 		"If your captain retires or leaves, the next vice-captain steps up, as at the other clubs. If you leave the captaincy empty yourself, it stays empty.",
 	]
