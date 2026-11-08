@@ -2098,8 +2098,12 @@ func begin_intake_draft() -> bool:
 	for p in available:
 		var tie := str(p.get("tied_club", ""))
 		var tied_this_year: bool = int(p.get("draft_year", 0)) == season_year
+		var academy: String = ExpansionBuild.academy_club(self, p)
 		if tie != "" and tied_this_year and league_lists.has(tie):
 			_assign_draftee(tie, p, str(p.get("tied_type", "tied")))
+		elif academy != "":
+			ExpansionBuild.ensure_foundation(self, academy)
+			_assign_draftee(academy, p, "NGA")
 		else:
 			open_pool.append(p)
 	if my_club != "" and league_lists.has(my_club):
@@ -2586,7 +2590,7 @@ func _ensure_league_lists() -> void:
 
 
 func _assign_draftee(code: String, p: Dictionary, kind: String) -> void:
-	var arr: Array = league_lists.get(code, [])
+	var arr: Array = league_lists[code] if league_lists.has(code) else ExpansionBuild.list_of(self, code)
 	if not p.has("xp"):
 		p["xp"] = 0
 		p["xp_games"] = 0
@@ -6681,7 +6685,7 @@ func my_payroll() -> int:
 
 
 func cap_room() -> int:
-	return salary_cap - my_payroll()
+	return cap_for(my_club) - my_payroll()
 
 
 # ---------------------------------------------------------------------------
@@ -7053,7 +7057,7 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 		return {"ok": false, "answer": "walk", "reason": "Talks have broken down: he will test free agency."}
 	years = clampi(years, 1, Contracts.MAX_YEARS)
 	salary = maxi(Contracts.SENIOR_MIN_2027, salary)
-	if my_payroll() - int(p.get("salary", 0)) + salary > salary_cap:
+	if my_payroll() - int(p.get("salary", 0)) + salary > cap_for(my_club):
 		return {"ok": false, "answer": "", "reason": "Not enough cap room for %s a season." % Contracts.money(salary)}
 	# Under 50, he may refuse you whatever you offer (director 2026-11-08).
 	if resign_refused(p):
@@ -9543,7 +9547,7 @@ func _fa_close_plan() -> Array:
 		best22[str(q["id"])] = true
 	# Cap room as you settle them: a standing offer is money you have set
 	# aside, so whoever takes yours can always be paid.
-	var room := salary_cap - my_payroll()
+	var room := cap_for(my_club) - my_payroll()
 	var size := my_list.size()
 	for p in Contracts.expiring(my_list):
 		if bool(p.get("resigned", false)) or retiring_now(p):

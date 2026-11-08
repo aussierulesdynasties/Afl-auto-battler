@@ -8,12 +8,13 @@ extends RefCounted
 ##                      wants, one per rival club. Yours comes as a card.
 ##   season E-1 ends    resolve(): a rival re-signs the players it would have
 ##                      kept; the rest join the new club's list.
-##   draft before E     draft_setup(): picks 1, 3, 5, 7 and the first pick of
-##                      later rounds, one of the four traded for a senior
-##                      player (forced_trade).
+##   draft before E     draft_setup(): picks 1, 3, 5, 7, 9, 11, 13 and the first
+##                      pick of later rounds; 5, 7, 11, 13 traded for senior
+##                      players (forced_trade).
 ##   rollover into E    enter(): the list it built is the list it fields.
-##   season E           a second, smaller round of approaches; pick 5 extra in
-##                      that year's draft. Then nothing more.
+##   season E           a second round of approaches.
+##   drafts E, E+1      picks 5 and 9 extra; pick 5 traded.
+##   drafts E-1 to E+2  home-state prospects join before the draft.
 ##
 ## gs.expansion[code] = {"package": true, "list": [players before entry],
 ##   "approached": [years], "targets": [{"id", "club", "name", "year",
@@ -46,6 +47,28 @@ static func first_season(gs) -> Array:
 		if GameDB.enter_year(str(code)) == int(gs.season_year) and has_package(gs, str(code)):
 			out.append(str(code))
 	return out
+
+
+## Clubs holding the extra picks in the draft after `year`'s season, past
+## their first draft: the two drafts after it.
+static func later_draft_clubs(gs, year: int) -> Array:
+	var out := []
+	for code in gs.expansion:
+		var first := GameDB.enter_year(str(code))
+		if (year == first or year == first + 1) and has_package(gs, str(code)):
+			out.append(str(code))
+	return out
+
+
+## The club with first call on this prospect in this year's draft, or "".
+static func academy_club(gs, p: Dictionary) -> String:
+	if str(p.get("state", "")) != "TAS":
+		return ""
+	var year := int(gs.season_year)
+	var first := GameDB.enter_year("TAS")
+	if year < first - 1 or year >= first - 1 + Expansion.ACADEMY_DRAFTS:
+		return ""
+	return "TAS" if has_package(gs, "TAS") or year == first - 1 else ""
 
 
 static func has_package(gs, code: String) -> bool:
@@ -162,6 +185,8 @@ static func _candidate(gs, club: String, bars: Dictionary) -> Dictionary:
 		if not _available(gs, p) or role_at(p, bars) == "depth":
 			continue
 		if club != str(gs.my_club):
+			if int(p.get("overall", 0)) >= Expansion.STAR_STAYS_OVERALL:
+				continue
 			var why: String = gs.ai_release_reason(club, p)
 			if why == "cap" and not Expansion.FIRST_CALL_CAP_SQUEEZED:
 				continue
@@ -258,7 +283,7 @@ static func card_facts(gs, p: Dictionary, code: String) -> Dictionary:
 	var want := Contracts.wants(p)
 	var price := int(want["salary"])
 	var years := int(want["years"])
-	var room: bool = int(gs.my_payroll()) - int(p.get("salary", 0)) + price <= int(gs.salary_cap)
+	var room: bool = int(gs.my_payroll()) - int(p.get("salary", 0)) + price <= int(gs.cap_for(str(gs.my_club)))
 	var comp := compensation(gs, p)
 	return {"new_club": GameDB.club_name(code), "new_club_code": code,
 			"keep_price": Contracts.money(price),
@@ -290,7 +315,7 @@ static func keep(gs, p: Dictionary) -> String:
 	var name := GameDB.player_display_name(p)
 	var want := Contracts.wants(p)
 	var price := int(want["salary"])
-	if int(gs.my_payroll()) - int(p.get("salary", 0)) + price > int(gs.salary_cap):
+	if int(gs.my_payroll()) - int(p.get("salary", 0)) + price > int(gs.cap_for(str(gs.my_club))):
 		if not t.is_empty():
 			t["status"] = "joining"
 		return "The cap has no room for %s a season. %s will go when the season ends." % [Contracts.money(price), name]
@@ -410,11 +435,34 @@ static func draft_picks(gs, n_clubs: int, pool_size: int) -> Array:
 	for code in building(gs):
 		ensure_foundation(gs, code)
 		var picks: Array = Expansion.first_draft_picks(code, n_clubs, rounds)
-		forced_trade(gs, code, picks)
+		for pick in Expansion.MUST_TRADE_PICKS:
+			forced_trade(gs, code, picks, int(pick))
+		_make_room(gs, code, picks)
 		comps.append_array(picks)
-	for code in first_season(gs):
-		comps.append_array(Expansion.second_draft_picks(code))
+	for code in later_draft_clubs(gs, int(gs.season_year)):
+		var picks: Array = Expansion.later_draft_picks(code)
+		forced_trade(gs, code, picks, Expansion.LATER_MUST_TRADE_PICK)
+		if code != str(gs.my_club):
+			_make_room(gs, code, picks)
+		comps.append_array(picks)
 	return comps
+
+
+## The club's lowest-rated state-league signings make way, so every pick it
+## still holds fits in the senior spots the draft fills.
+static func _make_room(gs, code: String, picks: Array) -> void:
+	var list: Array = list_of(gs, code)
+	var held := 0
+	for e in picks:
+		if str(e["club"]) == code:
+			held += 1
+	var over := RookieList.draft_size(list) + held - RookieList.SENIOR_SPOTS
+	if over <= 0:
+		return
+	var state_league := list.filter(func(p): return str(p["id"]).begins_with("FND_"))
+	state_league.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
+	for p in state_league.slice(0, over):
+		list.erase(p)
 
 
 ## How many of the new clubs' extra picks come before the `regular`-th
@@ -429,14 +477,14 @@ static func picks_ahead(gs, year: int, regular: int, n: int) -> int:
 			for e in Expansion.first_draft_picks(code, n, 4):
 				if int(e["after"]) < regular:
 					ahead += 1
-		for code in first_season(gs):
-			for e in Expansion.second_draft_picks(code):
+		for code in later_draft_clubs(gs, year):
+			for e in Expansion.later_draft_picks(code):
 				if int(e["after"]) < regular:
 					ahead += 1
 	elif year == int(gs.season_year) + 1:
 		# Next year's draft: a club entering then is in its first season.
-		for code in building(gs):
-			for e in Expansion.second_draft_picks(code):
+		for code in building(gs) + later_draft_clubs(gs, year):
+			for e in Expansion.later_draft_picks(code):
 				if int(e["after"]) < regular:
 					ahead += 1
 	return ahead
@@ -458,17 +506,23 @@ static func seat_guests(gs, draft: Draft) -> void:
 		draft.add_guest(code, list.size(), counts, pairs)
 
 
-## One of the four early picks must be traded for a senior player. The club
-## offers it round the league; each rival puts up the senior player it would
+## A pick that must be traded for a senior player. The club offers it round
+## the league; each rival puts up the senior player it would
 ## give for that pick by its own valuation (the one it uses in every trade),
 ## and the new club takes the best of them. Never with your club yet.
-static func forced_trade(gs, code: String, picks: Array) -> void:
+static func forced_trade(gs, code: String, picks: Array, pick_no: int) -> void:
 	var st := state(gs, code)
-	if bool(st.get("traded", false)):
+	# A save from before these rules made its one trade already.
+	if bool(st.get("traded", false)) and int(gs.season_year) < GameDB.enter_year(code):
+		return
+	var done_key := "%d:%d" % [int(gs.season_year), pick_no]
+	if not st.has("traded_picks"):
+		st["traded_picks"] = []
+	if (st["traded_picks"] as Array).has(done_key):
 		return
 	var entry := {}
 	for e in picks:
-		if int(e["pick"]) == Expansion.MUST_TRADE_PICK and int(e["round"]) == 1:
+		if int(e["pick"]) == pick_no and int(e["round"]) == 1:
 			entry = e
 	if entry.is_empty():
 		return
@@ -482,7 +536,7 @@ static func forced_trade(gs, code: String, picks: Array) -> void:
 		if list.size() <= Contracts.MIN_LIST:
 			continue
 		var phase: String = gs.club_phase(str(club))
-		var most := TradeValue.pick_value([[Expansion.MUST_TRADE_PICK, 1.0]], prospects, phase) \
+		var most := TradeValue.pick_value([[pick_no, 1.0]], prospects, phase) \
 				/ (1.0 + Contracts.TRADE_MARGIN)
 		var bars := TradeValue.selection_bars(list)
 		var proj := TradeValue.selection_bars(list, true)
@@ -501,15 +555,15 @@ static func forced_trade(gs, code: String, picks: Array) -> void:
 	(gs.season.lists[best_club] as Array).erase(best)
 	# His deal runs on from where it was, ticked down a season at the rollover
 	# like everyone's (the list he joins is not ticked).
-	var years := maxi(1, int(best.get("contract_years", 1)) - 1)
+	var years := maxi(1, int(best.get("contract_years", 1)) - (0 if gs.season.lists.has(code) else 1))
 	_sign(gs, code, best, int(best.get("salary", Contracts.asking_salary(best))), years)
 	entry["club"] = best_club
 	entry["traded"] = true
-	st["traded"] = true
-	var said := "%s trade pick %d to %s for %s." % [GameDB.club_name(code), Expansion.MUST_TRADE_PICK,
+	(st["traded_picks"] as Array).append(done_key)
+	var said := "%s trade pick %d to %s for %s." % [GameDB.club_name(code), pick_no,
 			GameDB.club_name(best_club), GameDB.player_display_name(best)]
 	gs.offseason_log.append({"kind": "ai_trade", "club": code, "with": best_club, "in": [str(best["id"])],
-			"out": ["pick %d" % Expansion.MUST_TRADE_PICK], "text": said, "phases": ["building", gs.club_phase(best_club)]})
+			"out": ["pick %d" % pick_no], "text": said, "phases": ["building", gs.club_phase(best_club)]})
 	gs.add_news("trade", "Trade: " + said)
 
 

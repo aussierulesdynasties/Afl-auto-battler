@@ -848,7 +848,25 @@ func _test_real_lists_tasmania_2028() -> void:
 	_check(GameState.choose_sim_ahead_club("TAS") and GameState.my_club == "TAS" and not GameState.sim_ahead
 			and GameState.has_career() and draft.user_club == "TAS" and str(GameState.challenge.get("kind", "")) == "youth",
 			"Tasmania are yours, and your challenge starts now")
-	_check(draft.upcoming_picks("TAS", 0) == tas_picks, "Taken by you, Tasmania keep the same picks")
+	var tas_list: Array = ExpansionBuild.list_of(GameState, "TAS")
+	var signed_tas := (GameState.expansion["TAS"]["signings"] as Array).size()
+	_check(signed_tas > 0 and signed_tas <= Expansion.SIGNINGS, "The player chooses, so Tasmania sign out-of-contract players (%d)" % signed_tas)
+	_check((GameState.expansion["TAS"]["traded_picks"] as Array).size() == 4, "Picks 5, 7, 11 and 13 are traded for senior players")
+	_check(tas_list.size() + tas_picks.size() <= RookieList.SENIOR_SPOTS, "Every pick they hold fits on the list (%d + %d)" % [tas_list.size(), tas_picks.size()])
+	var top_signed := 0
+	for p in tas_list:
+		if (GameState.expansion["TAS"]["signings"] as Array).has(str(p["id"])):
+			top_signed = maxi(top_signed, int(p["overall"]))
+	_check(top_signed > 0 and top_signed < Expansion.STAR_STAYS_OVERALL + 4, "Rivals' stars stay put: their best signing is rated %d" % top_signed)
+	var academy_ok := true
+	for row in GameState.intake_assignments:
+		if str(row["kind"]) == "NGA" and str(row["club"]) != "TAS":
+			academy_ok = false
+	for p in draft.pool if "pool" in draft else []:
+		if str(p.get("state", "")) == "TAS":
+			academy_ok = false
+	_check(academy_ok, "Tasmanian prospects join Tasmania before the draft, none reach the open pool")
+	_check(draft.upcoming_picks("TAS", 0) == tas_picks, "Taken by you, Tasmania keep the same picks (%s, then %s)" % [str(tas_picks), str(draft.upcoming_picks("TAS", 0))])
 	_check(GameState.club_yet_to_play(), "Their first draft comes before any season of theirs, so Continue returns to it")
 	_check(GameState.save_career(), "Their first draft saves")
 	GameState.reset()
@@ -865,6 +883,8 @@ func _test_real_lists_tasmania_2028() -> void:
 			"Your first season is 2028, on a 19-club ladder (%d)" % GameState.season_year)
 	_check(GameState.my_list.size() >= Prospects.MIN_LIST, "Tasmania have a full list (%d)" % GameState.my_list.size())
 	_check(not GameState.club_yet_to_play(), "Tasmania play 2028, so the Hub is home")
+	_check(GameState.cap_room() == GameState.salary_cap + ExpansionBuild.relief(GameState, "TAS") - GameState.my_payroll()
+			and ExpansionBuild.relief(GameState, "TAS") > 0, "The sign-on money counts on your own cap room")
 	_check(GameState.save_career(), "The 2028 career saves")
 	GameState.reset()
 	_check(GameState.load_career() and GameState.my_club == "TAS" and not GameState.sim_ahead and GameState.season_year == 2028,
@@ -941,7 +961,7 @@ func _test_real_lists_play_to_2030() -> void:
 			"Canberra is yours, and your challenge starts now")
 	_check(draft.upcoming_picks("CANB", 0) == canb_picks and ExpansionBuild.relief(GameState, "CANB") == relief_ai
 			and GameState.my_list.size() == signed,
-			"Taken by you, Canberra keeps the same picks, cap room and signings (%d, %d)" % [relief_ai, signed])
+			"Taken by you, Canberra keeps the same picks, cap room and signings (%d, %d; %s, then %s; relief %d; list %d)" % [relief_ai, signed, str(canb_picks), str(draft.upcoming_picks("CANB", 0)), ExpansionBuild.relief(GameState, "CANB"), GameState.my_list.size()])
 	_check(not Coaches.staff(GameState.coaches, "CANB").has("SC"), "You are Canberra's senior coach")
 	_ai_finish(draft)
 	GameState.finish_intake_draft()

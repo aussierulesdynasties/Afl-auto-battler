@@ -6,27 +6,38 @@ extends RefCounted
 ##
 ##  - The list starts with state-league and overlooked players: honest
 ##    footballers with little room left to improve, different every career.
-##  - In the draft before its first season the club holds picks 1, 3, 5 and 7
-##    and the first pick of each later round. One of the four must be traded
-##    for a senior player (the league wants a side that can compete in year 1).
-##  - In the draft after its first season it holds pick 5 on top of its own.
-##  - Over its first two off-seasons it may sign up to eight out-of-contract
-##    players, one per rival club. A player's club keeps him by re-signing him
-##    first; a club that wanted him and lost him gets a draft pick, by the
-##    rule that already pays a club for a lost free agent.
+##  The AFL's published rules for Tasmania (director, 2026-11-09, "do it like
+##  this then"; overrules the cut-down sizes of 2026-10-14):
+##  - In the draft before its first season the club holds picks 1, 3, 5, 7, 9,
+##    11 and 13 and the first pick of each later round. 5, 7, 11 and 13 must be
+##    traded for senior players.
+##  - In each of the next two drafts it holds picks 5 and 9 on top of its own,
+##    and pick 5 must be traded.
+##  - Over its first two off-seasons it may sign up to 18 out-of-contract
+##    players, one per rival club. The player chooses; a club that wanted him
+##    and lost him gets a draft pick, by the rule that already pays a club for
+##    a lost free agent.
 ##  - Sign-on money for those players sits outside the cap for its first two
-##    seasons, from a pool the size the AFL gave Tasmania.
-##  - After its second draft the club is treated like every other.
+##    seasons.
+##  - For four drafts from the one before its first season, the prospects of
+##    its home state join its list before the draft.
 
 ## Picks in the first round of the draft before the club's first season.
-const FIRST_DRAFT_PICKS := [1, 3, 5, 7]
-## The one of those that must be traded for a senior player.
-const MUST_TRADE_PICK := 7
-## The extra pick in the draft after its first season.
-const SECOND_DRAFT_PICK := 5
-## Out-of-contract players it may sign in all, and in the first off-season.
-const SIGNINGS := 8
-const FIRST_WINDOW := 5
+const FIRST_DRAFT_PICKS := [1, 3, 5, 7, 9, 11, 13]
+## Those that must be traded for a senior player.
+const MUST_TRADE_PICKS := [5, 7, 11, 13]
+## The extra picks in each of the two drafts after that, and the one to trade.
+const LATER_DRAFT_PICKS := [5, 9]
+const LATER_MUST_TRADE_PICK := 5
+## Out-of-contract players it may sign in all (the rules set no yearly limit).
+const SIGNINGS := 18
+const FIRST_WINDOW := 18
+## A rival's player this good will not join a side yet to play: squeezed at his
+## club, he goes to the open market instead (director, 2026-11-09, "Stars weigh
+## it harder").
+const STAR_STAYS_OVERALL := 80
+## Drafts with first call on home-state prospects, from the first one.
+const ACADEMY_DRAFTS := 4
 ## The approaches are made with this many home-and-away rounds still to play.
 const APPROACH_ROUNDS_LEFT := 4
 ## Nobody this old, or older, is approached.
@@ -44,11 +55,11 @@ const SIGN_ON_POOL := 5000000
 const SIGN_ON_SEASON_MAX := 3000000
 ## When a player's club meets his price, does he still choose between the two
 ## clubs (true), or does meeting his price keep him (false)?
-static var MATCHED_PLAYER_DECIDES := false
+static var MATCHED_PLAYER_DECIDES := true
 ## A player his club wants but cannot fit under its cap: may the new club
 ## sign him first (true), or does he go to free agency like anyone else?
-## Director, 2026-10-14: "No, he goes to free agency".
-static var FIRST_CALL_CAP_SQUEEZED := false
+## Director, 2026-11-09: his club cannot stop him leaving.
+static var FIRST_CALL_CAP_SQUEEZED := true
 ## A senior player, for the pick that must be traded: at least this old.
 const SENIOR_AGE := 23.0
 ## An entry year that never comes: a club this career leaves out.
@@ -88,9 +99,13 @@ static func first_draft_picks(code: String, n: int, rounds: int) -> Array:
 	return out
 
 
-## The one extra pick in the draft after its first season.
-static func second_draft_picks(code: String) -> Array:
-	return [_entry(code, SECOND_DRAFT_PICK - 1, 1, SECOND_DRAFT_PICK)]
+## The extra picks in each of the two drafts after that.
+static func later_draft_picks(code: String) -> Array:
+	var out := []
+	for i in range(LATER_DRAFT_PICKS.size()):
+		var pick := int(LATER_DRAFT_PICKS[i])
+		out.append(_entry(code, pick - 1 - i, 1, pick))
+	return out
 
 
 static func _entry(code: String, after: int, rnd: int, pick: int) -> Dictionary:
