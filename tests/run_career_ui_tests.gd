@@ -42,6 +42,18 @@ func _test_rivalry_catalogue() -> void:
 			"score": [77, 73], "label": "Grand Final", "is_final": true}, 2032)
 	_check(Rivalries.state(dynamic, "ADE", "GEE") == "rivals",
 			"Repeated high-stakes meetings can create a full dynamic rivalry")
+	_check(Rivalries.context(dynamic, "ADE", "GEE") == "A rivalry forged over 2 finals meetings and 4 close games.",
+			"Close finals count as finals meetings, not twice: " + Rivalries.context(dynamic, "ADE", "GEE"))
+	var no_finals := {}
+	for i in range(8):
+		Rivalries.record_match(no_finals, {"home": "BRL", "away": "SYD",
+				"score": [80, 75], "label": "Round %d" % (i + 1)}, 2027 + i)
+	_check(Rivalries.context(no_finals, "BRL", "SYD") == "A rivalry forged over 8 close games.",
+			"No finals: the line leaves the finals out: " + Rivalries.context(no_finals, "BRL", "SYD"))
+	var old_rec: Dictionary = (Rivalries.dynamic(dynamic, "ADE", "GEE") as Dictionary).duplicate(true)
+	old_rec.erase("close_finals")
+	_check(Rivalries.context({Rivalries.pair_key("ADE", "GEE"): old_rec}, "ADE", "GEE") == Rivalries.context(dynamic, "ADE", "GEE"),
+			"An older save's rivalry reads its close finals from the meetings it kept")
 	var before := int((Rivalries.dynamic(dynamic, "ADE", "GEE") as Dictionary)["score"])
 	Rivalries.record_match(dynamic, {"home": "GEE", "away": "ADE",
 			"score": [77, 73], "label": "Grand Final", "is_final": true}, 2032)
@@ -147,7 +159,6 @@ func _test_press_rolls() -> void:
 		for i in range(_state.my_list.size()):
 			_state.my_list[i]["morale"] = snap[i]
 			_state.my_list[i].erase("press_lift")
-			_state.my_list[i].erase("press_slow")
 		_state.board["confidence"] = 50
 		_state.media_memory = {}
 		_state.career_seed = seed
@@ -184,7 +195,7 @@ func _test_press_rolls() -> void:
 	words.append_array(MC.RECORD_CLAUSE.values())
 	words.append_array(MC.RECORD_REASON.values())
 	for j in MC.PERSONA.values():
-		for k in ["odds_note", "board_note", "named_note", "slow_note", "rule"]:
+		for k in ["odds_note", "board_note", "named_note", "rule"]:
 			if (j as Dictionary).has(k):
 				words.append(j[k])
 	words.append_array(MC.STANDING_WORDS.values())
@@ -250,7 +261,6 @@ func _press_reset() -> void:
 	for p in _state.my_list:
 		p["morale"] = 70
 		p.erase("press_lift")
-		p.erase("press_slow")
 
 
 func _press_conf(key_result: Array) -> Dictionary:
@@ -260,8 +270,7 @@ func _press_conf(key_result: Array) -> Dictionary:
 
 ## (g) Caps: no answer, journalist or record check takes a size past list 2,
 ## named 3, board 3; stacked answers never pass the cap, and the lift fades
-## back a point every second round (every third after the Philosopher), the
-## board's a point a round.
+## back a point every second round whoever asked, the board's a point a round.
 func _test_press_caps_and_fade() -> void:
 	var MC = load("res://scripts/sim/MediaConference.gd")
 	var worst := [0, 0, 0]
@@ -278,10 +287,10 @@ func _test_press_caps_and_fade() -> void:
 			"Every press size stays inside its cap: list 2, named 3, board 3 (largest %s)" % str(worst))
 	var p := {"morale": 70}
 	for i in range(5):
-		MC.apply_lift(p, 2, MC.LIST_CAP, false)
+		MC.apply_lift(p, 2, MC.LIST_CAP)
 	_check(int(p["morale"]) == 72 and int(p["press_lift"]) == 2,
 			"Five list-wide lifts in a row stop at the list cap (morale %d)" % int(p["morale"]))
-	MC.apply_lift(p, 3, MC.NAMED_CAP, false)
+	MC.apply_lift(p, 3, MC.NAMED_CAP)
 	_check(int(p["morale"]) == 73 and int(p["press_lift"]) == 3,
 			"A named lift on top stops at the named cap, never list plus named (morale %d)" % int(p["morale"]))
 	var trail := []
@@ -292,40 +301,41 @@ func _test_press_caps_and_fade() -> void:
 			"The lift fades a point every second round back to where he was, then the trace is gone (%s)" % str(trail))
 	# Director 2026-11-07: +1 lasts 2 rounds, -2 lasts 4.
 	var one := {"morale": 70}
-	MC.apply_lift(one, 1, MC.LIST_CAP, false)
+	MC.apply_lift(one, 1, MC.LIST_CAP)
 	var one_trail := []
 	for r in range(1, 4):
 		MC.fade_lift(one, r)
 		one_trail.append(int(one["morale"]))
 	var two := {"morale": 70}
-	MC.apply_lift(two, -2, MC.LIST_CAP, false)
+	MC.apply_lift(two, -2, MC.LIST_CAP)
 	var two_trail := []
 	for r in range(1, 6):
 		MC.fade_lift(two, r)
 		two_trail.append(int(two["morale"]))
 	_check(one_trail == [71, 70, 70] and two_trail == [68, 69, 69, 70, 70]
-			and MC.fade_rounds(1, false) == 2 and MC.fade_rounds(-2, false) == 4,
+			and MC.fade_rounds(1) == 2 and MC.fade_rounds(-2) == 4,
 			"A morale +1 lasts 2 rounds and a -2 lasts 4 (%s, %s)" % [str(one_trail), str(two_trail)])
-	var slow := {"morale": 70}
-	MC.apply_lift(slow, 2, MC.LIST_CAP, true)
-	var slow_trail := []
-	for r in range(1, 8):
-		MC.fade_lift(slow, r)
-		slow_trail.append(int(slow["morale"]))
-	_check(slow_trail == [72, 72, 71, 71, 71, 70, 70] and MC.fade_rounds(2, true) == 6 and MC.fade_rounds(2, false) == 4,
-			"After the Philosopher the lift fades a point every third round (%s)" % str(slow_trail))
+	# Director 2026-11-07: no journalist slows the fade. An old save's lift that
+	# still carries the Philosopher's slow flag fades at the one pace, flag gone.
+	var old := {"morale": 72, "press_lift": 2, "press_slow": true}
+	var old_trail := []
+	for r in range(1, 6):
+		MC.fade_lift(old, r)
+		old_trail.append(int(old["morale"]))
+	_check(old_trail == [72, 71, 71, 70, 70] and not old.has("press_slow") and not old.has("press_lift"),
+			"An old save's Philosopher lift fades a point every second round like any other, its flag dropped (%s)" % str(old_trail))
 	# Counted from the presser, not the round number: set on an odd round it
 	# still takes exactly fade_rounds rounds.
 	var odd := {"morale": 70}
-	MC.apply_lift(odd, 2, MC.LIST_CAP, true)
+	MC.apply_lift(odd, 2, MC.LIST_CAP)
 	var odd_trail := []
-	for r in range(4, 10):
+	for r in range(5, 10):
 		MC.fade_lift(odd, r)
 		odd_trail.append(int(odd["morale"]))
-	_check(odd_trail == [72, 72, 71, 71, 71, 70] and not odd.has("press_lift") and not odd.has("press_wait"),
-			"The Philosopher's lift takes exactly fade_rounds rounds whichever round it starts (%s)" % str(odd_trail))
+	_check(odd_trail == [72, 71, 71, 70, 70] and MC.fade_rounds(2) == 4 and not odd.has("press_lift") and not odd.has("press_wait"),
+			"A lift takes exactly fade_rounds rounds whichever round it starts (%s)" % str(odd_trail))
 	var low := {"morale": 6}
-	var moved: int = MC.apply_lift(low, -2, MC.LIST_CAP, false)
+	var moved: int = MC.apply_lift(low, -2, MC.LIST_CAP)
 	MC.fade_lift(low, 1)
 	MC.fade_lift(low, 2)
 	_check(moved == -1 and int(low["morale"]) == 6 and not low.has("press_lift"),
@@ -333,7 +343,7 @@ func _test_press_caps_and_fade() -> void:
 	# The round's fade runs in GameState before the next question forms.
 	_press_reset()
 	var q: Dictionary = _state.my_list[0]
-	MC.apply_lift(q, 2, MC.LIST_CAP, false)
+	MC.apply_lift(q, 2, MC.LIST_CAP)
 	_state._fade_press_lifts()
 	var held := int(q["morale"])
 	_state._fade_press_lifts()
@@ -455,10 +465,10 @@ func _test_press_personas() -> void:
 	_check(int(bogan["a"]["his"]) == 3 and int(bogan["b"]["his"]) == -2 and str(bogan["notes"]).contains("listen to his show"),
 			"The Bogan: a named player's sizes grow by one (%d / %d)" % [int(bogan["a"]["his"]), int(bogan["b"]["his"])])
 	var p_line: String = MC.rules_line("philosopher")
-	_check(p_line == "Her piece lingers: morale moves wear off a point every third round, board moves a point a round."
+	_check(p_line == MC.FADE_NOTE and not (MC.PERSONA["philosopher"] as Dictionary).has("slow")
 			and MC.rules_line("sycophant") == MC.FADE_NOTE and MC.rules_line("muckraker").begins_with("The Siren gets read upstairs")
 			and MC.rules_line("muckraker").ends_with(MC.FADE_NOTE),
-			"The gate says once how long the moves last, and her morale move lingers (%s)" % p_line)
+			"The gate says once how long the moves last, the same pace for every journalist (%s)" % p_line)
 	# Trimmed (director 2026-11-07): the fade and his personality are said once
 	# on the screen, never under each answer, and the line keeps every number.
 	var m_line: String = MC.odds_line("criticise", 40, MC.effects("criticise", m_ctx), m_ctx)
@@ -556,11 +566,11 @@ func _test_press_loss_lift() -> void:
 	_check(int(p["morale"]) == 70 + CL.MATCH_MORALE_LOSS and int(w["morale"]) == 70 + CL.MATCH_MORALE_WIN,
 			"A player who played gets +%d for a loss, +%d for a win" % [CL.MATCH_MORALE_LOSS, CL.MATCH_MORALE_WIN])
 	for i in range(3):
-		MC.apply_lift(p, 3, MC.NAMED_CAP, false, MC.LOSS_LIFT_CAP)
+		MC.apply_lift(p, 3, MC.NAMED_CAP, MC.LOSS_LIFT_CAP)
 	_check(int(p["morale"]) < int(w["morale"]) and int(p["morale"]) == int(w["morale"]) - 1,
 			"Stacked lifts after a loss stop just below the win (%d vs %d)" % [int(p["morale"]), int(w["morale"])])
 	var down := {"morale": 70}
-	MC.apply_lift(down, -3, MC.NAMED_CAP, false, MC.LOSS_LIFT_CAP)
+	MC.apply_lift(down, -3, MC.NAMED_CAP, MC.LOSS_LIFT_CAP)
 	_check(int(down["morale"]) == 67, "The loss cap only holds lifts; a drop keeps its full size (%d)" % int(down["morale"]))
 	# The gate shows the held size: the Bogan's named answer is +3, +2 after a loss.
 	var won: Dictionary = MC.effects("back_named", {"journalist": "bogan", "name": "Jack"})
@@ -631,91 +641,6 @@ func _test_press_old_save() -> void:
 			"Its pending question plays by place in the list, and standing starts from there (%s)" % str(landed.get("kind", "")))
 	_check(_state.save_career() and _state.load_career() and _state.press_standing("muckraker") == 1,
 			"The new standing survives a save and reload")
-	_state.delete_saved_career()
-
-
-## A named answer weighs on his next contract (director 2026-11-07: "And it
-## should weigh on future contract choices"): the gate says by how much and
-## for how long, his price to re-sign moves by exactly that, the talks say why,
-## it fades a season, stays with your club, and an old save has none.
-func _test_press_contract_memory() -> void:
-	var MC = load("res://scripts/sim/MediaConference.gd")
-	var CT = load("res://scripts/sim/Contracts.gd")
-	var hit: Dictionary = MC.effects("criticise_named", {"name": "Jack", "contract_years": 1})
-	_check(str(hit["both"]) == "Re-signing him: 4% dearer this year, 2% next" and int(hit["contract"]) == 4,
-			"Calling him out says the contract weight on the gate (%s)" % str(hit["both"]))
-	var backed: Dictionary = MC.effects("back_named", {"name": "Jack", "contract_years": 1})
-	_check(str(backed["both"]) == "Re-signing him: 2% cheaper this year, 1% next",
-			"Backing him says it too (%s)" % str(backed["both"]))
-	_check(str(MC.effects("criticise_named", {"name": "Jack", "contract_years": 2})["both"]) == "Re-signing him next year: 2% dearer",
-			"With a season to run after this one, only next year's talks are named")
-	var long: Dictionary = MC.effects("criticise_named", {"name": "Jack", "contract_years": 3})
-	_check(not long.has("contract") and str(long["both"]) == "Nothing else moves",
-			"A deal that outlasts the memory names no contract weight (%s)" % str(long["both"]))
-	# Calling him out, through the game: his price rises by the stated 4%.
-	_press_reset()
-	var him: Dictionary = _state.my_list[0]
-	him["contract_years"] = 1
-	var ask0: int = CT.asking_salary(him)
-	var conf: Dictionary = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 8, "year": int(_state.season_year),
-			"named": {"heavy_loss": {"id": str(him["id"]), "name": "Jack Smith"}},
-			"result": {"home": "FRE", "away": "CAR", "score": [55, 101]}}, {})
-	_state.media_conference = conf.duplicate(true)
-	var gate: String = _state.press_odds_line(3)
-	_check(gate.contains("Re-signing him: 4% dearer this year, 2% next"), "The named answer's line carries the contract weight (%s)" % gate)
-	_state.resolve_media_conference(3)
-	var ask1: int = CT.asking_salary(him)
-	_check(him.has("press_memory") and ask1 == ceili(ask0 * 1.04),
-			"Called out, his price to re-sign is 4%% dearer (%d -> %d)" % [ask0, ask1])
-	var talk: String = MC.contract_memory_line(him, int(_state.season_year))
-	_check(talk == "Remembers you called him out in round 8, so he wants 4% more.",
-			"Contract talks say why (%s)" % talk)
-	_check(_state.save_career() and _state.load_career(), "A career with a press memory saves and loads")
-	him = _state.list_player(str(him["id"]))
-	_check(CT.asking_salary(him) == ask1, "The memory survives a save and reload")
-	# A season on: half, said as last season; the season after: gone.
-	MC.age_memory(him, _state.my_club)
-	var half: String = MC.contract_memory_line(him, int(_state.season_year) + 1)
-	_check(MC.contract_pct(him) == 2 and half == "Remembers you called him out in round 8 last season, so he wants 2% more.",
-			"A season later it is half (%s)" % half)
-	MC.age_memory(him, _state.my_club)
-	_check(not him.has("press_memory") and CT.asking_salary(him) == ask0, "Two seasons later it is gone")
-	# Backing him by name: his price falls by the stated 2%.
-	_press_reset()
-	var star: Dictionary = _state.my_list[1]
-	star["contract_years"] = 1
-	var base: int = CT.asking_salary(star)
-	_state.media_conference = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 8, "year": int(_state.season_year),
-			"named": {"big_win": {"id": str(star["id"]), "name": "Jack Smith"}},
-			"result": {"home": "FRE", "away": "CAR", "score": [101, 55]}}, {}).duplicate(true)
-	var opts: Array = _state.media_conference.get("options", [])
-	var at := -1
-	for i in range(opts.size()):
-		if str(opts[i].get("kind", "")) == "back_named":
-			at = i
-	_check(at >= 0, "A big win offers an answer backing him by name")
-	if at >= 0:
-		_state.resolve_media_conference(at)
-	_check(CT.asking_salary(star) == ceili(base * 0.98),
-			"Backed, his price to re-sign is 2%% cheaper (%d -> %d)" % [base, CT.asking_salary(star)])
-	var warm: String = MC.contract_memory_line(star, int(_state.season_year))
-	_check(warm == "Remembers you backed him in round 8, so he will take 2% less.", "Talks say it when you backed him (%s)" % warm)
-	# It was said to him at your club: elsewhere it counts for nothing.
-	var gone := star.duplicate(true)
-	gone["club"] = "CAR"
-	_check(MC.contract_pct(gone) == 0 and MC.contract_memory_line(gone, int(_state.season_year)) == "",
-			"At another club he is priced as anyone else")
-	MC.age_memory(gone, _state.my_club)
-	_check(not gone.has("press_memory"), "The rollover drops a memory he took to another club")
-	# An old save: no memory, no change to anyone's price.
-	_press_reset()
-	var plain: Dictionary = _state.my_list[0]
-	var p0: int = CT.asking_salary(plain)
-	_check(_state.save_career() and _state.load_career(), "An old-shaped career saves and loads")
-	plain = _state.list_player(str(plain["id"]))
-	_check(not plain.has("press_memory") and CT.asking_salary(plain) == p0
-			and MC.contract_memory_line(plain, int(_state.season_year)) == "",
-			"An old save loads with no press memory and his price unchanged")
 	_state.delete_saved_career()
 
 
@@ -1067,7 +992,6 @@ func _run() -> void:
 	_t("_test_press_board_reason")
 	_t("_test_press_standout_only")
 	_t("_test_press_old_save")
-	_t("_test_press_contract_memory")
 	await _t("_test_game_feel_settings")
 	_t("_test_old_sound_levels_carry_over")
 	await _t("_test_report_a_problem")
@@ -2395,18 +2319,6 @@ Your career stays on this device.",
 				and _screen_text().contains("Cap room after this deal"),
 				"Talks open a sheet with salary, term and the cap consequence")
 		_check(_state.my_payroll() == payroll_before, "Opening talks signs nothing")
-		_check(current_scene.find_child("TalksPress", true, false) == null, "Talks with a player you never named say nothing of the press")
-		# Called out in round 8: the talks say why his price moved.
-		var talked: Dictionary = _state.list_player(str(current_scene.get("_talk_id")))
-		load("res://scripts/sim/MediaConference.gd").remember(talked, "criticise_named", "b", _state.my_club,
-				int(_state.season_year), 8)
-		current_scene.call("_show_talks")
-		await _settle()
-		var said: Control = current_scene.find_child("TalksPress", true, false)
-		var said_text := str(said.get_meta("plain", said.get("text"))) if said != null else "none"
-		_check(said_text == "Remembers you called him out in round 8, so he wants 4% more.",
-				"Talks say what he remembers of your press and its size (%s)" % said_text)
-		talked.erase("press_memory")
 		_router.handle_back(true)
 		await _settle()
 		_check(_router.current() == "offseason" and current_scene.find_child("ContractTalks", true, false) == null,

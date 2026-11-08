@@ -79,6 +79,7 @@ func _run() -> void:
 	await _t("_test_skip_to_break")
 	await _t("_test_side_keeps_calls")
 	await _t("_test_match_way_poster")
+	await _t("_test_old_key_moments_setting")
 	_t("_test_appearance")
 	# Battery: nothing is redrawn unless it changes, and never above 60 fps.
 	_t("_test_battery")
@@ -2116,6 +2117,26 @@ func _test_rings_on_the_oval() -> void:
 	box.find_child("StartQuarter", true, false).emit_signal("pressed")
 	await _settle()
 	_check(pitch.ringed(focus_id), "The player you play through is ringed from the bounce")
+	# The sim has played the stretch ahead of the oval: legs it has spent by the
+	# stretch's end carry no tired mark while the oval is still behind.
+	var legs_id := ""
+	for r in sim.squads[me].ground:
+		if not pitch.marks.has(str(r["id"])):
+			legs_id = str(r["id"])
+			break
+	var behind: bool = pitch.current_index() < pitch.events.size()
+	var legs_had: bool = sim.energy.has(legs_id)
+	var legs_was = sim.energy.get(legs_id, 100.0)
+	sim.energy[legs_id] = 10.0
+	m.call("_refresh_marks")
+	var ahead_marked: bool = pitch.marks.has(legs_id)
+	if legs_had:
+		sim.energy[legs_id] = legs_was
+	else:
+		sim.energy.erase(legs_id)
+	m.call("_refresh_marks")
+	_check(legs_id != "" and behind and not ahead_marked,
+			"Tired marks follow the oval, not the sim ahead of it (%s, behind %s, marked %s)" % [legs_id, behind, ahead_marked])
 	var tagger = load("res://scripts/sim/MatchSim.gd").tagger_for(sim.squads[me].ground)
 	_check(tagger != null and pitch.ringed(str(tagger["id"])), "So is the player who goes to your tag")
 	# Who tags is the coach's call: another midfielder on the ground takes the
@@ -2482,7 +2503,6 @@ func _test_press_effects_shown(db) -> void:
 	var who: Dictionary = _state.my_list[0]
 	who["morale"] = 50
 	who.erase("press_lift")
-	who.erase("press_slow")
 	var hub = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _settle()
@@ -2588,7 +2608,6 @@ func _test_press_scene_taps() -> void:
 	for i in range(4):
 		for p in _state.my_list:
 			p.erase("press_lift")
-			p.erase("press_slow")
 			p.erase("press_wait")
 		var press: Node = await open.call(muck.call())
 		var label := str((_state.media_conference.get("options", [])[i] as Dictionary).get("label", ""))
@@ -3214,11 +3233,8 @@ func _test_broken_calls() -> void:
 ## the football is identical. Then the hub's Play match, the press conference
 ## and the awards night with them off.
 func _test_vignettes_off_match() -> void:
-	# The vignettes-on match is taken in Key moments (P-14), the vignettes-off one
-	# watched: the same match either way, so one pair proves both.
-	var with_on: Dictionary = await _drive_match(true, "key")
+	var with_on: Dictionary = await _drive_match(true)
 	var with_off: Dictionary = await _drive_match(false)
-	_key_moments_checks(with_on, with_off)
 	print("Vignettes on: %d scenes, calls %s, %s. Off: %d scenes, calls %s, %s." % [int(with_on["vignettes"]),
 			str(with_on["kinds"]), str(with_on["score"]), int(with_off["vignettes"]), str(with_off["kinds"]),
 			str(with_off["score"])])
@@ -3327,7 +3343,7 @@ func _test_vignettes_off_match() -> void:
 ## A seeded live match played through the match screen, every call answered
 ## with its first choice. With the centre ball-up call forced in the last
 ## quarter, so the one call with a scene of its own always comes.
-func _drive_match(vignettes: bool, way := "watch") -> Dictionary:
+func _drive_match(vignettes: bool) -> Dictionary:
 	var db = root.get_node("GameDB")
 	_state.set_vignettes_on(vignettes)
 	_state.set_bounce_scene_every_match(true)
@@ -3335,7 +3351,7 @@ func _drive_match(vignettes: bool, way := "watch") -> Dictionary:
 	_state.replay_seed = SUITE_SEED
 	_state.start_season("COL", db.club_list("COL"))
 	root.size = Vector2i(390, 844)
-	_state.set_match_way(way)
+	_state.set_match_way("watch")
 	_state.prepare_interactive_match()
 	var seen := [0]
 	var watch := func(n: Node) -> void:
@@ -3345,22 +3361,8 @@ func _drive_match(vignettes: bool, way := "watch") -> Dictionary:
 			seen[0] += 1
 	node_added.connect(watch)
 	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
-	# Key moments holds 1x for 1.8 real seconds after a stop; a tenth here keeps
-	# the suite quick and leaves what stops the match the same.
-	m.set("km_hold_seconds", 0.1)
 	root.add_child(m)
 	await _settle()
-	var km_word: Control = m.find_child("KeyMomentsState", true, false)
-	var km_shown := km_word != null and km_word.is_visible_in_tree() and str((km_word as Button).text) == "Key moments"
-	var speeds_shown := 0
-	for b in m.get("_speed_btns"):
-		if (b as Control).is_visible_in_tree():
-			speeds_shown += 1
-	var km_watch: Control = m.find_child("KeyMomentsWatch", true, false)
-	var row_ok := km_word != null and km_watch != null and km_watch.global_position.x < km_word.global_position.x
-	for c in m.find_children("*", "Button", true, false):
-		if (c as Button).is_visible_in_tree() and (c as Button).text in ["Pause", "Watch", "Key moments", "Skip to full time"]:
-			row_ok = row_ok and (c as Control).size.y >= 44.0
 	var kinds := []
 	var offered := 0
 	var chosen := 0
@@ -3398,10 +3400,7 @@ func _drive_match(vignettes: bool, way := "watch") -> Dictionary:
 	var out := {"vignettes": seen[0], "kinds": kinds, "offered": offered, "chosen": chosen,
 		"bounce_facts": bounce_facts, "guard": guard,
 		"score": "%s-%s" % [str(res.get("goals", [])), str(res.get("behinds", []))],
-		"events": JSON.stringify(res.get("events", [])), "players": JSON.stringify(res.get("players", {})),
-		"log": (res.get("events", []) as Array).duplicate(true), "stops": (m.get("km_stops") as Array).duplicate(true),
-		"trace": (m.get("km_trace") as Array).duplicate(true), "km_shown": km_shown, "speeds_shown": speeds_shown,
-		"row_ok": row_ok}
+		"events": JSON.stringify(res.get("events", [])), "players": JSON.stringify(res.get("players", {}))}
 	_check(bool(m.get("_fulltime_shown")), "The match reaches full time (vignettes %s)" % ("on" if vignettes else "off"))
 	node_added.disconnect(watch)
 	m.queue_free()
@@ -3409,76 +3408,12 @@ func _drive_match(vignettes: bool, way := "watch") -> Dictionary:
 	return out
 
 
-## Key moments (P-14), from the seeded match taken that way (`key`) and the same
-## match watched (`watch`): it stops at every goal, every call and every break
-## in the sim's log and nowhere else, runs at top speed in between, and ends
-## on the same match.
-func _key_moments_checks(key: Dictionary, watch: Dictionary) -> void:
-	var log: Array = key["log"]
-	var goals := []
-	var moments := 0
-	for i in range(log.size()):
-		var k := str((log[i] as Dictionary).get("kind", ""))
-		if k == "goal":
-			goals.append(i)
-		elif k == "moment":
-			moments += 1
-	var goal_stops := []
-	var moment_stops := 0
-	var breaks := []
-	var other := []
-	for s in key["stops"]:
-		match str(s["kind"]):
-			"goal":
-				goal_stops.append(int(s["event"]))
-			"moment":
-				moment_stops += 1
-			"break":
-				breaks.append(int(s["q"]))
-			_:
-				other.append(str(s["kind"]))
-	print("Key moments: %d stops (%d goals of %d, %d calls of %d, breaks %s), %d events traced" % [
-			(key["stops"] as Array).size(), goal_stops.size(), goals.size(), moment_stops, moments,
-			str(breaks), (key["trace"] as Array).size()])
-	_check(bool(key["km_shown"]) and int(key["speeds_shown"]) == 0,
-			"Key moments shows its name where the speeds sit, the speeds put away (%d shown)" % int(key["speeds_shown"]))
-	_check(bool(key["row_ok"]), "The match row reads Pause, Watch, Key moments, each at least 44 px tall")
-	_check(not goals.is_empty() and goal_stops == goals,
-			"Key moments stops for every goal in the log and only those (%d of %d)" % [goal_stops.size(), goals.size()])
-	_check(moments > 0 and moment_stops == moments,
-			"Key moments stops for every coach's call (%d of %d)" % [moment_stops, moments])
-	_check(breaks == [2, 3, 4], "Key moments stops at quarter time, half time and three-quarter time (%s)" % str(breaks))
-	_check(other.is_empty(), "Key moments stops for nothing else (%s)" % str(other))
-	# Between the stops, top speed (8x): every event released below it belongs to
-	# a stretch of 1x that holds a goal or a call's line.
-	var stray := []
-	var run_has_key := false
-	var run_len := 0
-	var trace: Array = key["trace"]
-	for i in range(trace.size() + 1):
-		var slow := i < trace.size() and float(trace[i][1]) < 8.0
-		if slow:
-			run_len += 1
-			if str(trace[i][0]) in ["goal", "moment"]:
-				run_has_key = true
-			if str(trace[i][2]) == "":
-				stray.append("%s at %sx with no stop" % [str(trace[i][0]), str(trace[i][1])])
-		elif run_len > 0:
-			if not run_has_key:
-				stray.append("%d events slowed with no goal or call" % run_len)
-			run_has_key = false
-			run_len = 0
-	_check(trace.size() == log.size() and stray.is_empty(),
-			"Key moments runs at 8x except around a goal or a call (%d of %d traced; %s)" % [
-				trace.size(), log.size(), str(stray.slice(0, 3))])
-	_check(key["score"] == watch["score"] and key["events"] == watch["events"],
-			"Key moments ends on the same match as watching it (%s v %s)" % [str(key["score"]), str(watch["score"])])
-
-
-## The poster's three ways to take the match: a real tap picks one, the main
-## button says Skip to full time only when Skip is chosen, the last one comes up
-## chosen on the next visit, and a real tap on the main button with Skip chosen
-## goes straight to your full time.
+## The poster's two ways to take the match, Watch and Skip (Key moments cut,
+## director 2026-11-08): they share one row at equal widths with no hole where
+## a third sat; a real tap picks one, the main button says Skip to full time
+## only when Skip is chosen, the last one comes up chosen on the next visit, a
+## real tap on the main button with Skip chosen goes straight to your full
+## time, and with Watch chosen it opens the preview, then the match watched.
 func _test_match_way_poster() -> void:
 	var db = root.get_node("GameDB")
 	_state.set_vignettes_on(true)
@@ -3493,29 +3428,43 @@ func _test_match_way_poster() -> void:
 		var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 		root.add_child(hub)
 		await _settle()
-		var key: Button = hub.find_child("MatchWay_key", true, false)
+		var grid: Control = hub.find_child("MatchWay", true, false)
 		var skip: Button = hub.find_child("MatchWay_skip", true, false)
 		var watch: Button = hub.find_child("MatchWay_watch", true, false)
 		var play: Button = hub.find_child("PlayMatch", true, false)
-		_check(watch != null and key != null and skip != null and _chosen(watch) and not _chosen(key)
-				and play != null and play.text == "Play match",
-				"%dx%d: the poster offers Watch, Key moments and Skip, Watch chosen for a new coach" % [sz.x, sz.y])
-		var row_ok := watch != null and key != null and skip != null
+		var named_km := false
+		for c in hub.find_children("*", "Control", true, false):
+			if (c is Button or c is Label) and str(c.get("text")).to_lower().contains("key moments"):
+				named_km = true
+		_check(watch != null and skip != null and grid != null and grid.get_child_count() == 2
+				and hub.find_child("MatchWay_key", true, false) == null and not named_km
+				and _chosen(watch) and not _chosen(skip) and play != null and play.text == "Play match",
+				"%dx%d: the poster offers Watch and Skip only, Watch chosen for a new coach, no Key moments anywhere" % [sz.x, sz.y])
+		var row_ok := watch != null and skip != null and grid != null
 		if row_ok:
-			row_ok = (is_equal_approx(watch.global_position.y, key.global_position.y)
-					and is_equal_approx(key.global_position.y, skip.global_position.y)
-					and watch.global_position.x < key.global_position.x
-					and key.global_position.x < skip.global_position.x)
-		_check(row_ok, "%dx%d: the three choices sit in one row, Watch, Key moments, Skip" % [sz.x, sz.y])
-		var tapped: String = await Tap.tap(key) if key != null else "missing"
-		_check(tapped == "" and _state.match_way() == "key" and _chosen(key) and not _chosen(watch)
-				and play != null and play.text == "Play match",
-				"%dx%d: a real tap on Key moments chooses it and keeps it, Play match stays (%s, %s)" % [
-					sz.x, sz.y, tapped, _state.match_way()])
-		tapped = await Tap.tap(skip) if skip != null else "missing"
-		_check(tapped == "" and _state.match_way() == "skip" and play != null and play.text == "Skip to full time",
+			var gr := grid.get_global_rect()
+			var wr := watch.get_global_rect()
+			var sr := skip.get_global_rect()
+			row_ok = (is_equal_approx(wr.position.y, sr.position.y) and wr.position.x < sr.position.x
+					and absf(wr.size.x - sr.size.x) <= 1.0 and wr.size.y >= 44.0 and sr.size.y >= 44.0
+					and absf(wr.position.x - gr.position.x) <= 1.0 and absf(sr.end.x - gr.end.x) <= 1.0)
+			print("%dx%d MatchWay: grid %s, Watch %s, Skip %s" % [sz.x, sz.y, str(gr), str(wr), str(sr)])
+		_check(row_ok, "%dx%d: Watch and Skip share one row at equal widths, at least 44 px tall, filling the row edge to edge"
+				% [sz.x, sz.y])
+		var tapped: String = await Tap.tap(skip) if skip != null else "missing"
+		_check(tapped == "" and _state.match_way() == "skip" and _chosen(skip) and not _chosen(watch)
+				and play != null and play.text == "Skip to full time",
 				"%dx%d: a real tap on Skip chooses it and the main button says Skip to full time (%s, %s)" % [
 					sz.x, sz.y, tapped, play.text if play != null else "-"])
+		tapped = await Tap.tap(watch) if watch != null else "missing"
+		_check(tapped == "" and _state.match_way() == "watch" and _chosen(watch) and not _chosen(skip)
+				and play != null and play.text == "Play match",
+				"%dx%d: a real tap on Watch chooses it and the main button says Play match again (%s, %s)" % [
+					sz.x, sz.y, tapped, play.text if play != null else "-"])
+		# Skip again, for the next visit.
+		tapped = await Tap.tap(skip) if skip != null else "missing"
+		_check(tapped == "" and _state.match_way() == "skip", "%dx%d: a real tap on Skip chooses it again (%s)" % [
+				sz.x, sz.y, tapped])
 		hub.queue_free()
 		await _settle()
 	# The next visit: Skip comes up chosen; a real tap on the main button goes
@@ -3545,7 +3494,138 @@ func _test_match_way_poster() -> void:
 		m.queue_free()
 	if is_instance_valid(hub2):
 		hub2.queue_free()
+	await _settle()
+	# Watch: a real tap on Watch, then on Play match, opens the preview; its
+	# Continue opens your match watched, the pre-bounce box up, the speeds there.
+	await _watch_path_check("Watch")
 	_state.set_match_way("watch")
+	_state.set_vignettes_on(true)
+	await _settle()
+
+
+## From a fresh season on a phone: a real tap on Watch (when `tap_watch`), then
+## on Play match, opens the match preview; a real tap on its Continue opens
+## your match watched: the pre-bounce box, Pause and all four speeds shown at
+## least 44 px tall, the oval at your usual speed, no Key moments control.
+func _watch_path_check(tag: String, tap_watch := true) -> void:
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	_state.set_vignettes_on(false)
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("FRE", db.club_list("FRE"))
+	_state.set_setting("seen_weekly_loop_intro", true)
+	_state.tutorials = false
+	root.size = Vector2i(390, 844)
+	router.stack = []
+	router.go("hub")
+	await _settle()
+	var hub: Node = current_scene
+	var watch: Button = hub.find_child("MatchWay_watch", true, false) if hub != null else null
+	var why := ""
+	if tap_watch:
+		why = await Tap.tap(watch) if watch != null else "missing"
+	var play: Button = hub.find_child("PlayMatch", true, false) if hub != null else null
+	_check(why == "" and watch != null and _chosen(watch) and _state.match_way() == "watch"
+			and play != null and play.text == "Play match",
+			"%s: Watch is chosen and the main button says Play match (%s)" % [tag, why])
+	why = await Tap.tap(play) if play != null else "missing"
+	await _settle()
+	var pv: Node = current_scene
+	_check(why == "" and pv != null and pv.name == "MatchPreviewScene",
+			"%s: a real tap on Play match opens the match preview (%s, %s)" % [tag, why, str(pv.name) if pv != null else "none"])
+	var cont: Button = pv.find_child("PreviewContinue", true, false) if pv != null else null
+	why = await Tap.tap(cont) if cont != null else "missing"
+	await _settle()
+	var m: Node = current_scene
+	var on_match := m != null and m.name == "MatchScene"
+	_check(why == "" and on_match and _state.match_way_live == "watch" and m.find_child("CoachBox", true, false) != null
+			and not bool(m.get("_fulltime_shown")),
+			"%s: a real tap on Continue opens your match watched, the pre-bounce box up (%s, live %s)" % [
+				tag, why, _state.match_way_live])
+	var speeds_ok := on_match
+	var tall_ok := on_match
+	var km_node := false
+	if on_match:
+		for b in m.get("_speed_btns"):
+			speeds_ok = speeds_ok and (b as Control).is_visible_in_tree()
+			tall_ok = tall_ok and (b as Control).size.y >= 44.0
+		var pause_btn: Control = m.get("_play_btn")
+		tall_ok = tall_ok and pause_btn != null and pause_btn.is_visible_in_tree() and pause_btn.size.y >= 44.0
+		for c in m.find_children("*", "Control", true, false):
+			if str(c.name).begins_with("KeyMoments"):
+				km_node = true
+	var pitch = m.get("_pitch") if on_match else null
+	_check(speeds_ok and tall_ok and not km_node and pitch != null
+			and is_equal_approx(float(pitch.speed), _state.match_speed()),
+			"%s: the match bar shows Pause and 1x, 2x, 4x and 8x, each at least 44 px tall, at your usual speed (%sx), no Key moments control"
+			% [tag, str(pitch.speed) if pitch != null else "-"])
+	if m != null:
+		m.queue_free()
+	_state.pending_sim = null
+	_state.pending_match = {}
+	await _settle()
+
+
+## An install from before the cut has Key moments saved as its way to take the
+## match (settings ui/match_way = "key"). It loads as Watch: the hub shows
+## Watch chosen and Play match, the match is prepared and opened watched, and
+## the old word cannot be set again.
+func _test_old_key_moments_setting() -> void:
+	var real_path: String = _state.settings_path
+	var old_path := "user://test_old_match_way.cfg"
+	var cfg := ConfigFile.new()
+	cfg.set_value("ui", "match_way", "key")
+	cfg.set_value("ui", "seen_weekly_loop_intro", true)
+	cfg.save(old_path)
+	_state.settings_path = old_path
+	_check(_state.match_way() == "watch", "An old Key moments setting reads as Watch (%s)" % _state.match_way())
+	# Key moments can no longer be chosen: asking for it leaves Skip in place.
+	_state.set_match_way("skip")
+	_state.set_match_way("key")
+	var back := ConfigFile.new()
+	back.load(old_path)
+	_check(str(back.get_value("ui", "match_way", "")) == "skip" and _state.match_way() == "skip",
+			"Key moments can no longer be chosen: the way taken before stays (%s)" % _state.match_way())
+	_state.set_setting("match_way", "key")   # the old setting again, written raw
+	var db = root.get_node("GameDB")
+	_state.set_vignettes_on(true)
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("FRE", db.club_list("FRE"))
+	root.size = Vector2i(390, 844)
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	var watch: Button = hub.find_child("MatchWay_watch", true, false)
+	var skip: Button = hub.find_child("MatchWay_skip", true, false)
+	var play: Button = hub.find_child("PlayMatch", true, false)
+	_check(watch != null and skip != null and _chosen(watch) and not _chosen(skip)
+			and hub.find_child("MatchWay_key", true, false) == null and play != null and play.text == "Play match",
+			"With the old setting the hub shows Watch chosen and Play match")
+	hub.queue_free()
+	await _settle()
+	_state.match_way_live = "skip"   # a leftover from another match
+	_check(_state.prepare_interactive_match() and _state.match_way_live == "watch",
+			"With the old setting the match is prepared to be watched (%s)" % _state.match_way_live)
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	var speeds_ok := true
+	for b in m.get("_speed_btns"):
+		speeds_ok = speeds_ok and (b as Control).is_visible_in_tree()
+	_check(m.find_child("CoachBox", true, false) != null and not bool(m.get("_fulltime_shown")) and speeds_ok
+			and is_equal_approx(float(m.get("_pitch").speed), _state.match_speed()),
+			"With the old setting the match screen opens as Watch: the pre-bounce box, the four speeds, your usual speed")
+	m.queue_free()
+	_state.pending_sim = null
+	_state.pending_match = {}
+	await _settle()
+	# Through the hub with real taps, the old setting untouched.
+	await _watch_path_check("Old Key moments setting", false)
+	_state.settings_path = real_path
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(old_path))
+	_state.set_vignettes_on(true)
 	await _settle()
 
 

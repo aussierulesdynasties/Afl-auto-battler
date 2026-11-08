@@ -38,7 +38,9 @@ func _run() -> void:
 	_failures.append_array(suite.failures)
 	await _t("_test_hub_tests")
 	await _t("_test_poster_ball")
-	await _t("_test_fact_options")
+	await _t("_test_facts_without_options")
+	_t("_test_no_ruck_tag")
+	_t("_test_gate_odds")
 	_t("_test_former_rules")
 	await _t("_test_former_player")
 	_t("_test_old_club_rules")
@@ -877,110 +879,136 @@ func _tap_scan(label: Control, host: Node) -> bool:
 	return false
 
 
-## Every opposition fact comes with your options beside it (P-13, director
-## 2026-10-14, A9). Each fact the hub states has a row of the responses the rules
-## allow, in a fixed order, none marked best; the unsuitable ones are disabled
-## and say why; a real tap on one starts the match on that call's picker, with the
-## fact restated above it, and the pick lands as it does from the break.
-func _test_fact_options() -> void:
+## The opposition facts on the hub are facts only (director, 2026-11-08: "These
+## functions all belong to the pregame so it's just repetitive"): each fact the
+## hub states is its line from opponent_facts, with no response cards under it
+## and no gap where they were, and every name in it wears his club's ink. Tag,
+## defensive set-up and game plan stay on the pre-bounce setup. Play match
+## takes a real tap: with Watch chosen it opens the match preview, with Skip
+## chosen it opens your match skipped.
+func _test_facts_without_options() -> void:
 	var db = root.get_node("GameDB")
-	var FO = load("res://scripts/sim/FactOptions.gd")
-	_reset()
-	_state.set_setting("seen_weekly_loop_intro", true)
-	_state.start_season("FRE", db.club_list("FRE"))
-	# The table, for every club as the opponent: the options of each fact are
-	# exactly the table's for its kind, in the table's order, each disabled one
-	# with a reason and each enabled one with a cost.
-	var kinds := {}
-	var table_ok := true
-	var reasons_ok := true
-	var order_ok := true
-	var words_ok := true
-	var words := ["best", "recommend", "suggest", "ideal", "should", "advice", "optimal", "top pick"]
-	var disabled_seen := 0
-	var shown_ok := true
-	var ruck_clean := true
-	var ruck_facts := 0
-	var enabled_seen := 0
-	for code in _state.season.lists:
-		var facts: Array = _state.opponent_facts(str(code))
-		var opts: Array = _state.opponent_fact_options(str(code), facts, true)
-		var shown: Array = _state.opponent_fact_options(str(code), facts)
-		for i in range(mini(facts.size(), shown.size())):
-			for o in shown[i]:
-				shown_ok = shown_ok and bool(o["enabled"])
-				if str(facts[i]["key"]) == "ruck":
-					ruck_clean = ruck_clean and str(o["call"]) == "plan" and str(o["plan"]) == "contest"
-					ruck_facts += 1
-		table_ok = table_ok and opts.size() == facts.size()
-		for i in range(mini(facts.size(), opts.size())):
-			var key := str(facts[i]["key"])
-			kinds[key] = true
-			var want := []
-			for row in FO.TABLE[key]:
-				want.append("plan:" + str(row[1]) if str(row[0]) == "plan" else str(row[0]))
-			var got := []
-			var last := -1
-			for o in opts[i]:
-				got.append("plan:" + str(o["plan"]) if str(o["call"]) == "plan" else str(o["call"]))
-				var at: int = FO.ORDER.find(str(o["call"]))
-				order_ok = order_ok and at >= last
-				last = at
-				if bool(o["enabled"]):
-					enabled_seen += 1
-					words_ok = words_ok and str(o["cost"]) != "" and str(o["reason"]) == ""
-				else:
-					disabled_seen += 1
-					reasons_ok = reasons_ok and str(o["reason"]).length() > 8 and str(o["cost"]) == ""
-				for w in words:
-					words_ok = words_ok and not (str(o["label"]) + " " + str(o["cost"]) + " " + str(o["reason"])).to_lower().contains(w)
-			got.sort()
-			want.sort()
-			if got != want:
-				table_ok = false
-				push_error("%s %s: options %s, table %s" % [code, key, str(got), str(want)])
-	_check(table_ok, "Every fact of every opponent has exactly the table's responses for its kind")
-	_check(shown_ok, "The hub shows only responses the coach can take (no greyed ones)")
-	_check(ruck_clean, "A ruck fact is answered by the Win contest plan alone across all clubs (%d ruck facts)" % ruck_facts)
-	var two_r := {"id": "r1", "role": "RUCK", "overall": 80, "attr": {}}
-	var one_r := {"id": "r2", "role": "RUCK", "overall": 80, "attr": {}}
-	var mid_r := {"id": "m", "role": "MID", "overall": 70, "attr": {}}
-	_check(_names(FO.takeable(FO.options({"key": "ruck", "player_id": "r1"}, [two_r], [mid_r, one_r], [two_r]))) == ["plan"],
-			"The ruck fact offers the Win contest plan: Main ruck is no longer a call (2026-11-03)")
-	_check(not FO.ORDER.has("ruck") and not FO.NAMES.has("ruck"), "No Main ruck response is left")
-	_check(_names(FO.takeable(FO.options({"key": "danger", "player_id": "r1"}, [two_r], [one_r, one_r.duplicate()], [two_r]))).is_empty(),
-			"A danger man who is a ruck is never offered a tag")
-	_check(order_ok, "The responses always come in the fixed order: tag, key match-up, defensive set-up (cover, loose), plan")
-	_check(reasons_ok and disabled_seen > 0, "Every unsuitable response is disabled with its reason (%d seen)" % disabled_seen)
-	_check(words_ok and enabled_seen > 0, "Every other one carries its cost, and none says best, recommended or should (%d seen)" % enabled_seen)
-	_check(kinds.has("danger") and kinds.has("interceptor") and (kinds.has("midfield") or kinds.has("ruck")),
-			"The league covers the danger man, the roaming defender and a line (%s)" % ", ".join(kinds.keys()))
-	# Every match-day gate's gain and cost carry the sim's own constants
-	# (bible §4, director 2026-10-18); the templates hold no figure.
-	_gate_odds()
-	# A forward who is only a forward cannot be tagged: the response says why.
-	var fwd := {"id": "x", "name": "Sam Ridley", "role": "FWD", "overall": 80, "attr": {}}
-	var tagged: Array = FO.options({"key": "danger", "player_id": "x"}, [], [], [fwd])
-	_check(not tagged.is_empty() and str(tagged[0]["call"]) == "tag" and not bool(tagged[0]["enabled"])
-			and str(tagged[0]["reason"]) == "Sam Ridley plays forward: a tag needs a midfielder.",
-			"A forward cannot be tagged and the response says why (%s)" % (str(tagged[0]["reason"]) if not tagged.is_empty() else "-"))
-	var mid_fwd := {"id": "y", "role": "FWD", "role2": "MID", "overall": 80, "attr": {}}
-	var rank: Array = FO.options({"key": "danger", "player_id": "y"}, [], [], [mid_fwd])
-	_check(not rank.is_empty() and bool(rank[0]["enabled"]), "A mid/forward can be tagged, as the director asked (A9)")
-	# The tag's gain names the man it is about, never a bare "he" (director, 2026-11-07: "Who is he").
-	var named := {"id": "w", "name": "Jack Moss", "role": "MID", "overall": 80, "attr": {}}
-	var tag_named: Array = FO.options({"key": "danger", "player_id": "w"}, [], [], [named])
-	_check(not tag_named.is_empty() and str(tag_named[0]["gain"]).begins_with("Gain: Jack Moss keeps "),
-			"The tag gain names their player (%s)" % (str(tag_named[0]["gain"]) if not tag_named.is_empty() else "-"))
-	var GOx = load("res://scripts/sim/GateOdds.gd")
-	_check(str(GOx.tag_lines()[0]).begins_with(GOx.TAG_TARGET_ANY + " keeps "), "With nobody named, the tag gain says who it means")
-	var ruck_mid := {"id": "z", "role": "RUCK", "role2": "MID", "overall": 85, "attr": {}}
-	var rm: Array = FO.options({"key": "danger", "player_id": "z"}, [ruck_mid], [], [ruck_mid])
-	_check(not rm.is_empty() and str(rm[0]["call"]) == "tag" and not bool(rm[0]["enabled"]),
-			"A ruckman is never offered a tag, even one who also lists midfield (lead ruling, 2026-10-18)")
+	var NI = load("res://scripts/ui/NameInk.gd")
+	var kit = load("res://scripts/ui/UiKit.gd")
+	for club in ["FRE", "BRL"]:
+		_reset()
+		_state.set_setting("seen_weekly_loop_intro", true)
+		_state.start_season(club, db.club_list(club))
+		for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
+			var tag := "%s %dx%d" % [club, sz.x, sz.y]
+			root.size = sz
+			_state.set_match_way("watch")
+			var hub := await _open_hub()
+			var opp := str(_state.my_next_opponent()["code"])
+			var facts: Array = _state.opponent_facts(opp)
+			var index: Dictionary = NI.from_lists(_state.season.lists)
+			var opp_ink := "[color=#%s]" % kit.club_name_colour(kit.club_ink(opp)).to_html(false)
+			var said := true
+			var close := true
+			var inked := true
+			var named := 0
+			var opp_named := 0
+			var bad := ""
+			for i in range(facts.size()):
+				var fl: Control = hub.find_child("Fact_%d" % i, true, false)
+				var ok: bool = fl != null and _plain(fl) == str(facts[i]["text"])
+				if not ok and bad == "":
+					bad = "Fact_%d: %s" % [i, _plain(fl) if fl != null else "missing"]
+				said = said and ok
+				# A name in the fact wears his club's ink: the line is the
+				# NameInk markup of its words, the opponent's in theirs.
+				var want: String = NI.markup(str(facts[i]["text"]), index)
+				if want != "":
+					named += 1
+					inked = inked and fl is RichTextLabel and (fl as RichTextLabel).text == want
+					if want.contains(opp_ink):
+						opp_named += 1
+				if i > 0 and fl != null:
+					var before: Control = hub.find_child("Fact_%d" % (i - 1), true, false)
+					close = close and before != null and before.get_parent() == fl.get_parent() \
+							and fl.get_index() == before.get_index() + 1
+			_check(facts.size() >= 2 and said, "%s: each opposition fact is on the hub, word for word (%d facts) %s" % [tag, facts.size(), bad])
+			_check(close, "%s: each fact follows the one before it, nothing left between them" % tag)
+			_check(named > 0 and inked and opp_named > 0,
+					"%s: each name in a fact wears his club's ink, %s's own in theirs (%d named, %d in %s ink)" % [
+						tag, opp, named, opp_named, opp])
+			var cards := hub.find_children("FactOption*", "", true, false)
+			_check(cards.is_empty(), "%s: no response cards under the facts (%d found)" % [tag, cards.size()])
+			hub.queue_free()
+			await _settle()
+		# Skip chosen: the main button says Skip to full time.
+		root.size = Vector2i(390, 844)
+		_state.set_match_way("skip")
+		var hub2 := await _open_hub()
+		var play: Button = hub2.find_child("PlayMatch", true, false)
+		_check(play != null and play.text == "Skip to full time",
+				"%s: with Skip chosen the main button says Skip to full time (%s)" % [club, play.text if play != null else "none"])
+		hub2.queue_free()
+		await _settle()
+		# The setting outlives _reset: put Watch back for the suites after this one.
+		_state.set_match_way("watch")
+	root.size = Vector2i(390, 844)
+	await _play_tap_routes()
 
-	# No one tags ruckmen (director, 2026-10-18): across every club's list, a
-	# ruck-first player is never a tag target, whatever else he lists.
+
+## A real tap on the hub's main button, the way a finger reaches it: with Watch
+## chosen, Play match opens the match preview; with Skip chosen, Skip to full
+## time opens your match, taken as a skip (director, 2026-11-08: the hub's
+## facts carry no response cards, so nothing turns a Skip into a Watch).
+func _play_tap_routes() -> void:
+	var db = root.get_node("GameDB")
+	var router = root.get_node("Router")
+	var vignettes_were: bool = _state.vignettes_on()
+	for way in ["watch", "skip"]:
+		_reset()
+		_state.set_vignettes_on(false)
+		_state.start_season("FRE", db.club_list("FRE"))
+		_state.set_match_way(way)
+		router.stack = []
+		router.go("hub")
+		await _settle()
+		var hub: Node = get_current_scene()
+		var play: Button = hub.find_child("PlayMatch", true, false) if hub != null else null
+		var why: String = await Tap.tap(play) if play != null else "missing"
+		var want := "MatchPreviewScene" if way == "watch" else "MatchScene"
+		var at: Node = null
+		var saw_box := false
+		for i in range(120):
+			await process_frame
+			at = get_current_scene()
+			if at != null and at.name == "MatchScene":
+				saw_box = saw_box or at.find_child("CoachBox", true, false) != null
+			# A skip is let run to its full time before the screen is put away.
+			if at != null and at.name == want and (way == "watch" or bool(at.get("_fulltime_shown"))):
+				break
+		var landed := at != null and at.name == want
+		if way == "watch":
+			_check(why == "" and landed and at.find_child("PreviewContinue", true, false) != null,
+					"Watch chosen: a real tap on Play match opens the match preview (%s, %s)" % [
+						why, str(at.name) if at != null else "none"])
+		else:
+			# MatchScene takes the skip and puts the live way back to Watch, so
+			# the proof is the screen: full time, no coach box on the way.
+			var ft := landed and bool(at.get("_fulltime_shown"))
+			_check(why == "" and ft and not saw_box and _state.pending_sim == null,
+					"Skip chosen: a real tap on Skip to full time takes your match straight to full time (%s, %s, full time %s, coach box %s)" % [
+						why, str(at.name) if at != null else "none", str(ft), str(saw_box)])
+		if at != null:
+			at.queue_free()
+		_state.pending_sim = null
+		_state.pending_match = {}
+		router.stack = []
+		await _settle()
+	_state.set_match_way("watch")
+	_state.set_vignettes_on(vignettes_were)
+
+
+## No one tags ruckmen (director, 2026-10-18): across every club's list, a
+## ruck-first player is never a tag target, whatever else he lists.
+func _test_no_ruck_tag() -> void:
+	var db = root.get_node("GameDB")
+	_reset()
+	_state.start_season("FRE", db.club_list("FRE"))
 	var RT = load("res://scripts/sim/Ratings.gd")
 	var MSX = load("res://scripts/sim/MatchSim.gd")
 	var ruck_seen := 0
@@ -998,224 +1026,11 @@ func _test_fact_options() -> void:
 	_check(ruck_ok and clubs_seen >= 18 and ruck_seen > 18,
 			"No ruck-first player on any club's list can be tagged, even picked in the midfield (%d clubs, %d rucks)" % [clubs_seen, ruck_seen])
 
-	# The hub, phone and PC: the rows are under their facts, thumb-sized, whole.
-	for sz in [Vector2i(390, 844), Vector2i(1280, 720)]:
-		var tag := "%dx%d" % [sz.x, sz.y]
-		root.size = sz
-		var hub := await _open_hub()
-		var nxt: Dictionary = _state.my_next_opponent()
-		var facts: Array = _state.opponent_facts(str(nxt["code"]))
-		var opts: Array = _state.opponent_fact_options(str(nxt["code"]), facts)
-		var rows_ok := true
-		var rows_n := 0
-		var fits := true
-		var all_text := ""
-		for i in range(facts.size()):
-			var row: Control = hub.find_child("FactOptions_%d" % i, true, false)
-			var want_n: int = (opts[i] as Array).size()
-			if want_n == 0:
-				rows_ok = rows_ok and row == null
-				continue
-			rows_n += 1
-			rows_ok = rows_ok and row != null and row.get_child_count() == want_n
-			if row == null:
-				continue
-			var fact_label: Control = hub.find_child("Fact_%d" % i, true, false)
-			rows_ok = rows_ok and fact_label != null and row.get_index() == fact_label.get_index() + 1
-			for b in row.find_children("FactOption_*", "Button", true, false):
-				fits = fits and (b as Button).size.y >= (44.0 if sz.x < 600 else 36.0) and b.get_global_rect().size.x > 0.0
-				var o: Dictionary = b.get_meta("option")
-				var sub := b.get_parent().find_child("OptionSub", true, false) as Label
-				rows_ok = rows_ok and b.disabled == (not bool(o["enabled"])) \
-						and sub != null and sub.text == (str(o["cost"]) if bool(o["enabled"]) else str(o["reason"]))
-				var up := b.get_parent().find_child("OptionGain", true, false) as Label
-				rows_ok = rows_ok and (not bool(o["enabled"]) or (up != null and up.text == str(o["gain"])
-						and up.text.begins_with("Gain: ") and sub.text.begins_with("Cost: ")))
-				all_text += " " + sub.text + " " + (b.get_parent().find_child("OptionName", true, false) as Label).text
-		_check(rows_n > 0 and rows_ok, "%s: each stated fact has its options row beside it, with a cost or a reason on every one (%d rows)" % [tag, rows_n])
-		_check(fits, "%s: every option is a thumb tall and on the screen" % tag)
-		var lowered := all_text.to_lower()
-		var clean := true
-		for w in words:
-			clean = clean and not lowered.contains(w)
-		_check(clean, "%s: no option says best, recommended or should" % tag)
-		hub.queue_free()
-		await _settle()
 
-	# A real tap on an option chooses it and never starts the match (director,
-	# 2026-11-06: "If you click them the game just begins. That's a bad bug").
-	# Play match then opens on that call's picker with the one fact above it,
-	# and a pick made there is the call the quarter plays. Skip chosen as the
-	# way to take the match still opens on the call: the button says Play match.
-	_state.set_vignettes_on(false)
-	# Fremantle meet a side with plan responses; Brisbane meet one whose danger man can be tagged.
-	for case in [["FRE", "plan", "watch"], ["BRL", "tag", "watch"], ["BRL", "tag", "skip"]]:
-		var want_call: String = case[1]
-		var way: String = case[2]
-		_reset()
-		_state.set_setting("seen_weekly_loop_intro", true)
-		_state.start_season(str(case[0]), db.club_list(str(case[0])))
-		_state.set_match_way(way)
-		root.size = Vector2i(390, 844)
-		var hub2 := await _open_hub()
-		var nxt2: Dictionary = _state.my_next_opponent()
-		var facts2: Array = _state.opponent_facts(str(nxt2["code"]))
-		var opts2: Array = _state.opponent_fact_options(str(nxt2["code"]), facts2)
-		var chosen: Button = null
-		var fact_text := ""
-		var option: Dictionary = {}
-		for i in range(opts2.size()):
-			for o in opts2[i]:
-				if chosen == null and bool(o["enabled"]) and str(o["call"]) == want_call:
-					var key: String = str(o["plan"]) if want_call == "plan" else want_call
-					chosen = hub2.find_child("FactOption_%d_%s" % [i, key], true, false)
-					fact_text = str(facts2[i]["text"])
-					option = o
-		if chosen == null:
-			_check(false, "%s meet a fact with a %s response to tap" % [str(case[0]), want_call])
-			hub2.queue_free()
-			await _settle()
-			continue
-		var tag := "%s %s (%s)" % [str(case[0]), want_call, way]
-		var play: Button = hub2.find_child("PlayMatch", true, false)
-		_check(play != null and play.text == ("Skip to full time" if way == "skip" else "Play match"),
-				"%s: the one hub button that starts the match says so (%s)" % [tag, play.text if play != null else "none"])
-		# Every option card, a real tap at its centre at 390x844: the hub stays,
-		# no match is set up, and that card alone is chosen, its call held.
-		var cards_ok := true
-		var cards_n := 0
-		var bad := ""
-		for c in hub2.find_children("FactOption_*", "Button", true, false):
-			if (c as Button).disabled:
-				continue
-			cards_n += 1
-			var w: String = await Tap.tap(c)
-			await _settle()
-			var o: Dictionary = c.get_meta("option")
-			var on_n := 0
-			for d in hub2.find_children("FactOption_*", "Button", true, false):
-				on_n += 1 if bool(d.get_meta("chosen", false)) else 0
-			var ok: bool = w == "" and is_instance_valid(hub2) and hub2.is_inside_tree() \
-					and (current_scene == null or current_scene.name != "MatchScene") \
-					and _state.pending_sim == null and bool(c.get_meta("chosen", false)) and on_n == 1 \
-					and str(_state.call_intent.get("call", "")) == str(o["call"]) \
-					and str(_state.call_intent.get("plan", "")) == str(o["plan"])
-			if not ok and bad == "":
-				bad = "%s (%s)" % [c.name, w]
-			cards_ok = cards_ok and ok
-		_check(cards_n > 0 and cards_ok, "%s: a real tap on each of %d option cards stays on the hub, starts no match and shows that one chosen %s" % [tag, cards_n, bad])
-		# A second tap lets the call go again; a third chooses it.
-		var w2: String = await Tap.tap(chosen)
-		await _settle()
-		if not bool(chosen.get_meta("chosen", false)):
-			w2 += await Tap.tap(chosen)
-			await _settle()
-		var w3: String = await Tap.tap(chosen)
-		await _settle()
-		var let_go: bool = _state.call_intent.is_empty() and not bool(chosen.get_meta("chosen", false))
-		var w4: String = await Tap.tap(chosen)
-		await _settle()
-		_check(w2 + w3 + w4 == "" and let_go and bool(chosen.get_meta("chosen", false))
-				and str(_state.call_intent.get("fact", "")) == fact_text and _state.pending_sim == null,
-				"%s: tapping the chosen card again lets it go; tapping it once more chooses it" % tag)
-		_check(play != null and play.text == "Play match",
-				"%s: with a call chosen the start button says Play match (%s)" % [tag, play.text if play != null else "none"])
-		# The way to take the match: a real tap on Watch chooses it and starts nothing.
-		if way == "watch":
-			var watch: Button = hub2.find_child("MatchWay_watch", true, false)
-			var ww: String = await Tap.tap(watch) if watch != null else "no Watch"
-			await _settle()
-			_check(ww == "" and _state.pending_sim == null and (current_scene == null or current_scene.name != "MatchScene")
-					and not _state.call_intent.is_empty(),
-					"%s: a real tap on Watch picks the way and starts no match (%s)" % [tag, ww])
-		var why: String = await Tap.tap(play) if play != null else "no Play match"
-		await _settle()
-		# Play match opens the match preview (its own step, director 2026-11-07),
-		# with the call still held; a real tap on its Continue starts the match.
-		var pv: Node = current_scene
-		var cont: Control = pv.find_child("PreviewContinue", true, false) \
-				if pv != null and pv.name == "MatchPreviewScene" else null
-		_check(cont != null and not _state.call_intent.is_empty() and _state.pending_sim == null,
-				"%s: Play match opens the match preview, the call still held" % tag)
-		why += await Tap.tap(cont) if cont != null else "no Continue"
-		await _settle()
-		await _settle()
-		var scene: Node = current_scene
-		var box: Node = scene.find_child("CoachBox", true, false) if scene != null else null
-		_check(why == "" and scene != null and scene.name == "MatchScene" and box != null,
-				"%s: a real tap on Play match opens the match on its calls (%s)" % [tag, why])
-		_check(_state.match_way() == way, "%s: the saved way to take the match is unchanged (%s)" % [tag, _state.match_way()])
-		# The setting outlives _reset: put Watch back for the suites after this one.
-		_state.set_match_way("watch")
-		var restated: Node = box.find_child("CallIntentFact", true, false) if box != null else null
-		var picker_name: String = {"plan": "PlanPicker", "tag": "TagPicker"}[want_call]
-		var picker: Node = box.find_child(picker_name, true, false) if box != null else null
-		var plain := ""
-		if restated != null and restated.has_meta("plain"):
-			plain = str(restated.get_meta("plain"))
-		elif restated is Label:
-			plain = (restated as Label).text
-		_check(restated != null and plain == fact_text and picker != null and restated.get_parent() == picker.get_parent()
-				and restated.get_index() < picker.get_index(),
-				"The %s picker opens with the one fact above it (%s)" % [want_call, plain])
-		_check(_state.call_intent.is_empty(), "The tap's intent is used once and not kept")
-		if want_call == "tag" and picker != null:
-			# The same TagPicker main builds (its question, its candidates): no ruck on offer.
-			var opp_code: String = str(_state.my_next_opponent()["code"])
-			var rucks := 0
-			for tb in picker.find_children("TagPickerGrid_*", "Button", true, false):
-				var tid: String = str(tb.name).trim_prefix("TagPickerGrid_")
-				for lp in _state.season.lists[opp_code]:
-					if str(lp.get("id", "")) == tid and str(load("res://scripts/sim/Ratings.gd").positions(lp)[0]) == "RUCK":
-						rucks += 1
-			var asks := false
-			var ask_text: String = load("res://scripts/ui/match/MatchNotes.gd").tag_question()
-			for lab in picker.get_parent().find_children("*", "Label", true, false):
-				if (lab as Label).text == ask_text:
-					asks = true
-			_check(rucks == 0 and asks, "The opened tag picker is main's own: its question, and no ruck among the names (%d)" % rucks)
-		# Saves are unchanged: an intent held at save time never reaches the file.
-		_state.call_intent = {"call": "tag", "plan": "", "player_id": "x", "fact": "A fact."}
-		var wrote: bool = _state.save_career()
-		var back: Dictionary = CareerSave.read(_state.save_path)
-		_check(wrote and not back.is_empty() and not str(back).contains("call_intent") and not str(back).contains("A fact."),
-				"A held intent is not written into the save")
-		_state.call_intent = {}
-		_check(box != null and box.find_children("CallIntentFact", "", true, false).size() == 1,
-				"Only that one fact is added to the pane")
-		# The pick, from the same picker, a real tap; then the quarter.
-		var pick: Button = null
-		var pick_id := ""
-		if want_call == "plan":
-			pick = box.find_child("PlanPicker_" + str(option["plan"]), true, false) if box != null else null
-		elif picker != null:
-			for b in picker.find_children("TagPickerGrid_*", "Button", true, false):
-				if not str(b.name).ends_with("_"):
-					pick = b
-					pick_id = str(b.name).trim_prefix("TagPickerGrid_")
-					break
-		var why2: String = await Tap.tap(pick) if pick != null else "no pick"
-		_check(why2 == "", "A real tap picks from the opened %s picker (%s)" % [want_call, why2])
-		var start: Button = box.find_child("StartQuarter", true, false) if box != null else null
-		var sim = _state.pending_sim
-		var side: int = sim.moment_side if sim != null else 0
-		if start != null:
-			start.emit_signal("pressed")
-			await _settle()
-		var played := {}
-		if sim != null and not sim.tactics_history.is_empty():
-			played = (sim.tactics_history[0]["plans"][side] as Dictionary)
-		if want_call == "plan":
-			_check(str(played.get("gameplan", "")) == str(option["plan"]), "The plan picked there is the one the first quarter plays (%s)" % str(played.get("gameplan", "")))
-		elif pick_id != "":
-			_check(str(played.get("tag_id", "")) == pick_id, "The tag picked there is the one the first quarter plays (%s)" % str(played.get("tag_id", "")))
-		if current_scene != null:
-			current_scene.queue_free()
-		if is_instance_valid(hub2):
-			hub2.queue_free()
-		await _settle()
-	_state.set_vignettes_on(true)
-	root.size = Vector2i(390, 844)
+## Every match-day gate's gain and cost carry the sim's own constants (bible
+## §4, director 2026-10-18); the templates hold no figure.
+func _test_gate_odds() -> void:
+	_gate_odds()
 
 
 func _reset() -> void:
@@ -1558,47 +1373,24 @@ func _plain(c: Control) -> String:
 	return (c as RichTextLabel).get_parsed_text() if c is RichTextLabel else ""
 
 
-func _names(opts: Array) -> Array:
-	var r := []
-	for o in opts:
-		r.append(str(o["call"]))
-	return r
-
-
 ## Each gate's lines name the constant they describe, worked out the way the
 ## sim uses it, and no template carries a digit of its own.
 func _gate_odds() -> void:
 	var GO = load("res://scripts/sim/GateOdds.gd")
 	var Ms = load("res://scripts/sim/MatchSim.gd")
-	var RL = load("res://scripts/sim/Roles.gd")
 	var RT = load("res://scripts/sim/Ratings.gd")
 	var MU = load("res://scripts/sim/Matchups.gd")
 	var digits := RegEx.create_from_string("[0-9]")
-	var templates := [GO.GAIN, GO.COST, GO.TAG_GAIN, GO.TAG_COST, GO.MINDER_GAIN, GO.MINDER_COST, GO.LOOSE_GAIN,
-			GO.LOOSE_COST, GO.TAG_GIVES, GO.TAG_NOTE, GO.SKIP_FIRST, GO.SKIP_LATER,
+	var templates := [GO.GAIN, GO.COST, GO.TAG_GIVES, GO.TAG_NOTE, GO.SKIP_FIRST, GO.SKIP_LATER,
 			GO.FOR_MINUTES, GO.TO_SIREN, GO.TO_BREAK, GO.NONE_GAIN, GO.NONE_COST_RUN, GO.NONE_COST_BOUNCE]
-	for d in [GO.PLAN_GAIN, GO.PLAN_COST, GO.BURST_GAIN, GO.BURST_COST]:
+	for d in [GO.BURST_GAIN, GO.BURST_COST]:
 		templates.append_array((d as Dictionary).values())
 	var literal := templates.filter(func(t): return digits.search(str(t)) != null)
 	_check(literal.is_empty(), "No match-day gate template carries a number of its own (%s)" % str(literal))
 	var pct := func(x: float) -> String: return GO.pct(x)
-	var tag: Array = GO.tag_lines()
-	_check(str(tag[0]).contains(pct.call(RL.TAG_WITH_TAGGER)) and str(tag[0]).contains(pct.call(RL.TAG_PLAIN))
-			and str(tag[1]).contains(pct.call(Ms.TAGGER_COST)) and GO.tag_gives().contains(pct.call(1.0 - Ms.TAGGER_BALL)),
-			"Tag: the hold a Tagger and anyone else leave, and the share of his own game given up (%s / %s)" % tag)
-	var md: Array = GO.minder_lines()
-	_check(str(md[0]).contains(pct.call(float(Ms.MINDER_ROAM["other"]))) and str(md[0]).contains(pct.call(float(Ms.MINDER_ROAM["specialist"])))
-			and str(md[1]).contains(pct.call(1.0 - Ms.MINDER_INVOLVE)), "Defensive forward: his reach both ways and your forward's cost (%s / %s)" % md)
-	var att: Array = GO.plan_lines("attacking")
-	_check(str(att[0]).contains(pct.call(float(Ms.PLANS["attacking"]["goal"]) - 1.0)) and str(att[1]).contains(pct.call(float(Ms.PLANS["attacking"]["clangers"]) - 1.0))
-			and str(att[1]).contains(pct.call(float(Ms.PLANS["attacking"]["exposed"]) - 1.0)), "Attack corridor: both sides from PLANS (%s / %s)" % att)
-	var ctl: Array = GO.plan_lines("controlled")
-	_check(str(ctl[0]).contains(pct.call(1.0 - float(Ms.PLANS["controlled"]["clangers"]))) and str(ctl[1]).contains(pct.call(1.0 - float(Ms.PLANS["controlled"]["gain"]))),
-			"Controlled tempo: both sides from PLANS (%s / %s)" % ctl)
-	var dfn: Array = GO.plan_lines("defensive")
-	_check(str(dfn[0]).contains(pct.call(float(Ms.PRESS_PLAN_ZONE[0]) - 1.0)) and str(dfn[1]).contains(pct.call(1.0 - float(Ms.PLANS["defensive"]["goal"]))),
-			"Defensive press: both sides from PLANS and the press zones (%s / %s)" % dfn)
-	_check(str(GO.plan_lines("contest")[0]).contains(pct.call(float(Ms.PLANS["contest"]["contest"]))), "Win contest: its stoppage edge")
+	_check(GO.tag_gives().contains(pct.call(Ms.TAGGER_COST)) and GO.tag_gives().contains(pct.call(1.0 - Ms.TAGGER_BALL))
+			and GO.tag_note("A", "B").contains(GO.tag_gives_pct()),
+			"Tag: the share of his own game given up, from the tagger's constants (%s)" % GO.tag_gives())
 	_check(GO.skip_line(1).contains("plan you took in") and GO.skip_line(3).contains("last quarter's calls")
 			and GO.skip_line(3).contains("no change") and GO.skip_line(1).contains("Nothing changed here is kept"),
 			"Skip says what it plays with and that the sheet's other changes are not kept")

@@ -224,8 +224,7 @@ const ANSWERS := {
 ## changes what an answer does, shown openly on the gate). "likes" and
 ## "dislikes" move your standing with him by one; "odds" moves outcome "a";
 ## "board_up" adds one to every board size (to the cap), "named_up" one to
-## every named size (to the cap), "slow" stretches the morale fade to every
-## third round (SLOW_FADE_ROUNDS);
+## every named size (to the cap);
 ## "record" means the record check decides his standing and odds.
 const PERSONA := {
 	"muckraker": {"likes": ["criticise", "criticise_named"], "dislikes": ["back", "back_named"],
@@ -239,8 +238,7 @@ const PERSONA := {
 	"bogan": {"likes": ["back"], "dislikes": ["method"], "odds": {},
 		"named_up": true, "named_note": "The players listen to his show",
 		"rule": "The players listen to his show: a named player's move is a point bigger."},
-	"philosopher": {"likes": ["method"], "dislikes": ["criticise", "criticise_named"], "odds": {},
-		"slow": true, "slow_note": "Her piece lingers: morale moves wear off a point every third round, board moves a point a round."},
+	"philosopher": {"likes": ["method"], "dislikes": ["criticise", "criticise_named"], "odds": {}},
 }
 
 ## Standing with each journalist, -2..+2 (director 2026-11-06, Q1): each step
@@ -283,10 +281,9 @@ const ODDS_MIN := 20
 const ODDS_MAX := 80
 ## How many rounds each point of a press move lasts (director 2026-11-07,
 ## "Fade every 2nd round"): a player's morale move fades a point every second
-## round (+1 lasts 2 rounds, -2 lasts 4), every third after the Philosopher;
-## the board's fades a point a round.
+## round (+1 lasts 2 rounds, -2 lasts 4), whoever asked (director 2026-11-07:
+## no journalist slows it); the board's fades a point a round.
 const FADE_ROUNDS := 2
-const SLOW_FADE_ROUNDS := 3
 const BOARD_FADE_ROUNDS := 1
 
 ## The gate's templates: no digits here, every number comes from the tables.
@@ -310,26 +307,6 @@ const FADE_NOTE := "Morale moves wear off a point every second round, board move
 ## Your standing with him moves: what that does to his later questions.
 const LIKES := "%s warms to you (+%d%% next time)"
 const DISLIKES := "%s cools on you (-%d%% next time)"
-
-## A named answer stays with him (director 2026-11-07: "And it should weigh on
-## future contract choices"): whichever way it lands, his price to re-sign with
-## you moves by this share - dearer once you called him out, cheaper once you
-## backed him. Full for the rest of this season (its off-season talks and any
-## early extension), half the next season, then gone. The newest named answer
-## about him replaces an older one. His price is Contracts.asking_salary, so his
-## ask, his lowest and an early extension all move by the same share.
-const CONTRACT_PCT := {"criticise_named": 4, "back_named": -2}
-## On the gate, in the "either way" slot of a named answer: the talks it
-## reaches - this year's and next year's when his deal ends this season, only
-## next year's when it ends next season.
-const CONTRACT_LINE := "Re-signing him: %d%% %s this year, %d%% next"
-const CONTRACT_LINE_NEXT := "Re-signing him next year: %d%% %s"
-## In contract talks: why his price moved - what you said, when, and the
-## share now.
-const CONTRACT_MEMORY := "Remembers you %s %s, so he %s."
-const CONTRACT_MORE := "wants %d%% more"
-const CONTRACT_LESS := "will take %d%% less"
-const CONTRACT_SAID := {"criticise_named": "called him out", "back_named": "backed him"}
 
 
 ## The answer an option is. A save from before the roll kept fixed effects on
@@ -459,86 +436,7 @@ static func effects(kind: String, ctx: Dictionary = {}) -> Dictionary:
 		notes.append(str(j["named_note"]))
 	if verdict == "contradicted":
 		notes.append(_cap_first(RECORD_BOARD_NOTE))
-	# A named answer weighs on his next contract (CONTRACT_PCT), said only when
-	# a re-signing falls inside the two seasons it lasts (his deal has at most
-	# two seasons left, counting this one).
-	if CONTRACT_PCT.has(kind) and int(ctx.get("contract_years", 1)) <= 2:
-		out["contract"] = int(CONTRACT_PCT[kind])
-		out["both"] = contract_line(kind, int(ctx.get("contract_years", 1)))
 	return out
-
-
-## "Re-signing him: 4% dearer this year, 2% next" (his deal ends this
-## season) or "Re-signing him next year: 2% dearer" (it ends next season).
-static func contract_line(kind: String, contract_years := 1) -> String:
-	var pct := int(CONTRACT_PCT.get(kind, 0))
-	var way := "dearer" if pct > 0 else "cheaper"
-	if contract_years >= 2:
-		return CONTRACT_LINE_NEXT % [absi(contract_pct_after(pct, 1)), way]
-	return CONTRACT_LINE % [absi(pct), way, absi(contract_pct_after(pct, 1))]
-
-
-## The share left `seasons` rollovers after the answer: full, half, then 0.
-static func contract_pct_after(full: int, seasons: int) -> int:
-	if seasons <= 0:
-		return full
-	return full / 2 if seasons == 1 else 0
-
-
-## He remembers a named answer: kept on him with your club, the season and
-## round, and how it landed. Any other answer leaves him as he was.
-static func remember(p: Dictionary, kind: String, landed: String, club: String, year: int, round_no: int) -> void:
-	if not CONTRACT_PCT.has(kind) or p.is_empty():
-		return
-	var pct := int(CONTRACT_PCT[kind])
-	p["press_memory"] = {"kind": kind, "landed": landed, "club": club, "year": year, "round": round_no,
-			"full": pct, "pct": pct}
-
-
-## The share his price to re-sign moves now (+ dearer, - cheaper); 0 when he
-## remembers nothing, or what he remembers was said at another club. An
-## older save has no memory, so 0.
-static func contract_pct(p: Dictionary) -> int:
-	var m = p.get("press_memory")
-	if not (m is Dictionary) or str(m.get("club", "")) != str(p.get("club", "")):
-		return 0
-	return int(m.get("pct", 0))
-
-
-## At the rollover: the memory halves after its first season and is gone after
-## its second; it is dropped at once when he is not at `my_club` or it was said
-## at another club (a trade, or a coach who moved on).
-static func age_memory(p: Dictionary, my_club: String) -> void:
-	var m = p.get("press_memory")
-	if not (m is Dictionary):
-		p.erase("press_memory")
-		return
-	var full := int(m.get("full", 0))
-	var now := int(m.get("pct", 0))
-	if str(m.get("club", "")) != my_club or str(p.get("club", "")) != my_club or now != full:
-		p.erase("press_memory")
-		return
-	now = contract_pct_after(full, 1)
-	if now == 0:
-		p.erase("press_memory")
-	else:
-		m["pct"] = now
-
-
-## His line in contract talks, "" when he remembers nothing: "Remembers you
-## called him out in round 8, so he wants 4% more." `year` is the
-## season now.
-static func contract_memory_line(p: Dictionary, year: int) -> String:
-	var pct := contract_pct(p)
-	if pct == 0:
-		return ""
-	var m: Dictionary = p["press_memory"]
-	var said := int(m.get("round", 0))
-	var when := "in the finals" if said > Season.REGULAR_ROUNDS else "in round %d" % said
-	if int(m.get("year", year)) < year:
-		when += " last season"
-	return CONTRACT_MEMORY % [str(CONTRACT_SAID.get(str(m.get("kind", "")), "spoke about him")), when,
-			(CONTRACT_MORE if pct > 0 else CONTRACT_LESS) % absi(pct)]
 
 
 ## How your standing with the journalist who asked moves when you give this
@@ -600,8 +498,8 @@ static func is_woman(journalist: String) -> bool:
 
 ## How many rounds a player's press lift of this size takes to fade (fade_lift
 ## counts its rounds from the presser, so this is exact).
-static func fade_rounds(size: int, slow: bool) -> int:
-	return absi(size) * (SLOW_FADE_ROUNDS if slow else FADE_ROUNDS)
+static func fade_rounds(size: int) -> int:
+	return absi(size) * FADE_ROUNDS
 
 
 ## How many rounds the board's press move of this size takes to fade.
@@ -691,10 +589,7 @@ static func odds_line(kind: String, chance_a: int, fx: Dictionary = {}, ctx: Dic
 ## Said once on the gate, above the answers: how long a press move lasts, and
 ## what this journalist's personality does to the sizes.
 static func rules_line(journalist: String) -> String:
-	var j: Dictionary = PERSONA.get(journalist, {})
-	if bool(j.get("slow", false)):
-		return str(j["slow_note"])
-	var rule := str(j.get("rule", ""))
+	var rule := str((PERSONA.get(journalist, {}) as Dictionary).get("rule", ""))
 	return FADE_NOTE if rule == "" else "%s %s" % [rule, FADE_NOTE]
 
 
@@ -728,7 +623,7 @@ static func board_sentence(journalist: String, board: int) -> String:
 ## stacking can never pass the cap, and only what really moved his morale is
 ## kept to fade. `up` (>= 0) caps a lift lower than `cap`: LOSS_LIFT_CAP after
 ## a loss. Returns the change applied.
-static func apply_lift(p: Dictionary, delta: int, cap: int, slow: bool, up := -1) -> int:
+static func apply_lift(p: Dictionary, delta: int, cap: int, up := -1) -> int:
 	if delta == 0:
 		return 0
 	var old := int(p.get("press_lift", 0))
@@ -742,23 +637,21 @@ static func apply_lift(p: Dictionary, delta: int, cap: int, slow: bool, up := -1
 	p.erase("press_wait")
 	if now == 0:
 		p.erase("press_lift")
-		p.erase("press_slow")
 	else:
 		p["press_lift"] = now
-		p["press_slow"] = slow
 	return moved
 
 
 ## One round's fade of a player's press lift: a point back toward where he was
-## every FADE_ROUNDS rounds (SLOW_FADE_ROUNDS after the Philosopher), counted
-## from when it was set. True when it moved.
+## every FADE_ROUNDS rounds, counted from when it was set. True when it moved.
 static func fade_lift(p: Dictionary, _round_no: int) -> bool:
+	p.erase("press_slow")  # an old save's Philosopher flag: every lift now fades at the one pace
 	var lift := int(p.get("press_lift", 0))
 	if lift == 0:
 		return false
 	# "press_wait" counts the rounds since the last step (an old save's true reads as 1).
 	var waited := int(p.get("press_wait", 0)) + 1
-	if waited < (SLOW_FADE_ROUNDS if bool(p.get("press_slow", false)) else FADE_ROUNDS):
+	if waited < FADE_ROUNDS:
 		p["press_wait"] = waited
 		return false
 	p.erase("press_wait")
@@ -766,7 +659,6 @@ static func fade_lift(p: Dictionary, _round_no: int) -> bool:
 	lift -= signi(lift)
 	if lift == 0:
 		p.erase("press_lift")
-		p.erase("press_slow")
 		p.erase("press_wait")
 	else:
 		p["press_lift"] = lift

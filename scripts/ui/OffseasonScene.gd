@@ -161,6 +161,7 @@ func _undo_row(hv: VBoxContainer) -> void:
 	b.pressed.connect(func():
 		var r := GameState.undo_recruit()
 		_notice = str(r["reason"])
+		_prune_trade()  # an undone signing takes him out of the trade being built
 		_notice_club = ""
 		_notice_club_text = ""
 		_build())
@@ -446,13 +447,6 @@ func _show_talks() -> void:
 		var bend := _para(Contracts.bend_line(p, GameState.culture_effect(GameState.my_club, "resign_floor")), 13, UiKit.TEXT)
 		bend.name = "TalksBend"
 		v.add_child(bend)
-		# What you said about him in the press, and what it does to his price
-		# now (MediaConference.contract_memory_line): "" when he remembers nothing.
-		var said := MediaConference.contract_memory_line(p, GameState.season_year)
-		if said != "":
-			var press := _para(said, 14, UiKit.BAD if MediaConference.contract_pct(p) > 0 else UiKit.GOOD)
-			press.name = "TalksPress"
-			v.add_child(press)
 	if _talk_fa and GameState.my_list.size() >= Contracts.MAX_LIST:
 		v.add_child(_para("Your list is full (%d): release a player first." % Contracts.MAX_LIST, 14, UiKit.BAD))
 	for reason in terms.get("reasons", []):

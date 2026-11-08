@@ -40,7 +40,6 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	if his_club != "" and GameDB.clubs.has(his_club):
 		var club_l := UiKit.lbl(GameDB.club_name(his_club), UiKit.SECONDARY, name_ink, true)
 		club_l.name = "ProfileClub"
-		club_l.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		club_l.custom_minimum_size.y = 44
 		club_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		ClubLink.tappable(club_l, his_club)
@@ -469,6 +468,12 @@ static func _identity(v: VBoxContainer, p: Dictionary) -> Control:
 			var stack := UiKit.vbox(6)
 			stack.name = "ProfileNickname"
 			field.custom_minimum_size = Vector2(0, 44)
+			# The nickname line moves into the stack (hidden until one is saved),
+			# so the one you add shows; the unused row goes.
+			row.remove_child(nl)
+			row.free()
+			nl.visible = false
+			stack.add_child(nl)
 			stack.add_child(field)
 			stack.add_child(edit)
 			row = stack
@@ -484,6 +489,7 @@ static func _identity(v: VBoxContainer, p: Dictionary) -> Control:
 				return
 			var now := GameState.set_player_nickname(str(p["id"]), field.text)
 			nl.text = "\"%s\"" % now if now != "" else ""
+			nl.visible = now != "" or nick != ""
 			field.visible = false
 			edit.text = add_text if now == "" else "Change")
 		field.text_submitted.connect(func(_t): edit.emit_signal("pressed"))
