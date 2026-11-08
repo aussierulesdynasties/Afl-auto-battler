@@ -25,6 +25,11 @@ var tactics_read := 0.0
 ## plan as written. Worked out before the match starts (CoachEffects.apply).
 var plan_know := {}
 var ai_plans := false
+## An AI club's usual game this season (GameState.rival_plans "usual"): the
+## plan its coach settled on at his first match of the year, kept all year.
+## "" outside a career or before that match: worked out from the side
+## (PlanFit.standing_plan). Set by CoachEffects.apply_row.
+var usual_plan := ""
 ## Your club: the assistant takes the routine match-day calls you leave to
 ## him - the loose defender and the key defenders' match-ups (MatchSim).
 var assistant := false
