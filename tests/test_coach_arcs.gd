@@ -282,6 +282,20 @@ func _test_poached_moves_club() -> void:
 	var before := JSON.stringify(st)
 	_check(GameState.save_career() and GameState.load_career(), "poached: saves and loads at the new club")
 	_check(JSON.stringify(GameState.coach_arcs) == before and GameState.my_club == suitor, "poached: the career history comes back as it was")
+	# A flag won at the club he left is his; a flag the new club won before he
+	# got there is not (the move lands before the season is counted).
+	var roll_now: Array = GameState.honour_roll
+	var last_y := GameState.season_year - 1
+	var flags_at := {}
+	for premier in ["FRE", suitor]:
+		var fake := {"coach": {"start": last_y - 1, "seen": last_y - 1, "club": suitor, "clubs": [],
+				"seasons": 0, "games": 0, "flags": 0, "last_flag": 0, "coached": {}}}
+		GameState.honour_roll = [{"year": last_y, "my_club": "FRE", "my_record": "16-6-0", "premier": premier}]
+		ClubArcs._count_last_season(GameState, fake)
+		flags_at[premier] = [int(fake["coach"]["flags"]), int(fake["coach"]["last_flag"])]
+	GameState.honour_roll = roll_now
+	_check(flags_at["FRE"] == [1, last_y] and flags_at[suitor] == [0, 0],
+			"poached: the flag is counted at the club he coached that season, not the new one: %s" % str(flags_at))
 
 
 ## Arc 2 (and arc 11's take-over): sacked at a season's close, he takes a job
