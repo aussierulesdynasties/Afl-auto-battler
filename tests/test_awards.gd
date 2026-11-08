@@ -23,6 +23,7 @@ func run() -> void:
 	_t("_test_norm_smith_rules")
 	_t("_test_comeback_records")
 	_t("_test_bf_names")
+	_t("_test_career_record")
 	_t("_test_golden_fist_rule")
 	_t("_test_golden_fist_trophy_room")
 	_t("_test_full_season")
@@ -112,6 +113,60 @@ func _test_bf_names() -> void:
 	_check(lm.has("3 Doig Medals"), "A legend's medal tally names the medal (%s)" % str(lm))
 	lm = Almanac.legend_marks(legend, "FORGE")
 	_check(lm.has("3 %s best and fairests" % GameDB.club_name("FORGE")), "A club with no medal keeps best and fairests (%s)" % str(lm))
+
+
+## The Career section's facts (CareerRecord, T5.r110): only what is on record,
+## each said once, nothing for a player yet to play.
+func _test_career_record() -> void:
+	var names := func(c): return {"FRE": "Fremantle", "MEL": "Melbourne"}.get(c, c)
+	var rookie := {"id": "r1", "career": Career.fresh()}
+	_check(CareerRecord.lines(rookie, [], Milestones.empty(), "FRE", names).is_empty(),
+			"A player yet to play has no career facts")
+	_check(PlayerSheet._only_club(rookie, "FRE"),
+			"A first-season player's games are all his With us line's, so the totals are not said twice")
+	var unknown := {"id": "u1", "career": {"games": 0, "goals": 0, "through": 0, "unknown": [[0, 2025]],
+			"stints": [["FRE", 2020, 2025, 80, 10]]}}
+	_check(CareerRecord.lines(unknown, [], Milestones.empty(), "FRE", names).is_empty(),
+			"No debut is guessed for a career not on record in full")
+	var vet := {"id": "v1", "career": {"games": 210, "goals": 90, "through": 2031, "unknown": [],
+			"stints": [["MEL", 2020, 2027, 150, 60], ["FRE", 2028, 2031, 60, 30]]},
+			"honours": {"bf": {"MEL": 2}, "aa": 1, "captain": {"FRE": 2}},
+			"firsts": {}}
+	var roll := [
+		{"year": 2026, "premier": "MEL", "my_club": "FRE", "brownlow": [{"id": "v1"}]},
+		{"year": 2029, "premier": "FRE", "my_club": "FRE", "my_bf": [{"id": "v1"}], "my_aa": ["v1"]},
+		{"year": 2030, "premier": "FRE", "my_club": "FRE", "brownlow": [{"id": "v1"}], "norm_smith": [{"id": "x"}]},
+	]
+	var ml := Milestones.empty()
+	ml["log"] = [{"who": "player", "kind": "games", "value": 200, "id": "v1", "year": 2030, "label": "Round 9"},
+			{"who": "player", "kind": "debut", "value": 1, "id": "v1", "year": 2020, "label": "Round 1"},
+			{"who": "player", "kind": "games", "value": 100, "id": "other", "year": 2030, "label": "Round 9"}]
+	var texts := CareerRecord.lines(vet, roll, ml, "FRE", names).map(func(l): return str(l["text"]))
+	var want := ["Debuted in 2020, for Melbourne.", "200th game in Round 9, 2030.",
+			"At Melbourne for the 2026 premiership.", "At Fremantle for the 2029 and 2030 premierships.",
+			"Brownlow Medal 2026, 2030.", "%s 2029." % BestAndFairest.heading("FRE", "Fremantle"),
+			"%s at Melbourne." % BestAndFairest.count_line("MEL", "Melbourne", 2), "All-Australian 2029.",
+			"Captain of Fremantle, 2 seasons."]
+	_check(texts == want, "A veteran's career facts, in order (%s)" % str(texts))
+	# What his "With us" lines say is left to them.
+	var skipped := CareerRecord.lines(vet, roll, ml, "FRE", names, {"flag:2029": true, "bf:2029": true})
+	var st := skipped.map(func(l): return str(l["text"]))
+	_check(st.has("At Fremantle for the 2030 premiership.") and not str(st).contains("2029 and")
+			and not st.has("%s 2029." % BestAndFairest.heading("FRE", "Fremantle")),
+			"A flag or best and fairest the With us block says is not said again (%s)" % str(st))
+	_check(skipped.filter(func(l): return bool(l["bold"])).size() == skipped.size() - 3,
+			"Honours are bold, the debut, milestone and captaincy plain")
+	# A debut he made for you names the match.
+	vet["firsts"] = {"debut": {"year": 2028, "label": "Round 3"}}
+	vet["career"]["stints"] = [["FRE", 2028, 2031, 60, 30]]
+	_check(str(CareerRecord.lines(vet, [], Milestones.empty(), "FRE", names)[0]["text"]) == "Debuted in Round 3, 2028, for Fremantle.",
+			"A debut for you names the match")
+	_check(str(CareerRecord.lines(vet, [], Milestones.empty(), "FRE", names, {"debut": true})).find("Debuted") < 0,
+			"...unless his With us lines already say it")
+	var keys := Remembered.sheet_keys({"firsts": {"debut": {"year": 2028, "label": "Round 3"}}}, {}, "FRE",
+			{"flags": [2030], "bf": [2029]}, {})
+	_check(keys.has("debut") and keys.has("flag:2030") and keys.has("bf:2029"),
+			"The With us lines name what they say (%s)" % str(keys))
 
 
 func _test_vote_arithmetic() -> void:
@@ -347,7 +402,7 @@ func _test_full_season() -> void:
 	GameState.load_career()
 	_check(not (GameState.honour_roll[0] as Dictionary).has("golden_fist")
 			and not GameState.season_awards.has("golden_fist")
-			and StatsTrophies.player_honours(GameState.honour_roll).all(func(it): return str(it["key"]) != "golden_fist"),
+			and ClubTrophies.player_honours(GameState.honour_roll).all(func(it): return str(it["key"]) != "golden_fist"),
 			"An old save with no Golden Fist loads and shows none")
 	GameState.honour_roll = kept_roll
 	GameState.season_awards = kept_awards
@@ -461,13 +516,13 @@ func _test_golden_fist_trophy_room() -> void:
 			{"year": 2027, "my_club": "GEE", "golden_fist": [{"id": "gf2", "club": "CAR", "path": "lockdown",
 				"counts": {"spoils": 70}}]},
 			{"year": 2028, "my_club": "GEE"}]
-	var items := StatsTrophies.player_honours(seasons)
+	var items := ClubTrophies.player_honours(seasons)
 	var fists := items.filter(func(it): return str(it["key"]) == "golden_fist")
 	_check(fists.size() == 1 and str(fists[0]["id"]) == "gf1" and int(fists[0]["year"]) == 2026
 			and str(fists[0]["name"]) == Awards.GOLDEN_FIST
 			and str(fists[0]["count"]) == "14 intercept marks, 40 intercepts and 31 rebound 50s in 22 games",
 			"Your Golden Fist is on the shelf with its counts; another club's is not (%s)" % str(fists))
-	_check(StatsTrophies.kinds_won(seasons).has("golden_fist"), "The trophy room's filter offers the Golden Fist")
+	_check(ClubTrophies.kinds_won(seasons).has("golden_fist"), "The trophy room's filter offers the Golden Fist")
 	GameState.my_club = keep_club
 
 

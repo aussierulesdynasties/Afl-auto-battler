@@ -21,6 +21,7 @@ func run() -> void:
 	_t("_test_match_effect")
 	_t("_test_drilling")
 	_t("_test_ai")
+	_t("_test_report_matches_sim")
 	_t("_test_off_season_and_fade")
 	_t("_test_old_saves")
 	await _t("_test_screens")
@@ -311,6 +312,47 @@ func _test_ai() -> void:
 			"A year on, an AI club that still plays the same usual plan has slipped and drilled it back to well (%d of %d)" % [back, kept])
 
 
+## The Assistant's report names, for every club, the usual game the match
+## engine really opens with: the same side, weighed by the same plan knowledge.
+func _test_report_matches_sim() -> void:
+	PreSeason.reload()
+	for stage in ["fresh career", "after the pre-season", "each usual plan barely known"]:
+		_career(true)
+		if stage != "fresh career":
+			_press_on()
+		if stage == "a season on":
+			_finish_season()
+			_roll()
+		if stage == "each usual plan barely known":
+			# Knowledge apart from the list: a club that has let its usual plan
+			# slip opens with another, and the report must say so too. The
+			# knowledge weights are widened so the slip moves the plan at all.
+			PreSeason.data()["familiar_mult"] = {"well": 1.0, "partly": 0.5, "barely": 0.1}
+			for club in GameState.season.clubs:
+				var bare := GameState._usual_plan(str(club))
+				if PreSeason.DRILL_PLANS.has(bare):
+					GameState.plan_known[str(club)][bare] = 0
+		var wrong := []
+		var changed := []
+		for club in GameState.season.clubs:
+			var code := str(club)
+			var home := Squad.new(code, GameState.season.lists[code], true, code, GameState.season.selections.get(code, {}))
+			var away := Squad.new("X", GameDB.club_list(CLUB), false, CLUB)
+			CoachEffects.apply(home)
+			var sim := MatchSim.new(home, away, 77)
+			var report := GameState.usual_plan(code)
+			if report != sim._usual(0):
+				wrong.append("%s: report %s, sim %s" % [code, report, sim._usual(0)])
+			var bare := PlanFit.standing_plan(home.ground)
+			if bare != report:
+				changed.append(code)
+		_check(wrong.is_empty(), "%s: the report's usual plan is the one the sim opens with (%s)" % [stage, ", ".join(wrong)])
+		if stage == "each usual plan barely known":
+			_check(not changed.is_empty(), "...and with a usual plan let slip, some clubs open with another")
+		print("  usual plan, %s: %d of %d clubs differ from the plan named without plan knowledge %s" % [stage, changed.size(), GameState.season.clubs.size(), changed])
+	PreSeason.reload()
+
+
 func _test_off_season_and_fade() -> void:
 	PreSeason.reload()
 	_career(false)
@@ -572,6 +614,13 @@ func _test_group_screen() -> void:
 	_check(whole != null and fwd != null and bool(whole.get_meta("chosen", false)),
 			"A Game plan block's drills show the whole side until the coach picks a group")
 	_check(_label(scene, "DrillSplit0").begins_with("Every group drills the same"), "...and the line under the tabs says so")
+	var gaps := _tab_gaps(scene.find_child("DrillFor0", true, false) as Control)
+	_check(gaps.size() == 4 and gaps.min() >= 8.0 and gaps.max() <= gaps.min() * 2.0,
+			"The five group names sit evenly apart on a phone, never run together: gaps %s" % [gaps])
+	var narrowest := 999.0
+	for t in (scene.find_child("DrillFor0", true, false) as Control).get_children():
+		narrowest = minf(narrowest, (t as Control).size.x)
+	_check(narrowest >= 36.0, "...and each is a thumb wide at least (narrowest %.0f)" % narrowest)
 	_check(await _tap(fwd, "Forwards"), "A finger picks the forwards")
 	_check(bool(fwd.get_meta("chosen", false)) and _label(scene, "DrillSplit0").begins_with("The forwards: "),
 			"...the forwards' tab is on and the line says how many: " + _label(scene, "DrillSplit0"))
@@ -584,6 +633,24 @@ func _test_group_screen() -> void:
 	_check(not bool(contest.get_meta("chosen", false)) and "Forwards: Attack corridor and Win contest" in _label(scene, "DrillSplit0"),
 			"...which marks no plan and names the split: " + _label(scene, "DrillSplit0"))
 	_check(_fits(scene, 360.0), "...and nothing runs off a phone's width")
+
+
+## The space between one tab's name and the next, left to right (each name
+## is centred on its tab).
+func _tab_gaps(row: Control) -> Array:
+	var out := []
+	if row == null:
+		return out
+	var prev_right := NAN
+	for t in row.get_children():
+		var b := t as Button
+		var w := b.get_theme_font("font").get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				b.get_theme_font_size("font_size")).x
+		var left := b.position.x + (b.size.x - w) / 2.0
+		if not is_nan(prev_right):
+			out.append(snappedf(left - prev_right, 0.1))
+		prev_right = left + w
+	return out
 
 
 func _frames(tree: SceneTree, n: int) -> void:

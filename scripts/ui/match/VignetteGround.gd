@@ -696,6 +696,16 @@ static func _mcg_towers(ci: CanvasItem, cam: Cam) -> void:
 				ci.draw_rect(Rect2(at - Vector2(lamp, lamp * 0.7), Vector2(lamp * 2.0, lamp * 1.4)), Color(0.98, 0.97, 0.9), true)
 
 
+## Where the big screen at an end (-1: the other one) lands on the screen; empty when it
+## is behind the camera.
+static func screen_rect(cam: Cam, end := 1) -> Rect2:
+	var c := cam.oval(Vector2(0.0, (L + FENCE + 40.0) * end), 30.0)
+	if c.z <= 0.0:
+		return Rect2()
+	var size := Vector2(30.0, 13.0) * c.z
+	return Rect2(Vector2(c.x, c.y) - size * 0.5, size)
+
+
 ## The big screen high above the far end, behind the goals, showing the match's score
 ## as it stands (board): each club's code by a chip of its colour, goals.behinds and
 ## the total, the quarter beneath. Lit, so it glows a little into the night. The MCG has
@@ -703,12 +713,10 @@ static func _mcg_towers(ci: CanvasItem, cam: Cam) -> void:
 static func _screen(ci: CanvasItem, cam: Cam, home: Color, away: Color, board: Dictionary, end := 1) -> void:
 	if bool(board.get("off", false)):
 		return                                   # a shot too tight for it: half a screen read as a fault
-	var at := Vector2(0.0, (L + FENCE + 40.0) * end)
-	var c := cam.oval(at, 30.0)
-	if c.z <= 0.0:
+	var r := screen_rect(cam, end)
+	if not r.has_area():
 		return
-	var size := Vector2(30.0, 13.0) * c.z
-	var r := Rect2(Vector2(c.x, c.y) - size * 0.5, size)
+	var c := Vector3(r.get_center().x, r.get_center().y, r.size.x / 30.0)
 	for g in range(4):
 		ci.draw_rect(r.grow((g + 1) * 1.4 * c.z), Color(0.6, 0.7, 0.9, 0.025), true)
 	ci.draw_rect(r.grow(0.6 * c.z), Color(0.04, 0.04, 0.05), true)

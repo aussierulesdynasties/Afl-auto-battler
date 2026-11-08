@@ -33,6 +33,9 @@ var _interactive := false
 ## to full time, nothing played or applied again.
 var _review := false
 var _event_cursor := 0
+## Your side's legs (id -> energy) when the stretch now playing was simulated:
+## the tired marks read these until the oval catches up with the sim.
+var _legs_seen := {}
 var _my_side := 0
 var _margin: MarginContainer
 var _stacked := false
@@ -50,6 +53,7 @@ var _fulltime_shown := false
 var _farewell := {}
 var _coach_overlay: Control
 var _sheet_overlay: Control
+var _over: Control   # T3.R42: every sheet, call and scene opens here, under the scoreboard
 var _reflow_queued := false
 var _shown_goals := [0, 0]
 var _shown_behinds := [0, 0]
@@ -90,22 +94,6 @@ var _name_index := {}           # name -> club for NameInk, built once per match
 var _duel_mem := {}             # the feed's memory of the forward-50 duels (MatchNotes.duel_feed_line)
 var _break_refresh := Callable()   # the one-line break: say each call's answer again after a pick
 var _break_sheets: Array = []      # the one-line break: open sheets, the top one last ({overlay, close})
-## Key moments (director, 2026-10-18, P-14): your match at top speed, down to
-## 1x for your calls, each goal and the breaks, then on again. Playback only:
-## the sim, its log and the result are the same as watching.
-const KM_HOLD := 1.8                 # real seconds at 1x after a goal or a call (a goal's name runs as long)
-var km_hold_seconds := KM_HOLD       # tests shorten it; what stops the match is the same
-var _key_moments := false
-var _km_why := ""                    # what holds 1x now: "goal", "moment" or ""
-var _km_hold := 0.0                  # real seconds of 1x left (counted only while play runs)
-var _km_await := ""                  # 1x, the hold not yet counting, until this event is released
-var _km_goal_at := -1                # the goal (event index) a stop has already slowed for
-## Every stop, in order: {"kind": "goal"|"moment"|"break", "event": index, "q": quarter}.
-var km_stops: Array = []
-## Every released event while in Key moments: [kind, speed, why] (tests).
-var km_trace: Array = []
-var _km_word: Button
-var _km_watch: Button
 
 
 func _ready() -> void:
@@ -125,7 +113,6 @@ func _ready() -> void:
 		_pos_before = GameState.my_position()
 		# A pre-season practice match is nobody's debut, farewell or first goal.
 		_farewell = {} if _is_practice(GameState.pending_match) else _farewell_for(GameState.pending_match)
-		_key_moments = GameState.match_way_live == "key"
 	else:
 		_res = GameState.last_match
 		_review = GameState.review_requested
@@ -136,6 +123,9 @@ func _ready() -> void:
 	if _res.is_empty():
 		Router.replace("hub")
 		return
+	# Report a problem (Settings) quotes this match's last feed lines.
+	ProblemReport.start_feed("%s, %s v %s" % [str(_res.get("label", "")),
+			GameDB.club_name(str(_res["home"])), GameDB.club_name(str(_res["away"]))])
 	# The ground the vignettes draw: the MCG has its own stands (FL-003); every other
 	# venue keeps the plain ground. Set every match, as the static outlives the scene.
 	VignetteGround.use_match(_res)
@@ -182,6 +172,22 @@ func _build() -> void:
 	_root.add_child(_scoreboard())
 	_mount_body(UiKit.view_width(self) < 640.0)
 	_root.add_child(_body)
+	# T3.R42 (P-26): on a phone the score and the clock never leave the screen.
+	# Breaks, sheets, calls and scenes open in the space under the scoreboard.
+	_over = Control.new()
+	_over.name = "UnderScoreboard"
+	_over.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_over)
+	_over.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+
+## The overlays' top: the scoreboard's foot on a phone; a wide screen's break
+## keeps the whole height (its band carries the score).
+func _fit_over() -> void:
+	if _over == null or _root == null or _root.get_child_count() == 0:
+		return
+	var board := _root.get_child(0) as Control
+	_over.offset_top = board.get_global_rect().end.y - get_global_rect().position.y if _stacked else 0.0
 
 
 func _mount_body(stack: bool) -> void:
@@ -198,9 +204,6 @@ func _mount_body(stack: bool) -> void:
 	if _pitch == null:
 		_pitch = PitchView.new()
 		_pitch.speed = GameState.match_speed()
-		if _key_moments:
-			_pitch.speed = SPEEDS.back()
-			set_process(true)
 	# A phone follows the ball close up because its screen is small (and so does
 	# any narrow, stacked window); a wide window shows the whole ground whatever
 	# the platform (director, 2026-10-09; the web build on a PC, 2026-10-12).
@@ -273,6 +276,7 @@ func _scoreboard() -> Control:
 	h.add_child(_score_middle(narrow))
 	h.add_child(_score_column(str(_res["away"]), false, narrow))
 	v.add_child(_momentum_bar())
+	p.item_rect_changed.connect(_fit_over)
 	return p
 
 
@@ -353,7 +357,7 @@ func _paint_momentum() -> void:
 
 func _show_momentum_info() -> void:
 	_close_sheet()
-	var box := UiKit.modal_box(self, 520.0, 0.0, _wash())
+	var box := UiKit.modal_box(_over, 520.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
 	overlay.name = "MomentumInfo"
 	_sheet_overlay = overlay
@@ -473,24 +477,6 @@ func _controls() -> Control:
 	_play_btn.pressed.connect(_on_toggle)
 	row.add_child(_play_btn)
 
-	# Key moments shows its name where the speeds sit, in the poster's order
-	# (Watch, then Key moments): Watch drops back to watching at your usual
-	# speed and the speeds come back.
-	_km_watch = UiKit.btn("Watch", UiKit.SECONDARY)
-	_km_watch.name = "KeyMomentsWatch"
-	_km_watch.custom_minimum_size = Vector2(0, 44)
-	_km_watch.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_km_watch.clip_text = true
-	_km_watch.pressed.connect(_on_km_watch)
-	row.add_child(_km_watch)
-	_km_word = UiKit.btn("Key moments", UiKit.SECONDARY)
-	_km_word.name = "KeyMomentsState"
-	_km_word.custom_minimum_size = Vector2(0, 44)
-	_km_word.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_km_word.size_flags_stretch_ratio = 2.0
-	_km_word.clip_text = true
-	row.add_child(_km_word)
-
 	for s in SPEEDS:
 		var b := UiKit.btn("%dx" % int(s), UiKit.SECONDARY)
 		b.custom_minimum_size = Vector2(0, 44)
@@ -554,78 +540,11 @@ func _sync_controls() -> void:
 	_play_btn.text = "Play" if not _pitch.playing else "Pause"
 	for i in range(SPEEDS.size()):
 		UiKit.set_selected(_speed_btns[i], is_equal_approx(_pitch.speed, SPEEDS[i]))
-		_speed_btns[i].visible = not _key_moments
-	if _km_word != null:
-		_km_word.visible = _key_moments
-		_km_watch.visible = _key_moments
-		UiKit.set_selected(_km_word, true)
-		UiKit.set_selected(_km_watch, false)
 	if _break_skip != null:
 		var at := _breaks_played + 1
 		_break_skip.visible = at < 4 and not _finished
 		if at < 4:
 			_break_skip.text = "Skip to " + str(BREAK_NAMES[at - 1])
-
-
-## Watch from here on: your usual speed, the speed buttons back.
-func _on_km_watch() -> void:
-	_key_moments = false
-	_km_why = ""
-	_km_await = ""
-	set_process(false)
-	_pitch.set_speed(GameState.match_speed())
-	_sync_controls()
-
-
-## Key moments: down to 1x for a stop. `await_kind` holds 1x, uncounted,
-## until that event is released (the goal a shot is heading for, the line of a
-## call just answered); the hold counts down from there.
-func _km_slow(why: String, await_kind := "") -> void:
-	_km_why = why
-	_km_await = await_kind
-	_km_hold = km_hold_seconds
-	_pitch.set_speed(SPEEDS[0])
-
-
-## Key moments: back to top speed.
-func _km_fast() -> void:
-	_km_why = ""
-	_km_await = ""
-	_pitch.set_speed(SPEEDS.back())
-
-
-## The hold after a stop runs on real seconds of play: a close-up or a call
-## over the paused oval does not use it up.
-func _process(delta: float) -> void:
-	if not _key_moments or _km_why == "" or _km_await != "" or _pitch == null or not _pitch.playing:
-		return
-	_km_hold -= delta
-	if _km_hold <= 0.0:
-		_km_fast()
-
-
-## Key moments, on each released event: a goal is slowed for from the play
-## before it (the shot is seen at 1x) and held after it; a call's line is held
-## after it reaches the feed.
-func _km_event(ev: Dictionary, event_index: int) -> void:
-	if not _key_moments or _skipping:
-		return
-	var kind := str(ev.get("kind", ""))
-	if kind == "goal":
-		if _km_goal_at != event_index:
-			_km_goal_at = event_index
-			km_stops.append({"kind": "goal", "event": event_index, "q": int(ev.get("q", 0))})
-		_km_slow("goal")
-	elif kind == "moment" and _km_await == "moment":
-		_km_slow("moment")
-	km_trace.append([kind, _pitch.speed, _km_why])
-	var next := event_index + 1
-	var next_goal := next < _pitch.events.size() \
-			and str((_pitch.events[next] as Dictionary).get("kind", "")) == "goal"
-	if next_goal and _km_goal_at != next:
-		_km_goal_at = next
-		km_stops.append({"kind": "goal", "event": next, "q": int((_pitch.events[next] as Dictionary).get("q", 0))})
-		_km_slow("goal", "goal")
 
 
 func _on_toggle() -> void:
@@ -659,11 +578,8 @@ func _on_skip_to_break() -> void:
 	if _coach_overlay != null and is_instance_valid(_coach_overlay):
 		return
 	_close_moment()
-	# A close-up queued for this frame is dropped with the play it would show,
-	# and a Key moments slow ends with it.
+	# A close-up queued for this frame is dropped with the play it would show.
 	_broadcast_pending = false
-	if _key_moments and _km_why != "":
-		_km_fast()
 	# The rest of the quarter takes a moment on a phone: the button says so
 	# and the oval holds still while it is played.
 	_pitch.pause()
@@ -679,7 +595,7 @@ func _on_skip_to_break() -> void:
 		_res = sim.run_quarter()
 		_stamp_match_meta()
 		_append_new_events()
-	# No crowd, close-ups or Key moments stops on the way.
+	# No crowd or close-ups on the way.
 	_pitch.release_all()
 	_skipping = false
 	_break_skip.disabled = false
@@ -771,11 +687,6 @@ func _show_coach_box() -> void:
 	# lands on the break that has just sounded, and the button says so.
 	_breaks_played = q - 1
 	_sync_controls()
-	if _key_moments:
-		# The break is the stop; the next quarter starts at top speed.
-		if q > 1:
-			km_stops.append({"kind": "break", "event": _playback_event_index, "q": q})
-		_km_fast()
 	# The calls fill the screen at every break, so the actions sit at the
 	# bottom with the choices just above them.
 	# On a PC the break is a wide landscape sheet with every call in view
@@ -783,7 +694,7 @@ func _show_coach_box() -> void:
 	var wide := _wide_break()
 	_pc_break = wide
 	var stats_pc: Button = null
-	var box := UiKit.modal_box(self, minf(UiKit.view_width(self) - 48.0, 1560.0) if wide else 640.0, 0.0, _wash())
+	var box := UiKit.modal_box(_over, minf(UiKit.view_width(self) - 48.0, 1560.0) if wide else 640.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
 	overlay.name = "CoachBox"
 	_coach_overlay = overlay
@@ -1039,18 +950,28 @@ func _show_coach_box() -> void:
 	var tag_note := NameInk.rich(UiKit.NOTE, UiKit.MUTED)
 	tag_note.name = "TagNote"
 	tag_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# Who goes to him is only a question once there is a him: hidden with no
-	# tag (the fullest PC break then still fits without scrolling).
+	# On a phone the note with a tag ("X tags Y: he gives up...") runs to two
+	# lines and "No tag..." to one: it keeps room for two, so a tag tap never
+	# pushes the calls below it down (A2).
+	if not _pc_break:
+		tag_note.custom_minimum_size.y = ceilf(UiKit.FONT.get_height(UiKit.NOTE) * 2.0)
+	# Who goes to him is only a question once there is a him: shown faded and
+	# shut with no tag, so it never appears and shoves the calls below it.
 	var who_block: Array = []
 	var who_wb: Control = null
 	var who_hook: Array = [Callable()]
 	var sync_tag := func(_key: String) -> void:
 		if (who_hook[0] as Callable).is_valid():
 			(who_hook[0] as Callable).call()
+		# Who tags is always there, under the tag (A2, director 2026-10-14: the
+		# tag screen jumping about was "heinous, awful UI design"): faded and
+		# shut until there is a man to tag, so picking one moves nothing, not
+		# sideways and not down.
+		var has_tag := str(calls["tag_id"]) != ""
 		for b in who_block:
-			(b as Control).visible = str(calls["tag_id"]) != ""
-		# The columns are dealt once, with Who tags counted in its room (see
-		# _unit_heights): a call never changes column when it expands.
+			(b as Control).modulate.a = 1.0 if has_tag else 0.4
+			for wbtn in (b as Node).find_children("*", "Button", true, false):
+				(wbtn as Button).disabled = not has_tag
 		var who = my_mids.get(str(calls["tagger_id"]), tagger)
 		var target := GameDB.player_display_name_by_id(str(calls["tag_id"]), "")
 		if str(calls["tag_id"]) == "":
@@ -1354,59 +1275,6 @@ func _show_coach_box() -> void:
 				UiKit.attention(row as CanvasItem)
 		elif found != null:
 			UiKit.attention(found.get_parent() as CanvasItem)
-	_land_call_intent(overlay, q)
-
-
-## A response tapped beside an opposition fact on the hub (P-13,
-## GameState.call_intent) lands here, before the first ball-up: that call's
-## block is brought into view and brightens once, with the one fact that sent
-## the coach there restated above its picker. Nothing is chosen for him and
-## nothing else on the pane changes.
-const INTENT_NODES := {"tag": "TagPicker", "minder": "DefenceSetupPicker",
-		"loose": "DefenceSetupPicker", "plan": "PlanPicker"}
-
-
-func _land_call_intent(overlay: Control, q: int) -> void:
-	var intent: Dictionary = GameState.call_intent
-	GameState.call_intent = {}
-	if q != 1 or intent.is_empty():
-		return
-	var target: Node = overlay.find_child(str(INTENT_NODES.get(str(intent.get("call", "")), "-")), true, false)
-	if target == null:
-		return
-	# The call's own block: the one holding its heading.
-	var block: Node = target
-	while block != null and block != overlay and block.find_child("CallHeading", false, false) == null:
-		block = block.get_parent()
-	if block == null or block == overlay:
-		return
-	var line := _say(str(intent.get("fact", "")), UiKit.BODY, UiKit.TEXT, true)
-	line.name = "CallIntentFact"
-	if line is Label:
-		(line as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	block.add_child(line)
-	var heading: Node = block.find_child("CallHeading", false, false)
-	block.move_child(line, (heading.get_index() + 1) if heading != null else mini(2, block.get_child_count() - 1))
-	_show_intent_block.call_deferred(block, str(intent.get("player_id", "")))
-
-
-func _show_intent_block(block: Node, player_id: String) -> void:
-	# The columns of a PC pane are dealt a frame after the break is built.
-	for i in range(4):
-		await get_tree().process_frame
-	if not is_instance_valid(block):
-		return
-	var shown: Node = block
-	var up: Node = block
-	while up != null and not (up is ScrollContainer):
-		up = up.get_parent()
-	if up != null:
-		# The block's top (its heading and the fact) at the top of the pane; a
-		# long block would otherwise be shown by its end.
-		var sc := up as ScrollContainer
-		var top := (block as Control).global_position.y - (sc.get_child(0) as Control).global_position.y
-		sc.scroll_vertical = maxi(0, int(top) - 8)
-	UiKit.attention(shown as CanvasItem)
 
 
 # ---------------------------------------------------------------------------
@@ -1911,7 +1779,7 @@ func _skip_note(q: int, wide: bool) -> Label:
 
 func _open_break_sheet(node_name: String, title: String, parts: Array, home: Node) -> void:
 	# Best so far is a bottom sheet: the thumb's end of the screen, not floating.
-	var box := UiKit.modal_box(self, 640.0, 0.0, _wash(), node_name == "best", node_name == "best")
+	var box := UiKit.modal_box(_over, 640.0, 0.0, _wash(), node_name == "best", node_name == "best")
 	var ov: Control = box["overlay"]
 	ov.name = "CallSheet_" + node_name
 	# The break behind a sheet is out of sight: nothing of it reads, or shows
@@ -1937,7 +1805,7 @@ func _open_break_sheet(node_name: String, title: String, parts: Array, home: Nod
 		# Done is the one primary action, in the club fill.
 		_club_fill_button(done)
 		box["footer"].add_child(done)
-		var wash_best := UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
+		var wash_best := UiKit.team_wash() if _wash() == UiKit.AUTO_COLOUR else _wash()
 		UiKit.edge_fade(box["body"].get_parent() as ScrollContainer, Color(wash_best, 0.2))
 		_break_sheets.append({"overlay": ov, "close": _best_close(parts, home, ov)})
 		return
@@ -1945,7 +1813,7 @@ func _open_break_sheet(node_name: String, title: String, parts: Array, home: Nod
 	v.add_child(UiKit.spacer(8))
 	_club_fill_button(done)
 	box["footer"].add_child(done)
-	var wash_col := UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
+	var wash_col := UiKit.team_wash() if _wash() == UiKit.AUTO_COLOUR else _wash()
 	UiKit.edge_fade(box["body"].get_parent() as ScrollContainer, Color(wash_col, 0.2))
 	_break_sheets.append({"overlay": ov, "close": _best_close(parts, home, ov)})
 
@@ -2658,12 +2526,6 @@ func _group_energy(side: int) -> float:
 func _show_moment() -> void:
 	_close_moment()
 	_pitch.pause()
-	if _key_moments:
-		var last: Dictionary = km_stops.back() if not km_stops.is_empty() else {}
-		if str(last.get("kind", "")) != "moment" or int(last.get("event", -1)) != _playback_event_index:
-			km_stops.append({"kind": "moment", "event": _playback_event_index,
-					"q": int(GameState.pending_sim.pending_moment.get("q", 0))})
-		_km_slow("moment")
 	var m: Dictionary = GameState.pending_sim.pending_moment
 	# The late centre ball-up call, and the run of goals against (row 14), both
 	# put to the coach over a centre ball-up.
@@ -2676,7 +2538,7 @@ func _show_moment() -> void:
 		_show_bounce_moment(m)
 		return
 	# Sized for its few lines, not the whole phone.
-	var box := UiKit.modal_box(self, 560.0, 440.0, _wash())
+	var box := UiKit.modal_box(_over, 560.0, 440.0, _wash())
 	_moment_overlay = box["overlay"]
 	_moment_overlay.name = "MomentCard"
 	var v: VBoxContainer = box["body"]
@@ -2715,7 +2577,7 @@ func _show_moment() -> void:
 ## back to the match. The options and what they do are MatchSim's; the scene
 ## only shows the state of the match.
 func _show_bounce_moment(m: Dictionary) -> void:
-	var overlay := UiKit.cover(self)
+	var overlay := UiKit.cover(_over)
 	overlay.color = Color(0, 0, 0, 0)
 	overlay.name = "MomentCard"
 	overlay.set_meta("scene", true)
@@ -2805,9 +2667,6 @@ func _on_moment_choice(i: int) -> void:
 	# The call and how it came off reach the feed as the "moment" event,
 	# when play reaches it.
 	sim.resolve_moment(i)
-	if _key_moments:
-		# 1x until the call's line reaches the feed, then a moment more.
-		_km_slow("moment", "moment")
 	_advance_segment()
 
 
@@ -2909,9 +2768,10 @@ func _player_choice(node_name: String, none_label: String, roster: Array, first:
 						_break_refresh.call()))
 			grid.add_child(other)
 		if card.is_valid():
-			# Cards set their own facts (_dress_tagger_card): one to a line on
-			# a phone, side by side on a PC, "Other player..." last.
-			grid.columns = 2 if _pc_break else 1
+			# Cards set their own facts (_dress_tagger_card): one man to a
+			# row, the column's full width, so his facts never wrap a word to a
+			# line (A2); "Other player..." last.
+			grid.columns = 1
 			for gb in grid.get_children().duplicate():
 				if gb is Button and gb != other:
 					card.call(gb, str(gb.name).trim_prefix(node_name + "Grid_"))
@@ -2937,16 +2797,15 @@ func _card_text(r: Dictionary, detail: Callable) -> String:
 
 
 ## A "Who tags" card (director, 2026-10-13: it must read at a glance): his name
-## in bold with where he plays small beside it, then three short facts, one to
-## a line, label quiet and value clear (his Pressure, his legs, what he gives
-## up of his own game). Your club's colour is the rule down the left edge;
+## in bold with where he plays small beside it, then his Pressure, what their
+## man keeps and his legs along one line (label quiet, value clear), and what
+## he gives up of his own game under them. One man to a row, the column's full
+## width (A2). Your club's colour is the rule down the left edge;
 ## selection stays the button's own text outline. The button stays the card's
 ## background and its tap target, under the words; its words are kept in the
 ## "card_text" meta for the tests.
 func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: bool) -> void:
 	var gives_value := str(c["gives"]).left(1).to_upper() + str(c["gives"]).substr(1)
-	# The hold sits beside his Pressure (it is his Pressure and legs that set
-	# it), so the card keeps its three rows and the PC break still fits.
 	var press_value := "%s · their man keeps %s" % [c["pressure"], c["holds"]]
 	var plain := "%s\n%s\nPressure %s\nLegs %s\n%s %s" % [who_name, c["where"], press_value, c["legs"],
 			c["gives_label"], gives_value]
@@ -2992,36 +2851,25 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 	where.name = "CardWhere"
 	head.add_child(where)
 	col.add_child(head)
-	var rows := [["Pressure", press_value, false], ["Legs", str(c["legs"]), bool(c["legs_bad"])],
-			[str(c["gives_label"]), gives_value, false]]
-	# A phone card is wide: label and value in two columns. A PC's card is a
-	# narrow half of a column: the label above the long value instead.
-	var facts: Container = VBoxContainer.new() if _pc_break else GridContainer.new()
-	if _pc_break:
-		facts.add_theme_constant_override("separation", 2)
-	else:
-		(facts as GridContainer).columns = 2
-		facts.add_theme_constant_override("h_separation", 10)
-		facts.add_theme_constant_override("v_separation", 2)
-	for f in rows:
-		var k := UiKit.line(str(f[0]), UiKit.SECONDARY, UiKit.MUTED)
-		k.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-		var v := UiKit.lbl(str(f[1]), UiKit.BODY, UiKit.BAD if bool(f[2]) else UiKit.TEXT)
-		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		if _pc_break and str(f[0]) != str(c["gives_label"]):
-			var one := HBoxContainer.new()
-			one.add_theme_constant_override("separation", 8)
-			one.add_child(k)
-			one.add_child(v)
-			facts.add_child(one)
-		elif _pc_break:
-			facts.add_child(k)
-			facts.add_child(v)
-		else:
-			facts.add_child(k)
-			facts.add_child(v)
+	# The short facts flow along one line, each label quiet beside its value,
+	# and wrap whole (never a word to a line, A2); what he gives up is the
+	# long one, a sentence of its own under them.
+	var rows := [["Pressure", str(c["pressure"]), false], [str(c["holds_label"]), str(c["holds"]), false],
+			["Legs", str(c["legs"]), bool(c["legs_bad"])]]
+	var facts := HFlowContainer.new()
 	facts.name = "CardFacts"
+	facts.add_theme_constant_override("h_separation", 16)
+	facts.add_theme_constant_override("v_separation", 0)
+	for f in rows:
+		var one := UiKit.hbox(5)
+		one.add_child(UiKit.line(str(f[0]), UiKit.SECONDARY, UiKit.MUTED))
+		one.add_child(UiKit.line(str(f[1]), UiKit.BODY, UiKit.BAD if bool(f[2]) else UiKit.TEXT))
+		facts.add_child(one)
 	col.add_child(facts)
+	var gives := UiKit.lbl("%s %s" % [c["gives_label"], c["gives"]], UiKit.SECONDARY, UiKit.TEXT)
+	gives.name = "CardGives"
+	gives.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(gives)
 	if is_pick:
 		var pick := UiKit.line("Your assistant's pick", UiKit.SECONDARY, UiKit.MUTED)
 		pick.name = "CardPick"
@@ -3041,7 +2889,7 @@ func _short_name(r: Dictionary) -> String:
 ## marked. Back or Close leaves it as it was.
 func _player_sheet(title: String, roster: Array, current: String, detail: Callable, on_pick: Callable) -> void:
 	_close_sheet()
-	var box := UiKit.modal_box(self, 480.0, 0.0, _wash())
+	var box := UiKit.modal_box(_over, 480.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
 	overlay.name = "PlayerSheet"
 	_sheet_overlay = overlay
@@ -3102,7 +2950,7 @@ func _wash() -> Color:
 
 ## The sheet's wash colour, resolved (AUTO is your club's colour).
 func _wash_col() -> Color:
-	return UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
+	return UiKit.team_wash() if _wash() == UiKit.AUTO_COLOUR else _wash()
 
 
 func _close_sheet() -> void:
@@ -3166,7 +3014,7 @@ func _roster_side(side: int) -> Array:
 ## clubs, any quarter on its own. Close (or Back) returns to your calls.
 func _show_break_stats(players_first := false) -> void:
 	_close_report()
-	var box := UiKit.modal_box(self, SHEET_MAX_W if _stats_wide() else 640.0, 0.0, _wash())
+	var box := UiKit.modal_box(_over, SHEET_MAX_W if _stats_wide() else 640.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
 	overlay.name = "BreakStatsSheet"
 	_report_overlay = overlay
@@ -3284,6 +3132,7 @@ func _simulate_next_quarter(t: Dictionary) -> void:
 ## Simulate on to the end of the quarter or the next moment, then play it.
 func _advance_segment() -> void:
 	var sim: MatchSim = GameState.pending_sim
+	_legs_seen = _legs_now(sim)
 	if sim.continue_quarter():
 		_res = sim.end_quarter()
 	else:
@@ -3398,6 +3247,29 @@ func _append_new_events() -> void:
 # ---------------------------------------------------------------------------
 # Playback hooks
 # ---------------------------------------------------------------------------
+## Tired and hurt players carry a short mark on the oval and the bench strip
+## (PlayerMarks): the hurt from the injuries played so far, either side; the
+## tired from your own side's legs, in a match you coach.
+func _refresh_marks() -> void:
+	var injuries: Array = _res.get("injuries", [])
+	var energy := {}
+	var sim_now = GameState.pending_sim if _interactive else null
+	if sim_now != null:
+		injuries = sim_now.injuries
+		# The sim has run ahead of the oval: its legs now are the end of the stretch
+		# still playing, so the marks use the legs from when that stretch began.
+		energy = _legs_now(sim_now) if _pitch.current_index() >= _pitch.events.size() else _legs_seen
+	_pitch.set_marks(PlayerMarks.build(_pitch.events, _pitch.current_index(), injuries, energy))
+
+
+## Your side's legs in the sim right now: id -> energy.
+func _legs_now(sim: MatchSim) -> Dictionary:
+	var out := {}
+	for r in sim.legs(_my_side):
+		out[str(r["id"])] = float(r["energy"])
+	return out
+
+
 ## The ring on the oval: the players of yours you have made a call on or
 ## promised a run (MatchRings). Calls change at the breaks and at the moments,
 ## so it is read again with every event: a few lookups, and the view only
@@ -3405,6 +3277,7 @@ func _append_new_events() -> void:
 func _refresh_rings() -> void:
 	if _pitch == null:
 		return
+	_refresh_marks()
 	if _interactive and GameState.pending_sim != null:
 		_pitch.set_rings(MatchRings.ids(GameState.pending_sim, _my_side, GameState.my_list))
 	else:
@@ -3433,7 +3306,6 @@ func _on_event(ev: Dictionary) -> void:
 		_track_run(int(ev.get("side", 0)))
 	if _crowd != null and not _skipping:
 		_crowd.event(str(ev.get("kind", "")))
-	_km_event(ev, event_index)
 	_queue_broadcast(ev, event_index)
 
 
@@ -3464,9 +3336,6 @@ func _queue_broadcast(ev: Dictionary, event_index: int) -> void:
 		return
 	# Vignettes off (Settings): no replays. They decide nothing.
 	if not GameState.vignettes_on():
-		return
-	# Key moments stops for goals only: a goal's own close-up plays, nothing else.
-	if _key_moments and str(ev.get("kind", "")) != "goal":
 		return
 	var prev_ev := {}
 	var next_ev := {}
@@ -3508,7 +3377,7 @@ func _show_broadcast(kind: String, ev: Dictionary, snap: Dictionary) -> void:
 		return
 	_broadcast_pending = false
 	_broadcast_busy = true
-	var overlay := UiKit.cover(self)
+	var overlay := UiKit.cover(_over)
 	overlay.name = "BroadcastVignetteOverlay"
 	overlay.color = Color(0.015, 0.018, 0.02, 1.0)
 	_broadcast_overlay = overlay
@@ -3653,6 +3522,7 @@ func _feed_add(ev: Dictionary) -> void:
 	var stamp := _clock_text(int(ev.get("q", 1)), int(ev.get("min", 0)))
 	if str(line["tier"]) == "goal":
 		_feed.add_child(_goal_row(ev, stamp))
+		ProblemReport.note_feed("%s  %s" % [stamp, str(line["text"])])
 		_trim_feed()
 	elif str(line["tier"]) == "break":
 		_feed_text(str(line["text"]), UiKit.TEXT, true, "BreakLine")
@@ -3704,6 +3574,7 @@ func _feed_text(text: String, col: Color, strong: bool, node_name: String) -> vo
 	l.set_meta("feed_kind", node_name)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_feed.add_child(l)
+	ProblemReport.note_feed(text)
 	_trim_feed()
 
 
@@ -3741,6 +3612,7 @@ func _on_finished() -> void:
 	# A level final plays on: extra time is rolled now and fed to the pitch.
 	if _interactive and not _skipping and GameState.pending_sim != null \
 			and GameState.pending_sim.needs_extra_time():
+		_legs_seen = _legs_now(GameState.pending_sim)
 		_res = GameState.pending_sim.run_extra_time()
 		_stamp_match_meta()
 		_append_new_events()
@@ -3775,6 +3647,8 @@ func _on_finished() -> void:
 		var v := FarewellVignette.open(get_tree().root, _farewell["ms"], _farewell["man"],
 				GameState.my_club, str(_farewell["opp"]), _farewell["mine"], _farewell["theirs"],
 				"Full time", str(GameState.pending_match.get("weather", "")) == "wet")
+		v.offset_top = _over.offset_top   # under the scoreboard, as every scene (T3.R42)
+		v.clip_contents = true            # its stand's roof stays off the scoreboard
 		_farewell = {}
 		var wv: WeakRef = weakref(v)   # not the node: it frees itself when it ends
 		tree_exiting.connect(func():            # Back out of the match: it goes too
@@ -3824,7 +3698,7 @@ func _farewell_for(match: Dictionary) -> Dictionary:
 func _show_fulltime() -> void:
 	# A PC's Stats tab holds the score and the team numbers side by side, so the
 	# sheet is wider there; the Summary keeps its own reading width inside it.
-	var box := UiKit.modal_box(self, SHEET_MAX_W if _stats_wide() else 640.0, 0.0, _wash())
+	var box := UiKit.modal_box(_over, SHEET_MAX_W if _stats_wide() else 640.0, 0.0, _wash())
 	var overlay: Control = box["overlay"]
 	overlay.name = "FullTime"
 	_ft_box = box
@@ -3835,7 +3709,7 @@ func _show_fulltime() -> void:
 	_ft_tabs.name = "ReviewTabs"
 	outer.add_child(_ft_tabs)
 	outer.move_child(_ft_tabs, 0)
-	var wash_col := UiKit.team_colour() if _wash() == UiKit.AUTO_COLOUR else _wash()
+	var wash_col := UiKit.team_wash() if _wash() == UiKit.AUTO_COLOUR else _wash()
 	UiKit.edge_fade(box["body"].get_parent() as ScrollContainer, Color(wash_col, 0.2))
 
 	var home: String = _res["home"]

@@ -40,7 +40,6 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	if his_club != "" and GameDB.clubs.has(his_club):
 		var club_l := UiKit.lbl(GameDB.club_name(his_club), UiKit.SECONDARY, name_ink, true)
 		club_l.name = "ProfileClub"
-		club_l.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		club_l.custom_minimum_size.y = 44
 		club_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		ClubLink.tappable(club_l, his_club)
@@ -167,9 +166,15 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 			int(tally.get("goals", 0)) if live else 0)
 	var mine := not GameState.list_player(str(p.get("id", ""))).is_empty()
 	var only_us := mine and GameState.with_us_text(p) != "" and _only_club(p, GameState.my_club)
-	if tot != "" and not only_us:
+	# Then the facts on record from his career (CareerRecord, T5.r110): his
+	# debut, milestone games, flags and awards, each said once - what the "With
+	# us" block below already says is left to it.
+	var facts := career_facts(p, mine)
+	var unplayed := tot == "" and facts.is_empty() and not only_us
+	if (tot != "" and not only_us) or not facts.is_empty() or unplayed:
 		v.add_child(UiKit.spacer(4))
 		v.add_child(UiKit.lbl("Career", UiKit.SMALL, UiKit.MUTED))
+	if tot != "" and not only_us:
 		var cl := UiKit.lbl(tot, UiKit.BODY, UiKit.TEXT)
 		cl.name = "ProfileCareer"
 		v.add_child(cl)
@@ -177,19 +182,17 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 		if clubs.size() > 1:
 			for line in clubs:
 				v.add_child(UiKit.lbl(str(line), UiKit.SMALL, UiKit.MUTED))
-
-	# His honours, kept for good in the honour roll.
-	var medal_years := GameState.norm_smith_years(str(p.get("id", "")))
-	if not medal_years.is_empty():
-		v.add_child(UiKit.spacer(4))
-		v.add_child(UiKit.lbl("Honours", UiKit.SMALL, UiKit.MUTED))
-		var years: PackedStringArray = []
-		for y in medal_years:
-			years.append(str(y))
-		var hl := UiKit.lbl("Norm Smith Medal %s" % ", ".join(years), UiKit.BODY, UiKit.TEXT, true)
-		hl.name = "ProfileHonours"
-		hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(hl)
+	var fi := 0
+	for f in facts:
+		var fl := UiKit.lbl(str(f["text"]), UiKit.BODY, UiKit.TEXT, bool(f["bold"]))
+		fl.name = "CareerFact_%d" % fi
+		fl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(fl)
+		fi += 1
+	if unplayed:
+		var none := UiKit.lbl("Yet to play a senior game.", UiKit.BODY, UiKit.MUTED)
+		none.name = "CareerNone"
+		v.add_child(none)
 
 	# What the club remembers of him (P-37): his games and goals with you, then
 	# the three facts that matter most, newest first. Read-only.
@@ -317,11 +320,22 @@ static func with_us_block(p: Dictionary) -> Control:
 	return box
 
 
+## His career facts on record (CareerRecord.lines), less what his "With us"
+## lines say when he is yours.
+static func career_facts(p: Dictionary, mine: bool) -> Array:
+	var skip := {}
+	var w := GameState.with_us(p)
+	if mine and Remembered.head(w) != "":
+		skip = Remembered.sheet_keys(p, GameState.career_facts, GameState.my_club, w, GameState.LEARN_JOBS)
+	return CareerRecord.lines(p, GameState.honour_roll, GameState.milestone_log, GameState.my_club,
+			func(code): return GameDB.club_name(code), skip)
+
+
 ## True when every season on his record was at this club.
+## No stints yet means a first season, all of it here (a debutant's games are
+## his "With us" line, said once).
 static func _only_club(p: Dictionary, code: String) -> bool:
 	var stints: Array = Career.of(p).get("stints", [])
-	if stints.is_empty():
-		return false
 	for st in stints:
 		if str(st[0]) != code:
 			return false
@@ -454,6 +468,12 @@ static func _identity(v: VBoxContainer, p: Dictionary) -> Control:
 			var stack := UiKit.vbox(6)
 			stack.name = "ProfileNickname"
 			field.custom_minimum_size = Vector2(0, 44)
+			# The nickname line moves into the stack (hidden until one is saved),
+			# so the one you add shows; the unused row goes.
+			row.remove_child(nl)
+			row.free()
+			nl.visible = false
+			stack.add_child(nl)
 			stack.add_child(field)
 			stack.add_child(edit)
 			row = stack
@@ -469,6 +489,7 @@ static func _identity(v: VBoxContainer, p: Dictionary) -> Control:
 				return
 			var now := GameState.set_player_nickname(str(p["id"]), field.text)
 			nl.text = "\"%s\"" % now if now != "" else ""
+			nl.visible = now != "" or nick != ""
 			field.visible = false
 			edit.text = add_text if now == "" else "Change")
 		field.text_submitted.connect(func(_t): edit.emit_signal("pressed"))

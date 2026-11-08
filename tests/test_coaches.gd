@@ -346,15 +346,18 @@ func _test_ui() -> void:
 	var medallist: Dictionary = dawson if not dawson.is_empty() else (GameState.season.lists["ADE"] as Array)[0]
 	var plain := PlayerSheet.open(host, medallist)
 	await tree.process_frame
-	_check(plain.find_child("ProfileHonours", true, false) == null, "A player with no honours shows no honours line")
+	_check(not _text(plain).contains("Norm Smith Medal"), "A player with no honours shows no honours line")
 	plain.queue_free()
 	GameState.honour_roll.append({"year": 2031, "premier": "ADE", "norm_smith": [{"id": str(medallist["id"]), "club": "ADE", "line": "30 disp 2.1"}]})
 	GameState.honour_roll.append({"year": 2033, "premier": "GEE", "norm_smith": [{"id": str(medallist["id"]), "club": "ADE", "line": "28 disp"}]})
 	var decorated := PlayerSheet.open(host, medallist)
 	await tree.process_frame
-	var hon: Label = decorated.find_child("ProfileHonours", true, false)
-	_check(hon != null and hon.text == "Norm Smith Medal 2031, 2033",
-			"His profile lists the Norm Smith Medal under his honours (%s)" % [hon.text if hon != null else "none"])
+	var hon_text := ""
+	for l in decorated.find_children("CareerFact_*", "Label", true, false):
+		if (l as Label).text.begins_with("Norm Smith"):
+			hon_text = (l as Label).text
+	_check(hon_text == "Norm Smith Medal 2031, 2033.",
+			"His profile lists the Norm Smith Medal in his Career section (%s)" % hon_text)
 	decorated.queue_free()
 	GameState.honour_roll.resize(GameState.honour_roll.size() - 2)
 	host.queue_free()

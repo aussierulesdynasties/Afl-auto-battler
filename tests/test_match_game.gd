@@ -32,7 +32,7 @@ func run() -> void:
 	_t("_test_impact_and_ai")
 	_t("_test_decision_credits")
 	_t("_test_pep_talks")
-	_t("_test_tired_call_holds")
+	_t("_test_fatigue_parity")
 	_t("_test_play_through")
 	_t("_test_play_through_by_job")
 	_t("_test_play_through_three")
@@ -44,6 +44,8 @@ func run() -> void:
 	_t("_test_traits")
 	_t("_test_weather")
 	_t("_test_wet_weather_play")
+	_t("_test_wind_and_heat")
+	_t("_test_weather_follows_the_real_games")
 	_t("_test_metres_and_efficiency")
 	_t("_test_gps_distance")
 	_t("_test_ruck_integrity")
@@ -469,7 +471,9 @@ func _test_clanger_cause() -> void:
 	_check(MatchSim.clanger_why({"kind": "handball", "end": "pressure"}, "windy", "turnover") == "", "Wind blames kicks only")
 	_check(MatchSim.clanger_why({"kind": "kick", "end": "aerial"}, "wet", "turnover") == "", "A kick read and marked has its own line")
 	_check(MatchSim.clanger_why({"kind": "kick", "end": ""}, "wet", "score") == "", "A score is nobody's clanger")
-	_check(absf(MatchSim.clanger_blame_share("wet") - 0.15 / 1.15) < 0.001 and MatchSim.clanger_blame_share("perfect") == 0.0,
+	_check(absf(MatchSim.clanger_blame_share("wet") - 0.10 / 1.10) < 0.001
+			and absf(MatchSim.clanger_blame_share("windy") - 0.02 / 1.02) < 0.001
+			and MatchSim.clanger_blame_share("hot") == 0.0 and MatchSim.clanger_blame_share("perfect") == 0.0,
 			"The weather takes only its own share of the blame")
 
 
@@ -791,8 +795,8 @@ func _test_impact_and_ai() -> void:
 		var has_now: bool = now_t != null and Roles.is_tagger(now_t)
 		_check((str(s2.ai_tactics(1).get("tag_id", "")) != "") == has_now,
 				"%s %s a tag in the second half" % [str(pair[0]), "calls" if has_now else "does not call"])
-	# A tired star: under Normal rotations the rotations handle him, with no
-	# call; riding the stars brings one call a match, and resting him works.
+	# A tired star: the rotations handle him under every policy, with no call
+	# (Director Bible 2.60: rotations are automatic for both sides).
 	for policy in ["normal", "stars"]:
 		var tired := _sim(902)
 		tired.moment_side = 0
@@ -805,90 +809,61 @@ func _test_impact_and_ai() -> void:
 			_check(false, "Club 902 fields a star")
 			continue
 		tired.begin_quarter()
-		tired.energy[str(star["id"])] = 40.0      # after the break's recovery
+		tired.energy[str(star["id"])] = 20.0      # after the break's recovery: cooked
 		var calls := 0
 		var guard := 0
 		while guard < 40:
-			tired.continue_quarter()
-			var m := tired.pending_moment
-			if m.is_empty():
+			if tired.continue_quarter():
 				break
+			var m := tired.pending_moment
 			if str(m.get("kind", "")) == "tired":
 				calls += 1
-				if calls == 1:
-					tired.resolve_moment(0)
-					var still_on := false
-					for p in tired.squads[0].ground:
-						if str(p["id"]) == str(star["id"]):
-							still_on = true
-					_check(not still_on, "Resting him takes him off the ground")
-					# Cooked again later: still only the one call.
-					for p in tired.squads[0].ground:
-						if int(p["overall"]) >= MatchSim.STAR_OVR:
-							tired.energy[str(p["id"])] = 30.0
-					continue
 			tired.resolve_moment(int(m.get("default", 0)))
 			guard += 1
-		if policy == "normal":
-			var subbed := false
-			for ev in tired.events:
-				if str(ev["kind"]) == "sub" and int(ev["side"]) == 0 and int(ev.get("off_num", -1)) == int(star["num"]):
-					subbed = true
-			_check(calls == 0, "Normal rotations: no running-on-empty call")
-			_check(subbed, "Normal rotations take the cooked star off by themselves")
-		else:
-			_check(calls == 1, "Riding the stars: one tired call a match, not one a quarter (%d)" % calls)
+		var subbed := false
+		for ev in tired.events:
+			if str(ev["kind"]) == "sub" and int(ev["side"]) == 0 and int(ev.get("off_num", -1)) == int(star["num"]):
+				subbed = true
+		_check(calls == 0, "%s rotations: no running-on-empty call" % policy)
+		_check(subbed, "%s rotations take the cooked star off by themselves" % policy)
 
 
-## The tired-star call is a real choice because each answer holds to the
-## break: rested, he stays on the bench even once fresh; kept on, the
-## rotations leave him out there however cooked. The card names who comes on.
-## Director decision 2026-10-05 (roadmap M4-001).
-func _test_tired_call_holds() -> void:
-	for answer in ["rest", "keep"]:
+## Fatigue parity (T3.F-defects): your side and the rival's rotate on one rule.
+## Riding the stars, a cooked star comes off at the same line on either side,
+## whether or not you are coaching; the tired-star call that held yours on is gone
+## (Director Bible 2.60, 2.63 superseded).
+func _test_fatigue_parity() -> void:
+	for mine in range(2):
 		var sim := _sim(902)
-		sim.moment_side = 0
-		sim.set_rotation_policy(0, "stars")
-		var star: Dictionary = {}
-		for p in sim.squads[0].ground:
-			if int(p["overall"]) >= MatchSim.STAR_OVR:
-				star = p
-		if star.is_empty():
-			_check(false, "Club 902 fields a star")
+		sim.moment_side = mine
+		var stars := [{}, {}]
+		for side in range(2):
+			sim.set_rotation_policy(side, "stars")
+			for p in sim.squads[side].ground:
+				if int(p["overall"]) >= MatchSim.STAR_OVR:
+					stars[side] = p
+		if stars[0].is_empty() or stars[1].is_empty():
+			_check(false, "Both sides field a star")
 			return
-		var sid := str(star["id"])
 		sim.begin_quarter()
-		sim.energy[sid] = 40.0
-		var fired := {}
+		for side in range(2):
+			sim.energy[str(stars[side]["id"])] = 20.0
+		var tired_calls := 0
 		var guard := 0
 		while guard < 60:
 			if sim.continue_quarter():
 				break
-			var m := sim.pending_moment
-			if str(m.get("kind", "")) == "tired" and fired.is_empty():
-				fired = m.duplicate(true)
-				sim.resolve_moment(0 if answer == "rest" else 1)
-				if answer == "keep":
-					sim.energy[sid] = 12.0   # cooked: the rotations would take him
-			else:
-				sim.resolve_moment(int(m.get("default", 0)))
+			if str(sim.pending_moment.get("kind", "")) == "tired":
+				tired_calls += 1
+			sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
 			guard += 1
-		_check(not fired.is_empty(), "Riding the stars, a cooked star brings the call (%s)" % answer)
-		if fired.is_empty():
-			continue
-		var on_ground := not sim._on_ground(0, sid).is_empty()
-		if answer == "rest":
-			var sub_name := GameDB.player_display_name_by_id(str(fired.get("sub_id", "")), "")
-			var detail := str((fired["options"] as Array)[0]["detail"])
-			_check(sub_name != "" and detail.begins_with(sub_name + " comes on."),
-					"Rest names who comes on (%s)" % detail)
-			_check(not on_ground and float(sim.energy.get(sid, 0.0)) >= 85.0,
-					"Rested, he sits out the quarter even once fresh (energy %.0f)" % float(sim.energy.get(sid, 0.0)))
-		else:
-			_check(on_ground, "Kept on, he is still out there at the break however cooked")
-		sim.end_quarter()
-		sim.begin_quarter()
-		_check(sim._held.is_empty(), "The call ends at the break (%s)" % answer)
+		_check(tired_calls == 0, "No tired-star call for your side (side %d)" % mine)
+		for side in range(2):
+			var subbed := false
+			for ev in sim.events:
+				if str(ev["kind"]) == "sub" and int(ev["side"]) == side and int(ev.get("off_num", -1)) == int(stars[side]["num"]):
+					subbed = true
+			_check(subbed, "Side %d's cooked star is rotated off with side %d coached" % [side, mine])
 
 
 ## Calm the group is a live option: a milder, quarter-long Slow it down,
@@ -1086,6 +1061,9 @@ func _test_wet_weather_play() -> void:
 	var clangers := [0.0, 0.0]
 	var ballups := [0, 0]
 	var tackles := [0.0, 0.0]
+	var disposals := [0.0, 0.0]
+	var kicks := [0.0, 0.0]
+	var marks := [0.0, 0.0]
 	var set_shots := [0, 0]
 	var set_goals := [0, 0]
 	var fumbles := 0
@@ -1099,6 +1077,9 @@ func _test_wet_weather_play() -> void:
 			for side in range(2):
 				clangers[c] += float((res["team"][side] as Dictionary).get("clangers", 0.0))
 				tackles[c] += float((res["team"][side] as Dictionary).get("tackles", 0.0))
+				disposals[c] += float((res["team"][side] as Dictionary).get("disposals", 0.0))
+				kicks[c] += float((res["team"][side] as Dictionary).get("kicks", 0.0))
+				marks[c] += float((res["team"][side] as Dictionary).get("marks", 0.0))
 			var evs: Array = res["events"]
 			for j in range(evs.size()):
 				var e: Dictionary = evs[j]
@@ -1117,14 +1098,26 @@ func _test_wet_weather_play() -> void:
 						set_goals[c] += 1
 	_check(clangers[1] > clangers[0] * 1.04, "More clangers in the wet (%.0f against %.0f)" % [clangers[1], clangers[0]])
 	_check(ballups[1] > ballups[0] * 1.08, "More ball-ups in the wet (%d against %d)" % [ballups[1], ballups[0]])
-	_check(tackles[1] > tackles[0] * 1.06, "More tackles in the wet (%.0f against %.0f)" % [tackles[1], tackles[0]])
+	# Row 61: real wet games have 12.1% more tackles (afl_weather_rates.json) and the
+	# game 10.9% (tools/balance.sh, 1,000 paired matches, se 0.3%). Over these 16
+	# matches the rise has a standard error near 2.5%, so the floor is 4%, a clear
+	# rise nearly three standard errors under the game's own size (6% sat only two
+	# under); the real size is the balance run's to show.
+	_check(tackles[1] > tackles[0] * 1.04, "More tackles in the wet (%.0f against %.0f)" % [tackles[1], tackles[0]])
+	# Row 61: real wet games hold their disposals and kicks (-0.5%, +1.3%) and lose
+	# 13% of their marks (tools/balance/afl_weather_rates.json).
+	_check(absf(disposals[1] / disposals[0] - 1.0) < 0.04 and absf(kicks[1] / kicks[0] - 1.0) < 0.04,
+			"The wet holds the disposals and kicks (%.0f against %.0f, %.0f against %.0f)"
+			% [disposals[1], disposals[0], kicks[1], kicks[0]])
+	_check(marks[1] < marks[0] * 0.92, "Far fewer marks stick in the wet (%.0f against %.0f)" % [marks[1], marks[0]])
 	var acc_dry := float(set_goals[0]) / maxf(1.0, float(set_shots[0]))
 	var acc_wet := float(set_goals[1]) / maxf(1.0, float(set_shots[1]))
 	_check(acc_wet < acc_dry, "Set shots go through less often in the wet (%.2f against %.2f)" % [acc_wet, acc_dry])
 	_check(fumbles > 0 and fumble_named, "A wet fumble is a clanger the game puts down to the wet ball (%d)" % fumbles)
 	_check(fumble_ballups > 0 and fumble_ballups < fumbles,
 			"Some wet fumbles go straight to a ball-up, the rest spill loose (%d of %d)" % [fumble_ballups, fumbles])
-	# The set shot itself is 0.97 as likely to go through in the wet, band by band.
+	# The set shot itself is set_acc as likely to go through in the wet, band by band.
+	var sa := float(MatchSim.WEATHER_SIM["wet"]["set_acc"])
 	var wet := _sim(2)
 	wet.weather = "wet"
 	var scaled := true
@@ -1137,11 +1130,189 @@ func _test_wet_weather_play() -> void:
 		picked += 1
 		var hit := false
 		for b in MatchSim.set_bands(gp):
-			if is_equal_approx(float(split["goal"]), clampf(float(b["goal"]) * 0.97, 0.03, 0.97)):
+			if is_equal_approx(float(split["goal"]), clampf(float(b["goal"]) * sa, 0.03, 0.97)):
 				hit = true
 		if not hit:
 			scaled = false
-	_check(picked > 0 and scaled, "Every wet set shot is 0.97 as likely to go through (%d shots)" % picked)
+	_check(picked > 0 and scaled, "Every wet set shot is %.3f as likely to go through (%d shots)" % [sa, picked])
+	_check(is_equal_approx(wet._set_goal(0.6), 0.6 * sa) and is_equal_approx(dry._set_goal(0.6), 0.6),
+			"The wet's set-shot rate is one rule for every kind of set shot (%.3f, dry %.3f)"
+			% [wet._set_goal(0.6), dry._set_goal(0.6)])
+	# Row 61: the wet's aerial and run rates reach play. Sized to nothing (tune
+	# WX_<key>), no contested mark sticks anywhere on the ground and nobody bounces.
+	var contested_marks := [0, 0]
+	var bounces := [0.0, 0.0]
+	for c in range(2):
+		MatchSim.tune = {} if c == 0 else {"WX_aerial": 0.0, "WX_run": 0.0}
+		for i in range(4):
+			var s := _sim(760 + i)
+			s.weather = "wet"
+			var res := s.run()
+			for side in range(2):
+				bounces[c] += float((res["team"][side] as Dictionary).get("running_bounces", 0.0))
+			for e in res["events"]:
+				if str(e.get("kind", "")) == "mark" and bool(e.get("contested", false)):
+					contested_marks[c] += 1
+	MatchSim.tune = {}
+	_check(contested_marks[0] > 0 and contested_marks[1] == 0,
+			"Every contested mark goes through the wet's aerial rate (%d, none at nothing: %d)"
+			% [contested_marks[0], contested_marks[1]])
+	_check(bounces[0] > 0.0 and bounces[1] == 0.0,
+			"Every running bounce goes through the wet's run rate (%.0f, none at nothing: %.0f)" % [bounces[0], bounces[1]])
+
+
+## Row 61: wind and heat at real size. The wind takes marks, adds tackles, sends more
+## missed set shots out on the full and gives one end a breeze; the heat makes a
+## slower game with fewer tackles and clangers. A perfect day is untouched.
+func _test_wind_and_heat() -> void:
+	var dry := _sim(5)
+	var windy := _sim(5)
+	windy.weather = "windy"
+	var hot := _sim(5)
+	hot.weather = "hot"
+	var d := dry._rates()
+	var w := windy._rates()
+	var h := hot._rates()
+	_check(float(w["mark_share_of_kicks"]) < float(d["mark_share_of_kicks"]), "Fewer kicks are marked in the wind")
+	_check(windy._wx("tackle_share") > 1.0 and dry._wx("tackle_share") == 1.0, "More of the pressure is a tackle in the wind")
+	_check(float(h["chains_per_game"]) < float(d["chains_per_game"]) and float(h["pressure_base"]) < float(d["pressure_base"])
+			and float(h["clanger_per_chain"]) < float(d["clanger_per_chain"]),
+			"A hot day is a slower game, with less pressure and fewer clangers")
+	# The wind carries more missed set shots out on the full: fewer behinds per miss.
+	var miss_ok := true
+	var banded := 0
+	var want := MatchSim.SET_MISS_BEHIND * windy._wx("miss_behind")
+	for k in range(200):
+		var sp: Dictionary = windy._set_shot_split(0.3 + 0.04 * float(k % 10), 0.3)
+		if (sp["band"] as Dictionary).is_empty():
+			continue
+		banded += 1
+		if not is_equal_approx(float(sp["behind"]) / (1.0 - float(sp["goal"])), want):
+			miss_ok = false
+	_check(banded > 0 and miss_ok and want < MatchSim.SET_MISS_BEHIND,
+			"A missed set shot scores a behind less often in the wind (%.3f of misses against %.3f, %d shots)"
+			% [want, MatchSim.SET_MISS_BEHIND, banded])
+	# The breeze: with it a shot is easier, against it harder, fewer goals on the day.
+	var shooter: Dictionary = windy.squads[0].ground[0]
+	windy.current_quarter = 1
+	dry.current_quarter = 1
+	var side_with := 0 if windy.with_breeze(0) else 1
+	var p_with := windy.shot_chance(side_with, shooter, true, false)
+	var p_against := windy.shot_chance(1 - side_with, shooter, true, false)
+	var p_still := dry.shot_chance(side_with, shooter, true, false)
+	var p_still_b := dry.shot_chance(1 - side_with, shooter, true, false)
+	_check(p_with > p_still and p_against < p_still_b,
+			"The breeze helps one end and hurts the other (%.3f, %.3f against %.3f, %.3f)"
+			% [p_with, p_against, p_still, p_still_b])
+	_check(MatchSim.BREEZE_WITH + MatchSim.BREEZE_AGAINST < 2.0, "A breeze costs goals over the day")
+	windy.current_quarter = 2
+	_check(windy.with_breeze(1 - side_with), "The sides change ends at the break")
+	# Every set shot takes the wind's miss rate, not only a band from a mark: a
+	# free kick, a mark in the goal-square pack and the teammate on the lead too.
+	# With no miss scoring (tune WX_miss_behind 0), none of them is ever a behind.
+	MatchSim.tune = {"WX_miss_behind": 0.0}
+	var by_spot := {}
+	var pack_marks := 0
+	var pack_behinds := 0
+	var turn := 0
+	for seed in range(830, 838):
+		var live := _sim(seed)
+		live.weather = "windy"
+		live.moment_side = 0
+		while live.current_quarter <= 4:
+			live.begin_quarter()
+			while not live.continue_quarter():
+				var m: Dictionary = live.pending_moment
+				var pick := int(m.get("default", 0))
+				if str(m["kind"]) == "set_shot":
+					var key: String = ["bomb", "pass"][turn % 2]
+					turn += 1
+					var opts: Array = m["options"]
+					for i in range(opts.size()):
+						if str(opts[i]["key"]) == key:
+							pick = i
+				var from := live.events.size()
+				live.resolve_moment(pick)
+				for k in range(from, live.events.size() - 1):
+					var e: Dictionary = live.events[k]
+					if str(e["kind"]) == "pack" and str(e.get("outcome", "")) == "marked":
+						pack_marks += 1
+						if str((live.events[k + 1] as Dictionary)["kind"]) == "behind":
+							pack_behinds += 1
+			live.end_quarter()
+		for shot in live.shot_log:
+			var spot := str(shot[4])
+			if int(shot[1]) != 1 or spot == "":
+				continue
+			var kind := spot if spot == "free" or spot == "lead" else "band"
+			if not by_spot.has(kind):
+				by_spot[kind] = [0, 0]
+			by_spot[kind][0] += 1
+			if str(shot[3]) == "behind":
+				by_spot[kind][1] += 1
+	MatchSim.tune = {}
+	var all_kinds := by_spot.has("band") and by_spot.has("free") and by_spot.has("lead") and pack_marks > 0
+	var no_behinds := pack_behinds == 0
+	for kind in by_spot:
+		no_behinds = no_behinds and int(by_spot[kind][1]) == 0
+	_check(all_kinds and no_behinds,
+			"Every kind of set shot takes the wind's miss rate (%s, pack marks %d with %d behinds)"
+			% [str(by_spot), pack_marks, pack_behinds])
+
+
+## Row 61: every weather size points the way the real games do
+## (tools/balance/afl_weather_rates.json, 2016-25 against a perfect day).
+func _test_weather_follows_the_real_games() -> void:
+	var f := FileAccess.open("res://tools/balance/afl_weather_rates.json", FileAccess.READ)
+	_check(f != null, "The real weather reference is saved")
+	if f == null:
+		return
+	var ref: Dictionary = JSON.parse_string(f.get_as_text())
+	var real: Dictionary = ref["change_vs_perfect"]
+	_check(int(ref["n"]["wet"]) >= 100 and int(ref["n"]["windy"]) >= 100 and int(ref["n"]["hot_day"]) >= 30,
+			"The reference rests on enough games (%s)" % str(ref["n"]))
+	var gate: Dictionary = ref["validation_abc_wet"]["stats"]
+	var held := 0
+	for k in gate:
+		if bool(gate[k]["within_2se"]):
+			held += 1
+	_check(held >= gate.size() - 1, "The method reproduces ABC's wet-game table (%d of %d)" % [held, gate.size()])
+	var rd := _sim(6)._rates()
+	for cond in ["wet", "windy", "hot"]:
+		var s := _sim(6)
+		s.weather = cond
+		var r := s._rates()
+		var c: Dictionary = real[cond]
+		if float(c["marks"]["change"]) < -0.025:
+			_check(float(r["mark_share_of_kicks"]) < float(rd["mark_share_of_kicks"]), "%s: fewer marks, as in the real games" % cond)
+		var sim_more := s._wx("tackle_share") > 1.0
+		var sim_fewer := float(r["pressure_base"]) < float(rd["pressure_base"])
+		_check(sim_more if float(c["tackles"]["change"]) > 0.0 else sim_fewer, "%s: tackles go the way the real games' do" % cond)
+		# Every real change beyond twice its standard error that the sim has a rule
+		# for, that rule moves the same way. How far it moves is the balance
+		# harness's to measure (tools/balance.sh match 1000, perfect against cond).
+		var breeze := (MatchSim.BREEZE_WITH + MatchSim.BREEZE_AGAINST) / 2.0 if cond == "windy" else 1.0
+		var rule := {
+			"marks": float(r["mark_share_of_kicks"]) / float(rd["mark_share_of_kicks"]) * s._wx("aerial") - 1.0,
+			"contested_marks": s._wx("aerial") - 1.0,
+			"marks_inside_50": s._wx("aerial") - 1.0,
+			"tackles": s._wx("tackle_share") * float(r["pressure_base"]) / float(rd["pressure_base"]) - 1.0,
+			"clangers": float(r["clanger_per_chain"]) / float(rd["clanger_per_chain"]) - 1.0 + s._wx("fumble", 0.0),
+			"one_percenters": float(r["one_percenter_share"]) / float(rd["one_percenter_share"]) - 1.0,
+			"bounces": s._wx("run") - 1.0,
+			"goals": s._wx("set_acc") * float(r["inside50_goal"]) / float(rd["inside50_goal"]) * breeze - 1.0,
+		}
+		var wrong := []
+		var asked := 0
+		for k in rule:
+			var ch := float(c[k]["change"])
+			if absf(ch) <= 2.0 * float(c[k]["se"]):
+				continue
+			asked += 1
+			if float(rule[k]) * ch <= 0.0:
+				wrong.append(k)
+		_check(wrong.is_empty(), "%s: every clear real change the sim has a rule for goes the same way (%d asked, wrong: %s)"
+				% [cond, asked, str(wrong)])
 
 
 func _fake(id: String, role: String, attr: Dictionary) -> Dictionary:
@@ -3729,20 +3900,6 @@ func _test_df_duel_numbers() -> void:
 
 
 func _test_defensive_forward_cards() -> void:
-	# Copy-truth: the cost line is built from MINDER_ROAM and MINDER_INVOLVE,
-	# in words (no numbers on the break), and the words follow the constants.
-	var line := MatchNotes.minder_cost_line()
-	var kept_spec := float(MatchSim.MINDER_ROAM["specialist"])
-	var kept_other := float(MatchSim.MINDER_ROAM["other"])
-	_check(kept_spec < kept_other and kept_spec < 0.5 and kept_other > 0.55 and kept_other <= 0.8
-			and line.contains("%s of his contests with a Defensive forward" % MatchNotes.reach_words(kept_spec))
-			and line.contains("%s with any other forward" % MatchNotes.reach_words(kept_other))
-			and line.contains("well under half of his contests with a Defensive forward")
-			and line.contains("most with any other forward")
-			and float(MatchSim.MINDER_INVOLVE) <= 0.35 and line.contains("far less often") and not line.contains("%"),
-			"The cost line says what the constants do, in words (%s)" % line)
-	_check(MatchNotes.reach_words(0.2) == "hardly any" and MatchNotes.reach_words(0.5) == "about half"
-			and MatchNotes.reach_words(0.9) == "nearly all", "The share words read right at their edges")
 	_check(MatchNotes.minder_question("Jake Lever", "Melbourne").begins_with("Who covers Jake Lever (Melbourne)?")
 			and MatchNotes.minder_none_line().contains("no loose defender"),
 			"The question names their loose defender and his club; with none, it says so")

@@ -1354,7 +1354,11 @@ func _test_trade_picks() -> void:
 	for id in d.picked:
 		if int(d.pick_details(str(id)).get("pick", 0)) == at + 1:
 			used_by = d.drafted_by(str(id))
-	_check(used_by == holder, "The player taken with the traded pick goes to its holder (%s)" % used_by)
+	# A holder whose senior list is already full passes the pick (Draft._list_full):
+	# then nobody takes a player with it, the holder included.
+	var holder_full := d._list_full(holder) and d.passed_clubs.has(holder)
+	_check(used_by == holder or (used_by == "" and holder_full),
+			"The player taken with the traded pick goes to its holder (%s; holder's list full: %s)" % [used_by, str(holder_full)])
 	var spent_year := GameState.season_year
 	var spent_gone := GameState.finish_intake_draft()
 	for key in GameState.pick_owner:
@@ -1374,12 +1378,12 @@ func _run_draft() -> void:
 ## draft's and the next two drafts'; players never; a rival judges by its own
 ## read; a pick you sell moves you off the clock; the deal survives a save.
 func _test_draft_night_trades() -> void:
-	# A career where rivals deal on the night (seed 1: one rival deal. With
-	# every update in the game, seeds 1, 5 and 6 of 1-8 have one and the rest
+	# A career where rivals deal on the night (seed 3: one rival deal. Since
+	# the 2026-11-08 bug bash, seeds 3, 5 and 6 of 1-6 have one and the rest
 	# none, so the seed is pinned to a night that has one.)
 	GameState.reset()
-	GameState.career_seed = 1
-	GameState.replay_seed = 1
+	GameState.career_seed = 3
+	GameState.replay_seed = 3
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	_to_offseason()
 	var me := GameState.my_club
@@ -1734,14 +1738,19 @@ func _test_trade_requests() -> void:
 	for code in GameState.season.lists:
 		if code != me and not (GameState.season.lists[code] as Array).is_empty():
 			rival = str(code)
-			their = Ratings.select_22(GameState.season.lists[code])["bench"][0]
+			# A player retiring at the rollover can't be traded at all.
+			for q in Ratings.select_22(GameState.season.lists[code])["bench"]:
+				if not GameState.retiring_now(q):
+					their = q
+					break
 			break
 	var other := ""
 	for code in GameState.season.lists:
 		if code != me and str(code) != rival:
 			other = str(code)
 			break
-	var mine := [str(GameState.my_list[GameState.my_list.size() - 1]["id"])]
+	var staying := GameState.my_list.filter(func(q): return not GameState.retiring_now(q))
+	var mine := [str(staying[staying.size() - 1]["id"])]
 	GameState.trade_requests = {}
 	var before := GameState.evaluate_trade(rival, mine, [str(their["id"])])
 	GameState.trade_requests = {str(their["id"]): {"club": rival, "why": "games", "to": [me]}}
@@ -2439,6 +2448,25 @@ func _test_trade_reasons() -> void:
 	var twice := GameState.evaluate_trade(rival, [str(mine_list[0]["id"]), str(mine_list[0]["id"])], [str(theirs[0]["id"])])
 	_check(str(twice.get("code", "")) == "trade_twice" and str(twice["reason"]) == "Each player or pick can only go in once.",
 			"A player put in twice has its own reason")
+	# A player retiring at the rollover is nobody's to trade, on either side,
+	# and no rival club deals in him either.
+	var going: Dictionary = theirs[0]
+	var mine_going: Dictionary = mine_list[0]
+	var was := [going.get("retiring", 0), mine_going.get("retiring", 0)]
+	going["retiring"] = GameState.season_year + 1
+	mine_going["retiring"] = GameState.season_year + 1
+	var for_him := GameState.evaluate_trade(rival, [str(mine_list[1]["id"])], [str(going["id"])])
+	var of_mine := GameState.evaluate_trade(rival, [str(mine_going["id"])], [str(theirs[1]["id"])])
+	var in_pool := false
+	for code in GameState.season.lists:
+		if str(code) != rival and GameState._trade_pool(str(code), rival).has(going):
+			in_pool = true
+	going["retiring"] = was[0]
+	mine_going["retiring"] = was[1]
+	_check(str(for_him.get("code", "")) == "trade_retiring" and str(of_mine.get("code", "")) == "trade_retiring"
+			and str(for_him["reason"]) == "That player has announced his retirement." and not in_pool,
+			"A retiring player can't be traded for or traded away (%s, %s, in a pool: %s)" % [
+				str(for_him.get("code", "")), str(of_mine.get("code", "")), str(in_pool)])
 
 
 ## P-18: a free agent who chooses another club says why, from the branch his
@@ -2656,6 +2684,20 @@ func _test_rivals_act_in_their_interest() -> void:
 				== Contracts.club_max(kid, "bench", 1 << 40) + Contracts.SALARY_STEP,
 				"A rebuilding club pays one step more for a young player still growing")
 	_check(GameState.MAX_AI_TRADES >= 40, "Rival trades have only a runaway guard")
+	# A rival's answer reads in AFL money, not a raw number.
+	var target: Dictionary = star.duplicate(true)
+	var ask := Contracts.asking_salary(target)
+	var leader := {"club": GameState.my_club, "salary": ask + Contracts.SALARY_STEP, "years": 3, "role": "ground", "finish_t": 0.5}
+	target["offers"] = [leader, {"club": club, "salary": ask, "years": 3, "role": "ground", "finish_t": 0.5}]
+	var stats_before: Dictionary = GameState.market_stats.duplicate(true)
+	GameState.salary_cap = 1 << 40
+	var said: Array = GameState._rival_round(target, leader)
+	GameState.salary_cap = cap_before
+	GameState.market_stats = stats_before
+	var raw := RegEx.new()
+	raw.compile("[0-9]{5,}")
+	_check(said.size() == 1 and str(said[0]).contains(": $") and raw.search(str(said[0])) == null,
+			"A rival's improved offer is priced in AFL money (%s)" % str(said))
 
 
 ## Row 114 (Challenge.gd): Youth only refuses a trade for, or an offer to, a
@@ -2749,7 +2791,7 @@ func _test_challenge_offers() -> void:
 		if code == me:
 			continue
 		for q in GameState.season.lists[code]:
-			if int(floor(float(q.get("age", 0)))) >= 25:
+			if int(floor(float(q.get("age", 0)))) >= 25 and not GameState.retiring_now(q):
 				old = q
 				rival = code
 				break
@@ -2766,8 +2808,9 @@ func _test_challenge_offers() -> void:
 			if Challenge.block_reason(GameState, a) != "":
 				free_over += 1
 	_check(free_over > 0, "Rival clubs trading with each other are not bound by your challenge (%d)" % free_over)
+	var staying := GameState.my_list.filter(func(q): return not GameState.retiring_now(q))
 	GameState.trade_offers.append({"club": rival, "give": [str(old["id"])],
-			"take": [str(GameState.my_list[GameState.my_list.size() - 1]["id"])], "status": "open"})
+			"take": [str(staying[staying.size() - 1]["id"])], "status": "open"})
 	var i := GameState.trade_offers.size() - 1
 	if GameState.open_trade_offers().has(i):
 		var r := GameState.accept_trade_offer(i)

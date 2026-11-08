@@ -631,22 +631,24 @@ func _test_sim_to_round_one_taps() -> void:
 	Router.stack = []
 
 
-## The practice match keeps the coach's Key moments; Skip does not carry over,
-## because the coach pressed Coach the match (Sim the match is beside it).
+## The practice match is always watched: Skip does not carry over, because the
+## coach pressed Coach the match (Sim the match is beside it), and an old Key
+## moments setting (cut, director 2026-11-08) reads as Watch.
 func _test_match_way() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
 	tree.root.size = Vector2i(390, 844)
 	var was := GameState.match_way()
-	for way in ["key", "skip", "watch"]:
+	for way in ["skip", "watch", "key"]:
 		_career()
-		GameState.set_match_way(way)
+		# Written raw: "key" is what an install from before the cut still holds.
+		GameState.set_setting("match_way", way)
 		_to_practice()
-		GameState.match_way_live = "watch" if way == "key" else "key"   # a leftover from another match
-		_check(GameState.prepare_practice_match() and GameState.match_way_live == ("key" if way == "key" else "watch"),
-				"The practice match plays as %s says (%s)" % [way, GameState.match_way_live])
+		GameState.match_way_live = "skip"   # a leftover from another match
+		_check(GameState.prepare_practice_match() and GameState.match_way_live == "watch",
+				"With %s set, the practice match is watched (%s)" % [way, GameState.match_way_live])
 		GameState._clear_pending()
 	_career()
-	GameState.set_match_way("key")
+	GameState.set_match_way("skip")
 	GameState.set_setting("seen_weekly_loop_intro", true)
 	GameState.set_setting("seen_training_intro", true)
 	var scene: Control = await _tap_to_practice(tree)
@@ -655,13 +657,21 @@ func _test_match_way() -> void:
 	for i in range(120):
 		await tree.process_frame
 		m = tree.current_scene as Control
-		if m != null and m.name == "MatchScene" and m.find_child("KeyMomentsState", true, false) != null:
+		if m != null and m.name == "MatchScene" and m.find_child("CoachBox", true, false) != null:
 			break
-	var word := m.find_child("KeyMomentsState", true, false) as Control if m != null else null
-	_check(m != null and m.name == "MatchScene" and bool(m.get("_key_moments")) and word != null and word.is_visible_in_tree(),
-			"Phone: with Key moments set, the practice match opens on Key moments (scene %s, live %s, km %s, word %s)" % [
-			str(m.name) if m != null else "none", GameState.match_way_live, str(m.get("_key_moments")) if m != null else "",
-			str(word.is_visible_in_tree()) if word != null else "none"])
+	var speeds_shown := 0
+	var km_node := false
+	if m != null and m.name == "MatchScene":
+		for b in m.get("_speed_btns"):
+			if (b as Control).is_visible_in_tree():
+				speeds_shown += 1
+		for c in m.find_children("*", "Control", true, false):
+			if str(c.name).begins_with("KeyMoments"):
+				km_node = true
+	_check(m != null and m.name == "MatchScene" and m.find_child("CoachBox", true, false) != null
+			and not bool(m.get("_fulltime_shown")) and speeds_shown == 4 and not km_node,
+			"Phone: with Skip set, Coach the match opens the practice match watched (scene %s, live %s, speeds %d)" % [
+			str(m.name) if m != null else "none", GameState.match_way_live, speeds_shown])
 	GameState._clear_pending()
 	GameState.set_match_way(was)
 	Router.stack = []
