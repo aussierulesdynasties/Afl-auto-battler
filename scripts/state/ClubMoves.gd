@@ -12,7 +12,8 @@ extends RefCounted
 ##                 his coaching career is over (TODO T5.r22, Director Bible
 ##                 5.2.19-5.2.22). Every running arc ends at the old club, and
 ##                 the move waits in coach_arcs.move.
-##   apply_move    (at the rollover, before the new lists are built): he is the
+##   apply_move    (at the rollover, before the new lists are built; at once
+##                 when he takes a rival board's letter): he is the
 ##                 new club's coach. That club's AI senior coach takes the job
 ##                 he left (or, when his assistant was after it, the assistant
 ##                 does and the AI coach is let go). His career record (seasons,
@@ -51,6 +52,7 @@ static func season_close(gs) -> void:
 		return
 	_assistant_leaves(gs, st)
 	if to == "":
+		_rival_letter(gs, st)
 		return
 	# The assistant who may inherit the job (arc "assistant"), named now while
 	# the arc still remembers him.
@@ -315,10 +317,28 @@ static func _jobs_after_sack(gs, st: Dictionary) -> Array:
 		var outlook: Dictionary = gs.team_outlook(code)
 		var rank := int(gs.club_expect.get(code, ClubLife.default_rank(table.size())))
 		out.append({"code": code, "name": GameDB.club_name(code), "finish": int(finish[code]), "clubs": table.size(),
-				"list": str(outlook.get("line", "")),
+				"list": _list_line(outlook),
 				"goal": str(ClubLife.board_goal(rank, int(finish[code]), table.size()).get("text", "")),
-				"why_open": str(why_open.get(code, "The board wants a new senior coach."))})
+				"why_open": why_open_line(gs, code, year)})
 	return out
+
+
+## A club's list as a letter or a job offer gives it: the rating now and in
+## three years, never the Contender / Wildcard / Rebuilding word (director,
+## 2026-11-08). "" for a club with no list.
+static func _list_line(outlook: Dictionary) -> String:
+	if outlook.is_empty():
+		return ""
+	return TeamRating.rating_line(int(outlook["rating"]), int(outlook["forecast"]))
+
+
+## The off-season's opening moves rival lists (their re-signings, trades),
+## so a sacked coach's offers give each club's list as it stands after it.
+static func restate_offers(gs) -> void:
+	if not ClubArcs.on(gs):
+		return
+	for o in ClubArcs._st(gs).get("offers", []):
+		o["list"] = _list_line(gs.team_outlook(str(o["code"])))
 
 
 ## `n` of `pool`, seeded.
@@ -341,16 +361,86 @@ static func _coaches_gone(gs, year: int) -> Dictionary:
 			if str(s[1]) != "SC" or int(s[3]) != year:
 				continue
 			var club := str(s[0])
-			var who := GameDB.player_display_name(c)
-			if int((c.get("sacked_by", {}) as Dictionary).get(club, 0)) == year:
-				out[club] = "They sacked %s." % who
-			elif str(c.get("status", "")) == "retired":
-				out[club] = "%s has retired." % who
-			elif str(c.get("status", "")) == "club" and str(c.get("club", "")) != club:
-				out[club] = "%s has left to coach %s." % [who, GameDB.club_name(str(c.get("club", "")))]
-			elif str(c.get("status", "")) != "club":
-				out[club] = "%s's contract was not renewed." % who
+			var status := str(c.get("status", ""))
+			if int((c.get("sacked_by", {}) as Dictionary).get(club, 0)) == year or status != "club" or str(c.get("club", "")) != club:
+				out[club] = _gone_line(c, club, year)
 	return out
+
+
+## Why a club's senior job is open, every coach named with his club, so a
+## line read on its own never leaves a coach without one (director,
+## 2026-11-08: "why is it sam mitchell in photo 1 and then simon goodwin in
+## photo 2?"): "Sam Mitchell has left Hawthorn to coach Sydney. Simon Goodwin was
+## signed to replace him, but the board wants you instead." The coach a club signed
+## at this off-season is the one who takes the job he leaves (apply_move).
+static func why_open_line(gs, code: String, year: int) -> String:
+	var club := GameDB.club_name(code)
+	var now := _senior_coach(gs, code)
+	var gone := {}
+	for cid in gs.coaches:
+		var c: Dictionary = gs.coaches[cid]
+		if is_same(c, now):
+			continue
+		for s in c.get("stints", []):
+			if str(s[0]) == code and str(s[1]) == "SC" and int(s[3]) == year:
+				gone = c
+	if gone.is_empty():
+		if now.is_empty():
+			return "The %s board wants a new senior coach." % club
+		return "The %s board wants to replace %s." % [club, GameDB.player_display_name(now)]
+	var line := _gone_line(gone, code, year)
+	if _signed_at(now, code, year):
+		line += " %s was signed to replace him, but the board wants you instead." % GameDB.player_display_name(now)
+	return line
+
+
+## One departed senior coach, with his club: sacked, retired, gone to another
+## club (to coach it, or to its staff), moved down to an assistant's job, or
+## his contract not renewed.
+static func _gone_line(c: Dictionary, code: String, year: int) -> String:
+	var who := GameDB.player_display_name(c)
+	var club := GameDB.club_name(code)
+	var status := str(c.get("status", ""))
+	if int((c.get("sacked_by", {}) as Dictionary).get(code, 0)) == year:
+		return "%s sacked %s." % [club, who]
+	if status == "retired":
+		return "%s has retired as %s coach." % [who, club]
+	if status == "club" and str(c.get("club", "")) != code:
+		var to := GameDB.club_name(str(c.get("club", "")))
+		if str(c.get("job", "")) == "SC":
+			return "%s has left %s to coach %s." % [who, club, to]
+		return "%s has left %s to join %s's coaching staff." % [who, club, to]
+	if status == "club":
+		return "%s have moved %s to an assistant's job." % [club, who]
+	return "%s have not renewed %s's contract." % [club, who]
+
+
+## `c` is `code`'s senior coach from next season, signed at this off-season.
+static func _signed_at(c: Dictionary, code: String, year: int) -> bool:
+	for s in c.get("stints", []):
+		if str(s[0]) == code and str(s[1]) == "SC" and int(s[2]) == year + 1:
+			return true
+	return false
+
+
+## Who coaches the club he leaves, both clubs named (read after the move,
+## apply_move): "Fremantle have appointed Simon Goodwin to replace you.
+## Hawthorn had just signed him."
+static func successor_line(gs, from: String, to: String, year: int) -> String:
+	var old := GameDB.club_name(from)
+	var c := _senior_coach(gs, from)
+	if c.is_empty():
+		return "%s have yet to name your replacement." % old
+	var who := GameDB.player_display_name(c)
+	var stints: Array = c.get("stints", [])
+	var prev: Array = stints[-2] if stints.size() >= 2 else []
+	if not prev.is_empty() and str(prev[0]) == from:
+		return "%s have promoted your old assistant %s to replace you." % [old, who]
+	if not prev.is_empty() and str(prev[0]) == to and str(prev[1]) == "SC":
+		if int(prev[2]) == year + 1:
+			return "%s have appointed %s to replace you. %s had just signed him." % [old, who, GameDB.club_name(to)]
+		return "%s have appointed %s to replace you. He makes way for you at %s." % [old, who, GameDB.club_name(to)]
+	return "%s have appointed %s to replace you." % [old, who]
 
 
 ## The assistant (arc "assistant") who was backed to go: he takes the rival's
@@ -371,7 +461,8 @@ static func _assistant_leaves(gs, st: Dictionary) -> void:
 		CoachMarket._leave_job(sc, year)
 	CoachMarket._appoint(asst, to, "SC", year, int(gs.career_seed))
 	if not gs._vacancy_open(job):
-		gs.staff_vacancies.append({"job": job, "reason": "%s has left to coach %s." % [str(mem.get("assistant", "")), GameDB.club_name(to)]})
+		gs.staff_vacancies.append({"job": job, "reason": "%s has left %s to coach %s." % [str(mem.get("assistant", "")),
+				GameDB.club_name(gs.my_club), GameDB.club_name(to)]})
 
 
 # ---------------------------------------------------------------------------
@@ -381,6 +472,8 @@ static func apply_move(gs) -> void:
 	if not ClubArcs.on(gs):
 		return
 	var st := ClubArcs._st(gs)
+	# A letter never answered by the rollover is a no: he stays.
+	settle_letter(gs)
 	var mv: Dictionary = st["move"]
 	var to := str(mv.get("to", ""))
 	if to == "" or to == str(gs.my_club):
@@ -429,9 +522,7 @@ static func apply_move(gs) -> void:
 	gs.coach_approaches = []
 	gs.trade_requests = {}
 	gs.week_events = []
-	var old_name := GameDB.club_name(from)
-	gs.add_news(ClubArcs.NEWS_KIND, "You are the new senior coach of %s. %s takes over at %s." % [GameDB.club_name(to),
-			(GameDB.player_display_name(heir) if not heir.is_empty() else (GameDB.player_display_name(theirs) if not theirs.is_empty() else "A new coach")), old_name])
+	gs.add_news(ClubArcs.NEWS_KIND, "You are the new senior coach of %s. %s" % [GameDB.club_name(to), successor_line(gs, from, to, year)])
 	# The reprieve, said plainly at the new club (rule 60).
 	if str(mv.get("why", "")) == "sacked":
 		gs.add_news(ClubArcs.NEWS_KIND, reprieve_line(gs))
@@ -600,3 +691,154 @@ static func _coached_at(st: Dictionary, code: String) -> bool:
 		if str(h.get("code", "")) == code:
 			return true
 	return false
+
+
+# ---------------------------------------------------------------------------
+# A rival board's letter (TODO T5.r23, Director Bible 5.2.23)
+# ---------------------------------------------------------------------------
+## After a strong season (the finals played and the board's goal met) one rival
+## board writes to offer him its senior job: one letter a season at most, in
+## the off-season, never while he is sacked or already leaving, and not in a
+## season a rival already chased him (arc "poached"). The club: one whose
+## senior coach left at this off-season, else a bottom-half club (seeded, so a
+## reload agrees); never his own or a club that sacked him. Facts only: where
+## they finished, why the job is open, the list in words and the goal their
+## board would set, then the risk. The off-season waits for his answer
+## (GameState.open_offseason). Taking it moves him straight away (apply_move):
+## he runs the new club's off-season (contracts, trades, the draft) and the old
+## club carries on under the new club's old coach. Declining changes nothing.
+static func _rival_letter(gs, st: Dictionary) -> void:
+	var year := int(gs.season_year)
+	if gs.is_sacked() or not (st["move"] as Dictionary).is_empty() or int(st["letter"].get("year", 0)) == year:
+		return
+	if not strong_season(gs):
+		return
+	if (st["active"] as Dictionary).has("poached") or int((st["done"].get("poached", {}) as Dictionary).get("year", 0)) == year:
+		return
+	var table: Array = gs.season.ladder_sorted()
+	var finish := {}
+	for i in range(table.size()):
+		finish[str(table[i]["code"])] = i + 1
+	var not_him := {str(gs.my_club): true}
+	for h in st["coach"]["clubs"]:
+		if str(h.get("why_left", "")) == "sacked":
+			not_him[str(h["code"])] = true
+	var asst: Dictionary = st["active"].get("assistant", {})
+	if (asst.get("flags", {}) as Dictionary).has("backed"):
+		not_him[str(asst.get("mem", {}).get("assistant_code", ""))] = true
+	var why_open := _coaches_gone(gs, year)
+	var open := []
+	var bottom := []
+	var half := maxi(1, table.size() / 2)
+	for i in range(table.size()):
+		var code := str(table[i]["code"])
+		if not_him.has(code) or _senior_coach(gs, code).is_empty():
+			continue
+		if why_open.has(code):
+			open.append(code)
+		elif i + 1 > half:
+			bottom.append(code)
+	var pool := open if not open.is_empty() else bottom
+	if pool.is_empty():
+		return
+	var code: String = pool[_roll(gs, "letter|%d" % year, pool.size())]
+	var outlook: Dictionary = gs.team_outlook(code)
+	var mine: Dictionary = gs.team_outlook(str(gs.my_club))
+	var rank := int(gs.club_expect.get(code, ClubLife.default_rank(table.size())))
+	st["letter"] = {"year": year, "code": code, "name": GameDB.club_name(code), "from": str(gs.my_club),
+			"finish": int(finish.get(code, 0)), "clubs": table.size(), "list": _list_line(outlook),
+			"my_list": _list_line(mine), "board": gs.board_confidence(),
+			"goal": str(ClubLife.board_goal(rank, int(finish.get(code, 0)), table.size()).get("text", "")),
+			"why_open": why_open_line(gs, code, year),
+			"president": ClubArcs._gen_name(int(gs.career_seed), "president|" + code), "answer": ""}
+	CoachArcs.log_line(st, year, "Season end", "letter", "A letter from %s offers him their senior job." % GameDB.club_name(code))
+	gs.add_news(ClubArcs.NEWS_KIND, "A letter from %s: their board offers you the senior job." % GameDB.club_name(code))
+
+
+## A strong season: he took the club to the finals and met the board's goal
+## (this season's close, read from the honour roll and the board's history).
+static func strong_season(gs) -> bool:
+	var year := int(gs.season_year)
+	var hist: Array = gs.board.get("history", [])
+	if hist.is_empty() or int(hist[-1].get("year", 0)) != year or not bool(hist[-1].get("met", false)):
+		return false
+	if gs.honour_roll.is_empty():
+		return false
+	var h: Dictionary = gs.honour_roll[-1]
+	return int(h.get("year", 0)) == year and str(h.get("my_club", "")) == str(gs.my_club) and str(h.get("my_finals", "")) != ""
+
+
+## This off-season's letter ({} when none was written).
+static func letter(gs) -> Dictionary:
+	if not ClubArcs.on(gs) or not (gs.coach_arcs is Dictionary) or gs.coach_arcs.is_empty():
+		return {}
+	var l: Dictionary = ClubArcs._st(gs)["letter"]
+	return l if int(l.get("year", 0)) == int(gs.season_year) else {}
+
+
+## A letter waiting for his answer.
+static func letter_open(gs) -> bool:
+	var l := letter(gs)
+	return not l.is_empty() and str(l.get("answer", "")) == ""
+
+
+## What taking the job risks, in facts: the new board, the list he leaves and
+## what a sacking there would mean.
+static func letter_risk(gs) -> PackedStringArray:
+	var l := letter(gs)
+	var out := PackedStringArray()
+	if l.is_empty():
+		return out
+	out.append("Their board starts you at %d out of 100. %s's board is at %d now." % [ClubLife.START_CONFIDENCE,
+			GameDB.club_name(str(l["from"])), int(l["board"])])
+	if str(l.get("my_list", "")) != "":
+		out.append("You leave %s's list behind: %s" % [GameDB.club_name(str(l["from"])), str(l["my_list"])])
+	out.append("Sacked there, you would get one more chance at another club." if reprieves(gs) > 0
+			else "Sacked there, your coaching career is over. A premiership earns you another chance.")
+	return out
+
+
+## He takes the job and moves now: every running arc ends at the club he is
+## leaving, he becomes the new club's coach (apply_move, as at a rollover) and
+## the off-season opens there. One club at a time: once he has signed, nothing
+## else can move him.
+static func accept_letter(gs) -> bool:
+	if not letter_open(gs):
+		return false
+	var st := ClubArcs._st(gs)
+	var l: Dictionary = st["letter"]
+	var year := int(l["year"])
+	var heir_id := str((st["active"].get("assistant", {}) as Dictionary).get("mem", {}).get("assistant_id", ""))
+	_close_for_move(gs, st)
+	l["answer"] = "taken"
+	st["move"] = {"to": str(l["code"]), "why": "poached", "from": str(gs.my_club), "year": year, "heir": heir_id}
+	CoachArcs.log_line(st, year, "Season end", "letter", "Takes the senior job at %s." % str(l["name"]))
+	var from := str(gs.my_club)
+	apply_move(gs)
+	# Your list is the new club's from now (a rollover rebuilds it anyway).
+	if gs.season != null:
+		gs.my_list = gs.season.lists.get(str(gs.my_club), [])
+	var successor := _senior_coach(gs, from)
+	l["successor"] = GameDB.player_display_name(successor) if not successor.is_empty() else ""
+	l["after"] = successor_line(gs, from, str(l["code"]), year)
+	gs.open_offseason()
+	return true
+
+
+## He says no: nothing changes.
+static func decline_letter(gs) -> bool:
+	if not letter_open(gs):
+		return false
+	var st := ClubArcs._st(gs)
+	st["letter"]["answer"] = "declined"
+	CoachArcs.log_line(st, int(st["letter"]["year"]), "Season end", "letter", "Turns down %s." % str(st["letter"]["name"]))
+	# The off-season waited for his answer: it opens at his club.
+	gs.open_offseason(true)
+	return true
+
+
+## A letter still unanswered when the off-season moves on (a headless draft,
+## the rollover) is a no.
+static func settle_letter(gs) -> void:
+	if letter_open(gs):
+		decline_letter(gs)
