@@ -169,9 +169,9 @@ func _test_rules() -> void:
 	var afters := []
 	for e in picks:
 		afters.append(int(e["after"]))
-	_check(afters == [0, 1, 2, 3, 18, 36], "The first draft: picks 1, 3, 5, 7 and the first pick of rounds two and three (%s)" % str(afters))
-	var second: Array = Expansion.second_draft_picks("TAS")
-	_check(second.size() == 1 and int(second[0]["after"]) == 4, "The second draft: pick 5 and nothing else")
+	_check(afters == [0, 1, 2, 3, 4, 5, 6, 18, 36], "The first draft: picks 1, 3, 5, 7, 9, 11, 13 and the first pick of rounds two and three (%s)" % str(afters))
+	var second: Array = Expansion.later_draft_picks("TAS")
+	_check(second.size() == 2 and int(second[0]["after"]) == 4 and int(second[1]["after"]) == 7, "The next two drafts: picks 5 and 9")
 	var cap := Contracts.indexed_money_2027(Expansion.SIGN_ON_SEASON_MAX, 2028)
 	_check(Expansion.sign_on_relief(900000, 2028, 0) == 900000, "Sign-on money never exceeds what the signings are paid")
 	_check(Expansion.sign_on_relief(9000000, 2028, 0) == cap, "Sign-on money stops at the season's limit")
@@ -203,15 +203,16 @@ func _test_draft_seats() -> void:
 	var d := Draft.build_intake(pool, clubs.duplicate(), clubs.duplicate(), 7, {}, {}, {})
 	d.add_guest("TAS", 30, {"RUCK": 3, "MID": 10, "DEF": 9, "FWD": 8}, [])
 	var picks: Array = Expansion.first_draft_picks("TAS", clubs.size(), d.target_size)
-	picks[3]["club"] = str(clubs[5])   # the pick it must trade, traded
+	for i in [2, 3, 5, 6]:   # 5, 7, 11 and 13, the picks it must trade, traded
+		picks[i]["club"] = str(clubs[5])
 	d.add_compensation(picks)
-	_check(str(d.pick_sequence[0]) == "TAS" and str(d.pick_sequence[2]) == "TAS" and str(d.pick_sequence[4]) == "TAS",
-			"Tasmania holds picks 1, 3 and 5")
+	_check(str(d.pick_sequence[0]) == "TAS" and str(d.pick_sequence[2]) == "TAS" and str(d.pick_sequence[8]) == "TAS",
+			"Tasmania holds picks 1, 3 and 9")
 	_check(str(d.pick_sequence[1]) == str(clubs[0]) and str(d.pick_sequence[3]) == str(clubs[1]),
 			"The club that would have picked first picks second, the next picks fourth")
 	_check(str(d.pick_sequence[6]) == str(clubs[5]) and str(d.pick_origin[6]) == "TAS",
-			"The traded pick is pick 7, held by the club that traded for it")
-	_check(str(d.pick_sequence[clubs.size() + 4]) == "TAS" and int(d.pick_rounds[clubs.size() + 4]) == 2,
+			"A traded pick is pick 7, held by the club that traded for it")
+	_check(str(d.pick_sequence[clubs.size() + 7]) == "TAS" and int(d.pick_rounds[clubs.size() + 7]) == 2,
 			"Tasmania holds the first pick of round two")
 	_check(d.pick_limit("TAS") == 5, "Tasmania has five picks to make: three early ones and two later (%d)" % d.pick_limit("TAS"))
 	_run_plain(d)
@@ -245,15 +246,16 @@ func _test_build_and_entry() -> void:
 			"On: the list Tasmania built became its list")
 	_check(_count_prefix(tas, "EXP_") == 0, "On: none of the old generated players")
 	var from_state := _count_prefix(tas, "FND_")
-	_check(from_state >= 24 and from_state <= Expansion.FOUNDATION_SIZE, "On: the list is built on state-league signings (%d)" % from_state)
+	_check(from_state >= 10 and from_state <= Expansion.FOUNDATION_SIZE, "On: the list is built on state-league signings (%d)" % from_state)
 	_check(tas.size() >= Prospects.MIN_LIST and tas.size() <= Contracts.MAX_LIST, "On: a full list (%d)" % tas.size())
 	var mine := _picks_of(history, "TAS")
-	_check(mine.has(1) and mine.has(3) and mine.has(5), "On: Tasmania drafted at picks 1, 3 and 5 (%s)" % str(mine))
-	_check(bool(st.get("traded", false)) and not mine.has(7), "On: pick 7 was traded, as it must be (%s)" % str(mine))
+	_check(mine.has(1) and mine.has(3) and mine.has(9), "On: Tasmania drafted at picks 1, 3 and 9 (%s)" % str(mine))
+	_check((st.get("traded_picks", []) as Array).size() == 4 and not (mine.has(5) or mine.has(7) or mine.has(11) or mine.has(13)),
+			"On: picks 5, 7, 11 and 13 were traded, as they must be (%s)" % str(mine))
 	var trade_news := false
 	var entry_news := false
 	for item in GameState.news:
-		if str(item["text"]).begins_with("Trade: Tasmania trade pick 7"):
+		if str(item["text"]).begins_with("Trade: Tasmania trade pick 5"):
 			trade_news = true
 		if str(item["kind"]) == "expansion" and str(item["text"]).contains("from the state leagues"):
 			entry_news = true
@@ -316,8 +318,8 @@ func _test_second_year_and_end() -> void:
 	for c in GameState.draft.comp_picks:
 		if bool(c.get("concession", false)):
 			extra.append([str(c["club"]), int(c["index"]) + 1])
-	_check(extra.size() == 1 and str(extra[0][0]) == "TAS" and int(extra[0][1]) == 5,
-			"The second draft: Tasmania holds pick 5 on top of its own (%s)" % str(extra))
+	_check(extra.size() == 2 and str(extra[0][0]) != "TAS" and int(extra[0][1]) == 5 and str(extra[1][0]) == "TAS" and int(extra[1][1]) == 9,
+			"The second draft: Tasmania trades pick 5 and holds pick 9 on top of its own (%s)" % str(extra))
 	_run_draft()
 	GameState.finish_intake_draft()
 	var st: Dictionary = GameState.expansion["TAS"]
@@ -332,7 +334,7 @@ func _test_second_year_and_end() -> void:
 	for c in GameState.draft.comp_picks:
 		if bool(c.get("concession", false)):
 			later += 1
-	_check(later == 0, "The third draft: no extra pick")
+	_check(later == 2, "The third draft: picks 5 and 9 again")
 	_run_draft()
 	GameState.finish_intake_draft()
 	_check(GameState.cap_for("TAS") == GameState.salary_cap, "From its third season Tasmania's cap is everyone's cap")
@@ -530,7 +532,7 @@ func _test_save_round_trip() -> void:
 	for c in GameState.draft.comp_picks:
 		if bool(c.get("concession", false)):
 			extra += 1
-	_check(GameState.draft != null and extra == 1, "The open draft keeps Tasmania's extra pick through a reload")
+	_check(GameState.draft != null and extra == 2, "The open draft keeps Tasmania's extra pick through a reload")
 	_run_draft()
 	_check(GameState.finish_intake_draft() and GameState.season_year == 2029, "The reloaded draft finishes")
 

@@ -301,9 +301,9 @@ func _open_wait_sheet(code: String) -> void:
 	v.add_child(UiKit.heading("Start with %s in %d?" % [name_, year], UiKit.H1))
 	for line in [
 			"%s join the league in %d, so your first season is %d." % [name_, year, year],
-			"%d plays out without you. Their staff sign %d state-league players and trade pick %d for a senior player." % [
-				year - 1, Expansion.FOUNDATION_SIZE, Expansion.MUST_TRADE_PICK],
-			"You take over at the %d National Draft with picks 1, 3 and 5 and the first pick of each later round." % (year - 1)]:
+			"%d plays out without you. Their staff sign %d state-league players, chase out-of-contract players at rival clubs and trade picks 5, 7, 11 and 13 for senior players." % [
+				year - 1, Expansion.FOUNDATION_SIZE],
+			"You take over at the %d National Draft with picks 1, 3 and 9, the first pick of each later round, and any Tasmanian academy players." % (year - 1)]:
 		var l := UiKit.lbl(line, UiKit.BODY, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)

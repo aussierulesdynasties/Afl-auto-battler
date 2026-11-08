@@ -471,7 +471,7 @@ static func player_facts(gs) -> Array:
 	var rank := {}
 	for i in range(fit.size()):
 		rank[str(fit[i]["id"])] = i + 1
-	var cap_room: int = gs.salary_cap - gs.my_payroll()
+	var cap_room: int = gs.cap_for(str(gs.my_club)) - gs.my_payroll()
 	# By rating on the whole list, the injured included (ties by id, so the same list ranks the same way).
 	var everyone: Array = gs.my_list.duplicate()
 	everyone.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]) 			or (int(a["overall"]) == int(b["overall"]) and str(a["id"]) < str(b["id"])))
@@ -984,7 +984,7 @@ static func _extend(gs, p: Dictionary, name: String) -> String:
 	var years := ClubLife.early_years(p)
 	if int(p.get("contract_years", 1)) > 1:
 		return "%s is already signed beyond this season." % name
-	if gs.my_payroll() - int(p.get("salary", 0)) + cost > gs.salary_cap:
+	if gs.my_payroll() - int(p.get("salary", 0)) + cost > gs.cap_for(str(gs.my_club)):
 		# The cap moved since the card was drawn: nobody's fault.
 		return "The cap no longer has room to extend %s now; it waits for the off-season." % name
 	# Under 50, he may refuse you (director 2026-11-08): the draw talks use.
