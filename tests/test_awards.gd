@@ -21,6 +21,7 @@ func run() -> void:
 	_t("_test_vote_arithmetic")
 	_t("_test_umpires_measure")
 	_t("_test_umpires_draw")
+	_t("_test_coaches_read_taps")
 	_t("_test_brownlow_eligibility")
 	_t("_test_norm_smith_rules")
 	_t("_test_comeback_records")
@@ -195,13 +196,13 @@ func _test_vote_arithmetic() -> void:
 
 ## The Brownlow is the umpires' award: Awards.umpire_score (their fitted
 ## weights, plus UMPIRE_WIN for a man on the winning side) picks the 3-2-1,
-## while the coaches' votes and the best-and-fairest stay on influence. A
-## ruckman's tap count does not carry him past a 30-disposal midfielder
+## while the best-and-fairest stays on influence and the coaches' votes on the
+## match rating (MatchNotes.coaches_votes). A ruckman's tap count does not carry him past a 30-disposal midfielder
 ## (director, 2026-11-08), and clangers and pressure acts do not move the
 ## umpires' count.
 func _test_umpires_measure() -> void:
-	var ruck := {"disposals": 14.0, "hitouts": 45.0, "marks": 4.0, "clearances": 4.0, "tackles": 3.0}
-	var mid := {"disposals": 30.0, "marks": 5.0, "clearances": 6.0, "inside50": 4.0, "tackles": 5.0}
+	var ruck := {"disposals": 14.0, "kicks": 10.0, "handballs": 4.0, "hitouts": 45.0, "marks": 4.0, "clearances": 4.0, "tackles": 3.0}
+	var mid := {"disposals": 30.0, "kicks": 12.0, "handballs": 18.0, "marks": 5.0, "clearances": 6.0, "inside50": 4.0, "tackles": 5.0}
 	_check(CoachReport.influence(ruck) > CoachReport.influence(mid),
 			"(case) influence rates the 45-hit-out ruck above the 30-disposal mid")
 	_check(Awards.umpire_score(ruck, false) < Awards.umpire_score(mid, false),
@@ -218,12 +219,13 @@ func _test_umpires_measure() -> void:
 			"An empty line on the losing side scores nothing")
 	# One match: the home side wins; "winner" (14 disposals) and "loser"
 	# (20 disposals, beaten side) sit either side of the win bonus.
-	var players := {"ruck": ruck, "mid": mid, "winner": {"disposals": 14.0}, "loser": {"disposals": 20.0}}
+	var players := {"ruck": ruck, "mid": mid, "winner": {"disposals": 14.0, "kicks": 7.0, "handballs": 7.0},
+			"loser": {"disposals": 20.0, "kicks": 10.0, "handballs": 10.0}}
 	var home := [{"id": "ruck"}, {"id": "mid"}, {"id": "winner"}]
 	var away := [{"id": "loser"}]
 	for i in range(3):
-		players["h%d" % i] = {"disposals": 5.0}
-		players["a%d" % i] = {"disposals": 5.0}
+		players["h%d" % i] = {"disposals": 5.0, "kicks": 2.0, "handballs": 3.0}
+		players["a%d" % i] = {"disposals": 5.0, "kicks": 2.0, "handballs": 3.0}
 		home.append({"id": "h%d" % i})
 		away.append({"id": "a%d" % i})
 	var res := {"home": "GEE", "away": "HAW", "score": [80, 70], "roster": [home, away], "players": players}
@@ -231,9 +233,9 @@ func _test_umpires_measure() -> void:
 	Awards.tally_match(tally, res, true, false)
 	_check(int(tally["mid"]["votes"]) == 3 and int(tally["ruck"]["votes"]) == 2,
 			"The umpires give the mid 3 votes and the ruck 2")
-	_check(int(tally["ruck"]["coaches"]) == 5 and int(tally["mid"]["coaches"]) == 4
+	_check(int(tally["ruck"]["coaches"]) == 10 and int(tally["mid"]["coaches"]) == 8
 			and int(tally["ruck"]["bf"]) == 5 and int(tally["mid"]["bf"]) == 4,
-			"...while the coaches and the club best-and-fairest, on influence, have the ruck first")
+			"...while both coaches, and the club best-and-fairest on influence, have the ruck first")
 	_check(int(tally["winner"]["votes"]) == 1 and int(tally["loser"]["votes"]) == 0
 			and int(tally["loser"]["coaches"]) > int(tally["winner"]["coaches"]),
 			"The winning side's man takes the last vote from a busier loser (the coaches have it the other way)")
@@ -243,7 +245,28 @@ func _test_umpires_measure() -> void:
 	Awards.tally_match(dt, drawn, true, false)
 	_check(int(dt["loser"]["votes"]) == 1 and int(dt["winner"]["votes"]) == 0,
 			"A draw is no win for either side: the busier man takes the last vote")
-	_check(_sum(dt, "votes") == 6 and _sum(dt, "coaches") == 15, "Still 3-2-1 and 5-4-3-2-1 in a draw")
+	_check(_sum(dt, "votes") == 6 and _sum(dt, "coaches") == 30, "Still 3-2-1 and 5-4-3-2-1 from each coach in a draw")
+
+
+## What a tap is worth to a coach moves the coaches' votes and nothing else: the
+## real rucks' 8.4% of them is what COACHES_HITOUT_POINTS is set to reach.
+func _test_coaches_read_taps() -> void:
+	var players := {"ruck": {"hitouts": 60.0}, "mid": {"kicks": 36.0}}
+	var home := [{"id": "ruck"}, {"id": "mid"}]
+	var away := []
+	for i in range(4):
+		players["a%d" % i] = {"kicks": 5.0}
+		away.append({"id": "a%d" % i})
+	var res := {"home": "GEE", "away": "HAW", "score": [80, 70], "roster": [home, away], "players": players}
+	_check(MatchNotes.rating(players["ruck"]) == 60 and MatchNotes.rating(players["mid"]) == 72,
+			"(case) the stat sheet has the midfielder 72 and the ruck 60")
+	var flat := MatchNotes.coaches_votes(res, 1.0)
+	_check(int(flat["mid"]) == 10 and int(flat["ruck"]) == 8, "A tap at a point each: both coaches have the midfielder first")
+	var high := MatchNotes.coaches_votes(res, 2.0)
+	_check(int(high["ruck"]) == 10 and int(high["mid"]) == 8, "A tap at two points: both coaches have the ruck first")
+	_check(MatchNotes.COACHES_HITOUT_POINTS > 1.0 and MatchNotes.coaches_votes(res) == MatchNotes.coaches_votes(res, MatchNotes.COACHES_HITOUT_POINTS),
+			"The coaches' votes read a tap at COACHES_HITOUT_POINTS, above the stat sheet")
+	_check(MatchNotes.rating(players["ruck"]) == 60, "The match rating itself stays a point a tap")
 
 
 ## The game's 3-2-1 is drawn the way the fit says umpires choose
