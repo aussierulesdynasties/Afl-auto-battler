@@ -387,7 +387,11 @@ func _test_overlays() -> void:
 			if s.find_child("RoundResults", true, false) != null:
 				break
 			await process_frame
-		_state.skip_media_conference())
+		_state.skip_media_conference()
+		# The fourth week lands a training report, which opens over the hub
+		# once the results close: mark it read so this case stays about them.
+		if not _state.training_report.is_empty():
+			_state.training_report["dismissed"] = true)
 	await _overlay_case("hub: season plan", "hub", func(s): await _tap_named(s, "SeasonPlanLine"))
 	await _overlay_case("list: player profile", "list", func(s): s.call("_open_profile", pid))
 	await _overlay_case("list: captaincy sheet", "list", func(s): s.call("_open_captaincy"))

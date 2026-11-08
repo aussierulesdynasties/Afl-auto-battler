@@ -97,12 +97,13 @@ func _test_deck() -> void:
 		_check(not StoryDeck.by_id(deck, id).is_empty(), "%s is in the deck" % id)
 	var errs := StoryDeck.validate(deck)
 	_check(errs.is_empty(), "The deck with the second slice passes its checks: %s" % "; ".join(PackedStringArray(errs.slice(0, 4))))
-	# The rulings, as data: no board reward on any of the eight.
+	# The rulings, as data: no board reward on any of the eight (a board cost is allowed:
+	# sheet C, director 2026-11-08).
 	var board := []
 	for id in IDS:
 		for c in StoryDeck.by_id(deck, id)["choices"]:
 			for e in c["effects"]:
-				if str(e["op"]) == "board":
+				if str(e["op"]) == "board" and int(e.get("d", 0)) > 0:
 					board.append(id)
 	_check(board.is_empty(), "No card of the eight rewards the board (%s)" % str(board))
 	var a3: Dictionary = StoryDeck.by_id(deck, "finals_drought_over")

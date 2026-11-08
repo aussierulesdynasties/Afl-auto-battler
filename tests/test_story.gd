@@ -30,7 +30,10 @@ func run() -> void:
 	_t("_test_folded_sizes")
 	_t("_test_hints_in_words")
 	_t("_test_choice_stakes_are_stated")
-	_t("_test_every_option_has_a_cost")
+	_t("_test_every_choice_has_both_sides")
+	_t("_test_no_dead_story_flags")
+	_t("_test_arc_middle_before_end")
+	_t("_test_captain_contract_talk_dealt")
 	_t("_test_silent_defaults_announced")
 	_t("_test_every_line_has_a_size")
 	_t("_test_line_numbers_match_effects")
@@ -1062,8 +1065,8 @@ func _test_papers_cards_are_football() -> void:
 	var priv := _choice("media_papers_fronts_group", "private")
 	_check(_effect(front, "board").is_empty() and _effect(priv, "board").is_empty()
 			and int(_effect(front, "trust").get("d", 0)) > 0 and int(_effect(priv, "trust").get("d", 0)) < 0
-			and _effect(priv, "morale").is_empty() and not _effect(front, "delegate").is_empty(),
-			"Fronting the group is a risk on the room (it depends on whether the group listens to him); keeping it private gains nothing and costs his trust")
+			and int(_effect(priv, "morale").get("d", 0)) > 0 and not _effect(front, "delegate").is_empty(),
+			"Fronting the group is a risk on the room (it depends on whether the group listens to him); keeping it private lifts the side (the review stays on the football, sheet A5) and costs his trust")
 	var dg := _effect(front, "delegate")
 	_check(int(((dg["held"] as Array)[0] as Dictionary)["d"]) > 0 and int(((dg["failed"] as Array)[0] as Dictionary)["d"]) < 0,
 			"...the room's morale rises if the group listens and falls if it does not")
@@ -2953,78 +2956,218 @@ func _test_vacancy_is_filled() -> void:
 
 
 # --- Decision gates (director, 2026-10-18: every option states its upside and
-# downside with the size and the odds; an option with no downside is a design fault) ---
+# downside with the size and the odds; an option with no downside is a design fault.
+# Row 107, T5.Q18: every event-card choice gets an upside and a downside) ---
 
-## The 16 cards whose kind option used to win every number: every option now costs something.
-## (17 until contracts_rivals_circling was cut, row 96: private lives stay out of the game.)
-const GATED := ["board_billboards", "contracts_kid_wants_clarity",
-		"contracts_waited_manager_calls", "family_partner_job_offer", "family_newborn_no_sleep",
-		"family_partner_graduation", "family_house_settlement", "health_veteran_rehab_mentor",
-		"leadership_senior_runs_session", "captain_leaders_meeting", "captain_slump_start",
-		"captain_slump_mid", "captain_contract_start", "media_in_the_papers", "media_papers_again",
-		"members_cheer_squad"]
-## Options that still gain without a cost (2026-10-18). Their costs are a later sheet; this
-## list may only shrink: an entry that gains a cost must come off it, and no new one may join.
-const GAIN_ONLY_LEFT := ["community_hospital_visit/go", "finals_club_greats/in", "health_finals_light_week/light",
-		"captain_selection_word/talk", "captain_group_flat/dayoff", "captain_big_week/speak",
-		"captain_holding_group/noticed", "captain_slump_good/noticed", "captain_contract_signed/good",
-		"captain_succession_start/handover", "captain_succession_start/asks", "finals_last_season/quiet",
-		"finals_second_chance/burn", "finals_captain_last_word/him", "gf_last_game/him", "gf_last_game/calm",
-		"members_open_training/open", "members_open_training/closed", "finals_in/enjoy", "gf_milestone/banner",
-		"gf_milestone/club", "rivals_spy_at_training/let", "rivals_mouthing_off/calm", "gf_the_opponent/us",
-		"selection_talk_dropped/explain", "selection_talk_back/explain", "selection_talk_waiting/explain",
-		"finals_first_final/minder", "finals_first_final/alone", "gf_debut_year/away", "training_extra_session/recover",
-		"training_seniors_day_off/give", "training_time_trial/skip", "training_new_stoppage_setup/hold",
-		"training_backed_kid_flying/earned", "finals_week_off/semi",
-		# The second slice of finals cards (their switch retired 2026-11-06), written
-		# before this list was held: their costs are still to be written.
-		"finals_written_off/pin", "finals_written_off/back", "finals_one_week_short/not_done",
-		"finals_knocked_out/thanks", "gf_runners_up/let_go", "gf_night_before/together",
-		"gf_night_before/families", "finals_drought_over/feel", "finals_drought_over/outside",
-		"gf_premiers/again"]
-const GAIN_ONLY_FLOOR := 46
-
-
-func _test_every_option_has_a_cost() -> void:
+## Every choice on every card shows a Gain line and a Cost line under its button
+## (bible principle 4), the international and pre-season cards included. Director,
+## 2026-11-08: every one-sided choice took its drafted side (row 107 and row 63's
+## second sheet), and the choices whose only upside was the cost they spared each got
+## a gain of their own, so no choice is let off: not one short, spared or doing nothing. The lines are
+## the ones the coach reads: StoryEngine.stakes_lines of the choice's own effects, as
+## EventCardView prints them on the hub and pre-season cards. Built with every choice the
+## card is written with, so a choice the week's facts hide (the semi-final week off) is
+## checked too.
+func _test_every_choice_has_both_sides() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[4]
-	var gain_only := []
-	var gated_bad := []
-	for t in StoryDeck.all():
-		var card := GameState.story_card(str(t["id"]), p if str(t["subject"].get("kind", "")) == "player" else {})
-		# Every choice the card is written with, whether or not this week's facts show it.
+	var deck := StoryDeck.all()
+	var ids := {}
+	for t in deck:
+		ids[str(t["id"])] = true
+	_check(deck.size() >= 135 and ids.has("intl_homesick") and ids.has("pre_knee_return"),
+			"The check sees the whole deck, the international and pre-season cards included (%d cards)" % deck.size())
+	var view := FileAccess.get_file_as_string("res://scripts/ui/EventCardView.gd")
+	_check(view.contains("StoryEngine.stakes_lines(") and not view.contains("card_lines("),
+			"The card on screen prints stakes_lines, the lines this check reads")
+	var short := []
+	var spared := []
+	var nothing := []
+	var n := 0
+	for t in deck:
+		var subj := str((t["subject"] as Dictionary).get("kind", ""))
+		var card := GameState.story_card(str(t["id"]), p if subj == "player" else {})
+		var full := {"options": [], "facts": card.get("facts", {})}
 		for o in t["choices"]:
-			var lines := StoryEngine.stakes_lines(o.get("effects", []), card["facts"])
-			var gain := false
-			var cost := false
-			for l in lines:
-				gain = gain or l.begins_with(StoryEngine.GAIN_MARK)
-				cost = cost or l.begins_with(StoryEngine.COST_MARK)
+			(full["options"] as Array).append({"key": str(o["key"]), "effects": (o.get("effects", []) as Array).duplicate(true)})
+		for i in range((t["choices"] as Array).size()):
+			n += 1
+			var o: Dictionary = t["choices"][i]
 			var key := "%s/%s" % [t["id"], o["key"]]
-			if gain and not cost:
-				gain_only.append(key)
-			if GATED.has(str(t["id"])) and not cost:
-				gated_bad.append(key)
-		# On the card itself every option of the 16 shows a gain and a cost (bible §4).
-		if GATED.has(str(t["id"])):
-			for i in range((card["options"] as Array).size()):
-				var shown := StoryEngine.card_lines(card, i)
-				var g := false
-				var c := false
-				for l in shown:
-					g = g or l.begins_with(StoryEngine.GAIN_MARK)
-					c = c or l.begins_with(StoryEngine.COST_MARK)
-				if not (g and c):
-					gated_bad.append("%s/%s on the card (%s)" % [t["id"], card["options"][i]["key"], " ".join(shown)])
-	_check(gated_bad.is_empty(), "Every option on the %d gated cards states a cost, and on the card a gain too: %s" % [GATED.size(), ", ".join(PackedStringArray(gated_bad))])
-	var new_ones := gain_only.filter(func(k): return not GAIN_ONLY_LEFT.has(k))
-	var gone := GAIN_ONLY_LEFT.filter(func(k): return not gain_only.has(k))
-	_check(new_ones.is_empty(), "No option joins the gain-only list (a new card states a cost): %s" % ", ".join(PackedStringArray(new_ones)))
-	_check(gone.is_empty() and GAIN_ONLY_LEFT.size() <= GAIN_ONLY_FLOOR,
-			"The gain-only list only shrinks: take off the ones that now cost something (%s)" % ", ".join(PackedStringArray(gone)))
-	# The check bites: a gain-only option on a gated card is caught.
+			var lasting := (o.get("effects", []) as Array).filter(func(e): return not ["flag", "talk_note"].has(str(e.get("op", ""))))
+			if lasting.is_empty():
+				nothing.append(key)
+			var screen := StoryEngine.stakes_lines(o.get("effects", []), card.get("facts", {}))
+			var g := _has_mark(screen, StoryEngine.GAIN_MARK)
+			var c := _has_mark(screen, StoryEngine.COST_MARK)
+			if g and c:
+				continue
+			if c and _has_mark(StoryEngine.card_lines(full, i), StoryEngine.GAIN_MARK):
+				spared.append(key)
+			else:
+				short.append(key)
+	_check(short.is_empty(), "Every choice states a gain and a cost on screen; these are short of one (%s)"
+			% ", ".join(PackedStringArray(short)))
+	_check(spared.is_empty(), "No choice's only gain is the other choice's cost it spares (%s)"
+			% ", ".join(PackedStringArray(spared)))
+	var both := n - short.size() - spared.size()
+	_check(n >= 290 and both == n, "%d of %d choices show a gain and a cost on screen" % [both, n])
+	_check(nothing.is_empty(), "Every choice has a lasting effect, not only a story flag (%s)"
+			% ", ".join(PackedStringArray(nothing)))
+	# The check bites: a gain-only choice shows no Cost line...
 	var bite := StoryEngine.stakes_lines([{"op": "morale", "d": 4}], {})
-	_check(bite.size() == 1 and bite[0].begins_with(StoryEngine.GAIN_MARK), "A gain-only option shows no Cost line, so the check would catch it")
+	_check(not bite.is_empty() and not _has_mark(bite, StoryEngine.COST_MARK),
+			"A gain-only choice shows no Cost line, so the check would catch it (%s)" % " / ".join(bite))
+	# ...and a choice that only spares the other's cost shows its cost alone on screen.
+	var spare_only := [{"op": "morale", "d": -2}]
+	var on_screen := StoryEngine.stakes_lines(spare_only, {})
+	var with_spared := StoryEngine.card_lines({"options": [{"key": "a", "effects": spare_only},
+			{"key": "b", "effects": [{"op": "slow_start", "chance": 15}]}], "facts": {}}, 0)
+	_check(not _has_mark(on_screen, StoryEngine.GAIN_MARK) and _has_mark(with_spared, StoryEngine.GAIN_MARK),
+			"A choice whose only gain is the cost it spares shows no Gain line on screen, so it is not counted as both sides (%s)"
+			% " / ".join(on_screen))
+
+
+## Every story flag a choice sets is read: by a follow-up's needs, a subject or choice
+## condition (flag / no_flag), or the game's code (story_flag_set). A flag nothing
+## reads is a choice whose promised consequence never comes.
+func _test_no_dead_story_flags() -> void:
+	var code := _code_flag_reads("res://scripts")
+	_check(code.has("farewell_told"), "A flag the game's code reads by name is found (farewell_told)")
+	var r := _dead_flags(StoryDeck.all(), code)
+	_check((r["set"] as Dictionary).size() >= 9, "The deck sets its story flags (%d)" % (r["set"] as Dictionary).size())
+	_check((r["dead"] as Array).is_empty(), "Every story flag a choice sets is read somewhere: %s" % ", ".join(PackedStringArray(r["dead"])))
+	# The check bites: in a made-up deck, the flag nothing reads is reported, and the
+	# ones a follow-up's needs, a choice's condition or the code by name reads are not.
+	var found := _code_flag_names('if gs.story_flag_set(id, "t_code"):')
+	_check(found == ["t_code"], "The code scan finds a flag read by name (%s)" % ", ".join(PackedStringArray(found)))
+	var deck := [
+		{"id": "a", "choices": [{"key": "x", "effects": [{"op": "flag", "name": "t_unread"}, {"op": "flag", "name": "t_needs"},
+				{"op": "flag", "name": "t_choice"}, {"op": "flag", "name": "t_code"}]}]},
+		{"id": "b", "needs": {"flag": "t_needs", "after": 1}, "choices": [{"key": "y", "when": {"no_flag": "t_choice"}, "effects": []}]}]
+	var bite := _dead_flags(deck, found)
+	_check(bite["dead"] == ["t_unread (set by a/x)"],
+			"A flag nothing reads is caught, and only that one: %s" % ", ".join(PackedStringArray(bite["dead"])))
+
+
+## The flags a deck's choices set ({name: "card/choice"}) and the ones nothing reads:
+## no follow-up's needs, subject or choice condition, nor the code (`code_reads`).
+func _dead_flags(deck: Array, code_reads: Array) -> Dictionary:
+	var set_by := {}
+	var read := {}
+	for t in deck:
+		for o in t["choices"]:
+			for e in o.get("effects", []):
+				if str(e.get("op", "")) == "flag":
+					set_by[str(e["name"])] = "%s/%s" % [t["id"], o["key"]]
+			_flag_reads(o.get("when", {}), read)
+		var rest: Dictionary = (t as Dictionary).duplicate(true)
+		rest.erase("choices")
+		_flag_reads(rest, read)
+	for f in code_reads:
+		read[f] = true
+	var dead := []
+	for f in set_by:
+		if not read.has(f):
+			dead.append("%s (set by %s)" % [f, set_by[f]])
+	return {"set": set_by, "dead": dead}
+
+
+## An arc's middle beat can come: it opens before any end beat of the same arc,
+## since an end beat that is due comes first and closes the arc (row 107: the
+## captain's contract talk opened at 6 weeks, after the ends at 4, so it never came).
+func _test_arc_middle_before_end() -> void:
+	var first_end := {}
+	var middles := []
+	for t in StoryDeck.all():
+		var needs: Dictionary = t.get("needs", {})
+		if needs.is_empty():
+			continue
+		var k := "%s|%s" % [str(t.get("arc", "")), str(needs.get("flag", ""))]
+		var after := int(needs.get("after", 1))
+		if str(t.get("beat", "")) == "end":
+			first_end[k] = mini(int(first_end.get(k, after)), after)
+		elif str(t.get("beat", "")) == "middle":
+			middles.append([k, after, str(t["id"])])
+	_check(middles.size() >= 2, "The deck has its middle beats (%d)" % middles.size())
+	for m in middles:
+		_check(not first_end.has(m[0]) or int(m[1]) < int(first_end[m[0]]),
+				"%s opens (week %d) before its arc's first end beat (week %d)" % [m[2], m[1], int(first_end.get(m[0], -1))])
+
+
+## The captain's contract talk is dealt in a real season (row 107): once the story has
+## begun (cc_start), the engine deals captain_contract_wait three weeks on, before
+## either ending (signed or open, due at four), so the story's middle is met in play.
+func _test_captain_contract_talk_dealt() -> void:
+	_start()
+	var cap := {}
+	for p in GameState.my_list:
+		if Captaincy.role_of(GameState.captaincy_record("GEE"), str(p["id"])) == "captain":
+			cap = p
+	_check(not cap.is_empty(), "Geelong have a captain for the contract story")
+	if cap.is_empty():
+		return
+	var w0 := GameState.story_week()
+	StoryEngine.record_choice(GameState.story, GameState.story_card("captain_contract_start", cap), 1, w0)   # "Wait until later"
+	_check(GameState.story_flag_set(str(cap["id"]), "cc_start"), "The contract story has begun for the captain this week")
+	var first := ""
+	var at := -1
+	for r in range(10):
+		if GameState.week_event_pending():
+			GameState.resolve_week_event(0)
+		GameState.advance()
+		for c in GameState.week_events:
+			if first == "" and str(c.get("tid", "")).begins_with("captain_contract"):
+				first = str(c["tid"])
+				at = GameState.story_week() - w0
+		if first != "":
+			break
+	_check(first == "captain_contract_wait" and at >= 3,
+			"The engine deals the contract talk %d weeks on, before either ending (first dealt: %s)" % [at, first])
+
+
+func _has_mark(lines: PackedStringArray, mark: String) -> bool:
+	for l in lines:
+		if l.begins_with(mark):
+			return true
+	return false
+
+
+func _flag_reads(v, out: Dictionary) -> void:
+	if v is Dictionary:
+		for k in v:
+			if (str(k) == "flag" or str(k) == "no_flag") and v[k] is String:
+				out[str(v[k])] = true
+			else:
+				_flag_reads(v[k], out)
+	elif v is Array:
+		for x in v:
+			_flag_reads(x, out)
+
+
+## The flag names the game's code asks for by name: story_flag_set(holder, "name").
+func _code_flag_reads(dir: String) -> Array:
+	var out := []
+	var re := RegEx.new()
+	re.compile("story_flag_set\\([^,()]+,\\s*\"([a-z_]+)\"")
+	var d := DirAccess.open(dir)
+	if d == null:
+		return out
+	for f in d.get_files():
+		if f.ends_with(".gd"):
+			out.append_array(_code_flag_names(FileAccess.get_file_as_string(dir.path_join(f))))
+	for sub in d.get_directories():
+		out.append_array(_code_flag_reads(dir.path_join(sub)))
+	return out
+
+
+func _code_flag_names(text: String) -> Array:
+	var out := []
+	var re := RegEx.new()
+	re.compile("story_flag_set\\([^,()]+,\\s*\"([a-z_]+)\"")
+	for m in re.search_all(text):
+		out.append(m.get_string(1))
+	return out
 
 
 ## A card that settles itself if the coach sims past it says so on its face, in
