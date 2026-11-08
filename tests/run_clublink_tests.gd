@@ -784,8 +784,8 @@ func _from_hub(sz: Vector2i) -> void:
 			"outcome": "suspension", "weeks": 2, "reason": "rough conduct", "round": 1}]
 	# The week's club cards have already opened over the hub (Later): this
 	# test is the tribunal line on the page.
-	for c in _gs.week_events:
-		(c as Dictionary)["popped"] = true
+	for popped_card in _gs.week_events:
+		(popped_card as Dictionary)["popped"] = true
 	root.size = sz
 	var scene: Control = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(scene)
