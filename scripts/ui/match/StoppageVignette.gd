@@ -474,9 +474,14 @@ func _draw() -> void:
 ## and the far goals - all seen in perspective, so they hold their shape as it zooms.
 func _draw_ground() -> void:
 	var cam := ground_cam()
-	VignetteGround.draw_ground(self, cam, Rect2(Vector2.ZERO, size), _colours, 7, _board, weather, _t)
+	VignetteGround.draw_ground(self, cam, Rect2(Vector2.ZERO, size), _colours, 7, _screen_board(cam), weather, _t)
 	VignetteGround.draw_goals(self, cam, 1, _pad_colour())
 	VignetteGround.draw_goals(self, cam, -1, _pad_colour())
+
+
+## The score for the big screen through this camera; a scene can leave the screen out.
+func _screen_board(_cam: VignetteGround.Cam) -> Dictionary:
+	return _board
 
 
 ## This scene's camera, as the ground sees it.
