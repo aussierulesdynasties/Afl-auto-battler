@@ -2006,7 +2006,7 @@ func _test_awards_awarded() -> void:
 		var name_l: Label = medal.find_child("Name", true, false) if medal != null else null
 		var club_l: Label = medal.find_child("Club", true, false) if medal != null else null
 		if medal != null:
-			print("PROBE ", tag, " text='", name_l.text, "' name_size=", name_l.size, " medal=", medal.size, " host=", s.size, " view=", UiKit.view_width(s), " content=", s.call("content_width"), " wide=", s.call("wide"))
+			print("PROBE ", tag, " text='", name_l.text, "' name_size=", name_l.size, " medal=", medal.size, " host=", s.size, " content=", s.call("content_width"), " wide=", s.call("wide"))
 			var n: Node = name_l
 			while n != null and n != s:
 				print("PROBE   ", n.name, " ", n.get_class(), " x=", (n as Control).position.x, " w=", (n as Control).size.x, " min=", (n as Control).get_combined_minimum_size().x)
