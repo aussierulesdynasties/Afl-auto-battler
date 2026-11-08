@@ -646,6 +646,8 @@ func _open_event_sheet(index: int) -> void:
 
 func _close_event_sheet() -> void:
 	if _event_overlay != null and is_instance_valid(_event_overlay):
+		# Freed at the frame's end; the next new card's sheet takes the name now.
+		_event_overlay.name = "EventSheetGone"
 		_event_overlay.queue_free()
 	_event_overlay = null
 	_build()
@@ -1220,6 +1222,8 @@ func _on_skip_season() -> void:
 func _skip_season(orders := {}) -> void:
 	GameState.skip_season(orders)
 	_build()
+	# The last week's card and asks come up as after Sim the week.
+	_show_week_ask()
 
 
 ## The week's milestones (Milestones.gd), always shown:
@@ -1927,7 +1931,11 @@ func handle_back() -> bool:
 	if _results_overlay != null and is_instance_valid(_results_overlay):
 		_results_overlay.queue_free()
 		_results_overlay = null
-		_after_ask()
+		# Back is Continue here: the new card and the week's asks come next. A
+		# press conference is its own screen, so Back stays on the hub and it waits.
+		_build()
+		if not GameState.media_conference_pending():
+			_show_week_ask()
 		return true
 	if _talk_overlay != null and is_instance_valid(_talk_overlay):
 		_close_backing_talk()
