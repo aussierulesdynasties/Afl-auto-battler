@@ -26,12 +26,14 @@ func _shot(path: String) -> void:
 	print("wrote ", path)
 
 
-func _scroll_to(scene: Node, target: Control, above := 70) -> void:
+## `above`: px of the page above the target; `at_least`: the lowest scroll, so
+## a frame can start just past the top and end between two sections.
+func _scroll_to(scene: Node, target: Control, above := 70, at_least := 0) -> void:
 	var boxes := scene.find_children("*", "ScrollContainer", true, false)
 	for b in boxes:
 		var box := b as ScrollContainer
 		if box.is_visible_in_tree() and box.is_ancestor_of(target):
-			box.scroll_vertical = maxi(0, int(target.global_position.y - box.global_position.y) - above + box.scroll_vertical)
+			box.scroll_vertical = maxi(at_least, int(target.global_position.y - box.global_position.y) - above + box.scroll_vertical)
 	await _frames()
 
 
@@ -69,9 +71,9 @@ func _believable_brownlow(season) -> void:
 		t["polled"] = clampi(int(t.get("polled", 0)), ceili(votes / 3.0), votes)
 
 
-## A season played out at Fremantle as it falls on this seed: fifth, 16-7, into
-## the finals with the board's goal met, a strong season, so the season's own
-## close writes the rival board's letter and holds the off-season.
+## A season played out at Fremantle as it falls on this seed, into the finals
+## with the board's goal met: a strong season, so the season's own close writes
+## the rival board's letter and holds the off-season.
 func _season_with_letter() -> void:
 	var arcs = load("res://scripts/sim/CoachArcs.gd")
 	var moves = load("res://scripts/state/ClubMoves.gd")
@@ -117,10 +119,10 @@ func _name(tag: String) -> String:
 	return "%s/letter_%s_%dx%d.png" % [_dir, tag, _size.x, _size.y]
 
 
-func _at(hub, node: String, above: int, tag: String) -> void:
+func _at(hub, node: String, above: int, tag: String, at_least := 0) -> void:
 	var target: Control = hub.find_child(node, true, false)
 	if target != null:
-		await _scroll_to(hub, target, above)
+		await _scroll_to(hub, target, above, at_least)
 	else:
 		print("missing ", node)
 	await _shot(_name(tag))
@@ -150,14 +152,14 @@ func _run() -> void:
 	# 1: the letter, its risk and the two answers.
 	_season_with_letter()
 	var hub = await _hub()
-	await _at(hub, "RivalLetter", 10, "1_open")
+	await _at(hub, "RivalLetter", int(_size.y * 0.35), "1_open")
 	await _done(hub)
 	# 3: taken.
 	_season_with_letter()
 	moves.accept_letter(_state)
 	print("taken: ", _state.team_outlook(_state.my_club).get("line", ""))
 	hub = await _hub()
-	await _at(hub, "RivalLetter", int(_size.y * 0.35), "3_taken")
+	await _at(hub, "RivalLetter", int(_size.y * 0.35), "3_taken", 12)
 	await _done(hub)
 	# 4: turned down.
 	_season_with_letter()

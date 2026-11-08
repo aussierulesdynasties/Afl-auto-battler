@@ -317,10 +317,28 @@ static func _jobs_after_sack(gs, st: Dictionary) -> Array:
 		var outlook: Dictionary = gs.team_outlook(code)
 		var rank := int(gs.club_expect.get(code, ClubLife.default_rank(table.size())))
 		out.append({"code": code, "name": GameDB.club_name(code), "finish": int(finish[code]), "clubs": table.size(),
-				"list": str(outlook.get("line", "")),
+				"list": _list_line(outlook),
 				"goal": str(ClubLife.board_goal(rank, int(finish[code]), table.size()).get("text", "")),
 				"why_open": str(why_open.get(code, "The board wants a new senior coach."))})
 	return out
+
+
+## A club's list as a letter or a job offer gives it: the rating now and in
+## three years, never the Contender / Wildcard / Rebuilding word (director,
+## 2026-11-08). "" for a club with no list.
+static func _list_line(outlook: Dictionary) -> String:
+	if outlook.is_empty():
+		return ""
+	return TeamRating.rating_line(int(outlook["rating"]), int(outlook["forecast"]))
+
+
+## The off-season's opening moves rival lists (their re-signings, trades),
+## so a sacked coach's offers give each club's list as it stands after it.
+static func restate_offers(gs) -> void:
+	if not ClubArcs.on(gs):
+		return
+	for o in ClubArcs._st(gs).get("offers", []):
+		o["list"] = _list_line(gs.team_outlook(str(o["code"])))
 
 
 ## `n` of `pool`, seeded.
@@ -659,8 +677,8 @@ static func _rival_letter(gs, st: Dictionary) -> void:
 	var mine: Dictionary = gs.team_outlook(str(gs.my_club))
 	var rank := int(gs.club_expect.get(code, ClubLife.default_rank(table.size())))
 	st["letter"] = {"year": year, "code": code, "name": GameDB.club_name(code), "from": str(gs.my_club),
-			"finish": int(finish.get(code, 0)), "clubs": table.size(), "list": str(outlook.get("line", "")),
-			"my_list": str(mine.get("line", "")), "board": gs.board_confidence(),
+			"finish": int(finish.get(code, 0)), "clubs": table.size(), "list": _list_line(outlook),
+			"my_list": _list_line(mine), "board": gs.board_confidence(),
 			"goal": str(ClubLife.board_goal(rank, int(finish.get(code, 0)), table.size()).get("text", "")),
 			"why_open": str(why_open.get(code, "The board wants a new senior coach.")),
 			"president": ClubArcs._gen_name(int(gs.career_seed), "president|" + code), "answer": ""}

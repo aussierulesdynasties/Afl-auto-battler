@@ -5853,6 +5853,8 @@ func _close_season_awards() -> void:
 	# his answer holds it: it opens once he answers, at whichever club he is
 	# then at (ClubMoves.accept_letter / decline_letter).
 	open_offseason(true)
+	# Its opening moved rival lists: a sacked coach's offers say them as they stand.
+	ClubMoves.restate_offers(self)
 	_season_news()
 
 

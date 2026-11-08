@@ -347,6 +347,8 @@ func _test_sacked_way_back() -> void:
 	_check(jobs.size() == ClubMoves.OFFERS and not codes.has(old), "sacked: %d clubs offer him a job, not %s: %s" % [ClubMoves.OFFERS, old, str(codes)])
 	_check(jobs.all(func(o): return int(o["finish"]) > 0 and str(o["goal"]) != "" and str(o["list"]) != "" and str(o["why_open"]) != ""),
 			"sacked: each offer states where they finished, the list, the board's goal and why the job is open: %s" % str(jobs))
+	_check(jobs.all(func(o): return _ratings_only(str(o["list"]), str(o["code"]))),
+			"sacked: each offer gives the list as its ratings now and in three years, no list word: %s" % str(jobs.map(func(o): return o["list"])))
 	_check((st["move"] as Dictionary).is_empty() and int(st["coach"]["reprieves"]) == 1, "sacked: no move until he chooses; one reprieve left")
 	_check(not ClubMoves.take_job(GameState, old), "sacked: he cannot take a job that was not offered")
 	var to := str(jobs[-1]["code"]) if not jobs.is_empty() else ""
@@ -447,7 +449,7 @@ func _test_second_sacking_and_retire() -> void:
 	GameState.board["sacked"] = sacked_was
 	# Offers save and load; then he retires.
 	GameState.board["sacked"] = true
-	st["offers"] = [{"code": "GCS", "name": GameDB.club_name("GCS"), "finish": 17, "clubs": 18, "list": "Rebuilding.",
+	st["offers"] = [{"code": "GCS", "name": GameDB.club_name("GCS"), "finish": 17, "clubs": 18, "list": "Team rating 66. On this list, 70 in three years.",
 			"goal": "Win at least 7 games", "why_open": "The board wants a new senior coach."}]
 	st["sack"] = {"from": old, "year": GameState.season_year, "heir": ""}
 	var before := JSON.stringify(GameState.coach_arcs)
@@ -728,6 +730,19 @@ func _round_trip() -> bool:
 	return ok
 
 
+## A letter's or a job offer's list line: the club's rating now and in three
+## years and nothing else, never Contender / Wildcard / Rebuilding (director,
+## 2026-11-08).
+func _ratings_only(line: String, code: String) -> bool:
+	var o := GameState.team_outlook(code)
+	if o.is_empty():
+		return false
+	for word in ["Contender", "Wildcard", "Rebuilding"]:
+		if line.find(word) >= 0:
+			return false
+	return line == TeamRating.rating_line(int(o["rating"]), int(o["forecast"]))
+
+
 func _test_rival_letter() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = SUITE_SEED + 11
@@ -741,6 +756,9 @@ func _test_rival_letter() -> void:
 	_check(code != "" and code != "FRE" and int(l.get("finish", 0)) > 0 and str(l.get("list", "")) != ""
 			and str(l.get("goal", "")) != "" and str(l.get("why_open", "")) != "" and str(l.get("president", "")) != "",
 			"the letter states the club, where they finished, the list, the board's goal and why the job is open: %s" % str(l))
+	_check(_ratings_only(str(l.get("list", "")), code) and _ratings_only(str(l.get("my_list", "")), "FRE"),
+			"the letter gives both lists as their ratings now and in three years, no list word: %s | %s"
+			% [str(l.get("list", "")), str(l.get("my_list", ""))])
 	var risk := ClubMoves.letter_risk(GameState)
 	_check(risk.size() == 3 and risk[0].find("60 out of 100") >= 0 and risk[2].begins_with("Sacked there"),
 			"the letter states the risk: %s" % str(risk))
