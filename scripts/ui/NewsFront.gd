@@ -367,7 +367,8 @@ static func _brief_row(st: Dictionary, key: String) -> Control:
 ## One round as a front page into `body`. `wide` lays it out in columns.
 static func fill(body: Container, items: Array, my_club: String, wide: bool, names := {}) -> void:
 	_names = names
-	var page := build(items, my_club)
+	# The front page is the newest round; older rounds go under "Earlier" below.
+	var page := build(latest_round(items), my_club)
 	var head := UiKit.hbox(8)
 	var title := UiKit.heading("League news", UiKit.H1)
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF

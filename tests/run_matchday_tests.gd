@@ -2117,6 +2117,26 @@ func _test_rings_on_the_oval() -> void:
 	box.find_child("StartQuarter", true, false).emit_signal("pressed")
 	await _settle()
 	_check(pitch.ringed(focus_id), "The player you play through is ringed from the bounce")
+	# The sim has played the stretch ahead of the oval: legs it has spent by the
+	# stretch's end carry no tired mark while the oval is still behind.
+	var legs_id := ""
+	for r in sim.squads[me].ground:
+		if not pitch.marks.has(str(r["id"])):
+			legs_id = str(r["id"])
+			break
+	var behind: bool = pitch.current_index() < pitch.events.size()
+	var legs_had: bool = sim.energy.has(legs_id)
+	var legs_was = sim.energy.get(legs_id, 100.0)
+	sim.energy[legs_id] = 10.0
+	m.call("_refresh_marks")
+	var ahead_marked: bool = pitch.marks.has(legs_id)
+	if legs_had:
+		sim.energy[legs_id] = legs_was
+	else:
+		sim.energy.erase(legs_id)
+	m.call("_refresh_marks")
+	_check(legs_id != "" and behind and not ahead_marked,
+			"Tired marks follow the oval, not the sim ahead of it (%s, behind %s, marked %s)" % [legs_id, behind, ahead_marked])
 	var tagger = load("res://scripts/sim/MatchSim.gd").tagger_for(sim.squads[me].ground)
 	_check(tagger != null and pitch.ringed(str(tagger["id"])), "So is the player who goes to your tag")
 	# Who tags is the coach's call: another midfielder on the ground takes the
@@ -2483,7 +2503,6 @@ func _test_press_effects_shown(db) -> void:
 	var who: Dictionary = _state.my_list[0]
 	who["morale"] = 50
 	who.erase("press_lift")
-	who.erase("press_slow")
 	var hub = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _settle()
@@ -2499,8 +2518,11 @@ func _test_press_effects_shown(db) -> void:
 		shown = shown and line != null and line.is_visible_in_tree() and text == _state.press_odds_line(i) 				and text.contains("%d%% " % c) and text.contains("%d%% " % (100 - c))
 		# The Muckraker's twist is on the gate (director 2026-11-06).
 		if kind == "criticise":
-			shown = shown and text.contains("The players read his headline: 10% less likely to land well.") 					and not text.contains("The Siren gets read upstairs") and text.contains(MC.FADE_NOTE)
+			shown = shown and text.contains("His headline: 10% less likely") 					and not text.contains("The Siren gets read upstairs") and not text.contains(MC.FADE_NOTE)
 	_check(shown, "Every press answer shows both ways it can land, with the odds and the sizes")
+	var rules: Label = hub.find_child("MediaRules", true, false)
+	_check(rules != null and rules.is_visible_in_tree() and rules.text == MC.rules_line(str(_state.media_conference.get("journalist", ""))),
+			"How long the moves last is said once on the gate, above the answers (%s)" % ("missing" if rules == null else rules.text))
 	var c0: int = _state.press_chance(0)
 	var landed := "a" if MC.roll(_state.career_seed, _state.season_year, int(_state.media_conference.get("round", 0)),
 			str(_state.media_conference.get("key", "")), 0) <= c0 else "b"
@@ -2586,7 +2608,6 @@ func _test_press_scene_taps() -> void:
 	for i in range(4):
 		for p in _state.my_list:
 			p.erase("press_lift")
-			p.erase("press_slow")
 			p.erase("press_wait")
 		var press: Node = await open.call(muck.call())
 		var label := str((_state.media_conference.get("options", [])[i] as Dictionary).get("label", ""))

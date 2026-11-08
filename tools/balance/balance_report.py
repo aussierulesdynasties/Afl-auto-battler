@@ -17,14 +17,59 @@ MAP = {"disposals": "disposals", "kicks": "kicks", "handballs": "handballs",
        "rebound50": "rebound_50s", "rebounds": "rebound_50s"}
 EXTRA = ["score", "clangers", "intercepts", "one_percenters", "metres_gained", "strength", "draftees",
          "contested_possessions", "ground_ball_gets", "pressure_acts", "ball_ups", "throw_ins", "stoppages"]
-# Real wet against dry, match totals 2022-25 (docs/research/WEATHER_EVIDENCE.md [ABC];
-# scoring [BB] modern era, accuracy [BB]/[SI] in points). Shown for a paired run as B against A,
-# so it reads as the real reference when A is a perfect day and B a wet one.
-REAL_WET = {"tackles": "+12%", "clangers": "+9%", "ground_ball_gets": "+9%",
-            "contested_possessions": "+7%", "one_percenters": "+15%", "marks": "-13%",
-            "contested_marks": "-10%", "kicks": "0%", "handballs": "-1%", "goals": "-",
-            "score": "about -5%", "stoppages": "more (no public count)",
-            "ball_ups": "more (no public count)", "throw_ins": "-"}
+# Real weather against a perfect day, AFL 2016-25 without 2020 (afl_weather_rates.json,
+# built by build_weather_rates.py from AFL Tables match totals and Open-Meteo weather at
+# the ground). Shown for a paired run when B is a weather arm and A is not, so it reads
+# as the real reference for B against A. sim stat -> afl_weather_rates key.
+WEATHER_KEYS = {"disposals": "disposals", "kicks": "kicks", "handballs": "handballs",
+                "marks": "marks", "contested_marks": "contested_marks", "tackles": "tackles",
+                "contested_possessions": "contested_possessions",
+                "uncontested_possessions": "uncontested_possessions", "clangers": "clangers",
+                "one_percenters": "one_percenters", "inside50": "inside_50s",
+                "clearances": "clearances", "frees_for": "frees_for", "hitouts": "hitouts",
+                "running_bounces": "bounces", "goal_assists": "goal_assists",
+                "rebounds": "rebound_50s", "marks_inside_50": "marks_inside_50",
+                "goals": "goals", "behinds": "behinds", "score": "score",
+                "ground_ball_gets": None, "stoppages": None, "ball_ups": None}
+# [ABC] wet against dry 2022-25 for ground-ball gets, which AFL Tables does not count.
+REAL_WET_ABC = {"ground_ball_gets": (0.09, 0.03)}
+
+
+def weather_ref():
+    p = os.path.join(HERE, "afl_weather_rates.json")
+    return json.load(open(p, encoding="utf-8")) if os.path.exists(p) else None
+
+
+def weather_mark(sim, sim_se, real, real_se):
+    """IN within 2 combined standard errors of the real change, NEAR within 4, else OUT."""
+    s = math.sqrt(sim_se ** 2 + real_se ** 2)
+    if abs(sim - real) <= 2 * s:
+        return "IN"
+    return "NEAR" if abs(sim - real) <= 4 * s else "OUT"
+
+
+def odd_even(r):
+    """Margin in the odd quarters less the even ones, from both teams' quarter scores."""
+    q = [[t["q_score"][k] - (t["q_score"][k - 1] if k else 0) for k in range(4)] for t in r["teams"]]
+    m = [q[0][k] - q[1][k] for k in range(4)]
+    return (m[0] + m[2]) - (m[1] + m[3])
+
+
+def q4_share(r):
+    tot = sum(t["q_score"][3] for t in r["teams"])
+    return 100.0 * sum(t["q_score"][3] - t["q_score"][2] for t in r["teams"]) / tot if tot else None
+
+
+def breeze_size(sa, sb, n_boot=1000):
+    """Breeze worth B points of margin a quarter: Var(odd-even, B) - Var(odd-even, A) = 16 B^2.
+    Returns B and its bootstrap standard error (seeded, so the report is stable)."""
+    import random
+    rng = random.Random(61)
+
+    def b_of(x, y):
+        return math.sqrt(max(0.0, st.variance(x) - st.variance(y))) / 4.0
+    boots = [b_of(rng.choices(sb, k=len(sb)), rng.choices(sa, k=len(sa))) for _ in range(n_boot)]
+    return b_of(sb, sa), st.stdev(boots)
 
 
 def load(run, arm):
@@ -628,19 +673,25 @@ def spoils_section(A, B):
     print(f"\nReal: {ref['source']}")
 
 
-def wet_section(A, B, wet):
-    """Paired change in percent (B / A - 1), plus accuracy and set-shot accuracy
-    in points (row 120). The real wet v dry column shows only when B is the wet
-    arm and A is not (wet=True), so no other screen is read against it."""
+def weather_section(A, B, cond):
+    """Paired change in percent (B / A - 1), plus accuracy in points, the last
+    quarter's share of the scoring and the breeze split (row 61). The real column
+    shows only when B is a weather arm (cond = wet, windy or hot) and A is not, so no
+    other screen is read against it; each row is then marked IN/NEAR/OUT by
+    weather_mark."""
     if not B:
         return
     common = [i for i in A if i in B]
     if not common:
         return
-    print("\n## Change B against A, percent" + (" (real column: wet against dry)" if wet else "") + "\n")
-    print("| stat | A | B | B/A-1 | se |" + (" real wet v dry |" if wet else ""))
-    print("|---|---|---|---|---|" + ("---|" if wet else ""))
-    for k in list(REAL_WET):
+    ref = weather_ref() if cond else None
+    col = ref["change_vs_perfect"][cond] if ref else None
+    real = col is not None
+    print("\n## Change B against A, percent" + (f" (real column: {cond} against a perfect day, "
+          "AFL 2016-25, afl_weather_rates.json)" if real else "") + "\n")
+    print("| stat | A | B | B/A-1 | se |" + (" real | se | mark |" if real else ""))
+    print("|---|---|---|---|---|" + ("---|---|---|" if real else ""))
+    for k, rk in WEATHER_KEYS.items():
         a = per_match(A, k)
         b = per_match(B, k)
         ma = st.mean(a[i] for i in common)
@@ -649,36 +700,68 @@ def wet_section(A, B, wet):
         mb = st.mean(b[i] for i in common)
         d = [(b[i] - a[i]) / ma for i in common]
         se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
-        print(f"| {k} | {ma:.1f} | {mb:.1f} | {100 * (mb / ma - 1):+.1f}% | {100 * se:.1f}% |"
-              + (f" {REAL_WET[k]} |" if wet else ""))
+        line = f"| {k} | {ma:.1f} | {mb:.1f} | {100 * (mb / ma - 1):+.1f}% | {100 * se:.1f}% |"
+        if real:
+            rv = col.get(rk) if rk else None
+            if rv is None and cond == "wet" and k in REAL_WET_ABC:
+                rv = {"change": REAL_WET_ABC[k][0], "se": REAL_WET_ABC[k][1]}
+            if rv is None:
+                line += " - | - | - |"
+            else:
+                line += (f" {100 * rv['change']:+.1f}% | {100 * rv['se']:.1f}% |"
+                         f" {weather_mark(mb / ma - 1, se, rv['change'], rv['se'])} |")
+        print(line)
 
-    def acc(r, g, b):
-        gg = sum(float(t.get(g, 0)) for t in r["teams"])
-        bb = sum(float(t.get(b, 0)) for t in r["teams"])
-        return 100 * gg / (gg + bb) if gg + bb else None
-    for label, g, b, real in (("accuracy, goals per scoring shot (points)", "goals", "behinds", "-1 to -2"),
-                              ("set-shot goals per set shot (points)", "sshot_g", None, "-"),
-                              ("general-play goals per logged shot (points)", "gshot_g", None, "-")):
-        if b is None:
-            n = g.replace("_g", "_n")
-            fa = {i: (100 * sum(float(t.get(g, 0)) for t in A[i]["teams"])
-                      / max(1.0, sum(float(t.get(n, 0)) for t in A[i]["teams"]))) for i in common}
-            fb = {i: (100 * sum(float(t.get(g, 0)) for t in B[i]["teams"])
-                      / max(1.0, sum(float(t.get(n, 0)) for t in B[i]["teams"]))) for i in common}
-            pa = 100 * sum(float(t.get(g, 0)) for i in common for t in A[i]["teams"]) / max(1.0, sum(
-                float(t.get(n, 0)) for i in common for t in A[i]["teams"]))
-            pb = 100 * sum(float(t.get(g, 0)) for i in common for t in B[i]["teams"]) / max(1.0, sum(
-                float(t.get(n, 0)) for i in common for t in B[i]["teams"]))
-        else:
-            fa = {i: acc(A[i], g, b) for i in common}
-            fb = {i: acc(B[i], g, b) for i in common}
-            pa = 100 * sum(float(t.get(g, 0)) for i in common for t in A[i]["teams"]) / sum(
-                float(t.get(g, 0)) + float(t.get(b, 0)) for i in common for t in A[i]["teams"])
-            pb = 100 * sum(float(t.get(g, 0)) for i in common for t in B[i]["teams"]) / sum(
-                float(t.get(g, 0)) + float(t.get(b, 0)) for i in common for t in B[i]["teams"])
+    def counts(rows, ids, g, n):
+        """Goals (g) and their base over both teams of the matches in ids: shots of
+        that kind (n), or goals and behinds when n is None."""
+        gg = sum(float(t.get(g, 0)) for i in ids for t in rows[i]["teams"])
+        nn = sum(float(t.get(n or "behinds", 0)) for i in ids for t in rows[i]["teams"])
+        return gg, (nn + gg if n is None else nn)
+
+    def ratio(rows, ids, g, n):
+        gg, nn = counts(rows, ids, g, n)
+        return 100 * gg / nn if nn else None
+    # The set-shot and general-play rows (balance_body's sshot_* and gshot_*) have no
+    # real weather column: the reference counts goals and behinds, not shots by kind.
+    for label, g, n, rkey in (("accuracy, goals per scoring shot (points)", "goals", None, "accuracy"),
+                              ("set-shot goals per set shot (points)", "sshot_g", "sshot_n", None),
+                              ("general-play goals per logged shot (points)", "gshot_g", "gshot_n", None)):
+        if n is not None and not any(n in t for i in common for t in A[i]["teams"]):
+            continue
+        fa = {i: ratio(A, [i], g, n) for i in common}
+        fb = {i: ratio(B, [i], g, n) for i in common}
         d = [fb[i] - fa[i] for i in common if fa[i] is not None and fb[i] is not None]
-        se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
-        print(f"| {label} | {pa:.1f} | {pb:.1f} | {pb - pa:+.1f} pts | {se:.1f} |" + (f" {real} |" if wet else ""))
+        m, se = _mse(d)
+        pa, pb = ratio(A, common, g, n) or 0.0, ratio(B, common, g, n) or 0.0
+        line = f"| {label} | {pa:.1f} | {pb:.1f} | {m:+.1f} pts | {se:.1f} |"
+        if real and rkey and rkey in col:
+            rv = col[rkey]
+            line += f" {rv['change_points']:+.1f} pts | {rv['se']:.1f} | {weather_mark(m, se, rv['change_points'], rv['se'])} |"
+        elif real:
+            line += " - | - | - |"
+        print(line)
+    if "q_score" not in A[common[0]]["teams"][0]:
+        return
+    qa = {i: q4_share(A[i]) for i in common}
+    qb = {i: q4_share(B[i]) for i in common}
+    d = [qb[i] - qa[i] for i in common if qa[i] is not None and qb[i] is not None]
+    m, se = _mse(d)
+    line = (f"| last quarter's share of the scoring (points) | {st.mean(v for v in qa.values() if v is not None):.1f}% | "
+            f"{st.mean(v for v in qb.values() if v is not None):.1f}% | {m:+.2f} pts | {se:.2f} |")
+    if real:
+        rv = col["q4_share"]
+        line += f" {rv['change_points']:+.2f} pts | {rv['se']:.2f} | {weather_mark(m, se, rv['change_points'], rv['se'])} |"
+    print(line)
+    sa = [odd_even(A[i]) for i in common]
+    sb = [odd_even(B[i]) for i in common]
+    bz, bse = breeze_size(sa, sb)
+    line = (f"| breeze, margin points a quarter to the side kicking with it | sd {st.stdev(sa):.1f} | "
+            f"sd {st.stdev(sb):.1f} | {bz:.2f} | {bse:.2f} |")
+    if real:
+        rv = col["breeze"]
+        line += f" {rv['points_a_quarter']:.2f} | {rv['se']:.2f} | {weather_mark(bz, bse, rv['points_a_quarter'], rv['se'])} |"
+    print(line)
 
 
 def _mse(d):
@@ -945,7 +1028,12 @@ def main():
             sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ("yes" if se == 0 and st.mean(d) != 0 else "")
             line += f" {mb:.1f} | {mark(mb)} | {st.mean(d):+.2f} | {se:.2f} | {sig} |"
         print(line)
-    wet_section(A, B, "--weather wet" in (o.b or "") and "--weather wet" not in o.a)
+    # The real column reads B's weather against a perfect day, so A must be one:
+    # no --weather (the worker's default) or --weather perfect.
+    a_perfect = "--weather" not in (o.a or "") or "--weather perfect" in (o.a or "")
+    cond = (next((c for c in ("wet", "windy", "hot") if f"--weather {c}" in (o.b or "")), None)
+            if a_perfect else None)
+    weather_section(A, B, cond)
     role_table(A, B)
     spoils_section(A, B)
     for name, R in (("A", A), ("B", B)):
