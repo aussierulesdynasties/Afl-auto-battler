@@ -41,6 +41,10 @@
 						"why": "You talked him through being dropped"
 					},
 					{
+						"op": "expects_game",
+						"sting": 4
+					},
+					{
 						"op": "talk_note",
 						"said": "explain"
 					}
@@ -82,6 +86,12 @@
 						"op": "trust",
 						"d": -4,
 						"why": "You told him the side was your call when he was dropped"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You kept selection the coach's call"
 					},
 					{
 						"op": "talk_note",
@@ -134,6 +144,10 @@
 						"why": "You told him where he stood after his injury"
 					},
 					{
+						"op": "expects_game",
+						"sting": 4
+					},
+					{
 						"op": "talk_note",
 						"said": "explain"
 					}
@@ -175,6 +189,12 @@
 						"op": "trust",
 						"d": -4,
 						"why": "You told him the side was your call when he came back from injury"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You kept selection the coach's call"
 					},
 					{
 						"op": "talk_note",
@@ -227,6 +247,10 @@
 						"why": "You told him what he has to show for a game"
 					},
 					{
+						"op": "expects_game",
+						"sting": 4
+					},
+					{
 						"op": "talk_note",
 						"said": "explain"
 					}
@@ -268,6 +292,12 @@
 						"op": "trust",
 						"d": -4,
 						"why": "You told him the side was your call while he waited for a game"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You kept selection the coach's call"
 					},
 					{
 						"op": "talk_note",
@@ -397,6 +427,12 @@
 						"op": "trust",
 						"d": -4,
 						"why": "You left him out of the final"
+					},
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "You stuck with the side that earned the final"
 					}
 				],
 				"result": "{name} watches from the stands."
@@ -513,6 +549,11 @@
 						"op": "trust",
 						"d": 4,
 						"why": "You looked after him in his first finals week"
+					},
+					{
+						"op": "morale",
+						"d": -1,
+						"who": "side"
 					}
 				],
 				"result": "He shadows a senior player all week: meetings, recovery, the walk-through."
@@ -525,6 +566,11 @@
 						"op": "morale",
 						"d": 7,
 						"who": "subject"
+					},
+					{
+						"op": "slow_start",
+						"who": "subject",
+						"chance": 15
 					}
 				],
 				"result": "Nobody makes a fuss. {first} backs himself."
@@ -573,6 +619,10 @@
 						"op": "trust",
 						"d": 5,
 						"why": "You kept the Grand Final circus away from him"
+					},
+					{
+						"op": "board",
+						"d": -2
 					}
 				],
 				"result": "No interviews for {first} this week. Train, eat, sleep."

@@ -156,9 +156,7 @@ static func tally_match(tally: Dictionary, res: Dictionary, regular: bool) -> vo
 			t["disposals"] = int(t["disposals"]) + int(st.get("disposals", 0))
 			t["distance_run"] = float(t.get("distance_run", 0.0)) + float(st.get("distance_run", 0.0))
 			t["influence"] = float(t["influence"]) + inf
-			# AFL Coaches Association-style award: each coach effectively names a top five;
-			# the combined 10-8-6-4-2 scale preserves the same ordering without inventing
-			# a second performance model. Home-and-away only, like the live season race.
+			# The Coaches Award adds up each match's coaches' votes (below).
 			if not t.has("coaches"):
 				t["coaches"] = 0
 			tally[id] = t
@@ -174,10 +172,14 @@ static func tally_match(tally: Dictionary, res: Dictionary, regular: bool) -> vo
 			var t: Dictionary = tally[str(everyone[i][0])]
 			t["votes"] = int(t["votes"]) + (3 - i)
 			t["polled"] = int(t["polled"]) + 1
-		# Ten coaches-award votes per match, 5-4-3-2-1 to the five best players.
-		for i in range(mini(5, everyone.size())):
-			var t: Dictionary = tally[str(everyone[i][0])]
-			t["coaches"] = int(t.get("coaches", 0)) + (5 - i)
+		# The Coaches Award, as the AFL Coaches Association's: the votes shown
+		# at full time (each coach 5-4-3-2-1 to his best five, so up to 10 a
+		# match), added up over the home-and-away season.
+		var cv := MatchNotes.coaches_votes(res)
+		for id in cv:
+			if tally.has(str(id)):
+				var t: Dictionary = tally[str(id)]
+				t["coaches"] = int(t.get("coaches", 0)) + int(cv[id])
 
 
 ## The Norm Smith Medal for one Grand Final result: the most influential

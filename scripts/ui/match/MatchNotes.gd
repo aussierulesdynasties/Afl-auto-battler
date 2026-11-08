@@ -67,6 +67,14 @@ static func clanger_caption(why: String) -> String:
 	return str(CLANGER_CAPTIONS.get(why, ""))
 
 
+## A goal's headline: the scorer and his club in words ("Goal  Petracca
+## (Demons)"), so the club never rests on colour alone; a goal with no
+## scorer named is the club's.
+static func goal_head(who: String, club: String) -> String:
+	var short := GameDB.club_short(club)
+	return "Goal  " + ("%s (%s)" % [who, short] if who != "" else short)
+
+
 ## The feed line for an event, or {} to leave it to the oval.
 ## {"text", "tier"}: tier "goal" (its own row), "break" (bold), "play".
 static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
@@ -79,7 +87,7 @@ static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
 	var score: Array = ev.get("score", [0, 0])
 	match kind:
 		"goal":
-			return {"text": "Goal  " + (who if who != "" else GameDB.club_short(club)), "tier": "goal"}
+			return {"text": goal_head(who, club), "tier": "goal"}
 		"behind":
 			var by := who if who != "" else "rushed"
 			return {"text": "Behind: %s (%s)" % [by, GameDB.club_short(club)], "tier": "play"}
@@ -618,11 +626,19 @@ static func legs_word(energy: float) -> String:
 
 
 ## "Your midfield is fresh; theirs is tiring." from two group energies, or
-## "Both midfields are tiring." when they are the same.
-static func legs_line(mine: float, theirs: float) -> String:
+## "Both midfields are tiring." when they are the same. `reason` (RivalRead.
+## legs_reason) follows when theirs are the more tired: "...; theirs is
+## tiring: they've pressed since quarter time."
+static func legs_line(mine: float, theirs: float, reason := "") -> String:
 	if legs_word(mine) == legs_word(theirs):
 		return "Both midfields are %s." % legs_word(mine)
-	return "Your midfield is %s; theirs is %s." % [legs_word(mine), legs_word(theirs)]
+	var tail := ": " + reason if reason != "" and _legs_rank(theirs) > _legs_rank(mine) else ""
+	return "Your midfield is %s; theirs is %s%s." % [legs_word(mine), legs_word(theirs), tail]
+
+
+## 0 fresh, 1 tiring, 2 running on empty.
+static func _legs_rank(energy: float) -> int:
+	return 0 if energy >= FRESH else (1 if energy >= TIRING else 2)
 
 
 ## Names of your on-ground players below EMPTY energy, most tired first.
@@ -1085,7 +1101,8 @@ static func rated_players(res: Dictionary, side: int) -> Array:
 
 ## The coaches' votes, as the AFL gives them: each coach names his five best
 ## players on the ground, from either side, 5-4-3-2-1, so a player can earn up
-## to 10. Read from this match's ratings (so far, at a break), and from nothing
+## to 10. Given once, at full time (the season's Coaches Award adds them up,
+## Awards.tally_match). Read from this match's ratings, and from nothing
 ## the sim decides with: each coach's own taste for a player is a fixed small
 ## lean, the same all match, so the two coaches can differ on a close call.
 ## Returns {player id: votes}; a player on neither coach's five is absent.
@@ -1107,6 +1124,17 @@ static func coaches_votes(res: Dictionary) -> Dictionary:
 			var id := str(scored[i][0])
 			votes[id] = int(votes.get(id, 0)) + (5 - i)
 	return votes
+
+
+## Best so far at a break: the side's n best by match rating so far, in the
+## same shape as standouts_by_votes with no votes (the coaches vote once, at
+## full time, as the AFL's do): [{id, name, line, rating, inf, votes}].
+static func best_so_far(res: Dictionary, side: int, n: int) -> Array:
+	var out := []
+	for r in rated_players(res, side).slice(0, n):
+		out.append({"id": r["id"], "name": r["name"], "line": votes_line(r["stats"]),
+				"rating": r["rating"], "inf": r["rating"], "votes": 0})
+	return out
 
 
 ## The side's best by the coaches' votes, most votes first and the match

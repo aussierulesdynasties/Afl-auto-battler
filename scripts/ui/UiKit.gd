@@ -73,6 +73,42 @@ static func appearance() -> String:
 	return _appearance
 
 
+## Text size (row 118, P-04): Standard, Larger or Largest, from Settings. Every
+## size a screen asks for passes through px(), here and in set_font_size, so the
+## setting grows the game's words in this one place; pictures, the ground and the
+## spacing stay as they are. Screens still ask by role (NAME, FINE...); px() is
+## what the role renders at. Larger and Largest follow Android's own font-size
+## steps (1.15 and 1.3).
+const TEXT_SIZES := [["standard", "Standard"], ["larger", "Larger"], ["largest", "Largest"]]
+const TEXT_SCALE := {"standard": 1.0, "larger": 1.15, "largest": 1.3}
+static var text_scale := 1.0
+static var _text_size := "standard"
+
+
+static func apply_text_size(key: String) -> void:
+	_text_size = key if TEXT_SCALE.has(key) else "standard"
+	text_scale = float(TEXT_SCALE[_text_size])
+
+
+static func text_size() -> String:
+	return _text_size
+
+
+## A type size as it renders at the chosen text size.
+static func px(fs: float) -> int:
+	return roundi(fs * text_scale)
+
+
+## The one way a font size reaches a control outside UiKit's own builders:
+## `fs` is the role (NAME, FINE...), and the control gets it at the text size.
+## `scaled` is for a size read back from a control that already has it (a
+## button's words redrawn over it), so it is not grown twice. `node` is a
+## Control or a Window (a button's drop-down menu is a PopupMenu).
+static func set_font_size(node: Object, fs: int, key := "font_size", scaled := false) -> void:
+	assert(node is Control or node is Window, "set_font_size takes a Control or a Window")
+	node.call("add_theme_font_size_override", key, fs if scaled else px(fs))
+
+
 ## The WCAG contrast ratio of two colours (1 to 21).
 static func contrast(a: Color, b: Color) -> float:
 	var la := _relative_luminance(a)
@@ -372,7 +408,7 @@ static func edge_fade(sc: ScrollContainer, _tint := Color(0, 0, 0, 0), _h := 28.
 	hint.name = "ScrollHint"
 	hint.text = "Scroll for more"
 	hint.add_theme_font_override("font", FONT)
-	hint.add_theme_font_size_override("font_size", SECONDARY)
+	set_font_size(hint, SECONDARY)
 	hint.add_theme_color_override("font_color", TEXT)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -881,7 +917,7 @@ static func lbl(text: String, fs := 16, color := AUTO_COLOUR, bold := false) -> 
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_override("font", BOLD if bold else FONT)
-	l.add_theme_font_size_override("font_size", fs)
+	set_font_size(l, fs)
 	l.add_theme_color_override("font_color", color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
@@ -1235,7 +1271,7 @@ static func style_button(b: Button, fs := 16, primary := false, danger := false)
 	b.mouse_filter = Control.MOUSE_FILTER_PASS
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	b.add_theme_font_override("font", BOLD)
-	b.add_theme_font_size_override("font_size", fs)
+	set_font_size(b, fs)
 	var ink := BAD if danger else TEXT
 	b.add_theme_color_override("font_color", ink)
 	b.add_theme_color_override("font_hover_color", ink)
@@ -1544,7 +1580,7 @@ static func option() -> OptionButton:
 	b.fit_to_longest_item = false
 	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	b.get_popup().add_theme_font_override("font", FONT)
-	b.get_popup().add_theme_font_size_override("font_size", 16)
+	b.get_popup().add_theme_font_size_override("font_size", px(NAME))
 	b.get_popup().add_theme_constant_override("v_separation", 16)
 	return b
 
@@ -1556,7 +1592,7 @@ static func search_field(text: String, placeholder := "Search players...") -> Li
 	field.custom_minimum_size = Vector2(0, 44)
 	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	field.add_theme_font_override("font", FONT)
-	field.add_theme_font_size_override("font_size", 16)
+	set_font_size(field, NAME)
 	field.add_theme_color_override("font_color", TEXT)
 	field.add_theme_color_override("font_placeholder_color", MUTED)
 	field.add_theme_color_override("caret_color", TEXT)
@@ -1577,13 +1613,23 @@ static func chip(text: String, colour: Color) -> PanelContainer:
 	return p
 
 
+## The mark before a weakness's name (Hothead), so it never rests on BAD alone.
+const WEAKNESS_MARK := "- "
+
+
+## A trait's name as a list shows it: a weakness carries its mark ("- Hothead").
+static func trait_label(key: String) -> String:
+	return (WEAKNESS_MARK if Traits.is_bad(key) else "") + Traits.label(key)
+
+
 ## A player's traits as one quiet line ("Ball magnet · Big-game player"),
-## Hothead in BAD. Empty when he has none. Hover or tap says what each one does (TraitLink).
+## Hothead in BAD with its mark. Empty when he has none. Hover or tap says what
+## each one does (TraitLink).
 static func trait_chips(p: Dictionary) -> HBoxContainer:
 	var h := hbox(10)
 	h.name = "Traits"
 	for t in Traits.of(p):
-		var l := line(Traits.label(t), SMALL, BAD if Traits.is_bad(t) else MUTED)
+		var l := line(trait_label(t), SMALL, BAD if Traits.is_bad(t) else MUTED)
 		TraitLink.tappable(l, str(t))
 		h.add_child(l)
 	return h
@@ -1598,7 +1644,7 @@ static func role_chip(role: String) -> PanelContainer:
 	p.mouse_filter = Control.MOUSE_FILTER_PASS
 	p.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	# One column width whatever the tag, so names in a list share a left edge (guide §3).
-	p.custom_minimum_size.x = ROLE_COL
+	p.custom_minimum_size.x = px(ROLE_COL)
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var l := line(role, FINE, colour, true)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -1809,6 +1855,31 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 	var refit := func() -> void:
 		fit.call_deferred()
 	fit.call()
+	# A body of wrapped lines can be kept scrolling by its own bar: the bar
+	# takes a strip of the width, a line wraps, and the body is then too tall
+	# for the room it would fit at full width (the phone's half-time break:
+	# 647 with the bar, 612 without, in 628). When the bar shows, the body is
+	# laid out once without it; if it fits at full width, the bar stays away.
+	# Tried once per body height and at most four times a sheet, so a body that
+	# truly overflows keeps its bar and two heights never take turns.
+	# The try hides the bar (SHOW_NEVER) rather than turning scrolling off:
+	# a DISABLED container asks for its whole body's height, so for a frame a
+	# long sheet stood 2,500 units tall and pushed Start off a phone at the
+	# larger text size.
+	var unstick := func() -> void:
+		if not is_instance_valid(sc) or not is_instance_valid(body) or not sc.is_inside_tree() \
+				or not sc.get_v_scroll_bar().visible or sc.vertical_scroll_mode != ScrollContainer.SCROLL_MODE_AUTO:
+			return
+		var tried: Dictionary = sc.get_meta("bar_tried", {})
+		var h := int(body.get_combined_minimum_size().y)
+		if tried.has(h) or tried.size() >= 4:
+			return
+		tried[h] = true
+		sc.set_meta("bar_tried", tried)
+		sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+		sc.set_deferred("vertical_scroll_mode", ScrollContainer.SCROLL_MODE_AUTO)
+	sc.get_v_scroll_bar().visibility_changed.connect(unstick, CONNECT_DEFERRED)
+	body.minimum_size_changed.connect(unstick, CONNECT_DEFERRED)
 	overlay.resized.connect(fit)
 	body.minimum_size_changed.connect(refit)
 	footer.minimum_size_changed.connect(refit)
@@ -1879,7 +1950,7 @@ static func ladder_table(rows: Array, mine: String, width: float, limit := 0,
 				var probe := line(GameDB.club_short(str(rows[i]["code"])), SECONDARY, TEXT)
 				need = maxf(need, LADDER_NAME_INSET + probe.get_minimum_size().x)
 				probe.free()
-			spec["w"] = int(minf(LADDER_CLUB_W, ceilf(need) + 12.0))
+			spec["w"] = int(minf(px(LADDER_CLUB_W), ceilf(need) + 12.0))
 			# The table, and so the finals rule, ends at its last column.
 			v.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	v.add_child(_ladder_header(specs))
@@ -1919,6 +1990,10 @@ static func ladder_specs(width: float, full: bool) -> Array:
 	if width >= 460.0:
 		specs.append({"key": "pct", "title": "%", "w": 44})
 	specs.append({"key": "pts", "title": "Pts", "w": 34})
+	# The figure columns hold text, so they widen with the text size (row 118).
+	for spec in specs:
+		if spec.has("w"):
+			spec["w"] = px(int(spec["w"]))
 	return specs
 
 

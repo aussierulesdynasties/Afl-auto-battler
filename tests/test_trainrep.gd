@@ -36,6 +36,8 @@ func _fresh() -> void:
 	GameState.start_season("FRE", GameDB.club_list("FRE"))
 	GameState.replay_seed = SUITE_SEED
 	GameState.tutorials = false
+	# The club cards have their own test below: none opens over these unless asked.
+	GameState.event_sheets = false
 	Router.stack = []
 
 
@@ -66,6 +68,8 @@ func run(tree: SceneTree) -> void:
 		_tree.root.size = size
 		await _settle()
 		await _t("_test_taps", [size])
+		await _t("_test_after_results", [size])
+		await _t("_test_after_event_card", [size])
 	GameState.delete_saved_career()
 	print(Ran.line("Training report", self))
 	for f in failures:
@@ -92,7 +96,7 @@ func _test_snapshot_and_report() -> void:
 	_check(not r.is_empty(), "a report exists after round 4")
 	_check(str(r.get("label", "")) == "Rounds 1-4", "it is Rounds 1-4, not %s" % str(r.get("label")))
 	_check(GameState.training_block.is_empty(), "the block closes with the report")
-	_check(TrainingReport.hub_due(GameState), "the hub card is due")
+	_check(TrainingReport.hub_due(GameState), "the new report is due to open over the hub")
 	# The biggest riser by points, worked out here from the raw before and after.
 	var best_id := ""
 	var best_pts := 0
@@ -233,28 +237,28 @@ func _on_screen(c: Control, size: Vector2i) -> bool:
 	return r.position.x >= -0.5 and r.end.x <= size.x + 0.5
 
 
+func _hub() -> Control:
+	Router.stack = ["main"]
+	Router.go("hub")
+	await _settle(10)
+	return _tree.current_scene
+
+
+## A new report opens over the hub by itself, once; Close and Android Back put
+## it away; Training keeps it.
 func _test_taps(size: Vector2i) -> void:
 	var tag := "%dx%d" % [size.x, size.y]
 	_fresh()
 	_boost_potential(2)
 	_rounds(4)
 	GameState.skip_media_conference()
-	Router.stack = ["main"]
-	Router.go("hub")
-	await _settle(10)
-	var hub := _tree.current_scene
-	var card := hub.find_child("TrainingReportCard", true, false)
-	_check(card != null, "%s: the hub shows the report card" % tag)
-	if card == null:
-		return
-	var opener: Control = hub.find_child("TrainingReportOpen", true, false)
-	var why: String = await Tap.tap(opener)
-	_check(why == "", "%s: a finger opens the report (%s)" % [tag, why])
-	await _settle(4)
+	var hub := await _hub()
+	_check(hub.find_child("TrainingReportCard", true, false) == null, "%s: no report line on the hub" % tag)
 	var sheet := hub.find_child("TrainingReportSheet", true, false)
-	_check(sheet != null, "%s: the report is open" % tag)
+	_check(sheet != null, "%s: the new report opens over the hub" % tag)
 	if sheet == null:
 		return
+	_check(not TrainingReport.hub_due(GameState), "%s: it counts as read once it opens" % tag)
 	var risers: Array = GameState.training_report["risers"]
 	var rid := str(risers[0]["id"]) if not risers.is_empty() else ""
 	var name_b: Control = sheet.find_child("Name_" + rid, true, false) if rid != "" else null
@@ -268,22 +272,29 @@ func _test_taps(size: Vector2i) -> void:
 		await _settle(3)
 		_check(hub.find_child("PlayerProfile", true, false) == null, "%s: Back closes the profile" % tag)
 		_check(hub.find_child("TrainingReportSheet", true, false) != null, "%s: and leaves the report" % tag)
-	_check(await Tap.tap(hub.find_child("TrainingReportClose", true, false)) == "", "%s: a finger taps Close" % tag)
+	var close: Control = hub.find_child("TrainingReportClose", true, false)
+	_check(close != null and _on_screen(close, size), "%s: Close is on screen" % tag)
+	_check(await Tap.tap(close) == "", "%s: a finger taps Close" % tag)
 	await _settle(3)
 	_check(hub.find_child("TrainingReportSheet", true, false) == null, "%s: Close closes it" % tag)
-	_check(hub.find_child("TrainingReportCard", true, false) != null, "%s: the card stays after Close" % tag)
-	await Tap.tap(hub.find_child("TrainingReportOpen", true, false))
-	await _settle(4)
+	await _settle(6)
+	_check(hub.find_child("TrainingReportSheet", true, false) == null, "%s: it does not open again this visit" % tag)
+	hub = await _hub()
+	_check(hub.find_child("TrainingReportSheet", true, false) == null, "%s: nor on the next visit" % tag)
+	# Android Back on an unread one.
+	GameState.training_report["dismissed"] = false
+	hub = await _hub()
+	_check(hub.find_child("TrainingReportSheet", true, false) != null, "%s: an unread report opens" % tag)
 	Router.handle_back()
 	await _settle(3)
 	_check(hub.find_child("TrainingReportSheet", true, false) == null and _tree.current_scene == hub, "%s: Android Back closes the report and stays on the hub" % tag)
-	await Tap.tap(hub.find_child("TrainingReportOpen", true, false))
-	await _settle(4)
+	GameState.training_report["dismissed"] = false
+	hub = await _hub()
 	sheet = hub.find_child("TrainingReportSheet", true, false)
 	var rt := TrainingReport.retrain_list(GameState, GameState.training_report)
 	var entries: Array = rt["entries"]
 	_check(not entries.is_empty(), "%s: somebody can retrain" % tag)
-	if not entries.is_empty():
+	if not entries.is_empty() and sheet != null:
 		var id0 := str(entries[0]["id"])
 		var row: Control = sheet.find_child("Retrain_" + id0, true, false)
 		var rb: Control = row.find_child("Name_" + id0, true, false) if row != null else null
@@ -305,27 +316,77 @@ func _test_taps(size: Vector2i) -> void:
 				if (b as Button).text == want:
 					has = true
 			_check(has, "%s: his \"%s\" choice is there" % [tag, want])
-	# From Training: Back to the list, then the link reopens the report.
+	# Training keeps the read report: Back to the list, then its line reopens it.
+	if Router.current() != "training":
+		Router.go("training")
+		await _settle(8)
 	var link := _tree.current_scene.find_child("TrainingReportLink", true, false)
 	if link == null:
 		Router.handle_back()
 		await _settle(6)
 		link = _tree.current_scene.find_child("TrainingReportLink", true, false)
-	_check(link != null, "%s: Training keeps a link to the report" % tag)
+	_check(link != null, "%s: Training keeps the read report" % tag)
 	if link != null:
-		await Tap.tap(link)
+		_check(_on_screen(link, size), "%s: its line is on screen" % tag)
+		_check(await Tap.tap(link) == "", "%s: a finger taps the line" % tag)
 		await _settle(4)
-		_check(_tree.current_scene.find_child("TrainingReportSheet", true, false) != null, "%s: the link opens the report" % tag)
+		_check(_tree.current_scene.find_child("TrainingReportSheet", true, false) != null, "%s: the line opens the report" % tag)
 		Router.handle_back()
 		await _settle(3)
 		_check(_tree.current_scene.find_child("TrainingReportSheet", true, false) == null, "%s: Back closes it in Training" % tag)
-	Router.stack = ["main"]
-	Router.go("hub")
-	await _settle(8)
-	var hide: Control = _tree.current_scene.find_child("TrainingReportHide", true, false)
-	_check(await Tap.tap(hide) == "", "%s: a finger taps Hide" % tag)
-	await _settle(3)
-	_check(not TrainingReport.hub_due(GameState), "%s: dismissed" % tag)
-	Router.go("training")
-	await _settle(8)
-	_check(_tree.current_scene.find_child("TrainingReportLink", true, false) != null, "%s: still reachable from Training" % tag)
+
+
+## The report lands with the round's results: the results come first, the
+## report after Continue, never both at once.
+func _test_after_results(size: Vector2i) -> void:
+	var tag := "%dx%d results" % [size.x, size.y]
+	_fresh()
+	_rounds(3)
+	GameState.skip_media_conference()
+	var hub := await _hub()
+	_check(hub.find_child("TrainingReportSheet", true, false) == null, "%s: no report before round 4" % tag)
+	var sim: Control = hub.find_child("SimRound", true, false)
+	_check(sim != null, "%s: Sim the week is there" % tag)
+	if sim == null:
+		return
+	for sc in hub.find_children("*", "ScrollContainer", true, false):
+		(sc as ScrollContainer).ensure_control_visible(sim)
+	await _settle(2)
+	_check(await Tap.tap(sim) == "", "%s: a finger taps Sim the week" % tag)
+	await _settle(4)
+	var go: Control = hub.find_child("SimConfirmGo", true, false)
+	if go != null:
+		_check(await Tap.tap(go) == "", "%s: a finger confirms the sim" % tag)
+	for i in range(40):
+		await _tree.process_frame
+	_check(not GameState.training_report.is_empty(), "%s: the round lands the report" % tag)
+	_check(hub.find_child("RoundResults", true, false) != null, "%s: the round's results open" % tag)
+	_check(hub.find_child("TrainingReportSheet", true, false) == null, "%s: the report waits behind them" % tag)
+	GameState.skip_media_conference()
+	_check(await Tap.tap(hub.find_child("ResultsContinue", true, false)) == "", "%s: a finger taps Continue" % tag)
+	await _settle(6)
+	_check(hub.find_child("RoundResults", true, false) == null, "%s: the results close" % tag)
+	_check(hub.find_child("TrainingReportSheet", true, false) != null, "%s: then the report opens" % tag)
+
+
+## A new club card and a new report in the same visit: the card first, the
+## report when it closes, never both at once.
+func _test_after_event_card(size: Vector2i) -> void:
+	var tag := "%dx%d card" % [size.x, size.y]
+	_fresh()
+	_rounds(4)
+	GameState.skip_media_conference()
+	GameState.event_sheets = true
+	GameState.week_events = [GameState.story_card("members_open_training")]
+	var hub := await _hub()
+	_check(hub.find_child("EventSheet", true, false) != null, "%s: the new card opens first" % tag)
+	_check(hub.find_child("TrainingReportSheet", true, false) == null, "%s: the report waits behind it" % tag)
+	_check(TrainingReport.hub_due(GameState), "%s: and is still unread" % tag)
+	var later: Control = hub.find_child("EventLater", true, false)
+	_check(later != null, "%s: the card offers Later" % tag)
+	if later == null:
+		return
+	_check(await Tap.tap(later) == "", "%s: a finger taps Later" % tag)
+	await _settle(4)
+	_check(hub.find_child("EventSheet", true, false) == null, "%s: the card closes" % tag)
+	_check(hub.find_child("TrainingReportSheet", true, false) != null, "%s: then the report opens" % tag)

@@ -21,6 +21,8 @@ func _run() -> void:
 	await process_frame
 	_state = root.get_node("GameState")
 	_state.autosave_enabled = false
+	# These tests drive the hub for other things: no club card opens over it.
+	_state.event_sheets = false
 	_state.save_path = "user://test_career.save"
 	_state.settings_path = "user://test_matchup_settings.cfg"  # its own: other suites on the machine share test_settings.cfg
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
@@ -336,6 +338,10 @@ func _test_finals_week_by_week() -> void:
 	_check(out != "", "A club misses the finals to test with")
 	if out == "":
 		return
+	# The last round lands a training report, which opens over the hub: mark it
+	# read, as a player who closed it would, so the tap below reaches Finals.
+	if not _state.training_report.is_empty():
+		_state.training_report["dismissed"] = true
 	root.size = Vector2i(390, 844)
 	var hub: Control = await _open_hub()
 	# The series beside the ladder: a finger's tap opens it, Back closes it.
