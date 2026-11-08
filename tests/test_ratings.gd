@@ -320,6 +320,12 @@ func _test_ovr_overrides() -> void:
 			for k in who["attr"]:
 				mx = maxi(mx, int(who["attr"][k]))
 			_check(int(who["attr"][top]) == mx, "%s keeps his strength (%s): %s" % [c[2], top, str(who["attr"])])
+	# Director, 2026-11-08: Blicavs is a 65 wherever he plays.
+	var blicavs := _find(["GEE", "Mark", "Blicavs"])
+	_check(int(blicavs["overall"]) == 65, "Blicavs reads 65 (got %d)" % int(blicavs["overall"]))
+	for line in Ratings.ROLE_WEIGHTS:
+		_check(Ratings.line_rating(blicavs, line) <= 65.0,
+				"Blicavs's 65 holds at %s (got %.0f)" % [line, Ratings.line_rating(blicavs, line)])
 	# An unmatched row is reported, not lost.
 	GameDB.override_hits = {}
 	_check(GameDB._report_unmatched_overrides().size() >= rows.size() - 1, "unmatched rows are reported")
