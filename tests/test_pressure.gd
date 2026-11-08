@@ -141,7 +141,7 @@ func _test_high_pressure_forward() -> void:
 
 
 ## Who applies the pressure goes by Pressure to the power PRESS_PICK_POW: two
-## midfielders at 90 and 45 are picked about (90/45)^1.25 = 2.4 times as often
+## midfielders at 90 and 45 are picked about (90/45)^1.5 = 2.8 times as often
 ## as each other, and the balance harness's tune key (in capitals, like every
 ## other) moves it.
 func _test_pick_power() -> void:

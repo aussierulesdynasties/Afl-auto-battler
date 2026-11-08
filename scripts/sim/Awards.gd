@@ -3,9 +3,9 @@ extends RefCounted
 ## Season awards, built from a running per-player tally (match results are
 ## slimmed when a career is saved, so the tally is what survives a reload).
 ##
-##   Brownlow Medal   3-2-1 votes to the three players the umpires would
-##                    pick in every home-and-away match (umpire_score; finals
-##                    do not count)
+##   Brownlow Medal   3-2-1 votes in every home-and-away match, drawn the way
+##                    real umpires choose (umpire_score, brownlow_three;
+##                    finals do not count)
 ##   Coleman Medal    most home-and-away goals
 ##   Rising Star      best votes-then-influence among the season's weekly
 ##                    nominees (one a round: the most influential player 21
@@ -38,6 +38,12 @@ const UMPIRE_WEIGHTS := {"disposals": 1.0, "goals": 4.896, "marks": 0.256, "insi
 ## A man on the winning side, in disposals (the same fit): real umpires give 84%
 ## of their votes to the winners. A draw counts as no win for either side.
 const UMPIRE_WIN := 7.3
+## How sure the umpires are, per unit of umpire_score (the same fit's logit a
+## disposal): each of the 3, the 2 and the 1 is drawn from the men left, each
+## man's chance exp(UMPIRE_DRAW x his score). Real umpires do not always name
+## the three best lines, and always taking the top three gave sim winners 51
+## votes against a real 28-47 (tools/audit/brownlow_impl.gd).
+const UMPIRE_DRAW := 0.2098
 ## The team is a match-day 23: 18 by position plus five on the bench
 ## (director, 2026-10-06, with ARD-M5-001).
 const AA_BENCH := 5
@@ -160,8 +166,45 @@ static func umpire_score(st: Dictionary, won: bool) -> float:
 	return v
 
 
+## The Brownlow 3-2-1 of one match from [[id, umpire_score], ...]: the 3, then
+## the 2, then the 1, each drawn from the men left with chance proportional to
+## exp(UMPIRE_DRAW x score) (Plackett-Luce, the model the umpires' fit is).
+## Seeded by the match itself, so the same result always polls the same men.
+## Returns the three [id, score] rows in vote order.
+static func brownlow_three(scored: Array, res: Dictionary) -> Array:
+	var left := _ranked(scored, scored.size())
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(["brownlow", str(res.get("home", "")), str(res.get("away", "")),
+			int(res.get("round", 0)), res.get("score", []), res.get("quarters", [])])
+	var out := []
+	for _i in range(mini(3, left.size())):
+		var top := float(left[0][1])
+		var tot := 0.0
+		for e in left:
+			tot += exp(UMPIRE_DRAW * (float(e[1]) - top))
+		var x := rng.randf() * tot
+		var pick := left.size() - 1
+		for j in range(left.size()):
+			x -= exp(UMPIRE_DRAW * (float(left[j][1]) - top))
+			if x <= 0.0:
+				pick = j
+				break
+		out.append(left[pick])
+		left.remove_at(pick)
+	return out
+
+
+## The `n` highest [id, score] rows, highest first (a copy).
+static func _ranked(scored: Array, n := 3) -> Array:
+	var rows := scored.duplicate()
+	rows.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
+	return rows.slice(0, mini(n, rows.size()))
+
+
 ## Add one match to the tally. `regular` is false for finals.
-static func tally_match(tally: Dictionary, res: Dictionary, regular: bool) -> void:
+## `umpire_draw` false gives the 3-2-1 to the top three umpire_scores outright
+## (tests and the audit's comparison only).
+static func tally_match(tally: Dictionary, res: Dictionary, regular: bool, umpire_draw := true) -> void:
 	var stats_all: Dictionary = res.get("players", {})
 	var roster: Array = res.get("roster", [])
 	var codes := [str(res.get("home", "")), str(res.get("away", ""))]
@@ -201,9 +244,9 @@ static func tally_match(tally: Dictionary, res: Dictionary, regular: bool) -> vo
 			t["bf"] = int(t["bf"]) + (5 - i)
 	if regular:
 		everyone.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
-		umpires.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
-		for i in range(mini(3, umpires.size())):
-			var t: Dictionary = tally[str(umpires[i][0])]
+		var three := brownlow_three(umpires, res) if umpire_draw else _ranked(umpires)
+		for i in range(three.size()):
+			var t: Dictionary = tally[str(three[i][0])]
 			t["votes"] = int(t["votes"]) + (3 - i)
 			t["polled"] = int(t["polled"]) + 1
 		# Ten coaches-award votes per match, 5-4-3-2-1 to the five best players.
