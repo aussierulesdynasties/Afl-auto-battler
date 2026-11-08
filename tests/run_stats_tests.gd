@@ -2005,18 +2005,19 @@ func _test_awards_awarded() -> void:
 				"The medallist's count carries its unit (%s: %s)" % [tag, fig.text if fig else "none"])
 		var name_l: Label = medal.find_child("Name", true, false) if medal != null else null
 		var club_l: Label = medal.find_child("Club", true, false) if medal != null else null
+		var probe := ""
 		if medal != null:
-			print("PROBE ", tag, " text='", name_l.text, "' name_size=", name_l.size, " medal=", medal.size, " host=", s.size, " content=", s.call("content_width"), " wide=", s.call("wide"))
+			probe = "text=%s nsize=%s medal=%s host=%s content=%s wide=%s |" % [name_l.text, name_l.size, medal.size, s.size, s.call("content_width"), s.call("wide")]
 			var n: Node = name_l
 			while n != null and n != s:
-				print("PROBE   ", n.name, " ", n.get_class(), " x=", (n as Control).position.x, " w=", (n as Control).size.x, " min=", (n as Control).get_combined_minimum_size().x)
+				probe += " %s:%s:w%d" % [n.name, n.get_class(), int((n as Control).size.x)]
 				n = n.get_parent()
 			var hb: Node = medal.get_child(0)
 			for ch in hb.get_children():
-				print("PROBE   child ", ch.name, " ", ch.get_class(), " x=", ch.position.x, " w=", ch.size.x, " min=", ch.get_combined_minimum_size().x)
+				probe += " CH %s x%d w%d min%d" % [ch.name, int(ch.position.x), int(ch.size.x), int(ch.get_combined_minimum_size().x)]
 		_check(name_l != null and club_l != null and _label_fits(name_l),
 				"The medallist's name fits in full, beside the count (%s, club %s)"
-				% [tag, "under the name" if club_l != null and name_l != null and name_l.get_parent() == club_l.get_parent() else "beside it"])
+				% [tag, "under the name" if club_l != null and name_l != null and name_l.get_parent() == club_l.get_parent() else "beside it"] + probe)
 		_check(medal != null and (await Tap.tap(medal)) == "", "The Brownlow medallist takes a tap (%s)" % tag)
 		await _settle()
 		_check(s.find_child("PlayerProfile", true, false) != null, "The tap opens the medallist's profile (%s)" % tag)
