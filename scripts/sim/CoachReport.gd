@@ -471,8 +471,9 @@ static func _split_plans(res: Dictionary, my_side: int, opp_side: int, quarters:
 	var hist: Array = res.get("tactics_history", [])
 	var mine: Array = []
 	var opp: Array = []
-	# Half-time covers the quarters already simulated (normally Q1-Q2).
-	var wanted := maxi(1, mini(quarters, 2))
+	# The quarters already simulated: Q1-Q2 at half time, every one at full
+	# time (the glance tells a third-quarter switch; it once stopped at Q2).
+	var wanted := maxi(1, quarters)
 	for h in hist:
 		if not (h is Dictionary):
 			continue
@@ -724,17 +725,14 @@ static func glance(report: Dictionary, full_time := false) -> Dictionary:
 			read.append("You lead the %s, %d to %d." % [word, int(d["my"]), int(d["opp"])])
 		else:
 			read.append("%s lead the %s, %d to %d." % [them, word, int(d["opp"]), int(d["my"])])
-	# Their approach, only when it is not a plain game.
+	# Their approach, quarter by quarter, only when it is not a plain game
+	# (RivalRead.plan_story: "started with X and switched to Y in the third
+	# quarter").
 	var opp_plans: Array = report.get("opp_plans", [])
 	if opp_plans.size() >= 2:
-		var q1 := str((opp_plans[0] as Dictionary).get("gameplan", "balanced"))
-		var q2 := str((opp_plans[1] as Dictionary).get("gameplan", "balanced"))
-		if q1 != q2:
-			read.append("%s switched to %s in the second quarter." % [them,
-					str((opp_plans[1] as Dictionary).get("gameplan_label", q2)).to_lower()])
-		elif q1 != "balanced":
-			read.append("%s played %s all %s." % [them,
-					str((opp_plans[0] as Dictionary).get("gameplan_label", q1)).to_lower(), span])
+		var story := RivalRead.plan_story(them, opp_plans.map(func(p): return str((p as Dictionary).get("gameplan", "balanced"))), span)
+		if story != "":
+			read.append(story)
 	if read.is_empty():
 		read.append("An even %s: neither side is on top anywhere in particular." % span)
 	# The conditions, when they weren't a perfect day (ARD-M4-016).

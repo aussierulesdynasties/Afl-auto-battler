@@ -169,6 +169,17 @@ static func style(c: Dictionary) -> String:
 	var s := str(c.get("style", ""))
 	if STYLES.has(s):
 		return s
+	s = style_of(c)
+	c["style"] = s
+	return s
+
+
+## The style `style` would give him, without writing it on his record: for a
+## screen read before his first match (a rival coach read, RivalRead).
+static func style_of(c: Dictionary) -> String:
+	var s := str(c.get("style", ""))
+	if STYLES.has(s):
+		return s
 	var sk: Dictionary = c.get("skills", {})
 	if int(sk.get("tactics", 0)) >= STYLE_SHARP:
 		s = "balanced"
@@ -179,7 +190,6 @@ static func style(c: Dictionary) -> String:
 		s = str(STYLES[h % STYLES.size()])
 		if s == "reactive" and int(sk.get("manage", 0)) >= 80:
 			s = "cautious"
-	c["style"] = s
 	return s
 
 

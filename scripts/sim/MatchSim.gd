@@ -44,8 +44,9 @@ var tag_drops: Array = []
 ## How well each side's match-day players suit each plan (PlanFit): the
 ## plan's upside is scaled by it, its costs are not.
 var plan_fit := [{}, {}]
-## The plan each side's list suits as its usual game (PlanFit.standing_plan):
-## where an AI club starts, and what it goes back to.
+## Each side's usual game: where an AI club starts, and what it goes back to.
+## The plan its coach settled on for the season (Squad.usual_plan), or, with
+## none, the one its list suits (PlanFit.standing_plan).
 var standing := ["balanced", "balanced"]
 ## Named match-ups (Matchups, Gate 1.12): per defending side, which defender
 ## stands on each of the other side's key forwards. {forward id: defender id}.
@@ -112,7 +113,9 @@ var _lost_by := -1
 var _ball_lost_by := -1
 # Assistant-coach audit trail. Snapshots never touch the RNG, so calibration
 # is unaffected. tactics_history[q] records the plans in force for that
-# quarter; quarter_teams[q] records the cumulative team totals afterwards.
+# quarter, and "why" each rival coach played his (ai_why; "" for a side you
+# coach, and absent from matches saved before the rival coach read);
+# quarter_teams[q] records the cumulative team totals afterwards.
 var tactics_history: Array = []
 var quarter_teams: Array = []
 ## What each side is playing, for the match view (ARD-M8-003 tactical
@@ -460,7 +463,8 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
 	for side in range(2):
 		synergies[side] = Traits.active((squads[side] as Squad).ground)
-		standing[side] = PlanFit.standing_plan((squads[side] as Squad).ground, (squads[side] as Squad).plan_know)
+		standing[side] = (squads[side] as Squad).usual_plan if (squads[side] as Squad).usual_plan != "" \
+				else PlanFit.standing_plan((squads[side] as Squad).ground, (squads[side] as Squad).plan_know)
 		duels[side] = Matchups.defaults((squads[1 - side] as Squad).ground, (squads[side] as Squad).ground)
 		for plan in PlanFit.LEAGUE:
 			(plan_fit[side] as Dictionary)[plan] = PlanFit.fit((squads[side] as Squad).ground, plan)
@@ -476,7 +480,7 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	# coach box.
 	for side in range(2):
 		if (squads[side] as Squad).ai_plans:
-			var best := Matchups.best_interceptor(_loose_pool(side, (squads[side] as Squad).ground))
+			var best := loose_pick((squads[side] as Squad).ground, (squads[1 - side] as Squad).ground)
 			if not best.is_empty():
 				set_interceptor(side, str(best["id"]), false)
 		elif _assisted(side):
@@ -4157,9 +4161,13 @@ func begin_quarter() -> void:
 		for id in energy:
 			energy[id] = minf(float(energy_caps.get(id, 100.0)), float(energy[id]) + ENERGY_BREAK_RECOVER)
 	# AI clubs pick their plan for the quarter from the score and what they
-	# have seen (no dice: replays are unchanged).
+	# have seen (no dice: replays are unchanged). Why each plays his plan
+	# (ai_why) is read at the same moment, for the break sheet; "" for a side
+	# you coach.
+	var why := ["", ""]
 	for side in range(2):
 		if (squads[side] as Squad).ai_plans:
+			why[side] = ai_why(side)
 			set_tactics(side, ai_tactics(side))
 			if current_quarter > 1:
 				_ai_rematch(side)
@@ -4172,6 +4180,7 @@ func begin_quarter() -> void:
 		"quarter": current_quarter,
 		"plans": [(tactics[0] as Dictionary).duplicate(), (tactics[1] as Dictionary).duplicate()],
 		"rotations": [str(rotation_policy[0]), str(rotation_policy[1])],
+		"why": why,
 	})
 	_q_active = true
 	_q_i = 0
@@ -5986,50 +5995,118 @@ func _score_run(side: int) -> void:
 # ---------------------------------------------------------------------------
 # The rival coach (live matches)
 # ---------------------------------------------------------------------------
-## The opposition's plan for the coming quarter: its usual game (the plan
-## its list suits, PlanFit.standing_plan), protecting a big lead or chasing
-## a big deficit. From the second quarter it reads the plan you ran last
-## quarter and, when it is one of the main three, switches to the plan that
-## beats it (COUNTER) if that plan is worth nearly as much to it as its usual
-## game (COUNTER_GIVE, on PlanFit.plan_score). The scoreboard comes first:
-## a big lead or deficit decides before any counter. With a specialist
-## tagger on the ground it tags your most influential midfielder from half
-## time; without one it does not (a tag by a good midfielder costs more than
-## it takes, _tag_drag).
+## The opposition's plan for the coming quarter: its usual game (standing:
+## the plan its coach settled on for the season), protecting a big lead or chasing
+## a big deficit (ai_mood). From the second quarter it reads the plan you ran
+## last quarter and, when it is one of the main three, switches to the plan
+## that beats it (COUNTER) if that plan is worth nearly as much to it as its
+## usual game (COUNTER_GIVE, on PlanFit.plan_score). The scoreboard comes
+## first: a big lead or deficit decides before any counter. With a specialist
+## tagger on the ground it tags your most influential midfielder; without one
+## it does not (a tag by a good midfielder costs more than it takes,
+## _tag_drag).
 ## A sharper tactical group (Squad.tactics_read) reacts to a smaller margin
-## and tags from half time rather than the last quarter.
+## (react_margin) and tags from quarter time rather than half time
+## (tag_quarter).
 ## His senior coach's tendency (Squad.coach_style, COACH_STYLES) moves when
 ## he reacts, never what his players can do.
+## The Assistant's report and the break sheet say all of this in football
+## words (RivalRead), from these same constants and functions.
 ## The plan that beats each of the main three (the triangle at PLANS).
 const COUNTER := {"controlled": "attacking", "defensive": "controlled", "attacking": "defensive"}
 ## How much less (PlanFit.plan_score) a counter may be worth than the usual
 ## game and still be played.
 const COUNTER_GIVE := 0.3
+## The first quarter a rival coach answers the plan you ran (the one before).
+const COUNTER_Q := 2
+## The margin (points) that moves a rival coach whose box reads the game
+## averagely (Squad.tactics_read 0); a sharper box needs REACT_SPAN less per
+## point of read (react_margin).
+const REACT_BASE := 18.0
+const REACT_SPAN := 8.0
+## A box this sharp (Squad.tactics_read; CoachEffects.level(STRONG_CUT))
+## tags from quarter time (TAG_Q_SHARP); any other waits for half time
+## (TAG_Q_SLOW).
+const TAG_SHARP_READ := 0.4
+const TAG_Q_SHARP := 2
+const TAG_Q_SLOW := 3
+## Aerial contests one of your men must have won roaming (player_stats
+## "roam_wins") before the rival coach sends a forward to stand him.
+const LOOSE_MINDER_WINS := 2
+
+
+## The margin that moves a coach whose box reads the game at `read`.
+static func react_margin(read: float) -> float:
+	return REACT_BASE - REACT_SPAN * read
+
+
+## The first quarter a box reading the game at `read` sends its tagger.
+static func tag_quarter(read: float) -> int:
+	return TAG_Q_SHARP if read >= TAG_SHARP_READ else TAG_Q_SLOW
+
+
+## How the scoreboard has `side`'s coach going into the quarter, by the rule
+## ai_tactics plays: "protect" (well in front: he shuts up shop), "chase"
+## (well behind: he chases), "lost_q" (behind after half time and outscored
+## last quarter: he chases), "" (neither: his usual game, or his answer to
+## yours). Pure: no dice, nothing set.
+func ai_mood(side: int) -> String:
+	var margin := score(side) - score(1 - side)
+	var react := react_margin(float((squads[side] as Squad).tactics_read))
+	var st := _style(side)
+	if margin >= react * float(st["protect"]) + float(st["add"]):
+		return "protect"
+	if margin <= -(react * float(st["chase"]) + float(st["add"])):
+		return "chase"
+	if margin < 0 and current_quarter >= int(st["lost_q"]) and _lost_quarter(side, current_quarter - 1):
+		# Behind after half time and still losing ground: the usual game is
+		# not working, so it chases. Only what a coach sees - the scoreboard.
+		return "lost_q"
+	return ""
+
+
+## Why `side`'s coach plays the plan ai_tactics gives him this quarter: his
+## mood (ai_mood), "counter" (his answer to the plan you ran last quarter),
+## or "usual". Pure, like ai_mood.
+func ai_why(side: int) -> String:
+	var mood := ai_mood(side)
+	if mood != "":
+		return mood
+	return "counter" if _counter_plan(side, _usual(side)) != "" else "usual"
+
+
+## The plan that beats what the other side ran last quarter, when `side`'s
+## coach would play it instead of `plan`; "" when he stays. From the second
+## quarter only.
+func _counter_plan(side: int, plan: String) -> String:
+	if current_quarter < COUNTER_Q or tactics_history.is_empty():
+		return ""
+	# What they ran last quarter is on show: beat it if that costs little.
+	var theirs := plan_key(str(((tactics_history[-1]["plans"] as Array)[1 - side] as Dictionary).get("gameplan", "balanced")))
+	var beat := str(COUNTER.get(theirs, ""))
+	if beat == "" or beat == plan:
+		return ""
+	var sq: Squad = squads[side]
+	if PlanFit.plan_score(sq.ground, beat, sq.plan_know) >= PlanFit.plan_score(sq.ground, plan, sq.plan_know) - COUNTER_GIVE:
+		return beat
+	return ""
 
 
 func ai_tactics(side: int) -> Dictionary:
 	var opp := 1 - side
 	var read := float((squads[side] as Squad).tactics_read)
 	var margin := score(side) - score(opp)
-	var react := 18.0 - 8.0 * read
 	var st := _style(side)
 	var plan := _usual(side)
-	if margin >= react * float(st["protect"]) + float(st["add"]):
+	var mood := ai_mood(side)
+	if mood == "protect":
 		plan = "controlled"
-	elif margin <= -(react * float(st["chase"]) + float(st["add"])):
+	elif mood != "":
 		plan = "attacking"
-	elif margin < 0 and current_quarter >= int(st["lost_q"]) and _lost_quarter(side, current_quarter - 1):
-		# Behind after half time and still losing ground: the usual game is
-		# not working, so it chases. Only what a coach sees - the scoreboard.
-		plan = "attacking"
-	elif current_quarter >= 2 and not tactics_history.is_empty():
-		# What they ran last quarter is on show: beat it if that costs little.
-		var theirs := plan_key(str(((tactics_history[-1]["plans"] as Array)[opp] as Dictionary).get("gameplan", "balanced")))
-		var beat := str(COUNTER.get(theirs, ""))
-		if beat != "" and beat != plan:
-			var sq: Squad = squads[side]
-			if PlanFit.plan_score(sq.ground, beat, sq.plan_know) >= PlanFit.plan_score(sq.ground, plan, sq.plan_know) - COUNTER_GIVE:
-				plan = beat
+	else:
+		var beat := _counter_plan(side, plan)
+		if beat != "":
+			plan = beat
 	var fire := margin <= float(st["fire_at"]) and current_quarter >= int(st["fire_q"])
 	var t := {"gameplan": plan, "pep": "fire_up" if fire else "steady"}
 	t["interceptor_id"] = _ai_interceptor(side, (squads[side] as Squad).ground)
@@ -6041,14 +6118,14 @@ func ai_tactics(side: int) -> Dictionary:
 	for p in (squads[opp] as Squad).ground:
 		var ost: Dictionary = player_stats.get(str(p.get("id", "")), {})
 		observed_spare_wins = maxi(observed_spare_wins, int(ost.get("roam_wins", 0)))
-	if observed_spare_wins >= 2:
+	if observed_spare_wins >= LOOSE_MINDER_WINS:
 		t["spare_accountable"] = true
 		var minders := Matchups.minder_candidates((squads[side] as Squad).ground)
 		if not minders.is_empty():
 			t["spare_minder_id"] = str(minders[0]["id"])
 
 	var tagger = tagger_of(side)
-	if current_quarter >= (2 if read >= 0.4 else 3) and tagger != null and Roles.is_tagger(tagger):
+	if current_quarter >= tag_quarter(read) and tagger != null and Roles.is_tagger(tagger):
 		var best := ""
 		var best_inf := -1.0
 		for p in (squads[opp] as Squad).ground:
@@ -6068,14 +6145,21 @@ func ai_tactics(side: int) -> Dictionary:
 ## would take the forward, so a key forward is never left to a smaller man
 ## for the loose man's sake. The coach's own pick of the loose man is his.
 func _loose_pool(side: int, ground: Array) -> Array:
-	var d: Dictionary = duels[side]
+	return loose_pool(duels[side], str(interceptor[side]), (squads[side] as Squad).ground,
+			(squads[1 - side] as Squad).ground, ground)
+
+
+## _loose_pool from the match-ups themselves: `d` forward id -> defender id
+## for the side picking, `loose` its loose man now, `own` and `opp` the two
+## grounds, `ground` the men to pick from.
+static func loose_pool(d: Dictionary, loose: String, own: Array, opp: Array, ground: Array) -> Array:
 	var on := {}
 	for fid in d:
 		on[str(d[fid])] = str(fid)
 	var free_key := false
-	for p in Matchups.defenders((squads[side] as Squad).ground):
+	for p in Matchups.defenders(own):
 		var pid := str(p["id"])
-		if not on.has(pid) and pid != str(interceptor[side]) \
+		if not on.has(pid) and pid != loose \
 				and PlayerProfile.player_type(p) == "Key defender":
 			free_key = true
 	if free_key:
@@ -6084,14 +6168,29 @@ func _loose_pool(side: int, ground: Array) -> Array:
 		var fid := str(on.get(str(p["id"]), ""))
 		if fid == "" or PlayerProfile.player_type(p) != "Key defender":
 			return true
-		return not Matchups.is_key_forward(_on_ground(1 - side, fid)))
+		return not Matchups.is_key_forward(_find(opp, fid)))
+
+
+## The loose man a rival coach starts a match with, as MatchSim.new picks
+## him: his best interceptor among the men he can spare from the default
+## match-ups. {} for none. The Assistant's report names him from this.
+static func loose_pick(own: Array, opp: Array) -> Dictionary:
+	return Matchups.best_interceptor(loose_pool(Matchups.defaults(opp, own), "", own, opp, own))
+
+
+## The player with id `id` in `group`, or {}.
+static func _find(group: Array, id: String) -> Dictionary:
+	for p in group:
+		if str(p["id"]) == id:
+			return p
+	return {}
 
 
 ## A rival coach's loose defender for the quarter, from `ground`: his best
 ## interceptor, unless he is chasing the game late and wants every man on a
 ## forward. "" for none.
 func _ai_interceptor(side: int, ground: Array) -> String:
-	var react := 18.0 - 8.0 * float((squads[side] as Squad).tactics_read)
+	var react := react_margin(float((squads[side] as Squad).tactics_read))
 	var margin := score(side) - score(1 - side)
 	var st := _style(side)
 	var spare := Matchups.best_interceptor(_loose_pool(side, ground))
@@ -6123,8 +6222,9 @@ const COACH_STYLES := {
 }
 
 
-## `side`'s usual game: the plan its list suits (standing). Only an AI club
-## picks its plan this way; yours is always your own call.
+## `side`'s usual game (standing): the plan its coach settled on for the
+## season, or the one its list suits. Only an AI club picks its plan this
+## way; yours is always your own call.
 func _usual(side: int) -> String:
 	return str(standing[side])
 
