@@ -290,7 +290,7 @@ func _closer(roots: Array) -> Button:
 			continue
 		for b in r.find_children("*", "Button", true, false):
 			var t := str((b as Button).text).strip_edges()
-			if (b as Button).is_visible_in_tree() and ["Close", "Done", "Back", "Cancel", "Not now", "Back to your calls", "Back to hub", "OK", "Skip", "Got it", "Continue", "Start", "To the draft"].has(t):
+			if (b as Button).is_visible_in_tree() and ["Close", "Done", "Back", "Cancel", "Not now", "Back to your calls", "Back to hub", "OK", "Skip", "Got it", "Continue", "Start", "To the draft", "Skip to season review"].has(t):
 				return b
 	return null
 
@@ -410,6 +410,29 @@ func _test_overlays() -> void:
 	await _overlay_case("offseason: talks", "offseason", func(s): s.call("_open_talks", pid))
 	await _overlay_case("season review: awards program", "season_review", func(s): s.call("_open_awards_program"),
 			func(): _state.season_awards = {"year": 2026, "brownlow": []})
+	# Awards night's count (T5.Q23b), part way through the Brownlow.
+	await _overlay_case("season review: awards night count", "season_review", func(s):
+		s.set("_awards_overlay", load("res://scripts/ui/SeasonAwards.gd").open(s))
+		await _settle(3)
+		await _click_named(s, "AwardsNext"),
+			func(): load("res://tests/award_count_fixture.gd").build(_state, "COL"))
+	# Android Back keeps the count's place, as a tap outside it does: the night
+	# is not marked seen, and Replay awards picks it up there.
+	_fresh_career()
+	load("res://tests/award_count_fixture.gd").build(_state, "COL")
+	await _open("season_review")
+	var review := current_scene
+	var night: Control = load("res://scripts/ui/SeasonAwards.gd").open(review)
+	review.set("_awards_overlay", night)
+	await _settle(3)
+	await _click_named(review, "AwardsNext")
+	await _settle(3)
+	_router.notification(Node.NOTIFICATION_WM_GO_BACK_REQUEST)
+	await _settle(8)
+	var at: Dictionary = _state.season_awards.get("count_at", {})
+	_check(not is_instance_valid(night) and _router.current() == "season_review"
+			and not bool(_state.season_awards.get("presentation_seen", false)) and int(at.get("round", -1)) == 1,
+			"season review: Android Back closes the awards night and keeps its place (%s)" % str(at))
 
 
 # ---------------------------------------------------------------------------
