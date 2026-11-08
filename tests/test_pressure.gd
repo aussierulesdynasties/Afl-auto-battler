@@ -18,6 +18,7 @@ func run() -> void:
 	_t("_test_acts_and_reconcile")
 	_t("_test_role_pressure_matters")
 	_t("_test_high_pressure_forward")
+	_t("_test_pick_power")
 	_t("_test_rating_formula")
 	_t("_test_player_rating")
 	_t("_test_creating")
@@ -137,6 +138,43 @@ func _test_high_pressure_forward() -> void:
 	_check(elite > ordinary * 1.5,
 			"A high-Pressure forward generates far more pressure acts (%.1f -> %.1f a game)" % [ordinary, elite])
 	_check(elite < 40.0, "...but not every one on the ground (%.1f a game)" % elite)
+
+
+## Who applies the pressure goes by Pressure to the power PRESS_PICK_POW: two
+## midfielders at 90 and 45 are picked about (90/45)^1.5 = 2.8 times as often
+## as each other, and the balance harness's tune key (in capitals, like every
+## other) moves it.
+func _test_pick_power() -> void:
+	var sim := _sim(5)
+	var mids: Array = sim.squads[1].ground.filter(func(p): return str(p["role"]) == "MID")
+	var hi: Dictionary = mids[0]
+	var lo: Dictionary = mids[1]
+	hi["attr"]["pressure"] = 90.0
+	lo["attr"]["pressure"] = 45.0
+	var ar := sim._a(hi, "pressure") / sim._a(lo, "pressure")
+	var mr := sim._tactic_player_mult(1, hi, "tackler") / sim._tactic_player_mult(1, lo, "tackler")
+	var seen := _pick_ratio(sim, str(hi["id"]), str(lo["id"]))
+	var want := pow(ar, MatchSim.PRESS_PICK_POW) * mr
+	_check(absf(seen / want - 1.0) < 0.1,
+			"A 90-Pressure mid is picked to press %.2f times as often as a 45 (%.2f expected)" % [seen, want])
+	MatchSim.tune["PRESS_PICK_POW"] = 2.0
+	var tuned := _pick_ratio(sim, str(hi["id"]), str(lo["id"]))
+	MatchSim.tune.erase("PRESS_PICK_POW")
+	var want2 := pow(ar, 2.0) * mr
+	_check(absf(tuned / want2 - 1.0) < 0.1,
+			"The PRESS_PICK_POW tune key moves it (%.2f at 2.0, %.2f expected)" % [tuned, want2])
+
+
+func _pick_ratio(sim: MatchSim, hi: String, lo: String) -> float:
+	var n_hi := 0
+	var n_lo := 0
+	for i in range(30000):
+		var id := str((sim._pick_presser(1, 1) as Dictionary)["id"])
+		if id == hi:
+			n_hi += 1
+		elif id == lo:
+			n_lo += 1
+	return float(n_hi) / float(maxi(1, n_lo))
 
 
 func _player_acts(id: String, pressure: float) -> float:
