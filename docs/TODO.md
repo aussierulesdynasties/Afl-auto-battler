@@ -33,6 +33,7 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 
 | # | Feature | PRs | Open |
 |---|---|---|---|
+| 129 | Tasmania on the AFL's real list rules (director 2026-11-09, "do it like this then", "Stars weigh it harder"): rivals' players rated 80+ will not join. Three test careers, 2028: 8-14, 4-18, 4-18 | 1184, 1187 | his playtest of the 2028 start, including the 80 |
 | 61 | Weather: wet, wind and heat fitted to 2016-25 AFL games (#1150, live in 1.0.9). Balance stays his call; the look never touches the sim | his playtest |
 | 1 | Top three attributes on cards, Needs work benchmark, scout grade word for hidden prospects | #863 | |
 | 9 | Feed colours: your goals good, goals against bad, behinds and calls neutral | #918 | |
