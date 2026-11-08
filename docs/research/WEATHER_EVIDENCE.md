@@ -75,32 +75,70 @@ The director asked the lead for its own research and conclusions ("do your own r
 - [OUW] "AFL Wind and Scoring: what strong wind costs a total", OverUnderWeather Research Desk, 2026. 2,640 dry matches, 2004–26.
 - [AFLLab] "Environmental factors affecting AFL outcomes: the weather, part 2", The AFL Lab, August 2018.
 
-## As built (#449, wet rows row 120)
+## Real figures, 2016-25 (row 61)
 
+The sizes the game now plays to, measured from every AFL match of 2016-19 and 2021-25 (1,890; the
+roofed Docklands left out, 1,493 outdoor): each side's box score from AFL Tables, the weather in the
+match window (start to three hours on) from Open-Meteo's hourly archive at the ground. Built by
+`tools/balance/build_weather_rates.py` into `tools/balance/afl_weather_rates.json`, which also holds
+each change's standard error, the method and the thresholds. Against a perfect day (1,042 games):
+
+| Change a team | Wet (0.3 mm+, 215) | Windy (20 km/h+, 179) | Hot (25 C+ by day, 43 v 600) |
+|---|---|---|---|
+| Disposals | -0.5% | +0.3% | -0.9% |
+| Kicks | +1.3% | -0.4% | +0.2% |
+| Handballs | -2.9% | +1.3% | -2.4% |
+| Marks | -13.2% | -3.1% | -1.9% |
+| Contested marks | -12.1% | +0.5% | -5.6% |
+| Tackles | +12.1% | +3.9% | -3.8% |
+| Clangers | +10.1% | +1.8% | -2.7% |
+| One-percenters | +13.4% | -0.9% | -0.6% |
+| Contested possessions | +6.8% | +1.3% | -1.0% |
+| Running bounces | -25.4% | +4.5% | +7.0% |
+| Goals | -8.5% | -5.2% | +2.1% |
+| Score | -7.6% | -4.6% | +2.7% |
+| Accuracy (goals per scoring shot) | -1.8 points | -1.0 points | -0.7 points |
+| Last quarter's share of the scoring | -0.2 points | -0.5 points | +0.2 points (se 1.0) |
+| Breeze: margin swing a quarter to one end | | 3.7 points (se 1.4) | |
+
+The method is checked first: the wet against the dry over ABC's own seasons (2022-25, 105 wet and
+578 dry) reproduces ABC's table within two standard errors on 8 of its 9 stats (marks -12.4%, tackles
++12.2%, clangers +9.3%, one-percenters +15.0%, contested possessions +7.0%, contested marks -12.5%,
+marks inside 50 -14.8%, handballs -0.8%); kicks come out +1.2% (se 0.6) against ABC's 0%. The breeze is
+the extra spread of the quarter-by-quarter margin in windy games: one side kicks with it in the first
+and third, the other in the second and fourth, so the margin swings by the breeze's worth each quarter.
+Hot days are few (43 by day against 600 perfect days), so their changes carry wide errors; they show no
+late fade in the scoring.
+
+## As built (#449, wet rows row 120, all conditions row 61)
+
+Row 61 resized the wet, windy and hot rows to the real figures above; each condition is checked with
+`tools/balance.sh match 1000 --a "--weather perfect" --b "--weather <condition>"`, whose report prints
+the change beside the real one with an IN/NEAR/OUT mark (the PR for row 61 has the three tables).
 Each evidence point beside the constant that implements it, as of #449; the wet rows as of row 120 (`tools/balance.sh match 1000 --a "--weather perfect" --b "--weather wet"`, whose report prints a wet-against-dry change table). Measured rows are from `tools/audit/weather_impl.gd` over drafts 21 to 24 (1,656 side-matches per condition, each match played in all four conditions on one seed). "Calibrating (weather_impl)" means no measured number yet; `tools/audit/weather_impl.gd` plays every match four times on one seed (perfect, wet, windy, hot) to measure the change, and the lead fills these in from it. Sources are the tags above.
 
 | Evidence | Constant | Status |
 |---|---|---|
-| Poor weather is about 1 game in 5 [SI][BB] | `Weather.WET_K` 1.03 on the BoM rain-day share; the roofed ground is always dry | fitted: about 21% wet league-wide (`tools/balance/weather_cutoffs.py`) |
-| Wind of 20 km/h or more in about 14% of outdoor matches [OUW] | `Weather.WIND_CUT` 21.5 km/h mean 3 pm wind, `WIND_CAP` 0.35, `SOFT` 3.0 | fitted: 14.0% league-wide |
-| Heat clusters early; the Heat Policy was enacted in each of the first four rounds of 2025 [ABC] | `Weather.HOT_CUT` 28.6 C mean maximum, `SOFT` 3.0 | fitted: 70% of hot days in March and April, 8.9% overall (the 70% is a choice, not a sourced figure) |
+| A wet match (0.3 mm or more in the match window) is 14.4% of outdoor matches, 2016-25 (afl_weather_rates.json; [SI][BB]'s "about 1 game in 5" is poor weather by their own tags, not the measure the wet's effects are sized on) | `Weather.WET_K` 0.52 on the BoM rain-day share; the roofed ground is always dry | fitted (row 61, `tools/balance/weather_cutoffs.py` over 20 seasons of the game's fixture): 14.4% of outdoor matches, 10.6% league-wide |
+| Dry with a mean wind of 20 km/h or more in the match window: 12.0% of outdoor matches, 2016-25 (afl_weather_rates.json; [OUW] about 14%) | `Weather.WIND_CUT` 21.6 km/h mean 3 pm wind, `WIND_CAP` 0.35, `SOFT` 3.0 | fitted (row 61): 11.9% of outdoor matches |
+| Dry and still, 25 C or more in the match window: 3.8% of outdoor matches, 2016-25 (afl_weather_rates.json); heat clusters early, the Heat Policy enacted in each of the first four rounds of 2025 [ABC] | `Weather.HOT_CUT` 31.0 C mean maximum, `SOFT` 3.0 | fitted (row 61): 3.8% of outdoor matches, 71% of them in March and April |
 | One condition per match, known in the week (the director) | `Season.weather_for`, seeded from the season seed, round and clubs; `Weather.month_of_round` | design choice |
-| Wet: marks -13% [ABC] | `MatchSim.WEATHER_RATES` wet `mark_share_of_kicks` 0.90 | measured: marks -14% to -15% |
-| Wet: tackles +12%, one-percenters +15%, turnovers +11%, clangers +9%, contested possessions +7% [ABC]; more fumbles and stoppages (the director, 2026-11-06, row 120) | wet `stoppage_share` 1.05, `clanger_per_chain` 1.15, `one_percenter_share` 1.4; `MatchSim.WEATHER_SIM` wet `tackle_share` 1.27 (more of the pressure acts finish as tackles, so scoring is not squeezed further), `fumble` 0.08 (a wet ground ball fumbled, less for a strong contested player, 20% less for a wet-weather player; half held for a ball-up, half spilled loose), `tackle_spill` 0.85 (more tackles pin the ball for a ball-up) | measured, row 120, 1,000 paired matches: tackles +12.6%, clangers +8.8%, one-percenters +14.4%, ball-ups +17% (no public count), contested possessions +0.6% and ground-ball gets -4.9% (**short of the evidence**: the wet has about 11% fewer disposals, so fewer balls to win) |
-| Wet: scoring -10.7 points a game overall, -4.6 in the modern era [BB]; accuracy down a point or two [BB][SI]; lower set-shot accuracy (the director, 2026-11-06, row 120) | wet `inside50_goal` 0.98, `inside50_behind` 1.03, `metres_gain_mean` 1.12 (longer kicks between fewer marks); `WEATHER_SIM` wet `set_acc` 0.97 on every set shot's goal chance, frees included | measured, row 120: scoring -5.9% (se 0.7), accuracy -2.2 points, set-shot accuracy -2.4 points, general play -1.7 points. Wet kicks -11% against the real 0% predates row 120 |
+| Wet: marks -13% [ABC], -13.2% (row 61), contested marks -12.1% | `MatchSim.WEATHER_RATES` wet `mark_share_of_kicks` 0.81; `WEATHER_SIM` wet `aerial` 0.83 on contested and inside-50 marks | measured, row 61: marks -15.7%, contested marks -12.0%, marks inside 50 -14.0% (real -13.6%), all IN |
+| Wet: tackles +12%, one-percenters +15%, turnovers +11%, clangers +9%, contested possessions +7% [ABC]; more fumbles and stoppages (the director, 2026-11-06, row 120) | row 61: wet `chains_per_game` 1.05 (shorter chains, so more of them: disposals held level), `clanger_per_chain` 1.06, `one_percenter_share` 1.11, `handball_share` 0.97, `stoppage_share` 1.0; `MatchSim.WEATHER_SIM` wet `tackle_share` 1.12 (more of the pressure acts finish as tackles), `fumble` 0.06 (a wet ground ball fumbled, less for a strong contested player, 20% less for a wet-weather player; half held for a ball-up, half spilled loose), `tackle_spill` and `lockup` 1.0 (the extra stoppages come from fumbles), `run` 0.76 on running bounces | measured, row 61, 1,000 paired matches: disposals -0.7%, kicks +1.6%, tackles +10.9%, clangers +10.0%, one-percenters +13.5%, contested possessions +7.4%, hit-outs +6.8%, rebound 50s +5.9%, bounces -24.0%, all IN; ball-ups +14.2% (no public count); uncontested possessions -2.9% against -6.7% (OUT: the sim's contested share of the ball is about a third against the real 38%, so the same contested rise leaves less to come off the uncontested) |
+| Wet: scoring -10.7 points a game overall, -4.6 in the modern era [BB]; accuracy down a point or two [BB][SI]; lower set-shot accuracy (the director, 2026-11-06, row 120) | row 61: wet `inside50_goal` 0.945, `inside50_behind` 0.93, `metres_gain_mean` 1.04; `WEATHER_SIM` wet `set_acc` 0.975 on every set shot's goal chance: the band, a free kick, a mark in the goal-square pack and the lead's shot | measured, row 61: goals -9.3%, behinds -0.3%, score -8.3%, accuracy -2.2 points, all IN against the real -8.5%, -1.6%, -7.6% and -1.8 (set shots -4.9 points, general play +0.6) |
 | Wet: contested ball matters more, 64% to 69% of games for the contested-possession winner [ABC] | `MatchSim.WEATHER_PLAN` wet (contest 1.35, defensive and press 1.2, attacking and fast 0.6, controlled 0.85) | the director's rule in his words, not a measured figure; calibrating (weather_impl) |
-| Windy: fewer marks, more turnovers, targets harder to hit [ABC] | `WEATHER_RATES` windy `mark_share_of_kicks` 0.92, `clanger_per_chain` 1.06, `metres_gain_mean` 1.03 | measured: marks -6%, clangers +6%, accuracy -0.8 to -1.1 points |
-| Windy: about -5.2 combined points at 20 km/h and over [OUW]; the "five-goal breeze" [AFLLab] | `MatchSim.BREEZE_WITH` 1.04 and `BREEZE_AGAINST` 0.89 on goal chances, the breeze end swapping each quarter (averaged in extra time) | measured: scoring -3% to -4%, about -5 to -6 points a game combined |
+| Windy: fewer marks, more turnovers, targets harder to hit [ABC] | row 61: `WEATHER_RATES` windy `mark_share_of_kicks` 0.945, `chains_per_game` 1.01, `handball_share` 1.01, `one_percenter_share` 0.982 (fewer spoils off the entries), `clanger_is_free` 0.907 (fewer clangers paid as a free); `WEATHER_SIM` windy `tackle_share` 1.03, `miss_behind` 0.91 (more missed set shots out on the full) | measured, row 61, 1,000 paired matches: marks -3.0%, tackles +3.6%, clangers +1.0%, one-percenters -0.7%, frees -0.8%, disposals +0.7%, kicks -0.2%, handballs +1.8%, behinds -1.1%, accuracy -1.0 points, every row IN |
+| Windy: about -5.2 combined points at 20 km/h and over [OUW]; the "five-goal breeze" [AFLLab] | row 61: `MatchSim.BREEZE_WITH` 1.05 and `BREEZE_AGAINST` 0.83 on goal chances, the breeze end swapping each quarter (averaged in extra time) | measured, row 61: goals -5.7%, score -5.2%, the margin swinging 2.8 points a quarter to the breeze end (se 0.8; real 3.7, se 1.4), all IN |
 | Windy favours Controlled tempo (the director) | `WEATHER_PLAN` windy (controlled 1.25, attacking and fast 0.85) | the director's rule; calibrating (weather_impl) |
-| Hot: freer-flowing, fewer stoppages, bounces +11% [ABC] | `WEATHER_RATES` hot `pressure_base` 0.97, `stoppage_share` 0.95, `metres_gain_mean` 1.03 | measured: scoring +1% to +2%, tackles -2% to -3%, marks level |
-| Hot: fatigue and cramp; the Heat Policy's longer breaks [ABC] | `MatchSim.HOT_DRAIN` 1.12 on leg fatigue | effect size chosen, not sourced (no public figure for late-game fade) |
+| Hot: freer-flowing, fewer stoppages, bounces +11% [ABC] | row 61: `WEATHER_RATES` hot `chains_per_game` 0.975 (a slower game), `pressure_base` 0.97, `stoppage_share` 0.95, `clanger_per_chain` 0.97 | measured, row 61: tackles -3.2%, clangers -3.7%, disposals -0.0%, score -0.8%, bounces +3.8%, every row IN (real: -3.8%, -2.7%, -0.9%, +2.7%, +7.0%) |
+| Hot: fatigue and cramp; the Heat Policy's longer breaks [ABC] | `MatchSim.HOT_DRAIN` 1.12 on leg fatigue | effect size chosen; real hot days show no late fade in the scoring (last quarter's share +0.2 points, se 1.0), and the sim's is +0.2 (se 0.3) with the drain: the same within the noise |
 | Hot favours Attack corridor (the director) | `WEATHER_PLAN` hot (attacking and fast 1.2, defensive and press 0.8) | the director's rule; calibrating (weather_impl) |
 | Some players do better in poor weather [SI] (see WET_WEATHER_PLAYERS.md) | `Traits.WET_WEATHER` (contested 78 or more and disposal 72 or more), `WET_BALL` 1.10, `WET_CLANGERS` 0.80 | thresholds and effect sizes chosen, not sourced; calibrating (weather_impl) |
 ## Climate data per venue (`data/weather_by_venue.json`)
 
 Monthly March to September means from the Bureau of Meteorology's "Climate statistics for Australian locations" tables, fetched 2026-10-06 (URL pattern `https://www.bom.gov.au/climate/averages/tables/cw_<station>.shtml`). Three numbers a month for each venue: **rain days** (BoM's "Mean number of days of rain >= 1 mm"; the file also holds it as a share of the month's days), **mean 3pm wind speed** (km/h) and **mean maximum temperature** (C). Marvel Stadium is roofed, so it is always a perfect day and has no data.
 
-What BoM's summary tables do not give: days of strong wind and days over 25 C. The file therefore carries the means, not wind or hot shares. Turning them into the four conditions needs a calibration decision (for example against the 14% windy figure above), which is not made here.
+What BoM's summary tables do not give: days of strong wind and days over 25 C. The file therefore carries the means, not wind or hot shares. Row 61 turns them into the four conditions: `tools/balance/weather_cutoffs.py` fits `Weather.WET_K`, `WIND_CUT` and `HOT_CUT` so the game's outdoor matches (where and when `tools/balance/weather_fixture.gd` finds the game plays them) come up wet, windy and hot as often as real outdoor matches did by the match-window measure the effects were sized on (`afl_weather_rates.json` `share_of_outdoor`).
 
 | Venue (clubs) | Rain days | Mean max | 3pm wind |
 |---|---|---|---|

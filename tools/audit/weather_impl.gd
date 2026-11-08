@@ -3,15 +3,32 @@ extends RefCounted
 ## Drafted leagues, one home-and-away season each; every match is played four
 ## times on the same seed - a perfect day, wet, windy, hot - so each condition's
 ## change is paired. Per side-match: the box score, accuracy and the change
-## against a perfect day, beside docs/research/WEATHER_EVIDENCE.md's targets.
+## against a perfect day, beside the real games' change (row 61:
+## tools/balance/afl_weather_rates.json, AFL 2016-25 against a perfect day).
 ## Env: WX_DRAFTS (default 21,22).
 
 const STATS := ["score", "goals", "behinds", "disposals", "kicks", "handballs", "marks",
 		"contested_marks", "tackles", "clangers", "intercepts", "inside50", "clearances",
 		"one_percenters", "metres_gained"]
-## The evidence's change against a dry day, where it names one (wet: ABC 2022-25).
-const TARGET := {"wet": {"marks": -13.0, "tackles": 12.0, "clangers": 9.0, "one_percenters": 15.0,
-		"score": -5.0}}
+## The real games' change against a perfect day, by condition and stat, in per
+## cent ({} for a stat the reference does not hold).
+const REFERENCE := "res://tools/balance/afl_weather_rates.json"
+const REF_KEY := {"inside50": "inside_50s"}
+
+
+func real_change() -> Dictionary:
+	var out := {}
+	var f := FileAccess.open(REFERENCE, FileAccess.READ)
+	if f == null:
+		return out
+	var ref: Dictionary = JSON.parse_string(f.get_as_text())
+	for c in ref["change_vs_perfect"]:
+		out[c] = {}
+		for k in STATS:
+			var row = (ref["change_vs_perfect"][c] as Dictionary).get(REF_KEY.get(k, k))
+			if row is Dictionary and (row as Dictionary).has("change"):
+				out[c][k] = 100.0 * float(row["change"])
+	return out
 
 
 func run() -> void:
@@ -65,6 +82,14 @@ func run() -> void:
 			var b := float(base.get(k, 0.0)) / float(maxi(1, n))
 			line += "%12s" % ("%.1f" % v if c == "perfect" else "%.1f %+.0f%%" % [v, (v / maxf(0.001, b) - 1.0) * 100.0])
 		print(line)
+	var real := real_change()
+	for k in STATS:
+		var line := "%-16s" % ("real " + k)
+		for c in Weather.CONDITIONS:
+			var v = (real.get(c, {}) as Dictionary).get(k)
+			line += "%12s" % ("" if v == null else "%+.0f%%" % float(v))
+		if line.strip_edges() != "real " + k:
+			print(line)
 	var acc := "%-16s" % "accuracy"
 	for c in Weather.CONDITIONS:
 		var g := float((sums[c] as Dictionary).get("goals", 0.0))
@@ -75,4 +100,4 @@ func run() -> void:
 	for c in Weather.CONDITIONS:
 		mg += "%12s" % ("%+.2f" % (float(margin.get(c, 0.0)) / float(maxi(1, n / 2))))
 	print(mg)
-	print("evidence (wet vs dry): ", TARGET["wet"], "; accuracy -1 to -2 points; windy (20 km/h+) about -5 points a game combined.")
+	print("real accuracy change: wet -1.8, windy -1.0, hot -0.7 points (" + REFERENCE + ")")
