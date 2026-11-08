@@ -415,6 +415,7 @@ func _test_running_again() -> void:
 			"...and at a card stop one of them meets the running-again trigger (%s; dealt at %s), nobody else does (%s)" % [
 			", ".join(PackedStringArray(met)), ", ".join(PackedStringArray(dealt)), ", ".join(PackedStringArray(off_track))])
 
+
 func _test_hands_off_and_save() -> void:
 	_career(SEED + 3)
 	var round1 := _ids(GameState.week_events)

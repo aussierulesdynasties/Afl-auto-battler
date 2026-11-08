@@ -3,8 +3,8 @@
 TODO row 107 (T5.Q18): every event-card choice gets an upside and a downside. Built like row 63's sheets
 (`COST_SHEETS_CLUB_AND_GAIN_ONLY_2026-11-06.md`): each choice keeps what it does and takes the one side it is
 missing, from the effects cards already use, sized like their neighbours, and following the card's premise.
-The line under the button is generated from the effect, as on every other card. Docs only: no card changes
-until the director rules.
+The line under the button is generated from the effect, as on every other card. Docs only: these sheets
+change no card.
 
 Sources: `BOTH_SIDES_LEFT` in tests/test_story.gd and `tools/audit/sides_impl.gd` (what each button shows on
 screen, `StoryEngine.stakes_lines`). Row 63's second sheet already covers 36 of the 46 gain-only choices; these
