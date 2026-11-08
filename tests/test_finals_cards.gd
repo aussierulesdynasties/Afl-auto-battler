@@ -898,7 +898,7 @@ func _test_director_fixes() -> void:
 	var lines := " ".join(StoryEngine.stakes_lines(give["effects"], card["facts"]))
 	# Director 2026-11-08 (row 63's second sheet, row 14): when the group won't listen, the side's
 	# morale drops 2%, and the card says so before the choice.
-	_check(lines.contains("If it doesn't, morale down 2%"), "Last word, group not listening: the cost line names the 2% morale drop (%s)" % lines)
+	_check(lines.contains("If it doesn't, morale down 2%"), "Last word, group not listening: the cost line names the 2%% morale drop (%s)" % lines)
 	for q in GameState.my_list:
 		q["morale"] = 50
 	ClubStories.apply_choice(GameState, card, 0)
