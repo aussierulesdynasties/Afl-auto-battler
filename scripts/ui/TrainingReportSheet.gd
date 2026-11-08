@@ -1,59 +1,12 @@
 class_name TrainingReportSheet
 extends RefCounted
-## The monthly training report (TrainingReport.gd), opened from the hub card
-## or the line on Training. A sheet on a phone, a narrower pane on a PC. Tap a
+## The monthly training report (TrainingReport.gd). A new one opens over the
+## hub once (HubScene._show_training_report); after that it is one tap from the line on
+## Training. A sheet on a phone, a narrower pane on a PC. Tap a
 ## name for his profile; tap someone who can learn a position to go to his
 ## choice in Training. Facts only: nothing here says what to do.
 
 const WIDE := 760.0
-
-
-## The hub's card: the report's name, one tap to open, Hide to dismiss.
-static func hub_card(host: Control, on_retrain: Callable) -> Control:
-	var r := TrainingReport.current(GameState)
-	var card := UiKit.hbox(8)
-	card.name = "TrainingReportCard"
-	var open_b := UiKit.text_action("", UiKit.NAME)
-	open_b.name = "TrainingReportOpen"
-	open_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	open_b.custom_minimum_size = Vector2(0, 56)
-	var v := UiKit.vbox(0)
-	v.set_anchors_preset(Control.PRESET_FULL_RECT)
-	v.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	open_b.add_child(v)
-	var ink := UiKit.readable_ink(UiKit.team_colour())
-	var head := UiKit.ellipsis("Training report: %s" % str(r.get("label", "")).to_lower(), UiKit.NAME, ink, true)
-	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_child(head)
-	var sub := UiKit.ellipsis(_headline(r), UiKit.SMALL, UiKit.TEXT)
-	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_child(sub)
-	open_b.pressed.connect(func(): open(host, on_retrain))
-	card.add_child(open_b)
-	var hide := UiKit.btn("Hide", 14)
-	hide.name = "TrainingReportHide"
-	hide.custom_minimum_size = Vector2(72, 44)
-	hide.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	hide.pressed.connect(func():
-		TrainingReport.dismiss(GameState)
-		card.queue_free())
-	card.add_child(hide)
-	return card
-
-
-## The one line under the card's name.
-static func _headline(r: Dictionary) -> String:
-	var n := (r.get("risers", []) as Array).size()
-	var f := (r.get("fallers", []) as Array).size()
-	if n == 0 and f == 0:
-		return "No ratings changed."
-	if n == 0:
-		return "%d %s dropped." % [f, "player" if f == 1 else "players"]
-	var line := "%d %s improved." % [n, "player" if n == 1 else "players"]
-	if f > 0:
-		line = "%d improved, %d dropped." % [n, f]
-	return line
 
 
 ## The Training screen's one-line link.
@@ -130,6 +83,7 @@ static func open(host: Control, on_retrain: Callable) -> Control:
 		var rl := UiKit.lbl("In the reserves, %d %s kept developing." % [
 				n, "player" if n == 1 else "players"], UiKit.BODY, UiKit.TEXT)
 		rl.name = "ReportReserves"
+		left.add_child(UiKit.spacer(8))
 		left.add_child(rl)
 
 	var rt := TrainingReport.retrain_list(GameState, r)
