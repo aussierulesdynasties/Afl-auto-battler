@@ -782,6 +782,10 @@ func _from_hub(sz: Vector2i) -> void:
 	var p: Dictionary = _gs.my_list[2]
 	_gs.last_mro = [{"id": str(p["id"]), "name": _db.player_display_name(p), "club": "MEL",
 			"outcome": "suspension", "weeks": 2, "reason": "rough conduct", "round": 1}]
+	# The week's club cards have already opened over the hub (Later): this
+	# test is the tribunal line on the page.
+	for c in _gs.week_events:
+		(c as Dictionary)["popped"] = true
 	root.size = sz
 	var scene: Control = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(scene)
