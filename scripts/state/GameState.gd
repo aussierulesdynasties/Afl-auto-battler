@@ -2052,7 +2052,11 @@ func begin_draft() -> void:
 	# founding eighteen and a created club, with no new-club concessions.
 	expansion_from = GameDB.START_YEAR
 	_apply_entry_years()
-	draft = Draft.new(pool, GameDB.active_clubs(GameDB.START_YEAR).duplicate(), seed)
+	var clubs: Array = GameDB.active_clubs(GameDB.START_YEAR)
+	var short: int = Ratings.LIST_SIZE * clubs.size() - pool.size()
+	if short > 0:
+		pool.append_array(Prospects.generate_depth_pool(short, GameDB.START_YEAR, str(seed)))
+	draft = Draft.new(pool, clubs.duplicate(), seed)
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
 
