@@ -2378,8 +2378,13 @@ Your career stays on this device.",
 		await _settle()
 	_check(not had_conference or (_router.current() == "hub" and not _state.media_conference_pending()),
 			"A press conference, if the round raised one, is skipped by Back and the hub stays")
-	_router.handle_back(true)
-	await _settle()
+	# Back on the results brought the week's new card or ask on; each closes on
+	# its own Back, then Back leaves the hub.
+	var backs := 0
+	while _router.current() == "hub" and backs < 10:
+		_router.handle_back(true)
+		await _settle()
+		backs += 1
 	_check(_router.current() == "main", "Back from the hub goes to the main menu")
 	_check(_state.season != null, "Leaving by back keeps the career in memory")
 	_check(current_scene.find_child("ResumeCareer", true, false) != null,
