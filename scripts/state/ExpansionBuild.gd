@@ -294,6 +294,12 @@ static func keep(gs, p: Dictionary) -> String:
 		if not t.is_empty():
 			t["status"] = "joining"
 		return "The cap has no room for %s a season. %s will go when the season ends." % [Contracts.money(price), name]
+	# Under 50, he may refuse you (director 2026-11-08): the draw talks use.
+	if gs.resign_refused(p):
+		if not t.is_empty():
+			t["status"] = "joining"
+		return gs.refuse_resign(p, "He joins %s when the season ends." % GameDB.club_name(asked_by(gs, t))
+				if not t.is_empty() else Contracts.REFUSED_SEASON_END)
 	gs._resign(p, int(want["years"]), price)
 	if not t.is_empty():
 		t["status"] = "kept"

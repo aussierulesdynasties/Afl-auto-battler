@@ -190,7 +190,7 @@ func _test_press_rolls() -> void:
 	# Every number on the gate comes from the constants: no digits in a template.
 	var digit := RegEx.create_from_string("[0-9]")
 	var words: Array = [MC.ODDS_TEMPLATE, MC.MORALE_SIZE, MC.BOARD_SIZE, MC.AFTER_MORALE, MC.AFTER_BOARD,
-			MC.HIS_SIZE, MC.AFTER_HIS, MC.NO_BOARD, MC.LIKES, MC.DISLIKES, MC.STANDING_EFFECT,
+			MC.HIS_SIZE, MC.AFTER_HIS, MC.OPINION_SIZE, MC.NO_BOARD, MC.LIKES, MC.DISLIKES, MC.STANDING_EFFECT,
 			MC.REASON, MC.FADE_NOTE, MC.EITHER_WAY, MC.SEP]
 	words.append_array(MC.RECORD_CLAUSE.values())
 	words.append_array(MC.RECORD_REASON.values())
@@ -505,11 +505,133 @@ func _test_press_named() -> void:
 	for p in _state.my_list:
 		after += int(p["morale"])
 	var his_move := int(him["morale"]) - 70
-	var want := 1 if str(landed["landed"]) == "a" else -3
-	_check(his_move == want and after - others == his_move,
-			"Only the named player's morale moves (%+d, list total %+d)" % [his_move, after - others])
+	# Up a point whichever way it lands (director 2026-11-08).
+	_check(his_move == 1 and after - others == his_move,
+			"Only the named player's morale moves, up a point (%+d, list total %+d)" % [his_move, after - others])
 	_check(str(landed["line"]).contains(str(_db.player_display_name(him))), "The outcome line names him (%s)" % str(landed["line"]))
 
+
+## Calling a player out by name (director 2026-11-08): his morale goes up a
+## point whichever way it lands; if he takes it personally his opinion of you
+## also falls CALLOUT_OPINION_DROP points, the result says so, and backing him
+## by name later gives it back. Skipping the question moves nothing.
+func _test_press_opinion() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var PS = load("res://scripts/ui/PressScene.gd")
+	_press_reset()
+	var him: Dictionary = _state.my_list[0]
+	var pid := str(him["id"])
+	var key := Trust.player_key(pid)
+	var name := str(_db.player_display_name(him))
+	var drop: int = MC.CALLOUT_OPINION_DROP
+	var call_out: Dictionary = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 8, "year": int(_state.season_year),
+			"named": {"heavy_loss": {"id": pid, "name": name}},
+			"result": {"home": "FRE", "away": "CAR", "score": [55, 101]}}, {})
+	var at := (call_out["options"] as Array).size() - 1
+	_check(str(call_out["options"][at]["kind"]) == "criticise_named", "The heavy loss names him")
+	_state.relations.erase(key)
+	_state.media_conference = call_out.duplicate(true)
+	var gate: String = _state.press_odds_line(at)
+	_check(gate.contains("resolve tightens, his morale +1%") and gate.contains(
+			"he takes it personally, his morale +1%%, his opinion of you -%d" % drop) and not gate.contains("either way")
+			and not gate.contains("+0"),
+			"The call-out's gate shows both outcomes with every size (%s)" % gate)
+	var seen := {}
+	var bad: Array = []
+	var took: Dictionary = {}
+	var took_news := ""
+	for seed in range(1, 41):
+		_state.relations.erase(key)
+		_state.media_memory = {}
+		him["morale"] = 70
+		him.erase("press_lift")
+		_state.career_seed = seed
+		_state.media_conference = call_out.duplicate(true)
+		var landed: Dictionary = _state.resolve_media_conference(at)
+		var w := str(landed.get("landed", ""))
+		seen[w] = true
+		var t := Trust.value(_state.relations, key)
+		var owed: Array = (_state.media_memory.get("callouts", {}) as Dictionary).get(pid, [])
+		var ok := int(him["morale"]) == 71
+		if w == "b":
+			ok = (ok and t == -drop * Trust.PER_POINT and _state.opinion_of_you(pid) == 50 - drop
+					and landed["opinion"] == {"name": name, "from": 50, "to": 50 - drop} and owed == [t])
+			took = landed
+			took_news = str(_state.news[0].get("text", ""))
+		else:
+			ok = ok and t == 0 and (landed["opinion"] as Dictionary).is_empty() and owed.is_empty()
+		if not ok:
+			bad.append("seed %d %s: morale %d, trust %d, %s" % [seed, w, int(him["morale"]), t, str(landed.get("opinion"))])
+	_check(seen.has("a") and seen.has("b") and bad.is_empty(),
+			"Called out: his morale +1 either way; taking it personally also costs %d of his opinion of you (%s)" % [drop, str(bad)])
+	# The result screen and the news say what it did to his opinion of you.
+	var rows: Array = PS.press_outcome_rows(took, "")
+	var opinion_row := ""
+	for r in rows:
+		if str(r[0]) == "MediaOutcomeOpinion":
+			opinion_row = str(r[1])
+	# Last, after "it wears off": his opinion of you never does.
+	_check(opinion_row == "%s's opinion of you: 50 → %d/100" % [name, 50 - drop]
+			and str(rows[rows.size() - 1][0]) == "MediaOutcomeOpinion",
+			"The press result shows his opinion of you moving, on its last line (%s)" % opinion_row)
+	_check(took_news.ends_with("%s's opinion of you: 50 → %d/100." % [name, 50 - drop]),
+			"The news line says it too (%s)" % took_news)
+	# Backing him by name gives it back, whichever way the backing lands.
+	var backing: Dictionary = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 12, "year": int(_state.season_year),
+			"named": {"big_win": {"id": pid, "name": name}},
+			"result": {"home": "FRE", "away": "CAR", "score": [101, 55]}}, {})
+	var bat := (backing["options"] as Array).size() - 1
+	_check(str(backing["options"][bat]["kind"]) == "back_named", "The big win can back him by name")
+	var owed_now: Dictionary = {pid: [-drop * Trust.PER_POINT]}
+	var back_bad: Array = []
+	for seed in range(1, 21):
+		_state.relations.erase(key)
+		Trust.change(_state.relations, key, -drop * Trust.PER_POINT, "You called him out in the press", _state.season_year, "Round 8")
+		_state.media_memory = {"callouts": owed_now.duplicate(true)}
+		_state.career_seed = seed
+		_state.media_conference = backing.duplicate(true)
+		var bgate: String = _state.press_odds_line(bat)
+		var landed: Dictionary = _state.resolve_media_conference(bat)
+		if not (bgate.contains("his opinion of you +%d" % drop) and Trust.value(_state.relations, key) == 0
+				and landed["opinion"] == {"name": name, "from": 50 - drop, "to": 50} and not _state.media_memory.has("callouts")):
+			back_bad.append("seed %d: %s / %s" % [seed, bgate, str(landed.get("opinion"))])
+	_check(back_bad.is_empty(), "Backing him by name cancels the call-out's cost, and the gate says so (%s)" % str(back_bad))
+	# Nothing to cancel: backing him moves no opinion and the gate names none.
+	_state.relations.erase(key)
+	_state.media_memory = {}
+	_state.media_conference = backing.duplicate(true)
+	var plain: String = _state.press_odds_line(bat)
+	var none: Dictionary = _state.resolve_media_conference(bat)
+	_check(not plain.contains("opinion of you") and Trust.value(_state.relations, key) == 0
+			and (none["opinion"] as Dictionary).is_empty() and not _state.relations.has(key),
+			"Backing a player you never called out moves no opinion (%s)" % plain)
+	# Skipping the question moves nothing at all.
+	_press_reset()
+	Trust.change(_state.relations, key, -drop * Trust.PER_POINT, "You called him out in the press", _state.season_year, "Round 8")
+	_state.media_memory = {"callouts": {pid: [-drop * Trust.PER_POINT]}}
+	var morale := []
+	for p in _state.my_list:
+		morale.append([int(p["morale"]), p.get("press_lift")])
+	var rel: Dictionary = _state.relations.duplicate(true)
+	var board_before: int = _state.board_confidence()
+	var standing: Dictionary = {}
+	for j in MC.JOURNALISTS:
+		standing[j] = _state.press_standing(j)
+	_state.media_conference = backing.duplicate(true)
+	_state.skip_media_conference()
+	var morale_after := []
+	for p in _state.my_list:
+		morale_after.append([int(p["morale"]), p.get("press_lift")])
+	var standing_after: Dictionary = {}
+	for j in MC.JOURNALISTS:
+		standing_after[j] = _state.press_standing(j)
+	_check(morale_after == morale and _state.relations == rel and _state.board_confidence() == board_before
+			and standing_after == standing and _state.media_memory["callouts"] == {pid: [-drop * Trust.PER_POINT]}
+			and _state.media_conference.is_empty(),
+			"Skipping the press conference moves no morale, opinion, board or standing")
+	_state.media_conference = {}
+	_state.relations.erase(key)
+	_state.media_memory = {}
 
 ## (d) The Stats Geek reads the record: supported lands better and harder,
 ## contradicted worse and costs the board either way.
@@ -988,6 +1110,7 @@ func _run() -> void:
 	_t("_test_press_standing")
 	_t("_test_press_personas")
 	_t("_test_press_named")
+	_t("_test_press_opinion")
 	_t("_test_press_record")
 	_t("_test_press_board_reason")
 	_t("_test_press_standout_only")
@@ -1749,9 +1872,9 @@ Your career stays on this device.",
 	_check(cost_tap == "" and bool(_state.week_events[0].get("resolved", false)),
 			"A real tap on the answer that costs a game answers the card (%s)" % cost_tap)
 	_state.week_events = []
-	# His trust on the profile, at phone size: the words, and a finger on Why
-	# shows his reasons, newest first. A player you've had nothing to do with
-	# shows no trust line.
+	# His opinion of you on the profile, at phone size: the number, and a finger
+	# on Why shows the rule and his reasons, newest first. A player you've had
+	# nothing to do with is at 50/100.
 	var trusted: Dictionary = _state.my_list[0]
 	var stranger: Dictionary = _state.my_list[1]
 	var saved_rel: Dictionary = _state.relations.duplicate(true)
@@ -1764,19 +1887,22 @@ Your career stays on this device.",
 	var twords: Label = tsheet.find_child("TrustWords", true, false)
 	var twhy: Button = tsheet.find_child("TrustWhy", true, false)
 	var treasons: Control = tsheet.find_child("TrustReasons", true, false)
-	_check(twords != null and twords.text == "Trusts you." and treasons != null and not treasons.visible,
-			"The profile says he trusts you, with the reasons folded away")
+	_check(twords != null and twords.text == "Opinion of you 61/100." and treasons != null and not treasons.visible,
+			"The profile shows his opinion of you out of 100, with the reasons folded away (%s)" % (twords.text if twords != null else "missing"))
 	var why_tap: String = await Tap.tap(twhy) if twhy != null else "missing"
 	await _settle()
 	var first_reason: Label = treasons.get_child(1) if treasons != null and treasons.get_child_count() > 2 else null
 	_check(why_tap == "" and treasons.visible and twhy.size.y >= 44 and first_reason != null
-			and first_reason.text.begins_with("Round 5, ") and first_reason.text.ends_with("Trust rose."),
-			"A tap on Why shows his reasons, newest first (%s)" % why_tap)
+			and first_reason.text.begins_with("Round 5, ") and first_reason.text.ends_with("Opinion of you +5.")
+			and (treasons.get_child(0) as Label).text.contains("he may refuse to re-sign with you"),
+			"A tap on Why shows the rule, then his reasons newest first with their size (%s, %s)" % [why_tap,
+					first_reason.text if first_reason != null else "missing"])
 	tsheet.queue_free()
 	var ssheet: Control = load("res://scripts/ui/PlayerSheet.gd").open(current_scene, stranger)
 	await _settle()
-	_check(ssheet.find_child("ProfileTrust", true, false) == null,
-			"A player you've had nothing to do with shows no trust line")
+	var swords: Label = ssheet.find_child("TrustWords", true, false)
+	_check(swords != null and swords.text == "Opinion of you 50/100.",
+			"A player you've had nothing to do with is at 50/100 (%s)" % (swords.text if swords != null else "missing"))
 	ssheet.queue_free()
 	_state.relations = saved_rel
 	await _settle()
@@ -2323,6 +2449,35 @@ Your career stays on this device.",
 		await _settle()
 		_check(_router.current() == "offseason" and current_scene.find_child("ContractTalks", true, false) == null,
 				"Back closes the talks and stays on Trades & Contracts")
+		# Under 50/100 the talks say the chance he won't re-sign before any offer;
+		# at 50 they say nothing about it.
+		var trow: Node = talk.get_parent()
+		while trow != null and not str(trow.name).begins_with("Contract_"):
+			trow = trow.get_parent()
+		var tid := str(trow.name).trim_prefix("Contract_") if trow != null else ""
+		var tkey := Trust.player_key(tid)
+		var rel_before: Dictionary = _state.relations.duplicate(true)
+		_state.relations.erase(tkey)
+		current_scene.call("_open_talks", tid)
+		await _settle()
+		var at_fifty: bool = current_scene.find_child("TalksRefuse", true, false) == null
+		_router.handle_back(true)
+		await _settle()
+		Trust.change(_state.relations, tkey, -12, "You dropped him", _state.season_year, "Round 3")
+		current_scene.call("_open_talks", tid)
+		await _settle()
+		var refuse: Control = current_scene.find_child("TalksRefuse", true, false)
+		var refuse_text := ""
+		if refuse is RichTextLabel:
+			refuse_text = (refuse as RichTextLabel).get_parsed_text()
+		elif refuse != null:
+			refuse_text = str(refuse.get("text"))
+		_check(tid != "" and at_fifty and refuse != null and refuse.is_visible_in_tree()
+				and refuse_text == "His opinion of you: 44/100. 6% he won't re-sign with you.",
+				"Talks at 44/100 say the chance he won't re-sign before you offer, and at 50 say nothing (%s)" % refuse_text)
+		_router.handle_back(true)
+		await _settle()
+		_state.relations = rel_before
 	for tab in ["Tab_agents", "Tab_trade"]:
 		var tb: Button = current_scene.find_child(tab, true, false)
 		tb.emit_signal("pressed")

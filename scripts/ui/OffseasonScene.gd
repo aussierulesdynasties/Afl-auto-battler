@@ -270,7 +270,10 @@ func _contracts(body: VBoxContainer) -> void:
 			continue
 		var talks: Dictionary = p.get("talks", {})
 		if bool(talks.get("walked", false)):
-			row.add_child(UiKit.line("Talks broke down: he'll test free agency", UiKit.SECONDARY, UiKit.BAD, true))
+			var gone := "Talks broke down: he'll test free agency"
+			if talks.has("refused"):
+				gone = Contracts.REFUSED_CARD % int(talks["refused"])
+			row.add_child(UiKit.line(gone, UiKit.SECONDARY, UiKit.BAD, true))
 			var proj := _para(str(GameState.projected_compensation(p)["reason"]), 12, UiKit.TEXT)
 			proj.name = "CompProjection"
 			(card.get_child(0) as VBoxContainer).add_child(proj)
@@ -278,6 +281,10 @@ func _contracts(body: VBoxContainer) -> void:
 		if talks.has("counter"):
 			(card.get_child(0) as VBoxContainer).add_child(_para("He'd sign for %s over %d season%s." % [
 					Contracts.money(int(talks["counter"])), int(talks["years"]), "" if int(talks["years"]) == 1 else "s"], 12, UiKit.TEXT))
+		var odds := _refuse_odds(p, 12)
+		if odds != null:
+			odds.name = "RefuseOdds"
+			(card.get_child(0) as VBoxContainer).add_child(odds)
 		var talk := UiKit.btn("Talk contract", UiKit.SECONDARY)
 		talk.name = "Negotiate"
 		talk.custom_minimum_size = Vector2(0, 44)
@@ -447,6 +454,13 @@ func _show_talks() -> void:
 		var bend := _para(Contracts.bend_line(p, GameState.culture_effect(GameState.my_club, "resign_floor")), 13, UiKit.TEXT)
 		bend.name = "TalksBend"
 		v.add_child(bend)
+	# Under 50 he may refuse you whatever you offer (director 2026-11-08); a
+	# player you let go is asked the same.
+	if not _talk_fa or str(p.get("released_by", "")) == GameState.my_club:
+		var odds := _refuse_odds(p, 14)
+		if odds != null:
+			odds.name = "TalksRefuse"
+			v.add_child(odds)
 	if _talk_fa and GameState.my_list.size() >= Contracts.MAX_LIST:
 		v.add_child(_para("Your list is full (%d): release a player first." % Contracts.MAX_LIST, 14, UiKit.BAD))
 	for reason in terms.get("reasons", []):
@@ -583,6 +597,15 @@ func _make_offer(salary: int, years: int) -> void:
 	_notice_club = str(r.get("club", ""))
 	_notice_club_text = _notice if r.has("code") else ""
 	_build()
+
+
+## "His opinion of you: 44/100. 6% he won't re-sign with you." when his
+## opinion of you is under 50, else null.
+func _refuse_odds(p: Dictionary, size: int) -> Control:
+	var chance := GameState.resign_refuse_chance(p)
+	if chance <= 0:
+		return null
+	return _para(Contracts.REFUSE_ODDS % [GameState.opinion_of_you(str(p.get("id", ""))), chance], size, UiKit.BAD)
 
 
 func _close_talks() -> void:

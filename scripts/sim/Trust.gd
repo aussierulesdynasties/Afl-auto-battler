@@ -8,11 +8,13 @@ extends RefCounted
 ## with the career; a person with no entry is neutral, so an older save loads
 ## with everyone neutral.
 ##
-## Trust is shown in words, never as a number, and every change keeps its
-## reason ("You dropped him after three games"), so the player can always look
-## up why. It has no passive effect: it moves only through the choices on the
-## week's cards, and it changes what those choices do only where the card says
-## so (a talk lands harder with a player who trusts you).
+## The game shows it as his opinion of you, a number out of 100 (opinion();
+## director 2026-11-08): 50 when nothing has passed between you. Every change
+## keeps its reason ("You dropped him after three games"), so the player can
+## always look up why. It has no passive effect and never drifts back toward 50
+## on its own: it moves only through your choices, and it changes what those
+## choices do only where they say so (a talk lands harder with a player who
+## trusts you; below 50 he may refuse to re-sign, Contracts.refuse_chance).
 
 const LOWEST := -100
 const HIGHEST := 100
@@ -34,6 +36,12 @@ const BANDS := [
 ## harder with a player who trusts you, softer with one who doesn't.
 const LIFT_SCALE := {"close": 1.4, "trusts": 1.2, "neutral": 1.0, "wary": 0.7, "lost": 0.4}
 
+## Trust per point of the opinion the game shows (opinion()).
+const PER_POINT := 2
+const OPINION_LINE := "Opinion of you %d/100"
+## A reason's move, in the opinion the game shows.
+const OPINION_MOVE := "Opinion of you %+d."
+
 
 static func player_key(id: String) -> String:
 	return "p:" + id
@@ -43,19 +51,36 @@ static func value(rel: Dictionary, key: String) -> int:
 	return int((rel.get(key, {}) as Dictionary).get("t", 0))
 
 
+## His opinion of you as the game shows it, 0..100 (director 2026-11-08).
+static func opinion(t: int) -> int:
+	return roundi(50.0 + float(t) / float(PER_POINT))
+
+
+## What a trust move of `d` does to the opinion the game shows, from trust `t`
+## (after one moment's limit and the ends of the scale). An even move is always
+## half its size; an odd one depends on where he starts.
+static func opinion_move(t: int, d: int) -> int:
+	return opinion(clampi(t + clampi(d, -STEP_MAX, STEP_MAX), LOWEST, HIGHEST)) - opinion(t)
+
+
+## "Opinion of you 62/100".
+static func opinion_line(t: int) -> String:
+	return OPINION_LINE % opinion(t)
+
+
+## The lowest opinion a band starts at ("trusts" is 60).
+static func band_opinion(key: String) -> int:
+	for b in BANDS:
+		if str(b[1]) == key:
+			return opinion(int(b[0]))
+	return 0
+
+
 static func band(t: int) -> String:
 	for b in BANDS:
 		if t >= int(b[0]):
 			return str(b[1])
 	return "lost"
-
-
-## "Trusts you", "Wary of you"... or "" when he has no strong view of you.
-static func words(t: int) -> String:
-	for b in BANDS:
-		if t >= int(b[0]):
-			return str(b[2])
-	return ""
 
 
 ## Move trust by `d` (clamped to one moment's limit) and keep the reason.
@@ -70,7 +95,8 @@ static func change(rel: Dictionary, key: String, d: int, why: String, year: int,
 		return 0   # already at the end of the scale: nothing moved, nothing to keep
 	entry["t"] = after
 	var log: Array = entry.get("log", [])
-	log.append({"y": year, "w": when, "d": after - before, "why": why})
+	# "o": what the opinion the game shows moved, kept so the reason says it exactly.
+	log.append({"y": year, "w": when, "d": after - before, "o": opinion(after) - opinion(before), "why": why})
 	while log.size() > LOG_KEEP:
 		log.pop_front()
 	entry["log"] = log
@@ -78,31 +104,24 @@ static func change(rel: Dictionary, key: String, d: int, why: String, year: int,
 	return after - before
 
 
-## His reasons, newest first: [{"y", "w", "d", "why"}].
+## His reasons, newest first: [{"y", "w", "d", "o", "why"}] ("o" from 2026-11-08 on).
 static func reasons(rel: Dictionary, key: String) -> Array:
 	var log: Array = ((rel.get(key, {}) as Dictionary).get("log", []) as Array).duplicate()
 	log.reverse()
 	return log
 
 
-## His profile's line: his band's words, or, once something has moved him but
-## he is back in the middle, that he has no strong view. "" when nothing has
-## happened between you (a neutral player with no reasons says nothing).
-static func profile_words(rel: Dictionary, key: String) -> String:
-	var t := value(rel, key)
-	if words(t) != "":
-		return words(t)
-	return "Has no strong view of you" if not reasons(rel, key).is_empty() else ""
-
-
 ## One reason as the profile lists it: "Round 5, 2026. You promised him a game
-## and left him out. Trust fell."
+## and left him out. Opinion of you -4." A reason kept before the opinion was
+## shown has only the trust move: half of it, rounded away from zero.
 static func reason_text(r: Dictionary) -> String:
 	var why := str(r.get("why", "")).strip_edges()
 	if why != "" and not why.ends_with("."):
 		why += "."
-	return "%s, %d. %s %s" % [str(r.get("w", "")), int(r.get("y", 0)), why,
-			"Trust rose." if int(r.get("d", 0)) > 0 else "Trust fell."]
+	var d := int(r.get("d", 0))
+	var o := int(r.get("o", signi(d) * ceili(absf(float(d)) / 2.0)))
+	var head := "%s, %d. %s" % [str(r.get("w", "")), int(r.get("y", 0)), why]
+	return head if o == 0 else "%s %s" % [head, OPINION_MOVE % o]
 
 
 ## A lift that depends on trust, scaled by his band. Only lifts scale; a cost
