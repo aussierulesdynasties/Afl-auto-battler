@@ -229,7 +229,7 @@ func _show_home() -> void:
 
 	# A career in memory (back from the hub or the draft) or one on disk.
 	var resume_draft := GameState.draft != null and not GameState.draft.user_club.is_empty() \
-			and GameState.season == null
+			and (GameState.season == null or GameState.club_yet_to_play())
 	var live := resume_draft or GameState.season != null
 	if live or saved:
 		var cont := UiKit.btn("Continue", UiKit.H2, true)
@@ -336,7 +336,7 @@ func _on_continue() -> void:
 	# after that errors ("class instance is gone").
 	ScreenTransition.run("Loading your career...", func():
 		if GameState.load_career():
-			Router.go("hub" if GameState.season != null else "draft")
+			Router.go("hub" if GameState.season != null and not GameState.club_yet_to_play() else "draft")
 		else:
 			_show_load_error())
 
@@ -560,7 +560,7 @@ func _canberra_line(k: String) -> String:
 		return "Rebuild starts in 2027. Tasmania join in 2028 and the league stays at 19 clubs." + fixed
 	if k == "yes":
 		return "2027 to 2029 play out without you, every club run by its own staff: Tasmania join in 2028 and Canberra build their first list. You then choose any of the 20 clubs and start in 2030. Take Canberra and you build their list with the same new-club picks and cap room a rival coach gets." + fixed
-	return "You start in 2027. Tasmania join in 2028 and the league stays at 19 clubs; Tasmania cannot be chosen at the start." + fixed
+	return "You start in 2027, or take Tasmania and start in 2028, when they join. The league stays at 19 clubs." + fixed
 
 
 ## The real-lists start: with Canberra (and no Rebuild) the career starts in
@@ -568,7 +568,7 @@ func _canberra_line(k: String) -> String:
 func _real_start_line() -> String:
 	if _pick_canberra and _pick_challenge != "rebuild":
 		return "Every club keeps its real end-of-2026 list. The league plays 2027 to 2029 without you; then you choose your club and start in 2030."
-	return "Every club keeps its real end-of-2026 list. You run your club through the 2026 National Draft, then play 2027."
+	return "Every club keeps its real end-of-2026 list. You run your club through the 2026 National Draft, then play 2027; or take Tasmania and start in 2028."
 
 
 ## The Canberra rule follows the start and the Forge club's pick.
