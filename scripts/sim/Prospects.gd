@@ -996,7 +996,7 @@ static func class_shifts(tier: String, rank: int) -> Array:
 ## half the list when it has junior teams.
 ## `salt` (the career's seed, in words) gives each career its own players;
 ## without it the list is the same one every time, as it always was.
-static func generate_expansion_list(code: String, year: int, size := 36, salt := "") -> Array:
+static func generate_expansion_list(code: String, year: int, size := 36, salt := "", first_rank := 1) -> Array:
 	var rng := _rng_for("expansion-%s-%d%s" % [code, year, salt])
 	var home_teams := []
 	for team in JUNIOR_TEAMS:
@@ -1006,7 +1006,7 @@ static func generate_expansion_list(code: String, year: int, size := 36, salt :=
 			"DEF", "DEF", "DEF", "DEF", "FWD", "FWD", "FWD", "FWD",
 			"RUCK", "RUCK"]
 	var out := []
-	for r in range(1, size + 1):
+	for r in range(first_rank, first_rank + size):
 		var p := {}
 		var role: String = str(role_bag[rng.randi_range(0, role_bag.size() - 1)])
 		if r % 18 == 10:
@@ -1075,6 +1075,20 @@ static func generate_expansion_list(code: String, year: int, size := 36, salt :=
 		_mature_entry(p)
 		out.append(p)
 	GameDB.assign_aliases(out)
+	return out
+
+
+## The state-leaguers who fill out a League redraft: the real players run out
+## short of full lists (director, 2026-11-09: "Full-size lists"). Ranked after
+## the real class, unlisted until drafted.
+const DEPTH_FIRST_RANK := 40
+
+static func generate_depth_pool(count: int, year: int, salt: String) -> Array:
+	var out := generate_expansion_list("DEPTH", year, count, salt, DEPTH_FIRST_RANK)
+	for p in out:
+		p["club"] = ""
+		p["note"] = "State league, %d" % year
+		p["draft_year"] = GameDB.DATA_SEASON
 	return out
 
 
