@@ -25,10 +25,12 @@ cores="$(nproc 2>/dev/null || echo 4)"
 jobs="${JOBS:-$(( cores > 3 ? cores - 2 : 1 ))}"
 out="${OUT:-$root/.balance/$(date +%Y%m%d-%H%M%S)}"
 mkdir -p "$out"; touch "$out/.gdignore"
-[ -d "$root/.godot/imported" ] || "$godot" --headless --path "$root" --editor --import >/dev/null 2>&1 || true
+# Always import: a checkout that merged main has new classes its old class list lacks,
+# and every worker would then run with its autoloads broken.
+"$godot" --headless --path "$root" --editor --import >/dev/null 2>&1 || true
 start=$(date +%s)
 root_a="${root_a:+$(cd "$root_a" && pwd)}"
-[ -z "$root_a" ] || [ -d "$root_a/.godot/imported" ] || "$godot" --headless --path "$root_a" --editor --import >/dev/null 2>&1 || true
+[ -z "$root_a" ] || "$godot" --headless --path "$root_a" --editor --import >/dev/null 2>&1 || true
 run_arm() { # name, extra args, project root
   local name="$1" extra="$2" proj="${3:-$root}" per=$(( (n + jobs - 1) / jobs )) w=0 from=0
   while [ "$from" -lt "$n" ]; do
