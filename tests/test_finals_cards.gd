@@ -573,7 +573,7 @@ func _test_effects() -> void:
 			if id == "finals_second_chance":
 				_check(up == (0 if holds else -2), "%s: the group %s, the side's morale moves %d" % [id, "listens" if holds else "doesn't", up])
 			else:
-				_check(up == (5 if holds else 0), "%s: the group %s, the side's morale rises by %d" % [id, "listens" if holds else "doesn't", up])
+				_check(up == (5 if holds else -2), "%s: the group %s, the side's morale moves %d" % [id, "listens" if holds else "doesn't", up])
 
 
 ## The small chances: one roll from the save's seed; the same save rolls the same; the rate is the card's.
@@ -883,7 +883,7 @@ func _share_a_finals_week(a: Dictionary, b: Dictionary) -> bool:
 	return wa.x <= wa.y and wb.x <= wb.y and maxi(wa.x, wb.x) <= mini(wa.y, wb.y)
 
 
-## The director's fixes (2026-10-14): a captain the group would not listen to changes no morale; a
+## The director's fixes (2026-10-14): a captain the group would not listen to; a
 ## Grand Final card says Saturday, and the flag is on the side when the Grand Final is played; the
 ## Grand Final card names the club you actually meet.
 func _test_director_fixes() -> void:
@@ -896,14 +896,21 @@ func _test_director_fixes() -> void:
 	var give: Dictionary = card["options"][0]
 	card["facts"]["delegate_holds"] = false
 	var lines := " ".join(StoryEngine.stakes_lines(give["effects"], card["facts"]))
-	_check(not lines.contains("If it doesn't"), "Last word, group not listening: no line promises a morale change (%s)" % lines)
+	# Director 2026-11-08 (row 63's second sheet, row 14): when the group won't listen, the side's
+	# morale drops 2%, and the card says so before the choice.
+	_check(lines.contains("If it doesn't, morale down 2%"), "Last word, group not listening: the cost line names the 2%% morale drop (%s)" % lines)
 	for q in GameState.my_list:
 		q["morale"] = 50
 	ClubStories.apply_choice(GameState, card, 0)
 	var moved := 0
 	for q in GameState.my_list:
 		moved += absi(ClubLife.morale(q) - 50)
-	_check(moved == 0, "Last word, group not listening: nobody's morale moves (%d)" % moved)
+	var side_ids := _side_ids()
+	var dropped := 0
+	for q in GameState.my_list:
+		if side_ids.has(str(q["id"])) and ClubLife.morale(q) == 48:
+			dropped += 1
+	_check(moved > 0 and dropped == side_ids.size(), "Last word, group not listening: the side's morale drops 2%% (%d of %d)" % [dropped, side_ids.size()])
 	# Saturday, not "next final".
 	for id in ["gf_the_opponent", "gf_debut_year"]:
 		var c2 := GameState.story_card(id, GameState.my_list[3])

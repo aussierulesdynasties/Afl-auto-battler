@@ -26,8 +26,8 @@ const BEATS := ["start", "middle", "end"]
 ## The biggest effect one choice may carry, per lever.
 const CAPS := {"morale": 15, "xp": 26, "board": 8, "trust": Trust.STEP_MAX}
 ## Who a group effect reaches: the card's player, this week's side, the whole
-## list, or everyone but him.
-const WHO := ["subject", "side", "all", "others"]
+## list, everyone but him, or the vice-captain (a captain's card's morale only).
+const WHO := ["subject", "side", "all", "others", "vice"]
 ## Every effect a card can carry. Ops marked true need a player subject.
 const OPS := {
 	"morale": false, "xp": false, "board": false, "trust": true, "rest": true, "sore": true,
@@ -56,8 +56,12 @@ const OPS := {
 	"culture": false, "running": false, "drill": false,
 	# Lines with no lever of their own (director, 2026-10-18, row 24): a contract
 	# talk put off names the early premium it does not pay; a choice that holds a
-	# player back names the development (`d`, XP) the other choice would give him.
-	"open_price": true, "forgo_xp": true,
+	# player (or the group, by `who`) back names the development (`d`, XP) the other
+	# choice would give.
+	"open_price": true, "forgo_xp": false,
+	# The physio's plan for a player injured in the pre-season: the training and the
+	# Round 1 he misses while the injury runs (ClubStories.preseason_miss).
+	"keep_out": true,
 }
 ## The biggest step a card may give a culture strand, and the most weeks of
 ## running or drilling it may add or take.
@@ -92,8 +96,12 @@ const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "over
 		"last_season", "finals_games", "save_debut", "debut_year", "milestone_next",
 		"injured_weeks", "rushable", "overall_rank", "told_players",
 		# The pre-season cards: arrived this summer (a recruit or a draftee), where he
-		# finished in the time trial ("best", "worst" or ""), what he is injured with.
-		"new_here", "trial_place", "injury_kind",
+		# finished in the time trial ("best", "worst" or ""), what he is injured with
+		# (the stored kind, and the words for it: "a hamstring strain").
+		"new_here", "trial_place", "injury_kind", "injury_word",
+		# Injured in the pre-season: the development, Heavy weeks and Round 1 weeks the
+		# physio's plan costs him.
+		"pre_miss_xp", "pre_miss_heavy", "pre_miss_rounds",
 		# International prospects (international.json): who he is, and where he is in his career.
 		"intl", "intl_region", "from", "demonym", "home_club", "seasons_listed", "goals",
 		# The extension card: what waiting for the off-season can cost (ClubLife.wait_words).
@@ -312,8 +320,10 @@ static func _check_effect(where: String, e, player: bool) -> Array:
 	var who := str(e.get("who", "subject"))
 	if not WHO.has(who):
 		errs.append("%s: unknown target '%s'" % [where, who])
-	if (bool(OPS[op]) or ((op == "morale" or op == "xp" or op == "slow_start") and (who == "subject" or who == "others"))) and not player:
+	if (bool(OPS[op]) or ((op == "morale" or op == "xp" or op == "slow_start" or op == "forgo_xp") and (who == "subject" or who == "others"))) and not player:
 		errs.append("%s: '%s' needs a player card" % [where, op])
+	if who == "vice" and op != "morale":
+		errs.append("%s: only a morale move can reach the vice-captain" % where)
 	if CAPS.has(op):
 		var dv := int(e.get("d", 0))
 		if dv == 0 or absi(dv) > int(CAPS[op]):

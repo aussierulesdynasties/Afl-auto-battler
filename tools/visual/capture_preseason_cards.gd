@@ -2,7 +2,8 @@ extends SceneTree
 ## The pre-season card stop (row 39, slice 5) for the lead's check and the director's look.
 ## Needs a real renderer:
 ##   godot --path . --script tools/visual/capture_preseason_cards.gd -- --out /tmp/precards --club FRE [--size 1280x720]
-## Writes <out>_<NN>_<card>.png for each of the 11 cards (01_recruit ... 11_heated), and
+## Writes <out>_<NN>_<card>.png for each of the 11 cards (01_recruit ... 11_heated, and
+## 06b_knee_soon: the running-again card for a player back next week anyway), and
 ## <out>_<NN>_<card>_low.png scrolled to the foot when the card runs past the screen. Each
 ## stop is the real pre-season screen after week 3, with the card and its player forced so
 ## it is the one on show.
@@ -80,11 +81,15 @@ func _run() -> void:
 	var knee: Dictionary = state.my_list[9]
 	knee["injury_weeks"] = 3
 	knee["injury_kind"] = "knee"
+	# Back for next week's training anyway: the card still comes (director 2026-11-08).
+	var soon: Dictionary = state.my_list[10]
+	soon["injury_weeks"] = 1
+	soon["injury_kind"] = "hamstring"
 	var kid: Dictionary = state.list_player(str((trial["best"] as Array)[0]))
 	var star: Dictionary = state.list_player(str((trial["worst"] as Array)[0]))
 	var shots := [["pre_recruit_behind", recruit, "01_recruit"], ["pre_contract_talk", senior, "02_contract"],
 			["pre_bulking_up", young, "03_bulking"], ["pre_camp", {}, "04_camp"], ["pre_leaders_vote", {}, "05_leaders"],
-			["pre_knee_return", knee, "06_knee"], ["pre_flag_hangover", {}, "07_flag"], ["pre_kid_flying", kid, "08_kid"],
+			["pre_knee_return", knee, "06_knee"], ["pre_knee_return", soon, "06b_knee_soon"], ["pre_flag_hangover", {}, "07_flag"], ["pre_kid_flying", kid, "08_kid"],
 			["pre_star_last", star, "09_starlast"], ["pre_members_open", {}, "10_members"], ["pre_sim_heated", {}, "11_heated"]]
 	for shot in shots:
 		var card: Dictionary = state.story_card(str(shot[0]), shot[1])
@@ -93,6 +98,11 @@ func _run() -> void:
 		state.preseason["story_pending"] = true
 		root.get_node("Router").go("hub")
 		await _frames(12)
+		# The screen wipe swaps the scene on a thread; wait for the hub to land.
+		var waited := 0
+		while (current_scene == null or current_scene.find_child("PreSeasonPage", true, false) == null) and waited < 600:
+			await process_frame
+			waited += 1
 		print("scene ", current_scene.name, " stop ", state.preseason_stop())
 		await _shot(out + "_" + str(shot[2]) + ".png")
 		var page: Node = current_scene.find_child("PreSeasonPage", true, false)
