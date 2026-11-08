@@ -85,9 +85,8 @@ Cost lines for the two new ones:
 - Rows 1-24 and 28-36 went in as drafted. `forgo_xp` now names who goes without ("every player goes without 6 XP",
   "each player in the side goes without 4 XP"). Row 10's cost falls on the captain, the card's subject. Row 14
   fills the `failed` branch.
-- Rows 25-27 changed: "expects a game" would have Auto-pick name him this week, which contradicts the explain
-  answer's own "Nothing is promised." and makes it a smaller copy of the promise answer. Built instead: Standards
-  -1% ("You opened selection up for discussion"), the mirror of the "It's my call" answer's Standards +1%.
+- Rows 25-27 went in as drafted (director 2026-11-08, "He expects a game"): sitting him down carries "expects a game"
+  (sting 4%), so Auto-pick names him this week. The first build used Standards -1% instead; that is out.
 - C1 and C2 are code, not card data (GameState challenge/appeal), and are not built.
 
 ## Questions for the director

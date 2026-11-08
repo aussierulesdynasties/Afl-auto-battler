@@ -626,11 +626,19 @@ static func legs_word(energy: float) -> String:
 
 
 ## "Your midfield is fresh; theirs is tiring." from two group energies, or
-## "Both midfields are tiring." when they are the same.
-static func legs_line(mine: float, theirs: float) -> String:
+## "Both midfields are tiring." when they are the same. `reason` (RivalRead.
+## legs_reason) follows when theirs are the more tired: "...; theirs is
+## tiring: they've pressed since quarter time."
+static func legs_line(mine: float, theirs: float, reason := "") -> String:
 	if legs_word(mine) == legs_word(theirs):
 		return "Both midfields are %s." % legs_word(mine)
-	return "Your midfield is %s; theirs is %s." % [legs_word(mine), legs_word(theirs)]
+	var tail := ": " + reason if reason != "" and _legs_rank(theirs) > _legs_rank(mine) else ""
+	return "Your midfield is %s; theirs is %s%s." % [legs_word(mine), legs_word(theirs), tail]
+
+
+## 0 fresh, 1 tiring, 2 running on empty.
+static func _legs_rank(energy: float) -> int:
+	return 0 if energy >= FRESH else (1 if energy >= TIRING else 2)
 
 
 ## Names of your on-ground players below EMPTY energy, most tired first.
@@ -1091,6 +1099,13 @@ static func rated_players(res: Dictionary, side: int) -> Array:
 	return out
 
 
+## What a hit-out is worth to a coach picking his five. The match rating gives a
+## tap 1, which leaves rucks on 6.9% of the coaches' votes; the AFL's poll 8.4%
+## (2025-26). Coaches rate a ruck's tap work above the stat sheet, and this
+## number puts their share there. Measured with brownlow_impl.
+const COACHES_HITOUT_POINTS := 1.2
+
+
 ## The coaches' votes, as the AFL gives them: each coach names his five best
 ## players on the ground, from either side, 5-4-3-2-1, so a player can earn up
 ## to 10. Given once, at full time (the season's Coaches Award adds them up,
@@ -1098,7 +1113,7 @@ static func rated_players(res: Dictionary, side: int) -> Array:
 ## the sim decides with: each coach's own taste for a player is a fixed small
 ## lean, the same all match, so the two coaches can differ on a close call.
 ## Returns {player id: votes}; a player on neither coach's five is absent.
-static func coaches_votes(res: Dictionary) -> Dictionary:
+static func coaches_votes(res: Dictionary, hitout_points := COACHES_HITOUT_POINTS) -> Dictionary:
 	var everyone := []
 	for side in [0, 1]:
 		everyone.append_array(rated_players(res, side))
@@ -1106,11 +1121,13 @@ static func coaches_votes(res: Dictionary) -> Dictionary:
 	for coach in [0, 1]:
 		var scored := []
 		for r in everyone:
-			if int(r["rating"]) <= 0:
+			var hitouts := float((r["stats"] as Dictionary).get("hitouts", 0.0))
+			var seen := float(r["rating"]) - (float(RATING_POINTS["hitouts"]) - hitout_points) * hitouts
+			if seen <= 0.0:
 				continue
 			var key := "%s|%s|%d|%s" % [res.get("home", ""), res.get("away", ""), coach, r["id"]]
 			var lean := float(key.hash() % 1000) / 1000.0 - 0.5   # -0.5..0.5
-			scored.append([str(r["id"]), float(r["rating"]) * (1.0 + 0.12 * lean)])
+			scored.append([str(r["id"]), seen * (1.0 + 0.12 * lean)])
 		scored.sort_custom(func(a, b): return a[1] > b[1] or (a[1] == b[1] and str(a[0]) < str(b[0])))
 		for i in range(mini(5, scored.size())):
 			var id := str(scored[i][0])

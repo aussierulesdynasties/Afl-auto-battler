@@ -19,6 +19,9 @@ func run() -> void:
 	GameState.replay_seed = SUITE_SEED
 	GameDB.reload()
 	_t("_test_vote_arithmetic")
+	_t("_test_umpires_measure")
+	_t("_test_umpires_draw")
+	_t("_test_coaches_read_taps")
 	_t("_test_brownlow_eligibility")
 	_t("_test_norm_smith_rules")
 	_t("_test_comeback_records")
@@ -26,7 +29,9 @@ func run() -> void:
 	_t("_test_career_record")
 	_t("_test_golden_fist_rule")
 	_t("_test_golden_fist_trophy_room")
+	_t("_test_award_count_rounds")
 	_t("_test_full_season")
+	_t("_test_award_count_late_start")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Awards", self))
@@ -191,6 +196,118 @@ func _test_vote_arithmetic() -> void:
 	_check(_sum(finals, "goals") > 0, "Finals goals still count in the season tally")
 
 
+## The Brownlow is the umpires' award: Awards.umpire_score (their fitted
+## weights, plus UMPIRE_WIN for a man on the winning side) picks the 3-2-1,
+## while the best-and-fairest stays on influence and the coaches' votes on the
+## match rating (MatchNotes.coaches_votes). A ruckman's tap count does not carry him past a 30-disposal midfielder
+## (director, 2026-11-08), and clangers and pressure acts do not move the
+## umpires' count.
+func _test_umpires_measure() -> void:
+	var ruck := {"disposals": 14.0, "kicks": 10.0, "handballs": 4.0, "hitouts": 45.0, "marks": 4.0, "clearances": 4.0, "tackles": 3.0}
+	var mid := {"disposals": 30.0, "kicks": 12.0, "handballs": 18.0, "marks": 5.0, "clearances": 6.0, "inside50": 4.0, "tackles": 5.0}
+	_check(CoachReport.influence(ruck) > CoachReport.influence(mid),
+			"(case) influence rates the 45-hit-out ruck above the 30-disposal mid")
+	_check(Awards.umpire_score(ruck, false) < Awards.umpire_score(mid, false),
+			"The umpires rate a 30-disposal mid above a 45-hit-out ruck (%.1f against %.1f)"
+			% [Awards.umpire_score(mid, false), Awards.umpire_score(ruck, false)])
+	_check(is_equal_approx(Awards.umpire_score(mid, true) - Awards.umpire_score(mid, false), Awards.UMPIRE_WIN),
+			"Being on the winning side adds UMPIRE_WIN to the umpires' count")
+	var messy := mid.duplicate()
+	messy["clangers"] = 6.0
+	messy["pressure_acts"] = 25.0
+	_check(is_equal_approx(Awards.umpire_score(messy, false), Awards.umpire_score(mid, false)),
+			"Clangers and pressure acts leave the umpires' count unchanged")
+	_check(Awards.umpire_score({}, false) == 0.0 and Awards.umpire_score({}, true) == Awards.UMPIRE_WIN,
+			"An empty line on the losing side scores nothing")
+	# One match: the home side wins; "winner" (14 disposals) and "loser"
+	# (20 disposals, beaten side) sit either side of the win bonus.
+	var players := {"ruck": ruck, "mid": mid, "winner": {"disposals": 14.0, "kicks": 7.0, "handballs": 7.0},
+			"loser": {"disposals": 20.0, "kicks": 10.0, "handballs": 10.0}}
+	var home := [{"id": "ruck"}, {"id": "mid"}, {"id": "winner"}]
+	var away := [{"id": "loser"}]
+	for i in range(3):
+		players["h%d" % i] = {"disposals": 5.0, "kicks": 2.0, "handballs": 3.0}
+		players["a%d" % i] = {"disposals": 5.0, "kicks": 2.0, "handballs": 3.0}
+		home.append({"id": "h%d" % i})
+		away.append({"id": "a%d" % i})
+	var res := {"home": "GEE", "away": "HAW", "score": [80, 70], "roster": [home, away], "players": players}
+	var tally := {}
+	Awards.tally_match(tally, res, true, false)
+	_check(int(tally["mid"]["votes"]) == 3 and int(tally["ruck"]["votes"]) == 2,
+			"The umpires give the mid 3 votes and the ruck 2")
+	_check(int(tally["ruck"]["coaches"]) == 10 and int(tally["mid"]["coaches"]) == 8
+			and int(tally["ruck"]["bf"]) == 5 and int(tally["mid"]["bf"]) == 4,
+			"...while both coaches, and the club best-and-fairest on influence, have the ruck first")
+	_check(int(tally["winner"]["votes"]) == 1 and int(tally["loser"]["votes"]) == 0
+			and int(tally["loser"]["coaches"]) > int(tally["winner"]["coaches"]),
+			"The winning side's man takes the last vote from a busier loser (the coaches have it the other way)")
+	var drawn := res.duplicate(true)
+	drawn["score"] = [70, 70]
+	var dt := {}
+	Awards.tally_match(dt, drawn, true, false)
+	_check(int(dt["loser"]["votes"]) == 1 and int(dt["winner"]["votes"]) == 0,
+			"A draw is no win for either side: the busier man takes the last vote")
+	_check(_sum(dt, "votes") == 6 and _sum(dt, "coaches") == 30, "Still 3-2-1 and 5-4-3-2-1 from each coach in a draw")
+
+
+## What a tap is worth to a coach moves the coaches' votes and nothing else: the
+## real rucks' 8.4% of them is what COACHES_HITOUT_POINTS is set to reach.
+func _test_coaches_read_taps() -> void:
+	var players := {"ruck": {"hitouts": 60.0}, "mid": {"kicks": 36.0}}
+	var home := [{"id": "ruck"}, {"id": "mid"}]
+	var away := []
+	for i in range(4):
+		players["a%d" % i] = {"kicks": 5.0}
+		away.append({"id": "a%d" % i})
+	var res := {"home": "GEE", "away": "HAW", "score": [80, 70], "roster": [home, away], "players": players}
+	_check(MatchNotes.rating(players["ruck"]) == 60 and MatchNotes.rating(players["mid"]) == 72,
+			"(case) the stat sheet has the midfielder 72 and the ruck 60")
+	var flat := MatchNotes.coaches_votes(res, 1.0)
+	_check(int(flat["mid"]) == 10 and int(flat["ruck"]) == 8, "A tap at a point each: both coaches have the midfielder first")
+	var high := MatchNotes.coaches_votes(res, 2.0)
+	_check(int(high["ruck"]) == 10 and int(high["mid"]) == 8, "A tap at two points: both coaches have the ruck first")
+	_check(MatchNotes.COACHES_HITOUT_POINTS > 1.0 and MatchNotes.coaches_votes(res) == MatchNotes.coaches_votes(res, MatchNotes.COACHES_HITOUT_POINTS),
+			"The coaches' votes read a tap at COACHES_HITOUT_POINTS, above the stat sheet")
+	_check(MatchNotes.rating(players["ruck"]) == 60, "The match rating itself stays a point a tap")
+
+
+## The game's 3-2-1 is drawn the way the fit says umpires choose
+## (Awards.brownlow_three): the same match always polls the same men, the
+## clear best man usually gets the 3 but not always, and the counted three are
+## three different men.
+func _test_umpires_draw() -> void:
+	var res := _one_match()
+	var a := {}
+	var b := {}
+	Awards.tally_match(a, res, true)
+	Awards.tally_match(b, res.duplicate(true), true)
+	_check(_sum(a, "votes") == 6 and _sum(a, "polled") == 3, "The drawn count still hands out 3-2-1 to three men")
+	var same := true
+	for id in a:
+		same = same and int(a[id]["votes"]) == int(b.get(id, {}).get("votes", -1))
+	_check(same, "The same match result always polls the same men")
+	# Two men 5 apart in umpire_score and 20 others 30 behind: the best gets
+	# the 3 with chance 1 / (1 + exp(-5u) + 20 exp(-30u)) = 0.72 (u =
+	# UMPIRE_DRAW). Over 2,000 seeded matches, about that.
+	var firsts := 0
+	var distinct := true
+	var n := 2000
+	for k in range(n):
+		var scored := [["best", 30.0], ["next", 25.0]]
+		for j in range(20):
+			scored.append(["p%d" % j, 0.0])
+		var three := Awards.brownlow_three(scored, {"home": "GEE", "away": "HAW", "round": k + 1, "score": [k, 0]})
+		if str(three[0][0]) == "best":
+			firsts += 1
+		distinct = (distinct and three.size() == 3 and str(three[0][0]) != str(three[1][0])
+				and str(three[1][0]) != str(three[2][0]) and str(three[0][0]) != str(three[2][0]))
+	_check(distinct, "Every drawn 3-2-1 goes to three different men")
+	var u := Awards.UMPIRE_DRAW
+	var want := 1.0 / (1.0 + exp(-5.0 * u) + 20.0 * exp(-30.0 * u))
+	_check(absf(float(firsts) / n - want) < 0.035,
+			"The better man by 5 gets the 3 about %.2f of the time (%.3f)" % [want, float(firsts) / n])
+
+
 ## Ineligibility changes only who can receive the medal. Votes remain in
 ## raw order, and a successful challenge (flag cleared) restores eligibility.
 func _test_brownlow_eligibility() -> void:
@@ -218,7 +335,8 @@ func _test_brownlow_eligibility() -> void:
 
 
 ## The Norm Smith Medal: the most influential player of the Grand Final from
-## either side, by the same measure as the votes, and the same man every time.
+## either side, by influence (the measure the best-and-fairest and coaches'
+## votes use), and the same man every time.
 func _test_norm_smith_rules() -> void:
 	var res := _one_match()
 	res["tag"] = "GF"
@@ -420,9 +538,13 @@ func _test_full_season() -> void:
 	_check((GameState.season_awards.get("golden_fist", []) as Array).size() == fist.size()
 			and str(((GameState.honour_roll[0] as Dictionary).get("golden_fist", [{}]) as Array)[0].get("id", "")) == fist_id,
 			"The Golden Fist survives a save")
+	# Awards night's count, from the finished season (T5.Q23b).
+	_award_count_season_checks()
 	GameState.start_next_season()
 	_check(GameState.season_tally.is_empty() and GameState.honour_roll.size() == 1,
 			"A new season starts a fresh tally and keeps the honour roll")
+	_check((GameState.award_counts.get("rounds", []) as Array).is_empty(),
+			"A new season starts the awards-night record empty")
 
 
 ## A season book row: games and {stat: total}.
@@ -573,3 +695,152 @@ func _test_comeback_records() -> void:
 	_check(text.contains("Biggest lead lost: Carlton led Collingwood by 48 points at quarter time and lost (2029)"),
 			"The lead lost reads as football (%s)" % text)
 	GameState.records = old_records
+
+
+## Awards night's count (T5.Q23b): a round's record is the change in the
+## season tally across it, so a home-and-away match reads 3-2-1 and your side
+## 5-4-3-2-1; a final records only your club's points, and a round is never
+## recorded twice. Recording never touches the tally.
+func _test_award_count_rounds() -> void:
+	var res := _one_match()
+	res["round"] = 3
+	res["label"] = "Round 3"
+	var tally := {}
+	var rec := AwardsCount.fresh(2026, "GEE")
+	var before := AwardsCount.snapshot(tally, [res])
+	Awards.tally_match(tally, res, true)
+	var kept := tally.duplicate(true)
+	AwardsCount.record_round(rec, before, tally, [res], "GEE")
+	_check(tally == kept, "Recording a round leaves the season tally exactly as it was")
+	var rounds: Array = rec["rounds"]
+	var votes := []
+	var sides := {}
+	if rounds.size() == 1 and (rounds[0]["matches"] as Array).size() == 1:
+		for v in rounds[0]["matches"][0]["votes"]:
+			votes.append(int(v[1]))
+			sides[str(v[2])] = true
+	_check(votes == [3, 2, 1] and sides.keys().all(func(c): return c == "GEE" or c == "HAW"),
+			"A home-and-away match records its 3-2-1, most first, with each player's club (%s)" % str(votes))
+	var bf := []
+	for b in rounds[0].get("bf", []) if rounds.size() == 1 else []:
+		bf.append(int(b[1]))
+	_check(bf == [5, 4, 3, 2, 1] and str(rounds[0].get("vs", "")) == "HAW",
+			"Your side's 5-4-3-2-1 is recorded with the opponent (%s)" % str(bf))
+	var again := AwardsCount.snapshot(tally, [res])
+	Awards.tally_match(tally, res, true)
+	AwardsCount.record_round(rec, again, tally, [res], "GEE")
+	_check((rec["rounds"] as Array).size() == 1, "A round is never recorded twice")
+	var gf := _one_match()
+	gf["round"] = Season.REGULAR_ROUNDS + 1
+	gf["label"] = "Qualifying Final 2"
+	gf["tag"] = "QF"
+	var other := AwardsCount.fresh(2026, "ESS")
+	var fb := AwardsCount.snapshot(tally, [gf])
+	Awards.tally_match(tally, gf, false)
+	AwardsCount.record_round(rec, fb, tally, [gf], "GEE")
+	AwardsCount.record_round(other, fb, tally, [gf], "ESS")
+	var fin: Dictionary = (rec["rounds"] as Array).back()
+	_check(bool(fin.get("final", false)) and (fin["matches"] as Array).is_empty()
+			and (fin["bf"] as Array).size() == 5 and str(fin["label"]) == "Qualifying Final",
+			"A final records your club's points only, by the week's name (%s)" % str(fin.get("label", "")))
+	_check((other["rounds"] as Array).is_empty(), "A finals week without your club records nothing")
+	var steps := AwardsCount.brownlow_steps(rec)
+	_check(steps.size() == 1 and AwardsCount.club_steps(rec).size() == 2,
+			"The Brownlow count leaves the finals out; your club's count keeps them")
+	var board := AwardsCount.board(steps, 0, 1)
+	_check(board.size() == 3 and int(board[0]["total"]) == 3 and int(board[0]["rank"]) == 1
+			and AwardsCount.board(steps, 0, 0).is_empty(),
+			"The board holds only the votes read so far")
+	var level := [{"round": 1, "label": "Round 1", "matches": [{"home": "A", "away": "B",
+			"votes": [["x", 3, "A"], ["y", 2, "B"], ["z", 1, "A"]]}]},
+			{"round": 2, "label": "Round 2", "matches": [{"home": "A", "away": "B",
+			"votes": [["y", 3, "B"], ["x", 2, "A"], ["z", 1, "A"]]}]}]
+	var tied := AwardsCount.board(level, 2, 0, ["y", "x"])
+	_check(str(tied[0]["id"]) == "y" and int(tied[0]["rank"]) == 1 and int(tied[1]["rank"]) == 1
+			and bool(tied[0]["shared"]) and int(tied[2]["rank"]) == 3 and int(tied[0]["last"]) == 3,
+			"Level totals share a rank, listed in the order given; the last round's gain is kept")
+
+
+## A season played from Round 1: every round recorded, the rounds add up to
+## the season tally's votes and points, the count ends on the stored winner,
+## and the record and a count left part way survive a save.
+func _award_count_season_checks() -> void:
+	var rec: Dictionary = GameState.award_counts
+	var season: Season = GameState.season
+	var year := int(GameState.season_awards.get("year", 0))
+	_check(AwardsCount.complete(rec, year, "GEE", season.fixture.size()),
+			"A season played from Round 1 is recorded whole (%d rounds)" % (rec.get("rounds", []) as Array).size())
+	var steps := AwardsCount.brownlow_steps(rec)
+	var totals := AwardsCount.totals(steps, steps.size(), 0)
+	var off := []
+	for id in GameState.season_tally:
+		var want := int(GameState.season_tally[id].get("votes", 0))
+		var got := int((totals.get(str(id), {}) as Dictionary).get("total", 0))
+		if want != got:
+			off.append("%s %d/%d" % [id, got, want])
+	_check(off.is_empty() and steps.size() == season.fixture.size(),
+			"The rounds' votes add up to every player's season tally (%s)" % str(off.slice(0, 3)))
+	var club := AwardsCount.club_steps(rec)
+	var pts := AwardsCount.totals(club, club.size(), 0)
+	var bf_off := []
+	for id in GameState.season_tally:
+		var t: Dictionary = GameState.season_tally[id]
+		if str(t.get("club", "")) != "GEE":
+			continue
+		if int(t.get("bf", 0)) != int((pts.get(str(id), {}) as Dictionary).get("total", 0)):
+			bf_off.append(str(id))
+	var finals := 0
+	for st in club:
+		finals += 1 if bool(st["final"]) else 0
+	var played := 0
+	for week in season.finals.get("weeks", []):
+		for r in week:
+			if str(r.get("home", "")) == "GEE" or str(r.get("away", "")) == "GEE":
+				played += 1
+	_check(bf_off.is_empty() and finals == played,
+			"Your club's count adds up to its best and fairest, its %d finals included (%s)" % [played, str(bf_off.slice(0, 3))])
+	# Level players are listed by name, never by the result, so the stored
+	# leader is among those on top, on the same total.
+	var board := AwardsCount.board(steps, steps.size(), 0)
+	var top: Dictionary = (GameState.season_awards.get("brownlow", []) as Array)[0]
+	var leaders := board.filter(func(r): return int(r["rank"]) == 1).map(func(r): return str(r["id"]))
+	_check(leaders.has(str(top["id"])) and int(board[0]["total"]) == int(top["votes"]),
+			"The count ends with the stored leader on top (%s, %d votes)" % [GameState.award_name(top), int(top["votes"])])
+	GameState.season_awards["count_at"] = {"stage": 0, "round": 7, "match": 2}
+	var kept := rec.duplicate(true)
+	GameState.save_career()
+	GameState.load_career()
+	_check(GameState.award_counts == kept and int((GameState.season_awards.get("count_at", {}) as Dictionary).get("round", 0)) == 7,
+			"The record and the count's place survive a save")
+	GameState.season_awards.erase("count_at")
+
+
+## A save from before the record existed, or a record of another season, is
+## started afresh from the next round played and is never counted.
+func _test_award_count_late_start() -> void:
+	GameState.reset()
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	for i in 3:
+		GameState.advance()
+	GameState.award_counts = AwardsCount.fresh(0, "")
+	var next := GameState.season.round_index + 1
+	GameState.advance()
+	var rec: Dictionary = GameState.award_counts
+	_check(int(rec.get("from", 0)) == next and int(rec.get("year", 0)) == GameState.season_year
+			and (rec["rounds"] as Array).size() == 1 and int(rec["rounds"][0]["round"]) == next,
+			"A record from another season starts again at the next round (Round %d)" % next)
+	_check(not AwardsCount.complete(rec, GameState.season_year, "GEE", GameState.season.fixture.size()),
+			"A season recorded part way is not counted round by round")
+	# A save written before the record existed: it loads with an empty record
+	# that starts at the next round, never back-filled.
+	GameState.save_career()
+	var old := CareerSave.read(GameState.save_path)
+	old.erase("award_counts")
+	CareerSave.write(old, CareerSave.read_meta(GameState.save_path), GameState.save_path)
+	_check(GameState.load_career(), "A save from before the count's record loads")
+	var loaded: Dictionary = GameState.award_counts
+	var first := GameState.season.round_index + 1
+	_check(int(loaded.get("from", 0)) == first and int(loaded.get("year", 0)) == GameState.season_year
+			and str(loaded.get("club", "")) == "GEE" and (loaded.get("rounds", []) as Array).is_empty()
+			and not AwardsCount.complete(loaded, GameState.season_year, "GEE", GameState.season.fixture.size()),
+			"An older save starts its record empty at the next round (Round %d) and is not counted" % first)

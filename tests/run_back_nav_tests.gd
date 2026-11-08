@@ -49,6 +49,8 @@ func _run() -> void:
 	_router = root.get_node("Router")
 	_db = root.get_node("GameDB")
 	_state.autosave_enabled = false
+	# These tests drive the hub for other things: no club card opens over it.
+	_state.event_sheets = false
 	_state.save_path = "user://test_back_nav.save"
 	_state.settings_path = "user://test_back_nav.cfg"
 	# The first-visit intros (FirstVisitIntro.gd) are their own suite; here every
@@ -288,7 +290,7 @@ func _closer(roots: Array) -> Button:
 			continue
 		for b in r.find_children("*", "Button", true, false):
 			var t := str((b as Button).text).strip_edges()
-			if (b as Button).is_visible_in_tree() and ["Close", "Done", "Back", "Cancel", "Not now", "Back to your calls", "Back to hub", "OK", "Skip", "Got it", "Continue", "Start", "To the draft"].has(t):
+			if (b as Button).is_visible_in_tree() and ["Close", "Done", "Back", "Cancel", "Not now", "Back to your calls", "Back to hub", "OK", "Skip", "Got it", "Continue", "Start", "To the draft", "Skip to season review"].has(t):
 				return b
 	return null
 
@@ -408,6 +410,29 @@ func _test_overlays() -> void:
 	await _overlay_case("offseason: talks", "offseason", func(s): s.call("_open_talks", pid))
 	await _overlay_case("season review: awards program", "season_review", func(s): s.call("_open_awards_program"),
 			func(): _state.season_awards = {"year": 2026, "brownlow": []})
+	# Awards night's count (T5.Q23b), part way through the Brownlow.
+	await _overlay_case("season review: awards night count", "season_review", func(s):
+		s.set("_awards_overlay", load("res://scripts/ui/SeasonAwards.gd").open(s))
+		await _settle(3)
+		await _click_named(s, "AwardsNext"),
+			func(): load("res://tests/award_count_fixture.gd").build(_state, "COL"))
+	# Android Back keeps the count's place, as a tap outside it does: the night
+	# is not marked seen, and Replay awards picks it up there.
+	_fresh_career()
+	load("res://tests/award_count_fixture.gd").build(_state, "COL")
+	await _open("season_review")
+	var review := current_scene
+	var night: Control = load("res://scripts/ui/SeasonAwards.gd").open(review)
+	review.set("_awards_overlay", night)
+	await _settle(3)
+	await _click_named(review, "AwardsNext")
+	await _settle(3)
+	_router.notification(Node.NOTIFICATION_WM_GO_BACK_REQUEST)
+	await _settle(8)
+	var at: Dictionary = _state.season_awards.get("count_at", {})
+	_check(not is_instance_valid(night) and _router.current() == "season_review"
+			and not bool(_state.season_awards.get("presentation_seen", false)) and int(at.get("round", -1)) == 1,
+			"season review: Android Back closes the awards night and keeps its place (%s)" % str(at))
 
 
 # ---------------------------------------------------------------------------
@@ -921,7 +946,11 @@ func _test_loading_cover() -> void:
 		await _wait_cover(wipe)
 		process_frame.disconnect(watch_load)
 		_check(loaded_seen["before"], "loading cover: Continue shows its line before the career loads")
-		_check(_router.current() == "hub" and _state.season != null, "loading cover: Continue lands on the hub")
+		# The week simmed above can leave a press conference waiting: the hub hands
+		# it on to its own screen, with the hub under it for Back.
+		var landed: String = _router.current()
+		var on_hub: bool = landed == "hub" or (landed == "press" and _state.media_conference_pending() and _router.stack.has("hub"))
+		_check(on_hub and _state.season != null, "loading cover: Continue lands on the hub (on %s, %s)" % [landed, str(_router.stack)])
 	wipe.set("test_cover", false)
 	_state.delete_saved_career()
 	# The setting is saved and later suites read it: put it back.

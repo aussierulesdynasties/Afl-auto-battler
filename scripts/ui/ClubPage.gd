@@ -4,7 +4,13 @@ extends RefCounted
 ## about a club, opened by tapping its name anywhere (ClubLink). Its colours,
 ## ground, coach and captain, its trophies, the last five, the best 22 in words
 ## and the players it has swapped with you. Public facts only: a rival's
-## ratings, moods and plans stay hidden (#759). Your own club's page leads to
+## ratings, moods and plans stay hidden (#759). Two places read the rival
+## coach, in words only and never as numbers (RivalRead, director 2026-11-08):
+## the Assistant's report on this week's opponent (WeekPreview: their list's
+## fit and how well they know each plan, from hidden ratings; his habits and
+## his box) and the match break sheet (MatchScene: what the scoreboard has
+## him doing, from his box and his habits; why their legs are going). This
+## page still shows none of it. Your own club's page leads to
 ## the honour board (rulings no. 112, HonourBoard). The trophies (ClubTrophies)
 ## moved here from Season stats (director, 2026-11-06).
 ##
@@ -337,7 +343,7 @@ static func open_side(host: Control, code: String) -> Control:
 	if UiKit.club_is_black(code):
 		body.add_child(UiKit.club_title(GameDB.club_name(code), UiKit.H2, code, UiKit.PANEL))
 	else:
-		body.add_child(UiKit.ellipsis(GameDB.club_name(code), UiKit.H2, UiKit.club_ink(code, UiKit.PANEL), true))
+		body.add_child(UiKit.ellipsis(GameDB.club_name(code), UiKit.H2, UiKit.club_name_colour(UiKit.club_ink(code, UiKit.PANEL)), true))
 	var outlook := GameState.team_outlook(code)
 	if not outlook.is_empty():
 		var tl := UiKit.lbl(str(outlook["line"]), UiKit.BODY, UiKit.TEXT)
