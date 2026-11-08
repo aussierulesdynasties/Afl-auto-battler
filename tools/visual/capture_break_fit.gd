@@ -77,6 +77,10 @@ func _run() -> void:
 		var scene = load("res://scenes/MatchScene.tscn").instantiate()
 		_vp.add_child(scene)
 		await _frames(24)
+		# The quarters ran before the scene opened, so the scoreboard is set to the break as play would leave it.
+		var r: Dictionary = sim.result()
+		scene._update_scoreboard({"q": q - 1, "min": (q - 1) * 30, "goals": r["goals"], "behinds": r["behinds"]})
+		await _frames(2)
 		print("BREAK q", q, " ", club, " v ", vs, " canvas ", _vp.get_visible_rect().size)
 		_measure(scene, "q%d" % q)
 		await _shot("%s_q%d.png" % [out, q])
