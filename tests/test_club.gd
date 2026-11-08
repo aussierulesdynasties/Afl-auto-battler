@@ -346,7 +346,7 @@ func _test_events() -> void:
 	GameState.week_event = GameState.story_card("media_in_the_papers", paper_man)
 	var silence: Dictionary = GameState.week_event["unanswered"]
 	var paper_trust := Trust.value(GameState.relations, Trust.player_key(str(paper_man["id"])))
-	_check(int(silence["trust"]) == -2 and str(silence.get("hint", "")).contains("trusts you"),
+	_check(int(silence["trust"]) == -2 and str(silence.get("hint", "")).contains("opinion of you"),
 			"The card says what saying nothing costs: %s" % str(silence.get("hint", "")))
 	GameState._settle_week_event()
 	_check(GameState.board_confidence() == conf_before and ClubLife.morale(paper_man) == paper_morale

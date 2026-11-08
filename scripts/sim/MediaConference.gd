@@ -189,11 +189,18 @@ const BOARD_CAP := 3
 ## press lift after a loss stops one short of that gap (+2 today).
 const LOSS_LIFT_CAP := 2   # ClubLife.MATCH_MORALE_WIN - MATCH_MORALE_LOSS - 1 (tests pin it)
 
+## Calling a player out by name (director 2026-11-08): his morale goes up a
+## point whichever way it lands; if he takes it personally, his opinion of you
+## (Trust.opinion, out of 100) also falls this many points. Backing him by name
+## later gives those points back (GameState.resolve_media_conference).
+const CALLOUT_OPINION_DROP := 2
+
 ## Per answer: the chance of outcome "a" before the facts move it ("base"),
 ## which way the mood moves it ("pull": +1 a settled player or group takes it
 ## better, -1 a flat one needs it more), what youth does to it, and what the
 ## match result does to it. Each outcome moves board confidence ("board"),
-## every listed player's morale ("morale") or one named player's ("his");
+## every listed player's morale ("morale") or one named player's ("his"), and
+## may move his opinion of you ("opinion", in points out of 100);
 ## "odds" is its words at the gate, "after" what the coach reads once it has
 ## landed (%s is the named player). "both" names what moves the same way
 ## whichever way it lands, by the sign of the shared board move.
@@ -217,7 +224,7 @@ const ANSWERS := {
 	"criticise_named": {"base": 45, "pull": 1, "young": -15, "result": {},
 		"both": {0: "nothing else moves"},
 		"a": {"board": 0, "morale": 0, "his": 1, "odds": "%s's resolve tightens", "after": "%s's resolve tightened"},
-		"b": {"board": 0, "morale": 0, "his": -3, "odds": "he takes it personally", "after": "%s took it personally"}},
+		"b": {"board": 0, "morale": 0, "his": 1, "opinion": -CALLOUT_OPINION_DROP, "odds": "he takes it personally", "after": "%s took it personally"}},
 }
 
 ## The five journalists' personalities (director 2026-11-06: personality
@@ -296,10 +303,13 @@ const EITHER_WAY := "%s either way"
 const MORALE_SIZE := "morale %+d%%"
 const HIS_SIZE := "his morale %+d%%"
 const BOARD_SIZE := "board %+d%%"
+const OPINION_SIZE := "his opinion of you %+d"
 const NO_BOARD := "board unchanged"
 const AFTER_MORALE := "morale %+d%% across the list"
 const AFTER_HIS := "%s's morale %+d%%"
 const AFTER_BOARD := "board confidence %+d%%"
+## A named player's opinion of you after the answer, out of 100.
+const AFTER_OPINION := "%s's opinion of you: %d → %d/100."
 ## One odds twist on the gate: "Heavy loss: 15% less likely".
 const REASON := "%s: %d%% %s likely"
 ## Said once on the screen, not under every answer: how long the moves last.
@@ -388,16 +398,22 @@ static func reason_line(part: Dictionary) -> String:
 ## What an answer does once the journalist's personality and the record check
 ## have had their say: {"a": {board, morale, his, odds, after}, "b": ..., "both",
 ## "notes": the twists that changed it, in words}. `ctx`: {"journalist",
-## "verdict", "name": the named player, "lost": the match was a loss}. Every
-## size stays inside its cap (LOSS_LIFT_CAP for a lift after a loss).
+## "verdict", "name": the named player, "lost": the match was a loss,
+## "restore": opinion points backing him gives back from an earlier call-out}.
+## Every size stays inside its cap (LOSS_LIFT_CAP for a lift after a loss). A
+## named answer lists every size on both outcomes ("full").
 static func effects(kind: String, ctx: Dictionary = {}) -> Dictionary:
 	var s: Dictionary = ANSWERS.get(kind, ANSWERS["method"])
 	var j: Dictionary = PERSONA.get(str(ctx.get("journalist", "")), {})
 	var verdict := str(ctx.get("verdict", ""))
 	var name := str(ctx.get("name", "him"))
-	var out := {"notes": []}
+	var out := {"notes": [], "full": is_named(kind)}
 	for w in ["a", "b"]:
 		var o: Dictionary = (s[w] as Dictionary).duplicate()
+		o["opinion"] = int(o.get("opinion", 0))
+		# Backing him by name gives back what calling him out cost, either way it lands.
+		if kind == "back_named":
+			o["opinion"] += maxi(0, int(ctx.get("restore", 0)))
 		# His paper amplifies the board's read of the answer, never a move it
 		# makes whichever way it lands (no free, sure-thing lever).
 		if bool(j.get("board_up", false)) and int(o["board"]) != 0 \
@@ -427,7 +443,7 @@ static func effects(kind: String, ctx: Dictionary = {}) -> Dictionary:
 	var b: Dictionary = out["b"]
 	# What moves the same whichever way it lands, with its size, or what
 	# does not move at all ("Board unchanged").
-	var same := _shared_size(a, b)
+	var same := "" if bool(out["full"]) else _shared_size(a, b)
 	out["both"] = EITHER_WAY % _cap_first(same) if same != "" else _cap_first(str((s["both"] as Dictionary).get(0, "")))
 	var notes: Array = out["notes"]
 	if bool(j.get("board_up", false)) and int((s["a"] as Dictionary)["board"]) != int((s["b"] as Dictionary)["board"]):
@@ -563,8 +579,9 @@ static func odds_line(kind: String, chance_a: int, fx: Dictionary = {}, ctx: Dic
 		fx = effects(kind, ctx)
 	var a: Dictionary = fx["a"]
 	var b: Dictionary = fx["b"]
-	var parts: PackedStringArray = [ODDS_TEMPLATE % [chance_a, str(a["odds"]), _sizes(a, b), 100 - chance_a,
-			str(b["odds"]), _sizes(b, a)]]
+	var full := bool(fx.get("full", false))
+	var parts: PackedStringArray = [_outcome(chance_a, str(a["odds"]), _sizes(a, b, full)),
+			_outcome(100 - chance_a, str(b["odds"]), _sizes(b, a, full))]
 	if str(fx["both"]) != "":
 		parts.append(str(fx["both"]))
 	var journalist := str(ctx.get("journalist", ""))
@@ -607,6 +624,14 @@ static func after_line(kind: String, landed: String, fx: Dictionary = {}, name :
 		bits.append(AFTER_BOARD % int(o["board"]))
 	var tail := ", ".join(bits)
 	return "%s: %s." % [str(o["after"]), tail] if tail != "" else str(o["after"]) + "."
+
+
+## "Jack Smith's opinion of you: 50 → 48/100." from GameState's {"name",
+## "from", "to"}; "" when it did not move.
+static func opinion_after(moved: Dictionary) -> String:
+	if moved.is_empty() or int(moved.get("from", 0)) == int(moved.get("to", 0)):
+		return ""
+	return AFTER_OPINION % [str(moved.get("name", "")), int(moved["from"]), int(moved["to"])]
 
 
 ## The board's reason gains one sentence when an answer moved it (director
@@ -676,13 +701,23 @@ static func roll(seed: int, year: int, round_no: int, key: String, option: int) 
 
 
 ## The sizes that differ between the two outcomes, for one outcome.
-static func _sizes(o: Dictionary, other: Dictionary) -> String:
+## One outcome on the gate: "45% Jack's resolve tightens, his morale +1%".
+static func _outcome(pct: int, odds: String, sizes: String) -> String:
+	return "%d%% %s" % [pct, odds] if sizes == "" else "%d%% %s, %s" % [pct, odds, sizes]
+
+
+## An outcome's sizes: what differs from the other outcome, or with `full`
+## every move it makes (a named answer, director 2026-11-08).
+static func _sizes(o: Dictionary, other: Dictionary, full := false) -> String:
 	var bits: PackedStringArray = []
-	if int(o["morale"]) != int(other["morale"]):
+	if int(o["morale"]) != int(other["morale"]) or (full and int(o["morale"]) != 0):
 		bits.append(MORALE_SIZE % int(o["morale"]))
-	if int(o["his"]) != int(other["his"]):
+	if int(o["his"]) != int(other["his"]) or (full and int(o["his"]) != 0):
 		bits.append(HIS_SIZE % int(o["his"]))
-	if int(o["board"]) != int(other["board"]):
+	# His opinion of you only where it moves: no "+0" beside the outcome that leaves it.
+	if int(o.get("opinion", 0)) != 0 and (full or int(o.get("opinion", 0)) != int(other.get("opinion", 0))):
+		bits.append(OPINION_SIZE % int(o.get("opinion", 0)))
+	if int(o["board"]) != int(other["board"]) or (full and int(o["board"]) != 0):
 		bits.append(BOARD_SIZE % int(o["board"]) if int(o["board"]) != 0 else NO_BOARD)
 	return ", ".join(bits)
 
@@ -694,6 +729,8 @@ static func _shared_size(a: Dictionary, b: Dictionary) -> String:
 		bits.append(MORALE_SIZE % int(a["morale"]))
 	if int(a["his"]) == int(b["his"]) and int(a["his"]) != 0:
 		bits.append(HIS_SIZE % int(a["his"]))
+	if int(a.get("opinion", 0)) == int(b.get("opinion", 0)) and int(a.get("opinion", 0)) != 0:
+		bits.append(OPINION_SIZE % int(a["opinion"]))
 	if int(a["board"]) == int(b["board"]) and int(a["board"]) != 0:
 		bits.append(BOARD_SIZE % int(a["board"]))
 	return ", ".join(bits)
