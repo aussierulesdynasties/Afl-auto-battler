@@ -21,8 +21,13 @@ var _pick_real := true
 var _pick_board := "fair"
 var _pick_rivals := "shrewd"
 var _pick_tutorials := true
-## Canberra joins in 2030.
+## Canberra joins (in the 2027 redraft, or in 2030 on the real lists).
 var _pick_canberra := false
+var _canberra_row: VBoxContainer
+## Your Club Forge club's row, and the line that replaces it when the start
+## cannot take a created club (real 2026 lists, Rebuild).
+var _forged_row: VBoxContainer
+var _forged_note: VBoxContainer
 var _setup_tight := false
 ## How the next career starts (ARD-M5-016): "redraft" or "real" (real 2026 lists).
 var _pick_start := "redraft"
@@ -391,7 +396,7 @@ func _show_setup() -> void:
 	form.add_child(title)
 	_start_row = _choice("Start", "StartMode", [["redraft", "League redraft"], ["real", "Real 2026 lists"]],
 			_pick_start,
-			func(k): return ("Every club keeps its real end-of-2026 list. You run your club through the 2026 National Draft, then play 2027." if k == "real"
+			func(k): return (_real_start_line() if k == "real"
 					else "The whole league re-drafts from one player pool before 2027, in a random snake order."),
 			_on_pick_start)
 	form.add_child(_start_row)
@@ -427,12 +432,16 @@ func _show_setup() -> void:
 					else "No notes open by themselves. You can change this later in Settings."),
 			func(k): _pick_tutorials = k == "on"))
 	# Canberra, the second new club: a choice made once, here (director,
-	# 2026-10-14). Tasmania joins in 2028 either way.
-	form.add_child(_choice("Canberra", "Canberra", [["out", "19 clubs"], ["in", "Joins in 2030"]],
-			"in" if _pick_canberra else "out",
-			func(k): return ("Tasmania join in 2028 and Canberra in 2030, making 20 clubs. It cannot be changed once the career starts." if k == "in"
-					else "Tasmania join in 2028 and the league stays at 19 clubs. It cannot be changed once the career starts."),
-			func(k): _pick_canberra = k == "in"))
+	# 2026-10-14), asked as a question (2026-11-08). What Yes and No mean
+	# depends on the start (_canberra_line).
+	_canberra_row = _choice("Canberra joins?", "Canberra", [["yes", "Yes"], ["no", "No"]],
+			"yes" if _pick_canberra else "no",
+			func(k): return _canberra_line(str(k)),
+			func(k):
+				_pick_canberra = k == "yes"
+				_repaint_canberra())
+	_canberra_row.name = "Canberra"
+	form.add_child(_canberra_row)
 	# Your Club Forge player, if you made one: he enters this career's first
 	# National Draft like any other prospect.
 	var forged := GameState.forge_player()
@@ -442,13 +451,32 @@ func _show_setup() -> void:
 				"in" if _pick_prospect else "out",
 				func(_k): return "He enters this career's first National Draft. No club is told to take him; where he goes is up to the draft.",
 				func(k): _pick_prospect = k == "in"))
-	# Your Club Forge club, if you made one: an extra club in this career.
+	# Your Club Forge club, if you made one: an extra club in this career. It
+	# only joins a League redraft (it has no real 2026 list): on the other
+	# starts one line says so in place of the row, and the pick is kept for
+	# when the start goes back to a redraft (director, 2026-11-08).
+	_forged_row = null
+	_forged_note = null
 	var club := GameState.forge_club()
 	if not club.is_empty():
-		form.add_child(_choice("Your club", "ForgedClub", [["in", "Bring " + str(club.get("name", ""))], ["out", "Not this time"]],
+		_forged_row = _choice("Your club", "ForgedClub", [["in", "Bring " + str(club.get("name", ""))], ["out", "Not this time"]],
 				"in" if _pick_club else "out",
 				func(_k): return "It joins the competition as an extra club and drafts its list in the League Draft like everyone else. Choose it as your club next, or coach against it.",
-				func(k): _pick_club = k == "in"))
+				func(k):
+					_pick_club = k == "in"
+					_repaint_canberra())
+		_forged_row.name = "ForgedClub"
+		form.add_child(_forged_row)
+		# In its place on the other starts: the same heading, and why.
+		_forged_note = UiKit.vbox(2 if _setup_tight else 8)
+		_forged_note.name = "ForgedClubOnly"
+		_forged_note.add_child(UiKit.lbl("Your club", UiKit.H2, UiKit.TEXT, true))
+		var why := UiKit.lbl(FORGED_REDRAFT_ONLY, UiKit.SMALL, UiKit.MUTED)
+		why.name = "ForgedClubOnlyNote"
+		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_forged_note.add_child(why)
+		form.add_child(_forged_note)
+		_show_forged_row()
 	# The button sits under the scrolling choices, always on screen: with the two
 	# dials the setup is taller than a phone, and the button was below the fold.
 	var start := UiKit.btn("Choose your club", UiKit.H2, true)
@@ -479,6 +507,8 @@ func _on_pick_start(k: String) -> void:
 	if k != "real" and _pick_challenge == "rebuild":
 		_pick_challenge = "none"
 		(_challenge_row.get_meta("select") as Callable).call("none")
+	_show_forged_row()
+	_repaint_canberra()
 	_refresh_start()
 
 
@@ -489,7 +519,64 @@ func _on_pick_challenge(k: String) -> void:
 		(_start_row.get_meta("select") as Callable).call("real")
 	if is_instance_valid(_goal_row):
 		_goal_row.visible = k == "goal"
+	_show_forged_row()
+	_repaint_canberra()
 	_refresh_start()
+
+
+const FORGED_REDRAFT_ONLY := "Your club joins League redraft careers only."
+
+
+## The Forge club's row shows on a League redraft; the other starts show the
+## line saying why it is gone. The pick itself is untouched.
+func _show_forged_row() -> void:
+	var redraft := _pick_start != "real" and _pick_challenge != "rebuild"
+	if is_instance_valid(_forged_row):
+		_forged_row.visible = redraft
+	if is_instance_valid(_forged_note):
+		_forged_note.visible = not redraft
+
+
+## Your Forge club comes into this career: brought, and the start takes it.
+func _forged_joins() -> bool:
+	return _pick_club and _pick_start != "real" and _pick_challenge != "rebuild" \
+			and not GameState.forge_club().is_empty()
+
+
+## The Canberra question's rule, for the start picked (director, 2026-11-08):
+## a redraft takes Tasmania, and Canberra on Yes, into the 2027 draft as
+## equals; the real lists with Canberra play 2027-2029 without you and start
+## in 2030; Rebuild keeps its 2027 start.
+func _canberra_line(k: String) -> String:
+	var fixed := " It cannot be changed once the career starts."
+	if _pick_start != "real" and _pick_challenge != "rebuild":
+		var n := 19 + (1 if k == "yes" else 0) + (1 if _forged_joins() else 0)
+		if k == "yes":
+			return ("Tasmania and Canberra draft in the 2027 League redraft as equals: no priority picks and no extra cap room. %d clubs from 2027, and either new club can be yours." % n) + fixed
+		return ("Tasmania drafts in the 2027 League redraft as an equal and can be yours. %d clubs from 2027; Canberra never join." % n) + fixed
+	if _pick_challenge == "rebuild":
+		if k == "yes":
+			return "Rebuild starts in 2027. Tasmania join in 2028 and Canberra in 2030, making 20 clubs." + fixed
+		return "Rebuild starts in 2027. Tasmania join in 2028 and the league stays at 19 clubs." + fixed
+	if k == "yes":
+		return "2027 to 2029 play out without you, every club run by its own staff: Tasmania join in 2028 and Canberra build their first list. You then choose any of the 20 clubs and start in 2030. Take Canberra and you build their list with the same new-club picks and cap room a rival coach gets." + fixed
+	return "You start in 2027. Tasmania join in 2028 and the league stays at 19 clubs; Tasmania cannot be chosen at the start." + fixed
+
+
+## The real-lists start: with Canberra (and no Rebuild) the career starts in
+## 2030, after three seasons played without you.
+func _real_start_line() -> String:
+	if _pick_canberra and _pick_challenge != "rebuild":
+		return "Every club keeps its real end-of-2026 list. The league plays 2027 to 2029 without you; then you choose your club and start in 2030."
+	return "Every club keeps its real end-of-2026 list. You run your club through the 2026 National Draft, then play 2027."
+
+
+## The Canberra rule follows the start and the Forge club's pick.
+func _repaint_canberra() -> void:
+	if is_instance_valid(_canberra_row):
+		(_canberra_row.get_meta("select") as Callable).call("yes" if _pick_canberra else "no")
+	if is_instance_valid(_start_row):
+		(_start_row.get_meta("select") as Callable).call(_pick_start)
 
 
 ## Choose your club waits for the data, and for a goal when you set one.
@@ -632,11 +719,29 @@ func _start_new_career() -> void:
 		var forged := GameState.forge_player()
 		if not forged.is_empty():
 			GameState.add_custom_prospect(forged)
+	if _pick_start == "real" and _pick_canberra and _pick_challenge != "rebuild":
+		_play_years_without_you()
+		return
 	if _pick_start == "real":
 		GameState.begin_real_lists()
 	else:
 		GameState.begin_draft()
 	Router.go("draft")
+
+
+## Real 2026 lists with Canberra (director, 2026-11-08): 2027 to 2029 play out
+## under the cover, a line for each round, then Choose your club opens at the
+## 2029 National Draft.
+func _play_years_without_you() -> void:
+	ScreenTransition.run("Playing 2027 to 2029...", func():
+		GameState.begin_sim_ahead()
+		while true:
+			var line := GameState.sim_ahead_step()
+			if line == "":
+				break
+			ScreenTransition.show_line(line)
+			await ScreenTransition.drawn()
+		Router.go("draft"))
 
 
 func _confirm_new_career() -> void:

@@ -1445,6 +1445,7 @@ func _run() -> void:
 	_state.delete_saved_career()
 	await _t("_test_new_career_keeps_the_save")
 	await _t("_test_new_career_canberra_choice")
+	await _t("_test_new_career_forged_row_redraft_only")
 	await _t("_test_new_career_challenge_taps")
 	await _t("_test_pc_hub_and_list_layout")
 	for sz in [Vector2i(2560, 1440), Vector2i(1920, 1080), Vector2i(1280, 720)]:
@@ -3820,8 +3821,9 @@ func _find_named(n: Node, named: String, out: Array) -> void:
 		_find_named(c, named, out)
 
 
-## The Canberra choice on New career (director, 2026-10-14): off by default,
-## and a real tap on "Joins in 2030" puts Canberra in the career.
+## The Canberra question on New career (director, 2026-11-08): "Canberra
+## joins?" answers No by default, and a real tap on Yes puts Canberra in the
+## League redraft with Tasmania, both as equals.
 func _test_new_career_canberra_choice() -> void:
 	_state.delete_saved_career()
 	for pick_it in [false, true]:
@@ -3831,17 +3833,62 @@ func _test_new_career_canberra_choice() -> void:
 		await _settle()
 		await Tap.tap(current_scene.find_child("NewCareer", true, false))
 		await _settle()
+		var yes := current_scene.find_child("Canberra_yes", true, false)
+		var no := current_scene.find_child("Canberra_no", true, false)
+		var both_there: bool = yes != null and no != null  # gone once the draft opens
 		var t1 := ""
 		if pick_it:
-			t1 = await Tap.tap(current_scene.find_child("Canberra_in", true, false))
+			t1 = await Tap.tap(yes)
 			await _settle()
 		var t2: String = await Tap.tap(current_scene.find_child("StartCareer", true, false))
 		await _settle()
 		await _settle()
-		_check(t1 == "" and t2 == "" and _router.current() == "draft" and bool(_state.canberra_on) == pick_it
-				and _db.active_clubs(2030).has("CANB") == pick_it,
-				("A tap on Joins in 2030 puts Canberra in the new career (%s %s)" if pick_it
-				else "Left alone, the new career has no Canberra (%s %s)") % [t1, t2])
+		var clubs: Array = _state.draft.clubs if _state.draft != null else []
+		_check(both_there and t1 == "" and t2 == "" and _router.current() == "draft"
+				and bool(_state.canberra_on) == pick_it and clubs.has("CANB") == pick_it and clubs.has("TAS")
+				and clubs.size() == (20 if pick_it else 19),
+				("A tap on Yes puts Canberra and Tasmania in the 2027 League redraft (%s %s, %d clubs)" if pick_it
+				else "Left at No, the 2027 League redraft has Tasmania and no Canberra (%s %s, %d clubs)") % [
+					t1, t2, clubs.size()])
+	_state.reset()
+	_router.stack = []
+
+
+## The Forge club joins League redraft careers only (director, 2026-11-08):
+## Real 2026 lists or Rebuild hide its row and say why; a League redraft
+## brings it back with the pick as it was.
+func _test_new_career_forged_row_redraft_only() -> void:
+	_state.delete_saved_career()
+	_state.reset()
+	_state.set_forge_club({"name": "Port Melbourne", "short": "Borough", "code": "PMB",
+			"location": "port-melbourne", "primary": "#1B3A8C", "secondary": "#C8102E",
+			"accent": "#FFFFFF", "design": "hoops", "kit": "p/s/a"})
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	await _settle()
+	var row := current_scene.find_child("ForgedClub", true, false) as Control
+	var note := current_scene.find_child("ForgedClubOnlyNote", true, false) as Label
+	_check(row != null and note != null and row.is_visible_in_tree() and not note.is_visible_in_tree(),
+			"A League redraft shows the Your club row")
+	if row == null or note == null:
+		return
+	await Tap.tap(current_scene.find_child("ForgedClub_in", true, false))
+	await _settle()
+	await Tap.tap(current_scene.find_child("StartMode_real", true, false))
+	await _settle()
+	_check(not row.is_visible_in_tree() and note.is_visible_in_tree()
+			and note.text == "Your club joins League redraft careers only.",
+			"Real 2026 lists hide the Your club row and show the note")
+	await Tap.tap(current_scene.find_child("StartMode_redraft", true, false))
+	await _settle()
+	_check(row.is_visible_in_tree() and not note.is_visible_in_tree() and bool(current_scene.get("_pick_club")),
+			"Back on a League redraft, the row returns with your club still brought")
+	await Tap.tap(current_scene.find_child("Challenge_rebuild", true, false))
+	await _settle()
+	_check(not row.is_visible_in_tree() and note.is_visible_in_tree(), "Rebuild hides the Your club row too")
+	_state.set_forge_club({})
 	_state.reset()
 	_router.stack = []
 
