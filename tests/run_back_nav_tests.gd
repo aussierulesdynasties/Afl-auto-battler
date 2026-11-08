@@ -49,6 +49,8 @@ func _run() -> void:
 	_router = root.get_node("Router")
 	_db = root.get_node("GameDB")
 	_state.autosave_enabled = false
+	# These tests drive the hub for other things: no club card opens over it.
+	_state.event_sheets = false
 	_state.save_path = "user://test_back_nav.save"
 	_state.settings_path = "user://test_back_nav.cfg"
 	# The first-visit intros (FirstVisitIntro.gd) are their own suite; here every
