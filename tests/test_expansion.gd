@@ -31,6 +31,9 @@ func run() -> void:
 	_t("_test_created_club_rules")
 	_t("_test_created_club_career")
 	_t("_test_club_count_defaults")
+	_t("_test_redraft_equal_entry")
+	_t("_test_redraft_entry_saved")
+	_t("_test_real_lists_play_to_2030")
 	GameState.reset()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -242,14 +245,23 @@ func _test_entry_gates() -> void:
 		_check((GameDB.club_list(code) as Array).is_empty(),
 				"%s has no 2026-data players (its list is generated at entry)" % code)
 
-	# The new career's draft and club selection only see the first season's clubs.
+	# A League redraft without Canberra: Tasmania drafts in 2027 with the
+	# founding eighteen (director, 2026-11-08); Canberra never join.
 	GameState.reset()
 	GameState.begin_draft()
-	_check(GameState.draft.clubs.size() == 18
-			and not GameState.draft.clubs.has("TAS")
-			and not GameState.draft.clubs.has("CANB"),
-			"The 2027 career draft runs the founding eighteen only")
+	_check(GameState.draft.clubs.size() == 19
+			and GameState.draft.clubs.has("TAS")
+			and not GameState.draft.clubs.has("CANB")
+			and GameDB.enter_year("CANB") == Expansion.NEVER,
+			"A League redraft with Canberra No: 19 clubs from 2027, Tasmania in, no Canberra")
+	# Real 2026 lists without Canberra: unchanged, Tasmania join in 2028.
 	GameState.reset()
+	GameState.begin_real_lists()
+	_check(GameState.draft.clubs.size() == 18 and not GameState.draft.clubs.has("TAS")
+			and GameDB.enter_year("TAS") == 2028 and not GameState.sim_ahead,
+			"Real 2026 lists with Canberra No: the founding eighteen in 2027, Tasmania from 2028")
+	GameState.reset()
+	_check(GameDB.enter_year("TAS") == 2028, "A reset puts Tasmania back on its 2028 entry")
 
 
 # ---------------------------------------------------------------------------
@@ -537,8 +549,9 @@ func _test_created_club_career() -> void:
 	GameState.reset()
 	_check(GameState.create_club(_forge_spec()) == "", "The club is created for a new career")
 	GameState.begin_draft()
-	_check(GameState.draft.clubs.size() == 19 and GameState.draft.clubs.has("PMB"),
-			"The created club takes part in the League Draft")
+	_check(GameState.draft.clubs.size() == 20 and GameState.draft.clubs.has("PMB")
+			and GameState.draft.clubs.has("TAS"),
+			"The created club and Tasmania take part in the League Draft")
 	GameState.draft.start_for_user("PMB")
 	var draft: Draft = GameState.draft
 	var guard := 0
@@ -547,11 +560,11 @@ func _test_created_club_career() -> void:
 		var cand := draft._best_ai_pick(draft.current_club())
 		if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
 			draft._skip_current_pick()
-	_check(draft.is_finished(), "The nineteen-club League Draft completes")
+	_check(draft.is_finished(), "The twenty-club League Draft completes")
 	GameState.start_season("PMB", draft.list())
 	var season: Season = GameState.season
-	_check(GameState.my_club == "PMB" and season.ladder.size() == 19 and season.ladder.has("PMB"),
-			"You coach the created club on a nineteen-club ladder")
+	_check(GameState.my_club == "PMB" and season.ladder.size() == 20 and season.ladder.has("PMB"),
+			"You coach the created club on a twenty-club ladder")
 	# The director's PC playtest (2026-10-07): a created club started with
 	# every coaching job vacant. It hires before its first season, from
 	# coaches out of work; you are its senior coach.
@@ -567,7 +580,8 @@ func _test_created_club_career() -> void:
 	_check(not taken, "Nobody is taken from another club's staff")
 	var others_same := true
 	for club in GameDB.active_clubs(GameState.season_year):
-		if club != "PMB" and Coaches.staff(GameState.coaches, club) != Coaches.staff(seeded, club):
+		# Tasmania has no 2026 staff: it hires, like the created club.
+		if club != "PMB" and club != "TAS" and Coaches.staff(GameState.coaches, club) != Coaches.staff(seeded, club):
 			others_same = false
 	_check(others_same, "Every other club keeps its 2026 staff")
 	# One player per number on every list after the League Draft (director's
@@ -656,3 +670,186 @@ func _test_club_count_defaults() -> void:
 			"A goal with no position asks the club count: 21st of 21 meets it, 19th of 18 does not")
 	_check(ClubLife.goal_met({"pos": 12}, 12, 0, 21) and not ClubLife.goal_met({"pos": 12}, 13, 0, 21),
 			"A set goal position is not moved by the club count")
+
+# ---------------------------------------------------------------------------
+# New career: who is in the league from the start (director, 2026-11-08)
+# ---------------------------------------------------------------------------
+func _ai_finish(draft: Draft) -> void:
+	var guard := 0
+	draft.auto_until_user_turn()
+	while not draft.is_finished() and guard < 8000:
+		guard += 1
+		var cand := draft._best_ai_pick(draft.current_club())
+		if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
+			draft._skip_current_pick()
+		draft.auto_until_user_turn()
+
+
+func _saved_state() -> Dictionary:
+	return CareerSave.read(GameState.save_path)
+
+
+## League redraft with Canberra Yes and a created club: 21 clubs draft in
+## 2027 as equals (no priority picks, no cap room), and Tasmania or Canberra
+## can be yours.
+func _test_redraft_equal_entry() -> void:
+	GameState.reset()
+	GameState.set_canberra(true)
+	_check(GameState.create_club(_forge_spec()) == "", "The club is created for a new career")
+	GameState.begin_draft()
+	var draft: Draft = GameState.draft
+	_check(draft.clubs.size() == 21 and ["TAS", "CANB", "PMB"].all(func(c): return draft.clubs.has(c))
+			and GameDB.active_clubs(2027).size() == 21,
+			"League redraft, Canberra Yes, your club: 21 clubs from 2027 (%d)" % draft.clubs.size())
+	var picks := {}
+	for code in draft.pick_sequence:
+		picks[str(code)] = int(picks.get(str(code), 0)) + 1
+	var same := true
+	for code in draft.clubs:
+		same = same and int(picks.get(str(code), 0)) == int(picks.get("COL", 0))
+	_check(same and draft.guests.is_empty() and GameState.expansion.is_empty(),
+			"Every club has the same picks: no priority picks or new-club build (%s)" % str(picks))
+	_check(not ExpansionBuild.has_package(GameState, "TAS") and not ExpansionBuild.has_package(GameState, "CANB"),
+			"No new-club package (cap room) for Tasmania or Canberra in a redraft")
+	_check(draft.target_size >= Prospects.MIN_LIST,
+			"21 clubs still draft a playable list each (%d players)" % draft.target_size)
+	draft.start_for_user("CANB")
+	_ai_finish(draft)
+	_check(draft.is_finished(), "The 21-club League Draft completes")
+	GameState.start_season("CANB", draft.list())
+	var season: Season = GameState.season
+	_check(GameState.my_club == "CANB" and season.ladder.size() == 21 and GameState.season_year == 2027,
+			"You coach Canberra in 2027 on a 21-club ladder")
+	_check(ExpansionBuild.relief(GameState, "CANB") == 0 and ExpansionBuild.relief(GameState, "TAS") == 0,
+			"No cap room for Tasmania or Canberra in the 2027 season")
+	var games := {}
+	for rnd in season.fixture:
+		for m in rnd:
+			for code in [str(m[0]), str(m[1])]:
+				games[code] = int(games.get(code, 0)) + 1
+	var even := true
+	for code in season.ladder:
+		even = even and int(games.get(str(code), 0)) == int(games.get("CANB", 0))
+	_check(season.fixture.size() == Season.REGULAR_ROUNDS and even,
+			"A 21-club fixture: %d rounds, the same games for every club (byes)" % season.fixture.size())
+	var staff := Coaches.staff(GameState.coaches, "TAS")
+	_check(staff.size() == 6, "Tasmania, run by the AI, has its six coaches (%s)" % str(staff.keys()))
+	_check(not Coaches.staff(GameState.coaches, "CANB").has("SC"), "You are Canberra's senior coach")
+	GameState.reset()
+	# Canberra No: Tasmania can be yours from 2027.
+	GameState.begin_draft()
+	GameState.draft.start_for_user("TAS")
+	_ai_finish(GameState.draft)
+	GameState.start_season("TAS", GameState.draft.list())
+	_check(GameState.my_club == "TAS" and GameState.season.ladder.size() == 19,
+			"Canberra No: you can coach Tasmania from 2027 on a 19-club ladder")
+	GameState.reset()
+
+
+## A redraft career's 2027 entries survive a save and load; a save without
+## the field (a real-lists career, or one from before it) keeps the data years.
+func _test_redraft_entry_saved() -> void:
+	GameState.reset()
+	GameState.set_canberra(true)
+	GameState.begin_draft()
+	GameState.draft.start_for_user("FRE")
+	_ai_finish(GameState.draft)
+	GameState.start_season("FRE", GameState.draft.list())
+	_check(GameState.save_career(), "A redraft career saves")
+	_check(int(_saved_state().get("expansion_from", 0)) == 2027, "The save records the 2027 entry")
+	GameState.reset()
+	_check(GameDB.enter_year("CANB") == 2030, "A reset restores Canberra's 2030 entry")
+	_check(GameState.load_career() and GameState.expansion_from == 2027
+			and GameDB.enter_year("TAS") == 2027 and GameDB.enter_year("CANB") == 2027
+			and GameState.season.ladder.size() == 20,
+			"Loaded, Tasmania and Canberra are in from 2027 (TAS %d, CANB %d)" % [
+				GameDB.enter_year("TAS"), GameDB.enter_year("CANB")])
+	GameState.reset()
+	GameState.begin_real_lists()
+	GameState.choose_real_club("FRE")
+	_ai_finish(GameState.draft)
+	GameState.finish_intake_draft()
+	_check(GameState.save_career(), "A real-lists career saves")
+	var state := _saved_state()
+	GameState.reset()
+	_check(not state.is_empty() and not state.has("expansion_from")
+			and GameState.load_career() and GameState.expansion_from == 0 and not GameState.sim_ahead
+			and GameDB.enter_year("TAS") == 2028,
+			"A career without the new field loads with the data entry years")
+	GameState.reset()
+
+
+## Real 2026 lists with Canberra Yes: 2027 to 2029 play without you, every
+## club AI-run; you choose any club, Tasmania and Canberra included, at the
+## 2029 National Draft and start in 2030. Canberra taken by you keeps the
+## exact build its own staff would have had.
+func _test_real_lists_play_to_2030() -> void:
+	GameState.reset()
+	GameState.set_canberra(true)
+	GameState.challenge = {"kind": "youth"}
+	var old := []
+	for p in GameDB.all_players_sorted():
+		if float(p.get("age", 0.0)) >= 34.0:
+			old.append(str(p["id"]))
+	GameState.begin_sim_ahead()
+	_check(GameState.sim_ahead and GameState.my_club == "" and not GameState.has_career()
+			and not GameState.save_career(),
+			"The years played without you are not a career yet: nothing is saved")
+	var steps := 0
+	var lines := []
+	while steps < 400:
+		steps += 1
+		var line := GameState.sim_ahead_step()
+		if line == "":
+			break
+		lines.append(line)
+	_check(GameState.choosing_club() and GameState.season_year == 2029 and GameState.season.is_season_over(),
+			"Played to the 2029 National Draft, which waits for your club (%d steps)" % steps)
+	_check(lines.has("Playing 2027: Round 1...") and lines.has("Playing 2029: the Grand Final..."),
+			"The cover names each round and final as it plays (%s ... %s)" % [
+				str(lines.front()) if not lines.is_empty() else "", str(lines.back()) if not lines.is_empty() else ""])
+	_check(GameState.draft.user_club == "" and GameState.draft.pick_index == 0,
+			"No pick is made before you choose")
+	var listed := {}
+	for code in GameState.league_lists:
+		for p in GameState.league_lists[code]:
+			listed[str(p["id"])] = true
+	var still := old.filter(func(id): return listed.has(id))
+	_check(not old.is_empty() and still.is_empty(),
+			"Every 2026 player aged 34 or more has retired by 2029 (%d of %d still listed)" % [still.size(), old.size()])
+	var tas: Array = GameState.league_lists.get("TAS", [])
+	_check(tas.size() >= Prospects.MIN_LIST, "Tasmania exists with a list (%d players)" % tas.size())
+	_check(GameState.honour_roll.size() >= 3 and GameState.almanac.is_empty(),
+			"2027 to 2029 are on the honour roll; your club annual is empty (%d, %d)" % [
+				GameState.honour_roll.size(), GameState.almanac.size()])
+	var draft: Draft = GameState.draft
+	_check(draft.clubs.size() == 20 and draft.clubs.has("TAS") and draft.clubs.has("CANB"),
+			"Choose your club: all 20 clubs, Tasmania and Canberra included (%d)" % draft.clubs.size())
+	_check(ExpansionBuild.has_package(GameState, "CANB"),
+			"Canberra, still under its own staff, has its new-club build")
+	var canb_picks := draft.upcoming_picks("CANB", 0)
+	var col_picks := draft.upcoming_picks("COL", 0)
+	_check(canb_picks.size() > col_picks.size(),
+			"Canberra has its priority picks (%s; Collingwood %s)" % [str(canb_picks), str(col_picks)])
+	var relief_ai := ExpansionBuild.relief(GameState, "CANB")
+	var signed := ExpansionBuild.list_of(GameState, "CANB").size()
+	_check(GameState.choose_sim_ahead_club("CANB"), "You take Canberra")
+	_check(GameState.my_club == "CANB" and not GameState.sim_ahead and GameState.has_career()
+			and draft.user_club == "CANB" and str(GameState.challenge.get("kind", "")) == "youth",
+			"Canberra is yours, and your challenge starts now")
+	_check(draft.upcoming_picks("CANB", 0) == canb_picks and ExpansionBuild.relief(GameState, "CANB") == relief_ai
+			and GameState.my_list.size() == signed,
+			"Taken by you, Canberra keeps the same picks, cap room and signings (%d, %d)" % [relief_ai, signed])
+	_check(not Coaches.staff(GameState.coaches, "CANB").has("SC"), "You are Canberra's senior coach")
+	_ai_finish(draft)
+	GameState.finish_intake_draft()
+	_check(GameState.season_year == 2030 and GameState.season != null
+			and GameState.season.ladder.size() == 20 and GameState.season.ladder.has("CANB")
+			and GameState.my_club == "CANB",
+			"Your first season is 2030, on a 20-club ladder (%d)" % GameState.season_year)
+	_check(GameState.save_career(), "The 2030 career saves")
+	GameState.reset()
+	_check(GameState.load_career() and GameState.my_club == "CANB" and not GameState.sim_ahead
+			and GameState.season_year == 2030,
+			"It loads as a 2030 Canberra career")
+	GameState.reset()

@@ -160,6 +160,16 @@ var expansion := {}
 ## Does Canberra join in 2030? A choice at career start (a new career starts
 ## without it); a career saved before the choice existed keeps Canberra.
 var canberra_on := true
+## The year the new clubs (Tasmania, and Canberra while the career has it)
+## enter instead of their data years; 0 keeps the data years. A League
+## redraft takes them into the 2027 draft as equals (director, 2026-11-08):
+## no list build, no priority picks, no cap relief. Saved only when set.
+var expansion_from := 0
+## Real 2026 lists with Canberra (director, 2026-11-08): 2027-2029 are played
+## without you, every club run by its own staff, and you choose your club at
+## the 2029 National Draft. True from the start of the career until that
+## choice; the club choice then reads it (opening_draft is the 2026 one).
+var sim_ahead := false
 ## Offers rival clubs have made you this off-season: [{"club", "give" (their
 ## player and pick ids), "take" (yours), "status": "open", "accepted",
 ## "declined" or "off"}]. See _make_trade_offers.
@@ -645,6 +655,10 @@ func set_show_real_names(enabled: bool) -> void:
 ## True when there is a career worth saving: a season, or a draft where you
 ## have already picked your club.
 func has_career() -> bool:
+	# The years played without you are not a career yet: nothing is saved,
+	# and the old save stays, until you choose your club.
+	if sim_ahead and my_club == "":
+		return false
 	return season != null or (draft != null and not draft.user_club.is_empty())
 
 
@@ -823,6 +837,8 @@ func save_career() -> bool:
 		state["expansion"] = expansion
 	if not canberra_on:
 		state["canberra_on"] = false
+	if expansion_from != 0:
+		state["expansion_from"] = expansion_from
 	if not match_stories.is_empty():
 		state["match_stories"] = match_stories
 	if not match_story_digest.is_empty():
@@ -871,6 +887,10 @@ func load_career() -> bool:
 	# Canberra, before anything reads the clubs: a save from before the choice
 	# existed keeps it.
 	set_canberra(bool(state.get("canberra_on", true)))
+	# A redraft's new clubs entered with everyone (a save without it keeps the
+	# data years).
+	expansion_from = int(state.get("expansion_from", 0))
+	_apply_entry_years()
 	expansion = state.get("expansion", {}) if state.get("expansion") is Dictionary else {}
 	best23 = state.get("best23", {})
 	if not custom_club.is_empty():
@@ -1537,6 +1557,9 @@ func reset() -> void:
 	board = {}
 	expansion = {}
 	set_canberra(false)
+	expansion_from = 0
+	sim_ahead = false
+	_sim_ahead_challenge = {}
 	week_events = []
 	week_checks = {}
 	relations = {}
@@ -1829,6 +1852,103 @@ func choose_real_club(code: String) -> void:
 	mark_dirty()
 
 
+# ---------------------------------------------------------------------------
+# Real 2026 lists with Canberra: 2027-2029 played without you
+# ---------------------------------------------------------------------------
+## The first season you coach in a real-lists career with Canberra (director,
+## 2026-11-08): Canberra's 2030 entry with its build, and every club,
+## Tasmania and Canberra included, open to you.
+const SIM_AHEAD_TO := 2030
+## The challenge you set up, held back until you choose your club.
+var _sim_ahead_challenge := {}
+
+## Start the career: the real lists and the 2026 National Draft, with no club
+## of yours. sim_ahead_step then plays it through to the 2029 National Draft.
+func begin_sim_ahead() -> void:
+	begin_real_lists()
+	sim_ahead = true
+	# Your challenge starts with your first season, not with the years
+	# played without you.
+	_sim_ahead_challenge = challenge
+	challenge = {}
+	mark_dirty()
+
+
+## The 2029 National Draft is open and waits for you to choose your club.
+func choosing_club() -> bool:
+	return sim_ahead and my_club == "" and draft != null and draft.intake_mode \
+			and season != null and season_year == SIM_AHEAD_TO - 1
+
+
+## One step of the years played without you, under the cover: a round, a
+## week of the finals or an off-season with its drafts, each by the rules
+## every club lives by (each club's own staff decides, as for any rival).
+## Returns the line the cover shows next, or "" once the 2029 National Draft
+## waits for your club (choosing_club) or there is nothing left to play.
+func sim_ahead_step() -> String:
+	if not sim_ahead or my_club != "" or choosing_club():
+		return ""
+	if draft != null and draft.intake_mode:
+		# A draft between seasons (the 2026 one first): every club picks.
+		draft.start_for_user("")
+		finish_intake_draft()
+		return "Starting the %d season..." % season_year
+	if season == null:
+		return ""
+	RookieList.settle(self)
+	if not season.is_season_over():
+		advance()
+		return "Playing %d: %s..." % [season_year, _next_week_label()]
+	if begin_intake_draft():
+		if choosing_club():
+			return ""
+		finish_intake_draft()
+	else:
+		start_next_season()
+	return "Starting the %d season..." % season_year
+
+
+## The week about to be played, for the cover ("Round 7", "the Grand Final").
+func _next_week_label() -> String:
+	if season == null or season.is_season_over():
+		return "the off-season"
+	if not season.is_regular_done():
+		return season.round_label(season.round_index)
+	var w := int(season.finals.get("week", 1))
+	return str({1: "the Wildcard Round", 2: "the qualifying and elimination finals", 3: "the semi finals",
+			4: "the preliminary finals", 5: "the Grand Final"}.get(w, "the finals"))
+
+
+## Your club, chosen at the 2029 National Draft after the years played
+## without you. You take over as its senior coach (the coach who had the job
+## is free to be hired), and from here it is your club: you make its picks in
+## this draft, and a new club still building its list (Canberra) builds it
+## with the same picks and sign-on money it has under its own staff.
+func choose_sim_ahead_club(code: String) -> bool:
+	if not choosing_club() or not draft.clubs.has(code):
+		return false
+	my_club = code
+	my_list = league_lists[code] if league_lists.has(code) else ExpansionBuild.list_of(self, code)
+	var sc := ClubMoves._senior_coach(self, code)
+	if not sc.is_empty():
+		CoachMarket._leave_job(sc, season_year)
+	board = {}
+	staff_vacancies = []
+	coach_approaches = []
+	trade_requests = {}
+	week_events = []
+	sim_ahead = false
+	challenge = _sim_ahead_challenge
+	_sim_ahead_challenge = {}
+	draft.scouting_mults[code] = recruiting_uncertainty_mult()
+	draft.start_for_user(code)
+	add_news("career", "You are the new senior coach of %s, from the %d National Draft." % [
+			GameDB.club_name(code), season_year])
+	mark_dirty()
+	autosave()
+	return true
+
+
 func begin_draft() -> void:
 	GameDB.pristine = false   # a career's data from here on: the next reset() reloads
 	var seed := _clock_seed(1)
@@ -1838,7 +1958,12 @@ func begin_draft() -> void:
 	# drafted before the 2027 season.
 	var pool: Array = GameDB.all_players_sorted() + GameDB.all_draftees_sorted()
 	pool.sort_custom(func(a, b): return a["overall"] > b["overall"])
-	draft = Draft.new(pool, GameDB.active_clubs(season_year).duplicate(), seed)
+	# Every club drafts as an equal (director, 2026-11-08): Tasmania, and
+	# Canberra when the career has it, are in the 2027 redraft with the
+	# founding eighteen and a created club, with no new-club concessions.
+	expansion_from = GameDB.START_YEAR
+	_apply_entry_years()
+	draft = Draft.new(pool, GameDB.active_clubs(GameDB.START_YEAR).duplicate(), seed)
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
 
@@ -1938,7 +2063,9 @@ func begin_intake_draft() -> bool:
 	draft.set_pick_owners(draft_pick_owners(season_year))
 	draft.add_compensation(comps)
 	_watch_draft_night()
-	draft.start_for_user(my_club)
+	# Played without you, the 2029 draft waits for your club (choosing_club).
+	if not choosing_club():
+		draft.start_for_user(my_club)
 	autosave()
 	return true
 
@@ -5826,17 +5953,20 @@ func _close_season_awards() -> void:
 	var sh := Almanac.season_hero(self)
 	if not sh.is_empty():
 		honour_roll[-1]["season_hero"] = [sh]
-	var page := Almanac.season_entry(self)
-	Challenge.mark_season(self, page)   # your own goal, the season it is met
-	almanac.append(page)
-	# The honour board (row 122): every player of yours, read afresh from the
-	# season just closed, and anyone who has gone since the last close.
-	for p in my_list:
-		HonourBoard.upsert(self, p)
-	HonourBoard.sweep(self)
-	var first := Almanac.first_sentence(str(almanac[-1].get(Almanac.STORY_KEY, "")))
-	if first != "":
-		add_news("almanac_story", first)
+	# Your club annual starts with your first season: the years played
+	# without you (sim_ahead) are on the honour roll, not in your annual.
+	if my_club != "":
+		var page := Almanac.season_entry(self)
+		Challenge.mark_season(self, page)   # your own goal, the season it is met
+		almanac.append(page)
+		# The honour board (row 122): every player of yours, read afresh from the
+		# season just closed, and anyone who has gone since the last close.
+		for p in my_list:
+			HonourBoard.upsert(self, p)
+		HonourBoard.sweep(self)
+		var first := Almanac.first_sentence(str(almanac[-1].get(Almanac.STORY_KEY, "")))
+		if first != "":
+			add_news("almanac_story", first)
 	# Achievements first, then the season news, so the premiership line
 	# stays the newest item in the feed.
 	_close_season_achievements()
@@ -6825,6 +6955,20 @@ func set_canberra(on: bool) -> void:
 	canberra_on = on
 	if GameDB.clubs.has("CANB"):
 		GameDB.set_enter_year("CANB", GameDB.data_enter_year("CANB") if on else Expansion.NEVER)
+	_apply_entry_years()
+
+
+## The new clubs the data brings in after the first season (Tasmania,
+## Canberra; never a created club) enter in expansion_from when it is set. A
+## club the career leaves out (Canberra on No) stays out.
+func _apply_entry_years() -> void:
+	if expansion_from <= 0:
+		return
+	for code in GameDB.club_order:
+		var data := GameDB.data_enter_year(str(code))
+		if data > GameDB.START_YEAR and data < Expansion.NEVER \
+				and GameDB.enter_year(str(code)) < Expansion.NEVER:
+			GameDB.set_enter_year(str(code), expansion_from)
 
 
 func _offer_of(p: Dictionary, code: String) -> Dictionary:
