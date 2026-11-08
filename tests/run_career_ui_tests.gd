@@ -827,6 +827,89 @@ func _past_press() -> void:
 		await _settle()
 
 
+## These cards have already opened over the hub once (HubScene's card sheet):
+## the hub shows them first, with no sheet over them.
+func _shown_over_hub() -> void:
+	for c in _state.week_events:
+		(c as Dictionary)["popped"] = true
+
+
+## A new card opens over the hub on arrival (director, 2026-11-08): real taps
+## on Later close it and the card leads the hub until it is answered; it opens
+## once, not on every visit; Back closes it like Later; answered in the sheet,
+## it shows what happened and Done closes it.
+func _test_event_sheet() -> void:
+	_state.reset()
+	_state.career_seed = 4402
+	_state.replay_seed = 4402
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_router.stack = ["main"]
+	_state.week_events = [_state.story_card("members_open_training")]
+	_router.go("hub")
+	await _settle()
+	var sheet: Control = current_scene.find_child("EventSheet", true, false)
+	var later: Button = sheet.find_child("EventLater", true, false) if sheet != null else null
+	_check(sheet != null and later != null and sheet.find_child("SheetEvent", true, false) != null
+			and bool(_state.week_events[0].get("popped", false)),
+			"A new card opens over the hub on its own")
+	var later_tap: String = (await Tap.tap(later)) if later != null else "missing"
+	await _settle()
+	var waiting: Control = current_scene.find_child("WaitingEvents", true, false)
+	var week: Control = current_scene.find_child("ThisWeek", true, false)
+	_check(later_tap == "" and current_scene.find_child("EventSheet", true, false) == null
+			and not bool(_state.week_events[0].get("resolved", false)),
+			"A real tap on Later closes the card unanswered (%s)" % later_tap)
+	_check(waiting != null and waiting.get_index() == 0 and waiting.find_child("WeekEvent", true, false) != null
+			and week != null and week.find_child("WeekEvent", true, false) == null
+			and waiting.get_global_rect().position.y < week.get_global_rect().position.y,
+			"After Later the card leads the hub, above the week")
+	_router.go("hub")
+	await _settle()
+	_check(current_scene.find_child("EventSheet", true, false) == null
+			and current_scene.find_child("WaitingEvents", true, false) != null,
+			"It opens once: back on the hub it waits first, with no sheet")
+	# A second new card opens on arrival; Android Back closes it like Later.
+	_state.week_events = [_state.story_card("training_extra_session")]
+	_router.go("hub")
+	await _settle()
+	_check(current_scene.find_child("EventSheet", true, false) != null, "Each new card opens on arrival")
+	_router.handle_back(true)
+	await _settle()
+	_check(_router.current() == "hub" and current_scene.find_child("EventSheet", true, false) == null
+			and current_scene.find_child("WaitingEvents", true, false) != null
+			and not bool(_state.week_events[0].get("resolved", false)),
+			"Back closes the card like Later and stays on the hub")
+	# Answered in the sheet: what happened shows there, Done closes it, and the
+	# answered card sits in the week, not first.
+	_state.week_events = [_state.story_card("members_open_training")]
+	_router.go("hub")
+	await _settle()
+	sheet = current_scene.find_child("EventSheet", true, false)
+	var answer: Button = sheet.find_child("Event_0", true, false) if sheet != null else null
+	var answer_tap: String = (await Tap.tap(answer)) if answer != null else "missing"
+	await _settle()
+	var done: Button = sheet.find_child("EventDone", true, false) if is_instance_valid(sheet) else null
+	var sheet_text := ""
+	if is_instance_valid(sheet):
+		var out := []
+		_texts(sheet, out)
+		sheet_text = " | ".join(out)
+	_check(answer_tap == "" and bool(_state.week_events[0].get("resolved", false)) and done != null
+			and sheet_text.contains(str(_state.week_events[0].get("outcome", "-"))) and sheet.find_child("EventLater", true, false) == null,
+			"A real tap on an answer in the sheet answers the card and shows what happened (%s)" % answer_tap)
+	var done_tap: String = (await Tap.tap(done)) if done != null else "missing"
+	await _settle()
+	week = current_scene.find_child("ThisWeek", true, false)
+	_check(done_tap == "" and current_scene.find_child("EventSheet", true, false) == null
+			and current_scene.find_child("WaitingEvents", true, false) == null
+			and week != null and week.find_child("WeekEvent", true, false) != null,
+			"Done closes the sheet; the answered card shows in the week (%s)" % done_tap)
+	_state.week_events = []
+	root.size = size_before
+
+
 func _settle() -> void:
 	for i in range(4):
 		await process_frame
@@ -1123,6 +1206,7 @@ func _run() -> void:
 	await _t("_test_season_awards")
 	await _t("_test_back_arrow_taps")
 	await _t("_test_finals_card_taps")
+	await _t("_test_event_sheet")
 	await _t("_test_sacked_job_choice_taps")
 	await _t("_test_sim_asks_only_before_your_match")
 	await _t("_test_list_tabs_kept")
@@ -1791,6 +1875,7 @@ Your career stays on this device.",
 	await _settle()
 	_check(_router.current() == "hub", "Back returns to the hub")
 	_state.week_event = _state.story_card("members_open_training")
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
 	var ev_btn: Button = current_scene.find_child("Event_0", true, false)
@@ -1803,6 +1888,7 @@ Your career stays on this device.",
 	# A big week's two cards: both show, and a finger on the second card's
 	# answer settles that card only.
 	_state.week_events = [_state.story_card("members_open_training"), _state.story_card("training_extra_session")]
+	_shown_over_hub()
 	var two_cards_size := root.size
 	root.size = Vector2i(390, 844)
 	_router.go("hub")
@@ -1821,6 +1907,7 @@ Your career stays on this device.",
 	# does not repeat these lines under its heading.
 	# A card that settles itself when the week is played says so on its face, with that choice's cost.
 	_state.week_events = [_state.story_card("health_pulled_up_sore", _state.my_list[0])]
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
 	var sore_node: Control = current_scene.find_child("EventSilence_0", true, false)
@@ -1840,6 +1927,7 @@ Your career stays on this device.",
 			and int(_state.week_events[0].get("choice", -1)) == 1,
 			"A real tap on the default line answers nothing; a real tap on Play him answers it (%s / %s)" % [line_tap, play_tap])
 	_state.week_events = [_state.story_card("training_kid_pushing", _state.my_list[0])]
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
 	var kid_card: Control = current_scene.find_child("WeekEvent", true, false)
@@ -3067,6 +3155,7 @@ func _test_finals_card_taps() -> void:
 	sea.recalc_ladder()
 	sea.start_finals()
 	_state._next_week_event()
+	_shown_over_hub()
 	root.size = Vector2i(390, 844)
 	_router.stack = ["main"]
 	_router.go("hub")
@@ -3094,6 +3183,7 @@ func _test_finals_card_taps() -> void:
 	sea.finals["weeks"] = [[], []]
 	sea.finals["slots"] = {"W_QF1": "FRE"}
 	_state._next_week_event()
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
 	card = current_scene.find_child("WeekEvent", true, false)
@@ -3112,6 +3202,7 @@ func _test_finals_card_taps() -> void:
 		if captaincy.role_of(_state.captaincy_record("FRE"), str(q["id"])) == "captain":
 			cap = q
 	_state.week_events = [_state.story_card("finals_second_chance", cap)]
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
 	card = current_scene.find_child("WeekEvent", true, false)
