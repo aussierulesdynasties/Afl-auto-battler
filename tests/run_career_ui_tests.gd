@@ -1020,7 +1020,8 @@ func _test_event_sheet_flows() -> void:
 	_state.week_events = [ruled]
 	_router.go("hub")
 	await _settle()
-	var rule_btn: Button = current_scene.find_child("EventRule_0", true, false)
+	# The card is on the hub under the sheet as well: the sheet's own button.
+	var rule_btn: Button = current_scene.find_child("EventSheet", true, false).find_child("EventRule_0", true, false)
 	_check(rule_btn != null, "(setup) a card with a rule is on the sheet")
 	why = (await Tap.tap(rule_btn)) if rule_btn != null else "missing"
 	await _settle()
@@ -1031,7 +1032,7 @@ func _test_event_sheet_flows() -> void:
 	_check(why == "" and current_scene.find_child("RuleSheet", true, false) == null
 			and current_scene.find_child("EventSheet", true, false) != null,
 			"A finger on Close takes off the rule and leaves the card open (%s)" % why)
-	rule_btn = current_scene.find_child("EventRule_0", true, false)
+	rule_btn = current_scene.find_child("EventSheet", true, false).find_child("EventRule_0", true, false)
 	why = (await Tap.tap(rule_btn)) if rule_btn != null else "missing"
 	await _settle()
 	_router.handle_back(true)
