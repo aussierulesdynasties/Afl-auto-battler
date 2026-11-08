@@ -80,6 +80,9 @@ const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "over
 		"sore_pct", "injury_pct", "trial_ovr", "ask", "early_price", "more_seasons", "extension_ok", "job", "real_named",
 		"form", "form_games", "has_role2", "out_of_side", "starting", "form_low", "role_avg", "role_word", "trial_word", "trial_home", "trial_avg", "trial_par", "trial_tail",
 		"leadership", "captain", "delegate_holds", "holds_at", "holds_trust_at",
+		# His opinion of you out of 100 (Trust.opinion), the opinion the trust rule
+		# starts at, and under 50 the odds he refuses to re-sign (director 2026-11-08).
+		"opinion", "holds_opinion_at", "refuse_line",
 		"new_club", "keep_price", "keep_seasons", "keep_note", "comp_line",
 		# The finals cards: the ageing rule says this is his last season, the finals he has
 		# played in this save (and whether this save has seen every game he has played),

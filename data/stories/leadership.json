@@ -325,7 +325,7 @@
 					}
 				],
 				"result": "",
-				"rule": "The group listens to a captain with Leadership {holds_at} or more, or {holds_trust_at} or more if he trusts you. {name}: Leadership {leadership}."
+				"rule": "The group listens to a captain with Leadership {holds_at} or more, or {holds_trust_at} or more if his opinion of you is {holds_opinion_at}/100 or more. {name}: Leadership {leadership}, opinion of you {opinion}/100."
 			},
 			{
 				"key": "coaches",
@@ -415,7 +415,7 @@
 					}
 				],
 				"result": "",
-				"rule": "The group listens to a captain with Leadership {holds_at} or more, or {holds_trust_at} or more if he trusts you. {name}: Leadership {leadership}."
+				"rule": "The group listens to a captain with Leadership {holds_at} or more, or {holds_trust_at} or more if his opinion of you is {holds_opinion_at}/100 or more. {name}: Leadership {leadership}, opinion of you {opinion}/100."
 			}
 		],
 		"cooldown": 25,
@@ -502,7 +502,7 @@
 					}
 				],
 				"result": "",
-				"rule": "The group listens to a captain with Leadership {holds_at} or more, or {holds_trust_at} or more if he trusts you. {name}: Leadership {leadership}."
+				"rule": "The group listens to a captain with Leadership {holds_at} or more, or {holds_trust_at} or more if his opinion of you is {holds_opinion_at}/100 or more. {name}: Leadership {leadership}, opinion of you {opinion}/100."
 			}
 		],
 		"cooldown": 40,
@@ -1565,7 +1565,7 @@
 					}
 				],
 				"result": "",
-				"rule": "The group listens to a captain with Leadership {holds_at} or more, or {holds_trust_at} or more if he trusts you. {name}: Leadership {leadership}."
+				"rule": "The group listens to a captain with Leadership {holds_at} or more, or {holds_trust_at} or more if his opinion of you is {holds_opinion_at}/100 or more. {name}: Leadership {leadership}, opinion of you {opinion}/100."
 			}
 		]
 	},
@@ -1620,7 +1620,7 @@
 					}
 				],
 				"result": "",
-				"rule": "The group listens to a captain with Leadership {holds_at} or more, or {holds_trust_at} or more if he trusts you. {name}: Leadership {leadership}."
+				"rule": "The group listens to a captain with Leadership {holds_at} or more, or {holds_trust_at} or more if his opinion of you is {holds_opinion_at}/100 or more. {name}: Leadership {leadership}, opinion of you {opinion}/100."
 			},
 			{
 				"key": "me",
