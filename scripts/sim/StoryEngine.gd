@@ -269,7 +269,10 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 			continue
 		if bool(t.get("always", false)) and story["season"].has(_always_key(id, pid)):
 			continue
-		if played_between(int(story["subj"].get(pid, NEVER)), w) < int(t.get("subject_cooldown", 0)):
+		# No wait means no wait: Round 1's cards are drawn when the season is made, so
+		# their stamp is later than a pre-season week and the gap reads negative.
+		var wait := int(t.get("subject_cooldown", 0))
+		if wait > 0 and played_between(int(story["subj"].get(pid, NEVER)), w) < wait:
 			continue
 		if not meets(p, subject.get("where", {}), story["flags"].get(pid, {})):
 			continue

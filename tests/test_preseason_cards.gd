@@ -382,6 +382,16 @@ func _test_running_again() -> void:
 	p["injury_weeks"] = 1
 	_check(not StoryEngine.eligible_subject(kt, ClubStories.context(GameState), GameState.story, 100, RandomNumberGenerator.new()).is_empty(),
 			"A player back next week anyway still brings the running-again card")
+	# The subject of a Round 1 card too: those are stamped later than a pre-season week.
+	var stamps: Dictionary = GameState.story["subj"]
+	var stamped: Variant = stamps.get(str(p["id"]))
+	stamps[str(p["id"])] = StoryEngine.week_abs(int(GameState.season_year) + 1, 1)
+	_check(not StoryEngine.eligible_subject(kt, ClubStories.context(GameState), GameState.story, 100, RandomNumberGenerator.new()).is_empty(),
+			"A player with a Round 1 card waiting still brings the running-again card")
+	if stamped == null:
+		stamps.erase(str(p["id"]))
+	else:
+		stamps[str(p["id"])] = stamped
 	card = GameState.story_card("pre_knee_return", p)
 	var soon := StoryEngine.stakes_lines(card["options"][0]["effects"], card["facts"])
 	var soon_blob := " / ".join(soon)
@@ -426,10 +436,10 @@ func _test_running_again() -> void:
 					if str(row["club"]) == CLUB:
 						hurt[str(row["id"])] = true
 				var at := "%d@%d" % [seed, week]
-				var want := []
+				var due := []
 				for facts in ClubStories.context(GameState)["players"]:
 					if StoryEngine.meets(facts, where, {}) and not told.has(str(facts["id"])):
-						want.append(str(facts["id"]))
+						due.append(str(facts["id"]))
 				var got := []
 				for c in GameState.week_events:
 					if str(c.get("tid", "")) == "pre_knee_return":
@@ -437,10 +447,10 @@ func _test_running_again() -> void:
 						told[str(c["player_id"])] = true
 						if not hurt.has(str(c["player_id"])):
 							wrong.append(at + " not hurt on the track")
-				want.sort()
+				due.sort()
 				got.sort()
-				if want != got:
-					wrong.append("%s wanted %s, dealt %s" % [at, str(want), str(got)])
+				if due != got:
+					wrong.append("%s wanted %s, dealt %s" % [at, str(due), str(got)])
 				if not got.is_empty():
 					dealt.append(at)
 			GameState.preseason_advance()
