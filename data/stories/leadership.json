@@ -589,8 +589,7 @@
 						"why": "You didn't take his word on the young player"
 					}
 				],
-				"result": "{name} tells {kid_name} to keep going.",
-				"note": "Nothing changes."
+				"result": "{name} tells {kid_name} to keep going."
 			}
 		],
 		"cooldown": 40,
@@ -797,8 +796,7 @@
 						"d": -1
 					}
 				],
-				"result": "Nothing needs saying.",
-				"note": "Nothing changes."
+				"result": "Nothing needs saying."
 			}
 		],
 		"cooldown": 40,
@@ -1098,8 +1096,7 @@
 						"d": -1
 					}
 				],
-				"result": "He doesn't need telling.",
-				"note": "Nothing changes."
+				"result": "He doesn't need telling."
 			}
 		],
 		"cooldown": 80,
@@ -1280,8 +1277,7 @@
 						"d": -2
 					}
 				],
-				"result": "The group takes you at your word.",
-				"note": "Nothing changes yet."
+				"result": "The group takes you at your word."
 			},
 			{
 				"key": "ride",
@@ -1368,8 +1364,7 @@
 						"d": -1
 					}
 				],
-				"result": "Nothing more to say.",
-				"note": "Nothing changes."
+				"result": "Nothing more to say."
 			}
 		],
 		"cooldown": 120,
@@ -1515,8 +1510,7 @@
 						"name": "su_start"
 					}
 				],
-				"result": "{name} keeps leading the group as he is.",
-				"note": "Nothing changes."
+				"result": "{name} keeps leading the group as he is."
 			}
 		],
 		"cooldown": 160,

@@ -23,6 +23,7 @@ func run(suite) -> void:
 	_t("_test_effects")
 	_t("_test_facts")
 	_t("_test_running_again")
+	_t("_test_running_again_comes")
 	_t("_test_hands_off_and_save")
 	print("Pre-season cards: %d of the story suite's checks" % (s.checks - before))
 	PreSeason.reload()
@@ -354,8 +355,15 @@ func _test_running_again() -> void:
 			% [int(f["pre_miss_xp"]), want, int(f["pre_miss_heavy"]), int(f["pre_miss_rounds"])])
 	var rush := " / ".join(StoryEngine.stakes_lines(card["options"][0]["effects"], f))
 	_check(rush.contains("about %d XP of pre-season development" % want) and rush.contains("sore until Round 1")
-			and rush.contains("the pre-season match and Round 1") and rush.contains("two Heavy weeks")
+			and rush.contains("hurt in Round 1 and half that in the pre-season match") and rush.contains("two Heavy weeks")
 			and not rush.contains("you name him"), "Clearing him reads as the pre-season: %s" % rush)
+	_check(rush.contains("he starts each match"), "...both games, so each match: %s" % rush)
+	# After week 7 the pre-season match has been played: Round 1 is all that is left.
+	var late := f.duplicate()
+	late["pre_week"] = PreSeason.tune("practice_week")
+	var last_stop := " / ".join(StoryEngine.stakes_lines(card["options"][0]["effects"], late))
+	_check(last_stop.contains("hurt in Round 1 (") and last_stop.contains("he starts it") and not last_stop.contains("pre-season match"),
+			"After the pre-season match the odds are for Round 1 alone: %s" % last_stop)
 	var physio := " / ".join(StoryEngine.stakes_lines(card["options"][1]["effects"], f))
 	_check(physio.contains("goes without about %d XP of pre-season development" % want), "The physio's plan names the training it costs: %s" % physio)
 	GameState.week_events = [card]
@@ -374,6 +382,16 @@ func _test_running_again() -> void:
 	p["injury_weeks"] = 1
 	_check(not StoryEngine.eligible_subject(kt, ClubStories.context(GameState), GameState.story, 100, RandomNumberGenerator.new()).is_empty(),
 			"A player back next week anyway still brings the running-again card")
+	# The subject of a Round 1 card too: those are stamped later than a pre-season week.
+	var stamps: Dictionary = GameState.story["subj"]
+	var stamped: Variant = stamps.get(str(p["id"]))
+	stamps[str(p["id"])] = StoryEngine.week_abs(int(GameState.season_year) + 1, 1)
+	_check(not StoryEngine.eligible_subject(kt, ClubStories.context(GameState), GameState.story, 100, RandomNumberGenerator.new()).is_empty(),
+			"A player with a Round 1 card waiting still brings the running-again card")
+	if stamped == null:
+		stamps.erase(str(p["id"]))
+	else:
+		stamps[str(p["id"])] = stamped
 	card = GameState.story_card("pre_knee_return", p)
 	var soon := StoryEngine.stakes_lines(card["options"][0]["effects"], card["facts"])
 	var soon_blob := " / ".join(soon)
@@ -392,15 +410,13 @@ func _test_running_again() -> void:
 			"A concussed player never brings the running-again card")
 	p["injury_weeks"] = 0
 	p.erase("injury_kind")
-	# In play: a Heavy first block, walked stop by stop. At each card stop, a player hurt
-	# on the track and still out meets the card's trigger (checked on a fresh story, so
-	# the week's own draw and the quiet weeks do not hide it), and nobody else does; a
-	# deal of the card is about such a player. Whether a stop deals it is the draw's call.
+	# In play: a Heavy first block, walked stop by stop. Each card stop deals the card for
+	# every player who fits and has not had his this pre-season, and for nobody else.
 	PreSeason.data()["heavy_week_injury"] = 0.1
+	var where: Dictionary = kt["subject"]["where"]
 	var hurt_careers := 0
-	var met := []
 	var dealt := []
-	var off_track := []
+	var wrong := []
 	for seed in range(SEED, SEED + 10):
 		_career(seed)
 		for q in GameState.my_list:
@@ -409,28 +425,100 @@ func _test_running_again() -> void:
 		GameState.set_preseason_block(0, "heavy", "running")
 		var guard := 0
 		var hurt := {}
+		var told := {}
+		var seen_week := -1
 		while GameState.preseason_active() and guard < 30:
 			guard += 1
-			if GameState.preseason_stop() == "story":
+			var week := GameState.preseason_week()
+			if PreSeason.STORY_WEEKS.has(week) and week != seen_week:
+				seen_week = week
 				for row in GameState.preseason.get("injuries", []):
 					if str(row["club"]) == CLUB:
 						hurt[str(row["id"])] = true
-				var at := "%d@%d" % [seed, GameState.preseason_week()]
-				var ctx := ClubStories.context(GameState)
-				var who := StoryEngine.eligible_subject(kt, ctx, StoryEngine.ensure({}),
-						StoryEngine.week_abs(int(ctx["year"]), int(ctx["week"])), RandomNumberGenerator.new())
-				if not who.is_empty():
-					(met if hurt.has(str(who["id"])) else off_track).append(at)
+				var at := "%d@%d" % [seed, week]
+				var due := []
+				for facts in ClubStories.context(GameState)["players"]:
+					if StoryEngine.meets(facts, where, {}) and not told.has(str(facts["id"])):
+						due.append(str(facts["id"]))
+				var got := []
 				for c in GameState.week_events:
 					if str(c.get("tid", "")) == "pre_knee_return":
-						(dealt if hurt.has(str(c["player_id"])) else off_track).append(at)
+						got.append(str(c["player_id"]))
+						told[str(c["player_id"])] = true
+						if not hurt.has(str(c["player_id"])):
+							wrong.append(at + " not hurt on the track")
+				due.sort()
+				got.sort()
+				if due != got:
+					wrong.append("%s wanted %s, dealt %s" % [at, str(due), str(got)])
+				if not got.is_empty():
+					dealt.append(at)
 			GameState.preseason_advance()
 		hurt_careers += 1 if not hurt.is_empty() else 0
 	PreSeason.reload()
 	_check(hurt_careers >= 5, "A Heavy first block hurts players on the track (%d of 10 careers, the risk raised for the test)" % hurt_careers)
-	_check(not met.is_empty() and off_track.is_empty(),
-			"...and at a card stop one of them meets the running-again trigger (%s; dealt at %s), nobody else does (%s)" % [
-			", ".join(PackedStringArray(met)), ", ".join(PackedStringArray(dealt)), ", ".join(PackedStringArray(off_track))])
+	_check(not dealt.is_empty() and wrong.is_empty(),
+			"...and each card stop deals the running-again card for every player who fits, nobody else (dealt at %s; wrong: %s)" % [
+			", ".join(PackedStringArray(dealt)), ", ".join(PackedStringArray(wrong))])
+
+
+## The running-again card comes every time (director 2026-11-08): no quiet roll, no draw
+## against the other cards, no full category and no recent card about him holds it back.
+## One for each player who fits, once each a season.
+func _test_running_again_comes() -> void:
+	_career()
+	for q in GameState.my_list:
+		q["injury_weeks"] = 0
+		q.erase("injury_kind")
+	var deck := StoryDeck.all()
+	var hurt: Dictionary = GameState.my_list[6]
+	hurt["injury_weeks"] = 3
+	hurt["injury_kind"] = "hamstring"
+	var ctx := ClubStories.context(GameState)
+	var w := StoryEngine.week_abs(int(ctx["year"]), int(ctx["week"]))
+	var missed := []
+	var quiet := 0
+	for seed in range(40):
+		ctx["seed"] = seed
+		var roll := RandomNumberGenerator.new()
+		roll.seed = hash("story|%d|%d|%d" % [seed, int(ctx["year"]), int(ctx["week"])])
+		quiet += 1 if roll.randf() >= StoryEngine.EVENT_CHANCE else 0
+		var story := StoryEngine.ensure({})
+		# A full health category and a card about him last week would hold back a drawn card.
+		for i in range(StoryEngine.DIVERSITY_MAX):
+			(story["cats"] as Array).append([w, "health"])
+		story["subj"][str(hurt["id"])] = w
+		var cards := StoryEngine.pick_week(deck, ctx, story)
+		if cards.size() != 1 or str(cards[0]["tid"]) != "pre_knee_return" or str(cards[0]["player_id"]) != str(hurt["id"]):
+			missed.append(seed)
+	_check(quiet >= 5 and missed.is_empty(), "It comes at every stop he fits, %d quiet weeks among 40 included (missed: %s)" % [quiet, str(missed)])
+
+	var story := StoryEngine.ensure({})
+	var second: Dictionary = GameState.my_list[7]
+	second["injury_weeks"] = 2
+	second["injury_kind"] = "calf"
+	ctx = ClubStories.context(GameState)
+	var ids := []
+	for c in StoryEngine.pick_week(deck, ctx, story):
+		ids.append(str(c.get("player_id", "")) if str(c["tid"]) == "pre_knee_return" else "other")
+	ids.sort()
+	var both := [str(hurt["id"]), str(second["id"])]
+	both.sort()
+	_check(ids == both, "Two players the physio has at one stop get a card each, and nothing else that stop (%s)" % str(ids))
+	ctx["week"] = int(ctx["week"]) + 1
+	var again := StoryEngine.pick_week(deck, ctx, story).filter(func(c): return str(c["tid"]) == "pre_knee_return")
+	_check(again.is_empty(), "He does not bring it twice in a pre-season")
+	StoryEngine.new_season(story)
+	ctx["year"] = int(ctx["year"]) + 1
+	var next := StoryEngine.pick_week(deck, ctx, story).filter(func(c): return str(c["tid"]) == "pre_knee_return")
+	_check(next.size() == 2, "Hurt again next pre-season, it comes again (%d cards)" % next.size())
+	hurt["injury_weeks"] = 0
+	hurt.erase("injury_kind")
+	second["injury_weeks"] = 0
+	second.erase("injury_kind")
+	var t: Dictionary = (StoryDeck.by_id(deck, "pre_knee_return") as Dictionary).duplicate(true)
+	t["subject"] = {"kind": "club"}
+	_check(StoryDeck.validate([t]).any(func(x): return str(x).contains("always comes")), "A card that always comes must be about a player")
 
 
 func _test_hands_off_and_save() -> void:
