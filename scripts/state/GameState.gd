@@ -5301,7 +5301,7 @@ func _club_xp(club: String, p: Dictionary, base: int, staff: Dictionary, on_grou
 ## Manual (spend XP by hand) was cut 2026-11-03: old saves map to the
 ## closest plan (_closest_plan).
 const TRAIN_PLANS := [
-	{"key": "position", "label": "Position plan", "roles": []},
+	{"key": "position", "label": "By position", "roles": []},
 	{"key": "inside_mid", "label": "Inside midfielder", "roles": ["MID"],
 			"text": "Wins the ball at stoppages and keeps it in the tackle.",
 			"weights": {"contested": 3.0, "disposal": 1.0}},
@@ -9844,7 +9844,7 @@ func _plan_row(key: String) -> Dictionary:
 
 func train_plan_label(key: String) -> String:
 	var row := _plan_row(key)
-	return str(row.get("label", "Position plan")) if not row.is_empty() else "Position plan"
+	return str(row.get("label", "By position")) if not row.is_empty() else "By position"
 
 
 ## What the plan makes of him, in football terms. The Position plan reads

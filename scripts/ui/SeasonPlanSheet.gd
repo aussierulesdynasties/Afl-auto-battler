@@ -95,7 +95,7 @@ static func _build(host: Control, box: Dictionary, state: Dictionary, done: Call
 	var shown: Dictionary = Conditioning.revise(rec, week, draft) if changed else rec
 	var level: int = GameState.fitness_hp_level(me)
 
-	body.add_child(UiKit.lbl("Season plan", 22, UiKit.TEXT, true))
+	body.add_child(UiKit.lbl("Fitness plan", 22, UiKit.TEXT, true))
 	var words := UiKit.lbl(Conditioning.status_line(shown, week), UiKit.NAME, UiKit.TEXT, true)
 	words.name = "SeasonPlanSheetWords"
 	body.add_child(words)
