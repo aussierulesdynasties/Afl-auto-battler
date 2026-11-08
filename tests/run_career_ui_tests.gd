@@ -2449,6 +2449,35 @@ Your career stays on this device.",
 		await _settle()
 		_check(_router.current() == "offseason" and current_scene.find_child("ContractTalks", true, false) == null,
 				"Back closes the talks and stays on Trades & Contracts")
+		# Under 50/100 the talks say the chance he won't re-sign before any offer;
+		# at 50 they say nothing about it.
+		var trow: Node = talk.get_parent()
+		while trow != null and not str(trow.name).begins_with("Contract_"):
+			trow = trow.get_parent()
+		var tid := str(trow.name).trim_prefix("Contract_") if trow != null else ""
+		var tkey := Trust.player_key(tid)
+		var rel_before: Dictionary = _state.relations.duplicate(true)
+		_state.relations.erase(tkey)
+		current_scene.call("_open_talks", tid)
+		await _settle()
+		var at_fifty: bool = current_scene.find_child("TalksRefuse", true, false) == null
+		_router.handle_back(true)
+		await _settle()
+		Trust.change(_state.relations, tkey, -12, "You dropped him", _state.season_year, "Round 3")
+		current_scene.call("_open_talks", tid)
+		await _settle()
+		var refuse: Control = current_scene.find_child("TalksRefuse", true, false)
+		var refuse_text := ""
+		if refuse is RichTextLabel:
+			refuse_text = (refuse as RichTextLabel).get_parsed_text()
+		elif refuse != null:
+			refuse_text = str(refuse.get("text"))
+		_check(tid != "" and at_fifty and refuse != null and refuse.is_visible_in_tree()
+				and refuse_text == "His opinion of you: 44/100. 6% he won't re-sign with you.",
+				"Talks at 44/100 say the chance he won't re-sign before you offer, and at 50 say nothing (%s)" % refuse_text)
+		_router.handle_back(true)
+		await _settle()
+		_state.relations = rel_before
 	for tab in ["Tab_agents", "Tab_trade"]:
 		var tb: Button = current_scene.find_child(tab, true, false)
 		tb.emit_signal("pressed")

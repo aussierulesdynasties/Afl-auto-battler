@@ -270,7 +270,9 @@ func _contracts(body: VBoxContainer) -> void:
 			continue
 		var talks: Dictionary = p.get("talks", {})
 		if bool(talks.get("walked", false)):
-			var gone := Contracts.REFUSED_CARD % int(talks["refused"]) if talks.has("refused") 					else "Talks broke down: he'll test free agency"
+			var gone := "Talks broke down: he'll test free agency"
+			if talks.has("refused"):
+				gone = Contracts.REFUSED_CARD % int(talks["refused"])
 			row.add_child(UiKit.line(gone, UiKit.SECONDARY, UiKit.BAD, true))
 			var proj := _para(str(GameState.projected_compensation(p)["reason"]), 12, UiKit.TEXT)
 			proj.name = "CompProjection"
