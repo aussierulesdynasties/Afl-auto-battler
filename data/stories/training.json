@@ -42,6 +42,11 @@
 					{
 						"op": "fresh",
 						"who": "all"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 6,
+						"who": "all"
 					}
 				],
 				"result": "A recovery week: fresher bodies and minds."
@@ -235,6 +240,11 @@
 					{
 						"op": "fresh",
 						"who": "all"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 6,
+						"who": "all"
 					}
 				],
 				"note": "No extra development this week.",
@@ -301,6 +311,11 @@
 						"op": "morale",
 						"d": 1,
 						"who": "all"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 3,
+						"who": "all"
 					}
 				],
 				"result": "No time trial. The group's relieved."
@@ -344,6 +359,11 @@
 						"op": "morale",
 						"d": 2,
 						"who": "side"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 4,
+						"who": "side"
 					}
 				],
 				"result": "The set-up stays in the drawer for now."
@@ -380,6 +400,10 @@
 						"op": "trust",
 						"d": 5,
 						"why": "You told him he'd earned his spot"
+					},
+					{
+						"op": "expects_game",
+						"sting": 6
 					}
 				],
 				"result": "{name} hears it from you."
@@ -554,6 +578,11 @@
 						"op": "morale",
 						"d": 4,
 						"who": "all"
+					},
+					{
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10
 					}
 				],
 				"result": "Everyone watches the semi together in the theatrette. They know who's coming.",

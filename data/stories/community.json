@@ -24,6 +24,12 @@
 					{
 						"op": "board",
 						"d": 2
+					},
+					{
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10,
+						"on": "week"
 					}
 				],
 				"note": "It gives up the session that training brings.",
@@ -91,6 +97,10 @@
 					{
 						"op": "board",
 						"d": -2
+					},
+					{
+						"op": "morale",
+						"d": 2
 					}
 				],
 				"result": "The clinic will have to wait."
@@ -187,6 +197,10 @@
 					{
 						"op": "morale",
 						"d": -2
+					},
+					{
+						"op": "board",
+						"d": 1
 					}
 				],
 				"result": "The club sends a signed jumper."
@@ -237,6 +251,12 @@
 					{
 						"op": "morale",
 						"d": -2
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You kept game weeks on football"
 					}
 				],
 				"result": "{name} sends a video instead."
@@ -274,6 +294,11 @@
 					{
 						"op": "board",
 						"d": 1
+					},
+					{
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10
 					}
 				],
 				"result": "In the huddle with players whose names are on the honour boards. The young ones hang off every word."
@@ -331,6 +356,12 @@
 						"strand": "together",
 						"d": 2,
 						"why": "The players spent the night before the Grand Final together"
+					},
+					{
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10,
+						"on": "grand_final"
 					}
 				],
 				"result": "One long table, a few quiet words from the captain, lights out by ten."
@@ -341,6 +372,11 @@
 				"effects": [
 					{
 						"op": "fresh",
+						"who": "side"
+					},
+					{
+						"op": "morale",
+						"d": -1,
 						"who": "side"
 					}
 				],

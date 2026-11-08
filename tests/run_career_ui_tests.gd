@@ -868,6 +868,89 @@ func _past_press() -> void:
 		await _settle()
 
 
+## These cards have already opened over the hub once (HubScene's card sheet):
+## the hub shows them first, with no sheet over them.
+func _shown_over_hub() -> void:
+	for c in _state.week_events:
+		(c as Dictionary)["popped"] = true
+
+
+## A new card opens over the hub on arrival (director, 2026-11-08): real taps
+## on Later close it and the card leads the hub until it is answered; it opens
+## once, not on every visit; Back closes it like Later; answered in the sheet,
+## it shows what happened and Done closes it.
+func _test_event_sheet() -> void:
+	_state.reset()
+	_state.career_seed = 4402
+	_state.replay_seed = 4402
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_router.stack = ["main"]
+	_state.week_events = [_state.story_card("members_open_training")]
+	_router.go("hub")
+	await _settle()
+	var sheet: Control = current_scene.find_child("EventSheet", true, false)
+	var later: Button = sheet.find_child("EventLater", true, false) if sheet != null else null
+	_check(sheet != null and later != null and sheet.find_child("SheetEvent", true, false) != null
+			and bool(_state.week_events[0].get("popped", false)),
+			"A new card opens over the hub on its own")
+	var later_tap: String = (await Tap.tap(later)) if later != null else "missing"
+	await _settle()
+	var waiting: Control = current_scene.find_child("WaitingEvents", true, false)
+	var week: Control = current_scene.find_child("ThisWeek", true, false)
+	_check(later_tap == "" and current_scene.find_child("EventSheet", true, false) == null
+			and not bool(_state.week_events[0].get("resolved", false)),
+			"A real tap on Later closes the card unanswered (%s)" % later_tap)
+	_check(waiting != null and waiting.get_index() == 0 and waiting.find_child("WeekEvent", true, false) != null
+			and week != null and week.find_child("WeekEvent", true, false) == null
+			and waiting.get_global_rect().position.y < week.get_global_rect().position.y,
+			"After Later the card leads the hub, above the week")
+	_router.go("hub")
+	await _settle()
+	_check(current_scene.find_child("EventSheet", true, false) == null
+			and current_scene.find_child("WaitingEvents", true, false) != null,
+			"It opens once: back on the hub it waits first, with no sheet")
+	# A second new card opens on arrival; Android Back closes it like Later.
+	_state.week_events = [_state.story_card("training_extra_session")]
+	_router.go("hub")
+	await _settle()
+	_check(current_scene.find_child("EventSheet", true, false) != null, "Each new card opens on arrival")
+	_router.handle_back(true)
+	await _settle()
+	_check(_router.current() == "hub" and current_scene.find_child("EventSheet", true, false) == null
+			and current_scene.find_child("WaitingEvents", true, false) != null
+			and not bool(_state.week_events[0].get("resolved", false)),
+			"Back closes the card like Later and stays on the hub")
+	# Answered in the sheet: what happened shows there, Done closes it, and the
+	# answered card sits in the week, not first.
+	_state.week_events = [_state.story_card("members_open_training")]
+	_router.go("hub")
+	await _settle()
+	sheet = current_scene.find_child("EventSheet", true, false)
+	var answer: Button = sheet.find_child("Event_0", true, false) if sheet != null else null
+	var answer_tap: String = (await Tap.tap(answer)) if answer != null else "missing"
+	await _settle()
+	var done: Button = sheet.find_child("EventDone", true, false) if is_instance_valid(sheet) else null
+	var sheet_text := ""
+	if is_instance_valid(sheet):
+		var out := []
+		_texts(sheet, out)
+		sheet_text = " | ".join(out)
+	_check(answer_tap == "" and bool(_state.week_events[0].get("resolved", false)) and done != null
+			and sheet_text.contains(str(_state.week_events[0].get("outcome", "-"))) and sheet.find_child("EventLater", true, false) == null,
+			"A real tap on an answer in the sheet answers the card and shows what happened (%s)" % answer_tap)
+	var done_tap: String = (await Tap.tap(done)) if done != null else "missing"
+	await _settle()
+	week = current_scene.find_child("ThisWeek", true, false)
+	_check(done_tap == "" and current_scene.find_child("EventSheet", true, false) == null
+			and current_scene.find_child("WaitingEvents", true, false) == null
+			and week != null and week.find_child("WeekEvent", true, false) != null,
+			"Done closes the sheet; the answered card shows in the week (%s)" % done_tap)
+	_state.week_events = []
+	root.size = size_before
+
+
 func _settle() -> void:
 	for i in range(4):
 		await process_frame
@@ -1164,7 +1247,9 @@ func _run() -> void:
 	await _t("_test_season_awards")
 	await _t("_test_back_arrow_taps")
 	await _t("_test_finals_card_taps")
+	await _t("_test_event_sheet")
 	await _t("_test_sacked_job_choice_taps")
+	await _t("_test_rival_letter_taps")
 	await _t("_test_sim_asks_only_before_your_match")
 	await _t("_test_skip_season")
 	await _t("_test_skip_orders")
@@ -1834,6 +1919,7 @@ Your career stays on this device.",
 	await _settle()
 	_check(_router.current() == "hub", "Back returns to the hub")
 	_state.week_event = _state.story_card("members_open_training")
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
 	var ev_btn: Button = current_scene.find_child("Event_0", true, false)
@@ -1846,6 +1932,7 @@ Your career stays on this device.",
 	# A big week's two cards: both show, and a finger on the second card's
 	# answer settles that card only.
 	_state.week_events = [_state.story_card("members_open_training"), _state.story_card("training_extra_session")]
+	_shown_over_hub()
 	var two_cards_size := root.size
 	root.size = Vector2i(390, 844)
 	_router.go("hub")
@@ -1864,6 +1951,7 @@ Your career stays on this device.",
 	# does not repeat these lines under its heading.
 	# A card that settles itself when the week is played says so on its face, with that choice's cost.
 	_state.week_events = [_state.story_card("health_pulled_up_sore", _state.my_list[0])]
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
 	var sore_node: Control = current_scene.find_child("EventSilence_0", true, false)
@@ -1883,6 +1971,7 @@ Your career stays on this device.",
 			and int(_state.week_events[0].get("choice", -1)) == 1,
 			"A real tap on the default line answers nothing; a real tap on Play him answers it (%s / %s)" % [line_tap, play_tap])
 	_state.week_events = [_state.story_card("training_kid_pushing", _state.my_list[0])]
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
 	var kid_card: Control = current_scene.find_child("WeekEvent", true, false)
@@ -2450,6 +2539,12 @@ Your career stays on this device.",
 	_state.ensure_finals()
 	while not season.is_season_over():
 		_state.advance()
+	# A strong season ends with a rival board's letter that holds the
+	# off-season (ClubMoves, its own test below); this part is about the
+	# off-season at his club, so he stays put.
+	var moves = load("res://scripts/state/ClubMoves.gd")
+	if moves.letter_open(_state):
+		moves.decline_letter(_state)
 	_router.go("hub")
 	await _settle()
 	_check(_screen_text().contains("Trades & Contracts"), "The hub offers Trades & Contracts after the season")
@@ -3111,6 +3206,7 @@ func _test_finals_card_taps() -> void:
 	sea.recalc_ladder()
 	sea.start_finals()
 	_state._next_week_event()
+	_shown_over_hub()
 	root.size = Vector2i(390, 844)
 	_router.stack = ["main"]
 	_router.go("hub")
@@ -3138,6 +3234,7 @@ func _test_finals_card_taps() -> void:
 	sea.finals["weeks"] = [[], []]
 	sea.finals["slots"] = {"W_QF1": "FRE"}
 	_state._next_week_event()
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
 	card = current_scene.find_child("WeekEvent", true, false)
@@ -3156,6 +3253,7 @@ func _test_finals_card_taps() -> void:
 		if captaincy.role_of(_state.captaincy_record("FRE"), str(q["id"])) == "captain":
 			cap = q
 	_state.week_events = [_state.story_card("finals_second_chance", cap)]
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
 	card = current_scene.find_child("WeekEvent", true, false)
@@ -4079,6 +4177,79 @@ func _test_sacked_job_choice_taps() -> void:
 	root.size = size_before
 
 
+## A strong season's real close at Fremantle (row 112): the home-and-away
+## rounds skipped with Fremantle top of the ladder, so they play the finals
+## and meet the board's goal, and the close writes a rival board's letter that
+## holds the off-season until he answers.
+func _season_with_letter() -> void:
+	_state.reset()
+	_state.career_seed = 4411
+	_state.replay_seed = 4411
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var arcs = load("res://scripts/sim/CoachArcs.gd")
+	_state.coach_arcs = arcs.ensure(_state.coach_arcs)
+	var season = _state.season
+	season.round_index = season.fixture.size()
+	season.ladder["FRE"]["w"] = 20
+	season.recalc_ladder()
+	_state.ensure_finals()
+	while not season.is_season_over():
+		_state.advance()
+	# The hub's other first-visit and weekly asks come before the letter; this
+	# test is about the letter.
+	_state.week_events = []
+	_state.media_conference = {}
+	_state.set_setting("seen_weekly_loop_intro", true)
+
+
+func _test_rival_letter_taps() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	var moves = load("res://scripts/state/ClubMoves.gd")
+	_season_with_letter()
+	_check(moves.letter_open(_state) and not _state.offseason_open(),
+			"A strong season ends with a rival board's letter, and the off-season waits for the answer")
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var card: Control = current_scene.find_child("RivalLetter", true, false)
+	_check(card != null and current_scene.find_child("RivalLetterRisk", true, false) != null,
+			"The hub shows the letter and its risk")
+	_check(not _screen_text().contains("National Draft") and not _screen_text().contains("Trades & Contracts"),
+			"While the letter is open, trades, contracts and the draft wait for his answer")
+	var stay: Button = current_scene.find_child("RivalLetterStay", true, false)
+	var take: Button = current_scene.find_child("RivalLetterTake", true, false)
+	_check(stay != null and take != null and stay.get_combined_minimum_size().x <= stay.size.x + 0.5
+			and take.get_combined_minimum_size().x <= take.size.x + 0.5,
+			"Stay and Take read whole on a 390 phone")
+	var why: String = await Tap.tap(stay) if stay != null else "missing"
+	await _settle()
+	_check(why == "" and str(moves.letter(_state).get("answer", "")) == "declined" and _state.my_club == "FRE"
+			and (_state.coach_arcs["move"] as Dictionary).is_empty() and _state.offseason_open(),
+			"A finger on Stay turns the job down: he stays and the off-season opens at Fremantle (%s)" % why)
+	_check(current_scene.find_child("RivalLetterAnswered", true, false) != null and _screen_text().contains("National Draft")
+			and _screen_text().contains("Trades & Contracts"),
+			"After the answer the hub says so, and trades, contracts and the draft are back")
+	# The same letter, taken.
+	_season_with_letter()
+	var code := str(moves.letter(_state).get("code", ""))
+	_router.go("hub")
+	await _settle()
+	take = current_scene.find_child("RivalLetterTake", true, false)
+	why = await Tap.tap(take) if take != null else "missing"
+	await _settle()
+	_check(why == "" and code != "" and _state.my_club == code and (_state.coach_arcs["move"] as Dictionary).is_empty()
+			and _state.offseason_open(),
+			"A finger on Take moves him to %s at once and the off-season opens there (%s)" % [code, why])
+	var answered: Label = current_scene.find_child("RivalLetterAnswered", true, false)
+	_check(answered != null and answered.text.contains("senior coach now") and answered.text.contains("Fremantle have ")
+			and answered.text.contains(_db.club_name(code)) and _screen_text().contains("National Draft")
+			and _screen_text().contains("Trades & Contracts"),
+			"After taking it the hub says so, who replaced him at Fremantle and where from, and his new club's trades, contracts and draft are open (%s)"
+			% (answered.text if answered != null else "missing"))
+	root.size = size_before
+
+
 ## Skip to the end of the season (director, 2026-11-07; 2026-11-08: "It's just
 ## skipping games, no off season skipping"): a finger on the quiet button asks
 ## first, Cancel skips nothing, and the skip lands on the same finished season
@@ -4215,8 +4386,11 @@ func _skip_orders_run(orders: Dictionary) -> Dictionary:
 		for r in _rules("Backing").ledger(p):
 			if int(r.get("year", 0)) == year:
 				runs += 1
+	# A strong season can end in a rival board's letter (row 112), which holds
+	# the off-season until he answers, as it does after Sim the week.
+	var held: bool = load("res://scripts/state/ClubMoves.gd").letter_open(_state)
 	return {"ok": bool(res["ok"]), "runs": runs, "plan": _state.club_plan,
-			"over": _state.season.is_season_over(), "off": _state.offseason_open(), "draft": _state.draft != null}
+			"over": _state.season.is_season_over(), "off": _state.offseason_open() or held, "draft": _state.draft != null}
 
 
 func _test_skip_orders() -> void:
