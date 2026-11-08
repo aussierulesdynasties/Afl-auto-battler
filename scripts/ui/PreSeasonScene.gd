@@ -745,14 +745,14 @@ func _drill_row(i: int) -> Control:
 		t.name = "DrillFor%d_%s" % [i, "ALL" if key == "" else key]
 		# A thumb's width at least: "All" is a short word (44 px on the phone).
 		t.custom_minimum_size = Vector2(36, 44)
-		t.add_theme_font_size_override("font_size", UiKit.SECONDARY)
+		UiKit.set_font_size(t, UiKit.SECONDARY)
 		# All five in the sign face, a fifth narrower than the kit's regular
 		# face: in that face the names had almost no spare width on a 390 px
 		# phone and ran together. Each takes a share of the row as wide as its
 		# name, so what spare there is falls evenly between them.
 		t.add_theme_font_override("font", UiKit.BOLD)
 		t.size_flags_stretch_ratio = UiKit.BOLD.get_string_size(t.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
-				UiKit.SECONDARY).x + 4.0
+				UiKit.px(UiKit.SECONDARY)).x + 4.0
 		t.pressed.connect(func():
 			_drill_group[i] = key
 			_refresh_words())

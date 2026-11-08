@@ -133,7 +133,7 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	v.add_child(UiKit.spacer(4))
 	top_attributes_block(v, p, false, UiKit.BODY, UiKit.SMALL)
 	for t in Traits.of(p):
-		var tl := UiKit.lbl("%s. %s" % [Traits.label(str(t)), Traits.scout(str(t))], UiKit.SMALL,
+		var tl := UiKit.lbl("%s. %s" % [UiKit.trait_label(str(t)), Traits.scout(str(t))], UiKit.SMALL,
 				UiKit.BAD if Traits.is_bad(str(t)) else UiKit.TEXT)
 		tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		tl.name = "Trait_" + str(t)

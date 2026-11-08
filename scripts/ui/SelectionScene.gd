@@ -69,7 +69,7 @@ func _build() -> void:
 	pick.custom_minimum_size = Vector2(0, 44)
 	var menu := pick.get_popup()
 	menu.add_theme_font_override("font", UiKit.FONT)
-	menu.add_theme_font_size_override("font_size", UiKit.NAME)
+	UiKit.set_font_size(menu, UiKit.NAME)
 	var strategies := [["best", "Best side"], ["rest", "Rest tired players"], ["youth", "Blood the youth"],
 			["mine", "My Selected Best 23"]]
 	for i in range(strategies.size()):
