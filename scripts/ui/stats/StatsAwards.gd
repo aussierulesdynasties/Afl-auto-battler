@@ -401,7 +401,7 @@ static func _players() -> Dictionary:
 
 ## How wide a line of text is set in the game's face.
 static func _text_w(text: String, size: int, bold: bool) -> float:
-	return (UiKit.BOLD if bold else UiKit.FONT).get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	return (UiKit.BOLD if bold else UiKit.FONT).get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(size)).x
 
 
 static func _first(rows: Array) -> Dictionary:

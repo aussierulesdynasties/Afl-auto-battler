@@ -67,8 +67,8 @@ static func line(text: String, ids: Dictionary, size: int, colour: Color) -> Ric
 	# The game's faces, never the engine default (director, 2026-10-19).
 	r.add_theme_font_override("normal_font", UiKit.FONT)
 	r.add_theme_font_override("bold_font", UiKit.BOLD)
-	r.add_theme_font_size_override("normal_font_size", size)
-	r.add_theme_font_size_override("bold_font_size", size)
+	UiKit.set_font_size(r, size, "normal_font_size")
+	UiKit.set_font_size(r, size, "bold_font_size")
 	r.add_theme_color_override("default_color", colour)
 	# One colour for the whole line, so its names are bold to read as taps
 	# (director, 2026-10-19: no underline).

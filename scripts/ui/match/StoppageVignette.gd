@@ -13,6 +13,10 @@ extends Control
 
 signal ready_for_call
 
+## How much of the bottom of the scene the call covers once it is up (MatchScene
+## sets it as the call slides up): a name drawn under a man's feet stays above it.
+var call_room := 0.0
+
 ## Only the stoppage: the ruck and the three centre-square midfielders a side.
 const SLOTS := ["R", "C", "RR", "RV"]
 ## Beats of the scene, in seconds.

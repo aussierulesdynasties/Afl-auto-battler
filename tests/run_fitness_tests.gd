@@ -26,6 +26,8 @@ func _run() -> void:
 func _isolate_saves() -> void:
 	var gs = root.get_node("GameState")
 	gs.autosave_enabled = false
+	# These tests drive the hub for other things: no club card opens over it.
+	gs.event_sheets = false
 	gs.save_path = "user://test_career.save"
 	gs.settings_path = "user://test_settings.cfg"
 	gs.show_real_names = false

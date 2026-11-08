@@ -100,7 +100,7 @@ func _rebuild() -> void:
 		b.text = str(c[1])
 		b.flat = true
 		b.custom_minimum_size = Vector2(int(c[2]), 44)
-		b.add_theme_font_size_override("font_size", UiKit.SMALL)
+		UiKit.set_font_size(b, UiKit.SMALL)
 		b.add_theme_color_override("font_color", UiKit.TEXT if key == _sort else UiKit.MUTED)
 		b.tooltip_text = "Sort by %s" % str(NAMES.get(key, key))
 		b.pressed.connect(func():

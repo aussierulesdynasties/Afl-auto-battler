@@ -144,7 +144,9 @@ func _build() -> void:
 	# it, so the whole side shows without scrolling (director, 2026-10-10).
 	_pitch.custom_minimum_size = Vector2(0, 370 if _wide else 600)
 	if stacked:
-		_pitch.custom_minimum_size = Vector2(0, 300 if _wide else 392)
+		# Grown with the text size (Settings): its cards are taller, and an oval
+		# kept short piles them onto one another; the page scrolls instead.
+		_pitch.custom_minimum_size = Vector2(0, UiKit.px(300 if _wide else 392))
 		_pitch.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_pitch.mouse_filter = Control.MOUSE_FILTER_PASS
 	_pitch.draw.connect(_draw_pitch)
@@ -175,7 +177,9 @@ func _build() -> void:
 	# A row of five on a PC; on a phone it wraps rather than widen the screen.
 	var bench := GridContainer.new()
 	bench.name = "Bench"
-	bench.columns = 5 if (_wide or stacked) else 3
+	# Five across a stacked phone holds a surname at the standard text size; a
+	# larger one (Settings) wraps the bench in threes, every name whole.
+	bench.columns = 5 if (_wide or (stacked and UiKit.text_scale <= 1.0)) else 3
 	bench.add_theme_constant_override("h_separation", 6)
 	bench.add_theme_constant_override("v_separation", 6)
 	field.add_child(bench)
@@ -203,10 +207,15 @@ func _build() -> void:
 		rest.size_flags_stretch_ratio = 0.35
 		rest.custom_minimum_size.y = 120
 	add_child(rest)
-	# Role filter and search on one line when the page is stacked.
-	var controls: BoxContainer = rest
+	# Role filter and search on one line when the page is stacked; where the
+	# line is too narrow for both (a small phone at a larger text size,
+	# Settings) the search drops to its own line below, full width.
+	var controls: Container = rest
 	if stacked:
-		controls = UiKit.hbox(6)
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override("h_separation", 6)
+		flow.add_theme_constant_override("v_separation", 6)
+		controls = flow
 		controls.name = "BuilderControls"
 		rest.add_child(controls)
 	var tabs := HBoxContainer.new()
@@ -228,14 +237,19 @@ func _build() -> void:
 			_role = key
 			_build())
 		tabs.add_child(tb)
-	_search_field = UiKit.search_field(_search, "Search your list...")
+	_search_field = UiKit.search_field(_search)
 	_search_field.name = "BuilderSearch"
 	_search_field.text_changed.connect(func(t: String):
 		_search = t
 		_fill_grid())
 	if stacked:
 		_search_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_search_field.custom_minimum_size = Vector2(90, 44)
+		# Never narrower than its hint: where the line is too short for the
+		# hint whole, the field drops to its own line instead of cutting it.
+		var hint_w := UiKit.FONT.get_string_size(_search_field.placeholder_text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				_search_field.get_theme_font_size("font_size")).x
+		var pad := _search_field.get_theme_stylebox("normal").get_minimum_size().x
+		_search_field.custom_minimum_size = Vector2(maxf(90.0, ceilf(hint_w + pad) + 2.0), 44)
 	controls.add_child(_search_field)
 	if _read_only:
 		var ro := UiKit.lbl("Their side as it would take the field: tap a player to see him.", UiKit.SMALL, UiKit.MUTED)
@@ -246,9 +260,11 @@ func _build() -> void:
 		# The player you picked: swap him by tapping another, or look at him.
 		var bar := UiKit.hbox(6)
 		bar.name = "PickedBar"
-		var who := UiKit.ellipsis("%s picked: tap who he swaps with." % GameDB.player_display_name(_player(_picked)),
+		# His name whole: the line wraps rather than cut it.
+		var who := UiKit.lbl("%s picked: tap who he swaps with." % GameDB.player_display_name(_player(_picked)),
 				UiKit.SMALL, UiKit.TEXT, true)
 		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		who.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		who.name = "PickedName"
 		bar.add_child(NameLink.tappable(who, _picked))
 		var prof := UiKit.btn("Profile", 13)
@@ -280,7 +296,9 @@ func _build() -> void:
 		rest.add_child(hint)
 	_grid = GridContainer.new()
 	_grid.name = "NotSelected"
-	_grid.columns = 2
+	# Two abreast on a phone at the standard text size; a larger one (Settings)
+	# gives each card the width, so a full name and its lines stay whole.
+	_grid.columns = 2 if (_wide or UiKit.text_scale <= 1.0) else 1
 	if stacked and _wide:
 		_grid.columns = clampi(int(UiKit.view_width(self) / 400.0), 3, 8)
 	_grid.add_theme_constant_override("h_separation", 6)
@@ -368,7 +386,8 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 			sub.autowrap_mode = TextServer.AUTOWRAP_OFF
 			sub.clip_text = true
 		face.add_child(sub)
-		b.custom_minimum_size = Vector2(84 if _wide else 70, 44)
+		# As wide as the text size (Settings) needs: a surname is never cut short.
+		b.custom_minimum_size = Vector2(UiKit.px(84 if _wide else 70), 44)
 		if not on and not _read_only:
 			# Your guernsey colour across the top of each of your players.
 			for st in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
@@ -614,7 +633,7 @@ func _place_spots() -> void:
 			at = Vector2(-at.x, at.y)
 		var u := Vector2(at.x, at.y) if _across else Vector2(at.y, -at.x)
 		var centre := r.get_center() + Vector2(u.x * r.size.x * 0.5, u.y * r.size.y * 0.5)
-		(c as Control).custom_minimum_size.x = 84.0 if _across else 70.0
+		(c as Control).custom_minimum_size.x = UiKit.px(84 if _across else 70)
 		var sz: Vector2 = (c as Control).get_combined_minimum_size()
 		(c as Control).size = sz
 		(c as Control).position = (centre - sz * 0.5).clamp(r.position, r.end - sz)

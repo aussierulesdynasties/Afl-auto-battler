@@ -139,7 +139,7 @@ func _tighten(tabs: HBoxContainer) -> bool:
 				if sb != null:
 					sb.content_margin_left = pad
 					sb.content_margin_right = pad
-			(t as Button).add_theme_font_size_override("font_size", fs)
+			UiKit.set_font_size(t as Button, fs)
 		return true
 	return false
 
@@ -148,7 +148,7 @@ func _tighten(tabs: HBoxContainer) -> bool:
 func _tabs_width(tabs: HBoxContainer, pad: int, fs: int) -> float:
 	var w := 0.0
 	for t in tabs.get_children():
-		w += UiKit.BOLD.get_string_size((t as Button).text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 2.0 * pad
+		w += UiKit.BOLD.get_string_size((t as Button).text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(fs)).x + 2.0 * pad
 	return w + 2.0 * float(maxi(0, tabs.get_child_count() - 1))
 
 

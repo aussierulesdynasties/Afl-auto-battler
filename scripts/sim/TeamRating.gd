@@ -66,4 +66,11 @@ static func category(phase: String) -> String:
 ## the rating now and where the list is heading over three years
 ## (team_rating_spec.md). Three short sentences, so a phone can break between them.
 static func line(phase: String, now: int, later: int) -> String:
-	return "%s. Team rating %d. On this list, %d in three years." % [category(phase), now, later]
+	return "%s. %s" % [category(phase), rating_line(now, later)]
+
+
+## "Team rating 78. On this list, 81 in three years.": the line without the
+## category, as a letter or a job offer gives a club's list (director,
+## 2026-11-08: the finish and the ratings, nothing else).
+static func rating_line(now: int, later: int) -> String:
+	return "Team rating %d. On this list, %d in three years." % [now, later]
