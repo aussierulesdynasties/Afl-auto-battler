@@ -15,7 +15,9 @@ var _talk_overlay: Control
 var _midseason_overlay: Control
 var _news_overlay: Control
 var _rule_overlay: Control
+var _event_overlay: Control
 var _sim_confirm: Control
+var _skip_confirm: Control
 var _onboarding_overlay: Control
 
 
@@ -69,6 +71,13 @@ func _show_week_ask() -> void:
 	# Sacked, the week's asks (carnival, mid-season pick, press) are the club's,
 	# not his: the card is the only thing on the hub.
 	if GameState.is_sacked():
+		return
+	# A new club card opens over the hub first, once (director, 2026-11-08:
+	# "it feels bad to think youve missed event cards"); closing it brings
+	# the next new one, then the rest of the week's asks. The press
+	# conference after a match is its own screen and comes first: the card
+	# opens when the hub comes back.
+	if not GameState.media_conference_pending() and _show_new_event():
 		return
 	if not MidseasonDraft.carnival_lines(GameState).is_empty():
 		_show_carnival()
@@ -274,7 +283,10 @@ func _build() -> void:
 	var ladder_w := right_w * (1.0 if GameState.news.is_empty() else 0.42)
 	var ladder := _ladder_section(season, -1.0 if _narrow() else ladder_w)
 	var ladder_hugs := false
+	var waiting := _waiting_events()
 	if _narrow():
+		if waiting != null:
+			page.add_child(waiting)
 		if TrainingReport.hub_due(GameState):
 			page.add_child(TrainingReportSheet.hub_card(self, _go_retrain))
 		page.add_child(week)
@@ -290,6 +302,8 @@ func _build() -> void:
 		var left := UiKit.vbox(UiKit.SECTION)
 		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cols.add_child(left)
+		if waiting != null:
+			left.add_child(waiting)
 		if TrainingReport.hub_due(GameState):
 			left.add_child(TrainingReportSheet.hub_card(self, _go_retrain))
 		left.add_child(week)
@@ -515,6 +529,90 @@ func _event_card(index: int) -> Control:
 	return EventCardView.build(index, _narrow(), func(): _build(), _show_rule, _league_names())
 
 
+## The cards still waiting on the coach, first on the hub above everything
+## else until he answers them (director, 2026-11-08), or null.
+func _waiting_events() -> Control:
+	var box: VBoxContainer = null
+	for i in range(GameState.week_events.size()):
+		if bool((GameState.week_events[i] as Dictionary).get("resolved", false)):
+			continue
+		if box == null:
+			box = UiKit.vbox(UiKit.SECTION)
+			box.name = "WaitingEvents"
+		var ev := _event_card(i)
+		box.add_child(ev)
+		# A question still waiting on the coach: it brightens twice, once.
+		if not _settled:
+			UiKit.attention(ev)
+	return box
+
+
+## The first card that has not opened over the hub yet: it opens now, once
+## ("popped" is kept with the card, so it opens on arrival, not every visit).
+## Answer it there, or Later leaves it first on the hub. True if one opened.
+func _show_new_event() -> bool:
+	if _event_overlay != null and is_instance_valid(_event_overlay):
+		return true
+	if not GameState.event_sheets:
+		return false
+	for i in range(GameState.week_events.size()):
+		var card: Dictionary = GameState.week_events[i]
+		if bool(card.get("resolved", false)) or bool(card.get("popped", false)):
+			continue
+		card["popped"] = true
+		GameState.mark_dirty()
+		_open_event_sheet(i)
+		return true
+	return false
+
+
+func _open_event_sheet(index: int) -> void:
+	var box := UiKit.modal_box(self, 520.0, 0.0)
+	_event_overlay = box["overlay"]
+	_event_overlay.name = "EventSheet"
+	var v: VBoxContainer = box["body"]
+	# Whose question it is: your club's colour and crest over the card.
+	var club := UiKit.club_heading(GameState.my_club, null, UiKit.SECONDARY, 18.0)
+	club.name = "EventSheetClub"
+	v.add_child(club)
+	var footer: VBoxContainer = box["footer"]
+	var later := UiKit.btn("Later", UiKit.NAME)
+	later.name = "EventLater"
+	later.custom_minimum_size = Vector2(0, 48)
+	later.pressed.connect(_close_event_sheet)
+	var put_card := func(answered: Callable) -> void:
+		var old := v.get_node_or_null("SheetEvent")
+		if old != null:
+			# Its button is still sending the tap: hide it and let it go.
+			old.name = "SheetEventGone"
+			(old as Control).visible = false
+			old.queue_free()
+		var c := EventCardView.build(index, _narrow(), answered, _show_rule, _league_names(), true)
+		c.name = "SheetEvent"
+		v.add_child(c)
+	# Answered here, the card shows what happened in the sheet; Done closes it.
+	var answered := func() -> void:
+		put_card.call(func(): pass)
+		if is_instance_valid(later):
+			later.queue_free()
+		var done := UiKit.btn("Done", UiKit.NAME, true)
+		done.name = "EventDone"
+		done.custom_minimum_size = Vector2(0, 48)
+		done.pressed.connect(_close_event_sheet)
+		footer.add_child(done)
+		_build()
+	put_card.call(answered)
+	footer.add_child(later)
+
+
+func _close_event_sheet() -> void:
+	if _event_overlay != null and is_instance_valid(_event_overlay):
+		_event_overlay.queue_free()
+	_event_overlay = null
+	_build()
+	_show_week_ask()
+
+
 ## The exact rule behind a choice's line, looked up on purpose.
 func _show_rule(text: String) -> void:
 	if _rule_overlay != null and is_instance_valid(_rule_overlay):
@@ -599,7 +697,7 @@ func _job_offers(v: VBoxContainer, jobs: Array) -> void:
 		if str(o.get("list", "")) != "":
 			row.add_child(_offer_line("The list: " + str(o["list"]), UiKit.TEXT))
 		row.add_child(_offer_line("The board's goal: " + str(o["goal"]), UiKit.TEXT))
-		var take := _nav_button("Take the %s job" % GameDB.club_short(code), func():
+		var take := _nav_button("Take the job", func():
 			if ClubMoves.take_job(GameState, code):
 				_build())
 		take.name = "TakeJob_%s" % code
@@ -700,6 +798,9 @@ func _week_section(season: Season) -> Control:
 	var approaches := _approach_cards()
 	if approaches != null:
 		nv.add_child(approaches)
+	var letter := _letter_card()
+	if letter != null:
+		nv.add_child(letter)
 	if not GameState.pending_mro_challenges().is_empty():
 		nv.add_child(_tribunal_card())
 	var jobs_card := _week_jobs_card()
@@ -870,13 +971,13 @@ func _week_section(season: Season) -> Control:
 			nv.add_child(UiKit.spacer(4))
 			nv.add_child(ms_card)
 	# The week your season ends has its card, the Grand Final played or not.
+	# An answered card shows what happened here; one still waiting leads the
+	# page (_waiting_events).
 	for i in range(GameState.week_events.size()):
+		if not bool((GameState.week_events[i] as Dictionary).get("resolved", false)):
+			continue
 		nv.add_child(UiKit.spacer(4))
-		var ev := _event_card(i)
-		nv.add_child(ev)
-		# A question still waiting on the coach: it brightens twice, once.
-		if not bool((GameState.week_events[i] as Dictionary).get("resolved", false)) and not _settled:
-			UiKit.attention(ev)
+		nv.add_child(_event_card(i))
 
 	# On a wide screen the week's decisions are pinned under the page beside the
 	# rest of the club (_build), so Play match is never below the fold; on a
@@ -884,7 +985,202 @@ func _week_section(season: Season) -> Control:
 	if _narrow():
 		nv.add_child(UiKit.spacer(4))
 		nv.add_child(_with_jobs_note(_week_actions(season)))
+	if not season.is_season_over():
+		nv.add_child(_skip_season_button())
 	return nv
+
+
+## Skip to the end of the season (director, 2026-11-07, 2026-11-08: "It's just
+## skipping games, no off season skipping"): a quiet word under the week,
+## never the main move. A tap opens the sheet that says what is decided for
+## you; nothing is skipped until its own button is pressed.
+func _skip_season_button() -> Button:
+	var b := UiKit.text_action("Skip to the end of the %d season" % GameState.season_year, UiKit.BODY)
+	b.name = "SkipSeason"
+	b.add_theme_color_override("font_color", UiKit.MUTED)
+	b.custom_minimum_size = Vector2(0, 48)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	b.pressed.connect(_open_skip_confirm)
+	return b
+
+
+## The survey before the skip (row 70, T5.Q20; director, 2026-11-07: "I do
+## want the survey"): one question a step, each option with what it does for
+## you and what it costs (SkipOrders), opened on the club's current answers;
+## then the sheet that says what is left and asks. Back steps back a question.
+var _skip_answers := {}
+var _skip_step := 0
+
+
+## The confirm sheet's lines: what is left, your answers, and where it
+## stops. [node name, text, bold].
+static func skip_lines(season: Season, year: int, answers: Dictionary) -> Array:
+	var left := "the rest of the finals"
+	if not season.is_regular_done():
+		var n := season.fixture.size() - season.round_index
+		left = "%d round%s and the finals" % [n, "" if n == 1 else "s"]
+	var qs := SkipOrders.questions()
+	var out := [["SkipLeft", "The rest of the %d season is played out without you: %s." % [year, left], true]]
+	for q in qs:
+		var k := str(q["key"])
+		out.append(["SkipAnswer_" + k, "%s: %s" % [str(SkipOrders.SHORT[k]),
+				SkipOrders.label(qs, k, str(answers.get(k, "")))], false])
+	out.append(["SkipStop", "It stops after the last match of the season: re-signings, trades, free agency and the draft stay yours. If the board sacks you, it stops there.", false])
+	return out
+
+
+func _open_skip_confirm() -> void:
+	var season: Season = GameState.season
+	if season == null or season.is_season_over() or GameState.is_sacked():
+		return
+	_skip_answers = SkipOrders.defaults(GameState.club_plan)
+	_skip_show(0)
+
+
+func _skip_show(step: int) -> void:
+	_close_skip_confirm()
+	_skip_step = step
+	var qs := SkipOrders.questions()
+	var year := GameState.season_year
+	var box := UiKit.modal_box(self, 460.0, 0.0)
+	_skip_confirm = box["overlay"]
+	var v: VBoxContainer = box["body"]
+	var footer: VBoxContainer = box["footer"]
+	var back := UiKit.btn("Cancel" if step == 0 else "Back", UiKit.NAME)
+	back.name = "SkipSeasonCancel" if step == 0 else "SkipBack"
+	back.custom_minimum_size = Vector2(0, 48)
+	back.pressed.connect(_skip_back)
+	if step >= qs.size():
+		_skip_confirm.name = "SkipSeasonConfirm"
+		v.add_child(UiKit.heading("Skip to the end of the %d season?" % year, UiKit.H1))
+		for line in skip_lines(GameState.season, year, _skip_answers):
+			var l := UiKit.lbl(str(line[1]), UiKit.BODY if bool(line[2]) else UiKit.SECONDARY, UiKit.TEXT, bool(line[2]))
+			l.name = str(line[0])
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			v.add_child(l)
+			if bool(line[2]):
+				v.add_child(UiKit.spacer(2))
+				v.add_child(UiKit.lbl("Your calls", UiKit.SECONDARY, UiKit.MUTED, true))
+		var go := UiKit.btn("Skip the season", UiKit.NAME, true)
+		go.name = "SkipSeasonGo"
+		go.custom_minimum_size = Vector2(0, 48)
+		go.pressed.connect(_on_skip_season)
+		footer.add_child(_skip_pair(back, go))
+		return
+	_skip_confirm.name = "SkipSeasonSurvey"
+	var q: Dictionary = qs[step]
+	var key := str(q["key"])
+	var count := UiKit.lbl("Before you skip · %d of %d" % [step + 1, qs.size()], UiKit.SECONDARY, UiKit.MUTED, true)
+	count.name = "SkipStepCount"
+	v.add_child(count)
+	var head := UiKit.heading(str(q["title"]), UiKit.H1)
+	head.name = "SkipQuestion"
+	v.add_child(head)
+	var lead := UiKit.lbl(str(q["lead"]), UiKit.BODY, UiKit.TEXT)
+	lead.name = "SkipLead"
+	lead.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(lead)
+	v.add_child(UiKit.spacer(2))
+	var opts := UiKit.vbox(6)
+	opts.name = "SkipOptions_" + key
+	v.add_child(opts)
+	for o in q["options"]:
+		opts.add_child(_skip_option(key, o as Dictionary, opts))
+	var next := UiKit.btn("Next", UiKit.NAME, true)
+	next.name = "SkipNext"
+	next.custom_minimum_size = Vector2(0, 48)
+	next.pressed.connect(func(): _skip_show(_skip_step + 1))
+	footer.add_child(_skip_pair(back, next))
+
+
+## Back and the way on, side by side (the way on at the right), so the game
+## plan's five answers fit a phone without a scroll.
+func _skip_pair(back: Button, on: Button) -> Control:
+	var row := UiKit.hbox(8)
+	row.name = "SkipButtons"
+	for b in [back, on]:
+		(b as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		(b as Control).size_flags_stretch_ratio = 1.0
+		row.add_child(b)
+	return row
+
+
+## One answer: its name, then what it does for you and what it costs; a tap
+## chooses it (outlined) and moves nothing on.
+func _skip_option(q: String, o: Dictionary, group: Control) -> Control:
+	var key := str(o["key"])
+	var wrap := MarginContainer.new()
+	wrap.name = "SkipOptionWrap_%s_%s" % [q, key]
+	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var b := UiKit.btn("", UiKit.SECONDARY)
+	b.name = "SkipOption_%s_%s" % [q, key]
+	b.custom_minimum_size.y = 48
+	b.set_meta("key", key)
+	wrap.add_child(b)
+	var pad := MarginContainer.new()
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "right"]:
+		pad.add_theme_constant_override("margin_" + side, 12)
+	for side in ["top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, 8)
+	wrap.add_child(pad)
+	var col := UiKit.vbox(2)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad.add_child(col)
+	var name_l := UiKit.lbl(str(o["label"]), UiKit.NAME, UiKit.TEXT, true)
+	name_l.name = "OptionName"
+	col.add_child(name_l)
+	for part in [["Gain", "gain"], ["Cost", "cost"]]:
+		var row := UiKit.hbox(6)
+		row.name = "Option" + str(part[0])
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var tag := UiKit.lbl(str(part[0]), UiKit.SECONDARY, UiKit.MUTED, true)
+		tag.custom_minimum_size.x = 38
+		tag.autowrap_mode = TextServer.AUTOWRAP_OFF
+		tag.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		tag.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		var words := UiKit.lbl(str(o[part[1]]), UiKit.SECONDARY, UiKit.TEXT)
+		words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		for l in [tag, words]:
+			(l as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(l)
+		col.add_child(row)
+	b.pressed.connect(func():
+		_skip_answers[q] = key
+		_skip_paint(group, q))
+	UiKit.set_selected(b, str(_skip_answers.get(q, "")) == key)
+	return wrap
+
+
+func _skip_paint(group: Control, q: String) -> void:
+	for n in group.find_children("SkipOption_*", "Button", true, false):
+		UiKit.set_selected(n as Button, str((n as Button).get_meta("key", "")) == str(_skip_answers.get(q, "")))
+
+
+## Back (the button or Android Back): the question before, or out from the first.
+func _skip_back() -> void:
+	if _skip_step <= 0:
+		_close_skip_confirm()
+	else:
+		_skip_show(_skip_step - 1)
+
+
+func _close_skip_confirm() -> void:
+	if _skip_confirm != null and is_instance_valid(_skip_confirm):
+		_skip_confirm.queue_free()
+	_skip_confirm = null
+
+
+func _on_skip_season() -> void:
+	var orders := _skip_answers.duplicate()
+	_close_skip_confirm()
+	ScreenTransition.run("Playing out the %d season..." % GameState.season_year, _skip_season.bind(orders))
+
+
+func _skip_season(orders := {}) -> void:
+	GameState.skip_season(orders)
+	_build()
 
 
 ## The week's milestones (Milestones.gd), always shown:
@@ -1089,10 +1385,13 @@ func _week_actions(season: Season) -> Control:
 	var buttons: Array = []
 	if season.is_season_over():
 		var resume := GameState.draft != null and GameState.draft.intake_mode
-		if not resume:
-			buttons.append(_nav_button("Trades & Contracts", func(): Router.go("offseason")))
-		buttons.append(_nav_button("Resume national draft" if resume
-				else "%d National Draft" % GameState.season_year, _on_intake_draft, true))
+		# A rival's letter is answered before the off-season opens: its two
+		# buttons are the week's move until then.
+		if not ClubMoves.letter_open(GameState):
+			if not resume:
+				buttons.append(_nav_button("Trades & Contracts", func(): Router.go("offseason")))
+			buttons.append(_nav_button("Resume national draft" if resume
+					else "%d National Draft" % GameState.season_year, _on_intake_draft, true))
 	elif _regular_bye(season):
 		# A home-and-away bye: the season goes on, one round at a time.
 		buttons.append(_nav_button("Team", func(): Router.go("selection")))
@@ -1203,7 +1502,7 @@ func _footer(season: Season, with_sim := true) -> Control:
 	var row := UiKit.hbox(4 if tight else 6)
 	row.name = "HubFooter"
 	for b in buttons:
-		b.add_theme_font_size_override("font_size", 13 if tight else 15)
+		UiKit.set_font_size(b, 13 if tight else 15)
 		b.custom_minimum_size = Vector2(0, 44)
 		if tight:
 			for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
@@ -1282,6 +1581,69 @@ func _approach_cards() -> Control:
 		row.add_child(_approach_button(i, "go", "Let him go"))
 		card.add_child(row)
 		v.add_child(card)
+	v.add_child(UiKit.rule())
+	return v
+
+
+## A rival board's letter after a strong season (T5.r23): who they are, where
+## they finished, why the job is open, their list, their board's goal and the
+## risk, then his answer. Facts only; neither button is the suggested one.
+## Answered, one line says where he stands until the season rolls on.
+func _letter_card() -> Control:
+	var l := ClubMoves.letter(GameState)
+	if l.is_empty() or not GameState.season.is_season_over():
+		return null
+	var code := str(l["code"])
+	var mine := GameDB.club_name(GameState.my_club)
+	var v := UiKit.vbox(4)
+	v.name = "RivalLetter"
+	var answer := str(l.get("answer", ""))
+	if answer != "":
+		var old := GameDB.club_name(str(l["from"]))
+		# Who took the job he left, with both clubs named (ClubMoves.successor_line).
+		var after := str(l.get("after", ""))
+		if after == "":
+			after = ("%s have appointed %s to replace you." % [old, str(l["successor"])]) if str(l.get("successor", "")) != "" \
+					else "%s have yet to name your replacement." % old
+		var done := "You are %s's senior coach now: their contracts, trades and draft are yours this off-season. %s" % [
+				str(l["name"]), after] if answer == "taken" \
+				else "You turned %s down. You stay at %s." % [str(l["name"]), mine]
+		var dl := UiKit.lbl(done, UiKit.BODY, UiKit.TEXT if answer == "taken" else UiKit.MUTED)
+		dl.name = "RivalLetterAnswered"
+		dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(dl)
+		v.add_child(UiKit.rule())
+		return v
+	var name_row := UiKit.hbox(8)
+	name_row.add_child(UiKit.club_marker(code))
+	var nm := UiKit.lbl("A letter from %s" % str(l["name"]), UiKit.NAME, UiKit.club_vivid(code), true)
+	nm.name = "RivalLetterHead"
+	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_row.add_child(nm)
+	v.add_child(name_row)
+	v.add_child(_offer_line("%s, their president, offers you the senior job. You would start now, with their contracts, trades and draft." % str(l["president"]), UiKit.TEXT))
+	v.add_child(_offer_line("Finished %s of %d. %s" % [GameState.ordinal(int(l["finish"])), int(l["clubs"]), str(l["why_open"])], UiKit.TEXT))
+	if str(l.get("list", "")) != "":
+		v.add_child(_offer_line("Their list: " + str(l["list"]), UiKit.TEXT))
+	v.add_child(_offer_line("Their board's goal: " + str(l["goal"]), UiKit.TEXT))
+	var risk_head := UiKit.lbl("The risk", UiKit.SECONDARY, UiKit.TEXT, true)
+	risk_head.name = "RivalLetterRisk"
+	v.add_child(risk_head)
+	for line in ClubMoves.letter_risk(GameState):
+		v.add_child(_offer_line(line, UiKit.TEXT))
+	var row := UiKit.hbox(8)
+	var stay := _nav_button("Stay put", func():
+		if ClubMoves.decline_letter(GameState):
+			_build())
+	stay.name = "RivalLetterStay"
+	var take := _nav_button("Take the job", func():
+		if ClubMoves.accept_letter(GameState):
+			_build())
+	take.name = "RivalLetterTake"
+	row.add_child(stay)
+	row.add_child(take)
+	v.add_child(row)
 	v.add_child(UiKit.rule())
 	return v
 
@@ -1447,6 +1809,8 @@ func _sim_week() -> void:
 	_build()
 	if not GameState.last_results.is_empty():
 		_show_results(GameState.last_results)
+	else:
+		_show_week_ask()
 
 
 ## What the cover says while the week is simmed.
@@ -1497,6 +1861,9 @@ func handle_back() -> bool:
 	if _finals_overlay != null and is_instance_valid(_finals_overlay):
 		_close_finals()
 		return true
+	if _skip_confirm != null and is_instance_valid(_skip_confirm):
+		_skip_back()
+		return true
 	if _onboarding_overlay != null and is_instance_valid(_onboarding_overlay):
 		_close_weekly_loop_intro()
 		return true
@@ -1509,6 +1876,10 @@ func handle_back() -> bool:
 		return true
 	if _rule_overlay != null and is_instance_valid(_rule_overlay):
 		_close_rule()
+		return true
+	# Back on a new card is Later: it stays first on the hub.
+	if _event_overlay != null and is_instance_valid(_event_overlay):
+		_close_event_sheet()
 		return true
 	if _news_overlay != null and is_instance_valid(_news_overlay):
 		_news_overlay.queue_free()

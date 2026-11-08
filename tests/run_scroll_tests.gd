@@ -455,6 +455,8 @@ func _test_hub_round1(size: Vector2i) -> void:
 	var p: Dictionary = _db.club_list("WBD")[0]
 	var card: Dictionary = _state.story_card("contracts_wants_to_extend", p)
 	_check(not card.is_empty(), "%s: the contract card builds" % tag)
+	# Already opened over the hub (Later): this test is the card on the page.
+	card["popped"] = true
 	_state.week_events = [card]
 	_router.go("hub")
 	for i in range(90):

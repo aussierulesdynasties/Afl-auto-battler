@@ -47,6 +47,8 @@ func _run() -> void:
 	_db = root.get_node("GameDB")
 	_router = root.get_node("Router")
 	_gs.autosave_enabled = false
+	# These tests drive the hub for other things: no club card opens over it.
+	_gs.event_sheets = false
 	_gs.save_path = "user://test_namelink.save"
 	_gs.settings_path = "user://test_namelink.cfg"
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
@@ -156,6 +158,14 @@ func _test_training(club: String, sz: Vector2i) -> void:
 
 ## Touch along the label's lines until a profile opens.
 func _tap_scan(label: Control, host: Node) -> bool:
+	# A finger scrolls the line into sight first (a waiting club card leads
+	# the hub and can push it below the fold).
+	var sc := label.get_parent()
+	while sc != null and not (sc is ScrollContainer):
+		sc = sc.get_parent()
+	if sc != null:
+		(sc as ScrollContainer).ensure_control_visible(label)
+		await _settle()
 	var r := label.get_global_rect()
 	var y := r.position.y + 8.0
 	while y < r.end.y:

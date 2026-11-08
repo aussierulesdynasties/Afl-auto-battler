@@ -336,6 +336,9 @@ var settings_path := "user://settings.cfg"
 ## Autosave runs on every screen change, after every round and when the app
 ## is backgrounded or closed. Tests switch it off.
 var autosave_enabled := true
+## A new club card opens over the hub on arrival (HubScene). Never saved;
+## test runs that drive the hub for something else switch it off.
+var event_sheets := true
 ## A new draft or season is seeded from the clock, so no two careers play
 ## alike. Measurement tools set this so a career replays exactly: each of
 ## those seeds then comes from it and the year (_clock_seed). 0 in the game.
@@ -351,6 +354,7 @@ func _ready() -> void:
 	if cfg.load(settings_path) == OK:
 		show_real_names = bool(cfg.get_value("display", "real_names", true))
 	UiKit.apply_appearance(str(cfg.get_value("ui", "appearance", "dark")))
+	UiKit.apply_text_size(str(cfg.get_value("ui", "text_size", "standard")))
 	_carry_old_sound_levels(cfg)
 	_apply_sound_mute(bool(cfg.get_value("ui", "mute_sounds", false)))
 	AudioLevels.apply_volume(AudioLevels.valid(cfg.get_value("ui", "volume", AudioLevels.DEFAULT_VOLUME)))
@@ -425,6 +429,24 @@ func set_appearance(mode: String) -> bool:
 	var changed := appearance() != mode
 	set_setting("appearance", mode)
 	UiKit.apply_appearance(mode)
+	return changed
+
+
+## Standard, Larger or Largest (row 118): an unknown saved value reads as
+## Standard.
+func text_size() -> String:
+	var key := str(get_setting("text_size", "standard"))
+	return key if UiKit.TEXT_SCALE.has(key) else "standard"
+
+
+## Sets the size of the game's words. The caller rebuilds the current screen
+## when this returns true, so no control keeps the old size.
+func set_text_size(key: String) -> bool:
+	if not UiKit.TEXT_SCALE.has(key):
+		return false
+	var changed := text_size() != key
+	set_setting("text_size", key)
+	UiKit.apply_text_size(key)
 	return changed
 
 
@@ -677,10 +699,17 @@ func saved_career_meta() -> Dictionary:
 ## so the last save (from before the match) is the consistent one to keep.
 ## Full saves written this run: tests count them to keep a tap to one save.
 var saves_written := 0
+## Set while the season skip plays the season out: each round leaves the save
+## alone and the skip saves once at the end (a save every round was a quarter of
+## the skip's time). Killed mid-skip, the career is where the skip began.
+var _batching := false
+## The coach's answers to the survey before the season skip (SkipOrders),
+## held only while the skip runs; {} the rest of the time.
+var _skip_orders := {}
 
 
 func autosave() -> bool:
-	if not autosave_enabled or not has_career() or not pending_match.is_empty():
+	if _batching or not autosave_enabled or not has_career() or not pending_match.is_empty():
 		return false
 	return save_career()
 
@@ -1860,6 +1889,9 @@ func begin_intake_draft() -> bool:
 		return false
 	if draft != null and draft.intake_mode:
 		return true  # resume the draft in progress
+	# A rival's letter waits on the Hub; a run that drafts with it unanswered
+	# (headless) says no, and the off-season opens at his club (ClubMoves).
+	ClubMoves.settle_letter(self)
 	open_offseason()
 	recruit_undo.clear()
 	_close_free_agency()
@@ -5275,7 +5307,7 @@ func _club_xp(club: String, p: Dictionary, base: int, staff: Dictionary, on_grou
 ## Manual (spend XP by hand) was cut 2026-11-03: old saves map to the
 ## closest plan (_closest_plan).
 const TRAIN_PLANS := [
-	{"key": "position", "label": "Position plan", "roles": []},
+	{"key": "position", "label": "By position", "roles": []},
 	{"key": "inside_mid", "label": "Inside midfielder", "roles": ["MID"],
 			"text": "Wins the ball at stoppages and keeps it in the tackle.",
 			"weights": {"contested": 3.0, "disposal": 1.0}},
@@ -5785,7 +5817,9 @@ func _close_season_awards() -> void:
 			players[str(p["id"])] = p
 	# Before the off-season releases anyone, so a delisted player keeps it.
 	Career.close_season(players, season_tally, season_year, season_stats, season_stats_from)
-	open_offseason()
+	# Your staff as the season ended, for the season wrap; the off-season
+	# itself opens at the close's end (below).
+	offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() else {}
 	season_awards = Awards.season_awards(season_tally, players, season_year, rising_star_noms)
 	var medal := Awards.norm_smith(_grand_final_result())
 	if not medal.is_empty():
@@ -5844,6 +5878,12 @@ func _close_season_awards() -> void:
 	_coaching_offseason()
 	# Coach arcs: a sacked or poached coach changes clubs (ClubMoves).
 	ClubMoves.season_close(self)
+	# The off-season opens at his club. A rival board's letter waiting for
+	# his answer holds it: it opens once he answers, at whichever club he is
+	# then at (ClubMoves.accept_letter / decline_letter).
+	open_offseason(true)
+	# Its opening moved rival lists: a sacked coach's offers say them as they stand.
+	ClubMoves.restate_offers(self)
 	_season_news()
 
 
@@ -6366,10 +6406,18 @@ func offseason_open() -> bool:
 			and not (draft != null and draft.intake_mode) and offseason_year == season_year
 
 
+## The season's close has run (its awards are out) and the next season has not
+## begun: the feed's "Off-season", also while a rival board's letter holds the
+## off-season's opening (ClubMoves).
+func season_closed() -> bool:
+	return season == null or offseason_year == season_year or int(season_awards.get("year", 0)) == season_year
+
+
 ## Season over: rivals decide on their expiring players at once - keep who
 ## is worth his new price, let the rest go to free agency. Yours wait for you.
-func open_offseason() -> void:
-	if season == null or offseason_year == season_year:
+## `keep_staff`: the season's close already took your staff for the wrap.
+func open_offseason(keep_staff := false) -> void:
+	if season == null or offseason_year == season_year or ClubMoves.letter_open(self):
 		return
 	ensure_contracts()
 	# The season is over: every unfinished project is judged where it stands.
@@ -6384,7 +6432,8 @@ func open_offseason() -> void:
 	department_budget_year = season_year + 1
 	offseason_log = []
 	compensation = []
-	offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() else {}
+	if not keep_staff:
+		offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() else {}
 	_decide_retirements()
 	free_agents = []
 	# A new club's approaches are settled first: it had first call.
@@ -9818,7 +9867,7 @@ func _plan_row(key: String) -> Dictionary:
 
 func train_plan_label(key: String) -> String:
 	var row := _plan_row(key)
-	return str(row.get("label", "Position plan")) if not row.is_empty() else "Position plan"
+	return str(row.get("label", "By position")) if not row.is_empty() else "By position"
 
 
 ## What the plan makes of him, in football terms. The Position plan reads
@@ -10421,7 +10470,7 @@ const NEWS_MIN_OVR := 72
 func add_news(kind: String, text: String, when_label: String = "") -> void:
 	var when := when_label
 	if when == "":
-		when = "Off-season" if offseason_year == season_year or season == null else last_label
+		when = "Off-season" if season_closed() else last_label
 	news.push_front({"year": season_year, "when": when, "kind": kind, "text": text})
 	if news.size() > MAX_NEWS:
 		news.resize(MAX_NEWS)
@@ -10982,12 +11031,46 @@ func _prepare_media_conference(results: Array) -> void:
 			var p := _find_player(str(r.get("id", "")))
 			if not p.is_empty() and MediaConference.is_young(float(p.get("age", 30.0))):
 				young += 1
+	# A listed player's first game, or a career milestone, on the day: only for
+	# a career on record in full, so the count is true.
+	var debut := {}
+	var milestone := {}
+	if roster.size() > side:
+		for r in roster[side]:
+			var p := list_player(str(r.get("id", "")))
+			if p.is_empty() or not Career.complete(p):
+				continue
+			var g := games_played(p)
+			var who := {"id": str(p.get("id", "")), "name": GameDB.player_display_name(p), "games": g}
+			if g == 1 and debut.is_empty():
+				debut = who
+			elif BANNER_MILESTONES.has(g) and g >= 100 and g > int(milestone.get("games", 0)):
+				milestone = who
+	var fin := {}
+	if res.has("tag"):
+		var lbl := str(res.get("label", "final"))
+		if lbl.length() > 2 and lbl.right(1).is_valid_int():
+			lbl = lbl.left(lbl.length() - 2)
+		fin = {"label": lbl if lbl == "Grand Final" else lbl.to_lower(), "status": my_finals_status()}
+	var won_run := 0
+	var form: Array = season.club_results(my_club)
+	for i in range(form.size() - 1, -1, -1):
+		if str(form[i]) != "W":
+			break
+		won_run += 1
 	media_conference = MediaConference.pick({
 		"result": res, "club": my_club, "opponent_name": GameDB.club_name(opp),
 		"round": round_no, "injuries": injuries, "star": star, "year": season_year, "young": young,
-		"named": _press_named(res, side, hurt),
+		"named": _press_named(res, side, hurt), "debut": debut, "milestone": milestone, "final": fin,
+		"losing_run": losing_streak, "winning_run": won_run, "my_pos": my_position(), "opp_pos": club_position(opp),
 	}, media_memory)
 	if not media_conference.is_empty():
+		# How often each question has come up this career: its written
+		# versions take turns (MediaConference._turn).
+		var asked: Dictionary = media_memory["asked"] if media_memory.get("asked") is Dictionary else {}
+		var key := str(media_conference.get("key", ""))
+		asked[key] = int(asked.get(key, 0)) + 1
+		media_memory["asked"] = asked
 		media_conference["opp"] = GameDB.club_name(opp)
 		# How he asks follows your standing with him (director 2026-11-06, Q1);
 		# the question itself stays as it was.
@@ -11348,6 +11431,70 @@ func _next_week_event() -> void:
 	ClubArcs.week(self)
 
 
+## Skip to the end of the season (director, 2026-11-07: "We need to bring back
+## the ability to skip full seasons"; 2026-11-08: "It's just skipping games, no
+## off season skipping"). Every week left, the finals included, is played out
+## without you, exactly as Sim the week plays it, following the survey's
+## answers (SkipOrders). It stops once the season is over, where the last Sim
+## the week stops (the last match opens the off-season, so rivals settle their
+## contracts as always): re-signings, trades, free agency and the draft stay yours.
+## The last week's card is left for you, as after Sim the week. Sacked on the
+## way, it stops there. Saved once, at the end.
+## Returns {"ok", "year", "weeks", "reason": "done" | "sacked" | "none"}.
+func skip_season(orders := {}) -> Dictionary:
+	if season == null or is_sacked() or season.is_season_over():
+		return {"ok": false, "year": season_year, "weeks": 0, "reason": "none"}
+	var year := season_year
+	var weeks := 0
+	_batching = true
+	_skip_orders = SkipOrders.defaults(club_plan)
+	_skip_orders.merge(orders, true)
+	# The survey's answers (SkipOrders): the game plan stands as your plan; a
+	# run for the kids needs auto-pick, which names a promised player.
+	set_club_plan(str(_skip_orders["game_plan"]))
+	if str(_skip_orders["youth"]) == "kids" and not my_selection().is_empty():
+		set_selection({})
+	while season != null and not season.is_season_over() and weeks < 80:
+		if str(_skip_orders["youth"]) == "kids":
+			_skip_back_kids()
+		advance()
+		weeks += 1
+		if is_sacked():
+			break
+	if is_sacked() or season == null or not season.is_season_over():
+		_batching = false
+		_skip_orders = {}
+		autosave()
+		return {"ok": false, "year": year, "weeks": weeks, "reason": "sacked"}
+	_batching = false
+	_skip_orders = {}
+	mark_dirty()
+	autosave()
+	return {"ok": true, "year": year, "weeks": weeks, "reason": "done"}
+
+
+## "Give the kids a run" (SkipOrders): before each week of the skip, your
+## best players with few senior games are promised runs (Backing) until
+## SkipOrders.YOUTH_RUNS are on at once; auto-pick names them.
+func _skip_back_kids() -> void:
+	var on := 0
+	var kids := []
+	for p in my_list:
+		if Backing.is_active(p):
+			on += 1
+		elif can_back(p):
+			kids.append(p)
+	kids.sort_custom(func(a, b):
+		if int(a["overall"]) != int(b["overall"]):
+			return int(a["overall"]) > int(b["overall"])
+		return str(a["id"]) < str(b["id"]))
+	for p in kids:
+		if on >= SkipOrders.YOUTH_RUNS:
+			break
+		_start_backing(p)
+		on += 1
+
+
 func week_event_pending() -> bool:
 	for c in week_events:
 		if not bool((c as Dictionary).get("resolved", false)):
@@ -11363,6 +11510,11 @@ func _settle_week_event() -> void:
 	for i in range(week_events.size()):
 		var card: Dictionary = week_events[i]
 		if bool(card.get("resolved", false)):
+			continue
+		# Away on a skip, the survey's answer to the week's questions (SkipOrders).
+		var pick := SkipOrders.card_choice(card, str(_skip_orders.get("questions", "usual")))
+		if pick >= 0:
+			resolve_card(i, pick)
 			continue
 		var d := int(card.get("default", -1))
 		if d >= 0:
@@ -12284,7 +12436,7 @@ func captaincy_word(p: Dictionary) -> String:
 ## Has the season begun, so that taking an armband off costs? Before round 1,
 ## and through the off-season, changes are free.
 func captaincy_mid_season() -> bool:
-	if season == null or offseason_year == season_year:
+	if season_closed():
 		return false
 	return season.round_index > 0 or season.is_regular_done() or not season.finals.is_empty()
 
@@ -12513,7 +12665,7 @@ func _culture_marks() -> Dictionary:
 ## is in the culture under your leaders (the Captaincy panel).
 func _culture_move(code: String, strand: String, d: int, why: String) -> void:
 	var before := Culture.value(relations, code, strand)
-	var when := "Off-season" if season == null or offseason_year == season_year else last_label
+	var when := "Off-season" if season_closed() else last_label
 	if Culture.change(relations, code, strand, d, why, season_year, when) == 0:
 		return
 	if code == my_club:
