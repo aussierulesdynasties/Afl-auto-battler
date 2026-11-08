@@ -1307,8 +1307,11 @@ func _letter_card() -> Control:
 	var answer := str(l.get("answer", ""))
 	if answer != "":
 		var old := GameDB.club_name(str(l["from"]))
-		var after := ("%s coaches %s now." % [str(l["successor"]), old]) if str(l.get("successor", "")) != "" \
-				else "%s carries on under a new coach." % old
+		# Who took the job he left, with both clubs named (ClubMoves.successor_line).
+		var after := str(l.get("after", ""))
+		if after == "":
+			after = ("%s have appointed %s to replace you." % [old, str(l["successor"])]) if str(l.get("successor", "")) != "" \
+					else "%s have yet to name your replacement." % old
 		var done := "You are %s's senior coach now: their contracts, trades and draft are yours this off-season. %s" % [
 				str(l["name"]), after] if answer == "taken" \
 				else "You turned %s down. You stay at %s." % [str(l["name"]), mine]

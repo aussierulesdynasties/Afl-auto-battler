@@ -3952,7 +3952,9 @@ func _test_rival_letter_taps() -> void:
 			and _state.offseason_open(),
 			"A finger on Take moves him to %s at once and the off-season opens there (%s)" % [code, why])
 	var answered: Label = current_scene.find_child("RivalLetterAnswered", true, false)
-	_check(answered != null and answered.text.contains("senior coach now") and _screen_text().contains("National Draft")
+	_check(answered != null and answered.text.contains("senior coach now") and answered.text.contains("Fremantle have ")
+			and answered.text.contains(_db.club_name(code)) and _screen_text().contains("National Draft")
 			and _screen_text().contains("Trades & Contracts"),
-			"After taking it the hub says so, and his new club's trades, contracts and draft are open")
+			"After taking it the hub says so, who replaced him at Fremantle and where from, and his new club's trades, contracts and draft are open (%s)"
+			% (answered.text if answered != null else "missing"))
 	root.size = size_before

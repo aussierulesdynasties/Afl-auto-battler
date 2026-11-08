@@ -69,6 +69,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_second_sacking_and_retire")
 	_t("_test_real_sacking_record")
 	_t("_test_rival_letter")
+	_t("_test_coach_move_lines")
 	_t("_test_ten_seasons")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -688,6 +689,13 @@ func _test_real_sacking_record() -> void:
 ## trades and draft are his this off-season, and the old club settles its
 ## contracts like any rival under the new club's old coach. One letter a
 ## season; it saves and loads open or answered.
+func _news_has(text: String) -> bool:
+	for item in GameState.news:
+		if str(item.get("text", "")) == text:
+			return true
+	return false
+
+
 func _letters_in_news() -> int:
 	var n := 0
 	for item in GameState.news:
@@ -804,6 +812,13 @@ func _test_rival_letter() -> void:
 			"taken: he coaches %s straight away" % code)
 	_check(_senior_at(code).is_empty() and str(_senior_at("FRE").get("cid", "")) == their_id,
 			"taken: he is %s's one senior coach, and Fremantle are coached by %s's old coach (was %s)" % [code, code, fre_was])
+	var after := str(ClubMoves.letter(GameState).get("after", ""))
+	var their_name := GameDB.player_display_name(_senior_at("FRE"))
+	_check(str(l["why_open"]).find(GameDB.club_name(code)) >= 0 and after.begins_with("Fremantle have appointed %s to replace you." % their_name)
+			and after.find(GameDB.club_name(code)) >= 0,
+			"the letter and the answer name every coach with his club: %s | %s" % [str(l["why_open"]), after])
+	_check(_news_has("You are the new senior coach of %s. %s" % [GameDB.club_name(code), after]),
+			"the news of the move says who replaced him at Fremantle and where from")
 	_check(GameState.offseason_open() and _undecided(code) > 0 and _undecided("FRE") == 0,
 			"taken: the off-season opens; %s's contracts wait for him (%d), Fremantle settle theirs as a rival (%d left)"
 			% [code, _undecided(code), _undecided("FRE")])
@@ -841,3 +856,67 @@ func _test_rival_letter() -> void:
 	_check(str(GameState.coach_arcs["letter"].get("answer", "")) == "declined" and GameState.my_club == "FRE"
 			and GameState.offseason_year == GameState.season_year and GameState.draft.user_club == "FRE",
 			"a draft started with the letter unanswered: he stays, and the off-season opened at Fremantle first")
+
+
+## A stand-in for GameState with only the coaches, so each way a senior job
+## falls open can be set up exactly.
+class FakeCoaches:
+	var coaches := {}
+
+
+## One made-up coach (fictional names, so the lines never lean on a real one).
+func _coach(who: String, status: String, club: String, job: String, stints: Array, sacked_by := {}) -> Dictionary:
+	return {"generic_name": who, "status": status, "club": club, "job": job, "stints": stints, "sacked_by": sacked_by}
+
+
+## Every coach-move line names each coach's club (director, 2026-11-08: "why is
+## it sam mitchell in photo 1 and then simon goodwin in photo 2?"): why the job
+## is open, who the club signed, and who takes the job he leaves.
+func _test_coach_move_lines() -> void:
+	var real_was: bool = GameState.show_real_names
+	GameState.show_real_names = false
+	var y := 2027
+	var signed := _coach("Gary Lenehan", "club", "HAW", "SC", [["SYD", "SA", 2026, y], ["HAW", "SC", y + 1, 0]])
+	var cases := [
+		[_coach("Rex Pollard", "club", "SYD", "SC", [["HAW", "SC", 2026, y]]),
+				"Rex Pollard has left Hawthorn to coach Sydney."],
+		[_coach("Rex Pollard", "club", "SYD", "SA", [["HAW", "SC", 2026, y], ["SYD", "SA", y + 1, 0]]),
+				"Rex Pollard has left Hawthorn to join Sydney's coaching staff."],
+		[_coach("Rex Pollard", "free", "", "", [["HAW", "SC", 2026, y]], {"HAW": y}), "Hawthorn sacked Rex Pollard."],
+		[_coach("Rex Pollard", "retired", "", "", [["HAW", "SC", 2020, y]]), "Rex Pollard has retired as Hawthorn coach."],
+		[_coach("Rex Pollard", "free", "", "", [["HAW", "SC", 2026, y]]), "Hawthorn have not renewed Rex Pollard's contract."],
+		[_coach("Rex Pollard", "club", "HAW", "SA", [["HAW", "SC", 2026, y], ["HAW", "SA", y + 1, 0]]),
+				"Hawthorn have moved Rex Pollard to an assistant's job."],
+	]
+	for c in cases:
+		var gs := FakeCoaches.new()
+		gs.coaches = {"a": c[0], "b": signed.duplicate(true)}
+		var want: String = str(c[1]) + " Gary Lenehan was signed to replace him, but the board wants you instead."
+		var got := ClubMoves.why_open_line(gs, "HAW", y)
+		_check(got == want, "why the job is open, both coaches with their club: %s" % got)
+	# Nobody left: the board wants its sitting coach out.
+	var sitting := FakeCoaches.new()
+	sitting.coaches = {"b": _coach("Gary Lenehan", "club", "HAW", "SC", [["HAW", "SC", 2024, 0]])}
+	_check(ClubMoves.why_open_line(sitting, "HAW", y) == "The Hawthorn board wants to replace Gary Lenehan.",
+			"a sitting coach the board would replace is named: %s" % ClubMoves.why_open_line(sitting, "HAW", y))
+	_check(ClubMoves.why_open_line(FakeCoaches.new(), "HAW", y) == "The Hawthorn board wants a new senior coach.",
+			"no coach at all: the board wants one")
+	# Who takes the job he leaves (read after the move): both clubs named.
+	var after := [
+		[_coach("Gary Lenehan", "club", "FRE", "SC", [["SYD", "SA", 2026, y], ["HAW", "SC", y + 1, y], ["FRE", "SC", y + 1, 0]]),
+				"Fremantle have appointed Gary Lenehan to replace you. Hawthorn had just signed him."],
+		[_coach("Gary Lenehan", "club", "FRE", "SC", [["HAW", "SC", 2024, y], ["FRE", "SC", y + 1, 0]]),
+				"Fremantle have appointed Gary Lenehan to replace you. He makes way for you at Hawthorn."],
+		[_coach("Gary Lenehan", "club", "FRE", "SC", [["FRE", "SA", 2025, y], ["FRE", "SC", y + 1, 0]]),
+				"Fremantle have promoted your old assistant Gary Lenehan to replace you."],
+		[_coach("Gary Lenehan", "club", "FRE", "SC", [["ADE", "SC", 2020, 2024], ["FRE", "SC", y + 1, 0]]),
+				"Fremantle have appointed Gary Lenehan to replace you."],
+	]
+	for c in after:
+		var gs := FakeCoaches.new()
+		gs.coaches = {"b": c[0]}
+		var got := ClubMoves.successor_line(gs, "FRE", "HAW", y)
+		_check(got == str(c[1]), "who replaces him at the club he leaves: %s" % got)
+	_check(ClubMoves.successor_line(FakeCoaches.new(), "FRE", "HAW", y) == "Fremantle have yet to name your replacement.",
+			"no successor yet: said so, club named")
+	GameState.show_real_names = real_was
