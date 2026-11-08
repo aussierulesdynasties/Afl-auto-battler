@@ -34,6 +34,12 @@
 					{
 						"op": "board",
 						"d": -3
+					},
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "You took the board's heat yourself"
 					}
 				],
 				"result": "The board grudgingly agrees to wait."
@@ -76,6 +82,11 @@
 					{
 						"op": "board",
 						"d": -3
+					},
+					{
+						"op": "xp",
+						"d": 2,
+						"who": "side"
 					}
 				],
 				"result": "You stay at the club."
@@ -128,6 +139,10 @@
 					{
 						"op": "board",
 						"d": -3
+					},
+					{
+						"op": "fresh",
+						"who": "subject"
 					}
 				],
 				"result": "{name} rests. The sponsor goes quiet."
@@ -181,6 +196,12 @@
 						"op": "morale",
 						"d": -2,
 						"who": "all"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You kept the players grounded during the run"
 					}
 				],
 				"result": "No billboards. Not yet."
@@ -225,6 +246,12 @@
 					{
 						"op": "board",
 						"d": -4
+					},
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "You fought for the staff"
 					}
 				],
 				"result": "You fight for your people. The board notes it."

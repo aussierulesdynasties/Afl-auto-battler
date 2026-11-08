@@ -4,10 +4,10 @@ TODO row 63 (T5.Q2 and T5.Q3, both answered A). Built like the 17 story-card cos
 ch. 30 row 30): each option keeps its gain and takes one cost that follows the card's premise, from the same set of
 costs (a 10-20% chance of a slow start, a selection promise that stings, board confidence down 2%, one morale point,
 development forgone). The cost line is generated from the effect as a percentage, as on the 17. Nothing is dropped.
-Docs only: no code or balance changes until he rules.
+Sheet 2 was built 2026-11-08 in PR 1153 (director: "Put them in"); see "As built". Sheet 1 is still docs only.
 
-Sources: the gain-only list is `GAIN_ONLY_LEFT` in tests/test_story.gd (36 options today; the ruling said 33, and the
-floor `GAIN_ONLY_FLOOR` is 36); the club list is audit §5 "Club decisions"
+Sources: the gain-only list was `GAIN_ONLY_LEFT` in tests/test_story.gd (36 options on 2026-11-06; the ruling said 33).
+Row 107 folded it into `BOTH_SIDES_LEFT`, which PR 1153 emptied and removed; the club list is audit §5 "Club decisions"
 (DECISION_TRANSPARENCY_AUDIT_2026-10-18.md) checked against data/stories/*.json and GameState.gd on main today.
 
 ## Sheet 1: club dominant options (T5.Q2)
@@ -80,14 +80,16 @@ Cost lines for the two new ones:
 | 35 | training_backed_kid_flying/earned | morale +6%, trust +5% | expects a game (sting 6%) | He's told the spot is his |
 | 36 | finals_week_off/semi | morale +4% all | slow start 10% (side) | No hit-out, half the Rest option's 20% |
 
-## Build notes (for after his ruling)
+## As built (sheet 2, PR 1153)
 
-- `forgo_xp` is worded for one player today; rows 3, 5, 13, 17, 22, 31-34 need it for "all" or "side" (a wording change only).
-- Row 10 needs a cost on the captain while {vice_name} is the subject; row 14 fills the `failed` branch.
-- C1 and C2 are code, not card data (GameState challenge/appeal, a file another PR is editing now).
-- When built, each row comes off `GAIN_ONLY_LEFT` and the floor drops to 0.
+- Rows 1-24 and 28-36 went in as drafted. `forgo_xp` now names who goes without ("every player goes without 6 XP",
+  "each player in the side goes without 4 XP"). Row 10's cost falls on the captain, the card's subject. Row 14
+  fills the `failed` branch.
+- Rows 25-27 changed: "expects a game" would have Auto-pick name him this week, which contradicts the explain
+  answer's own "Nothing is promised." and makes it a smaller copy of the promise answer. Built instead: Standards
+  -1% ("You opened selection up for discussion"), the mirror of the "It's my call" answer's Standards +1%.
+- C1 and C2 are code, not card data (GameState challenge/appeal), and are not built.
 
 ## Questions for the director
 
 1. Sheet 1: board confidence down 2% for a failed Tribunal challenge or appeal, as written?
-2. Sheet 2: all 36 costs as written, or which rows to change?
