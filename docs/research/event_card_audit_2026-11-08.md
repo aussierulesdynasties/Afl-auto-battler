@@ -27,11 +27,12 @@ has seen gets a trigger it can meet. Two questions, two methods:
 
 ## 1. Upside and downside on every choice
 
-The test now fails if a choice joins the short list or the spared list, and fails until a choice that gains
-its missing side comes off it (`BOTH_SIDES_LEFT`, floor 71; `SPARED_GAIN_LEFT`, floor 27; `DOES_NOTHING_LEFT`,
-11). No card copy or effect changed for this half. Every missing side is drafted on a cost sheet for the
-director to rule on: row 63's second sheet (`COST_SHEETS_CLUB_AND_GAIN_ONLY_2026-11-06.md`, 36 gain-only
-choices) and this row's sheets (`COST_SHEETS_ROW107_2026-11-08.md`, the other 35).
+Built (director 2026-11-08: "Put them in", "Give each its own gain"): every choice below now carries the side
+it was missing, from row 63's second sheet (`COST_SHEETS_CLUB_AND_GAIN_ONLY_2026-11-06.md`, 36 gain-only
+choices; rows 25-27 changed, see its "As built") and this row's sheets (`COST_SHEETS_ROW107_2026-11-08.md`, the
+other 35 and the 27 spared). The short, spared and do-nothing lists are gone: `_test_every_choice_has_both_sides`
+now fails if any choice on the deck shows less than a gain and a cost. The lists below are what the audit found
+before the build.
 
 **Cost only (14):** the choice says what it costs and gives nothing back.
 media_young_feature/no, media_team_leak/let, media_cameras_in_rooms/no, media_papers_fronts_group/private,
@@ -56,7 +57,8 @@ captain_contract_open/understood, captain_succession_start/notyet, captain_succe
 other choice's cost it does not carry written as its gain ("No 15% chance of a slow start.",
 `StoryEngine.card_lines`). No screen has printed that line since #837 moved the hub card into EventCardView,
 which prints `stakes_lines`, so on screen these 27 show a cost only. Whether the line counts as an upside, and
-so should be printed again, is a director question; if it does not, each needs a gain of its own.
+so should be printed again, was a director question. Ruled 2026-11-08: it does not count, and each got a gain
+of its own.
 
 ## 2. Can every card come up
 
@@ -130,10 +132,12 @@ life is never about a player under his real name).
   - **Follow the physio's plan.** Its trust gain and morale cost are unchanged; it now also names what it
     costs (new op `keep_out`, no effect of its own): the same XP, and the weeks he is still out at Round 1.
 
-  The trigger now also needs clearing him to gain something (`pre_rush_gain`): a player back next week
-  anyway brings no card. Grid 4 ran before this narrowing. `tests/test_preseason_cards.gd`: `_test_facts`
+  Director 2026-11-08: the card comes every time, for any pre-season injury the physio is managing as it
+  nears its end (1 to 6 weeks left), never for a concussion. A player back for next week's training anyway
+  still brings it, and clearing him then says so: "He trains with the group from now. On the physio's plan he
+  is back for next week's training anyway, so clearing him gains no development and no Round 1 game." `tests/test_preseason_cards.gd`: `_test_facts`
   checks the trigger, the words and the concussion bar; `_test_running_again` checks the numbers and lines
-  on the club's blocks, the cleared result, the Round 1 case, the no-gain bar, and, walking ten pre-seasons
+  on the club's blocks, the cleared result, the Round 1 case, the back-next-week case and the concussion bar, and, walking ten pre-seasons
   with a Heavy first block (the injury risk raised for the test), that at a card stop a player hurt on the
   track meets the trigger and nobody else does.
 

@@ -1065,8 +1065,8 @@ func _test_papers_cards_are_football() -> void:
 	var priv := _choice("media_papers_fronts_group", "private")
 	_check(_effect(front, "board").is_empty() and _effect(priv, "board").is_empty()
 			and int(_effect(front, "trust").get("d", 0)) > 0 and int(_effect(priv, "trust").get("d", 0)) < 0
-			and _effect(priv, "morale").is_empty() and not _effect(front, "delegate").is_empty(),
-			"Fronting the group is a risk on the room (it depends on whether the group listens to him); keeping it private gains nothing and costs his trust")
+			and int(_effect(priv, "morale").get("d", 0)) > 0 and not _effect(front, "delegate").is_empty(),
+			"Fronting the group is a risk on the room (it depends on whether the group listens to him); keeping it private lifts the side (the review stays on the football, sheet A5) and costs his trust")
 	var dg := _effect(front, "delegate")
 	_check(int(((dg["held"] as Array)[0] as Dictionary)["d"]) > 0 and int(((dg["failed"] as Array)[0] as Dictionary)["d"]) < 0,
 			"...the room's morale rises if the group listens and falls if it does not")
@@ -2959,58 +2959,11 @@ func _test_vacancy_is_filled() -> void:
 # downside with the size and the odds; an option with no downside is a design fault.
 # Row 107, T5.Q18: every event-card choice gets an upside and a downside) ---
 
-## The choices still short of a gain or a cost on the card (2026-11-08): 46 gain only,
-## 14 cost only, 11 that do nothing or only spare another choice's cost. Their missing
-## sides are drafted on row 63's second cost sheet and row 107's (docs/research).
-## This list may only shrink: a choice that gets its missing side comes off, and no new
-## one may join.
-const BOTH_SIDES_LEFT := ["training_extra_session/recover", "training_seniors_day_off/give",
-		"training_time_trial/skip", "training_new_stoppage_setup/hold", "training_backed_kid_flying/earned",
-		"finals_week_off/semi", "health_finals_light_week/light", "media_young_feature/no", "media_team_leak/let",
-		"media_cameras_in_rooms/no", "media_papers_fronts_group/private", "media_trial_worked/ok",
-		"media_trial_not_yet/ok", "finals_written_off/pin", "finals_written_off/back", "finals_one_week_short/not_done",
-		"contracts_wants_to_extend/wait", "contracts_manager_noise/ignore", "captain_selection_word/talk",
-		"captain_selection_word/coaches", "captain_group_flat/dayoff", "captain_group_flat/hard",
-		"captain_harder_session/keep", "captain_young_player/notyet", "captain_big_week/speak",
-		"captain_holding_group/noticed", "captain_holding_group/letbe", "captain_slump_good/noticed",
-		"captain_slump_good/letbe", "captain_slump_flat/nerve", "captain_contract_wait/hand", "captain_contract_wait/ride",
-		"captain_contract_signed/good", "captain_contract_signed/letbe", "captain_contract_open/understood",
-		"captain_succession_start/handover", "captain_succession_start/asks", "captain_succession_start/notyet",
-		"captain_succession_next/later", "finals_last_season/quiet", "finals_second_chance/burn",
-		"finals_captain_last_word/him", "gf_last_game/him", "gf_last_game/calm", "finals_knocked_out/thanks",
-		"gf_runners_up/let_go", "community_hospital_visit/go", "finals_club_greats/in", "gf_night_before/together",
-		"gf_night_before/families", "rivals_spy_at_training/let", "rivals_mouthing_off/calm", "gf_the_opponent/us",
-		"board_president_lunch/no", "members_open_training/open", "members_open_training/closed",
-		"members_signing_session/no", "members_forum/results", "members_finals_tickets/ceo", "finals_in/enjoy",
-		"gf_milestone/banner", "gf_milestone/club", "finals_drought_over/feel", "finals_drought_over/outside",
-		"gf_premiers/again", "selection_talk_dropped/explain", "selection_talk_back/explain",
-		"selection_talk_waiting/explain", "finals_first_final/minder", "finals_first_final/alone", "gf_debut_year/away"]
-const BOTH_SIDES_FLOOR := 71
-## The choices whose card shows a cost and no gain, and whose only upside is the other
-## choice's cost that they spare (StoryEngine.card_lines: "No 15% chance of a slow
-## start."). No screen prints that line since #837 (the hub card moved into EventCardView,
-## which prints stakes_lines), so the coach sees a cost only. Counted on their own until
-## the director rules whether the spared line counts as an upside. Shrink only.
-const SPARED_GAIN_LEFT := ["health_pulled_up_sore/play", "family_baby_due/play", "family_dad_in_hospital/stay",
-		"family_brothers_wedding/play", "family_partner_job_offer/footy", "media_radio_spray/ignore",
-		"media_newspaper_column/no", "media_papers_again/stand", "contracts_waited_manager_calls/market",
-		"leadership_senior_runs_session/no", "captain_leaders_meeting/sit", "captain_leaders_meeting/notweek",
-		"captain_rest_ask/play", "captain_slump_mid/leave", "captain_contract_start/wait",
-		"community_country_clinic/no", "community_junior_club_fire/jumper", "community_school_visit/no",
-		"board_wants_answers/patience", "board_sponsor_shoot/no", "board_billboards/no", "board_savings/fight",
-		"members_cheer_squad/no", "selection_talk_dropped/call", "selection_talk_back/call",
-		"selection_talk_waiting/call", "selection_finals_experience/stick"]
-const SPARED_GAIN_FLOOR := 27
-## The choices with no lasting effect (only a story flag, or nothing at all): the 2026-10-12
-## audit's "a choice that does nothing" (rule 38). Shrink only.
-const DOES_NOTHING_LEFT := ["captain_young_player/notyet", "captain_holding_group/letbe",
-		"captain_slump_good/letbe", "captain_slump_flat/nerve", "captain_contract_wait/hand",
-		"captain_contract_signed/letbe", "captain_contract_open/understood", "captain_succession_start/notyet",
-		"captain_succession_next/later", "media_trial_worked/ok", "media_trial_not_yet/ok"]
-
-
 ## Every choice on every card shows a Gain line and a Cost line under its button
-## (bible principle 4), the international and pre-season cards included. The lines are
+## (bible principle 4), the international and pre-season cards included. Director,
+## 2026-11-08: every one-sided choice took its drafted side (row 107 and row 63's
+## second sheet), and the choices whose only upside was the cost they spared each got
+## a gain of their own, so no choice is let off: not one short, spared or doing nothing. The lines are
 ## the ones the coach reads: StoryEngine.stakes_lines of the choice's own effects, as
 ## EventCardView prints them on the hub and pre-season cards. Built with every choice the
 ## card is written with, so a choice the week's facts hide (the semi-final week off) is
@@ -3053,25 +3006,14 @@ func _test_every_choice_has_both_sides() -> void:
 				spared.append(key)
 			else:
 				short.append(key)
-	var new_ones := short.filter(func(k): return not BOTH_SIDES_LEFT.has(k))
-	var gone := BOTH_SIDES_LEFT.filter(func(k): return not short.has(k))
-	_check(new_ones.is_empty(), "No choice joins the one-sided list: a new or changed choice states a gain and a cost (%s)"
-			% ", ".join(PackedStringArray(new_ones)))
-	_check(gone.is_empty() and BOTH_SIDES_LEFT.size() <= BOTH_SIDES_FLOOR,
-			"The one-sided list only shrinks: take off the choices that now show both sides (%s)" % ", ".join(PackedStringArray(gone)))
-	var new_spared := spared.filter(func(k): return not SPARED_GAIN_LEFT.has(k))
-	var spared_gone := SPARED_GAIN_LEFT.filter(func(k): return not spared.has(k))
-	_check(new_spared.is_empty() and spared_gone.is_empty() and SPARED_GAIN_LEFT.size() <= SPARED_GAIN_FLOOR,
-			"The list of choices that show only a cost and spare the other's only shrinks (new: %s; gone: %s)"
-			% [", ".join(PackedStringArray(new_spared)), ", ".join(PackedStringArray(spared_gone))])
+	_check(short.is_empty(), "Every choice states a gain and a cost on screen; these are short of one (%s)"
+			% ", ".join(PackedStringArray(short)))
+	_check(spared.is_empty(), "No choice's only gain is the other choice's cost it spares (%s)"
+			% ", ".join(PackedStringArray(spared)))
 	var both := n - short.size() - spared.size()
-	_check(n >= 290 and both >= 192, "%d of %d choices show a gain and a cost on screen (%d more show a cost and only spare the other's)"
-			% [both, n, spared.size()])
-	var new_nothing := nothing.filter(func(k): return not DOES_NOTHING_LEFT.has(k))
-	var nothing_gone := DOES_NOTHING_LEFT.filter(func(k): return not nothing.has(k))
-	_check(new_nothing.is_empty() and nothing_gone.is_empty(),
-			"No new choice is without a lasting effect, and one that now has one comes off the list (new: %s; gone: %s)"
-			% [", ".join(PackedStringArray(new_nothing)), ", ".join(PackedStringArray(nothing_gone))])
+	_check(n >= 290 and both == n, "%d of %d choices show a gain and a cost on screen" % [both, n])
+	_check(nothing.is_empty(), "Every choice has a lasting effect, not only a story flag (%s)"
+			% ", ".join(PackedStringArray(nothing)))
 	# The check bites: a gain-only choice shows no Cost line...
 	var bite := StoryEngine.stakes_lines([{"op": "morale", "d": 4}], {})
 	_check(not bite.is_empty() and not _has_mark(bite, StoryEngine.COST_MARK),

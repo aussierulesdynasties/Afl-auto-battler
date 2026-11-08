@@ -331,8 +331,9 @@ func _test_facts() -> void:
 ## The running-again card (row 107) in the pre-season's own words: clearing him gains
 ## the training and the Round 1 he would miss on the physio's plan, on the club's blocks;
 ## it costs soreness to Round 1 and the Heavy weeks he would have sat out; the physio's
-## plan costs that training. A player back next week anyway brings no card. In play, a
-## Heavy first block hurts players on the track and a story stop deals the card about one.
+## plan costs that training. A player back next week anyway still brings the card
+## (director 2026-11-08: every time), and clearing him says it gains him nothing. In play,
+## a Heavy first block hurts players on the track and a story stop deals the card about one.
 func _test_running_again() -> void:
 	var kt := StoryDeck.by_id(StoryDeck.all(), "pre_knee_return")
 	_career()
@@ -369,10 +370,26 @@ func _test_running_again() -> void:
 	_check(int(card["facts"]["pre_miss_rounds"]) == 3 and " ".join(StoryEngine.stakes_lines(card["options"][0]["effects"], card["facts"])).contains("right for Round 1")
 			and " ".join(StoryEngine.stakes_lines(card["options"][1]["effects"], card["facts"])).contains("still out at Round 1, with three weeks to run"),
 			"Eight weeks out, the physio's plan keeps him out of Round 1 and clearing him makes him right for it")
-	# Back next week anyway: clearing him gains nothing, so the card does not come.
+	# Back next week anyway: the card still comes, and clearing him says it gains nothing.
 	p["injury_weeks"] = 1
+	_check(not StoryEngine.eligible_subject(kt, ClubStories.context(GameState), GameState.story, 100, RandomNumberGenerator.new()).is_empty(),
+			"A player back next week anyway still brings the running-again card")
+	card = GameState.story_card("pre_knee_return", p)
+	var soon := StoryEngine.stakes_lines(card["options"][0]["effects"], card["facts"])
+	var soon_blob := " / ".join(soon)
+	_check(int(card["facts"]["pre_miss_xp"]) == 0 and int(card["facts"]["pre_miss_rounds"]) == 0
+			and _has_gain(soon) and soon_blob.contains("back for next week's training anyway")
+			and soon_blob.contains("gains no development and no Round 1 game")
+			and not soon_blob.contains("would otherwise miss") and not soon_blob.contains("right for Round 1"),
+			"Back next week anyway, clearing him says truthfully it gains little: %s" % soon_blob)
+	var soon_physio := StoryEngine.stakes_lines(card["options"][1]["effects"], card["facts"])
+	_check(_has_gain(soon_physio) and " / ".join(soon_physio).contains("morale down"),
+			"...and the physio's plan still shows a gain and a cost: %s" % " / ".join(soon_physio))
+	# A concussion never brings it.
+	p["injury_weeks"] = 3
+	p["injury_kind"] = "concussion"
 	_check(StoryEngine.eligible_subject(kt, ClubStories.context(GameState), GameState.story, 100, RandomNumberGenerator.new()).is_empty(),
-			"A player back next week anyway brings no running-again card")
+			"A concussed player never brings the running-again card")
 	p["injury_weeks"] = 0
 	p.erase("injury_kind")
 	# In play: a Heavy first block, walked stop by stop. At each card stop, a player hurt
@@ -443,3 +460,10 @@ func _test_hands_off_and_save() -> void:
 			break
 	_check(found, "A card stop turned up in twenty careers to save at")
 	GameState.delete_saved_career()
+
+
+func _has_gain(lines: PackedStringArray) -> bool:
+	for l in lines:
+		if str(l).begins_with(StoryEngine.GAIN_MARK):
+			return true
+	return false

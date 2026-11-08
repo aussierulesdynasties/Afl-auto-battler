@@ -3,13 +3,13 @@
 TODO row 107 (T5.Q18): every event-card choice gets an upside and a downside. Built like row 63's sheets
 (`COST_SHEETS_CLUB_AND_GAIN_ONLY_2026-11-06.md`): each choice keeps what it does and takes the one side it is
 missing, from the effects cards already use, sized like their neighbours, and following the card's premise.
-The line under the button is generated from the effect, as on every other card. Docs only: these sheets
-change no card.
+The line under the button is generated from the effect, as on every other card. Built 2026-11-08 in PR 1153
+(director: "Put them in"); see "As built" at the end.
 
 Sources: `BOTH_SIDES_LEFT` in tests/test_story.gd and `tools/audit/sides_impl.gd` (what each button shows on
 screen, `StoryEngine.stakes_lines`). Row 63's second sheet already covers 36 of the 46 gain-only choices; these
-sheets cover the other 35 short choices. The 27 choices whose only gain is the other choice's cost they spare
-are not here: whether that line counts as an upside is its own question (see the end).
+sheets cover the other 35 short choices. The 27 choices whose only gain was the other choice's cost they
+spared each got a gain of their own (director 2026-11-08, see the end).
 
 Effects used: "morale N%" (`morale`, for him, the side or the whole list), "trust N%" (`trust`), "board N%"
 (`board`), a culture strand ("Togetherness", "Standards", "Ambition", `culture`), "N XP" (`xp`), "slow start N%"
@@ -73,17 +73,44 @@ The ten gain-only choices row 63's sheet does not cover.
 | C9 | finals_drought_over/outside | 3 XP (all), Standards +1% | morale -1% (all) | The players miss the moment |
 | C10 | gf_premiers/again | morale +4% (all), Ambition +2% | board -2% | The club and its members wanted the party |
 
-## Build notes (for after the ruling)
+## The 27 spared choices: built, each with a gain of its own
 
-- A6, A15, A16 and B7 change wording only: the line moves from a note (or the unprinted spared line) to a Gain line.
-- B2 and B3 are each the only answer on their card; they keep one button.
-- B9 needs a morale effect on {vice_name} while the captain is the subject (row 63's build notes, row 10).
-- Each built row comes off `BOTH_SIDES_LEFT`, and `BOTH_SIDES_FLOOR` drops by one.
+Director, 2026-11-08: "Give each its own gain". A printed "avoids" line does not count; each choice now carries a
+real effect, shown as a Gain line under its button.
 
-## The 27 spared choices
+| Card / choice | Gain (built) |
+|---|---|
+| health_pulled_up_sore/play | his morale +2% |
+| family_baby_due/play | Standards +1% |
+| family_dad_in_hospital/stay | board +2% |
+| family_brothers_wedding/play | morale +1% (side) |
+| family_partner_job_offer/footy | Ambition +1% |
+| media_radio_spray/ignore | board +2% |
+| media_newspaper_column/no | he gets 3 XP |
+| media_papers_again/stand | Standards +1% |
+| contracts_waited_manager_calls/market | board +2% |
+| leadership_senior_runs_session/no | Standards +1% |
+| captain_leaders_meeting/sit | board +1% |
+| captain_leaders_meeting/notweek | 2 XP (side) |
+| captain_rest_ask/play | Standards +1% |
+| captain_slump_mid/leave | he gets 3 XP |
+| captain_contract_start/wait | board +1% |
+| community_country_clinic/no | his morale +2% |
+| community_junior_club_fire/jumper | board +1% |
+| community_school_visit/no | Standards +1% |
+| board_wants_answers/patience | Togetherness +1% |
+| board_sponsor_shoot/no | fresh legs this week |
+| board_billboards/no | Standards +1% |
+| board_savings/fight | Togetherness +1% |
+| members_cheer_squad/no | he gets 2 XP |
+| selection_talk_dropped/call, selection_talk_back/call, selection_talk_waiting/call | Standards +1% each |
+| selection_finals_experience/stick | Togetherness +1% |
 
-Each shows a cost on screen and nothing else. Its upside is the other choice's cost it does not carry ("he plays
-this week", "no slow start"), which `StoryEngine.card_lines` writes as a Gain line but no screen has printed
-since #837 moved the hub card into EventCardView. If that line counts as an upside, printing it under the button
-again gives all 27 both sides with no card change. If it does not, each needs a gain of its own, drafted as
-sheet A was. The list is `SPARED_GAIN_LEFT` in tests/test_story.gd.
+## As built (PR 1153)
+
+- Every row on sheets A, B and C went in as drafted. `BOTH_SIDES_LEFT`, `SPARED_GAIN_LEFT` and `DOES_NOTHING_LEFT`
+  are gone: tests/test_story.gd now requires all of the deck's choices to show a gain and a cost.
+- A6: the note reads "{wait_price}" alone, under the open_price Gain line ("No 15% early premium...").
+- B8 and B9 have new result lines ("{name} keeps leading the group as he is.", "{name} keeps the armband for
+  now."). B9's cost reaches the vice-captain through a new effect target, `who: "vice"` (morale only).
+- The captain's contract talk (A1, B1): both answers now carry a gain and a cost, so the card stays dealt.

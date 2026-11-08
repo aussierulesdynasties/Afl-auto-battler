@@ -575,10 +575,8 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"new_here": _new_here(gs, p), "out_of_side": out_of_side(gs, p), "trial_place": _trial_place(gs, id),
 			"injury_kind": str(p.get("injury_kind", "")),
 			"injury_word": Injuries.wording(str(p.get("injury_kind", ""))) if int(p.get("injury_weeks", 0)) > 0 else "",
-			# Injured in the pre-season: what the physio's plan costs him, and whether
-			# clearing him now gains anything (preseason_miss).
-			"pre_miss_xp": int(miss["xp"]), "pre_miss_heavy": int(miss["heavy"]), "pre_miss_rounds": int(miss["rounds"]),
-			"pre_rush_gain": 1 if int(miss["xp"]) > 0 or int(miss["rounds"]) > 0 else 0}
+			# Injured in the pre-season: what the physio's plan costs him (preseason_miss).
+			"pre_miss_xp": int(miss["xp"]), "pre_miss_heavy": int(miss["heavy"]), "pre_miss_rounds": int(miss["rounds"])}
 	# International prospects' cards: where he comes from and how far into his career he is.
 	var country: Dictionary = InternationalProspects.country(str(p.get("intl", "")))
 	var career := Career.of(p)
@@ -829,6 +827,10 @@ static func _targets(gs, e: Dictionary, p: Dictionary) -> Array:
 				for id in side[k]:
 					ids[str(id)] = true
 			return gs.my_list.filter(func(q): return ids.has(str(q["id"])))
+		"vice":
+			# The vice-captain (captain's cards): the one _leader_facts names.
+			var vid := str(_leader_facts(gs).get("vice_id", ""))
+			return gs.my_list.filter(func(q): return vid != "" and str(q["id"]) == vid)
 	return gs.my_list
 
 

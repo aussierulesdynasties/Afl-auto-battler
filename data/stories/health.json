@@ -44,6 +44,10 @@
 				"effects": [
 					{
 						"op": "sore"
+					},
+					{
+						"op": "morale",
+						"d": 2
 					}
 				],
 				"result": "{name} plays. Fingers crossed."
@@ -171,6 +175,11 @@
 				"effects": [
 					{
 						"op": "fresh",
+						"who": "all"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 6,
 						"who": "all"
 					}
 				],
@@ -398,8 +407,7 @@
 			"where": {
 				"injured_weeks_min": 1,
 				"injured_weeks_max": 6,
-				"rushable": true,
-				"pre_rush_gain_min": 1
+				"rushable": true
 			},
 			"pick": "highest:overall"
 		},

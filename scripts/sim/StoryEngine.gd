@@ -803,7 +803,9 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 			return [["gain", "No %s early premium: his price waits on his form, lower if it drops, higher if he improves." % _pct(EARLY_PREMIUM_PCT)]]
 		# A choice that holds a player back from development the other choice gives.
 		"forgo_xp":
-			return [] if d <= 0 else [["cost", "Slower growth: he goes without %d XP of development (a senior game gives %d)." % [d, SENIOR_GAME_XP]]]
+			var without: String = {"side": "each player in the side goes", "all": "every player goes",
+					"others": "each of the others goes"}.get(who, "he goes")
+			return [] if d <= 0 else [["cost", "Slower growth: %s without %d XP of development (a senior game gives %d)." % [without, d, SENIOR_GAME_XP]]]
 		# The physio's plan in the pre-season: he stays out as long as the injury runs.
 		"keep_out":
 			var out := []
@@ -829,6 +831,9 @@ static func _rush_preseason(facts: Dictionary) -> Array:
 				xp, SENIOR_GAME_XP]])
 	if rounds > 0:
 		out.append(["gain", "He is right for Round 1, where on the physio's plan he would still be out with %s to run." % _weeks_of(rounds)])
+	if xp <= 0 and rounds <= 0:
+		# Nearly right anyway (director 2026-11-08: the card comes every time).
+		out.append(["gain", "He trains with the group from now. On the physio's plan he is back for next week's training anyway, so clearing him gains no development and no Round 1 game."])
 	# The card comes after the week's time trial or pre-season match (GameState.preseason_advance).
 	var games := "Round 1" if int(facts.get("pre_week", 0)) >= int(PreSeason.tune("practice_week")) else "the pre-season match and Round 1"
 	out.append(["cost", "He is sore until Round 1: %s chance he is hurt in %s (any injury, not only this one; %s), and he starts each %s short of fresh legs." % [
@@ -1050,6 +1055,8 @@ static func _morale_words(d: int, who: String) -> String:
 	var move := "%s %s" % ["up" if d > 0 else "down", _pct(absi(d))]
 	if who == "subject":
 		return "His morale %s." % move
+	if who == "vice":
+		return "{vice_name}'s morale %s." % move
 	var group: String = {"side": "across the side", "all": "across the whole list", "others": "in the rest of the group"}.get(who, "in the group")
 	return "Morale %s %s." % [move, group]
 
