@@ -131,7 +131,7 @@ const CLUB_FACTS := ["club", "opp", "round", "year", "losing_run", "winning_run"
 		"result", "lost_final", "lost_prelim", "margin", "margin_line", "history_line", "best_line"]
 
 const DEFAULTS := {"weight": 1, "cooldown": 40, "subject_cooldown": 8, "per_season": 0,
-		"phase": ["regular"], "default": -1, "bye": false, "priority": false}
+		"phase": ["regular"], "default": -1, "bye": false, "priority": false, "always": false}
 
 ## The international prospects' cards (data/stories/international.json).
 const INTERNATIONAL_FILE := "res://data/stories/international.json"
@@ -281,6 +281,8 @@ static func _check_card(t: Dictionary) -> Array:
 				errs.append_array(_check_text(id, str(s), player))
 	# What's at risk, in one short line under the text (optional).
 	errs.append_array(_check_text(id, str(t.get("stakes", "")), player))
+	if bool(t.get("always", false)) and not player:
+		errs.append("%s: a card that always comes needs a player, once each a season" % id)
 	var choices: Array = t.get("choices", [])
 	if choices.size() < 2 and not (bool(t.get("scripted", false)) and choices.size() == 1):
 		errs.append("%s: a card needs at least two choices" % id)

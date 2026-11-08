@@ -658,7 +658,6 @@ static func _new_here(gs, p: Dictionary) -> bool:
 	return int(p.get("joined", 0)) == last or int(p.get("drafted_year", 0)) == last
 
 
-## Where he finished in this pre-season's time trial: "best", "worst" or "".
 ## What the physio's plan costs a player injured in the pre-season, on the club's
 ## blocks as set: the development of the weeks he sits out (a week passes for him,
 ## then the week is trained, as GameState.preseason_step_week does; PreSeason.week_xp,
@@ -685,6 +684,7 @@ static func preseason_miss(gs, p: Dictionary) -> Dictionary:
 	return out
 
 
+## Where he finished in this pre-season's time trial: "best", "worst" or "".
 static func _trial_place(gs, id: String) -> String:
 	var tr: Dictionary = gs.preseason_trial()
 	if (tr.get("best", []) as Array).has(id):
@@ -814,7 +814,7 @@ static func trial_role(p: Dictionary) -> String:
 	return ""
 
 
-static func _targets(gs, e: Dictionary, p: Dictionary) -> Array:
+static func _targets(gs, e: Dictionary, p: Dictionary, facts := {}) -> Array:
 	match str(e.get("who", "subject")):
 		"subject":
 			return [p] if not p.is_empty() else []
@@ -828,8 +828,9 @@ static func _targets(gs, e: Dictionary, p: Dictionary) -> Array:
 					ids[str(id)] = true
 			return gs.my_list.filter(func(q): return ids.has(str(q["id"])))
 		"vice":
-			# The vice-captain (captain's cards): the one _leader_facts names.
-			var vid := str(_leader_facts(gs).get("vice_id", ""))
+			# The vice-captain the card named when it was dealt, even if the armbands
+			# have moved since (the card points at the Captaincy page).
+			var vid := str(facts.get("vice_id", ""))
 			return gs.my_list.filter(func(q): return vid != "" and str(q["id"]) == vid)
 	return gs.my_list
 
@@ -839,7 +840,7 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 	var name := str(facts.get("name", ""))
 	match str(e.get("op", "")):
 		"morale":
-			for q in _targets(gs, e, p):
+			for q in _targets(gs, e, p, facts):
 				ClubLife.add_morale(q, d)
 			applied["morale"] = int(applied.get("morale", 0)) + d
 		"xp":

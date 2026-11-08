@@ -119,7 +119,9 @@ life is never about a player under his real name).
   managing that can be rushed (not a concussion), titled "{name} is running again", and names the injury
   ("after a hamstring strain"). Only a Heavy pre-season week injures, so a club that trains Solid all summer
   never sees it: in grid 4, where the coach's first block is Heavy Running, its trigger held 96 weeks and it
-  came up 10 times.
+  came up 10 times. That grid ran while it was still a drawn card; it is now marked `always`, so each card
+  stop deals it for every player who fits, once each a pre-season. An injury after the last card stop (week
+  7), such as one in the pre-season match, has no stop left to bring it.
 
   Its choices now speak of the pre-season, not a match week. Both are worked out from the club's blocks as
   set (`ClubStories.preseason_miss`: the weeks he would sit out, what each would have trained, and the
@@ -138,8 +140,9 @@ life is never about a player under his real name).
   is back for next week's training anyway, so clearing him gains no development and no Round 1 game." `tests/test_preseason_cards.gd`: `_test_facts`
   checks the trigger, the words and the concussion bar; `_test_running_again` checks the numbers and lines
   on the club's blocks, the cleared result, the Round 1 case, the back-next-week case and the concussion bar, and, walking ten pre-seasons
-  with a Heavy first block (the injury risk raised for the test), that at a card stop a player hurt on the
-  track meets the trigger and nobody else does.
+  with a Heavy first block (the injury risk raised for the test), that each card stop deals it for every
+  player who fits and nobody else; `_test_running_again_comes` checks quiet weeks, a full category, two
+  players at once, and once each a season.
 
 ## Not exercised
 

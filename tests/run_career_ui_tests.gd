@@ -2272,6 +2272,13 @@ Your career stays on this device.",
 	_state.set_confirm_sim_round(true)
 
 	# --- a simmed match: headlined, and reviewable at full time -------------
+	# The rounds just simmed can leave a press conference waiting, depending on the
+	# results: leave it, as a coach would, and come back to the hub.
+	for _i in range(10):
+		if current_scene.has_method("_on_sim_round"):
+			break
+		_router.handle_back(true)
+		await _settle()
 	current_scene.call("_on_sim_round")
 	await _settle()
 	var popup = current_scene.get("_results_overlay")

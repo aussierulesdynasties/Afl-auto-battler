@@ -108,7 +108,8 @@ real effect, shown as a Gain line under its button.
 
 ## As built (PR 1153)
 
-- Every row on sheets A, B and C went in as drafted. `BOTH_SIDES_LEFT`, `SPARED_GAIN_LEFT` and `DOES_NOTHING_LEFT`
+- Every row on sheets A, B and C went in as drafted, except A15 and A16: their Gain lines became a gain of
+  their own (A15: he trusts you 2% more; A16: Standards +1). `BOTH_SIDES_LEFT`, `SPARED_GAIN_LEFT` and `DOES_NOTHING_LEFT`
   are gone: tests/test_story.gd now requires all of the deck's choices to show a gain and a cost.
 - A6: the note reads "{wait_price}" alone, under the open_price Gain line ("No 15% early premium...").
 - B8 and B9 have new result lines ("{name} keeps leading the group as he is.", "{name} keeps the armband for
