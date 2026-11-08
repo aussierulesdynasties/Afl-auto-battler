@@ -1614,7 +1614,8 @@ func _test_pc_break_worst_case(club := "COL") -> void:
 	for q in (sim.squads[me] as Object).ground:
 		if str(q["role"]) == "DEF" and (mine.is_empty() or db.player_display_name(q).length() > db.player_display_name(mine).length()):
 			mine = q
-	sim.set_interceptor(me, str(mine.get("id", "")), false)
+	# Your own call, so the assistant keeps him loose at quarter time.
+	sim.coach_interceptor(me, str(mine.get("id", "")))
 	sim.run_quarter()
 	(sim.player_stats.get(str(mine["id"]), {}) as Dictionary)["intercepts"] = 12.0
 	if not sim.player_stats.has(str(mine["id"])):

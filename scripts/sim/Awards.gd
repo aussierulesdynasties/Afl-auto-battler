@@ -3,14 +3,15 @@ extends RefCounted
 ## Season awards, built from a running per-player tally (match results are
 ## slimmed when a career is saved, so the tally is what survives a reload).
 ##
-##   Brownlow Medal   3-2-1 votes to the three most influential players in
-##                    every home-and-away match (finals do not count)
+##   Brownlow Medal   3-2-1 votes in every home-and-away match, drawn the way
+##                    real umpires choose (umpire_score, brownlow_three;
+##                    finals do not count)
 ##   Coleman Medal    most home-and-away goals
 ##   Rising Star      best votes-then-influence among the season's weekly
 ##                    nominees (one a round: the most influential player 21
 ##                    and under not yet nominated)
 ##   Norm Smith Medal the most influential player on the ground in the Grand
-##                    Final, from either side (the same measure as the votes)
+##                    Final, from either side
 ##   Best & fairest   5-4-3-2-1 within each side every match, finals included
 ##   All-Australian   the season's best 23 by position (12+ games)
 ##   Golden Fist      the season's best defender (golden_fist): a lockdown
@@ -18,9 +19,31 @@ extends RefCounted
 ##                    judged against the other defenders that season
 ##
 ## Influence is the best-on-ground measure the match screens already use
-## (CoachReport.influence).
+## (CoachReport.influence): it ranks the best-and-fairest, the coaches' award,
+## Norm Smith, Rising Star and the All-Australian side. Only the Brownlow, the
+## umpires' own award, uses umpire_score.
 
 const AA_SLOTS := [["RUCK", 1], ["MID", 5], ["DEF", 6], ["FWD", 6]]
+## How the umpires weight a man's match line when they give the 3-2-1, per unit
+## of each stat (a disposal = 1.0): a Plackett-Luce fit of every umpires' 3-2-1
+## in the 2023-25 home-and-away seasons, with the result in it (621 matches, AFL
+## Tables; tools/balance/afl_brownlow.json matches.vote_fit.with_result, built by
+## tools/balance/build_brownlow_rates.py). Replayed on the real match lines it
+## gives real winning tallies (33-38) and players polled (191-198). Pressure
+## acts have no match record to fit; clangers fit slightly positive (they ride
+## on the disposal), so neither counts. Director ruling 2026-11-08: a ruckman
+## like Blicavs must not win Brownlows on his tap count.
+const UMPIRE_WEIGHTS := {"disposals": 1.0, "goals": 4.896, "marks": 0.256, "inside50": 0.299,
+		"tackles": 0.277, "hitouts": 0.092, "clearances": 0.8, "one_percenters": 0.575}
+## A man on the winning side, in disposals (the same fit): real umpires give 84%
+## of their votes to the winners. A draw counts as no win for either side.
+const UMPIRE_WIN := 7.3
+## How sure the umpires are, per unit of umpire_score (the same fit's logit a
+## disposal): each of the 3, the 2 and the 1 is drawn from the men left, each
+## man's chance exp(UMPIRE_DRAW x his score). Real umpires do not always name
+## the three best lines, and always taking the top three gave sim winners 51
+## votes against a real 28-47 (tools/audit/brownlow_impl.gd).
+const UMPIRE_DRAW := 0.2098
 ## The team is a match-day 23: 18 by position plus five on the bench
 ## (director, 2026-10-06, with ARD-M5-001).
 const AA_BENCH := 5
@@ -133,13 +156,63 @@ static func golden_fist_path(row: Dictionary) -> String:
 	return "Intercept" if str(row.get("path", "")) == "intercept" else "Lockdown"
 
 
+## How the umpires rate one man's match for the Brownlow (UMPIRE_WEIGHTS, plus
+## UMPIRE_WIN when his side won). Brownlow votes only: every other award and
+## screen reads CoachReport.influence.
+static func umpire_score(st: Dictionary, won: bool) -> float:
+	var v := UMPIRE_WIN if won else 0.0
+	for k in UMPIRE_WEIGHTS:
+		v += float(UMPIRE_WEIGHTS[k]) * float(st.get(k, 0.0))
+	return v
+
+
+## The Brownlow 3-2-1 of one match from [[id, umpire_score], ...]: the 3, then
+## the 2, then the 1, each drawn from the men left with chance proportional to
+## exp(UMPIRE_DRAW x score) (Plackett-Luce, the model the umpires' fit is).
+## Seeded by the match itself, so the same result always polls the same men.
+## Returns the three [id, score] rows in vote order.
+static func brownlow_three(scored: Array, res: Dictionary) -> Array:
+	var left := _ranked(scored, scored.size())
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(["brownlow", str(res.get("home", "")), str(res.get("away", "")),
+			int(res.get("round", 0)), res.get("score", []), res.get("quarters", [])])
+	var out := []
+	for _i in range(mini(3, left.size())):
+		var top := float(left[0][1])
+		var tot := 0.0
+		for e in left:
+			tot += exp(UMPIRE_DRAW * (float(e[1]) - top))
+		var x := rng.randf() * tot
+		var pick := left.size() - 1
+		for j in range(left.size()):
+			x -= exp(UMPIRE_DRAW * (float(left[j][1]) - top))
+			if x <= 0.0:
+				pick = j
+				break
+		out.append(left[pick])
+		left.remove_at(pick)
+	return out
+
+
+## The `n` highest [id, score] rows, highest first (a copy).
+static func _ranked(scored: Array, n := 3) -> Array:
+	var rows := scored.duplicate()
+	rows.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
+	return rows.slice(0, mini(n, rows.size()))
+
+
 ## Add one match to the tally. `regular` is false for finals.
-static func tally_match(tally: Dictionary, res: Dictionary, regular: bool) -> void:
+## `umpire_draw` false gives the 3-2-1 to the top three umpire_scores outright
+## (tests and the audit's comparison only).
+static func tally_match(tally: Dictionary, res: Dictionary, regular: bool, umpire_draw := true) -> void:
 	var stats_all: Dictionary = res.get("players", {})
 	var roster: Array = res.get("roster", [])
 	var codes := [str(res.get("home", "")), str(res.get("away", ""))]
+	var sc: Array = res.get("score", [0, 0])
 	var everyone := []
+	var umpires := []
 	for side in range(mini(2, roster.size())):
+		var won := sc.size() > 1 and int(sc[side]) > int(sc[1 - side])
 		var side_rows := []
 		for r in roster[side]:
 			var id := str(r["id"])
@@ -162,14 +235,16 @@ static func tally_match(tally: Dictionary, res: Dictionary, regular: bool) -> vo
 			tally[id] = t
 			side_rows.append([id, inf])
 			everyone.append([id, inf])
+			umpires.append([id, umpire_score(st, won)])
 		side_rows.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
 		for i in range(mini(5, side_rows.size())):
 			var t: Dictionary = tally[str(side_rows[i][0])]
 			t["bf"] = int(t["bf"]) + (5 - i)
 	if regular:
 		everyone.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
-		for i in range(mini(3, everyone.size())):
-			var t: Dictionary = tally[str(everyone[i][0])]
+		var three := brownlow_three(umpires, res) if umpire_draw else _ranked(umpires)
+		for i in range(three.size()):
+			var t: Dictionary = tally[str(three[i][0])]
 			t["votes"] = int(t["votes"]) + (3 - i)
 			t["polled"] = int(t["polled"]) + 1
 		# The Coaches Award, as the AFL Coaches Association's: the votes shown
@@ -184,8 +259,9 @@ static func tally_match(tally: Dictionary, res: Dictionary, regular: bool) -> vo
 
 ## The Norm Smith Medal for one Grand Final result: the most influential
 ## player on the ground, from either side (CoachReport.influence, the measure
-## the Brownlow votes use). A level count goes to the home side's player who
-## comes first in the roster, so the same match always names the same man.
+## the best-and-fairest and coaches' votes use). A level count goes to the home
+## side's player who comes first in the roster, so the same match always names
+## the same man.
 ## Returns {id, club, influence, line} (`line` is his stat line that day), or
 ## {} when the match kept no player stats.
 static func norm_smith(res: Dictionary) -> Dictionary:
