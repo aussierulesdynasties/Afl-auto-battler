@@ -1,6 +1,6 @@
 ﻿# TODO: everything not done yet
 
-The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed after merge from the PR's `Closes row N` line (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call. There are no feature switches (director 2026-11-06): work goes straight into the game and his playtest judges it (section B). Updated 2026-11-08 against main `1358f093`. Live on itch: 1.0.9 (1358f09).
+The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed after merge from the PR's `Closes row N` line (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call. There are no feature switches (director 2026-11-06): work goes straight into the game and his playtest judges it (section B). Updated 2026-11-08 against main `1358f093`. Live on itch: 1.0.10 (4bbab26).
 
 ## Itch builds
 
@@ -33,7 +33,7 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 
 | # | Feature | PRs | Open |
 |---|---|---|---|
-| 61 | Weather at real size: wet, wind and heat fitted to 2016-25 AFL games (#1150, live in 1.0.9). Balance stays his call; the look never touches the sim | his playtest |
+| 61 | Weather: wet, wind and heat fitted to 2016-25 AFL games (#1150, live in 1.0.9). Balance stays his call; the look never touches the sim | his playtest |
 | 1 | Top three attributes on cards, Needs work benchmark, scout grade word for hidden prospects | #863 | |
 | 9 | Feed colours: your goals good, goals against bad, behinds and calls neutral | #918 | |
 | 10 | Kick range caps receiver choice; Sim the week shares the same pick | #857 #879 | |
