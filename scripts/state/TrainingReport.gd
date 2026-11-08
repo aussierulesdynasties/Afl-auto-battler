@@ -116,7 +116,8 @@ static func current(gs) -> Dictionary:
 	return gs.training_report
 
 
-## The hub card shows until it is dismissed.
+## A new report opens over the hub once; dismiss() marks it read. It stays
+## on Training either way.
 static func hub_due(gs) -> bool:
 	var r := current(gs)
 	return not r.is_empty() and not bool(r.get("dismissed", false))

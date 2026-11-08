@@ -83,6 +83,11 @@
 						"op": "morale",
 						"d": 2,
 						"who": "all"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 4,
+						"who": "all"
 					}
 				],
 				"result": "Let them watch. The players find it funny."
@@ -130,6 +135,12 @@
 					{
 						"op": "fresh",
 						"who": "side"
+					},
+					{
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10,
+						"on": "week"
 					}
 				],
 				"result": "You tell the group to ignore it."
@@ -213,6 +224,12 @@
 						"op": "morale",
 						"d": 2,
 						"who": "side"
+					},
+					{
+						"op": "loss_sting",
+						"who": "side",
+						"chance": 15,
+						"d": -6
 					}
 				],
 				"result": "Not one word about {opp} until Thursday's match plan."
