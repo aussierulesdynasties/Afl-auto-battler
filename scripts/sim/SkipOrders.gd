@@ -28,7 +28,7 @@ static func defaults(club_plan: String) -> Dictionary:
 
 ## The questions in order: {"key", "title", "lead", "options": [{"key",
 ## "label", "gain", "cost"}]}.
-static func questions() -> Array:
+static func questions(to := "season") -> Array:
 	var plans := []
 	for k in ["balanced", "attacking", "defensive", "contest", "controlled"]:
 		var part: Dictionary = CoachReport.PLAN_PARTS[k]
@@ -40,7 +40,8 @@ static func questions() -> Array:
 		plans.append({"key": k, "label": str(CoachReport.PLAN_NAMES[k]), "gain": gain, "cost": cost})
 	return [
 		{"key": "game_plan", "title": "How do we play?",
-			"lead": "Your game plan for every match left this season.", "options": plans},
+			"lead": "Your game plan for every home and away match left. It stays your plan for the finals until you change it." if to == "home_away"
+					else "Your game plan for every match left this season.", "options": plans},
 		{"key": "youth", "title": "Who gets picked?",
 			"lead": "Selection, every week you are away.", "options": [
 				{"key": "form", "label": "Best side on form",
@@ -49,7 +50,8 @@ static func questions() -> Array:
 				{"key": "kids", "label": "Give the kids a run",
 					"gain": "%s players with fewer than %d senior games are promised a run of %d games at a time, and get the match experience." % [
 						"Two", Backing.FEW_GAMES, Backing.RUN_GAMES],
-					"cost": "Seasoned players sit out for them, so the side is weaker some weeks. Auto-pick replaces a side you named."},
+					"cost": ("Seasoned players sit out for them, so the side is weaker some weeks. Auto-pick replaces a side you named, and stays on for the finals until you name another. A run still going after the last round carries into the finals." if to == "home_away"
+							else "Seasoned players sit out for them, so the side is weaker some weeks. Auto-pick replaces a side you named.")},
 			]},
 		{"key": "questions", "title": "Questions during the week",
 			"lead": "The cards that come up while you are away.", "options": [

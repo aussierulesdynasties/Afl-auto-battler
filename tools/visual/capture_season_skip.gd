@@ -67,9 +67,12 @@ func _run() -> void:
 		state.advance()
 		state._settle_week_event()
 	state.week_events = []
+	state.media_conference = {}
 	var hub = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _frames(12)
+	load("res://scripts/ui/TrainingReportSheet.gd").close_top(hub)
+	await _frames(4)
 	var b: Control = hub.find_child("SkipSeason", true, false)
 	if b == null:
 		push_error("no SkipSeason")
@@ -84,7 +87,42 @@ func _run() -> void:
 		await _frames(10)
 		var name := "skip_confirm" if i == keys.size() else "skip_q%d_%s" % [i + 1, keys[i]]
 		await _shot("%s/%s_%dx%d.png" % [dir, name, size.x, size.y])
+	# Skip just the home and away: the sheet, then the hub with the finals to coach.
+	hub.call("_open_skip_confirm", "home_away")
+	hub.call("_skip_show", 0)
+	await _frames(10)
+	await _shot("%s/skip_ha_q1_%dx%d.png" % [dir, size.x, size.y])
+	var ha_next: Button = hub.find_child("SkipNext", true, false)
+	if ha_next != null:
+		ha_next.pressed.emit()
+		await _frames(8)
+		await _shot("%s/skip_ha_q2_%dx%d.png" % [dir, size.x, size.y])
+		hub._skip_show(0)
+		await _frames(4)
+	hub.call("_skip_show", keys.size())
+	await _frames(10)
+	await _shot("%s/skip_ha_confirm_%dx%d.png" % [dir, size.x, size.y])
 	hub.call("_close_skip_confirm")
+	var ha: Dictionary = state.skip_season({}, "home_away")
+	print("skip home and away: ", ha)
+	state.week_events = []
+	state.media_conference = {}
+	hub.queue_free()
+	await _frames(2)
+	hub = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _frames(12)
+	var card: Button = hub.find_child("CarnivalDone", true, false)
+	if card != null:
+		card.pressed.emit()
+		await _frames(12)
+	load("res://scripts/ui/TrainingReportSheet.gd").close_top(hub)
+	await _frames(4)
+	await _shot("%s/skip_ha_after_%dx%d.png" % [dir, size.x, size.y])
+	var whole: Control = hub.find_child("SkipSeason", true, false)
+	if whole != null:
+		await _scroll_to(hub, whole, int(size.y * 0.6))
+		await _shot("%s/skip_ha_after_foot_%dx%d.png" % [dir, size.x, size.y])
 	var res: Dictionary = state.skip_season()
 	print("skip: ", res)
 	hub.queue_free()

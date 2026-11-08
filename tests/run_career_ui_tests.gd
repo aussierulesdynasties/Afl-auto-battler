@@ -1436,6 +1436,8 @@ func _run() -> void:
 	await _t("_test_rival_letter_taps")
 	await _t("_test_sim_asks_only_before_your_match")
 	await _t("_test_skip_season")
+	await _t("_test_skip_home_away")
+	await _t("_test_skip_home_away_kids")
 	await _t("_test_skip_orders")
 	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
@@ -4628,6 +4630,152 @@ func _test_skip_season() -> void:
 	_state.week_events = []
 	_state.set_confirm_sim_round(ask_before)
 	root.size = size_before
+
+
+## Skip just the home and away (director, 2026-11-09): by finger, it stops after
+## the last round with the finals drawn and his to coach, lands where Sim the
+## week does, survives a reload, and the finals then skip as ever. The label
+## fits a phone at the largest text, and the survey asks only what it can act on.
+func _test_skip_home_away() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	var ask_before: bool = _state.confirm_sim_round()
+	_state.set_confirm_sim_round(false)
+
+	# Played out the long way: Sim the week to the last home-and-away round.
+	_skip_start(5512)
+	_state.season.round_index = _state.season.fixture.size() - 3
+	var year: int = _state.season_year
+	var guard := 0
+	while not _state.season.is_regular_done() and guard < 80:
+		_state.advance()
+		guard += 1
+	var played := _skip_shape()
+
+	_skip_start(5512)
+	var start_round: int = _state.season.fixture.size() - 3
+	_state.season.round_index = start_round
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var b: Button = current_scene.find_child("SkipHomeAway", true, false)
+	_check(b != null and b.text == "Skip the rest of the home and away",
+			"The hub offers Skip the rest of the home and away")
+	_check(current_scene.find_child("SkipSeason", true, false) != null, "The hub still offers the whole season beside it")
+	# A label wider than the page would force the whole hub wider than the phone:
+	# measure its minimum at the largest text against a 360 phone's page (360 less
+	# the page margins and scroll rail), not against a parent it has already widened.
+	var text_was: String = _state.text_size()
+	_state.set_text_size("largest")
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	var wide: Button = current_scene.find_child("SkipHomeAway", true, false)
+	var need: float = wide.get_combined_minimum_size().x if wide != null else INF
+	_check(need <= 360.0 - 24.0 - float(load("res://scripts/ui/UiKit.gd").SCROLL_RAIL), "At the largest text the label fits a 360 phone (needs %.0f)" % need)
+	_state.set_text_size(text_was)
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	b = current_scene.find_child("SkipHomeAway", true, false)
+	var why: String = await Tap.tap(b) if b != null else "missing"
+	await _settle()
+	_check(why == "" and current_scene.find_child("SkipSeasonSurvey", true, false) != null and _state.season.round_index == start_round,
+			"A finger on it opens the survey and skips nothing yet (%s)" % why)
+	var lead: Label = current_scene.find_child("SkipLead", true, false)
+	_check(lead != null and lead.text.contains("home and away"), "The first question says the home and away (%s)" % (lead.text if lead != null else ""))
+	for q in _rules("SkipOrders").KEYS:
+		var nx: Button = current_scene.find_child("SkipNext", true, false)
+		why = await Tap.tap(nx) if nx != null else "missing"
+		await _settle()
+		_check(why == "", "A finger on Next walks on from %s (%s)" % [q, why])
+	var left: Label = current_scene.find_child("SkipLeft", true, false)
+	_check(left != null and left.text == "The rest of the %d home and away season is played out without you: 3 rounds." % year,
+			"The sheet says only the rounds go (%s)" % (left.text if left != null else ""))
+	var stop: Label = current_scene.find_child("SkipStop", true, false)
+	_check(stop != null and stop.text.contains("if you make the finals, you coach them"), "The sheet says the finals are his (%s)" % (stop.text if stop != null else ""))
+	_check(stop != null and not stop.text.contains("sacks"), "It warns of no sacking: the board only sacks after the finals")
+	var go: Button = current_scene.find_child("SkipSeasonGo", true, false)
+	_check(go != null and go.text == "Skip the home and away", "The button says what it skips")
+	why = await Tap.tap(go) if go != null else "missing"
+	guard = 0
+	while not _state.season.is_regular_done() and guard < 600:
+		await process_frame
+		guard += 1
+	for i in range(30):
+		await process_frame
+	await _settle()
+	_check(why == "" and _state.season.is_regular_done() and not _state.season.is_season_over() and _state.season_year == year,
+			"A finger on Skip the home and away plays every round and no final (%s)" % why)
+	_check(not _state.season.finals.is_empty() and int(_state.season.finals.get("week", 0)) == 1,
+			"The finals are drawn and none has been played")
+	var skipped := _skip_shape()
+	_check(skipped == played, "It lands where Sim the week does (%s vs %s)" % [skipped, played])
+	# The last round's press conference comes first, as after Sim the week; then the hub.
+	_state.media_conference = {}
+	_state.week_events = []
+	_router.stack = ["main"]
+	_router.go("hub")
+	await _settle()
+	_check(current_scene.find_child("SkipHomeAway", true, false) == null, "With the home and away done, that skip is gone (%s)" % current_scene.name)
+	_check(current_scene.find_child("SkipSeason", true, false) != null, "The hub still offers the skip to the end of the season")
+	# Only what the finals skip can act on: no kids' run can start now.
+	var keys := _skip_keys("season")
+	var finals_on: bool = _state.my_finals_status() != ""
+	_check(keys == (["game_plan", "questions"] if finals_on else ["questions"]),
+			"Past the home and away the survey drops the kids (%s, status %s)" % [keys, _state.my_finals_status()])
+	var finals_top: Array = _state.season.finals.get("top", [])
+	_state.season.finals["top"] = finals_top.filter(func(c): return c != _state.my_club)
+	_check(_skip_keys("season") == ["questions"], "Out of the finals, it asks only about the week's cards")
+	_state.season.finals["top"] = finals_top
+
+	# A reload keeps it, and the finals are still there to play.
+	_check(_state.save_career(), "The skipped home and away saves")
+	_check(_state.load_career(), "It loads")
+	_check(_skip_shape() == skipped, "A reload keeps it")
+	var res: Dictionary = _state.skip_season({}, "home_away")
+	_check(not bool(res["ok"]) and str(res["reason"]) == "none" and int(res["weeks"]) == 0, "Skipping the home and away again does nothing (%s)" % [res])
+	res = _state.skip_season({}, "season")
+	_check(bool(res["ok"]) and _state.season.is_season_over() and _state.season_year == year, "The finals then skip to the end of the season (%s)" % [res])
+	_state.week_events = []
+	_state.set_confirm_sim_round(ask_before)
+	root.size = size_before
+
+
+func _skip_keys(to: String) -> Array:
+	var out := []
+	for q in _state.skip_questions(to):
+		out.append(str(q["key"]))
+	return out
+
+
+## A skip to the end of the home and away starts no run it cannot finish, and
+## does not ask about the kids when none can start (director's finals stay his).
+func _test_skip_home_away_kids() -> void:
+	var backing = _rules("Backing")
+	_skip_start(5512)
+	_state.season.round_index = _state.season.fixture.size() - 2
+	_check(_skip_keys("home_away") == ["game_plan", "questions"], "With two rounds left the kids' run is not offered (%s)" % [_skip_keys("home_away")])
+	var res: Dictionary = _state.skip_season({"youth": "kids"}, "home_away")
+	var on := 0
+	for p in _state.my_list:
+		if backing.is_active(p):
+			on += 1
+	_check(bool(res["ok"]) and on == 0, "Two rounds left: no promise is made (%d on, %s)" % [on, res])
+	_skip_start(5512)
+	_state.season.round_index = _state.season.fixture.size() - 6
+	_check(_skip_keys("home_away").has("youth"), "With six rounds left it is")
+	res = _state.skip_season({"youth": "kids"}, "home_away")
+	var promised := 0
+	on = 0
+	for p in _state.my_list:
+		promised += backing.ledger(p).size()
+		if backing.is_active(p):
+			on += 1
+	_check(bool(res["ok"]) and promised >= 2, "Six rounds left: the kids get runs (%d)" % promised)
+	_check(on == 0, "None of them is still going when it stops (%d)" % on)
+	_state.week_events = []
+	_state.media_conference = {}
 
 
 ## The survey's answers reach the skip (row 70): the same seed skipped with
