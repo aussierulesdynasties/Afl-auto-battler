@@ -23,6 +23,8 @@ const ROUND_W := 80.0
 const LEAD_W := 104.0
 const CLUB_W := 72.0
 const GAP := 8.0
+## What the hub's always-kept scroll bar takes from content_width on a phone.
+const BAR_GUTTER := 16.0
 const FIGURE_SIZE := 17
 ## The All-Australian slots on the oval (Awards.AA_SLOTS): the five
 ## midfielders fill the centre square first, then the wings.
@@ -167,7 +169,7 @@ static func _honours(host: Control, aw: Dictionary) -> Control:
 	# The name takes the width the figure and club leave. Where a name still
 	# wouldn't fit (a phone), every club goes under its name instead, so the
 	# table keeps one shape.
-	var row_w: float = TABLE_W if bool(host.call("wide")) else float(host.call("content_width"))
+	var row_w: float = TABLE_W if bool(host.call("wide")) else float(host.call("content_width")) - BAR_GUTTER
 	var stack := name_w > row_w - float(StatsSide.RULE_INSET) - LEAD_W - CLUB_W - fig_w - 3.0 * GAP
 	for i in range(rows.size()):
 		var x: Array = rows[i]
