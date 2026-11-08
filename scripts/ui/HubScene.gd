@@ -553,6 +553,8 @@ func _waiting_events() -> Control:
 func _show_new_event() -> bool:
 	if _event_overlay != null and is_instance_valid(_event_overlay):
 		return true
+	if not GameState.event_sheets:
+		return false
 	for i in range(GameState.week_events.size()):
 		var card: Dictionary = GameState.week_events[i]
 		if bool(card.get("resolved", false)) or bool(card.get("popped", false)):

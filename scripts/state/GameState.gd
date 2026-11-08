@@ -336,6 +336,9 @@ var settings_path := "user://settings.cfg"
 ## Autosave runs on every screen change, after every round and when the app
 ## is backgrounded or closed. Tests switch it off.
 var autosave_enabled := true
+## A new club card opens over the hub on arrival (HubScene). Never saved;
+## test runs that drive the hub for something else switch it off.
+var event_sheets := true
 ## A new draft or season is seeded from the clock, so no two careers play
 ## alike. Measurement tools set this so a career replays exactly: each of
 ## those seeds then comes from it and the year (_clock_seed). 0 in the game.
