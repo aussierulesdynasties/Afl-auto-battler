@@ -70,8 +70,8 @@ func _build() -> void:
 	var hv := UiKit.vbox(4)
 	head.add_child(hv)
 	var room := GameState.cap_room()
-	hv.add_child(UiKit.lbl("Payroll %s of %s  ·  cap room %s  ·  list %d" % [Contracts.money(GameState.my_payroll()),
-			Contracts.money(GameState.salary_cap), Contracts.money(room), GameState.my_list.size()], 15,
+	hv.add_child(UiKit.lbl("Payroll %s of %s  ·  %s  ·  list %d" % [Contracts.money(GameState.my_payroll()),
+			Contracts.money(GameState.salary_cap), cap_room_words(room), GameState.my_list.size()], 15,
 			UiKit.GOOD if room >= 0 else UiKit.BAD, true))
 	# Your challenge's rule, said where it bites: who you may bring in.
 	if Challenge.kind(GameState) in ["youth", "rebuild"]:
@@ -515,7 +515,8 @@ func _show_talks() -> void:
 	var on_books := 0 if _talk_fa else int(p.get("salary", 0))
 	var room_after := GameState.cap_room() + on_books - _offer_salary
 	var blocked := bool(terms.get("refuse", false)) or (_talk_fa and GameState.my_list.size() >= Contracts.MAX_LIST)
-	v.add_child(_para("Cap room after this deal: %s" % Contracts.money(room_after), 14, UiKit.TEXT if room_after >= 0 else UiKit.BAD))
+	v.add_child(_para("Cap room after this deal: %s" % room_after_words(room_after), 14,
+			UiKit.TEXT if room_after >= 0 else UiKit.BAD))
 	var final := _talk_fa and GameState.fa_market_stage(_talk_id) == "final"
 	var offer := UiKit.btn("%s %s for %d season%s" % ["Final offer:" if final else "Offer", Contracts.money(_offer_salary), _offer_years,
 			"" if _offer_years == 1 else "s"], 16, true)
@@ -1138,6 +1139,21 @@ func _why_para(text: String, club: String, size: int, colour: Color) -> Control:
 	var l := NameInk.label(text, index, size, colour)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
+
+
+## The cap room in the off-season heading. Over the cap says so in words, not
+## in BAD alone: money() never goes below $0k.
+static func cap_room_words(room: int) -> String:
+	if room >= 0:
+		return "cap room %s" % Contracts.money(room)
+	return "over the cap by %s" % Contracts.money(-room)
+
+
+## What an offer leaves under the cap, in words: "none, $120k over the cap".
+static func room_after_words(room_after: int) -> String:
+	if room_after >= 0:
+		return Contracts.money(room_after)
+	return "none, %s over the cap" % Contracts.money(-room_after)
 
 
 func _para(text: String, size: int, colour: Color) -> Control:
