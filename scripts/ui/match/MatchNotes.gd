@@ -1085,7 +1085,8 @@ static func rated_players(res: Dictionary, side: int) -> Array:
 
 ## The coaches' votes, as the AFL gives them: each coach names his five best
 ## players on the ground, from either side, 5-4-3-2-1, so a player can earn up
-## to 10. Read from this match's ratings (so far, at a break), and from nothing
+## to 10. Given once, at full time (the season's Coaches Award adds them up,
+## Awards.tally_match). Read from this match's ratings, and from nothing
 ## the sim decides with: each coach's own taste for a player is a fixed small
 ## lean, the same all match, so the two coaches can differ on a close call.
 ## Returns {player id: votes}; a player on neither coach's five is absent.
@@ -1107,6 +1108,17 @@ static func coaches_votes(res: Dictionary) -> Dictionary:
 			var id := str(scored[i][0])
 			votes[id] = int(votes.get(id, 0)) + (5 - i)
 	return votes
+
+
+## Best so far at a break: the side's n best by match rating so far, in the
+## same shape as standouts_by_votes with no votes (the coaches vote once, at
+## full time, as the AFL's do): [{id, name, line, rating, inf, votes}].
+static func best_so_far(res: Dictionary, side: int, n: int) -> Array:
+	var out := []
+	for r in rated_players(res, side).slice(0, n):
+		out.append({"id": r["id"], "name": r["name"], "line": votes_line(r["stats"]),
+				"rating": r["rating"], "inf": r["rating"], "votes": 0})
+	return out
 
 
 ## The side's best by the coaches' votes, most votes first and the match
