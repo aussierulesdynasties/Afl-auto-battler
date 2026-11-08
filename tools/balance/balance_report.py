@@ -28,6 +28,7 @@ WEATHER_KEYS = {"disposals": "disposals", "kicks": "kicks", "handballs": "handba
                 "one_percenters": "one_percenters", "inside50": "inside_50s",
                 "clearances": "clearances", "frees_for": "frees_for", "hitouts": "hitouts",
                 "running_bounces": "bounces", "goal_assists": "goal_assists",
+                "rebounds": "rebound_50s", "marks_inside_50": "marks_inside_50",
                 "goals": "goals", "behinds": "behinds", "score": "score",
                 "ground_ball_gets": None, "stoppages": None, "ball_ups": None}
 # [ABC] wet against dry 2022-25 for ground-ball gets, which AFL Tables does not count.
@@ -567,22 +568,35 @@ def weather_section(A, B, cond):
                          f" {weather_mark(mb / ma - 1, se, rv['change'], rv['se'])} |")
         print(line)
 
-    def acc(r):
-        gg = sum(float(t.get("goals", 0)) for t in r["teams"])
-        bb = sum(float(t.get("behinds", 0)) for t in r["teams"])
-        return 100 * gg / (gg + bb) if gg + bb else None
-    fa = {i: acc(A[i]) for i in common}
-    fb = {i: acc(B[i]) for i in common}
-    d = [fb[i] - fa[i] for i in common if fa[i] is not None and fb[i] is not None]
-    m, se = _mse(d)
-    line = (f"| accuracy, goals per scoring shot (points) | {st.mean(v for v in fa.values() if v is not None):.1f} | "
-            f"{st.mean(v for v in fb.values() if v is not None):.1f} | {m:+.1f} pts | {se:.1f} |")
-    if real and "accuracy" in col:
-        rv = col["accuracy"]
-        line += f" {rv['change_points']:+.1f} pts | {rv['se']:.1f} | {weather_mark(m, se, rv['change_points'], rv['se'])} |"
-    elif real:
-        line += " - | - | - |"
-    print(line)
+    def counts(rows, ids, g, n):
+        """Goals (g) and their base over both teams of the matches in ids: shots of
+        that kind (n), or goals and behinds when n is None."""
+        gg = sum(float(t.get(g, 0)) for i in ids for t in rows[i]["teams"])
+        nn = sum(float(t.get(n or "behinds", 0)) for i in ids for t in rows[i]["teams"])
+        return gg, (nn + gg if n is None else nn)
+
+    def ratio(rows, ids, g, n):
+        gg, nn = counts(rows, ids, g, n)
+        return 100 * gg / nn if nn else None
+    # The set-shot and general-play rows (balance_body's sshot_* and gshot_*) have no
+    # real weather column: the reference counts goals and behinds, not shots by kind.
+    for label, g, n, rkey in (("accuracy, goals per scoring shot (points)", "goals", None, "accuracy"),
+                              ("set-shot goals per set shot (points)", "sshot_g", "sshot_n", None),
+                              ("general-play goals per logged shot (points)", "gshot_g", "gshot_n", None)):
+        if n is not None and not any(n in t for i in common for t in A[i]["teams"]):
+            continue
+        fa = {i: ratio(A, [i], g, n) for i in common}
+        fb = {i: ratio(B, [i], g, n) for i in common}
+        d = [fb[i] - fa[i] for i in common if fa[i] is not None and fb[i] is not None]
+        m, se = _mse(d)
+        pa, pb = ratio(A, common, g, n) or 0.0, ratio(B, common, g, n) or 0.0
+        line = f"| {label} | {pa:.1f} | {pb:.1f} | {m:+.1f} pts | {se:.1f} |"
+        if real and rkey and rkey in col:
+            rv = col[rkey]
+            line += f" {rv['change_points']:+.1f} pts | {rv['se']:.1f} | {weather_mark(m, se, rv['change_points'], rv['se'])} |"
+        elif real:
+            line += " - | - | - |"
+        print(line)
     if "q_score" not in A[common[0]]["teams"][0]:
         return
     qa = {i: q4_share(A[i]) for i in common}
@@ -870,8 +884,11 @@ def main():
             sig = "yes" if se > 0 and abs(st.mean(d)) > 2 * se else ("yes" if se == 0 and st.mean(d) != 0 else "")
             line += f" {mb:.1f} | {mark(mb)} | {st.mean(d):+.2f} | {se:.2f} | {sig} |"
         print(line)
-    cond = next((c for c in ("wet", "windy", "hot") if f"--weather {c}" in (o.b or "")
-                 and f"--weather {c}" not in o.a), None)
+    # The real column reads B's weather against a perfect day, so A must be one:
+    # no --weather (the worker's default) or --weather perfect.
+    a_perfect = "--weather" not in (o.a or "") or "--weather perfect" in (o.a or "")
+    cond = (next((c for c in ("wet", "windy", "hot") if f"--weather {c}" in (o.b or "")), None)
+            if a_perfect else None)
     weather_section(A, B, cond)
     role_table(A, B)
     spoils_section(A, B)

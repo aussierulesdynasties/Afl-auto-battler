@@ -121,6 +121,11 @@ def fetch(url: str, name: str, offline: bool) -> str:
                 raise
             time.sleep(5.0 * (attempt + 1) ** 2)
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    # The page cache sits inside the Godot project (data/cache, git-ignored):
+    # a .gdignore keeps the editor from importing about 100 MB of pages.
+    gdignore = os.path.join(ROOT, "data", "cache", ".gdignore")
+    if not os.path.exists(gdignore):
+        open(gdignore, "a").close()
     with open(path, "w", encoding="utf-8") as f:
         f.write(body)
     time.sleep(1.0)

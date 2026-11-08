@@ -262,21 +262,26 @@ var weather := "perfect":
 ## heat about 2.5% fewer (a slower game: fewer tackles, clangers and stoppages).
 ## The wet's inside50_goal also lowers set-shot accuracy (WEATHER_SIM set_acc
 ## is the rest of it); its stoppages come from fumbles (WEATHER_SIM fumble).
+## In the wind the ball is held a little more (handball_share), fewer spoils come
+## off the entries (one_percenter_share) and fewer of its clangers are paid as a
+## free (clanger_is_free), each sized to the real windy games.
 const WEATHER_RATES := {
 	"wet": {"chains_per_game": 1.05, "handball_share": 0.97,
 			"mark_share_of_kicks": 0.81, "clanger_per_chain": 1.06,
 			"stoppage_share": 1.0, "inside50_goal": 0.945, "inside50_behind": 0.93,
 			"one_percenter_share": 1.11, "metres_gain_mean": 1.04},
-	"windy": {"chains_per_game": 1.01, "mark_share_of_kicks": 0.945, "metres_gain_mean": 1.015},
+	"windy": {"chains_per_game": 1.01, "mark_share_of_kicks": 0.945, "handball_share": 1.01,
+			"one_percenter_share": 0.982, "clanger_is_free": 0.907},
 	"hot": {"chains_per_game": 0.975, "pressure_base": 0.97, "stoppage_share": 0.95, "clanger_per_chain": 0.97},
 }
 ## Rates for the sim's own named constants, read through _wx (WEATHER_RATES
 ## holds Ratings.T multipliers only), sized like WEATHER_RATES (row 61). A
 ## condition with no row, a perfect day included, plays every one at 1.0 and
 ## draws no extra dice.
-## - set_acc: goals per set shot, on every band and on a free's set shot.
+## - set_acc: goals per set shot: every band, a free kick, a mark in the
+##   goal-square pack and the lead's shot (_set_goal).
 ## - miss_behind: the share of missed set shots that still score a behind
-##   (SET_MISS_BEHIND); the wind carries more of them out of bounds.
+##   (SET_MISS_BEHIND, _set_behind); the wind carries more of them out of bounds.
 ## - lockup: LOCKUP_PRESS and LOCKUP_SPOIL, contests locking up for a ball-up.
 ## - tackle_spill: TACKLE_SPILL, held tackles that are ball-ups.
 ##   (Both 1.0 in the wet: its extra stoppages come from fumbles, and more
@@ -284,14 +289,15 @@ const WEATHER_RATES := {
 ## - fumble: the chance a ground ball is fumbled at the gather (_wet_fumble).
 ## - tackle_share: PRESS_TACKLE_SHARE, more of the pressure a tackle and less
 ##   a rushed disposal (pressure acts unchanged).
-## - aerial: the chance a contested or inside-50 kick is marked (general play,
-##   the forward's one-on-one and the entry), as mark_share_of_kicks does for
+## - aerial: the chance a contested or inside-50 kick is marked, by either side
+##   (general play and its intercept mark, the forward's one-on-one, the entry
+##   and the defender who marks it coming out), as mark_share_of_kicks does for
 ##   the uncontested ones: a greasy ball is dropped in a pack too.
 ## - run: the chance a carry takes a running bounce (cosmetic, the gain unchanged).
 const WEATHER_SIM := {
 	"wet": {"set_acc": 0.975, "lockup": 1.0, "tackle_spill": 1.0, "fumble": 0.06, "tackle_share": 1.12,
 			"aerial": 0.83, "run": 0.76},
-	"windy": {"tackle_share": 1.03, "miss_behind": 0.96},
+	"windy": {"tackle_share": 1.03, "miss_behind": 0.91},
 }
 ## A windy day has a breeze end (the "five-goal breeze"): shots kicked with it
 ## are a little easier, against it much harder. The sides change ends each
@@ -1934,10 +1940,10 @@ func _credit_aerial_loose(def_side: int, fp: float, receiver: Dictionary) -> voi
 			found = true
 		var stop := 0.62 * _a(p, "intercept") + 0.38 * _a(p, "marking")
 		var mp := clampf(0.34 + (receive - stop) / 240.0
-				+ (0.05 if _trait(receiver, "aerial") else 0.0), 0.16, 0.55)
+				+ (0.05 if _trait(receiver, "aerial") else 0.0), 0.16, 0.55) * _wx("aerial")
 		var sp := clampf(0.36 + (stop - receive) / 220.0
 				+ (0.07 if _trait(p, "interceptor") else 0.0), 0.20, 0.65)
-		var ip := sp * INTERCEPT_MARK * (0.6 + 0.8 * _a(p, "intercept") / 100.0)
+		var ip := sp * INTERCEPT_MARK * (0.6 + 0.8 * _a(p, "intercept") / 100.0) * _wx("aerial")
 		var ours := ip + 0.5 * (1.0 - mp - ip)
 		w_sum += w
 		wl_sum += wl
@@ -2472,7 +2478,8 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 	var spoil_p := clampf(0.36 + (stop - receive) / 220.0
 			+ (0.07 if _trait(defender, "interceptor") else 0.0), 0.20, 0.65)
 	if roll < mark_p + spoil_p:
-		if zone_intercepts and aerial_rng.randf() < _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.6 + 0.8 * _a(defender, "intercept") / 100.0):
+		var take_p := _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.6 + 0.8 * _a(defender, "intercept") / 100.0) * _wx("aerial")
+		if zone_intercepts and aerial_rng.randf() < take_p:
 			_intercept(opp, defender, false)
 			_won_back["marked"] = true
 			_t(opp, "marks")
@@ -3716,7 +3723,7 @@ func _intercept(side: int, who, could_mark: bool, contested := false) -> void:
 	# Whether he marked it or gathered it off the spill: a better reader of
 	# the ball marks more of them. A mark is a mark: he takes the next kick
 	# (the next chain starts from him, _chain_from["marked"]).
-	if could_mark and mark_rng.randf() < 0.35 * (0.5 + _a(who, "intercept") / 100.0):
+	if could_mark and mark_rng.randf() < 0.35 * (0.5 + _a(who, "intercept") / 100.0) * _wx("aerial"):
 		_t(side, "marks")
 		_p(who, "marks")
 		_won_back["marked"] = true
@@ -5251,7 +5258,7 @@ func _offer_set_shot(side: int, p_fp: float, shooter: Dictionary, defender, band
 			mate = p
 	var pass_p := clampf(0.50 + 0.35 * _a(shooter, "disposal") / 100.0
 			- 0.25 * dfn.def_intercept / 100.0, 0.35, 0.85)
-	var mate_goal := clampf(shot_chance(side, mate, true, false) * 1.3, 0.05, 0.9) if not mate.is_empty() else 0.0
+	var mate_goal := _set_goal(clampf(shot_chance(side, mate, true, false) * 1.3, 0.05, 0.9)) if not mate.is_empty() else 0.0
 	var bomb_goal := clampf(0.26 + 0.20 * (squads[side] as Squad).fwd_mark / 100.0
 			- 0.12 * dfn.def_intercept / 100.0, 0.1, 0.5)
 	var options := [
@@ -5291,6 +5298,23 @@ const SET_SHOT_SHARE := 0.55
 ## A missed set shot is usually a behind; now and then it falls short or
 ## goes out on the full.
 const SET_MISS_BEHIND := 0.70
+
+
+## A set shot's goal chance on the day: `goal_p` with the wet's harder kick
+## (WEATHER_SIM "set_acc"). Every set shot goes through here: a band from the
+## mark, a free kick, a mark in the goal-square pack, the teammate's shot when
+## the coach plays on.
+func _set_goal(goal_p: float) -> float:
+	return clampf(goal_p * _wx("set_acc"), 0.03, 0.97)
+
+
+## A set shot's behind chance once its goal chance is known: most misses are
+## behinds, fewer on a windy day, when more fall short or go out on the full
+## (WEATHER_SIM "miss_behind").
+func _set_behind(goal_p: float) -> float:
+	return (1.0 - goal_p) * SET_MISS_BEHIND * _wx("miss_behind")
+
+
 ## Row 77 (director ruling T8.Q9): real set shots are about 55% of shots
 ## (Champion Data shot counts, 2026: 5,951 of 10,859; SET_SHOT_EVIDENCE.md
 ## [WH]), so half the marks inside 50 go back and kick (SET_SHARE_ON), and each
@@ -5350,12 +5374,10 @@ func _set_shot_split(goal_p: float, behind_p: float) -> Dictionary:
 				break
 		# The wet makes the kick itself harder (row 120), after the expected
 		# value above, so the general-play shot does not make it back.
-		var sa := _wx("set_acc")
-		var mb := _wx("miss_behind")
-		if sa != 1.0 or mb != 1.0:
+		if _wx("set_acc") != 1.0 or _wx("miss_behind") != 1.0:
 			pick = pick.duplicate()
-			pick["goal"] = clampf(float(pick["goal"]) * sa, 0.03, 0.97)
-			pick["behind"] = (1.0 - float(pick["goal"])) * SET_MISS_BEHIND * mb
+			pick["goal"] = _set_goal(float(pick["goal"]))
+			pick["behind"] = _set_behind(float(pick["goal"]))
 		return {"band": pick, "goal": pick["goal"], "behind": pick["behind"]}
 	var rest := 1.0 - share
 	return {"band": {},
@@ -5493,7 +5515,7 @@ func resolve_moment(choice: int) -> Dictionary:
 func _option_points(o: Dictionary) -> float:
 	var g := float(o.get("goal", 0.0))
 	if str(o.get("key", "")) == "pass":
-		return g * 6.0 + float(o.get("pass", 0.0)) * (1.0 - float(o.get("mate_goal", 0.0))) * 0.6
+		return g * 6.0 + float(o.get("pass", 0.0)) * (1.0 - float(o.get("mate_goal", 0.0))) * 0.6 * _wx("miss_behind")
 	return g * 6.0 + float(o.get("behind", 0.0))
 
 
@@ -5528,7 +5550,7 @@ func _resolve_shot(side: int, m: Dictionary, opt: Dictionary) -> Dictionary:
 		kicker = shooter if mate.is_empty() else mate
 		assist = shooter
 		goal_p = float(opt.get("mate_goal", 0.5))
-		behind_p = (1.0 - goal_p) * 0.6
+		behind_p = (1.0 - goal_p) * 0.6 * _wx("miss_behind")
 		# He leads up into space nearer goal and marks it there.
 		fp = _closer_spot(side, fp, PASS_GAIN)
 		_t(side, "marks")
@@ -5641,8 +5663,8 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 		_p(marker, "contested_marks")
 		_pack_event(side, sq_fp, marker, "marked", {"marker_id": str(marker["id"])},
 				"%s marks in the goal square" % GameDB.player_display_name(marker))
-		var g := clampf(PACK_MARK_ACC * shot_chance(side, marker, true, false) / SET_REF, 0.5, 0.97)
-		return _set_result(side, marker, shooter, back, g, (1.0 - g) * SET_MISS_BEHIND * _wx("miss_behind"), false)
+		var g := _set_goal(clampf(PACK_MARK_ACC * shot_chance(side, marker, true, false) / SET_REF, 0.5, 0.97))
+		return _set_result(side, marker, shooter, back, g, _set_behind(g), false)
 	if r < p_mark + p_def:
 		# The defence wins it: a mark, or a fist that clears it - a good
 		# marker takes it, others punch it clear.
@@ -5743,9 +5765,8 @@ func _free_set_shot(side: int, at_fp: float, taker: Dictionary) -> Dictionary:
 	_chain_touch[str(taker["id"])] = taker
 	fp = at_fp
 	var metres := float(Ratings.T["goal_line"]) - (at_fp if side == 0 else -at_fp)
-	var goal_p := clampf(free_set_acc(metres) * shot_chance(side, taker, true, false) / SET_REF
-			* _wx("set_acc"), 0.03, 0.97)
-	var behind_p := (1.0 - goal_p) * SET_MISS_BEHIND * _wx("miss_behind")
+	var goal_p := _set_goal(free_set_acc(metres) * shot_chance(side, taker, true, false) / SET_REF)
+	var behind_p := _set_behind(goal_p)
 	var roll := rng.randf()
 	# His shot, as any set shot is counted (shots, set shots, their result).
 	_shot(side, taker, true, "goal" if roll < goal_p else ("behind" if roll < goal_p + behind_p else ""), metres, "free")

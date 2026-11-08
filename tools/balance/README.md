@@ -6,7 +6,7 @@ in a minute or two on this PC, without CI.
 ```bash
 GODOT=<godot console exe> tools/balance.sh match 1000                                    # one arm
 GODOT=<godot console exe> tools/balance.sh match 1000 --a-root ../main-checkout --b ""   # main vs this branch
-GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "--weather perfect"
+GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --b "--weather wet"
 ```
 
 - **Workers.** `balance_worker.gd` (+ `balance_body.gd`) plays a seed slice headless and writes one JSON
@@ -46,14 +46,19 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather wet" --b "-
   A "Change B against A" table gives B/A-1 with its se for the contest stats (tackles, clangers,
   ground-ball gets, contested possessions, one-percenters, marks, stoppages counted from ball-up and
   throw-in events) and accuracy in points. When B plays a weather and A a perfect day
-  (`--a "--weather perfect" --b "--weather wet|windy|hot"`, rows 120 and 61) the table widens to every
-  stat the reference holds, with the real change for that condition, its se and an IN/NEAR/OUT mark
-  (IN: within 2 combined se of the real change; NEAR: within 4), plus rows for accuracy, the last
-  quarter's share of the scoring and the breeze (how far the margin swings each quarter to the end
-  kicking with it, from the quarter margins' extra spread against A). Real: `afl_weather_rates.json`
+  (`--a "--weather perfect" --b "--weather wet|windy|hot"`, rows 120 and 61; A must be the perfect day,
+  as the real changes are against one) the table widens to every stat the reference holds (marks inside
+  50 and rebound 50s among them), with the real change for that condition, its se and an IN/NEAR/OUT
+  mark (IN: within 2 combined se of the real change; NEAR: within 4), plus rows for accuracy (overall,
+  set shots and general play), the last quarter's share of the scoring and the breeze (how far the
+  margin swings each quarter to the end kicking with it, from the quarter margins' extra spread
+  against A). Real: `afl_weather_rates.json`
   (AFL Tables 2016-19 and 2021-25 with Open-Meteo's hourly weather at the ground in the match window;
   built by `build_weather_rates.py`, which first checks its method against ABC's 2022-25 wet table;
   `--offline` rebuilds from its cache, `--explore` prints that check at several rain cut-offs).
+  How often each condition comes up is fitted to the same file's `share_of_outdoor`:
+  `weather_fixture.gd` dumps where and when the game plays 20 seasons of matches, and
+  `weather_cutoffs.py` fits `Weather.gd`'s WET_K, WIND_CUT and HOT_CUT to those shares.
   It also prints intercepts a game per player by his listed position (DEF, MID, FWD, RUCK; the
   definition of tools/audit/intercept_impl.gd) against Champion Data 2025, with B-A and se when paired.
   It also prints key forward v key defender contests per duel per match (row 94), from each match's

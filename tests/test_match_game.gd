@@ -1098,9 +1098,11 @@ func _test_wet_weather_play() -> void:
 						set_goals[c] += 1
 	_check(clangers[1] > clangers[0] * 1.04, "More clangers in the wet (%.0f against %.0f)" % [clangers[1], clangers[0]])
 	_check(ballups[1] > ballups[0] * 1.08, "More ball-ups in the wet (%d against %d)" % [ballups[1], ballups[0]])
-	# Row 61: real wet games have 12% more tackles and the game about 10% (balance.sh);
-	# over these 16 matches that rise has a standard error near 2.5%, so this asks
-	# for a clear rise, not the real size.
+	# Row 61: real wet games have 12.1% more tackles (afl_weather_rates.json) and the
+	# game 10.9% (tools/balance.sh, 1,000 paired matches, se 0.3%). Over these 16
+	# matches the rise has a standard error near 2.5%, so the floor is 4%, a clear
+	# rise nearly three standard errors under the game's own size (6% sat only two
+	# under); the real size is the balance run's to show.
 	_check(tackles[1] > tackles[0] * 1.04, "More tackles in the wet (%.0f against %.0f)" % [tackles[1], tackles[0]])
 	# Row 61: real wet games hold their disposals and kicks (-0.5%, +1.3%) and lose
 	# 13% of their marks (tools/balance/afl_weather_rates.json).
@@ -1133,6 +1135,30 @@ func _test_wet_weather_play() -> void:
 		if not hit:
 			scaled = false
 	_check(picked > 0 and scaled, "Every wet set shot is %.3f as likely to go through (%d shots)" % [sa, picked])
+	_check(is_equal_approx(wet._set_goal(0.6), 0.6 * sa) and is_equal_approx(dry._set_goal(0.6), 0.6),
+			"The wet's set-shot rate is one rule for every kind of set shot (%.3f, dry %.3f)"
+			% [wet._set_goal(0.6), dry._set_goal(0.6)])
+	# Row 61: the wet's aerial and run rates reach play. Sized to nothing (tune
+	# WX_<key>), no contested mark sticks anywhere on the ground and nobody bounces.
+	var contested_marks := [0, 0]
+	var bounces := [0.0, 0.0]
+	for c in range(2):
+		MatchSim.tune = {} if c == 0 else {"WX_aerial": 0.0, "WX_run": 0.0}
+		for i in range(4):
+			var s := _sim(760 + i)
+			s.weather = "wet"
+			var res := s.run()
+			for side in range(2):
+				bounces[c] += float((res["team"][side] as Dictionary).get("running_bounces", 0.0))
+			for e in res["events"]:
+				if str(e.get("kind", "")) == "mark" and bool(e.get("contested", false)):
+					contested_marks[c] += 1
+	MatchSim.tune = {}
+	_check(contested_marks[0] > 0 and contested_marks[1] == 0,
+			"Every contested mark goes through the wet's aerial rate (%d, none at nothing: %d)"
+			% [contested_marks[0], contested_marks[1]])
+	_check(bounces[0] > 0.0 and bounces[1] == 0.0,
+			"Every running bounce goes through the wet's run rate (%.0f, none at nothing: %.0f)" % [bounces[0], bounces[1]])
 
 
 ## Row 61: wind and heat at real size. The wind takes marks, adds tackles, sends more
@@ -1181,6 +1207,57 @@ func _test_wind_and_heat() -> void:
 	_check(MatchSim.BREEZE_WITH + MatchSim.BREEZE_AGAINST < 2.0, "A breeze costs goals over the day")
 	windy.current_quarter = 2
 	_check(windy.with_breeze(1 - side_with), "The sides change ends at the break")
+	# Every set shot takes the wind's miss rate, not only a band from a mark: a
+	# free kick, a mark in the goal-square pack and the teammate on the lead too.
+	# With no miss scoring (tune WX_miss_behind 0), none of them is ever a behind.
+	MatchSim.tune = {"WX_miss_behind": 0.0}
+	var by_spot := {}
+	var pack_marks := 0
+	var pack_behinds := 0
+	var turn := 0
+	for seed in range(830, 838):
+		var live := _sim(seed)
+		live.weather = "windy"
+		live.moment_side = 0
+		while live.current_quarter <= 4:
+			live.begin_quarter()
+			while not live.continue_quarter():
+				var m: Dictionary = live.pending_moment
+				var pick := int(m.get("default", 0))
+				if str(m["kind"]) == "set_shot":
+					var key: String = ["bomb", "pass"][turn % 2]
+					turn += 1
+					var opts: Array = m["options"]
+					for i in range(opts.size()):
+						if str(opts[i]["key"]) == key:
+							pick = i
+				var from := live.events.size()
+				live.resolve_moment(pick)
+				for k in range(from, live.events.size() - 1):
+					var e: Dictionary = live.events[k]
+					if str(e["kind"]) == "pack" and str(e.get("outcome", "")) == "marked":
+						pack_marks += 1
+						if str((live.events[k + 1] as Dictionary)["kind"]) == "behind":
+							pack_behinds += 1
+			live.end_quarter()
+		for shot in live.shot_log:
+			var spot := str(shot[4])
+			if int(shot[1]) != 1 or spot == "":
+				continue
+			var kind := spot if spot == "free" or spot == "lead" else "band"
+			if not by_spot.has(kind):
+				by_spot[kind] = [0, 0]
+			by_spot[kind][0] += 1
+			if str(shot[3]) == "behind":
+				by_spot[kind][1] += 1
+	MatchSim.tune = {}
+	var all_kinds := by_spot.has("band") and by_spot.has("free") and by_spot.has("lead") and pack_marks > 0
+	var no_behinds := pack_behinds == 0
+	for kind in by_spot:
+		no_behinds = no_behinds and int(by_spot[kind][1]) == 0
+	_check(all_kinds and no_behinds,
+			"Every kind of set shot takes the wind's miss rate (%s, pack marks %d with %d behinds)"
+			% [str(by_spot), pack_marks, pack_behinds])
 
 
 ## Row 61: every weather size points the way the real games do
@@ -1211,6 +1288,31 @@ func _test_weather_follows_the_real_games() -> void:
 		var sim_more := s._wx("tackle_share") > 1.0
 		var sim_fewer := float(r["pressure_base"]) < float(rd["pressure_base"])
 		_check(sim_more if float(c["tackles"]["change"]) > 0.0 else sim_fewer, "%s: tackles go the way the real games' do" % cond)
+		# Every real change beyond twice its standard error that the sim has a rule
+		# for, that rule moves the same way. How far it moves is the balance
+		# harness's to measure (tools/balance.sh match 1000, perfect against cond).
+		var breeze := (MatchSim.BREEZE_WITH + MatchSim.BREEZE_AGAINST) / 2.0 if cond == "windy" else 1.0
+		var rule := {
+			"marks": float(r["mark_share_of_kicks"]) / float(rd["mark_share_of_kicks"]) * s._wx("aerial") - 1.0,
+			"contested_marks": s._wx("aerial") - 1.0,
+			"marks_inside_50": s._wx("aerial") - 1.0,
+			"tackles": s._wx("tackle_share") * float(r["pressure_base"]) / float(rd["pressure_base"]) - 1.0,
+			"clangers": float(r["clanger_per_chain"]) / float(rd["clanger_per_chain"]) - 1.0 + s._wx("fumble", 0.0),
+			"one_percenters": float(r["one_percenter_share"]) / float(rd["one_percenter_share"]) - 1.0,
+			"bounces": s._wx("run") - 1.0,
+			"goals": s._wx("set_acc") * float(r["inside50_goal"]) / float(rd["inside50_goal"]) * breeze - 1.0,
+		}
+		var wrong := []
+		var asked := 0
+		for k in rule:
+			var ch := float(c[k]["change"])
+			if absf(ch) <= 2.0 * float(c[k]["se"]):
+				continue
+			asked += 1
+			if float(rule[k]) * ch <= 0.0:
+				wrong.append(k)
+		_check(wrong.is_empty(), "%s: every clear real change the sim has a rule for goes the same way (%d asked, wrong: %s)"
+				% [cond, asked, str(wrong)])
 
 
 func _fake(id: String, role: String, attr: Dictionary) -> Dictionary:
