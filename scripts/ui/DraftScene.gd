@@ -213,8 +213,19 @@ func _show_club_select() -> void:
 	# A career starts with the clubs active in its first season - the
 	# founding eighteen in the first season, more once expansion clubs arrive.
 	var real := GameState.opening_draft
+	var later := GameState.choosing_club()   # real lists, 2027-2029 played without you
 	var active := GameDB.active_clubs(GameDB.START_YEAR if real else GameState.season_year)
-	if real:
+	if later:
+		# The clubs in this draft: Canberra's first list is still being built.
+		active = _draft.clubs
+	if later:
+		_root.add_child(_header("Choose your club",
+				"2027 to 2029 played  /  the %d National Draft, then %d" % [
+					GameState.season_year, GameState.season_year + 1]))
+		_root.add_child(UiKit.lbl(
+				"Every club's own staff ran it from the real 2026 lists: Tasmania joined in 2028 and Canberra are building their first list for 2030. Take any club from this draft; Canberra keep their new-club picks. Your first season is 2030.",
+				16, UiKit.MUTED))
+	elif real:
 		_root.add_child(_header("Choose your club",
 				"Real 2026 lists  /  the 2026 National Draft, then 2027"))
 		_root.add_child(UiKit.lbl(
@@ -247,7 +258,9 @@ func _show_club_select() -> void:
 		var row := UiKit.hbox(8)
 		v.add_child(row)
 		row.add_child(UiKit.club_badge(code, 13, true))
-		var pick_label := UiKit.lbl("Pick %d" % (_draft.draft_order.find(code) + 1), UiKit.SMALL, UiKit.EMPH)
+		var first: Array = _draft.upcoming_picks(code, 1)
+		var pick_label := UiKit.lbl("Pick %d" % int(first[0]) if not first.is_empty() else "No pick",
+				UiKit.SMALL, UiKit.EMPH)
 		pick_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		pick_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(pick_label)
@@ -256,7 +269,9 @@ func _show_club_select() -> void:
 		_ignore_mouse(inner)
 		b.pressed.connect(_on_club_chosen.bind(code))
 		grid.add_child(b)
-	if real:
+	if later:
+		_root.add_child(UiKit.subtitle("Your first pick in the %d National Draft is shown on each card." % GameState.season_year))
+	elif real:
 		_root.add_child(UiKit.subtitle("Your first pick in the 2026 National Draft is shown on each card."))
 	else:
 		_root.add_child(UiKit.subtitle("Every club drafts %d players. Your first pick is shown on each card." % _draft.target_size))
@@ -280,7 +295,9 @@ func _on_club_chosen(code: String) -> void:
 	_club = code
 	_phase = "board"
 	_last_batch_start = _draft.pick_history.size()
-	if GameState.opening_draft:
+	if GameState.choosing_club():
+		GameState.choose_sim_ahead_club(code)
+	elif GameState.opening_draft:
 		GameState.choose_real_club(code)
 	else:
 		_draft.start_for_user(code)
