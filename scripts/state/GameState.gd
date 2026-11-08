@@ -1610,6 +1610,7 @@ func reset() -> void:
 	expansion_from = 0  # before set_canberra, which applies it to the entry years
 	set_canberra(false)
 	sim_ahead = false
+	sim_ahead_to = SIM_AHEAD_TO
 	_sim_ahead_challenge = {}
 	week_events = []
 	week_checks = {}
@@ -1912,6 +1913,9 @@ func choose_real_club(code: String) -> void:
 ## 2026-11-08): Canberra's 2030 entry with its build, and every club,
 ## Tasmania and Canberra included, open to you.
 const SIM_AHEAD_TO := 2030
+## Your first season while the years are played without you: 2030, or 2028 when
+## you take Tasmania from the real 2026 lists (director, 2026-11-09).
+var sim_ahead_to := SIM_AHEAD_TO
 ## The challenge you set up, held back until you choose your club.
 var _sim_ahead_challenge := {}
 
@@ -1919,7 +1923,12 @@ var _sim_ahead_challenge := {}
 ## of yours. sim_ahead_step then plays it through to the 2029 National Draft.
 func begin_sim_ahead() -> void:
 	begin_real_lists()
+	_hold_years_without_you(SIM_AHEAD_TO)
+
+
+func _hold_years_without_you(first_season: int) -> void:
 	sim_ahead = true
+	sim_ahead_to = first_season
 	# Your challenge starts with your first season, not with the years
 	# played without you.
 	_sim_ahead_challenge = challenge
@@ -1927,10 +1936,31 @@ func begin_sim_ahead() -> void:
 	mark_dirty()
 
 
+## The club that joins the season after a real-lists career starts, which you
+## can take by waiting for it (director, 2026-11-09: picking Tasmania plays 2027
+## without you and starts you in 2028), or "". On the 2026 National Draft's club
+## choice only. A rebuild is set on a club's real list, which it does not have.
+func waiting_club() -> String:
+	if not opening_draft or my_club != "" or sim_ahead or Challenge.kind(self) == "rebuild":
+		return ""
+	var year := GameDB.START_YEAR + 1
+	return "TAS" if GameDB.enter_year("TAS") == year else ""
+
+
+## Take the waiting club: from the 2026 National Draft, the years up to its
+## first National Draft are played without you (sim_ahead_step), and it is
+## yours from that draft.
+func begin_wait_for_club(code: String) -> bool:
+	if code == "" or code != waiting_club():
+		return false
+	_hold_years_without_you(GameDB.enter_year(code))
+	return true
+
+
 ## The 2029 National Draft is open and waits for you to choose your club.
 func choosing_club() -> bool:
 	return sim_ahead and my_club == "" and draft != null and draft.intake_mode \
-			and season != null and season_year == SIM_AHEAD_TO - 1
+			and season != null and season_year == sim_ahead_to - 1
 
 
 ## One step of the years played without you, under the cover: a round, a
@@ -1970,6 +2000,12 @@ func _next_week_label() -> String:
 	var w := int(season.finals.get("week", 1))
 	return str({1: "the Wildcard Round", 2: "the qualifying and elimination finals", 3: "the semi finals",
 			4: "the preliminary finals", 5: "the Grand Final"}.get(w, "the finals"))
+
+
+## Your club joins next season and you are at its first draft: the season on
+## file is one it did not play, so there is no Hub to go back to yet.
+func club_yet_to_play() -> bool:
+	return season != null and my_club != "" and not season.lists.has(my_club)
 
 
 ## Your club, chosen at the 2029 National Draft after the years played

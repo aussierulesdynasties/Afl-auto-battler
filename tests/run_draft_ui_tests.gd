@@ -42,6 +42,7 @@ func _run() -> void:
 	await _t("_test_phone_browser_never_wide")
 	await _t("_test_stage")
 	await _t("_test_league_draft_stays_instant")
+	await _t("_test_take_tasmania")
 	await _t("_test_rival_why")
 	for sz in [Vector2i(390, 844), Vector2i(360, 800), Vector2i(320, 568), Vector2i(2560, 1440)]:
 		await _t("_test_subtitle_whole", [sz])
@@ -1152,6 +1153,82 @@ func _check(condition: bool, message: String) -> void:
 
 ## Draft night's stage and replay are the National Draft's alone (lead,
 ## 2026-10-18): the League Draft's picks land at once, even with motion on.
+## Real lists, Canberra No (director, 2026-11-09: "Yes, start 2028"): by finger,
+## the Tasmania card opens a sheet that plays nothing; its button plays 2027
+## under the cover and opens the 2027 National Draft with Tasmania yours.
+func _test_take_tasmania() -> void:
+	_state.reset()
+	_state.set_canberra(false)
+	_state.begin_real_lists()
+	root.size = Vector2i(390, 844)
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	var col: Button = ui.find_child("Choose_COL", true, false)
+	var tile: Button = ui.find_child("Choose_TAS", true, false)
+	_check(col != null and tile != null, "The 2026 club choice shows the eighteen and Tasmania")
+	if tile == null:
+		ui.queue_free()
+		return
+	var scroll: ScrollContainer = _scroll_of(tile)
+	if scroll != null:
+		scroll.ensure_control_visible(tile)
+	await _settle()
+	var pick: String = ""
+	for l in tile.find_children("*", "Label", true, false):
+		pick += (l as Label).text + " | "
+	_check(pick.contains("From 2028"), "The card says when they start (%s)" % pick)
+	var why: String = await Tap.tap(tile)
+	await _settle()
+	var sheet: Node = ui.find_child("WaitForClub", true, false)
+	_check(why == "" and sheet != null and _state.season_year == 2026 and not _state.sim_ahead,
+			"A finger on it opens the sheet and plays nothing (%s)" % why)
+	why = await Tap.tap(ui.find_child("WaitBack", true, false))
+	await _settle()
+	_check(why == "" and ui.find_child("WaitForClub", true, false) == null and not _state.sim_ahead,
+			"Back closes it and you can still choose (%s)" % why)
+	why = await Tap.tap(tile)
+	await _settle()
+	_check(ui.handle_back() and not _state.sim_ahead, "Android Back closes the sheet, not the club choice")
+	await _settle()
+	_check(ui.find_child("WaitForClub", true, false) == null, "The sheet is gone and the clubs are still up")
+	why = await Tap.tap(tile)
+	await _settle()
+	why += await Tap.tap(ui.find_child("WaitGo", true, false))
+	var guard := 0
+	while _state.my_club != "TAS" and guard < 20000:
+		await process_frame
+		guard += 1
+	await _settle()
+	_check(why == "" and _state.my_club == "TAS" and _state.season_year == 2027 and _state.draft.intake_mode
+			and _state.draft.user_club == "TAS" and not _state.sim_ahead,
+			"A finger on Take Tasmania plays 2027 and Tasmania are yours at the 2027 draft (%s, %s, %d)" % [why, _state.my_club, _state.season_year])
+	_check(current_scene != null and current_scene.find_child("Choose_COL", true, false) == null,
+			"The draft board is up, not the club choice")
+	var router: Node = root.get_node("Router")
+	router.go("main")
+	await _settle()
+	var cont: Button = current_scene.find_child("ResumeCareer", true, false)
+	_check(cont != null, "The title offers Continue")
+	if cont != null:
+		why = await Tap.tap(cont)
+		await _settle()
+		_check(why == "" and router.current() == "draft", "A finger on Continue returns to Tasmania's draft, not a Hub for a season they missed (%s, %s)" % [why, router.current()])
+	if is_instance_valid(ui):
+		ui.queue_free()
+	await _settle()
+	_state.reset()
+
+
+func _scroll_of(c: Control) -> ScrollContainer:
+	var p := c.get_parent()
+	while p != null:
+		if p is ScrollContainer:
+			return p
+		p = p.get_parent()
+	return null
+
+
 func _test_league_draft_stays_instant() -> void:
 	var feel = load("res://scripts/ui/Feel.gd")
 	_state.reset()

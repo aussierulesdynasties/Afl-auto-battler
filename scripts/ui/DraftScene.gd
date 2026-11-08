@@ -243,7 +243,11 @@ func _show_club_select() -> void:
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 10)
 	_root.add_child(UiKit.scroll(grid))
-	for code in active:
+	var waiting := GameState.waiting_club()
+	var tiles: Array = active.duplicate()
+	if waiting != "":
+		tiles.append(waiting)
+	for code in tiles:
 		var b := UiKit.btn("", UiKit.NAME)
 		b.name = "Choose_" + code
 		b.custom_minimum_size = Vector2(0, 110)
@@ -259,23 +263,80 @@ func _show_club_select() -> void:
 		v.add_child(row)
 		row.add_child(UiKit.club_badge(code, 13, true))
 		var first: Array = _draft.upcoming_picks(code, 1)
-		var pick_label := UiKit.lbl("Pick %d" % int(first[0]) if not first.is_empty() else "No pick",
-				UiKit.SMALL, UiKit.EMPH)
+		var pick_text := "Pick %d" % int(first[0]) if not first.is_empty() else "No pick"
+		if code == waiting:
+			pick_text = "From %d" % GameDB.enter_year(code)
+		var pick_label := UiKit.lbl(pick_text, UiKit.SMALL, UiKit.EMPH)
 		pick_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		pick_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(pick_label)
 		v.add_child(UiKit.lbl(GameDB.club_name(code), UiKit.HEADING, UiKit.TEXT, true))
 		v.add_child(UiKit.ellipsis(str(GameDB.club(code).get("ground", "")), UiKit.SMALL, UiKit.MUTED))
 		_ignore_mouse(inner)
-		b.pressed.connect(_on_club_chosen.bind(code))
+		if code == waiting:
+			b.pressed.connect(_open_wait_sheet.bind(code))
+		else:
+			b.pressed.connect(_on_club_chosen.bind(code))
 		grid.add_child(b)
 	if later:
 		_root.add_child(UiKit.subtitle("Your first pick in the %d National Draft is shown on each card." % GameState.season_year))
 	elif real:
-		_root.add_child(UiKit.subtitle("Your first pick in the 2026 National Draft is shown on each card."))
+		_root.add_child(UiKit.subtitle("Your first pick in the 2026 National Draft is shown on each card." if waiting == ""
+				else "Your first pick in the 2026 National Draft is shown on each card. %s join in %d." % [
+					GameDB.club_name(waiting), GameDB.enter_year(waiting)]))
 	else:
 		_root.add_child(UiKit.subtitle("Every club drafts %d players. Your first pick is shown on each card." % _draft.target_size))
 
+
+
+## Take a club that joins next season (director, 2026-11-09): the sheet says
+## what it costs and gives, and nothing is played until its own button is pressed.
+func _open_wait_sheet(code: String) -> void:
+	var year := GameDB.enter_year(code)
+	var name_ := GameDB.club_name(code)
+	var box := UiKit.modal_box(self, 460.0, 0.0)
+	var overlay: Control = box["overlay"]
+	overlay.name = "WaitForClub"
+	var v: VBoxContainer = box["body"]
+	v.add_child(UiKit.heading("Start with %s in %d?" % [name_, year], UiKit.H1))
+	for line in [
+			"%s join the league in %d, so your first season is %d." % [name_, year, year],
+			"%d plays out without you. Their staff sign %d state-league players and trade pick %d for a senior player." % [
+				year - 1, Expansion.FOUNDATION_SIZE, Expansion.MUST_TRADE_PICK],
+			"You take over at the %d National Draft with picks 1, 3 and 5 and the first pick of each later round." % (year - 1)]:
+		var l := UiKit.lbl(line, UiKit.BODY, UiKit.TEXT)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(l)
+	var row := UiKit.hbox(8)
+	box["footer"].add_child(row)
+	var back := UiKit.btn("Back", UiKit.NAME)
+	back.name = "WaitBack"
+	var go := UiKit.btn("Take %s" % name_, UiKit.NAME, true)
+	go.name = "WaitGo"
+	for b in [back, go]:
+		(b as Control).custom_minimum_size = Vector2(0, 48)
+		(b as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(b)
+	back.pressed.connect(overlay.queue_free)
+	go.pressed.connect(func():
+		overlay.queue_free()
+		_wait_for_club(code))
+
+
+## The year or so without you, under the cover, then the club is yours and its
+## first National Draft opens.
+func _wait_for_club(code: String) -> void:
+	if not GameState.begin_wait_for_club(code):
+		return
+	ScreenTransition.run("Playing %d..." % (GameDB.enter_year(code) - 1), func():
+		while true:
+			var line := GameState.sim_ahead_step()
+			if line == "":
+				break
+			ScreenTransition.show_line(line)
+			await ScreenTransition.drawn()
+		GameState.choose_sim_ahead_club(code)
+		Router.go("draft"))
 
 
 func _sort_options() -> Array:
@@ -1307,6 +1368,11 @@ func _land_my_pick() -> void:
 ## Android Back and the top-bar back close the player first.
 func handle_back() -> bool:
 	if FirstVisitIntro.close_open(self):
+		return true
+	# The Tasmania sheet closes back to the clubs, as its own Back does.
+	var wait_sheet := get_node_or_null("WaitForClub")
+	if wait_sheet != null:
+		wait_sheet.queue_free()
 		return true
 	# Back first cuts draft night's show to the end: the stage and the replay.
 	if is_instance_valid(_beat) or replaying():
