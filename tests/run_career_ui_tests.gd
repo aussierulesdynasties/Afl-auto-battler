@@ -4295,8 +4295,11 @@ func _skip_orders_run(orders: Dictionary) -> Dictionary:
 		for r in _rules("Backing").ledger(p):
 			if int(r.get("year", 0)) == year:
 				runs += 1
+	# A strong season can end in a rival board's letter (row 112), which holds
+	# the off-season until he answers, as it does after Sim the week.
+	var held: bool = load("res://scripts/state/ClubMoves.gd").letter_open(_state)
 	return {"ok": bool(res["ok"]), "runs": runs, "plan": _state.club_plan,
-			"over": _state.season.is_season_over(), "off": _state.offseason_open(), "draft": _state.draft != null}
+			"over": _state.season.is_season_over(), "off": _state.offseason_open() or held, "draft": _state.draft != null}
 
 
 func _test_skip_orders() -> void:
