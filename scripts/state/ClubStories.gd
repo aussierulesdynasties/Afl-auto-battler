@@ -535,7 +535,10 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 	var out := {"id": id, "name": name, "first": name.split(" ")[0], "age": float(p.get("age", 25.0)),
 			"games": gs.games_played(p), "fit": fit, "selected": selected, "overall": ovr, "potential": pot,
 			"pot_gap": pot - ovr, "contract_years": int(p.get("contract_years", 2)), "morale": ClubLife.morale(p),
-			"trust": t, "trust_band": Trust.band(t),
+			"trust": t, "trust_band": Trust.band(t), "opinion": Trust.opinion(t),
+			# Under 50 he may refuse to re-sign (director 2026-11-08); "" at 50 or over.
+			"refuse_line": Contracts.REFUSE_ODDS % [Trust.opinion(t), gs.resign_refuse_chance(p)]
+					if gs.resign_refuse_chance(p) > 0 else "",
 			"discipline": int((p.get("attr", {}) as Dictionary).get("discipline", 50)),
 			# Recent form: his last games' Player Rating, averaged (the form the
 			# game already keeps and shows); form_games counts them (0 to 3).
@@ -563,6 +566,7 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			# fairly high and he trusts you (the rule is printed on the choice).
 			"leadership": lead, "captain": Captaincy.role_of(gs.captaincy_record(gs.my_club), id) == "captain",
 			"delegate_holds": holds, "holds_at": StoryDeck.HOLDS_AT, "holds_trust_at": StoryDeck.HOLDS_WITH_TRUST,
+			"holds_opinion_at": Trust.band_opinion("trusts"),
 			"last_season": _last_season(gs, p), "finals_games": int(p.get("finals_games", 0)),
 			"save_debut": gs.save_saw_every_game(p), "debut_year": _debut_year(gs, p),
 			"milestone_next": _milestone_next(gs, p), "injured_weeks": int(p.get("injury_weeks", 0)),
@@ -851,8 +855,13 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			var when := "Round %d" % int(facts.get("round", 0)) if int(facts.get("finals_week", 0)) == 0 else "Finals"
 			if int(facts.get("pre_week", 0)) > 0:
 				when = "Pre-season"
-			applied["trust"] = int(applied.get("trust", 0)) + Trust.change(gs.relations, Trust.player_key(str(p["id"])),
+			var key := Trust.player_key(str(p["id"]))
+			var before := Trust.opinion(Trust.value(gs.relations, key))
+			applied["trust"] = int(applied.get("trust", 0)) + Trust.change(gs.relations, key,
 					d, StoryEngine.fill(str(e.get("why", "")), facts), int(gs.season_year), when)
+			# His opinion of you before the first move and after the last.
+			applied["opinion"] = [int((applied.get("opinion", [before]) as Array)[0]),
+					Trust.opinion(Trust.value(gs.relations, key))]
 		"rest":
 			p["rested"] = true
 		"slow_start":
@@ -975,6 +984,9 @@ static func _extend(gs, p: Dictionary, name: String) -> String:
 	if gs.my_payroll() - int(p.get("salary", 0)) + cost > gs.salary_cap:
 		# The cap moved since the card was drawn: nobody's fault.
 		return "The cap no longer has room to extend %s now; it waits for the off-season." % name
+	# Under 50, he may refuse you (director 2026-11-08): the draw talks use.
+	if gs.resign_refused(p):
+		return gs.refuse_resign(p, Contracts.REFUSED_SEASON_END)
 	p["salary"] = cost
 	p["contract_years"] = years
 	ClubLife.add_morale(p, StoryEngine.EXTEND_MORALE)

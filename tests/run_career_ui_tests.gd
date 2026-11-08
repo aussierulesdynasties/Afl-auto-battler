@@ -159,7 +159,6 @@ func _test_press_rolls() -> void:
 		for i in range(_state.my_list.size()):
 			_state.my_list[i]["morale"] = snap[i]
 			_state.my_list[i].erase("press_lift")
-			_state.my_list[i].erase("press_slow")
 		_state.board["confidence"] = 50
 		_state.media_memory = {}
 		_state.career_seed = seed
@@ -191,12 +190,12 @@ func _test_press_rolls() -> void:
 	# Every number on the gate comes from the constants: no digits in a template.
 	var digit := RegEx.create_from_string("[0-9]")
 	var words: Array = [MC.ODDS_TEMPLATE, MC.MORALE_SIZE, MC.BOARD_SIZE, MC.AFTER_MORALE, MC.AFTER_BOARD,
-			MC.HIS_SIZE, MC.AFTER_HIS, MC.NO_BOARD, MC.LIKES, MC.DISLIKES, MC.STANDING_EFFECT,
-			MC.REASON, MC.FADE_NOTE, MC.SLOW_FADE_NOTE]
+			MC.HIS_SIZE, MC.AFTER_HIS, MC.OPINION_SIZE, MC.NO_BOARD, MC.LIKES, MC.DISLIKES, MC.STANDING_EFFECT,
+			MC.REASON, MC.FADE_NOTE, MC.EITHER_WAY, MC.SEP]
 	words.append_array(MC.RECORD_CLAUSE.values())
 	words.append_array(MC.RECORD_REASON.values())
 	for j in MC.PERSONA.values():
-		for k in ["odds_note", "board_note", "named_note", "slow_note"]:
+		for k in ["odds_note", "board_note", "named_note", "rule"]:
 			if (j as Dictionary).has(k):
 				words.append(j[k])
 	words.append_array(MC.STANDING_WORDS.values())
@@ -223,7 +222,7 @@ func _test_press_rolls() -> void:
 			for lever in [["morale", MC.MORALE_SIZE], ["board", MC.BOARD_SIZE]]:
 				for o in [a, b]:
 					if int(o[lever[0]]) != 0:
-						ok = ok and line.contains(str(lever[1]) % int(o[lever[0]]))
+						ok = ok and line.to_lower().contains(str(lever[1]) % int(o[lever[0]]))
 			if not ok:
 				sample = line
 			carries = carries and ok
@@ -262,7 +261,6 @@ func _press_reset() -> void:
 	for p in _state.my_list:
 		p["morale"] = 70
 		p.erase("press_lift")
-		p.erase("press_slow")
 
 
 func _press_conf(key_result: Array) -> Dictionary:
@@ -271,8 +269,8 @@ func _press_conf(key_result: Array) -> Dictionary:
 
 
 ## (g) Caps: no answer, journalist or record check takes a size past list 2,
-## named 3, board 3; stacked answers never pass the cap, and the
-## lift fades back a point a round (half pace after the Philosopher).
+## named 3, board 3; stacked answers never pass the cap, and the lift fades
+## back a point every second round whoever asked, the board's a point a round.
 func _test_press_caps_and_fade() -> void:
 	var MC = load("res://scripts/sim/MediaConference.gd")
 	var worst := [0, 0, 0]
@@ -289,47 +287,68 @@ func _test_press_caps_and_fade() -> void:
 			"Every press size stays inside its cap: list 2, named 3, board 3 (largest %s)" % str(worst))
 	var p := {"morale": 70}
 	for i in range(5):
-		MC.apply_lift(p, 2, MC.LIST_CAP, false)
+		MC.apply_lift(p, 2, MC.LIST_CAP)
 	_check(int(p["morale"]) == 72 and int(p["press_lift"]) == 2,
 			"Five list-wide lifts in a row stop at the list cap (morale %d)" % int(p["morale"]))
-	MC.apply_lift(p, 3, MC.NAMED_CAP, false)
+	MC.apply_lift(p, 3, MC.NAMED_CAP)
 	_check(int(p["morale"]) == 73 and int(p["press_lift"]) == 3,
 			"A named lift on top stops at the named cap, never list plus named (morale %d)" % int(p["morale"]))
 	var trail := []
-	for r in range(1, 5):
+	for r in range(1, 8):
 		MC.fade_lift(p, r)
 		trail.append(int(p["morale"]))
-	_check(trail == [72, 71, 70, 70] and not p.has("press_lift"),
-			"The lift fades a point a round back to where he was, then the trace is gone (%s)" % str(trail))
-	var slow := {"morale": 70}
-	MC.apply_lift(slow, 2, MC.LIST_CAP, true)
-	var slow_trail := []
+	_check(trail == [73, 72, 72, 71, 71, 70, 70] and not p.has("press_lift") and not p.has("press_wait"),
+			"The lift fades a point every second round back to where he was, then the trace is gone (%s)" % str(trail))
+	# Director 2026-11-07: +1 lasts 2 rounds, -2 lasts 4.
+	var one := {"morale": 70}
+	MC.apply_lift(one, 1, MC.LIST_CAP)
+	var one_trail := []
+	for r in range(1, 4):
+		MC.fade_lift(one, r)
+		one_trail.append(int(one["morale"]))
+	var two := {"morale": 70}
+	MC.apply_lift(two, -2, MC.LIST_CAP)
+	var two_trail := []
 	for r in range(1, 6):
-		MC.fade_lift(slow, r)
-		slow_trail.append(int(slow["morale"]))
-	_check(slow_trail == [72, 71, 71, 70, 70] and MC.fade_rounds(2, true) == 4 and MC.fade_rounds(2, false) == 2,
-			"After the Philosopher the lift fades at half pace (%s)" % str(slow_trail))
+		MC.fade_lift(two, r)
+		two_trail.append(int(two["morale"]))
+	_check(one_trail == [71, 70, 70] and two_trail == [68, 69, 69, 70, 70]
+			and MC.fade_rounds(1) == 2 and MC.fade_rounds(-2) == 4,
+			"A morale +1 lasts 2 rounds and a -2 lasts 4 (%s, %s)" % [str(one_trail), str(two_trail)])
+	# Director 2026-11-07: no journalist slows the fade. An old save's lift that
+	# still carries the Philosopher's slow flag fades at the one pace, flag gone.
+	var old := {"morale": 72, "press_lift": 2, "press_slow": true}
+	var old_trail := []
+	for r in range(1, 6):
+		MC.fade_lift(old, r)
+		old_trail.append(int(old["morale"]))
+	_check(old_trail == [72, 71, 71, 70, 70] and not old.has("press_slow") and not old.has("press_lift"),
+			"An old save's Philosopher lift fades a point every second round like any other, its flag dropped (%s)" % str(old_trail))
 	# Counted from the presser, not the round number: set on an odd round it
 	# still takes exactly fade_rounds rounds.
 	var odd := {"morale": 70}
-	MC.apply_lift(odd, 2, MC.LIST_CAP, true)
+	MC.apply_lift(odd, 2, MC.LIST_CAP)
 	var odd_trail := []
-	for r in range(4, 8):
+	for r in range(5, 10):
 		MC.fade_lift(odd, r)
 		odd_trail.append(int(odd["morale"]))
-	_check(odd_trail == [72, 71, 71, 70] and not odd.has("press_lift") and not odd.has("press_wait"),
-			"The Philosopher's lift takes exactly fade_rounds rounds whichever round it starts (%s)" % str(odd_trail))
+	_check(odd_trail == [72, 71, 71, 70, 70] and MC.fade_rounds(2) == 4 and not odd.has("press_lift") and not odd.has("press_wait"),
+			"A lift takes exactly fade_rounds rounds whichever round it starts (%s)" % str(odd_trail))
 	var low := {"morale": 6}
-	var moved: int = MC.apply_lift(low, -2, MC.LIST_CAP, false)
+	var moved: int = MC.apply_lift(low, -2, MC.LIST_CAP)
 	MC.fade_lift(low, 1)
+	MC.fade_lift(low, 2)
 	_check(moved == -1 and int(low["morale"]) == 6 and not low.has("press_lift"),
 			"At the morale floor only what really moved is kept, so the fade never overshoots (%d)" % int(low["morale"]))
 	# The round's fade runs in GameState before the next question forms.
 	_press_reset()
 	var q: Dictionary = _state.my_list[0]
-	MC.apply_lift(q, 2, MC.LIST_CAP, false)
+	MC.apply_lift(q, 2, MC.LIST_CAP)
 	_state._fade_press_lifts()
-	_check(int(q["morale"]) == 71 and int(q["press_lift"]) == 1, "GameState fades every listed player's press lift a round")
+	var held := int(q["morale"])
+	_state._fade_press_lifts()
+	_check(held == 72 and int(q["morale"]) == 71 and int(q["press_lift"]) == 1,
+			"GameState fades every listed player's press lift a point every second round (%d, %d)" % [held, int(q["morale"])])
 	# The board's press move fades too, and stacking never passes its cap.
 	_press_reset()
 	var up: int = _state._press_board(2)
@@ -354,7 +373,8 @@ func _test_press_caps_and_fade() -> void:
 			"options": [{"label": "x", "kind": "method"}]}
 	var res: Dictionary = _state.resolve_media_conference(0)
 	var b_moved: int = _state.board_confidence() - 50
-	_check(absi(b_moved) == 2 and int(_state.media_memory.get("board_lift", 0)) == b_moved and int(res["fade_rounds"]) == 2,
+	_check(absi(b_moved) == 2 and int(_state.media_memory.get("board_lift", 0)) == b_moved and int(res["fade_rounds"]) == 2
+			and int(res["fade_board"]) == 2 and int(res["fade_morale"]) == 0,
 			"An answer's board move is kept to fade, and the outcome says how long (%d, %s rounds)" % [b_moved, str(res.get("fade_rounds"))])
 
 
@@ -392,15 +412,25 @@ func _test_press_standing() -> void:
 			and MC.lead_in("muckraker", 0) == "",
 			"A cool journalist adds a lead-in; the question itself is unchanged (%s)" % asked)
 	var st_line: String = _state.press_standing_line()
-	_check(st_line == "Gary is cool on you: every answer is 5% less likely to land well.",
+	_check(st_line == "Gary's opinion of you is Wary: every answer is 5% less likely to land well.",
 			"The sheet says how he stands with you and what it does to the odds (%s)" % st_line)
-	_check(MC.standing_effect("muckraker", 0) == "" and MC.standing_word(0, "philosopher") == "takes you as she finds you",
-			"Even standing adds no line; its word names her")
-	_check(_state.press_odds_line(0).contains("Gary will like that: answers to him land well 5% more often after it.")
-			and _state.press_odds_line(2).contains("Gary won't like that: answers to him land well 5% less often after it."),
+	_check(MC.standing_effect("muckraker", 0) == "" and MC.standing_word(0) == "Neutral"
+			and [-2, -1, 0, 1, 2].map(func(v): return MC.standing_word(v)) == ["Hostile", "Wary", "Neutral", "Warm", "Firm fan"],
+			"His opinion of you reads Hostile / Wary / Neutral / Warm / Firm fan; Neutral adds no line")
+	var PS = load("res://scripts/ui/PressScene.gd")
+	var rows: Array = PS.press_outcome_rows({"journalist": "muckraker", "standing": [0, 1],
+			"fade_rounds": 4, "fade_morale": 4, "fade_board": 2}, "")
+	var texts := rows.map(func(r): return str(r[1]))
+	_check(texts.has("Gary Haddon's opinion of you: Neutral → Warm") and texts.has("Morale wears off over 4 rounds, the board over 2.")
+			and PS.OPINION % MC.standing_word(0) == "Opinion of you: Neutral",
+			"The gate and the result say his opinion of you, and both fade lengths when they differ (%s)" % str(texts))
+	var one_fade: Array = PS.press_outcome_rows({"fade_rounds": 2, "fade_morale": 2, "fade_board": 0}, "")
+	_check(str(one_fade[0][1]) == "It wears off over 2 rounds.", "One fade length is said once (%s)" % str(one_fade))
+	_check(_state.press_odds_line(0).contains("Gary warms to you (+5% next time)")
+			and _state.press_odds_line(2).contains("Gary cools on you (-5% next time)"),
 			"Each answer says how it moves your standing with him, as odds (%s)" % _state.press_odds_line(0))
 	_state.media_memory = {"standing": {"muckraker": 2}, "standing_year": int(_state.season_year)}
-	_check(not _state.press_odds_line(0).contains("will like that"),
+	_check(not _state.press_odds_line(0).contains("warms to you"),
 			"In his corner already, an answer he likes says nothing it cannot do")
 	_state.media_conference = {}
 
@@ -417,28 +447,34 @@ func _test_press_personas() -> void:
 			and MC.chance("criticise", {"journalist": "muckraker"}) == MC.chance("criticise", {}) - 10,
 			"The Muckraker: a board move that depends on how it lands grows by one, a sure one never does")
 	var m_ctx := {"journalist": "muckraker", "facts": {"journalist": "muckraker"}}
-	_check(MC.odds_line("criticise", 40, MC.effects("criticise", m_ctx), m_ctx).contains("The players read his headline: 10% less likely to land well."),
+	_check(MC.odds_line("criticise", 40, MC.effects("criticise", m_ctx), m_ctx).contains("His headline: 10% less likely"),
 			"The Muckraker's odds twist is named on the gate with its size")
 	var y_ctx := {"journalist": "sycophant", "facts": {"journalist": "sycophant"}}
 	_check(MC.chance("back", {"journalist": "sycophant"}) == MC.chance("back", {}) - 5
-			and MC.odds_line("back", 55, MC.effects("back", y_ctx), y_ctx).contains("Praise after a thumping is what everyone expects: 5% less likely to land well."),
+			and MC.odds_line("back", 55, MC.effects("back", y_ctx), y_ctx).contains("Praise is expected: 5% less likely"),
 			"The Sycophant: backing the players lands 5 worse, and the gate says so")
 	var heavy := {"key": "heavy_loss", "young": MC.YOUNG_SIDE, "morale": 50.0, "verdict": "contradicted"}
 	var why := ""
 	for kind in ["method", "back"]:
 		var ctx := {"facts": heavy, "verdict": "contradicted"}
 		why += MC.odds_line(kind, 50, MC.effects(kind, ctx), ctx)
-	_check(why.contains("After a heavy loss: 15% less likely to land well.") and why.contains("It's a young side: 10% more likely to land well.")
-			and why.contains("The group is flat: 10% more likely to land well.") and why.contains("The record says otherwise: 10% less likely to land well."),
+	_check(why.contains("Heavy loss: 15% less likely") and why.contains("Young side: 10% more likely")
+			and why.contains("The group is flat: 10% more likely") and why.contains("Record says otherwise: 10% less likely"),
 			"Every odds twist is named on the gate with its size (%s)" % why)
 	var bogan: Dictionary = MC.effects("back_named", {"journalist": "bogan", "name": "Jack"})
 	_check(int(bogan["a"]["his"]) == 3 and int(bogan["b"]["his"]) == -2 and str(bogan["notes"]).contains("listen to his show"),
 			"The Bogan: a named player's sizes grow by one (%d / %d)" % [int(bogan["a"]["his"]), int(bogan["b"]["his"])])
-	var p_ctx := {"journalist": "philosopher"}
-	var p_line: String = MC.odds_line("back", 55, MC.effects("back", p_ctx), p_ctx)
-	_check(p_line.contains("Her piece lingers: the players' moves wear off a point every second round.")
-			and p_line.contains(MC.SLOW_FADE_NOTE) and not p_line.contains(MC.FADE_NOTE),
-			"The Philosopher: the gate says her morale move lingers (%s)" % p_line)
+	var p_line: String = MC.rules_line("philosopher")
+	_check(p_line == MC.FADE_NOTE and not (MC.PERSONA["philosopher"] as Dictionary).has("slow")
+			and MC.rules_line("sycophant") == MC.FADE_NOTE and MC.rules_line("muckraker").begins_with("The Siren gets read upstairs")
+			and MC.rules_line("muckraker").ends_with(MC.FADE_NOTE),
+			"The gate says once how long the moves last, the same pace for every journalist (%s)" % p_line)
+	# Trimmed (director 2026-11-07): the fade and his personality are said once
+	# on the screen, never under each answer, and the line keeps every number.
+	var m_line: String = MC.odds_line("criticise", 40, MC.effects("criticise", m_ctx), m_ctx)
+	_check(m_line.begins_with("40% resolve tightens, morale +1% · 60% hung out to dry, morale -2% · Board +1% either way")
+			and not m_line.contains("wear") and not m_line.contains("Siren"),
+			"One answer's line: both outcomes with their odds and sizes, then what moves either way (%s)" % m_line)
 	_check(MC.standing_move("stats", "back", "supported") == 1 and MC.standing_move("stats", "back", "contradicted") == -1
 			and MC.standing_move("stats", "back", "neutral") == 0 and MC.standing_move("bogan", "method") == -1,
 			"The Stats Geek's standing follows the record, the others' their likes")
@@ -469,11 +505,133 @@ func _test_press_named() -> void:
 	for p in _state.my_list:
 		after += int(p["morale"])
 	var his_move := int(him["morale"]) - 70
-	var want := 1 if str(landed["landed"]) == "a" else -3
-	_check(his_move == want and after - others == his_move,
-			"Only the named player's morale moves (%+d, list total %+d)" % [his_move, after - others])
+	# Up a point whichever way it lands (director 2026-11-08).
+	_check(his_move == 1 and after - others == his_move,
+			"Only the named player's morale moves, up a point (%+d, list total %+d)" % [his_move, after - others])
 	_check(str(landed["line"]).contains(str(_db.player_display_name(him))), "The outcome line names him (%s)" % str(landed["line"]))
 
+
+## Calling a player out by name (director 2026-11-08): his morale goes up a
+## point whichever way it lands; if he takes it personally his opinion of you
+## also falls CALLOUT_OPINION_DROP points, the result says so, and backing him
+## by name later gives it back. Skipping the question moves nothing.
+func _test_press_opinion() -> void:
+	var MC = load("res://scripts/sim/MediaConference.gd")
+	var PS = load("res://scripts/ui/PressScene.gd")
+	_press_reset()
+	var him: Dictionary = _state.my_list[0]
+	var pid := str(him["id"])
+	var key := Trust.player_key(pid)
+	var name := str(_db.player_display_name(him))
+	var drop: int = MC.CALLOUT_OPINION_DROP
+	var call_out: Dictionary = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 8, "year": int(_state.season_year),
+			"named": {"heavy_loss": {"id": pid, "name": name}},
+			"result": {"home": "FRE", "away": "CAR", "score": [55, 101]}}, {})
+	var at := (call_out["options"] as Array).size() - 1
+	_check(str(call_out["options"][at]["kind"]) == "criticise_named", "The heavy loss names him")
+	_state.relations.erase(key)
+	_state.media_conference = call_out.duplicate(true)
+	var gate: String = _state.press_odds_line(at)
+	_check(gate.contains("resolve tightens, his morale +1%") and gate.contains(
+			"he takes it personally, his morale +1%%, his opinion of you -%d" % drop) and not gate.contains("either way")
+			and not gate.contains("+0"),
+			"The call-out's gate shows both outcomes with every size (%s)" % gate)
+	var seen := {}
+	var bad: Array = []
+	var took: Dictionary = {}
+	var took_news := ""
+	for seed in range(1, 41):
+		_state.relations.erase(key)
+		_state.media_memory = {}
+		him["morale"] = 70
+		him.erase("press_lift")
+		_state.career_seed = seed
+		_state.media_conference = call_out.duplicate(true)
+		var landed: Dictionary = _state.resolve_media_conference(at)
+		var w := str(landed.get("landed", ""))
+		seen[w] = true
+		var t := Trust.value(_state.relations, key)
+		var owed: Array = (_state.media_memory.get("callouts", {}) as Dictionary).get(pid, [])
+		var ok := int(him["morale"]) == 71
+		if w == "b":
+			ok = (ok and t == -drop * Trust.PER_POINT and _state.opinion_of_you(pid) == 50 - drop
+					and landed["opinion"] == {"name": name, "from": 50, "to": 50 - drop} and owed == [t])
+			took = landed
+			took_news = str(_state.news[0].get("text", ""))
+		else:
+			ok = ok and t == 0 and (landed["opinion"] as Dictionary).is_empty() and owed.is_empty()
+		if not ok:
+			bad.append("seed %d %s: morale %d, trust %d, %s" % [seed, w, int(him["morale"]), t, str(landed.get("opinion"))])
+	_check(seen.has("a") and seen.has("b") and bad.is_empty(),
+			"Called out: his morale +1 either way; taking it personally also costs %d of his opinion of you (%s)" % [drop, str(bad)])
+	# The result screen and the news say what it did to his opinion of you.
+	var rows: Array = PS.press_outcome_rows(took, "")
+	var opinion_row := ""
+	for r in rows:
+		if str(r[0]) == "MediaOutcomeOpinion":
+			opinion_row = str(r[1])
+	# Last, after "it wears off": his opinion of you never does.
+	_check(opinion_row == "%s's opinion of you: 50 → %d/100" % [name, 50 - drop]
+			and str(rows[rows.size() - 1][0]) == "MediaOutcomeOpinion",
+			"The press result shows his opinion of you moving, on its last line (%s)" % opinion_row)
+	_check(took_news.ends_with("%s's opinion of you: 50 → %d/100." % [name, 50 - drop]),
+			"The news line says it too (%s)" % took_news)
+	# Backing him by name gives it back, whichever way the backing lands.
+	var backing: Dictionary = MC.pick({"club": "FRE", "opponent_name": "Carlton", "round": 12, "year": int(_state.season_year),
+			"named": {"big_win": {"id": pid, "name": name}},
+			"result": {"home": "FRE", "away": "CAR", "score": [101, 55]}}, {})
+	var bat := (backing["options"] as Array).size() - 1
+	_check(str(backing["options"][bat]["kind"]) == "back_named", "The big win can back him by name")
+	var owed_now: Dictionary = {pid: [-drop * Trust.PER_POINT]}
+	var back_bad: Array = []
+	for seed in range(1, 21):
+		_state.relations.erase(key)
+		Trust.change(_state.relations, key, -drop * Trust.PER_POINT, "You called him out in the press", _state.season_year, "Round 8")
+		_state.media_memory = {"callouts": owed_now.duplicate(true)}
+		_state.career_seed = seed
+		_state.media_conference = backing.duplicate(true)
+		var bgate: String = _state.press_odds_line(bat)
+		var landed: Dictionary = _state.resolve_media_conference(bat)
+		if not (bgate.contains("his opinion of you +%d" % drop) and Trust.value(_state.relations, key) == 0
+				and landed["opinion"] == {"name": name, "from": 50 - drop, "to": 50} and not _state.media_memory.has("callouts")):
+			back_bad.append("seed %d: %s / %s" % [seed, bgate, str(landed.get("opinion"))])
+	_check(back_bad.is_empty(), "Backing him by name cancels the call-out's cost, and the gate says so (%s)" % str(back_bad))
+	# Nothing to cancel: backing him moves no opinion and the gate names none.
+	_state.relations.erase(key)
+	_state.media_memory = {}
+	_state.media_conference = backing.duplicate(true)
+	var plain: String = _state.press_odds_line(bat)
+	var none: Dictionary = _state.resolve_media_conference(bat)
+	_check(not plain.contains("opinion of you") and Trust.value(_state.relations, key) == 0
+			and (none["opinion"] as Dictionary).is_empty() and not _state.relations.has(key),
+			"Backing a player you never called out moves no opinion (%s)" % plain)
+	# Skipping the question moves nothing at all.
+	_press_reset()
+	Trust.change(_state.relations, key, -drop * Trust.PER_POINT, "You called him out in the press", _state.season_year, "Round 8")
+	_state.media_memory = {"callouts": {pid: [-drop * Trust.PER_POINT]}}
+	var morale := []
+	for p in _state.my_list:
+		morale.append([int(p["morale"]), p.get("press_lift")])
+	var rel: Dictionary = _state.relations.duplicate(true)
+	var board_before: int = _state.board_confidence()
+	var standing: Dictionary = {}
+	for j in MC.JOURNALISTS:
+		standing[j] = _state.press_standing(j)
+	_state.media_conference = backing.duplicate(true)
+	_state.skip_media_conference()
+	var morale_after := []
+	for p in _state.my_list:
+		morale_after.append([int(p["morale"]), p.get("press_lift")])
+	var standing_after: Dictionary = {}
+	for j in MC.JOURNALISTS:
+		standing_after[j] = _state.press_standing(j)
+	_check(morale_after == morale and _state.relations == rel and _state.board_confidence() == board_before
+			and standing_after == standing and _state.media_memory["callouts"] == {pid: [-drop * Trust.PER_POINT]}
+			and _state.media_conference.is_empty(),
+			"Skipping the press conference moves no morale, opinion, board or standing")
+	_state.media_conference = {}
+	_state.relations.erase(key)
+	_state.media_memory = {}
 
 ## (d) The Stats Geek reads the record: supported lands better and harder,
 ## contradicted worse and costs the board either way.
@@ -530,11 +688,11 @@ func _test_press_loss_lift() -> void:
 	_check(int(p["morale"]) == 70 + CL.MATCH_MORALE_LOSS and int(w["morale"]) == 70 + CL.MATCH_MORALE_WIN,
 			"A player who played gets +%d for a loss, +%d for a win" % [CL.MATCH_MORALE_LOSS, CL.MATCH_MORALE_WIN])
 	for i in range(3):
-		MC.apply_lift(p, 3, MC.NAMED_CAP, false, MC.LOSS_LIFT_CAP)
+		MC.apply_lift(p, 3, MC.NAMED_CAP, MC.LOSS_LIFT_CAP)
 	_check(int(p["morale"]) < int(w["morale"]) and int(p["morale"]) == int(w["morale"]) - 1,
 			"Stacked lifts after a loss stop just below the win (%d vs %d)" % [int(p["morale"]), int(w["morale"])])
 	var down := {"morale": 70}
-	MC.apply_lift(down, -3, MC.NAMED_CAP, false, MC.LOSS_LIFT_CAP)
+	MC.apply_lift(down, -3, MC.NAMED_CAP, MC.LOSS_LIFT_CAP)
 	_check(int(down["morale"]) == 67, "The loss cap only holds lifts; a drop keeps its full size (%d)" % int(down["morale"]))
 	# The gate shows the held size: the Bogan's named answer is +3, +2 after a loss.
 	var won: Dictionary = MC.effects("back_named", {"journalist": "bogan", "name": "Jack"})
@@ -952,6 +1110,7 @@ func _run() -> void:
 	_t("_test_press_standing")
 	_t("_test_press_personas")
 	_t("_test_press_named")
+	_t("_test_press_opinion")
 	_t("_test_press_record")
 	_t("_test_press_board_reason")
 	_t("_test_press_standout_only")
@@ -1713,9 +1872,9 @@ Your career stays on this device.",
 	_check(cost_tap == "" and bool(_state.week_events[0].get("resolved", false)),
 			"A real tap on the answer that costs a game answers the card (%s)" % cost_tap)
 	_state.week_events = []
-	# His trust on the profile, at phone size: the words, and a finger on Why
-	# shows his reasons, newest first. A player you've had nothing to do with
-	# shows no trust line.
+	# His opinion of you on the profile, at phone size: the number, and a finger
+	# on Why shows the rule and his reasons, newest first. A player you've had
+	# nothing to do with is at 50/100.
 	var trusted: Dictionary = _state.my_list[0]
 	var stranger: Dictionary = _state.my_list[1]
 	var saved_rel: Dictionary = _state.relations.duplicate(true)
@@ -1728,19 +1887,22 @@ Your career stays on this device.",
 	var twords: Label = tsheet.find_child("TrustWords", true, false)
 	var twhy: Button = tsheet.find_child("TrustWhy", true, false)
 	var treasons: Control = tsheet.find_child("TrustReasons", true, false)
-	_check(twords != null and twords.text == "Trusts you." and treasons != null and not treasons.visible,
-			"The profile says he trusts you, with the reasons folded away")
+	_check(twords != null and twords.text == "Opinion of you 61/100." and treasons != null and not treasons.visible,
+			"The profile shows his opinion of you out of 100, with the reasons folded away (%s)" % (twords.text if twords != null else "missing"))
 	var why_tap: String = await Tap.tap(twhy) if twhy != null else "missing"
 	await _settle()
 	var first_reason: Label = treasons.get_child(1) if treasons != null and treasons.get_child_count() > 2 else null
 	_check(why_tap == "" and treasons.visible and twhy.size.y >= 44 and first_reason != null
-			and first_reason.text.begins_with("Round 5, ") and first_reason.text.ends_with("Trust rose."),
-			"A tap on Why shows his reasons, newest first (%s)" % why_tap)
+			and first_reason.text.begins_with("Round 5, ") and first_reason.text.ends_with("Opinion of you +5.")
+			and (treasons.get_child(0) as Label).text.contains("he may refuse to re-sign with you"),
+			"A tap on Why shows the rule, then his reasons newest first with their size (%s, %s)" % [why_tap,
+					first_reason.text if first_reason != null else "missing"])
 	tsheet.queue_free()
 	var ssheet: Control = load("res://scripts/ui/PlayerSheet.gd").open(current_scene, stranger)
 	await _settle()
-	_check(ssheet.find_child("ProfileTrust", true, false) == null,
-			"A player you've had nothing to do with shows no trust line")
+	var swords: Label = ssheet.find_child("TrustWords", true, false)
+	_check(swords != null and swords.text == "Opinion of you 50/100.",
+			"A player you've had nothing to do with is at 50/100 (%s)" % (swords.text if swords != null else "missing"))
 	ssheet.queue_free()
 	_state.relations = saved_rel
 	await _settle()
@@ -2287,6 +2449,35 @@ Your career stays on this device.",
 		await _settle()
 		_check(_router.current() == "offseason" and current_scene.find_child("ContractTalks", true, false) == null,
 				"Back closes the talks and stays on Trades & Contracts")
+		# Under 50/100 the talks say the chance he won't re-sign before any offer;
+		# at 50 they say nothing about it.
+		var trow: Node = talk.get_parent()
+		while trow != null and not str(trow.name).begins_with("Contract_"):
+			trow = trow.get_parent()
+		var tid := str(trow.name).trim_prefix("Contract_") if trow != null else ""
+		var tkey := Trust.player_key(tid)
+		var rel_before: Dictionary = _state.relations.duplicate(true)
+		_state.relations.erase(tkey)
+		current_scene.call("_open_talks", tid)
+		await _settle()
+		var at_fifty: bool = current_scene.find_child("TalksRefuse", true, false) == null
+		_router.handle_back(true)
+		await _settle()
+		Trust.change(_state.relations, tkey, -12, "You dropped him", _state.season_year, "Round 3")
+		current_scene.call("_open_talks", tid)
+		await _settle()
+		var refuse: Control = current_scene.find_child("TalksRefuse", true, false)
+		var refuse_text := ""
+		if refuse is RichTextLabel:
+			refuse_text = (refuse as RichTextLabel).get_parsed_text()
+		elif refuse != null:
+			refuse_text = str(refuse.get("text"))
+		_check(tid != "" and at_fifty and refuse != null and refuse.is_visible_in_tree()
+				and refuse_text == "His opinion of you: 44/100. 6% he won't re-sign with you.",
+				"Talks at 44/100 say the chance he won't re-sign before you offer, and at 50 say nothing (%s)" % refuse_text)
+		_router.handle_back(true)
+		await _settle()
+		_state.relations = rel_before
 	for tab in ["Tab_agents", "Tab_trade"]:
 		var tb: Button = current_scene.find_child(tab, true, false)
 		tb.emit_signal("pressed")

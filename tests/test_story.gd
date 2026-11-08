@@ -224,13 +224,13 @@ func _test_hints_in_words() -> void:
 ## is worth to the coach is read straight off the effects here, apart from the
 ## engine's own wording, so the lines cannot drift from what the choice does.
 const GAIN_WORDS := {
-	"morale": "(?i)morale", "xp": "(?i)development", "board": "(?i)board confidence", "trust": "trusts you ([0-9]+% )?more",
+	"morale": "(?i)morale", "xp": "(?i)development", "board": "(?i)board confidence", "trust": "opinion of you (up [0-9]+|stays)",
 	"fresh": "legs", "promise_win": "Win and", "extend_early": "signs on", "captaincy_swap": "takes the armband",
 	"rush_back": "cleared to play", "role_trial": "plays as a", "rest": "can't get hurt", "culture": "(Standards|Togetherness|Ambition) rises [0-9]+%",
 	"running": "more weeks? of running", "drill": "on the game plan", "open_price": "early premium", "new_club_keep": "He stays for",
 }
 const COST_WORDS := {
-	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "trusts you ([0-9]+% )?less",
+	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "opinion of you (down [0-9]+|falls [0-9]+|stays)",
 	"rest": "misses", "heavy_legs": "Heavy legs", "sore": "chance he is injured", "expects_game": "expects a game",
 	"start_backing": "expects to be picked", "back_kid": "is promised", "promise_win": "Lose or draw and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
 	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot", "on_record": "on the record",
@@ -381,7 +381,7 @@ func _test_choice_stakes_are_stated() -> void:
 	_check(not _stakes_problems(heavy, PackedStringArray([good[1], good[0]])).is_empty(), "The check catches costs before gains")
 	# Every effect line names the thing that moves; no mood word stands in for it.
 	var vague := RegEx.create_from_string("(?i)\\b(lift|lifts|flat|stings|sours|thrilled|a bit off|likes it|won't like)\\b")
-	var nouns := {"morale": "orale", "xp": "evelopment", "board": "Board confidence", "trust": "trusts you", "rest": "game",
+	var nouns := {"morale": "orale", "xp": "evelopment", "board": "Board confidence", "trust": "opinion of you", "rest": "game",
 			"sore": "sore", "fresh": "legs", "heavy_legs": "legs", "expects_game": "game", "start_backing": "games",
 			"promise_win": "board confidence", "extend_early": "a season"}
 	var unnamed := []
@@ -435,36 +435,47 @@ func _test_choice_stakes_are_stated() -> void:
 func _test_trust_rules() -> void:
 	var rel := {}
 	var k := Trust.player_key("x")
-	_check(Trust.value(rel, k) == 0 and Trust.words(0) == "", "Nobody has a view of you to begin with, and it says nothing")
+	_check(Trust.value(rel, k) == 0 and Trust.opinion(0) == 50 and Trust.opinion_line(0) == "Opinion of you 50/100",
+			"Nobody has a view of you to begin with: his opinion of you is 50/100")
+	# Shown as 50 + trust / 2, rounded (director 2026-11-08); the bands are unchanged.
+	_check(Trust.opinion(Trust.LOWEST) == 0 and Trust.opinion(Trust.HIGHEST) == 100 and Trust.opinion(-12) == 44
+			and Trust.opinion(-8) == 46 and Trust.opinion(-3) == 49 and Trust.opinion(3) == 52 and Trust.opinion(-30) == 35
+			and Trust.band_opinion("trusts") == 60 and Trust.band_opinion("close") == 75,
+			"His opinion of you is 50 + trust / 2, from 0 to 100")
+	_check(Trust.opinion_move(0, -4) == -2 and Trust.opinion_move(0, -1) == 0 and Trust.opinion_move(0, 1) == 1
+			and Trust.opinion_move(0, 3) == 2 and Trust.opinion_move(-1, -1) == -1 and Trust.opinion_move(98, 10) == 1,
+			"A move's size in the opinion shown: half the trust move, from where he starts and inside the scale")
 	_check(Trust.change(rel, k, 40, "Big moment", 2027, "Round 3") == Trust.STEP_MAX,
 			"One moment moves trust at most %d" % Trust.STEP_MAX)
-	_check(Trust.words(Trust.value(rel, k)) == "Trusts you", "Twenty up: he trusts you")
+	_check(Trust.opinion_line(Trust.value(rel, k)) == "Opinion of you 60/100" and Trust.band(Trust.value(rel, k)) == "trusts",
+			"Twenty up: his opinion of you is 60/100")
 	for i in range(12):
 		Trust.change(rel, k, 10, "Moment %d" % i, 2027, "Round %d" % i)
-	_check(Trust.value(rel, k) == Trust.HIGHEST and Trust.words(Trust.HIGHEST) == "Trusts you completely",
-			"Trust tops out, in words")
+	_check(Trust.value(rel, k) == Trust.HIGHEST and Trust.opinion_line(Trust.HIGHEST) == "Opinion of you 100/100",
+			"Trust tops out at 100/100")
 	var r := Trust.reasons(rel, k)
 	# 20 + 8 x 10 reaches the top at Moment 7; the four after it moved nothing
 	# and keep no reason, so they cannot push real ones out.
 	_check(r.size() == Trust.LOG_KEEP and str(r[0]["why"]) == "Moment 7"
 			and r.all(func(e): return int(e["d"]) != 0),
 			"The last %d reasons are kept, newest first, and a move at the top of the scale keeps none" % Trust.LOG_KEEP)
-	_check(Trust.words(-30) == "Wary of you" and Trust.words(-80) == "Stopped listening", "Low trust in words")
+	_check(Trust.opinion(-80) == 10 and Trust.band(-30) == "wary" and Trust.band(-80) == "lost",
+			"Low trust shows as a low opinion of you")
 	_check(Trust.scaled(10, 60) > 10 and Trust.scaled(10, -60) < 10 and Trust.scaled(-5, 60) == -5,
 			"A lift lands harder with trust and softer without; a cost is a cost")
-	# The profile's words: nothing until something has passed between you.
+	# Each reason: when, what you did, and what it did to his opinion of you.
 	var p2 := Trust.player_key("y")
 	var none := {}
-	_check(Trust.profile_words(none, p2) == "", "The profile says nothing about a player you've had nothing to do with")
 	Trust.change(none, p2, 8, "You gave him his chance", 2027, "Round 4")
 	Trust.change(none, p2, -8, "You promised him a game and left him out", 2027, "Round 6")
-	_check(Trust.profile_words(none, p2) == "Has no strong view of you",
-			"Back in the middle after two moments, he has no strong view of you")
-	_check(Trust.profile_words(rel, k) == "Trusts you completely", "Otherwise the profile uses his band's words")
+	Trust.change(none, p2, -1, "You left him on the bench", 2027, "Round 7")
 	var rs := Trust.reasons(none, p2)
-	_check(Trust.reason_text(rs[0]) == "Round 6, 2027. You promised him a game and left him out. Trust fell."
-			and Trust.reason_text(rs[1]) == "Round 4, 2027. You gave him his chance. Trust rose.",
-			"Each reason reads when, what you did, and which way it moved him")
+	_check(Trust.opinion(Trust.value(none, p2)) == 50 and Trust.reason_text(rs[1]) == "Round 6, 2027. You promised him a game and left him out. Opinion of you -4."
+			and Trust.reason_text(rs[2]) == "Round 4, 2027. You gave him his chance. Opinion of you +4."
+			and Trust.reason_text(rs[0]) == "Round 7, 2027. You left him on the bench.",
+			"Each reason reads when, what you did, and what it did to his opinion of you (%s)" % Trust.reason_text(rs[0]))
+	_check(Trust.reason_text({"y": 2026, "w": "Round 2", "d": -3, "why": "Old"}) == "Round 2, 2026. Old. Opinion of you -2.",
+			"A reason kept before the opinion was shown still gives its size")
 
 
 # --- The engine ------------------------------------------------------------------
@@ -801,9 +812,9 @@ func _test_trust_in_play() -> void:
 	GameState.week_event = GameState.story_card("media_in_the_papers", p)
 	var hint := str(GameState.week_event["options"][1]["detail"])
 	var out := GameState.resolve_week_event(1)
-	_check(hint.contains("He trusts you"), "The choice says what it does to his trust (%s)" % hint)
-	_check(Trust.value(GameState.relations, key) == 10 and out.contains("He trusts you more"),
-			"Backing him in the papers: his trust rises, and the result says so (%s)" % out)
+	_check(hint.contains("His opinion of you up 5, to 55/100"), "The choice says what it does to his opinion of you (%s)" % hint)
+	_check(Trust.value(GameState.relations, key) == 10 and out.contains("His opinion of you: 50 → 55/100."),
+			"Backing him in the papers: his opinion of you rises, and the result says so (%s)" % out)
 	_check(str(Trust.reasons(GameState.relations, key)[0]["why"]) == "You kept him in when the papers wanted him out",
 			"The reason is kept in plain words")
 	# A promise broken after the match costs trust, with its reason.
@@ -831,8 +842,8 @@ func _test_trust_in_play() -> void:
 	Trust.change(GameState.relations, Trust.player_key(str(fan["id"])), 15, "t", 2027, "Round 1")
 	fan["morale"] = 30
 	var card := GameState.story_card("selection_unhappy", fan)
-	_check(str(card["options"][0]["detail"]).contains("counts for more because he trusts you"),
-			"A talk with a player who trusts you says it lands harder")
+	_check(str(card["options"][0]["detail"]).contains("It counts for more: his opinion of you is 78/100."),
+			"A talk with a player who trusts you says it lands harder, with his opinion of you (%s)" % str(card["options"][0]["detail"]))
 	GameState.week_event = card
 	GameState.resolve_week_event(0)
 	_check(ClubLife.morale(fan) == 30 + Trust.scaled(15, 55), "...and it does (%d)" % ClubLife.morale(fan))
@@ -1338,7 +1349,7 @@ func _test_role_card_shape() -> void:
 	p = _trial_candidate()
 	id = str(p["id"])
 	var quiet := GameState.story_card("media_papers_again", p)
-	_check(str((quiet["unanswered"] as Dictionary)["hint"]).contains("trusts you 2% less"), "The silence hint names the trust cost: %s" % str(quiet["unanswered"]["hint"]))
+	_check(str((quiet["unanswered"] as Dictionary)["hint"]).contains("opinion of you down 1, to 49/100"), "The silence hint names the cost to his opinion of you: %s" % str(quiet["unanswered"]["hint"]))
 	GameState.week_events = [quiet]
 	var b2 := GameState.board_confidence()
 	var t2 := Trust.value(GameState.relations, Trust.player_key(id))
@@ -1363,7 +1374,7 @@ func _test_front_group_words() -> void:
 		return
 	var d0 := str((card["options"] as Array)[0]["detail"])
 	var d1 := str((card["options"] as Array)[1]["detail"])
-	_check(d0.contains("trusts you 4% more") and d0.contains("morale up 3%") and d0.contains("morale down 3%") and d0.contains("the group") and d1.contains("2% less"),
+	_check(d0.contains("opinion of you up 2, to 52/100") and d0.contains("morale up 3%") and d0.contains("morale down 3%") and d0.contains("the group") and d1.contains("opinion of you down 1, to 49/100"),
 			"Card 3's trust lines differ in size: '%s' / '%s'" % [d0, d1])
 
 
@@ -3248,14 +3259,14 @@ func _test_silent_defaults_announced() -> void:
 			"The sore star's card says leaving it plays him; the odds sit under Play him (%s / %s)" % [sl, play_lines])
 	# Saying nothing's own price still reads as before, now with its size.
 	var quiet := GameState.story_card("media_in_the_papers", p)
-	_check(StoryEngine.silence_line(quiet) == "Say nothing: he trusts you 2% less.", "Saying nothing names its trust cost and size (%s)" % StoryEngine.silence_line(quiet))
+	_check(StoryEngine.silence_line(quiet) == "Say nothing: his opinion of you down 1, to 49/100.", "Saying nothing names its cost to his opinion of you, with the size (%s)" % StoryEngine.silence_line(quiet))
 
 
 ## Every Gain and Cost line carries its size: a percentage, a chance or a count of games.
 func _test_every_line_has_a_size() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[4]
-	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+ XP|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends")
+	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+/100|[0-9]+ XP|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends")
 	var bad := []
 	var parts_seen := 0
 	for t in StoryDeck.all():
@@ -3297,8 +3308,14 @@ func _test_line_numbers_match_effects() -> void:
 				var s := StoryEngine.fill(" ".join(PackedStringArray((StoryEngine._effect_parts(e, card["facts"]) as Array).map(func(x): return str(x[1])))), card["facts"])
 				var want := ""
 				match op:
-					"morale", "board", "trust":
+					"morale", "board":
 						want = "%d%%" % absi(StoryEngine.effect_d(e, card["facts"]))
+					"trust":
+						# His opinion of you out of 100, moved from where it is today.
+						var t0 := int(card["facts"].get("trust", 0))
+						var mv := Trust.opinion_move(t0, StoryEngine.effect_d(e, card["facts"]))
+						want = ("opinion of you stays %d/100" % Trust.opinion(t0)) if mv == 0 else \
+								"opinion of you %s %d, to %d/100" % ["up" if mv > 0 else "down", absi(mv), Trust.opinion(t0) + mv]
 					"xp":
 						want = "%d XP of development (a senior game gives %d)" % [int(e["d"]), GameState.XP_SENIOR_GAME]
 					"slow_start":
@@ -3306,7 +3323,8 @@ func _test_line_numbers_match_effects() -> void:
 					"loss_sting":
 						want = "about a %d%% chance the side's morale also falls %d%%" % [int(e["chance"]), absi(int(e["d"]))]
 					"expects_game":
-						want = "morale falls up to %d%%, he trusts you %d%% less" % [int(e.get("sting", 12)), absi(ClubStories.BROKEN_PROMISE_TRUST)]
+						want = "morale falls up to %d%%, his opinion of you falls %d" % [int(e.get("sting", 12)),
+								-Trust.opinion_move(int(card["facts"].get("trust", 0)), ClubStories.BROKEN_PROMISE_TRUST)]
 					# The pre-season cards' levers, against the pre-season's own sizes.
 					"culture":
 						want = "%s %d%%" % ["rises" if int(e["d"]) > 0 else "falls", absi(int(e["d"]))]

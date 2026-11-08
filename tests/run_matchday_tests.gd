@@ -2503,7 +2503,6 @@ func _test_press_effects_shown(db) -> void:
 	var who: Dictionary = _state.my_list[0]
 	who["morale"] = 50
 	who.erase("press_lift")
-	who.erase("press_slow")
 	var hub = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _settle()
@@ -2519,8 +2518,11 @@ func _test_press_effects_shown(db) -> void:
 		shown = shown and line != null and line.is_visible_in_tree() and text == _state.press_odds_line(i) 				and text.contains("%d%% " % c) and text.contains("%d%% " % (100 - c))
 		# The Muckraker's twist is on the gate (director 2026-11-06).
 		if kind == "criticise":
-			shown = shown and text.contains("The players read his headline: 10% less likely to land well.") 					and not text.contains("The Siren gets read upstairs") and text.contains(MC.FADE_NOTE)
+			shown = shown and text.contains("His headline: 10% less likely") 					and not text.contains("The Siren gets read upstairs") and not text.contains(MC.FADE_NOTE)
 	_check(shown, "Every press answer shows both ways it can land, with the odds and the sizes")
+	var rules: Label = hub.find_child("MediaRules", true, false)
+	_check(rules != null and rules.is_visible_in_tree() and rules.text == MC.rules_line(str(_state.media_conference.get("journalist", ""))),
+			"How long the moves last is said once on the gate, above the answers (%s)" % ("missing" if rules == null else rules.text))
 	var c0: int = _state.press_chance(0)
 	var landed := "a" if MC.roll(_state.career_seed, _state.season_year, int(_state.media_conference.get("round", 0)),
 			str(_state.media_conference.get("key", "")), 0) <= c0 else "b"
@@ -2603,12 +2605,22 @@ func _test_press_scene_taps() -> void:
 		return current_scene
 	_check((muck.call() as Dictionary).get("options", []).size() == 4,
 			"The Muckraker's heavy-loss question offers a fourth answer naming a player")
+	var seed_was: int = _state.career_seed
 	for i in range(4):
 		for p in _state.my_list:
 			p.erase("press_lift")
-			p.erase("press_slow")
 			p.erase("press_wait")
 		var press: Node = await open.call(muck.call())
+		if i == 3:
+			# A career where he takes the call-out personally (director 2026-11-08),
+			# so the result shows his opinion of you.
+			_state.relations.erase(Trust.player_key(str(named["id"])))
+			_state.media_memory.erase("callouts")
+			var key3 := str(_state.media_conference.get("key", ""))
+			for sd in range(1, 300):
+				if MC.roll(sd, _state.season_year, 8, key3, 3) > _state.press_chance(3):
+					_state.career_seed = sd
+					break
 		var label := str((_state.media_conference.get("options", [])[i] as Dictionary).get("label", ""))
 		var where: Label = press.find_child("MediaWhere", true, false)
 		var answer: Button = press.find_child("MediaAnswer_%d" % i, true, false)
@@ -2624,6 +2636,15 @@ func _test_press_scene_taps() -> void:
 				and said != null and said.is_visible_in_tree() and press.find_child("MediaAnswer_0", true, false) == null
 				and press.find_child("MediaTopSkip", true, false).disabled and named_only,
 				"A real tap on answer %d lands it in the press screen, with its odds and only what it moves (%s; %s)" % [i, tapped, label])
+		if i == 3:
+			var op: Label = press.find_child("MediaOutcomeOpinion", true, false)
+			var want := "%s's opinion of you: 50 → %d/100" % [str(root.get_node("GameDB").player_display_name(named)),
+					50 - int(MC.CALLOUT_OPINION_DROP)]
+			_check(op != null and op.is_visible_in_tree() and op.text == want,
+					"After a real tap on the call-out he took personally, the result shows his opinion of you (%s)" % (op.text if op != null else "missing"))
+			_state.relations.erase(Trust.player_key(str(named["id"])))
+			_state.media_memory.erase("callouts")
+			_state.career_seed = seed_was
 		var done: Button = press.find_child("MediaOutcomeDone", true, false)
 		var closed: String = await Tap.tap(done) if done != null else "missing"
 		await _settle()

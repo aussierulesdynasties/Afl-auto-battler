@@ -391,7 +391,7 @@ static func build(deck: Array, t: Dictionary, subj: Dictionary, club: Dictionary
 	if trust_cost != 0 and player:
 		card["unanswered"] = {"trust": trust_cost, "why": fill(str(un.get("why", "")), facts),
 				"text": fill(str(un.get("text", "")), facts),
-				"hint": "Say nothing: %s" % _lower_first(_trust_words(trust_cost))}
+				"hint": "Say nothing: %s" % _lower_first(_trust_words(trust_cost, int(facts.get("trust", 0))))}
 	return card
 
 
@@ -708,10 +708,11 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 			var s := _morale_words(d, who)
 			if str(e.get("scale", "")) == "trust" and d > 0:
 				var b := str(facts.get("trust_band", "neutral"))
+				var o := Trust.opinion(int(facts.get("trust", 0)))
 				if b == "close" or b == "trusts":
-					s += " It counts for more because he trusts you."
+					s += " It counts for more: his opinion of you is %d/100." % o
 				elif b == "wary" or b == "lost":
-					s += " It counts for less because he's wary of you."
+					s += " It counts for less: his opinion of you is %d/100." % o
 			if s != _morale_words(d, who):
 				return [["gain" if d > 0 else "cost", s]]
 			# A plain move carries who and how much, so stakes_lines can add two together.
@@ -719,7 +720,7 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 		"board":
 			return [] if d == 0 else [["gain" if d > 0 else "cost", _board_words(d)]]
 		"trust":
-			return [] if d == 0 else [["gain" if d > 0 else "cost", _trust_words(d)]]
+			return [] if d == 0 else [["gain" if d > 0 else "cost", _trust_words(d, int(facts.get("trust", 0)))]]
 		"xp":
 			var whom: String = "He gets" if who == "subject" else ("Each player in the side gets" if who == "side" else ("Each of the others gets" if who == "others" else "Every player gets"))
 			return [["gain", "%s %d XP of development (a senior game gives %d)." % [whom, d, SENIOR_GAME_XP]]]
@@ -742,19 +743,27 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 			return [["cost", "Heavy legs across the %s on game day: each player starts %d%% short of fresh and is %d%% more likely to be injured." % [
 					"side" if who == "side" else "whole list", short, rise]]]
 		"expects_game":
-			return [["cost", "He expects a game this week, and Auto-pick names him. Leave him out fit and the promise breaks: %s" % _broken_words(int(e.get("sting", 12)), absi(BROKEN_PROMISE_TRUST))]]
+			return [["cost", "He expects a game this week, and Auto-pick names him. Leave him out fit and the promise breaks: %s" % _broken_words(int(e.get("sting", 12)), BROKEN_PROMISE_TRUST, facts)]]
 		"start_backing":
 			return [["gain", _morale_words(Backing.THRILL, "subject"), "subject", Backing.THRILL],
-					["cost", "He expects to be picked for the next {run_games} games, and Auto-pick names him. Leave him out fit and the promise breaks: %s" % _broken_words(Backing.STING, absi(BROKEN_RUN_TRUST))]]
+					["cost", "He expects to be picked for the next {run_games} games, and Auto-pick names him. Leave him out fit and the promise breaks: %s" % _broken_words(Backing.STING, BROKEN_RUN_TRUST, facts)]]
 		"back_kid":
 			return [["gain", "{kid_name}'s morale up %s." % _pct(Backing.THRILL)],
-					["cost", "{kid_name} is promised the next {run_games} games, and Auto-pick names him. Leave him out fit and the promise breaks: %s" % _broken_words(Backing.STING, absi(BROKEN_RUN_TRUST))]]
+					["cost", "{kid_name} is promised the next {run_games} games, and Auto-pick names him. Leave him out fit and the promise breaks: %s" % _broken_words(Backing.STING, BROKEN_RUN_TRUST, {})]]
 		"extend_early":
-			return [["gain", "He signs on for {more_seasons}, and his morale goes up %s." % _pct(EXTEND_MORALE)],
+			var extend := [["gain", "He signs on for {more_seasons}, and his morale goes up %s." % _pct(EXTEND_MORALE)],
 					["cost", "Locked in at {early_price} a season, %s over what he is worth today, whatever he does next." % _pct(EARLY_PREMIUM_PCT)]]
+			# Under 50 he may refuse (director 2026-11-08): the odds before you ask.
+			if str(facts.get("refuse_line", "")) != "":
+				extend.append(["cost", "{refuse_line} If he refuses, he goes to free agency when the season ends."])
+			return extend
 		"new_club_keep":
-			return [["gain", NEW_CLUB_KEEP_GAIN], ["cost", NEW_CLUB_KEEP_COST
+			var keep := [["gain", NEW_CLUB_KEEP_GAIN], ["cost", NEW_CLUB_KEEP_COST
 					+ ("" if bool(facts.get("keep_room", true)) else " {keep_note}")]]
+			# Under 50 he may refuse (director 2026-11-08): the odds before you ask.
+			if str(facts.get("refuse_line", "")) != "":
+				keep.append(["cost", "{refuse_line} If he refuses, he joins {new_club} when the season ends."])
+			return keep
 		"new_club_go":
 			if int(facts.get("comp_after", 0)) > 0:
 				return [["gain", "{comp_line}"], ["cost", NEW_CLUB_GO_COST]]
@@ -764,8 +773,8 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 					["cost", "Lose or draw and board confidence falls %s more than a loss alone." % _pct(PROMISE_WIN_DOWN)]]
 		"captaincy_swap":
 			return [["gain", "{vice_name} takes the armband; {name} stays in the leadership group."],
-					["cost", "Taking it off {name} mid-season: his morale falls %s and he trusts you %s less. It uses your one change this season." % [
-						_pct(absi(Captaincy.STRIPPED_MORALE)), _pct(absi(Captaincy.STRIPPED_TRUST))]]]
+					["cost", "Taking it off {name} mid-season: his morale falls %s and his opinion of you falls %d. It uses your one change this season." % [
+						_pct(absi(Captaincy.STRIPPED_MORALE)), -Trust.opinion_move(int(facts.get("trust", 0)), Captaincy.STRIPPED_TRUST)]]]
 		"rush_back":
 			if int(facts.get("pre_week", 0)) > 0:
 				return _rush_preseason(facts)
@@ -898,10 +907,11 @@ static func _injury_length_words() -> String:
 	return "%s of injuries are two weeks or less" % _pct(roundi(short * 100.0))
 
 
-## A broken promise's price, in the order it lands.
-static func _broken_words(sting: int, trust: int) -> String:
-	return "his morale falls up to %s, he trusts you %s less and the group's togetherness drops %s." % [
-			_pct(sting), _pct(trust), _pct(BROKEN_TOGETHER)]
+## A broken promise's price, in the order it lands. `trust` is the move
+## (negative); the opinion it costs is from his trust in `facts` today.
+static func _broken_words(sting: int, trust: int, facts: Dictionary) -> String:
+	return "his morale falls up to %s, his opinion of you falls %d and the group's togetherness drops %s." % [
+			_pct(sting), -Trust.opinion_move(int(facts.get("trust", 0)), trust), _pct(BROKEN_TOGETHER)]
 
 
 ## A slow start: the chance, the match it is for and what it costs at the first bounce.
@@ -1048,16 +1058,21 @@ static func _board_words(d: int) -> String:
 	return "Board confidence %s %s." % ["up" if d > 0 else "down", _pct(absi(d))]
 
 
-static func _trust_words(d: int) -> String:
-	return "He trusts you %s %s." % [_pct(absi(d)), "more" if d > 0 else "less"]
+## A trust move as the opinion the game shows, from his trust `t` today:
+## "His opinion of you down 2, to 48/100."
+static func _trust_words(d: int, t: int) -> String:
+	var o := Trust.opinion_move(t, d)
+	if o == 0:
+		return "His opinion of you stays %d/100." % Trust.opinion(t)
+	return "His opinion of you %s %d, to %d/100." % ["up" if o > 0 else "down", absi(o), Trust.opinion(t) + o]
 
 
 ## What changed, for the card's result line: only the levers a player feels.
 static func aftermath(applied: Dictionary) -> String:
 	var out: PackedStringArray = []
-	var t := int(applied.get("trust", 0))
-	if t != 0:
-		out.append("He trusts you more." if t > 0 else "He trusts you less.")
+	var o: Array = applied.get("opinion", [])
+	if o.size() == 2 and int(o[0]) != int(o[1]):
+		out.append("His opinion of you: %d → %d/100." % [int(o[0]), int(o[1])])
 	var b := int(applied.get("board", 0))
 	if b != 0:
 		out.append("Board confidence went up." if b > 0 else "Board confidence went down.")

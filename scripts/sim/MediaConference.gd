@@ -189,54 +189,63 @@ const BOARD_CAP := 3
 ## press lift after a loss stops one short of that gap (+2 today).
 const LOSS_LIFT_CAP := 2   # ClubLife.MATCH_MORALE_WIN - MATCH_MORALE_LOSS - 1 (tests pin it)
 
+## Calling a player out by name (director 2026-11-08): his morale goes up a
+## point whichever way it lands; if he takes it personally, his opinion of you
+## (Trust.opinion, out of 100) also falls this many points. Backing him by name
+## later gives those points back (GameState.resolve_media_conference).
+const CALLOUT_OPINION_DROP := 1
+
 ## Per answer: the chance of outcome "a" before the facts move it ("base"),
 ## which way the mood moves it ("pull": +1 a settled player or group takes it
 ## better, -1 a flat one needs it more), what youth does to it, and what the
 ## match result does to it. Each outcome moves board confidence ("board"),
-## every listed player's morale ("morale") or one named player's ("his");
+## every listed player's morale ("morale") or one named player's ("his"), and
+## may move his opinion of you ("opinion", in points out of 100);
 ## "odds" is its words at the gate, "after" what the coach reads once it has
 ## landed (%s is the named player). "both" names what moves the same way
 ## whichever way it lands, by the sign of the shared board move.
 const ANSWERS := {
 	"criticise": {"base": 50, "pull": 1, "young": -15, "result": {},
-		"both": {1: "The board likes it either way", 0: "The board shrugs either way", -1: "The board frowns on it either way"},
-		"a": {"board": 1, "morale": 1, "his": 0, "odds": "their resolve tightens", "after": "The players' resolve tightened"},
-		"b": {"board": 1, "morale": -2, "his": 0, "odds": "they feel hung out to dry", "after": "The players felt hung out to dry"}},
+		"both": {0: "board unchanged"},
+		"a": {"board": 1, "morale": 1, "his": 0, "odds": "resolve tightens", "after": "The players' resolve tightened"},
+		"b": {"board": 1, "morale": -2, "his": 0, "odds": "hung out to dry", "after": "The players felt hung out to dry"}},
 	"method": {"base": 50, "pull": 0, "young": 0, "result": {"heavy_loss": -15, "big_win": 15},
-		"both": {1: "The players read nothing into it", 0: "The players read nothing into it", -1: "The players read nothing into it"},
+		"both": {0: "morale unchanged"},
 		"a": {"board": 1, "morale": 0, "his": 0, "odds": "the board buys it", "after": "The board bought it"},
 		"b": {"board": -1, "morale": 0, "his": 0, "odds": "the board hears excuses", "after": "The board heard excuses"}},
 	"back": {"base": 60, "pull": -1, "young": 10, "result": {},
-		"both": {1: "The board likes it either way", 0: "The board shrugs either way", -1: "The board wanted accountability either way"},
+		"both": {0: "board unchanged"},
 		"a": {"board": -1, "morale": 2, "his": 0, "odds": "the players lift", "after": "The players lifted"},
-		"b": {"board": -1, "morale": -1, "his": 0, "odds": "it rings hollow with them", "after": "It rang hollow with the players"}},
+		"b": {"board": -1, "morale": -1, "his": 0, "odds": "it rings hollow", "after": "It rang hollow with the players"}},
 	"back_named": {"base": 60, "pull": -1, "young": 0, "result": {},
-		"both": {0: "No one else's morale moves, and the board reads nothing into it"},
+		"both": {0: "nothing else moves"},
 		"a": {"board": 0, "morale": 0, "his": 2, "odds": "%s grows another leg", "after": "%s grew another leg"},
-		"b": {"board": 0, "morale": 0, "his": -1, "odds": "the spotlight weighs on %s", "after": "The spotlight weighed on %s"}},
+		"b": {"board": 0, "morale": 0, "his": -1, "odds": "the spotlight weighs on him", "after": "The spotlight weighed on %s"}},
 	"criticise_named": {"base": 45, "pull": 1, "young": -15, "result": {},
-		"both": {0: "No one else's morale moves, and the board reads nothing into it"},
+		"both": {0: "nothing else moves"},
 		"a": {"board": 0, "morale": 0, "his": 1, "odds": "%s's resolve tightens", "after": "%s's resolve tightened"},
-		"b": {"board": 0, "morale": 0, "his": -3, "odds": "%s takes it personally", "after": "%s took it personally"}},
+		"b": {"board": 0, "morale": 0, "his": 1, "opinion": -CALLOUT_OPINION_DROP, "odds": "he takes it personally", "after": "%s took it personally"}},
 }
 
 ## The five journalists' personalities (director 2026-11-06: personality
 ## changes what an answer does, shown openly on the gate). "likes" and
 ## "dislikes" move your standing with him by one; "odds" moves outcome "a";
 ## "board_up" adds one to every board size (to the cap), "named_up" one to
-## every named size (to the cap), "slow" makes the morale fade at half pace;
+## every named size (to the cap);
 ## "record" means the record check decides his standing and odds.
 const PERSONA := {
 	"muckraker": {"likes": ["criticise", "criticise_named"], "dislikes": ["back", "back_named"],
-		"odds": {"criticise": -10, "criticise_named": -10}, "odds_note": "The players read his headline",
-		"board_up": true, "board_note": "The Siren gets read upstairs"},
+		"odds": {"criticise": -10, "criticise_named": -10}, "odds_note": "His headline",
+		"board_up": true, "board_note": "The Siren gets read upstairs",
+		"rule": "The Siren gets read upstairs: a board move that hangs on how it lands is a point bigger."},
 	"sycophant": {"likes": ["back", "back_named"], "dislikes": ["criticise"],
-		"odds": {"back": -5, "back_named": -5}, "odds_note": "Praise after a thumping is what everyone expects"},
-	"stats": {"likes": [], "dislikes": [], "odds": {}, "record": true},
+		"odds": {"back": -5, "back_named": -5}, "odds_note": "Praise is expected"},
+	"stats": {"likes": [], "dislikes": [], "odds": {}, "record": true,
+		"rule": "The board reads Ladder Watch: when the record says otherwise, confidence drops a point more."},
 	"bogan": {"likes": ["back"], "dislikes": ["method"], "odds": {},
-		"named_up": true, "named_note": "The players listen to his show"},
-	"philosopher": {"likes": ["method"], "dislikes": ["criticise", "criticise_named"], "odds": {},
-		"slow": true, "slow_note": "Her piece lingers: the players' moves wear off a point every second round"},
+		"named_up": true, "named_note": "The players listen to his show",
+		"rule": "The players listen to his show: a named player's move is a point bigger."},
+	"philosopher": {"likes": ["method"], "dislikes": ["criticise", "criticise_named"], "odds": {}},
 }
 
 ## Standing with each journalist, -2..+2 (director 2026-11-06, Q1): each step
@@ -245,11 +254,11 @@ const PERSONA := {
 const STANDING_MIN := -2
 const STANDING_MAX := 2
 const STANDING_ODDS := 5
-## How he stands with you, after his name ("Gary is warm to you").
-const STANDING_WORDS := {-2: "has it in for you", -1: "is cool on you", 0: "takes you as %s finds you",
-		1: "is warm to you", 2: "is in your corner"}
-## Under the byline: "Gary is warm to you: every answer is 5% more likely to land well."
-const STANDING_EFFECT := "%s %s: every answer is %d%% %s likely to land well."
+## His opinion of you, one word per step (director 2026-11-07: "it should
+## read opinion of you: neutral"; he chose the five words).
+const STANDING_WORDS := {-2: "Hostile", -1: "Wary", 0: "Neutral", 1: "Warm", 2: "Firm fan"}
+## "Gary's opinion of you is Wary: every answer is 5% less likely to land well."
+const STANDING_EFFECT := "%s's opinion of you is %s: every answer is %d%% %s likely to land well."
 ## The question body never changes (5.50); standing only adds a lead-in.
 const LEAD_INS := {
 	"muckraker": ["You ducked me last time, so I'll try again.", "You've always fronted up, so here goes."],
@@ -265,9 +274,8 @@ const RECORD_MIN_GAMES := 4
 const RECORD_ODDS := 10
 const RECORD_CLAUSE := {"supported": "The record backs this.", "contradicted": "The record says otherwise.",
 		"neutral": "The record doesn't settle it.", "early": "Too early for the record to say."}
-## The same, as a reason on the gate: "The record backs this: 10% more likely
-## to land well."
-const RECORD_REASON := {"supported": "The record backs this", "contradicted": "The record says otherwise"}
+## The same, as a reason on the gate: "Record backs it: 10% more likely".
+const RECORD_REASON := {"supported": "Record backs it", "contradicted": "Record says otherwise"}
 const RECORD_BOARD_NOTE := "the board reads Ladder Watch"
 
 ## The group's (or the named player's) morale against the settled line moves
@@ -278,27 +286,37 @@ const MORALE_CAP := 10.0
 const ODDS_STEP := 5
 const ODDS_MIN := 20
 const ODDS_MAX := 80
-## Every press move (morale and the board) fades a point a round; the
-## Philosopher's morale moves a point every second round.
-const FADE_ROUNDS := 1
-const SLOW_FADE_ROUNDS := 2
+## How many rounds each point of a press move lasts (director 2026-11-07,
+## "Fade every 2nd round"): a player's morale move fades a point every second
+## round (+1 lasts 2 rounds, -2 lasts 4), whoever asked (director 2026-11-07:
+## no journalist slows it); the board's fades a point a round.
+const FADE_ROUNDS := 2
+const BOARD_FADE_ROUNDS := 1
 
 ## The gate's templates: no digits here, every number comes from the tables.
-const ODDS_TEMPLATE := "%d%% %s (%s), %d%% %s (%s). %s."
-const MORALE_SIZE := "%+d%% morale"
-const HIS_SIZE := "%+d%% %s's morale"
-const BOARD_SIZE := "%+d%% confidence"
-const NO_BOARD := "confidence unchanged"
+## One answer's line (director 2026-11-07, "Trim odds lines"): "40% resolve
+## tightens, morale +1% · 60% hung out to dry, morale -2% · Board +1% either
+## way · His headline: 10% less likely · Gary warms to you (+5% next time)".
+const ODDS_TEMPLATE := "%d%% %s, %s · %d%% %s, %s"
+const SEP := " · "
+const EITHER_WAY := "%s either way"
+const MORALE_SIZE := "morale %+d%%"
+const HIS_SIZE := "his morale %+d%%"
+const BOARD_SIZE := "board %+d%%"
+const OPINION_SIZE := "his opinion of you %+d"
+const NO_BOARD := "board unchanged"
 const AFTER_MORALE := "morale %+d%% across the list"
 const AFTER_HIS := "%s's morale %+d%%"
 const AFTER_BOARD := "board confidence %+d%%"
-## One odds twist on the gate: "After a heavy loss: 15% less likely to land well."
-const REASON := "%s: %d%% %s likely to land well."
-const FADE_NOTE := "These moves wear off a point a round."
-const SLOW_FADE_NOTE := "The board's move wears off a point a round."
+## A named player's opinion of you after the answer, out of 100.
+const AFTER_OPINION := "%s's opinion of you: %d → %d/100."
+## One odds twist on the gate: "Heavy loss: 15% less likely".
+const REASON := "%s: %d%% %s likely"
+## Said once on the screen, not under every answer: how long the moves last.
+const FADE_NOTE := "Morale moves wear off a point every second round, board moves a point a round."
 ## Your standing with him moves: what that does to his later questions.
-const LIKES := "%s will like that: answers to %s land well %d%% more often after it."
-const DISLIKES := "%s won't like that: answers to %s land well %d%% less often after it."
+const LIKES := "%s warms to you (+%d%% next time)"
+const DISLIKES := "%s cools on you (-%d%% next time)"
 
 
 ## The answer an option is. A save from before the roll kept fixed effects on
@@ -354,9 +372,9 @@ static func chance_parts(kind: String, facts: Dictionary) -> Array:
 		out.append({"pct": m, "why": ("%s is %s" % [name, feel]) if named else ("The group is %s" % feel)})
 	if named:
 		if is_young(float(facts.get("his_age", 30.0))) and int(s["young"]) != 0:
-			out.append({"pct": int(s["young"]), "why": "%s is still young" % name})
+			out.append({"pct": int(s["young"]), "why": "%s is young" % name})
 	elif int(facts.get("young", 0)) >= YOUNG_SIDE and int(s["young"]) != 0:
-		out.append({"pct": int(s["young"]), "why": "It's a young side"})
+		out.append({"pct": int(s["young"]), "why": "Young side"})
 	var j: Dictionary = PERSONA.get(str(facts.get("journalist", "")), {})
 	var jo := int((j.get("odds", {}) as Dictionary).get(kind, 0))
 	if jo != 0:
@@ -364,14 +382,14 @@ static func chance_parts(kind: String, facts: Dictionary) -> Array:
 	var key := str(facts.get("key", ""))
 	var r := int((s["result"] as Dictionary).get(key, 0))
 	if r != 0:
-		out.append({"pct": r, "why": "After a heavy loss" if key == "heavy_loss" else "After a big win"})
+		out.append({"pct": r, "why": "Heavy loss" if key == "heavy_loss" else "Big win"})
 	var verdict := str(facts.get("verdict", ""))
 	if RECORD_REASON.has(verdict):
 		out.append({"pct": RECORD_ODDS if verdict == "supported" else -RECORD_ODDS, "why": str(RECORD_REASON[verdict])})
 	return out
 
 
-## "After a heavy loss: 15% less likely to land well."
+## "Heavy loss: 15% less likely" (to land well).
 static func reason_line(part: Dictionary) -> String:
 	var pct := int(part["pct"])
 	return REASON % [str(part["why"]), absi(pct), "more" if pct > 0 else "less"]
@@ -380,16 +398,22 @@ static func reason_line(part: Dictionary) -> String:
 ## What an answer does once the journalist's personality and the record check
 ## have had their say: {"a": {board, morale, his, odds, after}, "b": ..., "both",
 ## "notes": the twists that changed it, in words}. `ctx`: {"journalist",
-## "verdict", "name": the named player, "lost": the match was a loss}. Every
-## size stays inside its cap (LOSS_LIFT_CAP for a lift after a loss).
+## "verdict", "name": the named player, "lost": the match was a loss,
+## "restore": opinion points backing him gives back from an earlier call-out}.
+## Every size stays inside its cap (LOSS_LIFT_CAP for a lift after a loss). A
+## named answer lists every size on both outcomes ("full").
 static func effects(kind: String, ctx: Dictionary = {}) -> Dictionary:
 	var s: Dictionary = ANSWERS.get(kind, ANSWERS["method"])
 	var j: Dictionary = PERSONA.get(str(ctx.get("journalist", "")), {})
 	var verdict := str(ctx.get("verdict", ""))
 	var name := str(ctx.get("name", "him"))
-	var out := {"notes": []}
+	var out := {"notes": [], "full": is_named(kind)}
 	for w in ["a", "b"]:
 		var o: Dictionary = (s[w] as Dictionary).duplicate()
+		o["opinion"] = int(o.get("opinion", 0))
+		# Backing him by name gives back what calling him out cost, either way it lands.
+		if kind == "back_named":
+			o["opinion"] += maxi(0, int(ctx.get("restore", 0)))
 		# His paper amplifies the board's read of the answer, never a move it
 		# makes whichever way it lands (no free, sure-thing lever).
 		if bool(j.get("board_up", false)) and int(o["board"]) != 0 \
@@ -410,14 +434,17 @@ static func effects(kind: String, ctx: Dictionary = {}) -> Dictionary:
 			o["morale"] = mini(int(o["morale"]), LOSS_LIFT_CAP)
 			o["his"] = mini(int(o["his"]), LOSS_LIFT_CAP)
 		if is_named(kind):
-			o["odds"] = str(o["odds"]) % name
+			# Named once per line: the second outcome says "he".
+			if str(o["odds"]).contains("%s"):
+				o["odds"] = str(o["odds"]) % name
 			o["after"] = str(o["after"]) % name
 		out[w] = o
 	var a: Dictionary = out["a"]
 	var b: Dictionary = out["b"]
-	var shared := signi(int(a["board"])) if int(a["board"]) == int(b["board"]) else 0
-	var both: Dictionary = s["both"]
-	out["both"] = str(both.get(shared, both.get(0, "")))
+	# What moves the same whichever way it lands, with its size, or what
+	# does not move at all ("Board unchanged").
+	var same := "" if bool(out["full"]) else _shared_size(a, b)
+	out["both"] = EITHER_WAY % _cap_first(same) if same != "" else _cap_first(str((s["both"] as Dictionary).get(0, "")))
 	var notes: Array = out["notes"]
 	if bool(j.get("board_up", false)) and int((s["a"] as Dictionary)["board"]) != int((s["b"] as Dictionary)["board"]):
 		notes.append(str(j["board_note"]))
@@ -453,18 +480,17 @@ static func standing_decayed(v: int, years: int) -> int:
 	return v - signi(v) * mini(absi(v), years)
 
 
-## "is warm to you", after his first name.
-static func standing_word(v: int, journalist := "") -> String:
-	var w := str(STANDING_WORDS.get(clampi(v, STANDING_MIN, STANDING_MAX), ""))
-	return w % ("she" if is_woman(journalist) else "he") if w.contains("%s") else w
+## His opinion of you in one word: "Warm".
+static func standing_word(v: int) -> String:
+	return str(STANDING_WORDS.get(clampi(v, STANDING_MIN, STANDING_MAX), ""))
 
 
-## "Gary is warm to you: every answer is 5% more likely to land well."; ""
-## when he takes you as he finds you.
+## "Gary's opinion of you is Warm: every answer is 5% more likely to land
+## well."; "" when Neutral.
 static func standing_effect(journalist: String, v: int) -> String:
 	if v == 0:
 		return ""
-	return STANDING_EFFECT % [first_name(journalist), standing_word(v, journalist), absi(v) * STANDING_ODDS,
+	return STANDING_EFFECT % [first_name(journalist), standing_word(v), absi(v) * STANDING_ODDS,
 			"more" if v > 0 else "less"]
 
 
@@ -486,10 +512,15 @@ static func is_woman(journalist: String) -> bool:
 	return bool(JOURNALISTS.get(journalist, {}).get("her", false))
 
 
-## How many rounds a press lift of this size takes to fade (fade_lift steps a
-## slow lift every second round counted from the presser, so this is exact).
-static func fade_rounds(size: int, slow: bool) -> int:
-	return absi(size) * (SLOW_FADE_ROUNDS if slow else FADE_ROUNDS)
+## How many rounds a player's press lift of this size takes to fade (fade_lift
+## counts its rounds from the presser, so this is exact).
+static func fade_rounds(size: int) -> int:
+	return absi(size) * FADE_ROUNDS
+
+
+## How many rounds the board's press move of this size takes to fade.
+static func board_fade_rounds(size: int) -> int:
+	return absi(size) * BOARD_FADE_ROUNDS
 
 
 ## The record the Stats Geek reads: {"w", "l", "d", "pct", "pos", "form" (-1..1),
@@ -538,57 +569,45 @@ static func record_line(rec: Dictionary) -> String:
 
 
 ## What an answer can do, under its button: both outcomes with their odds and
-## sizes, the lever that moves the same either way (bible §4), then what the
-## journalist and the record make of it, and how your standing with him moves.
-## `fx` is effects() (the base answer when empty); `ctx` {"journalist",
-## "verdict", "name"}.
+## sizes, what moves the same either way (bible §4), each twist in the odds,
+## and how your standing with him moves. How long the moves last and why his
+## personality changes a size are said once on the screen (rules_line), not
+## under every answer. `fx` is effects() (the base answer when empty); `ctx`
+## {"journalist", "verdict", "name", "standing", "facts"}.
 static func odds_line(kind: String, chance_a: int, fx: Dictionary = {}, ctx: Dictionary = {}) -> String:
 	if fx.is_empty():
 		fx = effects(kind, ctx)
 	var a: Dictionary = fx["a"]
 	var b: Dictionary = fx["b"]
-	var name := str(ctx.get("name", "his"))
-	var both := str(fx["both"])
-	var shared := _shared_size(a, b, name)
-	if shared != "":
-		both += " (%s)" % shared
-	var line: String = ODDS_TEMPLATE % [chance_a, str(a["odds"]), _sizes(a, b, name), 100 - chance_a, str(b["odds"]),
-			_sizes(b, a, name), both]
-	for n in fx.get("notes", []):
-		line += " %s." % str(n)
+	var full := bool(fx.get("full", false))
+	var parts: PackedStringArray = [_outcome(chance_a, str(a["odds"]), _sizes(a, b, full)),
+			_outcome(100 - chance_a, str(b["odds"]), _sizes(b, a, full))]
+	if str(fx["both"]) != "":
+		parts.append(str(fx["both"]))
 	var journalist := str(ctx.get("journalist", ""))
 	var verdict := str(ctx.get("verdict", ""))
 	# Every twist in the odds, named (director 2026-11-06: shown openly).
 	var facts: Dictionary = ctx.get("facts", {})
 	if not facts.is_empty():
 		for part in chance_parts(kind, facts):
-			line += " " + reason_line(part)
+			parts.append(reason_line(part))
 	elif RECORD_REASON.has(verdict):
-		line += " " + reason_line({"pct": RECORD_ODDS if verdict == "supported" else -RECORD_ODDS,
-				"why": RECORD_REASON[verdict]})
-	# How long it lasts is part of its size.
-	var any_move := false
-	var players_move := false
-	for w in ["a", "b"]:
-		var o: Dictionary = fx[w]
-		any_move = any_move or int(o["board"]) != 0 or int(o["morale"]) != 0 or int(o["his"]) != 0
-		players_move = players_move or int(o["morale"]) != 0 or int(o["his"]) != 0
-	var slow := bool((PERSONA.get(journalist, {}) as Dictionary).get("slow", false))
-	if any_move:
-		if slow and players_move:
-			line += " " + str(PERSONA[journalist]["slow_note"]) + "."
-			if int(a["board"]) != 0 or int(b["board"]) != 0:
-				line += " " + SLOW_FADE_NOTE
-		else:
-			line += " " + FADE_NOTE
+		parts.append(reason_line({"pct": RECORD_ODDS if verdict == "supported" else -RECORD_ODDS,
+				"why": RECORD_REASON[verdict]}))
 	var now := int(ctx.get("standing", 0))
 	var move := standing_after(now, standing_move(journalist, kind, verdict)) - now if journalist != "" else 0
-	var pron := "her" if is_woman(journalist) else "him"
 	if move > 0:
-		line += " " + LIKES % [first_name(journalist), pron, STANDING_ODDS]
+		parts.append(LIKES % [first_name(journalist), STANDING_ODDS])
 	elif move < 0:
-		line += " " + DISLIKES % [first_name(journalist), pron, STANDING_ODDS]
-	return line
+		parts.append(DISLIKES % [first_name(journalist), STANDING_ODDS])
+	return SEP.join(parts)
+
+
+## Said once on the gate, above the answers: how long a press move lasts, and
+## what this journalist's personality does to the sizes.
+static func rules_line(journalist: String) -> String:
+	var rule := str((PERSONA.get(journalist, {}) as Dictionary).get("rule", ""))
+	return FADE_NOTE if rule == "" else "%s %s" % [rule, FADE_NOTE]
 
 
 ## How it landed, for the sheet after the tap and the news.
@@ -607,6 +626,14 @@ static func after_line(kind: String, landed: String, fx: Dictionary = {}, name :
 	return "%s: %s." % [str(o["after"]), tail] if tail != "" else str(o["after"]) + "."
 
 
+## "Jack Smith's opinion of you: 50 → 49/100." from GameState's {"name",
+## "from", "to"}; "" when it did not move.
+static func opinion_after(moved: Dictionary) -> String:
+	if moved.is_empty() or int(moved.get("from", 0)) == int(moved.get("to", 0)):
+		return ""
+	return AFTER_OPINION % [str(moved.get("name", "")), int(moved["from"]), int(moved["to"])]
+
+
 ## The board's reason gains one sentence when an answer moved it (director
 ## 2026-11-06: add to the match reason, never overwrite it). "" for no move.
 static func board_sentence(journalist: String, board: int) -> String:
@@ -621,7 +648,7 @@ static func board_sentence(journalist: String, board: int) -> String:
 ## stacking can never pass the cap, and only what really moved his morale is
 ## kept to fade. `up` (>= 0) caps a lift lower than `cap`: LOSS_LIFT_CAP after
 ## a loss. Returns the change applied.
-static func apply_lift(p: Dictionary, delta: int, cap: int, slow: bool, up := -1) -> int:
+static func apply_lift(p: Dictionary, delta: int, cap: int, up := -1) -> int:
 	if delta == 0:
 		return 0
 	var old := int(p.get("press_lift", 0))
@@ -635,30 +662,28 @@ static func apply_lift(p: Dictionary, delta: int, cap: int, slow: bool, up := -1
 	p.erase("press_wait")
 	if now == 0:
 		p.erase("press_lift")
-		p.erase("press_slow")
 	else:
 		p["press_lift"] = now
-		p["press_slow"] = slow
 	return moved
 
 
-## One round's fade of a player's press lift: a point back toward where he was,
-## every round (every second round after the Philosopher). True when it moved.
+## One round's fade of a player's press lift: a point back toward where he was
+## every FADE_ROUNDS rounds, counted from when it was set. True when it moved.
 static func fade_lift(p: Dictionary, _round_no: int) -> bool:
+	p.erase("press_slow")  # an old save's Philosopher flag: every lift now fades at the one pace
 	var lift := int(p.get("press_lift", 0))
 	if lift == 0:
 		return false
-	# A slow lift waits every other round, counted from when it was set.
-	if bool(p.get("press_slow", false)):
-		if not bool(p.get("press_wait", false)):
-			p["press_wait"] = true
-			return false
-		p.erase("press_wait")
+	# "press_wait" counts the rounds since the last step (an old save's true reads as 1).
+	var waited := int(p.get("press_wait", 0)) + 1
+	if waited < FADE_ROUNDS:
+		p["press_wait"] = waited
+		return false
+	p.erase("press_wait")
 	ClubLife.add_morale(p, -signi(lift))
 	lift -= signi(lift)
 	if lift == 0:
 		p.erase("press_lift")
-		p.erase("press_slow")
 		p.erase("press_wait")
 	else:
 		p["press_lift"] = lift
@@ -676,24 +701,36 @@ static func roll(seed: int, year: int, round_no: int, key: String, option: int) 
 
 
 ## The sizes that differ between the two outcomes, for one outcome.
-static func _sizes(o: Dictionary, other: Dictionary, name: String) -> String:
+## One outcome on the gate: "45% Jack's resolve tightens, his morale +1%".
+static func _outcome(pct: int, odds: String, sizes: String) -> String:
+	return "%d%% %s" % [pct, odds] if sizes == "" else "%d%% %s, %s" % [pct, odds, sizes]
+
+
+## An outcome's sizes: what differs from the other outcome, or with `full`
+## every move it makes (a named answer, director 2026-11-08).
+static func _sizes(o: Dictionary, other: Dictionary, full := false) -> String:
 	var bits: PackedStringArray = []
-	if int(o["morale"]) != int(other["morale"]):
+	if int(o["morale"]) != int(other["morale"]) or (full and int(o["morale"]) != 0):
 		bits.append(MORALE_SIZE % int(o["morale"]))
-	if int(o["his"]) != int(other["his"]):
-		bits.append(HIS_SIZE % [int(o["his"]), name])
-	if int(o["board"]) != int(other["board"]):
+	if int(o["his"]) != int(other["his"]) or (full and int(o["his"]) != 0):
+		bits.append(HIS_SIZE % int(o["his"]))
+	# His opinion of you only where it moves: no "+0" beside the outcome that leaves it.
+	if int(o.get("opinion", 0)) != 0 and (full or int(o.get("opinion", 0)) != int(other.get("opinion", 0))):
+		bits.append(OPINION_SIZE % int(o.get("opinion", 0)))
+	if int(o["board"]) != int(other["board"]) or (full and int(o["board"]) != 0):
 		bits.append(BOARD_SIZE % int(o["board"]) if int(o["board"]) != 0 else NO_BOARD)
 	return ", ".join(bits)
 
 
 ## The size both outcomes share (the same move either way), or "".
-static func _shared_size(a: Dictionary, b: Dictionary, name: String) -> String:
+static func _shared_size(a: Dictionary, b: Dictionary) -> String:
 	var bits: PackedStringArray = []
 	if int(a["morale"]) == int(b["morale"]) and int(a["morale"]) != 0:
 		bits.append(MORALE_SIZE % int(a["morale"]))
 	if int(a["his"]) == int(b["his"]) and int(a["his"]) != 0:
-		bits.append(HIS_SIZE % [int(a["his"]), name])
+		bits.append(HIS_SIZE % int(a["his"]))
+	if int(a.get("opinion", 0)) == int(b.get("opinion", 0)) and int(a.get("opinion", 0)) != 0:
+		bits.append(OPINION_SIZE % int(a["opinion"]))
 	if int(a["board"]) == int(b["board"]) and int(a["board"]) != 0:
 		bits.append(BOARD_SIZE % int(a["board"]))
 	return ", ".join(bits)

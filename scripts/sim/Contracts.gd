@@ -142,6 +142,28 @@ const INSULT_NUM := 2
 const INSULT_DEN := 3
 const INSULT_STRIKES := 2
 const INSULT_MORALE := 5
+## Refusing to re-sign (director 2026-11-08): a player whose opinion of you
+## (Trust.opinion) is under REFUSE_BELOW may refuse to re-sign or extend with
+## you, REFUSE_PER_POINT percent for every point under it (46 gives 4%, 0
+## gives 50%). At REFUSE_BELOW or over, never.
+const REFUSE_BELOW := 50
+const REFUSE_PER_POINT := 1
+## What the talks say before you decide, and what happens when he refuses.
+const REFUSE_ODDS := "His opinion of you: %d/100. %d%% he won't re-sign with you."
+## The news line (name, opinion), then where he goes.
+const REFUSED := "%s won't re-sign with you: his opinion of you is %d/100."
+const REFUSED_GOES := "He goes to free agency."
+const REFUSED_SEASON_END := "He goes to free agency when the season ends."
+const REFUSED_STAYS := "He stays on the market."
+## What talks with him say once he has refused.
+const REFUSED_TALKS := "He won't re-sign with you: his opinion of you is %d/100."
+## On his contract card once he has refused.
+const REFUSED_CARD := "Won't re-sign: his opinion of you is %d/100"
+
+
+## The chance (percent) he refuses to re-sign with you, from his opinion of you.
+static func refuse_chance(opinion: int) -> int:
+	return maxi(0, REFUSE_BELOW - opinion) * REFUSE_PER_POINT
 
 
 ## His opening position: his asking price over the term he would like.
