@@ -1862,6 +1862,10 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 	# laid out once without it; if it fits at full width, the bar stays away.
 	# Tried once per body height and at most four times a sheet, so a body that
 	# truly overflows keeps its bar and two heights never take turns.
+	# The try hides the bar (SHOW_NEVER) rather than turning scrolling off:
+	# a DISABLED container asks for its whole body's height, so for a frame a
+	# long sheet stood 2,500 units tall and pushed Start off a phone at the
+	# larger text size.
 	var unstick := func() -> void:
 		if not is_instance_valid(sc) or not is_instance_valid(body) or not sc.is_inside_tree() \
 				or not sc.get_v_scroll_bar().visible or sc.vertical_scroll_mode != ScrollContainer.SCROLL_MODE_AUTO:
@@ -1872,7 +1876,7 @@ static func modal_box(parent: Control, max_w: float, prefer_h := 0.0, wash := AU
 			return
 		tried[h] = true
 		sc.set_meta("bar_tried", tried)
-		sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 		sc.set_deferred("vertical_scroll_mode", ScrollContainer.SCROLL_MODE_AUTO)
 	sc.get_v_scroll_bar().visibility_changed.connect(unstick, CONNECT_DEFERRED)
 	body.minimum_size_changed.connect(unstick, CONNECT_DEFERRED)
