@@ -110,12 +110,24 @@ static func set_table(coaches: Dictionary, clubs: Array, my_club: String) -> voi
 	table = {}
 	var by := staffs(coaches)
 	for club in clubs:
-		table[club] = tactics(by.get(club, {}), club == my_club)
-		table[club]["ai"] = club != my_club
-		table[club]["assistant"] = club == my_club
-		# An AI club's senior coach's tendency; yours is you.
-		var sc: Dictionary = (by.get(club, {}) as Dictionary).get("SC", {})
-		table[club]["style"] = Coaches.style(sc) if club != my_club and not sc.is_empty() else "balanced"
+		var staff: Dictionary = by.get(club, {})
+		# An AI club's senior coach's tendency, kept on his record from now.
+		var sc: Dictionary = staff.get("SC", {})
+		if club != my_club and not sc.is_empty():
+			Coaches.style(sc)
+		table[club] = row(staff, club == my_club)
+
+
+## One club's row of the table from its staff (staffs), writing nothing on
+## the records: {exec, read, ai, assistant, style}. An AI club's senior
+## coach's tendency; yours is you.
+static func row(staff: Dictionary, mine: bool) -> Dictionary:
+	var t := tactics(staff, mine)
+	t["ai"] = not mine
+	t["assistant"] = mine
+	var sc: Dictionary = staff.get("SC", {})
+	t["style"] = Coaches.style_of(sc) if not mine and not sc.is_empty() else "balanced"
+	return t
 
 
 ## How well each club knows each plan (GameState.plan_known, the same
@@ -129,7 +141,11 @@ static func for_club(code: String) -> Dictionary:
 
 ## Give a match squad its club's tactics (no-op outside a career).
 static func apply(sq: Squad) -> void:
-	var t: Dictionary = for_club(sq.code)
+	apply_row(sq, for_club(sq.code))
+
+
+## Give a squad one row of tactics (row): apply's, or a screen's own.
+static func apply_row(sq: Squad, t: Dictionary) -> void:
 	if t.is_empty():
 		return
 	sq.plan_know = {}

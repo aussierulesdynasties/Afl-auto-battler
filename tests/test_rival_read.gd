@@ -226,6 +226,13 @@ func _test_coach_words() -> void:
 		_check(not c.contains(CoachReport.plan_label(str(plan))), "The counter line never names a plan (%s)" % plan)
 	_say(RivalRead.tagger_line("Tom Tag"))
 	_say(RivalRead.minder_line())
+	# The report reads a new coach's style without writing it on his record:
+	# the match writes it at kick-off, and earlier would change a reload.
+	for skill in [10, 95]:
+		var sc := {"cid": "c_style_read_%d" % skill, "skills": {"tactics": skill, "manage": 50}}
+		var row := CoachEffects.row({"SC": sc}, false)
+		_check(not sc.has("style") and str(row["style"]) == Coaches.style(sc.duplicate(true)),
+				"A new coach's style is read without writing it, and is the one the match gives him (%s)" % row["style"])
 
 
 ## The break sheet's words: the counter tail, the mood, the legs reason.
@@ -367,7 +374,8 @@ func _test_in_career() -> void:
 	_check(report.size() == 3 and str(report[2][0]) == "Their coach" and (report[2][1] as Array).size() == 3,
 			"Their coach: his habits, his box, his counter")
 	# The record is saved, and the report reads the same after a load: the
-	# coaching table is never saved (reset empties it), so the load rebuilds it.
+	# coaching table is never saved (reset empties it) and the load leaves it
+	# empty, so the report works each coach out itself, writing nothing.
 	var before := JSON.stringify(GameState.rival_plans)
 	var report_before := JSON.stringify(report)
 	var next_before := JSON.stringify(GameState.opponent_report(str(GameState.my_next_opponent().get("code", ""))))
@@ -375,6 +383,7 @@ func _test_in_career() -> void:
 	GameState.reset()
 	_check(CoachEffects.table.is_empty(), "A reset leaves no coaching table behind")
 	_check(GameState.load_career() and JSON.stringify(GameState.rival_plans) == before, "The record comes back as saved")
+	var records := JSON.stringify(GameState.coaches, "", true)
 	var loaded := GameState.opponent_report(r1)
 	_check(loaded.size() == 3 and str(loaded[2][0]) == "Their coach" and (loaded[2][1] as Array).size() == 3,
 			"Straight after a load, their coach is read: %s" % [loaded])
@@ -382,6 +391,8 @@ func _test_in_career() -> void:
 	var opp := str(GameState.my_next_opponent().get("code", ""))
 	_check(opp != "", "There is a next opponent")
 	_check(JSON.stringify(GameState.opponent_report(opp)) == next_before, "...and so does this week's")
+	_check(CoachEffects.table.is_empty() and JSON.stringify(GameState.coaches, "", true) == records,
+			"Reading them leaves the coaches' records and the match's coaching table alone")
 	# A real tap, straight after the load, opens the report: their coach is in it.
 	await _tap_report()
 	var state := CareerSave.read(GameState.save_path)

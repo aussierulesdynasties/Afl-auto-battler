@@ -1101,10 +1101,6 @@ func load_career() -> bool:
 	honour_boards = state.get("honour_boards", {}) if state.get("honour_boards") is Dictionary else {}
 	if not state.has("honour_board"):
 		HonourBoard.backfill(self, func(id: String) -> Dictionary: return _any_player(id))
-	# The coaching table is derived, never saved (reset emptied it): rebuilt
-	# now, so the screens before the next match (the Assistant's report on
-	# the rival coach) read each club's coaching as the match will.
-	_refresh_coach_tactics()
 	return true
 
 
@@ -4631,11 +4627,18 @@ func usual_plan(code: String) -> String:
 
 
 ## `code`'s side as the match engine will field it this week, with its
-## coaching (CoachEffects: plan knowledge, box, coach's tendency).
+## coaching (CoachEffects: plan knowledge, box, coach's tendency). Its row is
+## worked out from the coaches as they stand (CoachEffects.row), as the match
+## does at kick-off, not read from the table: a loaded career has no table
+## until its next match, and rebuilding one here would write a new coach's
+## style on his record early (Coaches.style) and change how a reloaded career
+## plays. The coaches' records are left alone. Its tactics_exec leaves out
+## high performance (_refresh_coach_tactics); nothing that reads it here uses it.
 func _rival_squad(code: String) -> Squad:
 	var sq := Squad.new(code, season.lists[code], false, code, season.selections.get(code, {}))
 	_ensure_plan_known()
-	CoachEffects.apply(sq)
+	if not coaches.is_empty():
+		CoachEffects.apply_row(sq, CoachEffects.row(CoachEffects.staffs(coaches).get(code, {}), code == my_club))
 	return sq
 
 
