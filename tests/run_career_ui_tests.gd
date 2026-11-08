@@ -143,6 +143,11 @@ func _test_media_conference_rules() -> void:
 	_check(str(v0.get("qid", "")) == "heavy_loss.0" and str(v1.get("qid", "")) == "heavy_loss.1"
 			and str(v1.get("question", "")) == "Carlton kicked 15 goals to your 8. Where do you even start?",
 			"A question's two versions take turns (%s / %s)" % [str(v0.get("question", "")), str(v1.get("question", ""))])
+	var bw_ctx := {"club": "COL", "opponent_name": "Carlton", "round": 8, "year": 2027,
+			"result": {"home": "COL", "away": "CAR", "score": [122, 42]}}
+	var bw: Dictionary = MCY.pick(bw_ctx, {"asked": {"big_win": 1}})
+	_check(str(bw.get("question", "")).begins_with("An 80-point win over Carlton"),
+			"The big-win question says 'An 80-point win' (%s)" % str(bw.get("question", "")))
 	var run_ctx := {"club": "COL", "opponent_name": "Carlton", "round": 12, "year": 2027, "losing_run": 3,
 			"result": {"home": "COL", "away": "CAR", "score": [70, 85]}}
 	var run_q: Dictionary = MCY.pick(run_ctx, {})

@@ -124,7 +124,7 @@ static func pick(ctx: Dictionary, recent: Dictionary) -> Dictionary:
 						_named(named.get("heavy_loss", {}), "criticise_named", "%s went missing today.")))
 	elif margin >= 40:
 		if _turn(asked, "big_win", 2) == 1:
-			candidates.append(_q("big_win", "sycophant", "A %d-point win over %s. Has this side ever looked better?" % [margin, opp],
+			candidates.append(_q("big_win", "sycophant", "%s %d-point win over %s. Has this side ever looked better?" % [_a_an(margin), margin, opp],
 					round_no, "Some of them got sloppy. Not good enough.", "That's our system done right.",
 					"That's all the players. They were superb.",
 					_named(named.get("big_win", {}), "back_named", "%s was enormous today."), 1))
@@ -901,6 +901,11 @@ static func _shared_size(a: Dictionary, b: Dictionary) -> String:
 
 static func _cap_first(s: String) -> String:
 	return s.substr(0, 1).to_upper() + s.substr(1) if s != "" else s
+
+
+## "A" or "An" before a number said aloud: "An 80-point win", "A 52-point win".
+static func _a_an(n: int) -> String:
+	return "An" if str(n).begins_with("8") or n == 11 or n == 18 else "A"
 
 
 static func _ordinal(n: int) -> String:
