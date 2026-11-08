@@ -142,6 +142,7 @@ func play(from: int, count: int, out: String, weather: String,
 		var teams := []
 		var rosters: Array = sim.rosters()
 		var stats: Dictionary = r["players"]
+		var srcs := type_sources(sim, r)
 		for side in range(2):
 			var t: Dictionary = (r["team"][side] as Dictionary).duplicate()
 			t["score"] = int(r["score"][side])
@@ -154,7 +155,11 @@ func play(from: int, count: int, out: String, weather: String,
 			q_score[side][3] = int(r["score"][side])
 			t["q_score"] = q_score[side]
 			t["roles"] = role_lines(rosters[side], r["players"])
+			t["types"] = type_lines(rosters[side], r["players"])
+			t["type_src"] = srcs[side]
 			t["carry_zone"] = (sim.carry_log[side] as Dictionary).duplicate()
+			if "rebound_log" in sim:
+				t["reb_route"] = (sim.rebound_log[side] as Dictionary).duplicate()
 			t["legs_q"] = legs[side]
 			t["tank_q"] = tank[side]
 			t["interchanges"] = int(sim.interchanges[side])
@@ -398,3 +403,87 @@ static func role_lines(roster: Array, players: Dictionary) -> Dictionary:
 
 const ROLE_STATS := ["disposals", "kicks", "handballs", "marks", "rebounds", "inside50", "clearances", "goals",
 		"tackles", "pressure_acts"]
+
+
+## The same box score by each man's type as the game names it (Roles.label on his
+## list record: "Key defender", "Defender", "Small defender", "Inside midfielder",
+## "Wing", "Key forward", ...), as afl_role_rates.json "types" groups real players,
+## plus one row per man ("pl": [id, type, disposals, kicks, handballs, marks,
+## rebounds, kick_ins]) for the report's top-by-type list.
+static var _type_of := {}
+static func type_lines(roster: Array, players: Dictionary) -> Dictionary:
+	var out := {}
+	var pl := []
+	for p in roster:
+		var id := str(p["id"])
+		if not _type_of.has(id):
+			var rec = GameDB.player_by_id(id)
+			_type_of[id] = Roles.label(rec) if rec is Dictionary else "?"
+		var ty := str(_type_of[id])
+		if not out.has(ty):
+			out[ty] = {"pg": 0}
+		var row: Dictionary = out[ty]
+		row["pg"] = int(row["pg"]) + 1
+		var st: Dictionary = players.get(id, {})
+		for k in ROLE_STATS + ["kick_ins"]:
+			row[k] = float(row.get(k, 0.0)) + float(st.get(k, 0.0))
+		pl.append([id, ty, int(st.get("disposals", 0.0)), int(st.get("kicks", 0.0)),
+				int(st.get("handballs", 0.0)), int(st.get("marks", 0.0)),
+				int(st.get("rebounds", 0.0)), int(st.get("kick_ins", 0.0))])
+	out["pl"] = pl
+	return out
+
+
+## Where each type's disposals happen, read off the event log (no dice): every
+## kick, mark-and-kick or handball event by zone from his side's view (back
+## under -10 m, middle to +5, attack to the forward 50, inside), and how many
+## were his first touch straight after his own rebound out of defence ("reb").
+## Kick-ins kicked straight in are not disposals and are left out.
+static func type_sources(sim: MatchSim, r: Dictionary) -> Array:
+	var out := [{}, {}]
+	var f50 := float(Ratings.T["forward50_line"])
+	var prev := {}
+	for ev in r["events"]:
+		var e: Dictionary = ev
+		var kind := str(e.get("kind", ""))
+		var side := int(e.get("side", -1))
+		var id := str(e.get("player_id", ""))
+		if side >= 0 and id != "" and ["kick", "mark", "handball"].has(kind) \
+				and not (bool(e.get("kick_in", false)) and not bool(e.get("play_on", false))):
+			if not _type_of.has(id):
+				var rec = GameDB.player_by_id(id)
+				_type_of[id] = Roles.label(rec) if rec is Dictionary else "?"
+			var ty := str(_type_of[id])
+			var fp := float(e.get("fp", 0.0))
+			var atk := fp if side == 0 else -fp
+			var zone := "back" if atk < -10.0 else ("middle" if atk <= 5.0 else ("attack" if atk <= f50 else "inside"))
+			var d: Dictionary = out[side].get(ty, {})
+			d[zone] = int(d.get(zone, 0)) + 1
+			d["ev"] = int(d.get("ev", 0)) + 1
+			if str(prev.get("kind", "")) == "rebound" and str(prev.get("player_id", "")) == id:
+				d["reb"] = int(d.get("reb", 0)) + 1
+			out[side][ty] = d
+		if kind != "":
+			prev = e
+	# Who takes the ball straight after a rebound 50 (MatchSim.exit_rx_log),
+	# "rx" in all and "rx_<zone>" by where he took it.
+	# Every touch later in a chain that had a rebound 50 (post_exit_log): "px"
+	# and "px_<zone>".
+	for lg in [["exit_rx_log", "rx"], ["post_exit_log", "px"]]:
+		if not (str(lg[0]) in sim):
+			continue
+		for side in 2:
+			var log: Dictionary = sim.get(str(lg[0]))[side]
+			for k in log:
+				var parts := str(k).split("|")
+				var id := parts[1]
+				if not _type_of.has(id):
+					var rec = GameDB.player_by_id(id)
+					_type_of[id] = Roles.label(rec) if rec is Dictionary else "?"
+				var ty := str(_type_of[id])
+				var n := int(log[k])
+				var d: Dictionary = out[side].get(ty, {})
+				d[lg[1]] = int(d.get(lg[1], 0)) + n
+				d[str(lg[1]) + "_" + parts[0]] = int(d.get(str(lg[1]) + "_" + parts[0], 0)) + n
+				out[side][ty] = d
+	return out

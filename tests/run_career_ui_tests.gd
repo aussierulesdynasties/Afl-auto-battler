@@ -969,6 +969,188 @@ func _screen_text() -> String:
 	return " | ".join(out)
 
 
+## The sheet's other ways through, by finger: a second new card waits behind
+## Later and opens next; See the rule and a name lay over the card and Back
+## takes them off one at a time; Back on the round's results brings a new card
+## as Continue does; "popped" is kept in the save.
+func _test_event_sheet_flows() -> void:
+	_state.reset()
+	_state.career_seed = 4403
+	_state.replay_seed = 4403
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	_router.stack = ["main"]
+	_state.media_conference = {}
+
+	# Two new cards: Later on the first opens the second, then the hub.
+	_state.week_events = [_state.story_card("members_open_training"), _state.story_card("training_extra_session")]
+	_router.go("hub")
+	await _settle()
+	var later: Button = current_scene.find_child("EventLater", true, false)
+	var why: String = (await Tap.tap(later)) if later != null else "missing"
+	await _settle()
+	var sheet: Control = current_scene.find_child("EventSheet", true, false)
+	var shown: Array = []
+	if sheet != null:
+		_texts(sheet, shown)
+	_check(why == "" and sheet != null and bool(_state.week_events[1].get("popped", false))
+			and " | ".join(shown).contains(str(_state.week_events[1].get("title", "-"))),
+			"Later on one new card opens the next (%s)" % why)
+	later = current_scene.find_child("EventLater", true, false)
+	why = (await Tap.tap(later)) if later != null else "missing"
+	await _settle()
+	var waiting: Control = current_scene.find_child("WaitingEvents", true, false)
+	_check(why == "" and current_scene.find_child("EventSheet", true, false) == null
+			and waiting != null and waiting.find_child("WeekEvent", true, false) != null
+			and waiting.find_child("WeekEvent_1", true, false) != null,
+			"Later on the last one leaves both waiting first on the hub (%s)" % why)
+
+	# Kept in the save: it opens once across a reload too.
+	var kept: bool = _state.save_career() and _state.load_career()
+	_check(kept and _state.week_events.size() == 2 and bool(_state.week_events[0].get("popped", false))
+			and bool(_state.week_events[1].get("popped", false)), "A card that has opened is still marked after a reload")
+	_router.go("hub")
+	await _settle()
+	_check(current_scene.find_child("EventSheet", true, false) == null, "After a reload it waits on the hub, no sheet")
+
+	# See the rule lies over the card; closing it leaves the card open.
+	var ruled: Dictionary = _state.story_card("members_open_training")
+	ruled["options"][0]["rule"] = "The rule behind this answer."
+	_state.week_events = [ruled]
+	_router.go("hub")
+	await _settle()
+	# The card is on the hub under the sheet as well: the sheet's own button.
+	var rule_btn: Button = current_scene.find_child("EventSheet", true, false).find_child("EventRule_0", true, false)
+	_check(rule_btn != null, "(setup) a card with a rule is on the sheet")
+	why = (await Tap.tap(rule_btn)) if rule_btn != null else "missing"
+	await _settle()
+	var close_rule: Button = current_scene.find_child("RuleClose", true, false)
+	_check(why == "" and close_rule != null, "A finger on See the rule opens it over the card (%s)" % why)
+	why = (await Tap.tap(close_rule)) if close_rule != null else "missing"
+	await _settle()
+	_check(why == "" and current_scene.find_child("RuleSheet", true, false) == null
+			and current_scene.find_child("EventSheet", true, false) != null,
+			"A finger on Close takes off the rule and leaves the card open (%s)" % why)
+	rule_btn = current_scene.find_child("EventSheet", true, false).find_child("EventRule_0", true, false)
+	why = (await Tap.tap(rule_btn)) if rule_btn != null else "missing"
+	await _settle()
+	_router.handle_back(true)
+	await _settle()
+	_check(why == "" and current_scene.find_child("RuleSheet", true, false) == null
+			and current_scene.find_child("EventSheet", true, false) != null,
+			"Back takes off the rule first, the card stays (%s)" % why)
+	_router.handle_back(true)
+	await _settle()
+	_check(current_scene.find_child("EventSheet", true, false) == null and _router.current() == "hub",
+			"Back again closes the card")
+
+	# A name in the card opens his profile over it; Back takes the profile off.
+	var named: Dictionary = _state.story_card("members_open_training")
+	var him: Dictionary = _state.season.lists["FRE"][0]
+	named["text"] = "%s wants a word." % _db.player_display_name(him)
+	_state.week_events = [named]
+	_router.go("hub")
+	await _settle()
+	sheet = current_scene.find_child("EventSheet", true, false)
+	var line: Control = null
+	if sheet != null:
+		for r in sheet.find_children("*", "RichTextLabel", true, false):
+			if (r as RichTextLabel).text.contains("[url="):
+				line = r
+				break
+	_check(line != null, "(setup) the card's line names him")
+	var opened := false
+	if line != null:
+		var x := 4.0
+		while x < line.size.x and not opened:
+			await Tap.tap_at(line, Vector2(x, 10.0), false)
+			await _settle()
+			opened = current_scene.get_node_or_null("PlayerProfile") != null
+			x += 12.0
+	var profile: Control = current_scene.get_node_or_null("PlayerProfile")
+	_check(opened and sheet != null and profile.get_index() > sheet.get_index(),
+			"A finger on a name opens his profile over the card")
+	_router.handle_back(true)
+	await _settle()
+	_check(current_scene.get_node_or_null("PlayerProfile") == null
+			and current_scene.find_child("EventSheet", true, false) != null,
+			"Back takes off the profile first, the card stays")
+	_router.handle_back(true)
+	await _settle()
+	_check(current_scene.find_child("EventSheet", true, false) == null, "Back again closes the card")
+
+	# Back on the round's results brings a new card, the way Continue does.
+	_state.week_events = []
+	_router.go("hub")
+	await _settle()
+	current_scene.call("_show_results", [])
+	await _settle()
+	_check(current_scene.find_child("RoundResults", true, false) != null, "(setup) the round's results are up")
+	_state.week_events = [_state.story_card("members_open_training")]
+	_router.handle_back(true)
+	await _settle()
+	_check(current_scene.find_child("RoundResults", true, false) == null
+			and current_scene.find_child("EventSheet", true, false) != null,
+			"Back on the results opens a new card, as Continue does")
+	_state.week_events = []
+	root.size = size_before
+
+
+## Every card in the deck fits its sheet on a small phone, a phone and a PC
+## window: the sheet stays on screen, no answer runs past its edge, and Later
+## is in reach.
+func _test_event_sheet_fits_every_card() -> void:
+	_state.reset()
+	_state.career_seed = 4404
+	_state.replay_seed = 4404
+	_state.start_season("FRE", _db.club_list("FRE"))
+	var size_before := root.size
+	var him: Dictionary = _state.season.lists["FRE"][0]
+	var bad := []
+	var shown := 0
+	_router.stack = ["main"]
+	_state.week_events = []
+	_state.media_conference = {}
+	for dims in [Vector2i(360, 640), Vector2i(390, 844), Vector2i(1280, 720)]:
+		root.size = dims
+		_router.go("hub")
+		await _settle()
+		var hub: Node = current_scene
+		var win := Rect2(Vector2.ZERO, Vector2(dims))
+		for t in _rules("StoryDeck").all():
+			var player: bool = str((t["subject"] as Dictionary).get("kind", "club")) != "club"
+			var card: Dictionary = _state.story_card(str(t["id"]), him if player else {})
+			if card.is_empty():
+				continue
+			_state.week_events = [card]
+			hub.call("_open_event_sheet", 0)
+			await process_frame
+			await process_frame
+			var sheet: Control = hub.find_child("EventSheet", true, false)
+			var body: Control = sheet.find_child("SheetEvent", true, false)
+			var later: Control = sheet.find_child("EventLater", true, false)
+			var edge: float = body.get_parent().get_global_rect().end.x + 0.5
+			var wrong := ""
+			if not win.encloses(later.get_global_rect()):
+				wrong = "Later off screen"
+			for b in sheet.find_children("Event_*", "Button", true, false):
+				if (b as Control).get_global_rect().end.x > edge:
+					wrong = "%s runs %.0f past" % [b.name, (b as Control).get_global_rect().end.x - edge]
+			if body.get_global_rect().end.x > edge:
+				wrong = "body wider than its sheet by %.0f" % (body.get_global_rect().end.x - edge)
+			if not win.encloses(sheet.get_global_rect()) or body.get_parent().get_global_rect().end.x > dims.x:
+				wrong = "sheet off screen"
+			if wrong != "":
+				bad.append("%dx%d %s: %s" % [dims.x, dims.y, t["id"], wrong])
+			shown += 1
+			sheet.free()
+	_state.week_events = []
+	_check(shown >= 300, "The deck was walked at each size (%d sheets)" % shown)
+	_check(bad.is_empty(), "Every card fits its sheet at each size (%d out: %s)" % [bad.size(), str(bad.slice(0, 8))])
+	root.size = size_before
+
+
 ## A short sheet is as tall as what it holds, its buttons right under the
 ## words; a long one fills the screen and scrolls (the director's PC
 ## playtest, 2026-10-07: the "Your week" sheet was mostly empty, flagged 4-5
@@ -1248,6 +1430,8 @@ func _run() -> void:
 	await _t("_test_back_arrow_taps")
 	await _t("_test_finals_card_taps")
 	await _t("_test_event_sheet")
+	await _t("_test_event_sheet_flows")
+	await _t("_test_event_sheet_fits_every_card")
 	await _t("_test_sacked_job_choice_taps")
 	await _t("_test_rival_letter_taps")
 	await _t("_test_sim_asks_only_before_your_match")
@@ -1261,6 +1445,7 @@ func _run() -> void:
 	_state.delete_saved_career()
 	await _t("_test_new_career_keeps_the_save")
 	await _t("_test_new_career_canberra_choice")
+	await _t("_test_new_career_forged_row_redraft_only")
 	await _t("_test_new_career_challenge_taps")
 	await _t("_test_pc_hub_and_list_layout")
 	for sz in [Vector2i(2560, 1440), Vector2i(1920, 1080), Vector2i(1280, 720)]:
@@ -2193,8 +2378,13 @@ Your career stays on this device.",
 		await _settle()
 	_check(not had_conference or (_router.current() == "hub" and not _state.media_conference_pending()),
 			"A press conference, if the round raised one, is skipped by Back and the hub stays")
-	_router.handle_back(true)
-	await _settle()
+	# Back on the results brought the week's new card or ask on; each closes on
+	# its own Back, then Back leaves the hub.
+	var backs := 0
+	while _router.current() == "hub" and backs < 10:
+		_router.handle_back(true)
+		await _settle()
+		backs += 1
 	_check(_router.current() == "main", "Back from the hub goes to the main menu")
 	_check(_state.season != null, "Leaving by back keeps the career in memory")
 	_check(current_scene.find_child("ResumeCareer", true, false) != null,
@@ -3636,8 +3826,9 @@ func _find_named(n: Node, named: String, out: Array) -> void:
 		_find_named(c, named, out)
 
 
-## The Canberra choice on New career (director, 2026-10-14): off by default,
-## and a real tap on "Joins in 2030" puts Canberra in the career.
+## The Canberra question on New career (director, 2026-11-08): "Canberra
+## joins?" answers No by default, and a real tap on Yes puts Canberra in the
+## League redraft with Tasmania, both as equals.
 func _test_new_career_canberra_choice() -> void:
 	_state.delete_saved_career()
 	for pick_it in [false, true]:
@@ -3647,17 +3838,62 @@ func _test_new_career_canberra_choice() -> void:
 		await _settle()
 		await Tap.tap(current_scene.find_child("NewCareer", true, false))
 		await _settle()
+		var yes := current_scene.find_child("Canberra_yes", true, false)
+		var no := current_scene.find_child("Canberra_no", true, false)
+		var both_there: bool = yes != null and no != null  # gone once the draft opens
 		var t1 := ""
 		if pick_it:
-			t1 = await Tap.tap(current_scene.find_child("Canberra_in", true, false))
+			t1 = await Tap.tap(yes)
 			await _settle()
 		var t2: String = await Tap.tap(current_scene.find_child("StartCareer", true, false))
 		await _settle()
 		await _settle()
-		_check(t1 == "" and t2 == "" and _router.current() == "draft" and bool(_state.canberra_on) == pick_it
-				and _db.active_clubs(2030).has("CANB") == pick_it,
-				("A tap on Joins in 2030 puts Canberra in the new career (%s %s)" if pick_it
-				else "Left alone, the new career has no Canberra (%s %s)") % [t1, t2])
+		var clubs: Array = _state.draft.clubs if _state.draft != null else []
+		_check(both_there and t1 == "" and t2 == "" and _router.current() == "draft"
+				and bool(_state.canberra_on) == pick_it and clubs.has("CANB") == pick_it and clubs.has("TAS")
+				and clubs.size() == (20 if pick_it else 19),
+				("A tap on Yes puts Canberra and Tasmania in the 2027 League redraft (%s %s, %d clubs)" if pick_it
+				else "Left at No, the 2027 League redraft has Tasmania and no Canberra (%s %s, %d clubs)") % [
+					t1, t2, clubs.size()])
+	_state.reset()
+	_router.stack = []
+
+
+## The Forge club joins League redraft careers only (director, 2026-11-08):
+## Real 2026 lists or Rebuild hide its row and say why; a League redraft
+## brings it back with the pick as it was.
+func _test_new_career_forged_row_redraft_only() -> void:
+	_state.delete_saved_career()
+	_state.reset()
+	_state.set_forge_club({"name": "Port Melbourne", "short": "Borough", "code": "PMB",
+			"location": "port-melbourne", "primary": "#1B3A8C", "secondary": "#C8102E",
+			"accent": "#FFFFFF", "design": "hoops", "kit": "p/s/a"})
+	_router.stack = []
+	_router.go("main")
+	await _settle()
+	await Tap.tap(current_scene.find_child("NewCareer", true, false))
+	await _settle()
+	var row := current_scene.find_child("ForgedClub", true, false) as Control
+	var note := current_scene.find_child("ForgedClubOnlyNote", true, false) as Label
+	_check(row != null and note != null and row.is_visible_in_tree() and not note.is_visible_in_tree(),
+			"A League redraft shows the Your club row")
+	if row == null or note == null:
+		return
+	await Tap.tap(current_scene.find_child("ForgedClub_in", true, false))
+	await _settle()
+	await Tap.tap(current_scene.find_child("StartMode_real", true, false))
+	await _settle()
+	_check(not row.is_visible_in_tree() and note.is_visible_in_tree()
+			and note.text == "Your club joins League redraft careers only.",
+			"Real 2026 lists hide the Your club row and show the note")
+	await Tap.tap(current_scene.find_child("StartMode_redraft", true, false))
+	await _settle()
+	_check(row.is_visible_in_tree() and not note.is_visible_in_tree() and bool(current_scene.get("_pick_club")),
+			"Back on a League redraft, the row returns with your club still brought")
+	await Tap.tap(current_scene.find_child("Challenge_rebuild", true, false))
+	await _settle()
+	_check(not row.is_visible_in_tree() and note.is_visible_in_tree(), "Rebuild hides the Your club row too")
+	_state.set_forge_club({})
 	_state.reset()
 	_router.stack = []
 
@@ -4355,7 +4591,10 @@ func _test_skip_season() -> void:
 			"A finger on Skip the season plays out the %d season (%s)" % [year, why])
 	# The last match opens the off-season as it does after Sim the week (rivals
 	# settle their contracts); nothing of the coach's own is done for him.
-	_check(_state.offseason_open() and not _state.needs_season_wrap() and _state.draft == null,
+	# A strong season can end in a rival board's letter (row 112), which holds
+	# the off-season until he answers, as it does after Sim the week.
+	var held: bool = load("res://scripts/state/ClubMoves.gd").letter_open(_state)
+	_check((_state.offseason_open() or held) and not _state.needs_season_wrap() and _state.draft == null,
 			"It stops where the last Sim the week does: re-signings, trades and the draft are still the coach's")
 	var skipped := _skip_shape()
 	_check(skipped == played, "A skipped season lands where a played one does (%s vs %s)" % [skipped, played])
@@ -4366,6 +4605,20 @@ func _test_skip_season() -> void:
 	_check(_state.save_career(), "The skipped career saves")
 	_check(_state.load_career(), "The skipped career loads")
 	_check(_skip_shape() == skipped, "A reload keeps the skipped season")
+
+	# The last week's card opens at the end of the skip, as after Sim the week.
+	_state.media_conference = {}
+	_state.week_events = []
+	_router.go("hub")
+	await _settle()
+	_state.week_events = [_state.story_card("members_open_training")]
+	current_scene.call("_skip_season", {})
+	await _settle()
+	_check(current_scene.find_child("EventSheet", true, false) != null,
+			"A new card at the end of the skip opens over the hub, as after Sim the week")
+	_router.handle_back(true)
+	await _settle()
+	_state.week_events = []
 	_state.set_confirm_sim_round(ask_before)
 	root.size = size_before
 
