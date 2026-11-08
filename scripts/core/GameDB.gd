@@ -1217,6 +1217,8 @@ func _apply_ovr_overrides(list: Array) -> void:
 		else:
 			target = int(text)
 		if set_player_ovr(p, target):
+			if HOLDS_ON_EVERY_LINE.has(_override_key(p)):
+				hold_on_every_line(p, target)
 			# His POT is the one he had before, raised to his new OVR (a veteran
 			# is not a rehab case because his rating moved).
 			var pot := int(round(float(before_pot) * mult))
@@ -1273,6 +1275,49 @@ func _report_unmatched_overrides() -> Array:
 				out.append(path.get_file() + ": " + key)
 				push_warning("GameDB: override matches no player: %s %s" % [path.get_file(), key])
 	return out
+
+
+## club|first|last, lower case: who a hand-set rating belongs to.
+static func _override_key(p: Dictionary) -> String:
+	return "%s|%s|%s" % [p["club"], str(p["first"]).to_lower(), str(p["last"]).to_lower()]
+
+
+## Hand-set ratings that hold wherever he plays: no line rates him above the
+## number. Director, 2026-11-08: Blicavs is a 65, not a 65 ruck who is 81 in the
+## midfield and 93 in defence.
+const HOLDS_ON_EVERY_LINE := {"GEE|mark|blicavs": true}
+
+
+## Brings down what his other lines read until none rates him above target,
+## the highest attribute first so the profile keeps its order. His own line
+## stays on target: when an attribute it shares comes down (a ruck's contested
+## work), its heaviest attribute comes up to cover it. Star, durability and
+## discipline are who he is and stay.
+static func hold_on_every_line(p: Dictionary, target: int) -> void:
+	var a: Dictionary = p["attr"]
+	var role := str(p.get("role", "MID"))
+	var games := Ratings.effective_games(p)
+	var own: Dictionary = Ratings.ROLE_WEIGHTS.get(role, Ratings.ROLE_WEIGHTS["MID"])
+	var heaviest := ""
+	for k in own:
+		if heaviest == "" or float(own[k]) > float(own[heaviest]):
+			heaviest = k
+	for _guard in range(4000):
+		var over := ""
+		for line in Ratings.ROLE_WEIGHTS:
+			if line != role and Ratings.rate_overall(a, line, games) > target:
+				over = line
+				break
+		if over == "":
+			return
+		var top := ""
+		for k in Ratings.ROLE_WEIGHTS[over]:
+			if k != heaviest and (top == "" or int(a[k]) > int(a[top])):
+				top = k
+		a[top] = maxi(1, int(a[top]) - 1)
+		while Ratings.rate_overall(a, role, games) < target and int(a[heaviest]) < 99:
+			a[heaviest] = int(a[heaviest]) + 1
+	push_warning("GameDB: cannot hold %s %s at %d on every line" % [p["first"], p["last"], target])
 
 
 static func set_player_ovr(p: Dictionary, target: int) -> bool:
