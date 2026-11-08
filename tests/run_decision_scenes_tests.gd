@@ -30,6 +30,7 @@ func _run() -> void:
 	_state.replay_seed = SUITE_SEED
 	for kind in KINDS:
 		await _t("_test_kind", [kind])
+	await _t("_test_set_spots")
 	await _t("_test_card_without_vignettes")
 	for kind in KINDS:
 		await _t("_test_tap", [kind])
@@ -40,20 +41,27 @@ func _run() -> void:
 	quit(1 if _failures.size() > 0 else 0)
 
 
-## A live match, one quarter in, and the screen showing it.
-func _match() -> Dictionary:
+## A live match, one quarter in, and the screen showing it. Released: the oval has played
+## everything the sim has rolled, as when a call comes up in a match (MatchScene._on_finished),
+## so the scoreboard shows the sim's score; otherwise the oval is paused.
+func _match(released := false, phone := Vector2i(360, 740)) -> Dictionary:
 	var db = root.get_node("GameDB")
 	_state.reset()
 	_state.replay_seed = SUITE_SEED
 	_state.start_season("COL", db.club_list("COL"))
-	root.size = Vector2i(360, 740)
+	root.size = phone
 	_check(_state.prepare_interactive_match(), "A live match is prepared")
 	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
 	root.add_child(m)
 	await _settle()
 	(m.find_child("StartQuarter", true, false) as Button).emit_signal("pressed")
 	await _settle()
-	m.get("_pitch").pause()
+	if released:
+		m.set("_skipping", true)
+		m.get("_pitch").release_all()
+		m.set("_skipping", false)
+	else:
+		m.get("_pitch").pause()
 	var sim = _state.pending_sim
 	return {"m": m, "sim": sim, "me": int(m.get("_my_side"))}
 
@@ -187,10 +195,167 @@ func _test_kind(kind: String) -> void:
 			off.append(b.name)
 	_check(off.is_empty() and card.find_children("Moment_*", "Button", true, false).size() == (call["options"] as Array).size(),
 			"%s: every option is on screen and thumb-sized (%s)" % [kind, str(off)])
+	# The big screen, when the scene shows it, shows whole: inside the picture, its writing
+	# under the title bar.
+	vig.call("_set_camera")
+	var sr: Rect2 = load("res://scripts/ui/match/VignetteGround.gd").screen_rect(vig.ground_cam())
+	if not bool(vig.call("_screen_board", vig.ground_cam()).get("off", false)) and sr.has_area():
+		_check(sr.position.x >= 0.0 and sr.end.x <= vig.size.x and sr.position.y + sr.size.y * 0.15 >= vig.size.y * 0.075,
+				"%s: the big screen shows whole (%s)" % [kind, str(sr)])
 	var said := " ".join(vig.facts)
 	_check(not said.contains("%") and not said.to_lower().contains("recommend"), "%s: no stats or advice over the scene" % kind)
 	m.queue_free()
 	await _settle()
+
+
+## Director bug, 2026-11-08: the call said 25 metres out and the scene showed him at the
+## 50. Every spot MatchSim names (SET_BANDS_ON) is staged where the call says, through the
+## real call (MatchSim._offer_set_shot) on a smaller and a larger phone: the man on the mark
+## on the call's metres, the kicker a step behind him on his line to the goals, in the cell of
+## the ground the words name. Measured once the scene has frozen and the call has slid all the
+## way up: both goal posts in the picture above the call, and no goal or behind post rising
+## from behind either man; both men above
+## the call with their names clear of the title bar; the man on the mark showing past the
+## kicker; the big screen either in full from first frame to last or left out, and showing
+## what the scoreboard shows.
+func _test_set_spots() -> void:
+	var VG = load("res://scripts/ui/match/VignetteGround.gd")
+	var V = load("res://scripts/ui/match/DecisionVignette.gd")
+	var MS: GDScript = load("res://scripts/sim/MatchSim.gd")
+	_check(str(V.set_spot("")["key"]) == "front" and str(V.set_spot("mystery")["key"]) == "front",
+			"set_shot without a spot: straight in front, 35 out")
+	var goal_line := float((load("res://scripts/sim/Ratings.gd") as GDScript).get_script_constant_map()["T"]["goal_line"])
+	for phone in [Vector2i(360, 740), Vector2i(390, 844)]:
+		for band in MS.set_bands(0.34):
+			var key := str(band["key"])
+			var metres := float(band["metres"])
+			var at := "set_shot %s at %dx%d" % [key, phone.x, phone.y]
+			_check(V.SET_SPOTS.has(key), "%s: the scene has a spot for it" % at)
+			var ctx := await _match(true, phone)
+			var m: Control = ctx["m"]
+			var sim = ctx["sim"]
+			var me: int = ctx["me"]
+			_state.set_vignettes_on(true)
+			var mine: Array = sim.squads[me].ground
+			var shooter: Dictionary = mine.filter(func(p): return str(p["role"]) == "FWD")[0]
+			var feeder: Dictionary = mine.filter(func(p): return str(p["role"]) == "MID")[0]
+			var defender: Dictionary = (sim.squads[1 - me].ground as Array).filter(func(p): return str(p["role"]) == "DEF")[0]
+			sim.pending_moment = {}
+			sim.moment_side = me
+			sim._offer_set_shot(me, (1.0 if me == 0 else -1.0) * (goal_line - metres), shooter, defender, band, feeder)
+			_check(str(sim.pending_moment.get("band_key", "")) == key and str(sim.pending_moment.get("title", "")).ends_with(str(band["spot"])),
+					"%s: the real call names the spot" % at)
+			m.call("_show_moment")
+			await _settle()
+			var vig = m.find_child("DecisionVignette", true, false)
+			_check(vig != null, "%s: the call opens on its scene" % at)
+			if vig == null:
+				m.queue_free()
+				await _settle()
+				continue
+			var first_off: bool = bool(vig.call("_screen_board", vig.ground_cam()).get("off", false))
+			vig.finish_now()
+			_check(await _call_settled(m, vig), "%s: the scene freezes and the call slides all the way up" % at)
+			vig.call("_set_camera")
+			var goal := Vector2(0.0, float(VG.GOAL_Y))
+			var kicker: Vector2 = vig.spot_of(vig.token_of("kicker"))
+			var mark: Vector2 = vig.spot_of(vig.token_of("on_the_mark"))
+			var out := kicker.distance_to(goal)
+			_check(absf(out - metres) <= 2.0, "%s: the kicker is %.1f m out, within 2 m of the call's %d" % [at, out, int(metres)])
+			_check(absf(mark.distance_to(goal) - metres) < 0.5 and mark.distance_to(goal) < out,
+					"%s: the man on the mark stands on the call's metres, nearer the goals than the kicker" % at)
+			var over := rad_to_deg(absf((mark - kicker).angle_to(goal - kicker)))
+			_check(over < 1.0, "%s: the man on the mark is on the kicker's line to the goals (%.1f deg off it)" % [at, over])
+			var off_line := func(p: Vector2) -> float:
+				return rad_to_deg(atan2(absf(p.x - goal.x), goal.y - p.y))
+			var angle: float = off_line.call(kicker)
+			_check(absf(float(off_line.call(mark)) - float(V.SET_SPOTS[key])) < 0.5 and (angle > 60.0 if key == "pocket" else angle < 30.0),
+					"%s: drawn %.1f deg off the line through the goals: under 30, the straight-in-front cell the sim converts it at; the pocket over 60" % [at, angle])
+			_check((out > 50.0) == (key == "long"), "%s: the 50 m arc is %s him" % [at, "in front of" if key == "long" else "behind"])
+			# In the picture: both posts and both men between the title bar and the call, with
+			# room over each head for his name, and no post hidden behind a man.
+			var panel: Control = m.find_child("BounceCall", true, false)
+			var bottom: float = vig.size.y
+			if panel != null:
+				bottom = panel.get_global_rect().position.y - vig.get_global_rect().position.y
+			var bar: float = vig.size.y * 0.075
+			var cam = vig.ground_cam()
+			var men := true
+			var body := {}
+			for role in ["kicker", "on_the_mark"]:
+				var t: Dictionary = vig.token_of(role)
+				var feet: Vector3 = vig.call("_project", vig.call("_pos", t), vig.call("_lift", t))
+				var head: Vector3 = vig.call("_project", vig.call("_pos", t), float(vig.call("_lift", t)) + float(vig.call("_figure_top", t)))
+				men = men and feet.y < bottom and head.y > bar + 24.0 and feet.x > 0.0 and feet.x < vig.size.x
+				# feet.z is pixels per metre at his distance: half his width with his arms in (x),
+				# half his head's (y).
+				body[role] = Vector3(feet.x, 0.5 * feet.z, 0.15 * feet.z)
+			_check(men, "%s: both men stand above the call, their names clear of the title bar" % at)
+			var posts := true
+			var clear := true
+			var post_x := []
+			for x in [-1.5, -0.5, 0.5, 1.5]:
+				var p: Vector3 = cam.oval(Vector2(x * float(VG.GOAL_GAP), goal.y))
+				post_x.append(int(p.x))
+				if absf(x) < 1.0:
+					posts = posts and p.z > 0.0 and p.x > 0.0 and p.x < vig.size.x and p.y > bar and p.y < bottom
+				for role in body:
+					clear = clear and absf(p.x - (body[role] as Vector3).x) > (body[role] as Vector3).y
+			_check(posts, "%s: both goal posts stand in the scene, above the call" % at)
+			_check(clear, "%s: no goal or behind post rises from behind a man (posts at %s, men %s)" % [at, str(post_x), str(body)])
+			var k: Vector3 = body["kicker"]
+			var d: Vector3 = body["on_the_mark"]
+			_check(d.x - k.x > k.z + d.z, "%s: the man on the mark shows past the kicker's right shoulder, his head clear" % at)
+			# The big screen: decided once for the scene, never popping out mid-scene; when it
+			# shows, neither the title bar nor a side of the picture cuts it, from the cut-in to
+			# the freeze.
+			var shown_off: bool = bool(vig.call("_screen_board", cam).get("off", false))
+			var end: float = float(vig.get("_end"))
+			var cuts := 0
+			for i in range(41):
+				cuts += 1 if bool(vig.screen_cut_at(end * float(i) / 40.0, 0.0)) else 0
+			for j in range(1, 41):
+				cuts += 1 if bool(vig.screen_cut_at(end, 0.01 * float(j))) else 0
+			_check(shown_off == first_off, "%s: the big screen is the same at the cut-in as on the freeze" % at)
+			_check(shown_off == (cuts > 0), "%s: the big screen is left out only when the title bar or a side would cut it (%d frames)" % [at, cuts])
+			if phone == Vector2i(390, 844) and key == "close":
+				_check(shown_off, "%s: 25 out the big screen rises under the title bar, so it is left out" % at)
+			var sr: Rect2 = VG.screen_rect(cam)
+			if not shown_off and sr.has_area():
+				_check(sr.position.x >= 0.0 and sr.end.x <= vig.size.x and sr.position.y + sr.size.y * 0.15 >= bar,
+						"%s: the big screen shows whole, inside the picture and its writing under the title bar (%s)" % [at, str(sr)])
+			var board: Dictionary = vig.get("_board")
+			_check(board.get("goals") == m.get("_shown_goals") and board.get("behinds") == m.get("_shown_behinds"),
+					"%s: the big screen shows what the scoreboard shows (%s %s, %s %s)" % [at, str(board.get("goals")),
+					str(board.get("behinds")), str(m.get("_shown_goals")), str(m.get("_shown_behinds"))])
+			m.queue_free()
+			await _settle()
+	# The big screen's place is the ground's: 30 by 13 m, 30 m up, 40 m past the far fence,
+	# and nothing when it is behind the camera.
+	var c = VG.Cam.new()
+	c.f = 500.0
+	c.cx = 180.0
+	c.hor = 200.0
+	var far := Vector2(0.0, float(VG.L) + float(VG.FENCE) + 40.0)
+	var p: Vector3 = c.oval(far, 30.0)
+	var r: Rect2 = VG.screen_rect(c)
+	_check(p.z > 0.0 and r.get_center().is_equal_approx(Vector2(p.x, p.y)) and r.size.is_equal_approx(Vector2(30.0, 13.0) * p.z),
+			"The big screen stands 30 by 13 m, 30 m up past the far fence")
+	c.fwd = Vector2(0, -1)
+	_check(not VG.screen_rect(c).has_area(), "The big screen behind the camera is not drawn")
+
+
+## Until the scene has frozen, its last punch done, and the call has slid all the way up
+## (MatchScene._show_moment's 0.3 s slide); false if that never comes.
+func _call_settled(m: Control, vig) -> bool:
+	var panel: Control = m.find_child("BounceCall", true, false)
+	var margin: Control = panel.get_parent().get_parent() if panel != null else null
+	for i in range(60):
+		if float(vig.get("_hold")) >= 0.4 and margin != null and margin.get_theme_constant("margin_bottom") == 0:
+			await _settle()
+			return true
+		await create_timer(0.05).timeout
+	return false
 
 
 ## Vignettes off: the call is the text card, for every kind.
