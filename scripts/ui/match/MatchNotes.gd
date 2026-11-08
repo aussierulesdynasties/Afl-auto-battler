@@ -67,6 +67,14 @@ static func clanger_caption(why: String) -> String:
 	return str(CLANGER_CAPTIONS.get(why, ""))
 
 
+## A goal's headline: the scorer and his club in words ("Goal  Petracca
+## (Demons)"), so the club never rests on colour alone; a goal with no
+## scorer named is the club's.
+static func goal_head(who: String, club: String) -> String:
+	var short := GameDB.club_short(club)
+	return "Goal  " + ("%s (%s)" % [who, short] if who != "" else short)
+
+
 ## The feed line for an event, or {} to leave it to the oval.
 ## {"text", "tier"}: tier "goal" (its own row), "break" (bold), "play".
 static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
@@ -79,7 +87,7 @@ static func feed_line(ev: Dictionary, home: String, away: String) -> Dictionary:
 	var score: Array = ev.get("score", [0, 0])
 	match kind:
 		"goal":
-			return {"text": "Goal  " + (who if who != "" else GameDB.club_short(club)), "tier": "goal"}
+			return {"text": goal_head(who, club), "tier": "goal"}
 		"behind":
 			var by := who if who != "" else "rushed"
 			return {"text": "Behind: %s (%s)" % [by, GameDB.club_short(club)], "tier": "play"}

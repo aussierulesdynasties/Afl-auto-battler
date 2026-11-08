@@ -2686,11 +2686,22 @@ func _test_press_scene_taps() -> void:
 		return current_scene
 	_check((muck.call() as Dictionary).get("options", []).size() == 4,
 			"The Muckraker's heavy-loss question offers a fourth answer naming a player")
+	var seed_was: int = _state.career_seed
 	for i in range(4):
 		for p in _state.my_list:
 			p.erase("press_lift")
 			p.erase("press_wait")
 		var press: Node = await open.call(muck.call())
+		if i == 3:
+			# A career where he takes the call-out personally (director 2026-11-08),
+			# so the result shows his opinion of you.
+			_state.relations.erase(Trust.player_key(str(named["id"])))
+			_state.media_memory.erase("callouts")
+			var key3 := str(_state.media_conference.get("key", ""))
+			for sd in range(1, 300):
+				if MC.roll(sd, _state.season_year, 8, key3, 3) > _state.press_chance(3):
+					_state.career_seed = sd
+					break
 		var label := str((_state.media_conference.get("options", [])[i] as Dictionary).get("label", ""))
 		var where: Label = press.find_child("MediaWhere", true, false)
 		var answer: Button = press.find_child("MediaAnswer_%d" % i, true, false)
@@ -2706,6 +2717,15 @@ func _test_press_scene_taps() -> void:
 				and said != null and said.is_visible_in_tree() and press.find_child("MediaAnswer_0", true, false) == null
 				and press.find_child("MediaTopSkip", true, false).disabled and named_only,
 				"A real tap on answer %d lands it in the press screen, with its odds and only what it moves (%s; %s)" % [i, tapped, label])
+		if i == 3:
+			var op: Label = press.find_child("MediaOutcomeOpinion", true, false)
+			var want := "%s's opinion of you: 50 → %d/100" % [str(root.get_node("GameDB").player_display_name(named)),
+					50 - int(MC.CALLOUT_OPINION_DROP)]
+			_check(op != null and op.is_visible_in_tree() and op.text == want,
+					"After a real tap on the call-out he took personally, the result shows his opinion of you (%s)" % (op.text if op != null else "missing"))
+			_state.relations.erase(Trust.player_key(str(named["id"])))
+			_state.media_memory.erase("callouts")
+			_state.career_seed = seed_was
 		var done: Button = press.find_child("MediaOutcomeDone", true, false)
 		var closed: String = await Tap.tap(done) if done != null else "missing"
 		await _settle()
