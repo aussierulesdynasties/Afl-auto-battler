@@ -161,6 +161,7 @@ func _undo_row(hv: VBoxContainer) -> void:
 	b.pressed.connect(func():
 		var r := GameState.undo_recruit()
 		_notice = str(r["reason"])
+		_prune_trade()  # an undone signing takes him out of the trade being built
 		_notice_club = ""
 		_notice_club_text = ""
 		_build())

@@ -1,8 +1,8 @@
 class_name MatchKickoff
 extends RefCounted
 ## Play match: the one way into your live match, from the hub (Skip to full
-## time, a response tapped beside an opposition fact) and from the match preview's
-## Continue (director, 2026-11-07: the preview is its own step before the setup).
+## time) and from the match preview's Continue (director, 2026-11-07: the preview
+## is its own step before the setup).
 ## The pre-match scene goes up while the match is set up underneath, then the
 ## match-day setup opens.
 
@@ -62,12 +62,7 @@ static func start(tree: SceneTree, replace := false) -> bool:
 	if m.is_empty():
 		return false
 	busy = true
-	# A response chosen under a fact opens this match on that call before the
-	# first bounce, so Skip plays it the Watch way this once (the saved choice
-	# stays); the button said "Play match" (HubScene._play_label).
 	var way := GameState.match_way()
-	if way == "skip" and not GameState.call_intent.is_empty():
-		way = "watch"
 	if not GameState.vignettes_on() or way == "skip":
 		# Vignettes off (Settings), or Skip chosen: no banner scene, straight
 		# to the match.

@@ -67,6 +67,18 @@ var _flip_pending := false
 ## the ball. The name is kept in real seconds, not match time, so it can be read
 ## at any playback speed; the screen sets the rings, the view only draws.
 var rings := {}
+## Tired and hurt players (PlayerMarks.build): pid -> {mark, words}. A short
+## mark beside the disc, on the oval and the bench strip; words on a long press.
+var marks := {}
+## The long press: where the finger is down and since when (-1 for none), and
+## the words it brought up ({text, at, left}).
+const HOLD_SECS := 0.45
+const HOLD_SLOP := 14.0
+const TIP_SECS := 2.5
+var _hold_at := Vector2.ZERO
+var _hold_serial := 0
+var _held := false
+var tip := {}
 var _caption := {}             # {tok, text, left, goal, turnover, side}
 var _poss_side := -1           # who had the ball at the last possession event
 var _restarted := true         # the next possession comes from a restart
@@ -173,7 +185,9 @@ class MiniFigures extends Control:
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# The oval takes a long press on a disc (a tired or hurt player's words);
+	# everything else passes on to the screen.
+	mouse_filter = Control.MOUSE_FILTER_PASS
 	clip_contents = true
 	_figs = MiniFigures.new()
 	_figs.name = "MiniFigures"
@@ -363,6 +377,67 @@ func set_rings(ids: Array) -> void:
 		return
 	rings = next
 	queue_redraw()
+
+
+func set_marks(next: Dictionary) -> void:
+	if next == marks:
+		return
+	marks = next
+	queue_redraw()
+
+
+## A long press on a marked disc says what the mark means; a tap or a drag
+## does nothing here.
+func _gui_input(e: InputEvent) -> void:
+	if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+		if (e as InputEventMouseButton).pressed:
+			_hold_at = (e as InputEventMouseButton).position
+			_held = true
+			_hold_serial += 1
+			var serial := _hold_serial
+			get_tree().create_timer(HOLD_SECS).timeout.connect(func():
+				if _held and serial == _hold_serial:
+					show_tip_at(_hold_at))
+		else:
+			_held = false
+			if not tip.is_empty():
+				var serial2 := _hold_serial
+				get_tree().create_timer(TIP_SECS).timeout.connect(func():
+					if serial2 == _hold_serial and not tip.is_empty():
+						tip = {}
+						queue_redraw())
+	elif e is InputEventMouseMotion and _held:
+		if (e as InputEventMouseMotion).position.distance_to(_hold_at) > HOLD_SLOP:
+			_held = false
+
+
+## The marked player under `p` (a point in this view): {pid, words, at, r}, or
+## {} for none. The bench strip first, then the discs on the oval.
+func marked_at(p: Vector2) -> Dictionary:
+	if marks.is_empty() or director == null:
+		return {}
+	var tr := token_radius()
+	for sp in bench_spots(tr):
+		var pid := str(sp["pid"])
+		if marks.has(pid) and (sp["pos"] as Vector2).distance_to(p) <= float(sp["r"]) * 1.4:
+			return {"pid": pid, "words": PlayerMarks.words(marks[pid], true), "at": sp["pos"], "r": sp["r"]}
+	var id := disc_at_point(p)
+	if id >= 0:
+		var pid2 := str(director.tokens[id].get("pid", ""))
+		if marks.has(pid2):
+			return {"pid": pid2, "words": PlayerMarks.words(marks[pid2], false), "at": _disc_at(id), "r": tr}
+	return {}
+
+
+## Put up the words for the marked player at `p`; false when there is none.
+func show_tip_at(p: Vector2) -> bool:
+	var hit := marked_at(p)
+	if hit.is_empty():
+		return false
+	var who := GameDB.player_display_name_by_id(str(hit["pid"]), "")
+	tip = {"text": str(hit["words"]), "name": who, "at": hit["at"], "r": hit["r"]}
+	queue_redraw()
+	return true
 
 
 func ringed(pid: String) -> bool:
@@ -977,6 +1052,7 @@ func _draw() -> void:
 	_draw_role_labels(tr)
 	_draw_caption(tr)
 	_draw_press_banner()
+	_draw_tip()
 
 
 ## The press zone: a wash of the press club's own colour over the part of the
@@ -1866,6 +1942,9 @@ func _draw_bench(tr: float) -> void:
 						HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(RING_COLOUR, 0.6))
 	for sp in spots:
 		_draw_disc(sp["pos"], br, _kits[int(sp["side"])], str(sp["num"]), fs)
+		var m: Dictionary = marks.get(str(sp["pid"]), {})
+		if not m.is_empty():
+			PlayerMarks.paint(self, sp["pos"], br, str(m["mark"]), antialias)
 
 
 ## One disc: the kit, a dark edge, and the number in white with a full dark edge
@@ -1934,6 +2013,46 @@ func _draw_tokens(tr: float) -> void:
 				Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
 			draw_string(font, origin + off, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, inks[1])
 		draw_string(font, origin, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, inks[0])
+	# Tired and hurt marks over every disc, so none hides under a neighbour.
+	for t2 in director.tokens:
+		var m: Dictionary = marks.get(str(t2.get("pid", "")), {})
+		if m.is_empty() or float(t2["down"]) > 0.0:
+			continue
+		var p2 := _disc_at(int(t2["id"]))
+		if p2.x < -tr * 3.0 or p2.y < -tr * 3.0 or p2.x > size.x + tr * 3.0 or p2.y > size.y + tr * 3.0:
+			continue
+		PlayerMarks.paint(self, p2, tr, str(m["mark"]), antialias)
+
+
+## The long press's words: the player's name and what his mark means, in a
+## dark box over his disc, kept inside the view.
+func _draw_tip() -> void:
+	if tip.is_empty():
+		return
+	draw_set_transform(Vector2.ZERO)
+	var fs := 14
+	var who := str(tip.get("name", ""))
+	var text := str(tip["text"])
+	var nw := UiKit.BOLD.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var tw := UiKit.FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var pad := 8.0
+	var w := maxf(nw, tw) + pad * 2.0
+	var lines := 2 if who != "" else 1
+	var h := float(fs) * 1.35 * lines + pad * 2.0 - 4.0
+	var at: Vector2 = tip["at"]
+	var r := float(tip["r"])
+	var box := Rect2(at.x - w * 0.5, at.y - r * 1.6 - h, w, h)
+	if box.position.y < 4.0:
+		box.position.y = at.y + r * 1.6
+	box.position.x = clampf(box.position.x, 4.0, maxf(4.0, size.x - w - 4.0))
+	box.position.y = clampf(box.position.y, 4.0, maxf(4.0, size.y - h - 4.0))
+	draw_rect(box, Color(0.05, 0.05, 0.06, 0.94))
+	draw_rect(box, Color(RING_COLOUR, 0.5), false, 1.0)
+	var y := box.position.y + pad + fs * 0.95
+	if who != "":
+		draw_string(UiKit.BOLD, Vector2(box.position.x + pad, y), who, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, RING_COLOUR)
+		y += fs * 1.35
+	draw_string(UiKit.FONT, Vector2(box.position.x + pad, y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, RING_COLOUR)
 
 
 ## PROTOTYPE: the six nearest the ball as figures, each a slot for the

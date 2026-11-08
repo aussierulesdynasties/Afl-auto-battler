@@ -65,6 +65,17 @@ func _test_taker_is_their_midfielder() -> void:
 			theirs = true
 	_check(theirs, "the taker is on the other side's ground")
 	_check(float(sim.team_stats[1].get("intercepts", 0.0)) == before + 1.0, "it is the other side's intercept")
+	# Each dice stream has a seed of its own: two streams on one seed draw the
+	# same numbers, so their features would rise and fall together.
+	var seeds := {}
+	var streams := 0
+	for prop in sim.get_property_list():
+		var v = sim.get(str(prop["name"]))
+		if v is RandomNumberGenerator:
+			streams += 1
+			seeds[(v as RandomNumberGenerator).seed] = str(seeds.get((v as RandomNumberGenerator).seed, "")) + " " + str(prop["name"])
+	_check(streams >= 19 and seeds.size() == streams,
+			"every dice stream has its own seed (%d streams, %d seeds): %s" % [streams, seeds.size(), str(seeds.values())])
 
 
 ## Midfielders intercept near the real 2.5 a game, and the score stays in a
