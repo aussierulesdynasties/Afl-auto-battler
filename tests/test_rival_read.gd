@@ -1,9 +1,9 @@
 extends RefCounted
 ## The rival coach read (director, 2026-11-08; scripts/sim/RivalRead.gd): the
-## Assistant's report and the break sheet on the opposition coach. The calls
-## are unchanged (the recorded fixture), and every line says what his calls
-## really do: the same seeded matches, read at each break and checked against
-## the call he then makes. Run through tests/run_rival_read_tests.gd.
+## Assistant's report and the break sheet on the opposition coach. Every line
+## says what his calls really do: seeded matches (tests/rival_identity.gd),
+## read at each break and checked against the call he then makes. Run through
+## tests/run_rival_read_tests.gd.
 
 var failures: Array[String] = []
 var checks := 0
@@ -25,7 +25,6 @@ func run() -> void:
 	checks = 0
 	_said.clear()
 	GameState.replay_seed = SUITE_SEED
-	_t("_test_calls_unchanged")
 	_t("_test_reads_match_calls")
 	_t("_test_coach_words")
 	_t("_test_break_words")
@@ -55,38 +54,19 @@ func _say(line: String) -> String:
 	return line
 
 
+## One side's calls (RivalRead.calls_of) from plans and pep talks per quarter.
+func _calls(plans: Array, peps := []) -> Array:
+	var out := []
+	for i in range(plans.size()):
+		out.append({"gameplan": plans[i], "pep": peps[i] if i < peps.size() else "steady"})
+	return out
+
+
 func _plan(rec: Dictionary, side: int) -> String:
 	return MatchSim.plan_key(str(((rec["plans"] as Array)[side] as Dictionary).get("gameplan", "balanced")))
 
 
 # ---------------------------------------------------------------------------
-## The rival coach's calls and the scores are what they were before the read
-## (tests/fixtures/rival_identity.json, written from main by
-## tools/rival_identity_dump.gd).
-func _test_calls_unchanged() -> void:
-	var f := FileAccess.open(Identity.FIXTURE, FileAccess.READ)
-	_check(f != null, "The calls recorded before the rival coach read are there")
-	if f == null:
-		return
-	var want = JSON.parse_string(f.get_as_text())
-	_check(want is Array and (want as Array).size() == Identity.MATCHES,
-			"The record holds %d matches" % Identity.MATCHES)
-	if not (want is Array) or (want as Array).size() != Identity.MATCHES:
-		return
-	var same := 0
-	var first := ""
-	for i in range(Identity.MATCHES):
-		var got := JSON.stringify(JSON.parse_string(JSON.stringify(Identity.play(i))))
-		if got == JSON.stringify(want[i]):
-			same += 1
-		elif first == "":
-			first = "%s: was %s, now %s" % [str((want[i] as Dictionary).get("match", i)),
-					JSON.stringify(want[i]).left(300), got.left(300)]
-	_check(same == Identity.MATCHES, ("Every seeded match plays as before, every call the same (%d of %d; %s)."
-			+ " A change meant to move the match re-records the fixture: godot --headless --path ."
-			+ " --script tools/rival_identity_dump.gd") % [same, Identity.MATCHES, first])
-
-
 ## Each break read says what the rule then plays: his mood exactly when the
 ## scoreboard drives his next call, his answer to yours exactly when he
 ## countered; the tagger and loose man named are the men the match uses.
@@ -218,7 +198,11 @@ func _test_coach_words() -> void:
 			"No senior coach: \"Their coach\"")
 	_check(RivalRead.fire_clause("gambler").contains("sooner") and RivalRead.fire_clause("balanced").contains("well behind"),
 			"A gambler fires them up sooner than most; the plain rule when well behind")
-	_check(RivalRead.habit("stubborn").contains("bigger swing") and RivalRead.habit("reactive").contains("smaller swing")
+	# Stubborn and reactive move only the scoreboard margins (protect, chase):
+	# the habit says the scoreboard, not "anything" (the counter still comes).
+	_check(RivalRead.habit("stubborn").contains("the scoreboard has to swing further than most")
+			and RivalRead.habit("reactive").contains("smaller swing of the scoreboard")
+			and not RivalRead.habit("stubborn").contains("anything")
 			and RivalRead.habit("cautious").contains("shuts up shop sooner")
 			and RivalRead.habit("gambler").contains("chases sooner"),
 			"Each tendency moves the way its numbers do")
@@ -231,14 +215,15 @@ func _test_coach_words() -> void:
 		_check(b.contains("quickly") == sharp and b.contains(str(RivalRead.BREAKS[MatchSim.tag_quarter(float(read))])),
 				"Box %.2f: %s" % [read, b])
 		_check(not RivalRead.box_line(float(read), false).contains("tagger"), "No tagger, no tag timing")
+		_check(not b.contains("swing"), "The box says it in other words than the habits: %s" % b)
 	_check(MatchSim.react_margin(1.0) < MatchSim.react_margin(0.0), "A sharper box moves on a smaller swing")
 	var c := _say(RivalRead.counter_line())
-	_check(c.begins_with("From %s, unless the scoreboard has pushed him" % RivalRead.BREAKS[MatchSim.COUNTER_Q]),
+	_check(c.begins_with("From %s he answers" % RivalRead.BREAKS[MatchSim.COUNTER_Q])
+			and c.ends_with("unless the scoreboard forces his hand."),
 			"The counter waits for %s and gives way to the scoreboard: %s" % [RivalRead.BREAKS[MatchSim.COUNTER_Q], c])
-	for k in MatchSim.COUNTER:
-		_check(c.contains(CoachReport.plan_label(str(k))), "The counter line names %s" % k)
-		_check(not c.contains(CoachReport.plan_label(str(MatchSim.COUNTER[k])) + " beats"),
-				"...but never which plan beats it")
+	_check(c.split(" ").size() <= 32, "The counter line is short (%d words)" % c.split(" ").size())
+	for plan in MatchSim.PLANS:
+		_check(not c.contains(CoachReport.plan_label(str(plan))), "The counter line never names a plan (%s)" % plan)
 	_say(RivalRead.tagger_line("Tom Tag"))
 	_say(RivalRead.minder_line())
 
@@ -257,12 +242,30 @@ func _test_break_words() -> void:
 			_check(not m.contains(CoachReport.plan_label(str(plan))), "%s never names a plan (%s)" % [mood, plan])
 	_check(RivalRead.mood_tail("") == "" and RivalRead.mood_tail("counter") == "" and RivalRead.mood_tail("usual") == "",
 			"No mood read when the scoreboard is not driving him")
-	_check(RivalRead.legs_reason(["balanced", "defensive", "defensive"]) == "they've pressed since quarter time",
+	# The legs reason: their calls, against yours (a plain balanced game).
+	var plain := _calls(["balanced", "balanced", "balanced"])
+	_check(RivalRead.legs_reason(_calls(["balanced", "defensive", "defensive"]), plain) == "they've pressed since quarter time",
 			"Pressing since quarter time")
-	_check(RivalRead.legs_reason(["attacking"]) == "they've run it through the corridor all game", "The corridor all game")
-	_check(RivalRead.legs_reason(["defensive", "attacking"]) == "they've run hard all game", "Both plans that cost legs")
-	_check(RivalRead.legs_reason(["defensive", "controlled"]) == "" and RivalRead.legs_reason([]) == "",
+	_check(RivalRead.legs_reason(_calls(["attacking"]), plain) == "they've run it through the corridor all game",
+			"The corridor all game")
+	_check(RivalRead.legs_reason(_calls(["defensive", "attacking"]), plain) == "they've run hard all game",
+			"Both plans that cost legs")
+	_check(RivalRead.legs_reason(_calls(["defensive", "controlled"]), plain) == "" and RivalRead.legs_reason([], []) == "",
 			"No reason once their last quarter saved legs")
+	# A fire-up costs legs too (PEP_FIRE pace), and is named.
+	_check(RivalRead.legs_reason(_calls(["balanced", "balanced", "balanced"], ["steady", "fire_up", "fire_up"]), plain)
+			== "they've been fired up since quarter time", "Fired up since quarter time")
+	_check(RivalRead.legs_reason(_calls(["balanced", "defensive", "defensive"], ["steady", "steady", "fire_up"]), plain)
+			== "they've pressed since quarter time and been fired up since half time", "The press and the fire-up")
+	_check(RivalRead.legs_reason(_calls(["controlled", "controlled"], ["fire_up", "fire_up"]), plain)
+			== "they've been fired up all game", "A fire-up outruns a plan that saves legs")
+	# Only when their calls are the cause: yours cost as much, no reason.
+	_check(RivalRead.legs_reason(_calls(["balanced", "defensive", "defensive"]), _calls(["defensive", "defensive", "defensive"])) == "",
+			"No reason when your calls cost as much legs")
+	_check(RivalRead.legs_reason(_calls(["defensive", "defensive"]), _calls(["balanced", "balanced"], ["heat", "steady"])) == "",
+			"No reason when your heat cost more")
+	_check(RivalRead.legs_reason(_calls(["defensive", "defensive"]), _calls(["balanced", "balanced"], ["calm", "calm"]))
+			== "they've pressed all game", "Your calm saved your legs: theirs are their calls")
 	var tired := _say(MatchNotes.legs_line(80.0, 50.0, "they've pressed since half time"))
 	_check(tired.ends_with("theirs is running on empty: they've pressed since half time."), "The reason follows theirs: %s" % tired)
 	_check(not MatchNotes.legs_line(50.0, 80.0, "they've pressed since half time").contains("pressed"),
@@ -297,8 +300,14 @@ func _test_record_words() -> void:
 	]
 	_check(RivalRead.season_line(rows.slice(0, 1)) == "", "One match is not a season's habit")
 	var s := _say(RivalRead.season_line(rows))
-	_check(s == "This season: mostly %s, %s when chasing and %s when in front." % [
+	_check(s == "This season: mostly %s. When chasing, %s; when in front, %s." % [
 			CoachReport.plan_label("defensive"), CoachReport.plan_label("attacking"), CoachReport.plan_label("controlled")], s)
+	_check(_say(RivalRead.season_line([rows[0], rows[0]])) == "This season: mostly %s. When chasing, %s." % [
+			CoachReport.plan_label("defensive"), CoachReport.plan_label("attacking")], "Only the chase")
+	_check(_say(RivalRead.season_line([rows[1], rows[1]])) == "This season: mostly %s. When in front, %s." % [
+			CoachReport.plan_label("defensive"), CoachReport.plan_label("controlled")], "Only in front")
+	_check(_say(RivalRead.season_line([{"p": ["balanced"], "w": ["usual"]}, {"p": ["balanced"], "w": ["chase"]}]))
+			== "This season: mostly a balanced game.", "One habit, said once")
 	var v := _say(RivalRead.vs_line(rows, "GEE"))
 	_check(v == "Against you in Round 2, they started with %s and switched to %s in the second quarter." % [
 			CoachReport.plan_label("defensive"), CoachReport.plan_label("controlled")], v)
@@ -357,11 +366,24 @@ func _test_in_career() -> void:
 	_check(text.contains("This season: mostly "), "...and their season")
 	_check(report.size() == 3 and str(report[2][0]) == "Their coach" and (report[2][1] as Array).size() == 3,
 			"Their coach: his habits, his box, his counter")
-	# The record is saved, and a save from before it opens with none.
+	# The record is saved, and the report reads the same after a load: the
+	# coaching table is never saved (reset empties it), so the load rebuilds it.
 	var before := JSON.stringify(GameState.rival_plans)
+	var report_before := JSON.stringify(report)
+	var next_before := JSON.stringify(GameState.opponent_report(str(GameState.my_next_opponent().get("code", ""))))
 	_check(GameState.save_career(), "The career saves")
 	GameState.reset()
+	_check(CoachEffects.table.is_empty(), "A reset leaves no coaching table behind")
 	_check(GameState.load_career() and JSON.stringify(GameState.rival_plans) == before, "The record comes back as saved")
+	var loaded := GameState.opponent_report(r1)
+	_check(loaded.size() == 3 and str(loaded[2][0]) == "Their coach" and (loaded[2][1] as Array).size() == 3,
+			"Straight after a load, their coach is read: %s" % [loaded])
+	_check(JSON.stringify(loaded) == report_before, "The report reads as it did before the save")
+	var opp := str(GameState.my_next_opponent().get("code", ""))
+	_check(opp != "", "There is a next opponent")
+	_check(JSON.stringify(GameState.opponent_report(opp)) == next_before, "...and so does this week's")
+	# A real tap, straight after the load, opens the report: their coach is in it.
+	await _tap_report()
 	var state := CareerSave.read(GameState.save_path)
 	state.erase("rival_plans")
 	CareerSave.write(state, CareerSave.read_meta(GameState.save_path), GameState.save_path)
@@ -376,35 +398,9 @@ func _test_in_career() -> void:
 	GameState.advance()
 	_check(int(GameState.rival_plans.get("year", 0)) == GameState.season_year
 			and (GameState.rival_rows(r1) as Array).size() <= 1, "A new season's record starts afresh")
-	# A real tap opens the report: their coach is in it.
-	CoachEffects.table = {}
-	GameState._refresh_coach_tactics()
-	var opp := str(GameState.my_next_opponent().get("code", ""))
+	# The tagger, loose man and minder it names are the men the match plays.
+	opp = str(GameState.my_next_opponent().get("code", ""))
 	_check(opp != "", "There is a next opponent")
-	# On a phone, the match preview (the reference design).
-	var was := tree.root.size
-	tree.root.size = Vector2i(390, 844)
-	var ui: Control = load("res://scenes/MatchPreviewScene.tscn").instantiate()
-	tree.root.add_child(ui)
-	await _settle()
-	var btn: Button = ui.find_child("AssistantReport", true, false)
-	var sc: ScrollContainer = ui.find_child("PreviewScroll", true, false)
-	if sc != null and btn != null:
-		sc.ensure_control_visible(btn)
-		await _settle()
-	var why := "no report button" if btn == null else str(await Tap.tap(btn))
-	_check(why == "", "A tap opens the Assistant's report (%s)" % why)
-	await _settle()
-	var sheet: Node = ui.find_child("AssistantReportSheet", true, false)
-	var heads := []
-	if sheet != null:
-		for l in sheet.find_children("*", "Label", true, false):
-			heads.append(str((l as Label).text))
-	_check(heads.has("Their coach") and heads.has("Who matters"), "It reads their coach and who matters: %s" % [heads])
-	ui.queue_free()
-	tree.root.size = was
-	await _settle()
-	# The tagger and loose man it names are the men the match plays.
 	var rep := GameState.opponent_report(opp)
 	var people: Array = []
 	for part in rep:
@@ -430,6 +426,40 @@ func _test_in_career() -> void:
 		if str(f["key"]) == "danger" and str(f.get("player_id", "")) == loose:
 			danger = true
 	_check(loose == "" or named or danger, "The report's loose man is the one they start with (%s): %s" % [loose, people])
+	# The minder rule is read only when you start with a loose man for it to
+	# find (your assistant's, MatchSim._assistant_interceptor) and they have a
+	# forward to send.
+	var mine := str(sim.interceptor[sim.moment_side])
+	var can_mind := mine != "" and not Matchups.minder_candidates(sq.ground).is_empty()
+	_check(people.has(RivalRead.minder_line()) == can_mind,
+			"The minder rule is read exactly when you start with a loose man (%s): %s" % [mine, people])
+
+
+## On a phone (the reference design), a real tap on the match preview opens
+## the Assistant's report, and it reads their coach and who matters.
+func _tap_report() -> void:
+	var was := tree.root.size
+	tree.root.size = Vector2i(390, 844)
+	var ui: Control = load("res://scenes/MatchPreviewScene.tscn").instantiate()
+	tree.root.add_child(ui)
+	await _settle()
+	var btn: Button = ui.find_child("AssistantReport", true, false)
+	var sc: ScrollContainer = ui.find_child("PreviewScroll", true, false)
+	if sc != null and btn != null:
+		sc.ensure_control_visible(btn)
+		await _settle()
+	var why := "no report button" if btn == null else str(await Tap.tap(btn))
+	_check(why == "", "A tap opens the Assistant's report (%s)" % why)
+	await _settle()
+	var sheet: Node = ui.find_child("AssistantReportSheet", true, false)
+	var heads := []
+	if sheet != null:
+		for l in sheet.find_children("*", "Label", true, false):
+			heads.append(str((l as Label).text))
+	_check(heads.has("Their coach") and heads.has("Who matters"), "It reads their coach and who matters: %s" % [heads])
+	ui.queue_free()
+	tree.root.size = was
+	await _settle()
 
 
 ## No line carries a number (a round's own name aside) or advice.

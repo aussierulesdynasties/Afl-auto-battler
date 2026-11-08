@@ -21,6 +21,10 @@ const QUARTER_WORDS := ["first", "second", "third", "last"]
 const ORDER := ["balanced", "attacking", "defensive", "contest", "controlled"]
 ## Matches a club must have played before its season record is read.
 const SEASON_MIN := 2
+## The pep talks by tactics key (MatchSim._pep_mult), and the words for the
+## ones that cost legs, in the legs reason.
+const PEPS := {"calm": MatchSim.PEP_CALM, "fire_up": MatchSim.PEP_FIRE, "heat": MatchSim.PEP_HEAT}
+const PEP_WORDS := {"fire_up": "been fired up", "heat": "brought the heat"}
 ## The break read (ai_mood), said as their mood and never their plan.
 const MOODS := {
 	"protect": "In front like this, they'll be comfortable.",
@@ -42,9 +46,9 @@ static func habit(style: String) -> String:
 	if p == 0.0 and c == 0.0:
 		return "goes by the scoreboard: he shuts up shop when well in front and chases when well behind"
 	if p > 0.0 and c > 0.0:
-		return "backs his structure: it takes a bigger swing than most before he changes anything"
+		return "backs his structure: the scoreboard has to swing further than most before he shuts up shop or chases"
 	if p < 0.0 and c < 0.0:
-		return "throws the magnets around: a smaller swing than most is enough for him to change things"
+		return "throws the magnets around: he shuts up shop or chases on a smaller swing of the scoreboard than most"
 	var bits := []
 	if p != 0.0:
 		bits.append("shuts up shop %s than most when in front" % ("sooner" if p < 0.0 else "later"))
@@ -77,28 +81,28 @@ static func coach_line(name: String, style: String) -> String:
 	return "%s %s. %s" % [name if name != "" else "Their coach", habit(style), fire_clause(style)]
 
 
-## How sharply his box reads the game (Squad.tactics_read), and, with a
-## specialist tagger in their side, from which break the tag comes.
+## How sharply his box reads the game (Squad.tactics_read: a sharper box is
+## moved by a smaller margin, react_margin), and, with a specialist tagger in
+## their side, from which break the tag comes.
 static func box_line(read: float, tagger: bool) -> String:
-	var s := "Their box reads the game quickly: a smaller swing than most moves them" \
+	var s := "Their box reads the game quickly and reacts early." \
 			if read >= MatchSim.TAG_SHARP_READ \
-			else "Their box is steady rather than sharp: it takes a real swing to move them"
+			else "Their box is steady rather than sharp and slower to react."
 	if tagger:
 		var q := MatchSim.tag_quarter(read)
-		s += (", and their tagger goes to work from %s" if q <= MatchSim.TAG_Q_SHARP
-				else ", and their tagger waits until %s") % str(BREAKS.get(q, "late"))
-	return s + "."
+		s += (" Their tagger goes to work from %s." if q <= MatchSim.TAG_Q_SHARP
+				else " Their tagger waits until %s.") % str(BREAKS.get(q, "late"))
+	return s
 
 
-## The counter rule (MatchSim._counter_plan), once: which plans he answers,
-## from when, and the two things that stop him.
+## The counter rule (MatchSim._counter_plan), once: from when he answers
+## your plan, and the two things that stop him (his side playing the answer
+## much worse, COUNTER_GIVE; the scoreboard, whose mood ai_tactics reads
+## first). A plan nothing beats (no COUNTER entry) gets no answer.
 static func counter_line() -> String:
-	var plans := []
-	for k in MatchSim.COUNTER:
-		plans.append(CoachReport.plan_label(str(k)))
-	return ("From %s, unless the scoreboard has pushed him, he answers %s the quarter after you"
-			+ " run it with the plan that beats it, if his side can play that nearly as well.") % [
-			str(BREAKS.get(MatchSim.COUNTER_Q, "quarter time")), _list(plans, "or")]
+	return ("From %s he answers your last quarter's plan with the one that beats it,"
+			+ " if his side can play it nearly as well, unless the scoreboard forces his hand.") % \
+			str(BREAKS.get(MatchSim.COUNTER_Q, "quarter time"))
 
 
 # ---------------------------------------------------------------------------
@@ -229,33 +233,47 @@ static func break_line(sim: MatchSim, me: int) -> String:
 	return s
 
 
-## One side's plan in each quarter played so far (tactics_history).
-static func plans_of(sim: MatchSim, side: int) -> Array:
+## One side's calls in each quarter played so far (tactics_history): its
+## tactics, {"gameplan", "pep", ...}, one per quarter in order.
+static func calls_of(sim: MatchSim, side: int) -> Array:
 	var out := []
 	for h in sim.tactics_history:
-		out.append(str(((h["plans"] as Array)[side] as Dictionary).get("gameplan", "balanced")))
+		out.append(((h["plans"] as Array)[side] as Dictionary).duplicate())
 	return out
 
 
-## Why their legs are going, from their plans so far (one per quarter, in
-## order): the run of plans that cost legs ending with the last quarter,
-## "they've pressed since half time". "" when their last quarter cost none.
-static func legs_reason(plans: Array) -> String:
-	var n := plans.size()
-	if n == 0 or _pace(str(plans[n - 1])) <= 1.0:
+## Why their legs are going, from both sides' calls so far (calls_of). Said
+## only when their calls are the cause: the last quarter's plan and pep talk
+## cost them legs (MatchSim.PLANS and PEP_* pace), and their calls have cost
+## more than yours over the game. It names the run of plans that cost legs
+## and the run of fire-ups that end with the last quarter: "they've pressed
+## since quarter time and been fired up since half time". "" otherwise.
+static func legs_reason(theirs: Array, mine: Array) -> String:
+	var n := theirs.size()
+	if n == 0 or _cost(theirs[n - 1]) <= 1.0:
 		return ""
-	var start := n - 1
-	while start > 0 and _pace(str(plans[start - 1])) > 1.0:
-		start -= 1
-	var run := {}
-	for i in range(start, n):
-		run[str(plans[i])] = true
-	var verb := "they've run hard"
-	if run.size() == 1 and run.has("defensive"):
-		verb = "they've pressed"
-	elif run.size() == 1 and run.has("attacking"):
-		verb = "they've run it through the corridor"
-	return "%s %s" % [verb, str(SINCE.get(start + 1, "late"))]
+	var spent := 0.0
+	for i in range(n):
+		spent += _cost(theirs[i]) - (_cost(mine[i]) if i < mine.size() else 1.0)
+	if spent <= 0.0:
+		return ""
+	var bits := []
+	var start := _run_start(theirs, func(c): return _pace(_plan(c)) > 1.0)
+	if start >= 0:
+		var run := {}
+		for i in range(start, n):
+			run[MatchSim.plan_key(_plan(theirs[i]))] = true
+		var verb := "run hard"
+		if run.size() == 1 and run.has("defensive"):
+			verb = "pressed"
+		elif run.size() == 1 and run.has("attacking"):
+			verb = "run it through the corridor"
+		bits.append("%s %s" % [verb, str(SINCE.get(start + 1, "late"))])
+	var pep := _pep(theirs[n - 1])
+	if PEP_WORDS.has(pep):
+		var since := _run_start(theirs, func(c): return _pep(c) == pep)
+		bits.append("%s %s" % [PEP_WORDS[pep], str(SINCE.get(since + 1, "late"))])
+	return "they've " + " and ".join(bits)
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +343,7 @@ static func record_row(res: Dictionary, side: int) -> Dictionary:
 			"p": p, "w": w}
 
 
-## "This season: mostly A, B when chasing and C when in front." from a club's
+## "This season: mostly A. When chasing, B; when in front, C." from a club's
 ## record rows (record_row); "" before SEASON_MIN matches.
 static func season_line(rows: Array) -> String:
 	if rows.size() < SEASON_MIN:
@@ -350,14 +368,18 @@ static func season_line(rows: Array) -> String:
 	var most := _top(usual if not usual.is_empty() else all)
 	if most == "":
 		return ""
-	var bits := ["mostly " + phrase(most)]
+	var bits := []
 	var c := _top(chase)
 	if c != "" and c != most:
-		bits.append(phrase(c) + " when chasing")
+		bits.append("when chasing, " + phrase(c))
 	var f := _top(front)
 	if f != "" and f != most:
-		bits.append(phrase(f) + " when in front")
-	return "This season: %s." % _list(bits, "and")
+		bits.append("when in front, " + phrase(f))
+	var s := "This season: mostly %s." % phrase(most)
+	if not bits.is_empty():
+		var tail := "; ".join(bits)
+		s += " %s%s." % [tail.left(1).to_upper(), tail.substr(1)]
+	return s
 
 
 ## Their last match against you this season, as a story: "Against you in
@@ -391,6 +413,29 @@ static func where(label: String) -> String:
 # ---------------------------------------------------------------------------
 static func _pace(plan: String) -> float:
 	return float((MatchSim.PLANS.get(MatchSim.plan_key(plan), {}) as Dictionary).get("pace", 1.0))
+
+
+static func _plan(c) -> String:
+	return str((c as Dictionary).get("gameplan", "balanced")) if c is Dictionary else str(c)
+
+
+static func _pep(c) -> String:
+	return str((c as Dictionary).get("pep", "steady")) if c is Dictionary else "steady"
+
+
+## What a quarter's call did to legs: plan pace times pep talk pace (the
+## fatigue MatchSim._after_chain applies; Bring the heat burns legs only).
+static func _cost(c) -> float:
+	return _pace(_plan(c)) * float((PEPS.get(_pep(c), {}) as Dictionary).get("pace", 1.0))
+
+
+## The first quarter (0-based) of the run of calls matching `pred` that ends
+## with the last one; -1 when the last one does not match.
+static func _run_start(calls: Array, pred: Callable) -> int:
+	var start := calls.size()
+	while start > 0 and pred.call(calls[start - 1]):
+		start -= 1
+	return start if start < calls.size() else -1
 
 
 static func _top(counts: Dictionary) -> String:

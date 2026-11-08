@@ -1,12 +1,12 @@
 extends RefCounted
 ## The rival coach's calls from seeded matches, both sides AI clubs, every
-## coach tendency and box from slow to sharp. tools/rival_identity_dump.gd
-## wrote tests/fixtures/rival_identity.json from main before the rival coach
-## read (director, 2026-11-08); tests/test_rival_read.gd plays the same
-## matches and checks the scores and every call are unchanged. The words added
-## to the record since ("why") are left out of the comparison.
+## coach tendency and box from slow to sharp. tests/test_rival_read.gd reads
+## each break of these matches against the call that follows. To prove a
+## change leaves the calls alone, tools/rival_identity_dump.gd writes them
+## (the scores and every call, without "why", which main does not record) on
+## main and on the branch, and the two files must be byte-identical. A one-off
+## proof, not a stored golden: a change meant to move the match is free to.
 
-const FIXTURE := "res://tests/fixtures/rival_identity.json"
 const MATCHES := 40
 const STYLES := ["balanced", "stubborn", "reactive", "gambler", "cautious"]
 ## Box reads from the worst to the best (CoachEffects.level's range), with

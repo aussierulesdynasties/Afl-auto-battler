@@ -1101,6 +1101,10 @@ func load_career() -> bool:
 	honour_boards = state.get("honour_boards", {}) if state.get("honour_boards") is Dictionary else {}
 	if not state.has("honour_board"):
 		HonourBoard.backfill(self, func(id: String) -> Dictionary: return _any_player(id))
+	# The coaching table is derived, never saved (reset emptied it): rebuilt
+	# now, so the screens before the next match (the Assistant's report on
+	# the rival coach) read each club's coaching as the match will.
+	_refresh_coach_tactics()
 	return true
 
 

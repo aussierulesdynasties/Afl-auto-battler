@@ -2510,10 +2510,11 @@ func _legs_view() -> Control:
 	return v
 
 
-## Why their legs are going (RivalRead.legs_reason): the plans they have run
-## that cost legs, from their plans so far. "" when their last cost none.
+## Why their legs are going (RivalRead.legs_reason): the plans and fire-ups
+## that cost them legs, when their calls cost more than yours. "" otherwise.
 func _opp_legs_reason() -> String:
-	return RivalRead.legs_reason(RivalRead.plans_of(GameState.pending_sim, 1 - _my_side))
+	var sim: MatchSim = GameState.pending_sim
+	return RivalRead.legs_reason(RivalRead.calls_of(sim, 1 - _my_side), RivalRead.calls_of(sim, _my_side))
 
 
 func _group_energy(side: int) -> float:
