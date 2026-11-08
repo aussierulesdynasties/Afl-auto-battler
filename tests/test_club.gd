@@ -20,6 +20,7 @@ func run() -> void:
 	GameDB.reload()
 	_t("_test_rules")
 	_t("_test_season_flow")
+	_t("_test_unavailable_not_left_out")
 	_t("_test_events")
 	_t("_test_backing_rules")
 	_t("_test_backing_flow")
@@ -204,6 +205,75 @@ func _test_season_flow() -> void:
 		if not (t.get("phase", []) as Array).has("season_end"):
 			after_cards.append(str(c.get("tid", "")))
 	_check(after_cards.is_empty(), "No event cards once the season is over, bar the season-end one (%s, %s)" % [str(after_cards), GameState.my_finals_status()])
+
+
+## Through a real round (GameState._after_round): a player whose injury or
+## suspension runs out at this very round's tick could not play, so he is not
+## "left out while fit", at your club or a rival's, and a game you promised
+## him does not sting. Who was unavailable is read before the week ticks
+## down; read after the tick, or not passed on, both stings come back.
+func _test_unavailable_not_left_out() -> void:
+	GameState.reset()
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	GameState._settle_week_event()
+	var base := ClubLife.MORALE_BASE
+	var promised := "You promised him a game and left him out"
+	# Two of yours out for this game only, each promised a game: one in his
+	# last week injured, one in his last week suspended.
+	var mine := []
+	var n := GameState.my_list.size()
+	_check(n > 30, "Geelong has a full list (%d)" % n)
+	for k in [["injury_weeks", n - 1], ["suspension_weeks", n - 2]]:
+		var p: Dictionary = GameState.my_list[int(k[1])]
+		p[str(k[0])] = 1
+		p["morale"] = base
+		p["expects_game"] = 12
+		mine.append(p)
+	# The same two at every rival club.
+	var rivals := []
+	for code in GameState.season.lists:
+		if str(code) == "GEE":
+			continue
+		var list: Array = GameState.season.lists[code]
+		for k in [["injury_weeks", list.size() - 1], ["suspension_weeks", list.size() - 2]]:
+			var q: Dictionary = list[int(k[1])]
+			q[str(k[0])] = 1
+			q["morale"] = base
+			rivals.append([str(code), q])
+	GameState.advance()
+	var res := GameState.last_match
+	var side := 0 if str(res["home"]) == "GEE" else 1
+	var on := {}
+	for row in (res["roster"] as Array)[side]:
+		on[str(row["id"])] = true
+	for p in mine:
+		var id := str(p["id"])
+		var why := []
+		for r in Trust.reasons(GameState.relations, Trust.player_key(id)):
+			why.append(str(r["why"]))
+		_check(not on.has(id) and Backing.fit(p) and not p.has("expects_game"),
+				"(setup) %s sat out, his week ran out at the tick, and the promise was settled" % id)
+		_check(ClubLife.morale(p) == base and not why.has(promised),
+				"Out this week, so not left out: no sting, no broken promise (morale %d, trust %s)" % [ClubLife.morale(p), str(why)])
+	# Rivals: only the clubs that played this round.
+	var rosters := {}
+	for r in GameState.last_results:
+		for s in range(2):
+			var ids := {}
+			for row in (r["roster"] as Array)[s]:
+				ids[str(row["id"])] = true
+			rosters[str(r["home"] if s == 0 else r["away"])] = ids
+	var seen := 0
+	var stung := []
+	for pair in rivals:
+		if not rosters.has(pair[0]):
+			continue
+		var q: Dictionary = pair[1]
+		seen += 1
+		if (rosters[pair[0]] as Dictionary).has(str(q["id"])) or not Backing.fit(q) or ClubLife.morale(q) != base:
+			stung.append("%s %s %d" % [pair[0], q["id"], ClubLife.morale(q)])
+	_check(seen >= 8 and stung.is_empty(),
+			"A rival's man out this week is not stung either (%d checked; wrong: %s)" % [seen, str(stung)])
 
 
 func _test_events() -> void:
