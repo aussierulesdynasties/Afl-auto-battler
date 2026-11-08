@@ -729,13 +729,13 @@ func _test_private_cards() -> void:
 						st["flags"][pid2] = {}
 					st["flags"][pid2][where_flag] = 5
 			var who := StoryEngine.eligible_subject(t, ctx, st, 10, RandomNumberGenerator.new())
-			if named and not who.is_empty():
+			if who.is_empty():
 				leaks.append(str(t["id"]))
-			if not named and not who.is_empty():
+			else:
 				reachable += 1
-	_check(leaks.is_empty() and reachable == private.size(),
-			"A private card never picks a real-named player, and still picks the rest (%s, %d of %d)" % [
-			str(leaks), reachable, private.size()])
+	_check(leaks.is_empty() and reachable == private.size() * 2,
+			"Real names are treated like any other: every card can pick either (director, 2026-11-09) (%s, %d of %d)" % [
+			str(leaks), reachable, private.size() * 2])
 	GameState.show_real_names = true
 	var named_fact := ClubStories.player_fact(GameState, {"id": "r", "real_name": "Real Person", "name": "Fake Name",
 			"overall": 60}, false, {}, 1, 0)

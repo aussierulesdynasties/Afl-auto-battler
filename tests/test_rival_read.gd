@@ -315,14 +315,14 @@ func _test_record_words() -> void:
 			CoachReport.plan_label("controlled")], "Only in front")
 	# The season line never names a plan as their habit beside the usual game
 	# the report has just named (director, 2026-11-08: Essendon read "usual
-	# game, Defensive press" then "This season: mostly Controlled tempo").
+	# game, Defensive Press" then "This season: mostly Controlled Tempo").
 	_check(not s.contains(CoachReport.plan_label("defensive")), "Their usual game is not said twice: %s" % s)
 	_check(_say(RivalRead.season_line(rows, "attacking")) == "This season they've gone to the %s when in front." % [
 			CoachReport.plan_label("controlled")], "Chasing with their usual game is not a change")
 	_check(RivalRead.season_line([{"p": ["balanced"], "w": ["usual"]}, {"p": ["balanced"], "w": ["chase"]}], "balanced") == "",
 			"Nothing but their usual game: no line")
 	_check(_say(RivalRead.season_line([{"p": ["contest"], "w": ["chase"]}, {"p": ["balanced"], "w": ["usual"]}], "balanced"))
-			== "This season they've gone to %s when chasing." % CoachReport.plan_label("contest"), "Win contest reads without \"the\"")
+			== "This season they've gone to %s when chasing." % CoachReport.plan_label("contest"), "Win Contest reads without \"the\"")
 	var v := _say(RivalRead.vs_line(rows, "GEE"))
 	_check(v == "Against you in Round 2, they started with the %s and switched to the %s in the second quarter." % [
 			CoachReport.plan_label("defensive"), CoachReport.plan_label("controlled")], v)

@@ -116,16 +116,16 @@ var _tac := [{}, {}]
 ## pid -> {def: a defender by trade, h: height in cm}, from the result's
 ## roster (its list_role) or the player's record (_who).
 var _trade := {}
-## Attack corridor: each player's lane across the ground (token id -> y), fixed by
+## Attack Corridor: each player's lane across the ground (token id -> y), fixed by
 ## his line's slot order (_attack_lanes), so the side narrows as a whole team.
 var _lane := {}
-## Win contest: per side, the two half-line players shadowing the ball in open
+## Win Contest: per side, the two half-line players shadowing the ball in open
 ## play, left one first (_pick_shadows).
 var _shadow := [[], []]
-## Win contest: where the pack's ring is being set this beat (INF for none):
+## Win Contest: where the pack's ring is being set this beat (INF for none):
 ## the play's other runs keep clear of it (_clear_of_pack).
 var _ring_at := Vector2.INF
-## Win contest: ball-ups pinned to where the ball was when the umpire called them
+## Win Contest: ball-ups pinned to where the ball was when the umpire called them
 ## (event k -> the shift from the logged spot), _pin_ballup.
 var _ballup_pin := {}
 
@@ -653,7 +653,7 @@ func _ballup_phases(k: int) -> Array:
 		out.append({"t": "flight", "to": at, "dur": shape.x, "apex": shape.y, "recv": -1,
 				"mode": "stoppage"})
 	elif _ballup_pin.has(k) and (_ballup_pin[k] as Vector2).length() > 3.0:
-		# Pinned to the ball (Win contest): no flight to the logged spot, but the
+		# Pinned to the ball (Win Contest): no flight to the logged spot, but the
 		# ball-up keeps the time that flight took, so the pack forms and every
 		# later beat runs when it did before the pin.
 		out.append({"t": "wait", "dur": _flight_shape("kick", (_ballup_pin[k] as Vector2).length()).x,
@@ -1055,7 +1055,7 @@ func _loc(k: int) -> Vector2:
 		var y := src.y + dy
 		var side := int(ev.get("side", 0))
 		if _plan_of(side) == "attacking" and a >= 0 and int(tokens[a]["side"]) == side and _lane.has(a):
-			# Attack corridor: the ball goes to the receiver's lane. He leads
+			# Attack Corridor: the ball goes to the receiver's lane. He leads
 			# from his slot, up his lane, never across to the ball, so the
 			# receivers never converge on one column.
 			y = float(_lane[a]) + _rng.randf_range(-1.0, 1.0)
@@ -1076,7 +1076,7 @@ func _loc(k: int) -> Vector2:
 	return p
 
 
-## Win contest: the ball-up is where the ball is when the umpire calls it (motion
+## Win Contest: the ball-up is where the ball is when the umpire calls it (motion
 ## critic, 2026-10-18: the ring came in on the logged spot 15 m off and the ball
 ## then flew to it with nobody kicking it). Under that call the ball-up event `k`
 ## is pinned to the ball (where its flight lands, if it is in the air), so the
@@ -1102,7 +1102,7 @@ func _pin_ballup(k: int) -> void:
 
 
 ## The umpire's call: the ball dead in a tackle or a pack with a ball-up next.
-## Under Win contest the ball-up is pinned to the ball there and then.
+## Under Win Contest the ball-up is pinned to the ball there and then.
 func _pin_called_ballup() -> void:
 	if mode != "stoppage" or _beat.is_empty() or str(ball["mode"]) != "dead":
 		return
@@ -1397,7 +1397,7 @@ func _enter(p: Dictionary) -> void:
 			_ball_flight(at, at, 0.4 if p["t"] == "bounce" else 1.8, 3.5, up,
 					0.7 if p["t"] == "bounce" else 0.45)
 			for t in tokens:
-				# (A Win contest ring has put its rucks, or the men standing in
+				# (A Win Contest ring has put its rucks, or the men standing in
 				# for them, on the ball already: _pack_ring.)
 				if str(t["role"]) == "RUCK" and not (_ring_at.is_finite() and p["t"] == "throwup"):
 					var id := int(t["id"])
@@ -1411,7 +1411,7 @@ func _enter(p: Dictionary) -> void:
 						MatchMotion.set_goal(t, at + Vector2(-4.0 * _dir(int(t["side"])), 6.0 * signf((t["pos"] as Vector2).y)), 1.0, true)
 						_busy[int(t["id"])] = true
 					elif CONTEST_CRASH.has(s) and _plan_of(int(t["side"])) == "contest" and _centre_setup(int(t["side"])) == "stack":
-						# Win contest: both half-lines crash in too, once the ball is
+						# Win Contest: both half-lines crash in too, once the ball is
 						# up, a beat after the wings.
 						var out: Vector2 = (t["pos"] as Vector2) - at
 						_crash_late(t, at + out.normalized() * CONTEST_RING)
@@ -1489,7 +1489,7 @@ func _enter(p: Dictionary) -> void:
 				_drop_held(p["drop"])
 			var members: Array = p["members"]
 			if str(p.get("mode", "")) == "stoppage" and (_plan_of(0) == "contest" or _plan_of(1) == "contest"):
-				# Win contest: a ring, not a stack (_pack_ring).
+				# Win Contest: a ring, not a stack (_pack_ring).
 				var spots := _pack_ring(at2, members, int(p.get("winner", -1)))
 				p["spots"] = spots
 				# The ring takes a moment longer to set than a stack: everyone in
@@ -1611,7 +1611,7 @@ func _done(p: Dictionary) -> bool:
 						n += 1
 				elif (tokens[id]["pos"] as Vector2).distance_to(p["at"]) < 5.0:
 					n += 1
-			# A bigger pack (Win contest's extra numbers) takes a moment longer to form.
+			# A bigger pack (Win Contest's extra numbers) takes a moment longer to form.
 			var formed := n >= mini(int(p.get("need", 4)), (p["members"] as Array).size())
 			if formed and not ring.is_empty():
 				# A ring holds a moment once set, so it reads before the ball goes up.
@@ -2030,7 +2030,7 @@ func _refresh_structure() -> void:
 			if side == _poss and _plan_of(side) == "attacking" and d > LANE_SPACE * 0.5:
 				u = maxf(u, CORRIDOR_INTO)   # into the lanes smartly when the ball is won
 			if _plan_of(side) == "contest" and not crash and (str(t["role"]) in ["MID", "RUCK"] or (_shadow[side] as Array).has(id)):
-				u = maxf(u, CONTEST_HUNT)   # Win contest: the ring hunts the ball
+				u = maxf(u, CONTEST_HUNT)   # Win Contest: the ring hunts the ball
 			if _ring_at.is_finite() and (t["pos"] as Vector2).distance_to(_ring_at) < CONTEST_KEEP:
 				u = 1.0   # out of the way of the pack's ring, smartly
 			# Throw numbers at it: the engine's legs go 1.3 times as fast
@@ -2046,7 +2046,7 @@ func _refresh_structure() -> void:
 			MatchMotion.set_goal(t, g, u)
 
 
-## A goal kept clear of a Win contest pack's ring while it is set: anyone the
+## A goal kept clear of a Win Contest pack's ring while it is set: anyone the
 ## play sends near the ball stops CONTEST_KEEP off it.
 func _clear_of_pack(g: Vector2) -> Vector2:
 	if not _ring_at.is_finite():
@@ -2057,7 +2057,7 @@ func _clear_of_pack(g: Vector2) -> Vector2:
 	return _ring_at + (out.normalized() if out.length() > 0.01 else Vector2.UP) * CONTEST_KEEP
 
 
-## A half-line crashing a Win contest stoppage: he goes CONTEST_STAGGER after
+## A half-line crashing a Win Contest stoppage: he goes CONTEST_STAGGER after
 ## the wings, flat out.
 func _crash_late(t: Dictionary, g: Vector2) -> void:
 	g = MatchMotion.clamp_to_oval(g, 2.0)
@@ -2069,7 +2069,7 @@ func _crash_late(t: Dictionary, g: Vector2) -> void:
 ## Limits every shape keeps, whatever the call (the motion critic, 2026-10-18):
 ## in possession each line keeps LINE_WIDTH_MIN of spread across the ground; no
 ## two of a side's spots pile up (they part front to back, SPOT_GAP apart); at a
-## Win contest stoppage nobody but the pack stands inside CONTEST_KEEP of the
+## Win Contest stoppage nobody but the pack stands inside CONTEST_KEEP of the
 ## ball; and every spot stays STRUCT_MARGIN inside the boundary and out of the
 ## pockets under the phone's bench strip. `spots` is id -> spot, changed in place.
 func _structure_limits(side: int, spots: Dictionary, ball_p: Vector2, crash: bool) -> void:
@@ -2079,7 +2079,7 @@ func _structure_limits(side: int, spots: Dictionary, ball_p: Vector2, crash: boo
 	# further up it going forward; a player the play is steering (a lead, the
 	# ball's press and support) stands where he is and the spot gives way.
 	var dir := _dir(side)
-	# Attack corridor: in its lanes, two in one lane stand a whole disc apart.
+	# Attack Corridor: in its lanes, two in one lane stand a whole disc apart.
 	var gap := LANE_SPACE if side == _poss and not crash and _plan_of(side) == "attacking" else SPOT_GAP
 	var fixed := []
 	for t in tokens:
@@ -2107,7 +2107,7 @@ func _structure_limits(side: int, spots: Dictionary, ball_p: Vector2, crash: boo
 				moved = true
 			for f in fixed:
 				var dy2 := absf((f as Vector2).y - a.y)
-				# Attack corridor: a man on the run (a lead, the ball) in this very
+				# Attack Corridor: a man on the run (a lead, the ball) in this very
 				# lane gets two discs of room, so the lane never queues into a file.
 				var room := gap * 2.0 if gap == LANE_SPACE and dy2 < 2.0 else gap
 				if dy2 >= gap or absf((f as Vector2).x - a.x) >= room:
@@ -2134,7 +2134,7 @@ func _structure_limits(side: int, spots: Dictionary, ball_p: Vector2, crash: boo
 				p = ball_p + out
 		spots[id] = _keep_in(p)
 	if side != _poss or crash or _plan_of(side) == "attacking":
-		return   # Attack corridor keeps its lanes instead (_attack_lanes)
+		return   # Attack Corridor keeps its lanes instead (_attack_lanes)
 	# In possession each line keeps its width. Spread about the line's middle;
 	# where the ground narrows toward an end and the boundary holds a spot in,
 	# the line comes in toward the centre of the ground, where there is room.
@@ -2242,7 +2242,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 		x -= 3.0
 	var press_up := not has and _pressing(side, bx)
 	if press_up:
-		# Defensive press: while the ball is in their opponents' back half or the
+		# Defensive Press: while the ball is in their opponents' back half or the
 		# middle, the whole side compresses into one band around the ball
 		# (V1, press pilot): the forwards on the opponents' last line just
 		# ahead of it, the midfield within 25 m of it, the backs pushed up to
@@ -2264,7 +2264,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 	var drift := Vector2(sin(time * 0.31 + float(t["phase"])), cos(time * 0.23 + float(t["phase"]) * 1.7)) * 2.0
 	var world := Vector2(x * dir, y) + (t["jitter"] as Vector2) + drift
 	if has and plan == "attacking" and _lane.has(int(t["id"])):
-		# Attack corridor: the whole side narrows into its lanes (_attack_lanes),
+		# Attack Corridor: the whole side narrows into its lanes (_attack_lanes),
 		# each line in its slot order (no habits across: the gaps hold).
 		world.y = float(_lane[int(t["id"])])
 		if slot.begins_with("W"):
@@ -2273,7 +2273,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			world.x = minf(world.x * dir + WING_AHEAD, WING_FURTHEST) * dir
 	var shadowing := plan == "contest" and not _stoppage_on() and (_shadow[side] as Array).has(int(t["id"]))
 	if plan == "contest" and (mid or shadowing):
-		# Win contest: the midfield stays on the ball, each on his own side of
+		# Win Contest: the midfield stays on the ball, each on his own side of
 		# it round a ring (never a pile on top of it), and in open play two of
 		# the half lines shadow it with them: numbers round the ball.
 		var ang := deg_to_rad(_contest_angle(slot) if not shadowing
@@ -2285,7 +2285,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 		# Sent to their loose man: he stands where the spare would sit.
 		world = world.lerp((tokens[chase]["goal"] as Vector2), 0.6)
 	if plan == "contest" and _stoppage_on() and CONTEST_CRASH.has(slot):
-		# Win contest at a stoppage: the wings and both half-lines crash in
+		# Win Contest at a stoppage: the wings and both half-lines crash in
 		# round the contest, each from his own side of it.
 		var out := world - ball_p
 		if out.length() > CONTEST_RING:
@@ -2310,7 +2310,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 				var mark := og + (own_goal - og).normalized() * 2.5
 				var w := 0.65 if role == "DEF" else (0.45 if role == "MID" else 0.3)
 				if plan == "contest" and (mid or shadowing):
-					w *= CONTEST_MAN   # Win contest: the midfield hunts the ball, not the man
+					w *= CONTEST_MAN   # Win Contest: the midfield hunts the ball, not the man
 				if press_up:
 					w *= 0.1   # the press holds its band; it does not follow men back
 				if bool(t.get("tagging", false)):
@@ -2324,7 +2324,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 	return _keep_in(world)
 
 
-## The Defensive press, drawn (V1, press pilot). `bx` is the ball's distance
+## The Defensive Press, drawn (V1, press pilot). `bx` is the ball's distance
 ## up the ground from `side`'s own goal end (positive: in its opponents'
 ## back half). The shape is high while the ball is in the opponents' back half
 ## or the middle, and only for a side whose recorded plan is the press.
@@ -2339,7 +2339,7 @@ const PRESS_FRAME_SHIFT := 9.0    # ...and looks toward its high line
 const PRESS_FROM := -10.0
 
 
-## The press zone, drawn: whether `side` plays the Defensive press right now.
+## The press zone, drawn: whether `side` plays the Defensive Press right now.
 ## The tint follows the plan, with the ball only turning it up (director,
 ## 2026-10-14: it was seen in the first quarter and then "disappeared"). The old
 ## rule showed it only while the side was without the ball and the ball was up
@@ -2393,15 +2393,15 @@ static func press_zone_field(x_side: float) -> float:
 
 # ---------------------------------------------------------------------------
 # The oval marks two calls on the grass (P-12 pass 5, director 2026-10-18:
-# "Merge, then mark the oval"). Attack corridor and Win contest meet their
+# "Merge, then mark the oval"). Attack Corridor and Win Contest meet their
 # measures, but the busy players round the ball (leads, carrier, pack) crowd it
 # on every call, so the shape alone can read as a swarm or a clump. A faint
 # marking of the side's colour says the call where the discs cannot, like the
 # press wash. Read here, drawn by PitchView; neither moves a player.
-# - Attack corridor: the corridor its lanes use (LANE_TABLE's outermost lane,
+# - Attack Corridor: the corridor its lanes use (LANE_TABLE's outermost lane,
 #   plus a disc in the view), from the side's defensive 50 to the goal square,
 #   only while the side has the ball in play.
-# - Win contest: at a ball-up or throw-in, its pack's ring (PACK_RING) on the
+# - Win Contest: at a ball-up or throw-in, its pack's ring (PACK_RING) on the
 #   contest spot from the moment it is called until the clearance; in open play,
 #   the ring its midfield keeps round the ball (CONTEST_MID_RING) while the ball
 #   is live.
@@ -2410,14 +2410,14 @@ const CORRIDOR_TO := 76.0        # the front of the goal square (GOAL_X less its
 const CORRIDOR_HALF := 14.25     # the outermost lane (LANE_TABLE)
 
 
-## Whether `side`'s Attack corridor is marked now: its plan, the ball its, in play.
+## Whether `side`'s Attack Corridor is marked now: its plan, the ball its, in play.
 func corridor_mark_on(side: int) -> bool:
 	if _tac.size() < 2 or tokens.is_empty():
 		return false
 	return _plan_of(side) == "attacking" and side == _poss and not (mode in ["break", "centre", "stoppage"])
 
 
-## `side`'s Win contest ring now: {"at", "r", "stop"} (a stoppage's pack ring, or
+## `side`'s Win Contest ring now: {"at", "r", "stop"} (a stoppage's pack ring, or
 ## the midfield's ring round the ball in open play, the ball in play: not at a
 ## centre bounce, a stoppage, a set shot or a break), or {} when none shows.
 func contest_mark(side: int) -> Dictionary:
@@ -2493,15 +2493,15 @@ func _flooding(side: int) -> bool:
 # The coach's other structural calls, drawn (P-12, director 2026-10-18: "the
 # oval answers a structural call"). Each shape is what the engine does with
 # the call (MatchSim PLANS and BURSTS), never more:
-# - Attack corridor (more metres and shots, quicker legs, more turnovers):
+# - Attack Corridor (more metres and shots, quicker legs, more turnovers):
 #   with the ball the whole side narrows into the corridor, each player in his
 #   own lane (ATTACK_SHARE of his Balanced width, each line in its slot order,
 #   LANE_GAP apart); receivers lead up their lanes and the ball goes to the
 #   lane ahead (no switch of play); it moves quicker.
-# - Controlled tempo (less pressure felt, fewer clangers, fewer metres,
+# - Controlled Tempo (less pressure felt, fewer clangers, fewer metres,
 #   slower legs): with the ball it spreads wide and its lines come in short
 #   around the ball; it moves slower.
-# - Win contest (an edge at every stoppage, fewer metres): its midfield stays
+# - Win Contest (an edge at every stoppage, fewer metres): its midfield stays
 #   on the ball, on a ring round it, with two of the half lines shadowing it in
 #   open play; every centre bounce, ball-up and throw-in gets one more in the
 #   pack, the wings crashing in at a sprint and both half-lines a beat later,
@@ -2554,7 +2554,7 @@ const CONTEST_SHADOW_ANGLE := 135.0
 const CONTEST_SHADOWS := ["CHB", "HBL", "HBR", "CHF", "HFL", "HFR"]
 const CONTEST_HUNT := 1.0         # how hard the ring keeps up with the ball in open play
 const SHADOW_KEEP := 15.0          # metres nearer another must be to take over a shadow
-## Win contest's stoppage pack (_pack_ring): two a side on the ball, the rest
+## Win Contest's stoppage pack (_pack_ring): two a side on the ball, the rest
 ## round it this far off; a member is set once within PACK_SET of his spot.
 const PACK_RING := 8.0
 ## ...the two rucks this far either side of the ball, and each side's second man
@@ -2570,7 +2570,7 @@ const PACK_SET := 2.5
 const PACK_INNER_SET := 0.4        # ...and the four on the ball within this of theirs
 const CONTEST_PACK := 1            # extra players a side in a stoppage pack (with the ruck and the winner, six at most)
 const CONTEST_MAN := 0.25          # share of a midfielder's usual hold on his man
-## Win contest at a stoppage: who crashes in, to how far off the ball, how far.
+## Win Contest at a stoppage: who crashes in, to how far off the ball, how far.
 const CONTEST_CRASH := ["WL", "WR", "CHB", "HBL", "HBR", "CHF", "HFL", "HFR"]
 const CONTEST_RING := 13.0         # ...round the pack, outside its ring
 const CONTEST_CRASH_SHARE := 1.0
@@ -2654,7 +2654,7 @@ func _surge_ref(side: int, bx: float) -> float:
 	return out
 
 
-## Win contest: where round the ball a midfielder stands (CONTEST_ANGLE; an
+## Win Contest: where round the ball a midfielder stands (CONTEST_ANGLE; an
 ## extra midfielder fills the gaps between them).
 static func _contest_angle(slot: String) -> float:
 	if CONTEST_ANGLE.has(slot):
@@ -2663,7 +2663,7 @@ static func _contest_angle(slot: String) -> float:
 	return float(gaps[int(slot.substr(1)) % gaps.size()]) if slot.begins_with("X") else 90.0
 
 
-## Attack corridor, a shape of the whole team (pass 4, the motion critic's third
+## Attack Corridor, a shape of the whole team (pass 4, the motion critic's third
 ## look: a receiver path piled eight discs on one column). Each group (the
 ## backs' and forwards' lines of three, the four inside midfielders, the wings)
 ## keeps its slot order across the ground, left to right, on the lanes of
@@ -2724,7 +2724,7 @@ static func _isotonic(v: Array) -> Array:
 	return out
 
 
-## Win contest in open play: the two of the half lines nearest the ball shadow
+## Win Contest in open play: the two of the half lines nearest the ball shadow
 ## it with the midfield (kept until another is SHADOW_KEEP nearer, so they do not
 ## swap every beat), the left one first.
 func _pick_shadows(bp: Vector2) -> void:
@@ -2748,7 +2748,7 @@ func _pick_shadows(bp: Vector2) -> void:
 		_shadow[side] = pick
 
 
-## Win contest's stoppage pack, readable (the motion critic, 2026-10-18: eight to
+## Win Contest's stoppage pack, readable (the motion critic, 2026-10-18: eight to
 ## ten discs stacked in 15 m, numbers hidden): each side's ruck and its nearest
 ## other man on the ball, inside 3 m and 2.5 m from each other; the rest of the
 ## pack round it PACK_RING off, between them. Id -> spot.
@@ -2872,7 +2872,7 @@ func _ball_zone(ball_p: Vector2) -> void:
 	var dir := _dir(_poss)
 	var sup := _nearest(ball_p, _poss, 2, _busy.keys())
 	if _plan_of(_poss) == "attacking":
-		return   # Attack corridor: the lanes are the options; nobody comes onto the ball
+		return   # Attack Corridor: the lanes are the options; nobody comes onto the ball
 	for i in range(sup.size()):
 		var g2 := ball_p + (Vector2(dir * 9.0, -9.0) if i == 0 else Vector2(-dir * 5.0, 10.0))
 		MatchMotion.set_goal(tokens[sup[i]], _clear_of_pack(g2), 0.6)
@@ -2905,7 +2905,7 @@ func _centre_spot(t: Dictionary, carrier: int) -> Vector2:
 					spot.x = ARC_EDGE
 				elif (slot == "CHB" or slot == "HBL" or slot == "HBR") and _plan_of(side) == "contest" \
 						and not _burst_on(side, "stack"):
-					# Win contest: the half-backs up to their arc as well, to crash in.
+					# Win Contest: the half-backs up to their arc as well, to crash in.
 					spot.x = -ARC_EDGE
 			"flood":
 				# Defensive: the wings goal-side of the square, and the
@@ -2928,7 +2928,7 @@ func _centre_setup(side: int) -> String:
 		return "stack"
 	if _burst_on(side, "flood"):
 		return "flood"
-	# Win contest: an edge at every stoppage, so numbers at the centre bounce too.
+	# Win Contest: an edge at every stoppage, so numbers at the centre bounce too.
 	return "stack" if _plan_of(side) == "contest" else ""
 
 
