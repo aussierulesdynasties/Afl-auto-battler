@@ -67,6 +67,7 @@ func run() -> void:
 				players[str(p["id"])] = p
 		var season := Season.new(codes, lists, s * 7919 + 13)
 		var tally := {}
+		var coa := {}
 		var alt := {}  # id -> {ALT key: votes}
 		var comp := {}  # id -> {stat: season total}
 		var win_votes := 0
@@ -75,6 +76,11 @@ func run() -> void:
 		while not season.is_regular_done():
 			for res in season.play_round():
 				Awards.tally_match(tally, res, true)
+				for hw in [1.0, 0.75, 0.5, 0.35, 0.25, 0.15, 0.0]:
+					var cv: Dictionary = MatchNotes.coaches_votes(res, hw)
+					for cid in cv:
+						var ck := "%s|%.2f" % [str(cid), hw]
+						coa[ck] = int(coa.get(ck, 0)) + int(cv[cid])
 				var st_all: Dictionary = res.get("players", {})
 				for id in st_all:
 					var c: Dictionary = comp.get(str(id), {})
@@ -108,6 +114,8 @@ func run() -> void:
 					int(t.get("coaches", 0)), float(t["influence"]) / float(maxi(1, int(t["games"]))),
 					int(c.get("tackles", 0.0)), int(c.get("pressure_acts", 0.0)), int(c.get("hitouts", 0.0)),
 					",".join(parts), ",".join(alts)])
+		for ck in coa:
+			print("COA|%s|%d|%s|%d" % [mode, s, ck, int(coa[ck])])
 		var wn: Dictionary = aw.get("brownlow_winner", {})
 		print("WIN|%s|%d|%s|%d" % [mode, s, str(wn.get("id", "")), int(wn.get("votes", 0))])
 		print("WSH|%s|%d|%d|%d" % [mode, s, win_votes, all_votes])
