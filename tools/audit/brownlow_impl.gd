@@ -76,7 +76,7 @@ func run() -> void:
 		while not season.is_regular_done():
 			for res in season.play_round():
 				Awards.tally_match(tally, res, true)
-				for hw in [1.0, 0.75, 0.5, 0.35, 0.25, 0.15, 0.0]:
+				for hw in [1.0, 1.1, 1.15, 1.2, 1.25, 1.3, 1.4]:
 					var cv: Dictionary = MatchNotes.coaches_votes(res, hw)
 					for cid in cv:
 						var ck := "%s|%.2f" % [str(cid), hw]
