@@ -884,13 +884,11 @@ func load_career() -> bool:
 	reset()
 	# A created club joins the competition before anything reads the clubs.
 	custom_club = state.get("custom_club", {})
-	# Canberra, before anything reads the clubs: a save from before the choice
-	# existed keeps it.
-	set_canberra(bool(state.get("canberra_on", true)))
 	# A redraft's new clubs entered with everyone (a save without it keeps the
-	# data years).
+	# data years). Canberra, before anything reads the clubs: a save from before
+	# the choice existed keeps it. set_canberra applies the entry years.
 	expansion_from = int(state.get("expansion_from", 0))
-	_apply_entry_years()
+	set_canberra(bool(state.get("canberra_on", true)))
 	expansion = state.get("expansion", {}) if state.get("expansion") is Dictionary else {}
 	best23 = state.get("best23", {})
 	if not custom_club.is_empty():
@@ -1556,8 +1554,8 @@ func reset() -> void:
 	news = []
 	board = {}
 	expansion = {}
+	expansion_from = 0  # before set_canberra, which applies it to the entry years
 	set_canberra(false)
-	expansion_from = 0
 	sim_ahead = false
 	_sim_ahead_challenge = {}
 	week_events = []

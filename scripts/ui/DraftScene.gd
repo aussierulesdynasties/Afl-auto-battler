@@ -223,7 +223,7 @@ func _show_club_select() -> void:
 				"2027 to 2029 played  /  the %d National Draft, then %d" % [
 					GameState.season_year, GameState.season_year + 1]))
 		_root.add_child(UiKit.lbl(
-				"Every club's own staff ran it from the real 2026 lists: Tasmania joined in 2028 and Canberra are building their first list for 2030. Take any club from this draft; Canberra keep their new-club picks and cap room. Your first season is 2030.",
+				"Every club's own staff ran it from the real 2026 lists: Tasmania joined in 2028 and Canberra are building their first list for 2030. Take any club from this draft; Canberra keep their new-club picks. Your first season is 2030.",
 				16, UiKit.MUTED))
 	elif real:
 		_root.add_child(_header("Choose your club",

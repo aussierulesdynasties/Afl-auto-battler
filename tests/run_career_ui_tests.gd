@@ -3509,6 +3509,7 @@ func _test_new_career_canberra_choice() -> void:
 		await _settle()
 		var yes := current_scene.find_child("Canberra_yes", true, false)
 		var no := current_scene.find_child("Canberra_no", true, false)
+		var both_there: bool = yes != null and no != null  # gone once the draft opens
 		var t1 := ""
 		if pick_it:
 			t1 = await Tap.tap(yes)
@@ -3517,7 +3518,7 @@ func _test_new_career_canberra_choice() -> void:
 		await _settle()
 		await _settle()
 		var clubs: Array = _state.draft.clubs if _state.draft != null else []
-		_check(yes != null and no != null and t1 == "" and t2 == "" and _router.current() == "draft"
+		_check(both_there and t1 == "" and t2 == "" and _router.current() == "draft"
 				and bool(_state.canberra_on) == pick_it and clubs.has("CANB") == pick_it and clubs.has("TAS")
 				and clubs.size() == (20 if pick_it else 19),
 				("A tap on Yes puts Canberra and Tasmania in the 2027 League redraft (%s %s, %d clubs)" if pick_it

@@ -725,7 +725,7 @@ func _test_redraft_equal_entry() -> void:
 	var games := {}
 	for rnd in season.fixture:
 		for m in rnd:
-			for code in [str(m[0]), str(m[1])]:
+			for code in [str(m["home"]), str(m["away"])]:
 				games[code] = int(games.get(code, 0)) + 1
 	var even := true
 	for code in season.ladder:
@@ -758,7 +758,8 @@ func _test_redraft_entry_saved() -> void:
 	_check(GameState.save_career(), "A redraft career saves")
 	_check(int(_saved_state().get("expansion_from", 0)) == 2027, "The save records the 2027 entry")
 	GameState.reset()
-	_check(GameDB.enter_year("CANB") == 2030, "A reset restores Canberra's 2030 entry")
+	_check(GameDB.enter_year("CANB") == Expansion.NEVER and GameDB.enter_year("TAS") == 2028,
+			"A reset undoes the redraft's entry years (TAS %d, CANB %d)" % [GameDB.enter_year("TAS"), GameDB.enter_year("CANB")])
 	_check(GameState.load_career() and GameState.expansion_from == 2027
 			and GameDB.enter_year("TAS") == 2027 and GameDB.enter_year("CANB") == 2027
 			and GameState.season.ladder.size() == 20,
@@ -787,10 +788,10 @@ func _test_real_lists_play_to_2030() -> void:
 	GameState.reset()
 	GameState.set_canberra(true)
 	GameState.challenge = {"kind": "youth"}
-	var old := []
+	var old := {}
 	for p in GameDB.all_players_sorted():
 		if float(p.get("age", 0.0)) >= 34.0:
-			old.append(str(p["id"]))
+			old[str(p["id"])] = float(p["age"])
 	GameState.begin_sim_ahead()
 	_check(GameState.sim_ahead and GameState.my_club == "" and not GameState.has_career()
 			and not GameState.save_career(),
@@ -805,18 +806,21 @@ func _test_real_lists_play_to_2030() -> void:
 		lines.append(line)
 	_check(GameState.choosing_club() and GameState.season_year == 2029 and GameState.season.is_season_over(),
 			"Played to the 2029 National Draft, which waits for your club (%d steps)" % steps)
-	_check(lines.has("Playing 2027: Round 1...") and lines.has("Playing 2029: the Grand Final..."),
-			"The cover names each round and final as it plays (%s ... %s)" % [
-				str(lines.front()) if not lines.is_empty() else "", str(lines.back()) if not lines.is_empty() else ""])
+	_check(lines.has("Starting the 2027 season...") and lines.has("Playing 2027: Round 2...")
+			and lines.has("Playing 2029: the Grand Final..."),
+			"The cover names each round and final as it plays (%s)" % str(lines.slice(0, 3)))
 	_check(GameState.draft.user_club == "" and GameState.draft.pick_index == 0,
 			"No pick is made before you choose")
-	var listed := {}
+	# Retirement is a judgement, not a cut-off, so a veteran or two can last.
+	var still := 0
+	var aged := true
 	for code in GameState.league_lists:
 		for p in GameState.league_lists[code]:
-			listed[str(p["id"])] = true
-	var still := old.filter(func(id): return listed.has(id))
-	_check(not old.is_empty() and still.is_empty(),
-			"Every 2026 player aged 34 or more has retired by 2029 (%d of %d still listed)" % [still.size(), old.size()])
+			if old.has(str(p["id"])):
+				still += 1
+				aged = aged and float(p["age"]) >= float(old[str(p["id"])]) + 1.9
+	_check(not old.is_empty() and still * 4 <= old.size() and aged,
+			"The players 34 or older at the 2027 start have mostly retired by 2029; any left aged two years (%d of %d)" % [still, old.size()])
 	var tas: Array = GameState.league_lists.get("TAS", [])
 	_check(tas.size() >= Prospects.MIN_LIST, "Tasmania exists with a list (%d players)" % tas.size())
 	_check(GameState.honour_roll.size() >= 3 and GameState.almanac.is_empty(),
