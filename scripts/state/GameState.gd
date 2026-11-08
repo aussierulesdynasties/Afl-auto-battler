@@ -336,6 +336,9 @@ var settings_path := "user://settings.cfg"
 ## Autosave runs on every screen change, after every round and when the app
 ## is backgrounded or closed. Tests switch it off.
 var autosave_enabled := true
+## A new club card opens over the hub on arrival (HubScene). Never saved;
+## test runs that drive the hub for something else switch it off.
+var event_sheets := true
 ## A new draft or season is seeded from the clock, so no two careers play
 ## alike. Measurement tools set this so a career replays exactly: each of
 ## those seeds then comes from it and the year (_clock_seed). 0 in the game.
@@ -1886,6 +1889,9 @@ func begin_intake_draft() -> bool:
 		return false
 	if draft != null and draft.intake_mode:
 		return true  # resume the draft in progress
+	# A rival's letter waits on the Hub; a run that drafts with it unanswered
+	# (headless) says no, and the off-season opens at his club (ClubMoves).
+	ClubMoves.settle_letter(self)
 	open_offseason()
 	recruit_undo.clear()
 	_close_free_agency()
@@ -5811,7 +5817,9 @@ func _close_season_awards() -> void:
 			players[str(p["id"])] = p
 	# Before the off-season releases anyone, so a delisted player keeps it.
 	Career.close_season(players, season_tally, season_year, season_stats, season_stats_from)
-	open_offseason()
+	# Your staff as the season ended, for the season wrap; the off-season
+	# itself opens at the close's end (below).
+	offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() else {}
 	season_awards = Awards.season_awards(season_tally, players, season_year, rising_star_noms)
 	var medal := Awards.norm_smith(_grand_final_result())
 	if not medal.is_empty():
@@ -5870,6 +5878,12 @@ func _close_season_awards() -> void:
 	_coaching_offseason()
 	# Coach arcs: a sacked or poached coach changes clubs (ClubMoves).
 	ClubMoves.season_close(self)
+	# The off-season opens at his club. A rival board's letter waiting for
+	# his answer holds it: it opens once he answers, at whichever club he is
+	# then at (ClubMoves.accept_letter / decline_letter).
+	open_offseason(true)
+	# Its opening moved rival lists: a sacked coach's offers say them as they stand.
+	ClubMoves.restate_offers(self)
 	_season_news()
 
 
@@ -6392,10 +6406,18 @@ func offseason_open() -> bool:
 			and not (draft != null and draft.intake_mode) and offseason_year == season_year
 
 
+## The season's close has run (its awards are out) and the next season has not
+## begun: the feed's "Off-season", also while a rival board's letter holds the
+## off-season's opening (ClubMoves).
+func season_closed() -> bool:
+	return season == null or offseason_year == season_year or int(season_awards.get("year", 0)) == season_year
+
+
 ## Season over: rivals decide on their expiring players at once - keep who
 ## is worth his new price, let the rest go to free agency. Yours wait for you.
-func open_offseason() -> void:
-	if season == null or offseason_year == season_year:
+## `keep_staff`: the season's close already took your staff for the wrap.
+func open_offseason(keep_staff := false) -> void:
+	if season == null or offseason_year == season_year or ClubMoves.letter_open(self):
 		return
 	ensure_contracts()
 	# The season is over: every unfinished project is judged where it stands.
@@ -6410,7 +6432,8 @@ func open_offseason() -> void:
 	department_budget_year = season_year + 1
 	offseason_log = []
 	compensation = []
-	offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() else {}
+	if not keep_staff:
+		offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() else {}
 	_decide_retirements()
 	free_agents = []
 	# A new club's approaches are settled first: it had first call.
@@ -10447,7 +10470,7 @@ const NEWS_MIN_OVR := 72
 func add_news(kind: String, text: String, when_label: String = "") -> void:
 	var when := when_label
 	if when == "":
-		when = "Off-season" if offseason_year == season_year or season == null else last_label
+		when = "Off-season" if season_closed() else last_label
 	news.push_front({"year": season_year, "when": when, "kind": kind, "text": text})
 	if news.size() > MAX_NEWS:
 		news.resize(MAX_NEWS)
@@ -12413,7 +12436,7 @@ func captaincy_word(p: Dictionary) -> String:
 ## Has the season begun, so that taking an armband off costs? Before round 1,
 ## and through the off-season, changes are free.
 func captaincy_mid_season() -> bool:
-	if season == null or offseason_year == season_year:
+	if season_closed():
 		return false
 	return season.round_index > 0 or season.is_regular_done() or not season.finals.is_empty()
 
@@ -12642,7 +12665,7 @@ func _culture_marks() -> Dictionary:
 ## is in the culture under your leaders (the Captaincy panel).
 func _culture_move(code: String, strand: String, d: int, why: String) -> void:
 	var before := Culture.value(relations, code, strand)
-	var when := "Off-season" if season == null or offseason_year == season_year else last_label
+	var when := "Off-season" if season_closed() else last_label
 	if Culture.change(relations, code, strand, d, why, season_year, when) == 0:
 		return
 	if code == my_club:

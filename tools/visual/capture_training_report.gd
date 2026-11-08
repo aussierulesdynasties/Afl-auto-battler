@@ -55,6 +55,7 @@ func _run() -> void:
 	state.set_setting("seen_training_intro", true)
 	state.replay_seed = 2027
 	state.tutorials = false
+	state.event_sheets = false
 	state.start_season(club, db.club_list(club))
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))

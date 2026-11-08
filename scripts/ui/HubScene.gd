@@ -15,6 +15,7 @@ var _talk_overlay: Control
 var _midseason_overlay: Control
 var _news_overlay: Control
 var _rule_overlay: Control
+var _event_overlay: Control
 var _sim_confirm: Control
 var _skip_confirm: Control
 var _onboarding_overlay: Control
@@ -75,16 +76,25 @@ func _show_week_ask() -> void:
 	# not his: the card is the only thing on the hub.
 	if GameState.is_sacked():
 		return
+	# A new club card opens over the hub first, once (director, 2026-11-08:
+	# "it feels bad to think youve missed event cards"); closing it brings
+	# the next new one, then the rest of the week's asks. The press
+	# conference after a match is its own screen and comes first: the card
+	# opens when the hub comes back.
+	if not GameState.media_conference_pending() and _show_new_event():
+		return
 	if not MidseasonDraft.carnival_lines(GameState).is_empty():
 		_show_carnival()
 	elif MidseasonDraft.waiting(GameState):
 		_show_midseason_pick()
 	elif RookieList.waiting(GameState):
-		RookieDraftSheet.open(self, _build, RookieDraftSheet.PASS_HUB)
+		RookieDraftSheet.open(self, _after_ask, RookieDraftSheet.PASS_HUB)
 	elif GameState.backing_talk_pending():
 		_show_backing_talk()
 	elif GameState.media_conference_pending():
 		_show_media_conference()
+	else:
+		_show_training_report()
 
 
 ## A short first-hub orientation, shown where the weekly loop actually lives
@@ -279,7 +289,10 @@ func _build() -> void:
 	var ladder_w := right_w * (1.0 if GameState.news.is_empty() else 0.42)
 	var ladder := _ladder_section(season, -1.0 if _narrow() else ladder_w)
 	var ladder_hugs := false
+	var waiting := _waiting_events()
 	if _narrow():
+		if waiting != null:
+			page.add_child(waiting)
 		page.add_child(week)
 		page.add_child(UiKit.rule())
 		page.add_child(_standing_card())
@@ -293,6 +306,8 @@ func _build() -> void:
 		var left := UiKit.vbox(UiKit.SECTION)
 		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cols.add_child(left)
+		if waiting != null:
+			left.add_child(waiting)
 		left.add_child(week)
 		left.add_child(UiKit.rule())
 		left.add_child(_standing_card())
@@ -356,15 +371,27 @@ func _build() -> void:
 	_settled = true
 
 
-## A new monthly training report (director, 2026-11-08: "dismissable popups
-## rather than an unheralded line"): it opens over the hub once, when nothing
-## else is up. The week's card, the round's results or a press conference come
-## first; it never stacks on one. Read once, it lives on in Training.
-func _process(_delta: float) -> void:
-	if _root == null or not TrainingReport.hub_due(GameState) or GameState.is_sacked() or _popup_open():
+## A new training report opens over the hub once, behind the week's asks and
+## never over another popup (director, 2026-11-08: "should be dismissable popups
+## rather than an unheralded line in the UI"). A card or press conference still
+## to come goes first: the report then opens from _show_week_ask on the way back.
+func _show_training_report() -> void:
+	if not TrainingReport.hub_due(GameState) or GameState.is_sacked() or _popup_open():
 		return
+	if GameState.media_conference_pending():
+		return
+	if GameState.event_sheets:
+		for card in GameState.week_events:
+			if not bool(card.get("resolved", false)) and not bool(card.get("popped", false)):
+				return
 	TrainingReport.dismiss(GameState)
 	TrainingReportSheet.open(self, _go_retrain)
+
+
+## An ask closed that does not lead on to the next: the hub, then the report.
+func _after_ask() -> void:
+	_build()
+	_show_training_report()
 
 
 ## Something already sits over the hub, or the hub is handing over.
@@ -541,6 +568,90 @@ func _event_card(index: int) -> Control:
 	return EventCardView.build(index, _narrow(), func(): _build(), _show_rule, _league_names())
 
 
+## The cards still waiting on the coach, first on the hub above everything
+## else until he answers them (director, 2026-11-08), or null.
+func _waiting_events() -> Control:
+	var box: VBoxContainer = null
+	for i in range(GameState.week_events.size()):
+		if bool((GameState.week_events[i] as Dictionary).get("resolved", false)):
+			continue
+		if box == null:
+			box = UiKit.vbox(UiKit.SECTION)
+			box.name = "WaitingEvents"
+		var ev := _event_card(i)
+		box.add_child(ev)
+		# A question still waiting on the coach: it brightens twice, once.
+		if not _settled:
+			UiKit.attention(ev)
+	return box
+
+
+## The first card that has not opened over the hub yet: it opens now, once
+## ("popped" is kept with the card, so it opens on arrival, not every visit).
+## Answer it there, or Later leaves it first on the hub. True if one opened.
+func _show_new_event() -> bool:
+	if _event_overlay != null and is_instance_valid(_event_overlay):
+		return true
+	if not GameState.event_sheets:
+		return false
+	for i in range(GameState.week_events.size()):
+		var card: Dictionary = GameState.week_events[i]
+		if bool(card.get("resolved", false)) or bool(card.get("popped", false)):
+			continue
+		card["popped"] = true
+		GameState.mark_dirty()
+		_open_event_sheet(i)
+		return true
+	return false
+
+
+func _open_event_sheet(index: int) -> void:
+	var box := UiKit.modal_box(self, 520.0, 0.0)
+	_event_overlay = box["overlay"]
+	_event_overlay.name = "EventSheet"
+	var v: VBoxContainer = box["body"]
+	# Whose question it is: your club's colour and crest over the card.
+	var club := UiKit.club_heading(GameState.my_club, null, UiKit.SECONDARY, 18.0)
+	club.name = "EventSheetClub"
+	v.add_child(club)
+	var footer: VBoxContainer = box["footer"]
+	var later := UiKit.btn("Later", UiKit.NAME)
+	later.name = "EventLater"
+	later.custom_minimum_size = Vector2(0, 48)
+	later.pressed.connect(_close_event_sheet)
+	var put_card := func(answered: Callable) -> void:
+		var old := v.get_node_or_null("SheetEvent")
+		if old != null:
+			# Its button is still sending the tap: hide it and let it go.
+			old.name = "SheetEventGone"
+			(old as Control).visible = false
+			old.queue_free()
+		var c := EventCardView.build(index, _narrow(), answered, _show_rule, _league_names(), true)
+		c.name = "SheetEvent"
+		v.add_child(c)
+	# Answered here, the card shows what happened in the sheet; Done closes it.
+	var answered := func() -> void:
+		put_card.call(func(): pass)
+		if is_instance_valid(later):
+			later.queue_free()
+		var done := UiKit.btn("Done", UiKit.NAME, true)
+		done.name = "EventDone"
+		done.custom_minimum_size = Vector2(0, 48)
+		done.pressed.connect(_close_event_sheet)
+		footer.add_child(done)
+		_build()
+	put_card.call(answered)
+	footer.add_child(later)
+
+
+func _close_event_sheet() -> void:
+	if _event_overlay != null and is_instance_valid(_event_overlay):
+		_event_overlay.queue_free()
+	_event_overlay = null
+	_build()
+	_show_week_ask()
+
+
 ## The exact rule behind a choice's line, looked up on purpose.
 func _show_rule(text: String) -> void:
 	if _rule_overlay != null and is_instance_valid(_rule_overlay):
@@ -625,7 +736,7 @@ func _job_offers(v: VBoxContainer, jobs: Array) -> void:
 		if str(o.get("list", "")) != "":
 			row.add_child(_offer_line("The list: " + str(o["list"]), UiKit.TEXT))
 		row.add_child(_offer_line("The board's goal: " + str(o["goal"]), UiKit.TEXT))
-		var take := _nav_button("Take the %s job" % GameDB.club_short(code), func():
+		var take := _nav_button("Take the job", func():
 			if ClubMoves.take_job(GameState, code):
 				_build())
 		take.name = "TakeJob_%s" % code
@@ -726,6 +837,9 @@ func _week_section(season: Season) -> Control:
 	var approaches := _approach_cards()
 	if approaches != null:
 		nv.add_child(approaches)
+	var letter := _letter_card()
+	if letter != null:
+		nv.add_child(letter)
 	if not GameState.pending_mro_challenges().is_empty():
 		nv.add_child(_tribunal_card())
 	var jobs_card := _week_jobs_card()
@@ -896,13 +1010,13 @@ func _week_section(season: Season) -> Control:
 			nv.add_child(UiKit.spacer(4))
 			nv.add_child(ms_card)
 	# The week your season ends has its card, the Grand Final played or not.
+	# An answered card shows what happened here; one still waiting leads the
+	# page (_waiting_events).
 	for i in range(GameState.week_events.size()):
+		if not bool((GameState.week_events[i] as Dictionary).get("resolved", false)):
+			continue
 		nv.add_child(UiKit.spacer(4))
-		var ev := _event_card(i)
-		nv.add_child(ev)
-		# A question still waiting on the coach: it brightens twice, once.
-		if not bool((GameState.week_events[i] as Dictionary).get("resolved", false)) and not _settled:
-			UiKit.attention(ev)
+		nv.add_child(_event_card(i))
 
 	# On a wide screen the week's decisions are pinned under the page beside the
 	# rest of the club (_build), so Play match is never below the fold; on a
@@ -1310,10 +1424,13 @@ func _week_actions(season: Season) -> Control:
 	var buttons: Array = []
 	if season.is_season_over():
 		var resume := GameState.draft != null and GameState.draft.intake_mode
-		if not resume:
-			buttons.append(_nav_button("Trades & Contracts", func(): Router.go("offseason")))
-		buttons.append(_nav_button("Resume national draft" if resume
-				else "%d National Draft" % GameState.season_year, _on_intake_draft, true))
+		# A rival's letter is answered before the off-season opens: its two
+		# buttons are the week's move until then.
+		if not ClubMoves.letter_open(GameState):
+			if not resume:
+				buttons.append(_nav_button("Trades & Contracts", func(): Router.go("offseason")))
+			buttons.append(_nav_button("Resume national draft" if resume
+					else "%d National Draft" % GameState.season_year, _on_intake_draft, true))
 	elif _regular_bye(season):
 		# A home-and-away bye: the season goes on, one round at a time.
 		buttons.append(_nav_button("Team", func(): Router.go("selection")))
@@ -1507,6 +1624,69 @@ func _approach_cards() -> Control:
 	return v
 
 
+## A rival board's letter after a strong season (T5.r23): who they are, where
+## they finished, why the job is open, their list, their board's goal and the
+## risk, then his answer. Facts only; neither button is the suggested one.
+## Answered, one line says where he stands until the season rolls on.
+func _letter_card() -> Control:
+	var l := ClubMoves.letter(GameState)
+	if l.is_empty() or not GameState.season.is_season_over():
+		return null
+	var code := str(l["code"])
+	var mine := GameDB.club_name(GameState.my_club)
+	var v := UiKit.vbox(4)
+	v.name = "RivalLetter"
+	var answer := str(l.get("answer", ""))
+	if answer != "":
+		var old := GameDB.club_name(str(l["from"]))
+		# Who took the job he left, with both clubs named (ClubMoves.successor_line).
+		var after := str(l.get("after", ""))
+		if after == "":
+			after = ("%s have appointed %s to replace you." % [old, str(l["successor"])]) if str(l.get("successor", "")) != "" \
+					else "%s have yet to name your replacement." % old
+		var done := "You are %s's senior coach now: their contracts, trades and draft are yours this off-season. %s" % [
+				str(l["name"]), after] if answer == "taken" \
+				else "You turned %s down. You stay at %s." % [str(l["name"]), mine]
+		var dl := UiKit.lbl(done, UiKit.BODY, UiKit.TEXT if answer == "taken" else UiKit.MUTED)
+		dl.name = "RivalLetterAnswered"
+		dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(dl)
+		v.add_child(UiKit.rule())
+		return v
+	var name_row := UiKit.hbox(8)
+	name_row.add_child(UiKit.club_marker(code))
+	var nm := UiKit.lbl("A letter from %s" % str(l["name"]), UiKit.NAME, UiKit.club_vivid(code), true)
+	nm.name = "RivalLetterHead"
+	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_row.add_child(nm)
+	v.add_child(name_row)
+	v.add_child(_offer_line("%s, their president, offers you the senior job. You would start now, with their contracts, trades and draft." % str(l["president"]), UiKit.TEXT))
+	v.add_child(_offer_line("Finished %s of %d. %s" % [GameState.ordinal(int(l["finish"])), int(l["clubs"]), str(l["why_open"])], UiKit.TEXT))
+	if str(l.get("list", "")) != "":
+		v.add_child(_offer_line("Their list: " + str(l["list"]), UiKit.TEXT))
+	v.add_child(_offer_line("Their board's goal: " + str(l["goal"]), UiKit.TEXT))
+	var risk_head := UiKit.lbl("The risk", UiKit.SECONDARY, UiKit.TEXT, true)
+	risk_head.name = "RivalLetterRisk"
+	v.add_child(risk_head)
+	for line in ClubMoves.letter_risk(GameState):
+		v.add_child(_offer_line(line, UiKit.TEXT))
+	var row := UiKit.hbox(8)
+	var stay := _nav_button("Stay put", func():
+		if ClubMoves.decline_letter(GameState):
+			_build())
+	stay.name = "RivalLetterStay"
+	var take := _nav_button("Take the job", func():
+		if ClubMoves.accept_letter(GameState):
+			_build())
+	take.name = "RivalLetterTake"
+	row.add_child(stay)
+	row.add_child(take)
+	v.add_child(row)
+	v.add_child(UiKit.rule())
+	return v
+
+
 func _approach_button(i: int, choice: String, text: String, primary := false) -> Button:
 	var b := UiKit.btn(text, UiKit.SMALL + 1, primary)
 	b.name = "Approach_%d_%s" % [i, choice]
@@ -1668,6 +1848,8 @@ func _sim_week() -> void:
 	_build()
 	if not GameState.last_results.is_empty():
 		_show_results(GameState.last_results)
+	else:
+		_show_week_ask()
 
 
 ## What the cover says while the week is simmed.
@@ -1734,6 +1916,10 @@ func handle_back() -> bool:
 	if _rule_overlay != null and is_instance_valid(_rule_overlay):
 		_close_rule()
 		return true
+	# Back on a new card is Later: it stays first on the hub.
+	if _event_overlay != null and is_instance_valid(_event_overlay):
+		_close_event_sheet()
+		return true
 	if _news_overlay != null and is_instance_valid(_news_overlay):
 		_news_overlay.queue_free()
 		_news_overlay = null
@@ -1741,7 +1927,7 @@ func handle_back() -> bool:
 	if _results_overlay != null and is_instance_valid(_results_overlay):
 		_results_overlay.queue_free()
 		_results_overlay = null
-		_build()
+		_after_ask()
 		return true
 	if _talk_overlay != null and is_instance_valid(_talk_overlay):
 		_close_backing_talk()
@@ -1878,7 +2064,7 @@ func _close_midseason(_back: bool) -> void:
 			MidseasonDraft.close_carnival(GameState)
 		_midseason_overlay.queue_free()
 	_midseason_overlay = null
-	_build()
+	_after_ask()
 
 
 func _close_backing_talk() -> void:
@@ -1886,7 +2072,7 @@ func _close_backing_talk() -> void:
 	if _talk_overlay != null and is_instance_valid(_talk_overlay):
 		_talk_overlay.queue_free()
 	_talk_overlay = null
-	_build()
+	_after_ask()
 
 
 ## The press conference is its own full screen (ruling 3.52; director

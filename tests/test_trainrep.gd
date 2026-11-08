@@ -36,6 +36,8 @@ func _fresh() -> void:
 	GameState.start_season("FRE", GameDB.club_list("FRE"))
 	GameState.replay_seed = SUITE_SEED
 	GameState.tutorials = false
+	# The club cards have their own test below: none opens over these unless asked.
+	GameState.event_sheets = false
 	Router.stack = []
 
 
@@ -67,6 +69,7 @@ func run(tree: SceneTree) -> void:
 		await _settle()
 		await _t("_test_taps", [size])
 		await _t("_test_after_results", [size])
+		await _t("_test_after_event_card", [size])
 	GameState.delete_saved_career()
 	print(Ran.line("Training report", self))
 	for f in failures:
@@ -363,4 +366,27 @@ func _test_after_results(size: Vector2i) -> void:
 	_check(await Tap.tap(hub.find_child("ResultsContinue", true, false)) == "", "%s: a finger taps Continue" % tag)
 	await _settle(6)
 	_check(hub.find_child("RoundResults", true, false) == null, "%s: the results close" % tag)
+	_check(hub.find_child("TrainingReportSheet", true, false) != null, "%s: then the report opens" % tag)
+
+
+## A new club card and a new report in the same visit: the card first, the
+## report when it closes, never both at once.
+func _test_after_event_card(size: Vector2i) -> void:
+	var tag := "%dx%d card" % [size.x, size.y]
+	_fresh()
+	_rounds(4)
+	GameState.skip_media_conference()
+	GameState.event_sheets = true
+	GameState.week_events = [GameState.story_card("members_open_training")]
+	var hub := await _hub()
+	_check(hub.find_child("EventSheet", true, false) != null, "%s: the new card opens first" % tag)
+	_check(hub.find_child("TrainingReportSheet", true, false) == null, "%s: the report waits behind it" % tag)
+	_check(TrainingReport.hub_due(GameState), "%s: and is still unread" % tag)
+	var later: Control = hub.find_child("EventLater", true, false)
+	_check(later != null, "%s: the card offers Later" % tag)
+	if later == null:
+		return
+	_check(await Tap.tap(later) == "", "%s: a finger taps Later" % tag)
+	await _settle(4)
+	_check(hub.find_child("EventSheet", true, false) == null, "%s: the card closes" % tag)
 	_check(hub.find_child("TrainingReportSheet", true, false) != null, "%s: then the report opens" % tag)

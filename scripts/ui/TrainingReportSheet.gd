@@ -1,7 +1,7 @@
 class_name TrainingReportSheet
 extends RefCounted
 ## The monthly training report (TrainingReport.gd). A new one opens over the
-## hub once (HubScene._process); after that it is one tap from the line on
+## hub once (HubScene._show_training_report); after that it is one tap from the line on
 ## Training. A sheet on a phone, a narrower pane on a PC. Tap a
 ## name for his profile; tap someone who can learn a position to go to his
 ## choice in Training. Facts only: nothing here says what to do.
