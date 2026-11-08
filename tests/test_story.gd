@@ -34,6 +34,7 @@ func run() -> void:
 	_t("_test_no_dead_story_flags")
 	_t("_test_arc_middle_before_end")
 	_t("_test_captain_contract_talk_dealt")
+	_t("_test_vice_morale_follows_the_card")
 	_t("_test_silent_defaults_announced")
 	_t("_test_every_line_has_a_size")
 	_t("_test_line_numbers_match_effects")
@@ -3098,6 +3099,44 @@ func _test_arc_middle_before_end() -> void:
 ## The captain's contract talk is dealt in a real season (row 107): once the story has
 ## begun (cc_start), the engine deals captain_contract_wait three weeks on, before
 ## either ending (signed or open, due at four), so the story's middle is met in play.
+func _test_vice_morale_follows_the_card() -> void:
+	_start()
+	var rec: Dictionary = GameState.captaincy["GEE"]
+	var cap := {}
+	for p in GameState.my_list:
+		if Captaincy.role_of(GameState.captaincy_record("GEE"), str(p["id"])) == "captain":
+			cap = p
+	var card := GameState.story_card("captain_succession_next", cap)
+	var named := str(card["facts"].get("vice_id", ""))
+	_check(named != "", "Geelong have a vice-captain for the card to name")
+	if named == "":
+		return
+	var later: Dictionary = (StoryDeck.by_id(StoryDeck.all(), "captain_succession_next")["choices"] as Array)[1]
+	var line := " ".join(StoryEngine.stakes_lines(later["effects"], card["facts"]))
+	_check(line.contains(str(card["facts"]["vice_name"]) + "'s morale"), "The Cost line names him (%s)" % line)
+	# The card points at the Captaincy page: the armband moves before it is answered.
+	var other := {}
+	for p in GameState.my_list:
+		if str(p["id"]) != named and p != cap and Captaincy.role_of(GameState.captaincy_record("GEE"), str(p["id"])) == "":
+			other = p
+			break
+	for slot in rec["slots"]:
+		if str(slot["id"]) == named:
+			slot["id"] = str(other["id"])
+	var now_id := str(ClubStories._leader_facts(GameState)["vice_id"])
+	_check(now_id != "" and now_id != named, "The coach has changed the vice-captain since the card came")
+	var old_vice: Dictionary = GameState.list_player(named)
+	var new_vice: Dictionary = GameState.list_player(now_id)
+	old_vice["morale"] = 50
+	new_vice["morale"] = 50
+	ClubStories.apply_choice(GameState, card, 1)
+	_check(int(old_vice["morale"]) == 48 and int(new_vice["morale"]) == 50,
+			"The man the card named takes the morale cost, not the new vice-captain (%d, %d)" % [old_vice["morale"], new_vice["morale"]])
+	var bad := _bad({"choices": [{"key": "a", "label": "A", "effects": [{"op": "xp", "d": 3, "who": "vice"}]},
+			{"key": "b", "label": "B", "effects": []}]})
+	_check(bad.any(func(x): return str(x).contains("reach the vice-captain")), "Only a morale move can reach the vice-captain")
+
+
 func _test_captain_contract_talk_dealt() -> void:
 	_start()
 	var cap := {}

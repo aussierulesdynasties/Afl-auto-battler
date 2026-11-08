@@ -452,7 +452,8 @@
 		"phase": [
 			"preseason"
 		],
-		"cooldown": 20,
-		"per_season": 1
+		"cooldown": 0,
+		"subject_cooldown": 0,
+		"always": true
 	}
 ]
