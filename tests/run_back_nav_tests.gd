@@ -49,6 +49,8 @@ func _run() -> void:
 	_router = root.get_node("Router")
 	_db = root.get_node("GameDB")
 	_state.autosave_enabled = false
+	# These tests drive the hub for other things: no club card opens over it.
+	_state.event_sheets = false
 	_state.save_path = "user://test_back_nav.save"
 	_state.settings_path = "user://test_back_nav.cfg"
 	# The first-visit intros (FirstVisitIntro.gd) are their own suite; here every
@@ -921,7 +923,11 @@ func _test_loading_cover() -> void:
 		await _wait_cover(wipe)
 		process_frame.disconnect(watch_load)
 		_check(loaded_seen["before"], "loading cover: Continue shows its line before the career loads")
-		_check(_router.current() == "hub" and _state.season != null, "loading cover: Continue lands on the hub")
+		# The week simmed above can leave a press conference waiting: the hub hands
+		# it on to its own screen, with the hub under it for Back.
+		var landed: String = _router.current()
+		var on_hub: bool = landed == "hub" or (landed == "press" and _state.media_conference_pending() and _router.stack.has("hub"))
+		_check(on_hub and _state.season != null, "loading cover: Continue lands on the hub (on %s, %s)" % [landed, str(_router.stack)])
 	wipe.set("test_cover", false)
 	_state.delete_saved_career()
 	# The setting is saved and later suites read it: put it back.

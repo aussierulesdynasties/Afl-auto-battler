@@ -343,7 +343,7 @@ static func open_side(host: Control, code: String) -> Control:
 	if UiKit.club_is_black(code):
 		body.add_child(UiKit.club_title(GameDB.club_name(code), UiKit.H2, code, UiKit.PANEL))
 	else:
-		body.add_child(UiKit.ellipsis(GameDB.club_name(code), UiKit.H2, UiKit.club_ink(code, UiKit.PANEL), true))
+		body.add_child(UiKit.ellipsis(GameDB.club_name(code), UiKit.H2, UiKit.club_name_colour(UiKit.club_ink(code, UiKit.PANEL)), true))
 	var outlook := GameState.team_outlook(code)
 	if not outlook.is_empty():
 		var tl := UiKit.lbl(str(outlook["line"]), UiKit.BODY, UiKit.TEXT)
