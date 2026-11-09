@@ -2,7 +2,7 @@ extends SceneTree
 ## The Combine screen (row 83), for the director's look. Needs a real renderer:
 ##   godot --path . --windowed --script tools/visual/capture_combine.gd -- --out /tmp/cb [--club COL] [--size 390x844]
 ## Writes <out>_room.png, _intro.png, _day.png, _day_end.png, _test.png,
-## _test_end.png, _filtered.png, _sheet.png.
+## _test_end.png, _filtered.png, _sheet.png, _postseason.png.
 
 var W := 390
 var H := 844
@@ -104,4 +104,19 @@ func _run() -> void:
 	(rows.get_child(0) as Button).pressed.emit()
 	await _frames(10)
 	await _shot(out + "_sheet.png")
+	# The first postseason's intro on the hub, in the one run (row 83's look).
+	ui.queue_free()
+	await _frames(4)
+	state.draft = null
+	var sea = state.season
+	sea.round_index = sea.fixture.size()
+	sea.recalc_ladder()
+	sea.start_finals()
+	sea.finals["done"] = true
+	state.week_events = []
+	state.tutorials = true
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _frames(60)
+	await _shot(out + "_postseason.png")
 	quit(0)
