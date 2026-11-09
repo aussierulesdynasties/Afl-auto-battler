@@ -149,6 +149,7 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 		tl.name = "Trait_" + str(t)
 		TraitLink.tappable(tl, str(t))
 		v.add_child(tl)
+	synergy_fit_block(v, p, UiKit.SMALL)
 
 	# What he has done.
 	var prod := PlayerProfile.production(p)
@@ -528,3 +529,24 @@ static func _identity(v: VBoxContainer, p: Dictionary) -> Control:
 		il.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(il)
 	return later
+
+
+## Synergies within reach (row 103): for a player outside your list, which of
+## your synergies he would complete or bring closer, as facts in your club's
+## ink. Its own block ("SynergyFit") so a draft-fit mark can sit beside it.
+## Nothing when he does nothing for them.
+static func synergy_fit_block(v: Control, p: Dictionary, size: int) -> void:
+	var rows: Array = GameState.synergy_fit(p)
+	if rows.is_empty():
+		return
+	var box := UiKit.vbox(2)
+	box.name = "SynergyFit"
+	v.add_child(box)
+	for r in rows:
+		var done := bool(r["completes"])
+		var l := UiKit.lbl(Traits.fit_text(r), size,
+				UiKit.club_ink(GameState.my_club) if done else UiKit.TEXT, done)
+		l.name = "SynergyFit_" + str(r["key"])
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		TraitLink.tappable(l, str(r["key"]))
+		box.add_child(l)

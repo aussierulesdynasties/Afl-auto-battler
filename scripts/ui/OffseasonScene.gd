@@ -666,6 +666,7 @@ func _agents(body: VBoxContainer) -> void:
 				int(p["overall"]), str(GameState.pot_view(p)["text"]), int(p.get("age", 0)),
 				Contracts.money(int(want["salary"])), int(want["years"]),
 				GameDB.club_short(str(p.get("released_by", "")))])
+		PlayerSheet.synergy_fit_block(card.get_child(0) as VBoxContainer, p, 12)
 		var offers := GameState.fa_offers(str(p["id"]))
 		if not offers.is_empty():
 			var bits := PackedStringArray()

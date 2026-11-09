@@ -62,6 +62,8 @@ func _run() -> void:
 	await _t("_test_line_flow", [Vector2i(390, 844)])
 	await _t("_test_line_flow", [Vector2i(1280, 720)])
 	await _t("_test_training_news", [Vector2i(390, 844)])
+	await _t("_test_synergy_fit", [Vector2i(390, 844)])
+	await _t("_test_synergy_fit", [Vector2i(1280, 720)])
 	print(Ran.line("Trait link", self))
 	for f in _failures:
 		print("  FAIL: " + f)
@@ -276,3 +278,68 @@ func _scan(label: Control, host: Node) -> bool:
 			x += 5.0
 		y += 14.0
 	return false
+
+
+## Synergies within reach (row 103): a recruit's sheet says which of your
+## synergies he would complete or bring closer, as a fact; a real touch on
+## the line opens the synergy's rule. Your own players get no such line.
+func _test_synergy_fit(sz: Vector2i) -> void:
+	var tag := "fit %dx%d" % [sz.x, sz.y]
+	_gs.reset()
+	_gs.start_season("FRE", _db.club_list("FRE"))
+	root.size = sz
+	# Words: a completing row and a partial one.
+	_check(Traits.fit_text({"key": "engine_room", "trait": "bull", "have": 3, "need": 4, "completes": true})
+			== "Completes Engine room: 4 of 4 Contested bulls with him.", "%s: the completing line" % tag)
+	_check(Traits.fit_text({"key": "tall_small", "trait": "crumber", "have": 0, "need": 2, "completes": false})
+			== "Tall-small forward line: 1 of 2 Crumbers in the forward line with him.", "%s: the partial line" % tag)
+	# A rival midfielder made a contested bull.
+	var p: Dictionary = {}
+	for code in _gs.season.lists:
+		if str(code) == _gs.my_club:
+			continue
+		for q in _gs.season.lists[code]:
+			if str(q["role"]) == "MID":
+				p = (q as Dictionary).duplicate(true)
+				break
+		if not p.is_empty():
+			break
+	p["attr"]["contested"] = 95
+	_check(Traits.of(p).has("bull"), "%s: the recruit is a contested bull" % tag)
+	var ground: Array = _gs.my_squad().ground
+	var rows: Array = _gs.synergy_fit(p)
+	var engine := {}
+	for r in rows:
+		if str(r["key"]) == "engine_room":
+			engine = r
+	var prog := {}
+	for r in Traits.progress(ground):
+		if str(r["key"]) == "engine_room":
+			prog = r
+	if Traits.active(ground).has("engine_room"):
+		_check(engine.is_empty(), "%s: a synergy you field already is left out" % tag)
+	else:
+		_check(not engine.is_empty() and int(engine["have"]) == int(prog["have"]["bull"])
+				and bool(engine["completes"]) == (int(prog["missing"]) == 1),
+				"%s: Engine room counts your bulls on the ground" % tag)
+	_check(_gs.synergy_fit(_gs.my_list[0]).is_empty(), "%s: your own player gets no fit line" % tag)
+	var host := Control.new()
+	host.name = "Screen"
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	current_scene = host
+	_ps.open(host, p)
+	await _settle()
+	var line := host.find_child("SynergyFit_engine_room", true, false) as Control
+	if engine.is_empty():
+		_check(line == null, "%s: no line for a synergy he does nothing for" % tag)
+	else:
+		_check(line != null and (line as Label).text == Traits.fit_text(engine), "%s: his sheet shows the fit" % tag)
+		if line != null:
+			var why: String = await Tap.tap_at(line, Vector2(12, line.size.y / 2.0), false)
+			await _settle()
+			var sheet := _overlay(host, _tl.SHEET_NAME)
+			var title := sheet.find_child("TraitTitle", true, false) as Label if sheet != null else null
+			_check(title != null and title.text == "Engine room", "%s: a touch on the fit opens the synergy (%s)" % [tag, why])
+	host.queue_free()
+	await _settle()

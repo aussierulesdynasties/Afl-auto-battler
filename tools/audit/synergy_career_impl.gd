@@ -9,6 +9,11 @@ extends RefCounted
 ##   policy "trainer" - an engaged coach: at each season start every player
 ##                      of yours trains the plan that weights the stat of the
 ##                      trait he is nearest (Traits.near), else Position plan
+##   policy "focus"   - row 103: at each season start every player of yours
+##                      with no focus puts his stat focus on the stat of the
+##                      synergy trait he is nearest (Traits.near)
+## Each line also gives the share of AI clubs fielding at least one synergy
+## ("any") and AI players carrying a focus ("focus"), for a main-vs-branch pair.
 ## Args after the impl name: policy seed club seasons
 ## godot --headless --path . --script tools/audit/run_audit.gd -- synergy_career_impl trainer 1 MEL 4
 
@@ -70,6 +75,18 @@ func _train() -> int:
 	return n_set
 
 
+func _focus() -> int:
+	var n_set := 0
+	for p in GameState.my_list:
+		if GameState.focus_locked(p):
+			continue
+		for nr in Traits.near(p):
+			if GameState.focus_options(p).has(str(nr["stat"])) and GameState.set_stat_focus(str(p["id"]), str(nr["stat"])):
+				n_set += 1
+				break
+	return n_set
+
+
 func _snapshot(year: int, label: String) -> void:
 	var mine := _ground(club)
 	var my_act := Traits.active(mine)
@@ -85,15 +102,22 @@ func _snapshot(year: int, label: String) -> void:
 	var mx := 0
 	var n := 0
 	var ai_traits := 0.0
+	var any := 0
+	var focused := 0
 	for c in GameState.season.lists:
 		var k := Traits.active(_ground(str(c))).size()
 		if str(c) != club:
 			sum += k
 			n += 1
 			mx = maxi(mx, k)
+			if k > 0:
+				any += 1
+			for q in GameState.season.lists[c]:
+				if str(q.get("train_focus", "")) != "":
+					focused += 1
 			ai_traits += _good_traits(GameState.season.lists[c])
-	print("SYN %s seed %d %d %s | yours %d on %s | league AI mean %.2f max %d | good traits on list: yours %d, AI mean %.1f | your 18: %s" % [
-			policy, seed_n, year, label, my_act.size(), str(my_act), sum / maxf(1, n), mx,
+	print("SYN %s seed %d %d %s | yours %d on %s | league AI mean %.2f max %d any %.3f focus %d | good traits on list: yours %d, AI mean %.1f | your 18: %s" % [
+			policy, seed_n, year, label, my_act.size(), str(my_act), sum / maxf(1, n), mx, float(any) / maxf(1, n), focused,
 			_good_traits(GameState.season.lists[club]), ai_traits / maxf(1, n), " | ".join(lines)])
 
 
@@ -115,6 +139,8 @@ func run() -> void:
 		var year := GameState.season_year
 		if policy == "trainer":
 			_train()
+		elif policy == "focus":
+			_focus()
 		_snapshot(year, "start")
 		while not GameState.season.is_season_over():
 			GameState.advance()

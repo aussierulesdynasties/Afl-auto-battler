@@ -1070,6 +1070,7 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 		locked.name = "StatFocusLocked"
 		locked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(locked)
+		_focus_trait_line(v, p, current)
 		if _focus_notice != "":
 			v.add_child(UiKit.lbl(_focus_notice, UiKit.SECONDARY, UiKit.GOOD, true))
 		return box
@@ -1089,6 +1090,7 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 	v.add_child(UiKit.choice_grid("StatFocusPick", options, chosen, 2, func(key: String):
 		_focus_choice = key
 		_build()))
+	_focus_trait_line(v, p, chosen)
 	if chosen != "":
 		var lock := UiKit.btn("Lock in %s for %d" % [GameState.train_stat_label(chosen).to_lower(), year], 15, true)
 		lock.name = "StatFocusLock"
@@ -1103,6 +1105,26 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 			_build())
 		v.add_child(lock)
 	return box
+
+
+## The trait a focus grows him toward, as a fact (row 103): "Contested bull
+## at 84 contested: 4 to go." Over seasons: the focus carries on until changed.
+func _focus_trait_line(v: Control, p: Dictionary, stat: String) -> void:
+	var ft := GameState.focus_trait(p, stat)
+	if ft.is_empty():
+		return
+	var key := str(ft["key"])
+	var gap := int(ft["gap"])
+	var text := "%s at %d %s: %s." % [Traits.label(key), int(ft["min"]),
+			GameState.train_stat_label(stat).to_lower(),
+			"he is there" if gap == 0 else "%d to go" % gap]
+	if bool(ft["crowded"]):
+		text += " He carries two traits already, so it shows only once he is further past its line than he is past one of them."
+	var l := UiKit.lbl(text, 13, UiKit.EMPH, true)
+	l.name = "StatFocusTrait"
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	TraitLink.tappable(l, key)
+	v.add_child(l)
 
 
 ## "Week 3 of 8. As a key forward he rates 66, his own game 71: within 3 by
