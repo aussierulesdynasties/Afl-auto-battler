@@ -407,7 +407,7 @@ func _test_feed_whole_lines() -> void:
 		return
 	var cut_seen := false
 	for i in range(14):
-		m.call("_feed_text", "Q1 %d'  Geelong: Controlled tempo is on until quarter time, line %d." % [i + 1, i],
+		m.call("_feed_text", "Q1 %d'  Geelong: Controlled Tempo is on until quarter time, line %d." % [i + 1, i],
 				Color.WHITE, false, "PlayLine")
 		await _settle(3)
 		var top := float(sc.scroll_vertical)

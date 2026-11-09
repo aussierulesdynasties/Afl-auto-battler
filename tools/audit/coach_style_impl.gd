@@ -10,8 +10,8 @@ extends RefCounted
 ##   exploit  (b) for each style, the home coach with that tendency throughout;
 ##            the away coach plays its normal calls, or reads him: each
 ##            quarter it answers the plan he has just picked with its counter
-##            (Attack corridor beats Controlled tempo, the press beats Attack
-##            corridor, Controlled tempo plays through the press), everything
+##            (Attack Corridor beats Controlled Tempo, the press beats Attack
+##            corridor, Controlled Tempo plays through the press), everything
 ##            else as its normal calls. Reported: the away margin gained by
 ##            reading him, against the same for a balanced coach.
 ##   seeds    per pairing (default 40); six pairings

@@ -125,6 +125,12 @@ func _test_reads_match_calls() -> void:
 				if q >= 2:
 					var line := str(lines[1 - side])
 					var tail := RivalRead.mood_tail(why)
+					if why == "lost_q":
+						var far := RivalRead.well_behind(sim, side)
+						var said_key := "lost_said" if far else "lost_quiet"
+						seen[said_key] = int(seen.get(said_key, 0)) + 1
+						if not far:
+							tail = ""
 					var any_mood := false
 					for m in RivalRead.MOODS:
 						if line.contains(str(RivalRead.MOODS[m])):
@@ -174,6 +180,8 @@ func _test_reads_match_calls() -> void:
 	_check(bad.is_empty(), "Every read says what the coach then does (%d disagree: %s)" % [bad.size(), bad.slice(0, 4)])
 	_check(int(seen["protect"]) > 0 and int(seen["chase"]) + int(seen["lost_q"]) > 0 and int(seen["counter"]) > 0
 			and int(seen["usual"]) > 0, "The seeded matches show every reason he plays a plan: %s" % seen)
+	_check(int(seen.get("lost_said", 0)) > 0 and int(seen.get("lost_quiet", 0)) > 0,
+			"Lost the quarter: said when well behind, quiet when close: %s" % seen)
 	_check(int(seen["tag_on_time"]) > 0 and int(seen["fire"]) > 0 and int(seen["pulled"]) > 0,
 			"...and a tag on time, a fire-up and a loose man put back on a man: %s" % seen)
 
@@ -212,6 +220,8 @@ func _test_coach_words() -> void:
 	for read in Identity.READS:
 		var b := _say(RivalRead.box_line(float(read), true))
 		var sharp := float(read) >= MatchSim.TAG_SHARP_READ
+		_check(b.contains("usual pace") == (not sharp and float(read) >= RivalRead.BOX_USUAL_READ),
+				"The middle line is an average box: %.2f %s" % [read, b])
 		_check(b.contains("quickly") == sharp and b.contains(str(RivalRead.BREAKS[MatchSim.tag_quarter(float(read))])),
 				"Box %.2f: %s" % [read, b])
 		_check(not RivalRead.box_line(float(read), false).contains("tagger"), "No tagger, no tag timing")
@@ -225,7 +235,7 @@ func _test_coach_words() -> void:
 	for plan in MatchSim.PLANS:
 		_check(not c.contains(CoachReport.plan_label(str(plan))), "The counter line never names a plan (%s)" % plan)
 	_say(RivalRead.tagger_line("Tom Tag"))
-	_say(RivalRead.minder_line())
+	_check(_say(RivalRead.minder_line("Tom Fwd")).contains("Tom Fwd is the forward they'd likely send"), "The minder is named as a read")
 	# The report reads a new coach's style without writing it on his record:
 	# the match writes it at kick-off, and earlier would change a reload.
 	for skill in [10, 95]:
@@ -292,10 +302,10 @@ func _test_record_words() -> void:
 	_check(k == "They know %s only partly and %s and %s barely. The rest they know well." % [
 			CoachReport.plan_label("attacking"), CoachReport.plan_label("contest"), CoachReport.plan_label("controlled")], k)
 	var story := _say(RivalRead.plan_story("Melbourne", ["defensive", "defensive", "attacking", "attacking"]))
-	_check(story == "Melbourne started with the %s and switched to the %s in the third quarter." % [
+	_check(story == "Melbourne started with the %s and switched to %s in the third quarter." % [
 			CoachReport.plan_label("defensive"), CoachReport.plan_label("attacking")], story)
 	_check(RivalRead.plan_story("they", ["balanced", "balanced"]) == "", "A plain game is not a story")
-	_check(_say(RivalRead.plan_story("they", ["controlled", "controlled"], "half")) == "they played the %s all half." % CoachReport.plan_label("controlled"),
+	_check(_say(RivalRead.plan_story("they", ["controlled", "controlled"], "half")) == "they played %s all half." % CoachReport.plan_label("controlled"),
 			"One plan all half")
 	_check(_say(RivalRead.plan_story("they", ["balanced", "attacking", "defensive", "controlled"])).contains(", then "),
 			"Three switches read in order")
@@ -307,26 +317,29 @@ func _test_record_words() -> void:
 	]
 	_check(RivalRead.season_line(rows.slice(0, 1), "defensive") == "", "One match is not a season's habit")
 	var s := _say(RivalRead.season_line(rows, "defensive"))
-	_check(s == "This season they've gone to the %s when chasing and the %s when in front." % [
+	_check(s == "This season they've gone to %s when chasing and %s when in front." % [
 			CoachReport.plan_label("attacking"), CoachReport.plan_label("controlled")], s)
-	_check(_say(RivalRead.season_line([rows[0], rows[0]], "defensive")) == "This season they've gone to the %s when chasing." % [
+	_check(_say(RivalRead.season_line([rows[0], rows[0]], "defensive")) == "This season they've gone to %s when chasing." % [
 			CoachReport.plan_label("attacking")], "Only the chase")
-	_check(_say(RivalRead.season_line([rows[1], rows[1]], "defensive")) == "This season they've gone to the %s when in front." % [
+	_check(_say(RivalRead.season_line([rows[1], rows[1]], "defensive")) == "This season they've gone to %s when in front." % [
 			CoachReport.plan_label("controlled")], "Only in front")
 	# The season line never names a plan as their habit beside the usual game
 	# the report has just named (director, 2026-11-08: Essendon read "usual
-	# game, Defensive press" then "This season: mostly Controlled tempo").
+	# game, Defensive Press" then "This season: mostly Controlled Tempo").
 	_check(not s.contains(CoachReport.plan_label("defensive")), "Their usual game is not said twice: %s" % s)
-	_check(_say(RivalRead.season_line(rows, "attacking")) == "This season they've gone to the %s when in front." % [
+	_check(_say(RivalRead.season_line(rows, "attacking")) == "This season they've gone to %s when in front." % [
 			CoachReport.plan_label("controlled")], "Chasing with their usual game is not a change")
 	_check(RivalRead.season_line([{"p": ["balanced"], "w": ["usual"]}, {"p": ["balanced"], "w": ["chase"]}], "balanced") == "",
 			"Nothing but their usual game: no line")
 	_check(_say(RivalRead.season_line([{"p": ["contest"], "w": ["chase"]}, {"p": ["balanced"], "w": ["usual"]}], "balanced"))
-			== "This season they've gone to %s when chasing." % CoachReport.plan_label("contest"), "Win contest reads without \"the\"")
+			== "This season they've gone to %s when chasing." % CoachReport.plan_label("contest"), "Win Contest reads without \"the\"")
 	var v := _say(RivalRead.vs_line(rows, "GEE"))
-	_check(v == "Against you in Round 2, they started with the %s and switched to the %s in the second quarter." % [
+	_check(v == "Against you in Round 2, they started with the %s and switched to %s in the second quarter." % [
 			CoachReport.plan_label("defensive"), CoachReport.plan_label("controlled")], v)
 	_check(RivalRead.vs_line(rows, "SYD") == "", "No line before you have met")
+	var last_row := {"l": "Round 6", "v": "COL", "p": ["defensive", "attacking"], "w": ["usual", "chase"]}
+	_check(_say(RivalRead.last_line([last_row], "GEE")).begins_with("Last time out in Round 6, they started with"), "Their last match as a story")
+	_check(RivalRead.last_line([last_row], "COL") == "" and RivalRead.last_line([], "GEE") == "", "Not the match vs_line tells, and none before a game")
 	# record_row: a rival coach's side only.
 	var res := {"label": "Round 3", "home": "GEE", "away": "SYD", "tactics_history": [
 		{"quarter": 1, "plans": [{"gameplan": "defensive"}, {"gameplan": "attacking"}], "why": ["", "usual"]},
@@ -341,7 +354,7 @@ func _test_record_words() -> void:
 	var g := CoachReport.glance({"quarters": 4, "my_code": "GEE", "opp_code": "MEL", "opp_plans": [
 		{"gameplan": "defensive"}, {"gameplan": "defensive"}, {"gameplan": "attacking"}, {"gameplan": "attacking"}]}, true)
 	var read := " ".join(g.get("read", []))
-	_check(read.contains("started with the %s and switched to the %s in the third quarter." % [
+	_check(read.contains("started with the %s and switched to %s in the third quarter." % [
 			CoachReport.plan_label("defensive"), CoachReport.plan_label("attacking")]), "The glance tells the switch: %s" % read)
 
 
@@ -384,6 +397,16 @@ func _test_in_career() -> void:
 		if str(res.get("label", "")) == "Round 1" and (str(res["home"]) == "GEE" or str(res["away"]) == "GEE"):
 			r1 = str(res["away"]) if str(res["home"]) == "GEE" else str(res["home"])
 	_check(r1 != "", "Geelong played in Round 1")
+	# A new coach's read starts from his first game; a row from an older save
+	# names no coach and stays.
+	var clubs_now: Dictionary = GameState.rival_plans["clubs"]
+	if r1 != "" and clubs_now.has(r1):
+		var kept: Array = (clubs_now[r1] as Array).duplicate(true)
+		_check(not kept.is_empty() and str(kept[0].get("c", "")) == str(Coaches.staff(GameState.coaches, r1).get("SC", "")),
+				"Each row names the coach who made the calls")
+		clubs_now[r1] = [{"p": ["balanced"], "w": ["usual"], "c": "someone_gone"}, {"p": ["balanced"], "w": ["usual"]}]
+		_check(GameState.rival_rows(r1).size() == 1, "The old coach's games are dropped, an unnamed old row stays")
+		clubs_now[r1] = kept
 	if r1 == "":
 		return
 	var report := GameState.opponent_report(r1)
@@ -465,7 +488,8 @@ func _test_in_career() -> void:
 	# forward to send.
 	var mine := str(sim.interceptor[sim.moment_side])
 	var can_mind := mine != "" and not Matchups.minder_candidates(sq.ground).is_empty()
-	_check(people.has(RivalRead.minder_line()) == can_mind,
+	var minders := Matchups.minder_candidates(sq.ground)
+	_check(can_mind == (not minders.is_empty() and people.has(RivalRead.minder_line(GameDB.player_display_name(minders[0])))),
 			"The minder rule is read exactly when you start with a loose man (%s): %s" % [mine, people])
 
 

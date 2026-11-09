@@ -559,6 +559,7 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"ask": Contracts.money(Contracts.asking_salary(p)), "early_price": Contracts.money(early),
 			"more_seasons": "%s more season%s" % [MatchNotes.count_word(more), "" if more == 1 else "s"],
 			"extension_ok": ClubLife.extension_wanted(p, {}) and early - int(p.get("salary", 0)) <= cap_room,
+			"intl_extension_ok": ClubLife.extension_wanted(p, {}, ClubLife.INTL_EXTENSION_MIN_OVR) and early - int(p.get("salary", 0)) <= cap_room,
 			# Shown under his real name: no card invents a private life or
 			# misconduct for a real person (story research §4).
 			"real_named": bool(gs.show_real_names) and str(p.get("real_name", "")).strip_edges() != "",

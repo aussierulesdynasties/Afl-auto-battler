@@ -88,7 +88,7 @@ var _ft_tabs: HBoxContainer
 var _ft_tab := "summary"        # summary (home), stats or report
 var _run_side := -1            # who kicked the last goal, and how many in a row
 var _run_len := 0
-var _press_said := [false, false]  # the Defensive press line, once a side
+var _press_said := [false, false]  # the Defensive Press line, once a side
 var _call_mem := MatchNotes.call_state()  # the structural calls' lines (MatchNotes.call_lines)
 var _name_index := {}           # name -> club for NameInk, built once per match
 var _duel_mem := {}             # the feed's memory of the forward-50 duels (MatchNotes.duel_feed_line)
@@ -667,9 +667,9 @@ func _simulate_remaining() -> void:
 # Quarter-by-quarter coaching
 # ---------------------------------------------------------------------------
 const GAMEPLANS := [
-	["balanced", "Balanced"], ["attacking", "Attack corridor"],
-	["defensive", "Defensive press"], ["contest", "Win contest"],
-	["controlled", "Controlled tempo"],
+	["balanced", "Balanced"], ["attacking", "Attack Corridor"],
+	["defensive", "Defensive Press"], ["contest", "Win Contest"],
+	["controlled", "Controlled Tempo"],
 ]
 const PEP_TALKS := [
 	["steady", "Stay composed"], ["fire_up", "Fire them up"], ["calm", "Calm the group"],
@@ -2330,7 +2330,7 @@ func _fill_note_lines(into: VBoxContainer, text: String) -> void:
 
 
 ## The calls so far this match, one line a quarter played, under a call's words:
-## "Q1  Demons: Defensive press  ·  Crows: Attack corridor". Game plans are
+## "Q1  Demons: Defensive Press  ·  Crows: Attack Corridor". Game plans are
 ## shown for both clubs (the break already tells you theirs). Pep talks and
 ## rotations of the other club are hidden from the coach, so those show only
 ## yours. Nothing before the first bounce.
@@ -3217,7 +3217,7 @@ func _focus_note_text(slot: String, id: String) -> String:
 	return MatchNotes.focus_slot_note(slot, who, working, not on)
 
 
-## "Defensive press · tagging Walsh": your calls for this quarter, one line.
+## "Defensive Press · tagging Walsh": your calls for this quarter, one line.
 func _show_setup(t: Dictionary) -> void:
 	if _setup_line == null or not is_instance_valid(_setup_line):
 		return
@@ -4456,7 +4456,7 @@ func _career_high_feed(ev: Dictionary) -> bool:
 	return not lines.is_empty()
 
 
-## The Defensive press taking hold, once a side a match: the first time the
+## The Defensive Press taking hold, once a side a match: the first time the
 ## side whose plan it is defends after setting it (V2, press pilot).
 func _press_feed(event_index: int, ev: Dictionary) -> void:
 	var presser := MatchNotes.press_trigger(_res.get("timeline", []), event_index, ev, _press_said)

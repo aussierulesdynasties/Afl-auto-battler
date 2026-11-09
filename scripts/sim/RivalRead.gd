@@ -19,6 +19,8 @@ const SINCE := {1: "all game", 2: "since quarter time", 3: "since half time",
 const QUARTER_WORDS := ["first", "second", "third", "last"]
 ## Plans in the order the copy breaks ties.
 const ORDER := ["balanced", "attacking", "defensive", "contest", "controlled"]
+## A box this sharp or better reacts at the usual pace: the Good coaching cut.
+const BOX_USUAL_READ := -0.1
 ## Matches a club must have played before its season record is read.
 const SEASON_MIN := 2
 ## The pep talks by tactics key (MatchSim._pep_mult), and the words for the
@@ -85,9 +87,11 @@ static func coach_line(name: String, style: String) -> String:
 ## moved by a smaller margin, react_margin), and, with a specialist tagger in
 ## their side, from which break the tag comes.
 static func box_line(read: float, tagger: bool) -> String:
-	var s := "Their box reads the game quickly and reacts early." \
-			if read >= MatchSim.TAG_SHARP_READ \
-			else "Their box is steady rather than sharp and slower to react."
+	var s := "Their box is steady rather than sharp and slower to react."
+	if read >= MatchSim.TAG_SHARP_READ:
+		s = "Their box reads the game quickly and reacts early."
+	elif read >= BOX_USUAL_READ:
+		s = "Their box reacts at about the usual pace."
 	if tagger:
 		var q := MatchSim.tag_quarter(read)
 		s += (" Their tagger goes to work from %s." if q <= MatchSim.TAG_Q_SHARP
@@ -185,9 +189,11 @@ static func loose_line(name: String, style: String) -> String:
 
 
 ## The minder (ai_tactics: a forward sent to a loose man who keeps winning
-## the ball in the air, LOOSE_MINDER_WINS).
-static func minder_line() -> String:
-	return "If your loose man keeps cutting off their entries, they'll send a forward to stand him."
+## the ball in the air, LOOSE_MINDER_WINS): `name` is the forward they would
+## send today (Matchups.minder_candidates); the pick is made during the match,
+## so it is said as a read.
+static func minder_line(name: String) -> String:
+	return "If your loose man keeps cutting off their entries, %s is the forward they'd likely send to stand him." % name
 
 
 # ---------------------------------------------------------------------------
@@ -230,10 +236,22 @@ static func break_line(sim: MatchSim, me: int) -> String:
 	var s := played_line(str(((last["plans"] as Array)[opp] as Dictionary).get("gameplan", "balanced")),
 			answered, answered_q)
 	if (sim.squads[opp] as Squad).ai_plans and sim.current_quarter >= 2 and sim.current_quarter <= 4:
-		var mood := mood_tail(sim.ai_mood(opp))
-		if mood != "":
-			s += " " + mood
+		var m := sim.ai_mood(opp)
+		if m != "lost_q" or well_behind(sim, opp):
+			var mood := mood_tail(m)
+			if mood != "":
+				s += " " + mood
 	return s
+
+
+## Whether `side` is well behind: the margin the game already calls that, its
+## coach's fire-up mark (COACH_STYLES fire_at: 12 points, a gambler 9). A side
+## that has lost the quarter but is closer than this gets no chasing line, on
+## the director's ruling of 2026-11-09; his call itself does not change.
+static func well_behind(sim: MatchSim, side: int) -> bool:
+	var style := str((sim.squads[side] as Squad).coach_style)
+	var st: Dictionary = MatchSim.COACH_STYLES.get(style, MatchSim.COACH_STYLES["balanced"])
+	return float(sim.score(side) - sim.score(1 - side)) <= float(st["fire_at"])
 
 
 ## One side's calls in each quarter played so far (tactics_history): its
@@ -288,12 +306,12 @@ static func phrase(plan: String) -> String:
 	return "a balanced game" if k == "balanced" else CoachReport.plan_label(k)
 
 
-## The plans said with "the" ("Their usual game plan is the Defensive press.",
-## director, 2026-11-08); Win contest reads without it.
-const THE := {"attacking": true, "defensive": true, "controlled": true}
+## Only the Defensive Press takes "the" (director, 2026-11-08); "the Attack
+## Corridor" and "the Controlled Tempo" are wrong (director, 2026-11-09).
+const THE := {"defensive": true}
 
 
-## A plan as the report names it: "the Defensive press", "Win contest", "a
+## A plan as the report names it: "the Defensive Press", "Win Contest", "a
 ## balanced game".
 static func called(plan: String) -> String:
 	var k := MatchSim.plan_key(plan)
@@ -359,8 +377,8 @@ static func record_row(res: Dictionary, side: int) -> Dictionary:
 
 
 ## What the scoreboard has had them play this season, from a club's record
-## rows (record_row): "This season they've gone to the Attack corridor when
-## chasing and the Controlled tempo when in front." A part is left out when it
+## rows (record_row): "This season they've gone to Attack Corridor when
+## chasing and Controlled Tempo when in front." A part is left out when it
 ## is their usual game (`usual`, the plan the report names first, which their
 ## coach keeps all season: GameState._settle_usual_plans), and so is the line
 ## when nothing is left or before SEASON_MIN matches.
@@ -403,6 +421,19 @@ static func vs_line(rows: Array, me: String) -> String:
 			story = "they played it straight all game."
 		return "Against you %s, %s" % [where(str(r.get("l", ""))), story]
 	return ""
+
+
+## Their last match, as a story, when it was not against you (vs_line tells
+## that one): "Last time out in Round 6, they started with ...". "" for a plain
+## game or none played.
+static func last_line(rows: Array, me: String) -> String:
+	if rows.is_empty():
+		return ""
+	var r: Dictionary = rows[rows.size() - 1]
+	if str(r.get("v", "")) == me:
+		return ""
+	var story := plan_story("they", r.get("p", []))
+	return "" if story == "" else "Last time out %s, %s" % [where(str(r.get("l", ""))), story]
 
 
 ## "in Round 6", "in the Grand Final", "in the Qualifying Final" from a
