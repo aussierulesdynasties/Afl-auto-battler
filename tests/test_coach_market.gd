@@ -32,6 +32,9 @@ func run() -> void:
 	_t("_test_your_expiring_staff")
 	_t("_test_approaches_market")
 	_t("_test_approaches_flow")
+	_t("_test_staff_promises")
+	_t("_test_ai_clubs_counter")
+	_t("_test_promise_flow")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Coach market", self))
@@ -552,3 +555,127 @@ func _test_approaches_flow() -> void:
 		news += str(n) + " "
 	_check((str(moved.get("club", "")) == "ADE" and str(moved.get("job", "")) == "SA") or news.contains("fell through"),
 			"He joins Adelaide, or the move falls through and the news says so")
+
+
+## Row 117 (T5.Q16): a succession promise with a timeframe, kept or broken,
+## and a broken one costs trust.
+func _test_staff_promises() -> void:
+	var coaches := _league("GEE")
+	var c: Dictionary = coaches["GEE_MID"]
+	var stay := CoachMarket.stay_chance(c, "stay", "SA", Y)
+	var promise := CoachMarket.stay_chance(c, "promise", "SA", Y)
+	var promote := CoachMarket.stay_chance(c, "promote", "SA", Y)
+	_check(stay < promise and promise < promote, "A promise weighs between a plea and the job now (%.2f %.2f %.2f)" % [stay, promise, promote])
+	CoachMarket.make_promise(c, Y)
+	_check(CoachMarket.holds_promise(c, "GEE") and int(c["promise"]["by"]) == Y + CoachMarket.PROMISE_SEASONS,
+			"The promise names the job and the season it is due")
+	# Kept: he gets the job and the promise is done, his trust untouched.
+	var kept := c.duplicate(true)
+	CoachMarket._appoint(kept, "GEE", "SA", Y, SEED)
+	_check(not kept.has("promise") and CoachMarket.broken_by(kept, "GEE") == 0, "Giving him the job keeps the promise")
+	# Broken: someone else gets it.
+	var lines := CoachMarket.settle_promises(coaches, "GEE", "SA", "GEE_FWD")
+	_check(lines.size() == 1 and str(lines[0]).contains("promised"), "Giving the job to another breaks it, in words (%s)" % [lines])
+	_check(not c.has("promise") and CoachMarket.broken_by(c, "GEE") == 1, "A broken promise is remembered")
+	var after := CoachMarket.stay_chance(c, "promise", "SA", Y)
+	_check(is_equal_approx(promise - after, CoachMarket.BROKEN_TRUST), "...and every later offer from you weighs less (%.2f -> %.2f)" % [promise, after])
+	# Out of time: the market breaks an AI club's promise when it falls due.
+	coaches = _league("GEE")
+	var ade: Dictionary = coaches["ADE_FWD"]
+	CoachMarket.make_promise(ade, Y - 1)
+	CoachMarket.offseason({"coaches": coaches, "archive": {}, "year": Y, "my_club": "GEE",
+			"clubs": GameDB.active_clubs(Y + 1), "results": _results(true), "premier": "", "seed": SEED})
+	_check(str(ade["job"]) == "SA" or CoachMarket.broken_by(ade, "ADE") == 1,
+			"A promise that falls due is kept or broken, never left hanging (%s, broken %d)" % [ade["job"], CoachMarket.broken_by(ade, "ADE")])
+	# One head assistant per club, after a whole off-season of moves.
+	var per := {}
+	for cid in coaches:
+		var k: Dictionary = coaches[cid]
+		if str(k.get("status", "")) == "club" and str(k["job"]) == "SA":
+			per[str(k["club"])] = int(per.get(str(k["club"]), 0)) + 1
+	var bad := per.values().filter(func(n): return int(n) != 1)
+	_check(bad.is_empty() and per.size() == GameDB.active_clubs(Y + 1).size(), "Every club has exactly one senior assistant")
+
+
+## AI clubs follow the same rules: their coach is approached, they answer with
+## a promise, he weighs it as yours would, and the promise is kept first.
+func _test_ai_clubs_counter() -> void:
+	var c := _coach("X", "club", "ADE", "FWD")
+	var good := {"met": true, "finals": true}
+	var held := CoachMarket.ai_counter(c, "FWD", Y, good)
+	_check(held == CoachMarket.stays(c, "promise", "FWD", Y, 0, good), "An AI club's counter is weighed by your rule")
+	_check(not held or CoachMarket.holds_promise(c, "ADE"), "...and it is a promise, with a timeframe")
+	var sa := _coach("Y", "club", "ADE", "SA")
+	CoachMarket.ai_counter(sa, "SC", Y, good)
+	_check(not sa.has("promise"), "Its senior assistant is asked to stay, not promised his own job")
+	# Approached and held: a strong coach at an AI club turns a rival down.
+	var coaches := _league("GEE")
+	for k in ["ADE_FWD"]:
+		coaches[k]["rep"] = 90
+		coaches[k]["skills"] = {"teach": 92, "tactics": 92, "manage": 92}
+		coaches[k]["since"] = Y - 8
+	var res := _results(true)
+	for club in res:
+		res[club]["finals"] = true
+	var out := CoachMarket.offseason({"coaches": coaches, "archive": {}, "year": Y, "my_club": "GEE",
+			"clubs": GameDB.active_clubs(Y + 1), "results": res, "premier": "ADE", "seed": SEED})
+	_check(int(out["log"]["held"]) >= 0 and out["log"].has("broken"), "The market counts approaches held and promises broken")
+	# A promised coach gets his club's senior assistant job when it opens.
+	coaches = _league("GEE")
+	CoachMarket.make_promise(coaches["ADE_DEV"], Y)
+	coaches["ADE_SA"]["status"] = "retired_test"
+	coaches["ADE_SA"]["club"] = ""
+	CoachMarket.offseason({"coaches": coaches, "archive": {}, "year": Y, "my_club": "GEE",
+			"clubs": GameDB.active_clubs(Y + 1), "results": _results(true), "premier": "", "seed": SEED})
+	_check(str(coaches["ADE_DEV"]["club"]) == "ADE" and str(coaches["ADE_DEV"]["job"]) == "SA"
+			and not coaches["ADE_DEV"].has("promise"), "An AI club keeps its promise when the job opens")
+
+
+## Your answer: approach, promise (counter), the promise kept or broken,
+## departure, and the save.
+func _test_promise_flow() -> void:
+	GameState.reset()
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	var staff := GameState.club_staff("GEE")
+	var mid: Dictionary = staff.get("MID", {})
+	var fwd: Dictionary = staff.get("FWD", {})
+	_check(not mid.is_empty() and not fwd.is_empty() and staff.has("SA"), "You have line coaches and a senior assistant")
+	if mid.is_empty() or fwd.is_empty():
+		return
+	GameState.coach_approaches = [
+		{"cid": str(mid["cid"]), "from_job": "MID", "club": "ADE", "job": "MID", "choice": "", "kept": false, "text": ""},
+		{"cid": str(fwd["cid"]), "from_job": "FWD", "club": "CAR", "job": "SA", "choice": "", "kept": false, "text": ""}]
+	_check(GameState.approach_promise_block(0) == "", "You can promise a line coach the senior assistant's job")
+	var w := GameState.approach_weight(0, "promise")
+	_check(w > GameState.approach_weight(0, "stay") and w < GameState.approach_weight(0, "promote"),
+			"The card's weights rank promise between the plea and the job")
+	mid["since"] = GameState.season_year - 10   # long-serving: he takes your word
+	w = GameState.approach_weight(0, "promise")
+	var said := GameState.answer_approach(0, "promise")
+	_check((w >= 50) == said.contains("promised"), "He stays on a promise exactly when it weighs 50 or more (%d: %s)" % [w, said])
+	_check(not said.contains("promised") or CoachMarket.holds_promise(mid, "GEE"), "Kept on a promise, he holds it")
+	_check(GameState.approach_promise_block(0) != "" or not said.contains("promised"), "...and can't be promised twice")
+	var gone := GameState.answer_approach(1, "go")
+	_check(gone.contains("Carlton") and not GameState._protected_coaches().has(str(fwd["cid"])), "Letting one go leaves him free to depart")
+	_check(GameState.save_career() and GameState.load_career(), "The career saves and loads")
+	var back: Dictionary = GameState.coaches.get(str(mid["cid"]), {})
+	if not said.contains("promised"):
+		return
+	_check(CoachMarket.holds_promise(back, "GEE"), "The promise survives a save")
+	# Broken: the senior assistant's job goes to someone else.
+	var other := ""
+	for cid in GameState.coaches:
+		var k: Dictionary = GameState.coaches[cid]
+		if str(k.get("status", "")) == "free":
+			other = str(cid)
+			break
+	GameState.staff_vacancies.append({"job": "SA", "reason": "test"})
+	GameState.appoint_staff("SA", other)
+	_check(CoachMarket.broken_by(back, "GEE") == 1 and not CoachMarket.holds_promise(back, "GEE"),
+			"Giving his promised job to another breaks the promise")
+	var news := ""
+	for n in GameState.news:
+		news += str(n) + " "
+	_check(news.contains("weigh your word less"), "...and the news says what it cost")
+	_check(GameState.save_career() and GameState.load_career()
+			and CoachMarket.broken_by(GameState.coaches[str(mid["cid"])], "GEE") == 1, "A broken promise survives a save")

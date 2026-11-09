@@ -145,6 +145,11 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 	v.add_child(UiKit.lbl(str(Coaches.JOB_LABEL[job]), UiKit.SMALL, UiKit.TEXT, true))
 	v.add_child(UiKit.ellipsis(GameDB.player_display_name(c), UiKit.BODY, UiKit.TEXT, true))
 	v.add_child(UiKit.lbl(Coaches.headline(c), UiKit.SMALL, UiKit.TEXT))
+	# What you have promised him, and what a broken promise cost (T5.Q16).
+	var word := _word_line(c)
+	if word != null:
+		v.add_child(word)
+		b.custom_minimum_size.y += 20
 	for n in v.find_children("*", "Control", true, false):
 		n.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.pressed.connect(func(): _sheet = CoachSheet.open(self, c))
@@ -181,6 +186,22 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 		_build())
 	h.add_child(rel)
 	return h
+
+
+func _word_line(c: Dictionary) -> Label:
+	var mine := GameState.my_club
+	if CoachMarket.holds_promise(c, mine):
+		var l := UiKit.lbl("Promised senior assistant by %d" % int(c["promise"]["by"]), UiKit.SMALL, UiKit.EMPH, true)
+		l.name = "Promise_" + str(c.get("job", ""))
+		return l
+	var n := CoachMarket.broken_by(c, mine)
+	if n > 0:
+		var l := UiKit.lbl("You broke %s to him: your offers weigh %d less" % [
+				"a promise" if n == 1 else "%d promises" % n, int(round(CoachMarket.BROKEN_TRUST * 100.0 * n))],
+				UiKit.SMALL, UiKit.BAD, true)
+		l.name = "Broken_" + str(c.get("job", ""))
+		return l
+	return null
 
 
 ## One of your jobs is open: why, a short list to choose from, or let the
