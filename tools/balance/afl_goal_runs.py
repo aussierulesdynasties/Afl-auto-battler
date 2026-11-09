@@ -39,19 +39,29 @@ def parse(html):
     end = body.find("</table>")
     body = body[:end] if end > 0 else body
     seq = []
+    ev = []      # every score: [quarter, "H"/"A", points, seconds into the quarter]
+    qlen = []    # each quarter's length in seconds (the siren)
+    q = 0
     for row in re.split(r"<tr>", body):
         if "quarter" in row and "colspan=5" in row:
             if seq:
                 seq.append("|")
+            q += 1
+            t = re.search(r"\((\d+)m (\d+)s\)", row)
+            qlen.append(int(t.group(1)) * 60 + int(t.group(2)) if t else 0)
             continue
         cells = re.findall(r"<td[^>]*>(.*?)(?=<td|</tr>|$)", row, re.S)
         if len(cells) < 5:
             continue
-        home, away = re.sub(r"<[^>]+>", "", cells[0]), re.sub(r"<[^>]+>", "", cells[4])
-        if home.strip().endswith("goal"):
-            seq.append("H")
-        elif away.strip().endswith("goal"):
-            seq.append("A")
+        home, away = re.sub(r"<[^>]+>", "", cells[0]).strip(), re.sub(r"<[^>]+>", "", cells[4]).strip()
+        side, who, tcell = ("H", home, cells[1]) if home and home != "&nbsp;" else ("A", away, cells[3])
+        t = re.search(r"(\d+)m (\d+)s", tcell)
+        secs = int(t.group(1)) * 60 + int(t.group(2)) if t else -1
+        if who.endswith("goal"):
+            seq.append(side)
+            ev.append([q, side, 6, secs])
+        elif who.endswith("behind"):
+            ev.append([q, side, 1, secs])
     final = re.findall(r"(\d+)\.(\d+)\.<b>(\d+)</b> - (\d+)\.(\d+)\.<b>(\d+)", body)
     if not final:
         return None
@@ -60,7 +70,9 @@ def parse(html):
     # Keep a match only when the goals read off the rows add up to the final score.
     if s.count("H") != hg or s.count("A") != ag:
         return None
-    return {"seq": s, "h": hs, "a": as_}
+    if sum(e[2] for e in ev if e[1] == "H") != hs or sum(e[2] for e in ev if e[1] == "A") != as_:
+        return None
+    return {"seq": s, "h": hs, "a": as_, "ev": ev, "qlen": qlen}
 
 
 def main():
@@ -82,7 +94,7 @@ def main():
         print(y, len(links), "pages", len(games), "games so far", flush=True)
     json.dump({"source": "AFL Tables scoring progressions (afltables.com/afl/stats/games), "
                "home-and-away and finals", "years": o.years, "games": games},
-              open(o.out, "w", encoding="utf-8"), indent=0)
+              open(o.out, "w", encoding="utf-8"), separators=(",", ":"))
     print("wrote", o.out, len(games))
 
 
