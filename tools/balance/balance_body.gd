@@ -79,8 +79,68 @@ func play(from: int, count: int, out: String, weather: String,
 				var sq: Squad = sq_h if side == 0 else sq_a
 				sq.ai_plans = side != coached
 				sq.assistant = side == coached
+		var arch_side := i % 2
+		var ad := {}
+		for ai in range(args.size() - 1):
+			if str(args[ai]) == "--arch":
+				for kv in str(args[ai + 1]).split(",", false):
+					var pr := kv.split("=")
+					ad[pr[0]] = pr[1]
+		var xr := RandomNumberGenerator.new()
+		xr.seed = i * 97 + 5
+		var asq: Squad = sq_h if arch_side == 0 else sq_a
+		if ad.has("out"):
+			var want := float(ad["out"])
+			var gone := {}
+			var pool: Array = asq.ground + asq.bench
+			while want > 0.0:
+				if xr.randf() < want:
+					gone[str(pool[xr.randi_range(0, pool.size() - 1)]["id"])] = true
+				want -= 1.0
+			if not gone.is_empty():
+				var kept := []
+				for pl in asq.list:
+					if not gone.has(str(pl["id"])):
+						kept.append(pl)
+				var ai0 := asq.ai_plans
+				var as0 := asq.assistant
+				var code := h if arch_side == 0 else a
+				asq = Squad.new(code, kept, bool(at_home[arch_side]), code)
+				asq.ai_plans = ai0
+				asq.assistant = as0
+				if arch_side == 0:
+					sq_h = asq
+				else:
+					sq_a = asq
+		if ad.has("fplan"):
+			asq.ai_plans = false
+		if ad.has("exec"):
+			asq.tactics_exec = float(ad["exec"])
+		var morale_touched: Array = []
+		if ad.has("morale"):
+			for pl in asq.ground + asq.bench:
+				pl["morale"] = 70 + int(ad["morale"])
+				morale_touched.append(pl)
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
 		sim.weather = weather
+		for ak in ad:
+			if ak == "fplan":
+				(sim.arch[arch_side] as Dictionary)["fplan"] = str(ad[ak])
+				(sim.tactics[arch_side] as Dictionary)["gameplan"] = str(ad[ak])
+			elif ak == "form":
+				sim.form[arch_side] = float(sim.form[arch_side]) + float(ad[ak])
+			else:
+				(sim.arch[arch_side] as Dictionary)[ak] = float(ad[ak])
+		if ad.has("inj"):
+			var xinj := float(ad["inj"]) - 1.0
+			for xp in asq.ground + asq.bench:
+				if xr.randf() < xinj:
+					var xi := Injuries.roll(xr, xp)
+					if not xi.is_empty():
+						xi["side"] = arch_side
+						xi["id"] = str(xp["id"])
+						xi["at"] = xr.randi_range(2, 118)
+						sim._injury_plan.append(xi)
 		if setup == "league":
 			sim.season_plans = ["steady", "steady"]
 		elif setup == "coached":
@@ -192,9 +252,19 @@ func play(from: int, count: int, out: String, weather: String,
 				tp[str(pl["id"])] = [int(st.get("tackles", 0)), int(st.get("pressure_acts", 0)), role]
 				t["tp"] = tp
 			t["club"] = h if side == 0 else a
+			var inj_n := 0
+			var inj_w := 0
+			for ij in r["injuries"]:
+				if int(ij["side"]) == side:
+					inj_n += 1
+					inj_w += int(ij["weeks"])
+			t["inj_n"] = inj_n
+			t["inj_w"] = inj_w
 			t["ruck1"] = ruck1(r["roster"][side], stats, sq_h if side == 0 else sq_a)
 			teams.append(t)
 		var line := JSON.stringify({"i": i, "home": h, "away": a, "teams": teams, "duels": duels(sim, r)})
+		for pl in morale_touched:
+			pl.erase("morale")
 		fh.store_line(line)
 		if echo:
 			print("BAL " + line)

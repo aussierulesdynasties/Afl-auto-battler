@@ -53,3 +53,4 @@ for l in "$out"/*.log; do grep -q "SCRIPT ERROR\|Parse Error" "$l" && { echo "wo
 args=(--run "$out" --n "$n" --secs "$secs" --a "${arm_a:-base}${root_a:+ @ $(basename "$root_a")}")
 [ "$paired" = 1 ] && args+=(--b "${arm_b:-this checkout}")
 python "$root/tools/balance/balance_report.py" "${args[@]}" | tee "$out/report.md"
+[ "$paired" = 1 ] && python3 "$root/tools/balance/arch_compare.py" "$out" | tee -a "$out/report.md"
