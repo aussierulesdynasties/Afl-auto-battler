@@ -286,7 +286,7 @@ func _test_pick_from_sheet() -> void:
 	_check(said.contains("on your list"), "...and it says he's yours: %s" % said)
 	# He stays in the draft's pool and joins its picks: still one man, one row.
 	await _tap("CombineTab_day", "The day after the pick")
-	var class_size := _state.draft.pool.filter(func(p): return bool(p.get("projected", false))).size()
+	var class_size: int = _state.draft.pool.filter(func(p): return bool(p.get("projected", false))).size()
 	_check((_find("CombineCount") as Label).text.contains("of %d prospects" % class_size)
 			or (_find("CombineCount") as Label).text.begins_with("All %d" % class_size),
 			"The class is the same size after a pick: %s" % (_find("CombineCount") as Label).text)
