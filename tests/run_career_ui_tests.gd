@@ -2746,12 +2746,12 @@ Your career stays on this device.",
 	current_scene.set("_pane", "list")
 	current_scene.call("_build")
 	await _settle()
-	var mine_col: Color = (root.get_node("GameDB").club_colours(_state.my_club) as Array)[0]
-	var guernseys: Array = current_scene.find_children("Guernsey", "PanelContainer", true, false)
+	# STYLE-05: the guernsey is his number in your club's ink.
+	var mine_col: Color = load("res://scripts/ui/UiKit.gd").club_ink(_state.my_club)
+	var guernseys: Array = current_scene.find_children("Guernsey", "Label", true, false)
 	var all_ours := not guernseys.is_empty()
 	for g in guernseys:
-		var g_sb := (g as PanelContainer).get_theme_stylebox("panel") as StyleBoxFlat
-		all_ours = all_ours and g_sb != null and g_sb.bg_color.is_equal_approx(mine_col)
+		all_ours = all_ours and (g as Label).get_theme_color("font_color").is_equal_approx(mine_col)
 	_check(all_ours, "My list: every guernsey is your club's (%d rows)" % guernseys.size())
 	var list_back: Button = current_scene.find_child("TopBarBack", true, false)
 	_check(list_back != null, "My list has a back arrow")
