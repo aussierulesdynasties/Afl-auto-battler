@@ -33,6 +33,10 @@ func run() -> void:
 	_t("_test_real_lists_start")
 	_t("_test_rebuild_walkouts_sign")
 	_t("_test_gen_traits_rates")
+	# Last: generated classes draw names from a shared counter, and a surname
+	# clash changes an international prospect's role, so running this earlier
+	# moved _test_class_tiers' comparison.
+	_t("_test_tied_rookies_every_club")
 	GameState.replay_seed = 0
 	print(Ran.line("Intake", self))
 
@@ -423,6 +427,59 @@ func _tiny_pool(n: int) -> Array:
 			"gl": i, "di": 100 - i, "gm": 0.0,
 		})
 	return out
+
+
+## Row 86's rule holds for every club and through a save: a father-son or NGA
+## rookie at a rival gets what one at yours gets, a reload with the draft still
+## open neither loses him nor ticks him twice, and a Tasmania academy rookie,
+## on a list the rollover does not tick, starts his first season with two too.
+func _test_tied_rookies_every_club() -> void:
+	GameState.reset()
+	var active := []
+	for code in GameDB.CLUB_ORDER:
+		if GameDB.enter_year(code) <= GameState.season_year:
+			active.append(code)
+	var me := str(active[0])
+	GameState.start_season(me, GameDB.club_list(me))
+	GameState.season.round_index = GameState.season.fixture.size()
+	var pool: Array = GameState.draftee_pool
+	var planted := [
+		{"id": str(pool[0]["id"]), "club": me, "kind": "father-son"},
+		{"id": str(pool[1]["id"]), "club": str(active[1]), "kind": "father-son"},
+		{"id": str(pool[2]["id"]), "club": str(active[2]), "kind": "NGA"},
+	]
+	for i in planted.size():
+		pool[i]["tied_club"] = planted[i]["club"]
+		pool[i]["tied_type"] = planted[i]["kind"]
+	# A Tasmanian in the year before the club's debut goes to its academy.
+	pool[3]["state"] = "TAS"
+	pool[3].erase("tied_club")
+	planted.append({"id": str(pool[3]["id"]), "club": "TAS", "kind": "NGA"})
+	_check(GameDB.enter_year("TAS") == GameState.season_year + 1,
+			"The Tasmanian's draft is the year before the club's debut")
+	_check(GameState.begin_intake_draft(), "The draft opens with ties at your club, at rivals and at Tasmania")
+	# Save and reload with the draft open: the ties have landed, the tick has not.
+	_check(GameState.save_career() and GameState.load_career() and GameState.draft != null,
+			"A career saved with the draft open reloads with it still open")
+	var draft: Draft = GameState.draft
+	while not draft.is_finished():
+		var candidate := draft._best_ai_pick(draft.current_club())
+		if candidate.is_empty() or not draft._draft_pick(draft.current_club(), candidate):
+			draft._skip_current_pick()
+	_check(GameState.finish_intake_draft(), "The rollover commits after the reload")
+	_check(GameState.season_year == 2028, "The career advances a year")
+	for reloaded in [false, true]:
+		if reloaded:
+			_check(GameState.save_career() and GameState.load_career(), "The new season saves and reloads")
+		for want in planted:
+			var found := []
+			for code in GameState.league_lists:
+				for q in GameState.league_lists[code]:
+					if str(q["id"]) == str(want["id"]):
+						found.append([str(code), int(q.get("contract_years", 0)), str(q.get("drafted_type", ""))])
+			_check(found == [[str(want["club"]), Contracts.ROOKIE_YEARS, str(want["kind"])]],
+					"%s rookie at %s is on that list once and starts 2028 with two seasons (%s, reloaded: %s)" % [
+						want["kind"], want["club"], str(found), str(reloaded)])
 
 
 func _test_career_rollover() -> void:
