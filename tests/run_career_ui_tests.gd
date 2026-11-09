@@ -384,6 +384,26 @@ func _test_press_caps_and_fade() -> void:
 	_state._fade_press_lifts()
 	_check(held == 72 and int(q["morale"]) == 71 and int(q["press_lift"]) == 1,
 			"GameState fades every listed player's press lift a point every second round (%d, %d)" % [held, int(q["morale"])])
+	# Bug-bash 3 (2026-11-10): a player who leaves your list keeps fading his
+	# press lift at the same pace: traded, signed elsewhere or released.
+	for way in ["trade", "free_agent"]:
+		_press_reset()
+		var gone: Dictionary = _state.my_list[0]
+		MC.apply_lift(gone, 2, MC.LIST_CAP)
+		_state.my_list.erase(gone)
+		if way == "trade":
+			_state._join("MEL", gone)
+		else:
+			gone["club"] = ""
+			_state.free_agents.append(gone)
+		# A move can shift his morale on arrival: the fade runs from there.
+		var m0 := int(gone["morale"])
+		var gone_trail := []
+		for r in range(4):
+			_state._fade_press_lifts()
+			gone_trail.append(int(gone["morale"]) - m0)
+		_check(gone_trail == [0, -1, -1, -2] and not gone.has("press_lift"),
+				"A %s's press lift fades after he leaves your list (%s)" % [way, str(gone_trail)])
 	# The board's press move fades too, and stacking never passes its cap.
 	_press_reset()
 	var up: int = _state._press_board(2)

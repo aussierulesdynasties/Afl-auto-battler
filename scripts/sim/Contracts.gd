@@ -600,6 +600,11 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 	var my_after := my_list.size() - take.size() + give.size()
 	if ai_after > MAX_LIST or my_after > MAX_LIST:
 		return _verdict(false, "trade_list_over", ctx, {"n": MAX_LIST})
+	# Every player traded in lands on the senior list (row 88): a side may not
+	# end past its senior spots, unless it was already past them and the trade
+	# leaves it no further over (a list seeded over the cap can still deal).
+	if _senior_over(ai_list, give, take) or _senior_over(my_list, take, give):
+		return _verdict(false, "trade_senior_over", ctx, {"n": RookieList.SENIOR_SPOTS})
 	if ai_after < MIN_LIST or my_after < MIN_LIST:
 		return _verdict(false, "trade_list_under", ctx, {"n": MIN_LIST})
 	var ai_pay := payroll(ai_list) - payroll(give) + payroll(take)
@@ -680,6 +685,14 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 
 ## A trade answer: {"ok", "code", "reason"}, the reason the code's sentence
 ## (AiReasons) with the club's name from `ctx` and any `facts`.
+## Would `list`, giving `out` and getting `got`, end past its senior spots
+## (and further past them than it started)?
+static func _senior_over(list: Array, out: Array, got: Array) -> bool:
+	var before := RookieList.senior_count(list)
+	var after := before - RookieList.senior_count(out) + got.size()
+	return after > maxi(RookieList.SENIOR_SPOTS, before)
+
+
 static func _verdict(ok: bool, code: String, ctx: Dictionary, facts := {}) -> Dictionary:
 	var f: Dictionary = facts.duplicate()
 	f["club"] = str(ctx.get("name", "They"))
