@@ -3,7 +3,7 @@ extends SceneTree
 ## Needs a real renderer and a window (keep it out of the way with an override.cfg):
 ##   godot --path . --script tools/visual/capture_group_plans.gd -- --out /tmp/gp --club FRE [--size 360x800]
 ## Weeks 1 to 3 go on Game plan. Writes <out>_whole.png (the drill row on the
-## whole side), <out>_forwards.png (the forwards' tab, Win contest added to
+## whole side), <out>_forwards.png (the forwards' tab, Win Contest added to
 ## their drills) and <out>_split.png (the whole side again, the line naming
 ## the split). Nothing here touches a real save.
 

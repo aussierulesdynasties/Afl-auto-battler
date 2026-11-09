@@ -27,7 +27,7 @@ extends SceneTree
 ##   --loose SIDE    that side plays its best interceptor loose
 ##   --tag SIDE      that side tags the other side's best midfielder
 ##   --flood SIDE    that side floods behind the ball all match (0 home, 1 away)
-##   --press SIDE    that side plays the Defensive press all match (--balanced SIDE: Balanced)
+##   --press SIDE    that side plays the Defensive Press all match (--balanced SIDE: Balanced)
 ##   --noshape       the sim keeps every call, the oval draws none of their shapes
 ##   --stack SIDE    that side stacks every centre ball-up
 ##   --plan SIDE:KEY that side plays the plan KEY all match (attacking, contest,
@@ -97,7 +97,7 @@ func _run() -> void:
 			sim.set_tactics(ts, {"gameplan": "balanced", "tag_id": str(mids[0]["id"])})
 
 	if args.has("press") or args.has("balanced"):
-		# --press SIDE / --balanced SIDE: that side plays the Defensive press
+		# --press SIDE / --balanced SIDE: that side plays the Defensive Press
 		# (or Balanced) all match, its plan held (no AI re-pick), for the
 		# press pilot's before/after on the same seed.
 		# --press both: both sides press (each side's line shows once).

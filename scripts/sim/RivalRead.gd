@@ -288,12 +288,12 @@ static func phrase(plan: String) -> String:
 	return "a balanced game" if k == "balanced" else CoachReport.plan_label(k)
 
 
-## The plans said with "the" ("Their usual game plan is the Defensive press.",
-## director, 2026-11-08); Win contest reads without it.
-const THE := {"attacking": true, "defensive": true, "controlled": true}
+## Only the Defensive Press takes "the" (director, 2026-11-08); "the Attack
+## Corridor" and "the Controlled Tempo" are wrong (director, 2026-11-09).
+const THE := {"defensive": true}
 
 
-## A plan as the report names it: "the Defensive press", "Win contest", "a
+## A plan as the report names it: "the Defensive Press", "Win Contest", "a
 ## balanced game".
 static func called(plan: String) -> String:
 	var k := MatchSim.plan_key(plan)
@@ -359,8 +359,8 @@ static func record_row(res: Dictionary, side: int) -> Dictionary:
 
 
 ## What the scoreboard has had them play this season, from a club's record
-## rows (record_row): "This season they've gone to the Attack corridor when
-## chasing and the Controlled tempo when in front." A part is left out when it
+## rows (record_row): "This season they've gone to Attack Corridor when
+## chasing and Controlled Tempo when in front." A part is left out when it
 ## is their usual game (`usual`, the plan the report names first, which their
 ## coach keeps all season: GameState._settle_usual_plans), and so is the line
 ## when nothing is left or before SEASON_MIN matches.
