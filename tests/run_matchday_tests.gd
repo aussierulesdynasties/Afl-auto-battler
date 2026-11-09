@@ -1142,13 +1142,22 @@ func _test_one_line_break(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	var was_seed = _state.replay_seed
-	_state.reset()
-	_state.replay_seed = 2050
-	_state.career_seed = 2050
-	_state.start_season("FRE", db.club_list("FRE"))
-	_state.replay_seed = was_seed
-	root.size = sz
-	_check(_state.prepare_interactive_match(), "A live match is prepared for the one-line break (%s)" % tag)
+	var drew_mel := false
+	var prepared := false
+	for tries in range(80):
+		_state.reset()
+		_state.replay_seed = 2050 + tries
+		_state.career_seed = 2050 + tries
+		_state.start_season("FRE", db.club_list("FRE"))
+		_state.replay_seed = was_seed
+		root.size = sz
+		prepared = _state.prepare_interactive_match()
+		var sq = _state.pending_sim.squads
+		if str(sq[0].code) == "MEL" or str(sq[1].code) == "MEL":
+			drew_mel = true
+			print("PROBE one-line seed ", 2050 + tries)
+			break
+	_check(prepared, "A live match is prepared for the one-line break (%s)" % tag)
 	var sim = _state.pending_sim
 	var me := int(sim.moment_side)
 	var them := str((sim.squads[1 - me] as Object).code)
@@ -2158,6 +2167,9 @@ func _test_ballup_two_scene() -> void:
 	var flood_played := false
 	for e in sim.timeline.slice(played_from):
 		flood_played = flood_played or (int(e["side"]) == me and (e["bursts"] as Array).has("flood"))
+	print("PROBE flood asked=", asked, " now=", sim.moments.size(), " last=", sim.moments[-1] if sim.moments.size() > 0 else {}, " played_from=", played_from, " tl=", sim.timeline.size(), " qtr=", sim.current_quarter, " min=", sim.current_minute, " me=", me, " bursts=", sim.bursts[me], " pending=", sim.pending_moment.get("kind", "-"), " chains_left=", sim.get("_chains_left"))
+	for e in sim.timeline.slice(played_from):
+		print("PROBE tl side=", e["side"], " bursts=", e["bursts"], " at=", e["at"])
 	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("choice_label", "")) == "Flood behind the ball"
 			and flood_played, "The tap makes the call, and the flood is on")
 	m.queue_free()
