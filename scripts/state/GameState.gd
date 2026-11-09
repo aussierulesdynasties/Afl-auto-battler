@@ -3877,6 +3877,9 @@ func _note_rival_plans(results: Array) -> void:
 			var code := str([res.get("home", ""), res.get("away", "")][side])
 			if not clubs.has(code):
 				clubs[code] = []
+			# Whose calls these were: a new coach's read starts from his first
+			# game (rival_rows).
+			row["c"] = str(Coaches.staff(coaches, code).get("SC", ""))
 			(clubs[code] as Array).append(row)
 
 
@@ -3886,7 +3889,12 @@ func rival_rows(code: String) -> Array:
 	if int(rival_plans.get("year", 0)) != season_year or not (rival_plans.get("clubs") is Dictionary):
 		return []
 	var rows = (rival_plans["clubs"] as Dictionary).get(code, [])
-	return rows if rows is Array else []
+	if not rows is Array:
+		return []
+	# Only the games of the coach there now (director, 2026-11-09). A row
+	# from an older save names no coach and stays.
+	var now := str(Coaches.staff(coaches, code).get("SC", ""))
+	return (rows as Array).filter(func(r): return str((r as Dictionary).get("c", now)) == now)
 
 
 ## Each rival coach's usual game this season (rival_plans "usual"): club ->
@@ -4588,7 +4596,8 @@ static func form_line(info: Dictionary, prefix := "Form") -> String:
 func opponent_facts(code: String) -> Array:
 	if season == null or code == "" or not season.lists.has(code):
 		return []
-	return Matchup.facts(code, season.lists, season.selections, season.club_results(code))
+	return Matchup.facts(code, season.lists, season.selections, season.club_results(code),
+			MatchSim.loose_pick(_rival_squad(code).ground, my_squad().ground))
 
 
 ## Your former players on `code`'s list (FormerPlayers.against): who left
@@ -4709,7 +4718,7 @@ func opponent_report(code: String) -> Array:
 			if str(f["key"]) == "danger":
 				danger_id = str(f.get("player_id", ""))
 	var rows := rival_rows(code)
-	for line in [RivalRead.season_line(rows, usual), RivalRead.vs_line(rows, my_club)]:
+	for line in [RivalRead.season_line(rows, usual), RivalRead.last_line(rows, my_club), RivalRead.vs_line(rows, my_club)]:
 		if line != "":
 			play.append(line)
 	var mine := my_squad()
@@ -4720,9 +4729,9 @@ func opponent_report(code: String) -> Array:
 	var loose := MatchSim.loose_pick(sq.ground, mine.ground)
 	if not loose.is_empty() and str(loose.get("id", "")) != danger_id:
 		people.append(RivalRead.loose_line(GameDB.player_display_name(loose), sq.coach_style))
-	if not MatchSim.loose_pick(mine.ground, sq.ground).is_empty() \
-			and not Matchups.minder_candidates(sq.ground).is_empty():
-		people.append(RivalRead.minder_line())
+	var minders := Matchups.minder_candidates(sq.ground)
+	if not MatchSim.loose_pick(mine.ground, sq.ground).is_empty() and not minders.is_empty():
+		people.append(RivalRead.minder_line(GameDB.player_display_name(minders[0])))
 	var coach := []
 	if sq.ai_plans:
 		var sc: Dictionary = club_staff(code).get("SC", {})
