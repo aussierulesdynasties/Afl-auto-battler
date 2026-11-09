@@ -1332,8 +1332,8 @@ const CARRY_BACK_RETUNED := {"DEF": 0.55, "MID": 1.0, "RUCK": 0.3, "FWD": 0.12}
 ## Who in a line gets it changes; how much each line gets does not.
 ## The power on the rating in the carrier pick (2026-11-09). At 2 the ball went
 ## too much to the better-rated line; at 1.4 and 1.6 midfielders came closer
-## still, but margins shrank under real AFL's; 1.7 keeps them.
-const CARRY_PICK_POW := 1.7
+## still; row 136 settled on 1.5, with key forwards' leads holding margins up.
+const CARRY_PICK_POW := 1.5
 const BALL_USE := "ball_use"
 const BALL_USE_CARRY := 0.58
 const BALL_USE_DISPOSAL := 0.42
@@ -1346,7 +1346,7 @@ const FWD_KEY_CM := 192.0
 const FWD_SMALL_CM := 181.0
 ## Lead-up work in the middle and attack zones: small half-forwards get to
 ## more of it, key forwards stay deeper.
-const LEAD_UP_SIZES := {"small": 1.25, "general": 1.15, "key": 1.0}
+const LEAD_UP_SIZES := {"small": 1.25, "general": 1.15, "key": 1.35}
 ## Who is at the fall of the ball when a contest spills or is spoiled.
 const GROUND_SIZES := {"small": 1.8, "general": 1.0, "key": 0.45}
 ## His own game in the air moves an unmatched entry's mark chance by
@@ -2278,7 +2278,7 @@ const TACKLE_SPILL := 0.5
 ## (_rebound_exit).
 const D50_KICK_GAIN := 3.0
 const D50_HANDBALL := 0.7
-const D50_PRESSURE := 0.58
+const D50_PRESSURE := 0.50
 const D50_TURNOVER := 0.15
 
 
@@ -2294,10 +2294,10 @@ const SMOTHER_CAP := 0.022
 ## 2026-11-09: more of them, spoiled more and marked less (spoils between the
 ## arcs ran far under real, contested marks over).
 ## Most ordinary kicks still use the calibrated chain model unchanged.
-const GENERAL_AERIAL_P := 0.10
-const GENERAL_SPOIL_BASE := 0.66
+const GENERAL_AERIAL_P := 0.15
+const GENERAL_SPOIL_BASE := 0.82
 ## A general-play marking contest's mark chance, level players.
-const GENERAL_MARK_P := 0.27
+const GENERAL_MARK_P := 0.18
 const GENERAL_MARK_ROLES := {"FWD": 1.0, "MID": 0.85, "DEF": 0.65, "RUCK": 0.70}
 
 
