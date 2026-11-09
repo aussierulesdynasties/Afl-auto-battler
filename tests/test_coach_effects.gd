@@ -223,11 +223,9 @@ func _test_togetherness() -> void:
 	var share := float(wins[1] - wins[0]) / 20000.0
 	_check(wins[1] > wins[0] and absf(share - 0.01) < 0.003,
 			"A 1%% edge wins about 1%% more stoppages on the same dice (%.4f)" % share)
-	var lines := CoachReport.impact_lines([{"together": 0.8}, {"together": -0.6}], [{}, {}], 0)
-	var labels := []
-	for l in lines:
-		labels.append(str(l["label"]))
-	_check(labels.has("Your togetherness") and labels.has("Their togetherness"), "The readout names it (%s)" % [labels])
+	# Director 2026-11-10: no match copy; the effect shows on the culture screen only.
+	_check(CoachReport.impact_lines([{"together": 0.8}, {"together": -0.6}], [{}, {}], 0).is_empty(),
+			"The match readout says nothing about togetherness")
 
 
 func _test_man_management() -> void:

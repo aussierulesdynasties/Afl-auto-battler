@@ -21,8 +21,8 @@ extends RefCounted
 ##   Togetherness - how much being left out of the side costs a fit player's
 ##                  morale (ClubLife.morale_after_match), and on match day
 ##                  the ball won at stoppages (row 84, director 2026-11-06:
-##                  tight and cliques are felt in matches; MatchSim's
-##                  contest_winner, credited as "together")
+##                  tight and cliques are felt in matches, medium, 2026-11-10;
+##                  MatchSim's contest_winner; shown on the culture screen only)
 ##   Ambition     - winning now: the price a player will re-sign for, and a free
 ##                  agent's weighing of the club's offer (Contracts); patient or
 ##                  rebuilding: how fast under-22s and first-season draftees

@@ -80,7 +80,6 @@ const IMPACT_LABELS := {
 	"moments": "calls at the moments", "loose": "loose defender",
 	"tag": "tag", "minder": "defensive forward",
 	"traits": "traits and synergies", "form": "team form",
-	"together": "togetherness",
 }
 
 

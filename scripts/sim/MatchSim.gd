@@ -1581,7 +1581,8 @@ func contest_winner(use_fp: bool, fp: float) -> int:
 	_credit(0, "form", FORM_CONTEST * float(form[0]) * POSSESSION_VALUE)
 	_credit(1, "form", FORM_CONTEST * float(form[1]) * POSSESSION_VALUE)
 	# Togetherness (row 84): a tight group goes in for each other at the
-	# contest, a group with cliques doesn't.
+	# contest, a group with cliques doesn't. Credited for audits only: the
+	# director wants no match copy for it (2026-11-10), only the culture screen.
 	var tog0 := float((squads[0] as Squad).together)
 	var tog1 := float((squads[1] as Squad).together)
 	_credit(0, "together", tog0 * POSSESSION_VALUE)
