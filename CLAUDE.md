@@ -67,6 +67,8 @@ supplies the vision, taste, AFL knowledge, priorities and final judgement.
   response: no "best choice" labels, suggested line-ups, recommendation
   prompts, optimal matchup hints or "one more X" checklists on the main
   surface - there may be several reasonable answers with trade-offs.
+- **Every club gets it, and options are equal (director, 2026-11-09).** Every buff or cost the player's club gets, every rival club gets too. Options such as archetypes are equal, each with real positives and negatives, and none better on the scoreboard. Never ask the director either point: "stop asking stupid questions you know the answer to".
+- **Questions only he can answer (director, 2026-11-09).** Before listing a decision for the director, search `docs/DIRECTOR_BIBLE.md`, `docs/TODO.md` and this file. Strike every question a ruling already answers and apply the ruling instead. Whoever shows him a list checks it first, including lists written by an agent.
 - **Restraint is a feature.** A good idea is not automatically a good addition.
   Prefer the simplest thing that creates the football fantasy.
 - **Challenge the director** when an idea conflicts with this philosophy, is
