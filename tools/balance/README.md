@@ -31,6 +31,11 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   each siren, interchanges and exertion: home against away, coached against rival, and for a paired run
   the coached side and its rival each against the same side on the same seed in A. Use a multiple of
   306 matches (`918`) so every club is home and away equally often.
+- **A coach's tag** (`--tag none|first|median|last|tagger`, row 120): a match plays no tag unless an arm asks.
+  Side `i % 2` tags the rival's biggest midfielder from the first bounce with that man on `MatchSim.tag_order`
+  (`first` the tightest hold, `last` the loosest; `tagger` only if he is a Tagger; `none` follows the same man
+  with no tag). `--a "--tag none" --b "--tag last"` is what the loosest tag does against none; the report's Tags
+  section gives what each midfielder's tag leaves his man, the tagged man's and tagger's lines and the margin.
 - **Main against the branch** (every A/B of a change): `--a-root <checkout of origin/main> --b ""` plays
   arm A from that other checkout and arm B from this one, on the same seeds. There are no feature switches:
   a change is in the game once merged, so the only A/B is main against the branch. Each worker log starts with

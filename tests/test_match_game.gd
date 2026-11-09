@@ -2479,6 +2479,18 @@ func _test_hot_player_moment() -> void:
 	_check(str(m.get("kind", "")) == "hot" and tagger != null
 			and str(m["options"][0]["label"]).contains(GameDB.player_display_name(tagger)),
 			"A midfielder kicking a bag can be tagged, by the midfielder who would go to him")
+	# The call says what each answer does and costs, sized from what the sim plays
+	# (row 120): what he keeps with this man on him, and what this man gives up.
+	var legs := float(sim.energy.get(str(tagger["id"]), 100.0))
+	var want := GateOdds.pct(Roles.tag_keep(tagger, legs))
+	var tag_o: Dictionary = m["options"][0]
+	var leave_o: Dictionary = m["options"][1]
+	_check(str(tag_o["gain"]).begins_with("Gain: ") and str(tag_o["gain"]).contains(want + " of his ball"),
+			"The tag call sizes what he keeps with this man on him (%s: %s)" % [want, tag_o["gain"]])
+	_check(str(tag_o["cost"]).begins_with("Cost: ") and str(tag_o["cost"]).contains(GateOdds.tag_gives()),
+			"The tag call sizes what the man who goes gives up (%s)" % tag_o["cost"])
+	_check(str(leave_o["gain"]).begins_with("Gain: ") and str(leave_o["cost"]).begins_with("Cost: "),
+			"Leaving him has its gain and its cost too")
 
 
 ## Gate 1.12: key forward v key defender. Every link: a default set-up, a
@@ -2614,10 +2626,10 @@ func _test_current_club_identity() -> void:
 
 
 ## The director (2026-10-11): how tightly a tag holds its man comes from the
-## tagger's Pressure and his legs in this match. A fresh Tagger holds as
-## tightly as before (TAG_WITH_TAGGER) and never tighter; a midfielder of
-## ordinary Pressure about as a plain tag (TAG_PLAIN); a hard presser who is
-## not a Tagger in between; and the same man holds less once he tires.
+## tagger's Pressure and his legs in this match. A fresh Tagger holds tightest
+## (TAG_WITH_TAGGER); a hard presser who is not a Tagger less so, and an ordinary
+## midfielder less again but still takes real ball off him (row 120); and the
+## same man holds less once he tires.
 func _test_tag_hold() -> void:
 	var sim := _sim(8420, "GEE", "SYD")
 	var sq: Squad = sim.squads[0]
@@ -2648,20 +2660,31 @@ func _test_tag_hold() -> void:
 	for k in ["pressure", "contested", "carry", "disposal"]:
 		(m["attr"] as Dictionary)[k] = 40
 	var plain := sim._tag_share(0)
+	# The lowest Pressure there is, and that man out of legs: the floor of a tag.
+	(m["attr"] as Dictionary)["pressure"] = 1
+	var lowest := sim._tag_share(0)
+	sim.energy[mid] = 30.0
+	var lowest_tired := sim._tag_share(0)
+	sim.energy[mid] = 100.0
 	(m["attr"] as Dictionary).merge(keep, true)
 	_check(is_equal_approx(spec, Roles.TAG_WITH_TAGGER), "A fresh Tagger holds his man as tightly as before (%.3f)" % spec)
-	_check(is_equal_approx(plain, Roles.TAG_PLAIN), "A midfielder of ordinary Pressure holds like a plain tag (%.3f)" % plain)
-	_check(hard < Roles.TAG_PLAIN and hard >= Roles.TAG_WITH_TAGGER,
-			"A hard presser who is not a Tagger holds tighter than a plain tag, never tighter than a Tagger (%.3f)" % hard)
+	_check(hard >= Roles.TAG_TIGHTEST_PLAIN and hard > spec + 0.05,
+			"A hard presser who is not a Tagger does a clearly lesser job than a Tagger (%.3f v %.3f)" % [hard, spec])
+	_check(plain > hard and plain <= Roles.TAG_LOOSEST, "An ordinary midfielder holds less than a hard presser (%.3f)" % plain)
+	_check(lowest <= Roles.TAG_LOOSEST + 0.001 and lowest >= plain,
+			"The lowest-pressure midfielder holds least (%.3f)" % lowest)
+	_check(lowest_tired < 0.8, "Every tagger takes ball off his man, even the lowest presser out of legs (%.3f kept)" % lowest_tired)
 	_check(hard_tired > hard, "The same man holds less once he tires (%.3f fresh, %.3f tired)" % [hard, hard_tired])
+	_check(plain - spec > hard - spec, "Pressure scales the hold")
+	_check(GateOdds.tag_kept(m, 80.0) == Roles.tag_keep(m, 80.0), "The card shows what the sim plays")
 	# The break screen's order is the rule's own measure: tightest hold on his
 	# legs now, then the least given up; the assistant sends the first.
 	var order := MatchSim.tag_order(sq.ground, sim.energy)
 	var sorted_ok := order.size() >= 2
 	for i in range(1, order.size()):
-		var ha := MatchSim.tag_hold(order[i - 1], float(sim.energy.get(str(order[i - 1]["id"]), 100.0)))
-		var hb := MatchSim.tag_hold(order[i], float(sim.energy.get(str(order[i]["id"]), 100.0)))
-		if ha < hb - 0.0001 or (is_equal_approx(ha, hb) and MatchSim.tag_give_up(order[i - 1], sq.ground) > MatchSim.tag_give_up(order[i], sq.ground) + 0.0001):
+		var ha := Roles.tag_keep(order[i - 1], float(sim.energy.get(str(order[i - 1]["id"]), 100.0)))
+		var hb := Roles.tag_keep(order[i], float(sim.energy.get(str(order[i]["id"]), 100.0)))
+		if ha > hb + 0.0001 or (is_equal_approx(ha, hb) and MatchSim.tag_give_up(order[i - 1], sq.ground) > MatchSim.tag_give_up(order[i], sq.ground) + 0.0001):
 			sorted_ok = false
 	_check(sorted_ok, "Who tags is listed tightest hold first, then least given up")
 	_check(str(MatchSim.tagger_for(sq.ground)["id"]) == str(MatchSim.tag_order(sq.ground)[0]["id"]),
@@ -3444,15 +3467,20 @@ func _test_tag_tradeoff() -> void:
 		var sim := _sim(5, code, opp)
 		sim.set_tactics(0, {"tag_id": str(target["id"]), "tagger_id": tagger_id})
 		return sim._tag_drag(1) - sim._tag_drag(0)
+	# The half of that which is the tag's hold on his man (_tag_parts).
+	var held := func(code: String, target: Dictionary, tagger_id: String = "") -> float:
+		var sim := _sim(5, code, opp)
+		sim.set_tactics(0, {"tag_id": str(target["id"]), "tagger_id": tagger_id})
+		return float(sim._tag_parts(1)[0])
 	var spec_star: float = edge.call(with_spec, star)
 	var spec_plain: float = edge.call(with_spec, plain)
-	# Without a specialist the hold follows his Pressure (MatchSim.tag_hold):
+	# Without a specialist the hold follows his Pressure (Roles.tag_keep):
 	# the midfielder who holds a man least (last in tag_order) plays the man
 	# for nothing much and gives up his own game.
 	# Of the clubs without one, the midfielder who holds a man least.
 	var loose_club := ""
 	var loose_id := ""
-	var loose_hold := 2.0
+	var loose_keep := 0.0
 	for code in GameDB.active_clubs(2027):
 		if code == opp:
 			continue
@@ -3460,19 +3488,26 @@ func _test_tag_tradeoff() -> void:
 		if order.is_empty() or Roles.is_tagger(order[0]):
 			continue
 		var last: Dictionary = order[order.size() - 1]
-		if MatchSim.tag_hold(last, 100.0) < loose_hold:
-			loose_hold = MatchSim.tag_hold(last, 100.0)
+		if Roles.tag_keep(last, 100.0) > loose_keep:
+			loose_keep = Roles.tag_keep(last, 100.0)
 			loose_club = code
 			loose_id = str(last["id"])
 	var mid_star: float = edge.call(loose_club, star, loose_id)
 	var mid_plain: float = edge.call(loose_club, plain, loose_id)
 	var best_plain: float = edge.call(loose_club, plain)
+	var spec_hold: float = held.call(with_spec, star)
+	var loose_hold: float = held.call(loose_club, star, loose_id)
+	var best_hold: float = held.call(loose_club, star)
 	_check(spec_star > 0.0, "A specialist tagger on their best midfielder wins us the midfield battle (%+.2f)" % spec_star)
 	_check(spec_star > 2.0 * spec_plain, "...by far more than the same tag on an ordinary one (%+.2f)" % spec_plain)
-	_check(loose_hold < 0.5 and mid_plain < 0.0 and mid_star < spec_star,
-			"Without a specialist, a midfielder who can't hold a man (%s, %.2f) gives up his own game: a loss on an ordinary one (%+.2f), less on their star (%+.2f)" % [loose_club, loose_hold, mid_plain, mid_star])
-	_check(best_plain > mid_plain,
-			"...and the side's best presser does the same job better (%+.2f v %+.2f)" % [best_plain, mid_plain])
+	_check(loose_keep > Roles.TAG_TIGHTEST_PLAIN and mid_plain < 0.0 and mid_star > mid_plain,
+			"Without a specialist, a midfielder who can't hold a man (%s, keeps %.2f) gives up his own game: a loss on an ordinary one (%+.2f), a gain on their star (%+.2f)" % [loose_club, loose_keep, mid_plain, mid_star])
+	_check(loose_hold > 0.0 and loose_hold < spec_hold,
+			"...but he takes real ball off their star, and less than a specialist (%.2f v %.2f)" % [loose_hold, spec_hold])
+	_check(best_hold > loose_hold,
+			"The side's best presser holds him tighter (%.2f v %.2f)" % [best_hold, loose_hold])
+	_check(best_plain < mid_plain,
+			"...and gives up more of his own game to do it, so on an ordinary man he costs more (%+.2f v %+.2f)" % [best_plain, mid_plain])
 	# Over paired matches: the target sees less of the ball, and a good
 	# midfielder sent to tag sees less of it too.
 	var tagger: Dictionary = MatchSim.tagger_for((_sim(5, without, opp).squads[0] as Squad).ground)
