@@ -945,7 +945,12 @@ func _test_draft_card() -> void:
 	# the club saw, and none on one it did not.
 	PreSeason.reload()
 	_to_practice()
-	var seen_id := str(GameState.preseason_prospects()[3]["id"])
+	var offered: Array = GameState.preseason_prospects().map(func(p): return str(p["id"]))
+	var held_back := 0
+	for q in GameState.draftee_pool:
+		held_back += 0 if offered.has(str(q["id"])) or GameState.drafted_draftees.has(str(q["id"])) else 1
+	_check(held_back > 0 and not offered.is_empty(), "A new club's academy holds kids back from the trial list in its build year (%d)" % held_back)
+	var seen_id := str(offered[3])
 	GameState.toggle_practice_invite(seen_id)
 	GameState.sim_practice_match()
 	_press_on()
@@ -955,6 +960,14 @@ func _test_draft_card() -> void:
 			unseen_id = str(q["id"])
 	GameState.season.round_index = GameState.season.fixture.size()
 	var drafting: bool = GameState.begin_intake_draft()
+	var missing := []
+	for id in offered:
+		var in_draft: bool = GameState.draft.picked.has(id)
+		for q in GameState.draft.pool:
+			in_draft = in_draft or str(q["id"]) == id
+		if not in_draft:
+			missing.append(id)
+	_check(drafting and missing.is_empty(), "Every kid he could trial reaches the National Draft (%s)" % str(missing))
 	var draft_scene: Control = load("res://scenes/DraftScene.tscn").instantiate()
 	tree.root.add_child(draft_scene)
 	await _frames(tree, 8)
