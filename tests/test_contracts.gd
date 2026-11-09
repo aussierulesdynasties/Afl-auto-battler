@@ -674,6 +674,10 @@ func _test_free_agents() -> void:
 			total += 1
 			var code := str(o["club"])
 			var list: Array = GameState.season.lists[code]
+			# A rival's own player testing the market keeps its re-signing offer.
+			if code == str(fa.get("home_offer", "")):
+				seen[code] = true
+				continue
 			if seen.has(code) or code == str(fa.get("released_by", "")) or code == me \
 					or int(o["salary"]) < 1 or int(o["years"]) < 1 or int(o["years"]) > Contracts.MAX_YEARS \
 					or int(o["salary"]) > GameState._cap_room_of(code) \

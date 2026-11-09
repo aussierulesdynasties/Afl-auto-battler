@@ -46,16 +46,29 @@ func _career(seed: int, seasons: int) -> void:
 	gs.reset()
 	gs.career_seed = seed
 	gs.replay_seed = seed
-	var d: Draft = dyn.make_upside_draft(seed, 5)
-	var user := d.user_club if d.user_club != "" else str(d.draft_order[0])
-	gs.draft = d
-	gs.start_season(user, [])
+	var args := OS.get_cmdline_user_args()
+	if args.size() > 3 and str(args[3]) == "ahead":
+		_years_without_you(seed, gs)
+		return
+	if args.size() > 3 and str(args[3]) == "real":
+		# The real lists start (Args: seeds seasons real).
+		gs.begin_real_lists()
+		gs.choose_real_club(str(GameDB.club_order[seed % 18]))
+		gs.draft.start_for_user("")
+		gs.finish_intake_draft()
+	else:
+		var d: Draft = dyn.make_upside_draft(seed, 5)
+		var user0 := d.user_club if d.user_club != "" else str(d.draft_order[0])
+		gs.draft = d
+		gs.start_season(user0, [])
+	var user: String = gs.my_club
 	var done := 0
 	for y in range(seasons):
 		# The lists as they stood before the last week: advance() on the last
 		# week opens the off-season itself, and rivals decide their expiring
 		# players there.
 		var before := {}
+		RookieList.settle(gs)
 		while not gs.season.is_season_over():
 			before = {}
 			for code in gs.season.lists:
@@ -69,12 +82,17 @@ func _career(seed: int, seasons: int) -> void:
 			while not gs.draft.is_finished() and guard < 5000:
 				guard += 1
 				var code: String = gs.draft.current_club()
+				gs._rival_on_clock(code, gs.draft.pick_index)
+				code = gs.draft.current_club()
 				var c: Dictionary = gs.draft._best_ai_pick(code)
 				if c.is_empty() or not gs.draft._draft_pick(code, c):
 					gs.draft._skip_current_pick()
+			print("NIGHT year %d | rival deals %d" % [gs.season_year, gs.draft.night_trades.size()])
 			gs.finish_intake_draft()
 		else:
 			gs.start_next_season()
+		if gs.season_year == year:
+			break   # sacked with no job left: the career is over
 		# Read after the rollover: the log keeps the whole off-season.
 		var walked := {}
 		var traded := {}
@@ -91,6 +109,7 @@ func _career(seed: int, seasons: int) -> void:
 			kinds[str(e.get("kind", ""))] = int(kinds.get(str(e.get("kind", "")), 0)) + 1
 		print("LOG seed %d year %d | off-season log rows %s | free agents left unsigned %d" % [
 				seed, year, str(kinds), gs.free_agents.size()])
+		_market_line(seed, year, gs.offseason_log)
 		var retired := {}
 		for r in (gs.intake_summary.get("retired", []) as Array):
 			retired[str(r["id"])] = true
@@ -135,3 +154,49 @@ func _career(seed: int, seasons: int) -> void:
 					a["drafted"], a["traded_in"], a["signed"], out_n, in_n, a["kept"]])
 		done += 1
 	print("SUMMARY seed %d user %s offseasons %d" % [seed, user, done])
+
+
+## One off-season's free agency: released players and who changed clubs.
+func _market_line(seed: int, year: int, log: Array) -> void:
+	var by_id := {}
+	for e in log:
+		if str(e.get("kind", "")) == "released":
+			by_id[str(e["id"])] = e
+	var moved := 0
+	var wanted_moved := 0
+	var returned := 0
+	var money := 0
+	for e in log:
+		if str(e.get("kind", "")) != "signed":
+			continue
+		var r: Dictionary = by_id.get(str(e["id"]), {})
+		if str(r.get("club", "")) == str(e["club"]):
+			returned += 1
+		else:
+			moved += 1
+			if bool(r.get("wanted", false)):
+				wanted_moved += 1
+			money += int(e.get("salary", 0))
+	var new_club := 0
+	for e in log:
+		if str(e.get("kind", "")) == "signed" and str(e["club"]) == "TAS":
+			new_club += 1
+	print("MARKET seed %d year %d | released %d wanted %d | signed elsewhere %d returned %d | salaries %d | to TAS %d | out of contract moved %d" % [
+			seed, year, by_id.size(), by_id.values().filter(func(e): return bool(e.get("wanted", false))).size(),
+			moved, returned, money, new_club, wanted_moved])
+
+
+## The years played without you, by the same step the cover uses (Args: seeds
+## seasons ahead).
+func _years_without_you(seed: int, gs) -> void:
+	gs.begin_sim_ahead()
+	var logs := {}
+	var line := "start"
+	while line != "":
+		line = gs.sim_ahead_step()
+		if not gs.offseason_log.is_empty():
+			logs[int(gs.offseason_year)] = gs.offseason_log.duplicate()
+	for y in logs:
+		_market_line(seed, y, logs[y])
+	print("SUMMARY seed %d ahead to %d" % [seed, gs.season_year])
+
