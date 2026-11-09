@@ -4706,8 +4706,8 @@ const FIT_SLOPE := 0.25
 
 
 func fit(p: Dictionary) -> float:
-	var id := str(p["id"])
-	var e := float(energy.get(id, 100.0))
+	var id: String = p["id"]
+	var e: float = energy.get(id, 100.0)
 	var hit = _fit_cache.get(id)
 	if hit != null and hit[0] == e:
 		return hit[1]
@@ -4733,10 +4733,12 @@ func _trait_note(p) -> void:
 
 
 func _trait(p: Dictionary, key: String) -> bool:
-	var id := str(p.get("id", ""))
-	if not _traits.has(id):
-		_traits[id] = Traits.of(p)
-	return (_traits[id] as Array).has(key)
+	var id: String = p.get("id", "")
+	var known = _traits.get(id)
+	if known == null:
+		known = Traits.of(p)
+		_traits[id] = known
+	return known.has(key)
 
 
 ## A player's attribute as he is playing right now.
