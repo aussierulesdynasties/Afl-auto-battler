@@ -145,9 +145,12 @@ func _strengthen() -> void:
 func _print_nz() -> void:
 	for p in GameState.my_list:
 		if InternationalProspects.region(p) == "nz":
-			print("NZSTATE %d %s ovr %d pot %d years %d morale %d seasons %d" % [GameState.season_year, str(p["id"]),
+			var room: int = GameState.cap_for(str(GameState.my_club)) - GameState.my_payroll()
+			var over: int = ClubLife.early_price(p) - int(p.get("salary", 0))
+			print("NZSTATE %d %s ovr %d pot %d years %d morale %d drafted %d wanted %s price_over %d cap_room %d" % [GameState.season_year, str(p["id"]),
 					int(p.get("overall", 0)), int(p.get("potential", 0)), int(p.get("contract_years", 0)),
-					int(ClubLife.morale(p)), int(p.get("seasons_listed", -1))])
+					int(ClubLife.morale(p)), int(p.get("drafted_year", -1)),
+					str(ClubLife.extension_wanted(p, {}, ClubLife.INTL_EXTENSION_MIN_OVR)), over, room])
 
 
 func run() -> void:
