@@ -1119,15 +1119,14 @@ func _mid_value(p: Dictionary, n_centre: int, n_mids: int) -> float:
 	return v
 
 
-## How much of the ball the player `side` tags still gets: from TAG_PLAIN
-## down to TAG_WITH_TAGGER as the man on him holds tighter (tag_hold: his
-## Pressure and his legs now, so a tiring tagger lets him off the leash).
+## How much of the ball the player `side` tags still gets (Roles.tag_keep: the
+## Pressure of the man on him and his legs now, so a tiring tagger lets him off
+## the leash).
 func _tag_share(side: int) -> float:
 	var t = tagger_of(side)
 	if t == null:
-		return Roles.TAG_PLAIN
-	var hold := tag_hold(t, float(energy.get(str(t["id"]), 100.0)))
-	return Roles.TAG_PLAIN - (Roles.TAG_PLAIN - Roles.TAG_WITH_TAGGER) * hold
+		return Roles.TAG_LOOSEST
+	return Roles.tag_keep(t, float(energy.get(str(t["id"]), 100.0)))
 
 
 # ---------------------------------------------------------------------------
@@ -5325,17 +5324,20 @@ func _boundary_moment() -> bool:
 		# The midfielder who would actually go to him (tagger_for).
 		var minder = tagger_of(me)
 		var stopper := GameDB.player_display_name(minder) if minder != null else "a midfielder"
-		var cost := ("Tagging is %s's job: he takes more of the ball off him and gives up little." % stopper) \
-				if minder != null and Roles.is_tagger(minder) else \
-				("%s is no tagger: he gives up his own game to do it." % stopper)
+		var hot_name := GameDB.player_display_name(hot)
+		# The size of the call, from what the sim plays (GateOdds; row 120).
+		var on_him: Dictionary = minder if minder != null else {}
+		var kept := GateOdds.tag_kept(on_him, float(energy.get(str(on_him.get("id", "")), 100.0)))
 		_fire({"kind": "hot", "player_id": str(id), "default": 1,
-			"title": "%s has kicked %d" % [GameDB.player_display_name(hot), int(st["goals"])],
-			"text": "Their midfielder is hurting you on the scoreboard. A tag takes a good chunk of the ball off him, but your stopper stops playing his own game.",
+			"title": "%s has kicked %d" % [hot_name, int(st["goals"])],
+			"text": "Their midfielder is hurting you on the scoreboard.",
 			"options": [
 				{"key": "tag", "label": "Tag him with %s" % stopper,
-					"detail": "Until you call it off. " + cost},
+					"gain": GateOdds.gain(GateOdds.TAG_HOT_GAIN % [hot_name, GateOdds.pct(kept), stopper]),
+					"cost": GateOdds.cost(GateOdds.TAG_HOT_COST % [stopper, GateOdds.tag_gives()])},
 				{"key": "leave", "label": "Back your defenders",
-					"detail": "Keep the structure as it is."},
+					"gain": GateOdds.gain(GateOdds.TAG_LEAVE_GAIN),
+					"cost": GateOdds.cost(GateOdds.TAG_LEAVE_COST % hot_name)},
 			]})
 		return true
 	# Three goals in a row against.
@@ -6305,13 +6307,6 @@ static func tagger_for(ground: Array):
 	return null if order.is_empty() else order[0]
 
 
-## How tightly `p` holds the man he tags, 0 to 1 (director, 2026-10-11): his
-## Pressure (Roles.tag_press, 1 for a Tagger) times his legs now (energy
-## out of 100). A fresh Tagger is 1, today's tightest tag, and never more.
-static func tag_hold(p: Dictionary, legs: float) -> float:
-	return Roles.tag_press(p) * clampf(legs / 100.0, 0.0, 1.0)
-
-
 ## What sending `p` to a tag gives up of his own game: his part in the
 ## side's midfield contest from his ratings (as _mid_value: disposal, and
 ## contested ball unless he plays on a wing).
@@ -6331,7 +6326,7 @@ static func tag_give_up(p: Dictionary, ground: Array) -> float:
 
 
 ## The side's midfielders on the ground in the order a coach would send them
-## to a tag: the tightest hold first (tag_hold, on `legs` by id, else his
+## to a tag: the tightest hold first (Roles.tag_keep, on `legs` by id, else his
 ## starting legs), then the least given up of his own game. The assistant
 ## and the AI send the first; the break screen lists them in this order.
 static func tag_order(ground: Array, legs: Dictionary = {}) -> Array:
@@ -6340,10 +6335,10 @@ static func tag_order(ground: Array, legs: Dictionary = {}) -> Array:
 		if not midfielder_on_ground(p):
 			continue
 		var e := float(legs.get(str(p["id"]), _start_energy(p)))
-		rows.append([tag_hold(p, e), tag_give_up(p, ground), str(p["id"]), p])
+		rows.append([Roles.tag_keep(p, e), tag_give_up(p, ground), str(p["id"]), p])
 	rows.sort_custom(func(a, b):
 		if not is_equal_approx(float(a[0]), float(b[0])):
-			return float(a[0]) > float(b[0])
+			return float(a[0]) < float(b[0])
 		if not is_equal_approx(float(a[1]), float(b[1])):
 			return float(a[1]) < float(b[1])
 		return str(a[2]) < str(b[2]))

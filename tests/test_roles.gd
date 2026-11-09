@@ -242,9 +242,10 @@ func _test_tagger() -> void:
 	for p in home.ground:
 		if Roles.is_tagger(p):
 			has = true
-	_check(sim._tag_share(0) == (Roles.TAG_WITH_TAGGER if has else Roles.TAG_PLAIN),
+	var share := sim._tag_share(0)
+	_check(is_equal_approx(share, Roles.TAG_WITH_TAGGER) if has else share > Roles.TAG_WITH_TAGGER,
 			"The tag share follows whether a tagger is on the ground")
-	_check(Roles.TAG_WITH_TAGGER < Roles.TAG_PLAIN, "A tagger takes more of the ball off his man")
+	_check(Roles.TAG_WITH_TAGGER < Roles.TAG_TIGHTEST_PLAIN, "A tagger takes more of the ball off his man than anyone else can")
 	# A tag is a midfield job: a tag on a defender or forward does nothing,
 	# and the player who goes to the tagged man is a midfielder.
 	var t = MatchSim.tagger_for(home.ground)

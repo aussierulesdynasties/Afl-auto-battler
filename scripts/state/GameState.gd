@@ -2138,6 +2138,7 @@ func begin_intake_draft() -> bool:
 	open_offseason()
 	recruit_undo.clear()
 	_close_free_agency()
+	Season.beat()
 	if draftee_pool.is_empty() and season_year == GameDB.DATA_SEASON:
 		# A career begun in 2026 (before 2027 starts) still drafts the real
 		# 2026 class at its first season's end.
@@ -2315,6 +2316,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# Undecided assistants stay; then no staff job starts the season empty.
 	_settle_staff_contracts()
 	_fill_open_staff()
+	Season.beat()
 	# The honour board (row 122): anyone who left in the off-season (a trade,
 	# free agency) is stamped with the season he left after, before the year
 	# turns over and before a club move changes whose board it is.
@@ -2329,6 +2331,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 			for p in season.lists[code]:
 				played[str(p["id"])] = p
 		Career.close_season(played, season_tally, season_year, season_stats, season_stats_from)
+	Season.beat()
 	# Next year's generated class joins the pool before ageing, so the fresh
 	# 17-year-olds are also a year older in the season they arrive.
 	var generated := Prospects.generate_class(next_year, career_seed)
@@ -2338,9 +2341,11 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	for p in generated:
 		draftee_pool.append(p)
 
+	Season.beat()
 	# Free agents are on no list until a rival signs them, so heal after
 	# free agency closes, and heal the season's lists too.
 	_close_contracts()
+	Season.beat()
 	# A club that built its list (ExpansionBuild) brings it now, so its
 	# players age into their first season with everyone else.
 	for code in GameDB.club_order:
@@ -2402,7 +2407,9 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# The season's training, measured on the season's lists before anyone
 	# ages or retires; given back after ageing, before the re-anchor (row 90).
 	var train_unwind := Prospects.training_unwind(league_lists, next_year)
+	Season.beat()
 	intake_summary = Prospects.age_league(league_lists, next_year)
+	Season.beat()
 	intake_summary["signed"] = signed
 	_retirees_to_coaching(intake_summary.get("retired", []), listed)
 	Almanac.add_legends(self, intake_summary.get("retired", []), listed)
@@ -2413,6 +2420,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 					GameDB.club_name(str(r["club"])), int(float(r["age"]))])
 	intake_summary["year"] = next_year
 	draftee_pool = Prospects.age_pool(draftee_pool, next_year, drafted_draftees)
+	Season.beat()
 	# Expansion: any club whose first season is next_year arrives with a
 	# generated list (aged across the full range, not just a rookie class),
 	# so it ages, drafts, trains and simulates like every other club.
@@ -2427,6 +2435,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	Prospects.apply_training_unwind(league_lists, train_unwind)
 	intake_summary["renormalised"] = Prospects.renormalise_league(league_lists,
 		draftee_pool, GameDB.baseline_overall, GameDB.baseline_spread)
+	Season.beat()
 
 	# One array per club from here on: the season, the league lists and your
 	# list are the same arrays, so trades and signings touch them all.
@@ -2442,6 +2451,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	season = Season.new(GameDB.active_clubs(next_year).duplicate(), lists,
 			_clock_seed(3))
 	_sync_dual()
+	Season.beat()
 	# The cap moves with the new season before contracts are assigned.
 	salary_cap = Contracts.salary_cap_for_year(next_year)
 	# Expansion lists are born here, so their contracts must be assigned
@@ -2461,6 +2471,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	pending_match = {}
 	pending_sim = null
 	_collect_others()
+	Season.beat()
 	pending_round_results = []
 	pending_phase = ""
 	pending_label = ""
@@ -6857,6 +6868,7 @@ func open_offseason(keep_staff := false) -> void:
 	var testing := []
 	var testers := {}
 	for code in season.lists:
+		Season.beat()
 		if code == my_club:
 			continue
 		var list: Array = season.lists[code]
@@ -6903,7 +6915,9 @@ func open_offseason(keep_staff := false) -> void:
 	trade_offers = []
 	trade_table = []
 	_collect_trade_requests()
+	Season.beat()
 	_open_trade_market()
+	Season.beat()
 	# The market opens: rivals put their offers on the table. Last year's
 	# signings are last year's: each club aims for its targets afresh (they
 	# were never cleared, so year 2's opening offers were cut by year 1's
@@ -6914,6 +6928,7 @@ func open_offseason(keep_staff := false) -> void:
 	_bars = {}
 	_fa_phase = {}
 	_open_market(free_agents)
+	Season.beat()
 	mark_dirty()
 
 
