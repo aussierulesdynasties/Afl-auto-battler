@@ -35,8 +35,7 @@ func _ready() -> void:
 	name = "CombineScreen"
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	# The whole class, drafted or not: the day doesn't change once he's gone.
-	_pool = (draft.pool + draft.picked.values()).filter(func(p): return bool(p.get("projected", false)))
+	_pool = _whole_class()
 	for t in Combine.TESTS:
 		var key := str(t[0])
 		_ranked[key] = Combine.ranked(_pool, key, draft.seed)
@@ -56,6 +55,19 @@ func _ready() -> void:
 	_fit()
 	_build()
 	_return_to_place()
+
+
+## The whole class, drafted or not: the day doesn't change once he's gone. A
+## drafted man stays in the draft's pool as well as its picks: list him once.
+func _whole_class() -> Array:
+	var seen := {}
+	var out := []
+	for p in draft.pool + draft.picked.values():
+		var id := str(p.get("id", ""))
+		if not seen.has(id) and bool(p.get("projected", false)):
+			seen[id] = true
+			out.append(p)
+	return out
 
 
 ## A phone column on a wide window.
@@ -194,7 +206,7 @@ func _turned_heads() -> void:
 	_body.add_child(UiKit.lbl("Turned heads", UiKit.HEADING, StatsSide.mine_ink(), true))
 	for r in rows:
 		var p: Dictionary = r["p"]
-		var b := _tap_row(p, Combine.top_ten_words(r["tests"]), "", "", 0)
+		var b := _tap_row(p, Combine.top_ten_words(r["tests"]), "", "", -1)
 		b.name = "TurnedHeads_" + str(p.get("id", ""))
 		_body.add_child(b)
 
@@ -306,6 +318,8 @@ func _kind(p: Dictionary) -> String:
 	return PlayerProfile.player_type(p)
 
 
+## `rank`: his place on a board; 0 keeps the column empty so his name lines up
+## with the ranked rows; below 0 there is no column at all.
 func _tap_row(p: Dictionary, under: String, figure: String, standing: String, rank: int) -> Button:
 	var b := Button.new()
 	b.flat = true
@@ -313,12 +327,13 @@ func _tap_row(p: Dictionary, under: String, figure: String, standing: String, ra
 	b.custom_minimum_size.y = 60
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var id := str(p.get("id", ""))
+	b.set_meta("prospect_id", id)
 	b.pressed.connect(func(): inspect.emit(id))
 	var face := UiKit.hbox(8)
 	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	b.add_child(face)
-	if rank > 0:
-		var ranks := UiKit.line(str(rank), UiKit.NAME, UiKit.MUTED, true)
+	if rank >= 0:
+		var ranks := UiKit.line(str(rank) if rank > 0 else "", UiKit.NAME, UiKit.MUTED, true)
 		ranks.name = "Rank"
 		ranks.custom_minimum_size.x = 28
 		ranks.size_flags_vertical = Control.SIZE_SHRINK_CENTER
