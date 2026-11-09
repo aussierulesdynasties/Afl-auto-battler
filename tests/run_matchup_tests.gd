@@ -40,6 +40,7 @@ func _run() -> void:
 	_failures.append_array(suite.failures)
 	await _t("_test_hub_tests")
 	await _t("_test_poster_ball")
+	await _t("_test_hub_hero")
 	await _t("_test_facts_without_options")
 	_t("_test_no_ruck_tag")
 	_t("_test_gate_odds")
@@ -481,6 +482,96 @@ func _test_season_wrap() -> void:
 	await _settle()
 
 
+## The poster leads the hub (6.Q2): first in the week, the week's other asks
+## under it, the decision pinned in view on a phone; a card still waiting on the
+## coach stands above it (director, 2026-11-08) and the poster still shows.
+func _test_hub_hero() -> void:
+	var db = root.get_node("GameDB")
+	root.size = Vector2i(390, 844)
+	_reset()
+	_state.set_setting("seen_weekly_loop_intro", true)
+	_state.start_season("FRE", db.club_list("FRE"))
+	var hub := await _open_hub()
+	var week: Control = hub.find_child("ThisWeek", true, false)
+	var poster: Control = hub.find_child("MatchPoster", true, false)
+	_check(week != null and poster != null and poster.get_parent() == week and poster.get_index() == 0,
+			"The poster is the first thing in the week")
+	var page: ScrollContainer = hub.find_children("*", "ScrollContainer", true, false)[0]
+	var play: Button = hub.find_child("PlayMatch", true, false)
+	var pick: Button = _button(hub, "Pick the side")
+	_check(play != null and pick != null and not page.is_ancestor_of(play) and not page.is_ancestor_of(pick),
+			"On a phone Pick the side and Play match are pinned under the page")
+	var window := Rect2(Vector2.ZERO, hub.get_viewport_rect().size)
+	_check(play != null and window.encloses(play.get_global_rect()) and window.encloses(pick.get_global_rect()),
+			"Both are on the first screen")
+	# Their routes unhooked, so the taps do not leave the hub mid-test.
+	for b in [pick, play]:
+		for c in b.pressed.get_connections():
+			b.pressed.disconnect(c["callable"])
+		var why: String = await Tap.tap(b)
+		_check(why == "", "A real tap reaches %s where it is pinned (%s)" % [b.text, why])
+	hub.queue_free()
+	await _settle()
+	# A job or a notice sits under the poster, never above it.
+	_state.staff_vacancies = [{"reason": "Your head of list management has left."}]
+	hub = await _open_hub()
+	week = hub.find_child("ThisWeek", true, false)
+	poster = hub.find_child("MatchPoster", true, false)
+	var notice: Control = hub.find_child("StaffNotice", true, false)
+	_check(poster != null and poster.get_index() == 0 and notice != null and notice.get_index() > poster.get_index(),
+			"With more to ask, the poster still leads the week")
+	_state.staff_vacancies = []
+	hub.queue_free()
+	await _settle()
+	# A card waiting on the coach comes first; the poster is under it with no
+	# hole between, so its colours run under the fade.
+	var card: Dictionary = _state.story_card("members_open_training")
+	card["popped"] = true
+	_state.week_events = [card]
+	hub = await _open_hub()
+	await _settle()
+	var waiting: Control = hub.find_child("WaitingEvents", true, false)
+	poster = hub.find_child("MatchPoster", true, false)
+	page = hub.find_children("*", "ScrollContainer", true, false)[0]
+	_check(waiting != null and poster != null
+			and waiting.get_global_rect().position.y < poster.get_global_rect().position.y,
+			"A waiting card stands above the poster")
+	_check(hub.find_child("HubFoldGap", true, false) == null or poster == null
+			or poster.get_index() == 0, "No gap is pushed in over the poster")
+	_check(poster != null and poster.get_global_rect().position.y < page.get_global_rect().end.y,
+			"The poster starts on the first screen under the card (%s in %s)" % [
+			poster.get_global_rect() if poster != null else "-", page.get_global_rect()])
+	hub.queue_free()
+	await _settle()
+	_state.week_events = []
+	# Every club's name is whole on the poster and the two match, down to 320 wide.
+	var codes: Array = db.players_by_club.keys()
+	_check(codes.size() >= 18, "Every club is walked (%d)" % codes.size())
+	var Poster = load("res://scripts/ui/MatchPoster.gd")
+	for w in [320, 390]:
+		var whole := true
+		var same := true
+		for code in codes:
+			var holder := Control.new()
+			holder.size = Vector2(w - 54, 300)
+			root.add_child(holder)
+			var other: String = codes[0] if code != codes[0] else codes[1]
+			var one: Control = Poster.new().setup(code, other, true, "Home · MCG · Wet", true)
+			one.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			holder.add_child(one)
+			await _settle()
+			var sizes := {}
+			for lab: Label in one._names:
+				var fs := lab.get_theme_font_size("font_size")
+				sizes[fs] = true
+				if lab.get_theme_font("font").get_string_size(lab.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > lab.size.x + 0.5:
+					whole = false
+			same = same and sizes.size() == 1
+			holder.free()
+		_check(whole, "%d wide: no club's name is cut off on the poster" % w)
+		_check(same, "%d wide: the two names are the same size" % w)
+
+
 ## A fresh career on the suite's seeds (tools/audit/README.md: both seeds,
 ## after reset and before start_season).
 ## The match ball on the poster (director, 2026-10-14): the real picture
@@ -515,7 +606,10 @@ func _test_poster_ball() -> void:
 		var crests := poster.find_children("ClubMarker", "", true, false)
 		var clear := poster.get_global_rect().grow(0.5).encloses(ball.get_global_rect())
 		for c in crests:
-			clear = clear and not (c as Control).get_global_rect().grow(7.5).intersects(ball.get_global_rect())
+			# The guernsey as drawn, narrower than its box.
+			var box := (c as Control).get_global_rect()
+			var drawn := box.grow_individual(-box.size.x * 0.2, 0, -box.size.x * 0.2, 0)
+			clear = clear and not drawn.grow(7.5).intersects(ball.get_global_rect())
 		var venue: Label = poster.find_child("MatchVenue", true, false)
 		clear = clear and not venue.get_global_rect().intersects(ball.get_global_rect())
 		_check(crests.size() == 2 and clear and absf(ball.get_global_rect().get_center().x - poster.get_global_rect().get_center().x) <= 1.0,
