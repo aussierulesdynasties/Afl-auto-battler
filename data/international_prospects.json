@@ -25,7 +25,7 @@
       }]
     },
     {
-      "id": "NZL", "region": "nz", "name": "New Zealand", "demonym": "New Zealander", "weight": 3,
+      "id": "NZL", "region": "nz", "name": "New Zealand", "demonym": "New Zealander", "weight": 3, "raw_shift": 3.0, "raw_ceiling": 15.0,
       "age": [18, 20], "height": [185, 200],
       "roles": {"MID": 4, "DEF": 3, "FWD": 2, "RUCK": 1},
       "bias": {"contested": 5, "pressure": 4, "disposal": -2, "accuracy": -3, "creating": -1},
