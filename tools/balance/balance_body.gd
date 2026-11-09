@@ -29,8 +29,10 @@ const TANK := 40.0
 ## --arrivals league: how many new-club men and draftees a selected side carries in
 ## Rounds 1-6, as weights for 0, 1, 2 .. men, measured over seeded careers by
 ## tools/audit/familiarity_impl.gd (TeamFamiliarity, row 125).
-const LEAGUE_NEW_CLUB := [1.0]
-const LEAGUE_DRAFTEES := [1.0]
+## Computer clubs, seeds 301-303 over four counted seasons; draftees leave out an
+## expansion club's foundation year (14 or more).
+const LEAGUE_NEW_CLUB := [378.0, 373.0, 262.0, 125.0, 59.0, 39.0, 42.0, 5.0, 3.0, 9.0, 1.0]
+const LEAGUE_DRAFTEES := [279.0, 595.0, 318.0, 76.0, 7.0, 3.0]
 
 
 func play(from: int, count: int, out: String, weather: String,
