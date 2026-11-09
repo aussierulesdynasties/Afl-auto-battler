@@ -870,8 +870,7 @@
 			"where": {
 				"captain": true,
 				"fit": true,
-				"selected": true,
-				"morale_max": 70
+				"selected": true
 			},
 			"pick": "random"
 		},
@@ -949,7 +948,7 @@
 		"beat": "start",
 		"choice_notes": true,
 		"when": {
-			"losing_run_min": 2
+			"losing_run_min": 3
 		}
 	},
 	{
