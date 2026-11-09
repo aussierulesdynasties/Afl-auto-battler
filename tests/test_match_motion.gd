@@ -329,6 +329,19 @@ func _motion_calls(res: Dictionary) -> Dictionary:
 ## games (director, 2026-11-03): one game's moments are a sample, so each
 ## measure is its mean over SWEEP_SEEDS, held to the same bound.
 func _test_motion_averaged(results: Array) -> void:
+	# The ring's men keep their order round it: taking the nearest free spot one
+	# by one sent the last of these four across the pack (1.2 rad to -0.79 rad),
+	# through the four on the ball as it went up (seed 43, 2026-11-10).
+	var bearings := [-2.5, 0.2, 1.1, 1.2]
+	var ring_slots := [0.25 * PI, 0.75 * PI, 1.25 * PI, 1.75 * PI]
+	var pick: Array = MatchDirector._ring_slots(bearings, ring_slots)
+	var turn_most := 0.0
+	var taken := {}
+	for i in range(pick.size()):
+		taken[int(pick[i])] = true
+		turn_most = maxf(turn_most, absf(wrapf(float(ring_slots[int(pick[i])]) - float(bearings[i]), -PI, PI)))
+	_check(pick.size() == 4 and taken.size() == 4 and turn_most < PI * 0.5,
+			"A Win Contest ring sends nobody round to the far side of the pack: four men, four spots, none more than a quarter turn from where he stands (%.2f rad at most, %s)" % [turn_most, str(pick)])
 	var keys := ["vis_low_share", "vis_min0", "vis_min1", "inner_most", "inner_side_most", "pack_gap"]
 	var mean := {}
 	for k in keys:
