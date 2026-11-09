@@ -11,6 +11,11 @@ const TEXT := {
 		"This is where you pick the kids who will carry your club in five years.",
 		"When your pick comes up, choose a player from the pool.",
 	]],
+	"combine": ["The Combine", [
+		"Four tests on the day, and every club sees the same results.",
+		"They tell you about the athlete: speed, running, spring, kicking. They don't tell you he can play.",
+		"His junior numbers and your scouts' guess at OVR and POT are on his sheet. Tap a name to weigh it up.",
+	]],
 	"selection": ["Picking the side", [
 		"Your match-day 23 for this week. Until you move someone, the best side is picked for you.",
 		"Move players on and off the field to set the team you want.",

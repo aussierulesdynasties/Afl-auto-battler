@@ -1,0 +1,202 @@
+name: Run on GitHub
+
+# Runs what would otherwise tie up the PC (director 2026-11-10: "delegate more to github to free the pc up").
+# Start it against any branch; it only measures, and never pushes or comments.
+#
+#   gh workflow run run_on_github.yml --ref <branch> -f what=suites -f suites="story preseason"
+#   gh workflow run run_on_github.yml --ref <branch> -f what=balance -f base=main          # paired: main v this branch
+#   gh workflow run run_on_github.yml --ref <branch> -f what=balance -f b="--on my_switch" # paired: this branch, switch off v on
+#   gh workflow run run_on_github.yml --ref <branch> -f what=histories
+#
+# Results: suite logs are artifacts run-logs-<suite>; a balance report is in the run summary and artifact
+# run-balance; regenerated histories are artifact run-histories (unzip into data/histories, then commit).
+on:
+  workflow_dispatch:
+    inputs:
+      what:
+        description: "suites, balance or histories"
+        required: true
+        type: choice
+        options: [suites, balance, histories]
+      suites:
+        description: "suites: names separated by spaces"
+        required: false
+        default: ""
+        type: string
+      matches:
+        description: "balance: number of matches"
+        required: false
+        default: "1000"
+        type: string
+      base:
+        description: "balance: ref to pair against as arm A (for example main)"
+        required: false
+        default: ""
+        type: string
+      a:
+        description: "balance: harness arguments for arm A"
+        required: false
+        default: ""
+        type: string
+      b:
+        description: "balance: harness arguments for arm B"
+        required: false
+        default: ""
+        type: string
+
+# No concurrency group on purpose: these only measure, so any number can run at once.
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  plan:
+    if: inputs.what == 'suites'
+    runs-on: ubuntu-latest
+    outputs:
+      suites: ${{ steps.list.outputs.suites }}
+    steps:
+      - id: list
+        env:
+          SUITES: ${{ inputs.suites }}
+        run: |
+          if ! [[ "$SUITES" =~ ^[a-z0-9_]+( [a-z0-9_]+)*$ ]]; then
+            echo "::error::suites must be suite names separated by single spaces"
+            exit 1
+          fi
+          echo "suites=$(echo "$SUITES" | tr ' ' '\n' | python3 -c 'import json,sys; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')" >> "$GITHUB_OUTPUT"
+
+  suite:
+    name: suite ${{ matrix.suite }}
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: ${{ fromJSON(needs.plan.outputs.suites) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+      - name: Download Godot
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          curl -fsSL --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip" \
+          || curl -fsSL --retry 3 -o godot.zip \
+            "https://downloads.godotengine.org/?version=${GODOT_VERSION}&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
+          unzip -q godot.zip && rm godot.zip
+          mv "${name}" godot && chmod +x godot
+      - name: Run ${{ matrix.suite }}
+        env:
+          SUITE: ${{ matrix.suite }}
+        run: SUITE_TIMEOUT=3000 SUITES_ONLY=1 GODOT="$HOME/godot/godot" LOG_DIR="$RUNNER_TEMP/test-logs" tools/run_tests.sh "$SUITE"
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-logs-${{ matrix.suite }}
+          path: ${{ runner.temp }}/test-logs
+          if-no-files-found: ignore
+          retention-days: 14
+
+  balance:
+    if: inputs.what == 'balance'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out the base arm
+        if: inputs.base != ''
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base }}
+          path: _base
+      - name: Keep the base arm out of this project
+        if: inputs.base != ''
+        run: mv _base ../_base
+      - name: Cache Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+      - name: Download Godot
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          curl -fsSL --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip" \
+          || curl -fsSL --retry 3 -o godot.zip \
+            "https://downloads.godotengine.org/?version=${GODOT_VERSION}&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
+          unzip -q godot.zip && rm godot.zip
+          mv "${name}" godot && chmod +x godot
+      - name: Run the screen
+        env:
+          MATCHES: ${{ inputs.matches }}
+          BASE: ${{ inputs.base }}
+          ARM_A: ${{ inputs.a }}
+          ARM_B: ${{ inputs.b }}
+        run: |
+          set +e
+          cmd=(tools/balance.sh match "$MATCHES")
+          [ -z "$ARM_A" ] || cmd+=(--a "$ARM_A")
+          [ -z "$BASE" ] || cmd+=(--a-root ../_base)
+          if [ -n "$ARM_B" ] || [ -n "$BASE" ]; then cmd+=(--b "$ARM_B"); fi
+          GODOT="$HOME/godot/godot" JOBS=4 OUT="$RUNNER_TEMP/balance" "${cmd[@]}" 2>&1 | tee "$RUNNER_TEMP/balance-report.txt"
+          code=${PIPESTATUS[0]}
+          { echo '```'; cat "$RUNNER_TEMP/balance-report.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-balance
+          path: ${{ runner.temp }}/balance-report.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
+  histories:
+    if: inputs.what == 'histories'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+      - name: Download Godot
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          curl -fsSL --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip" \
+          || curl -fsSL --retry 3 -o godot.zip \
+            "https://downloads.godotengine.org/?version=${GODOT_VERSION}&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
+          unzip -q godot.zip && rm godot.zip
+          mv "${name}" godot && chmod +x godot
+      - name: Import the project
+        run: timeout 600 "$HOME/godot/godot" --headless --path . --editor --import > import.log 2>&1 || true
+      - name: Regenerate
+        run: GODOT="$HOME/godot/godot" JOBS=4 tools/histories/regen.sh
+      - name: Upload the histories
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-histories
+          path: data/histories/*.hist
+          retention-days: 14

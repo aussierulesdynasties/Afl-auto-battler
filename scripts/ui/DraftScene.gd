@@ -84,6 +84,9 @@ var _name_index := {}       # player name -> club, for the ink in a pick's story
 var _detail_id := ""
 var _detail: Control
 var _detail_all := false
+## The Combine (row 83): its screen while open, and where the coach was in it.
+var _combine: CombineScreen = null
+var _combine_place := {}
 
 
 func _ready() -> void:
@@ -402,7 +405,33 @@ func _header(title_text: String, sub: String) -> Control:
 		sub_l.name = "DraftSubtitle"
 		sub_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(sub_l)
+	if _phase == "board" and _draft != null and _draft.intake_mode:
+		h.add_child(_combine_button())
 	return h
+
+
+func _combine_button() -> Button:
+	var b := UiKit.btn("Combine", UiKit.SECONDARY)
+	b.name = "CombineEntry"
+	b.custom_minimum_size = Vector2(88, 44)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.pressed.connect(_open_combine)
+	return b
+
+
+## The Combine (row 83): over the board, so the pool stays where it was left. A
+## prospect's sheet opens over it in turn and comes back to the same place.
+func _open_combine() -> void:
+	_finish_night()
+	if is_instance_valid(_combine):
+		return
+	_combine = CombineScreen.new()
+	_combine.draft = _draft
+	_combine.club = _club
+	_combine.place = _combine_place
+	_combine.inspect.connect(_open_player)
+	add_child(_combine)
+	FirstVisitIntro.show_if_due(self, "combine")
 
 
 ## Draft night's hero (director, 2026-10-14): the guernsey of the club on the
@@ -540,6 +569,8 @@ func _compact_header() -> Control:
 	_cap.name = "SalaryCap"
 	_cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	h.add_child(_cap)
+	if _draft.intake_mode:
+		h.add_child(_combine_button())
 	return h
 
 
@@ -1108,6 +1139,9 @@ func _player_row(p: Dictionary) -> Control:
 
 func _on_pick(player: Dictionary) -> void:
 	_finish_night()
+	# Made from his sheet over the Combine: the pick lands on the board.
+	if is_instance_valid(_combine):
+		_combine.close()
 	var before := _draft.pick_history.size()
 	_last_batch_start = before
 	if _draft.pick(player):
@@ -1395,13 +1429,17 @@ func handle_back() -> bool:
 		_trade_sheet.queue_free()
 		_trade_sheet = null
 		return true
+	# A sheet over the Combine, the Combine over the meeting: each closes in turn.
+	if is_instance_valid(_detail):
+		_close_player()
+		return true
+	if is_instance_valid(_combine) and not _combine.is_queued_for_deletion():
+		_combine.close()
+		return true
 	# The recruiting meeting closes before the draft is left.
 	if is_instance_valid(_meeting):
 		_meeting.queue_free()
 		_meeting = null
-		return true
-	if is_instance_valid(_detail):
-		_close_player()
 		return true
 	return false
 
@@ -1459,6 +1497,11 @@ func _show_meeting() -> void:
 	go.name = "MeetingDone"
 	go.custom_minimum_size.y = 48
 	go.pressed.connect(func(): overlay.queue_free())
+	var day := UiKit.btn("See the Combine", UiKit.BODY)
+	day.name = "MeetingCombine"
+	day.custom_minimum_size.y = 48
+	day.pressed.connect(_open_combine)
+	(box["footer"] as VBoxContainer).add_child(day)
 	(box["footer"] as VBoxContainer).add_child(go)
 
 

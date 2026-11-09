@@ -143,3 +143,87 @@ static func field(pool: Array, key: String, seed: int) -> Array:
 
 static func _key(p: Dictionary, seed: int, suffix: String) -> String:
 	return "combine|%d|%s|%s" % [seed, str(p.get("id", "")), suffix]
+
+
+## The test's short name in a sentence ("top ten in the sprint and the jump").
+const SHORT := {"sprint": "sprint", "trial": "time trial", "leap": "jump", "kick": "kicking test"}
+
+
+## The class in one test, best first: [{"p", "result", "rank"}]. Level results
+## share a rank. Those who did not test are left out (untested()).
+static func ranked(pool: Array, key: String, seed: int) -> Array:
+	var low_best := bool(test(key)[3])
+	var rows := []
+	for p in pool:
+		var r := result(p, key, seed)
+		if r >= 0.0:
+			rows.append({"p": p, "result": r})
+	rows.sort_custom(func(a, b):
+		if float(a["result"]) != float(b["result"]):
+			return (float(a["result"]) < float(b["result"])) == low_best
+		return str(a["p"].get("id", "")) < str(b["p"].get("id", "")))
+	for i in rows.size():
+		var level: bool = i > 0 and float(rows[i - 1]["result"]) == float(rows[i]["result"])
+		rows[i]["rank"] = int(rows[i - 1]["rank"]) if level else i + 1
+	return rows
+
+
+## Those in `pool` with no results on the day.
+static func untested(pool: Array, seed: int) -> Array:
+	return pool.filter(func(p): return not tested(p, seed) or not p.has("attr"))
+
+
+## The middle result of a ranked class, or -1 for an empty one.
+static func middle(rows: Array) -> float:
+	return -1.0 if rows.is_empty() else float(rows[rows.size() / 2]["result"])
+
+
+## A testing-day line about the best in one test, read straight off the results:
+## how far clear of the next man he was. "" with nobody to compare him to.
+static func day_line(key: String, rows: Array, next_name: String) -> String:
+	if rows.size() < 2:
+		return ""
+	var gap := absf(float(rows[0]["result"]) - float(rows[1]["result"]))
+	var next := text(key, float(rows[1]["result"]))
+	if gap == 0.0:
+		return "%s matched him." % next_name
+	if gap < float(DAY_SD.get(key, 0.0)) * 1.5:
+		return "%s pushed him all the way, on %s." % [next_name, next]
+	match key:
+		"sprint":
+			return "Nobody else got near him. The next best was %s." % next
+		"trial":
+			return "He had the field strung out. The next best was %s." % next
+		"leap":
+			return "He got up above the rest. The next best was %s." % next
+		"kick":
+			return "Nobody else kicked as cleanly. The next best was %s." % next
+	return ""
+
+
+## Prospects in the top ten of two or more tests, most tests first: [{"p", "tests"}].
+static func all_rounders(pool: Array, seed: int, limit := 3) -> Array:
+	var counts := {}
+	for t in TESTS:
+		var key := str(t[0])
+		for row in ranked(pool, key, seed):
+			if int(row["rank"]) > 10:
+				break
+			var id := str(row["p"].get("id", ""))
+			if not counts.has(id):
+				counts[id] = {"p": row["p"], "tests": []}
+			counts[id]["tests"].append(key)
+	var out: Array = counts.values().filter(func(c): return (c["tests"] as Array).size() >= 2)
+	out.sort_custom(func(a, b):
+		if (a["tests"] as Array).size() != (b["tests"] as Array).size():
+			return (a["tests"] as Array).size() > (b["tests"] as Array).size()
+		return str(a["p"].get("id", "")) < str(b["p"].get("id", "")))
+	return out.slice(0, limit)
+
+
+## "Top ten in the sprint and the jump"; "... the sprint, the jump and the kicking test".
+static func top_ten_words(tests: Array) -> String:
+	var names: Array = tests.map(func(k): return "the " + str(SHORT.get(k, k)))
+	if names.size() < 2:
+		return "Top ten in " + "".join(names)
+	return "Top ten in %s and %s" % [", ".join(names.slice(0, names.size() - 1)), names[-1]]
