@@ -1717,7 +1717,7 @@ func _footer(season: Season, with_sim := true) -> Control:
 		var fs: int = b.get_theme_font_size("font_size")
 		b.custom_minimum_size.x = ceilf(font.get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + pad) + 1.0
 		row.add_child(b)
-	return row
+	return UiKit.nav_bar(row)
 
 
 ## A coach has left your staff (retired, or taken a job elsewhere): say who

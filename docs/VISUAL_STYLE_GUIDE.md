@@ -112,11 +112,11 @@ a rule, not a new component.
 | Component | Looks like | Use |
 |---|---|---|
 | Primary button | club-colour fill, bold NAME text | the one action; last in the column, where the thumb is |
-| Secondary button | flat PANEL surface, TEXT text, no outline, no shadow | other actions; at most three visible |
+| Secondary button | 1 px outline over a dark well, TEXT text, no shadow (director 2026-11-04, "Secondary buttons are outlines") | other actions; at most three visible |
 | Danger button | BAD outline and text | release, delete, reset |
 | Text action | bold TEXT, no surface (`UiKit.text_action`) | "Change", "Undo", "Skip to full time", "Assistant's report ›" beside a fact |
 | Section link | a heading whose row is the way in: title left, "Season stats ›" MUTED right (`UiKit.section_link`) | a section that opens a whole screen |
-| Choice (grid) | options outlined when chosen, TEXT ink; rest MUTED on the quiet surface (`UiKit.choice_grid`) | plans, names, anything with long labels or more than five options |
+| Choice (grid) | the chosen one a 2 px TEXT outline on the lifted surface; the rest outlined like a secondary button (`UiKit.choice_grid`) | plans, names, anything with long labels or more than five options |
 | Choice (segmented) | one line of short words, the current one underlined (`UiKit.segmented`; `UiKit.strip` if it must scroll) | two to five short options: One ruck · Dual ruck, Composed · Fire them up · Calm them, finals weeks |
 | Tabs | text with a 2 px underline under the current one, one row only (`UiKit.tab`) | sections of a screen; more than five means a picker |
 | Picker | a flat INK field with a chevron | choosing one of many (a stat, a venue) |
@@ -129,6 +129,7 @@ a rule, not a new component.
 | Figure | Display cut, shade on | a score, a rating, a position ("9th") |
 | Poster / duel | ClubDuel wash with both clubs | the hub hero, the match scoreboard, a final |
 | Top bar | back glyph, TITLE centred, one right control | every screen below the hub |
+| Nav bar | words on one INK bar under a 2 px rule in your club colour, no boxes (`UiKit.nav_bar`) | the hub's and the pre-season's foot |
 | Sheet | PANEL over the screen, Done as the primary | settings, a player, a filter |
 
 Banned: raised tiles, pills, chips, badges, progress bars for anything but a genuine progress,

@@ -695,7 +695,9 @@ func _player_card(p: Dictionary) -> Control:
 	ovr.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	top.add_child(ovr)
 	# Middle: his name, and his trait under it, centred in the room between the
-	# top row and the status, so a short name does not leave a hole.
+	# top row and the status, so a short name does not leave a hole. A player
+	# with no trait keeps the trait line's room, so the names of a row sit at
+	# one height (the confirmed name/second-line alignment defect).
 	var mid := UiKit.vbox(2)
 	mid.name = "CardMiddle"
 	mid.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -705,6 +707,9 @@ func _player_card(p: Dictionary) -> Control:
 	var fitted := _fit_name(full_name, text_w)
 	var nm := UiKit.name_label(str(fitted[0]), int(fitted[1]))
 	nm.tooltip_text = full_name
+	# A name fitted smaller keeps the full size's line, so it stays level too.
+	nm.custom_minimum_size.y = UiKit.BOLD.get_height(UiKit.px(CARD_NAME_FS))
+	nm.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	mid.add_child(nm)
 	var trait_keys := Traits.of(p)
 	if not trait_keys.is_empty():
@@ -712,6 +717,10 @@ func _player_card(p: Dictionary) -> Control:
 				UiKit.BAD if Traits.is_bad(trait_keys[0]) else UiKit.TEXT, true)
 		tr.name = "Trait"
 		mid.add_child(tr)
+	else:
+		var room := UiKit.ellipsis(" ", CARD_FS_LOW, UiKit.TEXT, true)
+		room.name = "TraitRoom"
+		mid.add_child(room)
 	# Bottom: one status line, always last, in a lighter weight than the trait.
 	var status := _card_status(p, id, text_w)
 	var st := UiKit.ellipsis(str(status[0]), CARD_FS_LOW, status[1])
