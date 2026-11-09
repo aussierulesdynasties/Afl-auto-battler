@@ -4,7 +4,7 @@ extends RefCounted
 ## of player: a press on its pressure players, corridor footy on its runners,
 ## winning the contest on its ball-winners and ruck. A plan's upside grows
 ## with them; its costs do not (MatchSim._pv), so a plan the list does not suit
-## is a real risk. Controlled tempo asks nothing special of a list (fewer
+## is a real risk. Controlled Tempo asks nothing special of a list (fewer
 ## errors, fresher legs, less ground for any side): measured, its value does
 ## not move with the side's kicks and marks, so it has no fit (always 1.0).
 ##
@@ -21,7 +21,7 @@ const NEEDS := {
 			"word": "pressure players"},
 	"contest": {"attr": {"contested": 1.0}, "lines": ["MID"], "n": 4, "ruck": true,
 			"word": "ball-winners"},
-	# Controlled tempo holds the ball against a press: it needs ball users
+	# Controlled Tempo holds the ball against a press: it needs ball users
 	# right across the ground - disposal under pressure, and the discipline
 	# not to cough it up.
 	"controlled": {"attr": {"disposal": 0.65, "discipline": 0.35}, "lines": ["DEF", "MID", "FWD"],
@@ -118,7 +118,7 @@ static func fit(ground: Array, plan: String) -> float:
 ## The plan a club plays as its usual game: the one its list suits best,
 ## weighted by how well the club knows it (`know`: Squad.plan_know, plan ->
 ## multiplier; empty = all known), if it clearly suits one; otherwise
-## Balanced. Controlled tempo counts like any other plan.
+## Balanced. Controlled Tempo counts like any other plan.
 static func standing_plan(ground: Array, know := {}) -> String:
 	var best := "balanced"
 	var best_score := STANDING_EDGE

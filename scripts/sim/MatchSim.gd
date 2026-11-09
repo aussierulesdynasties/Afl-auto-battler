@@ -905,9 +905,9 @@ func set_tactics(side: int, t: Dictionary) -> void:
 
 
 ## Gameplan trade-offs. Every plan gives something up, and the main three
-## counter each other: Attack corridor beats Controlled tempo (no pressure to
-## punish it), Controlled tempo beats the Defensive press (it plays through
-## the pressure), and the press beats Attack corridor (it squeezes the
+## counter each other: Attack Corridor beats Controlled Tempo (no pressure to
+## punish it), Controlled Tempo beats the Defensive Press (it plays through
+## the pressure), and the press beats Attack Corridor (it squeezes the
 ## corridor into turnovers). Keys: goal (own conversion), opp_goal (theirs),
 ## exposed (their conversion when you turn it over), gain (metres),
 ## clangers, press (pressure you apply), taken (pressure you take),
@@ -963,7 +963,7 @@ func _pv(side: int, key: String, fallback := 1.0) -> float:
 
 
 ## Pressure multiplier `side` faces from the opposition's plan, counters in.
-## Controlled tempo takes the sting out of a press as far as its ball users
+## Controlled Tempo takes the sting out of a press as far as its ball users
 ## can: a side of ordinary ones or better holds it off, poor ones only
 ## partly (PlanFit, "controlled"). The press is where the ball is
 ## (PRESS_PLAN_ZONE): numbers pushed up into his back third and taken out
@@ -993,7 +993,7 @@ func _plan(side: int) -> String:
 
 
 ## ARD-M4-015 (the director, 2026-10-06: "merge the duplicates"): "Fast
-## movement" was Attack corridor and "High press" was Defensive press under
+## movement" was Attack Corridor and "High press" was Defensive Press under
 ## older names, the same effects. Old saves and replays map across.
 ## Through stars (#874) is cut (director, 2026-11-07: the three play-through
 ## calls are back instead): an old save or replay on it plays Balanced.
@@ -1646,7 +1646,7 @@ const PEP_FIRE := {"clangers": 1.10, "pace": 1.20}
 ## the most pressure of the variants tried, legs burning far quicker.
 const PEP_HEAT := {"pace": 1.60}
 const PEP_HEAT_PRESS := 1.08
-## Heat on top of the Defensive press: the same hunting, so the gains overlap and
+## Heat on top of the Defensive Press: the same hunting, so the gains overlap and
 ## only this share of heat's pressure bonus is added (the legs cost stays in full).
 const PEP_HEAT_ON_PRESS := 0.5
 
@@ -2229,7 +2229,7 @@ const PRESS_ZONES := [
 	{"FWD": 0.22, "MID": 0.60, "RUCK": 0.30, "DEF": 0.85},
 ]
 const PRESS_ZONE_EDGE := 20.0
-## The Defensive press by zone, from the carrier's end (PRESS_ZONES order):
+## The Defensive Press by zone, from the carrier's end (PRESS_ZONES order):
 ## the pressure he meets. Their back third is where we push up and hunt; in
 ## their forward third our numbers are up the ground, so our own defence
 ## presses less. About the same pressure overall, moved up the ground.
@@ -4080,7 +4080,7 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 	if credit:
 		_credit(side, "gameplan", 6.0 * (goal_p - before))
 	before = goal_p
-	# Controlled tempo picks the press apart and is too slow to punish an
+	# Controlled Tempo picks the press apart and is too slow to punish an
 	# attacking side on the rebound; everyone else meets both in full.
 	if _plan(side) != "controlled":
 		goal_p *= _pv(opp, "opp_goal")
@@ -4723,8 +4723,8 @@ const FIT_SLOPE := 0.25
 
 
 func fit(p: Dictionary) -> float:
-	var id := str(p["id"])
-	var e := float(energy.get(id, 100.0))
+	var id: String = p["id"]
+	var e: float = energy.get(id, 100.0)
 	var hit = _fit_cache.get(id)
 	if hit != null and hit[0] == e:
 		return hit[1]
@@ -4750,10 +4750,12 @@ func _trait_note(p) -> void:
 
 
 func _trait(p: Dictionary, key: String) -> bool:
-	var id := str(p.get("id", ""))
-	if not _traits.has(id):
-		_traits[id] = Traits.of(p)
-	return (_traits[id] as Array).has(key)
+	var id: String = p.get("id", "")
+	var known = _traits.get(id)
+	if known == null:
+		known = Traits.of(p)
+		_traits[id] = known
+	return known.has(key)
 
 
 ## A player's attribute as he is playing right now.

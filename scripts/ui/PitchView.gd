@@ -1126,7 +1126,7 @@ func _draw_press_zone(c: Vector2, a: float, b: float) -> void:
 
 
 ## The oval marks the call (P-12 pass 5, director 2026-10-18: "Merge, then mark
-## the oval"): Attack corridor and Win contest get a faint marking on the grass
+## the oval"): Attack Corridor and Win Contest get a faint marking on the grass
 ## in the side's colour (press_zone_colour), so the call reads where the discs
 ## crowding the ball cannot say it. MatchDirector says when (corridor_mark_on,
 ## contest_mark); this draws, under the lines, the players and the ball, and

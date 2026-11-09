@@ -729,13 +729,13 @@ func _test_private_cards() -> void:
 						st["flags"][pid2] = {}
 					st["flags"][pid2][where_flag] = 5
 			var who := StoryEngine.eligible_subject(t, ctx, st, 10, RandomNumberGenerator.new())
-			if named and not who.is_empty():
+			if who.is_empty():
 				leaks.append(str(t["id"]))
-			if not named and not who.is_empty():
+			else:
 				reachable += 1
-	_check(leaks.is_empty() and reachable == private.size(),
-			"A private card never picks a real-named player, and still picks the rest (%s, %d of %d)" % [
-			str(leaks), reachable, private.size()])
+	_check(leaks.is_empty() and reachable == private.size() * 2,
+			"Real names are treated like any other: every card can pick either (director, 2026-11-09) (%s, %d of %d)" % [
+			str(leaks), reachable, private.size() * 2])
 	GameState.show_real_names = true
 	var named_fact := ClubStories.player_fact(GameState, {"id": "r", "real_name": "Real Person", "name": "Fake Name",
 			"overall": 60}, false, {}, 1, 0)
@@ -1762,9 +1762,8 @@ func _test_captain_cards() -> void:
 		if bool(c.get("private", false)):
 			private_ids.append(str(c["id"]))
 	private_ids.sort()
-	_check(private_ids == ["captain_slump_flat", "captain_slump_good", "captain_slump_mid", "captain_slump_start",
-			"captain_succession_next", "captain_succession_start"],
-			"Only the slump and succession cards are private (%s)" % ", ".join(PackedStringArray(private_ids)))
+	_check(private_ids.is_empty(),
+			"The leadership cards speak of football facts, so they run under real names (%s)" % ", ".join(PackedStringArray(private_ids)))
 	for c in cards:
 		if str(c["id"]).begins_with("captain_contract"):
 			_check(not bool(c.get("private", false)), "The contract arc is about the contract, a football fact (%s)" % c["id"])

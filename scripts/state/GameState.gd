@@ -3877,6 +3877,9 @@ func _note_rival_plans(results: Array) -> void:
 			var code := str([res.get("home", ""), res.get("away", "")][side])
 			if not clubs.has(code):
 				clubs[code] = []
+			# Whose calls these were: a new coach's read starts from his first
+			# game (rival_rows).
+			row["c"] = str(Coaches.staff(coaches, code).get("SC", ""))
 			(clubs[code] as Array).append(row)
 
 
@@ -3886,7 +3889,12 @@ func rival_rows(code: String) -> Array:
 	if int(rival_plans.get("year", 0)) != season_year or not (rival_plans.get("clubs") is Dictionary):
 		return []
 	var rows = (rival_plans["clubs"] as Dictionary).get(code, [])
-	return rows if rows is Array else []
+	if not rows is Array:
+		return []
+	# Only the games of the coach there now (director, 2026-11-09). A row
+	# from an older save names no coach and stays.
+	var now := str(Coaches.staff(coaches, code).get("SC", ""))
+	return (rows as Array).filter(func(r): return str((r as Dictionary).get("c", now)) == now)
 
 
 ## Each rival coach's usual game this season (rival_plans "usual"): club ->
@@ -4588,7 +4596,8 @@ static func form_line(info: Dictionary, prefix := "Form") -> String:
 func opponent_facts(code: String) -> Array:
 	if season == null or code == "" or not season.lists.has(code):
 		return []
-	return Matchup.facts(code, season.lists, season.selections, season.club_results(code))
+	return Matchup.facts(code, season.lists, season.selections, season.club_results(code),
+			MatchSim.loose_pick(_rival_squad(code).ground, my_squad().ground))
 
 
 ## Your former players on `code`'s list (FormerPlayers.against): who left
@@ -4709,7 +4718,7 @@ func opponent_report(code: String) -> Array:
 			if str(f["key"]) == "danger":
 				danger_id = str(f.get("player_id", ""))
 	var rows := rival_rows(code)
-	for line in [RivalRead.season_line(rows, usual), RivalRead.vs_line(rows, my_club)]:
+	for line in [RivalRead.season_line(rows, usual), RivalRead.last_line(rows, my_club), RivalRead.vs_line(rows, my_club)]:
 		if line != "":
 			play.append(line)
 	var mine := my_squad()
@@ -4720,9 +4729,9 @@ func opponent_report(code: String) -> Array:
 	var loose := MatchSim.loose_pick(sq.ground, mine.ground)
 	if not loose.is_empty() and str(loose.get("id", "")) != danger_id:
 		people.append(RivalRead.loose_line(GameDB.player_display_name(loose), sq.coach_style))
-	if not MatchSim.loose_pick(mine.ground, sq.ground).is_empty() \
-			and not Matchups.minder_candidates(sq.ground).is_empty():
-		people.append(RivalRead.minder_line())
+	var minders := Matchups.minder_candidates(sq.ground)
+	if not MatchSim.loose_pick(mine.ground, sq.ground).is_empty() and not minders.is_empty():
+		people.append(RivalRead.minder_line(GameDB.player_display_name(minders[0])))
 	var coach := []
 	if sq.ai_plans:
 		var sc: Dictionary = club_staff(code).get("SC", {})
@@ -5547,23 +5556,24 @@ func grant_match_xp(res: Dictionary) -> Dictionary:
 
 ## Pay one club's list for a match. Same scale for every club: the rivals
 ## earn exactly what your players earn.
-func _grant_xp(club: String, list: Array, res: Dictionary) -> Dictionary:
+func _grant_xp(club: String, list: Array, res: Dictionary, staffs = null) -> Dictionary:
 	var stats_all: Dictionary = res.get("players", {})
-	var squad := Squad.new(GameDB.club_name(club), list,
-			str(res.get("home", "")) == club, club,
+	var side := Ratings.select_side(list,
 			season.selections.get(club, {}) if season != null else {})
 	var ground_ids := {}
 	var bench_ids := {}
-	for p in squad.ground:
+	for p in side["ground"]:
 		ground_ids[str(p["id"])] = true
-	for p in squad.bench:
+	for p in side["bench"]:
 		bench_ids[str(p["id"])] = true
 	var rows: Array = []
 	var total := 0
 	var reserves_count := 0
 	var reserves_total := 0
 	# The club's teachers (CoachEffects): only once there is a coaching world.
-	var staff: Dictionary = CoachEffects.staffs(coaches).get(club, {}) if not coaches.is_empty() else {}
+	if staffs == null and not coaches.is_empty():
+		staffs = CoachEffects.staffs(coaches)
+	var staff: Dictionary = staffs.get(club, {}) if not coaches.is_empty() else {}
 	for p in list:
 		var id := str(p["id"])
 		var on_ground := ground_ids.has(id)
@@ -6787,6 +6797,9 @@ func open_offseason(keep_staff := false) -> void:
 	free_agents = []
 	# A new club's approaches are settled first: it had first call.
 	ExpansionBuild.resolve(self)
+	# No rating or injury moves while rivals re-sign: each list's best 22 only
+	# needs working out again when the list itself changes.
+	TradeValue.remember_bars(true)
 	for code in season.lists:
 		if code == my_club:
 			continue
@@ -6816,6 +6829,7 @@ func open_offseason(keep_staff := false) -> void:
 				# A player they wanted but could not fit can earn them a pick;
 				# one they delisted cannot.
 				_release(code, p, why == "cap")
+	TradeValue.remember_bars(false)
 	# Rival clubs trade first, so their free-agent offers are made from the
 	# lists they'll actually have.
 	trade_offers = []
@@ -10604,13 +10618,15 @@ func _train_rivals(results: Array) -> void:
 	if season == null:
 		return
 	var best := {}
+	# Once a week, not once a club: nobody changes jobs in between.
+	var staffs = CoachEffects.staffs(coaches) if not coaches.is_empty() else null
 	for res in results:
 		for side in ["home", "away"]:
 			var code := str(res.get(side, ""))
 			if code == "" or code == my_club or not season.lists.has(code):
 				continue
 			var list: Array = season.lists[code]
-			_grant_xp(code, list, res)
+			_grant_xp(code, list, res, staffs)
 			for p in list:
 				ai_spend_xp(p)
 				best = _development_pick(code, p, best)

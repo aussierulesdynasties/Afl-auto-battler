@@ -449,7 +449,7 @@
 	{
 		"id": "intl_irish_torn",
 		"category": "contracts",
-		"weight": 3,
+		"weight": 8,
 		"per_season": 1,
 		"cooldown": 40,
 		"subject_cooldown": 12,
@@ -459,7 +459,7 @@
 				"intl_region": "ireland",
 				"seasons_listed_min": 2,
 				"contract_years_max": 1,
-				"extension_ok": true,
+				"intl_extension_ok": true,
 				"fit": true,
 				"intl": true
 			},
@@ -590,7 +590,7 @@
 				"intl_region": "nz",
 				"seasons_listed_min": 2,
 				"contract_years_max": 1,
-				"extension_ok": true,
+				"intl_extension_ok": true,
 				"fit": true,
 				"intl": true
 			},

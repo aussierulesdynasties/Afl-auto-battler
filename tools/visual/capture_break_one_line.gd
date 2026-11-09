@@ -8,7 +8,7 @@ extends SceneTree
 ##   --played  play the first quarter on the oval from Ball it up, then <out>_played_quarter_time.png, and
 ##             print what the scoreboard behind the break reads against the sim's score
 ##   --club CODE  your club (default FRE)   --vs CODE  the opponent ("any" = the first drawn that is not COL)
-## Plays a first half with Defensive press, then writes, at half time:
+## Plays a first half with Defensive Press, then writes, at half time:
 ##   phone: <out>_1_break.png, _2_tag.png (the Tag sheet, a tag picked), _3_who.png (who tags),
 ##          _4_changed.png (back on the break, the Tag row marked), _5_best.png (Best so far)
 ##   PC:    <out>_1_break.png (Game plan beside the list), _2_tag.png (a tag picked, the cards in the pane),
