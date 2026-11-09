@@ -18,6 +18,7 @@ func run() -> void:
 	_t("_test_drift_cases")
 	_t("_test_season_end")
 	_t("_test_levers")
+	_t("_test_gambler_swing")
 	_t("_test_rivals")
 	_t("_test_match_neutral")
 	_t("_test_save_reload")
@@ -159,6 +160,19 @@ func _test_levers() -> void:
 			"A rival on Win Contest with an Analytical coach: CC, exec x1.125")
 	CoachEffects.table = {}
 	CoachEffects.usual = {}
+
+
+## The Gambler's swing is symmetric (director 2026-11-10): +2 after a win,
+## -2 after a loss, on top of what a player who played gets anyway.
+func _test_gambler_swing() -> void:
+	_check(Archetypes.SWING_WIN == 2 and Archetypes.SWING_LOSS == -2, "swing +2 / -2")
+	for won in [true, false]:
+		var plain := [{"id": "a", "morale": 50, "overall": 70}]
+		var gamb := [{"id": "a", "morale": 50, "overall": 70}]
+		ClubLife.morale_after_match(plain, {"a": true}, won)
+		ClubLife.morale_after_match(gamb, {"a": true}, won, {}, 0.0, {}, "GAMB")
+		var gap := ClubLife.morale(gamb[0]) - ClubLife.morale(plain[0])
+		_check(gap == (2 if won else -2), "Gambler %s: %+d on a plain coach (got %+d)" % ["win" if won else "loss", 2 if won else -2, gap])
 
 
 func _test_rivals() -> void:

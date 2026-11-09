@@ -7,6 +7,8 @@ extends Control
 ## GameState.interview_due.
 
 var _root: VBoxContainer
+## Outside the scroll: the page's one action never sits half under the fold.
+var _foot: VBoxContainer
 var _picks := []
 var _name := ""
 
@@ -28,7 +30,13 @@ func _ready() -> void:
 	add_child(margin)
 	var page := UiKit.vbox(14)
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	margin.add_child(UiKit.scroll(page))
+	var frame := UiKit.vbox(10)
+	margin.add_child(frame)
+	var sc := UiKit.scroll(page)
+	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	frame.add_child(sc)
+	_foot = UiKit.vbox(0)
+	frame.add_child(_foot)
 	_root = page
 	_name = GameState.coach_name
 	if _name == "":
@@ -38,8 +46,11 @@ func _ready() -> void:
 
 
 func _clear() -> void:
-	for c in _root.get_children():
-		c.queue_free()
+	# Out of the tree now, so the next page's nodes keep their names.
+	for box in [_root, _foot]:
+		for c in box.get_children():
+			box.remove_child(c)
+			c.queue_free()
 
 
 func _title(text: String) -> void:
@@ -64,7 +75,7 @@ func _name_page() -> void:
 		_name = field.text.strip_edges()
 		GameState.coach_name = _name
 		_question())
-	_root.add_child(go)
+	_foot.add_child(go)
 
 
 func _question() -> void:
@@ -85,16 +96,23 @@ func _question() -> void:
 	ql.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_root.add_child(ql)
 	var answers: Array = q["answers"]
+	# A wide screen sets the answers two by two, so all four sit above the fold.
+	var grid := GridContainer.new()
+	grid.columns = 2 if get_viewport_rect().size.x > get_viewport_rect().size.y else 1
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
+	_root.add_child(grid)
 	for a in range(answers.size()):
 		var b := UiKit.btn(str(answers[a][1]), UiKit.BODY)
 		b.name = "InterviewAnswer%d" % a
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.custom_minimum_size = Vector2(0, 52)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(func():
 			_picks.append(a)
 			_question())
-		_root.add_child(b)
+		grid.add_child(b)
 	var count := UiKit.lbl("Question %d of %d" % [i + 1, Archetypes.QUESTIONS.size()], UiKit.SMALL, UiKit.MUTED)
 	_root.add_child(count)
 
@@ -115,7 +133,7 @@ func _reveal() -> void:
 	var go := UiKit.btn("Continue", UiKit.BODY, true)
 	go.name = "InterviewDone"
 	go.pressed.connect(func(): Router.replace("hub"))
-	_root.add_child(go)
+	_foot.add_child(go)
 
 
 func _line(text: String, colour: Color) -> Label:

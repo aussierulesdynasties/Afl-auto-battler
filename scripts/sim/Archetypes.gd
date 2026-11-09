@@ -53,7 +53,7 @@ const KIDS_AGE := 22
 const STING := {"HARD": 1.25, "ANA": 1.25, "FATH": 0.75}
 ## Morale after a result for the Gambler: wins lift more, losses sting more.
 const SWING_WIN := 2
-const SWING_LOSS := -1
+const SWING_LOSS := -2
 
 ## What each archetype does, in football words (the reveal and the coach sheet).
 const UPSIDE := {
