@@ -26,6 +26,11 @@ var start := ""
 var setup := ""
 ## Energy under which a player on the ground is running on empty (fit 0.90 or less).
 const TANK := 40.0
+## --arrivals league: how many new-club men and draftees a selected side carries in
+## Rounds 1-6, as weights for 0, 1, 2 .. men, measured over seeded careers by
+## tools/audit/familiarity_impl.gd (TeamFamiliarity, row 125).
+const LEAGUE_NEW_CLUB := [1.0]
+const LEAGUE_DRAFTEES := [1.0]
 
 
 func play(from: int, count: int, out: String, weather: String,
@@ -41,6 +46,12 @@ func play(from: int, count: int, out: String, weather: String,
 				var pair := kv.split("=")
 				if pair.size() == 2:
 					MatchSim.tune[pair[0].strip_edges()] = float(pair[1])
+	# --arrivals: put team familiarity in the match (see _arrivals). Off, the lists
+	# are as they start a career: nobody is an arrival.
+	var arrivals := ""
+	for i in range(args.size() - 1):
+		if str(args[i]) == "--arrivals":
+			arrivals = str(args[i + 1])
 	var lists := {}
 	var class_ids := {}
 	if start == "real":
@@ -79,6 +90,7 @@ func play(from: int, count: int, out: String, weather: String,
 				var sq: Squad = sq_h if side == 0 else sq_a
 				sq.ai_plans = side != coached
 				sq.assistant = side == coached
+		var fam := _arrivals(arrivals, i, sq_h, sq_a)
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
 		sim.weather = weather
 		if setup == "league":
@@ -192,14 +204,78 @@ func play(from: int, count: int, out: String, weather: String,
 				tp[str(pl["id"])] = [int(st.get("tackles", 0)), int(st.get("pressure_acts", 0)), role]
 				t["tp"] = tp
 			t["club"] = h if side == 0 else a
+			if arrivals != "":
+				t["arrivals"] = TeamFamiliarity.new_club_men((sq_h if side == 0 else sq_a).ground + (sq_h if side == 0 else sq_a).bench).size()
+				t["fam_round"] = int(fam["round"])
+				t["fam_carry"] = int(fam["carry"]) == side
+				t["team_cut"] = snappedf(float(sim.team_fam_cut[side]), 0.0001)
 			t["ruck1"] = ruck1(r["roster"][side], stats, sq_h if side == 0 else sq_a)
 			teams.append(t)
+		for pl in fam["men"]:
+			TeamFamiliarity.clear(pl)   # GameDB's lists are shared by every match
 		var line := JSON.stringify({"i": i, "home": h, "away": a, "teams": teams, "duels": duels(sim, r)})
 		fh.store_line(line)
 		if echo:
 			print("BAL " + line)
 	fh.close()
 	return 0
+
+
+## Set team familiarity on the two sides before kick-off, seeded by the match so
+## both arms of a paired run mark the same men. The spec is "" (nobody), "N" (one
+## side, in turn, carries N new-club men, at each of Rounds 1-6 in turn: the
+## isolated measure), "N@R" (the same, always at round R) or "league" (both sides
+## carry what careers measure). Returns {round, carry (side, -1 none), men}.
+func _arrivals(spec: String, i: int, sq_h: Squad, sq_a: Squad) -> Dictionary:
+	var out := {"round": 0, "carry": -1, "men": []}
+	if spec == "":
+		return out
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 9000 + i
+	out["round"] = (i / 2) % 6 + 1
+	var plan := [[0, 0], [0, 0]]
+	if spec == "league":
+		for side in range(2):
+			plan[side] = [_weighted(rng, LEAGUE_NEW_CLUB), _weighted(rng, LEAGUE_DRAFTEES)]
+	else:
+		var parts := spec.split("@")
+		if parts.size() > 1:
+			out["round"] = int(parts[1])
+		out["carry"] = i % 2
+		plan[i % 2] = [int(parts[0]), 0]
+	var fam := TeamFamiliarity.ROUND_ONE + TeamFamiliarity.SENIOR_GAME * (int(out["round"]) - 1)
+	for side in range(2):
+		var sq: Squad = sq_h if side == 0 else sq_a
+		var men: Array = sq.ground + sq.bench
+		for k in range(men.size() - 1, 0, -1):
+			var j := rng.randi_range(0, k)
+			var swap: Variant = men[k]
+			men[k] = men[j]
+			men[j] = swap
+		var at := 0
+		for n in range(mini(int(plan[side][0]), men.size())):
+			TeamFamiliarity.arrive_club(men[at])
+			men[at]["team_fam"] = fam
+			out["men"].append(men[at])
+			at += 1
+		for n in range(mini(int(plan[side][1]), men.size() - at)):
+			TeamFamiliarity.arrive_draftee(men[at])
+			men[at]["team_fam"] = fam
+			out["men"].append(men[at])
+			at += 1
+	return out
+
+
+func _weighted(rng: RandomNumberGenerator, weights: Array) -> int:
+	var total := 0.0
+	for w in weights:
+		total += float(w)
+	var roll := rng.randf() * total
+	for k in range(weights.size()):
+		roll -= float(weights[k])
+		if roll <= 0.0:
+			return k
+	return weights.size() - 1
 
 
 ## [mean energy of the side's players on the ground, how many of them are under TANK].

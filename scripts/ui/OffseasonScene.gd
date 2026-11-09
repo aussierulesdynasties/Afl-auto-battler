@@ -636,6 +636,9 @@ func _agents(body: VBoxContainer) -> void:
 			_build())
 		controls.add_child(sort_btn)
 	body.add_child(controls)
+	var fam := _para(TeamFamiliarity.signing_line(), 13, UiKit.TEXT)
+	fam.name = "AgentsFamiliarity"
+	body.add_child(fam)
 	fas.sort_custom(func(a, b):
 		var av: float
 		var bv: float
@@ -738,6 +741,10 @@ func _trade(body: VBoxContainer) -> void:
 			"Nothing yet: add from your list below.")
 	_package(body, "You get", _theirs, _trade_club, "GetRow_",
 			"Nothing yet: add from their list below.")
+	if not _theirs.is_empty():
+		var fam := _para(TeamFamiliarity.signing_line(), 13, UiKit.TEXT)
+		fam.name = "TradeFamiliarity"
+		body.add_child(fam)
 	var verdict := GameState.evaluate_trade(_trade_club, _mine, _theirs)
 	var empty := _mine.is_empty() or _theirs.is_empty()
 	var shopping := _mine.size() == 1 and _theirs.is_empty()
