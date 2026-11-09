@@ -10391,6 +10391,42 @@ func _ground_for(side: Dictionary) -> Array:
 	return Squad.new(GameDB.club_name(my_club), my_list, true, my_club, sel).ground
 
 
+## Synergies within reach (row 103, 4.Q10): what a player from outside your
+## list would do for your synergies with him on your ground, as facts:
+## [{key, trait, have, need, completes}], the ones he completes first.
+## Counted against your side as it stands (my_squad), in his line for a line
+## synergy; a synergy you already field is left out. It never says whom he
+## would replace or whether to get him.
+func synergy_fit(p: Dictionary) -> Array:
+	var out := []
+	if p.is_empty() or not list_player(str(p.get("id", ""))).is_empty():
+		return out
+	var ground: Array = my_squad().ground
+	var on: Array = Traits.active(ground)
+	var his: Array = Traits.of(p)
+	var rows := {}
+	for r in Traits.progress(ground):
+		rows[str(r["key"])] = r
+	for key in Traits.SYNERGIES:
+		if on.has(key):
+			continue
+		var s: Dictionary = Traits.SYNERGIES[key]
+		var line := str(s["line"])
+		if line != "" and not Ratings.plays_role(p, line):
+			continue
+		var r: Dictionary = rows[key]
+		for t in s["needs"]:
+			var have := int(r["have"][t])
+			var need := int(s["needs"][t])
+			if not his.has(str(t)) or have >= need:
+				continue
+			out.append({"key": key, "trait": str(t), "have": have, "need": need,
+					"completes": int(r["missing"]) == 1})
+			break
+	var done := out.filter(func(x): return bool(x["completes"]))
+	return done + out.filter(func(x): return not bool(x["completes"]))
+
+
 ## The opposition's side as it would take the field this week (their own
 ## selection, or their auto-pick): {"side": selection, "list": players}.
 ## Projected - they name their side on match day.
@@ -10693,6 +10729,68 @@ func set_stat_focus(player_id: String, key: String) -> bool:
 	return true
 
 
+## The trait a stat focus grows him toward (row 103, 4.Q10): a trait his
+## role can earn from that stat that he does not have yet, {key, min, gap,
+## crowded} ({} when none). "crowded" when he already carries MAX_GOOD good
+## traits: reaching the line then shows the new one only once he is further
+## past it than he is past one he has (Traits.of keeps the furthest two).
+func focus_trait(p: Dictionary, stat: String) -> Dictionary:
+	if stat == "":
+		return {}
+	var have: Array = Traits.of(p)
+	var good := 0
+	for t in have:
+		if Traits.DEFS.has(t) and not Traits.is_bad(str(t)):
+			good += 1
+	var attr: Dictionary = p.get("attr", {})
+	var roles := [str(p.get("role", "")), str(p.get("role2", ""))]
+	for key in Traits.DEFS:
+		var d: Dictionary = Traits.DEFS[key]
+		if d.has("max") or str(d["stat"]) != stat or have.has(key):
+			continue
+		var need_roles: Array = d["roles"]
+		if not need_roles.is_empty() and not (need_roles.has(roles[0]) or need_roles.has(roles[1])):
+			continue
+		if bool(d.get("small", false)) and int(attr.get("marking", 0)) >= 52:
+			continue
+		return {"key": key, "min": int(d["min"]), "gap": maxi(0, int(d["min"]) - int(attr.get(stat, 0))),
+				"crowded": good >= Traits.MAX_GOOD}
+	return {}
+
+
+## Rival clubs grow traits the same way (every club gets it, director
+## 2026-11-09): a player with room for another trait puts his stat focus on
+## the nearest trait a synergy needs, within AI_TRAIT_REACH points, and keeps
+## it until he earns it. "" = none. Nothing is told; it is their training.
+const AI_TRAIT_REACH := 6
+
+
+func _ai_trait_focus(p: Dictionary) -> String:
+	var cur := str(p.get("train_focus", ""))
+	if cur != "":
+		var still := focus_trait(p, cur)
+		if not still.is_empty() and not bool(still["crowded"]):
+			return cur
+		p.erase("train_focus")
+	var wanted := {}
+	for s in Traits.SYNERGIES.values():
+		for t in (s as Dictionary)["needs"]:
+			wanted[str(t)] = true
+	var best := ""
+	var best_gap := AI_TRAIT_REACH + 1
+	for n in Traits.near(p):
+		if not wanted.has(str(n["key"])) or int(n["gap"]) >= best_gap:
+			continue
+		var ft := focus_trait(p, str(n["stat"]))
+		if ft.is_empty() or bool(ft["crowded"]) or not focus_options(p).has(str(n["stat"])):
+			continue
+		best = str(n["stat"])
+		best_gap = int(n["gap"])
+	if best != "":
+		p["train_focus"] = best
+	return best
+
+
 ## [focus XP, drills XP] spent this season while he had a focus.
 func focus_spent(p: Dictionary) -> Array:
 	var led: Array = p.get("focus_ledger", [])
@@ -10900,7 +10998,7 @@ func ai_spend_xp(p: Dictionary) -> int:
 		return 0
 	var focus: Dictionary = Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"])
 	var bought := 0
-	for n in _spend_with_weights(p, focus, true, ceiling).values():
+	for n in _spend_with_weights(p, focus, true, ceiling, "", _ai_trait_focus(p)).values():
 		bought += int(n)
 	return bought
 
