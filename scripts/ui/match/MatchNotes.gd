@@ -947,7 +947,7 @@ static func card_detail(p: Dictionary, trait_name: String, ratings: PackedString
 ## own place. His position ("Tagger" with the trait), his Pressure, his legs
 ## in the game's words (legs_word, no number; `legs_bad` only when he is
 ## running on empty), what going to the tag gives up of his own game and what
-## their man keeps with him on (GateOdds), with his Player rating for the
+## their man's touches with him on (GateOdds), with his Player rating for the
 ## season so far beside the cost (`rating` is -1 before he has played).
 static func tagger_card(p: Dictionary, legs: float, rating := -1.0) -> Dictionary:
 	var places := PackedStringArray()
@@ -960,7 +960,8 @@ static func tagger_card(p: Dictionary, legs: float, rating := -1.0) -> Dictionar
 	var lw := legs_word(legs)
 	# What the job costs him and what it holds their man to, sized from the
 	# sim's constants (GateOdds; bible §4). The cost is the same whoever goes;
-	# the hold is his Pressure and his legs (Roles.tag_keep).
+	# the hold is his Pressure and his legs, in their man's touches
+	# (Roles.tag_touches).
 	# His season Player rating stays beside it (director, 2026-10-13).
 	var season := " (yet to play this season)"
 	if rating >= 0.0:
@@ -968,7 +969,7 @@ static func tagger_card(p: Dictionary, legs: float, rating := -1.0) -> Dictionar
 	return {"where": where, "pressure": str(roundi(float(a.get("pressure", 0)))),
 			"legs": lw.left(1).to_upper() + lw.substr(1), "legs_bad": legs < TIRING,
 			"gives_label": "Gives up", "gives": GateOdds.tag_gives() + season,
-			"holds_label": "Their man keeps", "holds": GateOdds.pct(GateOdds.tag_kept(p, legs))}
+			"holds_label": "Their man", "holds": GateOdds.tag_touches(p, legs)}
 
 
 ## The same card in one run of words, for the long list ("Other player...")
@@ -979,7 +980,7 @@ static func tagger_card_detail(p: Dictionary, legs: float, wide: bool, rating :=
 	# never ends on one.
 	var dot := " · "
 	var first := "%s%sPressure %s" % [c["where"], dot, c["pressure"]]
-	var second := "%s%sGives up %s%sTheir man keeps %s of his ball" % [c["legs"], dot, c["gives"], dot, c["holds"]]
+	var second := "%s%sGives up %s%sTheir man: %s" % [c["legs"], dot, c["gives"], dot, c["holds"]]
 	return (first + dot + second) if wide else (first + "
 " + second)
 

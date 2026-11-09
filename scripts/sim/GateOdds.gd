@@ -13,12 +13,14 @@ const COST := "Cost: %s"
 
 # Who tags (the pre-bounce and break sheets).
 const TAG_GIVES := "%s of his own ball and contest work"
+# What the tag does to their man, in his touches a match (director, 2026-11-10).
+const TAG_TOUCHES := "Usually %d touches. Tagged, about %d."
 const TAG_NOTE := "%s tags %s: he gives up %s of his own game."
 # The call when their midfielder is kicking a bag.
-const TAG_HOT_GAIN := "%s keeps %s of his ball with %s on him, until you call it off"
+const TAG_HOT_GAIN := "%s usually gets %d touches; with %s on him, about %d, until you call it off"
 const TAG_HOT_COST := "%s gives up %s"
 const TAG_LEAVE_GAIN := "your midfielders play their own game"
-const TAG_LEAVE_COST := "%s keeps all of his ball"
+const TAG_LEAVE_COST := "%s gets his usual %d touches"
 
 # Skip to full time.
 const SKIP_FIRST := "Skip plays the match on the plan you took in, no tag, no talk. Nothing changed here is kept; every call in the match takes 'no change'."
@@ -69,9 +71,18 @@ static func tag_gives() -> String:
 	return TAG_GIVES % tag_gives_pct()
 
 
-## What the man on him keeps with `tagger` on him at `legs` (MatchSim._tag_share).
-static func tag_kept(tagger: Dictionary, legs: float) -> float:
-	return Roles.tag_keep(tagger, legs)
+## Their man's touches a match untagged, and with `tagger` on him at `legs`:
+## the sim's multiplier (MatchSim._tag_share) as measured in matches.
+static func usual_touches() -> int:
+	return roundi(Roles.TAG_USUAL_TOUCHES)
+
+
+static func tag_kept(tagger: Dictionary, legs: float) -> int:
+	return roundi(Roles.tag_touches(tagger, legs))
+
+
+static func tag_touches(tagger: Dictionary, legs: float) -> String:
+	return TAG_TOUCHES % [usual_touches(), tag_kept(tagger, legs)]
 
 
 ## The line under the tag call: the cost, whoever goes (each man's hold is on
