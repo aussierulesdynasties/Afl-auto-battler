@@ -2813,7 +2813,7 @@ func _card_text(r: Dictionary, detail: Callable) -> String:
 
 ## A "Who tags" card (director, 2026-10-13: it must read at a glance): his name
 ## in bold with where he plays small beside it, then his Pressure, what their
-## man keeps and his legs along one line (label quiet, value clear), and what
+## man's touches and his legs along one line (label quiet, value clear), and what
 ## he gives up of his own game under them. One man to a row, the column's full
 ## width (A2). Your club's colour is the rule down the left edge;
 ## selection stays the button's own text outline. The button stays the card's
@@ -2821,7 +2821,7 @@ func _card_text(r: Dictionary, detail: Callable) -> String:
 ## "card_text" meta for the tests.
 func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: bool) -> void:
 	var gives_value := str(c["gives"]).left(1).to_upper() + str(c["gives"]).substr(1)
-	var press_value := "%s · their man keeps %s" % [c["pressure"], c["holds"]]
+	var press_value := "%s · their man: %s" % [c["pressure"], c["holds"]]
 	var plain := "%s\n%s\nPressure %s\nLegs %s\n%s %s" % [who_name, c["where"], press_value, c["legs"],
 			c["gives_label"], gives_value]
 	if is_pick:

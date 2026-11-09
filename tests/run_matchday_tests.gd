@@ -723,11 +723,12 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 		_check(who_box != null and mine_btn != null, "You are offered who goes to the tag (%s)" % tag)
 		var dflt: Button = who_box.find_child("TaggerPickerGrid_", true, false) if who_box != null else null
 		# The card's words are kept on the button (its labels are children); the
-		# trade is his season Player rating, never his disposals (director, 2026-10-13).
+		# trade is his season Player rating, never his disposals (director, 2026-10-13);
+		# their man's hold is in his touches, usual and tagged (row 120).
 		var words := func(b: Button) -> String: return str(b.get_meta("card_text", b.text))
 		var gives := func(t: String) -> bool:
 			var gv: String = load("res://scripts/sim/GateOdds.gd").tag_gives()
-			return t.contains("Gives up " + gv.left(1).to_upper() + gv.substr(1) + " (") and t.contains("their man keeps ") and not t.contains("disposals") 					and (t.contains("season rating ") or t.contains("yet to play this season"))
+			return t.contains("Gives up " + gv.left(1).to_upper() + gv.substr(1) + " (") and t.contains("their man: Usually ") and t.contains(" touches. Tagged, about ") and not t.get_slice("Gives up", 1).contains("disposals") 					and (t.contains("season rating ") or t.contains("yet to play this season"))
 		_check(dflt != null and gives.call(words.call(dflt)) and words.call(dflt).contains("Your assistant's pick")
 				and mine_btn != null and gives.call(words.call(mine_btn)),
 				"Your assistant's tagger shows what he gives up, like the others, marked as the pick (%s: %s)" % [tag, words.call(dflt).replace("

@@ -34,7 +34,8 @@ const WING_NEVER_CONTESTED := 8.0
 ## the stoppage ball (MatchSim.pick_carrier / _stoppage).
 const WING_TRANSITION := 1.6
 const WING_STOPPAGE := 0.4
-## What the tagged player keeps of his ball on fresh legs (tag_keep; row 120).
+## The tagged player's chance to carry the ball, as a multiplier, on fresh legs
+## (tag_keep; row 120).
 ## A Tagger holds him to TAG_WITH_TAGGER. Anyone else does a real but lesser
 ## job, from his own Pressure: TAG_LOOSEST for the lowest-pressure midfielder up
 ## to TAG_TIGHTEST_PLAIN for the highest, so the median man is about 58%.
@@ -43,6 +44,17 @@ const TAG_LOOSEST := 0.66
 const TAG_TIGHTEST_PLAIN := 0.50
 ## What a tagger's legs add to that, all of it on empty: 0.13 x (1 - legs / 100).
 const TAG_TIRED := 0.13
+## Those are multipliers on his chance to be picked as the carrier, not his
+## disposals: the rest of his side's ball still finds him. What a tag does to his
+## touches, measured (tools/audit/tag_keep_impl.gd: their biggest midfielder
+## tagged from the first bounce v the same man untagged, 2,000 paired matches an
+## arm on main e67ba17d, audit runs 42686692074 (no tag) and 42686698853 to
+## 42686727963 (each multiplier held); a real tag, 42686736080, came within
+## 0.1 of this table). The card says it in counts (director, 2026-11-10).
+## His disposals untagged, a match:
+const TAG_USUAL_TOUCHES := 26.83
+## [multiplier, his disposals tagged]; read between the rows (tag_touches).
+const TAG_TOUCHES := [[0.42, 19.48], [0.50, 21.03], [0.58, 22.37], [0.66, 23.53], [0.79, 25.07], [1.0, 26.83]]
 ## A tagger's pressure, as a share of 2026 midfielders, and how far it must
 ## outrun his contested ball.
 const TAGGER_PRESSURE := 0.70
@@ -103,7 +115,7 @@ static func is_tagger(p: Dictionary) -> bool:
 	return press >= TAGGER_PRESSURE and press - maxf(win, run) >= TAGGER_MARGIN
 
 
-## The share of his ball a man keeps with `p` tagging him at `legs` (energy out
+## The multiplier on his chance to carry the ball with `p` tagging him at `legs` (energy out
 ## of 100; director, 2026-10-11: it comes from the tagger's Pressure and his
 ## legs). Every tagger takes something off him, and a Tagger the most (row 120).
 static func tag_keep(p: Dictionary, legs: float) -> float:
@@ -116,6 +128,24 @@ static func tag_keep(p: Dictionary, legs: float) -> float:
 			mid_view["role"] = "MID"
 			fresh = lerpf(TAG_LOOSEST, TAG_TIGHTEST_PLAIN, PlayerProfile.percentile(mid_view, "pressure", true))
 	return fresh + TAG_TIRED * (1.0 - clampf(legs / 100.0, 0.0, 1.0))
+
+
+## His disposals in a match with `p` tagging him at `legs`: what tag_keep's
+## multiplier comes to (TAG_TOUCHES; row 120).
+static func tag_touches(p: Dictionary, legs: float) -> float:
+	return touches_at(tag_keep(p, legs))
+
+
+static func touches_at(multiplier: float) -> float:
+	var rows: Array = TAG_TOUCHES
+	if multiplier <= float(rows[0][0]):
+		return float(rows[0][1])
+	for i in range(1, rows.size()):
+		var lo: Array = rows[i - 1]
+		var hi: Array = rows[i]
+		if multiplier <= float(hi[0]):
+			return lerpf(float(lo[1]), float(hi[1]), (multiplier - float(lo[0])) / (float(hi[0]) - float(lo[0])))
+	return float(rows[rows.size() - 1][1])
 
 
 ## His football identity in two or three words: "Wing", "Tagger",
