@@ -20,6 +20,8 @@ var _pitch: PitchView
 var _root: VBoxContainer
 var _score_home: Label
 var _score_away: Label
+## The band behind both scores: its width is what the two scores must share.
+var _score_band: Control
 var _clock: Label
 var _feed: VBoxContainer
 var _feed_scroll: ScrollContainer
@@ -284,6 +286,8 @@ func _scoreboard() -> Control:
 	h.add_child(_score_column(str(_res["away"]), false, narrow))
 	v.add_child(_momentum_bar())
 	p.item_rect_changed.connect(_fit_over)
+	p.item_rect_changed.connect(_fit_scores)
+	_score_band = p
 	return p
 
 
@@ -431,7 +435,7 @@ func _score_column(code: String, home: bool, narrow: bool) -> Control:
 			else HORIZONTAL_ALIGNMENT_LEFT
 	ClubDuel.on_colour(name)
 	v.add_child(name)
-	var score := UiKit.figure("0.0 (0)", 30 if narrow else 36, Color.WHITE)
+	var score := UiKit.figure("0.0 (0)", UiKit.RATING if narrow else 36, Color.WHITE)
 	ClubDuel.on_colour(score)
 	score.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if home \
 			else HORIZONTAL_ALIGNMENT_LEFT
@@ -3525,6 +3529,7 @@ func _paint_scoreboard() -> void:
 		return
 	_score_home.text = UiKit.scoreline(_shown_goals[0], _shown_behinds[0])
 	_score_away.text = UiKit.scoreline(_shown_goals[1], _shown_behinds[1])
+	_fit_scores()
 	if _clock != null:
 		_clock.text = _clock_text(_shown_q, _shown_min)
 	if _lead != null and is_instance_valid(_lead):
@@ -3532,6 +3537,29 @@ func _paint_scoreboard() -> void:
 		var name_of := func(c): return GameDB.club_short(str(c)) if narrow else GameDB.club_name(str(c))
 		_lead.text = MatchNotes.lead_text(str(_res["home"]), str(_res["away"]), [
 				_shown_goals[0] * 6 + _shown_behinds[0], _shown_goals[1] * 6 + _shown_behinds[1]], name_of)
+
+
+## Both scores at one size: the largest at which the longer one fits its half
+## of the band (row 6.29; a phone's 28.18 (186) ran past the band's clipped
+## edge). They step down together, so neither club's score reads smaller.
+func _fit_scores() -> void:
+	if _score_band == null or not is_instance_valid(_score_band) or _score_home == null:
+		return
+	var narrow := UiKit.view_width(self) < 640.0
+	var band := minf(_score_band.size.x, UiKit.view_width(self) - 2.0 * _score_band.global_position.x)
+	# The band's padding (8 a side), the row's two gaps (6) and the clock between.
+	var room := (band - 16.0 - 12.0 - (84.0 if narrow else 132.0)) / 2.0
+	var sizes := [UiKit.RATING, UiKit.SCORE, UiKit.NUMBER] if narrow else [36, UiKit.RATING, UiKit.SCORE]
+	var font: Font = _score_home.get_theme_font("font")
+	var fs: int = sizes[-1]
+	for s: int in sizes:
+		var wide := maxf(font.get_string_size(_score_home.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(s)).x,
+				font.get_string_size(_score_away.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(s)).x)
+		if wide <= room:
+			fs = s
+			break
+	for l: Label in [_score_home, _score_away]:
+		UiKit.set_font_size(l, fs)
 
 
 ## "Q3 12'": the minute of the quarter, like a ground's clock. MatchSim
