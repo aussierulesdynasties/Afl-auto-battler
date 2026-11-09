@@ -281,7 +281,7 @@ func _test_tagger() -> void:
 	for code in GameDB.active_clubs(2027):
 		usual[PlanFit.standing_plan(Squad.new(code, GameDB.club_list(code), false, code).ground)] = true
 	_check(usual.size() >= 3, "Clubs play different usual games (%s)" % str(usual.keys()))
-	# Controlled tempo now needs clean ball users: good lists get more from it,
+	# Controlled Tempo now needs clean ball users: good lists get more from it,
 	# poor ones only blunt a press part-way. It stays a situational protection
 	# plan, never a club's usual game.
 	var controlled_ok := true
@@ -294,7 +294,7 @@ func _test_tagger() -> void:
 		hi = maxf(hi, f)
 		controlled_ok = controlled_ok and not PlanFit.carriers(g2, "controlled").is_empty()
 	_check(controlled_ok and hi > lo,
-			"Controlled tempo depends on ball users")
+			"Controlled Tempo depends on ball users")
 
 
 ## A tag goes on anyone with a midfield position, first or second, wherever he

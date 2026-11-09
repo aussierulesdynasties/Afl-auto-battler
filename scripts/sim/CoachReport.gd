@@ -9,10 +9,10 @@ extends RefCounted
 
 const PLAN_NAMES := {
 	"balanced": "Balanced",
-	"attacking": "Attack corridor",
-	"defensive": "Defensive press",
-	"contest": "Win contest",
-	"controlled": "Controlled tempo",
+	"attacking": "Attack Corridor",
+	"defensive": "Defensive Press",
+	"contest": "Win Contest",
+	"controlled": "Controlled Tempo",
 }
 
 const PEP_NAMES := {
@@ -38,18 +38,18 @@ const PLAN_PARTS := {
 	"attacking": {"does": "Go through the corridor.",
 			"gain": "More ground and better shots.",
 			"cost": "More turnovers, heavier legs, and they score more on the rebound.",
-			"beats": "Beats Controlled tempo. A Defensive press squeezes it."},
+			"beats": "Beats Controlled Tempo. A Defensive Press squeezes it."},
 	"defensive": {"does": "Hunt the ball high and lock it in their half.",
 			"gain": "Win it back in their half.",
 			"cost": "Heavier legs, rushed shots, and space behind if they break it.",
-			"beats": "Beats Attack corridor. Controlled tempo plays through it."},
+			"beats": "Beats Attack Corridor. Controlled Tempo plays through it."},
 	"contest": {"does": "Numbers at the stoppage. Leans on your ball-winners and ruck.",
 			"gain": "More clearances won.",
 			"cost": "The ball moves a little slower and you are a little exposed on the rebound."},
 	"controlled": {"does": "Keep the ball. Asks nothing special of your list.",
 			"gain": "Fewer errors, less rattled by pressure, fresher legs.",
 			"cost": "Less ground gained.",
-			"beats": "Plays through a Defensive press. Attack corridor runs past it."},
+			"beats": "Plays through a Defensive Press. Attack Corridor runs past it."},
 }
 
 const PEP_SUMMARY := {
