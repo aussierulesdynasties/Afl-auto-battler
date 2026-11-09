@@ -674,10 +674,6 @@ func _test_free_agents() -> void:
 			total += 1
 			var code := str(o["club"])
 			var list: Array = GameState.season.lists[code]
-			# A rival's own player testing the market keeps its re-signing offer.
-			if code == str(fa.get("home_offer", "")):
-				seen[code] = true
-				continue
 			if seen.has(code) or code == str(fa.get("released_by", "")) or code == me \
 					or int(o["salary"]) < 1 or int(o["years"]) < 1 or int(o["years"]) > Contracts.MAX_YEARS \
 					or int(o["salary"]) > GameState._cap_room_of(code) \
@@ -871,8 +867,8 @@ func _test_free_agents() -> void:
 		if str(entry.get("kind", "")) == "signed" and str(entry["club"]) != me:
 			seen_n += 1
 			var code := str(entry["club"])
-			# A club building its list signs into that list, not season.lists.
-			if Contracts.payroll(ExpansionBuild.list_of(GameState, code)) > GameState.salary_cap:
+			# A club still to enter holds its list in the build, under its own cap.
+			if Contracts.payroll(ExpansionBuild.list_of(GameState, code)) > GameState.cap_for(code):
 				fair = false
 	_check(fair and seen_n > 0, "Every rival signing fits under the cap (%d signings)" % seen_n)
 

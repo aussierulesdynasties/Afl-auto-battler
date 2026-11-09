@@ -156,11 +156,13 @@ func _test_market_opens_fresh() -> void:
 	for code in GameState.season.lists:
 		stale[str(code)] = 2
 	GameState._targets_signed = stale.duplicate()
+	_settle_letter()
 	GameState.open_offseason()
 	var with_stale := _market_sig()
 	GameState.load_career()
 	# The save does not keep them: a career loaded in a fresh game has none.
 	GameState._targets_signed = {}
+	_settle_letter()
 	GameState.open_offseason()
 	var reloaded := _market_sig()
 	_check(with_stale != "" and with_stale == reloaded,
@@ -243,9 +245,17 @@ func _test_second_offseason_after_reload() -> void:
 	_check(bad.is_empty(), "Saved in season 2 and loaded fresh, the second off-season and season 3 play the same (%s)" % ", ".join(bad))
 
 
+## A strong season can end with a rival board's letter, and the off-season waits
+## for his answer (ClubMoves): he stays, so these careers carry on at his club.
+func _settle_letter() -> void:
+	if ClubMoves.letter_open(GameState):
+		ClubMoves.decline_letter(GameState)
+
+
 func _play_offseason() -> void:
 	while not GameState.season.is_season_over():
 		GameState.advance()
+	_settle_letter()
 	GameState.open_offseason()
 	if GameState.begin_intake_draft():
 		var d: Draft = GameState.draft
@@ -335,6 +345,7 @@ func _career_trace() -> Dictionary:
 ## From a finished season: the market as it opens, the draft class, the lists
 ## after the intake, and the first three rounds of the next season.
 func _offseason_trace() -> Dictionary:
+	_settle_letter()
 	GameState.open_offseason()
 	var out := {"market": _market_sig()}
 	if GameState.begin_intake_draft():
