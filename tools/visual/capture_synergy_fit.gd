@@ -42,17 +42,30 @@ func _run() -> void:
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)
 
-	# A rival made to carry the trait your nearest synergy is short of.
+	# Your nearest synergy brought to one short (illustrative), then a rival
+	# made to carry the trait it is short of.
 	var ground: Array = state.my_squad().ground
-	var want_syn := "engine_room"
-	var want_t := "bull"
-	for r in Traits.progress(ground):
-		if not bool(r["active"]) and int(r["missing"]) == 1:
-			want_syn = str(r["key"])
-			for t in r["needs"]:
-				if int(r["have"][t]) < int(r["needs"][t]):
-					want_t = str(t)
+	var near_row: Dictionary = Traits.progress(ground).filter(func(r): return not bool(r["active"]))[0]
+	var want_syn := str(near_row["key"])
+	var want_t := ""
+	for t in near_row["needs"]:
+		if int(near_row["have"][t]) < int(near_row["needs"][t]):
+			want_t = str(t)
+	var sline := str(Traits.SYNERGIES[want_syn]["line"])
+	var td: Dictionary = Traits.DEFS[want_t]
+	var short := int(near_row["missing"]) - 1
+	for q in ground:
+		if short <= 0:
 			break
+		if Traits.of(q).has(want_t) or (sline != "" and str(q["role"]) != sline):
+			continue
+		var troles: Array = td["roles"]
+		if not troles.is_empty() and not troles.has(str(q["role"])):
+			continue
+		var lp: Dictionary = state.list_player(str(q["id"]))
+		lp["attr"][str(td["stat"])] = int(td["min"]) + 8
+		if Traits.of(lp).has(want_t):
+			short -= 1
 	var d: Dictionary = Traits.DEFS[want_t]
 	var line := str(Traits.SYNERGIES[want_syn]["line"])
 	var roles: Array = d["roles"]
@@ -67,13 +80,18 @@ func _run() -> void:
 				break
 		if not rec.is_empty():
 			break
+	# Only the one trait, so it is his first two.
+	for k in Traits.DEFS:
+		var kd: Dictionary = Traits.DEFS[k]
+		if not kd.has("max"):
+			rec["attr"][str(kd["stat"])] = mini(int(rec["attr"].get(str(kd["stat"]), 0)), int(kd["min"]) - 3)
 	rec["attr"][str(d["stat"])] = int(d["min"]) + 6
 	if bool(d.get("small", false)):
 		rec["attr"]["marking"] = 45
 	print("CAPTURE recruit for ", want_syn, " / ", want_t, ": ", state.synergy_fit(rec))
 	router.go("list")
 	await _frames(8)
-	PlayerSheet.open(current_scene, rec)
+	load("res://scripts/ui/PlayerSheet.gd").open(current_scene, rec)
 	await _frames(8)
 	var fit: Control = current_scene.find_child("SynergyFit", true, false)
 	var sc := _scroll_of(fit)
