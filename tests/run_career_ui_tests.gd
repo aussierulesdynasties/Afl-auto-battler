@@ -2744,6 +2744,8 @@ Your career stays on this device.",
 	var moves = load("res://scripts/state/ClubMoves.gd")
 	if moves.letter_open(_state):
 		moves.decline_letter(_state)
+	# The first postseason's sheet has its own suite (first_visit_intro).
+	_state.postseason_intro_seen = true
 	_router.go("hub")
 	await _settle()
 	_check(_screen_text().contains("Trades & Contracts"), "The hub offers Trades & Contracts after the season")
@@ -4445,6 +4447,7 @@ func _season_with_letter() -> void:
 	_state.week_events = []
 	_state.media_conference = {}
 	_state.set_setting("seen_weekly_loop_intro", true)
+	_state.postseason_intro_seen = true
 
 
 func _test_rival_letter_taps() -> void:
