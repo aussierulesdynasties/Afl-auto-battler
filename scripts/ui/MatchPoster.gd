@@ -6,14 +6,14 @@ extends Control
 ## and the club names in the scoreboard face; the round, home or away, the
 ## ground and the forecast underneath. The hub's hero. Reads; changes nothing.
 
-const H_NARROW := 196.0
+const H_NARROW := 216.0
 const H_WIDE := 220.0
 ## The match ball between the two clubs, where the "v" was (director,
 ## 2026-10-14: "Bigger, in real colours", then "footy is too big"): a real
 ## footy beside a jumper, about 1.4 times a drawn guernsey's width (the
 ## guernsey fills about 0.6 of its box; the ball is wider than tall).
-const BALL_NARROW := 34.0
-const BALL_WIDE := 42.0
+const BALL_NARROW := 44.0
+const BALL_WIDE := 50.0
 
 var _mine := ""
 var _opp := ""
@@ -24,8 +24,11 @@ var _ball_shadow: TextureRect
 var _versus: Label
 var _crest_box: Control
 var _crest_other: Control
+var _names: Array[Label] = []
 ## The ball keeps at least this far from each guernsey, however narrow the phone.
 const BALL_CLEAR := 8.0
+## How much of its box a guernsey fills across.
+const GUERNSEY_FILL := 0.6
 
 static var _shadow_tex: GradientTexture2D
 
@@ -49,7 +52,7 @@ func setup(my_club: String, opp: String, is_home: bool, line: String, narrow: bo
 	var row := UiKit.hbox(10)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(row)
-	var crest := 64.0 if narrow else 76.0
+	var crest := 88.0 if narrow else 92.0
 	var mine := _side(my_club, crest, narrow)
 	_crest_box = mine.get_child(0)
 	row.add_child(mine)
@@ -103,9 +106,11 @@ func _place_ball() -> void:
 	# gives way, the guernseys do not.
 	var mine := _guernsey_rect(_crest_box)
 	var theirs := _guernsey_rect(_crest_other)
-	var room := theirs.position.x - mine.end.x - 2.0 * BALL_CLEAR
+	var drawn := mine.size.x * GUERNSEY_FILL
+	var room := theirs.get_center().x - mine.get_center().x - drawn - 2.0 * BALL_CLEAR
 	if room > 0.0 and bs.x > room:
 		bs *= room / bs.x
+	_ball.custom_minimum_size = bs
 	var centre := Vector2(_versus.global_position.x + _versus.size.x / 2.0,
 			_crest_box.global_position.y + _crest_box.size.y / 2.0) - global_position
 	_ball.size = bs
@@ -146,11 +151,25 @@ func _side(code: String, crest: float, narrow: bool) -> Control:
 	var c := CenterContainer.new()
 	c.add_child(UiKit.club_marker(code, crest))
 	s.add_child(c)
-	var n := UiKit.figure(GameDB.club_short(code), UiKit.SCORE if narrow else UiKit.RATING, Color.WHITE)
+	var n := UiKit.figure(GameDB.club_short(code), UiKit.RATING, Color.WHITE)
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	n.clip_text = true
+	n.resized.connect(_fit_names)
+	_names.append(n)
 	s.add_child(n)
 	return s
+
+
+## Both names at the big size, or both a step down when either would be cut off
+## (Kangaroos on a narrow phone): the two clubs always read as equals.
+func _fit_names() -> void:
+	var fits := true
+	for n: Label in _names:
+		var font: Font = n.get_theme_font("font")
+		if font.get_string_size(n.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.RATING).x > n.size.x:
+			fits = false
+	for n: Label in _names:
+		n.add_theme_font_size_override("font_size", UiKit.RATING if fits else UiKit.SCORE)
 
 
 func _shade(l: Label) -> void:
