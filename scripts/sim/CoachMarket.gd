@@ -322,6 +322,11 @@ static func term_years(c: Dictionary, job: String, met := false) -> int:
 static func _appoint(c: Dictionary, club: String, job: String, year: int, seed: int) -> void:
 	if str(c.get("status", "")) == "club":
 		_close_stint(c, year)
+	# A promise is kept by the job, and moot once he leaves the club.
+	if c.has("promise"):
+		var pr: Dictionary = c["promise"]
+		if str(pr.get("club", "")) != club or str(pr.get("job", "")) == job:
+			c.erase("promise")
 	c["status"] = "club"
 	c["club"] = club
 	c["job"] = job
@@ -349,8 +354,15 @@ static func _appoint(c: Dictionary, club: String, job: String, year: int, seed: 
 ## A senior coach's job is hard to turn down; a sideways move is not.
 const STAY_CHANCE := {
 	"promote": {4: 0.30, 3: 0.65, 2: 0.85, 1: 0.90},
+	"promise": {4: 0.20, 3: 0.45, 2: 0.60, 1: 0.70},
 	"stay": {4: 0.10, 3: 0.25, 2: 0.35, 1: 0.45},
 }
+## A succession promise (T5.Q16, director 2026-11-10): the senior assistant's
+## job within PROMISE_SEASONS seasons. Not money: a role with a timeframe.
+const PROMISE_SEASONS := 2
+## Each promise a club has broken him takes this off the weight any later
+## offer from that club carries.
+const BROKEN_TRUST := 0.15
 const STAY_LOYALTY_PER_YEAR := 0.03
 const STAY_LOYALTY_MAX := 0.10
 
@@ -367,7 +379,61 @@ static func stay_chance(c: Dictionary, offer: String, rival_job: String, year: i
 	for k in STAY_WIN:
 		if bool(result.get(k, false)):
 			p += float(STAY_WIN[k])
+	p -= BROKEN_TRUST * float(broken_by(c, str(c.get("club", ""))))
 	return clampf(p, 0.0, 0.95)
+
+
+## Promises `club` has broken him.
+static func broken_by(c: Dictionary, club: String) -> int:
+	return int((c.get("broken", {}) as Dictionary).get(club, 0))
+
+
+## Promise him his club's senior assistant job: his by the start of season
+## year + PROMISE_SEASONS (`year` is the season being played or just ended).
+static func make_promise(c: Dictionary, year: int) -> void:
+	c["promise"] = {"club": str(c.get("club", "")), "job": "SA", "by": year + PROMISE_SEASONS}
+
+
+static func holds_promise(c: Dictionary, club: String) -> bool:
+	var pr: Dictionary = c.get("promise", {})
+	return not pr.is_empty() and str(pr.get("club", "")) == club
+
+
+static func break_promise(c: Dictionary) -> void:
+	var club := str((c.get("promise", {}) as Dictionary).get("club", ""))
+	c.erase("promise")
+	if club == "":
+		return
+	if not c.has("broken"):
+		c["broken"] = {}
+	(c["broken"] as Dictionary)[club] = broken_by(c, club) + 1
+
+
+## `club` has just put `appointee` in `job`. Anyone there promised that job is
+## let down (a promise kept is cleared in _appoint). Returns the news line for
+## each one let down.
+static func settle_promises(coaches: Dictionary, club: String, job: String, appointee: String) -> Array:
+	var out := []
+	for cid in coaches:
+		var c: Dictionary = coaches[cid]
+		if cid == appointee or not holds_promise(c, club):
+			continue
+		if str((c["promise"] as Dictionary).get("job", "")) == job:
+			out.append(_broken_line(c))
+			break_promise(c)
+	return out
+
+
+## An AI club's answer when a rival comes for one of its coaches: the same
+## choices you have (a succession promise to a line coach, a plea to the
+## senior assistant), weighed by the same rule. True when he stays.
+static func ai_counter(c: Dictionary, rival_job: String, year: int, result: Dictionary) -> bool:
+	var offer := "stay" if str(c.get("job", "")) == "SA" or c.has("promise") else "promise"
+	if not stays(c, offer, rival_job, year, 0, result):
+		return false
+	if offer == "promise":
+		make_promise(c, year)
+	return true
 
 
 ## Does he stay? When what you offer, his years with you and your club's
@@ -413,7 +479,7 @@ static func offseason(ctx: Dictionary) -> Dictionary:
 	var seed := int(ctx.get("seed", 0))
 	var news: Array = []   # [priority, text]
 	var log := {"sackings": 0, "retired": 0, "expired": 0, "sc_changes": 0, "internal_sc": 0,
-			"promotions": 0, "poached_from_you": 0, "generated": 0, "emergency": 0,
+			"promotions": 0, "poached_from_you": 0, "held": 0, "broken": 0, "generated": 0, "emergency": 0,
 			"line_to_sc": 0, "archived": 0, "pruned": 0}
 	var my_vacancies: Array = []
 	var kept_by_you: Dictionary = ctx.get("protected", {})
@@ -508,6 +574,7 @@ static func offseason(ctx: Dictionary) -> Dictionary:
 	# Fill every vacancy, senior jobs first. A promotion from another club
 	# opens his old job, which joins the queue; each coach moves at most once.
 	var moved := {}
+	var held := {}
 	var poached_from_you := 0
 	var guard := 0
 	while guard < 2000:
@@ -530,12 +597,29 @@ static func offseason(ctx: Dictionary) -> Dictionary:
 			if str(deal[0]) == club and str(deal[1]) == job and not moved.has(cid) and coaches.has(cid):
 				best = coaches[cid]
 				best_score = INF
+		# A promise his club made him comes first (the same rule for every club).
+		if best_score != INF:
+			for cid in coaches:
+				var h: Dictionary = coaches[cid]
+				if not moved.has(cid) and str(h.get("status", "")) == "club" and str(h.get("club", "")) == club \
+						and holds_promise(h, club) and str(h["promise"]["job"]) == job:
+					best = h
+					best_score = INF
+					break
 		for cid in coaches:
 			if best_score == INF:
 				break
 			var c: Dictionary = coaches[cid]
-			if moved.has(cid) or promised.has(cid) or not would_take(c, club, job, year):
+			if moved.has(cid) or promised.has(cid) or held.has(cid) or not would_take(c, club, job, year):
 				continue
+			var home := str(c.get("club", "")) if str(c.get("status", "")) == "club" else ""
+			if home not in ["", club, my_club]:
+				# A rival's approach is answered once a season, by the same rule as yours.
+				held[cid] = true
+				if ai_counter(c, job, year, results.get(home, {})):
+					log["held"] += 1
+					continue
+				held.erase(cid)
 			if str(c.get("status", "")) == "club" and str(c["club"]) == my_club \
 					and (poached_from_you >= MAX_POACHED_FROM_YOU or kept_by_you.has(cid)):
 				continue
@@ -551,6 +635,10 @@ static func offseason(ctx: Dictionary) -> Dictionary:
 		var outside_sc := job == "SC" and from_club != club
 		var first_job := (best.get("stints", []) as Array).is_empty()
 		_appoint(best, club, job, year, seed)
+		for line in settle_promises(coaches, club, job, str(best["cid"])):
+			log["broken"] += 1
+			if club == my_club:
+				news.append([1, line])
 		if first_job and str(best.get("former_player_id", "")) != "" and job != "SC":
 			_first_job_news(best, club, job, my_club, news)
 		moved[str(best["cid"])] = true
@@ -590,6 +678,20 @@ static func offseason(ctx: Dictionary) -> Dictionary:
 		if not moved.has(cid) and coaches.has(cid):
 			news.append([1, "%s's move to %s fell through when the job never came up. He stays with you." % [
 					_name(coaches[cid]), GameDB.club_name(str((promised[cid] as Array)[0]))]])
+
+	# Promises whose time ran out: the job never came, and he remembers.
+	for cid in coaches:
+		var c: Dictionary = coaches[cid]
+		if not c.has("promise"):
+			continue
+		var pr: Dictionary = c["promise"]
+		if str(c.get("status", "")) != "club" or str(c.get("club", "")) != str(pr.get("club", "")):
+			c.erase("promise")
+		elif int(pr.get("by", 0)) <= year + 1 and str(pr.get("club", "")) != my_club:
+			# Your open jobs wait for you, so yours are judged when the season
+			# starts (GameState._expire_my_promises).
+			break_promise(c)
+			log["broken"] += 1
 
 	_prune(coaches, archive, year, my_club, log)
 	_top_up(coaches, year, seed, log, clubs)
@@ -891,6 +993,13 @@ static func _name(c: Dictionary) -> String:
 	return GameDB.player_display_name(c)
 
 
+## The news when a promise to him is broken.
+static func _broken_line(c: Dictionary) -> String:
+	var pr: Dictionary = c.get("promise", {})
+	return "You promised %s the senior assistant's job by %d. It went elsewhere, and he will weigh your word less from now on." % [
+			_name(c), int(pr.get("by", 0))]
+
+
 static func _job_word(job: String) -> String:
 	return str(Coaches.JOB_LABEL.get(job, job)).to_lower() + ("" if job == "SC" or job == "SA" else " coach")
 
@@ -987,6 +1096,13 @@ static func appoint_mine(coaches: Dictionary, cid: String, my_club: String, job:
 ## coach when nobody is free.
 static func auto_fill(coaches: Dictionary, my_club: String, job: String, year: int, seed: int) -> String:
 	var sl := shortlist(coaches, my_club, job, year, seed, 1)
+	# The club keeps a promise it made, as every club does.
+	for k in coaches:
+		var h: Dictionary = coaches[k]
+		if str(h.get("status", "")) == "club" and str(h.get("club", "")) == my_club and holds_promise(h, my_club) \
+				and str(h["promise"]["job"]) == job:
+			sl = [k]
+			break
 	var cid := ""
 	if sl.is_empty():
 		var log := {}
