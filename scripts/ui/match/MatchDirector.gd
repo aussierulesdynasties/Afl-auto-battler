@@ -2796,9 +2796,11 @@ func _pack_ring(at: Vector2, members: Array, winner: int) -> Dictionary:
 			var off: Vector2 = (tokens[list[i]]["pos"] as Vector2) - at
 			ring.append([off.angle() if off.length() > 0.5 else float(list[i]), int(list[i])])
 	# The rest on the ring, on the bearings between the four on the ball (where
-	# the discs drawn apart do not push into them), each taking the free one
-	# nearest his own bearing, so nobody runs through the pack; evenly round it
-	# with a crowd.
+	# the discs drawn apart do not push into them), each near his own bearing
+	# and in the order they stand round it, so nobody runs through the pack;
+	# evenly round it with a crowd.
+	for r in ring:
+		r[0] = wrapf(float(r[0]), -PI, PI)
 	ring.sort()
 	var m := ring.size()
 	var slots := []
@@ -2807,15 +2809,60 @@ func _pack_ring(at: Vector2, members: Array, winner: int) -> Dictionary:
 		n_slots = m
 	for q in range(n_slots):
 		slots.append(TAU * (float(q) + 0.5) / float(n_slots))
-	var free := slots.duplicate()
+	var bearings := []
 	for r in ring:
-		var best := 0
-		for q in range(free.size()):
-			if absf(wrapf(float(free[q]) - float(r[0]), -PI, PI)) < absf(wrapf(float(free[best]) - float(r[0]), -PI, PI)):
-				best = q
-		spots[int(r[1])] = at + Vector2.from_angle(float(free[best])) * PACK_RING
-		free.remove_at(best)
+		bearings.append(float(r[0]))
+	var pick := _ring_slots(bearings, slots)
+	for i in range(m):
+		spots[int(ring[i][1])] = at + Vector2.from_angle(float(slots[int(pick[i])])) * PACK_RING
 	return spots
+
+
+## Which of `slots` (bearings round the ring, ascending) each of `bearings`
+## (ascending) takes: the men keep their order round the ring, so no two paths
+## cross and nobody is sent to the far side through the pack (taking the nearest
+## free slot one by one could leave the last man a slot across the ball: seed 43,
+## 2026-11-10), and the squared turns from their own bearings are least.
+static func _ring_slots(bearings: Array, slots: Array) -> Array:
+	var m := bearings.size()
+	var n := slots.size()
+	var best_cost := INF
+	var best: Array = []
+	for o in range(n):
+		# dp[i][j]: the least cost with the first i men on the first j slots from o.
+		var dp := []
+		var from := []
+		for i in range(m + 1):
+			var row := []
+			var frow := []
+			for j in range(n + 1):
+				row.append(0.0 if i == 0 else INF)
+				frow.append(false)
+			dp.append(row)
+			from.append(frow)
+		for i in range(1, m + 1):
+			for j in range(i, n + 1):
+				var skip: float = dp[i][j - 1]
+				var dev := wrapf(float(slots[(o + j - 1) % n]) - float(bearings[i - 1]), -PI, PI)
+				var take: float = float(dp[i - 1][j - 1]) + dev * dev
+				if take <= skip:
+					dp[i][j] = take
+					from[i][j] = true
+				else:
+					dp[i][j] = skip
+		if float(dp[m][n]) < best_cost - 1e-9:
+			best_cost = dp[m][n]
+			var out := []
+			out.resize(m)
+			var i2 := m
+			var j2 := n
+			while i2 > 0:
+				if from[i2][j2]:
+					out[i2 - 1] = (o + j2 - 1) % n
+					i2 -= 1
+				j2 -= 1
+			best = out
+	return best
 
 
 ## A stoppage is on: a ball-up or throw-in being set, and the clearance out
