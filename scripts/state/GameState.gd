@@ -6413,6 +6413,8 @@ func _close_season_awards() -> void:
 	offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() else {}
 	season_awards = Awards.season_awards(season_tally, players, season_year, rising_star_noms)
 	var medal := Awards.norm_smith(_grand_final_result())
+	# Premiership-year tattoos (row 73): cosmetic, on the players, no match RNG.
+	PremiershipInk.record_grand_final(_grand_final_result(), premier(), players, season_year)
 	if not medal.is_empty():
 		season_awards["norm_smith"] = medal
 	# The Golden Fist (T5.Q11c), from the season's book. A book begun part way

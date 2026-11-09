@@ -836,6 +836,8 @@ func figure_look(p: Dictionary, wet := false) -> Dictionary:
 	var out := player_looks(p).duplicate()
 	out["hair_style"] = str(player_appearance(p)["hair_style"])
 	out["long_sleeves"] = Appearance.long_sleeves(str(p.get("id", "")), wet)
+	# His premiership years on the bicep (PremiershipInk), hidden under a long sleeve.
+	out["flag_ink"] = 0 if bool(out["long_sleeves"]) else PremiershipInk.years(p).size()
 	return out
 
 

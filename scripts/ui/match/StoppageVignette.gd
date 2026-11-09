@@ -53,6 +53,8 @@ static var frame_log: Array = []  # {anim, facing, frames, wanted}
 static var hair_log: Array = []
 ## The faces drawn while log_frames is on.
 static var face_log: Array = []
+## The premiership ink drawn while log_frames is on.
+static var ink_log: Array = []
 
 var tokens: Array = []      # {side, mine, slot, id, tall, look, name, num, tired, from, to, delay, dur}
 var facts: Array = []       # one or two lines of commentary, no numbers
@@ -544,7 +546,8 @@ func _draw_figure(at: Vector2, t: Dictionary) -> void:
 	var look: Dictionary = t.get("look", UMPIRE_LOOK)
 	draw_frame(self, Vector2(base.x, base.y), info, frame, k, look_colour(kit, look, mirror), mirror,
 			number_colour(kit, int(t["num"]), 1.0, mirror) if facing.begins_with("back") and m > 18.0 else Color(0, 0, 0, 0),
-			Transform2D.IDENTITY, str(look.get("hair_style", VignetteFigures.HAIR_BASE)), face_of(look))
+			Transform2D.IDENTITY, str(look.get("hair_style", VignetteFigures.HAIR_BASE)), face_of(look),
+			ink_of(look))
 
 
 ## Draws frame f of a strip with its feet at feet, k screen pixels per frame pixel,
@@ -556,9 +559,11 @@ func _draw_figure(at: Vector2, t: Dictionary) -> void:
 ## straight after it (VignetteFigures.hair_for: a style with no art yet draws
 ## the base look), so a man in front still covers the hair of one behind.
 ## face: his brows (face_of), or -1 for no face.
+## ink: his premiership years on the bicep (figure_look "flag_ink"; 0 for none):
+## drawn on the figure before his hair, in its own colour (VignetteInk).
 static func draw_frame(ci: CanvasItem, feet: Vector2, info: Dictionary, f: int, k: float, colour: Color,
 		mirror := false, number := Color(0, 0, 0, 0), view := Transform2D.IDENTITY,
-		hair_style := VignetteFigures.HAIR_BASE, face := -1) -> void:
+		hair_style := VignetteFigures.HAIR_BASE, face := -1, ink := 0) -> void:
 	var pivot := Vector2(info["pivot"][0], info["pivot"][1])
 	var dest := Rect2(feet - pivot * k, VignetteFigures.frame_size(info) * k)
 	var src := VignetteFigures.source(info, f)
@@ -567,6 +572,11 @@ static func draw_frame(ci: CanvasItem, feet: Vector2, info: Dictionary, f: int, 
 	ci.draw_texture_rect_region(FIGURE_SHADE, dest, src, colour)
 	if number.a > 0.0:
 		ci.draw_texture_rect_region(FIGURE_SHADE, dest, src, number)
+	var ic := VignetteInk.cell(info, ink)
+	if not ic.is_empty():
+		if log_frames:
+			ink_log.append({"years": ink, "texture": VignetteInk.texture(ic)})
+		_draw_look(ci, dest.position, ic, f, k, Color(1, 1, 1, colour.a), VignetteInk.texture(ic))
 	draw_hair(ci, dest.position, info, f, k, colour, hair_style, face)
 	if mirror:
 		ci.draw_set_transform_matrix(view)
@@ -603,12 +613,18 @@ static func draw_hair(ci: CanvasItem, origin: Vector2, info: Dictionary, f: int,
 
 
 ## A VignetteLooks cell (VignetteLooks.cell) over the figure drawn at origin, or nothing.
-static func _draw_look(ci: CanvasItem, origin: Vector2, c: Dictionary, f: int, k: float, colour: Color) -> void:
+static func _draw_look(ci: CanvasItem, origin: Vector2, c: Dictionary, f: int, k: float, colour: Color,
+		tex: Texture2D = null) -> void:
 	if c.is_empty():
 		return
-	ci.draw_texture_rect_region(VignetteLooks.texture(c),
+	ci.draw_texture_rect_region(tex if tex != null else VignetteLooks.texture(c),
 			Rect2(origin + Vector2(c["offset"][0], c["offset"][1]) * k, Vector2(c["size"][0], c["size"][1]) * k),
 			VignetteFigures.hair_source(c, f), colour)
+
+
+## The premiership years a look draws on the bicep (draw_frame's ink; 0 for none).
+static func ink_of(look: Dictionary) -> int:
+	return int(look.get("flag_ink", 0))
 
 
 ## The face a look draws (draw_frame's face): his brows
