@@ -6850,6 +6850,9 @@ func open_offseason(keep_staff := false) -> void:
 			if project_job(p) != "":
 				_finish_project(p, str(code) == my_club)
 	offseason_year = season_year
+	# Selection bars from before today (a rival board's letter reads them) must
+	# not reach the market: a reload, which does not keep them, would play it differently.
+	_bars = {}
 	# The board funds a fresh operating year. Last season's choices do not
 	# become permanent upgrades or compound into a tech tree.
 	department_budget = ClubBudget.defaults()
