@@ -547,6 +547,7 @@ func _test_hub_hero() -> void:
 	# Every club's name is whole on the poster and the two match, down to 320 wide.
 	var codes: Array = db.players_by_club.keys()
 	_check(codes.size() >= 18, "Every club is walked (%d)" % codes.size())
+	var Poster = load("res://scripts/ui/MatchPoster.gd")
 	for w in [320, 390]:
 		var whole := true
 		var same := true
@@ -555,7 +556,7 @@ func _test_hub_hero() -> void:
 			holder.size = Vector2(w - 54, 300)
 			root.add_child(holder)
 			var other: String = codes[0] if code != codes[0] else codes[1]
-			var one: Control = MatchPoster.new().setup(code, other, true, "Home · MCG · Wet", true)
+			var one: Control = Poster.new().setup(code, other, true, "Home · MCG · Wet", true)
 			one.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			holder.add_child(one)
 			await _settle()

@@ -1561,9 +1561,10 @@ func _push_past_fold(box: Control, fold: float, edge: float, max_gap: float) -> 
 		if r.position.y >= edge:
 			return true
 		# The poster is a picture: its colours running under the fade say the
-		# week goes on. Pushing it clear would leave a hole above the buttons.
+		# week goes on. Pushing it clear would leave a hole above the buttons. What
+		# follows it still gets the fold's rule: no sliver of Watch and Skip.
 		if c is MatchPoster:
-			return true
+			continue
 		if c is VBoxContainer:
 			if _push_past_fold(c, fold, edge, max_gap):
 				return true
