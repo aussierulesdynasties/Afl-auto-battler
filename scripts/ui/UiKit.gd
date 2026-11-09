@@ -1749,7 +1749,27 @@ static func top_bar(title_text: String, back := true, right: Control = null,
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.tooltip_text = title_text
-	h.add_child(t)
+	# STYLE-05 header (row 6.34): a short 2 px rule in your club's ink under
+	# the title (guide 2.2, "a 2 px club rule under a heading"); none before a
+	# club exists, so Main and the new-career screens keep a plain title.
+	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
+	if gs != null and str(gs.my_club) != "" and GameDB.clubs.has(str(gs.my_club)):
+		var stack := vbox(2)
+		stack.name = "TopBarTitle"
+		stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		stack.alignment = BoxContainer.ALIGNMENT_CENTER
+		stack.add_child(t)
+		var rule := ColorRect.new()
+		rule.name = "TopBarRule"
+		# The club's readable ink, not its wash: a deep purple rule vanished on Fremantle's backdrop.
+		rule.color = club_ink(str(gs.my_club))
+		rule.custom_minimum_size = Vector2(48, 2)
+		rule.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stack.add_child(rule)
+		h.add_child(stack)
+	else:
+		h.add_child(t)
 	if right != null:
 		h.add_child(right)
 	elif back:
