@@ -28,6 +28,7 @@ const SCENES := {
 ## line on the cover says what is happening now, in the same shape:
 ## "Loading your list...", "Playing Round 7...", "Starting the new season...".
 const LINES := {
+	"draft": "Opening the draft room...",
 	"list": "Loading your list...",
 	"selection": "Loading the team...",
 	"offseason": "Opening the trade period...",
