@@ -759,6 +759,57 @@ func save_career() -> bool:
 	if not has_career():
 		return false
 	saves_written += 1
+	var ok := CareerSave.write(_save_state(), _save_meta(), save_path)
+	if ok:
+		_dirty = false
+	return ok
+
+
+## A pre-made history (PremadeHistory): the league as it stands when Choose
+## your club opens, packed for shipping. Only the generator tool writes one.
+func write_history(path: String, meta: Dictionary) -> bool:
+	if not choosing_club():
+		return false
+	var state := _save_state()
+	state["sim_ahead"] = true
+	state["sim_ahead_to"] = sim_ahead_to
+	return CareerSave.write_packed(state, meta, path)
+
+
+## Start from a shipped history instead of playing the years live. The career's
+## own choices (the dials, the tips, the challenge) are kept, and its future is
+## its own: a new career seed, so two careers from one history part ways from
+## the first season. False, with nothing changed, when no fresh history fits:
+## the caller then plays the years live. A forged prospect enters in 2026, so
+## his career has to be played; a seeded run stays reproducible.
+func begin_from_history(first_season: int) -> bool:
+	if replay_seed != 0 or custom_prospect_id != "":
+		return false
+	var path := PremadeHistory.pick(first_season, show_real_names)
+	if path == "":
+		return false
+	var state := CareerSave.read_packed(path)
+	if state.is_empty():
+		return false
+	var held := challenge
+	var board_was := board_patience
+	var rivals_was := rival_recruiting
+	var tips_were := tutorials
+	if not _restore_career(state):
+		return false
+	GameDB.pristine = false   # a career's data from here on: the next reset() reloads
+	board_patience = board_was
+	rival_recruiting = rivals_was
+	tutorials = tips_were
+	_sim_ahead_challenge = held
+	challenge = {}
+	career_seed = randi_range(1, 999999)
+	mark_dirty()
+	return true
+
+
+## Everything a save holds.
+func _save_state() -> Dictionary:
 	# The pre-season league draft is spent once the season starts (it holds a
 	# second copy of the whole player pool), so it is not written.
 	var keep_draft := draft != null and not (season != null and not draft.intake_mode)
@@ -901,10 +952,7 @@ func save_career() -> bool:
 		state["plan_idle"] = plan_idle
 	if not rival_plans.is_empty():
 		state["rival_plans"] = rival_plans
-	var ok := CareerSave.write(state, _save_meta(), save_path)
-	if ok:
-		_dirty = false
-	return ok
+	return state
 
 
 func _save_meta() -> Dictionary:
@@ -925,10 +973,16 @@ func _save_meta() -> Dictionary:
 ## Replace the in-memory career with the saved one. Returns false (and leaves
 ## a fresh state) if there is no usable save.
 func load_career() -> bool:
-	var state := CareerSave.read(save_path)
+	return _restore_career(CareerSave.read(save_path))
+
+
+func _restore_career(state: Dictionary) -> bool:
 	if state.is_empty():
 		return false
 	reset()
+	# A pre-made history stops where Choose your club opens.
+	sim_ahead = bool(state.get("sim_ahead", false))
+	sim_ahead_to = int(state.get("sim_ahead_to", SIM_AHEAD_TO))
 	# A created club joins the competition before anything reads the clubs.
 	custom_club = state.get("custom_club", {})
 	# A redraft's new clubs entered with everyone (a save without it keeps the
@@ -1118,7 +1172,7 @@ func load_career() -> bool:
 	_mark_unicorns()
 	_backfill_potential()
 	ensure_contracts()
-	if season != null and board.is_empty():
+	if season != null and board.is_empty() and my_club != "":
 		_open_board_season()
 	coaches = state.get("coaches", {})
 	_teach_key = ""
@@ -5556,23 +5610,24 @@ func grant_match_xp(res: Dictionary) -> Dictionary:
 
 ## Pay one club's list for a match. Same scale for every club: the rivals
 ## earn exactly what your players earn.
-func _grant_xp(club: String, list: Array, res: Dictionary) -> Dictionary:
+func _grant_xp(club: String, list: Array, res: Dictionary, staffs = null) -> Dictionary:
 	var stats_all: Dictionary = res.get("players", {})
-	var squad := Squad.new(GameDB.club_name(club), list,
-			str(res.get("home", "")) == club, club,
+	var side := Ratings.select_side(list,
 			season.selections.get(club, {}) if season != null else {})
 	var ground_ids := {}
 	var bench_ids := {}
-	for p in squad.ground:
+	for p in side["ground"]:
 		ground_ids[str(p["id"])] = true
-	for p in squad.bench:
+	for p in side["bench"]:
 		bench_ids[str(p["id"])] = true
 	var rows: Array = []
 	var total := 0
 	var reserves_count := 0
 	var reserves_total := 0
 	# The club's teachers (CoachEffects): only once there is a coaching world.
-	var staff: Dictionary = CoachEffects.staffs(coaches).get(club, {}) if not coaches.is_empty() else {}
+	if staffs == null and not coaches.is_empty():
+		staffs = CoachEffects.staffs(coaches)
+	var staff: Dictionary = staffs.get(club, {}) if not coaches.is_empty() else {}
 	for p in list:
 		var id := str(p["id"])
 		var on_ground := ground_ids.has(id)
@@ -10617,13 +10672,15 @@ func _train_rivals(results: Array) -> void:
 	if season == null:
 		return
 	var best := {}
+	# Once a week, not once a club: nobody changes jobs in between.
+	var staffs = CoachEffects.staffs(coaches) if not coaches.is_empty() else null
 	for res in results:
 		for side in ["home", "away"]:
 			var code := str(res.get(side, ""))
 			if code == "" or code == my_club or not season.lists.has(code):
 				continue
 			var list: Array = season.lists[code]
-			_grant_xp(code, list, res)
+			_grant_xp(code, list, res, staffs)
 			for p in list:
 				ai_spend_xp(p)
 				best = _development_pick(code, p, best)

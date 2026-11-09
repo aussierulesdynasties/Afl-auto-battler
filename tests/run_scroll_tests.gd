@@ -65,6 +65,9 @@ func _run() -> void:
 		root.size = size
 		await _settle()
 		await _t("_test_hub_round1", [size])
+	root.size = Vector2i(390, 844)
+	await _settle()
+	await _t("_test_hub_fold")
 	print("SCROLLTABLE")
 	for line in _table:
 		print(line)
@@ -429,6 +432,72 @@ func _resize(sc: ScrollContainer, label: String, res: Array) -> void:
 ## The hub before Round 1 (a contract card on the page, the whole ladder
 ## below): every part is reachable by scrolling and ends fully inside the
 ## visible page, and the card's answer takes a real tap at its position.
+## At rest on a phone a hub card at the page's bottom edge shows its whole title
+## clear of the fade, or starts below the edge (director, 2026-11-09), and what
+## sits below still takes a real tap once scrolled to.
+func _test_hub_fold() -> void:
+	const Tap := preload("res://tests/tap.gd")
+	for club in ["WBD", "FRE", "COL", "MEL", "SYD", "GEE"]:
+		_state.reset()
+		_state.start_season(club, _db.club_list(club))
+		_state.replay_seed = SUITE_SEED
+		_state.tutorials = false
+		# The Milestones card brings the next row to the fold (the reported case).
+		_state.milestone_log["coach"] = {"games": 49}
+		_router.stack = []
+		_router.go("main")
+		await _settle()
+		_router.go("hub")
+		await _settle(40)
+		# A card that opened over the hub is its own test; this one reads the page.
+		var sheet: Node = current_scene.find_child("EventSheet", true, false)
+		if sheet != null:
+			sheet.free()
+		await _settle(3)
+		var sc: ScrollContainer = null
+		for n in current_scene.find_children("*", "ScrollContainer", true, false):
+			if (n as Control).is_visible_in_tree():
+				sc = n
+				break
+		_check(sc != null, "%s: the hub has its page" % club)
+		if sc == null:
+			continue
+		var edge := sc.get_global_rect().end.y
+		var fold := edge - 28.0
+		var below: Button = null
+		for n in sc.find_children("*", "", true, false):
+			if not (n is PanelContainer or n is Button) or not (n as Control).is_visible_in_tree():
+				continue
+			var r := (n as Control).get_global_rect()
+			if r.size.y > sc.size.y * 0.4:
+				continue
+			# Inside a card that peeks, the rows are meant to run on under the edge.
+			var par: Node = n.get_parent()
+			var in_peek := false
+			while par != null and par != sc:
+				if par is PanelContainer and (par as Control).get_global_rect().end.y > fold:
+					in_peek = true
+				par = par.get_parent()
+			if in_peek:
+				continue
+			# A card at the edge peeks: its title line reads clear of the fade.
+			var title_clear := false
+			for l in n.find_children("*", "Label", true, false):
+				if (l as Control).is_visible_in_tree():
+					title_clear = (l as Control).get_global_rect().end.y <= fold + 1.0
+					break
+			_check(r.end.y <= fold or r.position.y >= edge or title_clear,
+					"%s: %s is cut by the fold with no title showing (%d-%d, fold %d, edge %d)" % [club, n.name, r.position.y, r.end.y, fold, edge])
+			if below == null and n is Button and r.position.y >= edge:
+				below = n
+		if below != null and club == "GEE":
+			sc.scroll_vertical = int(below.get_global_rect().position.y - fold + 60.0)
+			await _settle(4)
+			var why: String = await Tap.tap(below)
+			_check(why == "", "A real tap reaches the button below the fold (%s)" % why)
+		_check(club != "GEE" or below != null, "GEE: a button sits below the fold to tap")
+
+
 func _test_hub_round1(size: Vector2i) -> void:
 	var tag := "hub round 1 %dx%d" % [size.x, size.y]
 	_state.reset()

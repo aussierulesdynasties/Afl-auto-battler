@@ -326,9 +326,16 @@ func _open_wait_sheet(code: String) -> void:
 ## The year or so without you, under the cover, then the club is yours and its
 ## first National Draft opens.
 func _wait_for_club(code: String) -> void:
-	if not GameState.begin_wait_for_club(code):
+	if code != GameState.waiting_club():
 		return
-	ScreenTransition.run("Playing %d..." % (GameDB.enter_year(code) - 1), func():
+	var first_season := GameDB.enter_year(code)
+	ScreenTransition.run("Playing %d..." % (first_season - 1), func():
+		await ScreenTransition.drawn()
+		if GameState.begin_from_history(first_season):
+			GameState.choose_sim_ahead_club(code)
+			Router.go("draft")
+			return
+		GameState.begin_wait_for_club(code)
 		while true:
 			var line := GameState.sim_ahead_step()
 			if line == "":
