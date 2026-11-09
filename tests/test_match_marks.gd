@@ -1,7 +1,7 @@
 extends RefCounted
 ## The oval marks the call (P-12 pass 5, director 2026-10-18: "Merge, then mark
-## the oval"): a faint corridor shade for Attack corridor and a faint ring for
-## Win contest, on the grass in the side's colour, under the players. Run
+## the oval"): a faint corridor shade for Attack Corridor and a faint ring for
+## Win Contest, on the grass in the side's colour, under the players. Run
 ## through tests/run_match_marks_tests.gd.
 ##
 ## Each marking shows only while its call is on and its moment holds (the
@@ -115,7 +115,7 @@ func _test_when_marked(res: Dictionary) -> void:
 	d._tac[0] = {"side": 0, "plan": "attacking", "bursts": []}
 	d._tac[1] = {"side": 1, "plan": "balanced", "bursts": []}
 	d._poss = 0
-	_check(d.corridor_mark_on(0), "Attack corridor: the corridor shows while the side has the ball in play")
+	_check(d.corridor_mark_on(0), "Attack Corridor: the corridor shows while the side has the ball in play")
 	_check(not d.corridor_mark_on(1), "...and never for the other side")
 	d._poss = 1
 	_check(not d.corridor_mark_on(0), "...and not while the other side has the ball")
@@ -127,13 +127,13 @@ func _test_when_marked(res: Dictionary) -> void:
 	MatchDirector.debug_no_press_shape = true
 	_check(not d.corridor_mark_on(0), "...and not with the shapes off (capture_match --noshape)")
 	MatchDirector.debug_no_press_shape = false
-	# Win contest.
+	# Win Contest.
 	d._tac[0] = {"side": 0, "plan": "contest", "bursts": []}
 	d._ring_at = Vector2(12.0, -20.0)
 	var m0: Dictionary = d.contest_mark(0)
 	_check(not m0.is_empty() and bool(m0["stop"]) and (m0["at"] as Vector2) == Vector2(12.0, -20.0)
 			and is_equal_approx(float(m0["r"]), MatchDirector.PACK_RING),
-			"Win contest: a ball-up's ring sits on the contest at the pack's ring (%s)" % str(m0))
+			"Win Contest: a ball-up's ring sits on the contest at the pack's ring (%s)" % str(m0))
 	_check(d.contest_mark(1).is_empty(), "...and never for the other side")
 	d._poss = 1
 	_check(not d.contest_mark(0).is_empty(), "...whoever is to win it")
@@ -180,9 +180,9 @@ func _test_when_marked(res: Dictionary) -> void:
 				"...from the call (the ball dead before a ball-up) the ring and the ball-up are where the ball is (%s, the ball-up %s, before the call %s), reading it changes nothing (%s)" % [str(mc), str(want), str(early), str(same)])
 	d._beat = {}
 	d.mode = "open"
-	_check(not d.corridor_mark_on(0), "Win contest has no corridor")
+	_check(not d.corridor_mark_on(0), "Win Contest has no corridor")
 	d._tac[0] = {"side": 0, "plan": "attacking", "bursts": []}
-	_check(d.contest_mark(0).is_empty(), "Attack corridor has no ring")
+	_check(d.contest_mark(0).is_empty(), "Attack Corridor has no ring")
 	MatchDirector.debug_no_press_shape = true
 	d._tac[0] = {"side": 0, "plan": "contest", "bursts": []}
 	_check(d.contest_mark(0).is_empty(), "No ring with the shapes off")
@@ -313,7 +313,7 @@ func _test_over_the_press(res: Dictionary) -> void:
 	pv.free()
 
 
-## Attack corridor on the oval: Fremantle's corridor shows while Fremantle has
+## Attack Corridor on the oval: Fremantle's corridor shows while Fremantle has
 ## the ball, and is gone once Melbourne has had it half a second.
 func _test_corridor_playback(res: Dictionary) -> void:
 	var r2 := _with_call(res, "attacking", [], 260)
@@ -391,14 +391,14 @@ func _test_corridor_playback(res: Dictionary) -> void:
 	print("  corridor: %d of %d turnovers from full fade out cleanly" % [turns_ok, turns])
 	_check(turns >= 3 and turns_ok == turns,
 			"...frame by frame at each turnover from full: it starts going at once, falls every frame, and is gone in 0.4 to 0.5 s (%d of %d)" % [turns_ok, turns])
-	_check(other == 0.0 and rings == 0.0, "No marking for Melbourne on Balanced, and no ring under Attack corridor")
+	_check(other == 0.0 and rings == 0.0, "No marking for Melbourne on Balanced, and no ring under Attack Corridor")
 	_check(top <= FAINT_TOP + 0.0001, "...faint all the way (%.3f)" % top)
 	_check(step_most <= PitchView.MARK_ALPHA / (FADE_LEAST * 30.0) * 1.6,
 			"...and it never pops between frames at 1x (largest change %.4f)" % step_most)
 	pv.free()
 
 
-## Win contest on the oval: the ring at every ball-up and throw-in, planted on the
+## Win Contest on the oval: the ring at every ball-up and throw-in, planted on the
 ## contest from the call to the clearance; in open play on the ball (_test_ball_in_the_ring).
 func _test_contest_playback(res: Dictionary) -> void:
 	var r2 := _with_call(res, "contest", [], 400)
@@ -499,7 +499,7 @@ func _test_contest_playback(res: Dictionary) -> void:
 		full_at += 1 if cur_max >= PitchView.MARK_ALPHA - 0.0001 else 0
 	print("  contest: %d of %d stoppages reach the full ring; %d open-play frames at full" % [full_at, stoppages, open_full])
 	_check(stoppages >= 5 and float(full_at) / float(stoppages) >= 0.8,
-			"Win contest: the ring comes in fully at the stoppages as the pack forms (%d of %d)" % [full_at, stoppages])
+			"Win Contest: the ring comes in fully at the stoppages as the pack forms (%d of %d)" % [full_at, stoppages])
 	_check(on_spot, "...on the contest itself")
 	print("  contest: the ring planted in %d showings (%d moves); %d of %d called ball-ups ringed from the call" % [spans, planted_moves, called_on, called])
 	_check(spans >= 5 and planted_moves == 0, "...planted there from the call to the clearance: it never follows the ball in (%d moves in %d showings)" % [planted_moves, spans])
@@ -509,7 +509,7 @@ func _test_contest_playback(res: Dictionary) -> void:
 	_check(open_wrong == 0, "...and only in live open play (%d frames off it)" % open_wrong)
 	_check(glide_most <= MatchMotion.SPRINT * FRAME * MatchDirector.TEMPO + 0.01,
 			"...moving with the ball no faster than a sprint (%.2f m in a frame)" % glide_most)
-	_check(other == 0.0 and corr == 0.0, "No ring for Melbourne on Balanced, and no corridor under Win contest")
+	_check(other == 0.0 and corr == 0.0, "No ring for Melbourne on Balanced, and no corridor under Win Contest")
 	_check(top <= FAINT_TOP + 0.0001, "...faint all the way (%.3f)" % top)
 	pv.free()
 
@@ -534,7 +534,7 @@ func _test_ball_in_the_ring(res: Dictionary, speed: float) -> void:
 	var was_leaving := false
 	var prev := 0.0
 	var sc := pv._scale()
-	# A ball-up under Win contest: from the umpire's call to the clearance the ball
+	# A ball-up under Win Contest: from the umpire's call to the clearance the ball
 	# is inside the ring's pad in every frame (motion critic, 2026-10-18: the ring
 	# came in 15 m from the ball and the ball flew to it).
 	var bu_frames := 0

@@ -6,7 +6,7 @@ extends RefCounted
 ## league around a list gets better or worse. No score is shown.
 ##
 ## Each strength is the engine's own: Contest, Running power and Pressure are
-## PlanFit's scores for Win contest, Attacking and Defensive; Control is the
+## PlanFit's scores for Win Contest, Attacking and Defensive; Control is the
 ## disposal that beats a press and the discipline that avoids clangers;
 ## Aerial power is the side's best marks; Finishing is the best forwards'
 ## kicking for goal and marking up forward. Pure rules on match-day sides.

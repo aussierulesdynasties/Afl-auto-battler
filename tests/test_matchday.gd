@@ -245,7 +245,7 @@ func _test_legs_words() -> void:
 	_check(MatchNotes.cooked(rows) == ["A", "C"], "Only the tired players on the ground are named, most tired first")
 	_check(not CoachReport.plan_summary("attacking").contains("%") and not CoachReport.pep_summary("calm").contains("%"),
 			"The break describes calls without percentages")
-	_check(CoachReport.plan_summary("attacking").contains("Controlled tempo"),
+	_check(CoachReport.plan_summary("attacking").contains("Controlled Tempo"),
 			"A plan's summary still says what it beats")
 
 

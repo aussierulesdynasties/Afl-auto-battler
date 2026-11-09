@@ -276,10 +276,6 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 			continue
 		if not meets(p, subject.get("where", {}), story["flags"].get(pid, {})):
 			continue
-		# A card that invents a private life, health of mind or misconduct is
-		# never about a player shown under his real name (director, 2026-10-11).
-		if bool(t.get("private", false)) and bool(p.get("real_named", false)):
-			continue
 		if not _arc_open_ok(t, story, pid, w):
 			continue
 		fits.append(p)

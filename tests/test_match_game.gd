@@ -761,9 +761,9 @@ func _test_impact_and_ai() -> void:
 	else:
 		var sq1: Squad = live.squads[1]
 		if PlanFit.plan_score(sq1.ground, "defensive", sq1.plan_know) >= PlanFit.plan_score(sq1.ground, expect, sq1.plan_know) - MatchSim.COUNTER_GIVE:
-			expect = "defensive"   # the press beats Attack corridor
+			expect = "defensive"   # the press beats Attack Corridor
 	_check(str(live.ai_tactics(1)["gameplan"]) == expect,
-			"Run Attack corridor twice: the rival coach keeps its usual game or plays the scoreboard (%s)" % expect)
+			"Run Attack Corridor twice: the rival coach keeps its usual game or plays the scoreboard (%s)" % expect)
 	live.set_tactics(0, {"gameplan": "controlled"})
 	live.run_quarter()
 	var tagged := str(live.ai_tactics(1).get("tag_id", ""))
@@ -1448,7 +1448,7 @@ func _test_gps_distance() -> void:
 	slow.set_tactics(0, {"gameplan": "controlled"})
 	var slow_km := float((slow.run()["team"][0] as Dictionary).get("distance_run", 0.0))
 	_check(fast_km > slow_km * 1.10,
-			"Attack corridor covers more ground than Controlled tempo (%.0f km v %.0f km)" % [
+			"Attack Corridor covers more ground than Controlled Tempo (%.0f km v %.0f km)" % [
 			fast_km / 1000.0, slow_km / 1000.0])
 
 	var plain := _sim(9052)
@@ -3375,10 +3375,10 @@ func _test_coach_styles() -> void:
 
 
 ## Playtest: a defensive AI sat in its press all game while losing, and
-## Controlled tempo shut the press out for any list. Now:
+## Controlled Tempo shut the press out for any list. Now:
 ## - behind after half time and outscored in the quarter just gone, the AI
 ##   chases (only the scoreboard - no read of the other side's plan);
-## - Controlled tempo holds a press off as far as its ball users can.
+## - Controlled Tempo holds a press off as far as its ball users can.
 ##   Measured, 150 matches a club v a pressing side: worth +20 and +15
 ##   points to the two best ball-using sides, +3 and +4 to the two worst
 ##   (it was +8 to +18 whatever the list).
@@ -3401,7 +3401,7 @@ func _test_ai_chases_and_controlled_needs_ball_users() -> void:
 	sim.q_goals[0] = [4, 1]
 	_check(str(sim.ai_tactics(1)["gameplan"]) == "defensive",
 			"Before half time a close deficit is no reason to abandon it")
-	# Controlled tempo against a press: good ball users hold it off, poor ones
+	# Controlled Tempo against a press: good ball users hold it off, poor ones
 	# only partly.
 	var press := _sim(4801)
 	press.set_tactics(1, {"gameplan": "defensive"})
@@ -3413,7 +3413,7 @@ func _test_ai_chases_and_controlled_needs_ball_users() -> void:
 	press.set_tactics(0, {"gameplan": "balanced"})
 	var none := press._press_on(0)
 	_check(is_equal_approx(good, 1.0) and poor > 1.0 and poor < none,
-			"Controlled tempo holds a press off as far as its ball users can (%.3f, %.3f, %.3f)" % [good, poor, none])
+			"Controlled Tempo holds a press off as far as its ball users can (%.3f, %.3f, %.3f)" % [good, poor, none])
 	_check(PlanFit.standing_plan([]) == "balanced", "An empty list plays Balanced")
 
 ## A tag is a trade: it takes the target out of the midfield battle and costs
@@ -3835,7 +3835,7 @@ func _test_defensive_forward() -> void:
 			"An AI club names the forward a coach would send, by the same rule")
 
 
-## The Defensive press (director, 2026-10-11): it hunts the ball high and
+## The Defensive Press (director, 2026-10-11): it hunts the ball high and
 ## leaves space behind. The side it presses meets more pressure in its back
 ## third, about Balanced's in the middle, and less in its forward third; a
 ## chain that breaks the press scores more easily; the AI's press is the
@@ -3963,7 +3963,7 @@ func _test_defensive_forward_cards() -> void:
 
 
 ## ARD-M4-015: eight plan names become six. An old save's "fast" plays as
-## Attack corridor and "press" as Defensive press: the same match, the same
+## Attack Corridor and "press" as Defensive Press: the same match, the same
 ## names on every screen.
 func _test_six_plans() -> void:
 	var a := _sim(9100)
@@ -3973,8 +3973,8 @@ func _test_six_plans() -> void:
 	var ra := a.run()
 	var rb := b.run()
 	_check(ra["score"] == rb["score"] and (ra["events"] as Array).size() == (rb["events"] as Array).size(),
-			"An old save's Fast movement plays exactly as Attack corridor")
-	_check(CoachReport.plan_label("fast") == "Attack corridor" and CoachReport.plan_label("press") == "Defensive press"
+			"An old save's Fast movement plays exactly as Attack Corridor")
+	_check(CoachReport.plan_label("fast") == "Attack Corridor" and CoachReport.plan_label("press") == "Defensive Press"
 			and not MatchSim.PLANS.has("fast") and not MatchSim.PLANS.has("press") and MatchSim.PLANS.size() == 4,
 			"Five plans (balanced and four others), and the old names read as the merged ones")
 
@@ -4056,7 +4056,7 @@ func _test_ai_counters_plan() -> void:
 	var att := PlanFit.plan_score(sq.ground, "attacking", sq.plan_know)
 	var t := str(m.ai_tactics(1)["gameplan"])
 	_check(t == ("attacking" if att >= -MatchSim.COUNTER_GIVE else "balanced"),
-			"Against Controlled tempo he plays Attack corridor when it is worth nearly his usual game (%s, %.2f)" % [t, att])
+			"Against Controlled Tempo he plays Attack Corridor when it is worth nearly his usual game (%s, %.2f)" % [t, att])
 	# Weighed on edge x knowledge: knowing the counter barely makes it cost more.
 	m.standing[1] = "contest"
 	sq.plan_know = {"attacking": 1.0, "contest": 1.0}
@@ -4249,7 +4249,7 @@ func _test_coach_plan_sticks_at_breaks() -> void:
 			_check(on, "Their spare has won three: left to him, he puts a minder on him")
 
 
-## Plan knowledge weighs the usual game, and Controlled tempo can be it.
+## Plan knowledge weighs the usual game, and Controlled Tempo can be it.
 func _test_standing_plan_knowledge() -> void:
 	var g: Array = _sim(4802).squads[0].ground
 	var free := PlanFit.standing_plan(g)
@@ -4265,4 +4265,4 @@ func _test_standing_plan_knowledge() -> void:
 		var gg: Array = Squad.new(code, GameDB.club_list(code), false, code).ground
 		var want := "controlled" if PlanFit.edge(gg, "controlled") > PlanFit.STANDING_EDGE else "balanced"
 		ok = ok and PlanFit.standing_plan(gg, only_controlled) == want
-	_check(ok, "Controlled tempo is a club's usual game when it is its best")
+	_check(ok, "Controlled Tempo is a club's usual game when it is its best")

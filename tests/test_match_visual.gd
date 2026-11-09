@@ -1487,7 +1487,7 @@ func _test_flood_shape(res: Dictionary) -> void:
 	d._tac[1] = {}
 
 
-## Defensive press pilot, V1-V3 (director, 2026-10-11): from its recorded plan, a
+## Defensive Press pilot, V1-V3 (director, 2026-10-11): from its recorded plan, a
 ## side that presses stands higher while the ball is in its opponents' back half
 ## or the middle, narrower, and only then; the plan changes nothing else.
 func _test_press_shape(res: Dictionary) -> void:
@@ -1714,20 +1714,20 @@ func _test_call_shapes(res: Dictionary) -> void:
 	var plain := {"plan": "balanced", "bursts": []}
 	var bal_has: Dictionary = stand.call(plain, 0)
 	var bal_not: Dictionary = stand.call(plain, 1)
-	# Attack corridor: narrower with the ball, the corridor full; nothing without it.
+	# Attack Corridor: narrower with the ball, the corridor full; nothing without it.
 	var att: Dictionary = stand.call({"plan": "attacking", "bursts": []}, 0)
 	_check(float(att["wide"]) <= 0.75 * float(bal_has["wide"]) and same.call(stand.call({"plan": "attacking", "bursts": []}, 1), bal_not),
-			"Attack corridor narrows into the corridor with the ball, by a quarter or more (%.1f m from the centre line against %.1f), and only with it" % [float(att["wide"]), float(bal_has["wide"])])
-	# Controlled tempo: wider with the ball and its lines in short around it.
+			"Attack Corridor narrows into the corridor with the ball, by a quarter or more (%.1f m from the centre line against %.1f), and only with it" % [float(att["wide"]), float(bal_has["wide"])])
+	# Controlled Tempo: wider with the ball and its lines in short around it.
 	var con: Dictionary = stand.call({"plan": "controlled", "bursts": []}, 0)
 	_check(float(con["wide"]) >= 1.15 * float(bal_has["wide"]) and float(con["span"]) <= float(bal_has["span"]) - 8.0
 			and same.call(stand.call({"plan": "controlled", "bursts": []}, 1), bal_not),
-			"Controlled tempo spreads wide with the ball (%.1f m against %.1f) and its lines come in short (%.0f m front to back against %.0f), only with the ball" % [float(con["wide"]), float(bal_has["wide"]), float(con["span"]), float(bal_has["span"])])
-	# Win contest: the midfield on the ball, both ways.
+			"Controlled Tempo spreads wide with the ball (%.1f m against %.1f) and its lines come in short (%.0f m front to back against %.0f), only with the ball" % [float(con["wide"]), float(bal_has["wide"]), float(con["span"]), float(bal_has["span"])])
+	# Win Contest: the midfield on the ball, both ways.
 	var ctn_has: Dictionary = stand.call({"plan": "contest", "bursts": []}, 0)
 	var ctn_not: Dictionary = stand.call({"plan": "contest", "bursts": []}, 1)
 	_check(float(ctn_has["mid_gap"]) <= 0.7 * float(bal_has["mid_gap"]) and float(ctn_not["mid_gap"]) <= 0.7 * float(bal_not["mid_gap"]),
-			"Win contest keeps its midfield on the ball, a third closer or more (%.0f and %.0f m in all against %.0f and %.0f)" % [float(ctn_has["mid_gap"]), float(ctn_not["mid_gap"]), float(bal_has["mid_gap"]), float(bal_not["mid_gap"])])
+			"Win Contest keeps its midfield on the ball, a third closer or more (%.0f and %.0f m in all against %.0f and %.0f)" % [float(ctn_has["mid_gap"]), float(ctn_not["mid_gap"]), float(bal_has["mid_gap"]), float(bal_not["mid_gap"])])
 	# ...and extra numbers at every stoppage: the centre bounce set up as a
 	# stack (a flood or stack burst still has the say), and a bigger pack at a
 	# ball-up.
@@ -1751,7 +1751,7 @@ func _test_call_shapes(res: Dictionary) -> void:
 	var pack_bal: Array = packs.call("balanced")
 	var pack_ctn: Array = packs.call("contest")
 	_check(centre_ok and bu >= 0 and int(pack_ctn[0]) > int(pack_bal[0]) and int(pack_ctn[0]) >= 3 + MatchDirector.CONTEST_PACK and int(pack_ctn[1]) == int(pack_bal[1]),
-			"Win contest sends extra numbers to every stoppage: a stacked centre bounce, a ball-up pack of %d against %d (the other side's %d unchanged)" % [int(pack_ctn[0]), int(pack_bal[0]), int(pack_ctn[1])])
+			"Win Contest sends extra numbers to every stoppage: a stacked centre bounce, a ball-up pack of %d against %d (the other side's %d unchanged)" % [int(pack_ctn[0]), int(pack_bal[0]), int(pack_ctn[1])])
 	d._tac[0] = {}
 	# Throw numbers at it: numbers ahead of the ball with it, the backs high without it.
 	var sg_has: Dictionary = stand.call({"plan": "balanced", "bursts": ["surge"]}, 0)
@@ -1772,7 +1772,7 @@ func _test_call_shapes(res: Dictionary) -> void:
 		paces.append(d._call_pace(0))
 	d._tac[0] = {}
 	_check(is_equal_approx(float(paces[0]), 1.0) and float(paces[1]) > 1.0 and float(paces[2]) < 1.0 and float(paces[3]) > 1.0 and float(paces[4]) < 1.0,
-			"Attack corridor and Throw numbers at it move quicker, Controlled tempo and Slow it down slower (%s)" % str(paces))
+			"Attack Corridor and Throw numbers at it move quicker, Controlled Tempo and Slow it down slower (%s)" % str(paces))
 	# Only the recorded call: another side's call, a call with no shape here
 	# (the stack) and the capture switch all leave Balanced as it was.
 	var only := true
@@ -1842,9 +1842,9 @@ func _test_call_lines(res: Dictionary) -> void:
 	var starts := lines.filter(func(l): return str(l[1]).contains("is on until"))
 	var kept := lines.filter(func(l): return str(l[1]).contains("stays on until"))
 	_check(starts.size() == 1 and int(starts[0][0]) == int(qs[0]) + 1
-			and str(starts[0][1]) == "%s: Attack corridor is on until half time." % ric,
+			and str(starts[0][1]) == "%s: Attack Corridor is on until half time." % ric,
 			"A plan set at quarter time gives one start line, at the next bounce (%s)" % str(starts))
-	_check(kept.size() == 2 and str(kept[0][1]) == "%s: Attack corridor stays on until three-quarter time." % ric,
+	_check(kept.size() == 2 and str(kept[0][1]) == "%s: Attack Corridor stays on until three-quarter time." % ric,
 			"...and a line at each later break while it stays on (%s)" % str(kept))
 	var burst: Array = walk.call(open + [{"at": 10, "side": 0, "plan": "balanced", "bursts": ["surge"]},
 			{"at": 40, "side": 0, "plan": "balanced", "bursts": []}])
@@ -1856,8 +1856,8 @@ func _test_call_lines(res: Dictionary) -> void:
 			"A short call the break ends gives one line, at the break (%s)" % str(at_break))
 	var off: Array = walk.call([{"at": 0, "side": 0, "plan": "defensive", "bursts": []}, open[1],
 			{"at": int(qs[0]) + 1, "side": 0, "plan": "balanced", "bursts": []}])
-	_check(off.size() == 2 and str(off[0][1]) == "%s: Defensive press is on until quarter time." % ric
-			and str(off[1][1]) == "%s: Defensive press ends at quarter time." % ric
+	_check(off.size() == 2 and str(off[0][1]) == "%s: Defensive Press is on until quarter time." % ric
+			and str(off[1][1]) == "%s: Defensive Press ends at quarter time." % ric
 			and int(off[1][0]) == int(qs[0]) + 1,
 			"A plan from the first bounce is marked, and its end at the break names the break, once (%s)" % str(off))
 	# The director's half-time feed: both coaches drop their plans at the break.
@@ -1878,12 +1878,12 @@ func _test_call_lines(res: Dictionary) -> void:
 				if k >= int(mem["break_lines"]):
 					stamped += 1
 	_check(ht.size() == 2 and int(ht[0][0]) == int(qs[1]) + 1
-			and str(ht[0][1]) == "%s: Controlled tempo ends at half time." % ric
-			and str(ht[1][1]) == "%s: Attack corridor ends at half time." % syd and stamped == 0,
+			and str(ht[0][1]) == "%s: Controlled Tempo ends at half time." % ric
+			and str(ht[1][1]) == "%s: Attack Corridor ends at half time." % syd and stamped == 0,
 			"Plans dropped at half time are said once each, as the break's, unclocked (%s, %d clocked)" % [str(ht), stamped])
 	var mid: Array = walk.call([{"at": 0, "side": 0, "plan": "defensive", "bursts": []}, open[1],
 			{"at": int(qs[0]) + 20, "side": 0, "plan": "balanced", "bursts": []}])
-	_check(mid.size() == 3 and str(mid[2][1]) == "%s: Defensive press ends." % ric and int(mid[2][0]) == int(qs[0]) + 20,
+	_check(mid.size() == 3 and str(mid[2][1]) == "%s: Defensive Press ends." % ric and int(mid[2][0]) == int(qs[0]) + 20,
 			"A plan dropped during a quarter keeps its plain line, at the play (%s)" % str(mid))
 
 

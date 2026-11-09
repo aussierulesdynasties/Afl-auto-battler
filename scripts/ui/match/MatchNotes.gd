@@ -206,7 +206,7 @@ static func run_line(club: String, n: int) -> String:
 	return "%s have kicked %s in a row." % [GameDB.club_name(club), count_word(n)]
 
 
-## The Defensive press taking hold (V2, press pilot), said once a side a match.
+## The Defensive Press taking hold (V2, press pilot), said once a side a match.
 static func press_line(club: String) -> String:
 	return "%s push up to press." % GameDB.club_name(club)
 
@@ -239,7 +239,7 @@ static func press_trigger(timeline: Array, event_index: int, ev: Dictionary, sai
 ## Every short call ends at the break (MatchSim.end_quarter). A plan dropped at
 ## a break was the coach's call at that break (both sides pick their plans on
 ## the break screen, after the break line is out), so its line names the break
-## ("Sydney: Attack corridor ends at half time.") and comes first at the next
+## ("Sydney: Attack Corridor ends at half time.") and comes first at the next
 ## bounce; state["break_lines"] says how many of the lines are the break's, so
 ## the feed shows them without the new quarter's clock.
 const PLAN_UNTIL := {1: "quarter time", 2: "half time", 3: "three-quarter time", 4: "the final siren"}

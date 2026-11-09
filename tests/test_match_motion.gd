@@ -24,19 +24,19 @@ const PHONE := Vector2(300, 387)
 const FRAME := 1.0 / 30.0
 ## At least this share of a side's disc area shows in 99 frames in 100 (Balanced
 ## never drops below 76%; the critic's worst frames were 15.7 of 18 discs with
-## Attack corridor and 12.3 with Win contest), and VISIBLE_WORST in every frame.
+## Attack Corridor and 12.3 with Win Contest), and VISIBLE_WORST in every frame.
 const VISIBLE_FLOOR := 0.72
 const VISIBLE_WORST := 0.55
 ## Every shape moves its side at least this far from Balanced, measured as below.
 const CALL_FLOOR := 8.0
-## A column (the critic's Attack corridor pile, pass 3): three or more of a
+## A column (the critic's Attack Corridor pile, pass 3): three or more of a
 ## side's discs within COLUMN_ACROSS of each other across the ground, each
 ## within COLUMN_ALONG of the next along it (a disc on a phone is 8.6 m across).
 const COLUMN_ACROSS := 4.0
 const COLUMN_ALONG := 9.0
 ## Heavily overlapping: centres within this many radii (a quarter of a disc covered).
 const HEAVY := 1.5
-## Attack corridor's spread across the ground in possession, on average (Balanced
+## Attack Corridor's spread across the ground in possession, on average (Balanced
 ## 18-19 m), and ATTACK_SPREAD_FLOOR in 98 frames in 100: it never collapses.
 const ATTACK_SPREAD_FLOOR := 9.0
 ## Each average is set below main's own by about twice its seed noise (director,
@@ -46,14 +46,14 @@ const ATTACK_SPREAD_LO := 9.5
 ## from 11.5 to 12.0; the 1.0.7 tuning measured 12.2 m, so 12.5 (director,
 ## 2026-11-06: loosen to measured), still about a third narrower than Balanced.
 const ATTACK_SPREAD_HI := 12.5
-## Attack corridor's shift from Balanced may sit this far under CALL_FLOOR
+## Attack Corridor's shift from Balanced may sit this far under CALL_FLOOR
 ## (0.5 until 2026-11-06; every feature on measured 7.2 m, just under 7.2 after
 ## main's stat focus merged in, so the floor sat at 7.0; the 1.0.7 tuning
 ## measured 6.6 m, so 6.5: director, 2026-11-06, loosen to measured).
 const ATTACK_CALL_SLACK := 1.5
 ## The ball-up ring: closest pair of a side, on average.
 const RING_GAP := 1.5
-## Attack corridor's longest file at most this much past Balanced's, on average.
+## Attack Corridor's longest file at most this much past Balanced's, on average.
 const FILE_SLACK := 0.75
 ## Balanced is the bar for crowding (lead, 2026-10-18), measured in the same run:
 ## the corridor is 45% narrower, so it may have this much more heavy overlap and
@@ -61,13 +61,13 @@ const FILE_SLACK := 0.75
 ## is the leads and the carrier, common to every call (follow-up).
 const CROWD_HEAVY_SHARE := 1.3
 const CROWD_FILE_POINTS := 0.02
-## Win contest in open play: the side's median player at least this much nearer
+## Win Contest in open play: the side's median player at least this much nearer
 ## the ball than on Balanced.
 const CONTEST_NEARER := 8.0
 ## ...and at the 75th percentile this much (8.0 until 2026-11-06; every
 ## feature on measured 7.9 m).
 const CONTEST_NEARER_P75 := 7.5
-## The pack at a Win contest ball-up: the four on the ball and its ring
+## The pack at a Win Contest ball-up: the four on the ball and its ring
 ## (MatchDirector.PACK_RING), out to a disc's radius past it.
 const PACK_AREA := 9.0
 ## ...and the four on the ball: inside 3 m (MatchDirector.PACK_SECOND), settling.
@@ -286,16 +286,16 @@ func _test_motion_limits(res: Dictionary) -> void:
 				tag, frames, tok_most, tok_most / h, draw_most, draw_most / h])
 		if speed == 1.0:
 			_check(narrow_n > 50 and narrow >= MatchDirector.LINE_WIDTH_MIN - 0.01,
-					"1x: in possession each line keeps at least %.0f m of spread across the ground, every call but Attack corridor (narrowest %.1f m over %d lines)" % [
+					"1x: in possession each line keeps at least %.0f m of spread across the ground, every call but Attack Corridor (narrowest %.1f m over %d lines)" % [
 					MatchDirector.LINE_WIDTH_MIN, narrow, narrow_n])
 			_check(lane_n > 50 and lane_gap >= MatchDirector.LANE_GAP - 0.01,
-					"1x: Attack corridor in possession: no two of a line of three closer than %.0f m across the ground (closest %.1f m over %d gaps)" % [
+					"1x: Attack Corridor in possession: no two of a line of three closer than %.0f m across the ground (closest %.1f m over %d gaps)" % [
 					MatchDirector.LANE_GAP, lane_gap, lane_n])
 			_check(inside >= MatchDirector.STRUCT_MARGIN - 0.01 and under == 0,
 					"1x: every structure spot is at least %.0f m inside the boundary line (closest %.1f m) and none under the phone's bench strip (%d)" % [
 					MatchDirector.STRUCT_MARGIN, inside, under])
 			_check(pack_n > 20 and pack_most <= 6,
-					"1x: while a Win contest side's stoppage pack forms and the ball goes up, no more than six of its discs are within 6 m of the ball (%d at most over %d frames)" % [pack_most, pack_n])
+					"1x: while a Win Contest side's stoppage pack forms and the ball goes up, no more than six of its discs are within 6 m of the ball (%d at most over %d frames)" % [pack_most, pack_n])
 			print("  motion 1x: narrowest line %.1f m, corridor lane gap %.1f m, closest to the line %.1f m, contest pack %d" % [
 					narrow, lane_gap, inside, pack_most])
 
@@ -325,7 +325,7 @@ func _motion_calls(res: Dictionary) -> Dictionary:
 	return r2
 
 
-## Visibility and the Win contest ball-up ring at 1x, averaged over the sweep's
+## Visibility and the Win Contest ball-up ring at 1x, averaged over the sweep's
 ## games (director, 2026-11-03): one game's moments are a sample, so each
 ## measure is its mean over SWEEP_SEEDS, held to the same bound.
 func _test_motion_averaged(results: Array) -> void:
@@ -350,7 +350,7 @@ func _test_motion_averaged(results: Array) -> void:
 			"1x over %d games: at least %.0f%% of each side's disc area shows in 99 frames in 100 (%.2f%% below, on average), and %.0f%% in every frame (Fremantle %.0f%%, Melbourne %.0f%% at worst, on average)" % [
 			g, 100.0 * VISIBLE_FLOOR, 100.0 * float(mean["vis_low_share"]), 100.0 * VISIBLE_WORST, 100.0 * float(mean["vis_min0"]), 100.0 * float(mean["vis_min1"])])
 	_check(pack_n > 20 and float(mean["inner_most"]) <= 4.0 and float(mean["inner_side_most"]) <= 2.0 and float(mean["pack_gap"]) >= RING_GAP,
-			"1x over %d games: a Win contest ball-up is a ring as the ball goes up: at most four discs within 3 m of the ball (%.2f on average), two a side (%.2f), and two of a side %.1f m apart at closest in the pack, 9 m round it (%.2f m on average; a pair with one of the four on the ball as players, the rest as drawn)" % [
+			"1x over %d games: a Win Contest ball-up is a ring as the ball goes up: at most four discs within 3 m of the ball (%.2f on average), two a side (%.2f), and two of a side %.1f m apart at closest in the pack, 9 m round it (%.2f m on average; a pair with one of the four on the ball as players, the rest as drawn)" % [
 			g, float(mean["inner_most"]), float(mean["inner_side_most"]), RING_GAP, float(mean["pack_gap"])])
 	print("  over %d games, 1x: below the floor %.2f%%, visible at worst %.2f / %.2f, ball-up within 3 m %.2f (a side %.2f), closest pair of a side %.2f m" % [
 			g, 100.0 * float(mean["vis_low_share"]), float(mean["vis_min0"]), float(mean["vis_min1"]),
@@ -445,7 +445,7 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 		var setting := d._pi < d._phases.size() and str((d._phases[d._pi] as Dictionary).get("t", "")) in ["setup", "wait"]
 		var ph := str((d._phases[d._pi] as Dictionary).get("t", "")) if d._pi < d._phases.size() else ""
 		if ph in ["pack", "throwup", "bounce"]:
-			# Win contest: no more than six of its discs within 6 m of the
+			# Win Contest: no more than six of its discs within 6 m of the
 			# ball while the pack forms and the ball goes up.
 			var world := _drawn_world(pv, drawn)
 			for side in range(2):
@@ -458,7 +458,7 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 				pack_most = maxi(pack_most, near)
 				pack_n += 1
 			if ph == "throwup" and (d._plan_of(0) == "contest" or d._plan_of(1) == "contest"):
-				# Win contest's ball-up is a ring, not a stack: two a side at
+				# Win Contest's ball-up is a ring, not a stack: two a side at
 				# most on the ball, and no two of a side on top of each other.
 				var inner := 0
 				var per := [0, 0]
@@ -511,7 +511,7 @@ func _motion_pass(r2: Dictionary, speed: float, light := false) -> Dictionary:
 				var role := str(d.tokens[id]["role"])
 				(lines["MID" if role == "RUCK" else role] as Array).append(p.y)
 			if side == d._poss and not stop and d._plan_of(side) == "attacking":
-				# Attack corridor: its lines of three in their lanes, no two of
+				# Attack Corridor: its lines of three in their lanes, no two of
 				# a line closer than LANE_GAP across (the 12 m floor gives way).
 				var threes := {}
 				for id in spots:
@@ -551,9 +551,9 @@ func _test_call_visibility(results: Array) -> void:
 		return _mean_of(each)
 	var bal: Dictionary = shape.call("balanced", [], true)
 	# [call, plan, bursts, measure, the sign a real shape moves it by]
-	var cases := [["Attack corridor (in possession, spread across)", "attacking", [], "has.spread", -1.0],
-			["Controlled tempo (in possession, front to back)", "controlled", [], "has.span", -1.0],
-			["Win contest (at a stoppage, the median player from the ball)", "contest", [], "stop.med_rad", -1.0],
+	var cases := [["Attack Corridor (in possession, spread across)", "attacking", [], "has.spread", -1.0],
+			["Controlled Tempo (in possession, front to back)", "controlled", [], "has.span", -1.0],
+			["Win Contest (at a stoppage, the median player from the ball)", "contest", [], "stop.med_rad", -1.0],
 			["Throw numbers at it (in possession, centroid up the ground from the ball)", "balanced", ["surge"], "has.cen_ball", 1.0],
 			["Throw numbers at it (in possession, median player from the ball)", "balanced", ["surge"], "has.med_ball", 1.0],
 			["Throw numbers at it (in possession, centroid from Melbourne's)", "balanced", ["surge"], "has.cen_opp", 1.0],
@@ -577,37 +577,37 @@ func _test_call_visibility(results: Array) -> void:
 		_check(moved >= floor_m, "%s moves Fremantle %.1f m from Balanced (%.1f against %.1f), at least %.1f m" % [
 				str(c[0]), moved, float(m.get(what, 0.0)), float(bal.get(what, 0.0)), floor_m])
 	print("  calls against Balanced, as drawn: " + ", ".join(said))
-	# Pass 4 (the motion critic's third look): Attack corridor is a narrower
-	# whole team, not a pile on the ball; Win contest puts numbers round the ball.
+	# Pass 4 (the motion critic's third look): Attack Corridor is a narrower
+	# whole team, not a pile on the ball; Win Contest puts numbers round the ball.
 	var att: Dictionary = done["attacking|[]"]
 	var con: Dictionary = done["contest|[]"]
 	var a_sp := float(att.get("open.spread.mean", 0.0))
 	var b_sp := float(bal.get("open.spread.mean", 0.0))
 	_check(a_sp >= ATTACK_SPREAD_LO and a_sp <= ATTACK_SPREAD_HI,
-			"Attack corridor: in possession Fremantle spreads %.0f to %.0f m across the ground on average (%.1f m; Balanced %.1f m)" % [
+			"Attack Corridor: in possession Fremantle spreads %.0f to %.0f m across the ground on average (%.1f m; Balanced %.1f m)" % [
 			ATTACK_SPREAD_LO, ATTACK_SPREAD_HI, a_sp, b_sp])
 	_check(float(att.get("open.spread.p02", 0.0)) >= ATTACK_SPREAD_FLOOR,
-			"Attack corridor: the corridor never collapses, at least %.0f m of spread in 98 possession frames in 100 (%.1f m at the 2nd percentile; Balanced %.1f m)" % [
+			"Attack Corridor: the corridor never collapses, at least %.0f m of spread in 98 possession frames in 100 (%.1f m at the 2nd percentile; Balanced %.1f m)" % [
 			ATTACK_SPREAD_FLOOR, float(att.get("open.spread.p02", 0.0)), float(bal.get("open.spread.p02", 0.0))])
 	# Balanced is the bar (lead, 2026-10-18): the corridor is never more crowded
 	# than Balanced on the same events, measured in the same run.
 	var a_heavy := float(att.get("has.heavy", 0.0))
 	var b_heavy := float(bal.get("has.heavy", 0.0))
 	_check(a_heavy <= b_heavy * CROWD_HEAVY_SHARE,
-			"Attack corridor: heavily overlapping discs at most %.0f%% of Balanced's in possession (Fremantle's pairs with centres within %.1f radii: %.2f a frame against %.2f)" % [
+			"Attack Corridor: heavily overlapping discs at most %.0f%% of Balanced's in possession (Fremantle's pairs with centres within %.1f radii: %.2f a frame against %.2f)" % [
 			100.0 * CROWD_HEAVY_SHARE, HEAVY, a_heavy, b_heavy])
 	_check(float(att.get("has.file", 9.0)) <= float(bal.get("has.file", 0.0)) + FILE_SLACK + 0.001,
-			"Attack corridor: Fremantle's longest file in possession at most %.2f discs past Balanced's on average (%.2f; Balanced %.2f)" % [
+			"Attack Corridor: Fremantle's longest file in possession at most %.2f discs past Balanced's on average (%.2f; Balanced %.2f)" % [
 			FILE_SLACK, float(att.get("has.file", 9.0)), float(bal.get("has.file", 0.0))])
 	var a_f3 := float(att.get("has.file3", 1.0))
 	var b_f3 := float(bal.get("has.file3", 0.0))
 	_check(a_f3 <= b_f3 + CROWD_FILE_POINTS,
-			"Attack corridor: a file of three in at most %.0f points more possession frames than Balanced (%.1f%% against %.1f%%)" % [
+			"Attack Corridor: a file of three in at most %.0f points more possession frames than Balanced (%.1f%% against %.1f%%)" % [
 			100.0 * CROWD_FILE_POINTS, 100.0 * a_f3, 100.0 * b_f3])
 	var nearer := float(bal.get("open.med_rad.mean", 0.0)) - float(con.get("open.med_rad.mean", 0.0))
 	var nearer75 := float(bal.get("open.med_rad.p75", 0.0)) - float(con.get("open.med_rad.p75", 0.0))
 	_check(nearer >= CONTEST_NEARER and nearer75 >= CONTEST_NEARER_P75,
-			"Win contest: in open play Fremantle's median player stands at least %.0f m nearer the ball than on Balanced, %.1f m at the 75th percentile (%.1f m nearer on average, %.1f against %.1f; %.1f m at the 75th percentile)" % [
+			"Win Contest: in open play Fremantle's median player stands at least %.0f m nearer the ball than on Balanced, %.1f m at the 75th percentile (%.1f m nearer on average, %.1f against %.1f; %.1f m at the 75th percentile)" % [
 			CONTEST_NEARER, CONTEST_NEARER_P75, nearer, float(con.get("open.med_rad.mean", 0.0)), float(bal.get("open.med_rad.mean", 0.0)), nearer75])
 	print("  attack corridor against Balanced: spread %.1f m (%.1f), 2nd percentile %.1f m (%.1f), heavy overlaps %.2f a frame (%.2f), any overlap %.2f (%.2f), longest file %.2f (%.2f), file-of-three frames %.1f%% (%.1f%%)" % [
 			a_sp, b_sp, float(att.get("open.spread.p02", 0.0)), float(bal.get("open.spread.p02", 0.0)), a_heavy, b_heavy,
