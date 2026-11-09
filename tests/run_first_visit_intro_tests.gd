@@ -47,6 +47,7 @@ func _run() -> void:
 	await _t("_test_postseason_when_knocked_out")
 	await _t("_test_postseason_not_when")
 	await _t("_test_postseason_per_career")
+	await _t("_test_postseason_not_used_without_you")
 	print(Ran.line("FirstVisitIntro", self))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -291,6 +292,34 @@ func _test_postseason_per_career() -> void:
 	_check(rolled, "The season rolls on")
 	_state.tutorials = true
 	_check(not _state.intro_due("postseason"), "Past his first postseason, it's gone, seen or not")
+
+
+## Bug-bash 6 (2026-11-10): a season played without you (sim-ahead, waiting
+## for Tasmania, a pre-made history) closing must not use up the sheet; only
+## his own first postseason does.
+func _test_postseason_not_used_without_you() -> void:
+	_in_finals(1)
+	_state.season.finals["done"] = true
+	_check(_state.my_first_season == _state.season_year, "A club from the start: this season is his first")
+	# The 2029 National Draft shape: the club chosen after a season played without you.
+	_state.my_first_season = 0
+	var year: int = _state.season_year
+	_check(_state.start_next_season(), "The season played without you rolls on")
+	_check(_state.intro_due("postseason"), "...and his first postseason's sheet is still due")
+	_check(_state.my_first_season == year + 1, "The next season is his first")
+	var saved: Dictionary = _state._save_state()
+	_check(int(saved.get("my_first_season", 0)) == year + 1, "The save carries his first season")
+	# Years with no club of yours at all (sim-ahead).
+	_in_finals(1)
+	_state.season.finals["done"] = true
+	_state.my_first_season = 0
+	_state.sim_ahead = true
+	_state.my_club = ""
+	_check(_state.start_next_season(), "A sim-ahead year rolls on")
+	_check(_state.my_first_season == 0, "...with no first season of his")
+	_state.my_club = "COL"
+	_state.sim_ahead = false
+	_check(_state.intro_due("postseason"), "...and the sheet still due")
 
 
 func _settle() -> void:
