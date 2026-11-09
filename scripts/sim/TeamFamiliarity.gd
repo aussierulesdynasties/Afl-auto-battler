@@ -2,8 +2,9 @@ class_name TeamFamiliarity
 extends RefCounted
 ## Team familiarity (TODO row 125, director 2026-11-08 and 2026-11-09): teammates
 ## play better the longer they play together, so a new arrival has growing pains
-## and a heavy list turnover costs the whole side. Not plan fluency
-## (PreSeason.familiar_mult) and not "synergy" (the trait synergies).
+## and a heavy list turnover costs the whole side. The coach sees it as Team
+## Chemistry. Not plan fluency (PreSeason.familiar_mult), and apart from the trait
+## line combinations.
 ##
 ## A player carries "team_fam" (50..100) only while he is short of 100: no key is
 ## 100, so everyone on a list when a career starts, and every player in an older
@@ -32,6 +33,10 @@ const TEAM_ARRIVALS := 4
 const TEAM_CUT_AT_70 := 0.11
 ## What that cut measures at 70, in points of margin, for the coach's copy.
 const TEAM_POINTS_AT_70 := 19
+## Rounds 1 to 7: the cost is gone by the seventh.
+const FADE_ROUNDS := 7
+## The most this can cost a side: the team step, and every man in it at 50.
+const WORST_CUT := TEAM_CUT_AT_70 + CLUB_CUT_AT_70 * (FULL - ARRIVE) / SHORT_AT_70
 
 
 static func value(p: Dictionary) -> float:
@@ -132,9 +137,9 @@ static func side_cuts(side: Array) -> Dictionary:
 	return out
 
 
-## "Familiarity 70%", or "" at 100.
+## "Chemistry 70%", or "" at 100.
 static func tag(p: Dictionary) -> String:
-	return "" if value(p) >= FULL else "Familiarity %d%%" % roundi(value(p))
+	return "" if value(p) >= FULL else "Chemistry %d%%" % roundi(value(p))
 
 
 ## "2%", "3.3%".
@@ -143,32 +148,57 @@ static func _percent(share: float) -> String:
 	return "%d%%" % roundi(v) if is_equal_approx(v, roundf(v)) else "%.1f%%" % v
 
 
-## His profile's line: what it is doing to his footy and how it comes back.
+## What his familiarity is taking off his footy, "2%".
+static func own_percent(p: Dictionary) -> String:
+	return _percent(own_cut(p))
+
+
+## Under his bar on his profile, "" at 100.
 static func line(p: Dictionary) -> String:
 	if value(p) >= FULL:
 		return ""
-	return "%s. Still learning his teammates: %s off his footy, back 5%% a game." % [
-			tag(p), _percent(own_cut(p))]
+	return "%s off his footy, up 5%% a game." % own_percent(p)
 
 
-## What the side's new-club men cost it, said before it bites: "" under three.
-## Facts only, whichever way the coach goes.
-static func side_line(side: Array) -> String:
+## The Team Chemistry meter, 1 to 0: the form the whole side is playing with, from what
+## each man carries (side_cuts), against the most this can cost a side. So one man at
+## 70 barely dents it and the step at 4 men shows as the step it is. Display only.
+static func chemistry(side: Array) -> float:
+	if side.is_empty():
+		return 1.0
+	var total := 0.0
+	for cut in side_cuts(side).values():
+		total += float(cut)
+	return clampf(1.0 - total / float(side.size()) / WORST_CUT, 0.0, 1.0)
+
+
+## The team-wide cost this side carries this round, in points. 0 under the threshold.
+static func team_points(side: Array) -> int:
 	var men := new_club_men(side)
-	var n := men.size()
-	if n < TEAM_ARRIVALS - 1:
-		return ""
-	var pts := roundi(float(TEAM_POINTS_AT_70) * _fade(men))
-	if n >= TEAM_ARRIVALS:
-		return "%d men new to the club in this side. From four, the whole side is still learning each other: about %d points this week, easing each game. First-gamers and draftees don't count." % [n, pts]
-	return "%d men new to the club in this side. A fourth and the whole side is still learning each other: about %d points this week, easing each game. First-gamers and draftees don't count." % [n, pts]
+	return 0 if men.size() < TEAM_ARRIVALS else roundi(float(TEAM_POINTS_AT_70) * _fade(men))
 
 
-## The rule, on the trade and free-agency screens.
+## The cost at each of Rounds 1 to 7, in points: 19 down to 0 on the same straight line.
+static func fade_points() -> Array:
+	var out := []
+	for game in range(FADE_ROUNDS):
+		out.append(roundi(float(TEAM_POINTS_AT_70) * float(FADE_ROUNDS - 1 - game) / float(FADE_ROUNDS - 1)))
+	return out
+
+
+## Where this side stands on fade_points, -1 when it carries no team-wide cost.
+static func fade_step(side: Array) -> int:
+	var men := new_club_men(side)
+	if men.size() < TEAM_ARRIVALS:
+		return -1
+	return roundi((1.0 - _fade(men)) * float(FADE_ROUNDS - 1))
+
+
+## The one line where a coach signs a man.
 static func signing_line() -> String:
-	return "A man from another club starts at familiarity 50%%, 70%% by Round 1 with a full pre-season, then up 5%% a game to 100%%. It takes 2%% off his footy at 70%%. Four or more new-club men in a side cost the whole side about %d points in Round 1, easing to nothing by Round 7." % TEAM_POINTS_AT_70
+	return "From another club: 2%% off his footy in Round 1, up 5%% a game. %d or more in a side: about %d points worse in Round 1, gone by Round 7." % [TEAM_ARRIVALS, TEAM_POINTS_AT_70]
 
 
-## The rule, on the draft screens.
+## The one line where a coach drafts a man.
 static func draft_line() -> String:
-	return "A draftee starts at familiarity 50%, 70% by Round 1 with a full pre-season, then up 5% a game to 100%. It takes 1% off his footy at 70%. Draftees don't count towards the four new men that cost a whole side."
+	return "A draftee: 1%% off his footy in Round 1, up 5%% a game. Draftees don't count towards the %d men from other clubs that hurt team chemistry." % TEAM_ARRIVALS
