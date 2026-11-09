@@ -48,9 +48,9 @@ const TAG_TIRED := 0.13
 ## disposals: the rest of his side's ball still finds him. What a tag does to his
 ## touches, measured (tools/audit/tag_keep_impl.gd: their biggest midfielder
 ## tagged from the first bounce v the same man untagged, 2,000 paired matches an
-## arm on main e67ba17d, audit runs 42686692074 (no tag) and 42686698853 to
-## 42686727963 (each multiplier held); a real tag, 42686736080, came within
-## 0.1 of this table). The card says it in counts (director, 2026-11-10).
+## arm on main 8757ee4a, audit runs 42686692074 (no tag) and 42686698853 to
+## 42686727963 (each multiplier held); a real tag (42686736080, 42686741689,
+## 42686748555: his legs and all) came within 0.1 of a disposal of it). The card says it in counts (director, 2026-11-10).
 ## His disposals untagged, a match:
 const TAG_USUAL_TOUCHES := 26.83
 ## [multiplier, his disposals tagged]; read between the rows (tag_touches).

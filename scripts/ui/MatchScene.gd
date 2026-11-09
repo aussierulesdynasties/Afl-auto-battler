@@ -2812,9 +2812,9 @@ func _card_text(r: Dictionary, detail: Callable) -> String:
 
 
 ## A "Who tags" card (director, 2026-10-13: it must read at a glance): his name
-## in bold with where he plays small beside it, then his Pressure, what their
-## man's touches and his legs along one line (label quiet, value clear), and what
-## he gives up of his own game under them. One man to a row, the column's full
+## in bold with where he plays small beside it, then his Pressure and his legs
+## along one line (label quiet, value clear), their man's touches with him on
+## (row 120) and what he gives up of his own game under them. One man to a row, the column's full
 ## width (A2). Your club's colour is the rule down the left edge;
 ## selection stays the button's own text outline. The button stays the card's
 ## background and its tap target, under the words; its words are kept in the
@@ -2867,10 +2867,9 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 	head.add_child(where)
 	col.add_child(head)
 	# The short facts flow along one line, each label quiet beside its value,
-	# and wrap whole (never a word to a line, A2); what he gives up is the
-	# long one, a sentence of its own under them.
-	var rows := [["Pressure", str(c["pressure"]), false], [str(c["holds_label"]), str(c["holds"]), false],
-			["Legs", str(c["legs"]), bool(c["legs_bad"])]]
+	# and wrap whole (never a word to a line, A2); their man's touches and what
+	# he gives up are the long ones, a line of their own each under them.
+	var rows := [["Pressure", str(c["pressure"]), false], ["Legs", str(c["legs"]), bool(c["legs_bad"])]]
 	var facts := HFlowContainer.new()
 	facts.name = "CardFacts"
 	facts.add_theme_constant_override("h_separation", 16)
@@ -2881,6 +2880,16 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 		one.add_child(UiKit.line(str(f[1]), UiKit.BODY, UiKit.BAD if bool(f[2]) else UiKit.TEXT))
 		facts.add_child(one)
 	col.add_child(facts)
+	# Their man's touches: the label quiet, the counts clear, wrapping inside
+	# the card rather than pushing it past the screen's edge.
+	var holds := UiKit.hbox(5)
+	holds.name = "CardHolds"
+	holds.add_child(UiKit.line(str(c["holds_label"]), UiKit.SECONDARY, UiKit.MUTED))
+	var holds_value := UiKit.lbl(str(c["holds"]), UiKit.BODY, UiKit.TEXT)
+	holds_value.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	holds_value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	holds.add_child(holds_value)
+	col.add_child(holds)
 	var gives := UiKit.lbl("%s %s" % [c["gives_label"], c["gives"]], UiKit.SECONDARY, UiKit.TEXT)
 	gives.name = "CardGives"
 	gives.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

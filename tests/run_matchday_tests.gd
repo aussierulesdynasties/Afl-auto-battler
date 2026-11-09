@@ -733,12 +733,16 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 				and mine_btn != null and gives.call(words.call(mine_btn)),
 				"Your assistant's tagger shows what he gives up, like the others, marked as the pick (%s: %s)" % [tag, words.call(dflt).replace("
 ", " / ") if dflt else "-"])
-		# Name bold on top, three labelled facts, the pick a quiet label on his card, your club's rule.
+		# Name bold on top, two labelled facts, their man's touches on a line of
+		# their own, the pick a quiet label on his card, your club's rule.
 		var cards: Array = who_box.find_children("Card_TaggerPickerGrid_*", "Control", true, false) if who_box != null else []
 		var shaped := not cards.is_empty()
 		for cd in cards:
-			shaped = shaped and cd.find_child("CardName", true, false) != null and cd.find_child("ClubRule", true, false) != null 					and (cd.find_child("CardFacts", true, false) as Container).get_child_count() >= 3
-		_check(shaped, "Each Who tags card is a name, three labelled facts and your club's rule (%s)" % tag)
+			shaped = shaped and cd.find_child("CardName", true, false) != null and cd.find_child("ClubRule", true, false) != null 					and (cd.find_child("CardFacts", true, false) as Container).get_child_count() >= 2 and cd.find_child("CardHolds", true, false) != null
+		_check(shaped, "Each Who tags card is a name, its labelled facts, their man's touches and your club's rule (%s)" % tag)
+		# Row 120: the touches line once pushed every card past a phone's edge.
+		var wide_cards := cards.filter(func(cd): return (cd as Control).get_global_rect().end.x > float(sz.x) + 1.0)
+		_check(wide_cards.is_empty(), "Every Who tags card fits the screen's width (%s: %d over)" % [tag, wide_cards.size()])
 		_check(dflt != null and dflt.get_parent().find_child("CardPick", true, false) != null
 				and cards.filter(func(cd): return cd.find_child("CardPick", true, false) != null).size() == 1,
 				"Only your assistant's pick carries the pick label (%s)" % tag)
