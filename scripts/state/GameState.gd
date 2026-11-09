@@ -11881,6 +11881,10 @@ func _prepare_media_conference(results: Array) -> void:
 		var key := str(media_conference.get("key", ""))
 		asked[key] = int(asked.get(key, 0)) + 1
 		media_memory["asked"] = asked
+		# The Muckraker quotes a claim back once, not after every heavy loss
+		# that season (audit 19/60: it came round every six rounds).
+		if str(media_conference.get("qid", "")) == "heavy_loss.said" and media_memory.get("said|big_win") is Dictionary:
+			(media_memory["said|big_win"] as Dictionary)["quoted"] = true
 		media_conference["opp"] = GameDB.club_name(opp)
 		# How he asks follows your standing with him (director 2026-11-06, Q1);
 		# the question itself stays as it was.
