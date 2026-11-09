@@ -17,7 +17,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 103 | Synergies within reach: draft, trade and free-agent screens show which synergy a player would complete, and a player can grow a trait over seasons through training (4.Q10); balance-gated | both shown in play, paired table |
 | 107 | Event cards: every choice gets an upside and a downside, and never-seen cards get a trigger (T5.Q18, row 34) | no no-cost choice, every card reachable in an audit |
 | 133 | Rival clubs sign out-of-contract players from other clubs on real lists, new clubs on the same rules (director 2026-11-09). A test career signed 0 for $0 | volume measured against real AFL, paired table |
-| 134 | Rival read rulings (director 2026-11-09): the minder line names a likely forward; the hub's loose man uses the report's pick; the chasing line only when well behind; their plan story shows on the Assistant's report | each shown in a capture, tests |
 | 135 | Hub at phone size: no card cut by the scroll edge above the bottom buttons (director 2026-11-09) | phone capture, his look |
 | 136 | Further match tuning (director 2026-11-09): mid disposals, key forward disposals, spoils, margins of 80+ | paired table, his playtest |
 | 137 | New career start: the 2-4 minutes of simulated years before 2027-2029 is not acceptable; cut it (director 2026-11-09) | measured before and after |
