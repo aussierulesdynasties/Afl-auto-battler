@@ -581,6 +581,7 @@ func _test_full_list_before_and_during_draft() -> void:
 	# A coach past his first week: the hub's one-off intro (a setting, so it
 	# carries over from whichever suite ran before) would sit over the button.
 	_state.set_setting("seen_weekly_loop_intro", true)
+	_state.postseason_intro_seen = true
 	for round_trip in ["delist", "start"]:
 		var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 		root.add_child(hub)
