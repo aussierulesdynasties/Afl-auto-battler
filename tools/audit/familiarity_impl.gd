@@ -22,6 +22,9 @@ var user := ""
 var tally := {}
 var missing := 0
 var arrivals_seen := 0
+## Your club's moves: the "active" coach's trades and free-agency signings made.
+var your_trades := 0
+var your_signings := 0
 
 
 func run() -> void:
@@ -88,7 +91,9 @@ func _career(seed: int, seasons: int, active: bool) -> void:
 func _play_season(count: bool) -> void:
 	var by_club := {}
 	while not gs.season.is_season_over():
-		if count and not gs.preseason_active():
+		# advance() would run the pre-season and Round 1 in one call: stop between them.
+		gs.preseason_sim_to_round1()
+		if count:
 			var rnd: int = gs.season.round_index
 			if rnd >= 0 and rnd < 6 and not by_club.has(rnd):
 				by_club[rnd] = _read_sides(rnd)
@@ -162,15 +167,17 @@ func _trade_bot(most: int) -> void:
 		var mine: Array = gs.my_list.duplicate()
 		mine.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
 		var done := false
-		for t in theirs.slice(0, 8):
+		# Their best 22 for a man of ours a little under him: what a rival would take.
+		for t in theirs.slice(0, 22):
 			if done or float(t.get("age", 25.0)) > 30.0:
 				continue
-			for i in range(10, mini(30, mine.size())):
+			for i in range(5, mini(30, mine.size())):
 				if int(t["overall"]) <= int(mine[i]["overall"]):
 					continue
 				var v: Dictionary = gs.evaluate_trade(str(code), [str(mine[i]["id"])], [str(t["id"])])
 				if bool(v.get("ok", false)) and bool(gs.make_trade(str(code), [str(mine[i]["id"])], [str(t["id"])]).get("ok", false)):
 					made += 1
+					your_trades += 1
 					done = true
 					break
 
@@ -189,6 +196,7 @@ func _fa_bot(most: int) -> void:
 		var r: Dictionary = gs.offer_free_agent(str(p["id"]), int(want["salary"]) + int(terms.get("premium", 0)), int(want["years"]))
 		if bool(r.get("ok", false)):
 			bids += 1
+			your_signings += 1
 
 
 func _report() -> void:
@@ -200,4 +208,5 @@ func _report() -> void:
 				t["avg_4"], 100.0 * t["avg_4"] / n, t["new_sum"] / n])
 		print("FAM %s | sides by new-club men, Rounds 1-6 %s | by draftees %s | familiarity in Round 1 %s" % [
 				key, str(t["new_hist"]), str(t["dft_hist"]), str(t["fam_at_r1"])])
+	print("FAM your club made %d trades and %d free-agency signings" % [your_trades, your_signings])
 	print("FAM arrivals checked %d, without a familiarity %d" % [arrivals_seen, missing])
