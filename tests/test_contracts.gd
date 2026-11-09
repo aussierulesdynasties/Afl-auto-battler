@@ -871,7 +871,8 @@ func _test_free_agents() -> void:
 		if str(entry.get("kind", "")) == "signed" and str(entry["club"]) != me:
 			seen_n += 1
 			var code := str(entry["club"])
-			if Contracts.payroll(GameState.season.lists[code]) > GameState.salary_cap:
+			# A club building its list signs into that list, not season.lists.
+			if Contracts.payroll(ExpansionBuild.list_of(GameState, code)) > GameState.salary_cap:
 				fair = false
 	_check(fair and seen_n > 0, "Every rival signing fits under the cap (%d signings)" % seen_n)
 
