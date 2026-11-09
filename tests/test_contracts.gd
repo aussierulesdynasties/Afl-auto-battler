@@ -669,13 +669,21 @@ func _test_free_agents() -> void:
 	var total := 0
 	var honest := true
 	var notes := []
+	var home_offers := 0
 	for fa in GameState.free_agents:
 		var seen := {}
+		# A rival's own out-of-contract player tests the market with his club's
+		# offer still on the table (#1206): that is the one offer the club that
+		# let him go may make, and only in this off-season.
+		var home := str(fa.get("home_offer", "")) if int(fa.get("home_offer_year", -1)) == GameState.season_year else ""
 		for o in fa.get("offers", []):
 			total += 1
 			var code := str(o["club"])
 			var list: Array = GameState.season.lists[code]
-			if seen.has(code) or code == str(fa.get("released_by", "")) or code == me \
+			var from_home := home != "" and code == home
+			if from_home:
+				home_offers += 1
+			if seen.has(code) or (code == str(fa.get("released_by", "")) and not from_home) or code == me \
 					or int(o["salary"]) < 1 or int(o["years"]) < 1 or int(o["years"]) > Contracts.MAX_YEARS \
 					or int(o["salary"]) > GameState._cap_room_of(code) \
 					or int(o["salary"]) > GameState.offer_max(fa, o) \
@@ -689,6 +697,7 @@ func _test_free_agents() -> void:
 			multi = fa
 	_check(not multi.is_empty(), "A free agent can hold offers from several clubs")
 	_check(honest, "Every offer is a real contract from a club with the need, the cap room and the valuation %s" % str(notes.slice(0, 3)))
+	_check(home_offers > 0, "A rival's player testing the market keeps his own club's offer (%d), under the same rules" % home_offers)
 	_check(total < GameState.free_agents.size() * GameState.season.lists.size() / 3,
 			"Clubs don't bid on everyone (%d offers for %d free agents)" % [total, GameState.free_agents.size()])
 	# No list-order priority: the same market opens whatever order the clubs
