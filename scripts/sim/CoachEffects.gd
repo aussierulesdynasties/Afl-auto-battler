@@ -116,6 +116,12 @@ static func set_table(coaches: Dictionary, clubs: Array, my_club: String) -> voi
 		if club != my_club and not sc.is_empty():
 			Coaches.style(sc)
 		table[club] = row(staff, club == my_club)
+		# The senior coach's Philosophical archetype (row 119): yours is held
+		# in your record; a rival's comes from his own (it moves with him).
+		if club == my_club:
+			table[club]["arch_p"] = str((my_arch.get("held", {}) as Dictionary).get("p", ""))
+		elif not sc.is_empty():
+			table[club]["arch_p"] = Archetypes.rival_philosophical(Coaches.style_of(sc), sc.get("skills", {}))
 
 
 ## One club's row of the table from its staff (staffs), writing nothing on
@@ -137,6 +143,21 @@ static var known := {}
 ## Each AI club's usual game this season (GameState.rival_plans "usual", the
 ## same dictionary): club -> plan. Read into the squad (Squad.usual_plan).
 static var usual := {}
+
+
+## Your coach's archetype record (GameState.coach_arch, the same dictionary).
+static var my_arch := {}
+
+
+## A club's senior coach's two archetypes this round: [Strategic, Philosophical]
+## ("" for none). A rival's Strategic is the plan his club usually plays.
+static func arch_of(code: String) -> Array:
+	var t: Dictionary = for_club(code)
+	if t.is_empty():
+		return ["", ""]
+	var s := str(usual.get(code, "")) if bool(t.get("ai", true)) else ""
+	var strat := Archetypes.strategic_for_plan(s) if bool(t.get("ai", true)) 			else str((my_arch.get("held", {}) as Dictionary).get("s", ""))
+	return [strat, str(t.get("arch_p", ""))]
 
 
 static func for_club(code: String) -> Dictionary:
@@ -162,6 +183,9 @@ static func apply_row(sq: Squad, t: Dictionary) -> void:
 	sq.ai_plans = bool(t["ai"])
 	sq.assistant = bool(t.get("assistant", false))
 	sq.coach_style = str(t.get("style", "balanced"))
+	var ids := arch_of(sq.code) if for_club(sq.code) == t else ["", str(t.get("arch_p", ""))]
+	sq.arch = Archetypes.levers(str(ids[0]), str(ids[1]))
+	sq.tactics_exec *= float(sq.arch.get("exec", 1.0))
 
 
 ## club -> {job: record}, in one pass over the records.
