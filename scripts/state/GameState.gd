@@ -294,6 +294,14 @@ var plan_idle := {}
 ## exists), so a save from before it loads empty: the report says nothing of
 ## their record, and each coach settles his usual game at the next round.
 var rival_plans := {}
+## Your coach (row 119): his name, and his two archetypes' record
+## (Archetypes.blank shape: scores, what he holds, this season's tally).
+## interview_due: a new career's appointment interview is still to be sat.
+## Optional in a save: an older one loads with no name, no archetypes and no
+## interview, and his coaching earns its archetypes by drift.
+var coach_name := ""
+var coach_arch := {}
+var interview_due := false
 ## Who leads each club (Captaincy.gd): club code -> its record. A club with
 ## no entry has named no one; an older save has none for anyone.
 var captaincy := {}
@@ -954,6 +962,12 @@ func _save_state() -> Dictionary:
 		state["plan_idle"] = plan_idle
 	if not rival_plans.is_empty():
 		state["rival_plans"] = rival_plans
+	if coach_name != "":
+		state["coach_name"] = coach_name
+	if not coach_arch.is_empty():
+		state["coach_arch"] = coach_arch
+	if interview_due:
+		state["interview_due"] = true
 	return state
 
 
@@ -1153,6 +1167,10 @@ func _restore_career(state: Dictionary) -> bool:
 	_clean_plan_known()
 	rival_plans = state.get("rival_plans", {}) if state.get("rival_plans") is Dictionary else {}
 	CoachEffects.usual = _season_usuals()
+	coach_name = str(state.get("coach_name", ""))
+	coach_arch = state.get("coach_arch", {}) if state.get("coach_arch") is Dictionary else {}
+	interview_due = bool(state.get("interview_due", false))
+	CoachEffects.my_arch = coach_arch
 	captaincy = state.get("captaincy", {})
 	class_tiers = state.get("class_tiers", {})
 	custom_prospect_id = str(state.get("custom_prospect_id", ""))
@@ -1700,6 +1718,10 @@ func reset() -> void:
 	rival_plans = {}
 	CoachEffects.known = {}
 	CoachEffects.usual = {}
+	coach_name = ""
+	coach_arch = {}
+	interview_due = false
+	CoachEffects.my_arch = coach_arch
 	captaincy = {}
 	class_tiers = {}
 	last_training_report = {}
@@ -3926,6 +3948,48 @@ func _finish_drills() -> String:
 
 ## A round has been played: a plan played keeps its place; one left alone
 ## through fade_rounds rounds slips a step (slowly). Finals do not count.
+## Your coaching this round counts toward his archetypes' drift (row 119):
+## each quarter on a plan, and each Throw numbers at it or Stack the
+## contest called.
+func _note_coach_arch(results: Array) -> void:
+	for res in results:
+		if not (res is Dictionary) or (res as Dictionary).has("tag"):
+			continue
+		var side := 0 if str(res.get("home", "")) == my_club else (1 if str(res.get("away", "")) == my_club else -1)
+		if side < 0:
+			continue
+		for h in (res as Dictionary).get("tactics_history", []):
+			var plans: Array = (h as Dictionary).get("plans", []) if h is Dictionary else []
+			if plans.size() > side:
+				Archetypes.tally_plan(coach_arch, MatchSim.plan_key(str((plans[side] as Dictionary).get("gameplan", "balanced"))))
+		for m in (res as Dictionary).get("moments", []):
+			if m is Dictionary and int(m.get("side", -1)) == side:
+				Archetypes.tally_call(coach_arch, str(m.get("call", "")))
+	CoachEffects.my_arch = coach_arch
+
+
+## The season is over: his archetypes drift with how he coached it, and any
+## change is announced (row 119).
+func _coach_arch_season_end() -> void:
+	if coach_arch.is_empty():
+		return
+	var out := Archetypes.season_end(coach_arch)
+	coach_arch = out["arch"]
+	CoachEffects.my_arch = coach_arch
+	for c in out["changed"]:
+		add_news("coach", Archetypes.change_line(str(c[0]), str(c[1]), str(c[2])))
+
+
+## Sit the appointment interview: `picks` one answer per question.
+func finish_interview(picks: Array) -> Dictionary:
+	coach_arch = Archetypes.score_interview(picks)
+	interview_due = false
+	CoachEffects.my_arch = coach_arch
+	mark_dirty()
+	autosave()
+	return coach_arch
+
+
 func _note_plans_played(results: Array) -> void:
 	if plan_known.is_empty():
 		return
@@ -5760,6 +5824,11 @@ func _club_xp(club: String, p: Dictionary, base: int, staff: Dictionary, on_grou
 	if club == my_club and float(p.get("age", 25.0)) <= ClubBudget.YOUNG_AGE:
 		gain = int(round(float(gain) * ClubBudget.development_mult(
 				department_budget_level("development"))))
+	# A Father Figure's kids develop a little faster (row 119).
+	if float(p.get("age", 25.0)) <= Archetypes.KIDS_AGE:
+		var kx := float(Archetypes.KIDS_XP.get(str(CoachEffects.arch_of(club)[1]), 1.0))
+		if kx != 1.0:
+			gain = int(round(float(gain) * kx))
 	var plan_xp := Conditioning.xp_mult(fitness_plan(club), p)
 	if plan_xp != 1.0:
 		gain = int(round(float(gain) * plan_xp))
@@ -6169,6 +6238,7 @@ func _short_name(id: String) -> String:
 func _after_round(results: Array) -> void:
 	_note_plans_played(results)
 	_note_rival_plans(results)
+	_note_coach_arch(results)
 	MidseasonDraft.after_round(self)
 	# Who on a promised run could not play this week, before anything ticks.
 	_backing_unavailable = {}
@@ -6928,6 +6998,7 @@ func open_offseason(keep_staff := false) -> void:
 			if project_job(p) != "":
 				_finish_project(p, str(code) == my_club)
 	offseason_year = season_year
+	_coach_arch_season_end()
 	# Selection bars from before today (a rival board's letter reads them) must
 	# not reach the market: a reload, which does not keep them, would play it differently.
 	_bars = {}
@@ -11481,7 +11552,8 @@ func _board_after_round(results: Array) -> void:
 		var staff: Dictionary = club_staff(my_club)
 		for p in my_list:
 			soft[str(p["id"])] = CoachEffects.soften(staff, p)
-	ClubLife.morale_after_match(my_list, played, margin > 0, soft, culture_effect(my_club, "sting"), _round_unavailable)
+	ClubLife.morale_after_match(my_list, played, margin > 0, soft, culture_effect(my_club, "sting"), _round_unavailable,
+			str(CoachEffects.arch_of(my_club)[1]))
 	# A player promised a run (Backing): each game he plays counts towards it.
 	# Left out while fit, the promise breaks and it stings, once, and the run
 	# is over; unable to play, the run waits. His one-week expectation is
@@ -11544,7 +11616,7 @@ func _rival_morale_after_round(results: Array) -> void:
 				for p in list:
 					soft[str(p["id"])] = CoachEffects.soften(staff, p)
 			ClubLife.morale_after_match(list, played, int(score[side]) > int(score[1 - side]), soft, culture_effect(code, "sting"),
-					_round_unavailable)
+					_round_unavailable, str(CoachEffects.arch_of(code)[1]))
 
 
 ## Keep your match's story (hero, turning point, reasons) and put its
@@ -11906,6 +11978,7 @@ func resolve_media_conference(option: int) -> Dictionary:
 		return {}
 	var picked: Dictionary = opts[option]
 	var kind := MediaConference.kind_of(picked, option)
+	Archetypes.tally_press(coach_arch, kind)
 	var odds := press_chance(option)
 	var ctx := press_context(option)
 	var fx := MediaConference.effects(kind, ctx)
@@ -12483,6 +12556,7 @@ func _refresh_coach_tactics() -> void:
 	if coaches.is_empty() or season == null:
 		CoachEffects.table = {}
 		return
+	CoachEffects.my_arch = coach_arch
 	CoachEffects.set_table(coaches, GameDB.active_clubs(season_year), my_club)
 	# High performance sets how sharply the plan is carried out (row 99): your
 	# club's budget, or an audit's level for an AI club; AI clubs otherwise run
