@@ -107,9 +107,9 @@ func _test_closer_set_shot_converts_more() -> void:
 			"Set shots from 20-30 m convert more than 40-50 m, and those more than 50+ m (%s)" % str(rate))
 
 
-## Over 30 seeded matches the set-shot share of shots sits near the share the
-## sim is built for (MatchSim.set_share(), row 77). Real AFL is about 55% of
-## shots; the gap is a balance question for the director, not this check.
+## Over 30 seeded matches the set-shot share of shots sits near real AFL, about
+## 55% of shots (row 77; SET_SHOT_EVIDENCE.md). SET_SHARE_ON is a different number,
+## the share of marks inside 50 that go back and kick, so it is not the aim here.
 func _test_set_share_near_real() -> void:
 	var res := _play()
 	var n := 0
@@ -119,5 +119,5 @@ func _test_set_share_near_real() -> void:
 		set_n += int(s[1])
 	_check(n > MATCHES * 30, "Shots were played (%d)" % n)
 	var share := float(set_n) / maxf(1.0, float(n))
-	var aim := MatchSim.SET_SHARE_ON
+	var aim := 0.55
 	_check(absf(share - aim) < 0.04, "The set-shot share sits near %.2f (%.3f)" % [aim, share])
