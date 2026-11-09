@@ -60,7 +60,7 @@ static func line_values(squad: Squad) -> Dictionary:
 ## lists: club -> player list; selections: club -> selection ({} = auto);
 ## results: opp's results oldest first, e.g. ["W", "L", "W"].
 static func facts(opp: String, lists: Dictionary, selections: Dictionary = {},
-		results: Array = []) -> Array:
+		results: Array = [], loose = null) -> Array:
 	if not lists.has(opp) or (lists[opp] as Array).is_empty():
 		return []
 	var out := []
@@ -77,7 +77,9 @@ static func facts(opp: String, lists: Dictionary, selections: Dictionary = {},
 	var danger := _danger(opp, squads[opp], lists)
 	if not danger.is_empty():
 		out.append(danger)
-	var spare := _interceptor_fact(squads[opp])
+	# `loose`: the man their coach starts there (MatchSim.loose_pick, the one
+	# the Assistant's report names), when the caller knows your side too.
+	var spare := _interceptor_fact(squads[opp], loose)
 	if not spare.is_empty() and (danger.is_empty()
 			or str(spare.get("player_id", "")) != str(danger.get("player_id", ""))):
 		out.append(spare)
@@ -171,8 +173,8 @@ static func _danger(opp: String, squad: Squad, lists: Dictionary) -> Dictionary:
 ## An opposition defender who is genuinely suited to roam is worth knowing
 ## before the bounce because the coach has a direct structural response:
 ## make the spare accountable. This is personnel evidence, not a prediction.
-static func _interceptor_fact(squad: Squad) -> Dictionary:
-	var spare := Matchups.best_interceptor(squad.ground)
+static func _interceptor_fact(squad: Squad, loose = null) -> Dictionary:
+	var spare: Dictionary = Matchups.best_interceptor(squad.ground) if loose == null else loose
 	if spare.is_empty():
 		return {}
 	return {"key": "interceptor",
