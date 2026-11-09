@@ -694,12 +694,14 @@ func _player_card(p: Dictionary) -> Control:
 	ovr.name = "Rating"
 	ovr.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	top.add_child(ovr)
-	# Middle: his name, and his trait under it, centred in the room between the
-	# top row and the status, so a short name does not leave a hole.
+	# Middle: his name, and his trait under it, from the same height on every
+	# card, so the names of a row line up whether or not a trait sits under
+	# them (the confirmed name/second-line alignment defect, director 2026-10-06).
 	var mid := UiKit.vbox(2)
 	mid.name = "CardMiddle"
 	mid.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	mid.alignment = BoxContainer.ALIGNMENT_CENTER
+	mid.alignment = BoxContainer.ALIGNMENT_BEGIN
+	mid.add_child(UiKit.spacer(6))
 	v.add_child(mid)
 	var full_name := GameDB.player_display_name(p)
 	var fitted := _fit_name(full_name, text_w)
