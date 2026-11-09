@@ -65,6 +65,9 @@ func _run() -> void:
 		root.size = size
 		await _settle()
 		await _t("_test_hub_round1", [size])
+	root.size = Vector2i(390, 844)
+	await _settle()
+	await _t("_test_hub_fold")
 	print("SCROLLTABLE")
 	for line in _table:
 		print(line)
@@ -429,6 +432,57 @@ func _resize(sc: ScrollContainer, label: String, res: Array) -> void:
 ## The hub before Round 1 (a contract card on the page, the whole ladder
 ## below): every part is reachable by scrolling and ends fully inside the
 ## visible page, and the card's answer takes a real tap at its position.
+## At rest on a phone no hub card is sliced by the page's bottom edge, or left
+## under its fade (director, 2026-11-09), and what was pushed down still takes a
+## real tap once scrolled to.
+func _test_hub_fold() -> void:
+	const Tap := preload("res://tests/tap.gd")
+	for club in ["WBD", "FRE", "COL", "MEL", "SYD", "GEE"]:
+		_state.reset()
+		_state.start_season(club, _db.club_list(club))
+		_state.replay_seed = SUITE_SEED
+		_state.tutorials = false
+		# The Milestones card brings the next row to the fold (the reported case).
+		_state.milestone_log["coach"] = {"games": 49}
+		_router.stack = []
+		_router.go("main")
+		await _settle()
+		_router.go("hub")
+		await _settle(40)
+		# A card that opened over the hub is its own test; this one reads the page.
+		var sheet: Node = current_scene.find_child("EventSheet", true, false)
+		if sheet != null:
+			sheet.free()
+		await _settle(3)
+		var sc: ScrollContainer = null
+		for n in current_scene.find_children("*", "ScrollContainer", true, false):
+			if (n as Control).is_visible_in_tree():
+				sc = n
+				break
+		_check(sc != null, "%s: the hub has its page" % club)
+		if sc == null:
+			continue
+		var edge := sc.get_global_rect().end.y
+		var fold := edge - 28.0
+		var below: Button = null
+		for n in sc.find_children("*", "", true, false):
+			if not (n is PanelContainer or n is Button) or not (n as Control).is_visible_in_tree():
+				continue
+			var r := (n as Control).get_global_rect()
+			if r.size.y > sc.size.y * 0.4:
+				continue
+			_check(r.end.y <= fold or r.position.y >= edge,
+					"%s: %s is cut by the fold (%d-%d, fold %d, edge %d)" % [club, n.name, r.position.y, r.end.y, fold, edge])
+			if below == null and n is Button and r.position.y >= edge:
+				below = n
+		if below != null and club == "GEE":
+			sc.scroll_vertical = int(below.get_global_rect().position.y - fold + 60.0)
+			await _settle(4)
+			var why: String = await Tap.tap(below)
+			_check(why == "", "A real tap reaches the button below the fold (%s)" % why)
+		_check(club != "GEE" or below != null, "GEE: a button sits below the fold to tap")
+
+
 func _test_hub_round1(size: Vector2i) -> void:
 	var tag := "hub round 1 %dx%d" % [size.x, size.y]
 	_state.reset()
