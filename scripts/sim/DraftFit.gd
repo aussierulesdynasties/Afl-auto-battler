@@ -25,6 +25,13 @@ const WEIGHTS := {
 	"ANA": {"intercept": 0.5, "creating": 0.5},
 }
 
+## The lines a Strategic archetype's plan counts (PlanFit.NEEDS): a ruck is
+## never marked for the pressing game. Philosophical marks read every line.
+const LINES := {
+	"DS": ["MID", "FWD"], "TA": ["MID", "FWD", "DEF"],
+	"CC": ["MID", "RUCK"], "PC": ["DEF", "MID", "FWD"],
+}
+
 ## The mark's words: what it suits, then the rating's name.
 const SUITS := {
 	"DS": ["Suits your pressing game", "pressure"],
@@ -51,6 +58,8 @@ static func marks(pool: Array, held: Dictionary, club: String, seed: int, mult :
 		var reads := []
 		for p in pool:
 			if not (p is Dictionary) or not bool(p.get("projected", false)):
+				continue
+			if LINES.has(id) and not (LINES[id] as Array).has(str(p.get("role", ""))):
 				continue
 			var r := read(p, id, club, seed, mult)
 			if not r.is_empty():

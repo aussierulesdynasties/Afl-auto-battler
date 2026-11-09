@@ -1344,12 +1344,19 @@ func _test_draft_fit() -> void:
 			for banned in ["take", "pick", "draft him", "best", "should", "recommend", "target"]:
 				texts_ok = texts_ok and not t.to_lower().contains(banned)
 		var above := true
+		var lines_ok := true
+		for pid in marks:
+			for p in d.pool:
+				if str(p["id"]) == pid and Fit.LINES.has(id):
+					lines_ok = lines_ok and (Fit.LINES[id] as Array).has(str(p["role"]))
 		for p in d.pool:
+			if Fit.LINES.has(id) and not (Fit.LINES[id] as Array).has(str(p["role"])):
+				continue
 			if not marks.has(str(p["id"])):
 				var r: Dictionary = Fit.read(p, id, "MEL", d.seed, mult)
 				var v := float(r["value"]) if id != "GAMB" else float(r["value"]) - float(r["rated"])
 				above = above and v <= lowest + 0.5
-		_check(marks.size() == 6 and above and texts_ok,
+		_check(marks.size() == 6 and above and texts_ok and lines_ok,
 				"%s marks the six who suit it best by the scouts' read, in fact words with the read's +/- (%d marked)" % [id, marks.size()])
 	_check(by_arch["DS"] != by_arch["CC"] and by_arch["FATH"] != by_arch["GAMB"],
 			"Different archetypes mark different prospects")

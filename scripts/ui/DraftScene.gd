@@ -1093,7 +1093,7 @@ func _player_row(p: Dictionary) -> Control:
 	# Draft fit (row 127): how he suits your coach's game, as a fact with
 	# the scouts' read. Your club's colour: it is about your club.
 	for m in _fit_of(p):
-		var fit_line := _row_line(str(m["text"]), _fit_colour())
+		var fit_line := _row_line(str(m["text"]), _fit_colour(), true)
 		fit_line.name = "Fit_%s_%s" % [str(p["id"]), str(m["arch"])]
 		face.add_child(fit_line)
 	# The prospect you created at New Career (row 64), easy to find.
@@ -2662,8 +2662,13 @@ func _fit_of(p: Dictionary) -> Array:
 	return (_fit as Dictionary).get(str(p.get("id", "")), [])
 
 
+## Your club's ink; a red club (whose red stays off text, club_name_colour)
+## uses its second ink, so the mark still reads as yours and never as white.
 func _fit_colour() -> Color:
-	return UiKit.club_name_colour(UiKit.club_ink(_club))
+	var ink := UiKit.club_name_colour(UiKit.club_ink(_club))
+	if ink == UiKit.TEXT:
+		ink = UiKit.club_name_colour(UiKit.club_ink_second(_club))
+	return ink
 
 
 func _row_line(text: String, colour: Color, bold := false) -> Label:
