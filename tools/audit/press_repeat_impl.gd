@@ -23,7 +23,9 @@ extends RefCounted
 ## and per career:
 ##   PR_GAPS seed <s> kind q|n id <id> count <n> gaps <g,g,...>
 ##   SUMMARY seed <s> ...
-## Measurement only: it never changes a rule.
+## A random-answer autopilot gets sacked within a few seasons; the audit is
+## about long saves at one club, so a sacking is cleared on the spot and
+## counted (reprieves in SUMMARY). Measurement only: it never changes a rule.
 
 func run() -> void:
 	var args := OS.get_cmdline_user_args()
@@ -50,13 +52,17 @@ func _career(seed: int, club: String, seasons: int) -> void:
 	var tot_press := 0
 	var tot_games := 0
 	var played := 0
+	var reprieves := 0
 	for s in range(seasons):
 		var games := 0
 		var press := 0
 		var qs := {}
 		var ns := {}
 		var notes_total := 0
-		while not GameState.season.is_season_over() and not GameState.is_sacked():
+		while not GameState.season.is_season_over():
+			if GameState.is_sacked():
+				GameState.board["sacked"] = false
+				reprieves += 1
 			for i in range(GameState.week_events.size() - 1, -1, -1):
 				var c: Dictionary = GameState.week_events[i]
 				GameState.resolve_card(i, answer.randi_range(0, maxi(0, (c.get("options", []) as Array).size() - 1)))
@@ -96,7 +102,10 @@ func _career(seed: int, club: String, seasons: int) -> void:
 				_top(qs, 5), notes_total, ns.size(), _top(ns, 5)])
 		tot_press += press
 		tot_games += games
-		if s == seasons - 1 or GameState.is_sacked():
+		if GameState.is_sacked():
+			GameState.board["sacked"] = false
+			reprieves += 1
+		if s == seasons - 1:
 			break
 		GameState.open_offseason()
 		if GameState.begin_intake_draft():
@@ -114,9 +123,9 @@ func _career(seed: int, club: String, seasons: int) -> void:
 		print("PR_GAPS seed %d kind q id %s count %d gaps %s text %s" % [seed, qid, (q_seen[qid] as Array).size(), _gaps(q_seen[qid]), q_text[qid]])
 	for nid in n_seen:
 		print("PR_GAPS seed %d kind n id %s count %d gaps %s text %s" % [seed, nid, (n_seen[nid] as Array).size(), _gaps(n_seen[nid]), n_text[nid]])
-	print("SUMMARY seed %d %s | seasons %d | games %d | pressers %d (%.1f a season) | distinct qids %d | distinct notes %d | sacked %s" % [
+	print("SUMMARY seed %d %s | seasons %d | games %d | pressers %d (%.1f a season) | distinct qids %d | distinct notes %d | reprieves %d" % [
 			seed, club, played, tot_games, tot_press, float(tot_press) / float(maxi(1, played)),
-			q_seen.size(), n_seen.size(), str(GameState.is_sacked())])
+			q_seen.size(), n_seen.size(), reprieves])
 
 
 ## The full-time "Coaching notes" lines, as MatchScene builds them for your match.
