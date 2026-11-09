@@ -30,6 +30,8 @@ func run() -> void:
 	_t("_test_golden_fist_rule")
 	_t("_test_golden_fist_trophy_room")
 	_t("_test_award_count_rounds")
+	_t("_test_premiership_ink_rules")
+	_t("_test_premiership_ink_cosmetic")
 	_t("_test_full_season")
 	_t("_test_award_count_late_start")
 	GameState.delete_saved_career()
@@ -394,6 +396,66 @@ func _find_player(id: String) -> Dictionary:
 	return gone if gone is Dictionary and (gone as Dictionary).has("attr") else {}
 
 
+func _ink_players() -> Dictionary:
+	var out := {}
+	for code in GameState.season.lists:
+		for q in GameState.season.lists[code]:
+			out[str(q["id"])] = q
+	return out
+
+
+## Premiership ink (TODO row 73): decided once at his first flag, at about SHARE
+## of players, later flags add their year, and the choice is his id's alone.
+func _test_premiership_ink_rules() -> void:
+	var yes := 0
+	for i in range(4000):
+		if PremiershipInk.adopts("ink-test-%d" % i):
+			yes += 1
+	var share := yes / 4000.0
+	_check(absf(share - PremiershipInk.SHARE) < 0.03,
+			"About %.0f%% of first-time premiership players get the tattoo (%.3f)" % [PremiershipInk.SHARE * 100.0, share])
+	_check(PremiershipInk.adopts("x1") == PremiershipInk.adopts("x1"), "The choice is the same every time for the same player")
+	var p := {"id": "inked"}
+	PremiershipInk.record_flag(p, 2031, 1.0)
+	PremiershipInk.record_flag(p, 2036, 0.0)
+	PremiershipInk.record_flag(p, 2033, 0.0)
+	PremiershipInk.record_flag(p, 2033, 0.0)
+	_check(PremiershipInk.years(p) == [2031, 2033, 2036],
+			"Later flags add their years in order, each once, with no new roll (%s)" % str(p.get("flag_ink")))
+	var q := {"id": "plain"}
+	PremiershipInk.record_flag(q, 2031, 0.0)
+	PremiershipInk.record_flag(q, 2034, 1.0)
+	_check(q.get(PremiershipInk.KEY) == false and PremiershipInk.years(q).is_empty(),
+			"A man who said no at his first flag never gets one later")
+	_check(GameDB.figure_look({"id": "inked", "flag_ink": [2031, 2033]}).get("flag_ink") == 2,
+			"The figure carries how many years are on his arm")
+	var gf := {"home": "GEE", "away": "HAW", "winner": 1,
+			"roster": [[{"id": "g1"}], [{"id": "h1"}, {"id": "h2"}]], "players": {"g1": {}, "h1": {}}}
+	_check(PremiershipInk.premiership_ids(gf, "HAW") == ["h1"] and PremiershipInk.premiership_ids(gf) == ["h1"],
+			"Only the winning side's men who played are premiership players")
+
+
+## Premiership ink changes no match number: the same seed plays the same match with every
+## player inked, and recording a flag draws nothing from the shared random stream.
+func _test_premiership_ink_cosmetic() -> void:
+	var plain := JSON.stringify(_one_match())
+	var gee: Array = GameDB.club_list("GEE")
+	var haw: Array = GameDB.club_list("HAW")
+	for p in gee + haw:
+		p["flag_ink"] = [2031, 2033, 2036]
+	var home := Squad.new("H", gee, true, "GEE")
+	var away := Squad.new("A", haw, false, "HAW")
+	var inked := JSON.stringify(MatchSim.new(home, away, 77).run())
+	for p in gee + haw:
+		p.erase("flag_ink")
+	_check(inked == plain, "A match plays out the same, number for number, with every player inked")
+	seed(4242)
+	var a := randi()
+	seed(4242)
+	PremiershipInk.record_flag({"id": "rng"}, 2031)
+	_check(randi() == a, "Recording a flag takes nothing from the game's random stream")
+
+
 func _test_full_season() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
@@ -475,6 +537,33 @@ func _test_full_season() -> void:
 	var nsm_id: String = str(nsm.get("id", ""))
 	_check(GameState.norm_smith_years(nsm_id) == [GameDB.START_YEAR],
 			"His profile can list the year he won it")
+	# Premiership ink (row 73): every man who played in the winning side decided once,
+	# no one else touched; the choice survives a save and reload.
+	var flag_men := PremiershipInk.premiership_ids(gf, GameState.premier())
+	var decided := 0
+	var inked := 0
+	for id in flag_men:
+		var q := _find_player(str(id))
+		if q.has(PremiershipInk.KEY):
+			decided += 1
+			if PremiershipInk.years(q) == [GameDB.START_YEAR]:
+				inked += 1
+	_check(flag_men.size() >= 18 and decided == flag_men.size(),
+			"Each premiership player's tattoo choice is made at his flag (%d of %d)" % [decided, flag_men.size()])
+	var strays := 0
+	for code in GameState.season.lists:
+		for q in GameState.season.lists[code]:
+			if q.has(PremiershipInk.KEY) and not flag_men.has(str(q["id"])):
+				strays += 1
+	_check(strays == 0, "Nobody outside the premiership side gets premiership ink (%d)" % strays)
+	var ink_before := {}
+	for id in flag_men:
+		ink_before[id] = _find_player(str(id)).get(PremiershipInk.KEY)
+	PremiershipInk.record_grand_final(gf, GameState.premier(), _ink_players(), GameDB.START_YEAR)
+	var same := true
+	for id in flag_men:
+		same = same and str(_find_player(str(id)).get(PremiershipInk.KEY)) == str(ink_before[id])
+	_check(same, "Processing the same Grand Final again changes no one's ink")
 	# An older save: a season with no Norm Smith on its entry loads and says nothing.
 	var kept_roll: Array = GameState.honour_roll.duplicate(true)
 	var old_roll: Array = GameState.honour_roll.duplicate(true)
@@ -484,6 +573,11 @@ func _test_full_season() -> void:
 	GameState.load_career()
 	_check(GameState.honour_roll.size() == 1 and GameState.norm_smith_years(nsm_id).is_empty(),
 			"An old save's season has no Norm Smith recorded and is not back-filled")
+	var kept := true
+	for id in flag_men:
+		kept = kept and str(_find_player(str(id)).get(PremiershipInk.KEY)) == str(ink_before[id])
+	_check(kept and inked == ink_before.values().filter(func(v): return v is Array).size(),
+			"Premiership ink is saved on the players and loads unchanged (%d inked)" % inked)
 	GameState.honour_roll = kept_roll
 	# The Golden Fist (T5.Q11c): a listed defender with the games, the same
 	# answer from the same book, on the honour roll and in the news.
