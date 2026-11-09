@@ -419,6 +419,8 @@ func _test_youth_only_drafts() -> void:
 	_new_career()
 	gs.challenge = {"kind": "youth"}
 	gs.season.round_index = gs.season.fixture.size()
+	# Room on the list, so the picks below are made: a full list passes them.
+	gs.my_list.resize(gs.my_list.size() - 3)
 	_check(gs.begin_intake_draft(), "(setup) the National Draft opens")
 	var draft: Draft = gs.draft
 	if draft == null:
