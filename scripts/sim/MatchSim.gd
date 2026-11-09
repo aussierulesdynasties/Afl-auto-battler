@@ -465,7 +465,13 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	mid_ic_rng.seed = seed * 137 + 139
 	injury_rng.seed = seed * 13 + 7
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
+	arch_rng.seed = seed * 151 + 157
 	for side in range(2):
+		arch[side] = (squads[side] as Squad).arch.duplicate()
+		var morale := _ar(side, "morale", 0.0)
+		if morale != 0.0:
+			for q in (squads[side] as Squad).ground + (squads[side] as Squad).bench:
+				_arch_form[str(q["id"])] = morale / 1000.0
 		synergies[side] = Traits.active((squads[side] as Squad).ground)
 		standing[side] = (squads[side] as Squad).usual_plan if (squads[side] as Squad).usual_plan != "" \
 				else PlanFit.standing_plan((squads[side] as Squad).ground, (squads[side] as Squad).plan_know)
@@ -958,6 +964,10 @@ func _pv(side: int, key: String, fallback := 1.0) -> float:
 	var plan := _plan(side)
 	var v := float((PLANS.get(plan, {}) as Dictionary).get(key, fallback))
 	var scale := 1.0
+	# The coach's Strategic archetype grows his own plan's upside and cost (row 119).
+	var amp := 1.0
+	if str((arch[side] as Dictionary).get("fplan", "")) == plan:
+		amp = _ar(side, "sup") if (PLAN_UPSIDE.get(plan, []) as Array).has(key) else _ar(side, "scost")
 	if (PLAN_UPSIDE.get(plan, []) as Array).has(key):
 		scale = float((squads[side] as Squad).tactics_exec) \
 				* float((plan_fit[side] as Dictionary).get(plan, 1.0)) \
@@ -966,7 +976,7 @@ func _pv(side: int, key: String, fallback := 1.0) -> float:
 		var know: Dictionary = (squads[side] as Squad).plan_know
 		if not know.is_empty():
 			scale *= float(know.get(plan, 1.0))
-	return fallback + (v - fallback) * scale
+	return fallback + (v - fallback) * scale * amp
 
 
 ## Pressure multiplier `side` faces from the opposition's plan, counters in.
@@ -993,6 +1003,18 @@ func _press_on(side: int, zone := 1) -> float:
 ## The side whose chain got out of its back third unpressured against a
 ## press (PRESS_BROKEN_EXPOSED), or -1. Reset at each chain's start.
 var _broke_press := -1
+
+
+## Morale from the coach's Philosophical archetype, as match form by player id
+## (10 morale points = 1%, like ClubLife.form), and the dice for his extra injuries.
+var _arch_form := {}
+var arch_rng := RandomNumberGenerator.new()
+## Each side's coach archetype levers (Archetypes.levers, from Squad.arch, row 119).
+var arch := [{}, {}]
+
+
+func _ar(side: int, key: String, d := 1.0) -> float:
+	return float((arch[side] as Dictionary).get(key, d))
 
 
 func _plan(side: int) -> String:
@@ -1876,7 +1898,7 @@ func _maybe_fifty(receiving_side: int, mark_fp: float, offender, recipient) -> f
 	if offender == null:
 		return mark_fp
 	var discipline := _a(offender, "discipline")
-	var chance := FIFTY_BASE * (1.35 - 0.70 * discipline / 100.0)
+	var chance := FIFTY_BASE * (1.35 - 0.70 * discipline / 100.0) * _ar(1 - receiving_side, "fifty")
 	if _trait(offender, "hothead"):
 		chance *= 1.65
 	if discipline_rng.randf() >= clampf(chance, 0.002, 0.035):
@@ -1900,7 +1922,7 @@ func _maybe_report(side: int, offender, victim) -> void:
 	if offender == null or victim == null:
 		return
 	var discipline := _a(offender, "discipline")
-	var chance := REPORT_BASE * (1.30 - 0.60 * discipline / 100.0)
+	var chance := REPORT_BASE * (1.30 - 0.60 * discipline / 100.0) * _ar(side, "fifty")
 	if _trait(offender, "hothead"):
 		chance *= 1.75
 	if mro_rng.randf() >= clampf(chance, 0.001, 0.014):
@@ -1950,14 +1972,9 @@ func _maybe_report(side: int, offender, victim) -> void:
 ## he takes away. Expected, never rolled.
 func _credit_general_loose(side: int, target: Dictionary, defender: Dictionary, roamer: Dictionary) -> void:
 	var opp := 1 - side
-	var edge := (_a(target, "marking") - _a(defender, "intercept")) / 260.0
-	if _trait(target, "aerial"):
-		edge += 0.05
-	var mark0 := clampf(0.42 + edge, 0.18, 0.70)
-	var mark_r := clampf(0.42 + edge + _roam_mark_shift(roamer), 0.18, 0.70)
-	var spoil_p := clampf(_tv("GENERAL_SPOIL_BASE", GENERAL_SPOIL_BASE)
-			+ (_a(defender, "intercept") - _a(target, "marking")) / 300.0
-			+ (0.06 if _trait(defender, "interceptor") else 0.0), 0.30, 0.82)
+	var mark0 := _general_mark_chance(target, defender, 0.0)
+	var mark_r := _general_mark_chance(target, defender, _roam_mark_shift(roamer))
+	var spoil_p := _general_spoil_chance(target, defender)
 	var denied := (mark0 - mark_r) + (1.0 - mark_r) * (1.0 - spoil_p) * _roam_spoil_p(roamer)
 	var p_r := _roam_chance(opp)
 	_credit(opp, "loose", p_r * denied * TURNOVER_VALUE)
@@ -2311,6 +2328,12 @@ const GENERAL_AERIAL_P := 0.15
 const GENERAL_SPOIL_BASE := 0.82
 ## A general-play marking contest's mark chance, level players.
 const GENERAL_MARK_P := 0.18
+## Clamp bounds, kept well clear of the bases (2026-11-10: the bases had come
+## to sit on a bound and the players' edge did nothing on that side).
+const GENERAL_MARK_MIN := 0.05
+const GENERAL_MARK_MAX := 0.70
+const GENERAL_SPOIL_MIN := 0.30
+const GENERAL_SPOIL_MAX := 0.95
 const GENERAL_MARK_ROLES := {"FWD": 1.0, "MID": 0.85, "DEF": 0.65, "RUCK": 0.70}
 
 
@@ -2788,6 +2811,26 @@ func _kick_in_play_on(taker) -> bool:
 ## A 15m+ kick in general play can bring two players to the drop. The result
 ## is a real mark/spoil/free; a spoil leaves the ball loose rather than gifting
 ## possession to the defender.
+## A general-play marking contest's mark chance. The bounds sit well clear of
+## GENERAL_MARK_P so the players' edge (and the loose man's shift) always moves
+## it; _credit_general_loose reads the same chance.
+func _general_mark_chance(target: Dictionary, defender: Dictionary, roam_shift: float) -> float:
+	var edge := (_a(target, "marking") - _a(defender, "intercept")) / 260.0
+	if _trait(target, "aerial"):
+		edge += 0.05
+	return clampf(_tv("GENERAL_MARK_P", GENERAL_MARK_P) + edge + roam_shift,
+			GENERAL_MARK_MIN, GENERAL_MARK_MAX) * _wx("aerial")
+
+
+## The defender's spoil chance once the mark is not taken. Bounds well clear of
+## GENERAL_SPOIL_BASE so defender quality and the Interceptor trait count.
+func _general_spoil_chance(target: Dictionary, defender: Dictionary) -> float:
+	return clampf(_tv("GENERAL_SPOIL_BASE", GENERAL_SPOIL_BASE)
+			+ (_a(defender, "intercept") - _a(target, "marking")) / 300.0
+			+ (0.06 if _trait(defender, "interceptor") else 0.0),
+			GENERAL_SPOIL_MIN, GENERAL_SPOIL_MAX)
+
+
 func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 	var opp := 1 - side
 	var target = _weighted_roles((squads[side] as Squad).ground, "marking",
@@ -2832,12 +2875,8 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 		return {"outcome": "free", "fp": mark, "actor": infringement["recipient"],
 				"free_side": free_side}
 
-	var mark_edge := (_a(target, "marking") - _a(defender, "intercept")) / 260.0
-	if _trait(target, "aerial"):
-		mark_edge += 0.05
-	if roaming:
-		mark_edge += _roam_mark_shift(roamer)
-	var mark_p := clampf(_tv("GENERAL_MARK_P", GENERAL_MARK_P) + mark_edge, 0.18, 0.70) * _wx("aerial")
+	var mark_p := _general_mark_chance(target, defender,
+			_roam_mark_shift(roamer) if roaming else 0.0)
 	if aerial_rng.randf() < mark_p:
 		_t(side, "marks")
 		_p(target, "marks")
@@ -2858,9 +2897,7 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 			_log_duel(side, target, man, true, mev)
 		return {"outcome": "mark", "fp": mark_fp, "actor": target}
 
-	var spoil_p := clampf(_tv("GENERAL_SPOIL_BASE", GENERAL_SPOIL_BASE)
-			+ (_a(defender, "intercept") - _a(target, "marking")) / 300.0
-			+ (0.06 if _trait(defender, "interceptor") else 0.0), 0.30, 0.82)
+	var spoil_p := _general_spoil_chance(target, defender)
 	var spoilt := aerial_rng.randf() < spoil_p
 	# The defender in it missed: the spare, as the extra body, has his own go.
 	if not spoilt and roaming and _roam_spoil(roamer):
@@ -3241,7 +3278,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_credit(opp, "traits", pressure * (lock - 1.0) * TURNOVER_VALUE)
 			pressure *= lock
 		p_base = pressure
-		pressure *= _pv(side, "taken")
+		pressure *= _pv(side, "taken") * _ar(side, "taken")
 		_credit(side, "gameplan", (p_base - pressure) * TURNOVER_VALUE)
 		p_base = pressure
 		pressure *= _pep_mult(side, "taken")
@@ -3373,7 +3410,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var prev_atk_fp := atk_fp
 		var gain: float = (float(T["metres_gain_mean"])
 				* (0.55 + 0.90 * _a(carrier, "carry") / 100.0))
-		gain *= _pv(side, "gain") * _pep_mult(side, "gain")
+		gain *= _pv(side, "gain") * _pep_mult(side, "gain") * _ar(side, "gain")
 		if synergies[side].has("supply_line"):
 			gain *= Traits.power("supply_line")
 		if _burst(side, "flood") or _burst(side, "hold"):
@@ -4095,7 +4132,7 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 	# The press closes the corridor: half the attacking plan's edge.
 	if own > 1.0 and _pv(opp, "press") > 1.0:
 		own = 1.0 + (own - 1.0) * 0.5
-	goal_p *= own
+	goal_p *= own * _ar(side, "goal")
 	if credit:
 		_credit(side, "gameplan", 6.0 * (goal_p - before))
 	before = goal_p
@@ -4103,7 +4140,7 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 	# attacking side on the rebound; everyone else meets both in full.
 	if _plan(side) != "controlled":
 		goal_p *= _pv(opp, "opp_goal")
-		goal_p *= _pv(opp, "exposed")
+		goal_p *= _pv(opp, "exposed") * _ar(opp, "exposed")
 	# This chain broke their press: the defence it runs at is outnumbered.
 	if _broke_press == side and _pv(opp, "press") > 1.0:
 		goal_p *= PRESS_BROKEN_EXPOSED
@@ -4466,7 +4503,7 @@ func _play_one_chain(T: Dictionary) -> void:
 	var hot_mult := float(cw[1])
 	_credit(side, "traits", -clanger_p * (hot_mult - 1.0) * CLANGER_VALUE)
 	clanger_p *= hot_mult
-	var cl_mult := _pv(side, "clangers")
+	var cl_mult := _pv(side, "clangers") * _ar(side, "clangers")
 	_credit(side, "gameplan", clanger_p * (1.0 - cl_mult) * CLANGER_VALUE)
 	clanger_p *= cl_mult
 	var pep_cl := _pep_mult(side, "clangers")
@@ -4750,7 +4787,7 @@ func fit(p: Dictionary) -> float:
 	var f := FIT_BASE + FIT_SLOPE * e / 100.0
 	if (current_quarter >= 4 or finals_mode) and _trait(p, "big_game"):
 		f += 0.05
-	f += ClubLife.form(p)
+	f += ClubLife.form(p) + float(_arch_form.get(id, 0.0))
 	f -= float(_fam_cut.get(id, 0.0))
 	_fit_cache[id] = [e, f]
 	return f
@@ -4876,7 +4913,7 @@ func _after_chain() -> void:
 		var movement_pace := _pv(side, "pace") * (1.0 if _pep(side) == "heat" else _pep_mult(side, "pace"))
 		if _burst(side, "surge"):
 			movement_pace *= SURGE_PACE
-		var fatigue_pace := movement_pace * heat_legs
+		var fatigue_pace := movement_pace * heat_legs * _ar(side, "legs")
 		if weather == "hot":
 			fatigue_pace *= HOT_DRAIN
 		if synergies[side].has("running_machine"):
@@ -4948,6 +4985,10 @@ func _plan_injuries() -> void:
 		var sq: Squad = squads[side]
 		for p in sq.ground + sq.bench:
 			var inj := Injuries.roll(injury_rng, p)
+			# A Hardline coach's extra injuries come off their own dice, so a
+			# match without one plays out exactly as before (row 119).
+			if inj.is_empty() and _ar(side, "inj") > 1.0 and arch_rng.randf() < _ar(side, "inj") - 1.0:
+				inj = Injuries.roll(arch_rng, p)
 			if inj.is_empty():
 				continue
 			inj["side"] = side
@@ -5694,6 +5735,7 @@ func resolve_moment(choice: int) -> Dictionary:
 			else:
 				outcome = "No change."
 	m["choice"] = choice
+	m["call"] = key
 	m["choice_label"] = str(opt.get("label", ""))
 	m["outcome"] = outcome
 	m["points"] = points
