@@ -202,6 +202,7 @@ var _named_this_round := {}
 var board_patience := "fair"     # this career's board dial (DifficultyDials step)
 var rival_recruiting := "shrewd" # this career's rival dial (DifficultyDials step)
 var tutorials := true            # this career's first-visit menu tips (Tutorials.gd)
+var postseason_intro_seen := false  # the first postseason's sheet: this career's, not the device's
 var board := {}                  # confidence, goal, warned, sacked, history
 ## This week's story cards (StoryEngine.pick_week): usually none or one, two
 ## in a big week. Each is answered on the hub before the round is played.
@@ -885,6 +886,7 @@ func _save_state() -> Dictionary:
 		"board_patience": board_patience,
 		"rival_recruiting": rival_recruiting,
 		"tutorials": tutorials,
+		"postseason_intro_seen": postseason_intro_seen,
 		"board": board,
 		"week_events": week_events,
 		"week_checks": week_checks,
@@ -1132,6 +1134,8 @@ func _restore_career(state: Dictionary) -> bool:
 	rival_recruiting = DifficultyDials.normalize(DifficultyDials.RIVALS,
 			str(state.get("rival_recruiting", legacy[DifficultyDials.RIVALS])))
 	tutorials = bool(state.get("tutorials", true))
+	# A save from before this field is past being a fresh career.
+	postseason_intro_seen = bool(state.get("postseason_intro_seen", true))
 	GameDB.draftees = state.get("db_draftees", GameDB.draftees)
 	GameDB.late_draftees = state.get("db_late_draftees", [])
 	GameDB._alias_next = int(state.get("db_alias_next", GameDB._alias_next))
@@ -1640,6 +1644,7 @@ func reset() -> void:
 	club_goals = {}
 	_last_finish = {}
 	draft_meeting_year = 0
+	postseason_intro_seen = false
 	salary_cap = 0
 	free_agents = []
 	offseason_year = 0
@@ -2306,6 +2311,7 @@ func finish_intake_draft() -> bool:
 ## Roll every list forward one year and rebuild the season. Split out so a
 ## career can continue even when there is no prospect pool to draft.
 func _start_next_season(next_year: int, signed: int) -> void:
+	postseason_intro_seen = true   # his first postseason is over, seen or not
 	# Where every club finished: next season's board reads it (ClubLife.board_goal).
 	_last_finish = {}
 	if season != null:
@@ -10861,7 +10867,19 @@ func tutorials_on() -> bool:
 ## Whether a first-visit intro opens by itself: this career's tips are on and
 ## it hasn't been seen on this device. Help buttons open intros regardless.
 func intro_due(key: String) -> bool:
+	if key == "postseason":
+		return tutorials and not postseason_intro_seen
 	return tutorials and not bool(get_setting("seen_%s_intro" % key, false))
+
+
+## The first postseason's sheet goes with the career (ruling 56: "a fresh
+## career's first postseason"); every other intro goes with the device.
+func mark_intro_seen(key: String) -> void:
+	if key == "postseason":
+		postseason_intro_seen = true
+		mark_dirty()
+	else:
+		set_setting("seen_%s_intro" % key, true)
 
 
 ## Settings: this career's tips on or off (and the next New career's default).
