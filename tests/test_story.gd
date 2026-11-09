@@ -2434,7 +2434,7 @@ func _test_culture_effects() -> void:
 							"%s %d: direction matches (%s)" % [strand, t, line])
 	_check(Culture.effect_line("standards", 20) == "Players recover a little faster between games.", "Standards, good band")
 	_check(Culture.effect_line("standards", -50) == "Players recover a little slower between games.", "Standards, slack band")
-	_check(Culture.effect_line("together", -50) == "Players take a missed game a little worse.", "Togetherness, divided band")
+	_check(Culture.effect_line("together", -50) == "Players win much less of the ball at stoppages and take a missed game a little worse.", "Togetherness, divided band")
 	_check(Culture.effect_line("ambition", 20) == "Players are a little more willing to stay and to join.", "Ambition, pushing to win now")
 	# Director, 2026-10-18: a patient club brings its young on; veterans' asks are not lower there.
 	_check(Culture.effect_line("ambition", -20) == "Young players come on a little quicker here."

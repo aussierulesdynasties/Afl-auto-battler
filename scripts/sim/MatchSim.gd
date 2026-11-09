@@ -1602,9 +1602,16 @@ func contest_winner(use_fp: bool, fp: float) -> int:
 	var form_edge := FORM_CONTEST * (float(form[0]) - float(form[1]))
 	_credit(0, "form", FORM_CONTEST * float(form[0]) * POSSESSION_VALUE)
 	_credit(1, "form", FORM_CONTEST * float(form[1]) * POSSESSION_VALUE)
+	# Togetherness (row 84): a tight group goes in for each other at the
+	# contest, a group with cliques doesn't. Credited for audits only: the
+	# director wants no match copy for it (2026-11-10), only the culture screen.
+	var tog0 := float((squads[0] as Squad).together)
+	var tog1 := float((squads[1] as Squad).together)
+	_credit(0, "together", tog0 * POSSESSION_VALUE)
+	_credit(1, "together", tog1 * POSSESSION_VALUE)
 	var p_home: float = (0.5
 			+ (c0 - c1) / float(T["contest_swing"])
-			+ home_edge() + form_edge)
+			+ home_edge() + form_edge + tog0 - tog1)
 	# The side with the run of play wins a little more of the ball.
 	var run := runaway()
 	p_home += momentum_edge * momentum * (1.0 + runaway_gain * run)

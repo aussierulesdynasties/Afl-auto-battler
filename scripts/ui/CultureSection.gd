@@ -9,7 +9,7 @@ extends RefCounted
 
 ## Under the title, what culture touches and what it costs (P-63), true to the
 ## effects in data/culture_effects.json: Standards and Togetherness cut both ways.
-const TRADE_OFF_LINE := "Culture tilts your list: how quickly legs recover, how players take a missed game, who stays and joins, and how fast young players come on. Let standards slip or the group split and it costs you."
+const TRADE_OFF_LINE := "Culture tilts your list: how quickly legs recover, how much ball the group wins at stoppages and how players take a missed game, who stays and joins, and how fast young players come on. Let standards slip or the group split and it costs you."
 ## The strand emblems: a square this size, tinted this far towards the club's colour.
 const ICON := 48.0
 const ICON_TINT := 0.55

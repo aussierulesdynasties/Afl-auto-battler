@@ -164,8 +164,16 @@ static func for_club(code: String) -> Dictionary:
 	return table.get(code, {})
 
 
-## Give a match squad its club's tactics (no-op outside a career).
+## The career's relations (GameState.relations, the same dictionary), for each
+## club's culture on match day; empty outside a career, and while the culture
+## effects are off (an audit's off arm).
+static var relations := {}
+
+
+## Give a match squad its club's tactics and its Togetherness on match day
+## (no-op outside a career).
 static func apply(sq: Squad) -> void:
+	sq.together = Culture.club_effect(relations, sq.code, "match_contest", "together") 			if not relations.is_empty() else 0.0
 	apply_row(sq, for_club(sq.code))
 
 

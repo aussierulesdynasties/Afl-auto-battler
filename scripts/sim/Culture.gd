@@ -19,7 +19,10 @@ extends RefCounted
 ## data/culture_effects.json, the same rule for every club, applied in GameState:
 ##   Standards    - how fast legs recover between games (Workload.advance_week)
 ##   Togetherness - how much being left out of the side costs a fit player's
-##                  morale (ClubLife.morale_after_match)
+##                  morale (ClubLife.morale_after_match), and on match day
+##                  the ball won at stoppages (row 84, director 2026-11-06:
+##                  tight and cliques are felt in matches, medium, 2026-11-10;
+##                  MatchSim's contest_winner; shown on the culture screen only)
 ##   Ambition     - winning now: the price a player will re-sign for, and a free
 ##                  agent's weighing of the club's offer (Contracts); patient or
 ##                  rebuilding: how fast under-22s and first-season draftees
@@ -318,7 +321,7 @@ static func club_effect(rel: Dictionary, club: String, kind: String, strand: Str
 
 
 ## Which strand each kind of effect belongs to.
-const KIND_STRAND := {"recovery": "standards", "sting": "together",
+const KIND_STRAND := {"recovery": "standards", "sting": "together", "match_contest": "together",
 		"resign_floor": "ambition", "free_agent_score": "ambition", "young_growth": "ambition",
 		"young_ceiling": "ambition"}
 
@@ -345,10 +348,15 @@ static func effect_line(strand: String, t: int) -> String:
 					"faster" if x > 0.0 else "slower"]
 		"together":
 			var x := effect_of("sting", strand, band)
-			if x == 0.0:
-				return ""
-			return "Players take a missed game %s %s." % ["a little" if absf(x) <= float(little["sting"]) else "much",
+			var m := effect_of("match_contest", strand, band)
+			var sting := "take a missed game %s %s" % ["a little" if absf(x) <= float(little["sting"]) else "much",
 					"better" if x > 0.0 else "worse"]
+			if m == 0.0:
+				return "" if x == 0.0 else "Players %s." % sting
+			var ball := "win %s %s of the ball at stoppages" % [
+					"a little" if absf(m) <= float(little["match_contest"]) else "much",
+					"more" if m > 0.0 else "less"]
+			return "Players %s." % ball if x == 0.0 else "Players %s and %s." % [ball, sting]
 		"ambition":
 			if effect_of("young_growth", strand, band) != 0.0 or effect_of("young_ceiling", strand, band) != 0.0:
 				return "Young players come on a little quicker here."
