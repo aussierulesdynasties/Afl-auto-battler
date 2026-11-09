@@ -5556,23 +5556,24 @@ func grant_match_xp(res: Dictionary) -> Dictionary:
 
 ## Pay one club's list for a match. Same scale for every club: the rivals
 ## earn exactly what your players earn.
-func _grant_xp(club: String, list: Array, res: Dictionary) -> Dictionary:
+func _grant_xp(club: String, list: Array, res: Dictionary, staffs = null) -> Dictionary:
 	var stats_all: Dictionary = res.get("players", {})
-	var squad := Squad.new(GameDB.club_name(club), list,
-			str(res.get("home", "")) == club, club,
+	var side := Ratings.select_side(list,
 			season.selections.get(club, {}) if season != null else {})
 	var ground_ids := {}
 	var bench_ids := {}
-	for p in squad.ground:
+	for p in side["ground"]:
 		ground_ids[str(p["id"])] = true
-	for p in squad.bench:
+	for p in side["bench"]:
 		bench_ids[str(p["id"])] = true
 	var rows: Array = []
 	var total := 0
 	var reserves_count := 0
 	var reserves_total := 0
 	# The club's teachers (CoachEffects): only once there is a coaching world.
-	var staff: Dictionary = CoachEffects.staffs(coaches).get(club, {}) if not coaches.is_empty() else {}
+	if staffs == null and not coaches.is_empty():
+		staffs = CoachEffects.staffs(coaches)
+	var staff: Dictionary = staffs.get(club, {}) if not coaches.is_empty() else {}
 	for p in list:
 		var id := str(p["id"])
 		var on_ground := ground_ids.has(id)
@@ -10617,13 +10618,15 @@ func _train_rivals(results: Array) -> void:
 	if season == null:
 		return
 	var best := {}
+	# Once a week, not once a club: nobody changes jobs in between.
+	var staffs = CoachEffects.staffs(coaches) if not coaches.is_empty() else null
 	for res in results:
 		for side in ["home", "away"]:
 			var code := str(res.get(side, ""))
 			if code == "" or code == my_club or not season.lists.has(code):
 				continue
 			var list: Array = season.lists[code]
-			_grant_xp(code, list, res)
+			_grant_xp(code, list, res, staffs)
 			for p in list:
 				ai_spend_xp(p)
 				best = _development_pick(code, p, best)
