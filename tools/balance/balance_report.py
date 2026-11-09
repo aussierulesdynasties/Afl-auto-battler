@@ -1104,6 +1104,53 @@ def tackle_section(A, B):
     print("\nThe sim's player-game counts every man who played; the real one counts men with 50%+ game time.")
 
 
+def tag_section(A, B):
+    """--tag (row 120): what each midfielder's tag would leave his man, and what the tag did. Each match line's
+    "tag" names the tagged man and the tagger; B-A is paired by seed on the matches where B set
+    a tag, so B = a tag and A = --tag none is what that tag does against no tag."""
+    tagged = [r for r in A.values() if "tag" in r] + [r for r in B.values() if "tag" in r]
+    if not tagged:
+        return
+    keeps = sorted(x for r in A.values() if "tag" in r for x in r["tag"]["keeps"])
+    print("\n## Tags (row 120)\n")
+    if keeps:
+        n = len(keeps)
+        print(f"What a tagged man keeps on fresh legs, over {n} starting midfield slots: lowest {100 * keeps[0]:.0f}%, "
+              f"median {100 * keeps[n // 2]:.0f}%, highest {100 * keeps[-1]:.0f}%; at a Tagger's 42%: {100 * sum(x <= 0.42 for x in keeps) / n:.1f}%, "
+              f"at 55% or more: {100 * sum(x >= 0.55 for x in keeps) / n:.1f}%. "
+              f"Sides with a Tagger: {100 * sum(r['tag']['has_tagger'] for r in A.values() if 'tag' in r) / max(1, sum('tag' in r for r in A.values())):.1f}%.\n")
+    rows = [("tagged man's disposals", lambda t: t["target_line"]["di"]),
+            ("tagged man's clearances", lambda t: t["target_line"]["cl"]),
+            ("tagged man's goals", lambda t: t["target_line"]["g"]),
+            ("tagging side's margin", lambda t: t["margin"])]
+    tagger_rows = [("tagger's disposals", lambda t: t["tagger_line"]["di"])]
+    common = [i for i in A if "tag" in A[i] and i in B and "tag" in B[i] and B[i]["tag"]["set"]]
+    if not B:
+        common = [i for i in A if "tag" in A[i] and A[i]["tag"]["set"]]
+    if not common:
+        print("No match played a tag in this comparison.")
+        return
+    print("| | A | B | B-A | se |")
+    print("|---|---|---|---|---|")
+    for name, fn in rows + tagger_rows:
+        a = [fn(A[i]["tag"]) for i in common]
+        if B:
+            b = [fn(B[i]["tag"]) for i in common]
+            d = [y - x for x, y in zip(a, b)]
+            se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+            print(f"| {name} | {st.mean(a):.2f} | {st.mean(b):.2f} | {st.mean(d):+.2f} | {se:.2f} |")
+        elif a:
+            print(f"| {name} | {st.mean(a):.2f} | - | - | - |")
+    source = B if B else A
+    keep = [source[i]["tag"].get("keep", 1.0) for i in common]
+    if keep:
+        print(f"\nMatches compared {len(common)}; the man keeps {100 * st.mean(keep):.1f}% of his ball on the tag's first "
+              f"legs (lowest {100 * min(keep):.1f}%, highest {100 * max(keep):.1f}%); "
+              f"tagger is a Tagger in {100 * sum(source[i]['tag']['specialist'] for i in common) / len(common):.1f}%.")
+        wins = [source[i]["tag"]["margin"] > 0 for i in common]
+        print(f"Tagging side wins {100 * sum(wins) / len(wins):.1f}%.")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -1177,6 +1224,7 @@ def main():
     reb_route_section(A, B)
     tackle_section(A, B)
     legs_section(A, B)
+    tag_section(A, B)
     print(f"\nOUT of real range (A): {', '.join(outs) if outs else 'none'}")
 
 
