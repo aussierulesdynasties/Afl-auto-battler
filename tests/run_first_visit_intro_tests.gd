@@ -12,7 +12,7 @@ var _checks := 0
 var _failures: Array[String] = []
 
 const SUITE_SEED := 2027
-const KEYS := ["draft", "selection", "coaching", "list", "staff", "offseason", "preseason", "season_review", "postseason"]
+const KEYS := ["draft", "selection", "coaching", "list", "staff", "offseason", "preseason", "season_review"]
 const SCENES := {
 	"selection": "res://scenes/SelectionScene.tscn",
 	"coaching": "res://scenes/CoachingScene.tscn",
@@ -46,6 +46,7 @@ func _run() -> void:
 	await _t("_test_postseason_on_hub")
 	await _t("_test_postseason_when_knocked_out")
 	await _t("_test_postseason_not_when")
+	await _t("_test_postseason_per_career")
 	print(Ran.line("FirstVisitIntro", self))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -178,6 +179,8 @@ func _test_postseason_on_hub() -> void:
 	_state.season.finals["done"] = true
 	hub = await _hub()
 	_check(hub.find_child("PostseasonIntro", true, false) != null, "The finals over, the hub opens the postseason intro")
+	for l in _FV.TEXT["postseason"][1]:
+		_check(str(l).length() <= 120, "Postseason intro line is short: %s" % l)
 	var said := " ".join(_FV.TEXT["postseason"][1])
 	var at: Array = []
 	for step in ["Season review", "Trades & Contracts", "National Draft", "pre-season", "Round 1"]:
@@ -194,7 +197,7 @@ func _test_postseason_on_hub() -> void:
 	hub = await _hub()
 	_check(hub.find_child("PostseasonIntro", true, false) == null, "It opens once")
 	await _gone(hub)
-	_state.set_setting("seen_postseason_intro", false)
+	_state.postseason_intro_seen = false
 	hub = await _hub()
 	_check(hub.find_child("PostseasonIntro", true, false) != null, "Unseen again, it's there")
 	_check(hub.handle_back(), "Back closes it first")
@@ -250,6 +253,44 @@ func _test_postseason_not_when() -> void:
 	await _gone(hub)
 	_state.draft = null
 	_check(_state.intro_due("postseason"), "None of them used it up")
+
+
+## The sheet belongs to the career: a new career on the same device sees it, the
+## save carries it, a save from before it doesn't get it, and it's the first
+## postseason only, seen or not.
+func _test_postseason_per_career() -> void:
+	_in_finals(1)
+	_state.season.finals["done"] = true
+	var hub: Control = await _hub()
+	_check(hub.find_child("PostseasonIntro", true, false) != null, "A fresh career sees it")
+	await _gone(hub)
+	_check(not _state.intro_due("postseason"), "...once")
+	_check(not bool(_state.get_setting("seen_postseason_intro", false)), "...and the device keeps no mark of it")
+	var saved: Dictionary = _state._save_state()
+	_check(bool(saved.get("postseason_intro_seen", false)), "The save carries it")
+	_in_finals(1)
+	_state.season.finals["done"] = true
+	_check(_state.intro_due("postseason"), "A new career on the same device gets it")
+	hub = await _hub()
+	_check(hub.find_child("PostseasonIntro", true, false) != null, "...on the hub")
+	await _gone(hub)
+	_state.postseason_intro_seen = false
+	saved = _state._save_state()
+	_check(not bool(saved.get("postseason_intro_seen", true)), "Unseen saves as unseen")
+	var unseen: bool = _state._restore_career(saved.duplicate(true))
+	_check(unseen and _state.intro_due("postseason"), "...and loads as unseen")
+	var old: Dictionary = saved.duplicate(true)
+	old.erase("postseason_intro_seen")
+	var loaded: bool = _state._restore_career(old)
+	_check(loaded and not _state.intro_due("postseason"), "A save from before the sheet isn't a fresh career")
+	# Tips off through the first postseason: the next one doesn't make up for it.
+	_in_finals(1)
+	_state.season.finals["done"] = true
+	_state.tutorials = false
+	var rolled: bool = _state.start_next_season()
+	_check(rolled, "The season rolls on")
+	_state.tutorials = true
+	_check(not _state.intro_due("postseason"), "Past his first postseason, it's gone, seen or not")
 
 
 func _settle() -> void:
