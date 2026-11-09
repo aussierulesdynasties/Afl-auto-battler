@@ -186,6 +186,14 @@ func _side_page(auto: bool) -> Control:
 		_fill_actions(actions)
 		builder.interchange_actions = actions
 		builder.hint_extra = "Picked for you each week until you move someone." if auto else ""
+		# The cost of a new-looking side, said where the side is picked (row 125).
+		# On a wide screen the week column beside it says the same.
+		if not _wide:
+			var turnover := UiKit.lbl("", UiKit.SMALL, UiKit.TEXT)
+			turnover.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			turnover.name = "TurnoverNote"
+			page.add_child(turnover)
+			_turnover_note(turnover)
 		page.add_child(builder)
 		builder.setup(GameState.current_side(), _wide)
 	builder.inspect.connect(_open_profile)
@@ -221,6 +229,11 @@ func _fill_actions(actions: HBoxContainer) -> void:
 		actions.add_child(undo)
 
 
+func _turnover_note(note: Label) -> void:
+	note.text = GameState.familiarity_side_line()
+	note.visible = note.text != ""
+
+
 ## After a move: the week and the actions beside the interchange, without
 ## rebuilding the builder (or losing your place in it).
 func _refresh_facts() -> void:
@@ -232,6 +245,9 @@ func _refresh_facts() -> void:
 	if actions != null:
 		UiKit.clear(actions)
 		_fill_actions(actions)
+	var turnover: Label = _root.find_child("TurnoverNote", true, false)
+	if turnover != null:
+		_turnover_note(turnover)
 
 
 ## Their player's profile: who he is and how he plays, nothing to change.

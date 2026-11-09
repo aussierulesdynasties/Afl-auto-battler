@@ -2072,6 +2072,14 @@ func choose_sim_ahead_club(code: String) -> bool:
 		return false
 	my_club = code
 	my_list = league_lists[code] if league_lists.has(code) else ExpansionBuild.list_of(self, code)
+	# Your career starts here: everyone on a list begins at 100% (row 125). The
+	# picks in this draft, yours and theirs, still arrive as draftees.
+	for c in draft.clubs:
+		_clear_familiarity(league_lists[c] if league_lists.has(c) else ExpansionBuild.list_of(self, str(c)))
+	if season != null:
+		for c in season.lists:
+			_clear_familiarity(season.lists[c])
+	_clear_familiarity(free_agents)
 	var sc := ClubMoves._senior_coach(self, code)
 	if not sc.is_empty():
 		CoachMarket._leave_job(sc, season_year)
@@ -2256,6 +2264,7 @@ func finish_intake_draft() -> bool:
 				p["xp"] = 0
 				p["xp_games"] = 0
 			p["club"] = code
+			TeamFamiliarity.arrive_draftee(p)
 			p["num"] = _next_jumper_number(arr)
 			p["draft_pick"] = int(entry.get("pick", 0))
 			p["draft_round"] = int(entry.get("round", 0))
@@ -2653,6 +2662,7 @@ func _assign_draftee(code: String, p: Dictionary, kind: String) -> void:
 		p["xp"] = 0
 		p["xp_games"] = 0
 	p["club"] = code
+	TeamFamiliarity.arrive_draftee(p)
 	p["num"] = _next_jumper_number(arr)
 	p["draft_pick"] = 0
 	_mark_drafted(p, kind, 0)
@@ -3619,6 +3629,8 @@ func _finish_preseason() -> void:
 	var clubs: Dictionary = preseason.get("clubs", {})
 	for club in season.clubs:
 		var code := str(club)
+		if season.lists.has(club):
+			TeamFamiliarity.round_one(season.lists[club])
 		if not clubs.has(code) or not season.lists.has(club):
 			continue
 		var entry: Dictionary = clubs[code]
@@ -5038,7 +5050,47 @@ func recent_honours(limit := 5) -> Array:
 
 ## Your own side's week worth knowing (Matchup.own_notes).
 func my_week_notes() -> Array:
-	return Matchup.own_notes(my_list) + milestone_notes()
+	var notes: Array = Matchup.own_notes(my_list) + milestone_notes()
+	var side_cost := familiarity_side_line()
+	if side_cost != "":
+		notes.append({"key": "own_familiarity", "text": side_cost})
+	return notes
+
+
+## Your side's team-wide familiarity cost as the coach reads it, "" when there is
+## nothing to say. From the side as arranged now.
+func familiarity_side_line() -> String:
+	if season == null or my_club == "":
+		return ""
+	var squad := my_squad()
+	return TeamFamiliarity.side_line(squad.ground + squad.bench)
+
+
+## Every club's week for team familiarity: a man who played comes on a senior
+## game's worth; a man left out but fit, a reserves game's.
+func _familiarity_after_round(results: Array) -> void:
+	if season == null:
+		return
+	for res in results:
+		var roster: Array = res.get("roster", [[], []])
+		for side in range(2):
+			var code := str(res.get("home" if side == 0 else "away", ""))
+			if code == "" or not season.lists.has(code) or roster.size() <= side:
+				continue
+			var played := {}
+			for r in roster[side]:
+				played[str(r["id"])] = true
+			for p in season.lists[code]:
+				var id := str(p["id"])
+				if played.has(id):
+					TeamFamiliarity.after_game(p, true)
+				elif Ratings.available(p) and not _round_unavailable.has(id):
+					TeamFamiliarity.after_game(p, false)
+
+
+func _clear_familiarity(list: Array) -> void:
+	for p in list:
+		TeamFamiliarity.clear(p)
 
 
 ## Games milestones worth marking (AFL convention: career games).
@@ -6123,6 +6175,7 @@ func _after_round(results: Array) -> void:
 	_draft_class_news()
 	_board_after_round(results)
 	_rival_morale_after_round(results)
+	_familiarity_after_round(results)
 	_fade_press_lifts()
 	_prepare_media_conference(results)
 	# One optional ask a week (director, 2026-10-09, G1): a sit-down takes the
@@ -7805,6 +7858,7 @@ func _join(code: String, p: Dictionary) -> void:
 		p["joined"] = season_year
 		# A move lands him on the new club's senior list (row 88, RookieList).
 		p.erase("rookie_list")
+		TeamFamiliarity.arrive_club(p, games_played(p) == 0)
 	# A new club ends a project; his season's chance stays spent. The old
 	# club's decision is kept as a career fact, with how it ended.
 	if project_job(p) != "" and str(p.get("club", "")) != code:

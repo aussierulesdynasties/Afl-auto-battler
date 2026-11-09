@@ -99,6 +99,12 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 		readiness.name = "ProfileReadiness"
 		readiness.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(readiness)
+	# Still learning his teammates (row 125): any club's man, a fact.
+	if TeamFamiliarity.line(p) != "":
+		var fam := UiKit.lbl(TeamFamiliarity.line(p), UiKit.BODY, UiKit.TEXT)
+		fam.name = "ProfileFamiliarity"
+		fam.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(fam)
 	# A run you have promised him (Backing): a fact, not advice.
 	var promise := Backing.note(p) if not rival else ""
 	if promise != "":

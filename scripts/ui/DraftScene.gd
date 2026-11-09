@@ -480,6 +480,11 @@ func _show_board() -> void:
 			_root.add_child(_header("League draft", sub))
 		_board = _live_board()
 		_root.add_child(_board)
+		if _draft.intake_mode:
+			var fam := UiKit.lbl(TeamFamiliarity.draft_line(), UiKit.SMALL, UiKit.TEXT)
+			fam.name = "DraftFamiliarity"
+			fam.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			_root.add_child(fam)
 	# Your challenge, said on the board where it bites.
 	var rule := Challenge.stated_line(GameState) if Challenge.kind(GameState) in ["youth", "rebuild"] else ""
 	if rule != "":
