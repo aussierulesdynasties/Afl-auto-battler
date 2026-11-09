@@ -1507,10 +1507,11 @@ func _sim_round_button() -> Button:
 const FOLD_GAP_MAX := 0.4
 
 
-## At rest on a phone no card is sliced by the bottom edge of the page (director,
-## 2026-11-09): the first one that would be, or would sit under the edge's fade,
-## starts below the edge instead. Only the opening view is fitted: a player's own
-## scroll is never snapped.
+## At rest on a phone the card at the bottom edge of the page peeks (director,
+## 2026-11-09, "peek with fade"): its whole title line reads clear of the fade and
+## the rest fades into the scroll. One with too little room for that starts below
+## the edge instead. Only the opening view is fitted: a player's own scroll is
+## never snapped.
 func _clear_fold(page: Control, sc: ScrollContainer) -> void:
 	# The page's height settles over the first frames (a window resize, the
 	# bars above and below): fit again whenever it changes.
@@ -1560,6 +1561,9 @@ func _push_past_fold(box: Control, fold: float, edge: float, max_gap: float) -> 
 				return true
 			continue
 		var gap := edge - r.position.y
+		var peek := _peek_height(c as Control)
+		if gap >= peek:
+			gap -= peek
 		if gap > max_gap:
 			# A tall card with a list inside: the gap falls between its rows.
 			for inner in c.get_children():
@@ -1575,6 +1579,15 @@ func _push_past_fold(box: Control, fold: float, edge: float, max_gap: float) -> 
 		box.move_child(spacer, c.get_index())
 		return true
 	return false
+
+
+## How much of a card shows when it peeks: down to the end of its title line,
+## plus the fade, so the title itself is not dimmed.
+func _peek_height(card: Control) -> float:
+	for n in card.find_children("*", "Label", true, false):
+		if (n as Control).is_visible_in_tree():
+			return (n as Control).get_global_rect().end.y - card.get_global_rect().position.y + _FOLD_FADE
+	return INF
 
 
 ## A little air above a pinned bar and a soft fade over the clip edge, so scrolled

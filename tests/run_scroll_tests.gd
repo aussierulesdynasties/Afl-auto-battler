@@ -432,9 +432,9 @@ func _resize(sc: ScrollContainer, label: String, res: Array) -> void:
 ## The hub before Round 1 (a contract card on the page, the whole ladder
 ## below): every part is reachable by scrolling and ends fully inside the
 ## visible page, and the card's answer takes a real tap at its position.
-## At rest on a phone no hub card is sliced by the page's bottom edge, or left
-## under its fade (director, 2026-11-09), and what was pushed down still takes a
-## real tap once scrolled to.
+## At rest on a phone a hub card at the page's bottom edge shows its whole title
+## clear of the fade, or starts below the edge (director, 2026-11-09), and what
+## sits below still takes a real tap once scrolled to.
 func _test_hub_fold() -> void:
 	const Tap := preload("res://tests/tap.gd")
 	for club in ["WBD", "FRE", "COL", "MEL", "SYD", "GEE"]:
@@ -471,8 +471,23 @@ func _test_hub_fold() -> void:
 			var r := (n as Control).get_global_rect()
 			if r.size.y > sc.size.y * 0.4:
 				continue
-			_check(r.end.y <= fold or r.position.y >= edge,
-					"%s: %s is cut by the fold (%d-%d, fold %d, edge %d)" % [club, n.name, r.position.y, r.end.y, fold, edge])
+			# Inside a card that peeks, the rows are meant to run on under the edge.
+			var par: Node = n.get_parent()
+			var in_peek := false
+			while par != null and par != sc:
+				if par is PanelContainer and (par as Control).get_global_rect().end.y > fold:
+					in_peek = true
+				par = par.get_parent()
+			if in_peek:
+				continue
+			# A card at the edge peeks: its title line reads clear of the fade.
+			var title_clear := false
+			for l in n.find_children("*", "Label", true, false):
+				if (l as Control).is_visible_in_tree():
+					title_clear = (l as Control).get_global_rect().end.y <= fold + 1.0
+					break
+			_check(r.end.y <= fold or r.position.y >= edge or title_clear,
+					"%s: %s is cut by the fold with no title showing (%d-%d, fold %d, edge %d)" % [club, n.name, r.position.y, r.end.y, fold, edge])
 			if below == null and n is Button and r.position.y >= edge:
 				below = n
 		if below != null and club == "GEE":
