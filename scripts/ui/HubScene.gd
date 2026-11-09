@@ -1521,15 +1521,20 @@ func _clear_fold(page: Control, sc: ScrollContainer) -> void:
 func _fit_fold(page: Control, sc: ScrollContainer) -> void:
 	_fold_fits += 1
 	var fit := _fold_fits
-	await get_tree().process_frame
-	if fit != _fold_fits or not is_instance_valid(page) or not is_instance_valid(sc):
+	# The Hub can leave the tree during any of these waits (a screen change):
+	# get_tree() is null then, so hold the tree and re-check after each frame.
+	if not is_inside_tree():
+		return
+	var tree := get_tree()
+	await tree.process_frame
+	if fit != _fold_fits or not is_inside_tree() or not is_instance_valid(page) or not is_instance_valid(sc):
 		return
 	for gap in page.find_children("HubFoldGap", "", true, false):
 		gap.get_parent().remove_child(gap)
 		gap.free()
-	await get_tree().process_frame
-	await get_tree().process_frame
-	if fit != _fold_fits or not is_instance_valid(page) or not is_instance_valid(sc):
+	await tree.process_frame
+	await tree.process_frame
+	if fit != _fold_fits or not is_inside_tree() or not is_instance_valid(page) or not is_instance_valid(sc):
 		return
 	var edge := sc.get_global_rect().end.y - float(sc.scroll_vertical)
 	_push_past_fold(page, edge - _FOLD_FADE, edge, sc.size.y * FOLD_GAP_MAX)
