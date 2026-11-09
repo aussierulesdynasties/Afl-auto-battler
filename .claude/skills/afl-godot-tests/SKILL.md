@@ -106,6 +106,10 @@ evidence: a minimal reproduction, the last good commit, the runtime state.
 
 ## CI
 
+- **Run it on GitHub, not on the PC (director, 2026-11-10: "utilise github as much as possible").** `run_on_github.yml`
+  runs long suites, balance screens and history regeneration on any branch: `gh workflow run run_on_github.yml --ref <branch>
+  -f what=suites -f suites="story preseason"`, `-f what=balance -f base=main`, `-f what=histories`. Audits go to `audit.yml`.
+  A local Godot only when a job needs a window or a fast loop, through `C:/kt/test_slot.sh` (6 Godots in total).
 - `tests.yml`: `plan` → twelve `shard` jobs (`tools/ci_shards.py` lays out
   `tools/ci_shards.txt` plus any suite added since the last re-plan, about
   10-12 min; PRs skip `balance`/`league_balance` and run `calibration` only
