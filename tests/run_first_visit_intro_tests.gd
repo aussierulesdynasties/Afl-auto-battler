@@ -12,7 +12,7 @@ var _checks := 0
 var _failures: Array[String] = []
 
 const SUITE_SEED := 2027
-const KEYS := ["draft", "selection", "coaching", "list", "staff", "offseason", "preseason", "season_review"]
+const KEYS := ["draft", "selection", "coaching", "list", "staff", "offseason", "preseason", "season_review", "postseason"]
 const SCENES := {
 	"selection": "res://scenes/SelectionScene.tscn",
 	"coaching": "res://scenes/CoachingScene.tscn",
@@ -43,6 +43,9 @@ func _run() -> void:
 	await _t("_test_old_device")
 	for key in SCENES:
 		await _t("_test_scene", [key])
+	await _t("_test_postseason_on_hub")
+	await _t("_test_postseason_when_knocked_out")
+	await _t("_test_postseason_not_when")
 	print(Ran.line("FirstVisitIntro", self))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -124,6 +127,129 @@ func _test_scene(key: String) -> void:
 	_check(again.find_child("*IntroOk", true, false) == null, "%s screen: next visit has no intro" % key)
 	again.queue_free()
 	await _settle()
+
+
+## A club in the finals at this ladder place, tips on, the intro not yet seen.
+func _in_finals(rank: int) -> void:
+	_reset_seen()
+	_state.set_setting("seen_weekly_loop_intro", true)
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.tutorials = true
+	_state.start_season("COL", root.get_node("GameDB").club_list("COL"))
+	var sea = _state.season
+	var codes: Array = sea.ladder.keys()
+	codes.sort()
+	codes.erase("COL")
+	codes.insert(rank - 1, "COL")
+	for i in range(codes.size()):
+		var row: Dictionary = sea.ladder[codes[i]]
+		row["w"] = 20 - i
+		row["l"] = 3 + i
+		row["d"] = 0
+		row["p"] = 23
+		row["pf"] = 2400 - i * 20
+		row["pa"] = 2000
+	sea.round_index = sea.fixture.size()
+	sea.recalc_ladder()
+	sea.start_finals()
+	_state.week_events = []
+
+
+func _hub() -> Control:
+	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
+	root.add_child(hub)
+	await _settle()
+	return hub
+
+
+func _gone(hub: Control) -> void:
+	hub.queue_free()
+	await _settle()
+
+
+## Once the finals are over the hub says the order, in the buttons' own words,
+## before anything is decided; a tap closes it, Back closes it, and it's once.
+func _test_postseason_on_hub() -> void:
+	_in_finals(1)
+	var hub: Control = await _hub()
+	_check(hub.find_child("PostseasonIntro", true, false) == null, "No postseason intro while the finals are on")
+	await _gone(hub)
+	_state.season.finals["done"] = true
+	hub = await _hub()
+	_check(hub.find_child("PostseasonIntro", true, false) != null, "The finals over, the hub opens the postseason intro")
+	var said := " ".join(_FV.TEXT["postseason"][1])
+	var at: Array = []
+	for step in ["Season review", "Trades & Contracts", "National Draft", "pre-season", "Round 1"]:
+		at.append(said.find(step))
+	var sorted := at.duplicate()
+	sorted.sort()
+	_check(not at.has(-1) and at == sorted, "It names each stop, in the order they come (%s)" % str(at))
+	var ok: Button = hub.find_child("PostseasonIntroOk", true, false)
+	_check(ok != null and (await Tap.tap(ok)) == "", "Got it takes a finger's tap")
+	await _settle()
+	_check(hub.find_child("PostseasonIntro", true, false) == null, "Got it closes it")
+	_check(hub.find_child("WeekActions", true, false) != null, "...and the off-season's buttons are there")
+	await _gone(hub)
+	hub = await _hub()
+	_check(hub.find_child("PostseasonIntro", true, false) == null, "It opens once")
+	await _gone(hub)
+	_state.set_setting("seen_postseason_intro", false)
+	hub = await _hub()
+	_check(hub.find_child("PostseasonIntro", true, false) != null, "Unseen again, it's there")
+	_check(hub.handle_back(), "Back closes it first")
+	await _settle()
+	_check(hub.find_child("PostseasonIntro", true, false) == null and hub.is_inside_tree(), "...and stays on the hub")
+	await _gone(hub)
+
+
+## Knocked out early: the league plays on from the hub, and the intro waits until
+## the last results are closed.
+func _test_postseason_when_knocked_out() -> void:
+	_in_finals(14)
+	var hub: Control = await _hub()
+	var weeks := 0
+	while not _state.season.is_season_over() and weeks < 8:
+		weeks += 1
+		hub.call("_sim_week")
+		await _settle()
+		_check(hub.find_child("PostseasonIntro", true, false) == null, "No intro over week %d's results" % weeks)
+		var go: Button = hub.find_child("ResultsContinue", true, false)
+		if not _state.season.is_season_over() and go != null:
+			go.pressed.emit()
+			await _settle()
+	_check(_state.season.is_season_over(), "The finals play out with him watching")
+	var last: Button = hub.find_child("ResultsContinue", true, false)
+	_check(last != null, "The Grand Final's results come up")
+	if last != null:
+		_check((await Tap.tap(last)) == "", "Continue takes a finger's tap")
+		await _settle()
+	_check(hub.find_child("PostseasonIntro", true, false) != null, "The results closed, the intro opens")
+	await _gone(hub)
+
+
+## Tips off stays off, sacked the off-season isn't his, a press conference goes
+## first, a draft under way is past it. None of them uses up the intro.
+func _test_postseason_not_when() -> void:
+	_in_finals(1)
+	_state.season.finals["done"] = true
+	_state.tutorials = false
+	var hub: Control = await _hub()
+	_check(hub.find_child("PostseasonIntro", true, false) == null, "Tips off: no postseason intro")
+	await _gone(hub)
+	_state.tutorials = true
+	_state.board["sacked"] = true
+	hub = await _hub()
+	_check(hub.find_child("PostseasonIntro", true, false) == null, "Sacked: no postseason intro")
+	await _gone(hub)
+	_state.board["sacked"] = false
+	_state.draft = load("res://scripts/sim/Draft.gd").new([])
+	_state.draft.intake_mode = true
+	hub = await _hub()
+	_check(hub.find_child("PostseasonIntro", true, false) == null, "A draft under way: no postseason intro")
+	await _gone(hub)
+	_state.draft = null
+	_check(_state.intro_due("postseason"), "None of them used it up")
 
 
 func _settle() -> void:

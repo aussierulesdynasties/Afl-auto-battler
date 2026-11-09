@@ -44,6 +44,11 @@ const TEXT := {
 		"How your season went: who won the flag, how your list went, and the final ladder.",
 		"Read it, then move on to the off-season and start building for next year.",
 	]],
+	"postseason": ["After the finals", [
+		"First the Season review: awards night, then how your year went.",
+		"Then Trades & Contracts: re-sign players, chase free agents, do deals. It all stays open until you start the draft.",
+		"After the National Draft comes the pre-season, then Round 1.",
+	]],
 }
 
 
