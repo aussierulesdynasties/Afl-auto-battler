@@ -2394,3 +2394,6 @@ Every open question from chapters 1 to 9 is collected here once. Each carries it
 124. Do you want the longer-term answers on DESIGN.md contradictions: list size (intro 40, section 4 min(44, floor(pool/clubs)) currently 37, rollover floor 32), the first in-career national draft class (generated 2027 class vs the 2026 National Draft start), and the repo-layout claim that PitchView is pure `_draw()`? [9:35]
 
 - **Tasmania at the start (2026-11-09).** Asked "With real lists and no Canberra, should picking Tasmania play 2027 without you and start you in 2028?", the director answered "Yes, start 2028". Overrules "Tasmania cannot be chosen at the start".
+- **A feature that never occurs is a bug (2026-11-09).** "if a gameplay feature we add NEVER occurs in game that isnt 'rarity', its a BUG"; "dont treat 0% as 'rare', its not 'rare', its nonexistent".
+- **Sir Doug Nicholls guernsey designs cut (2026-11-09).** Design library, catalogue, import and export and the artist question are cut. The annual round and its saved record stay. Overrules the earlier guernsey rulings.
+- **Event cards (2026-11-09).** Rare cards: "raise their weight". Irish and NZ contract cards: rated bar "make it 75". Captain's slump and succession: rewrite for real names.
