@@ -1136,19 +1136,17 @@ func _test_best_so_far(sz: Vector2i) -> void:
 ## tags lives inside the Tag call from the start, so picking a tag moves
 ## nothing; Back closes a sheet and keeps the break; the picks made behind the
 ## rows are the ones the quarter starts with. Real taps throughout. Fremantle v
-## Melbourne at half time (seed 2050), where Melbourne's ruck is running
+## Melbourne at half time (the first seed from 2050 that draws them), where Melbourne's ruck is running
 ## through the middle: the tag names are their listed midfielders only.
 func _test_one_line_break(sz: Vector2i) -> void:
 	var tag := "%dx%d" % [sz.x, sz.y]
 	var db = root.get_node("GameDB")
 	var was_seed = _state.replay_seed
-	_state.reset()
-	_state.replay_seed = 2050
-	_state.career_seed = 2050
-	_state.start_season("FRE", db.club_list("FRE"))
-	_state.replay_seed = was_seed
 	root.size = sz
-	_check(_state.prepare_interactive_match(), "A live match is prepared for the one-line break (%s)" % tag)
+	# Fremantle's first opponent from seed 2050 moved off Melbourne (Essendon
+	# now): the first seed from 2050 that draws them, as the call panes test does.
+	_check(_fre_v_mel(), "A live match against Melbourne is prepared for the one-line break (%s)" % tag)
+	_state.replay_seed = was_seed
 	var sim = _state.pending_sim
 	var me := int(sim.moment_side)
 	var them := str((sim.squads[1 - me] as Object).code)
@@ -1402,6 +1400,9 @@ func _test_one_line_break(sz: Vector2i) -> void:
 func _test_every_break_fits(club: String, vs: String, sz: Vector2i) -> void:
 	var db = root.get_node("GameDB")
 	var real: bool = _state.show_real_names
+	# The seed search below leaves the last seed tried: put the suite's back, so
+	# the tests after this one start from the season they were written for.
+	var seed_before: int = _state.replay_seed
 	_state.show_real_names = true
 	root.size = sz
 	for q in [2, 3, 4]:
@@ -1482,6 +1483,7 @@ func _test_every_break_fits(club: String, vs: String, sz: Vector2i) -> void:
 		m.queue_free()
 		await _settle()
 	_state.show_real_names = real
+	_state.replay_seed = seed_before
 
 
 ## What the break's list holds against the room it has (a break that fits does not scroll).
@@ -2126,6 +2128,13 @@ func _test_ballup_two_scene() -> void:
 	sim.moment_side = me
 	sim.current_quarter = 4
 	sim.current_minute = 106
+	# The quarter's chains match the clock (minute 106 is half way through the
+	# last quarter): Start may have played the first quarter out already when no
+	# call came in it (seed 2087: 68 of 68 chains), and a quarter with no chains
+	# left ends on the tap with nothing played under the flood.
+	var q_count := int(sim.get("_q_count"))
+	sim.set("_q_i", floori(q_count * 0.5))
+	sim.set("_q_active", true)
 	sim.at_centre = true
 	sim.set("_moments_this_q", 0)
 	sim.set("_last_moment_chain", -1000)
