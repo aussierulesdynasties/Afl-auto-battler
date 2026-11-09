@@ -172,7 +172,13 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 	var h := UiKit.hbox(8)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(b)
+	# Re-sign stacks over Release, so his lines keep the row's width at
+	# phone size instead of wrapping a word a line (bug-bash 7).
+	var acts: BoxContainer = h
 	if expiring:
+		acts = UiKit.vbox(8)
+		acts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(acts)
 		var keep := UiKit.btn("Re-sign", 14)
 		keep.name = "Resign_" + job
 		keep.custom_minimum_size = Vector2(92, 44)
@@ -180,7 +186,7 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 		keep.pressed.connect(func():
 			GameState.resign_staff(str(c["cid"]))
 			_build())
-		h.add_child(keep)
+		acts.add_child(keep)
 	var rel := UiKit.btn("Release", 14)
 	rel.name = "Release_" + job
 	rel.custom_minimum_size = Vector2(92, 44)
@@ -188,7 +194,7 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 	rel.pressed.connect(func():
 		GameState.release_staff(str(c["cid"]))
 		_build())
-	h.add_child(rel)
+	acts.add_child(rel)
 	return h
 
 
