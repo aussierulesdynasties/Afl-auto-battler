@@ -203,6 +203,10 @@ var board_patience := "fair"     # this career's board dial (DifficultyDials ste
 var rival_recruiting := "shrewd" # this career's rival dial (DifficultyDials step)
 var tutorials := true            # this career's first-visit menu tips (Tutorials.gd)
 var postseason_intro_seen := false  # the first postseason's sheet: this career's, not the device's
+## The first season you coach from its start (0: none yet). Years played
+## without you (sim-ahead, waiting for Tasmania, pre-made histories) close
+## before it and must not use up the first postseason's sheet.
+var my_first_season := 0
 var board := {}                  # confidence, goal, warned, sacked, history
 ## This week's story cards (StoryEngine.pick_week): usually none or one, two
 ## in a big week. Each is answered on the hub before the round is played.
@@ -895,6 +899,7 @@ func _save_state() -> Dictionary:
 		"rival_recruiting": rival_recruiting,
 		"tutorials": tutorials,
 		"postseason_intro_seen": postseason_intro_seen,
+		"my_first_season": my_first_season,
 		"board": board,
 		"week_events": week_events,
 		"week_checks": week_checks,
@@ -1150,6 +1155,10 @@ func _restore_career(state: Dictionary) -> bool:
 	tutorials = bool(state.get("tutorials", true))
 	# A save from before this field is past being a fresh career.
 	postseason_intro_seen = bool(state.get("postseason_intro_seen", true))
+	# A save from before this field: a club you hold outside the years played
+	# without you is one you coach this season.
+	my_first_season = int(state.get("my_first_season",
+			season_year if my_club != "" and not sim_ahead else 0))
 	GameDB.draftees = state.get("db_draftees", GameDB.draftees)
 	GameDB.late_draftees = state.get("db_late_draftees", [])
 	GameDB._alias_next = int(state.get("db_alias_next", GameDB._alias_next))
@@ -1663,6 +1672,7 @@ func reset() -> void:
 	_last_finish = {}
 	draft_meeting_year = 0
 	postseason_intro_seen = false
+	my_first_season = 0
 	salary_cap = 0
 	free_agents = []
 	offseason_year = 0
@@ -2343,7 +2353,10 @@ func finish_intake_draft() -> bool:
 ## Roll every list forward one year and rebuild the season. Split out so a
 ## career can continue even when there is no prospect pool to draft.
 func _start_next_season(next_year: int, signed: int) -> void:
-	postseason_intro_seen = true   # his first postseason is over, seen or not
+	# His first postseason is over, seen or not; a season played without
+	# you is not his (bug-bash 6).
+	if my_first_season != 0 and season_year >= my_first_season:
+		postseason_intro_seen = true
 	# Where every club finished: next season's board reads it (ClubLife.board_goal).
 	_last_finish = {}
 	if season != null:
@@ -2497,6 +2510,8 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	ensure_contracts()
 	ExpansionBuild.set_relief(self, next_year)
 	season_year = next_year
+	if my_first_season == 0 and my_club != "" and not sim_ahead:
+		my_first_season = season_year
 	# Dynamic rivalries cool once a season when two clubs stop meeting.
 	Rivalries.age(rivalry_history, season_year)
 	season_log = []
@@ -2787,6 +2802,8 @@ func _next_jumper_number(list: Array) -> int:
 func start_season(club_code: String, list: Array) -> void:
 	GameDB.pristine = false   # a career's data from here on: the next reset() reloads
 	my_club = club_code
+	if my_first_season == 0 and my_club != "" and not sim_ahead:
+		my_first_season = season_year
 	var lists := {}
 	# A league re-draft moves players between clubs: each arrives carrying his
 	# 2026 club, and takes his new club's code once his record is written below.
@@ -7063,6 +7080,7 @@ func open_offseason(keep_staff := false) -> void:
 		var from := str(p.get("club", ""))
 		_release(from, p, true, false)
 		p["home_offer"] = from
+		p["home_offer_year"] = season_year
 	# Rival clubs trade first, so their free-agent offers are made from the
 	# lists they'll actually have.
 	trade_offers = []
@@ -7522,6 +7540,20 @@ const FILLER_CAP := 3
 const TARGET_CAP := 3
 
 
+## The clubs that have targeted him in this off-season's market.
+func chased_by(p: Dictionary) -> Array:
+	var rec: Dictionary = p.get("chasers", {})
+	if int(rec.get("year", -1)) != season_year:
+		return []
+	return (rec.get("clubs", []) as Array).duplicate()
+
+
+## He has left the free-agent pool: what the market knew of him goes.
+static func clear_market_marks(p: Dictionary) -> void:
+	for key in ["home_offer", "home_offer_year", "chasers"]:
+		p.erase(key)
+
+
 func _open_market(players: Array) -> void:
 	# A player retiring at this rollover is not on the market: his career ends.
 	for p in players.duplicate():
@@ -7552,7 +7584,9 @@ func _open_market(players: Array) -> void:
 			clubs.append(code)
 	# A rival's own out-of-contract player keeps its offer while he listens.
 	for p in players:
-		var home := str(p.get("home_offer", ""))
+		# Only an offer made this off-season: an older save can carry one from
+		# a club that has since let him go.
+		var home := str(p.get("home_offer", "")) if int(p.get("home_offer_year", -1)) == season_year else ""
 		if home != "" and season.lists.has(home) and _offer_of(p, home).is_empty():
 			var term := int(Contracts.wants(p)["years"])
 			_add_offer(p, home, {"salary": Contracts.lowest(p, term) - culture_resign_discount(home, p, term), "years": term},
@@ -7560,7 +7594,11 @@ func _open_market(players: Array) -> void:
 	# Every club picks its targets, those that finished lowest first, and no
 	# more than TARGET_CAP clubs chase one player: the rest move to their next
 	# choice, so the whole market gets looked at, not only its top few.
+	# Chasers are counted across every opening of this off-season's market
+	# (and kept in the save), so a later round can't add a fourth.
 	var chasers := {}
+	for p in players:
+		chasers[str(p["id"])] = chased_by(p)
 	var by_finish := clubs.duplicate()
 	by_finish.sort_custom(func(a, b):
 		if _finish_t(a) != _finish_t(b):
@@ -7583,14 +7621,18 @@ func _open_market(players: Array) -> void:
 		for p in wanted:
 			if aims <= 0:
 				break
-			if int(chasers.get(str(p["id"]), 0)) >= TARGET_CAP:
+			var chasing: Array = chasers.get(str(p["id"]), [])
+			if not chasing.has(code) and chasing.size() >= TARGET_CAP:
 				continue
 			var role := fa_role(p, code)
 			var open := Contracts.opening_offer(p, role)
 			if int(open["salary"]) > Contracts.club_max(p, role, room, _fa_phase_of(code)):
 				continue
 			aims -= 1
-			chasers[str(p["id"])] = int(chasers.get(str(p["id"]), 0)) + 1
+			if not chasing.has(code):
+				chasing.append(code)
+				chasers[str(p["id"])] = chasing
+				p["chasers"] = {"year": season_year, "clubs": chasing.duplicate()}
 			_add_offer(p, code, open, role, ft)
 	# Then list fillers, among the players no club has targeted, so depth
 	# signings don't pile onto the market's best players.
@@ -7998,7 +8040,7 @@ func _sign_fa(p: Dictionary, code: String, salary: int, years: int) -> void:
 	p.erase("offers")
 	p.erase("market_round")
 	p.erase("market_log")
-	p.erase("home_offer")
+	clear_market_marks(p)
 	free_agents.erase(p)
 	_bars.erase(code)
 	offseason_log.append({"kind": "signed", "club": code, "id": str(p["id"]), "salary": salary, "years": years})
@@ -8015,6 +8057,7 @@ func _sign_fa(p: Dictionary, code: String, salary: int, years: int) -> void:
 
 func _join(code: String, p: Dictionary) -> void:
 	var list: Array = season.lists[code]
+	clear_market_marks(p)
 	if str(p.get("club", "")) != code:
 		p["joined"] = season_year
 		# A move lands him on the new club's senior list (row 88, RookieList).
@@ -10463,6 +10506,42 @@ func _ground_for(side: Dictionary) -> Array:
 	return Squad.new(GameDB.club_name(my_club), my_list, true, my_club, sel).ground
 
 
+## Synergies within reach (row 103, 4.Q10): what a player from outside your
+## list would do for your synergies with him on your ground, as facts:
+## [{key, trait, have, need, completes}], the ones he completes first.
+## Counted against your side as it stands (my_squad), in his line for a line
+## synergy; a synergy you already field is left out. It never says whom he
+## would replace or whether to get him.
+func synergy_fit(p: Dictionary) -> Array:
+	var out := []
+	if p.is_empty() or not list_player(str(p.get("id", ""))).is_empty():
+		return out
+	var ground: Array = my_squad().ground
+	var on: Array = Traits.active(ground)
+	var his: Array = Traits.of(p)
+	var rows := {}
+	for r in Traits.progress(ground):
+		rows[str(r["key"])] = r
+	for key in Traits.SYNERGIES:
+		if on.has(key):
+			continue
+		var s: Dictionary = Traits.SYNERGIES[key]
+		var line := str(s["line"])
+		if line != "" and not Ratings.plays_role(p, line):
+			continue
+		var r: Dictionary = rows[key]
+		for t in s["needs"]:
+			var have := int(r["have"][t])
+			var need := int(s["needs"][t])
+			if not his.has(str(t)) or have >= need:
+				continue
+			out.append({"key": key, "trait": str(t), "have": have, "need": need,
+					"completes": int(r["missing"]) == 1})
+			break
+	var done := out.filter(func(x): return bool(x["completes"]))
+	return done + out.filter(func(x): return not bool(x["completes"]))
+
+
 ## The opposition's side as it would take the field this week (their own
 ## selection, or their auto-pick): {"side": selection, "list": players}.
 ## Projected - they name their side on match day.
@@ -10765,6 +10844,68 @@ func set_stat_focus(player_id: String, key: String) -> bool:
 	return true
 
 
+## The trait a stat focus grows him toward (row 103, 4.Q10): a trait his
+## role can earn from that stat that he does not have yet, {key, min, gap,
+## crowded} ({} when none). "crowded" when he already carries MAX_GOOD good
+## traits: reaching the line then shows the new one only once he is further
+## past it than he is past one he has (Traits.of keeps the furthest two).
+func focus_trait(p: Dictionary, stat: String) -> Dictionary:
+	if stat == "":
+		return {}
+	var have: Array = Traits.of(p)
+	var good := 0
+	for t in have:
+		if Traits.DEFS.has(t) and not Traits.is_bad(str(t)):
+			good += 1
+	var attr: Dictionary = p.get("attr", {})
+	var roles := [str(p.get("role", "")), str(p.get("role2", ""))]
+	for key in Traits.DEFS:
+		var d: Dictionary = Traits.DEFS[key]
+		if d.has("max") or str(d["stat"]) != stat or have.has(key):
+			continue
+		var need_roles: Array = d["roles"]
+		if not need_roles.is_empty() and not (need_roles.has(roles[0]) or need_roles.has(roles[1])):
+			continue
+		if bool(d.get("small", false)) and int(attr.get("marking", 0)) >= 52:
+			continue
+		return {"key": key, "min": int(d["min"]), "gap": maxi(0, int(d["min"]) - int(attr.get(stat, 0))),
+				"crowded": good >= Traits.MAX_GOOD}
+	return {}
+
+
+## Rival clubs grow traits the same way (every club gets it, director
+## 2026-11-09): a player with room for another trait puts his stat focus on
+## the nearest trait a synergy needs, within AI_TRAIT_REACH points, and keeps
+## it until he earns it. "" = none. Nothing is told; it is their training.
+const AI_TRAIT_REACH := 6
+
+
+func _ai_trait_focus(p: Dictionary) -> String:
+	var cur := str(p.get("train_focus", ""))
+	if cur != "":
+		var still := focus_trait(p, cur)
+		if not still.is_empty() and not bool(still["crowded"]):
+			return cur
+		p.erase("train_focus")
+	var wanted := {}
+	for s in Traits.SYNERGIES.values():
+		for t in (s as Dictionary)["needs"]:
+			wanted[str(t)] = true
+	var best := ""
+	var best_gap := AI_TRAIT_REACH + 1
+	for n in Traits.near(p):
+		if not wanted.has(str(n["key"])) or int(n["gap"]) >= best_gap:
+			continue
+		var ft := focus_trait(p, str(n["stat"]))
+		if ft.is_empty() or bool(ft["crowded"]) or not focus_options(p).has(str(n["stat"])):
+			continue
+		best = str(n["stat"])
+		best_gap = int(n["gap"])
+	if best != "":
+		p["train_focus"] = best
+	return best
+
+
 ## [focus XP, drills XP] spent this season while he had a focus.
 func focus_spent(p: Dictionary) -> Array:
 	var led: Array = p.get("focus_ledger", [])
@@ -10972,7 +11113,7 @@ func ai_spend_xp(p: Dictionary) -> int:
 		return 0
 	var focus: Dictionary = Ratings.ROLE_WEIGHTS.get(str(p.get("role", "MID")), Ratings.ROLE_WEIGHTS["MID"])
 	var bought := 0
-	for n in _spend_with_weights(p, focus, true, ceiling).values():
+	for n in _spend_with_weights(p, focus, true, ceiling, "", _ai_trait_focus(p)).values():
 		bought += int(n)
 	return bought
 
