@@ -8,6 +8,7 @@ extends SceneTree
 ##       [--start real]   (the 2027 round-1 lists of a real-lists career, after the 2026 draft)
 ##       [--setup league|coached]   (background-match or coached-match setup; see balance_body.gd)
 ##       [--tag first|median|last|tagger|none]   (one side tags the rival's biggest midfielder; see balance_body.gd)
+##       [--together very|tight|cliques|split]   (one side, in turn, plays with that Togetherness band; row 84)
 ##
 ## Seed i plays two real 2026 lists picked from i (every pairing comes round),
 ## home side alternating, match seed 500000 + i. The same --from/--count in two

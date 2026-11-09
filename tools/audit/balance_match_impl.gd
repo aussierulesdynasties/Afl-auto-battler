@@ -19,6 +19,11 @@ func run() -> void:
 	var count := int(a[2]) if a.size() > 2 else 100
 	var weather := OS.get_environment("BAL_WEATHER")
 	var body = load("res://tools/balance/balance_body.gd").new()
+	# --setup league|coached, as balance_worker.gd takes it (balance_body reads
+	# its other flags, --together among them, from the command line itself).
+	for i in range(a.size() - 1):
+		if str(a[i]) == "--setup":
+			body.setup = str(a[i + 1])
 	var code: int = body.play(from, count, "user://balance_audit.jsonl",
 			weather if weather != "" else "perfect",
 			body.parse_sets(OS.get_environment("BAL_SET")), true)

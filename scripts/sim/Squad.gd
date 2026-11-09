@@ -15,6 +15,10 @@ var bench: Array = []
 ## Team form, -1..1, from recent results (Season.club_form). Set by whoever
 ## builds the match; 0 is neutral.
 var form := 0.0
+## The club's Togetherness on match day (row 84, director 2026-11-06): the
+## stoppage-win chance it adds (Culture "match_contest": a tight group goes in
+## for each other, cliques don't). Set by CoachEffects.apply; 0 is neutral.
+var together := 0.0
 ## From the club's coaches (CoachEffects), set before a match: how well its
 ## game plan is executed (1.0 = as written), how sharply it reads the match
 ## (-0.75 .. 1), and whether it picks its own plan each quarter (AI clubs).

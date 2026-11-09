@@ -1,7 +1,8 @@
 {
-  "_about": "Club culture effects. Director 2026-10-13: small, then measure; both ways for Standards and Togetherness. 2026-10-18: build them; Ambition helps re-signing and free agents on the winning-now side, and brings young players on a touch quicker on the patient side (veterans' asks are not lower there). Lead 2026-10-18: young_ceiling is points of season training ceiling for the young at a patient club (the Develop plan's lever; 0 turns it off), because the season ceiling otherwise caps the extra XP. Keys are the band names in Culture.BANDS; a band not listed does nothing. Every club follows the same rule. Sizes are the director's to set in his playtest.",
+  "_about": "Club culture effects. Director 2026-10-13: small, then measure; both ways for Standards and Togetherness. 2026-10-18: build them; Ambition helps re-signing and free agents on the winning-now side, and brings young players on a touch quicker on the patient side (veterans' asks are not lower there). Lead 2026-10-18: young_ceiling is points of season training ceiling for the young at a patient club (the Develop plan's lever; 0 turns it off), because the season ceiling otherwise caps the extra XP. Keys are the band names in Culture.BANDS; a band not listed does nothing. Row 84 (director 2026-11-06, \"felt in matches\"): match_contest is the stoppage-win chance a club's Togetherness adds on match day (home_ground_bonus is 0.030, full team form 0.010). Every club follows the same rule. Director 2026-11-10: medium, about 3-4 points a game at tight and cliques (audited: 0.001 of edge is about 0.16 points of margin), twice that at very and split; no match copy, the culture screen only. Final sizes are his after his playtest.",
   "recovery": {"standards": {"elite": 0.05, "good": 0.03, "loose": -0.03, "slack": -0.05}},
   "sting": {"together": {"very": 0.20, "tight": 0.10, "cliques": -0.10, "split": -0.20}},
+  "match_contest": {"together": {"very": 0.044, "tight": 0.022, "cliques": -0.022, "split": -0.044}},
   "resign_floor": {"ambition": {"allin": 0.02, "now": 0.01}},
   "free_agent_score": {"ambition": {"allin": 0.10, "now": 0.05}},
   "young_growth": {"ambition": {"patient": 0.03, "rebuild": 0.05}},
@@ -9,5 +10,5 @@
   "young_age_below": 22,
   "draftee_seasons": 1,
   "sting_limit": [-0.4, 0.6],
-  "little_max": {"recovery": 0.06, "sting": 0.25, "resign_floor": 0.03, "free_agent_score": 0.12, "young_growth": 0.06, "young_ceiling": 1}
+  "little_max": {"recovery": 0.06, "sting": 0.25, "match_contest": 0.025, "resign_floor": 0.03, "free_agent_score": 0.12, "young_growth": 0.06, "young_ceiling": 1}
 }

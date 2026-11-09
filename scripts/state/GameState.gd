@@ -1615,6 +1615,7 @@ func reset() -> void:
 	_standings_cache = {}
 	_fringe_cache = {}
 	CoachEffects.table = {}
+	CoachEffects.relations = {}
 	custom_club = {}
 	best23 = {}
 	my_club = ""
@@ -12737,6 +12738,7 @@ func _career_over(p: Dictionary, how := "retired") -> void:
 func _refresh_coach_tactics() -> void:
 	_ensure_plan_known()
 	CoachEffects.usual = _season_usuals()
+	CoachEffects.relations = relations if culture_effects_on else {}
 	if coaches.is_empty() or season == null:
 		CoachEffects.table = {}
 		return

@@ -1010,7 +1010,7 @@ func _test_culture_ui_tests() -> void:
 		var row: Node = sheet.find_child("Strand_" + id, true, false) if sheet != null else null
 		var e: Label = row.find_child("StrandEffect", true, false) if row != null else null
 		return e.text if e != null and e.is_visible_in_tree() else ""
-	_check(effect_of.call("together") == "Players take a missed game a little better.",
+	_check(effect_of.call("together") == "Players win a little more of the ball at stoppages and take a missed game a little better.",
 			"An active band says what it does for you, in one football line (%s)" % effect_of.call("together"))
 	_check(effect_of.call("standards") == "" and effect_of.call("ambition") == "",
 			"A band in the middle says nothing it does not do")

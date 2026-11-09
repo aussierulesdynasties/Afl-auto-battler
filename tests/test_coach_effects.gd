@@ -20,6 +20,7 @@ func run() -> void:
 	_t("_test_man_management")
 	_t("_test_assistant")
 	_t("_test_in_career")
+	_t("_test_togetherness")
 	GameState.delete_saved_career()
 	CoachEffects.table = {}
 	GameState.replay_seed = 0
@@ -183,6 +184,48 @@ func _test_tactics() -> void:
 	var slow_plan := str(r3.ai_tactics(0)["gameplan"])
 	_check(sharp_plan == "controlled" and slow_plan == str(r3.standing[0]),
 			"Two goals up: a sharp coach shuts it down, a poor one has not noticed (%s / %s)" % [sharp_plan, slow_plan])
+
+
+## Row 84 (director 2026-11-06): Togetherness at tight and cliques is felt in
+## matches - a stoppage edge from the culture table, the same for every club,
+## credited to its own line in the readout.
+func _test_togetherness() -> void:
+	var rel := {}
+	var sq := Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE")
+	CoachEffects.relations = {}
+	CoachEffects.apply(sq)
+	_check(sq.together == 0.0, "Outside a career, togetherness adds nothing")
+	CoachEffects.relations = rel
+	for row in [[20, "tight"], [-20, "cliques"], [50, "very"], [-50, "split"], [0, "mid"]]:
+		rel[Culture.key("GEE", "together")] = {"t": int(row[0]), "log": []}
+		CoachEffects.apply(sq)
+		_check(is_equal_approx(sq.together, Culture.effect_of("match_contest", "together", str(row[1]))),
+				"%s: the squad carries the table's stoppage edge (%s)" % [row[1], sq.together])
+	_check(Culture.effect_of("match_contest", "together", "tight") > 0.0
+			and Culture.effect_of("match_contest", "together", "cliques") < 0.0
+			and Culture.effect_of("match_contest", "together", "very") > Culture.effect_of("match_contest", "together", "tight")
+			and Culture.effect_of("match_contest", "together", "split") < Culture.effect_of("match_contest", "together", "cliques"),
+			"Tight helps, cliques cost, and the far bands go further")
+	CoachEffects.relations = {}
+	# The same dice: the edge only ever turns lost stoppages into won ones.
+	var wins := []
+	for edge in [0.0, 0.01]:
+		var a := Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE")
+		a.together = edge
+		var m := MatchSim.new(a, Squad.new("SYD", GameDB.club_list("SYD"), false, "SYD"), 84)
+		var n := 0
+		for i in range(20000):
+			if m.contest_winner(false, 0.0) == 0:
+				n += 1
+		wins.append(n)
+		if edge > 0.0:
+			_check(float((m.impact[0] as Dictionary).get("together", 0.0)) > 0.0, "The edge is credited to togetherness")
+	var share := float(wins[1] - wins[0]) / 20000.0
+	_check(wins[1] > wins[0] and absf(share - 0.01) < 0.003,
+			"A 1%% edge wins about 1%% more stoppages on the same dice (%.4f)" % share)
+	# Director 2026-11-10: no match copy; the effect shows on the culture screen only.
+	_check(CoachReport.impact_lines([{"together": 0.8}, {"together": -0.6}], [{}, {}], 0).is_empty(),
+			"The match readout says nothing about togetherness")
 
 
 func _test_man_management() -> void:
