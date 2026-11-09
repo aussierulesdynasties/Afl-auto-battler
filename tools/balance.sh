@@ -55,5 +55,6 @@ wait
 secs=$(( $(date +%s) - start ))
 for l in "$out"/*.log; do grep -q "SCRIPT ERROR\|Parse Error" "$l" && { echo "worker failed: $l"; tail -20 "$l"; exit 1; }; done
 args=(--run "$out" --n "$n" --secs "$secs" --a "${arm_a:-base}${a_root:+ (from $a_root)}")
-[ "$paired" = 1 ] && args+=(--b "$arm_b")
+b_label="${arm_b:-base}"; [ -z "$arm_b" ] && [ -n "$a_root" ] && b_label="this branch"
+[ "$paired" = 1 ] && args+=(--b "$b_label")
 python "$root/tools/balance/balance_report.py" "${args[@]}" | tee "$out/report.md"
