@@ -15,6 +15,7 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 117 | Coaching staff: head coach, head assistant, assistants; counter-offer (not money) when a rival poaches one (T5.Q16) | approach, counter and departure tested |
 | 120 | Every tag now holds his man (#1212), at the size the director ruled 2026-11-10: multiplier 66% to 50% by Pressure, Tagger 42%, tired legs up to 13 points. Left: match-day copy still shows that multiplier as "keeps X% of his ball", which is false; replace it with disposals kept from the tag_keep_impl audit (MatchNotes.tagger_card, GateOdds.tag_kept, GateOdds.TAG_HOT_GAIN), then his playtest; balance-gated | copy shows measured disposals kept, his look at the tagger card, his playtest |
 | 127 | Draft fit (director 2026-11-08): the coach's interview answers and archetype (row 119) mark draft prospects who suit the way he wants to play, and his scouts name them. The mark states the fit as a fact with the scout's uncertainty ("suits your pressing game: tackles 78, scout's read, +/-6") and never says take him. After row 119 | marks follow the archetype, scout uncertainty shown, no recommendation wording, real-tap check |
+| 130 | Scouting list (director 2026-11-10): a shortlist the coach keeps all season, reached from the hub under List. He adds prospects to it; a player on it gets his scouts' focus, so his rating range narrows faster. Each row shows the scouted ranges, the row 127 draft-fit mark and how the read has changed. It changes what the coach knows, never the sim. After row 127 | add/remove a prospect, his range narrows faster than off the list (seeded test), his look, real-tap check |
 
 ## B. Built and ON: his playtest judges
 
@@ -59,7 +60,6 @@ Never balance-screened together (#1074): match_flow, kick_range, set_shots, key_
 
 ## D. Audits to run (seeded, via audit.yml)
 
-- 19/60 Press-question and coaching-note repetition over long saves; pressers per season.
 - 28 How-we-play maturity; How-we-win materiality; List Profile vs results.
 
 ## E. Waiting on him or his phone
