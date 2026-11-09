@@ -18,6 +18,8 @@ extends RefCounted
 ## bwin   1 when a Q4 goal at minute 100+ left the margin within 12 (a centre bounce the late
 ##        bounce call could fire on follows every goal), whatever the call budget
 ## calls  the cards side 0 was asked, kind@q:min:margin[:run], ";"-separated (coach mode)
+## siren2 the siren test again with the "End of quarter 4" line skipped (the match's event list
+##        puts it between the last score and "final", so siren is always 0; audit 29)
 
 const WEATHERS := ["perfect", "perfect", "perfect", "perfect", "wet", "windy", "hot"]
 
@@ -57,6 +59,7 @@ func _play(mode: String, seed: int, pr: Array, weather: String) -> String:
 	var seq := ""
 	var q := 1
 	var siren := 0
+	var siren2 := 0
 	var m100 := 0
 	var bwin := 0
 	for i in range(ev.size()):
@@ -78,11 +81,18 @@ func _play(mode: String, seed: int, pr: Array, weather: String) -> String:
 			var nxt: Dictionary = ev[i + 1] if i + 1 < ev.size() else {}
 			if BroadcastVignette.pick_kind(e, prev, nxt, {}) == BroadcastVignette.AFTER_SIREN:
 				siren = 1
+			# The same test with the end-of-quarter line skipped: the next event that is not one.
+			var j := i + 1
+			while j < ev.size() and str((ev[j] as Dictionary).get("kind", "")) == "quarter":
+				j += 1
+			var nxt2: Dictionary = ev[j] if j < ev.size() else {}
+			if BroadcastVignette.pick_kind(e, prev, nxt2, {}) == BroadcastVignette.AFTER_SIREN:
+				siren2 = 1
 	while q < 4:
 		seq += "|"
 		q += 1
-	return "G|%s|%d|%s|%s|%s|%d|%d|%s|%d|%d|%d|%s" % [mode, seed, pr[0], pr[1], weather,
-			sim.score(0), sim.score(1), seq, siren, m100, bwin, ";".join(calls)]
+	return "G|%s|%d|%s|%s|%s|%d|%d|%s|%d|%d|%d|%s|%d" % [mode, seed, pr[0], pr[1], weather,
+			sim.score(0), sim.score(1), seq, siren, m100, bwin, ";".join(calls), siren2]
 
 
 func run() -> void:

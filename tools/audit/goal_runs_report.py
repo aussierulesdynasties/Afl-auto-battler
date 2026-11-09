@@ -60,8 +60,9 @@ def load_sim(paths):
             mode, seed, home, away, weather, hs, as_ = f[1], f[2], f[3], f[4], f[5], int(f[6]), int(f[7])
             seq = "|".join(f[8:12])
             siren, m100, bwin, calls = int(f[12]), int(f[13]), int(f[14]), f[15] if len(f) > 15 else ""
+            siren2 = int(f[16]) if len(f) > 16 else None
             out[mode].append({"seed": seed, "h": hs, "a": as_, "seq": seq, "siren": siren, "m100": m100,
-                              "bwin": bwin, "calls": [c for c in calls.split(";") if c]})
+                              "bwin": bwin, "calls": [c for c in calls.split(";") if c], "siren2": siren2})
     return out
 
 
@@ -167,6 +168,9 @@ def main():
         print(share_row("late bounce window: a goal after 30% of Q4 leaves it within 12", [g["bwin"] == 1 for g in S],
                         [real_window(g) for g in timed] if timed else None))
         print(share_row("after-the-siren scene shown", [g["siren"] == 1 for g in S], None))
+        s2 = [g for g in S if g["siren2"] is not None]
+        if s2:
+            print(share_row("  same test skipping the End of quarter 4 line", [g["siren2"] == 1 for g in s2], None))
         if mode == "coach":
             def has(g, kind, pred=lambda p: True):
                 for c in g["calls"]:
