@@ -2,6 +2,7 @@ extends SceneTree
 ## Row 103 for the director's look. Real renderer, windowed off screen
 ## (override.cfg), through C:/kt/gpu_slot.sh:
 ##   godot --path . --rendering-method gl_compatibility --script tools/visual/capture_synergy_fit.gd
+## or on GitHub: gh workflow run capture.yml --ref <branch> -f tool=capture_synergy_fit -f resolution=390x844
 ## Environment: CAP_W, CAP_H (default 390x844), CAP_OUT (file prefix, default
 ## "synergy_fit"). Saves <prefix>_sheet.png (a rival's profile: which of your
 ## synergies he would complete) and <prefix>_focus.png (a stat focus naming the
@@ -32,6 +33,10 @@ func _run() -> void:
 	var w := int(OS.get_environment("CAP_W")) if OS.get_environment("CAP_W") != "" else 390
 	var h := int(OS.get_environment("CAP_H")) if OS.get_environment("CAP_H") != "" else 844
 	var prefix := OS.get_environment("CAP_OUT") if OS.get_environment("CAP_OUT") != "" else "synergy_fit"
+	var a := OS.get_cmdline_user_args()
+	for i in range(a.size() - 1):
+		if str(a[i]) == "--out":
+			prefix = str(a[i + 1])
 	DisplayServer.window_set_size(Vector2i(w, h))
 	root.size = Vector2i(w, h)
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
