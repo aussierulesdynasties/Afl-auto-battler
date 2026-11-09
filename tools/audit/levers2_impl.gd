@@ -20,13 +20,20 @@ extends RefCounted
 ##   L2_TERM    ask (default) | short | long: the term your club gives a kid
 ##              (23 or under) it re-signs - one season, or four;
 ##   L2_RECRUIT -1 (default, Standard) | 0..3: your recruiting budget level,
-##              set directly so no other department pays for it.
+##              set directly so no other department pays for it;
+##   L2_PAID    1: Elite recruiting is paid for as a coach must (Development
+##              drops to Minimal; the board's $10.5m holds), row 67;
+##   L2_DEVPROJ 1: keep both development-project places busy all season
+##              (the highest-POT eligible player, his first job), row 67.
+## SUMMARY adds flags, grand finals and top-four finishes (row 67).
 ## Args after the impl name: seeds (comma-separated) seasons.
 
 var dyn = load("res://tools/balance/dynasty.gd").new()
 var trade_mode := "list"
 var term_mode := "ask"
 var recruit := -1
+var paid := false
+var devproj := false
 ## id -> true: players followed every season (draftees, probe pairs, kids).
 var tracked := {}
 
@@ -38,6 +45,9 @@ func run() -> void:
 	trade_mode = OS.get_environment("L2_TRADE") if OS.get_environment("L2_TRADE") != "" else "list"
 	term_mode = OS.get_environment("L2_TERM") if OS.get_environment("L2_TERM") != "" else "ask"
 	recruit = int(OS.get_environment("L2_RECRUIT")) if OS.get_environment("L2_RECRUIT") != "" else -1
+	paid = OS.get_environment("L2_PAID") == "1"
+	devproj = OS.get_environment("L2_DEVPROJ") == "1"
+	print("ARMS paid %s devproj %s" % [paid, devproj])
 	print("ARMS trade %s term %s recruit %d" % [trade_mode, term_mode, recruit])
 	for sd in seeds.split(",", false):
 		_career(int(sd), seasons)
@@ -54,14 +64,27 @@ func _career(seed: int, seasons: int) -> void:
 	var user := d.user_club if d.user_club != "" else str(d.draft_order[0])
 	gs.draft = d
 	gs.start_season(user, [])
-	var totals := {"ladder": 0, "rank": 0, "seasons": 0, "fa": 0, "trades": 0, "resigned": 0, "asked_out": 0}
+	var totals := {"ladder": 0, "rank": 0, "seasons": 0, "fa": 0, "trades": 0, "resigned": 0, "asked_out": 0,
+			"flags": 0, "gf": 0, "top4": 0, "projects": 0}
 	for y in range(seasons):
 		_set_recruit(gs)
 		_track(gs, seed, "start")
 		var strength_rank := _rank(gs, user)
 		while not gs.season.is_season_over():
+			if devproj:
+				totals["projects"] += _fill_projects(gs)
 			dyn._play_week(gs, user, false)
 		var ladder := _ladder_pos(gs, user)
+		var prem := str(gs.premier())
+		var top: Array = gs.season.finals.get("top", [])
+		if prem == user:
+			totals["flags"] += 1
+		if gs.my_finals_status() in ["premier", "runner_up"]:
+			totals["gf"] += 1
+		if ladder >= 1 and ladder <= 4:
+			totals["top4"] += 1
+		print("FLAG seed %d year %d premier %s mine %s finals %s" % [seed, gs.season_year, prem,
+				prem == user, top.has(user)])
 		_track(gs, seed, "end")
 		print("SEASON seed %d year %d club %s ladder %d rank %d payroll %d cap %d room %d list %d" % [
 				seed, gs.season_year, user, ladder, strength_rank, gs.my_payroll(), gs.salary_cap,
@@ -95,11 +118,40 @@ func _career(seed: int, seasons: int) -> void:
 	print("SUMMARY seed %d club %s trade %s term %s recruit %d ladder %.2f rank %.2f trades %d fa %d resigned %d asked_out %d" % [
 			seed, user, trade_mode, term_mode, recruit, float(totals["ladder"]) / n, float(totals["rank"]) / n,
 			int(totals["trades"]), int(totals["fa"]), int(totals["resigned"]), int(totals["asked_out"])])
+	print("FLAGS seed %d club %s paid %s devproj %s seasons %d flags %d gf %d top4 %d projects %d" % [
+			seed, user, paid, devproj, int(totals["seasons"]), int(totals["flags"]), int(totals["gf"]),
+			int(totals["top4"]), int(totals["projects"])])
 
 
 func _set_recruit(gs) -> void:
 	if recruit >= 0:
 		gs.department_budget["recruiting"] = recruit
+		if paid and recruit == ClubBudget.LEVELS.size() - 1:
+			gs.department_budget["development"] = 0
+
+
+## Fill free project places with the highest-POT eligible player, his first
+## learnable job (devproj_impl's "eager"). Returns projects started.
+func _fill_projects(gs) -> int:
+	var n := 0
+	while gs.active_projects() < gs.PROJECT_MAX:
+		var best := {}
+		var best_jobs := []
+		for p in gs.my_list:
+			var jobs: Array = gs.learnable_jobs(p)
+			if jobs.is_empty():
+				continue
+			if best.is_empty() or int(p.get("potential", 0)) > int(best.get("potential", 0)):
+				best = p
+				best_jobs = jobs
+		if best.is_empty():
+			return n
+		var before: int = gs.active_projects()
+		gs.set_player_plan(str(best["id"]), gs.LEARN_PREFIX + str(best_jobs[0]))
+		if gs.active_projects() <= before:
+			return n   # refused: never spin
+		n += 1
+	return n
 
 
 func _ladder_pos(gs, user: String) -> int:
