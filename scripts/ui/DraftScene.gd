@@ -481,7 +481,7 @@ func _show_board() -> void:
 		_board = _live_board()
 		_root.add_child(_board)
 		if _draft.intake_mode:
-			var fam := UiKit.lbl(TeamFamiliarity.draft_line(), UiKit.SMALL, UiKit.TEXT)
+			var fam := UiKit.lbl(TeamFamiliarity.draft_line(), UiKit.SECONDARY, UiKit.TEXT)
 			fam.name = "DraftFamiliarity"
 			fam.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			_root.add_child(fam)

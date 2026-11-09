@@ -231,7 +231,7 @@ func _test_save_and_old_save() -> void:
 		TF.clear(q)
 	GameState.save_career()
 	GameState.load_career()
-	_check(TF.value(GameState.list_player(id)) == 100.0 and GameState.familiarity_side_line() == "",
+	_check(TF.value(GameState.list_player(id)) == 100.0 and TF.chemistry(GameState.familiarity_side()) == 1.0,
 			"A save without the field loads with everyone at 100")
 
 
@@ -280,40 +280,62 @@ func _test_screens() -> void:
 	await _settle()
 	var row: Button = ls.find_child("Row_" + id, true, false)
 	var tag: Label = row.find_child("RowFamiliarity", true, false) if row != null else null
-	_check(tag != null and tag.text == "Familiarity 70%", "His row on My list reads Familiarity 70%")
+	_check(tag != null and tag.text == "Chemistry 70%", "His row on My list reads Chemistry 70%")
 	if row != null:
 		_check(await Tap.tap(row) == "", "A finger's tap on his row reaches it, past the new line")
 		await _settle()
 		var said: Label = ls.find_child("ProfileFamiliarity", true, false)
-		_check(said != null and said.text.contains("2% off his footy"), "His profile says what it costs him")
+		_check(said != null and said.find_child("ProfileFamiliarityCost", true, false).text == "2% off his footy, up 5% a game.", "His profile has his bar and what it costs him")
 	ls.queue_free()
 	await _settle()
 	TF.clear(p)
-	# Where the side is picked: silent under three, a warning at three, the cost at four.
+	# Where the side is picked: the meter, and a tap on it says why.
 	# A Squad names copies: the men themselves are on the list.
 	var named: Array = GameState.my_squad().ground.map(func(q): return GameState.list_player(str(q["id"])))
 	var ui: Control = load("res://scenes/SelectionScene.tscn").instantiate()
 	root.add_child(ui)
 	await _settle()
-	var note: Label = ui.find_child("TurnoverNote", true, false)
-	_check(note != null and not note.visible, "A settled side hears nothing about turnover")
-	ui.queue_free()
+	var meter: Button = ui.find_child("ChemistryMeter", true, false)
+	_check(meter != null and meter.size.y >= 44.0, "The meter is a thumb-sized target above the oval")
+	_check(meter != null and is_equal_approx(float(meter.get_meta("share")), 1.0), "A settled side's meter is full")
+	var nobody_tap: String = await Tap.tap(meter)
+	_check(nobody_tap == "", "A finger reaches the meter")
+	await _settle()
+	var sheet: Control = ui.find_child("ChemistrySheet", true, false)
+	_check(sheet != null and sheet.find_child("ChemistryNobody", true, false) != null, "A settled side's sheet has nobody on it")
+	_check(sheet != null and sheet.find_child("ChemistryPoints", true, false).text == "0", "It costs a settled side nothing")
+	_check(ui.handle_back() and ui.get("_chemistry") == null, "Back closes the sheet")
 	await _settle()
 	for q in named.slice(0, 3):
 		TF.arrive_club(q)
 		q["team_fam"] = 70.0
-	_check(GameState.familiarity_side_line().begins_with("3 men new") and GameState.familiarity_side_line().contains("about %d points" % TF.TEAM_POINTS_AT_70),
-			"At three the coach is told what a fourth would cost")
+	ui.find_child("TeamBuilder", true, false).changed.emit("")
+	var at_three := float(meter.get_meta("share"))
+	_check(at_three > 0.95 and at_three < 1.0, "3 men dent the meter by their own form only, live")
+	_check(TF.team_points(GameState.familiarity_side()) == 0, "3 men carry no team-wide cost")
 	TF.arrive_club(named[3])
 	named[3]["team_fam"] = 70.0
-	ui = load("res://scenes/SelectionScene.tscn").instantiate()
-	root.add_child(ui)
+	TF.arrive_draftee(named[4])
+	named[4]["team_fam"] = 70.0
+	ui.find_child("TeamBuilder", true, false).changed.emit("")
+	_check(float(meter.get_meta("share")) < 0.3, "The 4th man drops the meter, live, without a rebuild")
+	_check(await Tap.tap(meter) == "", "A finger reaches the meter over a side that has dropped")
 	await _settle()
-	note = ui.find_child("TurnoverNote", true, false)
-	_check(note != null and note.visible and note.text.begins_with("4 men new") and note.text.contains("about %d points" % TF.TEAM_POINTS_AT_70),
-			"At four the selection screen states the cost before it bites")
-	var keys := GameState.my_week_notes().map(func(n): return str(n.get("key", "")))
-	_check(keys.has("own_familiarity"), "The week's notes carry it too")
+	sheet = ui.find_child("ChemistrySheet", true, false)
+	_check(sheet != null, "A tap on the meter opens what is acting on the side")
+	if sheet != null:
+		_check(sheet.find_child("ChemistryPoints", true, false).text == "19", "The sheet gives the size this round")
+		_check(int(sheet.find_child("ChemistryPips", true, false).get_meta("men")) == 4, "The sheet draws the men against the 4")
+		_check(sheet.find_child("ChemistryMen", true, false).get_child_count() == 4, "A bar for each man from another club")
+		_check(sheet.find_child("ChemistryDraftees", true, false).get_child_count() == 1, "And each draftee, apart")
+		_check(sheet.find_child("ChemistryFade", true, false) != null, "And the fade over Rounds 1 to 7")
+		_check(await Tap.tap(sheet.find_child("ChemistryClose", true, false)) == "", "A finger reaches Close")
+		await _settle()
+		_check(not is_instance_valid(sheet), "Close closes it")
+	_check(TF.fade_points() == [19, 16, 13, 10, 6, 3, 0], "The drawn fade is the straight line from 19 to 0")
+	_check(TF.fade_step(GameState.familiarity_side()) == 0, "This side is lit at Round 1")
+	_check(TF.signing_line().contains("4 or more in a side: about 19 points worse"), "The signing line says the count in digits")
+	_check(not GameState.my_week_notes().map(func(n): return str(n.get("key", ""))).has("own_familiarity"), "The meter replaces the week's sentence")
 	ui.queue_free()
 	await _settle()
 	# The trade screen says the rule once you ask for a man.

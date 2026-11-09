@@ -5061,20 +5061,15 @@ func recent_honours(limit := 5) -> Array:
 
 ## Your own side's week worth knowing (Matchup.own_notes).
 func my_week_notes() -> Array:
-	var notes: Array = Matchup.own_notes(my_list) + milestone_notes()
-	var side_cost := familiarity_side_line()
-	if side_cost != "":
-		notes.append({"key": "own_familiarity", "text": side_cost})
-	return notes
+	return Matchup.own_notes(my_list) + milestone_notes()
 
 
-## Your side's team-wide familiarity cost as the coach reads it, "" when there is
-## nothing to say. From the side as arranged now.
-func familiarity_side_line() -> String:
+## Your side as arranged now, ground and bench: what the Team Chemistry meter reads.
+func familiarity_side() -> Array:
 	if season == null or my_club == "":
-		return ""
+		return []
 	var squad := my_squad()
-	return TeamFamiliarity.side_line(squad.ground + squad.bench)
+	return squad.ground + squad.bench
 
 
 ## Every club's week for team familiarity: a man who played comes on a senior

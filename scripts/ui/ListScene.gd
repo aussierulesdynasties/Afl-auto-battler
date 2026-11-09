@@ -350,7 +350,7 @@ func _list_row(p: Dictionary) -> Control:
 		mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		who.add_child(mark)
 		row.custom_minimum_size = Vector2(0, 74)
-	# Still learning his teammates (row 125): a line of its own, the same way.
+	# His familiarity (row 125): a line of its own, the same way.
 	if TeamFamiliarity.tag(p) != "":
 		var fam := UiKit.ellipsis(TeamFamiliarity.tag(p), UiKit.SMALL, UiKit.TEXT)
 		fam.name = "RowFamiliarity"

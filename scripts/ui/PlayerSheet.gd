@@ -99,11 +99,15 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 		readiness.name = "ProfileReadiness"
 		readiness.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(readiness)
-	# Still learning his teammates (row 125): any club's man, a fact.
+	# His chemistry as a bar (row 125): any club's man, a fact.
 	if TeamFamiliarity.line(p) != "":
-		var fam := UiKit.lbl(TeamFamiliarity.line(p), UiKit.BODY, UiKit.TEXT)
+		var fam := UiKit.vbox(2)
 		fam.name = "ProfileFamiliarity"
-		fam.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		fam.add_child(ChemistryMeter.familiarity_row(p, UiKit.club_ink(str(p.get("club", GameState.my_club)))))
+		var fam_cost := UiKit.lbl(TeamFamiliarity.line(p), UiKit.SECONDARY, UiKit.TEXT)
+		fam_cost.name = "ProfileFamiliarityCost"
+		fam_cost.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		fam.add_child(fam_cost)
 		v.add_child(fam)
 	# A run you have promised him (Backing): a fact, not advice.
 	var promise := Backing.note(p) if not rival else ""

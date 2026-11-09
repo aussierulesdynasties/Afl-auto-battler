@@ -1,9 +1,9 @@
 extends SceneTree
-## Team familiarity (row 125), for the director's look, one launch: where the side
-## is picked with four new-club men in it, a man's list row and profile, the trade
-## and free-agency screens, and the draft board. Needs a real renderer:
+## Team familiarity (row 125), for the director's look, one launch: the Team Chemistry
+## meter at 3 men and then at 4 (moved live), the sheet a tap opens, a man's list row and
+## profile, the trade and free-agency screens, and the draft board. Needs a real renderer:
 ##   godot --path . --script tools/visual/capture_familiarity.gd -- --out /tmp/fam [--size 390x844] [--club FRE]
-## Writes <out>_selection.png, _list.png, _profile.png, _trade.png, _agents.png, _draft.png.
+## Writes <out>_meter3.png, _meter4.png, _sheet.png, _list.png, _profile.png, _trade.png, _agents.png, _draft.png.
 
 var W := 390
 var H := 844
@@ -75,17 +75,27 @@ func _run() -> void:
 	# Loaded here: its class needs the autoloads, which a SceneTree script compiles before.
 	var fam: GDScript = load("res://scripts/sim/TeamFamiliarity.gd")
 	var named: Array = state.my_squad().ground.map(func(q): return state.list_player(str(q["id"])))
-	for p in named.slice(0, 4):
+	for p in named.slice(0, 3):
 		fam.arrive_club(p)
 		p["team_fam"] = 70.0
 	fam.arrive_draftee(named[4])
 	named[4]["team_fam"] = 70.0
+	fam.arrive_club(named[5], true)
+	named[5]["team_fam"] = 70.0
 
 	var ui: Control = load("res://scenes/SelectionScene.tscn").instantiate()
 	root.add_child(ui)
 	await _frames()
-	await _show(ui.find_child("TurnoverNote", true, false))
-	await _shot("selection")
+	await _shot("meter3")
+	# The 4th man goes in: the same screen, no rebuild, as a move does it.
+	fam.arrive_club(named[3])
+	named[3]["team_fam"] = 70.0
+	ui.find_child("TeamBuilder", true, false).changed.emit("")
+	await create_timer(0.8).timeout
+	await _shot("meter4")
+	(ui.find_child("ChemistryMeter", true, false) as Button).emit_signal("pressed")
+	await create_timer(0.6).timeout
+	await _shot("sheet")
 	ui.queue_free()
 	await _frames(3)
 
