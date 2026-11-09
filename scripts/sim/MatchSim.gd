@@ -1965,14 +1965,9 @@ func _maybe_report(side: int, offender, victim) -> void:
 ## he takes away. Expected, never rolled.
 func _credit_general_loose(side: int, target: Dictionary, defender: Dictionary, roamer: Dictionary) -> void:
 	var opp := 1 - side
-	var edge := (_a(target, "marking") - _a(defender, "intercept")) / 260.0
-	if _trait(target, "aerial"):
-		edge += 0.05
-	var mark0 := clampf(0.42 + edge, 0.18, 0.70)
-	var mark_r := clampf(0.42 + edge + _roam_mark_shift(roamer), 0.18, 0.70)
-	var spoil_p := clampf(_tv("GENERAL_SPOIL_BASE", GENERAL_SPOIL_BASE)
-			+ (_a(defender, "intercept") - _a(target, "marking")) / 300.0
-			+ (0.06 if _trait(defender, "interceptor") else 0.0), 0.30, 0.82)
+	var mark0 := _general_mark_chance(target, defender, 0.0)
+	var mark_r := _general_mark_chance(target, defender, _roam_mark_shift(roamer))
+	var spoil_p := _general_spoil_chance(target, defender)
 	var denied := (mark0 - mark_r) + (1.0 - mark_r) * (1.0 - spoil_p) * _roam_spoil_p(roamer)
 	var p_r := _roam_chance(opp)
 	_credit(opp, "loose", p_r * denied * TURNOVER_VALUE)
@@ -2326,6 +2321,12 @@ const GENERAL_AERIAL_P := 0.15
 const GENERAL_SPOIL_BASE := 0.82
 ## A general-play marking contest's mark chance, level players.
 const GENERAL_MARK_P := 0.18
+## Clamp bounds, kept well clear of the bases (2026-11-10: the bases had come
+## to sit on a bound and the players' edge did nothing on that side).
+const GENERAL_MARK_MIN := 0.05
+const GENERAL_MARK_MAX := 0.70
+const GENERAL_SPOIL_MIN := 0.30
+const GENERAL_SPOIL_MAX := 0.95
 const GENERAL_MARK_ROLES := {"FWD": 1.0, "MID": 0.85, "DEF": 0.65, "RUCK": 0.70}
 
 
@@ -2803,6 +2804,26 @@ func _kick_in_play_on(taker) -> bool:
 ## A 15m+ kick in general play can bring two players to the drop. The result
 ## is a real mark/spoil/free; a spoil leaves the ball loose rather than gifting
 ## possession to the defender.
+## A general-play marking contest's mark chance. The bounds sit well clear of
+## GENERAL_MARK_P so the players' edge (and the loose man's shift) always moves
+## it; _credit_general_loose reads the same chance.
+func _general_mark_chance(target: Dictionary, defender: Dictionary, roam_shift: float) -> float:
+	var edge := (_a(target, "marking") - _a(defender, "intercept")) / 260.0
+	if _trait(target, "aerial"):
+		edge += 0.05
+	return clampf(_tv("GENERAL_MARK_P", GENERAL_MARK_P) + edge + roam_shift,
+			GENERAL_MARK_MIN, GENERAL_MARK_MAX) * _wx("aerial")
+
+
+## The defender's spoil chance once the mark is not taken. Bounds well clear of
+## GENERAL_SPOIL_BASE so defender quality and the Interceptor trait count.
+func _general_spoil_chance(target: Dictionary, defender: Dictionary) -> float:
+	return clampf(_tv("GENERAL_SPOIL_BASE", GENERAL_SPOIL_BASE)
+			+ (_a(defender, "intercept") - _a(target, "marking")) / 300.0
+			+ (0.06 if _trait(defender, "interceptor") else 0.0),
+			GENERAL_SPOIL_MIN, GENERAL_SPOIL_MAX)
+
+
 func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 	var opp := 1 - side
 	var target = _weighted_roles((squads[side] as Squad).ground, "marking",
@@ -2847,12 +2868,8 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 		return {"outcome": "free", "fp": mark, "actor": infringement["recipient"],
 				"free_side": free_side}
 
-	var mark_edge := (_a(target, "marking") - _a(defender, "intercept")) / 260.0
-	if _trait(target, "aerial"):
-		mark_edge += 0.05
-	if roaming:
-		mark_edge += _roam_mark_shift(roamer)
-	var mark_p := clampf(_tv("GENERAL_MARK_P", GENERAL_MARK_P) + mark_edge, 0.18, 0.70) * _wx("aerial")
+	var mark_p := _general_mark_chance(target, defender,
+			_roam_mark_shift(roamer) if roaming else 0.0)
 	if aerial_rng.randf() < mark_p:
 		_t(side, "marks")
 		_p(target, "marks")
@@ -2873,9 +2890,7 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 			_log_duel(side, target, man, true, mev)
 		return {"outcome": "mark", "fp": mark_fp, "actor": target}
 
-	var spoil_p := clampf(_tv("GENERAL_SPOIL_BASE", GENERAL_SPOIL_BASE)
-			+ (_a(defender, "intercept") - _a(target, "marking")) / 300.0
-			+ (0.06 if _trait(defender, "interceptor") else 0.0), 0.30, 0.82)
+	var spoil_p := _general_spoil_chance(target, defender)
 	var spoilt := aerial_rng.randf() < spoil_p
 	# The defender in it missed: the spare, as the extra body, has his own go.
 	if not spoilt and roaming and _roam_spoil(roamer):
