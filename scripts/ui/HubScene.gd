@@ -1766,13 +1766,21 @@ func _approach_cards() -> Control:
 				CoachMarket._job_word(str(a["from_job"])), CoachMarket._job_word(str(a["job"]))], UiKit.BODY, UiKit.MUTED)
 		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		card.add_child(why)
-		var row := UiKit.hbox(8)
-		var block := GameState.approach_promote_block(i)
-		if block == "":
-			row.add_child(_approach_button(i, "promote", "Offer senior assistant", true))
-		row.add_child(_approach_button(i, "stay", "Ask him to stay"))
-		row.add_child(_approach_button(i, "go", "Let him go"))
-		card.add_child(row)
+		# Each answer: what it gives, what it costs, and how he weighs it
+		# (he stays at 50 or more; no roll). Neither is marked the better one.
+		var job_word := CoachMarket._job_word(str(a["from_job"]))
+		var by := GameState.season_year + CoachMarket.PROMISE_SEASONS
+		if GameState.approach_promote_block(i) == "":
+			card.add_child(_approach_option(i, "promote", "Senior assistant now",
+					"The job is his next season. His %s job opens for you to fill." % job_word))
+		if GameState.approach_promise_block(i) == "":
+			card.add_child(_approach_option(i, "promise", "Promise the job",
+					"Senior assistant by %d. Give the job to anyone else or miss the date, and every later offer to him weighs %d less." % [
+						by, int(round(CoachMarket.BROKEN_TRUST * 100.0))]))
+		card.add_child(_approach_option(i, "stay", "Ask him to stay",
+				"Nothing promised, nothing owed."))
+		card.add_child(_approach_option(i, "go", "Let him go",
+				"He leaves after the season and his %s job opens." % job_word))
 		v.add_child(card)
 	v.add_child(UiKit.rule())
 	return v
@@ -1839,6 +1847,25 @@ func _letter_card() -> Control:
 	v.add_child(row)
 	v.add_child(UiKit.rule())
 	return v
+
+
+## One answer to an approach: the button, then what it gives and costs and
+## how he weighs it.
+func _approach_option(i: int, choice: String, text: String, what: String) -> Control:
+	var row := UiKit.vbox(2)
+	row.add_child(_approach_button(i, choice, text))
+	var col := UiKit.vbox(0)
+	if choice != "go":
+		var w := GameState.approach_weight(i, choice)
+		var odds := UiKit.lbl("He weighs it %d of 100: %s" % [w, "stays" if w >= int(CoachMarket.STAY_BAR * 100.0) else "goes"],
+				UiKit.SMALL, UiKit.TEXT, true)
+		odds.name = "Approach_%d_%s_weight" % [i, choice]
+		col.add_child(odds)
+	var line := UiKit.lbl(what, UiKit.SMALL, UiKit.TEXT)
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(line)
+	row.add_child(col)
+	return row
 
 
 func _approach_button(i: int, choice: String, text: String, primary := false) -> Button:
