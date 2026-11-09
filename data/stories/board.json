@@ -151,6 +151,7 @@
 	},
 	{
 		"id": "board_billboards",
+		"weight": 6,
 		"category": "board",
 		"subject": {
 			"kind": "club"
