@@ -350,6 +350,13 @@ func _list_row(p: Dictionary) -> Control:
 		mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		who.add_child(mark)
 		row.custom_minimum_size = Vector2(0, 74)
+	# His familiarity (row 125): a line of its own, the same way.
+	if TeamFamiliarity.tag(p) != "":
+		var fam := UiKit.ellipsis(TeamFamiliarity.tag(p), UiKit.SMALL, UiKit.TEXT)
+		fam.name = "RowFamiliarity"
+		fam.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		who.add_child(fam)
+		row.custom_minimum_size = Vector2(0, 92 if GameState.is_untouchable(str(p["id"])) else 74)
 	var status := _status(p)
 	if str(status[0]) != "":
 		var st := UiKit.line(str(status[0]), UiKit.SMALL, status[1], true)

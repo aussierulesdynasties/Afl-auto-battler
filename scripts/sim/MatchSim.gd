@@ -140,6 +140,10 @@ var energy := {}
 ## fit() by player id, with the energy it was computed at (a changed energy recomputes);
 ## it is asked about half a million times a round of matches. The same numbers, computed once.
 var _fit_cache := {}
+## Team familiarity (TeamFamiliarity): the whole-game form cut each man plays with,
+## his own plus his side's, by id, and each side's team-wide part (for the harness).
+var _fam_cut := {}
+var team_fam_cut := [0.0, 0.0]
 var rotation_policy := ["normal", "normal"]
 ## A side's season fitness plan when it rotates itself each quarter
 ## (auto_rotation at every break); "" leaves rotation_policy as set.
@@ -466,6 +470,9 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 		standing[side] = (squads[side] as Squad).usual_plan if (squads[side] as Squad).usual_plan != "" \
 				else PlanFit.standing_plan((squads[side] as Squad).ground, (squads[side] as Squad).plan_know)
 		duels[side] = Matchups.defaults((squads[1 - side] as Squad).ground, (squads[side] as Squad).ground)
+		var named: Array = (squads[side] as Squad).ground + (squads[side] as Squad).bench
+		team_fam_cut[side] = TeamFamiliarity.team_cut(named)
+		_fam_cut.merge(TeamFamiliarity.side_cuts(named))
 		for plan in PlanFit.LEAGUE:
 			(plan_fit[side] as Dictionary)[plan] = PlanFit.fit((squads[side] as Squad).ground, plan)
 		for p in (squads[side] as Squad).ground:
@@ -4714,6 +4721,7 @@ func fit(p: Dictionary) -> float:
 	if (current_quarter >= 4 or finals_mode) and _trait(p, "big_game"):
 		f += 0.05
 	f += ClubLife.form(p)
+	f -= float(_fam_cut.get(id, 0.0))
 	_fit_cache[id] = [e, f]
 	return f
 

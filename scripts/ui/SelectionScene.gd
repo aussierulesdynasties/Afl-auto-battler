@@ -25,6 +25,7 @@ var _undo := {}            # the side before the last Auto-pick, for Undo
 var _view := "mine"        # "mine" or "opp": the oval shows them, read-only
 var _line_cache := {}      # the other clubs' lines, built once a visit
 var _wide := false
+var _chemistry: Control           # the Team Chemistry sheet, open over the side
 
 
 func _ready() -> void:
@@ -186,6 +187,8 @@ func _side_page(auto: bool) -> Control:
 		_fill_actions(actions)
 		builder.interchange_actions = actions
 		builder.hint_extra = "Picked for you each week until you move someone." if auto else ""
+		# Team Chemistry (row 125), read at a glance above the oval; a tap says why.
+		page.add_child(ChemistryMeter.meter(_open_chemistry))
 		page.add_child(builder)
 		builder.setup(GameState.current_side(), _wide)
 	builder.inspect.connect(_open_profile)
@@ -221,6 +224,19 @@ func _fill_actions(actions: HBoxContainer) -> void:
 		actions.add_child(undo)
 
 
+func _open_chemistry() -> void:
+	_close_chemistry()
+	_chemistry = ChemistryMeter.open(self, func(): _chemistry = null)
+
+
+func _close_chemistry() -> bool:
+	var was := _chemistry != null and is_instance_valid(_chemistry)
+	if was:
+		_chemistry.queue_free()
+	_chemistry = null
+	return was
+
+
 ## After a move: the week and the actions beside the interchange, without
 ## rebuilding the builder (or losing your place in it).
 func _refresh_facts() -> void:
@@ -232,6 +248,9 @@ func _refresh_facts() -> void:
 	if actions != null:
 		UiKit.clear(actions)
 		_fill_actions(actions)
+	var meter: Button = _root.find_child("ChemistryMeter", true, false)
+	if meter != null:
+		ChemistryMeter.refresh(meter)
 
 
 ## Their player's profile: who he is and how he plays, nothing to change.
@@ -292,6 +311,8 @@ func handle_back() -> bool:
 		return true
 	if _sheet != null and is_instance_valid(_sheet):
 		_close_profile()
+		return true
+	if _close_chemistry():
 		return true
 	return _week != null and _week.close_overlay()
 

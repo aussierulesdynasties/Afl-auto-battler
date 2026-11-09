@@ -299,6 +299,7 @@ static func _take(gs, code: String, p: Dictionary) -> void:
 	var rec: Dictionary = gs.rookie_draft
 	var from := MidseasonDraft.from_word(gs, p)
 	var id := str(p["id"])
+	var drafted: bool = not gs.free_agents.has(p)
 	if gs.free_agents.has(p):
 		gs.free_agents.erase(p)
 		p.erase("offers")
@@ -313,6 +314,8 @@ static func _take(gs, code: String, p: Dictionary) -> void:
 		p["xp"] = 0
 		p["xp_games"] = 0
 	gs._join(code, p)
+	if drafted:
+		TeamFamiliarity.arrive_draftee(p)
 	p["rookie_list"] = "A"
 	p["contract_years"] = deal_years(p)
 	p["salary"] = wage(gs.season_year)
