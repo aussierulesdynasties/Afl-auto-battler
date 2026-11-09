@@ -1015,22 +1015,18 @@ static func _running_words(d: int, facts := {}) -> String:
 ## pre-season facts (drill_plan, drill_level, drill_credit).
 static func _drill_words(d: int, facts := {}) -> String:
 	var head := "%s more week%s on the game plan" % [_count(d).capitalize(), "" if d == 1 else "s"]
-	var step := int(PreSeason.tune("drill_step_weeks"))
 	if not facts.has("drill_plan"):
-		return "%s: every %d weeks of drilling raises the side's fluency in a plan one step (low, medium, high)." % [head, step]
+		return "%s: every %d weeks of drilling raises the side's fluency in a plan one step (low, medium, high)." % [head, int(PreSeason.tune("drill_step_weeks"))]
 	var plan := str(facts["drill_plan"])
-	var base := int(facts.get("drill_level", PreSeason.WELL))
+	var base := float(facts.get("drill_level", PreSeason.WELL))
 	var credit := float(facts.get("drill_credit", 0.0))
-	var l0 := PreSeason.drilled_level(base, credit)
-	var l1 := PreSeason.drilled_level(base, credit + float(d))
+	var l0 := PreSeason.drilled_fluency(base, credit)
+	var l1 := PreSeason.drilled_fluency(base, credit + float(d))
 	if l1 != l0:
 		return "%s: the side's fluency in %s goes from %s to %s, so the plan works at %d%% of its strength instead of %d%%." % [
-				head, plan, PreSeason.fluency_word(l0), PreSeason.fluency_word(l1),
+				head, plan, PreSeason.fluency_long(l0), PreSeason.fluency_long(l1),
 				roundi(PreSeason.familiar_mult(l1) * 100.0), roundi(PreSeason.familiar_mult(l0) * 100.0)]
-	if l0 >= PreSeason.WELL:
-		return "%s: the side already knows %s as well as it can (high fluency), so it gains nothing more." % [head, plan]
-	return "%s: not enough on its own to lift the side's fluency in %s from %s (a step takes %d weeks)." % [
-			head, plan, PreSeason.fluency_word(l0), step]
+	return "%s: the side already knows %s as well as it can (high fluency), so it gains nothing more." % [head, plan]
 
 
 ## A role trial: where he plays and for how long.

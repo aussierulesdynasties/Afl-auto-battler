@@ -29,6 +29,10 @@ func run() -> void:
 	_t("_test_group_credit")
 	_t("_test_group_old_saves")
 	await _t("_test_group_screen")
+	_t("_test_part_rules")
+	_t("_test_part_carry")
+	_t("_test_part_save")
+	await _t("_test_part_screen")
 	PreSeason.reload()
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
@@ -63,7 +67,7 @@ func _levels() -> String:
 	codes.sort()
 	for c in codes:
 		for plan in ["balanced"] + PreSeason.DRILL_PLANS:
-			rows.append("%s/%s/%d" % [c, plan, int(GameState.plan_known[c].get(plan, -1))])
+			rows.append("%s/%s/%.2f" % [c, plan, float(GameState.plan_known[c].get(plan, -1))])
 	return ",".join(rows)
 
 
@@ -135,11 +139,11 @@ func _test_rules() -> void:
 	_check(PreSeason.clean_drills(["balanced"]).is_empty() and PreSeason.clean_drills("x").is_empty(),
 			"Balanced is not drilled, and bad input is nothing")
 	var one := PreSeason.drill_credit([["solid", "running"], ["solid", "plan", ["contest"]], ["solid", "skills"]])
-	_check(is_equal_approx(float(one["contest"]), 2.0) and PreSeason.drill_steps(2.0) == 1 and PreSeason.drill_steps(1.99) == 0,
+	_check(is_equal_approx(float(one["contest"]), 2.0) and PreSeason.drilled_level(0, 2.0) == 1 and PreSeason.drilled_level(0, 1.9) == 0,
 			"Two weeks drilling one plan is one step")
 	var two := PreSeason.drill_credit([["solid", "plan", ["contest", "attacking"]], ["solid", "skills"], ["solid", "skills"]])
 	_check(is_equal_approx(float(two["contest"]), 1.5) and PreSeason.drilled_level(0, 1.5) == 0,
-			"Two plans in a three-week block share it: neither moves up")
+			"Two plans in a three-week block share it: neither reaches the next level")
 	var both := PreSeason.drill_credit([["solid", "plan", ["contest", "attacking"]], ["solid", "plan", ["contest", "attacking"]],
 			["solid", "skills"]])
 	_check(PreSeason.drilled_level(0, float(both["contest"])) == 1 and PreSeason.drilled_level(1, 3.0) == 2
@@ -238,7 +242,7 @@ func _test_drilling() -> void:
 	_check(not GameState.set_preseason_drills(0, ["balanced"]) and GameState.preseason_drills(0) == ["contest", "controlled"],
 			"...and Balanced cannot be drilled")
 	_check(GameState.plan_level_after_drills("contest") == 1 and GameState.plan_level_after_drills("controlled") == 1,
-			"Three weeks shared by two plans moves neither (the page says so before it is trained)")
+			"Three weeks shared by two plans takes neither to the next level (the page says so before it is trained)")
 	_check(GameState.set_preseason_drills(0, ["contest"]) and GameState.plan_level_after_drills("contest") == 2,
 			"...but three weeks on one plan lifts it to well")
 	GameState.set_preseason_block(1, "solid", "plan")
@@ -472,10 +476,10 @@ func _test_screens() -> void:
 	var third := scene.find_child("Drill0_controlled", true, false) as Button
 	_check(await _tap(third, "a third plan"), "A third takes the first's place")
 	_check(GameState.preseason_drills(0) == ["contest", "controlled"], "...so the block drills the last two chosen")
-	_check(contest.text == "Win Contest\nmedium", "Three weeks shared by two plans: neither is lifted")
+	_check(contest.text == "Win Contest\nmedium\nRd 1: 75% to high", "Three weeks shared by two plans: each goes part of the way: " + contest.text)
 	await _tap(scene.find_child("Drill0_controlled", true, false) as Button, "let a plan go")
 	_check(GameState.preseason_drills(0) == ["contest"], "A tap on a chosen plan lets it go")
-	_check(contest.text == "Win Contest\nmedium, high by Round 1", "...and with one plan drilled the button says where it ends up")
+	_check(contest.text == "Win Contest\nmedium\nRd 1: high", "...and with one plan drilled the button says where it ends up")
 	_check((scene.find_child("Drill0_attacking", true, false) as Button).text == "Attack Corridor\nhigh",
 			"The plan you play has high fluency")
 	_check(_fits(scene, 390.0), "...and nothing runs off a phone's width")
@@ -637,6 +641,174 @@ func _test_group_screen() -> void:
 	_check(not bool(contest.get_meta("chosen", false)) and "Forwards: Attack Corridor and Win Contest" in _label(scene, "DrillSplit0"),
 			"...which marks no plan and names the split: " + _label(scene, "DrillSplit0"))
 	_check(_fits(scene, 360.0), "...and nothing runs off a phone's width")
+
+
+# ---------------------------------------------------------------------------
+# Row 126 (director, 2026-11-08: "Partial weeks count"): weeks short of a step go
+# into the season as part of one, and the plan button says how far along it is.
+func _test_part_rules() -> void:
+	PreSeason.reload()
+	var two := PreSeason.drill_credit([["solid", "running"], ["solid", "plan", ["contest", "attacking"]], ["solid", "skills"]])
+	_check(is_equal_approx(float(two["contest"]), 1.0) and is_equal_approx(PreSeason.drilled_fluency(1.0, float(two["contest"])), 1.5),
+			"A two-week block split between two plans gives each half a step")
+	_check(PreSeason.drilled_fluency(0.5, 1.0) == 1.0 and PreSeason.drilled_fluency(1.75, 3.0) == 2.0,
+			"Parts add up to a step, and high is the top")
+	_check(PreSeason.drilled_fluency(0.0, 2.0 / 3.0 + 2.0 / 3.0 + 2.0 / 3.0) == 1.0,
+			"Thirds of a block that make a step are a step, not 99% of one")
+	_check(PreSeason.fluency_short(1.0) == "medium" and PreSeason.fluency_short(1.5) == "50% to high"
+			and PreSeason.fluency_short(0.25) == "25% to medium" and PreSeason.fluency_short(2.0) == "high",
+			"The button's words")
+	_check(PreSeason.fluency_long(0.5) == "50% of the way to medium" and PreSeason.fluency_long(0.0) == "low", "...and a sentence's")
+	_check(PreSeason.known_line(1.5) == "Plan fluency: 50% to high" and PreSeason.known_line(1) == "Plan fluency: medium",
+			"The plan tile's line")
+	var a := PreSeason.familiar_mult(1)
+	var b := PreSeason.familiar_mult(2)
+	_check(is_equal_approx(PreSeason.familiar_mult(1.5), (a + b) / 2.0) and PreSeason.familiar_mult(1.25) < PreSeason.familiar_mult(1.5),
+			"Part of a step plays that part of the way between the levels")
+	var slipped := PreSeason.slip_levels({"contest": 1.5, "attacking": 0.5, "balanced": 2})
+	_check(float(slipped["contest"]) == 0.5 and float(slipped["attacking"]) == 0.0 and int(slipped["balanced"]) == 2,
+			"The off-season slips a whole step, the part with it, and never below low")
+	var low_part := _sim({"attacking": PreSeason.familiar_mult(0.5)}, {}, "attacking", "balanced")
+	var low := _sim({"attacking": PreSeason.familiar_mult(0)}, {}, "attacking", "balanced")
+	var medium := _sim({"attacking": PreSeason.familiar_mult(1)}, {}, "attacking", "balanced")
+	_check(low_part._pv(0, "goal") > low._pv(0, "goal") and low_part._pv(0, "goal") < medium._pv(0, "goal"),
+			"In the match itself a half step is more of the plan than low, less than medium")
+	var se = load("res://scripts/sim/StoryEngine.gd")
+	var one: String = se._drill_words(1, {"drill_plan": "Win Contest", "drill_level": 1.0, "drill_credit": 0.0})
+	_check("from medium to 50% of the way to high" in one and "works at 98% of its strength instead of 95%" in one,
+			"A card's extra week is worth part of a step, and says so: " + one)
+	var top: String = se._drill_words(1, {"drill_plan": "Win Contest", "drill_level": 2.0, "drill_credit": 0.0})
+	_check("nothing more" in top, "...and at the top it says there is nothing to gain")
+
+
+func _test_part_carry() -> void:
+	PreSeason.reload()
+	_career(false)
+	GameState.set_club_plan("attacking")
+	GameState.open_preseason()
+	GameState.news.clear()
+	GameState.set_preseason_block(1, "solid", "plan")
+	GameState.set_preseason_drills(1, ["contest", "controlled"])
+	_check(GameState.plan_fluency_after_drills("contest") == 1.5, "The page knows where the split block leaves a plan")
+	_press_on()
+	_check(GameState.plan_fluency(CLUB, "contest") == 1.5 and GameState.plan_fluency(CLUB, "controlled") == 1.5,
+			"A two-week block split between two plans moves both, carried into the season")
+	_check(GameState.plan_level(CLUB, "contest") == 1, "...still medium to whatever asks for the level")
+	_check(GameState.plan_fluency(CLUB, "defensive") == 1.0, "...and a plan nobody drilled is as it was")
+	var news := ""
+	for n in GameState.news:
+		news += str(n).to_lower() + " "
+	_check("fluency in win contest is now 50% of the way to high" in news, "The club's news says how far: " + news.left(160))
+	GameState._refresh_coach_tactics()
+	var sq := Squad.new("A", GameDB.club_list(CLUB), true, CLUB)
+	CoachEffects.apply(sq)
+	_check(is_equal_approx(float(sq.plan_know.get("contest", 0.0)), PreSeason.familiar_mult(1.5))
+			and is_equal_approx(float(sq.plan_know.get("defensive", 0.0)), PreSeason.familiar_mult(1)),
+			"The match squad carries the part step: %s" % [sq.plan_know])
+	_check(GameState.plan_known_line("contest") == "Plan fluency: 50% to high", "The season's plan line says it")
+	# Fade: a whole step, the part with it.
+	PreSeason.data()["fade_rounds"] = 1
+	GameState.advance()
+	_check(GameState.plan_fluency(CLUB, "contest") == 0.5, "An unplayed plan fades a whole step and keeps its part")
+	PreSeason.reload()
+	# Next year: what is left of the part meets the next pre-season's weeks.
+	GameState.plan_known[CLUB]["contest"] = 1.5
+	GameState.set_club_plan("attacking")
+	_finish_season()
+	GameState.plan_known[CLUB]["contest"] = 1.5
+	_roll()
+	_check(GameState.plan_fluency(CLUB, "contest") == 0.5, "Over the off-season the plan slips a step and the part stays")
+	GameState.preseason_add_drill(1)
+	_check(GameState.plan_fluency_after_drills(GameState.card_drill_plan()) >= 0.5, "A card's one week now counts")
+	GameState.set_preseason_block(1, "solid", "plan")
+	GameState.set_preseason_drills(1, ["contest", "controlled"])
+	_check(GameState.plan_fluency_after_drills("contest") == 1.0, "A second split block finishes the step the first began")
+	_press_on()
+	_check(GameState.plan_level(CLUB, "contest") == 1 and GameState.plan_fluency(CLUB, "contest") == 1.0, "...and the level moves")
+	# Rival clubs by the same rule.
+	var ai := str(GameState.season.clubs[0]) if str(GameState.season.clubs[0]) != CLUB else str(GameState.season.clubs[1])
+	var row: Dictionary = (GameState.preseason["clubs"] as Dictionary)[ai]
+	row["blocks"] = [["solid", "running"], ["solid", "plan", ["contest", "attacking"]], ["solid", "skills"]]
+	var before: float = float(GameState.plan_known[ai]["contest"])
+	GameState._finish_drills()
+	_check(GameState.plan_fluency(ai, "contest") == PreSeason.drilled_fluency(before, 1.0) and GameState.plan_fluency(ai, "contest") != before or before >= 2.0,
+			"A rival club's split block counts by the same rule (%.2f to %.2f)" % [before, GameState.plan_fluency(ai, "contest")])
+
+
+func _test_part_save() -> void:
+	PreSeason.reload()
+	_career()
+	GameState.plan_known[CLUB]["contest"] = 1.37
+	GameState.plan_known[CLUB]["defensive"] = PreSeason.drilled_fluency(0.0, 2.0 * 0.123)
+	var f1: float = GameState.plan_fluency(CLUB, "defensive")
+	GameState.save_career()
+	_check(GameState.load_career(), "A career with a part step saves and loads")
+	_check(GameState.plan_fluency(CLUB, "contest") == 1.37 and GameState.plan_fluency(CLUB, "defensive") == f1,
+			"...and the part comes back the very same number (%.17f, %.17f)" % [GameState.plan_fluency(CLUB, "contest"), GameState.plan_fluency(CLUB, "defensive")])
+	# A save from before part steps holds whole levels.
+	var state := CareerSave.read(GameState.save_path)
+	state["plan_known"] = {CLUB: {"balanced": 2, "attacking": 2, "defensive": 0, "contest": 1, "controlled": 1}}
+	state["plan_idle"] = {CLUB: {"contest": 3}}
+	CareerSave.write(state, GameState._save_meta(), GameState.save_path)
+	_check(GameState.load_career(), "An old save with whole levels loads")
+	_check(GameState.plan_fluency(CLUB, "contest") == 1.0 and GameState.plan_level(CLUB, "defensive") == 0
+			and GameState.plan_known_line("contest") == "Plan fluency: medium" and int(GameState.plan_idle[CLUB]["contest"]) == 3,
+			"...its levels are what they were, in the same words")
+	GameState.set_preseason_block(1, "solid", "plan")
+	GameState.set_preseason_drills(1, ["contest", "controlled"])
+	_press_on()
+	_check(GameState.plan_fluency(CLUB, "contest") == 1.5, "...and its next split block carries like any other")
+	var bad := CareerSave.read(GameState.save_path)
+	bad["plan_known"] = {CLUB: {"contest": 7.5, "attacking": -0.5}}
+	CareerSave.write(bad, GameState._save_meta(), GameState.save_path)
+	GameState.load_career()
+	_check(GameState.plan_fluency(CLUB, "contest") == 2.0 and GameState.plan_fluency(CLUB, "attacking") == 0.0,
+			"A damaged part step is clamped")
+
+
+func _test_part_screen() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.size = Vector2i(390, 844)
+	PreSeason.reload()
+	_career(false)
+	GameState.set_club_plan("attacking")
+	GameState.open_preseason()
+	GameState.set_setting("seen_weekly_loop_intro", true)
+	GameState.plan_known[CLUB]["defensive"] = 0.5
+	var scene: Control = await _open(tree)
+	_check(await _tap(scene.find_child("Focus1_plan", true, false) as Button, "Game plan on the two-week block"), "A finger sets the two-week block to Game plan")
+	var contest := scene.find_child("Drill1_contest", true, false) as Button
+	_check(contest.text == "Win Contest\nmedium", "Before any drilling a plan says where it stands: " + contest.text.replace("\n", " / "))
+	_check((scene.find_child("Drill1_defensive", true, false) as Button).text == "Defensive Press\n50% to medium",
+			"...and one part way says how far along")
+	var h0: float = contest.size.y
+	_check(await _tap(contest, "Win Contest to split the block"), "A finger splits the block with Win Contest")
+	_check(GameState.preseason_drills(1) == ["attacking", "contest"], "...two plans on two weeks")
+	_check(contest.text == "Win Contest\nmedium\nRd 1: 50% to high", "The button says how far along the week leaves it: " + contest.text.replace("\n", " / "))
+	_check(contest.size.y == h0, "...on a button that keeps its height (%.0f, %.0f)" % [h0, contest.size.y])
+	# Every line fits a button, at its own font, and three lines fit its height.
+	var font: Font = contest.get_theme_font("font")
+	var fsize: int = contest.get_theme_font_size("font_size")
+	var room: float = contest.size.x - contest.get_theme_stylebox("normal").get_margin(SIDE_LEFT) - contest.get_theme_stylebox("normal").get_margin(SIDE_RIGHT)
+	# The longest third line there can be, in the chosen button's bold font, less the
+	# room a desktop window's scrollbar takes (a capture cut a line this test passed).
+	var widest := 0.0
+	for line in ["Rd 1: " + PreSeason.fluency_short(0.5)] + Array(contest.text.split("\n")):
+		widest = maxf(widest, UiKit.BOLD.get_string_size(str(line), HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x)
+	_check(widest <= room - 16.0, "No line is cut short (widest %.0f of %.0f)" % [widest, room - 16.0])
+	_check(font.get_height(fsize) * 3.0 <= contest.size.y, "...and three lines fit its height (%.0f of %.0f)" % [font.get_height(fsize) * 3.0, contest.size.y])
+	_check(_fits(scene, 390.0), "...and nothing runs off a phone's width")
+	GameState.preseason_sim_to_round1()
+	var tiles := PlanTiles.grid(2, [], [])
+	# The two-column grid at the narrowest phone's page width (320 less its gutters).
+	tiles.custom_minimum_size = Vector2(288, 0)
+	tree.root.add_child(tiles)
+	await _frames(tree, 2)
+	var known := tiles.find_child("ClubPlan_contest", true, false).find_child("Known", true, false) as Label
+	_check(known.text == "Plan fluency: 50% to high", "After the pre-season the plan tile carries it: " + known.text)
+	_check(known.get_theme_font("font").get_string_size(known.text, HORIZONTAL_ALIGNMENT_LEFT, -1, known.get_theme_font_size("font_size")).x <= known.size.x + 0.5,
+			"...in full on the tile (%.0f of %.0f)" % [known.get_theme_font("font").get_string_size(known.text, HORIZONTAL_ALIGNMENT_LEFT, -1, known.get_theme_font_size("font_size")).x, known.size.x])
+	tiles.queue_free()
 
 
 ## The space between one tab's name and the next, left to right (each name
