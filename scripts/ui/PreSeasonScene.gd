@@ -791,13 +791,13 @@ func _drill_row(i: int) -> Control:
 
 
 ## How well the side knows a plan, and on a line of its own where the drilling
-## set leaves it: "medium", or "medium" then "50% to high by Round 1".
+## set leaves it: "medium", or "medium" then "Rd 1: 50% to high".
 func _knows_words(plan: String) -> String:
 	var now: float = GameState.plan_fluency(GameState.my_club, plan)
 	var after: float = GameState.plan_fluency_after_drills(plan)
 	var t := PreSeason.fluency_short(now)
 	if after != now:
-		t += "\n%s by Round 1" % PreSeason.fluency_short(after)
+		t += "\nRd 1: %s" % PreSeason.fluency_short(after)
 	return t
 
 

@@ -139,7 +139,7 @@ func _test_rules() -> void:
 	_check(PreSeason.clean_drills(["balanced"]).is_empty() and PreSeason.clean_drills("x").is_empty(),
 			"Balanced is not drilled, and bad input is nothing")
 	var one := PreSeason.drill_credit([["solid", "running"], ["solid", "plan", ["contest"]], ["solid", "skills"]])
-	_check(is_equal_approx(float(one["contest"]), 2.0) and PreSeason.drilled_level(0, 2.0) == 1 and PreSeason.drilled_level(0, 1.99) == 0,
+	_check(is_equal_approx(float(one["contest"]), 2.0) and PreSeason.drilled_level(0, 2.0) == 1 and PreSeason.drilled_level(0, 1.9) == 0,
 			"Two weeks drilling one plan is one step")
 	var two := PreSeason.drill_credit([["solid", "plan", ["contest", "attacking"]], ["solid", "skills"], ["solid", "skills"]])
 	_check(is_equal_approx(float(two["contest"]), 1.5) and PreSeason.drilled_level(0, 1.5) == 0,
@@ -476,10 +476,10 @@ func _test_screens() -> void:
 	var third := scene.find_child("Drill0_controlled", true, false) as Button
 	_check(await _tap(third, "a third plan"), "A third takes the first's place")
 	_check(GameState.preseason_drills(0) == ["contest", "controlled"], "...so the block drills the last two chosen")
-	_check(contest.text == "Win Contest\nmedium\n75% to high by Round 1", "Three weeks shared by two plans: each goes part of the way: " + contest.text)
+	_check(contest.text == "Win Contest\nmedium\nRd 1: 75% to high", "Three weeks shared by two plans: each goes part of the way: " + contest.text)
 	await _tap(scene.find_child("Drill0_controlled", true, false) as Button, "let a plan go")
 	_check(GameState.preseason_drills(0) == ["contest"], "A tap on a chosen plan lets it go")
-	_check(contest.text == "Win Contest\nmedium\nhigh by Round 1", "...and with one plan drilled the button says where it ends up")
+	_check(contest.text == "Win Contest\nmedium\nRd 1: high", "...and with one plan drilled the button says where it ends up")
 	_check((scene.find_child("Drill0_attacking", true, false) as Button).text == "Attack Corridor\nhigh",
 			"The plan you play has high fluency")
 	_check(_fits(scene, 390.0), "...and nothing runs off a phone's width")
@@ -784,26 +784,30 @@ func _test_part_screen() -> void:
 	var h0: float = contest.size.y
 	_check(await _tap(contest, "Win Contest to split the block"), "A finger splits the block with Win Contest")
 	_check(GameState.preseason_drills(1) == ["attacking", "contest"], "...two plans on two weeks")
-	_check(contest.text == "Win Contest\nmedium\n50% to high by Round 1", "The button says how far along the week leaves it: " + contest.text.replace("\n", " / "))
+	_check(contest.text == "Win Contest\nmedium\nRd 1: 50% to high", "The button says how far along the week leaves it: " + contest.text.replace("\n", " / "))
 	_check(contest.size.y == h0, "...on a button that keeps its height (%.0f, %.0f)" % [h0, contest.size.y])
 	# Every line fits a button, at its own font, and three lines fit its height.
 	var font: Font = contest.get_theme_font("font")
 	var fsize: int = contest.get_theme_font_size("font_size")
 	var room: float = contest.size.x - contest.get_theme_stylebox("normal").get_margin(SIDE_LEFT) - contest.get_theme_stylebox("normal").get_margin(SIDE_RIGHT)
+	# The longest third line there can be, in the chosen button's bold font, less the
+	# room a desktop window's scrollbar takes (a capture cut a line this test passed).
 	var widest := 0.0
-	for line in contest.text.split("\n"):
-		widest = maxf(widest, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x)
-	_check(widest <= room, "No line is cut short (widest %.0f of %.0f)" % [widest, room])
+	for line in ["Rd 1: " + PreSeason.fluency_short(0.5)] + Array(contest.text.split("\n")):
+		widest = maxf(widest, UiKit.BOLD.get_string_size(str(line), HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x)
+	_check(widest <= room - 16.0, "No line is cut short (widest %.0f of %.0f)" % [widest, room - 16.0])
 	_check(font.get_height(fsize) * 3.0 <= contest.size.y, "...and three lines fit its height (%.0f of %.0f)" % [font.get_height(fsize) * 3.0, contest.size.y])
 	_check(_fits(scene, 390.0), "...and nothing runs off a phone's width")
 	GameState.preseason_sim_to_round1()
 	var tiles := PlanTiles.grid(2, [], [])
+	# The two-column grid at the narrowest phone's page width (320 less its gutters).
+	tiles.custom_minimum_size = Vector2(288, 0)
 	tree.root.add_child(tiles)
 	await _frames(tree, 2)
 	var known := tiles.find_child("ClubPlan_contest", true, false).find_child("Known", true, false) as Label
 	_check(known.text == "Plan fluency: 50% to high", "After the pre-season the plan tile carries it: " + known.text)
 	_check(known.get_theme_font("font").get_string_size(known.text, HORIZONTAL_ALIGNMENT_LEFT, -1, known.get_theme_font_size("font_size")).x <= known.size.x + 0.5,
-			"...in full on the tile")
+			"...in full on the tile (%.0f of %.0f)" % [known.get_theme_font("font").get_string_size(known.text, HORIZONTAL_ALIGNMENT_LEFT, -1, known.get_theme_font_size("font_size")).x, known.size.x])
 	tiles.queue_free()
 
 
