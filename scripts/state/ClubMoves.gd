@@ -518,6 +518,9 @@ static func apply_move(gs) -> void:
 	HonourBoard.change_club(gs, from, to)
 	gs.my_club = to
 	gs.board = {"confidence": ClubLife.START_CONFIDENCE, "warned": false, "sacked": false, "history": hist}
+	# The old board's press move stays with the old board: nothing of it fades
+	# into, or stacks on, the new one (bug-bash 2).
+	gs.media_memory.erase("board_lift")
 	gs.staff_vacancies = []
 	gs.coach_approaches = []
 	gs.trade_requests = {}

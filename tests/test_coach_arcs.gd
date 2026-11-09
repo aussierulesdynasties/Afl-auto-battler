@@ -360,7 +360,13 @@ func _test_sacked_way_back() -> void:
 			"sacked: the sacking is on his record and the reprieve is spent: %s" % str(st["coach"]))
 	_check((st["offers"] as Array).is_empty(), "sacked: the offers are gone once he chooses")
 	_check(str(st["done"].get("assistant", {}).get("ending", "")) == "took_job", "assistant: resolves 'took_job': %s" % str(st["done"].get("assistant", {})))
+	# Bug-bash 2 (2026-11-10): the old board's press move stays with the old
+	# board; the new board starts clean and fades nothing from it.
+	GameState.media_memory["board_lift"] = 3
 	_check(GameState.start_next_season(), "sacked: the season rolls on")
+	_check(not GameState.media_memory.has("board_lift") and GameState.board_confidence() == ClubLife.START_CONFIDENCE,
+			"sacked: the old board's press move is gone at the new club (%s, %d)" % [
+			str(GameState.media_memory.get("board_lift")), GameState.board_confidence()])
 	st = GameState.coach_arcs
 	sa = GameState.coaches.get(sa_id, {})
 	_check(GameState.my_club == to, "sacked: he coaches %s now" % to)

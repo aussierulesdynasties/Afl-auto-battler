@@ -58,6 +58,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_youth_only_drafts")
 	_t("_test_youth_only_midseason")
 	await _t("_test_undrafted_chance")
+	_t("_test_arrivals_need_senior_spot")
 	GameState.replay_seed = 0
 	print(Ran.line("Rookie list", self))
 
@@ -621,3 +622,85 @@ func _test_undrafted_chance() -> void:
 	_check((gs.rookie_draft.get("picks", []) as Array).any(
 			func(k): return str(k["id"]) == pid and str(k["club"]) == CLUB),
 			"...and the Rookie Draft record keeps your pick")
+
+
+## Bug-bash 1 (2026-11-10): a signing or a trade lands a player on the senior
+## list, so it needs a senior spot (38), not a spot anywhere on the 44. A club
+## with 38 seniors and a free rookie spot cannot sign a free agent or take more
+## seniors than it gives in a trade; every club, rivals too.
+func _set_seniors(code: String, n: int) -> Array:
+	var list: Array = gs.season.lists[code]
+	var donors: Array = gs.season.lists["STK" if code != "STK" else "GEE"]
+	while RookieList.rookie_count(list) >= RookieList.CAT_A_SPOTS:
+		for q in list:
+			if RookieList.is_rookie(q):
+				list.erase(q)
+				break
+	while RookieList.senior_count(list) > n:
+		for q in list:
+			if not RookieList.is_rookie(q):
+				list.erase(q)
+				break
+	while RookieList.senior_count(list) < n:
+		var q: Dictionary = donors.pop_back()
+		q.erase("rookie_list")
+		q["club"] = code
+		list.append(q)
+	return list
+
+
+func _test_arrivals_need_senior_spot() -> void:
+	_new_career()
+	gs.season.round_index = gs.season.fixture.size()
+	gs.offseason_year = gs.season_year
+	_check(gs.offseason_open(), "(setup) the off-season is open")
+	gs.salary_cap += 50000000
+	var mine := _set_seniors(CLUB, RookieList.SENIOR_SPOTS)
+	_check(mine.size() < Contracts.MAX_LIST and RookieList.senior_count(mine) == RookieList.SENIOR_SPOTS,
+			"(setup) your senior list is full (%d), your list is not (%d)" % [RookieList.senior_count(mine), mine.size()])
+	var gee: Array = gs.season.lists["GEE"]
+	var fa: Dictionary = gee[gee.size() - 1]
+	gs._release("GEE", fa, false, false)
+	_check(gs.free_agents.has(fa), "(setup) a free agent")
+	var r: Dictionary = gs.offer_free_agent(str(fa["id"]), Contracts.asking_salary(fa), 2)
+	_check(not bool(r["ok"]) and str(r["reason"]).contains("senior list is full"),
+			"Free agency: no offer with 38 seniors (%s)" % str(r.get("reason", "")))
+	# He decides: your standing offer cannot be honoured; the rival's can.
+	var rival := "MEL"
+	_set_seniors(rival, RookieList.SENIOR_SPOTS - 1)
+	fa["offers"] = [{"club": CLUB, "salary": Contracts.SENIOR_MIN_2027 * 3, "years": 2, "role": "ground", "finish_t": 0.5},
+			{"club": rival, "salary": Contracts.SENIOR_MIN_2027, "years": 1, "role": "depth", "finish_t": 0.5}]
+	var went: String = gs._decide_fa(fa)
+	_check(went == rival and RookieList.senior_count(mine) == RookieList.SENIOR_SPOTS,
+			"Free agency: he cannot sign onto your full senior list (went to %s)" % went)
+	# A rival with 38 seniors and a free rookie spot is out of the market too.
+	var full_rival := _set_seniors(rival, RookieList.SENIOR_SPOTS)
+	var fa2: Dictionary = gee[gee.size() - 1]
+	gs._release("GEE", fa2, false, false)
+	fa2["offers"] = [{"club": rival, "salary": Contracts.SENIOR_MIN_2027, "years": 1, "role": "depth", "finish_t": 0.5}]
+	_check(gs._decide_fa(fa2) == "" and RookieList.senior_count(full_rival) == RookieList.SENIOR_SPOTS,
+			"Free agency: a rival with 38 seniors cannot sign him either")
+	# Trades: two of theirs for one of your rookies takes your seniors past 38.
+	var rk := {}
+	for q in mine:
+		if RookieList.is_rookie(q):
+			rk = q
+			break
+	if rk.is_empty():
+		rk = mine[mine.size() - 1]
+		rk["rookie_list"] = "A"
+		mine.erase(rk)
+		mine.append(rk)
+		_set_seniors(CLUB, RookieList.SENIOR_SPOTS)
+	gee = _set_seniors("GEE", 36)
+	var two := [gee[0], gee[1]]
+	var v := Contracts.evaluate_trade(gee, two, [rk], 1 << 40, mine, 1 << 40, 0.0, {"name": "Geelong"})
+	_check(not bool(v["ok"]) and str(v["code"]) == "trade_senior_over",
+			"Trades: two seniors in for a rookie past 38 seniors is refused (%s)" % str(v.get("code", "")))
+	var sen := {}
+	for q in mine:
+		if not RookieList.is_rookie(q):
+			sen = q
+			break
+	var v2 := Contracts.evaluate_trade(gee, [gee[0]], [sen], 1 << 40, mine, 1 << 40, 0.0, {"name": "Geelong"})
+	_check(str(v2["code"]) != "trade_senior_over", "Trades: a senior for a senior at 38 is not blocked by the senior list")

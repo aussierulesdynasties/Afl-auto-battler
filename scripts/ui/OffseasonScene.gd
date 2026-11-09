@@ -461,8 +461,8 @@ func _show_talks() -> void:
 		if odds != null:
 			odds.name = "TalksRefuse"
 			v.add_child(odds)
-	if _talk_fa and GameState.my_list.size() >= Contracts.MAX_LIST:
-		v.add_child(_para("Your list is full (%d): release a player first." % Contracts.MAX_LIST, 14, UiKit.BAD))
+	if _talk_fa and not RookieList.senior_spot_free(GameState.my_list):
+		v.add_child(_para("Your senior list is full (%d): release a player first." % RookieList.SENIOR_SPOTS, 14, UiKit.BAD))
 	for reason in terms.get("reasons", []):
 		var why := _para(str(reason), 14, UiKit.BAD if bool(terms["refuse"]) else UiKit.TEXT)
 		why.name = "FreeAgentReason"
@@ -514,7 +514,7 @@ func _show_talks() -> void:
 	# agent's is not.
 	var on_books := 0 if _talk_fa else int(p.get("salary", 0))
 	var room_after := GameState.cap_room() + on_books - _offer_salary
-	var blocked := bool(terms.get("refuse", false)) or (_talk_fa and GameState.my_list.size() >= Contracts.MAX_LIST)
+	var blocked := bool(terms.get("refuse", false)) or (_talk_fa and not RookieList.senior_spot_free(GameState.my_list))
 	v.add_child(_para("Cap room after this deal: %s" % room_after_words(room_after), 14,
 			UiKit.TEXT if room_after >= 0 else UiKit.BAD))
 	var final := _talk_fa and GameState.fa_market_stage(_talk_id) == "final"

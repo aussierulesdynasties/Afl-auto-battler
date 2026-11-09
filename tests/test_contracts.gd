@@ -885,7 +885,7 @@ func _test_market_marks() -> void:
 	var gs = GameState
 	var room := []
 	for code in GameDB.active_clubs(gs.season_year):
-		if code != gs.my_club and gs.season.lists.has(code) and (gs.season.lists[code] as Array).size() < Contracts.MAX_LIST - 2:
+		if code != gs.my_club and gs.season.lists.has(code) and RookieList.senior_count(gs.season.lists[code]) < RookieList.SENIOR_SPOTS - 2:
 			room.append(str(code))
 	_check(room.size() >= 2, "Two rival clubs have list room (%d)" % room.size())
 	var pool: Array = gs.free_agents.duplicate()
@@ -2678,7 +2678,8 @@ func _test_trade_reasons() -> void:
 	# (Mirrors the counter fixture in _test_trade_market: Collingwood, matched by rank.)
 	var col := (GameState.season.lists["COL"] as Array).duplicate()
 	col.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
-	var ours := GameState.my_list.duplicate()
+	# Seniors only: a rookie traded for a senior can hit the senior list cap (row 88).
+	var ours := RookieList.seniors(GameState.my_list)
 	ours.sort_custom(func(a, b): return int(a["overall"]) < int(b["overall"]))
 	var counters := 0
 	var counter_ok := true
@@ -2776,7 +2777,7 @@ func _test_free_agent_reasons() -> void:
 	var low := Contracts.lowest(target, years)
 	var rival := ""
 	for code in GameState.season.lists:
-		if code != me and code != str(target.get("released_by", "")) and (GameState.season.lists[code] as Array).size() < Contracts.MAX_LIST:
+		if code != me and code != str(target.get("released_by", "")) and RookieList.senior_spot_free(GameState.season.lists[code]):
 			rival = str(code)
 			break
 	target["offers"] = [{"club": rival, "salary": low + 20 * Contracts.SALARY_STEP, "years": years, "role": "ground", "finish_t": 0.5}]

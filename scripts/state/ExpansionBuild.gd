@@ -372,7 +372,7 @@ static func _settle(gs, code: String, st: Dictionary, t: Dictionary) -> void:
 			p = q
 	if p.is_empty() or not _available(gs, p) or list.size() <= Contracts.MIN_LIST \
 			or (st["signings"] as Array).size() >= Expansion.SIGNINGS \
-			or list_of(gs, code).size() >= Contracts.MAX_LIST:
+			or not RookieList.senior_spot_free(list_of(gs, code)):
 		t["status"] = "stayed"
 		return
 	var wanted := true
