@@ -310,8 +310,14 @@ func _test_career_spots_match_draft() -> void:
 			draft.auto_until_user_turn()
 	_check(draft.count_for(me) == usable,
 			"The coach signs as many as the count said (%d of %d)" % [draft.count_for(me), usable])
-	_check(draft.user_passed.size() >= picks.size() - usable,
-			"Every pick without a spot is recorded as passed (%s)" % str(draft.user_passed))
+	# The brief counts a round from the size of the class; the night plans its
+	# rounds from the room the lists are left with, so it can run one fewer. A
+	# held pick in a round that never runs has nothing to pass.
+	var on_the_night := 0
+	for code in draft.pick_sequence:
+		on_the_night += 1 if str(code) == me else 0
+	_check(draft.user_passed.size() == on_the_night - usable,
+			"Every pick without a spot is recorded as passed (%d on the night, %s)" % [on_the_night, str(draft.user_passed)])
 	var said := draft.user_passed_line()
 	_check(said != "", "The pass is said in words")
 	GameState.finish_intake_draft()

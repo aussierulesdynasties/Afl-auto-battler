@@ -11,6 +11,12 @@ func _initialize() -> void:
 func _run() -> void:
 	await process_frame
 	var path := "res://tools/audit/%s.gd" % OS.get_cmdline_user_args()[0]
-	var s = load(path).new()
+	# A script that fails to parse must end the run: Godot would idle forever.
+	var script = load(path)
+	if script == null or not script.can_instantiate():
+		push_error("Audit script did not load: %s" % path)
+		quit(1)
+		return
+	var s = script.new()
 	s.run()
 	quit(0)

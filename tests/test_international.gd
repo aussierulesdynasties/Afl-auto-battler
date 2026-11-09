@@ -224,6 +224,14 @@ func _test_career(state: Node, db: Node) -> void:
 			mine = str(p["id"])
 	_check(mine != "", "The first class has an international prospect")
 	state.season.round_index = state.season.fixture.size()
+	# A full list passes its picks (Draft._list_full), and whether rivals leave a
+	# gap is the market's business: the coach makes room, as a coach would.
+	state.open_offseason()
+	var spare: Dictionary = state.my_list[0]
+	for p in state.my_list:
+		if int(p["overall"]) < int(spare["overall"]):
+			spare = p
+	_check(bool(state.release_player(str(spare["id"])).get("ok", false)), "Adelaide delists a player to make room")
 	_check(state.begin_intake_draft(), "The intake opens")
 	var draft: Draft = state.draft
 	var guard := 0
@@ -239,7 +247,10 @@ func _test_career(state: Node, db: Node) -> void:
 			pick = draft._best_ai_pick(code)
 		if pick.is_empty() or not draft._draft_pick(code, pick):
 			draft._skip_current_pick()
-	_check(draft.picked.has(mine), "Adelaide drafted the international prospect")
+	var drafted_by_us := false
+	for p in draft.club_lists.get("ADE", []):
+		drafted_by_us = drafted_by_us or str(p["id"]) == mine
+	_check(drafted_by_us, "Adelaide drafted the international prospect")
 	var year := int(state.season_year)
 	_check(state.finish_intake_draft(), "The draft commits and the career rolls on")
 	var found := _find(state, mine)

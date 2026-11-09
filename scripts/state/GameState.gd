@@ -6946,6 +6946,8 @@ func open_offseason(keep_staff := false) -> void:
 	# No rating or injury moves while rivals re-sign: each list's best 22 only
 	# needs working out again when the list itself changes.
 	TradeValue.remember_bars(true)
+	var testing := []
+	var testers := {}
 	for code in season.lists:
 		Season.beat()
 		if code == my_club:
@@ -6970,6 +6972,12 @@ func open_offseason(keep_staff := false) -> void:
 			if why == "" or list.size() <= Contracts.MIN_LIST:
 				# Rivals bargain by the same rules: the least he takes for that term
 				# (a club pushing to win now keeps him a little cheaper, as yours does).
+				# Testers leave together later, so count them: the club must still
+				# have a full list for the trade period while they listen.
+				if why == "" and list.size() - int(testers.get(code, 0)) > Contracts.AI_FILL and tests_market(p, list):
+					testing.append(p)
+					testers[code] = int(testers.get(code, 0)) + 1
+					continue
 				var years := Contracts.ai_term(p, list)
 				_resign(p, years, Contracts.lowest(p, years) - culture_resign_discount(code, p, years))
 			else:
@@ -6977,6 +6985,12 @@ func open_offseason(keep_staff := false) -> void:
 				# one they delisted cannot.
 				_release(code, p, why == "cap")
 	TradeValue.remember_bars(false)
+	# Released together, after every club has settled, so one club's tested
+	# player is not another's replacement while it decides.
+	for p in testing:
+		var from := str(p.get("club", ""))
+		_release(from, p, true, false)
+		p["home_offer"] = from
 	# Rival clubs trade first, so their free-agent offers are made from the
 	# lists they'll actually have.
 	trade_offers = []
@@ -6997,6 +7011,18 @@ func open_offseason(keep_staff := false) -> void:
 	_open_market(free_agents)
 	Season.beat()
 	mark_dirty()
+
+
+## Out of contract at a rival, in its best 22 and with the service for free
+## agency: he hears what the market offers, as your best 23 do (_market_test),
+## with his club's usual re-signing offer on the table (_open_market). Real
+## free agents number about 115 a year and about 10 move (2023: 11; 2024: at
+## least 8); at 28 the game measured 10-17 a year after the new club's first.
+const TEST_MARKET_AGE := 28.0
+
+
+func tests_market(p: Dictionary, list: Array) -> bool:
+	return float(p.get("age", 0.0)) >= TEST_MARKET_AGE and comp_tenure_ok(p) and Contracts.needed(p, list)
 
 
 ## Why rival `code` lets expiring player `p` go (Contracts.ai_release_reason),
@@ -7421,6 +7447,7 @@ const FA_TARGETS := 2
 ## Places in the side by position, for spotting the thinnest part of a list.
 const FILL_SHARE := {"RUCK": 1, "MID": 7, "DEF": 5, "FWD": 5}
 const FILLER_CAP := 3
+const TARGET_CAP := 3
 
 
 func _open_market(players: Array) -> void:
@@ -7451,8 +7478,23 @@ func _open_market(players: Array) -> void:
 	for code in GameDB.active_clubs(season_year):
 		if code != my_club and season.lists.has(code) and (season.lists[code] as Array).size() < Contracts.MAX_LIST:
 			clubs.append(code)
-	# Every club picks its targets first, independently of the others.
-	for code in clubs:
+	# A rival's own out-of-contract player keeps its offer while he listens.
+	for p in players:
+		var home := str(p.get("home_offer", ""))
+		if home != "" and season.lists.has(home) and _offer_of(p, home).is_empty():
+			var term := int(Contracts.wants(p)["years"])
+			_add_offer(p, home, {"salary": Contracts.lowest(p, term) - culture_resign_discount(home, p, term), "years": term},
+					fa_role(p, home), _finish_t(home))
+	# Every club picks its targets, those that finished lowest first, and no
+	# more than TARGET_CAP clubs chase one player: the rest move to their next
+	# choice, so the whole market gets looked at, not only its top few.
+	var chasers := {}
+	var by_finish := clubs.duplicate()
+	by_finish.sort_custom(func(a, b):
+		if _finish_t(a) != _finish_t(b):
+			return _finish_t(a) > _finish_t(b)
+		return str(a) < str(b))
+	for code in by_finish:
 		var room := _cap_room_of(code)
 		var aims := FA_TARGETS - int(targets_held.get(code, 0)) - int(_targets_signed.get(code, 0))
 		var ft := _finish_t(code)
@@ -7469,11 +7511,14 @@ func _open_market(players: Array) -> void:
 		for p in wanted:
 			if aims <= 0:
 				break
+			if int(chasers.get(str(p["id"]), 0)) >= TARGET_CAP:
+				continue
 			var role := fa_role(p, code)
 			var open := Contracts.opening_offer(p, role)
 			if int(open["salary"]) > Contracts.club_max(p, role, room, _fa_phase_of(code)):
 				continue
 			aims -= 1
+			chasers[str(p["id"])] = int(chasers.get(str(p["id"]), 0)) + 1
 			_add_offer(p, code, open, role, ft)
 	# Then list fillers, among the players no club has targeted, so depth
 	# signings don't pile onto the market's best players.
@@ -7881,6 +7926,7 @@ func _sign_fa(p: Dictionary, code: String, salary: int, years: int) -> void:
 	p.erase("offers")
 	p.erase("market_round")
 	p.erase("market_log")
+	p.erase("home_offer")
 	free_agents.erase(p)
 	_bars.erase(code)
 	offseason_log.append({"kind": "signed", "club": code, "id": str(p["id"]), "salary": salary, "years": years})
