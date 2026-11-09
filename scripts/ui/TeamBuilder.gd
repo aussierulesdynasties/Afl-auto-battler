@@ -388,13 +388,15 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 		face.add_child(sub)
 		# As wide as the text size (Settings) needs: a surname is never cut short.
 		b.custom_minimum_size = Vector2(UiKit.px(84 if _wide else 70), 44)
-		if not on and not _read_only:
-			# Your guernsey colour across the top of each of your players.
+		if not on and not _rival:
+			# Your club's ink across the top of each of your players, on every oval
+			# (STYLE-04: My list's Best 23 matches Team selection). The readable ink,
+			# not the guernsey's own colour: Fremantle's deep purple vanished on the chip.
 			for st in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 				var sb := (b.get_theme_stylebox(st) as StyleBoxFlat).duplicate() as StyleBoxFlat
 				sb.set_border_width_all(0)
 				sb.border_width_top = 3
-				sb.border_color = UiKit.team_colour()
+				sb.border_color = UiKit.club_ink(GameState.my_club)
 				b.add_theme_stylebox_override(st, sb)
 		if not field_only and not _rival and Workload.value(p) >= Workload.CARRYING:
 			# How fresh he is, on the card: no profile needed to see it.
