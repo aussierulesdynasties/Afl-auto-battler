@@ -594,11 +594,28 @@ static func pump(job: Dictionary) -> bool:
 	return not todo.is_empty()
 
 
+## When set, called over and over during long blocking work (the main thread
+## waiting on match threads, the steps of the rollover): the loading cover keeps
+## its ball moving (ScreenTransition.keep_moving). It touches nothing in the sim
+## and draws no random numbers, so the results do not depend on it.
+static var wait_hook := Callable()
+
+
+## Long blocking work calls this between its steps.
+static func beat() -> void:
+	if wait_hook.is_valid():
+		wait_hook.call()
+
+
 ## Wait for matches started by start_all; their results, in order.
 static func finish_all(job: Dictionary) -> Array:
 	while pump(job):
 		pass
 	for th in job.get("threads", []):
+		if wait_hook.is_valid():
+			while (th as Thread).is_alive():
+				wait_hook.call()
+				OS.delay_usec(2000)
 		(th as Thread).wait_to_finish()
 	job["threads"] = []
 	var res := []
