@@ -50,6 +50,12 @@ if ! "$GODOT" --headless --path "$ROOT" --import > builds/import.log 2>&1; then
 	tail -20 builds/import.log >&2
 fi
 
+# A build ships the years without you as the sim stands now (row 137).
+if ! "$GODOT" --headless --path "$ROOT" --script tools/histories/generate.gd -- --check | tail -3; then
+	echo "FAIL: the pre-made histories are behind the code: run tools/histories/regen.sh and commit them." >&2
+	[ "${ALLOW_DIRTY:-0}" = "1" ] || exit 1
+fi
+
 echo "$version-$sha" > builds/version.txt
 
 failed=0
