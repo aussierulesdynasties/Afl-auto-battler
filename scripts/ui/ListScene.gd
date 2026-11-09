@@ -283,8 +283,12 @@ func _role_groups(lbox: Control, players: Array, skip_empty: bool) -> void:
 			continue
 		g.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
 		lbox.add_child(UiKit.spacer(4))
-		lbox.add_child(UiKit.lbl("%s  (%d)" % [UiKit.ROLE_LABEL[r], g.size()],
-				UiKit.SMALL, UiKit.MUTED, true))
+		# STYLE-05: each position heads its group in its role colour at name
+		# weight (role colours are ink only, style guide 2.1), not small grey.
+		var gh := UiKit.lbl("%s  (%d)" % [UiKit.ROLE_LABEL[r], g.size()],
+				UiKit.NAME, UiKit.ROLE_COLOUR[r], true)
+		gh.name = "RoleHead_" + r
+		lbox.add_child(gh)
 		for p in g:
 			lbox.add_child(_list_row(p))
 		lbox.add_child(UiKit.spacer(6))
@@ -293,14 +297,15 @@ func _role_groups(lbox: Control, players: Array, skip_empty: bool) -> void:
 ## His number on your club's guernsey: everyone on this list plays for you,
 ## whatever club he came from (p["club"] can be his source club after a
 ## league re-draft).
-func _guernsey(p: Dictionary) -> PanelContainer:
-	var cols: Array = GameDB.club_colours(GameState.my_club)
-	var chip := UiKit.chip(str(p["num"]), cols[0])
-	chip.name = "Guernsey"
-	var sb := UiKit.style(cols[0], 4, 4, cols[1])
-	sb.set_border_width_all(2)
-	chip.add_theme_stylebox_override("panel", sb)
-	return chip
+##
+## STYLE-05: the number is painted, not boxed - the scoreboard's Display cut
+## with its shade, in your club's ink (club_ink keeps it readable on the
+## page), so the column reads as a team sheet rather than a pile of chips.
+func _guernsey(p: Dictionary) -> Label:
+	var num := UiKit.figure(str(p["num"]), UiKit.NUMBER, UiKit.club_ink(GameState.my_club))
+	num.name = "Guernsey"
+	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	return num
 
 
 ## One player in one line: guernsey, name, who he is (type, age, height),
