@@ -726,7 +726,7 @@ func _drill_row(i: int) -> Control:
 	h.add_child(l)
 	# Says what the second line of each button is (director, 2026-10-19:
 	# "medium, then high" read as nothing).
-	var key_line := UiKit.lbl("Under each plan: how well the side knows it now, and by Round 1 with this drilling.", UiKit.SECONDARY, UiKit.TEXT)
+	var key_line := UiKit.lbl("Under each plan: how well the side knows it now, and by Round 1 with this drilling. Weeks short of a step still count: the plan plays part of the way up.", UiKit.SECONDARY, UiKit.TEXT)
 	key_line.name = "DrillKey%d" % i
 	key_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	h.add_child(key_line)
@@ -777,11 +777,12 @@ func _drill_row(i: int) -> Control:
 		var b := UiKit.btn(CoachReport.plan_label(key), UiKit.SECONDARY)
 		b.name = "Drill%d_%s" % [i, key]
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		# Two lines (the plan, how well the side knows it); the grid's width is
-		# the block's, never the words'.
+		# Up to three lines (the plan, how well the side knows it, where the
+		# drilling leaves it), the same height whichever, so a tap never moves the
+		# page; the grid's width is the block's, never the words'.
 		b.clip_text = true
 		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		b.custom_minimum_size = Vector2(0, 52)
+		b.custom_minimum_size = Vector2(0, 72)
 		b.pressed.connect(func(): _toggle_drill(i, key))
 		buttons[key] = b
 		grid.add_child(b)
@@ -789,14 +790,14 @@ func _drill_row(i: int) -> Control:
 	return h
 
 
-## How well the side knows a plan, and where the drilling set leaves it:
-## "medium", or "medium, high by Round 1" once the weeks are enough.
+## How well the side knows a plan, and on a line of its own where the drilling
+## set leaves it: "medium", or "medium" then "Rd 1: 50% to high".
 func _knows_words(plan: String) -> String:
-	var now: int = GameState.plan_level(GameState.my_club, plan)
-	var after: int = GameState.plan_level_after_drills(plan)
-	var t := PreSeason.fluency_word(now)
+	var now: float = GameState.plan_fluency(GameState.my_club, plan)
+	var after: float = GameState.plan_fluency_after_drills(plan)
+	var t := PreSeason.fluency_short(now)
 	if after != now:
-		t += ", %s by Round 1" % PreSeason.fluency_word(after)
+		t += "\nRd 1: %s" % PreSeason.fluency_short(after)
 	return t
 
 

@@ -6,6 +6,8 @@ extends SceneTree
 ## <out>_tiles.png (the pre-match plan tiles, "Plan fluency"), <out>_break.png
 ## (the break's plan call and the line under it). The levels shown are set by this
 ## tool for the look (contest low, controlled medium); it is not a balance read.
+## <out>_part.png (row 126): a 2-week block split between two plans, each button saying
+## how far along it goes, and a plan already part way from last year.
 
 var W := 390
 var H := 844
@@ -51,6 +53,7 @@ func _run() -> void:
 	state.replay_seed = 4127
 	state.set_setting("seen_weekly_loop_intro", true)
 	state.set_setting("seen_training_intro", true)
+	state.set_setting("seen_coaching_intro", true)
 	if W >= 760:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(Vector2i(W, H))
@@ -85,13 +88,28 @@ func _run() -> void:
 	await _scroll_to("BlockCost_0")
 	await _shot(out + "_drill_two.png")
 	await _press("Drill0_defensive")
+	# Row 126: the two-week block split between two plans, and a plan part way.
+	state.set_preseason_block(0, "solid", "running")
+	state.set_preseason_block(1, "solid", "plan")
+	state.set_preseason_drills(1, ["contest", "controlled"])
+	state.plan_known[club]["defensive"] = 0.5
+	root.get_node("Router").go("hub")
+	await _frames(10)
+	await _scroll_to("BlockCost_1")
+	await _shot(out + "_part.png")
+	state.plan_known[club]["defensive"] = 1
+	state.set_preseason_block(1, "solid", "running")
+	state.set_preseason_block(0, "solid", "plan")
+	state.set_preseason_drills(0, ["contest"])
+	root.get_node("Router").go("hub")
+	await _frames(10)
 	await _press("PreSeasonSim")
 	await _frames(6)
 	await _press("PreSeasonSimGo")
 	await _frames(20)
 	print("scene ", current_scene.name, " after: contest ", state.plan_level(club, "contest"), " attacking ",
 			state.plan_level(club, "attacking"))
-	state.plan_known[club]["controlled"] = 1
+	state.plan_known[club]["controlled"] = 1.5
 	state.plan_known[club]["defensive"] = 0
 	root.get_node("Router").go("coaching")
 	await _frames(12)
@@ -129,6 +147,12 @@ func _vs(state, club: String, opp: String) -> void:
 func _frames(n: int) -> void:
 	for i in range(n):
 		await process_frame
+	# A windowed run swaps screens under the cover, on a thread: wait it out.
+	var wipe: Node = root.get_node_or_null("ScreenTransition")
+	var waited := 0
+	while wipe != null and bool(wipe.get("busy")) and waited < 1800:
+		await process_frame
+		waited += 1
 
 
 ## Bring a node into view in whatever scroll holds it.

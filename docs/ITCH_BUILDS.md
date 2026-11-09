@@ -3,7 +3,7 @@
 Moved out of `docs/TODO.md` (2026-11-05) so it no longer loads into every session. Rows named here still live in `docs/TODO.md`.
 
 
-The itch page runs the browser build of main with every switch in section B off, so a build with only switched-off work shows a player nothing new. A build is worth uploading only when a player can see a difference: the switches named for it are on (he has played them), the listed rows are merged, CI is green and the web build ran. Sessions push with butler and post a short devlog in football words (docs/ITCH_UPLOAD.md). The director's standing permission (2026-11-06) replaces "he says go": sessions upload when a build is worth it and post a devlog with every upload. At least three changes a player can see, or one big one.
+The itch page runs the browser build of main with every switch in section B off, so a build with only switched-off work shows a player nothing new. A build is worth uploading only when a player can see a difference: the switches named for it are on (he has played them), the listed rows are merged, CI is green and the web build ran. Sessions push with butler and post a short devlog in football words (docs/ITCH_UPLOAD.md). He says when (2026-11-09, which ends the 2026-11-06 standing permission): no upload, version bump or devlog without his word, and a devlog with every upload. At least three changes a player can see, or one big one.
 
 | Build | Name | Ready when (rows and switches) | What a player sees |
 |---|---|---|---|
