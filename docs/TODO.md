@@ -60,7 +60,6 @@ Never balance-screened together (#1074): match_flow, kick_range, set_shots, key_
 
 ## D. Audits to run (seeded, via audit.yml)
 
-- 19/60 Press-question and coaching-note repetition over long saves; pressers per season.
 - 28 How-we-play maturity; How-we-win materiality; List Profile vs results.
 
 ## E. Waiting on him or his phone
