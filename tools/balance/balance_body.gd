@@ -62,6 +62,12 @@ func play(from: int, count: int, out: String, weather: String,
 	for i in range(args.size() - 1):
 		if str(args[i]) == "--arrivals":
 			arrivals = str(args[i + 1])
+	# --together BAND: one side a match (in turn: side i % 2) plays with that
+	# Togetherness band's stoppage edge (row 84), the other at mid.
+	var together := ""
+	for i in range(args.size() - 1):
+		if str(args[i]) == "--together":
+			together = str(args[i + 1])
 	var plan_know := -1.0
 	for i in range(args.size() - 1):
 		if str(args[i]) == "--plan-know":
@@ -109,6 +115,8 @@ func play(from: int, count: int, out: String, weather: String,
 				sq.ai_plans = side != coached
 				sq.assistant = side == coached
 		var fam := _arrivals(arrivals, i, sq_h, sq_a)
+		if together != "":
+			(sq_h if i % 2 == 0 else sq_a).together = Culture.effect_of("match_contest", "together", together)
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
 		sim.weather = weather
 		if setup == "league":
@@ -223,6 +231,9 @@ func play(from: int, count: int, out: String, weather: String,
 				tp[str(pl["id"])] = [int(st.get("tackles", 0)), int(st.get("pressure_acts", 0)), role]
 				t["tp"] = tp
 			t["club"] = h if side == 0 else a
+			if together != "":
+				t["together"] = float((sq_h if side == 0 else sq_a).together)
+				t["together_pts"] = snappedf(float((sim.impact[side] as Dictionary).get("together", 0.0)), 0.01)
 			if arrivals != "":
 				t["arrivals"] = TeamFamiliarity.new_club_men((sq_h if side == 0 else sq_a).ground + (sq_h if side == 0 else sq_a).bench).size()
 				t["fam_round"] = int(fam["round"])
