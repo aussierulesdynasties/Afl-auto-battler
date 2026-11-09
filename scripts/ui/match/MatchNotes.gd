@@ -960,7 +960,7 @@ static func tagger_card(p: Dictionary, legs: float, rating := -1.0) -> Dictionar
 	var lw := legs_word(legs)
 	# What the job costs him and what it holds their man to, sized from the
 	# sim's constants (GateOdds; bible §4). The cost is the same whoever goes;
-	# the hold is his Pressure and his legs (MatchSim.tag_hold).
+	# the hold is his Pressure and his legs (Roles.tag_keep).
 	# His season Player rating stays beside it (director, 2026-10-13).
 	var season := " (yet to play this season)"
 	if rating >= 0.0:

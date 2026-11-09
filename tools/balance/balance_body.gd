@@ -21,9 +21,14 @@ extends RefCounted
 ## Every team line carries its legs: "legs_q" mean energy of the 18 on the ground and
 ## "tank_q" how many of them are under TANK, at the end of each quarter, "interchanges",
 ## "exertion" (MatchSim.exertion summed over the side), and "coached".
+## `tag` (--tag, row 120): side i % 2 tags the rival's biggest midfielder from the first bounce
+## with the man `tag` names on tag_order: "first" (the tightest hold), "median", "last" (the
+## loosest), "tagger" (first on the list, only if he is a Tagger) or "none" (no tag, the paired
+## baseline: same man followed). The match line then carries "tag" (_tag_record).
 
 var start := ""
 var setup := ""
+var tag := ""
 ## Energy under which a player on the ground is running on empty (fit 0.90 or less).
 const TANK := 40.0
 ## --arrivals league: how many new-club men and draftees a selected side carries in
@@ -99,6 +104,7 @@ func play(from: int, count: int, out: String, weather: String,
 			sim.season_plans = ["steady", "steady"]
 		elif setup == "coached":
 			sim.moment_side = coached
+		var tag_rec := _set_tag(sim, i % 2) if tag != "" else {}
 		for k in sets:
 			if not str(k) in sim:
 				push_error("balance: MatchSim has no var " + str(k))
@@ -215,7 +221,10 @@ func play(from: int, count: int, out: String, weather: String,
 			teams.append(t)
 		for pl in fam["men"]:
 			TeamFamiliarity.clear(pl)   # GameDB's lists are shared by every match
-		var line := JSON.stringify({"i": i, "home": h, "away": a, "teams": teams, "duels": duels(sim, r)})
+		var row := {"i": i, "home": h, "away": a, "teams": teams, "duels": duels(sim, r)}
+		if tag != "":
+			row["tag"] = _tag_record(tag_rec, r)
+		var line := JSON.stringify(row)
 		fh.store_line(line)
 		if echo:
 			print("BAL " + line)
@@ -278,6 +287,57 @@ func _weighted(rng: RandomNumberGenerator, weights: Array) -> int:
 		if roll <= 0.0:
 			return k
 	return weights.size() - 1
+
+
+## Puts this arm's tag on, before the first bounce, for side `side`: {side, target, tagger,
+## specialist, has_tagger, set, keep, keeps (what his man keeps on each midfielder's fresh legs,
+## tag_order's order)}. The target is the rival's biggest midfielder by what he adds to the midfield
+## (MatchSim.tag_give_up), the same man in every arm. "set" is false when this arm plays no tag
+## (none, or tagger with no Tagger on the ground).
+func _set_tag(sim: MatchSim, side: int) -> Dictionary:
+	var theirs: Array = (sim.squads[1 - side] as Squad).ground
+	var target := {}
+	var most := -1.0
+	for p in theirs:
+		if MatchSim.taggable(p) and MatchSim.tag_give_up(p, theirs) > most:
+			most = MatchSim.tag_give_up(p, theirs)
+			target = p
+	var order := MatchSim.tag_order((sim.squads[side] as Squad).ground)
+	var keeps := []
+	var has_tagger := false
+	for p in order:
+		keeps.append(snappedf(GateOdds.tag_kept(p, 100.0), 0.001))
+		has_tagger = has_tagger or Roles.is_tagger(p)
+	var who := {}
+	if not order.is_empty():
+		match tag:
+			"first": who = order[0]
+			"median": who = order[order.size() / 2]
+			"last": who = order[order.size() - 1]
+			"tagger": who = order[0] if Roles.is_tagger(order[0]) else {}
+	var rec := {"side": side, "target": str(target.get("id", "")), "tagger": str(who.get("id", "")),
+			"specialist": Roles.is_tagger(who) if not who.is_empty() else false,
+			"has_tagger": has_tagger, "set": false, "keeps": keeps}
+	if not target.is_empty() and not who.is_empty():
+		sim.set_tactics(side, {"gameplan": "balanced", "tag_id": rec["target"], "tagger_id": rec["tagger"], "tag_set": true})
+		rec["set"] = true
+		rec["keep"] = snappedf(sim._tag_share(side), 0.001)
+	return rec
+
+
+## The tag's outcome: the tagged man's and the tagger's lines and the tagging side's margin.
+func _tag_record(rec: Dictionary, r: Dictionary) -> Dictionary:
+	var out := rec.duplicate()
+	var stats: Dictionary = r["players"]
+	var line := func(id: String) -> Dictionary:
+		var st: Dictionary = stats.get(id, {})
+		return {"di": int(st.get("disposals", 0)), "g": int(st.get("goals", 0)),
+				"cl": int(st.get("clearances", 0)), "cp": int(st.get("contested_possessions", st.get("contested", 0)))}
+	out["target_line"] = line.call(str(rec.get("target", "")))
+	out["tagger_line"] = line.call(str(rec.get("tagger", "")))
+	var side := int(rec["side"])
+	out["margin"] = int(r["score"][side]) - int(r["score"][1 - side])
+	return out
 
 
 ## [mean energy of the side's players on the ground, how many of them are under TANK].
