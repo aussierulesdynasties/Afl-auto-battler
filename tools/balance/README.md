@@ -17,6 +17,9 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   standard error is small. A change is real when |B - A| > 2 se (the `sig` column).
 - **Arm args.** `--weather perfect|wet|windy|hot`,
   `--tune KEY=V,...` (sets `MatchSim.tune`, read by `_tv`: size a constant before you fix it).
+- **Plan fluency** (`--plan-know F`, row 126): both sides know every plan but Balanced at fluency F (0 low, 1 medium,
+  2 high, 1.5 half way), as a career's record gives them; a plain run knows every plan fully, so it never moves with
+  fluency. Plans only come into it with `--setup league|coached`: `--a "--setup league --plan-know 1" --b "--setup league --plan-know 1.5"`.
 - **Generated lists** (`--lists generated`, row 104): every club's list is generated players instead of the
   real ones, to screen a change to generation in matches (`--a-root <main checkout> --a "--lists generated"
   --b "--lists generated"`). Classes 2027 on are generated on the game's data, grown five seasons, and each real
