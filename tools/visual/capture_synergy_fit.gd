@@ -105,9 +105,21 @@ func _run() -> void:
 		if str(q["role"]) == "MID" and not Traits.of(q).has("bull") and int(q["attr"]["contested"]) < 84:
 			p = q
 			break
+	for b in current_scene.find_children("*", "Button", true, false):
+		if (b as Button).text == "Close":
+			(b as Button).emit_signal("pressed")
+	await _frames(4)
+	state.set_setting("seen_training_intro", true)
 	router.go("training")
-	await _frames(8)
+	for i in range(120):
+		if current_scene != null and current_scene.has_method("_open_player"):
+			break
+		await process_frame
 	var scene = current_scene
+	if not scene.has_method("_open_player"):
+		push_error("training scene did not open")
+		quit(1)
+		return
 	scene.call("_open_player", str(p["id"]))
 	await _frames(6)
 	scene.set("_focus_choice", "contested")
