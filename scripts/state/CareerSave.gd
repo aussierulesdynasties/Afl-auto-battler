@@ -176,6 +176,47 @@ static func _wrote(p: String, head: PackedByteArray, bytes: PackedByteArray) -> 
 	return ctx.finish().hex_encode() == FileAccess.get_md5(p)
 
 
+## A pre-made history: the same blob as a save, compressed, behind a small
+## header (meta) that can be read without unpacking it.
+static func write_packed(state: Dictionary, meta: Dictionary, path: String) -> bool:
+	var enc := CareerSave.new()
+	var body = enc._encode(state)
+	enc._untag()
+	var bytes := var_to_bytes({"version": VERSION, "meta": meta, "players": enc._players, "state": body})
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		return false
+	f.store_var(meta)
+	f.store_64(bytes.size())
+	f.store_buffer(bytes.compress(FileAccess.COMPRESSION_ZSTD))
+	f.close()
+	return true
+
+
+static func read_packed_meta(path: String) -> Dictionary:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return {}
+	var meta = f.get_var()
+	return meta if meta is Dictionary else {}
+
+
+static func read_packed(path: String) -> Dictionary:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return {}
+	f.get_var()
+	var raw := f.get_64()
+	var packed := f.get_buffer(f.get_length() - f.get_position())
+	var blob = bytes_to_var(packed.decompress(raw, FileAccess.COMPRESSION_ZSTD))
+	if not (blob is Dictionary) or int((blob as Dictionary).get("version", 0)) != VERSION:
+		return {}
+	var dec := CareerSave.new()
+	dec._players = blob.get("players", {})
+	var state = dec._decode(blob.get("state", {}))
+	return state if state is Dictionary else {}
+
+
 ## The decoded state, or {} if there is no usable save.
 static func read(path := DEFAULT_PATH) -> Dictionary:
 	var blob := _read_blob(path)

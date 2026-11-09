@@ -734,6 +734,10 @@ func _start_new_career() -> void:
 ## 2029 National Draft.
 func _play_years_without_you() -> void:
 	ScreenTransition.run("Playing 2027 to 2029...", func():
+		await ScreenTransition.drawn()
+		if GameState.begin_from_history(GameState.SIM_AHEAD_TO):
+			Router.go("draft")
+			return
 		GameState.begin_sim_ahead()
 		while true:
 			var line := GameState.sim_ahead_step()
