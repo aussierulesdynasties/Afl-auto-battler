@@ -7,6 +7,7 @@ extends SceneTree
 ##       [--set runaway_gain=6,runaway_decay=0.985]   (MatchSim vars, for screening a knob)
 ##       [--start real]   (the 2027 round-1 lists of a real-lists career, after the 2026 draft)
 ##       [--setup league|coached]   (background-match or coached-match setup; see balance_body.gd)
+##       [--tag first|median|last|tagger|none]   (one side tags the rival's biggest midfielder; see balance_body.gd)
 ##
 ## Seed i plays two real 2026 lists picked from i (every pairing comes round),
 ## home side alternating, match seed 500000 + i. The same --from/--count in two
@@ -28,6 +29,7 @@ func _run() -> void:
 	var sets := ""
 	var start := ""
 	var setup := ""
+	var tag := ""
 	for i in range(a.size() - 1):
 		match str(a[i]):
 			"--from": from = int(a[i + 1])
@@ -37,6 +39,7 @@ func _run() -> void:
 			"--set": sets = str(a[i + 1])
 			"--start": start = str(a[i + 1])
 			"--setup": setup = str(a[i + 1])
+			"--tag": tag = str(a[i + 1])
 	# The feature switches are gone (director, 2026-11-06): an old --on/--off
 	# call would play two identical arms and report B-A of 0, so refuse it.
 	for arg in a:
@@ -51,5 +54,10 @@ func _run() -> void:
 		quit(2)
 		return
 	body.setup = setup
+	if not tag in ["", "first", "median", "last", "tagger", "none"]:
+		push_error("balance: --tag is first, median, last, tagger or none")
+		quit(2)
+		return
+	body.tag = tag
 	var code: int = body.play(from, count, out, weather, body.parse_sets(sets))
 	quit(code)
