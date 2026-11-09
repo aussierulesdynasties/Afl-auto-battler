@@ -138,11 +138,50 @@ func _test_media_conference_rules() -> void:
 	# turns, and the day's other stories each have a journalist of their own.
 	var hl_ctx := {"club": "COL", "opponent_name": "Carlton", "round": 8, "year": 2027,
 			"result": {"home": "COL", "away": "CAR", "score": [55, 101], "goals": [8, 15], "behinds": [7, 11]}}
-	var v0: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 2}})
+	var v0: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 3}})
 	var v1: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 1}})
+	var v2: Dictionary = MCY.pick(hl_ctx, {"asked": {"heavy_loss": 2}})
 	_check(str(v0.get("qid", "")) == "heavy_loss.0" and str(v1.get("qid", "")) == "heavy_loss.1"
-			and str(v1.get("question", "")) == "Carlton kicked 15 goals to your 8. Where do you even start?",
-			"A question's two versions take turns (%s / %s)" % [str(v0.get("question", "")), str(v1.get("question", ""))])
+			and str(v2.get("qid", "")) == "heavy_loss.2"
+			and str(v1.get("question", "")) == "Carlton kicked 15 goals to your 8. Where do you even start?"
+			and str(v2.get("question", "")).begins_with("That's a 46-point hiding from Carlton."),
+			"A question's three versions take turns (%s / %s / %s)" % [str(v0.get("question", "")),
+			str(v1.get("question", "")), str(v2.get("question", ""))])
+	# Audit 19/60: the most-asked questions each have three versions, every
+	# one different, with the same four kinds of answer.
+	var third_ctx := {
+		"big_win": {"club": "COL", "opponent_name": "Carlton", "round": 8, "year": 2027,
+				"result": {"home": "COL", "away": "CAR", "score": [122, 42]}},
+		"injury": {"club": "COL", "opponent_name": "Carlton", "round": 8, "year": 2027, "injuries": [{"name": "Jack Smith"}],
+				"result": {"home": "COL", "away": "CAR", "score": [72, 88]}},
+		"young_side": {"club": "COL", "opponent_name": "Carlton", "round": 8, "year": 2027, "young": 6,
+				"result": {"home": "COL", "away": "CAR", "score": [80, 70]}},
+		"milestone": {"club": "COL", "opponent_name": "Carlton", "round": 8, "year": 2027,
+				"milestone": {"name": "Jack Smith", "games": 200}, "result": {"home": "COL", "away": "CAR", "score": [80, 70]}},
+		"close_game": {"club": "COL", "opponent_name": "Carlton", "round": 8, "year": 2027,
+				"result": {"home": "COL", "away": "CAR", "score": [80, 79], "goals": [11, 11], "behinds": [14, 13]}},
+	}
+	for k in third_ctx:
+		var texts := {}
+		var kinds_ok := true
+		for n in range(3):
+			var q: Dictionary = MCY.pick(third_ctx[k], {"asked": {k: n}})
+			texts[str(q.get("question", ""))] = true
+			var ks := (q.get("options", []) as Array).slice(0, 3).map(func(o): return str(o["kind"]))
+			kinds_ok = kinds_ok and str(q.get("key", "")) == k and ks == ["criticise", "method", "back"]
+		_check(texts.size() == 3 and kinds_ok, "%s has three different versions (%s)" % [k, str(texts.keys())])
+	var c1: Dictionary = MCY.pick(third_ctx["close_game"], {"asked": {"close_game": 1}})
+	var c2: Dictionary = MCY.pick(third_ctx["close_game"], {"asked": {"close_game": 2}})
+	_check(str(c1.get("question", "")).begins_with("11.14 to 11.13 against Carlton")
+			and str(c2.get("question", "")).begins_with("1 point in it against Carlton")
+			and str(c2.get("qid", "")) == "close_game.shots.2",
+			"The close-game shots question's versions read the scores (%s / %s)" % [str(c1.get("question", "")), str(c2.get("question", ""))])
+	# The Muckraker quotes a claim back once only.
+	var said_cb := {"year": 2027, "option": 1, "opp": "Essendon", "round": 5}
+	var cb1: Dictionary = MCY.pick(hl_ctx, {"said|big_win": said_cb})
+	var cb2: Dictionary = MCY.pick(hl_ctx, {"said|big_win": said_cb.merged({"quoted": true})})
+	_check(str(cb1.get("qid", "")) == "heavy_loss.said" and str(cb2.get("qid", "")) == "heavy_loss.0",
+			"A claim is quoted back once, then the heavy-loss questions return (%s / %s)" % [str(cb1.get("qid", "")), str(cb2.get("qid", ""))])
 	var bw_ctx := {"club": "COL", "opponent_name": "Carlton", "round": 8, "year": 2027,
 			"result": {"home": "COL", "away": "CAR", "score": [122, 42]}}
 	var bw: Dictionary = MCY.pick(bw_ctx, {"asked": {"big_win": 1}})
