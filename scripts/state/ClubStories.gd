@@ -101,7 +101,7 @@ static func club_facts(gs, week: int, ph: String) -> Dictionary:
 		var plan: String = gs.card_drill_plan()
 		facts["pre_run"] = gs.preseason_run_forecast()
 		facts["drill_plan"] = CoachReport.plan_label(plan)
-		facts["drill_level"] = gs.plan_level(gs.my_club, plan)
+		facts["drill_level"] = gs.plan_fluency(gs.my_club, plan)
 		facts["drill_credit"] = float(gs.my_drill_credit().get(plan, 0.0))
 	return facts
 

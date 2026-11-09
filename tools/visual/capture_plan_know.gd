@@ -6,6 +6,8 @@ extends SceneTree
 ## <out>_tiles.png (the pre-match plan tiles, "Plan fluency"), <out>_break.png
 ## (the break's plan call and the line under it). The levels shown are set by this
 ## tool for the look (contest low, controlled medium); it is not a balance read.
+## <out>_part.png (row 126): a 2-week block split between two plans, each button saying
+## how far along it goes, and a plan already part way from last year.
 
 var W := 390
 var H := 844
@@ -85,6 +87,21 @@ func _run() -> void:
 	await _scroll_to("BlockCost_0")
 	await _shot(out + "_drill_two.png")
 	await _press("Drill0_defensive")
+	# Row 126: the two-week block split between two plans, and a plan part way.
+	state.set_preseason_block(0, "solid", "running")
+	state.set_preseason_block(1, "solid", "plan")
+	state.set_preseason_drills(1, ["contest", "controlled"])
+	state.plan_known[club]["defensive"] = 0.5
+	root.get_node("Router").go("hub")
+	await _frames(10)
+	await _scroll_to("Drill1_defensive")
+	await _shot(out + "_part.png")
+	state.plan_known[club]["defensive"] = 1
+	state.set_preseason_block(1, "solid", "running")
+	state.set_preseason_block(0, "solid", "plan")
+	state.set_preseason_drills(0, ["contest"])
+	root.get_node("Router").go("hub")
+	await _frames(10)
 	await _press("PreSeasonSim")
 	await _frames(6)
 	await _press("PreSeasonSimGo")
