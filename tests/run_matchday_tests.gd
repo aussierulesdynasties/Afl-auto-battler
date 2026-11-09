@@ -1468,6 +1468,17 @@ func _test_every_break_fits(club: String, vs: String, sz: Vector2i) -> void:
 					if f[0] > f[1] + 1.0:
 						tall.append("tag on %.0f of %.0f" % [f[0], f[1]])
 		_check(tall.is_empty(), "The break fits its sheet, nothing scrolls or overruns its row (%s: %s)" % [tag, str(tall)])
+		# On a phone what your calls did is one row; a real tap opens the lot.
+		var open_did: Button = box.find_child("CallsDidOpen", true, false)
+		if open_did != null:
+			var w_did: String = await Tap.tap(open_did)
+			await _settle()
+			var did_sheet: Node = m.find_child("CallSheet_did", true, false)
+			var did_list: Node = did_sheet.find_child("CallsDid", true, false) if did_sheet != null else null
+			_check(w_did == "" and did_list != null and (did_list as Control).is_visible_in_tree() and did_list.get_child_count() > 0,
+					"What your calls did opens in a sheet on a real tap (%s%s)" % [tag, (", " + w_did) if w_did != "" else ""])
+			m.call("handle_back")
+			await _settle()
 		m.queue_free()
 		await _settle()
 	_state.show_real_names = real

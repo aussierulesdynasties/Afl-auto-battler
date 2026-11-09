@@ -154,13 +154,17 @@ func _test_season_flow() -> void:
 			if code == "GEE":
 				continue
 			var won := int(r["score"][s]) > int(r["score"][1 - s])
+			# A Gambler senior coach adds his swing on top (row 119): +2 / -2.
+			var swing := 0
+			if str(CoachEffects.arch_of(code)[1]) == "GAMB":
+				swing = Archetypes.SWING_WIN if won else Archetypes.SWING_LOSS
 			var on := {}
 			for row in (r["roster"] as Array)[s]:
 				on[str(row["id"])] = true
 			for p in GameState.season.lists[code]:
 				var was := int(rival_before.get(str(p["id"]), ClubLife.MORALE_BASE))
 				if on.has(str(p["id"])):
-					rival_ok = rival_ok and ClubLife.morale(p) == clampi(was + (4 if won else 1), 5, 100)
+					rival_ok = rival_ok and ClubLife.morale(p) == clampi(was + (4 if won else 1) + swing, 5, 100)
 					played_count += 1
 				elif int(p.get("injury_weeks", 0)) <= 0 and was > 5:
 					rival_ok = rival_ok and ClubLife.morale(p) < was
