@@ -2175,7 +2175,7 @@ Your career stays on this device.",
 			same_style = false
 	_check(kid_card != null and kid_card.find_child("EventStakes_0", true, false) == null
 			and back_mark != null and back_mark.text == "Gain:" and cost_mark != null and cost_mark.text == "Cost:"
-			and cost_mark.get_theme_font("font") != rest_cost.get_theme_font("font") and cost_mark.get_theme_color("font_color") == rest_cost.get_theme_color("font_color")
+			and cost_mark.get_theme_font("font") != rest_cost.get_theme_font("font") and cost_mark.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").label_ink()
 			and back_gain != null and back_cost != null and back_cost.text.contains("promise breaks")
 			and rest_gain != null and rest_cost != null and rest_cost.text == "He misses this week's game."
 			and same_style and rest_btn != null and rest_cost.get_global_rect().position.y >= rest_gain.get_global_rect().end.y - 1.0
