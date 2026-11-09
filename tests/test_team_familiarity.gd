@@ -20,6 +20,7 @@ func run(tree_root: Window) -> void:
 	_t("_test_cut_sizes")
 	_t("_test_fade_line")
 	_t("_test_team_step")
+	_t("_test_points_match_lit_round")
 	_t("_test_reaches_fit")
 	_t("_test_plain_lists_unchanged")
 	_t("_test_ways_onto_a_list")
@@ -52,6 +53,24 @@ func _man(fam: float, draftee := false) -> Dictionary:
 	if draftee:
 		p["team_fam_kind"] = "draftee"
 	return p
+
+
+## Bug-bash 8 (2026-11-10): the sheet's "points worse this round" and the lit
+## Round column read the same value, wherever the side sits on the fade
+## (men at 82 gave 11 against a lit 13).
+func _test_points_match_lit_round() -> void:
+	var bad := []
+	var fam := 70.0
+	while fam <= 100.0:
+		var side := []
+		for i in range(4):
+			side.append(_man(fam))
+		var step := TF.fade_step(side)
+		var lit: int = TF.fade_points()[step] if step >= 0 else 0
+		if TF.team_points(side) != lit:
+			bad.append("%.1f: %d v R%d %d" % [fam, TF.team_points(side), step + 1, lit])
+		fam += 0.5
+	_check(bad.is_empty(), "The points this round are the lit column's, at every chemistry (%s)" % ", ".join(bad))
 
 
 func _test_cut_sizes() -> void:
@@ -332,6 +351,23 @@ func _test_screens() -> void:
 		_check(await Tap.tap(sheet.find_child("ChemistryClose", true, false)) == "", "A finger reaches Close")
 		await _settle()
 		_check(not is_instance_valid(sheet), "Close closes it")
+	# Part way down the fade (men at 82): the figure is the lit column's (bug-bash 8).
+	for q in named.slice(0, 4):
+		q["team_fam"] = 82.0
+	ui.find_child("TeamBuilder", true, false).changed.emit("")
+	_check(await Tap.tap(meter) == "", "A finger reaches the meter part way down the fade")
+	await _settle()
+	sheet = ui.find_child("ChemistrySheet", true, false)
+	if sheet != null:
+		var step := int(sheet.find_child("ChemistryFade", true, false).get_meta("step", -1))
+		var shown: String = sheet.find_child("ChemistryPoints", true, false).text
+		_check(step >= 0 and shown == str(TF.fade_points()[step]),
+				"The sheet's points (%s) are the lit Round %d's" % [shown, step + 1])
+		_check(await Tap.tap(sheet.find_child("ChemistryClose", true, false)) == "", "A finger reaches Close again")
+		await _settle()
+	for q in named.slice(0, 4):
+		q["team_fam"] = 70.0
+	ui.find_child("TeamBuilder", true, false).changed.emit("")
 	_check(TF.fade_points() == [19, 16, 13, 10, 6, 3, 0], "The drawn fade is the straight line from 19 to 0")
 	_check(TF.fade_step(GameState.familiarity_side()) == 0, "This side is lit at Round 1")
 	_check(TF.signing_line().contains("4 or more in a side: about 19 points worse"), "The signing line says the count in digits")

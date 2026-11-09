@@ -37,6 +37,7 @@ func run() -> void:
 		GameState.set_setting("seen_%s_intro" % key, true)
 	await _t("_test_ui")
 	await _t("_test_ui_expiring")
+	await _t("_test_ui_promise_fits")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Coaches", self))
@@ -438,6 +439,52 @@ func _test_ui_expiring() -> void:
 			await tree.process_frame
 	_check(scene.find_child("ContractEnds_" + job, true, false) == null
 			and int(staff[job]["contract_to"]) > GameState.season_year, "Re-signing him clears it")
+	scene.queue_free()
+	await tree.process_frame
+	GameState.reset()
+
+
+## Bug-bash 7 (2026-11-10): an expiring assistant who also holds a promise
+## shows both lines, and the row grows to hold them: every line sits inside
+## its row, above the next row, at phone size; Re-sign still takes a tap.
+func _test_ui_promise_fits() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	_new_career("CAR")
+	var guard := 0
+	while not GameState.season.is_season_over() and guard < 60:
+		GameState.advance()
+		guard += 1
+	var staff := GameState.club_staff("CAR")
+	var job := ""
+	for j in ["FWD", "MID", "DEF", "DEV"]:
+		if staff.has(j):
+			job = j
+			break
+	staff[job]["contract_to"] = GameState.season_year
+	CoachMarket.make_promise(staff[job], GameState.season_year)
+	tree.root.size = Vector2i(390, 844)
+	var scene: Control = load("res://scenes/StaffScene.tscn").instantiate()
+	tree.root.add_child(scene)
+	for i in range(4):
+		await tree.process_frame
+	var row: Control = scene.find_child("StaffRow_" + job, true, false)
+	var promise: Control = scene.find_child("Promise_" + job, true, false)
+	var ends: Control = scene.find_child("ContractEnds_" + job, true, false)
+	_check(row != null and promise != null and ends != null, "The expiring row shows its promise and its term")
+	if row != null and promise != null and ends != null:
+		var box := row.get_global_rect().grow(0.5)
+		for l in row.find_children("*", "Label", true, false):
+			var r := (l as Control).get_global_rect()
+			_check(box.encloses(r), "%s sits inside its row (%s in %s)" % [l.name, r, box])
+		var next_top := INF
+		for other in scene.find_children("StaffRow_*", "Control", true, false):
+			var t := (other as Control).get_global_rect().position.y
+			if other != row and t > box.position.y:
+				next_top = minf(next_top, t)
+		_check(ends.get_global_rect().end.y <= next_top + 0.5, "The term line stays above the next row")
+	var keep: Button = scene.find_child("Resign_" + job, true, false)
+	if keep != null:
+		await _press(keep, "Re-sign beside a promise")
 	scene.queue_free()
 	await tree.process_frame
 	GameState.reset()
