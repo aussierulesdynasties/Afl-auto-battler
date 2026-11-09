@@ -151,6 +151,9 @@ func _print_nz() -> void:
 					int(p.get("overall", 0)), int(p.get("potential", 0)), int(p.get("contract_years", 0)),
 					int(ClubLife.morale(p)), int(p.get("drafted_year", -1)),
 					str(ClubLife.extension_wanted(p, {}, ClubLife.INTL_EXTENSION_MIN_OVR)), over, room])
+			var f: Dictionary = ClubStories.player_fact(GameState, p, true, {}, 99, room)
+			print("NZFACT %s ok %s seasons %d fit %s intl %s region %s years %d" % [str(p["id"]), str(f.get("intl_extension_ok")),
+					int(f.get("seasons_listed", -1)), str(f.get("fit")), str(f.get("intl")), str(f.get("intl_region")), int(f.get("contract_years", -1))])
 
 
 func run() -> void:
