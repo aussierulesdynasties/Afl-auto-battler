@@ -203,6 +203,10 @@ var board_patience := "fair"     # this career's board dial (DifficultyDials ste
 var rival_recruiting := "shrewd" # this career's rival dial (DifficultyDials step)
 var tutorials := true            # this career's first-visit menu tips (Tutorials.gd)
 var postseason_intro_seen := false  # the first postseason's sheet: this career's, not the device's
+## The first season you coach from its start (0: none yet). Years played
+## without you (sim-ahead, waiting for Tasmania, pre-made histories) close
+## before it and must not use up the first postseason's sheet.
+var my_first_season := 0
 var board := {}                  # confidence, goal, warned, sacked, history
 ## This week's story cards (StoryEngine.pick_week): usually none or one, two
 ## in a big week. Each is answered on the hub before the round is played.
@@ -887,6 +891,7 @@ func _save_state() -> Dictionary:
 		"rival_recruiting": rival_recruiting,
 		"tutorials": tutorials,
 		"postseason_intro_seen": postseason_intro_seen,
+		"my_first_season": my_first_season,
 		"board": board,
 		"week_events": week_events,
 		"week_checks": week_checks,
@@ -1136,6 +1141,10 @@ func _restore_career(state: Dictionary) -> bool:
 	tutorials = bool(state.get("tutorials", true))
 	# A save from before this field is past being a fresh career.
 	postseason_intro_seen = bool(state.get("postseason_intro_seen", true))
+	# A save from before this field: a club you hold outside the years played
+	# without you is one you coach this season.
+	my_first_season = int(state.get("my_first_season",
+			season_year if my_club != "" and not sim_ahead else 0))
 	GameDB.draftees = state.get("db_draftees", GameDB.draftees)
 	GameDB.late_draftees = state.get("db_late_draftees", [])
 	GameDB._alias_next = int(state.get("db_alias_next", GameDB._alias_next))
@@ -1645,6 +1654,7 @@ func reset() -> void:
 	_last_finish = {}
 	draft_meeting_year = 0
 	postseason_intro_seen = false
+	my_first_season = 0
 	salary_cap = 0
 	free_agents = []
 	offseason_year = 0
@@ -2321,7 +2331,10 @@ func finish_intake_draft() -> bool:
 ## Roll every list forward one year and rebuild the season. Split out so a
 ## career can continue even when there is no prospect pool to draft.
 func _start_next_season(next_year: int, signed: int) -> void:
-	postseason_intro_seen = true   # his first postseason is over, seen or not
+	# His first postseason is over, seen or not; a season played without
+	# you is not his (bug-bash 6).
+	if my_first_season != 0 and season_year >= my_first_season:
+		postseason_intro_seen = true
 	# Where every club finished: next season's board reads it (ClubLife.board_goal).
 	_last_finish = {}
 	if season != null:
@@ -2475,6 +2488,8 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	ensure_contracts()
 	ExpansionBuild.set_relief(self, next_year)
 	season_year = next_year
+	if my_first_season == 0 and my_club != "" and not sim_ahead:
+		my_first_season = season_year
 	# Dynamic rivalries cool once a season when two clubs stop meeting.
 	Rivalries.age(rivalry_history, season_year)
 	season_log = []
@@ -2765,6 +2780,8 @@ func _next_jumper_number(list: Array) -> int:
 func start_season(club_code: String, list: Array) -> void:
 	GameDB.pristine = false   # a career's data from here on: the next reset() reloads
 	my_club = club_code
+	if my_first_season == 0 and my_club != "" and not sim_ahead:
+		my_first_season = season_year
 	var lists := {}
 	# A league re-draft moves players between clubs: each arrives carrying his
 	# 2026 club, and takes his new club's code once his record is written below.
