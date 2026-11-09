@@ -1316,10 +1316,14 @@ static func _by_roles(group: Array, roles: Array) -> Array:
 ## wings, taggers and small forwards went over the clubs' range. Measured on
 ## tools/balance.sh match 1000 (league setup): defenders back to 36%, wings
 ## 22.3, taggers 17.8, small forwards 14.9, all inside the range.
+## Realism tune (director, 2026-11-09): midfielders took too much of the ball
+## between the arcs and forwards too little (MID 24.7 disposals a game, real
+## 20.5; FWD 10.1, real 11.7), so MID comes down here and LEAD_UP_SIZES lets key
+## forwards lead up to more. Measured on tools/balance.sh match 1000.
 const CARRY_ROLES := {
-	"middle": {"MID": 1.0, "RUCK": 1.0, "DEF": 0.9, "FWD": 0.6},
-	"attack": {"MID": 1.0, "FWD": 1.0, "DEF": 0.6, "RUCK": 0.3},
-	"inside": {"FWD": 1.0, "MID": 1.0, "RUCK": 0.3, "DEF": 0.05},
+	"middle": {"MID": 0.7, "RUCK": 0.8, "DEF": 0.75, "FWD": 0.7},
+	"attack": {"MID": 0.6, "FWD": 1.0, "DEF": 0.45, "RUCK": 0.22},
+	"inside": {"FWD": 1.0, "MID": 0.85, "RUCK": 0.3, "DEF": 0.05},
 }
 ## Back-zone carrying retuned (row 92, T9.Q22, director 2026-11-06: defenders
 ## carry the ball more than real AFL). A defender still leads the back zone's
@@ -1332,6 +1336,10 @@ const CARRY_BACK_RETUNED := {"DEF": 0.55, "MID": 1.0, "RUCK": 0.3, "FWD": 0.12}
 ## of the ball, the carry/disposal blend kick_in_taker uses, not his
 ## intercepting, so the best spoiler is not also the one the ball goes to.
 ## Who in a line gets it changes; how much each line gets does not.
+## The power on the rating in the carrier pick (2026-11-09). At 2 the ball went
+## too much to the better-rated line; at 1.4 and 1.6 midfielders came closer
+## still; row 136 settled on 1.5, with key forwards' leads holding margins up.
+const CARRY_PICK_POW := 1.5
 const BALL_USE := "ball_use"
 const BALL_USE_CARRY := 0.58
 const BALL_USE_DISPOSAL := 0.42
@@ -1344,7 +1352,7 @@ const FWD_KEY_CM := 192.0
 const FWD_SMALL_CM := 181.0
 ## Lead-up work in the middle and attack zones: small half-forwards get to
 ## more of it, key forwards stay deeper.
-const LEAD_UP_SIZES := {"small": 1.7, "general": 1.15, "key": 0.6}
+const LEAD_UP_SIZES := {"small": 1.25, "general": 1.15, "key": 1.35}
 ## Who is at the fall of the ball when a contest spills or is spoiled.
 const GROUND_SIZES := {"small": 1.8, "general": 1.0, "key": 0.45}
 ## His own game in the air moves an unmatched entry's mark chance by
@@ -1375,15 +1383,16 @@ static func fwd_size(p: Dictionary) -> String:
 ## Who takes the shot from an entry: a resting ruck or a defender pushed
 ## forward kicks the odd goal.
 const SHOT_ROLES := {"FWD": 1.0, "MID": 1.0, "RUCK": 0.35, "DEF": 0.06}
-## Who wins a clearance: forwards and defenders at a stoppage now and then.
+## Who wins a clearance: forwards and defenders at a stoppage now and then
+## (2026-11-09: 0.14, 0.24 and 0.3, against real 2026 by line, from 0.25, 0.12, 0.10).
 ## A ruck wins a quarter of what a midfielder would around the ground: he
 ## taps it to them (calibrated 2026-10-06 to 3.8 a game, real 3.6; centre
 ## bounces pick from the attendees by contested work alone).
-const CLEARANCE_ROLES := {"MID": 1.0, "RUCK": 0.25, "FWD": 0.12, "DEF": 0.10}
+const CLEARANCE_ROLES := {"MID": 1.0, "RUCK": 0.14, "FWD": 0.24, "DEF": 0.3}
 ## A ball-up inside a side's own forward 50 is the forwards' ground: they win
 ## it as often as a midfielder would, so the stoppages the ruck now taps on
 ## don't all go to midfielders (item 18, 2026-10-06: keeps rating parity).
-const CLEARANCE_ROLES_F50 := {"MID": 1.0, "RUCK": 0.25, "FWD": 1.0, "DEF": 0.10}
+const CLEARANCE_ROLES_F50 := {"MID": 1.0, "RUCK": 0.14, "FWD": 1.0, "DEF": 0.3}
 ## The clearance winner takes the chain's first disposal, as a clearance is
 ## in real football (director, 2026-10-06; evidence #363). The carrier pick is
 ## still drawn, so the rest of the chain's dice are where they were. Off only
@@ -1939,7 +1948,7 @@ func _credit_general_loose(side: int, target: Dictionary, defender: Dictionary, 
 		edge += 0.05
 	var mark0 := clampf(0.42 + edge, 0.18, 0.70)
 	var mark_r := clampf(0.42 + edge + _roam_mark_shift(roamer), 0.18, 0.70)
-	var spoil_p := clampf(GENERAL_SPOIL_BASE
+	var spoil_p := clampf(_tv("GENERAL_SPOIL_BASE", GENERAL_SPOIL_BASE)
 			+ (_a(defender, "intercept") - _a(target, "marking")) / 300.0
 			+ (0.06 if _trait(defender, "interceptor") else 0.0), 0.30, 0.82)
 	var denied := (mark0 - mark_r) + (1.0 - mark_r) * (1.0 - spoil_p) * _roam_spoil_p(roamer)
@@ -2217,12 +2226,13 @@ func _credit(side: int, cause: String, pts: float) -> void:
 
 ## Pressure by zone. Where the ball is, from the carrier's end: his back
 ## third (their forwards press), the middle (their midfield), his forward
-## third (their defenders). Each role's share of the pressing there; a
+## third (their defenders). 2026-11-09: forwards up the ground from the middle,
+## midfielders less, on real tackles by line. Each role's share of the pressing there; a
 ## player's chance to be the one applying it is this times Pressure squared.
 const PRESS_ZONES := [
-	{"FWD": 1.0, "MID": 0.75, "RUCK": 0.30, "DEF": 0.10},
-	{"FWD": 0.30, "MID": 1.0, "RUCK": 0.70, "DEF": 0.30},
-	{"FWD": 0.10, "MID": 0.75, "RUCK": 0.30, "DEF": 1.0},
+	{"FWD": 1.0, "MID": 0.55, "RUCK": 0.30, "DEF": 0.08},
+	{"FWD": 0.70, "MID": 0.80, "RUCK": 0.60, "DEF": 0.25},
+	{"FWD": 0.22, "MID": 0.60, "RUCK": 0.30, "DEF": 0.85},
 ]
 const PRESS_ZONE_EDGE := 20.0
 ## The Defensive Press by zone, from the carrier's end (PRESS_ZONES order):
@@ -2239,14 +2249,17 @@ const PRESS_ZONE_TURNOVER := 1.5
 const PRESS_BROKEN_EXPOSED := 1.7
 ## Non-tackle pressure acts per tackle chance, the share of those that turn
 ## the ball over outright, and the ground a rushed disposal still gains.
-const PRESS_RUSH_RATIO := 2.0
+## 2026-11-09: a player's pressure acts ran at 60% of real (median 6.5 a game,
+## real 11), so there are more of them, each costing the carrier less
+## (PRESS_TURNOVER_FLOW, PRESS_RUSH_GAIN): turnovers and scoring hold.
+const PRESS_RUSH_RATIO := 3.3
 ## The share of a pressure chance that is a tackle; the rest of it is a
 ## rushed disposal instead (pressure acts unchanged). Calibrated to AFL
 ## tackle counts (2026-10-06: tackles ran about 6% above).
-const PRESS_TACKLE_SHARE := 0.95
+const PRESS_TACKLE_SHARE := 0.97
 ## A rusher forces turnovers at this rate (match flow), because a share of them
 ## lock up into ball-ups and a tackle can spill the ball.
-const PRESS_TURNOVER_FLOW := 0.28
+const PRESS_TURNOVER_FLOW := 0.175
 ## Match flow (director 2026-10-10, MATCH_SHAPE_AUDIT_2026-10-10.md): a ball-up
 ## comes from a contest that locks up, not from a won ball. Of the turnovers a
 ## presser forces, the share that lock up instead; of the spoils inside 50 the
@@ -2271,22 +2284,26 @@ const TACKLE_SPILL := 0.5
 ## (_rebound_exit).
 const D50_KICK_GAIN := 3.0
 const D50_HANDBALL := 0.7
-const D50_PRESSURE := 0.65
+const D50_PRESSURE := 0.50
 const D50_TURNOVER := 0.15
 
 
 ## A named constant, or its audit override (tune).
 static func _tv(key: String, value: float) -> float:
 	return float(tune.get(key, value))
-const PRESS_RUSH_GAIN := 0.80
+const PRESS_RUSH_GAIN := 0.96
 ## A close defender occasionally gets boot to ball. Around one or two per
 ## match across both sides; pressure and the smotherer's ability move it.
 const SMOTHER_BASE := 0.008
 const SMOTHER_CAP := 0.022
 ## A subset of genuine 15m+ kicks outside forward 50 become aerial contests.
+## 2026-11-09: more of them, spoiled more and marked less (spoils between the
+## arcs ran far under real, contested marks over).
 ## Most ordinary kicks still use the calibrated chain model unchanged.
-const GENERAL_AERIAL_P := 0.040
-const GENERAL_SPOIL_BASE := 0.56
+const GENERAL_AERIAL_P := 0.15
+const GENERAL_SPOIL_BASE := 0.82
+## A general-play marking contest's mark chance, level players.
+const GENERAL_MARK_P := 0.18
 const GENERAL_MARK_ROLES := {"FWD": 1.0, "MID": 0.85, "DEF": 0.65, "RUCK": 0.70}
 
 
@@ -2728,7 +2745,7 @@ func pick_carrier(side: int, fp: float, among: Array = []):
 	var sizes: Dictionary = LEAD_UP_SIZES if zone == "middle" or zone == "attack" else {}
 	var group: Array = sq.ground if among.is_empty() else among
 	var roles: Dictionary = _back_roles(group) if zone == "back" else CARRY_ROLES[zone]
-	var who = _weighted_roles(group, key, roles, 2.0, side, purpose, sizes, zone)
+	var who = _weighted_roles(group, key, roles, _tv("CARRY_PICK_POW", CARRY_PICK_POW), side, purpose, sizes, zone)
 	if who != null:
 		var k := zone + "|" + str(who["role"])
 		carry_log[side][k] = int((carry_log[side] as Dictionary).get(k, 0)) + 1
@@ -2768,6 +2785,12 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 	var opp := 1 - side
 	var target = _weighted_roles((squads[side] as Squad).ground, "marking",
 			GENERAL_MARK_ROLES, 2.0, side, "aerial_target")
+	# A man cannot go up for his own kick: draw again among the rest. The first
+	# draw stays, so every match without this case keeps its dice.
+	if target != null and carrier != null and str(target.get("id", "")) == str(carrier.get("id", "")):
+		var others: Array = (squads[side] as Squad).ground.filter(
+				func(p): return str(p.get("id", "")) != str(carrier.get("id", "")))
+		target = _weighted_roles(others, "marking", GENERAL_MARK_ROLES, 2.0, side, "aerial_target")
 	var lead := _key_lead(side, mark_fp, carrier)
 	if not lead.is_empty():
 		target = lead
@@ -2807,7 +2830,7 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 		mark_edge += 0.05
 	if roaming:
 		mark_edge += _roam_mark_shift(roamer)
-	var mark_p := clampf(0.42 + mark_edge, 0.18, 0.70) * _wx("aerial")
+	var mark_p := clampf(_tv("GENERAL_MARK_P", GENERAL_MARK_P) + mark_edge, 0.18, 0.70) * _wx("aerial")
 	if aerial_rng.randf() < mark_p:
 		_t(side, "marks")
 		_p(target, "marks")
@@ -2828,7 +2851,7 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 			_log_duel(side, target, man, true, mev)
 		return {"outcome": "mark", "fp": mark_fp, "actor": target}
 
-	var spoil_p := clampf(GENERAL_SPOIL_BASE
+	var spoil_p := clampf(_tv("GENERAL_SPOIL_BASE", GENERAL_SPOIL_BASE)
 			+ (_a(defender, "intercept") - _a(target, "marking")) / 300.0
 			+ (0.06 if _trait(defender, "interceptor") else 0.0), 0.30, 0.82)
 	var spoilt := aerial_rng.randf() < spoil_p
@@ -3281,7 +3304,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_emit("tackle", opp, fp, tackler,
 					"%s tackles %s - ball up" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
 			return {"outcome": "stoppage", "fp": fp, "actor": carrier}
-		if press_roll < pressure * (1.0 + PRESS_RUSH_RATIO):
+		if press_roll < pressure * (1.0 + _tv("PRESS_RUSH_RATIO", PRESS_RUSH_RATIO)):
 			# Closed down without a tackle: the disposal is rushed. It gains
 			# less ground, and sometimes goes straight to the opposition -
 			# likelier against a strong presser, less likely from a clean
@@ -3356,7 +3379,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		if is_kick_in:
 			gain *= 0.82 if not kick_in_play_on else 1.12
 		if rushed:
-			gain *= PRESS_RUSH_GAIN
+			gain *= _tv("PRESS_RUSH_GAIN", PRESS_RUSH_GAIN)
 		elif zone == 0 and _pv(opp, "press") > 1.0 and _broke_press != side:
 			# Out of the back third with nobody on him: the press is broken.
 			_broke_press = side
@@ -5493,10 +5516,10 @@ const SET_BANDS_ON := [
 	{"key": "pocket", "spot": "from the pocket, on a tight angle", "metres": 15.0, "acc": 0.605, "share": 0.15},
 	{"key": "long", "spot": "from 55 metres out", "metres": 55.0, "acc": 0.33, "share": 0.10},
 ]
-## Tuned with every feature on (director, 2026-11-06): 0.50 and 0.95 put set shots at 55.0% of scoring
-## shots over 1,000 matches (tools/balance.sh), from 65.5% at 0.63 and 0.74.
-const SET_SHARE_ON := 0.50
-const SET_GP_SHOT := 0.95
+## Tuned on tools/balance.sh match 1000 (2026-11-09): 0.57 and 0.89 put set shots at about 55% of scoring
+## shots with total scoring held, after the pressure and carrier changes had moved it to 50%.
+const SET_SHARE_ON := 0.57
+const SET_GP_SHOT := 0.89
 
 
 ## The share of marks inside 50 that end in a set shot from the mark.
