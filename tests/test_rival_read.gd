@@ -292,10 +292,10 @@ func _test_record_words() -> void:
 	_check(k == "They know %s only partly and %s and %s barely. The rest they know well." % [
 			CoachReport.plan_label("attacking"), CoachReport.plan_label("contest"), CoachReport.plan_label("controlled")], k)
 	var story := _say(RivalRead.plan_story("Melbourne", ["defensive", "defensive", "attacking", "attacking"]))
-	_check(story == "Melbourne started with the %s and switched to the %s in the third quarter." % [
+	_check(story == "Melbourne started with the %s and switched to %s in the third quarter." % [
 			CoachReport.plan_label("defensive"), CoachReport.plan_label("attacking")], story)
 	_check(RivalRead.plan_story("they", ["balanced", "balanced"]) == "", "A plain game is not a story")
-	_check(_say(RivalRead.plan_story("they", ["controlled", "controlled"], "half")) == "they played the %s all half." % CoachReport.plan_label("controlled"),
+	_check(_say(RivalRead.plan_story("they", ["controlled", "controlled"], "half")) == "they played %s all half." % CoachReport.plan_label("controlled"),
 			"One plan all half")
 	_check(_say(RivalRead.plan_story("they", ["balanced", "attacking", "defensive", "controlled"])).contains(", then "),
 			"Three switches read in order")
@@ -307,24 +307,24 @@ func _test_record_words() -> void:
 	]
 	_check(RivalRead.season_line(rows.slice(0, 1), "defensive") == "", "One match is not a season's habit")
 	var s := _say(RivalRead.season_line(rows, "defensive"))
-	_check(s == "This season they've gone to the %s when chasing and the %s when in front." % [
+	_check(s == "This season they've gone to %s when chasing and %s when in front." % [
 			CoachReport.plan_label("attacking"), CoachReport.plan_label("controlled")], s)
-	_check(_say(RivalRead.season_line([rows[0], rows[0]], "defensive")) == "This season they've gone to the %s when chasing." % [
+	_check(_say(RivalRead.season_line([rows[0], rows[0]], "defensive")) == "This season they've gone to %s when chasing." % [
 			CoachReport.plan_label("attacking")], "Only the chase")
-	_check(_say(RivalRead.season_line([rows[1], rows[1]], "defensive")) == "This season they've gone to the %s when in front." % [
+	_check(_say(RivalRead.season_line([rows[1], rows[1]], "defensive")) == "This season they've gone to %s when in front." % [
 			CoachReport.plan_label("controlled")], "Only in front")
 	# The season line never names a plan as their habit beside the usual game
 	# the report has just named (director, 2026-11-08: Essendon read "usual
 	# game, Defensive Press" then "This season: mostly Controlled Tempo").
 	_check(not s.contains(CoachReport.plan_label("defensive")), "Their usual game is not said twice: %s" % s)
-	_check(_say(RivalRead.season_line(rows, "attacking")) == "This season they've gone to the %s when in front." % [
+	_check(_say(RivalRead.season_line(rows, "attacking")) == "This season they've gone to %s when in front." % [
 			CoachReport.plan_label("controlled")], "Chasing with their usual game is not a change")
 	_check(RivalRead.season_line([{"p": ["balanced"], "w": ["usual"]}, {"p": ["balanced"], "w": ["chase"]}], "balanced") == "",
 			"Nothing but their usual game: no line")
 	_check(_say(RivalRead.season_line([{"p": ["contest"], "w": ["chase"]}, {"p": ["balanced"], "w": ["usual"]}], "balanced"))
 			== "This season they've gone to %s when chasing." % CoachReport.plan_label("contest"), "Win Contest reads without \"the\"")
 	var v := _say(RivalRead.vs_line(rows, "GEE"))
-	_check(v == "Against you in Round 2, they started with the %s and switched to the %s in the second quarter." % [
+	_check(v == "Against you in Round 2, they started with the %s and switched to %s in the second quarter." % [
 			CoachReport.plan_label("defensive"), CoachReport.plan_label("controlled")], v)
 	_check(RivalRead.vs_line(rows, "SYD") == "", "No line before you have met")
 	# record_row: a rival coach's side only.
@@ -341,7 +341,7 @@ func _test_record_words() -> void:
 	var g := CoachReport.glance({"quarters": 4, "my_code": "GEE", "opp_code": "MEL", "opp_plans": [
 		{"gameplan": "defensive"}, {"gameplan": "defensive"}, {"gameplan": "attacking"}, {"gameplan": "attacking"}]}, true)
 	var read := " ".join(g.get("read", []))
-	_check(read.contains("started with the %s and switched to the %s in the third quarter." % [
+	_check(read.contains("started with the %s and switched to %s in the third quarter." % [
 			CoachReport.plan_label("defensive"), CoachReport.plan_label("attacking")]), "The glance tells the switch: %s" % read)
 
 
