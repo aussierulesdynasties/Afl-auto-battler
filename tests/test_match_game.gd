@@ -19,6 +19,7 @@ func run() -> void:
 	_t("_test_boundary_rules")
 	_t("_test_authenticity_events")
 	_t("_test_contextual_frees_and_general_spoils")
+	_t("_test_general_contest_player_edge")
 	_t("_test_free_causes_follow_the_play")
 	_t("_test_free_keeps_possession")
 	_t("_test_clanger_cause")
@@ -113,6 +114,55 @@ func _t(test: String, args := []) -> Variant:
 func _sim(seed: int, a := "GEE", b := "COL") -> MatchSim:
 	return MatchSim.new(Squad.new(a, GameDB.club_list(a), true, a),
 			Squad.new(b, GameDB.club_list(b), false, b), seed)
+
+
+## Bug bash 2026-11-10: the general-play mark and spoil bases sat on their
+## clamp bounds, so a better defender, the loose man's shift and the
+## Interceptor trait did nothing; the credit used its own old base.
+func _test_general_contest_player_edge() -> void:
+	var sim := _sim(4242)
+	var base: Dictionary = (sim.squads[0] as Squad).ground[0]
+	var fwd: Dictionary = base.duplicate(true)
+	fwd["id"] = "bb_fwd"
+	fwd["attr"]["marking"] = 70
+	var level: Dictionary = base.duplicate(true)
+	level["id"] = "bb_def_level"
+	level["attr"]["marking"] = 50
+	level["attr"]["intercept"] = 70
+	var good: Dictionary = level.duplicate(true)
+	good["id"] = "bb_def_good"
+	good["attr"]["intercept"] = 90
+	var inter: Dictionary = level.duplicate(true)
+	inter["id"] = "bb_def_int"
+	sim._traits["bb_fwd"] = []
+	sim._traits["bb_def_level"] = []
+	sim._traits["bb_def_good"] = []
+	sim._traits["bb_def_int"] = ["interceptor"]
+	var m_level := sim._general_mark_chance(fwd, level, 0.0)
+	var m_good := sim._general_mark_chance(fwd, good, 0.0)
+	_check(m_good < m_level, "A better defender lowers the general mark chance (%.3f < %.3f)" % [m_good, m_level])
+	var m_roam := sim._general_mark_chance(fwd, good, -0.05)
+	_check(m_roam < m_good, "The loose man's shift lowers the mark chance (%.3f < %.3f)" % [m_roam, m_good])
+	var s_level := sim._general_spoil_chance(fwd, level)
+	var s_good := sim._general_spoil_chance(fwd, good)
+	var s_int := sim._general_spoil_chance(fwd, inter)
+	_check(s_good > s_level, "A better defender raises the spoil chance (%.3f > %.3f)" % [s_good, s_level])
+	_check(is_equal_approx(s_int - s_level, 0.06), "The Interceptor adds 0.06 to the spoil chance (%.3f vs %.3f)" % [s_int, s_level])
+	# The contest reads the tuned number; the credit calls the same functions.
+	var had := MatchSim.tune.has("GENERAL_MARK_P")
+	var old = MatchSim.tune.get("GENERAL_MARK_P")
+	MatchSim.tune["GENERAL_MARK_P"] = MatchSim.GENERAL_MARK_P + 0.10
+	var m_tuned := sim._general_mark_chance(fwd, level, 0.0)
+	if had:
+		MatchSim.tune["GENERAL_MARK_P"] = old
+	else:
+		MatchSim.tune.erase("GENERAL_MARK_P")
+	_check(m_tuned > m_level, "The mark chance reads the tuned GENERAL_MARK_P (%.3f > %.3f)" % [m_tuned, m_level])
+	var src: String = (load("res://scripts/sim/MatchSim.gd") as GDScript).source_code
+	var at := src.find("func _credit_general_loose")
+	var body := src.substr(at, src.find("\n\n\n", at) - at)
+	_check(body.contains("_general_mark_chance(") and body.contains("_general_spoil_chance(")
+			and not body.contains("0.42"), "The loose-man credit uses the contest's own chances")
 
 
 func _test_auto_sim_untouched() -> void:
