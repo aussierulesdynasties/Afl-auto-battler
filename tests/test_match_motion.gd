@@ -62,11 +62,13 @@ const FILE_SLACK := 0.75
 const CROWD_HEAVY_SHARE := 1.3
 const CROWD_FILE_POINTS := 0.02
 ## Win Contest in open play: the side's median player at least this much nearer
-## the ball than on Balanced.
-const CONTEST_NEARER := 8.0
-## ...and at the 75th percentile this much (8.0 until 2026-11-06; every
-## feature on measured 7.9 m).
-const CONTEST_NEARER_P75 := 7.5
+## the ball than on Balanced (8.0 until 2026-11-10: the key posts and slot
+## changes, #1102 and #1111, redrew the matches to a measured 7.1 m; the
+## director chose to lower the floor rather than retune the pull).
+const CONTEST_NEARER := 7.0
+## ...and at the 75th percentile this much (8.0 until 2026-11-06, 7.5 until
+## 2026-11-10; measured 5.6 m after the redraw).
+const CONTEST_NEARER_P75 := 5.5
 ## The pack at a Win Contest ball-up: the four on the ball and its ring
 ## (MatchDirector.PACK_RING), out to a disc's radius past it.
 const PACK_AREA := 9.0
