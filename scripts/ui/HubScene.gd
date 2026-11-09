@@ -337,6 +337,7 @@ func _build() -> void:
 	if _narrow():
 		_root.add_child(_bar_air(UiKit.BG, page_scroll))
 		_root.add_child(_footer(season))
+		_clear_fold.call_deferred(page, page_scroll)
 	else:
 		# On a wide screen the rest of the club stays pinned, but only under
 		# the ladder column, not stretched across the page (director: no
@@ -1499,6 +1500,94 @@ func _sim_round_button() -> Button:
 	var sim := _nav_button("Sim the week", _on_sim_round_pressed)
 	sim.name = "SimRound"
 	return sim
+
+
+## How much of a phone's page height a card may be pushed down by: anything
+## taller is a long table, which is meant to run on past the fold.
+const FOLD_GAP_MAX := 0.4
+
+
+## At rest on a phone the card at the bottom edge of the page peeks (director,
+## 2026-11-09, "peek with fade"): its whole title line reads clear of the fade and
+## the rest fades into the scroll. One with too little room for that starts below
+## the edge instead. Only the opening view is fitted: a player's own scroll is
+## never snapped.
+func _clear_fold(page: Control, sc: ScrollContainer) -> void:
+	# The page's height settles over the first frames (a window resize, the
+	# bars above and below): fit again whenever it changes.
+	sc.resized.connect(func() -> void: _fit_fold(page, sc))
+	_fit_fold(page, sc)
+
+
+func _fit_fold(page: Control, sc: ScrollContainer) -> void:
+	_fold_fits += 1
+	var fit := _fold_fits
+	# The Hub can leave the tree during any of these waits (a screen change):
+	# get_tree() is null then, so hold the tree and re-check after each frame.
+	if not is_inside_tree():
+		return
+	var tree := get_tree()
+	await tree.process_frame
+	if fit != _fold_fits or not is_inside_tree() or not is_instance_valid(page) or not is_instance_valid(sc):
+		return
+	for gap in page.find_children("HubFoldGap", "", true, false):
+		gap.get_parent().remove_child(gap)
+		gap.free()
+	await tree.process_frame
+	await tree.process_frame
+	if fit != _fold_fits or not is_inside_tree() or not is_instance_valid(page) or not is_instance_valid(sc):
+		return
+	var edge := sc.get_global_rect().end.y - float(sc.scroll_vertical)
+	_push_past_fold(page, edge - _FOLD_FADE, edge, sc.size.y * FOLD_GAP_MAX)
+
+
+var _fold_fits := 0
+const _FOLD_FADE := 28.0   # the height of _bar_air's fade
+
+
+## Returns true once the fold is dealt with. Lists are walked into, so the gap
+## falls between two cards rather than above the whole week.
+func _push_past_fold(box: Control, fold: float, edge: float, max_gap: float) -> bool:
+	for c in box.get_children():
+		if not c is Control or not (c as Control).visible:
+			continue
+		var r := (c as Control).get_global_rect()
+		if r.end.y <= fold:
+			continue
+		if r.position.y >= edge:
+			return true
+		if c is VBoxContainer:
+			if _push_past_fold(c, fold, edge, max_gap):
+				return true
+			continue
+		var gap := edge - r.position.y
+		var peek := _peek_height(c as Control)
+		if gap >= peek:
+			gap -= peek
+		if gap > max_gap:
+			# A tall card with a list inside: the gap falls between its rows.
+			for inner in c.get_children():
+				if inner is VBoxContainer:
+					return _push_past_fold(inner, fold, edge, max_gap)
+			return true
+		var sep := float((box as VBoxContainer).get_theme_constant("separation")) 				if box is VBoxContainer else 0.0
+		var spacer := Control.new()
+		spacer.name = "HubFoldGap"
+		spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		spacer.custom_minimum_size = Vector2(0, maxf(0.0, gap - sep))
+		box.add_child(spacer)
+		box.move_child(spacer, c.get_index())
+		return true
+	return false
+
+
+## How much of a card shows when it peeks: down to the end of its title line,
+## plus the fade, so the title itself is not dimmed.
+func _peek_height(card: Control) -> float:
+	for n in card.find_children("*", "Label", true, false):
+		if (n as Control).is_visible_in_tree():
+			return (n as Control).get_global_rect().end.y - card.get_global_rect().position.y + _FOLD_FADE
+	return INF
 
 
 ## A little air above a pinned bar and a soft fade over the clip edge, so scrolled
