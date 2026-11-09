@@ -333,7 +333,7 @@
 		"when": {
 			"finals_week": 5
 		},
-		"weight": 1,
+		"weight": 6,
 		"cooldown": 60,
 		"title": [
 			"The night before"

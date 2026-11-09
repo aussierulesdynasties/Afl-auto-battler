@@ -368,13 +368,15 @@ const DEV_WEEK_XP := 26
 ## Rating from which a player is a star who may ask to extend early (the
 ## line MatchSim calls a star).
 const EXTENSION_MIN_OVR := 80
+## The Irish and New Zealand contract cards ask less of him (director 2026-11-09).
+const INTL_EXTENSION_MIN_OVR := 75
 
 
 ## Is this player the kind who asks to extend early: a star, out of contract
 ## at season's end, settled enough to want to stay - and nobody has asked yet
 ## this season, so most contract calls wait for the off-season.
-static func extension_wanted(p: Dictionary, memory: Dictionary) -> bool:
-	if int(p.get("contract_years", 2)) > 1 or int(p.get("overall", 0)) < EXTENSION_MIN_OVR or morale(p) < 40:
+static func extension_wanted(p: Dictionary, memory: Dictionary, min_ovr: int = EXTENSION_MIN_OVR) -> bool:
+	if int(p.get("contract_years", 2)) > 1 or int(p.get("overall", 0)) < min_ovr or morale(p) < 40:
 		return false
 	for key in memory:
 		if str(key).begins_with("extension|"):

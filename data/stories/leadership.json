@@ -871,15 +871,15 @@
 				"captain": true,
 				"fit": true,
 				"selected": true,
-				"morale_max": 58
+				"morale_max": 70
 			},
 			"pick": "random"
 		},
 		"title": [
-			"{name} has lost his touch"
+			"{name}'s form has dropped"
 		],
 		"text": [
-			"{name}'s been off for a few weeks. He's quiet about it."
+			"{name}'s numbers have been down for a few weeks, and the side's been losing."
 		],
 		"choices": [
 			{
@@ -909,7 +909,7 @@
 						"sting": 6
 					}
 				],
-				"result": "{name} talked it through."
+				"result": "You go through his last few games with him."
 			},
 			{
 				"key": "back",
@@ -945,7 +945,6 @@
 			}
 		],
 		"cooldown": 80,
-		"private": true,
 		"arc": "captain_slump",
 		"beat": "start",
 		"choice_notes": true,
@@ -965,10 +964,10 @@
 			"pick": "random"
 		},
 		"title": [
-			"{name}'s still searching for it"
+			"{name}'s form is still down"
 		],
 		"text": [
-			"Better, but not his best."
+			"His numbers are better, but not at his best."
 		],
 		"choices": [
 			{
@@ -989,7 +988,7 @@
 						"sting": 6
 					}
 				],
-				"result": "{name} knows you're still with him."
+				"result": "{name} stays in the side."
 			},
 			{
 				"key": "word",
@@ -1010,7 +1009,7 @@
 						"who": "subject"
 					}
 				],
-				"result": "{name} appreciates it."
+				"result": "You go through the tape with him again."
 			},
 			{
 				"key": "leave",
@@ -1026,11 +1025,10 @@
 						"d": 3
 					}
 				],
-				"result": "{name} keeps his head down."
+				"result": "{name} keeps playing his role."
 			}
 		],
 		"cooldown": 80,
-		"private": true,
 		"arc": "captain_slump",
 		"beat": "middle",
 		"needs": {
@@ -1057,7 +1055,7 @@
 			"{name}'s back to his best"
 		],
 		"text": [
-			"{name} looks like himself again. The group's noticed."
+			"{name}'s numbers are back where they were."
 		],
 		"choices": [
 			{
@@ -1079,7 +1077,7 @@
 						"sting": 6
 					}
 				],
-				"result": "{name} grins."
+				"result": "You tell him at the end of training."
 			},
 			{
 				"key": "letbe",
@@ -1100,7 +1098,6 @@
 			}
 		],
 		"cooldown": 80,
-		"private": true,
 		"arc": "captain_slump",
 		"beat": "end",
 		"needs": {
@@ -1127,7 +1124,7 @@
 			"{name} hasn't found his form"
 		],
 		"text": [
-			"{name}'s still flat, and the group's noticed."
+			"{name}'s numbers are still down."
 		],
 		"choices": [
 			{
@@ -1159,7 +1156,6 @@
 			}
 		],
 		"cooldown": 80,
-		"private": true,
 		"arc": "captain_slump",
 		"beat": "end",
 		"needs": {
@@ -1447,10 +1443,10 @@
 			"pick": "random"
 		},
 		"title": [
-			"{vice_name} is running more of the group"
+			"{name}'s armband, and what comes next"
 		],
 		"text": [
-			"{name} has been captain a long time. {vice_name} has been picking up more of the leadership lately."
+			"{name} has been captain a long time. {vice_name} is next in line as vice-captain."
 		],
 		"choices": [
 			{
@@ -1491,7 +1487,7 @@
 						"name": "su_start"
 					}
 				],
-				"result": "{name} appreciates it."
+				"result": "The armband stays with {name}."
 			},
 			{
 				"key": "notyet",
@@ -1517,7 +1513,6 @@
 		"when": {
 			"has_vice": true
 		},
-		"private": true,
 		"arc": "captain_succession",
 		"beat": "start",
 		"choice_notes": true
@@ -1537,7 +1532,7 @@
 			"Who's next?"
 		],
 		"text": [
-			"{name} says {vice_name}'s ready when he is."
+			"{vice_name} has been vice-captain through it. The call on the armband is yours."
 		],
 		"choices": [
 			{
@@ -1572,7 +1567,6 @@
 		"when": {
 			"has_vice": true
 		},
-		"private": true,
 		"arc": "captain_succession",
 		"beat": "end",
 		"needs": {
