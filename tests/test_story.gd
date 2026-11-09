@@ -1762,9 +1762,8 @@ func _test_captain_cards() -> void:
 		if bool(c.get("private", false)):
 			private_ids.append(str(c["id"]))
 	private_ids.sort()
-	_check(private_ids == ["captain_slump_flat", "captain_slump_good", "captain_slump_mid", "captain_slump_start",
-			"captain_succession_next", "captain_succession_start"],
-			"Only the slump and succession cards are private (%s)" % ", ".join(PackedStringArray(private_ids)))
+	_check(private_ids.is_empty(),
+			"The leadership cards speak of football facts, so they run under real names (%s)" % ", ".join(PackedStringArray(private_ids)))
 	for c in cards:
 		if str(c["id"]).begins_with("captain_contract"):
 			_check(not bool(c.get("private", false)), "The contract arc is about the contract, a football fact (%s)" % c["id"])

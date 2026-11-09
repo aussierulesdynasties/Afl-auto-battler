@@ -445,6 +445,7 @@
 	},
 	{
 		"id": "finals_gone",
+		"weight": 8,
 		"category": "selection",
 		"phase": [
 			"regular"

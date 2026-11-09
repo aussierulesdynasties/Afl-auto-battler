@@ -276,7 +276,7 @@ func _find(state: Node, id: String) -> Dictionary:
 # ---------------------------------------------------------------------------
 func _facts(region: String, seasons: int, games: int, goals: int, selected: bool, contract: int, ext: bool) -> Dictionary:
 	return {"id": "x", "intl": region != "", "intl_region": region, "seasons_listed": seasons, "games": games,
-			"goals": goals, "selected": selected, "contract_years": contract, "extension_ok": ext, "fit": true}
+			"goals": goals, "selected": selected, "contract_years": contract, "extension_ok": ext, "intl_extension_ok": ext, "fit": true}
 
 
 func _eligible(card: Dictionary, f: Dictionary, round_no: int) -> bool:
