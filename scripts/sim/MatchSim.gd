@@ -2779,6 +2779,12 @@ func _general_aerial_contest(side: int, mark_fp: float, carrier) -> Dictionary:
 	var opp := 1 - side
 	var target = _weighted_roles((squads[side] as Squad).ground, "marking",
 			GENERAL_MARK_ROLES, 2.0, side, "aerial_target")
+	# A man cannot go up for his own kick: draw again among the rest. The first
+	# draw stays, so every match without this case keeps its dice.
+	if target != null and carrier != null and str(target.get("id", "")) == str(carrier.get("id", "")):
+		var others: Array = (squads[side] as Squad).ground.filter(
+				func(p): return str(p.get("id", "")) != str(carrier.get("id", "")))
+		target = _weighted_roles(others, "marking", GENERAL_MARK_ROLES, 2.0, side, "aerial_target")
 	var lead := _key_lead(side, mark_fp, carrier)
 	if not lead.is_empty():
 		target = lead
