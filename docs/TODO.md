@@ -78,7 +78,7 @@ Never balance-screened together (#1074): match_flow, kick_range, set_shots, key_
 - 38 Live-3D vignette probe (low priority; Tripo ruck rig in Godot).
 - 43 More Tripo emblems (15,000 credits set aside; first slice done, none further assigned).
 - 44 State of Origin (not for 1.0; scope interview first).
-- Synergy numbers up (director 2026-11-10: "if anything i wanna boost synergy numbers but thats for later"). The row 103 audit had 47% of rival clubs fielding a synergy on main, 57% with row 103. Conflicts with the older target in DIRECTOR_BIBLE ruling 23 (each synergy on for 15-25% of clubs, clubs mostly 0-1): his new word wins when this is assigned. Unassigned.
+- Synergy numbers up (director 2026-11-10: "if anything i wanna boost synergy numbers but thats for later"). The row 103 audit had 47% of rival clubs fielding a synergy on main, 57% with row 103. Conflicts with the older target in DIRECTOR_BIBLE ruling 23 (each synergy on for 15-25% of clubs, clubs mostly 0-1): superseded. Target (director 2026-11-10): "i think teams at the bottom of the ladder should have 0-1 synergies, teams in the top 4 probably have 2-4 synergies". Done looks like: a seeded audit of synergies per club by ladder position, bottom clubs 0-1, top 4 at 2-4. Unassigned.
 - 41 Club Forge game-plan builder.
 - T3.R41 Team selection as two screens on phone, side by side on PC, no scroll (ruled later, 2026-11-06).
 - Player personality types and captaincy meaning (composure, late-game stability): both wanted, later (T5.Q12, T5.Q13).
