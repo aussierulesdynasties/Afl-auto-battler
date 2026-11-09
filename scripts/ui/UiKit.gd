@@ -1347,6 +1347,18 @@ static func team_colour() -> Color:
 ## The wash of your club's colour from the top of a sheet: team_colour, but a
 ## black-and-white club (club_is_black) washes in its black lifted to a
 ## neutral grey, never the accent's red-brown (director 2026-11-07, "fix now").
+## The ink a label takes when it owns the controls or the line beside it (STYLE-03,
+## row 6.34): a call's heading over its choices, a "Gain:" / "Cost:" marker. Your
+## club's readable ink; plain TEXT for a club with no hue or before a club exists.
+## Club red is fine here (director, 2026-11-04).
+static func label_ink() -> Color:
+	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
+	var club := str(gs.my_club) if gs != null else ""
+	if club == "" or not GameDB.clubs.has(club):
+		return TEXT
+	return club_ink(club)
+
+
 static func team_wash() -> Color:
 	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
 	var club := str(gs.my_club) if gs != null else ""
