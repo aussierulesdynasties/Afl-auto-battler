@@ -1507,10 +1507,21 @@ func _mount_one_line(c: Dictionary) -> void:
 		v.add_child(head)
 		for n in [facts, legs]:
 			put.call(v, n)
-		if did_head != null:
-			v.add_child(UiKit.spacer(2))
-		for n in [did_head, did]:
-			put.call(v, n)
+		# What your calls did can run long (every call, tag and lasting moment):
+		# on a phone it is one row that opens the lot in a sheet, so the break
+		# keeps the same height whatever the quarter threw up.
+		if did != null:
+			if did_head != null and did_head.get_parent() != null:
+				did_head.get_parent().remove_child(did_head)
+			if did.get_parent() != null:
+				did.get_parent().remove_child(did)
+			store.add_child(did)
+			var open_did := UiKit.text_action("What your calls did", UiKit.BODY)
+			open_did.name = "CallsDidOpen"
+			open_did.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			var did_note: Node = store.find_child("CallsDidNote", true, false)
+			open_did.pressed.connect(func(): _open_break_sheet("did", "What your calls did", [did_note, did], store))
+			v.add_child(open_did)
 		v.add_child(rows)
 		for key in order:
 			var k := str(key)
