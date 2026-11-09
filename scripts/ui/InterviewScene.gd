@@ -90,7 +90,7 @@ func _question() -> void:
 			UiKit.SMALL, UiKit.club_name_colour(UiKit.club_ink(GameState.my_club)), true)
 	byline.name = "InterviewByline"
 	_root.add_child(byline)
-	var text := str(q["q"]).replace("<Name>", _name).replace("<Club>", GameDB.club_name(GameState.my_club))
+	var text := str(q["q"]).replace("<Name>", _name).replace("<Club>", GameDB.club_name(GameState.my_club)) 			.replace("<Rival>", _beaten())
 	var ql := UiKit.lbl(text, UiKit.H2, UiKit.TEXT, true)
 	ql.name = "InterviewQuestion"
 	ql.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -115,6 +115,22 @@ func _question() -> void:
 		grid.add_child(b)
 	var count := UiKit.lbl("Question %d of %d" % [i + 1, Archetypes.QUESTIONS.size()], UiKit.SMALL, UiKit.MUTED)
 	_root.add_child(count)
+
+
+## The candidate you beat for the job: a free former senior coach, always by
+## his fictional name (never a real person), the same one for the same club.
+func _beaten() -> String:
+	var ids := GameState.coaches.keys()
+	ids.sort()
+	for cid in ids:
+		var c: Dictionary = GameState.coaches[cid]
+		if str(c.get("status", "")) == "free" and bool(c.get("former_sc", false)) and str(c.get("generic_name", "")) != "":
+			var held_here := false
+			for st in c.get("stints", []):
+				held_here = held_here or str(st[0]) == GameState.my_club
+			if not held_here:
+				return str(c["generic_name"])
+	return "a long list of names"
 
 
 func _reveal() -> void:

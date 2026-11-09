@@ -87,6 +87,14 @@ func _run() -> void:
 		field.text_changed.emit(field.text)
 		ok = await _tap(scene, "InterviewStart") and ok
 		await _shot(tag + "_question.png")
+		# The rival named in Q1 is a fictional coach, never a real person.
+		var qt: String = (_find(scene, "InterviewQuestion") as Label).text
+		print("Q1 ", qt)
+		for c in state.coaches.values():
+			var real := str(c.get("real_name", ""))
+			if real != "" and qt.contains(real):
+				print("FAIL real coach named: ", real)
+				ok = false
 		for q in range(7):
 			ok = await _tap(scene, "InterviewAnswer%d" % (q % 2)) and ok
 		await _shot(tag + "_reveal.png")

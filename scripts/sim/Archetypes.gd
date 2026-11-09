@@ -15,7 +15,7 @@ const STRATEGIC := ["DS", "TA", "CC", "PC"]
 const PHILOSOPHICAL := ["HARD", "ANA", "FATH", "GAMB"]
 
 const NAME := {
-	"DS": "Defense and System", "TA": "Territory and Attack",
+	"DS": "Defence and System", "TA": "Territory and Attack",
 	"CC": "Contest and Clearance", "PC": "Possession and Control",
 	"HARD": "Hardline Disciplinarian", "ANA": "Analytical Tactician",
 	"FATH": "Father Figure", "GAMB": "The Gambler",
@@ -98,7 +98,7 @@ const RIVAL_LINE := {
 ## "<Name>" and "<Club>" are filled in by the screen.
 const QUESTIONS := [
 	{"j": "sycophant", "set": "s", "w": 4,
-		"q": "<Name>, congrats on your appointment as <Club> Head Coach. You beat James Hird for the job. What sort of footy do you want this club to play?",
+		"q": "<Name>, congrats on your appointment as <Club> senior coach. You beat <Rival> for the job. What sort of footy do you want this club to play?",
 		"answers": [["DS", "We'll hunt the ball. Nobody gets an easy kick against us."],
 			["TA", "We'll win the territory and take the game on. Some of it will go wrong."],
 			["CC", "We win it at the contest first. Everything comes off that."],
