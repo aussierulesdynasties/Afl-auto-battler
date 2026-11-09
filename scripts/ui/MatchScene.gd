@@ -3425,6 +3425,11 @@ func _show_broadcast(kind: String, ev: Dictionary, snap: Dictionary) -> void:
 	overlay.name = "BroadcastVignetteOverlay"
 	overlay.color = Color(0.015, 0.018, 0.02, 1.0)
 	_broadcast_overlay = overlay
+	# STYLE-06 (row 6.34): the cut to the close-up eases in with the figures
+	# instead of the oval snapping to black (motion rule: a screen eases in).
+	if UiKit.motion_on():
+		overlay.modulate.a = 0.0
+		overlay.create_tween().tween_property(overlay, "modulate:a", 1.0, UiKit.Motion.DUR_FAST) 				.set_trans(UiKit.Motion.TRANS_IN).set_ease(UiKit.Motion.EASE_IN)
 	var vignette := BroadcastVignette.new()
 	vignette.name = "BroadcastVignette"
 	overlay.add_child(vignette)
@@ -3435,7 +3440,17 @@ func _show_broadcast(kind: String, ev: Dictionary, snap: Dictionary) -> void:
 
 func _finish_broadcast() -> void:
 	if _broadcast_overlay != null and is_instance_valid(_broadcast_overlay):
-		_broadcast_overlay.queue_free()
+		var gone := _broadcast_overlay
+		gone.name = "BroadcastVignetteLeaving"
+		if UiKit.motion_on():
+			# Back to the oval the same way: the cover eases off over the ground,
+			# which is already playing again under it; it takes no taps while it goes.
+			gone.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var tw := gone.create_tween()
+			tw.tween_property(gone, "modulate:a", 0.0, UiKit.Motion.DUR_FAST) 					.set_trans(UiKit.Motion.TRANS_OUT).set_ease(UiKit.Motion.EASE_OUT)
+			tw.tween_callback(gone.queue_free)
+		else:
+			gone.queue_free()
 	_broadcast_overlay = null
 	_broadcast_busy = false
 	if _broadcast_finish_waiting:
