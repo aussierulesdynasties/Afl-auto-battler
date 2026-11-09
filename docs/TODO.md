@@ -15,7 +15,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 73 | Premiership-year tattoos at a restrained, configurable rate; zero gameplay effect (6.Q16; see G 6.63) | tattoos on, rate in one place |
 | 84 | Togetherness at tight and cliques is felt in matches (director 2026-11-06, after the row 68 review); balance-gated, his playtest judges | audit shows the effect, he has played it |
 | 103 | Synergies within reach: draft, trade and free-agent screens show which synergy a player would complete, and a player can grow a trait over seasons through training (4.Q10); balance-gated | both shown in play, paired table |
-| 107 | Event cards: every choice gets an upside and a downside, and never-seen cards get a trigger (T5.Q18, row 34) | no no-cost choice, every card reachable in an audit |
 | 133 | Rival clubs sign out-of-contract players from other clubs on real lists, new clubs on the same rules (director 2026-11-09). A test career signed 0 for $0 | volume measured against real AFL, paired table |
 | 136 | Further match tuning (director 2026-11-09): mid disposals, key forward disposals, spoils, margins of 80+ | paired table, his playtest |
 | 113 | Start at the end of 2026: real lists, the real 2026 National Draft with each club's real picks, then play 2027 (T5.r134) | start option, sourced pick ownership, test |

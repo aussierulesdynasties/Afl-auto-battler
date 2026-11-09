@@ -137,7 +137,7 @@ func _test_classes(state: Node, db: Node) -> void:
 	for p in all_intl:
 		var id := str(p["intl"])
 		var s: Dictionary = stat.get(id, {"n": 0, "disp": 0.0, "acc": 0.0, "cont": 0.0, "mark": 0.0,
-				"pres": 0.0, "carry": 0.0, "h": 0.0, "age_lo": 99.0, "age_hi": 0.0, "ruckfwd": 0})
+				"pres": 0.0, "tackle": 0.0, "carry": 0.0, "h": 0.0, "age_lo": 99.0, "age_hi": 0.0, "ruckfwd": 0})
 		s["n"] += 1
 		var a: Dictionary = p["attr"]
 		var ovr := float(p["overall"])
@@ -146,6 +146,7 @@ func _test_classes(state: Node, db: Node) -> void:
 		s["cont"] += float(a["contested"]) - ovr
 		s["mark"] += float(a["marking"]) - ovr
 		s["pres"] += float(a["pressure"]) - ovr
+		s["tackle"] += float(a["pressure"])
 		s["carry"] += float(a["carry"]) - ovr
 		s["h"] += float(p["height_cm"])
 		s["age_lo"] = minf(float(s["age_lo"]), float(p["age"]))
@@ -171,7 +172,7 @@ func _test_classes(state: Node, db: Node) -> void:
 	_check(m.call("IRL", "disp") > m.call("USA", "disp") + 3.0, "Irish prospects kick and dispose better than Americans")
 	_check(m.call("IRL", "acc") > m.call("NZL", "acc") + 2.0, "Irish prospects are more accurate than New Zealanders")
 	_check(m.call("NZL", "cont") > m.call("IRL", "cont") + 3.0, "New Zealanders are stronger in a contest than the Irish")
-	_check(m.call("NZL", "pres") > m.call("USA", "pres") + 2.0, "New Zealanders tackle harder than Americans")
+	_check(m.call("NZL", "tackle") > m.call("USA", "tackle") + 2.0, "New Zealanders tackle harder than Americans")
 	_check(m.call("USA", "h") > m.call("IRL", "h") + 5.0, "Americans are taller than the Irish")
 	_check(m.call("USA", "mark") > m.call("NZL", "mark") + 3.0, "Americans mark better than New Zealanders")
 	_check(int(stat["USA"]["ruckfwd"]) * 10 >= int(stat["USA"]["n"]) * 6, "Most Americans are ruck or forward")
