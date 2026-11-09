@@ -284,7 +284,7 @@ func _test_screens() -> void:
 	if row != null:
 		_check(await Tap.tap(row) == "", "A finger's tap on his row reaches it, past the new line")
 		await _settle()
-		var said: Label = ls.find_child("ProfileFamiliarity", true, false)
+		var said: Control = ls.find_child("ProfileFamiliarity", true, false)
 		_check(said != null and said.find_child("ProfileFamiliarityCost", true, false).text == "2% off his footy, up 5% a game.", "His profile has his bar and what it costs him")
 	ls.queue_free()
 	await _settle()
