@@ -3799,7 +3799,8 @@ func _ensure_plan_known() -> void:
 	CoachEffects.known = plan_known
 
 
-## Saved levels read back as whole numbers of real plans, in range.
+## Saved fluencies read back in range, for real plans (a save from before
+## part-steps holds whole levels, which are fluencies already).
 func _clean_plan_known() -> void:
 	var clean := {}
 	for club in plan_known:
@@ -3807,7 +3808,7 @@ func _clean_plan_known() -> void:
 			continue
 		var row := {}
 		for plan in ["balanced"] + PreSeason.DRILL_PLANS:
-			row[plan] = PreSeason.clamp_level(int((plan_known[club] as Dictionary).get(plan, PreSeason.start_level(str(plan), ""))))
+			row[plan] = PreSeason.clamp_fluency(float((plan_known[club] as Dictionary).get(plan, PreSeason.start_level(str(plan), ""))))
 		row["balanced"] = PreSeason.WELL
 		clean[str(club)] = row
 	plan_known = clean
@@ -3825,24 +3826,35 @@ func _clean_plan_known() -> void:
 ## How well `club` knows `plan` (0 barely, 1 partly, 2 well). Without a
 ## season: well.
 func plan_level(club: String, plan: String) -> int:
+	return int(plan_fluency(club, plan))
+
+
+## The same with the part of a step: 1.5 is medium, half way to high.
+func plan_fluency(club: String, plan: String) -> float:
 	if season == null:
-		return PreSeason.WELL
+		return float(PreSeason.WELL)
 	_ensure_plan_known()
-	return int((plan_known.get(club, {}) as Dictionary).get(plan, PreSeason.WELL))
+	return float((plan_known.get(club, {}) as Dictionary).get(plan, PreSeason.WELL))
 
 
-## Your side's plan under its words: "Plan fluency: medium". "" without a
+## Your side's plan under its words: "Plan fluency: medium", or
+## "Plan fluency: 50% to high" part way. "" without a
 ## season or a club.
 func plan_known_line(plan: String) -> String:
 	if season == null or my_club == "":
 		return ""
-	return PreSeason.known_line(plan_level(my_club, plan))
+	return PreSeason.known_line(plan_fluency(my_club, plan))
 
 
 ## Where the pre-season, as your blocks are set now, leaves a plan (a card's
 ## extra drilling, such as staying home from camp, included).
 func plan_level_after_drills(plan: String) -> int:
-	return PreSeason.drilled_level(plan_level(my_club, plan), float(my_drill_credit().get(plan, 0.0)))
+	return int(plan_fluency_after_drills(plan))
+
+
+## The same with the part of a step.
+func plan_fluency_after_drills(plan: String) -> float:
+	return PreSeason.drilled_fluency(plan_fluency(my_club, plan), float(my_drill_credit().get(plan, 0.0)))
 
 
 ## Your weeks of drilling by plan: the blocks as set now and any card's.
@@ -3865,8 +3877,9 @@ func _slip_plan_known() -> void:
 		plan_idle[club] = {}
 
 
-## Week 8: each club's drilled plans move up (a plan nobody drilled is as it
-## was). Returns the sentence for your news: "" when nothing moved.
+## Week 8: each club's drilled plans move up, weeks short of a step counting as
+## part of one (a plan nobody drilled is as it was). Returns the sentence for your
+## news: "" when nothing moved.
 func _finish_drills() -> String:
 	_ensure_plan_known()
 	var line := ""
@@ -3884,12 +3897,12 @@ func _finish_drills() -> String:
 			for plan in extra:
 				credit[plan] = float(credit.get(plan, 0.0)) + float(extra[plan])
 		for plan in credit:
-			var was := int((plan_known[code] as Dictionary).get(plan, 0))
-			var now := PreSeason.drilled_level(was, float(credit[plan]))
+			var was := float((plan_known[code] as Dictionary).get(plan, 0))
+			var now := PreSeason.drilled_fluency(was, float(credit[plan]))
 			(plan_known[code] as Dictionary)[plan] = now
 			(plan_idle[code] as Dictionary)[plan] = 0
 			if code == my_club and now != was:
-				line += " The side's fluency in %s is now %s." % [CoachReport.plan_label(str(plan)), PreSeason.fluency_word(now)]
+				line += " The side's fluency in %s is now %s." % [CoachReport.plan_label(str(plan)), PreSeason.fluency_long(now)]
 	return line
 
 
@@ -3919,7 +3932,7 @@ func _note_plans_played(results: Array) -> void:
 				if int(idle[plan]) >= fade:
 					idle[plan] = 0
 					var row: Dictionary = plan_known[code]
-					row[plan] = PreSeason.clamp_level(int(row.get(plan, 0)) - 1)
+					row[plan] = PreSeason.clamp_fluency(float(row.get(plan, 0)) - 1.0)
 	mark_dirty()
 
 
@@ -4128,13 +4141,24 @@ func preseason_add_drill(weeks: int) -> void:
 # The draft class the pre-season match trials (PreSeason.gd)
 # ---------------------------------------------------------------------------
 ## The prospects who can be invited: the coming National Draft's class, not
-## yet drafted, in the order the pool holds them.
+## yet drafted, in the order the pool holds them. A kid already spoken for by
+## another club (his tie, or a new club's academy) never reaches that draft, so
+## he is no trial for this one; a kid tied to your own club still is.
 func preseason_prospects() -> Array:
 	var out := []
 	for p in draftee_pool:
-		if not drafted_draftees.has(str(p.get("id", ""))):
+		if not drafted_draftees.has(str(p.get("id", ""))) and not _spoken_for_elsewhere(p):
 			out.append(p)
 	return out
+
+
+## Whether begin_intake_draft will hand this prospect to a club that is not yours.
+func _spoken_for_elsewhere(p: Dictionary) -> bool:
+	var tie := str(p.get("tied_club", ""))
+	if tie != "" and int(p.get("draft_year", 0)) == season_year:
+		return tie != my_club
+	var academy: String = ExpansionBuild.academy_club(self, p)
+	return academy != "" and academy != my_club
 
 
 ## Your recruiters' read of this year's draft class, by id: {"overall": [lo, hi],
