@@ -951,6 +951,9 @@ func _pv(side: int, key: String, fallback := 1.0) -> float:
 	var plan := _plan(side)
 	var v := float((PLANS.get(plan, {}) as Dictionary).get(key, fallback))
 	var scale := 1.0
+	var amp := 1.0
+	if str((arch[side] as Dictionary).get("fplan", "")) == plan:
+		amp = _ar(side, "sup") if (PLAN_UPSIDE.get(plan, []) as Array).has(key) else _ar(side, "scost")
 	if (PLAN_UPSIDE.get(plan, []) as Array).has(key):
 		scale = float((squads[side] as Squad).tactics_exec) \
 				* float((plan_fit[side] as Dictionary).get(plan, 1.0)) \
@@ -959,7 +962,7 @@ func _pv(side: int, key: String, fallback := 1.0) -> float:
 		var know: Dictionary = (squads[side] as Squad).plan_know
 		if not know.is_empty():
 			scale *= float(know.get(plan, 1.0))
-	return fallback + (v - fallback) * scale
+	return fallback + (v - fallback) * scale * amp
 
 
 ## Pressure multiplier `side` faces from the opposition's plan, counters in.
@@ -980,12 +983,17 @@ func _press_on(side: int, zone := 1) -> float:
 		m = 1.0 + (m - 1.0) * (1.0 - hold)
 	elif m > 1.0 and _plan(side) == "attacking":
 		m *= 1.10
-	return m
+	return m * _ar(1 - side, "press")
 
 
 ## The side whose chain got out of its back third unpressured against a
 ## press (PRESS_BROKEN_EXPOSED), or -1. Reset at each chain's start.
 var _broke_press := -1
+
+
+var arch := [{}, {}]
+func _ar(side: int, key: String, d := 1.0) -> float:
+	return float((arch[side] as Dictionary).get(key, d))
 
 
 func _plan(side: int) -> String:
@@ -1613,7 +1621,7 @@ func _contest_traits(side: int) -> float:
 
 
 func _contest_plan(side: int) -> float:
-	return _pv(side, "contest", 0.0)
+	return _pv(side, "contest", 0.0) + _ar(side, "contest", 0.0)
 
 
 ## Fire them up lifts a side at the contest only while it is chasing the
@@ -1854,7 +1862,7 @@ func _maybe_fifty(receiving_side: int, mark_fp: float, offender, recipient) -> f
 	if offender == null:
 		return mark_fp
 	var discipline := _a(offender, "discipline")
-	var chance := FIFTY_BASE * (1.35 - 0.70 * discipline / 100.0)
+	var chance := FIFTY_BASE * (1.35 - 0.70 * discipline / 100.0) * _ar(1 - receiving_side, "fifty")
 	if _trait(offender, "hothead"):
 		chance *= 1.65
 	if discipline_rng.randf() >= clampf(chance, 0.002, 0.035):
@@ -3205,7 +3213,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_credit(opp, "traits", pressure * (lock - 1.0) * TURNOVER_VALUE)
 			pressure *= lock
 		p_base = pressure
-		pressure *= _pv(side, "taken")
+		pressure *= _pv(side, "taken") * _ar(side, "taken")
 		_credit(side, "gameplan", (p_base - pressure) * TURNOVER_VALUE)
 		p_base = pressure
 		pressure *= _pep_mult(side, "taken")
@@ -3337,7 +3345,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var prev_atk_fp := atk_fp
 		var gain: float = (float(T["metres_gain_mean"])
 				* (0.55 + 0.90 * _a(carrier, "carry") / 100.0))
-		gain *= _pv(side, "gain") * _pep_mult(side, "gain")
+		gain *= _pv(side, "gain") * _pep_mult(side, "gain") * _ar(side, "gain")
 		if synergies[side].has("supply_line"):
 			gain *= Traits.power("supply_line")
 		if _burst(side, "flood") or _burst(side, "hold"):
@@ -4059,7 +4067,7 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 	# The press closes the corridor: half the attacking plan's edge.
 	if own > 1.0 and _pv(opp, "press") > 1.0:
 		own = 1.0 + (own - 1.0) * 0.5
-	goal_p *= own
+	goal_p *= own * _ar(side, "goal")
 	if credit:
 		_credit(side, "gameplan", 6.0 * (goal_p - before))
 	before = goal_p
@@ -4067,7 +4075,7 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 	# attacking side on the rebound; everyone else meets both in full.
 	if _plan(side) != "controlled":
 		goal_p *= _pv(opp, "opp_goal")
-		goal_p *= _pv(opp, "exposed")
+		goal_p *= _pv(opp, "exposed") * _ar(opp, "exposed")
 	# This chain broke their press: the defence it runs at is outnumbered.
 	if _broke_press == side and _pv(opp, "press") > 1.0:
 		goal_p *= PRESS_BROKEN_EXPOSED
@@ -4430,7 +4438,7 @@ func _play_one_chain(T: Dictionary) -> void:
 	var hot_mult := float(cw[1])
 	_credit(side, "traits", -clanger_p * (hot_mult - 1.0) * CLANGER_VALUE)
 	clanger_p *= hot_mult
-	var cl_mult := _pv(side, "clangers")
+	var cl_mult := _pv(side, "clangers") * _ar(side, "clangers")
 	_credit(side, "gameplan", clanger_p * (1.0 - cl_mult) * CLANGER_VALUE)
 	clanger_p *= cl_mult
 	var pep_cl := _pep_mult(side, "clangers")
@@ -4839,7 +4847,7 @@ func _after_chain() -> void:
 		var movement_pace := _pv(side, "pace") * (1.0 if _pep(side) == "heat" else _pep_mult(side, "pace"))
 		if _burst(side, "surge"):
 			movement_pace *= SURGE_PACE
-		var fatigue_pace := movement_pace * heat_legs
+		var fatigue_pace := movement_pace * heat_legs * _ar(side, "legs")
 		if weather == "hot":
 			fatigue_pace *= HOT_DRAIN
 		if synergies[side].has("running_machine"):
