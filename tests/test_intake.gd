@@ -26,7 +26,6 @@ func run() -> void:
 	_t("_test_spots_sheet_before_offseason_opens")
 	_t("_test_draft_rules")
 	_t("_test_career_rollover")
-	_t("_test_tied_rookies_every_club")
 	_t("_test_class_tiers")
 	_t("_test_retirement_talk")
 	_t("_test_custom_prospect")
@@ -34,6 +33,10 @@ func run() -> void:
 	_t("_test_real_lists_start")
 	_t("_test_rebuild_walkouts_sign")
 	_t("_test_gen_traits_rates")
+	# Last: generated classes draw names from a shared counter, and a surname
+	# clash changes an international prospect's role, so running this earlier
+	# moved _test_class_tiers' comparison.
+	_t("_test_tied_rookies_every_club")
 	GameState.replay_seed = 0
 	print(Ran.line("Intake", self))
 
