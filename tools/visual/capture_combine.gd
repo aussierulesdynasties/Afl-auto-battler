@@ -68,7 +68,7 @@ func _run() -> void:
 	for c in clubs:
 		sizes[c] = 34
 		counts[c] = {"RUCK": 2, "MID": 13, "DEF": 9, "FWD": 10}
-	var prospects: Array = load("res://scripts/sim/Prospects.gd").generate_class(state.season_year + 1, 7331)
+	var prospects: Array = load("res://scripts/sim/Prospects.gd").generate_class(state.season_year, 7331)
 	state.draft = load("res://scripts/sim/Draft.gd").build_intake(prospects, clubs, clubs, 551, sizes, counts)
 	state.draft.start_for_user(club)
 	state.my_club = club
