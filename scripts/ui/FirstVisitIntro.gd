@@ -3,8 +3,8 @@ extends RefCounted
 ## First-visit intros for the main screens that had none (plan step 3b,
 ## register row 27): the Season stats intro's sheet, word for word in look -
 ## a title, two or three plain lines from the coach's side, and "Got it".
-## Opens once per device, only while this career's tips are on
-## (GameState.intro_due); seen the moment it opens.
+## Opens once per device (the first postseason's: once per career), only while
+## this career's tips are on (GameState.intro_due); seen the moment it opens.
 
 const TEXT := {
 	"draft": ["The draft", [
@@ -43,6 +43,11 @@ const TEXT := {
 	"season_review": ["Season review", [
 		"How your season went: who won the flag, how your list went, and the final ladder.",
 		"Read it, then move on to the off-season and start building for next year.",
+	]],
+	"postseason": ["After the finals", [
+		"First the Season review: awards night, then how your year went.",
+		"Then Trades & Contracts: re-sign players, chase free agents, do deals. It all stays open until you start the draft.",
+		"After the National Draft comes the pre-season, then Round 1.",
 	]],
 }
 
@@ -84,7 +89,7 @@ static func show(host: Control, key: String) -> Control:
 		var l := UiKit.lbl(line, 14, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
-	GameState.set_setting("seen_%s_intro" % key, true)
+	GameState.mark_intro_seen(key)
 	var ok := UiKit.btn("Got it", UiKit.NAME, true)
 	ok.name = node + "IntroOk"
 	ok.custom_minimum_size = Vector2(0, 48)

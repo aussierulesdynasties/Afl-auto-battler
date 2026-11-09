@@ -76,6 +76,8 @@ func _show_week_ask() -> void:
 	# not his: the card is the only thing on the hub.
 	if GameState.is_sacked():
 		return
+	if _show_postseason_intro():
+		return
 	# A new club card opens over the hub first, once (director, 2026-11-08:
 	# "it feels bad to think youve missed event cards"); closing it brings
 	# the next new one, then the rest of the week's asks. The press
@@ -95,6 +97,27 @@ func _show_week_ask() -> void:
 		_show_media_conference()
 	else:
 		_show_training_report()
+
+
+## The first postseason, once the finals are over (T3.Q18, ruling 56): the order
+## of what's ahead, before his first decision in it. The week's asks follow when
+## it closes. A press conference after the Grand Final is its own screen and goes
+## first; a draft already under way is past the point of telling him.
+func _show_postseason_intro() -> bool:
+	if GameState.season == null or not GameState.season.is_season_over() \
+			or GameState.media_conference_pending() or _popup_open() \
+			or (GameState.draft != null and GameState.draft.intake_mode):
+		return false
+	var sheet := FirstVisitIntro.show_if_due(self, "postseason")
+	if sheet == null:
+		return false
+	sheet.tree_exited.connect(_after_postseason_intro, CONNECT_DEFERRED)
+	return true
+
+
+func _after_postseason_intro() -> void:
+	if is_inside_tree() and not is_queued_for_deletion():
+		_show_week_ask()
 
 
 ## A short first-hub orientation, shown where the weekly loop actually lives
@@ -2021,6 +2044,8 @@ func _close_finals() -> void:
 func handle_back() -> bool:
 	if MatchKickoff.busy:
 		return true     # the side is on its way out
+	if FirstVisitIntro.close_open(self):
+		return true
 	if TrainingReportSheet.close_top(self):
 		return true
 	var plan_sheet := get_node_or_null("SeasonPlanSheet")
