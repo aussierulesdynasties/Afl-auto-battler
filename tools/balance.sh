@@ -6,6 +6,7 @@
 #   tools/balance.sh match 1000                         # one arm
 #   tools/balance.sh match 1000 --b "--on clanger_cause" # paired: base vs B
 #   tools/balance.sh match 1000 --a "--weather wet" --b "--weather perfect"
+#   tools/balance.sh match 1000 --a "--side-plan attacking" --b "--side-plan attacking --coach TA,GAMB"
 # Env: GODOT (binary), JOBS (workers, default cores-2), OUT (run dir).
 set -euo pipefail
 mode="${1:-match}"; n="${2:-1000}"; shift $(( $# >= 2 ? 2 : $# ))
@@ -47,3 +48,5 @@ for l in "$out"/*.log; do grep -q "SCRIPT ERROR\|Parse Error" "$l" && { echo "wo
 args=(--run "$out" --n "$n" --secs "$secs" --a "${arm_a:-base}")
 [ "$paired" = 1 ] && args+=(--b "$arm_b")
 python "$root/tools/balance/balance_report.py" "${args[@]}" | tee "$out/report.md"
+# Paired: the margin of side i%2 (the side --coach and --side-plan set), arm B against A.
+[ "$paired" = 1 ] && python3 "$root/tools/balance/side_compare.py" "$out" | tee -a "$out/report.md"
