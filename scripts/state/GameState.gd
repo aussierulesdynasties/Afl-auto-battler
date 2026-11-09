@@ -7580,7 +7580,7 @@ func _open_market(players: Array) -> void:
 		return str(a["id"]) < str(b["id"]))
 	var clubs := []
 	for code in GameDB.active_clubs(season_year):
-		if code != my_club and season.lists.has(code) and (season.lists[code] as Array).size() < Contracts.MAX_LIST:
+		if code != my_club and season.lists.has(code) and RookieList.senior_spot_free(season.lists[code]):
 			clubs.append(code)
 	# A rival's own out-of-contract player keeps its offer while he listens.
 	for p in players:
@@ -7880,8 +7880,9 @@ func offer_free_agent(player_id: String, salary: int, years: int) -> Dictionary:
 	var barred := Challenge.block_reason(self, p)
 	if barred != "":
 		return {"ok": false, "answer": "", "code": "challenge", "reason": barred}
-	if my_list.size() >= Contracts.MAX_LIST:
-		return {"ok": false, "answer": "", "reason": "Your list is full (%d)." % Contracts.MAX_LIST}
+	# A signing lands on the senior list (row 88), so it needs a senior spot.
+	if not RookieList.senior_spot_free(my_list):
+		return {"ok": false, "answer": "", "reason": "Your senior list is full (%d)." % RookieList.SENIOR_SPOTS}
 	var talks: Dictionary = p.get("talks", {})
 	if talks.has("refused"):
 		return {"ok": false, "answer": "walk", "reason": Contracts.REFUSED_TALKS % int(talks["refused"])}
@@ -8005,9 +8006,10 @@ func _decide_fa(p: Dictionary) -> String:
 			continue
 		var code := str(o["club"])
 		var list: Array = season.lists.get(code, [])
-		if list.size() >= Contracts.MAX_LIST or int(o["salary"]) > _cap_room_of(code):
+		var no_spot := not RookieList.senior_spot_free(list)
+		if no_spot or int(o["salary"]) > _cap_room_of(code):
 			if code == my_club:
-				mine_out = "fa_your_list" if list.size() >= Contracts.MAX_LIST else "fa_your_cap"
+				mine_out = "fa_your_list" if no_spot else "fa_your_cap"
 			continue
 		if code == my_club:
 			mine = o
@@ -11940,13 +11942,24 @@ func _set_press_standing(journalist: String, v: int) -> void:
 
 
 ## Press morale fades a point every second round, whoever asked, before this
-## week's question forms (ruling 5.54: effects decay).
+## week's question forms (ruling 5.54: effects decay). A player who has left
+## your list (traded, signed elsewhere, released, or left behind by your own
+## club move) keeps fading at the same pace: every list and the free agents.
 func _fade_press_lifts() -> void:
 	if season == null:
 		return
 	var round_no := season.round_index if last_phase == "regular" else Season.REGULAR_ROUNDS + int((season.finals.get("weeks", []) as Array).size())
+	var faded := {}
 	for p in my_list:
 		MediaConference.fade_lift(p, round_no)
+		faded[str(p.get("id", ""))] = true
+	var others := free_agents.duplicate()
+	for code in season.lists:
+		others.append_array(season.lists[code])
+	for p in others:
+		if p.has("press_lift") and not faded.has(str(p.get("id", ""))):
+			MediaConference.fade_lift(p, round_no)
+			faded[str(p.get("id", ""))] = true
 	# The board's press move fades the same way (a point a round).
 	var lift := int(media_memory.get("board_lift", 0))
 	if lift != 0:

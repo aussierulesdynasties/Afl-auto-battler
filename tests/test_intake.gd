@@ -1367,9 +1367,12 @@ func _matched_share(grown: Array, t: String, bands: Dictionary) -> float:
 
 
 ## Row 114, Rebuild: the bottom club's three best walk out before the 2026
-## National Draft, and once it is done they sign with rival clubs for 2027
-## (never with you, never back at the club they left), each on a deal that
-## covers 2027. You take over the bottom club.
+## National Draft, and once it is done they go to market among the rival clubs
+## for 2027 (never with you, never back at the club they left), each signing on
+## a deal that covers 2027. A rival needs a free senior spot to sign one
+## (director 2026-11-10: a club with 38 seniors is blocked, no bumping a
+## rookie), so a walkout no rival can fit stays a free agent. You take over the
+## bottom club.
 func _test_rebuild_walkouts_sign() -> void:
 	GameState.reset()
 	GameState.replay_seed = 4242
@@ -1394,18 +1397,31 @@ func _test_rebuild_walkouts_sign() -> void:
 	for code in GameState.season.lists:
 		for q in GameState.season.lists[code]:
 			where[str(q["id"])] = [str(code), q]
+	var still := GameState.free_agents.filter(func(q): return gone.any(func(g): return str(g["id"]) == str(q["id"])))
 	var placed := 0
 	var wrong := []
 	for g in gone:
 		var at = where.get(str(g["id"]))
 		if at == null:
-			wrong.append("%s unsigned" % str(g["id"]))
+			if not still.any(func(q): return str(q["id"]) == str(g["id"])):
+				wrong.append("%s lost (on no list, not a free agent)" % str(g["id"]))
 			continue
 		if str(at[0]) == club or str(at[0]) == GameState.my_club or int(at[1].get("contract_years", 0)) < 1:
 			wrong.append("%s at %s" % [str(g["id"]), str(at[0])])
 			continue
 		placed += 1
-	_check(placed == 3 and wrong.is_empty(), "All three sign with rival clubs for 2027 (%s)" % ", ".join(wrong))
-	var still := GameState.free_agents.filter(func(q): return gone.any(func(g): return str(g["id"]) == str(q["id"])))
-	_check(still.is_empty(), "None of them is left in free agency")
+	_check(wrong.is_empty() and placed + still.size() == 3,
+			"Each walkout signs with a rival club for 2027 or stays a free agent (%s)" % ", ".join(wrong))
+	var over := []
+	for g in gone:
+		var at = where.get(str(g["id"]))
+		if at != null and RookieList.senior_count(GameState.season.lists[str(at[0])]) > RookieList.SENIOR_SPOTS:
+			over.append(str(at[0]))
+	_check(over.is_empty(), "No club signs a walkout past %d seniors (%s)" % [RookieList.SENIOR_SPOTS, ", ".join(over)])
+	if still.size() > 0:
+		var room := []
+		for code in GameState.season.lists:
+			if str(code) != club and str(code) != GameState.my_club and RookieList.senior_spot_free(GameState.season.lists[code]):
+				room.append(str(code))
+		print("  rebuild: %d of 3 walkouts left in free agency; rivals with a senior spot: %s" % [still.size(), ", ".join(room)])
 	GameState.reset()
