@@ -194,6 +194,7 @@ static func _fade(step: int, ink: Color) -> Control:
 	chart.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chart.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	chart.custom_minimum_size = Vector2(0, FADE_H)
+	chart.set_meta("step", step)
 	var values: Array = TeamFamiliarity.fade_points()
 	chart.draw.connect(func() -> void:
 		var font: Font = UiKit.BOLD

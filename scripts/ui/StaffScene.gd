@@ -149,9 +149,6 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 	var word := _word_line(c)
 	if word != null:
 		v.add_child(word)
-		b.custom_minimum_size.y += 20
-	for n in v.find_children("*", "Control", true, false):
-		n.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.pressed.connect(func(): _sheet = CoachSheet.open(self, c))
 	var expiring := releasable and GameState.expiring_staff().has(c)
 	if expiring:
@@ -160,7 +157,14 @@ func _coach_row(job: String, c: Dictionary, releasable := false) -> Control:
 		term.name = "ContractEnds_" + job
 		term.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(term)
-		b.custom_minimum_size.y = 92
+	for n in v.find_children("*", "Control", true, false):
+		n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# The row grows with its lines (a wrapped term, a promise): a Button does
+	# not size to its children, so it follows the column's height, never
+	# less than the plain row (bug-bash 7).
+	var fit := func(): b.custom_minimum_size.y = maxf(68.0, v.get_combined_minimum_size().y + 12.0)
+	v.minimum_size_changed.connect(fit)
+	fit.call()
 	if not releasable:
 		return b
 	# The offseason: an assistant can be let go (no payout, no negotiation);

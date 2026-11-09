@@ -48,6 +48,8 @@ func run() -> void:
 	_t("_test_stat_focus_unlocks_next_season")
 	_t("_test_stat_focus_old_saves")
 	_t("_test_stat_focus_club_move")
+	_t("_test_focus_grows_a_trait")
+	_t("_test_rivals_grow_traits")
 	GameState.delete_saved_career()
 	GameState.replay_seed = 0
 	print(Ran.line("Training", self))
@@ -1421,3 +1423,54 @@ func _mean_attr(players: Array, key: String) -> float:
 		s += float(p["attr"][key])
 	return s / maxf(1.0, float(players.size()))
 
+
+
+## Row 103: a stat focus names the trait it grows him toward and how far.
+func _test_focus_grows_a_trait() -> void:
+	_new_season()
+	var p := {}
+	for q in GameState.my_list:
+		if str(q["role"]) == "MID" and int(q["attr"]["contested"]) < 84 and not Traits.of(q).has("bull"):
+			p = q
+			break
+	_check(not p.is_empty(), "A midfielder short of Contested bull")
+	if p.is_empty():
+		return
+	var ft := GameState.focus_trait(p, "contested")
+	_check(str(ft.get("key", "")) == "bull" and int(ft["gap"]) == 84 - int(p["attr"]["contested"]),
+			"A contested focus grows him toward Contested bull, and says how far")
+	_check(GameState.focus_trait(p, "ruck").is_empty(), "A midfielder's ruck focus names no trait")
+	p["attr"]["contested"] = 99
+	_check(GameState.focus_trait(p, "contested").is_empty() or Traits.of(p).size() >= Traits.MAX_GOOD,
+			"Once he has it the focus names it no more")
+
+
+## Every club gets it: a rival player near a synergy trait puts his focus on
+## it, keeps it, and his training lifts that stat.
+func _test_rivals_grow_traits() -> void:
+	_new_season()
+	var p := {}
+	var stat := ""
+	for code in GameState.season.lists:
+		if str(code) == GameState.my_club:
+			continue
+		for q in GameState.season.lists[code]:
+			var s := GameState._ai_trait_focus(q)
+			if s != "":
+				p = q
+				stat = s
+				break
+		if not p.is_empty():
+			break
+	_check(not p.is_empty(), "Some rival player is working toward a synergy trait")
+	if p.is_empty():
+		return
+	_check(str(p.get("train_focus", "")) == stat and GameState._ai_trait_focus(p) == stat, "He keeps his focus")
+	var ft := GameState.focus_trait(p, stat)
+	_check(not ft.is_empty() and int(ft["gap"]) <= GameState.AI_TRAIT_REACH, "It is a trait within reach")
+	var before := int(p["attr"][stat])
+	# Room to grow this season, and a season's XP to spend.
+	p["season_start_ov"] = int(p["overall"])
+	p["xp"] = int(p.get("xp", 0)) + 3000
+	GameState.ai_spend_xp(p)
+	_check(int(p["attr"][stat]) > before, "His training lifts the focus stat (%d to %d)" % [before, int(p["attr"][stat])])

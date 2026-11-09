@@ -1604,6 +1604,7 @@ func _open_player(id: String) -> void:
 			if TraitLink.known(str(t)):
 				TraitLink.tappable(tl, str(t))
 			kv.add_child(tl)
+	PlayerSheet.synergy_fit_block(kv, p, 13)
 
 	# The Combine: his results on the day (measured, the same for every club),
 	# then the scouts' read of what they say about his football.
