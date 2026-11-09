@@ -76,7 +76,7 @@ func _question() -> void:
 	var q: Dictionary = Archetypes.QUESTIONS[i]
 	var j: Dictionary = MediaConference.JOURNALISTS.get(str(q["j"]), {})
 	var byline := UiKit.lbl("%s, %s" % [str(j.get("name", "")), str(j.get("outlet", ""))],
-			UiKit.SMALL, UiKit.club_ink(GameState.my_club), true)
+			UiKit.SMALL, UiKit.club_name_colour(UiKit.club_ink(GameState.my_club)), true)
 	byline.name = "InterviewByline"
 	_root.add_child(byline)
 	var text := str(q["q"]).replace("<Name>", _name).replace("<Club>", GameDB.club_name(GameState.my_club))
@@ -104,7 +104,7 @@ func _reveal() -> void:
 	_title("The kind of coach you are")
 	for set_key in ["s", "p"]:
 		var id := str(arch["held"][set_key])
-		var head := UiKit.lbl(str(Archetypes.NAME.get(id, id)), UiKit.H2, UiKit.club_ink(GameState.my_club), true)
+		var head := UiKit.lbl(str(Archetypes.NAME.get(id, id)), UiKit.H2, UiKit.club_name_colour(UiKit.club_ink(GameState.my_club)), true)
 		head.name = "Archetype_" + set_key
 		_root.add_child(head)
 		_root.add_child(_line(str(Archetypes.UPSIDE.get(id, "")), UiKit.GOOD))
