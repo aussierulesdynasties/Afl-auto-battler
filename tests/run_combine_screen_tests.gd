@@ -253,6 +253,8 @@ func _test_missed_never_invented() -> void:
 	_check(row != null and (row.find_child("Standing", true, false) as Label).text == "Did not test", "...and it says why")
 	var rows := _find("CombineRows")
 	_check(rows.get_child(rows.get_child_count() - 1).name.begins_with("Missed_"), "...below everyone who tested")
+	var ranked_x: float = _name_x(rows.get_child(0))
+	_check(row != null and is_equal_approx(_name_x(row), ranked_x), "...in the same columns as the ranked rows")
 	_ui._combine_place["shown"] = 40
 	_ui.handle_back()
 	await _settle()
@@ -282,6 +284,29 @@ func _test_pick_from_sheet() -> void:
 		for l in row.find_children("*", "Label", true, false):
 			said += (l as Label).text + " "
 	_check(said.contains("on your list"), "...and it says he's yours: %s" % said)
+	# He stays in the draft's pool and joins its picks: still one man, one row.
+	await _tap("CombineTab_day", "The day after the pick")
+	var class_size := _state.draft.pool.filter(func(p): return bool(p.get("projected", false))).size()
+	_check((_find("CombineCount") as Label).text.contains("of %d prospects" % class_size)
+			or (_find("CombineCount") as Label).text.begins_with("All %d" % class_size),
+			"The class is the same size after a pick: %s" % (_find("CombineCount") as Label).text)
+	await _tap("CombineTab_sprint", "Sprint tab after the pick")
+	_ui._combine_place["shown"] = 999
+	_ui._combine._fill_rows("sprint")
+	await _settle()
+	var his := 0
+	var ids := {}
+	var doubled := 0
+	for r in _find("CombineRows").get_children():
+		var rid := str(r.get_meta("prospect_id", ""))
+		if rid == id:
+			his += 1
+		if rid != "" and ids.has(rid):
+			doubled += 1
+		ids[rid] = true
+	_check(his == 1, "He's on the board once: %d" % his)
+	_check(doubled == 0, "Nobody is on the board twice: %d" % doubled)
+	_ui._combine_place["shown"] = 40
 	_ui.handle_back()
 	await _settle()
 
@@ -338,6 +363,12 @@ func _test_widths() -> void:
 		_check(entry != null and Rect2(Vector2.ZERO, root.get_visible_rect().size).grow(1).encloses(entry.get_global_rect()),
 				"The way in stays on screen at %d" % w)
 	root.size = Vector2i(390, 844)
+
+
+## Where a row's first column after the rank starts.
+func _name_x(row: Node) -> float:
+	var rank := row.find_child("Rank", true, false) as Control
+	return -1.0 if rank == null else rank.size.x + rank.global_position.x
 
 
 func view_ok(r: Rect2) -> bool:
