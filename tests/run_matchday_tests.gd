@@ -1455,6 +1455,16 @@ func _test_every_break_fits(club: String, vs: String, sz: Vector2i) -> void:
 		var f := _break_fit(box)
 		if f[0] > f[1] + 1.0:
 			tall.append("break %.0f of %.0f" % [f[0], f[1]])
+		print("PROBE fit ", tag, " ", f)
+		for sc in box.find_children("*", "ScrollContainer", true, false):
+			for ch in sc.get_children():
+				if ch is VBoxContainer:
+					print("PROBE sep ", (ch as VBoxContainer).get_theme_constant("separation"))
+					for row in ch.get_children():
+						if row is Control and (row as Control).visible:
+							var txt := _text(row).replace("
+", " | ")
+							print("PROBE row ", row.name, " h=", (row as Control).get_combined_minimum_size().y, " ", txt.left(260))
 		var rows: Array = box.find_children("CallRow_*", "Button", true, false)
 		for r in rows:
 			var inside := (r as Control).get_child(0) as Control
