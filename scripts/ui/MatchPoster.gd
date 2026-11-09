@@ -166,10 +166,10 @@ func _fit_names() -> void:
 	var fits := true
 	for n: Label in _names:
 		var font: Font = n.get_theme_font("font")
-		if font.get_string_size(n.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.RATING).x > n.size.x:
+		if font.get_string_size(n.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.px(UiKit.RATING)).x > n.size.x:
 			fits = false
 	for n: Label in _names:
-		n.add_theme_font_size_override("font_size", UiKit.RATING if fits else UiKit.SCORE)
+		UiKit.set_font_size(n, UiKit.RATING if fits else UiKit.SCORE)
 
 
 func _shade(l: Label) -> void:
