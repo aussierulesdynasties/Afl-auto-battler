@@ -1,42 +1,49 @@
-# Putting a private test build on itch.io
+# Putting a build on itch.io
 
-For the director. You upload; nobody else needs your itch login or keys. The build is the browser
-("HTML") version, single-threaded, so it needs no special server headers: SharedArrayBuffer is
-not needed.
+**Who does what.** Sessions push the builds with butler and post the devlog. The director holds the login and the keys ("I'll run butler login"): he runs `butler login` and signs in to itch in the browser, and no session runs that login or opens `~/.keys`. If butler reports it is logged out, ask him to log in again.
 
-## 1. Get the zip
+**When.** Only when he says (2026-11-09): "just whenever I say". No upload, version bump or devlog without his word. Each build he calls gets the next number and its own new devlog post; a post is never retitled to cover a later build.
 
-1. On GitHub, open Actions, then "Web build". Run it with "Run workflow" on main (it also runs on
-   every push to main).
-2. When it is green, open the run and download the artifact `aussie-rules-dynasties-web`.
-3. Unzip it once. Inside is `index.html` at the top, next to `index.js`, `index.pck`,
-   `index.wasm` and a few smaller files. The downloaded zip is already in the right shape for
-   itch: if it has `index.html` at the top level of the zip, upload it as it is.
-4. Size: about 25 MB zipped (38 MB game data, 39 MB engine, both compress well). The data is
-   mostly the figure sheets and the music. (2026-10-18: the generated music was removed, so the data is smaller than this.)
+The page is https://aussierulesdynasties.itch.io/aussie-rules-dynasties, public since 2026-10-17. The butler target is `aussierulesdynasties/aussie-rules-dynasties:<channel>`; the old gabebartolo-spec target fails with "invalid target (bad user)". The browser ("HTML") version is single-threaded, so it needs no special server headers: SharedArrayBuffer is not needed.
 
-## 2. Create the project on itch
+## 1. Push with butler
 
-1. itch.io, Dashboard, Create new project.
-2. Kind of project: **HTML**.
-3. Uploads: upload the zip, and tick **This file will be played in the browser**.
-4. Embed options:
-   - Viewport dimensions: 1280 x 720 (the desktop design size). Tick **Fullscreen button**.
-   - **Mobile friendly**: tick it, and set the orientation to **Portrait** (the phone plays
-     portrait only; the game's first tap also puts the page fullscreen in portrait).
-   - Leave "SharedArrayBuffer support" **off**. Leave "Automatically start on page load" off
-     (itch then shows a Run game button; that tap is also what lets the browser play sound).
-   - Tick **Click to launch in fullscreen** only if you want phones to start fullscreen.
-5. Title, short description and a cover image as you like.
+Three channels, one version for all. The page is free.
 
-## 3. Keep it private
+```bash
+python3 -I tools/bump_version.py      # its own PR, merged first
+tools/export_builds.sh windows android web
+V="$(cat builds/version.txt)"   # <version>-<sha7>, written by the export
+B=~/tools/butler/butler.exe
+$B push builds/web     aussierulesdynasties/aussie-rules-dynasties:html5   --userversion "$V"
+$B push builds/windows aussierulesdynasties/aussie-rules-dynasties:windows --userversion "$V"
+$B push builds/android/aussie-rules-dynasties.apk aussierulesdynasties/aussie-rules-dynasties:android --userversion "$V"
+$B status aussierulesdynasties/aussie-rules-dynasties
+```
 
-Visibility and access, at the bottom of the project's Edit page:
+A channel named `windows` or `android` gets its platform tag on itch by itself. `tools/export_builds.sh` hands the Android signing key to Godot itself, so no session needs to open it. The key and its backup: docs/ITCH_BUILDS.md.
 
-- Set it to **Restricted** and press Save. Then either:
-  - **Password**: set one, and send testers the page link and the password; or
-  - **Download keys / access list**: under Distribute, create keys and send each tester one.
-- Do not set it to Public until you want it public. A Restricted page is not searchable.
+The html5 channel can also take the Web build workflow's artifact: on GitHub, Actions, "Web build" (it runs on every push to main), download `aussie-rules-dynasties-web` and unzip it once, so `index.html` is at the top next to `index.js`, `index.pck` and `index.wasm`. About 25 MB zipped, mostly the figure sheets.
+
+**Version number.** The version comes from `project.godot` `config/version` (the menu and Settings read it, and the Android and Windows exports use it); nothing else holds a copy, and `tools/check_version.py` fails CI if one appears. The butler `--userversion` is `<version>-<sha7>` (for example `0.1.13-60a1bd4`).
+
+A push replaces that channel's build. Testers get it on their next load, and saves from the older build keep loading. If a tester still sees the old build, ask them to hard-refresh (Ctrl+Shift+R, or on a phone close the tab and reopen the link) and check the build label on the main menu.
+
+## 2. Post the devlog
+
+Every upload gets one, titled `Build <version> (<sha7>): ...`: patch notes in plain football words, no PR numbers or engine terms. Posting needs no further confirmation once he has called the build.
+
+Set the redactor layer's innerHTML and the hidden `post[body]` textarea, tick `post[published]`, then Save. The in-app browser pane works when Chrome is not connected (he signs in). Saving a post in HTML mode can leave it unpublished: after any save, curl the logged-out public /devlog list and re-tick Published where a post vanished.
+
+## 3. The page's settings
+
+The project already exists. These are what its Edit page should show:
+
+- Kind of project: **HTML**, with the html5 channel marked **This file will be played in the browser**.
+- Viewport dimensions: 1280 x 720 (the desktop design size). **Fullscreen button** ticked.
+- **Mobile friendly** ticked, orientation **Portrait** (the phone plays portrait only; the game's first tap also puts the page fullscreen in portrait).
+- "SharedArrayBuffer support" **off**. "Automatically start on page load" off (itch then shows a Run game button; that tap is also what lets the browser play sound).
+- Pricing "No payments". Butler can't set it; it is on the dashboard, under his login.
 
 ## 4. Testers
 
@@ -47,11 +54,14 @@ Visibility and access, at the bottom of the project's Edit page:
   when closed. Tell testers.
 - Desktop: Chrome, Edge or Firefox. Phone: Android Chrome and iOS Safari (iOS needs the tester to
   tap once before sound starts, as for any web game).
+- Windows shows a SmartScreen warning (the exe is unsigned): More info, Run anyway. Saves live in
+  `%APPDATA%/Godot/app_userdata/Aussie Rules Dynasties`.
+- Android: download the APK, allow installs from the browser, open it. Saves live inside the app
+  (uninstalling erases them).
 
-## First test on your phone
+## First test on a phone
 
-Do this once yourself before sending the link to testers (iOS Safari and real-device speed are
-the two things nobody could check from a computer):
+For the director, since iOS Safari and real-device speed are the two things nobody could check from a computer:
 
 1. Open the itch page on your phone and tap Run game. Hold the phone upright first.
 2. Wait for the loading bar. Note roughly how long it took on your connection.
@@ -73,8 +83,8 @@ Send back: phone model, browser (Chrome or Safari) and what felt wrong.
 
 ## Reporting a problem
 
-Tell testers to send you four things, by whatever channel you choose (a message, an email, a form;
-nothing about how to reach you is stored in the game or the repo):
+Testers send the director four things, by whatever channel he chooses (a message, an email, a form;
+nothing about how to reach him is stored in the game or the repo):
 
 1. **Build**: the small grey line at the bottom of the main menu, for example "Build 0.1.13 (a1b2c3d)".
    Settings shows the same line as the version. It says exactly which upload they played.
@@ -83,35 +93,6 @@ nothing about how to reach you is stored in the game or the repo):
 4. **Could it be repeated?** Once, or every time.
 
 If the screen is black or stuck, also ask for the browser console text (desktop: F12, Console).
-
-## 5. Updating the build
-
-Upload the new zip, then delete the old upload so only one file is marked to play in the browser
-(itch's own advice is to upload the new zip and delete the old one; its docs don't say more about
-caching, so if a tester still sees the old build, ask them to hard-refresh (Ctrl+Shift+R, or on a
-phone close the tab and reopen the link) and check the build label on the main menu). Testers get the new build on their next load. Saves from
-the older build keep loading.
-
-**Version number.** The version comes from `project.godot` `config/version` (the menu and Settings read it, and the Android and Windows exports use it); nothing else holds a copy, and `tools/check_version.py` fails CI if one appears. Bump it with `python3 -I tools/bump_version.py` in its own PR before a build. The butler `--userversion` is `<version>-<sha7>` (for example `0.1.13-60a1bd4`), and the devlog title is `Build <version> (<sha7>): ...`.
-
-## 6. Windows and Android, with butler
-
-Sessions upload (the director's standing permission, 2026-11-06, replaces waiting for his go) and post a devlog with every upload. The page is free. Three channels, one version for all:
-
-```bash
-python3 -I tools/bump_version.py      # its own PR, merged first
-tools/export_builds.sh windows android web
-V="$(cat builds/version.txt)"   # <version>-<sha7>, written by the export
-B=~/tools/butler/butler.exe
-$B push builds/web     aussierulesdynasties/aussie-rules-dynasties:html5   --userversion "$V"
-$B push builds/windows aussierulesdynasties/aussie-rules-dynasties:windows --userversion "$V"
-$B push builds/android/aussie-rules-dynasties.apk aussierulesdynasties/aussie-rules-dynasties:android --userversion "$V"
-$B status aussierulesdynasties/aussie-rules-dynasties
-```
-
-A channel named `windows` or `android` gets its platform tag on itch by itself. The html5 channel can also take the Web build workflow's artifact as before. Then post the devlog, titled `Build <version> (<sha7>): ...`, in football words.
-
-Testers: Windows shows a SmartScreen warning (the exe is unsigned): More info, Run anyway. Android: download the APK, allow installs from the browser, open it. Saves on Windows live in `%APPDATA%/Godot/app_userdata/Aussie Rules Dynasties`; on Android inside the app (uninstalling erases them). The signing key and its backup: docs/ITCH_BUILDS.md.
 
 ## Known issues
 
@@ -122,6 +103,6 @@ Testers: Windows shows a SmartScreen warning (the exe is unsigned): More info, R
 
 ## Notes
 
-- Anything that is not in the zip is not online: there is no server, no account and no network use.
+- Anything that is not in the build is not online: there is no server, no account and no network use.
 - If a tester sees a black screen, ask for the browser name and version and the browser console
   (F12) text. The game needs WebGL 2, which every current browser and phone has.

@@ -1,12 +1,12 @@
 # Agent teams (Claude Code)
 
-Claude Code agent teams let one session act as lead and spawn teammates that each hold their own context, message each other, and share a task list. They are experimental, off by default, and use far more tokens than one session. This note says how to use them here without breaking the existing team rules. It is a tool note, not a rule: `CLAUDE.md` and the design bible still govern everything.
+Claude Code agent teams let one session spawn teammates that each hold their own context, message each other, and share a task list. They are experimental, off by default, and use far more tokens than one session. This note says how to use them here without breaking the existing team rules. It is a tool note, not a rule: `CLAUDE.md` and the design bible still govern everything.
 
 ## Where it fits
 
 - There are no standing roles (director, 2026-10-29). A team is something a session starts for one bounded job, then shuts down; that session reports to the director.
-- Teammates load `CLAUDE.md`, skills and MCP servers like any session, so the bible rules reach them. They do not see the lead's conversation: put the task, the files and the evidence bar in the spawn prompt.
-- Teammates do not merge, do not open PRs unless assigned, and do not message the director. Findings go to the lead.
+- Teammates load `CLAUDE.md`, skills and MCP servers like any session, so the bible rules reach them. They do not see the starting session's conversation: put the task, the files and the evidence bar in the spawn prompt.
+- Teammates do not merge, do not open PRs unless assigned, and do not message the director. Findings go to the session that started the team.
 
 ## Turn it on (per session, not committed)
 
@@ -14,7 +14,7 @@ Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your shell, or in `~/.claude/set
 
 Optional: `claude --teammate-mode auto` for split panes under tmux or iTerm2. The default in-process mode works anywhere.
 
-## Teammate roles in this repo
+## Teammate agent types in this repo
 
 Defined in `.claude/agents/`, usable as `Spawn a teammate using the <name> agent type to ...`:
 
@@ -24,13 +24,13 @@ Defined in `.claude/agents/`, usable as `Spawn a teammate using the <name> agent
 | `balance-skeptic` | owns one balance hypothesis and tries to disprove the others, with evidence | no, reports only |
 | `feature-gate` | assesses a proposed feature against the bible's feature test | no, advisory |
 
-No agent judges art (director, 2026-10-29): every image, capture or clip goes straight to the director after the session's own file check.
+No agent judges art, and no critic agents (director, 2026-11-05): every image, board, pose, capture or clip goes straight to the director after the session's own frame check.
 
 ## Ground rules for every team
 
 1. **Assigned work only.** A roadmap item is context, not authorisation. The spawn prompt names what was assigned and by whom.
 2. **One owner per file.** Two teammates on one file overwrite each other. Hot files (`MatchSim`, `GameState`, roadmap section files, `CLAUDE.md`, `tests.yml`) get one owner or none. Teammates that write code each use their own worktree and branch (`afl-team-pr`); no `git stash`.
-3. **Nobody edits the bible.** Teammates propose, under "For the director". Plan approval in a team is granted by the lead without review, so it is not a director gate.
+3. **Nobody edits the bible.** Teammates propose, under "For the director". Plan approval in a team is granted by the starting session without review, so it is not a director gate.
 4. **The director's calls stay the director's.** A teammate never declares balance settled, art approved or a feature accepted.
 5. **Start with 3 to 5 teammates**, review and audit work first. Size tasks to a clear deliverable.
 6. **Shut the team down at the task boundary**, then rewrite the session's handoff (`afl-handoff`). Teams do not survive `/resume`: persist anything that matters to a doc or the handoff.
@@ -41,7 +41,7 @@ No agent judges art (director, 2026-10-29): every image, capture or clip goes st
 Bible adherence audit (read-only):
 
 ```text
-Spawn 4 teammates using the bible-auditor agent type. Each audits one area against docs/DESIGN_BIBLE.md and reports conflicts: (1) docs/ROADMAP.md and docs/roadmap/, (2) docs/DESIGN.md and docs/MATCH_VIEW.md, (3) docs/VISUAL_STYLE_GUIDE.md and screen copy under scripts/ui/, (4) docs/COMPETITIVE_BALANCE.md and the other balance docs. Nobody edits anything. When all have reported, synthesize one list of conflicts, grouped as real conflicts, wording drift and "For the director".
+Spawn 4 teammates using the bible-auditor agent type. Each audits one area against docs/DESIGN_BIBLE.md and reports conflicts: (1) docs/TODO.md, (2) docs/DESIGN.md and docs/MATCH_VIEW.md, (3) docs/VISUAL_STYLE_GUIDE.md and screen copy under scripts/ui/, (4) docs/COMPETITIVE_BALANCE.md and the other balance docs. Nobody edits anything. When all have reported, synthesize one list of conflicts, grouped as real conflicts, wording drift and "For the director".
 ```
 
 Balance drift (reports evidence only):
@@ -60,7 +60,7 @@ Spawn 3 teammates using the feature-gate agent type. Each assesses this proposed
 
 - Teammates did not appear: the task may have been too small for a team. Ask for "an agent team" explicitly. If Claude used subagents instead, say so and ask again.
 - Too many permission prompts: pre-approve common operations in permission settings before spawning.
-- Lead starts doing the work itself: tell it to wait for the teammates to finish.
+- The starting session does the work itself: tell it to wait for the teammates to finish.
 - A task looks stuck: the teammate may have finished without marking it done. Check, then update it or nudge the teammate.
 
 Source: Claude Code docs, "Orchestrate teams of Claude Code sessions".
