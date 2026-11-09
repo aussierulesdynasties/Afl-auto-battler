@@ -618,6 +618,12 @@ static func practice_opponent(pairs: Array, code: String) -> String:
 # fades a step slowly through the year. A plan known less than well gives
 # less of its upside in the match (MatchSim._pv); what a plan gives up does
 # not change. Balanced is the base game and is always known well.
+#
+# Weeks short of a step count (director, 2026-11-08: "Partial weeks count",
+# row 126). A side's record holds a fluency: the level and how far it is to the
+# next (1.5 is medium, half way to high), in hundredths of a step so a save
+# reads back the same number. Part of a step goes into the season and plays part
+# way between the two levels (familiar_mult), and slips and fades with the rest.
 # ---------------------------------------------------------------------------
 const LEVELS := ["barely", "partly", "well"]
 const WELL := 2
@@ -632,6 +638,12 @@ static func level_word(level: int) -> String:
 	return str(LEVELS[clamp_level(level)])
 
 
+## A fluency in range, to the hundredth of a step (a whole division, so it is the
+## same number a save's text reads back as).
+static func clamp_fluency(f: float) -> float:
+	return float(roundi(clampf(f, 0.0, float(WELL)) * 100.0)) / 100.0
+
+
 ## What the coach reads (director, 2026-10-14): high / medium / low.
 const FLUENCY := ["low", "medium", "high"]
 
@@ -640,14 +652,35 @@ static func fluency_word(level: int) -> String:
 	return str(FLUENCY[clamp_level(level)])
 
 
-## "Plan fluency: high".
-static func known_line(level: int) -> String:
-	return "Plan fluency: %s" % fluency_word(level)
+## A fluency in a button's room: "medium", or "50% to high" part way to it.
+static func fluency_short(f: float) -> String:
+	var c := clamp_fluency(f)
+	var pct := roundi((c - floorf(c)) * 100.0)
+	if pct == 0:
+		return fluency_word(int(c))
+	return "%d%% to %s" % [pct, fluency_word(int(c) + 1)]
 
 
-## How much of a plan's upside a side at this level keeps (1.0 = all of it).
-static func familiar_mult(level: int) -> float:
-	return float((tune("familiar_mult") as Dictionary).get(level_word(level), 1.0))
+## The same in a sentence: "medium", or "50% of the way to high".
+static func fluency_long(f: float) -> String:
+	return fluency_short(f).replace("% to ", "% of the way to ")
+
+
+## "Plan fluency: high", "Plan fluency: 50% to high".
+static func known_line(f: float) -> String:
+	return "Plan fluency: %s" % fluency_short(f)
+
+
+## How much of a plan's upside a side at this fluency keeps (1.0 = all of it):
+## part of a step plays that part of the way to the next level.
+static func familiar_mult(f: float) -> float:
+	var c := clamp_fluency(f)
+	var table: Dictionary = tune("familiar_mult")
+	var low := float(table.get(level_word(int(c)), 1.0))
+	var part := c - floorf(c)
+	if part <= 0.0:
+		return low
+	return lerpf(low, float(table.get(level_word(int(c) + 1), 1.0)), part)
 
 
 ## The starting level of a plan nobody has drilled: well for Balanced and
@@ -670,7 +703,7 @@ static func start_levels(usual: String) -> Dictionary:
 static func slip_levels(levels: Dictionary) -> Dictionary:
 	var out := levels.duplicate()
 	for plan in DRILL_PLANS:
-		out[plan] = clamp_level(int(levels.get(plan, 0)) - 1)
+		out[plan] = clamp_fluency(float(levels.get(plan, 0)) - 1.0)
 	out["balanced"] = WELL
 	return out
 
@@ -692,7 +725,7 @@ static func default_drill(usual: String, levels: Dictionary) -> Array:
 		return [usual]
 	var best := str(DRILL_PLANS[0])
 	for plan in DRILL_PLANS:
-		if int(levels.get(plan, 0)) < int(levels.get(best, 0)):
+		if float(levels.get(plan, 0)) < float(levels.get(best, 0)):
 			best = str(plan)
 	return [best]
 
@@ -728,14 +761,14 @@ static func drill_credit(blocks: Array, shares := {}) -> Dictionary:
 	return out
 
 
-## Steps up that much drilling gives a plan.
-static func drill_steps(credit: float) -> int:
-	return int(floor(credit / float(tune("drill_step_weeks")) + 0.000001))
+## A fluency after `credit` weeks of drilling: every week counts.
+static func drilled_fluency(f: float, credit: float) -> float:
+	return clamp_fluency(f + credit / float(tune("drill_step_weeks")))
 
 
-## A level after `credit` weeks of drilling.
-static func drilled_level(level: int, credit: float) -> int:
-	return clamp_level(level + drill_steps(credit))
+## The level (low, medium, high) after `credit` weeks of drilling.
+static func drilled_level(f: float, credit: float) -> int:
+	return int(drilled_fluency(f, credit))
 
 
 ## An AI club's blocks with its usual plan drilled in the block its phase

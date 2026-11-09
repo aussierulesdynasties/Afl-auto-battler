@@ -12,6 +12,9 @@ extends RefCounted
 ## every club picking as the AI does, career and replay seed 2026), so the real 2026 class
 ## plays where it is picked; each team line then also carries "draftees", the 2026
 ## draftees in its 23.
+## `--plan-know F` (row 126): both sides know every plan but Balanced at fluency F
+## (PreSeason: 0 low, 1 medium, 2 high, 1.5 half way from medium to high), as a career's
+## record would give them. Without it a squad knows every plan fully.
 ## `setup` (--setup, fatigue parity): "" plays both sides as before (no coaching table);
 ## "league" plays both as a career's background match does (Season.match_sim: rival coaches
 ## pick their plans, every club rotates on a Steady season plan); "coached" makes one side
@@ -46,6 +49,10 @@ func play(from: int, count: int, out: String, weather: String,
 				var pair := kv.split("=")
 				if pair.size() == 2:
 					MatchSim.tune[pair[0].strip_edges()] = float(pair[1])
+	var plan_know := -1.0
+	for i in range(args.size() - 1):
+		if str(args[i]) == "--plan-know":
+			plan_know = float(args[i + 1])
 	var lists := {}
 	var class_ids := {}
 	if start == "real":
@@ -78,6 +85,10 @@ func play(from: int, count: int, out: String, weather: String,
 		var at_home := [ground.call(h) == v, ground.call(a) == v]
 		var sq_h := Squad.new(h, lists.get(h, GameDB.club_list(h)), bool(at_home[0]), h)
 		var sq_a := Squad.new(a, lists.get(a, GameDB.club_list(a)), bool(at_home[1]), a)
+		if plan_know >= 0.0:
+			for sq in [sq_h, sq_a]:
+				for plan in PreSeason.DRILL_PLANS:
+					(sq as Squad).plan_know[str(plan)] = PreSeason.familiar_mult(plan_know)
 		var coached := i % 2 if setup == "coached" else -1
 		if setup == "league" or setup == "coached":
 			for side in range(2):
