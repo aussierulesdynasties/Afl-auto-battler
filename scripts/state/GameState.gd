@@ -5842,9 +5842,12 @@ func _club_xp(club: String, p: Dictionary, base: int, staff: Dictionary, on_grou
 	if club == my_club and float(p.get("age", 25.0)) <= ClubBudget.YOUNG_AGE:
 		gain = int(round(float(gain) * ClubBudget.development_mult(
 				department_budget_level("development"))))
-	# A Father Figure's kids develop a little faster (row 119).
-	if float(p.get("age", 25.0)) <= Archetypes.KIDS_AGE:
-		var kx := float(Archetypes.KIDS_XP.get(str(CoachEffects.arch_of(club)[1]), 1.0))
+	# A Father Figure's kids develop a little faster (row 119). From the staff
+	# here, not the round's table: pre-season work runs off match day, where a
+	# loaded career has no table yet and a straight one still has last
+	# season's, so a reload trained its kids differently.
+	if not coaches.is_empty() and float(p.get("age", 25.0)) <= Archetypes.KIDS_AGE:
+		var kx := float(Archetypes.KIDS_XP.get(CoachEffects.philosophical(staff, club == my_club), 1.0))
 		if kx != 1.0:
 			gain = int(round(float(gain) * kx))
 	var plan_xp := Conditioning.xp_mult(fitness_plan(club), p)

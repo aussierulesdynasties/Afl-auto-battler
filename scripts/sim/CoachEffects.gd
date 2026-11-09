@@ -116,12 +116,22 @@ static func set_table(coaches: Dictionary, clubs: Array, my_club: String) -> voi
 		if club != my_club and not sc.is_empty():
 			Coaches.style(sc)
 		table[club] = row(staff, club == my_club)
-		# The senior coach's Philosophical archetype (row 119): yours is held
-		# in your record; a rival's comes from his own (it moves with him).
-		if club == my_club:
-			table[club]["arch_p"] = str((my_arch.get("held", {}) as Dictionary).get("p", ""))
-		elif not sc.is_empty():
-			table[club]["arch_p"] = Archetypes.rival_philosophical(Coaches.style_of(sc), sc.get("skills", {}))
+		if club == my_club or not sc.is_empty():
+			table[club]["arch_p"] = philosophical(staff, club == my_club)
+
+
+## The senior coach's Philosophical archetype (row 119) from a club's staff
+## (staffs): yours is held in your record; a rival's comes from his own (it
+## moves with him). "" for none. Off match day (pre-season training, practice
+## matches) read this, not the table: the table is the round's, and a career
+## loaded since has none until its next round.
+static func philosophical(staff: Dictionary, mine: bool) -> String:
+	if mine:
+		return str((my_arch.get("held", {}) as Dictionary).get("p", ""))
+	var sc: Dictionary = staff.get("SC", {})
+	if sc.is_empty():
+		return ""
+	return Archetypes.rival_philosophical(Coaches.style_of(sc), sc.get("skills", {}))
 
 
 ## One club's row of the table from its staff (staffs), writing nothing on
