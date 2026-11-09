@@ -34,18 +34,19 @@ const WING_NEVER_CONTESTED := 8.0
 ## the stoppage ball (MatchSim.pick_carrier / _stoppage).
 const WING_TRANSITION := 1.6
 const WING_STOPPAGE := 0.4
-## A tag with a tagger on the ground: the tagged player's share of the ball
-## (MatchSim; 0.55 without one).
+## What the tagged player keeps of his ball on fresh legs (tag_keep; row 120).
+## A Tagger holds him to TAG_WITH_TAGGER. Anyone else does a real but lesser
+## job, from his own Pressure: TAG_LOOSEST for the lowest-pressure midfielder up
+## to TAG_TIGHTEST_PLAIN for the highest, so the median man is about 58%.
 const TAG_WITH_TAGGER := 0.42
-const TAG_PLAIN := 0.55
+const TAG_LOOSEST := 0.66
+const TAG_TIGHTEST_PLAIN := 0.50
+## What a tagger's legs add to that, all of it on empty: 0.13 x (1 - legs / 100).
+const TAG_TIRED := 0.13
 ## A tagger's pressure, as a share of 2026 midfielders, and how far it must
 ## outrun his contested ball.
 const TAGGER_PRESSURE := 0.70
 const TAGGER_MARGIN := 0.20
-## The median midfielder's Pressure: at or below it a tag holds no tighter
-## than any midfielder doing the job (TAG_PLAIN); from it up to a Tagger's
-## level (TAGGER_PRESSURE) the hold tightens to a Tagger's (director, 2026-10-11).
-const TAG_HOLD_FROM := 0.50
 
 
 ## What the wing rewards: carry and disposal. Raw attribute blend.
@@ -102,18 +103,19 @@ static func is_tagger(p: Dictionary) -> bool:
 	return press >= TAGGER_PRESSURE and press - maxf(win, run) >= TAGGER_MARGIN
 
 
-## How much of a full tagger's hold his Pressure gives, 0 to 1: 0 at or
-## below the median midfielder (TAG_HOLD_FROM), 1 at a Tagger's level and
-## for a Tagger. His legs on the day scale it again (MatchSim.tag_hold).
-static func tag_press(p: Dictionary) -> float:
-	if p.is_empty() or not p.has("attr"):
-		return 0.0
-	if is_tagger(p):
-		return 1.0
-	var mid_view := p.duplicate()
-	mid_view["role"] = "MID"
-	var press := PlayerProfile.percentile(mid_view, "pressure", true)
-	return clampf((press - TAG_HOLD_FROM) / (TAGGER_PRESSURE - TAG_HOLD_FROM), 0.0, 1.0)
+## The share of his ball a man keeps with `p` tagging him at `legs` (energy out
+## of 100; director, 2026-10-11: it comes from the tagger's Pressure and his
+## legs). Every tagger takes something off him, and a Tagger the most (row 120).
+static func tag_keep(p: Dictionary, legs: float) -> float:
+	var fresh := TAG_LOOSEST
+	if not p.is_empty() and p.has("attr"):
+		if is_tagger(p):
+			fresh = TAG_WITH_TAGGER
+		else:
+			var mid_view := p.duplicate()
+			mid_view["role"] = "MID"
+			fresh = lerpf(TAG_LOOSEST, TAG_TIGHTEST_PLAIN, PlayerProfile.percentile(mid_view, "pressure", true))
+	return fresh + TAG_TIRED * (1.0 - clampf(legs / 100.0, 0.0, 1.0))
 
 
 ## His football identity in two or three words: "Wing", "Tagger",

@@ -49,6 +49,8 @@ This applies to the entire game. On every screen:
   club colours and strategic use of bold set sections apart.
 - A player's allegiance is obvious.
 - No text becomes overlooked.
+- When we can explain info visually rather than with copy, it's better (director,
+  2026-11-10).
 
 ## The principles
 
