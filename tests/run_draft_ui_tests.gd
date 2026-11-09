@@ -44,6 +44,7 @@ func _run() -> void:
 	await _t("_test_league_draft_stays_instant")
 	await _t("_test_take_tasmania")
 	await _t("_test_rival_why")
+	await _t("_test_draft_fit")
 	for sz in [Vector2i(390, 844), Vector2i(360, 800), Vector2i(320, 568), Vector2i(2560, 1440)]:
 		await _t("_test_subtitle_whole", [sz])
 	print(Ran.line("Draft UI", self))
@@ -1302,3 +1303,119 @@ func _test_rival_why() -> void:
 			"The reason is one short line on the phone, not a card")
 	ui.queue_free()
 	await _settle()
+
+
+## Draft fit (row 127): your coach's archetypes mark the prospects who suit
+## his game, six a class each, as a fact with the scouts' uncertainty and no
+## word of taking him. The marks follow the archetype; a real tap opens a
+## marked prospect's sheet and the mark is there too.
+func _test_draft_fit() -> void:
+	root.size = Vector2i(390, 844)
+	var Fit = load("res://scripts/sim/DraftFit.gd")
+	var clubs := ["MEL", "CAR"]
+	var sizes := {"MEL": 34, "CAR": 34}
+	var counts := {
+		"MEL": {"RUCK": 2, "MID": 13, "DEF": 9, "FWD": 10},
+		"CAR": {"RUCK": 2, "MID": 13, "DEF": 9, "FWD": 10},
+	}
+	var prospects: Array = load("res://scripts/sim/Prospects.gd").generate_class(_state.season_year + 1, 7331)
+	_state.draft = load("res://scripts/sim/Draft.gd").build_intake(
+			prospects, clubs, clubs, 551, sizes, counts)
+	_state.draft.start_for_user("MEL")
+	_state.my_club = "MEL"
+	_state.draft_meeting_year = _state.season_year
+	var d = _state.draft
+	var mult: float = d.scouting_mult_for("MEL")
+	# Every archetype marks six, the top of the class by its own read.
+	var by_arch := {}
+	for id in ["DS", "TA", "CC", "PC", "HARD", "ANA", "FATH", "GAMB"]:
+		var set_key := "s" if ["DS", "TA", "CC", "PC"].has(id) else "p"
+		var held := {"s": "", "p": ""}
+		held[set_key] = id
+		var marks: Dictionary = Fit.marks(d.pool, held, "MEL", d.seed, mult)
+		by_arch[id] = marks.keys()
+		var lowest := INF
+		var texts_ok := true
+		for pid in marks:
+			var m: Dictionary = marks[pid][0]
+			lowest = minf(lowest, float(m["value"]) if id != "GAMB" else float(m["value"]) - float(m["rated"]))
+			var t := str(m["text"])
+			texts_ok = texts_ok and t.begins_with(str(Fit.SUITS[id][0]) + ": ") and t.contains("scout's read, +/-")
+			for banned in ["take", "pick", "draft him", "best", "should", "recommend", "target"]:
+				texts_ok = texts_ok and not t.to_lower().contains(banned)
+		var above := true
+		var lines_ok := true
+		for pid in marks:
+			for p in d.pool:
+				if str(p["id"]) == pid and Fit.LINES.has(id):
+					lines_ok = lines_ok and (Fit.LINES[id] as Array).has(str(p["role"]))
+		for p in d.pool:
+			if Fit.LINES.has(id) and not (Fit.LINES[id] as Array).has(str(p["role"])):
+				continue
+			if not marks.has(str(p["id"])):
+				var r: Dictionary = Fit.read(p, id, "MEL", d.seed, mult)
+				var v := float(r["value"]) if id != "GAMB" else float(r["value"]) - float(r["rated"])
+				above = above and v <= lowest + 0.5
+		_check(marks.size() == 6 and above and texts_ok and lines_ok,
+				"%s marks the six who suit it best by the scouts' read, in fact words with the read's +/- (%d marked)" % [id, marks.size()])
+	_check(by_arch["DS"] != by_arch["CC"] and by_arch["FATH"] != by_arch["GAMB"],
+			"Different archetypes mark different prospects")
+	var one: Dictionary = Fit.marks(d.pool, {"s": "DS", "p": ""}, "MEL", d.seed, mult)
+	var first: String = str(one.values()[0][0]["text"])
+	_check(first.begins_with("Suits your pressing game: pressure ") and first.ends_with("scout's read, +/-6"),
+			"Defence and System reads the pressure rating, +/-6 at a plain budget (%s)" % first)
+	# A coach with no archetype marks nobody.
+	_check(Fit.marks(d.pool, {}, "MEL", d.seed, mult).is_empty(), "No archetype, no marks")
+
+	# On the board: the coach holds Defence and System and the Father Figure.
+	_state.coach_arch = {"s": {"DS": 10.0}, "p": {"FATH": 10.0}, "held": {"s": "DS", "p": "FATH"},
+			"tally": {"plans": {}, "calls": {}}}
+	var marked: Dictionary = Fit.marks(d.pool, _state.coach_arch["held"], "MEL", d.seed, mult)
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	var lines := ui.find_children("Fit_*", "Label", true, false)
+	var shown_ok := not lines.is_empty()
+	for l in lines:
+		var parts := str(l.name).split("_")
+		var pid := "_".join(parts.slice(1, parts.size() - 1))
+		var arch := parts[parts.size() - 1]
+		var match_mark := false
+		for m in marked.get(pid, []):
+			match_mark = match_mark or (str(m["arch"]) == arch and str(m["text"]) == (l as Label).text)
+		shown_ok = shown_ok and match_mark and not _cut(l)
+	_check(shown_ok, "The board shows each marked prospect's marks under his row, whole on a phone (%d lines)" % lines.size())
+	var ds_lines := 0
+	for l in lines:
+		if str(l.name).ends_with("_DS"):
+			ds_lines += 1
+	_check(ds_lines <= 6, "No more than six Defence and System marks on the board")
+	var target := ""
+	for pid in marked:
+		if (marked[pid] as Array).size() >= 1 and ui.find_child("Inspect_" + str(pid), true, false) != null:
+			target = str(pid)
+			break
+	var inspect: Button = ui.find_child("Inspect_" + target, true, false)
+	var why: String = await Tap.tap(inspect)
+	await _settle()
+	var sheet_ok := why == ""
+	for m in marked.get(target, []):
+		var fl: Label = ui.find_child("DetailFit_" + str(m["arch"]), true, false)
+		sheet_ok = sheet_ok and fl != null and fl.is_visible_in_tree() and fl.text == str(m["text"])
+	_check(sheet_ok, "A real tap on a marked prospect opens his sheet with his marks (%s)" % why)
+	ui.call("_close_player")
+	ui.queue_free()
+	await _settle()
+	# The archetype changes, the marks follow.
+	_state.coach_arch["held"] = {"s": "CC", "p": "GAMB"}
+	ui = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	var after := ui.find_children("Fit_*", "Label", true, false)
+	var follows := not after.is_empty()
+	for l in after:
+		follows = follows and (str(l.name).ends_with("_CC") or str(l.name).ends_with("_GAMB"))
+	_check(follows, "After the coach's archetypes change, the board's marks are the new ones")
+	ui.queue_free()
+	await _settle()
+	_state.coach_arch = {}

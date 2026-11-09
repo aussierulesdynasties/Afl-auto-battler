@@ -87,6 +87,9 @@ var _detail_all := false
 ## The Combine (row 83): its screen while open, and where the coach was in it.
 var _combine: CombineScreen = null
 var _combine_place := {}
+## Draft fit (row 127): prospect id -> the marks your coach's archetypes put
+## on him (DraftFit.marks), read once per screen.
+var _fit = null
 
 
 func _ready() -> void:
@@ -1087,6 +1090,12 @@ func _player_row(p: Dictionary) -> Control:
 	var kind_line := _row_line(" · ".join(kind), UiKit.MUTED)
 	kind_line.name = "Kind_" + str(p["id"])
 	face.add_child(kind_line)
+	# Draft fit (row 127): how he suits your coach's game, as a fact with
+	# the scouts' read. Your club's colour: it is about your club.
+	for m in _fit_of(p):
+		var fit_line := _row_line(str(m["text"]), _fit_colour(), true)
+		fit_line.name = "Fit_%s_%s" % [str(p["id"]), str(m["arch"])]
+		face.add_child(fit_line)
 	# The prospect you created at New Career (row 64), easy to find.
 	var own := OwnProspect.tag(p)
 	if own != "":
@@ -1605,6 +1614,16 @@ func _open_player(id: String) -> void:
 				TraitLink.tappable(tl, str(t))
 			kv.add_child(tl)
 	PlayerSheet.synergy_fit_block(kv, p, 13)
+
+	# Draft fit (row 127): how he suits your coach's game.
+	var fits := _fit_of(p)
+	if not fits.is_empty():
+		kv.add_child(UiKit.spacer(4))
+		for m in fits:
+			var fl := UiKit.lbl(str(m["text"]), 14, _fit_colour(), true)
+			fl.name = "DetailFit_" + str(m["arch"])
+			fl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			kv.add_child(fl)
 
 	# The Combine: his results on the day (measured, the same for every club),
 	# then the scouts' read of what they say about his football.
@@ -2632,6 +2651,26 @@ func _ignore_mouse(node: Control) -> void:
 
 ## A secondary line of a pool row: wraps, never cut (style guide: names and
 ## the facts that decide never truncate).
+## The draft-fit marks on prospect `p` ([] for none): only on a National
+## Draft class, by the archetypes your coach holds (row 119).
+func _fit_of(p: Dictionary) -> Array:
+	if not _draft.intake_mode or not bool(p.get("projected", false)):
+		return []
+	if _fit == null:
+		_fit = DraftFit.marks(_draft.pool, GameState.coach_arch.get("held", {}), _club,
+				_draft.seed, _draft.scouting_mult_for(_club))
+	return (_fit as Dictionary).get(str(p.get("id", "")), [])
+
+
+## Your club's ink; a red club (whose red stays off text, club_name_colour)
+## uses its second ink, so the mark still reads as yours and never as white.
+func _fit_colour() -> Color:
+	var ink := UiKit.club_name_colour(UiKit.club_ink(_club))
+	if ink == UiKit.TEXT:
+		ink = UiKit.club_name_colour(UiKit.club_ink_second(_club))
+	return ink
+
+
 func _row_line(text: String, colour: Color, bold := false) -> Label:
 	var l := UiKit.lbl(text, UiKit.SECONDARY, colour, bold)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
