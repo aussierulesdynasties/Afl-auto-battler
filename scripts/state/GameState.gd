@@ -2331,6 +2331,7 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	# Undecided assistants stay; then no staff job starts the season empty.
 	_settle_staff_contracts()
 	_fill_open_staff()
+	_expire_my_promises()
 	Season.beat()
 	# The honour board (row 122): anyone who left in the off-season (a trade,
 	# free agency) is stamped with the season he left after, before the year
@@ -12481,6 +12482,28 @@ func _find_coach_approaches() -> void:
 	mark_dirty()
 
 
+## Why you can't promise him the senior assistant's job, or "" when you can.
+func approach_promise_block(i: int) -> String:
+	if i < 0 or i >= coach_approaches.size():
+		return "No such approach."
+	var a: Dictionary = coach_approaches[i]
+	if str(a["from_job"]) == "SA":
+		return "He is already your senior assistant."
+	if CoachMarket.holds_promise(coaches.get(str(a["cid"]), {}), my_club):
+		return "You have already promised him that job."
+	return ""
+
+
+## How he weighs an answer, 0-100: he stays at CoachMarket.STAY_BAR (50) or
+## more. No roll: the same weight gives the same answer every time.
+func approach_weight(i: int, choice: String) -> int:
+	if i < 0 or i >= coach_approaches.size() or choice == "go":
+		return 0
+	var a: Dictionary = coach_approaches[i]
+	var c: Dictionary = coaches.get(str(a["cid"]), {})
+	return int(round(100.0 * CoachMarket.stay_chance(c, choice, str(a["job"]), season_year, _my_coach_result())))
+
+
 ## Why you can't offer him senior assistant, or "" when you can.
 func approach_promote_block(i: int) -> String:
 	if i < 0 or i >= coach_approaches.size():
@@ -12508,6 +12531,8 @@ func answer_approach(i: int, choice: String) -> String:
 	var rival := GameDB.club_name(str(a["club"]))
 	if choice == "promote" and approach_promote_block(i) != "":
 		return approach_promote_block(i)
+	if choice == "promise" and approach_promise_block(i) != "":
+		return approach_promise_block(i)
 	a["choice"] = choice
 	if choice == "go":
 		a["text"] = "%s will join %s after the season. You wished him well." % [who, rival]
@@ -12516,8 +12541,13 @@ func answer_approach(i: int, choice: String) -> String:
 		if choice == "promote":
 			var old := str(c.get("job", ""))
 			CoachMarket.promote_to_sa(c, my_club, season_year, career_seed)
+			_let_down("SA", str(a["cid"]))
 			staff_vacancies.append({"job": old, "reason": "%s stepped up to senior assistant." % who})
 			a["text"] = "%s turns %s down to become your senior assistant." % [who, rival]
+		elif choice == "promise":
+			CoachMarket.make_promise(c, season_year)
+			a["text"] = "%s turns %s down. You have promised him the senior assistant's job by %d." % [
+					who, rival, season_year + CoachMarket.PROMISE_SEASONS]
 		else:
 			a["text"] = "%s turns %s down and stays on." % [who, rival]
 	else:
@@ -12614,6 +12644,7 @@ func appoint_staff(job: String, cid: String) -> void:
 	if not coaches.has(cid):
 		return
 	var left := CoachMarket.appoint_mine(coaches, cid, my_club, job, season_year, career_seed)
+	_let_down(job, cid)
 	_close_vacancy(job)
 	if left != "":
 		staff_vacancies.append({"job": left, "reason": "%s stepped up to %s." % [
@@ -12623,6 +12654,7 @@ func appoint_staff(job: String, cid: String) -> void:
 
 func auto_fill_staff(job: String) -> void:
 	var left := CoachMarket.auto_fill(coaches, my_club, job, season_year, career_seed)
+	_let_down(job, str(Coaches.staff(coaches, my_club).get(job, "")))
 	_close_vacancy(job)
 	if left != "":
 		staff_vacancies.append({"job": left, "reason": "Filled from within: his old job is open."})
@@ -12687,6 +12719,26 @@ func resign_staff(cid: String) -> void:
 func _settle_staff_contracts() -> void:
 	for c in expiring_staff():
 		CoachMarket.resign(c, season_year)
+
+
+## You gave `job` to `cid`: anyone you had promised it to hears about it.
+func _let_down(job: String, cid: String) -> void:
+	for line in CoachMarket.settle_promises(coaches, my_club, job, cid):
+		add_news("coaching", str(line))
+
+
+## A season starts: a promise to one of your coaches whose time is up and was
+## not kept is broken, and the news says so.
+func _expire_my_promises() -> void:
+	for cid in coaches:
+		var c: Dictionary = coaches[cid]
+		if not CoachMarket.holds_promise(c, my_club):
+			continue
+		if str(c.get("status", "")) != "club" or str(c.get("club", "")) != my_club:
+			c.erase("promise")
+		elif int(c["promise"].get("by", 0)) <= season_year + 1:
+			add_news("coaching", CoachMarket._broken_line(c))
+			CoachMarket.break_promise(c)
 
 
 ## A season never starts a staff member short: open jobs are auto-filled.

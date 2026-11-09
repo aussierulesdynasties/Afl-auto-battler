@@ -4775,10 +4775,12 @@ func _test_skip_home_away_kids() -> void:
 	on = 0
 	for p in _state.my_list:
 		promised += backing.ledger(p).size()
-		if backing.is_active(p):
+		# A run waits for a kid who is hurt or suspended (Backing.after_match), so
+		# one can outlast the season through no fault of the skip.
+		if backing.is_active(p) and backing.fit(p):
 			on += 1
 	_check(bool(res["ok"]) and promised >= 2, "Six rounds left: the kids get runs (%d)" % promised)
-	_check(on == 0, "None of them is still going when it stops (%d)" % on)
+	_check(on == 0, "None of them who can play is still going when it stops (%d)" % on)
 	_state.week_events = []
 	_state.media_conference = {}
 

@@ -14,8 +14,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 | 73 | Premiership-year tattoos at a restrained, configurable rate; zero gameplay effect (6.Q16; see G 6.63) | tattoos on, rate in one place |
 | 84 | Togetherness at tight and cliques is felt in matches (director 2026-11-06, after the row 68 review); balance-gated, his playtest judges | audit shows the effect, he has played it |
 | 103 | Synergies within reach: draft, trade and free-agent screens show which synergy a player would complete, and a player can grow a trait over seasons through training (4.Q10); balance-gated | both shown in play, paired table |
-| 136 | Further match tuning (director 2026-11-09): mid disposals, key forward disposals, spoils, margins of 80+ | paired table, his playtest |
-| 113 | Start at the end of 2026: real lists, the real 2026 National Draft with each club's real picks, then play 2027 (T5.r134) | start option, sourced pick ownership, test |
 | 117 | Coaching staff: head coach, head assistant, assistants; counter-offer (not money) when a rival poaches one (T5.Q16) | approach, counter and departure tested |
 | 119 | Coach name and appointment interview (director 2026-11-07, after itch 1.0.8). New save: pick any club, type your coach's name, then your first press conference (canon, director: you beat James Hird for the job, mentioned once in the interview, neutral wording, nothing about his past) in the same press room with the real journalists, not skippable: "<Name>, congrats on your appointment as Demons Head Coach", then questions on your coaching style, recruitment approach, strength and conditioning and more, ending with "what do you predict for the season to come?". Your answers set your coaching archetype, like an RPG. The archetype moves match play too, and it shifts over seasons with how you actually coach and answer the press. The season prediction shapes the archetype only (the board sets its own expectation). First step: draft the archetype list with each one's exact match effect for the director to approve, cut or rename; build nothing before that. | save start asks name then interview, every answer moves the archetype, archetype effect on match play measured with tools/balance.sh, drift over seasons tested, real-tap check on phone |
 | 120 | Every tag now holds his man (#1212), at the size the director ruled 2026-11-10: multiplier 66% to 50% by Pressure, Tagger 42%, tired legs up to 13 points. Left: match-day copy still shows that multiplier as "keeps X% of his ball", which is false; replace it with disposals kept from the tag_keep_impl audit (MatchNotes.tagger_card, GateOdds.tag_kept, GateOdds.TAG_HOT_GAIN), then his playtest; balance-gated | copy shows measured disposals kept, his look at the tagger card, his playtest |
@@ -73,12 +71,14 @@ Never balance-screened together (#1074): match_flow, kick_range, set_shots, key_
 - 59 Banner text and music: he supplies originals (placeholders in `data/banners.json`, empty playlist).
 - 56 Public demo page: rights to real names and a licence register come first.
 - 32 Web build parity: saves carried between devices pending his answer.
+- 113 Each club's real 2026 National Draft picks, with sources (parked, director 2026-11-10: "the draft hasnt happened yet so park it for now"). The rest shipped as the Real lists start (#569, #1172): real lists, the real 2026 class with ties, the 2026 National Draft, then 2027. Today the opening draft runs in reverse 2026 ladder order (GameState.gd begin_real_lists). Blocked until the real 2026 National Draft has happened.
 
 ## F. Later (1.x or after 1.0, unassigned)
 
 - 38 Live-3D vignette probe (low priority; Tripo ruck rig in Godot).
 - 43 More Tripo emblems (15,000 credits set aside; first slice done, none further assigned).
 - 44 State of Origin (not for 1.0; scope interview first).
+- Synergy numbers up (director 2026-11-10: "if anything i wanna boost synergy numbers but thats for later"). The row 103 audit had 47% of rival clubs fielding a synergy on main, 57% with row 103. Conflicts with the older target in DIRECTOR_BIBLE ruling 23 (each synergy on for 15-25% of clubs, clubs mostly 0-1): superseded. Target (director 2026-11-10): "i think teams at the bottom of the ladder should have 0-1 synergies, teams in the top 4 probably have 2-4 synergies". Done looks like: a seeded audit of synergies per club by ladder position, bottom clubs 0-1, top 4 at 2-4. Unassigned.
 - 41 Club Forge game-plan builder.
 - T3.R41 Team selection as two screens on phone, side by side on PC, no scroll (ruled later, 2026-11-06).
 - Player personality types and captaincy meaning (composure, late-game stability): both wanted, later (T5.Q12, T5.Q13).

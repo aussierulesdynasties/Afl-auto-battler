@@ -398,6 +398,12 @@ func _test_coach_approach_card() -> void:
 		return
 	_state.coach_approaches = [{"cid": str(mid["cid"]), "from_job": "MID", "club": "HAW", "job": "SA",
 			"choice": "", "kept": false, "text": ""}]
+	# A second approach answered with a promise (row 117).
+	var fwd: Dictionary = _state.club_staff("GEE").get("FWD", {})
+	if not fwd.is_empty():
+		fwd["since"] = _state.season_year - 10
+		_state.coach_approaches.append({"cid": str(fwd["cid"]), "from_job": "FWD", "club": "CAR", "job": "FWD",
+				"choice": "", "kept": false, "text": ""})
 	root.size = Vector2i(390, 844)
 	var hub: Control = await _open_hub()
 	var guard := 0
@@ -413,6 +419,14 @@ func _test_coach_approach_card() -> void:
 	_check(why == "" and str(_state.coach_approaches[0]["choice"]) == "go", "A tap on Let him go answers it (%s)" % why)
 	_check(hub.find_child("Approach_0_go", true, false) == null and _screen_text(hub).contains("Hawthorn"),
 			"The answer replaces the choices, in words")
+	if not fwd.is_empty():
+		_check(hub.find_child("Approach_1_promise_weight", true, false) != null and _screen_text(hub).contains("weighs it"),
+				"Each answer shows how he weighs it")
+		var pr: Button = hub.find_child("Approach_1_promise", true, false)
+		var why2: String = await preload("res://tests/tap.gd").tap(pr) if pr != null else "no Promise the job"
+		await _settle()
+		_check(why2 == "" and str(_state.coach_approaches[1]["choice"]) == "promise", "A tap on Promise the job answers it (%s)" % why2)
+		_check(_screen_text(hub).contains("senior assistant's job by"), "The promise and its season are in words")
 	hub.queue_free()
 	await _settle()
 

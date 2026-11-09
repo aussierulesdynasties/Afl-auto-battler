@@ -401,7 +401,7 @@ func _test_corridor_playback(res: Dictionary) -> void:
 ## Win Contest on the oval: the ring at every ball-up and throw-in, planted on the
 ## contest from the call to the clearance; in open play on the ball (_test_ball_in_the_ring).
 func _test_contest_playback(res: Dictionary) -> void:
-	var r2 := _with_call(res, "contest", [], 400)
+	var r2 := _with_call(res, "contest", [], 500)
 	var pv := _phone(r2, 1.0)
 	var d: MatchDirector = pv.director
 	var stoppages := 0
@@ -522,7 +522,7 @@ func _test_contest_playback(res: Dictionary) -> void:
 ## the pad only in a frame the ring is already easing out, and never then with the
 ## ring growing stronger. Drawn positions, on the phone, at 1x and 4x.
 func _test_ball_in_the_ring(res: Dictionary, speed: float) -> void:
-	var r2 := _with_call(res, "contest", [], 400)
+	var r2 := _with_call(res, "contest", [], 500)
 	var pv := _phone(r2, speed)
 	var d: MatchDirector = pv.director
 	var shown := 0
