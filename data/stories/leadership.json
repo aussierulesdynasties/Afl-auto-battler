@@ -1656,6 +1656,7 @@
 	},
 	{
 		"id": "finals_second_chance",
+		"priority": true,
 		"category": "leadership",
 		"phase": [
 			"finals"

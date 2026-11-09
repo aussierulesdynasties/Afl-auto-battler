@@ -36,7 +36,11 @@ extends RefCounted
 ##   game's contending clubs train it, so pre-season training can injure;
 ## - ANSWER=card:key,card:key: those cards are always answered with that choice (when
 ##   it is on the card), so an arc's rarer branch can be followed to its end.
-## Each season also prints FINISH <year> <club> ladder <position> finals <status>.
+## - STRONG=n: before each season every player on the coach's list gains n on each
+##   attribute and his overall, so finals and Grand Finals are reached and their cards
+##   can be counted. It changes the list, so its results say nothing about balance.
+## Each season also prints NZSTATE for each New Zealander on the list, with what the
+## rugby card asks of him, and FINISH <year> <club> ladder <position> finals <status>.
 ## Measurement only: it never changes a rule.
 
 var deck: Array = []
@@ -52,6 +56,7 @@ var intl := OS.get_environment("INTL") == "1"
 var keep := OS.get_environment("KEEP") == "1"
 var heavy := OS.get_environment("HEAVY") == "1"
 var fixed := _answers(OS.get_environment("ANSWER"))
+var strong := int(OS.get_environment("STRONG"))
 
 
 ## ANSWER's "card:key,card:key" as {card: key}.
@@ -127,6 +132,24 @@ func _keep_list() -> void:
 			GameState.offer_contract(id, int(r.get("salary", 0)), 2)
 
 
+func _strengthen() -> void:
+	if strong <= 0:
+		return
+	for p in GameState.my_list:
+		p["overall"] = mini(99, int(p.get("overall", 50)) + strong)
+		var attr: Dictionary = p.get("attr", {})
+		for k in attr:
+			attr[k] = minf(99.0, float(attr[k]) + strong)
+
+
+func _print_nz() -> void:
+	for p in GameState.my_list:
+		if InternationalProspects.region(p) == "nz":
+			print("NZSTATE %d %s ovr %d pot %d years %d morale %d seasons %d" % [GameState.season_year, str(p["id"]),
+					int(p.get("overall", 0)), int(p.get("potential", 0)), int(p.get("contract_years", 0)),
+					int(ClubLife.morale(p)), int(p.get("seasons_listed", -1))])
+
+
 func run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var seed := int(args[1]) if args.size() > 1 else 1
@@ -155,6 +178,8 @@ func run() -> void:
 	var press := {}
 	var seasons_played := 0
 	for s in range(seasons):
+		_strengthen()
+		_print_nz()
 		_walk_preseason()
 		while not GameState.season.is_season_over() and not GameState.is_sacked():
 			var ph := ClubStories.phase(GameState)
