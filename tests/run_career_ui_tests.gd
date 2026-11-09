@@ -2884,7 +2884,9 @@ Your career stays on this device.",
 	var decimal := RegEx.create_from_string("\\d\\.\\d|%")
 	# Money is real AFL money ("$18.44m"); anything else with a decimal or a
 	# percentage would be a model value leaking out.
-	var no_money := RegEx.create_from_string("\\$[0-9][0-9.,]*[mk]?").sub(_screen_text(), "", true)
+	# The familiarity line states its percentages on purpose (row 125): a gate's numbers.
+	var fam_line: String = load("res://scripts/sim/TeamFamiliarity.gd").signing_line()
+	var no_money := RegEx.create_from_string("\\$[0-9][0-9.,]*[mk]?").sub(_screen_text().replace(fam_line, ""), "", true)
 	_check(decimal.search(no_money) == null, "The trade screen shows no internal values")
 	_check(current_scene.find_child("TradeClubPhase", true, false) != null,
 			"The trade tab says where the other club is in its cycle")

@@ -17,6 +17,14 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   standard error is small. A change is real when |B - A| > 2 se (the `sig` column).
 - **Arm args.** `--weather perfect|wet|windy|hot`,
   `--tune KEY=V,...` (sets `MatchSim.tune`, read by `_tv`: size a constant before you fix it).
+- **Team familiarity** (`--arrivals`, row 125): real lists carry nobody new, so a plain run never exercises
+  `TeamFamiliarity`. `--arrivals N` has one side, in turn (`i % 2`), carry N new-club men, chosen by seed so both
+  arms mark the same men, at each of Rounds 1-6 in turn (familiarity 70, 75 .. 95); `--arrivals N@R` holds it at
+  round R; `--arrivals league` gives both sides the arrivals careers measure (`LEAGUE_NEW_CLUB`, `LEAGUE_DRAFTEES`,
+  from `tools/audit/familiarity_impl.gd`). The isolated team cost is
+  `--a "--arrivals 4 --tune fam_team=0" --b "--arrivals 4"`: same men, same own cuts, with and without the team-wide
+  one; the report's Team familiarity section gives the carrying side's margin, B-A per round and overall
+  (`fam_own=0` takes the men's own cuts off too). Use a multiple of 306; 3,672 matches gives a standard error near 0.75.
 - **Plan fluency** (`--plan-know F`, row 126): both sides know every plan but Balanced at fluency F (0 low, 1 medium,
   2 high, 1.5 half way), as a career's record gives them; a plain run knows every plan fully, so it never moves with
   fluency. Plans only come into it with `--setup league|coached`: `--a "--setup league --plan-know 1" --b "--setup league --plan-know 1.5"`.

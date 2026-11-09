@@ -1104,6 +1104,35 @@ def tackle_section(A, B):
     print("\nThe sim's player-game counts every man who played; the real one counts men with 50%+ game time.")
 
 
+def familiarity_section(A, B):
+    """--arrivals N: the carrying side's margin, B-A on the same seeds, per Round 1-6."""
+    def carried(r):
+        for s, t in enumerate(r["teams"]):
+            if t.get("fam_carry"):
+                return t, t["score"] - r["teams"][1 - s]["score"]
+        return None, 0
+    if not B or not any(carried(r)[0] for r in A.values()):
+        return
+    print("\n## Team familiarity: the side carrying the arrivals (B-A, same seeds)\n")
+    print("| round | matches | team cut A | team cut B | A margin | B margin | B-A | se | A win% | B win% |")
+    print("|---|---|---|---|---|---|---|---|---|---|")
+    pairs = [(A[i], B[i]) for i in A if i in B and carried(A[i])[0]]
+    rounds = sorted({carried(a)[0]["fam_round"] for a, _ in pairs})
+    means = []
+    for rd in rounds + [None]:
+        rows = [(a, b) for a, b in pairs if rd is None or carried(a)[0]["fam_round"] == rd]
+        ma = [carried(a)[1] for a, _ in rows]
+        mb = [carried(b)[1] for _, b in rows]
+        d = [y - x for x, y in zip(ma, mb)]
+        se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else 0.0
+        win = lambda m: 100 * sum(x > 0 for x in m) / len(m)
+        cut = lambda k: st.mean(carried(p[k])[0].get("team_cut", 0) for p in rows)
+        if rd is not None:
+            means.append(st.mean(d))
+        print(f"| {rd if rd is not None else 'all'} | {len(rows)} | {cut(0):.3f} | {cut(1):.3f} | {st.mean(ma):+.1f} | "
+              f"{st.mean(mb):+.1f} | {st.mean(d):+.2f} | {se:.2f} | {win(ma):.1f} | {win(mb):.1f} |")
+
+
 def tag_section(A, B):
     """--tag (row 120): what each midfielder's tag would leave his man, and what the tag did. Each match line's
     "tag" names the tagged man and the tagger; B-A is paired by seed on the matches where B set
@@ -1219,6 +1248,7 @@ def main():
     duel_section(A, B)
     ruck_section(A, B)
     margin_tail(A, B)
+    familiarity_section(A, B)
     role_report(A, B)
     type_report(A, B)
     reb_route_section(A, B)

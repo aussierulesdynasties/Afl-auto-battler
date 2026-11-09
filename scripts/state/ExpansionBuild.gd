@@ -99,6 +99,8 @@ static func ensure_foundation(gs, code: String) -> void:
 	st["list"] = Expansion.foundation_list(code, int(gs.season_year), int(gs.career_seed))
 	for p in st["list"]:
 		p["club"] = code
+		# State-league signings, no AFL games: a draftee's familiarity (row 125).
+		TeamFamiliarity.arrive_draftee(p)
 
 
 # ---------------------------------------------------------------------------
@@ -414,6 +416,7 @@ static func _sign(gs, code: String, p: Dictionary, salary: int, years: int) -> v
 		return
 	p["joined"] = GameDB.enter_year(code)
 	p["club"] = code
+	TeamFamiliarity.arrive_club(p, gs.games_played(p) == 0)
 	p["salary"] = salary
 	p["contract_years"] = years
 	for key in ["train_plan", "train_focus", "train_focus_year", "focus_ledger", "project", "released_by", "comp_eligible", "resigned", "talks", "rookie_list"]:
