@@ -343,7 +343,7 @@ func _set_tag(sim: MatchSim, side: int) -> Dictionary:
 	var keeps := []
 	var has_tagger := false
 	for p in order:
-		keeps.append(snappedf(GateOdds.tag_kept(p, 100.0), 0.001))
+		keeps.append(snappedf(Roles.tag_keep(p, 100.0), 0.001))
 		has_tagger = has_tagger or Roles.is_tagger(p)
 	var who := {}
 	if not order.is_empty():

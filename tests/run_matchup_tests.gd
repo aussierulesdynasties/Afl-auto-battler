@@ -1495,7 +1495,7 @@ func _gate_odds() -> void:
 	var RT = load("res://scripts/sim/Ratings.gd")
 	var MU = load("res://scripts/sim/Matchups.gd")
 	var digits := RegEx.create_from_string("[0-9]")
-	var templates := [GO.GAIN, GO.COST, GO.TAG_GIVES, GO.TAG_NOTE, GO.SKIP_FIRST, GO.SKIP_LATER,
+	var templates := [GO.GAIN, GO.COST, GO.TAG_GIVES, GO.TAG_TOUCHES, GO.TAG_NOTE, GO.TAG_HOT_GAIN, GO.TAG_HOT_COST, GO.TAG_LEAVE_GAIN, GO.TAG_LEAVE_COST, GO.SKIP_FIRST, GO.SKIP_LATER,
 			GO.FOR_MINUTES, GO.TO_SIREN, GO.TO_BREAK, GO.NONE_GAIN, GO.NONE_COST_RUN, GO.NONE_COST_BOUNCE]
 	for d in [GO.BURST_GAIN, GO.BURST_COST]:
 		templates.append_array((d as Dictionary).values())

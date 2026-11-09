@@ -5412,11 +5412,11 @@ func _boundary_moment() -> bool:
 			"text": "Their midfielder is hurting you on the scoreboard.",
 			"options": [
 				{"key": "tag", "label": "Tag him with %s" % stopper,
-					"gain": GateOdds.gain(GateOdds.TAG_HOT_GAIN % [hot_name, GateOdds.pct(kept), stopper]),
+					"gain": GateOdds.gain(GateOdds.TAG_HOT_GAIN % [hot_name, GateOdds.usual_touches(), stopper, kept]),
 					"cost": GateOdds.cost(GateOdds.TAG_HOT_COST % [stopper, GateOdds.tag_gives()])},
 				{"key": "leave", "label": "Back your defenders",
 					"gain": GateOdds.gain(GateOdds.TAG_LEAVE_GAIN),
-					"cost": GateOdds.cost(GateOdds.TAG_LEAVE_COST % hot_name)},
+					"cost": GateOdds.cost(GateOdds.TAG_LEAVE_COST % [hot_name, GateOdds.usual_touches()])},
 			]})
 		return true
 	# Three goals in a row against.
