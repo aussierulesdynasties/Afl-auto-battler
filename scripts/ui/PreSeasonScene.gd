@@ -307,7 +307,7 @@ func _papers_story() -> Control:
 				col.add_child(cl)
 				continue
 			var item := UiKit.hbox(6)
-			var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.TEXT, true)
+			var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.label_ink(), true)
 			mk.name = "Papers%sMark_%d" % [kind, i]
 			mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 			mk.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -921,7 +921,7 @@ func _paint_choice(b: Button, on: bool) -> void:
 ## full strength (the card-stakes pattern).
 func _stake(into: VBoxContainer, mark: String, node_name: String) -> Label:
 	var item := UiKit.hbox(6)
-	var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.TEXT, true)
+	var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.label_ink(), true)
 	mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	mk.autowrap_mode = TextServer.AUTOWRAP_OFF
 	mk.custom_minimum_size = Vector2(40, 0)
