@@ -1288,17 +1288,25 @@ static func style_button(b: Button, fs := 16, primary := false, danger := false)
 	elif danger:
 		sb = style(Color.TRANSPARENT, 8, RADIUS, BAD.darkened(0.2))
 	else:
-		sb = style(SURFACE, 8, RADIUS)
-		sb.set_border_width_all(0)
+		# STYLE-01 (director 2026-11-04, "Secondary buttons are outlines"): a
+		# 1 px outline over a dark well, so it reads on the page and on a club
+		# wash alike, and never looks like the chosen option (2 px TEXT).
+		sb = style(Color(BG, OUTLINE_WELL), 8, RADIUS, OUTLINE)
+		sb.set_border_width_all(1)
 	b.add_theme_stylebox_override("normal", sb)
 	var hover := sb.duplicate() as StyleBoxFlat
-	hover.bg_color = lead.lightened(0.08) if primary else SURFACE.lightened(0.05)
+	if primary:
+		hover.bg_color = lead.lightened(0.08)
+	else:
+		hover.border_color = MUTED
 	b.add_theme_stylebox_override("hover", hover)
 	var pressed := sb.duplicate() as StyleBoxFlat
-	pressed.bg_color = lead.darkened(0.12) if primary else SURFACE.lightened(0.10)
+	pressed.bg_color = lead.darkened(0.12) if primary else SURFACE
 	b.add_theme_stylebox_override("pressed", pressed)
 	b.add_theme_stylebox_override("hover_pressed", pressed)
-	var off := style(Color(SURFACE, 0.5), 8, RADIUS)
+	var off := style(Color(BG, OUTLINE_WELL), 8, RADIUS, LINE) if not primary and not danger \
+			else style(Color(SURFACE, 0.5), 8, RADIUS)
+	off.set_border_width_all(1 if not primary and not danger else 0)
 	b.add_theme_stylebox_override("disabled", off)
 	var focus := style(Color.TRANSPARENT, 0, RADIUS, TEXT)
 	focus.set_border_width_all(2)
@@ -1311,6 +1319,44 @@ static func style_button(b: Button, fs := 16, primary := false, danger := false)
 ## 8-10 October is gone; audit §3.1).
 static var SURFACE := Color("2a2823")
 
+## A secondary button's outline and the dark well inside it (STYLE-01): the
+## outline sits between LINE and MUTED so it shows on the page without
+## shouting; the well hides a club wash behind the words.
+static var OUTLINE := Color("6a645a")
+const OUTLINE_WELL := 0.72
+
+
+## The hub's foot (STYLE-01): the club's screens as words on one ink bar under
+## a 2 px rule in your club's colour, not a pile of boxes. Each word keeps a
+## 44 px thumb target; a press lights the surface behind it.
+static func nav_bar(row: Control) -> PanelContainer:
+	var bar := PanelContainer.new()
+	bar.name = "NavBar"
+	var sb := style(INK, 0, 0)
+	sb.set_border_width_all(0)
+	sb.border_width_top = 2
+	sb.border_color = team_wash()
+	sb.corner_radius_bottom_left = RADIUS
+	sb.corner_radius_bottom_right = RADIUS
+	sb.content_margin_top = 2
+	bar.add_theme_stylebox_override("panel", sb)
+	for b in row.get_children():
+		if b is Button:
+			nav_word(b)
+	bar.add_child(row)
+	return bar
+
+
+static func nav_word(b: Button) -> void:
+	var flat := style(Color.TRANSPARENT, 4, 0)
+	flat.set_border_width_all(0)
+	for state in ["normal", "hover", "disabled"]:
+		b.add_theme_stylebox_override(state, flat)
+	var lit := style(SURFACE, 4, 0)
+	lit.set_border_width_all(0)
+	b.add_theme_stylebox_override("pressed", lit)
+	b.add_theme_stylebox_override("hover_pressed", lit)
+
 
 ## The chosen one of a set (a plan, a filter, a tab-like toggle): TEXT ink and
 ## a 2 px TEXT outline on the quiet surface. The rest: MUTED ink on the same
@@ -1318,8 +1364,11 @@ static var SURFACE := Color("2a2823")
 ## mistaken for the primary action (guide §2.2). The director chose this over a
 ## faint club tint behind the chosen one (2026-10-10, audit §9.2 A/B).
 static func _choice_box(on: bool) -> StyleBoxFlat:
-	var sb := style(SURFACE, 8, RADIUS, TEXT if on else Color.TRANSPARENT)
-	sb.set_border_width_all(2 if on else 0)
+	# STYLE-01: the rest of a set are outlined like any secondary button, so
+	# every option you can tap reads the same; the chosen one is the 2 px TEXT
+	# outline on the lifted surface.
+	var sb := style(SURFACE if on else Color(BG, OUTLINE_WELL), 8, RADIUS, TEXT if on else OUTLINE)
+	sb.set_border_width_all(2 if on else 1)
 	return sb
 
 

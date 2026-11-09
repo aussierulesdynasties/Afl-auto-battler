@@ -244,6 +244,21 @@ func _test_training_grid() -> void:
 			centred = false
 			centred_note = "%s: %.1f off centre, %.1f off the left edge" % [card3.name, off, left_off]
 	_check(centred, "Grid: each name and trait sit centred between the top line and the status, on one left edge (%s)" % centred_note)
+	# The names of a row sit at one height, trait under him or not (CLAUDE.md's
+	# confirmed name/second-line defect: a traitless card's name sat lower).
+	var names_level := true
+	var names_note := ""
+	for r in rows:
+		var nys := []
+		for k in (r as Control).get_children():
+			var nm4: Label = k.find_child("Name", true, false)
+			if nm4 != null:
+				nys.append(nm4.get_global_rect().position.y)
+		for y in nys:
+			if absf(y - nys[0]) > 1.0:
+				names_level = false
+				names_note = "%s vs %s" % [str(y), str(nys[0])]
+	_check(names_level, "Grid: the names sit level across each row, trait or not (%s)" % names_note)
 	var lone_rows := 0
 	for r in rows:
 		if (r as Control).find_child("GridHole", false, false) != null:

@@ -907,8 +907,8 @@ func _choice_row(label: String, node_name: String, options: Array, current: Stri
 
 
 func _paint_choice(b: Button, on: bool) -> void:
-	var sb := UiKit.style(UiKit.SURFACE, 8, UiKit.RADIUS, UiKit.TEXT if on else Color.TRANSPARENT)
-	sb.set_border_width_all(2 if on else 0)
+	# The kit's choice look (STYLE-01): the rest outlined, the chosen one 2 px TEXT.
+	var sb := UiKit._choice_box(on)
 	for s in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		b.add_theme_stylebox_override(s, sb)
 	b.add_theme_font_override("font", UiKit.BOLD if on else UiKit.FONT)
@@ -1155,7 +1155,8 @@ func _actions(stop: String) -> Control:
 		else:
 			base.free()
 		v.add_child(go)
-		v.add_child(quiet)
+		# The quiet ones as words on the club's ink bar, like the hub's foot (STYLE-01).
+		v.add_child(UiKit.nav_bar(quiet))
 	return v
 
 
