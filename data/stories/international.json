@@ -728,6 +728,7 @@
 	{
 		"id": "intl_africa_visa",
 		"category": "family",
+		"priority": true,
 		"weight": 6,
 		"per_season": 1,
 		"cooldown": 40,
