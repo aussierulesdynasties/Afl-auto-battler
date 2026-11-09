@@ -20,6 +20,7 @@ const SCENES := {
 	"preseason": "res://scenes/PreSeasonScene.tscn",
 	"almanac": "res://scenes/AlmanacScene.tscn",
 	"press": "res://scenes/PressScene.tscn",
+	"interview": "res://scenes/InterviewScene.tscn",
 }
 
 ## Screens whose opening takes a while on a phone (their _ready builds a lot):

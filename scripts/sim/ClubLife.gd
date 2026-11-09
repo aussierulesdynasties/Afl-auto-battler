@@ -261,15 +261,21 @@ const MATCH_MORALE_LOSS := 1
 
 ## `unavailable`: ids who could not play this game (injured or suspended
 ## before the week ticked down): not picked is not left out.
+## `arch_p`: the senior coach's Philosophical archetype (row 119): it sizes
+## the left-out sting (Archetypes.STING) and the Gambler's swing.
 static func morale_after_match(list: Array, played: Dictionary, won: bool, soften: Dictionary = {}, culture_s := 0.0,
-		unavailable: Dictionary = {}) -> void:
+		unavailable: Dictionary = {}, arch_p := "") -> void:
+	var swing := 0
+	if arch_p == "GAMB":
+		swing = Archetypes.SWING_WIN if won else Archetypes.SWING_LOSS
+	var sting := float(Archetypes.STING.get(arch_p, 1.0))
 	for p in list:
 		var id := str(p["id"])
 		if played.has(id):
-			add_morale(p, MATCH_MORALE_WIN if won else MATCH_MORALE_LOSS)
+			add_morale(p, (MATCH_MORALE_WIN if won else MATCH_MORALE_LOSS) + swing)
 		elif int(p.get("injury_weeks", 0)) <= 0 and not unavailable.has(id):
 			var loss := 6 if int(p.get("overall", 0)) >= 78 else 3
-			add_morale(p, -CoachEffects.softened(loss, _sting_share(float(soften.get(id, 0.0)), culture_s)))
+			add_morale(p, -int(round(sting * CoachEffects.softened(loss, _sting_share(float(soften.get(id, 0.0)), culture_s)))))
 		else:
 			# Injured players drift back toward settled.
 			add_morale(p, signi(MORALE_BASE - morale(p)))

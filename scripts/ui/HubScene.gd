@@ -33,6 +33,10 @@ func _ready() -> void:
 	if GameState.preseason_active() and not GameState.needs_season_wrap():
 		Router.replace("preseason")
 		return
+	# A new coach sits his appointment interview before anything else (row 119).
+	if GameState.interview_due and GameState.my_club != "":
+		Router.replace("interview")
+		return
 	MatchKickoff.reset()
 	_warm_pre_match.call_deferred()
 

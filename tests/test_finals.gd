@@ -395,6 +395,7 @@ func _test_rest_of_week_in_background() -> void:
 		var matches: Array = season.finals_week_matches() if finals_week \
 				else season.fixture[season.round_index]
 		GameState._refresh_coach_tactics()   # as Play match does first
+		GameState._settle_usual_plans()     # likewise: a rival's usual plan sets his Strategic archetype (row 119)
 		var expect := {}
 		for i in range(matches.size()):
 			var m: Dictionary = matches[i]

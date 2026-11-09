@@ -237,7 +237,9 @@ func _test_one_season_and_finals() -> void:
 			if first_bad == "":
 				first_bad = "%s: counted %s, recorded %s" % [id, str(row), str(got)]
 		if int(row[0]) > 0:
-			clubs[str(players[id]["club"])] = true
+			# The club he played for: a player Tasmania signs before its first
+			# season reads TAS on his record by the season's end.
+			clubs[str(row[3])] = true
 		if int(row[2]) > 0:
 			finals_players += 1
 	_check(exact, "One season: every player's games and goals match the results %s" % first_bad)

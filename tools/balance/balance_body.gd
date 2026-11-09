@@ -109,8 +109,23 @@ func play(from: int, count: int, out: String, weather: String,
 				sq.ai_plans = side != coached
 				sq.assistant = side == coached
 		var fam := _arrivals(arrivals, i, sq_h, sq_a)
+		# --coach S,P (row 119): side i%2 is coached by archetypes S and P
+		# (Archetypes ids, "-" for none); --side-plan X makes it play plan X.
+		var cside: Squad = sq_h if i % 2 == 0 else sq_a
+		var side_plan := ""
+		for ci in range(args.size() - 1):
+			if str(args[ci]) == "--coach":
+				var ids := str(args[ci + 1]).split(",")
+				cside.arch = Archetypes.levers(ids[0], ids[1] if ids.size() > 1 else "")
+				cside.tactics_exec *= float(cside.arch.get("exec", 1.0))
+			elif str(args[ci]) == "--side-plan":
+				side_plan = str(args[ci + 1])
+		if side_plan != "":
+			cside.ai_plans = false
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
 		sim.weather = weather
+		if side_plan != "":
+			(sim.tactics[i % 2] as Dictionary)["gameplan"] = side_plan
 		if setup == "league":
 			sim.season_plans = ["steady", "steady"]
 		elif setup == "coached":

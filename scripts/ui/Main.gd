@@ -707,6 +707,8 @@ func _start_new_career() -> void:
 	# the career they had (reset() clears memory only).
 	GameState.reset()
 	GameState.set_canberra(_pick_canberra)
+	# A new career opens with the appointment interview (row 119).
+	GameState.interview_due = true
 	GameState.challenge = _challenge_state()
 	if _pick_challenge == "rebuild":
 		_pick_start = "real"

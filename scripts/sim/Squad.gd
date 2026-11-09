@@ -20,6 +20,8 @@ var form := 0.0
 ## (-0.75 .. 1), and whether it picks its own plan each quarter (AI clubs).
 var tactics_exec := 1.0
 var tactics_read := 0.0
+## The senior coach's archetype levers (Archetypes.levers, row 119); {} = none.
+var arch := {}
 ## How much of each plan's upside the side keeps for how well it knows the plan
 ## (plan familiarity, from the pre-season): plan -> 0..1. Empty = every
 ## plan as written. Worked out before the match starts (CoachEffects.apply).
