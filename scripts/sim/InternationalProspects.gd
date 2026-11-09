@@ -175,8 +175,9 @@ static func _make(p: Dictionary, c: Dictionary, year: int, rng: RandomNumberGene
 	p["name"] = p["generic_name"]
 	p["real_name"] = ""
 	p["attr_bias"] = c.get("bias", {}).duplicate()
-	p["class_shift"] = float(p.get("class_shift", 0.0)) + RAW_SHIFT
-	p["class_ceiling"] = float(p.get("class_ceiling", 0.0)) + RAW_CEILING
+	# A country can set its own (New Zealand's are better, director 2026-11-09).
+	p["class_shift"] = float(p.get("class_shift", 0.0)) + float(c.get("raw_shift", RAW_SHIFT))
+	p["class_ceiling"] = float(p.get("class_ceiling", 0.0)) + float(c.get("raw_ceiling", RAW_CEILING))
 	p["real_pos"] = Ratings.ROLE_SHORT_TO_POS.get(role, "MID")
 	p.erase("family")
 	p.erase("family_real_last")

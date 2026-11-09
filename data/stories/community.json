@@ -323,6 +323,7 @@
 	},
 	{
 		"id": "gf_night_before",
+		"priority": true,
 		"category": "community",
 		"subject": {
 			"kind": "club"
