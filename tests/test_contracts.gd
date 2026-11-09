@@ -24,6 +24,7 @@ func run() -> void:
 	_t("_test_opinion_never_drifts")
 	_t("_test_free_agent_terms")
 	_t("_test_free_agents")
+	_t("_test_market_marks")
 	_t("_test_compensation_rules")
 	_t("_test_compensation_draft_order")
 	_t("_test_compensation_flow")
@@ -874,6 +875,85 @@ func _test_free_agents() -> void:
 
 
 ## The market as a comparable book: player -> sorted club offers.
+## Bug-bash 2026-11-10: a club that let a market-tester go (after he was
+## drafted) never re-offers; an old save's undated home offer is ignored;
+## no player has more than TARGET_CAP chasers across the whole off-season,
+## save and reload included.
+func _test_market_marks() -> void:
+	_new_season()
+	_to_offseason()
+	var gs = GameState
+	var room := []
+	for code in GameDB.active_clubs(gs.season_year):
+		if code != gs.my_club and gs.season.lists.has(code) and (gs.season.lists[code] as Array).size() < Contracts.MAX_LIST - 2:
+			room.append(str(code))
+	_check(room.size() >= 2, "Two rival clubs have list room (%d)" % room.size())
+	var pool: Array = gs.free_agents.duplicate()
+	pool.sort_custom(func(a, b): return int(a["overall"]) > int(b["overall"]))
+	var keep_rookie: Dictionary = gs.rookie_draft
+	var keep_mid: Dictionary = gs.midseason
+	gs.rookie_draft = {"picks": [], "round": 1}
+	gs.midseason = {"picks": []}
+	for i in range(2):
+		var p: Dictionary = pool[i]
+		var home: String = room[i]
+		p["home_offer"] = home
+		p["home_offer_year"] = gs.season_year
+		if i == 0:
+			RookieList._take(gs, home, p)
+		else:
+			MidseasonDraft._take(gs, home, p)
+		_check(not p.has("home_offer"), "Drafted into a list, a tester's home offer goes (%s)" % ("rookie" if i == 0 else "mid-season"))
+		gs._release(home, p)
+		p.erase("offers")
+		gs._open_market([p])
+		_check(gs._offer_of(p, home).is_empty(), "The club that let him go does not re-offer (%s)" % ("rookie" if i == 0 else "mid-season"))
+		gs.free_agents.erase(p)
+	gs.rookie_draft = keep_rookie
+	gs.midseason = keep_mid
+	# An old save: an undated home offer from a club that let him go.
+	var old: Dictionary = pool[2]
+	old["released_by"] = room[0]
+	old["home_offer"] = room[0]
+	old.erase("home_offer_year")
+	old.erase("offers")
+	gs._open_market([old])
+	_check(gs._offer_of(old, room[0]).is_empty(), "An old save's undated home offer is ignored")
+	# Chasers across openings: one player on the market, his chasers sign
+	# their targets elsewhere, and the market opens again (as _resolve_market
+	# does after each pass), with a save and reload in the middle.
+	var worst := 0
+	var held := true
+	for k in range(3, 9):
+		var p: Dictionary = pool[k]
+		var id := str(p["id"])
+		p.erase("chasers")
+		p.erase("offers")
+		gs._targets_signed = {}
+		var seen := {}
+		for opening in range(4):
+			if opening == 2:
+				_check(gs.save_career(), "The career saves mid-market")
+				_check(gs.load_career(), "The career loads mid-market")
+			var now: Dictionary = {}
+			for q in gs.free_agents:
+				if str(q["id"]) == id:
+					now = q
+			if now.is_empty():
+				break
+			for o in now.get("offers", []):
+				gs._targets_signed[str(o["club"])] = GameState.FA_TARGETS
+			now.erase("offers")
+			gs._open_market([now])
+			for o in now.get("offers", []):
+				if not bool(o.get("filler", false)) and str(o["club"]) != str(now.get("home_offer", "")):
+					seen[str(o["club"])] = true
+			held = held and gs.has_method("chased_by") and (gs.call("chased_by", now) as Array).size() <= GameState.TARGET_CAP and (seen.is_empty() or not (gs.call("chased_by", now) as Array).is_empty())
+		worst = maxi(worst, seen.size())
+	_check(worst <= GameState.TARGET_CAP, "No player is chased by more than %d clubs over the off-season (worst %d)" % [GameState.TARGET_CAP, worst])
+	_check(held, "The chaser count is kept on the player through a save and reload")
+
+
 func _offer_book() -> String:
 	var rows := []
 	for fa in GameState.free_agents:

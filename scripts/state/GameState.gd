@@ -6992,6 +6992,7 @@ func open_offseason(keep_staff := false) -> void:
 		var from := str(p.get("club", ""))
 		_release(from, p, true, false)
 		p["home_offer"] = from
+		p["home_offer_year"] = season_year
 	# Rival clubs trade first, so their free-agent offers are made from the
 	# lists they'll actually have.
 	trade_offers = []
@@ -7451,6 +7452,20 @@ const FILLER_CAP := 3
 const TARGET_CAP := 3
 
 
+## The clubs that have targeted him in this off-season's market.
+func chased_by(p: Dictionary) -> Array:
+	var rec: Dictionary = p.get("chasers", {})
+	if int(rec.get("year", -1)) != season_year:
+		return []
+	return (rec.get("clubs", []) as Array).duplicate()
+
+
+## He has left the free-agent pool: what the market knew of him goes.
+static func clear_market_marks(p: Dictionary) -> void:
+	for key in ["home_offer", "home_offer_year", "chasers"]:
+		p.erase(key)
+
+
 func _open_market(players: Array) -> void:
 	# A player retiring at this rollover is not on the market: his career ends.
 	for p in players.duplicate():
@@ -7481,7 +7496,9 @@ func _open_market(players: Array) -> void:
 			clubs.append(code)
 	# A rival's own out-of-contract player keeps its offer while he listens.
 	for p in players:
-		var home := str(p.get("home_offer", ""))
+		# Only an offer made this off-season: an older save can carry one from
+		# a club that has since let him go.
+		var home := str(p.get("home_offer", "")) if int(p.get("home_offer_year", -1)) == season_year else ""
 		if home != "" and season.lists.has(home) and _offer_of(p, home).is_empty():
 			var term := int(Contracts.wants(p)["years"])
 			_add_offer(p, home, {"salary": Contracts.lowest(p, term) - culture_resign_discount(home, p, term), "years": term},
@@ -7489,7 +7506,11 @@ func _open_market(players: Array) -> void:
 	# Every club picks its targets, those that finished lowest first, and no
 	# more than TARGET_CAP clubs chase one player: the rest move to their next
 	# choice, so the whole market gets looked at, not only its top few.
+	# Chasers are counted across every opening of this off-season's market
+	# (and kept in the save), so a later round can't add a fourth.
 	var chasers := {}
+	for p in players:
+		chasers[str(p["id"])] = chased_by(p)
 	var by_finish := clubs.duplicate()
 	by_finish.sort_custom(func(a, b):
 		if _finish_t(a) != _finish_t(b):
@@ -7512,14 +7533,18 @@ func _open_market(players: Array) -> void:
 		for p in wanted:
 			if aims <= 0:
 				break
-			if int(chasers.get(str(p["id"]), 0)) >= TARGET_CAP:
+			var chasing: Array = chasers.get(str(p["id"]), [])
+			if not chasing.has(code) and chasing.size() >= TARGET_CAP:
 				continue
 			var role := fa_role(p, code)
 			var open := Contracts.opening_offer(p, role)
 			if int(open["salary"]) > Contracts.club_max(p, role, room, _fa_phase_of(code)):
 				continue
 			aims -= 1
-			chasers[str(p["id"])] = int(chasers.get(str(p["id"]), 0)) + 1
+			if not chasing.has(code):
+				chasing.append(code)
+				chasers[str(p["id"])] = chasing
+				p["chasers"] = {"year": season_year, "clubs": chasing.duplicate()}
 			_add_offer(p, code, open, role, ft)
 	# Then list fillers, among the players no club has targeted, so depth
 	# signings don't pile onto the market's best players.
@@ -7927,7 +7952,7 @@ func _sign_fa(p: Dictionary, code: String, salary: int, years: int) -> void:
 	p.erase("offers")
 	p.erase("market_round")
 	p.erase("market_log")
-	p.erase("home_offer")
+	clear_market_marks(p)
 	free_agents.erase(p)
 	_bars.erase(code)
 	offseason_log.append({"kind": "signed", "club": code, "id": str(p["id"]), "salary": salary, "years": years})
@@ -7944,6 +7969,7 @@ func _sign_fa(p: Dictionary, code: String, salary: int, years: int) -> void:
 
 func _join(code: String, p: Dictionary) -> void:
 	var list: Array = season.lists[code]
+	clear_market_marks(p)
 	if str(p.get("club", "")) != code:
 		p["joined"] = season_year
 		# A move lands him on the new club's senior list (row 88, RookieList).
