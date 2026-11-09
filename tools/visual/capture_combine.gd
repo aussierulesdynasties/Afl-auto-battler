@@ -109,10 +109,12 @@ func _run() -> void:
 	await _frames(4)
 	state.draft = null
 	var sea = state.season
-	sea.round_index = sea.fixture.size()
-	sea.recalc_ladder()
+	# A season really played, so the hub behind the sheet has a ladder and a premier.
+	while sea.round_index < sea.fixture.size():
+		sea.play_round()
 	sea.start_finals()
-	sea.finals["done"] = true
+	while not bool(sea.finals["done"]):
+		sea.play_finals_week()
 	state.week_events = []
 	state.tutorials = true
 	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
