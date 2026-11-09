@@ -1,7 +1,8 @@
 extends SceneTree
 ## The match's call panes as a phone and a PC show them: before the first ball-up, at quarter time,
 ## the break's Match stats sheet and the full-time Stats tab. Needs a real renderer:
-##   godot --path . --script tools/visual/capture_break_panes.gd -- --out /tmp/bp --size 1280x720 [--club FRE --vs MEL] [--seed 2050] [--logical 1280x720] [--tag]
+##   godot --path . --script tools/visual/capture_break_panes.gd -- --out /tmp/bp --size 1280x720 [--club FRE --vs MEL] [--seed 2050] [--logical 1280x720] [--tag] [--together 20]
+## --together T sets your club's Togetherness strand to T before the match (20: a tight group; row 84).
 ## --size is the canvas in UI units. --logical draws a bigger window the way the game does on a PC: ScreenLayout
 ## gives a 2560x1440 window a 1280x720 canvas at twice the pixels, so --size 2560x1440 --logical 1280x720.
 ## --tag picks a tag first (Who tags shows), to measure the fullest pre-bounce pane.
@@ -26,6 +27,7 @@ func _run() -> void:
 	var club := "FRE"
 	var vs := "MEL"
 	var seed_from := 2050
+	var together := 0
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		if str(a[i]) == "--tag":
@@ -37,6 +39,7 @@ func _run() -> void:
 			"--club": club = str(a[i + 1])
 			"--vs": vs = str(a[i + 1])
 			"--seed": seed_from = int(a[i + 1])
+			"--together": together = int(a[i + 1])
 			"--logical":
 				var lwh := str(a[i + 1]).split("x")
 				_lw = int(lwh[0])
@@ -67,6 +70,9 @@ func _run() -> void:
 		state.replay_seed = seed_from + tries
 		state.set_setting("seen_training_intro", true)
 		state.start_season(club, db.club_list(club))
+		if together != 0:
+			state.relations[Culture.key(club, "together")] = {"t": together, "log": []}
+			CoachEffects.relations = state.relations
 		state.prepare_interactive_match()
 		var s0 = state.pending_sim
 		var them := str(s0.squads[1].code) if str(s0.squads[0].code) == club else str(s0.squads[0].code)
