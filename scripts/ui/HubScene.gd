@@ -359,6 +359,11 @@ func _build() -> void:
 			right.add_child(news)
 	if _narrow():
 		_root.add_child(_bar_air(UiKit.BG, page_scroll))
+		# The decision stays in view whatever the week has to say above it: the
+		# poster leads, the facts follow and Play match never drops off the phone.
+		var actions := _week_actions(season)
+		if actions.get_child_count() > 0:
+			_root.add_child(_with_jobs_note(actions))
 		_root.add_child(_footer(season))
 		_clear_fold.call_deferred(page, page_scroll)
 	else:
@@ -857,20 +862,16 @@ func _week_section(season: Season) -> Control:
 	var nv := UiKit.vbox(6)
 	nv.name = "ThisWeek"
 	nv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var notice := _staff_notice()
-	if notice != null:
-		nv.add_child(notice)
-	var approaches := _approach_cards()
-	if approaches != null:
-		nv.add_child(approaches)
-	var letter := _letter_card()
-	if letter != null:
-		nv.add_child(letter)
-	if not GameState.pending_mro_challenges().is_empty():
-		nv.add_child(_tribunal_card())
-	var jobs_card := _week_jobs_card()
-	if jobs_card != null:
-		nv.add_child(jobs_card)
+	# The week's headline leads (the poster, on a week with a match: the hub's one
+	# hero, 6.Q2); what else the week asks sits straight under it. A card still
+	# waiting on the coach stands above the whole week (_build, _waiting_events).
+	var asks: Array[Control] = []
+	for ask: Control in [_staff_notice(), _approach_cards(), _letter_card(),
+			_tribunal_card() if not GameState.pending_mro_challenges().is_empty() else null,
+			_week_jobs_card()]:
+		if ask != null:
+			asks.append(ask)
+	var asks_at := -1
 	if season.is_season_over():
 		nv.add_child(UiKit.lbl("Season complete", UiKit.H1, UiKit.TEXT, true))
 		nv.add_child(UiKit.ellipsis("Premiers: %s" % GameDB.club_name(GameState.premier()),
@@ -932,6 +933,7 @@ func _week_section(season: Season) -> Control:
 			UiKit.reveal(poster)
 		nv.add_child(poster)
 		nv.add_child(_match_way())
+		asks_at = nv.get_child_count()
 		var marquee := MarqueeGames.tradition(str(mine["home"]), str(mine["away"]))
 		if not marquee.is_empty():
 			var marquee_line := UiKit.lbl(str(marquee["name"]), UiKit.SMALL, UiKit.EMPH, true)
@@ -1025,6 +1027,12 @@ func _week_section(season: Season) -> Control:
 					UiKit.BAD if str(notes[i].get("key", "")) == "own_injury" else UiKit.TEXT)
 			nl.name = "OwnNote_%d" % i
 			nv.add_child(nl)
+	if asks_at < 0:
+		asks_at = nv.get_child_count()
+	for ask in asks:
+		nv.add_child(ask)
+		nv.move_child(ask, asks_at)
+		asks_at += 1
 	if not season.is_season_over():
 		# Where the legs are at, one tap from the season line and the plan.
 		var plan_line := SeasonPlanSheet.line(self, func(): _build())
@@ -1044,12 +1052,8 @@ func _week_section(season: Season) -> Control:
 		nv.add_child(UiKit.spacer(4))
 		nv.add_child(_event_card(i))
 
-	# On a wide screen the week's decisions are pinned under the page beside the
-	# rest of the club (_build), so Play match is never below the fold; on a
-	# phone they close the week's section.
-	if _narrow():
-		nv.add_child(UiKit.spacer(4))
-		nv.add_child(_with_jobs_note(_week_actions(season)))
+	# The week's decisions are pinned under the page (_build), phone and PC, so
+	# Play match is never below the fold.
 	if not season.is_season_over():
 		if not season.is_regular_done():
 			nv.add_child(_skip_home_away_button())
@@ -1579,6 +1583,11 @@ func _push_past_fold(box: Control, fold: float, edge: float, max_gap: float) -> 
 			continue
 		if r.position.y >= edge:
 			return true
+		# The poster is a picture: its colours running under the fade say the
+		# week goes on. Pushing it clear would leave a hole above the buttons. What
+		# follows it still gets the fold's rule: no sliver of Watch and Skip.
+		if c is MatchPoster:
+			continue
 		if c is VBoxContainer:
 			if _push_past_fold(c, fold, edge, max_gap):
 				return true

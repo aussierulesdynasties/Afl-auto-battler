@@ -215,8 +215,10 @@ Only jobs the engine rewards:
   plays in the engine as a centre-square midfielder until the wing returns
   (a rule to revisit with rotations, not a presentation issue).
 * **Tagger** (MID). Pressure in the top 30% of midfielders and well ahead of
-  both his ball-winning and running. With a tagger on the ground, a tagged
-  opponent keeps 42% of his ball instead of 55%.
+  both his ball-winning and running. A Tagger holds the man he tags to 42% of
+  his ball; any other midfielder does a lesser job from his own Pressure, 66%
+  for the lowest to 50% for the highest (58% at the median). Tired legs give
+  back up to 13 points of that, whoever he is.
 * Everyone else reads as Inside midfielder, Key/Rebounding defender or Ruck
   (the Training vocabulary; a defender with fewer than six games of record
   is just a Defender - a few games cannot tell the two apart), or - for forwards - Key forward, Small forward or
