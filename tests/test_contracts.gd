@@ -1771,6 +1771,7 @@ func _test_future_picks() -> void:
 			and GameState.pick_owner_of(next, 1, me) == rival, "The future pick carries over the rollover")
 	_to_offseason()
 	var now := GameState.pick_asset(GameState.pick_id(next, 1, me))
+	print("PROBE now=", now, " me=", me, " next=", next, " year=", GameState.season_year, " off=", GameState.offseason_year, " active=", GameDB.active_clubs(GameState.season_year).size(), " seed=", GameState.career_seed, "/", GameState.replay_seed, " owners=", GameState.pick_owner_of(next, 1, me), " ids=", GameState.pick_id(next, 1, me), " tpy=", GameState.trade_pick_years())
 	_check(not now.is_empty() and str(now["owner"]) == rival and (now["positions"] as Array).size() == 1
 			and str(now["name"]).contains("(No. "), "A year on it is this year's pick, at its exact spot, still theirs")
 	_check(not GameState.pick_asset(GameState.pick_id(next + 2, 1, me)).is_empty()
@@ -1782,6 +1783,7 @@ func _test_future_picks() -> void:
 	for k in range(d.pick_sequence.size()):
 		if str(d.pick_origin[k]) == me and int(d.pick_rounds[k]) == 1 and d.comp_at(k).is_empty():
 			at = k
+	print("PROBE at=", at, " seq=", d.pick_sequence[at] if at >= 0 else "-", " round1 origins=", d.pick_origin.slice(0, 22), " seq=", d.pick_sequence.slice(0, 22), " rounds=", d.pick_rounds.slice(0, 22))
 	_check(at >= 0 and str(d.pick_sequence[at]) == rival, "At that draft the pick is theirs")
 
 
