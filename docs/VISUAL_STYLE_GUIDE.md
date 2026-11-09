@@ -1,6 +1,6 @@
 # Visual style guide: the look of Aussie Rules Dynasties
 
-The rules for how this game looks. Written for the agents who build it (Claude, the art agent)
+The rules for how this game looks. Written for the Claude sessions who build it
 and decided by the director. It replaces nothing in CLAUDE.md; it makes those rules concrete
 enough to build from and to test against. The evidence and the reasoning are in
 [docs/research/VISUAL_AUDIT_2026-10-10.md](research/VISUAL_AUDIT_2026-10-10.md). When this
@@ -135,7 +135,7 @@ Banned: raised tiles, pills, chips, badges, progress bars for anything but a gen
 decorative icon rows, stat boxes, cards inside cards, a tile grid used as navigation, two-row tab strips,
 decorative dividers, any control whose only job is to look like a control.
 Navigation icons are allowed (director, 2026-11-04): one icon with its word on each button of the
-hub's navigation row. They are AI-assisted candidates; critics check them and the director approves
+hub's navigation row. They are AI-assisted candidates; the session checks them itself and the director approves
 or rejects each set.
 
 ## 4. Screen templates
@@ -231,7 +231,7 @@ skippable, readable culmination.
 - Faces stay unlikenessed; real players show their curated row or the neutral look, never a
   guess.
 - Any change to how figures look starts as a sample at game scale beside today's, with a 2x
-  crop and a clip, through the lead's QC, then the director.
+  crop and a clip, through the session's own frame check, then the director.
 
 ### 7.2 The ground and the crowd
 - Real AFL dimensions through the scene's camera; posts, square, arcs, circles, mown stripes,
@@ -282,17 +282,18 @@ skippable, readable culmination.
 - 2x crops of anything with contact points; a clip for anything that moves.
 - The right art loaded, proven (not a fallback).
 - A real tap on any new or changed touch flow.
-- **The screen lint, before any capture reaches the lead.** Run `tools/run_screen_lint.sh <yourname>`
+- **The screen lint, before any capture reaches the director.** Run `tools/run_screen_lint.sh <yourname>`
   (hub, draft and pre-bounce pane at 390x844 and 1280x720; headless, no capture needed) and fix every FIX
   line: tap targets under 44 px at phone width, text under 13 px, the same fact drawn twice, text under 4.5:1
   against its panel. Lines marked "eyeball" (counts that share words but differ, like "26 prospects left" next
   to "8 available") are yours to judge. For a screen the script does not reach, run
   `tools/visual/screen_lint.gd` with `--screen res://scenes/X.tscn` and `--setup` (see its header). Contrast
   is computed from the panel colours in the scene tree, not from a rendered frame, so it cannot see colour a
-  `_draw()` paints: the critic's pixel check still stands. Say in the report that the lint ran and its result.
+  `_draw()` paints: your own look at the frame still stands. Say in the report that the lint ran and its result.
 - Tests: no literal font sizes; no truncated names; every move a scene asks for exists on the
   sheet; the figure checks; the floors.
-- The lead's `art-qa-critic` pass before the director sees anything; one decision per question,
+- The session's own frame check before the director sees anything, and no critic agents (director,
+  2026-11-05): all visual work goes straight to him after it; one decision per question,
   recommended option first, labelled images sent in the same turn.
 - Green CI is not approval of a look. The director approves a look in the game, on a device.
 
