@@ -132,6 +132,11 @@ func _build() -> void:
 	lv.add_child(UiKit.lbl("%s   -   %d pts" % [GameState.my_record(),
 			int(GameState.my_ladder_row().get("pts", 0))], 14, UiKit.TEXT))
 	lv.add_child(UiKit.spacer(4))
+	# Every fact below is the ladder's season, finals left out (bug-bash 4,
+	# 2026-11-10): said once, as the game-by-game strip's label is.
+	var ha := UiKit.lbl("Home and away", 12, UiKit.MUTED, true)
+	ha.name = "SeasonFactsLabel"
+	lv.add_child(ha)
 	# Each fact beside its figure, not a panel apart (director, 2026-10-14).
 	var facts := GridContainer.new()
 	facts.name = "SeasonFacts"
@@ -151,6 +156,12 @@ func _build() -> void:
 	]:
 		facts.add_child(UiKit.line(row[0], 12, UiKit.MUTED))
 		facts.add_child(UiKit.line(row[1], UiKit.SECONDARY, UiKit.TEXT, true))
+	var fl := finals_line(stats)
+	if fl != "":
+		lv.add_child(UiKit.spacer(2))
+		var fin_lbl := UiKit.lbl(fl, 12, UiKit.TEXT)
+		fin_lbl.name = "SeasonFinalsLine"
+		lv.add_child(fin_lbl)
 
 	lv.add_child(UiKit.spacer(6))
 	lv.add_child(UiKit.lbl("Game by game", 12, UiKit.MUTED, true))
@@ -307,7 +318,25 @@ func _my_results() -> Array:
 
 
 func _season_stats(mine: Array) -> Dictionary:
-	var lr := GameState.my_ladder_row()
+	return season_stats(mine, GameState.my_ladder_row(), GameState.my_club)
+
+
+## The season's facts, every one over the home-and-away season (the ladder's
+## games), as the panel labels them: points for and against and percentage
+## are the ladder's, so the margins, the streak and the goals leave the finals
+## out too. `mine` is your results in order, finals last.
+static func season_stats(mine: Array, lr: Dictionary, me: String) -> Dictionary:
+	var ha_games := mini(mine.size(), int(lr.get("p", mine.size())))
+	var fin := {"n": 0, "w": 0, "l": 0, "d": 0, "pf": 0, "pa": 0}
+	for res in mine.slice(ha_games):
+		var at_home: bool = str(res["home"]) == me
+		var us := int(res["score"][0 if at_home else 1])
+		var them := int(res["score"][1 if at_home else 0])
+		fin["n"] += 1
+		fin["pf"] += us
+		fin["pa"] += them
+		fin["w" if us > them else ("l" if us < them else "d")] += 1
+	mine = mine.slice(0, ha_games)
 	var best := 0
 	var worst := 0
 	var best_opp := "-"
@@ -316,7 +345,7 @@ func _season_stats(mine: Array) -> Dictionary:
 	var run := 0
 	var goals := 0
 	for res in mine:
-		var home_is_me: bool = str(res["home"]) == GameState.my_club
+		var home_is_me: bool = str(res["home"]) == me
 		var s: Array = res["score"]
 		var mine_score: int = int(s[0]) if home_is_me else int(s[1])
 		var theirs: int = int(s[1]) if home_is_me else int(s[0])
@@ -338,8 +367,20 @@ func _season_stats(mine: Array) -> Dictionary:
 		"pf": int(lr.get("pf", 0)), "pa": int(lr.get("pa", 0)),
 		"pct": float(lr.get("pct", 0.0)), "best_margin": best,
 		"worst_margin": absi(worst), "best_opp": best_opp, "worst_opp": worst_opp,
-		"streak": streak, "goals": goals,
+		"streak": streak, "goals": goals, "finals": fin,
 	}
+
+
+## The finals on their own short line under the home-and-away facts (director
+## 2026-11-10); "" when you played none.
+static func finals_line(stats: Dictionary) -> String:
+	var fin: Dictionary = stats.get("finals", {})
+	if int(fin.get("n", 0)) == 0:
+		return ""
+	# Wins-losses as the record above it says them ("14-9"), a draw only when there was one.
+	var drawn := "-%d" % int(fin["d"]) if int(fin["d"]) > 0 else ""
+	return "Finals: %d-%d%s (%d for, %d against)" % [int(fin["w"]), int(fin["l"]), drawn,
+			int(fin["pf"]), int(fin["pa"])]
 
 
 ## W/L/D chips for every game you played. Up to 28 of them, so they wrap.

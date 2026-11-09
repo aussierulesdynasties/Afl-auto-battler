@@ -1988,6 +1988,23 @@ Your career stays on this device.",
 	_check(review.summary_text("FRE", false, "7th") == "%s take the flag. You finished 7th." % _db.club_name("FRE"),
 			"Season review: another club's flag names them and your finish")
 	_check(review.summary_text("FRE", true, "1st") == "PREMIERSHIP!", "Season review: your flag says PREMIERSHIP!")
+	# Bug-bash 4 (2026-11-10): every season fact is home-and-away, like the
+	# ladder's points for and against: a final's big win, goals and streak
+	# are left out.
+	var ha_rows := [
+		{"home": "FRE", "away": "BRL", "score": [80, 70], "goals": [12, 10]},
+		{"home": "GEE", "away": "FRE", "score": [90, 60], "goals": [14, 9]},
+		{"home": "FRE", "away": "SYD", "score": [150, 50], "goals": [23, 7]},
+		{"home": "FRE", "away": "MEL", "score": [100, 40], "goals": [15, 6]},
+	]
+	var st: Dictionary = review.season_stats(ha_rows, {"p": 3, "pf": 290, "pa": 210, "pct": 138.1}, "FRE")
+	_check(int(st["best_margin"]) == 100 and int(st["goals"]) == 44 and int(st["streak"]) == 1
+			and int(st["worst_margin"]) == 30 and int(st["pf"]) == 290,
+			"Season review: best win, goals and streak leave the finals out, as points for does (%s)" % str(st))
+	_check(review.finals_line(st) == "Finals: 1-0 (100 for, 40 against)",
+			"Season review: the finals get their own short line (%s)" % review.finals_line(st))
+	_check(review.finals_line(review.season_stats(ha_rows.slice(0, 3), {"p": 3}, "FRE")) == "",
+			"Season review: no finals, no finals line")
 
 	# --- a saved career shows Continue, and it loads -------------------------
 	_state.start_season("SYD", _db.club_list("SYD"))
