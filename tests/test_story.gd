@@ -1947,7 +1947,7 @@ func _test_captain_cards_in_play() -> void:
 		var deck := StoryDeck.all()
 		for k in ["captain_slump_start", "captain_slump_mid", "captain_slump_good", "captain_slump_flat"]:
 			ids[k] = StoryDeck.by_id(deck, k)
-		GameState.losing_streak = 2  # a captain's form dips with the team's
+		GameState.losing_streak = 3  # a captain's form dips with the team's
 		# The week's own draw may already have put a card on him (his eight-week subject
 		# cooldown); this checks the slump arc on its own, so that draw is set aside.
 		GameState.story["subj"].erase(str(cap["id"]))
