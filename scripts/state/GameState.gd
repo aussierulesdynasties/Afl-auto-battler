@@ -4128,13 +4128,24 @@ func preseason_add_drill(weeks: int) -> void:
 # The draft class the pre-season match trials (PreSeason.gd)
 # ---------------------------------------------------------------------------
 ## The prospects who can be invited: the coming National Draft's class, not
-## yet drafted, in the order the pool holds them.
+## yet drafted, in the order the pool holds them. A kid already spoken for by
+## another club (his tie, or a new club's academy) never reaches that draft, so
+## he is no trial for this one; a kid tied to your own club still is.
 func preseason_prospects() -> Array:
 	var out := []
 	for p in draftee_pool:
-		if not drafted_draftees.has(str(p.get("id", ""))):
+		if not drafted_draftees.has(str(p.get("id", ""))) and not _spoken_for_elsewhere(p):
 			out.append(p)
 	return out
+
+
+## Whether begin_intake_draft will hand this prospect to a club that is not yours.
+func _spoken_for_elsewhere(p: Dictionary) -> bool:
+	var tie := str(p.get("tied_club", ""))
+	if tie != "" and int(p.get("draft_year", 0)) == season_year:
+		return tie != my_club
+	var academy: String = ExpansionBuild.academy_club(self, p)
+	return academy != "" and academy != my_club
 
 
 ## Your recruiters' read of this year's draft class, by id: {"overall": [lo, hi],
