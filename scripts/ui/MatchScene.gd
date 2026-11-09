@@ -2477,7 +2477,6 @@ func _calls_view(q: int) -> Control:
 		v.add_child(_say(tag_line, UiKit.SMALL, UiKit.TEXT))
 	if lines.is_empty() and v.get_child_count() == 1:
 		v.add_child(UiKit.lbl("An even quarter: no call moved the needle much.", UiKit.SMALL, UiKit.MUTED))
-	v.add_child(UiKit.lbl("Expected points each call added or cost, from the chances it changed.", UiKit.SMALL, UiKit.MUTED))
 	return v
 
 

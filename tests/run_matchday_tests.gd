@@ -3077,7 +3077,9 @@ func _test_side_keeps_calls() -> void:
 			"Every other call is kept, the tag on their player included (%s)" % str(t))
 	# The calls reach the match: Start plays them.
 	await _tap_named(ms, "StartQuarter", taps)
-	t = nsim2.tactics[side]
+	# The quarter's own record: the play may already have reached the break,
+	# which clears the talk.
+	t = nsim2.tactics_history[0]["plans"][side]
 	_check(taps.is_empty() and not _state.match_day_setup_open() and str(t.get("gameplan", "")) == plan
 			and str(t.get("pep", "")) == "fire_up" and str(t.get("tag_id", "")) == tag,
 			"Start plays the kept calls (%s %s)" % [str(taps), str(t)])
