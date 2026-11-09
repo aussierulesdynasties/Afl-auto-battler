@@ -871,7 +871,7 @@
 				"captain": true,
 				"fit": true,
 				"selected": true,
-				"morale_max": 58
+				"morale_max": 70
 			},
 			"pick": "random"
 		},
