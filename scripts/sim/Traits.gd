@@ -445,3 +445,25 @@ static func near(p: Dictionary) -> Array:
 			out.append({"key": key, "gap": gap, "stat": str(d["stat"])})
 	out.sort_custom(func(a, b): return int(a["gap"]) < int(b["gap"]))
 	return out
+
+
+## "4 Contested bulls", "1 Crumber": a count of a trait's carriers.
+static func count_words(t: String, n: int) -> String:
+	var name := label(t)
+	if n != 1:
+		name = str(PLURALS.get(t, name + "s"))
+	return "%d %s" % [n, name]
+
+
+## A recruit's synergy fit as a fact (row 103): "Completes Engine room: 4 of
+## 4 Contested bulls with him." or "Engine room: 3 of 4 Contested bulls with
+## him." Never whom to get. `row` is a GameState.synergy_fit row.
+static func fit_text(row: Dictionary) -> String:
+	var key := str(row["key"])
+	var need := int(row["need"])
+	var line := str((SYNERGIES[key] as Dictionary)["line"])
+	var where := " in the %s" % str(LINE_NAMES.get(line, line)) if line != "" else ""
+	var count := "%d of %s%s with him" % [int(row["have"]) + 1, count_words(str(row["trait"]), need), where]
+	if bool(row["completes"]):
+		return "Completes %s: %s." % [label(key), count]
+	return "%s: %s." % [label(key), count]

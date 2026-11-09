@@ -173,9 +173,11 @@ static func chemistry(side: Array) -> float:
 
 
 ## The team-wide cost this side carries this round, in points. 0 under the threshold.
+## Read off the lit column (fade_step), so the sheet's figure and its chart
+## never disagree (bug-bash 8: men at 82 read 11 against a lit 13).
 static func team_points(side: Array) -> int:
-	var men := new_club_men(side)
-	return 0 if men.size() < TEAM_ARRIVALS else roundi(float(TEAM_POINTS_AT_70) * _fade(men))
+	var step := fade_step(side)
+	return 0 if step < 0 else int(fade_points()[step])
 
 
 ## The cost at each of Rounds 1 to 7, in points: 19 down to 0 on the same straight line.
