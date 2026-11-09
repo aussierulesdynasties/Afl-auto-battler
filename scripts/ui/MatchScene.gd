@@ -633,6 +633,10 @@ func _close_coach() -> void:
 	_close_break_sheets()
 	_break_refresh = Callable()
 	if _coach_overlay != null and is_instance_valid(_coach_overlay):
+		# The closing break stays in the tree until the frame ends; a quarter that
+		# ends in the same frame (its play skipped through) opens the next break beside it, which would
+		# then be named CoachBox2. The closing one gives the name up first.
+		_coach_overlay.name = "CoachBoxClosing"
 		_coach_overlay.queue_free()
 		_coach_overlay = null
 
