@@ -82,9 +82,9 @@ static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callab
 				if mark == "":
 					col.add_child(cl)
 					continue
-				# The marker is bold (weight, not colour); the sentence stays regular.
+				# The marker is bold in your club's ink (STYLE-03); the sentence stays regular TEXT.
 				var item := UiKit.hbox(6)
-				var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.TEXT, true)
+				var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.label_ink(), true)
 				mk.name = "Event%sMark_%d_%d" % [kind, index, i]
 
 				mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN

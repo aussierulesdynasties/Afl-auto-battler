@@ -2320,7 +2320,7 @@ func _break_answers() -> Dictionary:
 func _plan_row(mark: String, text: String, node_name: String, traits := false) -> Control:
 	var item := UiKit.hbox(6)
 	item.name = node_name
-	var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.TEXT, true)
+	var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.label_ink(), true)
 	mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	mk.autowrap_mode = TextServer.AUTOWRAP_OFF
 	item.add_child(mk)
@@ -2709,7 +2709,8 @@ func _on_moment_choice(i: int) -> void:
 ## muted, so it reads at a glance (director, 2026-10-11); the lines under it
 ## stay regular.
 func _call_heading(label: String) -> Label:
-	var l := UiKit.lbl(label, UiKit.SMALL, UiKit.TEXT, true)
+	# The call's name owns the choices under it: name weight in your club's ink (STYLE-03).
+	var l := UiKit.lbl(label, UiKit.NAME, UiKit.label_ink(), true)
 	l.name = "CallHeading"
 	return l
 
