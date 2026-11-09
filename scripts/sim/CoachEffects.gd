@@ -131,7 +131,7 @@ static func row(staff: Dictionary, mine: bool) -> Dictionary:
 
 
 ## How well each club knows each plan (GameState.plan_known, the same
-## dictionary): club -> {plan: level}.
+## dictionary): club -> {plan: fluency}.
 static var known := {}
 
 ## Each AI club's usual game this season (GameState.rival_plans "usual", the
@@ -156,7 +156,7 @@ static func apply_row(sq: Squad, t: Dictionary) -> void:
 	sq.plan_know = {}
 	var levels: Dictionary = known.get(sq.code, {})
 	for plan in levels:
-		sq.plan_know[str(plan)] = PreSeason.familiar_mult(int(levels[plan]))
+		sq.plan_know[str(plan)] = PreSeason.familiar_mult(float(levels[plan]))
 	sq.tactics_exec = float(t["exec"])
 	sq.tactics_read = float(t["read"])
 	sq.ai_plans = bool(t["ai"])
