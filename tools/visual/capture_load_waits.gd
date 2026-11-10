@@ -1,7 +1,7 @@
 extends SceneTree
 ## Proof tool for the load screens (the set shot on the cover). Windowed, through
 ## the GPU slot:
-##   bash C:/kt/gpu_slot.sh godot --windowed --path . --script tools/visual/capture_load_waits.gd -- --out <dir> [--size 390x844] [--flows load,sim,list] [--no-png]
+##   bash C:/kt/gpu_slot.sh godot --windowed --path . --script tools/visual/capture_load_waits.gd -- --out <dir> [--size 390x844] [--flows load,sim,list,skip] [--web] [--no-png]
 ## Three real waits, each started by a finger's tap at the control's place:
 ## Continue on the title (loading a career), Sim the week on the hub, and My list
 ## on the hub (a slow screen). For each it saves every drawn frame from the tap
@@ -25,7 +25,8 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var out := "load_waits"
-	var flows := ["load", "sim", "list"]
+	var flows := ["load", "sim", "list", "skip"]
+	var web := false
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size()):
 		match str(a[i]):
@@ -39,11 +40,18 @@ func _run() -> void:
 				flows = Array(str(a[i + 1]).split(","))
 			"--no-png":
 				_png = false
+			"--web":
+				web = true
 	await process_frame
 	_state = root.get_node("GameState")
 	var db = root.get_node("GameDB")
 	var router = root.get_node("Router")
 	_wipe = root.get_node("ScreenTransition")
+	# --web: the flair and the screen loads behave as in a browser build (the
+	# ball at rest, scenes loaded under the line); read with SUMMARY-BROWSER.
+	if web:
+		(_wipe.call("flair") as Node).set("web_still", true)
+		router.set("test_main_thread_load", true)
 	_state.autosave_enabled = true
 	_state.event_sheets = false
 	_state.save_path = "user://capture_load_waits.save"
@@ -88,6 +96,28 @@ func _run() -> void:
 	if "list" in flows:
 		var lst := _find_text(current_scene, ["My list"])
 		await _trace("list", lst, out, func(): return current_scene != null and current_scene.scene_file_path.ends_with("ListScene.tscn"))
+	if "skip" in flows:
+		# Skip the rest of the home and away: the survey opens on the club's
+		# answers; Next through it, then the traced tap is the sheet's own Skip.
+		if not current_scene.scene_file_path.ends_with("HubScene.tscn"):
+			router.stack = []
+			router.go("hub")
+			await _settle()
+		var open := current_scene.find_child("SkipHomeAway", true, false) as BaseButton
+		if open == null:
+			print("skip: no Skip the rest of the home and away")
+		else:
+			open.pressed.emit()
+			await _settle()
+			for i in range(8):
+				var nxt := current_scene.find_child("SkipNext", true, false) as BaseButton
+				if nxt == null:
+					break
+				nxt.pressed.emit()
+				await process_frame
+				await process_frame
+			var go := current_scene.find_child("SkipSeasonGo", true, false) as Control
+			await _trace("skip", go, out, func(): return _state.season.is_regular_done())
 	quit(0)
 
 
@@ -139,7 +169,7 @@ func _trace(flow: String, c: Control, out: String, arrived: Callable) -> void:
 			root.get_texture().get_image().save_png("%s/f_%03d.png" % [dir, frames.size() - 1])
 	RenderingServer.frame_post_draw.connect(on_draw)
 	await _tap(c)
-	while Time.get_ticks_msec() - t0 < 60000:
+	while Time.get_ticks_msec() - t0 < 300000:
 		await process_frame
 		if bool(arrived.call()) and not bool(_wipe.get("busy")) and frames.size() > 4:
 			break

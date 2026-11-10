@@ -57,7 +57,7 @@ func _run() -> void:
 	_t("_test_every_kick_is_a_set_shot")
 	_t("_test_ball_flies_and_turns")
 	_t("_test_reduced_motion_rests")
-	_t("_test_web_opens_between_kicks")
+	_t("_test_web_ball_rests")
 	_t("_test_no_frames_by_hand_headless")
 	_t("_test_boot_splash_is_ours")
 	_t("_test_lines")
@@ -239,18 +239,23 @@ func _test_reduced_motion_rests() -> void:
 	flair.call("close")
 
 
-## A browser shows one still for a blocking wait: it is opened between kicks,
-## so no ball hangs in the air on it.
-func _test_web_opens_between_kicks() -> void:
+## A browser shows stills for a blocking wait (a skip draws one a week): the
+## ball rests on the turf there, so no still has it hanging in the air.
+func _test_web_ball_rests() -> void:
 	var flair := _flair()
-	flair.set("web_still_start", true)
-	flair.set("ball_at", Vector2(-1, -1))
+	var stage: Control = flair.get_node("LoadStage")
+	flair.set("web_still", true)
 	flair.call("open", "FRE", false)
-	_check(flair.get("ball_at") == Vector2(-1, -1), "a browser's first frame has no ball in flight (%s)" % flair.get("ball_at"))
-	flair.set("web_still_start", false)
+	var a: Vector2 = flair.get("ball_at")
+	flair.call("tick")
+	_check(flair.get("ball_at") == a and a.y > stage.size.y * 0.8,
+			"in a browser the ball sits still on the ground (%s of %s)" % [a.y, stage.size.y])
+	flair.set("web_still", false)
 	flair.call("close")
+	flair.set("hand_clock_ms", 500)
 	flair.call("open", "FRE", false)
-	_check(flair.get("ball_at") != Vector2(-1, -1), "elsewhere the first kick starts at once")
+	_check((flair.get("ball_at") as Vector2).y < stage.size.y * 0.8, "elsewhere it is kicked (%s)" % flair.get("ball_at"))
+	flair.set("hand_clock_ms", -1)
 	flair.call("close")
 
 
