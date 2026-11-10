@@ -199,6 +199,47 @@ skippable, readable culmination.
 - Labels name football things: Ladder, Players, Awards, Fixture, Trophies; never "Analytics",
   "Dashboard", "Stats hub" on a screen.
 
+### 5.1 Voice: the senior coach's briefing
+
+Director, 2026-11-10: option B of [the copy voice report](research/COPY_VOICE_RESEARCH_2026-11-10.md)
+(DIRECTOR_BIBLE 3.B.38). One coach voice on every screen, the coach's own notes to the group; no
+line is signed by a staff member.
+
+- **Person.** "We / our / us" for the club and its players. "You" only for what happens to the
+  coach personally: the sack, a job offer, a player's opinion of you, a promise you made, a choice
+  that is yours alone ("re-signings and the draft stay yours"). "His opinion of us" or "the board
+  sacks us" says something false.
+- **Length.** Body sentences 4 to 12 words, one cause or one fact each. A line that needs two
+  facts gets a line break, not a comma or a bracket.
+- **Tense.** Past for what happened, imperative for what to do on a control, "right now" over
+  "always". No superlatives.
+- **Buttons.** 1 to 4 words, a verb naming the outcome, the same words the body uses ("Stack the
+  centre bounce", never a second name).
+- **Headers.** 1 to 4 words, a noun or a place, no verb, no full stop.
+- **Gates.** `Gain: <one effect, one number>` and `Cost: <one effect, one number>`, one unit per
+  line; a second effect goes on its own line. "We" is the subject where one is needed ("We win
+  18% more centre clearances").
+- **Numbers.** OVR, POT and the opinion score stay as numbers (director, 2026-11-10); a 0-100
+  meter reads "%d out of 100", never "/100".
+- **The match feed** keeps a broadcaster's voice, set apart from the coach's (director,
+  2026-11-10), and is the one place "!" may appear. Journalists keep their own personalities.
+- **"Sim the week"** keeps the word "sim" (director, 2026-11-10); "simming" does not: "Ask before Sim the week".
+- **Words.** The AFL's own nouns: centre bounce, stoppage, clearance, inside 50, pressure acts,
+  best 22, senior list, rookie list, delist, list spot, trade period, free agency. Replace roster
+  (list), playbook (game plan), starter (best 22, or the player he replaces), payroll (salary
+  cap), overtime (extra time), franchise (club).
+- **Banned.** The list lives in one place, `scripts/core/CopyRules.gd` (should, recommend, need
+  to, consider, probability, chance of success, modifier, simulation, simming, Auto-pick,
+  projection, roster, starter, payroll, best choice; "/100", "|", "_" in visible text; "!" outside
+  the feed). Every UI test and `tools/visual/screen_lint.gd` read it, and
+  `tests/run_copy_rules_tests.gd` walks the copy sources for it.
+
+Models (keep, or match the shape): "Our midfield is winning the stoppages: clearances 14 to 9."
+"Usually 28 touches. Tagged, about 19." "Nothing promised, nothing owed." "Two seasons short of
+the board's goals. Your time at Fremantle is over." "Each plan suits some lists more than others.
+We can change it before any match." "We're short of rucks. Others will fill in." "Won't re-sign
+with us. His opinion of you: 31 out of 100."
+
 ## 6. Motion
 
 - A screen eases in over 0.18 s; a headline reveals; a figure counts up to its real value in

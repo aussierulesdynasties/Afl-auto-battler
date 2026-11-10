@@ -135,11 +135,12 @@ func _show_weekly_loop_intro() -> void:
 	_onboarding_overlay = box["overlay"]
 	_onboarding_overlay.name = "WeeklyLoopIntro"
 	var v: VBoxContainer = box["body"]
-	v.add_child(UiKit.heading("Your week", UiKit.TITLE))
+	v.add_child(UiKit.heading("Our week", UiKit.TITLE))
 	for line in [
-		"This is home base. Check the next opponent, then use Team to pick the side and Coaching if you want to change how you play.",
-		"Each week a short list here shows the jobs still open: look over the side, check training, and anything waiting on you. Tap a job to go to it; it ticks when done.",
-		"The list is a guide, never a gate. Play match or Sim the week whenever you are ready, jobs left or not.",
+		"This is home base. Who we play next is up top.",
+		"Pick the side in Team. Set how we play in Coaching.",
+		"The week's open jobs sit here. Tap one to go to it; it ticks when done.",
+		"The list is a guide, never a gate. Play match or Sim the week, jobs left or not.",
 	]:
 		var l := UiKit.lbl(line, 14, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -172,7 +173,7 @@ func _show_season_wrap() -> void:
 	overlay.name = "SeasonWrap"
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.lbl("Off-season complete", 20, UiKit.TEXT, true))
-	v.add_child(UiKit.lbl("Your %d list is set." % int(w.get("year", GameState.season_year)), 14, UiKit.MUTED))
+	v.add_child(UiKit.lbl("Our %d list is set." % int(w.get("year", GameState.season_year)), 14, UiKit.MUTED))
 	for part in [["In", "ins", "WrapIn"], ["Out", "outs", "WrapOut"]]:
 		var rows: Array = w.get(part[1], [])
 		if rows.is_empty():
@@ -250,7 +251,7 @@ func _show_season_wrap() -> void:
 	alm.pressed.connect(func(): Router.go("almanac"))
 	(box["footer"] as VBoxContainer).add_child(alm)
 	var to_preseason: bool = GameState.preseason_active()
-	var go := UiKit.btn("Start the pre-season" if to_preseason else "Begin season", UiKit.BODY, true)
+	var go := UiKit.btn("Start the pre-season" if to_preseason else "Start the season", UiKit.BODY, true)
 	go.name = "BeginSeason"
 	go.custom_minimum_size.y = 48
 	go.pressed.connect(func():
@@ -286,7 +287,17 @@ func _build() -> void:
 	settings.custom_minimum_size = Vector2(64, 44)
 	settings.add_theme_color_override("font_color", UiKit.MUTED)
 	settings.pressed.connect(func(): _settings = OptionsSheet.open(self, true))
-	_root.add_child(UiKit.top_bar(_week_title(season), false, settings))
+	# Any player or club by name, and the shortlist (row T3.R43, P-65).
+	var search := UiKit.btn("Search", 14)
+	search.name = "HubSearchOpen"
+	search.flat = true
+	search.custom_minimum_size = Vector2(64, 44)
+	search.add_theme_color_override("font_color", UiKit.MUTED)
+	search.pressed.connect(func(): HubSearch.open(self))
+	var bar_tools := UiKit.hbox(4)
+	bar_tools.add_child(search)
+	bar_tools.add_child(settings)
+	_root.add_child(UiKit.top_bar(_week_title(season), false, bar_tools))
 	if GameState.is_sacked():
 		# The jobs on offer and the record run past a phone's height: it scrolls.
 		var sp := UiKit.vbox(UiKit.SECTION)
@@ -634,7 +645,7 @@ func _show_new_event() -> bool:
 	return false
 
 
-func _open_event_sheet(index: int) -> void:
+func _open_event_sheet(index: int, why := "") -> void:
 	var box := UiKit.modal_box(self, 520.0, 0.0)
 	_event_overlay = box["overlay"]
 	_event_overlay.name = "EventSheet"
@@ -643,6 +654,11 @@ func _open_event_sheet(index: int) -> void:
 	var club := UiKit.club_heading(GameState.my_club, null, UiKit.SECONDARY, 18.0)
 	club.name = "EventSheetClub"
 	v.add_child(club)
+	if why != "":
+		var stop := UiKit.lbl(why, UiKit.SMALL, UiKit.MUTED)
+		stop.name = "SimStopped"
+		stop.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(stop)
 	var footer: VBoxContainer = box["footer"]
 	var later := UiKit.btn("Later", UiKit.NAME)
 	later.name = "EventLater"
@@ -671,6 +687,14 @@ func _open_event_sheet(index: int) -> void:
 		_build()
 	put_card.call(answered)
 	footer.add_child(later)
+
+
+## Close an open card sheet without moving on to the week's next ask.
+func _close_event_sheet_quiet() -> void:
+	if _event_overlay != null and is_instance_valid(_event_overlay):
+		_event_overlay.name = "EventSheetGone"
+		_event_overlay.queue_free()
+	_event_overlay = null
 
 
 func _close_event_sheet() -> void:
@@ -889,24 +913,24 @@ func _week_section(season: Season) -> Control:
 	elif _regular_bye(season):
 		nv.add_child(UiKit.lbl("Bye", UiKit.H1, UiKit.TEXT, true))
 		nv.add_child(UiKit.lbl(
-				"No game for you in Round %d. The rest of the league plays on." % (season.round_index + 1),
+				"No game for us in Round %d. The rest of the league plays on." % (season.round_index + 1),
 				UiKit.BODY, UiKit.MUTED))
 	elif _upcoming_match().is_empty():
 		match GameState.my_finals_status():
 			"bye":
 				nv.add_child(UiKit.lbl("Week off", UiKit.H1, UiKit.TEXT, true))
 				nv.add_child(UiKit.lbl(
-						"You have a week off while the rest of the series plays on.",
+						"We have a week off while the rest of the series plays on.",
 						UiKit.BODY, UiKit.MUTED))
 			"eliminated":
 				nv.add_child(UiKit.lbl("Knocked out", UiKit.H1, UiKit.BAD, true))
 				nv.add_child(UiKit.lbl(
-						"Your finals campaign is over. Play out the rest of the series to see who lifts the cup.",
+						"Our finals campaign is over. Play out the series to see who lifts the cup.",
 						UiKit.BODY, UiKit.MUTED))
 			_:
-				nv.add_child(UiKit.lbl("Season over for you", UiKit.H1, UiKit.BAD, true))
+				nv.add_child(UiKit.lbl("Season over", UiKit.H1, UiKit.BAD, true))
 				nv.add_child(UiKit.lbl(
-						"You missed the top %d. Play out the finals series to see who lifts the cup." % Season.FINALISTS,
+						"We missed the top %d. Play out the finals to see who lifts the cup." % Season.FINALISTS,
 						UiKit.BODY, UiKit.MUTED))
 	else:
 		var mine: Dictionary = _upcoming_match()
@@ -1753,7 +1777,7 @@ func _approach_cards() -> Control:
 	for i in range(GameState.coach_approaches.size()):
 		var a: Dictionary = GameState.coach_approaches[i]
 		var c: Dictionary = GameState.coaches.get(str(a["cid"]), {})
-		var who := CoachMarket._name(c) if not c.is_empty() else "Your coach"
+		var who := CoachMarket._name(c) if not c.is_empty() else "Our coach"
 		if str(a.get("choice", "")) != "":
 			var done := UiKit.lbl(str(a["text"]), UiKit.BODY, UiKit.MUTED)
 			done.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1762,7 +1786,7 @@ func _approach_cards() -> Control:
 		var card := UiKit.vbox(4)
 		card.name = "Approach_%d" % i
 		card.add_child(UiKit.lbl("%s want %s" % [GameDB.club_name(str(a["club"])), who], UiKit.NAME, UiKit.TEXT, true))
-		var why := UiKit.lbl("Your %s. They have offered him the %s job." % [
+		var why := UiKit.lbl("Our %s. They have offered him the %s job." % [
 				CoachMarket._job_word(str(a["from_job"])), CoachMarket._job_word(str(a["job"]))], UiKit.BODY, UiKit.MUTED)
 		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		card.add_child(why)
@@ -1857,7 +1881,7 @@ func _approach_option(i: int, choice: String, text: String, what: String) -> Con
 	var col := UiKit.vbox(0)
 	if choice != "go":
 		var w := GameState.approach_weight(i, choice)
-		var odds := UiKit.lbl("He weighs it %d of 100: %s" % [w, "stays" if w >= int(CoachMarket.STAY_BAR * 100.0) else "goes"],
+		var odds := UiKit.lbl("He weighs it %d out of 100: %s" % [w, "stays" if w >= int(CoachMarket.STAY_BAR * 100.0) else "goes"],
 				UiKit.SMALL, UiKit.TEXT, true)
 		odds.name = "Approach_%d_%s_weight" % [i, choice]
 		col.add_child(odds)
@@ -1904,8 +1928,8 @@ func _nav_button(text: String, cb: Callable, primary := false) -> Button:
 ## ("Play Wildcard Round" ran off the edge at 390).
 func _finals_play_label() -> String:
 	var w := int(GameState.season.finals.get("week", 1))
-	return ["Play the wildcard", "Play the finals", "Play semi finals",
-			"Play the prelims", "Play Grand Final"][clampi(w - 1, 0, 4)]
+	return ["Play the wildcard", "Play the finals", "Play the semi-finals",
+			"Play the preliminary finals", "Play the Grand Final"][clampi(w - 1, 0, 4)]
 
 
 func _finals_label() -> String:
@@ -1978,11 +2002,17 @@ func _sim_asks_first() -> bool:
 
 
 func _on_sim_round_pressed() -> void:
+	# Your standing orders say ask you (P-66): the week waits for the card.
+	var stops := GameState.sim_week_stops()
+	if not stops.is_empty():
+		_close_event_sheet_quiet()
+		_open_event_sheet(int(stops[0]), "Sim the week waits for this card: your standing orders say ask you.")
+		return
 	var m := _upcoming_match()
 	if not _sim_asks_first():
 		_on_sim_round()
 		return
-	var box := UiKit.modal_box(self, 420.0, 290.0)
+	var box := UiKit.modal_box(self, 420.0, 0.0)
 	_sim_confirm = box["overlay"]
 	_sim_confirm.name = "SimConfirm"
 	var v: VBoxContainer = box["body"]
@@ -1990,6 +2020,18 @@ func _on_sim_round_pressed() -> void:
 	var why := UiKit.lbl("Your match will be played out without you.", UiKit.BODY, UiKit.TEXT)
 	why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(why)
+	# What the assistant does while you are away, and the way to change it (P-66).
+	for line in SimOrdersSheet.summary():
+		var ol := UiKit.lbl(str(line), UiKit.SMALL, UiKit.MUTED)
+		ol.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(ol)
+	var orders := UiKit.text_action("When I sim the week ›", UiKit.BODY)
+	orders.name = "SimConfirmOrders"
+	orders.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	orders.pressed.connect(func():
+		_close_sim_confirm()
+		SimOrdersSheet.open(self))
+	v.add_child(orders)
 	var go := UiKit.btn("Sim the week", UiKit.NAME, true)
 	go.name = "SimConfirmGo"
 	go.custom_minimum_size = Vector2(0, 48)
@@ -2025,7 +2067,7 @@ func _on_sim_round() -> void:
 
 
 func _sim_week() -> void:
-	GameState.advance()
+	GameState.sim_week()
 	_build()
 	if not GameState.last_results.is_empty():
 		_show_results(GameState.last_results)
@@ -2037,12 +2079,12 @@ func _sim_week() -> void:
 func _sim_line() -> String:
 	var season: Season = GameState.season
 	if season == null or season.is_season_over():
-		return "Simming the week..."
+		return "Sim the week..."
 	if not season.is_regular_done():
 		return "Playing %s..." % season.round_label(season.round_index)
 	var w := int(season.finals.get("week", 1))
-	return ["Playing the wildcard round...", "Playing the first week of the finals...", "Playing the semi finals...",
-			"Playing the prelims...", "Playing the Grand Final..."][clampi(w - 1, 0, 4)]
+	return ["Playing the wildcard round...", "Playing the first week of the finals...", "Playing the semi-finals...",
+			"Playing the preliminary finals...", "Playing the Grand Final..."][clampi(w - 1, 0, 4)]
 
 
 ## Router back hook: close the results popup before leaving the hub.
@@ -2200,7 +2242,7 @@ func _show_midseason_pick() -> void:
 	_midseason_overlay.name = "MidseasonDraft"
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Mid-season rookie draft", UiKit.TITLE))
-	var note := UiKit.lbl("Your pick: whoever you take signs a rookie deal to the end of next season. Sim the week without picking passes it.", 15, UiKit.TEXT)
+	var note := UiKit.lbl("Our pick. Whoever we take signs a rookie deal to the end of next season.\nSim the week without picking and we pass.", 15, UiKit.TEXT)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(note)
 	var shown := MidseasonDraft.pool(GameState).slice(0, MIDSEASON_SHOWN)
