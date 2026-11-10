@@ -1613,15 +1613,19 @@ func _push_past_fold(box: Control, fold: float, edge: float, max_gap: float) -> 
 			continue
 		var gap := edge - r.position.y
 		var peek := _peek_height(c as Control)
+		var sep := float((box as VBoxContainer).get_theme_constant("separation")) 				if box is VBoxContainer else 0.0
 		if gap >= peek:
 			gap -= peek
+			# Its title already reads clear of the fade: a spacer here, even an
+			# empty one, would add the list's separation and push the title into it.
+			if gap <= sep:
+				return true
 		if gap > max_gap:
 			# A tall card with a list inside: the gap falls between its rows.
 			for inner in c.get_children():
 				if inner is VBoxContainer:
 					return _push_past_fold(inner, fold, edge, max_gap)
 			return true
-		var sep := float((box as VBoxContainer).get_theme_constant("separation")) 				if box is VBoxContainer else 0.0
 		var spacer := Control.new()
 		spacer.name = "HubFoldGap"
 		spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
