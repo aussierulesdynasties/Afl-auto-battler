@@ -346,7 +346,27 @@ func _test_in_career() -> void:
 	for p in GameState.my_list:
 		after += int(p.get("xp", 0))
 	_check(before == after, "A round's XP is paid once, however often it is asked")
+	# Your side as the match is given it this week, to compare after loading.
+	GameState._refresh_coach_tactics()
+	var want := GameState.my_squad()
+	CoachEffects.apply(want)
 	_check(GameState.save_career() and GameState.load_career(), "The career saves and loads")
+	# A loaded career has no table until its next match; the coaching screen's
+	# squad still carries your coaches (my_coached_squad), as the match's will.
+	CoachEffects.table = {}
+	var bare := GameState.my_squad()
+	CoachEffects.apply(bare)
+	var got := GameState.my_coached_squad()
+	_check(want.assistant and not bare.assistant and not want.plan_know.is_empty() and bare.plan_know.is_empty(),
+			"(setup) read from the empty table after loading, a squad has no coaching on it")
+	_check(is_equal_approx(got.tactics_exec, want.tactics_exec) and is_equal_approx(got.tactics_read, want.tactics_read)
+			and got.plan_know == want.plan_know and got.arch == want.arch and got.assistant == want.assistant
+			and got.plan_trait == want.plan_trait and is_equal_approx(got.together, want.together)
+			and got.ai_plans == want.ai_plans and got.usual_plan == want.usual_plan,
+			"After loading, the coaching screen's squad has the coaching the match gives it (exec %.3f for %.3f, read %.3f for %.3f)" % [
+			got.tactics_exec, want.tactics_exec, got.tactics_read, want.tactics_read])
+	_check(FileAccess.get_file_as_string("res://scripts/ui/CoachingScene.gd").contains("GameState.my_coached_squad()"),
+			"The coaching screen sizes its plans on that squad")
 	var saved := FileAccess.get_file_as_string(GameState.save_path)
 	_check(not saved.contains("tactics_exec") and not saved.contains("tactics_read"), "Nothing derived is saved: effects are read from the coaches")
 	# The table is not saved. On the first live week after loading, the
