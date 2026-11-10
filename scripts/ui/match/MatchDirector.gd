@@ -2303,7 +2303,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			# the ball and goal, across the corridor.
 			var hole := ball_p.lerp(own_goal, FLOOD_DEPTH)
 			hole.y = lerpf(ball_p.y, base.y * 0.55, 0.6)
-			world = world.lerp(hole, 0.75)
+			world = world.lerp(hole, FLOOD_MID_SHARE)
 		elif o >= 0:
 			var og: Vector2 = tokens[o]["goal"]
 			if og.distance_to(world) < 35.0:
@@ -2317,10 +2317,13 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 					w = 0.85   # a tagger plays the man
 				world = world.lerp(mark, w)
 		if flooding and role == "FWD":
-			# ...and the half-forward line pushes up toward the ball, so the
-			# numbers are behind it; the full-forward line stays home.
+			# ...and the half-forward line drops back to just goal-side of the
+			# ball, so the numbers are behind it wherever the ball is (row T2.4:
+			# pulled toward the ball, they stayed in front of it when it was in
+			# their own half); the full-forward line mostly stays home.
 			var half := slot == "CHF" or slot == "HFL" or slot == "HFR"
-			world.x = lerpf(world.x, ball_p.x, FLOOD_PUSH if half else FLOOD_PUSH * 0.25)
+			var behind := ball_p.x - dir * FLOOD_HALF_BEHIND
+			world.x = lerpf(world.x, behind, FLOOD_HALF_SHARE if half else FLOOD_PUSH * 0.25)
 	return _keep_in(world)
 
 
@@ -2481,6 +2484,12 @@ func _pressing(side: int, bx: float) -> bool:
 ## its own goal), and how far its forwards come up toward the ball.
 const FLOOD_DEPTH := 0.35
 const FLOOD_PUSH := 0.35
+## How far the midfield folds into that hole, how far goal-side of the ball the
+## half-forward line drops (metres) and how much of the way it goes (row T2.4:
+## at 0.75 and pushed toward the ball the flood moved the side 5.5 m, too little to see).
+const FLOOD_MID_SHARE := 0.9
+const FLOOD_HALF_BEHIND := 6.0
+const FLOOD_HALF_SHARE := 0.8
 
 
 ## The side's recorded calls include a flood (MatchSim.BURSTS, on the timeline

@@ -577,7 +577,9 @@ func _test_call_visibility(results: Array) -> void:
 			["Slow it down (in possession, centroid from Melbourne's)", "balanced", ["hold"], "has.cen_opp", -1.0],
 			["Slow it down (without the ball, centroid from the ball)", "balanced", ["hold"], "not.cen_ball", -1.0],
 			["Slow it down (without the ball, median player from the ball)", "balanced", ["hold"], "not.med_ball", -1.0],
-			["Slow it down (without the ball, centroid from Melbourne's)", "balanced", ["hold"], "not.cen_opp", -1.0]]
+			["Slow it down (without the ball, centroid from Melbourne's)", "balanced", ["hold"], "not.cen_opp", -1.0],
+			["Flood behind the ball (without the ball, centroid from the ball)", "balanced", ["flood"], "not.cen_ball", -1.0],
+			["Flood behind the ball (without the ball, median player from the ball)", "balanced", ["flood"], "not.med_ball", -1.0]]
 	var said := []
 	var done := {}
 	for c in cases:
