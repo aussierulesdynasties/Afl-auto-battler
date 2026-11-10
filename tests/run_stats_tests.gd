@@ -1104,7 +1104,9 @@ func _test_ladder(sz: Vector2i) -> void:
 		_check(pos_pc == "", "A real tap on the # header reaches it (%s: %s)" % [tag, pos_pc])
 
 	# Every header and cell is whole, and nothing in a row runs into its neighbour.
-	_table_text_whole(s, "ladder", tag)
+	# Under 340 units (StatsLadder.PHONE_TIGHT) the club column is the guernsey
+	# alone by design (row 84), so there the guernsey is what must show whole.
+	_table_text_whole(s, "ladder", tag, sz.x < 340)
 	# A wide screen: the toggles are compact groups rather than bars across the
 	# window, each with its words whole (row 149: the 100 to 140 px band is retired).
 	if sz.x >= 900:
@@ -1346,17 +1348,34 @@ func _header_aligns(s: Node, tag: String) -> void:
 ## 700 to 900 px table and 170 to 200 px club column bands are retired, a
 ## layout may move): no header or cell is cut short or runs out of its row, and
 ## no two pieces of text in a row run into each other.
-func _table_text_whole(s: Node, what: String, tag: String) -> void:
+func _table_text_whole(s: Node, what: String, tag: String, guernsey_only := false) -> void:
 	var table: Control = s.find_child("LadderTable", true, false)
 	var rows: Array = s.find_children("Club_*", "Button", true, false)
 	_check(table != null and not rows.is_empty(), "The %s table has rows to read (%s)" % [what, tag])
 	if table == null:
 		return
-	var cut: Array = _cut_text(table)
+	# The club's code beside its guernsey, where the guernsey stands for the club.
+	var codes := []
+	if guernsey_only:
+		var bare := []
+		for b in rows:
+			var code := str(b.name).trim_prefix("Club_")
+			var crest: Control = null
+			for n in (b as Node).find_children("*", "Label", true, false):
+				if (n as Label).text == code and (n as Label).text_overrun_behavior != TextServer.OVERRUN_NO_TRIMMING:
+					codes.append(n)
+					crest = n.get_parent().get_child(0) as Control
+			var row_box := (b as Control).get_global_rect()
+			if crest == null or crest is Label or not crest.is_visible_in_tree() or crest.size.x < 18.0 					or crest.get_global_rect().position.x < row_box.position.x - 1.0 					or crest.get_global_rect().end.x > row_box.end.x + 1.0:
+				bare.append(code)
+		_check(bare.is_empty(), "Every %s row shows its club's guernsey whole (%s: %s)" % [what, tag, str(bare.slice(0, 4))])
+	var cut: Array = _cut_text(table, codes)
 	var header: Node = s.find_child("LadderHeader", true, false)
 	if header != null:
 		cut.append_array(_cut_text(header))
 		for h in header.get_children():
+			if guernsey_only and str(h.name) == "Sort_club":
+				continue   # no room for the word over a guernsey-wide column
 			if h is Button and (h as Button).is_visible_in_tree() and not _button_text_fits(h as Button):
 				cut.append("%s \"%s\"" % [h.name, (h as Button).text])
 	_check(cut.is_empty(), "No %s header or cell is clipped (%s: %s)" % [what, tag, str(cut.slice(0, 4))])
@@ -1370,11 +1389,11 @@ func _table_text_whole(s: Node, what: String, tag: String) -> void:
 ## to an ellipsis or set in a box narrower than its words, or whole in its own
 ## box but drawn outside a row or a clipping parent (a row of fixed columns
 ## that outgrows its button is cut at the button's edge).
-func _cut_text(root_node: Node) -> Array:
+func _cut_text(root_node: Node, skip := []) -> Array:
 	var out := []
 	for n in root_node.find_children("*", "Label", true, false):
 		var l := n as Label
-		if not l.is_visible_in_tree() or l.text == "" or l.autowrap_mode != TextServer.AUTOWRAP_OFF:
+		if skip.has(l) or not l.is_visible_in_tree() or l.text == "" or l.autowrap_mode != TextServer.AUTOWRAP_OFF:
 			continue   # wrapped text takes another line instead
 		if _text_width(l) > l.size.x + 1.0:
 			out.append("%s \"%s\" is cut to %.0f px" % [l.name, l.text.left(24), l.size.x])
@@ -1385,7 +1404,8 @@ func _cut_text(root_node: Node) -> Array:
 			if p is Control and ((p as Control).clip_contents or str(p.name).begins_with("Club_")):
 				var box := (p as Control).get_global_rect()
 				if ink.position.x < box.position.x - 1.0 or ink.end.x > box.end.x + 1.0:
-					out.append("%s \"%s\" runs out of %s" % [l.name, l.text.left(24), p.name])
+					out.append("%s \"%s\" runs out of %s (words %.0f to %.0f, %s %.0f to %.0f)" % [l.name, l.text.left(24),
+							p.name, ink.position.x, ink.end.x, p.name, box.position.x, box.end.x])
 					break
 			p = p.get_parent()
 	return out
