@@ -2,6 +2,8 @@
 
 _Research report, 2026-11-10. Proposals only: nothing here is scheduled, and no copy in the game has changed. The roadmap is the director's._
 
+**Director ruling, 2026-11-10: option B, the senior coach's briefing.** One coach voice on every screen (no signed staff lines); "we / our" for the club, "you" only for what happens to the coach personally.
+
 ## 1. Summary: the voice lives in body lines, not buttons
 
 The game already has firm copy rules (natural AFL language, no engine words, sentence case, Gain and Cost with size and odds at every gate) but **no rule says who is speaking, in which person, or how long a line may be**. So every screen picks its own speaker: break notes say "you", the assistant's report says "us", the feed shouts "we are going to extra time!", event cards slide from tabloid into stat sheet, and tribunal buttons read like a legal form. In a hand sample of 124 lines, **32 carry an engine or software word, 18 are too long, 18 are vague, 17 read like documentation and 16 state a number unclearly**. The awkwardness concentrates in three places: generated gate and event-card cost lines (clauses and parentheses stacked to meet the transparency rule), onboarding and help text, and one action carrying two or three names.
@@ -201,12 +203,11 @@ Nothing below is scheduled. No TODO row owns the game's voice today, and the roa
 
 Struck because a ruling already answers them: how odds read ("60%" vs "6 in 10") is settled by ruling 3.B.27, percentages at the gate, with words allowed off it per 3.B.32; humour allowance is settled by 3.B.34 (at most one per screen, never beside a loss, injury, sacking or suspension); whether journalists keep their own voices is settled by the bible ("Journalists have personalities"); XP stays (3.B.33); and no option may name the best choice (bible principle 4).
 
-1. **Which voice: A (whiteboard), B (senior coach's briefing) or C (coaches' box)?**
-2. **Who speaks: one coach voice for every screen, or named staff signing their assessments (option C)?** C adds signed staff lines, which ruling 3.B.34's "no new dialogue/news framework" would otherwise rule out.
-3. **"We / our" or "you / your" for the club in body lines?** Under "we", what happens to the coach personally (sacking, a player's opinion of him) would still say "you".
-4. **Do OVR, POT and the 0-100 opinion score stay visible as numbers** (draft cards, player sheet, contracts), or move behind a word scale with a published ladder?
-5. **Does the match feed keep a broadcaster's voice** (as L87's "we are going to extra time!" does now) or read as neutral match-report fragments?
-6. **Does "Sim the week" keep the word "sim"?** This is already open at DIRECTOR_BIBLE.md:1921 and decides L18, L19 and L122.
+Questions 1 to 3 (which voice, who speaks, we or you) were answered on 2026-11-10: option B, one coach voice, "we / our" with "you" for the coach personally. Three remain:
+
+1. **Do OVR, POT and the 0-100 opinion score stay visible as numbers** (draft cards, player sheet, contracts), or move behind a word scale with a published ladder?
+2. **Does the match feed keep a broadcaster's voice** (as L87's "we are going to extra time!" does now) or read as neutral match-report fragments?
+3. **Does "Sim the week" keep the word "sim"?** This is already open at DIRECTOR_BIBLE.md:1921 and decides L18, L19 and L122.
 
 ## 8. Sources
 
@@ -218,9 +219,9 @@ Struck because a ruling already answers them: how odds read ("60%" vs "6 in 10")
 
 ## 9. Build scope
 
-A self-contained brief for a future session. Nothing here is scheduled; it starts only when the director assigns it, and **no player-facing line is rewritten before the director picks a voice** (question 1 below). Steps 1 and 2 can be built before that choice; steps 3 to 5 cannot.
+A self-contained brief for a future session. Nothing here is scheduled; it starts only when the director assigns it, and **the voice is option B, the senior coach's briefing (director, 2026-11-10)**: write every rewrite in section 5's B column and rules. The three questions below still decide the OVR/POT lines, the feed and "Sim the week"; leave those lines unchanged until they are answered.
 
-**1. Voice guide.** Where: a new subsection "Voice" under §5 Copy in docs/VISUAL_STYLE_GUIDE.md (lines 187-200), plus a one-line pointer and one review question in .claude/skills/afl-ui-writing/SKILL.md. Contents: the chosen option's rules from section 5 of this report (person, tense, sentence length; button 1-4 words as an outcome verb; header 1-4 words, no verb; gate grammar `Gain: <one effect, one number>` / `Cost: <one effect, one number>`, one unit per line; hidden meters as "%d out of 100"), the glossary and replacement words from section 4, the shared banned list, and the ten good lines from section 2 as models. Done: guide merged, under the 60 KB must-read limit (tools/check_doc_sizes.py green), afl-ui-writing points to it.
+**1. Voice guide.** Where: a new subsection "Voice" under §5 Copy in docs/VISUAL_STYLE_GUIDE.md (lines 187-200), plus a one-line pointer and one review question in .claude/skills/afl-ui-writing/SKILL.md. Contents: option B's rules from section 5, including the we/you rule, of this report (person, tense, sentence length; button 1-4 words as an outcome verb; header 1-4 words, no verb; gate grammar `Gain: <one effect, one number>` / `Cost: <one effect, one number>`, one unit per line; hidden meters as "%d out of 100"), the glossary and replacement words from section 4, the shared banned list, and the ten good lines from section 2 as models. Done: guide merged, under the 60 KB must-read limit (tools/check_doc_sizes.py green), afl-ui-writing points to it.
 
 **2. One shared banned-terms list and lint.** Create one constant file (proposed: scripts/core/CopyRules.gd) holding the shared list (should, recommend, best as a verdict, need to, consider, probability, chance of success, modifier, simulation, simming, Auto-pick, projection, roster, starter, payroll, OVR/POT only if the director drops them, "/100", "|" and "_" in visible text, "!" outside quoted commentary) and a `check(text) -> Array` helper. Absorb the scattered lists so each test reads the shared constant plus its own surface extras: tests/test_matchday.gd:11-14 (ADVICE, ENGINE), tests/test_preseason_cards.gd:326, tests/run_clublink_tests.gd:485, tests/run_draft_ui_tests.gd:1344. Wire the helper into tools/visual/screen_lint.gd over every visible Label/Button text, and add one test suite that walks the copy sources (data/stories/*.json, GateOdds.gd, StoryEngine.gd, CoachReport.gd, MatchNotes.gd constants) and fails on any hit. Done: every UI suite and the screen lint call the shared list; `tools/run_tests.sh` green; the lint reports zero banned terms (it will first fail on known hits such as "starter" at scripts/ui/PreSeasonScene.gd:591, which become the first fixes once the voice is chosen, or a temporary allow-list with each entry tied to a screen pass below).
 
@@ -244,12 +245,9 @@ A self-contained brief for a future session. Nothing here is scheduled; it start
 
 Done for each pass: every visible line on that screen read and either kept or rewritten to the voice guide; numbers and meaning unchanged (sizes marked † in section 5 come from the sim, never invented); shared lint green on that screen; pins updated; before-and-after captures at 390 and 1920 px (dark theme, non-Collingwood club) self-checked, then shown to the director with the old and new line for each change. The director's look closes the pass, not green CI.
 
-**5. Director gates inside the build.** Steps 3 to 5 wait for the voice choice. A pass with a line the director rejects is reworked before the next screen starts.
+**5. Director gates inside the build.** A pass with a line the director rejects is reworked before the next screen starts.
 
 **Open questions for the director (from section 7):**
-1. Which voice: A (whiteboard), B (senior coach's briefing) or C (coaches' box)?
-2. One coach voice for every screen, or named staff signing their assessments (C, which ruling 3.B.34's "no new dialogue/news framework" would otherwise rule out)?
-3. "We / our" or "you / your" for the club in body lines?
-4. Do OVR, POT and the 0-100 opinion score stay visible as numbers?
-5. Does the match feed keep a broadcaster's voice or read as neutral match-report fragments?
-6. Does "Sim the week" keep the word "sim"?
+1. Do OVR, POT and the 0-100 opinion score stay visible as numbers?
+2. Does the match feed keep a broadcaster's voice or read as neutral match-report fragments?
+3. Does "Sim the week" keep the word "sim"?
