@@ -2141,7 +2141,7 @@ func _test_ask_price() -> void:
 
 ## The clubs the ask-price volume check coaches (row 67), and its floor:
 ## trades a year a coach who asks makes on spare assets alone.
-const ASK_PRICE_CLUBS := ["GEE", "FRE", "MEL", "STK", "WB", "SYD"]
+const ASK_PRICE_CLUBS := ["GEE", "FRE", "MEL", "STK", "WBD", "SYD"]
 const ASK_PRICE_FLOOR := 1.0
 
 
