@@ -136,6 +136,13 @@ func play(from: int, count: int, out: String, weather: String,
 				cside.plan_trait = str(args[ci + 1])
 		if side_plan != "":
 			cside.ai_plans = false
+		# --rival-traits: a side with no --plan-trait runs the trait of the plan
+		# its side suits, as a rival club does with its usual game.
+		if args.has("--rival-traits"):
+			for sq in [sq_h, sq_a]:
+				if (sq as Squad).plan_trait == "":
+					(sq as Squad).plan_trait = PlanTraits.for_plan(
+							PlanFit.standing_plan((sq as Squad).ground, (sq as Squad).plan_know))
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)
 		sim.weather = weather
 		if side_plan != "":

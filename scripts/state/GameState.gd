@@ -4913,6 +4913,9 @@ func opponent_report(code: String) -> Array:
 		var what := str(THEIR_PLAN[usual])
 		play.append("Their usual game plan is %s. %s%s%s" % [RivalRead.called(usual),
 				what.left(1).to_upper(), what.substr(1), " " + legs if legs != "" else ""])
+	var trait_line := PlanTraits.rival_line(PlanTraits.for_plan(sq.usual_plan))
+	if trait_line != "":
+		play.append(trait_line)
 	var levels := {}
 	for plan in PreSeason.DRILL_PLANS:
 		levels[plan] = plan_level(code, str(plan))

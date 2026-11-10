@@ -161,7 +161,8 @@ func _test_save_reload() -> void:
 
 
 ## An older save has no trait; your club's match squad carries yours and a
-## rival's carries none.
+## rival's the one of its usual game (none for Balanced); the scouting report
+## says it.
 func _test_old_save_and_rivals() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
@@ -171,14 +172,30 @@ func _test_old_save_and_rivals() -> void:
 	state.erase("plan_trait")
 	_check(GameState._restore_career(state) and GameState.plan_trait == "" and CoachEffects.my_trait == "",
 			"An older save loads with no trait")
-	CoachEffects.my_trait = "fortress"
+	CoachEffects.my_trait = "chaos_ball"
+	CoachEffects.usual = {"SYD": "defensive", "STK": "balanced"}
 	var mine := Squad.new("Geelong", GameDB.club_list("GEE"), true, "GEE")
 	var theirs := Squad.new("Sydney", GameDB.club_list("SYD"), false, "SYD")
+	var plain := Squad.new("St Kilda", GameDB.club_list("STK"), false, "STK")
 	CoachEffects.apply_row(mine, _row(false))
 	CoachEffects.apply_row(theirs, _row(true))
-	_check(mine.plan_trait == "fortress" and theirs.plan_trait == "",
-			"Your club runs your trait, a rival none (%s, %s)" % [mine.plan_trait, theirs.plan_trait])
+	CoachEffects.apply_row(plain, _row(true))
+	_check(mine.plan_trait == "chaos_ball" and theirs.plan_trait == "fortress" and plain.plan_trait == "",
+			"Your club runs your trait, a defensive rival Fortress, a balanced one none (%s, %s, %s)"
+			% [mine.plan_trait, theirs.plan_trait, plain.plan_trait])
+	CoachEffects.usual = {}
 	CoachEffects.my_trait = ""
+	for plan in PlanTraits.FOR_PLAN:
+		var id := PlanTraits.for_plan(str(plan))
+		_check(PlanTraits.valid(id) != "" and PlanTraits.rival_line(id).contains("%")
+				and GameState.CLUB_PLANS.has(str(plan)),
+				"A %s rival's trait is real and scouted with its size (%s)" % [plan, id])
+	GameState.reset()
+	GameState.start_season("GEE", GameDB.club_list("GEE"))
+	GameState.rival_plans = {"year": GameState.season_year, "clubs": {}, "usual": {"SYD": "contest"}}
+	var report := str(GameState.opponent_report("SYD"))
+	_check(report.contains("Their game-plan trait is Stoppage Kings"),
+			"The report on a rival names its trait (%s)" % report.left(300))
 
 
 func _row(ai: bool) -> Dictionary:

@@ -9,7 +9,9 @@ extends RefCounted
 ## vigorously later, for now just build and ship" (TODO section Z). Every size
 ## is a named const so the balance pass can find it.
 ##
-## Rival clubs run none (they keep their usual plan only).
+## Every club gets them (CLAUDE.md, director 2026-11-09): a rival club runs the
+## trait that goes with its coach's usual game for the season (FOR_PLAN), fixed
+## for the season; a usual game with no match (Balanced) runs none.
 
 const IDS := ["fortress", "kick_mark", "cluster", "stoppage_kings", "fast_starters",
 		"chaos_ball", "hard_trainers", "long_bombers", "front_runners", "never_say_die"]
@@ -109,12 +111,42 @@ const BASIS := {
 	"front_runners": "Sides that bank a big lead and fold when chasing.",
 	"never_say_die": "The great comebacks.",
 }
+## A rival coach's usual game -> the trait his club runs (one table; a plan
+## not here runs none). The trait that is the same football as the plan.
+const FOR_PLAN := {
+	"defensive": "fortress",
+	"contest": "stoppage_kings",
+	"controlled": "kick_mark",
+	"attacking": "long_bombers",
+}
+
+## A rival's trait as the coach scouting them reads it: what it does to them
+## and to you.
+const RIVAL_LINE := {
+	"fortress": "Your shots go through 8% less often against them; their disposals gain 6% less ground.",
+	"stoppage_kings": "Their stoppage win chance is 3 points higher; your shots go through 5% more often.",
+	"kick_mark": "They give away 15% fewer clangers; their stoppage win chance is 3 points lower.",
+	"long_bombers": "Their kicks reach 8 metres further; you take intercept marks off their kicks 15% more often.",
+}
+
 ## Running none.
 const NONE_LINE := "No trait: your game plan as written."
 
 
 static func valid(id: String) -> String:
 	return id if LEVERS.has(id) else ""
+
+
+## The trait a rival club runs for its usual game ("" for none).
+static func for_plan(plan: String) -> String:
+	return str(FOR_PLAN.get(plan, ""))
+
+
+## The scouting line for a rival's trait ("" for none).
+static func rival_line(id: String) -> String:
+	if valid(id) == "":
+		return ""
+	return "Their game-plan trait is %s. %s" % [name_of(id), str(RIVAL_LINE.get(id, ""))]
 
 
 static func name_of(id: String) -> String:
