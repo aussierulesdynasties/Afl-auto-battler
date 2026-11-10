@@ -794,6 +794,12 @@ func _from_hub(sz: Vector2i) -> void:
 	await _settle()
 	var line: Control = scene.find_child("TribunalLine", true, false)
 	_check(line != null, "%s: the hub names a player in the tribunal line" % tag)
+	var gain: Control = scene.find_child("TribunalGain", true, false)
+	var cost: Control = scene.find_child("TribunalCost", true, false)
+	_check(gain != null and cost != null and gain.is_visible_in_tree() and cost.is_visible_in_tree()
+			and (gain.find_child("Text", true, false) as Label).text.begins_with("22% chance he's cleared")
+			and (cost.find_child("Text", true, false) as Label).text.contains("(78%)"),
+			"%s: the case shows what winning gives and losing costs, with its odds" % tag)
 	if line != null:
 		var opened: bool = await _scan_until(line, func() -> bool: return _open_node("PlayerProfile") != null)
 		var prof := _open_node("PlayerProfile")

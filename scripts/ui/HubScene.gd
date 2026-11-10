@@ -1462,6 +1462,9 @@ func _tribunal_card() -> Control:
 				"appeal" if stage == "appeal" else "challenge"), 12, UiKit.MUTED, true)
 		status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(status)
+		var gate: Array = GameState.tribunal_gate(row)
+		v.add_child(_stake_row(str(gate[0]), "TribunalGain"))
+		v.add_child(_stake_row(str(gate[1]), "TribunalCost"))
 		var b := UiKit.btn("Appeal to Appeals Board" if stage == "appeal" else "Challenge at Tribunal",
 				14, false)
 		b.custom_minimum_size.y = 44
@@ -1473,6 +1476,22 @@ func _tribunal_card() -> Control:
 			_build.call_deferred())
 		v.add_child(b)
 	return panel
+
+
+## "Gain:" or "Cost:" in label ink, then the line wrapping beside it.
+func _stake_row(line: String, node_name: String) -> Control:
+	var cut := line.find(": ")
+	var item := UiKit.hbox(6)
+	item.name = node_name
+	var mk := UiKit.lbl(line.substr(0, cut + 1), UiKit.SECONDARY, UiKit.label_ink(), true)
+	mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	item.add_child(mk)
+	var l := UiKit.lbl(line.substr(cut + 2), UiKit.SECONDARY, UiKit.TEXT)
+	l.name = "Text"
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	item.add_child(l)
+	return item
 
 
 ## Team form reads green when good, red when poor, muted when steady.
