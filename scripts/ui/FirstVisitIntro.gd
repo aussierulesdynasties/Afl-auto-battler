@@ -53,7 +53,7 @@ const TEXT := {
 	]],
 	"draft_trade": ["Trading picks", [
 		"Tonight only picks change hands: this draft's and the next two.",
-		"Offers for the pick you're on the clock with sit at the top. Accept one, or build your own deal below.",
+		"When a club bids for your pick, its offer shows at the top. Accept it, or build your own deal below.",
 		"The draft waits while this sheet is open. Tap Back to the draft when you're done.",
 	]],
 	"preseason": ["The pre-season", [
