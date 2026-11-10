@@ -65,6 +65,7 @@ func _run() -> void:
 	var at := args.find("--out")
 	if at >= 0 and at + 1 < args.size():
 		dir = args[at + 1]
+	DirAccess.make_dir_recursive_absolute(dir)
 	var club := _env("CAP_CLUB", "MEL")
 	var size := Vector2i(int(_env("CAP_W", "390")), int(_env("CAP_H", "844")))
 	await process_frame
@@ -118,8 +119,11 @@ func _run() -> void:
 	# A football word held: its rule.
 	var words: Dictionary = FW.entries()
 	var word := ""
+	# A trait reads best (its rule and what it needs); else any rule word.
 	for k in words:
-		if str(words[k]["kind"]) != "Rating":
+		if word == "" and str(words[k]["kind"]) != "Rating":
+			word = str(k)
+		if str(words[k].get("trait", "")) != "":
 			word = str(k)
 			break
 	print("word: ", word, " (", str(words[word]["kind"]) if word != "" else "none", ")")
