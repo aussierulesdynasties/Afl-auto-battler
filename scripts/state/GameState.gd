@@ -1010,10 +1010,14 @@ func load_career() -> bool:
 
 
 func _restore_career(state: Dictionary) -> bool:
+	# Season.beat() between the steps: the load screen keeps its ball moving
+	# (it touches nothing in the career and draws no random numbers).
 	if state.is_empty():
 		return false
+	Season.beat()
 	reset()
 	# A pre-made history stops where Choose your club opens.
+	Season.beat()
 	sim_ahead = bool(state.get("sim_ahead", false))
 	sim_ahead_to = int(state.get("sim_ahead_to", SIM_AHEAD_TO))
 	# A created club joins the competition before anything reads the clubs.
@@ -1022,6 +1026,7 @@ func _restore_career(state: Dictionary) -> bool:
 	# data years). Canberra, before anything reads the clubs: a save from before
 	# the choice existed keeps it. set_canberra applies the entry years.
 	expansion_from = int(state.get("expansion_from", 0))
+	Season.beat()
 	set_canberra(bool(state.get("canberra_on", true)))
 	expansion = state.get("expansion", {}) if state.get("expansion") is Dictionary else {}
 	best23 = state.get("best23", {})
@@ -1029,12 +1034,15 @@ func _restore_career(state: Dictionary) -> bool:
 	sim_orders = state.get("sim_orders", {}) if state.get("sim_orders") is Dictionary else {}
 	if not custom_club.is_empty():
 		GameDB.register_club(ClubForge.row(custom_club))
+	Season.beat()
 	season_year = int(state.get("season_year", 2026))
 	my_club = str(state.get("my_club", ""))
 	if state.get("season") is Dictionary:
 		var sv: Dictionary = state["season"]
 		season = Season.new(sv["clubs"], sv["lists"], int(sv["seed"]))
+		Season.beat()
 		CareerSave.apply_vars(season, sv)
+		Season.beat()
 		_sync_dual()
 		# Saves written under the old eight-finalist bracket cannot be
 		# restored into the wildcard series (different slots, different
@@ -1042,6 +1050,7 @@ func _restore_career(state: Dictionary) -> bool:
 		if not season.finals.is_empty() \
 				and int((season.finals.get("top", []) as Array).size()) != Season.FINALISTS:
 			season.finals = {}
+	Season.beat()
 	if state.get("draft") is Dictionary:
 		draft = Draft.new([], [], 0)
 		CareerSave.apply_vars(draft, state["draft"])
@@ -1087,6 +1096,7 @@ func _restore_career(state: Dictionary) -> bool:
 	role_trial = state.get("role_trial", {}) if state.get("role_trial") is Dictionary else {}
 	trial_result = state.get("trial_result", {}) if state.get("trial_result") is Dictionary else {}
 	pos_ratings = state.get("pos_ratings", {}) if state.get("pos_ratings") is Dictionary else {}
+	Season.beat()
 	season_team = state.get("season_team", {})
 	if not state.has("season_stats"):
 		# ...and so do the clubs' new statistics (TEAM_BOOK_KEYS).
@@ -1124,6 +1134,7 @@ func _restore_career(state: Dictionary) -> bool:
 	offseason_staff = state.get("offseason_staff", {})
 	department_budget = state.get("department_budget", ClubBudget.defaults())
 	department_budget_year = int(state.get("department_budget_year", season_year))
+	Season.beat()
 	_ensure_department_budget()
 	season_wrap = state.get("season_wrap", {})
 	offseason_log = state.get("offseason_log", [])
@@ -1239,6 +1250,7 @@ func _restore_career(state: Dictionary) -> bool:
 	if season != null:
 		for code in season.lists:
 			unique_jumpers(season.lists[code])
+	Season.beat()
 	# A save from before the coaching world: seed it for this career now.
 	if season != null and coaches.is_empty():
 		coaches = Coaches.seed(my_club)
@@ -1252,12 +1264,14 @@ func _restore_career(state: Dictionary) -> bool:
 				continue
 			bare.append(club)
 		CoachMarket.staff_new_clubs(coaches, bare, my_club, season_year - 1, career_seed)
+	Season.beat()
 	# A card drawn before the story deck (2026-10-11) has no template behind
 	# it: this week's card is drawn again from the deck, once.
 	if season != null and week_event_pending() and str(week_event.get("tid", "")) == "":
 		_next_week_event()
 	# The honour board (row 122): an older save had none, so it is built once
 	# from what the career recorded; never guessed.
+	Season.beat()
 	honour_board = state.get("honour_board", {}) if state.get("honour_board") is Dictionary else {}
 	honour_boards = state.get("honour_boards", {}) if state.get("honour_boards") is Dictionary else {}
 	if not state.has("honour_board"):
@@ -3202,22 +3216,33 @@ func ensure_finals() -> void:
 
 ## Play the next round (or finals week). Returns the phase it played.
 func advance() -> String:
+	# Season.beat() between the steps, as in _restore_career: the cover's ball
+	# keeps moving through Sim the week and a skip.
 	if season == null:
 		return "none"
 	recruit_undo.clear()
+	Season.beat()
 	preseason_sim_to_round1()
+	Season.beat()
 	_settle_week_event()
+	Season.beat()
 	MidseasonDraft.settle(self)
+	Season.beat()
 	RookieList.settle(self)
+	Season.beat()
 	_sync_club_plan()
+	Season.beat()
 	_refresh_coach_tactics()
+	Season.beat()
 	if not season.is_season_over():
 		_settle_usual_plans()
+	Season.beat()
 	_stamp_conditioning()
 	last_results = []
 	last_match = {}
 	last_pos_before = my_position()
 
+	Season.beat()
 	if not season.is_regular_done():
 		last_results = season.play_round()
 		last_phase = "regular"
@@ -3237,15 +3262,22 @@ func advance() -> String:
 		last_phase = "done"
 		return "done"
 
+	Season.beat()
 	for res in last_results:
 		season_log.append(res)
 		if res["home"] == my_club or res["away"] == my_club:
 			last_match = res
+	Season.beat()
 	_grant_match_xp(last_match)
+	Season.beat()
 	_train_rivals(last_results)
+	Season.beat()
 	_record_rivalries(last_results)
+	Season.beat()
 	_after_round(last_results)
+	Season.beat()
 	autosave()
+	Season.beat()
 	return last_phase
 
 
@@ -12439,10 +12471,18 @@ func _next_week_event() -> void:
 ## finals drawn and yours to coach; "season" plays on to the end of the finals.
 ## Returns {"ok", "year", "weeks", "reason": "done" | "sacked" | "none"}.
 func skip_season(orders := {}, to := "season") -> Dictionary:
+	var job := skip_begin(orders, to)
+	while skip_step(job):
+		pass
+	return skip_finish(job)
+
+
+## skip_season in steps, one week each, so the loading cover can show a frame
+## (and the round) between weeks: skip_begin, skip_step until false, then
+## skip_finish. The same calls in the same order as skip_season.
+func skip_begin(orders := {}, to := "season") -> Dictionary:
 	if season == null or is_sacked() or _skip_reached(to):
-		return {"ok": false, "year": season_year, "weeks": 0, "reason": "none"}
-	var year := season_year
-	var weeks := 0
+		return {"ok": false, "year": season_year, "weeks": 0, "reason": "none", "to": to, "done": true}
 	_batching = true
 	_skip_orders = SkipOrders.defaults(club_plan)
 	_skip_orders.merge(orders, true)
@@ -12451,14 +12491,30 @@ func skip_season(orders := {}, to := "season") -> Dictionary:
 	set_club_plan(str(_skip_orders["game_plan"]))
 	if str(_skip_orders["youth"]) == "kids" and not season.is_regular_done() and not my_selection().is_empty():
 		set_selection({})
-	while season != null and not _skip_reached(to) and weeks < 80:
-		if str(_skip_orders["youth"]) == "kids":
-			_skip_back_kids(to)
-		advance()
-		weeks += 1
-		if is_sacked():
-			break
-	if is_sacked() or season == null or not _skip_reached(to):
+	return {"year": season_year, "weeks": 0, "to": to}
+
+
+## Plays the next week of a skip. False once there is nothing left to play.
+func skip_step(job: Dictionary) -> bool:
+	if bool(job.get("done", false)):
+		return false
+	var to := str(job["to"])
+	if season == null or _skip_reached(to) or int(job["weeks"]) >= 80 or is_sacked():
+		return false
+	if str(_skip_orders["youth"]) == "kids":
+		_skip_back_kids(to)
+	advance()
+	job["weeks"] = int(job["weeks"]) + 1
+	return not is_sacked()
+
+
+## Ends a skip: saved once. {"ok", "year", "weeks", "reason": "done" | "sacked" | "none"}.
+func skip_finish(job: Dictionary) -> Dictionary:
+	if bool(job.get("done", false)):
+		return {"ok": false, "year": job["year"], "weeks": 0, "reason": "none"}
+	var year := int(job["year"])
+	var weeks := int(job["weeks"])
+	if is_sacked() or season == null or not _skip_reached(str(job["to"])):
 		_batching = false
 		_skip_orders = {}
 		autosave()
@@ -12468,6 +12524,16 @@ func skip_season(orders := {}, to := "season") -> Dictionary:
 	mark_dirty()
 	autosave()
 	return {"ok": true, "year": year, "weeks": weeks, "reason": "done"}
+
+
+## The cover's line while a skip plays the coming week: the round of the
+## season's rounds, or the finals.
+func skip_progress() -> String:
+	if season == null:
+		return ""
+	if not season.is_regular_done():
+		return "Playing Round %d of %d..." % [season.round_index + 1, season.fixture.size()]
+	return "Playing the finals..."
 
 
 ## Has the skip got where it was going?

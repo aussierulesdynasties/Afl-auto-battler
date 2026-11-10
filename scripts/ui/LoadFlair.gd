@@ -58,6 +58,8 @@ const DETAIL_MIN_PX := 6.5
 
 ## Tests: set the ball's clock by hand (ms since it opened), -1 to run free.
 var hand_clock_ms := -1
+## Tests: open as a browser does (between kicks).
+var web_still_start := false
 ## Filled by tick(); tests read them.
 var ball_at := Vector2.ZERO
 var ball_turn := 0.0
@@ -113,6 +115,11 @@ func open(club: String, still: bool) -> void:
 	_pad = UiKit.club_ink(club, UiKit.PANEL_ALT) if club != "" else POST
 	_still = still
 	_t0_ms = Time.get_ticks_msec()
+	# A browser cannot draw while blocking work runs, so the frame it shows for
+	# the wait is a still: open in the beat between kicks, so no ball hangs in
+	# the air; the kicks carry on when the work lets frames through.
+	if web_still_start or OS.has_feature("web"):
+		_t0_ms -= int(FLIGHT_S * 1000.0) + 40
 	visible = true
 	fit()
 	tick()

@@ -50,17 +50,20 @@ func _run() -> void:
 		_state.set_setting("seen_%s_intro" % key, true)
 	_state.set_confirm_sim_round(false)
 	await _t("_test_flair_only_with_a_line")
+	await _t("_test_cover_shown_before_work")
 	await _t("_test_stack_fits", [Vector2i(390, 844)])
 	await _t("_test_stack_fits", [Vector2i(320, 568)])
 	await _t("_test_stack_fits", [Vector2i(1280, 720)])
 	_t("_test_every_kick_is_a_set_shot")
 	_t("_test_ball_flies_and_turns")
 	_t("_test_reduced_motion_rests")
+	_t("_test_web_opens_between_kicks")
 	_t("_test_no_frames_by_hand_headless")
 	_t("_test_boot_splash_is_ours")
 	_t("_test_lines")
 	await _t("_test_beats_change_nothing")
 	await _t("_test_tap_after_cover")
+	await _t("_test_browser_loads_under_the_line")
 	print(Ran.line("Load flair", self))
 	if not _failures.is_empty():
 		for f in _failures:
@@ -107,6 +110,38 @@ func _test_flair_only_with_a_line() -> void:
 		await process_frame
 	await _down()
 	_check(not seen["plain"], "a plain wipe between screens stays plain: no flair")
+	_wipe.set("test_cover", false)
+
+
+## The set shot reaches the screen before the work starts (director,
+## 2026-11-10: "a grey screen for a few seconds then for a split second the
+## anim"): the frame that drew it has returned before the work runs, so a
+## browser has shown it; and a screen building itself under the cover gives the
+## ball a chance to move with every node it adds.
+func _test_cover_shown_before_work() -> void:
+	_wipe.set("test_cover", true)
+	var seen := {}
+	await _wipe.call("run", "Loading your list...", func():
+		seen["frame"] = Engine.get_process_frames()
+		seen["line_frame"] = int(_wipe.get("line_frame"))
+		seen["shot"] = _flair().visible and bool(_wipe.call("line_visible"))
+		seen["hooked"] = root.get_tree().node_added.is_connected(Callable(_wipe, "_on_node_added"))
+		var beats: int = int(_wipe.get("node_beats"))
+		var box := VBoxContainer.new()
+		for i in range(5):
+			box.add_child(Label.new())
+		root.add_child(box)
+		seen["beats"] = int(_wipe.get("node_beats")) - beats
+		box.queue_free())
+	await _down()
+	_check(seen.get("shot", false), "the work starts with the line and the set shot up")
+	_check(int(seen.get("frame", -1)) > int(seen.get("line_frame", 0)),
+			"and after the frame that drew them returned (line in frame %s, work in %s)" % [
+			seen.get("line_frame"), seen.get("frame")])
+	_check(seen.get("hooked", false), "while the line is up, a screen adding nodes keeps the ball moving")
+	_check(int(seen.get("beats", 0)) == 6, "one chance per node added (%s)" % seen.get("beats"))
+	_check(not root.get_tree().node_added.is_connected(Callable(_wipe, "_on_node_added")),
+			"and the hook comes off with the cover")
 	_wipe.set("test_cover", false)
 
 
@@ -204,6 +239,21 @@ func _test_reduced_motion_rests() -> void:
 	flair.call("close")
 
 
+## A browser shows one still for a blocking wait: it is opened between kicks,
+## so no ball hangs in the air on it.
+func _test_web_opens_between_kicks() -> void:
+	var flair := _flair()
+	flair.set("web_still_start", true)
+	flair.set("ball_at", Vector2(-1, -1))
+	flair.call("open", "FRE", false)
+	_check(flair.get("ball_at") == Vector2(-1, -1), "a browser's first frame has no ball in flight (%s)" % flair.get("ball_at"))
+	flair.set("web_still_start", false)
+	flair.call("close")
+	flair.call("open", "FRE", false)
+	_check(flair.get("ball_at") != Vector2(-1, -1), "elsewhere the first kick starts at once")
+	flair.call("close")
+
+
 func _test_no_frames_by_hand_headless() -> void:
 	var before: int = int(_wipe.get("pumped_frames"))
 	_wipe.call("keep_moving")
@@ -282,3 +332,29 @@ func _test_tap_after_cover() -> void:
 		return
 	var why: String = await Tap.tap(sim)
 	_check(why == "", "a finger's tap reaches Sim the week after the cover (%s)" % why)
+
+
+## A browser build has no threads, so loading the next screen blocks: it must
+## not start while the dots sweep in (they would freeze half way), only once
+## the cover and a line are on screen.
+func _test_browser_loads_under_the_line() -> void:
+	var path := "res://scenes/StatsHubScene.tscn"
+	_router.set("test_main_thread_load", true)
+	_wipe.set("test_cover", true)
+	_router.go("stats")
+	var during_sweep := ResourceLoader.load_threaded_get_status(path)
+	var phase_then := int(_wipe.get("_phase"))
+	var seen := {"line": false}
+	var t0 := Time.get_ticks_msec()
+	while ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE 			and Time.get_ticks_msec() - t0 < 10000:
+		seen["line"] = bool(_wipe.call("line_visible"))
+		seen["drawn"] = int(_wipe.get("drawn_count"))
+		await process_frame
+	await _down()
+	_router.set("test_main_thread_load", false)
+	_wipe.set("test_cover", false)
+	_check(phase_then == 1 and during_sweep == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE,
+			"no load while the dots sweep in (phase %d, status %d)" % [phase_then, during_sweep])
+	_check(seen.get("line", false), "the line is up before the load starts")
+	_check(current_scene != null and current_scene.scene_file_path == path,
+			"and the screen still opens (%s)" % (current_scene.scene_file_path if current_scene else "none"))

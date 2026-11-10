@@ -431,6 +431,9 @@ func _decode(v):
 		if d.size() == 1 and d.has(PLAYER_REF):
 			var sid := int(d[PLAYER_REF])
 			if not _decoded.has(sid):
+				# Loading a career decodes thousands of players: the load screen
+				# keeps its ball moving between them (draws no random numbers).
+				Season.beat()
 				var live := {}
 				_decoded[sid] = live
 				var raw: Dictionary = _players.get(sid, {})

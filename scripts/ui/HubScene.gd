@@ -1292,6 +1292,11 @@ func _close_skip_confirm() -> void:
 	_skip_confirm = null
 
 
+## Under the round on the cover during a skip (director, 2026-11-10: "most
+## players will assume the game has crashed ... a 'dont panic' message").
+const SKIP_CALM := "This takes a minute. The game hasn't frozen."
+
+
 func _on_skip_season() -> void:
 	var orders := _skip_answers.duplicate()
 	_close_skip_confirm()
@@ -1300,7 +1305,17 @@ func _on_skip_season() -> void:
 
 
 func _skip_season(orders := {}, to := "season") -> void:
-	GameState.skip_season(orders, to)
+	# A week at a time, with a frame drawn between weeks: the set shot keeps
+	# playing (in a browser too) and the line says which round is on, so a long
+	# skip never looks frozen (director, 2026-11-10).
+	var job := GameState.skip_begin(orders, to)
+	while true:
+		ScreenTransition.show_line("%s
+%s" % [GameState.skip_progress(), SKIP_CALM])
+		await ScreenTransition.drawn()
+		if not GameState.skip_step(job):
+			break
+	GameState.skip_finish(job)
 	_build()
 	# The last week's card and asks come up as after Sim the week.
 	_show_week_ask()
