@@ -793,12 +793,16 @@ func _inside50_phases(k: int) -> Array:
 	var loc := _loc(k)
 	var nk := _next_real(k)
 	var recv := _actor_id(events[nk]) if nk >= 0 else -1
+	var src: Vector2 = ball["pos"]
 	if nk >= 0 and str(events[nk].get("kind", "")) == "mark" and (events[nk] as Dictionary).has("band"):
 		# He marks where he kicks from (T2.24): the entry lands on the set
-		# shot's spot, on the side of the ground it was coming down.
-		loc = _set_spot(int(events[nk].get("side", 0)), str(events[nk]["band"]), loc.y)
-		_locs[nk] = loc
-	var src: Vector2 = ball["pos"]
+		# shot's spot, on the side of the ground it was coming down. Not when
+		# that spot is well behind the kicker (an entry logged on the goal line
+		# with a 45 m band): an entry never flies back towards his own goal.
+		var spot := _set_spot(int(events[nk].get("side", 0)), str(events[nk]["band"]), loc.y)
+		if (spot.x - src.x) * _dir(int(ev.get("side", 0))) > -SET_SPOT_BACK:
+			loc = spot
+			_locs[nk] = loc
 	var d := src.distance_to(loc)
 	var shape := _flight_shape("kick", d)
 	out += [{"t": "emit"},
@@ -969,13 +973,42 @@ func _free_phases(k: int) -> Array:
 ## 16 m off its spot).
 func _rebound_phases(k: int) -> Array:
 	var a := _actor_id(events[k])
-	if _restart(k) == "free":
+	if _short_set_shot(k) and _locs.has(_prev_real(k)):
+		# Set again here: a look-ahead may have cached the logged fp before the
+		# mark was moved to its band's spot (seed 42 ev 947 flew 40 m back).
+		_locs[k] = _short_spot(k)
+	if _restart(k) == "free" or _short_set_shot(k):
 		var loc := _loc(k)
 		var d := (ball["pos"] as Vector2).distance_to(loc)
 		if d > 1.0:
 			var shape := _flight_shape("kick", d)
 			return [{"t": "flight", "to": loc, "dur": shape.x, "apex": shape.y, "recv": a}] + _receive(k, a)
 	return _receive(k, a)
+
+
+## A rebound straight after a set-shot mark (one MatchSim tagged with its band):
+## the shot did not score and the defence has it.
+## Where a set shot that falls short comes down: MatchSim logs the rebound where
+## the mark was taken, but he kicked from the band's spot (T2.24), so it drops on
+## the line from there to goal, 40-90% of the way, at the point nearest the
+## defender who wins it (3/4 of the way left him 40 m off on seed 42 ev 1149).
+func _short_spot(k: int) -> Vector2:
+	var pk := _prev_real(k)
+	var spot: Vector2 = _locs[pk]
+	var goal := Vector2(MatchMotion.GOAL_X * _dir(int((events[pk] as Dictionary).get("side", 0))), 0.0)
+	var t := 0.75
+	var a := _actor_id(events[k])
+	var line := goal - spot
+	if a >= 0 and line.length_squared() > 1.0:
+		t = clampf(((tokens[a]["pos"] as Vector2) - spot).dot(line) / line.length_squared(), 0.4, 0.9)
+	return spot.lerp(goal, t)
+
+
+func _short_set_shot(k: int) -> bool:
+	if str((events[k] as Dictionary).get("kind", "")) != "rebound":
+		return false
+	var pk := _prev_real(k)
+	return pk >= 0 and str((events[pk] as Dictionary).get("kind", "")) == "mark" and (events[pk] as Dictionary).has("band")
 
 
 func _clanger_phases(k: int) -> Array:
@@ -1012,6 +1045,9 @@ func _flight_shape(kind: String, d: float) -> Vector2:
 # ---------------------------------------------------------------------------
 func _loc(k: int) -> Vector2:
 	if _locs.has(k):
+		return _locs[k]
+	if _short_set_shot(k) and _locs.has(_prev_real(k)):
+		_locs[k] = _short_spot(k)
 		return _locs[k]
 	var ev: Dictionary = events[k]
 	var kind := str(ev.get("kind", ""))
@@ -1209,6 +1245,9 @@ func _scrap(p: Dictionary, who: int) -> void:
 
 ## The longest a player is left collecting before the ball is his.
 const COLLECT_LIMIT := 6.0
+## How far behind the kicker an entry may land to stand a set-shot mark on its
+## band's spot (T2.24); further back, it lands where the log has it.
+const SET_SPOT_BACK := 20.0
 ## How much longer than its flat flight a kick may hang so its receiver gets
 ## under it: a 50 m kick up to about 2.9 s, a 20 m one 1.5 s, a real long
 ## kick's hang time. Defenders clearing their 50 (MatchSim D50_*) kick long to
@@ -1731,6 +1770,10 @@ func _log_arrival(k: int) -> void:
 	var want := float(ev.get("fp", 0.0))
 	if kind == "goal" or kind == "behind":
 		want = MatchMotion.GOAL_X * _dir(int(ev.get("side", 0)))
+	elif (ev.has("band") or _short_set_shot(k)) and _locs.has(k):
+		# A set-shot mark stands on its band's spot (T2.24), and a set shot
+		# that falls short drops in front of goal from there, not at the logged fp.
+		want = (_locs[k] as Vector2).x
 	if arrivals.size() >= 4000:
 		arrivals.pop_front()
 	arrivals.append({"idx": k, "kind": kind, "pos": ball["pos"], "want_x": want})
