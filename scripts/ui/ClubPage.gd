@@ -12,7 +12,9 @@ extends RefCounted
 ## him doing, from his box and his habits; why their legs are going). This
 ## page still shows none of it. Your own club's page leads to
 ## the honour board (rulings no. 112, HonourBoard). The trophies (ClubTrophies)
-## moved here from Season stats (director, 2026-11-06).
+## moved here from Season stats (director, 2026-11-06). Under them, a club
+## with a premiership side on record sets it against its list today
+## (PremiershipSide, row T5.r158); a club without one shows nothing.
 ##
 ## Look-up only; nothing here touches a match or a player.
 
@@ -54,6 +56,9 @@ static func open(host: Control, code: String) -> Control:
 	var trophies := UiKit.section_link("Trophies", _flags(code) + "  ›", "TrophiesLink")
 	trophies.pressed.connect(func(): open_trophies(host, code))
 	body.add_child(trophies)
+	var eras := _premiership_side(code)
+	if eras != null:
+		body.add_child(eras)
 
 	body.add_child(UiKit.spacer(UiKit.SECTION - 8))
 	body.add_child(UiKit.section("Last five"))
@@ -154,6 +159,25 @@ static func _leaders(code: String) -> Control:
 			"[color=#%s]Captain[/color]  [b]No captain named[/b]" % UiKit.MUTED.to_html(false)
 	NameLink.wire(r)
 	return r
+
+
+## The club's last premiership side in this career against its list today
+## (PremiershipSide, row T5.r158): null when none is on record. Each name
+## opens his profile.
+static func _premiership_side(code: String) -> Control:
+	var list := _list(code)
+	var r := PremiershipSide.remains(GameState.honour_roll, code, list, int(GameState.season_year))
+	var words := PremiershipSide.line(r, func(id: String) -> String:
+		return NameLink.url(_esc(GameDB.player_display_name(_in(list, id))), id))
+	if words.is_empty():
+		return null
+	var l := NameInk.rich(UiKit.BODY, UiKit.TEXT)
+	l.name = "PremiershipSide"
+	l.text = "[color=#%s]%s[/color]" % [UiKit.MUTED.to_html(false), _esc(str(words[0]))]
+	if str(words[1]) != "":
+		l.text = "[color=#%s]%s:[/color]  [b]%s[/b]" % [UiKit.MUTED.to_html(false), _esc(str(words[0])), str(words[1])]
+	NameLink.wire(l)
+	return l
 
 
 ## How many flags: this career's and the club's history before it.

@@ -528,6 +528,10 @@ func _test_full_season() -> void:
 	var roll_ns: Array = (GameState.honour_roll.back() as Dictionary).get("norm_smith", [])
 	_check(roll_ns.size() == 1 and str(roll_ns[0]["id"]) == str(nsm.get("id", "x")),
 			"The Norm Smith Medal is recorded on the honour roll beside the premier")
+	# The premiership side, kept for the club's page across generations (row T5.r158).
+	var side: Array = (GameState.honour_roll.back() as Dictionary).get("premier_side", [])
+	_check(side.size() >= 22 and side == PremiershipInk.premiership_ids(gf, GameState.premier()),
+			"The honour roll keeps the men who played in the premiership side (%d)" % side.size())
 	var ns_news := ""
 	for item in GameState.news:
 		if str(item["text"]).begins_with("Norm Smith Medal: "):
