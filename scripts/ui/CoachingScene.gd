@@ -246,8 +246,7 @@ func _plan_trait() -> Control:
 	return v
 
 
-## The chosen trait in words: its name, what it gives, what it costs, and
-## what you see on the ground.
+## The chosen trait in words: its name, what it gives and what it costs.
 func _trait_note(into: VBoxContainer, id: String) -> void:
 	for c in into.get_children():
 		into.remove_child(c)
@@ -260,8 +259,7 @@ func _trait_note(into: VBoxContainer, id: String) -> void:
 	var title := UiKit.lbl(PlanTraits.name_of(id), UiKit.BODY, UiKit.TEXT, true)
 	title.name = "TraitName"
 	into.add_child(title)
-	for part in [["Gain:", PlanTraits.UPSIDE, "TraitGain"], ["Cost:", PlanTraits.COST, "TraitCost"],
-			["Looks like:", PlanTraits.LOOKS, "TraitLooks"]]:
+	for part in [["Gain:", PlanTraits.UPSIDE, "TraitGain"], ["Cost:", PlanTraits.COST, "TraitCost"]]:
 		var row := UiKit.hbox(6)
 		row.name = str(part[2])
 		var mk := UiKit.lbl(str(part[0]), UiKit.SECONDARY, UiKit.label_ink(), true)

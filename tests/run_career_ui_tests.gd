@@ -2181,8 +2181,10 @@ Your career stays on this device.",
 	_check(trait_btn != null and trait_btn.size.y >= 44, "Each game-plan trait is a thumb-sized tap")
 	var why_trait: String = (await Tap.tap(trait_btn)) if trait_btn != null else "no button"
 	await _settle()
-	var t_gain: Label = current_scene.find_child("TraitGain", true, false)
-	var t_cost: Label = current_scene.find_child("TraitCost", true, false)
+	var t_gain_row: Node = current_scene.find_child("TraitGain", true, false)
+	var t_cost_row: Node = current_scene.find_child("TraitCost", true, false)
+	var t_gain: Label = t_gain_row.find_child("Text", false, false) if t_gain_row != null else null
+	var t_cost: Label = t_cost_row.find_child("Text", false, false) if t_cost_row != null else null
 	_check(_state.plan_trait == "fortress" and t_gain != null and t_cost != null
 			and t_gain.text.contains("8%") and t_cost.text.contains("6%"),
 			"Choosing a trait makes it the club's, and says its gain and cost (a real tap: %s)" % why_trait)

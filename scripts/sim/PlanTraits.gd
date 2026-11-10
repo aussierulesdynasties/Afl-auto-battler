@@ -96,19 +96,6 @@ const COST := {
 	"front_runners": "Behind, Fire them up lifts you at the contest 50% less.",
 	"never_say_die": "While you lead, their shots go through 5% more often.",
 }
-## What you see on the ground (the oval and the match feed).
-const LOOKS := {
-	"fortress": "A deep backline; short, sideways chains going forward.",
-	"kick_mark": "Uncontested marks in a chain; beaten at the ball-ups.",
-	"cluster": "A tight web through the middle; space in their forward line when it breaks.",
-	"stoppage_kings": "Mids piling into the ball-ups; a spare man for them on the rebound.",
-	"fast_starters": "A sharp first quarter; heavy legs late.",
-	"chaos_ball": "A swarm inside your forward 50; more of your own kicks spilled.",
-	"hard_trainers": "Legs hold in the last quarter; more players helped off.",
-	"long_bombers": "Long kicks into the 50; more of them marked by their defenders.",
-	"front_runners": "Goals come in runs when you're well ahead; flat when you're chasing.",
-	"never_say_die": "A surge when you're behind; sitting back when you're in front.",
-}
 ## Where a real side played it.
 const BASIS := {
 	"fortress": "Lyon's St Kilda: the best defence in four seasons.",
