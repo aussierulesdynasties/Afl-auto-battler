@@ -68,6 +68,9 @@ func _run() -> void:
 
 func _fresh(club: String) -> void:
 	_gs.reset()
+	# reset() forgets the first-visit cards; one over the tabs would take the tap.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_gs.set_setting("seen_%s_intro" % key, true)
 	_gs.career_seed = SUITE_SEED
 	_gs.replay_seed = SUITE_SEED
 	_gs.start_season(club, _db.club_list(club))
