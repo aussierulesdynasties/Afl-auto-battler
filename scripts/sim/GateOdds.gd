@@ -317,13 +317,14 @@ static func defence_texts(key: String, loose: Dictionary, minder: Dictionary, sp
 	return ["; ".join(gains), "; ".join(costs)]
 
 
-# The set shot (M7): the odds the card plays.
-const SHOT_GAIN := "%s chance of a goal, %s of a behind"
-const SHOT_COST := "%s chance it scores nothing"
-const PASS_GAIN := "%s chance it reaches him; then he kicks from closer, %s chance of a goal"
-const PASS_COST := "%s chance it is cut off and the shot is gone"
-const BOMB_GAIN := "%s chance of a goal out of the pack, %s of a behind"
-const BOMB_COST := "%s chance the defence clears it"
+# The set shot (M7): the odds the card plays. One short line each, so three
+# choices and their six lines leave both men in the picture on a 360 px phone.
+const SHOT_GAIN := "%s goal, %s behind"
+const SHOT_COST := "%s it scores nothing"
+const PASS_GAIN := "%s it reaches him, then %s goal from closer"
+const PASS_COST := "%s it is cut off and the shot is gone"
+const BOMB_GAIN := "%s goal out of the pack, %s behind"
+const BOMB_COST := "%s the defence clears it"
 
 
 ## A set-shot option's gain and cost, labelled: [gain, cost]. Whole figures:
