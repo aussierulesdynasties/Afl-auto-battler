@@ -332,7 +332,7 @@
 		"choices": [
 			{
 				"key": "talk",
-				"label": "Sit down with {name} and promise him a game",
+				"label": "Promise {name} a game",
 				"effects": [
 					{
 						"op": "morale",

@@ -6524,8 +6524,13 @@ func _dev_promise_week() -> void:
 		if t.is_empty() or int(p.get("injury_weeks", 0)) > 0:
 			continue
 		p["expects_game"] = DEV_PROMISE_STING
+		# His promised games were under way and the trial is gone (another
+		# trial took its place): they are owed again, and start once it is free.
+		if str(t["state"]) == "on" and (str(role_trial.get("id", "")) != str(p["id"]) or not role_trial.has("promised")):
+			t["state"] = "owed"
 		if str(t["state"]) == "owed" and role_trial.is_empty():
-			var said := start_role_trial(p, DEV_PROMISE_GAMES, str(t.get("role", "")))
+			# Already picked in that line or not, the promised games are counted.
+			var said := start_role_trial(p, DEV_PROMISE_GAMES, str(t.get("role", "")), true)
 			if said != "":
 				role_trial["promised"] = int(t.get("round", 0))
 				t["state"] = "on"
@@ -8395,8 +8400,20 @@ func fa_offers(player_id: String) -> Array:
 		elif i > 0:
 			view = "Behind."
 		out.append({"club": str(o["club"]), "name": club_name, "salary": int(o["salary"]), "years": int(o["years"]),
-				"view": view, "leading": i == 0, "mine": str(o["club"]) == my_club})
+				"view": view, "leading": i == 0, "mine": str(o["club"]) == my_club,
+				"worth": Contracts.worth_to_him(p, o)})
 	return out
+
+
+## What your offer of `salary` for `years` would be worth to free agent
+## `player_id` a season (Contracts.worth_to_him), before you make it: your
+## role for him, last year's finish and your culture, as `offer_free_agent`
+## would put them on the table (row T1.R26 FA weights).
+func fa_offer_worth(player_id: String, salary: int, years: int) -> int:
+	var p := free_agent(player_id)
+	return Contracts.worth_to_him(p, {"club": my_club, "salary": salary, "years": years,
+			"role": fa_role(p, my_club), "finish_t": _finish_t(my_club),
+			"amb": culture_effect(my_club, "free_agent_score")})
 
 
 ## Where his market stands for you: "open" (you can make an offer), "final"
@@ -9234,6 +9251,11 @@ const MAX_TABLE_OFFERS := 3
 ## of its players, and how many packages it weighs before saying no.
 const ASK_PRICE_PIECES := 3
 const ASK_PRICE_TRIES := 40
+## Past those first tries the weighing goes on through the packages near the
+## price (up to ASK_PRICE_OVER of it), ASK_PRICE_MOST at most, so a club that
+## turns down the cheapest forty is still asked about the next.
+const ASK_PRICE_OVER := 1.25
+const ASK_PRICE_MOST := 400
 ## How close to the most it would pay a club opens with nobody else bidding
 ## (each rival suitor on the trade table pushes it up a tenth).
 const UNASKED_BID := 0.8
@@ -10262,6 +10284,19 @@ func ask_around(id: String) -> Array:
 	return out
 
 
+## Ask their price's search: the first of `packages` ([pieces, value], cheapest
+## first) that `takes` says yes to, as an index; -1 for none. The first
+## ASK_PRICE_TRIES are always weighed; after them only packages worth up to
+## ASK_PRICE_OVER of the price, and never more than ASK_PRICE_MOST in all.
+static func ask_price_pick(packages: Array, price: float, takes: Callable) -> int:
+	for i in range(mini(packages.size(), ASK_PRICE_MOST)):
+		if i >= ASK_PRICE_TRIES and float(packages[i][1]) > price * ASK_PRICE_OVER:
+			break
+		if bool(takes.call(packages[i])):
+			return i
+	return -1
+
+
 ## Ask their price (row 67, 4.Q11): the other way from Ask around. Name a
 ## player at another club and it says what of yours it would take for him,
 ## from the same valuation it trades with. It weighs each of your picks and
@@ -10336,11 +10371,10 @@ func ask_price(club: String, id: String) -> Dictionary:
 				return float(x[1]) < float(y[1])
 			return str(x[0]) < str(y[0]))
 	var mine := []
-	for x in packages.slice(0, ASK_PRICE_TRIES):
-		var ids: Array = (x[0] as Array).map(func(i): return str(pool[i][0]))
-		if bool(evaluate_trade(club, ids, theirs)["ok"]):
-			mine = ids
-			break
+	var at := ask_price_pick(packages, price, func(x):
+		return bool(evaluate_trade(club, (x[0] as Array).map(func(i): return str(pool[i][0])), theirs)["ok"]))
+	if at >= 0:
+		mine = (packages[at][0] as Array).map(func(i): return str(pool[i][0]))
 	_freeze_league(false)
 	if mine.is_empty():
 		none["line"] = hard if hard != "" else "%s: nothing of yours they'd take for %s." % [name, who]
@@ -10700,14 +10734,16 @@ static func _move_in_sel(sel: Dictionary, id: String, target: String) -> void:
 ## When it ends he goes back to the line he was picked in (_end_role_trial) and
 ## the result comes as a card (_finish_role_trial). Returns what to tell the
 ## coach, "" when there is no trial: no second position, not on the ground, or
-## already picked there.
-func start_role_trial(p: Dictionary, games: int, role := "") -> String:
+## already picked there. `even_there` starts it for a player already picked in
+## that line (games you promised him: they are counted all the same).
+func start_role_trial(p: Dictionary, games: int, role := "", even_there := false) -> String:
 	var role2 := ClubStories.trial_role(p) if role == "" else role
 	if role2 == "" or season == null:
 		return ""
 	var id := str(p["id"])
 	var now := _line_of(current_side(), id)
-	if now == "" or _in_trial_line(now, role2):
+	var there := _in_trial_line(now, role2)
+	if now == "" or (there and not even_there):
 		return ""
 	if not role_trial.is_empty():
 		_end_role_trial(true)
@@ -10723,6 +10759,9 @@ func start_role_trial(p: Dictionary, games: int, role := "") -> String:
 	season.selections[my_club] = stored
 	role_trial = trial
 	mark_dirty()
+	if there:
+		return "%s plays his next %s games as a %s." % [GameDB.player_display_name(p), MatchNotes.count_word(games),
+				CoachPathway.position_word({"pos": role2})]
 	return "%s plays as a %s for the next %s games, then goes back." % [GameDB.player_display_name(p),
 			CoachPathway.position_word({"pos": role2}), MatchNotes.count_word(games)]
 
@@ -11322,6 +11361,25 @@ func set_best23(side: Dictionary) -> void:
 func my_squad() -> Squad:
 	return Squad.new(GameDB.club_name(my_club), my_list, true, my_club,
 			season.selections.get(my_club, {}) if season != null else {})
+
+
+## Your side as picked with your coaching on it, as the match gives it at
+## kick-off (_refresh_coach_tactics, CoachEffects.apply), for a screen. Worked
+## out from the coaches as they stand, not read from the round's table: a
+## loaded career has no table until its next match (_rival_squad).
+func my_coached_squad() -> Squad:
+	var sq := my_squad()
+	if season == null or coaches.is_empty():
+		CoachEffects.apply(sq)
+		return sq
+	_ensure_plan_known()
+	sq.together = Culture.club_effect(relations, sq.code, "match_contest", "together") 			if culture_effects_on and not relations.is_empty() else 0.0
+	var staff: Dictionary = CoachEffects.staffs(coaches).get(my_club, {})
+	var row := CoachEffects.row(staff, true)
+	row["arch_p"] = CoachEffects.philosophical(staff, true)
+	row["exec"] = clampf(float(row.get("exec", 1.0)) * ClubBudget.tactics_mult(fitness_hp_level(my_club)), 0.75, 1.35)
+	CoachEffects.apply_row(sq, row)
+	return sq
 
 
 ## Every plan: [[key, label], ...].

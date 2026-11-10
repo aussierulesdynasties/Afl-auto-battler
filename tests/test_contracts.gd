@@ -18,6 +18,7 @@ func run() -> void:
 	_t("_test_real_money_scale")
 	_t("_test_offseason_flow")
 	_t("_test_list_costs")
+	_t("_test_fa_weights")
 	_t("_test_market_test")
 	_t("_test_negotiation_rules")
 	_t("_test_negotiation")
@@ -99,6 +100,39 @@ func _to_offseason() -> void:
 ## what the gate says. Under his ask: morale 10 lower all season (rivals too).
 ## A release with seasons to run: half of what is left on the cap next season,
 ## undone with the release. A retiree asked again: 40% yes, legs 15% down.
+## Row T1.R26 FA weights: what he counts besides salary, in dollars, and the
+## dollar worth of each offer agrees with the offer he prefers.
+func _test_fa_weights() -> void:
+	var p: Dictionary = GameDB.all_players_sorted()[40].duplicate(true)
+	var line := Contracts.weigh_line(p)
+	_check(line.contains("best-23 spot as $180k") and line.contains("bench spot $90k")
+			and line.contains("as $50k") and line.contains("up to $100k"),
+			"The weights line sizes a starting spot, a bench spot, a season and last year's finish in dollars: " + line)
+	var offers := []
+	for salary in [300000, 500000, 700000]:
+		for years in [1, 2, 4]:
+			for role in ["ground", "bench", "depth"]:
+				for fin in [0.0, 0.5, 1.0]:
+					offers.append({"salary": salary, "years": years, "role": role, "finish_t": fin})
+	var agree := true
+	for a in offers:
+		for b in offers:
+			var wa := Contracts.worth_to_him(p, a)
+			var wb := Contracts.worth_to_him(p, b)
+			if absi(wa - wb) >= 20000 and (wa > wb) != Contracts.prefers(p, a, b):
+				agree = false
+	_check(agree, "The offer worth more to him is the one he prefers")
+	var plain := {"salary": 500000, "years": 1, "role": "depth", "finish_t": 1.0}
+	_check(Contracts.worth_to_him(p, plain) == 550000,
+			"A one-season depth offer from the wooden spooner is worth its salary plus one season's $50k")
+	var two := Contracts.fa_lines(600000, 3, 900000, 850000)
+	_check(str(two[0]).contains("$900k") and str(two[0]).contains("$850k")
+			and str(two[1]) == "$600k a season on your cap for 3 seasons, $1.8m in all",
+			"Your offer's Gain names both worths and its Cost the cap hit: %s / %s" % two)
+	_check(str(Contracts.fa_lines(600000, 1, 900000, 0)[0]).begins_with("no other club has offered"),
+			"Alone on the table, the Gain says he signs with you")
+
+
 func _test_list_costs() -> void:
 	_new_season()
 	_to_offseason()

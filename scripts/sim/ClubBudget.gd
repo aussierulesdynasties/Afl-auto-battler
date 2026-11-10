@@ -124,17 +124,26 @@ static func fold_football(allocation: Dictionary) -> Dictionary:
 	return out
 
 
+## The furthest a prospect's true rating fell outside the scouts' range, per
+## funding level (measured, tools/measure_scout_miss.gd).
+const SCOUT_WORST_MISS := [7, 6, 5, 4]
+
+
 ## The UI uses these exact statements before the player spends.
 static func benefit_text(area: String, level: int) -> String:
 	level = clamp_level(level)
 	if area == "recruiting":
+		# The miss share and the worst miss are measured (tools/measure_scout_miss.gd,
+		# ten draft classes, 514 prospects): funding narrows the scouts' ranges,
+		# so about the same share of reads miss at every level, by less.
+		var miss := "about 1 read in 7 misses his true rating, by up to %d" % SCOUT_WORST_MISS[level]
 		if level == 0:
-			return "Prospect scouting uncertainty is 25% wider than standard."
+			return "Prospect scouts' ranges are 25% wider than standard: " + miss + "."
 		if level == 1:
-			return "Prospect scouting uncertainty is at the standard level."
+			return "Prospect scouts' ranges are the standard width: " + miss + "."
 		if level == 2:
-			return "Prospect scouting uncertainty is 20% narrower than standard."
-		return "Prospect scouting uncertainty is 35% narrower than standard."
+			return "Prospect scouts' ranges are 20% narrower than standard: " + miss + "."
+		return "Prospect scouts' ranges are 35% narrower than standard: " + miss + "."
 	if area == "development":
 		if level == 0:
 			return "Players aged 22 and under develop 10% slower."
