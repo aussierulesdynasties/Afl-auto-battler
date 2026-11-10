@@ -93,7 +93,7 @@ const COST := {
 	"chaos_ball": "12% more of your own clangers.",
 	"hard_trainers": "15% more injuries.",
 	"long_bombers": "They take intercept marks off your kicks 15% more often.",
-	"front_runners": "Behind, Fire them up lifts you at the contest half as much.",
+	"front_runners": "Behind, Fire them up lifts you at the contest 50% less.",
 	"never_say_die": "While you lead, their shots go through 5% more often.",
 }
 ## What you see on the ground (the oval and the match feed).

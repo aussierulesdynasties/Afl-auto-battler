@@ -72,7 +72,8 @@ func _test_no_trait_neutral() -> void:
 	_check(a == _play("nonsense", 77), "An unknown trait plays as none")
 
 
-## Each trait changes the match on at least one of the seeds.
+## Each trait changes the match on at least one of the seeds, run by either
+## club (Front-Runners needs the side running it to get well ahead).
 func _test_each_changes_the_match() -> void:
 	var base := []
 	for s in SEEDS:
@@ -80,7 +81,8 @@ func _test_each_changes_the_match() -> void:
 	for id in PlanTraits.IDS:
 		var moved := false
 		for i in range(SEEDS.size()):
-			moved = moved or _play(id, SEEDS[i]) != base[i]
+			for side in range(2):
+				moved = moved or _play(id, SEEDS[i], side) != base[i]
 		_check(moved, "%s changes the match" % id)
 
 
@@ -114,18 +116,20 @@ func _test_gates() -> void:
 func _test_lever_direction() -> void:
 	var cl := {"": 0.0, "kick_mark": 0.0, "chaos_ball": 0.0}
 	var clear := {"": 0.0, "stoppage_kings": 0.0}
-	var ic := {"": 0.0, "long_bombers": 0.0}
 	for s in SEEDS:
 		for id in cl:
 			cl[id] += _stat(id, s, 0, "clangers")
 		for id in clear:
 			clear[id] += _stat(id, s, 0, "clearances")
-		for id in ic:
-			ic[id] += _stat(id, s, 1, "intercept_marks")
 	_check(cl["kick_mark"] < cl[""] and cl["chaos_ball"] > cl[""],
 			"Kick-Mark Masters give away fewer clangers, Chaos Ball more (%s)" % [cl])
 	_check(clear["stoppage_kings"] > clear[""], "Stoppage Kings win more clearances (%s)" % [clear])
-	_check(ic["long_bombers"] > ic[""], "Long Bombers' kicks are marked by their defenders more (%s)" % [ic])
+	# Long Bombers' cost is per contested kick; how many such kicks there are moves
+	# with the longer reach, so the levers are checked, not a six-match total.
+	var lb := _sim("long_bombers", 77)
+	_check(lb._gt(0, "icept") == PlanTraits.LONG_BOMBERS_ICEPT and lb._gt(1, "icept") == 1.0
+			and lb._gt(0, "range", 0.0) == PlanTraits.LONG_BOMBERS_RANGE,
+			"Long Bombers: their kicks reach further and are marked by the other side more")
 
 
 ## The full-time "What your calls did" line names the trait.
@@ -181,18 +185,19 @@ func _row(ai: bool) -> Dictionary:
 	return {"ai": ai, "exec": 1.0, "read": 0.0}
 
 
-func _sim(id: String, s: int) -> MatchSim:
+func _sim(id: String, s: int, side := 0) -> MatchSim:
 	var h := Squad.new("Geelong", GameDB.club_list("GEE"), true, "GEE")
 	var w := Squad.new("Sydney", GameDB.club_list("SYD"), false, "SYD")
-	h.plan_trait = id
+	(h if side == 0 else w).plan_trait = id
 	return MatchSim.new(h, w, s)
 
 
-func _play(id: String, s: int) -> Array:
-	var sim := _sim(id, s)
+func _play(id: String, s: int, side := 0) -> Array:
+	var sim := _sim(id, s, side)
 	var res: Dictionary = sim.run()
 	return [res.get("score", []), sim.injuries.size(), sim.team_stats[0].get("clangers", 0.0),
-			sim.team_stats[1].get("intercept_marks", 0.0), sim.team_stats[0].get("metres_gained", 0.0)]
+			sim.team_stats[1].get("intercept_marks", 0.0), sim.team_stats[0].get("metres_gained", 0.0),
+			sim.team_stats[1].get("clangers", 0.0), sim.team_stats[1].get("metres_gained", 0.0)]
 
 
 func _stat(id: String, s: int, side: int, key: String) -> float:

@@ -62,6 +62,7 @@ func _build() -> void:
 		cols.add_child(left)
 		cols.add_child(right)
 	left.add_child(_how_we_play())
+	left.add_child(_plan_trait())
 	left.add_child(_form())
 	right.add_child(_list_and_cap())
 	var board := _board()
@@ -218,6 +219,63 @@ func _how_we_play() -> Control:
 			l.name = "%s_%d" % [part[2], i]
 			v.add_child(l)
 	return v
+
+
+# ---------------------------------------------------------------------------
+# Game-plan trait (director, 2026-11-10): one strength and one matched cost on
+# top of the plan, or none. A tap picks it; the lines under the grid say what
+# it gives and what it costs, with the size. Never which is better.
+# ---------------------------------------------------------------------------
+func _plan_trait() -> Control:
+	var v := UiKit.vbox(6)
+	v.name = "PlanTraitSection"
+	v.add_child(_head("Game-plan trait"))
+	v.add_child(_wrapped("One strength and one cost, on top of your plan, every match. Or none.",
+			UiKit.SMALL, UiKit.MUTED))
+	var opts := [["none", "None"]]
+	for id in PlanTraits.IDS:
+		opts.append([id, PlanTraits.name_of(id)])
+	var note := UiKit.vbox(3)
+	note.name = "TraitNote"
+	var cur := GameState.plan_trait if GameState.plan_trait != "" else "none"
+	v.add_child(UiKit.choice_grid("PlanTrait", opts, cur, 2 if _narrow() else 3, func(k: String):
+		GameState.set_plan_trait("" if k == "none" else k)
+		_trait_note(note, k)))
+	_trait_note(note, cur)
+	v.add_child(note)
+	return v
+
+
+## The chosen trait in words: its name, what it gives, what it costs, and
+## what you see on the ground.
+func _trait_note(into: VBoxContainer, id: String) -> void:
+	for c in into.get_children():
+		into.remove_child(c)
+		c.queue_free()
+	if id == "none" or PlanTraits.valid(id) == "":
+		var none := _wrapped(PlanTraits.NONE_LINE, UiKit.BODY, UiKit.TEXT)
+		none.name = "TraitNone"
+		into.add_child(none)
+		return
+	var title := UiKit.lbl(PlanTraits.name_of(id), UiKit.BODY, UiKit.TEXT, true)
+	title.name = "TraitName"
+	into.add_child(title)
+	for part in [["Gain:", PlanTraits.UPSIDE, "TraitGain"], ["Cost:", PlanTraits.COST, "TraitCost"],
+			["Looks like:", PlanTraits.LOOKS, "TraitLooks"]]:
+		var row := UiKit.hbox(6)
+		row.name = str(part[2])
+		var mk := UiKit.lbl(str(part[0]), UiKit.SECONDARY, UiKit.label_ink(), true)
+		mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		mk.autowrap_mode = TextServer.AUTOWRAP_OFF
+		row.add_child(mk)
+		var l := _wrapped(str((part[1] as Dictionary).get(id, "")), UiKit.SECONDARY, UiKit.TEXT)
+		l.name = "Text"
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(l)
+		into.add_child(row)
+	var basis := _wrapped(str(PlanTraits.BASIS.get(id, "")), UiKit.SMALL, UiKit.MUTED)
+	basis.name = "TraitBasis"
+	into.add_child(basis)
 
 
 # ---------------------------------------------------------------------------
