@@ -1,7 +1,8 @@
 extends SceneTree
 ## Review capture for row T5.r158 (a club across generations), dark.
 ##   godot --path . --script tools/visual/capture_premiership_side.gd -- --size 390x844 --out <prefix>
-## You coach Fremantle; Melbourne's premiership two seasons back is staged on
+## You coach Fremantle in the career's fifth season; Melbourne's premiership
+## two seasons back is staged on
 ## the honour roll with three of today's Melbourne players in its side, and
 ## Geelong's the season before with eight. Opens each page from the ladder by
 ## its handler (the real taps are in tests/run_clublink_tests.gd). Writes
@@ -68,6 +69,8 @@ func _run() -> void:
 	gs.start_season("FRE", db.club_list("FRE"))
 	for i in range(3):
 		gs.advance()
+	# A fifth season, so both flags fall inside the career (it starts in 2027).
+	gs.season_year = int(gs.season_year) + 4
 	var y := int(gs.season_year)
 	gs.honour_roll = [
 		{"year": y - 3, "premier": "GEE", "runner_up": "SYD", "premier_side": _side(gs, "GEE", 8)},
