@@ -3,8 +3,13 @@ extends Control
 ## The new coach's appointment interview (row 119): his name, then seven
 ## questions from the press pack, one at a time. Answers show nothing while
 ## he gives them; at the end the two archetypes they add up to are named with
-## everything they do. It cannot be skipped. The hub routes here while
-## GameState.interview_due.
+## everything they do. It cannot be skipped. It comes once the club is taken,
+## before the first pick (director, 2026-11-11: "its meant to go before the
+## draft"); the draft and the hub both route here while GameState.interview_due.
+
+## Set by the draft board when it sends the coach here: Continue goes back to
+## it, a finished draft included (its Finish step is still to come).
+static var back_to_draft := false
 
 var _root: VBoxContainer
 ## Outside the scroll: the page's one action never sits half under the fold.
@@ -16,14 +21,14 @@ var _name := ""
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	if not GameState.interview_due or GameState.my_club == "":
-		Router.replace("hub" if GameState.season != null else "main")
+	if not GameState.interview_due or GameState.coach_club() == "":
+		_leave()
 		return
 	var bg := ColorRect.new()
 	bg.color = UiKit.BG
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
-	add_child(ClubBackdrop.new().setup(GameState.my_club))
+	add_child(ClubBackdrop.new().setup(GameState.coach_club()))
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	UiKit.apply_insets(margin, 16)
@@ -61,7 +66,7 @@ func _title(text: String) -> void:
 
 func _name_page() -> void:
 	_clear()
-	_title("%s want to announce their new senior coach" % GameDB.club_name(GameState.my_club))
+	_title("%s want to announce their new senior coach" % GameDB.club_name(GameState.coach_club()))
 	_root.add_child(UiKit.lbl("What's your name?", UiKit.BODY, UiKit.TEXT))
 	var field := UiKit.search_field("", "Your name")
 	field.name = "CoachName"
@@ -87,10 +92,10 @@ func _question() -> void:
 	var q: Dictionary = Archetypes.QUESTIONS[i]
 	var j: Dictionary = MediaConference.JOURNALISTS.get(str(q["j"]), {})
 	var byline := UiKit.lbl("%s, %s" % [str(j.get("name", "")), str(j.get("outlet", ""))],
-			UiKit.SMALL, UiKit.club_name_colour(UiKit.club_ink(GameState.my_club)), true)
+			UiKit.SMALL, UiKit.club_name_colour(UiKit.club_ink(GameState.coach_club())), true)
 	byline.name = "InterviewByline"
 	_root.add_child(byline)
-	var text := str(q["q"]).replace("<Name>", _name).replace("<Club>", GameDB.club_name(GameState.my_club)) 			.replace("<Rival>", _beaten())
+	var text := str(q["q"]).replace("<Name>", _name).replace("<Club>", GameDB.club_name(GameState.coach_club())) 			.replace("<Rival>", _beaten())
 	var ql := UiKit.lbl(text, UiKit.H2, UiKit.TEXT, true)
 	ql.name = "InterviewQuestion"
 	ql.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -127,7 +132,7 @@ func _beaten() -> String:
 		if str(c.get("status", "")) == "free" and bool(c.get("former_sc", false)) and str(c.get("generic_name", "")) != "":
 			var held_here := false
 			for st in c.get("stints", []):
-				held_here = held_here or str(st[0]) == GameState.my_club
+				held_here = held_here or str(st[0]) == GameState.coach_club()
 			if not held_here:
 				return str(c["generic_name"])
 	return "a long list of names"
@@ -138,7 +143,7 @@ func _reveal() -> void:
 	_title("The kind of coach you are")
 	for set_key in ["s", "p"]:
 		var id := str(arch["held"][set_key])
-		var head := UiKit.lbl(str(Archetypes.NAME.get(id, id)), UiKit.H2, UiKit.club_name_colour(UiKit.club_ink(GameState.my_club)), true)
+		var head := UiKit.lbl(str(Archetypes.NAME.get(id, id)), UiKit.H2, UiKit.club_name_colour(UiKit.club_ink(GameState.coach_club())), true)
 		head.name = "Archetype_" + set_key
 		_root.add_child(head)
 		_root.add_child(_line(str(Archetypes.UPSIDE.get(id, "")), UiKit.GOOD))
@@ -148,8 +153,18 @@ func _reveal() -> void:
 	_root.add_child(_line("How you coach from here can change both, a season at a time.", UiKit.MUTED))
 	var go := UiKit.btn("Continue", UiKit.BODY, true)
 	go.name = "InterviewDone"
-	go.pressed.connect(func(): Router.replace("hub"))
+	go.pressed.connect(_leave)
 	_foot.add_child(go)
+
+
+## Back to the draft board when the draft is still to come, else the hub.
+func _leave() -> void:
+	var from_draft := back_to_draft and GameState.draft != null
+	back_to_draft = false
+	if from_draft or (GameState.draft != null and not GameState.draft.is_finished() and GameState.coach_club() != ""):
+		Router.replace("draft")
+	else:
+		Router.replace("hub" if GameState.season != null else "main")
 
 
 func _line(text: String, colour: Color) -> Label:
