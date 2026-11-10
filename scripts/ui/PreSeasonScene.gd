@@ -1208,9 +1208,18 @@ func _on_sim_pressed() -> void:
 	box["footer"].add_child(cancel)
 
 
+## Under the loading cover, like Sim the week: the set shot plays while the
+## pre-season is simmed, then the hub. A browser draws nothing until the game
+## hands control back, so there the weeks hand it back as they go (the
+## practice matches on threads); elsewhere the matches' wait keeps the ball
+## moving.
 func _on_sim() -> void:
-	GameState.preseason_sim_to_round1()
-	_after("done")
+	ScreenTransition.run("Playing out the pre-season...", func():
+		if OS.has_feature("web"):
+			await GameState.preseason_sim_to_round1_async()
+		else:
+			GameState.preseason_sim_to_round1()
+		_after("done"))
 
 
 func _after(at: String) -> void:
