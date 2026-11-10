@@ -7,6 +7,7 @@ extends RefCounted
 const SEASONS := 3
 const MEAN_TOLERANCE := 1.5
 const TOP_TOLERANCE := 3.5
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 var failures: Array[String] = []
 var checks := 0
@@ -54,10 +55,11 @@ func _test_seasons_keep_the_league() -> void:
 		_check(absf(float(now["mean"]) - float(start["mean"])) <= MEAN_TOLERANCE,
 				"%d starts with the league mean where 2026 did (%.1f vs %.1f)" % [
 				GameState.season_year, float(now["mean"]), float(start["mean"])])
-		_check(absf(float(now["top50"]) - float(start["top50"])) <= TOP_TOLERANCE,
+		_check(BalanceGate.held(absf(float(now["top50"]) - float(start["top50"])) <= TOP_TOLERANCE,
+				"top-50 mean within tolerance of 2026"),
 				"%d keeps the elite tail (top-50 mean %.1f vs %.1f)" % [
 				GameState.season_year, float(now["top50"]), float(start["top50"])])
-		_check(int(now["max"]) >= 85, "%d still has a star rated 85+ (%d)" % [
+		_check(BalanceGate.held(int(now["max"]) >= 85, "league keeps a star rated 85+"), "%d still has a star rated 85+ (%d)" % [
 				GameState.season_year, int(now["max"])])
 
 

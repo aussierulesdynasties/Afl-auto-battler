@@ -10,6 +10,7 @@ var checks := 0
 
 const CLUBS := [["FRE", "MEL"], ["GEE", "COL"], ["SYD", "CAR"], ["BRL", "ESS"], ["HAW", "ADE"], ["WBD", "GWS"]]
 const MATCHES := 120
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -20,6 +21,7 @@ func run() -> void:
 	_t("_test_shot_log_matches_the_shots")
 	_t("_test_closer_set_shot_converts_more")
 	_t("_test_set_share_near_real")
+	_t("_test_set_shot_mark_names_its_spot")
 	print(Ran.line("Set shots", self))
 
 
@@ -103,7 +105,7 @@ func _test_closer_set_shot_converts_more() -> void:
 	for k in tally:
 		_check(int(tally[k][0]) >= 40, "Enough set shots from %s to compare (%d)" % [k, int(tally[k][0])])
 		rate[k] = float(tally[k][1]) / maxf(1.0, float(tally[k][0]))
-	_check(rate["near"] > rate["mid"] + 0.15 and rate["mid"] > rate["far"] + 0.10,
+	_check(BalanceGate.held(rate["near"] > rate["mid"] + 0.15 and rate["mid"] > rate["far"] + 0.10, "set shots: conversion falls with distance"),
 			"Set shots from 20-30 m convert more than 40-50 m, and those more than 50+ m (%s)" % str(rate))
 
 
@@ -120,4 +122,33 @@ func _test_set_share_near_real() -> void:
 	_check(n > MATCHES * 30, "Shots were played (%d)" % n)
 	var share := float(set_n) / maxf(1.0, float(n))
 	var aim := 0.55
-	_check(absf(share - aim) < 0.04, "The set-shot share sits near %.2f (%.3f)" % [aim, share])
+	_check(BalanceGate.held(absf(share - aim) < 0.04, "set shots: share near real"), "The set-shot share sits near %.2f (%.3f)" % [aim, share])
+
+
+## T2.24: a mark that goes back for a set shot names its band, and the oval
+## stands that mark at the band's metres from the middle of the goal line, so
+## the kick is taken from where the coach's call said he marked.
+func _test_set_shot_mark_names_its_spot() -> void:
+	var sim := _sim(2)
+	var r: Dictionary = sim.run()
+	var ev: Array = r["events"]
+	var keys := {}
+	for b in MatchSim.SET_BANDS_ON:
+		keys[str(b["key"])] = float(b["metres"])
+	var n := 0
+	for i in range(1, ev.size()):
+		var e: Dictionary = ev[i]
+		if bool(e.get("set", false)) and not e.has("from_free") and str((ev[i - 1] as Dictionary).get("kind", "")) == "mark":
+			n += 1
+			_check(keys.has(str((ev[i - 1] as Dictionary).get("band", ""))),
+					"Event %d: the set shot's mark names its band (%s)" % [i - 1, str(ev[i - 1])])
+	_check(n > 0, "Some set shots from a mark were played (%d)" % n)
+	var md := MatchDirector.new()
+	for side in range(2):
+		for key in keys:
+			for lean in [-1.0, 1.0]:
+				var at: Vector2 = md._set_spot(side, key, lean)
+				var goal := Vector2(MatchMotion.GOAL_X * (1.0 if side == 0 else -1.0), 0.0)
+				_check(absf(at.distance_to(goal) - float(keys[key])) < 0.01,
+						"Side %d %s: the oval marks him %.1f m out, the band says %.0f m" % [side, key, at.distance_to(goal), keys[key]])
+				_check(absf(at.x) < absf(goal.x), "Side %d %s: marked in front of the goal line" % [side, key])

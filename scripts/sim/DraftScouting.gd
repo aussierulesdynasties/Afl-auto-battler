@@ -20,11 +20,30 @@ const COMBINE_NOISE := 4.0
 static var seen_uncertainty := 0.7
 
 
-## 1.0 unless `club` has a note on him from its pre-season match (p["seen"]).
+## How much narrower a club's read is for every week its scouts have watched a
+## prospect on its scouting list (row 130, ScoutingList): 3% a week, never
+## below half the usual read. Agent's numbers, the director's to change.
+const FOCUS_RATE := 0.03
+const FOCUS_FLOOR := 0.5
+
+
+## How tightly `club` reads him: 1.0 for a club that has neither seen him in
+## its pre-season match (p["seen"]) nor watched him off its scouting list
+## (p["watch"], weeks by club); narrower for each.
 static func seen_mult(p: Dictionary, club: String) -> float:
-	if not (p.get("seen") is Dictionary) or not (p["seen"] as Dictionary).has(club):
+	var m := focus_mult(p, club)
+	if (p.get("seen") is Dictionary) and (p["seen"] as Dictionary).has(club):
+		m *= clampf(seen_uncertainty, 0.1, 1.0)
+	return m
+
+
+## The scouting list's part of seen_mult: 1.0 until `club`'s scouts have
+## watched him for a week (p["watch"][club], weeks).
+static func focus_mult(p: Dictionary, club: String) -> float:
+	if not (p.get("watch") is Dictionary):
 		return 1.0
-	return clampf(seen_uncertainty, 0.1, 1.0)
+	var weeks := float((p["watch"] as Dictionary).get(club, 0.0))
+	return maxf(FOCUS_FLOOR, 1.0 - FOCUS_RATE * weeks)
 
 
 static func projection(p: Dictionary, club: String, seed: int, uncertainty_mult := 1.0) -> Dictionary:
