@@ -24,6 +24,9 @@ var _pick_tutorials := true
 ## Canberra joins (in the 2027 redraft, or in 2030 on the real lists).
 var _pick_canberra := false
 var _canberra_row: VBoxContainer
+## The coach has read and confirmed the 2030 warning for this setup (Canberra
+## on the real lists plays 2027-2029 without you, director 2026-11-10).
+var _sim_ahead_ok := false
 ## Your Club Forge club's row, and the line that replaces it when the start
 ## cannot take a created club (real 2026 lists, Rebuild).
 var _forged_row: VBoxContainer
@@ -353,6 +356,7 @@ func _on_new_career() -> void:
 	_pick_rivals = GameState.new_career_dial(DifficultyDials.RIVALS)
 	_pick_tutorials = GameState.new_career_tutorials()
 	_pick_canberra = false
+	_sim_ahead_ok = false
 	_pick_challenge = "none"
 	_pick_goal = ""
 	_pick_prospect = not GameState.forge_player().is_empty()
@@ -439,7 +443,9 @@ func _show_setup() -> void:
 			func(k): return _canberra_line(str(k)),
 			func(k):
 				_pick_canberra = k == "yes"
-				_repaint_canberra())
+				_repaint_canberra()
+				if _pick_canberra and _plays_years_without_you() and not _sim_ahead_ok:
+					_open_sim_ahead_sheet(false))
 	_canberra_row.name = "Canberra"
 	form.add_child(_canberra_row)
 	# Your Club Forge player, if you made one: he enters this career's first
@@ -504,6 +510,7 @@ const GOAL_BUTTONS := {"flag_homegrown": "Home-grown flag", "coach_300": "300 ga
 ## Real 2026 lists: choosing a League redraft drops it.
 func _on_pick_start(k: String) -> void:
 	_pick_start = k
+	_sim_ahead_ok = false
 	if k != "real" and _pick_challenge == "rebuild":
 		_pick_challenge = "none"
 		(_challenge_row.get_meta("select") as Callable).call("none")
@@ -514,6 +521,7 @@ func _on_pick_start(k: String) -> void:
 
 func _on_pick_challenge(k: String) -> void:
 	_pick_challenge = k
+	_sim_ahead_ok = false
 	if k == "rebuild" and _pick_start != "real":
 		_pick_start = "real"
 		(_start_row.get_meta("select") as Callable).call("real")
@@ -691,6 +699,11 @@ func _close_setup() -> void:
 
 
 func _on_start() -> void:
+	# Canberra on the real lists: the 2030 warning first, if the coach has not
+	# confirmed it for this setup (the start may have changed since Yes).
+	if _plays_years_without_you() and not _sim_ahead_ok:
+		_open_sim_ahead_sheet(true)
+		return
 	if GameState.has_career() or GameState.has_saved_career():
 		_confirm_new_career()
 		return
@@ -721,7 +734,7 @@ func _start_new_career() -> void:
 		var forged := GameState.forge_player()
 		if not forged.is_empty():
 			GameState.add_custom_prospect(forged)
-	if _pick_start == "real" and _pick_canberra and _pick_challenge != "rebuild":
+	if _plays_years_without_you():
 		_play_years_without_you()
 		return
 	if _pick_start == "real":
@@ -729,6 +742,55 @@ func _start_new_career() -> void:
 	else:
 		GameState.begin_draft()
 	Router.go("draft")
+
+
+## This setup starts in 2030: real 2026 lists with Canberra, and no Rebuild.
+func _plays_years_without_you() -> bool:
+	return _pick_start == "real" and _pick_canberra and _pick_challenge != "rebuild"
+
+
+## The warning before a 2030 start commits (director, 2026-11-10: "if you click
+## YES to canberra joining, you should be warned that the game will sim to
+## 2030"). Back takes Canberra out again; the other button keeps it, and from
+## the Choose your club button it starts the career at once.
+func _open_sim_ahead_sheet(from_start: bool) -> void:
+	_close_confirm()
+	var first := GameState.SIM_AHEAD_TO
+	var box := UiKit.modal_box(self, 460.0, 0.0)
+	_confirm_overlay = box["overlay"]
+	_confirm_overlay.name = "SimAheadWarning"
+	var v: VBoxContainer = box["body"]
+	v.add_child(UiKit.heading("Your first season is %d" % first, UiKit.H1))
+	for line in [
+			"Canberra join the league in %d. With them in, %d to %d play out without you." % [first, GameDB.START_YEAR, first - 1],
+			"Every club is run by its own staff in those three seasons: they pick the sides, trade, sign free agents and draft. Tasmania join in %d, Canberra build their first list, and three premierships are decided." % GameDB.enter_year("TAS"),
+			"At the %d National Draft you choose any of the 20 clubs, sit your job interview and start in %d." % [first - 1, first]]:
+		var l := UiKit.lbl(line, UiKit.BODY, UiKit.TEXT)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(l)
+	var row := UiKit.hbox(8)
+	box["footer"].add_child(row)
+	var back := UiKit.btn("Back", UiKit.NAME)
+	back.name = "SimAheadBack"
+	var go := UiKit.btn("Start in %d" % first, UiKit.NAME, true)
+	go.name = "SimAheadConfirm"
+	for b in [back, go]:
+		(b as Control).custom_minimum_size = Vector2(0, 48)
+		(b as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(b)
+	back.pressed.connect(_cancel_sim_ahead)
+	go.pressed.connect(func():
+		_sim_ahead_ok = true
+		_close_confirm()
+		if from_start:
+			_on_start())
+
+
+## Back on the 2030 warning: Canberra stay out, and the setup is as it was.
+func _cancel_sim_ahead() -> void:
+	_close_confirm()
+	_pick_canberra = false
+	_repaint_canberra()
 
 
 ## Real 2026 lists with Canberra (director, 2026-11-08): 2027 to 2029 play out
@@ -813,7 +875,10 @@ func handle_back() -> bool:
 		_guide_overlay = null
 		return true
 	if is_instance_valid(_confirm_overlay):
-		_close_confirm()
+		if _confirm_overlay.name == "SimAheadWarning":
+			_cancel_sim_ahead()
+		else:
+			_close_confirm()
 		return true
 	if is_instance_valid(_settings_overlay):
 		_close_settings()

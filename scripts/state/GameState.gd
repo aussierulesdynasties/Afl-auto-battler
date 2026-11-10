@@ -817,12 +817,22 @@ func begin_from_history(first_season: int) -> bool:
 	var board_was := board_patience
 	var rivals_was := rival_recruiting
 	var tips_were := tutorials
+	# You, the coach, are this career's, not the history's: the appointment
+	# interview still waits and its answers are scored as in any start
+	# (director, 2026-11-10: "interview should happen in every game mode").
+	var interview_was := interview_due
+	var coach_was := coach_name
+	var arch_was := coach_arch
 	if not _restore_career(state):
 		return false
 	GameDB.pristine = false   # a career's data from here on: the next reset() reloads
 	board_patience = board_was
 	rival_recruiting = rivals_was
 	tutorials = tips_were
+	interview_due = interview_was
+	coach_name = coach_was
+	coach_arch = arch_was
+	CoachEffects.my_arch = coach_arch
 	_sim_ahead_challenge = held
 	challenge = {}
 	career_seed = randi_range(1, 999999)
