@@ -14,6 +14,8 @@ const QUIET_KINDS := ["kick", "handball", "sub", "ballup", "throwin", "mark", "t
 const RUN_LINE := 3
 ## MatchSim's minutes per quarter (it stamps Q2 from 31, Q3 from 61...).
 const QUARTER_MINUTES := 30
+## The score figure on a wide (PC) window; _fit_scores shrinks from here.
+const WIDE_SCORE := 46
 
 var _res := {}
 var _pitch: PitchView
@@ -439,7 +441,7 @@ func _score_column(code: String, home: bool, narrow: bool) -> Control:
 	ClubDuel.on_colour(name)
 	v.add_child(name)
 	# A wide screen's score is the headline across a 1920 band, not a caption in it (row T3.R9).
-	var score := UiKit.figure("0.0 (0)", UiKit.RATING if narrow else 46, Color.WHITE)
+	var score := UiKit.figure("0.0 (0)", UiKit.RATING if narrow else WIDE_SCORE, Color.WHITE)
 	ClubDuel.on_colour(score)
 	score.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if home \
 			else HORIZONTAL_ALIGNMENT_LEFT
@@ -3665,7 +3667,7 @@ func _fit_scores() -> void:
 	var band := minf(_score_band.size.x, UiKit.view_width(self) - 2.0 * _score_band.global_position.x)
 	# The band's padding (8 a side), the row's two gaps (6) and the clock between.
 	var room := (band - 16.0 - 12.0 - (84.0 if narrow else 132.0)) / 2.0
-	var sizes := [UiKit.RATING, UiKit.SCORE, UiKit.NUMBER] if narrow else [36, UiKit.RATING, UiKit.SCORE]
+	var sizes := [UiKit.RATING, UiKit.SCORE, UiKit.NUMBER] if narrow else [WIDE_SCORE, 36, UiKit.RATING, UiKit.SCORE]
 	var font: Font = _score_home.get_theme_font("font")
 	var fs: int = sizes[-1]
 	for s: int in sizes:

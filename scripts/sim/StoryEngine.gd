@@ -197,13 +197,23 @@ static func _always_key(id: String, pid: String) -> String:
 static func _pick_one(deck: Array, ctx: Dictionary, story: Dictionary, rng: RandomNumberGenerator, w: int,
 		quiet: bool, skip_cat: String, skip_pid: String) -> Dictionary:
 	var tiers := {"beat": [], "start": [], "one_off": []}
+	var topical := []
 	for t in deck:
 		if str(t["category"]) == skip_cat:
 			continue
 		var subj := eligible_subject(t, ctx, story, w, rng, skip_pid)
 		if subj.is_empty():
 			continue
-		tiers[tier(t)].append([t, subj])
+		if bool(t.get("topical", false)):
+			topical.append([t, subj])
+		else:
+			tiers[tier(t)].append([t, subj])
+	# A card about the run the club is on right now (a losing streak) is this
+	# week's story: it comes before the running stories and in a quiet week too.
+	# Behind them it was never drawn, there is always an older story waiting.
+	if not topical.is_empty():
+		var c: Array = topical[rng.randi_range(0, topical.size() - 1)]
+		return build(deck, c[0], c[1], ctx.get("club", {}), rng, w)
 	# A priority card (the Grand Final week's, a week off's) comes before the older ones.
 	for name in TIERS:
 		var first: Array = (tiers[name] as Array).filter(func(c): return bool(c[0].get("priority", false)))
@@ -1138,7 +1148,7 @@ static func _refuse_words(d: int, t: int) -> String:
 	var after := Trust.opinion(t) + Trust.opinion_move(t, d)
 	var chance := Contracts.refuse_chance(after)
 	if chance > 0:
-		return "At contract time that is a %d%% chance he won't re-sign with you." % chance
+		return "At contract time that is %s %d%% chance he won't re-sign with you." % [LeagueStories.an(chance), chance]
 	return "Under %d/100 he may refuse to re-sign with you, %d%% for each point under." % [
 			Contracts.REFUSE_BELOW, Contracts.REFUSE_PER_POINT]
 

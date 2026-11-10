@@ -74,6 +74,8 @@
 	},
 	{
 		"id": "media_radio_spray",
+		"topical": true,
+		"cooldown": 60,
 		"category": "media",
 		"subject": {
 			"kind": "club"

@@ -1979,7 +1979,7 @@ func begin_real_lists() -> void:
 		role_counts[code] = c
 		role_pairs[code] = pairs
 	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
-			_clock_seed(2), sizes, role_counts, role_pairs)
+			prospect_read_seed(), sizes, role_counts, role_pairs)
 	draft.senior_cap = RookieList.SENIOR_SPOTS
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
@@ -2228,6 +2228,11 @@ func choose_sim_ahead_club(code: String) -> bool:
 	sim_ahead = false
 	challenge = _sim_ahead_challenge
 	_sim_ahead_challenge = {}
+	# A Rebuild on a joining club is that club's rebuild, whether the years before
+	# it were played out or read from a shipped history (begin_from_history).
+	if Challenge.kind(self) == "rebuild" and GameDB.enter_year(code) > GameDB.START_YEAR 			and str(challenge.get("club", "")) != code:
+		challenge["club"] = code
+		challenge["gone"] = []
 	draft.scouting_mults[code] = recruiting_uncertainty_mult()
 	draft.start_for_user(code)
 	add_news("career", "You are the new senior coach of %s, from the %d National Draft." % [
@@ -2345,7 +2350,9 @@ func begin_intake_draft() -> bool:
 	# _start_next_season) rather than drafting into one - unless it is
 	# building its list (ExpansionBuild): then it has a seat and early picks.
 	var active := GameDB.active_clubs(season_year)
-	var seed := _clock_seed(2)
+	# The scouting list read this class with prospect_read_seed all year: draft
+	# night must use the same seed, or its marks, ranges and rank disagree.
+	var seed := prospect_read_seed()
 	draft = Draft.build_intake(open_pool, active.duplicate(), order,
 			seed, sizes, role_counts, role_pairs)
 	# The National Draft fills the senior list; the Rookie Draft follows.
@@ -7035,7 +7042,7 @@ func _close_season_achievements() -> void:
 	for id in Achievements.check_season(achievements, ctx):
 		achievements[id] = {"year": season_year}
 		var defn: Dictionary = Achievements.definition(id)
-		add_news("achievement", "Achievement unlocked: %s  -  %s (%s)" % [
+		add_news("achievement", "Achievement unlocked: %s - %s (%s)" % [
 				str(defn["name"]), GameDB.club_name(str(defn["club"])),
 				GameDB.club_short(str(defn["club"]))])
 
@@ -10850,6 +10857,13 @@ func _end_role_trial(restore: bool) -> void:
 func _trial_after_coach_pick(sel: Dictionary) -> void:
 	if role_trial.is_empty():
 		return
+	# No side named (the match-day staff pick it, as Sim the week's "runs for the
+	# kids" does): the trial goes on and they place him, as when it began that way.
+	var named := sel.duplicate()
+	named.erase("DUAL_RUCK")
+	if named.is_empty():
+		role_trial["auto"] = true
+		return
 	var line := _line_of(sel, str(role_trial.get("id", "")))
 	if _in_trial_line(line, str(role_trial.get("role", ""))):
 		role_trial["auto"] = false
@@ -12051,11 +12065,13 @@ func _draft_class_news() -> void:
 		return
 	if str(class_tiers.get(str(season_year), "")) != "super":
 		return
-	# The news item itself is the durable acknowledgement. Saves already persist
-	# the feed, so this needs no second flag that could drift out of sync.
+	# The feed is trimmed to MAX_NEWS, so the item cannot be its own memory. An
+	# older save that already has the line in its feed is not told twice.
 	for item in news:
 		if int(item.get("year", 0)) == season_year and str(item.get("kind", "")) == "superdraft":
 			return
+	if not Milestones.tell_once(self, "superdraft|%d" % season_year):
+		return
 	add_news("superdraft", "Recruiters believe this year's national draft is a superdraft — unusually strong at the top and deeper than a normal class. Clubs will be planning their off-season around it.")
 
 
@@ -12232,9 +12248,9 @@ func _round_news(results: Array) -> void:
 		var p := _find_player(str(inj.get("id", "")))
 		if p.is_empty() or int(inj.get("weeks", 0)) < 4 or int(p.get("overall", 0)) < NEWS_MIN_OVR 				or told.has(str(inj.get("id", ""))):
 			continue
-		add_news("injury", "%s (%s) is out for %s with a %s." % [GameDB.player_display_name(p),
+		add_news("injury", "%s (%s) is out for %s with %s." % [GameDB.player_display_name(p),
 				GameDB.club_name(str(inj.get("club", ""))), _weeks_text(int(inj["weeks"])),
-				str(inj.get("kind", "injury")).to_lower()])
+				Injuries.wording(str(inj.get("kind", "")))])
 	for row in last_mro:
 		var outcome := str(row.get("outcome", ""))
 		if outcome == "no_action":

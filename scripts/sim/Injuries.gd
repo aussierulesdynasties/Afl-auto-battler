@@ -35,7 +35,9 @@ static func wording(kind: String) -> String:
 	if WORDING.has(kind):
 		return str(WORDING[kind])
 	var k := kind.replace("_", " ")
-	return "an injury" if k == "" or k == "injury" else "a %s injury" % k
+	if k == "" or k == "injury":
+		return "an injury"
+	return "%s %s injury" % ["an" if "aeiou".contains(k.left(1).to_lower()) else "a", k]
 
 
 ## Chance this player is injured in a game he plays.

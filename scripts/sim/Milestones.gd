@@ -28,7 +28,7 @@ static func shown() -> bool:
 
 
 static func empty() -> Dictionary:
-	return {"coach": {"games": 0, "wins": 0, "finals": 0}, "log": [], "seen": {}, "last_match": ""}
+	return {"coach": {"games": 0, "wins": 0, "finals": 0}, "log": [], "seen": {}, "last_match": "", "told": {}}
 
 
 ## An older save: the coach's games and wins from the seasons on record (the
@@ -240,4 +240,18 @@ static func summary_items(gs, res: Dictionary) -> Array:
 ## The coming week's milestones in the news, one item each.
 static func preview_news(gs) -> void:
 	for u in upcoming(gs):
-		gs.add_news("milestone", "This week: " + str(u["text"]))
+		if tell_once(gs, "%s|%s" % [str(u["id"]), str(u["text"])]):
+			gs.add_news("milestone", "This week: " + str(u["text"]))
+
+
+## True the first time a line is filed, false ever after. The news feed is
+## trimmed, so the feed cannot be the memory: a player picked but not yet
+## played, or one goal short for a month, was announced again every week.
+static func tell_once(gs, key: String) -> bool:
+	var ml: Dictionary = gs.milestone_log
+	if not (ml.get("told") is Dictionary):
+		ml["told"] = {}
+	if (ml["told"] as Dictionary).has(key):
+		return false
+	ml["told"][key] = true
+	return true
