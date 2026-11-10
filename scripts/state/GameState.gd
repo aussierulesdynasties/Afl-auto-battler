@@ -68,6 +68,9 @@ var season_tally := {}           # player id -> running season numbers (Awards)
 var season_stats := {}
 var season_stats_from := 0
 var club_plan := "balanced"      # your standing game plan, from the first bounce
+## Your game-plan trait (PlanTraits id, director 2026-11-10); "" = none. Saved
+## only when set, so an older save loads with none.
+var plan_trait := ""
 var form_log := {}               # your player id -> his last three Player Ratings
 ## A story card's role trial: {id, role, left, home, auto, before, wrote}, or {}.
 ## One player plays his second position for `left` more of your games (see
@@ -399,6 +402,7 @@ var _dirty := false
 
 
 func _ready() -> void:
+	CareerSave.beat_hook = Season.beat   # load screen keeps moving while players decode
 	PreSeason.data()   # its sizes are read once, before any scouting read needs one
 	var cfg := ConfigFile.new()
 	if cfg.load(settings_path) == OK:
@@ -820,12 +824,22 @@ func begin_from_history(first_season: int) -> bool:
 	var board_was := board_patience
 	var rivals_was := rival_recruiting
 	var tips_were := tutorials
+	# You, the coach, are this career's, not the history's: the press
+	# interview still waits and its answers set the coaching style as in any start
+	# (director, 2026-11-10: "interview should happen in every game mode").
+	var interview_was := interview_due
+	var coach_was := coach_name
+	var arch_was := coach_arch
 	if not _restore_career(state):
 		return false
 	GameDB.pristine = false   # a career's data from here on: the next reset() reloads
 	board_patience = board_was
 	rival_recruiting = rivals_was
 	tutorials = tips_were
+	interview_due = interview_was
+	coach_name = coach_was
+	coach_arch = arch_was
+	CoachEffects.my_arch = coach_arch
 	_sim_ahead_challenge = held
 	challenge = {}
 	career_seed = randi_range(1, 999999)
@@ -987,6 +1001,8 @@ func _save_state() -> Dictionary:
 		state["coach_name"] = coach_name
 	if not coach_arch.is_empty():
 		state["coach_arch"] = coach_arch
+	if plan_trait != "":
+		state["plan_trait"] = plan_trait
 	if interview_due:
 		state["interview_due"] = true
 	return state
@@ -1014,10 +1030,14 @@ func load_career() -> bool:
 
 
 func _restore_career(state: Dictionary) -> bool:
+	# Season.beat() between the steps: the load screen keeps its ball moving
+	# (it touches nothing in the career and draws no random numbers).
 	if state.is_empty():
 		return false
+	Season.beat()
 	reset()
 	# A pre-made history stops where Choose your club opens.
+	Season.beat()
 	sim_ahead = bool(state.get("sim_ahead", false))
 	sim_ahead_to = int(state.get("sim_ahead_to", SIM_AHEAD_TO))
 	# A created club joins the competition before anything reads the clubs.
@@ -1026,6 +1046,7 @@ func _restore_career(state: Dictionary) -> bool:
 	# data years). Canberra, before anything reads the clubs: a save from before
 	# the choice existed keeps it. set_canberra applies the entry years.
 	expansion_from = int(state.get("expansion_from", 0))
+	Season.beat()
 	set_canberra(bool(state.get("canberra_on", true)))
 	expansion = state.get("expansion", {}) if state.get("expansion") is Dictionary else {}
 	best23 = state.get("best23", {})
@@ -1033,12 +1054,15 @@ func _restore_career(state: Dictionary) -> bool:
 	sim_orders = state.get("sim_orders", {}) if state.get("sim_orders") is Dictionary else {}
 	if not custom_club.is_empty():
 		GameDB.register_club(ClubForge.row(custom_club))
+	Season.beat()
 	season_year = int(state.get("season_year", 2026))
 	my_club = str(state.get("my_club", ""))
 	if state.get("season") is Dictionary:
 		var sv: Dictionary = state["season"]
 		season = Season.new(sv["clubs"], sv["lists"], int(sv["seed"]))
+		Season.beat()
 		CareerSave.apply_vars(season, sv)
+		Season.beat()
 		_sync_dual()
 		# Saves written under the old eight-finalist bracket cannot be
 		# restored into the wildcard series (different slots, different
@@ -1046,6 +1070,7 @@ func _restore_career(state: Dictionary) -> bool:
 		if not season.finals.is_empty() \
 				and int((season.finals.get("top", []) as Array).size()) != Season.FINALISTS:
 			season.finals = {}
+	Season.beat()
 	if state.get("draft") is Dictionary:
 		draft = Draft.new([], [], 0)
 		CareerSave.apply_vars(draft, state["draft"])
@@ -1087,10 +1112,12 @@ func _restore_career(state: Dictionary) -> bool:
 	club_plan = MatchSim.plan_key(str(state.get("club_plan", "balanced")))
 	if not CLUB_PLANS.has(club_plan):
 		club_plan = "balanced"
+	plan_trait = PlanTraits.valid(str(state.get("plan_trait", "")))
 	form_log = state.get("form_log", {})
 	role_trial = state.get("role_trial", {}) if state.get("role_trial") is Dictionary else {}
 	trial_result = state.get("trial_result", {}) if state.get("trial_result") is Dictionary else {}
 	pos_ratings = state.get("pos_ratings", {}) if state.get("pos_ratings") is Dictionary else {}
+	Season.beat()
 	season_team = state.get("season_team", {})
 	if not state.has("season_stats"):
 		# ...and so do the clubs' new statistics (TEAM_BOOK_KEYS).
@@ -1128,6 +1155,7 @@ func _restore_career(state: Dictionary) -> bool:
 	offseason_staff = state.get("offseason_staff", {})
 	department_budget = state.get("department_budget", ClubBudget.defaults())
 	department_budget_year = int(state.get("department_budget_year", season_year))
+	Season.beat()
 	_ensure_department_budget()
 	season_wrap = state.get("season_wrap", {})
 	offseason_log = state.get("offseason_log", [])
@@ -1244,6 +1272,7 @@ func _restore_career(state: Dictionary) -> bool:
 	if season != null:
 		for code in season.lists:
 			unique_jumpers(season.lists[code])
+	Season.beat()
 	# A save from before the coaching world: seed it for this career now.
 	if season != null and coaches.is_empty():
 		coaches = Coaches.seed(my_club)
@@ -1257,12 +1286,14 @@ func _restore_career(state: Dictionary) -> bool:
 				continue
 			bare.append(club)
 		CoachMarket.staff_new_clubs(coaches, bare, my_club, season_year - 1, career_seed)
+	Season.beat()
 	# A card drawn before the story deck (2026-10-11) has no template behind
 	# it: this week's card is drawn again from the deck, once.
 	if season != null and week_event_pending() and str(week_event.get("tid", "")) == "":
 		_next_week_event()
 	# The honour board (row 122): an older save had none, so it is built once
 	# from what the career recorded; never guessed.
+	Season.beat()
 	honour_board = state.get("honour_board", {}) if state.get("honour_board") is Dictionary else {}
 	honour_boards = state.get("honour_boards", {}) if state.get("honour_boards") is Dictionary else {}
 	if not state.has("honour_board"):
@@ -1666,6 +1697,8 @@ func reset() -> void:
 	season_stats = {}
 	season_stats_from = 0
 	club_plan = "balanced"
+	plan_trait = ""
+	CoachEffects.my_trait = ""
 	form_log = {}
 	role_trial = {}
 	training_block = {}
@@ -1906,11 +1939,13 @@ func begin_real_lists() -> void:
 			joined[str(mv["to"])] = true
 	for code in joined:
 		unique_jumpers(league_lists[code])
-	# Rebuild (Challenge): the bottom club of 2026 is yours, less its three best.
+	# Rebuild (Challenge): the bottom club of 2026, less its three best, or a
+	# club joining the league built from nothing (row T5.Q25). The choice is
+	# made on Choose your club; its three walk out only if the bottom club is
+	# taken (choose_real_club).
 	if Challenge.kind(self) == "rebuild":
-		var bottom := Challenge.bottom_club(active)
-		challenge["club"] = bottom
-		challenge["gone"] = Challenge.strip_best(self, bottom)
+		challenge["club"] = Challenge.bottom_club(active)
+		challenge["gone"] = []
 	intake_assignments = []
 	# The real 2026 class, and the career's own prospect if it has one.
 	var cls: Array = _career_copies(GameDB.draftees)
@@ -1948,9 +1983,6 @@ func begin_real_lists() -> void:
 	draft.senior_cap = RookieList.SENIOR_SPOTS
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
-	if Challenge.kind(self) == "rebuild" and str(challenge.get("club", "")) != "":
-		choose_real_club(str(challenge["club"]))
-		add_news("challenge", "%s The 2026 National Draft is next." % Challenge.stated_line(self))
 	mark_dirty()
 
 
@@ -2016,11 +2048,37 @@ static func _tie_label(kind: String) -> String:
 func choose_real_club(code: String) -> void:
 	if not opening_draft or not league_lists.has(code):
 		return
+	# Rebuild: the bottom club is the one real list on offer; its three best
+	# walk out as you take over.
+	var rebuild := Challenge.kind(self) == "rebuild"
+	if rebuild and code != str(challenge.get("club", "")):
+		return
+	if rebuild and (challenge.get("gone", []) as Array).is_empty():
+		challenge["gone"] = Challenge.strip_best(self, code)
+		_draft_sees_list(code)
 	my_club = code
 	my_list = league_lists[code]
 	draft.scouting_mults[code] = recruiting_uncertainty_mult()
 	draft.start_for_user(code)
+	if rebuild:
+		add_news("challenge", "%s The 2026 National Draft is next." % Challenge.stated_line(self))
 	mark_dirty()
+
+
+## The opening draft's picture of `code`'s list (its senior count and roles),
+## read again after the list changed under it (a Rebuild's walkouts).
+func _draft_sees_list(code: String) -> void:
+	var arr: Array = league_lists[code]
+	var c := {"RUCK": 0, "MID": 0, "DEF": 0, "FWD": 0}
+	var pairs: Array = []
+	for p in arr:
+		var r := str(p["role"])
+		if c.has(r):
+			c[r] = int(c[r]) + 1
+		pairs.append([r, str(p.get("role2", ""))])
+	draft.existing_sizes[code] = RookieList.draft_size(arr)
+	draft.existing_role_counts[code] = c
+	draft.existing_roles[code] = pairs
 
 
 # ---------------------------------------------------------------------------
@@ -2053,23 +2111,39 @@ func _hold_years_without_you(first_season: int) -> void:
 	mark_dirty()
 
 
-## The club that joins the season after a real-lists career starts, which you
-## can take by waiting for it (director, 2026-11-09: picking Tasmania plays 2027
-## without you and starts you in 2028), or "". On the 2026 National Draft's club
-## choice only. A rebuild is set on a club's real list, which it does not have.
+## The clubs joining the league after a real-lists career starts, which you
+## can take by waiting for them (director, 2026-11-09: picking Tasmania plays
+## 2027 without you and starts you in 2028). On the 2026 National Draft's club
+## choice only. Canberra (2030) is here only under a Rebuild, which keeps its
+## 2027 start with Canberra on; any other real-lists start with Canberra plays
+## 2027-2029 without you first (row T5.Q25).
+func waiting_clubs() -> Array:
+	if not opening_draft or my_club != "" or sim_ahead:
+		return []
+	var out := []
+	if GameDB.enter_year("TAS") == GameDB.START_YEAR + 1:
+		out.append("TAS")
+	if Challenge.kind(self) == "rebuild" and GameDB.enter_year("CANB") == SIM_AHEAD_TO:
+		out.append("CANB")
+	return out
+
+
+## The first of waiting_clubs(), or "".
 func waiting_club() -> String:
-	if not opening_draft or my_club != "" or sim_ahead or Challenge.kind(self) == "rebuild":
-		return ""
-	var year := GameDB.START_YEAR + 1
-	return "TAS" if GameDB.enter_year("TAS") == year else ""
+	var w := waiting_clubs()
+	return str(w[0]) if not w.is_empty() else ""
 
 
-## Take the waiting club: from the 2026 National Draft, the years up to its
+## Take a waiting club: from the 2026 National Draft, the years up to its
 ## first National Draft are played without you (sim_ahead_step), and it is
-## yours from that draft.
+## yours from that draft. A Rebuild taken this way builds the new club from
+## nothing; the bottom club keeps its three.
 func begin_wait_for_club(code: String) -> bool:
-	if code == "" or code != waiting_club():
+	if code == "" or not waiting_clubs().has(code):
 		return false
+	if Challenge.kind(self) == "rebuild":
+		challenge["club"] = code
+		challenge["gone"] = []
 	_hold_years_without_you(GameDB.enter_year(code))
 	return true
 
@@ -2288,6 +2362,12 @@ func begin_intake_draft() -> bool:
 	comps.append_array(new_club_picks)
 	draft.set_pick_owners(draft_pick_owners(season_year))
 	draft.add_compensation(comps)
+	# A joining club's job he took at the season's close starts here, at its
+	# first National Draft, with its picks (ClubMoves, TODO T5.Q25).
+	var leaving := my_club
+	if ClubMoves.apply_move_at_draft(self):
+		draft.scouting_mults.erase(leaving)
+		draft.scouting_mults[my_club] = recruiting_uncertainty_mult()
 	_watch_draft_night()
 	# Played without you, the 2029 draft waits for your club (choosing_club).
 	if not choosing_club():
@@ -3206,24 +3286,81 @@ func ensure_finals() -> void:
 		season.start_finals()
 
 
+## advance() with the week's matches run on threads while the screen keeps
+## drawing frames: the loading cover's set shot plays on (in a browser too,
+## where nothing draws until the game hands control back). Same steps, same
+## matches, same order, so the same results as advance().
+func advance_async() -> String:
+	if season == null:
+		return advance()
+	_advance_prep()
+	ensure_finals()          # a no-op before the finals; advance() does it first there too
+	var job := season.start_week()
+	while Season.running(job):
+		await get_tree().process_frame
+	_advance_reset()
+	# A browser shows a frame only between JavaScript tasks: a frame between
+	# the steps after the matches keeps the cover's ball from hanging.
+	for step in _play_steps():
+		await get_tree().process_frame
+		var stop: String = step.call()
+		if stop != "":
+			return stop
+	return last_phase
+
+
 ## Play the next round (or finals week). Returns the phase it played.
 func advance() -> String:
+	# Season.beat() between the steps, as in _restore_career: the cover's ball
+	# keeps moving through Sim the week and a skip.
 	if season == null:
 		return "none"
-	recruit_undo.clear()
-	preseason_sim_to_round1()
-	_settle_week_event()
-	MidseasonDraft.settle(self)
-	RookieList.settle(self)
-	_sync_club_plan()
-	_refresh_coach_tactics()
-	if not season.is_season_over():
-		_settle_usual_plans()
-	_stamp_conditioning()
+	_advance_prep()
+	_advance_reset()
+	for step in _play_steps():
+		Season.beat()
+		var stop: String = step.call()
+		if stop != "":
+			return stop
+	Season.beat()
+	return last_phase
+
+
+func _advance_reset() -> void:
 	last_results = []
 	last_match = {}
 	last_pos_before = my_position()
 
+
+## The week's steps before its matches.
+func _advance_prep() -> void:
+	recruit_undo.clear()
+	Season.beat()
+	preseason_sim_to_round1()
+	Season.beat()
+	_settle_week_event()
+	Season.beat()
+	MidseasonDraft.settle(self)
+	Season.beat()
+	RookieList.settle(self)
+	Season.beat()
+	_sync_club_plan()
+	Season.beat()
+	_refresh_coach_tactics()
+	Season.beat()
+	if not season.is_season_over():
+		_settle_usual_plans()
+	Season.beat()
+	_stamp_conditioning()
+
+
+## The week's matches and everything after them, in order. Each step returns
+## "" to go on, or the phase to stop at.
+func _play_steps() -> Array[Callable]:
+	return [_play_week, _log_week, _week_xp, _week_rivals, _week_after, _week_save]
+
+
+func _play_week() -> String:
 	if not season.is_regular_done():
 		last_results = season.play_round()
 		last_phase = "regular"
@@ -3242,17 +3379,36 @@ func advance() -> String:
 	else:
 		last_phase = "done"
 		return "done"
+	return ""
 
+
+func _week_xp() -> String:
+	_grant_match_xp(last_match)
+	return ""
+
+
+func _week_rivals() -> String:
+	_train_rivals(last_results)
+	_record_rivalries(last_results)
+	return ""
+
+
+func _week_after() -> String:
+	_after_round(last_results)
+	return ""
+
+
+func _week_save() -> String:
+	autosave()
+	return ""
+
+
+func _log_week() -> String:
 	for res in last_results:
 		season_log.append(res)
 		if res["home"] == my_club or res["away"] == my_club:
 			last_match = res
-	_grant_match_xp(last_match)
-	_train_rivals(last_results)
-	_record_rivalries(last_results)
-	_after_round(last_results)
-	autosave()
-	return last_phase
+	return ""
 
 
 
@@ -3604,6 +3760,28 @@ func preseason_trial() -> Dictionary:
 ## Train one week, every club by the same rules. Returns where it stopped:
 ## "trial" (the time trial has been run), "done" (Round 1 is next) or "".
 func preseason_step_week() -> String:
+	var at: Variant = _preseason_week_begin()
+	if at is Dictionary:
+		return _preseason_week_end(at, Season.run_all(at["sims"]))
+	return str(at)
+
+
+## preseason_step_week, with the other clubs' practice matches on threads
+## while frames draw, so the loading cover's set shot plays on in a browser.
+## Same matches, same order, so the same week.
+func preseason_step_week_async() -> String:
+	var at: Variant = _preseason_week_begin()
+	if at is Dictionary:
+		var job := Season.start_all(at["sims"], Season.web_cores())
+		while Season.running(job):
+			await get_tree().process_frame
+		return _preseason_week_end(at, Season.finish_all(job))
+	return str(at)
+
+
+## A pre-season week up to its practice matches: where it stops, or (the
+## practice week) the matches to play, for _preseason_week_end.
+func _preseason_week_begin() -> Variant:
 	if not preseason_active():
 		return "done"
 	RookieList.settle(self)
@@ -3626,9 +3804,8 @@ func preseason_step_week() -> String:
 		preseason["trial"] = PreSeason.trial(my_list, career_seed, season_year, my_club)
 		preseason["trial_seen"] = false
 		return "trial"
-	if str(PreSeason.STOPS.get(w, "")) == "practice" and _ai_practices(clubs):
-		# Every other pair of clubs plays its own that week; yours waits for you.
-		return "practice"
+	if str(PreSeason.STOPS.get(w, "")) == "practice":
+		return _ai_practices(clubs)
 	if str(PreSeason.STOPS.get(w, "")) == "papers":
 		_build_papers()
 		return "papers"
@@ -4182,23 +4359,50 @@ func preseason_sim_to_round1() -> void:
 		return
 	preseason["hands_off"] = true
 	while preseason_active():
-		preseason["trial_seen"] = true
-		if preseason_stop() == "story":
-			_end_preseason_cards()
-		if preseason_stop() == "practice":
-			# Simmed here, the match is never shown, so its result goes in the
-			# news (a match already coached live has its report shown).
-			if not practice_played() and sim_practice_match():
-				var line := practice_news_line()
-				if line != "":
-					add_news("preseason", line, "Pre-season")
-			(preseason["practice"] as Dictionary)["seen"] = true
-		if preseason_stop() == "papers":
-			papers_say_nothing()
-			(preseason["papers"] as Dictionary)["seen"] = true
+		_hands_off_cards()
+		_hands_off_stops(sim_practice_match())
 		preseason_step_week()
 	mark_dirty()
 	autosave()
+
+
+## preseason_sim_to_round1 with its matches on threads and a frame drawn each
+## week, so the loading cover's set shot plays on (in a browser too). Same
+## steps, same matches, same order, so the same pre-season.
+func preseason_sim_to_round1_async() -> void:
+	if not preseason_active():
+		return
+	preseason["hands_off"] = true
+	while preseason_active():
+		_hands_off_cards()
+		_hands_off_stops(await sim_practice_match_async())
+		await preseason_step_week_async()
+		await get_tree().process_frame
+	mark_dirty()
+	autosave()
+
+
+## A hands-off pre-season presses on past the trial and any card...
+func _hands_off_cards() -> void:
+	preseason["trial_seen"] = true
+	if preseason_stop() == "story":
+		_end_preseason_cards()
+
+
+## ...and past the practice match (`simmed`: yours was just played without
+## you) and the papers.
+func _hands_off_stops(simmed: bool) -> void:
+	if preseason_stop() == "practice":
+		# Simmed here, the match is never shown, so its result goes in the
+		# news (a match already coached live has its report shown).
+		if simmed:
+			var line := practice_news_line()
+			if line != "":
+				add_news("preseason", line, "Pre-season")
+		(preseason["practice"] as Dictionary)["seen"] = true
+	if preseason_stop() == "papers":
+		papers_say_nothing()
+		(preseason["papers"] as Dictionary)["seen"] = true
 
 
 # ---------------------------------------------------------------------------
@@ -4588,13 +4792,25 @@ func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dicti
 			"stood": stood, "struggled": struggled, "hurt": hurt, "prospects": seen_rows}
 
 
+## The practice week, once its matches are played.
+func _preseason_week_end(job: Dictionary, results: Array) -> String:
+	if _ai_practices_done(job, results):
+		# Every other pair of clubs plays its own that week; yours waits for you.
+		return "practice"
+	if preseason_week() >= PreSeason.weeks():
+		_finish_preseason()
+		return "done"
+	return ""
+
+
 ## Every other pair of clubs plays its practice match: each club's recruiters
 ## choose the prospects to trial by their own read of the class, the sides are
 ## their named or best available, and the matches are built in draw order,
 ## played together and finished in draw order (so the outcome never depends on
-## which finished first). Your pairing is only noted; you play it. False when
-## the draw leaves your club without a match.
-func _ai_practices(clubs: Dictionary) -> bool:
+## which finished first). Your pairing is only noted; you play it. Returns
+## the matches to play ({builds, sims, mine}); mine is "" when the draw
+## leaves your club without a match.
+func _ai_practices(clubs: Dictionary) -> Dictionary:
 	_refresh_coach_tactics()
 	var codes := []
 	for club in season.clubs:
@@ -4616,7 +4832,13 @@ func _ai_practices(clubs: Dictionary) -> bool:
 		var built := _practice_build(a, b, pa, pb)
 		builds.append(built)
 		sims.append(built["sim"])
-	var results: Array = Season.run_all(sims)
+	return {"builds": builds, "sims": sims, "mine": mine}
+
+
+## The other clubs' practice matches go in; true when yours waits for you.
+func _ai_practices_done(job: Dictionary, results: Array) -> bool:
+	var builds: Array = job["builds"]
+	var mine := str(job["mine"])
 	for i in range(builds.size()):
 		_practice_finish(str(builds[i]["home"]), builds[i], results[i])
 		_practice_finish(str(builds[i]["away"]), builds[i], results[i])
@@ -4690,6 +4912,19 @@ func sim_practice_match() -> bool:
 		return false
 	var built := _practice_mine()
 	_practice_done(built, (built["sim"] as MatchSim).run())
+	mark_dirty()
+	return true
+
+
+## sim_practice_match on a thread while frames draw (same match, same result).
+func sim_practice_match_async() -> bool:
+	if preseason_stop() != "practice" or practice_played():
+		return false
+	var built := _practice_mine()
+	var job := Season.start_all([built["sim"]], 1)
+	while Season.running(job):
+		await get_tree().process_frame
+	_practice_done(built, Season.finish_all(job)[0])
 	mark_dirty()
 	return true
 
@@ -4923,6 +5158,9 @@ func opponent_report(code: String) -> Array:
 		var what := str(THEIR_PLAN[usual])
 		play.append("Their usual game plan is %s. %s%s%s" % [RivalRead.called(usual),
 				what.left(1).to_upper(), what.substr(1), " " + legs if legs != "" else ""])
+	var trait_line := PlanTraits.rival_line(PlanTraits.for_plan(sq.usual_plan))
+	if trait_line != "":
+		play.append(trait_line)
 	var levels := {}
 	for plan in PreSeason.DRILL_PLANS:
 		levels[plan] = plan_level(code, str(plan))
@@ -6135,11 +6373,199 @@ func _finish_project(p: Dictionary, announce := true, at := "Season end") -> Dic
 	var name := GameDB.player_display_name(p)
 	var word := str(LEARN_JOBS[job]["word"])
 	var a := "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a"
-	if learned:
+	var talk := _dev_talk_for(p, job)
+	var said := str(talk.get("said", ""))
+	var told := "Round %d" % int(talk.get("round", 0))
+	if said != "":
+		_dev_talk_out(p, "learned" if learned else "not taken")
+	if learned and said == "promise" and at != "Season end":
+		# The games he was promised are owed now (_dev_promise_week starts them).
+		talk["state"] = "owed"
+		add_news("training", "%s has learned to play as %s %s. His three games there, as you told him in %s, start when he's next in the side." % [
+				name, a, word, told])
+	elif learned and said == "depth":
+		add_news("training", "%s has learned to play as %s %s: cover for the side, as you told him in %s." % [name, a, word, told])
+	elif learned:
+		if said == "promise":
+			talk["state"] = "owed"   # the season is over: open_offseason lapses it
 		add_news("training", "%s has learned to play as %s %s: he can be picked there now." % [name, a, word])
+	elif said == "promise":
+		talk["state"] = "off"
+		add_news("training", "%s's time training as %s %s has not taken, so the games there you talked about in %s are off. He knew it might not." % [
+				name, a, word, told])
 	else:
 		add_news("training", "%s's time training as %s %s has not taken: he is not ready to be picked there." % [name, a, word])
 	return {"id": str(p["id"]), "job": job, "learned": learned, "own": own, "there": there}
+
+
+# ---------------------------------------------------------------------------
+# Development talks (row T5.r93, RPG programme, ARD-M5-003; bible 5.9 #93):
+# a player learning a position wants to know what it is for. The talk is a
+# card in the week's one optional slot (data/stories/training.json,
+# training_dev_talk), in the first DEV_TALK_WEEKS weeks of his project. Promise
+# him games there if it takes, or tell him it is for depth; the verdict's news
+# line remembers which, and a promise becomes his next DEV_PROMISE_GAMES games
+# in the new position (a role trial), kept, broken or lapsed by what happens.
+# p["dev_talk"] = {"year", "round", "job", "role", "said": "promise"|"depth",
+#   "state": "heard" | "owed" | "on" | "kept" | "broken" | "off" | "lapsed"}
+# ---------------------------------------------------------------------------
+const DEV_TALK_WEEKS := 4
+const DEV_PROMISE_GAMES := 3
+## What leaving him out of the promised games costs: a promised game's sting.
+const DEV_PROMISE_STING := 12
+## How often a project takes from how far off he is in its early weeks: the
+## share that learned the position, by the gap (his own rating minus his rating
+## there) at the end of his week 1 to 4 (tools/audit/taketalk_impl.gd, 12 seeds
+## of 3 seasons, every club's projects). TAKE_PCT[week - 1][gap] is the percent
+## that learned it; a gap under 0 counts as 0 and one over TAKE_GAP_MAX as it.
+const TAKE_GAP_MAX := 5
+const TAKE_PCT := [
+	[100, 100, 85, 67, 27, 0],
+	[100, 100, 79, 45, 4, 0],
+	[100, 100, 77, 22, 1, 0],
+	[100, 100, 69, 6, 0, 0],
+]
+
+
+## His talk about the project he is on (or just finished), {} if none.
+func _dev_talk_for(p: Dictionary, job: String) -> Dictionary:
+	var t = p.get("dev_talk", {})
+	if t is Dictionary and int(t.get("year", 0)) == season_year and str(t.get("job", "")) == job:
+		return t
+	return {}
+
+
+## Is a talk about his project due? He is learning a position he does not
+## have, in the first DEV_TALK_WEEKS weeks, and you have not talked about it.
+func dev_talk_due(p: Dictionary) -> bool:
+	var job := project_job(p)
+	if job == "" or not _dev_talk_for(p, job).is_empty():
+		return false
+	if Ratings.positions(p).has(project_role(p)):
+		return false
+	var w := int((p["project"] as Dictionary).get("weeks", 0))
+	return w >= 1 and w <= DEV_TALK_WEEKS
+
+
+## "about 6 in 10": how often projects this far off at this stage take.
+func take_odds(p: Dictionary) -> String:
+	var role := project_role(p)
+	if role == "":
+		return ""
+	var w := clampi(int((p["project"] as Dictionary).get("weeks", 1)), 1, DEV_TALK_WEEKS)
+	var gap := clampi(int(p.get("overall", 0)) - rating_as(p, role), 0, TAKE_GAP_MAX)
+	return odds_in_ten(int(TAKE_PCT[w - 1][gap]))
+
+
+## A percent as the cards say odds: "about 6 in 10"; the ends stay true
+## ("fewer than 1 in 10", "more than 9 in 10").
+static func odds_in_ten(pct: int) -> String:
+	var n := int(round(pct / 10.0))
+	if n <= 0:
+		return "fewer than 1 in 10"
+	if n >= 10:
+		return "more than 9 in 10"
+	return "about %d in 10" % n
+
+
+## The talk is had (a card's choice): `said` "promise" or "depth". Kept on him
+## and as a career fact (G7, kind "talk", d "project|said"); the fact's out
+## is "heard" until the project's verdict, so the selection talks' settling
+## (_after_match_talks) never reads it.
+func dev_talk(p: Dictionary, said: String) -> void:
+	var job := project_job(p)
+	if job == "" or season == null:
+		return
+	var round_no := season.round_index + 1
+	p["dev_talk"] = {"year": season_year, "round": round_no, "job": job, "role": project_role(p),
+			"said": said, "state": "heard"}
+	CareerFacts.add(career_facts, str(p["id"]), CareerFacts.row(season_year, "Round %d" % round_no, "talk",
+			my_club, "project|" + said, "heard"))
+	mark_dirty()
+
+
+## Settle his project talk's career fact: "learned", "not taken", then "kept",
+## "broken" or "lapsed" for a promise.
+func _dev_talk_out(p: Dictionary, out: String) -> void:
+	var rows = career_facts.get(str(p["id"]), [])
+	if not (rows is Array):
+		return
+	for i in range((rows as Array).size() - 1, -1, -1):
+		var r: Array = rows[i]
+		if str(r[CareerFacts.K]) == "talk" and str(r[CareerFacts.D]).begins_with("project|") \
+				and int(r[CareerFacts.Y]) == season_year:
+			r[CareerFacts.OUT] = out
+			return
+
+
+## The promise owed or under way, {} if none.
+static func _dev_owed(p: Dictionary) -> Dictionary:
+	var t = p.get("dev_talk", {})
+	if t is Dictionary and str(t.get("said", "")) == "promise" and str(t.get("state", "")) in ["owed", "on"]:
+		return t
+	return {}
+
+
+## Each week: a fit player owed his games expects to play (Auto-pick names
+## him), and once he is in the side his games in the new position start (a role
+## trial of DEV_PROMISE_GAMES, marked as promised).
+func _dev_promise_week() -> void:
+	if season == null:
+		return
+	for p in my_list:
+		var t := _dev_owed(p)
+		if t.is_empty() or int(p.get("injury_weeks", 0)) > 0:
+			continue
+		p["expects_game"] = DEV_PROMISE_STING
+		if str(t["state"]) == "owed" and role_trial.is_empty():
+			var said := start_role_trial(p, DEV_PROMISE_GAMES, str(t.get("role", "")))
+			if said != "":
+				role_trial["promised"] = int(t.get("round", 0))
+				t["state"] = "on"
+				add_news("training", said)
+
+
+## After your match: a fit player owed his games who did not play was left out
+## of them. The promise breaks (its sting is the promised game's, paid by the
+## expects_game settling that follows).
+func _dev_promise_after_match(played: Dictionary) -> void:
+	for p in my_list:
+		var t := _dev_owed(p)
+		if t.is_empty() or played.has(str(p["id"])) or int(p.get("injury_weeks", 0)) > 0 \
+				or _round_unavailable.has(str(p["id"])):
+			continue
+		_dev_promise_broken(p, t, false)
+
+
+func _dev_promise_broken(p: Dictionary, t: Dictionary, sting: bool) -> void:
+	t["state"] = "broken"
+	_dev_talk_out(p, "broken")
+	if not role_trial.is_empty() and str(role_trial.get("id", "")) == str(p["id"]):
+		_end_role_trial(true)
+	var word := str((LEARN_JOBS.get(str(t.get("job", "")), {}) as Dictionary).get("word", "new position"))
+	var a := "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a"
+	add_news("club", "%s was promised three games as %s %s and was left out of them. He took it hard." % [
+			GameDB.player_display_name(p), a, word])
+	if sting:
+		p.erase("expects_game")
+		ClubLife.add_morale(p, -DEV_PROMISE_STING)
+		Trust.change(relations, Trust.player_key(str(p["id"])), ClubStories.BROKEN_PROMISE_TRUST,
+				"You promised him games in his new position and left him out", season_year, last_label)
+		_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You promised a player games and left him out")
+
+
+## The season is over before his promised games: the promise lapses, no sting.
+func _dev_promises_lapse() -> void:
+	for p in my_list:
+		var t := _dev_owed(p)
+		if t.is_empty():
+			continue
+		t["state"] = "lapsed"
+		_dev_talk_out(p, "lapsed")
+		p.erase("expects_game")
+		var word := str((LEARN_JOBS.get(str(t.get("job", "")), {}) as Dictionary).get("word", "new position"))
+		add_news("training", "The season ended before %s's games as a %s, so that promise lapses." % [
+				GameDB.player_display_name(p), word])
 
 
 ## A rival club's projects for one game: it runs up to PROJECT_MAX at once,
@@ -6461,6 +6887,10 @@ func _close_season_awards() -> void:
 		"year": season_year,
 		"premier": premier(),
 		"runner_up": str(season.finals.get("runner_up", "")),
+		# The men who played in the premiership side, for the club's page
+		# across generations (PremiershipSide, row T5.r158). Absent in a season
+		# closed before it was kept: never back-filled.
+		"premier_side": PremiershipInk.premiership_ids(_grand_final_result(), premier()),
 		"brownlow": [season_awards["brownlow_winner"]] if not (season_awards.get("brownlow_winner", {}) as Dictionary).is_empty() else [],
 		"coleman": (season_awards["coleman"] as Array).slice(0, 1),
 		"rising_star": (season_awards["rising_star"] as Array).slice(0, 1),
@@ -6484,6 +6914,10 @@ func _close_season_awards() -> void:
 	var sh := Almanac.season_hero(self)
 	if not sh.is_empty():
 		honour_roll[-1]["season_hero"] = [sh]
+	# The coach's ledger (P-39): which of this season's honoured players you
+	# drafted, kept now so the ledger still has them after they leave the game.
+	honour_roll[-1]["my_drafted"] = CoachLedger.snapshot(honour_roll[-1], _any_player, honour_roll,
+			my_club, season_year, my_first_season, start_mode)
 	# Your club annual starts with your first season: the years played
 	# without you (sim_ahead) are on the honour roll, not in your annual.
 	if my_club != "":
@@ -6799,6 +7233,28 @@ func pending_mro_challenges() -> Array:
 	return out
 
 
+## What a failed Tribunal challenge or appeal costs: the board's confidence
+## (0-100) drops this much (director, 2026-11-10, row T1.R26 C1).
+const TRIBUNAL_BOARD_COST := 5
+
+
+## The two lines under a Tribunal or Appeals Board case: what winning gives and
+## what losing costs, with the real odds (row T1.R26 C1).
+static func tribunal_gate(row: Dictionary) -> Array:
+	var appeal := str(row.get("stage", "tribunal")) == "appeal"
+	var pct := int(round(100.0 * (appeal_chance(row) if appeal else tribunal_chance(row))))
+	var cleared := "no fine" if str(row.get("outcome", "")) == "fine" else "no suspension"
+	return [
+		"Gain: %d%% chance he's cleared: %s, and Brownlow-eligible again" % [pct, cleared],
+		"Cost: if it fails (%d%%), the board's confidence drops %d%%" % [100 - pct, TRIBUNAL_BOARD_COST],
+	]
+
+
+func _tribunal_loss_cost() -> void:
+	if not board.is_empty():
+		board["confidence"] = clampi(board_confidence() - TRIBUNAL_BOARD_COST, 0, 100)
+
+
 static func tribunal_chance(row: Dictionary) -> float:
 	if str(row.get("outcome", "")) == "fine":
 		return 0.42
@@ -6893,9 +7349,10 @@ func challenge_mro(player_id: String) -> Dictionary:
 				"reason": "%s wins the Tribunal challenge. The sanction is overturned and Brownlow eligibility is restored." % name}
 
 	add_news("tribunal", "%s's Tribunal challenge failed; the MRO sanction stands." % name)
+	_tribunal_loss_cost()
 	mark_dirty()
 	return {"ok": true, "success": false,
-			"reason": "%s's Tribunal challenge fails. The original sanction stands." % name}
+			"reason": "%s's Tribunal challenge fails. The original sanction stands, and the board's confidence drops %d%%." % [name, TRIBUNAL_BOARD_COST]}
 
 
 ## A failed Tribunal suspension can go once to the Appeals Board. Successful
@@ -6924,9 +7381,10 @@ func appeal_mro(player_id: String) -> Dictionary:
 		return {"ok": true, "success": true,
 				"reason": "%s wins the appeal. The suspension is overturned and Brownlow eligibility is restored." % name}
 	add_news("tribunal", "%s's Appeals Board case failed; the suspension and Brownlow ineligibility stand." % name)
+	_tribunal_loss_cost()
 	mark_dirty()
 	return {"ok": true, "success": false,
-			"reason": "%s's appeal fails. The suspension and Brownlow ineligibility stand." % name}
+			"reason": "%s's appeal fails. The suspension and Brownlow ineligibility stand, and the board's confidence drops %d%%." % [name, TRIBUNAL_BOARD_COST]}
 
 
 ## Your club's new injuries from the last round, as readable lines.
@@ -7057,6 +7515,7 @@ func open_offseason(keep_staff := false) -> void:
 		for p in season.lists[code]:
 			if project_job(p) != "":
 				_finish_project(p, str(code) == my_club)
+	_dev_promises_lapse()
 	offseason_year = season_year
 	for code in season.lists:
 		ListCosts.season_over(season.lists[code], season_year)
@@ -8997,7 +9456,9 @@ func _counter(club: String, mine: Array, theirs: Array) -> Dictionary:
 			extra.append(str(pk["id"]))
 		if not draft_night_open():   # players never move on draft night
 			for p in my_list:
-				extra.append(str(p["id"]))
+				# Rivals never ask for a player you marked untouchable, in a counter too.
+				if not untouchable.has(str(p["id"])):
+					extra.append(str(p["id"]))
 		for id in extra:
 			if mine.has(id):
 				continue
@@ -10180,8 +10641,8 @@ static func _move_in_sel(sel: Dictionary, id: String, target: String) -> void:
 ## the result comes as a card (_finish_role_trial). Returns what to tell the
 ## coach, "" when there is no trial: no second position, not on the ground, or
 ## already picked there.
-func start_role_trial(p: Dictionary, games: int) -> String:
-	var role2 := ClubStories.trial_role(p)
+func start_role_trial(p: Dictionary, games: int, role := "") -> String:
+	var role2 := ClubStories.trial_role(p) if role == "" else role
 	if role2 == "" or season == null:
 		return ""
 	var id := str(p["id"])
@@ -10266,6 +10727,14 @@ func _finish_role_trial() -> void:
 	var trained := ok and _start_trial_training(p, role)
 	trial_result = {"id": str(p["id"]), "role": role, "word": CoachPathway.position_word({"pos": role}),
 			"avg": avg, "par": par, "ok": ok, "trained": trained}
+	# The games you promised him in a development talk (T5.r93): kept.
+	if role_trial.has("promised"):
+		trial_result["promised"] = int(role_trial["promised"])
+		var t := _dev_owed(p)
+		if not t.is_empty():
+			t["state"] = "kept"
+			_dev_talk_out(p, "kept")
+			p.erase("expects_game")
 	_end_role_trial(true)
 
 
@@ -10320,7 +10789,12 @@ func _trial_after_coach_pick(sel: Dictionary) -> void:
 	if _in_trial_line(line, str(role_trial.get("role", ""))):
 		role_trial["auto"] = false
 	else:
+		var promised := role_trial.has("promised")
+		var who := list_player(str(role_trial.get("id", "")))
 		role_trial = {}
+		# Moved out of the games you promised him there (T5.r93): the promise breaks.
+		if promised and not who.is_empty() and not _dev_owed(who).is_empty():
+			_dev_promise_broken(who, _dev_owed(who), true)
 
 
 ## Dual ruck (ARD-M5-001, director 2026-10-06): your second ruck takes the
@@ -10725,6 +11199,20 @@ func sim_week_stops() -> Array:
 func sim_week() -> String:
 	if season == null:
 		return "none"
+	var orders := _sim_week_orders()
+	return _sim_week_after(orders, advance())
+
+
+## sim_week with the week's matches on threads while frames keep drawing.
+func sim_week_async() -> String:
+	if season == null:
+		return "none"
+	var orders := _sim_week_orders()
+	var phase: String = await advance_async()
+	return _sim_week_after(orders, phase)
+
+
+func _sim_week_orders() -> Dictionary:
 	var orders := SimOrders.defaults().merged(sim_orders, true)
 	var policy := str(orders["questions"])
 	_skip_orders = {"questions": policy if policy in ["players", "board"] else "usual"}
@@ -10732,7 +11220,10 @@ func sim_week() -> String:
 		if not my_selection().is_empty():
 			set_selection({})
 		_skip_back_kids("season")
-	var phase := advance()
+	return orders
+
+
+func _sim_week_after(orders: Dictionary, phase: String) -> String:
 	_skip_orders = {}
 	if str(orders["press"]) == "assistant":
 		skip_media_conference()
@@ -10782,8 +11273,11 @@ func _plan_row(key: String) -> Dictionary:
 		var row: Dictionary = LEARN_JOBS[job]
 		var word := str(row["word"])
 		return {"key": key, "label": "Learn to play %s" % word, "roles": [],
-				"text": "%d weeks training as %s %s instead of in his own position, and his own game barely moves for the rest of the season. If he is close enough to the standard at the end, he can be picked there too; if not, it has not taken." % [
-					PROJECT_WEEKS, "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a", word],
+				# The sizes the project runs on (row T1.R26 C2): PROJECT_OWN_GAIN,
+				# PROJECT_PASS, LEARN_PAYBACK.
+				"text": "%d weeks training as %s %s instead of in his own position. For the rest of the season his own rating can rise only %d more. If his rating there ends within %d of his own, he can be picked there too, and next season his own rating can climb %d past the usual limit; if not, it has not taken." % [
+					PROJECT_WEEKS, "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a", word,
+					PROJECT_OWN_GAIN, PROJECT_PASS, LEARN_PAYBACK],
 				"weights": row["weights"]}
 	for row in TRAIN_PLANS:
 		if str(row["key"]) == key:
@@ -11916,6 +12410,8 @@ func _board_after_round(results: Array) -> void:
 					"You broke your word on his run of games", season_year, last_label)
 			_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You broke your word on a player's run of games")
 		p.erase("expects_game")
+	# Games promised in a development talk (T5.r93): left out of them fit breaks it.
+	_dev_promise_after_match(played)
 	# A player promised a game (a talk, or a kid given his chance): leaving
 	# him out fit sours it. Once: the promise ends with the round.
 	for p in my_list:
@@ -12416,7 +12912,8 @@ func _press_opinion(kind: String, his: Dictionary, move: int, round_no: int) -> 
 	return {"name": GameDB.player_display_name(his), "from": Trust.opinion(from), "to": Trust.opinion(to)}
 
 
-## Season over: did you meet the goal? Miss it badly twice and you are gone.
+## Season over: did you meet the goal? The board's confidence at the end decides a
+## warning and then the sack (ClubLife.season_end).
 func _board_season_end() -> void:
 	if board.is_empty():
 		return
@@ -12443,6 +12940,7 @@ func _board_season_end() -> void:
 
 func _next_week_event() -> void:
 	ExpansionBuild.week(self)
+	_dev_promise_week()
 	week_events = []
 	if season == null or is_sacked() or not stories_on or my_club == "":
 		return
@@ -12464,10 +12962,18 @@ func _next_week_event() -> void:
 ## finals drawn and yours to coach; "season" plays on to the end of the finals.
 ## Returns {"ok", "year", "weeks", "reason": "done" | "sacked" | "none"}.
 func skip_season(orders := {}, to := "season") -> Dictionary:
+	var job := skip_begin(orders, to)
+	while skip_step(job):
+		pass
+	return skip_finish(job)
+
+
+## skip_season in steps, one week each, so the loading cover can show a frame
+## (and the round) between weeks: skip_begin, skip_step until false, then
+## skip_finish. The same calls in the same order as skip_season.
+func skip_begin(orders := {}, to := "season") -> Dictionary:
 	if season == null or is_sacked() or _skip_reached(to):
-		return {"ok": false, "year": season_year, "weeks": 0, "reason": "none"}
-	var year := season_year
-	var weeks := 0
+		return {"ok": false, "year": season_year, "weeks": 0, "reason": "none", "to": to, "done": true}
 	_batching = true
 	_skip_orders = SkipOrders.defaults(club_plan)
 	_skip_orders.merge(orders, true)
@@ -12476,14 +12982,44 @@ func skip_season(orders := {}, to := "season") -> Dictionary:
 	set_club_plan(str(_skip_orders["game_plan"]))
 	if str(_skip_orders["youth"]) == "kids" and not season.is_regular_done() and not my_selection().is_empty():
 		set_selection({})
-	while season != null and not _skip_reached(to) and weeks < 80:
-		if str(_skip_orders["youth"]) == "kids":
-			_skip_back_kids(to)
-		advance()
-		weeks += 1
-		if is_sacked():
-			break
-	if is_sacked() or season == null or not _skip_reached(to):
+	return {"year": season_year, "weeks": 0, "to": to}
+
+
+## Plays the next week of a skip. False once there is nothing left to play.
+func skip_step(job: Dictionary) -> bool:
+	if bool(job.get("done", false)):
+		return false
+	var to := str(job["to"])
+	if season == null or _skip_reached(to) or int(job["weeks"]) >= 80 or is_sacked():
+		return false
+	if str(_skip_orders["youth"]) == "kids":
+		_skip_back_kids(to)
+	advance()
+	job["weeks"] = int(job["weeks"]) + 1
+	return not is_sacked()
+
+
+## skip_step with the week's matches on threads while frames keep drawing.
+func skip_step_async(job: Dictionary) -> bool:
+	if bool(job.get("done", false)):
+		return false
+	var to := str(job["to"])
+	if season == null or _skip_reached(to) or int(job["weeks"]) >= 80 or is_sacked():
+		return false
+	if str(_skip_orders["youth"]) == "kids":
+		_skip_back_kids(to)
+	await advance_async()
+	job["weeks"] = int(job["weeks"]) + 1
+	return not is_sacked()
+
+
+## Ends a skip: saved once. {"ok", "year", "weeks", "reason": "done" | "sacked" | "none"}.
+func skip_finish(job: Dictionary) -> Dictionary:
+	if bool(job.get("done", false)):
+		return {"ok": false, "year": job["year"], "weeks": 0, "reason": "none"}
+	var year := int(job["year"])
+	var weeks := int(job["weeks"])
+	if is_sacked() or season == null or not _skip_reached(str(job["to"])):
 		_batching = false
 		_skip_orders = {}
 		autosave()
@@ -12493,6 +13029,16 @@ func skip_season(orders := {}, to := "season") -> Dictionary:
 	mark_dirty()
 	autosave()
 	return {"ok": true, "year": year, "weeks": weeks, "reason": "done"}
+
+
+## The cover's line while a skip plays the coming week: the round of the
+## season's rounds, or the finals.
+func skip_progress() -> String:
+	if season == null:
+		return ""
+	if not season.is_regular_done():
+		return "Playing Round %d of %d..." % [season.round_index + 1, season.fixture.size()]
+	return "Playing the finals..."
 
 
 ## Has the skip got where it was going?
@@ -13100,7 +13646,16 @@ func set_club_plan(key: String) -> void:
 	mark_dirty()
 
 
+## Your game-plan trait (PlanTraits id, or "" for none): every match from the
+## next bounce, played or simmed.
+func set_plan_trait(id: String) -> void:
+	plan_trait = PlanTraits.valid(id)
+	_sync_club_plan()
+	mark_dirty()
+
+
 func _sync_club_plan() -> void:
+	CoachEffects.my_trait = plan_trait
 	if season != null:
 		season.plans = {my_club: club_plan} if club_plan != "balanced" else {}
 

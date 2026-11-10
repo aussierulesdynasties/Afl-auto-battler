@@ -384,16 +384,16 @@ static func late_cost(plan: String, w: int, bye_w: int) -> String:
 ## here from the constants the curve and the stamps use, at the club's
 ## high-performance level, so the words cannot drift from the rules. The
 ## templates carry no figure of their own (tests/test_fitness.gd checks).
-const PLAN_UP_PEAK := "Upside: at its best in %s the side tires %s slower, has %s fewer soft-tissue injuries and up to %s more in the legs."
-const PLAN_DOWN_PEAK := "Downside: building through to %s it tires %s faster, has %s less in the legs and %s more soft-tissue injuries."
-const PLAN_UP_FAST := "Upside: at its best in %s the side tires %s slower and has %s fewer soft-tissue injuries."
-const PLAN_DOWN_FAST := "Downside: from %s on, and through September, it tires up to %s faster, has up to %s less in the legs and up to %s more soft-tissue injuries."
-const PLAN_ODDS := "Odds: the peak lands within %d weeks of plan about %s of the time; otherwise it comes early or late."
-const PLAN_ODDS_SURE := "Odds: the peak lands within %d weeks of plan every season."
-const PLAN_UP_STEADY := "Upside: the same legs every week, with no heavy weeks and no extra soft-tissue risk."
-const PLAN_DOWN_STEADY := "Downside: no peak, so the side is no fresher in September than in March."
-const PLAN_UP_DEVELOP := "Upside: players %d and under earn %s more development XP, and with the plan on since the bye they have %d more %s of room to grow this season. %s fewer soft-tissue injuries all year."
-const PLAN_DOWN_DEVELOP := "Downside: all year the side tires %s faster and has %s less in the legs."
+const PLAN_UP_PEAK := "Gain: at its best in %s the side tires %s slower, has %s fewer soft-tissue injuries and up to %s more in the legs."
+const PLAN_DOWN_PEAK := "Cost: building through to %s it tires %s faster, has %s less in the legs and %s more soft-tissue injuries."
+const PLAN_UP_FAST := "Gain: at its best in %s the side tires %s slower and has %s fewer soft-tissue injuries."
+const PLAN_DOWN_FAST := "Cost: from %s on, and through September, it tires up to %s faster, has up to %s less in the legs and up to %s more soft-tissue injuries."
+const PLAN_ODDS := "The peak lands within %d weeks of plan about %s of the time; otherwise it comes early or late."
+const PLAN_ODDS_SURE := "The peak lands within %d weeks of plan every season."
+const PLAN_UP_STEADY := "Gain: the same legs every week, with no heavy weeks and no extra soft-tissue risk."
+const PLAN_DOWN_STEADY := "Cost: no peak, so the side is no fresher in September than in March."
+const PLAN_UP_DEVELOP := "Gain: players %d and under earn %s more development XP, and with the plan on since the bye they have %d more %s of room to grow this season. %s fewer soft-tissue injuries all year."
+const PLAN_DOWN_DEVELOP := "Cost: all year the side tires %s faster and has %s less in the legs."
 
 
 ## A share as a percentage, as the plan screens say it: "12%", "7.5%".
@@ -452,8 +452,9 @@ static func _best_months(peak_w: int) -> String:
 	return a if a == b else "%s and %s" % [a, b]
 
 
-## What `plan` does at a department level: its upside, its downside and, for a
-## plan with a peak, the odds it lands on time, one line each.
+## What `plan` does at a department level: its gain and its cost, one line
+## each (director 2026-11-10: "Gain / Cost everywhere", odds inside the line),
+## the odds a peak lands on time inside the gain line.
 static func plan_effect(plan: String, hp_level: int) -> String:
 	var h := float(PEAK_HEIGHT[ClubBudget.clamp_level(hp_level)])
 	var b := -BUILD_FLOOR
@@ -466,9 +467,8 @@ static func plan_effect(plan: String, hp_level: int) -> String:
 			for w in range(pw + 1):
 				if shape("peak", w, pw) <= BUILD_FLOOR:
 					deep = w
-			lines.append(PLAN_UP_PEAK % [_best_months(pw), pct(DRAIN_K * h), pct(INJURY_K * h), legs_pct(RESTORE_K * h)])
+			lines.append(PLAN_UP_PEAK % [_best_months(pw), pct(DRAIN_K * h), pct(INJURY_K * h), legs_pct(RESTORE_K * h)] + " " + odds_words(hp_level))
 			lines.append(PLAN_DOWN_PEAK % [month_of_week(deep), pct(DRAIN_K * b), legs_pct(CAP_K * b), pct(INJURY_K * b)])
-			lines.append(odds_words(hp_level))
 		"fast":
 			var fw := int(PEAK_WEEK["fast"])
 			# The first week after the early peak that the side is heavier than steady.
@@ -476,9 +476,8 @@ static func plan_effect(plan: String, hp_level: int) -> String:
 			for w in range(LAST_WEEK, fw, -1):
 				if shape("fast", w, fw) < 0.0:
 					heavy = w
-			lines.append(PLAN_UP_FAST % [_best_months(fw), pct(DRAIN_K * h), pct(INJURY_K * h)])
+			lines.append(PLAN_UP_FAST % [_best_months(fw), pct(DRAIN_K * h), pct(INJURY_K * h)] + " " + odds_words(hp_level))
 			lines.append(PLAN_DOWN_FAST % [month_of_week(heavy), pct(DRAIN_K * b), legs_pct(CAP_K * b), pct(INJURY_K * b)])
-			lines.append(odds_words(hp_level))
 		"steady":
 			lines.append(PLAN_UP_STEADY)
 			lines.append(PLAN_DOWN_STEADY)
@@ -504,9 +503,9 @@ const HP_ODDS_SURE := "every season"
 const HP_PLAN_UP := "Any game plan but Balanced gives %s more of what it is built for than at Standard."
 const HP_PLAN_DOWN := "Any game plan but Balanced gives %s less of what it is built for than at Standard."
 const HP_PLAN_EVEN := "Game plans give what they are built for."
-const HP_COST_MORE := "Costs %s more than Standard, taken from the other departments."
+const HP_COST_MORE := "%s more than Standard, taken from the other departments."
 const HP_COST_LESS := "Frees %s for the other departments."
-const HP_COST_EVEN := "Costs %s, an even share of the budget."
+const HP_COST_EVEN := "%s, an even share of the budget."
 
 
 static func department_words(hp_level: int) -> String:
@@ -532,7 +531,16 @@ static func department_words(hp_level: int) -> String:
 		cost = HP_COST_MORE % ("$%.1fm" % diff)
 	elif diff < -0.001:
 		cost = HP_COST_LESS % ("$%.1fm" % -diff)
-	return "%s %s %s %s" % [recovery, peak, plan, cost]
+	# Gain / Cost (director 2026-11-10): what the level buys is its gain and
+	# what it gives up, money or legs, its cost. Below Standard the money it
+	# frees is the gain and the weaker department the cost.
+	var gains: PackedStringArray = [recovery, peak, plan]
+	var costs: PackedStringArray = [cost]
+	if level < ClubBudget.STANDARD:
+		gains = [cost]
+		costs = [recovery, peak, plan]
+	return "%s
+%s" % [GateOdds.gain(" ".join(gains)), GateOdds.cost(" ".join(costs))]
 
 
 ## The plan sheet's department line: whose level the sizes and odds above are for.

@@ -826,6 +826,12 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 					_pct(int(e.get("chance", 0))), _pct(absi(int(e.get("d", 0))))]]]
 		"role_trial":
 			return [["gain", _trial_words(e)], ["cost", _trial_cost_words(e, facts)]]
+		# The development talk (T5.r93, GameState.dev_talk): games there if it takes.
+		"dev_promise":
+			return [["cost", "If it takes ({take_odds}), he expects his next three games as a {proj_word}, and Auto-pick plays him there. Leave him out of them fit and the promise breaks: %s Three games away from his usual spot." % _broken_words(
+					GameState.DEV_PROMISE_STING, BROKEN_PROMISE_TRUST, facts)]]
+		"no_promise":
+			return [["gain", "No promise to keep."]]
 		"on_record":
 			return [["cost", _record_words(facts)]]
 		# The pre-season cards' club levers: a culture strand (-100 to 100, so one

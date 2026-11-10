@@ -2417,6 +2417,26 @@ func _test_trade_market() -> void:
 				and (str(c["say"]).begins_with("“We'd need") or str(c["say"]).begins_with("“We could do it without")) \
 				and not str(c["say"]).contains("pick:")
 	_check(countered > 0 and good, "A refused offer gets a counter in their words, and making that change gets it done (%d)" % countered)
+	# A counter never asks for a player you marked untouchable (row T1.R26 C2).
+	var named := 0
+	var spared := true
+	for k in [6, 10, 14]:
+		var ask2 := [str(theirs[k]["id"])]
+		var offer2 := [str(mine[k]["id"])]
+		var c2 := GameState.trade_counter(rival, offer2, ask2)
+		if c2.is_empty() or (c2["mine"] as Array).size() <= offer2.size():
+			continue
+		var extra_id := str((c2["mine"] as Array)[-1])
+		if extra_id.begins_with("pick:"):
+			continue
+		named += 1
+		GameState.set_untouchable(extra_id, true)
+		var c3 := GameState.trade_counter(rival, offer2, ask2)
+		spared = spared and not (c3.get("mine", []) as Array).has(extra_id)
+		GameState.set_untouchable(extra_id, false)
+	if named == 0:
+		print("SKIP: no counter asked for one of your players, so untouchable was not exercised")
+	_check(spared, "A counter never asks for a player marked untouchable (%d tried)" % named)
 	_check(GameState.trade_counter(rival, [str(mine[mine.size() - 1]["id"])], [str(theirs[theirs.size() - 1]["id"])]).is_empty(),
 			"An offer they'd take needs no counter")
 

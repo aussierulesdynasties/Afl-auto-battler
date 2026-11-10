@@ -85,6 +85,8 @@ func _run() -> void:
 		await _t("_test_club_tap", [sz])
 		await _t("_test_board_taps", [sz])
 		await _t("_test_trophies", [sz])
+		await _t("_test_premiership_side", [sz])
+	await _t("_test_premiership_side_rules")
 	# The narrowest phone the game lays out for.
 	await _t("_test_board_taps", [Vector2i(320, 693)])
 	await _t("_test_drag_over_club", [Vector2i(390, 844)])
@@ -484,6 +486,7 @@ func _test_club_tap(sz: Vector2i) -> void:
 		# #759: a rival's page shows public facts only.
 		for banned in ["OVR", "Mood", "morale", "Game plan", "rating", "Rating", "potential"]:
 			_check(not txt.contains(banned), "%s: a rival's page never shows '%s'" % [tag, banned])
+		_check(CopyRules.words_in(txt).is_empty(), "%s: a rival's page keeps the copy rules: %s" % [tag, CopyRules.words_in(txt)])
 		_check(page.find_child("HonourBoardButton", true, false) == null, "%s: a rival's page has no honour board" % tag)
 		_check(txt.contains("Players swapped") and txt.contains("Played 160 for you"),
 				"%s: the page names the player you swapped with them" % tag)
@@ -576,9 +579,14 @@ func _test_board_taps(sz: Vector2i) -> void:
 		var prof: Node = screen.get_node_or_null("PlayerProfile")
 		_check(why3 == "" and prof != null, "%s: a name of a player still in the game opens his profile (%s)" % [tag, why3])
 		var ptext := _text_of(prof) if prof != null else ""
+		# His career story (CareerTale) may say the flag or the medal; then the
+		# facts under it leave that one out. Each is said once either way.
+		var flag_fact := ptext.contains("At Fremantle for the %d premiership." % (y - 2))
+		var flag_told := ptext.contains("with us for the %d premiership." % (y - 2))
+		var medal_fact := ptext.contains("Coleman Medal %d." % (y - 2))
+		var medal_told := ptext.contains("won the Coleman Medal in %d." % (y - 2))
 		_check(ptext.contains("Debuted in %d, for Fremantle." % (y - 8))
-				and ptext.contains("At Fremantle for the %d premiership." % (y - 2))
-				and ptext.contains("Coleman Medal %d." % (y - 2)),
+				and flag_fact != flag_told and medal_fact != medal_told,
 				"%s: his profile's Career section lists his debut, flag and medal on record (%s)" % [tag, ptext.replace("\n", " | ")])
 		_gs.honour_roll.pop_back()
 		_router.handle_back()
@@ -641,6 +649,85 @@ func _test_trophies(sz: Vector2i) -> void:
 				"%s: Close closes the trophies, the page stays (%s)" % [tag, why])
 	_router.handle_back()
 	await _settle()
+	screen.queue_free()
+	await _settle()
+
+
+## A club's last premiership side against its list today (row T5.r158): the
+## rule's cases, with no screen.
+func _test_premiership_side_rules() -> void:
+	var ps: GDScript = load("res://scripts/sim/PremiershipSide.gd")
+	var list := [{"id": "a"}, {"id": "c"}, {"id": "x"}]
+	var side := ["a", "b", "c", "d"]
+	var roll := [{"year": 2028, "premier": "MEL", "premier_side": side},
+			{"year": 2030, "premier": "GEE", "premier_side": ["g"]}]
+	var r: Dictionary = ps.remains(roll, "MEL", list, 2032)
+	_check(r == {"year": 2028, "of": 4, "left": ["a", "c"]},
+			"Two of the 2028 side are still on the list, in the side's order (%s)" % str(r))
+	var named := func(id: String) -> String: return id.to_upper()
+	_check(ps.line(r, named) == ["2028 premiership players still on the list", "A and C"],
+			"The line names them (%s)" % str(ps.line(r, named)))
+	_check(ps.line(ps.remains(roll, "MEL", [{"id": "c"}], 2032), named)
+			== ["2028 premiership player still on the list", "C"], "One survivor reads in the singular")
+	_check(ps.line(ps.remains(roll, "MEL", [{"id": "x"}], 2032), named)
+			== ["No 2028 premiership players left on the list", ""], "A side that has all gone says so")
+	var big := []
+	for i in 22:
+		big.append("p%d" % i)
+	var many: Array = big.map(func(id): return {"id": id})
+	var r2: Dictionary = ps.remains([{"year": 2029, "premier": "SYD", "premier_side": big}], "SYD", many.slice(0, 7), 2031)
+	_check(ps.line(r2, named) == ["2029 premiership players still on the list", "7 of 22"],
+			"More than four are counted, not named (%s)" % str(ps.line(r2, named)))
+	# Quiet: no flag, a flag this season, a flag with no side on record.
+	_check(ps.remains(roll, "FRE", list, 2032).is_empty(), "A club with no flag on record shows nothing")
+	_check(ps.remains(roll, "MEL", list, 2028).is_empty(), "This season's flag is not yet an earlier side")
+	var old := [{"year": 2027, "premier": "MEL", "premier_side": side}, {"year": 2029, "premier": "MEL"}]
+	_check(ps.remains(old, "MEL", list, 2032).is_empty(),
+			"A latest flag closed before sides were kept shows nothing, not an older one")
+	_check(ps.line({}, named).is_empty(), "No record, no words")
+
+
+## The line on a club's page: there for a club whose flag side is on record,
+## its names open the player; absent for a quiet club.
+func _test_premiership_side(sz: Vector2i) -> void:
+	var tag := "%dx%d" % [sz.x, sz.y]
+	_fresh("FRE")
+	var y := int(_gs.season_year)
+	var mel: Array = _gs.season.lists["MEL"]
+	var side := []
+	for i in 23:
+		side.append("gone_%d" % i)
+	side[3] = str(mel[0]["id"])
+	side[11] = str(mel[1]["id"])
+	_gs.honour_roll = [{"year": y - 3, "premier": "MEL", "runner_up": "GEE", "premier_side": side}]
+	var screen := _screen(sz)
+	await _settle()
+	_cl.open(screen, "MEL")
+	await _settle()
+	var page := _page(screen)
+	var line: RichTextLabel = page.find_child("PremiershipSide", true, false) if page != null else null
+	var want := "%d premiership players still on the list:  %s and %s" % [y - 3,
+			_db.player_display_name(mel[0]), _db.player_display_name(mel[1])]
+	_check(line != null and line.get_parsed_text() == want,
+			"%s: Melbourne's page sets its %d premiership side against today's list (%s)" % [
+			tag, y - 3, line.get_parsed_text() if line != null else "no line"])
+	if line != null:
+		var opened := await _scan_until(line, func() -> bool: return _open_node("PlayerProfile") != null)
+		_check(opened, "%s: a finger on a premiership player's name opens him" % tag)
+		if opened:
+			_router.handle_back()
+			await _settle()
+	_router.handle_back()
+	await _settle()
+	# Geelong lost that Grand Final and has no flag on record: nothing at all.
+	_cl.open(screen, "GEE")
+	await _settle()
+	page = _page(screen)
+	_check(page != null and page.find_child("PremiershipSide", true, false) == null,
+			"%s: a club with no premiership side on record shows no line" % tag)
+	_router.handle_back()
+	await _settle()
+	_gs.honour_roll = []
 	screen.queue_free()
 	await _settle()
 
@@ -793,6 +880,18 @@ func _from_hub(sz: Vector2i) -> void:
 	await _settle()
 	var line: Control = scene.find_child("TribunalLine", true, false)
 	_check(line != null, "%s: the hub names a player in the tribunal line" % tag)
+	var gain: Control = scene.find_child("TribunalGain", true, false)
+	var cost: Control = scene.find_child("TribunalCost", true, false)
+	_check(gain != null and cost != null and gain.is_visible_in_tree() and cost.is_visible_in_tree()
+			and (gain.find_child("Text", true, false) as Label).text.begins_with("22% chance he's cleared")
+			and (cost.find_child("Text", true, false) as Label).text.contains("(78%)"),
+			"%s: the case shows what winning gives and losing costs, with its odds" % tag)
+	var marks_whole := gain != null and cost != null
+	for row in [gain, cost]:
+		if row != null:
+			var mk := row.find_child("Mark", true, false) as Label
+			marks_whole = marks_whole and mk != null and mk.get_line_count() == 1
+	_check(marks_whole, "%s: Gain: and Cost: each read on one line beside their words" % tag)
 	if line != null:
 		var opened: bool = await _scan_until(line, func() -> bool: return _open_node("PlayerProfile") != null)
 		var prof := _open_node("PlayerProfile")

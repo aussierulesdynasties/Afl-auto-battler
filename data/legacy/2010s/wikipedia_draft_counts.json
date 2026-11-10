@@ -1,0 +1,67 @@
+{
+ "2009": {
+  "free_agency": 0,
+  "national": 91,
+  "preseason": 7,
+  "rookie": 72
+ },
+ "2010": {
+  "free_agency": 0,
+  "national": 107,
+  "preseason": 6,
+  "rookie": 74
+ },
+ "2011": {
+  "free_agency": 0,
+  "mini": 2,
+  "national": 85,
+  "preseason": 5,
+  "rookie": 78
+ },
+ "2012": {
+  "free_agency": 14,
+  "mini": 2,
+  "national": 94,
+  "preseason": 8,
+  "rookie": 45
+ },
+ "2013": {
+  "free_agency": 15,
+  "national": 85,
+  "preseason": 1,
+  "rookie": 54
+ },
+ "2014": {
+  "free_agency": 12,
+  "national": 76,
+  "preseason": 1,
+  "rookie": 64
+ },
+ "2015": {
+  "free_agency": 8,
+  "national": 70,
+  "rookie": 64
+ },
+ "2016": {
+  "free_agency": 9,
+  "national": 77,
+  "rookie": 50
+ },
+ "2017": {
+  "free_agency": 8,
+  "national": 77,
+  "preseason": 1,
+  "rookie": 36
+ },
+ "2018": {
+  "free_agency": 10,
+  "national": 78,
+  "rookie": 40
+ },
+ "2019": {
+  "free_agency": 10,
+  "national": 65,
+  "preseason": 2,
+  "rookie": 33
+ }
+}
