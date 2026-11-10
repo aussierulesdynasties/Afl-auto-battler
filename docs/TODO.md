@@ -10,7 +10,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 
 | # | What | Done looks like |
 |---|---|---|
-| 11 | Spilled tackle counted as an intercept (MatchSim.gd, around lines 3340-3344): count it as a spilled tackle, not an intercept | a seeded test shows a spilled tackle is not counted as an intercept |
 
 ## B. Built and ON: his playtest judges
 
@@ -26,7 +25,6 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 | 49, 50 | Match hero, turning point, reasons; club almanac | #853 #855 #890 | his playtest |
 | 35, 36 | Finals cards slice 2 and Grand Final cards | #864 | his playtest of the eight slice-2 cards (A3, A9, A14, A15, A16, B7, B8, B9), including the B8 running debt |
 | 52 | Expansion package, training report, speccy front | #711 #725 #735 #741 #1164 #1174 #745 #1126 #1074 | his playtest of the speccy front and the expansion entry; his look at the training report popup (#1164) |
-| 11 | Stoppages from contests, play on after a won ball | #897 #901 | his playtest; the spilled-tackle fix is in A; spoils, intercept marks and ground-ball gets are in Z |
 | 13 | Every in-match decision opens on a vignette scene; time pauses at a decision | #902 #908 | his 1.11 playtest gate |
 | 14 | Opposition goal run as two football moves over the centre ball-up | #903 | his playtest; which two moves (bible 2.Q8, D5 Q57): built as Stack the centre bounce and Flood behind the ball |
 | 15 | Late-game centre ball-up: two distinct choices | #899 #1074 | his playtest; are Stack the stoppage and Flood behind the ball the right two (bible 2.Q9, D5 Q58) |
