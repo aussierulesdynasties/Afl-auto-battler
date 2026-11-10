@@ -47,6 +47,7 @@ func _run() -> void:
 	await _t("_test_culture_ui_tests")
 	await _t("_test_captain_card_ui_tests")
 	await _t("_test_top_attributes_on_cards")
+	await _t("_test_top_three_on_compact_cards")
 	print(Ran.line("Roles + selection", self, [suite]))
 	_state.replay_seed = 0
 	quit(0 if _failures.is_empty() else 1)
@@ -1227,3 +1228,144 @@ func _test_top_attributes_on_cards() -> void:
 	sheet.queue_free()
 	await tree.process_frame
 	host.queue_free()
+
+
+## Row 150 (director, 2026-11-10: "Yes, add them"): the compact cards on Team
+## builder, Training and Off-season show each player's top three attributes,
+## at 390 px wide with nothing cut short, and a finger on them still picks him.
+func _test_top_three_on_compact_cards() -> void:
+	var db = root.get_node("GameDB")
+	var profile = load("res://scripts/sim/PlayerProfile.gd")
+	_state.reset()
+	_state.start_season("FRE", db.club_list("FRE"))
+	_state.set_selection({})
+	root.size = Vector2i(390, 844)
+	# Team builder: everyone outside the 23.
+	var ui := await _open(false)
+	var grid: Node = ui.find_child("NotSelected", true, false)
+	var cards: Array = grid.get_children() if grid != null else []
+	_check(cards.size() == _state.my_list.size() - 23 and cards.size() >= 4,
+			"Team builder: everyone outside the 23 has a card (%d)" % cards.size())
+	var bad := ""
+	for c in cards:
+		bad = _top_three_fault(c, _state.list_player(str(c.get_meta("id"))), profile) if bad == "" else bad
+	_check(bad == "", "Team builder: every compact card shows the top three whole at 390 px (%s)" % bad)
+	var first: Button = cards[0] if not cards.is_empty() else null
+	var three: Control = first.find_child("TopThree", true, false) if first != null else null
+	var first_id := str(first.get_meta("id")) if first != null else ""
+	# The phone's list is a short window of its own: the first card's every
+	# line, the top three last, shows in it without a scroll.
+	var window: Control = ui.find_child("NotSelectedScroll", true, false)
+	_check(window != null and three != null and window.get_global_rect().grow(0.5).encloses(three.get_global_rect())
+			and first.global_position.y >= window.global_position.y - 0.5,
+			"Team builder: the first card's top three show in the phone's list without a scroll (%s in %s)" % [
+			str(three.get_global_rect()) if three != null else "none", str(window.get_global_rect()) if window != null else "none"])
+	var why := "no card"
+	if three != null:
+		why = await Tap.tap_at(first, three.global_position + three.size * 0.5 - first.global_position)
+		await _settle()
+	var builder: Node = ui.find_child("TeamBuilder", true, false)
+	_check(why == "" and first_id != "" and builder != null and str(builder.get("_picked")) == first_id,
+			"Team builder: a real tap on the top three picks that player (%s)" % why)
+	ui.queue_free()
+	await _settle()
+	# Training: the whole list, two across.
+	var tr: Control = load("res://scenes/TrainingScene.tscn").instantiate()
+	root.add_child(tr)
+	await _settle()
+	var tcards: Array = tr.find_children("Card_*", "PanelContainer", true, false)
+	_check(tcards.size() == _state.my_list.size() and tcards.size() >= 30,
+			"Training: every player has a card (%d of %d)" % [tcards.size(), _state.my_list.size()])
+	bad = ""
+	var heights := {}
+	for c in tcards:
+		bad = _top_three_fault(c, _state.list_player(str(c.name).trim_prefix("Card_")), profile) if bad == "" else bad
+		heights[int((c as Control).size.y)] = true
+	_check(bad == "", "Training: every card shows the top three whole at 390 px (%s)" % bad)
+	_check(heights.size() == 1, "Training: the cards are still one height (%s)" % str(heights.keys()))
+	var tcard: Control = tcards[0] if not tcards.is_empty() else null
+	var tid := str(tcard.name).trim_prefix("Card_") if tcard != null else ""
+	var tbtn: Button = tcard.find_child("Trainee_" + tid, true, false) if tcard != null else null
+	var t3: Control = tcard.find_child("TopThree", true, false) if tcard != null else null
+	why = "no card"
+	if tbtn != null and t3 != null:
+		await Tap.steady(tbtn)
+		why = await Tap.tap_at(tbtn, t3.global_position + t3.size * 0.5 - tbtn.global_position)
+		await _settle()
+	_check(why == "" and bool(tr.get("_showing_detail")) and str(tr.get("_selected")) == tid,
+			"Training: a real tap on the top three opens that player (%s)" % why)
+	tr.queue_free()
+	await _settle()
+	# Off-season: the player rows, as wide as the page.
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	for tab in ["contracts", "agents"]:
+		var off: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
+		root.add_child(off)
+		off.set("_tab", tab)
+		off.call("_build")
+		await _settle()
+		var names: Array = off.find_children("PlayerName_*", "", true, false)
+		var threes: Array = off.find_children("TopThree", "", true, false)
+		_check(names.size() >= 1 and threes.size() == names.size(),
+				"Off-season %s: every player row has his top three (%d of %d)" % [tab, threes.size(), names.size()])
+		bad = ""
+		for n in names:
+			var q: Dictionary = _find_player(str(n.name).trim_prefix("PlayerName_"))
+			var holder: Node = n
+			while holder != null and holder.find_child("TopThree", true, false) == null:
+				holder = holder.get_parent()
+			bad = _top_three_fault(holder, q, profile) if bad == "" else bad
+		_check(bad == "", "Off-season %s: every row shows the top three whole at 390 px (%s)" % [tab, bad])
+		off.queue_free()
+		await _settle()
+
+
+## One of yours or a free agent, by id.
+func _find_player(id: String) -> Dictionary:
+	var p: Dictionary = _state.list_player(id)
+	if not p.is_empty():
+		return p
+	for q in _state.free_agents:
+		if str(q.get("id", "")) == id:
+			return q
+	return {}
+
+
+## "" when `card` shows p's top three, best first, with every word whole and
+## inside the card and the screen; else what is wrong, with his name.
+func _top_three_fault(card: Node, p: Dictionary, profile) -> String:
+	var who := str(p.get("generic_name", p.get("id", "?")))
+	var box: Control = card.find_child("TopThree", true, false) if card != null else null
+	if box == null or p.is_empty():
+		return "%s has no top three" % who
+	var top: Array = profile.top_attributes(p)
+	if top.size() != 3 or box.get_child_count() != 3:
+		return "%s shows %d of %d" % [who, box.get_child_count(), top.size()]
+	var outer := (card as Control).get_global_rect().grow(0.5)
+	var last_end := -1.0
+	for i in range(3):
+		var row: Control = box.get_child(i)
+		var attr: Label = row.get_node("Attr")
+		var val: Label = row.get_node("Value")
+		if row.name != "TopAttr_" + str(top[i]["key"]) or attr.text != str(top[i]["label"]) or val.text != str(int(top[i]["value"])):
+			return "%s row %d reads %s %s" % [who, i, attr.text, val.text]
+		for l in [attr, val]:
+			var fs: int = l.get_theme_font_size("font_size")
+			var need: float = l.get_theme_font("font").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			if need > l.size.x + 0.5 or l.size.y < l.get_theme_font("font").get_height(fs) - 0.5:
+				return "%s: %s is cut short (%d px for %d)" % [who, l.text, int(l.size.x), int(need)]
+		var r := row.get_global_rect()
+		if not outer.encloses(r) or r.end.x > 390.5 or r.position.x < 0.0:
+			return "%s: %s runs outside the card (%s in %s)" % [who, attr.text, str(r), str(outer)]
+		# Rows under each other or side by side: never one on top of another.
+		if i > 0 and r.intersects((box.get_child(i - 1) as Control).get_global_rect().grow(-0.5)):
+			return "%s: %s sits over the row before it" % [who, attr.text]
+		last_end = maxf(last_end, r.end.y)
+	# Nothing else on the card is drawn over the three.
+	var parent := box.get_parent()
+	if box.get_index() + 1 < parent.get_child_count():
+		var after := parent.get_child(box.get_index() + 1) as Control
+		if after != null and after.is_visible_in_tree() and after.get_global_rect().position.y < last_end - 0.5:
+			return "%s: %s sits over the top three" % [who, after.name]
+	return ""

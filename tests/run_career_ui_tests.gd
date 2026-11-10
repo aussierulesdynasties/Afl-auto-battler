@@ -4701,9 +4701,11 @@ func _test_list_shape_fits_phones() -> void:
 		var count := 0
 		for c in board.find_children("*", "Control", true, false):
 			var ctl := c as Control
-			# The boxes that hold the oval and the bench are as tall as their
-			# contents; what a finger meets is the controls inside them.
-			if not ctl.is_visible_in_tree() or ctl.size.x <= 0.0 or ctl.size.y <= 0.0 or ctl is BoxContainer:
+			# The boxes that hold the oval and the bench, and the grid of cards for
+			# the rest of the list, are as tall as their contents (the grid taller
+			# than a short phone now each card carries its top three); what a
+			# finger meets is the controls inside them.
+			if not ctl.is_visible_in_tree() or ctl.size.x <= 0.0 or ctl.size.y <= 0.0 or ctl is BoxContainer or ctl is GridContainer:
 				continue
 			count += 1
 			if win.encloses(ctl.get_global_rect()):
