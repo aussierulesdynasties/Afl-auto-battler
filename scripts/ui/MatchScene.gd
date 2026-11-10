@@ -62,6 +62,8 @@ var _shown_behinds := [0, 0]
 var _shown_q := 1
 var _shown_min := 0
 var _moment_overlay: Control
+var _warmed_call := false   # _warm_call_scene ran this match
+const WARM_FRAMES := 3
 ## Broadcast vignettes sit over the live oval and never touch MatchSim. They
 ## are deliberately sparse: at most three ordinary close-ups per watched
 ## match, with the final-kick set shot allowed as a separate special beat.
@@ -632,6 +634,35 @@ func _close_moment() -> void:
 	_moment_overlay = null
 
 
+## The first coach's call of a match froze the oval for seconds (TODO row T2.42,
+## traced by tools/visual/trace_stall_live.gd): its first frame paints this ground's
+## crowd for the home and away colours (the preview paints yours first, a different
+## picture), and compiles and uploads the figures' shader and sheets. Here that work is
+## done while the opening break waits on the coach: the real call scene draws behind
+## the break, clipped to one pixel, for a few frames, then goes. It reads the match
+## and changes nothing in it.
+func _warm_call_scene() -> void:
+	if not GameState.vignettes_on() or _warmed_call:
+		return
+	_warmed_call = true
+	var holder := Control.new()
+	holder.name = "CallSceneWarm"
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.clip_contents = true
+	holder.size = Vector2.ONE
+	_over.add_child(holder)
+	_over.move_child(holder, 0)
+	var vignette := StoppageVignette.new()
+	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(vignette)
+	vignette.size = get_viewport_rect().size
+	vignette.setup(GameState.pending_sim, _my_side, "")
+	for i in range(WARM_FRAMES):
+		await get_tree().process_frame
+	if is_instance_valid(holder):
+		holder.queue_free()
+
+
 func _close_coach() -> void:
 	_close_sheet()
 	_close_break_sheets()
@@ -713,6 +744,8 @@ func _show_coach_box() -> void:
 	var overlay: Control = box["overlay"]
 	overlay.name = "CoachBox"
 	_coach_overlay = overlay
+	if q == 1:
+		_warm_call_scene()
 	var v: VBoxContainer = box["body"]
 	var titles := {1: "Before the first ball-up", 2: "Quarter time", 3: "Half time", 4: "Three-quarter time"}
 	# The break leads with both clubs' colours (director, 2026-10-08).
