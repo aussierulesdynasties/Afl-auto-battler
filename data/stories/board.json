@@ -1,6 +1,7 @@
 [
 	{
 		"id": "board_wants_answers",
+		"topical": true,
 		"category": "board",
 		"cooldown": 6,
 		"subject": {

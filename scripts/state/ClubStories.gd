@@ -574,8 +574,8 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"talk_text": ClubLife.talk_text(case, i), "verdict": str(i.get("verdict", "")),
 			"job": str(i.get("job", "")), "need": str(i.get("need", "")),
 			"sore_odds": ClubLife.odds(Injuries.chance(sore)),
-			"sore_pct": "about a %d%%" % roundi(Injuries.chance(sore) * 100.0),
-			"injury_pct": "about a %d%%" % roundi(Injuries.chance(p) * 100.0),
+			"sore_pct": _about_pct(roundi(Injuries.chance(sore) * 100.0)),
+			"injury_pct": _about_pct(roundi(Injuries.chance(p) * 100.0)),
 			# How he rates in the spot a role trial would play him (his usual rating when he has none).
 			"trial_ovr": gs.rating_as(p, trial_role(p)) if trial_role(p) != "" and p.has("attr") else ovr,
 			"ask": Contracts.money(Contracts.asking_salary(p)), "early_price": Contracts.money(early),
@@ -644,6 +644,11 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 ## spot to an injury: he is judged on the rounds before he was hurt (the
 ## "where do I stand" sit-down is his story).
 const OUT_WEEKS := 2
+
+## "about a 12%" / "about an 18%".
+static func _about_pct(n: int) -> String:
+	return "about %s %d%%" % [LeagueStories.an(n), n]
+
 
 static func out_of_side(gs, p: Dictionary) -> bool:
 	var id := str(p.get("id", ""))
