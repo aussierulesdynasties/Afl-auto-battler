@@ -2282,6 +2282,12 @@ func begin_intake_draft() -> bool:
 	comps.append_array(new_club_picks)
 	draft.set_pick_owners(draft_pick_owners(season_year))
 	draft.add_compensation(comps)
+	# A joining club's job he took at the season's close starts here, at its
+	# first National Draft, with its picks (ClubMoves, TODO T5.Q25).
+	var leaving := my_club
+	if ClubMoves.apply_move_at_draft(self):
+		draft.scouting_mults.erase(leaving)
+		draft.scouting_mults[my_club] = recruiting_uncertainty_mult()
 	_watch_draft_night()
 	# Played without you, the 2029 draft waits for your club (choosing_club).
 	if not choosing_club():
