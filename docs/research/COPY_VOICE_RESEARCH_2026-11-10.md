@@ -150,7 +150,7 @@ These lines change the same way under A, B and C, because buttons and headers si
 | L86 | MatchSim.gd:4308 | "End of quarter %d - %s %d.%d (%d) \| %s %d.%d (%d)" | "End of Q%d · %s %d.%d (%d) · %s %d.%d (%d)" |
 | L87 | MatchSim.gd:4320 | "Scores level at full time - we are going to extra time!" | "Scores level at full time. Extra time." (C: the commentator may keep a broadcaster's line, set apart) |
 | L122 | OptionsSheet.gd:50 | "Ask before simming the week for me" | "Ask before Sim the week" |
-| L103 | DraftScene.gd:2041 | "Pick %d · %d OVR · %s" | Keeps "OVR" if the director keeps it; otherwise "Pick %d · rated %d · %s" |
+| L103 | DraftScene.gd:2041 | "Pick %d · %d OVR · %s" | "Pick %d · %d OVR · %s" (OVR stays: director, 2026-11-10) |
 
 ### Rewrites that differ by option
 
@@ -203,11 +203,10 @@ Nothing below is scheduled. No TODO row owns the game's voice today, and the roa
 
 Struck because a ruling already answers them: how odds read ("60%" vs "6 in 10") is settled by ruling 3.B.27, percentages at the gate, with words allowed off it per 3.B.32; humour allowance is settled by 3.B.34 (at most one per screen, never beside a loss, injury, sacking or suspension); whether journalists keep their own voices is settled by the bible ("Journalists have personalities"); XP stays (3.B.33); and no option may name the best choice (bible principle 4).
 
-Questions 1 to 3 (which voice, who speaks, we or you) were answered on 2026-11-10: option B, one coach voice, "we / our" with "you" for the coach personally. Three remain:
+Questions 1 to 3 (which voice, who speaks, we or you) were answered on 2026-11-10: option B, one coach voice, "we / our" with "you" for the coach personally. On the same day the director ruled that OVR, POT and the 0-100 opinion score stay visible as numbers ("Keep the numbers"). Two remain:
 
-1. **Do OVR, POT and the 0-100 opinion score stay visible as numbers** (draft cards, player sheet, contracts), or move behind a word scale with a published ladder?
-2. **Does the match feed keep a broadcaster's voice** (as L87's "we are going to extra time!" does now) or read as neutral match-report fragments?
-3. **Does "Sim the week" keep the word "sim"?** This is already open at DIRECTOR_BIBLE.md:1921 and decides L18, L19 and L122.
+1. **Does the match feed keep a broadcaster's voice** (as L87's "we are going to extra time!" does now) or read as neutral match-report fragments?
+2. **Does "Sim the week" keep the word "sim"?** This is already open at DIRECTOR_BIBLE.md:1921 and decides L18, L19 and L122.
 
 ## 8. Sources
 
@@ -219,11 +218,11 @@ Questions 1 to 3 (which voice, who speaks, we or you) were answered on 2026-11-1
 
 ## 9. Build scope
 
-A self-contained brief for a future session. Nothing here is scheduled; it starts only when the director assigns it, and **the voice is option B, the senior coach's briefing (director, 2026-11-10)**: write every rewrite in section 5's B column and rules. The three questions below still decide the OVR/POT lines, the feed and "Sim the week"; leave those lines unchanged until they are answered.
+A self-contained brief for a future session. Nothing here is scheduled; it starts only when the director assigns it, and **the voice is option B, the senior coach's briefing (director, 2026-11-10)**: write every rewrite in section 5's B column and rules. OVR, POT and the 0-100 opinion score stay visible as numbers (director, 2026-11-10); keep them, with the opinion score written "%d out of 100". The two questions below still decide the feed and "Sim the week"; leave those lines unchanged until they are answered.
 
 **1. Voice guide.** Where: a new subsection "Voice" under §5 Copy in docs/VISUAL_STYLE_GUIDE.md (lines 187-200), plus a one-line pointer and one review question in .claude/skills/afl-ui-writing/SKILL.md. Contents: option B's rules from section 5, including the we/you rule, of this report (person, tense, sentence length; button 1-4 words as an outcome verb; header 1-4 words, no verb; gate grammar `Gain: <one effect, one number>` / `Cost: <one effect, one number>`, one unit per line; hidden meters as "%d out of 100"), the glossary and replacement words from section 4, the shared banned list, and the ten good lines from section 2 as models. Done: guide merged, under the 60 KB must-read limit (tools/check_doc_sizes.py green), afl-ui-writing points to it.
 
-**2. One shared banned-terms list and lint.** Create one constant file (proposed: scripts/core/CopyRules.gd) holding the shared list (should, recommend, best as a verdict, need to, consider, probability, chance of success, modifier, simulation, simming, Auto-pick, projection, roster, starter, payroll, OVR/POT only if the director drops them, "/100", "|" and "_" in visible text, "!" outside quoted commentary) and a `check(text) -> Array` helper. Absorb the scattered lists so each test reads the shared constant plus its own surface extras: tests/test_matchday.gd:11-14 (ADVICE, ENGINE), tests/test_preseason_cards.gd:326, tests/run_clublink_tests.gd:485, tests/run_draft_ui_tests.gd:1344. Wire the helper into tools/visual/screen_lint.gd over every visible Label/Button text, and add one test suite that walks the copy sources (data/stories/*.json, GateOdds.gd, StoryEngine.gd, CoachReport.gd, MatchNotes.gd constants) and fails on any hit. Done: every UI suite and the screen lint call the shared list; `tools/run_tests.sh` green; the lint reports zero banned terms (it will first fail on known hits such as "starter" at scripts/ui/PreSeasonScene.gd:591, which become the first fixes once the voice is chosen, or a temporary allow-list with each entry tied to a screen pass below).
+**2. One shared banned-terms list and lint.** Create one constant file (proposed: scripts/core/CopyRules.gd) holding the shared list (should, recommend, best as a verdict, need to, consider, probability, chance of success, modifier, simulation, simming, Auto-pick, projection, roster, starter, payroll, "/100" (OVR and POT stay allowed: director, 2026-11-10), "|" and "_" in visible text, "!" outside quoted commentary) and a `check(text) -> Array` helper. Absorb the scattered lists so each test reads the shared constant plus its own surface extras: tests/test_matchday.gd:11-14 (ADVICE, ENGINE), tests/test_preseason_cards.gd:326, tests/run_clublink_tests.gd:485, tests/run_draft_ui_tests.gd:1344. Wire the helper into tools/visual/screen_lint.gd over every visible Label/Button text, and add one test suite that walks the copy sources (data/stories/*.json, GateOdds.gd, StoryEngine.gd, CoachReport.gd, MatchNotes.gd constants) and fails on any hit. Done: every UI suite and the screen lint call the shared list; `tools/run_tests.sh` green; the lint reports zero banned terms (it will first fail on known hits such as "starter" at scripts/ui/PreSeasonScene.gd:591, which become the first fixes once the voice is chosen, or a temporary allow-list with each entry tied to a screen pass below).
 
 **3. Pinned-wording tests.** Find every test that asserts exact copy: tests/test_story.gd:205 and tests/test_finals_cards.gd (DIRECTOR_BIBLE.md:419, rule 3.B.30), plus any test matching strings from GateOdds.gd, StoryEngine.gd, CoachReport.gd, MatchSim.gd card titles and FirstVisitIntro.gd. Each screen pass updates its pins in the same PR. Done: every rewritten line is asserted by at least one test (exact string or template), and no test still pins an old wording.
 
@@ -248,6 +247,5 @@ Done for each pass: every visible line on that screen read and either kept or re
 **5. Director gates inside the build.** A pass with a line the director rejects is reworked before the next screen starts.
 
 **Open questions for the director (from section 7):**
-1. Do OVR, POT and the 0-100 opinion score stay visible as numbers?
-2. Does the match feed keep a broadcaster's voice or read as neutral match-report fragments?
-3. Does "Sim the week" keep the word "sim"?
+1. Does the match feed keep a broadcaster's voice or read as neutral match-report fragments?
+2. Does "Sim the week" keep the word "sim"?
