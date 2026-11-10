@@ -90,6 +90,9 @@ func _run() -> void:
 	# 1. New career: Your goal, then Rebuild.
 	_fresh()
 	state.start_season("FRE", db.club_list("FRE"))
+	# Load the menu here first: the Router's threaded load races the vignette
+	# preloads in a windowed run and the menu then fails to compile.
+	load("res://scenes/Main.tscn")
 	root.get_node("Router").to_main_menu(false)
 	for i in range(60):
 		await process_frame
@@ -115,7 +118,16 @@ func _run() -> void:
 	_fresh()
 	state.challenge = {"kind": "rebuild"}
 	state.begin_real_lists()
+	# 2a. Choose your rebuild: the bottom club or Tasmania (row T5.Q25).
 	var ds: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ds)
+	for i in range(6):
+		await process_frame
+	await _shot("rebuild_choice")
+	ds.queue_free()
+	await process_frame
+	state.choose_real_club(str(state.challenge.get("club", "")))
+	ds = load("res://scenes/DraftScene.tscn").instantiate()
 	root.add_child(ds)
 	for i in range(6):
 		await process_frame

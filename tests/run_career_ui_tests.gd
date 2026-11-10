@@ -4093,6 +4093,13 @@ func _test_new_career_challenge_taps() -> void:
 	var t5: String = await Tap.tap(current_scene.find_child("StartCareer", true, false))
 	await _settle()
 	await _settle()
+	# Row T5.Q25: Choose your rebuild offers the bottom club or Tasmania.
+	var tas_tile := current_scene.find_child("Choose_TAS", true, false)
+	_check(_state.my_club == "" and tas_tile != null and current_scene.find_child("Choose_COL", true, false) == null,
+			"Choose your rebuild offers the bottom club and Tasmania, no other club")
+	var t6: String = await Tap.tap(current_scene.find_child("Choose_ESS", true, false))
+	await _settle()
+	t5 += t6
 	var ch: Dictionary = _state.challenge
 	var gone: Array = ch.get("gone", [])
 	var club := str(ch.get("club", ""))
@@ -4525,6 +4532,22 @@ func _test_sacked_job_choice_taps() -> void:
 	_check(why == "" and not _state.is_sacked() and str(_state.coach_arcs["move"].get("to", "")) == code,
 			"A finger on Take the job ends the sacking and the move is set for %s (%s)" % [code, why])
 	_check(current_scene.find_child("SackedCard", true, false) == null, "The hub rebuilds without the sacked card")
+	# Row T5.Q25: Tasmania join the league next season, so their job is one of
+	# the three, with no ladder finish; a finger on it sets the move, which is
+	# made at their first National Draft.
+	_sacked_with_offers()
+	_router.go("hub")
+	await _settle()
+	var tas_why: Label = current_scene.find_child("JobOfferFrom_TAS", true, false)
+	_check(moves.offers(_state).any(func(o): return str(o["code"]) == "TAS" and int(o.get("joins", 0)) == int(_state.season_year) + 1)
+			and tas_why != null and tas_why.text.begins_with("Tasmania join the league in %d." % (int(_state.season_year) + 1)),
+			"A club joining next season offers its job, saying when it joins (%s)" % (tas_why.text if tas_why != null else "missing"))
+	take = current_scene.find_child("TakeJob_TAS", true, false)
+	_check(take != null and take.get_combined_minimum_size().x <= take.size.x + 0.5, "Tasmania's Take button reads whole on a 390 phone")
+	why = await Tap.tap(take) if take != null else "missing"
+	await _settle()
+	_check(why == "" and not _state.is_sacked() and str(_state.coach_arcs["move"].get("to", "")) == "TAS" and _state.my_club == "FRE",
+			"A finger on Take the job at Tasmania sets the move for their first draft; he is at Fremantle until then (%s)" % why)
 	# A fresh sacking: retire instead, and the record is read out.
 	_sacked_with_offers()
 	_router.go("hub")
@@ -4569,11 +4592,15 @@ func _test_sacked_job_choice_taps() -> void:
 ## rounds skipped with Fremantle top of the ladder, so they play the finals
 ## and meet the board's goal, and the close writes a rival board's letter that
 ## holds the off-season until he answers.
-func _season_with_letter() -> void:
+func _season_with_letter(tas_joins := true) -> void:
 	_state.reset()
 	_state.career_seed = 4411
 	_state.replay_seed = 4411
 	_state.start_season("FRE", _db.club_list("FRE"))
+	# A club joining next season writes first (row T5.Q25); without one, the
+	# letter comes from a club on the ladder. reset() puts the year back.
+	if not tas_joins:
+		_db.set_enter_year("TAS", 9999)
 	var arcs = load("res://scripts/sim/CoachArcs.gd")
 	_state.coach_arcs = arcs.ensure(_state.coach_arcs)
 	var season = _state.season
@@ -4595,7 +4622,7 @@ func _test_rival_letter_taps() -> void:
 	var size_before := root.size
 	root.size = Vector2i(390, 844)
 	var moves = load("res://scripts/state/ClubMoves.gd")
-	_season_with_letter()
+	_season_with_letter(false)
 	_check(moves.letter_open(_state) and not _state.offseason_open(),
 			"A strong season ends with a rival board's letter, and the off-season waits for the answer")
 	_router.stack = ["main"]
@@ -4619,8 +4646,8 @@ func _test_rival_letter_taps() -> void:
 	_check(current_scene.find_child("RivalLetterAnswered", true, false) != null and _screen_text().contains("National Draft")
 			and _screen_text().contains("Trades & Contracts"),
 			"After the answer the hub says so, and trades, contracts and the draft are back")
-	# The same letter, taken.
-	_season_with_letter()
+	# A ladder club's letter, taken.
+	_season_with_letter(false)
 	var code := str(moves.letter(_state).get("code", ""))
 	_router.go("hub")
 	await _settle()
@@ -4635,6 +4662,26 @@ func _test_rival_letter_taps() -> void:
 			and answered.text.contains(_db.club_name(code)) and _screen_text().contains("National Draft")
 			and _screen_text().contains("Trades & Contracts"),
 			"After taking it the hub says so, who replaced him at Fremantle and where from, and his new club's trades, contracts and draft are open (%s)"
+			% (answered.text if answered != null else "missing"))
+	# Row T5.Q25: Tasmania, joining next season, write first. Taken, he
+	# takes over at their first National Draft and runs Fremantle's
+	# off-season until then.
+	_season_with_letter()
+	_check(str(moves.letter(_state).get("code", "")) == "TAS", "A strong season before Tasmania join brings their letter")
+	_router.go("hub")
+	await _settle()
+	var start: Label = current_scene.find_child("RivalLetterStart", true, false)
+	_check(start != null and start.text.contains("National Draft"),
+			"The letter says he would take over at their first National Draft (%s)" % (start.text if start != null else "missing"))
+	take = current_scene.find_child("RivalLetterTake", true, false)
+	why = await Tap.tap(take) if take != null else "missing"
+	await _settle()
+	_check(why == "" and _state.my_club == "FRE" and str(_state.coach_arcs["move"].get("to", "")) == "TAS" and _state.offseason_open(),
+			"A finger on Take signs him with Tasmania; Fremantle's off-season opens and stays his until the draft (%s)" % why)
+	answered = current_scene.find_child("RivalLetterAnswered", true, false)
+	_check(answered != null and answered.text.contains("Tasmania") and answered.text.contains("National Draft")
+			and _screen_text().contains("Trades & Contracts"),
+			"After taking it the hub says when he takes over, and Fremantle's trades and contracts are open (%s)"
 			% (answered.text if answered != null else "missing"))
 	root.size = size_before
 
