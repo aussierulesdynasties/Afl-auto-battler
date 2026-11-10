@@ -35,6 +35,8 @@ var _failures: Array = []
 var _gs: Node
 var _router: Node
 var UK
+var FW
+var WP
 
 
 func _initialize() -> void:
@@ -62,6 +64,8 @@ func _run() -> void:
 	_gs = root.get_node("GameState")
 	_router = root.get_node("Router")
 	UK = load("res://scripts/ui/UiKit.gd")
+	FW = load("res://scripts/ui/FootballWords.gd")
+	WP = load("res://scripts/ui/WordPress.gd")
 	_gs.autosave_enabled = false
 	_gs.event_sheets = false
 	_gs.save_path = "user://test_nav_economy.save"
@@ -75,6 +79,9 @@ func _run() -> void:
 	await _t("_test_paths_are_short")
 	await _t("_test_two_taps")
 	await _t("_test_overflow")
+	_t("_test_word_source")
+	await _t("_test_long_press_label")
+	await _t("_test_long_press_button")
 	UK.apply_text_size("standard")
 	_router.stack = []
 	print(Ran.line("Nav economy", self))
@@ -282,3 +289,147 @@ func _test_overflow() -> void:
 			var small := _small_targets(current_scene)
 			_check(small.is_empty(), "%s: targets under %d px: %s" % [tag, MIN_TARGET, "; ".join(small.slice(0, 8))])
 	_gs.set_text_size("standard")
+
+
+# ---------------------------------------------------------------------------
+# Long-press a football word for its rule (P-61)
+# ---------------------------------------------------------------------------
+
+## One source: a rated stat says what the stat guide says, a plan what the
+## coach box says, a pep talk what the break says; every trait is a word.
+func _test_word_source() -> void:
+	var all: Dictionary = FW.entries()
+	var SG = load("res://scripts/ui/StatGuide.gd")
+	var CR = load("res://scripts/sim/CoachReport.gd")
+	var TL = load("res://scripts/ui/TraitLink.gd")
+	_check(_gs.TRAIN_STATS.size() == 13, "13 rated stats (%d)" % _gs.TRAIN_STATS.size())
+	for row in _gs.TRAIN_STATS:
+		var e: Dictionary = all.get(str(row[1]), {})
+		_check(not e.is_empty() and str(e["lines"][0]) == SG.short(str(row[0])), "%s reads the stat guide's line" % row[1])
+	for k in CR.PLAN_NAMES:
+		var e: Dictionary = all.get(str(CR.PLAN_NAMES[k]), {})
+		_check(not e.is_empty() and str(e["lines"][0]) == str(CR.PLAN_PARTS[k]["does"]), "%s reads the plan's own words" % CR.PLAN_NAMES[k])
+	for k in CR.PEP_NAMES:
+		var e: Dictionary = all.get(str(CR.PEP_NAMES[k]), {})
+		_check(not e.is_empty() and str(e["lines"][0]) == str(CR.PEP_EFFECTS[k]), "%s reads the pep talk's effect" % CR.PEP_NAMES[k])
+	var tn: Dictionary = TL.names()
+	_check(tn.size() >= 10, "traits and synergies are words (%d)" % tn.size())
+	for shown in tn:
+		_check(str((all.get(str(shown), {}) as Dictionary).get("trait", "")) == str(tn[shown]), "%s opens its trait sheet" % shown)
+	for t in SG.TOPICS:
+		_check(all.has(str(t[0])), "the guide's topic %s is a word" % t[0])
+	_check(all.has("OVR") and all.has("POT") and all.has("XP"), "OVR, POT and XP are words")
+	# Words in a line: whole words, longest first, in reading order.
+	var found: Array = FW.find_in("A Defensive Press asks for pressure; impressive.")
+	_check(found == ["Defensive Press", "Pressure"], "words in a line (%s)" % str(found))
+	_check(FW.word_at("Go with Attack Corridor now", 12) == "Attack Corridor", "the word under a letter")
+	_check(FW.word_at("Go with Attack Corridor now", 2) == "", "no word under a plain letter")
+
+
+## The first visible label on the screen holding a football word, and the
+## middle of that word's first letters, in the label's own pixels.
+func _word_label(scene: Node) -> Array:
+	for n in scene.find_children("*", "Label", true, false):
+		var l := n as Label
+		if not l.is_visible_in_tree() or l.get_global_rect().end.y > PHONE.y or l.get_global_rect().position.y < 0:
+			continue
+		var words: Array = FW.find_in(l.text)
+		if words.is_empty():
+			continue
+		var at := l.text.to_lower().find(str(words[0]).to_lower())
+		var r: Rect2 = l.get_character_bounds(at + 1)
+		if r.size.x <= 0.0:
+			continue
+		return [l, r.get_center(), str(words[0])]
+	return []
+
+
+func _rule_sheet() -> Control:
+	var s := current_scene.find_child(FW.SHEET_NAME, true, false) as Control
+	if s == null:
+		s = current_scene.find_child("TraitInfo", true, false) as Control
+	if s != null and s.is_queued_for_deletion():
+		return null
+	return s
+
+
+## A finger held still on a word in a line opens its rule; Back closes it and
+## leaves the screen as it was; a quick tap opens nothing.
+func _test_long_press_label() -> void:
+	root.size = PHONE
+	_gs.set_text_size("standard")
+	var hit: Array = []
+	for key in ["coaching", "selection", "hub", "training"]:
+		_router.stack = []
+		_router.go(key)
+		await _settle(12)
+		hit = _word_label(current_scene)
+		if not hit.is_empty():
+			break
+	_check(not hit.is_empty(), "a screen shows a football word in a line")
+	if hit.is_empty():
+		return
+	var on: String = _router.current()
+	var why: String = await Tap.hold_at(hit[0], hit[1], WP.HOLD_SECONDS + 0.2)
+	_check(why == "", "the hold lands on %s (%s)" % [hit[2], why])
+	await _settle(4)
+	var sheet := _rule_sheet()
+	_check(sheet != null and sheet.is_visible_in_tree(), "%s on %s: holding it opens its rule" % [hit[2], on])
+	if sheet != null and sheet.name == FW.SHEET_NAME:
+		var title := sheet.find_child("WordTitle_0", true, false) as Label
+		_check(title != null and title.text == str(FW.entries()[hit[2]]["title"]), "the sheet is %s's (%s)" % [hit[2], title.text if title else "none"])
+		_check(sheet.find_child("WordRule_0_0", true, false) != null, "the sheet says the rule")
+		_check(sheet.find_child("WordClose", true, false) != null, "the sheet has Close")
+	_router.handle_back()
+	await _settle(4)
+	_check(_rule_sheet() == null, "Back closes the rule")
+	_check(_router.current() == on, "Back closes only the rule (on %s)" % _router.current())
+	if not is_instance_valid(hit[0]):
+		hit = _word_label(current_scene)
+	if hit.is_empty():
+		_check(false, "the word is still on the screen after Back")
+		return
+	await Tap.tap_at(hit[0], hit[1], false)
+	await _settle(4)
+	_check(_rule_sheet() == null, "a quick tap on a word opens no rule")
+
+
+## A held button with a football word opens the rule and does not act; a
+## control with its own long press (Training's bulk pick) is left alone.
+func _test_long_press_button() -> void:
+	root.size = PHONE
+	var target: Button = null
+	for key in ["coaching", "selection", "hub"]:
+		_router.stack = []
+		_router.go(key)
+		await _settle(12)
+		for n in current_scene.find_children("*", "Button", true, false):
+			var b := n as Button
+			if b.is_visible_in_tree() and not b.disabled and not FW.find_in(b.text).is_empty() \
+					and b.get_global_rect().end.y < PHONE.y and b.get_global_rect().position.y > 0:
+				target = b
+				break
+		if target != null:
+			break
+	_check(target != null, "a screen has a button with a football word")
+	if target != null:
+		var acted := [false]
+		target.pressed.connect(func(): acted[0] = true)
+		var on: String = _router.current()
+		var words := target.text
+		var why: String = await Tap.hold_at(target, target.size * 0.5, WP.HOLD_SECONDS + 0.2)
+		_check(why == "", "the hold lands on %s (%s)" % [words, why])
+		await _settle(4)
+		_check(_rule_sheet() != null, "holding \"%s\" on %s opens its rule" % [words, on])
+		_check(not acted[0], "holding \"%s\" does not press it" % words)
+		_router.handle_back()
+		await _settle(4)
+	# Training's rows keep their own hold.
+	_router.stack = []
+	_router.go("training")
+	await _settle(12)
+	var own := 0
+	for n in current_scene.find_children("*", "BaseButton", true, false):
+		if n.has_meta(WP.OWN_HOLD):
+			own += 1
+	_check(own > 0, "Training's player rows keep their own long press (%d)" % own)

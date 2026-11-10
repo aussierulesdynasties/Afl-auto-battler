@@ -340,7 +340,7 @@ static func on_profile_tap(row: Control) -> bool:
 static func close_open(scene: Node) -> bool:
 	if scene == null:
 		return false
-	if TraitLink.close_open(scene):
+	if TraitLink.close_open(scene) or FootballWords.close_open(scene):
 		return true
 	# The newest first: a profile opened from a club page closes before the page,
 	# a club page opened from a profile before the profile (ClubLink).

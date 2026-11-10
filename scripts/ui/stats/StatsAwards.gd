@@ -16,7 +16,7 @@ const RACE_W := 460.0
 ## Rows: one line, no rules between them; every other row on a faint band.
 const ROW_H := 32
 ## On a phone a row is a thumb's target: taller.
-const ROW_H_PHONE := 40
+const ROW_H_PHONE := 44
 ## The round, ahead of a Rising Star nominee.
 const ROUND_W := 80.0
 ## Row geometry, shared by the tables and the fit test for the honours.
