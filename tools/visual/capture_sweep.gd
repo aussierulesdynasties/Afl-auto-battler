@@ -4,10 +4,15 @@ extends SceneTree
 ## window (no --headless). Never touches a real save.
 ##   godot --path . --windowed --script tools/visual/capture_sweep.gd -- --screen hub --out DIR --tag before --size 390x844
 ## Writes DIR/<tag>_<screen>_<w>.png and, when the page scrolls, <tag>_<screen>_<w>_down.png.
+## --screen match: the coach's own live match of the next round. Writes
+## <tag>_match_<w>_prebounce.png (the first coach box), then starts the quarter
+## and writes <tag>_match_<w>_play.png after --play frames (default 900, about
+## 15 s at 1x) and <tag>_match_<w>_late.png after as many again at 4x.
 
 var _size := Vector2i(390, 844)
 var _state: Node
 var _router: Node
+var _play := 900
 
 
 func _initialize() -> void:
@@ -31,11 +36,14 @@ func _run() -> void:
 				screen = str(a[i + 1])
 			"--club":
 				club = str(a[i + 1])
+			"--play":
+				_play = int(str(a[i + 1]))
 			"--rounds":
 				rounds = int(str(a[i + 1]))
 			"--size":
 				var wh := str(a[i + 1]).split("x")
 				_size = Vector2i(int(wh[0]), int(wh[1]))
+	DirAccess.make_dir_recursive_absolute(out)
 	await process_frame
 	_state = root.get_node("GameState")
 	var db: Node = root.get_node("GameDB")
@@ -62,6 +70,10 @@ func _run() -> void:
 	_router.stack = []
 	_router.go("main")
 	await _frames(6)
+	if screen == "match":
+		await _match(out, tag)
+		quit()
+		return
 	_router.go(screen)
 	# The first screen of a run can sit behind the loading cover for a while.
 	var cover: Node = root.get_node("ScreenTransition")
@@ -81,6 +93,35 @@ func _run() -> void:
 		_save(stem + "_down.png")
 	print("captured ", stem)
 	quit()
+
+
+func _match(out: String, tag: String) -> void:
+	_state.set_setting("seen_training_intro", true)
+	if not _state.prepare_interactive_match():
+		push_error("no match to prepare")
+		return
+	_router.go("match")
+	var cover: Node = root.get_node("ScreenTransition")
+	for wait in range(1200):
+		if wait > 60 and str(_router.call("current")) == "match" and not bool(cover.get("busy")):
+			break
+		await process_frame
+	await _frames(60)
+	var stem := "%s/%s_match_%d" % [out, tag, _size.x]
+	_save(stem + "_prebounce.png")
+	var start := root.find_child("StartQuarter", true, false) as Button
+	if start == null:
+		push_error("no StartQuarter button")
+		return
+	start.emit_signal("pressed")
+	await _frames(_play)
+	_save(stem + "_play.png")
+	var scene: Node = root.find_child("MatchScene", true, false)
+	if scene != null and scene.has_method("_on_speed"):
+		scene.call("_on_speed", 4.0)
+	await _frames(_play)
+	_save(stem + "_late.png")
+	print("captured ", stem)
 
 
 func _shut_popups() -> void:
