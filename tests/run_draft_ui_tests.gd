@@ -45,6 +45,7 @@ func _run() -> void:
 	await _t("_test_take_tasmania")
 	await _t("_test_rival_why")
 	await _t("_test_draft_fit")
+	await _t("_test_redraft_wears_club")
 	for sz in [Vector2i(390, 844), Vector2i(360, 800), Vector2i(320, 568), Vector2i(2560, 1440)]:
 		await _t("_test_subtitle_whole", [sz])
 	print(Ran.line("Draft UI", self))
@@ -61,6 +62,36 @@ func _cut(l: Label) -> bool:
 	if l.autowrap_mode != TextServer.AUTOWRAP_OFF and l.get_visible_line_count() < l.get_line_count():
 		return true
 	return l.get_global_rect().end.x > float(root.size.x) + 1.0
+
+
+## The League redraft wears the chosen club's colours from the moment the club
+## is chosen (director 2026-11-10: the board and its tips were the no-club
+## red), a draft resumed from a save too, while GameState.my_club stays empty
+## until Start season; off the draft the colours read my_club alone again.
+func _test_redraft_wears_club() -> void:
+	var kit = load("res://scripts/ui/UiKit.gd")
+	_state.reset()
+	_state.draft = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(),
+			_db.active_clubs(2026).duplicate(), 12345)
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	_check(kit.team_colour() == kit.ACCENT, "Choose your club keeps the no-club accent")
+	ui.call("_on_club_chosen", "FRE")
+	await _settle()
+	_check(str(_state.my_club) == "", "Choosing a redraft club leaves my_club empty until Start season")
+	_check(kit.team_colour() != kit.ACCENT, "The redraft board takes the chosen club's colour")
+	_check(kit.label_ink() == kit.club_ink("FRE"), "Labels on the redraft board wear Fremantle's ink")
+	root.remove_child(ui)
+	ui.queue_free()
+	_check(kit.team_colour() == kit.ACCENT, "Leaving the draft drops the redraft club's colour")
+	ui = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	_check(kit.label_ink() == kit.club_ink("FRE"), "A resumed redraft wears its club's colour again")
+	root.remove_child(ui)
+	ui.queue_free()
+	_state.reset()
 
 
 ## The draft's subtitle is never cut off (row 109, 6.Q18: an ellipsised
