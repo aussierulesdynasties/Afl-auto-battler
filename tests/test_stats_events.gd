@@ -30,6 +30,7 @@ func run() -> void:
 	_t("_test_contested_marks", [results])
 	_t("_test_broken_tackles", [results])
 	_t("_test_old_boxes")
+	_t("_test_entry_spoil_one_percenter")
 	print(Ran.line("Stats event", self))
 
 
@@ -212,6 +213,30 @@ func _test_old_boxes() -> void:
 	_check(_n(full["team"][0], "chains") == 123 and _n(full["team"][0], "dont_argues") == 0
 			and _n(full["players"]["a"], "disposals") == 21,
 			"A match saved before broken tackles were kept reads back as it was")
+
+
+## A forward-50 entry the defender spoils: when that contest also counts a
+## one-percenter, it is the spoiler's, not another defender's.
+func _test_entry_spoil_one_percenter() -> void:
+	var sim := MatchSim.new(Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE"),
+			Squad.new("COL", GameDB.club_list("COL"), false, "COL"), 4177)
+	var both := 0
+	var wrong := 0
+	for i in range(600):
+		var team0: Dictionary = (sim.team_stats[1] as Dictionary).duplicate()
+		var before: Dictionary = sim.player_stats.duplicate(true)
+		sim.resolve_forward50(0, 50.0, null)
+		var team1: Dictionary = sim.team_stats[1]
+		if _n(team1, "spoils") - _n(team0, "spoils") != 1 or _n(team1, "one_percenters") - _n(team0, "one_percenters") != 1:
+			continue
+		both += 1
+		for id in sim.player_stats:
+			var now: Dictionary = sim.player_stats[id]
+			var was: Dictionary = before.get(id, {})
+			if _n(now, "spoils") - _n(was, "spoils") == 1 and _n(now, "one_percenters") - _n(was, "one_percenters") != 1:
+				wrong += 1
+	_check(both >= 10, "(setup) entries that were spoilt and counted a one-percenter (%d)" % both)
+	_check(wrong == 0, "A spoilt entry's one-percenter goes to the man who spoilt it (%d of %d went elsewhere)" % [wrong, both])
 
 
 func _check(condition: bool, message: String) -> void:

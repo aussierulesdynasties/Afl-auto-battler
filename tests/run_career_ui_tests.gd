@@ -3558,6 +3558,32 @@ func _test_list_problem_and_ask_around() -> void:
 ## and nothing of yours, a finger on Ask their price fills what you give with
 ## their ask, shows it in a line under the sheet, and the verdict is yes.
 func _test_ask_price_tap() -> void:
+	# The search behind the tap: a club that turns down the forty cheapest
+	# packages is still asked about the next ones near its price.
+	var packs := []
+	for i in range(500):
+		packs.append([[i], 10.0 + 0.004 * i])
+	var asked := []
+	var pick: int = _state.ask_price_pick(packs, 10.0, func(x):
+		asked.append(int(x[0][0]))
+		return int(x[0][0]) == 60)
+	_check(pick == 60 and asked.size() == 61,
+			"The 61st cheapest package is found when the first sixty are turned down (found %d after %d)" % [pick, asked.size()])
+	_check(_state.ask_price_pick(packs, 10.0, func(_x): return false) == -1, "No package they'd take: none named")
+	asked = []
+	_state.ask_price_pick(packs, 10.0, func(x):
+		asked.append(int(x[0][0]))
+		return false)
+	_check(asked.size() == int(_state.ASK_PRICE_MOST), "The search stops after %d packages (%d weighed)" % [int(_state.ASK_PRICE_MOST), asked.size()])
+	var dear := []
+	for i in range(100):
+		dear.append([[i], 20.0 + i])
+	asked = []
+	_state.ask_price_pick(dear, 10.0, func(x):
+		asked.append(int(x[0][0]))
+		return false)
+	_check(asked.size() == int(_state.ASK_PRICE_TRIES),
+			"Packages well over the price are weighed only among the first %d (%d weighed)" % [int(_state.ASK_PRICE_TRIES), asked.size()])
 	_state.reset()
 	_state.career_seed = 5508
 	_state.replay_seed = 5508
