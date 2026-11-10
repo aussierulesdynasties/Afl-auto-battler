@@ -827,7 +827,6 @@ func _test_ten_seasons() -> void:
 	var story := StoryEngine.new_state()
 	var seen := {}
 	var crowded := 0
-	var weeks := 0
 	for y in range(10):
 		StoryEngine.new_season(story)
 		# The list ages a year: the side that played September has finals behind it, and
@@ -845,7 +844,6 @@ func _test_ten_seasons() -> void:
 			ctx["big"] = wk == 1 or wk >= Season.REGULAR_ROUNDS
 			ctx["club"]["losing_run"] = wk % 7
 			var w := StoryEngine.week_abs(2027 + y, wk)
-			weeks += 1
 			for c in StoryEngine.pick_week(deck, ctx, story):
 				seen[str(c["tid"])] = int(seen.get(str(c["tid"]), 0)) + 1
 				StoryEngine.record_choice(story, c, maxi(0, int(c["default"])), w)
@@ -853,12 +851,15 @@ func _test_ten_seasons() -> void:
 				if StoryEngine.category_count(story, cat, w) > StoryEngine.DIVERSITY_MAX:
 					crowded += 1
 	_check(crowded == 0, "No category comes up more than twice in five weeks (%d breaches)" % crowded)
+	var played_span := StoryEngine.played_between(StoryEngine.week_abs(2027, 1), StoryEngine.week_abs(2036, 29))
 	var over := []
 	for t in deck:
 		var id := str(t["id"])
 		var n := int(seen.get(id, 0))
-		# Cooldowns count played weeks (StoryEngine.played_between), as this loop plays them.
-		var by_cooldown := weeks / maxi(1, int(t["cooldown"])) + 1
+		# Cooldowns count played weeks (StoryEngine.played_between), and a year's
+		# played weeks include its pre-season, which this loop skips: the bound is
+		# the played span from the first week here to the last, not this loop's count.
+		var by_cooldown := played_span / maxi(1, int(t["cooldown"])) + 1
 		if n > by_cooldown:
 			over.append("%s %d > %d (cooldown)" % [id, n, by_cooldown])
 		if int(t["per_season"]) > 0 and n > 10 * int(t["per_season"]):
