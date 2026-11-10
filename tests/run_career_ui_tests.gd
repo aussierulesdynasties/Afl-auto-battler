@@ -4096,7 +4096,8 @@ func _test_canberra_2030_warning() -> void:
 	await _settle()
 	_check(t4 == "" and again != null and t5 == "" and _state.season == null and _router.current() == "main"
 			and not bool(current_scene.get("_pick_canberra")),
-			"Back from the warning at Choose your club starts no career (%s %s)" % [t4, t5])
+			"Back from the warning at Choose your club starts no career (%s %s; sheet %s, season %s, route %s, Canberra %s)" % [
+				t4, t5, again != null, _state.season != null, _router.current(), current_scene.get("_pick_canberra")])
 	_state.reset()
 	_router.stack = []
 
