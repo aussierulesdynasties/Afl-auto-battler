@@ -46,7 +46,10 @@ const FRINGE := 3
 
 
 ## The best young player who could be backed and is good enough to hold a spot:
-## rated within FRINGE of the list's 22nd best. {} when there is none.
+## rated within FRINGE of the list's 22nd best, not in this week's side already,
+## and not asked about a run inside Backing.ASK_GAP weeks (director, 2026-11-10:
+## "keeps asking the same players over and over often theyre already in the
+## team"). {} when there is none.
 static func ready_to_back(gs) -> Dictionary:
 	var roster: Array = gs.club_roster(gs.my_club)
 	if roster.size() < 22:
@@ -57,10 +60,18 @@ static func ready_to_back(gs) -> Dictionary:
 	ovrs.sort()
 	ovrs.reverse()
 	var bar: int = int(ovrs[21]) - FRINGE
+	var w: int = gs.story_week()
+	var in_side := {}
+	var side: Dictionary = gs.current_side()
+	for k in side:
+		for id in side[k]:
+			in_side[str(id)] = true
 	var best := {}
 	for p in roster:
 		var ov := int(p.get("overall", 0))
-		if ov >= bar and gs.can_back(p) and (best.is_empty() or ov > int(best.get("overall", 0))):
+		if ov < bar or in_side.has(str(p.get("id", ""))) or not Backing.may_ask(p, w):
+			continue
+		if gs.can_back(p) and (best.is_empty() or ov > int(best.get("overall", 0))):
 			best = p
 	return best
 
@@ -100,6 +111,11 @@ static func pick(gs, week: Dictionary) -> Dictionary:
 		if held.is_empty():
 			return {}
 		week["big_call"] = held
+		if str(held["kind"]) == "backing":
+			# Asked once: whatever the coach does with it, not again for a while.
+			var young: Dictionary = gs.list_player(str(held.get("ref", "")))
+			if not young.is_empty():
+				Backing.mark_asked(young, gs.story_week())
 		gs.mark_dirty()
 	var out: Dictionary = (held as Dictionary).duplicate()
 	out["done"] = done(gs, str(held["kind"]), str(held.get("ref", "")))
