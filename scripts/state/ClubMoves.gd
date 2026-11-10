@@ -351,8 +351,8 @@ static func is_joining(gs, code: String) -> bool:
 static func _new_club_offer(gs, code: String, year: int, clubs: int) -> Dictionary:
 	return {"code": code, "name": GameDB.club_name(code), "finish": 0, "clubs": clubs + 1,
 			"joins": year + 1, "list": new_club_list_line(gs, code, year),
-			"goal": "set before %d from where their list ranks on paper. In the bottom third, it is at least %d wins." % [
-					year + 1, int(ClubLife.board_goal(clubs + 1, 0, clubs + 1).get("wins", 7))],
+			"goal": "set before %d from where their list ranks on paper. In %s, it is at least %d wins." % [
+					year + 1, ClubLife.bottom_places(clubs + 1), int(ClubLife.board_goal(clubs + 1, 0, clubs + 1).get("wins", 7))],
 			"why_open": new_club_why_line(gs, code, year)}
 
 

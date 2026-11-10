@@ -95,6 +95,7 @@ func run() -> void:
 	_t("_test_tag_tradeoff")
 	_t("_test_set_shot_bands")
 	_t("_test_set_shot_calls")
+	_t("_test_bomb_card_shows_the_dice")
 	_t("_test_forward_archetypes")
 	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
@@ -724,6 +725,70 @@ func _test_playtest_bounce() -> void:
 	_check(reached == games, "With the playtest switch on, every match reaches the centre-bounce call (%d of %d)" % [reached, games])
 	_check(unchanged == games,
 			"Played straight, the playtest call changes nothing: same score, same other calls, one centre-bounce call (%d of %d)" % [unchanged, games])
+
+
+## The director (2026-11-11): the bomb's card shows the pack's real odds, not
+## a fixed behind figure. What the coach's default weighs is left alone.
+func _test_bomb_card_shows_the_dice() -> void:
+	var sim: MatchSim = null
+	var m := {}
+	for i in range(12):
+		sim = _sim(500 + i)
+		sim.moment_side = 0
+		while sim.current_quarter <= 4 and m.is_empty():
+			sim.begin_quarter()
+			while m.is_empty() and not sim.continue_quarter():
+				if str(sim.pending_moment["kind"]) == "set_shot":
+					m = sim.pending_moment
+				else:
+					sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
+			if m.is_empty():
+				sim.end_quarter()
+		if not m.is_empty():
+			break
+	_check(not m.is_empty(), "(setup) a set-shot call comes up")
+	if m.is_empty():
+		return
+	var bomb := {}
+	for o in m["options"]:
+		if str(o["key"]) == "bomb":
+			bomb = o
+	_check(bomb.has("show_goal") and bomb.has("show_behind"), "The bomb carries the odds its card shows")
+	var shooter := sim._on_ground(0, str(m["player_id"]))
+	var defender := sim._on_ground(1, str(m.get("defender_id", "")))
+	var odds := sim.bomb_odds(0, shooter)
+	_check(is_equal_approx(float(bomb.get("show_goal", -1.0)), float(odds["goal"]))
+			and is_equal_approx(float(bomb.get("show_behind", -1.0)), float(odds["behind"])),
+			"The card's figures are the pack's odds (%s against %s)" % [str(bomb.get("show_goal")), str(odds)])
+	var lines := GateOdds.set_shot_lines(bomb)
+	_check(str(bomb["gain"]) == str(lines[0]) and str(lines[0]).contains(GateOdds.BOMB_GAIN % [
+			GateOdds.about_pct(float(odds["goal"])), GateOdds.about_pct(float(odds["behind"]))]),
+			"The card's line reads those odds: %s" % str(bomb["gain"]))
+	var rest := 100 - roundi(float(odds["goal"]) * 100.0) - roundi(float(odds["behind"]) * 100.0)
+	_check(str(bomb["cost"]).contains("%d%%" % rest), "Goal, behind and cleared add to 100: %s" % str(bomb["cost"]))
+	# The coach's default and the Moments line weigh what they always did.
+	_check(float(bomb["behind"]) == 0.30 and float(bomb["goal"]) >= 0.1 and float(bomb["goal"]) <= 0.5
+			and is_equal_approx(sim._option_points(bomb), float(bomb["goal"]) * 6.0 + 0.30),
+			"What the coach's default weighs for a bomb is unchanged (%s)" % str(bomb))
+	# The dice: bomb it many times; goals and behinds come at the odds shown.
+	# The odds are read before each kick, as the card reads them.
+	const N := 5000
+	var want_g := 0.0
+	var want_b := 0.0
+	var goals := 0
+	var behinds := 0
+	for i in N:
+		var now := sim.bomb_odds(0, shooter)
+		want_g += float(now["goal"])
+		want_b += float(now["behind"])
+		var res: Dictionary = sim._bomb(0, shooter, defender)
+		if int(res["points"]) == 6:
+			goals += 1
+		elif int(res["points"]) == 1:
+			behinds += 1
+	_check(absf(goals - want_g) / N < 0.02 and absf(behinds - want_b) / N < 0.02,
+			"Bombed %d times, the pack pays what the card shows: goals %.3f against %.3f shown, behinds %.3f against %.3f" % [
+			N, float(goals) / N, want_g / N, float(behinds) / N, want_b / N])
 
 
 func _test_set_shot() -> void:

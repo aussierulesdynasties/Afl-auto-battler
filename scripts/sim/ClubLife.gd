@@ -39,21 +39,30 @@ const MORALE_BASE := 70
 ##              the time, so it never sets that demand by itself);
 ##   finals     the top seven lists (three inside the finals places, which
 ##              are Season.FINALISTS at any number of clubs);
-##   top two-thirds  the rest of the lists outside the bottom third, asked to
-##              finish outside it: top 12 of 18, top 13 of 20, top 14 of 21.
-##              PROPOSAL (row 115), not a ruling: the director has not yet
-##              answered T9.Q20 (what the middle goal should be), nor whether
-##              the finals band and "seven wins" should scale. Key "top12" kept
+##   out of the bottom six  the rest of the lists above the bottom places,
+##              asked to stay out of them: 12th or better of 18 ("the bottom
+##              six"), 13th of 20 and 14th of 21 ("the bottom seven"). The
+##              words are the director's (T9.Q20, 2026-11-10): "Stay out of
+##              the bottom six", never a third of the ladder. Key "top12" kept
 ##              so old saves still read;
-##   seven wins the bottom third.
+##   seven wins the lists in those bottom places.
 const TOP4_LIST_RANK := 2
 const TOP4_LAST_FINISH := 4
 const FINALS_LIST_RANK := 7
 
 
-## The last ladder place outside the bottom third: 12 of 18, 13 of 20, 14 of 21.
+## The last ladder place that meets the middle goal: 12 of 18, 13 of 20, 14 of 21.
 static func top_two_thirds(clubs: int) -> int:
 	return roundi(clubs * 2.0 / 3.0)
+
+
+## The places below the middle goal, as the board says them: "the bottom six"
+## at 18 clubs, "the bottom seven" at 20 and 21. The word always matches the
+## ladder place the goal is judged on.
+static func bottom_places(clubs: int) -> String:
+	const WORDS := ["none", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
+	var n := clubs - top_two_thirds(clubs)
+	return "the bottom %s" % (WORDS[n] if n >= 0 and n < WORDS.size() else str(n))
 
 
 static func board_goal(rank: int, prev := 0, clubs := 18) -> Dictionary:
@@ -63,7 +72,7 @@ static func board_goal(rank: int, prev := 0, clubs := 18) -> Dictionary:
 		return {"key": "finals", "text": "Make the finals", "pos": Season.FINALISTS}
 	var mid := top_two_thirds(clubs)
 	if rank <= mid:
-		return {"key": "top12", "text": "Finish in the top %d" % mid, "pos": mid}
+		return {"key": "top12", "text": STAY_OUT + bottom_places(clubs), "pos": mid}
 	return {"key": "wins7", "text": "Win at least 7 games", "wins": 7}
 
 
@@ -83,7 +92,7 @@ static func goal_reason(goal: Dictionary, rank: int, clubs: int) -> String:
 				return paper + ": the board rates it among the best few in the competition."
 			return paper + ": the board sees a list good enough to play finals."
 		"top12":
-			return paper + ", in the middle of the pack: the board wants it out of the bottom third."
+			return paper + ", in the middle of the pack: the board wants it out of %s." % bottom_places(clubs)
 	return paper + ": the board knows it is still building."
 
 
@@ -159,10 +168,21 @@ const GOAL_PHRASE := {"top4": "a top-four finish", "finals": "a finals spot",
 		"top12": "a top-12 finish", "wins7": "seven wins"}
 
 
-## GOAL_PHRASE for `goal`; the middle band names its own ladder place.
+## The middle goal's opening words; what follows them names the bottom places.
+const STAY_OUT := "Stay out of "
+
+
+## GOAL_PHRASE for `goal`. The middle band is said in the goal's own words
+## ("a finish out of the bottom six"; the goal words are the director's, 2026-11-10), so the weekly board
+## line and the goal line name it one way. A goal set before those words (a
+## career mid-season) names its ladder place, as its goal line still does.
 static func goal_phrase(goal: Dictionary) -> String:
-	if str(goal.get("key", "")) == "top12" and goal.has("pos"):
-		return "a top-%d finish" % int(goal["pos"])
+	if str(goal.get("key", "")) == "top12":
+		var text := str(goal.get("text", ""))
+		if text.begins_with(STAY_OUT):
+			return "a finish out of " + text.trim_prefix(STAY_OUT)
+		if goal.has("pos"):
+			return "a top-%d finish" % int(goal["pos"])
 	return str(GOAL_PHRASE.get(str(goal.get("key", "")), "the season's goal"))
 
 

@@ -62,7 +62,7 @@
 			"Members want a signing session after training"
 		],
 		"text": [
-			"An hour in the car park with the members, after a long session."
+			"An hour on their feet in the car park with the members, straight after a long session, when they'd be in recovery."
 		],
 		"choices": [
 			{
@@ -74,12 +74,13 @@
 						"d": 3
 					},
 					{
-						"op": "morale",
-						"d": -2,
-						"who": "all"
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10,
+						"on": "week"
 					}
 				],
-				"result": "The players sign for an hour."
+				"result": "The players sign for an hour. Recovery waits."
 			},
 			{
 				"key": "no",
@@ -90,12 +91,11 @@
 						"d": -2
 					},
 					{
-						"op": "morale",
-						"d": 1,
-						"who": "all"
+						"op": "fresh",
+						"who": "side"
 					}
 				],
-				"result": "The signing session is put off."
+				"result": "The signing session is put off. The players go straight to recovery."
 			}
 		]
 	},
@@ -171,7 +171,7 @@
 			"The cheer squad have asked for {name}"
 		],
 		"text": [
-			"They want him to help paint the banner."
+			"They want him to help paint the banner on the afternoon he does his extra work."
 		],
 		"choices": [
 			{
@@ -187,28 +187,26 @@
 						"d": 4
 					},
 					{
-						"op": "slow_start",
-						"who": "subject",
-						"chance": 10,
-						"on": "week"
+						"op": "forgo_xp",
+						"d": 2
 					}
 				],
-				"result": "{name} helps paint the banner."
+				"result": "{name} helps paint the banner. His extra work waits a week."
 			},
 			{
 				"key": "no",
 				"label": "Not this week",
 				"effects": [
 					{
-						"op": "morale",
-						"d": -2
-					},
-					{
 						"op": "xp",
 						"d": 2
+					},
+					{
+						"op": "board",
+						"d": -1
 					}
 				],
-				"result": "The banner gets painted without {name}."
+				"result": "The banner gets painted without {name}. He does his extra work, and the cheer squad tell the club they're disappointed."
 			}
 		]
 	},
@@ -412,10 +410,10 @@
 						"why": "You let the cheer squad put his name on the Grand Final banner"
 					},
 					{
-						"op": "slow_start",
-						"who": "subject",
-						"chance": 20,
-						"on": "grand_final"
+						"op": "culture",
+						"strand": "together",
+						"d": -1,
+						"why": "You put one player's name on the Grand Final banner"
 					}
 				],
 				"result": "{name}'s name runs across the bottom of the banner. He'll keep a piece of it forever."
