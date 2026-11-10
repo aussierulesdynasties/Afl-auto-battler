@@ -10,6 +10,7 @@ var checks := 0
 
 const CLUBS := [["FRE", "MEL"], ["GEE", "COL"], ["SYD", "CAR"], ["BRL", "ESS"]]
 const SEEDS := 6
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -141,4 +142,4 @@ func _test_scores_stay_realistic() -> void:
 				n += 1
 	var avg := total / float(n)
 	print("Kick range: mean team score %.1f (%d team games)" % [avg, CLUBS.size() * SEEDS * 2])
-	_check(avg >= 60.0 and avg <= 105.0, "mean team score %.1f outside 60-105" % avg)
+	_check(BalanceGate.held(avg >= 60.0 and avg <= 105.0, "kick range: mean team score 60-105"), "mean team score %.1f outside 60-105" % avg)

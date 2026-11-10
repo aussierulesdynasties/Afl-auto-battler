@@ -15,6 +15,7 @@ const TOLERANCE := 0.07
 ## (2026-11-06): clearances run 8% over the real 2026 rate. A balance gap for
 ## the director's playtest, not a settled number.
 const STAT_TOLERANCE := {"Clearances": 0.10}
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 var checks := 0
 var failures := []
@@ -102,8 +103,10 @@ func _test_engine_against_2026(db, squad_script, sim_script) -> void:
 		var real := float(bench[str(row[2])])
 		var ratio := sim / real if real > 0.0 else 0.0
 		var flag := ""
-		if absf(ratio - 1.0) > float(STAT_TOLERANCE.get(str(row[0]), TOLERANCE)):
+		var miss := absf(ratio - 1.0) > float(STAT_TOLERANCE.get(str(row[0]), TOLERANCE))
+		if miss:
 			flag = "  <-- off"
+		if not BalanceGate.held(not miss, "calibration %s ratio %.2f vs real 2026" % [str(row[0]), ratio]):
 			failures.append("%s ratio %.2f" % [str(row[0]), ratio])
 		print("%-16s %9.1f %8.1f %6.2f%s" % [str(row[0]), real, sim, ratio, flag])
 	# How goals spread across a side: real 2026 clubs' top goalkicker kicks
@@ -131,8 +134,10 @@ func _test_engine_against_2026(db, squad_script, sim_script) -> void:
 		checks += 1
 		var ratio := float(row[1]) / float(row[2])
 		var flag := ""
-		if absf(ratio - 1.0) > 0.15:
+		var miss := absf(ratio - 1.0) > 0.15
+		if miss:
 			flag = "  <-- off"
+		if not BalanceGate.held(not miss, "calibration %s %.2f vs real %.2f" % [str(row[0]), float(row[1]), float(row[2])]):
 			failures.append("%s %.2f (real %.2f)" % [str(row[0]), float(row[1]), float(row[2])])
 		print("%-16s %9.2f %8.2f %6.2f%s" % [str(row[0]), float(row[2]), float(row[1]), ratio, flag])
 

@@ -12,6 +12,7 @@ var checks := 0
 ## Every season and draft here is seeded (C15): a clock seed makes a different
 ## league each run.
 const SUITE_SEED := 2027
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -230,7 +231,7 @@ func _test_youth_pace() -> void:
 	var old_top := _top_ten(1.0)
 	var top := _top_ten(Prospects.DRAFT_NIGHT_SCALE)
 	var drop := _mean_of(old_top, "overall") - _mean_of(top, "overall")
-	_check(drop >= 5.0 and drop <= 12.0, "A top-10 pick arrives about 8 points lower than on the old curve (%.1f)" % drop)
+	_check(BalanceGate.held(drop >= 5.0 and drop <= 12.0, "top-10 draft-night drop vs old curve"), "A top-10 pick arrives about 8 points lower than on the old curve (%.1f)" % drop)
 	_check(absf(_mean_of(old_top, "potential") - _mean_of(top, "potential")) <= 1.5, "His ceiling (POT) is the same")
 	# Readiness: a few are ready-made, most typical, some long-term projects.
 	var ready := 0
@@ -245,8 +246,8 @@ func _test_youth_pace() -> void:
 			project += 1
 			project_ov += float(p["overall"])
 	var n := float(top.size())
-	_check(float(ready) / n >= 0.10 and float(ready) / n <= 0.35, "About 1 in 5 of a top 10 is ready-made (%d of %d)" % [ready, top.size()])
-	_check(project > 0 and ready > 0 and ready_ov / float(ready) > project_ov / float(project) + 8.0,
+	_check(BalanceGate.held(float(ready) / n >= 0.10 and float(ready) / n <= 0.35, "ready-made share of top 10"), "About 1 in 5 of a top 10 is ready-made (%d of %d)" % [ready, top.size()])
+	_check(BalanceGate.held(project > 0 and ready > 0 and ready_ov / float(ready) > project_ov / float(project) + 8.0, "ready-made vs project draft-night gap"),
 			"A ready-made pick is well ahead of a project on draft night")
 	# He climbs: three off-seasons add well over ten points to the average top-10 pick.
 	var start := _mean_of(top, "overall")
@@ -257,7 +258,7 @@ func _test_youth_pace() -> void:
 			Prospects.age_player(c, 2040 + y)
 		after += float(c["overall"])
 	after /= n
-	_check(after - start >= 15.0, "The average top-10 pick climbs %.1f points in three seasons" % (after - start))
+	_check(BalanceGate.held(after - start >= 15.0, "top-10 three-season climb"), "The average top-10 pick climbs %.1f points in three seasons" % (after - start))
 	# Nobody already listed is rescaled: a saved draftee keeps his rating whatever the scale is now,
 	# and the real 2026 class (a draft class too, row 65) is rescaled like a generated one.
 	var saved: Dictionary = (_top_ten(1.0)[0] as Dictionary).duplicate(true)
@@ -334,11 +335,11 @@ func _test_draftee_bands() -> void:
 		var top: float = now["top_o"] / maxf(1.0, now["top_n"])
 		var mid: float = now["mid_o"] / maxf(1.0, now["mid_n"])
 		var late: float = now["late_o"] / maxf(1.0, now["late_n"])
-		_check(top >= 60.0 and top <= 62.5, "%s: picks 1-5 start about 60-62 (%.1f)" % [arm[0], top])
-		_check(mid >= 55.0 and mid <= 58.0, "%s: picks 6-20 start about 55-58 (%.1f)" % [arm[0], mid])
-		_check(late < mid - 2.0 and late >= 46.0, "%s: picks 21-40 start lower again, scaled the same way (%.1f)" % [arm[0], late])
+		_check(BalanceGate.held(top >= 60.0 and top <= 62.5, "picks 1-5 draftee band"), "%s: picks 1-5 start about 60-62 (%.1f)" % [arm[0], top])
+		_check(BalanceGate.held(mid >= 55.0 and mid <= 58.0, "picks 6-20 draftee band"), "%s: picks 6-20 start about 55-58 (%.1f)" % [arm[0], mid])
+		_check(BalanceGate.held(late < mid - 2.0 and late >= 46.0, "picks 21-40 draftee band"), "%s: picks 21-40 start lower again, scaled the same way (%.1f)" % [arm[0], late])
 		var old_top: float = was["top_o"] / maxf(1.0, was["top_n"])
-		_check(old_top - top >= 6.0, "%s: picks 1-5 start lower than on the old curve (%.1f v %.1f)" % [arm[0], top, old_top])
+		_check(BalanceGate.held(old_top - top >= 6.0, "picks 1-5 drop vs old curve"), "%s: picks 1-5 start lower than on the old curve (%.1f v %.1f)" % [arm[0], top, old_top])
 		for b in ["top", "mid"]:
 			var pot_now: float = now[b + "_p"] / maxf(1.0, now[b + "_n"])
 			var pot_was: float = was[b + "_p"] / maxf(1.0, was[b + "_n"])
@@ -395,7 +396,7 @@ func _test_pick_values_held() -> void:
 	for e in [[1, 1.9], [10, 1.3], [30, 0.7]]:
 		var now := _pick_value_at(int(e[0]), Prospects.DRAFT_NIGHT_SCALE)
 		var old := _pick_value_at(int(e[0]), 1.0)
-		_check(absf(now - float(e[1])) <= 0.15, "Pick %d is worth about %.1f to a rebuilding club (%.2f)" % [int(e[0]), float(e[1]), now])
+		_check(BalanceGate.held(absf(now - float(e[1])) <= 0.15, "rebuilding-club pick value"), "Pick %d is worth about %.1f to a rebuilding club (%.2f)" % [int(e[0]), float(e[1]), now])
 		_check(absf(now - old) <= 0.03 * old, "Pick %d is worth the same as on the old curve (%.2f v %.2f)" % [int(e[0]), now, old])
 
 

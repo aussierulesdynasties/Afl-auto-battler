@@ -53,6 +53,7 @@ func _check(condition: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+const BalanceGate := preload("res://tests/balance_gate.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -778,7 +779,7 @@ func _test_asset_valuation() -> void:
 		var first: Dictionary = d._best_ai_pick(d.current_club())
 		if top.has(str(first["id"])):
 			credible += 1
-	_check(credible >= 11, "The first pick of a career draft is one of the consensus top eight or within 4 points of it (%d of 12)" % credible)
+	_check(BalanceGate.held(credible >= 11, "draft: first career pick credible in 11 of 12"), "The first pick of a career draft is one of the consensus top eight or within 4 points of it (%d of 12)" % credible)
 
 
 ## The League Draft board is your recruiters' read, not the consensus: a

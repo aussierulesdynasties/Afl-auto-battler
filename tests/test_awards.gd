@@ -47,6 +47,7 @@ func _check(condition: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+const BalanceGate := preload("res://tests/balance_gate.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -491,7 +492,7 @@ func _test_full_season() -> void:
 		winner = _find_player(str(coleman[0].get("id", "")))
 		kicks.sort()
 		var median: float = kicks[kicks.size() / 2]
-		_check(not winner.is_empty() and float(winner["attr"]["goalkicking"]) >= median,
+		_check(BalanceGate.held(not winner.is_empty() and float(winner["attr"]["goalkicking"]) >= median, "Coleman medallist goalkicking vs league forward median"),
 				"The Coleman medallist can kick goals (%d, league forward median %d)" % [
 				int(winner.get("attr", {}).get("goalkicking", 0)), int(median)])
 	var rising: Array = aw.get("rising_star", [])
