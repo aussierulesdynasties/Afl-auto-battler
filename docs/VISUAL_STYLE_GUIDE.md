@@ -223,7 +223,7 @@ line is signed by a staff member.
   meter reads "%d out of 100", never "/100".
 - **The match feed** keeps a broadcaster's voice, set apart from the coach's (director,
   2026-11-10), and is the one place "!" may appear. Journalists keep their own personalities.
-- **"Sim the week"** keeps its name until the director rules on the word "sim" (3.Q).
+- **"Sim the week"** keeps the word "sim" (director, 2026-11-10); "simming" does not: "Ask before Sim the week".
 - **Words.** The AFL's own nouns: centre bounce, stoppage, clearance, inside 50, pressure acts,
   best 22, senior list, rookie list, delist, list spot, trade period, free agency. Replace roster
   (list), playbook (game plan), starter (best 22, or the player he replaces), payroll (salary

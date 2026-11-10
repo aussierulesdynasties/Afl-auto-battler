@@ -6,9 +6,8 @@ extends RefCounted
 ##
 ## OVR and POT stay allowed (director, 2026-11-10: "Keep the numbers"). The match feed keeps a
 ## broadcaster's voice (director, 2026-11-10: "Keep broadcaster"), so "!" is allowed there.
-## "Sim the week" keeps its name until the director rules on the word "sim" (DIRECTOR_BIBLE
-## 3.Q); "simming" is still banned and its known hits sit in tests/run_copy_rules_tests.gd's
-## allow-list, tied to that question.
+## "Sim the week" keeps the word "sim" (director, 2026-11-10) as the button's name; "simming"
+## stays banned ("Ask before Sim the week", not "Ask before simming").
 
 ## Whole words or phrases, any case. Advice ("should", "need to"), engine and software words
 ## ("modifier", "simulation", "roster"), and verdicts ("best choice").

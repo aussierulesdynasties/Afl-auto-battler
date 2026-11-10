@@ -63,7 +63,6 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 - 56 Public demo page: rights to real names and a licence register come first.
 - 32 Web build parity: saves carried between devices pending his answer.
 - 113 Each club's real 2026 National Draft picks, with sources (parked, director 2026-11-10: "the draft hasnt happened yet so park it for now"). The rest shipped as the Real lists start (#569, #1172): real lists, the real 2026 class with ties, the 2026 National Draft, then 2027. Today the opening draft runs in reverse 2026 ladder order (GameState.gd begin_real_lists). Blocked until the real 2026 National Draft has happened.
-- 141 Copy voice, the word "sim": "Simming the week..." (HubScene.gd), the "Ask before simming" setting (OptionsSheet.gd) and the Sim confirm sheet stay as they are until he rules whether "Sim the week" keeps the word (DIRECTOR_BIBLE 3.Q); then rewrite them and drop their ALLOW entries in tests/run_copy_rules_tests.gd.
 
 ## F. Later (1.x or after 1.0, unassigned)
 

@@ -2038,7 +2038,7 @@ func _sim_week() -> void:
 func _sim_line() -> String:
 	var season: Season = GameState.season
 	if season == null or season.is_season_over():
-		return "Simming the week..."
+		return "Sim the week..."
 	if not season.is_regular_done():
 		return "Playing %s..." % season.round_label(season.round_index)
 	var w := int(season.finals.get("week", 1))

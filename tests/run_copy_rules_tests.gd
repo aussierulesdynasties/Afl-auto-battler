@@ -12,7 +12,7 @@ var _failures: Array[String] = []
 const SOURCES := ["res://data/stories", "res://scripts/ui", "res://scripts/sim", "res://scripts/state"]
 
 ## Known hits, per file: [count, words, the pass that rewrites them]. Each reason names its copy
-## voice row in docs/TODO.md (131-140 the screen passes, 141 the open question on "sim").
+## voice row in docs/TODO.md (131-140, the screen passes).
 const ALLOW := {
 	"res://data/stories/leadership.json": [1, "should", "row 140: a player's own question, reported"],
 	"res://data/stories/media.json": [2, "should", "row 140: a pundit's view, reported"],
@@ -23,9 +23,7 @@ const ALLOW := {
 	"res://scripts/state/GameState.gd": [3, "starter, auto-pick, projection", "rows 134 and 138"],
 	"res://scripts/ui/CoachingScene.gd": [1, "payroll", "row 134: coaching"],
 	"res://scripts/ui/DraftScene.gd": [1, "projection", "row 136: draft"],
-	"res://scripts/ui/HubScene.gd": [1, "simming", "row 141, sim: the loading line waits on the word 'sim'"],
 	"res://scripts/ui/OffseasonScene.gd": [1, "payroll", "row 137: contracts and trades"],
-	"res://scripts/ui/OptionsSheet.gd": [1, "simming", "row 141, sim: the setting waits on the word 'sim'"],
 	"res://scripts/ui/PreSeasonScene.gd": [10, "starter", "row 136: pre-season"],
 	"res://scripts/ui/SelectionScene.gd": [4, "auto-pick", "row 134: renamed with the Auto-pick button"],
 	"res://scripts/ui/StatGuide.gd": [1, "projection", "row 139: stats and menus"],
@@ -46,7 +44,7 @@ const HUB_NEW := [
 	"Play the semi-finals", "Play the preliminary finals", "Play the Grand Final",
 	"Playing the semi-finals...", "Playing the preliminary finals...",
 	"Our pick. Whoever we take signs a rookie deal to the end of next season.",
-	"Sim the week without picking and we pass.",
+	"Sim the week without picking and we pass.", "Sim the week...",
 ]
 const HUB_OLD := [
 	"\"Your week\"", "Check the next opponent", "Each week a short list here", "whenever you are ready",
@@ -54,6 +52,7 @@ const HUB_OLD := [
 	"Your finals campaign", "Season over for you", "You missed the top", "\"Your coach\"",
 	"\"Your %s. They have", "%d of 100", "Play semi finals", "Play the prelims", "Play Grand Final",
 	"Playing the semi finals", "Playing the prelims", "Your pick: whoever you take",
+	"Simming the week...",
 ]
 
 
