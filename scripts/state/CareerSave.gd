@@ -48,6 +48,9 @@ const TEMP_SUFFIX := ".tmp"
 ## killed once the new save is written; "after_backup": once the old one has
 ## been moved aside; "swap": as if moving the new one into place failed).
 static var fail_at := ""
+## Called once per decoded player so a load screen keeps moving. GameState points it at
+## Season.beat; naming Season here would pull the autoloads into every runner that names CareerSave.
+static var beat_hook := Callable()
 
 
 ## A usable save at `path`, or one to recover it from.
@@ -433,7 +436,8 @@ func _decode(v):
 			if not _decoded.has(sid):
 				# Loading a career decodes thousands of players: the load screen
 				# keeps its ball moving between them (draws no random numbers).
-				Season.beat()
+				if beat_hook.is_valid():
+					beat_hook.call()
 				var live := {}
 				_decoded[sid] = live
 				var raw: Dictionary = _players.get(sid, {})

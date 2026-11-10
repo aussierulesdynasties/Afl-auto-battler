@@ -396,6 +396,7 @@ var _dirty := false
 
 
 func _ready() -> void:
+	CareerSave.beat_hook = Season.beat   # load screen keeps moving while players decode
 	PreSeason.data()   # its sizes are read once, before any scouting read needs one
 	var cfg := ConfigFile.new()
 	if cfg.load(settings_path) == OK:
