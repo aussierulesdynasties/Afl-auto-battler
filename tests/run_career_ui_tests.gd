@@ -4089,15 +4089,16 @@ func _test_canberra_2030_warning() -> void:
 	await _settle()
 	var t4: String = await Tap.tap(current_scene.find_child("StartCareer", true, false))
 	await _settle()
-	var again := current_scene.find_child("SimAheadWarning", true, false)
+	# Kept as a bool: Back frees the sheet, and a freed node compares equal to null.
+	var again: bool = current_scene.find_child("SimAheadWarning", true, false) != null
 	var t5: String = "no sheet"
-	if again != null:
+	if again:
 		t5 = await Tap.tap(current_scene.find_child("SimAheadBack", true, false))
 	await _settle()
-	_check(t4 == "" and again != null and t5 == "" and _state.season == null and _router.current() == "main"
+	_check(t4 == "" and again and t5 == "" and _state.season == null and _router.current() == "main"
 			and not bool(current_scene.get("_pick_canberra")),
 			"Back from the warning at Choose your club starts no career (%s %s; sheet %s, season %s, route %s, Canberra %s)" % [
-				t4, t5, again != null, _state.season != null, _router.current(), current_scene.get("_pick_canberra")])
+				t4, t5, again, _state.season != null, _router.current(), current_scene.get("_pick_canberra")])
 	_state.reset()
 	_router.stack = []
 
