@@ -10,7 +10,11 @@ extends SceneTree
 var _checks := 0
 var _failures: Array[String] = []
 
-const SOURCES := ["res://data/stories", "res://scripts/ui", "res://scripts/sim", "res://scripts/state"]
+## data/tales holds the phrase banks of the story layer (a career, the league news, a season's
+## shape): every phrase there reaches the screen, so the banks are walked like the story cards.
+const SOURCES := ["res://data/stories", "res://data/tales", "res://scripts/ui", "res://scripts/sim", "res://scripts/state"]
+## The phrase banks that must be among the files read (a moved or renamed bank fails by name).
+const TALES := ["res://data/tales/career.json", "res://data/tales/league.json", "res://data/tales/season.json"]
 
 ## Known hits, per file: [count, words, the pass that rewrites them]. Each reason names its copy
 ## voice row in docs/TODO.md (131-140, the screen passes).
@@ -103,6 +107,7 @@ func _test_sources() -> void:
 	var lit := RegEx.create_from_string("\"([^\"\\n]*)\"")
 	var found := {}
 	var lines := {}
+	var read := {}
 	for dir in SOURCES:
 		for path in _files(dir):
 			var text := FileAccess.get_file_as_string(path)
@@ -116,6 +121,7 @@ func _test_sources() -> void:
 					for m in lit.search_all(line):
 						if m.get_string(1).contains(" "):
 							strings.append(m.get_string(1))
+			read[path] = strings.size()
 			for s in strings:
 				var hits := CopyRules.words_in(str(s))
 				if hits.is_empty():
@@ -130,6 +136,15 @@ func _test_sources() -> void:
 				path, int(found[path]), allowed, " | ".join(PackedStringArray(lines[path]))])
 	for path in ALLOW:
 		_check(found.has(path), "%s is clean now: drop it from ALLOW" % path)
+	for path in TALES:
+		_check(int(read.get(path, 0)) > 0, "%s is read, phrase by phrase (%d strings)" % [path, int(read.get(path, 0))])
+	# The list bites on a bank: a banned word in a phrase shaped like the season bank's is caught.
+	var bank: Array = []
+	_json_strings({"angles": {"surge": {"slots": ["run"], "coach": ["We should have won our last {run} games."]}}}, bank)
+	var caught: Array = []
+	for s in bank:
+		caught.append_array(CopyRules.words_in(str(s)))
+	_check(caught == ["should"], "A banned word in a bank's phrase is caught (%s)" % str(caught))
 
 
 ## The hub pass: each rewritten line is in the hub's source, and none of the old ones is.
