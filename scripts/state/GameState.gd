@@ -323,6 +323,9 @@ var custom_club := {}
 ## "My Selected Best 23" (director, 2026-10-07): your saved recurring side, a
 ## selection ({RUCK, MID, WING, DEF, FWD, BENCH} -> ids), or {} if none.
 var best23 := {}
+## The hub search's shortlist (row T3.R43, P-65): player ids and "club:CODE",
+## in the order the coach added them. A look-up list; no effect on the game.
+var shortlist: Array = []
 var class_tiers := {}             # draft year (string) -> tier key, as generated
 var draftee_pool: Array = []     # all prospects that have not been drafted yet
 var drafted_draftees := {}       # prospect id -> destination club
@@ -932,6 +935,7 @@ func _save_state() -> Dictionary:
 		"opening_draft": opening_draft,
 		"custom_club": custom_club,
 		"best23": best23,
+		"shortlist": shortlist,
 		"user_dual_ruck": user_dual_ruck,
 		# Players carry p["career"]; saves without this mark predate it.
 		"career_version": CAREER_VERSION,
@@ -1013,6 +1017,7 @@ func _restore_career(state: Dictionary) -> bool:
 	set_canberra(bool(state.get("canberra_on", true)))
 	expansion = state.get("expansion", {}) if state.get("expansion") is Dictionary else {}
 	best23 = state.get("best23", {})
+	shortlist = state.get("shortlist", []) if state.get("shortlist") is Array else []
 	if not custom_club.is_empty():
 		GameDB.register_club(ClubForge.row(custom_club))
 	season_year = int(state.get("season_year", 2026))
@@ -1618,6 +1623,7 @@ func reset() -> void:
 	CoachEffects.relations = {}
 	custom_club = {}
 	best23 = {}
+	shortlist = []
 	my_club = ""
 	my_list = []
 	season = null
@@ -10649,6 +10655,20 @@ func opponent_side(code: String) -> Dictionary:
 		return {"side": {}, "list": []}
 	var sq := Squad.new(GameDB.club_name(code), season.lists[code], false, code, season.selections.get(code, {}))
 	return {"side": _as_selection(sq.ground, sq.bench), "list": season.lists[code]}
+
+
+## Put a player (id) or a club ("club:CODE") on the shortlist, or take it
+## off. True when it is on the list afterwards.
+func toggle_shortlist(id: String) -> bool:
+	if id == "":
+		return false
+	var on := shortlist.has(id)
+	if on:
+		shortlist.erase(id)
+	else:
+		shortlist.append(id)
+	mark_dirty()
+	return not on
 
 
 ## Save the side as your recurring Best 23 (kept until you save another).

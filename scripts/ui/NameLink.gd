@@ -352,4 +352,5 @@ static func close_open(scene: Node) -> bool:
 		if (c.name == SHEET_NAME and c.has_meta("name_link")) or c.has_meta("club_link"):
 			c.queue_free()
 			return true
-	return false
+	# The hub's search sits under the profile or club page it opened.
+	return HubSearch.close_open(scene)

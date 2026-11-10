@@ -82,6 +82,8 @@ func _run() -> void:
 	_t("_test_word_source")
 	await _t("_test_long_press_label")
 	await _t("_test_long_press_button")
+	_t("_test_search_finds")
+	await _t("_test_search_taps")
 	UK.apply_text_size("standard")
 	_router.stack = []
 	print(Ran.line("Nav economy", self))
@@ -186,7 +188,21 @@ func _test_two_taps() -> void:
 		if not ok:
 			continue
 		var shown := current_scene.find_child(str(f[2]), true, false) as Control if current_scene != null else null
-		_check(shown != null and shown.is_visible_in_tree(), "%s: %s shows after %d tap(s) (on %s)" % [fact, f[2], (f[1] as Array).size(), _router.current()])
+		var seen := shown != null and shown.is_visible_in_tree()
+		_check(seen, "%s: %s shows after %d tap(s) (on %s)" % [fact, f[2], (f[1] as Array).size(), _router.current()])
+		if not seen and current_scene != null:
+			# What the screen did build, to say why without another run.
+			var names: Array = []
+			for n in current_scene.find_children("FullTime*", "", true, false):
+				names.append("%s%s" % [n.name, "" if (n as CanvasItem).is_visible_in_tree() else "(hidden)"])
+			var lm: Dictionary = _gs.last_match
+			var side := 0 if str(lm.get("home", "")) == _gs.my_club else 1
+			var MN = load("res://scripts/ui/match/MatchNotes.gd")
+			var lines := 0
+			for q in range(1, 5):
+				lines += (MN.calls_lines(lm, side, q) as Array).size()
+			print("  DEBUG %s: built %s; last_match hist %d, snaps %d, call lines %d" % [fact, str(names),
+					(lm.get("tactics_history", []) as Array).size(), (lm.get("quarter_teams", []) as Array).size(), lines])
 	await _hub()
 
 
@@ -250,13 +266,32 @@ func _small_targets(scene: Node) -> Array:
 
 ## Which parent asks for more width than the screen has: the cause to fix.
 func _widest(c: Control, win: Vector2) -> String:
+	# Each ancestor's own minimum width, leaf first, and the first one over the
+	# screen: the jump between two links names the control that widens it.
 	var n: Node = c
 	var cause := ""
+	var chain: Array = []
 	while n != null and n is Control:
 		var w := (n as Control).get_combined_minimum_size().x
+		chain.append("%s:%.0f" % [n.name if not str(n.name).begins_with("@") else n.get_class(), w])
 		if w > win.x + 1.0 and cause == "":
 			cause = " (%s needs %.0f px)" % [n.name, w]
 		n = n.get_parent()
+	if cause != "":
+		cause += " [" + " < ".join(chain.slice(0, 12)) + "]"
+		# And down from the screen's page: the widest child at each level.
+		var down: Array = []
+		var d: Node = current_scene
+		while d != null and down.size() < 16:
+			var best: Control = null
+			for k in d.get_children():
+				if k is Control and (k as Control).visible and (best == null or (k as Control).get_combined_minimum_size().x > best.get_combined_minimum_size().x):
+					best = k
+			if best == null:
+				break
+			down.append("%s:%.0f" % [best.name if not str(best.name).begins_with("@") else best.get_class(), best.get_combined_minimum_size().x])
+			d = best
+		cause += " {" + " > ".join(down) + "}"
 	return cause
 
 
@@ -433,3 +468,110 @@ func _test_long_press_button() -> void:
 		if n.has_meta(WP.OWN_HOLD):
 			own += 1
 	_check(own > 0, "Training's player rows keep their own long press (%d)" % own)
+
+
+# ---------------------------------------------------------------------------
+# Search any player or club from the hub; shortlist by long-press (P-65)
+# ---------------------------------------------------------------------------
+
+## Names match whole clubs and any listed player, clubs first.
+func _test_search_finds() -> void:
+	var HS = load("res://scripts/ui/HubSearch.gd")
+	var CL = load("res://scripts/ui/ClubLink.gd")
+	var found: Array = HS.matches("Melb")
+	_check(not found.is_empty() and str(found[0]) == CL.SCHEME + "MEL", "\"Melb\" finds Melbourne first (%s)" % str(found.slice(0, 3)))
+	_check((HS.matches("M") as Array).is_empty(), "one letter searches nothing")
+	_check(_gs.season.lists.size() >= 18, "every club's list is searched (%d)" % _gs.season.lists.size())
+	var hits := 0
+	for code in ["GEE", "SYD", "FRE"]:
+		var p: Dictionary = _gs.season.lists[code][3]
+		var surname := str(p["name"]).get_slice(" ", str(p["name"]).get_slice_count(" ") - 1)
+		var ids: Array = HS.matches(surname)
+		if ids.has(str(p["id"])):
+			hits += 1
+		else:
+			_check(false, "%s finds %s of %s (%s)" % [surname, p["name"], code, str(ids.slice(0, 5))])
+	_check(hits == 3, "a surname finds the player at any club (%d of 3)" % hits)
+	_check(str(HS.describe(CL.SCHEME + "FRE")[0]) == "Fremantle", "a club row says the club")
+
+
+func _search_sheet() -> Control:
+	var s := current_scene.find_child("HubSearch", true, false) as Control
+	return null if s == null or s.is_queued_for_deletion() else s
+
+
+## Real taps: the hub's Search opens the sheet; a tap on a name opens his
+## profile over it; Back closes the profile, then the sheet; a held name goes
+## on the shortlist, shows on the empty field, and a second hold takes it off.
+func _test_search_taps() -> void:
+	root.size = PHONE
+	_gs.set_text_size("standard")
+	_gs.shortlist = []
+	await _hub()
+	var why: String = await Tap.tap(current_scene.find_child("HubSearchOpen", true, false))
+	_check(why == "", "the tap on Search lands (%s)" % why)
+	await _settle(4)
+	var sheet := _search_sheet()
+	_check(sheet != null and sheet.is_visible_in_tree(), "Search opens one sheet from the hub")
+	if sheet == null:
+		return
+	_check(sheet.find_child("ShortlistEmpty", true, false) != null, "an empty shortlist says how to fill it")
+	var p: Dictionary = _gs.season.lists["SYD"][2]
+	var id := str(p["id"])
+	var field := sheet.find_child("SearchField", true, false) as LineEdit
+	field.text = str(p["name"])
+	field.text_changed.emit(field.text)
+	await _settle(3)
+	var row := sheet.find_child("Result_" + id, true, false) as Button
+	_check(row != null, "typing his name lists %s" % p["name"])
+	if row == null:
+		return
+	why = await Tap.tap(row)
+	_check(why == "", "the tap on his name lands (%s)" % why)
+	await _settle(4)
+	var prof := current_scene.find_child("PlayerProfile", true, false) as Control
+	_check(prof != null and prof.is_visible_in_tree(), "a tap on a name opens his profile")
+	_router.handle_back()
+	await _settle(4)
+	_check(_search_sheet() != null and _router.current() == "hub", "Back closes the profile and keeps the search")
+	row = _search_sheet().find_child("Result_" + id, true, false) as Button
+	why = await Tap.hold_at(row, row.size * 0.5, WP.HOLD_SECONDS + 0.2)
+	await _settle(4)
+	_check(why == "" and _gs.shortlist.has(id), "holding his name puts him on the shortlist (%s)" % why)
+	_check(current_scene.find_child("PlayerProfile", true, false) == null, "the hold opens no profile")
+	_check(current_scene.find_child(FW.SHEET_NAME, true, false) == null, "the hold opens no word rule")
+	var kept := row.find_child("Kept", true, false) as Label
+	_check(kept != null and kept.visible, "his row says Kept")
+	field.text = ""
+	field.text_changed.emit("")
+	await _settle(3)
+	row = _search_sheet().find_child("Result_" + id, true, false) as Button
+	_check(row != null, "the empty field shows the shortlist with him on it")
+	# A club is kept the same way, and its row opens the club's page.
+	field.text = "Fremantle"
+	field.text_changed.emit(field.text)
+	await _settle(3)
+	var club := _search_sheet().find_child("Result_club_FRE", true, false) as Button
+	_check(club != null, "typing a club lists it")
+	if club != null:
+		why = await Tap.tap(club)
+		await _settle(4)
+		_check(why == "" and current_scene.find_child("ClubPage", true, false) != null, "a tap on a club opens its page (%s)" % why)
+		_router.handle_back()
+		await _settle(4)
+	field.text = ""
+	field.text_changed.emit("")
+	await _settle(3)
+	row = _search_sheet().find_child("Result_" + id, true, false) as Button
+	if row != null:
+		why = await Tap.hold_at(row, row.size * 0.5, WP.HOLD_SECONDS + 0.2)
+		await _settle(4)
+	_check(not _gs.shortlist.has(id), "a second hold takes him off")
+	_router.handle_back()
+	await _settle(4)
+	_check(_search_sheet() == null and _router.current() == "hub", "Back closes the search and stays on the hub")
+	# The shortlist is the career's: it is saved with it.
+	_gs.toggle_shortlist(id)
+	var saved: Dictionary = _gs._save_state()
+	_check((saved.get("shortlist", []) as Array).has(id), "the shortlist is saved with the career")
+	_gs.shortlist = []

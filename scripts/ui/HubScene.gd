@@ -286,7 +286,17 @@ func _build() -> void:
 	settings.custom_minimum_size = Vector2(64, 44)
 	settings.add_theme_color_override("font_color", UiKit.MUTED)
 	settings.pressed.connect(func(): _settings = OptionsSheet.open(self, true))
-	_root.add_child(UiKit.top_bar(_week_title(season), false, settings))
+	# Any player or club by name, and the shortlist (row T3.R43, P-65).
+	var search := UiKit.btn("Search", 14)
+	search.name = "HubSearchOpen"
+	search.flat = true
+	search.custom_minimum_size = Vector2(64, 44)
+	search.add_theme_color_override("font_color", UiKit.MUTED)
+	search.pressed.connect(func(): HubSearch.open(self))
+	var right := UiKit.hbox(4)
+	right.add_child(search)
+	right.add_child(settings)
+	_root.add_child(UiKit.top_bar(_week_title(season), false, right))
 	if GameState.is_sacked():
 		# The jobs on offer and the record run past a phone's height: it scrolls.
 		var sp := UiKit.vbox(UiKit.SECTION)
