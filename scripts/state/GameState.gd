@@ -6478,6 +6478,10 @@ func _close_season_awards() -> void:
 	var sh := Almanac.season_hero(self)
 	if not sh.is_empty():
 		honour_roll[-1]["season_hero"] = [sh]
+	# The coach's ledger (P-39): which of this season's honoured players you
+	# drafted, kept now so the ledger still has them after they leave the game.
+	honour_roll[-1]["my_drafted"] = CoachLedger.snapshot(honour_roll[-1], _any_player, honour_roll,
+			my_club, season_year, my_first_season, start_mode)
 	# Your club annual starts with your first season: the years played
 	# without you (sim_ahead) are on the honour roll, not in your annual.
 	if my_club != "":
