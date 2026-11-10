@@ -420,6 +420,10 @@ func _test_tap_after_cover() -> void:
 func _test_browser_loads_under_the_line() -> void:
 	var path := "res://scenes/StatsHubScene.tscn"
 	await _down()   # the tap test before this one leaves Sim the week's cover up
+	# Headless runs have no motion, so the cover would skip its sweep and go
+	# straight to held: turn motion on so there is a sweep to load during.
+	var feel = load("res://scripts/ui/Feel.gd")
+	feel.test_motion = true
 	_router.set("test_main_thread_load", true)
 	_wipe.set("test_cover", true)
 	_router.go("stats")
@@ -432,6 +436,7 @@ func _test_browser_loads_under_the_line() -> void:
 		seen["drawn"] = int(_wipe.get("drawn_count"))
 		await process_frame
 	await _down()
+	feel.test_motion = false
 	_router.set("test_main_thread_load", false)
 	_wipe.set("test_cover", false)
 	_check(phase_then == 1 and during_sweep == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE,
