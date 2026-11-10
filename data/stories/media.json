@@ -17,7 +17,7 @@
 			"The papers want {name} dropped"
 		],
 		"text": [
-			"Gary Haddon has {name} on the back page after a poor few weeks and says he should make way. {first} has averaged a Player rating of {form} over his last three games. Players who started as a {role_word} this year average a Player rating of {role_avg}."
+			"Gary Haddon has {name} on the back page after a poor few weeks and says he should make way. {first} has rated {form} over his last three games. The average {role_word} rates {role_avg}."
 		],
 		"unanswered": {
 			"trust": -2,
@@ -27,7 +27,7 @@
 		"choices": [
 			{
 				"key": "suspend",
-				"label": "Rest him this week",
+				"label": "Drop {first} this week",
 				"effects": [
 					{
 						"op": "rest"
@@ -46,7 +46,7 @@
 			},
 			{
 				"key": "back",
-				"label": "Keep him in",
+				"label": "Keep {first} in",
 				"effects": [
 					{
 						"op": "morale",
@@ -84,7 +84,7 @@
 			"Kev Pollard has sprayed you on radio"
 		],
 		"text": [
-			"Outer Wing Radio: \"{club} have lost their way and the coach has lost the rooms.\" Do you bite?"
+			"Outer Wing Radio: \"{club} have lost their way and the coach has lost the players.\" Do you bite?"
 		],
 		"choices": [
 			{
@@ -117,7 +117,7 @@
 						"d": 2
 					}
 				],
-				"result": "You say nothing. The rooms hear it all week anyway."
+				"result": "You say nothing. The players hear it all week anyway."
 			}
 		],
 		"when": {
@@ -144,7 +144,7 @@
 		"choices": [
 			{
 				"key": "yes",
-				"label": "Let him write it",
+				"label": "Let {first} write it",
 				"effects": [
 					{
 						"op": "morale",
@@ -202,7 +202,7 @@
 			"Footy Tonight want a feature on {name}"
 		],
 		"text": [
-			"Trish Lomax wants a week with him. Good for the club, and a lot of spotlight on a kid."
+			"Trish Lomax wants a week with {first}. Good for the club, and a lot of spotlight on a kid."
 		],
 		"choices": [
 			{
@@ -228,7 +228,7 @@
 			},
 			{
 				"key": "no",
-				"label": "Keep him out of it",
+				"label": "Keep {first} out of it",
 				"effects": [
 					{
 						"op": "morale",
@@ -332,7 +332,7 @@
 						"op": "culture",
 						"strand": "together",
 						"d": 1,
-						"why": "You kept the rooms the players'"
+						"why": "You kept the cameras out of the rooms"
 					}
 				],
 				"result": "No cameras. The board wanted the exposure."
@@ -361,7 +361,7 @@
 		"choices": [
 			{
 				"key": "front",
-				"label": "Let him front the group",
+				"label": "Let {first} front the group",
 				"effects": [
 					{
 						"op": "trust",
@@ -385,11 +385,11 @@
 							}
 						],
 						"held_result": "{name} takes the group through it and they hear him out.",
-						"failed_result": "It does not land with the group."
+						"failed_result": "It doesn't land with the group."
 					}
 				],
 				"result": "",
-				"rule": "The group listens to a player with Leadership {holds_at} or more, or {holds_trust_at} or more if his opinion of you is {holds_opinion_at}/100 or more. {name}: Leadership {leadership}, opinion of you {opinion}/100."
+				"rule": "The players listen to a teammate whose Leadership rating is {holds_at} or better. If {name} rates you {holds_opinion_at} out of 100 or better, {holds_trust_at} is enough. {name}: Leadership {leadership}, rates you {opinion} out of 100."
 			},
 			{
 				"key": "private",
@@ -434,15 +434,15 @@
 			"pick": "random"
 		},
 		"title": [
-			"They say {name} is in the wrong spot"
+			"Radio says {name} is playing in the wrong spot"
 		],
 		"text": [
-			"A former player on the radio says {name} should be playing as a {trial_word}. {first} wants to know if you will try it."
+			"A former player on the radio says {name} should be playing as a {trial_word}. {first} wants to know if you'll try it."
 		],
 		"choices": [
 			{
 				"key": "stand",
-				"label": "Leave him where he is",
+				"label": "Leave {first} where he is",
 				"effects": [
 					{
 						"op": "trust",
@@ -460,7 +460,7 @@
 			},
 			{
 				"key": "down",
-				"label": "Try him as a {trial_word}",
+				"label": "Try {first} as a {trial_word}",
 				"effects": [
 					{
 						"op": "role_trial",
@@ -497,10 +497,10 @@
 		},
 		"id": "media_trial_worked",
 		"title": [
-			"{name} passed his trial as a {trial_word}"
+			"{name} did well as a {trial_word} as a {trial_word}"
 		],
 		"text": [
-			"{first} averaged a Player rating of {trial_avg} as a {trial_word} over the three games. Players who started as a {trial_word} this year average a Player rating of {trial_par}. {trial_tail}"
+			"{first} rated {trial_avg} as a {trial_word} over the three games. The average {trial_word} rates {trial_par}. {trial_tail}"
 		],
 		"choices": [
 			{
@@ -517,7 +517,7 @@
 						"who": "subject"
 					}
 				],
-				"result": "{name} is back in his usual spot. Three weeks in a new role came out of the work on his own game."
+				"result": "{name} goes back to his usual spot, and you know he can play as a {trial_word}. Three weeks in a new role came out of the work on his own game."
 			}
 		]
 	},
@@ -538,7 +538,7 @@
 			"{name}'s trial as a {trial_word} is over"
 		],
 		"text": [
-			"{first} averaged a Player rating of {trial_avg} as a {trial_word} over the three games. Players who started as a {trial_word} this year average a Player rating of {trial_par}. {trial_tail}"
+			"{first} rated {trial_avg} as a {trial_word} over the three games. The average {trial_word} rates {trial_par}. {trial_tail}"
 		],
 		"choices": [
 			{
@@ -636,7 +636,7 @@
 		"choices": [
 			{
 				"key": "back",
-				"label": "Say it is about right",
+				"label": "Say that's about right",
 				"effects": [
 					{
 						"op": "board",
@@ -654,11 +654,11 @@
 						"why": "You were straight with the press about where the list sits"
 					}
 				],
-				"result": "You tell the press the list is about where they have it."
+				"result": "You tell the press that's about where the list is."
 			},
 			{
 				"key": "deflect",
-				"label": "Say the ladder is settled on the field",
+				"label": "Say the ladder gets sorted on the field",
 				"effects": [
 					{
 						"op": "morale",
@@ -712,7 +712,7 @@
 			"{paper} asks how long you have"
 		],
 		"text": [
-			"{writer} has the club finishing {pred_word}. The board's goal is to {goal_line}. He asks whether you are under pressure."
+			"{writer} has the club finishing {pred_word}. The board's goal is to {goal_line}. {writer} asks if you're under pressure."
 		],
 		"unanswered": {
 			"board": -4,
@@ -733,7 +733,7 @@
 						"who": "all"
 					}
 				],
-				"result": "You tell the press the board is entitled to ask, and so are they. The back page runs it as a coach under pressure, and the players read it."
+				"result": "You tell the press the board is entitled to ask, and so is the paper. The back page runs it as a coach under pressure, and the players read it."
 			},
 			{
 				"key": "deflect",
@@ -805,7 +805,7 @@
 		"choices": [
 			{
 				"key": "back",
-				"label": "Say he has earned the attention",
+				"label": "Say {first} has earned it",
 				"effects": [
 					{
 						"op": "morale",
@@ -826,7 +826,7 @@
 			},
 			{
 				"key": "deflect",
-				"label": "Say he still has plenty to prove",
+				"label": "Say {first} still has plenty to prove",
 				"effects": [
 					{
 						"op": "culture",
@@ -848,7 +848,7 @@
 			},
 			{
 				"key": "talk_up",
-				"label": "Promise him a run in the side",
+				"label": "Promise {first} a run in the side",
 				"effects": [
 					{
 						"op": "trust",
@@ -882,10 +882,10 @@
 			"words_behind_min": 1
 		},
 		"title": [
-			"{club} is {ladder_word}; you said {words_word}"
+			"You said {words_word}. {club} is {ladder_word}"
 		],
 		"text": [
-			"Before the season you told the press {club} would finish {words_word} or better. It sits {ladder_word}, and the papers have printed your words back."
+			"Before the season you told the press {club} would finish {words_word} or better. It sits {ladder_word}, and the papers have thrown your words back at you."
 		],
 		"unanswered": {
 			"board": -4,
@@ -943,7 +943,7 @@
 			"One win from the Grand Final"
 		],
 		"text": [
-			"Everyone outside the club wants to talk about the last Saturday in September. You need them thinking about this week."
+			"Everyone outside the club wants to talk about the last Saturday in September. You need the players thinking about this week."
 		],
 		"choices": [
 			{
@@ -980,7 +980,7 @@
 						"on": "week"
 					}
 				],
-				"result": "The players talk about the big day. Training has an edge to it."
+				"result": "The players talk about the big day. Training is a bit loose."
 			}
 		]
 	},
@@ -1001,7 +1001,7 @@
 			"Most of the tips have {opp} winning"
 		],
 		"text": [
-			"They finished above you, and the papers have noticed. The reporters want to know if you've read it."
+			"They finished above you, and the papers have noticed. The reporters ask if you've seen the tips."
 		],
 		"choices": [
 			{

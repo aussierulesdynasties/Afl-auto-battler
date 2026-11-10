@@ -1829,11 +1829,11 @@ func _test_fact_talks() -> void:
 	_check(str(card["text"]).begins_with("120 games, fit, and dropped") and keys == ["explain", "talk", "call"]
 			and str((card["options"][0] as Dictionary)["detail"]).contains("12 disposals"),
 			"The card opens on what happened and offers his season in plain numbers (%s)" % str(card["text"]))
-	_check(str((card["options"][0] as Dictionary)["label"]) == "Talk him through his season",
+	_check(str((card["options"][0] as Dictionary)["label"]) == "Talk %s through his season" % GameDB.player_display_name(p).split(" ")[0],
 			"The label is neutral: it neither argues for nor against your call")
 	info["kpi"] = ""
 	var none_yet := _talk_card(p, "waiting", info)
-	_check(str((none_yet["options"][0] as Dictionary)["label"]) == "Tell him what he has to show"
+	_check(str((none_yet["options"][0] as Dictionary)["label"]) == "Tell %s what he has to show" % GameDB.player_display_name(p).split(" ")[0]
 			and str((none_yet["options"][0] as Dictionary)["detail"]).begins_with("What a midfielder has to show: disposals and clearances."),
 			"With no game this season, it is what his job has to show, in a coach's words")
 	_check(GameState._explain_outcome("Rogers", {"kpi": "Three games: 29 disposals and 7 clearances a game.", "verdict": "good"})

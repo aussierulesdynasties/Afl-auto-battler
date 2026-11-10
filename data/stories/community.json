@@ -31,7 +31,7 @@
 						"who": "all"
 					}
 				],
-				"note": "It gives up the session that training brings.",
+				"note": "It costs you an afternoon's training.",
 				"result": "The players spend the afternoon on the wards."
 			},
 			{
@@ -51,7 +51,7 @@
 				"result": "You keep the players on the track."
 			}
 		],
-		"stakes": "Sending a group gives up the session that training brings."
+		"stakes": "Sending a group costs you an afternoon's training."
 	},
 	{
 		"id": "community_country_clinic",
@@ -73,7 +73,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Send him",
+				"label": "Send {first}",
 				"effects": [
 					{
 						"op": "board",
@@ -116,7 +116,7 @@
 			"The Foundation wants players at a fundraiser"
 		],
 		"text": [
-			"A Thursday night dinner, the night before the team leaves."
+			"A Thursday night dinner, the night before the side flies out."
 		],
 		"choices": [
 			{
@@ -172,7 +172,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Let him go back on Sunday",
+				"label": "Let {first} go back on Sunday",
 				"effects": [
 					{
 						"op": "morale",
@@ -226,7 +226,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Send him",
+				"label": "Send {first}",
 				"effects": [
 					{
 						"op": "morale",
@@ -346,7 +346,7 @@
 		"choices": [
 			{
 				"key": "together",
-				"label": "All together",
+				"label": "Keep the players together",
 				"effects": [
 					{
 						"op": "morale",
@@ -370,7 +370,7 @@
 			},
 			{
 				"key": "families",
-				"label": "With their families",
+				"label": "Send them home to their families",
 				"effects": [
 					{
 						"op": "fresh",

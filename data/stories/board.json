@@ -14,7 +14,7 @@
 			"The board wants answers"
 		],
 		"text": [
-			"Another loss, and the chairman's on the phone. He wants to know what happens next."
+			"Another loss, and the president's on the phone. He wants to know what happens next."
 		],
 		"default": 1,
 		"choices": [
@@ -90,7 +90,7 @@
 						"who": "side"
 					}
 				],
-				"result": "You stay at the club."
+				"result": "You skip the lunch and take training."
 			}
 		],
 		"when": {
@@ -131,7 +131,7 @@
 			},
 			{
 				"key": "no",
-				"label": "He needs the rest",
+				"label": "{first} needs the rest",
 				"effects": [
 					{
 						"op": "board",
