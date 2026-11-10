@@ -2474,7 +2474,7 @@ func _calls_view(q: int) -> Control:
 		if q >= 2:
 			before = (snaps[q - 2] as Dictionary).get("impact", [{}, {}])
 	v.add_child(UiKit.section("What your calls did" + (" in Q%d" % q if q > 0 else "")))
-	var lines := CoachReport.impact_lines(now, before, _my_side)
+	var lines := CoachReport.impact_lines(now, before, _my_side, 0.3, _res.get("plan_traits", ["", ""]))
 	if not lines.is_empty():
 		var wnote := UiKit.lbl(MatchNotes.CALLS_WORTH_NOTE, UiKit.SMALL, UiKit.MUTED)
 		wnote.name = "CallsWorthNote"

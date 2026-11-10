@@ -68,6 +68,9 @@ var season_tally := {}           # player id -> running season numbers (Awards)
 var season_stats := {}
 var season_stats_from := 0
 var club_plan := "balanced"      # your standing game plan, from the first bounce
+## Your game-plan trait (PlanTraits id, director 2026-11-10); "" = none. Saved
+## only when set, so an older save loads with none.
+var plan_trait := ""
 var form_log := {}               # your player id -> his last three Player Ratings
 ## A story card's role trial: {id, role, left, home, auto, before, wrote}, or {}.
 ## One player plays his second position for `left` more of your games (see
@@ -983,6 +986,8 @@ func _save_state() -> Dictionary:
 		state["coach_name"] = coach_name
 	if not coach_arch.is_empty():
 		state["coach_arch"] = coach_arch
+	if plan_trait != "":
+		state["plan_trait"] = plan_trait
 	if interview_due:
 		state["interview_due"] = true
 	return state
@@ -1083,6 +1088,7 @@ func _restore_career(state: Dictionary) -> bool:
 	club_plan = MatchSim.plan_key(str(state.get("club_plan", "balanced")))
 	if not CLUB_PLANS.has(club_plan):
 		club_plan = "balanced"
+	plan_trait = PlanTraits.valid(str(state.get("plan_trait", "")))
 	form_log = state.get("form_log", {})
 	role_trial = state.get("role_trial", {}) if state.get("role_trial") is Dictionary else {}
 	trial_result = state.get("trial_result", {}) if state.get("trial_result") is Dictionary else {}
@@ -1660,6 +1666,8 @@ func reset() -> void:
 	season_stats = {}
 	season_stats_from = 0
 	club_plan = "balanced"
+	plan_trait = ""
+	CoachEffects.my_trait = ""
 	form_log = {}
 	role_trial = {}
 	training_block = {}
@@ -4964,6 +4972,9 @@ func opponent_report(code: String) -> Array:
 		var what := str(THEIR_PLAN[usual])
 		play.append("Their usual game plan is %s. %s%s%s" % [RivalRead.called(usual),
 				what.left(1).to_upper(), what.substr(1), " " + legs if legs != "" else ""])
+	var trait_line := PlanTraits.rival_line(PlanTraits.for_plan(sq.usual_plan))
+	if trait_line != "":
+		play.append(trait_line)
 	var levels := {}
 	for plan in PreSeason.DRILL_PLANS:
 		levels[plan] = plan_level(code, str(plan))
@@ -13126,7 +13137,16 @@ func set_club_plan(key: String) -> void:
 	mark_dirty()
 
 
+## Your game-plan trait (PlanTraits id, or "" for none): every match from the
+## next bounce, played or simmed.
+func set_plan_trait(id: String) -> void:
+	plan_trait = PlanTraits.valid(id)
+	_sync_club_plan()
+	mark_dirty()
+
+
 func _sync_club_plan() -> void:
+	CoachEffects.my_trait = plan_trait
 	if season != null:
 		season.plans = {my_club: club_plan} if club_plan != "balanced" else {}
 

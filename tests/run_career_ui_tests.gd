@@ -2175,6 +2175,20 @@ Your career stays on this device.",
 	var chosen_l: Label = plan.find_child("Plan", true, false) if plan != null else null
 	var other_tile: Node = current_scene.find_child("ClubPlan_attacking", true, false)
 	var other_l: Label = other_tile.find_child("Plan", true, false) if other_tile != null else null
+	# Game-plan trait (director 2026-11-10): a real tap picks it, and the note says
+	# what it gives and what it costs, with the size.
+	var trait_btn: Button = current_scene.find_child("PlanTrait_fortress", true, false)
+	_check(trait_btn != null and trait_btn.size.y >= 44, "Each game-plan trait is a thumb-sized tap")
+	var why_trait: String = (await Tap.tap(trait_btn)) if trait_btn != null else "no button"
+	await _settle()
+	var t_gain_row: Node = current_scene.find_child("TraitGain", true, false)
+	var t_cost_row: Node = current_scene.find_child("TraitCost", true, false)
+	var t_gain: Label = t_gain_row.find_child("Text", false, false) if t_gain_row != null else null
+	var t_cost: Label = t_cost_row.find_child("Text", false, false) if t_cost_row != null else null
+	_check(_state.plan_trait == "fortress" and t_gain != null and t_cost != null
+			and t_gain.text.contains("8%") and t_cost.text.contains("6%"),
+			"Choosing a trait makes it the club's, and says its gain and cost (a real tap: %s)" % why_trait)
+	_state.set_plan_trait("")
 	root.size = size_plan
 	_check(chosen_l != null and other_l != null and chosen_l.get_theme_font("font") == load("res://scripts/ui/UiKit.gd").BOLD
 			and other_l.get_theme_font("font") != load("res://scripts/ui/UiKit.gd").BOLD, "The chosen plan is bold, the others are regular")
@@ -2821,11 +2835,21 @@ Your career stays on this device.",
 	var moves = load("res://scripts/state/ClubMoves.gd")
 	if moves.letter_open(_state):
 		moves.decline_letter(_state)
+	# Nor is it about a sacking: the seeded season's results move whenever the
+	# match does (rival clubs' game-plan traits did), so he keeps his job here.
+	var was_sacked: bool = _state.is_sacked()
+	_state.board.erase("sacked")
 	# The first postseason's sheet has its own suite (first_visit_intro).
 	_state.postseason_intro_seen = true
+	# A card the season's end raised (a Grand Final loss has one) has its own
+	# sheet test; here it sits on the hub without opening over it.
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
-	_check(_screen_text().contains("Trades & Contracts"), "The hub offers Trades & Contracts after the season")
+	# A season that ends in a final can raise a press conference over the hub.
+	await _past_press()
+	_check(_screen_text().contains("Trades & Contracts"), "The hub offers Trades & Contracts after the season (sacked at the end: %s, letter open: %s; %s)"
+			% [was_sacked, moves.letter_open(_state), _screen_text().left(200)])
 	var more: Button = current_scene.find_child("NewsMore", true, false)
 	_check(more != null, "The hub shows the league news")
 	if more != null:
@@ -2836,7 +2860,8 @@ Your career stays on this device.",
 	_router.handle_back(true)
 	await _settle()
 	_check(_router.current() == "hub" and current_scene.find_child("NewsFeed", true, false) == null,
-			"Back closes the news feed and stays on the hub")
+			"Back closes the news feed and stays on the hub (on %s, feed open: %s, stack %s; %s)" % [_router.current(),
+			current_scene.find_child("NewsFeed", true, false) != null, _router.stack, _screen_text().left(160)])
 	var offseason_size_before := root.size
 	root.size = Vector2i(360, 800)
 	_router.go("offseason")
