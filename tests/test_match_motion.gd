@@ -581,7 +581,9 @@ func _test_call_visibility(results: Array) -> void:
 			["Slow it down (without the ball, centroid from Melbourne's)", "balanced", ["hold"], "not.cen_opp", -1.0],
 			["Flood behind the ball (without the ball, centroid from the ball)", "balanced", ["flood"], "not.cen_ball", -1.0],
 			["Flood behind the ball (without the ball, median player from the ball)", "balanced", ["flood"], "not.med_ball", -1.0],
-			["Stack the stoppage (at a centre bounce, front to back)", "balanced", ["stack"], "ctr.span", -1.0]]
+			["Stack the stoppage (at a centre bounce, front to back)", "balanced", ["stack"], "ctr.span", -1.0],
+			["Push numbers forward (in possession, centroid up the ground from the ball)", "balanced", ["push"], "has.cen_ball", 1.0],
+			["Push numbers forward (in possession, median player from the ball)", "balanced", ["push"], "has.med_ball", 1.0]]
 	var said := []
 	var done := {}
 	for c in cases:

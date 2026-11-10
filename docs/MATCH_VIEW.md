@@ -120,6 +120,7 @@ Each structural call has a shape, read from the match's recorded calls
 |---|---|
 | Defensive press | one band around the ball in their back half or the middle, narrower, with the press-zone wash |
 | Flood behind the ball | the midfield folds back between ball and goal, the half-forwards push up |
+| Push numbers forward | with the ball the midfield and the half-back line run past it, the forwards stay ahead of it and the back pockets come up; at a centre ball-up the wings and the centreman set up ahead of the ball and both half-lines come up to their arcs |
 | Stack the stoppage | the wings on the square's edge at a centre bounce, crashing in at the bounce |
 | Attack corridor | with the ball the whole side narrows into the corridor, each man in his own lane: each line of three keeps its left-to-right order a disc apart (9.5 m, never under 7 m), the midfield's lanes between the backs' and forwards' so two lines never share a lane where they meet, the wings a little up the ground; the ball goes to the receiver's lane and he leads up it, nobody comes onto the ball (no switch of play); moves quicker |
 | Controlled tempo | spreads wide with the ball, its lines short around it; moves slower |
