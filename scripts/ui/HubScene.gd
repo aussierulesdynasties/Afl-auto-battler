@@ -29,14 +29,16 @@ func _ready() -> void:
 	if GameState.season == null:
 		Router.replace("main")
 		return
+	# A new coach faces the press interview (it sets the coaching style) before anything else (row 119),
+	# a pre-season included: a career that starts on one (a club taken after
+	# seasons played without you) still opens with it.
+	if GameState.interview_due and GameState.my_club != "":
+		Router.replace("interview")
+		return
 	# A pre-season is running: it has its own screen until Round 1 is next.
 	# The off-season wrap is read here first.
 	if GameState.preseason_active() and not GameState.needs_season_wrap():
 		Router.replace("preseason")
-		return
-	# A new coach sits his appointment interview before anything else (row 119).
-	if GameState.interview_due and GameState.my_club != "":
-		Router.replace("interview")
 		return
 	MatchKickoff.reset()
 	_warm_pre_match.call_deferred()

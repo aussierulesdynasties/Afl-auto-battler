@@ -223,7 +223,8 @@ static func season_end(conf: int, met: bool, warned: bool, poor_seasons: int, pa
 		elif poor_n >= int(patience.get("poor_seasons_before_warning", 1)):
 			warned = true
 			c = maxi(conf, WARN_LINE + 5)
-			verdict = "Final warning: miss again next year and you are gone."
+			# The sack rides on confidence, not the goal (row T1.R26 C2).
+			verdict = "Final warning: end next season with the board's confidence under %d%% and you are gone." % int(patience.get("poor_season_below", WARN_LINE))
 		else:
 			verdict = "The board is losing patience."
 	elif met:
