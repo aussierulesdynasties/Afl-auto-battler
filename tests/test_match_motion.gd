@@ -577,7 +577,10 @@ func _test_call_visibility(results: Array) -> void:
 			["Slow it down (in possession, centroid from Melbourne's)", "balanced", ["hold"], "has.cen_opp", -1.0],
 			["Slow it down (without the ball, centroid from the ball)", "balanced", ["hold"], "not.cen_ball", -1.0],
 			["Slow it down (without the ball, median player from the ball)", "balanced", ["hold"], "not.med_ball", -1.0],
-			["Slow it down (without the ball, centroid from Melbourne's)", "balanced", ["hold"], "not.cen_opp", -1.0]]
+			["Slow it down (without the ball, centroid from Melbourne's)", "balanced", ["hold"], "not.cen_opp", -1.0],
+			["Flood behind the ball (without the ball, centroid from the ball)", "balanced", ["flood"], "not.cen_ball", -1.0],
+			["Flood behind the ball (without the ball, median player from the ball)", "balanced", ["flood"], "not.med_ball", -1.0],
+			["Stack the stoppage (at a centre bounce, front to back)", "balanced", ["stack"], "ctr.span", -1.0]]
 	var said := []
 	var done := {}
 	for c in cases:
@@ -687,9 +690,27 @@ func _shape_of(r: Dictionary, events := -1, crowd := false) -> Dictionary:
 		if d.mode == "break":
 			continue
 		var stop := d._stoppage_on()
+		var world := _drawn_world(pv, drawn)
+		if d.mode == "centre":
+			# A centre bounce, set-up included: how far Fremantle stands, on
+			# average, from its own middle front to back (Stack the stoppage
+			# brings both half-lines and the pockets up toward the square).
+			var cx := []
+			for i in range(world.size()):
+				if int(d.tokens[i]["side"]) == 0:
+					cx.append((world[i] as Vector2).x)
+			var mid := 0.0
+			for x in cx:
+				mid += float(x) / float(cx.size())
+			var sp := 0.0
+			for x in cx:
+				sp += absf(float(x) - mid) / float(cx.size())
+			if not acc.has("ctr.span"):
+				acc["ctr.span"] = [0.0, 0]
+			acc["ctr.span"][0] += sp
+			acc["ctr.span"][1] += 1
 		if stop and d._pi < d._phases.size() and str((d._phases[d._pi] as Dictionary).get("t", "")) in ["setup", "wait"]:
 			continue   # 6-6-6: nobody may crash in before the ball is up
-		var world := _drawn_world(pv, drawn)
 		var b: Vector2 = d.ball["pos"]
 		var xs := []
 		var ys := []
