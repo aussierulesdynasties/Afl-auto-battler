@@ -9,6 +9,10 @@ extends SceneTree
 ## Writes <out>_sheet.png: the scene at its beats on a phone, then the call.
 ## --film START END: also writes <out>_film_NNN.png, 12 frames a second from START
 ## to END seconds, for checking motion (turn them into a GIF to review).
+## --live SECONDS: films the scene as it plays, from the cut through the freeze and the call
+## sliding up: <out>_fNNNN.png, one per frame, 30 a second (run Godot with --fixed-fps 30, as
+## capture.yml's movie_maker does, which also turns them into an MP4). --vignettes-off: the same call with Settings > Vignettes off (the card alone).
+## --club CODE: your club (default COL).
 ## --kit-options: shows the kit options - long sleeves on every one of your players,
 ## hooped socks on the other side's kit.
 ## It stages a tight last-quarter centre bounce on a live match and lets
@@ -31,6 +35,9 @@ func _run() -> void:
 	var kit_options := a.has("--kit-options")
 	var pin := 0
 	var weather := ""
+	var live := 0.0
+	var club := "COL"
+	var vig_off := a.has("--vignettes-off")
 	for i in range(a.size() - 1):
 		if str(a[i]) == "--seed":
 			pin = int(a[i + 1])
@@ -47,6 +54,10 @@ func _run() -> void:
 		elif str(a[i]) == "--weather":
 			# --weather wet|hot|windy|perfect: the vignettes draw this day instead of the match's.
 			load("res://scripts/ui/match/VignetteGrade.gd").forced_weather = str(a[i + 1])
+		elif str(a[i]) == "--live":
+			live = float(a[i + 1])
+		elif str(a[i]) == "--club":
+			club = str(a[i + 1])
 		elif str(a[i]) == "--msaa":
 			msaa = true
 		elif str(a[i]) == "--film" and i + 2 < a.size():
@@ -60,7 +71,8 @@ func _run() -> void:
 	state.reset()
 	if pin != 0:
 		state.replay_seed = pin     # the season's seed from it, not the clock
-	state.start_season("COL", db.club_list("COL"))
+	state.start_season(club, db.club_list(club))
+	state.set_vignettes_on(not vig_off)
 	root.size = Vector2i(W, H)
 	DisplayServer.window_set_size(Vector2i(W, H))
 	state.prepare_interactive_match()
@@ -93,6 +105,17 @@ func _run() -> void:
 	sim.energy[str(mids[1]["id"])] = 30.0
 	sim.call("_boundary_moment")
 	m.call("_show_moment")
+	if live > 0.0:
+		# Real time: every frame as the player sees it, the call's slide-up included.
+		var n := 0
+		var frames := int(live * 30.0)
+		for i in range(frames):
+			await process_frame
+			root.get_viewport().get_texture().get_image().save_png("%s_f%04d.png" % [out, n])
+			n += 1
+		print("filmed live ", n, " frames")
+		quit(0)
+		return
 	var vig = m.find_child("StoppageVignette", true, false)
 	vig.set_process(false)
 	if weather != "":
