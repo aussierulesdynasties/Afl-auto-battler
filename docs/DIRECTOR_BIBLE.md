@@ -2311,8 +2311,8 @@ Every open question from chapters 1 to 9 is collected here once. Each carries it
 54. Match flow steps 1 and 2 on claude/match-flow (play on after intercept or free; recalibrate turnovers): do you accept the balance? [2:5]
 55. Midfield intercept gap (sim 1.4 vs real 2.5; structural, deferred under "Merge, gap later"): do you want the midfield kick-intercept roll built now? [2:6, 8:8]
 56. Comeback rules: once the row 42 audit reports, which numbers do you accept? [2:7]
-57. Opposition goal-run decision: rebuild as two concrete football moves, and which? [2:8]
-58. Late-game centre ball-up: reduce to two mechanically distinct choices, and which? Is the centre ball-up scene on PC acceptable, and does the umpire's held ball no longer float? [2:9, 6:6]
+57. ANSWERED 2026-11-10: Stack the centre bounce and Flood behind the ball stand. Opposition goal-run decision: rebuild as two concrete football moves, and which? [2:8]
+58. ANSWERED 2026-11-10 (moves only): Flood behind the ball and Push numbers forward. Late-game centre ball-up: reduce to two mechanically distinct choices, and which? Is the centre ball-up scene on PC acceptable, and does the umpire's held ball no longer float? [2:9, 6:6]
 59. Coaches' votes (5-4-3-2-1): shall B6 be assigned? [2:11]
 60. Vignette coverage: shall every decision card get a vignette now (only the centre ball-up has one)? A live-speed window against "every decision needs a vignette" (C-MG-31): which wins? [2:12, 3:12]
 61. Own game plan builder (Q18) and the Club Forge plan builder: decide after drilling is played; do you want game-plan creation in the base game, a full builder for the Club Forge, or neither (stretch 1.x)? [2:13, 5:22]
@@ -2331,7 +2331,7 @@ Every open question from chapters 1 to 9 is collected here once. Each carries it
 
 ### D6. UI, screens and onboarding
 
-74. Feed colours: build own goals positive, conceded negative, behinds and tactical lines neutral now, and do you want blue or not? [3:8]
+74. ANSWERED 2026-11-10: your club's colour, not blue. Feed colours: build own goals positive, conceded negative, behinds and tactical lines neutral now, and do you want blue or not? [3:8]
 75. Stat guide: does the condensed A17 version replace the topic grid, or do you still want the grid? Should the Stat Guide topic-navigation rewrite (section 1.11) and the ladder "W-L" column wording be settled? [3:9, 9:33]
 76. Do you still want every pre-match decision moved ahead of Start, or do the calls stay in the pre-bounce pane? [3:10]
 77. Is ARD Signwriter your answer to "why havent we explored creating our own typeface as I;ve said many times and you've ignored", or do you want a custom face designed? [3:11]
