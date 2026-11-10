@@ -225,7 +225,8 @@ func _mount_body(stack: bool) -> void:
 		_side_panel.add_child(sv)
 		# Your match: the calls you have on, so the setup is never a guess.
 		# Every call in full: a long name or several calls wrap, never trim.
-		_setup_line = NameInk.rich(UiKit.SMALL, UiKit.MUTED)
+		# The calls on right now: the coach reads them, so not in grey (row T3.R9).
+		_setup_line = NameInk.rich(UiKit.SECONDARY, UiKit.TEXT)
 		_setup_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_setup_line.name = "SetupLine"
 		_setup_line.visible = false
@@ -432,7 +433,7 @@ func _score_column(code: String, home: bool, narrow: bool) -> Control:
 	var v := UiKit.vbox(1)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var name_text := GameDB.club_short(code) if narrow else GameDB.club_name(code)
-	var name := UiKit.ellipsis(name_text, UiKit.SECONDARY if narrow else 16, UiKit.TEXT, true)
+	var name := UiKit.ellipsis(name_text, UiKit.SECONDARY if narrow else UiKit.NAME, UiKit.TEXT, true)
 	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if home \
 			else HORIZONTAL_ALIGNMENT_LEFT
 	ClubDuel.on_colour(name)
@@ -464,7 +465,7 @@ func _score_middle(narrow: bool) -> Control:
 	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ClubDuel.on_colour(_clock)
 	mid.add_child(_clock)
-	_lead = UiKit.ellipsis("", UiKit.SMALL, UiKit.MUTED)
+	_lead = UiKit.ellipsis("", UiKit.SMALL, UiKit.TEXT)
 	_lead.name = "LeadLine"
 	_lead.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ClubDuel.on_colour(_lead)
