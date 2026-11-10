@@ -434,8 +434,8 @@
 				"effects": [
 					{
 						"op": "trust",
-						"d": 3,
-						"why": "You kept to the physio's plan for his comeback"
+						"d": -2,
+						"why": "You held him back when he said he was ready"
 					},
 					{
 						"op": "morale",

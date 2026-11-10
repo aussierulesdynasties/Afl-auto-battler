@@ -45,12 +45,6 @@
 						"op": "trust",
 						"d": -10,
 						"why": "You asked him to play the week his first child was born"
-					},
-					{
-						"op": "culture",
-						"strand": "standards",
-						"d": 1,
-						"why": "He played the week his first child was due"
 					}
 				],
 				"result": "{first} plays. He's on the first flight home after the siren."
@@ -109,8 +103,10 @@
 						"d": -6
 					},
 					{
-						"op": "board",
-						"d": 2
+						"op": "slow_start",
+						"who": "subject",
+						"chance": 15,
+						"on": "week"
 					}
 				],
 				"result": "{first} stays and plays. His head's somewhere else."
@@ -163,11 +159,6 @@
 					{
 						"op": "morale",
 						"d": -4
-					},
-					{
-						"op": "morale",
-						"d": 1,
-						"who": "side"
 					}
 				],
 				"result": "{first} plays. He watches the speeches on his phone."
@@ -206,10 +197,6 @@
 						"op": "trust",
 						"d": 6,
 						"why": "You told him the club would help his family settle"
-					},
-					{
-						"op": "board",
-						"d": -2
 					}
 				],
 				"result": "The club starts looking for work for his partner here."
@@ -270,10 +257,8 @@
 						"why": "You eased off when the baby wasn't sleeping"
 					},
 					{
-						"op": "slow_start",
-						"who": "subject",
-						"chance": 15,
-						"on": "week"
+						"op": "forgo_xp",
+						"d": 6
 					}
 				],
 				"note": "He misses the development a full week brings.",

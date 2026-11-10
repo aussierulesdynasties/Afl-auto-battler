@@ -160,7 +160,7 @@
 						"d": -2
 					}
 				],
-				"result": "{name}'s first column runs on Sunday."
+				"result": "{name}'s first column runs on Sunday. The board will be reading every word."
 			},
 			{
 				"key": "no",
@@ -176,8 +176,10 @@
 						"why": "You knocked back his newspaper column"
 					},
 					{
-						"op": "xp",
-						"d": 3
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "Players keep their opinions out of the papers"
 					}
 				],
 				"result": "{name} turns the paper down."
@@ -216,12 +218,13 @@
 						"d": 2
 					},
 					{
-						"op": "morale",
-						"d": -2,
-						"who": "others"
+						"op": "slow_start",
+						"who": "subject",
+						"chance": 10,
+						"on": "week"
 					}
 				],
-				"result": "The feature goes to air. The boys give him a hard time."
+				"result": "The feature goes to air. {first} has had a camera on him all week."
 			},
 			{
 				"key": "no",
@@ -236,7 +239,7 @@
 						"d": 4
 					}
 				],
-				"result": "No feature. {first} would have liked it."
+				"result": "No feature. {first} would have liked it, but his week stays on his footy."
 			}
 		]
 	},
@@ -332,7 +335,7 @@
 						"why": "You kept the rooms the players'"
 					}
 				],
-				"result": "No cameras. The network isn't happy."
+				"result": "No cameras. The board wanted the exposure."
 			}
 		],
 		"when": {
@@ -398,12 +401,12 @@
 						"why": "You kept it between you two when he asked for the group"
 					},
 					{
-						"op": "morale",
-						"d": 1,
+						"op": "xp",
+						"d": 2,
 						"who": "side"
 					}
 				],
-				"result": "You talk it through with {name} alone."
+				"result": "You talk it through with {name} alone. The review stays on the footy."
 			}
 		],
 		"arc": "papers",
@@ -507,10 +510,6 @@
 					{
 						"op": "morale",
 						"d": 3
-					},
-					{
-						"op": "expects_game",
-						"sting": 6
 					}
 				],
 				"result": "{name} is back in his usual spot."
@@ -636,7 +635,7 @@
 				"effects": [
 					{
 						"op": "board",
-						"d": 2
+						"d": -1
 					},
 					{
 						"op": "morale",
@@ -660,7 +659,7 @@
 						"d": -2
 					}
 				],
-				"result": "You tell the press the ladder is settled on the field, not in the papers."
+				"result": "You tell the press the ladder gets sorted on the field. The board wanted something to sell memberships on."
 			},
 			{
 				"key": "talk_up",
@@ -716,11 +715,6 @@
 					{
 						"op": "board",
 						"d": 3
-					},
-					{
-						"op": "morale",
-						"d": -2,
-						"who": "all"
 					}
 				],
 				"result": "You tell the press the board is entitled to ask, and so are they."
@@ -739,7 +733,7 @@
 						"d": -2
 					}
 				],
-				"result": "You tell the press you only think about Round 1."
+				"result": "You tell the press you're only thinking about Round 1. The board hears a coach ducking the question."
 			},
 			{
 				"key": "talk_up",
@@ -812,16 +806,17 @@
 						"who": "others"
 					}
 				],
-				"result": "You tell the press {name} has earned the attention."
+				"result": "You tell the press {name} has earned it. A few who've done more read that too."
 			},
 			{
 				"key": "deflect",
 				"label": "Say he still has plenty to prove",
 				"effects": [
 					{
-						"op": "morale",
-						"d": 2,
-						"who": "others"
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "Nobody gets talked up before the job is done"
 					},
 					{
 						"op": "morale",
@@ -895,7 +890,7 @@
 						"d": -3
 					}
 				],
-				"result": "You tell the press you were too bold."
+				"result": "You tell the press you got it wrong. The players see you wear it, not them."
 			},
 			{
 				"key": "hold",
@@ -908,7 +903,7 @@
 					},
 					{
 						"op": "board",
-						"d": -5
+						"d": -2
 					}
 				],
 				"result": "You tell the press the season is not over."
@@ -951,7 +946,7 @@
 						"who": "all"
 					}
 				],
-				"result": "Anyone who says the words buys the coffees. Nobody slips."
+				"result": "Anyone who says the words buys the coffees. Nobody slips. It's a tight week around the club."
 			},
 			{
 				"key": "dream",
@@ -1008,7 +1003,7 @@
 						"chance": 10
 					}
 				],
-				"result": "Every tip for {opp} goes on the noticeboard. The players read them twice."
+				"result": "Every tip for {opp} goes on the noticeboard. The players read them twice, and some will play the game in their heads all week."
 			},
 			{
 				"key": "back",
@@ -1024,10 +1019,6 @@
 						"strand": "together",
 						"d": 2,
 						"why": "You backed your players in the press before a final"
-					},
-					{
-						"op": "board",
-						"d": -2
 					}
 				],
 				"result": "\"We finished below them. We've beaten better sides.\" The players notice."

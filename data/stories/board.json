@@ -69,12 +69,12 @@
 						"d": 5
 					},
 					{
-						"op": "morale",
-						"d": -2,
+						"op": "forgo_xp",
+						"d": 2,
 						"who": "side"
 					}
 				],
-				"result": "You sell the plan over lunch. The players notice you weren't there."
+				"result": "You sell the plan over lunch and miss the session."
 			},
 			{
 				"key": "no",
@@ -122,10 +122,6 @@
 					{
 						"op": "board",
 						"d": 4
-					},
-					{
-						"op": "morale",
-						"d": -2
 					},
 					{
 						"op": "heavy_legs"
@@ -285,9 +281,10 @@
 						"d": -2
 					},
 					{
-						"op": "morale",
-						"d": 2,
-						"who": "all"
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "You stood by the medical staff"
 					}
 				],
 				"result": "You stand by the medical staff."
@@ -301,9 +298,10 @@
 						"d": 3
 					},
 					{
-						"op": "morale",
-						"d": -2,
-						"who": "all"
+						"op": "culture",
+						"strand": "together",
+						"d": -1,
+						"why": "You put the medical staff under review"
 					}
 				],
 				"result": "You promise a review. The physios aren't happy."

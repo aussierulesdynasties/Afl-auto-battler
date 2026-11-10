@@ -41,10 +41,6 @@
 						"why": "You talked him through being dropped"
 					},
 					{
-						"op": "expects_game",
-						"sting": 4
-					},
-					{
 						"op": "talk_note",
 						"said": "explain"
 					}
@@ -142,10 +138,6 @@
 						"op": "trust",
 						"d": 3,
 						"why": "You told him where he stood after his injury"
-					},
-					{
-						"op": "expects_game",
-						"sting": 4
 					},
 					{
 						"op": "talk_note",
@@ -247,10 +239,6 @@
 						"why": "You told him what he has to show for a game"
 					},
 					{
-						"op": "expects_game",
-						"sting": 4
-					},
-					{
 						"op": "talk_note",
 						"said": "explain"
 					}
@@ -332,7 +320,7 @@
 		"choices": [
 			{
 				"key": "talk",
-				"label": "Sit down with him",
+				"label": "Sit down with {name} and promise him a game",
 				"effects": [
 					{
 						"op": "morale",
@@ -551,11 +539,6 @@
 						"op": "trust",
 						"d": 4,
 						"why": "You looked after him in his first finals week"
-					},
-					{
-						"op": "morale",
-						"d": -1,
-						"who": "side"
 					}
 				],
 				"result": "He shadows a senior player all week: meetings, recovery, the walk-through."
