@@ -2268,7 +2268,7 @@ Your career stays on this device.",
 			and back_mark != null and back_mark.text == "Gain:" and cost_mark != null and cost_mark.text == "Cost:"
 			and cost_mark.get_theme_font("font") != rest_cost.get_theme_font("font") and cost_mark.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").label_ink()
 			and back_gain != null and back_cost != null and back_cost.text.contains("promise breaks")
-			and rest_gain != null and rest_cost != null and rest_cost.text == "He misses this week's game."
+			and rest_gain != null and rest_cost != null and rest_cost.text.begins_with("His opinion of you down") and rest_cost.text.contains("re-sign with you")
 			and same_style and rest_btn != null and rest_cost.get_global_rect().position.y >= rest_gain.get_global_rect().end.y - 1.0
 			and rest_gain.get_global_rect().position.y >= rest_btn.get_global_rect().end.y - 1.0,
 			"Each answer says its gains then its costs under its own button, in the same full-strength text (%s / %s)" % [back_cost.text if back_cost != null else "none", rest_cost.text if rest_cost != null else "none"])

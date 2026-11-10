@@ -3420,7 +3420,7 @@ func _queue_broadcast(ev: Dictionary, event_index: int) -> void:
 	if event_index > 0 and event_index - 1 < _pitch.events.size():
 		prev_ev = _pitch.events[event_index - 1]
 	if event_index + 1 < _pitch.events.size():
-		next_ev = _pitch.events[event_index + 1]
+		next_ev = BroadcastVignette.next_play_event(_pitch.events, event_index)
 	var snap := _broadcast_snapshot(ev)
 	var kind := BroadcastVignette.pick_kind(ev, prev_ev, next_ev, snap)
 	if kind == "":

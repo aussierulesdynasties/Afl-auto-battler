@@ -3387,12 +3387,16 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_last_disp["end"] = "tackle"
 			_last_disp["kind"] = disposal_kind
 			# Knocked loose in the tackle: whoever is there for the other side gathers
-			# it (an intercept possession). Otherwise it is held in: a ball-up.
+			# it off the ground. Otherwise it is held in: a ball-up. A spilled
+			# tackle is not an intercept (row 11): nobody disposed of the ball, so
+			# it counts as a spilled tackle and the gatherer's possession is a
+			# ground ball get (_first_gain, an unmarked turnover).
 			if lockup_rng.randf() < _tv("TACKLE_SPILL", TACKLE_SPILL) * _wx("tackle_spill"):
 				var taker = _aerial_defender(opp, fp)
 				if taker == null:
 					taker = tackler
-				_intercept(opp, taker, false)
+				_t(opp, "tackle_spills")
+				_won_back = {"side": opp, "id": str(taker.get("id", ""))}
 				_emit("tackle", opp, fp, tackler,
 						"%s tackles %s - it spills free" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
 				return {"outcome": "turnover", "fp": fp, "actor": taker}
@@ -3670,6 +3674,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 		_duel_tag = fid
 		_duel = {"fwd": fid, "def": str(matched["id"]), "won": "fwd" if marked else "def",
 				"q": current_quarter, "n": (duel_log[fid]["contests"] as Array).size()}
+	var mark_ev := {}
 	if marked:
 		_t(side, "marks")
 		_p(shooter, "marks")
@@ -3693,6 +3698,7 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 		_emit("mark", side, fp, shooter,
 				"%s takes %smark" % [GameDB.player_display_name(shooter), "a spectacular " if speccy else "the "])
 		var mev: Dictionary = events[events.size() - 1]
+		mark_ev = mev
 		mev["contested"] = contested
 		mev["speccy"] = speccy
 		if contested:
@@ -3781,6 +3787,10 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 		set_shot = split["band"]
 		if not set_shot.is_empty():
 			shot_fp = (1.0 if side == 0 else -1.0) * (float(T["goal_line"]) - float(set_shot["metres"]))
+			# He marked where he kicks from (T2.24): the oval stands the mark on
+			# the band's spot, as the call's own scene does. A tag, no roll.
+			if not mark_ev.is_empty():
+				mark_ev["band"] = str(set_shot["key"])
 
 	if side == moment_side and not set_shot.is_empty() and _moment_ready():
 		var close := current_quarter >= 4 and absi(score(side) - score(opp)) <= 18

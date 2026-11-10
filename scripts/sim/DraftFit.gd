@@ -3,7 +3,8 @@ extends RefCounted
 ## Draft fit (row 127, director 2026-11-08): the prospects in a National Draft
 ## class who suit the way your coach wants to play, by his two archetypes
 ## (row 119). A mark states the fit as a fact, with your scouts' read and its
-## uncertainty: "Suits your pressing game: pressure 78, scout's read, +/-6".
+## uncertainty as a range, in a recruiter's words (director 2026-11-10):
+## "Presses like your side: pressure 72-84".
 ## It never says take him. Pure rules: the board and the prospect sheet show it.
 ##
 ## Each held archetype marks MARKED prospects (director 2026-11-10: 6 a class),
@@ -32,16 +33,17 @@ const LINES := {
 	"CC": ["MID", "RUCK"], "PC": ["DEF", "MID", "FWD"],
 }
 
-## The mark's words: what it suits, then the rating's name.
+## The mark's words, as a recruiter says them (director 2026-11-10): the fit,
+## then the rating's name ("" when the fit already names it).
 const SUITS := {
-	"DS": ["Suits your pressing game", "pressure"],
-	"TA": ["Suits your territory game", "run and carry"],
-	"CC": ["Suits your contested game", "contested ball"],
-	"PC": ["Suits your possession game", "ball use"],
-	"HARD": ["Suits your standards", "discipline"],
-	"ANA": ["Suits how you read the game", "reads the play"],
-	"FATH": ["Suits how you bring kids on", "potential"],
-	"GAMB": ["Suits your appetite for risk", ""],
+	"DS": ["Presses like your side", "pressure"],
+	"TA": ["Runs and carries like your side", ""],
+	"CC": ["Wins it in close", "contested ball"],
+	"PC": ["Looks after the ball", "ball use"],
+	"HARD": ["Plays to your standards", "discipline"],
+	"ANA": ["Reads the play", ""],
+	"FATH": ["A kid to bring on", ""],
+	"GAMB": ["A punt", ""],
 }
 
 
@@ -91,9 +93,10 @@ static func read(p: Dictionary, id: String, club: String, seed: int, mult := 1.0
 		var half := maxi(1, int(round(float(int(view["potential"][1]) - int(view["potential"][0])) / 2.0)))
 		if id == "FATH":
 			return {"arch": id, "value": pot, "half": half, "rank": float(pot),
-					"text": _text(id, "%s %d" % [SUITS[id][1], pot], half)}
+					"text": "%s: one of the class's highest ceilings" % SUITS[id][0]}
 		return {"arch": id, "value": pot, "rated": ov, "half": half, "rank": float(pot - ov),
-				"text": _text(id, "rated %d, could be %d" % [ov, pot], half)}
+				"text": "%s: rated %s now, ceiling %s" % [SUITS[id][0],
+						DraftScouting.range_text(view["overall"]), DraftScouting.range_text(view["potential"])]}
 	var a: Dictionary = p.get("attr", {})
 	if a.is_empty() or not WEIGHTS.has(id):
 		return {}
@@ -105,8 +108,11 @@ static func read(p: Dictionary, id: String, club: String, seed: int, mult := 1.0
 	var value := int(round(seen))
 	var half := maxi(2, int(round(1.5 * DraftScouting.COMBINE_NOISE * u)))
 	return {"arch": id, "value": value, "half": half, "rank": seen,
-			"text": _text(id, "%s %d" % [SUITS[id][1], value], half)}
+			"text": _text(id, value, half)}
 
 
-static func _text(id: String, rating: String, half: int) -> String:
-	return "%s: %s, scout's read, +/-%d" % [SUITS[id][0], rating, half]
+## "Presses like your side: pressure 72-84": the read as a range, as OVR and POT are.
+static func _text(id: String, value: int, half: int) -> String:
+	var what := str(SUITS[id][1])
+	return "%s: %s%d-%d" % [SUITS[id][0], (what + " ") if what != "" else "",
+			clampi(value - half, 1, 99), clampi(value + half, 1, 99)]
