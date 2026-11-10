@@ -74,6 +74,7 @@ const CONTEST_NEARER_P75 := 5.5
 const PACK_AREA := 9.0
 ## ...and the four on the ball: inside 3 m (MatchDirector.PACK_SECOND), settling.
 const ON_BALL := 3.5
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -592,7 +593,7 @@ func _test_call_visibility(results: Array) -> void:
 		var moved := (float(m.get(what, 0.0)) - float(bal.get(what, 0.0))) * float(c[4])
 		said.append("%s %.1f m" % [str(c[0]), moved])
 		var floor_m := CALL_FLOOR - (ATTACK_CALL_SLACK if key == "attacking|[]" else 0.0)
-		_check(moved >= floor_m, "%s moves Fremantle %.1f m from Balanced (%.1f against %.1f), at least %.1f m" % [
+		_check(BalanceGate.held(moved >= floor_m, "match motion: call moves Fremantle from Balanced"), "%s moves Fremantle %.1f m from Balanced (%.1f against %.1f), at least %.1f m" % [
 				str(c[0]), moved, float(m.get(what, 0.0)), float(bal.get(what, 0.0)), floor_m])
 	print("  calls against Balanced, as drawn: " + ", ".join(said))
 	# Pass 4 (the motion critic's third look): Attack Corridor is a narrower
@@ -601,10 +602,10 @@ func _test_call_visibility(results: Array) -> void:
 	var con: Dictionary = done["contest|[]"]
 	var a_sp := float(att.get("open.spread.mean", 0.0))
 	var b_sp := float(bal.get("open.spread.mean", 0.0))
-	_check(a_sp >= ATTACK_SPREAD_LO and a_sp <= ATTACK_SPREAD_HI,
+	_check(BalanceGate.held(a_sp >= ATTACK_SPREAD_LO and a_sp <= ATTACK_SPREAD_HI, "match motion: Attack Corridor mean spread"),
 			"Attack Corridor: in possession Fremantle spreads %.0f to %.0f m across the ground on average (%.1f m; Balanced %.1f m)" % [
 			ATTACK_SPREAD_LO, ATTACK_SPREAD_HI, a_sp, b_sp])
-	_check(float(att.get("open.spread.p02", 0.0)) >= ATTACK_SPREAD_FLOOR,
+	_check(BalanceGate.held(float(att.get("open.spread.p02", 0.0)) >= ATTACK_SPREAD_FLOOR, "match motion: Attack Corridor spread floor"),
 			"Attack Corridor: the corridor never collapses, at least %.0f m of spread in 98 possession frames in 100 (%.1f m at the 2nd percentile; Balanced %.1f m)" % [
 			ATTACK_SPREAD_FLOOR, float(att.get("open.spread.p02", 0.0)), float(bal.get("open.spread.p02", 0.0))])
 	# Balanced is the bar (lead, 2026-10-18): the corridor is never more crowded
@@ -624,7 +625,7 @@ func _test_call_visibility(results: Array) -> void:
 			100.0 * CROWD_FILE_POINTS, 100.0 * a_f3, 100.0 * b_f3])
 	var nearer := float(bal.get("open.med_rad.mean", 0.0)) - float(con.get("open.med_rad.mean", 0.0))
 	var nearer75 := float(bal.get("open.med_rad.p75", 0.0)) - float(con.get("open.med_rad.p75", 0.0))
-	_check(nearer >= CONTEST_NEARER and nearer75 >= CONTEST_NEARER_P75,
+	_check(BalanceGate.held(nearer >= CONTEST_NEARER and nearer75 >= CONTEST_NEARER_P75, "match motion: Win Contest nearer the ball"),
 			"Win Contest: in open play Fremantle's median player stands at least %.0f m nearer the ball than on Balanced, %.1f m at the 75th percentile (%.1f m nearer on average, %.1f against %.1f; %.1f m at the 75th percentile)" % [
 			CONTEST_NEARER, CONTEST_NEARER_P75, nearer, float(con.get("open.med_rad.mean", 0.0)), float(bal.get("open.med_rad.mean", 0.0)), nearer75])
 	print("  attack corridor against Balanced: spread %.1f m (%.1f), 2nd percentile %.1f m (%.1f), heavy overlaps %.2f a frame (%.2f), any overlap %.2f (%.2f), longest file %.2f (%.2f), file-of-three frames %.1f%% (%.1f%%)" % [

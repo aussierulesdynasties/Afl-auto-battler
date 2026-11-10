@@ -268,6 +268,15 @@ gh run download <run-id> -n audit-<name>
 - It runs the audit script as it is on the branch you pass to `--ref`.
 - For a short audit, run it locally: `godot --headless --path . --script tools/audit/run_audit.gd -- <name>`, with `APPDATA=<scratch dir>` on Windows so it does not share saves with another run.
 
+## Balance checks wait (director 2026-11-10)
+
+Checks that hold the sim to a real-AFL number (a rate, share, percentile or
+gap over seeded matches) wait for the balance pass in TODO section Z. Wrap
+the condition: `_check(BalanceGate.held(cond, "short name"), message)` with
+`const BalanceGate := preload("res://tests/balance_gate.gd")`. A miss prints
+`BALANCE_DEFERRED| short name` and passes; with `BALANCE_CHECKS=1` it fails.
+Checks that guard a rule or catch breakage stay ordinary checks.
+
 ## Automated coverage
 
 **Model:** initial rival selections; contiguous global pick numbers and rounds;

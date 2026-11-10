@@ -36,6 +36,7 @@ func _check(condition: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+const BalanceGate := preload("res://tests/balance_gate.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -189,6 +190,6 @@ func _test_draw_rate(lb) -> void:
 					draws += 1
 		for c in season.ladder:
 			recorded += int(season.ladder[c]["d"])
-	_check(draws >= 1 and float(draws) / matches <= 0.03,
+	_check(BalanceGate.held(draws >= 1 and float(draws) / matches <= 0.03, "league: home-and-away draw rate at least one and <= 3%"),
 			"Home-and-away draws happen, and rarely (%d in %d)" % [draws, matches])
 	_check(recorded == 2 * draws, "Every draw is on the ladder for both clubs (%d, %d)" % [recorded, draws])

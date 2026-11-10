@@ -10,6 +10,7 @@ const SCENES := {
 	"preview": "res://scenes/MatchPreviewScene.tscn",
 	"stats": "res://scenes/StatsHubScene.tscn",
 	"list": "res://scenes/ListScene.tscn",
+	"scouting": "res://scenes/ScoutingScene.tscn",
 	"selection": "res://scenes/SelectionScene.tscn",
 	"offseason": "res://scenes/OffseasonScene.tscn",
 	"training": "res://scenes/TrainingScene.tscn",
