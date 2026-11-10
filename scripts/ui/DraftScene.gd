@@ -1108,7 +1108,7 @@ func _player_row(p: Dictionary) -> Control:
 					DraftScouting.range_text(view["potential"])]
 		else:
 			read = "%d OVR · %d POT" % [int(p["overall"]), int(p.get("potential", p["overall"]))]
-		read += " · " + Contracts.money(int(p["value"]))
+		read += " · " + Contracts.money(_draft.price(p))
 	var facts := read
 	if float(p.get("age", 0.0)) > 0.0:
 		facts = "%d yo · %s" % [int(p["age"]), read]
@@ -1121,8 +1121,10 @@ func _player_row(p: Dictionary) -> Control:
 	# Every fact on these lines decides a pick (his price is last): they wrap
 	# rather than cut on a phone, and the row grows to fit them.
 	face.add_child(_row_line(facts, UiKit.TEXT))
-	var kind: PackedStringArray = [where, PlayerProfile.player_type(p)]
-	for t in _traits_of(p):
+	# His type and traits as your scouts read him (L1).
+	var seen := _draft.scouted_copy(p)
+	var kind: PackedStringArray = [where, PlayerProfile.player_type(seen)]
+	for t in _traits_of(seen):
 		kind.append(_trait_label(str(t)))
 	var kind_line := _row_line(" · ".join(kind), UiKit.MUTED)
 	kind_line.name = "Kind_" + str(p["id"])
@@ -1146,7 +1148,7 @@ func _player_row(p: Dictionary) -> Control:
 		inspect.custom_minimum_size.y = maxf(66.0, face.get_combined_minimum_size().y))
 	var can_pick := _draft.can_pick_player(p)
 	var text := "+ " + role
-	var reason := "Draft %s for %s" % [GameDB.player_display_name(p), Contracts.money(int(p["value"]))]
+	var reason := "Draft %s for %s" % [GameDB.player_display_name(p), Contracts.money(_draft.price(p))]
 	if _draft.intake_mode:
 		reason = "Select %s in the National Draft" % GameDB.player_display_name(p)
 	if taken:
@@ -1582,6 +1584,9 @@ func _open_player(id: String) -> void:
 	# players too), exact once he is yours.
 	var view := _draft.user_view(p)
 	var read := bool(view["scouted"])
+	# Everything below the read (type, strengths, traits, full ratings) is as
+	# your scouts see him (row T1.R26 L1, director 2026-11-10).
+	var seen := _draft.scouted_copy(p)
 
 	# Who he is.
 	var name_l := UiKit.lbl(GameDB.player_display_name(p), 22, UiKit.TEXT, true)
@@ -1638,11 +1643,11 @@ func _open_player(id: String) -> void:
 	v.add_child(UiKit.spacer(4))
 	var kv := UiKit.vbox(3)
 	v.add_child(kv)
-	var type_l := UiKit.lbl(Roles.label(p), UiKit.HEADING, UiKit.TEXT, true)
+	var type_l := UiKit.lbl(Roles.label(seen), UiKit.HEADING, UiKit.TEXT, true)
 	type_l.name = "DetailType"
 	kv.add_child(type_l)
-	PlayerSheet.top_attributes_block(kv, p, scouted, 14, UiKit.SECONDARY)
-	var traits: Array = Traits.of(p)
+	PlayerSheet.top_attributes_block(kv, seen, scouted, 14, UiKit.SECONDARY)
+	var traits: Array = Traits.of(seen)
 	if not traits.is_empty():
 		kv.add_child(UiKit.spacer(4))
 		for t in traits:
@@ -1653,7 +1658,7 @@ func _open_player(id: String) -> void:
 			if TraitLink.known(str(t)):
 				TraitLink.tappable(tl, str(t))
 			kv.add_child(tl)
-	PlayerSheet.synergy_fit_block(kv, p, 13)
+	PlayerSheet.synergy_fit_block(kv, seen, 13)
 
 	# Draft fit (row 127): how he suits your coach's game.
 	var fits := _fit_of(p)
@@ -1749,13 +1754,19 @@ func _open_player(id: String) -> void:
 			_open_player(id))
 		v.add_child(all)
 		if _detail_all:
+			if read:
+				var rl := UiKit.lbl("Your scouts' read: each rating can be out as far as his OVR range.",
+						UiKit.SECONDARY, UiKit.MUTED)
+				rl.name = "DetailAttributesRead"
+				rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				v.add_child(rl)
 			var grid := GridContainer.new()
 			grid.name = "DetailAttributes"
 			grid.columns = 1 if UiKit.view_width(self) < 520.0 else 2
 			grid.add_theme_constant_override("h_separation", 14)
 			grid.add_theme_constant_override("v_separation", 6)
 			v.add_child(grid)
-			var attr: Dictionary = p["attr"]
+			var attr: Dictionary = seen["attr"]
 			for r in PlayerSheet.ATTR_ROWS:
 				grid.add_child(PlayerSheet.attr_bar(str(r[0]), str(r[1]), float(attr.get(r[0], 0.0))))
 
@@ -1779,7 +1790,9 @@ func _open_player(id: String) -> void:
 	if not _draft.has(id):
 		var who_name := GameDB.player_display_name(p)
 		var act := UiKit.btn("Sign " + who_name if _draft.intake_mode
-				else "Draft %s  ·  %s" % [who_name, Contracts.money(int(p["value"]))], 15, true)
+				# His name heads the sheet: the button keeps the price whole on a phone
+				# (Redraft salaries are always clear, director 2026-11-10).
+				else "Draft for %s" % Contracts.money(_draft.price(p)), 15, true)
 		act.name = "DetailDraft"
 		act.clip_text = true
 		act.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2079,7 +2092,7 @@ func _refresh_mine() -> void:
 							12, UiKit.MUTED))
 				else:
 					v.add_child(UiKit.lbl("Pick %d · %d OVR · %s" % [
-							int(entry.get("pick", 0)), int(player["overall"]), Contracts.money(int(player["value"]))],
+							int(entry.get("pick", 0)), int(player["overall"]), Contracts.money(_draft.price(player))],
 							12, UiKit.MUTED))
 				if stuck:
 					var row := UiKit.hbox(8)

@@ -457,7 +457,10 @@ func _test_who_a_rival_keeps() -> void:
 		# teammates' ratings could never make his club willing to let a sole
 		# ruck go, and the "let go" case would test the career's luck instead.
 		var p: Dictionary = {}
-		for i in range(12, list.size()):
+		# Kept: a best-23 regular, so he would rather stay than go (a matched
+		# player decides, Expansion.MATCHED_PLAYER_DECIDES), whatever this
+		# seed's draft left around him (row T1.R26 L1 moved your club's picks).
+		for i in range(4 if case == "kept" else 12, list.size()):
 			if not Ratings.plays_role(list[i], "RUCK"):
 				p = list[i]
 				break
@@ -466,6 +469,14 @@ func _test_who_a_rival_keeps() -> void:
 		p["age"] = 26.0
 		p.erase("retiring")
 		p.erase("rehab")   # rehab lifts his rating to his potential (TradeValue.rating): he would be needed
+		if not case.begins_with("cap"):
+			# Room under his club's cap, so neither case rests on how close
+			# this seed's drafted list sits to it (row T1.R26 L1 moved your
+			# club's draft picks, and with them every list after).
+			var room := int((GameState.salary_cap - Contracts.asking_salary(p) - 1500000) / maxi(1, list.size() - 1))
+			for q in list:
+				if q != p:
+					q["salary"] = mini(int(q.get("salary", 0)), room)
 		if case == "let go":
 			for q in list:
 				if q != p:
@@ -486,6 +497,11 @@ func _test_who_a_rival_keeps() -> void:
 			# rating, without the pool year's growth that used to lift it).
 			var role := str(p.get("role", ""))
 			for d in GameState._open_class(GameState.season_year):
+				# Every prospect can play his spot, so whichever pick his club
+				# holds reaches one who beats him (row T1.R26 L1 moved the
+				# seed's ladder, and with it his club's pick).
+				if str(d.get("role", "")) != role and str(d.get("role2", "")) != role:
+					d["role2"] = role
 				if str(d.get("role", "")) == role or str(d.get("role2", "")) == role:
 					d["overall"] = maxi(int(d["overall"]), int(p["overall"]) + 6)
 					d["potential"] = maxi(int(d.get("potential", 0)), maxi(int(d["overall"]), int(p.get("potential", 0)) + 6))
