@@ -3522,6 +3522,8 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			gain *= Traits.power("supply_line")
 		if _burst(side, "flood") or _burst(side, "hold"):
 			gain *= BACK_GAIN
+		if _burst(side, "push"):
+			gain *= PUSH_GAIN
 		gain *= rng.randf_range(0.45, 1.75)
 		if disposal_kind == "kick":
 			if in_d50:
@@ -4320,6 +4322,8 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 		call_mult *= HOLD_GOAL
 	if _burst(side, "flood"):
 		call_mult *= FLOOD_GOAL
+	if _burst(side, "push"):
+		call_mult *= PUSH_GOAL
 	goal_p *= call_mult
 	if credit:
 		_credit(side, "bursts", 6.0 * (goal_p - before))
@@ -4333,6 +4337,8 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 		opp_mult *= STACK_OPP_GOAL
 	if _burst(opp, "surge"):
 		opp_mult *= SURGE_OPP_GOAL
+	if _burst(opp, "push"):
+		opp_mult *= PUSH_OPP_GOAL
 	goal_p *= opp_mult
 	if credit:
 		_credit(opp, "bursts", 6.0 * (before - goal_p))
@@ -4423,6 +4429,7 @@ func continue_quarter() -> bool:
 		current_minute = (current_quarter - 1) * 30 + int(30 * _q_i / maxi(1, _q_count)) + 1
 		if moment_side >= 0 and _boundary_moment():
 			return false
+		_rival_ballup()
 		_q_i += 1
 		_play_one_chain(T)
 		if not pending_moment.is_empty():
@@ -5074,6 +5081,7 @@ func _after_chain() -> void:
 		var holding := _burst(side, "hold")
 		var flooding := _burst(side, "flood")
 		var stacking := _burst(side, "stack")
+		var pushing := _burst(side, "push")
 		for p in sq.ground:
 			var id := str(p["id"])
 			var role := str(p["role"])
@@ -5097,6 +5105,9 @@ func _after_chain() -> void:
 				gps *= 1.10 if role == "MID" else (1.07 if role == "DEF" or role == "RUCK" else 0.94)
 			elif stacking:
 				gps *= 1.08 if role == "MID" or role == "RUCK" else 0.98
+			elif pushing:
+				# Numbers forward: the midfield and the backs run up past the ball.
+				gps *= 1.08 if role == "MID" or role == "DEF" else 1.0
 			_t(side, "distance_run", gps)
 			_p(p, "distance_run", gps)
 
@@ -5397,6 +5408,7 @@ const MOMENT_GAP := 8                # chains between moments
 const BURSTS := {
 	"stack": {"label": "Stack the stoppage", "chains": 12, "for": "for the next few centre ball-ups"},
 	"flood": {"label": "Flood behind the ball", "chains": 45, "for": "for the rest of the quarter"},
+	"push": {"label": "Push numbers forward", "chains": 45, "for": "for the rest of the quarter"},
 	"surge": {"label": "Throw numbers at it", "chains": 15, "for": "for the next ten minutes"},
 	"hold": {"label": "Slow it down", "chains": 15, "for": "for the next ten minutes"},
 }
@@ -5408,6 +5420,8 @@ const BURSTS := {
 ## theirs, clangers and the pressure you feel. Stack: points of win chance at
 ## a centre bounce (the contest clamp still holds) and their shots. Flood:
 ## yours and theirs. Slow it down and Flood both cost ground (BACK_GAIN).
+## Push numbers forward (row 151) is the flood turned round: your shots and the
+## ground you make a kick go up, and so do their shots when they win it back.
 const SURGE_CONTEST := 0.03
 const SURGE_GOAL := 1.12
 const SURGE_OPP_GOAL := 1.25
@@ -5421,6 +5435,9 @@ const STACK_OPP_GOAL := 1.12
 const FLOOD_GOAL := 0.90
 const FLOOD_OPP_GOAL := 0.80
 const BACK_GAIN := 0.85
+const PUSH_GOAL := 1.12
+const PUSH_OPP_GOAL := 1.25
+const PUSH_GAIN := 1.15
 ## A game's minutes on the clock (four quarters of 30).
 const GAME_MINUTES := 120
 
@@ -5492,15 +5509,50 @@ func _fire_bounce(margin: int) -> void:
 	var when := "in the last minute" if to_go <= 1 else "with %d minutes left" % to_go
 	var title := "Centre ball-up - %s %s" % [state, when]
 	# Two distinct calls, each with its own upside and downside and no
-	# "Play it straight" (row 15). Unanswered (skipped, auto-played) is no call.
+	# "Play it straight" (row 15): Flood behind the ball and Push numbers
+	# forward (row 151, director 2026-11-10). Unanswered (skipped, auto-played)
+	# is no call.
 	_fire({"kind": "bounce", "default": -1, "title": title,
 		"text": "Set up for the rest of the game.",
 		"options": _sized([
-			{"key": "stack", "label": "Stack the stoppage",
-				"detail": "Extra numbers at the bounce: win far more clearances, but they score more easily if they get out."},
 			{"key": "flood", "label": "Flood behind the ball",
-				"detail": "Protect the lead: they score far less, and so do you."},
+				"detail": "Numbers behind the ball: they score less easily, and so do you."},
+			{"key": "push", "label": "Push numbers forward",
+				"detail": "Numbers ahead of the ball: you score more easily, and so do they when they win it back."},
 		], left, GateOdds.NONE_COST_BOUNCE)})
+
+
+## The same late centre ball-up for a rival coach (every club gets the two
+## moves; Director Bible 2.35: behind late means more aggressive, protecting a
+## narrow lead means safer). Same window as the coach's call (the last quarter,
+## the last 20 minutes, a centre ball-up, within two goals, once a match): in
+## front he floods behind the ball, behind he pushes numbers forward, level he
+## makes no call. From the scoreboard only, no dice. A side you coach is asked
+## instead (_bounce_moment) and a simulated side of yours makes no call.
+func _rival_ballup() -> void:
+	if current_quarter != 4 or not at_centre or current_minute < 100:
+		return
+	for side in range(2):
+		if side == moment_side or not (squads[side] as Squad).ai_plans or _asked.has("rival_bounce|%d" % side):
+			continue
+		var margin := score(side) - score(1 - side)
+		if margin == 0 or absi(margin) > 12:
+			continue
+		_asked["rival_bounce|%d" % side] = true
+		var key := "flood" if margin > 0 else "push"
+		_set_burst(side, key)
+		_emit("moment", side, fp, null, "%s: %s %s." % [squads[side].name, str(BURSTS[key]["label"]), str(BURSTS[key]["for"])])
+
+
+## Put a short call on. Flood behind the ball and Push numbers forward are
+## opposite set-ups: the new one replaces the other.
+func _set_burst(side: int, key: String) -> void:
+	var b: Dictionary = bursts[side]
+	if key == "push":
+		b.erase("flood")
+	elif key == "flood":
+		b.erase("push")
+	b[key] = _chains_for(int(BURSTS[key]["chains"]))
 
 
 ## A risk card's options with what each does for you and what it costs, sized
@@ -5890,7 +5942,7 @@ func resolve_moment(choice: int) -> Dictionary:
 				outcome = "Structure unchanged."
 		"momentum", "bounce":
 			if BURSTS.has(key):
-				(bursts[side] as Dictionary)[key] = _chains_for(int(BURSTS[key]["chains"]))
+				_set_burst(side, key)
 				outcome = "%s %s." % [str(BURSTS[key]["label"]), str(BURSTS[key]["for"])]
 			else:
 				outcome = "No change."

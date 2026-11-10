@@ -2278,8 +2278,8 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			width = maxf(width, HOLD_WIDTH)
 			pull *= CONTROL_PULL
 	var hb_line := slot == "CHB" or slot == "HBL" or slot == "HBR"
-	if has and _burst_on(side, "surge"):
-		# Throw numbers at it: the midfield and the half-back line run past
+	if has and (_burst_on(side, "surge") or _burst_on(side, "push")):
+		# Throw numbers at it, and Push numbers forward (row 151): the midfield and the half-back line run past
 		# the ball, the forwards stay ahead of it and the back pockets come up,
 		# so the numbers are ahead of it. They run to where the chain is going
 		# (the furthest lead already on), not where the ball is now, so a
@@ -3057,6 +3057,18 @@ func _centre_spot(t: Dictionary, carrier: int) -> Vector2:
 					spot = Vector2(-18.0, 30.0 * signf(spot.y))
 				elif slot == "C":
 					spot = Vector2(-14.0, -4.0)
+			"push":
+				# Push numbers forward (row 151), the flood turned round: the
+				# wings ahead of the square, the centreman at its front edge
+				# and both half-lines up to their arcs.
+				if slot == "WL" or slot == "WR":
+					spot = Vector2(18.0, 30.0 * signf(spot.y))
+				elif slot == "C":
+					spot = Vector2(14.0, -4.0)
+				elif slot == "CHF" or slot == "HFL" or slot == "HFR":
+					spot.x = ARC_EDGE
+				elif slot == "CHB" or slot == "HBL" or slot == "HBR":
+					spot.x = -ARC_EDGE
 	return Vector2(spot.x * _dir(side), spot.y)
 
 
@@ -3069,10 +3081,13 @@ const STACK_POCKET_X := 48.0
 
 
 ## A side's centre ball-up setup from its recorded calls: "stack" (extra
-## numbers at the contest), "flood" (numbers behind the ball) or "".
+## numbers at the contest), "flood" (numbers behind the ball), "push"
+## (numbers ahead of it) or "".
 func _centre_setup(side: int) -> String:
 	if _burst_on(side, "stack"):
 		return "stack"
+	if _burst_on(side, "push"):
+		return "push"
 	if _burst_on(side, "flood"):
 		return "flood"
 	# Win Contest: an edge at every stoppage, so numbers at the centre bounce too.

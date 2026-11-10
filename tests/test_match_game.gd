@@ -72,6 +72,8 @@ func run() -> void:
 	_t("_test_late_bounce_reachable")
 	_t("_test_bounce_once")
 	_t("_test_ballup_two")
+	_t("_test_ballup_moves_play_differently")
+	_t("_test_rival_ballup")
 	_t("_test_ruck_never_tags")
 	_t("_test_current_club_identity")
 	_t("_test_tag_ends_with_injury")
@@ -2985,7 +2987,19 @@ func _test_ballup_two() -> void:
 	var sim: MatchSim = ask.call()
 	var opts: Array = sim.pending_moment.get("options", [])
 	_check(str(sim.pending_moment.get("kind", "")) == "bounce" and opts.size() == 2, "Two choices at the late ball-up (%d)" % opts.size())
-	_check(str(opts[0]["key"]) == "stack" and str(opts[1]["key"]) == "flood", "...Stack the stoppage and Flood behind the ball")
+	_check(str(opts[0]["key"]) == "flood" and str(opts[1]["key"]) == "push"
+			and str(opts[0]["label"]) == "Flood behind the ball" and str(opts[1]["label"]) == "Push numbers forward",
+			"...Flood behind the ball and Push numbers forward (row 151: %s, %s)" % [str(opts[0]["label"]), str(opts[1]["label"])])
+	# Row 151: each move's gain and cost carry their sizes as percentages, from
+	# the constants the match plays.
+	var pc := func(x: float) -> String: return GateOdds.pct(x)
+	_check(str(opts[0]["gain"]).contains(pc.call(1.0 - MatchSim.FLOOD_OPP_GOAL)) and str(opts[0]["cost"]).contains(pc.call(1.0 - MatchSim.FLOOD_GOAL))
+			and str(opts[0]["cost"]).contains(pc.call(1.0 - MatchSim.BACK_GAIN)),
+			"Flood behind the ball: gain and cost sized from what the match plays (%s / %s)" % [str(opts[0]["gain"]), str(opts[0]["cost"])])
+	_check(str(opts[1]["gain"]).contains(pc.call(MatchSim.PUSH_GOAL - 1.0)) and str(opts[1]["gain"]).contains(pc.call(MatchSim.PUSH_GAIN - 1.0))
+			and str(opts[1]["cost"]).contains(pc.call(MatchSim.PUSH_OPP_GOAL - 1.0)) and str(opts[1]["gain"]).contains("siren"),
+			"Push numbers forward: gain and cost sized from what the match plays (%s / %s)" % [str(opts[1]["gain"]), str(opts[1]["cost"])])
+	_check(str(opts[0]["cost"]).contains("%") and str(opts[1]["cost"]).contains("%"), "Each cost is a percentage too")
 	var said_good := true
 	var ranked := false
 	for o in opts:
@@ -3003,10 +3017,102 @@ func _test_ballup_two() -> void:
 	# Each choice takes effect.
 	var a: MatchSim = ask.call()
 	a.resolve_moment(0)
-	_check((a.bursts[int(a.moments.back()["side"])] as Dictionary).has("stack"), "Stack the stoppage is on")
+	_check((a.bursts[int(a.moments.back()["side"])] as Dictionary).has("flood"), "Flood behind the ball is on")
 	var b: MatchSim = ask.call()
 	b.resolve_moment(1)
-	_check((b.bursts[int(b.moments.back()["side"])] as Dictionary).has("flood"), "Flood behind the ball is on")
+	_check((b.bursts[int(b.moments.back()["side"])] as Dictionary).has("push"), "Push numbers forward is on")
+	# The two are opposite set-ups: a flood still on from a run of goals gives
+	# way to the push, and the other way round.
+	var c: MatchSim = ask.call()
+	(c.bursts[0] as Dictionary)["flood"] = 20
+	c.resolve_moment(1)
+	_check((c.bursts[0] as Dictionary).has("push") and not (c.bursts[0] as Dictionary).has("flood"), "Push numbers forward takes the place of a flood still on")
+
+
+## Row 151: the two late ball-up moves play differently on paired seeds. The
+## same match to the first centre ball-up of the last quarter, then one move or
+## the other to the siren: with numbers forward both sides score more in that
+## quarter than with the flood, and the caller makes more ground a kick.
+func _test_ballup_moves_play_differently() -> void:
+	var play := func(seed: int, choice: int) -> Dictionary:
+		var sim := _sim(seed, "FRE", "MEL")
+		sim.moment_side = 0
+		sim.always_offer_bounce = true
+		var before := [0, 0]
+		var called := false
+		while sim.current_quarter <= 4:
+			sim.begin_quarter()
+			if sim.current_quarter == 4:
+				before = [sim.score(0), sim.score(1)]
+			while not sim.continue_quarter():
+				var is_call := str(sim.pending_moment.get("kind", "")) == "bounce"
+				called = called or is_call
+				sim.resolve_moment(choice if is_call else int(sim.pending_moment["default"]))
+			sim.end_quarter()
+		var r := sim.result()
+		return {"called": called, "mine": sim.score(0) - int(before[0]), "theirs": sim.score(1) - int(before[1]),
+				"score": [sim.score(0), sim.score(1)], "metres": float((r["team"] as Array)[0].get("metres_gained", 0.0)),
+				"disposals": float((r["team"] as Array)[0].get("disposals", 0.0))}
+	var games := 16
+	var called := 0
+	var differ := 0
+	var flood := {"mine": 0, "theirs": 0, "metres": 0.0, "disposals": 0.0}
+	var push := {"mine": 0, "theirs": 0, "metres": 0.0, "disposals": 0.0}
+	for i in range(games):
+		var f: Dictionary = play.call(15100 + i, 0)
+		var p: Dictionary = play.call(15100 + i, 1)
+		called += 1 if bool(f["called"]) and bool(p["called"]) else 0
+		differ += 1 if f["score"] != p["score"] else 0
+		for k in flood:
+			flood[k] += f[k]
+			push[k] += p[k]
+	_check(called == games, "Every paired match reaches the late ball-up call (%d of %d)" % [called, games])
+	_check(differ >= games - 2, "The same match ends differently on the two moves (%d of %d paired seeds)" % [differ, games])
+	_check(int(push["mine"]) > int(flood["mine"]), "Push numbers forward: you score more in the last quarter than on the flood (%d against %d over %d matches)" % [int(push["mine"]), int(flood["mine"]), games])
+	_check(int(push["theirs"]) > int(flood["theirs"]), "...and so do they (%d against %d)" % [int(push["theirs"]), int(flood["theirs"])])
+	var per_push := float(push["metres"]) / maxf(1.0, float(push["disposals"]))
+	var per_flood := float(flood["metres"]) / maxf(1.0, float(flood["disposals"]))
+	_check(per_push > per_flood, "...and you make more ground a disposal (%.2f m against %.2f m over the match)" % [per_push, per_flood])
+
+
+## Row 151: every club gets the two moves. A rival coach at the same late
+## centre ball-up floods in front and pushes numbers forward behind (Director
+## Bible 2.35), once a match, from the scoreboard only; level, he makes no call.
+func _test_rival_ballup() -> void:
+	var at := func(my_goals: float, their_goals: float, minute := 106, quarter := 4, centre := true) -> MatchSim:
+		var sim := _sim(4410, "MEL", "CAR")
+		(sim.squads[1] as Squad).ai_plans = true
+		sim.current_quarter = quarter
+		sim.current_minute = minute
+		sim.at_centre = centre
+		(sim.team_stats[0] as Dictionary)["goals"] = my_goals
+		(sim.team_stats[1] as Dictionary)["goals"] = their_goals
+		sim._rival_ballup()
+		return sim
+	var ahead: MatchSim = at.call(10.0, 11.0)
+	_check((ahead.bursts[1] as Dictionary).has("flood") and not (ahead.bursts[1] as Dictionary).has("push"),
+			"A rival a goal up at the late centre ball-up floods behind the ball")
+	_check((ahead.bursts[0] as Dictionary).is_empty(), "...and no call is made for the side you coach")
+	var said := str((ahead.events.back() as Dictionary).get("text", ""))
+	_check(str((ahead.events.back() as Dictionary).get("kind", "")) == "moment" and said.contains("Flood behind the ball") and said.begins_with(ahead.squads[1].name),
+			"...and the feed says whose call it is (%s)" % said)
+	var left := int((ahead.bursts[1] as Dictionary)["flood"])
+	ahead.team_stats[1]["goals"] = 9.0
+	ahead._rival_ballup()
+	_check(int((ahead.bursts[1] as Dictionary).get("flood", 0)) == left and not (ahead.bursts[1] as Dictionary).has("push"), "...once a match")
+	var behind: MatchSim = at.call(11.0, 10.0)
+	_check((behind.bursts[1] as Dictionary).has("push") and not (behind.bursts[1] as Dictionary).has("flood"),
+			"A rival a goal down pushes numbers forward")
+	_check((at.call(10.0, 10.0).bursts[1] as Dictionary).is_empty(), "Level, the rival makes no call")
+	_check((at.call(10.0, 13.0).bursts[1] as Dictionary).is_empty(), "More than two goals up, no call")
+	_check((at.call(10.0, 11.0, 95).bursts[1] as Dictionary).is_empty(), "Before the last 20 minutes, no call")
+	_check((at.call(10.0, 11.0, 80, 3).bursts[1] as Dictionary).is_empty(), "Before the last quarter, no call")
+	_check((at.call(10.0, 11.0, 106, 4, false).bursts[1] as Dictionary).is_empty(), "Away from a centre ball-up, no call")
+	# The same sizes for every club: the rival's flood and push are the calls
+	# the coach's card sizes (one set of constants, one length).
+	_check(int((behind.bursts[1] as Dictionary)["push"]) == behind._chains_for(int(MatchSim.BURSTS["push"]["chains"]))
+			and int(MatchSim.BURSTS["push"]["chains"]) == int(MatchSim.BURSTS["flood"]["chains"]),
+			"A rival's call lasts as long as yours")
 
 
 ## A tag is a midfielder's job (the director's PC playtest, 2026-10-07: the

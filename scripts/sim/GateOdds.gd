@@ -64,19 +64,21 @@ const BURST_GAIN := {
 	"hold": "%s fewer clangers, %s less pressure felt, their shots %s less accurate",
 	"stack": "a %s better chance at each centre bounce (never above %s)",
 	"flood": "their shots %s less accurate",
+	"push": "your shots %s more accurate, %s more ground a kick",
 }
 const BURST_COST := {
 	"surge": "their shots %s more accurate, legs tire %s faster",
 	"hold": "your shots %s less accurate, %s less ground a kick",
 	"stack": "their shots %s more accurate meanwhile",
 	"flood": "your shots %s less accurate, %s less ground a kick",
+	"push": "their shots %s more accurate",
 }
 const FOR_MINUTES := ", for about %d minutes"
 const TO_SIREN := ", to the final siren"
 const TO_BREAK := ", to the break"
 const NONE_GAIN := "no extra risk at either end"
 const NONE_COST_RUN := "their run goes on at the current odds"
-const NONE_COST_BOUNCE := "no extra edge at the bounce or behind the ball"
+const NONE_COST_BOUNCE := "no extra numbers behind the ball or ahead of it"
 
 
 static func pct(share: float) -> String:
@@ -158,6 +160,9 @@ static func burst_lines(kind: String, minutes_left := -1, last := true) -> Array
 		"flood":
 			return [BURST_GAIN[kind] % pct(1.0 - MatchSim.FLOOD_OPP_GOAL) + t,
 					BURST_COST[kind] % [pct(1.0 - MatchSim.FLOOD_GOAL), pct(1.0 - MatchSim.BACK_GAIN)]]
+		"push":
+			return [BURST_GAIN[kind] % [pct(MatchSim.PUSH_GOAL - 1.0), pct(MatchSim.PUSH_GAIN - 1.0)] + t,
+					BURST_COST[kind] % pct(MatchSim.PUSH_OPP_GOAL - 1.0)]
 	return ["", ""]
 
 

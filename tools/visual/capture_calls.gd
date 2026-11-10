@@ -32,6 +32,7 @@ const CALLS := [
 	["hold", "Slow it down", "balanced", ["hold"], "has"],
 	["flood", "Flood behind the ball", "balanced", ["flood"], "not"],
 	["stack", "Stack the stoppage", "balanced", ["stack"], "centre"],
+	["push", "Push numbers forward", "balanced", ["push"], "has"],
 ]
 const DT := 1.0 / 60.0
 const SAMPLE := 2          # a sample every 2 steps (1/30 s)

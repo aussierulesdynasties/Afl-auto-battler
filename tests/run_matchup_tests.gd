@@ -1526,6 +1526,9 @@ func _gate_odds() -> void:
 	var flood: Array = GO.burst_lines("flood", 15)
 	_check(str(flood[0]).contains(pct.call(1.0 - Ms.FLOOD_OPP_GOAL)) and str(flood[0]).ends_with(GO.TO_SIREN)
 			and str(flood[1]).contains(pct.call(1.0 - Ms.FLOOD_GOAL)), "Flood: to the siren, both sides from its constants (%s / %s)" % flood)
+	var push: Array = GO.burst_lines("push", 15)
+	_check(str(push[0]).contains(pct.call(Ms.PUSH_GOAL - 1.0)) and str(push[0]).contains(pct.call(Ms.PUSH_GAIN - 1.0)) and str(push[0]).ends_with(GO.TO_SIREN)
+			and str(push[1]).contains(pct.call(Ms.PUSH_OPP_GOAL - 1.0)), "Push numbers forward: to the siren, both sides from its constants (%s / %s)" % push)
 	var fwd := {"id": "f", "role": "FWD", "height_cm": 196, "attr": {"marking": 80}}
 	var back := {"id": "d", "role": "DEF", "height_cm": 192, "attr": {"intercept": 74, "marking": 68}}
 	var edge: float = MU.AERIAL_EDGE if load("res://scripts/sim/Traits.gd").has(fwd, "aerial") else 0.0
