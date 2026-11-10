@@ -2304,7 +2304,9 @@ Your career stays on this device.",
 	var sore_text := ""
 	if sore_node != null:
 		sore_text = str(sore_node.get_meta("plain")) if sore_node.has_meta("plain") else str(sore_node.get("text"))
-	_check(sore_text == "If you leave this, it goes as \"Play him\".",
+	# The choice carries his name, never a bare "him" (director, 2026-11-11).
+	_check(sore_text.begins_with("If you leave this, it goes as \"Play ") and sore_text.ends_with("\".")
+			and not sore_text.contains("Play him"),
 			"A card with a silent default names the choice it settles as, once (%s)" % sore_text)
 	# A finger on the line answers nothing; a finger on "Play him" below it answers the card.
 	var line_tap: String = await Tap.tap(sore_node) if sore_node != null else "missing"
@@ -2336,7 +2338,7 @@ Your career stays on this device.",
 			and back_mark != null and back_mark.text == "Gain:" and cost_mark != null and cost_mark.text == "Cost:"
 			and cost_mark.get_theme_font("font") != rest_cost.get_theme_font("font") and cost_mark.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").label_ink()
 			and back_gain != null and back_cost != null and back_cost.text.contains("promise breaks")
-			and rest_gain != null and rest_cost != null and rest_cost.text.begins_with("His opinion of you down") and rest_cost.text.contains("re-sign with you")
+			and rest_gain != null and rest_cost != null and rest_cost.text.contains("'s opinion of you down") and not rest_cost.text.begins_with("His ") and rest_cost.text.contains("re-sign with you")
 			and same_style and rest_btn != null and rest_cost.get_global_rect().position.y >= rest_gain.get_global_rect().end.y - 1.0
 			and rest_gain.get_global_rect().position.y >= rest_btn.get_global_rect().end.y - 1.0,
 			"Each answer says its gains then its costs under its own button, in the same full-strength text (%s / %s)" % [back_cost.text if back_cost != null else "none", rest_cost.text if rest_cost != null else "none"])
