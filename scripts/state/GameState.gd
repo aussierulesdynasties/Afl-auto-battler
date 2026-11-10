@@ -4218,9 +4218,12 @@ func coach_club() -> String:
 
 
 ## The press interview comes once the coach has a club and before his first
-## pick (director, 2026-11-11: "its meant to go before the draft").
+## pick (director, 2026-11-11: "its meant to go before the draft"). A draft
+## already run to its end counts too: a club with a full list passes every
+## pick the moment it is taken (the 2030 start), and its coach still sits the
+## interview before he sees the board.
 func interview_before_draft() -> bool:
-	return interview_due and coach_club() != "" and draft != null and not draft.is_finished()
+	return interview_due and coach_club() != "" and draft != null
 
 
 func finish_interview(picks: Array) -> Dictionary:

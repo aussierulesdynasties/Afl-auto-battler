@@ -7,6 +7,10 @@ extends Control
 ## before the first pick (director, 2026-11-11: "its meant to go before the
 ## draft"); the draft and the hub both route here while GameState.interview_due.
 
+## Set by the draft board when it sends the coach here: Continue goes back to
+## it, a finished draft included (its Finish step is still to come).
+static var back_to_draft := false
+
 var _root: VBoxContainer
 ## Outside the scroll: the page's one action never sits half under the fold.
 var _foot: VBoxContainer
@@ -155,7 +159,9 @@ func _reveal() -> void:
 
 ## Back to the draft board when the draft is still to come, else the hub.
 func _leave() -> void:
-	if GameState.draft != null and not GameState.draft.is_finished() and GameState.coach_club() != "":
+	var from_draft := back_to_draft and GameState.draft != null
+	back_to_draft = false
+	if from_draft or (GameState.draft != null and not GameState.draft.is_finished() and GameState.coach_club() != ""):
 		Router.replace("draft")
 	else:
 		Router.replace("hub" if GameState.season != null else "main")

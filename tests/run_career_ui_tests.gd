@@ -4277,10 +4277,11 @@ func _test_every_start_reaches_interview() -> void:
 		var due: bool = bool(_state.interview_due)
 		var clean: bool = (_state.coach_arch as Dictionary).is_empty() and str(_state.coach_name) == ""
 		_check(tap == "" and _state.coach_club() != "" and due and clean and mine_before == 0
-				and d != null and not d.is_finished() and _router.current() == "interview"
+				and d != null and _router.current() == "interview"
 				and current_scene.find_child("CoachName", true, false) != null,
-				"%s: the new coach of %s faces the press interview before the draft, name first (tap %s, due %s, clean %s, his picks %d, at %s)" % [
-					label, _state.coach_club(), tap, due, clean, mine_before, _router.current()])
+				"%s: the new coach of %s faces the press interview before the draft, name first (tap %s, due %s, clean %s, his picks %d, draft finished %s, at %s)" % [
+					label, _state.coach_club(), tap, due, clean, mine_before,
+					str(d != null and d.is_finished()), _router.current()])
 		if _router.current() != "interview":
 			continue
 		# The answers score exactly as in the standard start.
@@ -4429,6 +4430,8 @@ func _test_new_career_challenge_taps() -> void:
 	var tas_tile := current_scene.find_child("Choose_TAS", true, false)
 	_check(_state.my_club == "" and tas_tile != null and current_scene.find_child("Choose_COL", true, false) == null,
 			"Choose your rebuild offers the bottom club and Tasmania, no other club")
+	# The press interview has its own test (_test_every_start_reaches_interview).
+	_state.interview_due = false
 	var t6: String = await Tap.tap(current_scene.find_child("Choose_ESS", true, false))
 	await _settle()
 	t5 += t6

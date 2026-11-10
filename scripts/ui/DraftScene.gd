@@ -100,6 +100,7 @@ func _ready() -> void:
 	# A new coach faces the press before his first pick, a draft resumed from
 	# a save included (director, 2026-11-11: "its meant to go before the draft").
 	if GameState.interview_before_draft():
+		InterviewScene.back_to_draft = true
 		Router.replace("interview")
 		return
 	_club = _draft.user_club
@@ -417,6 +418,7 @@ func _on_club_chosen(code: String) -> void:
 		_draft.start_for_user(code)
 	GameState.mark_dirty()
 	if GameState.interview_before_draft():
+		InterviewScene.back_to_draft = true
 		Router.replace("interview")
 		return
 	_club_backdrop()
