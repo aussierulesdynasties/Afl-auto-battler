@@ -51,6 +51,9 @@ func run() -> void:
 	_t("_test_trial_result")
 	_t("_test_role_card_shape")
 	_t("_test_role_trial_save")
+	_t("_test_dev_talk")
+	_t("_test_dev_talk_follow_up")
+	_t("_test_dev_promise_kept_broken_lapsed")
 	_t("_test_ten_seasons")
 	_t("_test_trust_in_play")
 	_t("_test_stories_never_move_the_dice")
@@ -229,6 +232,7 @@ const GAIN_WORDS := {
 	"fresh": "legs", "promise_win": "Win and", "extend_early": "signs on", "captaincy_swap": "takes the armband",
 	"rush_back": "cleared to play", "role_trial": "plays as a", "rest": "can't get hurt", "culture": "(Standards|Togetherness|Ambition) rises [0-9]+%",
 	"running": "more weeks? of running", "drill": "on the game plan", "open_price": "early premium", "new_club_keep": "He stays for",
+	"no_promise": "No promise to keep",
 }
 const COST_WORDS := {
 	"morale": "(?i)morale", "board": "(?i)board confidence", "trust": "opinion of you (down [0-9]+|falls [0-9]+|stays)",
@@ -236,9 +240,9 @@ const COST_WORDS := {
 	"start_backing": "expects to be picked", "back_kid": "is promised", "promise_win": "Lose or draw and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
 	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot", "on_record": "on the record",
 	"culture": "(Standards|Togetherness|Ambition) falls [0-9]+%", "running": "less running", "forgo_xp": "Slower growth",
-	"new_club_keep": "against your cap", "new_club_go": "when this season ends",
+	"new_club_keep": "against your cap", "new_club_go": "when this season ends", "dev_promise": "expects his next three games",
 }
-const SAMPLE_FACTS := {"sore_odds": "about 1 in 6", "run_games": 3, "early_price": "$1m", "more_seasons": "two more seasons",
+const SAMPLE_FACTS := {"sore_odds": "about 1 in 6", "take_odds": "about 6 in 10", "proj_word": "key forward", "proj_line": "up forward", "run_games": 3, "early_price": "$1m", "more_seasons": "two more seasons",
 		"new_club": "Tasmania", "keep_seasons": "three more seasons", "keep_price": "$600k", "comp_after": 20,
 		"comp_line": "You receive a draft pick after pick 20, early in the second round."}
 
@@ -283,8 +287,14 @@ func _stakes_in(effects: Array) -> Array:
 		if op == "slow_start" or op == "on_record" or op == "forgo_xp":
 			costs.append(op)
 			continue
-		if op == "open_price":
+		if op == "open_price" or op == "no_promise":
 			gains.append(op)
+			continue
+		# A development talk's promise (T5.r93): games there if it takes, and what breaking it costs.
+		if op == "dev_promise":
+			for k in [op, "morale", "trust"]:
+				if not costs.has(k):
+					costs.append(k)
 			continue
 		if op == "loss_sting":
 			costs.append_array([op, "morale"])
@@ -3372,3 +3382,204 @@ func _test_trial_rating_and_old_cards() -> void:
 	GameState.resolve_card(0, 1)
 	_check(not words.contains("{") and words.contains("1 in") and bool(old.get("resolved", false)) and bool(q.get("sore", false)),
 			"An older saved card reads without braces, keeps its 1-in-N odds and still answers (%s)" % words)
+
+
+
+# --- Development talks (row T5.r93) ---------------------------------------------
+
+## A player in the side who can learn a position, now on a project in its
+## first week. {} if the test list has nobody.
+func _dev_learner() -> Dictionary:
+	var side := GameState.current_side()
+	for q in GameState.my_list:
+		if _line_in(side, str(q["id"])) in ["", "BENCH"] or int(q.get("injury_weeks", 0)) > 0:
+			continue
+		var jobs := GameState.learnable_jobs(q)
+		if jobs.is_empty():
+			continue
+		GameState.set_player_plan(str(q["id"]), GameState.LEARN_PREFIX + str(jobs[0]))
+		if GameState.project_job(q) == "":
+			continue
+		(q["project"] as Dictionary)["weeks"] = 1
+		return q
+	return {}
+
+
+func _news_has(text: String) -> bool:
+	for n in GameState.news:
+		if str(n["text"]).contains(text):
+			return true
+	return false
+
+
+## The verdict now, learned or not (his own rating set either side of his
+## rating there for the judgement, then put back).
+func _judge(p: Dictionary, learned: bool) -> void:
+	var own := int(p["overall"])
+	var there := GameState.rating_as(p, GameState.project_role(p))
+	p["overall"] = there if learned else there + GameState.PROJECT_PASS + 5
+	GameState._finish_project(p, true, "Round 6")
+	p["overall"] = own
+
+
+func _dev_talk_fact(id: String) -> Array:
+	var out := []
+	for r in CareerFacts.of(GameState.career_facts, id, "talk"):
+		if str(r["d"]).begins_with("project|"):
+			out.append(r)
+	return out
+
+
+## The talk comes from facts: a project he is on, in its weeks 1 to 4, in a
+## position he does not have, fit, not yet talked about. Its odds are the table's.
+func _test_dev_talk() -> void:
+	_start()
+	var p := _dev_learner()
+	_check(not p.is_empty(), "Someone in the side can learn a position")
+	if p.is_empty():
+		return
+	var id := str(p["id"])
+	var pr: Dictionary = p["project"]
+	var due := []
+	for w in [0, 1, 4, 5]:
+		pr["weeks"] = w
+		due.append(GameState.dev_talk_due(p))
+	_check(due == [false, true, true, false], "Due only in weeks 1 to 4 of his project (%s)" % str(due))
+	pr["weeks"] = 2
+	p["injury_weeks"] = 2
+	_check(not bool(ClubStories.project_facts(GameState, p)["dev_talk_due"]), "Not while he is injured")
+	p["injury_weeks"] = 0
+	var role := GameState.project_role(p)
+	var gap := clampi(int(p["overall"]) - GameState.rating_as(p, role), 0, GameState.TAKE_GAP_MAX)
+	_check(GameState.take_odds(p) == GameState.odds_in_ten(int(GameState.TAKE_PCT[1][gap])), "The odds are the measured table's, week 2 (%s)" % GameState.take_odds(p))
+	_check(GameState.odds_in_ten(0) == "fewer than 1 in 10" and GameState.odds_in_ten(100) == "more than 9 in 10"
+			and GameState.odds_in_ten(64) == "about 6 in 10", "Odds read true at the ends and round in between")
+	for w in GameState.TAKE_PCT.size():
+		var row: Array = GameState.TAKE_PCT[w]
+		for g in range(1, row.size()):
+			_check(int(row[g]) <= int(row[g - 1]), "Further off never takes more often (week %d, gap %d)" % [w + 1, g])
+	var t := StoryDeck.by_id(StoryDeck.all(), "training_dev_talk")
+	var ctx := ClubStories.context(GameState)
+	var who := StoryEngine.eligible_subject(t, ctx, StoryEngine.new_state(), 100, RandomNumberGenerator.new())
+	_check(not who.is_empty() and str(who["id"]) == id, "The card comes up about him")
+	# The card: his position, the odds, both sides of each choice.
+	var card := GameState.story_card("training_dev_talk", p)
+	var word := str(GameState.LEARN_JOBS[GameState.project_job(p)]["word"])
+	_check(str(card["title"]).contains(word) and str(card["text"]).contains(GameState.take_odds(p)),
+			"The card names the position and the odds: %s / %s" % [str(card["title"]), str(card["text"])])
+	var promise := str((card["options"] as Array)[0]["detail"])
+	var depth := str((card["options"] as Array)[1]["detail"])
+	_check(promise.contains("expects his next three games as a " + word) and promise.contains(GameState.take_odds(p))
+			and promise.contains("away from his usual spot") and promise.contains("orale"),
+			"Promise states the games, the odds and the sting: %s" % promise)
+	_check(depth.contains("No promise to keep.") and depth.contains("orale"), "Depth states its gain and its cost: %s" % depth)
+	# Promise: kept on him and as a career fact, and the talk is had.
+	var morale := ClubLife.morale(p)
+	var out := ClubStories.apply_choice(GameState, card, 0)
+	var dt: Dictionary = p.get("dev_talk", {})
+	_check(str(dt.get("said", "")) == "promise" and str(dt.get("state", "")) == "heard" and str(dt.get("role", "")) == role,
+			"The promise is kept on him (%s)" % str(dt))
+	_check(ClubLife.morale(p) > morale and out.contains("three games"), "His morale rises and the result says so: %s" % out)
+	var facts := _dev_talk_fact(id)
+	_check(facts.size() == 1 and str(facts[0]["d"]) == "project|promise" and str(facts[0]["out"]) == "heard", "A career fact: %s" % str(facts))
+	_check(not GameState.dev_talk_due(p), "Talked about: not due again")
+	ctx = ClubStories.context(GameState)
+	who = StoryEngine.eligible_subject(t, ctx, StoryEngine.new_state(), 100, RandomNumberGenerator.new())
+	_check(who.is_empty() or str(who["id"]) != id, "...and the card does not come up about him again")
+	# Depth.
+	_start()
+	p = _dev_learner()
+	card = GameState.story_card("training_dev_talk", p)
+	ClubStories.apply_choice(GameState, card, 1)
+	_check(str((p.get("dev_talk", {}) as Dictionary).get("said", "")) == "depth", "Depth is kept on him")
+	var df := _dev_talk_fact(str(p["id"]))
+	_check(df.size() == 1 and str(df[0]["d"]) == "project|depth", "...and as a career fact (%s)" % str(df))
+
+
+## The verdict's line remembers what you told him.
+func _test_dev_talk_follow_up() -> void:
+	for c in [["promise", true], ["promise", false], ["depth", true], ["depth", false], ["", true]]:
+		_start()
+		var p := _dev_learner()
+		if p.is_empty():
+			_check(false, "Someone in the side can learn a position")
+			return
+		var id := str(p["id"])
+		if str(c[0]) != "":
+			GameState.dev_talk(p, str(c[0]))
+		var told := "Round %d" % (GameState.season.round_index + 1)
+		_judge(p, bool(c[1]))
+		var dt: Dictionary = p.get("dev_talk", {})
+		var name := GameDB.player_display_name(p)
+		match "%s|%s" % [str(c[0]), str(c[1])]:
+			"promise|true":
+				_check(_news_has("His three games there, as you told him in %s, start when he's next in the side." % told)
+						and str(dt["state"]) == "owed", "Learned after a promise: his games are owed (%s)" % str(dt))
+			"promise|false":
+				_check(_news_has("so the games there you talked about in %s are off. He knew it might not." % told)
+						and str(dt["state"]) == "off", "Not taken after a promise: the games are off (%s)" % str(dt))
+			"depth|true":
+				_check(_news_has("cover for the side, as you told him in %s." % told), "Learned after depth: cover, as told")
+			"depth|false":
+				_check(_news_has(name + "'s time training as") and _news_has("he is not ready to be picked there"), "Not taken after depth: the plain line")
+			"|true":
+				_check(_news_has("he can be picked there now") and dt.is_empty(), "No talk: the plain line")
+		if str(c[0]) != "":
+			var f := _dev_talk_fact(id)
+			_check(f.size() == 1 and str(f[0]["out"]) == ("learned" if bool(c[1]) else "not taken"),
+					"The talk's career fact holds the verdict (%s)" % str(f))
+
+
+## A promise is games in the new position: kept when he plays them, broken
+## (with its sting) when you take him out of them, lapsed when the season ends first.
+func _test_dev_promise_kept_broken_lapsed() -> void:
+	# Kept.
+	_start()
+	var p := _dev_learner()
+	if p.is_empty():
+		_check(false, "Someone in the side can learn a position")
+		return
+	var id := str(p["id"])
+	var role := GameState.project_role(p)
+	GameState.dev_talk(p, "promise")
+	_judge(p, true)
+	GameState._dev_promise_week()
+	var dt: Dictionary = p["dev_talk"]
+	_check(str(dt["state"]) == "on" and int(GameState.role_trial.get("promised", 0)) > 0 and str(GameState.role_trial.get("role", "")) == role,
+			"Once owed, his games in the new position start (%s, %s)" % [str(dt), str(GameState.role_trial)])
+	_check(int(p.get("expects_game", 0)) == GameState.DEV_PROMISE_STING, "...and he expects to play them")
+	var trust := Trust.value(GameState.relations, Trust.player_key(id))
+	for r in range(GameState.DEV_PROMISE_GAMES):
+		GameState.advance()
+	_check(str(dt["state"]) == "kept" and GameState.role_trial.is_empty() and not p.has("expects_game"),
+			"Three games there and the promise is kept (%s)" % str(dt))
+	_check(Trust.value(GameState.relations, Trust.player_key(id)) >= trust, "Keeping it costs no trust")
+	_check(str(_dev_talk_fact(id)[0]["out"]) == "kept", "The career fact says kept")
+	_check(int(GameState.trial_result.get("promised", 0)) > 0, "The trial's result card knows it was a promise")
+	# Broken: you take him out of the trial line.
+	_start()
+	p = _dev_learner()
+	id = str(p["id"])
+	GameState.dev_talk(p, "promise")
+	_judge(p, true)
+	GameState._dev_promise_week()
+	p["morale"] = 60
+	trust = Trust.value(GameState.relations, Trust.player_key(id))
+	GameState.set_selection(_bench_him(GameState.current_side(), id))
+	dt = p["dev_talk"]
+	_check(str(dt["state"]) == "broken" and GameState.role_trial.is_empty(), "Benching him breaks the promise (%s)" % str(dt))
+	_check(ClubLife.morale(p) == 60 - GameState.DEV_PROMISE_STING, "...his morale falls %d (%d)" % [GameState.DEV_PROMISE_STING, ClubLife.morale(p)])
+	_check(Trust.value(GameState.relations, Trust.player_key(id)) < trust, "...and his opinion of you falls")
+	_check(_news_has("was promised three games as") and _news_has("and was left out of them"), "...and the news says so")
+	_check(str(_dev_talk_fact(id)[0]["out"]) == "broken", "The career fact says broken")
+	# Lapsed: the season ends with the games still owed. No sting.
+	_start()
+	p = _dev_learner()
+	id = str(p["id"])
+	GameState.dev_talk(p, "promise")
+	_judge(p, true)
+	p["morale"] = 60
+	GameState._dev_promises_lapse()
+	_check(str(p["dev_talk"]["state"]) == "lapsed" and ClubLife.morale(p) == 60, "Season over first: the promise lapses, no sting")
+	_check(_news_has("so that promise lapses"), "...and the news says so")
+	_check(str(_dev_talk_fact(id)[0]["out"]) == "lapsed", "The career fact says lapsed")
