@@ -72,7 +72,7 @@ static func board_goal(rank: int, prev := 0, clubs := 18) -> Dictionary:
 		return {"key": "finals", "text": "Make the finals", "pos": Season.FINALISTS}
 	var mid := top_two_thirds(clubs)
 	if rank <= mid:
-		return {"key": "top12", "text": "Stay out of %s" % bottom_places(clubs), "pos": mid}
+		return {"key": "top12", "text": STAY_OUT + bottom_places(clubs), "pos": mid}
 	return {"key": "wins7", "text": "Win at least 7 games", "wins": 7}
 
 
@@ -168,10 +168,21 @@ const GOAL_PHRASE := {"top4": "a top-four finish", "finals": "a finals spot",
 		"top12": "a top-12 finish", "wins7": "seven wins"}
 
 
-## GOAL_PHRASE for `goal`; the middle band names its own ladder place.
+## The middle goal's opening words; what follows them names the bottom places.
+const STAY_OUT := "Stay out of "
+
+
+## GOAL_PHRASE for `goal`. The middle band is said in the goal's own words
+## ("a finish out of the bottom six", director 2026-11-10), so the weekly board
+## line and the goal line name it one way. A goal set before those words (a
+## career mid-season) names its ladder place, as its goal line still does.
 static func goal_phrase(goal: Dictionary) -> String:
-	if str(goal.get("key", "")) == "top12" and goal.has("pos"):
-		return "a top-%d finish" % int(goal["pos"])
+	if str(goal.get("key", "")) == "top12":
+		var text := str(goal.get("text", ""))
+		if text.begins_with(STAY_OUT):
+			return "a finish out of " + text.trim_prefix(STAY_OUT)
+		if goal.has("pos"):
+			return "a top-%d finish" % int(goal["pos"])
 	return str(GOAL_PHRASE.get(str(goal.get("key", "")), "the season's goal"))
 
 

@@ -2038,8 +2038,23 @@ func _test_goal_follows_rank_by_clubs() -> void:
 	_check(preachy.is_empty(), "The board states its view; it never tells the coach what to do (%s)" % str(preachy))
 	_check(not ClubLife.goal_reason({"key": "top12", "pos": 12}, 0, 0).contains("on paper"),
 			"No rank on record: the old sentence, no made-up rank")
-	_check(ClubLife.match_reason(ClubLife.board_goal(10, 0, 21), "Geelong", 12, 0).contains("a top-14 finish"),
-			"After a match the board names the right ladder place")
+	# After a match the board names the middle goal in the goal's own words, at every size.
+	var weekly := []
+	for size in [[18, "six"], [20, "seven"], [21, "seven"]]:
+		var g := ClubLife.board_goal(10, 0, int(size[0]))
+		var aim := "a finish out of the bottom %s" % size[1]
+		if (ClubLife.match_reason(g, "Geelong", 12, 0) != "The win over Geelong keeps %s in reach." % aim
+				or ClubLife.match_reason(g, "Geelong", -12, 1) != "The loss to Geelong puts %s under threat." % aim
+				or ClubLife.match_reason(g, "Geelong", -12, 4) != "Four losses in a row: the board is getting restless about %s." % aim):
+			weekly.append(ClubLife.match_reason(g, "Geelong", 12, 0))
+		for margin in [12, -12]:
+			for streak in [0, 4]:
+				var said := ClubLife.match_reason(g, "Geelong", margin, streak)
+				if said.contains("top-") or not said.contains(str(g["text"]).trim_prefix("Stay out of ")):
+					weekly.append(said)
+	_check(weekly.is_empty(), "After a match the board names the middle goal as the goal line does, never a top-N finish (%s)" % str(weekly))
+	_check(ClubLife.match_reason({"key": "top12", "text": "Finish 12th or better", "pos": 12}, "Geelong", 12, 0).contains("a top-12 finish"),
+			"A goal set before the new words keeps naming its ladder place, as its goal line does")
 
 
 ## Row 115: the season's goal is set from every club's list rank among the
