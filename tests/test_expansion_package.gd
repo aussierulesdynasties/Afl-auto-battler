@@ -440,6 +440,14 @@ func _test_who_a_rival_keeps() -> void:
 		p["age"] = 26.0
 		p.erase("retiring")
 		p.erase("rehab")   # rehab lifts his rating to his potential (TradeValue.rating): he would be needed
+		if not case.begins_with("cap"):
+			# Room under his club's cap, so neither case rests on how close
+			# this seed's drafted list sits to it (row T1.R26 L1 moved your
+			# club's draft picks, and with them every list after).
+			var room := int((GameState.salary_cap - Contracts.asking_salary(p) - 1500000) / maxi(1, list.size() - 1))
+			for q in list:
+				if q != p:
+					q["salary"] = mini(int(q.get("salary", 0)), room)
 		if case == "let go":
 			for q in list:
 				if q != p:
