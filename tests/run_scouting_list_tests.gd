@@ -29,6 +29,10 @@ func _run() -> void:
 	_state.save_path = "user://test_scouting_list.save"
 	_state.settings_path = "user://test_scouting_list_settings.cfg"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(_state.settings_path))
+	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite,
+	# and My list's intro would take the tap on the way in.
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		_state.set_setting("seen_%s_intro" % key, true)
 	_state.show_real_names = false
 	_state.tutorials = false
 	_state.replay_seed = 1301
