@@ -36,6 +36,10 @@ Register row 45. Source: [the audit](DECISION_TRANSPARENCY_AUDIT_2026-10-18.md) 
 | S1 | 33 other gain-only story options (allowlist that can only shrink) | No cost | row 30 |
 | S2 | Press conference: bible says "dice roll", code is fixed ±1 | Bible and code disagree | §4, row 28 |
 
+## Rulings 2026-11-10 (T1.R26)
+
+1 "Gain / Cost everywhere". 2 "Gain for this list today". 3 "Everything follows the read". 4 "One scouting-budget line". 5 "Costs in the rule's spirit". 6 "Cost sheet, one look". 7-9 settled earlier (M5 cut into Through stars, S1 and S2 met).
+
 ## Questions (one each, recommended first)
 
 1. **Label wording.** Match gates say "Gain / Cost", club gates "Upside / Downside / Odds". One for every gate?
