@@ -309,16 +309,17 @@
 				"label": "Not this week",
 				"effects": [
 					{
-						"op": "xp",
-						"d": 4,
-						"who": "all"
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You kept finals week on the football"
 					},
 					{
 						"op": "board",
 						"d": -2
 					}
 				],
-				"result": "The session runs as planned. A couple of the old players take it personally."
+				"result": "The session runs as planned. A couple of the old players take it personally, and the board hears about it."
 			}
 		]
 	},

@@ -473,8 +473,10 @@
 						"who": "all"
 					},
 					{
-						"op": "board",
-						"d": 1
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You held every player to the same four tickets"
 					}
 				],
 				"result": "Same four as every club. A few players are working the phones."
