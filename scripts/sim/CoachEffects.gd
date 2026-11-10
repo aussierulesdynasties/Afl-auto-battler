@@ -204,7 +204,11 @@ static func apply_row(sq: Squad, t: Dictionary) -> void:
 	sq.ai_plans = bool(t["ai"])
 	sq.assistant = bool(t.get("assistant", false))
 	sq.coach_style = str(t.get("style", "balanced"))
-	var ids := arch_of(sq.code) if for_club(sq.code) == t else ["", str(t.get("arch_p", ""))]
+	# A row of a screen's own: your Strategic archetype is in your record; a
+	# rival's goes with his usual game, which only the round's table settles.
+	var ids := arch_of(sq.code) if for_club(sq.code) == t else [
+			"" if bool(t["ai"]) else str((my_arch.get("held", {}) as Dictionary).get("s", "")),
+			str(t.get("arch_p", ""))]
 	sq.arch = Archetypes.levers(str(ids[0]), str(ids[1]))
 	sq.plan_trait = PlanTraits.for_plan(sq.usual_plan) if bool(t["ai"]) else my_trait
 	sq.tactics_exec *= float(sq.arch.get("exec", 1.0))
