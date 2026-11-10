@@ -54,6 +54,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_release_and_resign")
 	_t("_test_entering_club_seat")
 	_t("_test_midseason_fills_rookie_spots")
+	_t("_test_midseason_pool_after_offseason")
 	_t("_test_real_lists_start")
 	_t("_test_youth_only_drafts")
 	_t("_test_youth_only_midseason")
@@ -364,6 +365,106 @@ func _test_midseason_fills_rookie_spots() -> void:
 	for k in picks:
 		var p := RookieList._find(gs.season.lists.get(str(k["club"]), []), str(k["id"]))
 		_check(RookieList.is_rookie(p), "A mid-season pick lands on the rookie list (%s)" % str(k["id"]))
+
+
+## The director (2026-11-11): the mid-season draft had nobody to take. After
+## an off-season the young unsigned free agents are still in the pool, rivals
+## leave rookie spots open, and the mid-season draft has players and takers.
+func _test_midseason_pool_after_offseason() -> void:
+	_new_career()
+	# Who stays when free agency closes: the young, the best of them first.
+	var model: Dictionary = (gs.season.lists["COL"] as Array)[0]
+	var made := []
+	for i in 16:
+		var fa: Dictionary = model.duplicate(true)
+		fa["id"] = "T_FA_%02d" % i
+		fa["age"] = 20.0 + float(i % 4)
+		fa["overall"] = 40 + i
+		fa.erase("retiring")
+		made.append(fa)
+	(made[13] as Dictionary)["age"] = 26.0
+	(made[14] as Dictionary)["age"] = 31.0
+	(made[15] as Dictionary)["retiring"] = gs.season_year + 1
+	var was: Array = gs.free_agents
+	gs.free_agents = made.duplicate()
+	var stay: Array = gs._fa_staying()
+	gs.free_agents = was
+	var stay_ids := stay.map(func(p): return str(p["id"]))
+	_check(stay.size() == gs.FA_STAYS_MAX and str(stay[0]["id"]) == "T_FA_12" and not stay_ids.has("T_FA_00"),
+			"The best twelve young free agents stay, best first (%s)" % str(stay_ids))
+	_check(not stay_ids.has("T_FA_13") and not stay_ids.has("T_FA_14") and not stay_ids.has("T_FA_15"),
+			"Nobody 26 or older stays, and nobody who is retiring (%s)" % str(stay_ids))
+	gs.season.round_index = gs.season.fixture.size()
+	_check(gs.begin_intake_draft(), "(setup) the National Draft opens")
+	var draft: Draft = gs.draft
+	if draft == null:
+		return
+	# Free agency has closed: who stayed in the pool.
+	var kept: Array = gs.free_agents.duplicate()
+	# Two more who stayed: one every club wants, one nobody does.
+	var star: Dictionary = made[0]
+	star["overall"] = 99
+	var spare: Dictionary = made[1]
+	spare["overall"] = 26
+	for p in [star, spare]:
+		p["age"] = 22.0
+		p["fa_kept"] = gs.season_year
+		p["contract_years"] = 0
+		p["released_by"] = "COL"
+		p.erase("rookie_list")
+		gs.free_agents.append(p)
+	var young := true
+	for p in kept:
+		young = young and float(p.get("age", 99.0)) < gs.FA_STAYS_UNDER and int(p.get("fa_kept", 0)) == gs.season_year
+	_check(young and kept.size() <= gs.FA_STAYS_MAX,
+			"Only young unsigned free agents stay when free agency closes (%d)" % kept.size())
+	while not draft.is_finished():
+		var candidate := draft._best_ai_pick(draft.current_club())
+		if candidate.is_empty() or not draft._draft_pick(draft.current_club(), candidate):
+			draft._skip_current_pick()
+	_check(gs.finish_intake_draft(), "(setup) the rollover commits")
+	RookieList.settle(gs)
+	_check(bool(gs.rookie_draft.get("done", false)), "(setup) the Rookie Draft is over")
+	var held := 0
+	for code in gs.season.lists:
+		if str(code) != gs.my_club and RookieList.rookie_spot_free(gs.season.lists[code]):
+			held += 1
+	_check(held >= 10, "Most rivals have a rookie spot for the mid-season draft (%d)" % held)
+	var rookie_picks: Array = gs.rookie_draft.get("picks", [])
+	var pool := MidseasonDraft.pool(gs)
+	_check(not pool.is_empty(), "After an off-season the mid-season draft pool is not empty (%d)" % pool.size())
+	_check(pool.size() == RookieList.AI_LEAVES and rookie_picks.size() > 1,
+			"Rivals took rookies and left their last picks unused: %d taken, %d still there" % [rookie_picks.size(), pool.size()])
+	var on_list := {}
+	for code in gs.season.lists:
+		for q in gs.season.lists[code]:
+			if str(q["id"]) == "T_FA_00":
+				on_list = q
+	_check(not on_list.is_empty() and RookieList.is_rookie(on_list) and not on_list.has("fa_kept")
+			and float(on_list["age"]) == 23.0,
+			"A free agent who stayed is taken in the Rookie Draft, a year older (%s)" % str(on_list.get("club", "")))
+	_check(pool.has(spare) and gs.free_agents.has(spare) and float(spare["age"]) == 23.0,
+			"One nobody took is still there to take mid-season, a year older")
+	for p in gs.free_agents:
+		_check(p.has("fa_kept") and float(p.get("age", 99.0)) < gs.FA_STAYS_UNDER + 1.0,
+				"A free agent still in the pool is one who stayed (%s)" % str(p.get("id", "")))
+	# The mid-season draft itself: rivals take players, and one is there for you.
+	MidseasonDraft._record(gs)
+	MidseasonDraft._open_draft(gs)
+	var mid_picks: Array = gs.midseason.get("picks", [])
+	_check(MidseasonDraft.waiting(gs) or not mid_picks.is_empty(),
+			"The mid-season draft has someone to take (%d picks before yours, %d left)" % [mid_picks.size(), MidseasonDraft.pool(gs).size()])
+	_check(not gs.news.any(func(n): return str(n.get("text", "")) == MidseasonDraft.NOBODY_AT_ALL_NEWS),
+			"The mid-season draft does not report nobody to take")
+	MidseasonDraft.settle(gs)
+	# The next off-season: a free agent nobody took in his extra year is gone.
+	var left: Array = gs.free_agents.filter(func(p): return p.has("fa_kept"))
+	gs.season.round_index = gs.season.fixture.size()
+	gs.open_offseason()
+	_check(gs.offseason_year == gs.season_year, "(setup) the next off-season opens")
+	for p in left:
+		_check(not gs.free_agents.has(p) and gs.departed_names.has(str(p["id"])),
+				"A free agent nobody took in his extra year leaves the game (%s)" % str(p["id"]))
 
 
 ## A real-lists career: the starting lists split into

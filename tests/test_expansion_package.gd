@@ -178,6 +178,13 @@ func _test_rules() -> void:
 	var pool := Contracts.indexed_money_2027(Expansion.SIGN_ON_POOL, 2029)
 	_check(Expansion.sign_on_relief(9000000, 2029, cap) == pool - cap, "The second season gets what is left of the pool")
 	_check(Expansion.sign_on_relief(9000000, 2029, pool + 1) == 0, "A spent pool gives nothing")
+	# The director (2026-11-11): the money steps down over the third and
+	# fourth seasons instead of ending at once.
+	_check(Expansion.tapered_relief(3000000, 3, 9000000) == 2000000, "The third season keeps two thirds of the second season's sign-on money")
+	_check(Expansion.tapered_relief(3000000, 4, 9000000) == 1000000, "The fourth season keeps one third")
+	_check(Expansion.tapered_relief(3000000, 5, 9000000) == 0 and Expansion.tapered_relief(3000000, 2, 9000000) == 0,
+			"Nothing steps down before the third season or after the fourth")
+	_check(Expansion.tapered_relief(3000000, 3, 500000) == 500000, "Stepping down, it still never exceeds what the signings are paid")
 
 
 func _test_canberra_choice() -> void:
@@ -337,7 +344,26 @@ func _test_second_year_and_end() -> void:
 	_check(later == 2, "The third draft: picks 5 and 9 again")
 	_run_draft()
 	GameState.finish_intake_draft()
-	_check(GameState.cap_for("TAS") == GameState.salary_cap, "From its third season Tasmania's cap is everyone's cap")
+	# 2030, its third season: the sign-on money steps down, it does not stop.
+	var second := int(st["relief"].get("2029", 0))
+	var third := Expansion.tapered_relief(second, 3, ExpansionBuild._signing_salaries(GameState, "TAS"))
+	_check(GameState.season_year == 2030 and int((st["relief"] as Dictionary).get("2030", -1)) == third
+			and GameState.cap_for("TAS") == GameState.salary_cap + third,
+			"Its third season keeps two thirds of the second season's sign-on money (%d of %d)" % [third, second])
+	_check(second == 0 or (third > 0 and third < second), "The third season's money is less than the second's, not nothing (%d, %d)" % [third, second])
+	var tas_pay := Contracts.payroll(GameState.season.lists.get("TAS", [])) + GameState.dead_for("TAS")
+	_check(tas_pay <= GameState.cap_for("TAS"),
+			"Tasmania is not over its cap in 2030 (%d against %d, league cap %d)" % [tas_pay, GameState.cap_for("TAS"), GameState.salary_cap])
+	var fourth := ExpansionBuild._relief_in(GameState, "TAS", 2031)
+	_check(fourth == Expansion.tapered_relief(second, 4, ExpansionBuild._signing_salaries(GameState, "TAS"))
+			and (second == 0 or (fourth > 0 and fourth < third)),
+			"Its fourth season keeps one third (%d)" % fourth)
+	_check(ExpansionBuild._relief_in(GameState, "TAS", 2032) == 0, "From its fifth season Tasmania's cap is everyone's cap")
+	_check(GameState.cap_for("GEE") == GameState.salary_cap, "No other club's cap moves in 2030")
+	# A save from before the money stepped down has no 2030 figure: same answer.
+	(st["relief"] as Dictionary).erase("2030")
+	_check(GameState.cap_for("TAS") == GameState.salary_cap + third, "A save without a third-season figure works it out the same")
+	(st["relief"] as Dictionary)["2030"] = third
 	_check(ExpansionBuild.building(GameState).is_empty() and ExpansionBuild.first_season(GameState).is_empty(),
 			"From its third season Tasmania is treated like every other club")
 

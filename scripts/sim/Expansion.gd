@@ -18,7 +18,8 @@ extends RefCounted
 ##    and lost him gets a draft pick, by the rule that already pays a club for
 ##    a lost free agent.
 ##  - Sign-on money for those players sits outside the cap for its first two
-##    seasons.
+##    seasons, then steps down over the next two (SIGN_ON_TAPER; the director,
+##    2026-11-11: the three-year founding deals outlast two seasons).
 ##  - For four drafts from the one before its first season, the prospects of
 ##    its home state join its list before the draft.
 
@@ -53,6 +54,10 @@ const FOUNDATION_ROOM := [[22.0, 4], [24.0, 3], [26.0, 2], [99.0, 1]]
 ## dollars; both move with the cap).
 const SIGN_ON_POOL := 5000000
 const SIGN_ON_SEASON_MAX := 3000000
+## After those two seasons the money steps down instead of ending at once: the
+## share of the second season's sign-on money the third and fourth seasons
+## keep off the payroll. Nothing from the fifth.
+const SIGN_ON_TAPER := [2.0 / 3.0, 1.0 / 3.0]
 ## When a player's club meets his price, does he still choose between the two
 ## clubs (true), or does meeting his price keep him (false)?
 static var MATCHED_PLAYER_DECIDES := true
@@ -120,3 +125,13 @@ static func sign_on_relief(signing_salaries: int, year: int, already_used: int) 
 	var pool := Contracts.indexed_money_2027(SIGN_ON_POOL, year)
 	var most := Contracts.indexed_money_2027(SIGN_ON_SEASON_MAX, year)
 	return maxi(0, mini(signing_salaries, mini(most, pool - already_used)))
+
+
+## The sign-on money in the club's season `nth` (1 = its first) once the two
+## pool seasons are over: SIGN_ON_TAPER of the second season's money, never
+## more than the salaries it is still paying those players.
+static func tapered_relief(second_season: int, nth: int, signing_salaries: int) -> int:
+	var step := nth - 3
+	if step < 0 or step >= SIGN_ON_TAPER.size():
+		return 0
+	return maxi(0, mini(signing_salaries, int(round(float(second_season) * float(SIGN_ON_TAPER[step])))))
