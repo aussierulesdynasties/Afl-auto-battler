@@ -4159,7 +4159,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 		_glance_section(v, "Your synergies", "FullTimeSynergies", MatchNotes.synergy_lines(_res, me).slice(0, 3), true)
 
 	# Your calls, quarter by quarter: what each was about and how that went.
-	if mine and _interactive:
+	if mine and (_interactive or _review):
 		var did := []
 		for qq in range(1, 5):
 			for t in MatchNotes.calls_lines(_res, me, qq):

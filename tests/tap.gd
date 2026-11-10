@@ -83,3 +83,31 @@ static func tap_at(c: Control, local: Vector2, must_reach := true) -> String:
 ## Where c's centre is on the screen (window pixels, after stretching).
 static func screen_point(c: Control) -> Vector2:
 	return c.get_screen_transform() * (c.size * 0.5)
+
+
+## Hold a finger still on c at `local` (its own pixels) for `seconds`, then
+## lift it: a long press the way a phone sends one. Returns "" when the touch
+## was on screen, else what went wrong. Whether c also acted is the caller's
+## to check (a long press that opened a sheet must not tap the button too).
+static func hold_at(c: Control, local: Vector2, seconds: float) -> String:
+	if c == null or not is_instance_valid(c):
+		return "no control"
+	var tree := c.get_tree()
+	if not c.is_visible_in_tree():
+		return "%s is hidden" % c.name
+	var at := c.get_screen_transform() * local
+	var win := c.get_window()
+	if not Rect2(Vector2.ZERO, Vector2(win.size)).has_point(at):
+		return "%s is off the screen at %s" % [c.name, str(at)]
+	for down in [true, false]:
+		var touch := InputEventScreenTouch.new()
+		touch.index = 0
+		touch.position = at
+		touch.pressed = down
+		Input.parse_input_event(touch)
+		Input.flush_buffered_events()
+		if down:
+			await tree.create_timer(seconds).timeout
+		for i in SETTLE_FRAMES:
+			await tree.process_frame
+	return ""

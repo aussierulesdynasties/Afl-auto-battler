@@ -63,12 +63,39 @@ func _build() -> void:
 		cols.add_child(right)
 	left.add_child(_how_we_play())
 	left.add_child(_form())
+	left.add_child(_sim_orders())
 	right.add_child(_list_and_cap())
 	var board := _board()
 	if board != null:
 		right.add_child(board)
 	right.add_child(_staff())
 	_root.add_child(UiKit.scroll(body))
+
+
+## "When I sim the week" (row T3.R43, P-66): the lines the assistant follows
+## when you sim, as they stand, and the way into the sheet that sets them.
+func _sim_orders() -> Control:
+	var v := UiKit.vbox(6)
+	v.name = "SimOrdersSection"
+	v.add_child(_head("When I sim the week"))
+	var lines := SimOrdersSheet.summary()
+	for i in range(lines.size()):
+		var l := _wrapped(str(lines[i]), UiKit.SMALL, UiKit.TEXT)
+		l.name = "SimOrderLine_%d" % i
+		v.add_child(l)
+	# The same button as My list under it: across a phone, sized on a PC.
+	var open := UiKit.btn("Set the lines", UiKit.BODY)
+	open.name = "SimOrdersOpen"
+	open.custom_minimum_size = Vector2(0, 48)
+	if _wide():
+		open.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		open.custom_minimum_size.x = 180
+	open.pressed.connect(func() -> void:
+		SimOrdersSheet.open(self, func() -> void:
+			if is_instance_valid(self) and is_inside_tree() and not is_queued_for_deletion():
+				_build()))
+	v.add_child(open)
+	return v
 
 
 func _narrow() -> bool:

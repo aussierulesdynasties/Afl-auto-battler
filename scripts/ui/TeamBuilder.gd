@@ -170,8 +170,20 @@ func _build() -> void:
 		irow.name = "InterchangeRow"
 		inter.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		irow.add_child(inter)
-		irow.add_child(interchange_actions)
-		field.add_child(irow)
+		# A phone at a large text size has no room for both on one line: the
+		# actions go under the word rather than push the page past the screen.
+		var need := inter.get_combined_minimum_size().x + 12.0 + interchange_actions.get_combined_minimum_size().x
+		# (Measured before the labels are themed, the need reads short: any
+		# text size above standard wraps on a phone.)
+		if not _wide and (UiKit.text_scale > 1.0 or need > UiKit.view_width(self) - 40.0):
+			field.add_child(irow)
+			var arow := UiKit.hbox(8)
+			arow.name = "InterchangeActionsRow"
+			arow.add_child(interchange_actions)
+			field.add_child(arow)
+		else:
+			irow.add_child(interchange_actions)
+			field.add_child(irow)
 	else:
 		field.add_child(inter)
 	# A row of five on a PC; on a phone it wraps rather than widen the screen.

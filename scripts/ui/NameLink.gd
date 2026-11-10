@@ -340,7 +340,7 @@ static func on_profile_tap(row: Control) -> bool:
 static func close_open(scene: Node) -> bool:
 	if scene == null:
 		return false
-	if TraitLink.close_open(scene):
+	if TraitLink.close_open(scene) or FootballWords.close_open(scene):
 		return true
 	# The newest first: a profile opened from a club page closes before the page,
 	# a club page opened from a profile before the profile (ClubLink).
@@ -352,4 +352,5 @@ static func close_open(scene: Node) -> bool:
 		if (c.name == SHEET_NAME and c.has_meta("name_link")) or c.has_meta("club_link"):
 			c.queue_free()
 			return true
-	return false
+	# The hub's search sits under the profile or club page it opened.
+	return HubSearch.close_open(scene) or SimOrdersSheet.close_open(scene)
