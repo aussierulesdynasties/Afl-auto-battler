@@ -160,7 +160,7 @@
 	{
 		"id": "leadership_players_meeting",
 		"topical": true,
-		"cooldown": 20,
+		"cooldown": 40,
 		"category": "leadership",
 		"subject": {
 			"kind": "club"

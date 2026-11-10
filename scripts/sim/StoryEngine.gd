@@ -262,7 +262,7 @@ static func eligible_subject(t: Dictionary, ctx: Dictionary, story: Dictionary, 
 	if per > 0 and int(story["season"].get(id, 0)) >= per:
 		return {}
 	# A priority card (September's) is not held back by the mix of the last five weeks.
-	if category_count(story, str(t["category"]), w) >= DIVERSITY_MAX and not bool(t.get("priority", false)) and not bool(t.get("always", false)) and not bool(t.get("topical", false)):
+	if category_count(story, str(t["category"]), w) >= DIVERSITY_MAX and not bool(t.get("priority", false)) and not bool(t.get("always", false)):
 		return {}
 	var club: Dictionary = ctx.get("club", {})
 	if not meets(club, t.get("when", {}), story["flags"].get("club", {})):
