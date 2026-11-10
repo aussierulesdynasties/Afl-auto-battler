@@ -38,7 +38,7 @@ static func tap_at(c: Control, local: Vector2, must_reach := true) -> String:
 			await tree.process_frame
 			break
 		p = p.get_parent()
-	var at := c.get_screen_transform() * local
+	var at := pixel_point(c, local)
 	var win := c.get_window()
 	if not Rect2(Vector2.ZERO, Vector2(win.size)).has_point(at):
 		return "%s is off the screen at %s" % [c.name, str(at)]
@@ -102,6 +102,17 @@ static func steady(c: Control, still := 10, limit := 600) -> void:
 
 
 ## Where c's centre is on the screen (window pixels, after stretching).
+## Where `local` (c's own pixels) is in the window's pixels, where a finger
+## lands. A desktop with display scaling draws the UI in fewer units than the
+## window has pixels (ScreenLayout), so a touch must be scaled up to match;
+## headless runs draw one unit per pixel.
+static func pixel_point(c: Control, local: Vector2) -> Vector2:
+	var win := c.get_window()
+	var units := win.get_visible_rect().size
+	var ratio := Vector2(win.size) / units if units.x > 0.0 and units.y > 0.0 else Vector2.ONE
+	return (c.get_screen_transform() * local) * ratio
+
+
 static func screen_point(c: Control) -> Vector2:
 	return c.get_screen_transform() * (c.size * 0.5)
 
@@ -116,7 +127,7 @@ static func hold_at(c: Control, local: Vector2, seconds: float) -> String:
 	var tree := c.get_tree()
 	if not c.is_visible_in_tree():
 		return "%s is hidden" % c.name
-	var at := c.get_screen_transform() * local
+	var at := pixel_point(c, local)
 	var win := c.get_window()
 	if not Rect2(Vector2.ZERO, Vector2(win.size)).has_point(at):
 		return "%s is off the screen at %s" % [c.name, str(at)]

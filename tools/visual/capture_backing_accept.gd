@@ -36,6 +36,24 @@ func _top(name: String) -> Control:
 	return found
 
 
+## Shows a screen the way a phone would, without the Router's threaded load
+## (a --script run cannot parse scripts on the loader thread), then waits for
+## `want` to be on screen.
+func _open(path: String, want: String) -> Control:
+	var old := root.get_tree().current_scene
+	if old != null:
+		old.queue_free()
+	var scene: Node = load(path).instantiate()
+	root.add_child(scene)
+	root.get_tree().current_scene = scene
+	for i in range(300):
+		await process_frame
+		var c := _top(want)
+		if c != null and i > 10:
+			return c
+	return null
+
+
 func _run() -> void:
 	var out := "/tmp/backing"
 	var club := "FRE"
@@ -84,29 +102,23 @@ func _run() -> void:
 	state.week_events = [state.story_card("training_kid_pushing", kid)]
 	print("kid ", kid["id"], " ", db.player_display_name(kid), " in side before: ", state.in_current_side(kid))
 	print("detail: ", state.week_events[0]["options"][0]["detail"])
-	root.get_node("Router").go("hub")
-	await _wait(20)
-	var back := _top("Event_0")
+	var back := await _open("res://scenes/HubScene.tscn", "Event_0")
 	print("button: ", back.text if back is Button else "missing")
 	await _shot(out + "_card.png")
-	var why: String = await Tap.tap(back)
-	print("tap: '", why, "'")
+	# The hub's card opens as a sheet: the finger presses the sheet's button,
+	# the one drawn on top (the hub's own copy sits under the sheet).
+	var c := _top("Event_0")
+	await Tap.steady(c)
+	var where := str(c.get_path())
+	print("tap at ", Tap.pixel_point(c, c.size * 0.5), " in a ", root.size, " window: ", where)
+	var why := await Tap.tap(c)
+	print("tap result: '", why, "'")
 	await _wait(12)
 	print("outcome: ", state.week_events[0].get("outcome", ""))
 	await _shot(out + "_result.png")
 	print("in side after: ", state.in_current_side(kid), " named: ", str(state.my_selection()).contains(str(kid["id"])))
-	# Selection: his card on the ground.
-	root.get_node("Router").go("selection")
-	await _wait(20)
-	var card := _top("Card_" + str(kid["id"]))
-	print("selection card: ", card != null, " ", card.get_global_rect() if card != null else Rect2())
-	if card != null:
-		var sc := card.get_parent()
-		while sc != null and not (sc is ScrollContainer):
-			sc = sc.get_parent()
-		if sc != null:
-			(sc as ScrollContainer).ensure_control_visible(card)
-			await _wait(4)
-		print("card rect on screen: ", card.get_global_rect())
+	# Selection: his card on the ground (the field fits the screen at 390 x 844).
+	var shown := await _open("res://scenes/SelectionScene.tscn", "ConfirmSide")
+	print("selection open: ", shown != null)
 	await _shot(out + "_selection.png")
 	quit(0)
