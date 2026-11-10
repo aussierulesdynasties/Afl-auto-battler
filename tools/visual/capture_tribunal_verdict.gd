@@ -1,5 +1,5 @@
 extends SceneTree
-## Visual review tool for the Tribunal verdict sheet (row 145) on the hub on a
+## Visual review tool for the Tribunal verdict sheet (row 146) on the hub on a
 ## phone (390x844), Fremantle:
 ##   godot --path . --script tools/visual/capture_tribunal_verdict.gd -- --out /tmp/tribunal
 ## Writes <out>_sheet.png: the hub's Tribunal card, a won challenge, a lost
