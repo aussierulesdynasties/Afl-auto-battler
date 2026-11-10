@@ -7339,14 +7339,14 @@ func challenge_mro(player_id: String) -> Dictionary:
 		_recompute_mro_player(player_id, str(target.get("case_id", "")))
 		add_news("tribunal", "%s has successfully challenged the MRO sanction at the Tribunal and is Brownlow-eligible again." % name)
 		mark_dirty()
-		return {"ok": true, "success": true,
-				"reason": "%s wins the Tribunal challenge. The sanction is overturned and Brownlow eligibility is restored." % name}
+		return _mro_verdict(target, "tribunal", true, name,
+				"%s wins the Tribunal challenge. The sanction is overturned and Brownlow eligibility is restored." % name)
 
 	add_news("tribunal", "%s's Tribunal challenge failed; the MRO sanction stands." % name)
 	_tribunal_loss_cost()
 	mark_dirty()
-	return {"ok": true, "success": false,
-			"reason": "%s's Tribunal challenge fails. The original sanction stands, and the board's confidence drops %d%%." % [name, TRIBUNAL_BOARD_COST]}
+	return _mro_verdict(target, "tribunal", false, name,
+			"%s's Tribunal challenge fails. The original sanction stands, and the board's confidence drops %d%%." % [name, TRIBUNAL_BOARD_COST])
 
 
 ## A failed Tribunal suspension can go once to the Appeals Board. Successful
@@ -7372,13 +7372,34 @@ func appeal_mro(player_id: String) -> Dictionary:
 		_recompute_mro_player(player_id, str(target.get("case_id", "")))
 		add_news("tribunal", "%s has won at the Appeals Board; the suspension is overturned and Brownlow eligibility is restored." % name)
 		mark_dirty()
-		return {"ok": true, "success": true,
-				"reason": "%s wins the appeal. The suspension is overturned and Brownlow eligibility is restored." % name}
+		return _mro_verdict(target, "appeal", true, name,
+				"%s wins the appeal. The suspension is overturned and Brownlow eligibility is restored." % name)
 	add_news("tribunal", "%s's Appeals Board case failed; the suspension and Brownlow ineligibility stand." % name)
 	_tribunal_loss_cost()
 	mark_dirty()
-	return {"ok": true, "success": false,
-			"reason": "%s's appeal fails. The suspension and Brownlow ineligibility stand, and the board's confidence drops %d%%." % [name, TRIBUNAL_BOARD_COST]}
+	return _mro_verdict(target, "appeal", false, name,
+			"%s's appeal fails. The suspension and Brownlow ineligibility stand, and the board's confidence drops %d%%." % [name, TRIBUNAL_BOARD_COST])
+
+
+## What a Tribunal or Appeals Board hearing decided, for the verdict sheet:
+## the sanction before and after, the odds we went in with, Brownlow
+## standing, the next step, and what the hearing cost: a lost hearing costs
+## the board's confidence (TRIBUNAL_BOARD_COST, row T1.R26 C1).
+func _mro_verdict(row: Dictionary, stage: String, success: bool, name: String, reason: String) -> Dictionary:
+	var p := list_player(str(row.get("id", "")))
+	var odds := appeal_chance(row) if stage == "appeal" else tribunal_chance(row)
+	var next_odds := -1.0
+	if not success and stage == "tribunal" and str(row.get("outcome", "")) == "suspension":
+		next_odds = appeal_chance(row)
+	var weeks := int(row.get("weeks", 0)) if str(row.get("outcome", "")) == "suspension" else 0
+	return {"ok": true, "success": success, "reason": reason,
+			"stage": stage, "id": str(row.get("id", "")), "name": name, "club": my_club,
+			"outcome": str(row.get("outcome", "")), "weeks_before": weeks,
+			"weeks_after": weeks if not success else 0,
+			"odds": odds, "next_odds": next_odds,
+			"brownlow_ok": not p.is_empty() and not bool(p.get("brownlow_ineligible", false)),
+			"risked": "%d%% of the board's confidence" % TRIBUNAL_BOARD_COST,
+			"paid": "nothing" if success else "the board's confidence, down %d%%" % TRIBUNAL_BOARD_COST}
 
 
 ## Your club's new injuries from the last round, as readable lines.

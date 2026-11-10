@@ -499,7 +499,8 @@ const COLOUR_CUES := {
 		["ch == \"W\"", "the W / L / D letters", 1],
 		["return UiKit.GOOD", "the form line's words", 1],
 		["return UiKit.BAD", "the form line's words", 1],
-		["margin_colour(won)", "Won by / Lost by / Drew", 2]],
+		["margin_colour(won)", "Won by / Lost by / Drew", 2],
+		["UiKit.GOOD if won else UiKit.BAD", "Challenge won / lost; Cleared or the ban in words", 2]],
 	"ListScene.gd": [
 		["concussion_text(p), UiKit.BAD", "the concussion in words", 1],
 		["\"Out %s\"", "Out N weeks", 1],

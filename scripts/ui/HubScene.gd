@@ -15,6 +15,7 @@ var _talk_overlay: Control
 var _midseason_overlay: Control
 var _news_overlay: Control
 var _rule_overlay: Control
+var _tribunal_overlay: Control
 var _event_overlay: Control
 var _sim_confirm: Control
 var _skip_confirm: Control
@@ -1496,13 +1497,97 @@ func _tribunal_card() -> Control:
 				14, false)
 		b.custom_minimum_size.y = 44
 		b.pressed.connect(func():
-			if stage == "appeal":
-				GameState.appeal_mro(str(row.get("id", "")))
-			else:
-				GameState.challenge_mro(str(row.get("id", "")))
-			_build.call_deferred())
+			var verdict: Dictionary = GameState.appeal_mro(str(row.get("id", ""))) if stage == "appeal" 					else GameState.challenge_mro(str(row.get("id", "")))
+			_build.call_deferred()
+			if bool(verdict.get("ok", false)):
+				_show_tribunal_verdict(verdict))
 		v.add_child(b)
 	return panel
+
+
+## The hearing's verdict, over the hub the moment it is decided (director,
+## 2026-11-10: "tribunal challenge results need a popup, too difficult to tell
+## currently"): won or lost, the penalty before and after, the odds we took
+## it on at, and what it cost. Our club's colour and the player's name in it
+## say whose player it is.
+func _show_tribunal_verdict(verdict: Dictionary) -> void:
+	if _tribunal_overlay != null and is_instance_valid(_tribunal_overlay):
+		_tribunal_overlay.queue_free()
+	var won := bool(verdict.get("success", false))
+	var appeal := str(verdict.get("stage", "")) == "appeal"
+	var fine := str(verdict.get("outcome", "")) == "fine"
+	var box := UiKit.modal_box(self, 460.0, 0.0)
+	_tribunal_overlay = box["overlay"]
+	_tribunal_overlay.name = "TribunalVerdict"
+	var v: VBoxContainer = box["body"]
+	var where := UiKit.lbl("Appeals Board" if appeal else "Tribunal", UiKit.SECONDARY, UiKit.MUTED, true)
+	where.name = "VerdictHearing"
+	# Beside the club's name, which takes the row's width: a wrapping label
+	# there gets no width and stands one letter a line down the sheet.
+	where.autowrap_mode = TextServer.AUTOWRAP_OFF
+	v.add_child(UiKit.club_heading(str(verdict.get("club", GameState.my_club)), where, UiKit.SECONDARY, 18.0))
+	var head := UiKit.heading("%s %s" % ["Appeal" if appeal else "Challenge", "won" if won else "lost"], UiKit.TITLE)
+	head.name = "VerdictHead"
+	head.add_theme_color_override("font_color", UiKit.GOOD if won else UiKit.BAD)
+	v.add_child(head)
+	var who := NameInk.label(str(verdict.get("name", "")), _league_names(), UiKit.NAME, UiKit.TEXT, true)
+	who.name = "VerdictPlayer"
+	v.add_child(who)
+	v.add_child(UiKit.spacer(4))
+	# The penalty, before and after, as the two figures the sheet is about.
+	var weeks := int(verdict.get("weeks_before", 0))
+	var before := "Fine" if fine else "%d match%s" % [weeks, "" if weeks == 1 else "es"]
+	var pen := UiKit.hbox(16)
+	pen.name = "VerdictPenalty"
+	for col in [["Before", before, UiKit.TEXT, "VerdictBefore"],
+			["Now", "Cleared" if won else before, UiKit.GOOD if won else UiKit.BAD, "VerdictAfter"]]:
+		var c := UiKit.vbox(0)
+		c.add_child(UiKit.lbl(str(col[0]), UiKit.SECONDARY, UiKit.MUTED, true))
+		var f := UiKit.figure(str(col[1]), UiKit.SCORE, col[2])
+		f.name = str(col[3])
+		c.add_child(f)
+		pen.add_child(c)
+	v.add_child(pen)
+	v.add_child(UiKit.spacer(4))
+	var lines := []
+	if won:
+		lines.append(["VerdictBrownlow", "Brownlow: eligible again." if bool(verdict.get("brownlow_ok", false))
+				else "Brownlow: still ineligible from an earlier sanction."])
+	else:
+		lines.append(["VerdictBrownlow", "Brownlow: ineligible this season."])
+	lines.append(["VerdictOdds", "We went in at %d%% to win." % roundi(float(verdict.get("odds", 0.0)) * 100.0)])
+	if not won:
+		var next := float(verdict.get("next_odds", -1.0))
+		if next >= 0.0:
+			lines.append(["VerdictNext", "We can still appeal: %d%% to win." % roundi(next * 100.0)])
+		elif appeal:
+			lines.append(["VerdictNext", "The Appeals Board is final."])
+		else:
+			lines.append(["VerdictNext", "A fine can't go to the Appeals Board."])
+	for item in lines:
+		var l := UiKit.lbl(str(item[1]), UiKit.BODY, UiKit.TEXT)
+		l.name = str(item[0])
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(l)
+	v.add_child(UiKit.spacer(4))
+	v.add_child(UiKit.lbl("What it cost", UiKit.SECONDARY, UiKit.MUTED, true))
+	for item in [["VerdictRisked", "Risked: %s." % str(verdict.get("risked", ""))],
+			["VerdictPaid", "Paid: %s." % str(verdict.get("paid", ""))]]:
+		var l := UiKit.lbl(str(item[1]), UiKit.BODY, UiKit.TEXT)
+		l.name = str(item[0])
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(l)
+	var ok := UiKit.btn("Done", UiKit.NAME, true)
+	ok.name = "TribunalVerdictDone"
+	ok.custom_minimum_size = Vector2(0, 48)
+	ok.pressed.connect(_close_tribunal_verdict)
+	(box["footer"] as VBoxContainer).add_child(ok)
+
+
+func _close_tribunal_verdict() -> void:
+	if _tribunal_overlay != null and is_instance_valid(_tribunal_overlay):
+		_tribunal_overlay.queue_free()
+	_tribunal_overlay = null
 
 
 ## "Gain:" or "Cost:" in label ink, then the line wrapping beside it.
@@ -2231,6 +2316,9 @@ func handle_back() -> bool:
 		return true
 	if _sim_confirm != null and is_instance_valid(_sim_confirm):
 		_close_sim_confirm()
+		return true
+	if _tribunal_overlay != null and is_instance_valid(_tribunal_overlay):
+		_close_tribunal_verdict()
 		return true
 	if _rule_overlay != null and is_instance_valid(_rule_overlay):
 		_close_rule()
