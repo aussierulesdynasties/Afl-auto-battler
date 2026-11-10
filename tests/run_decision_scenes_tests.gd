@@ -291,18 +291,6 @@ func _test_set_spots() -> void:
 				# feet.z is pixels per metre at his distance: half his width with his arms in (x),
 				# half his head's (y).
 				body[role] = Vector3(feet.x, 0.5 * feet.z, 0.15 * feet.z)
-			# TEMP measure (remove): the call's height and each row's.
-			var rows := []
-			if panel != null:
-				for c in panel.get_child(0).get_children():
-					rows.append("%s=%.0f" % [c.name, (c as Control).size.y])
-			var fh := []
-			for role in ["kicker", "on_the_mark"]:
-				var tk: Dictionary = vig.token_of(role)
-				fh.append("%s feet=%.0f head=%.0f x=%.0f" % [role, vig.call("_project", vig.call("_pos", tk), vig.call("_lift", tk)).y,
-						vig.call("_project", vig.call("_pos", tk), float(vig.call("_lift", tk)) + float(vig.call("_figure_top", tk))).y,
-						vig.call("_project", vig.call("_pos", tk), vig.call("_lift", tk)).x])
-			print("SETSHOT %s panel_h=%.0f bottom=%.0f vig=%s bar=%.0f men=%s %s rows=%s" % [at, panel.size.y if panel else -1.0, bottom, str(vig.size), bar, str(men), "; ".join(fh), ", ".join(rows)])
 			_check(men, "%s: both men stand above the call, their names clear of the title bar" % at)
 			var posts := true
 			var clear := true
