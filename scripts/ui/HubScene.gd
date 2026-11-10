@@ -1484,7 +1484,10 @@ func _stake_row(line: String, node_name: String) -> Control:
 	var item := UiKit.hbox(6)
 	item.name = node_name
 	var mk := UiKit.lbl(line.substr(0, cut + 1), UiKit.SECONDARY, UiKit.label_ink(), true)
+	mk.name = "Mark"
 	mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	# One word on one line: a wrapping mark collapses to a letter a line.
+	mk.autowrap_mode = TextServer.AUTOWRAP_OFF
 	item.add_child(mk)
 	var l := UiKit.lbl(line.substr(cut + 2), UiKit.SECONDARY, UiKit.TEXT)
 	l.name = "Text"
