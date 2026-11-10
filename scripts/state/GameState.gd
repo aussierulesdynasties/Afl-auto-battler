@@ -11444,11 +11444,13 @@ const MAX_NEWS := 120
 const NEWS_MIN_OVR := 72
 
 
-func add_news(kind: String, text: String, when_label: String = "") -> void:
+func add_news(kind: String, text: String, when_label: String = "", extra := {}) -> void:
 	var when := when_label
 	if when == "":
 		when = "Off-season" if season_closed() else last_label
-	news.push_front({"year": season_year, "when": when, "kind": kind, "text": text})
+	var item := {"year": season_year, "when": when, "kind": kind, "text": text}
+	item.merge(extra)
+	news.push_front(item)
 	if news.size() > MAX_NEWS:
 		news.resize(MAX_NEWS)
 
@@ -11634,9 +11636,17 @@ func _round_news(results: Array) -> void:
 					add_news("game", "%s had %d disposals for %s against %s." % [
 							GameDB.player_display_name(p), int(st["disposals"]),
 							GameDB.club_name(code), GameDB.club_name(opp)])
+	# The round's big stories, every match (LeagueStories): an injury told as a
+	# story is not also a plain line.
+	var told := {}
+	for st in LeagueStories.round_stories(results, LeagueStories.context(self)):
+		if str(st["id"]) != "":
+			told[str(st["id"])] = true
+		add_news("league_story", LeagueStories.text(st), "", {"headline": st["headline"],
+				"beats": st["beats"], "club": st["club"], "weight": st["weight"], "angle": st["angle"]})
 	for inj in last_injuries:
 		var p := _find_player(str(inj.get("id", "")))
-		if p.is_empty() or int(inj.get("weeks", 0)) < 4 or int(p.get("overall", 0)) < NEWS_MIN_OVR:
+		if p.is_empty() or int(inj.get("weeks", 0)) < 4 or int(p.get("overall", 0)) < NEWS_MIN_OVR 				or told.has(str(inj.get("id", ""))):
 			continue
 		add_news("injury", "%s (%s) is out for %s with a %s." % [GameDB.player_display_name(p),
 				GameDB.club_name(str(inj.get("club", ""))), _weeks_text(int(inj["weeks"])),
