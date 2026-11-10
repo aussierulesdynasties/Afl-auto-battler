@@ -23,8 +23,8 @@
 		"choices": [
 			{
 				"key": "extend",
-				"label": "Extend him now",
-				"note": "A premium for certainty.",
+				"label": "Re-sign {first} now",
+				"note": "You pay over the odds to lock {name} in now.",
 				"effects": [
 					{
 						"op": "extend_early"
@@ -58,7 +58,7 @@
 		],
 		"arc": "contract_wait",
 		"beat": "start",
-		"stakes": "Extend now: {more_seasons} at {early_price} a season, locked in. Wait, and his price moves with his form."
+		"stakes": "Extend now: {more_seasons} at {early_price} a season, locked in. Wait, and {name}'s price moves with his form."
 	},
 	{
 		"id": "contracts_manager_noise",
@@ -76,7 +76,7 @@
 			"{name}'s manager is talking him up"
 		],
 		"text": [
-			"He's on radio saying his client is \"weighing up his options\"."
+			"His manager's on radio saying his client is \"weighing up his options\"."
 		],
 		"choices": [
 			{
@@ -150,7 +150,7 @@
 			},
 			{
 				"key": "later",
-				"label": "Tell him it'll be sorted after the season",
+				"label": "Tell {first} it'll be sorted after the season",
 				"effects": [
 					{
 						"op": "trust",
@@ -188,7 +188,7 @@
 		"choices": [
 			{
 				"key": "plans",
-				"label": "Tell him he's part of the plans",
+				"label": "Tell {first} he's part of the plans",
 				"effects": [
 					{
 						"op": "morale",
@@ -208,7 +208,7 @@
 			},
 			{
 				"key": "earn",
-				"label": "Tell him he has to earn it",
+				"label": "Tell {first} he has to earn it",
 				"effects": [
 					{
 						"op": "morale",
@@ -248,7 +248,7 @@
 		"choices": [
 			{
 				"key": "coming",
-				"label": "Tell him a deal is coming at season's end",
+				"label": "Tell {first} a deal is coming at season's end",
 				"effects": [
 					{
 						"op": "morale",
@@ -268,7 +268,7 @@
 			},
 			{
 				"key": "market",
-				"label": "Let him test the market",
+				"label": "Let {first} test the market",
 				"effects": [
 					{
 						"op": "morale",
@@ -313,13 +313,13 @@
 			"{new_club} have approached {name}"
 		],
 		"text": [
-			"He is out of contract at season's end and {new_club} are building their first list. They can sign any player his club has not re-signed. Re-sign him now and he stays."
+			"{name} is out of contract at season's end and {new_club} are building their first list. They can sign any out-of-contract player his club hasn't re-signed. Re-sign him now and he stays."
 		],
 		"default": 1,
 		"choices": [
 			{
 				"key": "keep",
-				"label": "Re-sign him now",
+				"label": "Re-sign {first} now",
 				"effects": [
 					{
 						"op": "new_club_keep"
@@ -328,7 +328,7 @@
 			},
 			{
 				"key": "go",
-				"label": "Let him go",
+				"label": "Let {first} go",
 				"effects": [
 					{
 						"op": "new_club_go"
@@ -358,7 +358,7 @@
 		"choices": [
 			{
 				"key": "extend",
-				"label": "Sign him now",
+				"label": "Sign {first} now",
 				"effects": [
 					{
 						"op": "extend_early"
@@ -367,8 +367,8 @@
 			},
 			{
 				"key": "wait",
-				"label": "Tell him it waits until the season's under way",
-				"note": "No commitment yet. He'll ask for what he's worth then: less if his form drops, more if he improves.",
+				"label": "Tell {first} it can wait until the season starts",
+				"note": "No commitment yet. {first} will ask for what he's worth then: less if his form drops, more if he improves.",
 				"effects": [
 					{
 						"op": "open_price"

@@ -629,9 +629,31 @@ static func stakes_lines(effects: Array, facts: Dictionary) -> PackedStringArray
 	if not notes.is_empty():
 		out.append(" ".join(notes))
 	if not gains.is_empty():
-		out.append(GAIN_MARK + " ".join(gains))
+		out.append(GAIN_MARK + " ".join(_named(gains, facts)))
 	if not costs.is_empty():
-		out.append(COST_MARK + " ".join(costs))
+		out.append(COST_MARK + " ".join(_named(costs, facts)))
+	return out
+
+
+## A block of lines says who it is about before it says "he" (director,
+## 2026-11-11: "arbitrarily calling players He ... is a bug"): the first line
+## that opens with "He" or "His" opens with his first name instead. A block
+## that already names him is left alone.
+static func _named(lines: PackedStringArray, facts: Dictionary) -> PackedStringArray:
+	var first := str(facts.get("first", ""))
+	if first == "":
+		return lines
+	var out := PackedStringArray(lines)
+	for i in range(out.size()):
+		var s := out[i]
+		if s.contains(first):
+			return out
+		if s.begins_with("He "):
+			out[i] = first + s.substr(2)
+			return out
+		if s.begins_with("His "):
+			out[i] = first + "'s" + s.substr(3)
+			return out
 	return out
 
 
@@ -801,7 +823,7 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 			return [["cost", "Heavy legs across the %s on game day: each player starts %d%% short of fresh and is %d%% more likely to be injured." % [
 					"side" if who == "side" else "whole list", short, rise]]]
 		"expects_game":
-			return [["cost", "He expects a game this week, and Auto-pick names him. Leave him out fit and the promise breaks: %s" % _broken_words(int(e.get("sting", 12)), BROKEN_PROMISE_TRUST, facts)]]
+			return [["cost", "He expects a game this week and goes straight into the side. Leave him out fit and the promise breaks: %s" % _broken_words(int(e.get("sting", 12)), BROKEN_PROMISE_TRUST, facts)]]
 		"start_backing":
 			return [["gain", _morale_words(Backing.THRILL, "subject"), "subject", Backing.THRILL],
 					["cost", "He expects to be picked for the next {run_games} games%s. Leave him out fit and the promise breaks: %s" % [
@@ -849,7 +871,7 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 			return [["gain", _trial_words(e)], ["cost", _trial_cost_words(e, facts)]]
 		# The development talk (T5.r93, GameState.dev_talk): games there if it takes.
 		"dev_promise":
-			return [["cost", "If it takes ({take_odds}), he expects his next three games as a {proj_word}, and Auto-pick plays him there. Leave him out of them fit and the promise breaks: %s Three games away from his usual spot." % _broken_words(
+			return [["cost", "If it takes ({take_odds}), he expects his next three games as a {proj_word}, and he is picked there. Leave him out of them fit and the promise breaks: %s Three games away from his usual spot." % _broken_words(
 					GameState.DEV_PROMISE_STING, BROKEN_PROMISE_TRUST, facts)]]
 		"no_promise":
 			return [["gain", "No promise to keep."]]
@@ -1014,7 +1036,7 @@ static func _culture_words(e: Dictionary, d: int) -> String:
 	for st in Culture.STRANDS:
 		if str(st[0]) == str(e.get("strand", "")):
 			label = str(st[1])
-	return "%s %s %s." % [label, "rises" if d > 0 else "falls", _pct(absi(d))]
+	return "Club culture: %s %s %s." % [label, "up" if d > 0 else "down", _pct(absi(d))]
 
 
 ## Weeks of running, in plain football maths (director, 2026-10-19: "plain
