@@ -9,6 +9,7 @@ var checks := 0
 ## Every season and draft here is seeded (C15): a clock seed makes a different
 ## league each run.
 const SUITE_SEED := 2027
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -83,7 +84,7 @@ func _test_season_rate_and_absence() -> void:
 				if int(inj["weeks"]) < Injuries.CONCUSSION_MIN:
 					concussion_ok = false
 	var rate := float(total) / float(maxi(1, games))
-	_check(rate > 0.35 and rate < 1.3,
+	_check(BalanceGate.held(rate > 0.35 and rate < 1.3, "injury rate per side per game"),
 			"About one new injury per side per game (%.2f)" % rate)
 	_check(missed_ok, "An injured player misses his club's matches")
 	_check(concussions > 0 and concussion_ok,

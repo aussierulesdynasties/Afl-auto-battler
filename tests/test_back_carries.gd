@@ -12,6 +12,7 @@ var failures: Array[String] = []
 var checks := 0
 
 const DRAWS := 4000
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -86,7 +87,7 @@ func _test_weights() -> void:
 func _test_defender_leads_the_back_zone() -> void:
 	var on := _picks(_sim(31), -50.0)
 	var d_on := float(on.get("DEF", 0)) / DRAWS
-	_check(d_on > 0.5, "defenders still take most of the back zone's ball (%.1f%%)" % (100 * d_on))
+	_check(BalanceGate.held(d_on > 0.5, "defenders take most of the back-zone ball"), "defenders still take most of the back zone's ball (%.1f%%)" % (100 * d_on))
 
 
 ## Two defenders, one a ball user (carry and disposal 90, intercept 30) and
