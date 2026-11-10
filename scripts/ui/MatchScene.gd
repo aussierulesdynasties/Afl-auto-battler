@@ -2757,10 +2757,14 @@ func _moment_lines(to: Container, o: Dictionary) -> void:
 	if o.has("gain"):
 		# The break's look: "Gain:" and "Cost:" in the label ink, the line in body
 		# text, at the card's small size so the men stay in view above it.
+		# Its two lines held tight together, one block under its button.
+		var pair := UiKit.vbox(0)
+		pair.name = "MomentOdds"
+		to.add_child(pair)
 		for f in [["gain", "MomentGain"], ["cost", "MomentCost"]]:
 			var line := str(o[f[0]])
 			var cut := line.find(": ")
-			to.add_child(_plan_row(line.substr(0, cut + 1) if cut > 0 else "", line.substr(cut + 2) if cut > 0 else line, str(f[1]), false, UiKit.SMALL))
+			pair.add_child(_plan_row(line.substr(0, cut + 1) if cut > 0 else "", line.substr(cut + 2) if cut > 0 else line, str(f[1]), false, UiKit.SMALL))
 		return
 	var d := UiKit.lbl(str(o.get("detail", "")), UiKit.SMALL, UiKit.MUTED)
 	d.name = "MomentDetail"
