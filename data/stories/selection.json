@@ -43,6 +43,10 @@
 					{
 						"op": "talk_note",
 						"said": "explain"
+					},
+					{
+						"op": "expects_game",
+						"sting": 4
 					}
 				]
 			},
@@ -142,6 +146,10 @@
 					{
 						"op": "talk_note",
 						"said": "explain"
+					},
+					{
+						"op": "expects_game",
+						"sting": 4
 					}
 				]
 			},
@@ -241,6 +249,10 @@
 					{
 						"op": "talk_note",
 						"said": "explain"
+					},
+					{
+						"op": "expects_game",
+						"sting": 4
 					}
 				]
 			},
@@ -539,9 +551,14 @@
 						"op": "trust",
 						"d": 4,
 						"why": "You looked after him in his first finals week"
+					},
+					{
+						"op": "morale",
+						"d": -2,
+						"who": "subject"
 					}
 				],
-				"result": "He shadows a senior player all week: meetings, recovery, the walk-through."
+				"result": "{first} shadows a senior player all week: meetings, recovery, the walk-through. He's quieter by Thursday."
 			},
 			{
 				"key": "alone",

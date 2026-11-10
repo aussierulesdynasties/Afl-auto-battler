@@ -227,9 +227,15 @@
 						"op": "morale",
 						"d": 2,
 						"who": "side"
+					},
+					{
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10,
+						"on": "grand_final"
 					}
 				],
-				"result": "Not one word about {opp} until Thursday's match plan."
+				"result": "Not one word about {opp} until Thursday's match plan. Thursday is late to start on them."
 			}
 		]
 	}

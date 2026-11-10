@@ -153,16 +153,16 @@
 				"label": "Tell him it'll be sorted after the season",
 				"effects": [
 					{
-						"op": "morale",
-						"d": -2
-					},
-					{
 						"op": "trust",
 						"d": -2,
 						"why": "You put off talking about his future"
+					},
+					{
+						"op": "morale",
+						"d": 1
 					}
 				],
-				"result": "{name} has to wait."
+				"result": "{name} takes that as a maybe. He wanted an answer."
 			}
 		]
 	},
@@ -258,9 +258,13 @@
 						"op": "trust",
 						"d": 4,
 						"why": "You told him a deal was coming"
+					},
+					{
+						"op": "board",
+						"d": -1
 					}
 				],
-				"result": "{name} is reassured, for now."
+				"result": "{name} is reassured, for now. The board hears a deal was promised before the numbers were agreed."
 			},
 			{
 				"key": "market",

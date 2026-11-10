@@ -375,9 +375,15 @@
 					{
 						"op": "fresh",
 						"who": "side"
+					},
+					{
+						"op": "slow_start",
+						"who": "side",
+						"chance": 5,
+						"on": "grand_final"
 					}
 				],
-				"result": "Dinner at home and their own bed. Nobody's in a hurry to talk footy."
+				"result": "Dinner at home and their own bed. A few have a full house and a late night."
 			}
 		]
 	}

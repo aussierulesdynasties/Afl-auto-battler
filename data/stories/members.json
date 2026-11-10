@@ -125,9 +125,14 @@
 						"strand": "together",
 						"d": 1,
 						"why": "You fronted the members yourself"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 2,
+						"who": "side"
 					}
 				],
-				"result": "You front the members on Tuesday night."
+				"result": "You front the members on Tuesday night. The assistants take the session."
 			},
 			{
 				"key": "results",
@@ -244,9 +249,13 @@
 						"op": "xp",
 						"d": 2,
 						"who": "side"
+					},
+					{
+						"op": "board",
+						"d": -1
 					}
 				],
-				"result": "The CEO handles it."
+				"result": "The CEO handles it. The board wanted the coach's face on it."
 			}
 		],
 		"phase": [
@@ -618,6 +627,12 @@
 						"strand": "ambition",
 						"d": 2,
 						"why": "One week of celebrations, then you set the next target"
+					},
+					{
+						"op": "culture",
+						"strand": "together",
+						"d": -1,
+						"why": "The premiership celebrations were cut to a week"
 					}
 				],
 				"result": "One week, then the talk turns to doing it again."

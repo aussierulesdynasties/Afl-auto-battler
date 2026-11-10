@@ -443,6 +443,12 @@
 					},
 					{
 						"op": "keep_out"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "The physio's plan was followed"
 					}
 				],
 				"result": "{first} does as the physio says, and grumbles about it."

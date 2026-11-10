@@ -556,6 +556,12 @@
 					{
 						"op": "morale",
 						"d": -3
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "Training stayed closed to cameras and visitors"
 					}
 				],
 				"result": "{first} shows them around the city instead. He'd wanted them to see the club."
@@ -790,6 +796,12 @@
 						"op": "trust",
 						"d": -3,
 						"why": "You asked him to make do without his family at his debut"
+					},
+					{
+						"op": "culture",
+						"strand": "ambition",
+						"d": 1,
+						"why": "His debut went ahead the week he was picked"
 					}
 				],
 				"result": "{first} plays his debut without them. They watch on a phone in the kitchen."
