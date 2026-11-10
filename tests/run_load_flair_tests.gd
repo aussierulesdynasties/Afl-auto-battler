@@ -344,6 +344,7 @@ func _test_tap_after_cover() -> void:
 ## the cover and a line are on screen.
 func _test_browser_loads_under_the_line() -> void:
 	var path := "res://scenes/StatsHubScene.tscn"
+	await _down()   # the tap test before this one leaves Sim the week's cover up
 	_router.set("test_main_thread_load", true)
 	_wipe.set("test_cover", true)
 	_router.go("stats")
