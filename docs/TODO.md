@@ -10,7 +10,6 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 
 | # | What | Done looks like |
 |---|---|---|
-| 130 | Scouting list (director 2026-11-10): a shortlist the coach keeps all season, reached from the hub under List. He adds prospects to it; a player on it gets his scouts' focus, so his rating range narrows faster. Each row shows the scouted ranges, the draft-fit mark (#1254) and how the read has changed. It changes what the coach knows, never the sim. | add/remove a prospect, his range narrows faster than off the list (seeded test), his look, real-tap check |
 | 11 | Spilled tackle counted as an intercept (MatchSim.gd, around lines 3340-3344): count it as a spilled tackle, not an intercept | a seeded test shows a spilled tackle is not counted as an intercept |
 
 ## B. Built and ON: his playtest judges
