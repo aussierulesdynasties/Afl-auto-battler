@@ -20,6 +20,7 @@ func run() -> void:
 	_t("_test_scores_stay_realistic")
 	_t("_test_flow_keys_exist_in_calibration")
 	_t("_test_tackle_spill_is_a_tuned_lever")
+	_t("_test_spilled_tackle_is_not_an_intercept")
 	_t("_test_lockups_make_ball_ups_in_play")
 	_t("_test_rushed_kick_intercept_mark")
 	_t("_test_rotation_cadence_scales_with_chains")
@@ -131,6 +132,41 @@ func _test_tackle_spill_is_a_tuned_lever() -> void:
 	var always := _play_tuned({"TACKLE_SPILL": 1.0})
 	_check(int(never["spills"]) == 0, "a tackle spilled with TACKLE_SPILL at 0")
 	_check(int(always["spills"]) > 0, "no tackle spilled with TACKLE_SPILL at 1")
+
+
+## Records the event count each time an intercept is credited, so a test can
+## see which event an intercept belongs to.
+class InterceptSpy extends MatchSim:
+	var intercept_at: Array[int] = []
+
+	func _intercept(side: int, who, could_mark: bool, contested := false) -> void:
+		intercept_at.append(events.size())
+		super._intercept(side, who, could_mark, contested)
+
+
+## Row 11: a tackle that knocks the ball loose is a spilled tackle, not an
+## intercept. Seeded matches with every held tackle spilling: no spill event
+## follows an intercept credit directly, and the spills are counted.
+func _test_spilled_tackle_is_not_an_intercept() -> void:
+	MatchSim.tune = {"TACKLE_SPILL": 1.0}
+	var spills := 0
+	var counted := 0
+	var credited := 0
+	for s in range(SEEDS):
+		var sim := InterceptSpy.new(Squad.new("FRE", GameDB.club_list("FRE"), true, "FRE"),
+				Squad.new("MEL", GameDB.club_list("MEL"), false, "MEL"), 700 + s)
+		sim.run()
+		for side in [0, 1]:
+			counted += int(float(sim.team_stats[side].get("tackle_spills", 0.0)))
+		for i in range(sim.events.size()):
+			if str(sim.events[i]["text"]).ends_with("it spills free"):
+				spills += 1
+				if sim.intercept_at.has(i):
+					credited += 1
+	MatchSim.tune = {}
+	_check(spills > 0, "no tackle spilled with TACKLE_SPILL at 1")
+	_check(credited == 0, "%d of %d spilled tackles were counted as intercepts" % [credited, spills])
+	_check(counted == spills, "%d spilled tackles counted for %d spill events" % [counted, spills])
 
 
 func _test_lockups_make_ball_ups_in_play() -> void:
