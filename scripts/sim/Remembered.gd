@@ -157,6 +157,19 @@ static func release_line(p: Dictionary, store: Dictionary, club: String, with_us
 	return str(all[0]["said"])
 
 
+## The one fact the selection drop says (P-37), with his name for "He" and
+## "him" so it reads on its own under "X comes in for Y.": "Jones debuted for
+## you in Round 7, 2028." The same fact as release_line, "" when there is none.
+static func drop_line(p: Dictionary, name: String, store: Dictionary, club: String, with_us: Dictionary,
+		jobs: Dictionary = {}) -> String:
+	var said := release_line(p, store, club, with_us, jobs)
+	if said == "" or name == "":
+		return said
+	if said.begins_with("He "):
+		return name + said.substr(2)
+	return said.replace(" him ", " %s " % name)
+
+
 ## "Since 2028: 59 games, 20 goals." - the totals above the remembered facts.
 static func head(with_us: Dictionary) -> String:
 	var g := int(with_us.get("games", 0))

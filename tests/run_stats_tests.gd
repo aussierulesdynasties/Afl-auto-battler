@@ -356,17 +356,17 @@ func _test_sections() -> void:
 		await _settle()
 		if sz.x < 900:
 			var all_in := true
-			for key in ["ladder", "players", "ratings", "awards", "fixture"]:
+			for key in ["ladder", "players", "ratings", "awards", "fixture", "coach"]:
 				var tb: Control = s.find_child("Section_" + key, true, false)
 				if tb == null or tb.get_global_rect().end.x > sz.x + 1 or tb.get_global_rect().position.x < -1:
 					all_in = false
 			_check(all_in and s.find_child("SectionStrip", true, false) == null,
-					"Five short tabs fit one row on a phone, none cut and no sideways scroll (%dx%d)" % [sz.x, sz.y])
+					"Six short tabs fit one row on a phone, none cut and no sideways scroll (%dx%d)" % [sz.x, sz.y])
 			_check(s.find_child("Section_players", true, false).text == "Players",
 					"...with short names: Players (%dx%d)" % [sz.x, sz.y])
 		_check(s.find_child("Section_trophies", true, false) == null,
 				"The trophies are on the club's page now, not a Season stats tab (%dx%d)" % [sz.x, sz.y])
-		for key in ["ladder", "players", "ratings", "awards", "fixture"]:
+		for key in ["ladder", "players", "ratings", "awards", "fixture", "coach"]:
 			var t: Button = s.find_child("Section_" + key, true, false)
 			_check(t != null, "Season stats has a %s section (%dx%d)" % [key, sz.x, sz.y])
 			if t == null:
