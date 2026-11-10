@@ -28,8 +28,8 @@
 		"choices": [
 			{
 				"key": "rest",
-				"label": "Rest him this week",
-				"note": "He misses this round only.",
+				"label": "Rest {first} this week",
+				"note": "{name} misses this round only.",
 				"effects": [
 					{
 						"op": "rest",
@@ -40,7 +40,7 @@
 			},
 			{
 				"key": "play",
-				"label": "Play him",
+				"label": "Play {first}",
 				"effects": [
 					{
 						"op": "sore"
@@ -76,7 +76,7 @@
 		"choices": [
 			{
 				"key": "rest",
-				"label": "Give him the week",
+				"label": "Give {first} the week",
 				"effects": [
 					{
 						"op": "rest"
@@ -91,7 +91,7 @@
 			},
 			{
 				"key": "play",
-				"label": "He plays",
+				"label": "{first} plays",
 				"effects": [
 					{
 						"op": "morale",
@@ -125,7 +125,7 @@
 		"choices": [
 			{
 				"key": "rest",
-				"label": "Sit him out",
+				"label": "Sit {first} out",
 				"effects": [
 					{
 						"op": "rest",
@@ -136,7 +136,7 @@
 			},
 			{
 				"key": "play",
-				"label": "He says he's right",
+				"label": "Take {first}'s word",
 				"effects": [
 					{
 						"op": "sore"
@@ -183,7 +183,7 @@
 						"who": "all"
 					}
 				],
-				"note": "No extra development.",
+				"note": "The players miss a full session's work.",
 				"result": "A light week. Fresh bodies for the final."
 			},
 			{
@@ -229,7 +229,7 @@
 		"choices": [
 			{
 				"key": "help",
-				"label": "Let him",
+				"label": "Let {first}",
 				"effects": [
 					{
 						"op": "morale",
@@ -251,7 +251,7 @@
 			},
 			{
 				"key": "own",
-				"label": "Keep him on his own program",
+				"label": "Keep {first} on his own program",
 				"effects": [
 					{
 						"op": "morale",
@@ -296,7 +296,7 @@
 		"choices": [
 			{
 				"key": "pass",
-				"label": "Pass him",
+				"label": "Back {first} to play",
 				"effects": [
 					{
 						"op": "sore"
@@ -307,11 +307,11 @@
 						"why": "You backed him through a finals fitness test"
 					}
 				],
-				"result": "He runs clean and he's in."
+				"result": "{first} gets through the test and he's in."
 			},
 			{
 				"key": "out",
-				"label": "Don't risk him",
+				"label": "Don't risk {first}",
 				"effects": [
 					{
 						"op": "rest",
@@ -328,7 +328,7 @@
 						"why": "You ruled him out of a final against his word"
 					}
 				],
-				"result": "He's out. He's filthy, but he'll be right if there's a next week."
+				"result": "{first} is out. He's filthy, but he'll be right if there's a next week."
 			}
 		]
 	},
@@ -363,7 +363,7 @@
 		"choices": [
 			{
 				"key": "rush",
-				"label": "Rush him back",
+				"label": "Rush {first} back",
 				"effects": [
 					{
 						"op": "rush_back"
@@ -374,7 +374,7 @@
 						"why": "You gave him his chance to play in the Grand Final"
 					}
 				],
-				"result": "He's cleared to play."
+				"result": "{name} is cleared to play."
 			},
 			{
 				"key": "stay",
@@ -396,7 +396,7 @@
 						"why": "You didn't risk him in the Grand Final"
 					}
 				],
-				"result": "The side stays as it is. He'll be in a suit on the bench."
+				"result": "The side stays as it is. {first} will be in a suit on the bench."
 			}
 		]
 	},
@@ -415,12 +415,12 @@
 			"{name} is running again"
 		],
 		"text": [
-			"{first} is running again after {injury_word}. The physio hasn't cleared him yet, but he is asking to join full sessions and reckons he is ready."
+			"{first} is running again after {injury_word}. The physio hasn't cleared him yet, but he wants to join full training and reckons he's right to go."
 		],
 		"choices": [
 			{
 				"key": "rush",
-				"label": "Clear him to play",
+				"label": "Clear {first} for full training",
 				"effects": [
 					{
 						"op": "rush_back"

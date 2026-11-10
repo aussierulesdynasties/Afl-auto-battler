@@ -2304,7 +2304,9 @@ Your career stays on this device.",
 	var sore_text := ""
 	if sore_node != null:
 		sore_text = str(sore_node.get_meta("plain")) if sore_node.has_meta("plain") else str(sore_node.get("text"))
-	_check(sore_text == "If you leave this, it goes as \"Play him\".",
+	# The choice carries his name, never a bare "him" (director, 2026-11-11).
+	_check(sore_text.begins_with("If you leave this, it goes as \"Play ") and sore_text.ends_with("\".")
+			and not sore_text.contains("Play him"),
 			"A card with a silent default names the choice it settles as, once (%s)" % sore_text)
 	# A finger on the line answers nothing; a finger on "Play him" below it answers the card.
 	var line_tap: String = await Tap.tap(sore_node) if sore_node != null else "missing"
@@ -2336,7 +2338,7 @@ Your career stays on this device.",
 			and back_mark != null and back_mark.text == "Gain:" and cost_mark != null and cost_mark.text == "Cost:"
 			and cost_mark.get_theme_font("font") != rest_cost.get_theme_font("font") and cost_mark.get_theme_color("font_color") == load("res://scripts/ui/UiKit.gd").label_ink()
 			and back_gain != null and back_cost != null and back_cost.text.contains("promise breaks")
-			and rest_gain != null and rest_cost != null and rest_cost.text.begins_with("His opinion of you down") and rest_cost.text.contains("re-sign with you")
+			and rest_gain != null and rest_cost != null and rest_cost.text.contains("'s opinion of you down") and not rest_cost.text.begins_with("His ") and rest_cost.text.contains("re-sign with you")
 			and same_style and rest_btn != null and rest_cost.get_global_rect().position.y >= rest_gain.get_global_rect().end.y - 1.0
 			and rest_gain.get_global_rect().position.y >= rest_btn.get_global_rect().end.y - 1.0,
 			"Each answer says its gains then its costs under its own button, in the same full-strength text (%s / %s)" % [back_cost.text if back_cost != null else "none", rest_cost.text if rest_cost != null else "none"])
@@ -4204,8 +4206,8 @@ func _all_text(n: Node) -> String:
 ## Every start mode opens with the press interview that sets your coaching style (director, 2026-11-10:
 ## "interview should happen in every game mode"), its answers scored as in any
 ## start. Each start is set on New career and begun as Choose your club begins
-## it; the club is taken by a real tap; the hub then sends the new coach to the
-## interview. The 2030 start (Canberra on the real lists) and Tasmania's 2028
+## it; the club is taken by a real tap, and the interview comes before the
+## first pick (director, 2026-11-11: "its meant to go before the draft"). The 2030 start (Canberra on the real lists) and Tasmania's 2028
 ## start load a shipped history, which used to bring its own coach with it.
 func _test_every_start_reaches_interview() -> void:
 	var seed_was: int = _state.replay_seed
@@ -4262,33 +4264,26 @@ func _test_every_start_reaches_interview() -> void:
 			var tile := _first_named(draft_scene, "Choose_")
 			tap = await Tap.tap(tile) if tile != null else "no club tile"
 			await _settle()
-		# The draft to its end, as its own buttons make it: each pick the best
-		# player left, then Start season. Where it goes next is the hub's call;
-		# the press interview comes before the pre-season (on main it came only
-		# after the whole pre-season, and never after a shipped history).
-		var ds := current_scene
-		var d = _state.draft
-		var guard := 0
-		while d != null and not d.is_finished() and guard < 200:
-			guard += 1
-			var board: Array = d.board("", "", "", "overall", true).filter(func(p): return d.can_pick_player(p))
-			if board.is_empty():
-				break
-			ds.call("_on_pick", board[0])
-			await process_frame
-		var due: bool = bool(_state.interview_due)
-		var clean: bool = (_state.coach_arch as Dictionary).is_empty() and str(_state.coach_name) == ""
-		if is_instance_valid(ds) and ds.has_method("_on_finish"):
-			ds.call("_on_finish")
+		# Straight from the club tap to the press interview, before any pick of
+		# yours (director, 2026-11-11: "its meant to go before the draft").
 		for i in range(300):
 			if _router.current() != "draft" and not bool(root.get_node("ScreenTransition").busy):
 				break
 			await process_frame
 		await _settle()
-		_check(tap == "" and _state.my_club != "" and due and clean and _router.current() == "interview"
+		var d = _state.draft
+		var mine_before := 0
+		if d != null:
+			for pk in d.pick_history:
+				mine_before += 1 if str(pk["club"]) == _state.coach_club() else 0
+		var due: bool = bool(_state.interview_due)
+		var clean: bool = (_state.coach_arch as Dictionary).is_empty() and str(_state.coach_name) == ""
+		_check(tap == "" and _state.coach_club() != "" and due and clean and mine_before == 0
+				and d != null and _router.current() == "interview"
 				and current_scene.find_child("CoachName", true, false) != null,
-				"%s: the new coach of %s faces the press interview, name first (tap %s, due %s, clean %s, at %s)" % [
-					label, _state.my_club, tap, due, clean, _router.current()])
+				"%s: the new coach of %s faces the press interview before the draft, name first (tap %s, due %s, clean %s, his picks %d, draft finished %s, at %s)" % [
+					label, _state.coach_club(), tap, due, clean, mine_before,
+					str(d != null and d.is_finished()), _router.current()])
 		if _router.current() != "interview":
 			continue
 		# The answers score exactly as in the standard start.
@@ -4306,6 +4301,35 @@ func _test_every_start_reaches_interview() -> void:
 				and _state.coach_arch == want and load("res://scripts/sim/CoachEffects.gd").my_arch == want
 				and current_scene.find_child("InterviewDone", true, false) != null,
 				"%s: seven tapped answers set the coaching style as the standard start's (%s)" % [label, answered])
+		# Continue, by a real tap, goes back to the draft board for the first pick.
+		var cont: String = await Tap.tap(current_scene.find_child("InterviewDone", true, false))
+		for i in range(300):
+			if _router.current() == "draft" and not bool(root.get_node("ScreenTransition").busy):
+				break
+			await process_frame
+		await _settle()
+		_check(cont == "" and _router.current() == "draft" and str(current_scene.get("_phase")) == "board",
+				"%s: Continue goes back to the draft board (tap %s, at %s, phase %s)" % [
+					label, cont, _router.current(), current_scene.get("_phase")])
+		# The draft to its end; the hub never asks again.
+		var ds := current_scene
+		var guard := 0
+		while d != null and not d.is_finished() and guard < 200:
+			guard += 1
+			var board: Array = d.board("", "", "", "overall", true).filter(func(p): return d.can_pick_player(p))
+			if board.is_empty():
+				break
+			ds.call("_on_pick", board[0])
+			await process_frame
+		if is_instance_valid(ds) and ds.has_method("_on_finish"):
+			ds.call("_on_finish")
+		for i in range(300):
+			if _router.current() != "draft" and not bool(root.get_node("ScreenTransition").busy):
+				break
+			await process_frame
+		await _settle()
+		_check(_router.current() != "interview" and _router.current() != "draft" and not _state.interview_due,
+				"%s: after the draft the career goes on without a second interview (at %s)" % [label, _router.current()])
 	_state.replay_seed = seed_was
 	_state.delete_saved_career()
 	_state.reset()
@@ -4408,6 +4432,8 @@ func _test_new_career_challenge_taps() -> void:
 	var tas_tile := current_scene.find_child("Choose_TAS", true, false)
 	_check(_state.my_club == "" and tas_tile != null and current_scene.find_child("Choose_COL", true, false) == null,
 			"Choose your rebuild offers the bottom club and Tasmania, no other club")
+	# The press interview has its own test (_test_every_start_reaches_interview).
+	_state.interview_due = false
 	var t6: String = await Tap.tap(current_scene.find_child("Choose_ESS", true, false))
 	await _settle()
 	t5 += t6

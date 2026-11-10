@@ -404,7 +404,7 @@ func _test_your_player_is_approached() -> void:
 			_check(str(card.get("title", "")).contains("Tasmania") and not str(card.get("text", "")).contains("{"),
 					"The card names the club and leaves no blank (%s)" % str(card.get("title", "")))
 			var lines := StoryEngine.stakes_lines(card["options"][0]["effects"], card["facts"])
-			_check(lines.size() == 2 and lines[0].begins_with("Gain: He stays") and lines[1].contains("against your cap"),
+			_check(lines.size() == 2 and lines[0].begins_with("Gain: ") and lines[0].contains(" stays") and not lines[0].contains("He ") and lines[1].contains("against your cap"),
 					"Re-signing says what it gains and what it costs (%s)" % " | ".join(lines))
 			var go_lines := StoryEngine.stakes_lines(card["options"][1]["effects"], card["facts"])
 			_check(" ".join(go_lines).contains("joins Tasmania when this season ends") and not " ".join(go_lines).contains("{"),

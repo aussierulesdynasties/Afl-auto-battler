@@ -52,7 +52,7 @@
 			},
 			{
 				"key": "talk",
-				"label": "Promise him a game this week",
+				"label": "Promise {first} a game this week",
 				"effects": [
 					{
 						"op": "morale",
@@ -101,7 +101,7 @@
 				"result": "You tell {name} selection is your call, and it stands."
 			}
 		],
-		"stakes": "{kpi_or_need} Promise him a game and he expects to play this week."
+		"stakes": "{kpi_or_need} Promise {name} a game and he expects to play this week."
 	},
 	{
 		"id": "selection_talk_back",
@@ -155,7 +155,7 @@
 			},
 			{
 				"key": "talk",
-				"label": "Promise him a game this week",
+				"label": "Promise {first} a game this week",
 				"effects": [
 					{
 						"op": "morale",
@@ -204,7 +204,7 @@
 				"result": "You tell {name} selection is your call, and it stands."
 			}
 		],
-		"stakes": "{kpi_or_need} Promise him a game and he expects to play this week."
+		"stakes": "{kpi_or_need} Promise {name} a game and he expects to play this week."
 	},
 	{
 		"id": "selection_talk_waiting",
@@ -258,7 +258,7 @@
 			},
 			{
 				"key": "talk",
-				"label": "Promise him a game this week",
+				"label": "Promise {first} a game this week",
 				"effects": [
 					{
 						"op": "morale",
@@ -307,7 +307,7 @@
 				"result": "You tell {name} selection is your call, and it stands."
 			}
 		],
-		"stakes": "{kpi_or_need} Promise him a game and he expects to play this week."
+		"stakes": "{kpi_or_need} Promise {name} a game and he expects to play this week."
 	},
 	{
 		"id": "selection_unhappy",
@@ -327,7 +327,7 @@
 			"{name} is unhappy"
 		],
 		"text": [
-			"He feels he's being overlooked. An unhappy player plays below his best and costs more to re-sign."
+			"He feels he's being overlooked. Leave it and his form and his next contract will both cost you."
 		],
 		"choices": [
 			{
@@ -356,7 +356,7 @@
 			},
 			{
 				"key": "earn",
-				"label": "Tell him to earn it",
+				"label": "Tell {first} to earn it",
 				"effects": [
 					{
 						"op": "morale",
@@ -398,7 +398,7 @@
 		"choices": [
 			{
 				"key": "in",
-				"label": "Bring him in",
+				"label": "Bring {first} in",
 				"effects": [
 					{
 						"op": "expects_game",
@@ -540,7 +540,7 @@
 		"choices": [
 			{
 				"key": "minder",
-				"label": "Put a senior player with him all week",
+				"label": "Put a senior player with {first} all week",
 				"effects": [
 					{
 						"op": "xp",
@@ -562,7 +562,7 @@
 			},
 			{
 				"key": "alone",
-				"label": "Let him find his own way",
+				"label": "Let {first} find his own way",
 				"effects": [
 					{
 						"op": "morale",
@@ -602,7 +602,7 @@
 		"cooldown": 0,
 		"subject_cooldown": 0,
 		"title": [
-			"A Grand Final in his debut season"
+			"A Grand Final in {name}'s debut season"
 		],
 		"text": [
 			"{name} made his debut this season. On Saturday he plays in a Grand Final."
@@ -610,7 +610,7 @@
 		"choices": [
 			{
 				"key": "away",
-				"label": "Keep him away from the cameras",
+				"label": "Keep {first} away from the cameras",
 				"effects": [
 					{
 						"op": "morale",
@@ -631,7 +631,7 @@
 			},
 			{
 				"key": "enjoy",
-				"label": "Let him enjoy the week",
+				"label": "Let {first} enjoy the week",
 				"effects": [
 					{
 						"op": "morale",
@@ -670,7 +670,7 @@
 		"choices": [
 			{
 				"key": "promise",
-				"label": "Promise him a run",
+				"label": "Promise {first} a run",
 				"effects": [
 					{
 						"op": "morale",
@@ -683,7 +683,7 @@
 			},
 			{
 				"key": "show",
-				"label": "Tell him what he has to show",
+				"label": "Tell {first} what he has to show",
 				"effects": [
 					{
 						"op": "trust",

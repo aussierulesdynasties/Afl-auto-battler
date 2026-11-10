@@ -218,6 +218,10 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 - Retire the no-digit checks off the decision gates, and check the stats columns only for clipped text, not exact pixels (T7.O15).
 - Coleman cap: the 99.5th percentile (row 30).
 
+## Rulings (director, 2026-11-11)
+
+- The press interview that sets the coaching style comes before the draft: "its meant to go before the draft". It opens as soon as the coach takes a club, in every start mode, and Continue returns to the draft board for the first pick (row 141 follow-up; 1.0.14 shipped it after the National Draft).
+
 ## Current focus (moved from the bible, 2026-11-06)
 
 Polish is the gap. There are two big tickets, and one priority above both.
