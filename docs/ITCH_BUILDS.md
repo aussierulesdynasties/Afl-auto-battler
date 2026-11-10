@@ -3,7 +3,7 @@
 Moved out of `docs/TODO.md` (2026-11-05) so it no longer loads into every session. Rows named here still live in `docs/TODO.md`.
 
 
-The itch page runs the browser build of main as of the last upload (live: 1.0.13, 976718a). There are no feature switches (director 2026-11-06, #1074): everything merged to main goes into the next build. A build is worth uploading only when a player can see a difference: the listed rows are merged, CI is green and the web build ran. Sessions push with butler and post a short devlog in football words (docs/ITCH_UPLOAD.md). He says when (2026-11-09, which ends the 2026-11-06 standing permission): no upload, version bump or devlog without his word, and a devlog with every upload. At least three changes a player can see, or one big one.
+The itch page runs the browser build of main as of the last upload (live: 1.0.14, 80ae2f7, threaded browser build with SharedArrayBuffer on). There are no feature switches (director 2026-11-06, #1074): everything merged to main goes into the next build. A build is worth uploading only when a player can see a difference: the listed rows are merged, CI is green and the web build ran. Sessions push with butler and post a short devlog in football words (docs/ITCH_UPLOAD.md). He says when (2026-11-09, which ends the 2026-11-06 standing permission): no upload, version bump or devlog without his word, and a devlog with every upload. At least three changes a player can see, or one big one.
 
 | Build | Name | Ready when (rows and switches) | What a player sees |
 |---|---|---|---|
