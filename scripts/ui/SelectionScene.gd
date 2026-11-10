@@ -19,6 +19,9 @@ const WEEK_W_MAX := 600.0
 
 var _root: VBoxContainer
 var _notice := ""
+## The remembered fact about the player the last swap left out (P-37), and the
+## note it came with: said only while that note is still the one on screen.
+var _memory := ["", ""]
 var _week: WeekPreview          # the week beside the side (a wide screen), and its sheets
 var _sheet: Control             # a player's profile, open over the list
 var _undo := {}            # the side before the last Auto-pick, for Undo
@@ -168,6 +171,7 @@ func _side_page(auto: bool) -> Control:
 	builder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	builder.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	builder.start_note = _notice
+	builder.memory_note = str(_memory[1]) if str(_memory[0]) == _notice else ""
 	var opp_code := str(nxt.get("code", ""))
 	if _view == "opp" and opp_code != "":
 		var proj := _week.para("%s as they would take the field this week (projected: they name their side on match day). They kick the other way." % GameDB.club_name(opp_code), 13, UiKit.MUTED)
@@ -192,6 +196,7 @@ func _side_page(auto: bool) -> Control:
 	builder.inspect.connect(_open_profile)
 	builder.changed.connect(func(note: String):
 		_notice = note
+		_memory = [note, builder.memory_note]
 		builder.start_note = note
 		_undo = {}
 		var hint: Label = builder.find_child("BuilderHint", true, false)
