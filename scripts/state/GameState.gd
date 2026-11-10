@@ -312,6 +312,9 @@ var interview_due := false
 ## Who leads each club (Captaincy.gd): club code -> its record. A club with
 ## no entry has named no one; an older save has none for anyone.
 var captaincy := {}
+## The coach's scouting list (row 130, ScoutingList): [{"id", "year", "round",
+## "first": {"overall", "potential"}}], the read when he was listed.
+var scouting_list: Array = []
 ## Whether AI clubs choose a season plan by phase (never saved). On now that
 ## the plan screen lets you choose yours (BOSS, 2026-10-12): contenders peak
 ## for September and rebuilders develop. This one switch is the director's
@@ -928,6 +931,7 @@ func _save_state() -> Dictionary:
 		"conditioning": conditioning,
 		"preseason": preseason,
 		"captaincy": captaincy,
+		"scouting_list": scouting_list,
 		"class_tiers": class_tiers,
 		"custom_prospect_id": custom_prospect_id,
 		"start_mode": start_mode,
@@ -1187,6 +1191,8 @@ func _restore_career(state: Dictionary) -> bool:
 	interview_due = bool(state.get("interview_due", false))
 	CoachEffects.my_arch = coach_arch
 	captaincy = state.get("captaincy", {})
+	var scouted = state.get("scouting_list", [])
+	scouting_list = scouted if scouted is Array else []
 	class_tiers = state.get("class_tiers", {})
 	custom_prospect_id = str(state.get("custom_prospect_id", ""))
 	var own_story = state.get("custom_prospect_story", {})
@@ -1742,6 +1748,7 @@ func reset() -> void:
 	interview_due = false
 	CoachEffects.my_arch = coach_arch
 	captaincy = {}
+	scouting_list = []
 	class_tiers = {}
 	last_training_report = {}
 	_xp_grant_key = ""
@@ -4277,7 +4284,7 @@ func _spoken_for_elsewhere(p: Dictionary) -> bool:
 ## (DraftScouting.projection with this season's intake seed, Draft
 ## AI_POT_WEIGHT_INTAKE), so the draft night board agrees with it.
 func prospect_reads(prospects: Array) -> Dictionary:
-	var seed := _clock_seed(2) if replay_seed != 0 else posmod(career_seed * 7919 + season_year * 131 + 34, 1000000)
+	var seed := prospect_read_seed()
 	var mult := recruiting_uncertainty_mult()
 	var out := {}
 	var order := []
@@ -4293,6 +4300,11 @@ func prospect_reads(prospects: Array) -> Dictionary:
 	for i in range(order.size()):
 		(out[str(order[i][1])] as Dictionary)["rank"] = i + 1
 	return out
+
+
+## The seed of this season's reads of the draft class (prospect_reads).
+func prospect_read_seed() -> int:
+	return _clock_seed(2) if replay_seed != 0 else posmod(career_seed * 7919 + season_year * 131 + 34, 1000000)
 
 
 ## Best first; ties go to the id, so the same list gives the same order.
@@ -6270,6 +6282,7 @@ func _after_round(results: Array) -> void:
 	_note_rival_plans(results)
 	_note_coach_arch(results)
 	MidseasonDraft.after_round(self)
+	ScoutingList.week(self)
 	# Who on a promised run could not play this week, before anything ticks.
 	_backing_unavailable = {}
 	for p in my_list:
