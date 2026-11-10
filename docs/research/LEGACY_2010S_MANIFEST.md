@@ -180,7 +180,8 @@ harness shows the 2010 league plays like real AFL of that era.
    facts gathered and a design (when it fires, what it does to the sim, what the coach
    decides). The span he wants is 1990 to 2100 and beyond.
 
-**Still open: one rating scale across eras, or a scale per era.** Research below.
+4. **Ratings per era.** After the research below he chose option A: every player is rated
+   against his own season's league, and how each era played lives in the match engine.
 
 ## Ratings across eras: what other games do (research, 2026-11-10)
 
@@ -205,7 +206,7 @@ The common pattern is that a rating means "how good against his own league". How
 game was played (pace, scoring, kicking, the rules) is a separate per-era setting of the match
 engine.
 
-Options (the choice is the director's):
+Options shown to the director (he chose A, 2026-11-10):
 
 - **A. Per era (the common pattern).** Every player is rated against his own season's league,
   as 2026 is rated now. The 1990s, 2010s and 2080s each have the same spread of stars and
