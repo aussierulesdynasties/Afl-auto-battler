@@ -13,8 +13,9 @@ extends RefCounted
 ##   p["honours"]  counts the roll cannot date: best and fairests at other
 ##                 clubs, All-Australian jumpers, seasons as captain
 ##
-## `skip` holds what his "With us" lines already say (Remembered.sheet_keys:
-## "debut", "flag:2030", "bf:2029"), so a fact is said once on the sheet. His
+## `skip` holds what his "With us" lines and his story already say
+## (Remembered.sheet_keys: "debut", "flag:2030", "bf:2029"; CareerTale.keys
+## adds "brownlow:2032", "games:100"), so a fact is said once on the sheet. His
 ## games, goals and clubs are the totals line's, never repeated here.
 ##
 ## Each line is {"text", "bold"}: honours bold, the rest plain. Oldest first:
@@ -47,6 +48,8 @@ static func lines(p: Dictionary, honour_roll: Array, milestone_log: Dictionary, 
 	for e in milestone_log.get("log", []):
 		if not (e is Dictionary) or str(e.get("who", "")) != "player" or str(e.get("id", "")) != id:
 			continue
+		if skip.has("%s:%d" % [str(e.get("kind", "")), int(e.get("value", 0))]):
+			continue
 		var when := Firsts.when_text({"year": int(e.get("year", 0)), "label": str(e.get("label", ""))})
 		match str(e.get("kind", "")):
 			"games":
@@ -62,7 +65,8 @@ static func lines(p: Dictionary, honour_roll: Array, milestone_log: Dictionary, 
 			continue
 		var y := int(e.get("year", 0))
 		var premier := str(e.get("premier", ""))
-		if premier == "" or (premier == my_club and skip.has("flag:%d" % y)):
+		# One premier a season: "flag:Y" said elsewhere is this flag, at whichever club.
+		if premier == "" or skip.has("flag:%d" % y):
 			continue
 		for st in stints:
 			if str(st[0]) == premier and y >= int(st[1]) and y <= int(st[2]):
@@ -85,7 +89,8 @@ static func lines(p: Dictionary, honour_roll: Array, milestone_log: Dictionary, 
 			var rows = e.get(pair[0], [])
 			if rows is Array and not (rows as Array).is_empty() and rows[0] is Dictionary \
 					and str((rows[0] as Dictionary).get("id", "")) == id:
-				ys.append(int(e.get("year", 0)))
+				if not skip.has("%s:%d" % [pair[0], int(e.get("year", 0))]):
+					ys.append(int(e.get("year", 0)))
 		if not ys.is_empty():
 			out.append(_l("%s %s." % [pair[1], _years(ys)], true))
 

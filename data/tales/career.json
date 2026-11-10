@@ -1,0 +1,81 @@
+{
+	"_about": "A player's career story (scripts/sim/CareerTale.gd). Each angle declares the slots its phrases may use; CareerTale.validate rejects any other. Numbers come in ready-made from the slots (\"31 votes\", \"1 game\"), so a phrase can change the words around a number but never the number. Voice: the senior coach (director 2026-11-10): we/our for the club, you only for a promise the coach made. One phrase is picked per player, from his id, so his story reads the same every time.",
+	"angles": {
+		"draft_us": {
+			"slots": ["first", "pick", "year", "draft"],
+			"coach": ["We took {first} at pick {pick} in the {year} {draft}.", "{first} came to us at pick {pick} in the {year} {draft}."]
+		},
+		"draft_us_nopick": {
+			"slots": ["first", "year", "draft"],
+			"coach": ["We took {first} in the {year} {draft}.", "{first} came to us in the {year} {draft}."]
+		},
+		"draft_club": {
+			"slots": ["first", "pick", "year", "draft", "club"],
+			"coach": ["{club} took {first} at pick {pick} in the {year} {draft}."]
+		},
+		"draft_club_nopick": {
+			"slots": ["first", "year", "draft", "club"],
+			"coach": ["{club} took {first} in the {year} {draft}."]
+		},
+		"debut_us": {
+			"slots": ["when"],
+			"coach": ["He debuted for us {when}.", "His first game for us was {when}."]
+		},
+		"debut_club": {
+			"slots": ["club", "year"],
+			"coach": ["He debuted for {club} in {year}."]
+		},
+		"backed_done": {
+			"slots": ["games", "year"],
+			"coach": ["You promised him {games} in a row in {year}, and he played them all."]
+		},
+		"backed_broken": {
+			"slots": ["games", "year", "played"],
+			"coach": ["You promised him {games} in a row in {year}, then left him out after {played}."]
+		},
+		"milestone_games": {
+			"slots": ["nth", "when"],
+			"coach": ["His {nth} game came {when}.", "He played his {nth} game {when}."]
+		},
+		"milestone_goals": {
+			"slots": ["nth", "when"],
+			"coach": ["His {nth} career goal came {when}."]
+		},
+		"brownlow": {
+			"slots": ["year", "votes"],
+			"coach": ["He won the {year} Brownlow with {votes}.", "{votes} won him the {year} Brownlow."]
+		},
+		"brownlow_late": {
+			"slots": ["from", "year", "votes"],
+			"coach": ["From {from}, he won the {year} Brownlow with {votes}."]
+		},
+		"brownlow_multi": {
+			"slots": ["years"],
+			"coach": ["He won the Brownlow in {years}."]
+		},
+		"award": {
+			"slots": ["award", "years"],
+			"coach": ["He won the {award} in {years}."]
+		},
+		"flag_us": {
+			"slots": ["years", "flags"],
+			"coach": ["He was with us for the {years} {flags}."]
+		},
+		"flag_club": {
+			"slots": ["years", "flags", "club"],
+			"coach": ["He was at {club} for the {years} {flags}."]
+		},
+		"fell_short_us": {
+			"slots": ["games", "year"],
+			"coach": ["He played {games} for us and left after {year}."]
+		},
+		"fell_short_club": {
+			"slots": ["games", "year", "club"],
+			"coach": ["He played {games} for {club} and left after {year}."]
+		},
+		"high": {
+			"slots": ["stat", "when"],
+			"coach": ["His best day was {stat} {when}."]
+		}
+	}
+}

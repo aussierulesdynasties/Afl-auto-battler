@@ -357,8 +357,11 @@ func _test_ui() -> void:
 	for l in decorated.find_children("CareerFact_*", "Label", true, false):
 		if (l as Label).text.begins_with("Norm Smith"):
 			hon_text = (l as Label).text
-	_check(hon_text == "Norm Smith Medal 2031, 2033.",
-			"His profile lists the Norm Smith Medal in his Career section (%s)" % hon_text)
+	# His career story may tell it instead; then the facts under it leave it out.
+	var story: Label = decorated.find_child("CareerStory", true, false)
+	var told := story != null and story.text.contains("Norm Smith Medal in 2031 and 2033")
+	_check((hon_text == "Norm Smith Medal 2031, 2033.") != told,
+			"His profile lists the Norm Smith Medal in his Career section, once (%s | %s)" % [hon_text, story.text if story != null else "no story"])
 	decorated.queue_free()
 	GameState.honour_roll.resize(GameState.honour_roll.size() - 2)
 	host.queue_free()
