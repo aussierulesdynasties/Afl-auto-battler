@@ -99,7 +99,7 @@ func _build() -> void:
 		page.name = "ScoutScroll"
 		page.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_root.add_child(page)
-	UiKit.restore_places.call_deferred(_root, places)
+	UiKit.restore_places(_root, places)
 
 
 ## A section's heading in your club's ink, with a quiet note after it.

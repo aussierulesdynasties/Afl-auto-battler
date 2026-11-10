@@ -8,6 +8,9 @@ extends SceneTree
 ## Writes DIR/scout_<club>.png, DIR/scout_<club>_down.png and DIR/scout_<club>_pc.png.
 
 
+var SL
+
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -29,6 +32,7 @@ func _run() -> void:
 				clubs = str(a[i + 1]).split(",")
 	await process_frame
 	var state: Node = root.get_node("GameState")
+	SL = load("res://scripts/state/ScoutingList.gd")
 	var db: Node = root.get_node("GameDB")
 	state.autosave_enabled = false
 	state.save_path = "user://capture_scouting_list.save"
@@ -42,15 +46,15 @@ func _run() -> void:
 		var held := {"s": "DS", "p": "FATH"}
 		state.coach_arch = {"s": {"DS": 10.0}, "p": {"FATH": 10.0}, "held": held,
 				"tally": {"plans": {}, "calls": {}}}
-		var pool: Array = ScoutingList.pool(state)
+		var pool: Array = SL.pool(state)
 		var reads: Dictionary = state.prospect_reads(pool)
 		var order := pool.duplicate()
 		order.sort_custom(func(x, y): return int(reads[str(x["id"])]["rank"]) < int(reads[str(y["id"])]["rank"]))
-		ScoutingList.add(state, str(order[2]["id"]))
-		ScoutingList.add(state, str(order[9]["id"]))
+		SL.add(state, str(order[2]["id"]))
+		SL.add(state, str(order[9]["id"]))
 		for w in range(12):
-			ScoutingList.week(state)
-		ScoutingList.add(state, str(order[20]["id"]))
+			SL.week(state)
+		SL.add(state, str(order[20]["id"]))
 		for size in [Vector2i(390, 844), Vector2i(1280, 800)]:
 			root.size = size
 			await _frames(6)
