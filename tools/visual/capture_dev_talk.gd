@@ -22,12 +22,19 @@ func _frames(n: int) -> void:
 
 
 ## The screen the Router changed to (the change lands a frame or more later).
+var _last: Node = null
+
+
 func _scene() -> Node:
-	for i in range(120):
-		if current_scene != null:
+	for i in range(1200):
+		if current_scene != null and current_scene != _last and str(current_scene.scene_file_path).contains("Hub"):
+			_last = current_scene
+			for k in range(10):
+				await process_frame
 			return current_scene
 		await process_frame
-	return root
+	push_error("capture_dev_talk: no new hub (%s)" % (current_scene.scene_file_path if current_scene != null else "none"))
+	return current_scene if current_scene != null else root
 
 
 func _snap(path: String) -> void:
@@ -128,7 +135,7 @@ func _run() -> void:
 	print("NEWS ", gs.news[0]["text"])
 	gs.week_events = []
 	router.go("hub")
-	await _frames(30)
+	await _scene()
 	await _snap(out + "_news.png")
 	# His three games there, then the result card.
 	gs._dev_promise_week()
@@ -139,9 +146,10 @@ func _run() -> void:
 	gs.media_conference = {}
 	router.go("hub")
 	await _frames(40)
-	var card: Control = (await _scene()).find_child("WeekEvent", true, false)
+	var hub := await _scene()
+	var card: Control = hub.find_child("WeekEvent", true, false)
 	if card == null:
-		card = (await _scene()).find_child("SheetEvent", true, false)
+		card = hub.find_child("SheetEvent", true, false)
 	print("RESULT card ", card != null, " events ", gs.week_events.map(func(e): return e.get("tid", "")))
 	await _snap(out + "_result.png")
 	quit(0)
