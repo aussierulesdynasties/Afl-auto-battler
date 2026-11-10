@@ -438,14 +438,15 @@ func _score_column(code: String, home: bool, narrow: bool) -> Control:
 			else HORIZONTAL_ALIGNMENT_LEFT
 	ClubDuel.on_colour(name)
 	v.add_child(name)
-	var score := UiKit.figure("0.0 (0)", UiKit.RATING if narrow else 36, Color.WHITE)
+	# A wide screen's score is the headline across a 1920 band, not a caption in it (row T3.R9).
+	var score := UiKit.figure("0.0 (0)", UiKit.RATING if narrow else 46, Color.WHITE)
 	ClubDuel.on_colour(score)
 	score.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if home \
 			else HORIZONTAL_ALIGNMENT_LEFT
 	# A fixed minimum wider than the phone column is what shoved the oval
 	# off screen. Let the score take its own width in portrait.
 	if not narrow:
-		score.custom_minimum_size = Vector2(136, 0)
+		score.custom_minimum_size = Vector2(170, 0)
 	v.add_child(score)
 	if home:
 		_score_home = score
@@ -460,7 +461,7 @@ func _score_middle(narrow: bool) -> Control:
 	var mid := UiKit.vbox(0)
 	mid.alignment = BoxContainer.ALIGNMENT_CENTER
 	mid.custom_minimum_size = Vector2(84 if narrow else 132, 0)
-	_clock = UiKit.line("Q%d %d'" % [_shown_q, _shown_min], 17 if narrow else 20, UiKit.TEXT, true)
+	_clock = UiKit.line("Q%d %d'" % [_shown_q, _shown_min], 17 if narrow else 24, UiKit.TEXT, true)
 	_clock.name = "Clock"
 	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ClubDuel.on_colour(_clock)
