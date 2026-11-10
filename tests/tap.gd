@@ -80,6 +80,27 @@ static func tap_at(c: Control, local: Vector2, must_reach := true) -> String:
 	return "the tap on %s went to %s" % [c.name, top.name if top != null else "nothing"]
 
 
+## Wait until c has stopped moving: its place on screen the same for
+## `still` frames running (at most `limit` frames). A player taps a screen
+## that has settled; a card arriving late (a week's event) moves what is
+## under it, and a tap computed before that lands on whatever moved in.
+static func steady(c: Control, still := 10, limit := 600) -> void:
+	if c == null or not is_instance_valid(c):
+		return
+	var tree := c.get_tree()
+	var last := Rect2()
+	var same := 0
+	for i in range(limit):
+		await tree.process_frame
+		if not is_instance_valid(c):
+			return
+		var r := c.get_global_rect()
+		same = same + 1 if r == last else 0
+		last = r
+		if same >= still:
+			return
+
+
 ## Where c's centre is on the screen (window pixels, after stretching).
 static func screen_point(c: Control) -> Vector2:
 	return c.get_screen_transform() * (c.size * 0.5)

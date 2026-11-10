@@ -148,7 +148,7 @@ func _test_ticks_on_completion() -> void:
 		confirm.emit_signal("pressed")
 		await _settle()
 	confirm = _find("ConfirmSide")
-	_check(confirm != null and confirm.disabled and confirm.text == "Side confirmed", "Pressed, it reads Side confirmed")
+	_check(confirm != null and confirm.disabled and confirm.text == "Confirmed", "Pressed, it reads Confirmed")
 	await _hub()
 	_check(_mark_text("team") == "Done" and _mark_text("training") == "To do", "Confirm side ticks its job")
 	await _go("training")
@@ -229,13 +229,24 @@ func _test_real_taps_on_a_phone() -> void:
 	_fresh()
 	root.size = SIZES[1]
 	await _hub()
+	# A finger taps a screen that has stopped moving (late cards settle first).
+	await Tap.steady(_find("WeekJob_team") as Control)
 	var why: String = await Tap.tap(_find("WeekJob_team") as Control)
 	await _settle()
 	_check(why == "" and _router.current() == "selection", "Phone: a tap on Look over the side opens Team (%s)" % why)
-	why = await Tap.tap(_find("ConfirmSide") as Control)
+	await Tap.steady(_find("ConfirmSide") as Control)
+	var confirm := _find("ConfirmSide") as Control
+	var vw := float(current_scene.get_viewport_rect().size.x)
+	_check(confirm != null and confirm.get_global_rect().end.x <= vw + 0.5,
+			"Phone: Confirm side sits inside the screen's width")
+	why = await Tap.tap(confirm)
 	await _settle()
 	_check(why == "" and WC.is_done(_state, "team"), "Phone: a tap on Confirm side ticks the job (%s)" % why)
 	await _hub()
 	_check(_mark_text("team") == "Done", "Phone: back on the Hub, Look over the side shows Done")
+	await _go("selection")
+	var page := _find("SidePage") as Control
+	_check(page != null and page.get_global_rect().end.x <= float(current_scene.get_viewport_rect().size.x) + 0.5,
+			"Phone: once confirmed, Team still fits the screen's width")
 	root.size = SIZES[0]
 	await _settle(2)
