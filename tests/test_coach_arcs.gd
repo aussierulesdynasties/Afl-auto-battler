@@ -251,8 +251,9 @@ func _test_poached_moves_club() -> void:
 	_check(str(b.get("id", "")) == "arc_poach_call", "poached: the first beat is the call: %s" % str(b.get("id", "")))
 	_check(StoryEngine.fill("{suitor_president} of {suitor}", facts).find("{") < 0, "poached: its names fill the text")
 	CoachArcs.answer(def, rec, "arc_poach_call", "listen", GameState.story_week(), GameState.season_year)
-	CoachArcs.answer(def, rec, "arc_poach_offer", "take", GameState.story_week() + 3, GameState.season_year)
-	CoachArcs.answer(def, rec, "arc_poach_captain", "truth", GameState.story_week() + 5, GameState.season_year)
+	# The captain asks before the offer is in writing, so a denial then is a lie.
+	CoachArcs.answer(def, rec, "arc_poach_captain", "truth", GameState.story_week() + 2, GameState.season_year)
+	CoachArcs.answer(def, rec, "arc_poach_offer", "take", GameState.story_week() + 5, GameState.season_year)
 	_check((rec["flags"] as Dictionary).has("taking") and int(rec["beat"]) == 3, "poached: the offer is taken and every beat played")
 	# The board sacks him at the same close (row 111): the signed job stands,
 	# the sacking is on his record, and no second chance is spent.
@@ -676,7 +677,14 @@ func _test_real_sacking_record() -> void:
 		_check(not GameState.is_sacked() and GameState.start_next_season(), "real career: season %d rolls on" % (s + 1))
 		_check(GameState.my_club == old, "real career: still at %s" % old)
 	GameState.board["goal"] = {"key": "wins99", "text": "Win 99 games", "wins": 99}
-	_play_out(rng, 0)
+	var guard3 := 0
+	while not GameState.season.is_season_over() and guard3 < 40:
+		guard3 += 1
+		GameState.board["confidence"] = 0
+		GameState.board["warned"] = true
+		# As above: a rival's job taken this season would stand in place of the sacking.
+		GameState.coach_arcs["active"].erase("poached")
+		_week(rng)
 	var last := int(GameState.season_year)
 	var lines := ClubMoves.record_lines(GameState)
 	print("real career record (%d to %d): %s" % [first, last, " | ".join(lines)])

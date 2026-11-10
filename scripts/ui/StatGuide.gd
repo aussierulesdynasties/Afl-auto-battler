@@ -38,7 +38,7 @@ const TOPICS := [
 	["Team strengths", "Contest is your stoppages, attack your forwards and carry, defence your pressure and intercept."],
 	["Traits and synergies", "A standout stat earns a trait. The right mix in a line switches on a synergy; the Team screen shows yours, and says when one is a single player short (\"Lockdown unit: 1 lockdown player short\")."],
 	["Injuries and legs", "Every player risks injury each game, less with durability. Tired players win less ball, so rotate in the coach box."],
-	["XP and training", "Players earn XP every game, and what each one is developing as decides where it goes. A stat costs more the higher it already is, and much more past POT."],
+	["Development and training", "Players earn development every game, and what each one is developing as decides where it goes. A stat costs more the higher it already is, and much more past POT."],
 	["Contracts", "After the Grand Final, re-sign or release players, sign free agents and trade."],
 ]
 
@@ -61,7 +61,7 @@ const TEASERS := {
 	"Team strengths": "Contest, attack, defence",
 	"Traits and synergies": "Standouts and line mixes",
 	"Injuries and legs": "Durability and rotation",
-	"XP and training": "How players improve",
+	"Development and training": "How players improve",
 	"Contracts": "Re-sign, release, trade",
 }
 

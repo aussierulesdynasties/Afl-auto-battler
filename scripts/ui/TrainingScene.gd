@@ -34,7 +34,7 @@ var _press_scroll := 0
 var _press_pos := Vector2.ZERO
 const GRID_TAB_NAMES := {"": "All", "DEF": "Def", "MID": "Mid", "RUCK": "Ruck", "FWD": "Fwd"}
 const GRID_POS_NAME := {"RUCK": "Ruck", "MID": "Mid", "DEF": "Def", "FWD": "Fwd"}
-const GRID_TRADE_OFF_LINE := "Each game earns XP, and what he is developing as decides the stats it buys."
+const GRID_TRADE_OFF_LINE := "Each game earns development, and what he is developing as decides the stats it buys."
 const GRID_TOUCH := 48.0         # a thumb target: tabs, back, Stat guide
 const CARD_PAD := 10             # inside a card, left and right
 const CARD_PAD_V := 6            # inside a card, top and bottom
@@ -128,8 +128,8 @@ func _show_intro() -> void:
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("How training works", UiKit.TITLE))
 	for line in [
-		"Pick what kind of footballer each player should become. The XP he earns after every game goes on exactly that - an inside midfielder on winning the ball, a key forward on marking and goals.",
-		"By position is the safe default: it trains what his position is judged on. Change it whenever you like; banked XP is spent straight away.",
+		"Pick what kind of footballer each player should become. The development he earns after every game goes on exactly that - an inside midfielder on winning the ball, a key forward on marking and goals.",
+		"By position is the safe default: it trains what his position is judged on. Change it whenever you like; banked development is spent straight away.",
 		"Playing senior football develops a player fastest. Fit players you leave out develop in the reserves at about half the rate; injured and rested players barely at all.",
 		"Young players with room below their potential improve quickest.",
 	]:
@@ -309,9 +309,9 @@ func _plan_picker(p: Dictionary, on_pick: Callable) -> Control:
 
 func _spend_notice(gains: Dictionary, ov_before: int, ov_after: int) -> String:
 	if ov_after > ov_before:
-		return "Development changed. Banked XP lifted him from %d to %d." % [ov_before, ov_after]
+		return "Development changed. Banked development lifted him from %d to %d." % [ov_before, ov_after]
 	if not gains.is_empty():
-		return "Development changed. Banked XP went straight into it."
+		return "Development changed. Banked development went straight into it."
 	return "Development changed. It takes effect after the next game."
 
 
@@ -505,7 +505,7 @@ func _apply_bulk_plan(key: String) -> void:
 	var label := GameState.train_plan_label(key)
 	_notice = "%s applied to %d %s." % [label, changed, "player" if changed == 1 else "players"]
 	if spent > 0:
-		_notice += " Banked XP was spent under the new focus."
+		_notice += " Banked development was spent under the new focus."
 	if is_inside_tree():
 		_build()
 
@@ -1020,7 +1020,7 @@ func _detail_panel() -> Control:
 		TraitLink.tappable(hint, str(n["key"]))
 		body.add_child(hint)
 	if duty == "Reserves":
-		var res_line := UiKit.lbl("Developing in the reserves: +%d XP last game (a senior game is worth up to %d)." % [
+		var res_line := UiKit.lbl("Developing in the reserves: +%d development points last game (a senior game is worth up to %d)." % [
 				GameState.xp_gain_for(_selected), _senior_game_xp()], 13, UiKit.MUTED)
 		res_line.name = "ReservesLine"
 		res_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1110,7 +1110,7 @@ func _stat_focus_panel(p: Dictionary) -> Control:
 			var before := int(GameState.list_player(pid).get("overall", 0))
 			if GameState.set_stat_focus(pid, chosen):
 				var after := int(GameState.list_player(pid).get("overall", 0))
-				_focus_notice = "Banked XP lifted him from %d to %d." % [before, after] if after > before else ""
+				_focus_notice = "Banked development lifted him from %d to %d." % [before, after] if after > before else ""
 			_focus_choice = ""
 			_build())
 		v.add_child(lock)

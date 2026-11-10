@@ -11,7 +11,7 @@
   },
   "max_seasons": 1,
   "cooldown_seasons": 3,
-  "start_line": "{chairman} and the board have put {club}'s coach on notice.",
+  "start_line": "{chairman} and the board have put you on notice at {club}.",
   "beats": [
    {
     "id": "arc_hot_seat_line",
@@ -21,7 +21,7 @@
      "{chairman} sets the line"
     ],
     "text": [
-     "The chairman wants it on the table before another game is played: this is the season you keep your job or lose it."
+     "The chairman wants it on the table before another game is played: this is the season you keep your job or lose it. The board's goal for the year is the line."
     ],
     "choices": [
      {
@@ -74,18 +74,19 @@
       "label": "Change the game plan",
       "effects": [
        {
-        "op": "morale",
-        "who": "side",
-        "d": -2
+        "op": "culture",
+        "strand": "together",
+        "d": -1,
+        "why": "You dropped the plan the group had trained all summer"
        },
        {
         "op": "culture",
         "strand": "ambition",
         "d": 2,
-        "why": "The coach tore up the plan to save the season"
+        "why": "You tore up the plan to save the season"
        }
       ],
-      "result": "New plan on the whiteboard by Tuesday.",
+      "result": "A new plan is on the whiteboard by Tuesday, and a summer's work on the old one goes with it.",
       "arc": {
        "flag": "changed_plan"
       }
@@ -102,10 +103,10 @@
         "op": "culture",
         "strand": "together",
         "d": 2,
-        "why": "The coach backed the group under pressure"
+        "why": "You backed the group under pressure"
        }
       ],
-      "result": "You tell them the plan is right and the results will come."
+      "result": "You tell them the plan is right and the results will come. {chairman} wanted to see a change."
      }
     ]
    },
@@ -147,11 +148,12 @@
       "label": "Say nothing",
       "effects": [
        {
-        "op": "board",
+        "op": "morale",
+        "who": "side",
         "d": -2
        }
       ],
-      "result": "No comment, and back to work."
+      "result": "No comment, and back to work. The players read it in the papers instead."
      }
     ]
    },
@@ -189,7 +191,7 @@
         "d": -2
        }
       ],
-      "result": "One game does not make a season, you tell him."
+      "result": "You tell {chairman} one game does not make a season. He wanted a promise."
      }
     ]
    }
@@ -214,13 +216,13 @@
   ],
   "endings": {
    "sacked": {
-    "line": "The board sacked {club}'s coach. The hot seat is on the record."
+    "line": "{chairman}'s board has sacked you."
    },
    "still_warned": {
     "line": "Another season on notice. The hot seat stays hot."
    },
    "survived": {
-    "line": "He survived the hot seat. The board starts next season a little warmer.",
+    "line": "You survived the hot seat. The board starts next season a little warmer.",
     "board": 5
    }
   }
@@ -236,7 +238,7 @@
    "gap": 30
   },
   "max_seasons": 2,
-  "start_line": "The coach and {chairman}'s board are no longer speaking the same language.",
+  "start_line": "You and {chairman}'s board are no longer speaking the same language.",
   "beats": [
    {
     "id": "arc_feud_budget",
@@ -302,7 +304,7 @@
     "choices": [
      {
       "key": "pick",
-      "label": "Pick him",
+      "label": "Pick {first}",
       "effects": [
        {
         "op": "morale",
@@ -340,7 +342,7 @@
      "A board election"
     ],
     "text": [
-     "A challenger is running against {chairman}. Both camps want to know where the coach stands."
+     "A challenger is running against {chairman}. Both camps want to know where you stand."
     ],
     "choices": [
      {
@@ -365,10 +367,10 @@
         "op": "culture",
         "strand": "standards",
         "d": 1,
-        "why": "The coach kept football out of club politics"
+        "why": "You kept football out of club politics"
        }
       ],
-      "result": "Football only, you say."
+      "result": "You tell both camps your job is the football."
      }
     ]
    }
@@ -397,7 +399,7 @@
   ],
   "endings": {
    "won_over": {
-    "line": "The challenger won the vote. The new board is the coach's board.",
+    "line": "The challenger won the vote. The new board is your board.",
     "board_to": 60
    },
    "lost_feud": {
@@ -405,7 +407,7 @@
     "board": -8
    },
    "peace": {
-    "line": "The feud with the board has settled into an uneasy peace."
+    "line": "Your feud with the board has settled into an uneasy peace."
    }
   }
  },
@@ -421,43 +423,43 @@
    "hero_count_min": 3
   },
   "max_seasons": 6,
-  "start_line": "{name} is the coach's project now: the kid he has put his name to.",
+  "start_line": "{name} is your project now: the kid you have put your name to.",
   "beats": [
    {
     "id": "arc_protege_debut",
     "category": "selection",
     "gap": 1,
     "title": [
-     "When does {first} play?"
+     "How much does {first} play?"
     ],
     "text": [
-     "{name} is ready to train with the seniors. The question is when he plays with them."
+     "{name} has made his mark early. The question is how much senior football he plays this year."
     ],
     "choices": [
      {
       "key": "throw",
-      "label": "Throw him in",
+      "label": "Play {first} every week",
       "effects": [
        {
         "op": "xp",
         "d": 20
        }
       ],
-      "result": "He plays this year.",
+      "result": "{first} plays every week he is fit.",
       "arc": {
        "flag": "thrown_in"
       }
      },
      {
       "key": "hold",
-      "label": "Hold him back",
+      "label": "Manage {first}'s games",
       "effects": [
        {
         "op": "morale",
         "d": -2
        }
       ],
-      "result": "Another block of training first."
+      "result": "{first} sits out some weeks, and does not enjoy watching."
      }
     ]
    },
@@ -477,7 +479,7 @@
     "choices": [
      {
       "key": "untouchable",
-      "label": "He's untouchable",
+      "label": "Say {first} is untouchable",
       "effects": [
        {
         "op": "trust",
@@ -485,7 +487,7 @@
         "why": "You told rival clubs he was not for sale"
        }
       ],
-      "result": "Not for sale, you tell them."
+      "result": "You tell both clubs {first} is not for sale."
      },
      {
       "key": "listen",
@@ -497,7 +499,7 @@
         "why": "You listened to offers for him"
        }
       ],
-      "result": "You hear the offers. He hears that you did.",
+      "result": "You hear the offers. {first} hears that you did.",
       "arc": {
        "flag": "listened"
       }
@@ -512,12 +514,12 @@
      "The leadership group"
     ],
     "text": [
-     "{name} has the respect of the young group. Some of the older ones think he should wait his turn."
+     "{name} has the respect of the young group. Some of the older ones want him to wait his turn."
     ],
     "choices": [
      {
       "key": "in",
-      "label": "Put him in the group",
+      "label": "Put {first} in the group",
       "effects": [
        {
         "op": "trust",
@@ -544,7 +546,7 @@
         "d": -2
        }
       ],
-      "result": "His time will come, you tell him."
+      "result": "You tell {first} his time will come. He wanted it now."
      }
     ]
    },
@@ -559,12 +561,12 @@
      "The next captain"
     ],
     "text": [
-     "The club asks who leads after the current captain. Everyone knows whose name you would say."
+     "The club asks who leads after the current captain. Everyone knows you would say {name}."
     ],
     "choices": [
      {
       "key": "heir",
-      "label": "Name him the heir",
+      "label": "Name {first} the heir",
       "effects": [
        {
         "op": "trust",
@@ -586,7 +588,7 @@
         "d": -3
        }
       ],
-      "result": "No change at the top."
+      "result": "No change at the top. {first} hears his name was not put forward."
      }
     ]
    },
@@ -602,12 +604,12 @@
      "{first} names his reason"
     ],
     "text": [
-     "{name}'s new deal is on the table. He tells the papers he is staying because of the coach."
+     "{name}'s new deal is on the table. {first} tells the papers he is staying because of you."
     ],
     "choices": [
      {
       "key": "thank",
-      "label": "Thank him in public",
+      "label": "Thank {first} in public",
       "effects": [
        {
         "op": "morale",
@@ -629,10 +631,10 @@
         "op": "culture",
         "strand": "together",
         "d": 1,
-        "why": "The coach turned a star's praise back to the group"
+        "why": "You turned a star's praise back to the group"
        }
       ],
-      "result": "It's about the club, you say."
+      "result": "You tell the papers it is about the club."
      }
     ]
    }
@@ -659,13 +661,13 @@
   ],
   "endings": {
    "left": {
-    "line": "{name} has gone. The kid the coach backed plays his football somewhere else now."
+    "line": "{name} has gone. The kid you backed plays his football somewhere else now."
    },
    "heir": {
-    "line": "{name}, backed as a kid, is now the captain-in-waiting under the coach who backed him."
+    "line": "{name}, the kid you backed, is now your captain-in-waiting."
    },
    "made": {
-    "line": "{name} has made it under the coach who backed him."
+    "line": "{name} has made it, and you backed him from the start."
    }
   }
  },
@@ -695,7 +697,7 @@
     "choices": [
      {
       "key": "more",
-      "label": "Ask him to think about one more",
+      "label": "Ask {first} to think about one more",
       "effects": [
        {
         "op": "trust",
@@ -703,24 +705,18 @@
         "why": "You told him you wanted him for another year"
        }
       ],
-      "result": "He says he'll decide at season's end.",
-      "arc": {
-       "flag": "asked_more"
-      }
+      "result": "{first} says he'll decide at season's end."
      },
      {
       "key": "go",
-      "label": "Plan his send-off",
+      "label": "Plan {first}'s send-off",
       "effects": [
        {
         "op": "morale",
         "d": 3
        }
       ],
-      "result": "You start planning a proper farewell.",
-      "arc": {
-       "flag": "farewell"
-      }
+      "result": "You start planning a proper farewell."
      }
     ]
    },
@@ -731,7 +727,7 @@
     "subject_where": {
      "form_low": true
     },
-    "skip_after": 16,
+    "skip_after": 8,
     "title": [
      "{first} is struggling"
     ],
@@ -741,7 +737,7 @@
     "choices": [
      {
       "key": "keep",
-      "label": "Keep picking him",
+      "label": "Keep picking {first}",
       "effects": [
        {
         "op": "morale",
@@ -753,11 +749,11 @@
         "d": -2
        }
       ],
-      "result": "He keeps his place."
+      "result": "{first} keeps his place. The younger ones keep waiting."
      },
      {
       "key": "drop",
-      "label": "Drop him",
+      "label": "Drop {first}",
       "effects": [
        {
         "op": "trust",
@@ -771,7 +767,7 @@
         "why": "A club great was dropped in his last year"
        }
       ],
-      "result": "He takes it badly.",
+      "result": "{first} takes it badly.",
       "arc": {
        "flag": "dropped"
       }
@@ -785,7 +781,7 @@
     "when": {
      "hero_is_arc_player": true
     },
-    "skip_after": 8,
+    "skip_after": 4,
     "title": [
      "{first} has still got it"
     ],
@@ -795,17 +791,14 @@
     "choices": [
      {
       "key": "praise",
-      "label": "Say he has earned his say",
+      "label": "Say {first} has earned his say",
       "effects": [
        {
         "op": "morale",
         "d": 4
        }
       ],
-      "result": "He reads it on Monday and stands a little taller.",
-      "arc": {
-       "flag": "still_got_it"
-      }
+      "result": "{first} reads it on Monday and stands a little taller."
      },
      {
       "key": "plan",
@@ -817,7 +810,7 @@
         "why": "You said his last season is still his last"
        }
       ],
-      "result": "He nods, and says nothing."
+      "result": "{first} nods, and says nothing."
      }
     ]
    },
@@ -838,14 +831,14 @@
     "choices": [
      {
       "key": "yes",
-      "label": "Give him the game",
+      "label": "Give {first} the game",
       "effects": [
        {
         "op": "expects_game",
         "sting": 10
        }
       ],
-      "result": "He'll run out one last time."
+      "result": "{first} will run out one last time."
      },
      {
       "key": "no",
@@ -856,7 +849,7 @@
         "d": -5
        }
       ],
-      "result": "The side picks itself, you tell him.",
+      "result": "You tell {first} the side picks itself.",
       "arc": {
        "flag": "no_farewell"
       }
@@ -874,6 +867,13 @@
    },
    {
     "when": {
+     "here": false,
+     "arc_flag": "no_farewell"
+    },
+    "ending": "no_send_off"
+   },
+   {
+    "when": {
      "here": false
     },
     "ending": "send_off"
@@ -887,8 +887,11 @@
    "sour_exit": {
     "line": "{name} has retired. He was dropped in his last season and has not forgotten it."
    },
+   "no_send_off": {
+    "line": "{name} has retired after {games} games, without the farewell game he asked for."
+   },
    "send_off": {
-    "line": "{name} has retired after {games} games, with a send-off from the coach."
+    "line": "{name} has retired after {games} games, with the send-off you gave him."
    },
    "one_more": {
     "line": "{name} has gone round again: one more year."
@@ -906,7 +909,7 @@
   },
   "max_seasons": 40,
   "cooldown_seasons": 2,
-  "start_line": "{drought} seasons under this coach and no flag. {chairman} is counting.",
+  "start_line": "{drought} seasons with you in charge and no flag. {chairman} is counting.",
   "beats": [
    {
     "id": "arc_drought_bust",
@@ -934,7 +937,7 @@
         "op": "culture",
         "strand": "ambition",
         "d": 2,
-        "why": "The coach said it was flag or bust"
+        "why": "You said it was flag or bust"
        }
       ],
       "result": "Flag or bust it is.",
@@ -951,7 +954,7 @@
         "d": -4
        }
       ],
-      "result": "You ask for one more build."
+      "result": "You ask for one more build. {chairman} does not like waiting."
      }
     ]
    },
@@ -979,10 +982,10 @@
         "op": "culture",
         "strand": "ambition",
         "d": 2,
-        "why": "The coach went all in on this season"
+        "why": "You went all in on this season"
        }
       ],
-      "result": "This year, you tell them.",
+      "result": "You tell the group it is this year.",
       "arc": {
        "flag": "all_in"
       }
@@ -999,10 +1002,10 @@
         "op": "culture",
         "strand": "standards",
         "d": 2,
-        "why": "The coach kept building the list"
+        "why": "You kept building the list"
        }
       ],
-      "result": "The long game."
+      "result": "You play the long game. {chairman} wanted this year."
      }
     ]
    },
@@ -1013,7 +1016,7 @@
     "phase": [
      "finals"
     ],
-    "skip_after": 12,
+    "skip_after": 24,
     "title": [
      "September again"
     ],
@@ -1041,10 +1044,10 @@
         "op": "culture",
         "strand": "together",
         "d": 1,
-        "why": "The coach kept September calm"
+        "why": "You kept September calm"
        }
       ],
-      "result": "Same week as any other."
+      "result": "No speeches. The group trains as it has all year."
      }
     ]
    }
@@ -1057,21 +1060,31 @@
     "ending": "broken"
    },
    {
-    "when": {},
+    "when": {
+     "premiers": false,
+     "arc_flag": "flag_or_bust"
+    },
     "ending": "another_miss"
+   },
+   {
+    "when": {},
+    "ending": "goes_on"
    }
   ],
   "endings": {
    "broken": {
-    "line": "The drought is over. A flag, at last, for this coach.",
+    "line": "The drought is over. A flag, at last, with you in charge.",
     "board": 8
    },
    "another_miss": {
-    "line": "Another season without a flag. The drought goes on.",
+    "line": "You said flag or bust, and there is no flag. {chairman}'s board has not forgotten it.",
     "board": -8
    },
+   "goes_on": {
+    "line": "Still no flag at {club}. The drought goes on."
+   },
    "moved_on": {
-    "line": "The coach leaves {club} without the flag the drought was about."
+    "line": "You leave {club} without the flag the drought was about."
    }
   },
   "runs_on": true,
@@ -1088,7 +1101,7 @@
    "morale_below": 50
   },
   "max_seasons": 1,
-  "start_line": "{name}, one of the best three at {club}, is unhappy and out of contract.",
+  "start_line": "{name} is unhappy at {club} and wants a move.",
   "beats": [
    {
     "id": "arc_star_manager",
@@ -1098,7 +1111,7 @@
      "{first}'s manager calls"
     ],
     "text": [
-     "{name}'s manager says his client is open to a move. He would rather deal through him."
+     "{name}'s manager says {first} is open to a move, and wants every talk to go through the manager."
     ],
     "choices": [
      {
@@ -1111,7 +1124,7 @@
         "why": "You came to him yourself"
        }
       ],
-      "result": "You sit down with him, no manager in the room.",
+      "result": "You sit down with {first}, no manager in the room.",
       "arc": {
        "flag": "met"
       }
@@ -1138,23 +1151,23 @@
      "What would keep {first}?"
     ],
     "text": [
-     "He wants to feel he matters here. You can show him, or start looking at what he would bring in a trade."
+     "{first} wants to feel he matters here. You can show him, or start looking at what he would bring in a trade."
     ],
     "choices": [
      {
       "key": "wanted",
-      "label": "Tell him he's the heart of it",
+      "label": "Tell {first} he's the heart of it",
       "effects": [
        {
         "op": "morale",
         "d": 6
        }
       ],
-      "result": "He hears it."
+      "result": "{first} hears it, and trains like it."
      },
      {
       "key": "shop",
-      "label": "Shop him",
+      "label": "Shop {first}",
       "effects": [
        {
         "op": "trust",
@@ -1186,21 +1199,21 @@
     "choices": [
      {
       "key": "keep",
-      "label": "Ask him to stay",
+      "label": "Ask {first} to stay",
       "effects": [
        {
         "op": "morale",
         "d": 5
        }
       ],
-      "result": "You ask him to stay.",
+      "result": "You ask {first} to stay.",
       "arc": {
        "flag": "asked_stay"
       }
      },
      {
       "key": "go",
-      "label": "Tell him he can go",
+      "label": "Tell {first} he can go",
       "effects": [
        {
         "op": "morale",
@@ -1208,7 +1221,7 @@
         "d": -2
        }
       ],
-      "result": "You will not stand in his way.",
+      "result": "You will not stand in {first}'s way. The rest hear that one of their best is free to leave.",
       "arc": {
        "flag": "let_go"
       }
@@ -1236,7 +1249,7 @@
   ],
   "endings": {
    "left": {
-    "line": "{name} has left {club}. Twice a year now the coach faces him."
+    "line": "{name} has left {club}. Twice a year now you face him."
    },
    "stays_loyal": {
     "line": "{name} stayed, and is settled again."
@@ -1257,7 +1270,7 @@
    "hero_count_min": 3
   },
   "max_seasons": 2,
-  "start_line": "The coach has become a story in his own right. {journalist} has noticed.",
+  "start_line": "{journalist} is writing about {club} every week now, and about you.",
   "beats": [
    {
     "id": "arc_media_radio",
@@ -1267,7 +1280,7 @@
      "A weekly radio spot"
     ],
     "text": [
-     "{journalist}'s station wants the coach on air every Monday."
+     "{journalist}'s station wants you on air every Monday."
     ],
     "choices": [
      {
@@ -1282,10 +1295,10 @@
         "op": "culture",
         "strand": "standards",
         "d": -1,
-        "why": "The coach took a weekly radio spot"
+        "why": "You took a weekly radio spot"
        }
       ],
-      "result": "Mondays on air.",
+      "result": "Mondays on air. The board likes the coverage, and the players see where your Mondays go.",
       "arc": {
        "flag": "radio"
       }
@@ -1298,7 +1311,7 @@
         "op": "culture",
         "strand": "standards",
         "d": 1,
-        "why": "The coach turned down a radio spot to focus on the club"
+        "why": "You turned down a radio spot to keep your mind on the club"
        }
       ],
       "result": "Football first."
@@ -1324,7 +1337,7 @@
     "choices": [
      {
       "key": "defend",
-      "label": "Defend him",
+      "label": "Defend {first}",
       "effects": [
        {
         "op": "trust",
@@ -1339,7 +1352,7 @@
      },
      {
       "key": "agree",
-      "label": "Agree",
+      "label": "Agree with {journalist}",
       "effects": [
        {
         "op": "trust",
@@ -1347,7 +1360,7 @@
         "why": "You agreed with the papers about him"
        }
       ],
-      "result": "You don't disagree.",
+      "result": "You tell {journalist} the criticism is fair.",
       "arc": {
        "flag": "agreed"
       }
@@ -1377,10 +1390,10 @@
         "op": "culture",
         "strand": "standards",
         "d": 2,
-        "why": "The coach fronted the media for the group"
+        "why": "You fronted the media for the group"
        }
       ],
-      "result": "You take the questions."
+      "result": "You take the questions, and the club's name is in the story all week."
      },
      {
       "key": "blame",
@@ -1396,7 +1409,7 @@
         "d": -4
        }
       ],
-      "result": "You hang it on them.",
+      "result": "You hang it on the players. The board is glad the club is clear of it.",
       "arc": {
        "flag": "blamed"
       }
@@ -1434,26 +1447,26 @@
   ],
   "endings": {
    "villain": {
-    "line": "In {journalist}'s columns the coach is the villain now. The players have closed ranks."
+    "line": "In {journalist}'s columns you are the villain now. The players have closed ranks."
    },
    "darling": {
-    "line": "The media love the coach. The board likes the coverage; some players think he is distracted."
+    "line": "The media love you. The board likes the coverage; some players think you are distracted."
    },
    "quiet": {
-    "line": "The coach has gone quiet in the press, and the story has moved on."
+    "line": "You have gone quiet in the press, and the story has moved on."
    }
   }
  },
  {
   "id": "rivalry",
-  "name": "The rivalry he made",
+  "name": "The rivalry you made",
   "catalogue": 12,
   "kind": "club",
   "trigger": {
    "kind": "rivalry"
   },
   "max_seasons": 3,
-  "start_line": "{club} and {rival_club}: a rivalry made on this coach's watch.",
+  "start_line": "{club} and {rival_club}: a rivalry made on your watch.",
   "beats": [
    {
     "id": "arc_rival_press",
@@ -1472,7 +1485,7 @@
     "choices": [
      {
       "key": "answer",
-      "label": "Answer him",
+      "label": "Answer back",
       "effects": [
        {
         "op": "morale",
@@ -1484,20 +1497,20 @@
         "d": -2
        }
       ],
-      "result": "You give it straight back.",
+      "result": "You give it straight back. The board would rather you had stayed out of it.",
       "arc": {
        "flag": "answered"
       }
      },
      {
       "key": "ignore",
-      "label": "Ignore him",
+      "label": "Let it go",
       "effects": [
        {
         "op": "culture",
         "strand": "standards",
         "d": 1,
-        "why": "The coach let the football do the talking"
+        "why": "You let the football do the talking"
        }
       ],
       "result": "No reply."
@@ -1520,11 +1533,13 @@
       "label": "Hear them out",
       "effects": [
        {
-        "op": "board",
-        "d": 2
+        "op": "culture",
+        "strand": "together",
+        "d": -1,
+        "why": "You talked trade with the old enemy"
        }
       ],
-      "result": "You take the call.",
+      "result": "You take the call. The group hears you are talking with {rival_club}.",
       "arc": {
        "flag": "dealt"
       }
@@ -1537,7 +1552,7 @@
         "op": "culture",
         "strand": "together",
         "d": 2,
-        "why": "The coach would not deal with the old enemy"
+        "why": "You would not deal with the old enemy"
        }
       ],
       "result": "Not them. Not ever.",
@@ -1575,10 +1590,7 @@
         "d": 4
        }
       ],
-      "result": "They will run through a wall.",
-      "arc": {
-       "flag": "final_met"
-      }
+      "result": "They will run through a wall."
      },
      {
       "key": "plan",
@@ -1588,13 +1600,10 @@
         "op": "culture",
         "strand": "standards",
         "d": 1,
-        "why": "The coach treated the rival final like any other"
+        "why": "You treated the rival final like any other"
        }
       ],
-      "result": "Same plan, same jobs.",
-      "arc": {
-       "flag": "final_met"
-      }
+      "result": "Same plan, same jobs."
      }
     ]
    }
@@ -1618,7 +1627,7 @@
     "line": "{club} and {rival_club} have made a truce of sorts. They do business now."
    },
    "named": {
-    "line": "{club} against {rival_club} is a rivalry with a name now, and this coach made it."
+    "line": "{club} against {rival_club} is a rivalry with a name now, and you made it."
    }
   }
  },
@@ -1631,7 +1640,7 @@
    "kind": "family_club"
   },
   "max_seasons": 3,
-  "start_line": "{name} is at {club}: the son of {father}, who played under this coach.",
+  "start_line": "{name} is at {club}: the son of {father}, who played under you.",
   "beats": [
    {
     "id": "arc_family_welcome",
@@ -1646,17 +1655,14 @@
     "choices": [
      {
       "key": "look",
-      "label": "Look after him",
+      "label": "Look after {first}",
       "effects": [
        {
         "op": "morale",
         "d": 5
        }
       ],
-      "result": "You make sure he settles.",
-      "arc": {
-       "flag": "looked_after"
-      }
+      "result": "You make sure {first} settles."
      },
      {
       "key": "nofavours",
@@ -1666,10 +1672,10 @@
         "op": "culture",
         "strand": "standards",
         "d": 1,
-        "why": "The coach gave the father-son no favours"
+        "why": "You gave the father-son no favours"
        }
       ],
-      "result": "Same as everyone, you tell him."
+      "result": "{first} gets no favours."
      }
     ]
    },
@@ -1697,10 +1703,7 @@
         "d": 6
        }
       ],
-      "result": "Father hands son the jumper.",
-      "arc": {
-       "flag": "jumper"
-      }
+      "result": "Father hands son the jumper."
      },
      {
       "key": "low",
@@ -1711,7 +1714,7 @@
         "d": 2
        }
       ],
-      "result": "Just another game, you tell him."
+      "result": "No ceremony. {first} runs out with the rest."
      }
     ]
    }
@@ -1734,7 +1737,7 @@
     "line": "{name}, {father}'s son, has left {club}. The one that got away."
    },
    "dynasty": {
-    "line": "Father and son, both under this coach: {name} carries on {father}'s name at {club}."
+    "line": "Father and son, both under you: {name} carries on {father}'s name at {club}."
    }
   }
  },
@@ -1750,7 +1753,7 @@
    "flags_min": 2
   },
   "max_seasons": 1,
-  "start_line": "{seasons_coached} seasons, {coach_games} games, {coach_flags} flag(s). The coach's legacy is being talked about.",
+  "start_line": "{seasons_coached} seasons and {coach_games} games in the job. Your legacy is being talked about.",
   "beats": [
    {
     "id": "arc_legacy_milestone",
@@ -1760,7 +1763,7 @@
      "How to mark it"
     ],
     "text": [
-     "The club wants to mark the coach's milestone before this week's game."
+     "The club wants to mark your milestone before this week's game."
     ],
     "choices": [
      {
@@ -1773,7 +1776,7 @@
         "d": 4
        }
       ],
-      "result": "The players are the story, you say."
+      "result": "You turn the day over to the players."
      },
      {
       "key": "honour",
@@ -1810,7 +1813,7 @@
         "op": "culture",
         "strand": "standards",
         "d": 2,
-        "why": "The coach started planning his succession"
+        "why": "You started planning your succession"
        }
       ],
       "result": "You name your senior assistant as the next coach.",
@@ -1827,7 +1830,7 @@
         "d": -2
        }
       ],
-      "result": "There is time, you tell him."
+      "result": "You tell {chairman} there is time. He wanted a name."
      }
     ]
    }
@@ -1848,13 +1851,13 @@
   ],
   "endings": {
    "successor_ready": {
-    "line": "The coach's legacy is set, and his successor is named."
+    "line": "Your legacy is set, and your successor is named."
    },
    "coaching_on": {
-    "line": "The coach's legacy is set. He coaches on, with no successor named."
+    "line": "Your legacy is set. You coach on, with no successor named."
    },
    "moved_on": {
-    "line": "The coach leaves {club}. His legacy there is still being talked about."
+    "line": "You leave {club}. Your legacy there is still being talked about."
    }
   }
  },
@@ -1867,7 +1870,7 @@
    "kind": "sacked"
   },
   "max_seasons": 1,
-  "start_line": "Sacked by {old_club}, the coach starts again at {club}.",
+  "start_line": "Sacked by {old_club}, you start again at {club}.",
   "beats": [
    {
     "id": "arc_back_why",
@@ -1888,7 +1891,7 @@
         "op": "culture",
         "strand": "standards",
         "d": 1,
-        "why": "The new coach would not talk about his old club"
+        "why": "You would not talk about your old club"
        }
       ],
       "result": "You talk about {club} and nothing else.",
@@ -1931,11 +1934,15 @@
      {
       "key": "keep",
       "label": "Keep in touch",
-      "effects": [],
-      "result": "You talk for an hour. He misses the old plan.",
-      "arc": {
-       "flag": "kept_touch"
-      }
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "together",
+        "d": -1,
+        "why": "You were still on the phone to your old club's players"
+       }
+      ],
+      "result": "You talk for an hour. {former} misses the old plan."
      },
      {
       "key": "leave",
@@ -1945,10 +1952,10 @@
         "op": "culture",
         "strand": "together",
         "d": 1,
-        "why": "The coach gave everything to the new group"
+        "why": "You gave everything to the new group"
        }
       ],
-      "result": "You wish him well and hang up. {club} is the job now."
+      "result": "You wish {former} well and hang up. {club} is the job now."
      }
     ]
    },
@@ -1976,10 +1983,7 @@
         "d": 2
        }
       ],
-      "result": "You tell the press it is four points like any other.",
-      "arc": {
-       "flag": "played_down"
-      }
+      "result": "You tell the press it is four points like any other."
      },
      {
       "key": "everything",
@@ -1995,10 +1999,7 @@
         "d": -2
        }
       ],
-      "result": "You tell the group this one is for you. They hear it.",
-      "arc": {
-       "flag": "meant_it"
-      }
+      "result": "You tell the group this one is for you. They hear it."
      }
     ]
    }
@@ -2030,7 +2031,7 @@
     "board": 5
    },
    "settled": {
-    "line": "A first season at {club} is done. The sacking at {old_club} is behind him."
+    "line": "A first season at {club} is done. The sacking at {old_club} is behind you."
    }
   }
  },
@@ -2046,7 +2047,7 @@
   },
   "max_seasons": 1,
   "cooldown_seasons": 4,
-  "start_line": "{suitor} want a new coach, and they want {club}'s.",
+  "start_line": "{suitor} want a new coach, and they want you.",
   "beats": [
    {
     "id": "arc_poach_call",
@@ -2082,13 +2083,115 @@
         "d": 5
        }
       ],
-      "result": "You tell him you have a job. {chairman} hears about it and is pleased.",
+      "result": "You tell {suitor_president} you have a job. {chairman} hears about it and is pleased.",
       "arc": {
        "flag": "hung_up",
        "end": "loyal"
       }
      }
     ]
+   },
+   {
+    "id": "arc_poach_captain",
+    "category": "leadership",
+    "gap": 2,
+    "subject": {
+     "pick": "random",
+     "where": {
+      "captain": true
+     }
+    },
+    "title": [
+     {
+      "when": {
+       "arc_times_min": 1
+      },
+      "text": "{name} asks you again"
+     },
+     "{name} asks you straight"
+    ],
+    "text": [
+     {
+      "when": {
+       "arc_times_min": 1
+      },
+      "text": "Another club has come calling: {suitor} this time. {name} has been here before with you, and asks if you are going."
+     },
+     "The rumours have reached the rooms. Your captain {name} asks if you are leaving for {suitor}."
+    ],
+    "choices": [
+     {
+      "key": "truth",
+      "label": "Tell {first} the truth",
+      "effects": [
+       {
+        "op": "trust",
+        "d": 4,
+        "why": "You told him the truth about the other club's approach"
+       },
+       {
+        "op": "morale",
+        "who": "side",
+        "d": -3
+       }
+      ],
+      "result": "You tell {name} you have met {suitor_president}. He respects it, and the rooms know by the weekend.",
+      "when": {
+       "arc_times_max": 0
+      }
+     },
+     {
+      "key": "deny",
+      "label": "Deny it",
+      "effects": [
+       {
+        "op": "trust",
+        "d": -2,
+        "why": "You told him there was nothing in it, after you had met the other club"
+       }
+      ],
+      "result": "You look {name} in the eye and say there is nothing in it. He goes back to training.",
+      "when": {
+       "arc_times_max": 0
+      }
+     },
+     {
+      "key": "truth_again",
+      "label": "Tell {first} the truth",
+      "when": {
+       "arc_times_min": 1
+      },
+      "effects": [
+       {
+        "op": "trust",
+        "d": 3,
+        "why": "You told him the truth about the second approach"
+       },
+       {
+        "op": "morale",
+        "who": "side",
+        "d": -2
+       }
+      ],
+      "result": "You tell {name} it is {suitor} this time, and that you have met them. He nods. He has heard it before."
+     },
+     {
+      "key": "deny_again",
+      "label": "Deny it",
+      "when": {
+       "arc_times_min": 1
+      },
+      "effects": [
+       {
+        "op": "trust",
+        "d": -3,
+        "why": "You told him there was nothing in another club's approach"
+       }
+      ],
+      "result": "You say no again. {name} does not look as sure this time."
+     }
+    ],
+    "skip_after": 3
    },
    {
     "id": "arc_poach_offer",
@@ -2125,7 +2228,7 @@
         "d": -3
        }
       ],
-      "result": "You sign for {suitor}, to start next season. It stays quiet, for now.",
+      "result": "You sign for {suitor}, to start next season. The rooms know within the week.",
       "arc": {
        "flag": "taking"
       }
@@ -2142,119 +2245,6 @@
       "result": "You thank {suitor_president} and say no.",
       "arc": {
        "flag": "stayed"
-      }
-     }
-    ]
-   },
-   {
-    "id": "arc_poach_captain",
-    "category": "leadership",
-    "gap": 2,
-    "subject": {
-     "pick": "random",
-     "where": {
-      "captain": true
-     }
-    },
-    "title": [
-     {
-      "when": {
-       "arc_times_min": 1
-      },
-      "text": "{name} asks you again"
-     },
-     "{name} asks you straight"
-    ],
-    "text": [
-     {
-      "when": {
-       "arc_times_min": 1
-      },
-      "text": "Another club, another offer: {suitor} this time. {name} has been here before with you. Are you going?"
-     },
-     "The rumours have reached the rooms. Your captain {name} asks if you are leaving for {suitor}."
-    ],
-    "choices": [
-     {
-      "key": "truth",
-      "label": "Tell him the truth",
-      "effects": [
-       {
-        "op": "trust",
-        "d": 4,
-        "why": "You told him the truth about the offer"
-       },
-       {
-        "op": "morale",
-        "who": "side",
-        "d": -3
-       }
-      ],
-      "result": "You tell him what you know. He respects it.",
-      "arc": {
-       "flag": "told_truth"
-      },
-      "when": {
-       "arc_times_max": 0
-      }
-     },
-     {
-      "key": "deny",
-      "label": "Deny it",
-      "effects": [
-       {
-        "op": "trust",
-        "d": -2,
-        "why": "You lied to him about the offer"
-       }
-      ],
-      "result": "You look him in the eye and say no. He goes back to training.",
-      "arc": {
-       "flag": "denied"
-      },
-      "when": {
-       "arc_times_max": 0
-      }
-     },
-     {
-      "key": "truth_again",
-      "label": "Tell him the truth",
-      "when": {
-       "arc_times_min": 1
-      },
-      "effects": [
-       {
-        "op": "trust",
-        "d": 3,
-        "why": "You told him the truth about the second offer"
-       },
-       {
-        "op": "morale",
-        "who": "side",
-        "d": -2
-       }
-      ],
-      "result": "You tell him it is {suitor} this time, and what they offered. He nods. He has heard it before.",
-      "arc": {
-       "flag": "told_truth"
-      }
-     },
-     {
-      "key": "deny_again",
-      "label": "Deny it",
-      "when": {
-       "arc_times_min": 1
-      },
-      "effects": [
-       {
-        "op": "trust",
-        "d": -3,
-        "why": "You lied to him about another offer"
-       }
-      ],
-      "result": "You say no again. He does not look as sure this time.",
-      "arc": {
-       "flag": "denied"
       }
      }
     ]
@@ -2280,13 +2270,13 @@
   ],
   "endings": {
    "left": {
-    "line": "The coach has left {club} for {suitor}. {chairman} will not forget it."
+    "line": "You have left {club} for {suitor}. {chairman} will not forget it."
    },
    "new_deal": {
-    "line": "The coach stays at {club} on a richer deal, and {chairman}'s board is cooler for it."
+    "line": "You stay at {club} on a richer deal, and {chairman}'s board is cooler for it."
    },
    "loyal": {
-    "line": "{suitor} came for the coach and went away without him. {club} has a loyal coach.",
+    "line": "{suitor} came for you and went away without you. {club} has a loyal coach.",
     "board": 3
    }
   }
@@ -2308,9 +2298,9 @@
     "when": {
      "flag_reunion": true
     },
-    "text": "{club} against {old_club}, {flag_years_on} years on from the {flag_year} {old_club} premiership the coach won there."
+    "text": "{club} against {old_club}, {flag_years_on} years on from the {flag_year} {old_club} premiership you won there."
    },
-   "{club} against {old_club}: the coach meets his old club."
+   "{club} against {old_club}: you meet your old club."
   ],
   "beats": [
    {
@@ -2331,7 +2321,7 @@
       "when": {
        "flag_reunion": true
       },
-      "text": "{old_club} bring back the {flag_year} premiership side for a lap before the game, {flag_years_on} years on. The coach who won it is in the other box."
+      "text": "{old_club} bring back the {flag_year} premiership side for a lap before the game, {flag_years_on} years on. You coached that side, and now you are in the other box. {journalist} wants a line from you."
      },
      "The papers call {old_club} this week a grudge match. {former}, who you coached there, lines up against you."
     ],
@@ -2344,12 +2334,12 @@
         "op": "culture",
         "strand": "standards",
         "d": 1,
-        "why": "The coach planned for the man he knew best"
+        "why": "You planned for the man you knew best"
        }
       ],
       "result": "You put your best stopper on {former}.",
-      "arc": {
-       "flag": "tagged"
+      "when": {
+       "flag_reunion": false
       }
      },
      {
@@ -2366,16 +2356,13 @@
         "d": -2
        }
       ],
-      "result": "You tell {journalist} you know where the bodies are buried at {old_club}.",
-      "arc": {
-       "flag": "bit"
-      }
+      "result": "You tell {journalist} you know where the bodies are buried at {old_club}. The board winces."
      },
      {
       "key": "down",
       "label": "Play it down",
       "effects": [],
-      "result": "You call it four points and leave it there."
+      "result": "You say {old_club} are one more side to beat, and leave it there."
      }
     ]
    },
@@ -2398,7 +2385,7 @@
     "choices": [
      {
       "key": "gracious",
-      "label": "Shake his hand",
+      "label": "Shake {old_chairman}'s hand",
       "effects": [
        {
         "op": "board",
@@ -2412,7 +2399,7 @@
      },
      {
       "key": "cold",
-      "label": "Walk past him",
+      "label": "Walk past {old_chairman}",
       "effects": [
        {
         "op": "morale",
@@ -2420,10 +2407,7 @@
         "d": 2
        }
       ],
-      "result": "You walk past {old_chairman} without a word. The cameras get all of it.",
-      "arc": {
-       "flag": "cold"
-      }
+      "result": "You walk past {old_chairman} without a word. The cameras get all of it."
      }
     ]
    }
@@ -2454,13 +2438,13 @@
   ],
   "endings": {
    "remembered": {
-    "line": "The coach beat {old_club}, and {club} will bring it up at every meeting from now on."
+    "line": "You beat {old_club}, and {club} will bring it up at every meeting from now on."
    },
    "level": {
-    "line": "The coach and {old_club} finished level. Honours shared."
+    "line": "You and {old_club} finished level. Honours shared."
    },
    "reconciled": {
-    "line": "{old_club} got the better of the day, but the coach and {old_chairman} are on speaking terms again."
+    "line": "{old_club} got the better of the day, but you and {old_chairman} are on speaking terms again."
    },
    "enjoyed": {
     "line": "{old_club} got the better of their old coach, and enjoyed every minute of it."
@@ -2469,7 +2453,7 @@
  },
  {
   "id": "assistant",
-  "name": "The assistant who wants his job",
+  "name": "The assistant who wants your job",
   "catalogue": 11,
   "kind": "club",
   "trigger": {
@@ -2494,33 +2478,27 @@
     "choices": [
      {
       "key": "confront",
-      "label": "Confront him",
+      "label": "Confront {assistant}",
       "effects": [
        {
         "op": "culture",
         "strand": "standards",
         "d": 1,
-        "why": "The coach would not be undermined"
+        "why": "You would not be undermined"
        }
       ],
-      "result": "You ask {assistant} what the lunch was about. He says it was about nothing.",
-      "arc": {
-       "flag": "confronted"
-      }
+      "result": "You ask {assistant} what the lunch was about. He says it was about nothing."
      },
      {
       "key": "delegate",
-      "label": "Give him more to do",
+      "label": "Give {assistant} more to do",
       "effects": [
        {
         "op": "board",
         "d": 2
        }
       ],
-      "result": "You hand {assistant} the forward line. If he wants the job, he can earn it.",
-      "arc": {
-       "flag": "delegated"
-      }
+      "result": "You hand {assistant} the forward line. If he wants the job, he can earn it."
      }
     ]
    },
@@ -2537,23 +2515,32 @@
     "choices": [
      {
       "key": "back",
-      "label": "Back him to go",
-      "effects": [],
-      "result": "You tell him to take it. He will be a friend at {assistant_to}.",
+      "label": "Back {assistant} to go",
+      "effects": [
+       {
+        "op": "culture",
+        "strand": "together",
+        "d": 1,
+        "why": "You backed your assistant to take a senior job"
+       }
+      ],
+      "result": "You tell {assistant} to take it. He will be a friend at {assistant_to}.",
       "arc": {
        "flag": "backed"
       }
      },
      {
       "key": "block",
-      "label": "Ask him to stay",
+      "label": "Ask {assistant} to stay",
       "effects": [
        {
-        "op": "board",
-        "d": -2
+        "op": "culture",
+        "strand": "together",
+        "d": -1,
+        "why": "You stood in your assistant's way"
        }
       ],
-      "result": "You ask him to stay. He thinks it over, and stays.",
+      "result": "You ask {assistant} to stay. He thinks it over, and stays. The group knows what it cost him.",
       "arc": {
        "flag": "blocked"
       }
@@ -2582,13 +2569,13 @@
   ],
   "endings": {
    "took_job": {
-    "line": "The coach is gone from {club}, and {assistant} has his job."
+    "line": "You are gone from {club}, and {assistant} has your job."
    },
    "left_friend": {
     "line": "{assistant} has gone to coach {assistant_to}, a friend at a rival club."
    },
    "stayed_loyal": {
-    "line": "{assistant} stays at {club}, loyal to the coach for now."
+    "line": "{assistant} stays at {club}, loyal to you for now."
    }
   }
  }

@@ -374,7 +374,7 @@ func _test_word_source() -> void:
 		_check(str((all.get(str(shown), {}) as Dictionary).get("trait", "")) == str(tn[shown]), "%s opens its trait sheet" % shown)
 	for t in SG.TOPICS:
 		_check(all.has(str(t[0])), "the guide's topic %s is a word" % t[0])
-	_check(all.has("OVR") and all.has("POT") and all.has("XP"), "OVR, POT and XP are words")
+	_check(all.has("OVR") and all.has("POT") and not all.has("XP"), "OVR and POT are words; XP is not said on the screens")
 	# Words in a line: whole words, longest first, in reading order.
 	var found: Array = FW.find_in("A Defensive Press asks for pressure; impressive.")
 	_check(found == ["Defensive Press", "Pressure"], "words in a line (%s)" % str(found))
