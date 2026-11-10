@@ -203,9 +203,7 @@ Nothing below is scheduled. No TODO row owns the game's voice today, and the roa
 
 Struck because a ruling already answers them: how odds read ("60%" vs "6 in 10") is settled by ruling 3.B.27, percentages at the gate, with words allowed off it per 3.B.32; humour allowance is settled by 3.B.34 (at most one per screen, never beside a loss, injury, sacking or suspension); whether journalists keep their own voices is settled by the bible ("Journalists have personalities"); XP stays (3.B.33); and no option may name the best choice (bible principle 4).
 
-Questions 1 to 3 (which voice, who speaks, we or you) were answered on 2026-11-10: option B, one coach voice, "we / our" with "you" for the coach personally. On the same day the director ruled that OVR, POT and the 0-100 opinion score stay visible as numbers ("Keep the numbers"). The director also ruled that the match feed keeps a broadcaster's voice ("Keep broadcaster"). One remains:
-
-1. **Does "Sim the week" keep the word "sim"?** This is already open at DIRECTOR_BIBLE.md:1921 and decides L18, L19 and L122.
+Questions 1 to 3 (which voice, who speaks, we or you) were answered on 2026-11-10: option B, one coach voice, "we / our" with "you" for the coach personally. On the same day the director ruled that OVR, POT and the 0-100 opinion score stay visible as numbers ("Keep the numbers"). The director also ruled that the match feed keeps a broadcaster's voice ("Keep broadcaster"). Finally, "Sim the week" keeps the word "sim" (this closes the question open at DIRECTOR_BIBLE.md:1921 and settles L18, L19 and L122). No questions remain open.
 
 ## 8. Sources
 
@@ -217,7 +215,7 @@ Questions 1 to 3 (which voice, who speaks, we or you) were answered on 2026-11-1
 
 ## 9. Build scope
 
-A self-contained brief for a future session. Nothing here is scheduled; it starts only when the director assigns it, and **the voice is option B, the senior coach's briefing (director, 2026-11-10)**: write every rewrite in section 5's B column and rules. OVR, POT and the 0-100 opinion score stay visible as numbers (director, 2026-11-10); keep them, with the opinion score written "%d out of 100". The match feed keeps a broadcaster's voice, set apart from the coach's (director, 2026-11-10): feed passes fix punctuation and duplicate names only, and "!" stays allowed there. The question below still decides "Sim the week"; leave those lines unchanged until it is answered.
+A self-contained brief for a future session. Nothing here is scheduled; it starts only when the director assigns it, and **the voice is option B, the senior coach's briefing (director, 2026-11-10)**: write every rewrite in section 5's B column and rules. OVR, POT and the 0-100 opinion score stay visible as numbers (director, 2026-11-10); keep them, with the opinion score written "%d out of 100". The match feed keeps a broadcaster's voice, set apart from the coach's (director, 2026-11-10): feed passes fix punctuation and duplicate names only, and "!" stays allowed there. "Sim the week" keeps the word "sim" (director, 2026-11-10): the button keeps its name, and other lines that refer to it use the same words (L122 becomes "Ask before Sim the week").
 
 **1. Voice guide.** Where: a new subsection "Voice" under §5 Copy in docs/VISUAL_STYLE_GUIDE.md (lines 187-200), plus a one-line pointer and one review question in .claude/skills/afl-ui-writing/SKILL.md. Contents: option B's rules from section 5, including the we/you rule, of this report (person, tense, sentence length; button 1-4 words as an outcome verb; header 1-4 words, no verb; gate grammar `Gain: <one effect, one number>` / `Cost: <one effect, one number>`, one unit per line; hidden meters as "%d out of 100"), the glossary and replacement words from section 4, the shared banned list, and the ten good lines from section 2 as models. Done: guide merged, under the 60 KB must-read limit (tools/check_doc_sizes.py green), afl-ui-writing points to it.
 
@@ -245,5 +243,4 @@ Done for each pass: every visible line on that screen read and either kept or re
 
 **5. Director gates inside the build.** A pass with a line the director rejects is reworked before the next screen starts.
 
-**Open questions for the director (from section 7):**
-1. Does "Sim the week" keep the word "sim"?
+**Director rulings that settle section 7 (all 2026-11-10):** voice B; OVR, POT and the 0-100 opinion score stay as numbers; the match feed keeps a broadcaster's voice; "Sim the week" keeps "sim". No questions remain open. Logging these in docs/DIRECTOR_BIBLE.md is part of the build.
