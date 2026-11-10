@@ -2575,6 +2575,10 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	intake_summary = Prospects.age_league(league_lists, next_year)
 	Season.beat()
 	intake_summary["signed"] = signed
+	# A free agent still in the pool (_fa_staying) is a year older too; out of
+	# the game, he does not develop.
+	for p in free_agents:
+		p["age"] = float(p.get("age", 25.0)) + 1.0
 	_retirees_to_coaching(intake_summary.get("retired", []), listed)
 	Almanac.add_legends(self, intake_summary.get("retired", []), listed)
 	for r in intake_summary.get("retired", []):
@@ -7586,6 +7590,11 @@ func open_offseason(keep_staff := false) -> void:
 	if not keep_staff:
 		offseason_staff = Coaches.staff(coaches, my_club) if not coaches.is_empty() else {}
 	_decide_retirements()
+	# A free agent kept in the pool last off-season (_fa_staying) whom no club
+	# took in a year: his AFL career ends here.
+	for p in free_agents:
+		if p.has("fa_kept"):
+			_career_over(p, "delisted")
 	free_agents = []
 	# A new club's approaches are settled first: it had first call.
 	ExpansionBuild.resolve(self)
@@ -8057,7 +8066,8 @@ func _cap_room_of(code: String) -> int:
 
 
 ## The cap `code` works under: the league's, plus a new club's sign-on money
-## in its first two seasons (ExpansionBuild.relief; nothing for anyone else).
+## in its first two seasons, stepping down over the next two
+## (ExpansionBuild.relief; nothing for anyone else).
 func cap_for(code: String) -> int:
 	return salary_cap + ExpansionBuild.relief(self, code)
 
@@ -8654,6 +8664,7 @@ func _join(code: String, p: Dictionary) -> void:
 		p.erase(key)
 	p.erase("project")
 	p.erase("released_by")
+	p.erase("fa_kept")
 	p.erase("comp_eligible")
 	list.append(p)
 
@@ -10540,13 +10551,43 @@ func _close_free_agency() -> void:
 				HonourBoard.leave(self, p, "free_agent")
 	_market_test(testing)
 	_resolve_market()
-	# Nobody signed them: their AFL careers end here. One of yours who went out
-	# of contract left as a free agent; one you let go keeps his delisting.
+	# Nobody signed them: their AFL careers end here, except the best of the
+	# young ones (_fa_staying), who stay in the pool for the Rookie Draft and
+	# the mid-season draft. One of yours who went out of contract left as a
+	# free agent; one you let go keeps his delisting.
+	var staying := _fa_staying()
 	for p in free_agents:
 		HonourBoard.leave(self, p, "free_agent")
-		_career_over(p, "delisted")
-	free_agents = []
+		if staying.has(p):
+			p["fa_kept"] = season_year
+			for key in ["offers", "market_round", "market_log", "talks"]:
+				p.erase(key)
+		else:
+			_career_over(p, "delisted")
+	free_agents = staying
 	mark_dirty()
+
+
+## Under this age an unsigned free agent stays in the pool one more year (the
+## director, 2026-11-11: the mid-season draft had nobody to take), and the
+## most who stay: the best rated, younger first, then id.
+const FA_STAYS_UNDER := 26.0
+const FA_STAYS_MAX := 12
+
+
+## The unsigned free agents who stay available when free agency closes.
+func _fa_staying() -> Array:
+	var young := []
+	for p in free_agents:
+		if float(p.get("age", 30.0)) < FA_STAYS_UNDER and not retiring_now(p):
+			young.append(p)
+	young.sort_custom(func(a, b):
+		if int(a.get("overall", 0)) != int(b.get("overall", 0)):
+			return int(a.get("overall", 0)) > int(b.get("overall", 0))
+		if float(a.get("age", 25.0)) != float(b.get("age", 25.0)):
+			return float(a.get("age", 25.0)) < float(b.get("age", 25.0))
+		return str(a["id"]) < str(b["id"]))
+	return young.slice(0, FA_STAYS_MAX)
 
 
 ## How free agency's close will settle your undecided players, worked out
