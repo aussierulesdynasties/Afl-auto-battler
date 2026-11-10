@@ -2841,6 +2841,9 @@ Your career stays on this device.",
 	_state.board.erase("sacked")
 	# The first postseason's sheet has its own suite (first_visit_intro).
 	_state.postseason_intro_seen = true
+	# A card the season's end raised (a Grand Final loss has one) has its own
+	# sheet test; here it sits on the hub without opening over it.
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
 	# A season that ends in a final can raise a press conference over the hub.
