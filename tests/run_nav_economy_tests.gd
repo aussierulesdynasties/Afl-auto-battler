@@ -654,7 +654,7 @@ func _test_sim_orders() -> void:
 	card2["popped"] = true
 	_gs.week_events = [card2]
 	_check(_gs.sim_week_stops().is_empty(), "with a line for the cards, nothing stops")
-	var want: int = SkipOrders.card_choice(card2, "players")
+	var want: int = load("res://scripts/sim/SkipOrders.gd").card_choice(card2, "players")
 	_gs.sim_week()
 	_check(bool(card2.get("resolved", false)) and int(card2.get("choice", -2)) == want,
 			"the card is answered the way the line says (%d, wanted %d)" % [int(card2.get("choice", -2)), want])
