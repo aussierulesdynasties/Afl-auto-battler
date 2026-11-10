@@ -176,8 +176,16 @@ func _test_list_costs() -> void:
 	_check(ListCosts.haggle_lines(1000000, 1000000).is_empty(), "No haggle line at his ask")
 	var al := ListCosts.ask_lines("")
 	_check(str(al[0]).contains("40% chance") and str(al[1]).contains("15% down"), "The ask gate states the odds and the legs (%s)" % [al])
-	_check(str(ListCosts.ask_lines("He isn't enjoying his footy any more.")[0]).begins_with("Gain: none"),
-			"A retiree who will say no is shown as no chance")
+	var no := ListCosts.ask_lines("He isn't enjoying his footy any more.")
+	_check(str(no[0]).contains("0% chance he says yes (he isn't enjoying") and str(no[1]).contains("retires either way"),
+			"A retiree who will say no is shown as no chance, and no legs cost (%s)" % [no])
+	# Under his floor he does not sign: the gate promises no saving.
+	var short := ListCosts.haggle_lines(850000, 1000000, 900000, 3)
+	_check(str(short[0]).contains("won't sign for under $900k") and str(short[1]).contains("1 of your 3 offers"),
+			"Under his floor the gate says he won't sign and what the offer uses (%s)" % [short])
+	var rude := ListCosts.haggle_lines(500000, 1000000, 900000, 3)
+	_check(str(rude[1]).contains("insulted: it uses 2 of your 3 offers") and str(rude[1]).contains("drops 5%"),
+			"Under the insult line the gate says so (%s)" % [rude])
 
 
 func _test_real_money_scale() -> void:

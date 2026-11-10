@@ -531,7 +531,8 @@ func _show_talks() -> void:
 	v.add_child(_para("Cap room after this deal: %s" % room_after_words(room_after), 14,
 			UiKit.TEXT if room_after >= 0 else UiKit.BAD))
 	if not _talk_fa:
-		var hl := ListCosts.haggle_lines(_offer_salary, int(want["salary"]))
+		var floor_price := Contracts.lowest(p, _offer_years) - GameState.culture_resign_discount(GameState.my_club, p, _offer_years)
+		var hl := ListCosts.haggle_lines(_offer_salary, int(want["salary"]), floor_price, left)
 		if not hl.is_empty():
 			v.add_child(UiKit.stake_row(str(hl[0]), "HaggleGain"))
 			v.add_child(UiKit.stake_row(str(hl[1]), "HaggleCost"))
