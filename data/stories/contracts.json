@@ -134,7 +134,7 @@
 		"choices": [
 			{
 				"key": "honest",
-				"label": "Tell {name} straight: no promises past this year",
+				"label": "Tell {name} there's no promise",
 				"effects": [
 					{
 						"op": "morale",
