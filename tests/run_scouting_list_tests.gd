@@ -1,0 +1,202 @@
+extends SceneTree
+## godot --headless --path . --script tests/run_scouting_list_tests.gd
+## The scouting list (row 130): add and remove a prospect, the cap, a listed
+## prospect's read narrowing faster than one off the list on a pinned seed,
+## rival clubs keeping lists of their own, nothing true about the prospect
+## changed, and the screen reached from My list and worked with real taps.
+const Tap := preload("res://tests/tap.gd")
+const Ran := preload("res://tests/functions_ran.gd")
+
+var _state: Node
+var _router: Node
+var _checks := 0
+var _failures: Array[String] = []
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
+	await process_frame
+	_state = root.get_node("GameState")
+	_router = root.get_node("Router")
+	_state.autosave_enabled = false
+	_state.save_path = "user://test_scouting_list.save"
+	_state.settings_path = "user://test_scouting_list_settings.cfg"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(_state.settings_path))
+	_state.show_real_names = false
+	_state.tutorials = false
+	_state.replay_seed = 1301
+	_state.reset()
+	_state.start_season("FRE", root.get_node("GameDB").club_list("FRE"))
+	root.size = Vector2i(390, 844)
+	_t("_test_add_remove_and_cap")
+	_t("_test_listed_read_narrows_faster")
+	_t("_test_save_round_trip")
+	await _t("_test_screen_real_taps")
+	print(Ran.line("ScoutingList", self))
+	quit(0 if _failures.is_empty() else 1)
+
+
+func _class() -> Array:
+	return ScoutingList.pool(_state)
+
+
+func _test_add_remove_and_cap() -> void:
+	_state.scouting_list = []
+	var pool := _class()
+	_check(pool.size() > ScoutingList.LIMIT, "A draft class to scout (%d)" % pool.size())
+	if pool.size() <= ScoutingList.LIMIT:
+		return
+	var id := str(pool[0]["id"])
+	_check(ScoutingList.add(_state, id), "A prospect goes on the list")
+	_check(ScoutingList.has(_state, id), "He is on it")
+	_check(not ScoutingList.add(_state, id), "Not twice")
+	var e: Dictionary = _state.scouting_list[0]
+	_check((e["first"]["potential"] as Array).size() == 2, "His read is noted when he goes on")
+	_check(not ScoutingList.add(_state, "nobody_by_this_id"), "Nobody outside the class")
+	for i in range(1, ScoutingList.LIMIT):
+		ScoutingList.add(_state, str(pool[i]["id"]))
+	_check(ScoutingList.full(_state), "Full at %d" % ScoutingList.LIMIT)
+	_check(not ScoutingList.add(_state, str(pool[ScoutingList.LIMIT]["id"])), "No room past the limit")
+	_check(ScoutingList.remove(_state, id), "Taken off")
+	_check(not ScoutingList.has(_state, id) and not ScoutingList.full(_state), "Off, and room again")
+	_check(not ScoutingList.remove(_state, id), "Nothing to take off twice")
+	_state.scouting_list = []
+
+
+## Two prospects with the same pinned seed and recruiting: one listed, one not.
+## After a run of weeks the listed one's read is tighter than it was, and
+## tighter than the one off the list, whose read has not moved. The truth
+## underneath stays the same, and rivals keep lists of their own.
+func _test_listed_read_narrows_faster() -> void:
+	_state.scouting_list = []
+	var pool := _class()
+	if pool.size() < 2:
+		_check(false, "A class of two or more")
+		return
+	var on: Dictionary = pool[0]
+	var off: Dictionary = pool[1]
+	for p in [on, off]:
+		p.erase("watch")
+		p.erase("seen")
+	var club: String = _state.my_club
+	var truth := [int(on["overall"]), int(on["potential"]), (on.get("attr", {}) as Dictionary).duplicate()]
+	var before: Dictionary = _state.prospect_reads([on, off])
+	ScoutingList.add(_state, str(on["id"]))
+	for w in range(17):
+		ScoutingList.week(_state)
+	var after: Dictionary = _state.prospect_reads([on, off])
+	var width := func(r: Dictionary, k: String) -> int: return int(r[k][1]) - int(r[k][0])
+	var on_b: Dictionary = before[str(on["id"])]
+	var on_a: Dictionary = after[str(on["id"])]
+	var off_b: Dictionary = before[str(off["id"])]
+	var off_a: Dictionary = after[str(off["id"])]
+	_check(int(on["watch"][club]) == 17, "Seventeen weeks watched")
+	_check(not (off.get("watch", {}) as Dictionary).has(club), "Nobody off the list is watched")
+	_check(is_equal_approx(DraftScouting.focus_mult(on, club), DraftScouting.FOCUS_FLOOR),
+			"The read is at its tightest after seventeen weeks")
+	_check(DraftScouting.focus_mult(on, club) < DraftScouting.focus_mult(off, club), "Listed reads tighter than unlisted")
+	_check(width.call(on_a, "potential") < width.call(on_b, "potential"),
+			"His POT range narrowed: %s -> %s" % [on_b["potential"], on_a["potential"]])
+	_check(width.call(on_a, "overall") <= width.call(on_b, "overall"), "His OVR range never widens")
+	_check(width.call(on_a, "potential") + width.call(on_a, "overall") < width.call(off_a, "potential") + width.call(off_a, "overall")
+			or width.call(on_b, "potential") + width.call(on_b, "overall") > width.call(off_b, "potential") + width.call(off_b, "overall"),
+			"Narrowed more than the player off the list")
+	_check(off_a == off_b, "The read off the list has not moved")
+	_check(int(on["overall"]) == truth[0] and int(on["potential"]) == truth[1] and on.get("attr", {}) == truth[2],
+			"Nothing true about him changed")
+	var moved := ScoutingList.change_text(_state.scouting_list[0], on_a)
+	_check(moved.begins_with("Listed before Round 1: ") and moved.contains(DraftScouting.range_text(on_b["potential"])),
+			"The row says how the read moved: %s" % moved)
+	var rivals := 0
+	for p in pool:
+		for c in (p.get("watch", {}) as Dictionary):
+			if str(c) != club:
+				rivals += 1
+				break
+	_check(rivals >= ScoutingList.LIMIT, "Rival scouts keep lists too (%d prospects watched)" % rivals)
+	_state.scouting_list = []
+
+
+func _test_save_round_trip() -> void:
+	_state.scouting_list = []
+	var id := str(_class()[2]["id"])
+	ScoutingList.add(_state, id)
+	_check(_state.save_career(), "The career saves")
+	_state.scouting_list = []
+	_check(_state.load_career(), "The career loads")
+	_check(ScoutingList.has(_state, id), "The list survives a save")
+	_state.scouting_list = []
+
+
+func _test_screen_real_taps() -> void:
+	_state.scouting_list = []
+	_router.go("list")
+	await _settle()
+	var open := current_scene.find_child("ScoutingOpen", true, false) as Button
+	_check(open != null and open.size.y >= 44, "My list has a thumb-sized way to the scouting list")
+	if open == null:
+		return
+	_check(open.tooltip_text.begins_with("0 of %d" % ScoutingList.LIMIT), "It says how many are on it: %s" % open.tooltip_text)
+	var missed: String = await Tap.tap(open)
+	_check(missed == "", "Scouting list takes a finger: %s" % missed)
+	await _settle()
+	_check(str(current_scene.name) == "ScoutingScene", "The tap opens the scouting list (%s)" % current_scene.name)
+	if str(current_scene.name) != "ScoutingScene":
+		return
+	_check(current_scene.find_child("ScoutListEmpty", true, false) != null, "An empty list says so")
+	var id := str(_class()[0]["id"])
+	var add := current_scene.find_child("ClassAdd_" + id, true, false) as Button
+	_check(add != null and add.size.y >= 44, "Each prospect in the class has a thumb-sized Add")
+	if add == null:
+		return
+	missed = await Tap.tap(add)
+	_check(missed == "", "Add takes a finger: %s" % missed)
+	await _settle()
+	_check(ScoutingList.has(_state, id), "A real tap puts him on the list")
+	_check(current_scene.find_child("ScoutRow_" + id, true, false) != null, "He shows on your list")
+	_check(current_scene.find_child("ClassRow_" + id, true, false) == null, "And no longer in the class below")
+	var change := current_scene.find_child("ScoutChange_" + id, true, false) as Label
+	_check(change != null and change.text.contains("Listed before Round 1"), "His row says when he was listed")
+	var rem := current_scene.find_child("ScoutRemove_" + id, true, false) as Button
+	_check(rem != null, "A listed prospect has Remove")
+	if rem == null:
+		return
+	missed = await Tap.tap(rem)
+	_check(missed == "", "Remove takes a finger: %s" % missed)
+	await _settle()
+	_check(not ScoutingList.has(_state, id), "A real tap takes him off")
+	_check(current_scene.find_child("ClassRow_" + id, true, false) != null, "He is back in the class")
+	_check(_no_bad_words(current_scene), "No best, target or should on the screen")
+
+
+## The no-recommendation rule: the screen never says who to take.
+func _no_bad_words(n: Node) -> bool:
+	if n is Label or n is Button:
+		var t := str(n.text).to_lower()
+		for w in [" best", "target", "should", "recommend"]:
+			if t.contains(w):
+				push_error("Recommendation wording: %s" % n.text)
+				return false
+	for c in n.get_children():
+		if not _no_bad_words(c):
+			return false
+	return true
+
+
+func _settle() -> void:
+	for i in range(8):
+		await process_frame
+
+
+func _check(ok: bool, what: String) -> void:
+	_checks += 1
+	if not ok:
+		_failures.append(what)
+		push_error(what)
+
+
+func _t(test: String, args := []) -> Variant:
+	return await Ran.one(self, test, args)
