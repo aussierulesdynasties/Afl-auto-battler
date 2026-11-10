@@ -118,7 +118,8 @@ func play(from: int, count: int, out: String, weather: String,
 		if together != "":
 			(sq_h if i % 2 == 0 else sq_a).together = Culture.effect_of("match_contest", "together", together)
 		# --coach S,P (row 119): side i%2 is coached by archetypes S and P
-		# (Archetypes ids, "-" for none); --side-plan X makes it play plan X.
+		# (Archetypes ids, "-" for none); --side-plan X makes it play plan X;
+		# --plan-trait T gives it game-plan trait T (PlanTraits id).
 		var cside: Squad = sq_h if i % 2 == 0 else sq_a
 		var side_plan := ""
 		for ci in range(args.size() - 1):
@@ -128,6 +129,11 @@ func play(from: int, count: int, out: String, weather: String,
 				cside.tactics_exec *= float(cside.arch.get("exec", 1.0))
 			elif str(args[ci]) == "--side-plan":
 				side_plan = str(args[ci + 1])
+			elif str(args[ci]) == "--plan-trait":
+				if PlanTraits.valid(str(args[ci + 1])) == "":
+					push_error("balance: --plan-trait is one of " + ", ".join(PlanTraits.IDS))
+					return 2
+				cside.plan_trait = str(args[ci + 1])
 		if side_plan != "":
 			cside.ai_plans = false
 		var sim := MatchSim.new(sq_h, sq_a, 500000 + i)

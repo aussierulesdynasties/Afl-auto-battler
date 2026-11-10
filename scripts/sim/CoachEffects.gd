@@ -157,6 +157,8 @@ static var usual := {}
 
 ## Your coach's archetype record (GameState.coach_arch, the same dictionary).
 static var my_arch := {}
+## Your game-plan trait (GameState.plan_trait, PlanTraits id); rivals run none.
+static var my_trait := ""
 
 
 ## A club's senior coach's two archetypes this round: [Strategic, Philosophical]
@@ -203,6 +205,7 @@ static func apply_row(sq: Squad, t: Dictionary) -> void:
 	sq.coach_style = str(t.get("style", "balanced"))
 	var ids := arch_of(sq.code) if for_club(sq.code) == t else ["", str(t.get("arch_p", ""))]
 	sq.arch = Archetypes.levers(str(ids[0]), str(ids[1]))
+	sq.plan_trait = "" if bool(t["ai"]) else my_trait
 	sq.tactics_exec *= float(sq.arch.get("exec", 1.0))
 
 

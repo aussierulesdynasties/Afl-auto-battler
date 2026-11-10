@@ -47,6 +47,9 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   (`first` the tightest hold, `last` the loosest; `tagger` only if he is a Tagger; `none` follows the same man
   with no tag). `--a "--tag none" --b "--tag last"` is what the loosest tag does against none; the report's Tags
   section gives what each midfielder's tag leaves his man, the tagged man's and tagger's lines and the margin.
+- **A game-plan trait** (`--plan-trait ID`, director 2026-11-10): side `i % 2` runs that trait (`PlanTraits.IDS`).
+  `--b "--plan-trait fortress"` against a plain A is what the trait does; the closing side_compare line gives the
+  carrying side's margin B-A with its se, its own lines and the other side's goals, intercept marks and clearances.
 - **Main against the branch** (every A/B of a change): `--a-root <checkout of origin/main> --b ""` plays
   arm A from that other checkout and arm B from this one, on the same seeds. There are no feature switches:
   a change is in the game once merged, so the only A/B is main against the branch. Each worker log starts with
