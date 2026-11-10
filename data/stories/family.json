@@ -20,7 +20,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Tell him to be there",
+				"label": "Tell {first} to be there",
 				"effects": [
 					{
 						"op": "rest"
@@ -39,7 +39,7 @@
 			},
 			{
 				"key": "play",
-				"label": "Ask him to play, then fly home",
+				"label": "Ask {first} to play, then fly home",
 				"effects": [
 					{
 						"op": "trust",
@@ -78,7 +78,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Put him on the plane",
+				"label": "Put {first} on the plane",
 				"effects": [
 					{
 						"op": "rest"
@@ -97,7 +97,7 @@
 			},
 			{
 				"key": "stay",
-				"label": "Ask him to play first",
+				"label": "Ask {first} to play first",
 				"effects": [
 					{
 						"op": "trust",
@@ -146,7 +146,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Let him go",
+				"label": "Let {first} go",
 				"effects": [
 					{
 						"op": "rest"
@@ -161,7 +161,7 @@
 			},
 			{
 				"key": "play",
-				"label": "He plays",
+				"label": "{first} plays",
 				"effects": [
 					{
 						"op": "trust",
@@ -205,7 +205,7 @@
 		"choices": [
 			{
 				"key": "help",
-				"label": "Tell him the club will help",
+				"label": "Tell {first} the club will help",
 				"effects": [
 					{
 						"op": "morale",
@@ -225,7 +225,7 @@
 			},
 			{
 				"key": "footy",
-				"label": "Tell him footy comes first",
+				"label": "Tell {first} footy comes first",
 				"effects": [
 					{
 						"op": "trust",
@@ -264,7 +264,7 @@
 		"choices": [
 			{
 				"key": "light",
-				"label": "Give him a lighter week",
+				"label": "Give {first} a lighter week",
 				"effects": [
 					{
 						"op": "fresh"
@@ -283,7 +283,7 @@
 						"d": 6
 					}
 				],
-				"note": "He misses the development a full week brings.",
+				"note": "{first} misses a full week's training.",
 				"result": "{first} gets a lighter week."
 			},
 			{
@@ -306,7 +306,7 @@
 			}
 		],
 		"private": true,
-		"stakes": "A lighter week gives up the development a full week brings."
+		"stakes": "A lighter week means {first} misses a full week's training."
 	},
 	{
 		"id": "family_partner_graduation",
@@ -327,7 +327,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Give him the afternoon",
+				"label": "Give {first} the afternoon",
 				"effects": [
 					{
 						"op": "morale",
@@ -390,7 +390,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Give him the morning",
+				"label": "Give {first} the morning",
 				"effects": [
 					{
 						"op": "morale",

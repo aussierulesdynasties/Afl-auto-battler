@@ -356,7 +356,7 @@ func _test_running_again() -> void:
 			"Four weeks out after week 3, he misses weeks 4 to 6: %d XP (want %d), %d Heavy weeks, %d rounds"
 			% [int(f["pre_miss_xp"]), want, int(f["pre_miss_heavy"]), int(f["pre_miss_rounds"])])
 	var rush := " / ".join(StoryEngine.stakes_lines(card["options"][0]["effects"], f))
-	_check(rush.contains("about %d XP of pre-season development" % want) and rush.contains("sore until Round 1")
+	_check(rush.contains("about %d pre-season development points" % want) and rush.contains("sore until Round 1")
 			and rush.contains("hurt in Round 1 and half that in the pre-season match") and rush.contains("two Heavy weeks")
 			and not rush.contains("you name him"), "Clearing him reads as the pre-season: %s" % rush)
 	_check(rush.contains("he starts each match"), "...both games, so each match: %s" % rush)
@@ -367,7 +367,7 @@ func _test_running_again() -> void:
 	_check(last_stop.contains("hurt in Round 1 (") and last_stop.contains("he starts it") and not last_stop.contains("pre-season match"),
 			"After the pre-season match the odds are for Round 1 alone: %s" % last_stop)
 	var physio := " / ".join(StoryEngine.stakes_lines(card["options"][1]["effects"], f))
-	_check(physio.contains("goes without about %d XP of pre-season development" % want), "The physio's plan names the training it costs: %s" % physio)
+	_check(physio.contains("goes without about %d pre-season development points" % want), "The physio's plan names the training it costs: %s" % physio)
 	GameState.week_events = [card]
 	var said := GameState.resolve_card(0, 0)
 	_check(int(p.get("injury_weeks", 0)) == 0 and bool(p.get("sore", false)) and str(said).contains("trains with the group"),

@@ -10,7 +10,7 @@
 			"Members want an open training day"
 		],
 		"text": [
-			"The fans would love it. The coaches would rather work."
+			"The supporters would love it. The coaches would rather work."
 		],
 		"choices": [
 			{
@@ -149,7 +149,7 @@
 						"why": "You let the club answer with its football"
 					}
 				],
-				"result": "You stay at the club."
+				"result": "You keep your head down. The emails keep coming."
 			}
 		],
 		"when": {
@@ -176,7 +176,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Send him",
+				"label": "Send {first}",
 				"effects": [
 					{
 						"op": "board",
@@ -208,7 +208,7 @@
 						"d": 2
 					}
 				],
-				"result": "The banner gets painted without him."
+				"result": "The banner gets painted without {name}."
 			}
 		]
 	},
@@ -399,7 +399,7 @@
 		"choices": [
 			{
 				"key": "banner",
-				"label": "His name goes on the banner",
+				"label": "{first}'s name goes on the banner",
 				"effects": [
 					{
 						"op": "morale",
@@ -418,7 +418,7 @@
 						"on": "grand_final"
 					}
 				],
-				"result": "His name runs across the bottom of the banner. He'll keep a piece of it forever."
+				"result": "{name}'s name runs across the bottom of the banner. He'll keep a piece of it forever."
 			},
 			{
 				"key": "club",
@@ -435,7 +435,7 @@
 						"d": -2
 					}
 				],
-				"result": "The banner is all club. His milestone gets its moment after the siren."
+				"result": "The banner is all club. {name}'s milestone gets its moment after the siren."
 			}
 		]
 	},
@@ -611,7 +611,7 @@
 						"d": -1
 					}
 				],
-				"result": "The celebrations run for a week."
+				"result": "The celebrations run for a month."
 			},
 			{
 				"key": "again",
