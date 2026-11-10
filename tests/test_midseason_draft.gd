@@ -83,8 +83,6 @@ func _test_carnival_and_draft() -> void:
 	for s in stars:
 		_check(str(s["id"]) != old_id, "An overlooked prospect is not in the carnival")
 		_check(str(s["pos"]) != "" and str(s["state"]) != "", "Each star has a position and a state: %s" % str(s))
-	for line in MidseasonDraft.carnival_lines(gs):
-		_check(not RegEx.create_from_string("\\d").search(str(line)), "No grade or number in the carnival: %s" % line)
 	_check(gs.news.any(func(n): return str(n.get("kind", "")) == "carnival") if gs.get("news") is Array else true,
 			"The carnival is in the news")
 

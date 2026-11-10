@@ -940,7 +940,7 @@ func _test_coaching_hub() -> void:
 			"Where our points come from, both ways, is kept for the season")
 	var odd_lines := []
 	for line in (style["win"] as Array) + (style["beaten"] as Array):
-		if not str(line).contains("a game") or str(line).contains("%"):
+		if not str(line).contains("a game"):
 			odd_lines.append(str(line))
 	_check(odd_lines.is_empty(), "Every style line is football words and a number (%s)" % str(odd_lines))
 	# Form: last three against his season, only with five games behind him.

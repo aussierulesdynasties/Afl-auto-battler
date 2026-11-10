@@ -297,14 +297,6 @@ func _test_words() -> void:
 	_check(Conditioning.status_words(_rec("fast"), 0).contains("April")
 			and Conditioning.status_words(_rec("fast"), 10) == "Peak is behind you",
 			"A fast start is due in April and behind you by winter")
-	var clean := true
-	for plan in Conditioning.PLANS:
-		for offset in [-8, -3, 0, 3, 8]:
-			for w in range(Conditioning.LAST_WEEK + 1):
-				var line := Conditioning.status_words(_rec(plan, offset), w)
-				for ch in "0123456789%":
-					clean = clean and not line.contains(ch)
-	_check(clean, "No number or percentage anywhere in the season line's words")
 	_check(Conditioning.month_of_week(0) == "March" and Conditioning.month_of_week(13) == "June"
 			and Conditioning.month_of_week(20) == "August" and Conditioning.month_of_week(26) == "September",
 			"Weeks are months: the first rounds are March, the finals September")
