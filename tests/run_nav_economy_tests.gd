@@ -17,7 +17,7 @@ const CLUB := "MEL"
 const PHONE := Vector2i(360, 740)
 const MAX_TAPS := 2
 
-## [fact, [taps from the hub], the node that shows it]. A tap names a node, or
+## [fact, [taps from the hub], the node that shows it ("A|B": either)]. A tap names a node, or
 ## "text:<words>" for a button found by its words, or "first:<parent>" for the
 ## first button inside <parent> (a player on the list's board).
 const FACTS := [
@@ -26,7 +26,8 @@ const FACTS := [
 	["bio", ["text:My list", "first:Best22Board"], "PlayerProfile"],
 	["draft order", [], "DraftPickLine"],
 	["board goal", ["HubCoaching"], "Board"],
-	["calls at the last break", ["ReviewLastMatch"], "FullTimeCalls"],
+	# A call the Why section already quoted is not said again under Your calls.
+	["calls at the last break", ["ReviewLastMatch"], "FullTimeCalls|WhyReasons"],
 	["cap", ["HubCoaching"], "CapLine"],
 ]
 
@@ -194,8 +195,21 @@ func _test_two_taps() -> void:
 			await _settle(10)
 		if not ok:
 			continue
-		var shown := current_scene.find_child(str(f[2]), true, false) as Control if current_scene != null else null
-		var seen := shown != null and shown.is_visible_in_tree()
+		var seen := false
+		for want in str(f[2]).split("|"):
+			var shown := current_scene.find_child(want, true, false) as Control if current_scene != null else null
+			if shown != null and shown.is_visible_in_tree():
+				seen = true
+				if want == "WhyReasons":
+					# Only when the reasons quote the call itself.
+					var lm2: Dictionary = _gs.last_match
+					var st: Dictionary = load("res://scripts/sim/MatchStory.gd").build(lm2,
+							0 if str(lm2.get("home", "")) == _gs.my_club else 1)
+					var quoted := false
+					for r in st.get("reasons", []):
+						quoted = quoted or str((r as Dictionary).get("call", "")) != ""
+					_check(quoted, "%s: Why quotes the call" % fact)
+				break
 		_check(seen, "%s: %s shows after %d tap(s) (on %s)" % [fact, f[2], (f[1] as Array).size(), _router.current()])
 		if not seen and current_scene != null:
 			# What the screen did build, to say why without another run.
