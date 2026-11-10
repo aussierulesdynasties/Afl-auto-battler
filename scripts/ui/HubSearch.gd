@@ -149,13 +149,16 @@ static func _row(results: VBoxContainer, id: String, text: String) -> Button:
 	b.set_meta(WordPress.OWN_HOLD, true)
 	b.custom_minimum_size = Vector2(0, ROW_H)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# One line each (lbl wraps by default, and a wrapping label in a row
+	# shrinks to nothing): the name gives way first, trimmed.
 	var h := UiKit.hbox(8)
-	h.set_anchors_preset(Control.PRESET_FULL_RECT)
+	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(h)
 	var nm := UiKit.lbl(str(d[0]), UiKit.NAME, UiKit.club_ink(str(d[2])) if str(d[2]) != "" else UiKit.TEXT, true)
 	nm.name = "Name"
 	nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	nm.autowrap_mode = TextServer.AUTOWRAP_OFF
 	nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -164,11 +167,13 @@ static func _row(results: VBoxContainer, id: String, text: String) -> Button:
 	var sub := UiKit.lbl(str(d[1]), UiKit.SMALL, UiKit.MUTED)
 	sub.name = "Line"
 	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sub.autowrap_mode = TextServer.AUTOWRAP_OFF
 	sub.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(sub)
 	var kept := UiKit.lbl("Kept", UiKit.SMALL, UiKit.TEXT, true)
 	kept.name = "Kept"
 	kept.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	kept.autowrap_mode = TextServer.AUTOWRAP_OFF
 	kept.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	kept.visible = GameState.shortlist.has(id) and text.strip_edges().length() >= MIN_LETTERS
 	h.add_child(kept)

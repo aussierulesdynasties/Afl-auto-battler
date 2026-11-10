@@ -83,10 +83,13 @@ func _sim_orders() -> Control:
 		var l := _wrapped(str(lines[i]), UiKit.SMALL, UiKit.TEXT)
 		l.name = "SimOrderLine_%d" % i
 		v.add_child(l)
-	var open := UiKit.btn("Set the lines", UiKit.NAME)
+	# The same button as My list under it: across a phone, sized on a PC.
+	var open := UiKit.btn("Set the lines", UiKit.BODY)
 	open.name = "SimOrdersOpen"
 	open.custom_minimum_size = Vector2(0, 48)
-	open.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	if _wide():
+		open.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		open.custom_minimum_size.x = 180
 	open.pressed.connect(func() -> void:
 		SimOrdersSheet.open(self, func() -> void:
 			if is_instance_valid(self) and is_inside_tree() and not is_queued_for_deletion():

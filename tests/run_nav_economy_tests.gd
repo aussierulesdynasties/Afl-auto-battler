@@ -547,6 +547,10 @@ func _test_search_taps() -> void:
 	_check(row != null, "typing his name lists %s" % p["name"])
 	if row == null:
 		return
+	# Seen, not just built: the name is drawn on one line across the row.
+	var nm := row.find_child("Name", true, false) as Label
+	_check(nm != null and nm.size.x >= 120.0 and nm.size.y <= row.size.y and row.size.x >= 240.0,
+			"his row shows his name on one line (name %s, row %s)" % [str(nm.size) if nm else "none", str(row.size)])
 	why = await Tap.tap(row)
 	_check(why == "", "the tap on his name lands (%s)" % why)
 	await _settle(4)
