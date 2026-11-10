@@ -1,6 +1,6 @@
 ﻿# TODO: everything not done yet
 
-The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed after merge from the PR's `Closes row N` line (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call. There are no feature switches (director 2026-11-06): work goes straight into the game and his playtest judges it (section B). Updated 2026-11-10 against main `f2467685`: every row checked against merged work. Audits and balance wait in section Z (director 2026-11-10). Live on itch: 1.0.10 (4bbab26).
+The one list of work not done. Point a session at this file and it works down it. Done and cut items are removed after merge from the PR's `Closes row N` line (git history keeps them). Director rulings live in `docs/DIRECTOR_BIBLE.md` (reference, not a work list); the later ruling wins. Balance is the director's call. There are no feature switches (director 2026-11-06): work goes straight into the game and his playtest judges it (section B). Updated 2026-11-10 against main `f2467685`: every row checked against merged work. Audits and balance wait in section Z (director 2026-11-10). Live on itch: 1.0.13 (976718a).
 
 ## Itch builds
 
@@ -68,6 +68,8 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 - 43 More Tripo emblems (15,000 credits set aside; first slice done, none further assigned).
 - 44 State of Origin (not for 1.0; scope interview first).
 - 41 Club Forge game-plan builder.
+- 142 Legacy mode: start a career in the 1990s, 2000s or 2010s with that era's real lists (director 2026-11-10, parked). Mostly data: every era needs each club's list rated like the 2026 lists, plus that era's league (Fitzroy and the Brisbane Bears early; Fremantle 1995, Port 1997, Gold Coast 2011, GWS 2012). First slice: 2010. Gathering the 2010-2019 lists and drafts started 2026-11-10 (research only, no game build yet).
+- 143 Sandbox mode: every list and every player's numbers editable at any time (director 2026-11-10, parked). A separate mode, and the career wears a visible Sandbox mark so its honours and records don't read as earned (bible: the game is objective about risk). First slice: an Edit player sheet opened from a profile, built on Club Forge and the player Forge; phone first, no spreadsheet editor.
 - T3.R41 Team selection as two screens on phone, side by side on PC, no scroll (ruled later, 2026-11-06).
 - T3.R10 Accessibility, colour-blind kit-clash check (P-34: every disc pairing through deuteranopia and protanopia simulation, CI contrast floor) and text size on ground and vignette text (#1158 Q3); parked by the director 2026-11-10.
 - Player personality types and captaincy meaning (composure, late-game stability): both wanted, later (T5.Q12, T5.Q13).
