@@ -134,7 +134,7 @@
 		"choices": [
 			{
 				"key": "honest",
-				"label": "Tell him where he stands",
+				"label": "Tell {name} there's no promise",
 				"effects": [
 					{
 						"op": "morale",
@@ -153,16 +153,16 @@
 				"label": "Tell him it'll be sorted after the season",
 				"effects": [
 					{
-						"op": "morale",
-						"d": 3
-					},
-					{
 						"op": "trust",
 						"d": -2,
 						"why": "You put off talking about his future"
+					},
+					{
+						"op": "morale",
+						"d": 1
 					}
 				],
-				"result": "{name} has to wait."
+				"result": "{name} takes that as a maybe. He wanted an answer."
 			}
 		]
 	},
@@ -261,10 +261,10 @@
 					},
 					{
 						"op": "board",
-						"d": -2
+						"d": -1
 					}
 				],
-				"result": "{name} is reassured, for now."
+				"result": "{name} is reassured, for now. The board hears a deal was promised before the numbers were agreed."
 			},
 			{
 				"key": "market",
@@ -280,8 +280,7 @@
 						"why": "You let him test the market"
 					},
 					{
-						"op": "board",
-						"d": 2
+						"op": "open_price"
 					}
 				],
 				"result": "{name}'s manager starts taking calls."

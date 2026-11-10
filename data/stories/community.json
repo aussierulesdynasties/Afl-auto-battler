@@ -26,10 +26,9 @@
 						"d": 2
 					},
 					{
-						"op": "slow_start",
-						"who": "side",
-						"chance": 10,
-						"on": "week"
+						"op": "forgo_xp",
+						"d": 4,
+						"who": "all"
 					}
 				],
 				"note": "It gives up the session that training brings.",
@@ -199,8 +198,7 @@
 						"d": -2
 					},
 					{
-						"op": "board",
-						"d": 1
+						"op": "fresh"
 					}
 				],
 				"result": "The club sends a signed jumper."
@@ -239,7 +237,10 @@
 						"d": 2
 					},
 					{
-						"op": "heavy_legs"
+						"op": "slow_start",
+						"who": "subject",
+						"chance": 10,
+						"on": "week"
 					}
 				],
 				"result": "{name} speaks at assembly."
@@ -376,12 +377,13 @@
 						"who": "side"
 					},
 					{
-						"op": "morale",
-						"d": -1,
-						"who": "side"
+						"op": "slow_start",
+						"who": "side",
+						"chance": 5,
+						"on": "grand_final"
 					}
 				],
-				"result": "Dinner at home and their own bed. Nobody's in a hurry to talk footy."
+				"result": "Dinner at home and their own bed. A few have a full house and a late night."
 			}
 		]
 	}

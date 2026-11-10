@@ -41,12 +41,12 @@
 						"why": "You talked him through being dropped"
 					},
 					{
-						"op": "expects_game",
-						"sting": 4
-					},
-					{
 						"op": "talk_note",
 						"said": "explain"
+					},
+					{
+						"op": "expects_game",
+						"sting": 4
 					}
 				]
 			},
@@ -144,12 +144,12 @@
 						"why": "You told him where he stood after his injury"
 					},
 					{
-						"op": "expects_game",
-						"sting": 4
-					},
-					{
 						"op": "talk_note",
 						"said": "explain"
+					},
+					{
+						"op": "expects_game",
+						"sting": 4
 					}
 				]
 			},
@@ -247,12 +247,12 @@
 						"why": "You told him what he has to show for a game"
 					},
 					{
-						"op": "expects_game",
-						"sting": 4
-					},
-					{
 						"op": "talk_note",
 						"said": "explain"
+					},
+					{
+						"op": "expects_game",
+						"sting": 4
 					}
 				]
 			},
@@ -332,7 +332,7 @@
 		"choices": [
 			{
 				"key": "talk",
-				"label": "Sit down with him",
+				"label": "Promise {name} a game",
 				"effects": [
 					{
 						"op": "morale",
@@ -554,11 +554,11 @@
 					},
 					{
 						"op": "morale",
-						"d": -1,
-						"who": "side"
+						"d": -2,
+						"who": "subject"
 					}
 				],
-				"result": "He shadows a senior player all week: meetings, recovery, the walk-through."
+				"result": "{first} shadows a senior player all week: meetings, recovery, the walk-through. He's quieter by Thursday."
 			},
 			{
 				"key": "alone",

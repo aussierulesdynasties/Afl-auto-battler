@@ -121,8 +121,7 @@
 						"d": 10
 					},
 					{
-						"op": "morale",
-						"d": -3
+						"op": "heavy_legs"
 					}
 				],
 				"result": "{first} stays back with the skills coach each afternoon. He's tired, but he's learning."
@@ -212,11 +211,6 @@
 				"effects": [
 					{
 						"op": "fresh"
-					},
-					{
-						"op": "trust",
-						"d": 3,
-						"why": "You kept the media off him after his first game"
 					},
 					{
 						"op": "morale",
@@ -342,8 +336,8 @@
 						"why": "You let him go home for the summer after his first season"
 					},
 					{
-						"op": "board",
-						"d": -2
+						"op": "forgo_xp",
+						"d": 10
 					}
 				],
 				"result": "{first} flies home for the break. The high-performance staff aren't thrilled he'll miss the summer block."
@@ -547,9 +541,10 @@
 						"why": "You welcomed his college coach and family to training"
 					},
 					{
-						"op": "morale",
-						"d": -2,
-						"who": "side"
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10,
+						"on": "week"
 					}
 				],
 				"result": "The coach watches from the fence. The cameras put the group off a little."
@@ -559,16 +554,14 @@
 				"label": "Keep it to the weekend, off the training track",
 				"effects": [
 					{
-						"op": "fresh"
-					},
-					{
-						"op": "trust",
-						"d": 3,
-						"why": "You kept his visitors away from training"
-					},
-					{
 						"op": "morale",
 						"d": -3
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "Training stayed closed to cameras and visitors"
 					}
 				],
 				"result": "{first} shows them around the city instead. He'd wanted them to see the club."
@@ -694,9 +687,8 @@
 						"d": 2
 					},
 					{
-						"op": "morale",
-						"d": -2,
-						"who": "side"
+						"op": "forgo_xp",
+						"d": 6
 					}
 				],
 				"result": "{first} films the message for the kids. The other young players notice who's getting the spotlight."
@@ -765,8 +757,10 @@
 						"why": "You went to bat for his family's visas before his debut"
 					},
 					{
-						"op": "board",
-						"d": -2
+						"op": "slow_start",
+						"who": "subject",
+						"chance": 10,
+						"on": "week"
 					}
 				],
 				"result": "The club's staff spend the week on the phone. The visas arrive on Friday."
@@ -796,12 +790,18 @@
 				"effects": [
 					{
 						"op": "morale",
-						"d": 3
+						"d": -2
 					},
 					{
 						"op": "trust",
 						"d": -3,
 						"why": "You asked him to make do without his family at his debut"
+					},
+					{
+						"op": "culture",
+						"strand": "ambition",
+						"d": 1,
+						"why": "His debut went ahead the week he was picked"
 					}
 				],
 				"result": "{first} plays his debut without them. They watch on a phone in the kitchen."
