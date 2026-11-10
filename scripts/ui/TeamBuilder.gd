@@ -320,9 +320,6 @@ func _build() -> void:
 	# Two abreast on a phone at the standard text size; a larger one (Settings)
 	# gives each card the width, so a full name and its lines stay whole.
 	_grid.columns = 2 if (_wide or UiKit.text_scale <= 1.0) else 1
-	if stacked and not _wide:
-		# The phone's list is one card tall: one to a row, the top three on one line.
-		_grid.columns = 1
 	if stacked and _wide:
 		_grid.columns = clampi(int(UiKit.view_width(self) / 400.0), 3, 8)
 	_grid.add_theme_constant_override("h_separation", 6)
@@ -368,9 +365,8 @@ func _fill_grid() -> void:
 
 
 ## A player as a compact card: name and OVR, then position, playing style and
-## age, then traits (or why he can't play), then his top three attributes (three
-## rows; one line on a phone's own short list, where the cards go one to a row
-## so a whole card shows). On the oval, the short version.
+## age, then traits (or why he can't play), then his top three attributes, a
+## row each. On the oval, the short version.
 func _card(id: String, on_field: bool, place: String) -> Button:
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
@@ -471,9 +467,8 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 				UiKit.BAD if not Ratings.available(p) else UiKit.MUTED)
 		third_l.name = "Third"
 		face.add_child(third_l)
-		var one_line := stacked and not _wide
-		var three_h := PlayerSheet.top_three_height(UiKit.FINE) / (3.0 if one_line else 1.0)
-		face.add_child(PlayerSheet.top_three(p, UiKit.FINE, one_line))
+		var three_h := PlayerSheet.top_three_height(UiKit.FINE)
+		face.add_child(PlayerSheet.top_three(p, UiKit.FINE))
 		b.custom_minimum_size = Vector2(160, 62 + three_h)
 		if _wide:
 			# A PC card says all of it (a cut "Playmak…" hid a trait): the line
