@@ -321,8 +321,8 @@ static func defence_texts(key: String, loose: Dictionary, minder: Dictionary, sp
 # choices and their six lines leave both men in the picture on a 360 px phone.
 const SHOT_GAIN := "%s goal, %s behind"
 const SHOT_COST := "%s it scores nothing"
-const PASS_GAIN := "%s it reaches him, then %s goal from closer"
-const PASS_COST := "%s it is cut off and the shot is gone"
+const PASS_GAIN := "%s it reaches him, then %s goal"
+const PASS_COST := "%s it is cut off, no shot"
 const BOMB_GAIN := "%s goal out of the pack, %s behind"
 const BOMB_COST := "%s the defence clears it"
 
