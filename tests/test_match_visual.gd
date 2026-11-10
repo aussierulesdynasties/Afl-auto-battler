@@ -1214,6 +1214,31 @@ func _test_broadcast_vignettes() -> void:
 
 	_check(BroadcastVignette.pick_kind(close_set, {}, final, front) == BroadcastVignette.AFTER_SIREN,
 			"A close final set shot gets the final-kick broadcast scene")
+	# The scene as a real match hands it over (T3.F-defects, audit 29): the sim logs
+	# "End of quarter 4" between the last score and the siren, so the scene must
+	# look past that line. A real full-time event list, its last score made a close
+	# set shot: the after-the-siren scene must play from MatchScene's own lookup.
+	var real: Array = _sim(4101).run()["events"].duplicate(true)
+	var last := -1
+	for i in range(real.size()):
+		if str((real[i] as Dictionary).get("kind", "")) in ["goal", "behind"]:
+			last = i
+	_check(last >= 0 and str((real[real.size() - 1] as Dictionary).get("kind", "")) == "final",
+			"A full match ends with the siren after its last score")
+	if last >= 0:
+		real = real.slice(0, last + 1) + real.slice(real.size() - 2)
+		var shot: Dictionary = real[last]
+		shot["kind"] = "goal"
+		shot["set_shot"] = true
+		shot["q"] = 4
+		shot["side"] = 0
+		shot["goals"] = [10, 9]
+		shot["behinds"] = [5, 4]
+		_check(str((real[last + 1] as Dictionary).get("kind", "")) == "quarter",
+				"The end-of-quarter line sits between the last score and the siren")
+		var nxt := BroadcastVignette.next_play_event(real, last)
+		_check(BroadcastVignette.pick_kind(shot, real[last - 1], nxt, front) == BroadcastVignette.AFTER_SIREN,
+				"A close set shot that is the match's last kick plays the after-the-siren scene")
 	var easy_set := close_set.duplicate(true)
 	easy_set["goals"] = [15, 9]
 	_check(BroadcastVignette.pick_kind(easy_set, {}, final, front) != BroadcastVignette.AFTER_SIREN,
