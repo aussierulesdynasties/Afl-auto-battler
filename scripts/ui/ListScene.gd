@@ -168,6 +168,7 @@ func _build_pane() -> Control:
 	var value: Node = cap_link.find_child("SectionLeadsTo", true, false)
 	if value is Label:
 		(value as Label).add_theme_color_override("font_color", UiKit.TEXT)
+	host.add_child(_scouting_link())
 
 	if _narrow():
 		var tabs := UiKit.hbox(2)
@@ -458,3 +459,18 @@ func _attr_columns() -> int:
 	if w < 520.0:
 		return 1
 	return 2 if w < 1000.0 else 3
+
+
+## The scouting list (row 130, ScoutingScene): a row like Captaincy's, saying
+## how many prospects are on it.
+func _scouting_link() -> Control:
+	var n := ScoutingList.rows(GameState).size()
+	var b := UiKit.section_link("Scouting list", "%d of %d  ›" % [n, ScoutingList.LIMIT], "ScoutingOpen")
+	b.pressed.connect(func(): Router.go("scouting"))
+	if not _narrow():
+		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		b.custom_minimum_size = Vector2(460, 48)
+	var value: Node = b.find_child("SectionLeadsTo", true, false)
+	if value is Label:
+		(value as Label).add_theme_color_override("font_color", UiKit.TEXT)
+	return b
