@@ -973,13 +973,10 @@ func _free_phases(k: int) -> Array:
 ## 16 m off its spot).
 func _rebound_phases(k: int) -> Array:
 	var a := _actor_id(events[k])
-	if _short_set_shot(k) and _locs.has(_prev_real(k)) and not _locs.has(k):
-		# A set shot that falls short: MatchSim logs the rebound where the mark
-		# was taken, but he kicked from the band's spot (T2.24), so it drops
-		# in front of goal, three-quarters of the way from there.
-		var spot: Vector2 = _locs[_prev_real(k)]
-		var goal := Vector2(MatchMotion.GOAL_X * _dir(int((events[_prev_real(k)] as Dictionary).get("side", 0))), 0.0)
-		_locs[k] = spot.lerp(goal, 0.75)
+	if _short_set_shot(k) and _locs.has(_prev_real(k)):
+		# Set again here: a look-ahead may have cached the logged fp before the
+		# mark was moved to its band's spot (seed 42 ev 947 flew 40 m back).
+		_locs[k] = _short_spot(k)
 	if _restart(k) == "free" or _short_set_shot(k):
 		var loc := _loc(k)
 		var d := (ball["pos"] as Vector2).distance_to(loc)
@@ -991,6 +988,15 @@ func _rebound_phases(k: int) -> Array:
 
 ## A rebound straight after a set-shot mark (one MatchSim tagged with its band):
 ## the shot did not score and the defence has it.
+## Where a set shot that falls short comes down: MatchSim logs the rebound where
+## the mark was taken, but he kicked from the band's spot (T2.24), so it drops in
+## front of goal, three-quarters of the way from there.
+func _short_spot(k: int) -> Vector2:
+	var pk := _prev_real(k)
+	var goal := Vector2(MatchMotion.GOAL_X * _dir(int((events[pk] as Dictionary).get("side", 0))), 0.0)
+	return (_locs[pk] as Vector2).lerp(goal, 0.75)
+
+
 func _short_set_shot(k: int) -> bool:
 	if str((events[k] as Dictionary).get("kind", "")) != "rebound":
 		return false
@@ -1032,6 +1038,9 @@ func _flight_shape(kind: String, d: float) -> Vector2:
 # ---------------------------------------------------------------------------
 func _loc(k: int) -> Vector2:
 	if _locs.has(k):
+		return _locs[k]
+	if _short_set_shot(k) and _locs.has(_prev_real(k)):
+		_locs[k] = _short_spot(k)
 		return _locs[k]
 	var ev: Dictionary = events[k]
 	var kind := str(ev.get("kind", ""))
