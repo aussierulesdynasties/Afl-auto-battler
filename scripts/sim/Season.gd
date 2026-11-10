@@ -580,9 +580,10 @@ static func _run_share(share: Array) -> void:
 		(pair[1] as Dictionary)["res"] = (pair[0] as MatchSim).run()
 
 
-## The web build runs without threads (so it needs no special server headers).
+## Threads everywhere but a browser build exported without them (that one
+## needs no special server headers; the threaded one does).
 static func threads_available() -> bool:
-	return not OS.has_feature("web")
+	return not OS.has_feature("web") or OS.has_feature("threads")
 
 
 ## Play the next waiting match of a no-thread job; true while more remain.
