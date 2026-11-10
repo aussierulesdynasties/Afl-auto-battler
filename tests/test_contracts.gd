@@ -2142,7 +2142,7 @@ func _test_ask_price() -> void:
 ## The clubs the ask-price volume check coaches (row 67), and its floor:
 ## trades a year a coach who asks makes on spare assets alone.
 const ASK_PRICE_CLUBS := ["GEE", "FRE", "MEL", "STK", "WBD", "SYD"]
-const ASK_PRICE_FLOOR := 1.0
+const ASK_PRICE_FLOOR := 1.4   # real AFL, about 1.4 trades a club a year; trade_up_impl measured 2.0 (the cap) in open off-seasons
 
 
 ## A player's rating next season, as a coach reads it off the screens (age
