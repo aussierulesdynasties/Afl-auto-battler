@@ -4,7 +4,7 @@
 
 **When.** Only when he says (2026-11-09): "just whenever I say". No upload, version bump or devlog without his word. Each build he calls gets the next number and its own new devlog post; a post is never retitled to cover a later build.
 
-The page is https://aussierulesdynasties.itch.io/aussie-rules-dynasties, public since 2026-10-17. The butler target is `aussierulesdynasties/aussie-rules-dynasties:<channel>`; the old gabebartolo-spec target fails with "invalid target (bad user)". The browser ("HTML") version is single-threaded, so it needs no special server headers: SharedArrayBuffer is not needed.
+The page is https://aussierulesdynasties.itch.io/aussie-rules-dynasties, public since 2026-10-17. The butler target is `aussierulesdynasties/aussie-rules-dynasties:<channel>`; the old gabebartolo-spec target fails with "invalid target (bad user)". The browser ("HTML") version is threaded (director, 2026-11-10: the loading screen keeps playing while a week's matches run on threads), so it needs SharedArrayBuffer: itch's "SharedArrayBuffer support" must be ticked.
 
 ## 1. Push with butler
 
@@ -42,7 +42,7 @@ The project already exists. These are what its Edit page should show:
 - Kind of project: **HTML**, with the html5 channel marked **This file will be played in the browser**.
 - Viewport dimensions: 1280 x 720 (the desktop design size). **Fullscreen button** ticked.
 - **Mobile friendly** ticked, orientation **Portrait** (the phone plays portrait only; the game's first tap also puts the page fullscreen in portrait).
-- "SharedArrayBuffer support" **off**. "Automatically start on page load" off (itch then shows a Run game button; that tap is also what lets the browser play sound).
+- "SharedArrayBuffer support" **on** (the threaded build does not start without it). "Automatically start on page load" off (itch then shows a Run game button; that tap is also what lets the browser play sound).
 - Pricing "No payments". Butler can't set it; it is on the dashboard, under his login.
 
 ## 4. Testers
