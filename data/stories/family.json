@@ -20,7 +20,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Tell him to be there",
+				"label": "Tell {first} to be there",
 				"effects": [
 					{
 						"op": "rest"
@@ -39,7 +39,7 @@
 			},
 			{
 				"key": "play",
-				"label": "Ask him to play, then fly home",
+				"label": "Ask {first} to play, then fly home",
 				"effects": [
 					{
 						"op": "trust",
@@ -48,9 +48,9 @@
 					},
 					{
 						"op": "culture",
-						"strand": "standards",
+						"strand": "ambition",
 						"d": 1,
-						"why": "He played the week his first child was due"
+						"why": "The game came first the week his child was born"
 					}
 				],
 				"result": "{first} plays. He's on the first flight home after the siren."
@@ -78,7 +78,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Put him on the plane",
+				"label": "Put {first} on the plane",
 				"effects": [
 					{
 						"op": "rest"
@@ -97,7 +97,7 @@
 			},
 			{
 				"key": "stay",
-				"label": "Ask him to play first",
+				"label": "Ask {first} to play first",
 				"effects": [
 					{
 						"op": "trust",
@@ -109,8 +109,16 @@
 						"d": -6
 					},
 					{
-						"op": "board",
-						"d": 2
+						"op": "slow_start",
+						"who": "subject",
+						"chance": 15,
+						"on": "week"
+					},
+					{
+						"op": "culture",
+						"strand": "ambition",
+						"d": 1,
+						"why": "The game came first while his dad was in hospital"
 					}
 				],
 				"result": "{first} stays and plays. His head's somewhere else."
@@ -138,7 +146,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Let him go",
+				"label": "Let {first} go",
 				"effects": [
 					{
 						"op": "rest"
@@ -153,7 +161,7 @@
 			},
 			{
 				"key": "play",
-				"label": "He plays",
+				"label": "{first} plays",
 				"effects": [
 					{
 						"op": "trust",
@@ -165,9 +173,10 @@
 						"d": -4
 					},
 					{
-						"op": "morale",
+						"op": "culture",
+						"strand": "ambition",
 						"d": 1,
-						"who": "side"
+						"why": "The game came before his brother's wedding"
 					}
 				],
 				"result": "{first} plays. He watches the speeches on his phone."
@@ -196,7 +205,7 @@
 		"choices": [
 			{
 				"key": "help",
-				"label": "Tell him the club will help",
+				"label": "Tell {first} the club will help",
 				"effects": [
 					{
 						"op": "morale",
@@ -209,14 +218,14 @@
 					},
 					{
 						"op": "board",
-						"d": -2
+						"d": -1
 					}
 				],
-				"result": "The club starts looking for work for his partner here."
+				"result": "The club starts looking for work for {first}'s partner here. The board signs off on the cost."
 			},
 			{
 				"key": "footy",
-				"label": "Tell him footy comes first",
+				"label": "Tell {first} footy comes first",
 				"effects": [
 					{
 						"op": "trust",
@@ -255,7 +264,7 @@
 		"choices": [
 			{
 				"key": "light",
-				"label": "Give him a lighter week",
+				"label": "Give {first} a lighter week",
 				"effects": [
 					{
 						"op": "fresh"
@@ -270,13 +279,11 @@
 						"why": "You eased off when the baby wasn't sleeping"
 					},
 					{
-						"op": "slow_start",
-						"who": "subject",
-						"chance": 15,
-						"on": "week"
+						"op": "forgo_xp",
+						"d": 6
 					}
 				],
-				"note": "He misses the development a full week brings.",
+				"note": "{first} misses a full week's training.",
 				"result": "{first} gets a lighter week."
 			},
 			{
@@ -299,7 +306,7 @@
 			}
 		],
 		"private": true,
-		"stakes": "A lighter week gives up the development a full week brings."
+		"stakes": "A lighter week means {first} misses a full week's training."
 	},
 	{
 		"id": "family_partner_graduation",
@@ -320,7 +327,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Give him the afternoon",
+				"label": "Give {first} the afternoon",
 				"effects": [
 					{
 						"op": "morale",
@@ -383,7 +390,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Give him the morning",
+				"label": "Give {first} the morning",
 				"effects": [
 					{
 						"op": "morale",

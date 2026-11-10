@@ -287,7 +287,7 @@ func _answer(i: int) -> void:
 	var chance := int(landed.get("chance", 0))
 	if str(landed.get("landed", "a")) == "b":
 		chance = 100 - chance
-	var odds := UiKit.lbl("It was a %d%% chance." % chance, UiKit.BODY, UiKit.TEXT)
+	var odds := UiKit.lbl("It was %s %d%% chance." % [LeagueStories.an(chance), chance], UiKit.BODY, UiKit.TEXT)
 	odds.name = "MediaOutcomeChance"
 	out.add_child(odds)
 	for row in press_outcome_rows(landed, str(parts[1])):

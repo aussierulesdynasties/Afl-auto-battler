@@ -7,7 +7,7 @@
 			"kind": "club"
 		},
 		"title": [
-			"The coaches want an extra session"
+			"The coaches want a heavy week"
 		],
 		"text": [
 			"A heavy week on the track, or a week to freshen up?"
@@ -15,7 +15,7 @@
 		"choices": [
 			{
 				"key": "heavy",
-				"label": "Heavy session",
+				"label": "Heavy week",
 				"effects": [
 					{
 						"op": "xp",
@@ -32,7 +32,7 @@
 			{
 				"key": "recover",
 				"label": "Recovery week",
-				"note": "No extra development.",
+				"note": "The players miss a full session's work.",
 				"effects": [
 					{
 						"op": "morale",
@@ -79,7 +79,7 @@
 		"choices": [
 			{
 				"key": "blood",
-				"label": "Back him for {run_games} games",
+				"label": "Back {first} for {run_games} games",
 				"note": "Nothing develops a player like AFL footy.",
 				"effects": [
 					{
@@ -99,7 +99,7 @@
 			{
 				"key": "develop",
 				"label": "A week with the development coaches",
-				"note": "He wanted a game. A week in the development group tells him he isn't ready, and he can't be picked this week.",
+				"note": "{name} wanted a game. A week of extra work with the development coaches tells {name} he isn't ready, and he can't be picked this week.",
 				"effects": [
 					{
 						"op": "xp",
@@ -138,12 +138,12 @@
 			"{name} wants extra goalkicking after training"
 		],
 		"text": [
-			"He's been staying back with the forwards coach most nights. The fitness staff would rather he went home."
+			"He's been staying back with the forwards coach after most sessions. The fitness staff would rather he went home."
 		],
 		"choices": [
 			{
 				"key": "stay",
-				"label": "Let him stay back",
+				"label": "Let {first} stay back",
 				"effects": [
 					{
 						"op": "xp",
@@ -162,7 +162,7 @@
 			},
 			{
 				"key": "home",
-				"label": "Send him home",
+				"label": "Send {first} home",
 				"effects": [
 					{
 						"op": "morale",
@@ -199,8 +199,10 @@
 						"who": "all"
 					},
 					{
-						"op": "board",
-						"d": -2
+						"op": "culture",
+						"strand": "standards",
+						"d": -1,
+						"why": "A fight at match sim was left alone"
 					}
 				],
 				"result": "It stays on the track. The board hears about it anyway."
@@ -215,8 +217,10 @@
 						"who": "all"
 					},
 					{
-						"op": "board",
-						"d": 2
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You pulled the group up after a fight at match sim"
 					}
 				],
 				"result": "You pull the group up. The standard is set."
@@ -255,7 +259,7 @@
 						"who": "all"
 					}
 				],
-				"note": "No extra development this week.",
+				"note": "The players miss Monday's work.",
 				"result": "Monday off. Fresh legs on Saturday."
 			},
 			{
@@ -279,7 +283,7 @@
 		"when": {
 			"round_min": 8
 		},
-		"stakes": "A day off gives up the development Monday's session brings."
+		"stakes": "A day off costs you Monday's session."
 	},
 	{
 		"id": "training_time_trial",
@@ -398,7 +402,7 @@
 		"choices": [
 			{
 				"key": "earned",
-				"label": "Tell him he's earned his spot",
+				"label": "Tell {first} he's earned his spot",
 				"effects": [
 					{
 						"op": "morale",
@@ -418,7 +422,7 @@
 			},
 			{
 				"key": "grounded",
-				"label": "Keep his feet on the ground",
+				"label": "Keep {first}'s feet on the ground",
 				"effects": [
 					{
 						"op": "xp",
@@ -462,7 +466,7 @@
 		"choices": [
 			{
 				"key": "again",
-				"label": "Back him in for another week",
+				"label": "Back {first} in for another week",
 				"effects": [
 					{
 						"op": "expects_game",
@@ -481,7 +485,7 @@
 			},
 			{
 				"key": "twos",
-				"label": "Send him back to build in the twos",
+				"label": "Send {first} back to the twos to find form",
 				"effects": [
 					{
 						"op": "xp",
@@ -563,7 +567,7 @@
 			},
 			{
 				"key": "hard",
-				"label": "A hard match-practice hit-out",
+				"label": "A full-contact match sim",
 				"effects": [
 					{
 						"op": "xp",
@@ -588,9 +592,9 @@
 						"who": "all"
 					},
 					{
-						"op": "slow_start",
-						"who": "side",
-						"chance": 10
+						"op": "forgo_xp",
+						"d": 3,
+						"who": "all"
 					}
 				],
 				"result": "Everyone watches the semi together in the theatrette. They know who's coming.",
@@ -614,12 +618,12 @@
 			"{name} is behind the group"
 		],
 		"text": [
-			"{first} came in this summer and the running group has already left him. The fitness staff want to know what you want done."
+			"{first} came in this summer and he's already off the back of the running group. The fitness staff want to know what you want done."
 		],
 		"choices": [
 			{
 				"key": "extra",
-				"label": "Put him on extra sessions",
+				"label": "Put {first} on extra sessions",
 				"effects": [
 					{
 						"op": "xp",
@@ -634,7 +638,7 @@
 			},
 			{
 				"key": "group",
-				"label": "Keep him with the group",
+				"label": "Keep {first} with the group",
 				"effects": [
 					{
 						"op": "morale",
@@ -644,7 +648,7 @@
 						"op": "culture",
 						"strand": "standards",
 						"d": -1,
-						"why": "A new recruit was left to carry short in pre-season"
+						"why": "A new recruit was let off the running in pre-season"
 					}
 				],
 				"result": "{first} stays with the group and keeps struggling to catch up."
@@ -677,7 +681,7 @@
 		"choices": [
 			{
 				"key": "build",
-				"label": "Keep building him up",
+				"label": "Keep building {first} up",
 				"effects": [
 					{
 						"op": "xp",
@@ -687,7 +691,7 @@
 						"op": "sore"
 					}
 				],
-				"result": "{first} keeps adding size through the last blocks."
+				"result": "{first} keeps adding size, and carries the soreness into Round 1."
 			},
 			{
 				"key": "hold",
@@ -722,7 +726,7 @@
 			"The pre-season camp"
 		],
 		"text": [
-			"The leaders want to get the group away before the last block. There are three ways to spend it."
+			"The leaders want to get the group away before Round 1."
 		],
 		"choices": [
 			{
@@ -782,7 +786,7 @@
 						"who": "all"
 					}
 				],
-				"result": "A week at the club, running the plan until it's second nature."
+				"result": "Three days at the club running the plan. The leaders wanted the trip away."
 			}
 		],
 		"category": "training",
@@ -804,7 +808,7 @@
 			"Premiers, and the legs know it"
 		],
 		"text": [
-			"A flag is a long night, and the list has come back soft. The fitness staff say the base is behind where it should be this time of year."
+			"A flag means a long summer, and the list has come back soft. The fitness staff say the running is behind where it usually is at this time of year."
 		],
 		"choices": [
 			{
@@ -937,12 +941,12 @@
 			"{name} wants a word about the {proj_word} move"
 		],
 		"text": [
-			"Week {proj_week} of {proj_weeks} learning to play as a {proj_word}. He rates {proj_there} there and {proj_own} in his own spot, and he has to be within {proj_pass} by week {proj_weeks}. Players this far off at this stage get there {take_odds} times. He wants to know what it's for."
+			"Week {proj_week} of {proj_weeks} learning to play as a {proj_word}. {first} rates {proj_there} as a {proj_word} and {proj_own} in his own spot, and has to close to within {proj_pass} points by week {proj_weeks}. Players this far off at this stage get there {take_odds} times. He wants to know what it's for."
 		],
 		"choices": [
 			{
 				"key": "promise",
-				"label": "Promise him a run there if it takes",
+				"label": "Promise {first} a run there if the move works",
 				"effects": [
 					{
 						"op": "morale",
@@ -952,17 +956,17 @@
 					{
 						"op": "trust",
 						"d": 3,
-						"why": "You promised him games in his new position if it takes"
+						"why": "You promised him games in his new position if the move works"
 					},
 					{
 						"op": "dev_promise"
 					}
 				],
-				"result": "You tell {name} that if it takes, he gets three games {proj_line}."
+				"result": "You tell {name} that if the move works, he gets three games {proj_line}."
 			},
 			{
 				"key": "depth",
-				"label": "Tell him it's for depth",
+				"label": "Tell {first} it's for depth",
 				"effects": [
 					{
 						"op": "no_promise"

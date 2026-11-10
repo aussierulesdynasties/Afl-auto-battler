@@ -29,13 +29,10 @@ static func entries() -> Dictionary:
 		var title := str(t[0])
 		var e := {"title": title, "kind": "How it works", "lines": [str(t[1])], "trait": ""}
 		out[title] = e
-		# "Overall (OVR)" is said as OVR on the screens, "XP and training" as XP.
+		# "Overall (OVR)" is said as OVR on the screens.
 		var short := title.get_slice("(", 1).trim_suffix(")") if title.contains("(") else ""
 		if short != "":
 			out[short] = e
-	out["XP"] = out.get("XP and training", {})
-	if (out["XP"] as Dictionary).is_empty():
-		out.erase("XP")
 	for k in CoachReport.PLAN_NAMES:
 		var part: Dictionary = CoachReport.PLAN_PARTS.get(k, {})
 		var lines := [str(part.get("does", ""))]

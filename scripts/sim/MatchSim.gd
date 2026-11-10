@@ -1741,9 +1741,13 @@ func _contest_plan(side: int) -> float:
 ## game; level or in front it has nothing to answer, so the lift is gone
 ## while the costs (legs, tempers: PEP_FIRE) stay.
 func _contest_pep(side: int) -> float:
-	if _pep(side) != "fire_up" or score(side) >= score(1 - side):
+	if not _contest_pep_on(side):
 		return 0.0
 	return fire_up_contest(side)
+
+
+func _contest_pep_on(side: int) -> bool:
+	return _pep(side) == "fire_up" and score(side) < score(1 - side)
 
 
 ## What Fire them up adds at the contest for this side while it chases the
@@ -2321,11 +2325,14 @@ const CLANGER_VALUE := 0.6
 
 func _credit_contest(side: int, stoppage: bool) -> void:
 	_credit(side, "gameplan", _contest_plan(side) * POSSESSION_VALUE)
-	_credit(side, "pep", _contest_pep(side) * POSSESSION_VALUE)
+	# The call itself gets its base lift and the game plan's pep trait gets what it
+	# added to (or took from) that lift, so the two add up to what the contest got.
+	var pep_base := PEP_FIRE_CONTEST if _contest_pep_on(side) else 0.0
+	_credit(side, "pep", pep_base * POSSESSION_VALUE)
 	_credit(side, "bursts", _contest_calls(side, stoppage) * POSSESSION_VALUE)
 	_credit(side, "traits", _contest_traits(side) * POSSESSION_VALUE)
 	_credit(side, "plan_trait", (_contest_plan_trait(side, stoppage)
-			+ _contest_pep(side) * (1.0 - 1.0 / _gt(side, "pep"))) * POSSESSION_VALUE)
+			+ pep_base * (_gt(side, "pep") - 1.0)) * POSSESSION_VALUE)
 
 
 func _credit(side: int, cause: String, pts: float) -> void:
@@ -3774,7 +3781,10 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 			_roam_note(roamer, shooter, true)
 	if rng.randf() < float(T["one_percenter_share"]):
 		_t(opp, "one_percenters")
-		_p(_one_percenter(opp), "one_percenters")
+		# A spoil is the spoiler's one-percenter. The other is still drawn (and
+		# dropped) so every later random number falls where it did.
+		var drawn = _one_percenter(opp)
+		_p(spoiler if spoilt and not marked and spoiler != null else drawn, "one_percenters")
 
 	# Unmarked and unspoiled, the ball can hit the deck: a ground-ball forward
 	# gets to it first (more often off a tall target) and snaps instead.

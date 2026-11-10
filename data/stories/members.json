@@ -10,7 +10,7 @@
 			"Members want an open training day"
 		],
 		"text": [
-			"The fans would love it. The coaches would rather work."
+			"The supporters would love it. The coaches would rather work."
 		],
 		"choices": [
 			{
@@ -121,12 +121,18 @@
 						"d": 3
 					},
 					{
-						"op": "morale",
-						"d": -2,
-						"who": "all"
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "You fronted the members yourself"
+					},
+					{
+						"op": "forgo_xp",
+						"d": 2,
+						"who": "side"
 					}
 				],
-				"result": "You front the members on Tuesday night."
+				"result": "You front the members on Tuesday night. The assistants take the session."
 			},
 			{
 				"key": "results",
@@ -143,7 +149,7 @@
 						"why": "You let the club answer with its football"
 					}
 				],
-				"result": "You stay at the club."
+				"result": "You keep your head down. The emails keep coming."
 			}
 		],
 		"when": {
@@ -170,7 +176,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Send him",
+				"label": "Send {first}",
 				"effects": [
 					{
 						"op": "board",
@@ -202,7 +208,7 @@
 						"d": 2
 					}
 				],
-				"result": "The banner gets painted without him."
+				"result": "The banner gets painted without {name}."
 			}
 		]
 	},
@@ -228,9 +234,9 @@
 						"d": 3
 					},
 					{
-						"op": "morale",
-						"d": -2,
-						"who": "all"
+						"op": "forgo_xp",
+						"d": 2,
+						"who": "side"
 					}
 				],
 				"result": "You take the questions."
@@ -240,16 +246,16 @@
 				"label": "Leave it to the CEO",
 				"effects": [
 					{
-						"op": "board",
-						"d": -2
-					},
-					{
 						"op": "xp",
 						"d": 2,
 						"who": "side"
+					},
+					{
+						"op": "board",
+						"d": -1
 					}
 				],
-				"result": "The CEO handles it."
+				"result": "The CEO handles it. The board wanted the coach's face on it."
 			}
 		],
 		"phase": [
@@ -279,9 +285,10 @@
 						"d": 3
 					},
 					{
-						"op": "morale",
-						"d": -2,
-						"who": "all"
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10,
+						"on": "week"
 					}
 				],
 				"result": "The players spend an hour with the travelling members."
@@ -296,7 +303,7 @@
 					},
 					{
 						"op": "fresh",
-						"who": "all"
+						"who": "side"
 					}
 				],
 				"result": "The players stay in."
@@ -392,7 +399,7 @@
 		"choices": [
 			{
 				"key": "banner",
-				"label": "His name goes on the banner",
+				"label": "{first}'s name goes on the banner",
 				"effects": [
 					{
 						"op": "morale",
@@ -411,23 +418,24 @@
 						"on": "grand_final"
 					}
 				],
-				"result": "His name runs across the bottom of the banner. He'll keep a piece of it forever."
+				"result": "{name}'s name runs across the bottom of the banner. He'll keep a piece of it forever."
 			},
 			{
 				"key": "club",
 				"label": "The banner is for the club",
 				"effects": [
 					{
-						"op": "morale",
-						"d": 3,
-						"who": "side"
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "You kept Grand Final week about the club"
 					},
 					{
 						"op": "morale",
 						"d": -2
 					}
 				],
-				"result": "The banner is all club. His milestone gets its moment after the siren."
+				"result": "The banner is all club. {name}'s milestone gets its moment after the siren."
 			}
 		]
 	},
@@ -603,7 +611,7 @@
 						"d": -1
 					}
 				],
-				"result": "The celebrations run for a week."
+				"result": "The celebrations run for a month."
 			},
 			{
 				"key": "again",
@@ -621,8 +629,10 @@
 						"why": "One week of celebrations, then you set the next target"
 					},
 					{
-						"op": "board",
-						"d": -2
+						"op": "culture",
+						"strand": "together",
+						"d": -1,
+						"why": "The premiership celebrations were cut to a week"
 					}
 				],
 				"result": "One week, then the talk turns to doing it again."

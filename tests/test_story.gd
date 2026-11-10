@@ -42,6 +42,8 @@ func run() -> void:
 	_t("_test_trust_rules")
 	_t("_test_engine_rules")
 	_t("_test_calendar_order")
+	_t("_test_topical_card_comes_first")
+	_t("_test_said_once_and_said_right")
 	_t("_test_arcs")
 	_t("_test_finals_and_big_weeks")
 	_t("_test_private_cards")
@@ -230,8 +232,8 @@ func _test_hints_in_words() -> void:
 const GAIN_WORDS := {
 	"morale": "(?i)morale", "xp": "(?i)development", "board": "(?i)board confidence", "trust": "opinion of you (up [0-9]+|stays)",
 	"fresh": "legs", "promise_win": "Win and", "extend_early": "signs on", "captaincy_swap": "takes the armband",
-	"rush_back": "cleared to play", "role_trial": "plays as a", "rest": "can't get hurt", "culture": "(Standards|Togetherness|Ambition) rises [0-9]+%",
-	"running": "more weeks? of running", "drill": "on the game plan", "open_price": "early premium", "new_club_keep": "He stays for",
+	"rush_back": "cleared to play", "role_trial": "plays as a", "rest": "can't get hurt", "culture": "(Standards|Togetherness|Ambition) up [0-9]+%",
+	"running": "more weeks? of running", "drill": "on the game plan", "open_price": "early premium", "new_club_keep": "stays for",
 	"no_promise": "No promise to keep",
 }
 const COST_WORDS := {
@@ -239,7 +241,7 @@ const COST_WORDS := {
 	"rest": "misses", "heavy_legs": "Heavy legs", "sore": "chance he is injured", "expects_game": "expects a game",
 	"start_backing": "expects to be picked", "back_kid": "is promised", "promise_win": "Lose or draw and", "extend_early": "Locked in", "captaincy_swap": "mid-season",
 	"rush_back": "hurt again", "slow_start": "slowly", "loss_sting": "also falls", "role_trial": "away from his usual spot", "on_record": "on the record",
-	"culture": "(Standards|Togetherness|Ambition) falls [0-9]+%", "running": "less running", "forgo_xp": "Slower growth",
+	"culture": "(Standards|Togetherness|Ambition) down [0-9]+%", "running": "less running", "forgo_xp": "Slower growth",
 	"new_club_keep": "against your cap", "new_club_go": "when this season ends", "dev_promise": "expects his next three games",
 }
 const SAMPLE_FACTS := {"sore_odds": "about 1 in 6", "take_odds": "about 6 in 10", "proj_word": "key forward", "proj_line": "up forward", "run_games": 3, "early_price": "$1m", "more_seasons": "two more seasons",
@@ -533,6 +535,63 @@ func _test_calendar_order() -> void:
 			and int(old["flags"]["club"]["f"]) == StoryEngine.week_abs(2027, 26)
 			and int((old["cats"] as Array)[0][0]) == StoryEngine.week_abs(2027, 26)
 			and not StoryEngine.is_old_calendar(old), "An old save's story weeks convert on load")
+
+
+## Bug bash 3: the cards about a losing run sat behind every running story
+## and were never dealt in 17 seasons. A topical card is the week's card.
+func _test_topical_card_comes_first() -> void:
+	var deck := [_club_card("other", "training", {"cooldown": 0, "weight": 50}),
+			_club_card("spray", "media", {"cooldown": 0, "topical": true, "when": {"losing_run_min": 2}})]
+	var losing := 0
+	var winning := 0
+	for wk in range(2, 22):
+		var ctx := {"seed": 7, "year": 2027, "week": wk, "phase": "regular", "club": {"losing_run": 2}, "players": []}
+		var got: Array = StoryEngine.pick_week(deck, ctx, StoryEngine.new_state())
+		if got.size() == 1 and str(got[0]["tid"]) == "spray":
+			losing += 1
+		ctx["club"] = {"losing_run": 1}
+		for c in StoryEngine.pick_week(deck, ctx, StoryEngine.new_state()):
+			if str(c["tid"]) == "spray":
+				winning += 1
+	_check(losing == 20, "Two losses in a row: the card about it comes that week, a quiet week too (%d of 20)" % losing)
+	_check(winning == 0, "It never comes without the losing run")
+	var story := StoryEngine.new_state()
+	var c2 := {"seed": 7, "year": 2027, "week": 5, "phase": "regular", "club": {"losing_run": 3}, "players": []}
+	var real := [StoryDeck.by_id(StoryDeck.all(), "media_radio_spray")]
+	_check(StoryEngine.pick_week(real, c2, story).size() == 1, "The real card is dealt on a losing run")
+	c2["week"] = 6
+	_check(StoryEngine.pick_week(real, c2, story).is_empty(), "...and waits out its cooldown, not every week of the run")
+	for id in ["media_radio_spray", "leadership_players_meeting", "board_wants_answers"]:
+		_check(bool(StoryDeck.by_id(StoryDeck.all(), id).get("topical", false)), "%s is the week's card when its run is on" % id)
+
+
+## Bug bash 3: a line is filed once however long the fact stays true, and a
+## number takes the article it is said with.
+func _test_said_once_and_said_right() -> void:
+	GameState.milestone_log = Milestones.empty()
+	_check(Milestones.tell_once(GameState, "p1|x is set to make his debut.") and not Milestones.tell_once(GameState, "p1|x is set to make his debut."),
+			"A milestone preview is filed once, not every week it stays true")
+	var kept: Dictionary = Milestones.normalise(GameState.milestone_log.duplicate(true), GameState)
+	_check((kept.get("told", {}) as Dictionary).size() == 1, "What was told survives a save and load")
+	var old_save := Milestones.empty()
+	old_save.erase("told")
+	GameState.milestone_log = old_save
+	_check(Milestones.tell_once(GameState, "k"), "An older save with no record starts one")
+	GameState.milestone_log = Milestones.empty()
+	var wrong := []
+	for n in [8, 11, 18, 80, 86, 800, 8000, 11000]:
+		if LeagueStories.an(n) != "an":
+			wrong.append(n)
+	for n in [1, 7, 10, 12, 17, 19, 28, 100, 180]:
+		if LeagueStories.an(n) != "a":
+			wrong.append(n)
+	_check(wrong.is_empty(), "an 8, an 11, an 18, an 86; a 7, a 12, a 100 (%s)" % str(wrong))
+	_check(Injuries.wording("elbow") == "an elbow injury" and Injuries.wording("back") == "a back injury",
+			"An injury is said as football says it (%s, %s)" % [Injuries.wording("elbow"), Injuries.wording("back")])
+	var shares: Array = GateOdds.plan_shares("defensive")
+	_check((shares[1] as Array).size() == 4 and str(GateOdds.PLAN_COST["defensive"]).count("%s") == 4
+			and str(GateOdds.PLAN_COST["defensive"]).contains("less ground a kick"),
+			"The Defensive Press gate states every cost the match applies, the ground lost a kick included")
 
 
 func _test_engine_rules() -> void:
@@ -1273,8 +1332,8 @@ func _test_trial_result() -> void:
 		else:
 			_check(GameState.project_job(player) == "", "A fail starts no training")
 		var t := str(card["text"])
-		_check(t.contains("averaged a Player rating of %d as a %s" % [int(f["trial_avg"]), str(f["trial_word"])])
-				and t.contains("who started as a %s this year average a Player rating of %d" % [str(f["trial_word"]), int(f["trial_par"])]),
+		_check(t.contains("rated %d as a %s over the three games" % [int(f["trial_avg"]), str(f["trial_word"])])
+				and t.contains("The average %s rates %d" % [str(f["trial_word"]), int(f["trial_par"])]),
 				"The card shows both numbers in words: %s" % t)
 		_check(t.contains("three weeks already banked") == started, "...and says whether training starts: %s" % t)
 	# The league's position averages fill from every club's starters.
@@ -1294,8 +1353,8 @@ func _test_role_card_shape() -> void:
 	# The dropped card shows what his form has been and what a starter in his position averages.
 	var pc := GameState.story_card("media_in_the_papers", _trial_candidate())
 	var pf: Dictionary = pc["facts"]
-	_check(int(pf["role_avg"]) > 0 and str(pc["text"]).contains("averaged a Player rating of %d over his last three games" % int(pf["form"]))
-			and str(pc["text"]).contains("this year average a Player rating of %d" % int(pf["role_avg"])),
+	_check(int(pf["role_avg"]) > 0 and str(pc["text"]).contains("has rated %d over his last three games" % int(pf["form"]))
+			and str(pc["text"]).contains("rates %d" % int(pf["role_avg"])),
 			"The dropped card states his form and the position average: %s" % str(pc["text"]))
 	var ctx := ClubStories.context(GameState)
 	var t := StoryDeck.by_id(StoryDeck.all(), "media_papers_again")
@@ -1324,7 +1383,7 @@ func _test_role_card_shape() -> void:
 	_check(str(card["text"]).contains("playing as a " + word) and str(card["text"]).contains(GameDB.player_display_name(p).split(" ")[0] + " wants to know"),
 			"The body names the position and who wants to know: %s" % str(card["text"]))
 	_check(not str(card["text"]).contains("He wants to know"), "...not 'He'")
-	_check(str((card["options"] as Array)[1]["label"]) == "Try him as a " + word, "The button reads 'Try him as a %s'" % word)
+	_check(str((card["options"] as Array)[1]["label"]) == "Try %s as a %s" % [GameDB.player_display_name(p).split(" ")[0], word], "The button names him: 'Try [first name] as a %s'" % word)
 	var detail := str((card["options"] as Array)[1]["detail"])
 	_check(detail.contains("plays as a " + word) and detail.contains("goes back to being a "), "...and so does its Gain line, naming where he goes back to: %s" % detail)
 	# Already picked in his second position (qa T12): no card, no trial.
@@ -1836,8 +1895,8 @@ func _test_captain_cards() -> void:
 			and leave_detail.contains("would listen to" if stands else "wouldn't listen to")
 			and not leave_detail.to_lower().contains("settle") and not leave_detail.contains("Leadership"),
 			"The card line says what happens both ways, from the choice's own effects, and which way it stands (%s)" % leave_detail)
-	_check(leave_rule.contains("Leadership %d" % Leadership.of(cap)) and leave_rule.contains("%d or more" % StoryDeck.HOLDS_AT)
-			and leave_rule.contains("%d or more" % StoryDeck.HOLDS_WITH_TRUST) and not leave_rule.to_lower().contains("settle"),
+	_check(leave_rule.contains("Leadership %d" % Leadership.of(cap)) and leave_rule.contains("%d or better" % StoryDeck.HOLDS_AT)
+			and leave_rule.contains("%d is enough" % StoryDeck.HOLDS_WITH_TRUST) and not leave_rule.to_lower().contains("settle"),
 			"The rule one tap away prints his Leadership and the thresholds from the constants (%s)" % leave_rule)
 	_check(bool(card.get("choice_notes", false)), "A captain card shows what each choice does under its button")
 	var holds := StoryDeck.HOLDS_AT
@@ -3248,7 +3307,7 @@ func _test_silent_defaults_announced() -> void:
 	var sore := GameState.story_card("health_pulled_up_sore", p)
 	var sl := StoryEngine.silence_line(sore)
 	var play_lines := " ".join(StoryEngine.card_lines(sore, 1))
-	_check(sl == "If you leave this, it goes as \"Play him\"." and play_lines.contains("%") and play_lines.contains("chance"),
+	_check(sl.begins_with("If you leave this, it goes as \"Play ") and not sl.contains("Play him") and play_lines.contains("%") and play_lines.contains("chance"),
 			"The sore star's card says leaving it plays him; the odds sit under Play him (%s / %s)" % [sl, play_lines])
 	# Saying nothing's own price still reads as before, now with its size.
 	var quiet := GameState.story_card("media_in_the_papers", p)
@@ -3259,7 +3318,7 @@ func _test_silent_defaults_announced() -> void:
 func _test_every_line_has_a_size() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[4]
-	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+/100|[0-9]+ XP|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends|^No promise to keep[.]$")
+	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+/100|[0-9]+ (pre-season )?development points|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends|^No promise to keep[.]$")
 	var bad := []
 	var parts_seen := 0
 	for t in StoryDeck.all():
@@ -3310,7 +3369,7 @@ func _test_line_numbers_match_effects() -> void:
 						want = ("opinion of you stays %d/100" % Trust.opinion(t0)) if mv == 0 else \
 								"opinion of you %s %d, to %d/100" % ["up" if mv > 0 else "down", absi(mv), Trust.opinion(t0) + mv]
 					"xp":
-						want = "%d XP of development (a senior game gives %d)" % [int(e["d"]), GameState.XP_SENIOR_GAME]
+						want = "%d development points (a senior game gives %d)" % [int(e["d"]), GameState.XP_SENIOR_GAME]
 					"slow_start":
 						want = "About a %d%% chance" % int(e["chance"])
 					"loss_sting":
@@ -3320,13 +3379,13 @@ func _test_line_numbers_match_effects() -> void:
 								-Trust.opinion_move(int(card["facts"].get("trust", 0)), ClubStories.BROKEN_PROMISE_TRUST)]
 					# The pre-season cards' levers, against the pre-season's own sizes.
 					"culture":
-						want = "%s %d%%" % ["rises" if int(e["d"]) > 0 else "falls", absi(int(e["d"]))]
+						want = "%s %d%%" % ["up" if int(e["d"]) > 0 else "down", absi(int(e["d"]))]
 					"running":
 						want = ("more week" if int(e["d"]) > 0 else "less running")
 					"drill":
 						want = "more week%s on the game plan" % ("" if int(e["d"]) == 1 else "s")
 					"forgo_xp":
-						want = "goes without %d XP" % int(e["d"])
+						want = "goes without %d development points" % int(e["d"])
 					"open_price":
 						want = "No %d%% early premium" % StoryEngine.EARLY_PREMIUM_PCT
 				if want == "":
@@ -3560,6 +3619,50 @@ func _test_dev_promise_kept_broken_lapsed() -> void:
 		if str(c.get("tid", "")).begins_with("media_trial_") and str(c.get("text", "")).contains("You promised him this chance in Round"):
 			told = true
 	_check(told, "The trial's result card says it was the chance you promised (%s)" % str(GameState.week_events.map(func(c): return c.get("tid", ""))))
+	# Already picked in the new position when the games fall due: they still
+	# start, are counted, and the promise is kept.
+	_start()
+	p = _dev_learner()
+	id = str(p["id"])
+	role = GameState.project_role(p)
+	GameState.dev_talk(p, "promise")
+	_judge(p, true)
+	var named := GameState.current_side()
+	GameState._move_in_sel(named, id, role)
+	GameState.set_selection(named)
+	_check(GameState._in_trial_line(GameState._line_of(GameState.current_side(), id), role), "(setup) he is already picked in the new position")
+	GameState._dev_promise_week()
+	dt = p["dev_talk"]
+	_check(str(dt["state"]) == "on" and int(GameState.role_trial.get("promised", 0)) > 0 and str(GameState.role_trial.get("id", "")) == id,
+			"Already picked there, his promised games still start (%s, %s)" % [str(dt), str(GameState.role_trial)])
+	_check(_news_has("plays his next three games as a") and not _news_has("then goes back"), "...and the news does not send him back anywhere")
+	for r in range(GameState.DEV_PROMISE_GAMES):
+		GameState.advance()
+	_check(str(dt["state"]) == "kept" and GameState.role_trial.is_empty(), "...and three games later the promise is kept (%s)" % str(dt))
+	# Another player's trial takes the place of the promised one: the games are
+	# owed again, and start once that trial is over.
+	_start()
+	p = _dev_learner()
+	id = str(p["id"])
+	GameState.dev_talk(p, "promise")
+	_judge(p, true)
+	GameState._dev_promise_week()
+	dt = p["dev_talk"]
+	var other := {}
+	var side_now := GameState.current_side()
+	for q in GameState.my_list:
+		if str(q["id"]) != id and not (_line_in(side_now, str(q["id"])) in ["", "BENCH"]) and ClubStories.trial_role(q) != "" 				and GameState.start_role_trial(q, 3) != "":
+			other = q
+			break
+	_check(str(dt["state"]) == "on" and not other.is_empty() and str(GameState.role_trial.get("id", "")) == str(other.get("id", "")),
+			"(setup) another player's trial replaced the promised one (%s)" % str(GameState.role_trial))
+	GameState._dev_promise_week()
+	_check(str(dt["state"]) == "owed" and str(GameState.role_trial.get("id", "")) == str(other.get("id", "")),
+			"His promised games are owed again while the other trial runs (%s)" % str(dt))
+	GameState._end_role_trial(true)
+	GameState._dev_promise_week()
+	_check(str(dt["state"]) == "on" and str(GameState.role_trial.get("id", "")) == id and GameState.role_trial.has("promised"),
+			"...and start again once it is over (%s, %s)" % [str(dt), str(GameState.role_trial)])
 	# Broken: you take him out of the trial line.
 	_start()
 	p = _dev_learner()

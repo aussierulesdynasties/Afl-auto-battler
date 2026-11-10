@@ -1979,7 +1979,7 @@ func begin_real_lists() -> void:
 		role_counts[code] = c
 		role_pairs[code] = pairs
 	draft = Draft.build_intake(open_pool, active.duplicate(), opening_order(active),
-			_clock_seed(2), sizes, role_counts, role_pairs)
+			prospect_read_seed(), sizes, role_counts, role_pairs)
 	draft.senior_cap = RookieList.SENIOR_SPOTS
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
@@ -2228,6 +2228,11 @@ func choose_sim_ahead_club(code: String) -> bool:
 	sim_ahead = false
 	challenge = _sim_ahead_challenge
 	_sim_ahead_challenge = {}
+	# A Rebuild on a joining club is that club's rebuild, whether the years before
+	# it were played out or read from a shipped history (begin_from_history).
+	if Challenge.kind(self) == "rebuild" and GameDB.enter_year(code) > GameDB.START_YEAR 			and str(challenge.get("club", "")) != code:
+		challenge["club"] = code
+		challenge["gone"] = []
 	draft.scouting_mults[code] = recruiting_uncertainty_mult()
 	draft.start_for_user(code)
 	add_news("career", "You are the new senior coach of %s, from the %d National Draft." % [
@@ -2345,7 +2350,9 @@ func begin_intake_draft() -> bool:
 	# _start_next_season) rather than drafting into one - unless it is
 	# building its list (ExpansionBuild): then it has a seat and early picks.
 	var active := GameDB.active_clubs(season_year)
-	var seed := _clock_seed(2)
+	# The scouting list read this class with prospect_read_seed all year: draft
+	# night must use the same seed, or its marks, ranges and rank disagree.
+	var seed := prospect_read_seed()
 	draft = Draft.build_intake(open_pool, active.duplicate(), order,
 			seed, sizes, role_counts, role_pairs)
 	# The National Draft fills the senior list; the Rookie Draft follows.
@@ -6531,8 +6538,13 @@ func _dev_promise_week() -> void:
 		if t.is_empty() or int(p.get("injury_weeks", 0)) > 0:
 			continue
 		p["expects_game"] = DEV_PROMISE_STING
+		# His promised games were under way and the trial is gone (another
+		# trial took its place): they are owed again, and start once it is free.
+		if str(t["state"]) == "on" and (str(role_trial.get("id", "")) != str(p["id"]) or not role_trial.has("promised")):
+			t["state"] = "owed"
 		if str(t["state"]) == "owed" and role_trial.is_empty():
-			var said := start_role_trial(p, DEV_PROMISE_GAMES, str(t.get("role", "")))
+			# Already picked in that line or not, the promised games are counted.
+			var said := start_role_trial(p, DEV_PROMISE_GAMES, str(t.get("role", "")), true)
 			if said != "":
 				role_trial["promised"] = int(t.get("round", 0))
 				t["state"] = "on"
@@ -7049,7 +7061,7 @@ func _close_season_achievements() -> void:
 	for id in Achievements.check_season(achievements, ctx):
 		achievements[id] = {"year": season_year}
 		var defn: Dictionary = Achievements.definition(id)
-		add_news("achievement", "Achievement unlocked: %s  -  %s (%s)" % [
+		add_news("achievement", "Achievement unlocked: %s - %s (%s)" % [
 				str(defn["name"]), GameDB.club_name(str(defn["club"])),
 				GameDB.club_short(str(defn["club"]))])
 
@@ -9253,6 +9265,11 @@ const MAX_TABLE_OFFERS := 3
 ## of its players, and how many packages it weighs before saying no.
 const ASK_PRICE_PIECES := 3
 const ASK_PRICE_TRIES := 40
+## Past those first tries the weighing goes on through the packages near the
+## price (up to ASK_PRICE_OVER of it), ASK_PRICE_MOST at most, so a club that
+## turns down the cheapest forty is still asked about the next.
+const ASK_PRICE_OVER := 1.25
+const ASK_PRICE_MOST := 400
 ## How close to the most it would pay a club opens with nobody else bidding
 ## (each rival suitor on the trade table pushes it up a tenth).
 const UNASKED_BID := 0.8
@@ -10281,6 +10298,19 @@ func ask_around(id: String) -> Array:
 	return out
 
 
+## Ask their price's search: the first of `packages` ([pieces, value], cheapest
+## first) that `takes` says yes to, as an index; -1 for none. The first
+## ASK_PRICE_TRIES are always weighed; after them only packages worth up to
+## ASK_PRICE_OVER of the price, and never more than ASK_PRICE_MOST in all.
+static func ask_price_pick(packages: Array, price: float, takes: Callable) -> int:
+	for i in range(mini(packages.size(), ASK_PRICE_MOST)):
+		if i >= ASK_PRICE_TRIES and float(packages[i][1]) > price * ASK_PRICE_OVER:
+			break
+		if bool(takes.call(packages[i])):
+			return i
+	return -1
+
+
 ## Ask their price (row 67, 4.Q11): the other way from Ask around. Name a
 ## player at another club and it says what of yours it would take for him,
 ## from the same valuation it trades with. It weighs each of your picks and
@@ -10355,11 +10385,10 @@ func ask_price(club: String, id: String) -> Dictionary:
 				return float(x[1]) < float(y[1])
 			return str(x[0]) < str(y[0]))
 	var mine := []
-	for x in packages.slice(0, ASK_PRICE_TRIES):
-		var ids: Array = (x[0] as Array).map(func(i): return str(pool[i][0]))
-		if bool(evaluate_trade(club, ids, theirs)["ok"]):
-			mine = ids
-			break
+	var at := ask_price_pick(packages, price, func(x):
+		return bool(evaluate_trade(club, (x[0] as Array).map(func(i): return str(pool[i][0])), theirs)["ok"]))
+	if at >= 0:
+		mine = (packages[at][0] as Array).map(func(i): return str(pool[i][0]))
 	_freeze_league(false)
 	if mine.is_empty():
 		none["line"] = hard if hard != "" else "%s: nothing of yours they'd take for %s." % [name, who]
@@ -10719,14 +10748,16 @@ static func _move_in_sel(sel: Dictionary, id: String, target: String) -> void:
 ## When it ends he goes back to the line he was picked in (_end_role_trial) and
 ## the result comes as a card (_finish_role_trial). Returns what to tell the
 ## coach, "" when there is no trial: no second position, not on the ground, or
-## already picked there.
-func start_role_trial(p: Dictionary, games: int, role := "") -> String:
+## already picked there. `even_there` starts it for a player already picked in
+## that line (games you promised him: they are counted all the same).
+func start_role_trial(p: Dictionary, games: int, role := "", even_there := false) -> String:
 	var role2 := ClubStories.trial_role(p) if role == "" else role
 	if role2 == "" or season == null:
 		return ""
 	var id := str(p["id"])
 	var now := _line_of(current_side(), id)
-	if now == "" or _in_trial_line(now, role2):
+	var there := _in_trial_line(now, role2)
+	if now == "" or (there and not even_there):
 		return ""
 	if not role_trial.is_empty():
 		_end_role_trial(true)
@@ -10742,6 +10773,9 @@ func start_role_trial(p: Dictionary, games: int, role := "") -> String:
 	season.selections[my_club] = stored
 	role_trial = trial
 	mark_dirty()
+	if there:
+		return "%s plays his next %s games as a %s." % [GameDB.player_display_name(p), MatchNotes.count_word(games),
+				CoachPathway.position_word({"pos": role2})]
 	return "%s plays as a %s for the next %s games, then goes back." % [GameDB.player_display_name(p),
 			CoachPathway.position_word({"pos": role2}), MatchNotes.count_word(games)]
 
@@ -10863,6 +10897,13 @@ func _end_role_trial(restore: bool) -> void:
 ## nothing is put back.
 func _trial_after_coach_pick(sel: Dictionary) -> void:
 	if role_trial.is_empty():
+		return
+	# No side named (the match-day staff pick it, as Sim the week's "runs for the
+	# kids" does): the trial goes on and they place him, as when it began that way.
+	var named := sel.duplicate()
+	named.erase("DUAL_RUCK")
+	if named.is_empty():
+		role_trial["auto"] = true
 		return
 	var line := _line_of(sel, str(role_trial.get("id", "")))
 	if _in_trial_line(line, str(role_trial.get("role", ""))):
@@ -11334,6 +11375,25 @@ func set_best23(side: Dictionary) -> void:
 func my_squad() -> Squad:
 	return Squad.new(GameDB.club_name(my_club), my_list, true, my_club,
 			season.selections.get(my_club, {}) if season != null else {})
+
+
+## Your side as picked with your coaching on it, as the match gives it at
+## kick-off (_refresh_coach_tactics, CoachEffects.apply), for a screen. Worked
+## out from the coaches as they stand, not read from the round's table: a
+## loaded career has no table until its next match (_rival_squad).
+func my_coached_squad() -> Squad:
+	var sq := my_squad()
+	if season == null or coaches.is_empty():
+		CoachEffects.apply(sq)
+		return sq
+	_ensure_plan_known()
+	sq.together = Culture.club_effect(relations, sq.code, "match_contest", "together") 			if culture_effects_on and not relations.is_empty() else 0.0
+	var staff: Dictionary = CoachEffects.staffs(coaches).get(my_club, {})
+	var row := CoachEffects.row(staff, true)
+	row["arch_p"] = CoachEffects.philosophical(staff, true)
+	row["exec"] = clampf(float(row.get("exec", 1.0)) * ClubBudget.tactics_mult(fitness_hp_level(my_club)), 0.75, 1.35)
+	CoachEffects.apply_row(sq, row)
+	return sq
 
 
 ## Every plan: [[key, label], ...].
@@ -12065,11 +12125,13 @@ func _draft_class_news() -> void:
 		return
 	if str(class_tiers.get(str(season_year), "")) != "super":
 		return
-	# The news item itself is the durable acknowledgement. Saves already persist
-	# the feed, so this needs no second flag that could drift out of sync.
+	# The feed is trimmed to MAX_NEWS, so the item cannot be its own memory. An
+	# older save that already has the line in its feed is not told twice.
 	for item in news:
 		if int(item.get("year", 0)) == season_year and str(item.get("kind", "")) == "superdraft":
 			return
+	if not Milestones.tell_once(self, "superdraft|%d" % season_year):
+		return
 	add_news("superdraft", "Recruiters believe this year's national draft is a superdraft — unusually strong at the top and deeper than a normal class. Clubs will be planning their off-season around it.")
 
 
@@ -12246,9 +12308,9 @@ func _round_news(results: Array) -> void:
 		var p := _find_player(str(inj.get("id", "")))
 		if p.is_empty() or int(inj.get("weeks", 0)) < 4 or int(p.get("overall", 0)) < NEWS_MIN_OVR 				or told.has(str(inj.get("id", ""))):
 			continue
-		add_news("injury", "%s (%s) is out for %s with a %s." % [GameDB.player_display_name(p),
+		add_news("injury", "%s (%s) is out for %s with %s." % [GameDB.player_display_name(p),
 				GameDB.club_name(str(inj.get("club", ""))), _weeks_text(int(inj["weeks"])),
-				str(inj.get("kind", "injury")).to_lower()])
+				Injuries.wording(str(inj.get("kind", "")))])
 	for row in last_mro:
 		var outcome := str(row.get("outcome", ""))
 		if outcome == "no_action":

@@ -1,6 +1,7 @@
 [
 	{
 		"id": "board_wants_answers",
+		"topical": true,
 		"category": "board",
 		"cooldown": 6,
 		"subject": {
@@ -13,7 +14,7 @@
 			"The board wants answers"
 		],
 		"text": [
-			"Another loss, and the chairman's on the phone. He wants to know what happens next."
+			"Another loss, and the president's on the phone. He wants to know what happens next."
 		],
 		"default": 1,
 		"choices": [
@@ -68,12 +69,12 @@
 						"d": 5
 					},
 					{
-						"op": "morale",
-						"d": -2,
+						"op": "forgo_xp",
+						"d": 2,
 						"who": "side"
 					}
 				],
-				"result": "You sell the plan over lunch. The players notice you weren't there."
+				"result": "You sell the plan over lunch and miss the session."
 			},
 			{
 				"key": "no",
@@ -89,7 +90,7 @@
 						"who": "side"
 					}
 				],
-				"result": "You stay at the club."
+				"result": "You skip the lunch and take training."
 			}
 		],
 		"when": {
@@ -123,10 +124,6 @@
 						"d": 4
 					},
 					{
-						"op": "morale",
-						"d": -2
-					},
-					{
 						"op": "heavy_legs"
 					}
 				],
@@ -134,7 +131,7 @@
 			},
 			{
 				"key": "no",
-				"label": "He needs the rest",
+				"label": "{first} needs the rest",
 				"effects": [
 					{
 						"op": "board",
@@ -284,9 +281,10 @@
 						"d": -2
 					},
 					{
-						"op": "morale",
-						"d": 2,
-						"who": "all"
+						"op": "culture",
+						"strand": "together",
+						"d": 1,
+						"why": "You stood by the medical staff"
 					}
 				],
 				"result": "You stand by the medical staff."
@@ -300,9 +298,10 @@
 						"d": 3
 					},
 					{
-						"op": "morale",
-						"d": -2,
-						"who": "all"
+						"op": "culture",
+						"strand": "together",
+						"d": -1,
+						"why": "You put the medical staff under review"
 					}
 				],
 				"result": "You promise a review. The physios aren't happy."

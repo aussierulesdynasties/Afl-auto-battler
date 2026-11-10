@@ -26,13 +26,12 @@
 						"d": 2
 					},
 					{
-						"op": "slow_start",
-						"who": "side",
-						"chance": 10,
-						"on": "week"
+						"op": "forgo_xp",
+						"d": 4,
+						"who": "all"
 					}
 				],
-				"note": "It gives up the session that training brings.",
+				"note": "It costs you an afternoon's training.",
 				"result": "The players spend the afternoon on the wards."
 			},
 			{
@@ -52,7 +51,7 @@
 				"result": "You keep the players on the track."
 			}
 		],
-		"stakes": "Sending a group gives up the session that training brings."
+		"stakes": "Sending a group costs you an afternoon's training."
 	},
 	{
 		"id": "community_country_clinic",
@@ -74,7 +73,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Send him",
+				"label": "Send {first}",
 				"effects": [
 					{
 						"op": "board",
@@ -117,7 +116,7 @@
 			"The Foundation wants players at a fundraiser"
 		],
 		"text": [
-			"A Thursday night dinner, the night before the team leaves."
+			"A Thursday night dinner, the night before the side flies out."
 		],
 		"choices": [
 			{
@@ -173,7 +172,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Let him go back on Sunday",
+				"label": "Let {first} go back on Sunday",
 				"effects": [
 					{
 						"op": "morale",
@@ -199,8 +198,7 @@
 						"d": -2
 					},
 					{
-						"op": "board",
-						"d": 1
+						"op": "fresh"
 					}
 				],
 				"result": "The club sends a signed jumper."
@@ -228,7 +226,7 @@
 		"choices": [
 			{
 				"key": "go",
-				"label": "Send him",
+				"label": "Send {first}",
 				"effects": [
 					{
 						"op": "morale",
@@ -239,7 +237,10 @@
 						"d": 2
 					},
 					{
-						"op": "heavy_legs"
+						"op": "slow_start",
+						"who": "subject",
+						"chance": 10,
+						"on": "week"
 					}
 				],
 				"result": "{name} speaks at assembly."
@@ -345,7 +346,7 @@
 		"choices": [
 			{
 				"key": "together",
-				"label": "All together",
+				"label": "Keep the players together",
 				"effects": [
 					{
 						"op": "morale",
@@ -369,19 +370,20 @@
 			},
 			{
 				"key": "families",
-				"label": "With their families",
+				"label": "Send them home to their families",
 				"effects": [
 					{
 						"op": "fresh",
 						"who": "side"
 					},
 					{
-						"op": "morale",
-						"d": -1,
-						"who": "side"
+						"op": "slow_start",
+						"who": "side",
+						"chance": 5,
+						"on": "grand_final"
 					}
 				],
-				"result": "Dinner at home and their own bed. Nobody's in a hurry to talk footy."
+				"result": "Dinner at home and their own bed. A few have a full house and a late night."
 			}
 		]
 	}

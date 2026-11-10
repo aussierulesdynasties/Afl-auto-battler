@@ -24,7 +24,7 @@
 		"choices": [
 			{
 				"key": "host",
-				"label": "Move him in with a host family",
+				"label": "Move {first} in with a host family",
 				"effects": [
 					{
 						"op": "morale",
@@ -63,7 +63,7 @@
 			},
 			{
 				"key": "home",
-				"label": "Let him go home for a week",
+				"label": "Let {first} go home for a week",
 				"effects": [
 					{
 						"op": "morale",
@@ -108,7 +108,7 @@
 			"{first} is still learning the game"
 		],
 		"text": [
-			"He wins plenty of the ball, then gives it away: the umpire pings him for holding it, and the bounce off the turf keeps beating him. His old game never asked him to read an oval ball.",
+			"He wins plenty of the ball, then gives it away: the umpire pings him for holding the ball, and the bounce off the turf keeps beating him. His old game never asked him to read an oval ball.",
 			"He keeps getting pinged for holding the ball, and the way the oval ball sits up still catches him out. The talent is there; the habits are another game's."
 		],
 		"choices": [
@@ -121,15 +121,14 @@
 						"d": 10
 					},
 					{
-						"op": "morale",
-						"d": -3
+						"op": "heavy_legs"
 					}
 				],
 				"result": "{first} stays back with the skills coach each afternoon. He's tired, but he's learning."
 			},
 			{
 				"key": "twos",
-				"label": "Play him in the reserves for a week",
+				"label": "Play {first} in the reserves for a week",
 				"effects": [
 					{
 						"op": "xp",
@@ -139,11 +138,11 @@
 						"op": "rest"
 					}
 				],
-				"result": "{first} learns it against reserves players, with room to make mistakes."
+				"result": "{first} learns it in the twos, with room to make mistakes."
 			},
 			{
 				"key": "back",
-				"label": "Back him and show him vision",
+				"label": "Back {first} and show him vision",
 				"effects": [
 					{
 						"op": "xp",
@@ -190,7 +189,7 @@
 		"choices": [
 			{
 				"key": "talk",
-				"label": "Let him do the interviews",
+				"label": "Let {first} do the interviews",
 				"effects": [
 					{
 						"op": "morale",
@@ -212,11 +211,6 @@
 				"effects": [
 					{
 						"op": "fresh"
-					},
-					{
-						"op": "trust",
-						"d": 3,
-						"why": "You kept the media off him after his first game"
 					},
 					{
 						"op": "morale",
@@ -315,7 +309,7 @@
 		"choices": [
 			{
 				"key": "stay",
-				"label": "Ask him to stay for the summer program",
+				"label": "Ask {first} to stay for the summer program",
 				"effects": [
 					{
 						"op": "xp",
@@ -330,7 +324,7 @@
 			},
 			{
 				"key": "go",
-				"label": "Let him go home",
+				"label": "Let {first} go home",
 				"effects": [
 					{
 						"op": "morale",
@@ -342,8 +336,8 @@
 						"why": "You let him go home for the summer after his first season"
 					},
 					{
-						"op": "board",
-						"d": -2
+						"op": "forgo_xp",
+						"d": 10
 					}
 				],
 				"result": "{first} flies home for the break. The high-performance staff aren't thrilled he'll miss the summer block."
@@ -377,12 +371,12 @@
 			"{home_club} want {first} back"
 		],
 		"text": [
-			"It's championship time, and {home_club} have asked if he'll come home and play. He grew up on it."
+			"It's championship time, and {home_club} have asked if he'll come home and play. It's the game he grew up playing."
 		],
 		"choices": [
 			{
 				"key": "go",
-				"label": "Let him go home for the championship",
+				"label": "Let {first} go home for the championship",
 				"effects": [
 					{
 						"op": "morale",
@@ -401,7 +395,7 @@
 			},
 			{
 				"key": "final",
-				"label": "Release him for the final only",
+				"label": "Release {first} for the final only",
 				"effects": [
 					{
 						"op": "morale",
@@ -416,11 +410,11 @@
 						"op": "heavy_legs"
 					}
 				],
-				"result": "{first} makes a quick trip home for the final and comes straight back. He's heavy-legged on Saturday."
+				"result": "{first} makes a quick trip home for the final and comes straight back. He has heavy legs on Saturday."
 			},
 			{
 				"key": "no",
-				"label": "Tell him his contract is with us",
+				"label": "Tell {first} his contract is with us",
 				"effects": [
 					{
 						"op": "board",
@@ -474,7 +468,7 @@
 		"choices": [
 			{
 				"key": "extend",
-				"label": "Offer him an early extension",
+				"label": "Offer {first} an early extension",
 				"effects": [
 					{
 						"op": "extend_early"
@@ -483,7 +477,7 @@
 			},
 			{
 				"key": "time",
-				"label": "Tell him to take the off-season to decide",
+				"label": "Tell {first} to take the off-season to decide",
 				"effects": [
 					{
 						"op": "trust",
@@ -499,7 +493,7 @@
 						"d": -2
 					}
 				],
-				"result": "{first} has until the end of the season. The board would rather it was settled."
+				"result": "{first} has the off-season to decide. The board would rather it was settled."
 			}
 		],
 		"when": {
@@ -547,9 +541,10 @@
 						"why": "You welcomed his college coach and family to training"
 					},
 					{
-						"op": "morale",
-						"d": -2,
-						"who": "side"
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10,
+						"on": "week"
 					}
 				],
 				"result": "The coach watches from the fence. The cameras put the group off a little."
@@ -559,16 +554,14 @@
 				"label": "Keep it to the weekend, off the training track",
 				"effects": [
 					{
-						"op": "fresh"
-					},
-					{
-						"op": "trust",
-						"d": 3,
-						"why": "You kept his visitors away from training"
-					},
-					{
 						"op": "morale",
 						"d": -3
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "Training stayed closed to cameras and visitors"
 					}
 				],
 				"result": "{first} shows them around the city instead. He'd wanted them to see the club."
@@ -605,7 +598,7 @@
 		"choices": [
 			{
 				"key": "extend",
-				"label": "Offer him an early extension",
+				"label": "Offer {first} an early extension",
 				"effects": [
 					{
 						"op": "extend_early"
@@ -614,7 +607,7 @@
 			},
 			{
 				"key": "meet",
-				"label": "Let him take the meeting",
+				"label": "Let {first} take the meeting",
 				"effects": [
 					{
 						"op": "trust",
@@ -634,7 +627,7 @@
 			},
 			{
 				"key": "no",
-				"label": "Tell him he's a footballer now",
+				"label": "Tell {first} he's a footballer now",
 				"effects": [
 					{
 						"op": "board",
@@ -694,16 +687,15 @@
 						"d": 2
 					},
 					{
-						"op": "morale",
-						"d": -2,
-						"who": "side"
+						"op": "forgo_xp",
+						"d": 6
 					}
 				],
 				"result": "{first} films the message for the kids. The other young players notice who's getting the spotlight."
 			},
 			{
 				"key": "later",
-				"label": "Ask them to wait until he's established",
+				"label": "Ask them to wait until {first} is established",
 				"effects": [
 					{
 						"op": "xp",
@@ -745,7 +737,7 @@
 			"pick": "random"
 		},
 		"title": [
-			"{first}'s family can't get a visa"
+			"{first}'s family can't get visas"
 		],
 		"text": [
 			"His debut is this week and his parents' visas haven't come through. They won't be in the stands."
@@ -765,15 +757,17 @@
 						"why": "You went to bat for his family's visas before his debut"
 					},
 					{
-						"op": "board",
-						"d": -2
+						"op": "slow_start",
+						"who": "subject",
+						"chance": 10,
+						"on": "week"
 					}
 				],
 				"result": "The club's staff spend the week on the phone. The visas arrive on Friday."
 			},
 			{
 				"key": "wait",
-				"label": "Hold his debut back a week",
+				"label": "Hold {first}'s debut back a week",
 				"effects": [
 					{
 						"op": "morale",
@@ -796,12 +790,18 @@
 				"effects": [
 					{
 						"op": "morale",
-						"d": 3
+						"d": -2
 					},
 					{
 						"op": "trust",
 						"d": -3,
 						"why": "You asked him to make do without his family at his debut"
+					},
+					{
+						"op": "culture",
+						"strand": "ambition",
+						"d": 1,
+						"why": "His debut went ahead the week he was picked"
 					}
 				],
 				"result": "{first} plays his debut without them. They watch on a phone in the kitchen."

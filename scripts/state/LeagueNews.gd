@@ -35,7 +35,7 @@ static func flag_history(club: String, year: int, roll: Array) -> String:
 		return "%s flags in a row." % str(ClubStories.RUN_WORDS.get(run, str(run)))
 	var last := int(rec["last_flag"])
 	if last > 0 and year - last >= ClubStories.DROUGHT_YEARS:
-		return "Their first flag since %d, a %d-year wait." % [last, year - last]
+		return "Their first flag since %d, %s %d-year wait." % [last, LeagueStories.an(year - last), year - last]
 	return ""
 
 

@@ -136,6 +136,9 @@ func _ready() -> void:
 	if _draft.intake_mode and _phase == "board" and not _draft.is_finished() \
 			and GameState.draft_meeting_year != GameState.season_year:
 		GameState.draft_meeting_year = GameState.season_year
+		# Saved at once: a career loaded mid-draft has had its meeting.
+		GameState.mark_dirty()
+		GameState.autosave()
 		_show_meeting()
 	elif _phase == "board":
 		FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())

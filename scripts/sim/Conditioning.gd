@@ -392,7 +392,7 @@ const PLAN_ODDS := "The peak lands within %d weeks of plan about %s of the time;
 const PLAN_ODDS_SURE := "The peak lands within %d weeks of plan every season."
 const PLAN_UP_STEADY := "Gain: the same legs every week, with no heavy weeks and no extra soft-tissue risk."
 const PLAN_DOWN_STEADY := "Cost: no peak, so the side is no fresher in September than in March."
-const PLAN_UP_DEVELOP := "Gain: players %d and under earn %s more development XP, and with the plan on since the bye they have %d more %s of room to grow this season. %s fewer soft-tissue injuries all year."
+const PLAN_UP_DEVELOP := "Gain: players %d and under earn %s more development, and with the plan on since the bye they have %d more %s of room to grow this season. %s fewer soft-tissue injuries all year."
 const PLAN_DOWN_DEVELOP := "Cost: all year the side tires %s faster and has %s less in the legs."
 
 
