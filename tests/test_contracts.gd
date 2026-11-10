@@ -17,6 +17,7 @@ func run() -> void:
 	_t("_test_initial_contracts")
 	_t("_test_real_money_scale")
 	_t("_test_offseason_flow")
+	_t("_test_list_costs")
 	_t("_test_market_test")
 	_t("_test_negotiation_rules")
 	_t("_test_negotiation")
@@ -92,6 +93,91 @@ func _to_offseason() -> void:
 	GameState.ensure_finals()
 	while not GameState.season.is_season_over():
 		GameState.advance()
+
+
+## L4 (row T1.R26, director 2026-11-10): the list's one-sided options cost
+## what the gate says. Under his ask: morale 10 lower all season (rivals too).
+## A release with seasons to run: half of what is left on the cap next season,
+## undone with the release. A retiree asked again: 40% yes, legs 15% down.
+func _test_list_costs() -> void:
+	_new_season()
+	_to_offseason()
+	# Haggle: his lowest under his ask is accepted, and he carries the sting.
+	var haggled := {}
+	for p in Contracts.expiring(GameState.my_list):
+		var yrs := int(Contracts.wants(p)["years"])
+		if Contracts.lowest(p, yrs) < Contracts.asking_salary(p) and not GameState.resign_refused(p):
+			haggled = p
+			break
+	_check(not haggled.is_empty(), "One of yours would sign under his ask")
+	if not haggled.is_empty():
+		var yrs := int(Contracts.wants(haggled)["years"])
+		var stored := int(haggled.get("morale", ClubLife.MORALE_BASE))
+		var r := GameState.offer_contract(str(haggled["id"]), Contracts.lowest(haggled, yrs), yrs)
+		_check(bool(r["ok"]) and haggled.has("haggle_sting"), "Signed under his ask, he carries the sting (%s)" % r)
+		_check(ClubLife.morale(haggled) == maxi(5, stored - ListCosts.HAGGLE_STING),
+				"His morale reads %d lower all season (%d from %d)" % [ListCosts.HAGGLE_STING, ClubLife.morale(haggled), stored])
+		ClubLife.add_morale(haggled, 5)
+		_check(int(haggled["morale"]) == mini(100, stored + 5), "A morale change moves his own figure, not the sting")
+	var rival_stung := false
+	for code in GameState.season.lists:
+		if code != GameState.my_club:
+			for p in GameState.season.lists[code]:
+				rival_stung = rival_stung or p.has("haggle_sting")
+	_check(rival_stung, "A rival re-signing under the ask stings its player too")
+	# Meet his terms: no sting.
+	for p in Contracts.expiring(GameState.my_list):
+		if not bool(p.get("resigned", false)) and not GameState.resign_refused(p):
+			var w := Contracts.wants(p)
+			var ok := bool(GameState.offer_contract(str(p["id"]), int(w["salary"]), int(w["years"]))["ok"])
+			_check(not ok or not p.has("haggle_sting"), "At his ask, no sting")
+			break
+	# Release with seasons to run: half of what is left stays on the cap. Two
+	# spare men keep the list above its floor (Contracts.MIN_LIST).
+	var base: Dictionary = GameState.my_list[GameState.my_list.size() - 1]
+	for i in range(2):
+		var extra: Dictionary = base.duplicate(true)
+		extra["id"] = "costs_extra_%d" % i
+		extra.erase("resigned")
+		extra.erase("retiring")
+		GameState.my_list.append(extra)
+	var dear := {}
+	for p in GameState.my_list:
+		if int(p.get("contract_years", 1)) >= 2 and not GameState.retiring_now(p) 				and not str(p["id"]).begins_with("costs_extra"):
+			dear = p
+			break
+	_check(not dear.is_empty(), "One of yours has seasons to run")
+	if not dear.is_empty():
+		var dead := ListCosts.dead_money(dear)
+		_check(dead == int(round(int(dear["salary"]) * (int(dear["contract_years"]) - 1) * 0.5)),
+				"Dead money is half of what is left (%d)" % dead)
+		var before := GameState.my_payroll()
+		var sal := int(dear["salary"])
+		var rel := GameState.release_player(str(dear["id"]))
+		_check(bool(rel["ok"]), "He can be released (%s)" % str(rel["reason"]))
+		_check(GameState.dead_for(GameState.my_club) == dead and GameState.my_payroll() == before - sal + dead,
+				"Half of his remaining contract stays on your cap (%d, payroll %d -> %d)" % [dead, before, GameState.my_payroll()])
+		RecruitUndo.undo(GameState)
+		_check(GameState.dead_for(GameState.my_club) == 0 and GameState.my_payroll() == before,
+				"Undoing the release takes the dead money off too")
+	# Ask a retiree again: the roll, and his legs.
+	var old := {"id": "t_old", "morale": 80, "injury_weeks": 0}
+	_check(bool(Retirement.answer(old, GameState.season_year, 20, {}, 0.39)["stays"]), "Under 40% he says yes")
+	_check(not bool(Retirement.answer(old, GameState.season_year, 20, {}, 0.41)["stays"]), "Over 40% he says no")
+	_check(Retirement.no_reason(old, GameState.season_year, 20, {}) == "", "Fit and playing, nothing rules him out before you ask")
+	Retirement.apply(old, {"stays": true, "reason": ""}, GameState.season_year + 1)
+	_check(is_equal_approx(Workload.drain_mult(old), ListCosts.OLD_LEGS), "Talked round, his legs tire 15% faster")
+	ListCosts.season_over([old], GameState.season_year + 1)
+	_check(not old.has("old_legs") and is_equal_approx(Workload.drain_mult(old), 1.0), "The legs cost ends with the season")
+	# The gate says it.
+	var hl := ListCosts.haggle_lines(900000, 1000000)
+	_check(str(hl[0]).begins_with("Gain: ") and str(hl[0]).contains("10%") and str(hl[1]).contains("10% lower all season"),
+			"The haggle gate states the saving and the morale cost (%s)" % [hl])
+	_check(ListCosts.haggle_lines(1000000, 1000000).is_empty(), "No haggle line at his ask")
+	var al := ListCosts.ask_lines("")
+	_check(str(al[0]).contains("40% chance") and str(al[1]).contains("15% down"), "The ask gate states the odds and the legs (%s)" % [al])
+	_check(str(ListCosts.ask_lines("He isn't enjoying his footy any more.")[0]).begins_with("Gain: none"),
+			"A retiree who will say no is shown as no chance")
 
 
 func _test_real_money_scale() -> void:

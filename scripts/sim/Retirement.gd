@@ -65,7 +65,9 @@ static func recent_injuries(p: Dictionary, season: int, facts: Dictionary) -> in
 
 ## His answer, from what is on record: {"stays": bool, "reason": String}.
 ## The first reason that applies is the one he gives. `facts` as above.
-static func answer(p: Dictionary, season: int, games: int, facts: Dictionary) -> Dictionary:
+## `roll` (0-1, seeded by the caller): a fit, happy, playing retiree says yes
+## when it is under ListCosts.ASK_AGAIN_YES; -1 skips the roll (the reasons only).
+static func answer(p: Dictionary, season: int, games: int, facts: Dictionary, roll := -1.0) -> Dictionary:
 	if int(p.get("injury_weeks", 0)) > 0:
 		var kind := str(p.get("injury_kind", "injury")).replace("_", " ")
 		return {"stays": false, "reason": "He is still getting over the %s, and his body is telling him it's time." % kind}
@@ -76,7 +78,15 @@ static func answer(p: Dictionary, season: int, games: int, facts: Dictionary) ->
 		return {"stays": false, "reason": "He isn't enjoying his footy any more."}
 	if games < MIN_GAMES:
 		return {"stays": false, "reason": "%d %s this year: he doesn't see a role for himself." % [games, "game" if games == 1 else "games"]}
+	if roll >= ListCosts.ASK_AGAIN_YES:
+		return {"stays": false, "reason": "He's thought hard about it, and he's ready to finish on his terms."}
 	return {"stays": true, "reason": "He's fit, he's enjoying it and he's still in the side: he'll go around again."}
+
+
+## Why he would say no whatever you say, before you ask ("" when he might say yes).
+static func no_reason(p: Dictionary, season: int, games: int, facts: Dictionary) -> String:
+	var a := answer(p, season, games, facts)
+	return "" if bool(a["stays"]) else str(a["reason"])
 
 
 ## Record the answer on him; a yes makes the coming season his last-but-one.
@@ -85,3 +95,5 @@ static func apply(p: Dictionary, result: Dictionary, year: int) -> void:
 	if bool(result["stays"]):
 		p["play_on"] = year
 		p["talked_round"] = true
+		# His legs are down all the season he plays on (ListCosts.OLD_LEGS).
+		p["old_legs"] = year

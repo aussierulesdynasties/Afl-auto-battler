@@ -160,12 +160,16 @@ func _test_release_undo() -> void:
 	_check(not p.is_empty(), "A player to delist")
 	var id := str(p["id"])
 	var before := _world()
+	# Half of what is left on his contract stays on the cap (row T1.R26 L4).
+	var dead: int = load("res://scripts/sim/ListCosts.gd").dead_money(p)
+	var sal := int(p.get("salary", 0))
 	var r: Dictionary = _state.release_player(id)
 	_check(bool(r["ok"]), "The delisting goes through (%s)" % str(r["reason"]))
 	var after := _world()
 	_check(not (after["lists"]["GEE"] as Array).has(id) and _state.free_agent(id) == p,
 			"He is off your list and in the free-agent pool")
-	_check(int(after["payroll"]) < int(before["payroll"]), "His salary leaves your payroll")
+	_check(int(after["payroll"]) == int(before["payroll"]) - sal + dead,
+			"His salary leaves your payroll, less what stays on the cap (%d -> %d, dead %d)" % [before["payroll"], after["payroll"], dead])
 	_check((after["news"] as Array).size() == (before["news"] as Array).size() + 1,
 			"Delisting a player of his standing makes the news")
 	var last: Dictionary = _state.recruit_undo_last()

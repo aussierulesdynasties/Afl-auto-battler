@@ -32,7 +32,7 @@ static func cond_cap(p: Dictionary) -> float:
 
 ## How fast he tires on the ground: below 1.0 at a peak, above while building.
 static func drain_mult(p: Dictionary) -> float:
-	return float(p.get("cond_drain", 1.0))
+	return float(p.get("cond_drain", 1.0)) * ListCosts.legs(p)
 
 
 ## Automatic selection weighs freshness alongside ability. Manual selections

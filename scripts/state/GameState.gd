@@ -133,6 +133,9 @@ var career_facts := {}
 ## (RecruitUndo, row 119). Session only, never saved; cleared when the week
 ## moves on.
 var recruit_undo: Array = []
+## Released contracts still on a club's cap for the coming season (ListCosts,
+## row T1.R26 L4): club code -> {"year": season, "amount": dollars}.
+var dead_cap := {}
 var milestone_log := Milestones.empty()   # milestone games (Milestones.gd)
 ## Players who have left the game: id -> his name card (CareerFacts.name_card),
 ## so an honour-roll or record line can still name him.
@@ -931,6 +934,7 @@ func _save_state() -> Dictionary:
 		"club_goals": club_goals,
 		"draft_meeting_year": draft_meeting_year,
 		"career_seed": career_seed,
+		"dead_cap": dead_cap,
 		"conditioning": conditioning,
 		"preseason": preseason,
 		"captaincy": captaincy,
@@ -1178,6 +1182,7 @@ func _restore_career(state: Dictionary) -> bool:
 	GameDB._alias_next = int(state.get("db_alias_next", GameDB._alias_next))
 	# Saves from before class tiers use seed 0: still one fixed roll per year.
 	career_seed = int(state.get("career_seed", 0))
+	dead_cap = (state.get("dead_cap", {}) as Dictionary).duplicate(true)
 	conditioning = state.get("conditioning", {})
 	preseason = state.get("preseason", {})
 	# Saves from before the one pre-season match (director, 2026-11-03) may hold
@@ -1624,6 +1629,7 @@ func reset() -> void:
 	_targets_signed = {}
 	fa_lost = []
 	recruit_undo = []
+	dead_cap = {}
 	_bars = {}
 	_fa_phase = {}
 	_repl_class = {}
@@ -6957,7 +6963,12 @@ func ensure_contracts() -> void:
 
 
 func my_payroll() -> int:
-	return Contracts.payroll(my_list)
+	return Contracts.payroll(my_list) + dead_for(my_club)
+
+
+## What released contracts leave on `code`'s cap this coming season.
+func dead_for(code: String) -> int:
+	return int((dead_cap.get(code, {}) as Dictionary).get("amount", 0))
 
 
 func cap_room() -> int:
@@ -7047,6 +7058,12 @@ func open_offseason(keep_staff := false) -> void:
 			if project_job(p) != "":
 				_finish_project(p, str(code) == my_club)
 	offseason_year = season_year
+	for code in season.lists:
+		ListCosts.season_over(season.lists[code], season_year)
+	ListCosts.season_over(free_agents, season_year)
+	for code in dead_cap.keys():
+		if int((dead_cap[code] as Dictionary).get("year", 0)) <= season_year:
+			dead_cap.erase(code)
 	_coach_arch_season_end()
 	# Selection bars from before today (a rival board's letter reads them) must
 	# not reach the market: a reload, which does not keep them, would play it differently.
@@ -7270,7 +7287,9 @@ func talk_round(player_id: String) -> Dictionary:
 	var year := season_year + 1
 	if p.is_empty() or not offseason_open() or not Retirement.can_ask(p, my_list, year):
 		return {}
-	var res := Retirement.answer(p, season_year, season_games(player_id), career_facts)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("%d|ask_again|%s|%d" % [career_seed, str(p["id"]), year])
+	var res := Retirement.answer(p, season_year, season_games(player_id), career_facts, rng.randf())
 	Retirement.apply(p, res, year)
 	var name := GameDB.player_display_name(p)
 	add_news("retirement", ("%s will go around again in %d." % [name, year]) if bool(res["stays"])
@@ -7282,7 +7301,10 @@ func talk_round(player_id: String) -> Dictionary:
 ## Re-sign for `years` more seasons at `salary` (his asking price when not
 ## given). The contract ticks at the rollover, so it is stored as years + 1.
 func _resign(p: Dictionary, years: int, salary := -1) -> void:
-	p["salary"] = salary if salary > 0 else Contracts.asking_salary(p)
+	var ask := Contracts.asking_salary(p)
+	if salary > 0 and salary < ask:
+		p["haggle_sting"] = season_year + 1
+	p["salary"] = salary if salary > 0 else ask
 	p["contract_years"] = years + 1
 	p["resigned"] = true
 	p.erase("talks")
@@ -7292,6 +7314,9 @@ func _resign(p: Dictionary, years: int, salary := -1) -> void:
 ## or it could not fit his price) rather than delisting him, so losing him
 ## can earn a compensation pick - if he had been there long enough.
 func _release(code: String, p: Dictionary, wanted := false, announce := true) -> void:
+	var dead := ListCosts.dead_money(p) if offseason_open() and not retiring_now(p) else 0
+	if dead > 0:
+		dead_cap[code] = {"year": season_year + 1, "amount": dead_for(code) + dead}
 	(season.lists[code] as Array).erase(p)
 	p["released_by"] = code
 	# A delisted rookie is a free agent: whoever signs him, his old club
@@ -7519,7 +7544,7 @@ func _finish_t(code: String) -> float:
 
 
 func _cap_room_of(code: String) -> int:
-	return cap_for(code) - Contracts.payroll(season.lists.get(code, []))
+	return cap_for(code) - Contracts.payroll(season.lists.get(code, [])) - dead_for(code)
 
 
 ## The cap `code` works under: the league's, plus a new club's sign-on money

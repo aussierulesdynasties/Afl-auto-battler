@@ -345,6 +345,9 @@ func _retiring(body: VBoxContainer) -> void:
 				GameState.talk_round(str(p["id"]))
 				_build())
 			_action_slot(card).add_child(ask)
+			var gc := ListCosts.ask_lines(Retirement.no_reason(p, GameState.season_year, g, GameState.career_facts))
+			v.add_child(UiKit.stake_row(str(gc[0]), "AskGain"))
+			v.add_child(UiKit.stake_row(str(gc[1]), "AskCost"))
 		elif p.has("talked_round"):
 			v.add_child(_para("He went around again once already: this time he's going.", 12, UiKit.MUTED))
 
@@ -364,6 +367,9 @@ func _confirm_release(p: Dictionary) -> void:
 		memory.name = "ReleaseRemembered"
 		box["body"].add_child(memory)
 	box["body"].add_child(_para("He will leave your list and become a free agent. A delisted player earns no draft pick if he signs elsewhere.", 14, UiKit.TEXT))
+	var gc := ListCosts.release_lines(p)
+	box["body"].add_child(UiKit.stake_row(str(gc[0]), "ReleaseGain"))
+	box["body"].add_child(UiKit.stake_row(str(gc[1]), "ReleaseCost"))
 	var release := UiKit.btn("Release player", UiKit.NAME, true)
 	release.name = "ConfirmRelease"
 	release.custom_minimum_size.y = 44
@@ -524,6 +530,11 @@ func _show_talks() -> void:
 	var blocked := bool(terms.get("refuse", false)) or (_talk_fa and not RookieList.senior_spot_free(GameState.my_list))
 	v.add_child(_para("Cap room after this deal: %s" % room_after_words(room_after), 14,
 			UiKit.TEXT if room_after >= 0 else UiKit.BAD))
+	if not _talk_fa:
+		var hl := ListCosts.haggle_lines(_offer_salary, int(want["salary"]))
+		if not hl.is_empty():
+			v.add_child(UiKit.stake_row(str(hl[0]), "HaggleGain"))
+			v.add_child(UiKit.stake_row(str(hl[1]), "HaggleCost"))
 	var final := _talk_fa and GameState.fa_market_stage(_talk_id) == "final"
 	var offer := UiKit.btn("%s %s for %d season%s" % ["Final offer:" if final else "Offer", Contracts.money(_offer_salary), _offer_years,
 			"" if _offer_years == 1 else "s"], 16, true)
