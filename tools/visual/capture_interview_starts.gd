@@ -15,6 +15,10 @@ var db
 
 func _initialize() -> void:
 	_run.call_deferred()
+	# A script error inside the run stops it without quit(): never sit idle on a slot.
+	create_timer(180.0).timeout.connect(func():
+		print("CAPTURE watchdog: timed out")
+		quit(2))
 
 
 func _arg(name: String, fallback: String) -> String:
@@ -82,25 +86,30 @@ func _run() -> void:
 	state.save_path = "user://capture_interview.save"
 	state.settings_path = "user://capture_interview.cfg"
 	load("res://scripts/ui/UiKit.gd").apply_appearance("dark")
-	root.size = Vector2i(W, H)
-	root.gui_disable_input = true
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_size(Vector2i(W, H))
+	for i in range(10):
+		await process_frame
+	var layout = root.get_node("ScreenLayout")
+	var base: float = layout.desktop_density(Vector2(root.size), DisplayServer.screen_get_scale(),
+			DisplayServer.screen_get_dpi() if OS.get_name() == "Windows" else 0)
+	layout.ui_scale = 1.0 / maxf(1.0, base)
+	layout._update_scale()
 
 	print("CAPTURE stage 1")
 	# 1. New career: Real 2026 lists, then Yes to Canberra.
 	_fresh(2027)
-	root.get_node("Router").to_main_menu(false)
-	for i in range(60):
+	var menu: Control = load("res://scenes/Main.tscn").instantiate()
+	root.add_child(menu)
+	for i in range(10):
 		await process_frame
-		if current_scene != null and current_scene.has_method("_on_new_career"):
-			break
-	current_scene._on_new_career()
+	menu.call("_on_new_career")
 	await process_frame
-	await _press(current_scene, "StartMode_real")
-	await _press(current_scene, "Canberra_yes")
-	print("CAPTURE warning shown: ", current_scene.find_child("SimAheadWarning", true, false) != null)
+	await _press(menu, "StartMode_real")
+	await _press(menu, "Canberra_yes")
+	print("CAPTURE warning shown: ", menu.find_child("SimAheadWarning", true, false) != null)
 	await _shot("warning")
-	current_scene.queue_free()
+	menu.queue_free()
 	await process_frame
 
 	print("CAPTURE stage 2")
