@@ -981,6 +981,31 @@ func _pv(side: int, key: String, fallback := 1.0) -> float:
 	return fallback + (v - fallback) * scale * amp
 
 
+## How much of `plan`'s written upside a squad carries out today: its list's
+## fit, its coaches' execution, how well it knows the plan, the weather and a
+## Strategic coach's own plan, the same factors _pv multiplies (the gate's
+## "Gain for this list today", director 2026-11-10; tests/test_coach_effects.gd
+## holds the two together).
+static func upside_scale(sq: Squad, plan: String, weather_key := "perfect") -> float:
+	plan = plan_key(plan)
+	var s := float(sq.tactics_exec) * PlanFit.fit(sq.ground, plan) \
+			* float((WEATHER_PLAN.get(weather_key, {}) as Dictionary).get(plan, 1.0))
+	if not sq.plan_know.is_empty():
+		s *= float(sq.plan_know.get(plan, 1.0))
+	if str(sq.arch.get("fplan", "")) == plan:
+		s *= float(sq.arch.get("sup", 1.0))
+	return s
+
+
+## How much of `plan`'s written cost a squad pays: the plan's own, grown only
+## by a Strategic coach's own plan (row 119).
+static func cost_scale(sq: Squad, plan: String) -> float:
+	plan = plan_key(plan)
+	if str(sq.arch.get("fplan", "")) == plan:
+		return float(sq.arch.get("scost", 1.0))
+	return 1.0
+
+
 ## Pressure multiplier `side` faces from the opposition's plan, counters in.
 ## Controlled Tempo takes the sting out of a press as far as its ball users
 ## can: a side of ordinary ones or better holds it off, poor ones only
@@ -1586,6 +1611,14 @@ func _focus_mult(slot: String, purpose: String, zone: String) -> float:
 	return 1.0
 
 
+## The usage curve: disposals before a player's share starts to fade, and how
+## fast it fades; a played-through man's runs on longer (GateOdds.focus_texts).
+const USAGE_START := 18.0
+const USAGE_START_FOCUSED := 21.0
+const USAGE_WIDTH := 6.4
+const USAGE_WIDTH_FOCUSED := 5.4
+
+
 ## Soft possession cap. Team disposal volume is unchanged — this only stops one
 ## player absorbing every chain once they have already had a huge game.
 ## Must match tools/sim_harness.py::usage_multiplier (the unfocused curve).
@@ -1594,11 +1627,11 @@ func _usage_mult(p: Dictionary, focused: bool) -> float:
 	var id := str(p["id"])
 	if player_stats.has(id):
 		d = float((player_stats[id] as Dictionary).get("disposals", 0.0))
-	var start := 21.0 if focused else 18.0
+	var start := USAGE_START_FOCUSED if focused else USAGE_START
 	if d <= start:
 		return 1.0
 	var over := d - start
-	var width := 5.4 if focused else 6.4
+	var width := USAGE_WIDTH_FOCUSED if focused else USAGE_WIDTH
 	return maxf(0.02, exp(-(over * over) / (width * width)))
 
 
@@ -1710,13 +1743,21 @@ func _contest_plan(side: int) -> float:
 func _contest_pep(side: int) -> float:
 	if _pep(side) != "fire_up" or score(side) >= score(1 - side):
 		return 0.0
-	return 0.018 * _gt(side, "pep")
+	return fire_up_contest(side)
+
+
+## What Fire them up adds at the contest for this side while it chases the
+## game: the base lift scaled by its game plan's pep trait, as the gate shows it.
+func fire_up_contest(side: int) -> float:
+	return PEP_FIRE_CONTEST * _gt(side, "pep")
 
 
 ## Calm the group: a quarter-long, milder Slow it down (the "hold" call),
 ## as Fire them up is a milder Throw numbers at it - fewer clangers, less
 ## pressure felt and legs that last longer, for less ground gained.
 const PEP_CALM := {"clangers": 0.92, "taken": 0.95, "gain": 0.92, "pace": 0.95}
+## Fire them up's lift at the contest while chasing the game (_contest_pep).
+const PEP_FIRE_CONTEST := 0.018
 ## Fire them up: legs go quicker and tempers fray.
 const PEP_FIRE := {"clangers": 1.10, "pace": 1.20}
 ## Bring the heat (director, 2026-10-10): harder pressure on their ball carriers, so
@@ -5605,6 +5646,11 @@ func _offer_set_shot(side: int, p_fp: float, shooter: Dictionary, defender, band
 	options.append({"key": "bomb", "label": "Bomb it to the goal square",
 		"detail": "Into the pack: a forward might mark it or a crumber snap it, but more often the defence clears it.",
 		"goal": bomb_goal, "behind": 0.30})
+	# Each option's gain and cost with the odds it plays at (M7, director 2026-11-10).
+	for o in options:
+		var gc := GateOdds.set_shot_lines(o)
+		o["gain"] = gc[0]
+		o["cost"] = gc[1]
 	_fire({"kind": "set_shot", "default": 0, "player_id": str(shooter["id"]), "band_key": str(band["key"]),
 		"defender_id": "" if defender == null else str(defender["id"]), "fp": p_fp,
 		"feeder_id": "" if feeder == null else str(feeder["id"]),

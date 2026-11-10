@@ -199,7 +199,10 @@ func _how_we_play() -> Control:
 	v.add_child(trade)
 	var ground: Array = GameState.my_squad().ground
 	var profile := GameState.list_profile()
-	var note := _wrapped(CoachReport.plan_summary(GameState.club_plan), UiKit.SMALL, UiKit.TEXT)
+	# The plan sized for your side as picked, coaches and all (M1).
+	var sized_sq := GameState.my_squad()
+	CoachEffects.apply(sized_sq)
+	var note := _wrapped(CoachReport.plan_summary(GameState.club_plan, sized_sq), UiKit.SMALL, UiKit.TEXT)
 	note.name = "PlanNote"
 	# His own players, so each name wears the club's ink (NameInk).
 	var mine := NameInk.from_squads([GameState.my_list], [GameState.my_club])
@@ -209,7 +212,7 @@ func _how_we_play() -> Control:
 	NameInk.set_line(fit, fit_text, mine)
 	fit.visible = fit_text != ""
 	v.add_child(PlanTiles.grid(2 if _narrow() else 3, ground, profile, func(k: String):
-		note.text = CoachReport.plan_summary(k)
+		note.text = CoachReport.plan_summary(k, sized_sq)
 		var t := GameState.plan_fit_line(ground, k)
 		NameInk.set_line(fit, t, mine)
 		fit.visible = t != ""))

@@ -84,6 +84,9 @@ var stacked := false
 ## The line of the last move (or Auto-pick), said under the interchange in
 ## place of the tap hint; `hint_extra` is added to the tap hint.
 var start_note := ""
+## What the club remembers about the player the last move left out (P-37,
+## Remembered.drop_line), said on its own line under the note; "" for none.
+var memory_note := ""
 var hint_extra := ""
 ## Controls that act on the side, set beside the "Interchange" word.
 var interchange_actions: Control = null
@@ -306,6 +309,12 @@ func _build() -> void:
 		hint.name = "BuilderHint"
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		rest.add_child(hint)
+		if memory_note != "" and start_note != "":
+			# A fact, not a state: plain text, not the note's green.
+			var mem := UiKit.lbl(memory_note, UiKit.SMALL, UiKit.TEXT)
+			mem.name = "BuilderRemembered"
+			mem.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			rest.add_child(mem)
 	_grid = GridContainer.new()
 	_grid.name = "NotSelected"
 	# Two abreast on a phone at the standard text size; a larger one (Settings)
@@ -565,6 +574,7 @@ func _where(id: String) -> Array:
 
 ## Swap a with b (b may be "" for an empty spot at `place`, "LINE:i").
 func _swap(a: String, b: String, place: String) -> void:
+	memory_note = ""
 	if a == b:
 		_build()
 		return
@@ -589,6 +599,7 @@ func _swap(a: String, b: String, place: String) -> void:
 		_build()
 		return
 	var note := ""
+	var dropped := {}
 	if not wa.is_empty() and not wb.is_empty():
 		var la: Array = _side[wa[0]]
 		var lb: Array = _side[wb[0]]
@@ -600,19 +611,33 @@ func _swap(a: String, b: String, place: String) -> void:
 				else "%s moves." % GameDB.player_display_name(pa)
 	elif not wa.is_empty():
 		(_side[wa[0]] as Array)[int(wa[1])] = b
+		dropped = pa
 		note = "%s comes in for %s." % [GameDB.player_display_name(pb), GameDB.player_display_name(pa)]
 	else:
 		var lb2: Array = _side[wb[0]]
 		while lb2.size() <= int(wb[1]):
 			lb2.append("")
 		lb2[int(wb[1])] = a
+		dropped = pb
 		note = "%s comes in for %s." % [GameDB.player_display_name(pa), GameDB.player_display_name(pb)] if b != "" \
 				else "%s comes in." % GameDB.player_display_name(pa)
 	for line in LINES:
 		_side[line] = (_side[line] as Array).filter(func(x): return str(x) != "")
 	GameState.set_selection(_side)
+	memory_note = drop_memory(dropped)
+	# The note is on screen from this build, so the line under it is too.
+	start_note = note
 	_build()
 	changed.emit(note)
+
+
+## What the club remembers about a player you have just left out (P-37), or
+## "": the one fact the release confirm would say, with his name.
+static func drop_memory(p: Dictionary) -> String:
+	if p.is_empty() or str(p.get("id", "")) == "":
+		return ""
+	return Remembered.drop_line(p, GameDB.player_display_name(p), GameState.career_facts,
+			GameState.my_club, GameState.with_us(p), GameState.LEARN_JOBS)
 
 
 const TURF := Color(0.118, 0.333, 0.133)

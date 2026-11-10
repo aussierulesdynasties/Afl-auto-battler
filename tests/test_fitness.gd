@@ -341,7 +341,7 @@ func _test_plan_copy() -> void:
 	for level in range(ClubBudget.LEVELS.size()):
 		var h := float(Conditioning.PEAK_HEIGHT[level])
 		var peak := Conditioning.plan_effect("peak", level)
-		_check(peak.contains("Upside:") and peak.contains("Downside:") and peak.contains("Odds:")
+		_check(peak.contains("Gain:") and peak.contains("Cost:") and peak.contains("The peak lands")
 				and peak.contains(Conditioning.pct(Conditioning.DRAIN_K * h) + " slower")
 				and peak.contains(Conditioning.pct(Conditioning.INJURY_K * h) + " fewer")
 				and peak.contains(Conditioning.legs_pct(Conditioning.RESTORE_K * h) + " more in the legs")
@@ -350,7 +350,7 @@ func _test_plan_copy() -> void:
 				and peak.contains(Conditioning.pct(Conditioning.INJURY_K * b) + " more soft-tissue"),
 				"Peak for September at %s: the edge and the cost from the curve's constants (%s)" % [ClubBudget.level_label(level), peak])
 		var fast := Conditioning.plan_effect("fast", level)
-		_check(fast.contains("Upside:") and fast.contains("Downside:") and fast.contains("Odds:")
+		_check(fast.contains("Gain:") and fast.contains("Cost:") and fast.contains("The peak lands")
 				and fast.contains(Conditioning.pct(Conditioning.DRAIN_K * h) + " slower")
 				and fast.contains("March and April"),
 				"A fast start says its early edge and its winter cost (%s)" % fast)
@@ -369,7 +369,7 @@ func _test_plan_copy() -> void:
 		var dept := ClubBudget.benefit_text("high_performance", level)
 		var r := ClubBudget.recovery_mult(level) - 1.0
 		var diff := ClubBudget.cost_m(level) - ClubBudget.cost_m(ClubBudget.STANDARD)
-		_check(dept == Conditioning.department_words(level)
+		_check(dept == Conditioning.department_words(level) and dept.contains("Gain: ") and dept.contains("Cost: ")
 				and (is_zero_approx(r) or dept.contains(Conditioning.pct(absf(r))))
 				and dept.contains(Conditioning.pct(h) + " of its full height")
 				and (odds == "" or dept.contains(odds))
@@ -380,7 +380,7 @@ func _test_plan_copy() -> void:
 			"A better department lands the peak on time more often; Elite always does")
 	var dev := Conditioning.plan_effect("develop", 1)
 	var d := -Conditioning.DEVELOP_LEVEL
-	_check(dev.contains("Upside:") and dev.contains("Downside:")
+	_check(dev.contains("Gain:") and dev.contains("Cost:")
 			and dev.contains("players %d and under" % int(ClubBudget.YOUNG_AGE))
 			and dev.contains(Conditioning.pct(Conditioning.DEVELOP_XP) + " more development XP")
 			and dev.contains("%d more point" % Conditioning.DEVELOP_CEILING)
@@ -388,7 +388,7 @@ func _test_plan_copy() -> void:
 			and dev.contains(Conditioning.pct(Conditioning.DRAIN_K * d) + " faster"),
 			"Develop and manage says what the young gain and what the side gives up (%s)" % dev)
 	var steady := Conditioning.plan_effect("steady", 1)
-	_check(steady.contains("Upside:") and steady.contains("Downside:"), "Steady all year has an upside and a downside too")
+	_check(steady.contains("Gain:") and steady.contains("Cost:"), "Steady all year has a gain and a cost too")
 
 
 ## The plan on its screens, with a finger's taps: the line on the hub and

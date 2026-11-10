@@ -41,6 +41,8 @@ const LINES := {
 const SLOW_MS := 150
 
 var stack: Array = []
+## Tests: load the next screen as a browser build without threads does.
+var test_main_thread_load := false
 
 
 func go(key: String) -> void:
@@ -54,10 +56,20 @@ func go(key: String) -> void:
 	# thread while the dots sweep in. A headless test run swaps at once.
 	var wipe := get_node_or_null("/root/ScreenTransition")
 	if wipe != null and bool(wipe.call("cover_on")):
-		ResourceLoader.load_threaded_request(path)
+		# A browser build has no threads: the "threaded" load would run on the
+		# main thread while the dots sweep in and freeze them half way. There it
+		# starts under full cover, once the line is on screen (_covered_swap).
+		if not load_on_main_thread():
+			ResourceLoader.load_threaded_request(path)
 		wipe.call("cover", _covered_swap.bind(key, path, wipe), str(LINES.get(key, "")))
 		return
 	_swap(key, path, true)
+
+
+## True where loading a scene blocks the main thread (a browser build without
+## threads). Tests set test_main_thread_load.
+func load_on_main_thread() -> bool:
+	return test_main_thread_load or (OS.has_feature("web") and not OS.has_feature("threads"))
 
 
 ## Under full cover: save, wait for the threaded load (LOADING goes up if it
@@ -68,6 +80,11 @@ func _covered_swap(key: String, path: String, wipe: Node) -> void:
 		wipe.call("show_line", ScreenTransition.LOADING)
 		await wipe.call("drawn")
 	GameState.autosave_if_dirty()
+	if load_on_main_thread():
+		if not bool(wipe.call("line_visible")):
+			wipe.call("show_line", ScreenTransition.LOADING)
+			await wipe.call("drawn")
+		ResourceLoader.load_threaded_request(path)
 	var started := Time.get_ticks_msec()
 	while ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 		if Time.get_ticks_msec() - started >= SLOW_MS and not bool(wipe.call("line_visible")):
