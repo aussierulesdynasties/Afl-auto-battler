@@ -134,7 +134,7 @@
 		"choices": [
 			{
 				"key": "honest",
-				"label": "Tell him where he stands",
+				"label": "Tell {name} straight: no promises past this year",
 				"effects": [
 					{
 						"op": "morale",
@@ -154,7 +154,7 @@
 				"effects": [
 					{
 						"op": "morale",
-						"d": 3
+						"d": -2
 					},
 					{
 						"op": "trust",
@@ -258,10 +258,6 @@
 						"op": "trust",
 						"d": 4,
 						"why": "You told him a deal was coming"
-					},
-					{
-						"op": "board",
-						"d": -2
 					}
 				],
 				"result": "{name} is reassured, for now."
@@ -280,8 +276,7 @@
 						"why": "You let him test the market"
 					},
 					{
-						"op": "board",
-						"d": 2
+						"op": "open_price"
 					}
 				],
 				"result": "{name}'s manager starts taking calls."

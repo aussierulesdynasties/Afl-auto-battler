@@ -199,8 +199,10 @@
 						"who": "all"
 					},
 					{
-						"op": "board",
-						"d": -2
+						"op": "culture",
+						"strand": "standards",
+						"d": -1,
+						"why": "A fight at match sim was left alone"
 					}
 				],
 				"result": "It stays on the track. The board hears about it anyway."
@@ -215,8 +217,10 @@
 						"who": "all"
 					},
 					{
-						"op": "board",
-						"d": 2
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You pulled the group up after a fight at match sim"
 					}
 				],
 				"result": "You pull the group up. The standard is set."
@@ -588,9 +592,9 @@
 						"who": "all"
 					},
 					{
-						"op": "slow_start",
-						"who": "side",
-						"chance": 10
+						"op": "forgo_xp",
+						"d": 3,
+						"who": "all"
 					}
 				],
 				"result": "Everyone watches the semi together in the theatrette. They know who's coming.",
