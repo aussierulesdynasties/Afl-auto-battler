@@ -335,9 +335,10 @@ static func _surname(full: String) -> String:
 # ---------------------------------------------------------------------------
 const CAM_D := 46.0               # metres behind the centre
 const CAM_H := 12.0               # and up (low enough that the stand stays in the zoom)
-## The zoom: the wide shot of the whole stoppage (as a camera at 36 m), a slow creep while
-## it holds, the ruck contest's (as at 18.5 m) at the freeze, then a last punch-in.
-const ZOOM := [46.0 / 36.0, 46.0 / 33.0, 46.0 / 18.5, 46.0 / 17.0]
+## The zoom: the wide shot of the whole stoppage (as a camera at 27 m: both rucks and all six
+## mids across the frame, big enough to tell apart; at 36 m a phone drew them ~25 px tall), a
+## slow creep while it holds, the ruck contest's (as at 18.5 m) at the freeze, then a last punch-in.
+const ZOOM := [46.0 / 27.0, 46.0 / 25.0, 46.0 / 18.5, 46.0 / 17.0]
 ## The centre of the ground, as a share of the screen's height: while the play
 ## builds, and once the call is up (it takes the bottom of the screen).
 const CENTRE_Y := [0.58, 0.46]
