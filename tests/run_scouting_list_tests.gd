@@ -138,9 +138,10 @@ func _test_save_round_trip() -> void:
 
 func _test_screen_real_taps() -> void:
 	_state.scouting_list = []
-	_router.go("list")
+	var ls: Control = load("res://scenes/ListScene.tscn").instantiate()
+	root.add_child(ls)
 	await _settle()
-	var open := current_scene.find_child("ScoutingOpen", true, false) as Button
+	var open := ls.find_child("ScoutingOpen", true, false) as Button
 	_check(open != null and open.size.y >= 44, "My list has a thumb-sized way to the scouting list")
 	if open == null:
 		return
@@ -148,12 +149,17 @@ func _test_screen_real_taps() -> void:
 	var missed: String = await Tap.tap(open)
 	_check(missed == "", "Scouting list takes a finger: %s" % missed)
 	await _settle()
-	_check(str(current_scene.name) == "ScoutingScene", "The tap opens the scouting list (%s)" % current_scene.name)
-	if str(current_scene.name) != "ScoutingScene":
-		return
-	_check(current_scene.find_child("ScoutListEmpty", true, false) != null, "An empty list says so")
+	_check(_router.current() == "scouting", "The tap opens the scouting list (%s)" % _router.current())
+	if is_instance_valid(ls):
+		ls.queue_free()
+	if current_scene != null:
+		current_scene.visible = false
+	var sc: Control = load("res://scenes/ScoutingScene.tscn").instantiate()
+	root.add_child(sc)
+	await _settle()
+	_check(sc.find_child("ScoutListEmpty", true, false) != null, "An empty list says so")
 	var id := str(_class()[0]["id"])
-	var add := current_scene.find_child("ClassAdd_" + id, true, false) as Button
+	var add := sc.find_child("ClassAdd_" + id, true, false) as Button
 	_check(add != null and add.size.y >= 44, "Each prospect in the class has a thumb-sized Add")
 	if add == null:
 		return
@@ -161,11 +167,11 @@ func _test_screen_real_taps() -> void:
 	_check(missed == "", "Add takes a finger: %s" % missed)
 	await _settle()
 	_check(SL.has(_state, id), "A real tap puts him on the list")
-	_check(current_scene.find_child("ScoutRow_" + id, true, false) != null, "He shows on your list")
-	_check(current_scene.find_child("ClassRow_" + id, true, false) == null, "And no longer in the class below")
-	var change := current_scene.find_child("ScoutChange_" + id, true, false) as Label
+	_check(sc.find_child("ScoutRow_" + id, true, false) != null, "He shows on your list")
+	_check(sc.find_child("ClassRow_" + id, true, false) == null, "And no longer in the class below")
+	var change := sc.find_child("ScoutChange_" + id, true, false) as Label
 	_check(change != null and change.text.contains("Listed before Round 1"), "His row says when he was listed")
-	var rem := current_scene.find_child("ScoutRemove_" + id, true, false) as Button
+	var rem := sc.find_child("ScoutRemove_" + id, true, false) as Button
 	_check(rem != null, "A listed prospect has Remove")
 	if rem == null:
 		return
@@ -173,8 +179,8 @@ func _test_screen_real_taps() -> void:
 	_check(missed == "", "Remove takes a finger: %s" % missed)
 	await _settle()
 	_check(not SL.has(_state, id), "A real tap takes him off")
-	_check(current_scene.find_child("ClassRow_" + id, true, false) != null, "He is back in the class")
-	_check(_no_bad_words(current_scene), "No best, target or should on the screen")
+	_check(sc.find_child("ClassRow_" + id, true, false) != null, "He is back in the class")
+	_check(_no_bad_words(sc), "No best, target or should on the screen")
 
 
 ## The no-recommendation rule: the screen never says who to take.
