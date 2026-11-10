@@ -58,6 +58,8 @@ const DETAIL_MIN_PX := 6.5
 
 ## Tests: set the ball's clock by hand (ms since it opened), -1 to run free.
 var hand_clock_ms := -1
+## Tests: open as a browser does (the ball at rest).
+var web_still := false
 ## Filled by tick(); tests read them.
 var ball_at := Vector2.ZERO
 var ball_turn := 0.0
@@ -111,7 +113,10 @@ func _exit_tree() -> void:
 ## Up, for `club` (its colour on the post padding; "" before a career has one).
 func open(club: String, still: bool) -> void:
 	_pad = UiKit.club_ink(club, UiKit.PANEL_ALT) if club != "" else POST
-	_still = still
+	# A browser cannot draw while blocking work runs, so what it shows for a
+	# wait are stills (a skip draws one a week): the ball rests on the turf
+	# there, as with Reduced motion, so no still catches it hanging in the air.
+	_still = still or web_still or (OS.has_feature("web") and not OS.has_feature("threads"))
 	_t0_ms = Time.get_ticks_msec()
 	visible = true
 	fit()

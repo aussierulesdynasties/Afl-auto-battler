@@ -1,7 +1,8 @@
 name: Web build
 
-# Builds the browser version for itch.io: the single-threaded ("no threads")
-# Web export, so it runs on itch without SharedArrayBuffer or special headers.
+# Builds the browser version for itch.io: the threaded Web export, so a week's
+# matches run on threads while the loading screen keeps playing (director,
+# 2026-11-10). It needs itch's "SharedArrayBuffer support" ticked.
 # Start it by hand against any branch, or it runs on every push to main:
 #
 #   gh workflow run web.yml --ref <branch>
@@ -61,7 +62,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.local/share/godot/export_templates
-          key: godot-web-template-${{ env.GODOT_VERSION }}
+          key: godot-web-threads-template-${{ env.GODOT_VERSION }}
 
       - name: Download the web export template
         if: steps.tpl-cache.outputs.cache-hit != 'true'
@@ -72,7 +73,7 @@ jobs:
             "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" \
           || curl -fsSL --retry 3 -o templates.tpz \
             "https://downloads.godotengine.org/?version=${GODOT_VERSION}&flavor=stable&slug=export_templates.tpz&platform=templates"
-          unzip -q -j templates.tpz 'templates/web_nothreads_release.zip' 'templates/web_nothreads_debug.zip' 'templates/version.txt' -d "$dest"
+          unzip -q -j templates.tpz 'templates/web_release.zip' 'templates/web_debug.zip' 'templates/version.txt' -d "$dest"
           ls -la "$dest"
 
       - name: Import and export the Web build
