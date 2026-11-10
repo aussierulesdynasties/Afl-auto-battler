@@ -2147,3 +2147,22 @@ static func _ladder_label(text: String, w: int, col: Color, fs: int, bold: bool,
 	else:
 		l.custom_minimum_size = Vector2(w, 0)
 	return l
+
+
+## A gate's "Gain: ..." or "Cost: ..." line as a row (the card-stakes pattern):
+## the marker bold in the label ink, the sentence beside it in body text. The
+## row is named `node_name`; its sentence label is "Text".
+static func stake_row(line: String, node_name: String) -> Control:
+	var cut := line.find(": ")
+	var item := hbox(6)
+	item.name = node_name
+	var mk := lbl(line.substr(0, cut + 1) if cut > 0 else "", SECONDARY, label_ink(), true)
+	mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	mk.autowrap_mode = TextServer.AUTOWRAP_OFF
+	item.add_child(mk)
+	var l := lbl(line.substr(cut + 2) if cut > 0 else line, SECONDARY, TEXT)
+	l.name = "Text"
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	item.add_child(l)
+	return item
