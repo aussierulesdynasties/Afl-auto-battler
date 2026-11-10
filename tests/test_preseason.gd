@@ -5,6 +5,7 @@ extends RefCounted
 ## Every season here is seeded.
 
 const Tap := preload("res://tests/tap.gd")
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 var failures: Array[String] = []
 var checks := 0
@@ -630,7 +631,7 @@ func _test_ai_parity() -> void:
 	_check(off_inj == 0 and fair and on_inj <= GameState.preseason_injuries().size(),
 			"In training only a Heavy week hurts anyone, at any club, and only with a soft-tissue injury; the rest come from the pre-season match (%d in training, %d in the match, %d still out at Round 1)" % [
 			in_training, in_match, on_inj])
-	_check(on_mean >= off_mean and on_mean - off_mean < 1.0 and most <= GameState.SEASON_TRAIN_GAIN + 2,
+	_check(BalanceGate.held(on_mean >= off_mean and on_mean - off_mean < 1.0 and most <= GameState.SEASON_TRAIN_GAIN + 2, "preseason mean rating lift under a point"),
 			"A pre-season lifts the league's mean rating by under a point (%.2f to %.2f), nobody by more than the season limit" % [off_mean, on_mean])
 	_check(theirs > 0.0 and absf(mine - theirs) < 0.5,
 			"On the default plan your list develops like an AI club's (%.2f against %.2f a player)" % [mine, theirs])

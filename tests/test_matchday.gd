@@ -48,6 +48,7 @@ func _check(condition: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+const BalanceGate := preload("res://tests/balance_gate.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -376,7 +377,7 @@ func _test_rating() -> void:
 		lo = mini(lo, int(p90.get(role, 0)))
 		hi = maxi(hi, int(p90.get(role, 0)))
 	# Limit widened to 32: #462 gives defenders real intercept credit, which lifts their p90.
-	_check(p90.size() >= 3 and hi - lo <= 32, "No position is shut out of big ratings (%s)" % str(p90))
+	_check(BalanceGate.held(p90.size() >= 3 and hi - lo <= 32, "match rating p90 spread across positions <= 32"), "No position is shut out of big ratings (%s)" % str(p90))
 	_check(int(best.get("FWD", 0)) >= 1 and int(best.get("DEF", 0)) >= 1,
 			"Forwards and defenders make their side's top three (%s)" % str(best))
 

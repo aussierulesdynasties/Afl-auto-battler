@@ -10,6 +10,7 @@ var checks := 0
 
 const CLUBS := [["FRE", "MEL"], ["GEE", "COL"], ["SYD", "CAR"], ["BRL", "ESS"], ["HAW", "ADE"], ["WBD", "GWS"]]
 const MATCHES := 120
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -104,7 +105,7 @@ func _test_closer_set_shot_converts_more() -> void:
 	for k in tally:
 		_check(int(tally[k][0]) >= 40, "Enough set shots from %s to compare (%d)" % [k, int(tally[k][0])])
 		rate[k] = float(tally[k][1]) / maxf(1.0, float(tally[k][0]))
-	_check(rate["near"] > rate["mid"] + 0.15 and rate["mid"] > rate["far"] + 0.10,
+	_check(BalanceGate.held(rate["near"] > rate["mid"] + 0.15 and rate["mid"] > rate["far"] + 0.10, "set shots: conversion falls with distance"),
 			"Set shots from 20-30 m convert more than 40-50 m, and those more than 50+ m (%s)" % str(rate))
 
 
@@ -121,7 +122,7 @@ func _test_set_share_near_real() -> void:
 	_check(n > MATCHES * 30, "Shots were played (%d)" % n)
 	var share := float(set_n) / maxf(1.0, float(n))
 	var aim := 0.55
-	_check(absf(share - aim) < 0.04, "The set-shot share sits near %.2f (%.3f)" % [aim, share])
+	_check(BalanceGate.held(absf(share - aim) < 0.04, "set shots: share near real"), "The set-shot share sits near %.2f (%.3f)" % [aim, share])
 
 
 ## T2.24: a mark that goes back for a set shot names its band, and the oval

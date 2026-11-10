@@ -493,10 +493,10 @@ Precedence: a later director decision beats an earlier one. The 2026-11-03 story
 
 ## 3.Q Open for the director
 
-1. Gate label wording: Gain / Cost with odds inside the line, or Upside / Downside / Odds?
-2. Plan gain scaling: print the gain for this list today with "(X% for a list that suits it)", keep the suits-it figure plus words, or leave it?
-3. Draft leak: should the draft stop showing the true rating beside the scouting range, and how should range odds be worded?
-4. Which costs do the dominant list options (free release, haggling and the rest named in the audit; Play through and Main ruck are cut or merged, roadmap 32 rows 2-5) and the club dominant options carry?
+1. ANSWERED 2026-11-10: Gain / Cost everywhere (D4 39).
+2. ANSWERED 2026-11-10: gain for this list today (D4 40). Plan gain scaling: print the gain for this list today with "(X% for a list that suits it)", keep the suits-it figure plus words, or leave it?
+3. ANSWERED 2026-11-10: everything follows the read; one scouting-budget line (D4 41).
+4. ANSWERED 2026-11-10: list costs in the rule's spirit; club cost sheet, one look (D4 42). Which costs do the dominant list options (free release, haggling and the rest named in the audit; Play through and Main ruck are cut or merged, roadmap 32 rows 2-5) and the club dominant options carry?
 5. CLOSED as cut (roadmap 32 rows 2-5): Play through is the Through stars plan, so the Boss-written role lines are retired; its cost line is 2.Q15.
 6. Press conference: where bible and code disagree, which wins?
 7. The 33 gain-only story options: add a cost, drop them, or keep them?
@@ -647,9 +647,9 @@ How to read this chapter. Every rule carries its date and a source tag in square
 ## 4.Q Open for the director
 
 1. Coaching Teaching effect: DESIGN.md says Teaching scales match XP (-5% to +10%) with grades Elite 86+, Strong 78+, Good 68+; the 2026-10-09 RPG-006 record says Strong (82) or better adds a point to a player's season ceiling and Fair (62) or worse takes one off. Which model and which grade cut-offs govern?
-2. Rulings Q3 (draft leak): should everything on a scouted player follow the scouts' read (price, full ratings, traits, and Pick for me), or should it be hidden until he is on your list, or should truth stay and the range drop?
-3. Rulings Q4: under every range, do you want "this read misses about N% of the time, by up to M", or one line on scouting budget?
-4. Rulings Q5: should list options that are currently dominant (haggling under ask, release, asking a retiree again) get stated costs in the rule's spirit, a cost sheet later, or stay dominant?
+2. ANSWERED 2026-11-10 (everything follows the read, D4 41). Rulings Q3 (draft leak): should everything on a scouted player follow the scouts' read (price, full ratings, traits, and Pick for me), or should it be hidden until he is on your list, or should truth stay and the range drop?
+3. ANSWERED 2026-11-10 (one scouting-budget line, D4 41). Rulings Q4: under every range, do you want "this read misses about N% of the time, by up to M", or one line on scouting budget?
+4. ANSWERED 2026-11-10 (costs in the rule's spirit, D4 42). Rulings Q5: should list options that are currently dominant (haggling under ask, release, asking a retiree again) get stated costs in the rule's spirit, a cost sheet later, or stay dominant?
 5. Are C-PC-17 (untouchable), C-PC-18 (pick order from round 18) and C-PC-28 (pick trade on draft night, tier C until draft-night staging) inside the bundle you approved, or still candidates? C-PC-16 "Ask around" reads against P-18; is it in P-50 as you approved?
 6. P-57 league rules change over a career: "Not yet". Do you want it revisited after the cap-step announcement (P-55) has soaked?
 7. Should the staggered multi-day trade period (ARD-M6-004: 3-5 days, default three) be built at all, given C-PC-16 explicitly does not build it?
@@ -930,7 +930,7 @@ S24. Resolved: G1 questions ("is one slot right, none or fewer during a losing r
 ## 5.Q Open for the director
 
 Q1. ANSWERED 2026-11-06 (the roll stands; the code rolls each answer (seeded, odds shown); settled; see 5.4 entry 56a). Press conferences: your 2026-10-18 ruling was "Code follows the bible" (a seeded roll with odds and both outcomes shown); the 2026-11-03 rulings sheet (Q8) still asks the choice again. Does the roll stand (B), or should the bible line change to match the fixed effects now in code (A, recommended on that sheet)?
-Q2. Club dominant options (rulings Q6): do you want a cost sheet per option built like the 17 story cards (A, recommended), or drop options that cannot carry a cost (B)?
+Q2. ANSWERED 2026-11-10 (cost sheet, one look, D4 42). Club dominant options (rulings Q6): do you want a cost sheet per option built like the 17 story cards (A, recommended), or drop options that cannot carry a cost (B)?
 Q3. The 33 gain-only story options (rulings Q9): one cost sheet for all 33 with one look (A, recommended), or leave the allowlist as it is (B)?
 Q4. Coach arc catalogue: which of the draft arcs do you keep, change or cut before the arc engine is built, and will you play a career so the off switches (coach_arcs, weekly checklist, match_story, finals_cards_2) can go on?
 Q5. Is the one big call per week the right place to promote young-player backing, captaincy, press answers or assistant approaches? (suggestion only; 5.166; decided yes on the checklist itself, 5.162)
@@ -2289,10 +2289,10 @@ Every open question from chapters 1 to 9 is collected here once. Each carries it
 ### D4. Decision transparency, costs and copy
 
 38. ANSWERED 2026-11-06: the code rolls each answer (seeded, odds shown); settled (5.4 entry 56a). Press conference: the bible says "An answer is a dice roll based on logic"; the code once used fixed effects with no dice. The 2026-10-18 ruling was "Code follows the bible" (a seeded roll with odds and both outcomes shown), yet the 2026-11-03 rulings sheet (Q8) asks again. Does the roll stand (B), or does the bible line change to match the code (A, recommended on that sheet)? Where bible and code disagree, which wins? [1:6, 3:6, 5:1, 9:11]
-39. Gate label wording: Gain / Cost with odds inside the line, or Upside / Downside / Odds? [3:1]
-40. Plan gain scaling: print the gain for this list today with "(X% for a list that suits it)", keep the suits-it figure plus words, or leave it? [3:2]
-41. Draft leak: should the draft stop showing the true rating beside the scouting range (or should everything on a scouted player follow the scouts' read: price, full ratings, traits and Pick for me; or be hidden until he is on your list; or should truth stay and the range drop), and how should range odds be worded ("this read misses about N% of the time, by up to M", or one line on scouting budget)? [3:3, 4:2, 4:3]
-42. Which costs do the dominant list options (free release, haggling under ask, asking a retiree again and the rest named in the audit; Play through and Main ruck are cut or merged, roadmap 32 rows 2-5) and the club dominant options carry: a cost sheet per option built like the 17 story cards (A, recommended), a cost sheet later, drop options that cannot carry a cost (B), or stay dominant? [3:4, 4:4, 5:2]
+39. ANSWERED 2026-11-10 (T1.R26): "Gain / Cost everywhere", odds inside the line; club gates change from Upside/Downside/Odds. Gate label wording: Gain / Cost with odds inside the line, or Upside / Downside / Odds? [3:1]
+40. ANSWERED 2026-11-10 (T1.R26): "Gain for this list today": the line prints the gain with this list, weather and coaches, with "(X% for a list that suits it)" beside. Plan gain scaling: print the gain for this list today with "(X% for a list that suits it)", keep the suits-it figure plus words, or leave it? [3:2]
+41. ANSWERED 2026-11-10 (T1.R26): "Everything follows the read" (price, Full ratings, traits and Pick for me use the scouts' read) and "One scouting-budget line" for the odds. Draft leak: should the draft stop showing the true rating beside the scouting range (or should everything on a scouted player follow the scouts' read: price, full ratings, traits and Pick for me; or be hidden until he is on your list; or should truth stay and the range drop), and how should range odds be worded ("this read misses about N% of the time, by up to M", or one line on scouting budget)? [3:3, 4:2, 4:3]
+42. ANSWERED 2026-11-10 (T1.R26): list options: "Costs in the rule's spirit" (haggle under ask costs morale, a release leaves part of the contract on the cap, a retiree asked again plays with fewer legs, each sized); club options: "Cost sheet, one look" (built like the 17 story cards). Which costs do the dominant list options (free release, haggling under ask, asking a retiree again and the rest named in the audit; Play through and Main ruck are cut or merged, roadmap 32 rows 2-5) and the club dominant options carry: a cost sheet per option built like the 17 story cards (A, recommended), a cost sheet later, drop options that cannot carry a cost (B), or stay dominant? [3:4, 4:4, 5:2]
 43. CLOSED as cut (roadmap 32 rows 2-5; Play through is the Through stars plan; its cost line is 2.Q15): earlier question on the Boss-written role lines (key forward target, key midfielder, key distributor, key man in the middle) and a cost on Play through (PR #850; wait for #850 or add a legs cost now, Rulings Q7)? [2:15, 3:5]
 44. The 33 gain-only story options: add a cost (one cost sheet for all 33 with one look, A, recommended), drop them, or keep the allowlist as it is (B)? [3:7, 5:3]
 45. Lever truth: shall the loose man be accepted as an honest trade, given a decisive edge, or measured against the AI? [2:16]

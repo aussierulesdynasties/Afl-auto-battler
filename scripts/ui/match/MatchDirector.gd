@@ -1428,9 +1428,9 @@ func _enter(p: Dictionary) -> void:
 					if (s == "WL" or s == "WR") and _centre_setup(int(t["side"])) == "stack":
 						MatchMotion.set_goal(t, at + Vector2(-4.0 * _dir(int(t["side"])), 6.0 * signf((t["pos"] as Vector2).y)), 1.0, true)
 						_busy[int(t["id"])] = true
-					elif CONTEST_CRASH.has(s) and _plan_of(int(t["side"])) == "contest" and _centre_setup(int(t["side"])) == "stack":
-						# Win Contest: both half-lines crash in too, once the ball is
-						# up, a beat after the wings.
+					elif CONTEST_CRASH.has(s) and _centre_setup(int(t["side"])) == "stack":
+						# Win Contest or Stack the stoppage: both half-lines crash in
+						# too, once the ball is up, a beat after the wings.
 						var out: Vector2 = (t["pos"] as Vector2) - at
 						_crash_late(t, at + out.normalized() * CONTEST_RING)
 						t["crashing"] = true
@@ -2029,7 +2029,7 @@ func _refresh_structure() -> void:
 			var d := (t["pos"] as Vector2).distance_to(g)
 			var u := minf(clampf(d / 45.0, 0.1, 0.6) * _call_pace(side),
 					1.0 if _burst_on(side, "surge") else CALL_PACE_TOP)
-			var crashing: bool = crash and CONTEST_CRASH.has(str(t["slot"])) and _plan_of(side) == "contest"
+			var crashing: bool = crash and CONTEST_CRASH.has(str(t["slot"])) and _crashes(side)
 			if crashing:
 				# Crashing a stoppage is a sprint: the wings from the moment it
 				# is called, both half-lines a beat after them, so they do not
@@ -2140,7 +2140,7 @@ func _structure_limits(side: int, spots: Dictionary, ball_p: Vector2, crash: boo
 			break
 	for id in spots:
 		var p: Vector2 = spots[id]
-		if crash and (_plan_of(side) == "contest" or _plan_of(1 - side) == "contest"):
+		if crash and (_crashes(side) or _crashes(1 - side)):
 			var out := p - ball_p
 			var here: Vector2 = (tokens[id]["pos"] as Vector2) - ball_p
 			if here.length() < CONTEST_KEEP and here.length() > 0.01:
@@ -2302,12 +2302,17 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 	if has and chase >= 0:
 		# Sent to their loose man: he stands where the spare would sit.
 		world = world.lerp((tokens[chase]["goal"] as Vector2), 0.6)
-	if plan == "contest" and _stoppage_on() and CONTEST_CRASH.has(slot):
-		# Win Contest at a stoppage: the wings and both half-lines crash in
-		# round the contest, each from his own side of it.
+	if _stoppage_on() and CONTEST_CRASH.has(slot) and _crashes(side):
+		# Win Contest at a stoppage (Stack the stoppage at a centre bounce): the
+		# wings and both half-lines crash in round the contest, each from his
+		# own side of it.
 		var out := world - ball_p
 		if out.length() > CONTEST_RING:
 			world = world.lerp(ball_p + out.normalized() * CONTEST_RING, CONTEST_CRASH_SHARE)
+	elif _stoppage_on() and STACK_POCKETS.has(slot) and _burst_on(side, "stack") and _centre_stoppage():
+		# ...and its pockets hold up behind them, where the bounce set them.
+		var ax := world.x * dir
+		world.x = signf(ax) * minf(absf(ax), STACK_POCKET_X) * dir
 	var flooding := not has and _flooding(side)
 	if not has:
 		var o := int(t["match"])
@@ -2321,7 +2326,7 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			# the ball and goal, across the corridor.
 			var hole := ball_p.lerp(own_goal, FLOOD_DEPTH)
 			hole.y = lerpf(ball_p.y, base.y * 0.55, 0.6)
-			world = world.lerp(hole, 0.75)
+			world = world.lerp(hole, FLOOD_MID_SHARE)
 		elif o >= 0:
 			var og: Vector2 = tokens[o]["goal"]
 			if og.distance_to(world) < 35.0:
@@ -2335,10 +2340,13 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 					w = 0.85   # a tagger plays the man
 				world = world.lerp(mark, w)
 		if flooding and role == "FWD":
-			# ...and the half-forward line pushes up toward the ball, so the
-			# numbers are behind it; the full-forward line stays home.
+			# ...and the half-forward line drops back to just goal-side of the
+			# ball, so the numbers are behind it wherever the ball is (row T2.4:
+			# pulled toward the ball, they stayed in front of it when it was in
+			# their own half); the full-forward line mostly stays home.
 			var half := slot == "CHF" or slot == "HFL" or slot == "HFR"
-			world.x = lerpf(world.x, ball_p.x, FLOOD_PUSH if half else FLOOD_PUSH * 0.25)
+			var behind := ball_p.x - dir * FLOOD_HALF_BEHIND
+			world.x = lerpf(world.x, behind, FLOOD_HALF_SHARE if half else FLOOD_PUSH * 0.25)
 	return _keep_in(world)
 
 
@@ -2499,6 +2507,12 @@ func _pressing(side: int, bx: float) -> bool:
 ## its own goal), and how far its forwards come up toward the ball.
 const FLOOD_DEPTH := 0.35
 const FLOOD_PUSH := 0.35
+## How far the midfield folds into that hole, how far goal-side of the ball the
+## half-forward line drops (metres) and how much of the way it goes (row T2.4:
+## at 0.75 and pushed toward the ball the flood moved the side 5.5 m, too little to see).
+const FLOOD_MID_SHARE := 0.9
+const FLOOD_HALF_BEHIND := 6.0
+const FLOOD_HALF_SHARE := 0.8
 
 
 ## The side's recorded calls include a flood (MatchSim.BURSTS, on the timeline
@@ -2883,6 +2897,24 @@ static func _ring_slots(bearings: Array, slots: Array) -> Array:
 	return best
 
 
+## Win Contest's crash at every stoppage, or a stack's at a centre bounce.
+func _crashes(side: int) -> bool:
+	return _plan_of(side) == "contest" or (_burst_on(side, "stack") and _centre_stoppage())
+
+
+## The stoppage on is a centre bounce (its set-up or its clearance), where a
+## stacked side crashes in (row T2.4: with only its wings in, the stack moved
+## the side 2.8 m from Balanced, too little to see).
+func _centre_stoppage() -> bool:
+	if _beat.is_empty():
+		return false
+	var k := int(_beat["k"])
+	if _restart(k) == "centre":
+		return true
+	var pk := _prev_real(k)
+	return pk >= 0 and _possession(str((events[pk] as Dictionary).get("kind", ""))) and _restart(pk) == "centre"
+
+
 ## A stoppage is on: a ball-up or throw-in being set, and the clearance out
 ## of it (or out of a centre bounce) until the next disposal is under way.
 func _stoppage_on() -> bool:
@@ -2963,15 +2995,18 @@ func _centre_spot(t: Dictionary, carrier: int) -> Vector2:
 		match _centre_setup(side):
 			"stack":
 				# Attacking: the wings on the square's edge, ready to crash
-				# the contest, and the half-forwards up to the arc.
+				# the contest, and both half-lines up to their arcs.
 				if slot == "WL" or slot == "WR":
 					spot = Vector2(-2.0, 27.0 * signf(spot.y))
 				elif slot == "CHF" or slot == "HFL" or slot == "HFR":
 					spot.x = ARC_EDGE
-				elif (slot == "CHB" or slot == "HBL" or slot == "HBR") and _plan_of(side) == "contest" \
-						and not _burst_on(side, "stack"):
-					# Win Contest: the half-backs up to their arc as well, to crash in.
+				elif slot == "CHB" or slot == "HBL" or slot == "HBR":
 					spot.x = -ARC_EDGE
+				elif _burst_on(side, "stack") and STACK_POCKETS.has(slot):
+					# Stack the stoppage throws the whole side at it: the pockets
+					# step up behind the half-lines too (row T2.4), only the full-
+					# back and full-forward kept home. Still inside the arcs.
+					spot.x = signf(spot.x) * STACK_POCKET_X
 			"flood":
 				# Defensive: the wings goal-side of the square, and the
 				# centreman at its back edge, behind the ball.
@@ -2984,6 +3019,10 @@ func _centre_spot(t: Dictionary, carrier: int) -> Vector2:
 
 ## Just inside the forward 50 arc, in a side's attacking frame.
 const ARC_EDGE := 37.0   # MatchMotion.GOAL_X (85) - 48
+## Stack the stoppage at a centre bounce: the pockets this far from centre
+## (from 66-68 m; the arc is at 37 m where they stand, 15 m off the centre line).
+const STACK_POCKETS := ["FPL", "FPR", "BPL", "BPR"]
+const STACK_POCKET_X := 48.0
 
 
 ## A side's centre ball-up setup from its recorded calls: "stack" (extra
