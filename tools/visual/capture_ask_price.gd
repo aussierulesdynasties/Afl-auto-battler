@@ -71,9 +71,14 @@ func _shot(off: Node, name: String, path: String) -> void:
 	for i in range(8):
 		await process_frame
 	var target: Control = off.find_child(name, true, false)
-	var box: ScrollContainer = off.find_children("*", "ScrollContainer", true, false)[0]
-	if target != null:
-		box.scroll_vertical = int(target.global_position.y - box.global_position.y) - 260
+	var box: ScrollContainer = null
+	var up: Node = target
+	while up != null and box == null:
+		up = up.get_parent()
+		box = up as ScrollContainer
+	print("%s found %s, scroll box %s" % [name, target != null, box != null])
+	if target != null and box != null:
+		box.scroll_vertical = maxi(0, int(target.global_position.y - box.global_position.y) + box.scroll_vertical - 260)
 	for i in range(8):
 		await process_frame
 	var img := root.get_viewport().get_texture().get_image()
