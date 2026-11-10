@@ -1010,6 +1010,66 @@ func _test_event_sheet() -> void:
 	root.size = size_before
 
 
+## A Tribunal hearing's result opens over the hub the moment it is decided
+## (director, 2026-11-10: "too difficult to tell currently"): won or lost,
+## the ban before and after, the cost, our club's colours. Real taps at a
+## phone's size: Challenge at Tribunal opens it, Done closes it.
+func _test_tribunal_verdict() -> void:
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	for arm in [["won", 0.0, 1], ["lost", 0.99, 2]]:
+		_state.reset()
+		_state.career_seed = 4403
+		_state.replay_seed = 4403
+		_state.start_season("FRE", _db.club_list("FRE"))
+		_state.set_setting("seen_weekly_loop_intro", true)
+		var p: Dictionary = _state.my_list[0]
+		_state._process_discipline([{"home": "FRE", "away": "MEL", "reports": [{"side": 0,
+				"id": str(p["id"]), "name": _db.player_display_name(p), "victim_id": "v1",
+				"victim_name": "Victim", "reason": "rough conduct", "outcome": "suspension",
+				"weeks": int(arm[2]), "tribunal_roll": float(arm[1]), "appeal_roll": 0.99,
+				"challenged": false, "appealed": false}]}])
+		_router.stack = ["main"]
+		_router.go("hub")
+		await _settle()
+		var card: Control = current_scene.find_child("TribunalCard", true, false)
+		var challenge: Button = null
+		if card != null:
+			for b in card.find_children("*", "Button", true, false):
+				if (b as Button).text == "Challenge at Tribunal":
+					challenge = b
+		var why: String = (await Tap.tap(challenge)) if challenge != null else "missing"
+		await _settle()
+		var sheet: Control = current_scene.find_child("TribunalVerdict", true, false)
+		var text := ""
+		if sheet != null:
+			var out := []
+			_texts(sheet, out)
+			text = " | ".join(out)
+		var name := str(_db.player_display_name(p))
+		if str(arm[0]) == "won":
+			_check(why == "" and sheet != null and text.contains("Challenge won") and text.contains("1 match")
+					and text.contains("Cleared") and text.contains("34%") and text.contains("Brownlow: eligible again")
+					and text.contains("Risked:") and text.contains("Paid:") and text.contains("Fremantle"),
+					"A real tap on Challenge at Tribunal opens the verdict: won, 1 match to cleared, 34%%, the cost (%s; %s)" % [why, text])
+		else:
+			_check(why == "" and sheet != null and text.contains("Challenge lost") and text.count("2 matches") == 2
+					and text.contains("We can still appeal: 10%") and text.contains("Brownlow: ineligible")
+					and text.contains("Risked:") and text.contains("Paid:") and text.contains("Fremantle"),
+					"A lost challenge opens the verdict: lost, 2 matches before and now, the appeal's odds, the cost (%s; %s)" % [why, text])
+		var who: Node = sheet.find_child("VerdictPlayer", true, false) if sheet != null else null
+		var who_text := str(who.get("text")) if who != null else ""
+		_check(who_text.contains(name.split(" ")[-1]), "The verdict names the player (%s: %s)" % [name, who_text])
+		var done: Button = sheet.find_child("TribunalVerdictDone", true, false) if sheet != null else null
+		var done_tap: String = (await Tap.tap(done)) if done != null else "missing"
+		await _settle()
+		_check(done_tap == "" and current_scene.find_child("TribunalVerdict", true, false) == null
+				and _router.current() == "hub",
+				"A real tap on Done closes the %s verdict at 390x844 (%s)" % [str(arm[0]), done_tap])
+	_state.reset()
+	root.size = size_before
+
+
 func _settle() -> void:
 	for i in range(4):
 		await process_frame
@@ -1489,6 +1549,7 @@ func _run() -> void:
 	await _t("_test_back_arrow_taps")
 	await _t("_test_finals_card_taps")
 	await _t("_test_event_sheet")
+	await _t("_test_tribunal_verdict")
 	await _t("_test_event_sheet_flows")
 	await _t("_test_event_sheet_fits_every_card")
 	await _t("_test_sacked_job_choice_taps")

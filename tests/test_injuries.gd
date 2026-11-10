@@ -208,6 +208,11 @@ func _test_tribunal_challenge() -> void:
 			"A successful Tribunal challenge clears the ban and restores Brownlow eligibility")
 	_check(GameState.pending_mro_challenges().is_empty(),
 			"A Tribunal sanction cannot be challenged twice")
+	_check(str(win.get("stage", "")) == "tribunal" and int(win.get("weeks_before", -1)) == 1
+			and int(win.get("weeks_after", -1)) == 0 and is_equal_approx(float(win.get("odds", 0.0)), 0.34)
+			and bool(win.get("brownlow_ok", false)) and str(win.get("club", "")) == "GEE"
+			and str(win.get("risked", "")) != "" and str(win.get("paid", "")) != "",
+			"A won challenge reports the ban before (1) and after (0), the odds, Brownlow and the cost for its sheet")
 
 	var upheld: Dictionary = GameState.my_list[1]
 	var upheld_id := str(upheld["id"])
@@ -220,6 +225,10 @@ func _test_tribunal_challenge() -> void:
 	_check(not bool(loss.get("success", true)) and int(upheld.get("suspension_weeks", 0)) == 2
 			and bool(upheld.get("brownlow_ineligible", false)),
 			"A failed Tribunal challenge leaves the original ban and Brownlow ineligibility intact")
+	_check(int(loss.get("weeks_before", -1)) == 2 and int(loss.get("weeks_after", -1)) == 2
+			and is_equal_approx(float(loss.get("next_odds", -1.0)), 0.10)
+			and not bool(loss.get("brownlow_ok", true)),
+			"A lost challenge reports the ban unchanged at 2, Brownlow lost and the appeal's odds for its sheet")
 	var appeal_pending := GameState.pending_mro_challenges()
 	_check(appeal_pending.size() == 1 and str(appeal_pending[0].get("stage", "")) == "appeal",
 			"A failed Tribunal suspension can be taken once to the Appeals Board")
@@ -227,6 +236,9 @@ func _test_tribunal_challenge() -> void:
 	_check(bool(appeal.get("success", false)) and Ratings.available(upheld)
 			and not bool(upheld.get("brownlow_ineligible", false)),
 			"A successful appeal overturns the suspension and restores Brownlow eligibility")
+	_check(str(appeal.get("stage", "")) == "appeal" and int(appeal.get("weeks_after", -1)) == 0
+			and float(appeal.get("next_odds", 0.0)) < 0.0,
+			"A won appeal reports the ban cleared and no further hearing")
 	_check(GameState.pending_mro_challenges().is_empty(),
 			"A resolved Appeals Board case cannot be appealed twice")
 
