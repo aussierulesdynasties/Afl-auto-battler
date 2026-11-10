@@ -460,7 +460,8 @@ func _test_phone(size: Vector2i) -> void:
 		return
 	var texts: Array = []
 	_texts(feed, texts)
-	var blob := "\n".join(texts)
+	# NameInk keeps a name on one line with no-break spaces ("St Kilda"): read them as spaces.
+	var blob := "\n".join(texts).replace(String.chr(0x00A0), " ")
 	_check(blob.contains(str(st["headline"])), "%s: the story's headline is on the front page" % tag)
 	for b in st["beats"]:
 		_check(blob.contains(str(b)), "%s: the beat \"%s\" is on the front page" % [tag, b])
