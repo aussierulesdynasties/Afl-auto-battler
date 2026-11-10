@@ -40,6 +40,9 @@ func _run() -> void:
 			W = int(wh[0])
 			H = int(wh[1])
 	await process_frame
+	# Loaded once the autoloads exist: naming them in this script fails to compile.
+	var Intro = load("res://scripts/ui/FirstVisitIntro.gd")
+	var Kit = load("res://scripts/ui/UiKit.gd")
 	var state = root.get_node("GameState")
 	state.autosave_enabled = false
 	state.save_path = "user://capture_redraft.save"
@@ -64,17 +67,17 @@ func _run() -> void:
 	root.add_child(ui)
 	await _frames(10)
 	# Close whatever tip opened on Choose your club, then choose the club.
-	FirstVisitIntro.close_open(ui)
+	Intro.close_open(ui)
 	await _frames(4)
 	ui.call("_on_club_chosen", club)
 	await _frames(20)
-	print("my_club=", state.my_club, " colour club=", UiKit.my_club())
+	print("my_club=", state.my_club, " colour club=", Kit.my_club())
 	# The redraft's tip over the board: the League redraft's own where it exists, else the draft's.
-	var key := "league_draft" if FirstVisitIntro.TEXT.has("league_draft") else "draft"
-	FirstVisitIntro.show(ui, key)
+	var key: String = "league_draft" if Intro.TEXT.has("league_draft") else "draft"
+	Intro.show(ui, key)
 	await _frames(20)
 	await _shot(out + "_tip.png")
-	FirstVisitIntro.close_open(ui)
+	Intro.close_open(ui)
 	await _frames(10)
 	await _shot(out + "_board.png")
-	quit(0 if UiKit.my_club() == club and str(state.my_club) == "" else 1)
+	quit(0 if Kit.my_club() == club and str(state.my_club) == "" else 1)
