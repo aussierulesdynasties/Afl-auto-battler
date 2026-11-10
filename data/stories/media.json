@@ -401,8 +401,8 @@
 						"why": "You kept it between you two when he asked for the group"
 					},
 					{
-						"op": "xp",
-						"d": 2,
+						"op": "morale",
+						"d": 1,
 						"who": "side"
 					}
 				],
@@ -510,9 +510,14 @@
 					{
 						"op": "morale",
 						"d": 3
+					},
+					{
+						"op": "forgo_xp",
+						"d": 2,
+						"who": "subject"
 					}
 				],
-				"result": "{name} is back in his usual spot."
+				"result": "{name} is back in his usual spot. Three weeks in a new role came out of the work on his own game."
 			}
 		]
 	},
@@ -641,6 +646,12 @@
 						"op": "morale",
 						"d": -3,
 						"who": "all"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "You were straight with the press about where the list sits"
 					}
 				],
 				"result": "You tell the press the list is about where they have it."
@@ -715,9 +726,14 @@
 					{
 						"op": "board",
 						"d": 3
+					},
+					{
+						"op": "morale",
+						"d": -2,
+						"who": "all"
 					}
 				],
-				"result": "You tell the press the board is entitled to ask, and so are they."
+				"result": "You tell the press the board is entitled to ask, and so are they. The back page runs it as a coach under pressure, and the players read it."
 			},
 			{
 				"key": "deflect",
@@ -1019,9 +1035,15 @@
 						"strand": "together",
 						"d": 2,
 						"why": "You backed your players in the press before a final"
+					},
+					{
+						"op": "loss_sting",
+						"who": "side",
+						"chance": 15,
+						"d": -4
 					}
 				],
-				"result": "\"We finished below them. We've beaten better sides.\" The players notice."
+				"result": "\"We finished below them. We've beaten better sides.\" The players notice. It's on the record if the final goes wrong."
 			}
 		]
 	},
