@@ -63,6 +63,7 @@ func _run() -> void:
 	_t("_test_lines")
 	await _t("_test_beats_change_nothing")
 	await _t("_test_async_weeks_change_nothing")
+	await _t("_test_async_preseason_changes_nothing")
 	await _t("_test_tap_after_cover")
 	await _t("_test_browser_loads_under_the_line")
 	print(Ran.line("Load flair", self))
@@ -329,6 +330,45 @@ func _season_scores(threaded_frames: bool) -> String:
 		bits.append("%s %s %s %s" % [week.get("tag", week.get("round", "")), week["home"], week["away"], str(week["score"])])
 	for code in _state.season.ladder:
 		bits.append("%s %s" % [code, str(_state.season.ladder[code])])
+	return "
+".join(bits)
+
+
+## Sim to Round 1 in a browser hands frames back week by week, the practice
+## matches on threads: the same pre-season as the plain call, to the player.
+func _test_async_preseason_changes_nothing() -> void:
+	var plain: String = await _preseason_print(false)
+	var framed: String = await _preseason_print(true)
+	_check(plain != "" and plain == framed,
+			"the same pre-season either way (%s / %s)" % [plain.md5_text(), framed.md5_text()])
+	_check(framed.contains("practice:"), "the practice matches were played too")
+
+
+func _preseason_print(threaded_frames: bool) -> String:
+	_fresh()
+	_state.career_seed = SUITE_SEED
+	_state.open_preseason()
+	if not _state.preseason_active():
+		return ""
+	seed(SUITE_SEED)
+	var frames := [0]
+	var count := func(): frames[0] += 1
+	process_frame.connect(count)
+	if threaded_frames:
+		await _state.preseason_sim_to_round1_async()
+	else:
+		_state.preseason_sim_to_round1()
+	process_frame.disconnect(count)
+	if threaded_frames:
+		_check(frames[0] >= 8, "frames drew while the pre-season played (%d)" % frames[0])
+	var bits := PackedStringArray()
+	bits.append("practice: %s" % JSON.stringify(_state.preseason_practice(), "", true))
+	bits.append("conditioning: %s" % JSON.stringify(_state.conditioning, "", true))
+	for item in _state.news:
+		bits.append(str(item))
+	for code in _state.season.lists:
+		for p in _state.season.lists[code]:
+			bits.append(JSON.stringify(p, "", true))
 	return "
 ".join(bits)
 

@@ -3663,6 +3663,28 @@ func preseason_trial() -> Dictionary:
 ## Train one week, every club by the same rules. Returns where it stopped:
 ## "trial" (the time trial has been run), "done" (Round 1 is next) or "".
 func preseason_step_week() -> String:
+	var at: Variant = _preseason_week_begin()
+	if at is Dictionary:
+		return _preseason_week_end(at, Season.run_all(at["sims"]))
+	return str(at)
+
+
+## preseason_step_week, with the other clubs' practice matches on threads
+## while frames draw, so the loading cover's set shot plays on in a browser.
+## Same matches, same order, so the same week.
+func preseason_step_week_async() -> String:
+	var at: Variant = _preseason_week_begin()
+	if at is Dictionary:
+		var job := Season.start_all(at["sims"], Season.web_cores())
+		while Season.running(job):
+			await get_tree().process_frame
+		return _preseason_week_end(at, Season.finish_all(job))
+	return str(at)
+
+
+## A pre-season week up to its practice matches: where it stops, or (the
+## practice week) the matches to play, for _preseason_week_end.
+func _preseason_week_begin() -> Variant:
 	if not preseason_active():
 		return "done"
 	RookieList.settle(self)
@@ -3685,9 +3707,8 @@ func preseason_step_week() -> String:
 		preseason["trial"] = PreSeason.trial(my_list, career_seed, season_year, my_club)
 		preseason["trial_seen"] = false
 		return "trial"
-	if str(PreSeason.STOPS.get(w, "")) == "practice" and _ai_practices(clubs):
-		# Every other pair of clubs plays its own that week; yours waits for you.
-		return "practice"
+	if str(PreSeason.STOPS.get(w, "")) == "practice":
+		return _ai_practices(clubs)
 	if str(PreSeason.STOPS.get(w, "")) == "papers":
 		_build_papers()
 		return "papers"
@@ -4241,23 +4262,50 @@ func preseason_sim_to_round1() -> void:
 		return
 	preseason["hands_off"] = true
 	while preseason_active():
-		preseason["trial_seen"] = true
-		if preseason_stop() == "story":
-			_end_preseason_cards()
-		if preseason_stop() == "practice":
-			# Simmed here, the match is never shown, so its result goes in the
-			# news (a match already coached live has its report shown).
-			if not practice_played() and sim_practice_match():
-				var line := practice_news_line()
-				if line != "":
-					add_news("preseason", line, "Pre-season")
-			(preseason["practice"] as Dictionary)["seen"] = true
-		if preseason_stop() == "papers":
-			papers_say_nothing()
-			(preseason["papers"] as Dictionary)["seen"] = true
+		_hands_off_cards()
+		_hands_off_stops(sim_practice_match())
 		preseason_step_week()
 	mark_dirty()
 	autosave()
+
+
+## preseason_sim_to_round1 with its matches on threads and a frame drawn each
+## week, so the loading cover's set shot plays on (in a browser too). Same
+## steps, same matches, same order, so the same pre-season.
+func preseason_sim_to_round1_async() -> void:
+	if not preseason_active():
+		return
+	preseason["hands_off"] = true
+	while preseason_active():
+		_hands_off_cards()
+		_hands_off_stops(await sim_practice_match_async())
+		await preseason_step_week_async()
+		await get_tree().process_frame
+	mark_dirty()
+	autosave()
+
+
+## A hands-off pre-season presses on past the trial and any card...
+func _hands_off_cards() -> void:
+	preseason["trial_seen"] = true
+	if preseason_stop() == "story":
+		_end_preseason_cards()
+
+
+## ...and past the practice match (`simmed`: yours was just played without
+## you) and the papers.
+func _hands_off_stops(simmed: bool) -> void:
+	if preseason_stop() == "practice":
+		# Simmed here, the match is never shown, so its result goes in the
+		# news (a match already coached live has its report shown).
+		if simmed:
+			var line := practice_news_line()
+			if line != "":
+				add_news("preseason", line, "Pre-season")
+		(preseason["practice"] as Dictionary)["seen"] = true
+	if preseason_stop() == "papers":
+		papers_say_nothing()
+		(preseason["papers"] as Dictionary)["seen"] = true
 
 
 # ---------------------------------------------------------------------------
@@ -4647,13 +4695,25 @@ func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dicti
 			"stood": stood, "struggled": struggled, "hurt": hurt, "prospects": seen_rows}
 
 
+## The practice week, once its matches are played.
+func _preseason_week_end(job: Dictionary, results: Array) -> String:
+	if _ai_practices_done(job, results):
+		# Every other pair of clubs plays its own that week; yours waits for you.
+		return "practice"
+	if preseason_week() >= PreSeason.weeks():
+		_finish_preseason()
+		return "done"
+	return ""
+
+
 ## Every other pair of clubs plays its practice match: each club's recruiters
 ## choose the prospects to trial by their own read of the class, the sides are
 ## their named or best available, and the matches are built in draw order,
 ## played together and finished in draw order (so the outcome never depends on
-## which finished first). Your pairing is only noted; you play it. False when
-## the draw leaves your club without a match.
-func _ai_practices(clubs: Dictionary) -> bool:
+## which finished first). Your pairing is only noted; you play it. Returns
+## the matches to play ({builds, sims, mine}); mine is "" when the draw
+## leaves your club without a match.
+func _ai_practices(clubs: Dictionary) -> Dictionary:
 	_refresh_coach_tactics()
 	var codes := []
 	for club in season.clubs:
@@ -4675,7 +4735,13 @@ func _ai_practices(clubs: Dictionary) -> bool:
 		var built := _practice_build(a, b, pa, pb)
 		builds.append(built)
 		sims.append(built["sim"])
-	var results: Array = Season.run_all(sims)
+	return {"builds": builds, "sims": sims, "mine": mine}
+
+
+## The other clubs' practice matches go in; true when yours waits for you.
+func _ai_practices_done(job: Dictionary, results: Array) -> bool:
+	var builds: Array = job["builds"]
+	var mine := str(job["mine"])
 	for i in range(builds.size()):
 		_practice_finish(str(builds[i]["home"]), builds[i], results[i])
 		_practice_finish(str(builds[i]["away"]), builds[i], results[i])
@@ -4749,6 +4815,19 @@ func sim_practice_match() -> bool:
 		return false
 	var built := _practice_mine()
 	_practice_done(built, (built["sim"] as MatchSim).run())
+	mark_dirty()
+	return true
+
+
+## sim_practice_match on a thread while frames draw (same match, same result).
+func sim_practice_match_async() -> bool:
+	if preseason_stop() != "practice" or practice_played():
+		return false
+	var built := _practice_mine()
+	var job := Season.start_all([built["sim"]], 1)
+	while Season.running(job):
+		await get_tree().process_frame
+	_practice_done(built, Season.finish_all(job)[0])
 	mark_dirty()
 	return true
 
