@@ -15,12 +15,16 @@ static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callab
 	card.name = "WeekEvent" if index == 0 else "WeekEvent_%d" % index
 	var v := UiKit.vbox(8 if bare else 6)
 	card.add_child(v)
-	var title := NameInk.label(str(e.get("title", "")), names, UiKit.TITLE if bare else UiKit.BODY, UiKit.TEXT, true)
-	if bare and title is Label:
+	# On the hub the card's title is a heading, so the card reads as its own
+	# section above the week, not as one more line of it (T3.R9).
+	var title := NameInk.label(str(e.get("title", "")), names, UiKit.TITLE if bare else UiKit.H2, UiKit.TEXT, true)
+	if title is Label:
 		(title as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(title)
 	if not bool(e.get("resolved", false)):
-		var t := NameInk.label(str(e.get("text", "")), names, 12, UiKit.TEXT)
+		# The story itself is body copy: the coach decides on it (T3.R9; it was 12 px,
+		# under the 13 px floor).
+		var t := NameInk.label(str(e.get("text", "")), names, UiKit.BODY, UiKit.TEXT)
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(t)
 		# What an authored stakes line adds, then what happens if he says
@@ -44,7 +48,7 @@ static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callab
 		v.add_child(row)
 		for i in range(opts.size()):
 			var o: Dictionary = opts[i]
-			var b := UiKit.btn(str(o.get("label", "")), 14, false)
+			var b := UiKit.btn(str(o.get("label", "")), UiKit.NAME, false)
 			b.name = "Event_%d" % i
 			b.custom_minimum_size = Vector2(0, 48)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -104,7 +108,12 @@ static func build(index: int, narrow: bool, rebuild: Callable, show_rule: Callab
 				col.add_child(more)
 			row.add_child(col)
 	else:
-		v.add_child(UiKit.lbl(str(e.get("outcome", "")), 13, UiKit.GOOD))
+		# What the answer led to, in plain TEXT: an outcome can go either way, so
+		# it never wears GOOD (T3.R9).
+		var out := UiKit.lbl(str(e.get("outcome", "")), UiKit.BODY, UiKit.TEXT)
+		out.name = "EventOutcome_%d" % index
+		out.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(out)
 	return card
 
 

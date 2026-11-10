@@ -6487,6 +6487,10 @@ func _close_season_awards() -> void:
 		"year": season_year,
 		"premier": premier(),
 		"runner_up": str(season.finals.get("runner_up", "")),
+		# The men who played in the premiership side, for the club's page
+		# across generations (PremiershipSide, row T5.r158). Absent in a season
+		# closed before it was kept: never back-filled.
+		"premier_side": PremiershipInk.premiership_ids(_grand_final_result(), premier()),
 		"brownlow": [season_awards["brownlow_winner"]] if not (season_awards.get("brownlow_winner", {}) as Dictionary).is_empty() else [],
 		"coleman": (season_awards["coleman"] as Array).slice(0, 1),
 		"rising_star": (season_awards["rising_star"] as Array).slice(0, 1),
