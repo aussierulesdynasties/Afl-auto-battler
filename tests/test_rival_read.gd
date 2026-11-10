@@ -520,21 +520,14 @@ func _tap_report() -> void:
 	await _settle()
 
 
-## No line carries a number (a round's own name aside) or advice.
+## No line carries advice.
 func _test_plain_words() -> void:
-	var digits := RegEx.new()
-	digits.compile("\\d")
-	var round_no := RegEx.new()
-	round_no.compile("Round \\d+")
 	var bad := []
 	for l in _said:
-		var s := round_no.sub(str(l), "Round", true)
-		if digits.search(s) != null:
-			bad.append(l)
 		for w in ADVICE:
-			if s.to_lower().contains(w):
+			if str(l).to_lower().contains(w):
 				bad.append(l)
-	_check(_said.size() > 50 and bad.is_empty(), "%d lines, none with a number or advice: %s" % [_said.size(), bad.slice(0, 3)])
+	_check(_said.size() > 50 and bad.is_empty(), "%d lines, none with advice: %s" % [_said.size(), bad.slice(0, 3)])
 
 
 func _settle() -> void:

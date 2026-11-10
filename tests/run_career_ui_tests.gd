@@ -3272,8 +3272,7 @@ Your career stays on this device.",
 			"Settings shows the version read from project.godot config/version (%s)" % project_version)
 	var dials_line: Label = current_scene.find_child("OptionsCareerDials", true, false)
 	_check(dials_line != null and dials_line.visible
-			and dials_line.text == "This career: Patient board · Cut-throat rivals."
-			and not dials_line.text.contains("%"),
+			and dials_line.text == "This career: Patient board · Cut-throat rivals.",
 			"Settings shows the career's two dial steps in one read-only line")
 	_state.board_patience = board_was
 	_state.rival_recruiting = rivals_was

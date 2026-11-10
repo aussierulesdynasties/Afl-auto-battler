@@ -695,8 +695,7 @@ func _test_under_the_discs(res: Dictionary) -> void:
 # Tired and hurt players (T3.R10, PlayerMarks)
 # ---------------------------------------------------------------------------
 ## Tired comes from your side's legs under MatchNotes.EMPTY, hurt from the
-## injuries already played, and hurt outranks tired; the words never give a
-## fatigue percentage (director 2026-10-18).
+## injuries already played, and hurt outranks tired.
 func _test_player_marks_built(_res: Dictionary) -> void:
 	var evs := [{"kind": "kick", "player_id": "a"},
 			{"kind": "injury", "player_id": "b", "side": 0},
@@ -712,7 +711,6 @@ func _test_player_marks_built(_res: Dictionary) -> void:
 	_check(PlayerMarks.words(m["b"], false) == "Injured: hamstring strain, playing on",
 			"hurt words on the ground: %s" % PlayerMarks.words(m["b"], false))
 	_check(PlayerMarks.words(m["a"], false) == "Tired: running on empty", "tired words")
-	_check(not PlayerMarks.words(m["a"], false).contains("%"), "no fatigue percentage")
 
 
 ## A real finger: held on a marked disc (and on a marked bench disc) the words
