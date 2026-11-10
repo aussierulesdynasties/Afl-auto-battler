@@ -574,6 +574,7 @@ func _where(id: String) -> Array:
 
 ## Swap a with b (b may be "" for an empty spot at `place`, "LINE:i").
 func _swap(a: String, b: String, place: String) -> void:
+	memory_note = ""
 	if a == b:
 		_build()
 		return
@@ -624,6 +625,8 @@ func _swap(a: String, b: String, place: String) -> void:
 		_side[line] = (_side[line] as Array).filter(func(x): return str(x) != "")
 	GameState.set_selection(_side)
 	memory_note = drop_memory(dropped)
+	# The note is on screen from this build, so the line under it is too.
+	start_note = note
 	_build()
 	changed.emit(note)
 

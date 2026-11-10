@@ -34,6 +34,9 @@ static func _record(v: Control) -> void:
 		"no finals" if finals == 0 else ("finals once" if finals == 1 else "finals %d times" % finals),
 		"no premierships" if flags == 0 else "%d premiership%s" % [flags, "" if flags == 1 else "s"],
 	])
+	# Each part stays whole on a phone: a line breaks only between them.
+	for i in range(bits.size()):
+		bits[i] = bits[i].replace(" ", "\u00a0")
 	var l := UiKit.lbl("  ·  ".join(bits), UiKit.H2, UiKit.TEXT, true)
 	l.name = "CoachRecordLine"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

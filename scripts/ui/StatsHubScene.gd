@@ -240,7 +240,7 @@ func open_sheet(sheet: Control) -> void:
 
 func close_sheet() -> bool:
 	while not _sheets.is_empty():
-		var top: Control = _sheets.pop_back()
+		var top = _sheets.pop_back()  # untyped: a freed sheet must not error here
 		if is_instance_valid(top) and not top.is_queued_for_deletion():
 			top.queue_free()
 			return true

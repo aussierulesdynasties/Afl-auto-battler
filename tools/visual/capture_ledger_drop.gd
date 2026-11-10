@@ -3,7 +3,7 @@ extends SceneTree
 ## Season stats > Coach, filled and empty. Staged career data on real players
 ## (the same shape the tests use). Needs a real renderer:
 ##   godot --path . --windowed --script tools/visual/capture_ledger_drop.gd -- --out /tmp/rem [--size 390x844]
-## Writes <out>_drop.png, _coach.png, _coach_lower.png, _coach_empty.png.
+## Writes <out>_drop.png, _coach.png, _coach_empty.png.
 
 var W := 390
 var H := 844
@@ -24,6 +24,27 @@ func _shot(path: String) -> void:
 	img.convert(Image.FORMAT_RGBA8)
 	img.save_png(path)
 	print("wrote ", path, " ", img.get_size())
+
+
+## Router.go plays the transition cover in a windowed run: wait for the new
+## scene to be current and the cover to clear before touching it.
+func _go(router: Node, key: String) -> Node:
+	var path := str(router.SCENES.get(key, key))
+	var old := current_scene
+	router.go(key)
+	for i in range(600):
+		await process_frame
+		if current_scene != null and current_scene != old and current_scene.scene_file_path == path:
+			break
+	await _frames(60)
+	print("route ", key, ": ", current_scene.scene_file_path if current_scene != null else "none")
+	return current_scene
+
+
+## reset() forgets the first-visit cards: mark them seen again.
+func _seen(gs: Node) -> void:
+	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
+		gs.set_setting("seen_%s_intro" % key, true)
 
 
 func _has(host: Node, what: String) -> bool:
@@ -68,6 +89,7 @@ func _run() -> void:
 
 	# 1. The selection drop: a premiership player left out.
 	gs.reset()
+	_seen(gs)
 	gs.start_season("FRE", db.club_list("FRE"))
 	var year: int = gs.season_year
 	var side: Dictionary = gs.current_side()
@@ -78,9 +100,7 @@ func _run() -> void:
 	star.erase("firsts")
 	gs.career_facts.erase(star_id)
 	gs.honour_roll = [{"year": year - 2, "my_club": "FRE", "premier": "FRE", "my_bf": []}]
-	router.go("selection")
-	await _frames(20)
-	var ui: Node = current_scene
+	var ui: Node = await _go(router, "selection")
 	var in_id := ""
 	for c in ui.find_child("NotSelected", true, false).get_children():
 		if c is Button and load("res://scripts/sim/Ratings.gd").available(gs.list_player(str(c.get_meta("id")))):
@@ -96,9 +116,9 @@ func _run() -> void:
 
 	# 2. Season stats > Coach, empty: a first season.
 	gs.reset()
+	_seen(gs)
 	gs.start_season("MEL", db.club_list("MEL"))
-	router.go("stats")
-	await _frames(10)
+	await _go(router, "stats")
 	current_scene.find_child("Section_coach", true, false).emit_signal("pressed")
 	await _frames(20)
 	_has(current_scene, "DrafteesEmpty")
@@ -106,6 +126,7 @@ func _run() -> void:
 
 	# 3. Filled: three seasons in.
 	gs.reset()
+	_seen(gs)
 	gs.start_season("MEL", db.club_list("MEL"))
 	year = gs.season_year
 	gs.my_first_season = year - 3
@@ -133,16 +154,10 @@ func _run() -> void:
 		{"year": year - 2, "goal": "Make the finals", "met": true, "position": 6, "verdict": "The board is delighted."},
 		{"year": year - 1, "goal": "Finish in the top four", "met": true, "position": 1, "verdict": "The board is delighted."},
 	]
-	router.go("stats")
-	await _frames(10)
+	await _go(router, "stats")
 	current_scene.find_child("Section_coach", true, false).emit_signal("pressed")
 	await _frames(20)
 	_has(current_scene, "Draftees")
 	_has(current_scene, "Verdicts")
 	await _shot(out + "_coach.png")
-	var sc := current_scene.find_child("StatsScroll", true, false) as ScrollContainer
-	if sc != null:
-		sc.scroll_vertical = 100000
-	await _frames(10)
-	await _shot(out + "_coach_lower.png")
 	quit(0)

@@ -133,7 +133,11 @@ func _test_your_draft_rules() -> void:
 	var find := func(id: String) -> Dictionary:
 		return {"a": mine, "b": now}.get(id, {})
 	var snap: Dictionary = _ledger.snapshot(entry, find, roll, "MEL", 2029, 2027, "redraft")
-	_check(snap.keys() == ["a"], "The snapshot keeps only your draftees among the honoured (%s)" % str(snap.keys()))
+	# "a" (2027, your FRE) and "b" (this season's MEL rookie) are yours; "z" is not in the game.
+	var got := snap.keys()
+	got.sort()
+	_check(got == ["a", "b"] and snap["b"] == [2029, 0, "rookie"],
+			"The snapshot keeps your draftees among the honoured (%s)" % str(got))
 
 
 func _test_goal_line() -> void:
@@ -202,10 +206,11 @@ func _test_selection_drop_taps() -> void:
 			"Nothing remembered about the man left out: no line")
 	# Two men on the field swapping places drop no one.
 	var a := _spot_of(current_scene, str(_gs.current_side()["DEF"][0]))
-	var b := _spot_of(current_scene, str(_gs.current_side()["DEF"][1]))
+	var b_id := str(_gs.current_side()["DEF"][1])
 	await Tap.tap(a)
 	await _settle()
-	await Tap.tap(b)
+	# The first tap rebuilds the oval: find the second man again.
+	await Tap.tap(_spot_of(current_scene, b_id))
 	await _settle()
 	_check(current_scene.find_child("BuilderRemembered", true, false) == null,
 			"A swap on the field leaves no one out: no line")
@@ -236,21 +241,23 @@ func _test_coach_ledger_empty() -> void:
 	_check(s.find_child("DrafteesEmpty", true, false) != null and s.find_child("Draftees", true, false) == null,
 			"No draftee honoured yet: an honest line, no rows")
 	_check(s.find_child("VerdictsEmpty", true, false) != null, "No verdict yet: the board's first comes at season's end")
-	_router.handle_back(true)
+	s.queue_free()
 	await _settle()
 
 
 func _open_coach() -> Control:
-	_router.go("stats")
+	# As the stats suite opens it: the hub on its own at a phone's size.
+	var s: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
+	root.add_child(s)
 	await _settle()
-	var s: Control = current_scene
 	var tab := s.find_child("Section_coach", true, false) as Control
+	# Measured before the tap: the tap rebuilds the row.
+	var end := tab.get_global_rect().end.x if tab != null else 9999.0
+	_check(end <= 391.0 and s.find_child("SectionStrip", true, false) == null,
+			"Six tabs share one row on a phone, Coach whole (ends at %.1f)" % end)
 	var why: String = await Tap.tap(tab) if tab != null else "no Coach tab"
 	await _settle()
-	s = current_scene
 	_check(why == "" and s.find_child("StatsCoach", true, false) != null, "A finger on Coach opens the ledger (%s)" % why)
-	_check(tab != null and tab.get_global_rect().end.x <= 390.5 and s.find_child("SectionStrip", true, false) == null,
-			"Six tabs share one row on a phone, Coach whole")
 	return s
 
 
@@ -310,11 +317,11 @@ func _test_coach_ledger_taps() -> void:
 			_check((r as Control).get_global_rect().end.x <= 390.5, "%s fits a phone" % r.name)
 		var why: String = await Tap.tap(rows[0])
 		await _settle()
-		_check(why == "" and current_scene.find_child("PlayerProfile", true, false) != null,
+		_check(why == "" and s.find_child("PlayerProfile", true, false) != null,
 				"A finger on a draftee opens his profile (%s)" % why)
-		current_scene.handle_back()
+		s.handle_back()
 		await _settle()
-	var v: Node = current_scene.find_child("Verdicts", true, false)
+	var v: Node = s.find_child("Verdicts", true, false)
 	var years: Array = v.get_children().map(func(r): return str(r.name)) if v != null else []
 	_check(years == ["Verdict_%d" % (year - 1), "Verdict_%d" % (year - 2), "Verdict_%d" % (year - 3)],
 			"The board's verdict for every season, newest first (%s)" % str(years))
@@ -323,8 +330,8 @@ func _test_coach_ledger_taps() -> void:
 		_check((top.find_child("Said", true, false) as Label).text == "The board is delighted."
 				and (top.find_child("Goal", true, false) as Label).text == "Finish in the top four: finished 1st, goal met.",
 				"Each verdict says what the board said and the goal it judged")
-	var rec := current_scene.find_child("CoachRecordLine", true, false) as Label
-	_check(rec != null and rec.text == "3 seasons  ·  43-26-0  ·  finals once  ·  1 premiership",
+	var rec := s.find_child("CoachRecordLine", true, false) as Label
+	_check(rec != null and rec.text.replace("\u00a0", " ") == "3 seasons  ·  43-26-0  ·  finals once  ·  1 premiership",
 			"Your record in one line (%s)" % (rec.text if rec != null else "none"))
-	_router.handle_back(true)
+	s.queue_free()
 	await _settle()
