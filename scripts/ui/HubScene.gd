@@ -138,10 +138,6 @@ func _show_weekly_loop_intro() -> void:
 	v.add_child(UiKit.heading("Your week", UiKit.TITLE))
 	for line in [
 		"This is home base. Check the next opponent, then use Team to pick the side and Coaching if you want to change how you play.",
-		"Play match when you want the live coaching calls. Sim the week plays the round out for you quickly; the match itself is the same either way.",
-		"After the game, review what happened and change selection or training only when you have a reason. There is no weekly checklist to clear.",
-	] if not WeekChecklist.on(GameState) else [
-		"This is home base. Check the next opponent, then use Team to pick the side and Coaching if you want to change how you play.",
 		"Each week a short list here shows the jobs still open: look over the side, check training, and anything waiting on you. Tap a job to go to it; it ticks when done.",
 		"The list is a guide, never a gate. Play match or Sim the week whenever you are ready, jobs left or not.",
 	]:
@@ -1308,9 +1304,9 @@ func _milestone_card() -> Control:
 	return panel
 
 
-## The week's jobs (WeekChecklist; setting "weekly_checklist", off by
-## default): the big call's slot first, then the routine jobs, each one tap
-## from its screen and ticked when done. null when off or with no jobs.
+## The week's jobs (WeekChecklist): the big call's slot first, then the
+## routine jobs, each one tap from its screen and ticked when done. null with
+## no jobs (the season is over).
 func _week_jobs_card() -> Control:
 	var items := WeekChecklist.items(GameState)
 	var call := WeekChecklist.big_call(GameState)

@@ -106,9 +106,6 @@ func _build() -> void:
 		cols.add_child(right)
 	else:
 		_root.add_child(_scroller(_side_page(auto), "SelectionScroll"))
-	var confirm := _confirm_row()
-	if confirm != null:
-		_root.add_child(confirm)
 	if GameState.side_from_match and GameState.match_day_setup_open():
 		# Reached from the match-day setup: the way back is the primary action.
 		var row := UiKit.hbox(8)
@@ -123,25 +120,23 @@ func _build() -> void:
 
 
 ## "Confirm side" ticks the Hub checklist's "Look over the side" job
-## (director, 2026-11-03: an explicit button, not merely opening Team).
-## Only with the weekly_checklist setting on; off, nothing shows or writes.
-func _confirm_row() -> Control:
-	if not WeekChecklist.on(GameState) or GameState.season.is_season_over():
+## (director, 2026-11-03: an explicit button, not merely opening Team). It
+## sits at the end of the Interchange row, beside Save as my Best 23, so it
+## adds no height: Team selection never scrolls as a page. null once the
+## season is over.
+func _confirm_button() -> Button:
+	if GameState.season.is_season_over():
 		return null
-	var row := UiKit.hbox(8)
-	row.name = "ConfirmRow"
-	row.alignment = BoxContainer.ALIGNMENT_END
 	var done := WeekChecklist.is_done(GameState, "team")
-	var b := UiKit.btn("Side confirmed" if done else "Confirm side", UiKit.NAME, not done)
+	var b := UiKit.btn("Side confirmed" if done else "Confirm side", UiKit.SECONDARY, not done)
 	b.name = "ConfirmSide"
-	b.custom_minimum_size = Vector2(minf(220.0, UiKit.view_width(self) - 24.0), 44)
+	b.custom_minimum_size = Vector2(0, 44)
 	b.disabled = done
 	b.pressed.connect(func():
 		WeekChecklist.mark(GameState, "team")
 		_notice = "Side confirmed for this week."
 		_build())
-	row.add_child(b)
-	return row
+	return b
 
 
 ## A page fills the space and scrolls only if something abnormal (a very long
@@ -183,6 +178,7 @@ func _side_page(auto: bool) -> Control:
 	else:
 		var actions := HBoxContainer.new()
 		actions.name = "SideActions"
+		actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		actions.add_theme_constant_override("separation", 8)
 		_fill_actions(actions)
 		builder.interchange_actions = actions
@@ -222,6 +218,13 @@ func _fill_actions(actions: HBoxContainer) -> void:
 			_notice = "Back to your side before the auto-pick."
 			_build())
 		actions.add_child(undo)
+	var confirm := _confirm_button()
+	if confirm != null:
+		var gap := Control.new()
+		gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		actions.add_child(gap)
+		actions.add_child(confirm)
 
 
 func _open_chemistry() -> void:

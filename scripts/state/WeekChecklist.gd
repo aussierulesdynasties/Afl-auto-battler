@@ -5,20 +5,13 @@ extends RefCounted
 ## real state, each one tap from its screen. Guidance, never a block: Play
 ## match and Sim the week work with jobs left; Play only says how many.
 ##
-## Behind the setting "weekly_checklist" (default off). Off, the Hub is as it
-## was and nothing here writes any state.
+## On in every career (TODO row 51, 2026-11-10: the "weekly_checklist"
+## setting is gone).
 ##
 ## State: GameState.week_checks = {"week": story_week, "done": {key: true},
 ## "seen": {key: true}}. A new week starts it empty. "done" is what the coach
 ## did this week (confirmed the side, opened Training); "seen" remembers that a job
 ## came up this week, so it stays on the list, ticked, once it is dealt with.
-
-const SETTING := "weekly_checklist"
-
-
-static func on(gs) -> bool:
-	return bool(gs.get_setting(SETTING, false))
-
 
 ## The week's own record, reset when the week moves on.
 static func _week(gs) -> Dictionary:
@@ -28,14 +21,14 @@ static func _week(gs) -> Dictionary:
 	return gs.week_checks
 
 
-## Whether the coach did `key` this week. False when off.
+## Whether the coach did `key` this week.
 static func is_done(gs, key: String) -> bool:
-	return on(gs) and gs.season != null and _done(gs, key)
+	return gs.season != null and _done(gs, key)
 
 
-## The coach did `key` this week ("team" via Confirm side, "training"). Nothing when off.
+## The coach did `key` this week ("team" via Confirm side, "training").
 static func mark(gs, key: String) -> void:
-	if not on(gs) or gs.season == null:
+	if gs.season == null:
 		return
 	(_week(gs)["done"] as Dictionary)[key] = true
 	gs.mark_dirty()
@@ -58,9 +51,9 @@ static func _seen(gs, key: String, pending: bool) -> bool:
 ## The big call: the week's one weighty decision about the coach's own
 ## career. A due coach-arc beat first (ClubArcs.big_call); else the most pressing
 ## of backing a young player, captaincy, the press or an assistant approach
-## (BigCalls; both behind "coach_arcs"). {} or {"text", "route", "done", ...}.
+## (BigCalls). {} or {"text", "route", "done", ...}.
 static func big_call(gs) -> Dictionary:
-	if not on(gs) or gs.season == null:
+	if gs.season == null:
 		return {}
 	# Loaded here, not named: these read the GameDB autoload, which a test's
 	# preload of this script compiles before autoloads exist.
@@ -76,10 +69,10 @@ static func big_call(gs) -> Dictionary:
 
 ## This week's routine jobs, in order: [{key, text, done, route}]. "route"
 ## is the Router screen the job lives on, or "" when it is on the Hub itself.
-## Empty when off, or with no week to play (the season is over).
+## Empty with no week to play (the season is over).
 static func items(gs) -> Array:
 	var out: Array = []
-	if not on(gs) or gs.season == null or gs.season.is_season_over():
+	if gs.season == null or gs.season.is_season_over():
 		return out
 	out.append({"key": "team", "text": "Look over the side", "done": _done(gs, "team"), "route": "selection"})
 	out.append({"key": "training", "text": "Check training", "done": _done(gs, "training"), "route": "training"})

@@ -6,7 +6,7 @@ extends RefCounted
 ## state; the most pressing one is picked and kept for the rest of the week, then
 ## ticked once it is dealt with.
 ##
-## Behind both "weekly_checklist" and "coach_arcs": off, nothing here shows or writes.
+## Shows in every career (TODO row 51).
 
 ## Most pressing first: the press waits for no one, an approach has to be answered
 ## before the season ends, a club cannot go without a captain, a young player's
