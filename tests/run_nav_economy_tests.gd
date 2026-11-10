@@ -112,6 +112,9 @@ func _late_season_career() -> void:
 		res["label"] = _gs.pending_match["label"]
 		_gs.finish_interactive_match(res)
 	_gs.skip_media_conference()
+	# The week's one-off asks (the under-18 carnival) are seen already: the
+	# walk starts on a clear hub.
+	load("res://scripts/state/MidseasonDraft.gd").close_carnival(_gs)
 
 
 ## The table itself: no fact sits more than two taps from the hub.
@@ -125,6 +128,10 @@ func _hub() -> void:
 	_router.stack = []
 	_router.go("hub")
 	await _settle(12)
+	# Nothing may sit over the hub when a walk starts.
+	for c in current_scene.get_children():
+		if c is Control and (c as Control).visible and str(c.name) in ["CarnivalWeek", "MidseasonDraft", "BackingTalk", "EventSheet", "TrainingReport"]:
+			_check(false, "the hub opens under %s" % c.name)
 
 
 func _find_tap(step: String) -> Control:
@@ -213,8 +220,37 @@ func _overflows(scene: Node, win: Vector2) -> Array:
 		if r.size.x <= 0.0:
 			continue
 		if r.position.x < -1.0 or r.end.x > win.x + 1.0:
-			out.append("%s %s \"%s\" x %.0f..%.0f" % [c.get_class(), c.name, words.strip_edges().left(24), r.position.x, r.end.x])
+			out.append("%s %s \"%s\" x %.0f..%.0f%s" % [c.get_class(), c.name, words.strip_edges().left(24), r.position.x, r.end.x, _widest(c, win)])
 	return out
+
+
+## A thumb needs MIN_TARGET px (bible 86, P-77): every button that takes a
+## tap is at least that tall.
+const MIN_TARGET := 44
+
+
+func _small_targets(scene: Node) -> Array:
+	var out: Array = []
+	for n in scene.find_children("*", "BaseButton", true, false):
+		var b := n as BaseButton
+		if not b.is_visible_in_tree() or b.disabled or b.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+			continue
+		if b.size.y < MIN_TARGET - 0.5:
+			var words: String = (b as Button).text if b is Button else ""
+			out.append("%s \"%s\" %.0f px" % [b.name, words.strip_edges().left(20), b.size.y])
+	return out
+
+
+## Which parent asks for more width than the screen has: the cause to fix.
+func _widest(c: Control, win: Vector2) -> String:
+	var n: Node = c
+	var cause := ""
+	while n != null and n is Control:
+		var w := (n as Control).get_combined_minimum_size().x
+		if w > win.x + 1.0 and cause == "":
+			cause = " (%s needs %.0f px)" % [n.name, w]
+		n = n.get_parent()
+	return cause
 
 
 func _test_overflow() -> void:
@@ -243,4 +279,6 @@ func _test_overflow() -> void:
 				await _settle(10)
 			var over := _overflows(current_scene, win)
 			_check(over.is_empty(), "%s: words past the screen's edge: %s" % [tag, "; ".join(over.slice(0, 8))])
+			var small := _small_targets(current_scene)
+			_check(small.is_empty(), "%s: targets under %d px: %s" % [tag, MIN_TARGET, "; ".join(small.slice(0, 8))])
 	_gs.set_text_size("standard")
