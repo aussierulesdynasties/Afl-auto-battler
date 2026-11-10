@@ -213,6 +213,7 @@ func setup(p_result: Dictionary) -> void:
 	_order = []
 	_flip_pending = false
 	_trail = []
+	_crowd_tex = null
 	mini_figures = GameState.match_figures_on()
 	_looks = {}
 	if _figs != null:
@@ -953,8 +954,10 @@ func _draw() -> void:
 	var a := MatchMotion.HALF_LEN * s
 	var b := MatchMotion.HALF_WID * s
 
-	# The stand, dark, beyond the fence; the fence a band at the turf's edge.
+	# The stand beyond the fence: a crowd in both clubs' colours, seen from the
+	# broadcast camera high above, kept dark so the play stays in front (row T3.R9).
 	draw_rect(Rect2(Vector2.ZERO, size), STAND_COLOUR, true)
+	draw_texture_rect(_crowd_texture(), Rect2(Vector2.ZERO, size), true, CROWD_TINT)
 	# The ground itself (turf, lines, posts) is drawn lying flat and, upright,
 	# turned as one piece: a quarter turn about the view's centre.
 	var jolt := shake_offset() if _shake > 0.0 else Vector2.ZERO
@@ -974,6 +977,13 @@ func _draw() -> void:
 		var x0 := c.x - a + (2.0 * a) * float(i) / float(stripes)
 		var x1 := c.x - a + (2.0 * a) * float(i + 1) / float(stripes)
 		draw_colored_polygon(_stripe(c, a, b, x0, x1), grass[1])
+	# The light towers: brighter grass in the middle, the turf darkening toward the
+	# fence, so the ground reads as lit, not as a flat shape (row T3.R9).
+	var lit := _ellipse_points(c, a, b, 96)
+	var uvs := PackedVector2Array()
+	for q in lit:
+		uvs.append(Vector2(0.5 + (q.x - c.x) / (2.0 * a), 0.5 + (q.y - c.y) / (2.0 * b)))
+	draw_colored_polygon(lit, Color.WHITE, uvs, _light_texture())
 	drawn_layers = ["turf"]
 	_draw_press_zone(c, a, b)
 	drawn_layers.append("press")
@@ -1478,13 +1488,18 @@ func _draw_rings(tr: float) -> void:
 ## tagger, the loose man and his minder without a coaching overlay. The
 ## passing caption (a goal, a ringed player's touch) still sits above.
 func _draw_role_labels(tr: float) -> void:
-	var fs := clampi(int(tr * 1.15), 9, 12)
+	var fs := role_label_size(tr)
 	for l in role_label_layout(tr, fs):
 		var text := str(l["text"])
 		var origin: Vector2 = l["origin"]
 		for off in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
 			draw_string(UiKit.BOLD, origin + off, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.7))
 		draw_string(UiKit.BOLD, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.85))
+
+
+## The surnames' size: with the disc, never under the 13 px floor (row T3.R9).
+static func role_label_size(tr: float) -> int:
+	return clampi(int(tr * 1.15), UiKit.FINE, 15)
 
 
 ## Where each surname goes: [{id, text, origin, rect}]. Under its disc first;
@@ -1917,7 +1932,7 @@ func _draw_bench(tr: float) -> void:
 	var br: float = spots[0]["r"]
 	var fs := int(clampf(br * 1.1, 9.0, 13.0))
 	var word := "Bench"
-	var ww := UiKit.BOLD.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+	var ww := UiKit.BOLD.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.FINE).x
 	if not bool(spots[0]["column"]):
 		# In the bottom corners, where the oval's curve leaves the stand showing: a
 		# dark backing under each five so they read over whatever is under them,
@@ -1927,9 +1942,9 @@ func _draw_bench(tr: float) -> void:
 		draw_rect(Rect2(0.0, size.y - tall, wide, tall), Color(STAND_COLOUR, 0.82))
 		draw_rect(Rect2(size.x - wide, size.y - tall, wide, tall), Color(STAND_COLOUR, 0.82))
 		draw_string(UiKit.BOLD, Vector2(6.0, size.y - br * 2.0 - 10.0), word,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(RING_COLOUR, 0.6))
+				HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.FINE, Color(RING_COLOUR, 0.85))
 		draw_string(UiKit.BOLD, Vector2(size.x - 6.0 - ww, size.y - br * 2.0 - 10.0), word,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(RING_COLOUR, 0.6))
+				HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.FINE, Color(RING_COLOUR, 0.85))
 	else:
 		for side in range(2):
 			var top := INF
@@ -1940,7 +1955,7 @@ func _draw_bench(tr: float) -> void:
 					x = (sp["pos"] as Vector2).x
 			if top < INF:
 				draw_string(UiKit.BOLD, Vector2(x - ww * 0.5, top - br - 6.0), word,
-						HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(RING_COLOUR, 0.6))
+						HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.FINE, Color(RING_COLOUR, 0.85))
 	for sp in spots:
 		_draw_disc(sp["pos"], br, _kits[int(sp["side"])], str(sp["num"]), fs)
 		var m: Dictionary = marks.get(str(sp["pid"]), {})
@@ -2001,8 +2016,10 @@ func _draw_tokens(tr: float) -> void:
 		# Drop shadow keeps tokens readable on the stripes.
 		draw_circle(p + Vector2(0, tr * 0.22), tr, Color(0, 0, 0, 0.28))
 		_draw_kit(p, tr, kit)
-		draw_circle(p, tr, Color(0, 0, 0, 0.45), false, 1.2, antialias)
-		if tr < TOKEN_MIN:
+		_shade_disc(p, tr, base)
+		# Never under the 13 px floor: a disc too small for a readable number
+		# shows its kit alone (row T3.R9); a long press still names him.
+		if fs < UiKit.FINE:
 			continue
 		var label := str(t["num"])
 		var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, fs).x
@@ -2129,6 +2146,53 @@ func _look_for(pid: String) -> Dictionary:
 ## chevron or side panels in the pattern colour over the base; anything else
 ## is the base with an inner disc of the pattern colour. Shapes are drawn
 ## within the disc's chord so nothing pokes out of the circle.
+## The crowd in the stand: both clubs' supporters, painted once (VignetteCrowd)
+## and tiled; dimmed under CROWD_TINT so it never competes with the discs.
+const CROWD_TINT := Color(0.62, 0.62, 0.66)
+var _crowd_tex: Texture2D = null
+
+func _crowd_texture() -> Texture2D:
+	if _crowd_tex == null:
+		var cols := []
+		for k in ["home", "away"]:
+			var code := str(result.get(k, ""))
+			if code != "":
+				cols.append(GameDB.club_colours(code))
+		_crowd_tex = VignetteCrowd.stand(cols, 11)
+	return _crowd_tex
+
+
+## The light on the turf, one radial texture for every match: a soft pool of
+## light over the middle, the grass falling darker into the fence's shadow.
+static var _light_tex: Texture2D = null
+
+static func _light_texture() -> Texture2D:
+	if _light_tex == null:
+		var g := Gradient.new()
+		g.offsets = PackedFloat32Array([0.0, 0.55, 0.85, 1.0])
+		g.colors = PackedColorArray([Color(1.0, 1.0, 0.9, 0.10), Color(1.0, 1.0, 0.95, 0.0),
+				Color(0.0, 0.02, 0.0, 0.12), Color(0.0, 0.02, 0.0, 0.30)])
+		var t := GradientTexture2D.new()
+		t.gradient = g
+		t.fill = GradientTexture2D.FILL_RADIAL
+		t.fill_from = Vector2(0.5, 0.5)
+		t.fill_to = Vector2(1.0, 0.5)
+		t.width = 128
+		t.height = 128
+		_light_tex = t
+	return _light_tex
+
+
+## A disc with some body: lit from above (a light edge on its top, a darker one
+## underneath), and a light outline on a dark kit so navy or black still stands
+## off the dark green (Carlton, Collingwood, Fremantle at 18 px).
+func _shade_disc(p: Vector2, tr: float, base: Color) -> void:
+	draw_arc(p, tr - 0.8, PI * 1.08, PI * 1.92, 16, Color(1, 1, 1, 0.32), 1.4, antialias)
+	draw_arc(p, tr - 0.8, PI * 0.12, PI * 0.88, 16, Color(0, 0, 0, 0.30), 1.4, antialias)
+	var edge := Color(1, 1, 1, 0.7) if base.get_luminance() < 0.22 else Color(0, 0, 0, 0.45)
+	draw_circle(p, tr, edge, false, 1.3, antialias)
+
+
 func _draw_kit(p: Vector2, tr: float, kit: Dictionary) -> void:
 	paint_kit(self, p, tr, kit, antialias)
 
