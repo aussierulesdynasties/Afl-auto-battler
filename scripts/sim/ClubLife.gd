@@ -173,7 +173,7 @@ const STAY_OUT := "Stay out of "
 
 
 ## GOAL_PHRASE for `goal`. The middle band is said in the goal's own words
-## ("a finish out of the bottom six", director 2026-11-10), so the weekly board
+## ("a finish out of the bottom six"; the goal words are the director's, 2026-11-10), so the weekly board
 ## line and the goal line name it one way. A goal set before those words (a
 ## career mid-season) names its ladder place, as its goal line still does.
 static func goal_phrase(goal: Dictionary) -> String:
