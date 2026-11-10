@@ -820,12 +820,22 @@ func begin_from_history(first_season: int) -> bool:
 	var board_was := board_patience
 	var rivals_was := rival_recruiting
 	var tips_were := tutorials
+	# You, the coach, are this career's, not the history's: the press
+	# interview still waits and its answers set the coaching style as in any start
+	# (director, 2026-11-10: "interview should happen in every game mode").
+	var interview_was := interview_due
+	var coach_was := coach_name
+	var arch_was := coach_arch
 	if not _restore_career(state):
 		return false
 	GameDB.pristine = false   # a career's data from here on: the next reset() reloads
 	board_patience = board_was
 	rival_recruiting = rivals_was
 	tutorials = tips_were
+	interview_due = interview_was
+	coach_name = coach_was
+	coach_arch = arch_was
+	CoachEffects.my_arch = coach_arch
 	_sim_ahead_challenge = held
 	challenge = {}
 	career_seed = randi_range(1, 999999)
@@ -6187,11 +6197,199 @@ func _finish_project(p: Dictionary, announce := true, at := "Season end") -> Dic
 	var name := GameDB.player_display_name(p)
 	var word := str(LEARN_JOBS[job]["word"])
 	var a := "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a"
-	if learned:
+	var talk := _dev_talk_for(p, job)
+	var said := str(talk.get("said", ""))
+	var told := "Round %d" % int(talk.get("round", 0))
+	if said != "":
+		_dev_talk_out(p, "learned" if learned else "not taken")
+	if learned and said == "promise" and at != "Season end":
+		# The games he was promised are owed now (_dev_promise_week starts them).
+		talk["state"] = "owed"
+		add_news("training", "%s has learned to play as %s %s. His three games there, as you told him in %s, start when he's next in the side." % [
+				name, a, word, told])
+	elif learned and said == "depth":
+		add_news("training", "%s has learned to play as %s %s: cover for the side, as you told him in %s." % [name, a, word, told])
+	elif learned:
+		if said == "promise":
+			talk["state"] = "owed"   # the season is over: open_offseason lapses it
 		add_news("training", "%s has learned to play as %s %s: he can be picked there now." % [name, a, word])
+	elif said == "promise":
+		talk["state"] = "off"
+		add_news("training", "%s's time training as %s %s has not taken, so the games there you talked about in %s are off. He knew it might not." % [
+				name, a, word, told])
 	else:
 		add_news("training", "%s's time training as %s %s has not taken: he is not ready to be picked there." % [name, a, word])
 	return {"id": str(p["id"]), "job": job, "learned": learned, "own": own, "there": there}
+
+
+# ---------------------------------------------------------------------------
+# Development talks (row T5.r93, RPG programme, ARD-M5-003; bible 5.9 #93):
+# a player learning a position wants to know what it is for. The talk is a
+# card in the week's one optional slot (data/stories/training.json,
+# training_dev_talk), in the first DEV_TALK_WEEKS weeks of his project. Promise
+# him games there if it takes, or tell him it is for depth; the verdict's news
+# line remembers which, and a promise becomes his next DEV_PROMISE_GAMES games
+# in the new position (a role trial), kept, broken or lapsed by what happens.
+# p["dev_talk"] = {"year", "round", "job", "role", "said": "promise"|"depth",
+#   "state": "heard" | "owed" | "on" | "kept" | "broken" | "off" | "lapsed"}
+# ---------------------------------------------------------------------------
+const DEV_TALK_WEEKS := 4
+const DEV_PROMISE_GAMES := 3
+## What leaving him out of the promised games costs: a promised game's sting.
+const DEV_PROMISE_STING := 12
+## How often a project takes from how far off he is in its early weeks: the
+## share that learned the position, by the gap (his own rating minus his rating
+## there) at the end of his week 1 to 4 (tools/audit/taketalk_impl.gd, 12 seeds
+## of 3 seasons, every club's projects). TAKE_PCT[week - 1][gap] is the percent
+## that learned it; a gap under 0 counts as 0 and one over TAKE_GAP_MAX as it.
+const TAKE_GAP_MAX := 5
+const TAKE_PCT := [
+	[100, 100, 85, 67, 27, 0],
+	[100, 100, 79, 45, 4, 0],
+	[100, 100, 77, 22, 1, 0],
+	[100, 100, 69, 6, 0, 0],
+]
+
+
+## His talk about the project he is on (or just finished), {} if none.
+func _dev_talk_for(p: Dictionary, job: String) -> Dictionary:
+	var t = p.get("dev_talk", {})
+	if t is Dictionary and int(t.get("year", 0)) == season_year and str(t.get("job", "")) == job:
+		return t
+	return {}
+
+
+## Is a talk about his project due? He is learning a position he does not
+## have, in the first DEV_TALK_WEEKS weeks, and you have not talked about it.
+func dev_talk_due(p: Dictionary) -> bool:
+	var job := project_job(p)
+	if job == "" or not _dev_talk_for(p, job).is_empty():
+		return false
+	if Ratings.positions(p).has(project_role(p)):
+		return false
+	var w := int((p["project"] as Dictionary).get("weeks", 0))
+	return w >= 1 and w <= DEV_TALK_WEEKS
+
+
+## "about 6 in 10": how often projects this far off at this stage take.
+func take_odds(p: Dictionary) -> String:
+	var role := project_role(p)
+	if role == "":
+		return ""
+	var w := clampi(int((p["project"] as Dictionary).get("weeks", 1)), 1, DEV_TALK_WEEKS)
+	var gap := clampi(int(p.get("overall", 0)) - rating_as(p, role), 0, TAKE_GAP_MAX)
+	return odds_in_ten(int(TAKE_PCT[w - 1][gap]))
+
+
+## A percent as the cards say odds: "about 6 in 10"; the ends stay true
+## ("fewer than 1 in 10", "more than 9 in 10").
+static func odds_in_ten(pct: int) -> String:
+	var n := int(round(pct / 10.0))
+	if n <= 0:
+		return "fewer than 1 in 10"
+	if n >= 10:
+		return "more than 9 in 10"
+	return "about %d in 10" % n
+
+
+## The talk is had (a card's choice): `said` "promise" or "depth". Kept on him
+## and as a career fact (G7, kind "talk", d "project|said"); the fact's out
+## is "heard" until the project's verdict, so the selection talks' settling
+## (_after_match_talks) never reads it.
+func dev_talk(p: Dictionary, said: String) -> void:
+	var job := project_job(p)
+	if job == "" or season == null:
+		return
+	var round_no := season.round_index + 1
+	p["dev_talk"] = {"year": season_year, "round": round_no, "job": job, "role": project_role(p),
+			"said": said, "state": "heard"}
+	CareerFacts.add(career_facts, str(p["id"]), CareerFacts.row(season_year, "Round %d" % round_no, "talk",
+			my_club, "project|" + said, "heard"))
+	mark_dirty()
+
+
+## Settle his project talk's career fact: "learned", "not taken", then "kept",
+## "broken" or "lapsed" for a promise.
+func _dev_talk_out(p: Dictionary, out: String) -> void:
+	var rows = career_facts.get(str(p["id"]), [])
+	if not (rows is Array):
+		return
+	for i in range((rows as Array).size() - 1, -1, -1):
+		var r: Array = rows[i]
+		if str(r[CareerFacts.K]) == "talk" and str(r[CareerFacts.D]).begins_with("project|") \
+				and int(r[CareerFacts.Y]) == season_year:
+			r[CareerFacts.OUT] = out
+			return
+
+
+## The promise owed or under way, {} if none.
+static func _dev_owed(p: Dictionary) -> Dictionary:
+	var t = p.get("dev_talk", {})
+	if t is Dictionary and str(t.get("said", "")) == "promise" and str(t.get("state", "")) in ["owed", "on"]:
+		return t
+	return {}
+
+
+## Each week: a fit player owed his games expects to play (Auto-pick names
+## him), and once he is in the side his games in the new position start (a role
+## trial of DEV_PROMISE_GAMES, marked as promised).
+func _dev_promise_week() -> void:
+	if season == null:
+		return
+	for p in my_list:
+		var t := _dev_owed(p)
+		if t.is_empty() or int(p.get("injury_weeks", 0)) > 0:
+			continue
+		p["expects_game"] = DEV_PROMISE_STING
+		if str(t["state"]) == "owed" and role_trial.is_empty():
+			var said := start_role_trial(p, DEV_PROMISE_GAMES, str(t.get("role", "")))
+			if said != "":
+				role_trial["promised"] = int(t.get("round", 0))
+				t["state"] = "on"
+				add_news("training", said)
+
+
+## After your match: a fit player owed his games who did not play was left out
+## of them. The promise breaks (its sting is the promised game's, paid by the
+## expects_game settling that follows).
+func _dev_promise_after_match(played: Dictionary) -> void:
+	for p in my_list:
+		var t := _dev_owed(p)
+		if t.is_empty() or played.has(str(p["id"])) or int(p.get("injury_weeks", 0)) > 0 \
+				or _round_unavailable.has(str(p["id"])):
+			continue
+		_dev_promise_broken(p, t, false)
+
+
+func _dev_promise_broken(p: Dictionary, t: Dictionary, sting: bool) -> void:
+	t["state"] = "broken"
+	_dev_talk_out(p, "broken")
+	if not role_trial.is_empty() and str(role_trial.get("id", "")) == str(p["id"]):
+		_end_role_trial(true)
+	var word := str((LEARN_JOBS.get(str(t.get("job", "")), {}) as Dictionary).get("word", "new position"))
+	var a := "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a"
+	add_news("club", "%s was promised three games as %s %s and was left out of them. He took it hard." % [
+			GameDB.player_display_name(p), a, word])
+	if sting:
+		p.erase("expects_game")
+		ClubLife.add_morale(p, -DEV_PROMISE_STING)
+		Trust.change(relations, Trust.player_key(str(p["id"])), ClubStories.BROKEN_PROMISE_TRUST,
+				"You promised him games in his new position and left him out", season_year, last_label)
+		_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You promised a player games and left him out")
+
+
+## The season is over before his promised games: the promise lapses, no sting.
+func _dev_promises_lapse() -> void:
+	for p in my_list:
+		var t := _dev_owed(p)
+		if t.is_empty():
+			continue
+		t["state"] = "lapsed"
+		_dev_talk_out(p, "lapsed")
+		p.erase("expects_game")
+		var word := str((LEARN_JOBS.get(str(t.get("job", "")), {}) as Dictionary).get("word", "new position"))
+		add_news("training", "The season ended before %s's games as a %s, so that promise lapses." % [
+				GameDB.player_display_name(p), word])
 
 
 ## A rival club's projects for one game: it runs up to PROJECT_MAX at once,
@@ -7108,6 +7306,7 @@ func open_offseason(keep_staff := false) -> void:
 		for p in season.lists[code]:
 			if project_job(p) != "":
 				_finish_project(p, str(code) == my_club)
+	_dev_promises_lapse()
 	offseason_year = season_year
 	_coach_arch_season_end()
 	# Selection bars from before today (a rival board's letter reads them) must
@@ -9034,7 +9233,9 @@ func _counter(club: String, mine: Array, theirs: Array) -> Dictionary:
 			extra.append(str(pk["id"]))
 		if not draft_night_open():   # players never move on draft night
 			for p in my_list:
-				extra.append(str(p["id"]))
+				# Rivals never ask for a player you marked untouchable, in a counter too.
+				if not untouchable.has(str(p["id"])):
+					extra.append(str(p["id"]))
 		for id in extra:
 			if mine.has(id):
 				continue
@@ -10217,8 +10418,8 @@ static func _move_in_sel(sel: Dictionary, id: String, target: String) -> void:
 ## the result comes as a card (_finish_role_trial). Returns what to tell the
 ## coach, "" when there is no trial: no second position, not on the ground, or
 ## already picked there.
-func start_role_trial(p: Dictionary, games: int) -> String:
-	var role2 := ClubStories.trial_role(p)
+func start_role_trial(p: Dictionary, games: int, role := "") -> String:
+	var role2 := ClubStories.trial_role(p) if role == "" else role
 	if role2 == "" or season == null:
 		return ""
 	var id := str(p["id"])
@@ -10303,6 +10504,14 @@ func _finish_role_trial() -> void:
 	var trained := ok and _start_trial_training(p, role)
 	trial_result = {"id": str(p["id"]), "role": role, "word": CoachPathway.position_word({"pos": role}),
 			"avg": avg, "par": par, "ok": ok, "trained": trained}
+	# The games you promised him in a development talk (T5.r93): kept.
+	if role_trial.has("promised"):
+		trial_result["promised"] = int(role_trial["promised"])
+		var t := _dev_owed(p)
+		if not t.is_empty():
+			t["state"] = "kept"
+			_dev_talk_out(p, "kept")
+			p.erase("expects_game")
 	_end_role_trial(true)
 
 
@@ -10357,7 +10566,12 @@ func _trial_after_coach_pick(sel: Dictionary) -> void:
 	if _in_trial_line(line, str(role_trial.get("role", ""))):
 		role_trial["auto"] = false
 	else:
+		var promised := role_trial.has("promised")
+		var who := list_player(str(role_trial.get("id", "")))
 		role_trial = {}
+		# Moved out of the games you promised him there (T5.r93): the promise breaks.
+		if promised and not who.is_empty() and not _dev_owed(who).is_empty():
+			_dev_promise_broken(who, _dev_owed(who), true)
 
 
 ## Dual ruck (ARD-M5-001, director 2026-10-06): your second ruck takes the
@@ -10819,8 +11033,11 @@ func _plan_row(key: String) -> Dictionary:
 		var row: Dictionary = LEARN_JOBS[job]
 		var word := str(row["word"])
 		return {"key": key, "label": "Learn to play %s" % word, "roles": [],
-				"text": "%d weeks training as %s %s instead of in his own position, and his own game barely moves for the rest of the season. If he is close enough to the standard at the end, he can be picked there too; if not, it has not taken." % [
-					PROJECT_WEEKS, "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a", word],
+				# The sizes the project runs on (row T1.R26 C2): PROJECT_OWN_GAIN,
+				# PROJECT_PASS, LEARN_PAYBACK.
+				"text": "%d weeks training as %s %s instead of in his own position. For the rest of the season his own rating can rise only %d more. If his rating there ends within %d of his own, he can be picked there too, and next season his own rating can climb %d past the usual limit; if not, it has not taken." % [
+					PROJECT_WEEKS, "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a", word,
+					PROJECT_OWN_GAIN, PROJECT_PASS, LEARN_PAYBACK],
 				"weights": row["weights"]}
 	for row in TRAIN_PLANS:
 		if str(row["key"]) == key:
@@ -11963,6 +12180,8 @@ func _board_after_round(results: Array) -> void:
 					"You broke your word on his run of games", season_year, last_label)
 			_culture_move(my_club, "together", -StoryEngine.BROKEN_TOGETHER, "You broke your word on a player's run of games")
 		p.erase("expects_game")
+	# Games promised in a development talk (T5.r93): left out of them fit breaks it.
+	_dev_promise_after_match(played)
 	# A player promised a game (a talk, or a kid given his chance): leaving
 	# him out fit sours it. Once: the promise ends with the round.
 	for p in my_list:
@@ -12463,7 +12682,8 @@ func _press_opinion(kind: String, his: Dictionary, move: int, round_no: int) -> 
 	return {"name": GameDB.player_display_name(his), "from": Trust.opinion(from), "to": Trust.opinion(to)}
 
 
-## Season over: did you meet the goal? Miss it badly twice and you are gone.
+## Season over: did you meet the goal? The board's confidence at the end decides a
+## warning and then the sack (ClubLife.season_end).
 func _board_season_end() -> void:
 	if board.is_empty():
 		return
@@ -12490,6 +12710,7 @@ func _board_season_end() -> void:
 
 func _next_week_event() -> void:
 	ExpansionBuild.week(self)
+	_dev_promise_week()
 	week_events = []
 	if season == null or is_sacked() or not stories_on or my_club == "":
 		return
