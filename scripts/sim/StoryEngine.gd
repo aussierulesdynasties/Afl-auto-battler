@@ -803,7 +803,7 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 			return [["gain" if d > 0 else "cost", tw]]
 		"xp":
 			var whom: String = "He gets" if who == "subject" else ("Each player in the side gets" if who == "side" else ("Each of the others gets" if who == "others" else "Every player gets"))
-			return [["gain", "%s %d XP of development (a senior game gives %d)." % [whom, d, SENIOR_GAME_XP]]]
+			return [["gain", "%s %d development points (a senior game gives %d)." % [whom, d, SENIOR_GAME_XP]]]
 		"fresh":
 			return [["gain", "Fresh legs: %d%% less likely to be injured this week." % roundi((1.0 - ClubLife.FRESH_RISK) * 100.0)]]
 		"rest":
@@ -892,12 +892,12 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 		"forgo_xp":
 			var without: String = {"side": "each player in the side goes", "all": "every player goes",
 					"others": "each of the others goes"}.get(who, "he goes")
-			return [] if d <= 0 else [["cost", "Slower growth: %s without %d XP of development (a senior game gives %d)." % [without, d, SENIOR_GAME_XP]]]
+			return [] if d <= 0 else [["cost", "Slower growth: %s without %d development points (a senior game gives %d)." % [without, d, SENIOR_GAME_XP]]]
 		# The physio's plan in the pre-season: he stays out as long as the injury runs.
 		"keep_out":
 			var out := []
 			if int(facts.get("pre_miss_xp", 0)) > 0:
-				out.append(["cost", "Slower growth: he goes without about %d XP of pre-season development while he recovers (a senior game gives %d)." % [
+				out.append(["cost", "Slower growth: he goes without about %d pre-season development points while he recovers (a senior game gives %d)." % [
 						int(facts["pre_miss_xp"]), SENIOR_GAME_XP]])
 			if int(facts.get("pre_miss_rounds", 0)) > 0:
 				out.append(["cost", "He is still out at Round 1, with %s to run." % _weeks_of(int(facts["pre_miss_rounds"]))])
@@ -914,7 +914,7 @@ static func _rush_preseason(facts: Dictionary) -> Array:
 	var rounds := int(facts.get("pre_miss_rounds", 0))
 	var heavy := int(facts.get("pre_miss_heavy", 0))
 	if xp > 0:
-		out.append(["gain", "He trains with the group from now: about %d XP of pre-season development he would otherwise miss (a senior game gives %d)." % [
+		out.append(["gain", "He trains with the group from now: about %d pre-season development points he would otherwise miss (a senior game gives %d)." % [
 				xp, SENIOR_GAME_XP]])
 	if rounds > 0:
 		out.append(["gain", "He is right for Round 1, where on the physio's plan he would still be out with %s to run." % _weeks_of(rounds)])

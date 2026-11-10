@@ -137,12 +137,12 @@ static func benefit_text(area: String, level: int) -> String:
 		return "Prospect scouting uncertainty is 35% narrower than standard."
 	if area == "development":
 		if level == 0:
-			return "Players aged 22 and under earn 10% less development XP."
+			return "Players aged 22 and under develop 10% slower."
 		if level == 1:
-			return "Players aged 22 and under earn standard development XP."
+			return "Players aged 22 and under develop at the standard rate."
 		if level == 2:
-			return "Players aged 22 and under earn 10% more development XP."
-		return "Players aged 22 and under earn 15% more development XP."
+			return "Players aged 22 and under develop 10% faster."
+		return "Players aged 22 and under develop 15% faster."
 	if area == "high_performance":
 		# All it buys (recovery, the season peak's height and timing, the
 		# game plan's edge) and what it costs, worked out from the constants

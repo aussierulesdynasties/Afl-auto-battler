@@ -208,7 +208,7 @@ func _show_callout(index: int) -> void:
 	var duty := str(slot.get("title", ""))
 	if bool(entry.get("bench", false)):
 		duty = "Interchange"
-	_callout_box.add_child(UiKit.lbl("%s  ·  %d OVR  ·  %d XP" % [duty, int(p.get("overall", 0)),
+	_callout_box.add_child(UiKit.lbl("%s  ·  %d OVR  ·  %d development points banked" % [duty, int(p.get("overall", 0)),
 			int(p.get("xp", 0))], 12, UiKit.EMPH, true))
 	var role := str(slot.get("role", p.get("role", "MID")))
 	var rows: Array = CALLOUT_ATTRS.get(role, CALLOUT_ATTRS["MID"])

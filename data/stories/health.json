@@ -420,7 +420,7 @@
 		"choices": [
 			{
 				"key": "rush",
-				"label": "Clear {first} to play",
+				"label": "Clear {first} for full training",
 				"effects": [
 					{
 						"op": "rush_back"

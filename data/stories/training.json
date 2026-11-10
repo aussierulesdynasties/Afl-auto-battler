@@ -691,7 +691,7 @@
 						"op": "sore"
 					}
 				],
-				"result": "{first} keeps adding size through the last blocks."
+				"result": "{first} keeps adding size, and carries the soreness into Round 1."
 			},
 			{
 				"key": "hold",
@@ -726,7 +726,7 @@
 			"The pre-season camp"
 		],
 		"text": [
-			"The leaders want to get the group away before the last block."
+			"The leaders want to get the group away before Round 1."
 		],
 		"choices": [
 			{
@@ -786,7 +786,7 @@
 						"who": "all"
 					}
 				],
-				"result": "Three days at the club, running the plan until it's second nature."
+				"result": "Three days at the club running the plan. The leaders wanted the trip away."
 			}
 		],
 		"category": "training",
@@ -808,7 +808,7 @@
 			"Premiers, and the legs know it"
 		],
 		"text": [
-			"A flag means a long summer, and the list has come back soft. The fitness staff say the base is behind where it usually is this time of year."
+			"A flag means a long summer, and the list has come back soft. The fitness staff say the running is behind where it usually is at this time of year."
 		],
 		"choices": [
 			{

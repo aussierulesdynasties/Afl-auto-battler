@@ -3318,7 +3318,7 @@ func _test_silent_defaults_announced() -> void:
 func _test_every_line_has_a_size() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[4]
-	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+/100|[0-9]+ XP|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends|^No promise to keep[.]$")
+	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+/100|[0-9]+ (pre-season )?development points|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends|^No promise to keep[.]$")
 	var bad := []
 	var parts_seen := 0
 	for t in StoryDeck.all():
@@ -3369,7 +3369,7 @@ func _test_line_numbers_match_effects() -> void:
 						want = ("opinion of you stays %d/100" % Trust.opinion(t0)) if mv == 0 else \
 								"opinion of you %s %d, to %d/100" % ["up" if mv > 0 else "down", absi(mv), Trust.opinion(t0) + mv]
 					"xp":
-						want = "%d XP of development (a senior game gives %d)" % [int(e["d"]), GameState.XP_SENIOR_GAME]
+						want = "%d development points (a senior game gives %d)" % [int(e["d"]), GameState.XP_SENIOR_GAME]
 					"slow_start":
 						want = "About a %d%% chance" % int(e["chance"])
 					"loss_sting":
@@ -3385,7 +3385,7 @@ func _test_line_numbers_match_effects() -> void:
 					"drill":
 						want = "more week%s on the game plan" % ("" if int(e["d"]) == 1 else "s")
 					"forgo_xp":
-						want = "goes without %d XP" % int(e["d"])
+						want = "goes without %d development points" % int(e["d"])
 					"open_price":
 						want = "No %d%% early premium" % StoryEngine.EARLY_PREMIUM_PCT
 				if want == "":

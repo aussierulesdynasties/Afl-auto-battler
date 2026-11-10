@@ -382,7 +382,7 @@ func _test_plan_copy() -> void:
 	var d := -Conditioning.DEVELOP_LEVEL
 	_check(dev.contains("Gain:") and dev.contains("Cost:")
 			and dev.contains("players %d and under" % int(ClubBudget.YOUNG_AGE))
-			and dev.contains(Conditioning.pct(Conditioning.DEVELOP_XP) + " more development XP")
+			and dev.contains(Conditioning.pct(Conditioning.DEVELOP_XP) + " more development,")
 			and dev.contains("%d more point" % Conditioning.DEVELOP_CEILING)
 			and dev.contains(Conditioning.pct(Conditioning.INJURY_K * d) + " fewer")
 			and dev.contains(Conditioning.pct(Conditioning.DRAIN_K * d) + " faster"),
