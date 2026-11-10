@@ -10,6 +10,7 @@ var checks := 0
 
 const CLUBS := [["FRE", "MEL"], ["GEE", "COL"], ["SYD", "CAR"], ["BRL", "ESS"]]
 const SEEDS := 8
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -95,6 +96,6 @@ func _test_on_lifts_midfield_intercepts() -> void:
 	var on_rate: float = tot.x / maxf(1.0, tot.y)
 	# 3.05 measured with every feature on (2026-11-06): over the real 2.5, a
 	# balance gap for the director's playtest, so the ceiling is 3.2.
-	_check(on_rate > 2.0 and on_rate < 3.2, "midfield intercepts %.2f a game (real 2.5)" % on_rate)
+	_check(BalanceGate.held(on_rate > 2.0 and on_rate < 3.2, "midfield intercepts a game in 2.0-3.2"), "midfield intercepts %.2f a game (real 2.5)" % on_rate)
 	var mean_pts: float = pts / maxf(1.0, float(n))
-	_check(mean_pts > 70.0 and mean_pts < 100.0, "a team scores %.1f a game" % mean_pts)
+	_check(BalanceGate.held(mean_pts > 70.0 and mean_pts < 100.0, "team points a game in 70-100"), "a team scores %.1f a game" % mean_pts)
