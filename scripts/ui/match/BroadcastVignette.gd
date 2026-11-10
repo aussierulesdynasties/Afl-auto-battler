@@ -152,6 +152,16 @@ static func duration_for(p_kind: String) -> float:
 	return float(DURATIONS.get(p_kind, 3.5))
 
 
+## The event after `index` that is play, not a quarter-break line. The sim logs
+## "End of quarter 4" between the last score and the siren ("final"), so the
+## after-the-siren check must look past it (T3.F-defects, audit 29).
+static func next_play_event(events: Array, index: int) -> Dictionary:
+	var j := index + 1
+	while j < events.size() and str((events[j] as Dictionary).get("kind", "")) == "quarter":
+		j += 1
+	return events[j] if j < events.size() else {}
+
+
 ## Choose only from facts the current presentation already knows. There is no
 ## extra simulation roll here: the same replay produces the same vignette.
 static func pick_kind(ev: Dictionary, prev_ev: Dictionary, next_ev: Dictionary, snap: Dictionary) -> String:
