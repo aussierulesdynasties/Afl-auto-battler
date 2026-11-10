@@ -715,6 +715,10 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 	var op := str(e.get("op", ""))
 	var d := effect_d(e, facts)
 	var who := str(e.get("who", "subject"))
+	# A lever that is not a gain or a cost on this card (a development week's
+	# rest: he was not in the side, so missing the game costs nothing) says nothing.
+	if bool(e.get("quiet", false)):
+		return []
 	if str(e.get("line", "")) != "":
 		# A card may word an effect itself; it is still a gain or a cost by its sign.
 		var k := "gain" if d > 0 or op in ["xp", "fresh"] else "cost"
@@ -747,7 +751,14 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 		"board":
 			return [] if d == 0 else [["gain" if d > 0 else "cost", _board_words(d)]]
 		"trust":
-			return [] if d == 0 else [["gain" if d > 0 else "cost", _trust_words(d, int(facts.get("trust", 0)))]]
+			if d == 0:
+				return []
+			var tw := _trust_words(d, int(facts.get("trust", 0)))
+			# Knocked back, he remembers it at contract time (director 2026-11-10):
+			# under Contracts.REFUSE_BELOW he may refuse to re-sign with you.
+			if d < 0 and bool(e.get("contract", false)):
+				tw += " " + _refuse_words(d, int(facts.get("trust", 0)))
+			return [["gain" if d > 0 else "cost", tw]]
 		"xp":
 			var whom: String = "He gets" if who == "subject" else ("Each player in the side gets" if who == "side" else ("Each of the others gets" if who == "others" else "Every player gets"))
 			return [["gain", "%s %d XP of development (a senior game gives %d)." % [whom, d, SENIOR_GAME_XP]]]
@@ -1101,6 +1112,18 @@ static func _trust_words(d: int, t: int) -> String:
 	if o == 0:
 		return "His opinion of you stays %d/100." % Trust.opinion(t)
 	return "His opinion of you %s %d, to %d/100." % ["up" if o > 0 else "down", absi(o), Trust.opinion(t) + o]
+
+
+## What a fall in his opinion of you does to his next contract talks, from the
+## refusal rule (Contracts.refuse_chance): the odds he won't re-sign, or how
+## close the fall takes him to them.
+static func _refuse_words(d: int, t: int) -> String:
+	var after := Trust.opinion(t) + Trust.opinion_move(t, d)
+	var chance := Contracts.refuse_chance(after)
+	if chance > 0:
+		return "At contract time that is a %d%% chance he won't re-sign with you." % chance
+	return "Under %d/100 he may refuse to re-sign with you, %d%% for each point under." % [
+			Contracts.REFUSE_BELOW, Contracts.REFUSE_PER_POINT]
 
 
 ## What changed, for the card's result line: only the levers a player feels.

@@ -5,6 +5,7 @@ extends SceneTree
 ## string literals of the UI, sim and state scripts. A known hit sits in ALLOW with the copy pass
 ## that clears it (docs/TODO.md); the count must match exactly, so a new hit fails and a fixed one
 ## makes its allow-list entry shrink in the same PR. Each screen pass pins its rewritten lines.
+## Seeded by design: it reads source files only, nothing random runs.
 
 var _checks := 0
 var _failures: Array[String] = []
