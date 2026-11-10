@@ -183,11 +183,23 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 	# Then the facts on record from his career (CareerRecord, T5.r110): his
 	# debut, milestone games, flags and awards, each said once - what the "With
 	# us" block below already says is left to it.
-	var facts := career_facts(p, mine)
-	var unplayed := tot == "" and facts.is_empty() and not only_us
-	if (tot != "" and not only_us) or not facts.is_empty() or unplayed:
+	# His story leads the section (CareerTale; director 2026-11-10), and the
+	# fact lines under it leave out what it already says.
+	var told := career_story(p, mine)
+	var story: Array = told["story"]
+	var facts: Array = told["facts"]
+	var unplayed := tot == "" and facts.is_empty() and not only_us and story.is_empty()
+	if (tot != "" and not only_us) or not facts.is_empty() or unplayed or not story.is_empty():
 		v.add_child(UiKit.spacer(4))
 		v.add_child(UiKit.lbl("Career", UiKit.SMALL, UiKit.MUTED))
+	if not story.is_empty():
+		# One passage beside a bar in his club's colour, set apart from the facts.
+		var story_l := UiKit.lbl(CareerTale.text(story), UiKit.BODY, UiKit.TEXT)
+		story_l.name = "CareerStory"
+		story_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var story_box := UiKit.club_section_body(his_club, story_l, name_ink if his_club != "" else UiKit.MUTED)
+		story_box.name = "CareerStoryBox"
+		v.add_child(story_box)
 	if tot != "" and not only_us:
 		var cl := UiKit.lbl(tot, UiKit.BODY, UiKit.TEXT)
 		cl.name = "ProfileCareer"
@@ -337,12 +349,24 @@ static func with_us_block(p: Dictionary) -> Control:
 ## His career facts on record (CareerRecord.lines), less what his "With us"
 ## lines say when he is yours.
 static func career_facts(p: Dictionary, mine: bool) -> Array:
+	return career_story(p, mine)["facts"]
+
+
+## His story (CareerTale.tell) and his career facts on record, each fact said
+## once: the story leaves out what his "With us" lines say, and the fact lines
+## leave out what either says. {"story": [...], "facts": [...]}
+static func career_story(p: Dictionary, mine: bool) -> Dictionary:
 	var skip := {}
 	var w := GameState.with_us(p)
 	if mine and Remembered.head(w) != "":
 		skip = Remembered.sheet_keys(p, GameState.career_facts, GameState.my_club, w, GameState.LEARN_JOBS)
-	return CareerRecord.lines(p, GameState.honour_roll, GameState.milestone_log, GameState.my_club,
-			func(code): return GameDB.club_name(code), skip)
+	var ctx := CareerTale.context(skip)
+	ctx["name"] = GameDB.player_display_name(p)
+	var story := CareerTale.tell(p, ctx)
+	var both := skip.duplicate()
+	both.merge(CareerTale.keys(story))
+	return {"story": story, "facts": CareerRecord.lines(p, GameState.honour_roll, GameState.milestone_log,
+			GameState.my_club, func(code): return GameDB.club_name(code), both)}
 
 
 ## True when every season on his record was at this club.

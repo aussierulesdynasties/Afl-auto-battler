@@ -10,6 +10,8 @@ Which build goes to itch next, and when, is in `docs/ITCH_BUILDS.md` (read it on
 
 | # | What | Done looks like |
 |---|---|---|
+| 138 | Season story, second slice of the story layer (CareerTale.gd, research PROCEDURAL_COPY_RESEARCH_2026-11-10 §8): fill the almanac's empty `story_parts.arc` sentence from the season's own record, senior-coach voice, no language model | the almanac's arc sentence is written from the save for seeded seasons, every number traced to a stored fact, nothing said for a season with no arc; director approves the look |
+| 139 | Match story, third slice: a richer match story at full time. Needs his call first on question 5 of the research (may the save keep the impact ledger's coach rows per match?), since the coach's in-match calls are dropped at the end of each round | his answer to question 5, then a seeded full-time story whose every number traces to the result |
 | 11 | Spilled tackle counted as an intercept (MatchSim.gd, around lines 3340-3344): count it as a spilled tackle, not an intercept | a seeded test shows a spilled tackle is not counted as an intercept |
 
 ## B. Built and ON: his playtest judges
@@ -177,6 +179,7 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 - Audits and balance come last: "I also want to defer all audits until after all other roadmap rows are done"; "pointless to constantly audit an ever changing database; we can rigorously audit and balance after the game is fully featured." They sit in section Z.
 - A build row whose done-test contains an audit closes when the build ships; the audit moves to section Z as its own row ("Yes, split them").
 - Balance-threshold test checks move out of the nightly.
+- The career story (procedural copy, first slice): on the player sheet and on Brownlow night; up to five sentences, like the almanac; a career with nothing worth a story shows nothing, no filler line; Claude drafts the phrasings in the senior-coach voice and he edits them; one plain register everywhere, a failed pick told plainly, no warmer farewell text. Built in the career-story PR; the season and match stories are rows 138 and 139.
 
 ## Current focus (moved from the bible, 2026-11-06)
 

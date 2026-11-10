@@ -204,6 +204,17 @@ static func open(host: Control) -> Control:
 			# The winner leads, in his club's colour where it reads.
 			body.add_child(_words(GameState.award_name(winner), StatsSide.ink(code), 24, true))
 			body.add_child(_words("%s · %s" % [GameDB.club_name(code), _figure(winner, metric)], UiKit.TEXT))
+			# The medallist's story, from his draft to tonight (CareerTale;
+			# director 2026-11-10). Nothing when his career has no story yet.
+			if metric == "votes":
+				var story := _medallist_story(code, str(winner.get("id", "")))
+				if story != "":
+					body.add_child(UiKit.spacer(4))
+					var sl := _words(story, UiKit.TEXT)
+					sl.name = "WinnerStory"
+					var sb := UiKit.club_section_body(code, sl, StatsSide.ink(code))
+					sb.name = "WinnerStoryBox"
+					body.add_child(sb)
 			# A counted award has just shown its final count; the placings
 			# follow only the winner-by-winner reveal.
 			if metric != "goals" and rows.size() > 1 and count == "":
@@ -334,3 +345,14 @@ static func _words(text: String, colour: Color, font_size := 15, bold := false) 
 	var label := UiKit.lbl(text, font_size, colour, bold)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return label
+
+
+## The Brownlow medallist's career story as one passage, "" for none.
+static func _medallist_story(code: String, id: String) -> String:
+	var lists: Dictionary = GameState.season.lists if GameState.season != null else {}
+	for p in lists.get(code, []):
+		if str(p.get("id", "")) == id:
+			var ctx := CareerTale.context()
+			ctx["name"] = GameDB.player_display_name(p)
+			return CareerTale.text(CareerTale.tell(p, ctx))
+	return ""
