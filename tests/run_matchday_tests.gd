@@ -2103,8 +2103,8 @@ func _test_bounce_close_up() -> void:
 	_check(off.is_empty(), "Every option is on screen and thumb-sized (%s)" % str(off))
 	# The call is MatchSim's; then straight back to the match view.
 	var asked: int = sim.moments.size()
-	# Two choices, no "play it straight": the second is Flood behind the ball.
-	var flood: Button = card.find_child("Moment_1", true, false)
+	# Two choices, no "play it straight": the first is Flood behind the ball.
+	var flood: Button = card.find_child("Moment_0", true, false)
 	flood.emit_signal("pressed")
 	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("kind", "")) == "bounce",
 			"MatchSim takes the call")
@@ -2166,11 +2166,18 @@ func _test_ballup_two_scene() -> void:
 		await process_frame      # the call slides up (0.3 s)
 	var btns := card.find_children("Moment_*", "Button", true, false)
 	_check(btns.size() == 2 and card.find_child("Moment_2", true, false) == null, "Two choices on the card (%d)" % btns.size())
+	_check((card.find_child("Moment_0", true, false) as Button).text == "Flood behind the ball"
+			and (card.find_child("Moment_1", true, false) as Button).text == "Push numbers forward",
+			"The two moves are Flood behind the ball and Push numbers forward (row 151)")
+	var pct_lines := 0
+	for l in card.find_children("*", "Label", true, false):
+		pct_lines += 1 if (l as Label).text.contains("%") else 0
+	_check(pct_lines >= 4, "Each gain and each cost is sized as a percentage on the card (%d lines)" % pct_lines)
 	var gains := 0
 	var costs := 0
 	for l in card.find_children("*", "Label", true, false):
-		gains += 1 if (l as Label).text.begins_with("Gain: ") else 0
-		costs += 1 if (l as Label).text.begins_with("Cost: ") else 0
+		gains += 1 if (l as Label).text.begins_with("Gain:") else 0
+		costs += 1 if (l as Label).text.begins_with("Cost:") else 0
 	_check(gains == 2 and costs == 2, "Each choice says its gain and its cost (%d, %d)" % [gains, costs])
 	var low := _text(card).to_lower()
 	_check(not low.contains("play it straight") and not low.contains("recommend") and not low.contains("best"),
@@ -2178,16 +2185,16 @@ func _test_ballup_two_scene() -> void:
 	var asked: int = sim.moments.size()
 	var played_from: int = sim.timeline.size()
 	var why: String = await Tap.tap(card.find_child("Moment_1", true, false))
-	_check(why == "", "A real tap on Flood behind the ball reaches it (%s)" % why)
+	_check(why == "", "A real tap on Push numbers forward reaches it (%s)" % why)
 	# The tap plays on at once (MatchScene._advance_segment) to the next call or the
 	# break, and the break ends every call (MatchSim.end_quarter), so bursts may be
 	# empty again by now. The timeline notes each side's calls at every chain played:
-	# the flood must be in force for the play that followed the tap.
-	var flood_played := false
+	# the push must be in force for the play that followed the tap.
+	var push_played := false
 	for e in sim.timeline.slice(played_from):
-		flood_played = flood_played or (int(e["side"]) == me and (e["bursts"] as Array).has("flood"))
-	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("choice_label", "")) == "Flood behind the ball"
-			and flood_played, "The tap makes the call, and the flood is on")
+		push_played = push_played or (int(e["side"]) == me and (e["bursts"] as Array).has("push"))
+	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("choice_label", "")) == "Push numbers forward"
+			and push_played, "The tap makes the call, and the numbers are forward")
 	m.queue_free()
 	await _settle()
 
