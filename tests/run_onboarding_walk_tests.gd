@@ -248,12 +248,35 @@ func _walk_first_postseason() -> void:
 		guard += 1
 		_state.advance()
 	_state.season.finals["done"] = true
+	if _state.media_conference_pending():
+		_walk(mode, "The press conference after the Grand Final comes first (skipped here)")
+		_state.skip_media_conference()
 	var hub := await _hub(mode, "Hub, the Grand Final over")
 	_check(_tips(hub).has("PostseasonIntro"), "The finals over, the postseason tip opens")
 	await _close_tips(hub)
 	_walk(mode, "After Got it, the week's asks follow: %s" % ("yes" if hub.find_child("WeekActions", true, false) != null else "no"))
 	await _gone(hub)
-	await _visit(mode, "Season review", "res://scenes/SeasonReviewScene.tscn")
+	var review: Control = load("res://scenes/SeasonReviewScene.tscn").instantiate()
+	root.add_child(review)
+	await _settle()
+	var night := review.find_child("AwardsSkip", true, false) as Button
+	if night == null:
+		night = review.find_child("AwardsNext", true, false) as Button
+	_walk(mode, "Season review, first screen: %s" % ("awards night" if night != null else
+			", ".join(_tips(review).map(func(t): return _tip_title(review, t)))))
+	var guard_night := 0
+	while night != null and guard_night < 12:
+		guard_night += 1
+		await Tap.tap(night)
+		await _settle()
+		night = review.find_child("AwardsSkip", true, false) as Button
+		if night == null:
+			night = review.find_child("AwardsNext", true, false) as Button
+	var after_night := _tips(review)
+	_walk(mode, "Season review, after awards night: %s" % (", ".join(after_night.map(func(t): return _tip_title(review, t))) if not after_night.is_empty() else "no tip"))
+	_check(after_night.has("SeasonReviewIntro"), "The Season review tip follows awards night")
+	await _close_tips(review)
+	await _gone(review)
 	_state.open_offseason()
 	var p: Dictionary = _state.my_list[0]
 	p["contract_years"] = 1
