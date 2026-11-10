@@ -19,6 +19,7 @@ const WEEK := [["selection", "res://scenes/SelectionScene.tscn"], ["coaching", "
 		["staff", "res://scenes/StaffScene.tscn"], ["season_stats", "res://scenes/StatsHubScene.tscn"]]
 
 var _state: Node
+var _router: Node
 var _db: Node
 var _checks := 0
 var _failures: Array[String] = []
@@ -31,6 +32,7 @@ func _initialize() -> void:
 func _run() -> void:
 	await process_frame
 	_state = root.get_node("GameState")
+	_router = root.get_node("Router")
 	_db = root.get_node("GameDB")
 	_state.autosave_enabled = false
 	_state.save_path = SAVE
@@ -123,9 +125,12 @@ func _visit(mode: String, label: String, path: String) -> Array:
 	return tips
 
 
-## The League redraft to a full list, picking the best player each turn.
-func _initial_draft(mode: String) -> void:
+## The League redraft to a full list, picking the best player each turn. With
+## `interview` (a new career), taking the club opens the press interview before
+## the board (director, 2026-11-11: "its meant to go before the draft").
+func _initial_draft(mode: String, interview := false) -> void:
 	_state.begin_draft()
+	_state.interview_due = interview
 	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
 	root.add_child(ui)
 	await _settle()
@@ -134,6 +139,24 @@ func _initial_draft(mode: String) -> void:
 	await _close_tips(ui)
 	ui.call("_on_club_chosen", CLUB)
 	await _settle()
+	if interview:
+		var iv := current_scene
+		_check(_router.current() == "interview" and iv != null and str(iv.scene_file_path).ends_with("InterviewScene.tscn"),
+				"Taking the club opens the press interview before the board (at %s)" % _router.current())
+		if iv != null:
+			var it := _tips(iv)
+			_walk(mode, "Appointment interview: %s" % (", ".join(it.map(func(t): return _tip_title(iv, t))) if not it.is_empty() else "no tip"))
+			await _close_tips(iv)
+			_check(_tips(iv).is_empty(), "Appointment interview: the tip closes (%s)" % mode)
+		# The answers are career_ui's to prove; here the walk goes on to the board.
+		_state.interview_due = false
+		if iv != null:
+			iv.queue_free()
+		ui.queue_free()
+		await _settle()
+		ui = load("res://scenes/DraftScene.tscn").instantiate()
+		root.add_child(ui)
+		await _settle()
 	tips = _tips(ui)
 	_walk(mode, "Initial draft, the board after choosing %s: %s" % [CLUB, ", ".join(tips.map(func(t): return _tip_title(ui, t))) if not tips.is_empty() else "no tip"])
 	if mode != "off":
@@ -179,12 +202,11 @@ func _gone(n: Node) -> void:
 ## Initial draft, the pre-season and the first week's screens.
 func _test_walk_initial_draft_and_week() -> void:
 	_fresh_device(true)
-	_state.interview_due = true   # Main._start_new_career: a new career opens with the interview
-	await _initial_draft("initial draft")
-	# The draft's Start season goes to the hub, which sends a new coach to his
-	# appointment interview, then to the pre-season screen until Round 1.
-	await _visit("weekly loop", "Appointment interview", "res://scenes/InterviewScene.tscn")
-	_state.interview_due = false
+	# Main._start_new_career: a new career opens with the interview, once the
+	# club is taken and before the first pick.
+	await _initial_draft("initial draft", true)
+	# The draft's Start season goes to the hub, then to the pre-season screen
+	# until Round 1.
 	var pre := await _visit("weekly loop", "Pre-season", "res://scenes/PreSeasonScene.tscn")
 	_check(not pre.is_empty(), "The pre-season shows its tip")
 	# Into Round 1, as the pre-season's last stop does.

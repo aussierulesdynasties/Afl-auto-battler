@@ -97,6 +97,11 @@ func _ready() -> void:
 	if GameState.draft == null:
 		GameState.begin_draft()
 	_draft = GameState.draft
+	# A new coach faces the press before his first pick, a draft resumed from
+	# a save included (director, 2026-11-11: "its meant to go before the draft").
+	if GameState.interview_before_draft():
+		Router.replace("interview")
+		return
 	_club = _draft.user_club
 	_phase = "club" if _club.is_empty() else "board"
 	# The redraft wears the chosen club's colours before my_club is set, a
@@ -408,6 +413,9 @@ func _on_club_chosen(code: String) -> void:
 	else:
 		_draft.start_for_user(code)
 	GameState.mark_dirty()
+	if GameState.interview_before_draft():
+		Router.replace("interview")
+		return
 	_club_backdrop()
 	_show_board()
 	FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())

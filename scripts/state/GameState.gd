@@ -4202,6 +4202,20 @@ func _coach_arch_season_end() -> void:
 
 
 ## Sit the appointment interview: `picks` one answer per question.
+## The club the new coach was appointed to: my_club, or in a League redraft
+## (which sets my_club only once the draft ends) the club he is drafting for.
+func coach_club() -> String:
+	if my_club != "":
+		return my_club
+	return draft.user_club if draft != null else ""
+
+
+## The press interview comes once the coach has a club and before his first
+## pick (director, 2026-11-11: "its meant to go before the draft").
+func interview_before_draft() -> bool:
+	return interview_due and coach_club() != "" and draft != null and not draft.is_finished()
+
+
 func finish_interview(picks: Array) -> Dictionary:
 	coach_arch = Archetypes.score_interview(picks)
 	interview_due = false

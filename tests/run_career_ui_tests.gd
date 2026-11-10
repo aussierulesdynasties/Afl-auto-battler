@@ -4178,8 +4178,8 @@ func _all_text(n: Node) -> String:
 ## Every start mode opens with the press interview that sets your coaching style (director, 2026-11-10:
 ## "interview should happen in every game mode"), its answers scored as in any
 ## start. Each start is set on New career and begun as Choose your club begins
-## it; the club is taken by a real tap; the hub then sends the new coach to the
-## interview. The 2030 start (Canberra on the real lists) and Tasmania's 2028
+## it; the club is taken by a real tap, and the interview comes before the
+## first pick (director, 2026-11-11: "its meant to go before the draft"). The 2030 start (Canberra on the real lists) and Tasmania's 2028
 ## start load a shipped history, which used to bring its own coach with it.
 func _test_every_start_reaches_interview() -> void:
 	var seed_was: int = _state.replay_seed
@@ -4236,33 +4236,25 @@ func _test_every_start_reaches_interview() -> void:
 			var tile := _first_named(draft_scene, "Choose_")
 			tap = await Tap.tap(tile) if tile != null else "no club tile"
 			await _settle()
-		# The draft to its end, as its own buttons make it: each pick the best
-		# player left, then Start season. Where it goes next is the hub's call;
-		# the press interview comes before the pre-season (on main it came only
-		# after the whole pre-season, and never after a shipped history).
-		var ds := current_scene
-		var d = _state.draft
-		var guard := 0
-		while d != null and not d.is_finished() and guard < 200:
-			guard += 1
-			var board: Array = d.board("", "", "", "overall", true).filter(func(p): return d.can_pick_player(p))
-			if board.is_empty():
-				break
-			ds.call("_on_pick", board[0])
-			await process_frame
-		var due: bool = bool(_state.interview_due)
-		var clean: bool = (_state.coach_arch as Dictionary).is_empty() and str(_state.coach_name) == ""
-		if is_instance_valid(ds) and ds.has_method("_on_finish"):
-			ds.call("_on_finish")
+		# Straight from the club tap to the press interview, before any pick of
+		# yours (director, 2026-11-11: "its meant to go before the draft").
 		for i in range(300):
 			if _router.current() != "draft" and not bool(root.get_node("ScreenTransition").busy):
 				break
 			await process_frame
 		await _settle()
-		_check(tap == "" and _state.my_club != "" and due and clean and _router.current() == "interview"
+		var d = _state.draft
+		var mine_before := 0
+		if d != null:
+			for pk in d.pick_history:
+				mine_before += 1 if str(pk["club"]) == _state.coach_club() else 0
+		var due: bool = bool(_state.interview_due)
+		var clean: bool = (_state.coach_arch as Dictionary).is_empty() and str(_state.coach_name) == ""
+		_check(tap == "" and _state.coach_club() != "" and due and clean and mine_before == 0
+				and d != null and not d.is_finished() and _router.current() == "interview"
 				and current_scene.find_child("CoachName", true, false) != null,
-				"%s: the new coach of %s faces the press interview, name first (tap %s, due %s, clean %s, at %s)" % [
-					label, _state.my_club, tap, due, clean, _router.current()])
+				"%s: the new coach of %s faces the press interview before the draft, name first (tap %s, due %s, clean %s, his picks %d, at %s)" % [
+					label, _state.coach_club(), tap, due, clean, mine_before, _router.current()])
 		if _router.current() != "interview":
 			continue
 		# The answers score exactly as in the standard start.
@@ -4280,6 +4272,35 @@ func _test_every_start_reaches_interview() -> void:
 				and _state.coach_arch == want and load("res://scripts/sim/CoachEffects.gd").my_arch == want
 				and current_scene.find_child("InterviewDone", true, false) != null,
 				"%s: seven tapped answers set the coaching style as the standard start's (%s)" % [label, answered])
+		# Continue, by a real tap, goes back to the draft board for the first pick.
+		var cont: String = await Tap.tap(current_scene.find_child("InterviewDone", true, false))
+		for i in range(300):
+			if _router.current() == "draft" and not bool(root.get_node("ScreenTransition").busy):
+				break
+			await process_frame
+		await _settle()
+		_check(cont == "" and _router.current() == "draft" and str(current_scene.get("_phase")) == "board",
+				"%s: Continue goes back to the draft board (tap %s, at %s, phase %s)" % [
+					label, cont, _router.current(), current_scene.get("_phase")])
+		# The draft to its end; the hub never asks again.
+		var ds := current_scene
+		var guard := 0
+		while d != null and not d.is_finished() and guard < 200:
+			guard += 1
+			var board: Array = d.board("", "", "", "overall", true).filter(func(p): return d.can_pick_player(p))
+			if board.is_empty():
+				break
+			ds.call("_on_pick", board[0])
+			await process_frame
+		if is_instance_valid(ds) and ds.has_method("_on_finish"):
+			ds.call("_on_finish")
+		for i in range(300):
+			if _router.current() != "draft" and not bool(root.get_node("ScreenTransition").busy):
+				break
+			await process_frame
+		await _settle()
+		_check(_router.current() != "interview" and _router.current() != "draft" and not _state.interview_due,
+				"%s: after the draft the career goes on without a second interview (at %s)" % [label, _router.current()])
 	_state.replay_seed = seed_was
 	_state.delete_saved_career()
 	_state.reset()
