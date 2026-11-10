@@ -11,6 +11,11 @@ const TEXT := {
 		"This is where you pick the kids who will carry your club in five years.",
 		"When your pick comes up, choose a player from the pool.",
 	]],
+	"league_draft": ["The League redraft", [
+		"Every club starts from nothing and drafts a whole list of 44 from the league's players.",
+		"Each player you take costs his salary. Your list must fit under the cap and have at least two rucks.",
+		"When your pick comes up, take a player from the pool. The position counts show where you're short.",
+	]],
 	"combine": ["The Combine", [
 		"Four tests on the day, and every club sees the same results.",
 		"They tell you about the athlete: speed, running, spring, kicking. They don't tell you he can play.",
@@ -35,6 +40,21 @@ const TEXT := {
 	"offseason": ["The off-season", [
 		"Between the Grand Final and the draft you rebuild: contracts, free agents and trades.",
 		"Sort out the players you want to keep first, then fill the gaps.",
+	]],
+	"contracts": ["Contract talks", [
+		"He names a salary and a term. Meet his terms and he signs on the spot.",
+		"Offer less and he names his lowest. Three failed offers and he tests free agency.",
+		"Offer under two-thirds of his lowest and he's insulted: it counts as two and costs morale.",
+	]],
+	"trade": ["Trading", [
+		"Choose a club and put players or picks on each side. A no comes with their reason.",
+		"Want one of theirs? Add him alone and Ask their price. Selling? Ask around or use the trade table.",
+		"Contenders want help now; rebuilders want youth and picks. Trading closes when the draft starts.",
+	]],
+	"draft_trade": ["Trading picks", [
+		"Tonight only picks change hands: this draft's and the next two.",
+		"When a club bids for your pick, its offer shows at the top. Accept it, or build your own deal below.",
+		"The draft waits while this sheet is open. Tap Back to the draft when you're done.",
 	]],
 	"preseason": ["The pre-season", [
 		"The weeks before Round 1: get the squad fit and try your ideas out.",

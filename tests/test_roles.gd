@@ -42,6 +42,7 @@ func _check(condition: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+const BalanceGate := preload("res://tests/balance_gate.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -232,7 +233,7 @@ func _test_tagger() -> void:
 			n += 1
 	GameDB.skip_ovr_overrides = false
 	GameDB.reload()
-	_check(n >= 8 and n <= 40, "Taggers are a specialist few (%d)" % n)
+	_check(BalanceGate.held(n >= 8 and n <= 40, "tagger count 8-40"), "Taggers are a specialist few (%d)" % n)
 	# In a match, a tagger on the ground makes the tag bite harder.
 	var list: Array = GameDB.club_list("COL").duplicate(true)
 	var home := Squad.new("COL", list, true, "COL")

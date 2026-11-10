@@ -33,8 +33,16 @@ func _ready() -> void:
 	if not GameState.season_awards.is_empty() and GameState.season.is_season_over() \
 			and not bool(GameState.season_awards.get("presentation_seen", false)):
 		_awards_overlay = SeasonAwards.open(self)
+		# Awards night meets him first; the screen's tip follows once the night
+		# is done (left mid-count, it waits for the next visit).
+		_awards_overlay.tree_exited.connect(_after_awards, CONNECT_DEFERRED)
 	else:
 		FirstVisitIntro.show_if_due.call_deferred(self, "season_review")
+
+
+func _after_awards() -> void:
+	if is_inside_tree() and not is_queued_for_deletion() and bool(GameState.season_awards.get("presentation_seen", false)):
+		FirstVisitIntro.show_if_due(self, "season_review")
 
 
 func handle_back() -> bool:

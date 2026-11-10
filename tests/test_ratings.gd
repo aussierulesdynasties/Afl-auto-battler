@@ -11,6 +11,7 @@ var checks := 0
 ## Every season and draft here is seeded (C15): a clock seed makes a different
 ## league each run.
 const SUITE_SEED := 2027
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -137,8 +138,8 @@ func _test_scale() -> void:
 		nineties += 1 if ov >= 90 else 0
 		lo = mini(lo, ov)
 		hi = maxi(hi, ov)
-	_check(lo >= 36 and hi <= 97, "2026 ratings stay on the scale, clear of the retirement floor (%d-%d)" % [lo, hi])
-	_check(nineties >= 1 and nineties <= 8, "Only a handful of 90+ players (%d)" % nineties)
+	_check(BalanceGate.held(lo >= 36 and hi <= 97, "ratings: 2026 scale range"), "2026 ratings stay on the scale, clear of the retirement floor (%d-%d)" % [lo, hi])
+	_check(BalanceGate.held(nineties >= 1 and nineties <= 8, "ratings: 90+ player count"), "Only a handful of 90+ players (%d)" % nineties)
 	var fair := true
 	var meds := []
 	for role in by_role:
@@ -147,8 +148,8 @@ func _test_scale() -> void:
 		meds.append(int(v[v.size() / 2]))
 		if int(v[-1]) < 84:
 			fair = false
-	_check(fair, "Every position's best reach the mid 80s or better")
-	_check(meds.max() - meds.min() <= 6, "Position medians stay close together (%s)" % str(meds))
+	_check(BalanceGate.held(fair, "ratings: position tops reach mid 80s"), "Every position's best reach the mid 80s or better")
+	_check(BalanceGate.held(meds.max() - meds.min() <= 6, "ratings: position median spread"), "Position medians stay close together (%s)" % str(meds))
 	var mono := true
 	for role in Ratings.STRETCH_ANCHORS:
 		var last := -INF
@@ -176,7 +177,7 @@ func _test_ovr_tracks_strength() -> void:
 		xs.append(total / float(sq.ground.size() + sq.bench.size()))
 		ys.append(sq.strength())
 	var r := _pearson(xs, ys)
-	_check(r >= 0.80, "Selected-22 OVR tracks engine strength across the real lists (r = %.2f)" % r)
+	_check(BalanceGate.held(r >= 0.80, "ratings: OVR tracks engine strength"), "Selected-22 OVR tracks engine strength across the real lists (r = %.2f)" % r)
 
 
 func _pearson(xs: Array, ys: Array) -> float:

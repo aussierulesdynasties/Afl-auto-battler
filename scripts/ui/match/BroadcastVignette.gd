@@ -152,6 +152,16 @@ static func duration_for(p_kind: String) -> float:
 	return float(DURATIONS.get(p_kind, 3.5))
 
 
+## The event after `index` that is play, not a quarter-break line. The sim logs
+## "End of quarter 4" between the last score and the siren ("final"), so the
+## after-the-siren check must look past it (T3.F-defects, audit 29).
+static func next_play_event(events: Array, index: int) -> Dictionary:
+	var j := index + 1
+	while j < events.size() and str((events[j] as Dictionary).get("kind", "")) == "quarter":
+		j += 1
+	return events[j] if j < events.size() else {}
+
+
 ## Choose only from facts the current presentation already knows. There is no
 ## extra simulation roll here: the same replay produces the same vignette.
 static func pick_kind(ev: Dictionary, prev_ev: Dictionary, next_ev: Dictionary, snap: Dictionary) -> String:
@@ -301,6 +311,11 @@ const SPECCY_AT := {SPECCY_FRONT: Vector2(0.0, 46.0), SPECCY_SIDE: Vector2(22.0,
 ## After the siren: the mark 40 m out on a slight angle; he walks back 6 m and runs in.
 const SIREN_MARK := Vector2(-7.0, 39.0)
 const SIREN_RUN := 6.0
+## The kick's flight to the goal line, seconds, and its height crossing it, metres.
+const SIREN_FLIGHT := 2.1
+const SIREN_CROSS_H := 4.5
+## The lens as the ball reaches the posts.
+const SIREN_END_ZOOM := 1.35
 ## He kicks this far behind his mark: well clear of the man standing on it.
 const KICK_BEHIND := 5.0
 ## The crumb: the marking contest just outside the goal square, the crumber in front of
@@ -530,7 +545,10 @@ func _camera_aim() -> Array:
 			var k: Vector2 = _hip(_siren_kicker())[0]
 			var posts := _ground.project(Vector2(0.0, VignetteGround.GOAL_Y), 6.0)
 			var on: Vector2 = G.glide(k + Vector2(0, -h * 0.08), Vector2(posts.x, h * 0.45), _t, 2.6, 4.0)
-			return [on, G.glide(G.glide(1.22, 1.1, _t, 0.6, 2.4), 1.0, _t, 2.8, 4.0)]
+			# Then in on the posts as the ball comes down to them (a TV camera's zoom with the
+			# kick), so it is seen to go through; he stays in the shot (_keep_in_frame).
+			var z: float = G.glide(G.glide(1.22, 1.1, _t, 0.6, 2.4), 1.0, _t, 2.8, 4.0)
+			return [on, G.glide(z, SIREN_END_ZOOM, _t, 4.0, 3.02 + SIREN_FLIGHT)]
 		GOAL_LINE:
 			# The contest, then the fall of the ball, then running with the crumber as he
 			# breaks into space (room ahead of him), then wide for the snap at goal.
@@ -979,11 +997,33 @@ func _siren_ball(at: Vector2, kicker: Vector2, scale: float, boot: Vector2) -> v
 			pos = hand.lerp(boot, u * u)
 		_draw_ball(pos, scale * 0.9)
 	else:
-		var flight := clampf((_t - 3.02) / 1.85, 0.0, 1.0)
-		var goal := str(event.get("kind", "")) == "goal"
-		var start := Vector3(at.x, at.y, 0.7) + Vector3(_ground.fwd.x, _ground.fwd.y, 0.0) * 0.6
-		var end := Vector3(0.0 if goal else 4.8, VignetteGround.GOAL_Y + 1.0, 7.0)
-		_ball_flight(boot, start, end, 18.0, flight)
+		var flight := (_t - 3.02) / SIREN_FLIGHT
+		var p := siren_flight_point(at, flight)
+		var p0 := siren_flight_point(at, 0.0)
+		var s0 := _ground.project(Vector2(p0.x, p0.y), p0.z)
+		var s := _ground.project(Vector2(p.x, p.y), p.z)
+		if s.z <= 0.0:
+			return
+		var fix := (boot - Vector2(s0.x, s0.y)) * pow(1.0 - minf(flight * 4.0, 1.0), 2.0)
+		_draw_ball(Vector2(s.x, s.y) + fix, s.z / 64.0, true)
+
+
+## The ball in flight from the kicker at `at` (metres, height in z), `flight` 0 at the boot
+## and 1 at the goal line. A drop punt of 48 m in SIREN_FLIGHT seconds: a real ballistic
+## arc for that time, up about 8 m and through the posts at SIREN_CROSS_H (below the post
+## tops, so it reads as between them). Past 1 it carries on over the goal line and drops
+## behind the goals: it is still falling when the scene ends, never left hanging.
+func siren_flight_point(at: Vector2, flight: float) -> Vector3:
+	var goal := str(event.get("kind", "")) == "goal"
+	var start := Vector3(at.x, at.y, 0.7) + Vector3(_ground.fwd.x, _ground.fwd.y, 0.0) * 0.6
+	var end := Vector3(0.0 if goal else 4.8, VignetteGround.GOAL_Y, SIREN_CROSS_H)
+	var p := start.lerp(end, flight)
+	# Under gravity alone: z(t) = z0 + v t - g t^2 / 2 with z(T) = the crossing height.
+	var T := SIREN_FLIGHT
+	var tt := flight * T
+	var v := (end.z - start.z + 4.9 * T * T) / T
+	p.z = maxf(0.0, start.z + v * tt - 4.9 * tt * tt)
+	return p
 
 
 ## A figure's palm on screen in a frame (hand 0 his left, 1 his right, -1 between the

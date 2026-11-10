@@ -10,6 +10,7 @@ var checks := 0
 ## Every season and draft here is seeded (C15): a clock seed makes a different
 ## league each run.
 const SUITE_SEED := 2027
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -983,8 +984,8 @@ func _test_custom_prospect() -> void:
 	_check(int(ovr[0]) >= int(cls_ovr.min()) - 2 and int(ovr[-1]) <= int(cls_ovr.max()) + 2,
 			"Custom prospects stay inside a class's power band (%d-%d vs %d-%d)" % [ovr[0], ovr[-1], cls_ovr.min(), cls_ovr.max()])
 	# Draft-night ratings run at DRAFT_NIGHT_SCALE of the old curve (director 2026-10-14), so a modest one starts in the high 30s.
-	_check(int(ovr[40]) >= 36, "Even a modest one is a usable role-player prospect (10th percentile OVR %d)" % ovr[40])
-	_check(stars > 8 and stars < 140 and gen < 20,
+	_check(BalanceGate.held(int(ovr[40]) >= 36, "custom prospect 10th percentile OVR"), "Even a modest one is a usable role-player prospect (10th percentile OVR %d)" % ovr[40])
+	_check(BalanceGate.held(stars > 8 and stars < 140 and gen < 20, "custom prospect star and generational rates"),
 			"A star is uncommon and a generational ceiling rare (%d of 400 at POT 85+, %d at 92+)" % [stars, gen])
 
 	# Strengths reshape him, at the same overall.
@@ -1318,9 +1319,9 @@ func _test_gen_traits_rates() -> void:
 	var rh := 100.0 * real_hot / real.size()
 	var rb := 100.0 * real_bull / real.size()
 	_check(on["n"] > 300, "Eight classes are drawn (%d players)" % on["n"])
-	_check(absf(on["hot"] - rh) <= 2.5,
+	_check(BalanceGate.held(absf(on["hot"] - rh) <= 2.5, "generated hothead rate vs real"),
 			"Hotheads roll at the real rate: %.1f%% generated against %.1f%% real" % [on["hot"], rh])
-	_check(absf(on["bull"] - rb) <= 1.5,
+	_check(BalanceGate.held(absf(on["bull"] - rb) <= 1.5, "generated contested bull rate vs real"),
 			"Contested bulls at a real player's level match the real rate: %.1f%% against %.1f%%" % [on["bull"], rb])
 	# The same seeds give the same prospects: the temperament draw is seeded per player.
 	Prospects.forget_cache()
