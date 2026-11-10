@@ -35,6 +35,7 @@ func _run() -> void:
 	var ok: bool = gs.prepare_interactive_match()
 	print("FIRST prepare match: %.0f ms (%s)" % [_ms(t), str(ok)])
 	t = Time.get_ticks_usec()
+	var stop_scr = load("res://scripts/ui/match/StoppageVignette.gd")
 	var scr = load("res://scripts/ui/match/DecisionVignette.gd")
 	print("FIRST load the call scene's script and sheets: %.0f ms" % _ms(t))
 	var sim = gs.pending_sim
@@ -46,14 +47,14 @@ func _run() -> void:
 			host.size = Vector2(root.size)
 			root.add_child(host)
 			t = Time.get_ticks_usec()
-			var v: StoppageVignette = StoppageVignette.new() if kind == "stoppage" else scr.new()
+			var v = stop_scr.new() if kind == "stoppage" else scr.new()
 			host.add_child(v)
 			v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			v.clip_contents = true
 			if kind == "stoppage":
 				v.setup(sim, 0, "Centre bounce")
 			else:
-				(v as DecisionVignette).setup_decision(sim, 0, {"kind": "momentum", "title": "Probe", "q": 1, "min": 5})
+				v.setup_decision(sim, 0, {"kind": "momentum", "title": "Probe", "q": 1, "min": 5})
 			print("FIRST %s: setup %.0f ms" % [label, _ms(t)])
 			var frames := []
 			for f in range(6):
