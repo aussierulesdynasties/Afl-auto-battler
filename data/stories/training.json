@@ -98,14 +98,21 @@
 			{
 				"key": "develop",
 				"label": "A week with the development coaches",
-				"note": "It doesn't take a spot in the side, but there's no game for him at all this week.",
+				"note": "He wanted a game. A week in the development group tells him he isn't ready, and he can't be picked this week.",
 				"effects": [
 					{
 						"op": "xp",
 						"d": 26
 					},
 					{
-						"op": "rest"
+						"op": "trust",
+						"d": -8,
+						"why": "You told him he isn't ready for a senior game",
+						"contract": true
+					},
+					{
+						"op": "rest",
+						"quiet": true
 					}
 				],
 				"result": "{name} spends the week with the development coaches."
