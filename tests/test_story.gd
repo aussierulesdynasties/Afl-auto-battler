@@ -292,7 +292,7 @@ func _stakes_in(effects: Array) -> Array:
 			continue
 		# A development talk's promise (T5.r93): games there if it takes, and what breaking it costs.
 		if op == "dev_promise":
-			for k in [op, "morale", "trust"]:
+			for k in [op, "morale", "trust", "role_trial"]:
 				if not costs.has(k):
 					costs.append(k)
 			continue
@@ -3259,7 +3259,7 @@ func _test_silent_defaults_announced() -> void:
 func _test_every_line_has_a_size() -> void:
 	_start()
 	var p: Dictionary = GameState.my_list[4]
-	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+/100|[0-9]+ XP|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends")
+	var sized := RegEx.create_from_string("[0-9]+%|[0-9]+/100|[0-9]+ XP|[0-9.]+ weeks?|this week's game|takes the armband|cleared to play|next (one|two|three|four|five|six) game|games? away from his usual spot|for (one|two|three|four|five) more seasons?|[$][0-9.]+[km]? a season|pick [0-9]+|when this season ends|^No promise to keep[.]$")
 	var bad := []
 	var parts_seen := 0
 	for t in StoryDeck.all():
@@ -3555,7 +3555,11 @@ func _test_dev_promise_kept_broken_lapsed() -> void:
 			"Three games there and the promise is kept (%s)" % str(dt))
 	_check(Trust.value(GameState.relations, Trust.player_key(id)) >= trust, "Keeping it costs no trust")
 	_check(str(_dev_talk_fact(id)[0]["out"]) == "kept", "The career fact says kept")
-	_check(int(GameState.trial_result.get("promised", 0)) > 0, "The trial's result card knows it was a promise")
+	var told := false
+	for c in GameState.week_events:
+		if str(c.get("tid", "")).begins_with("media_trial_") and str(c.get("text", "")).contains("You promised him this chance in Round"):
+			told = true
+	_check(told, "The trial's result card says it was the chance you promised (%s)" % str(GameState.week_events.map(func(c): return c.get("tid", ""))))
 	# Broken: you take him out of the trial line.
 	_start()
 	p = _dev_learner()
