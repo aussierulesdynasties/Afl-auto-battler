@@ -9,6 +9,7 @@ extends SceneTree
 
 
 var SL
+var _phone_window := Vector2i.ZERO
 
 
 func _initialize() -> void:
@@ -54,10 +55,11 @@ func _run() -> void:
 		SL.add(state, str(order[9]["id"]))
 		for w in range(12):
 			SL.week(state)
+		# Twelve rounds played, as the twelve weeks of watching say.
+		state.season.round_index = 12
 		SL.add(state, str(order[20]["id"]))
 		for size in [Vector2i(390, 844), Vector2i(1280, 800)]:
-			root.size = size
-			await _frames(6)
+			await _size_window(size)
 			var ui: Control = load("res://scenes/ScoutingScene.tscn").instantiate()
 			root.add_child(ui)
 			await _frames(30)
@@ -75,6 +77,34 @@ func _run() -> void:
 			ui.queue_free()
 			await _frames(3)
 	quit()
+
+
+## The window at `size` canvas pixels. The canvas is laid out in
+## device-independent pixels, so on a scaled display the window grows by the
+## display scale until the canvas is the size a player gets (as capture_captaincy).
+func _size_window(size: Vector2i) -> void:
+	if _phone_window == Vector2i.ZERO:
+		_phone_window = DisplayServer.window_get_size()
+	if size.x < 760:
+		# A phone: the canvas itself is set, as the game sizes a phone's view.
+		DisplayServer.window_set_size(_phone_window)
+		root.size = size
+		await _frames(10)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_size(size)
+		root.size = size
+		await _frames(10)
+		var win := Vector2(size)
+		for i in range(4):
+			var factor := float(size.x) / maxf(1.0, root.get_visible_rect().size.x)
+			if factor <= 1.02:
+				break
+			win *= factor
+			DisplayServer.window_set_size(Vector2i(win))
+			root.size = Vector2i(win)
+			await _frames(10)
+	print("canvas ", root.get_visible_rect().size)
 
 
 func _save(path: String) -> void:
