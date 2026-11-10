@@ -1478,13 +1478,18 @@ func _draw_rings(tr: float) -> void:
 ## tagger, the loose man and his minder without a coaching overlay. The
 ## passing caption (a goal, a ringed player's touch) still sits above.
 func _draw_role_labels(tr: float) -> void:
-	var fs := clampi(int(tr * 1.15), 9, 12)
+	var fs := role_label_size(tr)
 	for l in role_label_layout(tr, fs):
 		var text := str(l["text"])
 		var origin: Vector2 = l["origin"]
 		for off in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
 			draw_string(UiKit.BOLD, origin + off, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.7))
 		draw_string(UiKit.BOLD, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.85))
+
+
+## The surnames' size: with the disc, never under the 13 px floor (row T3.R9).
+static func role_label_size(tr: float) -> int:
+	return clampi(int(tr * 1.15), UiKit.FINE, 15)
 
 
 ## Where each surname goes: [{id, text, origin, rect}]. Under its disc first;
@@ -1917,7 +1922,7 @@ func _draw_bench(tr: float) -> void:
 	var br: float = spots[0]["r"]
 	var fs := int(clampf(br * 1.1, 9.0, 13.0))
 	var word := "Bench"
-	var ww := UiKit.BOLD.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+	var ww := UiKit.BOLD.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.FINE).x
 	if not bool(spots[0]["column"]):
 		# In the bottom corners, where the oval's curve leaves the stand showing: a
 		# dark backing under each five so they read over whatever is under them,
@@ -1927,9 +1932,9 @@ func _draw_bench(tr: float) -> void:
 		draw_rect(Rect2(0.0, size.y - tall, wide, tall), Color(STAND_COLOUR, 0.82))
 		draw_rect(Rect2(size.x - wide, size.y - tall, wide, tall), Color(STAND_COLOUR, 0.82))
 		draw_string(UiKit.BOLD, Vector2(6.0, size.y - br * 2.0 - 10.0), word,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(RING_COLOUR, 0.6))
+				HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.FINE, Color(RING_COLOUR, 0.85))
 		draw_string(UiKit.BOLD, Vector2(size.x - 6.0 - ww, size.y - br * 2.0 - 10.0), word,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(RING_COLOUR, 0.6))
+				HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.FINE, Color(RING_COLOUR, 0.85))
 	else:
 		for side in range(2):
 			var top := INF
@@ -1940,7 +1945,7 @@ func _draw_bench(tr: float) -> void:
 					x = (sp["pos"] as Vector2).x
 			if top < INF:
 				draw_string(UiKit.BOLD, Vector2(x - ww * 0.5, top - br - 6.0), word,
-						HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(RING_COLOUR, 0.6))
+						HORIZONTAL_ALIGNMENT_LEFT, -1, UiKit.FINE, Color(RING_COLOUR, 0.85))
 	for sp in spots:
 		_draw_disc(sp["pos"], br, _kits[int(sp["side"])], str(sp["num"]), fs)
 		var m: Dictionary = marks.get(str(sp["pid"]), {})
