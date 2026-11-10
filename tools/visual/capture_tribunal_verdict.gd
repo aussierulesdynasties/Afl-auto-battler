@@ -57,6 +57,8 @@ func _run() -> void:
 		state.replay_seed = 4403
 		state.set_setting("seen_weekly_loop_intro", true)
 		state.start_season("FRE", db.club_list("FRE"))
+		# No week card over the hub: the Tribunal card is what this shows.
+		state.week_events = []
 		var p: Dictionary = state.my_list[0]
 		state._process_discipline([{"home": "FRE", "away": "MEL", "reports": [{"side": 0,
 				"id": str(p["id"]), "name": db.player_display_name(p), "victim_id": "v1",

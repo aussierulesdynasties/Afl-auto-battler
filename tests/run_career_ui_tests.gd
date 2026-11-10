@@ -1022,6 +1022,8 @@ func _test_tribunal_verdict() -> void:
 		_state.career_seed = 4403
 		_state.replay_seed = 4403
 		_state.start_season("FRE", _db.club_list("FRE"))
+		# No week card over the hub: the Tribunal card is what this shows.
+		_state.week_events = []
 		_state.set_setting("seen_weekly_loop_intro", true)
 		var p: Dictionary = _state.my_list[0]
 		_state._process_discipline([{"home": "FRE", "away": "MEL", "reports": [{"side": 0,
