@@ -1341,8 +1341,9 @@ func _test_draft_fit() -> void:
 			lowest = minf(lowest, float(m["value"]) if id != "GAMB" else float(m["value"]) - float(m["rated"]))
 			var t := str(m["text"])
 			texts_ok = texts_ok and t.begins_with(str(Fit.SUITS[id][0]) + ": ") and t.contains("scout's read, +/-")
-			for banned in ["take", "pick", "draft him", "best", "should", "recommend", "target"]:
+			for banned in ["take", "pick", "draft him", "best", "target"]:
 				texts_ok = texts_ok and not t.to_lower().contains(banned)
+			texts_ok = texts_ok and CopyRules.words_in(t).is_empty()
 		var above := true
 		var lines_ok := true
 		for pid in marks:
