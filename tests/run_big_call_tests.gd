@@ -45,6 +45,8 @@ func _run() -> void:
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
 	await _t("_test_backing_from_state")
+	await _t("_test_backing_asked_once")
+	await _t("_test_backing_never_when_picked")
 	await _t("_test_priority_and_one_per_week")
 	await _t("_test_captaincy")
 	await _t("_test_arc_beat_first")
@@ -86,6 +88,9 @@ func _test_backing_from_state() -> void:
 		return
 	if young.is_empty():
 		_check(not BigCalls.candidates(_state).has("backing"), "Nobody ready: no backing call")
+		# A side you named without him, so his rise does not pick him by itself
+		# (a player already in the side is never asked about).
+		_state.set_selection(_state.current_side())
 		kid["overall"] = 99
 		young = BigCalls.ready_to_back(_state)
 	_check(str(young.get("id", "")) == str(kid["id"]) or int(young.get("overall", 0)) >= int(kid["overall"]),
@@ -106,6 +111,79 @@ func _test_backing_from_state() -> void:
 		if _state.can_back(p):
 			p["overall"] = 1
 	_check(BigCalls.ready_to_back(_state).is_empty(), "Weak young players are not ready")
+
+
+## A young player out of a side you named, rated to hold a spot: the one the
+## backing call is about.
+func _ready_kid() -> Dictionary:
+	var kid := {}
+	for p in _state.club_roster("MEL"):
+		if _state.can_back(p) and str(p["role"]) != "RUCK":
+			kid = p
+	if kid.is_empty():
+		return {}
+	var side: Dictionary = _state.current_side()
+	for k in side:
+		(side[k] as Array).erase(str(kid["id"]))
+	_state.set_selection(side)
+	kid["overall"] = 99
+	return kid
+
+
+## Director, 2026-11-10: "keeps asking the same players over and over". Asked
+## once, he is not asked again for Backing.ASK_GAP played weeks, whatever the
+## coach did with it; then he can be.
+func _test_backing_asked_once() -> void:
+	_fresh()
+	var kid := _ready_kid()
+	_check(not kid.is_empty(), "MEL has a young player to back")
+	if kid.is_empty():
+		return
+	var backing = load("res://scripts/sim/Backing.gd")
+	_next_week()
+	var c := WC.big_call(_state)
+	_check(str(c.get("kind", "")) == "backing" and str(c.get("ref", "")) == str(kid["id"]),
+			"Week 1: the call is backing him (%s)" % str(c))
+	# The coach lets it go. Next week, and the week after, he is not asked again.
+	for wk in range(1, backing.ASK_GAP):
+		_state.season.round_index += 1
+		_next_week()
+		c = WC.big_call(_state)
+		_check(str(c.get("ref", "")) != str(kid["id"]),
+				"%d week(s) later he is not asked again (%s)" % [wk, str(c)])
+	_state.season.round_index += 1
+	_next_week()
+	c = WC.big_call(_state)
+	_check(str(c.get("ref", "")) == str(kid["id"]),
+			"%d weeks later he can be asked again (%s; may_ask %s, can_back %s, in side %s, next %s, asked %s, week %d)" % [
+				backing.ASK_GAP, str(c), str(backing.may_ask(kid, _state.story_week())), str(_state.can_back(kid)),
+				str(_state.in_current_side(kid)), str(_state.my_next_opponent()), str(kid.get("back_asked", "-")),
+				_state.story_week()])
+
+
+## Director, 2026-11-10: "often theyre already in the team". A young player
+## already in this week's side is never the backing call.
+func _test_backing_never_when_picked() -> void:
+	_fresh()
+	var kid := _ready_kid()
+	if kid.is_empty():
+		_check(false, "MEL has a young player to back")
+		return
+	_check(str(BigCalls.ready_to_back(_state).get("id", "")) == str(kid["id"]), "Out of the side, he is the one ready")
+	# Name him in the side yourself.
+	var side: Dictionary = _state.my_selection()
+	var line := "MID" if str(kid["role"]) == "MID" else str(kid["role"])
+	var arr: Array = side.get(line, [])
+	arr[arr.size() - 1] = str(kid["id"])
+	side[line] = arr
+	_state.set_selection(side)
+	var picked := false
+	var now: Dictionary = _state.current_side()
+	for k in now:
+		picked = picked or (now[k] as Array).has(str(kid["id"]))
+	_check(picked, "He is in the side now")
+	_check(str(BigCalls.ready_to_back(_state).get("id", "")) != str(kid["id"]),
+			"In the side: the call never asks about him")
 
 
 func _test_priority_and_one_per_week() -> void:

@@ -10104,7 +10104,39 @@ func set_selection(selection: Dictionary) -> void:
 	keep["DUAL_RUCK"] = user_dual_ruck
 	season.selections[my_club] = keep
 	_trial_after_coach_pick(keep)
+	_settle_answered_run_asks()
 	mark_dirty()
+
+
+## A card this week asking for a player's chance (a run of games) whose player
+## you have since named in the side: he has his game, so the question no longer
+## stands (director, 2026-11-10: "often theyre already in the team"). It closes
+## as unanswered without its cost; his wait before he asks again still runs.
+func _settle_answered_run_asks() -> void:
+	for c in week_events:
+		var card: Dictionary = c
+		if bool(card.get("resolved", false)):
+			continue
+		var p := list_player(str(card.get("player_id", "")))
+		if p.is_empty() or not in_current_side(p):
+			continue
+		# Only a card about a player out of the side (a captain's slump offers
+		# a picked player a run, and stays).
+		var t := StoryDeck.by_id(StoryDeck.all(), str(card.get("tid", "")))
+		var where: Dictionary = (t.get("subject", {}) as Dictionary).get("where", {})
+		if not (where.has("selected") and not bool(where["selected"])):
+			continue
+		var asks_run := false
+		for o in (card.get("options", []) as Array):
+			for e in ((o as Dictionary).get("effects", []) as Array):
+				if str((e as Dictionary).get("op", "")) == "start_backing":
+					asks_run = true
+		if not asks_run:
+			continue
+		card["resolved"] = true
+		card["choice"] = -1
+		card["outcome"] = "%s is in the side this week: he has his game." % GameDB.player_display_name(p)
+		StoryEngine.record_choice(story, card, -1, story_week())
 
 
 # ---------------------------------------------------------------------------
@@ -11887,6 +11919,8 @@ func _board_after_round(results: Array) -> void:
 		var pid := str(p["id"])
 		var run_state := Backing.after_match(p, played.has(pid), not _backing_unavailable.has(pid),
 				{"year": season_year, "label": str(res.get("label", ""))}, stats_all.get(pid, {}))
+		if run_state == "done" or run_state == "broken":
+			Backing.mark_asked(p, story_week())   # no new ask for a while (Backing.ASK_GAP)
 		if backing_talk.is_empty() and (run_state == "done" or run_state == "broken"):
 			backing_talk = Backing.talk(p, Backing.ledger(p).back())
 		if run_state == "broken":
@@ -12643,26 +12677,140 @@ func back_player(player_id: String) -> String:
 	for k in side:
 		if (side[k] as Array).has(str(p["id"])):
 			named = true
-	_start_backing(p)
+	var dropped := _start_backing(p)
 	var out := "%s has your word for %s games." % [GameDB.player_display_name(p),
 			MatchNotes.count_word(Backing.RUN_GAMES)]
 	if not named:
-		out += " Auto-pick names the player this week." if my_selection().is_empty() \
-				else " Pick the player this week."
+		out += " " + backed_in_words(dropped)
 	return out
+
+
+## What naming him does to the side, in words: who he comes in for.
+static func backed_in_words(dropped: String) -> String:
+	return "He's in the side this week%s." % ((", in place of %s" % dropped) if dropped != "" else "")
 
 
 ## Start a run for one of your players: the week's match is his first game if
 ## he plays it. He is thrilled, and he expects to be picked: auto-pick names
-## him while the run is on.
-func _start_backing(p: Dictionary) -> void:
+## him while the run is on, and a side you named takes him in at once
+## (director, 2026-11-10: "if u accept, the player is not automatically in the
+## team even though he should be"). Returns the name of the player he comes in
+## for, or "" (already in the side, or nobody had to make way).
+func _start_backing(p: Dictionary) -> String:
 	if Backing.is_active(p):
-		return
+		return ""
+	var swap := backing_swap(p)
+	var dropped := backing_drop_name(p) if swap.is_empty() else ""
+	if not (swap.get("out", {}) as Dictionary).is_empty():
+		dropped = GameDB.player_display_name(swap["out"])
 	var round_no := 0 if season.is_regular_done() else season.round_index + 1
 	Backing.start(p, season_year, round_no, games_played(p))
 	ClubLife.add_morale(p, Backing.THRILL)
 	p["expects_game"] = Backing.STING
+	if not (swap.get("sel", {}) as Dictionary).is_empty():
+		var keep: Dictionary = swap["sel"]
+		keep["DUAL_RUCK"] = user_dual_ruck
+		var stored: Dictionary = season.selections.get(my_club, {})
+		if stored.has("TRIAL"):
+			keep["TRIAL"] = stored["TRIAL"]
+		season.selections[my_club] = keep
 	mark_dirty()
+	return dropped
+
+
+## Is he in the side that would take the field this week (ground or bench)?
+func in_current_side(p: Dictionary) -> bool:
+	var id := str(p.get("id", ""))
+	var side := current_side()
+	for k in side:
+		if (side[k] as Array).has(id):
+			return true
+	return false
+
+
+## A side you named, with him put in it for a run: {"sel": the new side,
+## "out": the player who makes way ({} when a gap took him)}, or {} on
+## Auto-pick or when he is already named. He takes the place of, in order: a
+## player named in his line who cannot play this week, the lowest-rated
+## player named in his line who is not owed a game himself, the
+## lowest-rated such player on the bench. The one who makes way goes to the
+## players left out.
+func backing_swap(p: Dictionary) -> Dictionary:
+	var sel := my_selection()
+	if sel.is_empty():
+		return {}
+	var id := str(p.get("id", ""))
+	for k in sel:
+		if k != "OUT" and (sel[k] as Array).has(id):
+			return {}
+	var role := str(p.get("role", "MID"))
+	var lines: Array = ["MID", "WING"] if role == "MID" else [role]
+	var best := {}
+	var best_key := ""
+	var best_rank := INF
+	for pass_keys in [lines, ["BENCH"]]:
+		for k in pass_keys:
+			for other_id in (sel.get(k, []) as Array):
+				var q := list_player(str(other_id))
+				if q.is_empty():
+					continue
+				if Backing.is_active(q) or q.has("expects_game"):
+					continue
+				# Out this week anyway first; then the lowest rated.
+				var rank := float(q.get("overall", 0)) - (1000.0 if not Ratings.available(q) else 0.0)
+				if rank < best_rank:
+					best_rank = rank
+					best = q
+					best_key = str(k)
+		if not best.is_empty():
+			break
+	var out_list: Array = (sel.get("OUT", []) as Array).duplicate()
+	out_list.erase(id)
+	if best.is_empty():
+		# Nobody can make way: he goes on the bench, and the pick fills round him.
+		var bench: Array = (sel.get("BENCH", []) as Array).duplicate()
+		bench.append(id)
+		sel["BENCH"] = bench
+		sel["OUT"] = out_list
+		return {"sel": sel, "out": {}}
+	var arr: Array = (sel[best_key] as Array).duplicate()
+	arr[arr.find(str(best["id"]))] = id
+	sel[best_key] = arr
+	out_list.append(str(best["id"]))
+	sel["OUT"] = out_list
+	return {"sel": sel, "out": best}
+
+
+## The name of the player who would make way if he were backed now, or "":
+## in a side you named, the one backing_swap takes out; on Auto-pick, the
+## one Auto-pick would leave out to name him. Read-only.
+## `before`: this week's side when the caller has it already.
+func backing_drop_name(p: Dictionary, before: Dictionary = {}) -> String:
+	if season == null or my_club == "":
+		return ""
+	if before.is_empty():
+		before = current_side()
+	for k in before:
+		if (before[k] as Array).has(str(p.get("id", ""))):
+			return ""
+	if not my_selection().is_empty():
+		var out: Dictionary = backing_swap(p).get("out", {})
+		return GameDB.player_display_name(out) if not out.is_empty() else ""
+	var had := p.has("expects_game")
+	if not had:
+		p["expects_game"] = Backing.STING
+	var after := current_side()
+	if not had:
+		p.erase("expects_game")
+	var now := {}
+	for k in after:
+		for x in after[k]:
+			now[str(x)] = true
+	for k in before:
+		for x in before[k]:
+			if not now.has(str(x)):
+				return GameDB.player_display_name(list_player(str(x)))
+	return ""
 
 
 ## One line for each run you have promised, as Selection shows them. A named

@@ -64,6 +64,7 @@
 				"selected": false,
 				"out_of_side": true,
 				"backed": false,
+				"back_wait": false,
 				"age_max": 21,
 				"pot_gap_min": 8
 			},
