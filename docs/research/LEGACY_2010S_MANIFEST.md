@@ -154,25 +154,76 @@ Rebuild: `python tools/legacy_2010s/fetch.py --cache <dir> core`, then `players`
    (the real 2010-2019 seasons are the history: `ladders.csv`, `season_stats.csv`).
 7. **Title screen.** A start choice for the legacy era.
 
-**First shippable slice.** A 2010 real-lists career: every club's real 2010 list, rated from
-2009 and earlier, the real 2009 draft class drafted in the real order, then the 2010 season
-simulated. 16 clubs; GC and GWS arrive as the real expansion did. The seasons after that are
-the player's own.
+**First shippable slice.** A 2010 real-lists career: every club's real 2010 list (the 2009
+draftees already on it), rated from 2009 and earlier, then the 2010 season simulated. From the
+2010 National Draft on, each year's real class is drafted by the sim (director, 2026-11-10),
+and each era rule arrives in its real year. 16 clubs; GC and GWS arrive as the real expansion
+did. The seasons after that are the player's own alternative history.
 
-**What done looks like.** Starting a 2010 career shows each club's real 2010 list; the 2009
-draft runs with the real class in real order; the 2010 season plays; a checker passes (every
+**What done looks like.** Starting a 2010 career shows each club's real 2010 list; the 2010 season plays; the 2010 draft offers the real 2010 class; a checker passes (every
 club's list size within the limits, every player rated, ages from DOB as of 2010); the balance
 harness shows the 2010 league plays like real AFL of that era.
 
-**Open questions for the director** (options, not decisions):
+**Director rulings (2026-11-10, in `docs/DIRECTOR_BIBLE.md`).**
 
-1. **The real seasons after 2010.** (a) The sim decides everything from the 2010 lists on;
-   (b) real drafts arrive each year as the draft classes (the real 2010-2019 draftees enter
-   the league); (c) real drafts and real trades both happen as they did.
-2. **Era rules.** (a) 2010 rules (no free agency until the 2012 period, no academies, the
-   expansion concessions as they were), introduced in the years they began; (b) today's rules
-   from 2010.
-3. **Ratings for 2010.** (a) Rated relative to the 2010 league, as 2026 is rated against
-   2026; (b) on one scale across eras (a 2010 star rated against today's players).
-4. **What the player sees of history.** (a) The real 2010-2019 results are shown as "what
-   happened" beside the player's own; (b) only the player's own timeline.
+1. **The seasons after the start.** "drafts will be era accurate but the draft picks will be
+   subject to the simulation, creating an alternative history". Each year's real draft class
+   (`drafts.csv`, 2010-2019) enters the league as that year's prospects; who takes whom is the
+   sim's. Real trades after the start do not happen. The prospects need their bios and
+   pre-draft ratings: DOB, height and origin are in `drafts.csv` and `lists.csv`.
+2. **Era rules.** "yes, they will". Each rule arrives in the year it began: free agency from
+   the 2012 trade period, the northern academies, father-son bidding, Gold Coast's 2011 and
+   GWS's 2012 concessions, the Category B rookie.
+3. **Real history.** Matches are the sim's, but real historical events still happen: expansion
+   clubs joining, the Hawthorn-Melbourne merger game, the Essendon supplements saga, Carlton's
+   salary-cap breaches ("brown paper bags"), the Collingwood racism review. Each needs its
+   facts gathered and a design (when it fires, what it does to the sim, what the coach
+   decides). The span he wants is 1990 to 2100 and beyond.
+
+4. **Ratings per era.** After the research below he chose option A: every player is rated
+   against his own season's league, and how each era played lives in the match engine.
+
+## Ratings across eras: what other games do (research, 2026-11-10)
+
+- **Out of the Park Baseball** (historical leagues back to the 1870s) rates players relative to
+  their league's average by default. Its forums quote the developers saying the older absolute
+  ratings left early eras with almost no power hitters. Real-stat imports adjust for each
+  player's home ground, and a user setting picks whether ratings come from one season or from
+  three or five. Users report the era differences come from the match engine's setup for that
+  season, not from the ratings.
+- **Basketball GM** (real rosters back to 1956) fits a ratings model per season, so a player's
+  ratings reproduce his real stats in that season's game. The style of play of each era
+  (pace, three-point shooting) is a separate set of engine settings for that year, and can
+  change on a schedule as a career runs on. Its developer names the flaw: style of play
+  doesn't drift by itself.
+- **Baseball Mogul** is reported (search result, not read at source) to have added an era
+  normalisation of historical stats in 2017, for more accurate ratings in historical years.
+- **This game already holds a relative scale.** `Prospects.renormalise_league` re-anchors the
+  league to the 2026 average and spread after every rollover, so a 2060 league is rated like
+  2026's. A per-era scale is the same rule applied from 1990.
+
+The common pattern is that a rating means "how good against his own league". How the
+game was played (pace, scoring, kicking, the rules) is a separate per-era setting of the match
+engine.
+
+Options shown to the director (he chose A, 2026-11-10):
+
+- **A. Per era (the common pattern).** Every player is rated against his own season's league,
+  as 2026 is rated now. The 1990s, 2010s and 2080s each have the same spread of stars and
+  battlers. How each era played lives in the match engine (scores, pace, stoppages, the rules
+  of the year). Up: one model from 1990 to 2100, matches the existing re-anchoring, and a
+  2010 Brownlow winner rates like a 2026 one. Down: a 1995 star and a 2026 star show the same
+  number, so "who was better" across eras can't be read off the rating.
+- **B. One scale across eras.** Ratings anchored to one league (2026): older players rate
+  lower in what really changed (running capacity, skills under pressure), and the future
+  drifts upward. Up: eras compare directly on one number. Down: needs a model of how the game
+  changed each decade; the 2100 end needs a rule for drift (or the scale saturates); the 1990s
+  look weak on every screen.
+- **C. Per era, with an era badge.** As A, plus each player's profile shows where he would sit
+  on the 2026 scale (a drill-down, not the main number). Up: A's simplicity with the
+  comparison available to those who look. Down: two numbers for one player, and the
+  cross-era number is a model's estimate.
+
+Sources: [OOTP forum, ratings relative to league average](https://forums.ootpdevelopments.com/showthread.php?p=3174108),
+[Basketball GM, real rosters back to 1956](https://zengm.com/blog/2020/05/beta-real-rosters-back-to-1956/),
+[Basketball GM, legends leagues](https://zengm.com/blog/2020/05/legends-leagues/).
