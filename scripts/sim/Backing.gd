@@ -28,6 +28,31 @@ const THRILL := 5
 const STING := 10
 
 
+## Played weeks before the same player is asked about a run again (the card
+## "pushing for games" or the Hub's "Back him with a run of games?"), counted
+## from the last time he was asked or from the end of his last run. The story
+## deck's own wait before a card is about the same player again
+## (StoryDeck.DEFAULTS subject_cooldown). Director, 2026-11-10: "keeps asking
+## the same players over and over".
+const ASK_GAP := 8
+
+
+## Note that he was asked about a run (or that his run ended) this week:
+## `w` on the stories' calendar (StoryEngine.week_abs).
+static func mark_asked(p: Dictionary, w: int) -> void:
+	p["back_asked"] = w
+
+
+## Can he be asked about a run this week: no run on, and none asked or ended
+## inside the last ASK_GAP played weeks.
+static func may_ask(p: Dictionary, w: int) -> bool:
+	if is_active(p):
+		return false
+	if not p.has("back_asked"):
+		return true
+	return StoryEngine.played_between(int(p["back_asked"]), w) >= ASK_GAP
+
+
 static func ledger(p: Dictionary) -> Array:
 	var l = p.get("backed", [])
 	return l if l is Array else []

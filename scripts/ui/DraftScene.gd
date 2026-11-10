@@ -236,6 +236,10 @@ func _show_club_select() -> void:
 	var real := GameState.opening_draft
 	var later := GameState.choosing_club()   # real lists, 2027-2029 played without you
 	var active := GameDB.active_clubs(GameDB.START_YEAR if real else GameState.season_year)
+	# Rebuild: the bottom club of 2026, or a club joining the league (row T5.Q25).
+	var rebuild := real and Challenge.kind(GameState) == "rebuild"
+	if rebuild:
+		active = [str(GameState.challenge.get("club", ""))]
 	if later:
 		# The clubs in this draft: Canberra's first list is still being built.
 		active = _draft.clubs
@@ -246,6 +250,10 @@ func _show_club_select() -> void:
 		_root.add_child(UiKit.lbl(
 				"Every club's own staff ran it from the real 2026 lists: Tasmania joined in 2028 and Canberra are building their first list for 2030. Take any club from this draft; Canberra keep their new-club picks. Your first season is 2030.",
 				16, UiKit.MUTED))
+	elif rebuild:
+		_root.add_child(_header("Choose your rebuild",
+				"Real 2026 lists  /  the 2026 National Draft, then 2027"))
+		_root.add_child(UiKit.lbl(Challenge.choice_line(GameState), 16, UiKit.MUTED))
 	elif real:
 		_root.add_child(_header("Choose your club",
 				"Real 2026 lists  /  the 2026 National Draft, then 2027"))
@@ -264,10 +272,10 @@ func _show_club_select() -> void:
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 10)
 	_root.add_child(UiKit.scroll(grid))
+	var waits: Array = GameState.waiting_clubs()
 	var waiting := GameState.waiting_club()
 	var tiles: Array = active.duplicate()
-	if waiting != "":
-		tiles.append(waiting)
+	tiles.append_array(waits)
 	for code in tiles:
 		var b := UiKit.btn("", UiKit.NAME)
 		b.name = "Choose_" + code
@@ -285,7 +293,7 @@ func _show_club_select() -> void:
 		row.add_child(UiKit.club_badge(code, 13, true))
 		var first: Array = _draft.upcoming_picks(code, 1)
 		var pick_text := "Pick %d" % int(first[0]) if not first.is_empty() else "No pick"
-		if code == waiting:
+		if waits.has(code):
 			pick_text = "From %d" % GameDB.enter_year(code)
 		var pick_label := UiKit.lbl(pick_text, UiKit.SMALL, UiKit.EMPH)
 		pick_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -294,13 +302,15 @@ func _show_club_select() -> void:
 		v.add_child(UiKit.lbl(GameDB.club_name(code), UiKit.HEADING, UiKit.TEXT, true))
 		v.add_child(UiKit.ellipsis(str(GameDB.club(code).get("ground", "")), UiKit.SMALL, UiKit.MUTED))
 		_ignore_mouse(inner)
-		if code == waiting:
+		if waits.has(code):
 			b.pressed.connect(_open_wait_sheet.bind(code))
 		else:
 			b.pressed.connect(_on_club_chosen.bind(code))
 		grid.add_child(b)
 	if later:
 		_root.add_child(UiKit.subtitle("Your first pick in the %d National Draft is shown on each card." % GameState.season_year))
+	elif rebuild:
+		pass
 	elif real:
 		_root.add_child(UiKit.subtitle("Your first pick in the 2026 National Draft is shown on each card." if waiting == ""
 				else "Your first pick in the 2026 National Draft is shown on each card. %s join in %d." % [
@@ -320,11 +330,16 @@ func _open_wait_sheet(code: String) -> void:
 	overlay.name = "WaitForClub"
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Start with %s in %d?" % [name_, year], UiKit.H1))
-	for line in [
+	var without := "%d plays" % (year - 1) if year - 1 == GameDB.START_YEAR else "%d to %d play" % [GameDB.START_YEAR, year - 1]
+	var lines := [
 			"%s join the league in %d, so your first season is %d." % [name_, year, year],
-			"%d plays out without you. Their staff sign %d state-league players, chase out-of-contract players at rival clubs and trade picks 5, 7, 11 and 13 for senior players." % [
-				year - 1, Expansion.FOUNDATION_SIZE],
-			"You take over at the %d National Draft with picks 1, 3 and 9, the first pick of each later round, and any Tasmanian academy players." % (year - 1)]:
+			"%s out without you. Their staff sign %d state-league players, chase out-of-contract players at rival clubs and trade picks 5, 7, 11 and 13 for senior players." % [
+				without, Expansion.FOUNDATION_SIZE],
+			"You take over at the %d National Draft with picks 1, 3 and 9, the first pick of each later round, and any players from their academy." % (year - 1)]
+	if Challenge.kind(GameState) == "rebuild":
+		lines.append("Your Rebuild is %s, built from nothing. %s keep their three best." % [
+				name_, GameDB.club_name(str(GameState.challenge.get("club", "")))])
+	for line in lines:
 		var l := UiKit.lbl(line, UiKit.BODY, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)
@@ -347,10 +362,11 @@ func _open_wait_sheet(code: String) -> void:
 ## The year or so without you, under the cover, then the club is yours and its
 ## first National Draft opens.
 func _wait_for_club(code: String) -> void:
-	if code != GameState.waiting_club():
+	if not GameState.waiting_clubs().has(code):
 		return
 	var first_season := GameDB.enter_year(code)
-	ScreenTransition.run("Playing %d..." % (first_season - 1), func():
+	var playing := "%d" % (first_season - 1) if first_season - 1 == GameDB.START_YEAR else "%d to %d" % [GameDB.START_YEAR, first_season - 1]
+	ScreenTransition.run("Playing %s..." % playing, func():
 		await ScreenTransition.drawn()
 		if GameState.begin_from_history(first_season):
 			GameState.choose_sim_ahead_club(code)

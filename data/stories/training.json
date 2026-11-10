@@ -64,6 +64,7 @@
 				"selected": false,
 				"out_of_side": true,
 				"backed": false,
+				"back_wait": false,
 				"age_max": 21,
 				"pot_gap_min": 8
 			},
@@ -913,5 +914,71 @@
 		],
 		"cooldown": 20,
 		"per_season": 1
+	},
+	{
+		"id": "training_dev_talk",
+		"category": "training",
+		"weight": 6,
+		"phase": [
+			"regular",
+			"finals"
+		],
+		"cooldown": 0,
+		"subject_cooldown": 8,
+		"subject": {
+			"kind": "player",
+			"where": {
+				"fit": true,
+				"dev_talk_due": true
+			},
+			"pick": "random"
+		},
+		"title": [
+			"{name} wants a word about the {proj_word} move"
+		],
+		"text": [
+			"Week {proj_week} of {proj_weeks} learning to play as a {proj_word}. He rates {proj_there} there and {proj_own} in his own spot, and he has to be within {proj_pass} by week {proj_weeks}. Players this far off at this stage get there {take_odds} times. He wants to know what it's for."
+		],
+		"choices": [
+			{
+				"key": "promise",
+				"label": "Promise him a run there if it takes",
+				"effects": [
+					{
+						"op": "morale",
+						"d": 8,
+						"scale": "trust"
+					},
+					{
+						"op": "trust",
+						"d": 3,
+						"why": "You promised him games in his new position if it takes"
+					},
+					{
+						"op": "dev_promise"
+					}
+				],
+				"result": "You tell {name} that if it takes, he gets three games {proj_line}."
+			},
+			{
+				"key": "depth",
+				"label": "Tell him it's for depth",
+				"effects": [
+					{
+						"op": "no_promise"
+					},
+					{
+						"op": "trust",
+						"d": 2,
+						"why": "You were straight with him that his new position is for depth"
+					},
+					{
+						"op": "morale",
+						"d": -3
+					}
+				],
+				"result": "You tell {name} it gives the side cover {proj_line}. He's picked there when the side needs him."
+			}
+		]
 	}
 ]

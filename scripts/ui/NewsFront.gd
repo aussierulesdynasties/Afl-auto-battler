@@ -136,6 +136,14 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 					"headline": "%s are the %s premiers" % [m.get_string(1), m.get_string(2)],
 					"standfirst": history if history != "" else "The flag is theirs."}, true)
 			return _mine(s, my_club)
+	elif kind == "league_story":
+		# A round's big story (LeagueStories): its own headline and beats.
+		var beats: Array = item.get("beats", []) if item.get("beats") is Array else []
+		s.merge({"club": str(item.get("club", "")), "weight": int(item.get("weight", 45)),
+				"headline": str(item.get("headline", text)), "standfirst": " ".join(PackedStringArray(beats)),
+				"short": str(beats[0]) if not beats.is_empty() else "",
+				"group": _INJURY if str(item.get("angle", "")) == "injury" else _AROUND}, true)
+		return _mine(s, my_club)
 	elif kind == "almanac_story":
 		# The season wrap's front item: the first sentence
 		# of the story of the season.
@@ -299,7 +307,8 @@ static func _yours_tag() -> Label:
 
 
 ## A story with the club's bar down its side; big=true for the lead.
-static func _story_block(st: Dictionary, big: bool) -> Control:
+## `short`: the hub's card, where a multi-beat story shows its first beat only.
+static func _story_block(st: Dictionary, big: bool, short := false) -> Control:
 	var v := UiKit.vbox(4)
 	v.name = "Lead" if big else "Story"
 	# The lead sits on its club's tinted panel (_wash); its club ink reads there.
@@ -312,8 +321,9 @@ static func _story_block(st: Dictionary, big: bool) -> Control:
 		head.add_child(UiKit.line(GameDB.club_name(str(st["club"])), UiKit.NAME, _ink(str(st["club"]), surface), true))
 		v.add_child(head)
 	v.add_child(_headline(st, UiKit.H1 if big else UiKit.NAME, surface))
-	if str(st["standfirst"]) != "":
-		v.add_child(NameInk.label(str(st["standfirst"]), _names, UiKit.SECONDARY if big else UiKit.SMALL, UiKit.TEXT))
+	var stand := str(st.get("short", "")) if short and str(st.get("short", "")) != "" else str(st["standfirst"])
+	if stand != "":
+		v.add_child(NameInk.label(stand, _names, UiKit.SECONDARY if big else UiKit.SMALL, UiKit.TEXT))
 	if str(st["club"]) == "":
 		return v
 	return UiKit.club_section_body(str(st["club"]), v, UiKit.club_ink(str(st["club"])))
@@ -495,10 +505,10 @@ static func mini(items: Array, my_club: String, on_open: Callable, names := {}) 
 	v.add_child(top)
 	if not (page["lead"] as Dictionary).is_empty():
 		var lead := UiKit.panel(_wash(str(page["lead"]["club"])), 12)
-		lead.add_child(_story_block(page["lead"], true))
+		lead.add_child(_story_block(page["lead"], true, true))
 		v.add_child(lead)
 		for st in page["secondary"]:
-			v.add_child(_story_block(st, false))
+			v.add_child(_story_block(st, false, true))
 	_ignore_mouse(v)
 	return card
 

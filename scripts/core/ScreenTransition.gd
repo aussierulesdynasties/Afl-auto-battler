@@ -39,6 +39,12 @@ var pumped_frames := 0
 var pumped_us := 0
 ## False draws no frames by hand, for measuring a wait without them.
 var pump_on := true
+## Waits in drawn() that saw their frame handed over; tests read it.
+var drawn_count := 0
+## The process frame the line went up in, and the nodes a screen added under
+## it (each a chance to draw a frame by hand); tests read them.
+var line_frame := -1
+var node_beats := 0
 var _phase := Phase.IDLE
 var _rect: ColorRect
 var _label: Label
@@ -124,7 +130,7 @@ func cover(swap: Callable, text := "") -> void:
 ## the same cover.
 func run(text: String, work: Callable) -> void:
 	if not cover_on():
-		work.call()
+		await work.call()
 		return
 	if busy and _phase != Phase.REVEALING:
 		return
@@ -150,6 +156,12 @@ func show_line(text: String) -> void:
 		_flair.call("open", club, not should_run())
 		_label.offset_top = float(_flair.call("fit"))
 		Season.wait_hook = keep_moving
+		# A screen building itself under the cover (the hub after a week, My
+		# list) adds node after node without returning a frame: each one is a
+		# chance to keep the ball moving.
+		if not get_tree().node_added.is_connected(_on_node_added):
+			get_tree().node_added.connect(_on_node_added)
+		line_frame = Engine.get_process_frames()
 	_label.visible = true
 	lines_shown += 1
 
@@ -189,6 +201,13 @@ func line_visible() -> bool:
 
 ## Wait until a frame with the line on it has reached the screen. A headless
 ## run draws nothing, so two process frames stand in.
+##
+## frame_post_draw alone is not enough: an await on it resumes inside the frame
+## that drew the line, before the engine hands that frame over. A browser shows
+## a frame only once the frame's script has returned, so work started there ran
+## with the empty cover on screen and the set shot appeared only as the work
+## ended (director, 2026-11-10: "a grey screen for a few seconds then for a
+## split second the anim"). The next process frame starts after the hand-over.
 func drawn() -> void:
 	if DisplayServer.get_name() == "headless":
 		await get_tree().process_frame
@@ -196,6 +215,8 @@ func drawn() -> void:
 		return
 	_last_pump_ms = Time.get_ticks_msec()
 	await RenderingServer.frame_post_draw
+	await get_tree().process_frame
+	drawn_count += 1
 
 
 func _start() -> void:
@@ -266,6 +287,13 @@ func _hide_line() -> void:
 	_label.visible = false
 	_flair.call("close")
 	Season.wait_hook = Callable()
+	if get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.disconnect(_on_node_added)
+
+
+func _on_node_added(_node: Node) -> void:
+	node_beats += 1
+	keep_moving()
 
 
 func _set_factor(f: float) -> void:

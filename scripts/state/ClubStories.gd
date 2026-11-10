@@ -38,6 +38,7 @@ static func pick(gs) -> Array:
 	if phase(gs) == "finals" and (gs.season.is_season_over() or not ["alive", "bye"].has(gs.my_finals_status())):
 		return []
 	var cards: Array = StoryEngine.pick_week(StoryDeck.all(), context(gs), gs.story)
+	_mark_run_asks(gs, cards)
 	# The result of a role trial comes first, the week after it ends.
 	if not gs.trial_result.is_empty():
 		var tr: Dictionary = gs.trial_result
@@ -70,7 +71,22 @@ static func season_end_due(gs) -> bool:
 
 static func _season_end_pick(gs) -> Array:
 	(gs.story["season"] as Dictionary)[SEASON_END_MARK] = 1
-	return StoryEngine.pick_week(StoryDeck.all(), context(gs, "season_end"), gs.story)
+	var cards: Array = StoryEngine.pick_week(StoryDeck.all(), context(gs, "season_end"), gs.story)
+	_mark_run_asks(gs, cards)
+	return cards
+
+
+## A card that offers a player a run counts as asking him (Backing.ASK_GAP):
+## whatever the answer, he is not asked again for a while.
+static func _mark_run_asks(gs, cards: Array) -> void:
+	for c in cards:
+		var p: Dictionary = gs.list_player(str((c as Dictionary).get("player_id", "")))
+		if p.is_empty():
+			continue
+		for o in (c.get("options", []) as Array):
+			for e in ((o as Dictionary).get("effects", []) as Array):
+				if str((e as Dictionary).get("op", "")) == "start_backing":
+					Backing.mark_asked(p, gs.story_week())
 
 
 static func context(gs, ph_override := "") -> Dictionary:
@@ -484,6 +500,8 @@ static func player_facts(gs) -> Array:
 		var f := player_fact(gs, p, selected.has(id), info.get(id, {}), int(rank.get(id, 99)), cap_room,
 				int(all_rank.get(id, 99)))
 		f["starting"] = starting.has(id)
+		if not selected.has(id) and bool(f["fit"]) and not bool(f["back_wait"]):
+			f["back_out"] = gs.backing_drop_name(p, side)
 		# Picked in his second position already: a role trial there is no trial.
 		var line := ""
 		for k in side:
@@ -546,7 +564,11 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"role_avg": gs.position_average(str(p.get("role", ""))), "role_word": CoachPathway.position_word({"pos": str(p.get("role", ""))}),
 			"trial_word": CoachPathway.position_word({"pos": trial_role(p)}), "trial_home": CoachPathway.position_word({"pos": str(p.get("role", ""))}), "trial_avg": 0, "trial_par": 0, "trial_tail": "",
 			"starting": false,   # player_facts sets it from the side
-			"backed": Backing.is_active(p), "fit_rank": fit_rank, "talk_case": case, "kpi": kpi,
+			"backed": Backing.is_active(p), "back_wait": not Backing.may_ask(p, gs.story_week()),
+			# Who makes way if he is backed now (player_facts fills it: a card that
+			# promises him a run says so).
+			"back_out": "",
+			"fit_rank": fit_rank, "talk_case": case, "kpi": kpi,
 			"kpi_or_need": kpi if kpi != "" else need_line,
 			"explain_label": "Talk him through his season" if kpi != "" else "Tell him what he has to show",
 			"talk_text": ClubLife.talk_text(case, i), "verdict": str(i.get("verdict", "")),
@@ -594,6 +616,8 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 	# What waiting on an early extension can cost: the rise training can still
 	# bring his price this season (read on a copy: the ceiling marks the player).
 	out["wait_price"] = ClubLife.wait_words(p, gs.season_ceiling(p.duplicate()))
+	# His learning project, for the development talk (T5.r93).
+	out.merge(project_facts(gs, p), true)
 	# The result of his role trial, for the card that reports it.
 	var tr: Dictionary = gs.trial_result
 	if not tr.is_empty() and str(tr.get("id", "")) == id:
@@ -601,7 +625,10 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 		out["trial_avg"] = int(tr["avg"])
 		out["trial_par"] = int(tr["par"])
 		var back := "He goes back to his usual spot."
-		if bool(tr["ok"]):
+		if tr.has("promised"):
+			# The games you promised him in a development talk: he has had them.
+			out["trial_tail"] = "You promised him this chance in Round %d. %s" % [int(tr["promised"]), back]
+		elif bool(tr["ok"]):
 			out["trial_tail"] = ("%s He starts training as a %s with three weeks already banked." % [back, str(tr["word"])]
 					if bool(tr["trained"]) else "%s He cannot start training there just now." % back)
 		else:
@@ -724,6 +751,29 @@ static func _milestone_next(gs, p: Dictionary) -> int:
 		return 0
 	var next: int = gs.games_played(p) + 1
 	return next if [100, 150, 200, 250, 300, 350].has(next) else 0
+
+
+## Where a line plays, as a coach says where a player goes ("up forward").
+const LINE_WHERE := {"FWD": "up forward", "DEF": "down back", "MID": "in the middle", "RUCK": "in the ruck"}
+
+
+## His learning project as the development talk reads it (T5.r93): due, the
+## job's word, the week, both ratings, the pass rule and the odds it takes.
+static func project_facts(gs, p: Dictionary) -> Dictionary:
+	var out := {"dev_talk_due": false, "proj_word": "", "proj_week": 0, "proj_weeks": GameState.PROJECT_WEEKS,
+			"proj_there": 0, "proj_own": int(p.get("overall", 0)), "proj_pass": GameState.PROJECT_PASS,
+			"take_odds": "", "proj_line": ""}
+	var job: String = gs.project_job(p)
+	if job == "" or (p.get("attr", {}) as Dictionary).is_empty():
+		return out
+	var role: String = gs.project_role(p)
+	out["dev_talk_due"] = gs.dev_talk_due(p) and int(p.get("injury_weeks", 0)) <= 0
+	out["proj_word"] = str(GameState.LEARN_JOBS[job]["word"])
+	out["proj_week"] = int((p["project"] as Dictionary).get("weeks", 0))
+	out["proj_there"] = gs.rating_as(p, role)
+	out["take_odds"] = gs.take_odds(p)
+	out["proj_line"] = str(LINE_WHERE.get(role, ""))
+	return out
 
 
 ## One card from the deck about `p` (or the club), built for this week whether
@@ -926,10 +976,11 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 		"start_backing":
 			# His chance: a run of senior games (Backing). Leaving him out
 			# while fit breaks the promise, and that stings.
-			gs._start_backing(p)
+			var was_in: bool = gs.in_current_side(p)
+			var dropped: String = gs._start_backing(p)
 			var run := MatchNotes.count_word(Backing.RUN_GAMES)
-			return ("%s is told he has a run of %s games. He's in the side this week." if gs.my_selection().is_empty()
-					else "%s is told he has a run of %s games. Pick him this week.") % [name, run]
+			var told := "%s is told he has a run of %s games." % [name, run]
+			return told + " " + gs.backed_in_words("" if was_in else dropped)
 		"extend_early":
 			return _extend(gs, p, name)
 		"new_club_keep":
@@ -942,6 +993,11 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			return gs._explain_outcome(name, facts)
 		"talk_note":
 			gs._note_talk(p, str(e.get("said", "")), str(facts.get("talk_case", "")))
+		# The development talk (T5.r93): what you told him his new position is for.
+		"dev_promise":
+			gs.dev_talk(p, "promise")
+		"no_promise":
+			gs.dev_talk(p, "depth")
 		"delegate":
 			# Left to the captain: his Leadership and his trust in you decide, by the
 			# rule the choice printed. No dice.
@@ -957,9 +1013,11 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			var kid: Dictionary = gs.list_player(str(facts.get("kid_id", "")))
 			if kid.is_empty():
 				return "%s is no longer at the club." % str(facts.get("kid_name", "He"))
-			gs._start_backing(kid)
-			return "%s is told he has a run of %s games. Pick him this week." % [str(facts.get("kid_name", "")),
+			var kid_in: bool = gs.in_current_side(kid)
+			var kid_out: String = gs._start_backing(kid)
+			var kid_told := "%s is told he has a run of %s games." % [str(facts.get("kid_name", "")),
 					MatchNotes.count_word(Backing.RUN_GAMES)]
+			return kid_told + " " + gs.backed_in_words("" if kid_in else kid_out)
 		"captaincy_swap":
 			var vice: Dictionary = gs.list_player(str(facts.get("vice_id", "")))
 			if vice.is_empty() or p.is_empty():

@@ -121,6 +121,13 @@ func _run() -> void:
 	if card != null:
 		await _scroll_to(hub, card, 10)
 	await _shot(_name("1_offers_top"))
+	# 1b: a club joining next season (row T5.Q25), its offer in full.
+	var joining: Control = hub.find_child("JobOffer_TAS", true, false)
+	if joining != null:
+		await _scroll_to(hub, joining, 60)
+		await _shot(_name("1b_joining_club"))
+	else:
+		print("no Tasmania offer")
 	var retire: Control = hub.find_child("RetireCoach", true, false)
 	if retire != null:
 		await _scroll_to(hub, retire, int(_size.y * 0.55) if _size.y > _size.x else 150)

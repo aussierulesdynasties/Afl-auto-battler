@@ -25,6 +25,9 @@ func run() -> void:
 	_t("_test_backing_rules")
 	_t("_test_backing_flow")
 	_t("_test_backing_card_guard")
+	_t("_test_backing_named_side")
+	_t("_test_backing_ask_closes_when_picked")
+	_t("_test_backing_suspended_named_side")
 	_t("_test_pushing_for_games_needs_no_games")
 	_t("_test_fact_talks")
 	_t("_test_backing_lasts_the_season")
@@ -639,6 +642,8 @@ func _test_board_patience() -> void:
 	var f2 := ClubLife.season_end(10, false, bool(f1["warned"]), int(f1["poor_seasons"]), fair)
 	_check(bool(f1["warned"]) and not bool(f1["sacked"]) and bool(f2["sacked"]),
 			"Fair: the first poor season warns and the second sacks, as before the dials")
+	_check(str(f1["verdict"]) == "Final warning: end next season with the board's confidence under %d%% and you are gone." % int(fair.get("poor_season_below", ClubLife.WARN_LINE)),
+			"The final warning names what sacks you: the board's confidence at season's end (%s)" % str(f1["verdict"]))
 	_check(ClubLife.season_end(34, false, false, 0, fair)["warned"] == false
 			and ClubLife.season_end(34, false, false, 0, ruthless)["warned"] == true,
 			"Ruthless counts a season that only scrapes by as poor; Fair does not")
@@ -1186,8 +1191,8 @@ func _test_backing_flow() -> void:
 	_check(not _in_side(GameState.current_side(), low), "Auto-pick leaves the lowest-rated player out")
 	_check(GameState.can_back(low), "A player with two senior games can be backed from Selection")
 	var said := GameState.back_player(str(low["id"]))
-	_check(said == "%s has your word for three games. Auto-pick names the player this week." % GameDB.player_display_name(low),
-			"The tap says what changed (%s)" % said)
+	_check(said.begins_with("%s has your word for three games. He's in the side this week, in place of " % GameDB.player_display_name(low)),
+			"The tap says what changed, and who makes way (%s)" % said)
 	_check(_in_side(GameState.current_side(), low), "Auto-pick names a player on a run, ahead of better players")
 	_check(not GameState.can_back(low) and GameState.back_player(str(low["id"])) == "",
 			"A player on a run cannot be backed again")
@@ -1292,6 +1297,104 @@ func _test_backing_card_guard() -> void:
 			RandomNumberGenerator.new()).is_empty() else 1
 	_check(drawn > 0 and drawn_backed == 0,
 			"The kid-pushing-for-games card is not drawn for a player on a run (%d v %d)" % [drawn, drawn_backed])
+
+
+## A side you named that leaves a fit young player out: the kid's ask, with
+## the lowest-rated other player of his line as the one who makes way.
+func _named_side_without(kid: Dictionary) -> Dictionary:
+	var side := GameState.current_side()
+	for k in side:
+		(side[k] as Array).erase(str(kid["id"]))
+	GameState.set_selection(side)
+	return side
+
+
+func _named_ids(sel: Dictionary) -> Dictionary:
+	var out := {}
+	for k in sel:
+		if k == "OUT" or k == "DUAL_RUCK" or k == "TRIAL":
+			continue
+		for id in sel[k]:
+			out[str(id)] = true
+	return out
+
+
+## Director, 2026-11-10: "if u accept, the player is not automatically in the
+## team even though he should be". With a side you named, backing him on the
+## card puts him in it at once, for the whole run; the card names who makes
+## way, before and after you answer.
+func _test_backing_named_side() -> void:
+	_fresh_season()
+	var kid := _kid(_spare_kid(), 0)
+	kid["age"] = 19.0
+	_named_side_without(kid)
+	_check(not _in_side(GameState.current_side(), kid), "Named side: the kid is out")
+	var card := GameState.story_card("training_kid_pushing", kid)
+	var detail := str(card["options"][0]["detail"])
+	_check(detail.contains("goes straight into the side, in place of "),
+			"Back him: the Gain/Cost line says who makes way (%s)" % detail)
+	GameState.week_event = card
+	var out := GameState.resolve_week_event(0)
+	_check(_in_side(GameState.current_side(), kid), "Accepted: he is in this week's side (%s)" % out)
+	var sel := GameState.my_selection()
+	_check(_named_ids(sel).has(str(kid["id"])), "Accepted: he is named in your side, not left to a gap")
+	var gone := ""
+	for id in sel.get("OUT", []):
+		gone = str(id)
+	_check(gone != "" and not _named_ids(sel).has(gone), "The player who makes way is left out")
+	var gone_name := GameDB.player_display_name(GameState.list_player(gone)) if gone != "" else "?"
+	_check(out.contains("in place of %s" % gone_name) and detail.contains("in place of %s" % gone_name),
+			"The card and its result name the same player (%s / %s)" % [detail, out])
+	# The whole run: three rounds, and he plays every one.
+	for i in range(Backing.RUN_GAMES):
+		kid.erase("injury_weeks")
+		kid.erase("suspension_weeks")
+		_check(_in_side(GameState.current_side(), kid), "Round %d of the run: he is in the side" % (i + 1))
+		GameState.week_events = []
+		GameState.advance()
+	var run: Dictionary = Backing.ledger(kid).back() if not Backing.ledger(kid).is_empty() else {}
+	_check(str(run.get("state", "")) == "done" and int(run.get("played", 0)) == Backing.RUN_GAMES,
+			"The run is played out in full (%s)" % str(run))
+
+
+## Director, 2026-11-10: "often theyre already in the team". A card drawn after
+## the match asking for his chance closes once you name him in the side.
+func _test_backing_ask_closes_when_picked() -> void:
+	_fresh_season()
+	var kid := _kid(_spare_kid(), 0)
+	kid["age"] = 19.0
+	var side := _named_side_without(kid)
+	GameState.week_events = [GameState.story_card("training_kid_pushing", kid)]
+	var line := str(kid["role"])
+	var arr: Array = side.get(line, [])
+	arr[arr.size() - 1] = str(kid["id"])
+	side[line] = arr
+	GameState.set_selection(side)
+	var c: Dictionary = GameState.week_events[0]
+	_check(bool(c.get("resolved", false)) and not Backing.is_active(kid),
+			"Picked by you: his ask is answered, and no run is promised (%s)" % str(c.get("outcome", "")))
+	GameState.week_events = []
+
+
+## A suspended kid backed while a side is named: named at once, the run waits
+## out the suspension (he could not play), then he plays.
+func _test_backing_suspended_named_side() -> void:
+	_fresh_season()
+	var kid := _kid(_spare_kid(), 0)
+	kid["age"] = 19.0
+	_named_side_without(kid)
+	kid["suspension_weeks"] = 1
+	GameState.week_event = GameState.story_card("training_kid_pushing", kid)
+	GameState.resolve_week_event(0)
+	_check(_named_ids(GameState.my_selection()).has(str(kid["id"])), "Suspended: he is still named for his run")
+	_check(not _in_side(GameState.current_side(), kid), "Suspended: he does not take the field this week")
+	GameState.week_events = []
+	GameState.advance()
+	_check(Backing.is_active(kid) and int(Backing.current(kid).get("played", -1)) == 0,
+			"The run waits out the suspension, unbroken")
+	kid.erase("suspension_weeks")
+	kid.erase("injury_weeks")
+	_check(_in_side(GameState.current_side(), kid), "Free again: he is in the side")
 
 
 ## "Pushing for games" (and the finals-gone run home) is only for a kid who is

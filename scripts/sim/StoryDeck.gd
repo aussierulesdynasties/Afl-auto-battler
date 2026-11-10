@@ -62,6 +62,9 @@ const OPS := {
 	# The physio's plan for a player injured in the pre-season: the training and the
 	# Round 1 he misses while the injury runs (ClubStories.preseason_miss).
 	"keep_out": true,
+	# The development talk (T5.r93): games in his new position promised if it
+	# takes (a role trial when it does), or told it is for depth (no promise).
+	"dev_promise": true, "no_promise": true,
 }
 ## The biggest step a card may give a culture strand, and the most weeks of
 ## running or drilling it may add or take.
@@ -79,7 +82,7 @@ const HOLDS_WITH_TRUST := 45
 
 ## Facts a player card can test and print (GameState._story_player_facts).
 const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "overall", "potential",
-		"pot_gap", "contract_years", "morale", "trust", "trust_band", "discipline", "backed",
+		"pot_gap", "contract_years", "morale", "trust", "trust_band", "discipline", "backed", "back_wait", "back_out",
 		"fit_rank", "talk_case", "kpi", "kpi_or_need", "explain_label", "talk_text", "sore_odds",
 		"sore_pct", "injury_pct", "trial_ovr", "ask", "early_price", "more_seasons", "extension_ok", "intl_extension_ok", "job", "real_named",
 		"form", "form_games", "has_role2", "out_of_side", "starting", "form_low", "role_avg", "role_word", "trial_word", "trial_home", "trial_avg", "trial_par", "trial_tail",
@@ -105,7 +108,12 @@ const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "over
 		# International prospects (international.json): who he is, and where he is in his career.
 		"intl", "intl_region", "from", "demonym", "home_club", "seasons_listed", "goals",
 		# The extension card: what waiting for the off-season can cost (ClubLife.wait_words).
-		"wait_price"]
+		"wait_price",
+		# The development talk (T5.r93): his learning project, due in its first weeks,
+		# the job's word, the week, his ratings there and in his own spot, the pass
+		# margin, the odds it takes and where the line plays ("up forward").
+		"dev_talk_due", "proj_word", "proj_week", "proj_weeks", "proj_there", "proj_own", "proj_pass",
+		"take_odds", "proj_line"]
 ## Facts about the club and the week (GameState._story_club_facts).
 const CLUB_FACTS := ["club", "opp", "round", "year", "losing_run", "winning_run", "ladder",
 		"board", "fit_count", "run_games", "finals_week", "captain_name", "vice_name", "vice_id",
