@@ -7,9 +7,9 @@ extends RefCounted
 var failures: Array[String] = []
 var checks := 0
 
-## Words that would make a line advice, not a fact.
-const ADVICE := ["should", "try ", "switch", "recommend", "consider", "you need to", "lean ",
-		"keep the", "protect", "tag him", "run play"]
+## Words that would make a line advice, not a fact: the game's one banned list
+## (scripts/core/CopyRules.gd) plus this surface's own.
+var ADVICE: Array = CopyRules.WORDS + ["try ", "switch", "lean ", "keep the", "protect", "tag him", "run play"]
 ## Engine words that must never reach the player.
 const ENGINE := ["fp", "chain", "ballup", "ball-up", "inside50", "_", "|", "def "]
 

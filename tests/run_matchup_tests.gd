@@ -302,7 +302,7 @@ func _test_regular_bye() -> void:
 	root.size = Vector2i(390, 844)
 	var hub: Control = await _open_hub()
 	var text := _screen_text(hub)
-	_check(text.contains("Bye") and not text.contains("Season over for you")
+	_check(text.contains("Bye") and not text.contains("Season over")
 			and not text.contains("missed the top"), "A mid-season bye is not the end of the season")
 	var actions: Node = hub.find_child("WeekActions", true, false)
 	_check(actions != null and actions.find_child("SimFinalsWeek", true, false) == null,

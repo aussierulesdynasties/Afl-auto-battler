@@ -484,6 +484,7 @@ func _test_club_tap(sz: Vector2i) -> void:
 		# #759: a rival's page shows public facts only.
 		for banned in ["OVR", "Mood", "morale", "Game plan", "rating", "Rating", "potential"]:
 			_check(not txt.contains(banned), "%s: a rival's page never shows '%s'" % [tag, banned])
+		_check(CopyRules.words_in(txt).is_empty(), "%s: a rival's page keeps the copy rules: %s" % [tag, CopyRules.words_in(txt)])
 		_check(page.find_child("HonourBoardButton", true, false) == null, "%s: a rival's page has no honour board" % tag)
 		_check(txt.contains("Players swapped") and txt.contains("Played 160 for you"),
 				"%s: the page names the player you swapped with them" % tag)

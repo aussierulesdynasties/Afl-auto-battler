@@ -47,7 +47,7 @@ static func open(host: Control, in_career: bool, quit := false) -> Control:
 				"on" if GameState.haptics_on() else "off",
 				"A light buzz when you press a button, and a firmer one when a result lands.",
 				func(k): GameState.set_haptics_on(k == "on"))
-	_row(v, "Ask before simming the week for me", "SettingsSimConfirm", [["on", "On"], ["off", "Off"]],
+	_row(v, "Ask before Sim the week", "SettingsSimConfirm", [["on", "On"], ["off", "Off"]],
 			"on" if GameState.confirm_sim_round() else "off",
 			"Sim the week and the pre-season's Sim to Round 1 play out your own match without you. With this on, they ask first.",
 			func(k): GameState.set_confirm_sim_round(k == "on"))
