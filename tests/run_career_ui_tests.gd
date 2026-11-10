@@ -2843,6 +2843,8 @@ Your career stays on this device.",
 	_state.postseason_intro_seen = true
 	_router.go("hub")
 	await _settle()
+	# A season that ends in a final can raise a press conference over the hub.
+	await _past_press()
 	_check(_screen_text().contains("Trades & Contracts"), "The hub offers Trades & Contracts after the season (sacked at the end: %s, letter open: %s; %s)"
 			% [was_sacked, moves.letter_open(_state), _screen_text().left(200)])
 	var more: Button = current_scene.find_child("NewsMore", true, false)
