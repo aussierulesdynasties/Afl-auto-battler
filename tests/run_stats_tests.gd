@@ -85,6 +85,7 @@ func _run() -> void:
 	await _t("_test_fixture_finals")
 	await _t("_test_trophies")
 	await _t("_test_readability_b1")
+	await _t("_test_whole_text_checks_bite")
 	print(Ran.line("Stats", self, [ev]))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -1102,14 +1103,17 @@ func _test_ladder(sz: Vector2i) -> void:
 		var pos_pc: String = await Tap.tap(pos_btn)
 		_check(pos_pc == "", "A real tap on the # header reaches it (%s: %s)" % [tag, pos_pc])
 
-	# A wide screen: the table is as wide as its columns, at the left beside the
-	# toggles, and the toggles are compact groups rather than bars across the window.
+	# Every header and cell is whole, and nothing in a row runs into its neighbour.
+	# Under 340 units (StatsLadder.PHONE_TIGHT) the club column is the guernsey
+	# alone by design (row 84), so there the guernsey is what must show whole.
+	_table_text_whole(s, "ladder", tag, sz.x < 340)
+	# A wide screen: the toggles are compact groups rather than bars across the
+	# window, each with its words whole (row 149: the 100 to 140 px band is retired).
 	if sz.x >= 900:
-		_table_fits_content(s, "ladder", tag)
 		for n in ["Filter_all", "Filter_top10", "Filter_near"]:
-			var tb: Control = s.find_child(n, true, false)
-			_check(tb != null and tb.size.x >= 100 and tb.size.x <= 140,
-					"%s is a compact button, not a bar (%s: %.0f px)" % [n, tag, tb.size.x if tb != null else -1.0])
+			var tb: Button = s.find_child(n, true, false)
+			_check(tb != null and _button_text_fits(tb) and tb.size.x < sz.x * 0.5,
+					"%s shows its words whole and is not a bar across the window (%s: %.0f px)" % [n, tag, tb.size.x if tb != null else -1.0])
 
 	# Your club is set in bold, another is not.
 	var other: String = true_order[0] if true_order[0] != mine else true_order[1]
@@ -1214,19 +1218,19 @@ func _test_ladder(sz: Vector2i) -> void:
 	_check(tenth_rx.search(_text(s.find_child("Club_" + mine, true, false).find_child("Figure", true, false))) != null,
 			"Goals a game keep their tenth (%s)" % tag)
 	_fits(s, sz, "team stats", tag)
-	# The widest figure's ink starts about 10 px past the end of the bars: its
-	# text box 3 to 8 px, the glyphs' bearing the rest (critic 2026-11-04: 420
-	# px of nothing between them on a PC, then 45, then 18).
-	var near_gap := 9999.0
+	# No word or figure is cut short, runs out of its row or into its neighbour,
+	# and no figure is drawn over its bar (row 149, director 2026-11-10: the
+	# 3 to 8 px band between them is retired).
+	_table_text_whole(s, "team stats", tag)
+	var on_bar := []
 	for c in _row_codes(s):
 		var row: Node = s.find_child("Club_" + c, true, false)
 		var bar: Control = row.find_child("Bar", true, false)
 		var fig: Label = row.find_child("Figure", true, false)
-		var ink: float = fig.get_global_rect().end.x - fig.get_theme_font("font").get_string_size(fig.text,
-				HORIZONTAL_ALIGNMENT_LEFT, -1, fig.get_theme_font_size("font_size")).x
-		near_gap = minf(near_gap, ink - bar.get_global_rect().end.x)
-	_check(near_gap >= 3.0 and near_gap <= 8.0,
-			"The widest figure's text starts 3 to 8 px past the longest bar's end (%s: %.0f)" % [tag, near_gap])
+		if _ink_rect(fig).position.x < bar.get_global_rect().end.x - 0.5:
+			on_bar.append("%s %s" % [c, fig.text])
+	_check(on_bar.is_empty() and not _row_codes(s).is_empty(),
+			"Every team stats figure is clear of its bar (%s: %s)" % [tag, str(on_bar.slice(0, 4))])
 	ladder.pick_team_fact("for")
 	await Tap.tap(s.find_child("View_ladder", true, false))
 	await _settle()
@@ -1340,36 +1344,211 @@ func _header_aligns(s: Node, tag: String) -> void:
 	_check(off.is_empty(), "Ladder headers line up with their columns (%s: %s)" % [tag, str(off.slice(0, 4))])
 
 
-## On a wide screen the table is about as wide as its columns (760 to 900 px),
-## starts where the toggles above it start, and its club column is no wider than
-## about 200 px: the club and its numbers sit together.
-func _table_fits_content(s: Node, what: String, tag: String) -> void:
+## The table's words are whole and apart (row 149, director 2026-11-10: the
+## 700 to 900 px table and 170 to 200 px club column bands are retired, a
+## layout may move): no header or cell is cut short or runs out of its row, and
+## no two pieces of text in a row run into each other.
+func _table_text_whole(s: Node, what: String, tag: String, guernsey_only := false) -> void:
 	var table: Control = s.find_child("LadderTable", true, false)
-	var panel: Control = table
-	var w := panel.get_global_rect().size.x
-	_check(w >= 700 and w <= 900, "The %s table is as wide as its columns (%s: %.0f px)" % [what, tag, w])
-	var views: Control = s.find_child("Views", true, false)
-	_check(absf(panel.get_global_rect().position.x - views.get_global_rect().position.x) <= 2.0,
-			"...and starts at the left, level with the toggles (%s)" % tag)
-	var club: Control = s.find_child("Sort_club", true, false)
-	_check(club.size.x >= 170 and club.size.x <= 200, "...with a club column about 190 px (%s: %.0f px)" % [tag, club.size.x])
-	var first: Control = s.find_child("Sort_" + ("p" if what == "ladder" else "for"), true, false)
-	_check(absf(first.get_global_rect().position.x - club.get_global_rect().end.x) <= 4.0,
-			"...and the first column right after it (%s)" % tag)
+	var rows: Array = s.find_children("Club_*", "Button", true, false)
+	_check(table != null and not rows.is_empty(), "The %s table has rows to read (%s)" % [what, tag])
+	if table == null:
+		return
+	# The club's code beside its guernsey, where the guernsey stands for the club.
+	var codes := []
+	if guernsey_only:
+		var bare := []
+		for b in rows:
+			var code := str(b.name).trim_prefix("Club_")
+			var crest: Control = null
+			for n in (b as Node).find_children("*", "Label", true, false):
+				if (n as Label).text == code and (n as Label).text_overrun_behavior != TextServer.OVERRUN_NO_TRIMMING:
+					codes.append(n)
+					crest = n.get_parent().get_child(0) as Control
+			var row_box := (b as Control).get_global_rect()
+			if crest == null or crest is Label or not crest.is_visible_in_tree() or crest.size.x < 18.0 					or crest.get_global_rect().position.x < row_box.position.x - 1.0 					or crest.get_global_rect().end.x > row_box.end.x + 1.0:
+				bare.append(code)
+		_check(bare.is_empty(), "Every %s row shows its club's guernsey whole (%s: %s)" % [what, tag, str(bare.slice(0, 4))])
+	var cut: Array = _cut_text(table, codes)
+	var header: Node = s.find_child("LadderHeader", true, false)
+	if header != null:
+		cut.append_array(_cut_text(header))
+		for h in header.get_children():
+			if guernsey_only and str(h.name) == "Sort_club":
+				continue   # no room for the word over a guernsey-wide column
+			if h is Button and (h as Button).is_visible_in_tree() and not _button_text_fits(h as Button):
+				cut.append("%s \"%s\"" % [h.name, (h as Button).text])
+	_check(cut.is_empty(), "No %s header or cell is clipped (%s: %s)" % [what, tag, str(cut.slice(0, 4))])
+	var over := []
+	for b in rows:
+		over.append_array(_overlapping(b))
+	_check(over.is_empty(), "No two pieces of text in a %s row overlap (%s: %s)" % [what, tag, str(over.slice(0, 4))])
 
 
-## The shared table recipe: rows 32 px, no panel around the table, every other
+## Every one-line label under `root_node` whose words do not all show: trimmed
+## to an ellipsis or set in a box narrower than its words, or whole in its own
+## box but drawn outside a row or a clipping parent (a row of fixed columns
+## that outgrows its button is cut at the button's edge).
+func _cut_text(root_node: Node, skip := []) -> Array:
+	var out := []
+	for n in root_node.find_children("*", "Label", true, false):
+		var l := n as Label
+		if skip.has(l) or not l.is_visible_in_tree() or l.text == "" or l.autowrap_mode != TextServer.AUTOWRAP_OFF:
+			continue   # wrapped text takes another line instead
+		if _text_width(l) > l.size.x + 1.0:
+			out.append("%s \"%s\" is cut to %.0f px" % [l.name, l.text.left(24), l.size.x])
+			continue
+		var ink := _ink_rect(l)
+		var p: Node = l.get_parent()
+		while p != null and p != root_node.get_parent():
+			if p is Control and ((p as Control).clip_contents or str(p.name).begins_with("Club_")):
+				var box := (p as Control).get_global_rect()
+				if ink.position.x < box.position.x - 1.0 or ink.end.x > box.end.x + 1.0:
+					out.append("%s \"%s\" runs out of %s (words %.0f to %.0f, %s %.0f to %.0f)" % [l.name, l.text.left(24),
+							p.name, ink.position.x, ink.end.x, p.name, box.position.x, box.end.x])
+					break
+			p = p.get_parent()
+	return out
+
+
+## Pairs of labels in a row whose words are drawn over each other.
+func _overlapping(row: Node) -> Array:
+	var out := []
+	var inks := []
+	for n in row.find_children("*", "Label", true, false):
+		var l := n as Label
+		if l.is_visible_in_tree() and l.text != "":
+			inks.append([_ink_rect(l), l.text])
+	for i in inks.size():
+		for j in range(i + 1, inks.size()):
+			if (inks[i][0] as Rect2).grow(-0.5).intersects((inks[j][0] as Rect2).grow(-0.5)):
+				out.append("%s: \"%s\" on \"%s\"" % [row.name, inks[i][1], inks[j][1]])
+	return out
+
+
+func _text_width(l: Label) -> float:
+	return l.get_theme_font("font").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			l.get_theme_font_size("font_size")).x
+
+
+## Whether a button's words fit between its margins.
+func _button_text_fits(b: Button) -> bool:
+	var sb := b.get_theme_stylebox("normal")
+	var pad: float = sb.get_margin(SIDE_LEFT) + sb.get_margin(SIDE_RIGHT) if sb != null else 0.0
+	var w: float = b.get_theme_font("font").get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			b.get_theme_font_size("font_size")).x
+	return w + pad <= b.size.x + 1.0
+
+
+## Where a label's words are drawn: its own box when it wraps or is trimmed to
+## fit, otherwise the full width of its words from its aligned edge (which can
+## be wider than the box it was given).
+func _ink_rect(l: Label) -> Rect2:
+	var box := l.get_global_rect()
+	if l.autowrap_mode != TextServer.AUTOWRAP_OFF or l.text_overrun_behavior != TextServer.OVERRUN_NO_TRIMMING \
+			or l.clip_text:
+		return box
+	var w := _text_width(l)
+	var x := box.position.x
+	if l.horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT:
+		x = box.end.x - w
+	elif l.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER:
+		x = box.position.x + (box.size.x - w) / 2.0
+	return Rect2(x, box.position.y, w, box.size.y)
+
+
+## The clipped-text checks fail on the ways a table cell is really cut (review
+## of row 149): a row that outgrows its clipping button, a club name trimmed to
+## an ellipsis, and words drawn over each other. A whole row passes.
+func _test_whole_text_checks_bite() -> void:
+	var holder := Control.new()
+	holder.name = "BiteTable"
+	root.add_child(holder)
+	holder.position = Vector2(10, 10)
+	holder.size = Vector2(360, 200)
+	# A row of two one-line cells in a button narrower than the cells.
+	var tight := Button.new()
+	tight.name = "Club_TIGHT"
+	tight.clip_contents = true
+	holder.add_child(tight)
+	tight.size = Vector2(60, 32)
+	var cells := HBoxContainer.new()
+	tight.add_child(cells)
+	cells.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for word in ["Fremantle", "1234.5"]:
+		var cell := Label.new()
+		cell.text = word
+		cells.add_child(cell)
+	# A club name trimmed to an ellipsis.
+	var trim_row := Control.new()
+	trim_row.name = "Club_TRIM"
+	holder.add_child(trim_row)
+	trim_row.position = Vector2(0, 40)
+	trim_row.size = Vector2(300, 32)
+	var trimmed := Label.new()
+	trimmed.name = "Trimmed"
+	trimmed.text = "Greater Western Sydney"
+	trimmed.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	trim_row.add_child(trimmed)
+	trimmed.size = Vector2(40, 24)
+	# Two labels set over each other.
+	var piled := Control.new()
+	piled.name = "Club_PILED"
+	holder.add_child(piled)
+	piled.position = Vector2(0, 80)
+	piled.size = Vector2(300, 32)
+	for at in [0.0, 12.0]:
+		var word := Label.new()
+		word.text = "Bulldogs"
+		piled.add_child(word)
+		word.position = Vector2(at, 0)
+	# A row with room for everything.
+	var whole := Button.new()
+	whole.name = "Club_WHOLE"
+	whole.clip_contents = true
+	holder.add_child(whole)
+	whole.position = Vector2(0, 120)
+	whole.size = Vector2(300, 32)
+	var roomy := HBoxContainer.new()
+	whole.add_child(roomy)
+	roomy.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for word in ["Fremantle", "12"]:
+		var cell := Label.new()
+		cell.text = word
+		roomy.add_child(cell)
+	var snug := Button.new()
+	snug.text = "Top 10"
+	holder.add_child(snug)
+	snug.position = Vector2(0, 160)
+	await _settle()
+	var tight_cut := _cut_text(tight)
+	_check(tight_cut.size() >= 1 and str(tight_cut[-1]).contains("runs out of Club_TIGHT"),
+			"A cell pushed past its row's clipping edge is reported as clipped (%s)" % str(tight_cut))
+	var trim_cut := _cut_text(trim_row)
+	_check(trim_cut.size() == 1 and str(trim_cut[0]).contains("is cut to"),
+			"A club name trimmed to an ellipsis is reported as clipped (%s)" % str(trim_cut))
+	_check(_overlapping(piled).size() == 1,
+			"Two labels drawn over each other are reported as overlapping (%s)" % str(_overlapping(piled)))
+	_check(_cut_text(whole).is_empty() and _overlapping(whole).is_empty(),
+			"A row with room for its words passes (%s %s)" % [str(_cut_text(whole)), str(_overlapping(whole))])
+	var fits_first := _button_text_fits(snug)
+	snug.clip_text = true
+	snug.size = Vector2(20, 30)
+	_check(fits_first and not _button_text_fits(snug), "A button narrower than its words is reported as clipped")
+	holder.queue_free()
+	await _settle()
+
+
+## The shared table recipe: no panel around the table, every other
 ## row banded in PANEL, numbers and their headers right-aligned, the position
 ## muted, a zero muted, the sort key's header bold.
 func _table_recipe(s: Node, tag: String, with_pos: bool) -> void:
 	var table: Control = s.find_child("LadderTable", true, false)
 	_check(table.get_parent().name == "StatsLadder", "The table sits in no panel or card (%s)" % tag)
 	var rows := s.find_children("Club_*", "Button", true, false)
-	var tall := true
-	for b in rows:
-		if int(b.size.y) != (32 if root.size.x >= 900 else 44):
-			tall = false
-	_check(tall and not rows.is_empty(), "Rows are 32 px on a wide screen and a thumb-sized 44 px on a phone (%s)" % tag)
+	# Row heights: a thumb-sized least is checked in _test_ladder; the exact
+	# 32 and 44 px are retired (row 149).
+	_check(not rows.is_empty(), "The table has rows (%s)" % tag)
 	# Your club's row is in your colour instead of its band.
 	var kit = load("res://scripts/ui/UiKit.gd")
 	var mine := str(_state.my_club)

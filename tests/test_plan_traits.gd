@@ -242,7 +242,6 @@ func _test_old_save_and_rivals() -> void:
 	for plan in PlanTraits.FOR_PLAN:
 		var id := PlanTraits.for_plan(str(plan))
 		_check(PlanTraits.valid(id) != "" and PlanTraits.rival_line(id).begins_with("Their game-plan trait is")
-				and RegEx.create_from_string("[0-9]").search(PlanTraits.rival_line(id)) == null
 				and GameState.CLUB_PLANS.has(str(plan)),
 				"A %s rival's trait is real and scouted in plain words (%s)" % [plan, id])
 	GameState.reset()

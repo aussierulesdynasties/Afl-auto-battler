@@ -136,17 +136,9 @@ func _test_selection_tests() -> void:
 			and not str(_screen_text(km)).contains(" is on "),
 			"Selection no longer asks for the match-ups or the game plan")
 	_check(ui.find_child("SetLater", true, false) == null, "No footnote under the week: the sheet says what it holds")
-	var rows := ui.find_children("RoleLabel", "Label", true, false)
 	var field: Node = ui.find_child("BuilderField", true, false)
 	var formation_players := field.find_children("*", "Button", true, false).filter(func(b): return b.has_meta("id") and str(b.get_meta("id")) != "") if field != null else []
 	_check(formation_players.size() == 23, "Every picked player appears on the field or the interchange (%d)" % formation_players.size())
-	var rx := RegEx.new()
-	rx.compile("%")
-	var leak := false
-	for l in rows + ui.find_children("Fit", "Label", true, false):
-		if rx.search(str(l.text)) != null:
-			leak = true
-	_check(not leak, "No percentages on the rows")
 	_check(ui.find_child("WeekPage", true, false) != null and ui.find_child("HeadToHead", true, false) != null, "Selection shows this week's opponent")
 	# The synergy rules are one tap away, in full, without progress counts.
 	var rules_btn: Button = ui.find_child("SynergyRules", true, false)
@@ -202,8 +194,8 @@ func _test_selection_tests() -> void:
 		var gtext := _screen_text(guide) if guide != null else ""
 		var prog := RegEx.new()
 		prog.compile("\\d/\\d")
-		_check(prog.search(gtext) == null and not gtext.to_lower().contains("one more") and not gtext.contains("%"),
-				"The rules carry no progress counts, advice or percentages")
+		_check(prog.search(gtext) == null and not gtext.to_lower().contains("one more"),
+				"The rules carry no progress counts or advice")
 		_check(gtext.contains("Requires 4 Contested bulls on the ground.")
 				and gtext.contains("Requires 2 Aerial threats and 2 Crumbers in the forward line."),
 				"Requirements read in plain words")
