@@ -2305,14 +2305,14 @@ Every open question from chapters 1 to 9 is collected here once. Each carries it
 ### D5. Match day, simulation and the match view
 
 50. Weather: how does it affect a match, in system terms (decided that it matters; the system is not designed)? Shall the system beyond the rate table be designed, may weather change once at a quarter break (P-36, "Not yet"), may the open-list entry be removed as answered by ARD-M4-016 (audit proposal needing consent), and do you want unique weather icons later (parked, D1)? [1:2, 2:1, 2:2, 5:21, 6:10, 8:18, 9:2]
-51. Do ground dimensions affect the simulation (calibrated to each ground's real scoring) or presentation only (R33, Q6; the bible allows only weather to affect play)? Which grounds do fictional clubs use (Bellerive or Manuka versus the default)? [6:9, 9:26]
+51. PART ANSWERED 2026-11-10: fictional clubs use a real regional ground near their town (Bellerive, Manuka). Do ground dimensions affect the simulation (calibrated to each ground's real scoring) or presentation only (R33, Q6; the bible allows only weather to affect play)? Which grounds do fictional clubs use (Bellerive or Manuka versus the default)? [6:9, 9:26]
 52. League rules over a career (Pass 2 Q11, P-57, "not yet"): revisit after the cap-step announcement (P-55) has soaked? Do you want the cap step announced first? [2:3, 4:6]
 53. Collection pauses and far receivers: will you check an exported-PC full match and switch kick_range on? [2:4]
 54. Match flow steps 1 and 2 on claude/match-flow (play on after intercept or free; recalibrate turnovers): do you accept the balance? [2:5]
 55. Midfield intercept gap (sim 1.4 vs real 2.5; structural, deferred under "Merge, gap later"): do you want the midfield kick-intercept roll built now? [2:6, 8:8]
 56. Comeback rules: once the row 42 audit reports, which numbers do you accept? [2:7]
-57. Opposition goal-run decision: rebuild as two concrete football moves, and which? [2:8]
-58. Late-game centre ball-up: reduce to two mechanically distinct choices, and which? Is the centre ball-up scene on PC acceptable, and does the umpire's held ball no longer float? [2:9, 6:6]
+57. ANSWERED 2026-11-10: Stack the centre bounce and Flood behind the ball stand. Opposition goal-run decision: rebuild as two concrete football moves, and which? [2:8]
+58. ANSWERED 2026-11-10 (moves only): Flood behind the ball and Push numbers forward. Late-game centre ball-up: reduce to two mechanically distinct choices, and which? Is the centre ball-up scene on PC acceptable, and does the umpire's held ball no longer float? [2:9, 6:6]
 59. Coaches' votes (5-4-3-2-1): shall B6 be assigned? [2:11]
 60. Vignette coverage: shall every decision card get a vignette now (only the centre ball-up has one)? A live-speed window against "every decision needs a vignette" (C-MG-31): which wins? [2:12, 3:12]
 61. Own game plan builder (Q18) and the Club Forge plan builder: decide after drilling is played; do you want game-plan creation in the base game, a full builder for the Club Forge, or neither (stretch 1.x)? [2:13, 5:22]
@@ -2331,7 +2331,7 @@ Every open question from chapters 1 to 9 is collected here once. Each carries it
 
 ### D6. UI, screens and onboarding
 
-74. Feed colours: build own goals positive, conceded negative, behinds and tactical lines neutral now, and do you want blue or not? [3:8]
+74. ANSWERED 2026-11-10: your club's colour, not blue. Feed colours: build own goals positive, conceded negative, behinds and tactical lines neutral now, and do you want blue or not? [3:8]
 75. Stat guide: does the condensed A17 version replace the topic grid, or do you still want the grid? Should the Stat Guide topic-navigation rewrite (section 1.11) and the ladder "W-L" column wording be settled? [3:9, 9:33]
 76. Do you still want every pre-match decision moved ahead of Start, or do the calls stay in the pre-bounce pane? [3:10]
 77. Is ARD Signwriter your answer to "why havent we explored creating our own typeface as I;ve said many times and you've ignored", or do you want a custom face designed? [3:11]
@@ -2388,7 +2388,7 @@ Every open question from chapters 1 to 9 is collected here once. Each carries it
 119. Board goals: do they now use bands, previous finish and trajectory, has a long-save probe shown the human is not disproportionately sacked, and what should the hard-coded "Finish in the top 12" goal be (two-thirds up the ladder at 18 clubs, a little over half at 21)? Two difficulty dials (board patience and rival recruiting): what sizes once you have played them? [8:5, 8:14, 9:20]
 ### D10. Calibration, evidence and long-term contradictions
 
-120. Coleman cap: goalkicking saturates at 99 for 10 elite forwards because of the 98th-percentile clamp (Ratings.build_norm_params; phone case Brodie Kemp, 48 goals at Round 18). Normalise against the pool max or the 99.5th percentile, even though it re-rates forward OVR? [8:1]
+120. ANSWERED 2026-11-10: the 99.5th percentile. Coleman cap: goalkicking saturates at 99 for 10 elite forwards because of the 98th-percentile clamp (Ratings.build_norm_params; phone case Brodie Kemp, 48 goals at Round 18). Normalise against the pool max or the 99.5th percentile, even though it re-rates forward OVR? [8:1]
 121. Should the broad classifier bias toward MID (about 85 listed forwards and 21 listed defenders read MID) be fixed via real_pos? It would move 122 players and 110 OVRs and pull the forward median about 7 below midfield, so classification and forward rating must be settled together. Are the roughly 60 named OVR and POT corrections (PR #761, #750) and the role audit (#756, #764, A24 Tom Green) in the build as you want them, and are any still wrong? [8:11, 8:17]
 122. Are the believability audits not yet run worth running now: comeback rules, AI list building, run-of-goals cadence, AI plan adaptation, blowout distribution, vignette reachability in close finishes, how-we-play maturity, how-we-win materiality, List Profile vs results, PlanFit spread across 18 sides, bomb goal odds, LOOSE_MARK_EDGE, peak-timing odds refresh, combine grade error, free-agency culture bonus and AI scouting errors? Do you want Q4 familiarity and Q9 fitness base and training injuries sized in your next playtest? [8:16, 8:19]
 123. Should the sim-speed work (weekly AI optimisation after #888) be the next task, and is the 35% to 55% slowdown still acceptable on a long career? [8:20]

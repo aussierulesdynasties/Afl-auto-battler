@@ -679,6 +679,16 @@ static func card_lines(card: Dictionary, i: int) -> PackedStringArray:
 	return out
 
 
+## Who makes way when he goes into the side for a run (ClubStories back_out):
+## ", and he goes straight into the side, in place of Name".
+## Nothing for a player already in this week's side.
+static func _backing_out_words(facts: Dictionary) -> String:
+	if bool(facts.get("selected", false)):
+		return ""
+	var out := str(facts.get("back_out", ""))
+	return ", and he goes straight into the side" + (", in place of %s" % out if out != "" else "")
+
+
 ## What a choice spares him that another choice on the card would cost, in the
 ## same sizes; "" for a cost that is not spared by not choosing it (a mood).
 static func _spared_words(e: Dictionary, facts: Dictionary) -> String:
@@ -784,10 +794,11 @@ static func _effect_parts(e: Dictionary, facts: Dictionary) -> Array:
 			return [["cost", "He expects a game this week, and Auto-pick names him. Leave him out fit and the promise breaks: %s" % _broken_words(int(e.get("sting", 12)), BROKEN_PROMISE_TRUST, facts)]]
 		"start_backing":
 			return [["gain", _morale_words(Backing.THRILL, "subject"), "subject", Backing.THRILL],
-					["cost", "He expects to be picked for the next {run_games} games, and Auto-pick names him. Leave him out fit and the promise breaks: %s" % _broken_words(Backing.STING, BROKEN_RUN_TRUST, facts)]]
+					["cost", "He expects to be picked for the next {run_games} games%s. Leave him out fit and the promise breaks: %s" % [
+							_backing_out_words(facts), _broken_words(Backing.STING, BROKEN_RUN_TRUST, facts)]]]
 		"back_kid":
 			return [["gain", "{kid_name}'s morale up %s." % _pct(Backing.THRILL)],
-					["cost", "{kid_name} is promised the next {run_games} games, and Auto-pick names him. Leave him out fit and the promise breaks: %s" % _broken_words(Backing.STING, BROKEN_RUN_TRUST, {})]]
+					["cost", "{kid_name} is promised the next {run_games} games, and he goes straight into the side. Leave him out fit and the promise breaks: %s" % _broken_words(Backing.STING, BROKEN_RUN_TRUST, {})]]
 		"extend_early":
 			var extend := [["gain", "He signs on for {more_seasons}, and his morale goes up %s." % _pct(EXTEND_MORALE)],
 					["cost", "Locked in at {early_price} a season, %s over what he is worth today, whatever he does next." % _pct(EARLY_PREMIUM_PCT)]]

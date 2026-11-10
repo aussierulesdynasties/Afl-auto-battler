@@ -4,7 +4,7 @@
 # AFL 2026 team rates. See tools/balance/README.md.
 #
 #   tools/balance.sh match 1000                         # one arm
-#   tools/balance.sh match 1000 --b "--on clanger_cause" # paired: base vs B
+#   tools/balance.sh match 1000 --a-root <checkout of origin/main> --b "" # paired: main vs this branch
 #   tools/balance.sh match 1000 --a "--weather wet" --b "--weather perfect"
 #   tools/balance.sh match 1000 --a "--side-plan attacking" --b "--side-plan attacking --coach TA,GAMB"
 #   tools/balance.sh match 1000 --b "--plan-trait fortress"   # side i%2 runs a game-plan trait
