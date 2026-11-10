@@ -58,6 +58,7 @@ static func snapshot(gs: Node, subject_id: String) -> Dictionary:
 		"market_stats": gs.market_stats.duplicate(true),
 		"targets_signed": gs._targets_signed.duplicate(true),
 		"fa_last_why": gs.fa_last_why,
+		"dead_cap": gs.dead_cap.duplicate(true),
 		"subject": subject_id,
 		"before": fingerprint(gs),
 		"facts": facts,
@@ -109,6 +110,7 @@ static func restore(gs: Node, snap: Dictionary) -> void:
 	gs.market_stats = (snap["market_stats"] as Dictionary).duplicate(true)
 	gs._targets_signed = (snap["targets_signed"] as Dictionary).duplicate(true)
 	gs.fa_last_why = str(snap["fa_last_why"])
+	gs.dead_cap = (snap.get("dead_cap", {}) as Dictionary).duplicate(true)
 	var sid := str(snap["subject"])
 	if snap["facts"] == null:
 		gs.career_facts.erase(sid)

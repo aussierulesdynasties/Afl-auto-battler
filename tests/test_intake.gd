@@ -846,6 +846,14 @@ func _test_retirement_talk() -> void:
 		askable[str(r["p"]["id"])] = bool(r["can_ask"])
 	_check(askable.get(str(keen["id"]), false) and not askable.get(str(fringe["id"]), true),
 			"A healthy veteran can be asked; one outside the best 23 cannot")
+	# Asking is a roll (ListStings.ASK_AGAIN_YES): pick a career seed where his comes up yes.
+	var base_seed := GameState.career_seed
+	for k in range(64):
+		var trial := RandomNumberGenerator.new()
+		trial.seed = hash("%d|ask_again|%s|%d" % [base_seed + k, str(keen["id"]), year])
+		if trial.randf() < ListStings.ASK_AGAIN_YES:
+			GameState.career_seed = base_seed + k
+			break
 	var yes := GameState.talk_round(str(keen["id"]))
 	_check(bool(yes.get("stays", false)) and int(keen.get("play_on", 0)) == year,
 			"Fit, happy and in the side: he goes around again (%s)" % str(yes.get("reason", "")))

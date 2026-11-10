@@ -124,7 +124,7 @@ static func draftee_deal(p: Dictionary, year := 2027) -> void:
 static func asking_salary(p: Dictionary) -> int:
 	var price := Ratings.salary_value(int(p.get("overall", 50)))
 	# An unhappy player wants paying to stay.
-	if int(p.get("morale", 70)) < 40:
+	if ClubLife.morale(p) < 40:
 		price = ceili(price * 1.25)
 	return price
 

@@ -233,12 +233,14 @@ static func season_end(conf: int, met: bool, warned: bool, poor_seasons: int, pa
 	return {"confidence": c, "warned": warned, "sacked": sacked, "poor_seasons": poor_n, "verdict": verdict}
 
 
+## His morale as it plays, after any season-long sting (ListStings: re-signed
+## under his ask). The stored value moves; the sting sits on top of it.
 static func morale(p: Dictionary) -> int:
-	return int(p.get("morale", MORALE_BASE))
+	return maxi(5, int(p.get("morale", MORALE_BASE)) - ListStings.sting(p))
 
 
 static func add_morale(p: Dictionary, d: int) -> void:
-	p["morale"] = clampi(morale(p) + d, 5, 100)
+	p["morale"] = clampi(int(p.get("morale", MORALE_BASE)) + d, 5, 100)
 
 
 static func _sting_share(own: float, culture_s: float) -> float:

@@ -322,7 +322,7 @@ static func trigger(gs, st: Dictionary, def: Dictionary, ctx: Dictionary, season
 		"star_wants_out":
 			for p in players:
 				var unhappy := int(p.get("overall_rank", 99)) <= int(tr.get("top", 3)) and int(p.get("contract_years", 9)) == 1 \
-						and int(p.get("morale", 100)) < int(tr.get("morale_below", 50))
+						and ClubLife.morale(p) < int(tr.get("morale_below", 50))
 				if unhappy or (gs.trade_requests as Dictionary).has(str(p["id"])):
 					return _player_hit(p)
 		"media":
@@ -421,7 +421,7 @@ static func close_facts(gs, rec: Dictionary) -> Dictionary:
 	if who != "":
 		var p: Dictionary = gs.list_player(who)
 		f["here"] = not p.is_empty()
-		f["morale"] = int(p.get("morale", 0)) if not p.is_empty() else 0
+		f["morale"] = ClubLife.morale(p) if not p.is_empty() else 0
 	return f
 
 
