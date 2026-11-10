@@ -377,12 +377,23 @@ func _test_event_tradeoffs() -> void:
 	GameState.reset()
 	GameState.start_season("GEE", GameDB.club_list("GEE"))
 	_check(GameState.story_card("training_extra_session")["options"].size() == 2, "No free 'normal week' beside a free recovery week")
-	# A kid pushing for games: a development week costs him this week's game.
+	# A kid pushing for games: a development week tells him he isn't ready
+	# (director 2026-11-10): his opinion of you falls, and with it his odds of
+	# re-signing; missing a game he wasn't picked for is no cost, so the card
+	# doesn't call it one.
 	var kid: Dictionary = GameState.my_list[30]
 	kid["morale"] = 70
 	kid["xp"] = 0
-	GameState.week_event = GameState.story_card("training_kid_pushing", kid)
+	var kid_card := GameState.story_card("training_kid_pushing", kid)
+	var dev_lines := str(kid_card["options"][1]["detail"])
+	_check(dev_lines.contains("His opinion of you down") and dev_lines.contains("re-sign with you")
+			and not dev_lines.contains("misses this week's game"),
+			"A development week costs his opinion of you and says what it does to his re-signing (%s)" % dev_lines)
+	var opinion_was := GameState.opinion_of_you(str(kid["id"]))
+	GameState.week_event = kid_card
 	GameState.resolve_week_event(1)
+	_check(GameState.opinion_of_you(str(kid["id"])) < opinion_was,
+			"A development week lowers his opinion of you (%d -> %d)" % [opinion_was, GameState.opinion_of_you(str(kid["id"]))])
 	_check(bool(kid.get("rested", false)) and not Ratings.available(kid),
 			"A development week takes him out of this week's game")
 	_check(ClubLife.morale(kid) == 70, "A development week is not a free morale lift")

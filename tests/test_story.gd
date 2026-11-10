@@ -251,6 +251,9 @@ func _stakes_in(effects: Array) -> Array:
 	for e in effects:
 		var op := str(e.get("op", ""))
 		var d := int(e.get("d", 0))
+		# A quiet lever is neither a gain nor a cost on its card (StoryEngine).
+		if bool(e.get("quiet", false)):
+			continue
 		if op == "delegate":
 			for side in ["held", "failed"]:
 				var inner := _stakes_in(e.get(side, []))
@@ -390,7 +393,7 @@ func _test_choice_stakes_are_stated() -> void:
 		for c in t["choices"]:
 			for e in c.get("effects", []):
 				var op := str(e.get("op", ""))
-				if not nouns.has(op):
+				if not nouns.has(op) or bool(e.get("quiet", false)):
 					continue
 				var w := StoryEngine.describe({"effects": [e]}, SAMPLE_FACTS)
 				if w == "" or not w.contains(str(nouns[op])) or vague.search(w) != null:
