@@ -81,21 +81,31 @@ const IMPACT_LABELS := {
 	"moments": "calls at the moments", "loose": "loose defender",
 	"tag": "tag", "minder": "defensive forward",
 	"traits": "traits and synergies", "form": "team form",
+	"plan_trait": "game-plan trait",
 }
 
 
 ## Where the points came from between two impact snapshots (MatchSim.impact),
 ## from `side`'s point of view: [{"label", "pts"}], biggest first, anything
 ## under `min_pts` dropped. "Their gameplan -2.1" cost you 2.1 points.
-static func impact_lines(now: Array, before: Array, side: int, min_pts := 0.3) -> Array:
+## A game-plan trait's line names it (traits: the match's MatchSim "plan_traits").
+static func impact_lines(now: Array, before: Array, side: int, min_pts := 0.3, traits := ["", ""]) -> Array:
 	var out := []
 	for cause in IMPACT_LABELS:
 		var mine := _imp(now, side, cause) - _imp(before, side, cause)
 		var theirs := _imp(now, 1 - side, cause) - _imp(before, 1 - side, cause)
+		var label := str(IMPACT_LABELS[cause])
+		var my_label := label
+		var their_label := label
+		if cause == "plan_trait" and traits.size() == 2:
+			if PlanTraits.name_of(str(traits[side])) != "":
+				my_label = PlanTraits.name_of(str(traits[side])) + " (game-plan trait)"
+			if PlanTraits.name_of(str(traits[1 - side])) != "":
+				their_label = PlanTraits.name_of(str(traits[1 - side])) + " (game-plan trait)"
 		if absf(mine) >= min_pts:
-			out.append({"label": "Your " + str(IMPACT_LABELS[cause]), "pts": mine})
+			out.append({"label": "Your " + my_label, "pts": mine})
 		if absf(theirs) >= min_pts:
-			out.append({"label": "Their " + str(IMPACT_LABELS[cause]), "pts": -theirs})
+			out.append({"label": "Their " + their_label, "pts": -theirs})
 	out.sort_custom(func(a, b): return absf(float(a["pts"])) > absf(float(b["pts"])))
 	return out
 

@@ -682,7 +682,7 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 		await _settle()
 		var note: Control = box.find_child("PepNote", true, false)
 		# Gain and Cost, sized (M3, director 2026-11-10), replaced the old words.
-		var gc: Array = load("res://scripts/sim/GateOdds.gd").pep_texts(k)
+		var gc: Array = load("res://scripts/sim/GateOdds.gd").pep_texts(k, _state.pending_sim.fire_up_contest(int(m.get("_my_side"))))
 		_check(note != null and note.is_visible_in_tree() and note.find_child("PepGain", true, false) != null
 				and note.find_child("PepCost", true, false) != null
 				and _flat(_text(note)) == _flat("Gain: %s

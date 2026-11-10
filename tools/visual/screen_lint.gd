@@ -8,7 +8,8 @@ extends SceneTree
 ## screen is up, to open a sheet or pick a tab). --fixture adds a deliberate 40 px button, two 11 px lines and
 ## a pair of disagreeing counts to the screen, to prove the lint catches them.
 ## Checks: (1) tap targets under 44 px at phone width, (2) text under 13 px, (3) the same fact drawn twice
-## and counts that disagree, (4) text contrast under 4.5:1. Contrast method: headless has no rendered frame,
+## and counts that disagree, (4) text contrast under 4.5:1, (5) banned copy from scripts/core/CopyRules.gd
+## (the copy voice, style guide §5.1; "!" is allowed in the match feed, whose nodes are named *Feed*). Contrast method: headless has no rendered frame,
 ## so each label is compared with the colours of its ancestors' styleboxes and ColorRects, blended up from the
 ## first opaque one (the page colour UiKit.BG when none is opaque). It cannot see colour that _draw() paints.
 ## Exit code 1 when any FIX is found. Never touches a real save.
@@ -222,6 +223,7 @@ func _lint(screen: String) -> void:
 	var small: Array = []
 	var texts: Array = []
 	var low: Array = []
+	var banned: Array = []
 	var phone := _w < 700
 	for c in root.find_children("*", "Control", true, false):
 		var ctl := c as Control
@@ -238,6 +240,9 @@ func _lint(screen: String) -> void:
 		if t == "" or not (ctl is Label or ctl is RichTextLabel or ctl is Button):
 			continue
 		texts.append({"node": ctl, "text": t})
+		var bad: Array = CopyRules.check(t, str(ctl.get_path()).contains("Feed"))
+		if not bad.is_empty():
+			banned.append("   %s  %s  \"%s\"" % [_where(ctl), ", ".join(PackedStringArray(bad)), _flat(t).left(40)])
 		if _font_size(ctl) < MIN_FONT:
 			small.append(ctl)
 		var fg := _text_colour(ctl)
@@ -321,7 +326,9 @@ func _lint(screen: String) -> void:
 	for pr in low:
 		ll.append("   %s  %.2f:1  \"%s\"" % [_where(pr[0]), pr[1], _flat(_text_of(pr[0])).left(30)])
 	_list(ll)
-	_fixes = tap_list.size() + small.size() + dup_lines.size() + low.size()
-	print("%s  %s %dx%d: %d tap, %d small text, %d duplicate, %d contrast; to eyeball: %d same-words counts, %d shared-word counts" % [
+	print("5. Banned copy (scripts/core/CopyRules.gd): %d" % banned.size())
+	_list(banned)
+	_fixes = tap_list.size() + small.size() + dup_lines.size() + low.size() + banned.size()
+	print("%s  %s %dx%d: %d tap, %d small text, %d duplicate, %d contrast, %d banned copy; to eyeball: %d same-words counts, %d shared-word counts" % [
 		"PASS" if _fixes == 0 else "FIX", screen, _w, _h, tap_list.size(), small.size(), dup_lines.size(),
-		low.size(), conflicts.size(), maybes.size()])
+		low.size(), banned.size(), conflicts.size(), maybes.size()])

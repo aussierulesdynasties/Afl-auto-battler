@@ -160,7 +160,7 @@ var _played := [{}, {}]      # side -> id -> true: everyone who took the field
 ## full-time summary, director 2026-10-11); "legs", "traits" and "form" are
 ## the players and the bounce of the ball, with whatever no line measures.
 var impact := [{}, {}]
-const DECISION_CAUSES := ["moments", "gameplan", "loose", "tag", "pep", "bursts", "minder"]
+const DECISION_CAUSES := ["moments", "gameplan", "loose", "tag", "pep", "bursts", "minder", "plan_trait"]
 ## The forward the loose man was on before he was sent loose: def side ->
 ## {"id": loose man, "fwd": forward id}. Without the call he would be on him.
 var _loose_was := [{}, {}]
@@ -466,8 +466,10 @@ func _init(home: Squad, away: Squad, seed: int = 0) -> void:
 	injury_rng.seed = seed * 13 + 7
 	breeze_side = posmod(hash("breeze|%d" % seed), 2)
 	arch_rng.seed = seed * 151 + 157
+	trait_rng.seed = seed * 163 + 167
 	for side in range(2):
 		arch[side] = (squads[side] as Squad).arch.duplicate()
+		plan_trait[side] = PlanTraits.valid((squads[side] as Squad).plan_trait)
 		var morale := _ar(side, "morale", 0.0)
 		if morale != 0.0:
 			for q in (squads[side] as Squad).ground + (squads[side] as Squad).bench:
@@ -1028,6 +1030,9 @@ func _press_on(side: int, zone := 1) -> float:
 ## The side whose chain got out of its back third unpressured against a
 ## press (PRESS_BROKEN_EXPOSED), or -1. Reset at each chain's start.
 var _broke_press := -1
+## The side whose chain got out of its back third unpressured against The
+## Cluster (PlanTraits "broken"), or -1. Reset with _broke_press.
+var _broke_cluster := -1
 
 
 ## Morale from the coach's Philosophical archetype, as match form by player id
@@ -1040,6 +1045,39 @@ var arch := [{}, {}]
 
 func _ar(side: int, key: String, d := 1.0) -> float:
 	return float((arch[side] as Dictionary).get(key, d))
+
+
+## Each side's game-plan trait (PlanTraits id, director 2026-11-10); "" = none.
+var plan_trait := ["", ""]
+## The dice for a trait's extra injuries (Hard Trainers): their own stream, so a
+## match without one plays out exactly as before.
+var trait_rng := RandomNumberGenerator.new()
+
+
+## A side's game-plan trait lever `key` (PlanTraits.LEVERS), or `d` when it has
+## none or the lever's gate is shut (quarter or scoreboard). With no trait every
+## lever is 1.0 (or 0.0 when added), so the match is the same to the bit.
+func _gt(side: int, key: String, d := 1.0) -> float:
+	var id: String = plan_trait[side]
+	if id == "":
+		return d
+	var lv: Array = (PlanTraits.LEVERS[id] as Dictionary).get(key, [])
+	if lv.is_empty():
+		return d
+	match str(lv[1]):
+		"q1":
+			if current_quarter != 1:
+				return d
+		"q4":
+			if current_quarter < 4:
+				return d
+		"lead":
+			if score(side) <= score(1 - side):
+				return d
+		"lead_big":
+			if float(score(side) - score(1 - side)) <= runaway_lead:
+				return d
+	return float(lv[0])
 
 
 func _plan(side: int) -> String:
@@ -1647,7 +1685,7 @@ func contest_winner(use_fp: bool, fp: float) -> int:
 			+ home_edge() + form_edge + tog0 - tog1)
 	# The side with the run of play wins a little more of the ball.
 	var run := runaway()
-	p_home += momentum_edge * momentum * (1.0 + runaway_gain * run)
+	p_home += momentum_edge * momentum * (1.0 + runaway_gain * run) * _front_run()
 	if run > 0.0:
 		# A runaway can carry the leader to the contest cap on its own; cap it
 		# here so the coaches' contest calls below still move the odds (the
@@ -1682,7 +1720,13 @@ func home_edge() -> float:
 
 func _contest_bonus(side: int, stoppage := false) -> float:
 	return _contest_plan(side) + _contest_pep(side) + _contest_calls(side, stoppage) \
-			+ _contest_traits(side)
+			+ _contest_traits(side) + _contest_plan_trait(side, stoppage)
+
+
+## A game-plan trait's edge at a stoppage (Stoppage Kings, Kick-Mark Masters,
+## Fast Starters' first quarter).
+func _contest_plan_trait(side: int, stoppage: bool) -> float:
+	return _gt(side, "stoppage", 0.0) if stoppage else 0.0
 
 
 func _contest_traits(side: int) -> float:
@@ -1699,7 +1743,13 @@ func _contest_plan(side: int) -> float:
 func _contest_pep(side: int) -> float:
 	if _pep(side) != "fire_up" or score(side) >= score(1 - side):
 		return 0.0
-	return PEP_FIRE_CONTEST
+	return fire_up_contest(side)
+
+
+## What Fire them up adds at the contest for this side while it chases the
+## game: the base lift scaled by its game plan's pep trait, as the gate shows it.
+func fire_up_contest(side: int) -> float:
+	return PEP_FIRE_CONTEST * _gt(side, "pep")
 
 
 ## Calm the group: a quarter-long, milder Slow it down (the "hold" call),
@@ -2044,7 +2094,7 @@ func _credit_aerial_loose(def_side: int, fp: float, receiver: Dictionary) -> voi
 				+ (0.05 if _trait(receiver, "aerial") else 0.0), 0.16, 0.55) * _wx("aerial")
 		var sp := clampf(0.36 + (stop - receive) / 220.0
 				+ (0.07 if _trait(p, "interceptor") else 0.0), 0.20, 0.65)
-		var ip := sp * INTERCEPT_MARK * (0.6 + 0.8 * _a(p, "intercept") / 100.0) * _wx("aerial")
+		var ip := sp * INTERCEPT_MARK * (0.6 + 0.8 * _a(p, "intercept") / 100.0) * _wx("aerial") * _gt(1 - def_side, "icept")
 		var ours := ip + 0.5 * (1.0 - mp - ip)
 		w_sum += w
 		wl_sum += wl
@@ -2274,6 +2324,8 @@ func _credit_contest(side: int, stoppage: bool) -> void:
 	_credit(side, "pep", _contest_pep(side) * POSSESSION_VALUE)
 	_credit(side, "bursts", _contest_calls(side, stoppage) * POSSESSION_VALUE)
 	_credit(side, "traits", _contest_traits(side) * POSSESSION_VALUE)
+	_credit(side, "plan_trait", (_contest_plan_trait(side, stoppage)
+			+ _contest_pep(side) * (1.0 - 1.0 / _gt(side, "pep"))) * POSSESSION_VALUE)
 
 
 func _credit(side: int, cause: String, pts: float) -> void:
@@ -2618,7 +2670,7 @@ func _general_aerial(side: int, mark_fp: float, carrier, gain: float, rushed: bo
 	var spoil_p := clampf(0.36 + (stop - receive) / 220.0
 			+ (0.07 if _trait(defender, "interceptor") else 0.0), 0.20, 0.65)
 	if roll < mark_p + spoil_p:
-		var take_p := _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.6 + 0.8 * _a(defender, "intercept") / 100.0) * _wx("aerial")
+		var take_p := _tv("INTERCEPT_MARK", INTERCEPT_MARK) * (0.6 + 0.8 * _a(defender, "intercept") / 100.0) * _wx("aerial") * _gt(side, "icept")
 		if zone_intercepts and aerial_rng.randf() < take_p:
 			_intercept(opp, defender, false)
 			_won_back["marked"] = true
@@ -2758,7 +2810,7 @@ static func kick_range(kicker: Dictionary) -> float:
 ## in range: the nearest teammate (the short option). Pure: no dice.
 func kick_targets(side: int, from_fp: float, kicker: Dictionary) -> Array:
 	var from_atk := from_fp if side == 0 else -from_fp
-	var reach := kick_range(kicker)
+	var reach := kick_range(kicker) + _gt(side, "range", 0.0)
 	var kid := str(kicker.get("id", ""))
 	var pool := []
 	var nearest = null
@@ -3166,6 +3218,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 
 	_t(side, "chains")
 	_broke_press = -1
+	_broke_cluster = -1
 	_exit_open = false
 	_post_exit = false
 	var atk_fp := fp if side == 0 else -fp
@@ -3308,6 +3361,10 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var p_base := pressure
 		pressure *= _press_on(side, zone)
 		_credit(opp, "gameplan", (pressure - p_base) * TURNOVER_VALUE)
+		if zone == 1:
+			p_base = pressure
+			pressure *= _gt(opp, "mid_press")
+			_credit(opp, "plan_trait", (pressure - p_base) * TURNOVER_VALUE)
 		if synergies[opp].has("lockdown_unit"):
 			var lock := Traits.power("lockdown_unit")
 			_credit(opp, "traits", pressure * (lock - 1.0) * TURNOVER_VALUE)
@@ -3402,6 +3459,10 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				turn_p *= PRESS_ZONE_TURNOVER
 			if in_d50:
 				turn_p *= _tv("D50_TURNOVER", D50_TURNOVER)
+			if zone == 0:
+				var tp0 := turn_p
+				turn_p *= _gt(opp, "fwd_turnover")
+				_credit(opp, "plan_trait", (turn_p - tp0) * TURNOVER_VALUE)
 			if rng.randf() < turn_p:
 				# Rushed into a pack: sometimes nobody gets it clean and the
 				# umpire calls a ball-up where it locked up.
@@ -3449,7 +3510,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		var prev_atk_fp := atk_fp
 		var gain: float = (float(T["metres_gain_mean"])
 				* (0.55 + 0.90 * _a(carrier, "carry") / 100.0))
-		gain *= _pv(side, "gain") * _pep_mult(side, "gain") * _ar(side, "gain")
+		gain *= _pv(side, "gain") * _pep_mult(side, "gain") * _ar(side, "gain") * _gt(side, "gain")
 		if synergies[side].has("supply_line"):
 			gain *= Traits.power("supply_line")
 		if _burst(side, "flood") or _burst(side, "hold"):
@@ -3458,9 +3519,11 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 		if disposal_kind == "kick":
 			if in_d50:
 				gain *= _tv("D50_KICK_GAIN", D50_KICK_GAIN)
-			gain = minf(gain, kick_range(carrier))
+			gain = minf(gain, kick_range(carrier) + _gt(side, "range", 0.0))
 		if is_kick_in:
 			gain *= 0.82 if not kick_in_play_on else 1.12
+		if not rushed and zone == 0 and _broke_cluster != side and _gt(opp, "broken") > 1.0:
+			_broke_cluster = side
 		if rushed:
 			gain *= _tv("PRESS_RUSH_GAIN", PRESS_RUSH_GAIN)
 		elif zone == 0 and _pv(opp, "press") > 1.0 and _broke_press != side:
@@ -4071,6 +4134,14 @@ func _swing_momentum(side: int, amount: float) -> void:
 	momentum = clampf(momentum + s * amount * (1.0 - s * momentum), -1.0, 1.0)
 
 
+## Front-Runners: the run of play counts more for a side well in front
+## (PlanTraits). 1.0 for everyone else.
+func _front_run() -> float:
+	if momentum == 0.0:
+		return 1.0
+	return _gt(0 if momentum > 0.0 else 1, "momentum")
+
+
 ## How far the side with the run of play has run away with it, 0..1: 0 unless
 ## that side leads by more than runaway_lead, 1 at runaway_lead + RUNAWAY_SPAN
 ## or more.
@@ -4191,6 +4262,18 @@ func shot_chance(side: int, shooter: Dictionary, marked: bool, spoilt: bool, cre
 		goal_p *= PRESS_BROKEN_EXPOSED
 	if credit:
 		_credit(opp, "gameplan", 6.0 * (before - goal_p))
+	before = goal_p
+	# Game-plan traits (PlanTraits): the shooter's, then the defence's.
+	goal_p *= _gt(side, "goal")
+	if credit:
+		_credit(side, "plan_trait", 6.0 * (goal_p - before))
+	before = goal_p
+	goal_p *= _gt(opp, "opp_goal")
+	goal_p *= _gt(opp, "exposed")
+	if _broke_cluster == side:
+		goal_p *= _gt(opp, "broken")
+	if credit:
+		_credit(opp, "plan_trait", 6.0 * (before - goal_p))
 	before = goal_p
 	var tr := 1.0
 	if _trait(shooter, "sharpshooter"):
@@ -4452,6 +4535,7 @@ func _play_one_chain(T: Dictionary) -> void:
 	# Every restart is a new chain: a free kick's set shot never inherits a
 	# broken press from the chain before (qa, W7 of #647).
 	_broke_press = -1
+	_broke_cluster = -1
 	# A kick-in after a behind is not a stoppage: no ruck contest, no clearance.
 	# A boundary throw-in is: it always starts with a contested stoppage.
 	var from_kick_in := kick_in
@@ -4551,6 +4635,9 @@ func _play_one_chain(T: Dictionary) -> void:
 	var cl_mult := _pv(side, "clangers") * _ar(side, "clangers")
 	_credit(side, "gameplan", clanger_p * (1.0 - cl_mult) * CLANGER_VALUE)
 	clanger_p *= cl_mult
+	var gt_cl := _gt(side, "clangers")
+	_credit(side, "plan_trait", clanger_p * (1.0 - gt_cl) * CLANGER_VALUE)
+	clanger_p *= gt_cl
 	var pep_cl := _pep_mult(side, "clangers")
 	_credit(side, "pep", clanger_p * (1.0 - pep_cl) * CLANGER_VALUE)
 	clanger_p *= pep_cl
@@ -4765,6 +4852,7 @@ func result() -> Dictionary:
 		"quarter_teams": quarter_teams.duplicate(true),
 		"extra_time": extra_time_played,
 		"impact": impact.duplicate(true),
+		"plan_traits": plan_trait.duplicate(),
 		"moments": moments.duplicate(true),
 		"interchanges": interchanges.duplicate(),
 		"duels": duel_log.duplicate(true),
@@ -4958,7 +5046,7 @@ func _after_chain() -> void:
 		var movement_pace := _pv(side, "pace") * (1.0 if _pep(side) == "heat" else _pep_mult(side, "pace"))
 		if _burst(side, "surge"):
 			movement_pace *= SURGE_PACE
-		var fatigue_pace := movement_pace * heat_legs * _ar(side, "legs")
+		var fatigue_pace := movement_pace * heat_legs * _ar(side, "legs") * _gt(side, "legs")
 		if weather == "hot":
 			fatigue_pace *= HOT_DRAIN
 		if synergies[side].has("running_machine"):
@@ -5034,6 +5122,11 @@ func _plan_injuries() -> void:
 			# match without one plays out exactly as before (row 119).
 			if inj.is_empty() and _ar(side, "inj") > 1.0 and arch_rng.randf() < _ar(side, "inj") - 1.0:
 				inj = Injuries.roll(arch_rng, p)
+			# Hard Trainers' extra injuries, on their own dice (PlanTraits).
+			if inj.is_empty() and _gt(side, "inj") > 1.0 and trait_rng.randf() < _gt(side, "inj") - 1.0:
+				inj = Injuries.roll(trait_rng, p)
+				if not inj.is_empty():
+					inj["plan_trait"] = plan_trait[side]
 			if inj.is_empty():
 				continue
 			inj["side"] = side

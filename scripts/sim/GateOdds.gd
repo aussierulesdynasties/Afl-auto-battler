@@ -231,13 +231,15 @@ static func plan_texts_for(sq: Squad, plan: String, weather_key := "perfect") ->
 
 ## A pep talk's gain and cost for the quarter, unlabelled: [gain, cost], from
 ## the multipliers MatchSim._pep_mult, _contest_pep and _pep_heat use.
-static func pep_texts(key: String) -> Array:
+## `contest` is Fire them up's lift at the contest (MatchSim.fire_up_contest,
+## which carries the club's game-plan trait); the base lift when no sim is at hand.
+static func pep_texts(key: String, contest := MatchSim.PEP_FIRE_CONTEST) -> Array:
 	var c: Dictionary = MatchSim.PEP_CALM
 	var f: Dictionary = MatchSim.PEP_FIRE
 	var d := func(m: Dictionary, k: String) -> String: return pct(float(m.get(k, 1.0)) - 1.0)
 	match key:
 		"fire_up":
-			return [PEP_GAIN[key] % pct(MatchSim.PEP_FIRE_CONTEST), PEP_COST[key] % [d.call(f, "clangers"), d.call(f, "pace")]]
+			return [PEP_GAIN[key] % pct(contest), PEP_COST[key] % [d.call(f, "clangers"), d.call(f, "pace")]]
 		"calm":
 			return [PEP_GAIN[key] % [d.call(c, "clangers"), d.call(c, "taken"), d.call(c, "pace")], PEP_COST[key] % d.call(c, "gain")]
 		"heat":
