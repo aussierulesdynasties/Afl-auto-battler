@@ -1,9 +1,11 @@
-"""Paired margin of side i%2 (the side tools/balance.sh's --coach and --side-plan set),
+"""Paired margin of side i%2 (the side tools/balance.sh's --coach, --side-plan and --plan-trait set),
 arm B against arm A on the same seeds: python3 side_compare.py <run dir>."""
 import glob, json, math, sys
 
 D = sys.argv[1]
 KEYS = ["tackles", "clangers", "frees_against", "metres_gained", "inside50", "clearances", "goals", "score"]
+# The other side's lines, for a cost that lands on them (a game-plan trait's).
+THEIR_KEYS = ["goals", "intercept_marks", "clearances"]
 
 
 def load(arm):
@@ -32,4 +34,9 @@ for k in KEYS:
     y = sum(B[i][0].get(k, 0) for i in ids) / len(ids)
     if x:
         st.append(f"{k} {100 * (y / x - 1):+.1f}%")
+for k in THEIR_KEYS:
+    x = sum(A[i][1].get(k, 0) for i in ids) / len(ids)
+    y = sum(B[i][1].get(k, 0) for i in ids) / len(ids)
+    if x:
+        st.append(f"their {k} {100 * (y / x - 1):+.1f}%")
 print(f"b (v a) n={len(ids)} margin {m:+.2f} se {se:.2f} win {100 * wa:.1f}->{100 * wb:.1f} | " + " ".join(st))

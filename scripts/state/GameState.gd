@@ -68,6 +68,9 @@ var season_tally := {}           # player id -> running season numbers (Awards)
 var season_stats := {}
 var season_stats_from := 0
 var club_plan := "balanced"      # your standing game plan, from the first bounce
+## Your game-plan trait (PlanTraits id, director 2026-11-10); "" = none. Saved
+## only when set, so an older save loads with none.
+var plan_trait := ""
 var form_log := {}               # your player id -> his last three Player Ratings
 ## A story card's role trial: {id, role, left, home, auto, before, wrote}, or {}.
 ## One player plays his second position for `left` more of your games (see
@@ -326,6 +329,12 @@ var custom_club := {}
 ## "My Selected Best 23" (director, 2026-10-07): your saved recurring side, a
 ## selection ({RUCK, MID, WING, DEF, FWD, BENCH} -> ids), or {} if none.
 var best23 := {}
+## The hub search's shortlist (row T3.R43, P-65): player ids and "club:CODE",
+## in the order the coach added them. A look-up list; no effect on the game.
+var shortlist: Array = []
+## "When I sim the week" (row T3.R43, P-66): the lines the assistant follows
+## each week you sim (SimOrders keys -> answer). Missing keys take the defaults.
+var sim_orders := {}
 var class_tiers := {}             # draft year (string) -> tier key, as generated
 var draftee_pool: Array = []     # all prospects that have not been drafted yet
 var drafted_draftees := {}       # prospect id -> destination club
@@ -936,6 +945,8 @@ func _save_state() -> Dictionary:
 		"opening_draft": opening_draft,
 		"custom_club": custom_club,
 		"best23": best23,
+		"shortlist": shortlist,
+		"sim_orders": sim_orders,
 		"user_dual_ruck": user_dual_ruck,
 		# Players carry p["career"]; saves without this mark predate it.
 		"career_version": CAREER_VERSION,
@@ -975,6 +986,8 @@ func _save_state() -> Dictionary:
 		state["coach_name"] = coach_name
 	if not coach_arch.is_empty():
 		state["coach_arch"] = coach_arch
+	if plan_trait != "":
+		state["plan_trait"] = plan_trait
 	if interview_due:
 		state["interview_due"] = true
 	return state
@@ -1017,6 +1030,8 @@ func _restore_career(state: Dictionary) -> bool:
 	set_canberra(bool(state.get("canberra_on", true)))
 	expansion = state.get("expansion", {}) if state.get("expansion") is Dictionary else {}
 	best23 = state.get("best23", {})
+	shortlist = state.get("shortlist", []) if state.get("shortlist") is Array else []
+	sim_orders = state.get("sim_orders", {}) if state.get("sim_orders") is Dictionary else {}
 	if not custom_club.is_empty():
 		GameDB.register_club(ClubForge.row(custom_club))
 	season_year = int(state.get("season_year", 2026))
@@ -1073,6 +1088,7 @@ func _restore_career(state: Dictionary) -> bool:
 	club_plan = MatchSim.plan_key(str(state.get("club_plan", "balanced")))
 	if not CLUB_PLANS.has(club_plan):
 		club_plan = "balanced"
+	plan_trait = PlanTraits.valid(str(state.get("plan_trait", "")))
 	form_log = state.get("form_log", {})
 	role_trial = state.get("role_trial", {}) if state.get("role_trial") is Dictionary else {}
 	trial_result = state.get("trial_result", {}) if state.get("trial_result") is Dictionary else {}
@@ -1624,6 +1640,8 @@ func reset() -> void:
 	CoachEffects.relations = {}
 	custom_club = {}
 	best23 = {}
+	shortlist = []
+	sim_orders = {}
 	my_club = ""
 	my_list = []
 	season = null
@@ -1648,6 +1666,8 @@ func reset() -> void:
 	season_stats = {}
 	season_stats_from = 0
 	club_plan = "balanced"
+	plan_trait = ""
+	CoachEffects.my_trait = ""
 	form_log = {}
 	role_trial = {}
 	training_block = {}
@@ -1888,11 +1908,13 @@ func begin_real_lists() -> void:
 			joined[str(mv["to"])] = true
 	for code in joined:
 		unique_jumpers(league_lists[code])
-	# Rebuild (Challenge): the bottom club of 2026 is yours, less its three best.
+	# Rebuild (Challenge): the bottom club of 2026, less its three best, or a
+	# club joining the league built from nothing (row T5.Q25). The choice is
+	# made on Choose your club; its three walk out only if the bottom club is
+	# taken (choose_real_club).
 	if Challenge.kind(self) == "rebuild":
-		var bottom := Challenge.bottom_club(active)
-		challenge["club"] = bottom
-		challenge["gone"] = Challenge.strip_best(self, bottom)
+		challenge["club"] = Challenge.bottom_club(active)
+		challenge["gone"] = []
 	intake_assignments = []
 	# The real 2026 class, and the career's own prospect if it has one.
 	var cls: Array = _career_copies(GameDB.draftees)
@@ -1930,9 +1952,6 @@ func begin_real_lists() -> void:
 	draft.senior_cap = RookieList.SENIOR_SPOTS
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
-	if Challenge.kind(self) == "rebuild" and str(challenge.get("club", "")) != "":
-		choose_real_club(str(challenge["club"]))
-		add_news("challenge", "%s The 2026 National Draft is next." % Challenge.stated_line(self))
 	mark_dirty()
 
 
@@ -1998,11 +2017,37 @@ static func _tie_label(kind: String) -> String:
 func choose_real_club(code: String) -> void:
 	if not opening_draft or not league_lists.has(code):
 		return
+	# Rebuild: the bottom club is the one real list on offer; its three best
+	# walk out as you take over.
+	var rebuild := Challenge.kind(self) == "rebuild"
+	if rebuild and code != str(challenge.get("club", "")):
+		return
+	if rebuild and (challenge.get("gone", []) as Array).is_empty():
+		challenge["gone"] = Challenge.strip_best(self, code)
+		_draft_sees_list(code)
 	my_club = code
 	my_list = league_lists[code]
 	draft.scouting_mults[code] = recruiting_uncertainty_mult()
 	draft.start_for_user(code)
+	if rebuild:
+		add_news("challenge", "%s The 2026 National Draft is next." % Challenge.stated_line(self))
 	mark_dirty()
+
+
+## The opening draft's picture of `code`'s list (its senior count and roles),
+## read again after the list changed under it (a Rebuild's walkouts).
+func _draft_sees_list(code: String) -> void:
+	var arr: Array = league_lists[code]
+	var c := {"RUCK": 0, "MID": 0, "DEF": 0, "FWD": 0}
+	var pairs: Array = []
+	for p in arr:
+		var r := str(p["role"])
+		if c.has(r):
+			c[r] = int(c[r]) + 1
+		pairs.append([r, str(p.get("role2", ""))])
+	draft.existing_sizes[code] = RookieList.draft_size(arr)
+	draft.existing_role_counts[code] = c
+	draft.existing_roles[code] = pairs
 
 
 # ---------------------------------------------------------------------------
@@ -2035,23 +2080,39 @@ func _hold_years_without_you(first_season: int) -> void:
 	mark_dirty()
 
 
-## The club that joins the season after a real-lists career starts, which you
-## can take by waiting for it (director, 2026-11-09: picking Tasmania plays 2027
-## without you and starts you in 2028), or "". On the 2026 National Draft's club
-## choice only. A rebuild is set on a club's real list, which it does not have.
+## The clubs joining the league after a real-lists career starts, which you
+## can take by waiting for them (director, 2026-11-09: picking Tasmania plays
+## 2027 without you and starts you in 2028). On the 2026 National Draft's club
+## choice only. Canberra (2030) is here only under a Rebuild, which keeps its
+## 2027 start with Canberra on; any other real-lists start with Canberra plays
+## 2027-2029 without you first (row T5.Q25).
+func waiting_clubs() -> Array:
+	if not opening_draft or my_club != "" or sim_ahead:
+		return []
+	var out := []
+	if GameDB.enter_year("TAS") == GameDB.START_YEAR + 1:
+		out.append("TAS")
+	if Challenge.kind(self) == "rebuild" and GameDB.enter_year("CANB") == SIM_AHEAD_TO:
+		out.append("CANB")
+	return out
+
+
+## The first of waiting_clubs(), or "".
 func waiting_club() -> String:
-	if not opening_draft or my_club != "" or sim_ahead or Challenge.kind(self) == "rebuild":
-		return ""
-	var year := GameDB.START_YEAR + 1
-	return "TAS" if GameDB.enter_year("TAS") == year else ""
+	var w := waiting_clubs()
+	return str(w[0]) if not w.is_empty() else ""
 
 
-## Take the waiting club: from the 2026 National Draft, the years up to its
+## Take a waiting club: from the 2026 National Draft, the years up to its
 ## first National Draft are played without you (sim_ahead_step), and it is
-## yours from that draft.
+## yours from that draft. A Rebuild taken this way builds the new club from
+## nothing; the bottom club keeps its three.
 func begin_wait_for_club(code: String) -> bool:
-	if code == "" or code != waiting_club():
+	if code == "" or not waiting_clubs().has(code):
 		return false
+	if Challenge.kind(self) == "rebuild":
+		challenge["club"] = code
+		challenge["gone"] = []
 	_hold_years_without_you(GameDB.enter_year(code))
 	return true
 
@@ -2270,6 +2331,12 @@ func begin_intake_draft() -> bool:
 	comps.append_array(new_club_picks)
 	draft.set_pick_owners(draft_pick_owners(season_year))
 	draft.add_compensation(comps)
+	# A joining club's job he took at the season's close starts here, at its
+	# first National Draft, with its picks (ClubMoves, TODO T5.Q25).
+	var leaving := my_club
+	if ClubMoves.apply_move_at_draft(self):
+		draft.scouting_mults.erase(leaving)
+		draft.scouting_mults[my_club] = recruiting_uncertainty_mult()
 	_watch_draft_night()
 	# Played without you, the 2029 draft waits for your club (choosing_club).
 	if not choosing_club():
@@ -4905,6 +4972,9 @@ func opponent_report(code: String) -> Array:
 		var what := str(THEIR_PLAN[usual])
 		play.append("Their usual game plan is %s. %s%s%s" % [RivalRead.called(usual),
 				what.left(1).to_upper(), what.substr(1), " " + legs if legs != "" else ""])
+	var trait_line := PlanTraits.rival_line(PlanTraits.for_plan(sq.usual_plan))
+	if trait_line != "":
+		play.append(trait_line)
 	var levels := {}
 	for plan in PreSeason.DRILL_PLANS:
 		levels[plan] = plan_level(code, str(plan))
@@ -6443,6 +6513,10 @@ func _close_season_awards() -> void:
 		"year": season_year,
 		"premier": premier(),
 		"runner_up": str(season.finals.get("runner_up", "")),
+		# The men who played in the premiership side, for the club's page
+		# across generations (PremiershipSide, row T5.r158). Absent in a season
+		# closed before it was kept: never back-filled.
+		"premier_side": PremiershipInk.premiership_ids(_grand_final_result(), premier()),
 		"brownlow": [season_awards["brownlow_winner"]] if not (season_awards.get("brownlow_winner", {}) as Dictionary).is_empty() else [],
 		"coleman": (season_awards["coleman"] as Array).slice(0, 1),
 		"rising_star": (season_awards["rising_star"] as Array).slice(0, 1),
@@ -10664,6 +10738,58 @@ func opponent_side(code: String) -> Dictionary:
 	return {"side": _as_selection(sq.ground, sq.bench), "list": season.lists[code]}
 
 
+## Your answer to a "When I sim the week" line (SimOrders), or its default.
+func sim_order(key: String) -> String:
+	return str(sim_orders.get(key, SimOrders.defaults().get(key, "")))
+
+
+func set_sim_order(key: String, value: String) -> void:
+	if not SimOrders.KEYS.has(key):
+		return
+	sim_orders[key] = value
+	mark_dirty()
+
+
+## The cards Sim the week stops for under your standing orders (indices).
+func sim_week_stops() -> Array:
+	return SimOrders.stops(week_events, SimOrders.defaults().merged(sim_orders, true))
+
+
+## Sim the week on your standing orders: the week's cards answered the way you
+## set (SkipOrders.card_choice), runs for the kids if you asked for them, the
+## round played (advance), and the press fronted by the assistant if you said
+## so. The hub checks sim_week_stops first. Returns the phase played.
+func sim_week() -> String:
+	if season == null:
+		return "none"
+	var orders := SimOrders.defaults().merged(sim_orders, true)
+	var policy := str(orders["questions"])
+	_skip_orders = {"questions": policy if policy in ["players", "board"] else "usual"}
+	if str(orders["youth"]) == "kids" and not season.is_regular_done():
+		if not my_selection().is_empty():
+			set_selection({})
+		_skip_back_kids("season")
+	var phase := advance()
+	_skip_orders = {}
+	if str(orders["press"]) == "assistant":
+		skip_media_conference()
+	return phase
+
+
+## Put a player (id) or a club ("club:CODE") on the shortlist, or take it
+## off. True when it is on the list afterwards.
+func toggle_shortlist(id: String) -> bool:
+	if id == "":
+		return false
+	var on := shortlist.has(id)
+	if on:
+		shortlist.erase(id)
+	else:
+		shortlist.append(id)
+	mark_dirty()
+	return not on
+
+
 ## Save the side as your recurring Best 23 (kept until you save another).
 func set_best23(side: Dictionary) -> void:
 	best23 = side.duplicate(true)
@@ -13011,7 +13137,16 @@ func set_club_plan(key: String) -> void:
 	mark_dirty()
 
 
+## Your game-plan trait (PlanTraits id, or "" for none): every match from the
+## next bounce, played or simmed.
+func set_plan_trait(id: String) -> void:
+	plan_trait = PlanTraits.valid(id)
+	_sync_club_plan()
+	mark_dirty()
+
+
 func _sync_club_plan() -> void:
+	CoachEffects.my_trait = plan_trait
 	if season != null:
 		season.plans = {my_club: club_plan} if club_plan != "balanced" else {}
 

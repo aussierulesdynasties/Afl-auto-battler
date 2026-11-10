@@ -225,7 +225,8 @@ func _mount_body(stack: bool) -> void:
 		_side_panel.add_child(sv)
 		# Your match: the calls you have on, so the setup is never a guess.
 		# Every call in full: a long name or several calls wrap, never trim.
-		_setup_line = NameInk.rich(UiKit.SMALL, UiKit.MUTED)
+		# The calls on right now: the coach reads them, so not in grey (row T3.R9).
+		_setup_line = NameInk.rich(UiKit.SECONDARY, UiKit.TEXT)
 		_setup_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_setup_line.name = "SetupLine"
 		_setup_line.visible = false
@@ -432,19 +433,20 @@ func _score_column(code: String, home: bool, narrow: bool) -> Control:
 	var v := UiKit.vbox(1)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var name_text := GameDB.club_short(code) if narrow else GameDB.club_name(code)
-	var name := UiKit.ellipsis(name_text, UiKit.SECONDARY if narrow else 16, UiKit.TEXT, true)
+	var name := UiKit.ellipsis(name_text, UiKit.SECONDARY if narrow else UiKit.NAME, UiKit.TEXT, true)
 	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if home \
 			else HORIZONTAL_ALIGNMENT_LEFT
 	ClubDuel.on_colour(name)
 	v.add_child(name)
-	var score := UiKit.figure("0.0 (0)", UiKit.RATING if narrow else 36, Color.WHITE)
+	# A wide screen's score is the headline across a 1920 band, not a caption in it (row T3.R9).
+	var score := UiKit.figure("0.0 (0)", UiKit.RATING if narrow else 46, Color.WHITE)
 	ClubDuel.on_colour(score)
 	score.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if home \
 			else HORIZONTAL_ALIGNMENT_LEFT
 	# A fixed minimum wider than the phone column is what shoved the oval
 	# off screen. Let the score take its own width in portrait.
 	if not narrow:
-		score.custom_minimum_size = Vector2(136, 0)
+		score.custom_minimum_size = Vector2(170, 0)
 	v.add_child(score)
 	if home:
 		_score_home = score
@@ -459,12 +461,12 @@ func _score_middle(narrow: bool) -> Control:
 	var mid := UiKit.vbox(0)
 	mid.alignment = BoxContainer.ALIGNMENT_CENTER
 	mid.custom_minimum_size = Vector2(84 if narrow else 132, 0)
-	_clock = UiKit.line("Q%d %d'" % [_shown_q, _shown_min], 17 if narrow else 20, UiKit.TEXT, true)
+	_clock = UiKit.line("Q%d %d'" % [_shown_q, _shown_min], 17 if narrow else 24, UiKit.TEXT, true)
 	_clock.name = "Clock"
 	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ClubDuel.on_colour(_clock)
 	mid.add_child(_clock)
-	_lead = UiKit.ellipsis("", UiKit.SMALL, UiKit.MUTED)
+	_lead = UiKit.ellipsis("", UiKit.SMALL, UiKit.TEXT)
 	_lead.name = "LeadLine"
 	_lead.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ClubDuel.on_colour(_lead)
@@ -2472,7 +2474,7 @@ func _calls_view(q: int) -> Control:
 		if q >= 2:
 			before = (snaps[q - 2] as Dictionary).get("impact", [{}, {}])
 	v.add_child(UiKit.section("What your calls did" + (" in Q%d" % q if q > 0 else "")))
-	var lines := CoachReport.impact_lines(now, before, _my_side)
+	var lines := CoachReport.impact_lines(now, before, _my_side, 0.3, _res.get("plan_traits", ["", ""]))
 	if not lines.is_empty():
 		var wnote := UiKit.lbl(MatchNotes.CALLS_WORTH_NOTE, UiKit.SMALL, UiKit.MUTED)
 		wnote.name = "CallsWorthNote"
@@ -4159,7 +4161,7 @@ func _ft_summary(v: VBoxContainer) -> void:
 		_glance_section(v, "Your synergies", "FullTimeSynergies", MatchNotes.synergy_lines(_res, me).slice(0, 3), true)
 
 	# Your calls, quarter by quarter: what each was about and how that went.
-	if mine and _interactive:
+	if mine and (_interactive or _review):
 		var did := []
 		for qq in range(1, 5):
 			for t in MatchNotes.calls_lines(_res, me, qq):
