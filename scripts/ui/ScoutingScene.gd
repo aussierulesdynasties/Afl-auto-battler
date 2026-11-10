@@ -123,14 +123,23 @@ func _row(p: Dictionary, reads: Dictionary, fit: Dictionary, entry: Dictionary, 
 	var on_list := not entry.is_empty()
 	var v := UiKit.vbox(2)
 	v.name = ("ScoutRow_" if on_list else "ClassRow_") + id
+	# Name and who he is on the left, the button beside both lines: the two
+	# lines fill the button's thumb height, so no gap opens under the name.
 	var top := UiKit.hbox(8)
+	var who := UiKit.vbox(0)
+	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	who.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var nm := UiKit.name_label(GameDB.player_display_name(p))
-	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	top.add_child(nm)
+	who.add_child(nm)
+	who.add_child(_line("%s  ·  age %d" % [
+			str(UiKit.ROLE_LABEL.get(str(p.get("role", "")), str(p.get("role", "")))),
+			int(float(p.get("age", 18.0)))], UiKit.TEXT))
+	top.add_child(who)
 	var b := UiKit.btn("Remove" if on_list else ("List full" if is_full else "Add"), UiKit.NAME)
 	b.name = ("ScoutRemove_" if on_list else "ClassAdd_") + id
 	b.custom_minimum_size = Vector2(96, 44)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	b.disabled = not on_list and is_full
 	b.pressed.connect(func():
 		if on_list:
@@ -140,10 +149,8 @@ func _row(p: Dictionary, reads: Dictionary, fit: Dictionary, entry: Dictionary, 
 		_build())
 	top.add_child(b)
 	v.add_child(top)
-	v.add_child(_line("%s  ·  age %d  ·  ranked %s" % [
-			str(UiKit.ROLE_LABEL.get(str(p.get("role", "")), str(p.get("role", "")))),
-			int(float(p.get("age", 18.0))), PreSeason.ordinal(int(r.get("rank", 0)))], UiKit.TEXT))
-	v.add_child(_line("OVR %s  ·  POT %s" % [DraftScouting.range_text(r.get("overall", [0, 0])),
+	v.add_child(_line("Ranked %s  ·  OVR %s  ·  POT %s" % [PreSeason.ordinal(int(r.get("rank", 0))),
+			DraftScouting.range_text(r.get("overall", [0, 0])),
 			DraftScouting.range_text(r.get("potential", [0, 0]))], UiKit.TEXT, true))
 	for m in fit.get(id, []):
 		v.add_child(_line(str(m.get("text", "")), _fit_colour(), true))
