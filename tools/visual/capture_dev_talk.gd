@@ -21,6 +21,15 @@ func _frames(n: int) -> void:
 		await process_frame
 
 
+## The screen the Router changed to (the change lands a frame or more later).
+func _scene() -> Node:
+	for i in range(120):
+		if current_scene != null:
+			return current_scene
+		await process_frame
+	return root
+
+
 func _snap(path: String) -> void:
 	await _frames(8)
 	var img := root.get_viewport().get_texture().get_image()
@@ -32,6 +41,7 @@ func _snap(path: String) -> void:
 ## A player in the side who can learn a position, put on that project at week 2.
 func _learner(gs) -> Dictionary:
 	var side: Dictionary = gs.current_side()
+	var first := {}
 	for q in gs.my_list:
 		var line: String = gs._line_of(side, str(q["id"]))
 		if line in ["", "BENCH"] or int(q.get("injury_weeks", 0)) > 0:
@@ -43,8 +53,13 @@ func _learner(gs) -> Dictionary:
 		if gs.project_job(q) == "":
 			continue
 		(q["project"] as Dictionary)["weeks"] = 2
-		return q
-	return {}
+		if first.is_empty():
+			first = q
+		if str(gs.take_odds(q)).begins_with("about"):
+			return q
+		gs.set_player_plan(str(q["id"]), "")
+		q.erase("project")
+	return first
 
 
 func _run() -> void:
@@ -92,7 +107,7 @@ func _run() -> void:
 	gs.week_events = [gs.story_card("training_dev_talk", p)]
 	router.go("hub")
 	await _frames(30)
-	var sheet: Control = current_scene.find_child("EventSheet", true, false)
+	var sheet: Control = (await _scene()).find_child("EventSheet", true, false)
 	print("SHEET ", sheet != null)
 	await _snap(out + "_card.png")
 	var promise: Button = sheet.find_child("Event_0", true, false) if sheet != null else null
@@ -124,9 +139,9 @@ func _run() -> void:
 	gs.media_conference = {}
 	router.go("hub")
 	await _frames(40)
-	var card: Control = current_scene.find_child("WeekEvent", true, false)
+	var card: Control = (await _scene()).find_child("WeekEvent", true, false)
 	if card == null:
-		card = current_scene.find_child("SheetEvent", true, false)
+		card = (await _scene()).find_child("SheetEvent", true, false)
 	print("RESULT card ", card != null, " events ", gs.week_events.map(func(e): return e.get("tid", "")))
 	await _snap(out + "_result.png")
 	quit(0)
