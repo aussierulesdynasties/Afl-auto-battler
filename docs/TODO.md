@@ -184,7 +184,7 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 - Audits and balance come last: "I also want to defer all audits until after all other roadmap rows are done"; "pointless to constantly audit an ever changing database; we can rigorously audit and balance after the game is fully featured." They sit in section Z.
 - A build row whose done-test contains an audit closes when the build ships; the audit moves to section Z as its own row ("Yes, split them").
 - Balance-threshold test checks move out of the nightly.
-- The career story (procedural copy, first slice): on the player sheet and on Brownlow night; up to five sentences, like the almanac; a career with nothing worth a story shows nothing, no filler line; Claude drafts the phrasings in the senior-coach voice and he edits them; one plain register everywhere, a failed pick told plainly, no warmer farewell text. Look approved from the 390px captures ("Approve, ship it"). Built in the career-story PR; the season and match stories are rows 138 and 139.
+- The career story (procedural copy, first slice): on the player sheet and on Brownlow night; up to five sentences, like the almanac; a career with nothing worth a story shows nothing, no filler line; Claude drafts the phrasings in the senior-coach voice and he edits them; one plain register everywhere, a failed pick told plainly, no warmer farewell text. Look approved from the 390px captures ("Approve, ship it"). Built in the career-story PR; the season and match stories are rows 143 and 144.
 
 ## Current focus (moved from the bible, 2026-11-06)
 
