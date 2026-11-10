@@ -42,6 +42,9 @@ const LADDER_TIGHT := [["pos", "#", 20], ["club", "Club", 0], ["p", "P", 22], ["
 		["l", "L", 22], ["d", "D", 20], ["pct", "%", 36], ["pts", "Pts", 30], ["rating", "Rating", 44]]
 ## The least a phone's club column takes, header and rows alike: a guernsey.
 const CLUB_MIN_NARROW := 28
+## What the hub's always-kept scroll bar takes from content_width on a phone
+## (StatsAwards.BAR_GUTTER, the same 16).
+const BAR_GUTTER := 16.0
 ## Team stats: a per-game value for each, from GameState.season_team (only
 ## what is recorded there). One list, so a newly recorded stat joins with one
 ## line: {season_team key, column title, width on a phone, width on a wide
@@ -452,7 +455,11 @@ static func _team_board(host: Control, season: Season, wide: bool) -> Control:
 		fig_w = maxf(fig_w, ceilf(probe.get_minimum_size().x))
 		probe.free()
 	# A bar reads the same on a phone and a PC: no longer than a phone gives it.
-	var bar_w := minf(TEAM_BAR_MAX, float(host.call("content_width")) - team_row_width(0.0, fig_w))
+	# On a phone the hub's always-kept scroll bar takes its rail from the width,
+	# so the row and its figure end inside it (row 149: the figure ran 6 px
+	# past its row, under the rail).
+	var room := float(host.call("content_width")) - (0.0 if wide else BAR_GUTTER)
+	var bar_w := minf(TEAM_BAR_MAX, room - team_row_width(0.0, fig_w))
 	if wide:
 		# The bar spans its club's sub-line (the other facts), so the figure
 		# follows the bar, not 4 px of sub-line past it.

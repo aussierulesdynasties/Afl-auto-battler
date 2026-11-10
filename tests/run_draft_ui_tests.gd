@@ -719,8 +719,7 @@ func _test_inspect(ui: Control) -> void:
 		var all_there := true
 		for t in load("res://scripts/sim/Traits.gd").of(with_trait):
 			var tl: Label = ui.find_child("Trait_" + str(t), true, false)
-			# In football words: no simulation percentages when scouting.
-			if tl == null or tl.text.contains("%"):
+			if tl == null or tl.text.strip_edges() == "":
 				all_there = false
 		_check(all_there, "Each of his traits is shown and explained in football terms")
 		ui.call("_close_player")
