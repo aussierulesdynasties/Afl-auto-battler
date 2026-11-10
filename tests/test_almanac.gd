@@ -29,6 +29,9 @@ func run() -> void:
 	_t("_test_club_records")
 	_t("_test_story_finals_result")
 	_t("_test_story_with_match_story")
+	_t("_test_arc_bank_is_sound")
+	_t("_test_arc_season_shapes")
+	_t("_test_arc_old_page")
 	_t("_test_challenge_goal_marked")
 	_t("_test_homegrown_flag")
 	GameState.reset()
@@ -106,7 +109,28 @@ func _test_written_at_season_end() -> void:
 	var story := str(e.get(Almanac.STORY_KEY, ""))
 	var n := story.count(". ") + 1
 	_check(story != "" and n >= 2 and n <= 5, "The story of the season is up to 5 sentences: %s" % story)
-	_check(str((e[Almanac.PARTS_KEY] as Dictionary).get("arc", "x")) == "", "The coach-arc slot is there, empty, for 1a")
+	# Row 145: the season's shape, from the record the page keeps.
+	var arc: Dictionary = e.get(Almanac.ARC_KEY, {})
+	var form := ""
+	_check(GameState.season.results.size() >= 20, "The season's rounds are there to read (%d)" % GameState.season.results.size())
+	for rnd in GameState.season.results:
+		for res in rnd:
+			if GameState.is_my_match(res):
+				var mine := 0 if str(res["home"]) == "GEE" else 1
+				var diff := int(res["score"][mine]) - int(res["score"][1 - mine])
+				form += "W" if diff > 0 else ("L" if diff < 0 else "D")
+	_check(str(arc.get("form", "")) == form and form != "", "The page keeps your results in order (%s)" % str(arc.get("form", "")))
+	_check(form.count("W") == int(e["w"]) and form.count("L") == int(e["l"]) and form.count("D") == int(e["d"]),
+			"The kept results add up to the ladder's record (%s, %s)" % [form, GameState.my_record()])
+	_check((arc.get("rounds", []) as Array).size() == form.length(), "Each kept result has its round")
+	var fin := str(arc.get("finals", ""))
+	_check(fin.count("W") == int(e["finals_w"]) and fin.count("L") == int(e["finals_l"]), "The kept finals match the finals record (%s)" % fin)
+	var said := str((e[Almanac.PARTS_KEY] as Dictionary).get("arc", "x"))
+	_check(said == SeasonTale.sentence(arc, int(e["year"]), "GEE"), "The arc sentence is written from the kept facts: %s" % said)
+	_check((said == "") == (str(arc.get("angle", "")) == ""), "A sentence only when the season has a shape")
+	_arc_true(arc, said, bool(e["flag"]))
+	_check(said == "" or story.contains(said), "The story carries the arc sentence")
+	print("  arc %d: %s [finals %s] %s" % [int(e["year"]), form, fin if fin != "" else "none", said if said != "" else "(nothing said)"])
 	_trace(story, e, GameState.match_story_digest.get(str(int(e["year"])), {}))
 	_check(GameState.news.any(func(x): return str(x["kind"]) == "almanac_story" and story.begins_with(str(x["text"]))),
 			"The wrap's front item carries the story's first sentence")
@@ -385,3 +409,184 @@ func _test_homegrown_flag() -> void:
 	var dawson := GameDB.club_list("ADE").filter(func(q): return str(q["id"]) == "ADE_12")
 	_check(not dawson.is_empty() and str(dawson[0].get("drafted_club", "")) == "SYD",
 			"A real player's drafting club is his first AFL club (%s)" % (str(dawson[0].get("drafted_club", "")) if not dawson.is_empty() else "-"))
+
+
+# ---------------------------------------------------------------------------
+# Row 145: the season's shape in one sentence (SeasonTale.gd)
+# ---------------------------------------------------------------------------
+## Every angle has phrases, and no phrase uses a slot its angle does not declare.
+func _test_arc_bank_is_sound() -> void:
+	var bank := SeasonTale.bank()
+	_check(CareerTale.validate(bank).is_empty(), "The season phrase bank is sound: %s" % str(CareerTale.validate(bank)))
+	_check(SeasonTale.WEIGHT.size() == 8, "Eight angles are weighed (%d)" % SeasonTale.WEIGHT.size())
+	for a in SeasonTale.WEIGHT:
+		_check(bank.has(a), "The bank has phrases for %s" % a)
+	for a in bank:
+		_check(SeasonTale.WEIGHT.has(a), "No phrase without an angle that can be told: %s" % a)
+		for ph in bank[a]["coach"]:
+			_check(RegEx.create_from_string("\\d").search(str(ph)) == null, "No number is written into a phrase: %s" % str(ph))
+
+
+## A season's rounds in Season.results' shape from one letter a round ("-" is
+## your bye), with seeded scores and another match beside yours each round.
+func _arc_rounds(form: String, rng: RandomNumberGenerator) -> Array:
+	var out := []
+	for i in form.length():
+		var rnd := [{"home": "FRE", "away": "MEL", "score": [60 + rng.randi() % 60, 60 + rng.randi() % 60]}]
+		if form[i] != "-":
+			var low := 40 + rng.randi() % 60
+			var high := low + (0 if form[i] == "D" else 1 + rng.randi() % 50)
+			var home := rng.randi() % 2 == 0
+			var mine := high if form[i] == "W" else low
+			var theirs := low if form[i] == "W" else high
+			rnd.append({"home": "GEE" if home else "STK", "away": "STK" if home else "GEE",
+					"score": [mine, theirs] if home else [theirs, mine]})
+		out.append(rnd)
+	return out
+
+
+## A hand-built page for a season of the given shape, as the season's close writes it.
+func _arc_page(year: int, form: String, finals: String, flag: bool) -> Dictionary:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SUITE_SEED + year
+	var weeks := _arc_rounds(finals, rng)
+	var rec := SeasonTale.record(_arc_rounds(form, rng), weeks, "GEE")
+	var tag := "GF" if flag else ("" if finals == "" else "EF1")
+	var e := {"year": year, "club": "GEE", "ladder": 1 if flag else 12, "of": 18,
+			"w": form.count("W"), "l": form.count("L"), "d": form.count("D"), "flag": flag,
+			"finals_tag": tag, "finals_text": Almanac.finals_text(tag, flag, false), "legends": []}
+	_check(str(rec["form"]) == form.replace("-", "") and str(rec["finals"]) == finals,
+			"%d: the record reads the results back in order (%s)" % [year, str(rec["form"])])
+	e[Almanac.ARC_KEY] = SeasonTale.tell(rec, flag)
+	e[Almanac.PARTS_KEY] = Almanac.story_parts(e, {})
+	e[Almanac.STORY_KEY] = Almanac.compose(e[Almanac.PARTS_KEY])
+	return e
+
+
+## The kept facts are true of the kept results, counted again here another way,
+## and every number in the sentence is one of those facts.
+func _arc_true(arc: Dictionary, said: String, flag: bool) -> void:
+	var angle := str(arc.get("angle", ""))
+	var f: Dictionary = arc.get("facts", {})
+	var form := str(arc.get("form", ""))
+	var rounds: Array = arc.get("rounds", [])
+	var all := form + str(arc.get("finals", ""))
+	_check(angle != "" or f.is_empty(), "No facts without an angle")
+	if angle in ["surge", "fade"]:
+		var half := int(form.length() / 2.0)
+		var first := form.left(half)
+		var late := form.right(form.length() - half)
+		_check(int(f["first_w"]) == first.count("W") and int(f["first_l"]) == first.count("L")
+				and int(f["first_d"]) == first.count("D"), "%s: the first half's record is counted from the results" % angle)
+		_check(int(f["late_w"]) == late.count("W") and int(f["late_n"]) == late.length(),
+				"%s: the second half's wins are counted from the results" % angle)
+		_check(int(f["split_round"]) == int(rounds[half - 1]), "%s: the split is the round of the last first-half game" % angle)
+		var before := float(first.count("W")) / first.length()
+		var after := float(late.count("W")) / late.length()
+		_check((after > before) == (angle == "surge") and absf(after - before) >= 0.29,
+				"%s: the win rate moved that way (%.2f to %.2f)" % [angle, before, after])
+	elif angle != "":
+		var c := "W" if angle in ["run_to_flag", "won_first", "win_run"] else "L"
+		var run := int(f["run"])
+		_check(run >= SeasonTale.RUN and all.contains(c.repeat(run)) and not all.contains(c.repeat(run + 1)),
+				"%s: %d on end is the longest run in the results (%s)" % [angle, run, all])
+		if angle in ["won_first", "lost_first"]:
+			_check(all.begins_with(c.repeat(run)), "%s: the run opens the season" % angle)
+		if angle in ["run_to_flag", "lost_last"]:
+			_check(all.ends_with(c.repeat(run)), "%s: the run closes the season" % angle)
+		if angle == "run_to_flag":
+			_check(flag, "run_to_flag: only in a premiership season")
+		if angle in ["win_run", "lose_run"]:
+			_check(int(f["from_round"]) == int(rounds[all.find(c.repeat(run))]), "%s: the run starts in the round said" % angle)
+	var nums := {}
+	for k in f:
+		nums[str(int(f[k]))] = true
+	for m in RegEx.create_from_string("\\d+").search_all(said):
+		_check(nums.has(m.get_string()), "The arc's %s is a kept fact (%s; %s)" % [m.get_string(), said, str(f)])
+
+
+## Seeded seasons of each shape: a flag, a wooden spoon, a late surge, a fade, a
+## run after the bye, and a mid-table year that has no shape and says nothing.
+## Each sentence is pinned, traced to its facts, and kept across a save and load.
+func _test_arc_season_shapes() -> void:
+	# [form, finals, flag, angle, facts, what the sentence must say]
+	var shapes := [
+		["WLWWLWWWLWWW-WLWWWWWWWWW", "WWW", true, "run_to_flag", {"run": 12},
+				["We won our last 12 games, the Grand Final the last of them."]],
+		["LLLLLLLLWLLL-LLWLLLLDLLL", "", false, "lost_first", {"run": 8}, ["We lost our first 8 games."]],
+		["LLWLLLWLLWLW-WWLWWWLWWLW", "", false, "surge",
+				{"first_w": 3, "first_l": 8, "first_d": 0, "split_round": 11, "late_w": 9, "late_n": 12},
+				["3-8 after Round 11", "won 9 of the next 12."]],
+		["WWLWWWWDWWWL-LWLLDLLWLLL", "", false, "fade",
+				{"first_w": 9, "first_l": 1, "first_d": 1, "split_round": 11, "late_w": 2, "late_n": 12},
+				["We were 9-1-1 after Round 11", "won 2 of the next 12."]],
+		["WWLWWLWLWLWL-WWWWWWLLWLL", "L", false, "win_run", {"run": 6, "from_round": 14},
+				["We won 6 in a row from Round 14."]],
+		["WLWLLWWLWLWL-WWLLWLWWLLW", "", false, "", {}, []],
+	]
+	var pages := []
+	for i in shapes.size():
+		var sh: Array = shapes[i]
+		var e := _arc_page(2040 + i, sh[0], sh[1], sh[2])
+		var arc: Dictionary = e[Almanac.ARC_KEY]
+		var said := str(e[Almanac.PARTS_KEY]["arc"])
+		var name := str(sh[3]) if str(sh[3]) != "" else "no shape"
+		_check(str(arc.get("angle", "")) == str(sh[3]), "%s tells %s (told %s)" % [sh[0], name, str(arc.get("angle", ""))])
+		_check(arc.get("facts", {}) == sh[4], "%s keeps the facts %s (kept %s)" % [name, str(sh[4]), str(arc.get("facts", {}))])
+		for want in sh[5]:
+			_check(said.contains(str(want)), "%s says \"%s\": %s" % [name, want, said])
+		if str(sh[3]) == "":
+			_check(said == "" and not arc.has("facts"), "A season with no shape says nothing: %s" % said)
+			_check(not str(e[Almanac.STORY_KEY]).contains("We "), "Its story has no arc sentence: %s" % str(e[Almanac.STORY_KEY]))
+		else:
+			_check(said.ends_with(".") and said.count(". ") == 0, "One sentence: %s" % said)
+			_check(str(e[Almanac.STORY_KEY]).ends_with(said), "The story ends on the arc sentence: %s" % str(e[Almanac.STORY_KEY]))
+		_arc_true(arc, said, bool(sh[2]))
+		_check(str(Almanac.story_parts(e, {})["arc"]) == said, "The same season reads the same every time")
+		print("  arc shape %s: %s" % [name, str(e[Almanac.STORY_KEY])])
+		pages.append(e)
+	# A season too short to have a shape, and a record that does not line up.
+	_check(SeasonTale.beats({"form": "WWWWWWWWW", "rounds": [1, 2, 3, 4, 5, 6, 7, 8, 9], "finals": ""}, false).is_empty(),
+			"Nine games is too short a season to tell")
+	_check(SeasonTale.beats({"form": "WWWWWWWWWWWW", "rounds": [1, 2], "finals": ""}, false).is_empty(),
+			"Results without their rounds tell nothing")
+	# Kept across a save and load, and still written from what was kept.
+	var own: Array = GameState.almanac.duplicate(true)
+	GameState.almanac.append_array(pages)
+	var before: Array = GameState.almanac.duplicate(true)
+	_check(GameState.save_career(), "The career saves with the arc pages")
+	GameState.reset()
+	GameState.load_career()
+	_check(GameState.almanac == before, "Every page's arc survives a save and load")
+	_check(GameState.almanac.size() == own.size() + shapes.size(), "Every shape's page came back (%d)" % GameState.almanac.size())
+	for e in GameState.almanac.slice(own.size()):
+		var said := SeasonTale.sentence(e.get(Almanac.ARC_KEY, {}), int(e["year"]), str(e["club"]))
+		_check(said == str(e[Almanac.PARTS_KEY]["arc"]), "After the load the sentence is still its kept facts: %s" % said)
+		_arc_true(e.get(Almanac.ARC_KEY, {}), said, bool(e["flag"]))
+	GameState.almanac = own
+
+
+## A page written before the arc was kept: the save loads, the page reads as it
+## did, and nothing is invented for it.
+func _test_arc_old_page() -> void:
+	var own: Array = GameState.almanac.duplicate(true)
+	var old := _arc_page(2050, "LLWLLLWLLWLW-WWLWWWLWWLW", "", false)
+	old.erase(Almanac.ARC_KEY)
+	old[Almanac.PARTS_KEY] = Almanac.story_parts(old, {})
+	old[Almanac.STORY_KEY] = Almanac.compose(old[Almanac.PARTS_KEY])
+	var story := str(old[Almanac.STORY_KEY])
+	_check(str(old[Almanac.PARTS_KEY]["arc"]) == "" and story != "", "A page without the kept record has no arc sentence")
+	GameState.almanac.append(old.duplicate(true))
+	_check(GameState.save_career(), "The career saves with the older page")
+	GameState.reset()
+	_check(GameState.load_career(), "A save with a page from before the arc loads")
+	var back: Dictionary = GameState.almanac.back()
+	_check(not back.has(Almanac.ARC_KEY) and str(back[Almanac.STORY_KEY]) == story, "The older page reads as it did: %s" % str(back.get(Almanac.STORY_KEY, "")))
+	_check(str(Almanac.story_parts(back, {})["arc"]) == "", "Nothing is back-filled into an older page")
+	_check(SeasonTale.sentence({}, 2050, "GEE") == "" and SeasonTale.sentence({"angle": "surge"}, 2050, "GEE") != "",
+			"An empty arc says nothing, and a part-kept one never breaks the page")
+	var scene: Control = load("res://scenes/AlmanacScene.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(scene)
+	_check(scene.find_children("StoryOfTheSeason", "", true, false).size() >= 1, "The almanac screen still draws its stories")
+	scene.queue_free()
+	GameState.almanac = own
