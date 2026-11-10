@@ -2857,7 +2857,8 @@ Your career stays on this device.",
 	_router.handle_back(true)
 	await _settle()
 	_check(_router.current() == "hub" and current_scene.find_child("NewsFeed", true, false) == null,
-			"Back closes the news feed and stays on the hub")
+			"Back closes the news feed and stays on the hub (on %s, feed open: %s, stack %s; %s)" % [_router.current(),
+			current_scene.find_child("NewsFeed", true, false) != null, _router.stack, _screen_text().left(160)])
 	var offseason_size_before := root.size
 	root.size = Vector2i(360, 800)
 	_router.go("offseason")
