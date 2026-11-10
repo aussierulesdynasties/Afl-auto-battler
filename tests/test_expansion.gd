@@ -897,7 +897,32 @@ func _test_real_lists_tasmania_2028() -> void:
 	GameState.set_canberra(false)
 	GameState.challenge = {"kind": "rebuild"}
 	GameState.begin_real_lists()
-	_check(GameState.waiting_club() == "", "A rebuild needs a club's real list, so it cannot wait for Tasmania")
+	# Row T5.Q25: a Rebuild picks the bottom club or a club joining the league.
+	var bottom := str(GameState.challenge.get("club", ""))
+	var kept := (GameState.league_lists[bottom] as Array).size()
+	_check(GameState.my_club == "" and GameState.waiting_clubs() == ["TAS"] and bottom != "" and (GameState.challenge["gone"] as Array).is_empty(),
+			"A rebuild offers the bottom club (%s) or Tasmania, and nobody has walked out yet (%s)" % [bottom, str(GameState.waiting_clubs())])
+	GameState.choose_real_club("COL")
+	_check(GameState.my_club == "", "A rebuild cannot take a club other than the bottom one")
+	_check(GameState.begin_wait_for_club("TAS") and str(GameState._sim_ahead_challenge.get("club", "")) == "TAS"
+			and (GameState._sim_ahead_challenge["gone"] as Array).is_empty() and (GameState.league_lists[bottom] as Array).size() == kept,
+			"Rebuild at Tasmania: built from nothing, the challenge waits for 2028 and %s keep their three" % bottom)
+	GameState.reset()
+	GameState.set_canberra(true)
+	GameState.challenge = {"kind": "rebuild"}
+	GameState.begin_real_lists()
+	_check(GameState.waiting_clubs() == ["TAS", "CANB"] and not GameState.sim_ahead,
+			"With Canberra on, a rebuild starts in 2027 and can wait for Tasmania or Canberra: %s" % str(GameState.waiting_clubs()))
+	_check(GameState.begin_wait_for_club("CANB") and GameState.sim_ahead_to == 2030, "Rebuild at Canberra waits for 2030")
+	GameState.reset()
+	GameState.set_canberra(false)
+	GameState.challenge = {"kind": "rebuild"}
+	GameState.begin_real_lists()
+	GameState.choose_real_club(bottom)
+	_check(GameState.my_club == bottom and (GameState.challenge["gone"] as Array).size() == 3
+			and (GameState.league_lists[bottom] as Array).size() == kept - 3
+			and int(GameState.draft.existing_sizes[bottom]) == RookieList.draft_size(GameState.league_lists[bottom]),
+			"Rebuild at %s: three walk out as he takes over, and the draft counts the list without them" % bottom)
 	GameState.reset()
 	_check(GameState.sim_ahead_to == 2030, "A reset clears it")
 

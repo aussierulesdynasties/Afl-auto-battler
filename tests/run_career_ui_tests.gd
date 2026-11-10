@@ -2177,6 +2177,20 @@ Your career stays on this device.",
 	var chosen_l: Label = plan.find_child("Plan", true, false) if plan != null else null
 	var other_tile: Node = current_scene.find_child("ClubPlan_attacking", true, false)
 	var other_l: Label = other_tile.find_child("Plan", true, false) if other_tile != null else null
+	# Game-plan trait (director 2026-11-10): a real tap picks it, and the note says
+	# what it gives and what it costs, with the size.
+	var trait_btn: Button = current_scene.find_child("PlanTrait_fortress", true, false)
+	_check(trait_btn != null and trait_btn.size.y >= 44, "Each game-plan trait is a thumb-sized tap")
+	var why_trait: String = (await Tap.tap(trait_btn)) if trait_btn != null else "no button"
+	await _settle()
+	var t_gain_row: Node = current_scene.find_child("TraitGain", true, false)
+	var t_cost_row: Node = current_scene.find_child("TraitCost", true, false)
+	var t_gain: Label = t_gain_row.find_child("Text", false, false) if t_gain_row != null else null
+	var t_cost: Label = t_cost_row.find_child("Text", false, false) if t_cost_row != null else null
+	_check(_state.plan_trait == "fortress" and t_gain != null and t_cost != null
+			and t_gain.text.contains("8%") and t_cost.text.contains("6%"),
+			"Choosing a trait makes it the club's, and says its gain and cost (a real tap: %s)" % why_trait)
+	_state.set_plan_trait("")
 	root.size = size_plan
 	_check(chosen_l != null and other_l != null and chosen_l.get_theme_font("font") == load("res://scripts/ui/UiKit.gd").BOLD
 			and other_l.get_theme_font("font") != load("res://scripts/ui/UiKit.gd").BOLD, "The chosen plan is bold, the others are regular")
@@ -2823,11 +2837,21 @@ Your career stays on this device.",
 	var moves = load("res://scripts/state/ClubMoves.gd")
 	if moves.letter_open(_state):
 		moves.decline_letter(_state)
+	# Nor is it about a sacking: the seeded season's results move whenever the
+	# match does (rival clubs' game-plan traits did), so he keeps his job here.
+	var was_sacked: bool = _state.is_sacked()
+	_state.board.erase("sacked")
 	# The first postseason's sheet has its own suite (first_visit_intro).
 	_state.postseason_intro_seen = true
+	# A card the season's end raised (a Grand Final loss has one) has its own
+	# sheet test; here it sits on the hub without opening over it.
+	_shown_over_hub()
 	_router.go("hub")
 	await _settle()
-	_check(_screen_text().contains("Trades & Contracts"), "The hub offers Trades & Contracts after the season")
+	# A season that ends in a final can raise a press conference over the hub.
+	await _past_press()
+	_check(_screen_text().contains("Trades & Contracts"), "The hub offers Trades & Contracts after the season (sacked at the end: %s, letter open: %s; %s)"
+			% [was_sacked, moves.letter_open(_state), _screen_text().left(200)])
 	var more: Button = current_scene.find_child("NewsMore", true, false)
 	_check(more != null, "The hub shows the league news")
 	if more != null:
@@ -2838,7 +2862,8 @@ Your career stays on this device.",
 	_router.handle_back(true)
 	await _settle()
 	_check(_router.current() == "hub" and current_scene.find_child("NewsFeed", true, false) == null,
-			"Back closes the news feed and stays on the hub")
+			"Back closes the news feed and stays on the hub (on %s, feed open: %s, stack %s; %s)" % [_router.current(),
+			current_scene.find_child("NewsFeed", true, false) != null, _router.stack, _screen_text().left(160)])
 	var offseason_size_before := root.size
 	root.size = Vector2i(360, 800)
 	_router.go("offseason")
@@ -4285,6 +4310,13 @@ func _test_new_career_challenge_taps() -> void:
 	var t5: String = await Tap.tap(current_scene.find_child("StartCareer", true, false))
 	await _settle()
 	await _settle()
+	# Row T5.Q25: Choose your rebuild offers the bottom club or Tasmania.
+	var tas_tile := current_scene.find_child("Choose_TAS", true, false)
+	_check(_state.my_club == "" and tas_tile != null and current_scene.find_child("Choose_COL", true, false) == null,
+			"Choose your rebuild offers the bottom club and Tasmania, no other club")
+	var t6: String = await Tap.tap(current_scene.find_child("Choose_ESS", true, false))
+	await _settle()
+	t5 += t6
 	var ch: Dictionary = _state.challenge
 	var gone: Array = ch.get("gone", [])
 	var club := str(ch.get("club", ""))
@@ -4717,6 +4749,22 @@ func _test_sacked_job_choice_taps() -> void:
 	_check(why == "" and not _state.is_sacked() and str(_state.coach_arcs["move"].get("to", "")) == code,
 			"A finger on Take the job ends the sacking and the move is set for %s (%s)" % [code, why])
 	_check(current_scene.find_child("SackedCard", true, false) == null, "The hub rebuilds without the sacked card")
+	# Row T5.Q25: Tasmania join the league next season, so their job is one of
+	# the three, with no ladder finish; a finger on it sets the move, which is
+	# made at their first National Draft.
+	_sacked_with_offers()
+	_router.go("hub")
+	await _settle()
+	var tas_why: Label = current_scene.find_child("JobOfferFrom_TAS", true, false)
+	_check(moves.offers(_state).any(func(o): return str(o["code"]) == "TAS" and int(o.get("joins", 0)) == int(_state.season_year) + 1)
+			and tas_why != null and tas_why.text.begins_with("Tasmania join the league in %d." % (int(_state.season_year) + 1)),
+			"A club joining next season offers its job, saying when it joins (%s)" % (tas_why.text if tas_why != null else "missing"))
+	take = current_scene.find_child("TakeJob_TAS", true, false)
+	_check(take != null and take.get_combined_minimum_size().x <= take.size.x + 0.5, "Tasmania's Take button reads whole on a 390 phone")
+	why = await Tap.tap(take) if take != null else "missing"
+	await _settle()
+	_check(why == "" and not _state.is_sacked() and str(_state.coach_arcs["move"].get("to", "")) == "TAS" and _state.my_club == "FRE",
+			"A finger on Take the job at Tasmania sets the move for their first draft; he is at Fremantle until then (%s)" % why)
 	# A fresh sacking: retire instead, and the record is read out.
 	_sacked_with_offers()
 	_router.go("hub")
@@ -4761,11 +4809,15 @@ func _test_sacked_job_choice_taps() -> void:
 ## rounds skipped with Fremantle top of the ladder, so they play the finals
 ## and meet the board's goal, and the close writes a rival board's letter that
 ## holds the off-season until he answers.
-func _season_with_letter() -> void:
+func _season_with_letter(tas_joins := true) -> void:
 	_state.reset()
 	_state.career_seed = 4411
 	_state.replay_seed = 4411
 	_state.start_season("FRE", _db.club_list("FRE"))
+	# A club joining next season writes first (row T5.Q25); without one, the
+	# letter comes from a club on the ladder. reset() puts the year back.
+	if not tas_joins:
+		_db.set_enter_year("TAS", 9999)
 	var arcs = load("res://scripts/sim/CoachArcs.gd")
 	_state.coach_arcs = arcs.ensure(_state.coach_arcs)
 	var season = _state.season
@@ -4787,7 +4839,7 @@ func _test_rival_letter_taps() -> void:
 	var size_before := root.size
 	root.size = Vector2i(390, 844)
 	var moves = load("res://scripts/state/ClubMoves.gd")
-	_season_with_letter()
+	_season_with_letter(false)
 	_check(moves.letter_open(_state) and not _state.offseason_open(),
 			"A strong season ends with a rival board's letter, and the off-season waits for the answer")
 	_router.stack = ["main"]
@@ -4811,8 +4863,8 @@ func _test_rival_letter_taps() -> void:
 	_check(current_scene.find_child("RivalLetterAnswered", true, false) != null and _screen_text().contains("National Draft")
 			and _screen_text().contains("Trades & Contracts"),
 			"After the answer the hub says so, and trades, contracts and the draft are back")
-	# The same letter, taken.
-	_season_with_letter()
+	# A ladder club's letter, taken.
+	_season_with_letter(false)
 	var code := str(moves.letter(_state).get("code", ""))
 	_router.go("hub")
 	await _settle()
@@ -4827,6 +4879,26 @@ func _test_rival_letter_taps() -> void:
 			and answered.text.contains(_db.club_name(code)) and _screen_text().contains("National Draft")
 			and _screen_text().contains("Trades & Contracts"),
 			"After taking it the hub says so, who replaced him at Fremantle and where from, and his new club's trades, contracts and draft are open (%s)"
+			% (answered.text if answered != null else "missing"))
+	# Row T5.Q25: Tasmania, joining next season, write first. Taken, he
+	# takes over at their first National Draft and runs Fremantle's
+	# off-season until then.
+	_season_with_letter()
+	_check(str(moves.letter(_state).get("code", "")) == "TAS", "A strong season before Tasmania join brings their letter")
+	_router.go("hub")
+	await _settle()
+	var start: Label = current_scene.find_child("RivalLetterStart", true, false)
+	_check(start != null and start.text.contains("National Draft"),
+			"The letter says he would take over at their first National Draft (%s)" % (start.text if start != null else "missing"))
+	take = current_scene.find_child("RivalLetterTake", true, false)
+	why = await Tap.tap(take) if take != null else "missing"
+	await _settle()
+	_check(why == "" and _state.my_club == "FRE" and str(_state.coach_arcs["move"].get("to", "")) == "TAS" and _state.offseason_open(),
+			"A finger on Take signs him with Tasmania; Fremantle's off-season opens and stays his until the draft (%s)" % why)
+	answered = current_scene.find_child("RivalLetterAnswered", true, false)
+	_check(answered != null and answered.text.contains("Tasmania") and answered.text.contains("National Draft")
+			and _screen_text().contains("Trades & Contracts"),
+			"After taking it the hub says when he takes over, and Fremantle's trades and contracts are open (%s)"
 			% (answered.text if answered != null else "missing"))
 	root.size = size_before
 

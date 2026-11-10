@@ -564,8 +564,8 @@ func _canberra_line(k: String) -> String:
 		return ("Tasmania drafts in the 2027 League redraft as an equal and can be yours. %d clubs from 2027; Canberra never join." % n) + fixed
 	if _pick_challenge == "rebuild":
 		if k == "yes":
-			return "Rebuild starts in 2027. Tasmania join in 2028 and Canberra in 2030, making 20 clubs." + fixed
-		return "Rebuild starts in 2027. Tasmania join in 2028 and the league stays at 19 clubs." + fixed
+			return "Rebuild starts in 2027, or take Tasmania (2028) or Canberra (2030) and build from nothing. 20 clubs from 2030." + fixed
+		return "Rebuild starts in 2027, or take Tasmania (2028) and build from nothing. The league stays at 19 clubs." + fixed
 	if k == "yes":
 		return "2027 to 2029 play out without you, every club run by its own staff: Tasmania join in 2028 and Canberra build their first list. You then choose any of the 20 clubs and start in 2030. Take Canberra and you build their list with the same new-club picks and cap room a rival coach gets." + fixed
 	return "You start in 2027, or take Tasmania and start in 2028, when they join. The league stays at 19 clubs." + fixed
