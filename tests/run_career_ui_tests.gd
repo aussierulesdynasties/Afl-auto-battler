@@ -1501,6 +1501,7 @@ func _run() -> void:
 	await _t("_test_list_tabs_kept")
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
+	await _t("_test_ask_price_tap")
 	_t("_test_type_roles")
 	await _t("_test_names_fit")
 	_state.delete_saved_career()
@@ -3455,6 +3456,68 @@ func _test_list_problem_and_ask_around() -> void:
 	else:
 		_check(scene.find_children("AskTrade_*", "", true, false).is_empty(),
 				"With nobody keen there is no way into a trade from the answers")
+	scene.queue_free()
+	root.size = size_before
+	await _settle()
+
+
+## Ask their price on a phone (row 67): with one of their players on the sheet
+## and nothing of yours, a finger on Ask their price fills what you give with
+## their ask, shows it in a line under the sheet, and the verdict is yes.
+func _test_ask_price_tap() -> void:
+	_state.reset()
+	_state.career_seed = 5508
+	_state.replay_seed = 5508
+	_state.start_season("MEL", _db.club_list("MEL"))
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	var size_before := root.size
+	root.size = Vector2i(390, 844)
+	var scene: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
+	root.add_child(scene)
+	await _settle()
+	var club := str(scene.get("_trade_club"))
+	var theirs: Array = (_state.season.lists[club] as Array).duplicate()
+	theirs.sort_custom(func(a, b):
+		if int(a["overall"]) != int(b["overall"]):
+			return int(a["overall"]) > int(b["overall"])
+		return str(a["id"]) < str(b["id"]))
+	var pid := ""
+	var expect := {}
+	for q in theirs.slice(0, 8):
+		var r: Dictionary = _state.ask_price(club, str(q["id"]))
+		if bool(r["ok"]):
+			pid = str(q["id"])
+			expect = r
+			break
+	_check(pid != "", "%s name a price for one of their best eight players" % _db.club_name(club))
+	if pid == "":
+		scene.queue_free()
+		root.size = size_before
+		await _settle()
+		return
+	var why_tab: String = await Tap.tap(scene.find_child("Tab_trade", true, false))
+	await _settle()
+	var why_side: String = await Tap.tap(scene.find_child("TradeSide_theirs", true, false))
+	await _settle()
+	var why_pick: String = await Tap.tap(scene.find_child("Their_" + pid, true, false))
+	await _settle()
+	var verdict := scene.find_child("TradeVerdict", true, false) as Control
+	_check(why_tab == "" and why_side == "" and why_pick == "" and scene.find_child("AskPrice", true, false) != null,
+			"With one of theirs and nothing of yours, Ask their price is there (%s %s %s)" % [why_tab, why_side, why_pick])
+	var list_before := str(_state.my_list.map(func(q): return q["id"]))
+	var why_ask: String = await Tap.tap(scene.find_child("AskPrice", true, false))
+	await _settle()
+	var said := scene.find_child("TradePrice", true, false)
+	verdict = scene.find_child("TradeVerdict", true, false) as Control
+	_check(why_ask == "" and str(scene.get("_mine")) == str(expect["mine"])
+			and scene.find_children("GiveRow_*", "", true, false).size() == (expect["mine"] as Array).size(),
+			"A finger on Ask their price fills what you give with their ask (%s; %s)" % [why_ask, str(scene.get("_mine"))])
+	_check(said != null and str(said.get("text")).contains(" would take ") and verdict != null
+			and str(verdict.get_meta("code", "")) == "trade_accept",
+			"Their price shows in a line and the verdict is yes (%s)" % (str(said.get("text")) if said != null else "none"))
+	_check(str(_state.my_list.map(func(q): return q["id"])) == list_before and scene.find_child("AskPrice", true, false) == null,
+			"Asking moves nobody, and the button goes once you have something to give")
 	scene.queue_free()
 	root.size = size_before
 	await _settle()

@@ -36,6 +36,7 @@ func run() -> void:
 	_t("_test_draft_night_trades")
 	_t("_test_mixed_packages")
 	_t("_test_trade_market")
+	_t("_test_ask_price")
 	_t("_test_rival_recruiting_dial")
 	_t("_test_pick_provenance")
 	_t("_test_untouchable")
@@ -2072,6 +2073,96 @@ func _test_rival_recruiting_dial() -> void:
 	_check(found != "", "One offer to %s is accepted by Easygoing rivals and refused by Cut-throat ones (%d offers asked)" % [rival, asked])
 	_check(backwards == 0, "No offer is refused by Easygoing rivals yet accepted by Cut-throat ones (%d)" % backwards)
 	GameState.set_new_career_dial("rival_recruiting", "shrewd")
+
+
+## Row 67 (4.Q11): a coach who asks for an upgrade and has spare assets gets
+## workable offers. Ask their price names a package the club accepts, never
+## an untouchable, and changes nothing; and across seeded off-seasons a coach
+## who asks for every player who'd walk into his side, and agrees only when
+## everything asked is spare, trades at about real AFL volume (1.4 a club).
+func _test_ask_price() -> void:
+	var made := 0
+	var seasons := 0
+	var priced := 0
+	for club in ASK_PRICE_CLUBS:
+		GameState.reset()
+		GameState.career_seed = 6701
+		GameState.replay_seed = 6701
+		GameState.start_season(club, GameDB.club_list(club))
+		_to_offseason()
+		seasons += 1
+		var dealt := 0
+		for rival in GameDB.active_clubs(GameState.season_year):
+			if str(rival) == club or dealt >= 2:
+				continue
+			var line22 := _nth_next(GameState.my_list, 21)
+			var line26 := _nth_next(GameState.my_list, 25)
+			var ups: Array = (GameState.season.lists[rival] as Array).filter(func(q):
+				return _next_overall(q) >= line22 + 3.0 and float(q.get("age", 30.0)) <= 30.0)
+			ups.sort_custom(func(a, b): return _next_overall(a) > _next_overall(b))
+			for q in ups:
+				var before := str(GameState.my_list.map(func(x): return x["id"])) + str(GameState.trade_offers.size())
+				var r := GameState.ask_price(str(rival), str(q["id"]))
+				if not bool(r["ok"]):
+					continue
+				priced += 1
+				if priced == 1:
+					_check(str(GameState.my_list.map(func(x): return x["id"])) + str(GameState.trade_offers.size()) == before,
+							"Asking their price offers and moves nothing")
+					_check(str(GameState.ask_price(str(rival), str(q["id"]))) == str(r),
+							"Asking twice gets the same price")
+					_check(bool(GameState.evaluate_trade(str(rival), r["mine"], r["theirs"])["ok"])
+							and (r["mine"] as Array).size() <= GameState.ASK_PRICE_PIECES
+							and str(r["line"]).begins_with(GameDB.club_name(str(rival)) + " would take "),
+							"Their price is a trade they'd accept, in a line naming the club (%s)" % str(r["line"]))
+					var keep := str((r["mine"] as Array)[0])
+					if not keep.begins_with("pick:"):
+						GameState.set_untouchable(keep, true)
+						var again := GameState.ask_price(str(rival), str(q["id"]))
+						_check(not (again["mine"] as Array).has(keep), "An untouchable player is never in their price")
+						GameState.set_untouchable(keep, false)
+				var spare := true
+				for id in r["mine"]:
+					if str(id).begins_with("pick:"):
+						continue
+					var p := GameState.list_player(str(id))
+					spare = spare and not p.is_empty() and _next_overall(p) < line26 \
+							and not (float(p.get("age", 25.0)) <= 22.0 and int(p.get("potential", 0)) - int(p["overall"]) >= 6)
+				if spare and bool(GameState.make_trade(str(rival), r["mine"], r["theirs"])["ok"]):
+					dealt += 1
+					break
+		made += dealt
+	var rate := float(made) / float(maxi(1, seasons))
+	_check(priced > 0, "Clubs name a price for players who'd walk into your side (%d)" % priced)
+	_check(rate >= ASK_PRICE_FLOOR,
+			"A coach who asks for upgrades with spare assets trades about as often as a real club (%.2f a year over %d off-seasons; real AFL about 1.4)" % [
+			rate, seasons])
+
+
+## The clubs the ask-price volume check coaches (row 67), and its floor:
+## trades a year a coach who asks makes on spare assets alone.
+const ASK_PRICE_CLUBS := ["GEE", "FRE", "MEL", "STK", "WBD", "SYD"]
+const ASK_PRICE_FLOOR := 1.4   # real AFL, about 1.4 trades a club a year; trade_up_impl measured 2.0 (the cap) in open off-seasons
+
+
+## A player's rating next season, as a coach reads it off the screens (age
+## and POT): tools/balance/dynasty.gd expected_overall, one year.
+static func _next_overall(p: Dictionary) -> float:
+	var ov := float(p["overall"])
+	var pot := maxf(ov, float(p.get("potential", ov)))
+	var age := float(p.get("age", 25.0)) + 1.0
+	var d := 4.25 if age <= 20.0 else (2.5 if age <= 23.0 else (1.0 if age <= 27.0 else (0.0 if age <= 30.0 \
+			else (-1.5 if age <= 33.0 else -3.75))))
+	if d > 0.0:
+		d = minf(d, maxf(0.0, pot - ov))
+	return ov + d
+
+
+static func _nth_next(list: Array, n: int) -> float:
+	var values := list.map(func(p): return _next_overall(p))
+	values.sort()
+	values.reverse()
+	return float(values[clampi(n, 0, values.size() - 1)]) if not values.is_empty() else 0.0
 
 
 func _test_trade_market() -> void:
