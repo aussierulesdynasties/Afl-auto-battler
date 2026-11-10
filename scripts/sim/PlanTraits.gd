@@ -121,12 +121,13 @@ const FOR_PLAN := {
 }
 
 ## A rival's trait as the coach scouting them reads it: what it does to them
-## and to you.
+## and to you, in plain words (the Assistant's report carries no numbers,
+## tests/test_rival_read.gd; the sizes are at the gate, the picker).
 const RIVAL_LINE := {
-	"fortress": "Your shots go through 8% less often against them; their disposals gain 6% less ground.",
-	"stoppage_kings": "Their stoppage win chance is 3 points higher; your shots go through 5% more often.",
-	"kick_mark": "They give away 15% fewer clangers; their stoppage win chance is 3 points lower.",
-	"long_bombers": "Their kicks reach 8 metres further; you take intercept marks off their kicks 15% more often.",
+	"fortress": "Your shots go through less often against them, and their disposals gain less ground.",
+	"stoppage_kings": "They win more of the stoppages, and your shots go through more often.",
+	"kick_mark": "They give away fewer clangers, and they win fewer of the stoppages.",
+	"long_bombers": "Their kicks go further, and you take more intercept marks off them.",
 }
 
 ## Running none.
