@@ -62,6 +62,7 @@ func _run() -> void:
 	_t("_test_boot_splash_is_ours")
 	_t("_test_lines")
 	await _t("_test_beats_change_nothing")
+	await _t("_test_async_weeks_change_nothing")
 	await _t("_test_tap_after_cover")
 	await _t("_test_browser_loads_under_the_line")
 	print(Ran.line("Load flair", self))
@@ -296,6 +297,40 @@ func _test_beats_change_nothing() -> void:
 	_season.set("wait_hook", Callable())
 	_check(calls[0] >= 10, "the rollover beats through its steps (%d)" % calls[0])
 	_check(without != "" and without == with_hook, "the same league either way (%s / %s)" % [without, with_hook])
+
+
+## Sim the week and a skip play the week's matches on threads while frames
+## draw (advance_async): every score of a season, finals too, and the ladder
+## come out exactly as advance() plays them.
+func _test_async_weeks_change_nothing() -> void:
+	var played_sync: String = await _season_scores(false)
+	var played_async: String = await _season_scores(true)
+	_check(played_sync != "" and played_sync == played_async,
+			"the same season either way (%s / %s)" % [played_sync.md5_text(), played_async.md5_text()])
+	_check(played_async.contains("GF"), "the finals were played too")
+
+
+func _season_scores(threaded_frames: bool) -> String:
+	_fresh()
+	seed(SUITE_SEED)
+	var frames := [0]
+	var count := func(): frames[0] += 1
+	process_frame.connect(count)
+	while not _state.season.is_season_over():
+		if threaded_frames:
+			await _state.advance_async()
+		else:
+			_state.advance()
+	process_frame.disconnect(count)
+	if threaded_frames:
+		_check(frames[0] >= 24, "frames drew while the weeks played (%d)" % frames[0])
+	var bits := PackedStringArray()
+	for week in _state.season_log:
+		bits.append("%s %s %s %s" % [week.get("tag", week.get("round", "")), week["home"], week["away"], str(week["score"])])
+	for code in _state.season.ladder:
+		bits.append("%s %s" % [code, str(_state.season.ladder[code])])
+	return "
+".join(bits)
 
 
 func _rollover() -> String:

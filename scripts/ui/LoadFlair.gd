@@ -116,7 +116,7 @@ func open(club: String, still: bool) -> void:
 	# A browser cannot draw while blocking work runs, so what it shows for a
 	# wait are stills (a skip draws one a week): the ball rests on the turf
 	# there, as with Reduced motion, so no still catches it hanging in the air.
-	_still = still or web_still or OS.has_feature("web")
+	_still = still or web_still or (OS.has_feature("web") and not OS.has_feature("threads"))
 	_t0_ms = Time.get_ticks_msec()
 	visible = true
 	fit()

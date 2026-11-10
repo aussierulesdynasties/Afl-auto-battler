@@ -1333,7 +1333,7 @@ func _skip_season(orders := {}, to := "season") -> void:
 		ScreenTransition.show_line("%s
 %s" % [GameState.skip_progress(), SKIP_CALM])
 		await ScreenTransition.drawn()
-		if not GameState.skip_step(job):
+		if not await GameState.skip_step_async(job):
 			break
 	GameState.skip_finish(job)
 	_build()
@@ -2105,7 +2105,7 @@ func _on_sim_round() -> void:
 
 
 func _sim_week() -> void:
-	GameState.sim_week()
+	await GameState.sim_week_async()
 	_build()
 	if not GameState.last_results.is_empty():
 		_show_results(GameState.last_results)

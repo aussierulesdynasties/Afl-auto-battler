@@ -684,9 +684,8 @@ func next_seed(extra: int = 0) -> int:
 	return seed * 1000003 + round_index * 9176 + extra * 7919 + 13
 
 
-func play_round() -> Array:
-	if round_index >= fixture.size():
-		return []
+## The current round's matches, built and not yet run.
+func _round_sims() -> Array:
 	var round_matches: Array = fixture[round_index]
 	var sims := []
 	for i in range(round_matches.size()):
@@ -694,7 +693,67 @@ func play_round() -> Array:
 		sims.append(match_sim(m["home"], m["away"], next_seed(i),
 				round_at_home(round_index, m["home"], m["away"]), false,
 				weather_for(m["home"], m["away"], round_index)))
-	var played := run_all(sims)
+	return sims
+
+
+## A week's matches started ahead by start_week, waiting for play_round or
+## play_finals_week to take their results. Never saved.
+var _early := {}
+
+
+## Start this week's matches on threads without waiting (GameState.advance_async
+## keeps drawing frames until running() is false). The same matches, seeds and
+## order as play_round / play_finals_week build, so the results are identical.
+func start_week() -> Dictionary:
+	_early = {}
+	if not is_regular_done():
+		if round_index < fixture.size():
+			_early = start_all(_round_sims(), web_cores())
+			_early["week"] = "r%d" % round_index
+	elif not finals.is_empty() and not bool(finals["done"]):
+		_early = start_all(_finals_sims(_finals_ready()), web_cores())
+		_early["week"] = "f%d" % int(finals["week"])
+	return _early
+
+
+## Threads for a week's matches. A browser keeps a small fixed pool of workers
+## and Godot uses some of them itself, so a web build takes two.
+static func web_cores() -> int:
+	if OS.has_feature("web"):
+		return 2
+	return OS.get_processor_count()
+
+
+## True while a started week still has matches running. Without threads it
+## plays one more match per call, so a caller drawing a frame each time still
+## draws between matches.
+static func running(job: Dictionary) -> bool:
+	if job.is_empty():
+		return false
+	if job.has("todo"):
+		return pump(job)
+	for th in job.get("threads", []):
+		if (th as Thread).is_alive():
+			return true
+	return false
+
+
+## The results of the week started by start_week, if it is this week; else [].
+func _take_early(week: String) -> Array:
+	if _early.is_empty() or str(_early.get("week", "")) != week:
+		_early = {}
+		return []
+	var job := _early
+	_early = {}
+	return finish_all(job)
+
+
+func play_round() -> Array:
+	if round_index >= fixture.size():
+		return []
+	var played := _take_early("r%d" % round_index)
+	if played.is_empty():
+		played = run_all(_round_sims())
 	var gather := round_index == gather_round()
 	for res in played:
 		res["round"] = round_index + 1
@@ -852,22 +911,37 @@ func finals_week_matches() -> Array:
 	return []
 
 
-func play_finals_week() -> Array:
-	if finals.is_empty() or bool(finals["done"]):
-		return []
+## This finals week's matches with both clubs known: [index in the week (its
+## seed), match] pairs.
+func _finals_ready() -> Array:
 	var matches := finals_week_matches()
 	var ready := []
-	var sims := []
 	for i in range(matches.size()):
 		var m: Dictionary = matches[i]
 		if m["home"] == "" or m["away"] == "":
 			continue
-		ready.append(m)
-		sims.append(match_sim(m["home"], m["away"], finals_seed(i), finals_at_home(m), true,
+		ready.append([i, m])
+	return ready
+
+
+func _finals_sims(ready: Array) -> Array:
+	var sims := []
+	for pair in ready:
+		var m: Dictionary = pair[1]
+		sims.append(match_sim(m["home"], m["away"], finals_seed(int(pair[0])), finals_at_home(m), true,
 				weather_for(m["home"], m["away"], REGULAR_ROUNDS + int(finals["week"]), m)))
-	var played := run_all(sims)
+	return sims
+
+
+func play_finals_week() -> Array:
+	if finals.is_empty() or bool(finals["done"]):
+		return []
+	var ready := _finals_ready()
+	var played := _take_early("f%d" % int(finals["week"]))
+	if played.is_empty():
+		played = run_all(_finals_sims(ready))
 	for i in range(played.size()):
-		record_final(ready[i], played[i])
+		record_final(ready[i][1], played[i])
 	complete_finals_week(played)
 	return played
 

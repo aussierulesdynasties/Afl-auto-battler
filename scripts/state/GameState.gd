@@ -3215,12 +3215,44 @@ func ensure_finals() -> void:
 		season.start_finals()
 
 
+## advance_async ran this week's steps before the matches and started them.
+var _prepped := false
+
+
+## advance() with the week's matches run on threads while the screen keeps
+## drawing frames: the loading cover's set shot plays on (in a browser too,
+## where nothing draws until the game hands control back). Same steps, same
+## matches, same order, so the same results as advance().
+func advance_async() -> String:
+	if season == null:
+		return advance()
+	_advance_prep()
+	_prepped = true
+	ensure_finals()          # a no-op before the finals; advance() does it first there too
+	var job := season.start_week()
+	while Season.running(job):
+		await get_tree().process_frame
+	return advance()
+
+
 ## Play the next round (or finals week). Returns the phase it played.
 func advance() -> String:
 	# Season.beat() between the steps, as in _restore_career: the cover's ball
 	# keeps moving through Sim the week and a skip.
 	if season == null:
 		return "none"
+	if _prepped:
+		_prepped = false
+	else:
+		_advance_prep()
+	last_results = []
+	last_match = {}
+	last_pos_before = my_position()
+	return _advance_play()
+
+
+## The week's steps before its matches.
+func _advance_prep() -> void:
 	recruit_undo.clear()
 	Season.beat()
 	preseason_sim_to_round1()
@@ -3239,10 +3271,10 @@ func advance() -> String:
 		_settle_usual_plans()
 	Season.beat()
 	_stamp_conditioning()
-	last_results = []
-	last_match = {}
-	last_pos_before = my_position()
 
+
+## The week's matches and everything after them.
+func _advance_play() -> String:
 	Season.beat()
 	if not season.is_regular_done():
 		last_results = season.play_round()
@@ -10737,6 +10769,20 @@ func sim_week_stops() -> Array:
 func sim_week() -> String:
 	if season == null:
 		return "none"
+	var orders := _sim_week_orders()
+	return _sim_week_after(orders, advance())
+
+
+## sim_week with the week's matches on threads while frames keep drawing.
+func sim_week_async() -> String:
+	if season == null:
+		return "none"
+	var orders := _sim_week_orders()
+	var phase: String = await advance_async()
+	return _sim_week_after(orders, phase)
+
+
+func _sim_week_orders() -> Dictionary:
 	var orders := SimOrders.defaults().merged(sim_orders, true)
 	var policy := str(orders["questions"])
 	_skip_orders = {"questions": policy if policy in ["players", "board"] else "usual"}
@@ -10744,7 +10790,10 @@ func sim_week() -> String:
 		if not my_selection().is_empty():
 			set_selection({})
 		_skip_back_kids("season")
-	var phase := advance()
+	return orders
+
+
+func _sim_week_after(orders: Dictionary, phase: String) -> String:
 	_skip_orders = {}
 	if str(orders["press"]) == "assistant":
 		skip_media_conference()
@@ -12509,6 +12558,20 @@ func skip_step(job: Dictionary) -> bool:
 	if str(_skip_orders["youth"]) == "kids":
 		_skip_back_kids(to)
 	advance()
+	job["weeks"] = int(job["weeks"]) + 1
+	return not is_sacked()
+
+
+## skip_step with the week's matches on threads while frames keep drawing.
+func skip_step_async(job: Dictionary) -> bool:
+	if bool(job.get("done", false)):
+		return false
+	var to := str(job["to"])
+	if season == null or _skip_reached(to) or int(job["weeks"]) >= 80 or is_sacked():
+		return false
+	if str(_skip_orders["youth"]) == "kids":
+		_skip_back_kids(to)
+	await advance_async()
 	job["weeks"] = int(job["weeks"]) + 1
 	return not is_sacked()
 

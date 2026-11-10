@@ -130,7 +130,7 @@ func cover(swap: Callable, text := "") -> void:
 ## the same cover.
 func run(text: String, work: Callable) -> void:
 	if not cover_on():
-		work.call()
+		await work.call()
 		return
 	if busy and _phase != Phase.REVEALING:
 		return
