@@ -56,9 +56,10 @@ run_arm a "$arm_a" "$root_a"
 wait
 secs=$(( $(date +%s) - start ))
 for l in "$out"/*.log; do grep -q "SCRIPT ERROR\|Parse Error" "$l" && { echo "worker failed: $l"; tail -20 "$l"; exit 1; }; done
-args=(--run "$out" --n "$n" --secs "$secs" --a "${arm_a:-base}${a_root:+ (from $a_root)}")
+args=(--run "$out" --n "$n" --secs "$secs" "--a=${arm_a:-base}${a_root:+ (from $a_root)}")
 b_label="${arm_b:-base}"; [ -z "$arm_b" ] && [ -n "$a_root" ] && b_label="this branch"
-[ "$paired" = 1 ] && args+=(--b "$b_label")
+# "--a=" and "--b=": a one-word label such as "--rival-traits" would read as a flag.
+[ "$paired" = 1 ] && args+=("--b=$b_label")
 python "$root/tools/balance/balance_report.py" "${args[@]}" | tee "$out/report.md"
 # Paired: the margin of side i%2 (the side --coach, --side-plan and --plan-trait set), arm B against A.
 [ "$paired" = 1 ] && python3 "$root/tools/balance/side_compare.py" "$out" | tee -a "$out/report.md"
