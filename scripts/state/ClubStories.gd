@@ -570,7 +570,7 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 			"back_out": "",
 			"fit_rank": fit_rank, "talk_case": case, "kpi": kpi,
 			"kpi_or_need": kpi if kpi != "" else need_line,
-			"explain_label": "Talk him through his season" if kpi != "" else "Tell him what he has to show",
+			"explain_label": ("Talk %s through his season" if kpi != "" else "Tell %s what he has to show") % name.split(" ")[0],
 			"talk_text": ClubLife.talk_text(case, i), "verdict": str(i.get("verdict", "")),
 			"job": str(i.get("job", "")), "need": str(i.get("need", "")),
 			"sore_odds": ClubLife.odds(Injuries.chance(sore)),
