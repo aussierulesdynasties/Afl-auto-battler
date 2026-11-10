@@ -89,19 +89,22 @@ func _tip_title(host: Node, tip: String) -> String:
 ## Close every tip over host the way a finger does: its Got it, else Back.
 func _close_tips(host: Node) -> void:
 	for i in range(4):
-		var ok: Button = host.find_child("*IntroOk", true, false)
-		if ok == null:
-			ok = host.find_child("FinishOnboarding", true, false)
-		if ok == null:
-			var training_ok: Button = host.find_child("TrainingIntroOk", true, false)
-			ok = training_ok
+		var ok: Button = null
+		for pattern in ["*IntroOk", "FinishOnboarding"]:
+			for b in host.find_children(pattern, "Button", true, false):
+				if not b.is_queued_for_deletion() and b.is_visible_in_tree():
+					ok = b
+					break
+			if ok != null:
+				break
 		if ok == null:
 			if not _tips(host).is_empty() and host.has_method("handle_back"):
 				host.handle_back()
 				await _settle()
 			return
+		var what := str(ok.name)
 		var why: String = await Tap.tap(ok)
-		_check(why == "", "%s takes a finger's tap (%s)" % [ok.name, why])
+		_check(why == "", "%s takes a finger's tap (%s)" % [what, why])
 		await _settle()
 
 
@@ -176,15 +179,20 @@ func _gone(n: Node) -> void:
 ## Initial draft, the pre-season and the first week's screens.
 func _walk_initial_draft_and_week() -> void:
 	_fresh_device(true)
+	_state.interview_due = true   # Main._start_new_career: a new career opens with the interview
 	await _initial_draft("initial draft")
-	var hub := await _hub("weekly loop", "Hub, first visit (pre-season)")
-	_check(not _tips(hub).is_empty(), "The first hub shows its weekly-loop tip")
-	await _close_tips(hub)
-	await _gone(hub)
+	# The draft's Start season goes to the hub, which sends a new coach to his
+	# appointment interview, then to the pre-season screen until Round 1.
+	await _visit("weekly loop", "Appointment interview", "res://scenes/InterviewScene.tscn")
+	_state.interview_due = false
 	var pre := await _visit("weekly loop", "Pre-season", "res://scenes/PreSeasonScene.tscn")
 	_check(not pre.is_empty(), "The pre-season shows its tip")
 	# Into Round 1, as the pre-season's last stop does.
-	_state.preseason = {}
+	_state.preseason["done"] = true
+	var hub := await _hub("weekly loop", "Hub, first visit (Round 1)")
+	_check(_tips(hub).has("WeeklyLoopIntro"), "The first hub shows its weekly-loop tip")
+	await _close_tips(hub)
+	await _gone(hub)
 	for v in WEEK:
 		var tips := await _visit("weekly loop", str(v[0]).capitalize(), str(v[1]))
 		_check(not tips.is_empty(), "%s shows its tip on a fresh save" % v[0])
@@ -217,16 +225,23 @@ func _season_to_finals(rank: int) -> void:
 	_state.week_events = []
 
 
-func _new_season_career(mode: String) -> void:
+## A fresh device and career at Round 1, its first hub visit made (the
+## weekly-loop tip read), as any coach meets it before the finals.
+func _new_season_career(mode: String, first_hub := true) -> void:
 	_fresh_device(true)
 	_state.start_season(CLUB, _db.club_list(CLUB))
 	_walk(mode, "Fresh device, new career at %s, Tutorials on" % CLUB)
+	if not first_hub:
+		return
+	var hub := await _hub(mode, "Hub, Round 1")
+	await _close_tips(hub)
+	await _gone(hub)
 
 
 ## The first postseason: finals played from the hub, then each stop in order.
 func _walk_first_postseason() -> void:
 	var mode := "first postseason"
-	_new_season_career(mode)
+	await _new_season_career(mode)
 	_season_to_finals(1)
 	var guard := 0
 	while not _state.season.is_season_over() and guard < 8:
@@ -256,11 +271,16 @@ func _walk_first_postseason() -> void:
 	_walk(mode, "Talk contract (own player): %s" % ", ".join(_tips(s).map(func(t): return _tip_title(s, t))))
 	_check(_tips(s).has("ContractsIntro"), "Talks open the contract tip")
 	await _close_tips(s)
-	s.call("_close_talks")
-	var tab: Button = s.find_child("Tab_trade", true, false)
-	if tab != null:
-		await Tap.tap(tab)
+	var cancel: Button = s.find_child("CancelTalks", true, false)
+	if cancel != null:
+		_check((await Tap.tap(cancel)) == "", "Cancel closes the talks")
 		await _settle()
+	var tab: Button = s.find_child("Tab_trade", true, false)
+	var tapped := "no Trade tab"
+	if tab != null:
+		tapped = await Tap.tap(tab)
+		await _settle()
+	_check(tapped == "", "The Trade tab takes a tap (%s)" % tapped)
 	_walk(mode, "Trade tab: %s" % ", ".join(_tips(s).map(func(t): return _tip_title(s, t))))
 	_check(_tips(s).has("TradeIntro"), "The Trade tab opens the trade tip")
 	await _close_tips(s)
@@ -302,7 +322,7 @@ func _walk_first_postseason() -> void:
 ## hub, and the postseason tip waits for the Grand Final's results.
 func _walk_early_elimination() -> void:
 	var mode := "early elimination"
-	_new_season_career(mode)
+	await _new_season_career(mode)
 	_season_to_finals(8)
 	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
@@ -327,24 +347,29 @@ func _walk_early_elimination() -> void:
 		await Tap.tap(last)
 		await _settle()
 	_walk(mode, "Grand Final results closed: %s" % ", ".join(_tips(hub).map(func(t): return _tip_title(hub, t))))
-	_check(_tips(hub).has("PostseasonIntro"), "The postseason tip opens after the last results")
+	if not _tips(hub).has("PostseasonIntro"):
+		# Say what holds it back, so the record is honest about the order.
+		_walk(mode, "Held back by: season over %s, press conference %s, season wrap %s" % [
+				_state.season.is_season_over(), _state.media_conference_pending(), _state.needs_season_wrap()])
+		await _gone(hub)
+		if _state.media_conference_pending():
+			_walk(mode, "The press conference after the Grand Final comes first (skipped here)")
+			_state.skip_media_conference()
+		hub = await _hub(mode, "Hub after the press conference")
+	_check(_tips(hub).has("PostseasonIntro"), "The postseason tip opens once the finals are over")
 	await _gone(hub)
 
 
 ## Save half-way through the tips, quit, load: seen stays seen, unseen still due.
 func _walk_reload() -> void:
 	var mode := "reload"
-	_new_season_career(mode)
-	_state.open_preseason(false)
-	var hub := await _hub(mode, "Hub, first visit")
-	await _close_tips(hub)
-	await _gone(hub)
+	await _new_season_career(mode)
 	await _visit(mode, "Selection", "res://scenes/SelectionScene.tscn")
 	_check(_state.save_career(), "The career saves")
 	_state.reset()
 	_check(_state.load_career(), "The career loads")
 	_walk(mode, "Saved and loaded; Tutorials still %s" % ("on" if _state.tutorials_on() else "off"))
-	hub = await _hub(mode, "Hub after reload")
+	var hub := await _hub(mode, "Hub after reload")
 	_check(_tips(hub).is_empty(), "The weekly-loop tip doesn't come back after a reload")
 	await _gone(hub)
 	var sel := await _visit(mode, "Selection after reload", "res://scenes/SelectionScene.tscn")
@@ -358,7 +383,7 @@ func _walk_reload() -> void:
 ## screen still has its tip. Skipping help never skips a football decision.
 func _walk_skip() -> void:
 	var mode := "skip"
-	_new_season_career(mode)
+	await _new_season_career(mode, false)
 	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 	root.add_child(hub)
 	await _settle()
@@ -397,7 +422,7 @@ func _walk_off() -> void:
 ## doesn't reset what was seen, and no control re-opens a seen tip.
 func _walk_replay() -> void:
 	var mode := "replay"
-	_new_season_career(mode)
+	await _new_season_career(mode)
 	await _visit(mode, "Selection", "res://scenes/SelectionScene.tscn")
 	_state.set_tutorials_on(false)
 	_state.set_tutorials_on(true)
