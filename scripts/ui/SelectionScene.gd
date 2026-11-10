@@ -122,13 +122,15 @@ func _build() -> void:
 ## "Confirm side" ticks the Hub checklist's "Look over the side" job
 ## (director, 2026-11-03: an explicit button, not merely opening Team). It
 ## sits at the end of the Interchange row, beside Save as my Best 23, so it
-## adds no height: Team selection never scrolls as a page. null once the
-## season is over.
-func _confirm_button() -> Button:
+## adds no height: Team selection never scrolls as a page. Its words are no
+## wider than "Confirm side" (a phone's row has no room to grow: "Confirmed"
+## once pressed, "Confirm" while Undo shares the row). null once the season
+## is over.
+func _confirm_button(short := false) -> Button:
 	if GameState.season.is_season_over():
 		return null
 	var done := WeekChecklist.is_done(GameState, "team")
-	var b := UiKit.btn("Side confirmed" if done else "Confirm side", UiKit.SECONDARY, not done)
+	var b := UiKit.btn("Confirmed" if done else ("Confirm" if short else "Confirm side"), UiKit.SECONDARY, not done)
 	b.name = "ConfirmSide"
 	b.custom_minimum_size = Vector2(0, 44)
 	b.disabled = done
@@ -218,7 +220,7 @@ func _fill_actions(actions: HBoxContainer) -> void:
 			_notice = "Back to your side before the auto-pick."
 			_build())
 		actions.add_child(undo)
-	var confirm := _confirm_button()
+	var confirm := _confirm_button(not _undo.is_empty())
 	if confirm != null:
 		var gap := Control.new()
 		gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL

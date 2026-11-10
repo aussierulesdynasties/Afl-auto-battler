@@ -197,12 +197,19 @@ func _test_hub_row() -> void:
 	if bc != null:
 		_check(str((bc as Button).tooltip_text) == str(WC.big_call(_state).get("text", "")),
 				"The row is this week's call")
+		# The Hub's count covers every "To do" row, the open call included.
+		var open_jobs := 0
+		for it in WC.items(_state):
+			if not bool(it["done"]):
+				open_jobs += 1
+		var head := current_scene.find_child("WeekJobsHead", true, false) as Label
+		_check(WC.left(_state) == open_jobs + 1 and head != null and head.text.ends_with("%d to do" % (open_jobs + 1)),
+				"The Hub counts the open big call with the jobs (%s)" % (head.text if head != null else "no head"))
 		# A real finger on the call reaches its screen (row 51).
 		var route := str(WC.big_call(_state).get("route", ""))
 		var size := root.size
 		root.size = Vector2i(390, 844)
-		for i in range(4):
-			await process_frame
+		await Tap.steady(current_scene.find_child("BigCall", true, false) as Control)
 		var why: String = await Tap.tap(current_scene.find_child("BigCall", true, false) as Control)
 		for i in range(8):
 			await process_frame

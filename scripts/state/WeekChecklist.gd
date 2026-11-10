@@ -90,9 +90,11 @@ static func items(gs) -> Array:
 	return out
 
 
-## How many of this week's jobs are still open.
+## How many of this week's jobs are still open, the big call included: the
+## Hub counts every "To do" row it shows.
 static func left(gs) -> int:
-	var n := 0
+	var call := big_call(gs)
+	var n := 0 if call.is_empty() or bool(call.get("done", false)) else 1
 	for it in items(gs):
 		if not bool(it["done"]):
 			n += 1

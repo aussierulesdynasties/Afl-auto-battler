@@ -54,21 +54,25 @@ func _run() -> void:
 	await _frames(8)
 	router.go("hub")
 	await _frames(20)
-	_close_intros()
+	await _close_intros()
 	await _frames(20)
-	_show("WeekJobs")
+	await Tap.steady(_find("WeekJobs"))
+	_save(out + "_0_hub_top.png")
+	await _show("WeekJobs")
 	await _frames(10)
 	_save(out + "_1_hub.png")
-	print("tap job: '%s'" % await Tap.tap(_find("WeekJob_team")))
+	await _tap("WeekJob_team")
 	await _frames(20)
-	_close_intros()
+	await _frames(20)
+	await _close_intros()
 	await _frames(10)
-	_show("ConfirmSide")
+	await _show("ConfirmSide")
 	await _frames(10)
 	_save(out + "_2_team.png")
-	print("tap confirm: '%s'" % await Tap.tap(_find("ConfirmSide")))
+	await _tap("ConfirmSide")
 	await _frames(20)
-	_show("ConfirmSide")
+	await _frames(20)
+	await _show("ConfirmSide")
 	await _frames(10)
 	_save(out + "_3_confirmed.png")
 	router.stack = []
@@ -76,23 +80,43 @@ func _run() -> void:
 	await _frames(8)
 	router.go("hub")
 	await _frames(20)
-	_close_intros()
-	_show("WeekJobs")
+	await _close_intros()
+	await _show("WeekJobs")
 	await _frames(10)
 	_save(out + "_4_hub_done.png")
 	print("route now: %s" % router.current())
 	quit()
 
 
+## A real tap (tests/tap.gd). The suites prove taps headless at phone size;
+## this window has no focus, so a miss here falls back to the button's own
+## press and says so, to keep the frames coming.
+func _tap(n: String) -> void:
+	var c := _find(n)
+	await Tap.steady(c)
+	var why: String = await Tap.tap(c)
+	print("tap %s: %s" % [n, "ok" if why == "" else why])
+	if why != "" and c is BaseButton and is_instance_valid(c):
+		(c as BaseButton).emit_signal("pressed")
+
+
 func _find(n: String) -> Control:
-	return current_scene.find_child(n, true, false) as Control
+	return root.find_child(n, true, false) as Control
 
 
-## The first-visit intro is answered, as a returning player has.
+## The first-visit intro is answered, as a returning player has, and any week
+## event that pops up is put off with "Later" so the list underneath shows.
 func _close_intros() -> void:
-	for b in root.find_children("*", "Button", true, false):
-		if (b as Button).text == "Got it" and (b as Button).is_visible_in_tree():
-			(b as Button).emit_signal("pressed")
+	for i in range(4):
+		var hit := false
+		for b in root.find_children("*", "Button", true, false):
+			var t := (b as Button).text
+			if (t == "Got it" or t == "Later") and (b as Button).is_visible_in_tree():
+				(b as Button).emit_signal("pressed")
+				hit = true
+		if not hit:
+			return
+		await _frames(8)
 
 
 ## Scroll so `n` is on screen, as a player reading down would.
@@ -101,16 +125,28 @@ func _show(n: String) -> void:
 	if c == null:
 		print("missing: " + n)
 		return
+	await Tap.steady(c)
 	var p := c.get_parent()
 	while p != null:
 		if p is ScrollContainer:
 			(p as ScrollContainer).ensure_control_visible(c)
-			return
+			break
 		p = p.get_parent()
+	await Tap.steady(c)
 
 
+## Frames, then however long the screen wipe (ScreenTransition) still runs:
+## a windowed run plays it at real speed, so a fixed frame count can land
+## under the cover.
 func _frames(n: int) -> void:
 	for i in range(n):
+		await process_frame
+	var wipe := root.get_node_or_null("ScreenTransition")
+	var guard := 0
+	while wipe != null and bool(wipe.get("busy")) and guard < 600:
+		await process_frame
+		guard += 1
+	for i in range(6):
 		await process_frame
 
 
