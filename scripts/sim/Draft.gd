@@ -578,9 +578,10 @@ func _draft_pick(code: String, p: Dictionary) -> bool:
 	if not _can_afford_for(code, p):
 		return false
 
+	var paid := price_for(code, p)
 	picked[id] = p
 	club_lists[code].append(p)
-	club_spend[code] = int(club_spend[code]) + int(p["value"])
+	club_spend[code] = int(club_spend[code]) + paid
 	if code == user_club:
 		order.append(id)
 	var entry := {
@@ -594,7 +595,7 @@ func _draft_pick(code: String, p: Dictionary) -> bool:
 		"player_name": str(p.get("generic_name", p.get("name", "Player"))),
 		"role": Ratings.role_tag(p),
 		"overall": int(p["overall"]),
-		"value": int(p["value"]),
+		"value": paid,
 		"source_club": str(p["club"]),
 	}
 	pick_history.append(entry)
@@ -786,7 +787,7 @@ static func _match_player(pi: int, pairs: Array, slots: Array, holder: Array, se
 
 
 func _can_afford_for(code: String, p: Dictionary) -> bool:
-	return int(p["value"]) <= usable_cap_for(code)
+	return price_for(code, p) <= usable_cap_for(code)
 
 
 ## What a club can spend on its next pick: the cap it has left, less enough to
@@ -1099,8 +1100,13 @@ func club_eval_sd(code: String) -> float:
 ## This club's opinion of the player, minus the shared worth. 0 for your club
 ## and outside the career draft.
 func _eval_error(code: String, p: Dictionary) -> float:
-	if intake_mode or code == user_club or not league_mode:
+	if intake_mode or not league_mode:
 		return 0.0
+	# Your club's opinion is your recruiters' read (row T1.R26 L1, director
+	# 2026-11-10: "everything follows the read"), so Pick for me and your price
+	# see what you see.
+	if code == user_club:
+		return float(int(user_view(p)["overall_mid"]) - int(p.get("overall", 50)))
 	var sd := club_eval_sd(code)
 	if sd <= 0.0:
 		return 0.0
@@ -1175,6 +1181,41 @@ func user_view(p: Dictionary) -> Dictionary:
 	return {"scouted": true, "overall": [maxi(1, ov_mid - half), mini(99, ov_mid + half)],
 			"potential": [maxi(ov_mid, pot_mid - half - 1), mini(99, pot_mid + half + 1)],
 			"overall_mid": ov_mid, "potential_mid": pot_mid}
+
+
+## What `code` pays for him: his true salary, the same for every club at
+## every scouting level. In Redraft mode's initial redraft every salary is
+## clear, never blurred by scout prowess (director 2026-11-10: "in redraft mode
+## the salaries shouldnt be obscured by scout prowess ... all salaries must be
+## clear"). Row T1.R26 L1 (everything follows the read) still moves what you
+## see of his ratings, traits and Pick for me; never his salary.
+func price_for(_code: String, p: Dictionary) -> int:
+	return int(p["value"])
+
+
+## Your price for him (price_for your club).
+func price(p: Dictionary) -> int:
+	return price_for(user_club, p)
+
+
+## A player as your scouts see him (row T1.R26 L1, "everything follows the
+## read"): every rating moved by the read's miss on his OVR, so his strengths,
+## traits and full ratings miss exactly as often as the OVR range does. Only
+## what you see uses it; the player underneath never changes. `p` itself when
+## your read of him is exact.
+func scouted_copy(p: Dictionary) -> Dictionary:
+	var view := user_view(p)
+	if not bool(view["scouted"]) or not p.has("attr"):
+		return p
+	var shift := float(int(view["overall_mid"]) - int(p.get("overall", 50)))
+	var c := p.duplicate(true)
+	var attr: Dictionary = c["attr"]
+	for k in attr.keys():
+		var moved := clampf(float(attr[k]) + shift, 1.0, 99.0)
+		attr[k] = roundi(moved) if typeof(attr[k]) == TYPE_INT else moved
+	c["overall"] = int(view["overall_mid"])
+	c["potential"] = int(view["potential_mid"])
+	return c
 
 
 ## user_view for a whole board at once, by id, so a sort reads each once.
@@ -1397,7 +1438,7 @@ func _replacement(code: String, role: String) -> float:
 func _cap_penalty(code: String, p: Dictionary) -> float:
 	if intake_mode:
 		return 0.0
-	var salary := int(p["value"])
+	var salary := price_for(code, p)
 	var value := Contracts.salary_score(salary)
 	var spots_after := target_size - count_for(code) - 1
 	if spots_after <= 0:
@@ -1552,7 +1593,7 @@ func release_for_room(id: String) -> bool:
 	(club_lists[user_club] as Array).erase(p)
 	picked.erase(id)
 	order.erase(id)
-	club_spend[user_club] = int(club_spend[user_club]) - int(p["value"])
+	club_spend[user_club] = int(club_spend[user_club]) - price_for(user_club, p)
 	var entry: Dictionary = _pick_by_player.get(id, {})
 	entry["released"] = true
 	_pick_by_player.erase(id)
@@ -1589,9 +1630,9 @@ func pick_block_reason(p: Dictionary) -> String:
 		if not _can_afford_for(user_club, p):
 			var slots_after := target_size - count() - 1
 			if slots_after <= 0:
-				return "Not enough salary cap: he costs %s and you have %s left." % [Contracts.money(int(p["value"])), Contracts.money(remaining())]
+				return "Not enough salary cap: he costs %s and you have %s left." % [Contracts.money(price(p)), Contracts.money(remaining())]
 			return "This selection would leave too little salary cap to complete your list. He costs %s; you have %s left, and after keeping about %s for your other %d places, %s is free for this pick." % [
-					Contracts.money(int(p["value"])), Contracts.money(remaining()), Contracts.money(reserve_for(user_club)), slots_after, Contracts.money(maxi(0, usable_cap_for(user_club)))]
+					Contracts.money(price(p)), Contracts.money(remaining()), Contracts.money(reserve_for(user_club)), slots_after, Contracts.money(maxi(0, usable_cap_for(user_club)))]
 		var forced := _forced_role(user_club)
 		if forced != "" and not Ratings.plays_role(p, forced):
 			return "Your remaining places must go to rucks: every list needs two."
@@ -1736,9 +1777,16 @@ func board(role := "", club := "", search := "", sort := "overall",
 			else:
 				out.sort_custom(func(a, b): return a["overall"] > b["overall"])
 		"value":
+			# Lowest cost at your price, then your read (L1: never the truth).
+			var cost := {}
+			for pl in out:
+				cost[pl["id"]] = price(pl)
+			var read := _views(out) if league_mode and not intake_mode else {}
 			out.sort_custom(func(a, b):
-				if a["value"] != b["value"]:
-					return int(a["value"]) < int(b["value"])
+				if cost[a["id"]] != cost[b["id"]]:
+					return int(cost[a["id"]]) < int(cost[b["id"]])
+				if not read.is_empty():
+					return int(read[a["id"]]["overall_mid"]) > int(read[b["id"]]["overall_mid"])
 				return a["overall"] > b["overall"])
 		"name":
 			out.sort_custom(func(a, b): return GameDB.player_sort_name(a) < GameDB.player_sort_name(b))

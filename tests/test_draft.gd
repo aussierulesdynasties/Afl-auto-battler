@@ -458,7 +458,7 @@ func _career_draft(seed: int) -> Draft:
 func _cheapest_legal(d: Draft) -> Dictionary:
 	var best := {}
 	for p in d.pool:
-		if d.can_pick_player(p) and (best.is_empty() or int(p["value"]) < int(best["value"])):
+		if d.can_pick_player(p) and (best.is_empty() or d.price(p) < d.price(best)):
 			best = p
 	return best
 
@@ -471,8 +471,8 @@ func _test_cap_guard() -> void:
 	var p := _cheapest_legal(d)
 	var real_spend := int(d.club_spend[me])
 	# Exactly at the boundary: this pick leaves precisely the reserve.
-	d.club_spend[me] = d.budget - d.reserve_for(me) - int(p["value"])
-	_check(d.usable_cap_for(me) == int(p["value"]) and d.can_pick_player(p),
+	d.club_spend[me] = d.budget - d.reserve_for(me) - d.price(p)
+	_check(d.usable_cap_for(me) == d.price(p) and d.can_pick_player(p),
 			"A pick that leaves exactly enough to fill the list is allowed")
 	d.club_spend[me] = int(d.club_spend[me]) + 1
 	_check(not d.can_pick_player(p) and d.pick_block_reason(p).begins_with("This selection would leave too little salary cap"),
@@ -818,8 +818,37 @@ func _test_scouted_league_board() -> void:
 		if draft.can_pick_player(p):
 			pick = p
 			break
+	# L1 (row T1.R26, director 2026-11-10): his ratings follow the read; his
+	# salary never does ("salary shouldn't be obscure, it should be clearly
+	# displayed"), and it is the same for every club.
+	var price_ok := true
+	var copy_ok := true
+	for p in board.slice(0, 60):
+		var v := draft.user_view(p)
+		price_ok = price_ok and draft.price(p) == int(p["value"]) and draft.price_for("CAR", p) == int(p["value"])
+		var seen := draft.scouted_copy(p)
+		var shift := int(v["overall_mid"]) - int(p["overall"])
+		for k in (p["attr"] as Dictionary).keys():
+			var want := clampf(float(p["attr"][k]) + shift, 1.0, 99.0)
+			copy_ok = copy_ok and absf(float(seen["attr"][k]) - want) <= 0.5
+		copy_ok = copy_ok and int(seen["overall"]) == int(v["overall_mid"])
+	_check(price_ok, "His price is his real salary, the same for every club, whatever the read")
+	# ...and at every scouting level: the redraft's salaries are never blurred.
+	var levels_ok := true
+	var keep := draft.scouting_mults.duplicate()
+	for lvl in range(4):
+		draft.scouting_mults[draft.user_club] = ClubBudget.scouting_mult(lvl)
+		for p in board.slice(0, 60):
+			levels_ok = levels_ok and draft.price(p) == int(p["value"])
+	draft.scouting_mults = keep
+	_check(levels_ok, "A redraft salary is the same at every scouting level")
+	_check(copy_ok, "His ratings as you see them miss by exactly what his OVR read misses by")
+	var spent_before := draft.spent_for(draft.user_club)
+	var shown := draft.price(pick) if not pick.is_empty() else 0
 	_check(not pick.is_empty() and draft.pick(pick), "(setup) you draft a player")
 	if not pick.is_empty():
+		_check(draft.spent_for(draft.user_club) - spent_before == shown,
+				"You are charged the price you were shown (%d)" % shown)
 		var v := draft.user_view(pick)
 		_check(not bool(v["scouted"]) and int(v["overall_mid"]) == int(pick["overall"]),
 				"Once drafted he is known exactly")
