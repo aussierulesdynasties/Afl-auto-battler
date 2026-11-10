@@ -1372,13 +1372,24 @@ static func _choice_box(on: bool) -> StyleBoxFlat:
 	return sb
 
 
+## The club whose colours the screens wear: yours, or during the League
+## redraft the club you have chosen to draft for, which DraftScene sets here
+## because GameState.my_club stays empty until the season starts (director
+## 2026-11-10: the board takes the club's colour as soon as it is chosen).
+## Only colour reads it; nothing about the career does.
+static var club_override := ""
+
+
+static func my_club() -> String:
+	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
+	var club := str(gs.my_club) if gs != null else ""
+	return club if club != "" else club_override
+
+
 ## Your club's colour for what you act on: its most vivid colour that shows,
 ## or the accent when it has none (a black-and-white club) or no club yet.
 static func team_colour() -> Color:
-	var club := ""
-	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
-	if gs != null:
-		club = str(gs.my_club)
+	var club := my_club()
 	if club == "" or not GameDB.clubs.has(club):
 		return ACCENT
 	# The most vivid of its colours that is neither near black nor near white
@@ -1401,16 +1412,14 @@ static func team_colour() -> Color:
 ## club's readable ink; plain TEXT for a club with no hue or before a club exists.
 ## Club red is fine here (director, 2026-11-04).
 static func label_ink() -> Color:
-	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
-	var club := str(gs.my_club) if gs != null else ""
+	var club := my_club()
 	if club == "" or not GameDB.clubs.has(club):
 		return TEXT
 	return club_ink(club)
 
 
 static func team_wash() -> Color:
-	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
-	var club := str(gs.my_club) if gs != null else ""
+	var club := my_club()
 	if club != "" and GameDB.clubs.has(club) and club_is_black(club):
 		return ClubBackdrop.lifted(club_black(club))
 	return team_colour()
@@ -1422,8 +1431,7 @@ static func team_wash() -> Color:
 ## 2026-11-08, "Grey buttons too").
 const BLACK_CLUB_BUTTON_LUM := 0.38
 static func team_button() -> Color:
-	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
-	var club := str(gs.my_club) if gs != null else ""
+	var club := my_club()
 	if club != "" and GameDB.clubs.has(club) and club_is_black(club):
 		return ClubBackdrop.lifted(club_black(club), BLACK_CLUB_BUTTON_LUM)
 	return team_colour()
@@ -1752,8 +1760,8 @@ static func top_bar(title_text: String, back := true, right: Control = null,
 	# STYLE-05 header (row 6.34): a short 2 px rule in your club's ink under
 	# the title (guide 2.2, "a 2 px club rule under a heading"); none before a
 	# club exists, so Main and the new-career screens keep a plain title.
-	var gs = Engine.get_main_loop().root.get_node_or_null("GameState") if Engine.get_main_loop() is SceneTree else null
-	if gs != null and str(gs.my_club) != "" and GameDB.clubs.has(str(gs.my_club)):
+	var my := my_club()
+	if my != "" and GameDB.clubs.has(my):
 		var stack := vbox(2)
 		stack.name = "TopBarTitle"
 		stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1762,7 +1770,7 @@ static func top_bar(title_text: String, back := true, right: Control = null,
 		var rule := ColorRect.new()
 		rule.name = "TopBarRule"
 		# The club's readable ink, not its wash: a deep purple rule vanished on Fremantle's backdrop.
-		rule.color = club_ink(str(gs.my_club))
+		rule.color = club_ink(my)
 		rule.custom_minimum_size = Vector2(48, 2)
 		rule.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
