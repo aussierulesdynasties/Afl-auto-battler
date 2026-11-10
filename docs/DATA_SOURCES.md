@@ -22,6 +22,28 @@ matches would get `?` (unknown) rather than zero; none does today. When the
 rating model changes, merge only the columns you mean to refresh: a full
 re-run also re-rates past `seasons`, which moves POT.
 
+## Legacy mode, the 2010s (tools/legacy_2010s/, row 142)
+
+`data/legacy/2010s/` (lists, drafts, moves, ladders and season totals, 2009-2019) comes from
+these free public pages, fetched 2026-11-10 into a local cache by
+`tools/legacy_2010s/fetch.py`. Details, counts and gaps:
+[research/LEGACY_2010S_MANIFEST.md](research/LEGACY_2010S_MANIFEST.md).
+
+- Draftguru lists: `https://www.draftguru.com.au/lists/<year>/<club>` (2010-2019): list type,
+  DOB, height, games, goals, votes, origin, first draft. Its "Grade" is not copied.
+- Draftguru years: `https://www.draftguru.com.au/years/<year>` (1986-2019): every pick, trade
+  and signing with its flag.
+- Draftguru players: `https://www.draftguru.com.au/players/<slug>/<n>`: each player's
+  movements, for how he joined a club and where a move came from.
+- AFL Tables: `https://afltables.com/afl/stats/<year>.html` (season totals),
+  `https://afltables.com/afl/seas/<year>.html` (ladder), player bios under
+  `https://afltables.com/afl/stats/players/` (weight).
+- Squiggle API: `https://api.squiggle.com.au/?q=standings;year=<year>` and
+  `?q=games;year=<year>` (ladder and finals).
+- Wikipedia: `https://en.wikipedia.org/wiki/<year>_AFL_draft` (2009-2019: rounds, notes,
+  free agency, compensation), `https://en.wikipedia.org/wiki/Rookie_list` and
+  `https://en.wikipedia.org/wiki/AFL_draft` (list limits).
+
 ## What we have vs wishlist
 
 Base: `data/players_2026.csv` — 669 players, season totals only:
