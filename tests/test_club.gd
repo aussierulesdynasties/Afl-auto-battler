@@ -1941,16 +1941,17 @@ func _test_fact_talks() -> void:
 
 ## Row 115 (T5.r117): the board goal follows the list's pre-season rank, and
 ## the middle band scales with the number of clubs. The bands checked here are
-## the row 115 PROPOSAL, pending the director's T9.Q20 answer: finish outside
-## the bottom third (top 12 of 18, top 13 of 20, top 14 of 21), the finals band
-## kept at the top seven lists, seven wins unscaled. Change them with the ruling.
+## the director's T9.Q20 ruling (2026-11-10, row 148): the middle goal is 12th or
+## better at 18 clubs, worded "Stay out of the bottom six" (13th of 20 and 14th of
+## 21 are "the bottom seven"), never a third of the ladder; the finals
+## band stays at the top seven lists, seven wins unscaled.
 func _test_goal_follows_rank_by_clubs() -> void:
 	var want := {
-		18: {1: "Make the finals", 7: "Make the finals", 8: "Finish in the top 12", 12: "Finish in the top 12",
+		18: {1: "Make the finals", 7: "Make the finals", 8: "Stay out of the bottom six", 12: "Stay out of the bottom six",
 			13: "Win at least 7 games", 18: "Win at least 7 games"},
-		20: {7: "Make the finals", 8: "Finish in the top 13", 13: "Finish in the top 13", 14: "Win at least 7 games"},
-		21: {1: "Make the finals", 7: "Make the finals", 8: "Finish in the top 14", 12: "Finish in the top 14",
-			14: "Finish in the top 14", 15: "Win at least 7 games", 21: "Win at least 7 games"},
+		20: {7: "Make the finals", 8: "Stay out of the bottom seven", 13: "Stay out of the bottom seven", 14: "Win at least 7 games"},
+		21: {1: "Make the finals", 7: "Make the finals", 8: "Stay out of the bottom seven", 12: "Stay out of the bottom seven",
+			14: "Stay out of the bottom seven", 15: "Win at least 7 games", 21: "Win at least 7 games"},
 	}
 	var cases := 0
 	var wrong := []
@@ -1987,8 +1988,46 @@ func _test_goal_follows_rank_by_clubs() -> void:
 	var r1 := ClubLife.goal_reason(ClubLife.board_goal(1, 2, 18), 1, 18)
 	_check(r6.begins_with("Going into the season your list ranked 6th of 18 on paper") and r6.contains("finals"),
 			"The board says where the list ranks (%s)" % r6)
-	_check(r14.begins_with("Going into the season your list ranked 14th of 21 on paper") and r14.contains("bottom third"),
-			"At 21 clubs the middle goal says why: out of the bottom third (%s)" % r14)
+	_check(r14 == "Going into the season your list ranked 14th of 21 on paper, in the middle of the pack: the board wants it out of the bottom seven.",
+			"At 21 clubs the middle goal says why: out of the bottom seven (%s)" % r14)
+	var r10 := ClubLife.goal_reason(ClubLife.board_goal(10, 0, 18), 10, 18)
+	var r13 := ClubLife.goal_reason(ClubLife.board_goal(13, 0, 20), 13, 20)
+	_check(r10 == "Going into the season your list ranked 10th of 18 on paper, in the middle of the pack: the board wants it out of the bottom six.",
+			"At 18 clubs the board wants the list out of the bottom six (%s)" % r10)
+	_check(r13 == "Going into the season your list ranked 13th of 20 on paper, in the middle of the pack: the board wants it out of the bottom seven.",
+			"At 20 clubs the board wants the list out of the bottom seven (%s)" % r13)
+	# The words are true to the number: the places named are exactly the ones that miss the goal.
+	var true_words := true
+	for size in [[18, 12, "six"], [20, 13, "seven"], [21, 14, "seven"]]:
+		var g := ClubLife.board_goal(8, 0, int(size[0]))
+		true_words = (true_words and int(g["pos"]) == int(size[1]) and str(g["text"]) == "Stay out of the bottom %s" % size[2]
+				and ClubLife.bottom_places(int(size[0])) == "the bottom %s" % size[2]
+				and int(size[0]) - int(g["pos"]) == {"six": 6, "seven": 7}[size[2]]
+				and ClubLife.goal_met(g, int(size[1]), 0, int(size[0])) and not ClubLife.goal_met(g, int(size[1]) + 1, 22, int(size[0])))
+	_check(true_words, "The middle goal is 12th of 18, 13th of 20 and 14th of 21, and the bottom six or seven are the places that miss it")
+	# No player-facing line in the scripts or data still uses the old wording (comments are not player-facing).
+	var old_words := "bottom " + "third"
+	var stale := []
+	var scanned := 0
+	var dirs := ["res://scripts", "res://data"]
+	while not dirs.is_empty():
+		var dir_path: String = dirs.pop_back()
+		for sub_dir in DirAccess.get_directories_at(dir_path):
+			dirs.append(dir_path + "/" + sub_dir)
+		for file_name in DirAccess.get_files_at(dir_path):
+			if not (file_name.get_extension() in ["gd", "json", "tres", "tscn", "txt", "csv", "cfg"]):
+				continue
+			scanned += 1
+			var line_no := 0
+			for line in FileAccess.get_file_as_string(dir_path + "/" + file_name).split("\n"):
+				line_no += 1
+				var code := str(line).strip_edges()
+				if file_name.get_extension() == "gd" and code.begins_with("#"):
+					continue
+				if code.to_lower().contains(old_words):
+					stale.append("%s/%s:%d" % [dir_path, file_name, line_no])
+	_check(scanned > 100, "The scripts and data were read for the old wording (%d files)" % scanned)
+	_check(stale.is_empty(), "No player-facing line still says the old middle-goal wording (%s)" % str(stale))
 	_check(r21.contains("21st of 21") and r1.contains("1st of 18") and r1.contains("top four last year"),
 			"Edges read right: %s / %s" % [r1, r21])
 	var preachy := []
@@ -1999,8 +2038,23 @@ func _test_goal_follows_rank_by_clubs() -> void:
 	_check(preachy.is_empty(), "The board states its view; it never tells the coach what to do (%s)" % str(preachy))
 	_check(not ClubLife.goal_reason({"key": "top12", "pos": 12}, 0, 0).contains("on paper"),
 			"No rank on record: the old sentence, no made-up rank")
-	_check(ClubLife.match_reason(ClubLife.board_goal(10, 0, 21), "Geelong", 12, 0).contains("a top-14 finish"),
-			"After a match the board names the right ladder place")
+	# After a match the board names the middle goal in the goal's own words, at every size.
+	var weekly := []
+	for size in [[18, "six"], [20, "seven"], [21, "seven"]]:
+		var g := ClubLife.board_goal(10, 0, int(size[0]))
+		var aim := "a finish out of the bottom %s" % size[1]
+		if (ClubLife.match_reason(g, "Geelong", 12, 0) != "The win over Geelong keeps %s in reach." % aim
+				or ClubLife.match_reason(g, "Geelong", -12, 1) != "The loss to Geelong puts %s under threat." % aim
+				or ClubLife.match_reason(g, "Geelong", -12, 4) != "Four losses in a row: the board is getting restless about %s." % aim):
+			weekly.append(ClubLife.match_reason(g, "Geelong", 12, 0))
+		for margin in [12, -12]:
+			for streak in [0, 4]:
+				var said := ClubLife.match_reason(g, "Geelong", margin, streak)
+				if said.contains("top-") or not said.contains(str(g["text"]).trim_prefix("Stay out of ")):
+					weekly.append(said)
+	_check(weekly.is_empty(), "After a match the board names the middle goal as the goal line does, never a top-N finish (%s)" % str(weekly))
+	_check(ClubLife.match_reason({"key": "top12", "text": "Finish 12th or better", "pos": 12}, "Geelong", 12, 0).contains("a top-12 finish"),
+			"A goal set before the new words keeps naming its ladder place, as its goal line does")
 
 
 ## Row 115: the season's goal is set from every club's list rank among the

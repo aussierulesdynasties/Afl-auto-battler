@@ -16,8 +16,11 @@ extends RefCounted
 ##   ([{id, name, games, goals, why}]), club_records_broken ([text]),
 ##   season_hero ([{id, name, count}], with the match story on),
 ##   story_of_the_season (3 to 5 sentences, story_parts + compose) and
-##   story_parts {result, hero, match, turn, arc, legends}: "arc" stays ""
-##   until plan step 1a writes a coach-arc sentence into it and recomposes.
+##   story_parts {result, hero, match, turn, arc, legends}. "arc" is the
+##   season's shape in one sentence (row 145, SeasonTale.gd), written from
+##   arc {form, rounds, finals, angle, facts}: your results in order and the
+##   numbers the sentence uses. "" for a season with no shape to tell, and on
+##   a page written before the arc was kept.
 ##   challenge_met (the words of your own goal, Challenge.gd) only on the page
 ##   of the season it was first met.
 
@@ -37,6 +40,8 @@ const STORY_KEY := "story_of_the_season"
 ## The story's parts, kept so a later sentence (legends, a coach arc) can be
 ## added and the story told again (compose).
 const PARTS_KEY := "story_parts"
+## The season's record and the facts its arc sentence is written from (SeasonTale).
+const ARC_KEY := "arc"
 
 
 ## The season just finished, as the almanac keeps it. `gs` is GameState,
@@ -86,6 +91,8 @@ static func season_entry(gs) -> Dictionary:
 	var sh: Array = roll.get("season_hero", [])
 	if not sh.is_empty():
 		entry["season_hero"] = sh.duplicate(true)
+	entry[ARC_KEY] = SeasonTale.tell(SeasonTale.record(season.results, season.finals.get("weeks", []), my),
+			bool(entry["flag"]))
 	var digest: Dictionary = gs.match_story_digest.get(str(int(gs.season_year)), {})
 	var parts := story_parts(entry, digest)
 	entry[PARTS_KEY] = parts
@@ -364,7 +371,8 @@ static func _club_records_broken(gs, code: String) -> Array:
 # The story of the season
 # ---------------------------------------------------------------------------
 ## The story's parts (each "" or whole sentences), in order: result, hero,
-## match, arc (plan step 1a fills it; "" until then), legends (at the rollover).
+## match, arc (the season's shape, from the facts kept in entry["arc"]; "" when
+## there is none), legends (at the rollover).
 static func story_parts(entry: Dictionary, digest: Dictionary) -> Dictionary:
 	var parts := {"result": "", "hero": "", "match": "", "turn": "", "arc": "", "legends": ""}
 	var place := "%s of %d" % [ordinal(int(entry.get("ladder", 0))), int(entry.get("of", 0))]
@@ -400,6 +408,9 @@ static func story_parts(entry: Dictionary, digest: Dictionary) -> Dictionary:
 	elif not (entry.get("goalkicker", {}) as Dictionary).is_empty():
 		var gk: Dictionary = entry["goalkicker"]
 		parts["match"] = "%s kicked %d goals to lead the club." % [str(gk.get("name", "")), int(gk.get("goals", 0))]
+	var arc = entry.get(ARC_KEY, {})
+	if arc is Dictionary:
+		parts["arc"] = SeasonTale.sentence(arc, int(entry.get("year", 0)), str(entry.get("club", "")))
 	return parts
 
 

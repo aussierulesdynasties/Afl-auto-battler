@@ -1,0 +1,43 @@
+{
+	"_about": "The shape of a season in one sentence, for the almanac's story of the season (scripts/sim/SeasonTale.gd). Same shape as the career story's bank (data/tales/career.json): each angle declares the slots its phrases may use, and CareerTale.validate rejects any other. Numbers come in ready-made from the slots, so a phrase can change the words around a number but never the number. Voice: the senior coach, we/our for the club. Every phrase says a thing that happened and never whether it was good. One phrase is picked per season from the year and the club, so a season reads the same every time.",
+	"angles": {
+		"surge": {
+			"slots": ["first_rec", "split", "late_won", "late_n"],
+			"coach": [
+				"We were {first_rec} after {split} and won {late_won} of the next {late_n}.",
+				"From {first_rec} after {split}, we won {late_won} of the next {late_n}."
+			]
+		},
+		"fade": {
+			"slots": ["first_rec", "split", "late_won", "late_n"],
+			"coach": [
+				"We were {first_rec} after {split} and won {late_won} of the next {late_n}.",
+				"We were {first_rec} after {split}, then won {late_won} of the next {late_n}."
+			]
+		},
+		"run_to_flag": {
+			"slots": ["run"],
+			"coach": ["We won our last {run} games, the Grand Final the last of them."]
+		},
+		"won_first": {
+			"slots": ["run"],
+			"coach": ["We won our first {run} games."]
+		},
+		"win_run": {
+			"slots": ["run", "from"],
+			"coach": ["We won {run} in a row from {from}."]
+		},
+		"lost_first": {
+			"slots": ["run"],
+			"coach": ["We lost our first {run} games."]
+		},
+		"lost_last": {
+			"slots": ["run"],
+			"coach": ["We lost our last {run} games."]
+		},
+		"lose_run": {
+			"slots": ["run", "from"],
+			"coach": ["We lost {run} in a row from {from}."]
+		}
+	}
+}

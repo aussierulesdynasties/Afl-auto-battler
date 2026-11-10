@@ -342,8 +342,11 @@ static func set_shot_lines(o: Dictionary) -> Array:
 			return [gain(PASS_GAIN % [about_pct(pp), about_pct(float(o.get("mate_goal", 0.0)))]),
 					cost(PASS_COST % about_pct(1.0 - pp))]
 		"bomb":
-			var b := float(o.get("behind", 0.0))
-			return [gain(BOMB_GAIN % [about_pct(g), about_pct(b)]), cost(BOMB_COST % _rest_pct(g, b))]
+			# The pack's real dice (MatchSim.bomb_odds), not the figures the
+			# coach's default weighs.
+			var bg := float(o.get("show_goal", g))
+			var b := float(o.get("show_behind", o.get("behind", 0.0)))
+			return [gain(BOMB_GAIN % [about_pct(bg), about_pct(b)]), cost(BOMB_COST % _rest_pct(bg, b))]
 	var bh := float(o.get("behind", 0.0))
 	return [gain(SHOT_GAIN % [about_pct(g), about_pct(bh)]), cost(SHOT_COST % _rest_pct(g, bh))]
 

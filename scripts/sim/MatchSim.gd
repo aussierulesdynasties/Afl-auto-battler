@@ -3492,7 +3492,7 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 				_last_disp["kind"] = disposal_kind
 				if disposal_kind == "kick":
 					_kick_marked(opp, taker, fp, mark_rng.randf() < _tv("PRESS_KICK_MARKED", PRESS_KICK_MARKED)
-							* (0.6 + 0.8 * _a(taker, "intercept") / 100.0))
+							* (0.6 + 0.8 * _a(taker, "intercept") / 100.0) * _gt(side, "icept"))
 				return {"outcome": "turnover", "fp": fp, "actor": taker}
 			rushed = true
 
@@ -4021,7 +4021,9 @@ func _intercept(side: int, who, could_mark: bool, contested := false) -> void:
 	# Whether he marked it or gathered it off the spill: a better reader of
 	# the ball marks more of them. A mark is a mark: he takes the next kick
 	# (the next chain starts from him, _chain_from["marked"]).
-	if could_mark and mark_rng.randf() < 0.35 * (0.5 + _a(who, "intercept") / 100.0) * _wx("aerial"):
+	# could_mark: it came off the other side's kick inside 50, so their plan's
+	# intercept cost counts (PlanTraits "icept"), as on every intercept mark.
+	if could_mark and mark_rng.randf() < 0.35 * (0.5 + _a(who, "intercept") / 100.0) * _wx("aerial") * _gt(1 - side, "icept"):
 		_t(side, "marks")
 		_p(who, "marks")
 		_won_back["marked"] = true
@@ -4718,7 +4720,7 @@ func _clanger_taken(side: int, at: float) -> void:
 	next_side = opp
 	_prev_end = "turnover"
 	_kick_marked(opp, taker, at, rng.randf() < _tv("CLANGER_MARKED", CLANGER_MARKED)
-			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0))
+			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0) * _gt(side, "icept"))
 
 
 ## Row 89 (director, 2026-11-06, T8.Q8: midfield intercepts 1.4 a game against
@@ -4757,7 +4759,7 @@ func _mid_kick_intercept(side: int, at: float) -> Dictionary:
 			break
 	_intercept(opp, taker, false)
 	_kick_marked(opp, taker, at, mid_ic_rng.randf() < _tv("CLANGER_MARKED", CLANGER_MARKED)
-			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0))
+			* (0.6 + 0.8 * _a(taker, "intercept") / 100.0) * _gt(side, "icept"))
 	# The passage it cut short did not use all its share of the quarter: that
 	# time is played (MID_GIVE_BACK of a chain each), so the match keeps its
 	# length of play.
@@ -5705,9 +5707,14 @@ func _offer_set_shot(side: int, p_fp: float, shooter: Dictionary, defender, band
 			"detail": "%s, then he shoots from closer: %s." % [pass_words(pass_p), chance_words(mate_goal).to_lower()],
 			"goal": pass_p * mate_goal, "pass": pass_p, "mate_goal": mate_goal,
 			"mate_id": str(mate["id"])})
+	# "goal" and "behind" are what the coach's default and the Moments line
+	# weigh (_option_points), unchanged; the card shows the pack's real dice
+	# (bomb_odds) under their own keys.
+	var pack := bomb_odds(side, shooter)
 	options.append({"key": "bomb", "label": "Bomb it to the goal square",
 		"detail": "Into the pack: a forward might mark it or a crumber snap it, but more often the defence clears it.",
-		"goal": bomb_goal, "behind": 0.30})
+		"goal": bomb_goal, "behind": 0.30,
+		"show_goal": float(pack["goal"]), "show_behind": float(pack["behind"])})
 	# Each option's gain and cost with the odds it plays at (M7, director 2026-11-10).
 	for o in options:
 		var gc := GateOdds.set_shot_lines(o)
@@ -6157,6 +6164,102 @@ func _bomb(side: int, shooter: Dictionary, defender: Dictionary) -> Dictionary:
 		_end_moment_chain("behind", kick_in_fp(side), side)
 		return {"points": 1, "text": "Rushed through for a behind."}
 	return _shot_turnover(side, back, "Spoiled, and the defence gathers")
+
+
+## What a bomb to the goal square comes to before a die is rolled: the chance
+## of a goal and of a behind, from the same PACK_* numbers, players and weights
+## _bomb rolls with, averaged over who flies for it and who is at the fall of
+## the ball. For the set-shot card only. Pure: no dice, nothing changed.
+func bomb_odds(side: int, shooter: Dictionary) -> Dictionary:
+	var opp := 1 - side
+	var fwds := []
+	for p in _by_roles((squads[side] as Squad).ground, ["FWD", "RUCK"]):
+		if str(p["id"]) != str(shooter["id"]):
+			fwds.append(p)
+	var backs := _by_roles((squads[opp] as Squad).ground, ["DEF"])
+	if backs.is_empty():
+		backs = (squads[opp] as Squad).ground
+	var back: Dictionary = backs[0]
+	for p in backs:
+		if _pack_def(p) > _pack_def(back):
+			back = p
+	var dfn := _pack_def(back)
+	var ctx := _pick_ctx(side)
+	# Who flies for it, weighted as _weighted(fwds, "marking", 2.0, side, "shooter").
+	var markers := []
+	var total := 0.0
+	for p in fwds:
+		var w: float = pow(maxf(1.0, _a(p, "marking")), 2.0) * _tactic_player_mult(side, p, "shooter", ctx)
+		markers.append([p, w])
+		total += w
+	if markers.is_empty():
+		markers.append([null, 1.0])
+		total = 1.0
+	elif total <= 0.0:
+		# _pick takes the first man when nobody carries a weight.
+		markers = [[fwds[0], 1.0]]
+		total = 1.0
+	var goal := 0.0
+	var behind := 0.0
+	for row in markers:
+		var marker = row[0]
+		var share: float = float(row[1]) / total
+		if share <= 0.0:
+			continue
+		var att := 0.0 if marker == null else _a(marker, "marking")
+		var p_mark := clampf(PACK_MARK + (att - dfn) / 250.0, 0.08, 0.40) if marker != null else 0.0
+		var p_def := clampf(PACK_DEFENCE + (dfn - att) / 250.0, 0.15, 0.50)
+		var g := 0.0
+		var b := 0.0
+		if marker != null:
+			var mg := _set_goal(clampf(PACK_MARK_ACC * shot_chance(side, marker, true, false) / SET_REF, 0.5, 0.97))
+			g += p_mark * mg
+			b += p_mark * minf(_set_behind(mg), 1.0 - mg)
+		var deck := _deck_odds(side, "" if marker == null else str(marker["id"]), ctx)
+		var spill := maxf(0.0, 1.0 - p_mark - p_def)
+		g += spill * float(deck["goal"])
+		b += spill * float(deck["behind"])
+		goal += share * g
+		behind += share * b
+	return {"goal": PACK_THROUGH * PACK_THROUGH_GOAL + (1.0 - PACK_THROUGH) * goal,
+			"behind": PACK_THROUGH * (1.0 - PACK_THROUGH_GOAL) + (1.0 - PACK_THROUGH) * behind}
+
+
+## A bomb spoiled to the deck: the chance it ends in a goal and in a behind
+## (a crumber's snap, or rushed through), averaged over who is at the fall of
+## the ball, weighted as _ground_forward picks him. Pure: no dice.
+func _deck_odds(side: int, exclude: String, ctx: Dictionary) -> Dictionary:
+	var pick_ctx := ctx.duplicate()
+	pick_ctx["zone"] = ""
+	var rows := []
+	var total := 0.0
+	for p in (squads[side] as Squad).ground:
+		if str(p["id"]) == exclude:
+			continue
+		var w: float = float(CRUMB_ROLES.get(str(p["role"]), 0.0)) * pow(maxf(1.0, _a(p, "pressure")), 2.0)
+		if str(p["role"]) == "FWD":
+			w *= float(GROUND_SIZES.get(fwd_size(p), 1.0))
+		w *= _tactic_player_mult(side, p, "crumb", pick_ctx)
+		rows.append([p, w])
+		total += w
+	if rows.is_empty():
+		return {"goal": 0.0, "behind": PACK_RUSHED}
+	if total <= 0.0:
+		rows = [[rows[0][0], 1.0]]
+		total = 1.0
+	var goal := 0.0
+	var behind := 0.0
+	for row in rows:
+		var share: float = float(row[1]) / total
+		if share <= 0.0:
+			continue
+		var crumber: Dictionary = row[0]
+		var gathers := clampf(PACK_CRUMB * (0.7 + 0.6 * _a(crumber, "pressure") / 100.0), 0.0, 1.0)
+		var snap := clampf(shot_chance(side, crumber, false, false) * CRUMB_SNAP, 0.0, 1.0)
+		var bh: float = float(_rates()["inside50_behind"]) * (0.80 + 0.40 * _a(crumber, "goalkicking") / 100.0)
+		goal += share * gathers * snap
+		behind += share * (gathers * minf(bh, 1.0 - snap) + (1.0 - gathers) * PACK_RUSHED)
+	return {"goal": goal, "behind": behind}
 
 
 ## A defender in a goal-square pack: reading it first, then marking it.

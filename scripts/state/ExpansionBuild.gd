@@ -608,21 +608,33 @@ static func entry_line(gs, code: String) -> String:
 
 
 ## The season has its lists and contracts: set this year's sign-on money for
-## each club still inside its first two seasons.
+## each club still inside its first two seasons, or the two after them, when
+## it steps down (Expansion.SIGN_ON_TAPER).
 static func set_relief(gs, year: int) -> void:
 	for code in gs.expansion:
 		if not has_package(gs, str(code)):
 			continue
 		var first := GameDB.enter_year(str(code))
-		if year < first or year > first + 1:
+		if year < first or year > first + 1 + Expansion.SIGN_ON_TAPER.size():
 			continue
-		var st: Dictionary = gs.expansion[code]
-		var used := 0
-		for y in st["relief"]:
-			if int(y) < year:
-				used += int(st["relief"][y])
-		(st["relief"] as Dictionary)[str(year)] = Expansion.sign_on_relief(
-				_signing_salaries(gs, str(code)), year, used)
+		(gs.expansion[code]["relief"] as Dictionary)[str(year)] = _relief_in(gs, str(code), year)
+
+
+## `code`'s sign-on money in `year`: from the pool in its first two seasons,
+## a share of the second season's in the two after, nothing otherwise.
+static func _relief_in(gs, code: String, year: int) -> int:
+	var st: Dictionary = gs.expansion[code]
+	var first := GameDB.enter_year(code)
+	if year < first:
+		return 0
+	if year > first + 1:
+		return Expansion.tapered_relief(int((st["relief"] as Dictionary).get(str(first + 1), 0)),
+				year - first + 1, _signing_salaries(gs, code))
+	var used := 0
+	for y in st["relief"]:
+		if int(y) < year:
+			used += int(st["relief"][y])
+	return Expansion.sign_on_relief(_signing_salaries(gs, code), year, used)
 
 
 static func _signing_salaries(gs, code: String) -> int:
@@ -642,11 +654,9 @@ static func relief(gs, code: String) -> int:
 	var st: Dictionary = gs.expansion[code]
 	var year := int(gs.season_year)
 	if not gs.offseason_open():
+		# A save from before the money stepped down has no figure for its
+		# third or fourth season: worked out here, the same way.
+		if not (st["relief"] as Dictionary).has(str(year)):
+			return _relief_in(gs, code, year) if year > GameDB.enter_year(code) + 1 else 0
 		return int((st["relief"] as Dictionary).get(str(year), 0))
-	var first := GameDB.enter_year(code)
-	if year + 1 < first or year + 1 > first + 1:
-		return 0
-	var used := 0
-	for y in st["relief"]:
-		used += int(st["relief"][y])
-	return Expansion.sign_on_relief(_signing_salaries(gs, code), year + 1, used)
+	return _relief_in(gs, code, year + 1)

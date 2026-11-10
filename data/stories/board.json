@@ -191,18 +191,13 @@
 						"d": -1
 					},
 					{
-						"op": "morale",
-						"d": -2,
-						"who": "all"
-					},
-					{
 						"op": "culture",
 						"strand": "standards",
 						"d": 1,
 						"why": "You kept the players grounded during the run"
 					}
 				],
-				"result": "No billboards. Not yet."
+				"result": "No billboards. Not yet. The board had the artwork ready."
 			}
 		],
 		"when": {

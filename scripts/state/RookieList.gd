@@ -26,7 +26,8 @@ extends RefCounted
 ##      prospects every earlier draft passed over.
 ##   A pick goes on the rookie list on the rookie wage: two seasons for a
 ##   player under 21, one for anyone older. Every rival takes the best-rated
-##   player left (younger first, then id), the same rating you are shown.
+##   player left (younger first, then id), the same rating you are shown,
+##   until AI_LEAVES players are left: those stay for the mid-season draft.
 ##   When your turn comes the draft waits for you; starting the pre-season
 ##   week or the season without picking passes.
 ##
@@ -44,6 +45,11 @@ const NOBODY_LEFT_NEWS := "Rookie Draft: nobody was left when your pick came up,
 const NOBODY_AT_ALL_NEWS := "Rookie Draft: there was nobody to take, so no club made a pick, yours included."
 ## Under this age a Rookie Draft pick signs for two seasons, otherwise one.
 const TWO_YEAR_UNDER := 21.0
+## Rival clubs leave their last Rookie Draft picks unused (the director,
+## 2026-11-11): once this many players are left in the pool no rival takes
+## another, so they are still there for the mid-season draft. You may still
+## take any of them.
+const AI_LEAVES := 12
 
 
 static func is_rookie(p: Dictionary) -> bool:
@@ -221,6 +227,8 @@ static func round_now(gs) -> int:
 
 static func _can_pick(gs, rec: Dictionary, code: String) -> bool:
 	if (rec["passed"] as Dictionary).has(code):
+		return false
+	if code != gs.my_club and MidseasonDraft.pool(gs).size() <= AI_LEAVES:
 		return false
 	return rookie_spot_free(_list_of(gs, code))
 

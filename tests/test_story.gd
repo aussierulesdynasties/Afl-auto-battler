@@ -31,6 +31,7 @@ func run() -> void:
 	_t("_test_hints_in_words")
 	_t("_test_choice_stakes_are_stated")
 	_t("_test_every_choice_has_both_sides")
+	_t("_test_effects_follow_the_story")
 	_t("_test_no_dead_story_flags")
 	_t("_test_arc_middle_before_end")
 	_t("_test_captain_contract_talk_dealt")
@@ -3099,6 +3100,41 @@ func _test_every_choice_has_both_sides() -> void:
 	_check(not _has_mark(on_screen, StoryEngine.GAIN_MARK) and _has_mark(with_spared, StoryEngine.GAIN_MARK),
 			"A choice whose only gain is the cost it spares shows no Gain line on screen, so it is not counted as both sides (%s)"
 			% " / ".join(on_screen))
+
+
+## Bug bash 3, the ten borderline effects (director, 2026-11-11: change all ten): each
+## effect now has a cause the card states. A list of [card, choice, op that must be
+## there, op that must be gone].
+func _test_effects_follow_the_story() -> void:
+	var want := [
+		["board_billboards", "no", "culture", "morale"],
+		["finals_club_greats", "later", "culture", "xp"],
+		["finals_family_tickets", "four", "culture", "board"],
+		["members_signing_session", "sign", "slow_start", "morale"],
+		["members_signing_session", "no", "fresh", "morale"],
+		["members_cheer_squad", "go", "forgo_xp", "slow_start"],
+		["members_cheer_squad", "no", "board", "morale"],
+		["intl_first_goal", "night", "slow_start", "heavy_legs"],
+		["gf_milestone", "banner", "culture", "slow_start"],
+	]
+	var by_id := {}
+	for t in StoryDeck.all():
+		by_id[str(t["id"])] = t
+	for w in want:
+		var ops := []
+		for c in by_id[w[0]]["choices"]:
+			if str(c["key"]) == w[1]:
+				for e in c["effects"]:
+					ops.append(str(e["op"]))
+		_check(ops.has(w[2]) and not ops.has(w[3]), "%s / %s: has %s, no %s (%s)" % [w[0], w[1], w[2], w[3], ", ".join(ops)])
+	var words := {
+		"contracts_manager_noise": "leaned on his manager",
+		"training_new_stoppage_setup": "usual light Thursday",
+		"gf_debut_year": "The broadcaster wanted",
+	}
+	for id in words:
+		var text := JSON.stringify(by_id[id]["choices"])
+		_check(text.contains(words[id]) and not text.contains("over his head"), "%s says why: \"%s\"" % [id, words[id]])
 
 
 ## Every story flag a choice sets is read: by a follow-up's needs, a subject or choice

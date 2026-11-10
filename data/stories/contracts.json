@@ -90,10 +90,10 @@
 					{
 						"op": "trust",
 						"d": -3,
-						"why": "You went over his head to his manager"
+						"why": "You leaned on his manager in the middle of contract talks"
 					}
 				],
-				"result": "You have a word with the manager. It goes quiet."
+				"result": "You tell the manager to keep it off the radio. It goes quiet, and {first} hears about the call."
 			},
 			{
 				"key": "ignore",
@@ -106,10 +106,10 @@
 					{
 						"op": "trust",
 						"d": 2,
-						"why": "You didn't go round him to his manager"
+						"why": "You didn't bite when his manager went on radio"
 					}
 				],
-				"result": "You leave it. The board doesn't like reading it."
+				"result": "You leave it. {first} sees the club didn't bite. The board doesn't like reading it."
 			}
 		]
 	},
