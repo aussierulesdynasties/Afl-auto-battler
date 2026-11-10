@@ -20,7 +20,7 @@ const ALLOW := {
 	"res://data/stories/training.json": [1, "should", "row 140: the fitness staff's view, reported"],
 	"res://scripts/sim/MatchSim.gd": [1, "should", "row 131: a shot's likelihood at the gate"],
 	"res://scripts/sim/SkipOrders.gd": [2, "auto-pick", "row 134: renamed with the Auto-pick button"],
-	"res://scripts/sim/StoryEngine.gd": [3, "auto-pick", "row 134: renamed with the Auto-pick button"],
+	"res://scripts/sim/StoryEngine.gd": [4, "auto-pick", "rows 134 and T5.r93: renamed with the Auto-pick button; the development talk's promise"],
 	"res://scripts/state/GameState.gd": [3, "starter, auto-pick, projection", "rows 134 and 138"],
 	"res://scripts/ui/CoachingScene.gd": [1, "payroll", "row 134: coaching"],
 	"res://scripts/ui/DraftScene.gd": [1, "projection", "row 136: draft"],

@@ -936,7 +936,7 @@
 			"{name} wants a word about the {proj_word} move"
 		],
 		"text": [
-			"Week {proj_week} of {proj_weeks} learning to play as a {proj_word}. He rates {proj_there} there and {proj_own} in his own spot, and he needs to be within {proj_pass} by week {proj_weeks}. Players this far off at this stage get there {take_odds} times. He wants to know what it's for."
+			"Week {proj_week} of {proj_weeks} learning to play as a {proj_word}. He rates {proj_there} there and {proj_own} in his own spot, and he has to be within {proj_pass} by week {proj_weeks}. Players this far off at this stage get there {take_odds} times. He wants to know what it's for."
 		],
 		"choices": [
 			{
