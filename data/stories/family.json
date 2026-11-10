@@ -45,6 +45,12 @@
 						"op": "trust",
 						"d": -10,
 						"why": "You asked him to play the week his first child was born"
+					},
+					{
+						"op": "culture",
+						"strand": "ambition",
+						"d": 1,
+						"why": "The game came first the week his child was born"
 					}
 				],
 				"result": "{first} plays. He's on the first flight home after the siren."
@@ -107,6 +113,12 @@
 						"who": "subject",
 						"chance": 15,
 						"on": "week"
+					},
+					{
+						"op": "culture",
+						"strand": "ambition",
+						"d": 1,
+						"why": "The game came first while his dad was in hospital"
 					}
 				],
 				"result": "{first} stays and plays. His head's somewhere else."
@@ -159,6 +171,12 @@
 					{
 						"op": "morale",
 						"d": -4
+					},
+					{
+						"op": "culture",
+						"strand": "ambition",
+						"d": 1,
+						"why": "The game came before his brother's wedding"
 					}
 				],
 				"result": "{first} plays. He watches the speeches on his phone."
@@ -197,9 +215,13 @@
 						"op": "trust",
 						"d": 6,
 						"why": "You told him the club would help his family settle"
+					},
+					{
+						"op": "board",
+						"d": -1
 					}
 				],
-				"result": "The club starts looking for work for his partner here."
+				"result": "The club starts looking for work for {first}'s partner here. The board signs off on the cost."
 			},
 			{
 				"key": "footy",
