@@ -672,8 +672,6 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 	_check(why == "", "A finger reaches a call in the rest of the calls, no button first (%s: %s)" % [tag, why])
 	await _settle()
 	var legs_text := _text(box.find_child("LegsView", true, false))
-	# Loaded, not named: the autoloads are not there when this script compiles.
-	var report = load("res://scripts/sim/CoachReport.gd")
 
 	# Pep talk: all four choices, Composed included, explain themselves.
 	var pep_seen := {}
@@ -683,15 +681,20 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 		_check(w == "", "A finger picks the %s pep talk (%s: %s)" % [k, tag, w])
 		await _settle()
 		var note: Control = box.find_child("PepNote", true, false)
-		_check(note != null and note.is_visible_in_tree() and _flat(_text(note)) != "" and _flat(_text(note)) == _flat(report.pep_summary(k)),
-				"The %s pep talk shows its own description (%s)" % [k, tag])
+		# Gain and Cost, sized (M3, director 2026-11-10), replaced the old words.
+		var gc: Array = load("res://scripts/sim/GateOdds.gd").pep_texts(k)
+		_check(note != null and note.is_visible_in_tree() and note.find_child("PepGain", true, false) != null
+				and note.find_child("PepCost", true, false) != null
+				and _flat(_text(note)) == _flat("Gain: %s
+Cost: %s" % [gc[0], gc[1]]),
+				"The %s pep talk shows its own gain and cost (%s: %s)" % [k, tag, _text(note) if note else "-"])
 		pep_seen[_flat(_text(note)) if note != null else ""] = true
 	_check(pep_seen.size() == 4, "Each pep talk has its own words (%s)" % tag)
 	var composed: Button = box.find_child("PepPicker_steady", true, false)
 	await Tap.tap(composed)
 	await _settle()
 	var pn: Control = box.find_child("PepNote", true, false)
-	_check(pn != null and _text(pn).begins_with("Keep them as they are"), "Back on Composed, its words return (%s)" % tag)
+	_check(pn != null and _flat(_text(pn)).contains("no extra wear on the legs"), "Back on Composed, its words return (%s)" % tag)
 
 	# Tag: "No tag" says so; a name brings the tagger line back.
 	var tn: Control = box.find_child("TagNote", true, false)

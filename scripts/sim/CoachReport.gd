@@ -31,8 +31,9 @@ const PEP_EFFECTS := {
 
 ## What each plan does and gives up, in football words, from MatchSim.PLANS.
 ## The one description of a plan: selection, coaching, the quarter break
-## and the assistant's report all read it. No percentages; how much a plan
-## gives depends on the players who carry it (GameState.plan_fit_line).
+## and the assistant's report all read it. These are the words used where no
+## squad is known; with one, plan_summary sizes the gain for that list today
+## and the cost it pays (GateOdds.plan_texts_for, director 2026-11-10).
 const PLAN_PARTS := {
 	"balanced": {"does": "Play it straight: no extra edge, and nothing for them to exploit."},
 	"attacking": {"does": "Go through the corridor.",
@@ -138,14 +139,21 @@ static func plan_parts(key: String) -> Dictionary:
 	return PLAN_PARTS.get(MatchSim.plan_key(key), PLAN_PARTS["balanced"])
 
 
-## The parts joined into one paragraph, for screens that show a plan in a line.
-static func plan_summary(key: String) -> String:
+## The parts joined into one paragraph, for screens that show a plan in a
+## line. With `sq` the Gain and Cost are sized for that squad today
+## (GateOdds.plan_texts_for, M1); without it, in words.
+static func plan_summary(key: String, sq: Squad = null, weather_key := "perfect") -> String:
 	var d := plan_parts(key)
 	var out := PackedStringArray([str(d["does"])])
-	if d.has("gain"):
-		out.append("Gain: " + str(d["gain"]))
-	if d.has("cost"):
-		out.append("Cost: " + str(d["cost"]))
+	if sq != null:
+		var sized := GateOdds.plan_texts_for(sq, key, weather_key)
+		out.append(GateOdds.gain(str(sized[0])) + ".")
+		out.append(GateOdds.cost(str(sized[1])) + ".")
+	else:
+		if d.has("gain"):
+			out.append("Gain: " + str(d["gain"]))
+		if d.has("cost"):
+			out.append("Cost: " + str(d["cost"]))
 	if d.has("beats"):
 		out.append(str(d["beats"]))
 	return " ".join(out)

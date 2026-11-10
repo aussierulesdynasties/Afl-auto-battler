@@ -895,9 +895,11 @@ func _show_coach_box() -> void:
 		does.name = "PlanDoes"
 		does.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		plan_note.add_child(does)
-		for part in [["gain", "Gain:", "PlanGain"], ["cost", "Cost:", "PlanCost"]]:
-			if d.has(part[0]):
-				plan_note.add_child(_plan_row(str(part[1]), str(d[part[0]]), str(part[2])))
+		# Sized for this list today: its fit, coaches, familiarity and the
+		# day's weather (M1, director 2026-11-10).
+		var sized := GateOdds.plan_texts_for(sim.squads[_my_side], key, sim.weather)
+		plan_note.add_child(_plan_row("Gain:", str(sized[0]), "PlanGain"))
+		plan_note.add_child(_plan_row("Cost:", str(sized[1]), "PlanCost"))
 		if d.has("beats"):
 			var beats := UiKit.lbl(str(d["beats"]), UiKit.SECONDARY, UiKit.TEXT)
 			beats.name = "PlanBeats"
@@ -1061,14 +1063,20 @@ func _show_coach_box() -> void:
 		var note := UiKit.lbl("", UiKit.NOTE, UiKit.MUTED)
 		note.name = "FocusNote_" + slot
 		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		# What the call gains and costs (M5, director 2026-11-10), as the plan's rows.
+		var gc_rows := UiKit.vbox(2)
+		gc_rows.name = "FocusGainCost_" + slot
 		var sync := func(id: String) -> void:
 			note.text = _focus_note_text(slot, id)
+			_gain_cost_rows(gc_rows, GateOdds.focus_texts(slot,
+					GameDB.player_display_name_by_id(id, "your player") if id != "" else ""), "Focus")
 		var text: Array = MatchNotes.FOCUS_SLOT_TEXT[slot]
 		var pick := _player_choice("FocusPicker_" + slot, "No one", fits, _in_the_game(fits, quick if quick > 0 else 3), calls, slot,
 				"Play through: %s" % str(text[0]).to_lower(), sync)
 		var block := _call_block("Play through: %s" % str(text[0]).to_lower(), pick)
 		sync.call(str(calls[slot]))
 		block.add_child(note)
+		block.add_child(gc_rows)
 		(rep if rep != v else col_a).add_child(block)
 		group.call("pt", block)
 
@@ -1104,6 +1112,8 @@ func _show_coach_box() -> void:
 	def_note.name = "DefenceNote"
 	def_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var df_how: Array = [null]
+	var def_rows := UiKit.vbox(2)
+	def_rows.name = "DefenceGainCost"
 	var sync_def := func(key: String) -> void:
 		var loose_on := key == "loose" or key == "both"
 		var cover_on := key == "cover" or key == "both"
@@ -1113,6 +1123,10 @@ func _show_coach_box() -> void:
 				GameDB.player_display_name_by_id(loose_pick, "your best interceptor"),
 				GameDB.player_display_name_by_id(minder_pick, "a forward"),
 				GameDB.player_display_name(opp_spare) if not opp_spare.is_empty() else "")
+		# Sized for the men in the jobs (M6, director 2026-11-10).
+		var gc := GateOdds.defence_texts(key, _focus_player(loose_pick) if loose_on else {},
+				_focus_player(minder_pick) if cover_on else {}, opp_spare)
+		_gain_cost_rows(def_rows, gc, "Defence")
 		if df_how[0] != null and is_instance_valid(df_how[0]):
 			(df_how[0] as Control).visible = cover_on
 			if cover_on:
@@ -1126,6 +1140,7 @@ func _show_coach_box() -> void:
 	def_block.add_child(def_ask)
 	def_block.move_child(def_ask, 1)
 	def_block.add_child(def_note)
+	def_block.add_child(def_rows)
 	# From quarter time on: how your loose man and your forward on theirs are going.
 	var loose_now := str(sim.interceptor[_my_side])
 	if q > 1 and loose_now != "":
@@ -1159,7 +1174,13 @@ func _show_coach_box() -> void:
 	var pep_note := UiKit.vbox(3)
 	pep_note.name = "PepNote"
 	var sync_pep := func(key: String) -> void:
-		_fill_note_lines(pep_note, CoachReport.pep_summary(key))
+		# What the talk does and costs this quarter, sized (M3).
+		for c in pep_note.get_children():
+			pep_note.remove_child(c)
+			c.queue_free()
+		var sized := GateOdds.pep_texts(key)
+		pep_note.add_child(_plan_row("Gain:", str(sized[0]), "PepGain"))
+		pep_note.add_child(_plan_row("Cost:", str(sized[1]), "PepCost"))
 	# Four talks: a two-column grid of their full names, which fits a 360 phone
 	# and the PC column alike (one row of four ran off a phone).
 	var pep := _choice_grid("PepPicker", PEP_TALKS, calls, "pep", 2, sync_pep)
@@ -1330,6 +1351,7 @@ func _fill_df_duel(box: VBoxContainer, sim: MatchSim, calls: Dictionary, roamer:
 		var rrow := UiKit.hbox(6)
 		rrow.add_child(rr)
 		var rtag := UiKit.lbl("rating", UiKit.SECONDARY, UiKit.MUTED)
+		rtag.autowrap_mode = TextServer.AUTOWRAP_OFF
 		rtag.size_flags_vertical = Control.SIZE_SHRINK_END
 		rrow.add_child(rtag)
 		col.add_child(rrow)
@@ -2317,6 +2339,14 @@ func _break_answers() -> Dictionary:
 
 ## A "Gain:" / "Cost:" style row: the marker bold, the sentence beside it, both
 ## in full ink (the card-stakes pattern).
+## Fill `box` with a call's "Gain:" and "Cost:" rows ([gain, cost], unlabelled),
+## the plan's look: the label in the label ink, the line in body text.
+func _gain_cost_rows(box: Control, gc: Array, prefix: String) -> void:
+	UiKit.clear(box)
+	box.add_child(_plan_row("Gain:", str(gc[0]), prefix + "Gain"))
+	box.add_child(_plan_row("Cost:", str(gc[1]), prefix + "Cost"))
+
+
 func _plan_row(mark: String, text: String, node_name: String, traits := false) -> Control:
 	var item := UiKit.hbox(6)
 	item.name = node_name
@@ -2685,12 +2715,17 @@ func _show_bounce_moment(m: Dictionary) -> void:
 ## Under a call's choice: what it does for you and what it costs, sized
 ## (GateOdds; "gain" and "cost" on the option), or its one line of words.
 func _moment_lines(to: Container, o: Dictionary) -> void:
-	var lines: Array = [str(o["gain"]), str(o["cost"])] if o.has("gain") else [str(o.get("detail", ""))]
-	for i in range(lines.size()):
-		var d := UiKit.lbl(str(lines[i]), UiKit.SMALL, UiKit.TEXT if o.has("gain") else UiKit.MUTED)
-		d.name = ("MomentGain" if i == 0 else "MomentCost") if o.has("gain") else "MomentDetail"
-		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		to.add_child(d)
+	if o.has("gain"):
+		# The break's look: "Gain:" and "Cost:" in the label ink, the line in body text.
+		for f in [["gain", "MomentGain"], ["cost", "MomentCost"]]:
+			var line := str(o[f[0]])
+			var cut := line.find(": ")
+			to.add_child(_plan_row(line.substr(0, cut + 1) if cut > 0 else "", line.substr(cut + 2) if cut > 0 else line, str(f[1])))
+		return
+	var d := UiKit.lbl(str(o.get("detail", "")), UiKit.SMALL, UiKit.MUTED)
+	d.name = "MomentDetail"
+	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	to.add_child(d)
 
 
 func _on_moment_choice(i: int) -> void:

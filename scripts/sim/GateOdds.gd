@@ -11,6 +11,38 @@ extends RefCounted
 const GAIN := "Gain: %s"
 const COST := "Cost: %s"
 
+# The game plans (M1, director 2026-11-10: "Gain for this list today", the
+# written figure beside it). Templates hold no number of their own.
+const PLAN_GAIN := {
+	"attacking": "your shots %s more accurate, %s more ground a kick",
+	"defensive": "%s more pressure where they start, their shots %s less accurate",
+	"contest": "a %s better chance at every stoppage",
+	"controlled": "%s fewer clangers, %s less pressure felt, legs tire %s slower",
+}
+const PLAN_COST := {
+	"attacking": "%s more clangers, legs tire %s faster, their shots %s more accurate on the rebound",
+	"defensive": "your shots %s less accurate, legs tire %s faster, %s less pressure in your back third",
+	"contest": "%s less ground a kick, their shots %s more accurate on the rebound",
+	"controlled": "%s less ground a kick",
+}
+const PLAN_SUITS := " (%s for a list that suits it)"
+const BALANCED_GAIN := "nothing for them to exploit: no plan cost"
+const BALANCED_COST := "no plan edge at either end"
+
+# The pep talk (M3), for the quarter it is given.
+const PEP_GAIN := {
+	"steady": "no extra wear on the legs and no frayed tempers",
+	"fire_up": "a %s better chance at every contest while you are behind; nothing level or in front",
+	"calm": "%s fewer clangers, %s less pressure felt, legs tire %s slower",
+	"heat": "%s more pressure on their ball carriers (%s on top of a Defensive Press)",
+}
+const PEP_COST := {
+	"steady": "no lift at the contest and no extra pressure",
+	"fire_up": "%s more clangers and legs tire %s faster, behind or not",
+	"calm": "%s less ground a kick",
+	"heat": "legs tire %s faster all quarter",
+}
+
 # Who tags (the pre-bounce and break sheets).
 const TAG_GIVES := "%s of his own ball and contest work"
 # What the tag does to their man, in his touches a match (director, 2026-11-10).
@@ -49,6 +81,11 @@ const NONE_COST_BOUNCE := "no extra edge at the bounce or behind the ball"
 
 static func pct(share: float) -> String:
 	return Conditioning.pct(absf(share))
+
+
+## "about N%": a whole figure, for odds that are an estimate of reach.
+static func about_pct(share: float) -> String:
+	return "%d%%" % roundi(absf(share) * 100.0)
 
 
 static func gain(s: String) -> String:
@@ -122,3 +159,188 @@ static func burst_lines(kind: String, minutes_left := -1, last := true) -> Array
 			return [BURST_GAIN[kind] % pct(1.0 - MatchSim.FLOOD_OPP_GOAL) + t,
 					BURST_COST[kind] % [pct(1.0 - MatchSim.FLOOD_GOAL), pct(1.0 - MatchSim.BACK_GAIN)]]
 	return ["", ""]
+
+
+static func _plan_v(plan: String, key: String, fallback := 1.0) -> float:
+	return float((MatchSim.PLANS.get(plan, {}) as Dictionary).get(key, fallback))
+
+
+## A plan's gain and cost as figures: [gain shares, cost shares], each share
+## the written one times `up` (gain) or `down` (cost), as MatchSim._pv does.
+static func plan_shares(plan: String, up := 1.0, down := 1.0) -> Array:
+	var v := func(k: String) -> float: return absf(_plan_v(plan, k) - 1.0)
+	match plan:
+		"attacking":
+			return [[v.call("goal") * up, v.call("gain") * up],
+					[v.call("clangers") * down, v.call("pace") * down, v.call("exposed") * down]]
+		"defensive":
+			var zone: Array = MatchSim.PRESS_PLAN_ZONE
+			return [[(float(zone[0]) - 1.0) * up, v.call("opp_goal") * up],
+					[v.call("goal") * down, v.call("pace") * down, (1.0 - float(zone[2]))]]
+		"contest":
+			return [[_plan_v(plan, "contest", 0.0) * up], [v.call("gain") * down, v.call("exposed") * down]]
+		"controlled":
+			return [[v.call("clangers") * up, v.call("taken") * up, v.call("pace") * up], [v.call("gain") * down]]
+	return [[], []]
+
+
+static func _pcts(shares: Array) -> Array:
+	return shares.map(func(x): return pct(float(x)))
+
+
+## "5% and 6%", "8%, 4% and 5%".
+static func _and(items: Array) -> String:
+	if items.size() <= 1:
+		return "".join(items)
+	return ", ".join(items.slice(0, items.size() - 1)) + " and " + str(items[-1])
+
+
+## A plan's gain and cost for this list today, unlabelled: [gain, cost].
+## `up` and `down` come from MatchSim.upside_scale and cost_scale; the
+## written figures follow the gain when today's differ.
+## `best_up` is the gain scale a list that suits the plan as well as a list
+## can (PlanFit.FIT_MAX) would get with everything else the same; -1 means the
+## written plan on such a list. Today's gain never tops it.
+static func plan_texts(plan: String, up := 1.0, down := 1.0, best_up := -1.0) -> Array:
+	plan = MatchSim.plan_key(plan)
+	if not PLAN_GAIN.has(plan):
+		return [BALANCED_GAIN, BALANCED_COST]
+	if best_up < 0.0:
+		best_up = PlanFit.FIT_MAX
+	var today := plan_shares(plan, up, down)
+	var suits := plan_shares(plan, best_up)
+	var g := str(PLAN_GAIN[plan]) % _pcts(today[0])
+	if _pcts(today[0]) != _pcts(suits[0]):
+		g += PLAN_SUITS % _and(_pcts(suits[0]))
+	return [g, str(PLAN_COST[plan]) % _pcts(today[1])]
+
+
+## The same as "Gain: ..." and "Cost: ..." lines.
+static func plan_lines(plan: String, up := 1.0, down := 1.0) -> Array:
+	var t := plan_texts(plan, up, down)
+	return [gain(str(t[0])), cost(str(t[1]))]
+
+
+## A plan's texts for a squad as it would take the field (CoachEffects applied).
+static func plan_texts_for(sq: Squad, plan: String, weather_key := "perfect") -> Array:
+	var up := MatchSim.upside_scale(sq, plan, weather_key)
+	var fit := PlanFit.fit(sq.ground, MatchSim.plan_key(plan))
+	var best := up / fit * PlanFit.FIT_MAX if fit > 0.0 else -1.0
+	return plan_texts(plan, up, MatchSim.cost_scale(sq, plan), best)
+
+
+## A pep talk's gain and cost for the quarter, unlabelled: [gain, cost], from
+## the multipliers MatchSim._pep_mult, _contest_pep and _pep_heat use.
+static func pep_texts(key: String) -> Array:
+	var c: Dictionary = MatchSim.PEP_CALM
+	var f: Dictionary = MatchSim.PEP_FIRE
+	var d := func(m: Dictionary, k: String) -> String: return pct(float(m.get(k, 1.0)) - 1.0)
+	match key:
+		"fire_up":
+			return [PEP_GAIN[key] % pct(MatchSim.PEP_FIRE_CONTEST), PEP_COST[key] % [d.call(f, "clangers"), d.call(f, "pace")]]
+		"calm":
+			return [PEP_GAIN[key] % [d.call(c, "clangers"), d.call(c, "taken"), d.call(c, "pace")], PEP_COST[key] % d.call(c, "gain")]
+		"heat":
+			var press := MatchSim.PEP_HEAT_PRESS - 1.0
+			return [PEP_GAIN[key] % [pct(press), pct(press * MatchSim.PEP_HEAT_ON_PRESS)],
+					PEP_COST[key] % d.call(MatchSim.PEP_HEAT, "pace")]
+	return [PEP_GAIN["steady"], PEP_COST["steady"]]
+
+
+# Play through (M5): the ball shared out differently, not more of it.
+const FOCUS_GAIN := {
+	"focus_mid": "%s gets the ball %s more often through the midfield, and keeps getting it to about %d touches before it spreads again (%d for anyone else)",
+	"focus_fwd": "%s gets the ball %s more often up forward and takes %s more of the shots",
+	"focus_def": "%s gets %s more of the first use out of the back half",
+}
+const FOCUS_COST := {
+	"focus_mid": "the side's ball doesn't grow: the rest of the midfield gets less of it, and he runs %s further",
+	"focus_fwd": "the shots don't grow: a better-placed forward shoots less often, and he runs %s further",
+	"focus_def": "the ball out doesn't grow: the other backs get less first use, and he runs %s further",
+}
+const FOCUS_NONE_GAIN := "the ball finds whoever is best placed"
+const FOCUS_NONE_COST := "nobody gets the extra ball"
+
+
+## A play-through call's gain and cost, unlabelled: [gain, cost]. `who` is
+## his name, "" for nobody.
+static func focus_texts(slot: String, who: String) -> Array:
+	if who == "":
+		return [FOCUS_NONE_GAIN, FOCUS_NONE_COST]
+	var run := pct(MatchSim.GPS_FOCUS_MULT - 1.0)
+	match slot:
+		"focus_fwd":
+			return [FOCUS_GAIN[slot] % [who, pct(MatchSim.FOCUS_CARRY - 1.0), pct(MatchSim.FOCUS_SHOT - 1.0)], FOCUS_COST[slot] % run]
+		"focus_def":
+			return [FOCUS_GAIN[slot] % [who, pct(MatchSim.FOCUS_EXIT - 1.0)], FOCUS_COST[slot] % run]
+	return [FOCUS_GAIN["focus_mid"] % [who, pct(MatchSim.FOCUS_CARRY - 1.0), roundi(MatchSim.USAGE_START_FOCUSED),
+			roundi(MatchSim.USAGE_START)], FOCUS_COST["focus_mid"] % run]
+
+
+# Defensive set-up (M6), sized for the men in the jobs.
+const LOOSE_GAIN := "%s gets to about %s of their entries and makes the mark harder when he does"
+const LOOSE_COST := "he leaves his man on about %s of entries; when he is late or loses, their shot is up to %s more dangerous"
+const COVER_GAIN := "%s reaches %s fewer contests with %s on him"
+const COVER_COST := "%s is %s less often a target inside 50"
+const MAN_GAIN := "every defender holds his man: no space opens behind a loose man"
+const MAN_COST := "nobody spare to cut off their entries%s"
+const MAN_COST_SPARE := ", and %s plays free"
+
+
+## How often a loose defender gets to an entry's contest, as the sim reaches
+## it (MatchSim._loose_reach, before a forward drags him).
+static func loose_reach(p: Dictionary) -> float:
+	var read := clampf((Matchups.interceptor_score(p) - MatchSim.LOOSE_READ_FLOOR) / MatchSim.LOOSE_READ_SPAN, 0.0, 1.0)
+	var r := MatchSim.LOOSE_REACH_MIN + MatchSim.LOOSE_REACH_RANGE * read
+	return r * (MatchSim.ROAM_REACH if MatchSim.zone_intercepts else 1.0)
+
+
+## A defensive set-up's gain and cost, unlabelled: [gain, cost]. `loose` and
+## `minder` are the men in the jobs ({} when not in the set-up); `spare` is
+## their loose man ({} when they have none).
+static func defence_texts(key: String, loose: Dictionary, minder: Dictionary, spare: Dictionary) -> Array:
+	var gains := PackedStringArray()
+	var costs := PackedStringArray()
+	if (key == "loose" or key == "both") and not loose.is_empty():
+		gains.append(LOOSE_GAIN % [GameDB.player_display_name(loose), about_pct(loose_reach(loose))])
+		var go := MatchSim.LOOSE_GO * (MatchSim.ROAM_REACH if MatchSim.zone_intercepts else 1.0)
+		costs.append(LOOSE_COST % [about_pct(go), pct(float(MatchSim.LOOSE_LATE_SPACE["marked"]))])
+	if (key == "cover" or key == "both") and not minder.is_empty() and not spare.is_empty():
+		var roam := float(MatchSim.MINDER_ROAM["specialist" if Traits.has(minder, "def_forward") else "other"])
+		gains.append(COVER_GAIN % [GameDB.player_display_name(spare), pct(1.0 - roam), GameDB.player_display_name(minder)])
+		costs.append(COVER_COST % [GameDB.player_display_name(minder), pct(1.0 - MatchSim.MINDER_INVOLVE)])
+	if gains.is_empty():
+		var free := MAN_COST_SPARE % GameDB.player_display_name(spare) if not spare.is_empty() else ""
+		return [MAN_GAIN, MAN_COST % free]
+	return ["; ".join(gains), "; ".join(costs)]
+
+
+# The set shot (M7): the odds the card plays.
+const SHOT_GAIN := "%s chance of a goal, %s of a behind"
+const SHOT_COST := "%s chance it scores nothing"
+const PASS_GAIN := "%s chance it reaches him; then he kicks from closer, %s chance of a goal"
+const PASS_COST := "%s chance it is cut off and the shot is gone"
+const BOMB_GAIN := "%s chance of a goal out of the pack, %s of a behind"
+const BOMB_COST := "%s chance the defence clears it"
+
+
+## A set-shot option's gain and cost, labelled: [gain, cost]. Whole figures:
+## the odds of one kick, not a measured rate.
+static func set_shot_lines(o: Dictionary) -> Array:
+	var g := float(o.get("goal", 0.0))
+	match str(o.get("key", "")):
+		"pass":
+			var pp := float(o.get("pass", 0.0))
+			return [gain(PASS_GAIN % [about_pct(pp), about_pct(float(o.get("mate_goal", 0.0)))]),
+					cost(PASS_COST % about_pct(1.0 - pp))]
+		"bomb":
+			var b := float(o.get("behind", 0.0))
+			return [gain(BOMB_GAIN % [about_pct(g), about_pct(b)]), cost(BOMB_COST % _rest_pct(g, b))]
+	var bh := float(o.get("behind", 0.0))
+	return [gain(SHOT_GAIN % [about_pct(g), about_pct(bh)]), cost(SHOT_COST % _rest_pct(g, bh))]
+
+
+## What is left of 100% once the goal and behind figures are rounded, so the
+## three a card shows always add up.
+static func _rest_pct(goal: float, behind: float) -> String:
+	return "%d%%" % maxi(0, 100 - roundi(goal * 100.0) - roundi(behind * 100.0))
