@@ -5,7 +5,8 @@ name: Tests
 # harness. Documentation-only changes skip this expensive game test run.
 # If a PR changes both docs and game files, the tests still run.
 # Two more cases skip the game tests (the plan job sets code=false): a draft PR
-# (a run starts when it is marked ready for review), and a PR that only touches
+# (a run starts when it is marked ready for review; until then "test" is red, so
+# a draft can never merge on a run that tested nothing), and a PR that only touches
 # audit or capture scripts (tools/audit, tools/visual), which no suite loads.
 #
 # The suites run as parallel shards (tools/ci_shards.txt), so a pull request
@@ -419,4 +420,11 @@ jobs:
             fi
           else
             echo "The game tests were skipped ($REASON)."
+            # A draft's skipped run must never count as a pass: auto-merge would fire on
+            # it the moment the PR is marked ready, before the real run starts (#1359).
+            case "$REASON" in
+              draft*)
+                echo "::error::draft pull request: the game tests have not run, so this check does not pass. Mark it ready for review to run them."
+                exit 1 ;;
+            esac
           fi
