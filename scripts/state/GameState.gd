@@ -8367,8 +8367,20 @@ func fa_offers(player_id: String) -> Array:
 		elif i > 0:
 			view = "Behind."
 		out.append({"club": str(o["club"]), "name": club_name, "salary": int(o["salary"]), "years": int(o["years"]),
-				"view": view, "leading": i == 0, "mine": str(o["club"]) == my_club})
+				"view": view, "leading": i == 0, "mine": str(o["club"]) == my_club,
+				"worth": Contracts.worth_to_him(p, o)})
 	return out
+
+
+## What your offer of `salary` for `years` would be worth to free agent
+## `player_id` a season (Contracts.worth_to_him), before you make it: your
+## role for him, last year's finish and your culture, as `offer_free_agent`
+## would put them on the table (row T1.R26 FA weights).
+func fa_offer_worth(player_id: String, salary: int, years: int) -> int:
+	var p := free_agent(player_id)
+	return Contracts.worth_to_him(p, {"club": my_club, "salary": salary, "years": years,
+			"role": fa_role(p, my_club), "finish_t": _finish_t(my_club),
+			"amb": culture_effect(my_club, "free_agent_score")})
 
 
 ## Where his market stands for you: "open" (you can make an offer), "final"
