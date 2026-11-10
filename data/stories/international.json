@@ -261,10 +261,13 @@
 						"who": "side"
 					},
 					{
-						"op": "heavy_legs"
+						"op": "slow_start",
+						"who": "side",
+						"chance": 10,
+						"on": "week"
 					}
 				],
-				"result": "The group takes {first} out for dinner. He's flat at the next session."
+				"result": "The group takes {first} out for dinner and it runs late. A few of them are flat at the next session."
 			},
 			{
 				"key": "work",
