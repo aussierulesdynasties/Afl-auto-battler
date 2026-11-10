@@ -124,9 +124,8 @@ func _build() -> void:
 
 ## "Confirm side" ticks the Hub checklist's "Look over the side" job
 ## (director, 2026-11-03: an explicit button, not merely opening Team).
-## Only with the weekly_checklist setting on; off, nothing shows or writes.
 func _confirm_row() -> Control:
-	if not WeekChecklist.on(GameState) or GameState.season.is_season_over():
+	if GameState.season.is_season_over():
 		return null
 	var row := UiKit.hbox(8)
 	row.name = "ConfirmRow"
