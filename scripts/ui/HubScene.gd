@@ -135,11 +135,12 @@ func _show_weekly_loop_intro() -> void:
 	_onboarding_overlay = box["overlay"]
 	_onboarding_overlay.name = "WeeklyLoopIntro"
 	var v: VBoxContainer = box["body"]
-	v.add_child(UiKit.heading("Your week", UiKit.TITLE))
+	v.add_child(UiKit.heading("Our week", UiKit.TITLE))
 	for line in [
-		"This is home base. Check the next opponent, then use Team to pick the side and Coaching if you want to change how you play.",
-		"Each week a short list here shows the jobs still open: look over the side, check training, and anything waiting on you. Tap a job to go to it; it ticks when done.",
-		"The list is a guide, never a gate. Play match or Sim the week whenever you are ready, jobs left or not.",
+		"This is home base. Who we play next is up top.",
+		"Pick the side in Team. Set how we play in Coaching.",
+		"The week's open jobs sit here. Tap one to go to it; it ticks when done.",
+		"The list is a guide, never a gate. Play match or Sim the week, jobs left or not.",
 	]:
 		var l := UiKit.lbl(line, 14, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -172,7 +173,7 @@ func _show_season_wrap() -> void:
 	overlay.name = "SeasonWrap"
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.lbl("Off-season complete", 20, UiKit.TEXT, true))
-	v.add_child(UiKit.lbl("Your %d list is set." % int(w.get("year", GameState.season_year)), 14, UiKit.MUTED))
+	v.add_child(UiKit.lbl("Our %d list is set." % int(w.get("year", GameState.season_year)), 14, UiKit.MUTED))
 	for part in [["In", "ins", "WrapIn"], ["Out", "outs", "WrapOut"]]:
 		var rows: Array = w.get(part[1], [])
 		if rows.is_empty():
@@ -250,7 +251,7 @@ func _show_season_wrap() -> void:
 	alm.pressed.connect(func(): Router.go("almanac"))
 	(box["footer"] as VBoxContainer).add_child(alm)
 	var to_preseason: bool = GameState.preseason_active()
-	var go := UiKit.btn("Start the pre-season" if to_preseason else "Begin season", UiKit.BODY, true)
+	var go := UiKit.btn("Start the pre-season" if to_preseason else "Start the season", UiKit.BODY, true)
 	go.name = "BeginSeason"
 	go.custom_minimum_size.y = 48
 	go.pressed.connect(func():
@@ -530,7 +531,8 @@ func _standing_card() -> Control:
 	# Your list as one number and where the club is in its cycle (TeamRating).
 	var outlook := GameState.team_outlook(GameState.my_club)
 	if not outlook.is_empty():
-		var tl := UiKit.lbl(str(outlook["line"]), UiKit.SECONDARY, UiKit.MUTED)
+		# Your list's number in TEXT, like theirs above: a fact he decides on (T3.R9).
+		var tl := UiKit.lbl(str(outlook["line"]), UiKit.SECONDARY, UiKit.TEXT)
 		tl.name = "MyTeamOutlook"
 		cv.add_child(tl)
 	# The last rounds on: where your first pick falls if the season ended today.
@@ -786,7 +788,9 @@ func _job_offers(v: VBoxContainer, jobs: Array) -> void:
 		nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		name_row.add_child(nm)
 		row.add_child(name_row)
-		row.add_child(_offer_line("Finished %s of %d. %s" % [GameState.ordinal(int(o["finish"])), int(o["clubs"]), str(o["why_open"])], UiKit.TEXT))
+		var from_line := _offer_line(_where_from(o), UiKit.TEXT)
+		from_line.name = "JobOfferFrom_%s" % code
+		row.add_child(from_line)
 		if str(o.get("list", "")) != "":
 			row.add_child(_offer_line("The list: " + str(o["list"]), UiKit.TEXT))
 		row.add_child(_offer_line("The board's goal: " + str(o["goal"]), UiKit.TEXT))
@@ -912,24 +916,24 @@ func _week_section(season: Season) -> Control:
 	elif _regular_bye(season):
 		nv.add_child(UiKit.lbl("Bye", UiKit.H1, UiKit.TEXT, true))
 		nv.add_child(UiKit.lbl(
-				"No game for you in Round %d. The rest of the league plays on." % (season.round_index + 1),
+				"No game for us in Round %d. The rest of the league plays on." % (season.round_index + 1),
 				UiKit.BODY, UiKit.MUTED))
 	elif _upcoming_match().is_empty():
 		match GameState.my_finals_status():
 			"bye":
 				nv.add_child(UiKit.lbl("Week off", UiKit.H1, UiKit.TEXT, true))
 				nv.add_child(UiKit.lbl(
-						"You have a week off while the rest of the series plays on.",
+						"We have a week off while the rest of the series plays on.",
 						UiKit.BODY, UiKit.MUTED))
 			"eliminated":
 				nv.add_child(UiKit.lbl("Knocked out", UiKit.H1, UiKit.BAD, true))
 				nv.add_child(UiKit.lbl(
-						"Your finals campaign is over. Play out the rest of the series to see who lifts the cup.",
+						"Our finals campaign is over. Play out the series to see who lifts the cup.",
 						UiKit.BODY, UiKit.MUTED))
 			_:
-				nv.add_child(UiKit.lbl("Season over for you", UiKit.H1, UiKit.BAD, true))
+				nv.add_child(UiKit.lbl("Season over", UiKit.H1, UiKit.BAD, true))
 				nv.add_child(UiKit.lbl(
-						"You missed the top %d. Play out the finals series to see who lifts the cup." % Season.FINALISTS,
+						"We missed the top %d. Play out the finals to see who lifts the cup." % Season.FINALISTS,
 						UiKit.BODY, UiKit.MUTED))
 	else:
 		var mine: Dictionary = _upcoming_match()
@@ -993,10 +997,17 @@ func _week_section(season: Season) -> Control:
 			standing_text = "%s are %s on the ladder  ·  %s" % [
 					GameDB.club_short(opp), GameState.ordinal(GameState.club_position(opp)),
 					GameState.form_line(their)]
+		# Their side as one block under a bar in their colour, in full TEXT: the
+		# coach plans against these, and the bar says whose they are before the
+		# words do (T3.R9; they were grey).
+		var their_block := UiKit.vbox(2)
+		their_block.name = "OppBlock"
+		their_block.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if standing_text != "":
-			var standing := UiKit.lbl(standing_text, UiKit.SECONDARY, UiKit.MUTED)
+			var standing := UiKit.lbl(standing_text, UiKit.SECONDARY, UiKit.TEXT)
 			standing.name = "OppFormLine"
-			nv.add_child(standing)
+			standing.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			their_block.add_child(standing)
 		# Their list: the club's guernsey and name, then its line (TeamRating).
 		var their_list := GameState.team_outlook(opp)
 		if not their_list.is_empty():
@@ -1005,11 +1016,22 @@ func _week_section(season: Season) -> Control:
 			var mark := UiKit.club_marker(opp, 18.0)
 			mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			row.add_child(mark)
-			var tl := UiKit.lbl("%s  %s" % [GameDB.club_short(opp), str(their_list["line"])], UiKit.SECONDARY, UiKit.MUTED)
+			var tl := UiKit.lbl("%s  %s" % [GameDB.club_short(opp), str(their_list["line"])], UiKit.SECONDARY, UiKit.TEXT)
 			tl.name = "OppTeamOutlook"
 			tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(tl)
-			nv.add_child(row)
+			their_block.add_child(row)
+		if their_block.get_child_count() > 0:
+			var their_side := UiKit.hbox(10)
+			their_side.name = "OppSide"
+			var bar := ColorRect.new()
+			bar.name = "OppBar"
+			bar.color = UiKit.club_ink(opp)
+			bar.custom_minimum_size = Vector2(3, 0)
+			bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			their_side.add_child(bar)
+			their_side.add_child(their_block)
+			nv.add_child(their_side)
 		# The football: two or three facts, then anything on our side.
 		var facts := GameState.opponent_facts(opp)
 		var notes := GameState.my_week_notes()
@@ -1617,15 +1639,19 @@ func _push_past_fold(box: Control, fold: float, edge: float, max_gap: float) -> 
 			continue
 		var gap := edge - r.position.y
 		var peek := _peek_height(c as Control)
+		var sep := float((box as VBoxContainer).get_theme_constant("separation")) 				if box is VBoxContainer else 0.0
 		if gap >= peek:
 			gap -= peek
+			# Its title already reads clear of the fade: a spacer here, even an
+			# empty one, would add the list's separation and push the title into it.
+			if gap <= sep:
+				return true
 		if gap > max_gap:
 			# A tall card with a list inside: the gap falls between its rows.
 			for inner in c.get_children():
 				if inner is VBoxContainer:
 					return _push_past_fold(inner, fold, edge, max_gap)
 			return true
-		var sep := float((box as VBoxContainer).get_theme_constant("separation")) 				if box is VBoxContainer else 0.0
 		var spacer := Control.new()
 		spacer.name = "HubFoldGap"
 		spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1776,7 +1802,7 @@ func _approach_cards() -> Control:
 	for i in range(GameState.coach_approaches.size()):
 		var a: Dictionary = GameState.coach_approaches[i]
 		var c: Dictionary = GameState.coaches.get(str(a["cid"]), {})
-		var who := CoachMarket._name(c) if not c.is_empty() else "Your coach"
+		var who := CoachMarket._name(c) if not c.is_empty() else "Our coach"
 		if str(a.get("choice", "")) != "":
 			var done := UiKit.lbl(str(a["text"]), UiKit.BODY, UiKit.MUTED)
 			done.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1785,7 +1811,7 @@ func _approach_cards() -> Control:
 		var card := UiKit.vbox(4)
 		card.name = "Approach_%d" % i
 		card.add_child(UiKit.lbl("%s want %s" % [GameDB.club_name(str(a["club"])), who], UiKit.NAME, UiKit.TEXT, true))
-		var why := UiKit.lbl("Your %s. They have offered him the %s job." % [
+		var why := UiKit.lbl("Our %s. They have offered him the %s job." % [
 				CoachMarket._job_word(str(a["from_job"])), CoachMarket._job_word(str(a["job"]))], UiKit.BODY, UiKit.MUTED)
 		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		card.add_child(why)
@@ -1832,7 +1858,11 @@ func _letter_card() -> Control:
 		var done := "You are %s's senior coach now: their contracts, trades and draft are yours this off-season. %s" % [
 				str(l["name"]), after] if answer == "taken" \
 				else "You turned %s down. You stay at %s." % [str(l["name"]), mine]
-		var dl := UiKit.lbl(done, UiKit.BODY, UiKit.TEXT if answer == "taken" else UiKit.MUTED)
+		# A club yet to play: signed, he takes over at its first National Draft.
+		if answer == "taken" and int(l.get("joins", 0)) > 0 and GameState.my_club == str(l["from"]):
+			done = "You have signed with %s and take over at the %d National Draft. Until then %s's contracts and trades are yours." % [
+					str(l["name"]), int(l["year"]), old]
+		var dl :=UiKit.lbl(done, UiKit.BODY, UiKit.TEXT if answer == "taken" else UiKit.MUTED)
 		dl.name = "RivalLetterAnswered"
 		dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(dl)
@@ -1846,8 +1876,14 @@ func _letter_card() -> Control:
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_row.add_child(nm)
 	v.add_child(name_row)
-	v.add_child(_offer_line("%s, their president, offers you the senior job. You would start now, with their contracts, trades and draft." % str(l["president"]), UiKit.TEXT))
-	v.add_child(_offer_line("Finished %s of %d. %s" % [GameState.ordinal(int(l["finish"])), int(l["clubs"]), str(l["why_open"])], UiKit.TEXT))
+	var start := "You would start now, with their contracts, trades and draft."
+	if int(l.get("joins", 0)) > 0:
+		start = "You would take over at the %d National Draft and make their picks. This off-season's contracts and trades stay yours at %s." % [
+				int(l["year"]), mine]
+	var offer := _offer_line("%s, their president, offers you the senior job. %s" % [str(l["president"]), start], UiKit.TEXT)
+	offer.name = "RivalLetterStart"
+	v.add_child(offer)
+	v.add_child(_offer_line(_where_from(l), UiKit.TEXT))
 	if str(l.get("list", "")) != "":
 		v.add_child(_offer_line("Their list: " + str(l["list"]), UiKit.TEXT))
 	v.add_child(_offer_line("Their board's goal: " + str(l["goal"]), UiKit.TEXT))
@@ -1872,6 +1908,14 @@ func _letter_card() -> Control:
 	return v
 
 
+## Where an offering club stands: its ladder finish and why the job is open,
+## or, for a club yet to play, the year it joins and why (ClubMoves).
+func _where_from(o: Dictionary) -> String:
+	if int(o.get("joins", 0)) > 0:
+		return str(o["why_open"])
+	return "Finished %s of %d. %s" % [GameState.ordinal(int(o["finish"])), int(o["clubs"]), str(o["why_open"])]
+
+
 ## One answer to an approach: the button, then what it gives and costs and
 ## how he weighs it.
 func _approach_option(i: int, choice: String, text: String, what: String) -> Control:
@@ -1880,7 +1924,7 @@ func _approach_option(i: int, choice: String, text: String, what: String) -> Con
 	var col := UiKit.vbox(0)
 	if choice != "go":
 		var w := GameState.approach_weight(i, choice)
-		var odds := UiKit.lbl("He weighs it %d of 100: %s" % [w, "stays" if w >= int(CoachMarket.STAY_BAR * 100.0) else "goes"],
+		var odds := UiKit.lbl("He weighs it %d out of 100: %s" % [w, "stays" if w >= int(CoachMarket.STAY_BAR * 100.0) else "goes"],
 				UiKit.SMALL, UiKit.TEXT, true)
 		odds.name = "Approach_%d_%s_weight" % [i, choice]
 		col.add_child(odds)
@@ -1927,8 +1971,8 @@ func _nav_button(text: String, cb: Callable, primary := false) -> Button:
 ## ("Play Wildcard Round" ran off the edge at 390).
 func _finals_play_label() -> String:
 	var w := int(GameState.season.finals.get("week", 1))
-	return ["Play the wildcard", "Play the finals", "Play semi finals",
-			"Play the prelims", "Play Grand Final"][clampi(w - 1, 0, 4)]
+	return ["Play the wildcard", "Play the finals", "Play the semi-finals",
+			"Play the preliminary finals", "Play the Grand Final"][clampi(w - 1, 0, 4)]
 
 
 func _finals_label() -> String:
@@ -2078,12 +2122,12 @@ func _sim_week() -> void:
 func _sim_line() -> String:
 	var season: Season = GameState.season
 	if season == null or season.is_season_over():
-		return "Simming the week..."
+		return "Sim the week..."
 	if not season.is_regular_done():
 		return "Playing %s..." % season.round_label(season.round_index)
 	var w := int(season.finals.get("week", 1))
-	return ["Playing the wildcard round...", "Playing the first week of the finals...", "Playing the semi finals...",
-			"Playing the prelims...", "Playing the Grand Final..."][clampi(w - 1, 0, 4)]
+	return ["Playing the wildcard round...", "Playing the first week of the finals...", "Playing the semi-finals...",
+			"Playing the preliminary finals...", "Playing the Grand Final..."][clampi(w - 1, 0, 4)]
 
 
 ## Router back hook: close the results popup before leaving the hub.
@@ -2241,7 +2285,7 @@ func _show_midseason_pick() -> void:
 	_midseason_overlay.name = "MidseasonDraft"
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.heading("Mid-season rookie draft", UiKit.TITLE))
-	var note := UiKit.lbl("Your pick: whoever you take signs a rookie deal to the end of next season. Sim the week without picking passes it.", 15, UiKit.TEXT)
+	var note := UiKit.lbl("Our pick. Whoever we take signs a rookie deal to the end of next season.\nSim the week without picking and we pass.", 15, UiKit.TEXT)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(note)
 	var shown := MidseasonDraft.pool(GameState).slice(0, MIDSEASON_SHOWN)

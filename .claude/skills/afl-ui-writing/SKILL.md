@@ -51,3 +51,9 @@ an uncontrolled redesign.
 like this game, or like any AI-generated sports-management app? If the latter,
 simplify it. Authored and restrained, not weird; never at the cost of
 usability.
+
+**Voice (director, 2026-11-10).** Every line is written in the senior coach's
+briefing: [style guide §5.1](docs/VISUAL_STYLE_GUIDE.md) holds the rules and
+`scripts/core/CopyRules.gd` the one banned list. Review question for every line:
+does it follow §5.1's person (we for the club, you only for the coach himself),
+length (4 to 12 words) and gate grammar (one effect, one number per line)?
