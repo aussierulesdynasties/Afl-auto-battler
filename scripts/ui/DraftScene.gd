@@ -99,6 +99,9 @@ func _ready() -> void:
 	_draft = GameState.draft
 	_club = _draft.user_club
 	_phase = "club" if _club.is_empty() else "board"
+	# The redraft wears the chosen club's colours before my_club is set, a
+	# draft resumed from a save included.
+	UiKit.club_override = _club
 	for i in range(_draft.pick_history.size() - 1, -1, -1):
 		if str(_draft.pick_history[i]["club"]) == _club:
 			_last_batch_start = int(_draft.pick_history[i]["pick"])
@@ -129,8 +132,20 @@ func _ready() -> void:
 			and GameState.draft_meeting_year != GameState.season_year:
 		GameState.draft_meeting_year = GameState.season_year
 		_show_meeting()
-	else:
-		FirstVisitIntro.show_if_due.call_deferred(self, "draft")
+	elif _phase == "board":
+		FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())
+
+
+## The draft's tip: the League redraft builds a whole list from the league's
+## players; the National Draft (and the real lists' opening draft) is the kids.
+## Each opens on the board, never over Choose your club (row T3.R56).
+func _intro_key() -> String:
+	return "draft" if _draft.intake_mode or GameState.opening_draft else "league_draft"
+
+
+## Off the draft, colour reads GameState.my_club alone again.
+func _exit_tree() -> void:
+	UiKit.club_override = ""
 
 
 func _on_resize() -> void:
@@ -367,6 +382,7 @@ func _grid_columns() -> int:
 
 func _on_club_chosen(code: String) -> void:
 	_club = code
+	UiKit.club_override = code
 	_phase = "board"
 	_last_batch_start = _draft.pick_history.size()
 	if GameState.choosing_club():
@@ -378,6 +394,7 @@ func _on_club_chosen(code: String) -> void:
 	GameState.mark_dirty()
 	_club_backdrop()
 	_show_board()
+	FirstVisitIntro.show_if_due.call_deferred(self, _intro_key())
 
 
 ## Your club's colour behind the board once you have one (director,
@@ -755,6 +772,7 @@ func _on_trade_picks() -> void:
 	if is_instance_valid(_trade_sheet):
 		_trade_sheet.queue_free()
 	_trade_sheet = DraftTradeSheet.open(self, _draft, _after_trade)
+	FirstVisitIntro.show_if_due(self, "draft_trade")
 
 
 func _after_trade() -> void:
@@ -1505,7 +1523,10 @@ func _show_meeting() -> void:
 	var go := UiKit.btn("To the draft", UiKit.BODY, true)
 	go.name = "MeetingDone"
 	go.custom_minimum_size.y = 48
-	go.pressed.connect(func(): overlay.queue_free())
+	# The panel meets first; the draft's own tip follows it, once.
+	go.pressed.connect(func():
+		overlay.queue_free()
+		FirstVisitIntro.show_if_due.call_deferred(self, _intro_key()))
 	var day := UiKit.btn("See the Combine", UiKit.BODY)
 	day.name = "MeetingCombine"
 	day.custom_minimum_size.y = 48

@@ -35,6 +35,7 @@ func _run() -> void:
 	for kind in KINDS:
 		await _t("_test_tap", [kind])
 	await _t("_test_no_chosen_defender")
+	await _t("_test_first_call_warmed")
 	print(Ran.line("Decision scenes", self))
 	for f in _failures:
 		print("  FAIL: ", f)
@@ -443,6 +444,61 @@ func _test_no_chosen_defender() -> void:
 
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
+## TODO row T2.42: the first call of a match froze the oval for about 5 s while the
+## call scene painted the ground's crowd and loaded its figures on its first frame. The
+## opening break now does that work behind itself (MatchScene._warm_call_scene): by the
+## time the coach taps Start, the crowd the call will draw is already painted, the warm
+## scene is gone, and the match is exactly where it was.
+func _test_first_call_warmed() -> void:
+	var db = root.get_node("GameDB")
+	var crowd = load("res://scripts/ui/match/VignetteCrowd.gd")
+	var ground = load("res://scripts/ui/match/VignetteGround.gd")
+	_state.set_vignettes_on(true)
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("MEL", db.club_list("MEL"))
+	root.size = Vector2i(390, 844)
+	_check(_state.prepare_interactive_match(), "A live match is prepared")
+	var sim = _state.pending_sim
+	var minute_was: int = sim.current_minute
+	var events_was: int = (sim.events as Array).size()
+	(crowd._cache as Dictionary).clear()
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await process_frame
+	var holder := m.find_child("CallSceneWarm", true, false) as Control
+	_check(holder != null and m.find_child("CoachBox", true, false) != null,
+			"the opening break warms the call scene behind it")
+	_check(holder != null and holder.size == Vector2.ONE and holder.clip_contents
+			and holder.mouse_filter == Control.MOUSE_FILTER_IGNORE,
+			"the warm scene shows one pixel at most and takes no taps")
+	await _settle()
+	var colours := [db.club_colours(str(sim.squads[0].code)), db.club_colours(str(sim.squads[1].code))]
+	var key := "seats|%s|%d|%s" % [str(colours), 7, (ground.seat_colour() as Color).to_html()]
+	_check((crowd._cache as Dictionary).has(key), "the first call's crowd (home and away colours) is painted at the break")
+	if bool((ground.spec as Dictionary).get("hill", false)):
+		var hill := "seats|%s|%d|%s" % [str(colours), 8, (ground.HILL as Color).to_html()]
+		_check((crowd._cache as Dictionary).has(hill), "the ground's hill crowd is painted at the break")
+	_check(m.find_child("CallSceneWarm", true, false) == null, "the warm scene is gone before play")
+	_check(sim.current_minute == minute_was and (sim.events as Array).size() == events_was,
+			"warming the call scene changes nothing in the match")
+	m.queue_free()
+	await _settle()
+	# With the Vignettes setting off there is no call scene to warm.
+	_state.set_vignettes_on(false)
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.start_season("MEL", db.club_list("MEL"))
+	_check(_state.prepare_interactive_match(), "A live match is prepared")
+	m = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await process_frame
+	_check(m.find_child("CallSceneWarm", true, false) == null, "vignettes off: nothing is warmed")
+	m.queue_free()
+	await _settle()
+	_state.set_vignettes_on(true)
+
+
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 

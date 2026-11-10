@@ -106,6 +106,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `keyboard` | The phone keyboard on every screen with a text field: the window loses the keyboard's height (phone on its side, upright, tablet) and the same field keeps the focus and its text; text arriving the way the engine's web keyboard sends it fills the field and filters the list; the web export has the phone keyboard on |
 | `international` | International prospects: one or two per generated class over 150 seeded years, never none or three, from seven countries; names from their own country's lists; raw but high-ceiling ratings shaped by their code; one drafted, kept across a save and a season rollover; an old save loads |
 | `namelink` | A player's name opens his profile: real touches at 390x844 and 1280x720 on the Training header, a row's Profile tap and a name in the week's news; a drag that starts on a name still scrolls; Back closes the profile and leaves the screen as it was. |
+| `nav_economy` | Weekly facts within two taps of the hub, the overflow walk at every text size, long-press football words, hub search and shortlist, the Sim the week standing orders |
 | `trainrep` | The monthly training report: the block snapshot, a known riser with his stats, the retraining list matching the Training menu's own (and the club's two-project limit), an old save, and real taps on a phone and a PC (open, a name, a retraining entry, Close, Android Back) |
 | `match_story` | The match makes the story: the hero is the winners' best by goals, disposals, tackles, clearances and clutch late goals; every reason traces to a number in the result; one record per match of yours persists through save and load and Sim the week; an old save loads; the Summary shows the story above How it went on a phone and a PC |
 | `key_duels` | Key forward v key defender (row 94): the key-forward target share; contests per duel on seeded matches; every logged mark is a mark event tagged to that forward, against the man the log names; the full-time line's "N marks from M contests" and its beat / held reading are the log's and the verdict rule's |
@@ -266,6 +267,15 @@ gh run download <run-id> -n audit-<name>
 - Every dispatch runs on its own, so variants of one audit can go at once. There is a 180 minute limit and a read-only token: the workflow only measures and never pushes or comments.
 - It runs the audit script as it is on the branch you pass to `--ref`.
 - For a short audit, run it locally: `godot --headless --path . --script tools/audit/run_audit.gd -- <name>`, with `APPDATA=<scratch dir>` on Windows so it does not share saves with another run.
+
+## Balance checks wait (director 2026-11-10)
+
+Checks that hold the sim to a real-AFL number (a rate, share, percentile or
+gap over seeded matches) wait for the balance pass in TODO section Z. Wrap
+the condition: `_check(BalanceGate.held(cond, "short name"), message)` with
+`const BalanceGate := preload("res://tests/balance_gate.gd")`. A miss prints
+`BALANCE_DEFERRED| short name` and passes; with `BALANCE_CHECKS=1` it fails.
+Checks that guard a rule or catch breakage stay ordinary checks.
 
 ## Automated coverage
 

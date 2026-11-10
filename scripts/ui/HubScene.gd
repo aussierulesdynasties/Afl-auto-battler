@@ -138,10 +138,6 @@ func _show_weekly_loop_intro() -> void:
 	v.add_child(UiKit.heading("Your week", UiKit.TITLE))
 	for line in [
 		"This is home base. Check the next opponent, then use Team to pick the side and Coaching if you want to change how you play.",
-		"Play match when you want the live coaching calls. Sim the week plays the round out for you quickly; the match itself is the same either way.",
-		"After the game, review what happened and change selection or training only when you have a reason. There is no weekly checklist to clear.",
-	] if not WeekChecklist.on(GameState) else [
-		"This is home base. Check the next opponent, then use Team to pick the side and Coaching if you want to change how you play.",
 		"Each week a short list here shows the jobs still open: look over the side, check training, and anything waiting on you. Tap a job to go to it; it ticks when done.",
 		"The list is a guide, never a gate. Play match or Sim the week whenever you are ready, jobs left or not.",
 	]:
@@ -290,7 +286,17 @@ func _build() -> void:
 	settings.custom_minimum_size = Vector2(64, 44)
 	settings.add_theme_color_override("font_color", UiKit.MUTED)
 	settings.pressed.connect(func(): _settings = OptionsSheet.open(self, true))
-	_root.add_child(UiKit.top_bar(_week_title(season), false, settings))
+	# Any player or club by name, and the shortlist (row T3.R43, P-65).
+	var search := UiKit.btn("Search", 14)
+	search.name = "HubSearchOpen"
+	search.flat = true
+	search.custom_minimum_size = Vector2(64, 44)
+	search.add_theme_color_override("font_color", UiKit.MUTED)
+	search.pressed.connect(func(): HubSearch.open(self))
+	var bar_tools := UiKit.hbox(4)
+	bar_tools.add_child(search)
+	bar_tools.add_child(settings)
+	_root.add_child(UiKit.top_bar(_week_title(season), false, bar_tools))
 	if GameState.is_sacked():
 		# The jobs on offer and the record run past a phone's height: it scrolls.
 		var sp := UiKit.vbox(UiKit.SECTION)
@@ -638,7 +644,7 @@ func _show_new_event() -> bool:
 	return false
 
 
-func _open_event_sheet(index: int) -> void:
+func _open_event_sheet(index: int, why := "") -> void:
 	var box := UiKit.modal_box(self, 520.0, 0.0)
 	_event_overlay = box["overlay"]
 	_event_overlay.name = "EventSheet"
@@ -647,6 +653,11 @@ func _open_event_sheet(index: int) -> void:
 	var club := UiKit.club_heading(GameState.my_club, null, UiKit.SECONDARY, 18.0)
 	club.name = "EventSheetClub"
 	v.add_child(club)
+	if why != "":
+		var stop := UiKit.lbl(why, UiKit.SMALL, UiKit.MUTED)
+		stop.name = "SimStopped"
+		stop.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(stop)
 	var footer: VBoxContainer = box["footer"]
 	var later := UiKit.btn("Later", UiKit.NAME)
 	later.name = "EventLater"
@@ -675,6 +686,14 @@ func _open_event_sheet(index: int) -> void:
 		_build()
 	put_card.call(answered)
 	footer.add_child(later)
+
+
+## Close an open card sheet without moving on to the week's next ask.
+func _close_event_sheet_quiet() -> void:
+	if _event_overlay != null and is_instance_valid(_event_overlay):
+		_event_overlay.name = "EventSheetGone"
+		_event_overlay.queue_free()
+	_event_overlay = null
 
 
 func _close_event_sheet() -> void:
@@ -1308,9 +1327,9 @@ func _milestone_card() -> Control:
 	return panel
 
 
-## The week's jobs (WeekChecklist; setting "weekly_checklist", off by
-## default): the big call's slot first, then the routine jobs, each one tap
-## from its screen and ticked when done. null when off or with no jobs.
+## The week's jobs (WeekChecklist): the big call's slot first, then the
+## routine jobs, each one tap from its screen and ticked when done. null with
+## no jobs (the season is over).
 func _week_jobs_card() -> Control:
 	var items := WeekChecklist.items(GameState)
 	var call := WeekChecklist.big_call(GameState)
@@ -1982,11 +2001,17 @@ func _sim_asks_first() -> bool:
 
 
 func _on_sim_round_pressed() -> void:
+	# Your standing orders say ask you (P-66): the week waits for the card.
+	var stops := GameState.sim_week_stops()
+	if not stops.is_empty():
+		_close_event_sheet_quiet()
+		_open_event_sheet(int(stops[0]), "Sim the week waits for this card: your standing orders say ask you.")
+		return
 	var m := _upcoming_match()
 	if not _sim_asks_first():
 		_on_sim_round()
 		return
-	var box := UiKit.modal_box(self, 420.0, 290.0)
+	var box := UiKit.modal_box(self, 420.0, 0.0)
 	_sim_confirm = box["overlay"]
 	_sim_confirm.name = "SimConfirm"
 	var v: VBoxContainer = box["body"]
@@ -1994,6 +2019,18 @@ func _on_sim_round_pressed() -> void:
 	var why := UiKit.lbl("Your match will be played out without you.", UiKit.BODY, UiKit.TEXT)
 	why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(why)
+	# What the assistant does while you are away, and the way to change it (P-66).
+	for line in SimOrdersSheet.summary():
+		var ol := UiKit.lbl(str(line), UiKit.SMALL, UiKit.MUTED)
+		ol.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(ol)
+	var orders := UiKit.text_action("When I sim the week ›", UiKit.BODY)
+	orders.name = "SimConfirmOrders"
+	orders.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	orders.pressed.connect(func():
+		_close_sim_confirm()
+		SimOrdersSheet.open(self))
+	v.add_child(orders)
 	var go := UiKit.btn("Sim the week", UiKit.NAME, true)
 	go.name = "SimConfirmGo"
 	go.custom_minimum_size = Vector2(0, 48)
@@ -2029,7 +2066,7 @@ func _on_sim_round() -> void:
 
 
 func _sim_week() -> void:
-	GameState.advance()
+	GameState.sim_week()
 	_build()
 	if not GameState.last_results.is_empty():
 		_show_results(GameState.last_results)

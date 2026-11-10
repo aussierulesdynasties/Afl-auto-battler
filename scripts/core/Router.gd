@@ -10,6 +10,7 @@ const SCENES := {
 	"preview": "res://scenes/MatchPreviewScene.tscn",
 	"stats": "res://scenes/StatsHubScene.tscn",
 	"list": "res://scenes/ListScene.tscn",
+	"scouting": "res://scenes/ScoutingScene.tscn",
 	"selection": "res://scenes/SelectionScene.tscn",
 	"offseason": "res://scenes/OffseasonScene.tscn",
 	"training": "res://scenes/TrainingScene.tscn",
@@ -151,6 +152,10 @@ var _web_back = null    # keeps the browser callback alive
 
 
 func _ready() -> void:
+	# Long-press a football word for its rule (row T3.R43, P-61), on every screen.
+	var words := WordPress.new()
+	words.name = "WordPress"
+	add_child(words)
 	if OS.has_feature("web"):
 		_hook_browser_back()
 

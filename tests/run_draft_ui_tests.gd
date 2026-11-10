@@ -45,6 +45,7 @@ func _run() -> void:
 	await _t("_test_take_tasmania")
 	await _t("_test_rival_why")
 	await _t("_test_draft_fit")
+	await _t("_test_redraft_wears_club")
 	for sz in [Vector2i(390, 844), Vector2i(360, 800), Vector2i(320, 568), Vector2i(2560, 1440)]:
 		await _t("_test_subtitle_whole", [sz])
 	print(Ran.line("Draft UI", self))
@@ -61,6 +62,36 @@ func _cut(l: Label) -> bool:
 	if l.autowrap_mode != TextServer.AUTOWRAP_OFF and l.get_visible_line_count() < l.get_line_count():
 		return true
 	return l.get_global_rect().end.x > float(root.size.x) + 1.0
+
+
+## The League redraft wears the chosen club's colours from the moment the club
+## is chosen (director 2026-11-10: the board and its tips were the no-club
+## red), a draft resumed from a save too, while GameState.my_club stays empty
+## until Start season; off the draft the colours read my_club alone again.
+func _test_redraft_wears_club() -> void:
+	var kit = load("res://scripts/ui/UiKit.gd")
+	_state.reset()
+	_state.draft = load("res://scripts/sim/Draft.gd").new(_db.all_players_sorted(),
+			_db.active_clubs(2026).duplicate(), 12345)
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	_check(kit.team_colour() == kit.ACCENT, "Choose your club keeps the no-club accent")
+	ui.call("_on_club_chosen", "FRE")
+	await _settle()
+	_check(str(_state.my_club) == "", "Choosing a redraft club leaves my_club empty until Start season")
+	_check(kit.team_colour() != kit.ACCENT, "The redraft board takes the chosen club's colour")
+	_check(kit.label_ink() == kit.club_ink("FRE"), "Labels on the redraft board wear Fremantle's ink")
+	root.remove_child(ui)
+	ui.queue_free()
+	_check(kit.team_colour() == kit.ACCENT, "Leaving the draft drops the redraft club's colour")
+	ui = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	_check(kit.label_ink() == kit.club_ink("FRE"), "A resumed redraft wears its club's colour again")
+	root.remove_child(ui)
+	ui.queue_free()
+	_state.reset()
 
 
 ## The draft's subtitle is never cut off (row 109, 6.Q18: an ellipsised
@@ -1340,7 +1371,7 @@ func _test_draft_fit() -> void:
 			var m: Dictionary = marks[pid][0]
 			lowest = minf(lowest, float(m["value"]) if id != "GAMB" else float(m["value"]) - float(m["rated"]))
 			var t := str(m["text"])
-			texts_ok = texts_ok and t.begins_with(str(Fit.SUITS[id][0]) + ": ") and t.contains("scout's read, +/-")
+			texts_ok = texts_ok and t.begins_with(str(Fit.SUITS[id][0]) + ": ") and not t.contains("+/-") and not t.contains("scout's read")
 			for banned in ["take", "pick", "draft him", "best", "should", "recommend", "target"]:
 				texts_ok = texts_ok and not t.to_lower().contains(banned)
 		var above := true
@@ -1357,13 +1388,15 @@ func _test_draft_fit() -> void:
 				var v := float(r["value"]) if id != "GAMB" else float(r["value"]) - float(r["rated"])
 				above = above and v <= lowest + 0.5
 		_check(marks.size() == 6 and above and texts_ok and lines_ok,
-				"%s marks the six who suit it best by the scouts' read, in fact words with the read's +/- (%d marked)" % [id, marks.size()])
+				"%s marks the six who suit it best by the scouts' read, in a recruiter's words with the read as a range (%d marked)" % [id, marks.size()])
 	_check(by_arch["DS"] != by_arch["CC"] and by_arch["FATH"] != by_arch["GAMB"],
 			"Different archetypes mark different prospects")
 	var one: Dictionary = Fit.marks(d.pool, {"s": "DS", "p": ""}, "MEL", d.seed, mult)
 	var first: String = str(one.values()[0][0]["text"])
-	_check(first.begins_with("Suits your pressing game: pressure ") and first.ends_with("scout's read, +/-6"),
-			"Defence and System reads the pressure rating, +/-6 at a plain budget (%s)" % first)
+	var span: PackedStringArray = first.trim_prefix("Presses like your side: pressure ").split("-")
+	_check(first.begins_with("Presses like your side: pressure ") and span.size() == 2
+			and int(span[1]) - int(span[0]) == 12,
+			"Defence and System reads the pressure rating as a range 12 wide at a plain budget (%s)" % first)
 	# A coach with no archetype marks nobody.
 	_check(Fit.marks(d.pool, {}, "MEL", d.seed, mult).is_empty(), "No archetype, no marks")
 

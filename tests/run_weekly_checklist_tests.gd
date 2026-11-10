@@ -1,9 +1,9 @@
 extends SceneTree
 ## godot --headless --path . --script tests/run_weekly_checklist_tests.gd
-## The Hub's weekly checklist (WeekChecklist.gd; setting "weekly_checklist",
-## off by default; director, 2026-11-03): jobs read from real state, ticked
-## when done, one tap to their screen, the big call's slot empty until the
-## coach arcs fill it, never a block on Play; off, the Hub is as before.
+## The Hub's weekly checklist (WeekChecklist.gd; director, 2026-11-03; on in
+## every career since TODO row 51): jobs read from real state, ticked when
+## done, one tap to their screen, the big call's slot empty until the coach
+## arcs fill it, never a block on Play.
 
 var _state: Node
 var _router: Node
@@ -12,6 +12,7 @@ var _checks := 0
 var _failures: Array[String] = []
 
 const WC := preload("res://scripts/state/WeekChecklist.gd")
+const Tap := preload("res://tests/tap.gd")
 const SUITE_SEED := 2027
 const SIZES := [Vector2i(1280, 720), Vector2i(390, 844)]
 
@@ -47,22 +48,21 @@ func _run() -> void:
 	_state.settings_path = "user://test_weekly_checklist.cfg"
 	_state.delete_saved_career()
 	root.size = SIZES[0]
-	await _t("_test_off_is_old_hub")
+	await _t("_test_on_in_a_normal_career")
 	await _t("_test_items_reflect_state")
 	await _t("_test_ticks_on_completion")
 	await _t("_test_hub_card_and_note")
 	await _t("_test_layout_sizes")
 	await _t("_test_intro_text")
-	_state.set_setting(WC.SETTING, false)
+	await _t("_test_real_taps_on_a_phone")
 	print(Ran.line("Weekly checklist", self))
 	for f in _failures:
 		print("  FAIL: " + f)
 	quit(1 if not _failures.is_empty() else 0)
 
 
-func _fresh(on: bool) -> void:
+func _fresh() -> void:
 	_state.reset()
-	_state.set_setting(WC.SETTING, on)
 	_state.career_seed = SUITE_SEED
 	_state.replay_seed = SUITE_SEED
 	_state.start_season("MEL", _db.club_list("MEL"))
@@ -94,20 +94,21 @@ func _mark_text(job: String) -> String:
 	return str((row.find_child("Mark", true, false) as Label).text)
 
 
-func _test_off_is_old_hub() -> void:
-	_fresh(false)
-	_check(not WC.on(_state) and WC.items(_state).is_empty() and WC.left(_state) == 0,
-			"Off by default: no jobs")
+## No setting to turn on (row 51): a plain new career has the list, the
+## Hub card, the Team Confirm side button, and Play match still there.
+func _test_on_in_a_normal_career() -> void:
+	_fresh()
+	_check(not WC.items(_state).is_empty() and WC.left(_state) > 0,
+			"A normal career has this week's jobs")
 	await _hub()
-	_check(_find("WeekJobs") == null and _find("JobsLeftNote") == null and _find("PlayMatch") != null,
-			"Off: the Hub has no checklist and no note, Play match as before")
+	_check(_find("WeekJobs") != null and _find("PlayMatch") != null,
+			"A normal career: the Hub shows the checklist and Play match")
 	await _go("selection")
-	_check(_find("ConfirmSide") == null, "Off: Team has no Confirm side button")
-	_check(_state.week_checks.is_empty(), "Off: opening Team writes no checklist state")
+	_check(_find("ConfirmSide") != null, "A normal career: Team has the Confirm side button")
 
 
 func _test_items_reflect_state() -> void:
-	_fresh(true)
+	_fresh()
 	var keys := []
 	for it in WC.items(_state):
 		keys.append(str(it["key"]))
@@ -130,7 +131,7 @@ func _test_items_reflect_state() -> void:
 
 
 func _test_ticks_on_completion() -> void:
-	_fresh(true)
+	_fresh()
 	await _hub()
 	_check(_mark_text("team") == "To do" and _mark_text("training") == "To do", "Both jobs start open on the Hub")
 	var team: Button = _find("WeekJob_team")
@@ -147,7 +148,7 @@ func _test_ticks_on_completion() -> void:
 		confirm.emit_signal("pressed")
 		await _settle()
 	confirm = _find("ConfirmSide")
-	_check(confirm != null and confirm.disabled and confirm.text == "Side confirmed", "Pressed, it reads Side confirmed")
+	_check(confirm != null and confirm.disabled and confirm.text == "Confirmed", "Pressed, it reads Confirmed")
 	await _hub()
 	_check(_mark_text("team") == "Done" and _mark_text("training") == "To do", "Confirm side ticks its job")
 	await _go("training")
@@ -165,7 +166,7 @@ func _test_ticks_on_completion() -> void:
 
 
 func _test_hub_card_and_note() -> void:
-	_fresh(true)
+	_fresh()
 	await _hub()
 	_check(_find("WeekJobs") != null and _find("BigCall") == null, "On: the card shows, the big call's slot shows nothing")
 	var note: Label = _find("JobsLeftNote")
@@ -183,7 +184,7 @@ func _test_layout_sizes() -> void:
 	for size in SIZES:
 		root.size = size
 		await _settle(2)
-		_fresh(true)
+		_fresh()
 		await _hub()
 		var card: Control = _find("WeekJobs")
 		var note: Control = _find("JobsLeftNote")
@@ -207,20 +208,45 @@ func _test_layout_sizes() -> void:
 
 
 func _test_intro_text() -> void:
-	for on in [false, true]:
-		_fresh(on)
-		_state.tutorials = true
-		_state.set_setting("seen_weekly_loop_intro", false)
-		await _hub()
-		var intro := _find("WeeklyLoopIntro")
-		var text := ""
-		if intro != null:
-			for l in intro.find_children("*", "Label", true, false):
-				text += (l as Label).text + "\n"
-		if on:
-			_check(intro != null and not text.contains("no weekly checklist") and text.contains("never a gate"),
-					"On: the weekly-loop intro tells of the list")
-		else:
-			_check(intro != null and text.contains("There is no weekly checklist to clear"),
-					"Off: the weekly-loop intro is the old one")
-		_state.set_setting("seen_weekly_loop_intro", true)
+	_fresh()
+	_state.tutorials = true
+	_state.set_setting("seen_weekly_loop_intro", false)
+	await _hub()
+	var intro := _find("WeeklyLoopIntro")
+	var text := ""
+	if intro != null:
+		for l in intro.find_children("*", "Label", true, false):
+			text += (l as Label).text + "
+"
+	_check(intro != null and not text.contains("no weekly checklist") and text.contains("never a gate"),
+			"The weekly-loop intro tells of the list")
+	_state.set_setting("seen_weekly_loop_intro", true)
+
+
+## Real taps at a phone's size (row 51): a finger on the Hub's job reaches
+## Team, a finger on Confirm side ticks it, and back on the Hub it shows Done.
+func _test_real_taps_on_a_phone() -> void:
+	_fresh()
+	root.size = SIZES[1]
+	await _hub()
+	# A finger taps a screen that has stopped moving (late cards settle first).
+	await Tap.steady(_find("WeekJob_team") as Control)
+	var why: String = await Tap.tap(_find("WeekJob_team") as Control)
+	await _settle()
+	_check(why == "" and _router.current() == "selection", "Phone: a tap on Look over the side opens Team (%s)" % why)
+	await Tap.steady(_find("ConfirmSide") as Control)
+	var confirm := _find("ConfirmSide") as Control
+	var vw := float(current_scene.get_viewport_rect().size.x)
+	_check(confirm != null and confirm.get_global_rect().end.x <= vw + 0.5,
+			"Phone: Confirm side sits inside the screen's width")
+	why = await Tap.tap(confirm)
+	await _settle()
+	_check(why == "" and WC.is_done(_state, "team"), "Phone: a tap on Confirm side ticks the job (%s)" % why)
+	await _hub()
+	_check(_mark_text("team") == "Done", "Phone: back on the Hub, Look over the side shows Done")
+	await _go("selection")
+	var page := _find("SidePage") as Control
+	_check(page != null and page.get_global_rect().end.x <= float(current_scene.get_viewport_rect().size.x) + 0.5,
+			"Phone: once confirmed, Team still fits the screen's width")
+	root.size = SIZES[0]
+	await _settle(2)

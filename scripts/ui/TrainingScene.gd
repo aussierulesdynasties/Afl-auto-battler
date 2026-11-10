@@ -737,6 +737,7 @@ func _player_card(p: Dictionary) -> Control:
 	for state_name in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 		b.add_theme_stylebox_override(state_name, clear)
 	b.button_down.connect(_begin_player_hold.bind(id))
+	b.set_meta(WordPress.OWN_HOLD, true)
 	b.button_up.connect(_end_player_hold.bind(id))
 	b.pressed.connect(_press_player.bind(id))
 	card.add_child(b)

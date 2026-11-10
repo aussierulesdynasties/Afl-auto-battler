@@ -78,7 +78,8 @@ func _play(mode: String, seed: int, pr: Array, weather: String) -> String:
 				bwin = 1
 		if k == "goal" or k == "behind":
 			var prev: Dictionary = ev[i - 1] if i > 0 else {}
-			var nxt: Dictionary = ev[i + 1] if i + 1 < ev.size() else {}
+			# As MatchScene asks it: the next play event (T3.F-defects).
+			var nxt := BroadcastVignette.next_play_event(ev, i)
 			if BroadcastVignette.pick_kind(e, prev, nxt, {}) == BroadcastVignette.AFTER_SIREN:
 				siren = 1
 			# The same test with the end-of-quarter line skipped: the next event that is not one.
