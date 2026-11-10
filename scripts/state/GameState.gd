@@ -9034,7 +9034,9 @@ func _counter(club: String, mine: Array, theirs: Array) -> Dictionary:
 			extra.append(str(pk["id"]))
 		if not draft_night_open():   # players never move on draft night
 			for p in my_list:
-				extra.append(str(p["id"]))
+				# Rivals never ask for a player you marked untouchable, in a counter too.
+				if not untouchable.has(str(p["id"])):
+					extra.append(str(p["id"]))
 		for id in extra:
 			if mine.has(id):
 				continue
@@ -10819,8 +10821,11 @@ func _plan_row(key: String) -> Dictionary:
 		var row: Dictionary = LEARN_JOBS[job]
 		var word := str(row["word"])
 		return {"key": key, "label": "Learn to play %s" % word, "roles": [],
-				"text": "%d weeks training as %s %s instead of in his own position, and his own game barely moves for the rest of the season. If he is close enough to the standard at the end, he can be picked there too; if not, it has not taken." % [
-					PROJECT_WEEKS, "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a", word],
+				# The sizes the project runs on (row T1.R26 C2): PROJECT_OWN_GAIN,
+				# PROJECT_PASS, LEARN_PAYBACK.
+				"text": "%d weeks training as %s %s instead of in his own position. For the rest of the season his own rating can rise only %d more. If his rating there ends within %d of his own, he can be picked there too, and next season his own rating can climb %d past the usual limit; if not, it has not taken." % [
+					PROJECT_WEEKS, "an" if word.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a", word,
+					PROJECT_OWN_GAIN, PROJECT_PASS, LEARN_PAYBACK],
 				"weights": row["weights"]}
 	for row in TRAIN_PLANS:
 		if str(row["key"]) == key:
@@ -12453,7 +12458,8 @@ func _press_opinion(kind: String, his: Dictionary, move: int, round_no: int) -> 
 	return {"name": GameDB.player_display_name(his), "from": Trust.opinion(from), "to": Trust.opinion(to)}
 
 
-## Season over: did you meet the goal? Miss it badly twice and you are gone.
+## Season over: did you meet the goal? The board's confidence at the end decides a
+## warning and then the sack (ClubLife.season_end).
 func _board_season_end() -> void:
 	if board.is_empty():
 		return
