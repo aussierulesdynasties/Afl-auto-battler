@@ -59,6 +59,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `sir_doug_round` | Sir Doug Nicholls Round: Round 11 is marked, a club with a bye in it marks it the next round, a design slot per club ("none"), the record survives save and reload, old saves, the fixture page and match card on a 390-wide phone |
 | `own_prospect` | Row 64: the prospect you create (Alastair McNeil) in the first National Draft in both starts, the news lines of his career, the marks on his draft row and profile |
 | `league_news` | Row 76: the premiership item's flag-history sentence (first ever, back-to-back, a 10+ year wait) from the honour roll and the sourced pre-career flags, its front-page standfirst, and a seeded season played through (the sentence true) |
+| `league_stories` | The round's league stories (LeagueStories.gd): comebacks, blown leads, held-on wins, thrashings, close finishes and injuries each fire on the match's facts and stay silent without them; at most four a round, biggest first; the same round reads the same; your own headline is never repeated; results unchanged; a real tap at 390 x 844 opens the front page with the story |
 | `expansion` | Tasmania in 2028 and Canberra in 2030, and a Club Forge club entering with the career |
 | `expansion_package` | How a new club builds its list: state-league signings, early picks, the traded pick, out-of-contract signings, sign-on money, the Canberra choice, the approach card, premiers picking last |
 | `finals` | The wildcard finals bracket, extra time, draws |

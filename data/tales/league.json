@@ -1,0 +1,204 @@
+{
+	"_about": "Round-by-round league stories for the news feed (scripts/core/LeagueStories.gd). Same shape as the career story's bank (data/tales/career.json): each angle declares the slots its phrases may use, and LeagueStories.validate rejects any other. Numbers come in ready-made from the slots (\"31 points\", \"six weeks\"), so a phrase can change the words around a number but never the number. Voice: a footy news desk, third person, plural verbs for clubs and nicknames (\"Fremantle were\", \"Dockers hold on\"). One phrase is picked per match and angle from a seeded hash, so a round always reads the same. No phrase may repeat the headline over your own result (Headlines.gd): never \"From N points down at\", \"We made that interesting\", \"Not much room to breathe\" or \"Nothing between them\".",
+	"angles": {
+		"comeback_head": {
+			"slots": ["win", "lose", "deficit", "deficit_adj", "brk"],
+			"news": [
+				"{win} storm home to beat {lose}",
+				"{win} overrun {lose} after trailing by {deficit}",
+				"{win} turn a {deficit_adj} deficit into a win",
+				"{lose} let a {deficit_adj} lead slip"
+			]
+		},
+		"comeback_lead": {
+			"slots": ["win_club", "lose_club", "deficit", "brk"],
+			"news": [
+				"{lose_club} led by {deficit} at {brk}.",
+				"{win_club} trailed by {deficit} at {brk}.",
+				"At {brk}, {lose_club} were {deficit} clear."
+			]
+		},
+		"blown_head": {
+			"slots": ["win", "lose", "lead", "lead_adj", "brk"],
+			"news": [
+				"{lose} throw away a {lead_adj} lead",
+				"{lose} collapse after leading by {lead}",
+				"{lose} lose from {lead} up at {brk}",
+				"{win} reel in a {lead_adj} deficit"
+			]
+		},
+		"blown_lead": {
+			"slots": ["win_club", "lose_club", "lead", "brk"],
+			"news": [
+				"{lose_club} were {lead} up at {brk}.",
+				"{lose_club} led by {lead} at {brk} and looked in control.",
+				"{win_club} trailed by {lead} at {brk}."
+			]
+		},
+		"held_on_head": {
+			"slots": ["win", "lose", "lead", "lead_adj", "margin"],
+			"news": [
+				"{win} hang on as a {lead_adj} lead shrinks to {margin}",
+				"{win} survive a {lose} charge",
+				"{lose} nearly run down {win}"
+			]
+		},
+		"held_on_lead": {
+			"slots": ["win_club", "lose_club", "lead", "brk"],
+			"news": [
+				"{win_club} led by {lead} at {brk}.",
+				"{win_club} were {lead} up at {brk} and cruising."
+			]
+		},
+		"turn": {
+			"slots": ["win_club", "lose_club", "gb", "opp_gb", "since"],
+			"news": [
+				"From there {win_club} kicked {gb} to {opp_gb}.",
+				"{win_club} outscored {lose_club} {gb} to {opp_gb} after {since}.",
+				"After {since}, {win_club} kicked {gb} to {opp_gb}."
+			]
+		},
+		"turn_player": {
+			"slots": ["name", "goals", "since"],
+			"news": [
+				"{name} kicked {goals} of them.",
+				"{name} led the charge with {goals} after {since}.",
+				"{name} kicked {goals} in the run home."
+			]
+		},
+		"held_on_turn": {
+			"slots": ["lose_club", "gb", "opp_gb", "since"],
+			"news": [
+				"{lose_club} kicked {gb} to {opp_gb} after {since}.",
+				"{lose_club} came home {gb} to {opp_gb} after {since} but ran out of time."
+			]
+		},
+		"huge_head": {
+			"slots": ["win", "lose", "margin"],
+			"news": [
+				"{win} thrash {lose} by {margin}",
+				"{win} crush {lose} by {margin}",
+				"{margin}: {win} run riot against {lose}",
+				"{lose} flattened by {margin}"
+			]
+		},
+		"huge_kicker": {
+			"slots": ["name", "goals"],
+			"news": [
+				"{name} kicked {goals}.",
+				"{name} led the way with {goals}.",
+				"{name} helped himself to {goals}."
+			]
+		},
+		"huge_held": {
+			"slots": ["lose_club", "goals"],
+			"news": [
+				"{lose_club} managed {goals} all day.",
+				"{lose_club} kicked only {goals}."
+			]
+		},
+		"close_head": {
+			"slots": ["win", "lose", "margin"],
+			"news": [
+				"{win} edge {lose} by {margin}",
+				"{win} hold on by {margin}",
+				"{margin} in it as {win} get home",
+				"{lose} fall {margin} short"
+			]
+		},
+		"draw_head": {
+			"slots": ["home", "away"],
+			"news": [
+				"{home} and {away} can't be split",
+				"Honours even: {home} and {away} draw",
+				"{home} and {away} share the points"
+			]
+		},
+		"close_winner": {
+			"slots": ["name", "win_club"],
+			"news": [
+				"{name} put {win_club} in front for good in the last quarter.",
+				"{name}'s goal in the last quarter was the one that won it.",
+				"The winner came from {name} in the last quarter."
+			]
+		},
+		"close_changes": {
+			"slots": ["n"],
+			"news": [
+				"The lead changed {n} times.",
+				"It changed hands {n} times."
+			]
+		},
+		"scoreline": {
+			"slots": ["line"],
+			"news": [
+				"{line}."
+			]
+		},
+		"ladder_top": {
+			"slots": ["club"],
+			"news": [
+				"{club} go top of the ladder.",
+				"It puts {club} on top of the ladder."
+			]
+		},
+		"ladder_into": {
+			"slots": ["club", "pos"],
+			"news": [
+				"{club} move into the ten, {pos} on the ladder.",
+				"It lifts {club} into the ten, up to {pos}."
+			]
+		},
+		"ladder_out": {
+			"slots": ["club", "pos"],
+			"news": [
+				"{club} drop out of the ten, to {pos}.",
+				"{club} fall to {pos}, outside the ten."
+			]
+		},
+		"ladder_up": {
+			"slots": ["club", "pos"],
+			"news": [
+				"{club} climb to {pos} on the ladder.",
+				"The win lifts {club} to {pos}."
+			]
+		},
+		"ladder_stay": {
+			"slots": ["club", "pos"],
+			"news": [
+				"{club} stay {pos} on the ladder.",
+				"{club} sit {pos} on the ladder."
+			]
+		},
+		"injury_head": {
+			"slots": ["name", "weeks", "kind"],
+			"news": [
+				"{name} out for {weeks}",
+				"{name} faces {weeks} out with {kind}",
+				"{kind} sidelines {name} for {weeks}"
+			]
+		},
+		"injury_what": {
+			"slots": ["name", "club", "kind", "weeks"],
+			"news": [
+				"{club} will be without {name} for {weeks} with {kind}.",
+				"{name} has {kind} and will miss {weeks}.",
+				"{club} have lost {name} for {weeks} to {kind}."
+			]
+		},
+		"injury_when": {
+			"slots": ["quarter", "opp", "result"],
+			"news": [
+				"He was hurt in the {quarter} quarter against {opp}, {result}.",
+				"It happened in the {quarter} quarter against {opp} ({result})."
+			]
+		},
+		"injury_when_plain": {
+			"slots": ["opp", "result"],
+			"news": [
+				"He was hurt against {opp}, {result}.",
+				"It happened against {opp} ({result})."
+			]
+		}
+	}
+}
