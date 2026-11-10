@@ -8,6 +8,7 @@ extends RefCounted
 var failures: Array[String] = []
 var checks := 0
 const MATCHES := 16
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -98,7 +99,7 @@ func _test_acts_and_reconcile() -> void:
 				forced = true
 	_check(fwd_tackles > 0.0, "Forwards record tackles (%d in %d matches)" % [fwd_tackles, MATCHES])
 	_check(reconciled, "Every team's pressure acts and tackles are the sum of its players'")
-	_check(acts > tackles * 2.0, "Most pressure acts are not tackles (%d acts, %d tackles)" % [acts, tackles])
+	_check(BalanceGate.held(acts > tackles * 2.0, "pressure acts exceed twice tackles"), "Most pressure acts are not tackles (%d acts, %d tackles)" % [acts, tackles])
 	_check(forced, "Pressure can force a turnover without a tackle")
 
 

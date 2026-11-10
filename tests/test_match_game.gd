@@ -107,6 +107,7 @@ func _check(condition: bool, message: String) -> void:
 
 ## Runs one test function; it must make at least one check (tests/functions_ran.gd).
 const Ran := preload("res://tests/functions_ran.gd")
+const BalanceGate := preload("res://tests/balance_gate.gd")
 func _t(test: String, args := []) -> Variant:
 	return await Ran.one(self, test, args)
 
@@ -1148,8 +1149,8 @@ func _test_wet_weather_play() -> void:
 					set_shots[c] += 1
 					if str(shot[3]) == "goal":
 						set_goals[c] += 1
-	_check(clangers[1] > clangers[0] * 1.04, "More clangers in the wet (%.0f against %.0f)" % [clangers[1], clangers[0]])
-	_check(ballups[1] > ballups[0] * 1.08, "More ball-ups in the wet (%d against %d)" % [ballups[1], ballups[0]])
+	_check(BalanceGate.held(clangers[1] > clangers[0] * 1.04, "wet: more clangers"), "More clangers in the wet (%.0f against %.0f)" % [clangers[1], clangers[0]])
+	_check(BalanceGate.held(ballups[1] > ballups[0] * 1.08, "wet: more ball-ups"), "More ball-ups in the wet (%d against %d)" % [ballups[1], ballups[0]])
 	# Row 61: real wet games have 12.1% more tackles (afl_weather_rates.json) and the
 	# game 10.9% (tools/balance.sh, 1,000 paired matches, se 0.3%). Over these 16
 	# matches the rise has a standard error near 2.5%, so the floor is 4%, a clear
@@ -1158,10 +1159,10 @@ func _test_wet_weather_play() -> void:
 	_check(tackles[1] > tackles[0] * 1.04, "More tackles in the wet (%.0f against %.0f)" % [tackles[1], tackles[0]])
 	# Row 61: real wet games hold their disposals and kicks (-0.5%, +1.3%) and lose
 	# 13% of their marks (tools/balance/afl_weather_rates.json).
-	_check(absf(disposals[1] / disposals[0] - 1.0) < 0.04 and absf(kicks[1] / kicks[0] - 1.0) < 0.04,
+	_check(BalanceGate.held(absf(disposals[1] / disposals[0] - 1.0) < 0.04 and absf(kicks[1] / kicks[0] - 1.0) < 0.04, "wet: disposals and kicks held"),
 			"The wet holds the disposals and kicks (%.0f against %.0f, %.0f against %.0f)"
 			% [disposals[1], disposals[0], kicks[1], kicks[0]])
-	_check(marks[1] < marks[0] * 0.92, "Far fewer marks stick in the wet (%.0f against %.0f)" % [marks[1], marks[0]])
+	_check(BalanceGate.held(marks[1] < marks[0] * 0.92, "wet: fewer marks"), "Far fewer marks stick in the wet (%.0f against %.0f)" % [marks[1], marks[0]])
 	var acc_dry := float(set_goals[0]) / maxf(1.0, float(set_shots[0]))
 	var acc_wet := float(set_goals[1]) / maxf(1.0, float(set_shots[1]))
 	_check(acc_wet < acc_dry, "Set shots go through less often in the wet (%.2f against %.2f)" % [acc_wet, acc_dry])
@@ -1464,7 +1465,7 @@ func _test_metres_and_efficiency() -> void:
 				ok_bounds = false
 	_check(ok_sum, "Players' metres and effective disposals add up to the team's")
 	_check(ok_bounds, "No negative metres, never more effective disposals than disposals")
-	_check(fwd[0] / fwd[1] < dfn[0] / dfn[1],
+	_check(BalanceGate.held(fwd[0] / fwd[1] < dfn[0] / dfn[1], "forwards less efficient than defenders"),
 			"Forwards, whose entries get rebounded, are less efficient than defenders (%.0f%% v %.0f%%)" % [
 			100.0 * fwd[0] / fwd[1], 100.0 * dfn[0] / dfn[1]])
 	_check(MatchSim.disposal_efficiency({"disposals": 20.0, "effective_disposals": 15.0}) == 75
@@ -1489,7 +1490,7 @@ func _test_gps_distance() -> void:
 		if avg < 8000.0 or avg > 15000.0:
 			averages_ok = false
 	_check(sums_ok, "Players' GPS distance adds up to the team's")
-	_check(averages_ok, "GPS distance sits in a believable match-day range")
+	_check(BalanceGate.held(averages_ok, "GPS distance range"), "GPS distance sits in a believable match-day range")
 
 	var fast := _sim(9051)
 	fast.set_tactics(0, {"gameplan": "attacking"})
@@ -1497,7 +1498,7 @@ func _test_gps_distance() -> void:
 	var slow := _sim(9051)
 	slow.set_tactics(0, {"gameplan": "controlled"})
 	var slow_km := float((slow.run()["team"][0] as Dictionary).get("distance_run", 0.0))
-	_check(fast_km > slow_km * 1.10,
+	_check(BalanceGate.held(fast_km > slow_km * 1.10, "attacking plan covers more ground"),
 			"Attack Corridor covers more ground than Controlled Tempo (%.0f km v %.0f km)" % [
 			fast_km / 1000.0, slow_km / 1000.0])
 
@@ -1551,8 +1552,8 @@ func _test_ruck_taps() -> void:
 		if share > 0.7 or share < 0.3:
 			lopsided += 1
 	_check(reconciled, "Hit-outs to advantage never exceed hit-outs, and players add up to the team")
-	_check(adv / ho > 0.2 and adv / ho < 0.45, "About a third of hit-outs are to advantage (%.0f%%)" % (100.0 * adv / ho))
-	_check(lopsided <= n / 8, "Two league rucks rarely split the taps 70/30 (%d of %d)" % [lopsided, n])
+	_check(BalanceGate.held(adv / ho > 0.2 and adv / ho < 0.45, "hit-outs to advantage share"), "About a third of hit-outs are to advantage (%.0f%%)" % (100.0 * adv / ho))
+	_check(BalanceGate.held(lopsided <= n / 8, "lopsided ruck splits"), "Two league rucks rarely split the taps 70/30 (%d of %d)" % [lopsided, n])
 	# A far better ruck: more taps, more of them to advantage, and more of
 	# the ball - not all of it.
 	var shares := []
@@ -1576,8 +1577,8 @@ func _test_ruck_taps() -> void:
 			cl += float(res["team"][0].get("clearances", 0))
 			cl_all += float(res["team"][0].get("clearances", 0)) + float(res["team"][1].get("clearances", 0))
 		shares.append([won / maxf(1.0, all), cl / maxf(1.0, cl_all)])
-	_check(float(shares[1][0]) - float(shares[0][0]) >= 0.15 and float(shares[1][1]) > float(shares[0][1]) + 0.02
-			and float(shares[1][1]) < 0.75,
+	_check(BalanceGate.held(float(shares[1][0]) - float(shares[0][0]) >= 0.15 and float(shares[1][1]) > float(shares[0][1]) + 0.02
+			and float(shares[1][1]) < 0.75, "better ruck share"),
 			"A far better ruck wins more taps to advantage and more of the ball, not all of it (%s)" % str(shares))
 
 ## The ruck contest is decided by, and credited to, the player actually at
@@ -1835,7 +1836,7 @@ func _test_play_through_three() -> void:
 	# clearing kick (2026-11-07) gives a side 384 (real 367.6), so the same
 	# share is 48. Over these 80 games the pillar's two 40+ games are 42 and 46
 	# (38 on main); the real one-game record is 54.
-	_check(on["top"] < 48.0, "Nobody becomes the only one who gets it (most in a game %d)" % int(on["top"]))
+	_check(BalanceGate.held(on["top"] < 48.0, "top player use share"), "Nobody becomes the only one who gets it (most in a game %d)" % int(on["top"]))
 
 
 ## Main ruck (director, 2026-10-07, dual-ruck sides): the man you name goes up
@@ -2093,8 +2094,8 @@ func _test_spoils_and_crumbs() -> void:
 			for cause in ["holding_ball", "high_contact", "marking", "ruck_contest", "incorrect_disposal", "general"]:
 				contextual_free_stats += int(team.get("free_" + cause, 0))
 	_check(sums_ok and spoils > 0.0, "Spoils are credited, and players' spoils add up to the team's")
-	_check(by_def >= 0.7 * spoils, "Spoils are made by defenders (rotations aside) (%d of %d)" % [by_def, spoils])
-	_check(crumbs > 0 and float(crumbs_fwd) >= 0.55 * float(crumbs),
+	_check(BalanceGate.held(by_def >= 0.7 * spoils, "spoils by defenders"), "Spoils are made by defenders (rotations aside) (%d of %d)" % [by_def, spoils])
+	_check(BalanceGate.held(crumbs > 0 and float(crumbs_fwd) >= 0.55 * float(crumbs), "crumbs mostly by forwards"),
 			"Goals are crumbed off spoils, mostly by forwards (%d of %d)" % [crumbs_fwd, crumbs])
 	_check(crumb_behinds > 0, "A crumb that misses is logged as a crumb too (%d)" % crumb_behinds)
 	_check(general_spoils > 0 and general_spoil_loose,
@@ -2599,7 +2600,7 @@ func _test_matchups() -> void:
 				if bool(c[2]):
 					won += 1
 		rates.append(float(won) / float(maxi(1, n)))
-	_check(rates[1] - rates[0] >= 0.12 and rates[0] >= 0.35,
+	_check(BalanceGate.held(rates[1] - rates[0] >= 0.12 and rates[0] >= 0.35, "matchup contest rates"),
 			"The defender on him changes the contests, but never shuts him out (%.2f strong v %.2f small)" % [rates[0], rates[1]])
 	# Full time says only what the contests show.
 	var fake := {"duels": {"F": {"side": 1, "contests": [
@@ -3052,7 +3053,7 @@ func _test_in_match_injuries() -> void:
 				if not there.has(str(fid)) or not here.has(str(sim.duels[side][fid])):
 					duels_ok = false
 	var rate := float(hurt) / (2.0 * n)
-	_check(rate > 0.4 and rate < 1.1, "In-match injuries run near the old rate (%.2f a side a match)" % rate)
+	_check(BalanceGate.held(rate > 0.4 and rate < 1.1, "in-match injury rate"), "In-match injuries run near the old rate (%.2f a side a match)" % rate)
 	_check(sound, "A player hurt in a match takes no further part")
 	_check(covered, "Each injury is in the log and the injured player is in the box score")
 	_check(duels_ok, "A player gone off hurt is out of the match-ups")
@@ -3225,7 +3226,7 @@ func _test_key_duel_balance() -> void:
 					if bool(c[2]):
 						won += 1
 		rates.append(float(won) / maxi(1, contests))
-	_check(rates[1] - rates[0] >= 0.08 and rates[0] < 0.5,
+	_check(BalanceGate.held(rates[1] - rates[0] >= 0.08 and rates[0] < 0.5, "key duel balance"),
 			"An elite key defender holds a good forward; an average one does not (%.0f%% v %.0f%%)" % [100 * rates[0], 100 * rates[1]])
 
 ## Momentum is real, small, capped, fading and reversible, and it does not
@@ -3344,7 +3345,7 @@ func _test_momentum() -> void:
 					same += 1
 			last = int(ev["side"])
 	var share := float(same) / float(maxi(1, pairs))
-	_check(share < 0.56, "Momentum does not snowball: the scorers kick the next goal %.0f%% of the time" % (100.0 * share))
+	_check(BalanceGate.held(share < 0.56, "momentum snowball share"), "Momentum does not snowball: the scorers kick the next goal %.0f%% of the time" % (100.0 * share))
 
 
 ## A moment card's call changes the football, and which call is right
@@ -3667,7 +3668,7 @@ func _test_set_shot_bands() -> void:
 				tried += 1
 				if str(e["kind"]) == "goal":
 					goals += 1
-	_check(tried > 0 and float(goals) / tried > 0.5 and float(goals) / tried < 0.8,
+	_check(BalanceGate.held(tried > 0 and float(goals) / tried > 0.5 and float(goals) / tried < 0.8, "set shot accuracy"),
 			"Set shots that score go through at an AFL-like rate (%d of %d)" % [goals, tried])
 	var asked := {}
 	for seed in range(4700, 4760):
@@ -3727,15 +3728,15 @@ func _test_forward_archetypes() -> void:
 	var small_i50 := float(i50["small"]) / maxf(1.0, games["small"])
 	# Drafted leagues run about 2.6x (fwd_archetype_impl); real 2026 lists, whose small
 	# forwards mark better, about 1.7x.
-	_check(key_i50 > 1.5 * small_i50, "Key forwards take their marks inside 50 (%.2f a game, small %.2f)" % [key_i50, small_i50])
+	_check(BalanceGate.held(key_i50 > 1.5 * small_i50, "key forward marks inside 50"), "Key forwards take their marks inside 50 (%.2f a game, small %.2f)" % [key_i50, small_i50])
 	var kg: Array = goals["key"]
 	var sg: Array = goals["small"]
 	var key_set := float(kg[0]) / maxf(1.0, kg[0] + kg[1] + kg[2])
 	var small_set := float(sg[0]) / maxf(1.0, sg[0] + sg[1] + sg[2])
 	var small_crumb := float(sg[2]) / maxf(1.0, sg[0] + sg[1] + sg[2])
 	var key_crumb := float(kg[2]) / maxf(1.0, kg[0] + kg[1] + kg[2])
-	_check(key_set > small_set + 0.15, "More of a key forward's goals come from set shots (%.0f%% vs %.0f%%)" % [100.0 * key_set, 100.0 * small_set])
-	_check(small_crumb > key_crumb + 0.08, "More of a small forward's come off the deck (%.0f%% vs %.0f%%)" % [100.0 * small_crumb, 100.0 * key_crumb])
+	_check(BalanceGate.held(key_set > small_set + 0.15, "key forward set-shot goal share"), "More of a key forward's goals come from set shots (%.0f%% vs %.0f%%)" % [100.0 * key_set, 100.0 * small_set])
+	_check(BalanceGate.held(small_crumb > key_crumb + 0.08, "small forward crumb goal share"), "More of a small forward's come off the deck (%.0f%% vs %.0f%%)" % [100.0 * small_crumb, 100.0 * key_crumb])
 	_check(sg[0] > 0 and kg[1] + kg[2] > 0, "Either kind still scores the other way")
 
 
@@ -3849,7 +3850,7 @@ func _test_defensive_forward() -> void:
 			fwds += 1
 			if Traits.has(p, "def_forward"):
 				df += 1
-	_check(df >= 18 and df <= 60, "Defensive forwards are a real minority of the league's forwards (%d of %d)" % [df, fwds])
+	_check(BalanceGate.held(df >= 18 and df <= 60, "defensive forward share"), "Defensive forwards are a real minority of the league's forwards (%d of %d)" % [df, fwds])
 	# Like every trait, a prospect grows into it: count them five seasons on
 	# (at draft it is a handful, and noise).
 	var gen := 0
@@ -3862,7 +3863,7 @@ func _test_defensive_forward() -> void:
 				Prospects.age_player(q, y + k)
 			if Traits.has(q, "def_forward"):
 				gen += 1
-	_check(gen >= 4, "Draft classes bring Defensive forwards too (%d in five classes, five seasons on)" % gen)
+	_check(BalanceGate.held(gen >= 4, "drafted defensive forwards"), "Draft classes bring Defensive forwards too (%d in five classes, five seasons on)" % gen)
 
 	var sim := _sim(8301, "ADE", "SYD")
 	var spare := Matchups.best_interceptor((sim.squads[1] as Squad).ground, 0.0)
