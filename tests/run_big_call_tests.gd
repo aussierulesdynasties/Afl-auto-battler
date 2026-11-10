@@ -153,6 +153,13 @@ func _test_backing_asked_once() -> void:
 				"%d week(s) later he is not asked again (%s)" % [wk, str(c)])
 	_state.season.round_index += 1
 	_next_week()
+	_check(backing.may_ask(kid, _state.story_week()), "%d weeks later the wait is over" % backing.ASK_GAP)
+	# A bye week has no match to back him for: the next week with one asks.
+	for i in range(4):
+		if _state.can_back(kid):
+			break
+		_state.season.round_index += 1
+		_next_week()
 	c = WC.big_call(_state)
 	_check(str(c.get("ref", "")) == str(kid["id"]),
 			"%d weeks later he can be asked again (%s; may_ask %s, can_back %s, in side %s, next %s, asked %s, week %d)" % [

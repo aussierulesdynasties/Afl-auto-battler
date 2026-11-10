@@ -642,6 +642,8 @@ func _test_board_patience() -> void:
 	var f2 := ClubLife.season_end(10, false, bool(f1["warned"]), int(f1["poor_seasons"]), fair)
 	_check(bool(f1["warned"]) and not bool(f1["sacked"]) and bool(f2["sacked"]),
 			"Fair: the first poor season warns and the second sacks, as before the dials")
+	_check(str(f1["verdict"]) == "Final warning: end next season with the board's confidence under %d%% and you are gone." % int(fair.get("poor_season_below", ClubLife.WARN_LINE)),
+			"The final warning names what sacks you: the board's confidence at season's end (%s)" % str(f1["verdict"]))
 	_check(ClubLife.season_end(34, false, false, 0, fair)["warned"] == false
 			and ClubLife.season_end(34, false, false, 0, ruthless)["warned"] == true,
 			"Ruthless counts a season that only scrapes by as poor; Fair does not")

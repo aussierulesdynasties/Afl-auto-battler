@@ -616,6 +616,8 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 	# What waiting on an early extension can cost: the rise training can still
 	# bring his price this season (read on a copy: the ceiling marks the player).
 	out["wait_price"] = ClubLife.wait_words(p, gs.season_ceiling(p.duplicate()))
+	# His learning project, for the development talk (T5.r93).
+	out.merge(project_facts(gs, p), true)
 	# The result of his role trial, for the card that reports it.
 	var tr: Dictionary = gs.trial_result
 	if not tr.is_empty() and str(tr.get("id", "")) == id:
@@ -623,7 +625,10 @@ static func player_fact(gs, p: Dictionary, selected: bool, i: Dictionary, fit_ra
 		out["trial_avg"] = int(tr["avg"])
 		out["trial_par"] = int(tr["par"])
 		var back := "He goes back to his usual spot."
-		if bool(tr["ok"]):
+		if tr.has("promised"):
+			# The games you promised him in a development talk: he has had them.
+			out["trial_tail"] = "You promised him this chance in Round %d. %s" % [int(tr["promised"]), back]
+		elif bool(tr["ok"]):
 			out["trial_tail"] = ("%s He starts training as a %s with three weeks already banked." % [back, str(tr["word"])]
 					if bool(tr["trained"]) else "%s He cannot start training there just now." % back)
 		else:
@@ -746,6 +751,29 @@ static func _milestone_next(gs, p: Dictionary) -> int:
 		return 0
 	var next: int = gs.games_played(p) + 1
 	return next if [100, 150, 200, 250, 300, 350].has(next) else 0
+
+
+## Where a line plays, as a coach says where a player goes ("up forward").
+const LINE_WHERE := {"FWD": "up forward", "DEF": "down back", "MID": "in the middle", "RUCK": "in the ruck"}
+
+
+## His learning project as the development talk reads it (T5.r93): due, the
+## job's word, the week, both ratings, the pass rule and the odds it takes.
+static func project_facts(gs, p: Dictionary) -> Dictionary:
+	var out := {"dev_talk_due": false, "proj_word": "", "proj_week": 0, "proj_weeks": GameState.PROJECT_WEEKS,
+			"proj_there": 0, "proj_own": int(p.get("overall", 0)), "proj_pass": GameState.PROJECT_PASS,
+			"take_odds": "", "proj_line": ""}
+	var job: String = gs.project_job(p)
+	if job == "" or (p.get("attr", {}) as Dictionary).is_empty():
+		return out
+	var role: String = gs.project_role(p)
+	out["dev_talk_due"] = gs.dev_talk_due(p) and int(p.get("injury_weeks", 0)) <= 0
+	out["proj_word"] = str(GameState.LEARN_JOBS[job]["word"])
+	out["proj_week"] = int((p["project"] as Dictionary).get("weeks", 0))
+	out["proj_there"] = gs.rating_as(p, role)
+	out["take_odds"] = gs.take_odds(p)
+	out["proj_line"] = str(LINE_WHERE.get(role, ""))
+	return out
 
 
 ## One card from the deck about `p` (or the club), built for this week whether
@@ -965,6 +993,11 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			return gs._explain_outcome(name, facts)
 		"talk_note":
 			gs._note_talk(p, str(e.get("said", "")), str(facts.get("talk_case", "")))
+		# The development talk (T5.r93): what you told him his new position is for.
+		"dev_promise":
+			gs.dev_talk(p, "promise")
+		"no_promise":
+			gs.dev_talk(p, "depth")
 		"delegate":
 			# Left to the captain: his Leadership and his trust in you decide, by the
 			# rule the choice printed. No dice.
