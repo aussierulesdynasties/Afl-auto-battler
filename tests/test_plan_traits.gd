@@ -21,6 +21,7 @@ func run() -> void:
 	_t("_test_each_changes_the_match")
 	_t("_test_gates")
 	_t("_test_lever_direction")
+	_t("_test_long_bombers_every_intercept")
 	_t("_test_impact_names_trait")
 	_t("_test_save_reload")
 	_t("_test_old_save_and_rivals")
@@ -130,6 +131,59 @@ func _test_lever_direction() -> void:
 	_check(lb._gt(0, "icept") == PlanTraits.LONG_BOMBERS_ICEPT and lb._gt(1, "icept") == 1.0
 			and lb._gt(0, "range", 0.0) == PlanTraits.LONG_BOMBERS_RANGE,
 			"Long Bombers: their kicks reach further and are marked by the other side more")
+
+
+## The director (2026-11-11): Long Bombers' cost is on every way the other
+## side marks your kick, not one of them. Same dice with and without the plan.
+func _test_long_bombers_every_intercept() -> void:
+	const N := 4000
+	var got := {}
+	for arm in ["", "kicking", "defending"]:
+		var sim := _sim("" if arm == "" else "long_bombers", 91, 1 if arm == "defending" else 0)
+		sim.current_quarter = 1
+		var who: Dictionary = (sim.squads[1] as Squad).ground[0]
+		var row := []
+		sim.mark_rng.seed = 501
+		var before := float(sim.team_stats[1].get("intercept_marks", 0.0))
+		for i in N:
+			sim._intercept(1, who, true)
+		row.append(float(sim.team_stats[1].get("intercept_marks", 0.0)) - before)
+		sim.rng.seed = 502
+		before = float(sim.team_stats[1].get("intercept_marks", 0.0))
+		for i in N:
+			sim._clanger_taken(0, 0.0)
+		row.append(float(sim.team_stats[1].get("intercept_marks", 0.0)) - before)
+		sim.mid_ic_rng.seed = 503
+		before = float(sim.team_stats[1].get("intercept_marks", 0.0))
+		for i in N:
+			sim._mid_kick_intercept(0, 0.0)
+		row.append(float(sim.team_stats[1].get("intercept_marks", 0.0)) - before)
+		got[arm] = row
+	var names := ["a mark from an entry inside 50", "a clanger taken", "a kick read in the middle"]
+	for i in names.size():
+		var plain := float(got[""][i])
+		var lb := float(got["kicking"][i])
+		_check(plain > 100.0 and lb > plain and absf(lb / plain - PlanTraits.LONG_BOMBERS_ICEPT) < 0.04,
+				"Long Bombers: %s is marked 15%% more often off their kick (%d against %d)" % [names[i], int(lb), int(plain)])
+		_check(float(got["defending"][i]) == plain,
+				"Long Bombers: %s off the other side's kick is untouched (%d against %d)" % [names[i], int(got["defending"][i]), int(plain)])
+	# Every intercept-mark chance in the match carries the lever, the rushed
+	# kick under pressure included (it sits inside play_chain).
+	var src := FileAccess.get_file_as_string("res://scripts/sim/MatchSim.gd")
+	var found := 0
+	var bare := []
+	var n := 0
+	for line in src.split("\n"):
+		n += 1
+		if not line.contains("\"intercept\") / 100.0)"):
+			continue
+		if not (line.contains("(0.6 + 0.8 * _a(") or line.contains("(0.5 + _a(who,")):
+			continue
+		found += 1
+		if not line.contains("\"icept\")"):
+			bare.append(n)
+	_check(found >= 6 and bare.is_empty(),
+			"Every intercept-mark chance carries the plan's cost (%d found, without it on lines %s)" % [found, str(bare)])
 
 
 ## The full-time "What your calls did" line names the trait.
