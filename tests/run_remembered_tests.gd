@@ -57,9 +57,11 @@ func _run() -> void:
 	_t("_test_drop_line_words")
 	_t("_test_your_draft_rules")
 	_t("_test_goal_line")
-	await _t("_test_selection_drop_taps")
+	# The ledger first: the team screen's field taps and Back can leave the
+	# window's pointer state mid-drag on CI, and a tap after that reaches nothing.
 	await _t("_test_coach_ledger_empty")
 	await _t("_test_coach_ledger_taps")
+	await _t("_test_selection_drop_taps")
 	print(Ran.line("Remembered", self))
 	for f in _failures:
 		print("  FAIL: " + f)
