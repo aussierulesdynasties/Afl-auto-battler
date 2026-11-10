@@ -12,7 +12,8 @@ var _checks := 0
 var _failures: Array[String] = []
 
 const SUITE_SEED := 2027
-const KEYS := ["draft", "selection", "coaching", "list", "staff", "offseason", "preseason", "season_review"]
+const KEYS := ["draft", "selection", "coaching", "list", "staff", "offseason", "preseason", "season_review",
+		"contracts", "trade", "draft_trade", "league_draft"]
 const SCENES := {
 	"selection": "res://scenes/SelectionScene.tscn",
 	"coaching": "res://scenes/CoachingScene.tscn",
@@ -43,6 +44,8 @@ func _run() -> void:
 	await _t("_test_old_device")
 	for key in SCENES:
 		await _t("_test_scene", [key])
+	await _t("_test_contract_and_trade_tutorials")
+	await _t("_test_draft_trade_tutorial")
 	await _t("_test_postseason_on_hub")
 	await _t("_test_postseason_when_knocked_out")
 	await _t("_test_postseason_not_when")
@@ -128,6 +131,125 @@ func _test_scene(key: String) -> void:
 	await _settle()
 	_check(again.find_child("*IntroOk", true, false) == null, "%s screen: next visit has no intro" % key)
 	again.queue_free()
+	await _settle()
+
+
+## A fresh career's first off-season, every intro unseen and tips on, with
+## one of your players out of contract so there are talks to open.
+func _fresh_offseason() -> void:
+	_reset_seen()
+	_state.reset()
+	_state.replay_seed = SUITE_SEED
+	_state.tutorials = true
+	_state.start_season("FRE", root.get_node("GameDB").club_list("FRE"))
+	_state.season.round_index = _state.season.fixture.size()
+	_state.open_offseason()
+	var p: Dictionary = _state.my_list[0]
+	p["contract_years"] = 1
+	for k in ["resigned", "talks", "retiring"]:
+		p.erase(k)
+
+
+func _tap_named(host: Node, node_name: String) -> String:
+	var b: Control = host.find_child(node_name, true, false)
+	if b == null:
+		return "no " + node_name
+	var why: String = await Tap.tap(b)
+	await _settle()
+	return why
+
+
+## The trade and contract tutorials (row T3.R56): each opens over its own
+## screen the first time a finger gets there, Got it takes a tap, Back closes
+## it before the screen, and it never comes back. Tips off: neither opens.
+func _test_contract_and_trade_tutorials() -> void:
+	_fresh_offseason()
+	root.size = Vector2i(390, 844)
+	var s: Control = load("res://scenes/OffseasonScene.tscn").instantiate()
+	root.add_child(s)
+	await _settle()
+	_check(s.find_child("OffseasonIntroOk", true, false) != null, "The off-season opens with its own intro first")
+	_check((await _tap_named(s, "OffseasonIntroOk")) == "", "Off-season Got it takes a tap")
+	_check(s.find_child("ContractsIntro", true, false) == null, "No contract tutorial before any talks")
+	_check((await _tap_named(s, "Negotiate")) == "", "Talk contract takes a tap")
+	_check(s.find_child("ContractTalks", true, false) != null, "The talks sheet opens")
+	var ok: Button = s.find_child("ContractsIntroOk", true, false)
+	_check(ok != null and ok.size.y >= 44.0, "...with the contract tutorial over it, Got it thumb-sized")
+	_check((await _tap_named(s, "ContractsIntroOk")) == "", "Contract Got it takes a tap")
+	_check(s.find_child("ContractsIntro", true, false) == null and s.find_child("ContractTalks", true, false) != null,
+			"Got it closes the tutorial and leaves the talks open")
+	_check((await _tap_named(s, "CancelTalks")) == "", "Cancel closes the talks")
+	_check((await _tap_named(s, "Negotiate")) == "", "Talk contract again")
+	_check(s.find_child("ContractTalks", true, false) != null and s.find_child("ContractsIntro", true, false) == null,
+			"Talks a second time: no tutorial")
+	await _tap_named(s, "CancelTalks")
+	_check((await _tap_named(s, "Tab_trade")) == "", "The Trade tab takes a tap")
+	_check(s.find_child("TradeIntroOk", true, false) != null, "The Trade tab opens the trade tutorial")
+	_check(s.find_child("MakeTrade", true, false) != null, "...over the trade sheet")
+	_check(s.handle_back(), "Back closes the trade tutorial first")
+	await _settle()
+	_check(s.find_child("TradeIntro", true, false) == null and s.is_inside_tree(), "...and the off-season stays")
+	await _tap_named(s, "Tab_contracts")
+	await _tap_named(s, "Tab_trade")
+	_check(s.find_child("TradeIntro", true, false) == null, "Trade tab a second time: no tutorial")
+	s.queue_free()
+	await _settle()
+	# Tips off: neither opens, and neither is used up.
+	_fresh_offseason()
+	_state.tutorials = false
+	s = load("res://scenes/OffseasonScene.tscn").instantiate()
+	root.add_child(s)
+	await _settle()
+	await _tap_named(s, "Negotiate")
+	_check(s.find_child("ContractTalks", true, false) != null and s.find_child("ContractsIntro", true, false) == null,
+			"Tips off: talks open with no tutorial")
+	await _tap_named(s, "CancelTalks")
+	await _tap_named(s, "Tab_trade")
+	_check(s.find_child("MakeTrade", true, false) != null and s.find_child("TradeIntro", true, false) == null,
+			"Tips off: no trade tutorial")
+	_check(not bool(_state.get_setting("seen_contracts_intro", false)) and not bool(_state.get_setting("seen_trade_intro", false)),
+			"Tips off leaves both unseen")
+	s.queue_free()
+	_state.tutorials = true
+	await _settle()
+
+
+## Draft night's pick trading: the first Trade picks opens its tutorial over
+## the sheet; Got it takes a tap and the sheet stays; the next time, none.
+func _test_draft_trade_tutorial() -> void:
+	_fresh_offseason()
+	_state.set_setting("seen_draft_intro", true)
+	_state.set_setting("seen_combine_intro", true)
+	root.size = Vector2i(390, 844)
+	if not _state.begin_intake_draft():
+		_check(false, "The draft opens")
+		return
+	var draft = _state.draft
+	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
+	root.add_child(ui)
+	await _settle()
+	var skip: Button = ui.find_child("MeetingDone", true, false)
+	if skip != null:
+		skip.pressed.emit()
+		await _settle()
+	var guard := 0
+	while not draft.is_user_turn() and not draft.is_finished() and guard < 200:
+		guard += 1
+		draft.auto_until_user_turn()
+	ui.call("_refresh")
+	await _settle()
+	_check((await _tap_named(ui, "TradePicks")) == "", "Trade picks takes a tap")
+	_check(ui.find_child("TradeSheet", true, false) != null, "The pick-trading sheet opens")
+	_check(ui.find_child("DraftTradeIntroOk", true, false) != null, "...with its tutorial over it")
+	_check((await _tap_named(ui, "DraftTradeIntroOk")) == "", "Got it takes a tap")
+	_check(ui.find_child("DraftTradeIntro", true, false) == null and ui.find_child("TradeSheet", true, false) != null,
+			"Got it closes the tutorial, the sheet stays")
+	_check((await _tap_named(ui, "TradeSheetClose")) == "", "Back to the draft takes a tap")
+	_check((await _tap_named(ui, "TradePicks")) == "", "Trade picks again")
+	_check(ui.find_child("TradeSheet", true, false) != null and ui.find_child("DraftTradeIntro", true, false) == null,
+			"Trade picks a second time: no tutorial")
+	ui.queue_free()
+	_state.draft = null
 	await _settle()
 
 

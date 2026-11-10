@@ -110,7 +110,9 @@ func _build() -> void:
 			_notice_club = ""
 			_notice_club_text = ""
 			_choosing_club = false
-			_build())
+			_build()
+			if _tab == "trade":
+				FirstVisitIntro.show_if_due(self, "trade"))
 		tabs.add_child(b)
 	var body := UiKit.vbox(6)
 	_scroll_box = UiKit.scroll(body)
@@ -423,6 +425,10 @@ func _open_talks(player_id: String, free_agent := false) -> void:
 	if not free_agent or _offer_years <= 0:
 		_offer_years = int(talks.get("years", want["years"]))
 	_show_talks()
+	# Your own player's talks get the contract tutorial; a free agent's market
+	# reads differently and explains itself on the sheet.
+	if not free_agent:
+		FirstVisitIntro.show_if_due(self, "contracts")
 
 
 func _talk_player() -> Dictionary:
