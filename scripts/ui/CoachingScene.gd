@@ -200,8 +200,7 @@ func _how_we_play() -> Control:
 	var ground: Array = GameState.my_squad().ground
 	var profile := GameState.list_profile()
 	# The plan sized for your side as picked, coaches and all (M1).
-	var sized_sq := GameState.my_squad()
-	CoachEffects.apply(sized_sq)
+	var sized_sq := GameState.my_coached_squad()
 	var note := _wrapped(CoachReport.plan_summary(GameState.club_plan, sized_sq), UiKit.SMALL, UiKit.TEXT)
 	note.name = "PlanNote"
 	# His own players, so each name wears the club's ink (NameInk).
