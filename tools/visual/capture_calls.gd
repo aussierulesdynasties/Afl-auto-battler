@@ -36,6 +36,7 @@ const CALLS := [
 const DT := 1.0 / 60.0
 const SAMPLE := 2          # a sample every 2 steps (1/30 s)
 const HOLD_SHARE := 0.8    # the moment holds in at least this share of the window
+const CENTRE_SHARE := 0.3  # a centre bounce is short: its set-up and the bounce, then the clearance
 const SETTLE_S := 30.0     # skip the first 30 s of play (the opening bounce)
 const MAX_EVENTS := 700
 
@@ -205,7 +206,7 @@ func _pick_window(pitch, r: Dictionary, want: String, secs: float) -> Dictionary
 			if bool(on[j]):
 				held += 1
 		var share := float(held) / float(n)
-		if share >= HOLD_SHARE and (want != "centre" or int(idx[s]) > 3):
+		if share >= (CENTRE_SHARE if want == "centre" else HOLD_SHARE) and (want != "centre" or int(idx[s]) > 3):
 			return {"idx": int(idx[s]), "share": share}
 	return {}
 
