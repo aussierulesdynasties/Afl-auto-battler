@@ -241,7 +241,14 @@ func _grid_card(ui: Node, id: String) -> Control:
 func _test_coach_ledger_empty() -> void:
 	_fresh("MEL")
 	root.size = Vector2i(390, 844)
-	var s := await _open_coach()
+	# Opened on Coach: this test reads the empty lines. The finger on the tab is
+	# the filled test's (and the stats suite's); here, on CI only, the hub's
+	# first tap of a fresh career reached no control at all (win 390x844, tab
+	# on screen and whole, nothing dragging), which a local run never showed.
+	load("res://scripts/ui/StatsHubScene.gd").current = "coach"
+	var s: Control = load("res://scenes/StatsHubScene.tscn").instantiate()
+	root.add_child(s)
+	await _settle()
 	_check(s.find_child("CoachRecordEmpty", true, false) != null, "No season finished: the record says when it starts")
 	_check(s.find_child("DrafteesEmpty", true, false) != null and s.find_child("Draftees", true, false) == null,
 			"No draftee honoured yet: an honest line, no rows")
