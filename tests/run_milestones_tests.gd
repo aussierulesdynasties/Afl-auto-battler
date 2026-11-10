@@ -41,6 +41,7 @@ func _run() -> void:
 	await _t("_test_coach")
 	await _t("_test_sim_week_records")
 	await _t("_test_old_save")
+	await _t("_test_bench_debut")
 	await _t("_test_live")
 	print(Ran.line("Milestones", self))
 	for f in _failures:
@@ -184,6 +185,41 @@ func _test_sim_week_records() -> void:
 		_check(_M.summary_line(_state, _state.my_last_result()).contains("50th"), "The full-time line names it")
 	else:
 		print("SKIP: the target did not take the field this week")
+
+
+## A first game is flagged for a player picked on the ground, not for one
+## named on the bench: he may not get on, and the line would come back weekly.
+func _test_bench_debut() -> void:
+	_fresh()
+	var side: Dictionary = _state.current_side()
+	var benched := {}
+	for id in side["BENCH"]:
+		var q: Dictionary = _state.list_player(str(id))
+		if Career.complete(q):
+			benched = q
+			break
+	var picked := {}
+	for k in side:
+		if str(k) == "BENCH":
+			continue
+		for id in side[k]:
+			var q: Dictionary = _state.list_player(str(id))
+			if picked.is_empty() and Career.complete(q):
+				picked = q
+	_check(not benched.is_empty() and not picked.is_empty(), "(setup) a player on the bench and one on the ground")
+	if benched.is_empty() or picked.is_empty():
+		return
+	_set_games(benched, 0)
+	_set_games(picked, 0)
+	_check(_state.games_played(benched) == 0 and _state.games_played(picked) == 0, "(setup) neither has played a game")
+	var up: Array = _M.upcoming(_state)
+	_check(up.any(func(u): return str(u["key"]) == "debut" and str(u["id"]) == str(picked["id"])),
+			"A player picked on the ground for his first game has his debut flagged")
+	_check(not up.any(func(u): return str(u["id"]) == str(benched["id"]) and str(u["key"]) in ["debut", "games"]),
+			"A player named on the bench who has not played has no debut line")
+	_set_games(benched, 49)
+	_check(_M.upcoming(_state).any(func(u): return str(u["key"]) == "games" and str(u["id"]) == str(benched["id"])),
+			"A bench player's 50th is still flagged")
 
 
 func _test_old_save() -> void:
