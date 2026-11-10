@@ -150,7 +150,7 @@ func _run() -> void:
 		root.msaa_2d = Viewport.MSAA_DISABLED
 	for t in BEATS:
 		vig.set("_t", t)
-		if t >= StoppageVignette.FREEZE:
+		if t >= vig.FREEZE:
 			vig.set_process(true)
 			vig.finish_now()
 			for i in range(40):
@@ -181,7 +181,7 @@ func _run() -> void:
 					print("VIG_TIME msaa %s | gpu %.3f ms (mean of 200 frames)" % ["2x" if mode == Viewport.MSAA_2X else "off", gpu / 200.0])
 			(shots[shots.size() - 1] as Image).save_png("%s_beat%d_off.png" % [out, shots.size() - 1])
 			root.msaa_2d = Viewport.MSAA_DISABLED
-			vig.set_process(t >= StoppageVignette.FREEZE)
+			vig.set_process(t >= vig.FREEZE)
 	var sheet := Image.create(W * 3, H * 2, false, Image.FORMAT_RGBA8)
 	for i in range(shots.size()):
 		var img: Image = shots[i]
