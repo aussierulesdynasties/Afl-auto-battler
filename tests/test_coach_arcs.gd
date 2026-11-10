@@ -970,7 +970,7 @@ func _test_joining_club_after_sack() -> void:
 			"joining, sacked: Tasmania are one of the %d jobs: %s" % [ClubMoves.OFFERS, str(jobs.map(func(o): return o["code"]))])
 	_check(int(tas.get("joins", 0)) == joins and int(tas.get("finish", -1)) == 0
 			and str(tas.get("why_open", "")).begins_with("Tasmania join the league in %d." % joins)
-			and str(tas.get("list", "")).find("Picks 1, 3 and 9") >= 0 and str(tas.get("goal", "")) != "",
+			and str(tas.get("list", "")).find("Picks 1, 3 and 9") >= 0 and str(tas.get("goal", "")).ends_with("In the bottom six, it is at least 7 wins."),
 			"joining, sacked: the offer says the year they join, why the job is open, their list and picks, and the goal: %s" % str(tas))
 	var their_id := str(_senior_at("TAS").get("cid", ""))
 	_check(their_id != "", "joining, sacked: Tasmania have signed a first coach who would make way")
