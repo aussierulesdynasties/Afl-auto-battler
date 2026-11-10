@@ -59,6 +59,8 @@ func _run() -> void:
 	for card in _state.week_events:
 		card["popped"] = true
 	_state.skip_media_conference()
+	if screen == "match":
+		_state.prepare_interactive_match()
 	_router.stack = []
 	_router.go("main")
 	await _frames(6)
@@ -71,6 +73,8 @@ func _run() -> void:
 		await process_frame
 	await _frames(60)
 	await _shut_popups()
+	if screen == "match":
+		await _play_into_match(root.find_child("MatchScene", true, false))
 	await _frames(40)
 	var stem := "%s/%s_%s_%d" % [out, tag, screen, _size.x]
 	_save(stem + ".png")
@@ -81,6 +85,31 @@ func _run() -> void:
 		_save(stem + "_down.png")
 	print("captured ", stem)
 	quit()
+
+
+## The live match: Start, play at 8x, take each in-play call's default, and pause
+## at Q1 15' so the feed, the score and the momentum all have something to show.
+func _play_into_match(scene: Node) -> void:
+	if scene == null:
+		push_error("capture_sweep: no MatchScene")
+		return
+	for b in scene.find_children("*", "Button", true, false):
+		if (b as Button).text == "Start" and (b as Button).is_visible_in_tree():
+			(b as Button).emit_signal("pressed")
+			break
+	await _frames(20)
+	scene.call("_on_speed", 8.0)
+	for wait in range(12000):
+		if int(scene.get("_shown_q")) > 1 or int(scene.get("_shown_min")) >= 15:
+			break
+		if scene.get("_moment_overlay") != null:
+			var m: Dictionary = _state.pending_sim.pending_moment
+			scene.call("_on_moment_choice", int(m.get("default", 0)))
+		await process_frame
+	var pitch: Node = scene.get("_pitch")
+	if bool(pitch.get("playing")):
+		scene.call("_on_toggle")
+	print("match paused at Q%d %d'" % [int(scene.get("_shown_q")), int(scene.get("_shown_min"))])
 
 
 func _shut_popups() -> void:
