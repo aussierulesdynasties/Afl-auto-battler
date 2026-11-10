@@ -434,8 +434,8 @@
 				"effects": [
 					{
 						"op": "trust",
-						"d": 3,
-						"why": "You kept to the physio's plan for his comeback"
+						"d": -2,
+						"why": "You held him back when he said he was ready"
 					},
 					{
 						"op": "morale",
@@ -443,6 +443,12 @@
 					},
 					{
 						"op": "keep_out"
+					},
+					{
+						"op": "culture",
+						"strand": "standards",
+						"d": 1,
+						"why": "The physio's plan was followed"
 					}
 				],
 				"result": "{first} does as the physio says, and grumbles about it."

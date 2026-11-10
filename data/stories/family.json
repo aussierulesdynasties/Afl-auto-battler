@@ -48,9 +48,9 @@
 					},
 					{
 						"op": "culture",
-						"strand": "standards",
+						"strand": "ambition",
 						"d": 1,
-						"why": "He played the week his first child was due"
+						"why": "The game came first the week his child was born"
 					}
 				],
 				"result": "{first} plays. He's on the first flight home after the siren."
@@ -109,8 +109,16 @@
 						"d": -6
 					},
 					{
-						"op": "board",
-						"d": 2
+						"op": "slow_start",
+						"who": "subject",
+						"chance": 15,
+						"on": "week"
+					},
+					{
+						"op": "culture",
+						"strand": "ambition",
+						"d": 1,
+						"why": "The game came first while his dad was in hospital"
 					}
 				],
 				"result": "{first} stays and plays. His head's somewhere else."
@@ -165,9 +173,10 @@
 						"d": -4
 					},
 					{
-						"op": "morale",
+						"op": "culture",
+						"strand": "ambition",
 						"d": 1,
-						"who": "side"
+						"why": "The game came before his brother's wedding"
 					}
 				],
 				"result": "{first} plays. He watches the speeches on his phone."
@@ -209,10 +218,10 @@
 					},
 					{
 						"op": "board",
-						"d": -2
+						"d": -1
 					}
 				],
-				"result": "The club starts looking for work for his partner here."
+				"result": "The club starts looking for work for {first}'s partner here. The board signs off on the cost."
 			},
 			{
 				"key": "footy",
@@ -270,10 +279,8 @@
 						"why": "You eased off when the baby wasn't sleeping"
 					},
 					{
-						"op": "slow_start",
-						"who": "subject",
-						"chance": 15,
-						"on": "week"
+						"op": "forgo_xp",
+						"d": 6
 					}
 				],
 				"note": "He misses the development a full week brings.",
