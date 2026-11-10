@@ -37,13 +37,13 @@ func _run() -> void:
 	_state.settings_path = SETTINGS
 	_state.show_real_names = false
 	root.size = Vector2i(390, 844)
-	await _t("_walk_initial_draft_and_week")
-	await _t("_walk_first_postseason")
-	await _t("_walk_early_elimination")
-	await _t("_walk_reload")
-	await _t("_walk_skip")
-	await _t("_walk_off")
-	await _t("_walk_replay")
+	await _t("_test_walk_initial_draft_and_week")
+	await _t("_test_walk_first_postseason")
+	await _t("_test_walk_early_elimination")
+	await _t("_test_walk_reload")
+	await _t("_test_walk_skip")
+	await _t("_test_walk_off")
+	await _t("_test_walk_replay")
 	print(Ran.line("Onboarding walk", self))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -177,7 +177,7 @@ func _gone(n: Node) -> void:
 
 
 ## Initial draft, the pre-season and the first week's screens.
-func _walk_initial_draft_and_week() -> void:
+func _test_walk_initial_draft_and_week() -> void:
 	_fresh_device(true)
 	_state.interview_due = true   # Main._start_new_career: a new career opens with the interview
 	await _initial_draft("initial draft")
@@ -239,7 +239,7 @@ func _new_season_career(mode: String, first_hub := true) -> void:
 
 
 ## The first postseason: finals played from the hub, then each stop in order.
-func _walk_first_postseason() -> void:
+func _test_walk_first_postseason() -> void:
 	var mode := "first postseason"
 	await _new_season_career(mode)
 	_season_to_finals(1)
@@ -343,7 +343,7 @@ func _walk_first_postseason() -> void:
 
 ## Knocked out in the first week of the finals: the league plays on from the
 ## hub, and the postseason tip waits for the Grand Final's results.
-func _walk_early_elimination() -> void:
+func _test_walk_early_elimination() -> void:
 	var mode := "early elimination"
 	await _new_season_career(mode)
 	_season_to_finals(8)
@@ -384,7 +384,7 @@ func _walk_early_elimination() -> void:
 
 
 ## Save half-way through the tips, quit, load: seen stays seen, unseen still due.
-func _walk_reload() -> void:
+func _test_walk_reload() -> void:
 	var mode := "reload"
 	await _new_season_career(mode)
 	await _visit(mode, "Selection", "res://scenes/SelectionScene.tscn")
@@ -404,7 +404,7 @@ func _walk_reload() -> void:
 
 ## Skip on the first hub's tip: the week's asks still come, and every other
 ## screen still has its tip. Skipping help never skips a football decision.
-func _walk_skip() -> void:
+func _test_walk_skip() -> void:
 	var mode := "skip"
 	await _new_season_career(mode, false)
 	var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
@@ -425,7 +425,7 @@ func _walk_skip() -> void:
 
 ## Tutorials off at New career: no tip anywhere; turned on in Settings later,
 ## the unseen ones come.
-func _walk_off() -> void:
+func _test_walk_off() -> void:
 	var mode := "off"
 	_fresh_device(false)
 	await _initial_draft(mode)
@@ -443,7 +443,7 @@ func _walk_off() -> void:
 
 ## Replay: is there any way to see a tip again? Turning Tutorials off and on
 ## doesn't reset what was seen, and no control re-opens a seen tip.
-func _walk_replay() -> void:
+func _test_walk_replay() -> void:
 	var mode := "replay"
 	await _new_season_career(mode)
 	await _visit(mode, "Selection", "res://scenes/SelectionScene.tscn")
@@ -456,6 +456,7 @@ func _walk_replay() -> void:
 	var rows := src.count("_row(v, ")
 	_walk(mode, "Settings rows: %d; tips controls: Tutorials On/Off%s" % [rows,
 			"" if src.find("seen_") == -1 else ", plus a reset of seen tips"])
+	_check(src.find("seen_") == -1, "Replay still unbuilt: when a reset lands, update docs/research/ONBOARDING_WALKTHROUGH_2026-11-10.md")
 
 
 func _settle() -> void:
