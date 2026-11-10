@@ -1,11 +1,12 @@
 class_name StoppageVignette
 extends Control
-## A staged close-up of a centre bounce, for the late-game centre-bounce call
-## (ARD-M8-007 prototype). The match cuts to a low camera behind your end,
-## tight on the centre square. The real rucks and centre-square midfielders
-## jog into their set-up, a tired one lagging behind the rest, the umpire walks
-## in with the ball, bounces it, the rucks go up - and it freezes at the top of
-## the contest for the call.
+## A staged centre bounce, for the late-game centre-bounce call (ARD-M8-007
+## prototype). The match cuts to the broadcast camera behind your end, wide on
+## the centre square: the real rucks and centre-square midfielders jog into
+## their set-up, a tired one lagging behind the rest, and the umpire walks in
+## with the ball. Only once the whole stoppage has been seen does the lens push
+## in: he bounces it, the rucks go up - and it freezes at the top of the
+## contest for the call (row T2.48: establish the stoppage before the close-up).
 ##
 ## Presentation only: it reads MatchSim's state (who is on the ground, their
 ## legs, how the stoppages have gone) and changes nothing. What the call does
@@ -21,10 +22,12 @@ var call_room := 0.0
 const SLOTS := ["R", "C", "RR", "RV"]
 ## Beats of the scene, in seconds.
 const CUT_IN := 0.35
-const UMP_IN := [1.0, 2.2]
-const BALL_UP := 2.9       # the umpire bounces it
-const RUN_IN := [2.9, 3.45]
-const FREEZE := 3.8
+const UMP_IN := [1.2, 2.6]
+const BALL_UP := 3.5       # the umpire bounces it
+const RUN_IN := [3.5, 4.05]
+const FREEZE := 4.4
+## The wide shot holds until the umpire lifts the ball; the push-in runs from here to the freeze.
+const PUSH_IN := BALL_UP - 0.7
 ## Legs below this are running on empty (MatchNotes.EMPTY).
 const EMPTY := 50.0
 ## Players are drawn larger than life so a phone can read them.
@@ -324,16 +327,17 @@ static func _surname(full: String) -> String:
 
 
 # ---------------------------------------------------------------------------
-# The camera: the broadcast camera high behind your end, on a long lens, zooming in on
-# the square and panning with the ruckmen. It stays where it is: only the lens moves, so
-# the picture scales as one and nothing changes shape (it used to travel in from 34 m to
-# 18 m, and the square and the players warped as it came - director).
+# The camera: the broadcast camera high behind your end, on a long lens. It opens wide on
+# the square and holds there while the set-up builds (both rucks, the mids, the umpire),
+# then zooms in on the contest as the ball goes up. It stays where it is: only the lens
+# moves, so the picture scales as one and nothing changes shape (it used to travel in
+# from 34 m to 18 m, and the square and the players warped as it came - director).
 # ---------------------------------------------------------------------------
 const CAM_D := 46.0               # metres behind the centre
 const CAM_H := 12.0               # and up (low enough that the stand stays in the zoom)
-## The zoom: the square at the start's framing (as the old camera at 34 m) out to the
-## ruck contest's (as at 17 m), then a last punch-in on the freeze.
-const ZOOM := [46.0 / 34.0, 46.0 / 18.5, 46.0 / 17.0]
+## The zoom: the wide shot of the whole stoppage (as a camera at 36 m), a slow creep while
+## it holds, the ruck contest's (as at 18.5 m) at the freeze, then a last punch-in.
+const ZOOM := [46.0 / 36.0, 46.0 / 33.0, 46.0 / 18.5, 46.0 / 17.0]
 ## The centre of the ground, as a share of the screen's height: while the play
 ## builds, and once the call is up (it takes the bottom of the screen).
 const CENTRE_Y := [0.58, 0.46]
@@ -353,21 +357,24 @@ var _pan := 0.0                   # pixels the camera has turned across, at this
 
 
 func _set_camera() -> void:
-	var k := _ease(clampf(_t / FREEZE, 0.0, 1.0))
+	# The wide shot holds (a slow creep keeps it alive), then the push-in eases in and out.
+	var hold := clampf(_t / PUSH_IN, 0.0, 1.0)
+	var k := _smooth(clampf((_t - PUSH_IN) / (FREEZE - PUSH_IN), 0.0, 1.0))
 	var punch := _ease(clampf(_hold / 0.4, 0.0, 1.0))
 	# Fitted to the height on a wide window (director: "no reason to be so limited on PC"),
 	# pushed in LANDSCAPE_PUSH: the bounce is an action beat, so the contest fills the frame
 	# with the posts and the crowd along the top. A portrait phone keeps its framing.
 	var base := size.y * 0.7 * LANDSCAPE_PUSH if size.x > size.y else maxf(size.x * 1.5, size.y * 0.7)
-	var z: float = lerpf(lerpf(ZOOM[0], ZOOM[1], k), ZOOM[2], punch)
+	var z: float = lerpf(lerpf(lerpf(ZOOM[0], ZOOM[1], hold), ZOOM[2], k), ZOOM[3], punch)
 	_focal = base * z
 	_zoom = z / ZOOM[0]
-	# Panning across from where your players run in to the contest. A pan turns the
+	# The wide shot is turned onto the centre of the square, so the set-up sits in the middle
+	# of the picture; then it pans across with the ruckmen to the contest. A pan turns the
 	# camera on its head, which moves the whole picture as one; the camera itself stays
 	# at CAM_X (sliding it across would move the near turf more than the far, and the
 	# painted lines would skew as it went - director).
 	_cam_x = CAM_X
-	_pan = _focal * (CAM_X * 0.35 - CAM_X) / (_cam_d + 5.0) * k
+	_pan = _focal * lerpf(-CAM_X, CAM_X * 0.35 - CAM_X, k) / (_cam_d + 5.0)
 	# Where the centre of the ground sits: low enough to fill the screen while the
 	# play builds, then lifted clear of the call as it slides up - the same push-in
 	# as the freeze, so one move makes room for the call rather than empty turf
@@ -384,6 +391,11 @@ func _project(p: Vector2, h := 0.0) -> Vector3:
 
 static func _ease(k: float) -> float:
 	return 1.0 - pow(1.0 - k, 3.0)
+
+
+## Eased in and out: a lens move that starts and lands softly.
+static func _smooth(k: float) -> float:
+	return k * k * (3.0 - 2.0 * k)
 
 
 # ---------------------------------------------------------------------------

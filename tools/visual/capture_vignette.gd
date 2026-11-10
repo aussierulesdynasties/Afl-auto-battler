@@ -20,7 +20,8 @@ extends SceneTree
 
 var W := 390
 var H := 844
-const BEATS := [0.15, 0.9, 1.8, 2.6, 3.3, 3.8]
+## The scene's beats: the cut, the run-in, the set-up held wide, the push-in, the bounce, the freeze.
+const BEATS := [0.15, 1.0, 2.4, 3.1, 3.9, 4.4]
 
 
 func _initialize() -> void:
@@ -149,7 +150,7 @@ func _run() -> void:
 		root.msaa_2d = Viewport.MSAA_DISABLED
 	for t in BEATS:
 		vig.set("_t", t)
-		if t >= 3.8:
+		if t >= StoppageVignette.FREEZE:
 			vig.set_process(true)
 			vig.finish_now()
 			for i in range(40):
@@ -180,7 +181,7 @@ func _run() -> void:
 					print("VIG_TIME msaa %s | gpu %.3f ms (mean of 200 frames)" % ["2x" if mode == Viewport.MSAA_2X else "off", gpu / 200.0])
 			(shots[shots.size() - 1] as Image).save_png("%s_beat%d_off.png" % [out, shots.size() - 1])
 			root.msaa_2d = Viewport.MSAA_DISABLED
-			vig.set_process(t >= 3.8)
+			vig.set_process(t >= StoppageVignette.FREEZE)
 	var sheet := Image.create(W * 3, H * 2, false, Image.FORMAT_RGBA8)
 	for i in range(shots.size()):
 		var img: Image = shots[i]
