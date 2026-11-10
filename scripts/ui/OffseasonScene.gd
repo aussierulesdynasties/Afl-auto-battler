@@ -530,6 +530,15 @@ func _show_talks() -> void:
 	var blocked := bool(terms.get("refuse", false)) or (_talk_fa and not RookieList.senior_spot_free(GameState.my_list))
 	v.add_child(_para("Cap room after this deal: %s" % room_after_words(room_after), 14,
 			UiKit.TEXT if room_after >= 0 else UiKit.BAD))
+	if _talk_fa:
+		var best_other := 0
+		for row in GameState.fa_offers(_talk_id):
+			if not bool(row["mine"]):
+				best_other = maxi(best_other, int(row["worth"]))
+		var fl := Contracts.fa_lines(_offer_salary, _offer_years,
+				GameState.fa_offer_worth(_talk_id, _offer_salary, _offer_years), best_other)
+		v.add_child(UiKit.stake_row(GateOdds.gain(str(fl[0])), "FaGain"))
+		v.add_child(UiKit.stake_row(GateOdds.cost(str(fl[1])), "FaCost"))
 	if not _talk_fa:
 		var floor_price := Contracts.lowest(p, _offer_years) - GameState.culture_resign_discount(GameState.my_club, p, _offer_years)
 		var hl := ListCosts.haggle_lines(_offer_salary, int(want["salary"]), floor_price, left)
@@ -579,11 +588,16 @@ func _offers_table(v: VBoxContainer) -> void:
 			grid.add_child(club)
 			grid.add_child(UiKit.line(Contracts.money(int(row["salary"])), 13, UiKit.TEXT, bool(row["leading"])))
 			grid.add_child(UiKit.line(str(row["years"]), UiKit.SECONDARY, UiKit.TEXT, bool(row["leading"])))
-			var view := _para(("Leading. " if bool(row["leading"]) else "") + str(row["view"]), 12, UiKit.TEXT)
+			var view := _para(("Leading. " if bool(row["leading"]) else "") + str(row["view"])
+					+ " Worth %s to him." % Contracts.money(int(row["worth"])), 12, UiKit.TEXT)
 			view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			view.custom_minimum_size.x = 120
 			grid.add_child(view)
 		v.add_child(grid)
+	# How he weighs any offer, in dollars (row T1.R26 FA weights).
+	var weigh := _para(Contracts.weigh_line(GameState.free_agent(_talk_id)), 12, UiKit.MUTED)
+	weigh.name = "FaWeights"
+	v.add_child(weigh)
 	var log: Array = GameState.free_agent(_talk_id).get("market_log", [])
 	if not log.is_empty():
 		var said := _para("After your offer: " + " ".join(PackedStringArray(log)), 13, UiKit.TEXT)
