@@ -59,9 +59,9 @@ func _test_plan_lines() -> void:
 						"The plan blurb is separate lines with a lead line (%s)" % pk)
 				if pn == null:
 					continue
-				_check((pk == "balanced") == (pn.find_child("PlanGain", true, false) == null)
-						and (pk == "balanced") == (pn.find_child("PlanCost", true, false) == null),
-						"Every plan but Balanced has Gain and Cost rows (%s)" % pk)
+				# Balanced too (M2, director 2026-11-10): every plan states a gain and a cost.
+				_check(pn.find_child("PlanGain", true, false) != null and pn.find_child("PlanCost", true, false) != null,
+						"Every plan has Gain and Cost rows (%s)" % pk)
 				_check((pk in ["attacking", "defensive", "controlled"]) == (pn.find_child("PlanBeats", true, false) != null),
 						"The beats line shows for the plans with a counter (%s)" % pk)
 				_check((pk == "balanced") == (pn.find_child("PlanBest", true, false) == null),

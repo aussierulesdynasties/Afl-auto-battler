@@ -121,8 +121,19 @@ func _frames(n: int) -> void:
 		await process_frame
 
 
+## Router loads a screen behind the loading cover: wait (up to ~10 s) until
+## the scene is up and holds `node_name`.
+func _wait_for(node_name: String) -> void:
+	for i in range(600):
+		if current_scene != null and current_scene.find_child(node_name, true, false) != null:
+			return
+		await process_frame
+	print("TIMEOUT waiting for ", node_name)
+
+
 ## Scroll the hub so the season line is on screen.
 func _to_line() -> void:
+	await _wait_for("SeasonPlanLine")
 	await _frames(3)
 	var line: Node = current_scene.find_child("SeasonPlanLine", true, false)
 	var p: Node = line.get_parent() if line != null else null
@@ -135,6 +146,7 @@ func _to_line() -> void:
 
 
 func _press(node_name: String) -> void:
+	await _wait_for(node_name)
 	await _frames(3)
 	var b: Node = current_scene.find_child(node_name, true, false)
 	if b is Button:

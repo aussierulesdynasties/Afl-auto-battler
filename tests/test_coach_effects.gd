@@ -21,6 +21,7 @@ func run() -> void:
 	_t("_test_assistant")
 	_t("_test_in_career")
 	_t("_test_togetherness")
+	_t("_test_gate_scale")
 	GameState.delete_saved_career()
 	CoachEffects.table = {}
 	GameState.replay_seed = 0
@@ -368,3 +369,25 @@ func _test_in_career() -> void:
 		if hist.size() >= 2 and ((hist[1]["plans"] as Array)[0] as Dictionary).has("pep"):
 			coached = true
 	_check(coached, "...and the round's other matches still use their coaches' calls")
+
+
+## The plan gate's "Gain for this list today" scales the written upside by
+## exactly what the match does (MatchSim.upside_scale against _pv), and its
+## cost by what a Strategic coach adds (cost_scale), in every weather.
+func _test_gate_scale() -> void:
+	var sq := Squad.new("MEL", GameDB.club_list("MEL"), true, "MEL")
+	var sq2 := Squad.new("STK", GameDB.club_list("STK"), false, "STK")
+	sq.tactics_exec = 1.08
+	sq.plan_know = {"attacking": 0.9, "defensive": 0.8, "contest": 1.0, "controlled": 0.85}
+	sq.arch = {"fplan": "contest", "sup": 1.2, "scost": 1.1}
+	for weather in MatchSim.WEATHER_PLAN.keys() + ["perfect"]:
+		var sim := MatchSim.new(sq, sq2, 31)
+		sim.weather = weather
+		for plan in MatchSim.PLAN_UPSIDE.keys():
+			sim.set_tactics(0, {"gameplan": plan})
+			var up := MatchSim.upside_scale(sq, plan, weather)
+			for key in (MatchSim.PLANS[plan] as Dictionary).keys():
+				var v := float(MatchSim.PLANS[plan][key])
+				var want := 1.0 + (v - 1.0) * (up if (MatchSim.PLAN_UPSIDE[plan] as Array).has(key) else MatchSim.cost_scale(sq, plan))
+				_check(is_equal_approx(sim._pv(0, key), want),
+						"The %s gate sizes %s as the match plays it in %s (%.4f vs %.4f)" % [plan, key, weather, want, sim._pv(0, key)])
