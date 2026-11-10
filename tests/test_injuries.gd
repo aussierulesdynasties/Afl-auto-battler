@@ -202,7 +202,15 @@ func _test_tribunal_challenge() -> void:
 	var pending := GameState.pending_mro_challenges()
 	_check(pending.size() == 1 and str(pending[0].get("case", "")) != "",
 			"A live MRO sanction exposes one Tribunal challenge with a case assessment")
+	# C1 (row T1.R26, director 2026-11-10): the case states its real odds
+	# and the cost of losing it.
+	var gate: Array = GameState.tribunal_gate(pending[0])
+	_check(str(gate[0]) == "Gain: 34% chance he's cleared: no suspension, and Brownlow-eligible again"
+			and str(gate[1]) == "Cost: if it fails (66%), the board's confidence drops 5%",
+			"The Tribunal case says its odds and what losing costs (%s / %s)" % gate)
+	GameState.board["confidence"] = 60
 	var win := GameState.challenge_mro(cleared_id)
+	_check(GameState.board_confidence() == 60, "Winning at the Tribunal costs the board nothing")
 	_check(bool(win.get("success", false)) and Ratings.available(cleared)
 			and not bool(cleared.get("brownlow_ineligible", false)),
 			"A successful Tribunal challenge clears the ban and restores Brownlow eligibility")
@@ -217,12 +225,18 @@ func _test_tribunal_challenge() -> void:
 			"challenged": false, "appealed": false}
 	GameState._process_discipline([{"home": "GEE", "away": "COL", "reports": [fail_report]}])
 	var loss := GameState.challenge_mro(upheld_id)
+	_check(GameState.board_confidence() == 55,
+			"Losing at the Tribunal drops the board's confidence 5 (%d)" % GameState.board_confidence())
 	_check(not bool(loss.get("success", true)) and int(upheld.get("suspension_weeks", 0)) == 2
 			and bool(upheld.get("brownlow_ineligible", false)),
 			"A failed Tribunal challenge leaves the original ban and Brownlow ineligibility intact")
 	var appeal_pending := GameState.pending_mro_challenges()
 	_check(appeal_pending.size() == 1 and str(appeal_pending[0].get("stage", "")) == "appeal",
 			"A failed Tribunal suspension can be taken once to the Appeals Board")
+	if appeal_pending.size() == 1:
+		var ag: Array = GameState.tribunal_gate(appeal_pending[0])
+		_check(str(ag[0]).begins_with("Gain: 10% chance") and str(ag[1]).contains("(90%)"),
+				"The appeal states the Appeals Board's narrower odds (%s)" % ag[0])
 	var appeal := GameState.appeal_mro(upheld_id)
 	_check(bool(appeal.get("success", false)) and Ratings.available(upheld)
 			and not bool(upheld.get("brownlow_ineligible", false)),
