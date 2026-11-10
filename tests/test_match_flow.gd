@@ -10,6 +10,7 @@ var checks := 0
 
 const CLUBS := [["FRE", "MEL"], ["GEE", "COL"], ["SYD", "CAR"], ["BRL", "ESS"]]
 const SEEDS := 5
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -90,7 +91,7 @@ func _test_won_ball_is_played_on() -> void:
 func _test_scores_stay_realistic() -> void:
 	var r := _play()
 	var per := float(r["points"]) / float(r["games"])
-	_check(per > 130.0 and per < 230.0, "match points %.0f out of a plausible range" % per)
+	_check(BalanceGate.held(per > 130.0 and per < 230.0, "match points per game in 130-230"), "match points %.0f out of a plausible range" % per)
 
 
 ## Plays the sample with `tuning` applied; returns the chain starts, the

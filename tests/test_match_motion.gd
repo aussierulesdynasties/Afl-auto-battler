@@ -74,6 +74,7 @@ const CONTEST_NEARER_P75 := 5.5
 const PACK_AREA := 9.0
 ## ...and the four on the ball: inside 3 m (MatchDirector.PACK_SECOND), settling.
 const ON_BALL := 3.5
+const BalanceGate := preload("res://tests/balance_gate.gd")
 
 
 func run() -> void:
@@ -577,7 +578,10 @@ func _test_call_visibility(results: Array) -> void:
 			["Slow it down (in possession, centroid from Melbourne's)", "balanced", ["hold"], "has.cen_opp", -1.0],
 			["Slow it down (without the ball, centroid from the ball)", "balanced", ["hold"], "not.cen_ball", -1.0],
 			["Slow it down (without the ball, median player from the ball)", "balanced", ["hold"], "not.med_ball", -1.0],
-			["Slow it down (without the ball, centroid from Melbourne's)", "balanced", ["hold"], "not.cen_opp", -1.0]]
+			["Slow it down (without the ball, centroid from Melbourne's)", "balanced", ["hold"], "not.cen_opp", -1.0],
+			["Flood behind the ball (without the ball, centroid from the ball)", "balanced", ["flood"], "not.cen_ball", -1.0],
+			["Flood behind the ball (without the ball, median player from the ball)", "balanced", ["flood"], "not.med_ball", -1.0],
+			["Stack the stoppage (at a centre bounce, front to back)", "balanced", ["stack"], "ctr.span", -1.0]]
 	var said := []
 	var done := {}
 	for c in cases:
@@ -589,7 +593,7 @@ func _test_call_visibility(results: Array) -> void:
 		var moved := (float(m.get(what, 0.0)) - float(bal.get(what, 0.0))) * float(c[4])
 		said.append("%s %.1f m" % [str(c[0]), moved])
 		var floor_m := CALL_FLOOR - (ATTACK_CALL_SLACK if key == "attacking|[]" else 0.0)
-		_check(moved >= floor_m, "%s moves Fremantle %.1f m from Balanced (%.1f against %.1f), at least %.1f m" % [
+		_check(BalanceGate.held(moved >= floor_m, "match motion: call moves Fremantle from Balanced"), "%s moves Fremantle %.1f m from Balanced (%.1f against %.1f), at least %.1f m" % [
 				str(c[0]), moved, float(m.get(what, 0.0)), float(bal.get(what, 0.0)), floor_m])
 	print("  calls against Balanced, as drawn: " + ", ".join(said))
 	# Pass 4 (the motion critic's third look): Attack Corridor is a narrower
@@ -598,10 +602,10 @@ func _test_call_visibility(results: Array) -> void:
 	var con: Dictionary = done["contest|[]"]
 	var a_sp := float(att.get("open.spread.mean", 0.0))
 	var b_sp := float(bal.get("open.spread.mean", 0.0))
-	_check(a_sp >= ATTACK_SPREAD_LO and a_sp <= ATTACK_SPREAD_HI,
+	_check(BalanceGate.held(a_sp >= ATTACK_SPREAD_LO and a_sp <= ATTACK_SPREAD_HI, "match motion: Attack Corridor mean spread"),
 			"Attack Corridor: in possession Fremantle spreads %.0f to %.0f m across the ground on average (%.1f m; Balanced %.1f m)" % [
 			ATTACK_SPREAD_LO, ATTACK_SPREAD_HI, a_sp, b_sp])
-	_check(float(att.get("open.spread.p02", 0.0)) >= ATTACK_SPREAD_FLOOR,
+	_check(BalanceGate.held(float(att.get("open.spread.p02", 0.0)) >= ATTACK_SPREAD_FLOOR, "match motion: Attack Corridor spread floor"),
 			"Attack Corridor: the corridor never collapses, at least %.0f m of spread in 98 possession frames in 100 (%.1f m at the 2nd percentile; Balanced %.1f m)" % [
 			ATTACK_SPREAD_FLOOR, float(att.get("open.spread.p02", 0.0)), float(bal.get("open.spread.p02", 0.0))])
 	# Balanced is the bar (lead, 2026-10-18): the corridor is never more crowded
@@ -621,7 +625,7 @@ func _test_call_visibility(results: Array) -> void:
 			100.0 * CROWD_FILE_POINTS, 100.0 * a_f3, 100.0 * b_f3])
 	var nearer := float(bal.get("open.med_rad.mean", 0.0)) - float(con.get("open.med_rad.mean", 0.0))
 	var nearer75 := float(bal.get("open.med_rad.p75", 0.0)) - float(con.get("open.med_rad.p75", 0.0))
-	_check(nearer >= CONTEST_NEARER and nearer75 >= CONTEST_NEARER_P75,
+	_check(BalanceGate.held(nearer >= CONTEST_NEARER and nearer75 >= CONTEST_NEARER_P75, "match motion: Win Contest nearer the ball"),
 			"Win Contest: in open play Fremantle's median player stands at least %.0f m nearer the ball than on Balanced, %.1f m at the 75th percentile (%.1f m nearer on average, %.1f against %.1f; %.1f m at the 75th percentile)" % [
 			CONTEST_NEARER, CONTEST_NEARER_P75, nearer, float(con.get("open.med_rad.mean", 0.0)), float(bal.get("open.med_rad.mean", 0.0)), nearer75])
 	print("  attack corridor against Balanced: spread %.1f m (%.1f), 2nd percentile %.1f m (%.1f), heavy overlaps %.2f a frame (%.2f), any overlap %.2f (%.2f), longest file %.2f (%.2f), file-of-three frames %.1f%% (%.1f%%)" % [
@@ -687,9 +691,27 @@ func _shape_of(r: Dictionary, events := -1, crowd := false) -> Dictionary:
 		if d.mode == "break":
 			continue
 		var stop := d._stoppage_on()
+		var world := _drawn_world(pv, drawn)
+		if d.mode == "centre":
+			# A centre bounce, set-up included: how far Fremantle stands, on
+			# average, from its own middle front to back (Stack the stoppage
+			# brings both half-lines and the pockets up toward the square).
+			var cx := []
+			for i in range(world.size()):
+				if int(d.tokens[i]["side"]) == 0:
+					cx.append((world[i] as Vector2).x)
+			var mid := 0.0
+			for x in cx:
+				mid += float(x) / float(cx.size())
+			var sp := 0.0
+			for x in cx:
+				sp += absf(float(x) - mid) / float(cx.size())
+			if not acc.has("ctr.span"):
+				acc["ctr.span"] = [0.0, 0]
+			acc["ctr.span"][0] += sp
+			acc["ctr.span"][1] += 1
 		if stop and d._pi < d._phases.size() and str((d._phases[d._pi] as Dictionary).get("t", "")) in ["setup", "wait"]:
 			continue   # 6-6-6: nobody may crash in before the ball is up
-		var world := _drawn_world(pv, drawn)
 		var b: Vector2 = d.ball["pos"]
 		var xs := []
 		var ys := []

@@ -3,7 +3,7 @@ extends SceneTree
 ## The Hub's weekly "one big call" (director 2026-11-03, plan 3a): a due
 ## coach-arc beat, else the most pressing of the press, an assistant approach,
 ## a captaincy vacancy, backing a young player, a captaincy review, read from
-## real state; one per week, kept through save/load; off, nothing.
+## real state; one per week, kept through save/load; on in every career.
 
 var _state: Node
 var _router: Node
@@ -12,6 +12,7 @@ var _checks := 0
 var _failures: Array[String] = []
 
 const WC := preload("res://scripts/state/WeekChecklist.gd")
+const Tap := preload("res://tests/tap.gd")
 const SUITE_SEED := 2027
 var BigCalls
 
@@ -43,7 +44,6 @@ func _run() -> void:
 	_state.delete_saved_career()
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
-	await _t("_test_off_is_empty")
 	await _t("_test_backing_from_state")
 	await _t("_test_priority_and_one_per_week")
 	await _t("_test_captaincy")
@@ -51,7 +51,6 @@ func _run() -> void:
 	await _t("_test_save_load")
 	await _t("_test_hub_row")
 	await _t("_test_every_kind_routes")
-	_state.set_setting(WC.SETTING, false)
 	_state.delete_saved_career()
 	print(Ran.line("Big call", self))
 	for f in _failures:
@@ -59,9 +58,8 @@ func _run() -> void:
 	quit(1 if not _failures.is_empty() else 0)
 
 
-func _fresh(checklist: bool) -> void:
+func _fresh() -> void:
 	_state.reset()
-	_state.set_setting(WC.SETTING, checklist)
 	_state.career_seed = SUITE_SEED
 	_state.replay_seed = SUITE_SEED
 	_state.start_season("MEL", _db.club_list("MEL"))
@@ -75,14 +73,8 @@ func _next_week() -> void:
 	_state.week_checks = {"week": -99, "done": {}, "seen": {}}
 
 
-func _test_off_is_empty() -> void:
-	_fresh(false)
-	_check(WC.big_call(_state).is_empty(), "Checklist off: no big call")
-	_check(not (_state.week_checks as Dictionary).has("big_call"), "Checklist off: nothing written")
-
-
 func _test_backing_from_state() -> void:
-	_fresh(true)
+	_fresh()
 	# Out of the box no MEL youngster is near the side: no backing call.
 	var young: Dictionary = BigCalls.ready_to_back(_state)
 	var kid := {}
@@ -117,7 +109,7 @@ func _test_backing_from_state() -> void:
 
 
 func _test_priority_and_one_per_week() -> void:
-	_fresh(true)
+	_fresh()
 	var cid := ""
 	for k in _state.coaches:
 		if str(_state.coaches[k].get("club", "")) == "MEL":
@@ -141,7 +133,7 @@ func _test_priority_and_one_per_week() -> void:
 
 
 func _test_captaincy() -> void:
-	_fresh(true)
+	_fresh()
 	if not _state.captaincy.has("MEL"):
 		_state._captaincy_refresh()
 	var rec: Dictionary = _state.captaincy.get("MEL", {})
@@ -167,7 +159,7 @@ func _test_captaincy() -> void:
 
 
 func _test_arc_beat_first() -> void:
-	_fresh(true)
+	_fresh()
 	_state.week_events = [{"coach_arc": "hot_seat", "title": "The board wants a word", "resolved": false}]
 	var c := WC.big_call(_state)
 	_check(str(c.get("text", "")) == "The board wants a word" and c.has("card"),
@@ -177,7 +169,7 @@ func _test_arc_beat_first() -> void:
 
 
 func _test_save_load() -> void:
-	_fresh(true)
+	_fresh()
 	_state.media_conference = {"key": "x", "round": 1}
 	_check(str(WC.big_call(_state).get("kind", "")) == "press", "Press call before save")
 	_state.media_conference = {}
@@ -191,7 +183,7 @@ func _test_save_load() -> void:
 
 
 func _test_hub_row() -> void:
-	_fresh(true)
+	_fresh()
 	var rec: Dictionary = _state.captaincy.get("MEL", {})
 	rec["slots"] = []
 	rec["seeded"] = true
@@ -205,11 +197,22 @@ func _test_hub_row() -> void:
 	if bc != null:
 		_check(str((bc as Button).tooltip_text) == str(WC.big_call(_state).get("text", "")),
 				"The row is this week's call")
+		# A real finger on the call reaches its screen (row 51).
+		var route := str(WC.big_call(_state).get("route", ""))
+		var size := root.size
+		root.size = Vector2i(390, 844)
+		for i in range(4):
+			await process_frame
+		var why: String = await Tap.tap(current_scene.find_child("BigCall", true, false) as Control)
+		for i in range(8):
+			await process_frame
+		_check(why == "" and route != "" and _router.current() == route, "Phone: a tap on the big call opens its screen (%s)" % why)
+		root.size = size
 
 
 ## Every big-call kind has a route the Router knows, so its Hub row can be tapped.
 func _test_every_kind_routes() -> void:
-	_fresh(true)
+	_fresh()
 	var cid := ""
 	for k in _state.coaches:
 		if str(_state.coaches[k].get("club", "")) == "MEL":
