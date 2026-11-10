@@ -260,8 +260,16 @@ func _open_coach() -> Control:
 	var end := tab.get_global_rect().end.x if tab != null else 9999.0
 	_check(end <= 391.0 and s.find_child("SectionStrip", true, false) == null,
 			"Six tabs share one row on a phone, Coach whole (ends at %.1f)" % end)
+	await _settle(20)
+	tab = s.find_child("Section_coach", true, false) as Control
+	var before := "win %s, tab %s, valid %s" % [str(root.size), str(tab.get_global_rect()) if tab != null else "-",
+			str(is_instance_valid(tab))]
 	var why: String = await Tap.tap(tab) if tab != null else "no Coach tab"
 	await _settle()
+	if why != "":
+		var hov := root.gui_get_hovered_control()
+		why += "; %s; hovered %s; dragging %s; tab now valid %s" % [before, hov.get_path() if hov != null else "none",
+				str(root.gui_is_dragging()), str(is_instance_valid(tab))]
 	_check(why == "" and s.find_child("StatsCoach", true, false) != null, "A finger on Coach opens the ledger (%s)" % why)
 	return s
 
