@@ -63,7 +63,8 @@ static func matches(text: String) -> Array:
 	if q.length() < MIN_LETTERS:
 		return []
 	var clubs: Array = []
-	for code in GameDB.clubs:
+	# Only clubs in the league this season: Tasmania is not a name to find before it joins.
+	for code in GameDB.active_clubs(GameState.season_year):
 		var nm := GameDB.club_name(str(code))
 		if nm.to_lower().contains(q) or GameDB.club_short(str(code)).to_lower().contains(q) or str(code).to_lower() == q:
 			clubs.append([0 if nm.to_lower().begins_with(q) else 1, nm, ClubLink.SCHEME + str(code)])

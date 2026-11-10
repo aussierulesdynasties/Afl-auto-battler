@@ -42,6 +42,8 @@ func run() -> void:
 	_t("_test_trust_rules")
 	_t("_test_engine_rules")
 	_t("_test_calendar_order")
+	_t("_test_topical_card_comes_first")
+	_t("_test_said_once_and_said_right")
 	_t("_test_arcs")
 	_t("_test_finals_and_big_weeks")
 	_t("_test_private_cards")
@@ -533,6 +535,63 @@ func _test_calendar_order() -> void:
 			and int(old["flags"]["club"]["f"]) == StoryEngine.week_abs(2027, 26)
 			and int((old["cats"] as Array)[0][0]) == StoryEngine.week_abs(2027, 26)
 			and not StoryEngine.is_old_calendar(old), "An old save's story weeks convert on load")
+
+
+## Bug bash 3: the cards about a losing run sat behind every running story
+## and were never dealt in 17 seasons. A topical card is the week's card.
+func _test_topical_card_comes_first() -> void:
+	var deck := [_club_card("other", "training", {"cooldown": 0, "weight": 50}),
+			_club_card("spray", "media", {"cooldown": 0, "topical": true, "when": {"losing_run_min": 2}})]
+	var losing := 0
+	var winning := 0
+	for wk in range(2, 22):
+		var ctx := {"seed": 7, "year": 2027, "week": wk, "phase": "regular", "club": {"losing_run": 2}, "players": []}
+		var got: Array = StoryEngine.pick_week(deck, ctx, StoryEngine.new_state())
+		if got.size() == 1 and str(got[0]["tid"]) == "spray":
+			losing += 1
+		ctx["club"] = {"losing_run": 1}
+		for c in StoryEngine.pick_week(deck, ctx, StoryEngine.new_state()):
+			if str(c["tid"]) == "spray":
+				winning += 1
+	_check(losing == 20, "Two losses in a row: the card about it comes that week, a quiet week too (%d of 20)" % losing)
+	_check(winning == 0, "It never comes without the losing run")
+	var story := StoryEngine.new_state()
+	var c2 := {"seed": 7, "year": 2027, "week": 5, "phase": "regular", "club": {"losing_run": 3}, "players": []}
+	var real := [StoryDeck.by_id(StoryDeck.all(), "media_radio_spray")]
+	_check(StoryEngine.pick_week(real, c2, story).size() == 1, "The real card is dealt on a losing run")
+	c2["week"] = 6
+	_check(StoryEngine.pick_week(real, c2, story).is_empty(), "...and waits out its cooldown, not every week of the run")
+	for id in ["media_radio_spray", "leadership_players_meeting", "board_wants_answers"]:
+		_check(bool(StoryDeck.by_id(StoryDeck.all(), id).get("topical", false)), "%s is the week's card when its run is on" % id)
+
+
+## Bug bash 3: a line is filed once however long the fact stays true, and a
+## number takes the article it is said with.
+func _test_said_once_and_said_right() -> void:
+	GameState.milestone_log = Milestones.empty()
+	_check(Milestones.tell_once(GameState, "p1|x is set to make his debut.") and not Milestones.tell_once(GameState, "p1|x is set to make his debut."),
+			"A milestone preview is filed once, not every week it stays true")
+	var kept: Dictionary = Milestones.normalise(GameState.milestone_log.duplicate(true), GameState)
+	_check((kept.get("told", {}) as Dictionary).size() == 1, "What was told survives a save and load")
+	var old_save := Milestones.empty()
+	old_save.erase("told")
+	GameState.milestone_log = old_save
+	_check(Milestones.tell_once(GameState, "k"), "An older save with no record starts one")
+	GameState.milestone_log = Milestones.empty()
+	var wrong := []
+	for n in [8, 11, 18, 80, 86, 800, 8000, 11000]:
+		if LeagueStories.an(n) != "an":
+			wrong.append(n)
+	for n in [1, 7, 10, 12, 17, 19, 28, 100, 180]:
+		if LeagueStories.an(n) != "a":
+			wrong.append(n)
+	_check(wrong.is_empty(), "an 8, an 11, an 18, an 86; a 7, a 12, a 100 (%s)" % str(wrong))
+	_check(Injuries.wording("elbow") == "an elbow injury" and Injuries.wording("back") == "a back injury",
+			"An injury is said as football says it (%s, %s)" % [Injuries.wording("elbow"), Injuries.wording("back")])
+	var shares: Array = GateOdds.plan_shares("defensive")
+	_check((shares[1] as Array).size() == 4 and str(GateOdds.PLAN_COST["defensive"]).count("%s") == 4
+			and str(GateOdds.PLAN_COST["defensive"]).contains("less ground a kick"),
+			"The Defensive Press gate states every cost the match applies, the ground lost a kick included")
 
 
 func _test_engine_rules() -> void:

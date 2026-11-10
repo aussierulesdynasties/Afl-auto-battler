@@ -127,6 +127,13 @@ func _test_your_draft_rules() -> void:
 			"The 2026 class taken in your opening redraft: yours")
 	_check(_ledger.your_draft(redraft, roll, "MEL", 2029, 2027, "real").is_empty(),
 			"...but not in a real-lists career, where no redraft happened")
+	var opening := {"id": "o", "drafted_club": "FRE", "drafted_year": 2026, "drafted_pick": 3, "drafted_type": "national"}
+	_check(_ledger.your_draft(opening, roll, "MEL", 2029, 2027, "real") == [2026, 3, "national"],
+			"The draft that opened your career is held the year before your first season: yours")
+	var not_ours := opening.duplicate()
+	not_ours["drafted_club"] = "MEL"
+	_check(_ledger.your_draft(not_ours, roll, "MEL", 2029, 2027, "real").is_empty(),
+			"...but not the pick of a club you only joined later")
 	_check(_ledger.your_draft({"id": "c"}, roll, "MEL", 2029, 2027, "redraft").is_empty(),
 			"No draft on record: not yours")
 	_check(_ledger.draft_words([2027, 7, "national"]) == "Pick 7, 2027 national draft"

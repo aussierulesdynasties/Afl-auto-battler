@@ -370,6 +370,9 @@ static func _ladder_beat(sb: _Say, code: String, before: Array, after: Array, re
 		return sb.line("ladder_out", slots)
 	if now < was:
 		return sb.line("ladder_up", slots)
+	# A winner passed on percentage has not "stayed" anywhere: say nothing.
+	if now > was:
+		return ""
 	return sb.line("ladder_stay", slots)
 
 
@@ -491,7 +494,17 @@ static func _pt_adj(n: int) -> String:
 
 ## The article before a number said aloud: "an 8", "an 11", "an 18", "an 80-odd".
 static func _an(n: int) -> String:
-	return "an" if n == 8 or n == 11 or n == 18 or (n >= 80 and n <= 89) else "a"
+	# As it is said aloud: eight, eighty, eight hundred; eleven and eighteen, and
+	# eleven or eighteen thousand. One hundred and eighty is "a".
+	var s := str(absi(n))
+	if s.begins_with("8"):
+		return "an"
+	return "an" if s.length() % 3 == 2 and (s.begins_with("11") or s.begins_with("18")) else "a"
+
+
+## The same, for copy written outside this file ("an 8% chance", "an 11-year wait").
+static func an(n: int) -> String:
+	return _an(n)
 
 
 static func _goals(n: int) -> String:

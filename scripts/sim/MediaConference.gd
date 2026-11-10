@@ -117,8 +117,8 @@ static func pick(ctx: Dictionary, recent: Dictionary) -> Dictionary:
 			var goals: Array = res.get("goals", [])
 			var hv := _turn(asked, "heavy_loss", 3)
 			if hv == 2:
-				candidates.append(_q("heavy_loss", "muckraker", "That's a %d-point hiding from %s. Do your players still believe in what you're selling?" % [
-						-margin, opp], round_no,
+				candidates.append(_q("heavy_loss", "muckraker", "That's %s %d-point hiding from %s. Do your players still believe in what you're selling?" % [
+						LeagueStories.an(-margin), -margin, opp], round_no,
 						"Some of them need a hard look at themselves.", "The plan's sound. We didn't carry it out.",
 						"They believe. They'll show it next week.",
 						_named(named.get("heavy_loss", {}), "criticise_named", "%s went missing today."), 2))

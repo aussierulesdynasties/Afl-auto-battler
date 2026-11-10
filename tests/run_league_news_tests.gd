@@ -180,7 +180,10 @@ func _expected(code: String, year: int, roll: Array) -> String:
 	var last := 0
 	for y in flags:
 		last = maxi(last, int(y))
-	return "Their first flag since %d, a %d-year wait." % [last, year - last] if year - last >= _cs.DROUGHT_YEARS else ""
+	# "an 11-year wait", "an 18-year wait", "an 80-year wait": by ear, worked out here on its own.
+	var n := year - last
+	var art := "an" if n == 8 or n == 11 or n == 18 or (n >= 80 and n <= 89) else "a"
+	return "Their first flag since %d, %s %d-year wait." % [last, art, n] if year - last >= _cs.DROUGHT_YEARS else ""
 
 
 func _test_season_seeded() -> void:

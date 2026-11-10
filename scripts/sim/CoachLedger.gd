@@ -42,9 +42,13 @@ static func your_draft(p: Dictionary, honour_roll: Array, my_club: String, seaso
 		return []
 	if p.has("drafted_year"):
 		var y := int(p["drafted_year"])
-		if first_season > 0 and y < first_season:
+		# A draft is held in the year before the season its players first play: the
+		# draft that opened your career (real lists, or the one you walked into after
+		# years simmed ahead) is stamped the year before your first season.
+		if first_season > 0 and y < first_season - 1:
 			return []
-		if club_in(y, honour_roll, my_club, season_year) != dc:
+		var as_of := first_season if first_season > 0 and y == first_season - 1 else y
+		if club_in(as_of, honour_roll, my_club, season_year) != dc:
 			return []
 		return [y, int(p.get("drafted_pick", 0)), str(p.get("drafted_type", "national"))]
 	# The 2026 class taken in the opening league redraft (GameState.start_season

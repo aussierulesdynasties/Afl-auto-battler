@@ -21,7 +21,7 @@ const PLAN_GAIN := {
 }
 const PLAN_COST := {
 	"attacking": "%s more clangers, legs tire %s faster, their shots %s more accurate on the rebound",
-	"defensive": "your shots %s less accurate, legs tire %s faster, %s less pressure in your back third",
+	"defensive": "your shots %s less accurate, legs tire %s faster, %s less pressure in your back third, %s less ground a kick",
 	"contest": "%s less ground a kick, their shots %s more accurate on the rebound",
 	"controlled": "%s less ground a kick",
 }
@@ -176,7 +176,7 @@ static func plan_shares(plan: String, up := 1.0, down := 1.0) -> Array:
 		"defensive":
 			var zone: Array = MatchSim.PRESS_PLAN_ZONE
 			return [[(float(zone[0]) - 1.0) * up, v.call("opp_goal") * up],
-					[v.call("goal") * down, v.call("pace") * down, (1.0 - float(zone[2]))]]
+					[v.call("goal") * down, v.call("pace") * down, (1.0 - float(zone[2])), v.call("gain") * down]]
 		"contest":
 			return [[_plan_v(plan, "contest", 0.0) * up], [v.call("gain") * down, v.call("exposed") * down]]
 		"controlled":
