@@ -82,7 +82,7 @@ const HOLDS_WITH_TRUST := 45
 
 ## Facts a player card can test and print (GameState._story_player_facts).
 const PLAYER_FACTS := ["name", "first", "age", "games", "fit", "selected", "overall", "potential",
-		"pot_gap", "contract_years", "morale", "trust", "trust_band", "discipline", "backed",
+		"pot_gap", "contract_years", "morale", "trust", "trust_band", "discipline", "backed", "back_wait", "back_out",
 		"fit_rank", "talk_case", "kpi", "kpi_or_need", "explain_label", "talk_text", "sore_odds",
 		"sore_pct", "injury_pct", "trial_ovr", "ask", "early_price", "more_seasons", "extension_ok", "intl_extension_ok", "job", "real_named",
 		"form", "form_games", "has_role2", "out_of_side", "starting", "form_low", "role_avg", "role_word", "trial_word", "trial_home", "trial_avg", "trial_par", "trial_tail",

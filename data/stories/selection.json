@@ -456,7 +456,8 @@
 				"age_max": 21,
 				"fit": true,
 				"selected": false,
-				"out_of_side": true
+				"out_of_side": true,
+				"back_wait": false
 			},
 			"pick": "highest:potential"
 		},
