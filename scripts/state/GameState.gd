@@ -3215,10 +3215,6 @@ func ensure_finals() -> void:
 		season.start_finals()
 
 
-## advance_async ran this week's steps before the matches and started them.
-var _prepped := false
-
-
 ## advance() with the week's matches run on threads while the screen keeps
 ## drawing frames: the loading cover's set shot plays on (in a browser too,
 ## where nothing draws until the game hands control back). Same steps, same
@@ -3227,12 +3223,19 @@ func advance_async() -> String:
 	if season == null:
 		return advance()
 	_advance_prep()
-	_prepped = true
 	ensure_finals()          # a no-op before the finals; advance() does it first there too
 	var job := season.start_week()
 	while Season.running(job):
 		await get_tree().process_frame
-	return advance()
+	_advance_reset()
+	# A browser shows a frame only between JavaScript tasks: a frame between
+	# the steps after the matches keeps the cover's ball from hanging.
+	for step in _play_steps():
+		await get_tree().process_frame
+		var stop: String = step.call()
+		if stop != "":
+			return stop
+	return last_phase
 
 
 ## Play the next round (or finals week). Returns the phase it played.
@@ -3241,14 +3244,21 @@ func advance() -> String:
 	# keeps moving through Sim the week and a skip.
 	if season == null:
 		return "none"
-	if _prepped:
-		_prepped = false
-	else:
-		_advance_prep()
+	_advance_prep()
+	_advance_reset()
+	for step in _play_steps():
+		Season.beat()
+		var stop: String = step.call()
+		if stop != "":
+			return stop
+	Season.beat()
+	return last_phase
+
+
+func _advance_reset() -> void:
 	last_results = []
 	last_match = {}
 	last_pos_before = my_position()
-	return _advance_play()
 
 
 ## The week's steps before its matches.
@@ -3273,9 +3283,13 @@ func _advance_prep() -> void:
 	_stamp_conditioning()
 
 
-## The week's matches and everything after them.
-func _advance_play() -> String:
-	Season.beat()
+## The week's matches and everything after them, in order. Each step returns
+## "" to go on, or the phase to stop at.
+func _play_steps() -> Array[Callable]:
+	return [_play_week, _log_week, _week_xp, _week_rivals, _week_after, _week_save]
+
+
+func _play_week() -> String:
 	if not season.is_regular_done():
 		last_results = season.play_round()
 		last_phase = "regular"
@@ -3294,24 +3308,36 @@ func _advance_play() -> String:
 	else:
 		last_phase = "done"
 		return "done"
+	return ""
 
-	Season.beat()
+
+func _week_xp() -> String:
+	_grant_match_xp(last_match)
+	return ""
+
+
+func _week_rivals() -> String:
+	_train_rivals(last_results)
+	_record_rivalries(last_results)
+	return ""
+
+
+func _week_after() -> String:
+	_after_round(last_results)
+	return ""
+
+
+func _week_save() -> String:
+	autosave()
+	return ""
+
+
+func _log_week() -> String:
 	for res in last_results:
 		season_log.append(res)
 		if res["home"] == my_club or res["away"] == my_club:
 			last_match = res
-	Season.beat()
-	_grant_match_xp(last_match)
-	Season.beat()
-	_train_rivals(last_results)
-	Season.beat()
-	_record_rivalries(last_results)
-	Season.beat()
-	_after_round(last_results)
-	Season.beat()
-	autosave()
-	Season.beat()
-	return last_phase
+	return ""
 
 
 

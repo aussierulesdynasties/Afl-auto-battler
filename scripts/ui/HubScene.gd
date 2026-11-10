@@ -2117,11 +2117,15 @@ func _sim_week() -> void:
 		await GameState.sim_week_async()
 	else:
 		GameState.sim_week()
+	var t0 := Time.get_ticks_msec()  # TIMING (temporary)
 	_build()
+	var t1 := Time.get_ticks_msec()  # TIMING (temporary)
 	if not GameState.last_results.is_empty():
 		_show_results(GameState.last_results)
 	else:
 		_show_week_ask()
+	if OS.has_feature("web"):  # TIMING (temporary)
+		JavaScriptBridge.eval("window.__steps=%s" % JSON.stringify([GameState.web_step_ms, t1 - t0, Time.get_ticks_msec() - t1]))
 
 
 ## What the cover says while the week is simmed.
