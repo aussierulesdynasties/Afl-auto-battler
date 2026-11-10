@@ -764,7 +764,7 @@ func _open_sim_ahead_sheet(from_start: bool) -> void:
 	for line in [
 			"Canberra join the league in %d. With them in, %d to %d play out without you." % [first, GameDB.START_YEAR, first - 1],
 			"Every club is run by its own staff in those three seasons: they pick the sides, trade, sign free agents and draft. Tasmania join in %d, Canberra build their first list, and three premierships are decided." % GameDB.enter_year("TAS"),
-			"At the %d National Draft you choose any of the 20 clubs, sit your job interview and start in %d." % [first - 1, first]]:
+			"At the %d National Draft you choose any of the 20 clubs, face the press as their new coach and start in %d." % [first - 1, first]]:
 		var l := UiKit.lbl(line, UiKit.BODY, UiKit.TEXT)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(l)

@@ -817,8 +817,8 @@ func begin_from_history(first_season: int) -> bool:
 	var board_was := board_patience
 	var rivals_was := rival_recruiting
 	var tips_were := tutorials
-	# You, the coach, are this career's, not the history's: the appointment
-	# interview still waits and its answers are scored as in any start
+	# You, the coach, are this career's, not the history's: the press
+	# interview still waits and its answers set the coaching style as in any start
 	# (director, 2026-11-10: "interview should happen in every game mode").
 	var interview_was := interview_due
 	var coach_was := coach_name

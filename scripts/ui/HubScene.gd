@@ -28,7 +28,7 @@ func _ready() -> void:
 	if GameState.season == null:
 		Router.replace("main")
 		return
-	# A new coach sits his appointment interview before anything else (row 119),
+	# A new coach faces the press interview (it sets the coaching style) before anything else (row 119),
 	# a pre-season included: a career that starts on one (a club taken after
 	# seasons played without you) still opens with it.
 	if GameState.interview_due and GameState.my_club != "":

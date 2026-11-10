@@ -4041,7 +4041,7 @@ func _test_canberra_2030_warning() -> void:
 	var sheet := current_scene.find_child("SimAheadWarning", true, false)
 	var said := _all_text(sheet) if sheet != null else ""
 	_check(t1 == "" and sheet != null and said.contains("Your first season is 2030")
-			and said.contains("2027 to 2029 play out without you") and said.contains("job interview"),
+			and said.contains("2027 to 2029 play out without you") and said.contains("face the press"),
 			"Yes on the real lists warns that 2027 to 2029 play out without you (%s): %s" % [t1, said])
 	var t2: String = await Tap.tap(current_scene.find_child("SimAheadBack", true, false))
 	await _settle()
@@ -4082,7 +4082,7 @@ func _all_text(n: Node) -> String:
 	return " ".join(PackedStringArray(out))
 
 
-## Every start mode opens with the appointment interview (director, 2026-11-10:
+## Every start mode opens with the press interview that sets your coaching style (director, 2026-11-10:
 ## "interview should happen in every game mode"), its answers scored as in any
 ## start. Each start is set on New career and begun as Choose your club begins
 ## it; the club is taken by a real tap; the hub then sends the new coach to the
@@ -4105,7 +4105,7 @@ func _test_every_start_reaches_interview() -> void:
 	var picks := [1, 0, 2, 1, 3, 0, 1]
 	for st in starts:
 		var label := str(st[0])
-		var history := (bool(st[3]) and str(st[1]) == "real" and str(st[2]) != "rebuild") or bool(st[4])
+		var history: bool = (bool(st[3]) and str(st[1]) == "real" and str(st[2]) != "rebuild") or bool(st[4])
 		# The shipped histories serve an unseeded career only (begin_from_history).
 		_state.replay_seed = 0 if history else seed_was
 		_state.delete_saved_career()
@@ -4122,7 +4122,7 @@ func _test_every_start_reaches_interview() -> void:
 		menu.set("_pick_canberra", bool(st[3]))
 		menu.call("_start_new_career")
 		for i in range(900):
-			if _router.current() == "draft" and not ScreenTransition.busy:
+			if _router.current() == "draft" and not bool(root.get_node("ScreenTransition").busy):
 				break
 			await process_frame
 		await _settle()
@@ -4135,7 +4135,7 @@ func _test_every_start_reaches_interview() -> void:
 			await _settle()
 			tap += await Tap.tap(draft_scene.find_child("WaitGo", true, false))
 			for i in range(900):
-				if _state.my_club != "" and not ScreenTransition.busy:
+				if _state.my_club != "" and not bool(root.get_node("ScreenTransition").busy):
 					break
 				await process_frame
 			await _settle()
@@ -4143,17 +4143,32 @@ func _test_every_start_reaches_interview() -> void:
 			var tile := _first_named(draft_scene, "Choose_")
 			tap = await Tap.tap(tile) if tile != null else "no club tile"
 			await _settle()
-		# A League redraft names your club when its draft is done; the pick
-		# stands in for that here.
-		if _state.my_club == "" and is_instance_valid(draft_scene):
-			_state.my_club = str(draft_scene.get("_club"))
-		var due := bool(_state.interview_due)
-		var clean := (_state.coach_arch as Dictionary).is_empty() and _state.coach_name == ""
-		_router.go("hub")
+		# The draft to its end, as its own buttons make it: each pick the best
+		# player left, then Start season. Where it goes next is the hub's call;
+		# the press interview comes before the pre-season (on main it came only
+		# after the whole pre-season, and never after a shipped history).
+		var ds := current_scene
+		var d = _state.draft
+		var guard := 0
+		while d != null and not d.is_finished() and guard < 200:
+			guard += 1
+			var board: Array = d.board("", "", "", "overall", true).filter(func(p): return d.can_pick_player(p))
+			if board.is_empty():
+				break
+			ds.call("_on_pick", board[0])
+			await process_frame
+		var due: bool = bool(_state.interview_due)
+		var clean: bool = (_state.coach_arch as Dictionary).is_empty() and str(_state.coach_name) == ""
+		if is_instance_valid(ds) and ds.has_method("_on_finish"):
+			ds.call("_on_finish")
+		for i in range(300):
+			if _router.current() != "draft" and not bool(root.get_node("ScreenTransition").busy):
+				break
+			await process_frame
 		await _settle()
 		_check(tap == "" and _state.my_club != "" and due and clean and _router.current() == "interview"
 				and current_scene.find_child("CoachName", true, false) != null,
-				"%s: the new coach of %s sits the appointment interview, name first (tap %s, due %s, clean %s, at %s)" % [
+				"%s: the new coach of %s faces the press interview, name first (tap %s, due %s, clean %s, at %s)" % [
 					label, _state.my_club, tap, due, clean, _router.current()])
 		if _router.current() != "interview":
 			continue
@@ -4171,7 +4186,7 @@ func _test_every_start_reaches_interview() -> void:
 		_check(answered == "" and not _state.interview_due and _state.coach_name == "Pat Reid"
 				and _state.coach_arch == want and load("res://scripts/sim/CoachEffects.gd").my_arch == want
 				and current_scene.find_child("InterviewDone", true, false) != null,
-				"%s: seven tapped answers score as the standard start's (%s)" % [label, answered])
+				"%s: seven tapped answers set the coaching style as the standard start's (%s)" % [label, answered])
 	_state.replay_seed = seed_was
 	_state.delete_saved_career()
 	_state.reset()
