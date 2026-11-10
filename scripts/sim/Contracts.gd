@@ -449,6 +449,50 @@ static func offer_view(p: Dictionary, o: Dictionary, other: Dictionary, club_nam
 	return ""
 
 
+## One point of his offer score in dollars a season: the salary_score slope
+## ($155k is 1 point, $1.25m is 10). Row T1.R26 FA weights: every part of
+## what he weighs is shown in these dollars.
+const POINT_DOLLARS := (1250000.0 - 155000.0) / 9.0
+
+
+## Dollars a season that `points` of his score are worth, to the nearest $10k.
+static func points_money(points: float) -> int:
+	return int(round(points * POINT_DOLLARS / 10000.0)) * 10000
+
+
+## What offer `o` is worth to him a season, in dollars: its salary plus his
+## role there, security up to the term he wants, the club's finish last year
+## and its push to win, each at its offer_score weight. A higher worth is the
+## offer he prefers (`prefers`), ties aside.
+static func worth_to_him(p: Dictionary, o: Dictionary) -> int:
+	return int(round(((offer_score(p, o) - 1.0) * POINT_DOLLARS + float(SENIOR_MIN_2027)) / 10000.0)) * 10000
+
+
+## How he weighs any offer besides its salary, each part in dollars a season
+## (row T1.R26): one rule, the same for every club.
+const WEIGH_LINE := "Besides salary he counts a best-23 spot as %s a season (a bench spot %s), each season up to the %d he wants as %s, and a club's finish last year up to %s (premiers over the wooden spoon)."
+
+
+## Your free-agency offer as a gate (row T1.R26: "Gain / Cost everywhere"):
+## Gain, he signs with you if yours is worth the most to him once rivals have
+## answered; Cost, its salary on your cap for its term.
+const FA_GAIN := "he signs with you if yours is still worth the most to him after rivals answer (yours %s a season to him, the best other %s)"
+const FA_GAIN_ALONE := "no other club has offered: he signs with you (yours is worth %s a season to him)"
+const FA_COST := "%s a season on your cap for %d season%s, %s in all"
+
+
+static func fa_lines(salary: int, years: int, worth: int, best_other: int) -> Array:
+	var g := FA_GAIN_ALONE % money(worth) if best_other <= 0 else FA_GAIN % [money(worth), money(best_other)]
+	# Plain lines: the screen labels them with GateOdds.gain / cost (Contracts
+	# stays free of GameDB, so standalone runners compile it).
+	return [g, FA_COST % [money(salary), years, "" if years == 1 else "s", money(salary * years)]]
+
+
+static func weigh_line(p: Dictionary) -> String:
+	return WEIGH_LINE % [money(points_money(float(ROLE_WEIGHT["ground"]))), money(points_money(float(ROLE_WEIGHT["bench"]))),
+			int(wants(p)["years"]), money(points_money(0.4)), money(points_money(0.8))]
+
+
 static func _ordinal(n: int) -> String:
 	var suffix := "th"
 	if n % 100 < 11 or n % 100 > 13:
