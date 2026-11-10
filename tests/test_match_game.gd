@@ -74,6 +74,7 @@ func run() -> void:
 	_t("_test_ballup_two")
 	_t("_test_ballup_moves_play_differently")
 	_t("_test_rival_ballup")
+	_t("_test_ballup_unanswered")
 	_t("_test_ruck_never_tags")
 	_t("_test_current_club_identity")
 	_t("_test_tag_ends_with_injury")
@@ -2972,7 +2973,8 @@ func _test_late_bounce_reachable() -> void:
 
 
 ## Row 15: the late centre ball-up is two distinct calls, each with an upside,
-## a downside and a length; unanswered is no call.
+## a downside and a length; the card left unanswered puts nothing on itself
+## (_test_ballup_unanswered: the call is then made as a rival coach makes his).
 func _test_ballup_two() -> void:
 	var ask := func() -> MatchSim:
 		var sim := _sim(4400, "MEL", "CAR")
@@ -3010,7 +3012,7 @@ func _test_ballup_two() -> void:
 	_check(not ranked, "Neither choice is called better")
 	_check(sim.pending_moment["options"][0]["gain"] != sim.pending_moment["options"][1]["gain"]
 			and str(opts[0]["cost"]) != str(opts[1]["cost"]), "The two choices differ in upside and downside")
-	# Unanswered (Skip, auto-play) is no call: nothing stacked or flooded.
+	# Unanswered (Skip, auto-play), the card itself puts nothing on.
 	var side := int(sim.pending_moment.get("side", 0))
 	var res := sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
 	_check(int(res.get("choice", 0)) == -1 and (sim.bursts[side] as Dictionary).is_empty(), "Unanswered, no call is made")
@@ -3113,6 +3115,63 @@ func _test_rival_ballup() -> void:
 	_check(int((behind.bursts[1] as Dictionary)["push"]) == behind._chains_for(int(MatchSim.BURSTS["push"]["chains"]))
 			and int(MatchSim.BURSTS["push"]["chains"]) == int(MatchSim.BURSTS["flood"]["chains"]),
 			"A rival's call lasts as long as yours")
+
+
+## Row 151, every club gets it: a late ball-up card left unanswered (a match
+## you skip through) is not a side with no call against a rival who makes
+## one. The call is made for your side by the rule a rival coach uses: flood
+## in front, push numbers forward behind. It is not counted as your own call.
+func _test_ballup_unanswered() -> void:
+	var at := func(my_goals: float, their_goals: float, minute := 106) -> MatchSim:
+		var sim := _sim(4420, "MEL", "CAR")
+		sim.moment_side = 0
+		(sim.squads[1] as Squad).ai_plans = true
+		sim.current_quarter = 4
+		sim.current_minute = minute
+		sim.at_centre = true
+		(sim.team_stats[0] as Dictionary)["goals"] = my_goals
+		(sim.team_stats[1] as Dictionary)["goals"] = their_goals
+		return sim
+	var up: MatchSim = at.call(11.0, 10.0)
+	_check(up._boundary_moment() and str(up.pending_moment.get("kind", "")) == "bounce", "A goal up late, you are asked at the centre ball-up")
+	up._rival_ballup()
+	_check((up.bursts[0] as Dictionary).is_empty(), "While the card is up, no call is made for you")
+	var res := up.resolve_moment(int(up.pending_moment.get("default", 0)))
+	up._rival_ballup()
+	_check((up.bursts[0] as Dictionary).has("flood") and not (up.bursts[0] as Dictionary).has("push"),
+			"Left unanswered a goal up, your side floods behind the ball as a rival coach would")
+	_check((up.bursts[1] as Dictionary).has("push"), "...and the rival a goal down pushes numbers forward: both sides have a call")
+	_check(str(res.get("call", "")) == "none" and int(res.get("choice", 0)) == -1, "...and it is not recorded as your own call (%s)" % str(res.get("call", "")))
+	var mine := (up.events as Array).filter(func(e): return str(e.get("kind", "")) == "moment" and str(e.get("text", "")).begins_with(up.squads[0].name))
+	_check(mine.size() == 1 and str(mine[0]["text"]).contains("Flood behind the ball"), "...and the feed says so, once (%d)" % mine.size())
+	var held := int((up.bursts[0] as Dictionary)["flood"])
+	(up.team_stats[0] as Dictionary)["goals"] = 9.0
+	up._rival_ballup()
+	_check(int((up.bursts[0] as Dictionary).get("flood", 0)) == held and not (up.bursts[0] as Dictionary).has("push"), "...once a match")
+	var down: MatchSim = at.call(10.0, 11.0)
+	down._boundary_moment()
+	down.resolve_moment(-1)
+	down._rival_ballup()
+	_check((down.bursts[0] as Dictionary).has("push") and (down.bursts[1] as Dictionary).has("flood"),
+			"Left unanswered a goal down, your side pushes numbers forward")
+	# Your own answer stands: nothing is called over it.
+	var own: MatchSim = at.call(11.0, 10.0)
+	own._boundary_moment()
+	own.resolve_moment(1)
+	own._rival_ballup()
+	_check((own.bursts[0] as Dictionary).has("push") and not (own.bursts[0] as Dictionary).has("flood"), "Answered, your call stands")
+	# The playtest aid's card (any score, any minute of the last quarter) left
+	# unanswered: the call still comes only in the real window.
+	var aid: MatchSim = at.call(11.0, 10.0, 95)
+	aid.always_offer_bounce = true
+	_check(aid._boundary_moment(), "The playtest card comes before the last 20 minutes")
+	aid.resolve_moment(-1)
+	aid._rival_ballup()
+	_check((aid.bursts[0] as Dictionary).is_empty(), "The playtest card left unanswered puts nothing on early")
+	aid.current_minute = 106
+	_check(not aid._boundary_moment(), "...and the real card does not come a second time")
+	aid._rival_ballup()
+	_check((aid.bursts[0] as Dictionary).has("flood"), "...but the call is made for your side where the real card would have come")
 
 
 ## A tag is a midfielder's job (the director's PC playtest, 2026-10-07: the

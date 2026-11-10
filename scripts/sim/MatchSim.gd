@@ -5474,6 +5474,9 @@ func _bounce_moment(margin: int) -> bool:
 			# all) comes exactly as it would have without the aid.
 			_moments_this_q += 1
 			_last_moment_chain = _chain_no
+			# The aid's card left unanswered leaves this call unanswered too.
+			if _asked.has("bounce_playtest_left"):
+				_asked["bounce_left"] = true
 			return false
 		_fire_bounce(margin)
 		return true
@@ -5497,6 +5500,7 @@ func _playtest_bounce() -> bool:
 	var calls := _moments_this_q
 	var last := _last_moment_chain
 	_fire_bounce(score(moment_side) - score(1 - moment_side))
+	pending_moment["playtest"] = true
 	_moments_this_q = calls
 	_last_moment_chain = last
 	return true
@@ -5510,8 +5514,9 @@ func _fire_bounce(margin: int) -> void:
 	var title := "Centre ball-up - %s %s" % [state, when]
 	# Two distinct calls, each with its own upside and downside and no
 	# "Play it straight" (row 15): Flood behind the ball and Push numbers
-	# forward (row 151, director 2026-11-10). Unanswered (skipped, auto-played)
-	# is no call.
+	# forward (row 151, director 2026-11-10). Left unanswered (a match you
+	# skip through), the call is made for your side as a rival coach makes
+	# his (_rival_ballup).
 	_fire({"kind": "bounce", "default": -1, "title": title,
 		"text": "Set up for the rest of the game.",
 		"options": _sized([
@@ -5528,12 +5533,15 @@ func _fire_bounce(margin: int) -> void:
 ## the last 20 minutes, a centre ball-up, within two goals, once a match): in
 ## front he floods behind the ball, behind he pushes numbers forward, level he
 ## makes no call. From the scoreboard only, no dice. A side you coach is asked
-## instead (_bounce_moment) and a simulated side of yours makes no call.
+## instead (_bounce_moment). Where its card is left unanswered (a match you
+## skip through) the same call is made for it by the same rule, so your club
+## is never the one side at the ball-up without a call.
 func _rival_ballup() -> void:
 	if current_quarter != 4 or not at_centre or current_minute < 100:
 		return
 	for side in range(2):
-		if side == moment_side or not (squads[side] as Squad).ai_plans or _asked.has("rival_bounce|%d" % side):
+		var called := _asked.has("bounce_left") if side == moment_side else (squads[side] as Squad).ai_plans
+		if not called or _asked.has("rival_bounce|%d" % side):
 			continue
 		var margin := score(side) - score(1 - side)
 		if margin == 0 or absi(margin) > 12:
@@ -5946,6 +5954,9 @@ func resolve_moment(choice: int) -> Dictionary:
 				outcome = "%s %s." % [str(BURSTS[key]["label"]), str(BURSTS[key]["for"])]
 			else:
 				outcome = "No change."
+				# The late ball-up left unanswered: _rival_ballup makes the call.
+				if str(m.get("kind", "")) == "bounce":
+					_asked["bounce_playtest_left" if m.has("playtest") else "bounce_left"] = true
 	m["choice"] = choice
 	m["call"] = key
 	m["choice_label"] = str(opt.get("label", ""))
