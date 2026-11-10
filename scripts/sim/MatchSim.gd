@@ -3336,12 +3336,16 @@ func play_chain(side: int, fp: float, from_bounce: bool, from_kick_in := false) 
 			_last_disp["end"] = "tackle"
 			_last_disp["kind"] = disposal_kind
 			# Knocked loose in the tackle: whoever is there for the other side gathers
-			# it (an intercept possession). Otherwise it is held in: a ball-up.
+			# it off the ground. Otherwise it is held in: a ball-up. A spilled
+			# tackle is not an intercept (row 11): nobody disposed of the ball, so
+			# it counts as a spilled tackle and the gatherer's possession is a
+			# ground ball get (_first_gain, an unmarked turnover).
 			if lockup_rng.randf() < _tv("TACKLE_SPILL", TACKLE_SPILL) * _wx("tackle_spill"):
 				var taker = _aerial_defender(opp, fp)
 				if taker == null:
 					taker = tackler
-				_intercept(opp, taker, false)
+				_t(opp, "tackle_spills")
+				_won_back = {"side": opp, "id": str(taker.get("id", ""))}
 				_emit("tackle", opp, fp, tackler,
 						"%s tackles %s - it spills free" % [GameDB.player_display_name(tackler), GameDB.player_display_name(carrier)])
 				return {"outcome": "turnover", "fp": fp, "actor": taker}
