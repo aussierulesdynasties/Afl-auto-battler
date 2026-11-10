@@ -793,6 +793,11 @@ func _inside50_phases(k: int) -> Array:
 	var loc := _loc(k)
 	var nk := _next_real(k)
 	var recv := _actor_id(events[nk]) if nk >= 0 else -1
+	if nk >= 0 and str(events[nk].get("kind", "")) == "mark" and (events[nk] as Dictionary).has("band"):
+		# He marks where he kicks from (T2.24): the entry lands on the set
+		# shot's spot, on the side of the ground it was coming down.
+		loc = _set_spot(int(events[nk].get("side", 0)), str(events[nk]["band"]), loc.y)
+		_locs[nk] = loc
 	var src: Vector2 = ball["pos"]
 	var d := src.distance_to(loc)
 	var shape := _flight_shape("kick", d)
@@ -1074,6 +1079,19 @@ func _loc(k: int) -> Vector2:
 	p.y = clampf(p.y, -ymax, ymax)
 	_locs[k] = p
 	return p
+
+
+## Where a set shot from `band` is marked, on the oval: the band's metres from
+## the middle of `side`'s attacking goal line, its angle off the line through
+## the goals on the `lean` side (the ball's side of the ground).
+func _set_spot(side: int, band: String, lean: float) -> Vector2:
+	var metres := 35.0
+	for b in MatchSim.SET_BANDS_ON:
+		if str(b["key"]) == band:
+			metres = float(b["metres"])
+	var ang := deg_to_rad(float(DecisionVignette.SET_SPOTS.get(band, 0.0)))
+	var across := (1.0 if lean >= 0.0 else -1.0) * sin(ang) * metres
+	return Vector2(_dir(side) * (MatchMotion.GOAL_X - cos(ang) * metres), across)
 
 
 ## Win Contest: the ball-up is where the ball is when the umpire calls it (motion
