@@ -530,7 +530,8 @@ func _standing_card() -> Control:
 	# Your list as one number and where the club is in its cycle (TeamRating).
 	var outlook := GameState.team_outlook(GameState.my_club)
 	if not outlook.is_empty():
-		var tl := UiKit.lbl(str(outlook["line"]), UiKit.SECONDARY, UiKit.MUTED)
+		# Your list's number in TEXT, like theirs above: a fact he decides on (T3.R9).
+		var tl := UiKit.lbl(str(outlook["line"]), UiKit.SECONDARY, UiKit.TEXT)
 		tl.name = "MyTeamOutlook"
 		cv.add_child(tl)
 	# The last rounds on: where your first pick falls if the season ended today.
@@ -993,10 +994,17 @@ func _week_section(season: Season) -> Control:
 			standing_text = "%s are %s on the ladder  ·  %s" % [
 					GameDB.club_short(opp), GameState.ordinal(GameState.club_position(opp)),
 					GameState.form_line(their)]
+		# Their side as one block under a bar in their colour, in full TEXT: the
+		# coach plans against these, and the bar says whose they are before the
+		# words do (T3.R9; they were grey).
+		var their_block := UiKit.vbox(2)
+		their_block.name = "OppBlock"
+		their_block.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if standing_text != "":
-			var standing := UiKit.lbl(standing_text, UiKit.SECONDARY, UiKit.MUTED)
+			var standing := UiKit.lbl(standing_text, UiKit.SECONDARY, UiKit.TEXT)
 			standing.name = "OppFormLine"
-			nv.add_child(standing)
+			standing.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			their_block.add_child(standing)
 		# Their list: the club's guernsey and name, then its line (TeamRating).
 		var their_list := GameState.team_outlook(opp)
 		if not their_list.is_empty():
@@ -1005,11 +1013,22 @@ func _week_section(season: Season) -> Control:
 			var mark := UiKit.club_marker(opp, 18.0)
 			mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			row.add_child(mark)
-			var tl := UiKit.lbl("%s  %s" % [GameDB.club_short(opp), str(their_list["line"])], UiKit.SECONDARY, UiKit.MUTED)
+			var tl := UiKit.lbl("%s  %s" % [GameDB.club_short(opp), str(their_list["line"])], UiKit.SECONDARY, UiKit.TEXT)
 			tl.name = "OppTeamOutlook"
 			tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(tl)
-			nv.add_child(row)
+			their_block.add_child(row)
+		if their_block.get_child_count() > 0:
+			var their_side := UiKit.hbox(10)
+			their_side.name = "OppSide"
+			var bar := ColorRect.new()
+			bar.name = "OppBar"
+			bar.color = UiKit.club_ink(opp)
+			bar.custom_minimum_size = Vector2(3, 0)
+			bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			their_side.add_child(bar)
+			their_side.add_child(their_block)
+			nv.add_child(their_side)
 		# The football: two or three facts, then anything on our side.
 		var facts := GameState.opponent_facts(opp)
 		var notes := GameState.my_week_notes()
@@ -1617,15 +1636,19 @@ func _push_past_fold(box: Control, fold: float, edge: float, max_gap: float) -> 
 			continue
 		var gap := edge - r.position.y
 		var peek := _peek_height(c as Control)
+		var sep := float((box as VBoxContainer).get_theme_constant("separation")) 				if box is VBoxContainer else 0.0
 		if gap >= peek:
 			gap -= peek
+			# Its title already reads clear of the fade: a spacer here, even an
+			# empty one, would add the list's separation and push the title into it.
+			if gap <= sep:
+				return true
 		if gap > max_gap:
 			# A tall card with a list inside: the gap falls between its rows.
 			for inner in c.get_children():
 				if inner is VBoxContainer:
 					return _push_past_fold(inner, fold, edge, max_gap)
 			return true
-		var sep := float((box as VBoxContainer).get_theme_constant("separation")) 				if box is VBoxContainer else 0.0
 		var spacer := Control.new()
 		spacer.name = "HubFoldGap"
 		spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
