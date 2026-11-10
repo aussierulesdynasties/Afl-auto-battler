@@ -309,6 +309,9 @@ var interview_due := false
 ## Who leads each club (Captaincy.gd): club code -> its record. A club with
 ## no entry has named no one; an older save has none for anyone.
 var captaincy := {}
+## The coach's scouting list (row 130, ScoutingList): [{"id", "year", "round",
+## "first": {"overall", "potential"}}], the read when he was listed.
+var scouting_list: Array = []
 ## Whether AI clubs choose a season plan by phase (never saved). On now that
 ## the plan screen lets you choose yours (BOSS, 2026-10-12): contenders peak
 ## for September and rebuilders develop. This one switch is the director's
@@ -925,6 +928,7 @@ func _save_state() -> Dictionary:
 		"conditioning": conditioning,
 		"preseason": preseason,
 		"captaincy": captaincy,
+		"scouting_list": scouting_list,
 		"class_tiers": class_tiers,
 		"custom_prospect_id": custom_prospect_id,
 		"start_mode": start_mode,
@@ -1181,6 +1185,8 @@ func _restore_career(state: Dictionary) -> bool:
 	interview_due = bool(state.get("interview_due", false))
 	CoachEffects.my_arch = coach_arch
 	captaincy = state.get("captaincy", {})
+	var scouted = state.get("scouting_list", [])
+	scouting_list = scouted if scouted is Array else []
 	class_tiers = state.get("class_tiers", {})
 	custom_prospect_id = str(state.get("custom_prospect_id", ""))
 	var own_story = state.get("custom_prospect_story", {})
@@ -1734,6 +1740,7 @@ func reset() -> void:
 	interview_due = false
 	CoachEffects.my_arch = coach_arch
 	captaincy = {}
+	scouting_list = []
 	class_tiers = {}
 	last_training_report = {}
 	_xp_grant_key = ""
@@ -4269,7 +4276,7 @@ func _spoken_for_elsewhere(p: Dictionary) -> bool:
 ## (DraftScouting.projection with this season's intake seed, Draft
 ## AI_POT_WEIGHT_INTAKE), so the draft night board agrees with it.
 func prospect_reads(prospects: Array) -> Dictionary:
-	var seed := _clock_seed(2) if replay_seed != 0 else posmod(career_seed * 7919 + season_year * 131 + 34, 1000000)
+	var seed := prospect_read_seed()
 	var mult := recruiting_uncertainty_mult()
 	var out := {}
 	var order := []
@@ -4285,6 +4292,11 @@ func prospect_reads(prospects: Array) -> Dictionary:
 	for i in range(order.size()):
 		(out[str(order[i][1])] as Dictionary)["rank"] = i + 1
 	return out
+
+
+## The seed of this season's reads of the draft class (prospect_reads).
+func prospect_read_seed() -> int:
+	return _clock_seed(2) if replay_seed != 0 else posmod(career_seed * 7919 + season_year * 131 + 34, 1000000)
 
 
 ## Best first; ties go to the id, so the same list gives the same order.
@@ -6262,6 +6274,7 @@ func _after_round(results: Array) -> void:
 	_note_rival_plans(results)
 	_note_coach_arch(results)
 	MidseasonDraft.after_round(self)
+	ScoutingList.week(self)
 	# Who on a promised run could not play this week, before anything ticks.
 	_backing_unavailable = {}
 	for p in my_list:
@@ -8693,6 +8706,10 @@ const NEGOTIATE_STEPS := 6
 const TARGET_TRIES := 15
 ## Most offers that come in for one player or pick on the trade table.
 const MAX_TABLE_OFFERS := 3
+## Ask their price (row 67): the most pieces of yours a club names for one
+## of its players, and how many packages it weighs before saying no.
+const ASK_PRICE_PIECES := 3
+const ASK_PRICE_TRIES := 40
 ## How close to the most it would pay a club opens with nobody else bidding
 ## (each rival suitor on the trade table pushes it up a tenth).
 const UNASKED_BID := 0.8
@@ -9717,6 +9734,93 @@ func ask_around(id: String) -> Array:
 			return int(rank[a["kind"]]) < int(rank[b["kind"]])
 		return GameDB.club_name(str(a["club"])) < GameDB.club_name(str(b["club"])))
 	return out
+
+
+## Ask their price (row 67, 4.Q11): the other way from Ask around. Name a
+## player at another club and it says what of yours it would take for him,
+## from the same valuation it trades with. It weighs each of your picks and
+## players as it would receive them (never one you marked untouchable) and
+## names the package of up to ASK_PRICE_PIECES it values nearest its price
+## that it would still accept. Nothing is offered or saved: the coach weighs
+## the ask on the usual trade sheet. {"ok", "line", "mine", "theirs"}; ok
+## false, with the reason in "line", when nothing of yours would do.
+func ask_price(club: String, id: String) -> Dictionary:
+	var theirs := [id]
+	var name := GameDB.club_name(club)
+	var none := {"ok": false, "line": "", "mine": [], "theirs": theirs}
+	var found := _trade_assets(theirs, club)
+	if str(found["error"]) != "":
+		none["line"] = str(found["error"])
+		return none
+	var target: Dictionary = found["assets"][0]
+	var who := _ask_name(id, "their")
+	var prospects := trade_prospects()
+	var phase := club_phase(club)
+	var margin := float(difficulty_rules()["trade_margin"])
+	_freeze_league(true)
+	# Each of yours as they'd value receiving him alone, against their side
+	# without the player they'd give up (Contracts.evaluate_trade's own sums).
+	var remaining: Array = (season.lists[club] as Array).filter(func(q): return q != target)
+	var bars := TradeValue.selection_bars(remaining)
+	var proj := TradeValue.selection_bars(remaining, true)
+	var games: Dictionary = trade_context(club)["games"]
+	var pool := []
+	for pk in club_picks(my_club):
+		pool.append([str(pk["id"]), TradeValue.pick_value(pk["positions"], prospects.get(str(pk["year"]), []), phase,
+				int(pk["year"]) - season_year)])
+	if not draft_night_open():   # players never move on draft night
+		for q in my_list:
+			var qid := str(q["id"])
+			if untouchable.has(qid) or retiring_now(q) or _wont_go([q], club) != "":
+				continue
+			pool.append([qid, float(TradeValue.value(q, {"phase": phase, "bars": bars, "proj": proj,
+					"games": int(games.get(qid, -1))})["total"])])
+	pool = pool.filter(func(a): return float(a[1]) > 0.0)
+	# What they'd give up, and any refusal no package can answer (a closed
+	# market, your challenge, a player who asked to go elsewhere).
+	var price := -1.0
+	var hard := ""
+	# One piece can fail on list size or the cap; the first that reaches the
+	# weighing gives the club's price.
+	for a in pool:
+		var v := evaluate_trade(club, [str(a[0])], theirs)
+		if v.has("out"):
+			price = float(v["out"]) * (1.0 + margin)
+			break
+		if str(v.get("code", "")) in ["trade_closed", "trade_night_picks_only", "trade_challenge",
+				"trade_asked_elsewhere"]:
+			hard = str(v["reason"])
+			break
+	var packages := []
+	if price > 0.0:
+		var n := pool.size()
+		for i in range(n):
+			packages.append([[i], float(pool[i][1])])
+			for j in range(i + 1, n):
+				packages.append([[i, j], TradeValue.package([pool[i][1], pool[j][1]])])
+				if ASK_PRICE_PIECES < 3:
+					continue
+				for k in range(j + 1, n):
+					packages.append([[i, j, k], TradeValue.package([pool[i][1], pool[j][1], pool[k][1]])])
+		# Fitted one by one into their side a package is never worth more
+		# than its pieces alone, so anything under the price can't do.
+		packages = packages.filter(func(x): return float(x[1]) >= price)
+		packages.sort_custom(func(x, y):
+			if float(x[1]) != float(y[1]):
+				return float(x[1]) < float(y[1])
+			return str(x[0]) < str(y[0]))
+	var mine := []
+	for x in packages.slice(0, ASK_PRICE_TRIES):
+		var ids: Array = (x[0] as Array).map(func(i): return str(pool[i][0]))
+		if bool(evaluate_trade(club, ids, theirs)["ok"]):
+			mine = ids
+			break
+	_freeze_league(false)
+	if mine.is_empty():
+		none["line"] = hard if hard != "" else "%s: nothing of yours they'd take for %s." % [name, who]
+		return none
+	return {"ok": true, "mine": mine, "theirs": theirs, "line": "%s would take %s for %s." % [name,
+			" and ".join(mine.map(func(x): return _ask_name(str(x)))), who]}
 
 
 ## Offers still on the table: open, and everything in them still where it was.

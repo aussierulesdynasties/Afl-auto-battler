@@ -1340,7 +1340,7 @@ func _test_draft_fit() -> void:
 			var m: Dictionary = marks[pid][0]
 			lowest = minf(lowest, float(m["value"]) if id != "GAMB" else float(m["value"]) - float(m["rated"]))
 			var t := str(m["text"])
-			texts_ok = texts_ok and t.begins_with(str(Fit.SUITS[id][0]) + ": ") and t.contains("scout's read, +/-")
+			texts_ok = texts_ok and t.begins_with(str(Fit.SUITS[id][0]) + ": ") and not t.contains("+/-") and not t.contains("scout's read")
 			for banned in ["take", "pick", "draft him", "best", "should", "recommend", "target"]:
 				texts_ok = texts_ok and not t.to_lower().contains(banned)
 		var above := true
@@ -1357,13 +1357,15 @@ func _test_draft_fit() -> void:
 				var v := float(r["value"]) if id != "GAMB" else float(r["value"]) - float(r["rated"])
 				above = above and v <= lowest + 0.5
 		_check(marks.size() == 6 and above and texts_ok and lines_ok,
-				"%s marks the six who suit it best by the scouts' read, in fact words with the read's +/- (%d marked)" % [id, marks.size()])
+				"%s marks the six who suit it best by the scouts' read, in a recruiter's words with the read as a range (%d marked)" % [id, marks.size()])
 	_check(by_arch["DS"] != by_arch["CC"] and by_arch["FATH"] != by_arch["GAMB"],
 			"Different archetypes mark different prospects")
 	var one: Dictionary = Fit.marks(d.pool, {"s": "DS", "p": ""}, "MEL", d.seed, mult)
 	var first: String = str(one.values()[0][0]["text"])
-	_check(first.begins_with("Suits your pressing game: pressure ") and first.ends_with("scout's read, +/-6"),
-			"Defence and System reads the pressure rating, +/-6 at a plain budget (%s)" % first)
+	var span: PackedStringArray = first.trim_prefix("Presses like your side: pressure ").split("-")
+	_check(first.begins_with("Presses like your side: pressure ") and span.size() == 2
+			and int(span[1]) - int(span[0]) == 12,
+			"Defence and System reads the pressure rating as a range 12 wide at a plain budget (%s)" % first)
 	# A coach with no archetype marks nobody.
 	_check(Fit.marks(d.pool, {}, "MEL", d.seed, mult).is_empty(), "No archetype, no marks")
 
