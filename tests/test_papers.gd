@@ -236,7 +236,7 @@ func _test_answers() -> void:
 		GameState.papers_answer(int(pair[0]))
 		_check(int(GameState.papers_record()["claim"]) == 0 and not GameState.story["flags"].has("club"),
 				"Answer %d puts nothing on the record" % int(pair[0]))
-		_check(GameState.board_confidence() == b0 + (2 if int(pair[0]) == 0 else -2),
+		_check(GameState.board_confidence() == b0 + (-1 if int(pair[0]) == 0 else -2),
 				"Answer %d moves the board by what its Gain and Cost say" % int(pair[0]))
 	# The breakout: talking him up is a promised run, with its sting if broken.
 	_career()
