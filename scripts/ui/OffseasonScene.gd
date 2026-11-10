@@ -31,6 +31,7 @@ var _fa_sort := "value"
 var _fa_sort_desc := true
 var _asked_id := ""       # the player you asked around about (P-50)
 var _asked: Array = []    # every rival's answer, GameState.ask_around
+var _price := {}          # their price for one of their players: {"club", "id", "line"}, GameState.ask_price
 
 
 func _ready() -> void:
@@ -749,7 +750,10 @@ func _trade(body: VBoxContainer) -> void:
 	var verdict := GameState.evaluate_trade(_trade_club, _mine, _theirs)
 	var empty := _mine.is_empty() or _theirs.is_empty()
 	var shopping := _mine.size() == 1 and _theirs.is_empty()
-	var prompt := "Add what you want back, or put it on the trade table." if shopping else "Put something on each side."
+	# One of theirs and nothing of yours yet: you can ask what they'd want (row 67).
+	var buying := _theirs.size() == 1 and _mine.is_empty() and not GameState.draft_night_open()
+	var prompt := "Add what you want back, or put it on the trade table." if shopping else \
+			("Add what you'd give, or ask their price." if buying else "Put something on each side.")
 	# Their answer in one line, with the reason their decision took (P-18);
 	# the club's name wears its ink, and a refusal reads as text, not grey.
 	var answer := _para(prompt, 14, UiKit.MUTED) if empty else \
@@ -757,6 +761,11 @@ func _trade(body: VBoxContainer) -> void:
 	answer.name = "TradeVerdict"
 	if not empty:
 		answer.set_meta("code", str(verdict.get("code", "")))
+	# Their price, when you asked it for the player still on the sheet.
+	if str(_price.get("club", "")) == _trade_club and _theirs.size() == 1 and _theirs[0] == str(_price.get("id", "")):
+		var said := _why_para(str(_price["line"]), _trade_club, 14, UiKit.TEXT)
+		said.name = "TradePrice"
+		body.add_child(said)
 	body.add_child(answer)
 	if not empty and not bool(verdict["ok"]):
 		var counter := _counter_for(_trade_club, _mine, _theirs)
@@ -784,6 +793,17 @@ func _trade(body: VBoxContainer) -> void:
 			_theirs = []
 		_build())
 	body.add_child(go)
+	if buying:
+		var price := UiKit.btn("Ask their price", UiKit.BODY)
+		price.name = "AskPrice"
+		price.custom_minimum_size = Vector2(0, 44)
+		price.pressed.connect(func():
+			var r := GameState.ask_price(_trade_club, str(_theirs[0]))
+			_price = {"club": _trade_club, "id": str(_theirs[0]), "line": str(r["line"])}
+			if bool(r["ok"]):
+				_mine = (r["mine"] as Array).duplicate()
+			_build())
+		body.add_child(price)
 	if shopping:
 		var listed := GameState.trade_table.has(str(_mine[0]))
 		var table := UiKit.btn("Already on the trade table" if listed else "Put on the trade table", UiKit.BODY)
