@@ -2835,11 +2835,16 @@ Your career stays on this device.",
 	var moves = load("res://scripts/state/ClubMoves.gd")
 	if moves.letter_open(_state):
 		moves.decline_letter(_state)
+	# Nor is it about a sacking: the seeded season's results move whenever the
+	# match does (rival clubs' game-plan traits did), so he keeps his job here.
+	var was_sacked: bool = _state.is_sacked()
+	_state.board.erase("sacked")
 	# The first postseason's sheet has its own suite (first_visit_intro).
 	_state.postseason_intro_seen = true
 	_router.go("hub")
 	await _settle()
-	_check(_screen_text().contains("Trades & Contracts"), "The hub offers Trades & Contracts after the season")
+	_check(_screen_text().contains("Trades & Contracts"), "The hub offers Trades & Contracts after the season (sacked at the end: %s, letter open: %s; %s)"
+			% [was_sacked, moves.letter_open(_state), _screen_text().left(200)])
 	var more: Button = current_scene.find_child("NewsMore", true, false)
 	_check(more != null, "The hub shows the league news")
 	if more != null:
