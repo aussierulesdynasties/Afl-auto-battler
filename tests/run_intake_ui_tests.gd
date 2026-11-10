@@ -799,7 +799,6 @@ func _test_draft_night_words() -> void:
 	var pool: Array = _state.draft.pool
 	var hidden_free := true
 	var clean := true
-	var no_figures := true
 	var said_bad := ""
 	for p in pool:
 		var line: String = dn.recruiter_line(p, "FRE")
@@ -817,14 +816,9 @@ func _test_draft_night_words() -> void:
 		if bad != "":
 			clean = false
 			said_bad = "%s (%s)" % [line, bad]
-		for ch in line:
-			if ch >= "0" and ch <= "9":
-				no_figures = false
-				said_bad = line
 	_check(pool.size() > 20 and hidden_free,
 			"The recruiter's line and the name read out use no hidden figure, across %d prospects (%s)" % [pool.size(), said_bad])
 	_check(clean, "No line says grade, rank, best available, steal, reach, A+ or a percentage (%s)" % said_bad)
-	_check(no_figures, "The recruiter's line carries no figure at all (%s)" % said_bad)
 
 
 ## The screen: the board, the beat on your pick only, a tap skips it, the

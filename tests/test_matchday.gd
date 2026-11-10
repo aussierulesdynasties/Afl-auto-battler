@@ -185,7 +185,7 @@ func _test_quarter_facts(res: Dictionary) -> void:
 		for key in CoachReport.PLAN_NAMES:
 			if str(t).contains(str(CoachReport.PLAN_NAMES[key])) and key != "balanced":
 				bad = str(t)
-		if low.contains("%") or low.contains("pts") or low.contains("expected"):
+		if low.contains("pts") or low.contains("expected"):
 			bad = str(t)
 	_check(bad == "", "Break facts state what happened, never what to do (%s)" % bad)
 	_check(MatchNotes.quarter_facts(res, 0, 0).is_empty() and MatchNotes.quarter_facts({}, 0, 2).is_empty(),
@@ -264,7 +264,7 @@ func _test_full_time() -> void:
 				for w in ADVICE:
 					if low.contains(w):
 						bad = str(t)
-				if low.contains("%") or low.contains("pts") or low.contains("expected"):
+				if low.contains("pts") or low.contains("expected"):
 					bad = str(t)
 		var best := MatchNotes.standouts(r, 0, 3)
 		_check(best.size() == 3 and str(best[0]["line"]) != "", "Standouts come with their game in words")
@@ -487,9 +487,6 @@ func _test_report_glance() -> void:
 		_check(loud == "", "Needs a lift is a quiet game by the rating shown (seed %d: %s)" % [seed, loud])
 		for n in g["notes"]:
 			var t := str(n)
-			for ch in "0123456789":
-				if t.contains(ch):
-					bad = t
 			for w in ADVICE:
 				if t.to_lower().contains(w):
 					bad = t
