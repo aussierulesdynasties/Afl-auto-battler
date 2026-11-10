@@ -187,7 +187,9 @@ func _test_hub_tests() -> void:
 	hub = await _open_hub()
 	_check(_screen_text(hub).contains("Season complete"), "A finished season says so")
 	_check(hub.find_children("Fact_*", "Control", true, false).is_empty(), "No facts once the season is over")
-	_check(_button(hub.find_child("WeekActions", true, false), "National Draft") != null,
+	# A rival club's letter is answered first: the draft button follows it.
+	var letter: bool = load("res://scripts/state/ClubMoves.gd").letter_open(_state)
+	_check(letter or _button(hub.find_child("WeekActions", true, false), "National Draft") != null,
 			"The national draft is the next step")
 	hub.queue_free()
 	await _settle()

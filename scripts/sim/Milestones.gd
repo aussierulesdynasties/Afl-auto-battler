@@ -189,9 +189,11 @@ static func upcoming(gs) -> Array:
 				continue
 			var name := str(GameDB.player_display_name(p))
 			var next: int = gs.games_played(p) + 1
-			if next == 1:
+			# Named on the bench he may not get on, and a game he does not play
+			# is not his first: no debut line until he is in the side proper.
+			if next == 1 and str(k) != "BENCH":
 				out.append({"key": "debut", "who": "player", "id": str(id), "text": "%s is set to make his debut." % name})
-			elif PLAYER_GAMES.has(next):
+			elif next != 1 and PLAYER_GAMES.has(next):
 				out.append({"key": "games", "who": "player", "id": str(id), "text": "%s plays his %s game." % [name, gs.ordinal(next)]})
 			var goals: int = gs.career_goals_before(p, 0)
 			for mark in PLAYER_GOALS:

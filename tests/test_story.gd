@@ -3619,6 +3619,50 @@ func _test_dev_promise_kept_broken_lapsed() -> void:
 		if str(c.get("tid", "")).begins_with("media_trial_") and str(c.get("text", "")).contains("You promised him this chance in Round"):
 			told = true
 	_check(told, "The trial's result card says it was the chance you promised (%s)" % str(GameState.week_events.map(func(c): return c.get("tid", ""))))
+	# Already picked in the new position when the games fall due: they still
+	# start, are counted, and the promise is kept.
+	_start()
+	p = _dev_learner()
+	id = str(p["id"])
+	role = GameState.project_role(p)
+	GameState.dev_talk(p, "promise")
+	_judge(p, true)
+	var named := GameState.current_side()
+	GameState._move_in_sel(named, id, role)
+	GameState.set_selection(named)
+	_check(GameState._in_trial_line(GameState._line_of(GameState.current_side(), id), role), "(setup) he is already picked in the new position")
+	GameState._dev_promise_week()
+	dt = p["dev_talk"]
+	_check(str(dt["state"]) == "on" and int(GameState.role_trial.get("promised", 0)) > 0 and str(GameState.role_trial.get("id", "")) == id,
+			"Already picked there, his promised games still start (%s, %s)" % [str(dt), str(GameState.role_trial)])
+	_check(_news_has("plays his next three games as a") and not _news_has("then goes back"), "...and the news does not send him back anywhere")
+	for r in range(GameState.DEV_PROMISE_GAMES):
+		GameState.advance()
+	_check(str(dt["state"]) == "kept" and GameState.role_trial.is_empty(), "...and three games later the promise is kept (%s)" % str(dt))
+	# Another player's trial takes the place of the promised one: the games are
+	# owed again, and start once that trial is over.
+	_start()
+	p = _dev_learner()
+	id = str(p["id"])
+	GameState.dev_talk(p, "promise")
+	_judge(p, true)
+	GameState._dev_promise_week()
+	dt = p["dev_talk"]
+	var other := {}
+	var side_now := GameState.current_side()
+	for q in GameState.my_list:
+		if str(q["id"]) != id and not (_line_in(side_now, str(q["id"])) in ["", "BENCH"]) and ClubStories.trial_role(q) != "" 				and GameState.start_role_trial(q, 3) != "":
+			other = q
+			break
+	_check(str(dt["state"]) == "on" and not other.is_empty() and str(GameState.role_trial.get("id", "")) == str(other.get("id", "")),
+			"(setup) another player's trial replaced the promised one (%s)" % str(GameState.role_trial))
+	GameState._dev_promise_week()
+	_check(str(dt["state"]) == "owed" and str(GameState.role_trial.get("id", "")) == str(other.get("id", "")),
+			"His promised games are owed again while the other trial runs (%s)" % str(dt))
+	GameState._end_role_trial(true)
+	GameState._dev_promise_week()
+	_check(str(dt["state"]) == "on" and str(GameState.role_trial.get("id", "")) == id and GameState.role_trial.has("promised"),
+			"...and start again once it is over (%s, %s)" % [str(dt), str(GameState.role_trial)])
 	# Broken: you take him out of the trial line.
 	_start()
 	p = _dev_learner()

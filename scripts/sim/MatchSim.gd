@@ -3781,7 +3781,10 @@ func resolve_forward50(side: int, fp: float, feeder) -> Dictionary:
 			_roam_note(roamer, shooter, true)
 	if rng.randf() < float(T["one_percenter_share"]):
 		_t(opp, "one_percenters")
-		_p(_one_percenter(opp), "one_percenters")
+		# A spoil is the spoiler's one-percenter. The other is still drawn (and
+		# dropped) so every later random number falls where it did.
+		var drawn = _one_percenter(opp)
+		_p(spoiler if spoilt and not marked and spoiler != null else drawn, "one_percenters")
 
 	# Unmarked and unspoiled, the ball can hit the deck: a ground-ball forward
 	# gets to it first (more often off a tall target) and snaps instead.

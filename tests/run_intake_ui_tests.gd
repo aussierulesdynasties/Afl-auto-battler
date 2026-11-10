@@ -81,9 +81,18 @@ func _test_intake_by_taps() -> void:
 
 	# A phone in portrait, so the taps below land the way a player's would.
 	root.size = Vector2i(390, 844)
+	# The meeting is written to the save as it opens (the test save only), so a
+	# career loaded mid-draft does not hold it again.
+	_state.delete_saved_career()
+	_state.autosave_enabled = true
 	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
 	root.add_child(ui)
 	await _settle()
+	_state.autosave_enabled = false
+	var on_disk: Dictionary = load("res://scripts/state/CareerSave.gd").read(_state.save_path)
+	_check(int(on_disk.get("draft_meeting_year", 0)) == int(_state.season_year),
+			"The meeting held is in the save, so a loaded career does not hold it again (saved %d, this draft %d)" % [
+			int(on_disk.get("draft_meeting_year", 0)), int(_state.season_year)])
 	_check(ui.get("_phase") == "board", "The intake draft resumes straight to the board")
 	# The recruiting panel meets first: a few lines on the list, a few names,
 	# no order of preference and no "best pick".
