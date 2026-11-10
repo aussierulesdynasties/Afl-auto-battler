@@ -788,7 +788,9 @@ func _job_offers(v: VBoxContainer, jobs: Array) -> void:
 		nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		name_row.add_child(nm)
 		row.add_child(name_row)
-		row.add_child(_offer_line("Finished %s of %d. %s" % [GameState.ordinal(int(o["finish"])), int(o["clubs"]), str(o["why_open"])], UiKit.TEXT))
+		var from_line := _offer_line(_where_from(o), UiKit.TEXT)
+		from_line.name = "JobOfferFrom_%s" % code
+		row.add_child(from_line)
 		if str(o.get("list", "")) != "":
 			row.add_child(_offer_line("The list: " + str(o["list"]), UiKit.TEXT))
 		row.add_child(_offer_line("The board's goal: " + str(o["goal"]), UiKit.TEXT))
@@ -1878,7 +1880,11 @@ func _letter_card() -> Control:
 		var done := "You are %s's senior coach now: their contracts, trades and draft are yours this off-season. %s" % [
 				str(l["name"]), after] if answer == "taken" \
 				else "You turned %s down. You stay at %s." % [str(l["name"]), mine]
-		var dl := UiKit.lbl(done, UiKit.BODY, UiKit.TEXT if answer == "taken" else UiKit.MUTED)
+		# A club yet to play: signed, he takes over at its first National Draft.
+		if answer == "taken" and int(l.get("joins", 0)) > 0 and GameState.my_club == str(l["from"]):
+			done = "You have signed with %s and take over at the %d National Draft. Until then %s's contracts and trades are yours." % [
+					str(l["name"]), int(l["year"]), old]
+		var dl :=UiKit.lbl(done, UiKit.BODY, UiKit.TEXT if answer == "taken" else UiKit.MUTED)
 		dl.name = "RivalLetterAnswered"
 		dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(dl)
@@ -1892,8 +1898,14 @@ func _letter_card() -> Control:
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_row.add_child(nm)
 	v.add_child(name_row)
-	v.add_child(_offer_line("%s, their president, offers you the senior job. You would start now, with their contracts, trades and draft." % str(l["president"]), UiKit.TEXT))
-	v.add_child(_offer_line("Finished %s of %d. %s" % [GameState.ordinal(int(l["finish"])), int(l["clubs"]), str(l["why_open"])], UiKit.TEXT))
+	var start := "You would start now, with their contracts, trades and draft."
+	if int(l.get("joins", 0)) > 0:
+		start = "You would take over at the %d National Draft and make their picks. This off-season's contracts and trades stay yours at %s." % [
+				int(l["year"]), mine]
+	var offer := _offer_line("%s, their president, offers you the senior job. %s" % [str(l["president"]), start], UiKit.TEXT)
+	offer.name = "RivalLetterStart"
+	v.add_child(offer)
+	v.add_child(_offer_line(_where_from(l), UiKit.TEXT))
 	if str(l.get("list", "")) != "":
 		v.add_child(_offer_line("Their list: " + str(l["list"]), UiKit.TEXT))
 	v.add_child(_offer_line("Their board's goal: " + str(l["goal"]), UiKit.TEXT))
@@ -1916,6 +1928,14 @@ func _letter_card() -> Control:
 	v.add_child(row)
 	v.add_child(UiKit.rule())
 	return v
+
+
+## Where an offering club stands: its ladder finish and why the job is open,
+## or, for a club yet to play, the year it joins and why (ClubMoves).
+func _where_from(o: Dictionary) -> String:
+	if int(o.get("joins", 0)) > 0:
+		return str(o["why_open"])
+	return "Finished %s of %d. %s" % [GameState.ordinal(int(o["finish"])), int(o["clubs"]), str(o["why_open"])]
 
 
 ## One answer to an approach: the button, then what it gives and costs and

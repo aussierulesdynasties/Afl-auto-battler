@@ -19,6 +19,7 @@ const ALLOW := {
 	"res://data/stories/media.json": [2, "should", "row 140: a pundit's view, reported"],
 	"res://data/stories/training.json": [1, "should", "row 140: the fitness staff's view, reported"],
 	"res://scripts/sim/MatchSim.gd": [1, "should", "row 131: a shot's likelihood at the gate"],
+	"res://scripts/sim/PlanTraits.gd": [1, "starters", "kept: the Fast Starters trait (a side that starts quickly, AFL usage), not the line-up sense"],
 	"res://scripts/sim/SkipOrders.gd": [2, "auto-pick", "row 134: renamed with the Auto-pick button"],
 	"res://scripts/sim/StoryEngine.gd": [3, "auto-pick", "row 134: renamed with the Auto-pick button"],
 	"res://scripts/state/GameState.gd": [3, "starter, auto-pick, projection", "rows 134 and 138"],

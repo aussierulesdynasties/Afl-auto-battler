@@ -69,6 +69,8 @@ func run(tree: SceneTree) -> void:
 	_t("_test_second_sacking_and_retire")
 	_t("_test_real_sacking_record")
 	_t("_test_rival_letter")
+	_t("_test_joining_club_after_sack")
+	_t("_test_joining_club_letter")
 	_t("_test_coach_move_lines")
 	_t("_test_ten_seasons")
 	GameState.delete_saved_career()
@@ -713,8 +715,12 @@ func _letters_in_news() -> int:
 ## A strong season played for real: Fremantle are put top of the ladder before
 ## the last home-and-away round (30 wins added), so they play the finals and
 ## meet any board goal, and the season's own close writes the letter.
-func _strong_season(rng: RandomNumberGenerator) -> void:
+## `tas_joins` false keeps Tasmania out of the league after the reset, so a
+## club on the ladder writes the letter.
+func _strong_season(rng: RandomNumberGenerator, tas_joins := true) -> void:
 	_fresh()
+	if not tas_joins:
+		GameDB.set_enter_year("TAS", Expansion.NEVER)
 	var guard := 0
 	while GameState.season.round_index < GameState.season.fixture.size() - 1 and guard < 40:
 		guard += 1
@@ -758,9 +764,16 @@ func _ratings_only(line: String, code: String) -> bool:
 
 
 func _test_rival_letter() -> void:
+	# A club on the ladder writes here: a club joining next season would write
+	# first (row T5.Q25, its own tests below), so Tasmania stay out for now.
+	_rival_letter_body()
+	GameDB.set_enter_year("TAS", GameDB.data_enter_year("TAS"))
+
+
+func _rival_letter_body() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = SUITE_SEED + 11
-	_strong_season(rng)
+	_strong_season(rng, false)
 	var st: Dictionary = GameState.coach_arcs
 	var year := int(GameState.season_year)
 	var l := ClubMoves.letter(GameState)
@@ -862,6 +875,132 @@ func _test_rival_letter() -> void:
 	_check(str(GameState.coach_arcs["letter"].get("answer", "")) == "declined" and GameState.my_club == "FRE"
 			and GameState.offseason_year == GameState.season_year and GameState.draft.user_club == "FRE",
 			"a draft started with the letter unanswered: he stays, and the off-season opened at Fremantle first")
+
+
+# ---------------------------------------------------------------------------
+# A club joining the league (director ruling 8, TODO T5.Q25)
+# ---------------------------------------------------------------------------
+## Every club drafts what it is owed, ours by the AI's own choice here.
+func _ai_finish(draft: Draft) -> void:
+	var guard := 0
+	draft.auto_until_user_turn()
+	while not draft.is_finished() and guard < 8000:
+		guard += 1
+		var cand := draft._best_ai_pick(draft.current_club())
+		if cand.is_empty() or not draft._draft_pick(draft.current_club(), cand):
+			draft._skip_current_pick()
+		draft.auto_until_user_turn()
+
+
+## Tasmania join the season after this one (the data has them in 2028; a
+## test career's year can differ, so the test puts them there). Returns it.
+func _tas_joins_next() -> int:
+	var next := int(GameState.season_year) + 1
+	GameDB.set_enter_year("TAS", next)
+	return next
+
+
+## His move to a club yet to play, checked at its first draft and on through
+## its first season: the list, the cap, the board, his record, a reload.
+func _check_joined(tag: String, from: String, year: int, their_id: String) -> void:
+	var st: Dictionary = GameState.coach_arcs
+	_check(GameState.my_club == "TAS" and GameState.draft != null and GameState.draft.user_club == "TAS"
+			and GameState.club_yet_to_play(),
+			"%s: at the %d National Draft he is Tasmania's coach and makes their picks (%s)" % [tag, year, GameState.my_club])
+	_check(is_same(GameState.my_list, ExpansionBuild.list_of(GameState, "TAS")) and GameState.my_list.size() > 0,
+			"%s: his list is the one Tasmania are building (%d)" % [tag, GameState.my_list.size()])
+	_check(_senior_at("TAS").is_empty() and str(_senior_at(from).get("cid", "")) == their_id,
+			"%s: Tasmania's first coach takes the job he left at %s" % [tag, from])
+	var rec: Array = st["coach"]["clubs"]
+	_check(rec.size() >= 2 and str(rec[-2]["code"]) == from and int(rec[-2]["to"]) == year and str(rec[-1]["code"]) == "TAS"
+			and int(rec[-1]["from"]) == year + 1 and int(rec[-1]["to"]) == 0 and (st["move"] as Dictionary).is_empty(),
+			"%s: his record closes %s at %d and starts Tasmania in %d: %s" % [tag, from, year, year + 1, str(rec)])
+	_check(_news_has("You are the new senior coach of %s. %s" % [GameDB.club_name("TAS"), ClubMoves.successor_line(GameState, from, "TAS", year)]),
+			"%s: the news says he is Tasmania's coach and who replaced him" % tag)
+	var keep := GameState.save_path
+	GameState.save_path = "user://test_coach_arcs_joining.save"
+	_check(GameState.save_career() and GameState.load_career() and GameState.my_club == "TAS"
+			and GameState.club_yet_to_play() and GameState.draft.user_club == "TAS",
+			"%s: it saves and reloads at Tasmania's first draft" % tag)
+	_ai_finish(GameState.draft)
+	_check(GameState.finish_intake_draft() and GameState.season_year == year + 1 and GameState.my_club == "TAS"
+			and GameState.season.lists.has("TAS") and is_same(GameState.my_list, GameState.season.lists["TAS"]),
+			"%s: their first season is %d and his list is theirs" % [tag, year + 1])
+	var all_tas := GameState.my_list.all(func(p): return str(p.get("club", "")) == "TAS")
+	_check(GameState.my_list.size() >= Prospects.MIN_LIST and all_tas,
+			"%s: a full list, every player Tasmania's (%d)" % [tag, GameState.my_list.size()])
+	_check(ExpansionBuild.relief(GameState, "TAS") > 0
+			and GameState.cap_room() == GameState.salary_cap + ExpansionBuild.relief(GameState, "TAS") - GameState.my_payroll(),
+			"%s: Tasmania's sign-on money counts on his cap room" % tag)
+	_check(not GameState.club_yet_to_play() and GameState.board_confidence() == ClubLife.START_CONFIDENCE
+			and not GameState.is_sacked(), "%s: the Hub is home and a fresh board starts him" % tag)
+	_check(GameState.save_career() and GameState.load_career() and GameState.my_club == "TAS" and GameState.season_year == year + 1,
+			"%s: the first Tasmania season saves and loads" % tag)
+	GameState.save_path = keep
+	GameDB.set_enter_year("TAS", GameDB.data_enter_year("TAS"))
+
+
+## Sacked the season before Tasmania join: their job is one of the few on
+## offer, saying why it is open and what the list has; taken, he is their
+## coach from their first National Draft.
+func _test_joining_club_after_sack() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SUITE_SEED + 21
+	_fresh()
+	var year := int(GameState.season_year)
+	var joins := _tas_joins_next()
+	GameState.board["goal"] = {"key": "wins99", "text": "Win 99 games", "wins": 99}
+	_play_out(rng, 0)
+	var st: Dictionary = GameState.coach_arcs
+	_check(GameState.is_sacked(), "joining, sacked: sacked at the close")
+	var jobs: Array = st["offers"]
+	var tas: Dictionary = {}
+	for o in jobs:
+		if str(o["code"]) == "TAS":
+			tas = o
+	_check(jobs.size() == ClubMoves.OFFERS and not tas.is_empty(),
+			"joining, sacked: Tasmania are one of the %d jobs: %s" % [ClubMoves.OFFERS, str(jobs.map(func(o): return o["code"]))])
+	_check(int(tas.get("joins", 0)) == joins and int(tas.get("finish", -1)) == 0
+			and str(tas.get("why_open", "")).begins_with("Tasmania join the league in %d." % joins)
+			and str(tas.get("list", "")).find("Picks 1, 3 and 9") >= 0 and str(tas.get("goal", "")) != "",
+			"joining, sacked: the offer says the year they join, why the job is open, their list and picks, and the goal: %s" % str(tas))
+	var their_id := str(_senior_at("TAS").get("cid", ""))
+	_check(their_id != "", "joining, sacked: Tasmania have signed a first coach who would make way")
+	_check(ClubMoves.take_job(GameState, "TAS") and str(st["move"].get("to", "")) == "TAS" and GameState.my_club == "FRE",
+			"joining, sacked: he takes the job; until their draft he is still at Fremantle")
+	_check(GameState.begin_intake_draft(), "joining, sacked: the National Draft opens")
+	_check_joined("joining, sacked", "FRE", year, their_id)
+
+
+## A strong season before Tasmania join: their board writes first. Taken, he
+## signs now, runs Fremantle's contracts and trades, then takes over at
+## Tasmania's first National Draft.
+func _test_joining_club_letter() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SUITE_SEED + 22
+	_fresh()
+	var year := int(GameState.season_year)
+	var joins := _tas_joins_next()
+	var guard := 0
+	while GameState.season.round_index < GameState.season.fixture.size() - 1 and guard < 40:
+		guard += 1
+		_week(rng)
+	GameState.season.ladder["FRE"]["w"] = int(GameState.season.ladder["FRE"]["w"]) + 30
+	GameState.season.recalc_ladder()
+	_play_out(rng)
+	var l := ClubMoves.letter(GameState)
+	_check(ClubMoves.letter_open(GameState) and str(l.get("code", "")) == "TAS" and int(l.get("joins", 0)) == joins
+			and int(l.get("finish", -1)) == 0 and str(l.get("why_open", "")).begins_with("Tasmania join the league"),
+			"joining, letter: Tasmania's board writes, saying the year they join: %s" % str(l))
+	var their_id := str(_senior_at("TAS").get("cid", ""))
+	_check(ClubMoves.accept_letter(GameState) and GameState.my_club == "FRE"
+			and str(GameState.coach_arcs["move"].get("to", "")) == "TAS" and GameState.offseason_open(),
+			"joining, letter: taken, he signs now and the off-season opens at Fremantle")
+	_check(_undecided("FRE") > 0, "joining, letter: Fremantle's contracts wait for him (%d)" % _undecided("FRE"))
+	_check(_news_has("You have taken the senior job at Tasmania. You take over at the %d National Draft." % year),
+			"joining, letter: the news says when he takes over")
+	_check(GameState.begin_intake_draft(), "joining, letter: the National Draft opens")
+	_check_joined("joining, letter", "FRE", year, their_id)
 
 
 ## A stand-in for GameState with only the coaches, so each way a senior job
