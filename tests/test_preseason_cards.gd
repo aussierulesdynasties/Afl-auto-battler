@@ -323,9 +323,11 @@ func _test_facts() -> void:
 	for id in IDS:
 		var tt := StoryDeck.by_id(StoryDeck.all(), id)
 		var blob := JSON.stringify(tt)
-		for w in ["XP", "coefficient", "multiplier", "simulation"]:
+		for w in ["XP", "coefficient", "multiplier"]:
 			if blob.contains(w):
 				bad.append("%s says %s" % [id, w])
+		for w in CopyRules.words_in(blob):
+			bad.append("%s says %s" % [id, w])
 	_check(bad.is_empty(), "The pre-season cards read as football, not as engine: %s" % " | ".join(PackedStringArray(bad)))
 
 
