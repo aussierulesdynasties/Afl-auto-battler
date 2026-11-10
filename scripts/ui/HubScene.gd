@@ -1495,6 +1495,10 @@ func _show_tribunal_verdict(verdict: Dictionary) -> void:
 	_tribunal_overlay.name = "TribunalVerdict"
 	var v: VBoxContainer = box["body"]
 	var where := UiKit.lbl("Appeals Board" if appeal else "Tribunal", UiKit.SECONDARY, UiKit.MUTED, true)
+	where.name = "VerdictHearing"
+	# Beside the club's name, which takes the row's width: a wrapping label
+	# there gets no width and stands one letter a line down the sheet.
+	where.autowrap_mode = TextServer.AUTOWRAP_OFF
 	v.add_child(UiKit.club_heading(str(verdict.get("club", GameState.my_club)), where, UiKit.SECONDARY, 18.0))
 	var head := UiKit.heading("%s %s" % ["Appeal" if appeal else "Challenge", "won" if won else "lost"], UiKit.TITLE)
 	head.name = "VerdictHead"

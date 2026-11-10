@@ -1059,6 +1059,9 @@ func _test_tribunal_verdict() -> void:
 					and text.contains("We can still appeal: 10%") and text.contains("Brownlow: ineligible")
 					and text.contains("Risked:") and text.contains("Paid:") and text.contains("Fremantle"),
 					"A lost challenge opens the verdict: lost, 2 matches before and now, the appeal's odds, the cost (%s; %s)" % [why, text])
+		var hearing: Control = sheet.find_child("VerdictHearing", true, false) if sheet != null else null
+		_check(hearing != null and hearing.size.y < 40.0 and hearing.size.x > 40.0,
+				"The hearing's name sits on one line beside the club (%s)" % (str(hearing.size) if hearing != null else "missing"))
 		var who: Node = sheet.find_child("VerdictPlayer", true, false) if sheet != null else null
 		var who_text := str(who.get("text")) if who != null else ""
 		_check(who_text.contains(name.split(" ")[-1]), "The verdict names the player (%s: %s)" % [name, who_text])
