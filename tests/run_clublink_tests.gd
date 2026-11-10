@@ -579,9 +579,14 @@ func _test_board_taps(sz: Vector2i) -> void:
 		var prof: Node = screen.get_node_or_null("PlayerProfile")
 		_check(why3 == "" and prof != null, "%s: a name of a player still in the game opens his profile (%s)" % [tag, why3])
 		var ptext := _text_of(prof) if prof != null else ""
+		# His career story (CareerTale) may say the flag or the medal; then the
+		# facts under it leave that one out. Each is said once either way.
+		var flag_fact := ptext.contains("At Fremantle for the %d premiership." % (y - 2))
+		var flag_told := ptext.contains("with us for the %d premiership." % (y - 2))
+		var medal_fact := ptext.contains("Coleman Medal %d." % (y - 2))
+		var medal_told := ptext.contains("won the Coleman Medal in %d." % (y - 2))
 		_check(ptext.contains("Debuted in %d, for Fremantle." % (y - 8))
-				and ptext.contains("At Fremantle for the %d premiership." % (y - 2))
-				and ptext.contains("Coleman Medal %d." % (y - 2)),
+				and flag_fact != flag_told and medal_fact != medal_told,
 				"%s: his profile's Career section lists his debut, flag and medal on record (%s)" % [tag, ptext.replace("\n", " | ")])
 		_gs.honour_roll.pop_back()
 		_router.handle_back()
