@@ -1016,10 +1016,16 @@ static func standouts(res: Dictionary, side: int, n: int) -> Array:
 ## nothing extra. Every free against is also a clanger: -3 in all.
 ## Every tackle is also a pressure act, so a tackle is 2 + 1 = 3 in all and
 ## pressure without a tackle (a rushed disposal, a forced turnover) is 1.
+## Defenders rated up (director, 2026-11-10): every spoil is also a one
+## percenter, so a spoil is 2 + 1 = 3 in all, the same as a tackle; an
+## intercept (the ball won back off the opposition) is 1, before the disposal
+## that follows it. Without them a defender's best games sat 39 below a
+## forward's at the 90th percentile.
 const RATING_POINTS := {
 	"kicks": 2, "handballs": 1, "marks": 3, "tackles": 2, "pressure_acts": 1,
 	"goals": 14, "behinds": 1, "hitouts": 1,
 	"inside50": 4, "goal_assists": 2, "rebounds": 3, "one_percenters": 1,
+	"spoils": 2, "intercepts": 1,
 	"clangers": -2, "frees_for": 1, "frees_against": -1,
 }
 

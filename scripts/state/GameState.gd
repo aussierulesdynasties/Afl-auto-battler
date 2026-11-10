@@ -217,7 +217,7 @@ var week_event: Dictionary:
 		return week_events[0] if not week_events.is_empty() else {}
 	set(value):
 		week_events = [] if value.is_empty() else [value]
-## The week's checklist record (WeekChecklist.gd; setting "weekly_checklist").
+## The week's checklist record (WeekChecklist.gd).
 var week_checks := {}
 ## Trust between you and the people around the club (Trust.gd): {"p:<player
 ## id>": {"t", "log"}}. Missing means neutral. Saved; later phases add coaches,

@@ -2088,7 +2088,7 @@ Your career stays on this device.",
 	_check(intro != null and skip_intro != null
 			and _screen_text().contains("This is home base")
 			and _screen_text().contains("Play match")
-			and _screen_text().contains("After the game"),
+			and _screen_text().contains("never a gate"),
 			"The first Hub visit explains the weekly loop in context and can be skipped")
 	if skip_intro != null:
 		skip_intro.emit_signal("pressed")
