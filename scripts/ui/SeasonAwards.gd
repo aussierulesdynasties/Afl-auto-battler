@@ -215,6 +215,7 @@ static func open(host: Control) -> Control:
 					var sb := UiKit.club_section_body(code, sl, StatsSide.ink(code))
 					sb.name = "WinnerStoryBox"
 					body.add_child(sb)
+					body.add_child(UiKit.spacer(6))
 			# A counted award has just shown its final count; the placings
 			# follow only the winner-by-winner reveal.
 			if metric != "goals" and rows.size() > 1 and count == "":

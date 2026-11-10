@@ -154,6 +154,13 @@ func _test_golden() -> void:
 	for c in _cases():
 		var said := CareerTale.text(CareerTale.tell(c[1], c[2]))
 		_check(said == str(c[3]), "%s:\n    got  %s\n    want %s" % [c[0], said, c[3]])
+	# What his "With us" lines already say (Remembered's keys) is not told twice.
+	var a: Array = _cases()[0]
+	var ctx: Dictionary = a[2].duplicate()
+	ctx["skip"] = {"flag:2031": true, "debut": true}
+	var said := CareerTale.text(CareerTale.tell(a[1], ctx))
+	_check(not said.contains("premiership") and not said.contains("debuted") and said.contains("31 votes"),
+			"The sheet's own lines are not repeated: %s" % said)
 
 
 ## A first-year rookie (the draft and a debut) and a player with nothing on
@@ -255,6 +262,10 @@ func _test_premade_histories() -> void:
 	for first in PremadeHistory.STARTS:
 		GameState.reset()
 		GameState.tutorials = false
+		# A replay seed refuses a premade history (it plays the years live), so
+		# the history is picked from the global seed instead, still pinned.
+		GameState.replay_seed = 0
+		seed(SUITE_SEED + first)
 		_check(GameState.begin_from_history(first), "History %d starts" % first)
 		var code := "TAS" if first == 2028 else "MEL"
 		GameState.choose_sim_ahead_club(code)
@@ -286,6 +297,7 @@ func _test_premade_histories() -> void:
 				break
 		_check(same, "%d: a reload tells the same stories" % first)
 		GameState.delete_saved_career()
+	GameState.replay_seed = SUITE_SEED
 	_check(told > 0, "Some players in the premade histories have a story (%d)" % told)
 
 

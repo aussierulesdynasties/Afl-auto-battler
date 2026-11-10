@@ -200,6 +200,7 @@ static func open(host: Control, p: Dictionary, on_close: Callable = Callable(),
 		var story_box := UiKit.club_section_body(his_club, story_l, name_ink if his_club != "" else UiKit.MUTED)
 		story_box.name = "CareerStoryBox"
 		v.add_child(story_box)
+		v.add_child(UiKit.spacer(6))
 	if tot != "" and not only_us:
 		var cl := UiKit.lbl(tot, UiKit.BODY, UiKit.TEXT)
 		cl.name = "ProfileCareer"

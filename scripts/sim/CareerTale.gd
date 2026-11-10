@@ -232,7 +232,8 @@ static func _facts(p: Dictionary, ctx: Dictionary) -> Array:
 		beats.append(_beat("award", int(ys[0]), {"award": pair[1], "years": _and_years(ys), "list": ys},
 				",".join(PackedStringArray(ys.map(func(y): return "%s:%d" % [pair[0], y])))))
 
-	# Premierships at the clubs he was on the list of that season.
+	# Premierships at the clubs he was on the list of that season, less those
+	# the sheet says elsewhere.
 	var flags := {}
 	var order := []
 	for e in roll:
@@ -244,6 +245,9 @@ static func _facts(p: Dictionary, ctx: Dictionary) -> Array:
 			continue
 		for st in stints:
 			if str(st[0]) == premier and y >= int(st[1]) and y <= int(st[2]):
+				# Said already where the sheet lists what he did with you.
+				if skip.has("flag:%d" % y):
+					break
 				var us := _coached(ctx, y, premier)
 				var key := "us" if us else premier
 				if not flags.has(key):
