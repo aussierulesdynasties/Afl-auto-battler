@@ -168,8 +168,13 @@ func _test_club_evaluation() -> void:
 			capped = false
 	_check(capped, "Evaluation errors are capped")
 
-	# Your club, and the intake draft, keep the shared valuation.
-	_check(a._eval_error("COL", pool[0]) == 0.0, "Your club's picks get no evaluation error")
+	# Your club's opinion is your recruiters' read (row T1.R26 L1); the intake
+	# draft keeps the shared valuation.
+	var mine_ok := true
+	for p in pool.slice(0, 40):
+		var want := float(int(a.user_view(p)["overall_mid"]) - int(p["overall"]))
+		mine_ok = mine_ok and is_equal_approx(a._eval_error("COL", p), want)
+	_check(mine_ok, "Your club's opinion of a player is your recruiters' read of him")
 	var intake := Draft.build_intake(pool.slice(0, 20), ["A", "B"], ["A", "B"], 5,
 			{"A": 30, "B": 30}, {})
 	_check(intake._eval_error("A", pool[0]) == 0.0, "The intake draft keeps the shared valuation")
