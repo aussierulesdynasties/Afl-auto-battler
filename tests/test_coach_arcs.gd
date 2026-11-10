@@ -715,8 +715,12 @@ func _letters_in_news() -> int:
 ## A strong season played for real: Fremantle are put top of the ladder before
 ## the last home-and-away round (30 wins added), so they play the finals and
 ## meet any board goal, and the season's own close writes the letter.
-func _strong_season(rng: RandomNumberGenerator) -> void:
+## `tas_joins` false keeps Tasmania out of the league after the reset, so a
+## club on the ladder writes the letter.
+func _strong_season(rng: RandomNumberGenerator, tas_joins := true) -> void:
 	_fresh()
+	if not tas_joins:
+		GameDB.set_enter_year("TAS", Expansion.NEVER)
 	var guard := 0
 	while GameState.season.round_index < GameState.season.fixture.size() - 1 and guard < 40:
 		guard += 1
@@ -760,9 +764,16 @@ func _ratings_only(line: String, code: String) -> bool:
 
 
 func _test_rival_letter() -> void:
+	# A club on the ladder writes here: a club joining next season would write
+	# first (row T5.Q25, its own tests below), so Tasmania stay out for now.
+	_rival_letter_body()
+	GameDB.set_enter_year("TAS", GameDB.data_enter_year("TAS"))
+
+
+func _rival_letter_body() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = SUITE_SEED + 11
-	_strong_season(rng)
+	_strong_season(rng, false)
 	var st: Dictionary = GameState.coach_arcs
 	var year := int(GameState.season_year)
 	var l := ClubMoves.letter(GameState)

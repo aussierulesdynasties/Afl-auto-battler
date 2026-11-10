@@ -4093,6 +4093,13 @@ func _test_new_career_challenge_taps() -> void:
 	var t5: String = await Tap.tap(current_scene.find_child("StartCareer", true, false))
 	await _settle()
 	await _settle()
+	# Row T5.Q25: Choose your rebuild offers the bottom club or Tasmania.
+	var tas_tile := current_scene.find_child("Choose_TAS", true, false)
+	_check(_state.my_club == "" and tas_tile != null and current_scene.find_child("Choose_COL", true, false) == null,
+			"Choose your rebuild offers the bottom club and Tasmania, no other club")
+	var t6: String = await Tap.tap(current_scene.find_child("Choose_ESS", true, false))
+	await _settle()
+	t5 += t6
 	var ch: Dictionary = _state.challenge
 	var gone: Array = ch.get("gone", [])
 	var club := str(ch.get("club", ""))

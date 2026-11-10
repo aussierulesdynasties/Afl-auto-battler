@@ -1900,11 +1900,13 @@ func begin_real_lists() -> void:
 			joined[str(mv["to"])] = true
 	for code in joined:
 		unique_jumpers(league_lists[code])
-	# Rebuild (Challenge): the bottom club of 2026 is yours, less its three best.
+	# Rebuild (Challenge): the bottom club of 2026, less its three best, or a
+	# club joining the league built from nothing (row T5.Q25). The choice is
+	# made on Choose your club; its three walk out only if the bottom club is
+	# taken (choose_real_club).
 	if Challenge.kind(self) == "rebuild":
-		var bottom := Challenge.bottom_club(active)
-		challenge["club"] = bottom
-		challenge["gone"] = Challenge.strip_best(self, bottom)
+		challenge["club"] = Challenge.bottom_club(active)
+		challenge["gone"] = []
 	intake_assignments = []
 	# The real 2026 class, and the career's own prospect if it has one.
 	var cls: Array = _career_copies(GameDB.draftees)
@@ -1942,9 +1944,6 @@ func begin_real_lists() -> void:
 	draft.senior_cap = RookieList.SENIOR_SPOTS
 	draft.user_max_age = Challenge.max_age(self)
 	OwnProspect.check(self)
-	if Challenge.kind(self) == "rebuild" and str(challenge.get("club", "")) != "":
-		choose_real_club(str(challenge["club"]))
-		add_news("challenge", "%s The 2026 National Draft is next." % Challenge.stated_line(self))
 	mark_dirty()
 
 
@@ -2010,11 +2009,37 @@ static func _tie_label(kind: String) -> String:
 func choose_real_club(code: String) -> void:
 	if not opening_draft or not league_lists.has(code):
 		return
+	# Rebuild: the bottom club is the one real list on offer; its three best
+	# walk out as you take over.
+	var rebuild := Challenge.kind(self) == "rebuild"
+	if rebuild and code != str(challenge.get("club", "")):
+		return
+	if rebuild and (challenge.get("gone", []) as Array).is_empty():
+		challenge["gone"] = Challenge.strip_best(self, code)
+		_draft_sees_list(code)
 	my_club = code
 	my_list = league_lists[code]
 	draft.scouting_mults[code] = recruiting_uncertainty_mult()
 	draft.start_for_user(code)
+	if rebuild:
+		add_news("challenge", "%s The 2026 National Draft is next." % Challenge.stated_line(self))
 	mark_dirty()
+
+
+## The opening draft's picture of `code`'s list (its senior count and roles),
+## read again after the list changed under it (a Rebuild's walkouts).
+func _draft_sees_list(code: String) -> void:
+	var arr: Array = league_lists[code]
+	var c := {"RUCK": 0, "MID": 0, "DEF": 0, "FWD": 0}
+	var pairs: Array = []
+	for p in arr:
+		var r := str(p["role"])
+		if c.has(r):
+			c[r] = int(c[r]) + 1
+		pairs.append([r, str(p.get("role2", ""))])
+	draft.existing_sizes[code] = RookieList.draft_size(arr)
+	draft.existing_role_counts[code] = c
+	draft.existing_roles[code] = pairs
 
 
 # ---------------------------------------------------------------------------
@@ -2047,23 +2072,39 @@ func _hold_years_without_you(first_season: int) -> void:
 	mark_dirty()
 
 
-## The club that joins the season after a real-lists career starts, which you
-## can take by waiting for it (director, 2026-11-09: picking Tasmania plays 2027
-## without you and starts you in 2028), or "". On the 2026 National Draft's club
-## choice only. A rebuild is set on a club's real list, which it does not have.
+## The clubs joining the league after a real-lists career starts, which you
+## can take by waiting for them (director, 2026-11-09: picking Tasmania plays
+## 2027 without you and starts you in 2028). On the 2026 National Draft's club
+## choice only. Canberra (2030) is here only under a Rebuild, which keeps its
+## 2027 start with Canberra on; any other real-lists start with Canberra plays
+## 2027-2029 without you first (row T5.Q25).
+func waiting_clubs() -> Array:
+	if not opening_draft or my_club != "" or sim_ahead:
+		return []
+	var out := []
+	if GameDB.enter_year("TAS") == GameDB.START_YEAR + 1:
+		out.append("TAS")
+	if Challenge.kind(self) == "rebuild" and GameDB.enter_year("CANB") == SIM_AHEAD_TO:
+		out.append("CANB")
+	return out
+
+
+## The first of waiting_clubs(), or "".
 func waiting_club() -> String:
-	if not opening_draft or my_club != "" or sim_ahead or Challenge.kind(self) == "rebuild":
-		return ""
-	var year := GameDB.START_YEAR + 1
-	return "TAS" if GameDB.enter_year("TAS") == year else ""
+	var w := waiting_clubs()
+	return str(w[0]) if not w.is_empty() else ""
 
 
-## Take the waiting club: from the 2026 National Draft, the years up to its
+## Take a waiting club: from the 2026 National Draft, the years up to its
 ## first National Draft are played without you (sim_ahead_step), and it is
-## yours from that draft.
+## yours from that draft. A Rebuild taken this way builds the new club from
+## nothing; the bottom club keeps its three.
 func begin_wait_for_club(code: String) -> bool:
-	if code == "" or code != waiting_club():
+	if code == "" or not waiting_clubs().has(code):
 		return false
+	if Challenge.kind(self) == "rebuild":
+		challenge["club"] = code
+		challenge["gone"] = []
 	_hold_years_without_you(GameDB.enter_year(code))
 	return true
 
