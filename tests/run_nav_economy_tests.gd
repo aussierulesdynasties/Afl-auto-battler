@@ -84,6 +84,7 @@ func _run() -> void:
 	await _t("_test_long_press_button")
 	_t("_test_search_finds")
 	await _t("_test_search_taps")
+	await _t("_test_sim_orders")
 	UK.apply_text_size("standard")
 	_router.stack = []
 	print(Ran.line("Nav economy", self))
@@ -114,7 +115,13 @@ func _late_season_career() -> void:
 	if _gs.pending_sim != null:
 		var sim = _gs.pending_sim
 		var res := {}
+		var me := 0 if str(_gs.pending_match["home"]) == _gs.my_club else 1
 		while sim.current_quarter <= 4:
+			# A call at the last break, so the review has one to show.
+			if sim.current_quarter == 4:
+				var t: Dictionary = (sim.tactics[me] as Dictionary).duplicate()
+				t["gameplan"] = "attacking"
+				sim.set_tactics(me, t)
 			res = sim.run_quarter()
 		res["home"] = _gs.pending_match["home"]
 		res["away"] = _gs.pending_match["away"]
@@ -575,3 +582,81 @@ func _test_search_taps() -> void:
 	var saved: Dictionary = _gs._save_state()
 	_check((saved.get("shortlist", []) as Array).has(id), "the shortlist is saved with the career")
 	_gs.shortlist = []
+
+
+# ---------------------------------------------------------------------------
+# "When I sim the week": standing orders, saved and followed (P-66)
+# ---------------------------------------------------------------------------
+
+## Real taps: Coaching > Set the lines opens the sheet; a tap sets a line and
+## it is saved; a waiting card stops Sim the week when the line says ask me;
+## the other lines answer the card and send the assistant to the press.
+## Runs last: it plays rounds.
+func _test_sim_orders() -> void:
+	root.size = PHONE
+	_gs.set_text_size("standard")
+	_gs.sim_orders = {}
+	_check(_gs.sim_order("youth") == "form" and _gs.sim_order("questions") == "usual" and _gs.sim_order("press") == "me",
+			"the lines start on what Sim the week has always done")
+	await _hub()
+	var why: String = await Tap.tap(current_scene.find_child("HubCoaching", true, false))
+	await _settle(10)
+	var open := current_scene.find_child("SimOrdersOpen", true, false) as Button
+	_check(why == "" and open != null, "Coaching has the standing orders (%s)" % why)
+	if open == null:
+		return
+	why = await Tap.tap(open)
+	await _settle(4)
+	var sheet := current_scene.find_child("SimOrders", true, false) as Control
+	_check(why == "" and sheet != null and sheet.is_visible_in_tree(), "Set the lines opens the sheet (%s)" % why)
+	if sheet == null:
+		return
+	for k in ["youth", "questions", "press"]:
+		_check(sheet.find_child("SimOrderOptions_" + k, true, false) != null, "the sheet has the %s line" % k)
+	why = await Tap.tap(sheet.find_child("SimOrder_questions_ask", true, false))
+	await _settle(2)
+	var why2: String = await Tap.tap(sheet.find_child("SimOrder_press_assistant", true, false))
+	await _settle(2)
+	_check(why == "" and why2 == "" and _gs.sim_order("questions") == "ask" and _gs.sim_order("press") == "assistant",
+			"a tap sets a line (%s, %s)" % [why, why2])
+	var saved: Dictionary = _gs._save_state()
+	_check(str((saved.get("sim_orders", {}) as Dictionary).get("questions", "")) == "ask", "the lines are saved with the career")
+	_router.handle_back()
+	await _settle(6)
+	_check(current_scene.find_child("SimOrders", true, false) == null and _router.current() == "coaching", "Back closes the sheet")
+	var line := current_scene.find_child("SimOrderLine_1", true, false) as Label
+	_check(line != null and line.text.contains("Ask me"), "Coaching says the line as set (%s)" % (line.text if line else "none"))
+	# Followed: a waiting card stops Sim the week, and nothing is played.
+	var card: Dictionary = _gs.story_card("training_extra_session")
+	_check(not card.is_empty(), "a week card to wait on")
+	card["popped"] = true
+	_gs.week_events = [card]
+	await _hub()
+	var before: int = _gs.season.round_index
+	var sim := current_scene.find_child("SimRound", true, false) as Button
+	_check(sim != null, "the hub has Sim the week")
+	if sim != null:
+		why = await Tap.tap(sim)
+		await _settle(6)
+		_check(why == "" and _gs.season.round_index == before, "Sim the week stops for the card: no round played (%s)" % why)
+		var stop := current_scene.find_child("SimStopped", true, false) as Control
+		_check(stop != null and stop.is_visible_in_tree(), "the card opens and says why the week waits")
+	_router.handle_back()
+	await _settle(4)
+	_gs.resolve_card(0, 0)
+	_check(_gs.sim_week_stops().is_empty(), "an answered card stops nothing")
+	_gs.sim_week()
+	_check(_gs.season.round_index == before + 1, "then the week is played (%d)" % _gs.season.round_index)
+	_check(not _gs.media_conference_pending(), "the assistant fronted the press")
+	# Back the players: the card is answered that way, with no stop.
+	_gs.set_sim_order("questions", "players")
+	var card2: Dictionary = _gs.story_card("members_open_training")
+	card2["popped"] = true
+	_gs.week_events = [card2]
+	_check(_gs.sim_week_stops().is_empty(), "with a line for the cards, nothing stops")
+	var want: int = SkipOrders.card_choice(card2, "players")
+	_gs.sim_week()
+	_check(bool(card2.get("resolved", false)) and int(card2.get("choice", -2)) == want,
+			"the card is answered the way the line says (%d, wanted %d)" % [int(card2.get("choice", -2)), want])
+	_gs.sim_orders = {}
+	_gs.week_events = []

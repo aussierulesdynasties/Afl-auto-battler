@@ -353,4 +353,4 @@ static func close_open(scene: Node) -> bool:
 			c.queue_free()
 			return true
 	# The hub's search sits under the profile or club page it opened.
-	return HubSearch.close_open(scene)
+	return HubSearch.close_open(scene) or SimOrdersSheet.close_open(scene)
