@@ -1101,6 +1101,9 @@ func _show_coach_box() -> void:
 		gc_rows.name = "FocusGainCost_" + slot
 		var sync := func(id: String) -> void:
 			note.text = _focus_note_text(slot, id)
+			# Gain / Cost below says what the pick does; the note stays only
+			# when the call waits (he is benched or out of the spot).
+			note.visible = _focus_waits(slot, id)
 			_gain_cost_rows(gc_rows, GateOdds.focus_texts(slot,
 					GameDB.player_display_name_by_id(id, "your player") if id != "" else ""), "Focus")
 		var text: Array = MatchNotes.FOCUS_SLOT_TEXT[slot]
@@ -2380,15 +2383,15 @@ func _gain_cost_rows(box: Control, gc: Array, prefix: String) -> void:
 	box.add_child(_plan_row("Cost:", str(gc[1]), prefix + "Cost"))
 
 
-func _plan_row(mark: String, text: String, node_name: String, traits := false) -> Control:
+func _plan_row(mark: String, text: String, node_name: String, traits := false, size := UiKit.SECONDARY) -> Control:
 	var item := UiKit.hbox(6)
 	item.name = node_name
-	var mk := UiKit.lbl(mark, UiKit.SECONDARY, UiKit.label_ink(), true)
+	var mk := UiKit.lbl(mark, size, UiKit.label_ink(), true)
 	mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	mk.autowrap_mode = TextServer.AUTOWRAP_OFF
 	item.add_child(mk)
 	# Synergies named here explain themselves on a tap (TraitLink).
-	var l: Control = TraitLink.line(text, UiKit.SECONDARY, UiKit.TEXT) if traits else _say(text, UiKit.SECONDARY, UiKit.TEXT)
+	var l: Control = TraitLink.line(text, size, UiKit.TEXT) if traits else _say(text, size, UiKit.TEXT)
 	l.name = "Text"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2749,11 +2752,12 @@ func _show_bounce_moment(m: Dictionary) -> void:
 ## (GateOdds; "gain" and "cost" on the option), or its one line of words.
 func _moment_lines(to: Container, o: Dictionary) -> void:
 	if o.has("gain"):
-		# The break's look: "Gain:" and "Cost:" in the label ink, the line in body text.
+		# The break's look: "Gain:" and "Cost:" in the label ink, the line in body
+		# text, at the card's small size so the men stay in view above it.
 		for f in [["gain", "MomentGain"], ["cost", "MomentCost"]]:
 			var line := str(o[f[0]])
 			var cut := line.find(": ")
-			to.add_child(_plan_row(line.substr(0, cut + 1) if cut > 0 else "", line.substr(cut + 2) if cut > 0 else line, str(f[1])))
+			to.add_child(_plan_row(line.substr(0, cut + 1) if cut > 0 else "", line.substr(cut + 2) if cut > 0 else line, str(f[1]), false, UiKit.SMALL))
 		return
 	var d := UiKit.lbl(str(o.get("detail", "")), UiKit.SMALL, UiKit.MUTED)
 	d.name = "MomentDetail"
@@ -3298,6 +3302,18 @@ func _focus_text(id: String) -> String:
 
 ## Under a Play through control: his job and what it does for him; the
 ## general description with nobody picked; that it waits while he is off the spot.
+func _focus_waits(slot: String, id: String) -> bool:
+	if id == "":
+		return false
+	var sim: MatchSim = GameState.pending_sim
+	if sim == null:
+		return false
+	for p in (sim.squads[_my_side] as Squad).ground:
+		if str(p["id"]) == id:
+			return not (MatchSim.FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"]))
+	return true
+
+
 func _focus_note_text(slot: String, id: String) -> String:
 	if id == "":
 		return MatchNotes.focus_slot_note(slot, "", false, false)
