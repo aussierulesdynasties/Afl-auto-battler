@@ -97,6 +97,8 @@ func _season_with_letter() -> void:
 	_state.midseason["carnival_seen"] = true
 	_state.media_conference = {}
 	_state.week_events = []
+	_state.postseason_intro_seen = true
+	load("res://scripts/state/TrainingReport.gd").dismiss(_state)
 	var row: Dictionary = season.ladder["FRE"]
 	print("letter: ", moves.letter(_state), " off-season open: ", _state.offseason_open())
 	print("FRE %d-%d-%d " % [int(row["w"]), int(row["l"]), int(row["d"])], _state.form_line(_state.club_form_info("FRE")),

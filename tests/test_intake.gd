@@ -1379,6 +1379,7 @@ func _test_rebuild_walkouts_sign() -> void:
 	GameState.replay_seed = 4242
 	GameState.challenge = {"kind": "rebuild"}
 	GameState.begin_real_lists()
+	GameState.choose_real_club(str(GameState.challenge.get("club", "")))
 	var club := str(GameState.challenge.get("club", ""))
 	var gone: Array = GameState.challenge.get("gone", [])
 	_check(club != "" and GameState.my_club == club and gone.size() == 3,

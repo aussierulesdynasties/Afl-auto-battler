@@ -309,10 +309,15 @@ static func _jobs_after_sack(gs, st: Dictionary) -> Array:
 			open.append(code)
 		elif bottom.size() < SACKED_FROM_BOTTOM:
 			bottom.append(code)
-	var picked := _pick(gs, open, OFFERS, "sackjob|%d" % year)
-	picked.append_array(_pick(gs, bottom, OFFERS - picked.size(), "sackjob2|%d" % year))
+	# A club joining the league next season has its senior job to fill, so it
+	# is always one of them (director ruling 8, TODO T5.Q25).
+	var joining := joining_clubs(gs).filter(func(c): return not sacked_him.has(c))
+	var picked := _pick(gs, open, OFFERS - joining.size(), "sackjob|%d" % year)
+	picked.append_array(_pick(gs, bottom, OFFERS - joining.size() - picked.size(), "sackjob2|%d" % year))
 	picked.sort_custom(func(a, b): return int(finish[a]) < int(finish[b]))
 	var out := []
+	for code in joining:
+		out.append(_new_club_offer(gs, code, year, table.size()))
 	for code in picked:
 		var outlook: Dictionary = gs.team_outlook(code)
 		var rank := int(gs.club_expect.get(code, ClubLife.default_rank(table.size())))
@@ -321,6 +326,75 @@ static func _jobs_after_sack(gs, st: Dictionary) -> Array:
 				"goal": str(ClubLife.board_goal(rank, int(finish[code]), table.size()).get("text", "")),
 				"why_open": why_open_line(gs, code, year)})
 	return out
+
+
+# ---------------------------------------------------------------------------
+# A club joining the league (director ruling 8, TODO T5.Q25)
+# ---------------------------------------------------------------------------
+## Clubs whose first season is next year: at this season's close their senior
+## job is one he can take (after a sacking, or by a rival board's letter).
+static func joining_clubs(gs) -> Array:
+	var out := []
+	for code in GameDB.club_order:
+		if GameDB.enter_year(str(code)) == int(gs.season_year) + 1 and str(code) != str(gs.my_club):
+			out.append(str(code))
+	return out
+
+
+## `code` plays its first season next year.
+static func is_joining(gs, code: String) -> bool:
+	return code != "" and GameDB.enter_year(code) == int(gs.season_year) + 1
+
+
+## A joining club's job, as the Hub lists it: no ladder finish, the year it
+## joins, its list as it stands and the picks to come, and why the job is open.
+static func _new_club_offer(gs, code: String, year: int, clubs: int) -> Dictionary:
+	return {"code": code, "name": GameDB.club_name(code), "finish": 0, "clubs": clubs + 1,
+			"joins": year + 1, "list": new_club_list_line(gs, code, year),
+			"goal": "set before %d from where their list ranks on paper. In the bottom third, it is at least %d wins." % [
+					year + 1, int(ClubLife.board_goal(clubs + 1, 0, clubs + 1).get("wins", 7))],
+			"why_open": new_club_why_line(gs, code, year)}
+
+
+## Why a joining club's job is open: it has never had a coach play a game.
+static func new_club_why_line(gs, code: String, year: int) -> String:
+	var club := GameDB.club_name(code)
+	var line := "%s join the league in %d." % [club, year + 1]
+	var now := _senior_coach(gs, code)
+	if now.is_empty():
+		return line + " The board has yet to name its first senior coach."
+	return line + " They signed %s as their first senior coach, but the board wants you instead." % GameDB.player_display_name(now)
+
+
+## A joining club's list in facts: who is signed so far and the picks to come
+## (the National Draft picks it keeps once its staff have traded the others).
+static func new_club_list_line(gs, code: String, year: int) -> String:
+	if not ExpansionBuild.has_package(gs, code):
+		return ""
+	var n := (ExpansionBuild.list_of(gs, code) as Array).size()
+	var keep := []
+	for k in Expansion.FIRST_DRAFT_PICKS:
+		if not Expansion.MUST_TRADE_PICKS.has(k):
+			keep.append(str(k))
+	return "%d players signed so far. Picks %s and the first pick of each later round in the %d National Draft." % [
+			n, _and_list(PackedStringArray(keep)), year]
+
+
+## A move to a joining club is made when its first National Draft opens, so he
+## makes its picks, as a career that starts with the club does
+## (GameState.choose_sim_ahead_club). Until then the off-season (contracts,
+## trades) is at the club he leaves. Called from GameState.begin_intake_draft
+## once the draft has seated the new club; a club with no seat (a save past its
+## build) is joined at the rollover instead (apply_move).
+static func apply_move_at_draft(gs) -> bool:
+	if not ClubArcs.on(gs) or gs.draft == null:
+		return false
+	var to := str((ClubArcs._st(gs)["move"] as Dictionary).get("to", ""))
+	if not is_joining(gs, to) or not (gs.draft.clubs as Array).has(to):
+		return false
+	apply_move(gs)
+	gs.my_list = ExpansionBuild.list_of(gs, to)
+	return true
 
 
 ## A club's list as a letter or a job offer gives it: the rating now and in
@@ -338,7 +412,11 @@ static func restate_offers(gs) -> void:
 	if not ClubArcs.on(gs):
 		return
 	for o in ClubArcs._st(gs).get("offers", []):
-		o["list"] = _list_line(gs.team_outlook(str(o["code"])))
+		var code := str(o["code"])
+		if int(o.get("joins", 0)) > 0:
+			o["list"] = new_club_list_line(gs, code, int(gs.season_year))
+		else:
+			o["list"] = _list_line(gs.team_outlook(code))
 
 
 ## `n` of `pool`, seeded.
@@ -741,19 +819,26 @@ static func _rival_letter(gs, st: Dictionary) -> void:
 			open.append(code)
 		elif i + 1 > half:
 			bottom.append(code)
-	var pool := open if not open.is_empty() else bottom
+	# A club joining the league next season writes first: its job is the one
+	# most plainly open (director ruling 8, TODO T5.Q25).
+	var joining := joining_clubs(gs).filter(func(c): return not not_him.has(c))
+	var pool := joining if not joining.is_empty() else (open if not open.is_empty() else bottom)
 	if pool.is_empty():
 		return
 	var code: String = pool[_roll(gs, "letter|%d" % year, pool.size())]
-	var outlook: Dictionary = gs.team_outlook(code)
 	var mine: Dictionary = gs.team_outlook(str(gs.my_club))
-	var rank := int(gs.club_expect.get(code, ClubLife.default_rank(table.size())))
-	st["letter"] = {"year": year, "code": code, "name": GameDB.club_name(code), "from": str(gs.my_club),
-			"finish": int(finish.get(code, 0)), "clubs": table.size(), "list": _list_line(outlook),
+	var l := {"year": year, "code": code, "name": GameDB.club_name(code), "from": str(gs.my_club),
 			"my_list": _list_line(mine), "board": gs.board_confidence(),
-			"goal": str(ClubLife.board_goal(rank, int(finish.get(code, 0)), table.size()).get("text", "")),
-			"why_open": why_open_line(gs, code, year),
 			"president": ClubArcs._gen_name(int(gs.career_seed), "president|" + code), "answer": ""}
+	if joining.has(code):
+		l.merge(_new_club_offer(gs, code, year, table.size()))
+	else:
+		var outlook: Dictionary = gs.team_outlook(code)
+		var rank := int(gs.club_expect.get(code, ClubLife.default_rank(table.size())))
+		l.merge({"finish": int(finish.get(code, 0)), "clubs": table.size(), "list": _list_line(outlook),
+				"goal": str(ClubLife.board_goal(rank, int(finish.get(code, 0)), table.size()).get("text", "")),
+				"why_open": why_open_line(gs, code, year)})
+	st["letter"] = l
 	CoachArcs.log_line(st, year, "Season end", "letter", "A letter from %s offers him their senior job." % GameDB.club_name(code))
 	gs.add_news(ClubArcs.NEWS_KIND, "A letter from %s: their board offers you the senior job." % GameDB.club_name(code))
 
@@ -817,6 +902,14 @@ static func accept_letter(gs) -> bool:
 	st["move"] = {"to": str(l["code"]), "why": "poached", "from": str(gs.my_club), "year": year, "heir": heir_id}
 	CoachArcs.log_line(st, year, "Season end", "letter", "Takes the senior job at %s." % str(l["name"]))
 	var from := str(gs.my_club)
+	if is_joining(gs, str(l["code"])):
+		# A club yet to play: he takes over at its first National Draft
+		# (apply_move_at_draft). This off-season's contracts and trades stay
+		# his at the club he is leaving.
+		gs.add_news(ClubArcs.NEWS_KIND, "You have taken the senior job at %s. You take over at the %d National Draft." % [
+				str(l["name"]), year])
+		gs.open_offseason(true)
+		return true
 	apply_move(gs)
 	# Your list is the new club's from now (a rollover rebuilds it anyway).
 	if gs.season != null:

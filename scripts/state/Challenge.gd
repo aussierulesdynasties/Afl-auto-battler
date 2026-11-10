@@ -54,7 +54,7 @@ static func rule_line(k: String) -> String:
 		"rebuild":
 			var bottom := bottom_club(GameDB.active_clubs(GameDB.START_YEAR))
 			var who := GameDB.club_name(bottom) if bottom != "" else "the club that finished last"
-			return "Rebuild: you take over %s, last in 2026, and its three best players walk out before you start. Real 2026 lists only." % who
+			return "Rebuild: you take over %s, last in 2026, and its three best players walk out before you start. Or take a club joining the league and build it from nothing. Real 2026 lists only." % who
 		"goal":
 			return "Your goal: pick one. Nothing changes in the game; the club annual marks the season you reach it."
 	return "A normal career, with no extra rule."
@@ -188,6 +188,21 @@ static func place_gone(gs) -> void:
 			break
 	for p in left:
 		p.erase("offers")
+
+
+## What Choose your rebuild offers: the bottom club less its three best, or a
+## club joining the league, built from nothing (row T5.Q25).
+static func choice_line(gs) -> String:
+	var bottom := GameDB.club_name(str(gs.challenge.get("club", "")))
+	var line := "Take %s, last in 2026: their three best players walk out before the 2026 National Draft." % bottom
+	var waits: Array = gs.waiting_clubs()
+	if waits.is_empty():
+		return line
+	var joins := []
+	for code in waits:
+		joins.append("%s (%d)" % [GameDB.club_name(str(code)), GameDB.enter_year(str(code))])
+	return line + " Or wait for %s and build a new club from nothing; %s then keep their three." % [
+			" or ".join(PackedStringArray(joins)), bottom]
 
 
 static func gone_names(gs) -> String:
