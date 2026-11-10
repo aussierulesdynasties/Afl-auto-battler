@@ -989,12 +989,19 @@ func _rebound_phases(k: int) -> Array:
 ## A rebound straight after a set-shot mark (one MatchSim tagged with its band):
 ## the shot did not score and the defence has it.
 ## Where a set shot that falls short comes down: MatchSim logs the rebound where
-## the mark was taken, but he kicked from the band's spot (T2.24), so it drops in
-## front of goal, three-quarters of the way from there.
+## the mark was taken, but he kicked from the band's spot (T2.24), so it drops on
+## the line from there to goal, 40-90% of the way, at the point nearest the
+## defender who wins it (3/4 of the way left him 40 m off on seed 42 ev 1149).
 func _short_spot(k: int) -> Vector2:
 	var pk := _prev_real(k)
+	var spot: Vector2 = _locs[pk]
 	var goal := Vector2(MatchMotion.GOAL_X * _dir(int((events[pk] as Dictionary).get("side", 0))), 0.0)
-	return (_locs[pk] as Vector2).lerp(goal, 0.75)
+	var t := 0.75
+	var a := _actor_id(events[k])
+	var line := goal - spot
+	if a >= 0 and line.length_squared() > 1.0:
+		t = clampf(((tokens[a]["pos"] as Vector2) - spot).dot(line) / line.length_squared(), 0.4, 0.9)
+	return spot.lerp(goal, t)
 
 
 func _short_set_shot(k: int) -> bool:
