@@ -198,7 +198,7 @@ year,draft,round,pick,club,first,last,origin,flag,flag_detail,wiki_note,wiki_pla
 2009,national,8,94,RIC,Andrew,Browne,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2009_AFL_draft,2026-11-10
 2009,national,8,95,BRL,Pearce,Hanley,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2009_AFL_draft,2026-11-10
 2009,rookie,1,6,MEL,Michael,Newton,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2009_AFL_draft,2026-11-10
-2009,rookie,1,10,,Henry,Playfair,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2009_AFL_draft,2026-11-10
+2009,rookie,1,10,SYD,Henry,Playfair,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2009_AFL_draft,2026-11-11
 2009,rookie,2,22,MEL,John,Meesen,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2009_AFL_draft,2026-11-10
 2009,rookie,3,49,STK,Jarryd,Allen,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2009_AFL_draft,2026-11-10
 2009,rookie,4,54,PAD,Glenn,Dawson,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2009_AFL_draft,2026-11-10
@@ -906,13 +906,13 @@ year,draft,round,pick,club,first,last,origin,flag,flag_detail,wiki_note,wiki_pla
 2013,national,7,93,RIC,Ricky,Petterd,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-10
 2013,national,7,94,CAR,Tom,Bell,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-10
 2013,national,8,95,GWS,Zac,Williams,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-10
-2013,rookie,1,1,,Sam,Schulz,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-10
-2013,rookie,1,10,,Corey,Gault,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-10
-2013,rookie,2,33,,Derick,Wanganeen,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-10
-2013,rookie,3,38,,Murray,Newman,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-10
-2013,rookie,3,44,,Brent,Renouf,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-10
-2013,rookie,4,50,,Neville,Jetta,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-10
-2013,rookie,4,53,,Heath,Scotland,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-10
+2013,rookie,1,1,GWS,Sam,Schulz,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-11
+2013,rookie,1,10,COL,Corey,Gault,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-11
+2013,rookie,2,33,HAW,Derick,Wanganeen,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-11
+2013,rookie,3,38,WCE,Murray,Newman,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-11
+2013,rookie,3,44,PAD,Brent,Renouf,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-11
+2013,rookie,4,50,MEL,Neville,Jetta,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-11
+2013,rookie,4,53,CAR,Heath,Scotland,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2013_AFL_draft,2026-11-11
 2014,pre_draft_signing,,,STK,Barclay,Miller,New Zealand,international_scholarship,Intl Schol,,,,/players/barclay_miller/1,https://www.draftguru.com.au/years/2014 | https://en.wikipedia.org/wiki/2014_AFL_draft,2026-11-10
 2014,national,1,1,STK,Paddy,McCartin,St Joseph's / St Joseph's College / Geelong Grammar / Geelong U18,,,,Paddy McCartin,,/players/paddy_mccartin/1,https://www.draftguru.com.au/years/2014 | https://en.wikipedia.org/wiki/2014_AFL_draft,2026-11-10
 2014,national,1,2,MEL,Christian,Petracca,Park Orchards / Warrandyte / Beverley Hills / Whitefriars College / Eastern U18,,,,Christian Petracca *,,/players/christian_petracca/1,https://www.draftguru.com.au/years/2014 | https://en.wikipedia.org/wiki/2014_AFL_draft,2026-11-10
@@ -1613,19 +1613,19 @@ year,draft,round,pick,club,first,last,origin,flag,flag_detail,wiki_note,wiki_pla
 2018,post_draft_signing,,,RIC,Sydney,Stack,Northam Federals / Perth,supplemental_selection,SSP,,,,/players/sydney_stack/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
 2018,post_draft_signing,,,MEL,Corey,Wagner,Sandgate / Aspley,supplemental_selection,SSP,,,,/players/corey_wagner/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
 2018,post_draft_signing,,,RIC,Maverick,Weller,Burnie / Tasmania U18,supplemental_selection,SSP,,,,/players/maverick_weller/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,1,CAR,Josh,Deluca,Sorrento Duncraig JFC / Subiaco,,,,,,/players/josh_deluca/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,2,GCS,Mitch,Riordan,Haileybury College / Dandenong U18,,,,,,/players/mitch_riordan/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,3,MEL,Kyle,Dunkley,Gippsland U18 / Footscray (VFL),,,,,,/players/kyle_dunkley/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,4,SYD,Michael,Knoll,Vermont / Basketball / Box Hill / South Adelaide,,,,,,/players/michael_knoll/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,5,NTH,Lachie,Hosie,Henley / Glenelg,,,,,,/players/lachie_hosie/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,6,WBD,Ryan,Gardner,Burnie / Tasmania U18,,,,,,/players/ryan_gardner/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,7,ESS,Will,Snelling,Goodwood / West Adelaide,,,,,,/players/will_snelling/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,8,STK,Jack,Mayo,Carine JFC / Subiaco,,,,,,/players/jack_mayo/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,9,PAD,Cameron,Sutcliffe,Kadina / Woodville-West Torrens,,,,,,/players/cameron_sutcliffe/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,11,FRE,Dillon,O'Reilly,East Fremantle JFC,,,,,,/players/dillon_o'reilly/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,13,RIC,Marlion,Pickett,Swan Districts (WAAFL) / South Fremantle,,,,,,/players/marlion_pickett/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,14,COL,John,Noble,Plympton / West Adelaide,,,,,,/players/john_noble/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
-2018,mid_season,,16,SYD,Cody,Hirst,Eastern U18,,,,,,/players/cody_hirst/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
+2019,mid_season,,1,CAR,Josh,Deluca,Sorrento Duncraig JFC / Subiaco,,,,,,/players/josh_deluca/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
+2019,mid_season,,2,GCS,Mitch,Riordan,Haileybury College / Dandenong U18,,,,,,/players/mitch_riordan/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
+2019,mid_season,,3,MEL,Kyle,Dunkley,Gippsland U18 / Footscray (VFL),,,,,,/players/kyle_dunkley/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
+2019,mid_season,,4,SYD,Michael,Knoll,Vermont / Basketball / Box Hill / South Adelaide,,,,,,/players/michael_knoll/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
+2019,mid_season,,5,NTH,Lachie,Hosie,Henley / Glenelg,,,,,,/players/lachie_hosie/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
+2019,mid_season,,6,WBD,Ryan,Gardner,Burnie / Tasmania U18,,,,,,/players/ryan_gardner/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
+2019,mid_season,,7,ESS,Will,Snelling,Goodwood / West Adelaide,,,,,,/players/will_snelling/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
+2019,mid_season,,8,STK,Jack,Mayo,Carine JFC / Subiaco,,,,,,/players/jack_mayo/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
+2019,mid_season,,9,PAD,Cameron,Sutcliffe,Kadina / Woodville-West Torrens,,,,,,/players/cameron_sutcliffe/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
+2019,mid_season,,11,FRE,Dillon,O'Reilly,East Fremantle JFC,,,,,,/players/dillon_o'reilly/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
+2019,mid_season,,13,RIC,Marlion,Pickett,Swan Districts (WAAFL) / South Fremantle,,,,,,/players/marlion_pickett/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
+2019,mid_season,,14,COL,John,Noble,Plympton / West Adelaide,,,,,,/players/john_noble/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
+2019,mid_season,,16,SYD,Cody,Hirst,Eastern U18,,,,,,/players/cody_hirst/1,https://www.draftguru.com.au/years/2018 | https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-11
 2018,rookie,1,2,GCS,Michael,Rischitelli,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
 2018,rookie,1,4,BRL,Ryan,Bastinac,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10
 2018,rookie,1,5,FRE,Ethan,Hughes,,,,,,wikipedia,,https://en.wikipedia.org/wiki/2018_AFL_draft,2026-11-10

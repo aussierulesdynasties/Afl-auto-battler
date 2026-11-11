@@ -6,6 +6,7 @@
 		"per_season": 1,
 		"cooldown": 40,
 		"subject_cooldown": 12,
+		"series": "intl",
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -95,6 +96,7 @@
 		"per_season": 1,
 		"cooldown": 40,
 		"subject_cooldown": 12,
+		"series": "intl",
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -169,6 +171,7 @@
 		"per_season": 1,
 		"cooldown": 40,
 		"subject_cooldown": 12,
+		"series": "intl",
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -229,6 +232,7 @@
 		"per_season": 1,
 		"cooldown": 40,
 		"subject_cooldown": 12,
+		"series": "intl",
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -294,6 +298,7 @@
 		"per_season": 1,
 		"cooldown": 40,
 		"subject_cooldown": 12,
+		"series": "intl",
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -360,6 +365,7 @@
 		"per_season": 1,
 		"cooldown": 40,
 		"subject_cooldown": 12,
+		"series": "intl",
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -450,6 +456,7 @@
 		"per_season": 1,
 		"cooldown": 40,
 		"subject_cooldown": 12,
+		"series": "intl",
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -512,6 +519,7 @@
 		"per_season": 1,
 		"cooldown": 40,
 		"subject_cooldown": 12,
+		"series": "intl",
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -580,6 +588,7 @@
 		"per_season": 1,
 		"cooldown": 40,
 		"subject_cooldown": 12,
+		"series": "intl",
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -659,6 +668,7 @@
 		"per_season": 1,
 		"cooldown": 40,
 		"subject_cooldown": 12,
+		"series": "intl",
 		"subject": {
 			"kind": "player",
 			"where": {
@@ -728,6 +738,7 @@
 		"per_season": 1,
 		"cooldown": 40,
 		"subject_cooldown": 12,
+		"series": "intl",
 		"subject": {
 			"kind": "player",
 			"where": {
