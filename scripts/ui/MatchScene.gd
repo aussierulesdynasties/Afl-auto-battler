@@ -4223,16 +4223,11 @@ func _ft_summary(v: VBoxContainer) -> void:
 		_glance_section(v, "Your synergies", "FullTimeSynergies", MatchNotes.synergy_lines(_res, me).slice(0, 3), true)
 
 	# Your calls, quarter by quarter: what each was about and how that went.
+	# Five at most, every quarter's first call before any quarter's second
+	# (MatchNotes.calls_summary), so Q3 and Q4 are never crowded out by Q1.
+	# The call the Why section already quoted is not said again.
 	if mine and (_interactive or _review):
-		var did := []
-		for qq in range(1, 5):
-			for t in MatchNotes.calls_lines(_res, me, qq):
-				# The call the Why section already quoted is not said again.
-				if told_above.has("q%d" % qq) and told_above.has("call:" + str(t)):
-					continue
-				did.append("Q%d  ·  %s" % [qq, str(t)])
-		if not did.is_empty():
-			_glance_section(v, "Your calls", "FullTimeCalls", did.slice(0, 5))
+		_glance_section(v, "Your calls", "FullTimeCalls", MatchNotes.calls_summary(_res, me, told_above))
 
 	# A handful of numbers worth a glance; the full table is a tap away.
 	v.add_child(UiKit.spacer(UiKit.GAP))
