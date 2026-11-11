@@ -381,8 +381,7 @@ func _prospects_by_rank() -> Array:
 ## their read of his OVR and POT, as the draft board shows them.
 func _prospect_text(p: Dictionary, reads: Dictionary) -> String:
 	var r: Dictionary = reads.get(str(p["id"]), {})
-	return "%s  ·  %s, age %d
-Ranked %s  ·  %s OVR  ·  %s POT" % [GameDB.player_display_name(p),
+	return "%s  ·  %s, age %d\nRanked %s  ·  %s OVR  ·  %s POT" % [GameDB.player_display_name(p),
 			str(UiKit.ROLE_LABEL.get(str(p.get("role", "")), str(p.get("role", "")))), int(float(p.get("age", 18.0))),
 			PreSeason.ordinal(int(r.get("rank", 0))), DraftScouting.range_text(r.get("overall", [0, 0])),
 			DraftScouting.range_text(r.get("potential", [0, 0]))]
@@ -1019,8 +1018,7 @@ func _refresh_words() -> void:
 	if _base_head != null and is_instance_valid(_base_head):
 		var base: String = GameState.preseason_base()
 		_base_head.text = "This training builds %s." % str(PreSeason.BASE_LABEL[base])
-		_base_body.text = "%s
-%s" % [PreSeason.base_effect(base), PreSeason.base_rule(GameState.preseason_run_forecast())]
+		_base_body.text = "%s\n%s" % [PreSeason.base_effect(base), PreSeason.base_rule(GameState.preseason_run_forecast())]
 
 
 ## The time trial: the order they came home, the first five and the last
