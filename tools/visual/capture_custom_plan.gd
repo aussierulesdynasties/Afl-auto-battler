@@ -74,11 +74,11 @@ func _run() -> void:
 		await _frames(8)
 	await _scroll_to("PlanPicker", scene)
 	_save(out + "_break.png")
-	if row != null:
-		var back := InputEventAction.new()
-		back.action = "ui_cancel"
-		back.pressed = true
-		Input.parse_input_event(back)
+	# Close the picker with its own Done: a ui_cancel here reaches the Router as
+	# Android Back and puts the title menu over the match.
+	var done: Button = scene.find_child("CallDone", true, false)
+	if done != null:
+		done.emit_signal("pressed")
 		await _frames(8)
 	var go: Button = scene.find_child("StartQuarter", true, false)
 	if go != null:
