@@ -133,7 +133,12 @@ func _build() -> void:
 		cols.add_child(right)
 	else:
 		_list_host = null
-		_root.add_child(_scroller(_side_page(auto), "SelectionScroll"))
+		# A phone scrolls the page by drag, with no bar (as Training): the bar's
+		# strip pushed the page 20 px past a 390 px screen, and the Auto-pick
+		# button's right border with it.
+		var sc := _scroller(_side_page(auto), "SelectionScroll")
+		sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+		_root.add_child(sc)
 	if GameState.side_from_match and GameState.match_day_setup_open():
 		# Reached from the match-day setup: the way back is the primary action.
 		var row := UiKit.hbox(8)
@@ -215,7 +220,7 @@ func _side_page(auto: bool) -> Control:
 		actions.add_theme_constant_override("separation", 8)
 		_fill_actions(actions)
 		builder.interchange_actions = actions
-		builder.hint_extra = "Picked by Auto-pick until you move someone." if auto else ""
+		builder.hint_extra = "Auto-pick names our side until you move someone." if auto else ""
 		# Team Chemistry (row 125), read at a glance above the oval; a tap says
 		# why. It shares the line of the Your team / opponent switch, so the
 		# height it used goes to the players not picked.
@@ -267,7 +272,7 @@ func _fill_actions(actions: HBoxContainer) -> void:
 		undo.pressed.connect(func():
 			GameState.set_selection(_undo)
 			_undo = {}
-			_notice = "Back to the side from before Auto-pick."
+			_notice = "Back to our side from before Auto-pick."
 			_build())
 		actions.add_child(undo)
 	var confirm := _confirm_button(not _undo.is_empty())

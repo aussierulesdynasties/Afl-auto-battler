@@ -5,7 +5,7 @@ extends SceneTree
 ## after:
 ##   godot --path . --script tools/visual/capture_copy_voice_team.gd -- --out <prefix> [--only a,b]
 ## Writes <prefix>_<state>.png for: team_intro, team, team_hint, team_menu, team_dual, team_one_ruck,
-## team_saved, team_undo, team_rest, team_no_best23, team_opp, team_back, coaching_intro,
+## team_saved, team_undo_row, team_undo, team_rest, team_no_best23, team_opp, team_back, coaching_intro,
 ## coaching, coaching_trait, coaching_cap, sim_orders.
 
 const CLUB := "FRE"
@@ -47,7 +47,7 @@ func _run() -> void:
 		await _open("selection", "Selection")
 		await _shot("team_intro")
 
-	# The side as Auto-pick picks it: the hint under the interchange.
+	# The side as Auto-pick names it: the hint under the interchange.
 	if _want("team"):
 		_fresh(intro_keys)
 		await _open("selection", "Selection")
@@ -86,8 +86,12 @@ func _run() -> void:
 	# An Auto-pick, its note, then Undo.
 	if _want("team_rest") or _want("team_undo"):
 		_fresh(intro_keys)
+		# A side of your own first, so the pick has one to go back to (Undo).
+		_state.set_selection(_state.current_side())
 		var ui5: Node = await _open("selection", "Selection")
 		ui5.call("_apply_strategy", "rest")
+		# The interchange row with Undo in it, on the pitch side of the drawer.
+		await _shot("team_undo_row")
 		await _raise()
 		await _shot("team_rest")
 		var undo: BaseButton = ui5.find_child("UndoPick", true, false)
