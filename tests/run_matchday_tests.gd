@@ -2520,11 +2520,21 @@ func _test_momentum_meter() -> void:
 	_check(bar != null and _text(bar).contains("Momentum") and word != null, "The meter is labelled Momentum")
 	m.call("_track_momentum", {"mom": 0.0})
 	_check(word != null and word.text == "Even", "Level, it says Even (%s)" % (word.text if word else "-"))
+	await _settle()
+	var note: Label = m.find_child("MomentumNote", true, false)
+	var pitch: Control = m.get("_pitch")
+	var ground_before: Rect2 = pitch.get_global_rect() if pitch != null else Rect2()
+	_check(note != null and note.modulate.a == 0.0 and not bool(_state.get_setting("seen_momentum_intro", false)),
+			"Before momentum moves, the line is unseen and not yet counted as seen")
 	m.call("_track_momentum", {"mom": 0.6})
 	_check(word.text == "%s on top" % db.club_short(str(res["home"])), "Home on top is named (%s)" % word.text)
-	var note: Label = m.find_child("MomentumNote", true, false)
-	_check(note != null and note.visible and bool(_state.get_setting("seen_momentum_intro", false)),
+	_check(note != null and note.visible and note.modulate.a == 1.0
+			and bool(_state.get_setting("seen_momentum_intro", false)),
 			"The first match you watch says what it is, once it moves")
+	await _settle()
+	var ground_after: Rect2 = pitch.get_global_rect() if pitch != null else Rect2(-1, -1, -1, -1)
+	_check(pitch != null and ground_before.size.y > 0.0 and ground_after == ground_before,
+			"The ground does not move when the line appears (%s -> %s)" % [ground_before, ground_after])
 	m.call("_track_momentum", {"mom": -0.6})
 	_check(word.text == "%s on top" % db.club_short(str(res["away"])), "Away on top is named (%s)" % word.text)
 	var why: String = await Tap.tap(bar)
@@ -2553,7 +2563,7 @@ func _test_momentum_meter() -> void:
 	await _settle()
 	m2.call("_track_momentum", {"mom": 0.6})
 	var note2: Label = m2.find_child("MomentumNote", true, false)
-	_check(note2 != null and not note2.visible, "The next match does not say it again")
+	_check(note2 != null and not note2.visible, "The next match does not say it again, nor keeps its room")
 	m2.queue_free()
 	await _settle()
 
