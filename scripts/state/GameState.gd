@@ -2960,7 +2960,7 @@ func start_season(club_code: String, list: Array) -> void:
 			unique_jumpers(lists[code])
 		# A re-drafted list of 44 splits into 38 seniors
 		# and six rookies, the youngest.
-		RookieList.seed_lists(lists)
+		RookieList.seed_lists(lists, false)
 		# The 2026 draft class had never been drafted: the club that took
 		# him in the League redraft first drafted him (home-grown, Challenge).
 		# Real players keep the club that drafted them in the AFL.
