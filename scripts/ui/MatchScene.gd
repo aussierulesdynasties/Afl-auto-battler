@@ -82,6 +82,8 @@ var _momentum := 0.0            # the engine's momentum as shown: -1 (away on to
 var _mom_meter: Control       # MomentumMeter: draws the engine's momentum
 var _mom_word: Label          # who has it, in words
 var _mom_note: Label          # first match only: what it is
+var _mom_bar: Button          # the meter (its foot is the scoreboard's, the line aside)
+const SCORE_BAND_PAD := 8
 ## The break is the PC sheet (four columns): player cards say their detail
 ## on one line and choices sit 40 tall (a mouse, not a thumb).
 var _pc_break := false
@@ -197,8 +199,10 @@ func _fit_over() -> void:
 	# The first match's momentum line keeps its room under the meter, but a scene
 	# opening under the scoreboard never gives that room up: it starts where it
 	# would without the line, over it, so every match frames its scenes the same.
-	if _mom_note != null and _mom_note.visible:
-		foot -= _mom_note.size.y + 2.0
+	# Measured from the meter, which stays put while the line's wrap settles, so a
+	# sheet opened in the first frames is never resized under itself.
+	if _mom_note != null and _mom_note.visible and _mom_bar != null:
+		foot = _mom_bar.get_global_rect().end.y + SCORE_BAND_PAD
 	_over.offset_top = foot - get_global_rect().position.y if _stacked else 0.0
 
 
@@ -288,7 +292,7 @@ func _scoreboard() -> Control:
 	var narrow := UiKit.view_width(self) < 640.0
 	# Both clubs' colours behind the score (director, 2026-10-08: not boring).
 	var v := UiKit.vbox(4)
-	var p := ClubDuel.band(str(_res["home"]), str(_res["away"]), v, 8, 0.35)
+	var p := ClubDuel.band(str(_res["home"]), str(_res["away"]), v, SCORE_BAND_PAD, 0.35)
 	var h := UiKit.hbox(6)
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(h)
@@ -297,7 +301,6 @@ func _scoreboard() -> Control:
 	h.add_child(_score_column(str(_res["away"]), false, narrow))
 	v.add_child(_momentum_bar())
 	p.item_rect_changed.connect(_fit_over)
-	_mom_note.item_rect_changed.connect(_fit_over)
 	p.item_rect_changed.connect(_fit_scores)
 	_score_band = p
 	return p
@@ -333,6 +336,7 @@ func _momentum_bar() -> Control:
 	b.flat = true
 	b.custom_minimum_size = Vector2(0, 30)
 	b.pressed.connect(_show_momentum_info)
+	_mom_bar = b
 	var v := UiKit.vbox(2)
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
