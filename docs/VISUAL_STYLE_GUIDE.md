@@ -63,7 +63,7 @@ Light mode is maintained, not designed for. It uses dedicated pairs, never inver
   else on the rest. Selection is never a fill and never the club colour, so a chosen option can
   never be mistaken for the thing to do next.
 - **State:** GOOD and BAD only when the game is telling the truth about a state that changed.
-- **Allegiance and sections (director, 2026-10-13; design bible, second pillar):** wherever a
+- **Allegiance and sections (director, 2026-10-13; design bible, fourth pillar):** wherever a
   player or a club appears, his side is obvious at a glance: the club colour as a rule, a bar, a
   tint or the heading's ink, with the guernsey marker beside it for clubs whose colour is too dark
   for the page. Sections are set apart by weight, size and club colour, not by spacing alone. A
@@ -237,7 +237,7 @@ line is signed by a staff member.
   to, consider, probability, chance of success, modifier, simulation, simming, Auto-pick,
   projection, roster, starter, payroll, best choice; "/100", "|", "_" in visible text; "!" outside
   the feed). Every UI test and `tools/visual/screen_lint.gd` read it, and
-  `tests/run_copy_rules_tests.gd` walks the copy sources for it.
+  the `copy-voice` lint (`tools/lint/copy_voice.py`, its ALLOW list) walks the copy sources for it.
 
 Models (keep, or match the shape): "Our midfield is winning the stoppages: clearances 14 to 9."
 "Usually 28 touches. Tagged, about 19." "Nothing promised, nothing owed." "Two seasons short of

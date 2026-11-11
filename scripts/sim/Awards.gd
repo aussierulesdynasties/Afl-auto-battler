@@ -386,9 +386,10 @@ static func _rows(tally: Dictionary, players: Dictionary) -> Array:
 
 
 ## The games a player needs for the All-Australian team after `rounds` of the
-## home-and-away season: the full-season minimum, scaled to the rounds played.
-static func aa_min_games(rounds: int) -> int:
-	return clampi(ceili(float(AA_MIN_GAMES) * float(rounds) / float(Season.REGULAR_ROUNDS)), 1, AA_MIN_GAMES)
+## home-and-away season: the full-season minimum, scaled to the rounds played
+## of the season's `season_rounds` (Season.regular_rounds()).
+static func aa_min_games(rounds: int, season_rounds := Season.REGULAR_ROUNDS) -> int:
+	return clampi(ceili(float(AA_MIN_GAMES) * float(rounds) / float(season_rounds)), 1, AA_MIN_GAMES)
 
 
 ## The All-Australian team if it were picked today, from the tally so far

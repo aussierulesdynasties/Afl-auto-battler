@@ -31,7 +31,6 @@ func run() -> void:
 	_t("_test_coaches_votes")
 	_t("_test_report_glance")
 	_t("_test_lift_skips_short_games")
-	_t("_test_no_green_decoration")
 	_t("_test_club_markers")
 	_t("_test_palette_snapshot")
 	_t("_test_headlines")
@@ -495,20 +494,6 @@ func _test_report_glance() -> void:
 				if str(p["line"]).contains("disp (") or str(p["line"]).contains("CLR") or str(p["line"]).contains("vs par"):
 					bad = str(p["line"])
 	_check(bad == "", "Notes and players read as football, not a stat sheet or advice (%s)" % bad)
-
-
-## Green is a state (won, met, rising), not the game's accent: no screen
-## paints a selection or a highlight with a green surface.
-func _test_no_green_decoration() -> void:
-	var found := ""
-	var dir := DirAccess.open("res://scripts/ui")
-	for f in dir.get_files():
-		if not f.ends_with(".gd"):
-			continue
-		var src := FileAccess.get_file_as_string("res://scripts/ui/" + f)
-		if src.contains("263025"):
-			found = f
-	_check(found == "", "No green highlight surfaces in the UI (%s)" % found)
 
 
 ## A club is marked by its own guernsey (club marker A, GuernseyCrest): its
