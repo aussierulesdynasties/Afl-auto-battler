@@ -725,10 +725,17 @@ func _boundary_free_phases(k: int) -> Array:
 func _fifty_phases(k: int) -> Array:
 	var at := _loc(k)
 	var d := (ball["pos"] as Vector2).distance_to(at)
+	var who := _actor_id(events[k])
 	var out := []
-	if d > 1.0:
+	if d > 1.0 and who >= 0 and str(ball["mode"]) == "held" and int(ball["holder"]) == who:
+		# He has the ball from the free: he carries it up to the new mark, as a
+		# player does. A ball flown 50 m ahead of him lay alone for six seconds
+		# while he ran to it (picture_truth, a 49 m penalty).
+		out.append({"t": "hold", "who": who, "carry": at, "run": true, "mode": "stoppage",
+				"max": d / float(tokens[who]["top"]) * 1.6 + 0.5})
+	elif d > 1.0:
 		out.append({"t": "flight", "to": at, "dur": clampf(0.35 + d / 110.0, 0.35, 0.9),
-				"apex": 1.2, "recv": -1, "mode": "stoppage"})
+				"apex": 1.2, "recv": who, "mode": "stoppage"})
 	out += [{"t": "emit", "log": true}, {"t": "wait", "dur": 0.25, "ease": true}]
 	return out
 
@@ -1531,6 +1538,8 @@ func _enter(p: Dictionary) -> void:
 					goal = carry
 				MatchMotion.set_goal(t3, goal, 0.8, true)
 				_busy[who3] = true
+			if p.has("mode"):
+				mode = str(p["mode"])
 		"chase":
 			var vt: Dictionary = tokens[int(p["victim"])]
 			MatchMotion.set_goal(vt, vt["pos"], 0.2, true)
