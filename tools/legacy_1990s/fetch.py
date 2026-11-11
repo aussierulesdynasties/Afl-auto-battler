@@ -187,7 +187,13 @@ RULE_SOURCES = [AR.format(2006, "report"), AR.format(2010, "Report"), AR.format(
                 "https://www.afl.com.au/news/96194/an-ever-changing-game",
                 # Canberra Times articles on Trove: the 1993 cap; the 1995 and 1996 caps.
                 "https://trove.nla.gov.au/newspaper/article/118214696",
-                "https://trove.nla.gov.au/newspaper/article/130564397"]
+                "https://trove.nla.gov.au/newspaper/article/130564397",
+                # Macdonald & Borland's table of AFL player payments 1992-2003 (Fort & Fizel,
+                # International Sports Economics Comparisons, 2004, p. 304), as Google Books'
+                # search-inside snippet: the 1992 and 1994 caps. Google answers scripted
+                # requests from some addresses with 429; the cached copy was saved from a browser.
+                "https://books.google.com.au/books?id=QFDeEAAAQBAJ&newbks=0&hl=en"
+                "&q=%221992-2003+1992+1993+1994%22+%22TPP+per+Club%22"]
 # AFL Tables venue page -> the ground's Wikipedia article (its infobox's former names).
 GROUND_ARTICLES = {
     "mcg": "Melbourne_Cricket_Ground", "waverley_park": "Waverley_Park", "princes_park": "Princes_Park_(stadium)",

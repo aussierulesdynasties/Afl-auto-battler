@@ -955,6 +955,12 @@ AR19 = "https://footyindustry.com/docs/AFL%202019%20Annual%20Report.pdf"
 AR21 = "https://footyindustry.com/docs/AFL%202021%20Annual%20Report.pdf"
 # Trove's newspaper article pages carry the article's own (OCR) text.
 TROVE = "https://trove.nla.gov.au/newspaper/article/{}"
+# Macdonald & Borland, "Professional Sports Competitions in Australia", in Fort &
+# Fizel (eds), International Sports Economics Comparisons (2004), p. 304, Table 2
+# "Australian Football League Player Payments, 1992-2003": Google Books' snippet
+# of its season header and its TPP per Club row, one column a season from 1992.
+GBOOK_TPP = ("https://books.google.com.au/books?id=QFDeEAAAQBAJ&newbks=0&hl=en"
+             "&q=%221992-2003+1992+1993+1994%22+%22TPP+per+Club%22")
 # Era rules. Every value is a statement on the page quoted beside it, checked by
 # hand on CHECKED; a year no statement covers stays out (the game decides what
 # a missing year means). from_year..to_year is the span the statement covers.
@@ -974,10 +980,15 @@ ERA_RULES = [
     ("salary_cap", 1500000, 1990, 1990, "https://www.afl.com.au/news/96194/an-ever-changing-game",
      "Back in 1990 players were paid ... The then $1.5 million salary cap"),
     # 1993, 1995 and 1996 from the Canberra Times: the AFL's own reports of
-    # those years (scanned) give no per-club cap but 1996's. No source found for
-    # 1992 or 1994, so they stay out.
+    # those years (scanned) give no per-club cap but 1996's. 1992 and 1994 from
+    # Macdonald & Borland's table (its row also gives 1993 $1.747m and 1995 $2.300m,
+    # agreeing with the Canberra Times, and 1996 $2.500m against its $2.55m).
+    ("salary_cap", 1600000, 1992, 1992, GBOOK_TPP,
+     "1992-2003 1992 1993 1994 1995 Season ... TPP per Club $ 1.600 m $ 1.747 m $ 1.847 m"),
     ("salary_cap", 1750000, 1993, 1993, TROVE.format(118214696),
      "after making it to last year's grand final ... the Blues had voluntarily disclosed they had exceeded the salary cap limit of $1.75 million"),
+    ("salary_cap", 1847000, 1994, 1994, GBOOK_TPP,
+     "1992-2003 1992 1993 1994 1995 Season ... TPP per Club $ 1.600 m $ 1.747 m $ 1.847 m"),
     ("salary_cap", 2330000, 1995, 1995, TROVE.format(130564397),
      "The commission also agreed to an increase in the salary cap next year from $2.33 million to $2.55 million"),
     ("salary_cap", 2550000, 1996, 1996, TROVE.format(130564397),
@@ -1080,7 +1091,10 @@ def page_has(cache: str, page: str, words: str) -> bool:
     A page is a Wikipedia title or a full URL (a PDF is cached as its text)."""
     def squash(s: str) -> str:
         return re.sub(r"[^a-z0-9]", "", s.lower())
-    page_text = squash(text(wiki_text(cache, page) if not page.startswith("https://") else read(cache, page)))
+    raw = wiki_text(cache, page) if not page.startswith("https://") else read(cache, page)
+    # A page that carries its text as JSON (Google Books' snippets) escapes its tags as <...
+    raw = re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), raw)
+    page_text = squash(text(raw))
     parts = [re.sub(r"^(Evolution of competition table: |TPP per club from \d{4} \(\$m\): |\d{4} - )", "", f)
              for f in re.split(r"\s*\.\.\.\s*|;\s*", words) if f.strip()]
     return all(squash(p)[:60] in page_text for p in parts)
