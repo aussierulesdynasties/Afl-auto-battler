@@ -306,9 +306,10 @@ func _test_draft_room_gate() -> void:
 		_check(GameState.draft_room_line() == "Clubs must take at least three players. Delist %s to make room, or trade the picks." % words[k],
 				"The gate's line: %s" % GameState.draft_room_line())
 		_check(DraftSpotsSheet.needed(), "The draft button opens the gate while short (%d)" % k)
-		var why := ""
+		# A real list can be full already (no pads), so any senior player will do.
+		var why := "nobody to delist"
 		for p in GameState.my_list.duplicate():
-			if str(p["id"]).begins_with("pad_gate_"):
+			if not RookieList.is_rookie(p) and not GameState.retiring_now(p):
 				var r := GameState.release_player(str(p["id"]))
 				why = "" if bool(r["ok"]) else str(r["reason"])
 				break
