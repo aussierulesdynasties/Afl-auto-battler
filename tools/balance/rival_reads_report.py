@@ -5,9 +5,10 @@ Adds up the snap["reads"] records of dynasty_run.gd --reads careers:
 
     python tools/balance/rival_reads_report.py run/reads_*.json [--json out.json]
 
---json also writes the POT counts by Recruiting level, which
-tests/test_workload.gd holds the Recruiting budget line's odds to
-(tools/balance/rival_reads_measured.json).
+--json also writes the POT counts by Recruiting level (all reads, and players
+under 50 games), which tests/test_workload.gd holds the Recruiting budget
+line's odds to, and the free-agency counts tests/test_contracts.gd holds the
+offer gate's odds to (tools/balance/rival_reads_measured.json).
 
 Prints a markdown page: the POT range on another club's player (how often his
 true potential is outside it, by Recruiting budget and by games played), and
@@ -84,7 +85,17 @@ def main(paths):
         summary = {"off_seasons": seasons, "club_seasons": clubs,
                    "careers": [p.replace(chr(92), "/").split("/")[-1] for p in paths],
                    "pot": [{"level": name, "reads": total(level=li)[0], "misses": total(level=li)[1],
-                            "worst": total(level=li)[3]} for li, name in enumerate(LEVELS)]}
+                            "worst": total(level=li)[3]} for li, name in enumerate(LEVELS)],
+                   "young": [{"level": name, "reads": total(level=li, games=0)[0],
+                              "misses": total(level=li, games=0)[1]} for li, name in enumerate(LEVELS)]}
+        # The free-agency gate's odds: how often the cheapest offer that leads
+        # still leads once rivals answer, and what leading again costs when
+        # it does not (salary a season, your second offer over your first).
+        overtaken = [r for r in fa if not r["held"]]
+        extra = [r["final"] - r["open"] for r in overtaken if "final" in r]
+        summary["fa"] = {"talks": len(fa), "held": sum(1 for r in fa if r["held"]),
+                         "led_again": len(extra),
+                         "extra_median": statistics.median(extra) if extra else 0}
         with open(json_out, "w", encoding="utf-8", newline=chr(10)) as f:
             json.dump(summary, f, indent=1)
             f.write(chr(10))
