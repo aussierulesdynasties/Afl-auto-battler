@@ -365,7 +365,8 @@ func _fill_grid() -> void:
 
 
 ## A player as a compact card: name and OVR, then position, playing style and
-## age, then traits (or why he can't play). On the oval, the short version.
+## age, then traits (or why he can't play), then his top three attributes, a
+## row each. On the oval, the short version.
 func _card(id: String, on_field: bool, place: String) -> Button:
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
@@ -466,7 +467,9 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 				UiKit.BAD if not Ratings.available(p) else UiKit.MUTED)
 		third_l.name = "Third"
 		face.add_child(third_l)
-		b.custom_minimum_size = Vector2(160, 62)
+		var three_h := PlayerSheet.top_three_height(UiKit.FINE)
+		face.add_child(PlayerSheet.top_three(p, UiKit.FINE))
+		b.custom_minimum_size = Vector2(160, 62 + three_h)
 		if _wide:
 			# A PC card says all of it (a cut "Playmak…" hid a trait): the line
 			# wraps and the card grows to hold it.
@@ -480,7 +483,7 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 			third_l.add_theme_constant_override("line_spacing", -1)
 			third_l.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 			face.minimum_size_changed.connect(func():
-				b.custom_minimum_size.y = maxf(62.0, face.get_combined_minimum_size().y + 16.0))
+				b.custom_minimum_size.y = maxf(62.0 + three_h, face.get_combined_minimum_size().y + 16.0))
 	_ignore_mouse(face)
 	if _read_only:
 		if id != "":

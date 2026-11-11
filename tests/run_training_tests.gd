@@ -217,7 +217,7 @@ func _test_training_grid() -> void:
 				level = false
 				level_note = "%s vs %s" % [str(y), str(ys[0])]
 	# The name and the trait under it sit centred in the room between the top
-	# line and the status, on the same left edge as both (the old full-width
+	# line and his top three, on the same left edge as the status (the old full-width
 	# row's name stack sat off centre: CLAUDE.md's confirmed defect).
 	var centred := true
 	var centred_note := ""
@@ -237,13 +237,19 @@ func _test_training_grid() -> void:
 			stack_top = minf(stack_top, (k as Control).get_global_rect().position.y)
 			stack_end = maxf(stack_end, (k as Control).get_global_rect().end.y)
 		var room_top := top_line.get_global_rect().end.y
-		var room_end := st3.get_global_rect().position.y
+		# His top three sit between the trait and the status (row 150).
+		var three3: Control = card3.find_child("TopThree", true, false)
+		if three3 == null:
+			centred = false
+			centred_note = "%s: no top three" % card3.name
+			continue
+		var room_end := three3.get_global_rect().position.y
 		var off := (stack_top + stack_end) * 0.5 - (room_top + room_end) * 0.5
 		var left_off := nm3.get_global_rect().position.x - st3.get_global_rect().position.x
 		if absf(off) > 1.5 or stack_top < room_top - 0.5 or stack_end > room_end + 0.5 or absf(left_off) > 0.5:
 			centred = false
 			centred_note = "%s: %.1f off centre, %.1f off the left edge" % [card3.name, off, left_off]
-	_check(centred, "Grid: each name and trait sit centred between the top line and the status, on one left edge (%s)" % centred_note)
+	_check(centred, "Grid: each name and trait sit centred between the top line and the top three, on one left edge (%s)" % centred_note)
 	# The names of a row sit at one height, trait under him or not (CLAUDE.md's
 	# confirmed name/second-line defect: a traitless card's name sat lower).
 	var names_level := true
