@@ -59,6 +59,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `load_flair` | The load screens: logo and set shot on every wait with a line, the logo file named in one place (GameLogo) and marked a stand-in there, the ball's flight, Reduced motion, the boot splash, the rollover's beats changing nothing |
 | `intake` | The National Draft model: the 2026 class, projection, season rollover |
 | `intake_ui` | The National Draft on the shared draft screen |
+| `predraft_card` | The recruiting panel's "Before the draft" card on a fresh career, by real taps: after the press interview and before the first pick, straight after the club tap when no interview is due, never twice after backing out and reloading, none on the League redraft |
 | `rookie_list` | The rookie list: the National Draft fills the senior list (38), the Rookie Draft after it fills six rookie spots, upgrading a rookie, old saves, both lists on the list screen, real taps on the sheet and the upgrade, and (row 64) every prospect the National Draft passed over gets his rookie list chance |
 | `sir_doug_round` | Sir Doug Nicholls Round: Round 11 is marked, a club with a bye in it marks it the next round, a design slot per club ("none"), the record survives save and reload, old saves, the fixture page and match card on a 390-wide phone |
 | `own_prospect` | Row 64: the prospect you create (Alastair McNeil) in the first National Draft in both starts, the news lines of his career, the marks on his draft row and profile |
