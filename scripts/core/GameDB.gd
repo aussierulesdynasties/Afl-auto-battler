@@ -8,22 +8,28 @@ extends Node
 ## desktop and mobile. A CSV left on Godot's default (csv_translation) importer
 ## is missing from an exported build: tools/check_export_data.sh guards this.
 
-## Chronology. The data is the completed 2026 AFL season (stats, ratings,
-## careers through 2026, the 2026 draft class); a career starts with the
-## 2027 season, taking over the league 2026 produced. Ages are as of the
-## start of the first playable season.
-const DATA_SEASON := 2026
-const START_YEAR := 2027
-const START_DATE := "2027-03-01"
+## Chronology. The data is one completed AFL season (stats, ratings, careers
+## through it, the draft class after it); a career starts with the next
+## season, taking over the league that season produced. Ages are as of the
+## start of the first playable season. Which season is the career's choice
+## (Datasets, Legacy mode row 142): reload(dataset) sets these from its row.
+## Today's start is the 2026 data and a 2027 first season. The names keep the
+## upper case they had as constants, so every reader stays as it was.
+var dataset_id := Datasets.DEFAULT
+var DATA_SEASON := 2026
+var START_YEAR := 2027
+var START_DATE := "2027-03-01"
 
 const CLUBS_CSV := "res://data/clubs.csv"
-## The player pool: 2026 season stats plus bio fields (dob, age, height).
-## Required - see _load_players(). data/players_2026.csv (stats only) is the
-## Python tools' source and is not read by the game.
-const PLAYERS_ENRICHED_CSV := "res://data/players_enriched_2026.csv"
-const DRAFTEES_CSV := "res://data/draftees_2026.csv"
-const POTENTIAL_CSV := "res://data/potential_overrides.csv"
-const OVR_CSV := "res://data/ovr_overrides.csv"
+## The dataset's files (Datasets.FILE_KEYS), set by reload(); "" is a file the
+## era has none of. The player pool: the data season's stats plus bio fields
+## (dob, age, height). Required - see _load_players(). For 2026,
+## data/players_2026.csv (stats only) is the Python tools' source and is not
+## read by the game.
+var PLAYERS_ENRICHED_CSV := "res://data/players_enriched_2026.csv"
+var DRAFTEES_CSV := "res://data/draftees_2026.csv"
+var POTENTIAL_CSV := "res://data/potential_overrides.csv"
+var OVR_CSV := "res://data/ovr_overrides.csv"
 ## Which override rows (file|club|first|last) found their player, and the rows
 ## that found nobody in the players or the list additions.
 var override_hits := {}
@@ -33,13 +39,13 @@ var override_unmatched: Array = []
 ## turns them off for every suite but the ratings one (AFL_SKIP_OVR_ROWS=1).
 var skip_ovr_overrides := OS.get_environment("AFL_SKIP_OVR_ROWS") == "1"
 ## Draft pedigree and rated past seasons, built by tools/build_history.py.
-const HISTORY_CSV := "res://data/player_history_2026.csv"
+var HISTORY_CSV := "res://data/player_history_2026.csv"
 ## How real players look on the vignette figures (Appearance.gd): skin tone and
 ## hair colour, drafted from public photos and reviewed by the director.
 const APPEARANCE_CSV := "res://data/player_appearance.csv"
 ## Where each 2026 player came from (a state, or INT), from his recruiting source;
 ## built by tools/build_player_origin.py. A blank state is left unset.
-const ORIGIN_CSV := "res://data/player_origin_2026.csv"
+var ORIGIN_CSV := "res://data/player_origin_2026.csv"
 ## Curated looks needed before their mix replaces Appearance.DEFAULT_SKIN_MIX.
 const MIX_FROM := 100
 
@@ -133,17 +139,17 @@ var draftees := []         # the shipped draft class, projections applied
 ## project), by age and list type; their position is estimated from height.
 ## Not in the League redraft pool.
 var list_additions := []
-const LIST_ADDITIONS_CSV := "res://data/list_additions_2026.csv"
+var LIST_ADDITIONS_CSV := "res://data/list_additions_2026.csv"
 ## Senior numbers for the additions who have played AFL before (built by
 ## tools/build_addition_stats.py from AFL Tables, season in the "src" column):
 ## they are rated from that record through Ratings.derive_all, like any listed
 ## player, not as draft prospects.
-const LIST_ADDITION_STATS_CSV := "res://data/list_additions_stats.csv"
+var LIST_ADDITION_STATS_CSV := "res://data/list_additions_stats.csv"
 ## Who left a list at the end of 2026, before the National Draft: the key
 ## "first|last|dob" (lower case) to the kind ("retired", "delisted",
 ## "rookie_delisted", "catb_delisted").
 var departures := {}
-const DEPARTURES_CSV := "res://data/departures_2026.csv"
+var DEPARTURES_CSV := "res://data/departures_2026.csv"
 ## Who changed club in the 2026 trade period and free agency, after the 2026
 ## season and before the National Draft: the key "first|last|dob" (lower case)
 ## to {"from", "to", "kind"} ("traded" or "free_agent"). The 2026 season record
@@ -151,7 +157,7 @@ const DEPARTURES_CSV := "res://data/departures_2026.csv"
 ## played; a real-lists career moves these players when it opens
 ## (GameState.begin_real_lists).
 var club_moves := {}
-const CLUB_MOVES_CSV := "res://data/club_moves_2026.csv"
+var CLUB_MOVES_CSV := "res://data/club_moves_2026.csv"
 var late_draftees := []    # generated future classes registered at runtime
 var appearance := {}       # "first|last|dob" -> {skin, hair, status, club}: curated looks
 var skin_mix: Array = Appearance.DEFAULT_SKIN_MIX
@@ -172,11 +178,11 @@ var _real_names := {}
 
 
 ## A player's age at the start of the first playable season (START_DATE),
-## from his date of birth. Without one, the dataset's 2026 age plus a year.
-static func age_at_start(dob: String, age_2026: float) -> float:
+## from his date of birth. Without one, his data-season age plus a year.
+func age_at_start(dob: String, age_in_data: float) -> float:
 	if dob.length() >= 10:
 		return float(Prospects.days_between(dob, START_DATE)) / 365.25
-	return age_2026 + 1.0
+	return age_in_data + 1.0
 
 
 func _ready() -> void:
@@ -187,8 +193,15 @@ func _ready() -> void:
 var reloads := 0
 
 
-func reload() -> void:
+## Load a dataset (Datasets): today's 2026 set unless a career chose another.
+## An unknown id loads nothing and says so; the last load stays.
+func reload(dataset := Datasets.DEFAULT) -> void:
+	var row := Datasets.get_set(dataset)
+	if row.is_empty():
+		push_error("GameDB: no dataset '%s'; nothing reloaded." % dataset)
+		return
 	reloads += 1
+	_use_dataset(dataset, row)
 	clubs = _load_clubs()
 	club_order = CLUB_ORDER.duplicate()
 	_alias_candidates = []
@@ -200,7 +213,7 @@ func reload() -> void:
 	Ratings.derive_all(players)
 	_apply_history(players)
 	for p in players:
-		Ratings.rate_on_record(p)
+		Ratings.rate_on_record(p, DATA_SEASON)
 	override_hits = {}
 	for p in players:
 		Potential.assign(p)
@@ -246,6 +259,25 @@ func reload() -> void:
 	else:
 		print("GameDB: %d players / %d clubs; %d draft-class prospects"
 				% [players.size(), clubs.size(), draftees.size()])
+
+
+## Point the season and every file at one dataset's row.
+func _use_dataset(id: String, row: Dictionary) -> void:
+	dataset_id = id
+	DATA_SEASON = int(row["data_season"])
+	START_YEAR = int(row["start_year"])
+	START_DATE = str(row["start_date"])
+	PLAYERS_ENRICHED_CSV = str(row.get("players", ""))
+	DRAFTEES_CSV = str(row.get("draftees", ""))
+	HISTORY_CSV = str(row.get("history", ""))
+	ORIGIN_CSV = str(row.get("origin", ""))
+	LIST_ADDITIONS_CSV = str(row.get("list_additions", ""))
+	LIST_ADDITION_STATS_CSV = str(row.get("list_addition_stats", ""))
+	DEPARTURES_CSV = str(row.get("departures", ""))
+	CLUB_MOVES_CSV = str(row.get("club_moves", ""))
+	LADDER_PATH = str(row.get("ladder", ""))
+	OVR_CSV = str(row.get("ovr_overrides", ""))
+	POTENTIAL_CSV = str(row.get("potential_overrides", ""))
 
 
 # ---------------------------------------------------------------------------
@@ -345,13 +377,30 @@ func club_list(code: String) -> Array:
 	return players_by_club.get(code, [])
 
 
-## The real final 2026 ladder (data/ladder_2026.csv, sourced): rows of
-## {"pos", "club", "finals"} in ladder order. [] when the file is missing.
-const LADDER_2026_PATH := "res://data/ladder_2026.csv"
+## The dataset's own final ladder (data/ladder_2026.csv for 2026, sourced).
+var LADDER_PATH := "res://data/ladder_2026.csv"
+## Each decade's real ladders, one file per decade with a "year" column (the
+## Legacy mode data, data/legacy/<decade>s/ladders.csv).
+const LEGACY_LADDERS := "res://data/legacy/%ds/ladders.csv"
 
-func ladder_2026() -> Array:
+
+## A real season's final ladder: rows of {"pos", "club", "finals"} in ladder
+## order. The data season reads the dataset's own ladder, any other season
+## its decade's file. [] when no file has that season.
+func ladder_of(season: int) -> Array:
 	var out := []
-	var f := FileAccess.open(LADDER_2026_PATH, FileAccess.READ)
+	if season == DATA_SEASON and LADDER_PATH != "":
+		out = _read_ladder(LADDER_PATH, season)
+	if out.is_empty():
+		out = _read_ladder(LEGACY_LADDERS % (season - posmod(season, 10)), season)
+	return out
+
+
+func _read_ladder(path: String, season: int) -> Array:
+	var out := []
+	if not FileAccess.file_exists(path):
+		return out
+	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return out
 	var header := f.get_csv_line()
@@ -361,6 +410,9 @@ func ladder_2026() -> Array:
 	while not f.eof_reached():
 		var row := f.get_csv_line()
 		if row.size() < header.size() or str(row[0]).strip_edges() == "":
+			continue
+		# A file of many seasons keeps the one asked for; a one-season file has no year.
+		if at.has("year") and int(row[at["year"]]) != season:
 			continue
 		out.append({"pos": int(row[at["pos"]]), "club": str(row[at["club"]]).strip_edges(),
 				"finals": str(row[at["finals"]]).strip_edges() if at.has("finals") else ""})
@@ -503,6 +555,8 @@ func mark_unicorns(list: Array) -> void:
 
 
 func _load_draftees() -> Array:
+	if DRAFTEES_CSV == "":
+		return []   # an era whose classes the draft years load, not the dataset
 	if not FileAccess.file_exists(DRAFTEES_CSV):
 		push_warning("GameDB: no draft-class file (%s); the intake draft will fall back to generated classes." % DRAFTEES_CSV)
 		return []
@@ -525,7 +579,7 @@ func _load_draftees() -> Array:
 		p["real_name"] = "%s %s" % [p["first"], p["last"]]
 		p["generic_name"] = ""
 		p["name"] = ""
-		p["id"] = "D2026_%02d" % rank
+		p["id"] = "D%d_%02d" % [DATA_SEASON, rank]
 		# "club" carries the recruiting team until the player is drafted;
 		# the intake then reassigns club/num like a real list move.
 		p["club"] = _cell_str(cells, idx, "team")
@@ -550,7 +604,7 @@ func _load_draftees() -> Array:
 		p["age"] = age_at_start(str(p["dob"]), 17.3)
 		p["debut"] = ""
 		p["height_source"] = "draft class"
-		p["draft_year"] = 2026
+		p["draft_year"] = DATA_SEASON
 		p["draft_rank"] = rank
 		p["draft_team"] = _cell_str(cells, idx, "team")
 		p["draft_league"] = _cell_str(cells, idx, "league")
@@ -599,7 +653,7 @@ func _load_list_additions() -> Array:
 		p["generic_name"] = ""
 		p["name"] = ""
 		var club := _cell_str(cells, idx, "club")
-		p["id"] = "L2026_%s_%03d" % [club, n]
+		p["id"] = "L%d_%s_%03d" % [DATA_SEASON, club, n]
 		p["club"] = club
 		p["num"] = 0
 		p["src"] = "LIST"
@@ -626,7 +680,7 @@ func _load_list_additions() -> Array:
 			p["real_pos"] = pos if pos != "" else ""
 			p["role_estimated"] = false
 			p["stats_year"] = int(rec.get("src", 0))
-			p["data_src"] = "listed 2026, rated on his %d season" % int(rec.get("src", 0))
+			p["data_src"] = "listed %d, rated on his %d season" % [DATA_SEASON, int(rec.get("src", 0))]
 			p["draft_year"] = DATA_SEASON
 			p["draft_rank"] = 0
 			p["draft_team"] = ""
@@ -658,7 +712,7 @@ func _load_list_additions() -> Array:
 		for k in ["u18_gm", "u18_di", "u18_gl", "u18_mk", "u18_tk", "u18_if50", "u18_ho"]:
 			p[k] = 0.0
 		p["note"] = ""
-		p["data_src"] = "listed 2026, no senior game"
+		p["data_src"] = "listed %d, no senior game" % DATA_SEASON
 		Prospects.project(p)
 		out.append(p)
 	if not established.is_empty():
@@ -852,6 +906,8 @@ static func _look_key(p: Dictionary) -> String:
 ## number, first and last name. A player with no row or a blank state keeps
 ## no home_state.
 func _apply_origin(list: Array) -> void:
+	if ORIGIN_CSV == "":
+		return
 	var rows := _read_rows(ORIGIN_CSV)
 	if rows.size() < 2:
 		return
@@ -1110,7 +1166,7 @@ func _load_players() -> Array:
 			dupe += 1
 		seen_ids[id] = true
 		p["id"] = id
-		p["src"] = int(str(cells[idx["src"]])) if idx.has("src") else 2026
+		p["src"] = int(str(cells[idx["src"]])) if idx.has("src") else DATA_SEASON
 		for k in STAT_KEYS:
 			p[k] = float(str(cells[idx[k]])) if idx.has(k) else 0.0
 		# Optional enriched fields — defaults keep Ratings.gd backward-compatible
