@@ -62,3 +62,14 @@ scripts/state/ClubArcs.gd week
 scripts/state/ExpansionBuild.gd week
 scripts/state/ClubMoves.gd settle_letter
 scripts/state/ClubMoves.gd decline_letter
+# Third level
+scripts/state/ClubStories.gd context
+scripts/sim/StoryEngine.gd pick_week
+scripts/sim/Contracts.gd ai_release_reason
+scripts/state/GameState.gd replacement_worth
+scripts/state/GameState.gd _rival_on_clock
+scripts/state/GameState.gd _stamp_conditioning
+scripts/sim/Draft.gd _ai_pick_current
+scripts/sim/Draft.gd _best_ai_pick
+scripts/sim/Almanac.gd update_club_records
+scripts/state/ScoutingList.gd week
