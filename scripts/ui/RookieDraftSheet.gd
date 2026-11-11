@@ -31,7 +31,7 @@ static func open(host: Control, on_done: Callable, pass_line := PASS_PRESEASON) 
 	var note := UiKit.lbl(("Round %d, your pick. Rookie list %d / %d. A rookie is paid the rookie wage, %s a season: " +
 			"two seasons for a player under 21, one for anyone older. " +
 			"Pass and your Rookie Draft is over. %s") % [
-			RookieList.round_now(GameState), RookieList.rookie_count(list), RookieList.CAT_A_SPOTS,
+			RookieList.round_now(GameState), RookieList.cat_a_count(list), RookieList.CAT_A_SPOTS,
 			Contracts.money(RookieList.wage(year)), pass_line], 15, UiKit.TEXT)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(note)

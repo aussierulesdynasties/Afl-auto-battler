@@ -329,6 +329,8 @@ def check_club_moves() -> list[str]:
         undated = r["kind"] in ("delisted_free_agent", "pre_draft") and r["announced"] == ""
         if not undated and not "2026-10-01" <= r["announced"] <= "2026-11-30":
             problems.append(f"club move {who}: announced {r['announced']!r} is outside the 2026 trade period and free agency")
+        if r["list"] not in ("", "senior", "rookie", "cat_b"):
+            problems.append(f"club move {who}: list {r['list']!r} is not senior, rookie or cat_b")
         if not r["source_url"].startswith("http") or not r["checked"]:
             problems.append(f"club move {who}: needs a source URL and a checked date")
         if key in departed:

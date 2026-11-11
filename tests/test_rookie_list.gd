@@ -57,6 +57,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_midseason_pool_after_offseason")
 	_t("_test_real_lists_start")
 	_t("_test_real_lists_open_spots")
+	_t("_test_real_lists_rookie_categories")
 	_t("_test_youth_only_drafts")
 	_t("_test_youth_only_midseason")
 	await _t("_test_undrafted_chance")
@@ -498,7 +499,7 @@ func _test_real_lists_start() -> void:
 	_check(marked > 0, "The club lists' rookies start on the rookie list (%d)" % marked)
 	var rookies_before := {}
 	for code in gs.league_lists:
-		rookies_before[code] = RookieList.rookie_count(gs.league_lists[code])
+		rookies_before[code] = RookieList.cat_a_count(gs.league_lists[code])
 	gs.choose_real_club(CLUB)
 	while not draft.is_finished():
 		var candidate := draft._best_ai_pick(draft.current_club())
@@ -516,8 +517,8 @@ func _test_real_lists_start() -> void:
 	RookieList.settle(gs)
 	_check(bool(gs.rookie_draft.get("done", false)), "Passing ends your Rookie Draft and it runs to its end")
 	for code in gs.season.lists:
-		_check(RookieList.rookie_count(gs.season.lists[code]) <= maxi(RookieList.CAT_A_SPOTS, int(rookies_before.get(code, 0))),
-				"%s: at most six rookies after it, or no more than its real rookie list" % code)
+		_check(RookieList.cat_a_count(gs.season.lists[code]) <= maxi(RookieList.CAT_A_SPOTS, int(rookies_before.get(code, 0))),
+				"%s: at most six Category A rookies after it, or no more than its real rookie list" % code)
 
 
 ## Director's bug, 2026-11-12: as Melbourne in a real-lists career "I entered
@@ -565,6 +566,53 @@ func _test_real_lists_open_spots() -> void:
 		if str(p.get("real_name", "")) == "Ricky Mentha":
 			mentha = str(p.get("rookie_list", ""))
 	_check(mentha == "B", "A Category B rookie (Ricky Mentha) starts on the rookie list as one (%s)" % mentha)
+
+
+## The checker's fault on #1443: Category B rookies took Category A spots, so
+## Essendon (5 A + 2 B), Fremantle and Melbourne (6 A + 1 B each) started at
+## "7 / 6" and had no Rookie Draft or mid-season rookie pick. The AFL's rule:
+## up to six Category A rookies, and up to two Category B in their own spots,
+## outside the 44 (senior and Category A lists). Every club starts within
+## both, except where the real 2026 list was over (DraftGuru's 2026 lists,
+## less the 2026 departures): West Coast's ten Category A rookies (injury
+## replacements signed in 2026) and GWS's three Category B rookies.
+const CAT_A_OVER := {"WCE": 10}
+const CAT_B_OVER := {"GWS": 3}
+
+
+func _test_real_lists_rookie_categories() -> void:
+	gs.reset()
+	gs.begin_real_lists()
+	var bad := PackedStringArray()
+	for code in gs.league_lists:
+		var arr: Array = gs.league_lists[code]
+		var a := RookieList.cat_a_count(arr)
+		var b := RookieList.cat_b_count(arr)
+		if a > int(CAT_A_OVER.get(code, RookieList.CAT_A_SPOTS)):
+			bad.append("%s %d Category A" % [code, a])
+		if b > int(CAT_B_OVER.get(code, RookieList.CAT_B_SPOTS)):
+			bad.append("%s %d Category B" % [code, b])
+	_check(bad.is_empty(), "Every club starts with at most 6 Category A and 2 Category B rookies, or its real 2026 list (%s)" % ", ".join(bad))
+	for code in CAT_A_OVER:
+		_check(RookieList.cat_a_count(gs.league_lists[code]) > RookieList.CAT_A_SPOTS,
+				"%s's named exception is still real (%d Category A)" % [code, RookieList.cat_a_count(gs.league_lists[code])])
+	for code in CAT_B_OVER:
+		_check(RookieList.cat_b_count(gs.league_lists[code]) > RookieList.CAT_B_SPOTS,
+				"%s's named exception is still real (%d Category B)" % [code, RookieList.cat_b_count(gs.league_lists[code])])
+	var ess: Array = gs.league_lists["ESS"]
+	_check(RookieList.cat_a_count(ess) == 5 and RookieList.cat_b_count(ess) == 2 and RookieList.rookie_spot_free(ess),
+			"Essendon's two Category B rookies leave it a Category A spot (%d A, %d B)" % [RookieList.cat_a_count(ess), RookieList.cat_b_count(ess)])
+	var mel: Array = gs.league_lists["MEL"]
+	_check(RookieList.cat_a_count(mel) == 6 and RookieList.cat_b_count(mel) == 1 and RookieList.list_size(mel) == mel.size() - 1,
+			"Melbourne: six Category A, Ricky Mentha in a Category B spot outside the 44 (%d A, %d B, %d of 44)" % [
+				RookieList.cat_a_count(mel), RookieList.cat_b_count(mel), RookieList.list_size(mel)])
+	# A signing the data names as Category B joins as one (Isaac Keeler, Port
+	# Adelaide's pre-draft selection, DraftGuru's 2027 list).
+	var keeler := ""
+	for p in gs.league_lists["PAD"]:
+		if str(p.get("real_name", "")) == "Isaac Keeler":
+			keeler = str(p.get("rookie_list", "?"))
+	_check(keeler == "B", "Isaac Keeler joins Port Adelaide as a Category B rookie (%s)" % keeler)
 
 
 ## Row 114: Youth only binds your club in every draft. The National Draft
@@ -858,3 +906,28 @@ func _test_arrivals_need_senior_spot() -> void:
 			break
 	var v2 := Contracts.evaluate_trade(gee, [gee[0]], [sen], 1 << 40, mine, 1 << 40, 0.0, {"name": "Geelong"})
 	_check(str(v2["code"]) != "trade_senior_over", "Trades: a senior for a senior at 38 is not blocked by the senior list")
+	# A list over the 44 (West Coast's real 2026 list: 46 on the senior and
+	# Category A lists) can still trade one for one, never take on more; a
+	# Category B rookie is outside the 44.
+	var over: Array = []
+	for i in 46:
+		var q: Dictionary = (gee[i % gee.size()] as Dictionary).duplicate(true)
+		q["id"] = "over_%d" % i
+		if i >= 36:
+			q["rookie_list"] = "A"
+		else:
+			q.erase("rookie_list")
+		over.append(q)
+	var one := Contracts.evaluate_trade(over, [over[0]], [sen], 1 << 40, mine, 1 << 40, 0.0, {"name": "West Coast"})
+	_check(str(one["code"]) != "trade_list_over",
+			"Trades: a club over the 44 can still trade one for one (%s)" % str(one.get("code", "")))
+	var grow := Contracts.evaluate_trade(over, [over[0]], [sen, mine.filter(func(q): return q != sen)[0]], 1 << 40, mine, 1 << 40, 0.0, {"name": "West Coast"})
+	_check(str(grow["code"]) == "trade_list_over",
+			"Trades: a club over the 44 cannot take on more players (%s)" % str(grow.get("code", "")))
+	# 36 seniors and seven rookies, two of them Category B: five Category A,
+	# 41 of the 44, so a Category A spot is free.
+	var mixed: Array = over.slice(0, 43)
+	for i in 2:
+		(mixed[36 + i] as Dictionary)["rookie_list"] = "B"
+	_check(RookieList.list_size(mixed) == 41 and RookieList.cat_a_count(mixed) == 5 and RookieList.rookie_spot_free(mixed),
+			"Two Category B rookies sit outside the 44 and take no Category A spot (%d of 44)" % RookieList.list_size(mixed))

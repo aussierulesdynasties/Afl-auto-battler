@@ -7,11 +7,13 @@ extends RefCounted
 ##   senior list   everyone without a `rookie_list` key, up to SENIOR_SPOTS.
 ##                 National Draft picks, trades and free-agent signings go here.
 ##   rookie list   players with p["rookie_list"] == "A" (Category A), up to
-##                 CAT_A_SPOTS, on the rookie wage. A real-lists career also
-##                 starts its real Category B rookies there ("B"), in the same
-##                 spots. The Rookie Draft and the
+##                 CAT_A_SPOTS, on the rookie wage. The Rookie Draft and the
 ##                 mid-season rookie draft fill it.
-## Senior and rookie spots together never pass Contracts.MAX_LIST, except
+##                 A real-lists career also starts its real Category B rookies
+##                 there ("B"), up to CAT_B_SPOTS of their own: as in the AFL,
+##                 a Category B rookie takes no Category A spot and sits
+##                 outside the 44 (list_size). No draft signs one.
+## Senior and Category A spots together never pass Contracts.MAX_LIST, except
 ## where a real-lists career starts a club over it, as the real club was
 ## (seed_lists): it then signs no rookie, and makes no trade that leaves it
 ## over, until it is back under.
@@ -43,6 +45,8 @@ extends RefCounted
 ##    "upgrades": [{"club","id","name"}], "done": bool}
 
 const CAT_A_SPOTS := 6
+## Category B rookies, outside the Category A spots and the 44 (the AFL's rule).
+const CAT_B_SPOTS := 2
 const SENIOR_SPOTS := Contracts.MAX_LIST - CAT_A_SPOTS
 const KIND := "rookie"
 const NOBODY_LEFT_NEWS := "Rookie Draft: nobody was left when your pick came up, so your draft ended."
@@ -73,6 +77,24 @@ static func rookie_count(list: Array) -> int:
 	return rookies(list).size()
 
 
+static func is_cat_b(p: Dictionary) -> bool:
+	return str(p.get("rookie_list", "")) == "B"
+
+
+static func cat_b_count(list: Array) -> int:
+	return list.filter(func(p): return is_cat_b(p)).size()
+
+
+## Category A rookies: the spots the Rookie Draft and mid-season draft fill.
+static func cat_a_count(list: Array) -> int:
+	return rookie_count(list) - cat_b_count(list)
+
+
+## The list as the 44 counts it: senior and Category A, not Category B.
+static func list_size(list: Array) -> int:
+	return list.size() - cat_b_count(list)
+
+
 static func senior_count(list: Array) -> int:
 	return list.size() - rookie_count(list)
 
@@ -87,7 +109,7 @@ static func senior_spot_free(list: Array) -> bool:
 
 
 static func rookie_spot_free(list: Array) -> bool:
-	return rookie_count(list) < CAT_A_SPOTS and list.size() < Contracts.MAX_LIST
+	return cat_a_count(list) < CAT_A_SPOTS and list_size(list) < Contracts.MAX_LIST
 
 
 ## The rookie wage in a season (the 2027 rookie minimum, indexed).
@@ -112,7 +134,8 @@ static func deal_years(p: Dictionary) -> int:
 ## lists had as rookies (`list_type`, from data/list_types_2026.csv and
 ## data/list_additions_2026.csv) go on the rookie list: Category A rookies
 ## ("A") and Category B rookies ("B"), every one of them, never onto the
-## senior list. A club whose real rookie list is over CAT_A_SPOTS (West Coast
+## senior list. Category B rookies take their own spots, never a Category A
+## one. A club whose real Category A list is over CAT_A_SPOTS (West Coast
 ## 2026: injury replacements signed mid-season) starts over it, as the real
 ## club did before the rookie delisting period, and takes no Rookie Draft pick
 ## until it is back under; its senior list, and so its National Draft picks,
@@ -138,7 +161,7 @@ static func seed_lists(lists: Dictionary, real_types := true) -> void:
 				return float(a.get("age", 0.0)) < float(b.get("age", 0.0))
 			return str(a["id"]) < str(b["id"]))
 		for p in young:
-			if senior_count(list) <= SENIOR_SPOTS or rookie_count(list) >= CAT_A_SPOTS:
+			if senior_count(list) <= SENIOR_SPOTS or cat_a_count(list) >= CAT_A_SPOTS:
 				break
 			p["rookie_list"] = "A"
 

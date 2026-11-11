@@ -652,7 +652,10 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 	take = take.filter(func(a): return not is_pick(a))
 	var ai_after := ai_list.size() - give.size() + take.size()
 	var my_after := my_list.size() - take.size() + give.size()
-	if ai_after > MAX_LIST or my_after > MAX_LIST:
+	# The 44 (senior and Category A lists; a Category B rookie is outside it):
+	# no side may end past it, unless it was already past it and the trade
+	# leaves it no further over (a real list seeded over it can still deal).
+	if _list_over(ai_list, give, take) or _list_over(my_list, take, give):
 		return _verdict(false, "trade_list_over", ctx, {"n": MAX_LIST})
 	# Every player traded in lands on the senior list (row 88): a side may not
 	# end past its senior spots, unless it was already past them and the trade
@@ -741,8 +744,14 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 	return out
 
 
-## A trade answer: {"ok", "code", "reason"}, the reason the code's sentence
-## (AiReasons) with the club's name from `ctx` and any `facts`.
+## Would `list`, giving `out` and getting `got`, end past the 44 (and further
+## past it than it started)? Everyone traded in lands on the senior list.
+static func _list_over(list: Array, out: Array, got: Array) -> bool:
+	var before := RookieList.list_size(list)
+	var after := before - RookieList.list_size(out) + got.size()
+	return after > maxi(MAX_LIST, before)
+
+
 ## Would `list`, giving `out` and getting `got`, end past its senior spots
 ## (and further past them than it started)?
 static func _senior_over(list: Array, out: Array, got: Array) -> bool:
@@ -751,6 +760,8 @@ static func _senior_over(list: Array, out: Array, got: Array) -> bool:
 	return after > maxi(RookieList.SENIOR_SPOTS, before)
 
 
+## A trade answer: {"ok", "code", "reason"}, the reason the code's sentence
+## (AiReasons) with the club's name from `ctx` and any `facts`.
 static func _verdict(ok: bool, code: String, ctx: Dictionary, facts := {}) -> Dictionary:
 	var f: Dictionary = facts.duplicate()
 	f["club"] = str(ctx.get("name", "They"))
