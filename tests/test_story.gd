@@ -3661,11 +3661,17 @@ func _test_dev_promise_named_side() -> void:
 	var id := str(p["id"])
 	GameState.dev_talk(p, "promise")
 	_judge(p, true)
+	# Name someone else in his place, so no gap pulls him back in.
 	var side := GameState.current_side()
-	for k in side:
-		(side[k] as Array).erase(id)
+	var line := _line_in(side, id)
+	var sub := ""
+	for q in GameState.my_list:
+		if sub == "" and _line_in(side, str(q["id"])) == "" and str(q["role"]) != "RUCK" 				and int(q.get("injury_weeks", 0)) == 0 and int(q.get("suspension_weeks", 0)) == 0:
+			sub = str(q["id"])
+	var arr: Array = side[line]
+	arr[arr.find(id)] = sub
 	GameState.set_selection(side)
-	_check(_line_in(GameState.current_side(), id) == "", "(setup) a side you named leaves him out")
+	_check(sub != "" and _line_in(GameState.current_side(), id) == "", "(setup) a side you named leaves him out")
 	GameState._dev_promise_week()
 	var dt: Dictionary = p["dev_talk"]
 	_check(not (_line_in(GameState.current_side(), id) in ["", "BENCH"]) and _line_in(GameState.my_selection(), id) != "",
