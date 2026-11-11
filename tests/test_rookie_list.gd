@@ -602,6 +602,15 @@ func _test_real_lists_rookie_categories() -> void:
 	var ess: Array = gs.league_lists["ESS"]
 	_check(RookieList.cat_a_count(ess) == 5 and RookieList.cat_b_count(ess) == 2 and RookieList.rookie_spot_free(ess),
 			"Essendon's two Category B rookies leave it a Category A spot (%d A, %d B)" % [RookieList.cat_a_count(ess), RookieList.cat_b_count(ess)])
+	# West Coast as DraftGuru's 2027 list has it after the 2026 list period
+	# (checked 2026-11-12): 51 on the 2026 list, less Cripps (retired) and seven
+	# delistings, plus Trent Rivers and Jack Viney from Melbourne = 45: 33
+	# senior, 10 Category A, 2 Category B, so 43 of the 44.
+	var wce: Array = gs.league_lists["WCE"]
+	_check(RookieList.senior_count(wce) == 33 and RookieList.cat_a_count(wce) == 10
+			and RookieList.cat_b_count(wce) == 2 and RookieList.list_size(wce) == 43,
+			"West Coast starts as its real list: 33 senior, 10 Category A, 2 Category B, 43 of 44 (%d, %d, %d, %d)" % [
+				RookieList.senior_count(wce), RookieList.cat_a_count(wce), RookieList.cat_b_count(wce), RookieList.list_size(wce)])
 	var mel: Array = gs.league_lists["MEL"]
 	_check(RookieList.cat_a_count(mel) == 6 and RookieList.cat_b_count(mel) == 1 and RookieList.list_size(mel) == mel.size() - 1,
 			"Melbourne: six Category A, Ricky Mentha in a Category B spot outside the 44 (%d A, %d B, %d of 44)" % [
