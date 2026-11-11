@@ -22,11 +22,14 @@ const ALLOW := {
 	"res://data/stories/leadership.json": [1, "should", "row 140: a player's own question, reported"],
 	"res://data/stories/media.json": [2, "should", "row 140: a pundit's view, reported"],
 	"res://scripts/sim/MatchSim.gd": [1, "should", "row 131: a shot's likelihood at the gate"],
+	"res://scripts/sim/SkipOrders.gd": [2, "auto-pick", "director 2026-11-12: Auto-pick keeps its name"],
+	"res://scripts/ui/FirstVisitIntro.gd": [1, "auto-pick", "director 2026-11-12: Auto-pick keeps its name"],
 	"res://scripts/sim/PlanTraits.gd": [1, "starters", "kept: the Fast Starters trait (a side that starts quickly, AFL usage), not the line-up sense"],
 	"res://scripts/state/GameState.gd": [1, "projection", "row 138"],
 	"res://scripts/ui/DraftScene.gd": [1, "projection", "row 136: draft"],
 	"res://scripts/ui/OffseasonScene.gd": [1, "payroll", "row 137: contracts and trades"],
 	"res://scripts/ui/PreSeasonScene.gd": [10, "starter", "row 136: pre-season"],
+	"res://scripts/ui/SelectionScene.gd": [5, "auto-pick", "director 2026-11-12: Auto-pick keeps its name"],
 	"res://scripts/ui/StatGuide.gd": [1, "projection", "row 139: stats and menus"],
 }
 
