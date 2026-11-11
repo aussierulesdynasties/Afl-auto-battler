@@ -16,7 +16,8 @@ extends RefCounted
 ##            "from", "to" (his years with you), "games", "goals" (-1: not on
 ##            record, shown as a dash and never guessed), "bf", "flags",
 ##            "brownlow", "aa" ([years]), "left" (the season he left after, 0
-##            while he is still on your list), "how" ("retired", "delisted" (you
+##            while he is still on your list), "how" ("retired", "medical" (the
+##            medical panel ended his career mid-season), "delisted" (you
 ##            let him go), "free_agent" (out of contract, he went), "moved", ""
 ##            while he is here or when not on record), "to_club"
 ##            (where he went when he moved), "facts" (what the club remembers
@@ -145,7 +146,7 @@ static func leave(gs: Object, p: Dictionary, how: String, to_club := "") -> void
 	row["left"] = int(before.get("left", 0)) if int(before.get("left", 0)) > 0 else int(gs.get("season_year"))
 	row["how"] = str(before.get("how", ""))
 	row["to_club"] = str(before.get("to_club", ""))
-	if str(row.get("how", "")) == "" or how == "retired":
+	if str(row.get("how", "")) == "" or how == "retired" or how == "medical":
 		row["how"] = how
 		row["to_club"] = to_club
 

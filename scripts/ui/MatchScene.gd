@@ -1001,14 +1001,32 @@ func _show_coach_box() -> void:
 	var tag_detail := func(r: Dictionary, wide: bool) -> String:
 		var p: Dictionary = my_mids.get(str(r["id"]), r)
 		return MatchNotes.tagger_card_detail(p, float(sim.energy.get(str(r["id"]), 100.0)), wide, season_rating.call(str(r["id"])))
-	var tag_note := NameInk.rich(UiKit.NOTE, UiKit.MUTED)
+	# What the tag does and costs, as labelled Gain / Cost rows like every other
+	# break call (director 2026-11-10, "Gain / Cost everywhere"), the touches
+	# inside the line. A name in either line opens his profile on a tap.
+	var tag_note := UiKit.vbox(2)
 	tag_note.name = "TagNote"
-	tag_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# On a phone the note with a tag ("X tags Y: he gives up...") runs to two
-	# lines and "No tag..." to one: it keeps room for two, so a tag tap never
-	# pushes the calls below it down (A2).
+	var tag_rows: Array = []
+	for mark in ["Gain:", "Cost:"]:
+		var row := UiKit.hbox(6)
+		row.name = "Tag" + mark.trim_suffix(":")
+		var mk := UiKit.lbl(mark, UiKit.NOTE, UiKit.label_ink(), true)
+		mk.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		mk.autowrap_mode = TextServer.AUTOWRAP_OFF
+		row.add_child(mk)
+		var line := NameInk.rich(UiKit.NOTE, UiKit.TEXT)
+		line.name = "Text"
+		line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(line)
+		tag_note.add_child(row)
+		tag_rows.append(line)
+	# On a phone the rows with a tag run to four lines and with none to three:
+	# they keep room for four, so a tag tap never pushes the calls below it
+	# down (A2).
 	if not _pc_break:
-		tag_note.custom_minimum_size.y = ceilf(UiKit.FONT.get_height(UiKit.px(UiKit.NOTE)) * 2.0)
+		tag_note.custom_minimum_size.y = ceilf(UiKit.FONT.get_height(UiKit.px(UiKit.NOTE)) * 4.0) + 2.0
+	# Their midfielder who goes untagged with No tag (set once the choices are known).
+	var untagged: Array = [""]
 	# Who goes to him is only a question once there is a him: shown faded and
 	# shut with no tag, so it never appears and shoves the calls below it.
 	var who_block: Array = []
@@ -1027,16 +1045,17 @@ func _show_coach_box() -> void:
 			for wbtn in (b as Node).find_children("*", "Button", true, false):
 				(wbtn as Button).disabled = not has_tag
 		var who = my_mids.get(str(calls["tagger_id"]), tagger)
-		var target := GameDB.player_display_name_by_id(str(calls["tag_id"]), "")
-		if str(calls["tag_id"]) == "":
-			NameInk.set_line(tag_note, "No tag: your midfielders play their own game.", _names())
-		elif who == null:
-			NameInk.set_line(tag_note, "No midfielder on the ground to tag with.", _names())
-		elif str(calls["tagger_id"]) != "" and not my_mids.has(str(calls["tagger_id"])):
-			NameInk.set_line(tag_note, "%s, your tagger, is on the bench. %s tags %s until he is back." % [
-					GameDB.player_display_name_by_id(str(calls["tagger_id"]), "Your tagger"), GameDB.player_display_name(who), target], _names())
-		else:
-			NameInk.set_line(tag_note, GateOdds.tag_note(GameDB.player_display_name(who), target), _names())
+		var target := GameDB.player_display_name_by_id(str(calls["tag_id"]), "Their man") if str(calls["tag_id"]) != "" else ""
+		var benched := ""
+		if str(calls["tagger_id"]) != "" and not my_mids.has(str(calls["tagger_id"])):
+			benched = GameDB.player_display_name_by_id(str(calls["tagger_id"]), "your tagger")
+		var who_name := GameDB.player_display_name(who) if who != null else ""
+		var kept := GateOdds.tag_kept(who, float(sim.energy.get(str(who["id"]), 100.0))) if who != null else 0
+		var gc := GateOdds.tag_break_texts(target, who_name, kept, benched, str(untagged[0]))
+		NameInk.set_line(tag_rows[0], str(gc[0]), _names())
+		NameInk.set_line(tag_rows[1], str(gc[1]), _names())
+		tag_note.set_meta("plain", GateOdds.gain(str(gc[0])) + "
+" + GateOdds.cost(str(gc[1])))
 	# The tag is offered on their listed midfielders only (director, 2026-10-14:
 	# "Only listed midfielders"): the names, and "Other midfielder..." for the
 	# listed midfielders not already shown, which is not drawn when none is
@@ -1051,6 +1070,13 @@ func _show_coach_box() -> void:
 		for r in opp_listed:
 			if str(r["id"]) == bid and not tag_first.any(func(x): return str(x["id"]) == bid):
 				tag_first.append(r)
+	# No tag leaves their busiest midfielder free, the man the sheet's fact line
+	# names; before anyone has had the ball, the first one offered.
+	var busiest := _busiest_mid(sim)
+	if not busiest.is_empty():
+		untagged[0] = str(busiest["name"])
+	elif not tag_first.is_empty():
+		untagged[0] = GameDB.player_display_name_by_id(str(tag_first[0]["id"]), "")
 	var tag := _player_choice("TagPicker", "No tag", opp_listed, tag_first, calls, "tag_id",
 			MatchNotes.tag_question(), sync_tag, Callable(), Callable(), "Other player…", true)
 	# The question is drawn over the choices, as the loose interceptor's is.
@@ -1836,7 +1862,17 @@ func _club_code_of(id: String) -> String:
 ## The fact beside the tag: their busiest midfielder so far ("" before anyone
 ## has had the ball). A fact, never a suggestion.
 func _tag_fact_line(sim: MatchSim) -> String:
-	var top := ""
+	var busiest := _busiest_mid(sim)
+	if busiest.is_empty():
+		return ""
+	var most := int(busiest["disposals"])
+	return "%s has had %d disposal%s, the most of their midfielders." % [
+			str(busiest["name"]), most, "" if most == 1 else "s"]
+
+
+## Their busiest midfielder so far, {name, disposals}; {} before anyone has had the ball.
+func _busiest_mid(sim: MatchSim) -> Dictionary:
+	var top := {}
 	var most := 0
 	for r in _roster_side(1 - _my_side):
 		if not _taggable_now(sim, r) or not _listed_midfielder(sim, r):
@@ -1845,9 +1881,8 @@ func _tag_fact_line(sim: MatchSim) -> String:
 		var n := int(float(st.get("disposals", 0.0)))
 		if n > most:
 			most = n
-			top = GameDB.player_display_name(r)
-	return "" if top == "" else "%s has had %d disposal%s, the most of their midfielders." % [
-			top, most, "" if most == 1 else "s"]
+			top = {"name": GameDB.player_display_name(r), "disposals": n}
+	return top
 
 
 ## A sheet over the break: one call (or who tags, or Best so far) with Done.
@@ -2971,6 +3006,10 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 	# and wrap whole (never a word to a line, A2); their man's touches and what
 	# he gives up are the long ones, a line of their own each under them.
 	var rows := [["Pressure", str(c["pressure"]), false], ["Legs", str(c["legs"]), bool(c["legs_bad"])]]
+	if _pc_break:
+		# His season rating, which sits with "Gives up" on a phone card.
+		var season := str(c["gives"]).trim_prefix(GateOdds.tag_gives()).strip_edges().trim_prefix("(").trim_suffix(")")
+		rows.append(["Season", season.trim_prefix("season rating ").replace("yet to play this season", "yet to play"), false])
 	var facts := HFlowContainer.new()
 	facts.name = "CardFacts"
 	facts.add_theme_constant_override("h_separation", 16)
@@ -2991,10 +3030,14 @@ func _dress_tagger_card(b: Button, who_name: String, c: Dictionary, is_pick: boo
 	holds_value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	holds.add_child(holds_value)
 	col.add_child(holds)
-	var gives := UiKit.lbl("%s %s" % [c["gives_label"], c["gives"]], UiKit.SECONDARY, UiKit.TEXT)
-	gives.name = "CardGives"
-	gives.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(gives)
+	# On a PC the Cost row under the cards says what the tagger gives up, the
+	# same for every man, so the card leaves it out (his season rating is in
+	# its facts) and the fullest break still fits 1280x720.
+	if not _pc_break:
+		var gives := UiKit.lbl("%s %s" % [c["gives_label"], c["gives"]], UiKit.SECONDARY, UiKit.TEXT)
+		gives.name = "CardGives"
+		gives.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		col.add_child(gives)
 	if is_pick:
 		var pick := UiKit.line("Your assistant's pick", UiKit.SECONDARY, UiKit.MUTED)
 		pick.name = "CardPick"
@@ -4223,11 +4266,10 @@ func _ft_summary(v: VBoxContainer) -> void:
 		_glance_section(v, "Your synergies", "FullTimeSynergies", MatchNotes.synergy_lines(_res, me).slice(0, 3), true)
 
 	# Your calls, quarter by quarter: what each was about and how that went.
-	# Five at most, every quarter's first call before any quarter's second
-	# (MatchNotes.calls_summary), so Q3 and Q4 are never crowded out by Q1.
-	# The call the Why section already quoted is not said again.
 	if mine and (_interactive or _review):
-		_glance_section(v, "Your calls", "FullTimeCalls", MatchNotes.calls_summary(_res, me, told_above))
+		var did := MatchNotes.full_time_calls(_res, me, told_above, 5)
+		if not did.is_empty():
+			_glance_section(v, "Your calls", "FullTimeCalls", did)
 
 	# A handful of numbers worth a glance; the full table is a tap away.
 	v.add_child(UiKit.spacer(UiKit.GAP))
@@ -4242,6 +4284,12 @@ func _ft_summary(v: VBoxContainer) -> void:
 			var inj := UiKit.lbl("Injured: " + ", ".join(hurt), UiKit.BODY, UiKit.BAD, true)
 			inj.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			week.add_child(inj)
+		var panel := GameState.my_medical_lines()
+		if not panel.is_empty():
+			var md := UiKit.lbl("Medical panel: " + " ".join(panel), UiKit.BODY, UiKit.BAD, true)
+			md.name = "YourMedical"
+			md.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			week.add_child(md)
 		var report: Dictionary = GameState.last_training_report
 		if str(report.get("home", "")) == home and str(report.get("away", "")) == away:
 			# Who improved, and how, lives in Training (a tap below); here

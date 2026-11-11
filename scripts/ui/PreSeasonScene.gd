@@ -436,6 +436,16 @@ func _match_report(rep: Dictionary, prefix: String, pool: Array) -> Control:
 			l.name = prefix + "Hurt_%d" % i
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			left.add_child(l)
+	# The medical panel sat on one of yours after a concussion in this match.
+	var medical: Array = rep.get("medical", [])
+	if not medical.is_empty():
+		left.add_child(UiKit.spacer(8))
+		left.add_child(_report_head("Medical panel"))
+		for i in range(medical.size()):
+			var l := UiKit.lbl(str(medical[i]), UiKit.BODY, UiKit.BAD)
+			l.name = prefix + "Medical_%d" % i
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			left.add_child(l)
 	var seen: Array = rep.get("prospects", [])
 	if not seen.is_empty():
 		var names_by_id := {}

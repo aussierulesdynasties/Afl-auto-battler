@@ -2,7 +2,13 @@ extends RefCounted
 ## The body of tools/perf/weeks_bench.gd (see there).
 
 
+## The step timer (tools/perf/perf_lap.gd), when the bench tree has one.
+var _lap: GDScript = null
+
+
 func run(root: Node) -> void:
+	if ResourceLoader.exists("res://tools/perf/perf_lap.gd"):
+		_lap = load("res://tools/perf/perf_lap.gd")
 	var club := "GEE"
 	var seasons := 3
 	var rs := 4242
@@ -44,6 +50,15 @@ func run(root: Node) -> void:
 		var season_results := []
 		while not gs.season.is_season_over():
 			var w0 := Time.get_ticks_usec()
+			if plain and _lap != null:
+				var wl = _lap.new("bench.week")
+				wl.lap("advance (%s)" % ("regular" if not gs.season.is_regular_done() else "finals"))
+				gs.advance()
+				_lap.close_top()
+				weeks_ms += (Time.get_ticks_usec() - w0) / 1000.0
+				weeks += 1
+				season_results.append_array(gs.last_results)
+				continue
 			if plain:
 				# GameState.advance() whole: for older trees without these steps.
 				gs.advance()
@@ -76,18 +91,25 @@ func run(root: Node) -> void:
 		if s == seasons - 1:
 			break
 		var o0 := Time.get_ticks_usec()
+		var lap = _lap.new("bench.offseason") if _lap != null else null
+		if lap: lap.lap("open_offseason")
 		gs.open_offseason()
+		if lap: lap.lap("begin_intake_draft")
 		if gs.begin_intake_draft():
 			var d = gs.draft
 			var guard := 0
+			if lap: lap.lap("draft picks (bench loop)")
 			while not d.is_finished() and guard < 5000:
 				guard += 1
 				var c: Dictionary = d._best_ai_pick(d.current_club())
 				if c.is_empty() or not d._draft_pick(d.current_club(), c):
 					d._skip_current_pick()
+			if lap: lap.lap("finish_intake_draft")
 			gs.finish_intake_draft()
 		else:
+			if lap: lap.lap("start_next_season")
 			gs.start_next_season()
+		if lap: _lap.close_top()
 		ms["offseason"] += (Time.get_ticks_usec() - o0) / 1000.0
 	var save_h := JSON.stringify(gs._save_state()).sha256_text() if gs.has_method("_save_state") else "none"
 	print("HASH save %s" % save_h)
@@ -96,4 +118,6 @@ func run(root: Node) -> void:
 		print("PERF %-16s %9.0f ms" % [k, ms[k]])
 	print("PERF weeks %.1f s over %d weeks (%.0f ms a week); off-season %.1f s" % [
 		weeks_ms / 1000.0, weeks, weeks_ms / maxf(1, weeks), ms["offseason"] / 1000.0])
+	if _lap != null:
+		_lap.dump()
 	print("PERF coaches %d, free or away %d" % [gs.coaches.size(), gs.coaches.values().filter(func(c): return str(c.get("status", "")) in ["free", "away"]).size()])
