@@ -2634,10 +2634,14 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 		inj.name = "MyInjured"
 		inj.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(inj)
-	var panel := GameState.my_medical_lines()
-	if not panel.is_empty():
-		var md := UiKit.lbl("Medical panel: " + " ".join(panel), UiKit.SMALL, UiKit.BAD, true)
-		md.name = "MyMedical"
+	# One line per sitting, the first headed "Medical panel:". A cleared player
+	# is good news: body ink; a career ended is the injury red.
+	var panel := GameState.my_medical_rows()
+	for i in range(panel.size()):
+		var ok := bool(panel[i]["cleared"])
+		var md := UiKit.lbl(("Medical panel: " if i == 0 else "") + str(panel[i]["text"]),
+				UiKit.SMALL, UiKit.TEXT if ok else UiKit.BAD, not ok)
+		md.name = "MyMedical_%d" % i
 		md.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(md)
 	var mro := GameState.my_mro_lines()
