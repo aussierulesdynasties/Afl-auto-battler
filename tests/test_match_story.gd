@@ -77,6 +77,9 @@ func run(tree: SceneTree) -> void:
 	_t("_test_my_best_in_loss")
 	_t("_test_digest_survives_trim")
 	_t("_test_factors_never_repeat")
+	_t("_test_calls_trace")
+	_t("_test_calls_kept")
+	_t("_test_calls_old_fixture")
 	for size in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		_tree.root.size = size
 		await _settle()
@@ -256,6 +259,15 @@ func _test_summary(size: Vector2i) -> void:
 				"%s: the story sits above How it went" % tag)
 	var r := box.get_global_rect()
 	_check(r.position.x >= -0.5 and r.end.x <= size.x + 0.5, "%s: the story fits the screen" % tag)
+	# Our calls (row 144): a row per MatchStory.calls row, then the final margin.
+	var c := MatchStory.calls(GameState.last_match, _side(GameState.last_match))
+	var grid: GridContainer = box.find_child("CallsStory", true, false)
+	_check(not c.is_empty() and grid != null, "%s: the story shows our calls" % tag)
+	if grid != null and not c.is_empty():
+		_check(grid.get_child_count() == 2 * ((c["rows"] as Array).size() + 1),
+				"%s: a row per call plus the margin (%d children)" % [tag, grid.get_child_count()])
+		var gr := grid.get_global_rect()
+		_check(gr.position.x >= -0.5 and gr.end.x <= size.x + 0.5, "%s: our calls fit the screen" % tag)
 	Router.stack = []
 	Router.go("hub")
 	await _settle(4)
@@ -608,3 +620,108 @@ func _test_no_repeats(size: Vector2i) -> void:
 	Router.stack = []
 	Router.go("hub")
 	await _settle(4)
+
+
+## Our calls at full time (row 144): every number traces to the result. Each
+## call row is its impact-ledger credit rounded, the other rows are the sums
+## they name, and all of them add up to the final margin.
+func _test_calls_trace() -> void:
+	_fresh()
+	_rounds(4)
+	var bad := []
+	var seen := 0
+	var kinds := {}
+	for res in GameState.season_log:
+		if not res.has("impact"):
+			continue
+		for side in [0, 1]:
+			var c := MatchStory.calls(res, side)
+			if c.is_empty():
+				continue
+			seen += 1
+			var margin := int(res["score"][side]) - int(res["score"][1 - side])
+			var imp: Array = res["impact"]
+			var credit := func(s: int, cause: String) -> float:
+				return snappedf(float((imp[s] as Dictionary).get(cause, 0.0)), 0.01)
+			var mine_total := 0.0
+			var theirs := 0.0
+			for cause in MatchSim.DECISION_CAUSES:
+				mine_total += credit.call(side, cause)
+				theirs -= credit.call(1 - side, cause)
+			var shown := 0.0
+			var sum := 0
+			for r in c["rows"]:
+				var pts := int(r["pts"])
+				sum += pts
+				kinds[str(r["kind"])] = true
+				if pts == 0:
+					bad.append("a row worth nothing: %s" % r["text"])
+				if not str(r["text"]).contains(str(absi(pts))):
+					bad.append("text lacks its number: %s" % r["text"])
+				if str(r["kind"]) == "call":
+					var cr: float = credit.call(side, str(r["cause"]))
+					shown += cr
+					if pts != roundi(cr):
+						bad.append("%s says %d, the ledger %.2f" % [r["cause"], pts, cr])
+				elif str(r["kind"]) == "theirs" and pts != roundi(theirs):
+					bad.append("their calls say %d, the ledger %.2f" % [pts, theirs])
+			for r in c["rows"]:
+				if str(r["kind"]) == "other" and int(r["pts"]) != roundi(mine_total - shown):
+					bad.append("our other calls say %d, the ledger %.2f" % [int(r["pts"]), mine_total - shown])
+			if sum != margin or int(c["margin"]) != margin:
+				bad.append("rows add to %d, the margin is %d" % [sum, margin])
+	_check(seen >= 8, "calls are told for most matches (%d)" % seen)
+	_check(bad.is_empty(), "every calls number traces to the result (%s)" % str(bad.slice(0, 3)))
+	_check(kinds.has("call") and kinds.has("rest"), "our calls and the players and the bounce both show (%s)" % str(kinds))
+
+
+## The save keeps each match's coach rows (director 2026-11-10: "Yes, keep
+## them"), they survive save and load, and a kept record retells the same
+## calls as the result it came from.
+func _test_calls_kept() -> void:
+	_fresh()
+	_rounds(2)
+	var rec: Dictionary = GameState.last_match_story()
+	var me := _side(GameState.last_match)
+	_check(rec.get("coach_rows") is Dictionary and not (rec["coach_rows"]["mine"] as Dictionary).is_empty(),
+			"the record keeps our coach rows")
+	var live := MatchStory.calls(GameState.last_match, me)
+	var kept := MatchStory.calls_from(rec.get("coach_rows", {}), rec.get("call_names", {}), int(rec["margin"]))
+	_check(kept == live, "the kept rows tell the same calls (%s vs %s)" % [str(kept.get("rows", [])).left(160),
+			str(live.get("rows", [])).left(160)])
+	_check(GameState.save_career(), "saves")
+	GameState.reset()
+	_check(GameState.load_career(), "loads")
+	var back: Dictionary = GameState.last_match_story()
+	_check(back.get("coach_rows") == rec.get("coach_rows") and back.get("call_names") == rec.get("call_names"),
+			"the coach rows round-trip through the save")
+	_check(MatchStory.calls(GameState.last_match, me) == live,
+			"the last match's review tells the same calls after a reload")
+	GameState.delete_saved_career()
+
+
+## An old save (the frozen version 2 fixture, written before the coach rows
+## were kept) loads, its records and last match tell no calls rather than
+## wrong ones, and the next match keeps them.
+func _test_calls_old_fixture() -> void:
+	GameState.delete_saved_career()
+	var gz := FileAccess.get_file_as_bytes("res://tests/fixtures/career_v2_2026-11-11.save.gz")
+	var f := FileAccess.open(GameState.save_path, FileAccess.WRITE)
+	f.store_buffer(gz.decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP))
+	f.close()
+	GameState.reset()
+	_check(GameState.load_career(), "the old fixture loads")
+	var old := GameState.match_stories.size()
+	_check(old >= 1 and not (GameState.match_stories[0] as Dictionary).has("coach_rows"),
+			"its records predate the coach rows (%d)" % old)
+	var first: Dictionary = GameState.match_stories[0] if old > 0 else {}
+	_check(MatchStory.calls_from(first.get("coach_rows", {}), first.get("call_names", {}),
+			int(first.get("margin", 0))).is_empty(), "an old record tells no calls")
+	_check(MatchStory.calls(GameState.last_match, 0).is_empty() and MatchStory.calls(GameState.last_match, 1).is_empty(),
+			"an old last match tells no calls")
+	GameState.replay_seed = SUITE_SEED
+	GameState.advance()
+	var rec: Dictionary = GameState.last_match_story()
+	_check(GameState.match_stories.size() == old + 1 and rec.get("coach_rows") is Dictionary
+			and not (rec["coach_rows"]["mine"] as Dictionary).is_empty(), "the next match keeps its coach rows")
+	GameState.delete_saved_career()
