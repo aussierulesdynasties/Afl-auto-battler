@@ -131,6 +131,9 @@ var _timeline_last := ["", ""]
 ## Q4 leads to extra time instead of the full-time siren.
 var finals_mode := false
 var extra_time_played := false
+## False for a final the year replayed when drawn (every final in 1990, the
+## Grand Final to 2015): level at full time, it ends level (Season.record_final).
+var extra_time_allowed := true
 
 ## Legs. Every player has energy (0-100): on-ground players tire each chain,
 ## the bench recovers, and coaches rotate tired players off. Energy scales a
@@ -4473,7 +4476,7 @@ func end_quarter() -> Dictionary:
 ## True once a finals match is level after four quarters and extra time has
 ## not been played yet.
 func needs_extra_time() -> bool:
-	return finals_mode and not extra_time_played and current_quarter > 4 \
+	return finals_mode and extra_time_allowed and not extra_time_played and current_quarter > 4 \
 			and score(0) == score(1)
 
 
