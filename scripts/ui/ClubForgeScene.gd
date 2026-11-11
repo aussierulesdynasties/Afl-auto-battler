@@ -710,13 +710,16 @@ func _club_workspace(form: ScrollContainer) -> Control:
 		var strip := UiKit.hbox(10)
 		strip.name = "ForgePreviewPanel"
 		strip.add_child(crest)
+		# Save sits under the name, not beside it, so the name keeps the
+		# strip's full width and stays on one line on a 390 px phone.
 		var words := UiKit.vbox(2)
 		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		words.add_child(name_l)
 		words.add_child(line)
+		words.add_child(UiKit.spacer(4))
+		save.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		words.add_child(save)
 		strip.add_child(words)
-		save.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		strip.add_child(save)
 		out.add_child(strip)
 		out.add_child(_problem)
 		out.add_child(form)

@@ -3,10 +3,13 @@ extends SceneTree
 ## on a phone (390x844), dark theme. Needs a real renderer:
 ##   godot --path . --script tools/visual/capture_forge_colours.gd -- --out /tmp/forge_colours
 ## Writes <out>_1_palette.png (the colour picker with every colour, painting
-## with a new one), <out>_2_guernsey.png (a guernsey made in new colours:
-## bottle green with old gold hoops and cream trim, on the phone's paint
-## canvas), <out>_3_saved.png (the Forge with that club saved) and
+## with aqua, a new one), <out>_2_guernsey.png (a guernsey made in new
+## colours: bottle green with cream trim, its hoops painted aqua by a real tap
+## on the phone's paint canvas), <out>_3_saved.png (the Forge with that club
+## saved) and
 ## <out>_sheet.png (the three side by side).
+
+const Tap := preload("res://tests/tap.gd")
 
 const W := 390
 const H := 844
@@ -69,7 +72,27 @@ func _run() -> void:
 	var shots := []
 	await _show(scene, scene.find_child("ForgePalette", true, false), 90.0)
 	shots.append(await _shot())
-	await _show(scene, scene.find_child("ForgePaint", true, false), 120.0)
+	# Paint the hoops aqua with a finger's tap on the canvas, so the brush
+	# the screen names shows on the guernsey.
+	var canvas: Control = scene.find_child("ForgePaint", true, false)
+	await _show(scene, canvas, 120.0)
+	var spot := Vector2(-1, -1)
+	for y in range(int(canvas.size.y)):
+		var at := Vector2(canvas.size.x * 0.5, float(y))
+		if canvas.part_at(at) == "pattern":
+			spot = at + Vector2(0, 4)
+			break
+	if spot.x < 0.0 or canvas.part_at(spot) != "pattern":
+		push_error("no hoop found on the paint canvas")
+		quit(1)
+		return
+	var why: String = await Tap.tap_at(canvas, spot)
+	if why != "" or str(scene._club["secondary"]).to_lower() != "#1fb8c9":
+		push_error("the tap did not paint the hoops aqua: %s" % why)
+		quit(1)
+		return
+	canvas = scene.find_child("ForgePaint", true, false)
+	await _show(scene, canvas, 120.0)
 	shots.append(await _shot())
 	scene._on_save_club()
 	shots.append(await _shot())

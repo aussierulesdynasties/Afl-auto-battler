@@ -1876,6 +1876,18 @@ Your career stays on this device.",
 	var club_code: LineEdit = current_scene.find_child("ForgeClubCode", true, false)
 	_check(club_name != null and club_name.text == "Port Melbourne" and club_code != null and club_code.text == "PM",
 			"Picking a place fills in the club's name and an abbreviation")
+	# Phone (390 px): Save club sits under the club's name, inside the name
+	# column, so "Port Melbourne" keeps the strip's width and stays one line.
+	var pv_name: Label = current_scene.find_child("ForgePreviewName", true, false)
+	var save_club: Control = current_scene.find_child("ForgeSaveClub", true, false)
+	var name_col: Control = pv_name.get_parent() if pv_name != null else null
+	var save_in_col: bool = save_club != null and name_col != null and save_club.get_parent() == name_col \
+			and name_col.get_global_rect().grow(0.5).encloses(save_club.get_global_rect())
+	_check(root.size.x == 390 and save_in_col
+			and save_club.get_global_rect().position.y >= pv_name.get_global_rect().end.y - 0.5,
+			"Phone: Save club sits inside the name column, under the club's name")
+	_check(pv_name != null and pv_name.text == "Port Melbourne" and pv_name.get_line_count() == 1,
+			"Phone: the club's name \"Port Melbourne\" is one line (%d)" % (pv_name.get_line_count() if pv_name != null else -1))
 	_type("ForgeClubNickname", "Borough")
 	_type("ForgeClubCode", "pmb")
 	_check(club_code != null and club_code.text == "PMB", "The abbreviation is written in capitals")
