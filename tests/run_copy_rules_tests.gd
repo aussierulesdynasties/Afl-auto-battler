@@ -56,19 +56,19 @@ const HUB_OLD := [
 ]
 
 ## The team builder and coaching pass (copy voice pass 5): per file, the rewritten lines and the
-## lines they replaced. Auto-pick is the Match committee now, on every screen that names it.
+## lines they replaced. Auto-pick keeps its name (director, 2026-11-12), never "Match committee".
 const TEAM_PASS := {
 	"res://scripts/ui/SelectionScene.gd": [[
-		"\"Match committee\"", "Dual ruck on. The match committee names a second ruck on the bench.",
-		"One ruck. The match committee fills the bench with the best of the rest.",
+		"\"Auto-pick\"", "Dual ruck on. Auto-pick names a second ruck on the bench.",
+		"One ruck. Auto-pick fills the bench with the best of the rest.",
 		"Our side is confirmed for this week.", "\"Our team\"",
 		"Projected: %s as they would line up this week. They name their side on match day. They kick the other way.",
-		"Picked at match committee until you move someone.",
-		"Saved as your Best 23. Choose it any week from Match committee.",
-		"Back to the side from before match committee.",
+		"Picked by Auto-pick until you move someone.",
+		"Saved as your Best 23. Choose it any week from Auto-pick.",
+		"Back to the side from before Auto-pick.",
 		"Leave the player out while he is fit and the promise breaks. It stings.",
-	], ["\"Auto-pick\"", "Auto-pick names", "Auto-pick fills", "Side confirmed for", "\"Your team\"", "(projected:",
-		"Picked for you", "from Auto-pick", "before the auto-pick", "Leave a fit player out"]],
+	], ["atch committee", "Dual ruck on:", "One ruck:", "Side confirmed for", "\"Your team\"", "(projected:",
+		"Picked for you", "before the auto-pick", "Leave a fit player out"]],
 	"res://scripts/ui/CoachingScene.gd": [[
 		"Each plan buys an edge and gives something up. The note below says which.",
 		"Each plan runs on one of our list's strengths. That is our side as picked, against every list in the league.",
@@ -79,16 +79,16 @@ const TEAM_PASS := {
 	], ["gives something up;", "one of your list's", "Also on your list", "how your side wins", "on top of your plan",
 		"of your game", "payroll %s"]],
 	"res://scripts/ui/FirstVisitIntro.gd": [[
-		"Our match-day 23 for this week. The match committee picks it until you move someone.",
+		"Our match-day 23 for this week. Auto-pick sets it until you move someone.",
 		"Move players on and off the ground to set the side you want.",
 		"Our game plan: how we play every week, set against what our list is good at.",
 		"Each plan suits some lists more than others. We can change it before any match.",
 	], ["Your match-day 23", "is picked for you", "the team you want", "Your game plan: how your side",
 		"Pick the plan that suits"]],
 	"res://scripts/sim/SkipOrders.gd": [[
-		"The match committee picks the side in place of one you named.",
-		"The match committee picks the side in place of one you named, and keeps picking it for the finals until you name another.",
-	], ["Auto-pick"]],
+		"Auto-pick sets the side in place of one you named.",
+		"Auto-pick sets the side in place of one you named, and keeps setting it for the finals until you name another.",
+	], ["atch committee", "Auto-pick replaces"]],
 	"res://scripts/state/GameState.gd": [[
 		"Nobody needs a break. This is our best side.", "Not enough fresh players to rest anyone. This is our best side.",
 		"No saved Best 23 yet. Set a side and save it.", "Our Best 23. Replacing unavailable players: %s.",

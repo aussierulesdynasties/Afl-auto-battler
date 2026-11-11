@@ -1134,7 +1134,7 @@ func _focus_trait_line(v: Control, p: Dictionary, stat: String) -> void:
 			GameState.train_stat_label(stat).to_lower(),
 			"he is there" if gap == 0 else "%d to go" % gap]
 	if bool(ft["crowded"]):
-		text += " He carries two traits already. This one shows once he clears its mark by more than he clears one of theirs."
+		text += " He carries %s traits already. This one shows once he clears its mark by more than he clears one of theirs." % MatchNotes.count_word(Traits.MAX_GOOD)
 	var l := UiKit.lbl(text, 13, UiKit.EMPH, true)
 	l.name = "StatFocusTrait"
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
