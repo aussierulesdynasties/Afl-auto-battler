@@ -133,7 +133,12 @@ func _build() -> void:
 		cols.add_child(right)
 	else:
 		_list_host = null
-		_root.add_child(_scroller(_side_page(auto), "SelectionScroll"))
+		# A phone scrolls the page by drag, with no bar (as Training): the bar's
+		# strip pushed the page 20 px past a 390 px screen, and the Auto-pick
+		# button's right border with it.
+		var sc := _scroller(_side_page(auto), "SelectionScroll")
+		sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+		_root.add_child(sc)
 	if GameState.side_from_match and GameState.match_day_setup_open():
 		# Reached from the match-day setup: the way back is the primary action.
 		var row := UiKit.hbox(8)
