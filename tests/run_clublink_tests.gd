@@ -852,7 +852,7 @@ func _from_match(sz: Vector2i) -> void:
 		if note != null:
 			var opened: bool = await _scan_until(note, func() -> bool: return _open_node("PlayerProfile") != null)
 			var prof := _open_node("PlayerProfile")
-			var seen := "'%s' at %s in %s" % [(note as RichTextLabel).get_parsed_text(), note.get_global_rect(), root.get_visible_rect()]
+			var seen := "'%s' at %s in %s" % [str(note.get_meta("plain", "")), note.get_global_rect(), root.get_visible_rect()]
 			_check(opened and prof != null, "%s: a finger on a name in the match opens his profile (%s)" % [tag, seen])
 			if prof != null:
 				await _sheet_club_tap(prof, tag)

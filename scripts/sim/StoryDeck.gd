@@ -7,6 +7,10 @@ extends RefCounted
 ## health of mind, family or misconduct: StoryEngine never picks a player
 ## shown under his real name for it.
 ##
+## A card of a "series" (the international cards, "intl") counts its
+## subject_cooldown from the last card of that series about the player, and
+## waits StoryEngine.SERIES_GAP weeks after any other card about him.
+##
 ## A card names: its category; who it is about (a player picked by conditions on
 ## saved facts, or the club); when it can come up; title and text variants;
 ## two or more choices, each with effects through levers the game already has
