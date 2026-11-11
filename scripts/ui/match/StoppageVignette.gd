@@ -51,7 +51,7 @@ const UMPIRE_KIT := 2
 ## frame past the end of a move would otherwise freeze on its last frame
 ## without a word. Off in play.
 static var log_frames := false
-static var frame_log: Array = []  # {anim, facing, frames, wanted}
+static var frame_log: Array = []  # {anim, facing, frames, wanted, info: the strip drawn}
 ## ... and which hair they draw over the figures: {style, texture}.
 static var hair_log: Array = []
 ## The faces drawn while log_frames is on.
@@ -812,5 +812,5 @@ func _readable_on(bg: Color) -> Color:
 static func figure_frame(info: Dictionary, wanted: int, anim: String, facing: String) -> int:
 	var frames := int(info["frames"])
 	if log_frames:
-		frame_log.append({"anim": anim, "facing": facing, "frames": frames, "wanted": wanted})
+		frame_log.append({"anim": anim, "facing": facing, "frames": frames, "wanted": wanted, "info": info})
 	return clampi(wanted, 0, frames - 1)
