@@ -86,10 +86,10 @@ class CopyVoice(Repo):
 
     def test_hub_pins(self):
         self.write("scripts/ui/HubScene.gd", 'var a = "Our week"\nvar b = "Begin season"\n')
-        found = copy_voice.check_hub(self.root, new=["Our week", "Start the season"], old=["Begin season"])
+        found = copy_voice.check_passes(self.root, [(copy_voice.HUB, "copy voice pass 2, hub", ["Our week", "Start the season"], ["Begin season"])])
         self.assertEqual([f.text() for f in found], [
-            "scripts/ui/HubScene.gd: [hub-copy] the hub no longer says: Start the season (copy voice pass 2 pinned it)",
-            "scripts/ui/HubScene.gd:2: [hub-copy] the hub says an old line again: Begin season"])
+            "scripts/ui/HubScene.gd: [copy-pass] no longer says: Start the season (copy voice pass 2, hub pinned it)",
+            "scripts/ui/HubScene.gd:2: [copy-pass] says an old line again: Begin season (copy voice pass 2, hub)"])
 
 
 class Screens(Repo):
@@ -189,6 +189,13 @@ class AutoloadReach(Repo):
     def test_load_by_path_and_shadowing_pass(self):
         self.assertEqual(self.run_on('extends SceneTree\nvar Deck\nfunc _run():\n\tDeck = load("res://scripts/sim/Deck.gd")\n'
                                      '\tPure.f()\n\tDeck.all()\n'), [])
+
+    def test_a_string_over_a_line_break_hides_its_words(self):
+        # Godot accepts a double-quoted string that runs over a line break (run_matchday_tests.gd);
+        # its words are not names, and the lines after it keep their numbers.
+        found = self.run_on('extends SceneTree\nfunc _run():\n\tprint("a\nDeck: " + str(load("res://x/Deck.gd")))\n'
+                            '\t# "a quote in a comment\n\tEngine2.f()\n')
+        self.assertEqual(self.at(found), ["tests/run_x_tests.gd:6"])
 
     def test_a_non_scenetree_script_may_name_anything(self):
         self.write("scripts/ui/Screen.gd", "extends Control\nfunc f():\n\tGameDB.x\n")

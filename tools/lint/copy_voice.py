@@ -1,11 +1,11 @@
 """The copy voice (director, 2026-11-10: option B, the senior coach's briefing; style guide §5.1).
 
-Moved from tests/run_copy_rules_tests.gd (_test_sources, _test_hub_pass) on 2026-11-12, rule for
+Moved from tests/run_copy_rules_tests.gd (_test_sources, _test_hub_pass, _test_team_pass, _test_training_pass) on 2026-11-12, rule for
 rule. One banned list, scripts/core/CopyRules.gd (WORDS), walked over every copy source: story
 cards, the tale phrase banks and the string literals of the UI, sim and state scripts. A known
 hit sits in ALLOW with the copy pass that clears it (docs/TODO.md); the count must match
 exactly, so a new hit fails and a fixed one makes its ALLOW entry shrink in the same PR. Each
-screen pass pins its rewritten lines (HUB_NEW / HUB_OLD). CopyRules.words_in/check themselves
+screen pass pins its rewritten lines and the ones they replaced (PASSES). CopyRules.words_in/check themselves
 are unit-tested in Godot (tests/run_clublink_tests.gd, _test_copy_rules).
 """
 import json
@@ -27,15 +27,11 @@ ALLOW = {
     "data/stories/media.json": [2, "should", "row 140: a pundit's view, reported"],
     "scripts/sim/MatchSim.gd": [1, "should", "row 131: a shot's likelihood at the gate"],
     "scripts/sim/PlanTraits.gd": [1, "starters", "kept: the Fast Starters trait (a side that starts quickly, AFL usage), not the line-up sense"],
-    "scripts/sim/SkipOrders.gd": [2, "auto-pick", "row 134: renamed with the Auto-pick button"],
-    "scripts/state/GameState.gd": [2, "starter, projection", "rows 134 and 138"],
-    "scripts/ui/CoachingScene.gd": [1, "payroll", "row 134: coaching"],
+    "scripts/state/GameState.gd": [1, "projection", "row 138"],
     "scripts/ui/DraftScene.gd": [1, "projection", "row 136: draft"],
     "scripts/ui/OffseasonScene.gd": [1, "payroll", "row 137: contracts and trades"],
     "scripts/ui/PreSeasonScene.gd": [10, "starter", "row 136: pre-season"],
-    "scripts/ui/SelectionScene.gd": [4, "auto-pick", "row 134: renamed with the Auto-pick button"],
     "scripts/ui/StatGuide.gd": [1, "projection", "row 139: stats and menus"],
-    "scripts/ui/TrainingScene.gd": [1, "should", "row 135: training"],
 }
 
 HUB = "scripts/ui/HubScene.gd"
@@ -63,6 +59,80 @@ HUB_OLD = [
     "Playing the semi finals", "Playing the prelims", "Your pick: whoever you take",
     "Simming the week...",
 ]
+
+## The team builder and coaching pass (copy voice pass 5): per file, the rewritten lines and the
+## lines they replaced. Auto-pick is the Match committee now, on every screen that names it.
+TEAM_PASS = {
+    "scripts/ui/SelectionScene.gd": [[
+        "\"Match committee\"", "Dual ruck on. The match committee names a second ruck on the bench.",
+        "One ruck. The match committee fills the bench with the best of the rest.",
+        "Our side is confirmed for this week.", "\"Our team\"",
+        "Projected: %s as they would line up this week. They name their side on match day. They kick the other way.",
+        "Picked at match committee until you move someone.",
+        "Saved as your Best 23. Choose it any week from Match committee.",
+        "Back to the side from before match committee.",
+        "Leave the player out while he is fit and the promise breaks. It stings.",
+    ], ["\"Auto-pick\"", "Auto-pick names", "Auto-pick fills", "Side confirmed for", "\"Your team\"", "(projected:",
+        "Picked for you", "from Auto-pick", "before the auto-pick", "Leave a fit player out"]],
+    "scripts/ui/CoachingScene.gd": [[
+        "Each plan buys an edge and gives something up. The note below says which.",
+        "Each plan runs on one of our list's strengths. That is our side as picked, against every list in the league.",
+        "\"Also on our list\"", "After three games, how we win and get beaten shows here.",
+        "One strength and one cost, on top of our plan, every match. Or none.",
+        "No part of our game is costing us regularly.", "No one part of our game stands above the league.",
+        "%s of the %s salary cap",
+    ], ["gives something up;", "one of your list's", "Also on your list", "how your side wins", "on top of your plan",
+        "of your game", "payroll %s"]],
+    "scripts/ui/FirstVisitIntro.gd": [[
+        "Our match-day 23 for this week. The match committee picks it until you move someone.",
+        "Move players on and off the ground to set the side you want.",
+        "Our game plan: how we play every week, set against what our list is good at.",
+        "Each plan suits some lists more than others. We can change it before any match.",
+    ], ["Your match-day 23", "is picked for you", "the team you want", "Your game plan: how your side",
+        "Pick the plan that suits"]],
+    "scripts/sim/SkipOrders.gd": [[
+        "The match committee picks the side in place of one you named.",
+        "The match committee picks the side in place of one you named, and keeps picking it for the finals until you name another.",
+    ], ["Auto-pick"]],
+    "scripts/state/GameState.gd": [[
+        "Nobody needs a break. This is our best side.", "Not enough fresh players to rest anyone. This is our best side.",
+        "No saved Best 23 yet. Set a side and save it.", "Our Best 23. Replacing unavailable players: %s.",
+        "\"Our Best 23.\"", "No young player is close enough to take a senior spot. This is our best side.",
+    ], ["this is your best side", "arrange a side and save it", "\"Your Best 23", "a starter's spot"]],
+}
+
+TRAINING = "scripts/ui/TrainingScene.gd"
+## The training pass (copy voice pass 6): the rewritten lines of TrainingScene.gd, and the lines
+## they replaced. What a player trains as is his development focus, on every line that names it.
+TRAINING_NEW = [
+    "A player earns development every game. His development focus decides which stats it lifts.",
+    "Pick the kind of footballer each player becomes. That is his development focus.",
+    "By position trains what a player's position is judged on. Change a focus any time.",
+    "Nothing develops a player like senior football. A fit player we leave out develops in the reserves, at about half the rate.",
+    "Young players a long way short of their potential improve quicker than the rest.",
+    "No rating moved after the last game.", "No game played yet. Our players develop after every game.",
+    "Focus changed. Banked development lifted his OVR from %d to %d.",
+    "Focus changed. Banked development went straight into it.", "Focus changed. It starts after the next game.",
+    "%s set for %d %s.", "last game. A senior game is worth up to %d.",
+    "On hold while he learns a position. All his training goes into the new role.",
+    "His development drills get the rest. Change it when the %d season opens.",
+    "Each point on one stat costs more as it climbs. So his OVR grows more slowly than with no stat focus.",
+    "This one shows once he clears its mark by more than he clears one of theirs.",
+    "As a %s he rates %d. In his own position, %d. ", "That is up to the standard. He can be picked there after week %d.",
+    "Get within %d by week %d and he can be picked there.",
+]
+TRAINING_OLD = [
+    "should become", "safe default", "whenever you like", "Fit players you leave out", "improve quickest",
+    "Training: no rating changes", "Players develop after every match", "what he is developing as",
+    "Development changed", "lifted him from", "applied to %d", "spent under the new focus",
+    "(a senior game", "learns a position:", "You can change it when", "get dearer", "on his plan alone",
+    "further past its line", "his own game %d", "\"up to the standard", "\"within %d by week",
+]
+
+## Every pinned pass: (file, the pass, its rewritten lines, the lines they replaced).
+PASSES = [(HUB, "copy voice pass 2, hub", HUB_NEW, HUB_OLD)] + [
+    (path, "copy voice pass 5, team and coaching", v[0], v[1]) for path, v in TEAM_PASS.items()] + [
+    (TRAINING, "copy voice pass 6, training", TRAINING_NEW, TRAINING_OLD)]
 
 LITERAL = re.compile(r'"([^"\n]*)"')
 
@@ -154,17 +224,18 @@ def check(root, allow=None, sources=None, tales=None):
     return out
 
 
-def check_hub(root, new=None, old=None):
-    new = HUB_NEW if new is None else new
-    old = HUB_OLD if old is None else old
-    src = read(root, HUB)
+def check_passes(root, passes=None):
+    """Each copy pass's rewritten lines are still in their file, and none of the old ones."""
     out = []
-    if not src:
-        return [Finding(HUB, 0, "hub-copy", "file not found")]
-    for s in new:
-        if s not in src:
-            out.append(Finding(HUB, 0, "hub-copy", "the hub no longer says: %s (copy voice pass 2 pinned it)" % s))
-    for s in old:
-        if s in src:
-            out.append(Finding(HUB, line_of(src, s), "hub-copy", "the hub says an old line again: %s" % s))
+    for path, label, new, old in (PASSES if passes is None else passes):
+        src = read(root, path)
+        if not src:
+            out.append(Finding(path, 0, "copy-pass", "file not found (%s pinned it)" % label))
+            continue
+        for s in new:
+            if s not in src:
+                out.append(Finding(path, 0, "copy-pass", "no longer says: %s (%s pinned it)" % (s, label)))
+        for s in old:
+            if s in src:
+                out.append(Finding(path, line_of(src, s), "copy-pass", "says an old line again: %s (%s)" % (s, label)))
     return out

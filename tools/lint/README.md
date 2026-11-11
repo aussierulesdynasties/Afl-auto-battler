@@ -25,7 +25,7 @@ A failure prints `path:line: [rule] message` (and a GitHub annotation on CI).
 |---|---|---|---|
 | autoload-reach | autoload_reach.py | No `extends SceneTree` script (runner, harness) names, at compile time, a class whose chain reaches an autoload: under `godot --script` it fails to compile and Godot hangs to the time limit. `load()` it inside `_run()`. | new (StoryDeck, ClubForge and #978 breaks) |
 | copy-voice | copy_voice.py | The banned words (`scripts/core/CopyRules.gd` WORDS) in story cards, tale banks and UI/sim/state string literals, at the exact ALLOW counts. | copy_rules `_test_sources` |
-| hub-copy | copy_voice.py | The hub's rewritten lines stay; the old ones stay gone. | copy_rules `_test_hub_pass` |
+| copy-pass | copy_voice.py | Each copy voice pass keeps its rewritten lines and its old ones stay gone (PASSES: hub, team and coaching, training). | copy_rules `_test_hub_pass`, `_test_team_pass`, `_test_training_pass` |
 | font-size-one-place | screens.py | No `add_theme_font_size_override` outside UiKit. | text_size `_test_one_place` |
 | colour-cue | screens.py | A state colour (GOOD/BAD) always has a word or mark too (P-10); every such line is listed in COLOUR_CUES at its exact count. | text_size `_test_colour_has_words` |
 | type-role | screens.py | Every literal text size on a screen is in `UiKit.SIZES`. | career_ui `_test_type_roles` |
@@ -36,7 +36,7 @@ A failure prints `path:line: [rule] message` (and a GitHub annotation on CI).
 | story-flags | story_flags.py | Every story flag a choice sets is read by a card or by `story_flag_set(..., "name")`. | test_story `_test_no_dead_story_flags` |
 | gdlint | gdlint_gate.py, gdlintrc | gdtoolkit's linter (naming, unused arguments, whitespace) against `gdlint_baseline.txt`. | new |
 
-Each rule keeps its table (ALLOW, HUB_NEW/HUB_OLD, COLOUR_CUES, BANNED) in its own file; edit
+Each rule keeps its table (ALLOW, PASSES, COLOUR_CUES, BANNED) in its own file; edit
 the table in the same PR as the line it covers, as before. What stays in Godot: anything that
 needs the engine (CopyRules' own unit tests in clublink, contrast maths, image and audio
 checks, StoryDeck.validate, ProjectSettings, taps), and the compile preflight

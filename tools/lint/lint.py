@@ -28,7 +28,7 @@ from common import ROOT  # noqa: E402
 RULES = {
     "autoload-reach": autoload_reach.check,
     "copy-voice": copy_voice.check,
-    "hub-copy": copy_voice.check_hub,
+    "copy-pass": copy_voice.check_passes,
     "font-size-one-place": screens.check_font_size_one_place,
     "colour-cue": screens.check_colour_cues,
     "type-role": screens.check_type_roles,

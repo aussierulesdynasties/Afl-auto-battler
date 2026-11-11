@@ -18,7 +18,9 @@ import subprocess
 
 from common import Finding
 
-STR = re.compile(r'"""[\s\S]*?"""|"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'')
+# One pass, left to right, so a quote inside a comment and a # inside a string both read right.
+# A double-quoted string may run over a line break: Godot accepts it (tests/run_matchday_tests.gd).
+TOKEN = re.compile(r'#[^\n]*|"""[\s\S]*?"""|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\\n])*\'')
 IDENT = re.compile(r'(?<![\w.$])([A-Z]\w*)\b')
 PRELOAD = re.compile(r'preload\(\s*"res://([^"]+\.gd)"')
 LOCAL = re.compile(r'\b(?:var|const)\s+([A-Z]\w*)')
@@ -26,7 +28,10 @@ LOCAL = re.compile(r'\b(?:var|const)\s+([A-Z]\w*)')
 
 def strip(t):
     """The source with every string emptied and every comment removed."""
-    return re.sub(r'#[^\n]*', '', STR.sub('""', t))
+    def blank(m):
+        s = m.group(0)
+        return "" if s.startswith("#") else '"' + "\n" * s.count("\n") + '"'
+    return TOKEN.sub(blank, t)
 
 
 def tracked_gd(root):

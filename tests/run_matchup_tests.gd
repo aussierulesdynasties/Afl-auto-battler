@@ -1656,7 +1656,7 @@ func _gate_odds() -> void:
 	var RT = load("res://scripts/sim/Ratings.gd")
 	var MU = load("res://scripts/sim/Matchups.gd")
 	var digits := RegEx.create_from_string("[0-9]")
-	var templates := [GO.GAIN, GO.COST, GO.TAG_GIVES, GO.TAG_TOUCHES, GO.TAG_NOTE, GO.TAG_HOT_GAIN, GO.TAG_HOT_COST, GO.TAG_LEAVE_GAIN, GO.TAG_LEAVE_COST, GO.SKIP_FIRST, GO.SKIP_LATER,
+	var templates := [GO.GAIN, GO.COST, GO.TAG_GIVES, GO.TAG_TOUCHES, GO.TAG_BREAK_GAIN, GO.TAG_BENCH_COST, GO.TAG_NOBODY_GAIN, GO.TAG_NONE_GAIN, GO.TAG_NONE_COST_ANY, GO.TAG_HOT_GAIN, GO.TAG_HOT_COST, GO.TAG_LEAVE_GAIN, GO.TAG_LEAVE_COST, GO.TAG_MOVE_COST, GO.TAG_STAY_GAIN, GO.SKIP_FIRST, GO.SKIP_LATER,
 			GO.FOR_MINUTES, GO.TO_SIREN, GO.TO_BREAK, GO.NONE_GAIN, GO.NONE_COST_RUN, GO.NONE_COST_BOUNCE]
 	for d in [GO.BURST_GAIN, GO.BURST_COST]:
 		templates.append_array((d as Dictionary).values())
@@ -1664,7 +1664,10 @@ func _gate_odds() -> void:
 	_check(literal.is_empty(), "No match-day gate template carries a number of its own (%s)" % str(literal))
 	var pct := func(x: float) -> String: return GO.pct(x)
 	_check(GO.tag_gives().contains(pct.call(Ms.TAGGER_COST)) and GO.tag_gives().contains(pct.call(1.0 - Ms.TAGGER_BALL))
-			and GO.tag_note("A", "B").contains(GO.tag_gives_pct()),
+			and str(GO.tag_break_texts("B", "A", 20)[1]).contains(GO.tag_gives())
+			and str(GO.tag_break_texts("", "A", 20)[0]).contains(GO.tag_gives())
+			and str(GO.tag_break_texts("", "A", 20, "", "C")[1]).contains("C gets his usual %d touches" % GO.usual_touches())
+			and str(GO.tag_break_texts("B", "", 0)[0]).begins_with("none"),
 			"Tag: the share of his own game given up, from the tagger's constants (%s)" % GO.tag_gives())
 	_check(GO.skip_line(1).contains("plan you took in") and GO.skip_line(3).contains("last quarter's calls")
 			and GO.skip_line(3).contains("no change") and GO.skip_line(1).contains("Nothing changed here is kept"),

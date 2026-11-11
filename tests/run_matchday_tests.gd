@@ -71,6 +71,7 @@ func _run() -> void:
 	await _t("_test_tag_not_saved")
 	await _t("_test_bounce_close_up")
 	await _t("_test_ballup_two_scene")
+	await _t("_test_hot_tag_tap")
 	await _t("_test_playtest_bounce_scene")
 	await _t("_test_rings_on_the_oval")
 	await _t("_test_first_goal_line")
@@ -699,7 +700,14 @@ Cost: %s" % [gc[0], gc[1]]),
 	# Tag: "No tag" says so; a name brings the tagger line back.
 	var tn: Control = box.find_child("TagNote", true, false)
 	var none: Button = box.find_child("TagPickerGrid_", true, false)
-	_check(tn != null and none != null and _plain(tn).begins_with("No tag"), "With no tag, the tag line says so (%s: %s)" % [tag, _plain(tn) if tn else "-"])
+	# The call's Gain / Cost rows (director 2026-11-10, "Gain / Cost everywhere"):
+	# No tag has its own gain and its own cost, the touches inside the line.
+	var usual := roundi(float(load("res://scripts/sim/Roles.gd").TAG_USUAL_TOUCHES))
+	var no_tag_ok := func() -> bool:
+		var t := _plain(tn)
+		return t.begins_with("Gain: your midfielders play their own game") and t.contains("
+Cost: ") 				and t.contains("usual %d touches" % usual) and tn.find_child("TagGain", true, false) != null 				and tn.find_child("TagCost", true, false) != null
+	_check(tn != null and none != null and no_tag_ok.call(), "With no tag, the tag call says its gain and its cost (%s: %s)" % [tag, _plain(tn) if tn else "-"])
 	var named: Button = null
 	for b in box.find_child("TagPicker", true, false).find_children("TagPickerGrid_*", "Button", true, false):
 		if str(b.name) != "TagPickerGrid_":
@@ -709,10 +717,13 @@ Cost: %s" % [gc[0], gc[1]]),
 	if named != null:
 		var tw: String = await Tap.tap(named)
 		await _settle()
-		_check(tw == "" and _plain(tn).contains(" tags "), "Picking a player brings the tagger line (%s: %s)" % [tag, _plain(tn)])
+		_check(tw == "" and _plain(tn).contains("usually gets %d touches" % usual) and _plain(tn).contains("on him, about ")
+				and _plain(tn).contains("
+Cost: ") and _plain(tn).contains(str(load("res://scripts/sim/GateOdds.gd").tag_gives())),
+				"A real tap on a player sizes the tag: his touches, and what the tagger gives up (%s: %s)" % [tag, _plain(tn)])
 		var tw2: String = await Tap.tap(box.find_child("TagPickerGrid_", true, false))
 		await _settle()
-		_check(tw2 == "" and _plain(tn).begins_with("No tag"), "Back to no tag, the line says so (%s)" % tag)
+		_check(tw2 == "" and no_tag_ok.call(), "Back to no tag, its own gain and cost return (%s: %s)" % [tag, _plain(tn)])
 		await Tap.tap(named)
 		await _settle()
 		# Who tags: your assistant's man first, another midfielder a real tap away.
@@ -776,10 +787,10 @@ Cost: %s" % [gc[0], gc[1]]),
 			var mine_name: String = words.call(mine_btn).split("\n")[0].strip_edges()
 			var ww: String = await Tap.tap(mine_btn)
 			await _settle()
-			_check(ww == "" and _plain(tn).begins_with(mine_name), "The midfielder you tap is the one who goes (%s: %s; tapped %s)" % [tag, _plain(tn), mine_name])
+			_check(ww == "" and _plain(tn).contains("with %s on him" % mine_name), "The midfielder you tap is the one who goes (%s: %s; tapped %s)" % [tag, _plain(tn), mine_name])
 			var wd: String = await Tap.tap(who_box.find_child("TaggerPickerGrid_", true, false))
 			await _settle()
-			_check(wd == "" and not _plain(tn).begins_with(mine_name), "Back to your assistant's man (%s: %s; was %s)" % [tag, _plain(tn), mine_name])
+			_check(wd == "" and not _plain(tn).contains("with %s on him" % mine_name), "Back to your assistant's man (%s: %s; was %s)" % [tag, _plain(tn), mine_name])
 
 	# Start with a tag: the plan line names every call, in full, and nothing
 	# it sits above is pushed off the screen.
@@ -2176,6 +2187,69 @@ func _test_ballup_two_scene() -> void:
 		push_played = push_played or (int(e["side"]) == me and (e["bursts"] as Array).has("push"))
 	_check(sim.moments.size() == asked + 1 and str((sim.moments[-1] as Dictionary).get("choice_label", "")) == "Push numbers forward"
 			and push_played, "The tap makes the call, and the numbers are forward")
+	m.queue_free()
+	await _settle()
+
+
+## Their midfielder has kicked three: the in-match Tag call names the man who
+## would go, sizes both answers, and a real tap on "Tag him with ..." puts the
+## tag on (T1.R26 M7).
+func _test_hot_tag_tap() -> void:
+	var sz := Vector2i(390, 844)
+	_state.reset()
+	_state.start_season("FRE", root.get_node("GameDB").club_list("FRE"))
+	root.size = sz
+	_check(_state.prepare_interactive_match(), "A live match is prepared (tag call)")
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	(m.find_child("StartQuarter", true, false) as Button).emit_signal("pressed")
+	await _settle()
+	m.get("_pitch").pause()
+	var sim = _state.pending_sim
+	var me := int(m.get("_my_side"))
+	sim.pending_moment = {}
+	sim.moment_side = me
+	sim.set("_moments_this_q", 0)
+	sim.set("_last_moment_chain", -1000)
+	sim.set("_run", [0, 0])
+	sim.tactics[me]["tag_id"] = ""
+	var hot: Dictionary = {}
+	for p in sim.squads[1 - me].ground:
+		if load("res://scripts/sim/MatchSim.gd").taggable(p):
+			hot = p
+			break
+	_check(not hot.is_empty() and sim.tagger_of(me) != null, "They have a midfielder on the ground and you have one to send")
+	if hot.is_empty() or sim.tagger_of(me) == null:
+		m.queue_free()
+		return
+	sim.player_stats[str(hot["id"])] = {"goals": 3.0}
+	_check(sim.call("_boundary_moment") and str(sim.pending_moment.get("kind", "")) == "hot",
+			"MatchSim asks the tag call (%s)" % str(sim.pending_moment.get("kind", "-")))
+	var who: String = root.get_node("GameDB").player_display_name(sim.tagger_of(me))
+	m.call("_show_moment")
+	await _settle()
+	var card = m.find_child("MomentCard", true, false)
+	_check(card != null, "The tag call opens")
+	if card == null:
+		m.queue_free()
+		return
+	var vig = card.find_child("DecisionVignette", true, false)
+	if vig != null:
+		vig.finish_now()
+		await _settle()
+	for i in range(30):
+		await process_frame      # the call slides up (0.3 s)
+	var b0: Button = card.find_child("Moment_0", true, false)
+	_check(b0 != null and b0.text == "Tag him with %s" % who, "The first answer names the man who goes (%s)" % (b0.text if b0 else "-"))
+	var low := _text(card)
+	_check(low.contains("usually gets %d touches" % roundi(float(load("res://scripts/sim/Roles.gd").TAG_USUAL_TOUCHES))) and low.contains(str(load("res://scripts/sim/GateOdds.gd").tag_gives())),
+			"The card sizes the tag in touches and what he gives up (%s)" % low)
+	var why: String = await Tap.tap(b0)
+	_check(why == "", "A real tap on Tag him reaches it (%s)" % why)
+	var last: Dictionary = sim.moments[-1] if not sim.moments.is_empty() else {}
+	_check(str(last.get("kind", "")) == "hot" and str(last.get("call", "")) == "tag" and str(last.get("player_id", "")) == str(hot["id"]),
+			"The tap makes the call: the tag goes on their man (%s)" % str(last.get("choice_label", "-")))
 	m.queue_free()
 	await _settle()
 
