@@ -13,7 +13,7 @@ extends SceneTree
 
 const SUITE_SEED := 2027
 ## Careers played, seeds SUITE_SEED, SUITE_SEED + 1, ...
-const CAREERS := 6
+const CAREERS := 20
 ## Of those, how many must see one of his international cards dealt.
 const NEED := 4
 
