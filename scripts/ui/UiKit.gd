@@ -21,10 +21,19 @@ const SHADE := 0.03
 ## GameState reads the user's appearance preference. These are runtime values
 ## rather than constants so every screen can rebuild cleanly in light mode.
 const AUTO_COLOUR := Color(-1, -1, -1, -1)
-static var BG := Color("121110")
-static var PANEL := Color("1b1a17")       # a grouped surface
-static var PANEL_ALT := Color("24221e")   # a surface on a surface - sparingly
-static var INK := Color("0d0c0b")         # inputs and wells
+## The five surfaces are one elevation scale (row V4), lowest first: each step
+## is lighter than the one under it on the dark ground. elevation() is the
+## scale in order; tests/run_contrast_tests.gd fails a step out of order and
+## any text token or club ink under 4.5:1 on any step.
+static var INK := Color("0d0c0b")         # step 0: inputs, wells, the hub's foot
+static var BG := Color("121110")          # step 1: the page
+static var PANEL := Color("1b1a17")       # step 2: a grouped surface
+static var PANEL_ALT := Color("24221e")   # step 3: a surface on a surface - sparingly
+## Step 4, the quiet surface of a pressed or chosen control: it reads on BG and
+## on PANEL alike. Flat: no edge, no shadow (the raised tile of 8-10 October is
+## gone; audit §3.1).
+static var SURFACE := Color("2a2823")
+const ELEVATION := ["INK", "BG", "PANEL", "PANEL_ALT", "SURFACE"]
 static var LINE := Color("363229")        # rules and outlines
 static var TEXT := Color("f1eee6")
 static var MUTED := Color("a39e93")
@@ -71,6 +80,11 @@ static func apply_appearance(mode: String) -> void:
 
 static func appearance() -> String:
 	return _appearance
+
+
+## The elevation scale as colours, lowest step first (ELEVATION names them).
+static func elevation() -> Array:
+	return [INK, BG, PANEL, PANEL_ALT, SURFACE]
 
 
 ## Text size (row 118, P-04): Standard, Larger or Largest, from Settings. Every
@@ -1284,7 +1298,7 @@ static func style_button(b: Button, fs := 16, primary := false, danger := false)
 		sb = style(lead, 8, RADIUS)
 		sb.set_border_width_all(0)
 		for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-			b.add_theme_color_override(k, ink_on(lead))
+			b.add_theme_color_override(k, primary_label(lead))
 	elif danger:
 		sb = style(Color.TRANSPARENT, 8, RADIUS, BAD.darkened(0.2))
 	else:
@@ -1313,11 +1327,6 @@ static func style_button(b: Button, fs := 16, primary := false, danger := false)
 	b.add_theme_stylebox_override("focus", focus)
 	feel(b, "main" if primary else "soft")
 
-
-## The quiet surface of a secondary control: one step up from the page, so it
-## reads on BG and on PANEL alike. Flat: no edge, no shadow (the raised tile of
-## 8-10 October is gone; audit §3.1).
-static var SURFACE := Color("2a2823")
 
 ## A secondary button's outline and the dark well inside it (STYLE-01): the
 ## outline sits between LINE and MUTED so it shows on the page without
@@ -1429,12 +1438,80 @@ static func team_wash() -> Color:
 ## club's button is its black lifted to a mid grey that stands clear of the
 ## quiet SURFACE buttons beside it, never the accent's red (director
 ## 2026-11-08, "Grey buttons too").
+## Either way it passes through primary_fill, so it shows on the page.
 const BLACK_CLUB_BUTTON_LUM := 0.38
 static func team_button() -> Color:
 	var club := my_club()
 	if club != "" and GameDB.clubs.has(club) and club_is_black(club):
-		return ClubBackdrop.lifted(club_black(club), BLACK_CLUB_BUTTON_LUM)
-	return team_colour()
+		return primary_fill(ClubBackdrop.lifted(club_black(club), BLACK_CLUB_BUTTON_LUM))
+	return primary_fill(team_colour())
+
+
+## The floors a primary button's fill is held to (row V4, ruling V-R2): 3:1
+## against the page and a panel, so the button's shape shows (Carlton's navy
+## was 1.4:1 on the page), and 4.5:1 under its label.
+const FILL_FLOOR := 3.0
+const LABEL_FLOOR := 4.5
+const _LABEL_DARK := Color("161512")
+
+
+## `c` as a primary button's fill on the dark ground: unchanged when it already
+## meets both floors; else moved along its own hue (OKLCH lightness only;
+## chroma only shrinks to stay inside sRGB) just far enough: lighter until it
+## stands 3:1 off the page and a panel, darker until it is INK_CLASH clear of
+## BAD, then lighter or darker until its label (primary_label) reads at 4.5:1.
+## tests/run_contrast_tests.gd walks every club through it. The light ground
+## is left as it was.
+static func primary_fill(c: Color) -> Color:
+	if _appearance != "dark":
+		return c
+	var out := c
+	var grounds := [BG, PANEL]
+	var guard := 0
+	while min_contrast(out, grounds) < FILL_FLOOR and guard < 200:
+		out = _oklch_step(out, 0.005)
+		guard += 1
+	# Clear of BAD (ruling V-R2): darker, away from BAD's pale red, while the
+	# fill still stands off the page; Hawthorn's brown ink was 19 from BAD.
+	guard = 0
+	while colour_distance(out, BAD) < INK_CLASH and guard < 200:
+		var deeper := _oklch_step(out, -0.005)
+		out = deeper if min_contrast(deeper, grounds) >= FILL_FLOOR else _oklch_step(out, 0.005)
+		guard += 1
+	guard = 0
+	while contrast(primary_label(out), out) < LABEL_FLOOR and guard < 200:
+		var darker := _oklch_step(out, -0.005)
+		# Darker suits a white label, unless that sinks the fill into the page.
+		if primary_label(out) == Color.WHITE and min_contrast(darker, grounds) >= FILL_FLOOR:
+			out = darker
+		else:
+			out = _oklch_step(out, 0.005)
+		guard += 1
+	return out
+
+
+## The label on a primary fill: white where white reads at 4.5:1, else
+## whichever of white and near-black reads better (near-black on the Giants'
+## orange, where white was 2.8:1).
+static func primary_label(fill: Color) -> Color:
+	var white := contrast(Color.WHITE, fill)
+	if white >= LABEL_FLOOR or white >= contrast(_LABEL_DARK, fill):
+		return Color.WHITE
+	return _LABEL_DARK
+
+
+## `c` one step lighter (or darker) in OKLCH, hue kept.
+static func _oklch_step(c: Color, dl: float) -> Color:
+	var lab: Vector3 = ClubBackdrop._to_oklab(c)
+	var chroma := Vector2(lab.y, lab.z).length()
+	var hue := atan2(lab.z, lab.y)
+	var l := clampf(lab.x + dl, 0.0, 1.0)
+	while chroma > 0.0:
+		var col: Color = ClubBackdrop._from_oklab(Vector3(l, chroma * cos(hue), chroma * sin(hue)))
+		if col.a > 0.0:
+			return col
+		chroma -= 0.004
+	return ClubBackdrop._from_oklab(Vector3(l, 0.0, 0.0))
 
 
 ## Match day's sheet wash: the opponent's colour, the atmosphere you play
