@@ -394,6 +394,27 @@ const PLAN_UP_STEADY := "Gain: the same legs every week, with no heavy weeks and
 const PLAN_DOWN_STEADY := "Cost: no peak, so the side is no fresher in September than in March."
 const PLAN_UP_DEVELOP := "Gain: players %d and under earn %s more development, and with the plan on since the bye they have %d more %s of room to grow this season. %s fewer soft-tissue injuries all year."
 const PLAN_DOWN_DEVELOP := "Cost: all year the side tires %s faster and has %s less in the legs."
+## Develop and manage also sets the match-day rotations (MatchSim.auto_rotation
+## puts the club on "hard", every other plan on "normal"): the legs each
+## player rests at, from MatchSim.ROTATION_POLICIES, and the two days the
+## plan does not decide them (T1.R26 M4; the rotation call itself was cut,
+## director 2026-11-03, so this plan is where the coach still sets them).
+const PLAN_ROTATE_GAIN := "Gain: in a match our players rest once their legs drop to %s, not %s, so the side on the ground is fresher."
+const PLAN_ROTATE_COST := "Cost: our best players (OVR %d and up) rest at %s, not %s, so they play less of the match."
+const PLAN_ROTATE_DAYS := "A hot day rests every plan at these marks. A last quarter within %d points keeps every plan's best on down to %s."
+
+
+## What Develop and manage does to the rotations, against every other plan:
+## a gain line, a cost line and the days the plan does not decide.
+static func rotation_lines() -> PackedStringArray:
+	var managed: Dictionary = MatchSim.ROTATION_POLICIES["hard"]
+	var usual: Dictionary = MatchSim.ROTATION_POLICIES["normal"]
+	var ridden: Dictionary = MatchSim.ROTATION_POLICIES["stars"]
+	return PackedStringArray([
+		PLAN_ROTATE_GAIN % [legs_pct(float(managed["role"])), legs_pct(float(usual["role"]))],
+		PLAN_ROTATE_COST % [MatchSim.STAR_OVR, legs_pct(float(managed["star"])), legs_pct(float(usual["star"]))],
+		PLAN_ROTATE_DAYS % [MatchSim.AUTO_RIDE_MARGIN, legs_pct(float(ridden["star"]))],
+	])
 
 
 ## A share as a percentage, as the plan screens say it: "12%", "7.5%".
@@ -487,6 +508,7 @@ static func plan_effect(plan: String, hp_level: int) -> String:
 			lines.append(PLAN_UP_DEVELOP % [int(ClubBudget.YOUNG_AGE), pct(DEVELOP_XP), DEVELOP_CEILING, "point" if DEVELOP_CEILING == 1 else "points",
 					pct(INJURY_K * d)])
 			lines.append(PLAN_DOWN_DEVELOP % [pct(DRAIN_K * d), legs_pct(CAP_K * d)])
+			lines.append_array(rotation_lines())
 	return "\n".join(lines)
 
 
