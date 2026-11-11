@@ -266,6 +266,8 @@ func _test_rivals_build_one() -> void:
 			and RegEx.create_from_string("[0-9]+%").search(report) == null,
 			"The report on a rival names its plan, in words (%s)" % report.left(300))
 	var sim := MatchSim.new(Squad.new("Geelong", GameDB.club_list("GEE"), true, "GEE"), theirs, 77)
+	# Its coach's first-quarter call, as run_quarter makes it.
+	sim.set_tactics(1, sim.ai_tactics(1))
 	_check(sim._plan(1) == "custom" and is_equal_approx(sim._gt(1, "opp_goal"),
 			CustomPlan.lever(CustomPlan.entry("lockdown", true), "opp_goal", 1.0, sim._custom_up(1)))
 			and sim._gt(1, "opp_goal") < 1.0,
