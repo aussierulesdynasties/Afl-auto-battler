@@ -124,7 +124,7 @@ static func short_tag(gs, p: Dictionary) -> String:
 # ---------------------------------------------------------------------------
 ## The club that finished last on the real 2026 ladder among `active`.
 static func bottom_club(active: Array) -> String:
-	var ladder: Array = GameDB.ladder_2026()
+	var ladder: Array = GameDB.ladder_of(GameDB.DATA_SEASON)
 	for i in range(ladder.size() - 1, -1, -1):
 		var code := str(ladder[i]["club"])
 		if active.has(code):

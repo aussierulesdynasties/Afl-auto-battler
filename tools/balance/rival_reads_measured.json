@@ -1,0 +1,66 @@
+{
+ "off_seasons": 35,
+ "club_seasons": 659,
+ "careers": [
+  "reads_301.json",
+  "reads_302.json",
+  "reads_303.json",
+  "reads_304.json",
+  "reads_305.json",
+  "reads_306.json"
+ ],
+ "pot": [
+  {
+   "level": "Minimal",
+   "reads": 457871,
+   "misses": 89117,
+   "worst": 7
+  },
+  {
+   "level": "Standard",
+   "reads": 457871,
+   "misses": 74309,
+   "worst": 5
+  },
+  {
+   "level": "Strong",
+   "reads": 457871,
+   "misses": 60060,
+   "worst": 5
+  },
+  {
+   "level": "Elite",
+   "reads": 457871,
+   "misses": 48480,
+   "worst": 3
+  }
+ ],
+ "young": [
+  {
+   "level": "Minimal",
+   "reads": 143164,
+   "misses": 38991
+  },
+  {
+   "level": "Standard",
+   "reads": 143164,
+   "misses": 38156
+  },
+  {
+   "level": "Strong",
+   "reads": 143164,
+   "misses": 32643
+  },
+  {
+   "level": "Elite",
+   "reads": 143164,
+   "misses": 32535
+  }
+ ],
+ "fa": {
+  "talks": 931,
+  "held": 380,
+  "led_again": 551,
+  "extra_median": 100000
+ }
+}

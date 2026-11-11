@@ -131,6 +131,19 @@ func _test_fa_weights() -> void:
 			"Your offer's Gain names both worths and its Cost the cap hit: %s / %s" % two)
 	_check(str(Contracts.fa_lines(600000, 1, 900000, 0)[0]).begins_with("no other club has offered"),
 			"Alone on the table, the Gain says he signs with you")
+	# The Gain's odds are the measured ones (tools/balance/rival_reads_measured.json,
+	# row T1.R26 L3): how often the cheapest leading offer still led once
+	# rivals answered, and what leading again cost when it did not.
+	var fa: Dictionary = JSON.parse_string(
+			FileAccess.get_file_as_string("res://tools/balance/rival_reads_measured.json"))["fa"]
+	var held_in_10 := int(round(10.0 * float(fa["held"]) / maxf(1.0, float(fa["talks"]))))
+	var extra := int(round(float(fa["extra_median"]) / 10000.0)) * 10000
+	_check(int(fa["talks"]) >= 500 and held_in_10 == Contracts.FA_HOLDS_IN_10 and extra == Contracts.FA_RELEAD_EXTRA
+			and str(two[0]).contains("still leads about %d times in 10 once they answer" % held_in_10)
+			and str(two[0]).contains("costs about %s a season more" % Contracts.money(extra))
+			and not str(Contracts.fa_lines(600000, 1, 900000, 0)[0]).contains("times in 10"),
+			"Your offer's Gain states the measured odds: still leads %d times in 10 of %d talks, %s more to lead again"
+			% [held_in_10, int(fa["talks"]), Contracts.money(extra)])
 
 
 func _test_list_costs() -> void:

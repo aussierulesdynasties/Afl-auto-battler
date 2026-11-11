@@ -507,7 +507,7 @@ func _test_hub_round1(size: Vector2i) -> void:
 	# Last year's finish: the real 2026 ladder in a real-lists first season,
 	# nothing in a redrafted league or for a club that is not on that ladder.
 	_state.start_mode = "real"
-	var real_ladder: Array = _db.ladder_2026()
+	var real_ladder: Array = _db.ladder_of(2026)
 	var first: String = str(real_ladder[0]["club"])
 	_check(_state.last_finish_of(first) == 1, "%s: the real champion finished 1st last year (%d)" % [tag, _state.last_finish_of(first)])
 	_state.start_mode = "redraft"

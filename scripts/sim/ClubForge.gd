@@ -127,7 +127,7 @@ static func club_problem(spec: Dictionary) -> String:
 			return "%s already goes by %s." % [str(c.get("name", other)), code]
 		if str(c.get("name", "")).to_lower() == name.to_lower():
 			return "There is already a club called %s." % name
-	if GameDB.CLUB_ORDER.has(code) or RESERVED_CODES.has(code) or CareerSave.RENAMED_CLUBS.has(code):
+	if GameDB.CLUB_ORDER.has(code) or GameDB.PAST_CLUBS.has(code) or RESERVED_CODES.has(code) or CareerSave.RENAMED_CLUBS.has(code):
 		return "%s is taken. Try another abbreviation." % code
 	var loc := location(str(spec.get("location", "")))
 	if loc.is_empty():
