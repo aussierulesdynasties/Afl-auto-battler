@@ -363,8 +363,25 @@ func _list_row(p: Dictionary) -> Control:
 		fam.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		who.add_child(fam)
 		row.custom_minimum_size = Vector2(0, 92 if GameState.is_untouchable(str(p["id"])) else 74)
+	# His concussions in five years, once they matter (MedicalPanel): a line of
+	# its own under his details, with what is keeping him out above it when
+	# something is, so his name is never cut for either.
+	var knocks := GameState.concussions_in_window(p)
 	var status := _status(p)
-	if str(status[0]) != "":
+	if knocks >= MedicalPanel.SHOWN_FROM:
+		var lines := 1
+		if str(status[0]) != "":
+			var out := UiKit.ellipsis(str(status[0]), UiKit.SMALL, status[1], true)
+			out.name = "RowStatus"
+			out.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			who.add_child(out)
+			lines = 2
+		var conc := UiKit.ellipsis(MedicalPanel.count_text(knocks), UiKit.SMALL, UiKit.BAD, true)
+		conc.name = "RowConcussions"
+		conc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		who.add_child(conc)
+		row.custom_minimum_size = Vector2(0, maxf(row.custom_minimum_size.y, 56.0) + 18.0 * lines)
+	elif str(status[0]) != "":
 		var st := UiKit.line(str(status[0]), UiKit.SMALL, status[1], true)
 		st.name = "RowStatus"
 		st.size_flags_vertical = Control.SIZE_SHRINK_CENTER

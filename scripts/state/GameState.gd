@@ -60,6 +60,11 @@ var last_label := ""             # "Round 7" / "Grand Final" / ...
 var season_log: Array = []       # every result, for the season review screen
 var last_injuries: Array = []    # the last round's new injuries, every club
 var last_mro: Array = []         # the last round's MRO outcomes, every club
+## The last round's medical panel sittings, every club (MedicalPanel.gd):
+## [{id, club, name, overall, count, cleared, pct, year, at}]. Optional in a save, absent = [].
+var last_medical: Array = []
+## Players the panel did not clear this week, [club, player], until _settle_medical.
+var _medical_out: Array = []
 var season_tally := {}           # player id -> running season numbers (Awards)
 ## Every player's season statistics across the competition (StatBook): id ->
 ## {"club", "clubs", "games", "s": {stat: total}}. season_stats_from is the
@@ -879,6 +884,7 @@ func _save_state() -> Dictionary:
 		"season_log": CareerSave.slim_results(season_log),
 		"last_injuries": last_injuries,
 		"last_mro": last_mro,
+		"last_medical": last_medical,
 		"season_tally": season_tally,
 		"season_stats": StatBook.pack_book(season_stats),
 		"season_stats_from": season_stats_from,
@@ -1103,6 +1109,8 @@ func _restore_career(state: Dictionary) -> bool:
 	season_log = state.get("season_log", [])
 	last_injuries = state.get("last_injuries", [])
 	last_mro = state.get("last_mro", [])
+	last_medical = state.get("last_medical", []) if state.get("last_medical") is Array else []
+	_medical_out = []
 	season_tally = state.get("season_tally", {})
 	season_stats = StatBook.unpack_book(state.get("season_stats", {}))
 	season_stats_from = int(state.get("season_stats_from", 0))
@@ -1693,6 +1701,8 @@ func reset() -> void:
 	season_log = []
 	last_injuries = []
 	last_mro = []
+	last_medical = []
+	_medical_out = []
 	season_tally = {}
 	season_stats = {}
 	season_stats_from = 0
@@ -4811,6 +4821,8 @@ func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dicti
 	var hurt := []
 	for r in rows:
 		var hp := list_player(str(r["id"]))
+		if hp.is_empty():
+			continue   # the medical panel ended his career (MedicalPanel)
 		hurt.append("%s (%s, %s)" % [GameDB.player_display_name(hp), Injuries.wording(str(r["kind"])), _weeks_text(int(r["weeks"]))])
 	last_injuries = rows
 	var score: Array = res.get("score", [0, 0])
@@ -6803,6 +6815,8 @@ func _after_round(results: Array) -> void:
 	if season != null and season.is_season_over() \
 			and int(season_awards.get("year", 0)) != season_year:
 		_close_season_awards()
+	# A career the medical panel ended this week ends here, once the round is counted.
+	_settle_medical()
 	_captaincy_week()
 	_culture_week(results)
 	_next_week_event()
@@ -7119,6 +7133,7 @@ func _process_injuries(results: Array) -> void:
 	if season == null:
 		return
 	last_injuries = []
+	last_medical = []
 	for res in results:
 		for side in ["home", "away"]:
 			var code := str(res.get(side, ""))
@@ -7128,16 +7143,106 @@ func _process_injuries(results: Array) -> void:
 		var rows := Injuries.apply_match(res, season.lists, season.seed,
 				int(res.get("round", season.round_index)))
 		last_injuries += rows
-		_log_injuries(rows, str(res.get("label", "")))
+		_log_injuries(rows, str(res.get("label", "")), false)
+	# A player the panel did not clear is not one of the week's injured: his
+	# news is the panel's.
+	last_injuries = _not_medically_out(last_injuries)
 
 
 ## Each new injury is a career fact (CareerFacts): the season, the match,
 ## his club and what it was, so later decisions can cite his real history -
 ## only what this career saw.
-func _log_injuries(rows: Array, label: String) -> void:
+func _log_injuries(rows: Array, label: String, settle := true) -> void:
 	for r in rows:
 		CareerFacts.add(career_facts, str(r["id"]),
 				CareerFacts.row(season_year, label, "injury", str(r["club"]), "", str(r.get("kind", ""))))
+		if str(r.get("kind", "")) == "concussion":
+			_medical_panel(str(r["id"]), str(r["club"]), label)
+	if settle:
+		_settle_medical()
+
+
+## His concussions in this season and the four before (MedicalPanel.count).
+func concussions_in_window(p: Dictionary) -> int:
+	return MedicalPanel.count(career_facts, str(p.get("id", "")), season_year)
+
+
+## A concussion has just gone on his record. With five or more in five years
+## the medical panel sits that week (director, 2026-11-11): one roll of its own
+## at the flat MedicalPanel.CLEAR_CHANCE, the same for every club's player.
+func _medical_panel(id: String, club: String, at: String) -> void:
+	var n := MedicalPanel.count(career_facts, id, season_year)
+	if not MedicalPanel.sits(n) or season == null:
+		return
+	var p := {}
+	for q in season.lists.get(club, []):
+		if str(q.get("id", "")) == id:
+			p = q
+	if p.is_empty():
+		return
+	var ok := MedicalPanel.cleared(career_seed, id, season_year, MedicalPanel.count_ever(career_facts, id))
+	var row := {"id": id, "club": club, "name": GameDB.player_display_name(p),
+			"overall": int(p.get("overall", 0)), "count": n, "cleared": ok, "pct": MedicalPanel.clear_pct(),
+			"year": season_year, "at": at}
+	last_medical.append(row)
+	if not ok:
+		_medical_out.append([club, p])
+	if club == my_club:
+		add_news("medical", MedicalPanel.result_line(row), "", {"club": club, "name": row["name"], "cleared": ok})
+	elif not ok or int(row["overall"]) >= NEWS_MIN_OVR:
+		add_news("medical", MedicalPanel.league_line(row, GameDB.club_name(club)), "", {"club": club, "name": row["name"], "cleared": ok})
+	mark_dirty()
+
+
+## The injury rows without anyone the panel has just retired.
+func _not_medically_out(rows: Array) -> Array:
+	if _medical_out.is_empty():
+		return rows
+	var gone := {}
+	for pair in _medical_out:
+		gone[str((pair[1] as Dictionary).get("id", ""))] = true
+	return rows.filter(func(r): return not gone.has(str(r.get("id", ""))))
+
+
+func _settle_medical() -> void:
+	var out := _medical_out
+	_medical_out = []
+	for pair in out:
+		_medical_retire(str(pair[0]), pair[1])
+
+
+## The panel did not clear him: his career ends this week, mid-season. He comes
+## off his club's list (the spot stays empty until the club next adds a player:
+## the mid-season rookie draft, or the off-season), his contract ends with him
+## as a retiring player's does (nothing is left on the cap), and the career-over
+## path does the rest (the honour board, his name for the record books, a
+## coaching future).
+func _medical_retire(club: String, p: Dictionary) -> void:
+	if season != null and season.lists.has(club):
+		(season.lists[club] as Array).erase(p)
+	if league_lists.has(club):
+		(league_lists[club] as Array).erase(p)
+	if club == my_club:
+		my_list.erase(p)
+		if str(role_trial.get("id", "")) == str(p.get("id", "")):
+			_end_role_trial(false)
+	p.erase("injury_weeks")
+	p.erase("injury_kind")
+	p["contract_years"] = 0
+	_career_over(p, "medical")
+	mark_dirty()
+
+
+## The medical panel's sittings on your players in the last round, as short
+## lines for the week's injuries: "Name cleared to play on (50% chance of
+## being cleared)".
+func my_medical_lines() -> Array:
+	var out := []
+	for row in last_medical:
+		var this_week: bool = int(row.get("year", 0)) == season_year and str(row.get("at", "")) == last_label
+		if this_week and str(row.get("club", "")) == my_club:
+			out.append(MedicalPanel.result_short(row))
+	return out
 
 
 ## A save from before career facts kept injuries on the player as bare years

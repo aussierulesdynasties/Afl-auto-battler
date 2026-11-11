@@ -4247,6 +4247,12 @@ func _ft_summary(v: VBoxContainer) -> void:
 			var inj := UiKit.lbl("Injured: " + ", ".join(hurt), UiKit.BODY, UiKit.BAD, true)
 			inj.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			week.add_child(inj)
+		var panel := GameState.my_medical_lines()
+		if not panel.is_empty():
+			var md := UiKit.lbl("Medical panel: " + ", ".join(panel), UiKit.BODY, UiKit.BAD, true)
+			md.name = "YourMedical"
+			md.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			week.add_child(md)
 		var report: Dictionary = GameState.last_training_report
 		if str(report.get("home", "")) == home and str(report.get("away", "")) == away:
 			# Who improved, and how, lives in Training (a tap below); here
