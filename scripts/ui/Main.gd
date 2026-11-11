@@ -319,15 +319,14 @@ func _show_home() -> void:
 		_content.add_child(UiKit.spacer(8))
 		_content.add_child(build)
 	else:
-		var build := _quiet_btn("%s  ·  %s" % [build_text, PATCH_NOTES_TITLE], "BuildLabel", _show_patch_notes)
-		build.add_theme_font_size_override("font_size", UiKit.SMALL)
+		var build := _quiet_btn("%s  ·  %s" % [build_text, PATCH_NOTES_TITLE], "BuildLabel", _show_patch_notes, UiKit.SMALL)
 		build.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		_content.add_child(build)
 
 
 ## A secondary action that reads as text: no box, muted until pressed.
-func _quiet_btn(text: String, node_name: String, cb := Callable()) -> Button:
-	var b := UiKit.btn(text, UiKit.BODY)
+func _quiet_btn(text: String, node_name: String, cb := Callable(), fs := UiKit.BODY) -> Button:
+	var b := UiKit.btn(text, fs)
 	b.name = node_name
 	b.flat = true
 	b.custom_minimum_size = Vector2(120, 44)
