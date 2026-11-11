@@ -205,7 +205,9 @@ func _thumb_drag(sc: ScrollContainer, label: String, res: Array) -> void:
 	var before_ids := {}
 	_ids(current_scene, before_ids)
 	var touches := [0]
-	var spy := func(ev: InputEvent): if ev is InputEventScreenTouch or ev is InputEventScreenDrag: touches[0] += 1
+	var spy := func(ev: InputEvent):
+		if ev is InputEventScreenTouch or ev is InputEventScreenDrag:
+			touches[0] += 1
 	sc.gui_input.connect(spy)
 	var th := _thumb(bar)
 	var x := th.position.x + th.size.x - 4.0

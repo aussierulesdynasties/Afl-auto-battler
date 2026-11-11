@@ -1412,8 +1412,7 @@ func _test_report_a_problem() -> void:
 	report.start_feed("Round 3, Carlton v Collingwood")
 	for i in range(25):
 		report.note_feed("Q1 %d'  Line %d" % [i, i])
-	var lines: PackedStringArray = report.text("hub").split("
-")
+	var lines: PackedStringArray = report.text("hub").split("\n")
 	_check(lines[0] == "Aussie Rules Dynasties: problem report" and lines[1].begins_with("What happened:"),
 			"The note opens with its title and a line for what happened")
 	var want := ["Build: %s" % BuildInfo.label(), "Seed: ", "Round: ", "Screen: hub",
@@ -1660,7 +1659,7 @@ func _test_menu_and_career() -> void:
 	alt_enter.alt_pressed = true
 	alt_enter.pressed = true
 	root.get_node("ScreenLayout")._input(alt_enter)
-	_check(_state.fullscreen() == not was_full, "Alt+Enter switches between fullscreen and window")
+	_check(_state.fullscreen() == (not was_full), "Alt+Enter switches between fullscreen and window")
 	root.get_node("ScreenLayout")._input(alt_enter)
 	_check(_state.fullscreen() == was_full, "and back again")
 	_check(current_scene.find_child("MenuHelp", true, false) != null
@@ -1672,8 +1671,7 @@ func _test_menu_and_career() -> void:
 
 	# --- the offline promise and the browser's storage line (P-70, P-71) -----------
 	var promise: Label = current_scene.find_child("OfflinePromise", true, false)
-	_check(promise != null and promise.text == "Plays offline. No ads, no account.
-Your career stays on this device.",
+	_check(promise != null and promise.text == "Plays offline. No ads, no account.\nYour career stays on this device.",
 			"The menu prints the offline promise, saying the career stays on this device")
 	var main_script = load("res://scripts/ui/Main.gd")
 	_check(main_script.promise_text(true).ends_with("Your career stays in this browser.")
@@ -1876,6 +1874,18 @@ Your career stays on this device.",
 	var club_code: LineEdit = current_scene.find_child("ForgeClubCode", true, false)
 	_check(club_name != null and club_name.text == "Port Melbourne" and club_code != null and club_code.text == "PM",
 			"Picking a place fills in the club's name and an abbreviation")
+	# Phone (390 px): Save club sits under the club's name, inside the name
+	# column, so "Port Melbourne" keeps the strip's width and stays one line.
+	var pv_name: Label = current_scene.find_child("ForgePreviewName", true, false)
+	var save_club: Control = current_scene.find_child("ForgeSaveClub", true, false)
+	var name_col: Control = pv_name.get_parent() if pv_name != null else null
+	var save_in_col: bool = save_club != null and name_col != null and save_club.get_parent() == name_col \
+			and name_col.get_global_rect().grow(0.5).encloses(save_club.get_global_rect())
+	_check(root.size.x == 390 and save_in_col
+			and save_club.get_global_rect().position.y >= pv_name.get_global_rect().end.y - 0.5,
+			"Phone: Save club sits inside the name column, under the club's name")
+	_check(pv_name != null and pv_name.text == "Port Melbourne" and pv_name.get_line_count() == 1,
+			"Phone: the club's name \"Port Melbourne\" is one line (%d)" % (pv_name.get_line_count() if pv_name != null else -1))
 	_type("ForgeClubNickname", "Borough")
 	_type("ForgeClubCode", "pmb")
 	_check(club_code != null and club_code.text == "PMB", "The abbreviation is written in capitals")
@@ -1908,6 +1918,29 @@ Your career stays on this device.",
 			"The guernsey wears what was painted: red, blue hoops, gold trim")
 	_check(_screen_text().contains("Main colour") and _screen_text().contains("Pattern colour")
 			and _screen_text().contains("Trim colour"), "Each part is named with its colour")
+	# The wider palette (director 2026-11-11), by finger on a phone: all of it
+	# on screen at thumb size, and a new colour paints the trim.
+	var palette: Control = current_scene.find_child("ForgePalette", true, false)
+	var swatches := palette.get_children() if palette != null else []
+	var small_sw := []
+	for s in swatches:
+		if (s as Control).size.x < 44 or (s as Control).size.y < 44:
+			small_sw.append(s.name)
+	# Loaded, not named: naming ClubForge here compiles it before GameDB exists.
+	var palette_size: int = load("res://scripts/sim/ClubForge.gd").PALETTE.size()
+	_check(swatches.size() == palette_size and palette_size >= 27 and small_sw.is_empty(),
+			"Every Forge colour is a thumb-sized swatch on a phone (%d, small %s)" % [swatches.size(), str(small_sw)])
+	var bottle_sw: Control = current_scene.find_child("ForgeColour_bottle", true, false)
+	var bottle_tap: String = await Tap.tap(bottle_sw) if bottle_sw != null else "missing"
+	await _settle()
+	_check(bottle_tap == "" and _screen_text().contains("Painting with Bottle green"),
+			"A finger picks a new colour, and the screen names it (%s)" % bottle_tap)
+	var trim_part: Control = current_scene.find_child("ForgePart_trim", true, false)
+	var trim_tap: String = await Tap.tap(trim_part) if trim_part != null else "missing"
+	await _settle()
+	_check(trim_tap == "" and str(current_scene.get("_club")["accent"]).to_upper() == "#0C4A2F"
+			and _screen_text().contains("Bottle green"),
+			"A finger paints the trim bottle green (%s)" % trim_tap)
 	# Where you click on the guernsey decides what you paint.
 	var crest = load("res://scripts/ui/GuernseyCrest.gd").make(Color.RED, Color.BLUE, Color.WHITE, "hoops", "", 100.0)
 	crest.size = Vector2(100, 100)

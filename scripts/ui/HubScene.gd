@@ -1336,8 +1336,7 @@ func _skip_season(orders := {}, to := "season") -> void:
 	# skip never looks frozen (director, 2026-11-10).
 	var job := GameState.skip_begin(orders, to)
 	while true:
-		ScreenTransition.show_line("%s
-%s" % [GameState.skip_progress(), SKIP_CALM])
+		ScreenTransition.show_line("%s\n%s" % [GameState.skip_progress(), SKIP_CALM])
 		await ScreenTransition.drawn()
 		# A browser draws only between JavaScript tasks, so there the week's
 		# matches run on threads under drawn frames; PC and Android keep the
@@ -2436,8 +2435,7 @@ func _show_midseason_pick() -> void:
 	for p in shown:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
-		var txt := UiKit.lbl("%s  %d
-%s, %d, %s" % [GameDB.player_display_name(p), int(p.get("overall", 0)),
+		var txt := UiKit.lbl("%s  %d\n%s, %d, %s" % [GameDB.player_display_name(p), int(p.get("overall", 0)),
 				DraftNight.position_words(p), int(p.get("age", 0)), MidseasonDraft.from_word(GameState, p)], 14, UiKit.TEXT)
 		txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -2636,10 +2634,14 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 		inj.name = "MyInjured"
 		inj.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(inj)
-	var panel := GameState.my_medical_lines()
-	if not panel.is_empty():
-		var md := UiKit.lbl("Medical panel: " + " ".join(panel), UiKit.SMALL, UiKit.BAD, true)
-		md.name = "MyMedical"
+	# One line per sitting, the first headed "Medical panel:". A cleared player
+	# is good news: body ink; a career ended is the injury red.
+	var panel := GameState.my_medical_rows()
+	for i in range(panel.size()):
+		var ok := bool(panel[i]["cleared"])
+		var md := UiKit.lbl(("Medical panel: " if i == 0 else "") + str(panel[i]["text"]),
+				UiKit.SMALL, UiKit.TEXT if ok else UiKit.BAD, not ok)
+		md.name = "MyMedical_%d" % i
 		md.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(md)
 	var mro := GameState.my_mro_lines()
