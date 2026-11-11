@@ -97,6 +97,16 @@ func _run() -> void:
 	root.add_child(ui)
 	for i in range(8):
 		await process_frame
+	if "--raised" in a:
+		# The phone's list pulled up over the oval.
+		ui.find_child("TeamBuilder", true, false).set_raised(true, false)
+	if "--dent" in a:
+		# A few men from other clubs, so the chemistry bar is short of full.
+		for q in state.my_squad().ground.slice(0, 6):
+			var man = state.list_player(str(q["id"]))
+			load("res://scripts/sim/TeamFamiliarity.gd").arrive_club(man)
+			man["team_fam"] = 70.0
+		ui.call("_build")
 	if picked:
 		var c: Button = ui.find_child("Spot_C", true, false)
 		if c != null:
