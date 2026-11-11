@@ -1084,8 +1084,8 @@ func _runner(id: String, place: String, node_name: String) -> Control:
 ## for others (the Bulldogs' red).
 func _primary(text: String) -> Button:
 	var b := UiKit.btn(text, UiKit.NAME, true)
-	var fill := UiKit.club_ink(GameState.my_club)
-	var ink := UiKit.ink_on(fill)
+	var fill := UiKit.primary_fill(UiKit.club_ink(GameState.my_club))
+	var ink := UiKit.primary_label(fill)
 	var shades := {"normal": fill, "hover": fill.lightened(0.08),
 			"pressed": fill.darkened(0.12), "hover_pressed": fill.darkened(0.12)}
 	for state in shades:

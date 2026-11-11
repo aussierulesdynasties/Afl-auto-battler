@@ -27,6 +27,8 @@ The html5 channel can also take the Web build workflow's artifact: on GitHub, Ac
 
 **Version number.** The version comes from `project.godot` `config/version` (the menu and Settings read it, and the Android and Windows exports use it); nothing else holds a copy, and `tools/check_version.py` fails CI if one appears. The butler `--userversion` is `<version>-<sha7>` (for example `0.1.13-60a1bd4`).
 
+**Patch notes in the game.** The version-bump PR also adds the new version's lines to `data/patch_notes.json` (the menu shows them once per version; the `save_release` suite fails a bump without them). Same rules as the devlog below.
+
 A push replaces that channel's build. Testers get it on their next load, and saves from the older build keep loading. If a tester still sees the old build, ask them to hard-refresh (Ctrl+Shift+R, or on a phone close the tab and reopen the link) and check the build label on the main menu.
 
 ## 2. Post the devlog

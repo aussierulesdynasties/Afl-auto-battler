@@ -326,7 +326,8 @@ func _test_plan_copy() -> void:
 			Conditioning.PLAN_DOWN_DEVELOP, Conditioning.HP_RECOVERY_UP, Conditioning.HP_RECOVERY_DOWN,
 			Conditioning.HP_RECOVERY_EVEN, Conditioning.HP_PEAK, Conditioning.HP_ODDS, Conditioning.HP_ODDS_SURE,
 			Conditioning.HP_COST_MORE, Conditioning.HP_COST_LESS, Conditioning.HP_COST_EVEN,
-			Conditioning.PLAN_DEPARTMENT]
+			Conditioning.PLAN_DEPARTMENT, Conditioning.PLAN_ROTATE_GAIN, Conditioning.PLAN_ROTATE_COST,
+			Conditioning.PLAN_ROTATE_DAYS]
 	var literal := templates.filter(func(t): return digits.search(str(t)) != null)
 	_check(literal.is_empty(), "No plan or department line carries a number of its own (%s)" % str(literal))
 	var b := -Conditioning.BUILD_FLOOR
@@ -381,6 +382,49 @@ func _test_plan_copy() -> void:
 			"Develop and manage says what the young gain and what the side gives up (%s)" % dev)
 	var steady := Conditioning.plan_effect("steady", 1)
 	_check(steady.contains("Gain:") and steady.contains("Cost:"), "Steady all year has a gain and a cost too")
+	_rotation_copy(dev)
+
+
+## Develop and manage says the rotations it sets (T1.R26 M4): the legs each
+## player rests at are the ones the match rotates on, read from
+## MatchSim.ROTATION_POLICIES, and the plan is the one that sets them.
+func _rotation_copy(dev: String) -> void:
+	var P: Dictionary = MatchSim.ROTATION_POLICIES
+	var lines := Conditioning.rotation_lines()
+	_check(lines.size() == 3 and lines[0].begins_with("Gain: ") and lines[1].begins_with("Cost: ")
+			and dev.contains(lines[0]) and dev.contains(lines[1]) and dev.contains(lines[2]),
+			"Develop and manage carries its rotation gain, cost and the days it does not decide (%s)" % dev)
+	_check(lines[0].contains("drop to %d%%, not %d%%" % [int(P["hard"]["role"]), int(P["normal"]["role"])])
+			and lines[1].contains("OVR %d and up" % MatchSim.STAR_OVR)
+			and lines[1].contains("rest at %d%%, not %d%%" % [int(P["hard"]["star"]), int(P["normal"]["star"])])
+			and lines[2].contains("within %d points" % MatchSim.AUTO_RIDE_MARGIN)
+			and lines[2].contains("down to %d%%" % int(P["stars"]["star"])),
+			"The rotation marks on the plan are the match's own (%s)" % str(lines))
+	_check(float(P["hard"]["role"]) > float(P["normal"]["role"]) and float(P["hard"]["star"]) > float(P["normal"]["star"])
+			and float(P["stars"]["star"]) < float(P["normal"]["star"]),
+			"The words hold: managed players rest earlier, the best included; a close finish keeps the best on longest")
+	for plan in Conditioning.PLANS:
+		if str(plan) != "develop":
+			_check(not Conditioning.plan_effect(str(plan), 1).contains(lines[0]),
+					"%s does not claim the managed rotations" % Conditioning.PLAN_LABEL[plan])
+	# The plan is what sets them, and the two days it does not are as written.
+	var sim := MatchSim.new(Squad.new("FRE", GameDB.club_list("FRE"), true, "FRE"),
+			Squad.new("MEL", GameDB.club_list("MEL"), false, "MEL"), 31)
+	sim.current_quarter = 2
+	var by_plan := {}
+	for plan in Conditioning.PLANS:
+		by_plan[plan] = sim.auto_rotation(0, str(plan))
+	_check(by_plan == {"peak": "normal", "steady": "normal", "fast": "normal", "develop": "hard"},
+			"Only Develop and manage puts the side on the managed rotations (%s)" % str(by_plan))
+	var was := str(sim.weather)
+	sim.weather = "hot"
+	_check(sim.auto_rotation(0, "steady") == "hard" and sim.auto_rotation(0, "develop") == "hard",
+			"A hot day rests every plan at the managed marks")
+	sim.weather = was
+	sim.current_quarter = 4
+	_check(sim.score(0) == sim.score(1) and sim.auto_rotation(0, "develop") == "stars"
+			and sim.auto_rotation(0, "steady") == "stars",
+			"A close last quarter keeps every plan's best on")
 
 
 ## The plan on its screens, with a finger's taps: the line on the hub and
@@ -450,6 +494,10 @@ func _test_screens() -> void:
 	var lvl: int = GameState.fitness_hp_level("GEE")
 	var peak_e := locked.find_child("PlanEffect_peak", true, false) as Label
 	var dept_l := locked.find_child("SeasonPlanDepartment", true, false) as Label
+	var dev_e := locked.find_child("PlanEffect_develop", true, false) as Label
+	_check(dev_e != null and dev_e.text == Conditioning.plan_effect("develop", lvl)
+			and dev_e.text.contains(Conditioning.rotation_lines()[1]),
+			"The sheet shows the rotations Develop and manage sets")
 	_check(peak_e != null and peak_e.text == Conditioning.plan_effect("peak", lvl)
 			and dept_l != null and dept_l.text == Conditioning.department_line(lvl),
 			"The sheet shows each plan's upside, downside and odds at your department's level")
