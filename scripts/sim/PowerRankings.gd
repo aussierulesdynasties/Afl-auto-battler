@@ -27,7 +27,7 @@ const LEADS := {
 	],
 	"bottom": [
 		"It shapes as a long year for {c}, and {s} cannot carry them alone.",
-		"{c} are the paper's wooden-spoon tip; {s} is the one sure thing on the list.",
+		"{c} are tipped to finish near the bottom; {s} is the one sure thing on the list.",
 		"Few give {c} much of a chance, though {s} will keep them honest most weeks.",
 	],
 	"rise": [
@@ -52,7 +52,7 @@ const LEADS := {
 		"Start with the {line}: {l} heads the deepest one in the league at {c}.",
 	],
 	"line_top": [
-		"The {line} is {c}'s strength, with {l} the pick of a deep group.",
+		"The {line} is the strength at {c}, with {l} the pick of a deep group.",
 		"Built around {l}, {c} have a {line} as good as any outside the very best.",
 		"{l} leads a top-four {line} at {c}.",
 		"{c} will lean on a quality {line}, and {l} is its best player.",

@@ -328,7 +328,7 @@ func _papers_ladder() -> Control:
 	v.add_child(_section_head("The papers' ladder"))
 	var order: Array = GameState.papers_record().get("order", [])
 	# Each club's power-ranking blurb, its practice move folded in.
-	var blurbs: Dictionary = GameState.papers_blurbs()
+	var blurbs: Dictionary = {} if _wide() else GameState.papers_blurbs()
 	# A PC is short: the ladder is two columns of nine, so all of it is in view.
 	var cols: Array = [v, v]
 	if _wide():
@@ -359,9 +359,10 @@ func _papers_ladder() -> Control:
 		var nm := UiKit.lbl(GameDB.club_name(code), UiKit.BODY, UiKit.club_name_colour(UiKit.club_ink(code)), mine)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		# The paper's word on each club sits under its name: the power-ranking
-		# blurb, with its practice move as the last sentence.
-		var why := str(blurbs.get(code, GameState.papers_move_line(code)))
+		# The paper's word on each club sits under its name: on a phone the
+		# power-ranking blurb, with its practice move as the last sentence; on a
+		# PC, where all 18 clubs stay in view, the practice move alone.
+		var why := GameState.papers_move_line(code) if _wide() else str(blurbs.get(code, GameState.papers_move_line(code)))
 		if why == "":
 			row.add_child(nm)
 		else:
