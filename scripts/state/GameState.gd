@@ -4142,7 +4142,7 @@ func papers_facts() -> Dictionary:
 	var order: Array = papers_record().get("order", [])
 	var margins: Dictionary = preseason.get("practice_margins", {}) if preseason.get("practice_margins") is Dictionary else {}
 	var depth := {"DEF": 6, "MID": 6, "FWD": 6, "RUCK": 2}
-	var words := {"DEF": "defence", "MID": "midfield", "FWD": "forward line", "RUCK": "ruck stocks"}
+	var words := {"DEF": "defence", "MID": "midfield", "FWD": "forward line", "RUCK": "ruck division"}
 	# Each line's strength: the mean of its best few fit players.
 	var lines := {}
 	for code in order:

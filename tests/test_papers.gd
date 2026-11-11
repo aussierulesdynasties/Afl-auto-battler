@@ -103,6 +103,77 @@ func _test_rules() -> void:
 			"Which story runs is the pre-season's own seeded draw")
 
 
+## The papers' power rankings (director, 2026-11-12): every club gets its own
+## blurb, no two alike, each naming a player on that club's list or its
+## practice result, and a club the practice moved keeps the paper's line on it.
+func _test_power_rankings() -> void:
+	PreSeason.reload()
+	_career()
+	_check(_to_papers(), "The papers print")
+	var order: Array = GameState.papers_record().get("order", [])
+	var blurbs := GameState.papers_blurbs()
+	var facts := GameState.papers_facts()
+	var all := true
+	var true_fact := true
+	var sentences := {}
+	var repeats := []
+	var moved := true
+	for code in order:
+		var b := str(blurbs.get(code, ""))
+		all = all and b != ""
+		var named := false
+		for p in GameState.season.lists[code]:
+			if b.contains(GameDB.player_display_name(p)):
+				named = true
+				break
+		var m := int((facts[code] as Dictionary).get("margin", 0))
+		if m != 0 and b.contains("%d-point practice" % absi(m)):
+			named = true
+		true_fact = true_fact and named
+		if not named:
+			print("  no fact in: ", b)
+		var mv := GameState.papers_move_line(str(code))
+		moved = moved and (mv == "" or b.ends_with(mv + "."))
+		# The same sentence frame twice: each sentence with the club's and its
+		# players' names taken out (the paper's move lines are checked above).
+		var body := b.trim_suffix(mv + ".") if mv != "" else b
+		for sentence in body.split(". ", false):
+			var frame := sentence.replace(GameDB.club_name(str(code)), "C")
+			for p in GameState.season.lists[code]:
+				frame = frame.replace(GameDB.player_display_name(p), "P")
+			if sentences.has(frame):
+				repeats.append(frame)
+			sentences[frame] = true
+		print("  ", code, ": ", b)
+	_check(order.size() == 18 and all, "Every club on the papers' ladder has a blurb")
+	_check(repeats.is_empty(), "No two blurbs share a sentence (%s)" % str(repeats))
+	_check(true_fact, "Each blurb names a player on that club's list or its practice result")
+	_check(moved, "A club the practice moved ends its blurb with the paper's line on the move")
+	var text := str(blurbs.values()).to_lower()
+	_check(not text.contains("overall") and not text.contains("rating") and not text.contains("potential"),
+			"No engine words in the blurbs")
+	# The rule reads facts, not the club.
+	var f := {"name": "Ascot", "pos": 1, "clubs": 18, "star": "Sam Smith", "second": "Tom Brown",
+			"line": {"word": "midfield", "rank": 1, "lead": "Sam Smith"}}
+	var top := PowerRankings.blurb("AAA", f, {})
+	_check(top.contains("Sam Smith") and top.contains("Ascot"), "A blurb names the club and its player (%s)" % top)
+	var hurt := f.duplicate(true)
+	hurt["pos"] = 9
+	hurt["line"] = {"word": "midfield", "rank": 12, "lead": "Sam Smith"}
+	hurt["hurt"] = {"name": "Jack Jones", "kind": "a hamstring injury"}
+	_check(PowerRankings.blurb("AAA", hurt, {}).contains("Jack Jones"), "A club missing a good player says so")
+	var rec := hurt.duplicate(true)
+	rec.erase("hurt")
+	rec["recruit"] = {"name": "Ned Kelly", "from": "Glenrowan"}
+	var r := PowerRankings.blurb("AAA", rec, {})
+	_check(r.contains("Ned Kelly") and r.contains("Glenrowan"), "A club's best recruit leads its blurb, with his old club (%s)" % r)
+	var used := {}
+	var texts := {}
+	for k in range(12):
+		texts[PowerRankings.blurb("C%d" % k, hurt, used)] = true
+	_check(texts.size() == 12, "Twelve mid-table clubs with the same facts still read twelve ways (%d)" % texts.size())
+
+
 ## The practice match nudges the paper's ladder (director, 2026-11-12, "Nudge
 ## it"): four goals moves a club a place, seven goals two; every club the same.
 func _test_practice_nudge() -> void:
