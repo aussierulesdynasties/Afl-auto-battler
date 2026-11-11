@@ -35,6 +35,7 @@ func run() -> void:
 	_t("_test_a_player_short_still_trades")
 	_t("_test_midseason_draft_fills_the_spot")
 	_t("_test_short_with_rookie_spots_full")
+	_t("_test_grand_final_week")
 	GameState.replay_seed = 0
 	print(Ran.line("Medical panel", self))
 
@@ -492,6 +493,21 @@ func _trim(club: String, n: int, keep: Dictionary) -> Array:
 	return cut
 
 
+## In a first season nobody is in the mid-season draft's pool (no free agents,
+## no passed-over prospects), and each club with a rookie spot free picks
+## before a short club lower on the ladder. Every other club gives its players
+## over the minimum to the pool, so it holds one for every club in the order.
+func _fill_pool(skip: Array) -> void:
+	for code in GameState.season.lists:
+		if skip.has(str(code)):
+			continue
+		for q in _trim(str(code), Contracts.MIN_LIST, {}):
+			q["released_by"] = str(code)
+			GameState.free_agents.append(q)
+	_check(MidseasonDraft.pool(GameState).size() > GameState.season.lists.size(),
+			"The draft's pool holds a player for every club (%d)" % MidseasonDraft.pool(GameState).size())
+
+
 ## The coach's own player's sitting is on the week's surface wherever it can
 ## happen: a final whose week is named differently from its match (a simulated
 ## finals week), a final he played, and the practice match. Nothing is matched
@@ -671,6 +687,73 @@ func _test_retirement_is_on_the_books() -> void:
 			"A save without the record loads with none")
 
 
+## The panel sits in the Grand Final week, the week the season closes and the
+## off-season opens. A rival's player it does not clear (out of contract, so
+## the off-season would re-sign, delist or release him) is retired before the
+## off-season opens: no club re-signs him, releases him or retires him again,
+## and he is never in the free-agent pool after his career has ended.
+func _test_grand_final_week() -> void:
+	_career()
+	var guard := 0
+	while guard < 60 and not GameState.season.is_season_over() and not (GameState.season.is_regular_done()
+			and not GameState.season.finals.is_empty() and int(GameState.season.finals.get("week", 0)) == 5):
+		guard += 1
+		GameState.advance()
+	_check(not GameState.season.is_season_over() and int(GameState.season.finals.get("week", 0)) == 5,
+			"The season reaches Grand Final week (%d weeks)" % guard)
+	if GameState.season.is_season_over():
+		return
+	# The Grand Final week's own steps, with the panel's concussion handed on by the match.
+	GameState._advance_prep()
+	GameState._advance_reset()
+	GameState._play_week()
+	_check(GameState.season.is_season_over() and GameState.last_results.size() == 1,
+			"The Grand Final is played (%d results)" % GameState.last_results.size())
+	if GameState.last_results.is_empty():
+		return
+	var res: Dictionary = GameState.last_results[0]
+	var side := 1 if str(res.get("home", "")) == GameState.my_club else 0
+	var club := str(res.get("away" if side == 1 else "home", ""))
+	var p := {}
+	for q in GameState.season.lists.get(club, []):
+		var qid := str(q["id"])
+		if MedicalPanel.count_ever(GameState.career_facts, qid) == 0 and int(q.get("injury_weeks", 0)) == 0 \
+				and float(q.get("age", 40.0)) < 29.0 \
+				and not MedicalPanel.cleared(GameState.career_seed, qid, GameState.season_year, 5):
+			p = q
+			break
+	_check(not p.is_empty(), "A %s player the panel does not clear exists in this seed" % club)
+	if p.is_empty():
+		return
+	var id := str(p["id"])
+	p["contract_years"] = 1
+	p.erase("retiring")
+	p.erase("resigned")
+	_past(p, 4)
+	res["injuries"] = (res.get("injuries", []) as Array) + [{"side": side, "id": id, "weeks": 2, "kind": "concussion"}]
+	# A rival board's letter would hold the off-season until he answers (this
+	# seed's season earns one): the letter this year is already declined, so the
+	# off-season opens with the Grand Final.
+	ClubArcs._st(GameState)["letter"] = {"year": GameState.season_year, "answer": "declined"}
+	GameState._log_week()
+	GameState._week_xp()
+	GameState._week_rivals()
+	GameState._week_after()
+	_check(GameState.offseason_year == GameState.season_year and not ClubMoves.letter_open(GameState),
+			"The off-season has opened (off-season %d, season %d)" % [GameState.offseason_year, GameState.season_year])
+	_check(GameState.last_medical.size() == 1 and not bool(GameState.last_medical[0]["cleared"])
+			and GameState.medical_retired.any(func(r): return str(r.get("id", "")) == id),
+			"The panel sat in Grand Final week and did not clear him")
+	_check(not _on_a_list(id) and GameState.departed_names.has(id), "His career is over and he is on no list")
+	_check(not GameState.free_agents.has(p)
+			and not GameState.free_agents.any(func(q): return str(q.get("id", "")) == id),
+			"He is not in the free-agent pool after his career ended")
+	_check(not GameState.offseason_log.any(func(e): return str(e.get("id", "")) == id)
+			and not p.has("resigned") and not p.has("retiring") and int(p.get("contract_years", -1)) == 0,
+			"The off-season never saw him: not re-signed, released or retired again (%s)" % [
+			GameState.offseason_log.filter(func(e): return str(e.get("id", "")) == id)])
+
+
 ## A medical retirement can leave a club one under the minimum list. While it
 ## is short, a trade that leaves its list no smaller is still legal; one that
 ## makes it smaller is not, and nothing changes for a club on the minimum.
@@ -730,6 +813,7 @@ func _test_midseason_draft_fills_the_spot() -> void:
 	for q in cut:
 		q["released_by"] = str(q.get("club", ""))
 		GameState.free_agents.append(q)
+	_fill_pool(["FRE", "MEL"])
 	GameState.midseason = {}
 	MidseasonDraft._open_draft(GameState)
 	var order: Array = GameState.midseason.get("order", [])
@@ -768,6 +852,7 @@ func _test_short_with_rookie_spots_full() -> void:
 	for q in cut:
 		q["released_by"] = "MEL"
 		GameState.free_agents.append(q)
+	_fill_pool(["MEL"])
 	GameState.midseason = {}
 	MidseasonDraft._open_draft(GameState)
 	while MidseasonDraft.waiting(GameState):

@@ -6857,7 +6857,9 @@ func _after_round(results: Array) -> void:
 	if season != null and season.is_season_over() \
 			and int(season_awards.get("year", 0)) != season_year:
 		_close_season_awards()
-	# A career the medical panel ended this week ends here, once the round is counted.
+	# A career the medical panel ended this week ends here, once the round is
+	# counted (in the Grand Final week the season's close has already settled
+	# it, before the off-season opens).
 	_settle_medical()
 	_captaincy_week()
 	_culture_week(results)
@@ -7021,6 +7023,10 @@ func _close_season_awards() -> void:
 		var first := Almanac.first_sentence(str(almanac[-1].get(Almanac.STORY_KEY, "")))
 		if first != "":
 			add_news("almanac_story", first)
+	# A career the medical panel ended in the Grand Final week ends now: his
+	# season is counted and honoured above, and the off-season below (a coach's
+	# move, re-signings, delistings, free agency) must not find him on a list.
+	_settle_medical()
 	# Achievements first, then the season news, so the premiership line
 	# stays the newest item in the feed.
 	_close_season_achievements()
