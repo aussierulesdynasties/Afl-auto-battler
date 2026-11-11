@@ -989,13 +989,19 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			p["expects_game"] = int(e.get("sting", 12))
 			# Named just now (not injured or suspended): say who made way.
 			var came_in: bool = not was_in and gs.in_current_side(p)
+			# Fit, but every place is held by a player owed a game: say so.
+			var no_room: bool = not was_in and not came_in and Ratings.available(p)
 			if str(facts.get("_result", "")) != "":
 				# The card's own result line speaks; on Auto-pick he is named anyway, so
 				# only a side you picked yourself needs the reminder.
 				if gs.my_selection().is_empty():
 					return ""
 				applied["_lead_result"] = true
+				if no_room:
+					return gs.NO_ROOM_WORDS
 				return gs.backed_in_words(made_way) if came_in else "He expects a game this week."
+			if no_room:
+				return "%s feels heard. %s" % [name, gs.NO_ROOM_WORDS]
 			if gs.my_selection().is_empty():
 				return "%s feels heard. He's in the side this week." % name
 			if came_in:
@@ -1008,7 +1014,7 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			var dropped: String = gs._start_backing(p)
 			var run := MatchNotes.count_word(Backing.RUN_GAMES)
 			var told := "%s is told he has a run of %s games." % [name, run]
-			return told + " " + gs.backed_in_words("" if was_in else dropped)
+			return told + " " + gs.promised_in_words(p, "" if was_in else dropped)
 		"extend_early":
 			return _extend(gs, p, name)
 		"new_club_keep":
@@ -1045,7 +1051,7 @@ static func _apply(gs, e: Dictionary, p: Dictionary, facts: Dictionary, applied:
 			var kid_out: String = gs._start_backing(kid)
 			var kid_told := "%s is told he has a run of %s games." % [str(facts.get("kid_name", "")),
 					MatchNotes.count_word(Backing.RUN_GAMES)]
-			return kid_told + " " + gs.backed_in_words("" if kid_in else kid_out)
+			return kid_told + " " + gs.promised_in_words(kid, "" if kid_in else kid_out)
 		"captaincy_swap":
 			var vice: Dictionary = gs.list_player(str(facts.get("vice_id", "")))
 			if vice.is_empty() or p.is_empty():

@@ -363,8 +363,7 @@ func _season_scores(threaded_frames: bool) -> String:
 		bits.append("%s %s %s %s" % [week.get("tag", week.get("round", "")), week["home"], week["away"], str(week["score"])])
 	for code in _state.season.ladder:
 		bits.append("%s %s" % [code, str(_state.season.ladder[code])])
-	return "
-".join(bits)
+	return "\n".join(bits)
 
 
 ## Sim to Round 1 in a browser hands frames back week by week, the practice
@@ -402,8 +401,7 @@ func _preseason_print(threaded_frames: bool) -> String:
 	for code in _state.season.lists:
 		for p in _state.season.lists[code]:
 			bits.append(JSON.stringify(p, "", true))
-	return "
-".join(bits)
+	return "\n".join(bits)
 
 
 func _rollover() -> String:
