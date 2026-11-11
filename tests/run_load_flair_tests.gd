@@ -61,6 +61,7 @@ func _run() -> void:
 	_t("_test_no_frames_by_hand_headless")
 	_t("_test_boot_splash_is_ours")
 	_t("_test_lines")
+	_t("_test_logo_named_in_one_place")
 	await _t("_test_beats_change_nothing")
 	await _t("_test_async_weeks_change_nothing")
 	await _t("_test_async_preseason_changes_nothing")
@@ -73,6 +74,38 @@ func _run() -> void:
 		quit(1)
 		return
 	quit(0)
+
+
+## Row V9: the logo file is named in GameLogo and nowhere else, and GameLogo says
+## whether it is still the stand-in. Both screens that show it read it from there.
+func _test_logo_named_in_one_place() -> void:
+	var logo: GDScript = load("res://scripts/ui/GameLogo.gd")
+	var file := str(logo.TEXTURE.resource_path).get_file()
+	_check(file != "" and logo.TEXTURE.get_width() > 0, "the logo file loads (%s)" % file)
+	_check(logo.PLACEHOLDER == file.contains("placeholder"),
+			"GameLogo says the logo is a stand-in exactly while the file is one (%s)" % file)
+	_check(Rect2(Vector2.ZERO, logo.TEXTURE.get_size()).encloses(logo.REGION),
+			"the lettering's crop is inside the file")
+	var named: Array[String] = []
+	var users: Array[String] = []
+	var dirs := ["res://scripts", "res://tests", "res://tools"]
+	while not dirs.is_empty():
+		var at: String = dirs.pop_back()
+		for sub in DirAccess.get_directories_at(at):
+			dirs.append(at.path_join(sub))
+		for f in DirAccess.get_files_at(at):
+			if not f.ends_with(".gd"):
+				continue
+			var text := FileAccess.get_file_as_string(at.path_join(f))
+			if text.contains(file.get_basename()):
+				named.append(at.path_join(f))
+			if at.begins_with("res://scripts") and text.contains("GameLogo.art()"):
+				users.append(f)
+	_check(named == ["res://scripts/ui/GameLogo.gd"],
+			"only GameLogo names the logo file (found in %s)" % [named])
+	users.sort()
+	_check(users == ["LoadFlair.gd", "Main.gd"],
+			"the title screen and the load screens take the logo from GameLogo (%s)" % [users])
 
 
 func _flair() -> Control:
@@ -95,7 +128,7 @@ func _test_flair_only_with_a_line() -> void:
 		var logo: TextureRect = _flair().get_node("LoadLogo")
 		var art := logo.texture as AtlasTexture
 		seen["logo_ok"] = art != null and art.atlas != null \
-				and art.atlas.resource_path.ends_with("aussie_rules_dynasties_logo_placeholder.png")
+				and art.atlas == load("res://scripts/ui/GameLogo.gd").TEXTURE 				and art.region == load("res://scripts/ui/GameLogo.gd").REGION
 		seen["hook"] = (_season.get("wait_hook") as Callable).is_valid())
 	_check(seen["line"], "a wait with a line has the flair on it")
 	_check(seen["logo_ok"], "the logo on it is the game's wordmark, not a fallback")

@@ -52,7 +52,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 |---|---|
 | `draft` | The League Draft model: cap, snake order, rival picks, pick log |
 | `draft_ui` | The draft screen's layout and state: containers, widths, rotate and resume |
-| `load_flair` | The load screens: logo and set shot on every wait with a line, the ball's flight, Reduced motion, the boot splash, the rollover's beats changing nothing |
+| `load_flair` | The load screens: logo and set shot on every wait with a line, the logo file named in one place (GameLogo) and marked a stand-in there, the ball's flight, Reduced motion, the boot splash, the rollover's beats changing nothing |
 | `intake` | The National Draft model: the 2026 class, projection, season rollover |
 | `intake_ui` | The National Draft on the shared draft screen |
 | `rookie_list` | The rookie list: the National Draft fills the senior list (38), the Rookie Draft after it fills six rookie spots, upgrading a rookie, old saves, both lists on the list screen, real taps on the sheet and the upgrade, and (row 64) every prospect the National Draft passed over gets his rookie list chance |
