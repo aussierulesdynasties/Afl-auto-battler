@@ -19,6 +19,7 @@ func run() -> void:
 	GameState.replay_seed = SUITE_SEED
 	_t("_test_rules")
 	_t("_test_practice_nudge")
+	_t("_test_power_rankings")
 	_t("_test_deck")
 	_t("_test_flow")
 	_t("_test_answers")

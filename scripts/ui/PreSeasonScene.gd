@@ -323,19 +323,19 @@ func _papers_story() -> Control:
 ## The ladder the papers printed, best first: your club in bold, every club
 ## in its own colour.
 func _papers_ladder() -> Control:
-	var v := UiKit.vbox(2)
+	var v := UiKit.vbox(10)
 	v.name = "PapersLadder"
 	v.add_child(_section_head("The papers' ladder"))
 	var order: Array = GameState.papers_record().get("order", [])
-	var moves: Dictionary = GameState.papers_record().get("moves", {})
-	var margins: Dictionary = GameState.preseason.get("practice_margins", {}) if GameState.preseason.get("practice_margins") is Dictionary else {}
+	# Each club's power-ranking blurb, its practice move folded in.
+	var blurbs: Dictionary = GameState.papers_blurbs()
 	# A PC is short: the ladder is two columns of nine, so all of it is in view.
 	var cols: Array = [v, v]
 	if _wide():
 		var pair := UiKit.hbox(24)
 		pair.name = "PapersLadderColumns"
-		var left := UiKit.vbox(2)
-		var right := UiKit.vbox(2)
+		var left := UiKit.vbox(10)
+		var right := UiKit.vbox(10)
 		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		pair.add_child(left)
@@ -350,30 +350,27 @@ func _papers_ladder() -> Control:
 		var pos := UiKit.figure(str(i + 1), UiKit.NUMBER)
 		pos.custom_minimum_size = Vector2(26, 0)
 		pos.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		pos.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		pos.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		row.add_child(pos)
 		var mark := UiKit.club_marker(code, 20.0)
-		mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		mark.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		row.add_child(mark)
 		var mine := code == GameState.my_club
 		var nm := UiKit.lbl(GameDB.club_name(code), UiKit.BODY, UiKit.club_name_colour(UiKit.club_ink(code)), mine)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		# A club the practice match moved says so under its name.
-		var mv: Dictionary = moves.get(code, {})
-		var by := str(mv.get("by", ""))
-		var by_name := by if by == "" or by == "top" or by == "bottom" else GameDB.club_name(by)
-		var why := PreSeason.practice_move_line(int(mv.get("places", 0)), int(mv.get("margin", 0)),
-				int(mv.get("earned", mv.get("places", 0))), by_name, int(margins.get(by, 0)))
+		# The paper's word on each club sits under its name: the power-ranking
+		# blurb, with its practice move as the last sentence.
+		var why := str(blurbs.get(code, GameState.papers_move_line(code)))
 		if why == "":
 			row.add_child(nm)
 		else:
 			var stack := UiKit.vbox(0)
 			stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			stack.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			stack.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 			stack.add_child(nm)
 			var note := UiKit.lbl(why, UiKit.SECONDARY, UiKit.MUTED)
-			note.name = "PapersMove_%d" % i
+			note.name = "PapersBlurb_%d" % i
 			note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			stack.add_child(note)
 			row.add_child(stack)
