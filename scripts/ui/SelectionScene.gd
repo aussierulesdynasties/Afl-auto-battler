@@ -2,7 +2,7 @@ extends Control
 ## Team selection: your match-day 23, built on the field (TeamBuilder; the
 ## director's PC playtest, 2026-10-07). Until you move someone the best side
 ## is picked for you each week; your first move makes the side yours, and it
-## stays yours until you choose an Auto-pick strategy again. A gap (an
+## stays yours until you choose a Match committee strategy again. A gap (an
 ## injured player) is filled automatically on match day.
 ##
 ## No scrolling (director, 2026-10-13: "team selection being scrollable doesnt
@@ -26,7 +26,7 @@ var _notice := ""
 var _memory := ["", ""]
 var _week: WeekPreview          # the week beside the side (a wide screen), and its sheets
 var _sheet: Control             # a player's profile, open over the list
-var _undo := {}            # the side before the last Auto-pick, for Undo
+var _undo := {}            # the side before the last Match committee pick, for Undo
 var _view := "mine"        # "mine" or "opp": the oval shows them, read-only
 var _line_cache := {}      # the other clubs' lines, built once a visit
 var _wide := false
@@ -65,12 +65,12 @@ func _build() -> void:
 	var places := UiKit.scroll_places(_root)
 	UiKit.clear(_root)
 	_wide = ScreenLayout.wide_view(UiKit.view_width(self), UiKit.view_height(self), 900.0)
-	# Auto-pick is an action, never a mode: choose a strategy and it sets the
+	# Match committee (the old Auto-pick) is an action, never a mode: choose a strategy and it sets the
 	# side; your moves after that stay yours (director, 2026-10-07). It is
 	# the top bar's right control (audit §8 Phase 1.4): the board comes first.
 	var pick := MenuButton.new()
 	pick.name = "AutoPick"
-	pick.text = "Auto-pick"
+	pick.text = "Match committee"
 	pick.flat = false
 	UiKit.style_button(pick, UiKit.BODY)
 	pick.custom_minimum_size = Vector2(0, 44)
@@ -81,7 +81,7 @@ func _build() -> void:
 			["mine", "My Selected Best 23"]]
 	for i in range(strategies.size()):
 		menu.add_item(str(strategies[i][1]), i)
-	# One ruck or two only changes who Auto-pick names on the bench, so it sits
+	# One ruck or two only changes who the match committee names on the bench, so it sits
 	# in this menu, ticked when on.
 	menu.add_separator()
 	menu.add_check_item("Dual ruck", 100)
@@ -90,7 +90,7 @@ func _build() -> void:
 		if idx == 100:
 			var on := not GameState.dual_ruck()
 			GameState.set_dual_ruck(on)
-			_notice = "Dual ruck on: Auto-pick names a second ruck on the bench." if on else "One ruck: Auto-pick fills the bench with the best of the rest."
+			_notice = "Dual ruck on. The match committee names a second ruck on the bench." if on else "One ruck. The match committee fills the bench with the best of the rest."
 			_build()
 			return
 		_apply_strategy(str(strategies[idx][0])))
@@ -164,7 +164,7 @@ func _confirm_button(short := false) -> Button:
 	b.disabled = done
 	b.pressed.connect(func():
 		WeekChecklist.mark(GameState, "team")
-		_notice = "Side confirmed for this week."
+		_notice = "Our side is confirmed for this week."
 		_build())
 	return b
 
@@ -187,7 +187,7 @@ func _side_page(auto: bool) -> Control:
 	if not nxt.is_empty():
 		# Look at them on the same oval (director, 2026-10-07).
 		var opp_name := GameDB.club_short(str(nxt["code"]))
-		page.add_child(UiKit.segmented("OvalView", [["mine", "Your team"], ["opp", opp_name]], _view, func(k):
+		page.add_child(UiKit.segmented("OvalView", [["mine", "Our team"], ["opp", opp_name]], _view, func(k):
 			_view = k
 			_build()))
 	var builder := TeamBuilder.new()
@@ -201,7 +201,7 @@ func _side_page(auto: bool) -> Control:
 	builder.memory_note = str(_memory[1]) if str(_memory[0]) == _notice else ""
 	var opp_code := str(nxt.get("code", ""))
 	if _view == "opp" and opp_code != "":
-		var proj := _week.para("%s as they would take the field this week (projected: they name their side on match day). They kick the other way." % GameDB.club_name(opp_code), 13, UiKit.MUTED)
+		var proj := _week.para("Projected: %s as they would line up this week. They name their side on match day. They kick the other way." % GameDB.club_name(opp_code), 13, UiKit.MUTED)
 		proj.name = "OppProjected"
 		page.add_child(proj)
 		page.add_child(builder)
@@ -215,7 +215,7 @@ func _side_page(auto: bool) -> Control:
 		actions.add_theme_constant_override("separation", 8)
 		_fill_actions(actions)
 		builder.interchange_actions = actions
-		builder.hint_extra = "Picked for you each week until you move someone." if auto else ""
+		builder.hint_extra = "Picked at match committee until you move someone." if auto else ""
 		# Team Chemistry (row 125), read at a glance above the oval; a tap says
 		# why. It shares the line of the Your team / opponent switch, so the
 		# height it used goes to the players not picked.
@@ -258,7 +258,7 @@ func _fill_actions(actions: HBoxContainer) -> void:
 	save.name = "SaveBest23"
 	save.pressed.connect(func():
 		GameState.set_best23(GameState.current_side())
-		_notice = "Saved as your Best 23. Choose it any week from Auto-pick."
+		_notice = "Saved as your Best 23. Choose it any week from Match committee."
 		_build())
 	actions.add_child(save)
 	if not _undo.is_empty():
@@ -267,7 +267,7 @@ func _fill_actions(actions: HBoxContainer) -> void:
 		undo.pressed.connect(func():
 			GameState.set_selection(_undo)
 			_undo = {}
-			_notice = "Back to your side before the auto-pick."
+			_notice = "Back to the side from before match committee."
 			_build())
 		actions.add_child(undo)
 	var confirm := _confirm_button(not _undo.is_empty())
@@ -340,7 +340,7 @@ func _open_profile(id: String) -> void:
 	if GameState.can_back(p):
 		var run := MatchNotes.count_word(Backing.RUN_GAMES)
 		actions.append({"name": "BackRun", "label": "Back for %s games" % run,
-				"detail": "A run of %s senior games, starting with the next. Leave a fit player out and the promise breaks, and it stings." % run,
+				"detail": "A run of %s senior games, starting with the next. Leave the player out while he is fit and the promise breaks. It stings." % run,
 				"run": _back.bind(id)})
 	_sheet = PlayerSheet.open(self, p, func(): _sheet = null, actions)
 

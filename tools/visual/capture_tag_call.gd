@@ -1,13 +1,15 @@
 extends SceneTree
 ## Row 120: the call when their midfielder is kicking a bag, with what each answer does and
 ## costs. Needs a real renderer:
-##   godot --path . --script tools/visual/capture_tag_call.gd -- --out /tmp/tc [--club FRE]
+##   godot --path . --script tools/visual/capture_tag_call.gd -- --out /tmp/tc [--club FRE] [--tagged 1]
+## --tagged 1 stages the same call with your tag already on another of their midfielders.
 ## Writes <out>_scene.png (the scene with the call up) and <out>_card.png (vignettes off),
 ## and prints the call's lines.
 
 var W := 390
 var H := 844
 var _out := "/tmp/tc"
+var _tagged := false
 
 
 func _initialize() -> void:
@@ -50,10 +52,17 @@ func _stage(club: String, vignettes: bool) -> Control:
 	sim.current_minute = 40
 	sim._moments_this_q = 0
 	sim._last_moment_chain = sim._chain_no - 100
+	var hot_id := ""
 	for p in sim.squads[them].ground:
 		if str(p["role"]) == "MID":
-			sim.player_stats[str(p["id"])] = {"goals": 3.0}
+			hot_id = str(p["id"])
+			sim.player_stats[hot_id] = {"goals": 3.0}
 			break
+	if _tagged:
+		for p in sim.squads[them].ground:
+			if str(p["id"]) != hot_id and sim.taggable(p):
+				sim.tactics[me]["tag_id"] = str(p["id"])
+				break
 	sim._boundary_moment()
 	print("MOMENT ", sim.pending_moment.get("kind", ""), " ", sim.pending_moment.get("title", ""))
 	for o in sim.pending_moment.get("options", []):
@@ -71,6 +80,8 @@ func _run() -> void:
 				_out = str(a[i + 1])
 			"--club":
 				club = str(a[i + 1])
+			"--tagged":
+				_tagged = str(a[i + 1]) == "1"
 	await process_frame
 	var state = root.get_node("GameState")
 	state.autosave_enabled = false

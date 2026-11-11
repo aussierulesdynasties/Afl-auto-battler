@@ -174,6 +174,15 @@ static func story(item: Dictionary, my_club := "") -> Dictionary:
 		# Your own club's business, told as yours.
 		s.merge({"group": _YOURS, "club": my_club, "weight": 30, "mine": true}, true)
 		return s
+	elif kind == "medical":
+		# The concussion medical panel sat (MedicalPanel): the item carries who and how it went.
+		var who := str(item.get("name", ""))
+		var ok := bool(item.get("cleared", false))
+		s.merge({"group": _INJURY, "club": str(item.get("club", "")), "name": who, "weight": 55 if ok else 85,
+				"standfirst": text}, true)
+		if who != "":
+			s["headline"] = ("Medical panel clears %s" % who) if ok else ("Medical panel ends %s's career" % who)
+		return _mine(s, my_club)
 	elif kind == "trade":
 		s["weight"] = 35
 	elif kind == "own_prospect":

@@ -60,7 +60,7 @@ func _test_training_hero() -> void:
 				scene.queue_free()
 				await _settle()
 				continue
-			_check(trade != null and trade.is_visible_in_tree() and trade.text.contains("what he is developing as decides the stats it buys"),
+			_check(trade != null and trade.is_visible_in_tree() and trade.text.contains("His development focus decides which stats it lifts."),
 					"%s: Training says in a line what a plan costs and what it buys (P-63)" % tag)
 			var tex: Texture2D = hero.texture if hero != null else null
 			_check(tex != null and tex.resource_path == "res://assets/ui/models/training_gear.png"
