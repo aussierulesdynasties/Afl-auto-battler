@@ -4,21 +4,30 @@ extends RefCounted
 ## menu the first time a new version opens (row T7.R84). The quiet version
 ## line at the foot of the menu opens the same sheet again.
 ##
-## Whoever bumps config/version in project.godot adds that version here in
-## the same change (tests/run_save_release_tests.gd fails the build without
+## Whoever bumps config/version in project.godot adds that version to
+## data/patch_notes.json in the same change (tests/run_save_release_tests.gd fails the build without
 ## it). Each line names the football change the coach will meet, never a
 ## working name or a number from the tracker, and nothing that was removed
 ## (director, 2026-10-13: "please ensure you dont write misleading patch
 ## notes"; 2026-10-18: "dont mention the removals in the devlog").
 
-const NOTES := {
-	"1.0.14": [
-		"Every call on match day shows what you gain, what it costs and the odds.",
-		"League news covers every match of the round.",
-		"A Tribunal verdict shows whether your challenge won, the ban before and after, and what it cost you.",
-		"Each player's sheet tells the story of his career.",
-	],
-}
+## The notes live in data/patch_notes.json, keyed by version: the build
+## number has one source (project.godot), so no script names a version.
+const PATH := "res://data/patch_notes.json"
+
+static var _notes: Dictionary = {}
+static var _loaded := false
+
+
+## Every version's lines, keyed by version.
+static func notes() -> Dictionary:
+	if not _loaded:
+		_loaded = true
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string(PATH))
+		if parsed is Dictionary:
+			_notes = parsed
+	return _notes
+
 
 ## The settings key holding the last version whose notes were shown.
 const SEEN_KEY := "patch_notes_seen"
@@ -30,7 +39,7 @@ static func version() -> String:
 
 ## The lines for `v`, or none when that version has no notes.
 static func lines(v := "") -> Array:
-	return NOTES.get(v if v != "" else version(), [])
+	return notes().get(v if v != "" else version(), [])
 
 
 ## Should the sheet open now? `seen` is the version last shown ("" on a

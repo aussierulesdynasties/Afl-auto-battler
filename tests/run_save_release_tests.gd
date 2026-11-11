@@ -341,11 +341,11 @@ func _test_this_version_has_notes() -> void:
 	var v := PatchNotes.version()
 	var lines := PatchNotes.lines()
 	_check(lines.size() >= 1 and lines.size() <= 6,
-			"Version %s has 1 to 6 lines of patch notes in scripts/core/PatchNotes.gd (add them with the version bump)" % v)
+			"Version %s has 1 to 6 lines of patch notes in data/patch_notes.json (add them with the version bump)" % v)
 	var tracker := RegEx.new()
 	tracker.compile("#\\d|\\bPR\\b|\\brow \\d|\\bT\\d\\.")
-	for ver in PatchNotes.NOTES:
-		for text in PatchNotes.NOTES[ver]:
+	for ver in PatchNotes.notes():
+		for text in PatchNotes.notes()[ver]:
 			var s := str(text)
 			_check(s.strip_edges() == s and s.length() >= 20 and s.length() <= 130 and s.ends_with("."),
 					"%s: a note is one plain sentence: %s" % [ver, s])
