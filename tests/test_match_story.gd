@@ -83,6 +83,7 @@ func run(tree: SceneTree) -> void:
 	_t("_test_calls_name_skip_loose")
 	_t("_test_calls_name_switched_loose")
 	_t("_test_calls_name_moment_tag")
+	_t("_test_calls_skip_men_against_the_row")
 	for size in [Vector2i(390, 844), Vector2i(1280, 720)]:
 		_tree.root.size = size
 		await _settle()
@@ -800,6 +801,18 @@ func _test_calls_name_switched_loose() -> void:
 	var got := str(MatchStory.call_names(res, 0)["loose"])
 	_check(got.begins_with(MatchStory._name_in(res, best) + " ") and got.contains("loose m"),
 			"the loose man's row leads with the biggest earner (%s, want %s first)" % [got, MatchStory._name_in(res, best)])
+
+
+## A man who cost points is never named on a row that shows a gain, even when
+## he moved the most points: A -9, B +6, C +5 is "B and C", not "A and B".
+func _test_calls_skip_men_against_the_row() -> void:
+	var res := {"roster": [[{"id": "a", "name": "Al"}, {"id": "b", "name": "Bo"}, {"id": "c", "name": "Cy"}]]}
+	var got: Array = MatchStory._earners(res, {"a": -9.0, "b": 6.0, "c": 5.0})
+	_check(got == ["Bo", "Cy"], "only the men who added to a +2 row are named (%s)" % str(got))
+	got = MatchStory._earners(res, {"a": 9.0, "b": -3.0})
+	_check(got == ["Al"], "the man who cost 3 is left off a +6 row (%s)" % str(got))
+	got = MatchStory._earners(res, {"a": -4.0, "b": 1.0})
+	_check(got == ["Al"], "a -3 row names the man who cost points (%s)" % str(got))
 
 
 ## A tag called from a moment card in the last quarter (no tag before it, the
