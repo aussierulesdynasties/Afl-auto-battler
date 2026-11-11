@@ -302,12 +302,13 @@ func _test_draft_room_gate() -> void:
 		_check(GameState.draft_room_line() == "Clubs must take at least three players. Delist %s to make room, or trade the picks." % words[k],
 				"The gate's line: %s" % GameState.draft_room_line())
 		_check(DraftSpotsSheet.needed(), "The draft button opens the gate while short (%d)" % k)
-		var gone := false
+		var why := ""
 		for p in GameState.my_list.duplicate():
-			if str(p["id"]).begins_with("pad_gate_") and bool(GameState.release_player(str(p["id"]))["ok"]):
-				gone = true
+			if str(p["id"]).begins_with("pad_gate_"):
+				var r := GameState.release_player(str(p["id"]))
+				why = "" if bool(r["ok"]) else str(r["reason"])
 				break
-		_check(gone, "A padded player is delisted")
+		_check(why == "", "A padded player is delisted (%s; open %s)" % [why, str(GameState.offseason_open())])
 	_check(GameState.draft_room_short() == 0 and GameState.draft_room_line() == "", "The rule is met")
 	# Trading picks away: a club holding fewer than three needs a spot for each.
 	var mine: Array = GameState.club_picks(me).filter(func(pk): return int(pk["year"]) == GameState.season_year)
