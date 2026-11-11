@@ -96,6 +96,9 @@ func _build() -> void:
 			pcols.add_child(pl)
 			var pr := _papers_ladder()
 			pr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			# Two columns of nine clubs, each with the paper's line under it: the
+			# ladder takes the wider share so a line fits on one row.
+			pr.size_flags_stretch_ratio = 2.0
 			pcols.add_child(pr)
 			page.add_child(pcols)
 		else:
@@ -334,8 +337,9 @@ func _papers_ladder() -> Control:
 	if _wide():
 		var pair := UiKit.hbox(24)
 		pair.name = "PapersLadderColumns"
-		var left := UiKit.vbox(10)
-		var right := UiKit.vbox(10)
+		# A PC row is one short move line, so it packs as tight as main's ladder.
+		var left := UiKit.vbox(2)
+		var right := UiKit.vbox(2)
 		left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		pair.add_child(left)
