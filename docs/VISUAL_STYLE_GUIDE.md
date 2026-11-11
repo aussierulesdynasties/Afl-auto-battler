@@ -54,6 +54,11 @@ Light mode is maintained, not designed for. It uses dedicated pairs, never inver
   no club), white or near-black ink by luminance. Never two filled buttons on one screen.
   Director, 2026-11-04: the primary may be filled in club colour. Risk: a red club's fill can clash
   with BAD, so each club's fill needs a contrast check and a collision check against BAD before it ships.
+  The check is `tests/run_contrast_tests.gd` (row V4), over every club and every Club Forge colour: the
+  fill is 3:1 or more against the page and a panel, 4.5:1 under its label, and 25 or more (CIE76) from
+  BAD. `UiKit.primary_fill` moves a club colour along its own hue just far enough to meet them.
+- **Surfaces are one scale:** INK, BG, PANEL, PANEL_ALT, SURFACE, each lighter than the last
+  (`UiKit.elevation()`). The same test holds every text token and club ink to 4.5:1 on every step.
 - **Selection:** TEXT ink and a 2 px TEXT outline on the chosen option; MUTED ink and nothing
   else on the rest. Selection is never a fill and never the club colour, so a chosen option can
   never be mistaken for the thing to do next.

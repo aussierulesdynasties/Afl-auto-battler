@@ -2184,7 +2184,9 @@ func _figure_slots(tr: float) -> Array:
 				mirror = sv.x > 0.0
 			else:
 				facing = "back" if sv.y < 0.0 else "front"
-		if not VignetteFigures.has("average", anim, facing):
+		# A move the sheet lacks is stood in for (the picture-truth suite reads this).
+		var fallback := not VignetteFigures.has("average", anim, facing)
+		if fallback:
 			anim = "idle"
 			facing = "front"
 		var info := VignetteFigures.strip("average", anim, facing)
@@ -2198,7 +2200,8 @@ func _figure_slots(tr: float) -> Array:
 		out.append({"feet": p + Vector2(0, tr * 0.3), "info": info, "frame": frame, "k": k,
 				"colour": StoppageVignette.look_colour(kit, look, mirror), "mirror": mirror,
 				"number": number, "hair": str(look.get("hair_style", VignetteFigures.HAIR_BASE)),
-				"face": StoppageVignette.face_of(look), "ink": StoppageVignette.ink_of(look)})
+				"face": StoppageVignette.face_of(look), "ink": StoppageVignette.ink_of(look),
+				"anim": anim, "facing": facing, "fallback": fallback})
 	# The man lower on the screen stands in front.
 	out.sort_custom(func(a, b): return (a["feet"] as Vector2).y < (b["feet"] as Vector2).y)
 	return out

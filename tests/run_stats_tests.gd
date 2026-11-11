@@ -2275,7 +2275,9 @@ func _test_club_code_colours() -> void:
 	for code in ["CAR", "RIC", "ESS", "MEL"]:
 		_state.my_club = code
 		_check(UK.team_wash().is_equal_approx(UK.team_colour()), "%s's sheet wash is its own colour" % code)
-		_check(UK.team_button().is_equal_approx(UK.team_colour()), "%s's buttons are its own colour" % code)
+		# Its own colour, held to the fill floors (row V4): Carlton's navy is lifted to show.
+		_check(UK.team_button().is_equal_approx(UK.primary_fill(UK.team_colour()))
+				and absf(UK.team_button().h - UK.team_colour().h) < 0.03, "%s's buttons are its own colour" % code)
 	_state.my_club = was
 	print("Club code colours: " + ", ".join(line))
 	# A Forge club whose colours are all pale never falls back to its white.
