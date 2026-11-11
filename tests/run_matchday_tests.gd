@@ -1598,27 +1598,8 @@ func _test_club_ink_all() -> void:
 		if not bb.contains(shown) or (reds.has(c2) and bb.contains(raw)):
 			markup_bad.append("%s %s" % [c2, bb])
 	_check(markup_bad.is_empty() and reds_seen == reds.size(), "Every club's player name markup uses the name colour, never a red club's raw ink (%s, %d red clubs checked)" % [str(markup_bad), reds_seen])
-	# Part 2: no screen script hands a raw club ink to a name label or its font colour.
-	var raw_paint := []
-	var stack: Array = ["res://scripts/ui"]
-	while not stack.is_empty():
-		var dir_path: String = stack.pop_back()
-		for sub in DirAccess.get_directories_at(dir_path):
-			stack.append(dir_path + "/" + sub)
-		for f in DirAccess.get_files_at(dir_path):
-			if not f.ends_with(".gd"):
-				continue
-			var src := FileAccess.get_file_as_string(dir_path + "/" + f)
-			var n_line := 0
-			for ln in src.split("\n"):
-				n_line += 1
-				var t: String = ln.strip_edges()
-				if t.begins_with("#"):
-					continue
-				var paints: bool = (t.contains("lbl(") or t.contains("line(") or t.contains("ellipsis(") or t.contains("font_color")) 						and (t.contains("UiKit.club_ink(") or t.contains("UiKit.club_ink_second(")) 						and not t.contains("club_name_colour(")
-				if paints:
-					raw_paint.append("%s:%d" % [f, n_line])
-	_check(raw_paint.is_empty(), "No screen paints a name label in a raw club ink (use UiKit.club_name_colour) (%s)" % str(raw_paint))
+	# Part 2 (no screen script paints a name label in a raw club ink) is a static lint now:
+	# tools/lint/screens.py check_raw_club_ink.
 
 
 func _test_pc_break_worst_case(club := "COL") -> void:

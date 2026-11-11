@@ -15,13 +15,17 @@ pull request and every push to `main`, with Godot 4.7.2 downloaded and cached.
 A suite that hangs is stopped after 15 minutes (`SUITE_TIMEOUT`) and fails the
 run; a failing run uploads the logs as an artifact.
 
-CI runs the suites as five parallel shards, so a pull request takes about eight
-minutes instead of half an hour. `tools/ci_shards.txt` says which suites each
+CI runs the suites as twelve parallel shards. `tools/ci_shards.txt` says which suites each
 shard runs, planned from measured timings. Every `tests/run_<name>_tests.gd`
 is a suite, so a new one needs no list entry: `tools/ci_shards.py` puts it on
-the lightest shard until the weekly re-plan. One more job runs the dataset, export-data and intake
-harness checks once (`EXTRAS_ONLY=1 tools/run_tests.sh`). The required check
-named `test` is the last job and passes only when every shard and that job did.
+the lightest shard until the weekly re-plan. Before the shards, the `lint` job runs the
+static rules that need no Godot (`python3 -I tools/lint/lint.py`, see
+[tools/lint/README.md](../tools/lint/README.md): copy voice, colour cues, type roles, sim
+boundaries, the autoload compile rule, gdlint) and the dataset, suite-seed, intake-harness and
+offline-promise checks; a rule that only reads source text belongs there, not in a suite. One
+more job runs the export-data and harness self-test once (`EXTRAS_ONLY=1 tools/run_tests.sh`).
+The required check named `test` is the last job and passes only when lint, every shard and
+that job did.
 
 Run only the suites your change touches while you work; CI runs the rest.
 
@@ -105,7 +109,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `balance` | A long-career guard: three seasons must not inflate the league |
 | `decision_scenes` | The in-match calls (tired, duel, hot, momentum, set shot) opening on a vignette scene: real players in their own kits, ball only at a palm, sheet frames in range, text card with vignettes off, a real tap on the call |
 | `assets` | The art and music as shipped: figure-sheet frames against the layout, vignettes playing their moves through, banners, music files, levels and the player |
-| `keyboard` | The phone keyboard on every screen with a text field: the window loses the keyboard's height (phone on its side, upright, tablet) and the same field keeps the focus and its text; text arriving the way the engine's web keyboard sends it fills the field and filters the list; the web export has the phone keyboard on |
+| `keyboard` | The phone keyboard on every screen with a text field: the window loses the keyboard's height (phone on its side, upright, tablet) and the same field keeps the focus and its text; text arriving the way the engine's web keyboard sends it fills the field and filters the list (the web export's keyboard preset is the `export-presets` lint) |
 | `international` | International prospects: one or two per generated class over 150 seeded years, never none or three, from seven countries; names from their own country's lists; raw but high-ceiling ratings shaped by their code; one drafted, kept across a save and a season rollover; an old save loads |
 | `namelink` | A player's name opens his profile: real touches at 390x844 and 1280x720 on the Training header, a row's Profile tap and a name in the week's news; a drag that starts on a name still scrolls; Back closes the profile and leaves the screen as it was. |
 | `nav_economy` | Weekly facts within two taps of the hub, the overflow walk at every text size, long-press football words, hub search and shortlist, the Sim the week standing orders |
