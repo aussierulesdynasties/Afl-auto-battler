@@ -131,6 +131,9 @@ var _timeline_last := ["", ""]
 ## Q4 leads to extra time instead of the full-time siren.
 var finals_mode := false
 var extra_time_played := false
+## False for a final the year replayed when drawn (every final in 1990, the
+## Grand Final to 2015): level at full time, it ends level (Season.record_final).
+var extra_time_allowed := true
 
 ## Legs. Every player has energy (0-100): on-ground players tire each chain,
 ## the bench recovers, and coaches rotate tired players off. Energy scales a
@@ -4483,7 +4486,7 @@ func end_quarter() -> Dictionary:
 ## True once a finals match is level after four quarters and extra time has
 ## not been played yet.
 func needs_extra_time() -> bool:
-	return finals_mode and not extra_time_played and current_quarter > 4 \
+	return finals_mode and extra_time_allowed and not extra_time_played and current_quarter > 4 \
 			and score(0) == score(1)
 
 
@@ -5612,24 +5615,32 @@ func _boundary_moment() -> bool:
 		var hot := _on_ground(opp, str(id))
 		if hot.is_empty() or not taggable(hot) or _tag_id(me) == str(id):
 			continue
-		_asked["hot|" + str(id)] = true
-		# The midfielder who would actually go to him (tagger_for).
+		# The midfielder who would actually go to him (tagger_for). With none of
+		# yours on the ground there is no tag to offer: the call waits (not
+		# marked asked) until one is back on.
 		var minder = tagger_of(me)
-		var stopper := GameDB.player_display_name(minder) if minder != null else "a midfielder"
+		if minder == null:
+			continue
+		_asked["hot|" + str(id)] = true
+		var stopper := GameDB.player_display_name(minder)
 		var hot_name := GameDB.player_display_name(hot)
 		# The size of the call, from what the sim plays (GateOdds; row 120).
-		var on_him: Dictionary = minder if minder != null else {}
+		var on_him: Dictionary = minder
 		var kept := GateOdds.tag_kept(on_him, float(energy.get(str(on_him.get("id", "")), 100.0)))
+		# A tag already on another of theirs moves if the coach says tag: the card
+		# says so, and what leaving it where it is keeps (the answer itself is
+		# unchanged: resolve_moment sets the tag on this man either way).
+		var tagged := _on_ground(opp, _tag_id(me))
+		var on_now := "" if tagged.is_empty() else GameDB.player_display_name(tagged)
+		var lines := GateOdds.tag_call_lines(hot_name, stopper, kept, on_now)
 		_fire({"kind": "hot", "player_id": str(id), "default": 1,
 			"title": "%s has kicked %d" % [hot_name, int(st["goals"])],
 			"text": "Their midfielder is hurting you on the scoreboard.",
 			"options": [
-				{"key": "tag", "label": "Tag him with %s" % stopper,
-					"gain": GateOdds.gain(GateOdds.TAG_HOT_GAIN % [hot_name, GateOdds.usual_touches(), stopper, kept]),
-					"cost": GateOdds.cost(GateOdds.TAG_HOT_COST % [stopper, GateOdds.tag_gives()])},
-				{"key": "leave", "label": "Back your defenders",
-					"gain": GateOdds.gain(GateOdds.TAG_LEAVE_GAIN),
-					"cost": GateOdds.cost(GateOdds.TAG_LEAVE_COST % [hot_name, GateOdds.usual_touches()])},
+				{"key": "tag", "label": ("Tag him with %s" if on_now == "" else "Move %s onto him") % stopper,
+					"gain": lines["tag_gain"], "cost": lines["tag_cost"]},
+				{"key": "leave", "label": "Back your defenders" if on_now == "" else "Leave the tag on %s" % on_now,
+					"gain": lines["leave_gain"], "cost": lines["leave_cost"]},
 			]})
 		return true
 	# Three goals in a row against.

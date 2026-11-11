@@ -42,7 +42,7 @@ static func build(host: Control) -> Control:
 		v.add_child(_aa(host, aw.get("all_australian", []), true, 0))
 		v.add_child(_rising(host))
 		return v
-	var played := mini(season.round_index, Season.REGULAR_ROUNDS)
+	var played := mini(season.round_index, season.regular_rounds())
 	var info := "After Round %d. Nothing here is awarded until the season's end." % played
 	if season.is_regular_done():
 		info = "Home and away complete. The awards are presented after the Grand Final."
@@ -256,7 +256,7 @@ static func _rising(host: Control) -> Control:
 		v.add_child(b)
 	if from > 1:
 		var gap := _para("Round 1's nomination wasn't recorded in this save." if from == 2
-				else "Nominations from Rounds 1 to %d weren't recorded in this save." % mini(from - 1, Season.REGULAR_ROUNDS))
+				else "Nominations from Rounds 1 to %d weren't recorded in this save." % mini(from - 1, GameState.season.regular_rounds()))
 		gap.name = "RisingStarUnrecorded"
 		v.add_child(gap)
 	return v
