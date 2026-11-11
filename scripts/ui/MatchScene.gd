@@ -4267,15 +4267,9 @@ func _ft_summary(v: VBoxContainer) -> void:
 
 	# Your calls, quarter by quarter: what each was about and how that went.
 	if mine and (_interactive or _review):
-		var did := []
-		for qq in range(1, 5):
-			for t in MatchNotes.calls_lines(_res, me, qq):
-				# The call the Why section already quoted is not said again.
-				if told_above.has("q%d" % qq) and told_above.has("call:" + str(t)):
-					continue
-				did.append("Q%d  ·  %s" % [qq, str(t)])
+		var did := MatchNotes.full_time_calls(_res, me, told_above, 5)
 		if not did.is_empty():
-			_glance_section(v, "Your calls", "FullTimeCalls", did.slice(0, 5))
+			_glance_section(v, "Your calls", "FullTimeCalls", did)
 
 	# A handful of numbers worth a glance; the full table is a tap away.
 	v.add_child(UiKit.spacer(UiKit.GAP))
@@ -4290,6 +4284,12 @@ func _ft_summary(v: VBoxContainer) -> void:
 			var inj := UiKit.lbl("Injured: " + ", ".join(hurt), UiKit.BODY, UiKit.BAD, true)
 			inj.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			week.add_child(inj)
+		var panel := GameState.my_medical_lines()
+		if not panel.is_empty():
+			var md := UiKit.lbl("Medical panel: " + " ".join(panel), UiKit.BODY, UiKit.BAD, true)
+			md.name = "YourMedical"
+			md.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			week.add_child(md)
 		var report: Dictionary = GameState.last_training_report
 		if str(report.get("home", "")) == home and str(report.get("away", "")) == away:
 			# Who improved, and how, lives in Training (a tap below); here
