@@ -9,7 +9,8 @@ extends SceneTree
 ## cards waited 12 weeks after any card about him, so none ever came.
 ##
 ## INTL_CAREERS=<n> plays more careers; INTL_REPORT=1 prints what held his
-## cards back each week (the measurement behind the rule).
+## cards back each week (the measurement behind the rule); INTL_OLD_RULE=1
+## plays them under the old rule, where this suite goes red.
 
 const SUITE_SEED := 2027
 ## Careers played, seeds SUITE_SEED, SUITE_SEED + 1, ...
@@ -143,6 +144,11 @@ func _test_the_dealer_draws_his_cards() -> void:
 			print("INTL dealt: seed %d, no international drafted" % career_seed)
 			continue
 		drafted += 1
+		# INTL_OLD_RULE=1 measures the rule before the fix: his cards count
+		# their wait from any card about him (the deck is reloaded per career).
+		if OS.get_environment("INTL_OLD_RULE") == "1":
+			for t in StoryDeck.all():
+				(t as Dictionary).erase("series")
 		if _state.needs_season_wrap():
 			_state.begin_season_from_wrap()
 		var guard := 0
