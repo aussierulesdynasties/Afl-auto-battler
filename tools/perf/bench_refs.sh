@@ -52,6 +52,11 @@ for rep in $(seq 1 "$REPS"); do
 		off=$(echo "$line" | sed -nE 's/.*off-season ([0-9.]+) s.*/\1 s/p')
 		hash=$(grep -E '^HASH all ' "$log" | awk '{print substr($3,1,12)}' || true)
 		echo "| $rep | $ref | $sha | ${weeks:-failed} | ${off} | $wall | ${hash} |" >> "$OUT/table.md"
+		if [[ " $ARGS " == *" --laps "* ]] && [ -f "$trees/tree-$n/tools/perf/match_bench.gd" ]; then
+			# One match at a time on one thread, the same fixtures and seeds: is the engine itself slower?
+			XDG_DATA_HOME="$trees/mdata-$rep-$n" timeout 1800 "$GODOT" --headless --path "$trees/tree-$n" 				--script res://tools/perf/match_bench.gd -- --n 40 > "$OUT/m${rep}-${n}.log" 2>&1 || true
+			grep -E '^PERF' "$OUT/m${rep}-${n}.log" | sed "s/^/MATCH $ref /" || tail -n 20 "$OUT/m${rep}-${n}.log"
+		fi
 	done < "$OUT/trees.txt"
 done
 cat "$OUT/table.md"
