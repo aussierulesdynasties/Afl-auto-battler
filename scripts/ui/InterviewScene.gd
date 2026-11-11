@@ -11,9 +11,20 @@ extends Control
 ## it, a finished draft included (its Finish step is still to come).
 static var back_to_draft := false
 
+## The press room on a phone: never shorter than this, never much taller than
+## it is wide (the room is drawn to its frame's height).
+const STAGE_MIN := 180.0
+const STAGE_TALL := 1.25
+
 var _root: VBoxContainer
 ## Outside the scroll: the page's one action never sits half under the fold.
 var _foot: VBoxContainer
+var _frame: VBoxContainer
+## The press room (MediaConferenceVignette, the same room as every press
+## conference), above the pages on a phone and beside them on a wide screen. It
+## stays through every page, so the coach walks in and sits down once.
+var _stage: Control
+var _wide := false
 var _picks := []
 var _name := ""
 
@@ -35,14 +46,43 @@ func _ready() -> void:
 	add_child(margin)
 	var page := UiKit.vbox(14)
 	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var frame := UiKit.vbox(10)
-	margin.add_child(frame)
+	var vw := UiKit.view_width(self)
+	var vh := UiKit.view_height(self)
+	_wide = ScreenLayout.roomy(vw, vh)
+	_frame = UiKit.vbox(10)
+	_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if GameState.vignettes_on():
+		_stage = Control.new()
+		_stage.name = "InterviewStage"
+		_stage.clip_contents = true
+	if _wide:
+		var row := UiKit.hbox(24)
+		row.name = "InterviewRow"
+		margin.add_child(row)
+		if _stage != null:
+			var stage_w := minf(vw * 0.5, (vh - 120.0) * 1.6)
+			_stage.custom_minimum_size = Vector2(stage_w, stage_w / 1.6)
+			_stage.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			row.add_child(_stage)
+		row.add_child(_frame)
+	else:
+		margin.add_child(_frame)
+		if _stage != null:
+			_stage.custom_minimum_size = Vector2(0, STAGE_MIN)
+			_frame.add_child(_stage)
 	var sc := UiKit.scroll(page)
 	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	frame.add_child(sc)
+	_frame.add_child(sc)
+	if _stage == null:
+		# No room drawn (scenes off): the page sits in the middle, not at the top
+		# of an empty screen.
+		page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		page.alignment = BoxContainer.ALIGNMENT_CENTER
 	_foot = UiKit.vbox(0)
-	frame.add_child(_foot)
+	_frame.add_child(_foot)
 	_root = page
+	if _stage != null:
+		MediaConferenceVignette.open(_stage, GameState.coach_club())
 	_name = GameState.coach_name
 	if _name == "":
 		_name_page()
@@ -56,6 +96,20 @@ func _clear() -> void:
 		for c in box.get_children():
 			box.remove_child(c)
 			c.queue_free()
+
+
+## On a phone the room takes the height the page leaves free (from STAGE_MIN to
+## STAGE_TALL of its width), so the screen has no empty block under the answers.
+func _fit() -> void:
+	if _stage == null or _wide:
+		return
+	# A frame first, so the wrapped labels report their real height.
+	await get_tree().process_frame
+	if not is_instance_valid(_stage) or not is_inside_tree():
+		return
+	var need := _root.get_combined_minimum_size().y
+	var room := _frame.size.y - _foot.get_combined_minimum_size().y - 2.0 * _frame.get_theme_constant("separation")
+	_stage.custom_minimum_size.y = clampf(room - need, STAGE_MIN, maxf(STAGE_MIN, _frame.size.x * STAGE_TALL))
 
 
 func _title(text: String) -> void:
@@ -81,6 +135,7 @@ func _name_page() -> void:
 		GameState.coach_name = _name
 		_question())
 	_foot.add_child(go)
+	_fit()
 
 
 func _question() -> void:
@@ -120,6 +175,7 @@ func _question() -> void:
 		grid.add_child(b)
 	var count := UiKit.lbl("Question %d of %d" % [i + 1, Archetypes.QUESTIONS.size()], UiKit.SMALL, UiKit.MUTED)
 	_root.add_child(count)
+	_fit()
 
 
 ## The candidate you beat for the job: a free former senior coach, always by
@@ -155,6 +211,7 @@ func _reveal() -> void:
 	go.name = "InterviewDone"
 	go.pressed.connect(_leave)
 	_foot.add_child(go)
+	_fit()
 
 
 ## Back to the draft board when the draft is still to come, else the hub.
