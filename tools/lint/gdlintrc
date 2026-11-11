@@ -1,0 +1,37 @@
+# Proposed gdlintrc for AFL (gdtoolkit 4.5.0). Only rules that point at a real defect or a
+# naming slip; layout and size rules are off (they would flag 8,900 lines of working code).
+disable:
+- class-definitions-order
+- max-line-length
+- max-file-lines
+- max-public-methods
+- max-returns
+- function-arguments-number
+- comparison-with-itself
+- no-elif-return
+- no-else-return
+- duplicated-load
+excluded_directories: !!set
+  .git: null
+  .godot: null
+  addons: null
+class-name: ([A-Z][a-z0-9]*)+
+sub-class-name: _?([A-Z][a-z0-9]*)+
+signal-name: '[a-z][a-z0-9]*(_[a-z0-9]+)*'
+enum-name: ([A-Z][a-z0-9]*)+
+enum-element-name: '[A-Z][A-Z0-9]*(_[A-Z0-9]+)*'
+function-name: (_on_([A-Z][a-z0-9]*)+(_[a-z0-9]+)*|_?[a-z][a-z0-9]*(_[a-z0-9]+)*)
+constant-name: _?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*
+load-constant-name: (([A-Z][a-z0-9]*)+|_?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*)
+class-load-variable-name: (_?([A-Z][a-z0-9]*)+|_?[a-z][a-z0-9]*(_[a-z0-9]+)*|[A-Z][A-Z0-9]*)
+class-variable-name: (_?[a-z][a-z0-9]*(_[a-z0-9]+)*|[A-Z][A-Z0-9]*(_[A-Z0-9]+)*|([A-Z][a-z0-9]*)+)
+function-variable-name: (_?[a-z][a-z0-9]*(_[a-z0-9]+)*|([A-Z][a-z0-9]*)+|[A-Z][A-Z0-9]*)
+function-preload-variable-name: ([A-Z][a-z0-9]*)+
+function-argument-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
+loop-variable-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
+tab-characters: 1
+expression-not-assigned: null
+mixed-tabs-and-spaces: null
+trailing-whitespace: null
+unnecessary-pass: null
+unused-argument: null

@@ -462,7 +462,7 @@ func _week_title(season: Season) -> String:
 	if season.is_season_over():
 		return "%d season" % GameState.season_year
 	if not season.is_regular_done():
-		return "Round %d of %d" % [season.round_index + 1, Season.REGULAR_ROUNDS]
+		return "Round %d of %d" % [season.round_index + 1, season.regular_rounds()]
 	return _finals_label()
 
 
@@ -487,7 +487,8 @@ func _ladder_section(season: Season, table_width := -1.0) -> Control:
 	var width := _content_width() if _narrow() else _content_width() * 0.45
 	if table_width > 0.0:
 		width = table_width
-	v.add_child(UiKit.ladder_table(season.ladder_sorted(), GameState.my_club, width, 0, false))
+	v.add_child(UiKit.ladder_table(season.ladder_sorted(), GameState.my_club, width, 0, false,
+			season.finalists()))
 	return v
 
 
@@ -936,7 +937,7 @@ func _week_section(season: Season) -> Control:
 			_:
 				nv.add_child(UiKit.lbl("Season over", UiKit.H1, UiKit.BAD, true))
 				nv.add_child(UiKit.lbl(
-						"We missed the top %d. Play out the finals to see who lifts the cup." % Season.FINALISTS,
+						"We missed the top %d. Play out the finals to see who lifts the cup." % GameState.season.finalists(),
 						UiKit.BODY, UiKit.MUTED))
 	else:
 		var mine: Dictionary = _upcoming_match()
@@ -1335,8 +1336,7 @@ func _skip_season(orders := {}, to := "season") -> void:
 	# skip never looks frozen (director, 2026-11-10).
 	var job := GameState.skip_begin(orders, to)
 	while true:
-		ScreenTransition.show_line("%s
-%s" % [GameState.skip_progress(), SKIP_CALM])
+		ScreenTransition.show_line("%s\n%s" % [GameState.skip_progress(), SKIP_CALM])
 		await ScreenTransition.drawn()
 		# A browser draws only between JavaScript tasks, so there the week's
 		# matches run on threads under drawn frames; PC and Android keep the
@@ -2143,7 +2143,7 @@ func _upcoming_match() -> Dictionary:
 
 func _ladder_grid(_limit: int) -> Control:
 	return UiKit.ladder_table(GameState.season.ladder_sorted(), GameState.my_club,
-			_content_width() - 24.0, 8, false)
+			_content_width() - 24.0, 8, false, GameState.season.finalists())
 
 
 # ---------------------------------------------------------------------------
@@ -2435,8 +2435,7 @@ func _show_midseason_pick() -> void:
 	for p in shown:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
-		var txt := UiKit.lbl("%s  %d
-%s, %d, %s" % [GameDB.player_display_name(p), int(p.get("overall", 0)),
+		var txt := UiKit.lbl("%s  %d\n%s, %d, %s" % [GameDB.player_display_name(p), int(p.get("overall", 0)),
 				DraftNight.position_words(p), int(p.get("age", 0)), MidseasonDraft.from_word(GameState, p)], 14, UiKit.TEXT)
 		txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

@@ -151,9 +151,7 @@ func _run() -> void:
 	print("wrote draft")
 	var clip_file := FileAccess.open("%s_%s_clips.txt" % [out, mode], FileAccess.WRITE)
 	if clip_file != null:
-		clip_file.store_string("
-".join(clips) + "
-")
+		clip_file.store_string("\n".join(clips) + "\n")
 	print("CLIPS %d" % clips.size())
 	for line in clips:
 		print(line)
