@@ -54,7 +54,7 @@ func run(root: Node) -> void:
 				var wl = _lap.new("bench.week")
 				wl.lap("advance (%s)" % ("regular" if not gs.season.is_regular_done() else "finals"))
 				gs.advance()
-				wl = null
+				_lap.close_top()
 				weeks_ms += (Time.get_ticks_usec() - w0) / 1000.0
 				weeks += 1
 				season_results.append_array(gs.last_results)
@@ -109,7 +109,7 @@ func run(root: Node) -> void:
 		else:
 			if lap: lap.lap("start_next_season")
 			gs.start_next_season()
-		lap = null
+		if lap: _lap.close_top()
 		ms["offseason"] += (Time.get_ticks_usec() - o0) / 1000.0
 	var save_h := JSON.stringify(gs._save_state()).sha256_text() if gs.has_method("_save_state") else "none"
 	print("HASH save %s" % save_h)
