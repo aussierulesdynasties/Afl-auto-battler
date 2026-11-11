@@ -649,7 +649,11 @@ static func evaluate_trade(ai_list: Array, give: Array, take: Array, cap: int,
 	# leaves it no further over (a list seeded over the cap can still deal).
 	if _senior_over(ai_list, give, take) or _senior_over(my_list, take, give):
 		return _verdict(false, "trade_senior_over", ctx, {"n": RookieList.SENIOR_SPOTS})
-	if ai_after < MIN_LIST or my_after < MIN_LIST:
+	# No trade takes a side under the minimum. A side already under it stays
+	# able to deal as long as the trade leaves its list no smaller: only a
+	# medical retirement (GameState._medical_retire) puts a club there, and it
+	# stays a player short until its next intake (director, 2026-11-11).
+	if (ai_after < MIN_LIST and ai_after < ai_list.size()) or (my_after < MIN_LIST and my_after < my_list.size()):
 		return _verdict(false, "trade_list_under", ctx, {"n": MIN_LIST})
 	var ai_pay := payroll(ai_list) - payroll(give) + payroll(take)
 	if ai_pay > cap:
