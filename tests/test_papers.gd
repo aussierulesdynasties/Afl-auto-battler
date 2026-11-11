@@ -168,6 +168,8 @@ func _test_practice_nudge() -> void:
 	_check(played >= GameState.season.clubs.size() - 1 and margins.has("MEL"),
 			"Every club that played a practice match has its margin kept, yours too (%d)" % played)
 	var moves: Dictionary = rec.get("moves", {})
+	print("  papers' ladder %s" % str(rec["order"]))
+	print("  moves %s" % str(moves))
 	var ok := true
 	var full := true
 	var named := 0
@@ -179,14 +181,16 @@ func _test_practice_nudge() -> void:
 		var m: Dictionary = moves.get(code, {"places": 0, "earned": 0, "by": ""})
 		var places := int(m["places"])
 		ok = ok and int(m["earned"]) == shift and places * shift >= 0 and absi(places) <= absi(shift)
-		# Short of what it earned only when the ladder's end stopped it.
+		# Short of what it earned only when the ladder's end stopped it or
+		# another club's own result took the place it was after.
 		if absi(places) < absi(shift):
-			full = full and ["top", "bottom"].has(str(m["by"]))
-			print("  short: %s earned %d moved %d by %s" % [code, shift, places, str(m["by"])])
+			var by := str(m["by"])
+			full = full and (["top", "bottom"].has(by) or PreSeason.practice_shift(int(margins.get(by, 0))) != 0)
+			print("  short: %s earned %d moved %d by %s" % [code, shift, places, by])
 	_check(ok and (rec["order"] as Array).size() == GameState.season.clubs.size()
 			and int(rec["pred"]) == (rec["order"] as Array).find("MEL") + 1,
 			"The printed ladder is whole, each named move is the way its result points and no further, and your place is read from it")
-	_check(full and named > 0, "Every club the practice match earned a move gets all of it unless the ladder's end stops it (%d named)" % named)
+	_check(full and named > 0, "Every club the practice match earned a move gets all of it unless the ladder's end or another club's result stops it (%d named)" % named)
 	_career()
 
 
