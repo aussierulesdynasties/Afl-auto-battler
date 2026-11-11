@@ -7,17 +7,19 @@ name: Run on GitHub
 #   gh workflow run run_on_github.yml --ref <branch> -f what=balance -f base=main          # paired: main v this branch
 #   gh workflow run run_on_github.yml --ref <branch> -f what=balance -f b="--on my_switch" # paired: this branch, switch off v on
 #   gh workflow run run_on_github.yml --ref <branch> -f what=histories
+#   gh workflow run run_on_github.yml --ref main -f what=bench -f refs="<sha> <sha>" -f reps=2 -f bench_args="--plain"
 #
 # Results: suite logs are artifacts run-logs-<suite>; a balance report is in the run summary and artifact
-# run-balance; regenerated histories are artifact run-histories (unzip into data/histories, then commit).
+# run-balance; regenerated histories are artifact run-histories (unzip into data/histories, then commit);
+# bench times (tools/perf/bench_refs.sh) are in the run summary and artifact run-bench.
 on:
   workflow_dispatch:
     inputs:
       what:
-        description: "suites, balance or histories"
+        description: "suites, balance, histories or bench"
         required: true
         type: choice
-        options: [suites, balance, histories]
+        options: [suites, balance, histories, bench]
       suites:
         description: "suites: names separated by spaces"
         required: false
@@ -40,6 +42,21 @@ on:
         type: string
       b:
         description: "balance: harness arguments for arm B"
+        required: false
+        default: ""
+        type: string
+      refs:
+        description: "bench: commits or branches to time, separated by spaces"
+        required: false
+        default: ""
+        type: string
+      reps:
+        description: "bench: rounds over all refs (1-5)"
+        required: false
+        default: "1"
+        type: string
+      bench_args:
+        description: "bench: arguments for weeks_bench.gd (for example --plain)"
         required: false
         default: ""
         type: string
@@ -199,4 +216,44 @@ jobs:
         with:
           name: run-histories
           path: data/histories/*.hist
+          retention-days: 14
+
+  bench:
+    if: inputs.what == 'bench'
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Cache Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+      - name: Download Godot
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          curl -fsSL --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip" \
+          || curl -fsSL --retry 3 -o godot.zip \
+            "https://downloads.godotengine.org/?version=${GODOT_VERSION}&flavor=stable&slug=linux.x86_64.zip&platform=linux.64"
+          unzip -q godot.zip && rm godot.zip
+          mv "${name}" godot && chmod +x godot
+      - name: Time each ref
+        env:
+          REFS: ${{ inputs.refs }}
+          REPS: ${{ inputs.reps }}
+          ARGS: ${{ inputs.bench_args }}
+        run: GODOT="$HOME/godot/godot" OUT="$RUNNER_TEMP/bench" tools/perf/bench_refs.sh
+      - name: Upload the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-bench
+          path: ${{ runner.temp }}/bench
+          if-no-files-found: ignore
           retention-days: 14

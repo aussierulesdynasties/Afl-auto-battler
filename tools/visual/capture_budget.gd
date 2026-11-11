@@ -1,7 +1,7 @@
 extends SceneTree
 ## Visual review tool for the off-season Club budget tab (row 99: three lines,
 ## High performance carrying the game plan's edge), on a phone (390x844):
-##   godot --path . --script tools/visual/capture_budget.gd -- --out /tmp/budget
+##   godot --path . --script tools/visual/capture_budget.gd -- --out /tmp/budget [--club FRE]
 ## Writes <out>_sheet.png, four frames: the fresh Standard allocation (top and
 ## scrolled to High performance), then Recruiting cut to Minimal and High
 ## performance raised to Strong with Lower and Raise (top, scrolled).
@@ -50,10 +50,13 @@ func _press(Tap, scene: Node, name: String) -> void:
 
 func _run() -> void:
 	var out := "/tmp/budget"
+	var club := "GEE"
 	var a := OS.get_cmdline_user_args()
 	for i in range(a.size() - 1):
 		if str(a[i]) == "--out":
 			out = str(a[i + 1])
+		elif str(a[i]) == "--club":
+			club = str(a[i + 1])
 	await process_frame
 	var Tap = load("res://tests/tap.gd")
 	var state = root.get_node("GameState")
@@ -63,7 +66,7 @@ func _run() -> void:
 	state.settings_path = "user://capture_settings.cfg"
 	state.reset()
 	state.replay_seed = 2027
-	state.start_season("GEE", db.club_list("GEE"))
+	state.start_season(club, db.club_list(club))
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		state.set_setting("seen_%s_intro" % key, true)
 	root.size = Vector2i(W, H)
