@@ -192,13 +192,18 @@ func _test_ten_seasons() -> void:
 
 
 ## Plays the rest of this season, keeping the board where `conf` puts it (-1: leave it).
-func _play_out(rng: RandomNumberGenerator, conf := -1) -> void:
+## `sack` marks the board's sacking before each week, so the close finds him
+## sacked whatever the seeded season does (a premiership at confidence 0 still
+## clears the board's line, and #1370 changed how this seed plays out).
+func _play_out(rng: RandomNumberGenerator, conf := -1, sack := false) -> void:
 	var guard := 0
 	while not GameState.season.is_season_over() and guard < 40:
 		guard += 1
 		if conf >= 0:
 			GameState.board["confidence"] = conf
 			GameState.board["warned"] = true
+		if sack:
+			GameState.board["sacked"] = true
 		_week(rng)
 
 
@@ -257,7 +262,7 @@ func _test_poached_moves_club() -> void:
 	_check((rec["flags"] as Dictionary).has("taking") and int(rec["beat"]) == 3, "poached: the offer is taken and every beat played")
 	# The board sacks him at the same close (row 111): the signed job stands,
 	# the sacking is on his record, and no second chance is spent.
-	_play_out(rng, 0)
+	_play_out(rng, 0, true)
 	_check(not GameState.is_sacked() and int(st["coach"]["sackings"]) == 1 and int(st["coach"]["reprieves"]) == 1
 			and (st["offers"] as Array).is_empty(),
 			"poached and sacked: he still goes, the sacking counts, the second chance is kept: %s" % str(st["coach"]))

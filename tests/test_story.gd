@@ -57,6 +57,7 @@ func run() -> void:
 	_t("_test_dev_talk_follow_up")
 	_t("_test_dev_promise_kept_broken_lapsed")
 	_t("_test_dev_promise_named_side")
+	_t("_test_dev_promise_suspended_waits")
 	_t("_test_ten_seasons")
 	_t("_test_trust_in_play")
 	_t("_test_stories_never_move_the_dice")
@@ -1518,8 +1519,7 @@ func _test_leadership() -> void:
 		if rn != "":
 			var rk := "%s|%s" % [str(p.get("club", "")), rn]
 			by_real[rk] = int(by_real.get(rk, 0)) + 1
-	var lines := FileAccess.get_file_as_string(Leadership.PATH).split("
-", false)
+	var lines := FileAccess.get_file_as_string(Leadership.PATH).split("\n", false)
 	var bad := []
 	for i in range(lines.size()):
 		var row := lines[i].strip_edges()
@@ -2048,7 +2048,7 @@ func _test_captain_cards_in_play() -> void:
 		var good := not StoryEngine.eligible_subject(ids["captain_slump_good"], ctx, GameState.story, w, rng).is_empty()
 		var flat := not StoryEngine.eligible_subject(ids["captain_slump_flat"], ctx, GameState.story, w, rng).is_empty()
 		var want_good: bool = scenario != "flat"
-		_check(good == want_good and flat == not want_good,
+		_check(good == want_good and flat == (not want_good),
 				"%s: the %s ending follows (good %s, flat %s)" % [scenario, "good" if want_good else "flat", str(good), str(flat)])
 
 
@@ -2440,8 +2440,7 @@ func _test_culture_copy_is_true() -> void:
 	_check(readers == ["CultureSection.gd", "GameState.gd"], "Only the screen and the news mover read a strand directly (%s)" % ", ".join(readers))
 	var gs := FileAccess.get_file_as_string("res://scripts/state/GameState.gd")
 	var at := gs.find("func _culture_move")
-	var body := gs.substr(at, gs.find("
-func ", at + 5) - at)
+	var body := gs.substr(at, gs.find("\nfunc ", at + 5) - at)
 	_check(gs.count("Culture.value(") == body.count("Culture.value("), "In GameState a strand is read directly only to make news")
 	# Play reads a strand in one place, by kind; each kind is applied where the screen says.
 	var effect_readers := []
@@ -3661,15 +3660,28 @@ func _test_dev_promise_named_side() -> void:
 	var id := str(p["id"])
 	GameState.dev_talk(p, "promise")
 	_judge(p, true)
+	# Name someone else in his place, so no gap pulls him back in.
 	var side := GameState.current_side()
-	for k in side:
-		(side[k] as Array).erase(id)
+	var line := _line_in(side, id)
+	var sub := ""
+	for q in GameState.my_list:
+		if sub == "" and _line_in(side, str(q["id"])) == "" and str(q["role"]) != "RUCK" 				and int(q.get("injury_weeks", 0)) == 0 and int(q.get("suspension_weeks", 0)) == 0:
+			sub = str(q["id"])
+	var arr: Array = side[line]
+	arr[arr.find(id)] = sub
 	GameState.set_selection(side)
-	_check(_line_in(GameState.current_side(), id) == "", "(setup) a side you named leaves him out")
+	_check(sub != "" and _line_in(GameState.current_side(), id) == "", "(setup) a side you named leaves him out")
+	var sub_name := GameDB.player_display_name(GameState.list_player(sub))
 	GameState._dev_promise_week()
 	var dt: Dictionary = p["dev_talk"]
 	_check(not (_line_in(GameState.current_side(), id) in ["", "BENCH"]) and _line_in(GameState.my_selection(), id) != "",
 			"Owed his games: he is named in your side at once (%s)" % _line_in(GameState.current_side(), id))
+	var made_way := ""
+	for o in GameState.my_selection().get("OUT", []):
+		made_way = GameDB.player_display_name(GameState.list_player(str(o)))
+	_check(made_way != "" and _news_has("%s is in the side this week for his promised games, in place of %s." % [
+			GameDB.player_display_name(p), made_way]),
+			"...and the news names who made way, as the card does (%s; %s was named)" % [made_way, sub_name])
 	_check(str(dt["state"]) == "on" and str(GameState.role_trial.get("id", "")) == id and GameState.role_trial.has("promised"),
 			"...and his promised games start (%s, %s)" % [str(dt), str(GameState.role_trial)])
 	for r in range(GameState.DEV_PROMISE_GAMES):
@@ -3679,3 +3691,32 @@ func _test_dev_promise_named_side() -> void:
 		GameState.advance()
 		_check(GameState.last_side.has(id) or str(dt["state"]) == "kept", "Promised game %d: he took the field" % (r + 1))
 	_check(str(dt["state"]) == "kept", "Three games there and the promise is kept (%s)" % str(dt))
+
+
+## Owed his promised games but suspended: he is not named (it would only push
+## a fit man out of a side you named), nothing starts, and his games wait.
+func _test_dev_promise_suspended_waits() -> void:
+	_start()
+	var p := _dev_learner()
+	if p.is_empty():
+		_check(false, "Someone in the side can learn a position")
+		return
+	var id := str(p["id"])
+	GameState.dev_talk(p, "promise")
+	_judge(p, true)
+	var side := GameState.current_side()
+	for k in side:
+		(side[k] as Array).erase(id)
+	GameState.set_selection(side)
+	var before := GameState.my_selection()
+	p["suspension_weeks"] = 1
+	GameState._dev_promise_week()
+	var dt: Dictionary = p["dev_talk"]
+	_check(_line_in(GameState.my_selection(), id) == "" and (GameState.my_selection().get("OUT", []) as Array).size()
+			== (before.get("OUT", []) as Array).size(), "Suspended: he is not named, and nobody is pushed out")
+	_check(str(dt["state"]) == "owed" and GameState.role_trial.is_empty() and not p.has("expects_game"),
+			"...his games stay owed and nothing starts (%s, %s)" % [str(dt), str(GameState.role_trial)])
+	p.erase("suspension_weeks")
+	GameState._dev_promise_week()
+	_check(_line_in(GameState.my_selection(), id) != "" and str(dt["state"]) == "on",
+			"Free again: he is named and his games start (%s)" % str(dt))
