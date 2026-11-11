@@ -246,28 +246,45 @@ static func reasons(res: Dictionary, side: int) -> Array:
 	return out.slice(0, MAX_REASONS)
 
 
+## What the "What your calls did" line's slot is in the impact ledger.
+## Players to go through have no ledger cause of their own.
+const CALL_SLOT_CAUSE := {"gameplan": "gameplan", "tag_id": "tag"}
+
+
 ## What your calls did, for the quarter that went most the result's way:
-## the first "What your calls did" line for it (MatchNotes.calls_lines), with
-## that quarter's score to each side. {} when no call was on record.
+## a "What your calls did" line for it (MatchNotes.calls_lines), with that
+## quarter's score to each side. Only a call whose ledger figure, as its own
+## row on "Our calls" shows it, went the result's way is cited, so a win is never put
+## down to a call the same screen says cost us (director, 2026-11-12); failing
+## that, the next quarter's call, else {}.
 static func call_reason(res: Dictionary, side: int, dir: int) -> Dictionary:
 	var qg: Array = res.get("q_goals", [])
 	var qb: Array = res.get("q_behinds", [])
-	var best_q := 0
-	var best_m := 0
+	# The points each call shows on Our calls; a call folded into "Our other
+	# calls" has no figure of its own there, so it is not cited either.
+	var shown := {}
+	for r in calls(res, side).get("rows", []):
+		if str(r["kind"]) == "call":
+			shown[str(r["cause"])] = int(r["pts"])
+	var qs := []
 	for i in range(mini(qg.size(), 4)):
 		var m := ((int(qg[i][side]) * 6 + int(qb[i][side])) - (int(qg[i][1 - side]) * 6 + int(qb[i][1 - side]))) * dir
-		if m > best_m and not MatchNotes.calls_lines(res, side, i + 1).is_empty():
-			best_m = m
-			best_q = i + 1
-	if best_q == 0:
-		return {}
-	var line := str(MatchNotes.calls_lines(res, side, best_q)[0])
-	var i := best_q - 1
-	var a := int(qg[i][side]) * 6 + int(qb[i][side])
-	var b := int(qg[i][1 - side]) * 6 + int(qb[i][1 - side])
-	return {"stat": "q%d_points" % best_q, "mine": a, "theirs": b, "quarter": best_q, "call": line,
-			"text": "Your call in the %s quarter (%s to %d): %s" % [MatchNotes.QUARTER_NAMES[i],
-			("won it %d" if a > b else "lost it %d") % a, b, line]}
+		if m > 0:
+			qs.append([m, i])
+	qs.sort_custom(func(x, y): return int(x[0]) > int(y[0]) or (int(x[0]) == int(y[0]) and int(x[1]) < int(y[1])))
+	for pair in qs:
+		var i := int(pair[1])
+		for e in MatchNotes._calls_entries(res, side, i + 1):
+			var cause := str(CALL_SLOT_CAUSE.get(str(e["key"]), ""))
+			if cause == "" or int(shown.get(cause, 0)) * dir <= 0:
+				continue
+			var line := str(e["line"])
+			var a := int(qg[i][side]) * 6 + int(qb[i][side])
+			var b := int(qg[i][1 - side]) * 6 + int(qb[i][1 - side])
+			return {"stat": "q%d_points" % (i + 1), "mine": a, "theirs": b, "quarter": i + 1, "call": line,
+					"cause": cause, "text": "Your call in the %s quarter (%s to %d): %s" % [MatchNotes.QUARTER_NAMES[i],
+					("won it %d" if a > b else "lost it %d") % a, b, line]}
+	return {}
 
 
 ## "Smith stars as Geelong beat Sydney by 23".
