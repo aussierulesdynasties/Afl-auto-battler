@@ -2392,8 +2392,8 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 			# ball, so the numbers are behind it wherever the ball is (row T2.4:
 			# pulled toward the ball, they stayed in front of it when it was in
 			# their own half); the full-forward line comes a third of the way
-			# up after them and the rest stays home (row T2.4: at a quarter of
-			# that the flood moved the side 8.0 m, on the call floor).
+			# up after them (row T2.4: at a quarter of that the flood moved the
+			# side 8.0 m, on the call floor).
 			var half := slot == "CHF" or slot == "HFL" or slot == "HFR"
 			var behind := ball_p.x - dir * FLOOD_HALF_BEHIND
 			world.x = lerpf(world.x, behind, FLOOD_HALF_SHARE if half else FLOOD_PUSH)
