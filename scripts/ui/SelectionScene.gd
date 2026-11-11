@@ -215,7 +215,7 @@ func _side_page(auto: bool) -> Control:
 		actions.add_theme_constant_override("separation", 8)
 		_fill_actions(actions)
 		builder.interchange_actions = actions
-		builder.hint_extra = "Picked at match committee until you move someone." if auto else ""
+		builder.hint_extra = "The match committee picks our side until you move someone." if auto else ""
 		# Team Chemistry (row 125), read at a glance above the oval; a tap says
 		# why. It shares the line of the Your team / opponent switch, so the
 		# height it used goes to the players not picked.

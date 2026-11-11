@@ -56,7 +56,8 @@ const HUB_OLD := [
 	"Simming the week...",
 ]
 
-## The team builder and coaching pass (copy voice pass 5): per file, the rewritten lines and the
+## The team builder and coaching pass (copy voice pass 5, with the builder's tap hint, the trait
+## picker's none line and the sim sheet's plan line): per file, the rewritten lines and the
 ## lines they replaced. Auto-pick is the Match committee now, on every screen that names it.
 const TEAM_PASS := {
 	"res://scripts/ui/SelectionScene.gd": [[
@@ -64,12 +65,12 @@ const TEAM_PASS := {
 		"One ruck. The match committee fills the bench with the best of the rest.",
 		"Our side is confirmed for this week.", "\"Our team\"",
 		"Projected: %s as they would line up this week. They name their side on match day. They kick the other way.",
-		"Picked at match committee until you move someone.",
+		"The match committee picks our side until you move someone.",
 		"Saved as your Best 23. Choose it any week from Match committee.",
 		"Back to the side from before match committee.",
 		"Leave the player out while he is fit and the promise breaks. It stings.",
 	], ["\"Auto-pick\"", "Auto-pick names", "Auto-pick fills", "Side confirmed for", "\"Your team\"", "(projected:",
-		"Picked for you", "from Auto-pick", "before the auto-pick", "Leave a fit player out"]],
+		"Picked for you", "Picked at match committee", "from Auto-pick", "before the auto-pick", "Leave a fit player out"]],
 	"res://scripts/ui/CoachingScene.gd": [[
 		"Each plan buys an edge and gives something up. The note below says which.",
 		"Each plan runs on one of our list's strengths. That is our side as picked, against every list in the league.",
@@ -95,6 +96,15 @@ const TEAM_PASS := {
 		"No saved Best 23 yet. Set a side and save it.", "Our Best 23. Replacing unavailable players: %s.",
 		"\"Our Best 23.\"", "No young player is close enough to take a senior spot. This is our best side.",
 	], ["this is your best side", "arrange a side and save it", "\"Your Best 23", "a starter's spot"]],
+	"res://scripts/ui/TeamBuilder.gd": [[
+		" two of our players to swap them. Or drag one onto the other.",
+	], [" a player, then another (or drag one onto another) to swap them."]],
+	"res://scripts/sim/PlanTraits.gd": [[
+		"No trait. Just our game plan.",
+	], ["No trait: your game plan as written."]],
+	"res://scripts/ui/SimOrdersSheet.gd": [[
+		"Every match starts on our game plan: %s.\\nWe can change it in How we play.",
+	], ["Every match starts on your game plan", ": change it in How we play."]],
 }
 
 
