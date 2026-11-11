@@ -126,9 +126,11 @@ func _run() -> void:
 		while (current_scene == null or current_scene.find_child("PapersLadder", true, false) == null) and wait < 600:
 			wait += 1
 			await process_frame
-		await _frames(10)
+		# Past the loading card and the wipe into the screen.
+		await create_timer(3.0).timeout
 		await _shot(out + "_real.png")
 		await _scroll(true)
+		await create_timer(0.5).timeout
 		await _shot(out + "_real_low.png")
 		quit(0)
 		return

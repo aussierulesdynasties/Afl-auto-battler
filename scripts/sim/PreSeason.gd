@@ -854,42 +854,45 @@ static func practice_shift(margin: int) -> int:
 
 
 ## The paper's ladder after the practice matches: each club with a result
-## (`margins`: club -> its own points margin) swaps places with the club
-## practice_shift places up or down, so every place is still filled once. The
-## biggest margins go first (then the list order); a club swaps once, and a
-## swap never pushes a winner down or a loser up (it tries a place nearer, or
-## stays). So no club moves more than two places, and the same results always
-## print the same ladder. Every club the same.
+## (`margins`: club -> its own points margin) has practice_shift places to move,
+## taken as swaps with the club next to it, top of the ladder first, until no
+## swap is left, so every place is still filled once. A winner climbs past any
+## club that did not win, a loser drops past any club that did not lose; a
+## winner never goes down, a loser never goes up, and neither moves further
+## than its result earned. The same results always print the same ladder.
+## Every club the same.
 static func practice_nudge(order: Array, margins: Dictionary) -> Array:
 	var out := order.duplicate()
-	var shifts := {}
-	var movers := []
-	for i in range(order.size()):
-		var code := str(order[i])
-		shifts[code] = practice_shift(int(margins[code])) if margins.has(code) else 0
-		if int(shifts[code]) != 0:
-			movers.append([-absi(int(margins[code])), i, code])
-	movers.sort_custom(func(a, b): return int(a[0]) < int(b[0]) or (int(a[0]) == int(b[0]) and int(a[1]) < int(b[1])))
-	var locked := {}
-	for m in movers:
-		var code := str(m[2])
-		if locked.has(code):
-			continue
-		var shift := int(shifts[code])
-		var at := out.find(code)
-		for step in range(absi(shift), 0, -1):
-			var to := at - step * signi(shift)
-			if to < 0 or to >= out.size():
+	var earned := {}
+	var left := {}
+	for code in out:
+		earned[str(code)] = practice_shift(int(margins[code])) if margins.has(code) else 0
+		left[str(code)] = earned[str(code)]
+	var swapped := true
+	while swapped:
+		swapped = false
+		for i in range(out.size() - 1):
+			var up := str(out[i])
+			var down := str(out[i + 1])
+			# A winner never goes down and a loser never goes up; one that has
+			# used its places goes no further.
+			if int(earned[up]) > 0 or int(earned[down]) < 0:
 				continue
-			var other := str(out[to])
-			# The club swapped the other way must not have earned the opposite.
-			if locked.has(other) or int(shifts[other]) * signi(shift) > 0:
+			if int(earned[down]) > 0 and int(left[down]) == 0:
 				continue
-			out[to] = code
-			out[at] = other
-			locked[other] = true
-			break
-		locked[code] = true
+			if int(earned[up]) < 0 and int(left[up]) == 0:
+				continue
+			var climbs := int(left[down]) > 0
+			var drops := int(left[up]) < 0
+			if not (climbs or drops):
+				continue
+			out[i] = down
+			out[i + 1] = up
+			if climbs:
+				left[down] = int(left[down]) - 1
+			if drops:
+				left[up] = int(left[up]) + 1
+			swapped = true
 	return out
 
 
