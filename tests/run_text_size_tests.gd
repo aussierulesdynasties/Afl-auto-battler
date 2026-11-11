@@ -490,7 +490,8 @@ const COLOUR_CUES := {
 		["\"On your list\"", "On your list, pick N", 1],
 		["int(st[\"short\"]) > 0", "the need word (short of ...)", 1],
 		["_draft.is_valid()", "the status line in words", 1]],
-	"DraftSpotsSheet.gd": [["str(line[2]) == \"bad\"", "the line says who will pass", 1]],
+	"DraftSpotsSheet.gd": [["str(line[2]) == \"bad\"", "the line says who will pass", 1],
+		["lbl(gate, 15, UiKit.BAD", "the gate's line says how many to delist", 1]],
 	"DraftTradeSheet.gd": [["bool(verdict[\"ok\"])", "the club's reason in words", 1]],
 	"HubScene.gd": [
 		["\"You have retired\" if retired", "You have retired / You have been sacked", 1],

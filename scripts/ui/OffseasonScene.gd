@@ -40,6 +40,10 @@ func _ready() -> void:
 		Router.replace("main")
 		return
 	GameState.open_offseason()
+	# The draft's list gate sends the coach to the tab he chose (Delist or Trade).
+	if DraftSpotsSheet.route_tab != "":
+		_tab = DraftSpotsSheet.route_tab
+		DraftSpotsSheet.route_tab = ""
 	# Your club's colour behind the page, as on the hub and match day
 	# (director, 2026-10-10: every screen in the gameday style).
 	add_child(ClubBackdrop.new().setup(GameState.my_club))

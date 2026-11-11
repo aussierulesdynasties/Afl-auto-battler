@@ -591,7 +591,26 @@ func _test_full_list_before_and_during_draft() -> void:
 	# carries over from whichever suite ran before) would sit over the button.
 	_state.set_setting("seen_weekly_loop_intro", true)
 	_state.postseason_intro_seen = true
-	for round_trip in ["delist", "start"]:
+	# Must make room (director, 2026-11-12): one open spot for three picks is
+	# short of the rule, so the sheet is a gate with Delist and Trade, and no
+	# start. Once the coach has delisted enough, the draft starts.
+	var held: int = (spots["picks"] as Array).size()
+	var short: int = _state.draft_room_short()
+	_check(held >= 2 and short == mini(3, held) - int(spots["open"]),
+			"The list is short of the rule by %d (%s)" % [short, str(spots)])
+	var words := ["no", "one", "two", "three"]
+	var want_gate := "Clubs must take at least three players. Delist %s to make room, or trade the picks." % words[mini(short, 3)]
+	for round_trip in ["delist", "trade", "start"]:
+		if round_trip == "start":
+			# The coach delists the players the gate asked for.
+			var gone := 0
+			for p in _state.my_list.duplicate():
+				if _state.draft_room_short() <= 0:
+					break
+				if str(p["id"]).begins_with("pad_") and bool(_state.release_player(str(p["id"]))["ok"]):
+					gone += 1
+			_check(gone == short and _state.draft_room_short() == 0 and _state.draft_room_line() == "",
+					"Delisting %d meets the rule (%d delisted)" % [short, gone])
 		var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
 		root.add_child(hub)
 		await _settle()
@@ -606,36 +625,48 @@ func _test_full_list_before_and_during_draft() -> void:
 		await _press(go, "the National Draft button")
 		await _settle()
 		var sheet: Control = hub.find_child("DraftSpots", true, false)
-		_check(sheet != null, "The draft button first opens the list-spots sheet")
-		_check(_state.draft == null or not _state.draft.intake_mode, "The draft has not started yet")
-		var passing: Label = hub.find_child("DraftSpotsPassing", true, false)
-		var want := "%s %s will pass." % ["Pick" if (spots["passing"] as Array).size() == 1 else "Picks",
-				load("res://scripts/sim/Draft.gd").picks_words(spots["passing"])]
-		_check(passing != null and passing.text == want,
-				"The sheet names the picks that will pass: %s" % (passing.text if passing else "-"))
-		var rule: Label = hub.find_child("DraftSpotsRule", true, false)
-		_check(rule != null and rule.text.contains("delisted before the draft starts"), "The sheet states the rule")
-		var said := ""
-		for l in sheet.find_children("*", "Label", true, false) if sheet else []:
-			said += (l as Label).text.to_lower() + " "
-		for w in ["you should", "recommend", "best", "must"]:
-			_check(not said.contains(w), "The sheet never tells the coach what to do (%s)" % w)
 		var vp := Rect2(Vector2.ZERO, Vector2(root.size))
-		for bn in ["DraftSpotsDelist", "DraftSpotsStart"]:
-			var b: Button = hub.find_child(bn, true, false)
-			_check(b != null and vp.grow(1).encloses(b.get_global_rect()) and b.size.y >= 44,
-					"%s is on screen and thumb-sized" % bn)
-		var tap: Button = hub.find_child("DraftSpotsDelist" if round_trip == "delist" else "DraftSpotsStart", true, false)
-		if tap == null:
-			hub.queue_free()
-			return
-		await _press(tap, tap.text)
+		var tap: Button = null
+		if round_trip != "start":
+			_check(sheet != null, "The draft button first opens the list gate")
+			_check(_state.draft == null or not _state.draft.intake_mode, "The draft has not started yet")
+			var gate: Label = hub.find_child("DraftRoomGate", true, false)
+			_check(gate != null and gate.text == want_gate, "The gate says the rule: %s" % (gate.text if gate else "-"))
+			_check(hub.find_child("DraftSpotsStart", true, false) == null, "The gate has no start button")
+			for bn in ["DraftRoomDelist", "DraftRoomTrade"]:
+				var b: Button = hub.find_child(bn, true, false)
+				_check(b != null and vp.grow(1).encloses(b.get_global_rect()) and b.size.y >= 44,
+						"%s is on screen and thumb-sized" % bn)
+			tap = hub.find_child("DraftRoomDelist" if round_trip == "delist" else "DraftRoomTrade", true, false)
+		elif sheet != null:
+			# The rule is met; any picks over the open spots still pass, said first.
+			_check(hub.find_child("DraftRoomGate", true, false) == null, "The gate is gone once the rule is met")
+			var passing: Label = hub.find_child("DraftSpotsPassing", true, false)
+			var left: Dictionary = _state.draft_list_spots()
+			var want := "%s %s will pass." % ["Pick" if (left["passing"] as Array).size() == 1 else "Picks",
+					load("res://scripts/sim/Draft.gd").picks_words(left["passing"])]
+			_check(passing != null and passing.text == want,
+					"The sheet names the picks that will pass: %s" % (passing.text if passing else "-"))
+			var rule: Label = hub.find_child("DraftSpotsRule", true, false)
+			_check(rule != null and rule.text.contains("delisted before the draft starts"), "The sheet states the rule")
+			var said := ""
+			for l in sheet.find_children("*", "Label", true, false):
+				said += (l as Label).text.to_lower() + " "
+			for w in ["you should", "recommend", "best"]:
+				_check(not said.contains(w), "The sheet never tells the coach what to do (%s)" % w)
+			tap = hub.find_child("DraftSpotsStart", true, false)
+			_check(tap != null and vp.grow(1).encloses(tap.get_global_rect()) and tap.size.y >= 44,
+					"Start the draft is on screen and thumb-sized")
+		if tap != null:
+			await _press(tap, tap.text)
 		for i in range(20):
 			await process_frame
 		var cur := current_scene
-		if round_trip == "delist":
+		if round_trip != "start":
 			_check(cur != null and cur.scene_file_path.ends_with("OffseasonScene.tscn"),
-					"Delist players opens the off-season screen (%s)" % (cur.scene_file_path if cur else "-"))
+					"%s opens the off-season screen (%s)" % [round_trip, cur.scene_file_path if cur else "-"])
+			var want_tab := "contracts" if round_trip == "delist" else "trade"
+			_check(cur != null and str(cur.get("_tab")) == want_tab, "%s opens on the %s tab" % [round_trip, want_tab])
 			_check(_state.offseason_open(), "Players can still be delisted: the off-season is open")
 		else:
 			_check(_state.draft != null and _state.draft.intake_mode, "Start the draft starts it")
@@ -654,6 +685,9 @@ func _test_full_list_before_and_during_draft() -> void:
 			draft.pick_for_me()
 		else:
 			draft.auto_until_user_turn()
+	if held <= 3:
+		_check(draft.user_passed.is_empty(), "With the rule met and no picks over, none passed")
+		return
 	_check(not draft.user_passed.is_empty(), "A pick passed for a full list")
 	var ui: Control = load("res://scenes/DraftScene.tscn").instantiate()
 	root.add_child(ui)
