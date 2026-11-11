@@ -32,6 +32,7 @@ func _run() -> void:
 	await _t("_test_old_calls_load_and_rotations_are_automatic")
 	await _t("_test_defence_setup_keys")
 	await _t("_test_tag_is_permanent")
+	await _t("_test_full_time_calls_cover_every_quarter")
 	_state.autosave_enabled = true
 	print(Ran.line("Match calls", self))
 	for f in _failures:
@@ -173,3 +174,39 @@ func _test_tag_is_permanent() -> void:
 			"Mid/forward can be tagged; a ruck in a midfield slot cannot")
 
 
+## Full-time "Your calls" (bug, director 2026-11-12: "only ever seems to show
+## events from Q1 and rarely Q2, but never 3 or 4"): with three calls a quarter
+## the list used to stop after Q1 and Q2. Every quarter played now gets a line,
+## in quarter order, still at most five, and a call the Why section quoted is
+## not said again.
+func _test_full_time_calls_cover_every_quarter() -> void:
+	var MN = load("res://scripts/ui/match/MatchNotes.gd")
+	var hist := []
+	var snaps := []
+	for q in range(1, 5):
+		var mine := {"gameplan": "attacking", "tag_id": "opp_1", "focus_mid": "me_1"}
+		hist.append({"quarter": q, "plans": [mine, {"gameplan": "balanced"}]})
+		snaps.append({"team": [{"inside50": 12.0 * q, "goals": 3.0 * q}, {"inside50": 10.0 * q, "goals": 2.0 * q}],
+				"players": {"opp_1": {"disposals": 4.0 * q}, "me_1": {"disposals": 6.0 * q}}})
+	var res := {"tactics_history": hist, "quarter_teams": snaps}
+	for q in range(1, 5):
+		_check((MN.calls_lines(res, 0, q) as Array).size() == 3, "Fixture: Q%d should have three call lines" % q)
+	var lines: Array = MN.full_time_calls(res, 0, {}, 5)
+	_check(lines.size() == 5, "Your calls should still stop at five lines, got %d" % lines.size())
+	var quarters := []
+	for l in lines:
+		quarters.append(int(str(l).substr(1, 1)))
+	for q in range(1, 5):
+		_check(quarters.has(q), "Your calls should have a Q%d line, got %s" % [q, str(lines)])
+	var sorted := quarters.duplicate()
+	sorted.sort()
+	_check(quarters == sorted, "Your calls should read in quarter order, got %s" % str(quarters))
+	# The Why section quoted Q4's first call: Q4 still shows its others.
+	var first_q4 := str(MN.calls_lines(res, 0, 4)[0])
+	var told := {"q4": true, "call:" + first_q4: true}
+	var after: Array = MN.full_time_calls(res, 0, told, 5)
+	_check(not after.has("Q4  ·  " + first_q4), "A call the Why section quoted should not be said again")
+	var q4_after := after.filter(func(l): return str(l).begins_with("Q4"))
+	_check(q4_after.size() == 1, "Q4 should keep one of its other calls, got %s" % str(after))
+	# A match with fewer lines than the cap shows them all.
+	_check((MN.full_time_calls(res, 0, {}, 20) as Array).size() == 12, "Under the cap every call line shows")

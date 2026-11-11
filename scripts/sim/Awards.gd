@@ -209,7 +209,6 @@ static func tally_match(tally: Dictionary, res: Dictionary, regular: bool, umpir
 	var roster: Array = res.get("roster", [])
 	var codes := [str(res.get("home", "")), str(res.get("away", ""))]
 	var sc: Array = res.get("score", [0, 0])
-	var everyone := []
 	var umpires := []
 	for side in range(mini(2, roster.size())):
 		var won := sc.size() > 1 and int(sc[side]) > int(sc[1 - side])
@@ -234,14 +233,12 @@ static func tally_match(tally: Dictionary, res: Dictionary, regular: bool, umpir
 				t["coaches"] = 0
 			tally[id] = t
 			side_rows.append([id, inf])
-			everyone.append([id, inf])
 			umpires.append([id, umpire_score(st, won)])
 		side_rows.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
 		for i in range(mini(5, side_rows.size())):
 			var t: Dictionary = tally[str(side_rows[i][0])]
 			t["bf"] = int(t["bf"]) + (5 - i)
 	if regular:
-		everyone.sort_custom(func(a, b): return float(a[1]) > float(b[1]))
 		var three := brownlow_three(umpires, res) if umpire_draw else _ranked(umpires)
 		for i in range(three.size()):
 			var t: Dictionary = tally[str(three[i][0])]

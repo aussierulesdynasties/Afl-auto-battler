@@ -3541,6 +3541,23 @@ func fitness_plan(club: String) -> String:
 func fitness_bye_week(club: String) -> int:
 	if season == null:
 		return -1
+	# The fixture is drawn once with the season: each club's bye is found once.
+	# (A loaded season's fixture is a new array, so it is found afresh.)
+	if not is_same(_bye_fixture, season.fixture) or _bye_rounds != season.fixture.size():
+		_bye_fixture = season.fixture
+		_bye_rounds = season.fixture.size()
+		_bye_weeks = {}
+	if not _bye_weeks.has(club):
+		_bye_weeks[club] = _find_bye_week(club)
+	return int(_bye_weeks[club])
+
+
+var _bye_fixture: Array = []
+var _bye_rounds := -1
+var _bye_weeks := {}
+
+
+func _find_bye_week(club: String) -> int:
 	for ri in range(season.fixture.size()):
 		var plays := false
 		for m in season.fixture[ri]:
@@ -7825,6 +7842,10 @@ func open_offseason(keep_staff := false) -> void:
 			if not list.has(p):
 				continue   # already delisted to make cap room for a better player
 			var why := ai_release_reason(code, p)
+			# Talked round this off-season, he cannot be delisted by choice
+			# until the next one: the club keeps him, as yours must.
+			if why == "delist" and ListStings.release_held(p, season_year + 1):
+				why = Contracts.ai_release_reason(p, list, cap_for(code))
 			if why == "cap" and list.size() > Contracts.MIN_LIST:
 				# Before a wanted player walks for want of cap room, the club
 				# delists its least valuable expiring players it does not pick
@@ -7845,7 +7866,8 @@ func open_offseason(keep_staff := false) -> void:
 					testers[code] = int(testers.get(code, 0)) + 1
 					continue
 				var years := Contracts.ai_term(p, list)
-				_resign(p, years, Contracts.lowest(p, years) - culture_resign_discount(code, p, years))
+				var least := Contracts.lowest(p, years) - culture_resign_discount(code, p, years)
+				_resign(p, years, least, least)
 			else:
 				# A player they wanted but could not fit can earn them a pick;
 				# one they delisted cannot.
@@ -7896,7 +7918,28 @@ func tests_market(p: Dictionary, list: Array) -> bool:
 ## measured against the best replacement it can actually get at his position.
 func ai_release_reason(code: String, p: Dictionary) -> String:
 	var list: Array = season.lists.get(code, [])
+	# A player in its best 22 is never delisted, so his replacement is never
+	# weighed: only the class ranking replacement_worth keeps is made as before.
+	if Contracts.needed(p, list):
+		_fill_repl_class(code)
+		return Contracts.ai_release_reason(p, list, cap_for(code))
 	return Contracts.ai_release_reason(p, list, cap_for(code), replacement_worth(code, p))
+
+
+## What replacement_worth leaves behind when it reaches the draft: the class
+## ranked once per class size (_repl_class), filled at the same calls it was.
+func _fill_repl_class(code: String) -> void:
+	if str(_repl_class.get("key", "")) == "%d:%d" % [season_year, draftee_pool.size()]:
+		return
+	var spot := 0
+	for pk in club_picks(code):
+		if int(pk["year"]) == season_year:
+			var at := int((pk["positions"] as Array)[0][0])
+			if spot == 0 or at < spot:
+				spot = at
+	if spot > 0:
+		_repl_class = {"key": "%d:%d" % [season_year, draftee_pool.size()],
+				"ranked": TradeValue.rank_prospects(_open_class(season_year))}
 
 
 ## The best a club can get in his place, on Contracts.worth's scale: the top
@@ -7936,7 +7979,7 @@ func _spare_expiring(code: String, keep: Dictionary, on: Array = []) -> Dictiona
 	var list: Array = on if not on.is_empty() else season.lists.get(code, [])
 	var spare := {}
 	for q in Contracts.expiring(list):
-		if q == keep or retiring_now(q) or bool(q.get("resigned", false)) or Contracts.needed(q, list):
+		if q == keep or retiring_now(q) or bool(q.get("resigned", false)) or Contracts.needed(q, list) 				or ListStings.release_held(q, season_year + 1):
 			continue
 		if spare.is_empty() or Contracts.worth(q) < Contracts.worth(spare) \
 				or (Contracts.worth(q) == Contracts.worth(spare) and str(q["id"]) < str(spare["id"])):
@@ -8029,10 +8072,15 @@ func talk_round(player_id: String) -> Dictionary:
 
 ## Re-sign for `years` more seasons at `salary` (his asking price when not
 ## given). The contract ticks at the rollover, so it is stored as years + 1.
-func _resign(p: Dictionary, years: int, salary := -1) -> void:
+## Under his ask he carries a sting sized by the share of the gap to
+## `floor_price` saved (the least he takes on that term; Contracts.lowest when
+## not given), the same rule for every club (ListStings.haggle_points).
+func _resign(p: Dictionary, years: int, salary := -1, floor_price := -1) -> void:
 	var ask := Contracts.asking_salary(p)
 	if salary > 0 and salary < ask:
 		p["haggle_sting"] = season_year + 1
+		p["haggle_points"] = ListStings.haggle_points(salary, ask,
+				floor_price if floor_price >= 0 else Contracts.lowest(p, years))
 	p["salary"] = salary if salary > 0 else ask
 	p["contract_years"] = years + 1
 	p["resigned"] = true
@@ -8139,7 +8187,7 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 	var out := {"ok": false, "answer": str(reply["answer"]), "salary": int(reply["salary"])}
 	match str(reply["answer"]):
 		"accept":
-			_resign(p, years, salary)
+			_resign(p, years, salary, Contracts.lowest(p, years) - culture_resign_discount(my_club, p, years))
 			out["ok"] = true
 			out["reason"] = "%s re-signs for %d season%s at %s." % [name, years, "" if years == 1 else "s", Contracts.money(salary)]
 		"counter":
@@ -8182,6 +8230,8 @@ func release_player(player_id: String) -> Dictionary:
 		return {"ok": false, "reason": "Players can only be released in the off-season."}
 	if my_list.size() <= Contracts.MIN_LIST:
 		return {"ok": false, "reason": "Your list cannot go below %d." % Contracts.MIN_LIST}
+	if ListStings.release_held(p, season_year + 1):
+		return {"ok": false, "reason": ListCosts.HELD_REASON % GameDB.player_display_name(p)}
 	# A player whose career ends at this rollover leaves the game when he is
 	# let go (_open_market), so that one cannot be undone.
 	var snap := {} if retiring_now(p) else RecruitUndo.snapshot(self, player_id)
@@ -11242,16 +11292,16 @@ func auto_pick(strategy: String) -> Dictionary:
 				if not in_side.has(str(p["id"])):
 					rested.append(GameDB.player_display_name(p))
 			var note := "Rested: %s." % ", ".join(rested) if not rested.is_empty() \
-					else "Nobody needs a break: this is your best side."
+					else "Nobody needs a break. This is our best side."
 			if not tired.is_empty() and fresh.size() < (18 + Ratings.INTERCHANGE):
-				note = "Not enough fresh players to rest anyone: this is your best side."
+				note = "Not enough fresh players to rest anyone. This is our best side."
 			return {"side": side, "note": note}
 		"youth":
 			var sel2 := Ratings.select_22(pool, dual)
 			return blood_youth(_as_selection(sel2["ground"], sel2["bench"]), pool)
 		"mine":
 			if best23.is_empty():
-				return {"side": {}, "note": "No saved Best 23 yet: arrange a side and save it."}
+				return {"side": {}, "note": "No saved Best 23 yet. Set a side and save it."}
 			var side3: Dictionary = best23.duplicate(true)
 			var by_id3 := {}
 			for p in my_list:
@@ -11276,8 +11326,8 @@ func auto_pick(strategy: String) -> Dictionary:
 						arr3[i] = str(best3["id"])
 						swaps.append("%s in for %s" % [GameDB.player_display_name(best3),
 								GameDB.player_display_name(p3) if p3 != null else "a departed player"])
-			return {"side": side3, "note": ("Your Best 23. %s (unavailable)." % "; ".join(swaps)) if not swaps.is_empty()
-					else "Your Best 23."}
+			return {"side": side3, "note": ("Our Best 23. Replacing unavailable players: %s." % "; ".join(swaps)) if not swaps.is_empty()
+					else "Our Best 23."}
 	var sel4 := Ratings.select_22(pool, dual)
 	return {"side": _as_selection(sel4["ground"], sel4["bench"]), "note": "Best side by rating and position."}
 
@@ -11333,7 +11383,7 @@ func blood_youth(side_in: Dictionary, pool: Array) -> Dictionary:
 				var laid := Roles.key_post_order(ids.map(func(id): return by_id[str(id)]), line)
 				side2[line] = laid.map(func(p): return str(p["id"]))
 	return {"side": side2, "note": _blooding_note(brought, dropped, by_id) if not brought.is_empty()
-			else "No young player is close enough to a starter's spot: this is your best side."}
+			else "No young player is close enough to take a senior spot. This is our best side."}
 
 
 ## Young for this pick: YOUTH_AGE or under in whole years, as the game shows

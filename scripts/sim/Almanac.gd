@@ -326,18 +326,27 @@ static func update_club_records(gs, results: Array) -> void:
 			if roster.size() > s:
 				for r in roster[s]:
 					var st: Dictionary = stats.get(str(r.get("id", "")), {})
+					var goals := int(float(st.get("goals", 0.0)))
+					var disposals := int(float(st.get("disposals", 0.0)))
+					# His name only when he sets a record (a search of every list).
+					if not _beats(cr, "most_goals", goals) and not _beats(cr, "most_disposals", disposals):
+						continue
 					var who := GameDB.player_display_name_by_id(str(r.get("id", "")), str(r.get("name", "")))
-					_beat(cr, "most_goals", int(float(st.get("goals", 0.0))), who, year, where)
-					_beat(cr, "most_disposals", int(float(st.get("disposals", 0.0))), who, year, where)
+					_beat(cr, "most_goals", goals, who, year, where)
+					_beat(cr, "most_disposals", disposals, who, year, where)
 
 
 static func _beat(cr: Dictionary, key: String, value: int, who: String, year: int, label: String) -> void:
-	if value <= 0:
-		return
-	var old: Dictionary = cr.get(key, {})
-	if not old.is_empty() and value <= int(old.get("value", 0)):
+	if not _beats(cr, key, value):
 		return
 	cr[key] = {"value": value, "who": who, "year": year, "label": label}
+
+
+static func _beats(cr: Dictionary, key: String, value: int) -> bool:
+	if value <= 0:
+		return false
+	var old: Dictionary = cr.get(key, {})
+	return old.is_empty() or value > int(old.get("value", 0))
 
 
 ## One club record in words, e.g. "Most goals in a match: 9, J. Smith (Round 4 v Carlton, 2027)".
