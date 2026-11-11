@@ -2042,9 +2042,9 @@ func _test_goal_follows_rank_by_clubs() -> void:
 	var weekly := []
 	for size in [[18, "six"], [20, "seven"], [21, "seven"]]:
 		var g := ClubLife.board_goal(10, 0, int(size[0]))
-		var aim := "a finish out of the bottom %s" % size[1]
-		if (ClubLife.match_reason(g, "Geelong", 12, 0) != "The win over Geelong keeps %s in reach." % aim
-				or ClubLife.match_reason(g, "Geelong", -12, 1) != "The loss to Geelong puts %s under threat." % aim
+		var aim := "the bottom %s" % size[1]
+		if (ClubLife.match_reason(g, "Geelong", 12, 0) != "The win over Geelong keeps the club clear of %s." % aim
+				or ClubLife.match_reason(g, "Geelong", -12, 1) != "The loss to Geelong drags the club towards %s." % aim
 				or ClubLife.match_reason(g, "Geelong", -12, 4) != "Four losses in a row: the board is getting restless about %s." % aim):
 			weekly.append(ClubLife.match_reason(g, "Geelong", 12, 0))
 		for margin in [12, -12]:
