@@ -53,6 +53,10 @@ const TAG_HOT_GAIN := "%s usually gets %d touches; with %s on him, about %d, unt
 const TAG_HOT_COST := "%s gives up %s"
 const TAG_LEAVE_GAIN := "your midfielders play their own game"
 const TAG_LEAVE_COST := "%s gets his usual %d touches"
+## The same call with a tag already on another of theirs: the man who goes is
+## already giving up his own game, so moving him costs the hold he has now.
+const TAG_MOVE_COST := "the tag comes off %s, who goes back to his usual %d touches"
+const TAG_STAY_GAIN := "%s stays on %s, who is held to about %d touches"
 
 # Skip to full time.
 const SKIP_FIRST := "Skip plays the match on the plan you took in, no tag, no talk. Nothing changed here is kept; every call in the match takes 'no change'."
@@ -122,6 +126,21 @@ static func tag_kept(tagger: Dictionary, legs: float) -> int:
 
 static func tag_touches(tagger: Dictionary, legs: float) -> String:
 	return TAG_TOUCHES % [usual_touches(), tag_kept(tagger, legs)]
+
+
+## The four lines of the in-match tag call (MatchSim "hot"): their midfielder
+## `hot_name` has kicked a bag, `stopper` would go to him and hold him to `kept`
+## touches. `on_now` is the man `stopper` is already tagging, "" for none: then
+## moving the tag costs that hold, and leaving it keeps it.
+static func tag_call_lines(hot_name: String, stopper: String, kept: int, on_now: String = "") -> Dictionary:
+	var usual := usual_touches()
+	var moving := on_now != ""
+	return {
+		"tag_gain": gain(TAG_HOT_GAIN % [hot_name, usual, stopper, kept]),
+		"tag_cost": cost(TAG_MOVE_COST % [on_now, usual] if moving else TAG_HOT_COST % [stopper, tag_gives()]),
+		"leave_gain": gain(TAG_STAY_GAIN % [stopper, on_now, kept] if moving else TAG_LEAVE_GAIN),
+		"leave_cost": cost(TAG_LEAVE_COST % [hot_name, usual]),
+	}
 
 
 ## The line under the tag call: the cost, whoever goes (each man's hold is on

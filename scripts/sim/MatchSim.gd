@@ -5609,16 +5609,20 @@ func _boundary_moment() -> bool:
 		# The size of the call, from what the sim plays (GateOdds; row 120).
 		var on_him: Dictionary = minder if minder != null else {}
 		var kept := GateOdds.tag_kept(on_him, float(energy.get(str(on_him.get("id", "")), 100.0)))
+		# A tag already on another of theirs moves if the coach says tag: the card
+		# says so, and what leaving it where it is keeps (the answer itself is
+		# unchanged: resolve_moment sets the tag on this man either way).
+		var tagged := _on_ground(opp, _tag_id(me)) if minder != null else {}
+		var on_now := "" if tagged.is_empty() else GameDB.player_display_name(tagged)
+		var lines := GateOdds.tag_call_lines(hot_name, stopper, kept, on_now)
 		_fire({"kind": "hot", "player_id": str(id), "default": 1,
 			"title": "%s has kicked %d" % [hot_name, int(st["goals"])],
 			"text": "Their midfielder is hurting you on the scoreboard.",
 			"options": [
-				{"key": "tag", "label": "Tag him with %s" % stopper,
-					"gain": GateOdds.gain(GateOdds.TAG_HOT_GAIN % [hot_name, GateOdds.usual_touches(), stopper, kept]),
-					"cost": GateOdds.cost(GateOdds.TAG_HOT_COST % [stopper, GateOdds.tag_gives()])},
-				{"key": "leave", "label": "Back your defenders",
-					"gain": GateOdds.gain(GateOdds.TAG_LEAVE_GAIN),
-					"cost": GateOdds.cost(GateOdds.TAG_LEAVE_COST % [hot_name, GateOdds.usual_touches()])},
+				{"key": "tag", "label": ("Tag him with %s" if on_now == "" else "Move %s onto him") % stopper,
+					"gain": lines["tag_gain"], "cost": lines["tag_cost"]},
+				{"key": "leave", "label": "Back your defenders" if on_now == "" else "Leave the tag on %s" % on_now,
+					"gain": lines["leave_gain"], "cost": lines["leave_cost"]},
 			]})
 		return true
 	# Three goals in a row against.
