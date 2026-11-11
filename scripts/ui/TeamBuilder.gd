@@ -212,6 +212,8 @@ func _build() -> void:
 		else:
 			irow.add_child(interchange_actions)
 			field.add_child(irow)
+			if not _wide:
+				_wrap_actions_if_wide.call_deferred(irow, field)
 	else:
 		field.add_child(inter)
 	# A row of five on a PC; on a phone it wraps rather than widen the screen.
@@ -333,7 +335,7 @@ func _build() -> void:
 		bar.add_child(cancel)
 		rest.add_child(bar)
 	else:
-		var tap_hint := ("Tap" if (ScreenLayout.is_touch() or not _wide) else "Click") + " a player, then another (or drag one onto another) to swap them."
+		var tap_hint := ("Tap" if (ScreenLayout.is_touch() or not _wide) else "Click") + " two of our players to swap them. Or drag one onto the other."
 		if hint_extra != "":
 			tap_hint = hint_extra + " " + tap_hint
 		var hint := UiKit.lbl(start_note if start_note != "" else tap_hint, UiKit.SMALL,
@@ -419,6 +421,26 @@ func lift_full() -> float:
 	if not is_instance_valid(_slot) or not is_instance_valid(_pitch):
 		return 0.0
 	return maxf(0.0, _slot.global_position.y - (_pitch.global_position.y + _pitch.size.y * 0.5))
+
+
+## The check above runs before the row is on screen, where it reads the
+## window as 1280 wide. Once it is themed and laid out, a row wider than the
+## page (Undo beside Save as my Best 23 and Confirm, on a 390 px phone) puts
+## its actions under the word, as at a larger text size, rather than push the
+## page, and the Auto-pick button with it, past the screen's edge.
+func _wrap_actions_if_wide(irow: HBoxContainer, field: Control) -> void:
+	if not is_instance_valid(irow) or not irow.is_inside_tree() or interchange_actions == null:
+		return
+	if interchange_actions.get_parent() != irow:
+		return
+	if irow.get_combined_minimum_size().x <= UiKit.view_width(self) - 24.0:
+		return
+	irow.remove_child(interchange_actions)
+	var arow := UiKit.hbox(8)
+	arow.name = "InterchangeActionsRow"
+	arow.add_child(interchange_actions)
+	field.add_child(arow)
+	field.move_child(arow, irow.get_index() + 1)
 
 
 func is_raised() -> bool:
