@@ -29,6 +29,9 @@ func run() -> void:
 	_t("_test_backing_ask_closes_when_picked")
 	_t("_test_backing_suspended_named_side")
 	_t("_test_promised_game_named_side")
+	_t("_test_promise_no_room")
+	_t("_test_auto_pick_keeps_promised")
+	_t("_test_promise_keeps_trial_player")
 	_t("_test_pushing_for_games_needs_no_games")
 	_t("_test_fact_talks")
 	_t("_test_backing_lasts_the_season")
@@ -1396,6 +1399,117 @@ func _test_backing_suspended_named_side() -> void:
 	kid.erase("suspension_weeks")
 	kid.erase("injury_weeks")
 	_check(_in_side(GameState.current_side(), kid), "Free again: he is in the side")
+
+
+## Every place in a side you named is held by a player owed a game: backing
+## another kid does not claim he is in (a sixth bench name would not make the
+## 23), says there was no room, and leaving him out of that match breaks nothing.
+func _test_promise_no_room() -> void:
+	_fresh_season()
+	var kid := _kid(_spare_kid(), 0)
+	kid["age"] = 19.0
+	var side := _named_side_without(kid)
+	var held := 0
+	for k in side:
+		for id in side[k]:
+			var q := GameState.list_player(str(id))
+			q.erase("injury_weeks")
+			q.erase("suspension_weeks")
+			q.erase("rested")
+			q["expects_game"] = 12
+			held += 1
+	_check(held == 18 + Ratings.bench_size, "(setup) all 23 named and owed a game (%d)" % held)
+	var said := GameState.back_player(str(kid["id"]))
+	_check(said.contains(GameState.NO_ROOM_WORDS) and not said.contains("He's in the side"),
+			"No room: the answer says so and does not claim a place (%s)" % said)
+	_check(not _named_ids(GameState.my_selection()).has(str(kid["id"]))
+			and (GameState.my_selection().get("BENCH", []) as Array).size() == Ratings.bench_size,
+			"...he is not a sixth bench name")
+	var trust := Trust.value(GameState.relations, Trust.player_key(str(kid["id"])))
+	GameState.week_events = []
+	GameState.advance()
+	_check(Backing.is_active(kid) and int(Backing.current(kid).get("played", -1)) == 0,
+			"Left out of a match he could not be named in: the run waits, unbroken (%s)" % str(Backing.current(kid)))
+	_check(Trust.value(GameState.relations, Trust.player_key(str(kid["id"]))) >= trust,
+			"...and his opinion of you does not fall for it")
+
+
+## Every Selection pick keeps a promised player in, as the weekly auto-pick
+## (select_22) does: your Best 23, Rest the tired ones, and Blood youth.
+func _test_auto_pick_keeps_promised() -> void:
+	_fresh_season()
+	var kid := _kid(_spare_kid(), 0)
+	kid["age"] = 19.0
+	GameState.best23 = _named_side_without(kid).duplicate(true)
+	kid["expects_game"] = 12
+	var mine := GameState.auto_pick("mine")
+	_check(_named_ids(mine["side"]).has(str(kid["id"])) and str(mine["note"]).contains("Kept in as promised"),
+			"Best 23: a player you promised a game is kept in (%s)" % str(mine["note"]))
+	# Rest: a tired starter owed a game is not rested.
+	GameState.set_selection({})
+	var starter := {}
+	var side := GameState.current_side()
+	for q in GameState.my_list:
+		if starter.is_empty() and str(q["id"]) != str(kid["id"]) and _in_side(side, q) and str(q["role"]) != "RUCK":
+			starter = q
+	starter["workload"] = Workload.NEEDS_BREAK + 10.0
+	starter["expects_game"] = 12
+	var rest := GameState.auto_pick("rest")
+	_check(_named_ids(rest["side"]).has(str(starter["id"])) and not str(rest["note"]).contains(GameDB.player_display_name(starter)),
+			"Rest: a tired player you promised a game plays (%s)" % str(rest["note"]))
+	# Blood youth: the oldest, weakest starter of every line is owed a game, so
+	# none of them makes way for a youngster.
+	var owed := []
+	for line in ["DEF", "MID", "WING", "FWD"]:
+		var weak := {}
+		for id in side.get(line, []):
+			var q := GameState.list_player(str(id))
+			if not GameState.is_young(q) and (weak.is_empty() or int(q["overall"]) < int(weak["overall"])):
+				weak = q
+		if not weak.is_empty():
+			weak["expects_game"] = 12
+			owed.append(weak)
+	var youth := GameState.auto_pick("youth")
+	for q in owed:
+		_check(_named_ids(youth["side"]).has(str(q["id"])), "Blood youth: %s, promised a game, stays in (%s)" % [
+				GameDB.player_display_name(q), str(youth["note"])])
+	for q in GameState.my_list:
+		q.erase("expects_game")
+	starter.erase("workload")
+
+
+## The player on a role trial never makes way for a promised player: the
+## trial needs him in the side.
+func _test_promise_keeps_trial_player() -> void:
+	_fresh_season()
+	GameState.set_selection(GameState.current_side())
+	var t := {}
+	for q in GameState.my_list:
+		if t.is_empty() and _in_side(GameState.current_side(), q) and ClubStories.trial_role(q) != "" \
+				and GameState.start_role_trial(q, 3) != "":
+			t = q
+	if t.is_empty():
+		_check(false, "(setup) someone in the side can start a role trial")
+		return
+	var line := ""
+	var sel := GameState.my_selection()
+	for k in sel:
+		if k != "OUT" and (sel[k] as Array).has(str(t["id"])):
+			line = str(k)
+	_check(line != "" and line != "BENCH", "(setup) the trial player is named on the ground (%s)" % line)
+	var own := int(t["overall"])
+	t["overall"] = 1   # the lowest-rated in his line: the one who would make way
+	var kid := _kid(_spare_kid([str(t["id"])]), 0)
+	kid["age"] = 19.0
+	for k in sel:
+		(sel[k] as Array).erase(str(kid["id"]))
+	GameState.set_selection(sel)
+	kid["role"] = "MID" if line == "WING" else line
+	GameState.back_player(str(kid["id"]))
+	_check(_named_ids(GameState.my_selection()).has(str(t["id"])) and str(GameState.role_trial.get("id", "")) == str(t["id"]),
+			"The trial player keeps his place and his trial (%s)" % str(GameState.role_trial))
+	_check(_named_ids(GameState.my_selection()).has(str(kid["id"])), "...and the promised kid is named in place of another")
+	t["overall"] = own
 
 
 ## "Pushing for games" (and the finals-gone run home) is only for a kid who is

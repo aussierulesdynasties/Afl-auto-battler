@@ -57,6 +57,7 @@ func run() -> void:
 	_t("_test_dev_talk_follow_up")
 	_t("_test_dev_promise_kept_broken_lapsed")
 	_t("_test_dev_promise_named_side")
+	_t("_test_dev_promise_suspended_waits")
 	_t("_test_ten_seasons")
 	_t("_test_trust_in_play")
 	_t("_test_stories_never_move_the_dice")
@@ -3670,10 +3671,17 @@ func _test_dev_promise_named_side() -> void:
 	arr[arr.find(id)] = sub
 	GameState.set_selection(side)
 	_check(sub != "" and _line_in(GameState.current_side(), id) == "", "(setup) a side you named leaves him out")
+	var sub_name := GameDB.player_display_name(GameState.list_player(sub))
 	GameState._dev_promise_week()
 	var dt: Dictionary = p["dev_talk"]
 	_check(not (_line_in(GameState.current_side(), id) in ["", "BENCH"]) and _line_in(GameState.my_selection(), id) != "",
 			"Owed his games: he is named in your side at once (%s)" % _line_in(GameState.current_side(), id))
+	var made_way := ""
+	for o in GameState.my_selection().get("OUT", []):
+		made_way = GameDB.player_display_name(GameState.list_player(str(o)))
+	_check(made_way != "" and _news_has("%s is in the side this week for his promised games, in place of %s." % [
+			GameDB.player_display_name(p), made_way]),
+			"...and the news names who made way, as the card does (%s; %s was named)" % [made_way, sub_name])
 	_check(str(dt["state"]) == "on" and str(GameState.role_trial.get("id", "")) == id and GameState.role_trial.has("promised"),
 			"...and his promised games start (%s, %s)" % [str(dt), str(GameState.role_trial)])
 	for r in range(GameState.DEV_PROMISE_GAMES):
@@ -3683,3 +3691,32 @@ func _test_dev_promise_named_side() -> void:
 		GameState.advance()
 		_check(GameState.last_side.has(id) or str(dt["state"]) == "kept", "Promised game %d: he took the field" % (r + 1))
 	_check(str(dt["state"]) == "kept", "Three games there and the promise is kept (%s)" % str(dt))
+
+
+## Owed his promised games but suspended: he is not named (it would only push
+## a fit man out of a side you named), nothing starts, and his games wait.
+func _test_dev_promise_suspended_waits() -> void:
+	_start()
+	var p := _dev_learner()
+	if p.is_empty():
+		_check(false, "Someone in the side can learn a position")
+		return
+	var id := str(p["id"])
+	GameState.dev_talk(p, "promise")
+	_judge(p, true)
+	var side := GameState.current_side()
+	for k in side:
+		(side[k] as Array).erase(id)
+	GameState.set_selection(side)
+	var before := GameState.my_selection()
+	p["suspension_weeks"] = 1
+	GameState._dev_promise_week()
+	var dt: Dictionary = p["dev_talk"]
+	_check(_line_in(GameState.my_selection(), id) == "" and (GameState.my_selection().get("OUT", []) as Array).size()
+			== (before.get("OUT", []) as Array).size(), "Suspended: he is not named, and nobody is pushed out")
+	_check(str(dt["state"]) == "owed" and GameState.role_trial.is_empty() and not p.has("expects_game"),
+			"...his games stay owed and nothing starts (%s, %s)" % [str(dt), str(GameState.role_trial)])
+	p.erase("suspension_weeks")
+	GameState._dev_promise_week()
+	_check(_line_in(GameState.my_selection(), id) != "" and str(dt["state"]) == "on",
+			"Free again: he is named and his games start (%s)" % str(dt))
