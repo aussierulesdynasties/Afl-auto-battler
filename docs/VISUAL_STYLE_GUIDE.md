@@ -229,6 +229,9 @@ line is signed by a staff member.
 - **The match feed** keeps a broadcaster's voice, set apart from the coach's (director,
   2026-11-10), and is the one place "!" may appear. Journalists keep their own personalities.
 - **"Sim the week"** keeps the word "sim" (director, 2026-11-10); "simming" does not: "Ask before Sim the week".
+- **"Auto-pick"** stays the name of the Team selection button (director, 2026-11-12: "Auto pick. I
+  already answered this question"); the lines that name the button keep it, allowed by file in
+  `tests/run_copy_rules_tests.gd`.
 - **Words.** The AFL's own nouns: centre bounce, stoppage, clearance, inside 50, pressure acts,
   best 22, senior list, rookie list, delist, list spot, trade period, free agency. Replace roster
   (list), playbook (game plan), starter (best 22, or the player he replaces), payroll (salary
