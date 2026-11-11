@@ -1911,6 +1911,27 @@ Your career stays on this device.",
 			"The guernsey wears what was painted: red, blue hoops, gold trim")
 	_check(_screen_text().contains("Main colour") and _screen_text().contains("Pattern colour")
 			and _screen_text().contains("Trim colour"), "Each part is named with its colour")
+	# The wider palette (director 2026-11-11), by finger on a phone: all of it
+	# on screen at thumb size, and a new colour paints the trim.
+	var palette: Control = current_scene.find_child("ForgePalette", true, false)
+	var swatches := palette.get_children() if palette != null else []
+	var small_sw := []
+	for s in swatches:
+		if (s as Control).size.x < 44 or (s as Control).size.y < 44:
+			small_sw.append(s.name)
+	_check(swatches.size() == ClubForge.PALETTE.size() and small_sw.is_empty(),
+			"Every Forge colour is a thumb-sized swatch on a phone (%d, small %s)" % [swatches.size(), str(small_sw)])
+	var bottle_sw: Control = current_scene.find_child("ForgeColour_bottle", true, false)
+	var bottle_tap: String = await Tap.tap(bottle_sw) if bottle_sw != null else "missing"
+	await _settle()
+	_check(bottle_tap == "" and _screen_text().contains("Painting with Bottle green"),
+			"A finger picks a new colour, and the screen names it (%s)" % bottle_tap)
+	var trim_part: Control = current_scene.find_child("ForgePart_trim", true, false)
+	var trim_tap: String = await Tap.tap(trim_part) if trim_part != null else "missing"
+	await _settle()
+	_check(trim_tap == "" and str(current_scene.get("_club")["accent"]).to_upper() == "#0C4A2F"
+			and _screen_text().contains("Bottle green"),
+			"A finger paints the trim bottle green (%s)" % trim_tap)
 	# Where you click on the guernsey decides what you paint.
 	var crest = load("res://scripts/ui/GuernseyCrest.gd").make(Color.RED, Color.BLUE, Color.WHITE, "hoops", "", 100.0)
 	crest.size = Vector2(100, 100)
