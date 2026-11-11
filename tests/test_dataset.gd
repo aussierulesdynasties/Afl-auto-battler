@@ -16,8 +16,10 @@ const GOLDEN_LOAD := "94876aac547014895ed75f971a92817c"
 const GOLDEN_REAL := "7576cb577da70d80f6222786c2710b94"
 ## A played match's floating point differs between Windows and Linux builds of
 ## Godot, so the season has one fingerprint per platform; each was taken on
-## main before the change (Linux: run_on_github run 43024085570).
-const GOLDEN_SEASON := {"Windows": "b039d703c0783968328f937754c75eee", "Linux": "780ff5a200eee3f3481e3ea11111cc31"}
+## main before the change (Linux: run_on_github run 43024085570). The own
+## plan (CustomPlan) redrew the season: Linux from Tests run 43083470206; the
+## Windows print still predates it and is refreshed on the next local run.
+const GOLDEN_SEASON := {"Windows": "b039d703c0783968328f937754c75eee", "Linux": "f99bf57c4e3a8dfdc2409ecb11611bec"}
 
 ## A small league standing in for a legacy set until the 1990 files ship:
 ## 42 real players re-dated to a 1989 data season, a 1990 first season, and
