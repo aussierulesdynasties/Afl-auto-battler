@@ -3,6 +3,8 @@
 _Director's decisions, brainstorm of 2026-10-09. Session record:
 [brainstorms/2026-10-09-design-bible.md](brainstorms/2026-10-09-design-bible.md)._
 
+_Updated 2026-11-12 with the director's consent: press-line wording, pillar order, story question._
+
 ## What this document is
 
 The bible holds the ultimate truth for Aussie Rules Dynasties. It is a philosophy
@@ -25,9 +27,19 @@ Brownlow. The satisfaction is that your vision and your faith paid off.
 understands the risk was theirs to take. Risks can pay off and risks can fail. It
 is up to the player, and the game is objective about it.
 
-## The core pillar: player agency
+## The first pillar: story
 
-Player agency is the core pillar. It is what sets this game apart from simulators
+A simulation that feels like a story, a legacy, a dynasty. The coach's career is
+the centre of the game.
+
+## The second pillar: a deep simulator
+
+It is real footy. Player ratings reflect reality, and decisions move the odds,
+never the certainty.
+
+## The third pillar: player agency
+
+Player agency is the third pillar. It is what sets this game apart from simulators
 that lean toward the uninteractive.
 
 - This is not a spreadsheet simulator.
@@ -35,7 +47,7 @@ that lean toward the uninteractive.
 - The game is designed for a player who plays most matches and sims the odd one.
   Playing hands-off is the gamer's call, and the risk of it is theirs.
 
-## The second pillar: readability and intuitive interfaces
+## The fourth pillar: readability and intuitive interfaces
 
 _Director, 2026-10-13._
 
@@ -92,8 +104,8 @@ matter.
 **Press conferences.** Answers affect the sim: player morale, board expectations
 and relationships with the press. Journalists have personalities.
 
-- An answer is a dice roll based on logic. The gamer should know that a comment
-  carries risk.
+- Every answer carries a named risk: the odds of each outcome are shown before
+  you answer.
 - The press conference tests media literacy, relationship management and board
   compliance.
 - The effect is visible afterwards. Criticise a young player and his morale may
@@ -138,6 +150,7 @@ the director:
 A feature must be justifiable based on its intent. It does not need to pass every
 question below, but it must answer to at least the intent it claims.
 
+- Does it add to the coach's story or the club's legacy?
 - Does it enhance the core philosophy of the game?
 - Does it increase immersion?
 - Does it create better roleplaying opportunities?
