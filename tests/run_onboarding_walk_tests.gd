@@ -216,6 +216,17 @@ func _interview_press_room(iv: Control) -> void:
 	_check(VF.strip("coach", "coach_seated", "front") is Dictionary and not (VF.strip("coach", "coach_seated", "front") as Dictionary).is_empty(),
 			"Appointment interview: the sheet holds the seated coach the room draws")
 	_check(room.size.x >= 300.0 and room.size.y >= 180.0, "Appointment interview: the room fills its stage (%s)" % room.size)
+	# Director's check, 2026-11-12 (blurry coach): the sheet is never blown up past
+	# its own pixels, even at the camera's closest; more screen means more room.
+	_check(room.call("figure_scale") <= 1.001,
+			"Appointment interview: the coach is drawn at or under the sheet's own size (%.2f screen units per sheet pixel)" % room.call("figure_scale"))
+	var named_size := stage.size
+	var named_box: Rect2 = room.call("scene_box")
+	var name_go: Control = iv.find_child("InterviewStart", true, false)
+	var name_field: Control = iv.find_child("CoachName", true, false)
+	if name_go != null and name_field != null:
+		var under := name_go.get_global_rect().position.y - name_field.get_global_rect().end.y
+		_check(under < 40.0, "Appointment interview: Face the press sits right under the name field (%d px)" % under)
 	var field: LineEdit = iv.find_child("CoachName", true, false)
 	if field != null:
 		field.text = "Pat Reid"
@@ -237,6 +248,8 @@ func _interview_press_room(iv: Control) -> void:
 			"Appointment interview: no empty block under the answers (room %d px high, %d px under the last answer)" % [stage.size.y, gap])
 	_check(stage.find_child("MediaConferenceVignette", false, false) == room,
 			"Appointment interview: the same room stays through the questions")
+	_check(stage.size == named_size and (room.call("scene_box") as Rect2).size == named_box.size,
+			"Appointment interview: the room keeps its size from page to page (%s then %s)" % [named_size, stage.size])
 	var why2: String = await Tap.tap(answer)
 	_check(why2 == "", "Appointment interview: an answer takes a finger's tap past the room (%s)" % why2)
 	await _settle()

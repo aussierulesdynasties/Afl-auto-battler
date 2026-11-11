@@ -2,8 +2,11 @@ extends SceneTree
 ## The press interview before the draft on a fresh new career (onboarding on),
 ## as a coach meets it: the League redraft, take the club, the interview opens.
 ##   godot --path . --script tools/visual/capture_onboarding_interview.gd -- --out DIR [--size 390x844] [--club MEL]
-## Writes DIR/<W>x<H>_<screen>.png: tip, name, question, reveal. Prints whether
-## the press room drew from the figure sheet (SCENE lines).
+## Writes DIR/<W>x<H>_<screen>.png: walkin (the coach walking in, a moment after
+## the screen opens), name, question, reveal. The interview has no Tutorials tip of
+## its own (FirstVisitIntro.TEXT has no "interview" key), so none is shot. Prints
+## per page whether the press room drew from the figure sheet, its size and the
+## coach's on-screen scale per sheet pixel (SCENE lines).
 ## Needs a real renderer: run windowed, never --headless.
 
 var W := 390
@@ -58,7 +61,8 @@ func _report(iv: Node) -> void:
 	print("SCENE stage=", stage != null, " size=", stage.size if stage != null else Vector2.ZERO,
 			" vignette=", v != null, " sheet=", SV.FIGURE_SHADE.resource_path if v != null else "",
 			" sheet_size=", SV.FIGURE_SHADE.get_size() if v != null else Vector2.ZERO,
-			" expected=", VF.SHEET_SIZE)
+			" expected=", VF.SHEET_SIZE,
+			" figure_scale=", snappedf(v.figure_scale(), 0.001) if v != null and v.has_method("figure_scale") else -1.0)
 
 
 func _run() -> void:
@@ -112,10 +116,10 @@ func _run() -> void:
 	if iv == null or not str(iv.scene_file_path).ends_with("InterviewScene.tscn"):
 		quit(1)
 		return
-	await _shot("tip")
-	for b in iv.find_children("*IntroOk", "Button", true, false):
-		b.pressed.emit()
-	await _frames(4)
+	print("CAPTURE tips open: ", iv.find_children("*Intro", "", true, false).size())
+	await _shot("walkin")
+	# The coach seated before the name page's shot.
+	await create_timer(1.5).timeout
 	_report(iv)
 	await _shot("name")
 	var f: LineEdit = iv.find_child("CoachName", true, false)
@@ -125,8 +129,11 @@ func _run() -> void:
 		await _press(iv, "InterviewStart")
 	# The coach is seated and the room settled.
 	await create_timer(2.5).timeout
+	_report(iv)
 	await _shot("question")
 	for a in [1, 0, 2, 1, 3, 0, 1]:
 		await _press(iv, "InterviewAnswer%d" % a)
+	await _frames(4)
+	_report(iv)
 	await _shot("reveal")
 	quit(0)
