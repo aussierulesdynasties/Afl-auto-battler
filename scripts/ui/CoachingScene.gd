@@ -181,7 +181,7 @@ func _profile_row(row: Dictionary, ground: Array) -> Control:
 	return box
 
 
-const TRADE_OFF_LINE := "Each plan buys an edge and gives something up; the note below says which."
+const TRADE_OFF_LINE := "Each plan buys an edge and gives something up. The note below says which."
 
 
 # ---------------------------------------------------------------------------
@@ -191,7 +191,7 @@ func _how_we_play() -> Control:
 	var v := UiKit.vbox(6)
 	v.name = "HowWePlay"
 	v.add_child(_head("How we play"))
-	v.add_child(_wrapped("Each plan runs on one of your list's strengths: your side as picked, against every list in the league.",
+	v.add_child(_wrapped("Each plan runs on one of our list's strengths. That is our side as picked, against every list in the league.",
 			UiKit.SMALL, UiKit.MUTED))
 	# What it costs and what it buys, in one line (P-63).
 	var trade := _wrapped(TRADE_OFF_LINE, UiKit.SMALL, UiKit.TEXT)
@@ -219,7 +219,7 @@ func _how_we_play() -> Control:
 	var rest := UiKit.vbox(0)
 	rest.name = "ListProfile"
 	rest.add_child(UiKit.spacer(4))
-	rest.add_child(UiKit.lbl("Also on your list", UiKit.SMALL, UiKit.TEXT, true))
+	rest.add_child(UiKit.lbl("Also on our list", UiKit.SMALL, UiKit.TEXT, true))
 	for row in profile:
 		if not PlanTiles.PLAN_STRENGTH.values().has(str(row["dim"])):
 			rest.add_child(_profile_row(row, ground))
@@ -232,7 +232,7 @@ func _how_we_play() -> Control:
 	var style := GameState.how_we_play()
 	if int(style["games"]) < 3:
 		v.add_child(UiKit.spacer(4))
-		v.add_child(_wrapped("After three games, how your side wins and gets beaten shows here.",
+		v.add_child(_wrapped("After three games, how we win and get beaten shows here.",
 				UiKit.BODY, UiKit.MUTED))
 		return v
 	for part in [["How we win", "win", "WinLine"], ["How we get beaten", "beaten", "BeatenLine"]]:
@@ -377,8 +377,8 @@ static func _quiet_line(part: String, games: int) -> String:
 	if games < SETTLED_GAMES:
 		return "Nothing stands out yet."
 	if part == "beaten":
-		return "No part of your game is costing you regularly."
-	return "No one part of your game stands above the league."
+		return "No part of our game is costing us regularly."
+	return "No one part of our game stands above the league."
 
 
 const SETTLED_GAMES := 10
@@ -394,7 +394,7 @@ func _list_and_cap() -> Control:
 	var line := "%d players on the list" % GameState.my_list.size()
 	if GameState.salary_cap > 0:
 		var room := GameState.cap_room()
-		line += "  ·  payroll %s of %s  ·  %s" % [Contracts.money(GameState.my_payroll()), Contracts.money(GameState.cap_for(GameState.my_club)),
+		line += "  ·  %s of the %s salary cap  ·  %s" % [Contracts.money(GameState.my_payroll()), Contracts.money(GameState.cap_for(GameState.my_club)),
 				("%s under the cap" % Contracts.money(room)) if room >= 0 else ("%s over the cap" % Contracts.money(-room))]
 	var l := _wrapped(line)
 	l.name = "CapLine"

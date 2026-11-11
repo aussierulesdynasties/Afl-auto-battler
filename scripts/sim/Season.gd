@@ -17,9 +17,11 @@ extends RefCounted
 ##   Week 4  PF: QF winners v SF winners
 ##   Week 5  GF
 
+## The game's league (2026 on, and any season with no year). A season's own
+## shape comes from SeasonRules by its year: read regular_rounds(),
+## finalists() and grand_final_venue() from a season, never these.
 const REGULAR_ROUNDS := 24
 const FINALISTS := 10
-## The Grand Final is always played here, whichever clubs make it.
 const GRAND_FINAL_VENUE := "MCG"
 
 var clubs: Array = []          # club codes
@@ -32,9 +34,15 @@ var seed := 0
 var finals := {}               # finals series state, empty until started
 var selections := {}           # code -> chosen match-day side (empty = auto)
 var plans := {}                # code -> standing game plan (absent = balanced)
+## The season's year (0: none given, the game's league) and its shape
+## (SeasonRules.for_year): rounds, games, finalists, finals format, venue.
+var year := 0
+var rules := {}
 
 
-func _init(club_codes: Array, club_lists: Dictionary, p_seed: int = 0) -> void:
+func _init(club_codes: Array, club_lists: Dictionary, p_seed: int = 0, p_year: int = 0) -> void:
+	year = p_year
+	rules = SeasonRules.for_year(year)
 	clubs = club_codes.duplicate()
 	# Keep only this season's clubs. Callers build `club_lists` for every
 	# club that will ever exist, and the offseason, contracts and free-agent
@@ -50,6 +58,54 @@ func _init(club_codes: Array, club_lists: Dictionary, p_seed: int = 0) -> void:
 		ladder[c] = {"code": c, "p": 0, "w": 0, "l": 0, "d": 0,
 				"pf": 0, "pa": 0, "pts": 0, "pct": 0.0}
 	fixture = build_fixture()
+
+
+# ---------------------------------------------------------------------------
+# The season's shape
+# ---------------------------------------------------------------------------
+## Home-and-away rounds this season (24 in the game's league; 22 in 1990).
+func regular_rounds() -> int:
+	return int(rules.get("rounds", REGULAR_ROUNDS))
+
+
+## How many clubs make the finals (10; five in 1990, six 1991-93, eight after).
+func finalists() -> int:
+	return int(rules.get("finalists", FINALISTS))
+
+
+## The finals format, a SeasonRules.BRACKETS key.
+func finals_format() -> String:
+	return str(rules.get("finals", SeasonRules.DEFAULT["finals"]))
+
+
+## How many weeks the finals take (five with the wildcard round, four before).
+func finals_weeks() -> int:
+	return SeasonRules.finals_weeks(finals_format())
+
+
+## Every final's tag this season, in the order they are played.
+func finals_tags() -> Array:
+	return SeasonRules.tags(finals_format())
+
+
+## Where this season's Grand Final is played, whichever clubs make it.
+func grand_final_venue() -> String:
+	return str(rules.get("gf_venue", GRAND_FINAL_VENUE))
+
+
+## The week of the season the current (or last) finals week is: the
+## home-and-away rounds, then one a finals week, a replayed final included.
+func finals_round() -> int:
+	return regular_rounds() + int(finals.get("week", 1)) + int(finals.get("replays", 0))
+
+
+## Games each club plays: the year's own count, else 23 at an even club
+## count and 22 at an odd one (one bye or two in the 24 rounds).
+func games_per_club() -> int:
+	var g := int(rules.get("games", 0))
+	if g > 0:
+		return g
+	return regular_rounds() - 1 if clubs.size() % 2 == 0 else regular_rounds() - 2
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +188,7 @@ func build_fixture() -> Array:
 	var base := []
 	for r in round_robin(order):
 		base.append(r.map(func(m): return [str(m["home"]), str(m["away"])]))
-	var target := REGULAR_ROUNDS - 1 if clubs.size() % 2 == 0 else REGULAR_ROUNDS - 2
+	var target := games_per_club()
 	# Each club meets every other once (n - 1 games), then the return rounds:
 	# base rounds picked again. The last round pairs off the clubs those
 	# return rounds rest - never a pair they already bring back (a third
@@ -189,8 +245,9 @@ func build_fixture() -> Array:
 				start.append((base[bi] as Array).duplicate())
 			start = _shuffled(start, rng)
 			start.insert(rng.randi_range(BYE_FIRST, mini(BYE_LAST, start.size())), spare.duplicate())
+		start = _fit_rounds(start)
 		var order_r := _level_rounds(start, rng)
-		var closest := REGULAR_ROUNDS
+		var closest := regular_rounds()
 		var close := 0
 		var meets := _meet_rounds(order_r)
 		for key in meets:
@@ -218,6 +275,27 @@ func build_fixture() -> Array:
 		if score == 0:
 			break
 	return _assign_venues(best, rng)
+
+
+## The drawn rounds made to fill the season's rounds: a season with a round
+## for every game (1990, 14 clubs, 22 rounds) drops the empty spare round; a
+## longer one (an Opening Round) gets empty rounds mid-season that levelling
+## then fills. The game's league already has exactly its rounds: unchanged.
+func _fit_rounds(start: Array) -> Array:
+	var want := regular_rounds()
+	if start.size() == want:
+		return start
+	var out := start.duplicate()
+	if out.size() > want:
+		for i in range(out.size() - 1, -1, -1):
+			if out.size() > want and (out[i] as Array).is_empty():
+				out.remove_at(i)
+		return out
+	var at := clampi(BYE_FIRST, 0, out.size())
+	while out.size() < want:
+		out.insert(at, [])
+		at = mini(at + 2, out.size())
+	return out
 
 
 func _pair_key(m: Array) -> String:
@@ -494,13 +572,13 @@ func _legacy_fixture() -> Array:
 		out.append(r)
 	# Return fixture: same pairings, venues flipped.
 	for r in first_half:
-		if out.size() >= REGULAR_ROUNDS:
+		if out.size() >= regular_rounds():
 			break
 		var flipped := []
 		for m in r:
 			flipped.append({"home": m["away"], "away": m["home"]})
 		out.append(flipped)
-	return out.slice(0, REGULAR_ROUNDS)
+	return out.slice(0, regular_rounds())
 
 
 # ---------------------------------------------------------------------------
@@ -838,9 +916,9 @@ func finals_math(code: String) -> String:
 			could_pass += 1
 		if pts > most:
 			certain_ahead += 1
-	if could_pass <= FINALISTS - 1:
+	if could_pass <= finalists() - 1:
 		return "in"
-	if certain_ahead >= FINALISTS:
+	if certain_ahead >= finalists():
 		return "out"
 	return "live"
 
@@ -852,11 +930,13 @@ func is_regular_done() -> bool:
 # ---------------------------------------------------------------------------
 # Finals
 # ---------------------------------------------------------------------------
-## The wildcard bracket (see the class doc): ten finalists, five weeks.
+## The finals series of the season's format (SeasonRules.BRACKETS): the
+## wildcard bracket of the class doc in the game's league, the McIntyre final
+## five, the final six or a final eight in a past year.
 func start_finals() -> void:
 	var top := []
 	for row in ladder_sorted():
-		if top.size() >= FINALISTS:
+		if top.size() >= finalists():
 			break
 		top.append(row["code"])
 	finals = {
@@ -870,46 +950,93 @@ func start_finals() -> void:
 	}
 
 
+## This finals week's matches, {"tag", "label", "home", "away"}; a side not
+## known yet is "". A week replaying a drawn final holds only the replay.
 func finals_week_matches() -> Array:
 	if finals.is_empty():
 		return []
-	var t: Array = finals["top"]
-	var s: Dictionary = finals["slots"]
-	match int(finals["week"]):
-		1:
-			return [
-				{"tag": "WC1", "label": "Wildcard Final 1", "home": t[6], "away": t[9]},
-				{"tag": "WC2", "label": "Wildcard Final 2", "home": t[7], "away": t[8]},
-			]
-		2:
-			return [
-				{"tag": "QF1", "label": "Qualifying Final 1", "home": t[0], "away": t[3]},
-				{"tag": "QF2", "label": "Qualifying Final 2", "home": t[1], "away": t[2]},
-				# Wildcard winners reseed by original ladder position: the
-				# winner of 7v10 takes the 7th seed, the winner of 8v9 the 8th.
-				{"tag": "EF1", "label": "Elimination Final 1",
-						"home": t[4], "away": s.get("W_WC2", "")},
-				{"tag": "EF2", "label": "Elimination Final 2",
-						"home": t[5], "away": s.get("W_WC1", "")},
-			]
-		3:
-			return [
-				{"tag": "SF1", "label": "Semi Final 1",
-						"home": s.get("L_QF1", ""), "away": s.get("W_EF1", "")},
-				{"tag": "SF2", "label": "Semi Final 2",
-						"home": s.get("L_QF2", ""), "away": s.get("W_EF2", "")},
-			]
-		4:
-			return [
-				{"tag": "PF1", "label": "Preliminary Final 1",
-						"home": s.get("W_QF1", ""), "away": s.get("W_SF2", "")},
-				{"tag": "PF2", "label": "Preliminary Final 2",
-						"home": s.get("W_QF2", ""), "away": s.get("W_SF1", "")},
-			]
-		5:
-			return [{"tag": "GF", "label": "Grand Final",
-						"home": s.get("W_PF1", ""), "away": s.get("W_PF2", "")}]
-	return []
+	var week := int(finals["week"])
+	var spec := SeasonRules.bracket(finals_format())
+	if week < 1 or week > spec.size():
+		return []
+	var again: Array = finals.get("replay", [])
+	var out := []
+	for e in spec[week - 1]:
+		if not again.is_empty() and not again.has(e[0]):
+			continue
+		var home := finals_slot(str(e[2]))
+		var away := finals_slot(str(e[3]))
+		if bool(e[4]) and home != "" and away != "" and _seed_of(away) < _seed_of(home):
+			var t := home
+			home = away
+			away = t
+		var label := str(e[1]) + (" Replay" if not again.is_empty() else "")
+		out.append({"tag": e[0], "label": label, "home": home, "away": away})
+	return out
+
+
+## The club in a bracket slot (SeasonRules.BRACKETS), or "" while unknown.
+func finals_slot(slot: String) -> String:
+	var t: Array = finals.get("top", [])
+	var s: Dictionary = finals.get("slots", {})
+	if slot.begins_with("S") and slot.substr(1).is_valid_int():
+		var i := int(slot.substr(1)) - 1
+		return str(t[i]) if i >= 0 and i < t.size() else ""
+	if slot == "HI_EF" or slot == "LO_EF":
+		var a := str(s.get("W_EF1", ""))
+		var b := str(s.get("W_EF2", ""))
+		if a == "" or b == "":
+			return ""
+		var hi := a if _seed_of(a) < _seed_of(b) else b
+		return hi if slot == "HI_EF" else (b if hi == a else a)
+	if slot.begins_with("RW") or slot.begins_with("RL"):
+		# Week one's winners (or losers), best-placed first.
+		var side := "W_" if slot.begins_with("RW") else "L_"
+		var ranked := []
+		for e in SeasonRules.bracket(finals_format())[0]:
+			var c := str(s.get(side + str(e[0]), ""))
+			if c == "":
+				return ""
+			ranked.append(c)
+		ranked.sort_custom(func(x, y): return _seed_of(x) < _seed_of(y))
+		var k := int(slot.substr(2)) - 1
+		return str(ranked[k]) if k >= 0 and k < ranked.size() else ""
+	return str(s.get(slot, ""))
+
+
+## Whether the loser of final `tag` plays on: the bracket has a later final
+## for that loser (a qualifying final's second chance), or, in the McIntyre
+## final eight, `code` is one of the two best-placed losers of week one.
+func loser_goes_on(tag: String, code: String) -> bool:
+	var spec := SeasonRules.bracket(finals_format())
+	var at := -1
+	for w in range(spec.size()):
+		for e in spec[w]:
+			if str(e[0]) == tag:
+				at = w
+	for w in range(at + 1, spec.size()):
+		for e in spec[w]:
+			for side in [str(e[2]), str(e[3])]:
+				if side == "L_" + tag:
+					return true
+				if at == 0 and side.begins_with("RL") and finals_slot(side) == code:
+					return true
+	return false
+
+
+## True once `code` has lost a final it does not come back from.
+func finals_eliminated(code: String) -> bool:
+	var s: Dictionary = finals.get("slots", {})
+	for tag in finals_tags():
+		if str(s.get("L_" + str(tag), "")) == code and not loser_goes_on(str(tag), code):
+			return true
+	return false
+
+
+## A finalist's ladder place, 0-based (a club not in the finals sorts last).
+func _seed_of(code: String) -> int:
+	var i := (finals.get("top", []) as Array).find(code)
+	return i if i >= 0 else 1 << 20
 
 
 ## This finals week's matches with both clubs known: [index in the week (its
@@ -929,9 +1056,17 @@ func _finals_sims(ready: Array) -> Array:
 	var sims := []
 	for pair in ready:
 		var m: Dictionary = pair[1]
-		sims.append(match_sim(m["home"], m["away"], finals_seed(int(pair[0])), finals_at_home(m), true,
-				weather_for(m["home"], m["away"], REGULAR_ROUNDS + int(finals["week"]), m)))
+		var sim := match_sim(m["home"], m["away"], finals_seed(int(pair[0])), finals_at_home(m), true,
+				weather_for(m["home"], m["away"], finals_round(), m))
+		sim.extra_time_allowed = finals_extra_time(m)
+		sims.append(sim)
 	return sims
+
+
+## Whether a final level at the end of normal time goes to extra time: always
+## in the game's league; a year that replayed drawn finals plays it again.
+func finals_extra_time(m: Dictionary) -> bool:
+	return not SeasonRules.replays_draw(str(rules.get("drawn_finals", "extra_time")), str(m.get("tag", "")))
 
 
 func play_finals_week() -> Array:
@@ -950,15 +1085,15 @@ func play_finals_week() -> Array:
 ## Seed for match `i` of the current finals week. Shared by the simulated
 ## week and the interactive finals match so both roll the same game.
 func finals_seed(i: int) -> int:
-	return seed * 7717 + int(finals["week"]) * 131 + i
+	return seed * 7717 + int(finals["week"]) * 131 + i + int(finals.get("replays", 0)) * 100003
 
 
-## Where a final is played. The higher-ranked club hosts every final at its
-## home ground, except the Grand Final, which is always at the MCG whoever
-## makes it. The bracket always lists the higher seed first.
+## Where a final is played. The club listed first hosts every final at its
+## home ground, except the Grand Final, which is at the season's Grand Final
+## ground (the MCG; Waverley Park in 1991) whoever makes it.
 func finals_venue(m: Dictionary) -> String:
 	if str(m.get("tag", "")) == "GF":
-		return GRAND_FINAL_VENUE
+		return grand_final_venue()
 	return home_ground(str(m.get("home", "")))
 
 
@@ -970,16 +1105,19 @@ func finals_venue(m: Dictionary) -> String:
 func finals_at_home(m: Dictionary) -> Array:
 	if str(m.get("tag", "")) != "GF":
 		return [true, false]
-	return [home_ground(str(m.get("home", ""))) == GRAND_FINAL_VENUE,
-			home_ground(str(m.get("away", ""))) == GRAND_FINAL_VENUE]
+	return [home_ground(str(m.get("home", ""))) == grand_final_venue(),
+			home_ground(str(m.get("away", ""))) == grand_final_venue()]
 
 
 func home_ground(code: String) -> String:
 	return str(GameDB_ref().club(code).get("ground", ""))
 
 
-## This season's Gather Round (GatherRound), 0-based, or -1.
+## This season's Gather Round (GatherRound), 0-based, or -1 (none, or a year
+## before the AFL held one).
 func gather_round() -> int:
+	if not bool(rules.get("gather_round", true)):
+		return -1
 	return GatherRound.round_of(fixture, clubs, seed)
 
 
@@ -1015,16 +1153,20 @@ func round_label(round_i: int) -> String:
 
 ## Stamp a finals result and advance the bracket slots. Extra time settles
 ## almost every level final; if even the golden-point period runs dry, the
-## higher-ranked side advances.
+## higher-ranked side advances. In a year that replayed drawn finals a level
+## final fills no slot: it is played again the next week.
 func record_final(m: Dictionary, res: Dictionary) -> void:
 	var s: Dictionary = finals["slots"]
-	res["round"] = REGULAR_ROUNDS + int(finals["week"])
+	res["round"] = finals_round()
 	res["label"] = m["label"]
 	res["tag"] = m["tag"]
 	res["venue"] = finals_venue(m)
 	var sc: Array = res["score"]
 	var winner: String
 	var loser: String
+	if sc[0] == sc[1] and not finals_extra_time(m):
+		res["replay_due"] = true
+		return
 	if sc[0] == sc[1]:
 		var top: Array = finals["top"]
 		winner = m["home"] if top.find(m["home"]) < top.find(m["away"]) else m["away"]
@@ -1038,10 +1180,21 @@ func record_final(m: Dictionary, res: Dictionary) -> void:
 
 
 ## Close the current finals week once every match in it has been recorded.
+## A drawn final due a replay holds the bracket a week: the next week plays
+## only the replay (1990: Collingwood and West Coast's qualifying final).
 func complete_finals_week(played: Array) -> void:
 	var s: Dictionary = finals["slots"]
 	finals["weeks"].append(played)
-	if int(finals["week"]) == 5 and not played.is_empty():
+	var again := []
+	for res in played:
+		if bool((res as Dictionary).get("replay_due", false)):
+			again.append(str(res.get("tag", "")))
+	if not again.is_empty():
+		finals["replay"] = again
+		finals["replays"] = int(finals.get("replays", 0)) + 1
+		return
+	finals.erase("replay")
+	if int(finals["week"]) == finals_weeks() and not played.is_empty():
 		finals["premier"] = s.get("W_GF", "")
 		finals["runner_up"] = s.get("L_GF", "")
 		finals["done"] = true
