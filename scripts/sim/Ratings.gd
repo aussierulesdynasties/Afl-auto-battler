@@ -105,40 +105,42 @@ const ROLE_SHORT_TO_POS := {"RUCK": "RUC", "MID": "MID", "DEF": "DEF", "FWD": "F
 ## cannot suppress them forever. Everything else keeps its real season games.
 ## A short 2026 says little of a proven player (director, 2026-10-08: an
 ## injury year must not sink Treloar, Hogan or Darcy). Under RECORD_SHORT
-## games, his rating is his record: 2026, 2025 and 2024 OVRs weighted by the
-## games behind each and by how recent (RECORD_W). Only ever a lift, and only
+## games, his rating is his record: the data season's OVR and the two before
+## it (2026, 2025 and 2024 for today's data) weighted by the games behind each
+## and by how recent (RECORD_W, by years before the data season). Only ever a lift, and only
 ## when the record clearly says more (RECORD_LIFT); his attributes are refitted
 ## to it and his rating then counts a full sample. Real players only, once,
 ## when the data loads (GameDB), after their history.
-const RECORD_W := {2026: 1.0, 2025: 0.75, 2024: 0.5}
+const RECORD_W := {0: 1.0, 1: 0.75, 2: 0.5}
 const RECORD_SHORT := 14.0
 const RECORD_LIFT := 3.0
 const RECORD_SHARE := 0.6
 
 
-static func record_level(p: Dictionary) -> float:
+## `season` is the data season (GameDB.DATA_SEASON): the one his numbers are from.
+static func record_level(p: Dictionary, season := 2026) -> float:
 	var gm := float(p.get("gm", 0.0))
-	var num := float(p.get("overall", 0)) * gm * float(RECORD_W[2026])
-	var den := gm * float(RECORD_W[2026])
+	var num := float(p.get("overall", 0)) * gm * float(RECORD_W[0])
+	var den := gm * float(RECORD_W[0])
 	var seen := false
 	for h in p.get("history", []):
-		var y := int(h[0])
-		if y < 2026 and RECORD_W.has(y) and int(h[2]) > 0:
-			num += float(h[1]) * float(h[2]) * float(RECORD_W[y])
-			den += float(h[2]) * float(RECORD_W[y])
+		var back := season - int(h[0])
+		if back > 0 and RECORD_W.has(back) and int(h[2]) > 0:
+			num += float(h[1]) * float(h[2]) * float(RECORD_W[back])
+			den += float(h[2]) * float(RECORD_W[back])
 			seen = true
 	return num / den if seen and den > 0.0 else -1.0
 
 
-static func rate_on_record(p: Dictionary) -> void:
+static func rate_on_record(p: Dictionary, season := 2026) -> void:
 	if bool(p.get("generated", false)) or bool(p.get("projected", false)) \
 			or float(p.get("gm", 0.0)) >= RECORD_SHORT or not p.has("attr"):
 		return
-	var level := record_level(p)
+	var level := record_level(p, season)
 	if level < float(p.get("overall", 0)) + RECORD_LIFT:
 		return
 	var role := str(p.get("role", "MID"))
-	p["season_overall"] = int(p.get("overall", 0))   # what 2026 alone said
+	p["season_overall"] = int(p.get("overall", 0))   # what the data season alone said
 	# Most of the way to his record, not all of it: a long layoff still costs
 	# something, and a full lift crowded midfielders' best games further above
 	# everyone else's (the rating-parity check).
