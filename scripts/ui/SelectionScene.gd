@@ -194,6 +194,7 @@ func _side_page(auto: bool) -> Control:
 	builder.name = "TeamBuilder"
 	builder.stacked = true
 	builder.rest_host = _list_host if _wide else null
+	builder.pull_up = not _wide
 	builder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	builder.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	builder.start_note = _notice

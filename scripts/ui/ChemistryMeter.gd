@@ -13,6 +13,10 @@ const PIP := 22.0
 const PIP_GAP := 8.0
 const FADE_H := 112.0
 const ROW_H := 30.0
+## A bar tall enough to carry its figure, and the least fill the figure fits inside.
+const FIGURE_H := 22.0
+const FIGURE_PAD := 6.0
+const FIGURE_INSIDE := 0.3
 
 
 ## A drawn bar, 0 to 1: a dim track and the fill. Passes every touch through.
@@ -36,6 +40,46 @@ static func bar(share: float, colour: Color, h := 10.0, fill_name := "") -> Cont
 	fill.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	fill.anchor_right = clampf(share, 0.0, 1.0)
 	return holder
+
+
+## The bar with its figure written in it (director, 2026-11-11: "its hard to
+## tell if the chem bar is full or not, add a number in the bar with %"). The
+## figure rides the end of the fill, so it moves with it; on a short fill it
+## stands just past the end, on the track.
+static func figure_bar(share: float, colour: Color, fill_name: String) -> Control:
+	var holder := bar(share, colour, FIGURE_H, fill_name)
+	var fill: Control = holder.get_child(1)
+	var fig := UiKit.line("", UiKit.SMALL, UiKit.TEXT, true)
+	fig.name = "ChemistryFigure"
+	fig.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fig.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	fill.add_child(fig)
+	_set_figure(fill, share)
+	return holder
+
+
+## 100% only when the side is fully settled: a figure never rounds up to full.
+static func percent(share: float) -> int:
+	return clampi(int(floor(share * 100.0 + 0.0001)), 0, 100)
+
+
+static func _set_figure(fill: Control, share: float) -> void:
+	var fig: Label = fill.get_node_or_null("ChemistryFigure") if fill != null else null
+	if fig == null:
+		return
+	fig.text = "%d%%" % percent(share)
+	var inside := share >= FIGURE_INSIDE
+	fig.add_theme_color_override("font_color", UiKit.ink_on((fill as ColorRect).color) if inside else UiKit.TEXT)
+	fig.anchor_left = 1.0
+	fig.anchor_right = 1.0
+	fig.anchor_top = 0.0
+	fig.anchor_bottom = 1.0
+	fig.grow_horizontal = Control.GROW_DIRECTION_BEGIN if inside else Control.GROW_DIRECTION_END
+	var w := fig.get_combined_minimum_size().x
+	fig.offset_left = (-w - FIGURE_PAD) if inside else FIGURE_PAD
+	fig.offset_right = -FIGURE_PAD if inside else (w + FIGURE_PAD)
+	fig.offset_top = 0.0
+	fig.offset_bottom = 0.0
 
 
 ## A man's chemistry as a bar with its figure, for his profile.
@@ -69,7 +113,7 @@ static func meter(on_tap: Callable) -> Button:
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	row.add_child(UiKit.line("Team Chemistry", UiKit.BODY, UiKit.TEXT, true))
 	var share := _share()
-	row.add_child(bar(share, _ink(), 14.0, "ChemistryFill"))
+	row.add_child(figure_bar(share, _ink(), "ChemistryFill"))
 	row.add_child(UiKit.line("›", UiKit.NAME, UiKit.TEXT, true))
 	b.set_meta("share", share)
 	b.pressed.connect(on_tap)
@@ -79,7 +123,9 @@ static func meter(on_tap: Callable) -> Button:
 ## The side changed: the bar moves to where it now stands.
 static func refresh(b: Button) -> void:
 	var share := _share()
-	UiKit.fill_bar(b.find_child("ChemistryFill", true, false), float(b.get_meta("share", share)), share)
+	var fill: Control = b.find_child("ChemistryFill", true, false)
+	UiKit.fill_bar(fill, float(b.get_meta("share", share)), share)
+	_set_figure(fill, share)
 	b.set_meta("share", share)
 
 
@@ -93,7 +139,7 @@ static func open(host: Control, on_close := Callable()) -> Control:
 	UiKit.close_on_outside_tap(box, on_close)
 	var v: VBoxContainer = box["body"]
 	v.add_child(UiKit.lbl("Team Chemistry", UiKit.H1, UiKit.TEXT, true))
-	v.add_child(bar(TeamFamiliarity.chemistry(side), ink, 14.0, "SheetChemistryFill"))
+	v.add_child(figure_bar(TeamFamiliarity.chemistry(side), ink, "SheetChemistryFill"))
 
 	var men := TeamFamiliarity.new_club_men(side)
 	v.add_child(UiKit.spacer(6))
