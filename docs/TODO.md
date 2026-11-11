@@ -28,6 +28,7 @@ The longest chain, which sets the finish: T1.R26, then 131, then the director's 
 
 | # | What | Done looks like |
 |---|---|---|
+| 154 | Medical retirement check for concussion (director 2026-11-11: "if a player gets 5 or more concussions within a 5 year period, they should have to pass a medical retirement check"; "Flat odds each time"; the panel sits "Straight after the fifth"). Every club. Being built on branch feat/concussion-medical-check; the cleared chance is one number, first value 50%, his to tune. | A player with five or more concussions in five seasons faces the panel the week of each such concussion at one stated chance; a fail ends his career that week; the count and the odds show on his sheet before it happens; the measured number of players reaching the panel is reported; and the director approves the captures |
 | 152 | Home grounds for the fictional and expansion clubs (row 6.44; director 2026-11-10): each plays at a real regional ground near its town, e.g. Bellerive or Manuka, with its own ground look. After: the director's look at the six no-name captures in 6.44 | each such club's home ground draws as its real regional ground in a match, and the director has looked |
 | 144 | Match story, third slice: a richer match story at full time. The save keeps the impact ledger's coach rows per match (director 2026-11-10: "Yes, keep them"; save-schema change, W7 review), since today the coach's in-match calls are dropped at the end of each round After: 133. | a seeded full-time story whose every number traces to the result |
 | 131 | Copy voice pass 1, gates (with T1.R26): scripts/sim/GateOdds.gd, MatchSim.gd call cards, CoachReport.gd pep talks and plans; MatchSim's "He should kick it" After: T1.R26 and 151. | every visible line on it reads in the senior coach's voice (docs/VISUAL_STYLE_GUIDE.md §5.1, director 2026-11-10: B), its entries in tests/run_copy_rules_tests.gd ALLOW are gone, its pinned-wording tests updated, and he approves the before/after 390 px captures |
@@ -89,6 +90,7 @@ Every switch went on for good in #1072 and #1074 (director 2026-11-06: "i dont w
 - 41 Club Forge game-plan builder.
 - 142 Legacy mode: start a career in the 1990s, 2000s or 2010s with that era's real lists (director 2026-11-10, parked). Mostly data: every era needs each club's list rated like the 2026 lists, plus that era's league (Fitzroy and the Brisbane Bears early; Fremantle 1995, Port 1997, Gold Coast 2011, GWS 2012). First slice: 2010. The 2010-2019 lists, drafts, moves, ladders and season stats are in `data/legacy/2010s` (#1324) and the director's era rulings are in the Director Bible (#1327); no game code reads them yet and no player is rated.
 - 143 Sandbox mode: every list and every player's numbers editable at any time (director 2026-11-10, parked). A separate mode, and the career wears a visible Sandbox mark so its honours and records don't read as earned (bible: the game is objective about risk). First slice: an Edit player sheet opened from a profile, built on Club Forge and the player Forge; phone first, no spreadsheet editor.
+- 153 Stretch goal, the coach's phone (director 2026-11-11, not assigned): "smart phone/social media hub including contacts, a folder for players screenshots, perhaps a home for stats and news too". Scope interview first: what the contacts do, what the screenshot folder holds, and whether stats and news move there from the hub or are reached from both (one clear job per screen; the hub leads with events and the news ticker).
 - T3.R41 Team selection as two screens on phone, side by side on PC, no scroll (ruled later, 2026-11-06).
 - T3.R10 Accessibility, colour-blind kit-clash check (P-34: every disc pairing through deuteranopia and protanopia simulation, CI contrast floor) and text size on ground and vignette text (#1158 Q3); parked by the director 2026-11-10.
 - Player personality types and captaincy meaning (composure, late-game stability): both wanted, later (T5.Q12, T5.Q13).
@@ -212,6 +214,10 @@ Settled answers that are not build rows. The bible stays as it is unless he cons
 ## Rulings (director, 2026-11-11)
 
 - The press interview that sets the coaching style comes before the draft: "its meant to go before the draft". It opens as soon as the coach takes a club, in every start mode, and Continue returns to the draft board for the first pick (row 141 follow-up; 1.0.14 shipped it after the National Draft).
+
+- Concussion: "if a player gets 5 or more concussions within a 5 year period, they should have to pass a medical retirement check". The check is "Flat odds each time"; the panel sits "Straight after the fifth", so a fail ends the career that week (row 154).
+- Stretch goal, not assigned: "smart phone/social media hub including contacts, a folder for players screenshots, perhaps a home for stats and news too" (row 153, section F).
+- Looks approved ("Yes, ship it"): the kicking-end goal square and painted 50s, the saves menu and What's new sheet, premiership streamers on the Finals series sheet at every opening, the primary-button contrast floor, and the rotation marks on the Develop and manage card.
 
 ## Current focus (moved from the bible, 2026-11-06)
 
