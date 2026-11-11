@@ -26,20 +26,31 @@ const SHORT_MAX := 16
 ## How far apart (RGB distance, 0-1.73) the guernsey and its pattern must be
 ## for the design to read on a small screen.
 const MIN_CONTRAST := 0.25
-## The football colours a created club picks from: [id, name, hex].
+## The football colours a created club picks from: [id, name, hex], in
+## families (blues, greens, reds, golds, purples and browns, then the
+## neutrals). A save keeps the hex, so an id or hex here never changes: a
+## colour may be added, never edited or removed (director 2026-11-11 asked for
+## more; the first 15 are the original set).
 const PALETTE := [
 	["navy", "Navy", "#13234B"], ["blue", "Royal blue", "#1F4FA8"], ["sky", "Light blue", "#6CACE4"],
-	["teal", "Teal", "#00808A"], ["green", "Green", "#1E6B3A"], ["maroon", "Maroon", "#6E1F2E"],
-	["red", "Red", "#C8102E"], ["orange", "Orange", "#E8762B"], ["gold", "Gold", "#F2B231"],
-	["yellow", "Yellow", "#F7D417"], ["brown", "Brown", "#5C3A21"], ["purple", "Purple", "#4B2A7B"],
-	["grey", "Grey", "#8A8D91"], ["black", "Black", "#111111"], ["white", "White", "#F5F5F5"],
+	["powder", "Powder blue", "#B9D9EB"], ["teal", "Teal", "#00808A"], ["aqua", "Aqua", "#1FB8C9"],
+	["bottle", "Bottle green", "#0C4A2F"], ["green", "Green", "#1E6B3A"], ["emerald", "Emerald", "#009A4E"],
+	["lime", "Lime", "#9BC53D"], ["maroon", "Maroon", "#6E1F2E"], ["red", "Red", "#C8102E"],
+	["pink", "Pink", "#E8608F"], ["burnt", "Burnt orange", "#B4501E"], ["orange", "Orange", "#E8762B"],
+	["oldgold", "Old gold", "#B8913A"], ["gold", "Gold", "#F2B231"], ["yellow", "Yellow", "#F7D417"],
+	["purple", "Purple", "#4B2A7B"], ["lilac", "Lilac", "#9D7CC4"], ["brown", "Brown", "#5C3A21"],
+	["cream", "Cream", "#EDE3C8"], ["white", "White", "#F5F5F5"], ["silver", "Silver", "#BFC3C7"],
+	["grey", "Grey", "#8A8D91"], ["charcoal", "Charcoal", "#3B3F45"], ["black", "Black", "#111111"],
 ]
 ## The location library's colour words, as palette ids.
 const TAG_COLOURS := {
 	"navy": "navy", "navy blue": "navy", "dark blue": "navy", "blue": "blue", "royal blue": "blue",
-	"light blue": "sky", "sky blue": "sky", "teal": "teal", "green": "green", "bottle green": "green",
-	"maroon": "maroon", "red": "red", "orange": "orange", "gold": "gold", "old gold": "gold",
-	"yellow": "yellow", "brown": "brown", "purple": "purple", "grey": "grey", "black": "black", "white": "white",
+	"light blue": "sky", "sky blue": "sky", "powder blue": "powder", "teal": "teal", "aqua": "aqua",
+	"green": "green", "bottle green": "bottle", "emerald": "emerald", "lime": "lime",
+	"maroon": "maroon", "red": "red", "pink": "pink", "burnt orange": "burnt", "orange": "orange",
+	"gold": "gold", "old gold": "oldgold", "yellow": "yellow", "brown": "brown", "purple": "purple",
+	"lilac": "lilac", "cream": "cream", "silver": "silver", "grey": "grey", "charcoal": "charcoal",
+	"black": "black", "white": "white",
 }
 
 static var _locations: Array = []
