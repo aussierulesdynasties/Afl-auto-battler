@@ -58,10 +58,15 @@ func _report(iv: Node) -> void:
 	var VF = load("res://scripts/ui/match/VignetteFigures.gd")
 	var stage: Control = iv.find_child("InterviewStage", true, false)
 	var v: Node = iv.find_child("MediaConferenceVignette", true, false)
+	# The interview draws the coach from the close-up sheets (CoachCloseUp, 3x).
+	var close: Dictionary = v.get("_close") if v != null else {}
+	var shade: Texture2D = close.get("shade", SV.FIGURE_SHADE)
+	var mat := v.material as ShaderMaterial if v != null else null
 	print("SCENE stage=", stage != null, " size=", stage.size if stage != null else Vector2.ZERO,
-			" vignette=", v != null, " sheet=", SV.FIGURE_SHADE.resource_path if v != null else "",
-			" sheet_size=", SV.FIGURE_SHADE.get_size() if v != null else Vector2.ZERO,
-			" expected=", VF.SHEET_SIZE,
+			" vignette=", v != null, " sheet=", shade.resource_path if v != null else "",
+			" sheet_size=", shade.get_size() if v != null else Vector2.ZERO,
+			" bound=", mat.get_shader_parameter("sheet_size") if mat != null else Vector2i.ZERO,
+			" figures=", VF.SHEET_SIZE,
 			" figure_scale=", snappedf(v.figure_scale(), 0.001) if v != null and v.has_method("figure_scale") else -1.0)
 
 
