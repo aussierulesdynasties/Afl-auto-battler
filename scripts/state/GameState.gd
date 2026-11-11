@@ -4048,7 +4048,8 @@ func papers_record() -> Dictionary:
 
 
 ## The paper's ladder, best first: each club's best side as TeamRating reads it
-## after the summer's injuries, near-ties to last year's finish.
+## after the summer's injuries, near-ties to last year's finish, then nudged by
+## the practice matches ("moves": club -> {places, margin} for each it moved).
 func _build_papers() -> void:
 	var ratings := {}
 	var last := {}
@@ -4056,7 +4057,16 @@ func _build_papers() -> void:
 		var code := str(club)
 		ratings[code] = TeamRating.rating(season.lists[club])
 		last[code] = last_finish_of(code)
-	var order := PreSeason.predicted_order(ratings, last, club_expect)
+	var listed := PreSeason.predicted_order(ratings, last, club_expect)
+	# The practice matches nudge it (director, 2026-11-12): every club the same.
+	var margins: Dictionary = preseason.get("practice_margins", {}) if preseason.get("practice_margins") is Dictionary else {}
+	var order := PreSeason.practice_nudge(listed, margins)
+	var moves := {}
+	for code in margins:
+		var shift := PreSeason.practice_shift(int(margins[code]))
+		var places := listed.find(code) - order.find(code)
+		if shift != 0 and places != 0 and signi(places) == signi(shift):
+			moves[str(code)] = {"places": places, "margin": int(margins[code])}
 	var pred := order.find(my_club) + 1
 	var eligible := []
 	if pred > season.finalists():
@@ -4069,7 +4079,7 @@ func _build_papers() -> void:
 	var kind := ""
 	if not eligible.is_empty():
 		kind = PreSeason.pick_paper(eligible, PreSeason.papers_seed(career_seed, season_year, my_club))
-	preseason["papers"] = {"order": order, "pred": pred, "kind": kind,
+	preseason["papers"] = {"order": order, "moves": moves, "pred": pred, "kind": kind,
 			"pid": pid if kind == "breakout" else "", "claim": 0, "answered": false,
 			"choice": -2, "result": "", "seen": false}
 	mark_dirty()
@@ -4852,6 +4862,12 @@ func _practice_build(home: String, away: String, home_invites: Array, away_invit
 ## records or the board. Returns your report (for your club), or {}.
 func _practice_finish(club: String, built: Dictionary, res: Dictionary) -> Dictionary:
 	var stats_all: Dictionary = res.get("players", {})
+	# Each club's margin, for the papers' ladder (PreSeason.practice_nudge).
+	var sc: Array = res.get("score", [0, 0])
+	var margin := int(sc[0]) - int(sc[1])
+	if not (preseason.get("practice_margins") is Dictionary):
+		preseason["practice_margins"] = {}
+	(preseason["practice_margins"] as Dictionary)[club] = margin if club == str(built["home"]) else -margin
 	var guests: Array = (built["guests"] as Dictionary).get(club, [])
 	var played := {}
 	for id in (built["ids"] as Dictionary).get(club, []):
@@ -6705,6 +6721,8 @@ func _dev_promise_week() -> void:
 		var t := _dev_owed(p)
 		if t.is_empty() or int(p.get("injury_weeks", 0)) > 0:
 			continue
+		# A side you named takes him in, as Auto-pick does, so his games can start.
+		name_promised(p)
 		p["expects_game"] = DEV_PROMISE_STING
 		# His promised games were under way and the trial is gone (another
 		# trial took its place): they are owed again, and start once it is free.
@@ -13758,14 +13776,26 @@ static func backed_in_words(dropped: String) -> String:
 func _start_backing(p: Dictionary) -> String:
 	if Backing.is_active(p):
 		return ""
-	var swap := backing_swap(p)
-	var dropped := backing_drop_name(p) if swap.is_empty() else ""
-	if not (swap.get("out", {}) as Dictionary).is_empty():
-		dropped = GameDB.player_display_name(swap["out"])
+	var dropped := name_promised(p)
 	var round_no := 0 if season.is_regular_done() else season.round_index + 1
 	Backing.start(p, season_year, round_no, games_played(p))
 	ClubLife.add_morale(p, Backing.THRILL)
 	p["expects_game"] = Backing.STING
+	mark_dirty()
+	return dropped
+
+
+## A game you promised him (a run, a card's "a game this week", the games of a
+## development talk): a side you named takes him in at once (backing_swap), so
+## the List, Selection and the match all show him from the moment you say it;
+## auto-pick names him by itself. Call it before he is marked as owed the game.
+## Returns the name of the player he comes in for, or "" (already in the side,
+## or nobody had to make way).
+func name_promised(p: Dictionary) -> String:
+	var swap := backing_swap(p)
+	var dropped := backing_drop_name(p) if swap.is_empty() else ""
+	if not (swap.get("out", {}) as Dictionary).is_empty():
+		dropped = GameDB.player_display_name(swap["out"])
 	if not (swap.get("sel", {}) as Dictionary).is_empty():
 		var keep: Dictionary = swap["sel"]
 		keep["DUAL_RUCK"] = user_dual_ruck
@@ -13773,7 +13803,7 @@ func _start_backing(p: Dictionary) -> String:
 		if stored.has("TRIAL"):
 			keep["TRIAL"] = stored["TRIAL"]
 		season.selections[my_club] = keep
-	mark_dirty()
+		mark_dirty()
 	return dropped
 
 
