@@ -441,13 +441,14 @@ static func run_step(losses: int, wins: int) -> Array:
 ## The season's close for one club: [{"strand", "d", "why"}].
 ## `position` is 1-based on the ladder of `clubs`; `age_gap` is the best 22's
 ## average age minus the league's; `discipline_gap` is the list's discipline
-## rating minus the league's.
+## rating minus the league's. `finals_places`: how many made the finals that
+## season (Season.finalists(): five in 1990).
 static func season_steps(position: int, clubs: int, premier: bool, age_gap: float,
-		discipline_gap: float) -> Array:
+		discipline_gap: float, finals_places := FINALS_PLACES) -> Array:
 	var out := []
 	if premier:
 		out.append({"strand": "together", "d": 5, "why": "Premiers"})
-	elif position <= FINALS_PLACES:
+	elif position <= finals_places:
 		out.append({"strand": "together", "d": 3, "why": "Played finals"})
 	elif position > clubs - BOTTOM_PLACES:
 		out.append({"strand": "together", "d": -3, "why": "Finished near the bottom of the ladder"})

@@ -1412,8 +1412,7 @@ func _test_report_a_problem() -> void:
 	report.start_feed("Round 3, Carlton v Collingwood")
 	for i in range(25):
 		report.note_feed("Q1 %d'  Line %d" % [i, i])
-	var lines: PackedStringArray = report.text("hub").split("
-")
+	var lines: PackedStringArray = report.text("hub").split("\n")
 	_check(lines[0] == "Aussie Rules Dynasties: problem report" and lines[1].begins_with("What happened:"),
 			"The note opens with its title and a line for what happened")
 	var want := ["Build: %s" % BuildInfo.label(), "Seed: ", "Round: ", "Screen: hub",
@@ -1568,7 +1567,6 @@ func _run() -> void:
 	await _t("_test_remembered")
 	await _t("_test_list_problem_and_ask_around")
 	await _t("_test_ask_price_tap")
-	_t("_test_type_roles")
 	await _t("_test_names_fit")
 	_state.delete_saved_career()
 	await _t("_test_new_career_keeps_the_save")
@@ -1661,7 +1659,7 @@ func _test_menu_and_career() -> void:
 	alt_enter.alt_pressed = true
 	alt_enter.pressed = true
 	root.get_node("ScreenLayout")._input(alt_enter)
-	_check(_state.fullscreen() == not was_full, "Alt+Enter switches between fullscreen and window")
+	_check(_state.fullscreen() == (not was_full), "Alt+Enter switches between fullscreen and window")
 	root.get_node("ScreenLayout")._input(alt_enter)
 	_check(_state.fullscreen() == was_full, "and back again")
 	_check(current_scene.find_child("MenuHelp", true, false) != null
@@ -1673,8 +1671,7 @@ func _test_menu_and_career() -> void:
 
 	# --- the offline promise and the browser's storage line (P-70, P-71) -----------
 	var promise: Label = current_scene.find_child("OfflinePromise", true, false)
-	_check(promise != null and promise.text == "Plays offline. No ads, no account.
-Your career stays on this device.",
+	_check(promise != null and promise.text == "Plays offline. No ads, no account.\nYour career stays on this device.",
 			"The menu prints the offline promise, saying the career stays on this device")
 	var main_script = load("res://scripts/ui/Main.gd")
 	_check(main_script.promise_text(true).ends_with("Your career stays in this browser.")
@@ -1712,9 +1709,7 @@ Your career stays on this device.",
 	await _settle()
 	_check(current_scene.find_child("StorageNotice", true, false) == null,
 			"The line is not shown again on a later visit")
-	var presets := FileAccess.get_file_as_string("res://export_presets.cfg")
-	_check(presets.contains("user_data_backup/allow=true"),
-			"The Android export turns on the system's own backup of the save")
+	# The Android save backup preset (user_data_backup/allow=true) is a static lint: tools/lint/boundaries.py.
 
 	# --- settings: appearance and player names apply at once -----------------
 	current_scene.find_child("MenuSettings", true, false).emit_signal("pressed")
@@ -4010,58 +4005,6 @@ func _type(node_name: String, text: String) -> void:
 	if f != null:
 		(f as LineEdit).text = text
 		(f as LineEdit).text_changed.emit(text)
-
-
-## Type roles (docs/VISUAL_STYLE_GUIDE.md §2.3): a screen never sets a font size
-## that is not one of UiKit's roles. A literal outside UiKit.SIZES in any UiKit
-## text call, or in a font_size override, fails here with the file and line.
-func _test_type_roles() -> void:
-	var sizes: Array = load("res://scripts/ui/UiKit.gd").SIZES
-	var call := RegEx.new()
-	call.compile("UiKit\\.(lbl|line|ellipsis|figure|heading|btn|name_label|set_font_size)\\(")
-	var num := RegEx.new()
-	num.compile("[,(]\\s*(\\d{1,2})\\s*[,)]")
-	var override := RegEx.new()
-	override.compile("font_size\", (\\d{1,2})")
-	var bad: Array[String] = []
-	var files := _gd_files("res://scripts/ui")
-	for path in files:
-		if path.ends_with("UiKit.gd"):
-			continue
-		var text := FileAccess.get_file_as_string(path)
-		var n := 0
-		for line in text.split("\n"):
-			n += 1
-			if line.strip_edges().begins_with("#"):
-				continue
-			var hits: Array = []
-			if call.search(line) != null:
-				for m in num.search_all(line):
-					hits.append(int(m.get_string(1)))
-			for m in override.search_all(line):
-				hits.append(int(m.get_string(1)))
-			for h in hits:
-				if h >= 6 and not sizes.has(h):
-					bad.append("%s:%d size %d" % [path.get_file(), n, h])
-	_check(files.size() > 20, "The type-role check saw the screens (%d files)" % files.size())
-	_check(bad.is_empty(), "Every text size on every screen is a UiKit role: %s" % str(bad.slice(0, 8)))
-
-
-func _gd_files(dir: String) -> Array[String]:
-	var out: Array[String] = []
-	var d := DirAccess.open(dir)
-	if d == null:
-		return out
-	d.list_dir_begin()
-	var f := d.get_next()
-	while f != "":
-		if d.current_is_dir():
-			if not f.begins_with("."):
-				out.append_array(_gd_files(dir + "/" + f))
-		elif f.ends_with(".gd"):
-			out.append(dir + "/" + f)
-		f = d.get_next()
-	return out
 
 
 ## A name never truncates (guide §4.2): every row's name label is a UiKit

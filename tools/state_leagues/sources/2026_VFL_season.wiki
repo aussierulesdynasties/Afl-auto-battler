@@ -1,0 +1,2463 @@
+{{Short description|144th season of the Victorian Football League}}
+{{Use dmy dates|date=March 2026}}
+{{Use Australian English|date=March 2026}}
+{{Infobox Victorian football season
+| competition     = vfl
+| year            = 2026
+| image           = Box Hill post-match with cup 18 (cropped 2).jpg
+| imagesize       = 255px
+| caption         = Box Hill celebrates with the premiership cup
+| date            = {{nowrap|20 March – 20 September 2026}}
+| teams           = 22
+| premiers        = {{VFL Box}}
+| count           = 4
+| runnersup       = {{VFL Geeres}}
+| rucount         = 3
+| minor premiers  = {{VFL Geeres}}
+| mpcount         = 3
+| listontrophy    = Trent Mynott<br/>({{VFL Fra}} – 22 votes)<br/>[[George Stevens (Australian footballer)|George Stevens]]<br/>({{VFL Gee}} – 22 votes)
+| frostymiller    = Corey Ellison<br/>({{VFL Fra}} – 52 goals)
+| matches         = 209
+| attendance      = 
+| highattendha    = 14,122 ([[#Round 5|Round 5]], {{AFL Tas}} v {{VFL Car}})
+| highattendfin   = 12,941 ([[#Grand Final|Grand Final]], {{VFL Gee}} v {{VFL Box}})
+| prevseason      = {{coloured link|white|2025 VFL season|2025}}
+| nextseason      = {{coloured link|white|2027 VFL season|2027}}
+}}
+The '''2026 VFL season''' was the 144th season of the [[Victorian Football League]] (VFL), a second-tier [[Australian rules football]] competition played in the states of [[Victoria (state)|Victoria]], [[New South Wales]], [[Queensland]] and [[Tasmania]].<ref>{{cite web |last1=Ralphsmith |first1=Jonty |title=VFL 2026 season dates locked in as VFLW campaign moved |url=https://www.zerohanger.com/vfl-2026-season-dates-locked-in-as-vflw-campaign-moved-171334/ |publisher=ZeroHanger |access-date=30 November 2025 |archive-url=https://web.archive.org/web/20251130090853/https://www.zerohanger.com/vfl-2026-season-dates-locked-in-as-vflw-campaign-moved-171334/ |archive-date=30 November 2025 |date=27 November 2025}}</ref> The season commenced on 20 March and concluded on 20 September.<ref name="afl27nov">{{cite web |title=2026 VFL and VFLW season dates |url=https://www.afl.com.au/news/1457481/2026-vfl-and-vflw-season-dates |publisher=AFL.com.au |access-date=27 November 2025 |archive-url=https://web.archive.org/web/20251127145330/https://www.afl.com.au/news/1457481/2026-vfl-and-vflw-season-dates |archive-date=27 November 2025 |date=27 November 2025}}</ref>
+
+{{VFL Box}} won the [[List of VFA/VFL premiers|premiership]] for the fourth time, defeating {{VFL Gee}} by 23 points in the [[#Grand Final|2026 VFL Grand Final]]. It was the first grand final since [[2019 VFL season|2019]] to feature two Victorian teams.
+
+==Background==
+===Broadcast rights===
+The [[Seven Network]], which had broadcast VFL matches since [[2015 VFL season|2015]], did not renew its deal, stating that the practice was no longer commercially viable.<ref>{{cite web |last1=Knox |first1=David |title=Seven drops "not commercially viable" VFL |url=https://tvtonight.com.au/2026/01/seven-drops-not-commercially-viable-vfl.html |publisher=TV Tonight |access-date=15 February 2026 |archive-url=https://web.archive.org/web/20260215091603/https://tvtonight.com.au/2026/01/seven-drops-not-commercially-viable-vfl.html |archive-date=15 February 2026 |date=28 January 2026}}</ref> During the [[2025 VFL season|2025 season]], one match per round had been shown in Victoria on its secondary channel, [[7mate]].<ref>{{cite web |title=Saturday night lights to shine on VFL |url=https://www.afl.com.au/news/1281872/saturday-night-lights-to-shine-on-vfl |publisher=AFL.com.au |access-date=17 March 2025 |archive-url=https://web.archive.org/web/20250317003443/https://www.afl.com.au/news/1281872/saturday-night-lights-to-shine-on-vfl |archive-date=17 March 2025 |date=17 March 2025}}</ref> On 12 February 2026, ''[[Crikey]]'' reported that the [[ABC Sport|ABC]] had secured the VFL television and radio rights for the 2026 season.<ref>{{cite web |last1=Saeed |first1=Daanyal |title=ABC secures television and radio rights for the VFL |url=https://www.crikey.com.au/2026/02/12/vfl-on-abc-tv-radio-rights-2026/ |publisher=Crikey |access-date=15 February 2026 |archive-url=https://web.archive.org/web/20260215091645/https://www.crikey.com.au/2026/02/12/vfl-on-abc-tv-radio-rights-2026/ |archive-date=15 February 2026 |date=12 February 2026}}</ref> The full broadcast deal was announced on 12 March 2026.<ref name="deal">{{cite web |title=Expanded VFL broadcast deal announced |url=https://www.afl.com.au/news/1476113/expanded-vfl-broadcast-deal-announced |publisher=AFL.com.au |access-date=11 March 2026 |archive-url=https://web.archive.org/web/20260311223823/https://www.afl.com.au/news/1476113/expanded-vfl-broadcast-deal-announced |archive-date=11 March 2026 |date=11 March 2026}}</ref>
+
+The ABC broadcast one match per round, generally commencing at 12:05pm on Saturdays, which was available on [[ABC Victoria|ABC Television in Victoria]], [[ABC iview]] nationally, and simulcast on [[ABC Radio (Australia)|ABC Radio]] and [[ABC Listen]].<ref name="deal"/><ref>{{cite web |title=Jason Bennett returns to VFL coverage with the ABC after television and radio deal struck |url=https://www.abc.net.au/news/2026-03-12/jason-bennett-joins-the-abc-to-cover-the-vfl/106444476 |publisher=ABC News |access-date=11 March 2026 |archive-url=https://web.archive.org/web/20260311224450/https://www.abc.net.au/news/2026-03-12/jason-bennett-joins-the-abc-to-cover-the-vfl/106444476 |archive-date=11 March 2026 |date=11 March 2026}}</ref>
+
+[[Kayo Sports]], which previously broadcast VFL matches in [[2021 VFL season|2021]], streamed at least one home-and-away match per round (which was also shown on [[Fox Footy]]).<ref name="deal"/> The Seven Network broadcast all ten of the [[Tasmania Football Club]]'s home matches on [[TNT (Australian TV station)|Seven Tasmania]] and [[7plus]] nationally.<ref name="sen">{{cite web |title=SEN and SEG lock in historic Tassie Devils VFL deal |url=https://www.sen.com.au/news/2026/03/11/vfl-broadcast-deal-sen-tassie-devils |publisher=SEN |access-date=11 March 2026 |archive-url=https://web.archive.org/web/20260311224430/https://www.sen.com.au/news/2026/03/11/vfl-broadcast-deal-sen-tassie-devils |archive-date=11 March 2026 |date=11 March 2026}}</ref> The [[Sports Entertainment Network]] (SEN) broadcast all of Tasmania's home-and-away matches on radio.<ref name="sen"/>
+
+The preliminary finals and grand final were broadcast by the ABC.<ref name="deal"/> All matches continued to be broadcast online through the AFL's website and app.<ref name="deal"/>
+
+==League membership==
+In 2026, 22 teams competed in the VFL, the equal-most (with [[2021 VFL season|2021]]) to contest a VFA/VFL premiership in a single division.<ref name="fixture2026">{{cite web |title=2026 Smithy's VFL and VFLW fixtures confirmed |url=https://www.afl.com.au/news/1464390/2026-smithys-vfl-and-vflw-fixtures-confirmed |publisher=AFL.com.au |access-date=15 February 2026 |archive-url=https://web.archive.org/web/20260215092235/https://www.afl.com.au/news/1464390/2026-smithys-vfl-and-vflw-fixtures-confirmed |archive-date=15 February 2026 |date=11 February 2026}}</ref> It was the first time that clubs from four different states were represented in the same season.<ref name="fixture2026"/>
+
+===Preston===
+[[File:PCO_8.jpg|thumb|230px|Torn-down advertising signage next to a [[Preston Football Club]] banner at [[Preston City Oval]] in November 2025]]
+The [[Preston Football Club|Northern Bullants]] faced several challenges throughout the [[2025 VFL season|2025 season]]. A new president and board took over in May 2025, reverting the club to its traditional "[[Preston Football Club]]" name on 20 August 2025, immediately after the conclusion of the home-and-away season.<ref>{{cite web |title='Time for action': Bullants need your support as club returns to Preston name |url=https://www.prestonfc.com.au/post/time-for-action-bullants-need-your-support-as-club-returns-to-preston-name |publisher=Preston Football Club |access-date=13 March 2026 |archive-url=https://web.archive.org/web/20260218012327/https://www.prestonfc.com.au/post/time-for-action-bullants-need-your-support-as-club-returns-to-preston-name |archive-date=18 February 2026 |date=20 August 2025}}</ref> The club had last competed as Preston in [[1999 VFL season|1999]] (when it was nicknamed the "Knights").<ref>{{cite web |title=Preston Football Club |url=https://libraries.darebin.vic.gov.au/Darebinheritage/sport-leisure/football/prestonfootballclub |publisher=Darebin Libraries |access-date=16 November 2025 |archive-url=https://web.archive.org/web/20251116043814/https://libraries.darebin.vic.gov.au/Darebinheritage/sport-leisure/football/prestonfootballclub |archive-date=16 November 2025}}</ref>
+
+At the same time, it was reported that the club could be in danger of folding because of debt, with the club asking the [[Australian Football League]] (AFL) to financially assist.<ref>{{cite web |last1=Amy |first1=Paul |last2=Michell |first2=Tim |title=Northern Bullants on brink of collapse after plea to AFL for debt bailout |url=https://www.heraldsun.com.au/sport/afl/northern-bullants-on-brink-of-collapse-after-plea-to-afl-for-debt-bailout/news-story/7d554cf9175c412a7a57dd7b5a811bd6 |publisher=Herald Sun |access-date=30 August 2025 |archive-url=https://archive.today/20250819063742/https://www.heraldsun.com.au/sport/afl/northern-bullants-on-brink-of-collapse-after-plea-to-afl-for-debt-bailout/news-story/7d554cf9175c412a7a57dd7b5a811bd6?amp |archive-date=19 August 2025 |date=19 August 2025}}</ref> On 6 October 2025, after years of uncompetitive performances, having struggled to pay its players and staff in 2025, and with questions over its long-term viability without the annual subsidies that clubs had received from the league prior to the pandemic-interrupted [[2020 VFL season|2020 season]], the VFL revoked the club's licence.<ref>{{cite web |title=Historic VFL club stripped of licence after 143 years of history as AFL makes call on debt crisis |url=https://www.foxsports.com.au/afl/afl-2025-preston-football-club-loses-vfl-licence-after-143-years-of-history-northern-bullants-debt-carlton-blues-affiliation-latest-news/news-story/6a94dc518bb3d5269378597a45fbaa51 |publisher=Fox Sports |access-date=13 March 2026 |archive-url=https://web.archive.org/web/20251211222304/https://www.foxsports.com.au/afl/afl-2025-preston-football-club-loses-vfl-licence-after-143-years-of-history-northern-bullants-debt-carlton-blues-affiliation-latest-news/news-story/6a94dc518bb3d5269378597a45fbaa51 |archive-date=11 December 2025 |date=6 October 2025}}</ref>
+
+It was the not the first time Preston's history that it had faced similar circumstances – in [[1912 VFA season|1912]] it amalgamated with {{VFA Nor}}, in [[1997 VFL season|1997]] its licence was withdrawn but was restored after one month, and in [[2020 VFL season|2020]] it almost folded after {{AFL Car}} ended their [[Australian Football League reserves affiliations|affiliation]].<ref>{{cite web |title='Time for action': Bullants need your support as club returns to Preston name |url=https://www.prestonfc.com.au/post/time-for-action-bullants-need-your-support-as-club-returns-to-preston-name |publisher=Preston Football Club |access-date=16 November 2025 |archive-url=https://web.archive.org/web/20251116043923/https://www.prestonfc.com.au/post/time-for-action-bullants-need-your-support-as-club-returns-to-preston-name |archive-date=16 November 2025 |date=20 August 2025}}</ref>
+
+Initially, Preston club officials expressed optimism about regaining a VFL licence in 2027 or 2028.<ref>{{cite web |title=Proud to be Preston: Three Clubs. United. One Jumper. |url=https://www.prestonfc.com.au/post/proud-to-be-preston-three-clubs-united-one-jumper |publisher=Preston Football Club |access-date=16 November 2025 |archive-url=https://web.archive.org/web/20251116043943/https://www.prestonfc.com.au/post/proud-to-be-preston-three-clubs-united-one-jumper |archive-date=16 November 2025 |date=22 October 2025}}</ref> However, faced with no viable path to readmission, the club entered voluntary liquidation after a meeting of members on 15 December 2025.<ref>{{cite web |title=Club statement |url=https://www.prestonfc.com.au/post/club-statement-2 |publisher=Preston Football Club |access-date=31 December 2025 |archive-url=https://web.archive.org/web/20251231112502/https://www.prestonfc.com.au/post/club-statement-2 |archive-date=31 December 2025 |date=17 December 2025}}</ref><ref>{{cite web |last1=Keating |first1=Mitch |title=Preston FC members vote on voluntary liquidation, Bullants to be deregistered |url=https://www.zerohanger.com/preston-fc-members-vote-on-voluntary-liquidation-bullants-to-be-deregistered-171808/ |publisher=ZeroHanger |access-date=28 February 2026 |archive-url=https://web.archive.org/web/20251222231558/https://www.zerohanger.com/preston-fc-members-vote-on-voluntary-liquidation-bullants-to-be-deregistered-171808/ |archive-date=22 December 2025 |date=17 December 2025}}</ref>
+
+===St Kilda===
+[[File:Trevor Barker Beach Oval 2026 24.jpg|thumb|230px|Promotional signage inside [[Trevor Barker Beach Oval]] for {{VFL San}}'s return as a standalone team]]
+{{AFL|StK}} competed in the VFL with its own [[reserves team]] during the [[2000 VFL season|2000 season]], before entering into an [[Australian Football League reserves affiliations|affiliation]] with {{VFL SV}} (later renamed {{VFL Cas}}) in [[2001 VFL season|2001]]. The agreement ended after the [[2008 VFL season|2008 season]] and St Kilda affiliated with {{VFL San}} in [[2009 VFL season|2009]].<ref>{{cite web |title=Saints, Demons in VFL affiliate swap |url=https://www.afl.com.au/news/102841/saints-demons-in-vfl-affiliate-swap |publisher=AFL.com.au |access-date=16 November 2025 |archive-url=https://web.archive.org/web/20251116051549/https://www.afl.com.au/news/102841/saints-demons-in-vfl-affiliate-swap |archive-date=16 November 2025 |date=5 June 2008}}</ref>
+
+In April 2025, Sandringham rejected a proposal from St Kilda to be renamed to the "Sandringham Saints" and move all home matches from [[Trevor Barker Beach Oval]] to [[Moorabbin Oval]].<ref>{{cite web |last1=Wu |first1=Andrew |last2=Spits |first2=Scott |title=Why the Saints could split from their VFL team; Sam Darcy avoids knee surgery |url=https://www.smh.com.au/sport/afl/wouldn-t-be-doing-the-right-thing-why-the-saints-could-split-from-their-vfl-team-20250424-p5lu12.html |publisher=Sydney Morning Herald |access-date=16 November 2025 |archive-url=https://web.archive.org/web/20251116052010/https://www.smh.com.au/sport/afl/wouldn-t-be-doing-the-right-thing-why-the-saints-could-split-from-their-vfl-team-20250424-p5lu12.html |archive-date=16 November 2025 |date=24 April 2025}}</ref> The proposal also would have resulted in Sandringham permanently using St Kilda's colours of red, black and white (which it had already worn as an away jumper beginning in [[2019 VFL season|2019]]).<ref>{{cite web |title=Sandringham releases clash guernsey for 2019 |url=https://www.sandringhamfc.com.au/latest-news/sandringham-releases-clash-guernsey-for-2019 |publisher=Sandringham Football Club |access-date=19 August 2025 |archive-url=https://web.archive.org/web/20250413011225/https://www.sandringhamfc.com.au/latest-news/sandringham-releases-clash-guernsey-for-2019 |archive-date=13 April 2025 |date=8 April 2019}}</ref>
+
+On 30 June 2025, St Kilda announced it would end its affiliation with Sandringham following the 2025 season.<ref>{{cite web |title=St Kilda to field standalone VFL team in 2026 |url=https://www.saints.com.au/news/1817429/vfl |publisher=St Kilda Football Club |access-date=30 June 2025 |archive-url=https://web.archive.org/web/20250630041810/https://www.saints.com.au/news/1817429/vfl |archive-date=30 June 2025 |date=30 June 2025}}</ref><ref>{{cite web |last1=Keating |first1=Mitch |title=St Kilda make call on VFL team for 2026 |url=https://www.zerohanger.com/st-kilda-make-call-on-vfl-team-for-2026-164590/ |publisher=ZeroHanger |access-date=30 June 2025 |archive-url=https://web.archive.org/web/20250630041958/https://www.zerohanger.com/st-kilda-make-call-on-vfl-team-for-2026-164590/ |archive-date=30 June 2025 |date=30 June 2025}}</ref> The AFL granted a VFL licence to St Kilda the same day, while Sandringham continued in the competition as a standalone team.<ref>{{cite web |title=St Kilda approved VFL licence |url=https://www.afl.com.au/news/1354925/st-kilda-approved-vfl-licence |publisher=AFL.com.au |access-date=30 June 2025 |archive-url=https://web.archive.org/web/20250630072728/https://www.afl.com.au/news/1354925/st-kilda-approved-vfl-licence |archive-date=30 June 2025 |date=30 June 2025}}</ref><ref>{{cite web |last1=Alvaro |first1=Michael |title=Recruitment drive: Standalone Sandringham's signing spree |url=https://central.rookieme.com/afl/2026/01/22/recruitment-drive-standalone-sandringhams-signing-spree/ |publisher=Rookie Me Central |access-date=26 January 2026 |archive-url=https://web.archive.org/web/20260126144341/https://central.rookieme.com/afl/2026/01/22/recruitment-drive-standalone-sandringhams-signing-spree/ |archive-date=26 January 2026 |date=22 January 2026}}</ref>
+
+Sandringham defeated {{VFL Wer}} in [[#Round 2|round 2]] after trailing by 34 points at half-time, which was its first victory as a standalone team since the [[1999 VFL season|1999 VFL semi-final]].<ref>{{cite web |last1=Ralphsmith |first1=Jonty |title=From the brink to a famous win: stand-alone Sandringham on the board |url=https://www.zerohanger.com/from-the-brink-to-a-famous-win-stand-alone-sandringham-on-the-board-174707/ |publisher=ZeroHanger |access-date=31 March 2026 |archive-url=https://web.archive.org/web/20260331041904/https://www.zerohanger.com/from-the-brink-to-a-famous-win-stand-alone-sandringham-on-the-board-174707/ |archive-date=31 March 2026 |date=29 March 2026}}</ref><ref>{{cite web |last1=McGuire |first1=Casey |title=VFL Match Report: Round 2 vs Werribee |url=https://www.sandringhamfc.com.au/latest-news/vfl-match-report-round-2-vs-werribee |publisher=Sandringham Football Club |access-date=31 March 2026 |archive-url=https://web.archive.org/web/20260331041751/https://www.sandringhamfc.com.au/latest-news/vfl-match-report-round-2-vs-werribee |archive-date=31 March 2026 |date=30 March 2026}}</ref>
+
+===Tasmania===
+[[File:WERvTAS2026PM 17.jpg|thumb|250px|{{AFL Tas}} during its first practice match against {{VFL Wer}} on 7 March 2026]]
+On 5 September 2025, the [[Tasmania Football Club]] was granted a licence to compete in the VFL from 2026, ahead of its planned entry into the AFL from the 2028 season.<ref>{{cite web |title=Tasmania to enter VFL and VFLW in 2026 |url=https://www.afl.com.au/news/1411172/tasmania-to-enter-vfl-and-vflw-in-2026 |publisher=AFL.com.au |access-date=5 September 2025 |archive-url=https://web.archive.org/web/20250905041125/https://www.afl.com.au/news/1411172/tasmania-to-enter-vfl-and-vflw-in-2026 |archive-date=5 September 2025 |date=5 September 2025}}</ref><ref>{{cite web |title=Tasmania Football Club to Enter VFL and VFLW in 2026 |url=https://tasmaniafc.com/news/tasmania-football-club-to-enter-vfl-and-vflw-in-2026/ |publisher=Tasmania Football Club |access-date=5 September 2025 |archive-url=https://web.archive.org/web/20250905041642/https://tasmaniafc.com/news/tasmania-football-club-to-enter-vfl-and-vflw-in-2026/ |archive-date=5 September 2025 |date=5 September 2025}}</ref> [[Jeromey Webberley]] was appointed as the club's inaugural VFL coach, while former {{AFL Ess}} player [[Jye Menzie]] became the club's first player when he was signed on 30 September 2025.<ref>{{cite web |last1=Hann |first1=Ben |title=Tasmania Devils reveal inaugural coach after reaching massive milestone |url=https://www.examiner.com.au/story/9060249/tasmania-devils-appoint-first-vfl-coach-jeromey-webberley/ |publisher=The Examiner |access-date=8 September 2025 |archive-url=https://web.archive.org/web/20250908015523/https://www.examiner.com.au/story/9060249/tasmania-devils-appoint-first-vfl-coach-jeromey-webberley/ |archive-date=8 September 2025 |date=8 September 2025}}</ref><ref>{{cite web |title=Devils Sign First VFL Athlete |url=https://tasmaniafc.com/news/devils-sign-first-vfl-athlete/ |publisher=Tasmania Football Club |access-date=30 September 2025 |archive-url=https://web.archive.org/web/20250930071658/https://tasmaniafc.com/news/devils-sign-first-vfl-athlete/ |archive-date=30 September 2025 |date=30 September 2025}}</ref>
+
+Tasmania played its first official practice match against {{VFL Wer}} at [[RMIT Oval]] on 7 March 2026, losing 14.8 (92) to 10.12 (72).<ref>{{cite web |title=Promising Signs In Tasmania Practice Match Win |url=https://www.werribeefc.com.au/news/1257-promising-signs-in-tasmania-practice-match-win |publisher=Werribee Football Club |access-date=9 March 2026 |archive-url=https://web.archive.org/web/20260309123429/https://www.werribeefc.com.au/news/1257-promising-signs-in-tasmania-practice-match-win |archive-date=9 March 2026 |date=9 March 2026}}</ref> It played its first home-and-away season match against {{VFL Cob}} at [[North Hobart Oval]] in [[#Round 1|round 1]], winning 14.12 (96) to 11.13 (79).<ref>{{cite web |title=Tasmania Devils win historic first VFL clash |url=https://www.espn.com.au/afl/story/_/id/48265720/afl-tasmania-devils-win-historic-first-vfl-clash-beating-coburg |publisher=ESPN |access-date=21 March 2026 |archive-url=https://web.archive.org/web/20260321050314/https://www.espn.com.au/afl/story/_/id/48265720/afl-tasmania-devils-win-historic-first-vfl-clash-beating-coburg |archive-date=21 March 2026 |date=21 March 2026}}</ref><ref name="pulse28feb">{{cite web |title=North Hobart Oval capacity set at 11,135 for Tasmania Devils VFL return |url=https://pulsetasmania.com.au/news/north-hobart-oval-capacity-set-at-11135-for-tasmania-devils-return/ |publisher=Pulse Tasmania |access-date=28 February 2026 |archive-url=https://web.archive.org/web/20260228030421/https://pulsetasmania.com.au/news/north-hobart-oval-capacity-set-at-11135-for-tasmania-devils-return/ |archive-date=28 February 2026 |date=28 February 2026}}</ref>
+
+It was the first time a club from [[Tasmania]] had competed in the VFL since the [[Tasmanian Devils (2001–2008)|original Tasmania Football Club]], which competed from [[2001 VFL season|2001]] until the end of [[2008 VFL season|2008]].<ref>{{cite web |last1=Newlinds |first1=Peter |title=Tasmania gripped by footy fever |url=https://www.abc.net.au/news/2003-09-02/tasmania-gripped-by-footy-fever/1473468 |publisher=ABC News |access-date=16 November 2025 |archive-url=https://web.archive.org/web/20251116054233/https://www.abc.net.au/news/2003-09-02/tasmania-gripped-by-footy-fever/1473468 |archive-date=16 November 2025 |date=2 September 2003}}</ref>
+
+==Clubs==
+===Venues and affiliations===
+{| class="wikitable plainrowheaders"
+! Club
+! State
+! Home venue(s)
+! Capacity
+! [[Australian Football League reserves affiliations|AFL affiliation]]
+|-
+! rowspan=2; style="text-align:left" | {{VFL Box}}
+| rowspan=2; align=center | [[Victoria (state)|VIC]]
+| [[Box Hill City Oval]]
+| 6,000
+| rowspan=2 | '''{{AFL Haw}}'''
+|-
+| [[Kennedy Community Centre]]
+| 3,000
+|-
+! style="text-align:left" | {{VFL Bri}}
+| align=center | [[Queensland|QLD]]
+| [[Brighton Homes Arena]]
+| 8,000
+| '''[[Brisbane Lions|Brisbane]]'''
+|-
+! style="text-align:left" | {{VFL Car}}
+| align=center | [[Victoria (state)|VIC]]
+| [[Ikon Park]]
+| 13,000
+| '''{{AFL Car}}'''
+|-
+! style="text-align:left" | {{VFL Cas}}
+| align=center | [[Victoria (state)|VIC]]
+| [[Casey Fields]]
+| 9,000
+| '''{{AFL Mel}}'''
+|-
+! style="text-align:left" | {{VFL Cob}}
+| align=center | [[Victoria (state)|VIC]]
+| [[Barry Plant Park]]
+| 15,000
+| {{N/A}}
+|-
+! rowspan=3; style="text-align:left" | {{VFL Col}}
+| rowspan=3; align=center | [[Victoria (state)|VIC]]
+| [[Victoria Park, Melbourne|Victoria Park]]
+| 10,000
+| rowspan=3 | '''{{AFL Col}}'''
+|-
+| [[KGM Centre (oval)|KGM Centre]]
+| 3,500
+|-
+| [[Tony Sheehan Oval]]
+| 2,500
+|-
+! rowspan=2; style="text-align:left" | {{VFL Ess}}
+| rowspan=2; align=center | [[Victoria (state)|VIC]]
+| [[NEC Hangar]]
+| 3,500
+| rowspan=2 | '''{{AFL Ess}}'''
+|-
+| [[Windy Hill, Essendon|Windy Hill]]
+| 10,000
+|-
+! rowspan=2; style="text-align:left" | {{VFL Foo}}
+| rowspan=2; align=center | [[Victoria (state)|VIC]]
+| [[Mission Whitten Oval]]
+| 10,000
+| rowspan=2 | '''{{AFL WB}}'''
+|-
+| [[Marvel Stadium]]
+| 53,343
+|-
+! style="text-align:left" | {{VFL Fra}}
+| align=center | [[Victoria (state)|VIC]]
+| [[Kinetic Stadium]]
+| 5,000
+| {{N/A}}
+|-
+! style="text-align:left" | {{VFL Gee}}
+| align=center | [[Victoria (state)|VIC]]
+| [[GMHBA Stadium]]
+| 40,000
+| '''{{AFL Gee}}'''
+|-
+! style="text-align:left" | {{VFL GC}}
+| align=center | [[Queensland|QLD]]
+| [[People First Stadium]]
+| 25,000
+| '''{{AFL GC}}'''
+|-
+! rowspan=3; style="text-align:left" | {{VFL GWS}}
+| rowspan=3; align=center | [[New South Wales|NSW]]
+| [[Tom Wills Oval]]
+| 1,000
+| rowspan=3 | '''{{AFL GWS}}'''
+|-
+| [[ENGIE Stadium]]
+| 23,500
+|-
+| [[Narrandera Sportsground]]
+| 14,000
+|-
+! style="text-align:left" | {{VFL NM}}
+| align=center | [[Victoria (state)|VIC]]
+| [[Arden Street Oval]]
+| 4,000
+| '''{{AFL NM}}'''
+|-
+! style="text-align:left" | {{VFL PM}}
+| align=center | [[Victoria (state)|VIC]]
+| [[ETU Stadium]]
+| 6,000
+| {{N/A}}
+|-
+! rowspan=3; style="text-align:left" | {{VFL Ric}}
+| rowspan=3; align=center | [[Victoria (state)|VIC]]
+| [[Holm Park Recreation Reserve|Holm Park]]
+| 7,000
+| rowspan=3 | '''{{AFL Ric}}'''
+|-
+| [[Kinetic Stadium]]
+| 5,000
+|-
+| [[ETU Stadium]]
+| 6,000
+|-
+! style="text-align:left" | {{VFL San}}
+| align=center | [[Victoria (state)|VIC]]
+| [[Trevor Barker Beach Oval|WS Trevor Barker Beach Oval]]
+| 6,000
+| {{N/A}}
+|-
+! style="text-align:left" | {{VFL Sou}}
+| align=center | [[Queensland|QLD]]
+| [[Fankhauser Reserve]]
+| 8,000
+| {{N/A}}
+|-
+! style="text-align:left" | {{VFL StK}}
+| align=center | [[Victoria (state)|VIC]]
+| [[RSEA Park]]
+| 8,000
+| '''{{AFL StK}}'''
+|-
+! rowspan=3; style="text-align:left" | {{VFL Syd}}
+| rowspan=3; align=center | [[New South Wales|NSW]]
+| [[Tramway Oval]]
+| 1,000
+| rowspan=3 | '''{{AFL Syd}}'''
+|-
+| [[Blacktown ISP Oval]]
+| 10,000
+|-
+| [[Sydney Cricket Ground]]
+| 48,000
+|-
+! rowspan=4; style="text-align:left" | {{AFL Tas}}
+| rowspan=4; align=center | [[Tasmania|TAS]]
+| [[Bellerive Oval|Ninja Stadium]]
+| 20,000
+| rowspan=4; {{N/A}}
+|-
+| [[North Hobart Oval]]
+| 11,135
+|-
+| [[York Park|UTAS Stadium]]
+| 17,000
+|-
+| [[Dial Park]]
+| 3,000
+|-
+! style="text-align:left" | {{VFL Wer}}
+| align=center | [[Victoria (state)|VIC]]
+| [[Avalon Airport Oval]]
+| 8,000
+| {{N/A}}
+|-
+! style="text-align:left" | {{VFL Wil}}
+| align=center | [[Victoria (state)|VIC]]
+| [[DSV Stadium]]
+| 6,000
+| {{N/A}}
+|}
+
+===Coach appointments===
+{| class="wikitable"
+! New coach
+! Club
+! Date of appointment
+! class=unsortable | Previous coach
+! class=unsortable | {{abbr|Ref|Reference}}
+|-
+! style="text-align:left" | [[Daniel Ward (footballer)|Daniel Ward]]
+| {{VFL San}} 
+| 4 September 2025
+| [[Brendon Goddard]]
+| align=center | <ref>{{cite web |title=Daniel Ward appointed Sandringham FC VFL Senior Coach for 2026 |url=https://www.sandringhamfc.com.au/latest-news/homepage-news-feed/2026-vfl-senior-coach-appointed |publisher=Sandringham Football Club |access-date=4 September 2025 |archive-url=https://web.archive.org/web/20250904072743/https://www.sandringhamfc.com.au/latest-news/homepage-news-feed/2026-vfl-senior-coach-appointed |archive-date=4 September 2025 |date=4 September 2025}}</ref>
+|-
+! style="text-align:left" | [[Jeromey Webberley]]
+| {{AFL Tas}}
+| 8 September 2025
+| ''N/A''
+| align=center | <ref>{{cite web |title=Tasmania Football Club Appoints First Coach |url=https://tasmaniafc.com/news/tasmania-football-club-appoints-first-coach/ |publisher=Tasmania Football Club |access-date=12 January 2026 |archive-url=https://web.archive.org/web/20250930071742/https://tasmaniafc.com/news/tasmania-football-club-appoints-first-coach/ |archive-date=30 September 2025 |date=8 September 2025}}</ref>
+|-
+! style="text-align:left" | [[Adam Marcon]]
+| {{VFL NM}} 
+| 15 September 2025
+| [[Tom Lynch (Australian footballer, born 1990)|Tom Lynch]]
+| align=center | 
+|-
+! style="text-align:left" | [[Jack Madgen]]
+| {{VFL Ric}} 
+| 24 September 2025
+| [[Jake Batchelor]]
+| align=center | <ref>{{cite web |title=Jack Madgen to coach VFL Tigers |url=https://www.richmondfc.com.au/news/1902566/jack-madgen-to-coach-vfl-tigers |publisher=Richmond Football Club |access-date=18 March 2026 |archive-url=https://web.archive.org/web/20260214064408/https://www.richmondfc.com.au/news/1902566/jack-madgen-to-coach-vfl-tigers |archive-date=14 February 2026 |date=24 September 2025}}</ref>
+|-
+! style="text-align:left" | [[Nick Malceski]]
+| {{VFL Syd}} 
+| 7 October 2025
+| [[Jarrad McVeigh]]
+| align=center | <ref>{{cite web |title=Sydney Swans welcome back Malceski |url=https://www.sydneyswans.com.au/news/1911497/sydney-swans-welcome-back-malceski |publisher=Sydney Swans |access-date=18 March 2026 |archive-url=https://web.archive.org/web/20260218005902/https://www.sydneyswans.com.au/news/1911497/sydney-swans-welcome-back-malceski |archive-date=18 February 2026 |date=7 October 2025}}</ref>
+|-
+! style="text-align:left" | [[Rhett McLennan]]
+| {{VFL Cas}} 
+| 10 October 2025
+| Taylor Whitford
+| align=center | <ref>{{cite web |title=Dees appoint McLennan |url=https://www.melbournefc.com.au/news/1913000/vfl-senior-coach-dees-appoint-mclennan |publisher=Melbourne Football Club |access-date=16 November 2025 |archive-url=https://web.archive.org/web/20251010061928/https://www.melbournefc.com.au/news/1913000/vfl-senior-coach-dees-appoint-mclennan |archive-date=10 October 2025 |date=10 October 2025}}</ref>
+|-
+! style="text-align:left" | [[David Mirra]]
+| {{VFL Box}} 
+| 12 October 2025
+| [[Zane Littlejohn]]
+| align=center | <ref>{{cite web |title=Mirra returns to the brown and gold as VFL Senior Coach |url=https://www.hawthornfc.com.au/news/1915031/mirra-returns-to-the-brown-and-gold-as-vfl-senior-coach |publisher=Hawthorn Football Club |access-date=16 November 2025 |archive-url=https://web.archive.org/web/20251116055839/https://www.hawthornfc.com.au/news/1915031/mirra-returns-to-the-brown-and-gold-as-vfl-senior-coach |archive-date=16 November 2025 |date=13 October 2025}}</ref>
+|-
+! style="text-align:left" | [[Damian Truslove]]
+| {{VFL Car}} 
+| 27 October 2025
+| [[Luke Power]]
+| align=center | <ref>{{cite web |last1=Filippo |first1=Cristian |title="My main goal": New VFL coach Truslove's development philosophy |url=https://www.carltonfc.com.au/news/1922142/my-main-goal-new-vfl-coach-trusloves-development-philosophy |publisher=Carlton Football Club |access-date=18 March 2026 |archive-url=https://web.archive.org/web/20260204053010/https://www.carltonfc.com.au/news/1922142/my-main-goal-new-vfl-coach-trusloves-development-philosophy |archive-date=4 February 2026 |date=27 October 2025}}</ref>
+|-
+! style="text-align:left" | [[Alex Johnson (Australian footballer)|Alex Johnson]]
+| {{VFL Foo}} 
+| 27 October 2025
+| Stewart Edge
+| align=center | <ref>{{cite web |last1=Gabelich |first1=Josh |title=Dogs promote flag Swan to coach VFL team in 2026 |url=https://www.afl.com.au/news/1446959/sydney-swans-premiership-player-alex-johnson-to-coach-footscray-vfl-in-2026 |publisher=AFL.com.au |access-date=16 November 2025 |archive-url=https://web.archive.org/web/20251116060423/https://www.afl.com.au/news/1446959/sydney-swans-premiership-player-alex-johnson-to-coach-footscray-vfl-in-2026 |archive-date=16 November 2025 |date=27 October 2025}}</ref>
+|-
+! style="text-align:left" | [[Matthew Lokan]]
+| {{VFL Col}} 
+| 31 October 2025
+| [[Andy Otten]]
+| align=center | <ref>{{cite web |title=Former Pie returns as VFL Senior Coach |url=https://www.collingwoodfc.com.au/news/1923893/former-pie-returns-as-vfl-senior-coach |publisher=Collingwood Football Club |access-date=16 November 2025 |archive-url=https://web.archive.org/web/20251116060659/https://www.collingwoodfc.com.au/news/1923893/former-pie-returns-as-vfl-senior-coach |archive-date=16 November 2025 |date=31 October 2025}}</ref>
+|-
+! style="text-align:left" | [[Brendon Goddard]]
+| {{VFL StK}} 
+| 16 November 2025
+| ''N/A''
+| align=center | <ref>{{cite web |title=Saints lock in VFL coaches |url=https://www.saints.com.au/news/1930598/saints-lock-in-vfl-coaches |publisher=St Kilda Football Club |access-date=16 November 2025 |archive-url=https://web.archive.org/web/20251116055031/https://www.saints.com.au/news/1930598/saints-lock-in-vfl-coaches |archive-date=16 November 2025 |date=16 November 2025}}</ref>
+|-
+! style="text-align:left" | [[Dan Lowther]]
+| {{VFL Wer}} 
+| 10 December 2025
+| [[James Allan (Australian footballer)|James Allan]]
+| align=center | <ref>{{cite web |title=Werribee Announces 2026 Senior Coach |url=https://www.werribeefc.com.au/news/1229-werribee-announces-2026-senior-coach |publisher=Werribee Football Club |access-date=10 December 2025 |archive-url=https://web.archive.org/web/20251210090130/https://www.werribeefc.com.au/news/1229-werribee-announces-2026-senior-coach |archive-date=10 December 2025 |date=10 December 2025}}</ref>
+|-
+! style="text-align:left" | [[Robbie Chancellor]]
+| {{VFL GWS}} 
+| 4 March 2026
+| Wayne Cripps
+| align=center | <ref>{{cite web |title=GIANTS 2026 Coaching Structure |url=https://www.gwsgiants.com.au/news/1964341/giants-2026-coaching-structure |publisher=GWS GIANTS |access-date=18 March 2026 |archive-url=https://web.archive.org/web/20260318014122/https://www.gwsgiants.com.au/news/1964341/giants-2026-coaching-structure |archive-date=18 March 2026 |date=4 March 2026}}</ref>
+|-
+! style="text-align:left" | [[Scott Borlace]]
+| {{VFL Bri}} 
+| TBD
+| [[Ben Hudson]]
+| align=center | 
+|}
+
+===Club leadership===
+{| class="wikitable plainrowheaders"
+! rowspan=2 | Club
+! rowspan=2 | Coach
+! colspan=3 | Leadership group
+! rowspan=2 | {{abbr|Ref|Reference}}
+|-
+! Captain(s) !! Vice-captain(s) !! Other leader(s)
+|-
+! style="text-align:left" | {{VFL Box}}
+| [[David Mirra]]
+| Stu Horner
+| [[Trent Bianco]], Kye Declase
+| Corey Preston, Blake Simondson
+| align=center | <ref>{{cite web |title=Hawks Locked In for Season Opener |url=https://boxhillhawks.com.au/vfl-team-selection-round-1-2026/ |publisher=Box Hill Hawks |access-date=28 October 2026 |archive-url=https://web.archive.org/web/20261026124557/https://boxhillhawks.com.au/vfl-team-selection-round-1-2026/ |archive-date=26 October 2026 |date=19 March 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Bri}}
+| [[Scott Borlace]]
+| 
+| 
+| 
+| align=center | 
+|-
+! style="text-align:left" | {{VFL Car}}
+| [[Damian Truslove]]
+| ''AFL-listed player rotation''
+| 
+| [[Darcy Tucker (footballer)|Darcy Tucker]], [[Ethan Phillips (footballer)|Ethan Phillips]], Jack Sammartino, Logan Prout, Will Cookson, Cooper Vickery
+| align=center | <ref>{{cite web |title=Carlton Reserves lock in VFL leaders for 2026 |url=https://www.carltonfc.com.au/news/1980829/ |publisher=Carlton Football Club |access-date=25 March 2026 |archive-url=https://web.archive.org/web/20260325054537/https://www.carltonfc.com.au/news/1980829/ |archive-date=25 March 2026 |date=25 March 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Cas}}
+| [[Rhett McLennan]]
+| 
+| 
+| 
+| align=center | 
+|-
+! style="text-align:left" | {{VFL Cob}}
+| [[Jamie Cassidy-McNamara]]
+| Jesse Corigliano<ref name="afl12mar2026">{{cite web |last1=Bastiani |first1=Gemma |title='This is actually beautiful': How this ex-Swan quickly found an upside to being delisted |url=https://www.afl.com.au/news/1475610/this-is-actually-beautiful-how-this-ex-sydney-swans-robbie-fox-quickly-found-an-upside-to-being-delisted-at-tasmania-devils |publisher=AFL.com.au |access-date=28 October 2026 |archive-url=https://web.archive.org/web/20260413135641/https://www.afl.com.au/news/1475610/this-is-actually-beautiful-how-this-ex-sydney-swans-robbie-fox-quickly-found-an-upside-to-being-delisted-at-tasmania-devils |archive-date=13 April 2026 |date=12 March 2026}}</ref>
+| 
+| 
+| align=center | 
+|-
+! style="text-align:left" | {{VFL Col}}
+| [[Matthew Lokan]]
+| [[Brady Grey]], Ben De Bolfo
+| 
+| [[Will Phillips (footballer)|Will Phillips]], Josh Browne, Max Mahoney
+| align=center | <ref>{{cite web |title=Grey and De Bolfo to lead VFL Pies in 2026 |url=https://www.collingwoodfc.com.au/news/1969760/grey-and-de-bolfo-to-lead-vfl-pies-in-2026 |publisher=Collingwood Football Club |access-date=26 March 2026 |archive-url=https://web.archive.org/web/20260319080544/https://www.collingwoodfc.com.au/news/1969760/grey-and-de-bolfo-to-lead-vfl-pies-in-2026 |archive-date=19 March 2026 |date=19 March 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Ess}}
+| [[Cameron Joyce (coach)|Cameron Joyce]]<ref>{{cite web |title=Bombers finalise 2026 coaching structure |url=https://www.essendonfc.com.au/news/1941740/bombers-finalise-2026-coaching-structure |publisher=Essendon Football Club |access-date=24 March 2026 |archive-url=https://web.archive.org/web/20260223132656/https://www.essendonfc.com.au/news/1941740/bombers-finalise-2026-coaching-structure |archive-date=23 February 2026 |date=15 December 2025}}</ref>
+| [[Xavier O'Neill]]
+| [[Jackson Hately]]
+| 
+| align=center | <ref>{{cite web |title=2026 VFL squad |url=https://www.essendonfc.com.au/teams/vfl/squad |publisher=Essendon Football Club |access-date=24 March 2026 |archive-url=https://web.archive.org/web/20260324052732/https://www.essendonfc.com.au/teams/vfl/squad |archive-date=24 March 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Foo}}
+| [[Alex Johnson (Australian footballer)|Alex Johnson]]
+| Dan Orgill
+| Billy Crofts, Cooper Craig-Peters
+| 
+| align=center | 
+|-
+! style="text-align:left" | {{VFL Fra}}
+| [[Jackson Kornberg]]
+| [[Trent Mynott]]
+| Joe Lloyd, George Grey, Taine Barlow
+| Noah Gown, Darby Hipwell, Corey Ellison, {{strike|[[Tom Blamires]]}}{{efn|[[Tom Blamires]] was drafted to {{AFL NM}} in the [[2025 AFL draft|AFL pre-season supplemental selection period]] prior to the start of the VFL season.<ref name="fra17mar"/>}}
+| align=center | <ref name="fra17mar">{{cite web |title=LEADERSHIP GROUP ANNOUNCED |url=https://www.facebook.com/frankstonfootballclub/posts/pfbid02h9szKhc2u4m3rSTCAYrAKD8TH7p7segPYdGrR94fFwtB2iXsLmz6tWjHea7VEFDkl |website=Facebook |publisher=Frankston Football Club |access-date=26 March 2026 |archive-url=https://web.archive.org/web/20260326032310/https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Ffrankstonfootballclub%2Fposts%2Fpfbid02h9szKhc2u4m3rSTCAYrAKD8TH7p7segPYdGrR94fFwtB2iXsLmz6tWjHea7VEFDkl |archive-date=26 March 2026 |date=17 March 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Gee}}
+| [[Mark Corrigan (footballer)|Mark Corrigan]]
+| Dan Capiron
+| {{strike|[[Marcus Herbert]]}}{{efn|[[Marcus Herbert]] was drafted by {{AFL|WC}} in the [[2026 AFL draft##2026 mid-season rookie draft|2026 AFL mid-season rookie draft]].<ref>{{cite web |last1=Sciberras |first1=Jaiden |title=Every pick of the 2026 AFL Mid-Season Draft |url=https://www.sen.com.au/news/2026/05/26/afl-mid-season-draft-2026-live-order-nominees-every-pick-club-by-club |website=SEN |publisher=Sports Entertainment Network |access-date=28 May 2026 |date=27 May 2026}}</ref>}}
+| 
+| align=center | <ref>{{cite web |title=VFL Team Selection – Round 1 |url=https://www.geelongcats.com.au/news/1974100/vfl-team-selection-round-1 |website=Geelong Football Club |access-date=28 May 2026 |date=19 March 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL GC}}
+| [[Tate Kaesler]]
+| [[Alex Sexton]]
+| 
+| 
+| align=center | <ref>{{cite web |last1=Radcliffe |first1=Iona |title=Sexton to guide SUNS' next gen as VFL captain |url=https://www.goldcoastfc.com.au/news/1976453/sexton-to-guide-suns-next-gen-as-vfl-captain |publisher=Gold Coast Suns |access-date=22 March 2026 |archive-url=https://web.archive.org/web/20260322022814/https://www.goldcoastfc.com.au/news/1976453/sexton-to-guide-suns-next-gen-as-vfl-captain |archive-date=22 March 2026 |date=21 March 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL GWS}}
+| [[Robbie Chancellor]]
+| Ryan Hebron
+| 
+| 
+| align=center | 
+|-
+! style="text-align:left" | {{VFL NM}}
+| [[Adam Marcon]]
+| 
+| 
+| 
+| align=center | 
+|-
+! style="text-align:left" | {{VFL PM}}
+| [[Brendan McCartney]]
+| Tom Hird
+| Kaine Baldwin
+| Tom Highmore, Josh Green, Tom Graham
+| align=center | <ref>{{cite web |title=Say hello to your 2026 VFL Leadership Team. |url=https://www.instagram.com/portmelbournefc/p/DUm4zrPCbjS/ |website=Instagram |publisher=Port Melbourne Football Club |access-date=11 February 2026 |archive-url=https://archive.today/20260211143116/https://www.instagram.com/portmelbournefc/p/DUm4zrPCbjS/ |archive-date=11 February 2026 |date=11 February 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Ric}}
+| [[Jack Madgen]]
+| 
+| 
+| 
+| align=center | 
+|-
+! style="text-align:left" | {{VFL San}}
+| [[Daniel Ward (footballer)|Daniel Ward]]
+| Blake Watson
+| Ben Stephenson, Mitch Ryan, Ethan Williams
+| Josh Hutchings, [[Kynan Brown]], Brodie Findlay, Billy Johnson
+| align=center | <ref>{{cite web |last1=McGuire |first1=Casey |title=Watson re-appointed Captain as leadership group announced |url=https://www.sandringhamfc.com.au/latest-news/homepage-news-feed/2026-leadership-group-announced |publisher=Sandringham Football Club |access-date=14 March 2026 |archive-url=https://web.archive.org/web/20260314044954/https://www.sandringhamfc.com.au/latest-news/homepage-news-feed/2026-leadership-group-announced |archive-date=14 March 2026 |date=14 March 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Sou}}
+| [[Matthew Primus]]
+| [[Brayden Crossley]], [[Jacob Dawson]]
+| [[Zac Foot]]
+| Jesse Joyce, Michael Manteit, Max Spencer
+| align=center | <ref>{{cite web |last1=Wilson-Keir |first1=Jaspar |title=Southport Sharks announce 2026 VFL leadership group |url=https://football.southportsharks.com.au/football/southport-sharks-announce-2026-vfl-leadership-group/ |publisher=Southport Sharks |access-date=25 March 2026 |archive-url=https://web.archive.org/web/20260325122519/https://football.southportsharks.com.au/football/southport-sharks-announce-2026-vfl-leadership-group/ |archive-date=25 March 2026 |date=19 March 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL StK}}
+| [[Brendon Goddard]]
+| Billy McGee Galimberti
+| Ned Maginness, Billy Richardson
+| Jett Hartman, Bailey McKenzie
+| align=center | <ref>{{cite web |title=Billy McGee Galimberti named St Kilda VFL captain for 2026 |url=https://www.saints.com.au/news/1975787/billy-mcgee-galimberti-named-st-kilda-vfl-captain-for-2026 |publisher=St Kilda Football Club |access-date=23 March 2026 |archive-url=https://web.archive.org/web/20260323073522/https://www.saints.com.au/news/1975787/billy-mcgee-galimberti-named-st-kilda-vfl-captain-for-2026 |archive-date=23 March 2026 |date=20 March 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Syd}}
+| [[Nick Malceski]]
+| 
+| 
+| 
+| align=center | 
+|-
+! style="text-align:left" | {{AFL Tas}}
+| [[Jeromey Webberley]]
+| [[Robbie Fox]]
+| [[Jye Menzie]]
+| Brad-Cox Goodyer, [[Hugh Dixon]], [[Caleb Mitchell]]
+| align=center | <ref>{{cite web |last1=Bastiani |first1=Gemma |title='This is actually beautiful': How this ex-Swan quickly found an upside to being delisted |url=https://www.afl.com.au/news/1475610 |publisher=AFL.com.au |access-date=12 March 2026 |archive-url=https://web.archive.org/web/20260312072841/https://www.afl.com.au/news/1475610 |archive-date=12 March 2026 |date=12 March 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Wer}}
+| [[Dan Lowther]]
+| Jesse Clark
+| [[Dom Brew]] ({{abbr|vc|Vice-captain}}), Louis Pinnuck ({{abbr|dvc|Deputy vice-captain}})
+| Jay Dahlhaus, [[Charlie Lazzaro]]
+| align=center | <ref>{{cite web |title=Clark to Lead Werribee Again In 2026 |url=https://www.werribeefc.com.au/news/1249-clark-to-lead-werribee-again-in-2026 |publisher=Werribee Football Club |access-date=13 March 2026 |archive-url=https://web.archive.org/web/20260313045805/https://www.werribeefc.com.au/news/1249-clark-to-lead-werribee-again-in-2026 |archive-date=13 March 2026 |date=26 February 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Wil}}
+| [[Justin Plapp]]
+| Finn O'Dwyer
+| Toby Triffett, Jack Toner
+| [[Luke Parks]]
+| align=center | <ref name="wil13mar2026">{{cite web |title=Polson steps down as captain as 2026 VFL leadership group announced |url=https://williamstownfc.com.au/polson-steps-down-as-captain-as-2026-vfl-leadership-group-announced/ |publisher=Williamstown Football Club |access-date=14 September 2026 |archive-url=https://web.archive.org/web/20260422142550/https://williamstownfc.com.au/polson-steps-down-as-captain-as-2026-vfl-leadership-group-announced/ |archive-date=22 April 2026 |date=13 March 2026}}</ref>
+|}
+
+==Pre-season==
+===Practice matches===
+VFL practice matches began on 13 February 2026.<ref name="practicematches">{{cite web |title=2026 Smithy's VFL practice match schedule |url=https://www.afl.com.au/news/1464613/2026-smithys-vfl-practice-match-schedule |publisher=AFL.com.au |access-date=16 February 2026 |date=16 February 2026}}</ref>
+{{AFLGameHeader|title=2026 VFL practice matches}}
+{{AFLGame|date=Friday, 13 February (6:30pm)|home team={{VFL Cob}}|winner=A|away team={{VFL Ric}}|venue=[[La Trobe Sports Park]]|home score=6.12 (48)|away score=7.10 (52)|crowd=|report=[https://www.richmondfc.com.au/news/1953876/vfl-tigers-take-down-lions-in-practice-match Report]}}
+{{AFLGame|date=Wednesday, 18 February (7:05pm)|home team={{VFL Car}}|winner=H|away team={{VFL Cob}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=7.14 (56)|away score=7.8 (50)|crowd=|report=[https://www.carltonfc.com.au/news/1957605/vfl-practice-match-report-truslove-wraps-up-narrow-win Report]}}
+{{AFLGame|date=Thursday, 19 February (5:00pm)|home team={{VFL Foo}}|winner=H|away team={{VFL San}}|venue=[[Whitten Oval|Mission Whitten Oval]]|home score=13.9 (87)|away score=8.11 (59)|crowd=|report=[https://www.sandringhamfc.com.au/latest-news/vfl-practice-match-report-vs-footscray Report]}}
+{{AFLGame|date=Friday, 20 February (1:05pm)|home team={{VFL Ess}}|winner=H|away team={{VFL Ric}}|venue=[[The Hangar|NEC Hangar]]|home score=18.13 (121)|away score=8.7 (55)|crowd=|report=[https://www.richmondfc.com.au/news/1958443/bombers-defeat-tigers-in-vfl-practice-match Report]}}
+{{AFLGame|date=Friday, 20 February (2:30pm)|home team={{VFL CasD}}|winner=A|away team={{VFL NM}}|venue=[[Casey Fields]]|home score=12.5 (77)|away score=11.12 (78)|crowd=|report=[https://x.com/CaseyDemonsFC/status/2024780766874612076 Scores]}}
+{{AFLGame|date=Friday, 20 February (5:30pm)|home team={{VFL StK}}|winner=A|away team={{VFL PM}}|venue=[[Moorabbin Oval|RSEA Park]]|home score=6.7 (43)|away score=19.10 (124)|crowd=|report=[https://www.instagram.com/portmelbournefc/p/DU-Um6xAWxG/ Scores]}}
+{{AFLGame|date=Saturday, 21 February (12:30pm)|home team={{VFL Wil}}|winner=H|away team={{VFL Fra}}|venue=[[La Trobe Sports Park]]|home score=17.11 (113)|away score=6.5 (41)|crowd=|report=[https://www.facebook.com/photo/?fbid=1730018374968481&set=a.378563830113949 Scores]}}
+{{AFLGame|date=Wednesday, 25 February (2:00pm)|home team={{VFL Car}}|winner=H|away team={{VFL Gee}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=13.4 (82)|away score=13.3 (81)|crowd=|report=[https://www.carltonfc.com.au/news/1960947/vfl-practice-match-report-four-goal-flynn-late-scoreboard-drama-sees-blues-prevail Report]}}
+{{AFLGame|date=Thursday, 26 February (10:30am)|home team={{VFL Bri}}|winner=H|away team={{VFL GC}}|venue=[[Springfield Central Stadium|Brighton Homes Arena]]|home score=12.6 (78)|away score=11.8 (74)|crowd=|report=[https://www.afl.com.au/news/1464613/2026-smithys-vfl-practice-match-schedule Scores]}}
+{{AFLGame|Thursday, 26 February (abandoned)|''{{VFL Syd}}''||V|''{{VFL GWS}}''||[[Henson Park]]}}
+{{AFLGame|date=Friday, 27 February (4:10pm)|home team={{VFL Foo}}|winner=A|away team={{VFL Box}}|venue=[[Whitten Oval|Mission Whitten Oval]]|home score=10.11 (71)|away score=11.7 (73)|crowd=|report=[https://www.westernbulldogs.com.au/news/1962343/vfl-march-report-practice-match-v-box-hill Report]}}
+{{AFLGame|date=Friday, 27 February (5:30pm)|home team={{VFL NM}}|winner=A|away team={{VFL Cob}}|venue=[[Arden Street Oval]]|home score=7.9 (51)|away score=9.20 (74)|crowd=|report=[https://www.afl.com.au/news/1464613/2026-smithys-vfl-practice-match-schedule Scores]}}
+{{AFLGame|date=Saturday, 28 February (10:00am)|home team={{VFL Cob}}|winner=H|away team={{VFL San}}|venue=[[Highgate Recreation Reserve]]|home score=12.12 (84)|away score=6.8 (44)|crowd=|report=[https://www.afl.com.au/news/1464613/2026-smithys-vfl-practice-match-schedule Report]}}
+{{AFLGame|date=Saturday, 28 February (11:00am)|home team={{VFL CasD}}|winner=A|away team={{VFL Ric}}|venue=[[Casey Fields]]|home score=5.4 (34)|away score=12.12 (84)|crowd=|report=[https://www.richmondfc.com.au/news/1962645/vfl-tigers-down-dees-in-casey-scorcher Report]}}
+{{AFLGame|date=Saturday, 28 February (12:45pm)|home team={{VFL Wer}}|winner=H|away team={{VFL Fra}}|venue=[[Highgate Recreation Reserve]]|home score=17.10 (112)|away score=6.9 (45)|crowd=|report=[https://www.afl.com.au/news/1464613/2026-smithys-vfl-practice-match-schedule Scores]}}
+{{AFLGame|date=Saturday, 28 February (3:30pm)|home team={{VFL Wil}}|winner=H|away team={{VFL PM}}|venue=[[Highgate Recreation Reserve]]|home score=14.6 (90)|away score=10.7 (67)|crowd=|report=[https://www.afl.com.au/news/1464613/2026-smithys-vfl-practice-match-schedule Scores]}}
+{{AFLGame|date=Sunday, 1 March (10:00am)|home team={{VFL NM}}|winner=A|away team={{VFL Col}}|venue=[[Arden Street Oval]]|home score=11.8 (74)|away score=15.14 (104)|crowd=|report=[https://www.nmfc.com.au/news/1963824/vfl-practice-match-report-what-the-coach-said Report]}}
+{{AFLGame|date=Sunday, 1 March (11:00am)|home team={{VFL Ess}}|winner=A|away team={{VFL StK}}|venue=[[The Hangar|NEC Hangar]]|home score=10.6 (66)|away score=16.11 (107)|crowd=|report=[https://www.afl.com.au/news/1464613/2026-smithys-vfl-practice-match-schedule Scores]}}
+{{AFLGame|date=Friday, 6 March (3:00pm)|home team={{VFL GC}}|winner=H|away team={{VFL Sou}}|venue=[[Austworld Centre Oval]]|home score=13.8 (86)|away score=7.3 (45)|crowd=|report=[https://www.instagram.com/southportsharksafl/p/DViKy7BCQLm/?hl=en Scores]}}
+{{AFLGame|date=Friday, 6 March (5:00pm)|home team={{VFL Car}}|winner=A|away team={{VFL Foo}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=6.22 (58)|away score=12.7 (79)|crowd=|report=[https://www.instagram.com/carlton_reserves/p/DViV4r0km_p/ Scores]}}
+{{AFLGame|date=Friday, 6 March (5:00pm)|home team={{VFL Syd}}|winner=H|away team=[[North Shore Australian Football Club|North Shore]]|venue=[[Tramway Oval]]|home score=15.6 (106)|away score=1.3 (9)|crowd=|report=[https://www.instagram.com/swans_reserves/p/DViOq2IEjl_/?hl=en&img_index=1 Scores]}}
+{{AFLGame|date=Saturday, 7 March (10:00am)|home team={{VFL Bri}}|winner=H|away team=[[Aspley Football Club|Aspley]]|venue=[[Graham Road Oval]]|home score=27.14 (176)|away score=3.3 (21)|crowd=|report=[https://x.com/brisbanelions/status/2030105005806735473 Scores]}}
+{{AFLGame|date=Saturday, 7 March (10:30am)|home team={{VFL StK}}|winner=A|away team={{VFL Wil}}|venue=[[Moorabbin Oval|RSEA Park]]|home score=11.10 (76)|away score=11.14 (80)|crowd=|report=[https://www.instagram.com/williamstownfc/p/DVkQZHjkxWE/ Scores]}}
+{{AFLGame|date=Saturday, 7 March (11:00am)|home team={{VFL CasD}}|winner=A|away team={{VFL Box}}|venue=[[Casey Fields]]|home score=13.12 (90)|away score=14.14 (98)|crowd=|report=[https://www.melbournefc.com.au/news/1967380/vfl-report-dees-turn-up-the-heat-against-box-hill Report]}}
+{{AFLGame|date=Saturday, 7 March (12:00pm)|home team={{VFL Fra}}|winner=A|away team={{VFL San}}|venue=[[Belvedere Reserve]]|home score=13.9 (87)|away score=13.11 (89)|crowd=|report=[https://www.instagram.com/frankstonfootballclub/p/DVkpBm4FfDh/?hl=en Scores]}}
+{{AFLGame|date=Saturday, 7 March (12:00pm)|home team={{VFL NM}}|winner=A|away team={{VFL Gee}}|venue=[[Arden Street Oval]]|home score=13.9 (87)|away score=14.11 (95)|crowd=|report=[https://www.reddit.com/r/NorthMelbourneFC/comments/1rn2sme/vfl_practice_match/ Scores]}}
+{{AFLGame|date=Saturday, 7 March (3:00pm)|home team={{VFL Wer}}|winner=H|away team={{AFL Tas}}|venue=[[RMIT Oval]]|home score=14.8 (92)|away score=10.12 (72)|crowd=|report=[https://x.com/brentcostelloe/status/2030173306989764963 Scores]}}
+{{AFLGame|date=Saturday, 7 March (3:00pm)|home team={{SANFL Gle}}|winner=A|away team={{VFL Cob}}|venue=[[West Gambier Football Oval]]|home score=9.10 (64)|away score=11.9 (75)|crowd=|report=[https://www.afl.com.au/news/1464613/2026-smithys-vfl-practice-match-schedule Scores]}}
+{{AFLGame|date=Thursday, 12 March (1:00pm)|home team={{VFL Car}}|winner=H|away team={{VFL Ric}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=10.17 (77)|away score=10.10 (70)|crowd=|report=[https://x.com/RichmondVFL/status/2031952994208797051 Scores]}}
+{{AFLGame|date=Friday, 13 March (4:30pm)|home team={{VFL Box}}|winner=H|away team={{VFL PM}}|venue=[[Kennedy Community Centre]]|home score=12.13 (85)|away score=12.10 (82)|crowd=|report=[https://www.instagram.com/p/DV0U5Zik0Uy/ Scores]}}
+{{AFLGame|date=Saturday, 14 March (10:00am)|home team={{VFL Foo}}|winner=H|away team={{VFL Wer}}|venue=[[Whitten Oval|Mission Whitten Oval]]|home score=17.14 (116)|away score=10.10 (70)|crowd=|report=[https://www.facebook.com/story.php?story_fbid=1519887410143281&id=100063661093005 Scores]}}
+{{AFLGame|date=Saturday, 14 March (cancelled)|home team=''{{VFL Bri}}''|winner=|away team=''{{VFL Sou}}''|venue=[[Springfield Central Stadium|Brighton Homes Arena]]|home score=|away score=|crowd=|report=}}
+{{AFLGame|date=Saturday, 14 March (9:30am)|home team={{VFL GWS}}|winner=A|away team={{VFL Syd}}|venue=[[Tom Wills Oval]]|home score=14.4 (88)|away score=14.14 (98)|crowd=|report=}}
+{{AFLGame|date=Saturday, 14 March (11:00am)|home team={{VFL Gee}}|winner=H|away team={{VFL Col}}|venue=[[Deakin University Elite Sports Precinct]]|home score=22.4 (138)|away score=13.9 (87)|crowd=|report=[https://www.facebook.com/story.php?story_fbid=1387782816726245&id=100064836186858&http_ref=eyJ0cyI6MTc3MzY5ODk5NDAwMCwiciI6Imh0dHBzOlwvXC93d3cuZ29vZ2xlLmNvbVwvIn0%3D Scores]}}
+{{AFLGame|date=Saturday, 14 March (2:00pm)|home team={{VFL NM}}|winner=H|away team={{VFL Ess}}|venue=[[Arden Street Oval]]|home score=14.11 (95)|away score=11.15 (81)|crowd=|report=[https://www.essendonfc.com.au/news/1971441/vfl-youngsters-impress-gresham-slots-five-in-final-practice-match Report]}}
+{{AFLGame|date=Sunday, 15 March (10:00am)|home team={{VFL StK}}|winner=A|away team={{VFL CasD}}|venue=[[Moorabbin Oval|RSEA Park]]|home score=10.6 (66)|away score=24.22 (166)|crowd=|report=[https://www.melbournefc.com.au/news/1972973/vfl-report-dees-dominate-in-final-practice-match Report]}}
+{{AFLGame|date=Sunday, 15 March (1:30pm)|home team={{VFL GC}}|winner=H|away team=[[Palm Beach Currumbin Australian Football Club|Palm Beach Currumbin]]|venue=[[Carrara Stadium|People First Stadium]]|home score=17.9 (111)|away score=5.3 (33)|crowd=|report=[https://www.goldcoastfc.com.au/news/1972959/suns-impress-in-final-vfl-hitout Report]}}
+{{AFLGameFooter|notes=
+* {{AFL Syd}} v {{VFL GWS}} was abandoned without any play having occurred because of poor weather at [[Henson Park]].<ref>{{cite web |title=VFL practice match squad confirmed |url=https://www.sydneyswans.com.au/news/1965097/vfl-practice-match-squad-confirmed |publisher=Sydney Swans |access-date=13 March 2026 |archive-url=https://web.archive.org/web/20260313030939/https://www.sydneyswans.com.au/news/1965097/vfl-practice-match-squad-confirmed |archive-date=13 March 2026 |date=5 March 2026 |quote=After their pre-season hitout against the GWS Giants last week was cancelled due to weather, the Swans reserves will get their chance to run out in a match against the North Shore Bombers, who play in the Sydney AFL Premier League.}}</ref>
+* {{VFL Sou}} v {{VFL Bri}} was cancelled because Brisbane had only five AFL-listed players available.<ref>{{cite web |last1=Whiting |first1=Michael |title=Decimated Lions to get 'innovative' against red-hot Swans |url=https://www.afl.com.au/news/1476965/chris-fagan-says-decimated-brisbane-lions-need-to-get-innovative-against-red-hot-sydney-swans |publisher=AFL.com.au |access-date=13 March 2026 |archive-url=https://web.archive.org/web/20260313030500/https://www.afl.com.au/news/1476965/chris-fagan-says-decimated-brisbane-lions-need-to-get-innovative-against-red-hot-sydney-swans |archive-date=13 March 2026 |date=13 March 2026 |quote=The Lions have 17 players unavailable and have cancelled a VFL practice match against Southport.}}</ref>
+}}
+
+==Home-and-away season==
+===Round 1===
+{{AFLGameHeader|title=Round 1}}
+{{AFLGame|date=Friday, 20 March (12:35pm)|home team={{VFL Box}}|winner=H|away team={{VFL Syd}}|venue=[[Kennedy Community Centre]]|home score=16.11 (107)|away score=10.11 (71)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8265 Report]|[https://web.archive.org/web/20260329024458/https://vfl.aflmstats.com/game/2026-1-haw-syd Stats]}}}}
+{{AFLGame|date=Friday, 20 March (7:05pm)|home team={{VFL Gee}}|winner=H|away team={{VFL Ess}}|venue=[[Kardinia Park (stadium)|GMHBA Stadium]]|home score=24.19 (163)|away score=12.6 (78)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8266 Report]|[https://web.archive.org/web/20260329024006/https://vfl.aflmstats.com/game/2026-1-gee-ess Stats]}}}}
+{{AFLGame|date=Friday, 20 March (7:35pm)|home team={{VFL Fra}}|winner=A|away team={{VFL Wil}}|venue=[[Frankston Park|Kinetic Stadium]]|home score=14.11 (95)|away score=14.13 (97)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8267 Report]|[https://web.archive.org/web/20260329024035/https://vfl.aflmstats.com/game/2026-1-frn-wil Stats]}}}}
+{{AFLGame|date=Saturday, 21 March (10:00am)|home team={{VFL Ric}}|winner=H|away team={{VFL Sou}}|venue=[[Frankston Park|Kinetic Stadium]]|home score=14.16 (100)|away score=7.18 (60)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8264 Report]|[https://web.archive.org/web/20260329024935/https://vfl.aflmstats.com/game/2026-1-ric-sth Stats]}}}}
+{{AFLGame|date=Satuday, 21 March (11:05am)|home team={{VFL GWS}}|winner=H|away team={{VFL StK}}|venue=[[Tom Wills Oval]]|home score=17.16 (118)|away score=10.14 (74)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8268 Report]|[https://web.archive.org/web/20260329025144/https://vfl.aflmstats.com/game/2026-1-gws-stk Stats]}}}}
+{{AFLGame|date=Saturday, 21 March (12:05pm)|home team={{AFL Tas}}|winner=H|away team={{VFL Cob}}|venue=[[North Hobart Oval]]|home score=14.12 (96)|away score=11.13 (79)|crowd=10,634<ref>{{cite web |title=Tasmania Devils win historic first VFL clash |url=https://www.espn.com.au/afl/story/_/id/48265720/afl-tasmania-devils-win-historic-first-vfl-clash-beating-coburg |publisher=ESPN |access-date=21 March 2026 |archive-url=https://web.archive.org/web/20260321050314/https://www.espn.com.au/afl/story/_/id/48265720/afl-tasmania-devils-win-historic-first-vfl-clash-beating-coburg |archive-date=21 March 2026 |date=21 March 2026}}</ref>|report={{hlist|[https://www.afl.com.au/vfl/matches/8260 Report]|[https://web.archive.org/web/20260329024013/https://vfl.aflmstats.com/game/2026-1-tas-cob Stats]}}}}
+{{AFLGame|date=Saturday, 21 March (12:05pm)|home team={{VFL Foo}}|winner=H|away team={{VFL Cas}}|venue=[[Whitten Oval|Mission Whitten Oval]]|home score=19.21 (135)|away score=14.8 (92)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8263 Report]|[https://web.archive.org/web/20260329025402/https://vfl.aflmstats.com/game/2026-1-wbd-csy Stats]}}}}
+{{AFLGame|date=Sunday, 22 March (11:00am)|home team={{VFL GC}}|winner=A|away team={{VFL Wer}}|venue=[[Carrara Stadium|People First Stadium]]|home score=8.10 (58)|away score=9.19 (73)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8262 Report]|[https://web.archive.org/web/20260329025514/https://vfl.aflmstats.com/game/2026-1-gcs-wer Stats]}}}}
+{{AFLGame|date=Sunday, 22 March (2:05pm)|home team={{VFL San}}|winner=A|away team={{VFL PtM}}|venue=[[Trevor Barker Beach Oval]]|home score=12.15 (87)|away score=14.17 (101)|crowd=2,200<ref>{{cite web |title=Port Melbourne defeat Sandringham In front of 2,000+ fans and win the Scully Cup |url=https://www.facebook.com/reel/2027282308669906 |website=Facebook |publisher=VFL Rewind Radio Program |access-date=22 March 2026 |archive-url=https://web.archive.org/web/20260322141041/https://www.facebook.com/reel/2027282308669906 |archive-date=22 March 2026 |date=22 March 2026}}</ref><ref>{{cite web |title=VFL Round 1 |url=https://vflfooty.com/vfl-round-1-3 |publisher=VFL Footy |access-date=9 May 2026 |archive-url=https://web.archive.org/web/20260509141520/https://vflfooty.com/vfl-round-1-3 |archive-date=9 May 2026 |date=22 March 2026}}</ref>|report={{hlist|[https://www.afl.com.au/vfl/matches/8261 Report]|[https://web.archive.org/web/20260329025716/https://vfl.aflmstats.com/game/2026-1-san-pmb Stats]}}}}
+{{AFLGameBye|{{VFL Bri}}, {{VFL Car}}, {{VFL Col}}, {{VFL NM}}}}
+{{AFLGameFooter|notes=
+*Four matches were impacted by time changes to accommodate broadcasts: {{VFL Ric}} v {{VFL Sou}} (12:05pm to 10:00am), {{AFL Tas}} v {{VFL Cob}} (1:05pm to 12:05pm), {{VFL Foo}} v {{VFL Cas}} (2:05pm to 12:05pm), and {{VFL GC}} v {{VFL Wer}} (11:05am to 11:00am).<ref>{{cite web |title=2026 Smithy's VFL Round 1 fixture |url=https://www.afl.com.au/news/1462530/2026-smithys-vfl-round-1-fixture |publisher=AFL.com.au |access-date=3 February 2026 |archive-url=https://web.archive.org/web/20260203114319/https://www.afl.com.au/news/1462530/2026-smithys-vfl-round-1-fixture |archive-date=3 February 2026 |date=30 January 2026}}</ref>
+*Because of nearby lightning, the {{VFL GWS}} v {{VFL StK}} match was halted for 30 minutes during the third quarter.<ref>{{cite web |title=Electric Young Duo Light it Up in GIANT VFL Win |url=https://www.gwsgiants.com.au/news/1977986/electric-young-duo-light-it-up-in-giant-vfl-win |publisher=GWS GIANTS |access-date=23 March 2026 |archive-url=https://web.archive.org/web/20260323072538/https://www.gwsgiants.com.au/news/1977986/electric-young-duo-light-it-up-in-giant-vfl-win |archive-date=23 March 2026 |date=22 March 2026}}</ref>
+}}
+
+===Round 2===
+{{AFLGameHeader|title=Round 2}}
+{{AFLGame|date=Friday, 27 March (3:00pm)|home team={{VFL Col}}|winner=A|away team={{VFL GWS}}|venue=[[KGM Centre (oval)|KGM Centre]]|home score=11.13 (79)|away score=14.11 (95)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8360 Report]|[https://web.archive.org/web/20260329025212/https://vfl.aflmstats.com/game/2026-2-col-gws Stats]}}}}
+{{AFLGame|date=Friday, 27 March (7:05pm)|home team={{VFL Gee}}|winner=H|away team={{VFL Box}}|venue=[[Kardinia Park (stadium)|GMHBA Stadium]]|home score=19.9 (123)|away score=11.10 (76)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8361 Report]|[https://web.archive.org/web/20260329024532/https://vfl.aflmstats.com/game/2026-2-gee-haw Stats]}}}}
+{{AFLGame|date=Friday, 27 March (7:35pm)|home team={{VFL Fra}}|winner=H|away team={{VFL StK}}|venue=[[Frankston Park|Kinetic Stadium]]|home score=10.13 (73)|away score=9.11 (65)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8362 Report]|[https://web.archive.org/web/20260329025222/https://vfl.aflmstats.com/game/2026-2-frn-stk Stats]}}}}
+{{AFLGame|date=Saturday, 28 March (11:05am)|home team={{VFL Ric}}|winner=A|away team={{VFL Cob}}|venue=[[Holm Park Recreation Reserve|Holm Park]]|home score=9.10 (64)|away score=12.15 (87)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8363 Report]|[https://web.archive.org/web/20260329025018/https://vfl.aflmstats.com/game/2026-2-ric-cob Stats]}}}}
+{{AFLGame|date=Saturday, 28 March (12:05pm)|home team={{VFL Bri}}|winner=A|away team={{VFL Sou}}|venue=[[Springfield Central Stadium|Brighton Homes Arena]]|home score=15.11 (101)|away score=19.8 (122)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8366 Report]|[https://web.archive.org/web/20260329025019/https://vfl.aflmstats.com/game/2026-2-brl-sth Stats]}}}}
+{{AFLGame|date=Saturday, 28 March (12:05pm)|home team={{VFL San}}|winner=H|away team={{VFL Wer}}|venue=[[Trevor Barker Beach Oval]]|home score=10.13 (73)|away score=8.9 (57)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8365 Report]|[https://web.archive.org/web/20260329025802/https://vfl.aflmstats.com/game/2026-2-san-wer Stats]}}}}
+{{AFLGame|date=Saturday, 28 March (12:05pm)|home team={{AFL Tas}}|winner=H|away team={{VFL PtM}}|venue=[[York Park|UTAS Stadium]]|home score=15.11 (101)|away score=14.9 (93)|crowd=5,013<ref>{{cite web |title=Tasmania Devils back up VFL debut with second win |url=https://www.espn.com.au/afl/story/_/id/48327898/tasmania-devils-back-vfl-debut-second-win-port-melbourne |publisher=ESPN |access-date=28 March 2026 |archive-url=https://web.archive.org/web/20260328103704/https://www.espn.com.au/afl/story/_/id/48327898/tasmania-devils-back-vfl-debut-second-win-port-melbourne |archive-date=28 March 2026 |date=28 March 2026}}</ref>|report={{hlist|[https://www.afl.com.au/vfl/matches/8368 Report]|[https://web.archive.org/web/20260329025811/https://vfl.aflmstats.com/game/2026-2-tas-pmb Stats]}}}}
+{{AFLGame|date=Saturday, 28 March (12:35pm)|home team={{VFL Ess}}|winner=H|away team={{VFL NM}}|venue=[[The Hangar|NEC Hangar]]|home score=15.8 (98)|away score=12.7 (79)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8364 Report]|[https://web.archive.org/web/20260329024030/https://vfl.aflmstats.com/game/2026-2-ess-kan Stats]}}}}
+{{AFLGame|date=Sunday, 29 March (11:05am)|home team={{VFL Car}}|winner=A|away team={{VFL Wil}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=12.7 (79)|away score=12.12 (84)|crowd=|report={{hlist|[https://www.afl.com.au/vfl/matches/8367 Report]|[https://web.archive.org/web/20260331014745/https://vfl.aflmstats.com/game/2026-2-car-wil Stats]}}}}
+{{AFLGameBye|{{VFL Cas}}, {{VFL Foo}}, {{VFL GC}}, {{VFL Syd}}}}
+{{AFLGameFooter|notes=
+*{{VFL Col}} v {{VFL GWS}} was moved from [[Victoria Park, Melbourne|Victoria Park]] to [[KGM Centre (oval)|KGM Centre]].<ref>{{cite web |title=The Victorian Football League advises a venue change to the Smithy's VFL Round 2 match between Collingwood and GWS Giants on Friday 27 March |url=https://www.facebook.com/vflfooty/posts/pfbid0RAFNWXE7QDNF6oybRsvzoQYuQYSNvZm1yShpMzVf2TNP7JWRDizbTnAA8kxZegofl?rdid=o1tavswMeYUfxhVp# |website=Facebook |publisher=VFL / VFLW |access-date=23 March 2026 |archive-url=https://web.archive.org/web/20260323065109/https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Fvflfooty%2Fposts%2Fpfbid0RAFNWXE7QDNF6oybRsvzoQYuQYSNvZm1yShpMzVf2TNP7JWRDizbTnAA8kxZegofl%3Frdid%3Do1tavswMeYUfxhVp |archive-date=23 March 2026 |date=23 March 2026}}</ref>
+*{{AFL Tas}} v {{VFL PM}}, which was scheduled to be played on 29 March, was moved to 28 March with the same starting time of 12:05pm because no flights were scheduled to leave [[Launceston, Tasmania|Launceston]] on the evening of 29 March.<ref>{{cite web |title=Tasmania's 2026 VFL & VFLW Fixture Revealed |url=https://tasmaniafc.com/news/tasmanias-2026-vfl-vflw-fixture-revealed/ |publisher=Tasmania Football Club |access-date=8 March 2026 |archive-url=https://web.archive.org/web/20260308074503/https://tasmaniafc.com/news/tasmanias-2026-vfl-vflw-fixture-revealed/ |archive-date=8 March 2026 |date=11 February 2026}}</ref><ref>{{cite web |title=Due to no flights leaving Launceston on Sunday night, our VFL Round 2 fixture against Tasmania has been moved to the Saturday, March 28, at 12:05PM |url=https://www.facebook.com/pmfcborough/posts/pfbid02gwri5U9i9Rk1JyHSTarJdxkGVjVAzJm99VTgRS1b63cCH9DQQneJBJjif4pmTpRul |website=Facebook |publisher=Port Melbourne Football Club |access-date=10 March 2026 |archive-url=https://web.archive.org/web/20260310103054/https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2Fpmfcborough%2Fposts%2Fpfbid02gwri5U9i9Rk1JyHSTarJdxkGVjVAzJm99VTgRS1b63cCH9DQQneJBJjif4pmTpRul |archive-date=10 March 2026 |date=9 March 2026}}</ref>
+}}
+
+===Round 3===
+{{AFLGameHeader|title=Round 3}}
+{{AFLGame|date=Friday, 3 April (11:05am)|home team={{VFL Bri}}|winner=A|away team={{VFL San}}|venue=[[Springfield Central Stadium|Brighton Homes Arena]]|home score=13.13 (91)|away score=15.8 (98)|crowd=|report=[https://www.afl.com.au/vfl/matches/8371 Report]}}
+{{AFLGame|date=Friday, 3 April (11:30am)|home team={{VFL NM}}|winner=H|away team={{VFL Car}}|venue=[[Arden Street Oval]]|home score=17.8 (110)|away score=14.15 (99)|crowd=|report=[https://www.afl.com.au/vfl/matches/8369 Report]}}
+{{AFLGame|date=Friday, 3 April (1:05pm)|home team={{VFL Cob}}|winner=A|away team={{VFL Col}}|venue=[[Coburg City Oval|Barry Plant Park]]|home score=10.14 (74)|away score=17.17 (119)|crowd=|report=[https://www.afl.com.au/vfl/matches/8370 Report]}}
+{{AFLGame|date=Friday, 3 April (2:05pm)|home team={{VFL Fra}}|winner=A|away team={{AFL Tas}}|venue=[[Frankston Park|Kinetic Stadium]]|home score=9.13 (67)|away score=21.19 (145)|crowd=4,613<ref>{{cite web |title=Frankston v Tasmania |url=https://www.austadiums.com/sport/event/33781 |publisher=Austadiums |access-date=28 October 2026 |archive-url=https://web.archive.org/web/20261028021912/https://www.austadiums.com/sport/event/33781 |archive-date=28 October 2026 |date=3 April 2026}}</ref>|report=[https://www.afl.com.au/vfl/matches/8376 Report]}}
+{{AFLGame|date=Saturday, 4 April (12:05pm)|home team={{VFL Sou}}|winner=H|away team={{VFL GC}}|venue=[[Fankhauser Reserve]]|home score=22.13 (145)|away score=10.9 (69)|crowd=|report=[https://www.afl.com.au/vfl/matches/8372 Report]}}
+{{AFLGame|date=Saturday, 4 April (12:05pm)|home team={{VFL Wer}}|winner=A|away team={{VFL Gee}}|venue=[[Chirnside Park (stadium)|Avalon Airport Oval]]|home score=6.10 (46)|away score=12.18 (90)|crowd=|report=[https://www.afl.com.au/vfl/matches/8373 Report]}}
+{{AFLGame|date=Saturday, 4 April (1:00pm)|home team={{VFL PtM}}|winner=A|away team={{VFL Syd}}|venue=[[North Port Oval|ETU Stadium]]|home score=7.15 (57)|away score=12.6 (78)|crowd=2,500<ref>{{cite web |title=2026 VFL Round 3 |url=https://vflfooty.com/2026-vfl-round-3 |publisher=VFL Footy |access-date=9 May 2026 |archive-url=https://web.archive.org/web/20260509141452/https://vflfooty.com/2026-vfl-round-3 |archive-date=9 May 2026 |date=4 May 2026}}</ref>|report=[https://www.afl.com.au/vfl/matches/8374 Report]}}
+{{AFLGame|date=Sunday, 5 April (11:05am)|home team={{VFL CasD}}|winner=H|away team={{VFL Box}}|venue=[[Casey Fields]]|home score=17.8 (110)|away score=16.10 (106)|crowd=|report=[https://www.afl.com.au/vfl/matches/8377 Report]}}
+{{AFLGame|date=Sunday, 5 April (1:05pm)|home team={{VFL StK}}|winner=A|away team={{VFL Ric}}|venue=[[Moorabbin Oval|RSEA Park]]|home score=11.9 (75)|away score=16.12 (108)|crowd=|report=[https://www.afl.com.au/vfl/matches/8375 Report]}}
+{{AFLGame|date=Sunday, 5 April (3:20pm)|home team={{VFL Foo}}|winner=H|away team={{VFL Ess}}|venue=[[Docklands Stadium|Marvel Stadium]]|home score=18.10 (118)|away score=10.11 (71)|crowd=|report=[https://www.afl.com.au/vfl/matches/8378 Report]}}
+{{AFLGameBye|{{VFL GWS}}, {{VFL Wil}}}}
+{{AFLGameFooter|notes=
+*{{VFL Foo}} v {{VFL Ess}}, which was scheduled to be played at [[Whitten Oval|Mission Whitten Oval]] at 3:05pm, was moved to [[Docklands Stadium|Marvel Stadium]] as a [[curtain-raiser]] to the [[2025 AFL season#Round 4|round 4 AFL match]] between the same clubs.<ref>{{cite web |title=VFL: Curtain raiser clash announced for Easter Sunday |url=https://www.essendonfc.com.au/news/1984547/vfl-curtain-raiser-clash-announced-for-easter-sunday |publisher=Essendon Football Club |access-date=5 April 2026 |archive-url=https://web.archive.org/web/20260405084301/https://www.essendonfc.com.au/news/1984547/vfl-curtain-raiser-clash-announced-for-easter-sunday |archive-date=5 April 2026 |date=30 March 2026}}</ref>
+}}
+
+===Round 4===
+{{AFLGameHeader|title=Round 4}}
+{{AFLGame|date=Friday, 17 April (3:00pm)|home team={{VFL Gee}}|winner=A|away team={{VFL Foo}}|venue=[[Kardinia Park (stadium)|GMHBA Stadium]]|home score=7.9 (51)|away score=12.12 (84)|crowd=|report=[https://www.afl.com.au/vfl/matches/8380 Report]}}
+{{AFLGame|date=Friday, 17 April (3:35pm)|home team={{VFL Syd}}|winner=H|away team={{VFL GWS}}|venue=[[Sydney Cricket Ground]]|home score=15.6 (96)|away score=10.14 (74)|crowd=|report=[https://www.afl.com.au/vfl/matches/8382 Report]}}
+{{AFLGame|date=Friday, 17 April (7:05pm)|home team={{VFL Car}}|winner=H|away team={{VFL Col}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=11.19 (85)|away score=7.12 (54)|crowd=|report=[https://www.afl.com.au/vfl/matches/8379 Report]}}
+{{AFLGame|date=Saturday, 18 April (9:30am)|home team={{VFL GC}}|winner=H|away team={{VFL Ess}}|venue=[[Carrara Stadium|People First Stadium]]|home score=16.21 (117)|away score=19.9 (123)|crowd=|report=[https://www.afl.com.au/vfl/matches/8381 Report]}}
+{{AFLGame|date=Saturday, 18 April (12:05pm)|home team={{VFL Wil}}|winner=H|away team={{VFL Sou}}|venue=[[Williamstown Cricket Ground|DSV Stadium]]|home score=19.13 (127)|away score=10.14 (74)|crowd=1,000<ref>{{cite web |last1=Ford |first1=Ben |title=Seagulls make a statement in their first home game against the Sharks |url=https://williamstownfc.com.au/seagulls-make-a-statement-in-their-first-home-game-against-the-sharks/ |publisher=Williamstown Football Club |access-date=27 April 2026 |archive-url=https://web.archive.org/web/20260427105048/https://williamstownfc.com.au/seagulls-make-a-statement-in-their-first-home-game-against-the-sharks/ |archive-date=27 April 2026 |date=20 April 2026}}</ref>|report=[https://www.afl.com.au/vfl/matches/8383 Report]}}
+{{AFLGame|date=Saturday, 18 April (12:05pm)|home team={{VFL Cob}}|winner=A|away team={{VFL StK}}|venue=[[Coburg City Oval|Barry Plant Park]]|home score=12.13 (85)|away score=17.12 (114)|crowd=|report=[https://www.afl.com.au/vfl/matches/8384 Report]}}
+{{AFLGame|date=Saturday, 18 April (2:05pm)|home team={{VFL San}}|winner=A|away team={{VFL NM}}|venue=[[Trevor Barker Beach Oval]]|home score=10.9 (69)|away score=22.17 (149)|crowd=|report=[https://www.afl.com.au/vfl/matches/8385 Report]}}
+{{AFLGame|date=Saturday, 18 April (2:05pm)|home team={{VFL PtM}}|winner=A|away team={{VFL Box}}|venue=[[North Port Oval|ETU Stadium]]|home score=11.4 (70)|away score=21.17 (143)|crowd=|report=[https://www.afl.com.au/vfl/matches/8387 Report]}}
+{{AFLGame|date=Saturday, 18 April (2:05pm)|home team={{VFL Wer}}|winner=H|away team={{VFL Fra}}|venue=[[Chirnside Park (stadium)|Avalon Airport Oval]]|home score=15.12 (102)|away score=11.14 (80)|crowd=|report=[https://www.afl.com.au/vfl/matches/8386 Report]}}
+{{AFLGame|date=Sunday, 19 April (11:05am)|home team={{VFL CasD}}|winner=A|away team={{VFL Bri}}|venue=[[Casey Fields]]|home score=13.9 (87)|away score=20.5 (125)|crowd=|report=[https://www.afl.com.au/vfl/matches/8388 Report]}}
+{{AFLGameBye|{{VFL Ric}}, {{AFL Tas}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 5===
+{{AFLGameHeader|title=Round 5}}
+{{AFLGame|date=Friday, 24 April (11:05am)|home team={{VFL Foo}}|winner=A|away team={{VFL Syd}}|venue=[[Whitten Oval|Mission Whitten Oval]]|home score=12.9 (81)|away score=22.8 (140)|crowd=|report=[https://www.afl.com.au/vfl/matches/8389 Report]}}
+{{AFLGame|date=Friday, 24 April (2:05pm)|home team={{VFL Col}}|winner=H|away team={{VFL Ess}}|venue=[[KGM Centre (oval)|KGM Centre]]|home score=17.12 (114)|away score=15.13 (103)|crowd=|report=[https://www.afl.com.au/vfl/matches/8392 Report]}}
+{{AFLGame|date=Friday, 24 April (7:35pm)|home team={{VFL Fra}}|winner=H|away team={{VFL Cob}}|venue=[[Frankston Park|Kinetic Stadium]]|home score=16.8 (104)|away score=10.11 (71)|crowd=|report=[https://www.afl.com.au/vfl/matches/8390 Report]}}
+{{AFLGame|date=Saturday, 25 April (1:05pm)|home team={{VFL Cas}}|winner=H|away team={{VFL Ric}}|venue=[[Casey Fields]]|home score=11.14 (80)|away score=7.11 (53)|crowd=|report=[https://www.afl.com.au/vfl/matches/8391 Report]}}
+{{AFLGame|date=Saturday, 25 April (7:05pm)|home team={{VFL Wil}}|winner=A|away team={{VFL Wer}}|venue=[[Williamstown Cricket Ground|DSV Stadium]]|home score=11.6 (72)|away score=14.13 (97)|crowd=2,000<ref>{{cite web |last1=Ford |first1=Ben |title=Seagulls fall short in ANZAC Day clash against Werribee |url=https://williamstownfc.com.au/seagulls-fall-short-in-anzac-day-clash-against-werribee/ |publisher=Williamstown Football Club |access-date=27 April 2026 |archive-url=https://web.archive.org/web/20260427104508/https://williamstownfc.com.au/seagulls-fall-short-in-anzac-day-clash-against-werribee/ |archive-date=27 April 2026 |date=27 April 2026}}</ref>|report=[https://www.afl.com.au/vfl/matches/8393 Report]}}
+{{AFLGame|date=Saturday, 25 April (7:05pm)|home team={{AFL Tas}}|winner=A|away team={{VFL Car}}|venue=[[Bellerive Oval|Ninja Stadium]]|home score=9.14 (68)|away score=14.9 (93)|crowd=14,122<ref>{{cite web |title=Tasmania Devils' unbeaten run ends against Carlton |url=https://pulsetasmania.com.au/news/tasmania-devils-unbeaten-run-ends-against-carlton/ |publisher=Pulse Tasmania |access-date=26 April 2026 |archive-url=https://web.archive.org/web/20260426035629/https://pulsetasmania.com.au/news/tasmania-devils-unbeaten-run-ends-against-carlton/ |archive-date=26 April 2026 |date=25 April 2026}}</ref>|report=[https://www.afl.com.au/vfl/matches/8394 Report]}}
+{{AFLGame|date=Sunday, 26 April (9:30am)|home team={{VFL GWS}}|winner=H|away team={{VFL NM}}|venue=[[Tom Wills Oval]]|home score=20.22 (142)|away score=12.7 (79)|crowd=|report=[https://www.afl.com.au/vfl/matches/8397 Report]}}
+{{AFLGame|date=Sunday, 26 April (11:05am)|home team={{VFL Bri}}|winner=A|away team={{VFL PtM}}|venue=[[Springfield Central Stadium|Brighton Homes Arena]]|home score=6.8 (44)|away score=13.11 (89)|crowd=|report=[https://www.afl.com.au/vfl/matches/8396 Report]}}
+{{AFLGame|date=Sunday, 26 April (2:05pm)|home team={{VFL San}}|winner=A|away team={{VFL Box}}|venue=[[Trevor Barker Beach Oval]]|home score=12.11 (83)|away score=15.13 (103)|crowd=|report=[https://www.afl.com.au/vfl/matches/8395 Report]}}
+{{AFLGame|date=Sunday, 26 April (2:05pm)|home team={{VFL StK}}|winner=A|away team={{VFL GC}}|venue=[[Moorabbin Oval|RSEA Park]]|home score=8.13 (61)|away score=14.12 (96)|crowd=|report=[https://www.afl.com.au/vfl/matches/8398 Report]}}
+{{AFLGameBye|{{VFL Sou}}, {{VFL Gee}}}}
+{{AFLGameFooter|notes=
+*{{VFL Col}} v {{VFL Ess}} was moved from [[Victoria Park, Melbourne|Victoria Park]] to [[KGM Centre (oval)|KGM Centre]].<ref>{{cite web |title=VFL venue change: Bombers' Anzac Round clash moved to KGM Centre |url=https://www.essendonfc.com.au/news/2002308/vfl-venue-change-bombers-anzac-round-clash-moved-to-kgm-centre |publisher=Essendon Football Club |access-date=26 April 2026 |archive-url=https://web.archive.org/web/20260426035945/https://www.essendonfc.com.au/news/2002308/vfl-venue-change-bombers-anzac-round-clash-moved-to-kgm-centre |archive-date=26 April 2026 |date=23 April 2026}}</ref>
+}}
+
+===Round 6===
+{{AFLGameHeader|title=Round 6}}
+{{AFLGame|date=Friday, 1 May (7:05pm)|home team={{VFL Box}}|winner=H|away team={{VFL Col}}|venue=[[Kennedy Community Centre]]|home score=16.13 (109)|away score=15.10 (100)|crowd=|report=[https://www.afl.com.au/vfl/matches/8404 Report]}}
+{{AFLGame|date=Friday, 1 May (7:35pm)|home team={{VFL Ric}}|winner=A|away team={{VFL Fra}}|venue=[[Frankston Park|Kinetic Stadium]]|home score=9.8 (62)|away score=11.8 (74)|crowd=|report=[https://www.afl.com.au/vfl/matches/8399 Report]}}
+{{AFLGame|date=Saturday, 2 May (10:35am)|home team={{VFL Sou}}|winner=H|away team={{VFL Foo}}|venue=[[Fankhauser Reserve]]|home score=12.8 (80)|away score=10.10 (70)|crowd=|report=[https://www.afl.com.au/vfl/matches/8401 Report]}}
+{{AFLGame|date=Saturday, 2 May (12:05pm)|home team={{VFL Car}}|winner=H|away team={{VFL StK}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=14.14 (98)|away score=13.15 (93)|crowd=|report=[https://www.afl.com.au/vfl/matches/8400 Report]}}
+{{AFLGame|date=Saturday, 2 May (12:30pm)|home team={{VFL Gee}}|winner=H|away team={{VFL NM}}|venue=[[Kardinia Park (stadium)|GMHBA Stadium]]|home score=11.20 (86)|away score=11.7 (73)|crowd=|report=[https://www.afl.com.au/vfl/matches/8402 Report]}}
+{{AFLGame|date=Saturday, 2 May (1:05pm)|home team={{VFL Cob}}|winner=H|away team={{VFL Bri}}|venue=[[Coburg City Oval|Barry Plant Park]]|home score=17.13 (115)|away score=6.14 (50)|crowd=|report=[https://www.afl.com.au/vfl/matches/8403 Report]}}
+{{AFLGame|date=Saturday, 2 May (2:05pm)|home team={{VFL Ess}}|winner=A|away team={{VFL Wil}}|venue=[[Windy Hill, Essendon|Windy Hill]]|home score=11.9 (75)|away score=12.16 (88)|crowd=|report=}}
+{{AFLGame|date=Sunday, 3 May (12:05pm)|home team={{AFL Tas}}|winner=H|away team={{VFL San}}|venue=[[York Park|UTAS Stadium]]|home score=19.12 (126)|away score=15.10 (100)|crowd=2,489<ref>{{cite web |title=Tasmania v Sandringham |url=https://www.austadiums.com/sport/event/33816 |publisher=Austadiums |access-date=23 June 2026 |archive-url=https://web.archive.org/web/20260623043957/https://www.austadiums.com/sport/event/33816 |archive-date=23 June 2026 |date=3 May 2026}}</ref>|report=[https://www.afl.com.au/vfl/matches/8407 Report]}}
+{{AFLGame|date=Sunday, 3 May (12:15pm)|home team={{VFL Syd}}|winner=H|away team={{VFL Cas}}|venue=[[Tramway Oval]]|home score=14.10 (94)|away score=11.11 (77)|crowd=|report=[https://www.afl.com.au/vfl/matches/8406 Report]}}
+{{AFLGame|date=Sunday, 3 May (2:05pm)|home team={{VFL PtM}}|winner=H|away team={{VFL Wer}}|venue=[[North Port Oval|ETU Stadium]]|home score=13.12 (90)|away score=9.10 (64)|crowd=|report=[https://www.afl.com.au/vfl/matches/8414 Report]}}
+{{AFLGame|date=Sunday, 3 May (2:35pm)|home team={{VFL GC}}|winner=A|away team={{VFL GWS}}|venue=[[Carrara Stadium|People First Stadium]]|home score=11.12 (78)|away score=21.8 (134)|crowd=|report=[https://www.afl.com.au/vfl/matches/8409 Report]}}
+{{AFLGameFooter|notes=
+*{{VFL Box}} v {{VFL Col}}, which was scheduled to be played at [[Box Hill City Oval]] on 2 May, was moved to [[Kennedy Community Centre]].<ref>{{cite web |title=Please be advised of a fixture change for our Round 5 and 6 VFL clashes |url=https://www.facebook.com/collingwoodfc/photos/please-be-advised-of-a-fixture-change-for-our-round-5-and-6-vfl-clashesvfl-round/1414208340750359/ |website=Facebook |publisher=Collingwood Football Club |access-date=23 April 2026 |archive-url=https://web.archive.org/web/20260423025611/https://www.facebook.com/login/?next=https%3A%2F%2Fwww.facebook.com%2Fcollingwoodfc%2Fphotos%2Fplease-be-advised-of-a-fixture-change-for-our-round-5-and-6-vfl-clashesvfl-round%2F1414208340750359%2F |archive-date=23 April 2026 |date=13 April 2026}}</ref>
+*This was {{VFL Box}}'s 500th senior match since the beginning of its [[Australian Football League reserves affiliations|reserves affiliation]] with {{AFL Haw}} in [[2000 VFL season|2000]].<ref>{{cite web |last1=Sacco |first1=Nicholas |title=The VFL matches you can't miss in 2026 |url=https://www.afl.com.au/news/1465934/the-vfl-matches-you-cant-miss-in-2026 |publisher=AFL.com.au |access-date=16 February 2026 |archive-url=https://web.archive.org/web/20260216062224/https://www.afl.com.au/news/1465934/the-vfl-matches-you-cant-miss-in-2026 |archive-date=16 February 2026 |date=16 February 2026}}</ref>
+}}
+
+===Round 7===
+{{AFLGameHeader|title=Round 7}}
+{{AFLGame|date=Saturday, 9 May (10:00am)|home team={{VFL CasD}}|winner=A|away team={{VFL Car}}|venue=[[Casey Fields]]|home score=3.17 (35)|away score=24.13 (157)|crowd=|report=[https://www.afl.com.au/vfl/matches/8411 Report]}}
+{{AFLGame|date=Saturday, 9 May (10:35am)|home team={{VFL Sou}}|winner=A|away team={{VFL Cob}}|venue=[[Fankhauser Reserve]]|home score=9.15 (69)|away score=17.10 (112)|crowd=|report=[https://www.afl.com.au/vfl/matches/8408 Report]}}
+{{AFLGame|date=Saturday, 9 May (3:05pm)|home team={{VFL Col}}|winner=A|away team={{VFL Gee}}|venue=[[Victoria Park, Melbourne|Victoria Park]]|home score=8.7 (55)|away score=17.14 (116)|crowd=|report=[https://www.afl.com.au/vfl/matches/8415 Report]}}
+{{AFLGame|date=Saturday, 9 May (4:05pm)|home team={{VFL Wer}}|winner=D|away team={{AFL Tas}}|venue=[[Chirnside Park (stadium)|Avalon Airport Oval]]|home score=14.13 (97)|away score=14.13 (97)|crowd=|report=[https://www.afl.com.au/vfl/matches/8410 Report]}}
+{{AFLGame|date=Saturday, 9 May (4:35pm)|home team={{VFL NM}}|winner=H|away team={{VFL Syd}}|venue=[[Arden Street Oval]]|home score=10.15 (75)|away score=9.9 (63)|crowd=|report=[https://www.afl.com.au/vfl/matches/8412 Report]}}
+{{AFLGame|date=Saturday, 9 May (6:05pm)|home team={{VFL Wil}}|winner=H|away team={{VFL Ric}}|venue=[[Williamstown Cricket Ground|DSV Stadium]]|home score=16.11 (107)|away score=10.10 (70)|crowd=|report=[https://www.afl.com.au/vfl/matches/8413 Report]}}
+{{AFLGame|date=Sunday, 10 May (11:05am)|home team={{VFL GWS}}|winner=A|away team={{VFL Ess}}|venue=[[Tom Wills Oval]]|home score=8.15 (63)|away score=17.12 (114)|crowd=|report=[https://www.afl.com.au/vfl/matches/8416 Report]}}
+{{AFLGame|date=Sunday, 10 May (2:05pm)|home team={{VFL San}}|winner=A|away team={{VFL StK}}|venue=[[Trevor Barker Beach Oval]]|home score=9.16 (70)|away score=13.7 (85)|crowd=|report=[https://www.afl.com.au/vfl/matches/8417 Report]}}
+{{AFLGameBye|{{VFL Box}}, {{VFL Bri}}, {{VFL Foo}}, {{VFL Fra}}, {{VFL GC}}, {{VFL PM}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 8===
+{{AFLGameHeader|title=Round 8}}
+{{AFLGame|date=Friday, 15 May (12:05pm)|home team={{VFL Bri}}|winner=A|away team={{VFL Gee}}|venue=[[Springfield Central Stadium|Brighton Homes Arena]]|home score=7.7 (49)|away score=15.25 (115)|crowd=|report=[https://www.afl.com.au/vfl/matches/8419 Report]}}
+{{AFLGame|date=Friday, 15 May (2:05pm)|home team={{VFL Syd}}|winner=H|away team={{VFL Col}}|venue=[[Tramway Oval]]|home score=19.12 (126)|away score=10.14 (74)|crowd=|report=[https://www.afl.com.au/vfl/matches/8420 Report]}}
+{{AFLGame|date=Saturday, 16 May (10:05am)|home team={{VFL Box}}|winner=H|away team={{VFL Ric}}|venue=[[Box Hill City Oval]]|home score=12.11 (83)|away score=12.10 (82)|crowd=|report=[https://www.afl.com.au/vfl/matches/8418 Report]}}
+{{AFLGame|date=Saturday, 16 May (11:05am)|home team={{VFL GC}}|winner=A|away team={{VFL Fra}}|venue=[[Carrara Stadium|People First Stadium]]|home score=12.11 (83)|away score=19.8 (122)|crowd=|report=[https://www.afl.com.au/vfl/matches/8421 Report]}}
+{{AFLGame|date=Saturday, 16 May (11:05am)|home team={{AFL Tas}}|winner=A|away team={{VFL Sou}}|venue=[[North Hobart Oval]]|home score=11.11 (77)|away score=20.10 (130)|crowd=6,300<ref>{{cite web |title=Tasmania v Southport Sharks |url=https://www.austadiums.com/sport/event/33834 |publisher=Austadiums |access-date=23 June 2026 |archive-url=https://web.archive.org/web/20260623043506/https://www.austadiums.com/sport/event/33834 |archive-date=23 June 2026 |date=16 May 2026}}</ref>|report=[https://www.afl.com.au/vfl/matches/8428 Report]}}
+{{AFLGame|date=Saturday, 16 May (12:05pm)|home team={{VFL Car}}|winner=H|away team={{VFL Foo}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=16.21 (117)|away score=15.7 (97)|crowd=|report=[https://www.afl.com.au/vfl/matches/8424 Report]}}
+{{AFLGame|date=Saturday, 16 May (2:05pm)|home team={{VFL StK}}|winner=H|away team={{VFL Cas}}|venue=[[Moorabbin Oval|RSEA Park]]|home score=15.15 (105)|away score=8.9 (57)|crowd=|report=[https://www.afl.com.au/vfl/matches/8423 Report]}}
+{{AFLGame|date=Saturday, 16 May (2:05pm)|home team={{VFL PtM}}|winner=H|away team={{VFL NM}}|venue=[[North Port Oval|ETU Stadium]]|home score=15.13 (103)|away score=13.12 (90)|crowd=|report=[https://www.afl.com.au/vfl/matches/8422 Report]}}
+{{AFLGame|date=Sunday, 17 May (1:05pm)|home team={{VFL San}}|winner=A|away team={{VFL GWS}}|venue=[[Trevor Barker Beach Oval]]|home score=12.12 (84)|away score=12.15 (87)|crowd=|report=[https://www.afl.com.au/vfl/matches/8426 Report]}}
+{{AFLGameBye|{{VFL Cob}}, {{VFL Wer}}, {{VFL Wil}}, {{VFL Ess}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 9===
+{{AFLGameHeader|title=Round 9}}
+{{AFLGame|date=Friday, 22 May (7:05pm)|home team={{VFL Wil}}|winner=A|away team={{VFL Box}}|venue=[[Williamstown Cricket Ground|DSV Stadium]]|home score=11.23 (89)|away score=14.10 (94)|crowd=|report=[https://www.afl.com.au/vfl/matches/8425 Report]}}
+{{AFLGame|date=Saturday, 23 May (10:00am)|home team={{VFL Ric}}|winner=A|away team={{VFL Ess}}|venue=[[Windy Hill, Essendon|Windy Hill]]|home score=14.5 (89)|away score=15.17 (107)|crowd=|report=[https://www.afl.com.au/vfl/matches/8430 Report]}}
+{{AFLGame|date=Saturday, 23 May (11:05am)|home team={{VFL Sou}}|winner=H|away team={{VFL PtM}}|venue=[[Fankhauser Reserve]]|home score=16.14 (110)|away score=11.12 (78)|crowd=|report=[https://www.afl.com.au/vfl/matches/8427 Report]}}
+{{AFLGame|date=Saturday, 23 May (11:05am)|home team={{VFL Wer}}|winner=H|away team={{VFL Col}}|venue=[[Chirnside Park (stadium)|Avalon Airport Oval]]|home score=19.12 (126)|away score=14.11 (95)|crowd=|report=[https://www.afl.com.au/vfl/matches/8429 Report]}}
+{{AFLGame|date=Saturday, 23 May (12:05pm)|home team={{VFL Gee}}|winner=H|away team={{VFL Syd}}|venue=[[Kardinia Park (stadium)|GMHBA Stadium]]|home score=12.18 (90)|away score=10.16 (76)|crowd=|report=[https://www.afl.com.au/vfl/matches/8432 Report]}}
+{{AFLGame|date=Saturday, 23 May (1:30pm)|home team={{VFL NM}}|winner=H|away team={{VFL GC}}|venue=[[Arden Street Oval]]|home score=13.12 (90)|away score=11.11 (77)|crowd=|report=[https://www.afl.com.au/vfl/matches/8435 Report]}}
+{{AFLGame|date=Saturday, 23 May (7:05pm)|home team={{VFL Fra}}|winner=A|away team={{VFL San}}|venue=[[Frankston Park|Kinetic Stadium]]|home score=6.16 (52)|away score=8.12 (60)|crowd=|report=[https://www.afl.com.au/vfl/matches/8431 Report]}}
+{{AFLGame|date=Sunday, 24 May (11:05am)|home team={{VFL Cas}}|winner=H|away team={{VFL Foo}}|venue=[[Casey Fields]]|home score=21.10 (136)|away score=14.17 (101)|crowd=|report=[https://www.afl.com.au/vfl/matches/8434 Report]}}
+{{AFLGame|date=Sunday, 24 May (1:05pm)|home team={{VFL Cob}}|winner=H|away team={{VFL Car}}|venue=[[Coburg City Oval|Barry Plant Park]]|home score=16.14 (110)|away score=10.14 (74)|crowd=|report=[https://www.afl.com.au/vfl/matches/8433 Report]}}
+{{AFLGame|date=Sunday, 24 May (4:00pm)|home team={{VFL GWS}}|winner=H|away team={{VFL Bri}}|venue=[[Sydney Showground Stadium|ENGIE Stadium]]|home score=16.6 (102)|away score=10.12 (72)|crowd=|report=[https://www.afl.com.au/vfl/matches/8436 Report]}}
+{{AFLGameBye|{{VFL StK}}, {{AFL Tas}}}}
+{{AFLGameFooter|notes=*The {{VFL Gee}} v {{VFL Syd}} match, which was scheduled to be played on 24 May at 11:05am, was moved to 23 May at 12:05pm as a [[curtain-raiser]] to the [[2025 AFL season#Round 11|round 11 AFL match]] between the same clubs.<ref>{{cite web |title=Geelong's 2026 VFL Fixture Revealed |url=https://www.geelongcats.com.au/news/1952079/geelongs-2026-vfl-fixture-revealed |publisher=Geelong Football Club |access-date=4 March 2026 |archive-url=https://web.archive.org/web/20260303054143/https://www.geelongcats.com.au/news/1952079/geelongs-2026-vfl-fixture-revealed |archive-date=3 March 2026 |date=11 February 2026}}</ref><ref>{{cite web |last1=King |first1=Tom |title=Additional curtain raiser for VFL Cats |url=https://www.krock.com.au/national/geelong-cats/additional-curtain-raiser-for-vfl-cats/ |publisher=K ROCK 95.5 |access-date=7 March 2026 |archive-url=https://web.archive.org/web/20260304053831/https://www.krock.com.au/national/geelong-cats/additional-curtain-raiser-for-vfl-cats/ |archive-date=4 March 2026 |date=4 March 2026}}</ref>
+}}
+
+===Round 10===
+{{AFLGameHeader|title=Round 10}}
+{{AFLGame|date=Saturday, 30 May (10:00am)|home team={{VFL Syd}}|winner=A|away team={{VFL Ric}}|venue=[[Tramway Oval]]|home score=9.14 (68)|away score=12.8 (80)|crowd=|report=[https://www.afl.com.au/vfl/matches/8439 Report]}}
+{{AFLGame|date=Saturday, 30 May (12:05pm)|home team={{VFL Car}}|winner=A|away team={{VFL Gee}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=12.9 (81)|away score=20.11 (131)|crowd=|report=[https://www.afl.com.au/vfl/matches/8437 Report]}}
+{{AFLGame|date=Saturday, 30 May (2:05pm)|home team={{VFL StK}}|winner=H|away team={{VFL Box}}|venue=[[Moorabbin Oval|RSEA Park]]|home score=14.8 (92)|away score=9.4 (58)|crowd=|report=[https://www.afl.com.au/vfl/matches/8440 Report]}}
+{{AFLGame|date=Saturday, 30 May (3:05pm)|home team={{VFL Foo}}|winner=H|away team={{VFL Col}}|venue=[[Whitten Oval|Mission Whitten Oval]]|home score=14.8 (92)|away score=10.12 (72)|crowd=|report=[https://www.afl.com.au/vfl/matches/8438 Report]}}
+{{AFLGame|date=Sunday, 31 May (11:05am)|home team={{VFL Cas}}|winner=H|away team={{VFL GWS}}|venue=[[Casey Fields]]|home score=12.5 (77)|away score=9.9 (63)|crowd=|report=[https://www.afl.com.au/vfl/matches/8442 Report]}}
+{{AFLGame|date=Sunday, 31 May (11:05am)|home team={{VFL Bri}}|winner=A|away team={{VFL Fra}}|venue=[[Springfield Central Stadium|Brighton Homes Arena]]|home score=17.6 (108)|away score=20.15 (135)|crowd=|report=[https://www.afl.com.au/vfl/matches/8441 Report]}}
+{{AFLGame|date=Sunday, 31 May (12:05pm)|home team={{VFL Ess}}|winner=A|away team={{VFL Wer}}|venue=[[Windy Hill, Essendon|Windy Hill]]|home score=18.6 (114)|away score=27.12 (174)|crowd=|report=[https://www.afl.com.au/vfl/matches/8445 Report]}}
+{{AFLGame|date=Sunday, 31 May (1:05pm)|home team={{VFL Cob}}|winner=H|away team={{VFL Wil}}|venue=[[Coburg City Oval|Barry Plant Park]]|home score=12.19 (91)|away score=10.13 (73)|crowd=|report=[https://www.afl.com.au/vfl/matches/8443 Report]}}
+{{AFLGame|date=Sunday, 31 May (1:05pm)|home team={{VFL PtM}}|winner=H|away team={{AFL Tas}}|venue=[[North Port Oval|ETU Stadium]]|home score=16.8 (104)|away score=14.16 (100)|crowd=|report=[https://www.afl.com.au/vfl/matches/8444 Report]}}
+{{AFLGameBye|{{VFL San}}, {{VFL GC}}, {{VFL NM}}, {{VFL Sou}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 11===
+{{AFLGameHeader|title=Round 11}}
+{{AFLGame|date=Saturday, 6 June (10:05am)|home team={{AFL Tas}}|winner=H|away team={{VFL NM}}|venue=[[North Hobart Oval]]|home score=15.14 (104)|away score=13.12 (90)|crowd=4,107<ref>{{cite web |title=Tasmania v North Melbourne |url=https://www.austadiums.com/sport/event/33857 |publisher=Austadiums |access-date=23 June 2026 |archive-url=https://web.archive.org/web/20260623042524/https://www.austadiums.com/sport/event/33857 |archive-date=23 June 2026 |date=6 June 2026}}</ref>|report=[https://www.afl.com.au/vfl/matches/8459 Report]}}
+{{AFLGame|date=Saturday, 6 June (12:05pm)|home team={{VFL Fra}}|winner=H|away team={{VFL Sou}}|venue=[[Frankston Park|Kinetic Stadium]]|home score=21.7 (133)|away score=12.12 (84)|crowd=1,110<ref>{{cite web |title=2026 VFL – Round 11 |url=https://www.vflfooty.com/2026-vfl-round-11 |publisher=VFL Footy |access-date=28 October 2026 |archive-url=https://web.archive.org/web/20261028033548/https://www.vflfooty.com/2026-vfl-round-11 |archive-date=28 October 2026 |date=6 June 2026 |quote=Frankston beat Southport for first time at Kinetic Stadium today, good crowd of 1100}}</ref>|report=[https://www.afl.com.au/vfl/matches/8449 Report]}}
+{{AFLGame|date=Saturday, 6 June (12:05pm)|home team={{VFL Col}}|winner=H|away team={{VFL CasD}}|venue=[[Casey Fields]]|home score=9.14 (68)|away score=8.8 (56)|crowd=|report=[https://www.afl.com.au/vfl/matches/8461 Report]}}
+{{AFLGame|date=Saturday, 6 June (1:30pm)|home team={{VFL GC}}|winner=H|away team={{VFL Bri}}|venue=[[Carrara Stadium|People First Stadium]]|home score=12.13 (85)|away score=9.14 (68)|crowd=|report=[https://www.afl.com.au/vfl/matches/8448 Report]}}
+{{AFLGame|date=Saturday, 6 June (2:05pm)|home team={{VFL Box}}|winner=H|away team={{VFL Foo}}|venue=[[Box Hill City Oval]]|home score=10.13 (73)|away score=9.11 (65)|crowd=|report=[https://www.afl.com.au/vfl/matches/8447 Report]}}
+{{AFLGame|date=Saturday, 6 June (2:05pm)|home team={{VFL Wer}}|winner=H|away team={{VFL Cob}}|venue=[[Chirnside Park (stadium)|Avalon Airport Oval]]|home score=16.11 (107)|away score=6.12 (48)|crowd=|report=[https://www.afl.com.au/vfl/matches/8446 Report]}}
+{{AFLGame|date=Saturday, 6 June (2:35pm)|home team={{VFL San}}|winner=A|away team={{VFL Gee}}|venue=[[Trevor Barker Beach Oval]]|home score=5.6 (36)|away score=13.16 (94)|crowd=|report=[https://www.afl.com.au/vfl/matches/8455 Report]}}
+{{AFLGame|date=Sunday, 7 June (12:15pm)|home team={{VFL Syd}}|winner=A|away team={{VFL StK}}|venue=[[Tramway Oval]]|home score=17.5 (107)|away score=16.14 (110)|crowd=|report=[https://www.afl.com.au/vfl/matches/8451 Report]}}
+{{AFLGame|date=Sunday, 7 June (2:05pm)|home team={{VFL Ess}}|winner=H|away team={{VFL Car}}|venue=[[Windy Hill, Essendon|Windy Hill]]|home score=14.9 (93)|away score=11.19 (85)|crowd=|report=[https://www.afl.com.au/vfl/matches/8456 Report]}}
+{{AFLGame|date=Sunday, 7 June (2:05pm)|home team={{VFL PtM}}|winner=H|away team={{VFL Wil}}|venue=[[North Port Oval|ETU Stadium]]|home score=14.16 (100)|away score=15.9 (99)|crowd=|report=[https://www.afl.com.au/vfl/matches/8458 Report]}}
+{{AFLGameBye|{{VFL Ric}}, {{VFL GWS}}}}
+{{AFLGameFooter|notes=
+* The [[Collingwood Football Club|Collingwood]] v [[Casey Demons|Casey]] fixture was moved to [[Casey Fields]] due to heavy rainfall affecting the condition of the playing surface at [[Victoria Park, Melbourne|Victoria Park]].<ref>{{cite web|url=https://www.melbournefc.com.au/news/2040007/venue-update-vfl-vflw-vs-collingwood|title=Venue, Time Update VFL & VFLW vs Collingwood|work=melbournefc.com.au|date=5 June 2026}}</ref>
+}}
+
+===Round 12===
+{{AFLGameHeader|title=Round 12}}
+{{AFLGame|date=Saturday, 13 June (10:00am)|home team={{VFL Sou}}|winner=A|away team={{VFL Syd}}|venue=[[Fankhauser Reserve]]|home score=12.10 (82)|away score=17.16 (118)|crowd=|report=[https://www.afl.com.au/vfl/matches/8450 Report]}}
+{{AFLGame|date=Saturday, 13 June (11:05am)|home team={{VFL Gee}}|winner=H|away team={{VFL GC}}|venue=[[Kardinia Park (stadium)|GMHBA Stadium Stadium]]|home score=22.15 (147)|away score=5.4 (34)|crowd=|report=[https://www.afl.com.au/vfl/matches/8452 Report]}}
+{{AFLGame|date=Saturday, 13 June (12:00pm)|home team={{VFL Wer}}|winner=H|away team={{VFL Bri}}|venue=[[Chirnside Park (stadium)|Avalon Airport Oval]]|home score=12.16 (88)|away score=9.8 (62)|crowd=|report=[https://www.afl.com.au/vfl/matches/8460 Report]}}
+{{AFLGame|date=Saturday, 13 June (12:05pm)|home team={{VFL Foo}}|winner=A|away team={{VFL San}}|venue=[[Whitten Oval|Mission Whitten Oval]]|home score=6.12 (48)|away score=8.11 (59)|crowd=|report=[https://www.afl.com.au/vfl/matches/8457 Report]}}
+{{AFLGame|date=Saturday, 13 June (12:05pm)|home team={{VFL Wil}}|winner=H|away team={{VFL GWS}}|venue=[[Williamstown Cricket Ground|DSV Stadium]]|home score=14.9 (93)|away score=11.17 (83)|crowd=|report=[https://www.afl.com.au/vfl/matches/8453 Report]}}
+{{AFLGame|date=Saturday, 13 June (12:05pm)|home team={{AFL Tas}}|winner=H|away team={{VFL Ric}}|venue=[[York Park|UTAS Stadium]]|home score=11.19 (85)|away score=3.4 (22)|crowd=|report=[https://www.afl.com.au/vfl/matches/8454 Report]}}
+{{AFLGame|date=Sunday, 14 June (11:05am)|home team={{VFL NM}}|winner=D|away team={{VFL StK}}|venue=[[Arden Street Oval]]|home score=13.8 (86)|away score=11.20 (86)|crowd=|report=[https://www.afl.com.au/vfl/matches/8465 Report]}}
+{{AFLGame|date=Sunday, 14 June (1:05pm)|home team={{VFL Cob}}|winner=H|away team={{VFL Fra}}|venue=[[Coburg City Oval|Barry Plant Park]]|home score=12.7 (79)|away score=9.10 (64)|crowd=|report=[https://www.afl.com.au/vfl/matches/8469 Report]}}
+{{AFLGame|date=Sunday, 14 June (2:05pm)|home team={{VFL CasD}}|winner=H|away team={{VFL Ess}}|venue=[[Casey Fields]]|home score=16.11 (107)|away score=11.9 (75)|crowd=|report=[https://www.afl.com.au/vfl/matches/8466 Report]}}
+{{AFLGameBye|{{VFL Box}}, {{VFL Car}}, {{VFL Col}}, {{VFL PtM}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 13===
+{{AFLGameHeader|title=Round 13}}
+{{AFLGame|date=Friday, 19 June (3:00pm)|home team={{VFL GC}}|winner=A|away team={{VFL Box}}|venue=[[Carrara Stadium|People First Stadium]]|home score=6.9 (45)|away score=21.16 (142)|crowd=|report=[https://www.afl.com.au/vfl/matches/8463 Report]}}
+{{AFLGame|date=Friday, 19 June (7:35pm)|home team={{VFL Fra}}|winner=H|away team={{VFL Col}}|venue=[[Frankston Park|Kinetic Stadium]]|home score=12.7 (79)|away score=11.12 (78)|crowd=|report=[https://www.afl.com.au/vfl/matches/8464 Report]}}
+{{AFLGame|date=Saturday, 20 June (12:05pm)|home team={{VFL Sou}}|winner=A|away team={{VFL Gee}}|venue=[[Fankhauser Reserve]]|home score=6.10 (46)|away score=14.9 (93)|crowd=|report=[https://www.afl.com.au/vfl/matches/8462 Report]}}
+{{AFLGame|date=Saturday, 20 June (12:05pm)|home team={{VFL Wil}}|winner=H|away team={{VFL CasD}}|venue=[[Williamstown Cricket Ground|DSV Stadium]]|home score=18.13 (121)|away score=12.12 (84)|crowd=|report=[https://www.afl.com.au/vfl/matches/8467 Report]}}
+{{AFLGame|date=Saturday, 20 June (12:15pm)|home team={{VFL GWS}}|winner=H|away team={{VFL Car}}|venue=[[Sydney Showground Stadium|ENGIE Stadium]]|home score=24.11 (155)|away score=12.14 (86)|crowd=|report=[https://www.afl.com.au/vfl/matches/8468 Report]}}
+{{AFLGame|date=Sunday, 21 June (1:05pm)|home team={{VFL Cob}}|winner=H|away team={{VFL PtM}}|venue=[[Coburg City Oval|Barry Plant Park]]|home score=16.7 (103)|away score=12.14 (86)|crowd=|report=[https://www.afl.com.au/vfl/matches/8476 Report]}}
+{{AFLGame|date=Sunday, 21 June (1:05pm)|home team={{VFL San}}|winner=A|away team={{AFL Tas}}|venue=[[Trevor Barker Beach Oval]]|home score=17.10 (112)|away score=23.10 (148)|crowd=|report=[https://www.afl.com.au/vfl/matches/8474 Report]}}
+{{AFLGame|date=Sunday, 21 June (2:05pm)|home team={{VFL StK}}|winner=H|away team={{VFL Foo}}|venue=[[Moorabbin Oval|RSEA Park]]|home score=19.11 (125)|away score=13.10 (88)|crowd=|report=[https://www.afl.com.au/vfl/matches/8471 Report]}}
+{{AFLGame|date=Sunday, 21 June (2:15pm)|home team={{VFL Ric}}|winner=A|away team={{VFL NM}}|venue=[[North Port Oval|ETU Stadium]]|home score=8.11 (59)|away score=18.14 (122)|crowd=|report=[https://www.afl.com.au/vfl/matches/8478 Report]}}
+{{AFLGameBye|{{VFL Bri}}, {{VFL Ess}}, {{VFL Syd}}, {{VFL Wer}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 14===
+{{AFLGameHeader|title=Round 14}}
+{{AFLGame|date=Friday, 26 June (11:05am)|home team={{VFL Bri}}|winner=H|away team={{AFL Tas}}|venue=[[Springfield Central Stadium|Brighton Homes Arena]]|home score=21.13 (139)|away score=11.12 (78)|crowd=|report=[https://www.afl.com.au/vfl/matches/8482 Report]}}
+{{AFLGame|date=Saturday, 27 June (10:00am)|home team={{VFL Car}}|winner=A|away team={{VFL Wer}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=8.11 (59)|away score=9.12 (66)|crowd=|report=[https://www.afl.com.au/vfl/matches/8473 Report]}}
+{{AFLGame|date=Saturday, 27 June (10:05am)|home team={{VFL Box}}|winner=A|away team={{VFL GWS}}|venue=[[Box Hill City Oval]]|home score=14.12 (96)|away score=17.6 (108)|crowd=|report=[https://www.afl.com.au/vfl/matches/8475 Report]}}
+{{AFLGame|date=Saturday, 27 June (11:05am)|home team={{VFL Syd}}|winner=H|away team={{VFL San}}|venue=[[Blacktown International Sportspark|Blacktown ISP]]|home score=26.16 (172)|away score=5.9 (39)|crowd=|report=[https://www.afl.com.au/vfl/matches/8470 Report]}}
+{{AFLGame|date=Saturday, 27 June (12:05pm)|home team={{VFL Col}}|winner=H|away team={{VFL Ric}}|venue=[[La Trobe Sports Park]]|home score=19.18 (132)|away score=9.8 (62)|crowd=|report=[https://www.afl.com.au/vfl/matches/8477 Report]}}
+{{AFLGame|date=Saturday, 27 June (12:05pm)|home team={{VFL Sou}}|winner=H|away team={{VFL Wil}}|venue=[[Fankhauser Reserve]]|home score=14.14 (98)|away score=7.7 (49)|crowd=|report=[https://www.afl.com.au/vfl/matches/8481 Report]}}
+{{AFLGame|date=Sunday, 28 June (12:05pm)|home team={{VFL NM}}|winner=H|away team={{VFL Ess}}|venue=[[Arden Street Oval]]|home score=14.8 (92)|away score=13.11 (89)|crowd=|report=[https://www.afl.com.au/vfl/matches/8472 Report]}}
+{{AFLGame|date=Sunday, 28 June (2:00pm)|home team={{VFL PtM}}|winner=H|away team={{VFL GC}}|venue=[[North Port Oval|ETU Stadium]]|home score=9.9 (63)|away score=8.9 (57)|crowd=|report=[https://www.afl.com.au/vfl/matches/8484 Report]}}
+{{AFLGameBye|{{VFL CasD}}, {{VFL Cob}}, {{VFL Foo}}, {{VFL Fra}}, {{VFL Gee}}, {{VFL StK}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 15===
+{{AFLGameHeader|title=Round 15}}
+{{AFLGame|date=Friday, 3 July (7:35pm)|home team={{VFL Fra}}|winner=A|away team={{VFL Gee}}|venue=[[Frankston Park|Kinetic Stadium]]|home score=8.6 (54)|away score=15.16 (106)|crowd=|report=[https://www.afl.com.au/vfl/matches/8483 Report]}}
+{{AFLGame|date=Saturday, 4 July (10:00am)|home team={{VFL Col}}|winner=A|away team={{VFL Bri}}|venue=[[Coburg City Oval|Barry Plant Park]]|home score=8.19 (67)|away score=13.10 (88)|crowd=|report=[https://www.afl.com.au/vfl/matches/8480 Report]}}
+{{AFLGame|date=Saturday, 4 July (11:00am)|home team={{VFL GC}}|winner=A|away team={{VFL Syd}}|venue=[[Carrara Stadium|People First Stadium]]|home score=12.8 (80)|away score=18.12 (120)|crowd=|report=[https://www.afl.com.au/vfl/matches/8487 Report]}}
+{{AFLGame|date=Saturday, 4 July (11:05am)|home team={{VFL Wer}}|winner=H|away team={{VFL Sou}}|venue=[[Chirnside Park (stadium)|Avalon Airport Oval]]|home score=13.13 (91)|away score=10.11 (71)|crowd=|report=[https://www.afl.com.au/vfl/matches/8486 Report]}}
+{{AFLGame|date=Saturday, 4 July (11:35am)|home team={{AFL Tas}}|winner=A|away team={{VFL Box}}|venue=[[Dial Regional Sports Complex|Dial Park]]|home score=10.11 (71)|away score=11.10 (76)|crowd=2,800<ref>{{cite web |title=Tasmania v Box Hill Hawks |url=https://www.austadiums.com/sport/event/34659 |publisher=Austadiums |access-date=28 October 2026 |archive-url=https://web.archive.org/web/20261028071729/https://www.austadiums.com/sport/event/34659 |archive-date=28 October 2026 |date=4 July 2026}}</ref>|report=[https://www.afl.com.au/vfl/matches/8492 Report]}}
+{{AFLGame|date=Saturday, 4 July (12:05pm)|home team={{VFL Ric}}|winner=A|away team={{VFL Car}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=10.7 (67)|away score=15.12 (102)|crowd=|report=[https://www.afl.com.au/vfl/matches/8488 Report]}}
+{{AFLGame|date=Saturday, 4 July (2:05pm)|home team={{VFL Wil}}|winner=A|away team={{VFL Foo}}|venue=[[Williamstown Cricket Ground|DSV Stadium]]|home score=9.6 (60)|away score=14.17 (101)|crowd=|report=[https://www.afl.com.au/vfl/matches/8497 Report]}}
+{{AFLGame|date=Sunday, 5 July (10:30am)|home team={{VFL GWS}}|winner=H|away team={{VFL Cob}}|venue=[[Narrandera Sportsground]]|home score=8.18 (66)|away score=9.10 (64)|crowd=|report=[https://www.afl.com.au/vfl/matches/8479 Report]}}
+{{AFLGame|date=Sunday, 5 July (12:00pm)|home team={{VFL Ess}}|winner=H|away team={{VFL StK}}|venue=[[Windy Hill, Essendon|Windy Hill]]|home score=18.8 (116)|away score=13.13 (91)|crowd=|report=[https://www.afl.com.au/vfl/matches/8489 Report]}}
+{{AFLGame|date=Sunday, 5 July (1:30pm)|home team={{VFL CasD}}|winner=A|away team={{VFL PtM}}|venue=[[Casey Fields]]|home score=9.12 (66)|away score=12.12 (84)|crowd=|report=[https://www.afl.com.au/vfl/matches/8485 Report]}}
+{{AFLGameBye|{{VFL NM}}, {{VFL San}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 16===
+{{AFLGameHeader|title=Round 16}}
+{{AFLGame|date=Friday, 10 July (3:25pm)|home team={{VFL Col}}|winner=H|away team={{VFL NM}}|venue=[[Docklands Stadium|Marvel Stadium]]|home score=17.16 (118)|away score=11.9 (75)|crowd=|report=[https://www.afl.com.au/vfl/matches/8495 Report]}}
+{{AFLGame|date=Saturday, 11 July (11:05am)|home team={{AFL Tas}}|winner=H|away team={{VFL GC}}|venue=[[North Hobart Oval]]|home score=18.14 (122)|away score=10.12 (72)|crowd=3,627<ref>{{cite web |title=Tasmania v Gold Coast Suns |url=https://www.austadiums.com/sport/event/34665 |publisher=Austadiums |access-date=28 October 2026 |archive-url=https://web.archive.org/web/20261028072504/https://www.austadiums.com/sport/event/34665 |archive-date=28 October 2026 |date=11 July 2026}}</ref>|report=[https://www.afl.com.au/vfl/matches/8500 Report]}}
+{{AFLGame|date=Saturday, 11 July (12:05pm)|home team={{VFL Gee}}|winner=H|away team={{VFL Ric}}|venue=[[Kardinia Park (stadium)|GMHBA Stadium]]|home score=23.14 (152)|away score=11.4 (70)|crowd=|report=[https://www.afl.com.au/vfl/matches/8498 Report]}}
+{{AFLGame|date=Saturday, 11 July (12:05pm)|home team={{VFL Syd}}|winner=D|away team={{VFL Wil}}|venue=[[Blacktown International Sportspark|Blacktown ISP]]|home score=13.13 (91)|away score=14.7 (91)|crowd=|report=[https://www.afl.com.au/vfl/matches/8496 Report]}}
+{{AFLGame|date=Saturday, 11 July (2:05pm)|home team={{VFL StK}}|winner=A|away team={{VFL Wer}}|venue=[[Moorabbin Oval|RSEA Park]]|home score=9.11 (65)|away score=10.6 (66)|crowd=|report=[https://www.afl.com.au/vfl/matches/8502 Report]}}
+{{AFLGame|date=Sunday, 12 July (10:00am)|home team={{VFL Bri}}|winner=A|away team={{VFL Ess}}|venue=[[Springfield Central Stadium|Brighton Homes Arena]]|home score=10.13 (73)|away score=15.13 (103)|crowd=|report=[https://www.afl.com.au/vfl/matches/8499 Report]}}
+{{AFLGame|date=Sunday, 12 July (11:05am)|home team={{VFL Foo}}|winner=A|away team={{VFL Fra}}|venue=[[Whitten Oval|Mission Whitten Oval]]|home score=7.16 (58)|away score=10.11 (71)|crowd=|report=[https://www.afl.com.au/vfl/matches/8494 Report]}}
+{{AFLGame|date=Sunday, 12 July (1:05pm)|home team={{VFL Cob}}|winner=H|away team={{VFL CasD}}|venue=[[Coburg City Oval|Barry Plant Park]]|home score=20.8 (128)|away score=12.13 (85)|crowd=|report=[https://www.afl.com.au/vfl/matches/8491 Report]}}
+{{AFLGame|date=Sunday, 12 July (2:00pm)|home team={{VFL PtM}}|winner=H|away team={{VFL San}}|venue=[[North Port Oval|ETU Stadium]]|home score=7.14 (56)|away score=6.9 (45)|crowd=|report=[https://www.afl.com.au/vfl/matches/8493 Report]}}
+{{AFLGame|date=Sunday, 12 July (2:05pm)|home team={{VFL Box}}|winner=A|away team={{VFL Car}}|venue=[[Box Hill City Oval]]|home score=9.7 (61)|away score=12.12 (84)|crowd=|report=[https://www.afl.com.au/vfl/matches/8490 Report]}}
+{{AFLGameBye|{{VFL Sou}}, {{VFL GWS}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 17===
+{{AFLGameHeader|title=Round 17}}
+{{AFLGame|date=Friday, 17 July (12:35pm)|home team={{VFL Syd}}|winner=H|away team={{VFL Bri}}|venue=[[Tramway Oval]]|home score=11.12 (78)|away score=9.8 (62)|crowd=|report=[https://www.afl.com.au/vfl/matches/8501 Report]}}
+{{AFLGame|date=Saturday, 18 July (10:05am)|home team={{VFL San}}|winner=D|away team={{VFL Sou}}|venue=[[Trevor Barker Beach Oval]]|home score=14.14 (98)|away score=15.8 (98)|crowd=|report=[https://www.afl.com.au/vfl/matches/8503 Report]}}
+{{AFLGame|date=Saturday, 18 July (12:05pm)|home team={{VFL StK}}|winner=A|away team={{VFL Gee}}|venue=[[Moorabbin Oval|RSEA Park]]|home score=6.9 (45)|away score=9.17 (71)|crowd=|report=[https://www.afl.com.au/vfl/matches/8508 Report]}}
+{{AFLGame|date=Saturday, 18 July (12:35pm)|home team={{VFL Wil}}|winner=H|away team={{AFL Tas}}|venue=[[Williamstown Cricket Ground|DSV Stadium]]|home score=13.14 (92)|away score=11.20 (86)|crowd=|report=[https://www.afl.com.au/vfl/matches/8512 Report]}}
+{{AFLGame|date=Sunday, 19 July (10:00am)|home team={{VFL Ess}}|winner=H|away team={{VFL Cob}}|venue=[[Windy Hill, Essendon|Windy Hill]]|home score=17.11 (113)|away score=8.12 (60)|crowd=|report=[https://www.afl.com.au/vfl/matches/8505 Report]}}
+{{AFLGame|date=Sunday, 19 July (10:00am)|home team={{VFL GC}}|winner=A|away team={{VFL Foo}}|venue=[[Carrara Stadium|People First Stadium]]|home score=7.13 (55)|away score=12.11 (83)|crowd=|report=[https://www.afl.com.au/vfl/matches/8510 Report]}}
+{{AFLGame|date=Sunday, 19 July (12:05pm)|home team={{VFL NM}}|winner=A|away team={{VFL CasD}}|venue=[[Arden Street Oval]]|home score=9.7 (61)|away score=14.8 (92)|crowd=|report=[https://www.afl.com.au/vfl/matches/8507 Report]}}
+{{AFLGame|date=Sunday, 19 July (12:35pm)|home team={{VFL Fra}}|winner=H|away team={{VFL GWS}}|venue=[[Frankston Park|Kinetic Stadium]]|home score=20.11 (131)|away score=9.13 (67)|crowd=|report=[https://www.afl.com.au/vfl/matches/8504 Report]}}
+{{AFLGame|date=Sunday, 19 July (2:05pm)|home team={{VFL Wer}}|winner=H|away team={{VFL PtM}}|venue=[[Chirnside Park (stadium)|Avalon Airport Oval]]|home score=16.13 (109)|away score=10.11 (71)|crowd=|report=[https://www.afl.com.au/vfl/matches/8509 Report]}}
+{{AFLGame|date=Sunday, 19 July (2:30pm)|home team={{VFL Ric}}|winner=A|away team={{VFL Box}}|venue=[[Box Hill City Oval]]|home score=8.9 (57)|away score=10.9 (69)|crowd=|report=[https://www.afl.com.au/vfl/matches/8506 Report]}}
+{{AFLGameBye|{{VFL Car}}, {{VFL Col}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 18===
+{{AFLGameHeader|title=Round 18}}
+{{AFLGame|date=Friday, 24 July (12:05pm)|home team={{VFL Col}}|winner=H|away team={{VFL StK}}|venue=[[La Trobe Sports Park]]|home score=14.19 (103)|away score=14.9 (93)|crowd=|report=[https://www.afl.com.au/vfl/matches/8517 Report]}}
+{{AFLGame|date=Saturday, 25 July (10:00am)|home team={{VFL Car}}|winner=H|away team={{VFL GC}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=12.5 (77)|away score=7.17 (59)|crowd=|report=[https://www.afl.com.au/vfl/matches/8513 Report]}}
+{{AFLGame|date=Saturday, 25 July (10:00am)|home team={{VFL Box}}|winner=A|away team={{VFL Ess}}|venue=[[Kennedy Community Centre]]|home score=6.10 (46)|away score=10.11 (71)|crowd=|report=[https://www.afl.com.au/vfl/matches/8516 Report]}}
+{{AFLGame|date=Saturday, 25 July (10:45am)|home team={{VFL Bri}}|winner=H|away team={{VFL NM}}|venue=[[Springfield Central Stadium|Brighton Homes Arena]]|home score=20.11 (131)|away score=19.4 (118)|crowd=|report=[https://www.afl.com.au/vfl/matches/8522 Report]}}
+{{AFLGame|date=Saturday, 25 July (12:05pm)|home team={{VFL CasD}}|winner=A|away team={{VFL Gee}}|venue=[[Casey Fields]]|home score=9.9 (63)|away score=17.14 (116)|crowd=|report=[https://www.afl.com.au/vfl/matches/8515 Report]}}
+{{AFLGame|date=Saturday, 25 July (12:05pm)|home team={{VFL Sou}}|winner=H|away team={{VFL Fra}}|venue=[[Fankhauser Reserve]]|home score=11.14 (80)|away score=11.7 (73)|crowd=|report=[https://www.afl.com.au/vfl/matches/8519 Report]}}
+{{AFLGame|date=Saturday, 25 July (12:35pm)|home team={{VFL GWS}}|winner=A|away team={{VFL Syd}}|venue=[[Sydney Showground Stadium|ENGIE Stadium]]|home score=14.6 (90)|away score=25.18 (168)|crowd=|report=[https://www.afl.com.au/vfl/matches/8511 Report]}}
+{{AFLGame|date=Saturday, 25 July (3:05pm)|home team={{VFL Foo}}|winner=H|away team={{VFL Ric}}|venue=[[Whitten Oval|Mission Whitten Oval]]|home score=16.9 (105)|away score=4.7 (31)|crowd=|report=[https://www.afl.com.au/vfl/matches/8518 Report]}}
+{{AFLGame|date=Sunday, 26 July (1:05pm)|home team={{VFL Cob}}|winner=H|away team={{VFL San}}|venue=[[Coburg City Oval|Barry Plant Park]]|home score=11.12 (78)|away score=9.10 (64)|crowd=|report=[https://www.afl.com.au/vfl/matches/8514 Report]}}
+{{AFLGameBye|{{VFL PtM}}, {{AFL Tas}}, {{VFL Wer}}, {{VFL Wil}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 19===
+{{AFLGameHeader|title=Round 19}}
+{{AFLGame|date=Friday, 31 July (4:00pm)|home team={{VFL Gee}}|winner=A|away team={{VFL Col}}|venue=[[Kardinia Park (stadium)|GMHBA Stadium]]|home score=12.12 (84)|away score=17.10 (112)|crowd=|report=[https://www.afl.com.au/vfl/matches/8523 Report]}}
+{{AFLGame|date=Friday, 31 July (7:35pm)|home team={{VFL Fra}}|winner=H|away team={{VFL PtM}}|venue=[[Frankston Park|Kinetic Stadium]]|home score=11.13 (79)|away score=6.13 (49)|crowd=|report=[https://www.afl.com.au/vfl/matches/8524 Report]}}
+{{AFLGame|date=Saturday, 1 August (11:00am)|home team={{VFL Car}}|winner=H|away team={{VFL Bri}}|venue=[[Princes Park (stadium)|Ikon Park]]|home score=19.6 (120)|away score=9.6 (60)|crowd=|report=[https://www.afl.com.au/vfl/matches/8520 Report]}}
+{{AFLGame|date=Saturday, 1 August (11:05am)|home team={{VFL Syd}}|winner=A|away team={{AFL Tas}}|venue=[[Tramway Oval]]|home score=12.14 (86)|away score=17.14 (116)|crowd=|report=[https://www.afl.com.au/vfl/matches/8521 Report]}}
+{{AFLGame|date=Saturday, 1 August (11:05am)|home team={{VFL Sou}}|winner=H|away team={{VFL GWS}}|venue=[[Fankhauser Reserve]]|home score=17.12 (114)|away score=9.19 (73)|crowd=|report=[https://www.afl.com.au/vfl/matches/8527 Report]}}
+{{AFLGame|date=Saturday, 1 August (12:05pm)|home team={{VFL Wer}}|winner=H|away team={{VFL Foo}}|venue=[[Chirnside Park (stadium)|Avalon Airport Oval]]|home score=16.6 (102)|away score=11.16 (82)|crowd=|report=[https://www.afl.com.au/vfl/matches/8528 Report]}}
+{{AFLGame|date=Saturday, 1 August (2:05pm)|home team={{VFL Box}}|winner=H|away team={{VFL NM}}|venue=[[Box Hill City Oval]]|home score=14.19 (103)|away score=10.12 (72)|crowd=|report=[https://www.afl.com.au/vfl/matches/8529 Report]}}
+{{AFLGame|date=Sunday, 2 August (10:00am)|home team={{VFL GC}}|winner=H|away team={{VFL CasD}}|venue=[[Carrara Stadium|People First Stadium]]|home score=15.11 (101)|away score=14.8 (92)|crowd=|report=[https://www.afl.com.au/vfl/matches/8525 Report]}}
+{{AFLGame|date=Sunday, 2 August (2:05pm)|home team={{VFL San}}|winner=A|away team={{VFL Wil}}|venue=[[Trevor Barker Beach Oval]]|home score=9.8 (62)|away score=17.11 (113)|crowd=|report=[https://www.afl.com.au/vfl/matches/8525 Report]}}
+{{AFLGameBye|{{VFL Cob}}, {{VFL Ess}}, {{VFL StK}}, {{VFL Ric}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 20===
+{{AFLGameHeader|title=Round 20}}
+{{AFLGame|date=Friday, 7 August (2:05pm)|home team={{VFL NM}}|winner=A|away team={{VFL Foo}}|venue=[[Arden Street Oval]]|home score=7.9 (51)|away score=12.25 (97)|crowd=|report=[https://www.afl.com.au/vfl/matches/8533 Report]}}
+{{AFLGame|date=Saturday, 8 August (11:05am)|home team={{AFL Tas}}|winner=H|away team={{VFL Wer}}|venue=[[North Hobart Oval]]|home score=14.14 (98)|away score=12.14 (86)|crowd=4,803<ref>{{cite web |title=Tasmania v Werribee |url=https://www.austadiums.com/sport/event/34704 |publisher=Austadiums |access-date=27 October 2026 |archive-url=https://web.archive.org/web/20261027145307/https://www.austadiums.com/sport/event/34704 |archive-date=27 October 2026 |date=8 August 2026}}</ref>|report=[https://www.afl.com.au/vfl/matches/8536 Report]}}
+{{AFLGame|date=Saturday, 8 August (12:05pm)|home team={{VFL Ess}}|winner=H|away team={{VFL Col}}|venue=[[Windy Hill, Essendon|Windy Hill]]|home score=10.15 (75)|away score=11.8 (74)|crowd=|report=[https://www.afl.com.au/vfl/matches/8531 Report]}}
+{{AFLGame|date=Saturday, 8 August (12:05pm)|home team={{VFL Sou}}|winner=A|away team={{VFL Bri}}|venue=[[Fankhauser Reserve]]|home score=4.9 (33)|away score=18.23 (131)|crowd=|report=[https://www.afl.com.au/vfl/matches/8537 Report]}}
+{{AFLGame|date=Saturday, 8 August (2:00pm)|home team={{VFL PtM}}|winner=H|away team={{VFL Ric}}|venue=[[North Port Oval|ETU Stadium]]|home score=13.9 (87)|away score=11.7 (73)|crowd=|report=[https://www.afl.com.au/vfl/matches/8532 Report]}}
+{{AFLGame|date=Sunday, 9 August (10:00am)|home team={{VFL StK}}|winner=H|away team={{VFL Car}}|venue=[[Moorabbin Oval|RSEA Park]]|home score=9.14 (68)|away score=8.13 (61)|crowd=|report=[https://www.afl.com.au/vfl/matches/8534 Report]}}
+{{AFLGame|date=Sunday, 9 August (11:00am)|home team={{VFL GWS}}|winner=H|away team={{VFL GC}}|venue=[[Tom Wills Oval]]|home score=21.7 (133)|away score=18.12 (120)|crowd=|report=[https://www.afl.com.au/vfl/matches/8530 Report]}}
+{{AFLGame|date=Sunday, 9 August (2:35pm)|home team={{VFL Wil}}|winner=A|away team={{VFL Cob}}|venue=[[Williamstown Cricket Ground|DSV Stadium]]|home score=6.12 (48)|away score=9.9 (63)|crowd=|report=[https://www.afl.com.au/vfl/matches/8535 Report]}}
+{{AFLGameBye|{{VFL Box}}, {{VFL CasD}}, {{VFL Fra}}, {{VFL Gee}}, {{VFL San}}, {{VFL Syd}}}}
+{{AFLGameFooter|notes=
+}}
+
+===Round 21===
+{{AFLGameHeader|title=Round 21}}
+{{AFLGame|date=Saturday, 15 August (11:05am)|home team={{VFL Bri}}|winner=H|away team={{VFL GC}}|venue=[[Springfield Central Stadium|Brighton Homes Arena]]|home score=26.17 (173)|away score=11.4 (70)|crowd=|report=[https://www.afl.com.au/vfl/matches/8548#summary Report]}}
+{{AFLGame|date=Saturday, 15 August (12:05pm)|home team={{VFL Cob}}|winner=A|away team={{VFL Sou}}|venue=[[Coburg City Oval|Barry Plant Park]]|home score=14.8 (92)|away score=15.8 (98)|crowd=|report=[https://www.afl.com.au/vfl/matches/8540 Report]}}
+{{AFLGame|date=Saturday, 15 August (12:05pm)|home team={{VFL Wil}}|winner=H|away team={{VFL Fra}}|venue=[[Williamstown Cricket Ground|DSV Stadium]]|home score=16.14 (110)|away score=10.8 (68)|crowd=|report=[https://www.afl.com.au/vfl/matches/8547 Report]}}
+{{AFLGame|date=Saturday, 15 August (1:05pm)|home team={{VFL Ess}}|winner=H|away team={{VFL Syd}}|venue=[[Windy Hill, Essendon|Windy Hill]]|home score=18.17 (125)|away score=15.8 (98)|crowd=|report=[https://www.afl.com.au/vfl/matches/8546 Report]}}
+{{AFLGame|date=Saturday, 15 August (2:05pm)|home team={{VFL PtM}}|winner=H|away team={{VFL Col}}|venue=[[North Port Oval|ETU Stadium]]|home score=17.13 (115)|away score=14.5 (89)|crowd=|report=[https://www.afl.com.au/vfl/matches/8542 Report]}}
+{{AFLGame|date=Saturday, 15 August (2:05pm)|home team={{VFL Ric}}|winner=H|away team={{VFL StK}}|venue=[[Moorabbin Oval|RSEA Park]]|home score=13.7 (85)|away score=4.13 (37)|crowd=|report=[https://www.afl.com.au/vfl/matches/8544 Report]}}
+{{AFLGame|date=Saturday, 15 August (2:05pm)|home team={{VFL Wer}}|winner=H|away team={{VFL San}}|venue=[[Chirnside Park (stadium)|Avalon Airport Oval]]|home score=23.10 (148)|away score=13.11 (89)|crowd=|report=[https://www.afl.com.au/vfl/matches/8545 Report]}}
+{{AFLGame|date=Sunday, 16 August (9:35am)|home team={{VFL GWS}}|winner=A|away team={{AFL Tas}}|venue=[[Sydney Olympic Park#Tom Wills Oval|Tom Wills Oval]]|home score=9.11 (65)|away score=15.14 (104)|crowd=|report=[https://www.afl.com.au/vfl/matches/8538 Report]}}
+{{AFLGame|date=Sunday, 16 August (10:35am)|home team={{VFL Foo}}|winner=A|away team={{VFL Car}}|venue=[[Whitten Oval|Misson Whitten Oval]]|home score=9.6 (60)|away score=13.13 (91)|crowd=|report=[https://www.afl.com.au/vfl/matches/8541 Report]}}
+{{AFLGame|date=Sunday, 16 August (12:05pm)|home team={{VFL NM}}|winner=A|away team={{VFL Gee}}|venue=[[Arden Street Oval]]|home score=12.7 (79)|away score=16.17 (113)|crowd=|report=[https://www.afl.com.au/vfl/matches/8543 Report]}}
+{{AFLGame|date=Sunday, 16 August (2:05pm)|home team={{VFL Box}}|winner=H|away team={{VFL CasD}}|venue=[[Box Hill City Oval]]|home score=17.10 (112)|away score=6.19 (55)|crowd=|report=[https://www.afl.com.au/vfl/matches/8539 Report]}}
+{{AFLGameFooter|notes=
+}}
+
+==Ladder==
+<onlyinclude>{{#invoke:Sports table|main|style=WDL
+|loss_before_draw=true|for_against_style=points|use_goal_percentage=yes
+|winpoints=4|drawpoints=2
+
+|update=complete
+|source=[https://www.afl.com.au/ladder?Competition=7&Season=88&Round=1408 AFL.com.au]
+
+|team1=GEE |win_GEE=16|loss_GEE=2 |draw_GEE=0 |pf_GEE=1941|pa_GEE=1157
+|team2=WER |win_WER=13|loss_WER=4 |draw_WER=1 |pf_WER=1699|pa_WER=1414
+|team3=BOX |win_BOX=12|loss_BOX=6 |draw_BOX=0 |pf_BOX=1657|pa_BOX=1448|status_BOX=P
+|team4=TAS |win_TAS=11|loss_TAS=6 |draw_TAS=1 |pf_TAS=1822|pa_TAS=1603
+|team5=ESS |win_ESS=11|loss_ESS=7 |draw_ESS=0 |pf_ESS=1743|pa_ESS=1731
+|team6=POR |win_POR=11|loss_POR=7 |draw_POR=0 |pf_POR=1496|pa_POR=1537
+|team7=SYD |win_SYD=10|loss_SYD=7 |draw_SYD=1 |pf_SYD=1850|pa_SYD=1510
+|team8=WIL |win_WIL=10|loss_WIL=7 |draw_WIL=1 |pf_WIL=1613|pa_WIL=1511
+|team9=CAR |win_CAR=10|loss_CAR=8 |draw_CAR=0 |pf_CAR=1648|pa_CAR=1471
+|team10=FRA|win_FRA=10|loss_FRA=8 |draw_FRA=0 |pf_FRA=1554|pa_FRA=1504
+|team11=COB|win_COB=10|loss_COB=8 |draw_COB=0 |pf_COB=1539|pa_COB=1495
+|team12=GWS|win_GWS=10|loss_GWS=8 |draw_GWS=0 |pf_GWS=1718|pa_GWS=1729
+|team13=SOU|win_SOU=9 |loss_SOU=8 |draw_SOU=1 |pf_SOU=1594|pa_SOU=1685
+|team14=FOO|win_FOO=8 |loss_FOO=10|draw_FOO=0 |pf_FOO=1565|pa_FOO=1477
+|team15=STK|win_STK=7 |loss_STK=10|draw_STK=1 |pf_STK=1484|pa_STK=1546
+|team16=COL|win_COL=7 |loss_COL=11|draw_COL=0 |pf_COL=1603|pa_COL=1653
+|team17=NOR|win_NOR=6 |loss_NOR=11|draw_NOR=1 |pf_NOR=1591|pa_NOR=1729
+|team18=BRI|win_BRI=6 |loss_BRI=12|draw_BRI=0 |pf_BRI=1628|pa_BRI=1703
+|team19=CAS|win_CAS=6 |loss_CAS=12|draw_CAS=0 |pf_CAS=1451|pa_CAS=1805
+|team20=SAN|win_SAN=4 |loss_SAN=13|draw_SAN=1 |pf_SAN=1328|pa_SAN=1806
+|team21=RIC|win_RIC=4 |loss_RIC=14|draw_RIC=0 |pf_RIC=1234|pa_RIC=1632
+|team22=GCS|win_GCS=3 |loss_GCS=15|draw_GCS=0 |pf_GCS=1356|pa_GCS=1968
+
+<!--TEAM NAMES. No need to update beyond initial entering-->
+|name_BOX=[[Box Hill Hawks|Box Hill]]
+|name_BRI=[[Brisbane Lions#Reserves team|Brisbane (R)]]
+|name_CAR=[[Carlton Football Club#Reserves team|Carlton (R)]]
+|name_CAS=[[Casey Demons|Casey]]
+|name_COB=[[Coburg Football Club|Coburg]]
+|name_COL=[[Collingwood Football Club#Reserves team|Collingwood (R)]]
+|name_ESS=[[Essendon Football Club#Reserves team|Essendon (R)]]
+|name_FOO=[[Western Bulldogs#Reserves team|Footscray (R)]]
+|name_FRA=[[Frankston Football Club|Frankston]]
+|name_GEE=[[Geelong Football Club#Reserves team|Geelong (R)]]
+|name_GCS=[[Gold Coast Suns#Reserves team|Gold Coast (R)]]
+|name_GWS=[[Greater Western Sydney Giants#Reserves team|Greater Western Sydney (R)]]
+|name_NOR=[[North Melbourne Football Club#Reserves team|North Melbourne (R)]]
+|name_POR=[[Port Melbourne Football Club|Port Melbourne]]
+|name_RIC=[[Richmond Football Club#Reserves team|Richmond (R)]] 
+|name_SAN=[[Sandringham Football Club|Sandringham]]
+|name_STK=[[St Kilda Football Club#Reserves team|St Kilda (R)]]
+|name_SOU=[[Southport Australian Football Club|Southport]]
+|name_SYD=[[Sydney Swans#Reserves team|Sydney (R)]]
+|name_TAS=[[Tasmania Football Club|Tasmania]]
+|name_WER=[[Werribee Football Club|Werribee]]
+|name_WIL=[[Williamstown Football Club|Williamstown]]
+
+<!--CLASSIFICATION RULES-->
+|class_rules = 1) points; 2) percentage; 3) number of points for<br/>
+(R) Club is the [[reserves team]] of a senior club of the Australian Football League
+
+|result1=Q |result2=Q |result3=Q |result4=Q |result5=Q |result6=Q |result7=Q |result8=Q |result9=Q |result10=Q
+
+|col_Q=green2 |text_Q=[[#Finals series|Finals series]]
+|res_col_header=Qualification
+
+<!--Table settings and rules-->
+|status_text_P = Premiers 
+|show_limit=5
+}}</onlyinclude>
+
+===Progression by round===
+{| class=wikitable
+| style="text-align:center; background-color:#C9F0FF" | 4 || Finished the round in first place || style="text-align:center; background-color:#FFCFCF; width:1em" | 0 || Finished the round in last place
+|-
+| style="text-align:center; background-color:#CCFFCC"' | 4 || colspan=3 | Finished the round inside the top ten
+|-
+| style=text-align:center | 4<sub>1</sub> || colspan=3 | Subscript indicates the ladder position at the end of the round
+|-
+| style=text-align:center | <u>4</u><sub>1</sub> || colspan=3 | Underlined points indicate the team had a bye that round
+|}
+<div class="overflowbugx" style="overflow:auto; width:auto">
+{| class="wikitable sortable" style="font-size:77.5%; text-align:center"
+! rowspan=2 | Team !! colspan=21 | Home-and-away season
+|-
+! 1 !! 2 !! 3 !! 4 !! 5 !! 6 !! 7 !! 8 !! 9 !! 10 !! 11 !! 12 !! 13 !! 14 !! 15 !! 16 !! 17 !! 18 !! 19 !! 20 !! 21
+|-
+! style=text-align:left | {{VFL Box}}
+| bgcolor=CCFFCC | {{sort|04|4<sub>4</sub>}}
+| {{sort|12|4<sub>12</sub>}}
+| {{sort|11|4<sub>11</sub>}}
+| bgcolor=CCFFCC | {{sort|07|8<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|06|12<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|05|16<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|06|<u>16</u><sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|06|20<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|03|24<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|03|24<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|02|28<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|03|<u>28</u><sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|02|32<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|04|32<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|04|36<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|04|36<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|03|40<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|04|40<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|03|44<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|03|<u>44</u><sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|03|48<sub>3</sub>}}
+|-
+! style=text-align:left | {{VFL Bri}}
+| {{sort|19|<u>0</u><sub>19</sub>}}
+| {{sort|17|0<sub>17</sub>}}
+| {{sort|20|0<sub>20</sub>}}
+| {{sort|15|4<sub>15</sub>}}
+| {{sort|19|4<sub>19</sub>}}
+| {{sort|21|4<sub>21</sub>}}
+| {{sort|21|<u>4</u><sub>21</sub>}}
+| bgcolor=FFCFCF | {{sort|22|4<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|4<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|4<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|4<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|4<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|<u>4</u><sub>22</sub>}}
+| {{sort|21|8<sub>21</sub>}}
+| {{sort|20|12<sub>20</sub>}}
+| {{sort|20|12<sub>20</sub>}}
+| {{sort|20|12<sub>20</sub>}}
+| {{sort|20|16<sub>20</sub>}}
+| {{sort|20|16<sub>20</sub>}}
+| {{sort|19|20<sub>19</sub>}}
+| {{sort|18|24<sub>18</sub>}}
+|-
+! style=text-align:left | {{VFL Car}}
+| {{sort|20|<u>0</u><sub>20</sub>}}
+| {{sort|15|0<sub>15</sub>}}
+| {{sort|19|0<sub>19</sub>}}
+| {{sort|14|4<sub>14</sub>}}
+| bgcolor=CCFFCC | {{sort|09|8<sub>9</sub>}}
+| bgcolor=CCFFCC | {{sort|08|12<sub>8</sub>}}
+| bgcolor=CCFFCC | {{sort|04|16<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|02|20<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|04|20<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|06|20<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|09|20<sub>9</sub>}}
+| {{sort|12|<u>20</u><sub>12</sub>}}
+| {{sort|13|20<sub>13</sub>}}
+| {{sort|14|20<sub>14</sub>}}
+| {{sort|13|24<sub>13</sub>}}
+| {{sort|11|28<sub>11</sub>}}
+| {{sort|12|<u>28</u><sub>12</sub>}}
+| {{sort|12|32<sub>12</sub>}}
+| bgcolor=CCFFCC | {{sort|08|36<sub>8</sub>}}
+| {{sort|12|36<sub>12</sub>}}
+| bgcolor=CCFFCC | {{sort|09|40<sub>9</sub>}}
+|-
+! style=text-align:left | {{VFL Cas}}
+| {{sort|13|0<sub>13</sub>}}
+| {{sort|21|<u>0</u><sub>21</sub>}}
+| {{sort|15|4<sub>15</sub>}}
+| {{sort|19|4<sub>19</sub>}}
+| {{sort|15|8<sub>15</sub>}}
+| {{sort|17|8<sub>17</sub>}}
+| {{sort|20|8<sub>20</sub>}}
+| {{sort|20|8<sub>20</sub>}}
+| {{sort|18|12<sub>18</sub>}}
+| {{sort|17|16<sub>17</sub>}}
+| {{sort|17|16<sub>17</sub>}}
+| {{sort|15|20<sub>15</sub>}}
+| {{sort|16|20<sub>16</sub>}}
+| {{sort|16|<u>20</u><sub>16</sub>}}
+| {{sort|17|20<sub>17</sub>}}
+| {{sort|18|20<sub>18</sub>}}
+| {{sort|17|24<sub>17</sub>}}
+| {{sort|18|24<sub>18</sub>}}
+| {{sort|18|24<sub>18</sub>}}
+| {{sort|18|<u>24</u><sub>18</sub>}}
+| {{sort|19|24<sub>19</sub>}}
+|-
+! style=text-align:left | {{VFL Cob}}
+| {{sort|12|0<sub>12</sub>}}
+| bgcolor=CCFFCC | {{sort|07|4<sub>7</sub>}}
+| {{sort|14|4<sub>14</sub>}}
+| {{sort|18|4<sub>18</sub>}}
+| bgcolor=FFCFCF | {{sort|22|4<sub>22</sub>}}
+| {{sort|16|8<sub>16</sub>}}
+| {{sort|11|12<sub>11</sub>}}
+| {{sort|13|<u>12</u><sub>13</sub>}}
+| bgcolor=CCFFCC | {{sort|10|16<sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|08|20<sub>8</sub>}}
+| {{sort|13|20<sub>13</sub>}}
+| bgcolor=CCFFCC | {{sort|09|24<sub>9</sub>}}
+| bgcolor=CCFFCC | {{sort|08|28<sub>8</sub>}}
+| bgcolor=CCFFCC | {{sort|09|<u>28</u><sub>9</sub>}}
+| bgcolor=CCFFCC | {{sort|08|28<sub>8</sub>}}
+| bgcolor=CCFFCC | {{sort|08|32<sub>8</sub>}}
+| bgcolor=CCFFCC | {{sort|10|32<sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|07|36<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|09|<u>36</u><sub>9</sub>}}
+| bgcolor=CCFFCC | {{sort|07|40<sub>7</sub>}}
+| {{sort|11|40<sub>11</sub>}}
+|-
+! style=text-align:left | {{VFL Col}}
+| {{sort|21|<u>0</u><sub>21</sub>}}
+| {{sort|16|0<sub>16</sub>}}
+| bgcolor=CCFFCC | {{sort|09|4<sub>9</sub>}}
+| {{sort|16|4<sub>16</sub>}}
+| {{sort|11|8<sub>11</sub>}}
+| {{sort|14|8<sub>14</sub>}}
+| {{sort|17|8<sub>17</sub>}}
+| {{sort|18|8<sub>18</sub>}}
+| {{sort|20|8<sub>20</sub>}}
+| {{sort|20|8<sub>20</sub>}}
+| {{sort|19|12<sub>19</sub>}}
+| {{sort|20|<u>12</u><sub>20</sub>}}
+| {{sort|19|12<sub>19</sub>}}
+| {{sort|18|16<sub>18</sub>}}
+| {{sort|18|16<sub>18</sub>}}
+| {{sort|17|20<sub>17</sub>}}
+| {{sort|18|<u>20</u><sub>18</sub>}}
+| {{sort|17|24<sub>17</sub>}}
+| {{sort|15|28<sub>15</sub>}}
+| {{sort|16|28<sub>16</sub>}}
+| {{sort|16|28<sub>16</sub>}}
+|-
+! style=text-align:left | {{VFL Ess}}
+| {{sort|18|0<sub>18</sub>}}
+| {{sort|14|4<sub>14</sub>}}
+| {{sort|18|4<sub>18</sub>}}
+| {{sort|13|8<sub>13</sub>}}
+| {{sort|18|8<sub>18</sub>}}
+| {{sort|19|8<sub>19</sub>}}
+| {{sort|15|12<sub>15</sub>}}
+| {{sort|16|<u>12</u><sub>16</sub>}}
+| {{sort|14|16<sub>14</sub>}}
+| {{sort|16|16<sub>16</sub>}}
+| {{sort|14|20<sub>14</sub>}}
+| {{sort|14|20<sub>14</sub>}}
+| {{sort|15|20<sub>15</sub>}}
+| {{sort|15|<u>20</u><sub>15</sub>}}
+| {{sort|15|24<sub>15</sub>}}
+| {{sort|12|28<sub>12</sub>}}
+| {{sort|11|32<sub>11</sub>}}
+| bgcolor=CCFFCC | {{sort|08|36<sub>8</sub>}}
+| {{sort|11|<u>36</u><sub>11</sub>}}
+| bgcolor=CCFFCC | {{sort|09|40<sub>9</sub>}}
+| bgcolor=CCFFCC | {{sort|05|44<sub>5</sub>}}
+|-
+! style=text-align:left | {{VFL Foo}}
+| bgcolor=CCFFCC | {{sort|05|4<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|05|<u>4</u><sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|03|8<sub>3</sub>}}
+| bgcolor=C9F0FF | {{sort|01|12<sub>1</sub>}}
+| bgcolor=CCFFCC | {{sort|05|12<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|07|12<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|09|<u>12</u><sub>9</sub>}}
+| {{sort|12|12<sub>12</sub>}}
+| {{sort|15|12<sub>15</sub>}}
+| {{sort|13|16<sub>13</sub>}}
+| {{sort|15|16<sub>15</sub>}}
+| {{sort|17|16<sub>17</sub>}}
+| {{sort|17|16<sub>17</sub>}}
+| {{sort|17|<u>16</u><sub>17</sub>}}
+| {{sort|16|20<sub>16</sub>}}
+| {{sort|16|20<sub>16</sub>}}
+| {{sort|16|24<sub>16</sub>}}
+| {{sort|14|28<sub>14</sub>}}
+| {{sort|14|28<sub>14</sub>}}
+| {{sort|14|32<sub>14</sub>}}
+| {{sort|14|32<sub>14</sub>}}
+|-
+! style=text-align:left | {{VFL Fra}}
+| bgcolor=CCFFCC | {{sort|10|0<sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|08|4<sub>8</sub>}}
+| {{sort|17|4<sub>17</sub>}}
+| {{sort|21|4<sub>21</sub>}}
+| {{sort|16|8<sub>16</sub>}}
+| {{sort|12|12<sub>12</sub>}}
+| {{sort|14|<u>12</u><sub>14</sub>}}
+| bgcolor=CCFFCC | {{sort|10|16<sub>10</sub>}}
+| {{sort|12|16<sub>12</sub>}}
+| bgcolor=CCFFCC | {{sort|10|20<sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|05|24<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|08|24<sub>8</sub>}}
+| bgcolor=CCFFCC | {{sort|07|28<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|08|<u>28</u><sub>8</sub>}}
+| bgcolor=CCFFCC | {{sort|10|28<sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|09|32<sub>9</sub>}}
+| bgcolor=CCFFCC | {{sort|06|36<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|05|36<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|05|40<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|06|<u>40</u><sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|10|40<sub>10</sub>}}
+|-
+! style=text-align:left | {{VFL Gee}}
+| bgcolor=C9F0FF | {{sort|01|4<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|8<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|12<sub>1</sub>}}
+| bgcolor=CCFFCC | {{sort|02|12<sub>2</sub>}}
+| bgcolor=C9F0FF | {{sort|01|<u>12</u><sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|16<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|20<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|24<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|28<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|32<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|36<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|40<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|44<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|<u>44</u><sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|48<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|52<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|56<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|60<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|60<sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|<u>60</u><sub>1</sub>}}
+| bgcolor=C9F0FF | {{sort|01|64<sub>1</sub>}}
+|-
+! style=text-align:left | {{VFL GC}}
+| {{sort|12|0<sub>12</sub>}}
+| {{sort|19|<u>0</u><sub>19</sub>}}
+| bgcolor=FFCFCF | {{sort|22|0<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|0<sub>22</sub>}}
+| {{sort|20|4<sub>20</sub>}}
+| bgcolor=FFCFCF | {{sort|22|4<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|<u>4</u><sub>22</sub>}}
+| {{sort|21|4<sub>21</sub>}}
+| {{sort|21|4<sub>21</sub>}}
+| {{sort|21|<u>4</u><sub>21</sub>}}
+| {{sort|21|8<sub>21</sub>}}
+| {{sort|21|8<sub>21</sub>}}
+| {{sort|21|8<sub>21</sub>}}
+| bgcolor=FFCFCF | {{sort|22|8<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|8<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|8<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|8<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|8<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|12<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|12<sub>22</sub>}}
+| bgcolor=FFCFCF | {{sort|22|12<sub>22</sub>}}
+|-
+! style=text-align:left | {{VFL GWS}}
+| bgcolor=CCFFCC | {{sort|03|4<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|02|8<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|04|<u>8</u><sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|08|8<sub>8</sub>}}
+| bgcolor=CCFFCC | {{sort|02|12<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|02|16<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|05|16<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|04|20<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|02|24<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|02|24<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|04|<u>24</u><sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|06|24<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|05|28<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|03|32<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|03|36<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|03|<u>36</u><sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|05|36<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|06|36<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|10|36<sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|08|40<sub>8</sub>}}
+| {{sort|12|40<sub>12</sub>}}
+|-
+! style=text-align:left | {{VFL NM}}
+| bgcolor=FFCFCF | {{sort|22|<u>0</u><sub>22</sub>}}
+| {{sort|18|0<sub>18</sub>}}
+| bgcolor=CCFFCC | {{sort|10|4<sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|05|8<sub>5</sub>}}
+| {{sort|12|8<sub>12</sub>}}
+| {{sort|15|8<sub>15</sub>}}
+| bgcolor=CCFFCC | {{sort|10|12<sub>10</sub>}}
+| {{sort|14|12<sub>14</sub>}}
+| {{sort|11|<u>16</u><sub>11</sub>}}
+| {{sort|14|16<sub>14</sub>}}
+| {{sort|16|16<sub>16</sub>}}
+| {{sort|16|18<sub>16</sub>}}
+| {{sort|12|22<sub>12</sub>}}
+| {{sort|11|26<sub>11</sub>}}
+| {{sort|11|<u>26</u><sub>11</sub>}}
+| {{sort|13|26<sub>13</sub>}}
+| {{sort|14|26<sub>14</sub>}}
+| {{sort|16|26<sub>16</sub>}}
+| {{sort|17|26<sub>17</sub>}}
+| {{sort|17|26<sub>17</sub>}}
+| {{sort|17|26<sub>17</sub>}}
+|-
+! style=text-align:left | {{VFL PM}}
+| bgcolor=CCFFCC | {{sort|08|4<sub>8</sub>}}
+| bgcolor=CCFFCC | {{sort|09|4<sub>9</sub>}}
+| {{sort|12|4<sub>12</sub>}}
+| {{sort|20|4<sub>20</sub>}}
+| {{sort|14|8<sub>14</sub>}}
+| bgcolor=CCFFCC | {{sort|10|12<sub>10</sub>}}
+| {{sort|12|<u>12</u><sub>12</sub>}}
+| bgcolor=CCFFCC | {{sort|09|16<sub>9</sub>}}
+| {{sort|13|16<sub>13</sub>}}
+| {{sort|11|20<sub>11</sub>}}
+| bgcolor=CCFFCC | {{sort|06|24<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|10|<u>24</u><sub>10</sub>}}
+| {{sort|11|24<sub>11</sub>}}
+| bgcolor=CCFFCC | {{sort|10|28<sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|06|32<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|05|36<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|07|36<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|09|<u>36</u><sub>9</sub>}}
+| {{sort|12|36<sub>12</sub>}}
+| bgcolor=CCFFCC | {{sort|10|40<sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|06|44<sub>6</sub>}}
+|-
+! style=text-align:left | {{VFL Ric}}
+| bgcolor=CCFFCC | {{sort|02|4<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|06|4<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|05|8<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|06|<u>8</u><sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|10|8<sub>10</sub>}}
+| {{sort|13|8<sub>13</sub>}}
+| {{sort|16|8<sub>16</sub>}}
+| {{sort|17|8<sub>17</sub>}}
+| {{sort|19|8<sub>19</sub>}}
+| {{sort|18|12<sub>18</sub>}}
+| {{sort|18|<u>12</u><sub>18</sub>}}
+| {{sort|19|12<sub>19</sub>}}
+| {{sort|20|12<sub>20</sub>}}
+| {{sort|20|12<sub>20</sub>}}
+| {{sort|21|12<sub>21</sub>}}
+| {{sort|21|12<sub>21</sub>}}
+| {{sort|21|12<sub>21</sub>}}
+| {{sort|21|12<sub>21</sub>}}
+| {{sort|21|<u>12</u><sub>21</sub>}}
+| {{sort|21|12<sub>21</sub>}}
+| {{sort|21|16<sub>21</sub>}}
+|-
+! style=text-align:left | {{VFL San}}
+| {{sort|11|0<sub>11</sub>}}
+| bgcolor=CCFFCC | {{sort|10|4<sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|08|8<sub>8</sub>}}
+| {{sort|12|8<sub>12</sub>}}
+| {{sort|17|8<sub>17</sub>}}
+| {{sort|18|8<sub>18</sub>}}
+| {{sort|19|8<sub>19</sub>}}
+| {{sort|19|8<sub>19</sub>}}
+| {{sort|17|12<sub>17</sub>}}
+| {{sort|19|<u>12</u><sub>19</sub>}}
+| {{sort|20|12<sub>20</sub>}}
+| {{sort|18|16<sub>18</sub>}}
+| {{sort|18|16<sub>18</sub>}}
+| {{sort|19|16<sub>19</sub>}}
+| {{sort|19|<u>16</u><sub>19</sub>}}
+| {{sort|19|16<sub>19</sub>}}
+| {{sort|19|18<sub>19</sub>}}
+| {{sort|19|18<sub>19</sub>}}
+| {{sort|19|18<sub>19</sub>}}
+| {{sort|20|<u>18</u><sub>20</sub>}}
+| {{sort|20|18<sub>20</sub>}}
+|-
+! style=text-align:left | {{VFL Sou}}
+| {{sort|17|0<sub>17</sub>}}
+| {{sort|13|4<sub>13</sub>}}
+| bgcolor=CCFFCC | {{sort|06|8<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|10|8<sub>10</sub>}}
+| {{sort|13|<u>8</u><sub>13</sub>}}
+| bgcolor=CCFFCC | {{sort|09|12<sub>9</sub>}}
+| {{sort|13|12<sub>13</sub>}}
+| bgcolor=CCFFCC | {{sort|08|16<sub>8</sub>}}
+| bgcolor=CCFFCC | {{sort|07|20<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|09|<u>20</u><sub>9</sub>}}
+| {{sort|11|20<sub>11</sub>}}
+| {{sort|13|20<sub>13</sub>}}
+| {{sort|14|20<sub>14</sub>}}
+| {{sort|13|24<sub>13</sub>}}
+| {{sort|14|24<sub>14</sub>}}
+| {{sort|15|<u>24</u><sub>15</sub>}}
+| {{sort|15|26<sub>15</sub>}}
+| {{sort|13|30<sub>13</sub>}}
+| {{sort|13|34<sub>13</sub>}}
+| {{sort|13|34<sub>13</sub>}}
+| {{sort|13|38<sub>13</sub>}}
+|-
+! style=text-align:left | {{VFL StK}}
+| {{sort|16|0<sub>16</sub>}}
+| {{sort|20|0<sub>20</sub>}}
+| {{sort|21|0<sub>21</sub>}}
+| {{sort|17|4<sub>17</sub>}}
+| {{sort|21|4<sub>21</sub>}}
+| {{sort|20|4<sub>20</sub>}}
+| {{sort|18|8<sub>18</sub>}}
+| {{sort|15|12<sub>15</sub>}}
+| {{sort|16|<u>12</u><sub>16</sub>}}
+| {{sort|15|16<sub>15</sub>}}
+| {{sort|12|20<sub>12</sub>}}
+| {{sort|11|22<sub>11</sub>}}
+| bgcolor=CCFFCC | {{sort|09|26<sub>9</sub>}}
+| {{sort|12|<u>26</u><sub>12</sub>}}
+| {{sort|12|26<sub>12</sub>}}
+| {{sort|14|26<sub>14</sub>}}
+| {{sort|13|26<sub>13</sub>}}
+| {{sort|15|26<sub>15</sub>}}
+| {{sort|16|<u>26</u><sub>16</sub>}}
+| {{sort|15|30<sub>15</sub>}}
+| {{sort|15|30<sub>15</sub>}}
+|-
+! style=text-align:left | {{VFL Syd}}
+| {{sort|15|0<sub>15</sub>}}
+| bgcolor=FFCFCF | {{sort|22|<u>0</u><sub>22</sub>}}
+| {{sort|13|4<sub>13</sub>}}
+| bgcolor=CCFFCC | {{sort|09|8<sub>9</sub>}}
+| bgcolor=CCFFCC | {{sort|04|12<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|04|16<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|07|16<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|03|20<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|05|20<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|05|20<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|08|24<sub>8</sub>}}
+| bgcolor=CCFFCC | {{sort|05|24<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|10|<u>24</u><sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|06|28<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|05|32<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|06|34<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|04|38<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|03|42<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|04|42<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|04|<u>42</u><sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|07|42<sub>7</sub>}}
+|-
+! style=text-align:left | {{AFL Tas}}
+| bgcolor=CCFFCC | {{sort|07|4<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|03|8<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|02|12<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|03|<u>12</u><sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|03|12<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|03|16<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|03|18<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|07|18<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|08|<u>18</u><sub>8</sub>}}
+| {{sort|12|18<sub>12</sub>}}
+| bgcolor=CCFFCC | {{sort|07|22<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|04|26<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|04|30<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|05|30<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|07|30<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|07|34<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|08|34<sub>8</sub>}}
+| bgcolor=CCFFCC | {{sort|10|<u>34</u><sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|06|38<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|05|42<sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|04|46<sub>4</sub>}}
+|-
+! style=text-align:left | {{VFL Wer}}
+| bgcolor=CCFFCC | {{sort|06|4<sub>6</sub>}}
+| {{sort|11|4<sub>11</sub>}}
+| {{sort|16|4<sub>16</sub>}}
+| {{sort|11|8<sub>11</sub>}}
+| bgcolor=CCFFCC | {{sort|08|12<sub>8</sub>}}
+| {{sort|11|12<sub>11</sub>}}
+| bgcolor=CCFFCC | {{sort|08|14<sub>8</sub>}}
+| {{sort|11|<u>14</u><sub>11</sub>}}
+| bgcolor=CCFFCC | {{sort|09|18<sub>9</sub>}}
+| bgcolor=CCFFCC | {{sort|04|22<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|03|26<sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|02|30<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|03|<u>30</u><sub>3</sub>}}
+| bgcolor=CCFFCC | {{sort|02|34<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|02|38<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|02|42<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|02|46<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|02|<u>46</u><sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|02|50<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|02|50<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|02|54<sub>2</sub>}}
+|-
+! style=text-align:left | {{VFL Wil}}
+| bgcolor=CCFFCC | {{sort|09|4<sub>9</sub>}}
+| bgcolor=CCFFCC | {{sort|04|8<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|07|<u>8</u><sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|04|12<sub>4</sub>}}
+| bgcolor=CCFFCC | {{sort|07|12<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|06|16<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|02|20<sub>2</sub>}}
+| bgcolor=CCFFCC | {{sort|05|<u>20</u><sub>5</sub>}}
+| bgcolor=CCFFCC | {{sort|06|20<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|07|20<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|10|20<sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|07|24<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|06|28<sub>6</sub>}}
+| bgcolor=CCFFCC | {{sort|07|28<sub>7</sub>}}
+| bgcolor=CCFFCC | {{sort|09|28<sub>9</sub>}}
+| bgcolor=CCFFCC | {{sort|10|30<sub>10</sub>}}
+| bgcolor=CCFFCC | {{sort|09|34<sub>9</sub>}}
+| {{sort|11|<u>34</u><sub>11</sub>}}
+| bgcolor=CCFFCC | {{sort|07|38<sub>7</sub>}}
+| {{sort|11|38<sub>11</sub>}}
+| bgcolor=CCFFCC | {{sort|08|42<sub>8</sub>}}
+|}</div>
+
+==Finals series==
+===Wildcard finals===
+{{AFLGameHeader|title=Wildcard finals{{anchor|Finals week 1}}}}
+{{AFLGame|Saturday, 22 August (11:05am)|[[Sydney Swans|Sydney]]|22.14 (146)|H|[[Frankston Football Club|Frankston]]|11.12 (78)|[[Blacktown ISP Oval]]||[https://www.afl.com.au/vfl/matches/9031 Report]}}
+{{AFLGame|Saturday, 22 August (11:05am)|[[Williamstown Football Club|Williamstown]]|19.7 (121)|H|[[Carlton Football Club|Carlton]]|12.11 (83)|[[Williamstown Cricket Ground|DSV Stadium]]||[https://www.afl.com.au/vfl/matches/9032 Report]}}
+{{AFLGameFooter|notes=}}
+
+===Qualifying finals and elimination finals===
+{{AFLGameHeader|title=Qualifying finals{{anchor|Finals week 2}}}}
+{{AFLGame|Saturday, 29 August (12:05pm)|[[Geelong Football Club|Geelong]]|13.11 (89)|H|[[Tasmania Football Club|Tasmania]]|9.12 (66)|[[Kardinia Park (stadium)|GMHBA Stadium]]||[https://www.afl.com.au/vfl/matches/9035 Report]}}
+{{AFLGame|Saturday, 29 August (2:05pm)|[[Werribee Football Club|Werribee]]|15.6 (96)|A|[[Box Hill Hawks|Box Hill]]|16.13 (109)|[[Chirnside Park (stadium)|Avalon Airport Oval]]||[https://www.afl.com.au/vfl/matches/9038 Report]}}
+{{AFLGameFooter}}
+{{AFLGameHeader|title=Elimination finals}}
+{{AFLGame|Saturday, 29 August (12:05pm)|[[Essendon Football Club|Essendon]]|14.12 (96)|H|[[Williamstown Football Club|Williamstown]]|7.9 (51)|[[Windy Hill, Essendon|Windy Hill]]||[https://www.afl.com.au/vfl/matches/9036 Report]}}
+{{AFLGame|Saturday, 29 August (12:35pm)|[[Port Melbourne Football Club|Port Melbourne]]|17.14 (116)|H|[[Sydney Swans|Sydney]]|9.7 (61)|[[North Port Oval|ETU Stadium]]||[https://www.afl.com.au/vfl/matches/9037 Report]}}
+{{AFLGameFooter}}
+
+===Semi-finals===
+{{AFLGameHeader|title=Semi-finals{{anchor|Finals week 3}}}}
+{{AFLGame|Saturday, 5 September (11:05am)|[[Tasmania Football Club|Tasmania]]|10.14 (74)|A|[[Essendon Football Club|Essendon]]|15.11 (101)|[[North Hobart Oval]]|8,012<ref name="pulse5sep2026">{{cite web |title=Tasmania Devils' first VFL season ends with semi-final loss |url=https://pulsetasmania.com.au/news/tasmania-devils-first-vfl-season-ends-with-semi-final-loss/ |publisher=Pulse Tasmania |access-date=27 October 2026 |archive-url=https://web.archive.org/web/20260905162225/https://pulsetasmania.com.au/news/tasmania-devils-first-vfl-season-ends-with-semi-final-loss/ |archive-date=5 September 2026 |date=5 September 2026}}</ref>|[https://www.afl.com.au/vfl/matches/9052 Report]}}
+{{AFLGame|Saturday, 5 September (12:05pm)|[[Werribee Football Club|Werribee]]|9.15 (69)|A|[[Port Melbourne Football Club|Port Melbourne]]|12.13 (85)|[[Chirnside Park (stadium)|Avalon Airport Oval]]||[https://www.afl.com.au/vfl/matches/9051 Report]}}
+{{AFLGameFooter|notes=}}
+
+===Preliminary finals===
+{{AFLGameHeader|title=Preliminary finals{{anchor|Finals week 4}}}}
+{{AFLGame|Saturday, 12 September (11:05am)|[[Box Hill Football Club|Box Hill]]|13.17 (95)|H|[[Essendon Football Club|Essendon]]|13.10 (88)|[[Box Hill City Oval]]||[https://www.afl.com.au/vfl/matches/9062 Report]}}
+{{AFLGame|Sunday, 13 September (1:35pm)|[[Geelong Football Club|Geelong]]|14.12 (96)|H|[[Port Melbourne Football Club|Port Melbourne]]|6.13 (49)|[[Kardinia Park (stadium)|GMHBA Stadium]]||[https://www.afl.com.au/vfl/matches/9063 Report]}}
+{{AFLGameFooter}}
+
+===Grand Final===
+{{AFLGameDetailed
+|title = 2026 VFL Grand Final{{anchor|Finals week 5}}
+|date = Sunday, 20 September (2:05pm)
+|home team = {{VFL Gee}} 
+|home Q1 = 2.1 (13)
+|home Q2 = 3.4 (22)
+|home Q3 = 3.7 (25)
+|home final = 5.9 (39)
+|winner = A
+|away team = {{VFL Box}}
+|away Q1 = 3.1 (19)
+|away Q2 = 6.5 (41)
+|away Q3 = 8.8 (56)
+|away final = 8.14 (62)
+|venue = [[Princes Park (stadium)|Ikon Park]]
+|crowd = 12,941
+|report = <ref>{{cite web|url=https://www.afl.com.au/news/1617372/mighty-fighting-hawks-prey-on-cats-in-premiership-decider|title=Mighty, fighting Hawks prey on Cats in premiership decider|work=afl.com.au|date=20 September 2026}}</ref><ref>{{cite web|url=https://www.foxsports.com.au/afl/afl-2026-box-hill-hawks-def-geelong-in-vfl-grand-final-norm-goss-medal-winner-fremantle-affiliate-peel-thunder-in-wafl-grand-final-sanfl-grand-final/news-story/5badb21d578a1dfd74b1664eaad9d4cd|title=Hawks premiers after Cats VFL boilover; Freo star pushes case in WAFL — State League GF wrap
+|work=foxsports.com.au|date=20 September 2026|author=Max Laughton}}</ref><ref>{{cite web|url=https://www.afl.com.au/vfl/matches/9068#timeline|work=afl.com.au|date=20 September 2026|title=Scorecard: Geelong Cats v Box Hill Hawks}}</ref>
+|umpires = 
+|BOG award = [[Norm Goss Memorial Medal]]
+|BOG winner = [[Ollie Greeves]] (Box Hill)
+|home goals = [[George Stevens (Australian footballer)|Stevens]], Molier, [[Jack Bowes|Bowes]], [[Jed Bews|Bews]], Ballantyne
+|away goals = [[Calsher Dear|Dear]] 2<br>[[Aidan Schubert|Schubert]], [[Ned Reeves|Reeves]], Preston, [[Cam Nairn|Nairn]], [[Brodie McLaughlin|McLaughlin]], [[Will McCabe|McCabe]] 
+|home best = 
+|away best = 
+|home injuries = 
+|away injuries = 
+|home reports = 
+|away reports = 
+|anthem = 
+|broadcast = [[ABC Sport|ABC]]
+|notes =
+}}
+
+====Teams====
+{| width=92% |
+|-
+| valign="top" |{{Aussie rules team|title=[[File:Geelong Football Club Colours.svg|15px]] {{VFL Gee}}<ref name="GFteams">{{cite web |title=TEAMS: Smithy’s VFL Grand Final |url=https://www.afl.com.au/news/1613383/teams-smithys-vfl-grand-final |website=afl.com.au |access-date=21 September 2026}}</ref>|backpocket1=31. [[Keighton Matofai-Forbes]] |fullback=69. [[Nathan Kreuger]]|backpocket2=23. [[Lennox Hofmann]]|halfbackflank1=27. [[Nick Driscoll]]|centrehalfback=41. [[Cillian Burke]]|halfbackflank2=24. [[Jed Bews]]|wing1=12. [[Jack Bowes]]|centre=15. [[George Stevens (Australian footballer)|George Stevens]]|wing2=22. [[Hunter Holmes]]|halfforwardflank1=50. Daniel Capiron ([[Captain (Australian rules football)|c]])|centrehalfforward=20. [[Jacob Molier]]|halfforwardflank2=25. [[Jesse Mellor]]|forwardpocket1=57. Jamieson Ballantyne|fullforward=2. [[Jay Polkinghorne]]|forwardpocket2=55. Jay Rantall|ruck=37. [[Joe Pike (footballer)|Joe Pike]]|ruckrover=10. [[Mitch Knevitt]]|rover=13. [[Jhye Clark]]|interchange1=74. Patrick Kelly|interchange2=76. Lachlan Weidemann|interchange3=78. Zach Stevens|interchange4=81. Tom Peirce|interchange5=84. Charley Green|interchange6=|coach=Mark Corrigan}}
+| valign="top" |{{Aussie rules team | title = [[File:Hawthorn Football Club Colours.svg|15px]] {{VFL Box}}<ref name="GFteams"/>
+| backpocket1 = 26. [[Bodie Ryan]]
+| fullback = 36. [[James Blanck]]
+| backpocket2 = 14. [[Jack Scrimshaw]]
+| halfbackflank1 = 31. [[Matt LeRay]]
+| centrehalfback = 21. [[Noah Mraz]]
+| halfbackflank2 = 62. Stu Horner ([[Captain (Australian rules football)|c]])
+| wing1 = 34. [[Jack Dalton (footballer, born 2007)|Jack Dalton]]
+| centre = 44. [[Henry Hustwaite]]
+| wing2 = 39. [[Flynn Perez]]
+| halfforwardflank1 = 22. [[Cam Nairn|Cameron Nairn]]
+| centrehalfforward = 13. [[Calsher Dear]]
+| halfforwardflank2 = 38. [[Max Ramsden]]
+| forwardpocket1 = 20. [[Finn Maginness]]
+| fullforward = 29. [[Aidan Schubert]]
+| forwardpocket2 = 27. [[Will McCabe]]
+| ruck = 7. [[Ned Reeves]]
+| ruckrover = 41. [[Matt Hill (Australian footballer)|Matt Hill]] 
+| rover = 35. [[Ollie Greeves|Oliver Greeves]]
+| interchange1 = 76. Tom Farrer
+| interchange2 = 50. [[Brodie McLaughlin]]
+| interchange3 = 32. [[Cody Anderson (footballer)|Cody Anderson]]
+| interchange4 = 73. Corey Preston
+| interchange5 = 58. [[Trent Bianco]]
+| interchange6 = 
+| coach = [[David Mirra]]
+}}
+|}
+
+==Win–loss table==
+Home matches are indicated in '''bold'''.
+{| class=wikitable style=font-size:77.5%
+| style="background:#CCFFCC; width:1em" align=center | + || style=width:5em | Win || style="background:#C0C0C0; width:1em" |  || Eliminated
+|-
+| style="background:#FFCFCF; width:1em" align=center | − || style=width:5em | Loss || align=center | X || Bye
+|-
+| style="background:#CCCCFF; width:1em" |  || style=width:5em | Draw
+|}
+<div class="overflowbugx" style="overflow:auto; width:auto">
+{| class="wikitable sortable" style="font-size:77.5%; text-align:center"
+! rowspan=2 | Team !! colspan=21 | Home-and-away season !! colspan=5 | Finals series
+|-
+! 1 !! 2 !! 3 !! 4 !! 5 !! 6 !! 7 !! 8 !! 9 !! 10 !! 11 !! 12 !! 13 !! 14 !! 15 !! 16 !! 17 !! 18 !! 19 !! 20 !! 21 !! FW1 !! FW2 !! FW3 !! FW4 !! GF
+|-
+! style=text-align:left | {{VFL Box}}
+| bgcolor=CCFFCC | '''{{sort|07|SYD<br>+36}}'''
+| bgcolor=FFCFCF | {{sort|01|GEE<br>-47}}
+| bgcolor=FFCFCF | {{sort|19|CAS<br>-4}}
+| bgcolor=CCFFCC | {{sort|06|PM<br>+73}}
+| bgcolor=CCFFCC | {{sort|20|SAN<br>+20}}
+| bgcolor=CCFFCC | '''{{sort|16|COL<br>+9}}'''
+| X
+| bgcolor=CCFFCC | '''{{sort|21|RIC<br>+1}}'''
+| bgcolor=CCFFCC | {{sort|08|WIL<br>+5}}
+| bgcolor=FFCFCF | {{sort|15|STK<br>-34}}
+| bgcolor=CCFFCC | '''{{sort|14|FOO<br>+8}}'''
+| X
+| bgcolor=CCFFCC | {{sort|22|GCS<br>+97}}
+| bgcolor=FFCFCF | '''{{sort|12|GWS<br>-12}}'''
+| bgcolor=CCFFCC | {{sort|04|TAS<br>+5}}
+| bgcolor=FFCFCF | '''{{sort|09|CAR<br>-23}}'''
+| bgcolor=CCFFCC | {{sort|21|RIC<br>+12}}
+| bgcolor=FFCFCF | '''{{sort|05|ESS<br>-25}}'''
+| bgcolor=CCFFCC | '''{{sort|17|NM<br>+31}}'''
+| X
+| bgcolor=CCFFCC | '''{{sort|19|CAS<br>+57}}'''
+| X
+| bgcolor=CCFFCC | {{sort|02|WER<br>+13}}
+| X
+| bgcolor=CCFFCC | '''{{sort|05|ESS<br>+7}}'''
+| bgcolor=CCFFCC | {{sort|01|GEE<br>+23}}
+|-
+! style=text-align:left | {{VFL Bri}}
+| X
+| bgcolor=FFCFCF | '''{{sort|13|SOU<br>-21}}'''
+| bgcolor=FFCFCF | '''{{sort|20|SAN<br>-7}}'''
+| bgcolor=CCFFCC | {{sort|19|CAS<br>+38}}
+| bgcolor=FFCFCF | '''{{sort|06|PM<br>-45}}'''
+| bgcolor=FFCFCF | {{sort|11|COB<br>-65}}
+| X
+| bgcolor=FFCFCF | '''{{sort|01|GEE<br>-66}}'''
+| bgcolor=FFCFCF | {{sort|12|GWS<br>-30}}
+| bgcolor=FFCFCF | '''{{sort|10|FRA<br>-27}}'''
+| bgcolor=FFCFCF | {{sort|22|GCS<br>-17}}
+| bgcolor=FFCFCF | {{sort|02|WER<br>-26}}
+| X
+| bgcolor=CCFFCC | '''{{sort|04|TAS<br>+61}}'''
+| bgcolor=CCFFCC | {{sort|16|COL<br>+21}}
+| bgcolor=FFCFCF | '''{{sort|05|ESS<br>-30}}'''
+| bgcolor=FFCFCF | {{sort|07|SYD<br>-16}}
+| bgcolor=CCFFCC | '''{{sort|17|NM<br>+13}}'''
+| bgcolor=FFCFCF | {{sort|09|CAR<br>-60}}
+| bgcolor=CCFFCC | {{sort|13|SOU<br>+98}}
+| bgcolor=CCFFCC | '''{{sort|22|GCS<br>+103}}'''
+| 
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL Car}}
+| X
+| bgcolor=FFCFCF | '''{{sort|08|WIL<br>-5}}'''
+| bgcolor=FFCFCF | {{sort|17|NM<br>-11}}
+| bgcolor=CCFFCC | '''{{sort|16|COL<br>+31}}'''
+| bgcolor=CCFFCC | {{sort|04|TAS<br>+25}}
+| bgcolor=CCFFCC | '''{{sort|15|STK<br>+5}}'''
+| bgcolor=CCFFCC | {{sort|19|CAS<br>+122}}
+| bgcolor=CCFFCC | '''{{sort|14|FOO<br>+20}}'''
+| bgcolor=FFCFCF | {{sort|11|COB<br>-36}}
+| bgcolor=FFCFCF | '''{{sort|01|GEE<br>-50}}'''
+| bgcolor=FFCFCF | {{sort|05|ESS<br>-8}}
+| X
+| bgcolor=FFCFCF | {{sort|12|GWS<br>-69}}
+| bgcolor=FFCFCF | '''{{sort|02|WER<br>-7}}'''
+| bgcolor=CCFFCC | {{sort|21|RIC<br>+35}}
+| bgcolor=CCFFCC | {{sort|03|BOX<br>+23}}
+| X
+| bgcolor=CCFFCC | '''{{sort|22|GCS<br>+18}}'''
+| bgcolor=CCFFCC | '''{{sort|18|BRI<br>+60}}'''
+| bgcolor=FFCFCF | {{sort|15|STK<br>-7}}
+| bgcolor=CCFFCC | {{sort|14|FOO<br>+31}}
+| bgcolor=FFCFCF | {{sort|08|WIL<br>-38}}
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL Cas}}
+| bgcolor=FFCFCF | {{sort|14|FOO<br>-43}}
+| X
+| bgcolor=CCFFCC | '''{{sort|03|BOX<br>+4}}'''
+| bgcolor=FFCFCF | '''{{sort|18|BRI<br>-38}}'''
+| bgcolor=CCFFCC | '''{{sort|21|RIC<br>+27}}'''
+| bgcolor=FFCFCF | {{sort|07|SYD<br>-17}}
+| bgcolor=FFCFCF | '''{{sort|09|CAR<br>-122}}'''
+| bgcolor=FFCFCF | {{sort|15|STK<br>-48}}
+| bgcolor=CCFFCC | '''{{sort|14|FOO<br>+35}}'''
+| bgcolor=CCFFCC | '''{{sort|12|GWS<br>+14}}'''
+| bgcolor=FFCFCF | {{sort|16|COL<br>-12}}
+| bgcolor=CCFFCC | '''{{sort|05|ESS<br>+32}}'''
+| bgcolor=FFCFCF | {{sort|08|WIL<br>-37}}
+| X
+| bgcolor=FFCFCF | '''{{sort|06|PM<br>-18}}'''
+| bgcolor=FFCFCF | {{sort|11|COB<br>-43}}
+| bgcolor=CCFFCC | {{sort|17|NM<br>+31}}
+| bgcolor=FFCFCF | '''{{sort|01|GEE<br>-53}}'''
+| bgcolor=FFCFCF | {{sort|22|GCS<br>-9}}
+| X
+| bgcolor=FFCFCF | {{sort|03|BOX<br>-57}}
+| 
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL Cob}}
+| bgcolor=FFCFCF | {{sort|04|TAS<br>-17}}
+| bgcolor=CCFFCC | {{sort|21|RIC<br>+23}}
+| bgcolor=FFCFCF | '''{{sort|16|COL<br>-45}}'''
+| bgcolor=FFCFCF | '''{{sort|15|STK<br>-29}}'''
+| bgcolor=FFCFCF | {{sort|10|FRA<br>-33}}
+| bgcolor=CCFFCC | '''{{sort|18|BRI<br>+65}}'''
+| bgcolor=CCFFCC | {{sort|13|SOU<br>+43}}
+| X
+| bgcolor=CCFFCC | '''{{sort|09|CAR<br>+36}}'''
+| bgcolor=CCFFCC | '''{{sort|08|WIL<br>+18}}'''
+| bgcolor=FFCFCF | {{sort|02|WER<br>-59}}
+| bgcolor=CCFFCC | '''{{sort|10|FRA<br>+15}}'''
+| bgcolor=CCFFCC | '''{{sort|06|PM<br>+17}}'''
+| X
+| bgcolor=FFCFCF | {{sort|12|GWS<br>-2}}
+| bgcolor=CCFFCC | '''{{sort|19|CAS<br>+43}}'''
+| bgcolor=FFCFCF | {{sort|05|ESS<br>-53}}
+| bgcolor=CCFFCC | '''{{sort|20|SAN<br>+14}}'''
+| X
+| bgcolor=CCFFCC | {{sort|08|WIL<br>+15}}
+| bgcolor=FFCFCF | '''{{sort|13|SOU<br>-6}}'''
+| 
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL Col}}
+| X
+| bgcolor=FFCFCF | '''{{sort|12|GWS<br>-16}}'''
+| bgcolor=CCFFCC | {{sort|11|COB<br>+45}}
+| bgcolor=FFCFCF | {{sort|09|CAR<br>-31}}
+| bgcolor=CCFFCC | '''{{sort|05|ESS<br>+11}}'''
+| bgcolor=FFCFCF | {{sort|03|BOX<br>-9}}
+| bgcolor=FFCFCF | '''{{sort|01|GEE<br>-61}}'''
+| bgcolor=FFCFCF | {{sort|07|SYD<br>-52}}
+| bgcolor=FFCFCF | {{sort|02|WER<br>-31}}
+| bgcolor=FFCFCF | {{sort|14|FOO<br>-20}}
+| bgcolor=CCFFCC | '''{{sort|19|CAS<br>+12}}'''
+| X
+| bgcolor=FFCFCF | {{sort|10|FRA<br>-1}}
+| bgcolor=CCFFCC | '''{{sort|21|RIC<br>+70}}'''
+| bgcolor=FFCFCF | '''{{sort|18|BRI<br>-21}}'''
+| bgcolor=CCFFCC | '''{{sort|17|NM<br>+43}}'''
+| X
+| bgcolor=CCFFCC | '''{{sort|15|STK<br>+10}}'''
+| bgcolor=CCFFCC | {{sort|01|GEE<br>+28}}
+| bgcolor=FFCFCF | {{sort|05|ESS<br>-1}}
+| bgcolor=FFCFCF | {{sort|06|PM<br>-26}}
+| 
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL Ess}}
+| bgcolor=FFCFCF | {{sort|01|GEE<br>-85}}
+| bgcolor=CCFFCC | '''{{sort|17|NM<br>+19}}'''
+| bgcolor=FFCFCF | {{sort|14|FOO<br>-47}}
+| bgcolor=CCFFCC | {{sort|22|GCS<br>+6}}
+| bgcolor=FFCFCF | {{sort|16|COL<br>-11}}
+| bgcolor=FFCFCF | '''{{sort|08|WIL<br>-13}}'''
+| bgcolor=CCFFCC | {{sort|12|GWS<br>+51}}
+| X
+| bgcolor=CCFFCC | {{sort|21|RIC<br>+18}}
+| bgcolor=FFCFCF | '''{{sort|02|WER<br>-60}}'''
+| bgcolor=CCFFCC | '''{{sort|09|CAR<br>+8}}'''
+| bgcolor=FFCFCF | {{sort|19|CAS<br>-32}}
+| X
+| bgcolor=FFCFCF | {{sort|17|NM<br>-3}}
+| bgcolor=CCFFCC | '''{{sort|15|STK<br>+25}}'''
+| bgcolor=CCFFCC | {{sort|18|BRI<br>+30}}
+| bgcolor=CCFFCC | '''{{sort|11|COB<br>+53}}'''
+| bgcolor=CCFFCC | {{sort|03|BOX<br>+25}}
+| X
+| bgcolor=CCFFCC | '''{{sort|16|COL<br>+1}}'''
+| bgcolor=CCFFCC | '''{{sort|07|SYD<br>+27}}'''
+| X
+| bgcolor=CCFFCC | '''{{sort|08|WIL<br>+45}}'''
+| bgcolor=CCFFCC | {{sort|04|TAS<br>+27}}
+| bgcolor=FFCFCF | {{sort|03|BOX<br>-7}}
+| 
+|-
+! style=text-align:left | {{VFL Foo}}
+| bgcolor=CCFFCC | '''{{sort|19|CAS<br>+43}}'''
+| X
+| bgcolor=CCFFCC | '''{{sort|05|ESS<br>+47}}'''
+| bgcolor=CCFFCC | {{sort|01|GEE<br>+33}}
+| bgcolor=FFCFCF | '''{{sort|07|SYD<br>-59}}'''
+| bgcolor=FFCFCF | {{sort|13|SOU<br>-10}}
+| X
+| bgcolor=FFCFCF | {{sort|09|CAR<br>-20}}
+| bgcolor=FFCFCF | {{sort|19|CAS<br>-35}}
+| bgcolor=CCFFCC | '''{{sort|16|COL<br>+20}}'''
+| bgcolor=FFCFCF | {{sort|03|BOX<br>-8}}
+| bgcolor=FFCFCF | '''{{sort|20|SAN<br>-11}}'''
+| bgcolor=FFCFCF | {{sort|15|STK<br>-37}}
+| X
+| bgcolor=CCFFCC | {{sort|08|WIL<br>+41}}
+| bgcolor=FFCFCF | '''{{sort|10|FRA<br>-13}}'''
+| bgcolor=CCFFCC | {{sort|22|GCS<br>+28}}
+| bgcolor=CCFFCC | '''{{sort|21|RIC<br>+74}}'''
+| bgcolor=FFCFCF | {{sort|02|WER<br>-20}}
+| bgcolor=CCFFCC | {{sort|17|NM<br>+46}}
+| bgcolor=FFCFCF | '''{{sort|09|CAR<br>-31}}'''
+| 
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL Fra}}
+| bgcolor=FFCFCF | '''{{sort|08|WIL<br>-2}}'''
+| bgcolor=CCFFCC | '''{{sort|15|STK<br>+8}}'''
+| bgcolor=FFCFCF | '''{{sort|04|TAS<br>-78}}'''
+| bgcolor=FFCFCF | {{sort|02|WER<br>-22}}
+| bgcolor=CCFFCC | '''{{sort|11|COB<br>+33}}'''
+| bgcolor=CCFFCC | {{sort|21|RIC<br>+12}}
+| X
+| bgcolor=CCFFCC | {{sort|22|GCS<br>+39}}
+| bgcolor=FFCFCF | '''{{sort|20|SAN<br>-8}}'''
+| bgcolor=CCFFCC | {{sort|18|BRI<br>+27}}
+| bgcolor=CCFFCC | '''{{sort|13|SOU<br>+49}}'''
+| bgcolor=FFCFCF | {{sort|11|COB<br>-15}}
+| bgcolor=CCFFCC | '''{{sort|16|COL<br>+1}}'''
+| X
+| bgcolor=FFCFCF | '''{{sort|01|GEE<br>-52}}'''
+| bgcolor=CCFFCC | {{sort|14|FOO<br>+13}}
+| bgcolor=CCFFCC | '''{{sort|12|GWS<br>+64}}'''
+| bgcolor=FFCFCF | {{sort|13|SOU<br>-7}}
+| bgcolor=CCFFCC | '''{{sort|06|PM<br>+30}}'''
+| X
+| bgcolor=FFCFCF | {{sort|08|WIL<br>-42}}
+| bgcolor=FFCFCF | {{sort|07|SYD<br>-68}}
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL Gee}}
+| bgcolor=CCFFCC | '''{{sort|05|ESS<br>+85}}'''
+| bgcolor=CCFFCC | '''{{sort|03|BOX<br>+47}}'''
+| bgcolor=CCFFCC | {{sort|02|WER<br>+44}}
+| bgcolor=FFCFCF | '''{{sort|14|FOO<br>-33}}'''
+| X
+| bgcolor=CCFFCC | '''{{sort|17|NM<br>+13}}'''
+| bgcolor=CCFFCC | {{sort|16|COL<br>+61}}
+| bgcolor=CCFFCC | {{sort|18|BRI<br>+66}}
+| bgcolor=CCFFCC | '''{{sort|07|SYD<br>+14}}'''
+| bgcolor=CCFFCC | {{sort|09|CAR<br>+50}}
+| bgcolor=CCFFCC | {{sort|20|SAN<br>+58}}
+| bgcolor=CCFFCC | '''{{sort|22|GCS<br>+113}}'''
+| bgcolor=CCFFCC | {{sort|13|SOU<br>+47}}
+| X
+| bgcolor=CCFFCC | {{sort|10|FRA<br>+52}}
+| bgcolor=CCFFCC | '''{{sort|21|RIC<br>+82}}'''
+| bgcolor=CCFFCC | {{sort|15|STK<br>+26}}
+| bgcolor=CCFFCC | {{sort|19|CAS<br>+53}}
+| bgcolor=FFCFCF | '''{{sort|16|COL<br>-28}}'''
+| X
+| bgcolor=CCFFCC | {{sort|17|NM<br>+34}}
+| X
+| bgcolor=CCFFCC | '''{{sort|04|TAS<br>+23}}'''
+| X
+| bgcolor=CCFFCC | '''{{sort|06|PM<br>+47}}'''
+| bgcolor=FFCFCF | {{sort|03|BOX<br>-23}}
+|-
+! style=text-align:left | {{VFL GC}}
+| bgcolor=FFCFCF | '''{{sort|02|WER<br>-15}}'''
+| X
+| bgcolor=FFCFCF | {{sort|13|SOU<br>-76}}
+| bgcolor=FFCFCF | '''{{sort|05|ESS<br>-6}}'''
+| bgcolor=CCFFCC | {{sort|15|STK<br>+35}}
+| bgcolor=FFCFCF | '''{{sort|12|GWS<br>-56}}'''
+| X
+| bgcolor=FFCFCF | '''{{sort|10|FRA<br>-39}}'''
+| bgcolor=FFCFCF | {{sort|17|NM<br>-13}}
+| X
+| bgcolor=CCFFCC | '''{{sort|18|BRI<br>+17}}'''
+| bgcolor=FFCFCF | {{sort|01|GEE<br>-113}}
+| bgcolor=FFCFCF | '''{{sort|03|BOX<br>-97}}'''
+| bgcolor=FFCFCF | {{sort|06|PM<br>-6}}
+| bgcolor=FFCFCF | '''{{sort|07|SYD<br>-40}}'''
+| bgcolor=FFCFCF | {{sort|04|TAS<br>-50}}
+| bgcolor=FFCFCF | '''{{sort|14|FOO<br>-28}}'''
+| bgcolor=FFCFCF | {{sort|09|CAR<br>-18}}
+| bgcolor=CCFFCC | '''{{sort|19|CAS<br>+9}}'''
+| bgcolor=FFCFCF | {{sort|12|GWS<br>-13}}
+| bgcolor=FFCFCF | {{sort|18|BRI<br>-103}}
+| 
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL GWS}}
+| bgcolor=CCFFCC | '''{{sort|15|STK<br>+44}}'''
+| bgcolor=CCFFCC | {{sort|16|COL<br>+16}}
+| X
+| bgcolor=FFCFCF | {{sort|07|SYD<br>-22}}
+| bgcolor=CCFFCC | '''{{sort|17|NM<br>+63}}'''
+| bgcolor=CCFFCC | {{sort|22|GCS<br>+56}}
+| bgcolor=FFCFCF | '''{{sort|05|ESS<br>-51}}'''
+| bgcolor=CCFFCC | {{sort|20|SAN<br>+3}}
+| bgcolor=CCFFCC | '''{{sort|18|BRI<br>+30}}'''
+| bgcolor=FFCFCF | {{sort|19|CAS<br>-14}}
+| X
+| bgcolor=FFCFCF | {{sort|08|WIL<br>-10}}
+| bgcolor=CCFFCC | '''{{sort|09|CAR<br>+69}}'''
+| bgcolor=CCFFCC | {{sort|03|BOX<br>+12}}
+| bgcolor=CCFFCC | '''{{sort|11|COB<br>+2}}'''
+| X
+| bgcolor=FFCFCF | {{sort|10|FRA<br>-64}}
+| bgcolor=FFCFCF | '''{{sort|07|SYD<br>-78}}'''
+| bgcolor=FFCFCF | {{sort|13|SOU<br>-41}}
+| bgcolor=CCFFCC | '''{{sort|22|GCS<br>+13}}'''
+| bgcolor=FFCFCF | '''{{sort|04|TAS<br>-39}}'''
+| 
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL NM}}
+| X
+| bgcolor=FFCFCF | {{sort|05|ESS<br>-19}}
+| bgcolor=CCFFCC | '''{{sort|09|CAR<br>+11}}'''
+| bgcolor=CCFFCC | {{sort|20|SAN<br>+80}}
+| bgcolor=FFCFCF | {{sort|12|GWS<br>-63}}
+| bgcolor=FFCFCF | {{sort|01|GEE<br>-13}}
+| bgcolor=CCFFCC | '''{{sort|07|SYD<br>+12}}'''
+| bgcolor=FFCFCF | {{sort|06|PM<br>-13}}
+| bgcolor=CCFFCC | '''{{sort|22|GCS<br>+13}}'''
+| X
+| bgcolor=FFCFCF | {{sort|04|TAS<br>-14}}
+| bgcolor=CCCCFF | '''{{sort|15|STK<br>0}}'''
+| bgcolor=CCFFCC | {{sort|21|RIC<br>+63}}
+| bgcolor=CCFFCC | '''{{sort|05|ESS<br>+3}}'''
+| X
+| bgcolor=FFCFCF | {{sort|16|COL<br>-43}}
+| bgcolor=FFCFCF | '''{{sort|19|CAS<br>-31}}'''
+| bgcolor=FFCFCF | {{sort|18|BRI<br>-13}}
+| bgcolor=FFCFCF | {{sort|03|BOX<br>-31}}
+| bgcolor=FFCFCF | '''{{sort|14|FOO<br>-46}}'''
+| bgcolor=FFCFCF | '''{{sort|01|GEE<br>-34}}'''
+| 
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL PM}}
+| bgcolor=CCFFCC | {{sort|20|SAN<br>+14}}
+| bgcolor=FFCFCF | {{sort|04|TAS<br>-8}}
+| bgcolor=FFCFCF | '''{{sort|07|SYD<br>-21}}'''
+| bgcolor=FFCFCF | '''{{sort|03|BOX<br>-73}}'''
+| bgcolor=CCFFCC | {{sort|18|BRI<br>+45}}
+| bgcolor=CCFFCC | '''{{sort|02|WER<br>+26}}'''
+| X
+| bgcolor=CCFFCC | '''{{sort|17|NM<br>+13}}'''
+| bgcolor=FFCFCF | {{sort|13|SOU<br>-32}}
+| bgcolor=CCFFCC | '''{{sort|04|TAS<br>+4}}'''
+| bgcolor=CCFFCC | '''{{sort|08|WIL<br>+1}}'''
+| X
+| bgcolor=FFCFCF | {{sort|11|COB<br>-17}}
+| bgcolor=CCFFCC | '''{{sort|22|GCS<br>+6}}'''
+| bgcolor=CCFFCC | {{sort|19|CAS<br>+18}}
+| bgcolor=CCFFCC | '''{{sort|20|SAN<br>+11}}'''
+| bgcolor=FFCFCF | {{sort|02|WER<br>-38}}
+| X
+| bgcolor=FFCFCF | {{sort|10|FRA<br>-30}}
+| bgcolor=CCFFCC | '''{{sort|21|RIC<br>+14}}'''
+| bgcolor=CCFFCC | '''{{sort|16|COL<br>+26}}'''
+| X
+| bgcolor=CCFFCC | '''{{sort|07|SYD<br>+55}}'''
+| bgcolor=CCFFCC | {{sort|02|WER<br>+16}}
+| bgcolor=FFCFCF | {{sort|01|GEE<br>-47}}
+| 
+|-
+! style=text-align:left | {{VFL Ric}}
+| bgcolor=CCFFCC | '''{{sort|13|SOU<br>+40}}'''
+| bgcolor=FFCFCF | '''{{sort|11|COB<br>-23}}'''
+| bgcolor=CCFFCC | {{sort|15|STK<br>+33}}
+| X
+| bgcolor=FFCFCF | {{sort|19|CAS<br>-27}}
+| bgcolor=FFCFCF | '''{{sort|10|FRA<br>-12}}'''
+| bgcolor=FFCFCF | {{sort|08|WIL<br>-37}}
+| bgcolor=FFCFCF | {{sort|03|BOX<br>-1}}
+| bgcolor=FFCFCF | '''{{sort|05|ESS<br>-18}}'''
+| bgcolor=CCFFCC | {{sort|07|SYD<br>+12}}
+| X
+| bgcolor=FFCFCF | {{sort|04|TAS<br>-63}}
+| bgcolor=FFCFCF | '''{{sort|17|NM<br>-63}}'''
+| bgcolor=FFCFCF | {{sort|16|COL<br>-70}}
+| bgcolor=FFCFCF | '''{{sort|09|CAR<br>-35}}'''
+| bgcolor=FFCFCF | {{sort|01|GEE<br>-82}}
+| bgcolor=FFCFCF | '''{{sort|03|BOX<br>-12}}'''
+| bgcolor=FFCFCF | {{sort|14|FOO<br>-74}}
+| X
+| bgcolor=FFCFCF | {{sort|06|PM<br>-14}}
+| bgcolor=CCFFCC | '''{{sort|15|STK<br>+48}}'''
+| 
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL San}}
+| bgcolor=FFCFCF | '''{{sort|06|PM<br>-14}}'''
+| bgcolor=CCFFCC | '''{{sort|02|WER<br>+16}}'''
+| bgcolor=CCFFCC | {{sort|18|BRI<br>+7}}
+| bgcolor=FFCFCF | '''{{sort|17|NM<br>-80}}'''
+| bgcolor=FFCFCF | '''{{sort|03|BOX<br>-20}}'''
+| bgcolor=FFCFCF | {{sort|04|TAS<br>-26}}
+| bgcolor=FFCFCF | '''{{sort|15|STK<br>-15}}'''
+| bgcolor=FFCFCF | '''{{sort|12|GWS<br>-3}}'''
+| bgcolor=CCFFCC | {{sort|10|FRA<br>+8}}
+| X
+| bgcolor=FFCFCF | '''{{sort|01|GEE<br>-58}}'''
+| bgcolor=CCFFCC | {{sort|14|FOO<br>+11}}
+| bgcolor=FFCFCF | '''{{sort|04|TAS<br>-36}}'''
+| bgcolor=FFCFCF | {{sort|07|SYD<br>-133}}
+| X
+| bgcolor=FFCFCF | {{sort|06|PM<br>-11}}
+| bgcolor=CCCCFF | '''{{sort|13|SOU<br>0}}'''
+| bgcolor=FFCFCF | {{sort|11|COB<br>-14}}
+| bgcolor=FFCFCF | '''{{sort|08|WIL<br>-51}}'''
+| X
+| bgcolor=FFCFCF | {{sort|02|WER<br>-59}}
+| 
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL Sou}}
+| bgcolor=FFCFCF | {{sort|21|RIC<br>-40}}
+| bgcolor=CCFFCC | {{sort|18|BRI<br>+21}}
+| bgcolor=CCFFCC | '''{{sort|22|GCS<br>+76}}'''
+| bgcolor=FFCFCF | {{sort|08|WIL<br>-53}}
+| X
+| bgcolor=CCFFCC | '''{{sort|14|FOO<br>+10}}'''
+| bgcolor=FFCFCF | '''{{sort|11|COB<br>-43}}'''
+| bgcolor=CCFFCC | {{sort|04|TAS<br>+53}}
+| bgcolor=CCFFCC | '''{{sort|06|PM<br>+32}}'''
+| X
+| bgcolor=FFCFCF | {{sort|10|FRA<br>-49}}
+| bgcolor=FFCFCF | '''{{sort|07|SYD<br>-36}}'''
+| bgcolor=FFCFCF | '''{{sort|01|GEE<br>-47}}'''
+| bgcolor=CCFFCC | '''{{sort|08|WIL<br>+49}}'''
+| bgcolor=FFCFCF | {{sort|02|WER<br>-20}}
+| X
+| bgcolor=CCCCFF | {{sort|20|SAN<br>0}}
+| bgcolor=CCFFCC | '''{{sort|10|FRA<br>+7}}'''
+| bgcolor=CCFFCC | '''{{sort|12|GWS<br>+41}}'''
+| bgcolor=FFCFCF | '''{{sort|18|BRI<br>-98}}'''
+| bgcolor=CCFFCC | {{sort|11|COB<br>+6}}
+| 
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL StK}}
+| bgcolor=FFCFCF | {{sort|12|GWS<br>-44}}
+| bgcolor=FFCFCF | {{sort|10|FRA<br>-8}}
+| bgcolor=FFCFCF | '''{{sort|21|RIC<br>-33}}'''
+| bgcolor=CCFFCC | {{sort|11|COB<br>+29}}
+| bgcolor=FFCFCF | '''{{sort|22|GCS<br>-35}}'''
+| bgcolor=FFCFCF | {{sort|09|CAR<br>-5}}
+| bgcolor=CCFFCC | {{sort|20|SAN<br>+15}}
+| bgcolor=CCFFCC | '''{{sort|19|CAS<br>+48}}'''
+| X
+| bgcolor=CCFFCC | '''{{sort|03|BOX<br>+34}}'''
+| bgcolor=CCFFCC | {{sort|07|SYD<br>+3}}
+| bgcolor=CCCCFF | {{sort|17|NM<br>0}}
+| bgcolor=CCFFCC | '''{{sort|14|FOO<br>+37}}'''
+| X
+| bgcolor=FFCFCF | {{sort|05|ESS<br>-25}}
+| bgcolor=FFCFCF | '''{{sort|02|WER<br>-1}}'''
+| bgcolor=FFCFCF | '''{{sort|01|GEE<br>-26}}'''
+| bgcolor=FFCFCF | {{sort|16|COL<br>-10}}
+| X
+| bgcolor=CCFFCC | '''{{sort|09|CAR<br>+7}}'''
+| bgcolor=FFCFCF | {{sort|21|RIC<br>-48}}
+| 
+| 
+| 
+| 
+| 
+|-
+! style=text-align:left | {{VFL Syd}}
+| bgcolor=FFCFCF | {{sort|03|BOX<br>-36}}
+| X
+| bgcolor=CCFFCC | {{sort|06|PM<br>+21}}
+| bgcolor=CCFFCC | '''{{sort|12|GWS<br>+22}}'''
+| bgcolor=CCFFCC | {{sort|14|FOO<br>+59}}
+| bgcolor=CCFFCC | '''{{sort|19|CAS<br>+17}}'''
+| bgcolor=FFCFCF | {{sort|17|NM<br>-12}}
+| bgcolor=CCFFCC | '''{{sort|16|COL<br>+52}}'''
+| bgcolor=FFCFCF | {{sort|01|GEE<br>-14}}
+| bgcolor=FFCFCF | '''{{sort|21|RIC<br>-12}}'''
+| bgcolor=FFCFCF | '''{{sort|15|STK<br>-3}}'''
+| bgcolor=CCFFCC | {{sort|13|SOU<br>+36}}
+| X
+| bgcolor=CCFFCC | '''{{sort|20|SAN<br>+133}}'''
+| bgcolor=CCFFCC | {{sort|22|GCS<br>+40}}
+| bgcolor=CCCCFF | '''{{sort|08|WIL<br>0}}'''
+| bgcolor=CCFFCC | '''{{sort|18|BRI<br>+16}}'''
+| bgcolor=CCFFCC | {{sort|12|GWS<br>+78}}
+| bgcolor=FFCFCF | '''{{sort|04|TAS<br>-30}}'''
+| X
+| bgcolor=FFCFCF | {{sort|05|ESS<br>-27}}
+| bgcolor=CCFFCC | '''{{sort|10|FRA<br>+68}}'''
+| bgcolor=FFCFCF | {{sort|06|PM<br>-55}}
+| 
+| 
+| 
+|-
+! style=text-align:left | {{AFL Tas}}
+| bgcolor=CCFFCC | '''{{sort|11|COB<br>+17}}'''
+| bgcolor=CCFFCC | '''{{sort|06|PM<br>+8}}'''
+| bgcolor=CCFFCC | {{sort|10|FRA<br>+78}}
+| X
+| bgcolor=FFCFCF | '''{{sort|09|CAR<br>-25}}'''
+| bgcolor=CCFFCC | '''{{sort|20|SAN<br>+26}}'''
+| bgcolor=CCCCFF | {{sort|02|WER<br>0}}
+| bgcolor=FFCFCF | '''{{sort|13|SOU<br>-53}}'''
+| X
+| bgcolor=FFCFCF | {{sort|06|PM<br>-4}}
+| bgcolor=CCFFCC | '''{{sort|17|NM<br>+14}}'''
+| bgcolor=CCFFCC | '''{{sort|21|RIC<br>+63}}'''
+| bgcolor=CCFFCC | {{sort|20|SAN<br>+36}}
+| bgcolor=FFCFCF | {{sort|18|BRI<br>-61}}
+| bgcolor=FFCFCF | '''{{sort|03|BOX<br>-5}}'''
+| bgcolor=CCFFCC | '''{{sort|22|GCS<br>+50}}'''
+| bgcolor=FFCFCF | {{sort|08|WIL<br>-6}}
+| X
+| bgcolor=CCFFCC | {{sort|07|SYD<br>+30}}
+| bgcolor=CCFFCC | '''{{sort|02|WER<br>+12}}'''
+| bgcolor=CCFFCC | {{sort|12|GWS<br>+39}}
+| X
+| bgcolor=FFCFCF | {{sort|01|GEE<br>-23}}
+| bgcolor=FFCFCF | '''{{sort|05|ESS<br>-27}}'''
+| 
+| 
+|-
+! style=text-align:left | {{VFL Wer}}
+| bgcolor=CCFFCC | {{sort|22|GCS<br>+15}}
+| bgcolor=FFCFCF | {{sort|20|SAN<br>-16}}
+| bgcolor=FFCFCF | '''{{sort|01|GEE<br>-44}}'''
+| bgcolor=CCFFCC | '''{{sort|10|FRA<br>+22}}'''
+| bgcolor=CCFFCC | {{sort|08|WIL<br>+25}}
+| bgcolor=FFCFCF | {{sort|06|PM<br>-26}}
+| bgcolor=CCCCFF | '''{{sort|04|TAS<br>0}}'''
+| X
+| bgcolor=CCFFCC | '''{{sort|16|COL<br>+31}}'''
+| bgcolor=CCFFCC | {{sort|05|ESS<br>+60}}
+| bgcolor=CCFFCC | '''{{sort|11|COB<br>+59}}'''
+| bgcolor=CCFFCC | '''{{sort|18|BRI<br>+26}}'''
+| X
+| bgcolor=CCFFCC | {{sort|09|CAR<br>+7}}
+| bgcolor=CCFFCC | '''{{sort|13|SOU<br>+20}}'''
+| bgcolor=CCFFCC | {{sort|15|STK<br>+1}}
+| bgcolor=CCFFCC | '''{{sort|06|PM<br>+38}}'''
+| X
+| bgcolor=CCFFCC | '''{{sort|14|FOO<br>+20}}'''
+| bgcolor=FFCFCF | {{sort|04|TAS<br>-12}}
+| bgcolor=CCFFCC | '''{{sort|20|SAN<br>+59}}'''
+| X
+| bgcolor=FFCFCF | '''{{sort|03|BOX<br>-13}}'''
+| bgcolor=FFCFCF | '''{{sort|06|PM<br>-16}}'''
+| 
+| 
+|-
+! style=text-align:left | {{VFL Wil}}
+| bgcolor=CCFFCC | {{sort|10|FRA<br>+2}}
+| bgcolor=CCFFCC | {{sort|09|CAR<br>+5}}
+| X
+| bgcolor=CCFFCC | '''{{sort|13|SOU<br>+53}}'''
+| bgcolor=FFCFCF | '''{{sort|02|WER<br>-25}}'''
+| bgcolor=CCFFCC | {{sort|05|ESS<br>+13}}
+| bgcolor=CCFFCC | '''{{sort|21|RIC<br>+37}}'''
+| X
+| bgcolor=FFCFCF | '''{{sort|03|BOX<br>-5}}'''
+| bgcolor=FFCFCF | {{sort|11|COB<br>-18}}
+| bgcolor=FFCFCF | {{sort|06|PM<br>-1}}
+| bgcolor=CCFFCC | '''{{sort|12|GWS<br>+10}}'''
+| bgcolor=CCFFCC | '''{{sort|19|CAS<br>+37}}'''
+| bgcolor=FFCFCF | {{sort|13|SOU<br>-49}}
+| bgcolor=FFCFCF | '''{{sort|14|FOO<br>-41}}'''
+| bgcolor=CCCCFF | {{sort|07|SYD<br>0}}
+| bgcolor=CCFFCC | '''{{sort|04|TAS<br>+6}}'''
+| X
+| bgcolor=CCFFCC | {{sort|20|SAN<br>+51}}
+| bgcolor=FFCFCF | '''{{sort|11|COB<br>-15}}'''
+| bgcolor=CCFFCC | '''{{sort|10|FRA<br>+42}}'''
+| bgcolor=CCFFCC | '''{{sort|09|CAR<br>+38}}'''
+| bgcolor=FFCFCF | {{sort|05|ESS<br>-45}}
+| 
+| 
+| 
+|}</div>
+
+==Awards==
+* '''[[J. J. Liston Trophy]]''' (best and fairest): Trent Mynott ({{VFL Fra}}) & [[George Stevens (Australian footballer)|George Stevens]] ({{VFL Gee}}) – 22 votes (tied)<ref name="2026VFLAwards">{{cite web |title=Mynott, Stevens share Liston; Eaves breaks through for Lambert-Pearce |url=https://www.afl.com.au/news/1612713/mynott-stevens-share-liston-eaves-breaks-through-for-lambert-pearce |website=afl.com.au |access-date=14 September 2026 |date=14 September 2026}}</ref>{{efn|Ben Hobbs ({{VFL PM}}) polled 26 votes and [[Jacob Dawson]] ({{VFL Sou}}) polled 25 votes, but both were ineligible due to suspension.}}
+* '''[[Fothergill–Round–Mitchell Medal]]''' (rising star): Brady Wright ({{VFL Wer}})
+* '''[[Jim 'Frosty' Miller Medal]]''' (leading goalkicker): Corey Ellison ({{VFL Fra}}) – 52 goals<ref>{{cite web|url=https://www.instagram.com/frankstonfootballclub/p/DcIiRTVDC4b/|title=CONGRATULATIONS COREY ELLISON Frosty Miller Medallist 2026!|work=Frankston Football Club|publisher=Instagram|date=17 August 2026}}</ref>
+* '''Coaches MVP Award''': [[Jacob Dawson]] ({{VFL Sou}}) – 105 votes
+
+===Team of the Year===
+{{Aussie rules team
+| title             = 2026 VFL Team of the Year<ref name="2026VFLAwards"/>
+| backpocket1       = Stu Horner ({{VFL Box}}) (c)
+| fullback          = [[Nathan Kreuger]] ({{VFL Gee}})
+| backpocket2       = [[Luke Parks]] ({{VFL Wil}})
+| halfbackflank1    = Jackson Voss ({{VFL Fra}})
+| centrehalfback    = [[Tyler Sellers]] ({{VFL Ess}})
+| halfbackflank2    = Donovan Toohey ({{VFL Cob}})
+| wing1             = [[Jack Bytel]] ({{VFL Cob}})
+| centre            = [[Jacob Dawson]] ({{VFL Sou}})
+| wing2             = [[Mitch Knevitt]] ({{VFL Gee}})
+| halfforwardflank1 = [[Zac Foot]] ({{VFL Sou}})
+| centrehalfforward = [[Mitch Podhajski]] ({{VFL Cob}}/{{VFL Col}})
+| halfforwardflank2 = Jed Hagan ({{AFL Tas}})
+| forwardpocket1    = Brady Wright ({{VFL Wer}})
+| fullforward       = Corey Ellison ({{VFL Fra}})
+| forwardpocket2    = [[Jaidyn Stephenson]] ({{VFL Cob}}) 
+| ruck              = Ajang Kuol Mun ({{VFL Wer}})
+| ruckrover         = [[George Stevens (Australian footballer)|George Stevens]] ({{VFL Gee}})
+| rover             = Trent Mynott ({{VFL Fra}})
+| interchange1      = [[Hugh Dixon]] ({{AFL Tas}})
+| interchange2      = [[Ben Hobbs]] ({{VFL PM}})
+| interchange3      = [[Henry Hustwaite]] ({{VFL Box}})
+| interchange4      = [[Jye Menzie]] ({{AFL Tas}}) 
+| interchange5      = [[Jack Ough]] ({{VFL GWS}})
+| interchange6      = Jack Riding ({{VFL Wer}}) 
+| coach             = Mark Corrigan ({{VFL Gee}})
+}}
+
+===Club best and fairest===
+{| class="wikitable plainrowheaders"
+! Club
+! Award
+! Winner
+! {{abbr|Ref|Reference}}
+|-
+! style="text-align:left" | {{VFL Box}}
+| '''[[Col Austen Trophy]]'''
+| [[Henry Hustwaite]]
+| align=center | 
+|-
+!rowspan=2; style="text-align:left" | {{VFL Bri}}
+| rowspan=2 | '''[[Neville Fallon Award]]'''
+| [[Luke Beecken]]
+| rowspan=2; align=center | <ref>{{cite web |title=The Neville Fallon Award for VFL B&F |url=https://www.lions.com.au/video/2144419/the-neville-fallon-award-for-vfl-bf?videoId=2144419&modal=true&type=video&publishFrom=1790863961001 |website=lions.com.au |access-date=5 October 2026}}</ref>
+|-
+| [[Luke Lloyd]]
+|-
+! style="text-align:left" | {{VFL Car}}
+| '''[[Carlton VFL Best and Fairest|Best and Fairest]]'''
+| [[Lachie Fogarty]] 
+| align=center | <ref>{{cite web |title=Fogarty takes out VFL Best and Fairest |url=https://www.carltonfc.com.au/news/2125554/fogarty-takes-out-vfl-best-and-fairest |website=carltonfc.com.au |access-date=14 September 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Cas}}
+| '''[[Gardner Clark Medal]]'''
+| [[Jack Henderson (Australian footballer)|Jack Henderson]]
+| align=center | <ref>{{cite web |title=2026 Keith ‘Bluey’ Truscott {{!}} All the winners |url=https://www.melbournefc.com.au/news/2144993/2026-keith-bluey-truscott-all-the-winners |website=melbournefc.com.au |access-date=5 October 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Cob}}
+| '''[[Jim Sullivan Medal]]'''
+| Donovan Toohey
+| align=center | <ref>{{cite web |last1=Amy |first1=Paul |title=Great effort from Donovan Toohey. Shared Coburg's best and fairest with Joel Trudgeon last year, but won it outright in 2026, beating Jack Bytel (second), Jaidyn Stephenson and Cooper Keogh (equal third). Defender who knows when to negate and when to create. He's a star. |url=https://x.com/PaulAmy375/status/2104446841446359436 |website=x.com |access-date=5 October 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Col}}
+| '''[[Joseph Wren Trophy]]'''
+| Oskar Faulkhead
+| align=center | <ref>{{cite web |title=Oskar Faulkhead is our 2026 Joseph Wren Trophy winner for VFL Best and Fairest 👏 |url=https://www.instagram.com/p/Dd_MKmKE_d-/?img_index=1 |website=instagram.com |access-date=5 October 2026}}</ref>
+|-
+!rowspan=2; style="text-align:left" | {{VFL Ess}}
+| rowspan=2 | '''[[Essendon VFL Best and Fairest|Best and Fairest]]'''
+| [[Tyler Sellers]]
+| rowspan=2; align=center |<ref>{{cite web |title=Skipper, resurgent defender share Bombers’ VFL Best and Fairest |url=https://www.essendonfc.com.au/news/2146042/skipper-resurgent-defender-share-bombers-vfl-best-and-fairest |website=essendonfc.com.au |access-date=5 October 2026}}</ref>
+|-
+| [[Xavier O'Neill]]
+|-
+! style="text-align:left" | {{VFL Foo}}
+| '''[[Footscray VFL Best and Fairest|Best and Fairest]]'''
+| Cooper Craig-Peters
+| align=center | <ref>{{cite web |title=Congratulations to Cooper Craig-Peters, our Footscray Best and Fairest! |url=https://www.facebook.com/footscrayVFL/posts/congratulations-to-cooper-craig-peters-our-footscray-best-and-fairestjack-billin/1710309984434355/ |website=facebook.com |publisher=Footscray Bulldogs |access-date=5 October 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Fra}}
+| '''[[Peter Geddes Medal]]'''
+| Jackson Voss
+| align=center | <ref>{{cite web |last1=Amy |first1=Paul |title=The final votes in the Frankston VFL best and fairest. |url=https://x.com/PaulAmy375/status/2103095285207752942 |website=x.com |access-date=5 October 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Gee}}
+| '''[[List of Geelong Football Club individual awards and records#VFL best and fairest|Best and Fairest]]'''
+| [[George Stevens (Australian footballer)|George Stevens]]
+| align=center | <ref>{{cite web |title=Latest News George Stevens Wins Geelong's 2026 VFL Best and Fairest Award |url=https://www.geelongcats.com.au/news/2136255/george-stevens-wins-geelongs-2026-vfl-best-and-fairest-award |website=Geelong Football Club |access-date=27 September 2026 |date=25 September 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL GC}}
+| '''[[Gold Coast Suns VFL Player of the Year|Player of the Year]]'''
+| [[Caleb Graham]]
+| align=center | <ref>{{cite web |title=Caleb Graham wins Great Northern Brewing Co. VFL Player of the Year |url=https://www.goldcoastfc.com.au/news/2132259/caleb-graham-wins-great-northern-brewing-co-vfl-player-of-the-year |website=goldcoastfc.com.au |access-date=5 October 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL GWS}}
+| '''[[Greater Western Sydney Giants VFL Player of the Year|Player of the Year]]'''
+| Harvey Hooper
+| align=center | <ref>{{cite web |last1=Patterson |first1=Emily |title=Giants flyer pips star recruit to claim his first Kevin Sheedy Medal |url=https://www.afl.com.au/news/1600810/gws-giants-flyer-lachie-ash-wins-his-first-kevin-sheedy-medal |website=afl.com.au |access-date=5 October 2026}}</ref>
+|-
+!rowspan=3; style="text-align:left" | {{VFL NM}}
+| rowspan=3 | '''[[John Law Medal]]'''
+| Matthew Keast
+| rowspan=3; align=center | <ref>{{cite web |last1=Beveridge |first1=Riley |title=Young Roos star joins elite company with third Syd Barker Medal |url=https://www.afl.com.au/news/1625761/young-north-melbourne-kangaroos-star-harry-sheezel-joins-elite-company-with-third-syd-barker-medal |website=afl.com.au |access-date=5 October 2026}}</ref> 
+|-
+| James Tarrant
+|-
+| Darcy Macpherson
+|-
+! style="text-align:left" | {{VFL PM}}
+| '''[[Jack McFarlane Medal]]'''
+| [[Ben Hobbs]]
+| align=center | <ref>{{cite web |title=Best & Fairest 2026 |url=https://www.portmelbournefc.com.au/news/borough-celebrates-2026-best-fairest-award-winners/ |website=portmelbournefc.com.au |access-date=5 October 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Ric}}
+| '''[[Guinane Medal]]'''
+| Mutaz El Nour
+| align=center | <ref>{{cite web |title=El Nour wins back-to-back Guinane Medals, Collier earns Steve Morris Award |url=https://www.richmondfc.com.au/news/2143071/el-nour-wins-back-to-back-guinane-medals-collier-earns-steve-morris-award |website=richmondfc.com.au |access-date=5 October 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL San}}
+| '''[[Neil Bencraft Medal]]'''
+| Nathan Philactides
+| align=center | <ref>{{cite web |title=2026 Neil Bencraft Best and Fairest Recap |url=https://www.sandringhamfc.com.au/latest-news/homepage-news-feed/2026-neil-bencraft-best-and-fairest-recap |website=sandringhamfc.com.au |access-date=5 October 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Sou}}
+| '''[[Doc Mackenzie Medal]]'''
+| [[Jacob Dawson]]
+| align=center | <ref>{{cite web |title=DAWSON WINS THIRD DOC MACKENZIE MEDAL IN A ROW |url=https://football.southportsharks.com.au/football/dawson-wins-third-doc-mackenzie-medal-in-a-row/ |website=football.southportsharks.com.au |access-date=5 October 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL StK}}
+| '''[[St Kilda VFL Best and Fairest|Best and Fairest]]'''
+| [[Hugh Boxshall]]
+| align=center | <ref name="stk26aug2026">{{cite web |last1=Tonini |first1=Josh |title=Young midfielder takes out St Kilda VFL Best and Fairest |url=https://www.saints.com.au/news/2113269/vfl-bf |publisher=St Kilda Football Club |access-date=27 August 2026 |archive-url=https://web.archive.org/web/20260827102223/https://www.saints.com.au/news/2113269/vfl-bf |archive-date=27 August 2026 |date=26 August 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Syd}}
+| '''[[Sydney Swans VFL Player of the Year|Player of the Year]]'''
+| [[Patrick Snell]]
+| align=center | <ref>{{cite web |title=2026 Sydney Swans AFL Awards: Every award winner |url=https://www.sydneyswans.com.au/news/2144710/2026-sydney-swans-afl-awards-every-award-winner |website=sydneyswans.com.au |access-date=5 October 2026}}</ref>
+|-
+! style="text-align:left" | {{AFL Tas}}
+| '''[[Tasmania VFL Best and Fairest|Best and Fairest]]'''
+| [[Hugh Dixon]]
+| align=center | <ref>{{cite web |last1=Cellini |first1=Aidan |title=Tasmanian Devils BnF winner on AFL club’s radar ahead of trade period |url=https://www.zerohanger.com/tasmanian-devils-bnf-winner-on-afl-clubs-radar-ahead-of-trade-period-183249/ |website=zerohanger.com |access-date=5 October 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Wer}}
+| '''[[Bruce Montgomery Trophy]]'''
+| Ajang Kuol mun
+| align=center | <ref>{{cite web |title=Kuol mun Claims Bruce Montgomery Trophy in Thrilling Count |url=https://www.werribeefc.com.au/news/1408-kuol-mun-claims-bruce-montgomery-trophy-in-thrilling-count |website=werribeefc.com.au |access-date=5 October 2026}}</ref>
+|-
+! style="text-align:left" | {{VFL Wil}}
+| '''[[Gerry Callahan Medal]]'''
+| [[Kallan Dawson]]
+| align=center | <ref>{{cite web |title=DAWSON TAKES THE TOP SPOT! |url=https://www.facebook.com/WilliamstownFC/posts/dawson-takes-the-top-spotkallan-is-our-gerry-callahan-medal-winner-crowned-the-m/1933023468001303/ |website=facebook.com |access-date=5 October 2026}}</ref>
+|}
+
+==Representative match==
+An [[Interstate matches in Australian rules football|interstate representative match]] against the [[South Australian National Football League]] (SANFL) was again played during the AFL's [[Gather Round]], marking the third successive season the fixture was scheduled. The match was played at [[Glenelg Oval|Stratarama Stadium]], the home ground of [[Glenelg Football Club|Glenelg]], and was part of a double-header alongside a women's match.<ref>{{cite web|url=https://www.sportingnews.com/au/afl/news/state-leagues-exhibition-games-set-afl-gather-round-2026-vfl-sanfl/afda5fa97995154a901bf8ec|title=State leagues exhibition games set for AFL Gather Round 2026|work=The Sporting News|date=10 December 2025|author=Jake Beddard|archive-url=https://web.archive.org/web/20251222063823/https://www.sportingnews.com/au/afl/news/state-leagues-exhibition-games-set-afl-gather-round-2026-vfl-sanfl/afda5fa97995154a901bf8ec|archive-date=22 December 2025|url-status=live}}</ref>
+
+===Scoreboard===
+{{AFLGameDetailed
+| title           = 2026 State Game
+| date            = Saturday, 11 April (2:30pm [[Time in Australia|ACST]])
+| winner          = A
+| home team       = [[South Australian National Football League|SANFL]]
+| home Q1         = 5.4 (34)
+| home Q2         = 7.9 (51)
+| home Q3         = 12.10 (82)
+| home final      = 14.14 (98)
+| home goals      = Scully 3<br>[[Liam McBean|McBean]], Allan, Doyle 2<br>[[Lachlan Hosie|Hosie]], Emmett, [[Max Beattie|Beattie]], Murley, Ryan 1
+| home best       = Lewis, Ryan, Scharenberg, Scully, Doyle
+| home injuries   =
+| home reports    =
+| away team       = [[Victorian Football League|VFL]]
+| away Q1         = 3.3 (21)
+| away Q2         = 7.8 (50)
+| away Q3         = 11.11 (77)
+| away final      = 15.13 (103)
+| away goals      = Podhajski 4<br>Clarke, Hagan, Brew, Tarrant 2<br>Hately, Billings, Declase 1
+| away best       = [[Riley Bonner|Bonner]], Hately, Bell, Parks, Podhajski
+| away injuries   =
+| away reports    =
+| venue           = [[Glenelg Oval|Stratarama Stadium]]
+| crowd           =
+| report          = <ref>{{cite web|url=https://sanfl.com.au/league/news/west-end-state-team-falls-to-vfl/|work=sanfl.com.au|date=11 April 2026|title=West End State Team falls to VFL|author=Luke Marchioro|archive-url=https://web.archive.org/web/20260412003807/https://sanfl.com.au/league/news/west-end-state-team-falls-to-vfl/|archive-date=12 April 2026|url-status=live}}</ref><ref>{{cite web|url=https://www.afl.com.au/news/1496788/vfl-defends-title-against-oldest-foe|title=VFL defends title against oldest foe|date=11 April 2026|work=afl.com.au|archive-url=https://web.archive.org/web/20260418024017/https://www.afl.com.au/news/1496788/vfl-defends-title-against-oldest-foe|archive-date=18 April 2026|url-status=live}}</ref>
+| umpires         = 
+| BOG award       = [[Fos Williams Medal]] (SANFL) & Frank Johnson Medal (VFL)
+| BOG winner      = Tom Lewis (SANFL) & [[Riley Bonner]] (VFL)
+| broadcast       = [[Seven Network]]<br>AFL.com.au<ref name=VicCaptainsStateGame>{{cite web|url=https://www.afl.com.au/news/1493159/pinnuck-and-tierney-appointed-big-v-captains|title=Pinnuck and Tierney appointed Big V captains|work=afl.com.au|date=9 April 2026|quote=The 2026 State Games will be available via AFL.com.au and the AFL Live Official App...The men's match will also be broadcast by the Seven Network via 7mate in South Australia and Victoria, and via 7plus nationally.|archive-url=https://web.archive.org/web/20260410000813/https://www.afl.com.au/news/1493159/pinnuck-and-tierney-appointed-big-v-captains|archive-date=10 April 2026|url-status=live}}</ref>
+| anthem          =
+| notes           = 
+}}
+
+===Victorian team===
+[[File:SANFLvsVFL2026 136.jpg|thumb|right|VFL players celebrate the win against the SANFL in the 2026 State Game]]
+{{Aussie rules team | title = 2026 VFL State Team<ref name=VICteam26>{{cite web|url=https://www.afl.com.au/news/1493697/teams-sanfl-vs-vfl-state-game|title=TEAMS: SANFL vs VFL State Game|work=afl.com.au|date=9 April 2026|archive-url=https://web.archive.org/web/20260410000956/https://www.afl.com.au/news/1493697/teams-sanfl-vs-vfl-state-game|archive-date=10 April 2026|url-status=live}}</ref><ref>{{cite web|url=https://www.afl.com.au/news/1479661/kornberg-gourley-confirmed-as-state-team-coaches|title=Kornberg, Gourley confirmed as State Team coaches|date=17 March 2026|work=afl.com.au|archive-url=https://web.archive.org/web/20260405084227/https://www.afl.com.au/news/1479661/kornberg-gourley-confirmed-as-state-team-coaches|archive-date=5 April 2026|url-status=live}}</ref><ref>{{cite web|url=https://www.afl.com.au/news/1493159/pinnuck-and-tierney-appointed-big-v-captains|title=Pinnuck and Tierney appointed Big V captains|work=afl.com.au|date=9 April 2026|archive-url=https://web.archive.org/web/20260410000813/https://www.afl.com.au/news/1493159/pinnuck-and-tierney-appointed-big-v-captains|archive-date=10 April 2026|url-status=live}}</ref> | teamcolour = Vic
+| backpocket1 = 12. Luke Parks<br>({{VFL Wil}})
+| fullback = 25. Ryan Eyers<br>({{VFL Wer}})
+| backpocket2 = 13. Jackson Voss<br>({{VFL Fra}})
+| halfbackflank1 = 9. Louis Pinnuck (c)<br>({{VFL Wer}})
+| centrehalfback = 38. Jesse Clark<br>({{VFL Wer}})
+| halfbackflank2 = 26. [[Riley Bonner]] <br>({{VFL CasD}})
+| wing1 = 24. Kye Declase<br>({{VFL Box}})
+| centre = 2. [[Dom Brew]]<br>({{VFL Wer}})
+| wing2 = 15. [[Jack Billings]]<br>({{VFL Foo}})
+| halfforwardflank1 = 37. Jack Riding<br>({{VFL Wer}})
+| centrehalfforward = 32. [[Mitch Podhajski]]<br>({{VFL Cob}})
+| halfforwardflank2 = 36. Jed Hagan<br>({{AFL Tas}})
+| forwardpocket1 = 1. Brodie McLaughlin<br>({{VFL Box}})
+| fullforward = 29. [[Hugh Dixon]]<br>({{AFL Tas}})
+| forwardpocket2 = 14. [[Jaidyn Stephenson]]<br>({{VFL Cob}})
+| ruck = 35. [[Brayden Crossley]]<br>({{VFL Sou}})
+| ruckrover = 28. [[James Bell (Australian footballer)|James Bell]]<br>({{VFL GWS}})
+| rover = 10. [[Zac Foot]]<br>({{VFL Sou}})
+| interchange1 = 6. [[Hugo Hall-Kahan]]<br>({{VFL Wil}})
+| interchange2 = 8. [[Charlie Clarke (footballer, born 2004)|Charlie Clarke]]<br>({{VFL PtM}})
+| interchange3 = 16. Jackson Hately<br>({{VFL Ess}})
+| interchange4 = 30. Corey Ellison<br>({{VFL Fra}})
+| interchange5 = 23. Harvey Hooper<br>({{VFL GWS}})
+| emergency1 = 5. Cooper Craig-Peters<br>({{VFL Foo}})
+| emergency2 = 11. [[Marcus Herbert]]<br>({{VFL Gee}})
+| emergency3 = 28. James Tarrant<br>({{VFL NM}})
+| emergency4 = 41. [[Brynn Teakle]]<br>({{VFL Col}})
+| coach = Jackson Kornberg<br>({{VFL Fra}})
+}}
+
+==See also==
+*[[2026 VFL Women's season]]
+
+==Notes==
+{{notelist}}
+
+==References==
+{{reflist}}
+
+==External links==
+* [https://vfl.aflmstats.com/season/2026 2026 VFL season] at VFL Stats
+* {{Commons category-inline}}
+
+{{VFA/VFL seasons}}
+{{2026 VFL Team of the Year}}
+{{2026 VFL state team}}
+
+[[Category:Victorian Football League seasons]]
+[[Category:2026 in Australian rules football|VFL]]
+[[Category:2026 in Victoria (state)|VFL]]

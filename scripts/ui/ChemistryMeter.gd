@@ -75,6 +75,10 @@ static func _set_figure(fill: Control, share: float) -> void:
 	fig.anchor_top = 0.0
 	fig.anchor_bottom = 1.0
 	fig.grow_horizontal = Control.GROW_DIRECTION_BEGIN if inside else Control.GROW_DIRECTION_END
+	# The width below is measured before the figure is on screen, in a wider
+	# face than it draws in: the text keeps to the fill's end, so on a phone's
+	# short bar "100%" no longer spills left over "Team Chemistry".
+	fig.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if inside else HORIZONTAL_ALIGNMENT_LEFT
 	var w := fig.get_combined_minimum_size().x
 	fig.offset_left = (-w - FIGURE_PAD) if inside else FIGURE_PAD
 	fig.offset_right = -FIGURE_PAD if inside else (w + FIGURE_PAD)

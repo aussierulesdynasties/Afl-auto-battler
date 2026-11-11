@@ -131,7 +131,7 @@ def select(changed, root=ROOT, smoke=SMOKE):
     wanted = {s for s in smoke if s in suites}
     for path in changed:
         base = path[:-len(".uid")] if path.endswith(".uid") else path
-        if path.startswith(("docs/", "tools/audit/", "tools/visual/")) or path.endswith(".md"):
+        if path.startswith(("docs/", "tools/audit/", "tools/visual/", "tools/lint/")) or path.endswith(".md"):
             continue
         harness = base.startswith(("tests/fixtures/", "tests/functions_ran", "tests/tap", "tests/export_data"))
         traced = (base.startswith("tests/") and base.endswith(".gd") and not harness)             or (base.startswith(("scripts/", "scenes/")) and base.endswith(FOLLOWED)) or base.startswith(LEAF_DIRS)

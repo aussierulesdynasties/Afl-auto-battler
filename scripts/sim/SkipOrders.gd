@@ -50,8 +50,8 @@ static func questions(to := "season") -> Array:
 				{"key": "kids", "label": "Give the kids a run",
 					"gain": "%s players with fewer than %d senior games are promised a run of %d games at a time, and get the match experience." % [
 						"Two", Backing.FEW_GAMES, Backing.RUN_GAMES],
-					"cost": ("Seasoned players sit out for them, so the side is weaker some weeks. Auto-pick replaces a side you named, and stays on for the finals until you name another. A run still going after the last round carries into the finals." if to == "home_away"
-							else "Seasoned players sit out for them, so the side is weaker some weeks. Auto-pick replaces a side you named.")},
+					"cost": ("Seasoned players sit out for them, so the side is weaker some weeks. Auto-pick names the side in place of one you named, and keeps naming it for the finals until you name another. A run still going after the last round carries into the finals." if to == "home_away"
+							else "Seasoned players sit out for them, so the side is weaker some weeks. Auto-pick names the side in place of one you named.")},
 			]},
 		{"key": "questions", "title": "Questions during the week",
 			"lead": "The cards that come up while you are away.", "options": [

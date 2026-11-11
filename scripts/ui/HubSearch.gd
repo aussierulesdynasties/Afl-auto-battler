@@ -156,7 +156,7 @@ static func _row(results: VBoxContainer, id: String, text: String) -> Button:
 	h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(h)
-	var nm := UiKit.lbl(str(d[0]), UiKit.NAME, UiKit.club_ink(str(d[2])) if str(d[2]) != "" else UiKit.TEXT, true)
+	var nm := UiKit.lbl(str(d[0]), UiKit.NAME, UiKit.club_name_colour(UiKit.club_ink(str(d[2]))) if str(d[2]) != "" else UiKit.TEXT, true)
 	nm.name = "Name"
 	nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	nm.autowrap_mode = TextServer.AUTOWRAP_OFF

@@ -94,9 +94,7 @@ func _run() -> void:
 				str(ev["name"]), pv.caption_text(), str(ev["text"])])
 		shots += 1
 		var lf := FileAccess.open(_out + "_log.txt", FileAccess.WRITE)
-		lf.store_string("
-".join(_log) + "
-")
+		lf.store_string("\n".join(_log) + "\n")
 		lf.close()
 		pv.playing = true
 	var f := FileAccess.open(_out + "_log.txt", FileAccess.WRITE)
