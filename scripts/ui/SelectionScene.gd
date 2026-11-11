@@ -90,7 +90,7 @@ func _build() -> void:
 		if idx == 100:
 			var on := not GameState.dual_ruck()
 			GameState.set_dual_ruck(on)
-			_notice = "Dual ruck on: Auto-pick names a second ruck on the bench." if on else "One ruck: Auto-pick fills the bench with the best of the rest."
+			_notice = "Dual ruck on. Auto-pick names a second ruck on the bench." if on else "One ruck. Auto-pick fills the bench with the best of the rest."
 			_build()
 			return
 		_apply_strategy(str(strategies[idx][0])))
@@ -133,7 +133,12 @@ func _build() -> void:
 		cols.add_child(right)
 	else:
 		_list_host = null
-		_root.add_child(_scroller(_side_page(auto), "SelectionScroll"))
+		# A phone scrolls the page by drag, with no bar (as Training): the bar's
+		# strip pushed the page 20 px past a 390 px screen, and the Auto-pick
+		# button's right border with it.
+		var sc := _scroller(_side_page(auto), "SelectionScroll")
+		sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+		_root.add_child(sc)
 	if GameState.side_from_match and GameState.match_day_setup_open():
 		# Reached from the match-day setup: the way back is the primary action.
 		var row := UiKit.hbox(8)
@@ -164,7 +169,7 @@ func _confirm_button(short := false) -> Button:
 	b.disabled = done
 	b.pressed.connect(func():
 		WeekChecklist.mark(GameState, "team")
-		_notice = "Side confirmed for this week."
+		_notice = "Our side is confirmed for this week."
 		_build())
 	return b
 
@@ -187,7 +192,7 @@ func _side_page(auto: bool) -> Control:
 	if not nxt.is_empty():
 		# Look at them on the same oval (director, 2026-10-07).
 		var opp_name := GameDB.club_short(str(nxt["code"]))
-		page.add_child(UiKit.segmented("OvalView", [["mine", "Your team"], ["opp", opp_name]], _view, func(k):
+		page.add_child(UiKit.segmented("OvalView", [["mine", "Our team"], ["opp", opp_name]], _view, func(k):
 			_view = k
 			_build()))
 	var builder := TeamBuilder.new()
@@ -201,7 +206,7 @@ func _side_page(auto: bool) -> Control:
 	builder.memory_note = str(_memory[1]) if str(_memory[0]) == _notice else ""
 	var opp_code := str(nxt.get("code", ""))
 	if _view == "opp" and opp_code != "":
-		var proj := _week.para("%s as they would take the field this week (projected: they name their side on match day). They kick the other way." % GameDB.club_name(opp_code), 13, UiKit.MUTED)
+		var proj := _week.para("Projected: %s as they would line up this week. They name their side on match day. They kick the other way." % GameDB.club_name(opp_code), 13, UiKit.MUTED)
 		proj.name = "OppProjected"
 		page.add_child(proj)
 		page.add_child(builder)
@@ -215,7 +220,7 @@ func _side_page(auto: bool) -> Control:
 		actions.add_theme_constant_override("separation", 8)
 		_fill_actions(actions)
 		builder.interchange_actions = actions
-		builder.hint_extra = "Picked for you each week until you move someone." if auto else ""
+		builder.hint_extra = "Auto-pick names our side until you move someone." if auto else ""
 		# Team Chemistry (row 125), read at a glance above the oval; a tap says
 		# why. It shares the line of the Your team / opponent switch, so the
 		# height it used goes to the players not picked.
@@ -267,7 +272,7 @@ func _fill_actions(actions: HBoxContainer) -> void:
 		undo.pressed.connect(func():
 			GameState.set_selection(_undo)
 			_undo = {}
-			_notice = "Back to your side before the auto-pick."
+			_notice = "Back to our side from before Auto-pick."
 			_build())
 		actions.add_child(undo)
 	var confirm := _confirm_button(not _undo.is_empty())
@@ -340,7 +345,7 @@ func _open_profile(id: String) -> void:
 	if GameState.can_back(p):
 		var run := MatchNotes.count_word(Backing.RUN_GAMES)
 		actions.append({"name": "BackRun", "label": "Back for %s games" % run,
-				"detail": "A run of %s senior games, starting with the next. Leave a fit player out and the promise breaks, and it stings." % run,
+				"detail": "A run of %s senior games, starting with the next. Leave the player out while he is fit and the promise breaks. It stings." % run,
 				"run": _back.bind(id)})
 	_sheet = PlayerSheet.open(self, p, func(): _sheet = null, actions)
 

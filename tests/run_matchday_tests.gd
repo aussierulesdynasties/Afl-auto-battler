@@ -71,6 +71,7 @@ func _run() -> void:
 	await _t("_test_tag_not_saved")
 	await _t("_test_bounce_close_up")
 	await _t("_test_ballup_two_scene")
+	await _t("_test_hot_tag_tap")
 	await _t("_test_playtest_bounce_scene")
 	await _t("_test_rings_on_the_oval")
 	await _t("_test_first_goal_line")
@@ -166,7 +167,7 @@ func _test_ground_fit() -> void:
 		await _settle()
 		var pitch = m.get("_pitch")
 		var wide: bool = sz.x > sz.y
-		_check(not pitch.camera_enabled and pitch.upright == not wide,
+		_check(not pitch.camera_enabled and pitch.upright == (not wide),
 				"The whole ground shows, left to right in a wide window and top to bottom on a phone held upright, web or not (%dx%d: camera %s, upright %s)" % [
 				sz.x, sz.y, str(pitch.camera_enabled), str(pitch.upright)])
 		if wide:
@@ -685,8 +686,7 @@ func _test_coach_descriptions(sz: Vector2i) -> void:
 		var gc: Array = load("res://scripts/sim/GateOdds.gd").pep_texts(k, _state.pending_sim.fire_up_contest(int(m.get("_my_side"))))
 		_check(note != null and note.is_visible_in_tree() and note.find_child("PepGain", true, false) != null
 				and note.find_child("PepCost", true, false) != null
-				and _flat(_text(note)) == _flat("Gain: %s
-Cost: %s" % [gc[0], gc[1]]),
+				and _flat(_text(note)) == _flat("Gain: %s\nCost: %s" % [gc[0], gc[1]]),
 				"The %s pep talk shows its own gain and cost (%s: %s)" % [k, tag, _text(note) if note else "-"])
 		pep_seen[_flat(_text(note)) if note != null else ""] = true
 	_check(pep_seen.size() == 4, "Each pep talk has its own words (%s)" % tag)
@@ -699,7 +699,13 @@ Cost: %s" % [gc[0], gc[1]]),
 	# Tag: "No tag" says so; a name brings the tagger line back.
 	var tn: Control = box.find_child("TagNote", true, false)
 	var none: Button = box.find_child("TagPickerGrid_", true, false)
-	_check(tn != null and none != null and _plain(tn).begins_with("No tag"), "With no tag, the tag line says so (%s: %s)" % [tag, _plain(tn) if tn else "-"])
+	# The call's Gain / Cost rows (director 2026-11-10, "Gain / Cost everywhere"):
+	# No tag has its own gain and its own cost, the touches inside the line.
+	var usual := roundi(float(load("res://scripts/sim/Roles.gd").TAG_USUAL_TOUCHES))
+	var no_tag_ok := func() -> bool:
+		var t := _plain(tn)
+		return t.begins_with("Gain: your midfielders play their own game") and t.contains("\nCost: ") 				and t.contains("usual %d touches" % usual) and tn.find_child("TagGain", true, false) != null 				and tn.find_child("TagCost", true, false) != null
+	_check(tn != null and none != null and no_tag_ok.call(), "With no tag, the tag call says its gain and its cost (%s: %s)" % [tag, _plain(tn) if tn else "-"])
 	var named: Button = null
 	for b in box.find_child("TagPicker", true, false).find_children("TagPickerGrid_*", "Button", true, false):
 		if str(b.name) != "TagPickerGrid_":
@@ -709,10 +715,12 @@ Cost: %s" % [gc[0], gc[1]]),
 	if named != null:
 		var tw: String = await Tap.tap(named)
 		await _settle()
-		_check(tw == "" and _plain(tn).contains(" tags "), "Picking a player brings the tagger line (%s: %s)" % [tag, _plain(tn)])
+		_check(tw == "" and _plain(tn).contains("usually gets %d touches" % usual) and _plain(tn).contains("on him, about ")
+				and _plain(tn).contains("\nCost: ") and _plain(tn).contains(str(load("res://scripts/sim/GateOdds.gd").tag_gives())),
+				"A real tap on a player sizes the tag: his touches, and what the tagger gives up (%s: %s)" % [tag, _plain(tn)])
 		var tw2: String = await Tap.tap(box.find_child("TagPickerGrid_", true, false))
 		await _settle()
-		_check(tw2 == "" and _plain(tn).begins_with("No tag"), "Back to no tag, the line says so (%s)" % tag)
+		_check(tw2 == "" and no_tag_ok.call(), "Back to no tag, its own gain and cost return (%s: %s)" % [tag, _plain(tn)])
 		await Tap.tap(named)
 		await _settle()
 		# Who tags: your assistant's man first, another midfielder a real tap away.
@@ -734,8 +742,7 @@ Cost: %s" % [gc[0], gc[1]]),
 			return t.contains("Gives up " + gv.left(1).to_upper() + gv.substr(1) + " (") and t.contains("their man: Usually ") and t.contains(" touches. Tagged, about ") and not t.get_slice("Gives up", 1).contains("disposals") 					and (t.contains("season rating ") or t.contains("yet to play this season"))
 		_check(dflt != null and gives.call(words.call(dflt)) and words.call(dflt).contains("Your assistant's pick")
 				and mine_btn != null and gives.call(words.call(mine_btn)),
-				"Your assistant's tagger shows what he gives up, like the others, marked as the pick (%s: %s)" % [tag, words.call(dflt).replace("
-", " / ") if dflt else "-"])
+				"Your assistant's tagger shows what he gives up, like the others, marked as the pick (%s: %s)" % [tag, words.call(dflt).replace("\n", " / ") if dflt else "-"])
 		# Name bold on top, two labelled facts, their man's touches on a line of
 		# their own, the pick a quiet label on his card, your club's rule.
 		var cards: Array = who_box.find_children("Card_TaggerPickerGrid_*", "Control", true, false) if who_box != null else []
@@ -776,10 +783,10 @@ Cost: %s" % [gc[0], gc[1]]),
 			var mine_name: String = words.call(mine_btn).split("\n")[0].strip_edges()
 			var ww: String = await Tap.tap(mine_btn)
 			await _settle()
-			_check(ww == "" and _plain(tn).begins_with(mine_name), "The midfielder you tap is the one who goes (%s: %s; tapped %s)" % [tag, _plain(tn), mine_name])
+			_check(ww == "" and _plain(tn).contains("with %s on him" % mine_name), "The midfielder you tap is the one who goes (%s: %s; tapped %s)" % [tag, _plain(tn), mine_name])
 			var wd: String = await Tap.tap(who_box.find_child("TaggerPickerGrid_", true, false))
 			await _settle()
-			_check(wd == "" and not _plain(tn).begins_with(mine_name), "Back to your assistant's man (%s: %s; was %s)" % [tag, _plain(tn), mine_name])
+			_check(wd == "" and not _plain(tn).contains("with %s on him" % mine_name), "Back to your assistant's man (%s: %s; was %s)" % [tag, _plain(tn), mine_name])
 
 	# Start with a tag: the plan line names every call, in full, and nothing
 	# it sits above is pushed off the screen.
@@ -1598,27 +1605,8 @@ func _test_club_ink_all() -> void:
 		if not bb.contains(shown) or (reds.has(c2) and bb.contains(raw)):
 			markup_bad.append("%s %s" % [c2, bb])
 	_check(markup_bad.is_empty() and reds_seen == reds.size(), "Every club's player name markup uses the name colour, never a red club's raw ink (%s, %d red clubs checked)" % [str(markup_bad), reds_seen])
-	# Part 2: no screen script hands a raw club ink to a name label or its font colour.
-	var raw_paint := []
-	var stack: Array = ["res://scripts/ui"]
-	while not stack.is_empty():
-		var dir_path: String = stack.pop_back()
-		for sub in DirAccess.get_directories_at(dir_path):
-			stack.append(dir_path + "/" + sub)
-		for f in DirAccess.get_files_at(dir_path):
-			if not f.ends_with(".gd"):
-				continue
-			var src := FileAccess.get_file_as_string(dir_path + "/" + f)
-			var n_line := 0
-			for ln in src.split("\n"):
-				n_line += 1
-				var t: String = ln.strip_edges()
-				if t.begins_with("#"):
-					continue
-				var paints: bool = (t.contains("lbl(") or t.contains("line(") or t.contains("ellipsis(") or t.contains("font_color")) 						and (t.contains("UiKit.club_ink(") or t.contains("UiKit.club_ink_second(")) 						and not t.contains("club_name_colour(")
-				if paints:
-					raw_paint.append("%s:%d" % [f, n_line])
-	_check(raw_paint.is_empty(), "No screen paints a name label in a raw club ink (use UiKit.club_name_colour) (%s)" % str(raw_paint))
+	# Part 2 (no screen script paints a name label in a raw club ink) is a static lint now:
+	# tools/lint/screens.py check_raw_club_ink.
 
 
 func _test_pc_break_worst_case(club := "COL") -> void:
@@ -2199,6 +2187,69 @@ func _test_ballup_two_scene() -> void:
 	await _settle()
 
 
+## Their midfielder has kicked three: the in-match Tag call names the man who
+## would go, sizes both answers, and a real tap on "Tag him with ..." puts the
+## tag on (T1.R26 M7).
+func _test_hot_tag_tap() -> void:
+	var sz := Vector2i(390, 844)
+	_state.reset()
+	_state.start_season("FRE", root.get_node("GameDB").club_list("FRE"))
+	root.size = sz
+	_check(_state.prepare_interactive_match(), "A live match is prepared (tag call)")
+	var m: Control = load("res://scenes/MatchScene.tscn").instantiate()
+	root.add_child(m)
+	await _settle()
+	(m.find_child("StartQuarter", true, false) as Button).emit_signal("pressed")
+	await _settle()
+	m.get("_pitch").pause()
+	var sim = _state.pending_sim
+	var me := int(m.get("_my_side"))
+	sim.pending_moment = {}
+	sim.moment_side = me
+	sim.set("_moments_this_q", 0)
+	sim.set("_last_moment_chain", -1000)
+	sim.set("_run", [0, 0])
+	sim.tactics[me]["tag_id"] = ""
+	var hot: Dictionary = {}
+	for p in sim.squads[1 - me].ground:
+		if load("res://scripts/sim/MatchSim.gd").taggable(p):
+			hot = p
+			break
+	_check(not hot.is_empty() and sim.tagger_of(me) != null, "They have a midfielder on the ground and you have one to send")
+	if hot.is_empty() or sim.tagger_of(me) == null:
+		m.queue_free()
+		return
+	sim.player_stats[str(hot["id"])] = {"goals": 3.0}
+	_check(sim.call("_boundary_moment") and str(sim.pending_moment.get("kind", "")) == "hot",
+			"MatchSim asks the tag call (%s)" % str(sim.pending_moment.get("kind", "-")))
+	var who: String = root.get_node("GameDB").player_display_name(sim.tagger_of(me))
+	m.call("_show_moment")
+	await _settle()
+	var card = m.find_child("MomentCard", true, false)
+	_check(card != null, "The tag call opens")
+	if card == null:
+		m.queue_free()
+		return
+	var vig = card.find_child("DecisionVignette", true, false)
+	if vig != null:
+		vig.finish_now()
+		await _settle()
+	for i in range(30):
+		await process_frame      # the call slides up (0.3 s)
+	var b0: Button = card.find_child("Moment_0", true, false)
+	_check(b0 != null and b0.text == "Tag him with %s" % who, "The first answer names the man who goes (%s)" % (b0.text if b0 else "-"))
+	var low := _text(card)
+	_check(low.contains("usually gets %d touches" % roundi(float(load("res://scripts/sim/Roles.gd").TAG_USUAL_TOUCHES))) and low.contains(str(load("res://scripts/sim/GateOdds.gd").tag_gives())),
+			"The card sizes the tag in touches and what he gives up (%s)" % low)
+	var why: String = await Tap.tap(b0)
+	_check(why == "", "A real tap on Tag him reaches it (%s)" % why)
+	var last: Dictionary = sim.moments[-1] if not sim.moments.is_empty() else {}
+	_check(str(last.get("kind", "")) == "hot" and str(last.get("call", "")) == "tag" and str(last.get("player_id", "")) == str(hot["id"]),
+			"The tap makes the call: the tag goes on their man (%s)" % str(last.get("choice_label", "-")))
+	m.queue_free()
+	await _settle()
+
+
 ## The playtest switch (Settings, ARD-M8-007): the centre-bounce scene comes even
 ## where no call could - early in the last quarter of a blowout, the quarter's calls
 ## spent - and plays through the real match screen.
@@ -2465,11 +2516,21 @@ func _test_momentum_meter() -> void:
 	_check(bar != null and _text(bar).contains("Momentum") and word != null, "The meter is labelled Momentum")
 	m.call("_track_momentum", {"mom": 0.0})
 	_check(word != null and word.text == "Even", "Level, it says Even (%s)" % (word.text if word else "-"))
+	await _settle()
+	var note: Label = m.find_child("MomentumNote", true, false)
+	var pitch: Control = m.get("_pitch")
+	var ground_before: Rect2 = pitch.get_global_rect() if pitch != null else Rect2()
+	_check(note != null and note.modulate.a == 0.0 and not bool(_state.get_setting("seen_momentum_intro", false)),
+			"Before momentum moves, the line is unseen and not yet counted as seen")
 	m.call("_track_momentum", {"mom": 0.6})
 	_check(word.text == "%s on top" % db.club_short(str(res["home"])), "Home on top is named (%s)" % word.text)
-	var note: Label = m.find_child("MomentumNote", true, false)
-	_check(note != null and note.visible and bool(_state.get_setting("seen_momentum_intro", false)),
+	_check(note != null and note.visible and note.modulate.a == 1.0
+			and bool(_state.get_setting("seen_momentum_intro", false)),
 			"The first match you watch says what it is, once it moves")
+	await _settle()
+	var ground_after: Rect2 = pitch.get_global_rect() if pitch != null else Rect2(-1, -1, -1, -1)
+	_check(pitch != null and ground_before.size.y > 0.0 and ground_after == ground_before,
+			"The ground does not move when the line appears (%s -> %s)" % [ground_before, ground_after])
 	m.call("_track_momentum", {"mom": -0.6})
 	_check(word.text == "%s on top" % db.club_short(str(res["away"])), "Away on top is named (%s)" % word.text)
 	var why: String = await Tap.tap(bar)
@@ -2498,7 +2559,7 @@ func _test_momentum_meter() -> void:
 	await _settle()
 	m2.call("_track_momentum", {"mom": 0.6})
 	var note2: Label = m2.find_child("MomentumNote", true, false)
-	_check(note2 != null and not note2.visible, "The next match does not say it again")
+	_check(note2 != null and not note2.visible, "The next match does not say it again, nor keeps its room")
 	m2.queue_free()
 	await _settle()
 

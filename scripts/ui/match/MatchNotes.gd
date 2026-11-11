@@ -467,14 +467,25 @@ const CALLS_WORTH_NOTE := "Points are what each call added to your margin or too
 
 
 static func calls_lines(res: Dictionary, my_side: int, q: int) -> Array:
-	var hist: Array = res.get("tactics_history", [])
+	return _calls_entries(res, my_side, q).map(func(e): return str(e["line"]))
+
+
+## Your plan for quarter q (the last one set for it), or {} with none.
+static func _plan_for(res: Dictionary, my_side: int, q: int) -> Dictionary:
+	var calls: Dictionary = {}
+	for h in res.get("tactics_history", []):
+		if int(h.get("quarter", 0)) == q:
+			calls = ((h["plans"] as Array)[my_side] as Dictionary)
+	return calls
+
+
+## calls_lines with where each line came from: {"key", "value", "line"}, the
+## key being "gameplan" or the plan slot (tag_id, focus_mid ...).
+static func _calls_entries(res: Dictionary, my_side: int, q: int) -> Array:
 	var snaps: Array = res.get("quarter_teams", [])
 	if q < 1 or snaps.size() < q:
 		return []
-	var calls: Dictionary = {}
-	for h in hist:
-		if int(h.get("quarter", 0)) == q:
-			calls = ((h["plans"] as Array)[my_side] as Dictionary)
+	var calls := _plan_for(res, my_side, q)
 	if calls.is_empty():
 		return []
 	var opp := 1 - my_side
@@ -492,17 +503,19 @@ static func calls_lines(res: Dictionary, my_side: int, q: int) -> Array:
 	var label := CoachReport.plan_label(plan)
 	match plan:
 		"attacking":
-			out.append(("%s: %d inside 50s and %s" % [label, n.call(mine, "inside50"), _goals_word(n.call(mine, "goals"))])
-					+ ((", from %d and %d%s." % [n.call(p_mine, "inside50"), n.call(p_mine, "goals"), prev]) if q >= 2 else "."))
+			out.append(("%s: %s and %s" % [label, _i50_word(n.call(mine, "inside50")), _goals_word(n.call(mine, "goals"))])
+					+ ((" (%s and %s%s)." % [_i50_word(n.call(p_mine, "inside50")), _goals_word(n.call(p_mine, "goals")), prev]) if q >= 2 else "."))
 		"defensive":
-			out.append(("%s: they had %d inside 50s and kicked %s" % [label, n.call(theirs, "inside50"), _goals_word(n.call(theirs, "goals"))])
-					+ ((", from %d and %d%s." % [n.call(p_theirs, "inside50"), n.call(p_theirs, "goals"), prev]) if q >= 2 else "."))
+			out.append(("%s: they had %s and kicked %s" % [label, _i50_word(n.call(theirs, "inside50")), _goals_word(n.call(theirs, "goals"))])
+					+ ((" (%s and %s%s)." % [_i50_word(n.call(p_theirs, "inside50")), _goals_word(n.call(p_theirs, "goals")), prev]) if q >= 2 else "."))
 		"contest":
 			out.append(("%s: clearances %d to %d" % [label, n.call(mine, "clearances"), n.call(theirs, "clearances")])
 					+ ((", from %d to %d%s." % [n.call(p_mine, "clearances"), n.call(p_theirs, "clearances"), prev]) if q >= 2 else "."))
 		"controlled":
 			out.append(("%s: %d clangers" % [label, n.call(mine, "clangers")])
 					+ ((", from %d%s." % [n.call(p_mine, "clangers"), prev]) if q >= 2 else "."))
+	if not out.is_empty():
+		out[0] = {"key": "gameplan", "value": plan, "line": out[0]}
 	for key in [["tag_id", "Tag on %s: %d disposal%s", opp], ["focus_mid", "Through %s: %d disposal%s", my_side],
 			["focus_fwd", "Through %s: %d disposal%s", my_side], ["focus_def", "Through %s: %d disposal%s", my_side],
 			["focus_id", "Through %s: %d disposal%s", my_side]]:
@@ -513,8 +526,60 @@ static func calls_lines(res: Dictionary, my_side: int, q: int) -> Array:
 		var line := str(key[1]) % [GameDB.player_display_name_by_id(id, "him"), d_now, "" if d_now == 1 else "s"]
 		if q >= 2:
 			line += ", from %d%s" % [_player_delta(was, before, id, "disposals"), prev]
-		out.append(line + ".")
+		out.append({"key": str(key[0]), "value": id, "line": line + "."})
 	return out
+
+
+## The full-time "Your calls" list: every quarter's calls, at most `cap`
+## lines. Taken a quarter at a time in turn (each quarter's first line, then
+## each one's second) and shown in quarter order, so Q3 and Q4 are never
+## crowded out by Q1 and Q2 (bug: the first five lines were all Q1 and Q2).
+## Within a quarter, a call made or changed that quarter comes before one
+## carried over from the quarter before, so a Q1 tag still in force does not
+## take Q2's place from the call made in Q2.
+## A call the Why section already quoted (`told`: "q<n>" and "call:<line>")
+## is not said again.
+static func full_time_calls(res: Dictionary, my_side: int, told: Dictionary, cap := 5) -> Array:
+	var per_q := []
+	for q in range(1, 5):
+		var earlier := _plan_for(res, my_side, q - 1) if q >= 2 else {}
+		var fresh := []
+		var carried := []
+		for e in _calls_entries(res, my_side, q):
+			var t := str(e["line"])
+			if told.has("q%d" % q) and told.has("call:" + t):
+				continue
+			var key := str(e["key"])
+			var was := str(earlier.get(key, ""))
+			if key == "gameplan" and was != "":
+				was = MatchSim.plan_key(was)
+			if q >= 2 and was == str(e["value"]):
+				carried.append(t)
+			else:
+				fresh.append(t)
+		per_q.append(fresh + carried)
+	var take := [0, 0, 0, 0]
+	var left := cap
+	var row := 0
+	while left > 0:
+		var any := false
+		for i in range(4):
+			if left > 0 and row < (per_q[i] as Array).size():
+				take[i] += 1
+				left -= 1
+				any = true
+		if not any:
+			break
+		row += 1
+	var out := []
+	for i in range(4):
+		for t in (per_q[i] as Array).slice(0, take[i]):
+			out.append("Q%d  ·  %s" % [i + 1, t])
+	return out
+
+
+static func _i50_word(n: int) -> String:
+	return "1 inside 50" if n == 1 else "%d inside 50s" % n
 
 
 static func _goals_word(g: int) -> String:
@@ -981,8 +1046,7 @@ static func tagger_card_detail(p: Dictionary, legs: float, wide: bool, rating :=
 	var dot := " · "
 	var first := "%s%sPressure %s" % [c["where"], dot, c["pressure"]]
 	var second := "%s%sGives up %s%sTheir man: %s" % [c["legs"], dot, c["gives"], dot, c["holds"]]
-	return (first + dot + second) if wide else (first + "
-" + second)
+	return (first + dot + second) if wide else (first + "\n" + second)
 
 
 ## The best few players of a side by influence: [{"id", "name", "line"}].
@@ -1121,9 +1185,17 @@ const COACHES_HITOUT_POINTS := 1.2
 ## lean, the same all match, so the two coaches can differ on a close call.
 ## Returns {player id: votes}; a player on neither coach's five is absent.
 static func coaches_votes(res: Dictionary, hitout_points := COACHES_HITOUT_POINTS) -> Dictionary:
+	# Each player's id, stats and rating (rated_players without the names and
+	# its sort: the coaches' own sort below orders them in full).
 	var everyone := []
+	var roster: Array = res.get("roster", [[], []])
+	var players: Dictionary = res.get("players", {})
 	for side in [0, 1]:
-		everyone.append_array(rated_players(res, side))
+		if roster.size() <= side:
+			continue
+		for p in roster[side]:
+			var st: Dictionary = players.get(str(p["id"]), {})
+			everyone.append({"id": str(p["id"]), "stats": st, "rating": rating(st)})
 	var votes := {}
 	for coach in [0, 1]:
 		var scored := []
