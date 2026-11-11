@@ -4,7 +4,8 @@ extends RefCounted
 ## played start to finish through the real match screen on a phone, at 8x, and
 ## at every tick it draws five things are checked:
 ##   1. no disc moves faster than a footballer runs, and none jumps;
-##   2. the ball is with a player or on its way, never hanging in the air;
+##   2. the ball is with a player or on its way, never hanging in the air,
+##      and never crossing the ground faster than a kick;
 ##   3. there are 36 discs, 18 a side, all on the ground and on the screen;
 ##   4. the feed, the scoreboard and the match's own score agree;
 ##   5. every figure drawn comes from its intended sheet, never a fallback.
@@ -40,7 +41,7 @@ var _still := 0.0          # match seconds the ball has lain still out of hands
 var _context := "start"
 var _prev_w2s := PackedVector2Array()   # the discs' own places, before any nudge
 var _prev_scale := 0.0
-var _reports: Array[String] = []        # seen and told, not failed (see _tick)
+var _prev_size := Vector2.ZERO          # the ground's part of the screen
 
 # The score, counted here from the events the screen has played.
 var _goals := [0, 0]
@@ -59,6 +60,10 @@ func run(tree: SceneTree) -> void:
 	_db = root.get_node("GameDB")
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
+	# The first match a device watches adds a line under the momentum meter, and
+	# the ground gives up 21 px to it in one frame. The setting is saved, so only
+	# a run on a clean machine (CI) saw it: disc 12 "moved" 8.40 m at tick 237.
+	_state.set_setting("seen_momentum_intro", true)
 	_t("_test_the_measures_catch_a_fault")
 	await _t("_test_a_full_match_at_8x")
 	print(Ran.line("Picture truth", self))
@@ -95,6 +100,12 @@ func _test_the_measures_catch_a_fault() -> void:
 	var ground := {"mode": "dead", "holder": -1, "pos": Vector2(20, 5), "h": 0.0}
 	_check(Truth.ball_fault(ground, ground, toks, h, 1.0) == "", "A ball on the ground for a second passes")
 	_check(Truth.ball_fault(ground, ground, toks, h, Truth.LYING_LIMIT + 1.0) != "", "A ball nobody goes to is caught")
+	var far := fly.duplicate()
+	far["pos"] = Vector2(20.0 + Truth.KICK_SPEED * h, 5)
+	_check(Truth.ball_speed_fault(far, hang, h) == "", "A ball at the hardest kick's speed passes")
+	far["pos"] = Vector2(20.0 + 42.0, 5)
+	_check(Truth.ball_speed_fault(far, hang, h) != "", "A ball that crosses 42 metres in a tick is caught")
+	_check(Truth.ball_speed_fault(far, {}, h) == "", "The first frame's ball has nothing to be measured against")
 	var out := fly.duplicate()
 	out["pos"] = Vector2(MatchMotion.HALF_LEN + 30.0, 0)
 	_check(Truth.ball_fault(out, fly, toks, h, 0.0) != "", "A ball thirty metres over the fence is caught")
@@ -236,8 +247,6 @@ func _test_a_full_match_at_8x() -> void:
 	_check(int(_stats.get("held", 0)) > 100 and int(_stats.get("flight", 0)) > 100,
 			"The ball was seen in hands and in flight (%s)" % str(_stats))
 	print("Picture truth measured: %s" % str(_stats))
-	for r in _reports:
-		print("Picture truth reports: " + r)
 	m.queue_free()
 	await _settle()
 
@@ -278,22 +287,17 @@ func _tick(pitch, m: Control) -> void:
 		_still = 0.0
 	_peak("lying_secs", _still)
 	_count(str(ball.get("mode", "?")))
-	# Told, not failed: a ball that crosses the ground faster than any kick.
-	# It is in flight, so the picture and the truth still agree, but it reads
-	# as a jump (the free kick's ball brought to the mark, MatchDirector
-	# _possession_phases "free": any distance in 0.4 s).
+	# The ball never crosses the ground faster than a kick (a free kick's ball
+	# once flew any distance to the mark in 0.4 s: 52 m in one tick at 8x).
+	var bs := Truth.ball_speed_fault(ball, _prev_ball, h)
 	if not _prev_ball.is_empty():
-		var went: float = (ball["pos"] as Vector2).distance_to(_prev_ball["pos"])
-		if went / h > Truth.KICK_SPEED:
-			_count("ball faster than a kick")
-			if _reports.size() < 8:
-				_reports.append("the ball went %.0f m in a tick (%.0f m a second), %s to %s, tick %d, event %d" % [went,
-						went / (FRAME * SPEED * MatchDirector.TEMPO), str(_prev_ball.get("mode", "")), str(ball.get("mode", "")),
-						int(_stats.get("ticks", 0)), _events])
+		_peak("ball_ratio", (ball["pos"] as Vector2).distance_to(_prev_ball["pos"]) / (Truth.KICK_SPEED * h))
+	_ok("ball speed", bs == "", "The ball moves no faster than a kick (%s; %s)" % [bs, _where(d)])
 	_prev_w2s = PackedVector2Array()
 	for t in d.tokens:
 		_prev_w2s.append(pitch._w2s(t["pos"]))
 	_prev_scale = scale
+	_prev_size = pitch.size
 	var bf := Truth.ball_fault(ball, _prev_ball, d.tokens, h, _still)
 	_ok("ball", bf == "", "The ball is with a player or on its way (%s; %s)" % [bf, _where(d)])
 	var at: Vector2 = pitch.ball_point()
@@ -461,8 +465,9 @@ func _disc_detail(pitch, tok: PackedVector2Array, disc: PackedVector2Array, scal
 		if step > (MatchMotion.SPRINT + MatchMotion.WALK) * FRAME * SPEED * MatchDirector.TEMPO * 1.001:
 			var before: Vector2 = _prev_disc[i] - _prev_w2s[i]
 			var after: Vector2 = disc[i] - pitch._w2s(tok[i])
-			return "disc %d: he ran %.2f m, the nudge moved %.2f m, the ground was %.3f px a metre and is %.3f" % [i,
-					_prev_tok[i].distance_to(tok[i]), before.distance_to(after) / scale, _prev_scale, scale]
+			return "disc %d: he ran %.2f m, the nudge moved %.2f m, the ground was %.3f px a metre in %s and is %.3f in %s" % [i,
+					_prev_tok[i].distance_to(tok[i]), before.distance_to(after) / scale, _prev_scale, str(_prev_size),
+					scale, str(pitch.size)]
 	return ""
 
 
