@@ -81,6 +81,7 @@ func _run() -> void:
 	_t("_test_rules")
 	_t("_test_sources")
 	_t("_test_hub_pass")
+	_t("_test_no_click")
 	print(Ran.line("Copy rules", self))
 	quit(0 if _failures.is_empty() else 1)
 
@@ -154,6 +155,38 @@ func _test_hub_pass() -> void:
 		_check(src.contains(str(s)), "the hub says: %s" % s)
 	for s in HUB_OLD:
 		_check(not src.contains(str(s)), "the hub no longer says: %s" % s)
+
+
+## Phone first: a line of copy says "tap", never "click". A screen that names the pointer by
+## device asks ScreenLayout.tap_word() (a one-word literal, so the scan below passes it).
+const CLICK := "(?i)(?<![A-Za-z])click(s|ed|ing)?(?![A-Za-z])"
+
+
+## No copy source has a sentence with "click" in it.
+func _test_no_click() -> void:
+	var click := RegEx.create_from_string(CLICK)
+	_check(click.search("Painting with Aqua: click the part of the guernsey") != null, "'click' in a sentence is caught")
+	_check(click.search("Clicking the guernsey first") != null, "'Clicking' is caught")
+	_check(click.search("Painting with Aqua: tap the part of the guernsey to colour it.") == null, "'tap' passes")
+	var lit := RegEx.create_from_string("\"([^\"\\n]*)\"")
+	var hits: Array = []
+	for dir in SOURCES:
+		for path in _files(dir):
+			var text := FileAccess.get_file_as_string(path)
+			var strings: Array = []
+			if path.ends_with(".json"):
+				_json_strings(JSON.parse_string(text), strings)
+			else:
+				for line in text.split("\n"):
+					if line.strip_edges().begins_with("#"):
+						continue
+					for m in lit.search_all(line):
+						if m.get_string(1).contains(" "):
+							strings.append(m.get_string(1))
+			for s in strings:
+				if click.search(str(s)) != null:
+					hits.append("%s: \"%s\"" % [path, str(s).left(90)])
+	_check(hits.is_empty(), "Copy says 'tap', not 'click': %s" % " | ".join(PackedStringArray(hits)))
 
 
 func _files(dir: String) -> Array:
