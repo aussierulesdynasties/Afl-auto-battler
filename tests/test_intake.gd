@@ -283,18 +283,22 @@ func _test_draft_room_gate() -> void:
 	season.round_index = season.fixture.size()
 	season.finals = {"done": true, "premier": "CAR", "runner_up": "ESS"}
 	GameState.open_offseason()
+	# No tied (father-son, academy) draftees: they would hold spots of their own.
+	for p in GameState.draftee_pool:
+		if str(p.get("tied_club", "")) == me:
+			p["tied_club"] = ""
+	for p in GameState.my_list:
+		p["contract_years"] = 3
 	var n := 0
-	while RookieList.senior_count(GameState.my_list) < RookieList.SENIOR_SPOTS and n < 60:
+	while int(GameState.draft_list_spots()["held"]) < RookieList.SENIOR_SPOTS and n < 60:
 		var copy: Dictionary = (GameState.my_list[n % GameState.my_list.size()] as Dictionary).duplicate(true)
 		copy["id"] = "pad_gate_%d" % n
 		copy["rookie_list"] = ""
 		GameState.my_list.append(copy)
 		n += 1
-	for p in GameState.my_list:
-		p["contract_years"] = 3
 	var s := GameState.draft_list_spots()
 	var held: int = (s["picks"] as Array).size()
-	_check(held >= 3 and int(s["open"]) == 0, "A full list with three picks or more (%s)" % str(s))
+	_check(held >= 3 and int(s["held"]) == int(s["cap"]), "A full list with three picks or more (%s)" % str(s))
 	var words := ["no", "one", "two", "three"]
 	var want := mini(3, held)
 	for k in range(want, 0, -1):
