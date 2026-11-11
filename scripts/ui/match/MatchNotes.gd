@@ -1046,8 +1046,7 @@ static func tagger_card_detail(p: Dictionary, legs: float, wide: bool, rating :=
 	var dot := " · "
 	var first := "%s%sPressure %s" % [c["where"], dot, c["pressure"]]
 	var second := "%s%sGives up %s%sTheir man: %s" % [c["legs"], dot, c["gives"], dot, c["holds"]]
-	return (first + dot + second) if wide else (first + "
-" + second)
+	return (first + dot + second) if wide else (first + "\n" + second)
 
 
 ## The best few players of a side by influence: [{"id", "name", "line"}].
