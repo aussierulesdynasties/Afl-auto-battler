@@ -67,6 +67,10 @@ func _stage(club: String, vignettes: bool) -> Control:
 	print("MOMENT ", sim.pending_moment.get("kind", ""), " ", sim.pending_moment.get("title", ""))
 	for o in sim.pending_moment.get("options", []):
 		print("OPTION ", o.get("label", ""), " | ", o.get("gain", ""), " | ", o.get("cost", ""))
+	# The scoreboard follows the staged moment (Q2 10', their man's three goals on it).
+	var goals := [sim.goals(0), sim.goals(1)]
+	goals[them] = maxi(3, int(goals[them]))
+	m.call("_update_scoreboard", {"goals": goals, "behinds": [sim.behinds(0), sim.behinds(1)], "q": 2, "min": 40})
 	m.call("_show_moment")
 	return m
 

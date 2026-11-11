@@ -110,6 +110,11 @@ func _run() -> void:
 		var scene = load("res://scenes/MatchScene.tscn").instantiate()
 		root.add_child(scene)
 		await _frames(16)
+		# The quarters ran off screen, so the scoreboard is set to where a played
+		# match stands at this break: the score, and the last quarter's siren.
+		scene.call("_update_scoreboard", {"goals": [sim.goals(0), sim.goals(1)],
+				"behinds": [sim.behinds(0), sim.behinds(1)], "q": int(q) - 1, "min": (int(q) - 1) * 30})
+		await _frames(2)
 		var pre := ("q%d_" % int(q)) if as_built else ""
 		await _shot(scene, out, pre + "1_break")
 		var key := str(opened.get(int(q), "tag")) if as_built else "tag"
