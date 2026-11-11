@@ -316,11 +316,8 @@ func _test_draft_room_gate() -> void:
 	for pk in mine.slice(1):
 		GameState.pick_owner["%d:%d:%s" % [int(pk["year"]), int(pk["round"]), str(pk.get("origin", me))]] = other
 	var left: Array = GameState.draft_list_spots()["picks"]
-	if left.size() == 1:
-		_check(GameState.draft_room_short() == 0, "One pick and three open spots: the rule is met")
-	else:
-		print("SKIP: pick ownership keys differ (%s)" % str(left))
-		_check(true, "skipped")
+	_check(left.size() == 1, "Trading away all but one pick leaves one (%s)" % str(left))
+	_check(GameState.draft_room_short() == 0, "One pick and three open spots: the rule is met")
 
 
 ## In a career, the count the brief and the pre-draft sheet show matches the

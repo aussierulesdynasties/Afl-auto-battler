@@ -9,6 +9,10 @@ extends SceneTree
 const W := 360
 const H := 740
 const CLUB := "MEL"
+## Pads are copies of real players; each gets its own name so no list repeats.
+const PAD_NAMES := ["Liam Corbett", "Josh Haddad", "Ned Fairlie", "Kai Morrow", "Ben Talbot",
+		"Ollie Strand", "Jack Mercer", "Finn Dowd", "Max Lillie", "Tom Kerrigan", "Sam Okafor",
+		"Will Brennan", "Harry Vane", "Luke Danaher", "Zac Pemberton", "Cody Arnott"]
 
 
 func _initialize() -> void:
@@ -50,15 +54,26 @@ func _run() -> void:
 	s.finals = {"done": true, "premier": "CAR", "runner_up": "ESS"}
 	state.open_offseason()
 	var rl = load("res://scripts/state/RookieList.gd")
-	var n := 0
-	while rl.senior_count(state.my_list) < rl.SENIOR_SPOTS - 1 and n < 40:
-		var copy: Dictionary = (state.my_list[n % state.my_list.size()] as Dictionary).duplicate(true)
-		copy["id"] = "pad_%d" % n
-		copy["rookie_list"] = ""
-		state.my_list.append(copy)
-		n += 1
 	for p in state.my_list:
 		p["contract_years"] = 3
+	# Pad with copies of the cheapest players; the last three pads are out of
+	# contract (kept by default, so they hold a spot) and are the ones the
+	# Contracts tab offers to release.
+	var cheap: Array = state.my_list.duplicate()
+	cheap.sort_custom(func(x, y): return int(x.get("salary", 0)) < int(y.get("salary", 0)))
+	var pads := []
+	var n := 0
+	while rl.senior_count(state.my_list) < rl.SENIOR_SPOTS - 1 and n < 40:
+		var copy: Dictionary = (cheap[n % 6] as Dictionary).duplicate(true)
+		copy["id"] = "pad_%d" % n
+		copy["rookie_list"] = ""
+		for k in ["name", "generic_name", "real_name"]:
+			copy[k] = PAD_NAMES[n % PAD_NAMES.size()]
+		state.my_list.append(copy)
+		pads.append(copy)
+		n += 1
+	for i in range(maxi(0, pads.size() - 3), pads.size()):
+		pads[i]["contract_years"] = 1
 	print("short=", state.draft_room_short(), " spots=", state.draft_list_spots())
 	for step in [["", "_1_gate.png"], ["DraftRoomDelist", "_2_delist.png"], ["DraftRoomTrade", "_3_trade.png"]]:
 		var hub: Control = load("res://scenes/HubScene.tscn").instantiate()
@@ -73,8 +88,8 @@ func _run() -> void:
 			if b != null:
 				b.emit_signal("pressed")
 			hub.queue_free()
-			for i in range(20):
-				await process_frame
+			# The screen change runs under the dot cover: wait until it has gone.
+			await create_timer(2.5).timeout
 		await _shot(out + str(step[1]))
 		if is_instance_valid(hub):
 			hub.queue_free()
