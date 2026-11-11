@@ -9,6 +9,9 @@ cached so a re-run fetches nothing twice. Same method as tools/legacy_2010s.
     python tools/legacy_1990s/fetch.py --cache data/cache/legacy_1990s players   # one Draftguru page per listed player
     python tools/legacy_1990s/fetch.py --cache data/cache/legacy_1990s bios      # AFL Tables player pages (weight)
     python tools/legacy_1990s/fetch.py --cache data/cache/legacy_1990s pre       # 1987-89, the 1990 start, era rules, grounds
+    python tools/legacy_1990s/fetch.py --cache data/cache/legacy_1990s rules     # era rules' pages only
+
+A PDF source is cached as its text (pdftotext -layout, from poppler).
 
 The cache is not committed (data/cache/ is gitignored); build.py reads it.
 """
@@ -18,7 +21,10 @@ import argparse
 import html
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 
@@ -87,6 +93,30 @@ def get(cache: str, url: str, pause: float = 0.6) -> str:
     return body
 
 
+def get_pdf(cache: str, url: str) -> str:
+    """A PDF's text, as pdftotext -layout reads it, cached like a page."""
+    path = cache_path(cache, url)
+    if os.path.exists(path) and os.path.getsize(path) > 0:
+        with open(path, encoding="utf-8") as fh:
+            return fh.read()
+    tool = shutil.which("pdftotext")
+    if not tool:
+        raise SystemExit("pdftotext (poppler) is needed to read " + url)
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        data = resp.read()
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, txt = os.path.join(tmp, "src.pdf"), os.path.join(tmp, "src.txt")
+        with open(pdf, "wb") as fh:
+            fh.write(data)
+        subprocess.run([tool, "-layout", "-enc", "UTF-8", pdf, txt], check=True)
+        with open(txt, encoding="utf-8", errors="replace") as fh:
+            body = fh.read()
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(body)
+    return body
+
+
 def core(cache: str) -> None:
     for y in DRAFT_YEARS:
         get(cache, f"{DG}/years/{y}")
@@ -149,6 +179,11 @@ COACH_PAGES = ["brisbaneb", "carlton", "collingwood", "essendon", "fitzroy", "bu
 # Era rules: each value in era_rules.csv quotes one of these pages.
 RULE_PAGES = ["AFL_salary_cap", "Australian_Football_League", "Interchange_(Australian_rules_football)",
               "Rookie_list"]
+# Era-rule sources off Wikipedia, by full URL: the AFL's annual reports (the
+# footyindustry.com archive) and AFL articles, for the salary caps of 1990-2012.
+AR = "https://footyindustry.com/docs/AFL%20{}%20Annual%20{}.pdf"
+RULE_SOURCES = [AR.format(2006, "report"), AR.format(2010, "Report"), AR.format(2011, "Report"),
+                "https://www.afl.com.au/news/96194/an-ever-changing-game"]
 # AFL Tables venue page -> the ground's Wikipedia article (its infobox's former names).
 GROUND_ARTICLES = {
     "mcg": "Melbourne_Cricket_Ground", "waverley_park": "Waverley_Park", "princes_park": "Princes_Park_(stadium)",
@@ -170,7 +205,8 @@ def pre(cache: str) -> None:
     get(cache, WIKI + "1990_AFL_season")
     for slug in COACH_PAGES:
         get(cache, f"https://afltables.com/afl/stats/coaches/{slug}.html")
-    for page in RULE_PAGES + sorted(set(GROUND_ARTICLES.values())):
+    rules(cache)
+    for page in sorted(set(GROUND_ARTICLES.values())):
         get(cache, WIKI + page)
     # Bios of the players in the 1987-89 stats not already cached (most are:
     # anyone who also played in the 1990s). build.py reads only the ones whose
@@ -186,13 +222,20 @@ def pre(cache: str) -> None:
     print("pre done")
 
 
+def rules(cache: str) -> None:
+    for page in RULE_PAGES:
+        get(cache, WIKI + page)
+    for url in RULE_SOURCES:
+        (get_pdf if url.endswith(".pdf") else get)(cache, url)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", required=True)
-    ap.add_argument("step", choices=["core", "players", "bios", "pre"])
+    ap.add_argument("step", choices=["core", "players", "bios", "pre", "rules"])
     a = ap.parse_args()
     os.makedirs(a.cache, exist_ok=True)
-    {"core": core, "players": players, "bios": bios, "pre": pre}[a.step](a.cache)
+    {"core": core, "players": players, "bios": bios, "pre": pre, "rules": rules}[a.step](a.cache)
 
 
 if __name__ == "__main__":

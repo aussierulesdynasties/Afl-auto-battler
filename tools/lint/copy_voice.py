@@ -79,7 +79,7 @@ TEAM_PASS = {
         "Saved as your Best 23. Choose it any week from Auto-pick.",
         "Back to our side from before Auto-pick.",
         "Leave the player out while he is fit and the promise breaks. It stings.",
-    ], ["Dual ruck on: Auto-pick", "One ruck: Auto-pick", "Side confirmed for", "\"Your team\"", "(projected:",
+    ], ["atch committee", "Dual ruck on: Auto-pick", "One ruck: Auto-pick", "Side confirmed for", "\"Your team\"", "(projected:",
         "Picked for you", "Back to your side before the auto-pick", "Leave a fit player out"]],
     "scripts/ui/CoachingScene.gd": [[
         "Each plan buys an edge and gives something up. The note below says which.",
@@ -100,7 +100,7 @@ TEAM_PASS = {
     "scripts/sim/SkipOrders.gd": [[
         "Auto-pick names the side in place of one you named.",
         "Auto-pick names the side in place of one you named, and keeps naming it for the finals until you name another.",
-    ], ["Auto-pick replaces"]],
+    ], ["atch committee", "Auto-pick replaces"]],
     "scripts/state/GameState.gd": [[
         "Nobody needs a break. This is our best side.", "Not enough fresh players to rest anyone. This is our best side.",
         "No saved Best 23 yet. Set a side and save it.", "Our Best 23. Replacing unavailable players: %s.",
