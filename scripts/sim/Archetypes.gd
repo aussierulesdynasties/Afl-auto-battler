@@ -150,7 +150,7 @@ const SHARE := 2.5
 ## (MatchSim BURSTS keys) that earn Philosophical points.
 const PRESS_KIND := {"back": "FATH", "back_named": "FATH", "criticise": "HARD",
 		"criticise_named": "HARD", "method": "ANA"}
-const CALL_KEY := {"surge": "GAMB", "stack": "GAMB"}
+const CALL_KEY := {"surge": "GAMB", "stack": "GAMB", "push": "GAMB"}
 
 
 ## An empty record: no scores, nothing held, nothing tallied.
