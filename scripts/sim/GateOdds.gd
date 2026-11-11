@@ -47,7 +47,13 @@ const PEP_COST := {
 const TAG_GIVES := "%s of his own ball and contest work"
 # What the tag does to their man, in his touches a match (director, 2026-11-10).
 const TAG_TOUCHES := "Usually %d touches. Tagged, about %d."
-const TAG_NOTE := "%s tags %s: he gives up %s of his own game."
+# The Tag call at a break (director 2026-11-10, "Gain / Cost everywhere"):
+# labelled rows like every other break call, the size inside the line.
+const TAG_BREAK_GAIN := "%s usually gets %d touches; with %s on him, about %d"
+const TAG_BENCH_COST := "%s goes while %s is on the bench, and gives up %s"
+const TAG_NOBODY_GAIN := "none: you have no midfielder on the ground to go to him"
+const TAG_NONE_GAIN := "your midfielders play their own game: nobody gives up %s"
+const TAG_NONE_COST_ANY := "their midfielders get their usual %d touches"
 # The call when their midfielder is kicking a bag.
 const TAG_HOT_GAIN := "%s usually gets %d touches; with %s on him, about %d, until you call it off"
 const TAG_HOT_COST := "%s gives up %s"
@@ -143,10 +149,20 @@ static func tag_call_lines(hot_name: String, stopper: String, kept: int, on_now:
 	}
 
 
-## The line under the tag call: the cost, whoever goes (each man's hold is on
-## his own card, MatchNotes.tagger_card).
-static func tag_note(who_name: String, target_name: String) -> String:
-	return TAG_NOTE % [who_name, target_name, tag_gives_pct()]
+## The break Tag call's Gain / Cost, unlabelled: [gain, cost]. `target` is the
+## man tagged ("" for no tag); `who` the midfielder who goes ("" when you have
+## none on the ground) and `kept` the touches he holds him to; `benched` your
+## named tagger when he is on the bench and `who` goes in his place. With no
+## tag, `their_best` is the midfielder of theirs who goes untagged ("" for any).
+static func tag_break_texts(target: String, who: String, kept: int, benched := "", their_best := "") -> Array:
+	var usual := usual_touches()
+	if target == "":
+		return [TAG_NONE_GAIN % tag_gives(),
+				TAG_LEAVE_COST % [their_best, usual] if their_best != "" else TAG_NONE_COST_ANY % usual]
+	if who == "":
+		return [TAG_NOBODY_GAIN, TAG_LEAVE_COST % [target, usual]]
+	var gave := TAG_BENCH_COST % [who, benched, tag_gives()] if benched != "" else TAG_HOT_COST % [who, tag_gives()]
+	return [TAG_BREAK_GAIN % [target, usual, who, kept], gave]
 
 
 static func skip_line(q: int) -> String:

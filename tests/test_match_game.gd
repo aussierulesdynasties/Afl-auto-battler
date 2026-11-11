@@ -2651,6 +2651,26 @@ func _test_hot_player_moment() -> void:
 	_check(str(benched.pending_moment["options"][0]["label"]).begins_with("Tag him with ")
 			and str(benched.pending_moment["options"][0]["cost"]).contains(GateOdds.tag_gives()),
 			"A tag on a man off the ground costs nothing to move: the card reads as a new tag")
+	# No midfielder of yours on the ground: no tag to offer, so no call that
+	# does nothing; it waits and comes once one is back on.
+	var bare := _sim(77)
+	bare.moment_side = 0
+	bare.current_quarter = 2
+	bare._chain_no = 200
+	var sq0 := bare.squads[0] as Squad
+	var kept_ground: Array = sq0.ground.duplicate()
+	sq0.ground = sq0.ground.filter(func(p): return not MatchSim.midfielder_on_ground(p))
+	bare.player_stats[str(mid["id"])] = {"goals": 3.0}
+	bare._boundary_moment()
+	_check(bare.tagger_of(0) == null and str(bare.pending_moment.get("kind", "")) != "hot",
+			"With no midfielder on the ground there is no tag call (%s)" % str(bare.pending_moment.get("title", "-")))
+	bare.pending_moment = {}
+	sq0.ground = kept_ground
+	bare._chain_no = 300
+	bare._boundary_moment()
+	_check(str(bare.pending_moment.get("kind", "")) == "hot"
+			and str(bare.pending_moment["options"][0]["label"]) == "Tag him with %s" % GameDB.player_display_name(bare.tagger_of(0)),
+			"Once a midfielder is back on, the call comes, naming him")
 
 
 ## Gate 1.12: key forward v key defender. Every link: a default set-up, a
