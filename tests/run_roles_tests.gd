@@ -26,6 +26,10 @@ func _run() -> void:
 	# Return visits: the first-visit intros (FirstVisitIntro.gd) have their own suite.
 	for key in load("res://scripts/ui/FirstVisitIntro.gd").TEXT:
 		_state.set_setting("seen_%s_intro" % key, true)
+	# Training keeps its own first-visit sheet (TrainingScene._show_intro), which is not
+	# in that table. Left due, it covers the list on a clean device and takes the
+	# real tap meant for a card; an earlier suite on the same device used to hide that.
+	_state.set_setting("seen_training_intro", true)
 	_state.show_real_names = false
 	_state.replay_seed = SUITE_SEED
 	var script = load("res://tests/test_roles.gd")
