@@ -455,12 +455,15 @@ func _match_report(rep: Dictionary, prefix: String, pool: Array) -> Control:
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			left.add_child(l)
 	# The medical panel sat on one of yours after a concussion in this match.
+	# A cleared player is good news: body ink, not the injury red.
 	var medical: Array = rep.get("medical", [])
+	var cleared: Array = rep.get("medical_cleared", [])
 	if not medical.is_empty():
 		left.add_child(UiKit.spacer(8))
 		left.add_child(_report_head("Medical panel"))
 		for i in range(medical.size()):
-			var l := UiKit.lbl(str(medical[i]), UiKit.BODY, UiKit.BAD)
+			var ok := i < cleared.size() and bool(cleared[i])
+			var l := UiKit.lbl(str(medical[i]), UiKit.BODY, UiKit.TEXT if ok else UiKit.BAD)
 			l.name = prefix + "Medical_%d" % i
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			left.add_child(l)
