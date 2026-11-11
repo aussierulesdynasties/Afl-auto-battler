@@ -5054,6 +5054,12 @@ func _skip_start_finals(seed: int) -> void:
 	_state.media_conference = {}
 
 
+## The finals' first training report opens over the hub: closed, as a coach would.
+func _close_hub_report() -> void:
+	load("res://scripts/ui/TrainingReportSheet.gd").close_top(current_scene)
+	await _settle()
+
+
 ## How long a test finger stays down for a long press: past HoldPress.SECONDS.
 const HOLD_HELD := 0.75
 
@@ -5186,6 +5192,7 @@ func _test_skip_long_press() -> void:
 	_router.stack = ["main"]
 	_router.go("hub")
 	await _settle()
+	await _close_hub_report()
 	b = _bulk_skip_button()
 	_check(b != null and str(b.get_meta("bulk_skip")) == "season", "In the finals the week's button holds the rest of the season (%s)" % (b.name if b != null else "none"))
 	why = await Tap.hold_at(b, b.size * 0.5, HOLD_HELD) if b != null else "missing"
@@ -5223,6 +5230,7 @@ func _test_skip_season() -> void:
 	_router.stack = ["main"]
 	_router.go("hub")
 	await _settle()
+	await _close_hub_report()
 	var b := _bulk_skip_button()
 	_check(b != null and str(b.get_meta("bulk_skip")) == "season", "In the finals the week's button holds the skip to the end of the %d season" % year)
 	var why: String = await Tap.hold_at(b, b.size * 0.5, HOLD_HELD) if b != null else "missing"
