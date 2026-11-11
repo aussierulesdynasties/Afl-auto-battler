@@ -1,0 +1,24 @@
+# Functions lap_instrument.py times in the bench trees (path, function).
+scripts/state/GameState.gd advance
+scripts/state/GameState.gd _advance_prep
+scripts/state/GameState.gd _play_week
+scripts/state/GameState.gd _log_week
+scripts/state/GameState.gd _week_xp
+scripts/state/GameState.gd _week_rivals
+scripts/state/GameState.gd _week_after
+scripts/state/GameState.gd _week_save
+scripts/state/GameState.gd _after_round
+scripts/state/GameState.gd preseason_sim_to_round1
+scripts/state/GameState.gd _settle_usual_plans
+scripts/state/GameState.gd _refresh_coach_tactics
+scripts/state/GameState.gd _find_coach_approaches
+scripts/state/GameState.gd _train_rivals
+scripts/state/GameState.gd open_offseason
+scripts/state/GameState.gd begin_intake_draft
+scripts/state/GameState.gd finish_intake_draft
+scripts/state/GameState.gd start_next_season
+scripts/sim/Season.gd play_round
+scripts/sim/Season.gd play_finals_week
+scripts/sim/Season.gd _round_sims
+scripts/state/GameState.gd _start_next_season
+scripts/state/GameState.gd _grant_match_xp
