@@ -1919,7 +1919,9 @@ Your career stays on this device.",
 	for s in swatches:
 		if (s as Control).size.x < 44 or (s as Control).size.y < 44:
 			small_sw.append(s.name)
-	_check(swatches.size() == ClubForge.PALETTE.size() and small_sw.is_empty(),
+	# Loaded, not named: naming ClubForge here compiles it before GameDB exists.
+	var palette_size: int = load("res://scripts/sim/ClubForge.gd").PALETTE.size()
+	_check(swatches.size() == palette_size and palette_size >= 27 and small_sw.is_empty(),
 			"Every Forge colour is a thumb-sized swatch on a phone (%d, small %s)" % [swatches.size(), str(small_sw)])
 	var bottle_sw: Control = current_scene.find_child("ForgeColour_bottle", true, false)
 	var bottle_tap: String = await Tap.tap(bottle_sw) if bottle_sw != null else "missing"
