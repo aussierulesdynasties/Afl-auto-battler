@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# For a push to main: did a green pull-request run already test exactly these files?
+# For a push to main: did a green pull-request or merge-queue run already test exactly these files?
 # A squash of an up-to-date branch gives the same tree as the merge commit its
 # last green Tests run checked out, so running every shard again proves nothing.
 #
@@ -13,6 +13,15 @@ set -u
 sha="$1"
 repo="$2"
 tree=$(git rev-parse "$sha^{tree}" 2>/dev/null) || { echo "Run: cannot read the tree of $sha"; exit 1; }
+# The merge queue pushes to main exactly the group commit its green Tests run tested.
+mq=$(gh api "repos/$repo/actions/workflows/tests.yml/runs?event=merge_group&head_sha=$sha&status=success&per_page=1" 	-q '.workflow_runs[0].id // empty' 2>/dev/null)
+if [ -n "$mq" ]; then
+	tested=$(gh api "repos/$repo/actions/runs/$mq/artifacts" -q '.artifacts[] | select(.name | startswith("tested-tree-")) | .name' 2>/dev/null | head -1)
+	if [ "${tested#tested-tree-}" = "$tree" ]; then
+		echo "Skip: tree $tree is the one merge-queue run $mq tested"
+		exit 0
+	fi
+fi
 pr=$(gh api "repos/$repo/commits/$sha/pulls" -q '[.[] | select(.merged_at != null)][0].number' 2>/dev/null)
 [ -n "$pr" ] && [ "$pr" != null ] || { echo "Run: $sha is not a merged pull request"; exit 1; }
 head=$(gh api "repos/$repo/pulls/$pr" -q .head.sha 2>/dev/null)
