@@ -546,7 +546,7 @@ func _check_once(r: Dictionary, tag: String) -> void:
 	_check(factors != null and head != null, "%s: How it went is built" % tag)
 	if factors != null and head != null:
 		var empty := factors.get_child_count() == 0
-		_check(factors.visible == not empty and head.visible == not empty,
+		_check(factors.visible == (not empty) and head.visible == (not empty),
 				"%s: How it went shows only with something left to say (%d lines)" % [tag, factors.get_child_count()])
 	print("  %s: %s" % [tag, " | ".join(_summary_sentences(ft))])
 	Router.stack = []

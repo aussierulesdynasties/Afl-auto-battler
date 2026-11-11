@@ -587,8 +587,7 @@ func _card(id: String, on_field: bool, place: String) -> Button:
 			ready.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			face.add_child(ready)
 			b.custom_minimum_size.y = 58
-		b.tooltip_text = GameDB.player_display_name(p) + ("
-" + _trial_note(id) if _trial_note(id) != "" else "")
+		b.tooltip_text = GameDB.player_display_name(p) + ("\n" + _trial_note(id) if _trial_note(id) != "" else "")
 	else:
 		var row := UiKit.hbox(6)
 		face.add_child(row)

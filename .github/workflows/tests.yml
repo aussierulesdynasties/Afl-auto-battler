@@ -75,8 +75,8 @@ jobs:
         with:
           fetch-depth: 2     # the PR merge commit and the base it merges into
 
-      # Anything outside docs/, *.md files and the audit and capture scripts
-      # (tools/audit/, tools/visual/) counts as code. A draft PR runs no game
+      # Anything outside docs/, *.md files, the audit and capture scripts and the lints
+      # (tools/audit/, tools/visual/, tools/lint/) counts as code. A draft PR runs no game
       # tests until it is marked ready for review.
       - name: Check for code changes
         id: changes
@@ -90,9 +90,9 @@ jobs:
             if [ "$IS_DRAFT" = "true" ]; then
               code=false
               reason="draft pull request: the game tests run when it is marked ready for review"
-            elif ! git diff --name-only HEAD^1 HEAD | grep -qvE '^docs/|\.md$|^tools/audit/|^tools/visual/'; then
+            elif ! git diff --name-only HEAD^1 HEAD | grep -qvE '^docs/|\.md$|^tools/audit/|^tools/visual/|^tools/lint/'; then
               code=false
-              reason="documentation, audit or capture scripts only"
+              reason="documentation, audit or capture scripts or the static lints only (the lint job checks those)"
             fi
           fi
           # roadmap_close.yml dispatches this on its docs/TODO.md-only commit to earn

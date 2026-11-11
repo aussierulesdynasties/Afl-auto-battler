@@ -23,7 +23,7 @@ A failure prints `path:line: [rule] message` (and a GitHub annotation on CI).
 
 | Rule | File | What it checks | Came from |
 |---|---|---|---|
-| autoload-reach | autoload_reach.py | No `extends SceneTree` script (runner, harness) names, at compile time, a class whose chain reaches an autoload: under `godot --script` it fails to compile and Godot hangs to the time limit. `load()` it inside `_run()`. | new (StoryDeck, ClubForge and #978 breaks) |
+| autoload-reach | autoload_reach.py | No script whose extends chain reaches SceneTree (runner, harness) names, at compile time, a class whose chain (names, single- or double-quoted preloads, `extends "res://..."`) reaches an autoload: under `godot --script` it fails to compile and Godot hangs to the time limit. `load()` it inside `_run()`; a `var` of the same name shadows the class only in its own function. | new (StoryDeck, ClubForge and #978 breaks) |
 | copy-voice | copy_voice.py | The banned words (`scripts/core/CopyRules.gd` WORDS) in story cards, tale banks and UI/sim/state string literals, at the exact ALLOW counts. | copy_rules `_test_sources` |
 | copy-pass | copy_voice.py | Each copy voice pass keeps its rewritten lines and its old ones stay gone (PASSES: hub, team and coaching, training). | copy_rules `_test_hub_pass`, `_test_team_pass`, `_test_training_pass` |
 | font-size-one-place | screens.py | No `add_theme_font_size_override` outside UiKit. | text_size `_test_one_place` |
@@ -44,10 +44,15 @@ checks, StoryDeck.validate, ProjectSettings, taps), and the compile preflight
 
 ## gdlint baseline
 
-`gdlint_baseline.txt` lists the problems known when the gate started (`count rule path`): 28
-unused arguments, 34 naming slips, and 22 files gdtoolkit cannot parse though Godot can (a
-newline inside a string, `set`/`get` as a variable name, `x == not y`). A file may keep up to
-its count of each rule; one more fails. When you fix some, the run notes the baseline can
+`gdlint_baseline.txt` lists the known problems (`count rule path`): 71 on 2026-11-12, unused
+arguments and naming slips. A file may keep up to its count of each rule; one more fails.
+
+A parse error is never baselined: gdtoolkit skips a file it cannot parse, so one baselined
+parse error would exempt the whole file. Every tracked .gd parses since 2026-11-12. gdtoolkit
+4.5.0 lags Godot on four legal forms; write them the way it reads:
+a line break inside a `"..."` string (write `\n`), `set` or `get` as a variable name (rename),
+`x == not y` (write `x == (not y)`), and a one-line lambda with an `if` body (put the body on
+its own lines). When you fix some, the run notes the baseline can
 shrink; rewrite it with `python3 -I tools/lint/lint.py --only gdlint --write-baseline`.
 Never raise a count by hand to pass: fix the line, or rename it to match the rule.
 

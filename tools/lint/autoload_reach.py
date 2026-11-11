@@ -8,8 +8,9 @@ _run() after `await process_frame` (afl-godot-tests skill).
 
 This finds those names with no Godot, in about a second: it reads the [autoload] names from
 project.godot, maps each class_name to its file, strips strings and comments, and follows
-class names and preloads transitively. A `var`/`const` of the same name (var BigCalls = load(...))
-shadows the class and is skipped. tools/ci_preflight_compile.sh (Godot --check-only) stays the
+class names, preloads and `extends "res://..."` bases transitively. A `var`/`const` of the same
+name (var BigCalls = load(...)) shadows the class: a class-level one in the whole file, one inside a
+function only in that function. An entry script is one whose extends chain reaches SceneTree. tools/ci_preflight_compile.sh (Godot --check-only) stays the
 ground truth; this is the fast first gate, and the one that runs where no preflight does.
 """
 import os
@@ -22,8 +23,12 @@ from common import Finding
 # A double-quoted string may run over a line break: Godot accepts it (tests/run_matchday_tests.gd).
 TOKEN = re.compile(r'#[^\n]*|"""[\s\S]*?"""|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\\n])*\'')
 IDENT = re.compile(r'(?<![\w.$])([A-Z]\w*)\b')
-PRELOAD = re.compile(r'preload\(\s*"res://([^"]+\.gd)"')
+PRELOAD = re.compile(r'preload\(\s*["\']res://([^"\']+\.gd)["\']')
+EXTENDS_PATH = re.compile(r'^extends\s+["\']res://([^"\']+\.gd)["\']', re.M)
+EXTENDS_NAME = re.compile(r'^extends\s+(\w+)', re.M)
 LOCAL = re.compile(r'\b(?:var|const)\s+([A-Z]\w*)')
+CLASS_LOCAL = re.compile(r'^(?:static\s+)?(?:var|const)\s+([A-Z]\w*)', re.M)
+FUNC_START = re.compile(r'^(?:static\s+)?func\b')
 
 
 def strip(t):
@@ -67,10 +72,47 @@ def check(root, files=None, extra=()):
         if m:
             cls_of[m.group(1)] = f
 
+    def blocks(f):
+        """The stripped source cut at each top-level func: the class body, then one per function."""
+        out, start, cur = [], 1, []
+        for i, line in enumerate(src[f].split("\n")):
+            if FUNC_START.match(line) and cur:
+                out.append((start, cur))
+                start, cur = i + 1, []
+            cur.append(line)
+        out.append((start, cur))
+        return out
+
     def deps(f):
-        local = set(LOCAL.findall(src[f]))
-        names = {n for n in IDENT.findall(src[f]) if (n in autoloads or n in cls_of) and n not in local}
-        return names, set(PRELOAD.findall(raw[f]))
+        """({name: first line naming it unshadowed}, {preloaded or extended path})."""
+        class_local = set(CLASS_LOCAL.findall(src[f]))
+        names = {}
+        for start, lines in blocks(f):
+            local = class_local | (set(LOCAL.findall("\n".join(lines))) if FUNC_START.match(lines[0]) else set())
+            for i, line in enumerate(lines):
+                for n in IDENT.findall(line):
+                    if (n in autoloads or n in cls_of) and n not in local and n not in names:
+                        names[n] = start + i
+        return names, set(PRELOAD.findall(raw[f])) | set(EXTENDS_PATH.findall(raw[f]))
+
+    entry_memo = {}
+
+    def is_entry(f, seen=()):
+        """Whether f's extends chain reaches SceneTree (so `godot --script` can start it)."""
+        if f in entry_memo:
+            return entry_memo[f]
+        if f in seen:
+            return False
+        m = EXTENDS_PATH.search(raw[f])
+        if m:
+            out = m.group(1) in src and is_entry(m.group(1), seen + (f,))
+        else:
+            m = EXTENDS_NAME.search(raw[f])
+            base = m.group(1) if m else ""
+            out = base == "SceneTree" or (base in cls_of and cls_of[base] != f and is_entry(cls_of[base], seen + (f,)))
+        if not seen:
+            entry_memo[f] = out
+        return out
 
     memo = {}
 
@@ -101,13 +143,16 @@ def check(root, files=None, extra=()):
                     if r:
                         out = [p.split('/')[-1]] + r
                         break
-        memo[f] = out
+        # A walk cut short by a cycle (an ancestor of f is in `seen`) is partial: cache it only when
+        # it found a chain or started from nothing, or a later runner naming a class on the cycle passes.
+        if out or not seen:
+            memo[f] = out
         return out
 
     findings = []
     entries = 0
     for f in sorted(src):
-        if not re.search(r'^extends\s+SceneTree', raw[f], re.M):
+        if not is_entry(f):
             continue
         entries += 1
         names, preloads = deps(f)
@@ -126,9 +171,8 @@ def check(root, files=None, extra=()):
                     hits.append((p, [p.split('/')[-1]] + r))
         lines = raw[f].split("\n")
         for n, chain in hits:
-            word = re.compile(r'(?<![\w.])' + re.escape(n.split('/')[-1]) + r'\b')
-            ln = next((i + 1 for i, l in enumerate(lines) if word.search(strip(l))), 0) \
-                or next((i + 1 for i, l in enumerate(lines) if n in l and "preload" in l), 0)
+            ln = names.get(n) or next((i + 1 for i, l in enumerate(lines)
+                                       if n in l and ("preload" in l or l.startswith("extends"))), 0)
             findings.append(Finding(f, ln, "autoload-reach",
                                     "names %s at compile time (%s), so `godot --script` fails before the autoloads "
                                     "exist and the run hangs: load() it by path inside _run() after await "

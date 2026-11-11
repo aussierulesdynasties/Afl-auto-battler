@@ -1074,8 +1074,7 @@ func _show_coach_box() -> void:
 		var gc := GateOdds.tag_break_texts(target, who_name, kept, benched, str(untagged[0]))
 		NameInk.set_line(tag_rows[0], str(gc[0]), _names())
 		NameInk.set_line(tag_rows[1], str(gc[1]), _names())
-		tag_note.set_meta("plain", GateOdds.gain(str(gc[0])) + "
-" + GateOdds.cost(str(gc[1])))
+		tag_note.set_meta("plain", GateOdds.gain(str(gc[0])) + "\n" + GateOdds.cost(str(gc[1])))
 	# The tag is offered on their listed midfielders only (director, 2026-10-14:
 	# "Only listed midfielders"): the names, and "Other midfielder..." for the
 	# listed midfielders not already shown, which is not drawn when none is
@@ -2963,8 +2962,7 @@ func _player_choice(node_name: String, none_label: String, roster: Array, first:
 func _card_text(r: Dictionary, detail: Callable) -> String:
 	# A card keeps its groups on their own lines (MatchNotes.card_detail).
 	var extra := str(detail.call(r, false)) if detail.is_valid() else ""
-	return _short_name(r) if extra == "" else "%s
-%s" % [_short_name(r), extra]
+	return _short_name(r) if extra == "" else "%s\n%s" % [_short_name(r), extra]
 
 
 ## A "Who tags" card (director, 2026-10-13: it must read at a glance): his name
@@ -3097,8 +3095,7 @@ func _player_sheet(title: String, roster: Array, current: String, detail: Callab
 				line += "  ·  " + game
 		elif game != "":
 			extra += "  ·  " + game
-		var b := UiKit.btn(line if extra == "" else line + "
-" + extra, 14)
+		var b := UiKit.btn(line if extra == "" else line + "\n" + extra, 14)
 		b.name = "Sheet_" + id
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		if extra == "":
