@@ -605,6 +605,18 @@ func _change_ends() -> void:
 	queue_redraw()
 
 
+## The painted 50s on each arc: about 7 m tall on the ground, never under the
+## oval's 13 px text floor (row T3.R9).
+const FIFTY_M := 7.0
+const FIFTY_GAP := 4.0
+## How far along the arc from the boundary each 50 sits, in metres.
+const FIFTY_FROM_BOUNDARY_M := 16.0
+
+
+static func fifty_font_size(px_per_m: float) -> int:
+	return int(maxf(13.0, round(FIFTY_M * px_per_m)))
+
+
 ## The goal square at the end a side kicks to is drawn in that side's colour,
 ## heavier than the ground's white lines, and filled. The 50 m arc stays white.
 const END_LINE_W := 3.0
@@ -1039,6 +1051,9 @@ func _draw() -> void:
 	draw_arc(c, 5.0 * s, 0, TAU, 32, line_col, lw, antialias)
 
 	# 50m arcs and goal squares at each end
+	var fifty_fs := fifty_font_size(s)
+	var fifty := UiKit.BOLD.get_string_size("50", HORIZONTAL_ALIGNMENT_LEFT, -1, fifty_fs)
+	var fifties: Array[Vector2] = []
 	for sgn in [-1.0, 1.0]:
 		var goal := _w2s_flat(Vector2(sgn * GOAL_LINE_M, 0.0))
 		var rad := 50.0 * s
@@ -1050,7 +1065,20 @@ func _draw() -> void:
 		# each change of ends, so the colours change ends with the sides.
 		var end_col := end_colour(_kits[0 if sgn > 0.0 else 1]) if _kits.size() == 2 else line_col
 		var end_lw := lw if _kits.size() != 2 else END_LINE_W
-		draw_arc(goal, rad, span.x, span.y, 48, line_col, lw, antialias)
+		# A painted 50 sits on each arc near both boundary ends, the line broken
+		# around it, as on a real ground (director, 2026-11-11: "the 50 metre arcs
+		# should also have the number 50 in them"; "each arc neds 2 near the
+		# boundary line sort of"). The numbers are drawn once the ground's turn is
+		# undone, so they read level on a phone.
+		var half := (maxf(fifty.x, fifty.y) * 0.5 + FIFTY_GAP) / rad
+		var inset := minf(FIFTY_FROM_BOUNDARY_M / 50.0, (span.y - span.x) * 0.25)
+		var lo := span.x + inset
+		var hi := span.y - inset
+		draw_arc(goal, rad, span.x, lo - half, 8, line_col, lw, antialias)
+		draw_arc(goal, rad, lo + half, hi - half, 40, line_col, lw, antialias)
+		draw_arc(goal, rad, hi + half, span.y, 8, line_col, lw, antialias)
+		for ang in [lo, hi]:
+			fifties.append(goal + Vector2(cos(ang), sin(ang)) * rad)
 		# Goal square: 9m deep, 6.4m wide across the goal line.
 		var depth := 9.0 * s
 		var width := 6.4 * s
@@ -1066,6 +1094,10 @@ func _draw() -> void:
 
 	if upright:
 		draw_set_transform(jolt)
+	for at in fifties:
+		var mid := _to_screen(at)
+		var origin := mid + Vector2(-fifty.x * 0.5, UiKit.BOLD.get_ascent(fifty_fs) * 0.5 - UiKit.BOLD.get_descent(fifty_fs) * 0.5)
+		draw_string(UiKit.BOLD, origin, "50", HORIZONTAL_ALIGNMENT_LEFT, -1, fifty_fs, Color(1, 1, 1, 0.8))
 	# Rain falls and wind blows over the ground, under the players and the ball.
 	var now := float(Time.get_ticks_msec()) / 1000.0
 	VignetteWeather.draw_air(self, r, now, weather)
