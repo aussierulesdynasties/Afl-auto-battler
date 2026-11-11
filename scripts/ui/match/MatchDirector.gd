@@ -2357,10 +2357,10 @@ func _structure_spot(t: Dictionary, ball_p: Vector2, poss: int) -> Vector2:
 		var out := world - ball_p
 		if out.length() > CONTEST_RING:
 			world = world.lerp(ball_p + out.normalized() * CONTEST_RING, CONTEST_CRASH_SHARE)
-	elif _stoppage_on() and STACK_POCKETS.has(slot) and _burst_on(side, "stack") and _centre_stoppage():
-		# ...and its pockets hold up behind them, where the bounce set them.
+	elif _stoppage_on() and STACK_HOLD.has(slot) and _burst_on(side, "stack") and _centre_stoppage():
+		# ...and its keys and pockets hold up on the arcs, where the bounce set them.
 		var ax := world.x * dir
-		world.x = signf(ax) * minf(absf(ax), STACK_POCKET_X) * dir
+		world.x = signf(ax) * minf(absf(ax), STACK_HOLD_X) * dir
 	var flooding := not has and _flooding(side)
 	if not has:
 		var o := int(t["match"])
@@ -2553,7 +2553,7 @@ func _pressing(side: int, bx: float) -> bool:
 
 ## How far back from the ball a flooding midfield sits (share of the way to
 ## its own goal), and how far its forwards come up toward the ball.
-const FLOOD_DEPTH := 0.35
+const FLOOD_DEPTH := 0.45
 const FLOOD_PUSH := 0.35
 ## How far the midfield folds into that hole, how far goal-side of the ball the
 ## half-forward line drops (metres) and how much of the way it goes (row T2.4:
@@ -3046,15 +3046,17 @@ func _centre_spot(t: Dictionary, carrier: int) -> Vector2:
 				# the contest, and both half-lines up to their arcs.
 				if slot == "WL" or slot == "WR":
 					spot = Vector2(-2.0, 27.0 * signf(spot.y))
+				elif _burst_on(side, "stack") and STACK_ARC.has(slot):
+					# Stack the stoppage throws the whole side at it: all six of
+					# each line on the arc's edge, just inside it (6-6-6), the
+					# keys and pockets up beside the half-lines (row T2.4: with
+					# the pockets at 48 m and the keys home, the stack moved the
+					# side 4.0 m front to back, too little to see).
+					spot = _on_arc(float(STACK_ARC[slot]), spot.x >= 0.0)
 				elif slot == "CHF" or slot == "HFL" or slot == "HFR":
 					spot.x = ARC_EDGE
 				elif slot == "CHB" or slot == "HBL" or slot == "HBR":
 					spot.x = -ARC_EDGE
-				elif _burst_on(side, "stack") and STACK_POCKETS.has(slot):
-					# Stack the stoppage throws the whole side at it: the pockets
-					# step up behind the half-lines too (row T2.4), only the full-
-					# back and full-forward kept home. Still inside the arcs.
-					spot.x = signf(spot.x) * STACK_POCKET_X
 			"flood":
 				# Defensive: the wings goal-side of the square, and the
 				# centreman at its back edge, behind the ball.
@@ -3079,10 +3081,22 @@ func _centre_spot(t: Dictionary, carrier: int) -> Vector2:
 
 ## Just inside the forward 50 arc, in a side's attacking frame.
 const ARC_EDGE := 37.0   # MatchMotion.GOAL_X (85) - 48
-## Stack the stoppage at a centre bounce: the pockets this far from centre
-## (from 66-68 m; the arc is at 37 m where they stand, 15 m off the centre line).
-const STACK_POCKETS := ["FPL", "FPR", "BPL", "BPR"]
-const STACK_POCKET_X := 48.0
+## Stack the stoppage at a centre bounce: each line's six on its arc, at this
+## distance across the ground (forward frame; a back line mirrors it), from the
+## key in the middle to the pockets on the flanks.
+const STACK_ARC := {"CHF": -5.0, "FF": 5.0, "HFL": -16.0, "HFR": 16.0, "FPL": -27.0, "FPR": 27.0,
+		"CHB": -5.0, "FB": 5.0, "HBL": -16.0, "HBR": 16.0, "BPL": -27.0, "BPR": 27.0}
+## ...and after the bounce the keys and pockets hold up there, no deeper than this
+## from the centre (the half-lines crash the contest: _crashes).
+const STACK_HOLD := ["FF", "FPL", "FPR", "FB", "BPL", "BPR"]
+const STACK_HOLD_X := 44.0
+
+
+## A spot just inside the 50 m arc at `y` across the ground, in a side's
+## attacking frame: its forward arc when `forward`, else its back one.
+static func _on_arc(y: float, forward: bool) -> Vector2:
+	var x := MatchMotion.GOAL_X - sqrt(maxf(0.0, 2500.0 - y * y)) + 1.0
+	return Vector2(x if forward else -x, y)
 
 
 ## A side's centre ball-up setup from its recorded calls: "stack" (extra
