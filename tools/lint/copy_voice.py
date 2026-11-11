@@ -133,7 +133,6 @@ TRAINING_NEW = [
     "On hold while he learns a position. All his training goes into the new role.",
     "His development drills get the rest. Change it when the %d season opens.",
     "Each point on one stat costs more as it climbs. So his OVR grows more slowly than with no stat focus.",
-    "This one shows once he clears its mark by more than he clears one of theirs.",
     "As a %s he rates %d. In his own position, %d. ", "That is up to the standard. He can be picked there after week %d.",
     "Get within %d by week %d and he can be picked there.",
 ]
