@@ -7614,6 +7614,10 @@ func open_offseason(keep_staff := false) -> void:
 			if not list.has(p):
 				continue   # already delisted to make cap room for a better player
 			var why := ai_release_reason(code, p)
+			# Talked round this off-season, he cannot be delisted by choice
+			# until the next one: the club keeps him, as yours must.
+			if why == "delist" and ListStings.release_held(p, season_year + 1):
+				why = Contracts.ai_release_reason(p, list, cap_for(code))
 			if why == "cap" and list.size() > Contracts.MIN_LIST:
 				# Before a wanted player walks for want of cap room, the club
 				# delists its least valuable expiring players it does not pick
@@ -7634,7 +7638,8 @@ func open_offseason(keep_staff := false) -> void:
 					testers[code] = int(testers.get(code, 0)) + 1
 					continue
 				var years := Contracts.ai_term(p, list)
-				_resign(p, years, Contracts.lowest(p, years) - culture_resign_discount(code, p, years))
+				var least := Contracts.lowest(p, years) - culture_resign_discount(code, p, years)
+				_resign(p, years, least, least)
 			else:
 				# A player they wanted but could not fit can earn them a pick;
 				# one they delisted cannot.
@@ -7725,7 +7730,7 @@ func _spare_expiring(code: String, keep: Dictionary, on: Array = []) -> Dictiona
 	var list: Array = on if not on.is_empty() else season.lists.get(code, [])
 	var spare := {}
 	for q in Contracts.expiring(list):
-		if q == keep or retiring_now(q) or bool(q.get("resigned", false)) or Contracts.needed(q, list):
+		if q == keep or retiring_now(q) or bool(q.get("resigned", false)) or Contracts.needed(q, list) 				or ListStings.release_held(q, season_year + 1):
 			continue
 		if spare.is_empty() or Contracts.worth(q) < Contracts.worth(spare) \
 				or (Contracts.worth(q) == Contracts.worth(spare) and str(q["id"]) < str(spare["id"])):
@@ -7818,10 +7823,15 @@ func talk_round(player_id: String) -> Dictionary:
 
 ## Re-sign for `years` more seasons at `salary` (his asking price when not
 ## given). The contract ticks at the rollover, so it is stored as years + 1.
-func _resign(p: Dictionary, years: int, salary := -1) -> void:
+## Under his ask he carries a sting sized by the share of the gap to
+## `floor_price` saved (the least he takes on that term; Contracts.lowest when
+## not given), the same rule for every club (ListStings.haggle_points).
+func _resign(p: Dictionary, years: int, salary := -1, floor_price := -1) -> void:
 	var ask := Contracts.asking_salary(p)
 	if salary > 0 and salary < ask:
 		p["haggle_sting"] = season_year + 1
+		p["haggle_points"] = ListStings.haggle_points(salary, ask,
+				floor_price if floor_price >= 0 else Contracts.lowest(p, years))
 	p["salary"] = salary if salary > 0 else ask
 	p["contract_years"] = years + 1
 	p["resigned"] = true
@@ -7928,7 +7938,7 @@ func offer_contract(player_id: String, salary: int, years: int) -> Dictionary:
 	var out := {"ok": false, "answer": str(reply["answer"]), "salary": int(reply["salary"])}
 	match str(reply["answer"]):
 		"accept":
-			_resign(p, years, salary)
+			_resign(p, years, salary, Contracts.lowest(p, years) - culture_resign_discount(my_club, p, years))
 			out["ok"] = true
 			out["reason"] = "%s re-signs for %d season%s at %s." % [name, years, "" if years == 1 else "s", Contracts.money(salary)]
 		"counter":
@@ -7971,6 +7981,8 @@ func release_player(player_id: String) -> Dictionary:
 		return {"ok": false, "reason": "Players can only be released in the off-season."}
 	if my_list.size() <= Contracts.MIN_LIST:
 		return {"ok": false, "reason": "Your list cannot go below %d." % Contracts.MIN_LIST}
+	if ListStings.release_held(p, season_year + 1):
+		return {"ok": false, "reason": ListCosts.HELD_REASON % GameDB.player_display_name(p)}
 	# A player whose career ends at this rollover leaves the game when he is
 	# let go (_open_market), so that one cannot be undone.
 	var snap := {} if retiring_now(p) else RecruitUndo.snapshot(self, player_id)

@@ -5601,18 +5601,22 @@ func _boundary_moment() -> bool:
 		var hot := _on_ground(opp, str(id))
 		if hot.is_empty() or not taggable(hot) or _tag_id(me) == str(id):
 			continue
-		_asked["hot|" + str(id)] = true
-		# The midfielder who would actually go to him (tagger_for).
+		# The midfielder who would actually go to him (tagger_for). With none of
+		# yours on the ground there is no tag to offer: the call waits (not
+		# marked asked) until one is back on.
 		var minder = tagger_of(me)
-		var stopper := GameDB.player_display_name(minder) if minder != null else "a midfielder"
+		if minder == null:
+			continue
+		_asked["hot|" + str(id)] = true
+		var stopper := GameDB.player_display_name(minder)
 		var hot_name := GameDB.player_display_name(hot)
 		# The size of the call, from what the sim plays (GateOdds; row 120).
-		var on_him: Dictionary = minder if minder != null else {}
+		var on_him: Dictionary = minder
 		var kept := GateOdds.tag_kept(on_him, float(energy.get(str(on_him.get("id", "")), 100.0)))
 		# A tag already on another of theirs moves if the coach says tag: the card
 		# says so, and what leaving it where it is keeps (the answer itself is
 		# unchanged: resolve_moment sets the tag on this man either way).
-		var tagged := _on_ground(opp, _tag_id(me)) if minder != null else {}
+		var tagged := _on_ground(opp, _tag_id(me))
 		var on_now := "" if tagged.is_empty() else GameDB.player_display_name(tagged)
 		var lines := GateOdds.tag_call_lines(hot_name, stopper, kept, on_now)
 		_fire({"kind": "hot", "player_id": str(id), "default": 1,
