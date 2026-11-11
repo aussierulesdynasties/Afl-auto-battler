@@ -150,6 +150,10 @@ func play(from: int, count: int, out: String, weather: String,
 		elif setup == "coached":
 			sim.moment_side = coached
 		var tag_rec := _set_tag(sim, i % 2) if tag != "" else {}
+		var through_rec := {}
+		for ci in range(args.size() - 1):
+			if str(args[ci]) == "--through":
+				through_rec = _set_through(sim, i % 2, str(args[ci + 1]))
 		for k in sets:
 			if not str(k) in sim:
 				push_error("balance: MatchSim has no var " + str(k))
@@ -272,6 +276,12 @@ func play(from: int, count: int, out: String, weather: String,
 		var row := {"i": i, "home": h, "away": a, "teams": teams, "duels": duels(sim, r)}
 		if tag != "":
 			row["tag"] = _tag_record(tag_rec, r)
+		if not through_rec.is_empty():
+			for slot in through_rec:
+				var st: Dictionary = (r["players"] as Dictionary).get(str(through_rec[slot]), {})
+				through_rec[slot] = {"id": through_rec[slot], "disposals": int(st.get("disposals", 0)),
+						"goals": int(st.get("goals", 0))}
+			row["through"] = through_rec
 		var line := JSON.stringify(row)
 		fh.store_line(line)
 		if echo:
@@ -342,6 +352,30 @@ func _weighted(rng: RandomNumberGenerator, weights: Array) -> int:
 ## tag_order's order)}. The target is the rival's biggest midfielder by what he adds to the midfield
 ## (MatchSim.tag_give_up), the same man in every arm. "set" is false when this arm plays no tag
 ## (none, or tagger with no Tagger on the ground).
+## --through mid|fwd|def|all (director bug 2026-11-12, play-through on the
+## ground): side i % 2 plays through its highest-rated man in that call's line
+## (focus_mid, focus_fwd, focus_def; "all" makes all three calls) from the first
+## bounce, its plan unchanged. Returns {slot: id}; the match line carries each
+## man's disposals and goals under "through".
+func _set_through(sim: MatchSim, side: int, which: String) -> Dictionary:
+	var slots := MatchSim.FOCUS_SLOTS if which == "all" else ["focus_" + which]
+	var t: Dictionary = (sim.tactics[side] as Dictionary).duplicate()
+	var out := {}
+	for slot in slots:
+		if not MatchSim.FOCUS_SLOT_ROLES.has(slot):
+			push_error("balance: --through is mid, fwd, def or all")
+			return {}
+		var best := {}
+		for p in (sim.squads[side] as Squad).ground:
+			if (MatchSim.FOCUS_SLOT_ROLES[slot] as Array).has(str(p["role"])) and not out.values().has(str(p["id"])) 					and (best.is_empty() or int(p["overall"]) > int(best["overall"])):
+				best = p
+		if not best.is_empty():
+			t[slot] = str(best["id"])
+			out[slot] = str(best["id"])
+	sim.set_tactics(side, t)
+	return out
+
+
 func _set_tag(sim: MatchSim, side: int) -> Dictionary:
 	var theirs: Array = (sim.squads[1 - side] as Squad).ground
 	var target := {}

@@ -80,10 +80,10 @@ static func warning(n: int) -> String:
 	if n < SHOWN_FROM:
 		return ""
 	if n >= SITS_AT:
-		return "%s. Another one and the medical panel sits again: %d%% chance of being cleared to play on." % [
+		return "%s. Another one and the medical panel sits again: %d%% chance of being cleared to keep playing." % [
 				count_text(n), clear_pct()]
 	var more := SITS_AT - n
-	return "%s. %s more and the medical panel sits: %d%% chance of being cleared to play on." % [
+	return "%s. %s more and the medical panel sits: %d%% chance of being cleared to keep playing." % [
 			count_text(n), "One" if more == 1 else "Two", clear_pct()]
 
 
@@ -93,9 +93,9 @@ static func result_line(row: Dictionary) -> String:
 	var n := int(row.get("count", SITS_AT))
 	var pct := int(row.get("pct", clear_pct()))
 	if bool(row.get("cleared", false)):
-		return "%s had his %s concussion in %d years and the medical panel sat. The panel cleared him to play on (a %d%% chance). Another concussion and it sits again." % [
+		return "%s had his %s concussion in %d years and the medical panel sat. The panel cleared him to keep playing once he recovers (a %d%% chance). Another concussion and it sits again." % [
 				who, Almanac.ordinal(n), YEARS, pct]
-	return "%s had his %s concussion in %d years and the medical panel sat. The panel did not clear him to play on. He had a %d%% chance. His career is over and your list is a player short." % [
+	return "%s had his %s concussion in %d years and the medical panel sat. The panel did not clear him to keep playing. He had a %d%% chance. His career is over and your list is a player short." % [
 			who, Almanac.ordinal(n), YEARS, pct]
 
 
@@ -105,8 +105,8 @@ static func result_short(row: Dictionary) -> String:
 	var who := str(row.get("name", "The player"))
 	var pct := int(row.get("pct", clear_pct()))
 	if bool(row.get("cleared", false)):
-		return "%s cleared to play on (a %d%% chance)." % [who, pct]
-	return "%s not cleared to play on. He had a %d%% chance. His career is over." % [who, pct]
+		return "%s was cleared to keep playing once he recovers (a %d%% chance)." % [who, pct]
+	return "%s was not cleared to keep playing. He had a %d%% chance. His career is over." % [who, pct]
 
 
 ## A rival's sitting, for league news.
@@ -114,7 +114,7 @@ static func league_line(row: Dictionary, club_name: String) -> String:
 	var who := str(row.get("name", "A player"))
 	var n := int(row.get("count", SITS_AT))
 	if bool(row.get("cleared", false)):
-		return "%s (%s) has been cleared by the medical panel to play on after his %s concussion in %d years." % [
+		return "%s (%s) has been cleared by the medical panel to keep playing after his %s concussion in %d years." % [
 				who, club_name, Almanac.ordinal(n), YEARS]
 	return "%s (%s) has played his last game: the medical panel did not clear him after his %s concussion in %d years." % [
 			who, club_name, Almanac.ordinal(n), YEARS]

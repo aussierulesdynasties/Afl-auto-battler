@@ -79,7 +79,7 @@ TEAM_PASS = {
         "Saved as your Best 23. Choose it any week from Auto-pick.",
         "Back to our side from before Auto-pick.",
         "Leave the player out while he is fit and the promise breaks. It stings.",
-    ], ["Dual ruck on: Auto-pick", "One ruck: Auto-pick", "Side confirmed for", "\"Your team\"", "(projected:",
+    ], ["atch committee", "Dual ruck on: Auto-pick", "One ruck: Auto-pick", "Side confirmed for", "\"Your team\"", "(projected:",
         "Picked for you", "Back to your side before the auto-pick", "Leave a fit player out"]],
     "scripts/ui/CoachingScene.gd": [[
         "Each plan buys an edge and gives something up. The note below says which.",
@@ -100,7 +100,7 @@ TEAM_PASS = {
     "scripts/sim/SkipOrders.gd": [[
         "Auto-pick names the side in place of one you named.",
         "Auto-pick names the side in place of one you named, and keeps naming it for the finals until you name another.",
-    ], ["Auto-pick replaces"]],
+    ], ["atch committee", "Auto-pick replaces"]],
     "scripts/state/GameState.gd": [[
         "Nobody needs a break. This is our best side.", "Not enough fresh players to rest anyone. This is our best side.",
         "No saved Best 23 yet. Set a side and save it.", "Our Best 23. Replacing unavailable players: %s.",
@@ -234,6 +234,26 @@ def check(root, allow=None, sources=None, tales=None):
     for path in tales:
         if read_n.get(path, 0) <= 0:
             out.append(Finding(path, 0, "copy-voice", "the phrase bank was not read, phrase by phrase (%d strings)" % read_n.get(path, 0)))
+    return out
+
+
+## Phone first: a line of copy says "tap", never "click". A screen that names the pointer by
+## device asks ScreenLayout.tap_word() (a one-word literal, so the scan passes it).
+CLICK = re.compile(r"(?i)(?<![A-Za-z])click(s|ed|ing)?(?![A-Za-z])")
+
+
+def check_no_click(root, sources=None):
+    """No copy source has a line with "click" in it (moved from copy_rules _test_no_click)."""
+    out = []
+    for d in (SOURCES if sources is None else sources):
+        for path in gd_files(root, d, ext=(".gd", ".json")):
+            try:
+                strings = source_strings(path, read(root, path))
+            except ValueError:
+                continue  # copy-voice reports the broken JSON
+            for n, s in strings:
+                if CLICK.search(s):
+                    out.append(Finding(path, n, "no-click", "copy says 'tap', not 'click': \"%s\"" % s[:90]))
     return out
 
 

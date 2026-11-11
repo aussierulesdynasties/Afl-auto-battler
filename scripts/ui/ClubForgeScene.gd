@@ -527,7 +527,7 @@ var _kit_box: VBoxContainer
 var _pv := {}
 var _ppv := {}
 ## The director's flow (2026-10-07): name the club, pick the design, then
-## pick a colour (the brush) and click the part of the guernsey to paint.
+## pick a colour (the brush) and tap the part of the guernsey to paint.
 var _brush := ""
 const PART_KEY := {"body": "primary", "pattern": "secondary", "trim": "accent"}
 const PART_LABEL := {"body": "Main colour", "pattern": "Pattern colour", "trim": "Trim colour"}
@@ -697,7 +697,7 @@ func _club_workspace(form: ScrollContainer) -> Control:
 		centre.add_child(crest)
 		side.add_child(centre)
 		_paintable(crest)
-		side.add_child(_sub("Pick a colour, then click the part of the guernsey to paint."))
+		side.add_child(_sub("Pick a colour, then tap the part of the guernsey to paint it."))
 		side.add_child(name_l)
 		side.add_child(line)
 		side.add_child(UiKit.spacer(6))
@@ -710,13 +710,16 @@ func _club_workspace(form: ScrollContainer) -> Control:
 		var strip := UiKit.hbox(10)
 		strip.name = "ForgePreviewPanel"
 		strip.add_child(crest)
+		# Save sits under the name, not beside it, so the name keeps the
+		# strip's full width and stays on one line on a 390 px phone.
 		var words := UiKit.vbox(2)
 		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		words.add_child(name_l)
 		words.add_child(line)
+		words.add_child(UiKit.spacer(4))
+		save.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		words.add_child(save)
 		strip.add_child(words)
-		save.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		strip.add_child(save)
 		out.add_child(strip)
 		out.add_child(_problem)
 		out.add_child(form)
@@ -807,7 +810,7 @@ func _paint_part(part: String) -> void:
 	if part == "pattern" and str(_club["design"]) == "plain":
 		return
 	if _brush == "":
-		_problem.text = "Pick a colour first, then click the guernsey."
+		_problem.text = "Pick a colour first, then tap the guernsey."
 		_problem.visible = true
 		return
 	_club[PART_KEY[part]] = _brush
@@ -852,8 +855,8 @@ func _rebuild_paint() -> void:
 		grid.add_child(b)
 	_colour_box.add_child(grid)
 	var brush_name := _colour_name(_brush, "")
-	_colour_box.add_child(_sub(("Painting with %s: click the part of the guernsey to colour." % brush_name)
-			if brush_name != "" else "Pick a colour, then click the part of the guernsey to colour."))
+	_colour_box.add_child(_sub(("Painting with %s: tap the part of the guernsey to colour it." % brush_name)
+			if brush_name != "" else "Pick a colour, then tap the part of the guernsey to colour it."))
 	if not wide:
 		var cols := _kit_colours()
 		var canvas := GuernseyCrest.make(cols[0], cols[1], cols[2], str(_club["design"]),

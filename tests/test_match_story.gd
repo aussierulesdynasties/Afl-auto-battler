@@ -653,6 +653,12 @@ func _test_calls_every_quarter_pure() -> void:
 		var n := (MatchNotes.calls_lines(res, me, q) as Array).size()
 		_check(n == 5, "calls: Q%d has five call lines (got %d)" % [q, n])
 		all += n
+	# Win Contest (Q3 here) names the last quarter's clearances in brackets, as
+	# the attacking and defensive lines do: "from 8 to 10" read as a rise.
+	var contest := str(MatchNotes.calls_lines(res, me, 3)[0])
+	var cl := RegEx.create_from_string("^Win Contest: clearances \\d+ to \\d+ \\(\\d+ to \\d+ in the second\\)\\.$")
+	_check(cl.search(contest) != null and not contest.contains("from"),
+			"calls: the contest line puts the last quarter in brackets (got %s)" % contest)
 	# The old summary: every line in quarter order, the first five kept.
 	var old := []
 	for q in range(1, 5):
@@ -719,8 +725,7 @@ func _test_calls_every_quarter_screen() -> void:
 	var text := ""
 	if box != null:
 		for c in box.get_children():
-			text += str(c.get_meta("plain", c.get("text"))) + "
-"
+			text += str(c.get_meta("plain", c.get("text"))) + "\n"
 	for q in range(1, 5):
 		_check(text.contains("Q%d  ·  " % q), "calls: Your calls lists a Q%d call:\n%s" % [q, text])
 	Router.stack = []

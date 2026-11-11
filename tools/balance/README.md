@@ -47,6 +47,11 @@ GODOT=<godot console exe> tools/balance.sh match 1000 --a "--weather perfect" --
   (`first` the tightest hold, `last` the loosest; `tagger` only if he is a Tagger; `none` follows the same man
   with no tag). `--a "--tag none" --b "--tag last"` is what the loosest tag does against none; the report's Tags
   section gives what each midfielder's tag leaves his man, the tagged man's and tagger's lines and the margin.
+- **Play-through calls** (`--through mid|fwd|def|all`, director bug 2026-11-12): side `i % 2` plays through its
+  highest-rated man in that call's line from the first bounce (`all`: all three calls), its plan unchanged; the match
+  line carries each man's disposals and goals under `through`. A plain match makes no play-through call (rival clubs
+  never pick one), so a change to how the calls play needs this flag in both arms to show anything. For main against
+  a branch that adds the flag, copy `balance_body.gd` into the main checkout first, so both arms make the same calls.
 - **Your own plan** (`--custom-plan S,C`, director 2026-11-12): side `i % 2` plays its own plan of strength S
   and cost C (`CustomPlan.STRENGTH_IDS`, `CustomPlan.COST_IDS`; a pair on the same lever is refused) all match.
   `--a "--side-plan balanced" --b "--custom-plan sharp,slow"` is what that plan does against playing Balanced; the

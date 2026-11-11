@@ -26,6 +26,7 @@ A failure prints `path:line: [rule] message` (and a GitHub annotation on CI).
 | autoload-reach | autoload_reach.py | No script whose extends chain reaches SceneTree (runner, harness) names, at compile time, a class whose chain (names, single- or double-quoted preloads, `extends "res://..."`) reaches an autoload: under `godot --script` it fails to compile and Godot hangs to the time limit. `load()` it inside `_run()`; a `var` of the same name shadows the class only in its own function. | new (StoryDeck, ClubForge and #978 breaks) |
 | copy-voice | copy_voice.py | The banned words (`scripts/core/CopyRules.gd` WORDS) in story cards, tale banks and UI/sim/state string literals, at the exact ALLOW counts. | copy_rules `_test_sources` |
 | copy-pass | copy_voice.py | Each copy voice pass keeps its rewritten lines and its old ones stay gone (PASSES: hub, team and coaching, training). | copy_rules `_test_hub_pass`, `_test_team_pass`, `_test_training_pass` |
+| no-click | copy_voice.py | Phone first: no copy line (story cards, tale banks, UI/sim/state string literals) says "click"; it says "tap". | copy_rules `_test_no_click` |
 | font-size-one-place | screens.py | No `add_theme_font_size_override` outside UiKit. | text_size `_test_one_place` |
 | colour-cue | screens.py | A state colour (GOOD/BAD) always has a word or mark too (P-10); every such line is listed in COLOUR_CUES at its exact count. | text_size `_test_colour_has_words` |
 | type-role | screens.py | Every literal text size on a screen is in `UiKit.SIZES`. | career_ui `_test_type_roles` |
