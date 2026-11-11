@@ -1068,6 +1068,7 @@ func _restore_career(state: Dictionary) -> bool:
 		GameDB.register_club(ClubForge.row(custom_club))
 	Season.beat()
 	season_year = int(state.get("season_year", 2026))
+	GameDB.apply_era(season_year)
 	my_club = str(state.get("my_club", ""))
 	if state.get("season") is Dictionary:
 		var sv: Dictionary = state["season"]
@@ -2643,6 +2644,8 @@ func _start_next_season(next_year: int, signed: int) -> void:
 	ensure_contracts()
 	ExpansionBuild.set_relief(self, next_year)
 	season_year = next_year
+	# The clubs as they were this year (the Bears until 1997); today's years change nothing.
+	GameDB.apply_era(season_year)
 	if my_first_season == 0 and my_club != "" and not sim_ahead:
 		my_first_season = season_year
 	# Dynamic rivalries cool once a season when two clubs stop meeting.
