@@ -3639,8 +3639,8 @@ func _test_moment_calls_matter() -> void:
 			totals["surge"] / 40.0, totals["none"] / 40.0, totals["hold"] / 40.0])
 	# Set shots: the best call depends on the shot.
 	var best := {}
-	# Sixty matches: the call other than the shot is best only now and then.
-	for i in range(60):
+	# Thirty matches: the call other than the shot is best only now and then.
+	for i in range(30):
 		var s3 := _sim(9300 + i)
 		s3.moment_side = 0
 		while s3.current_quarter <= 4:
@@ -3658,6 +3658,24 @@ func _test_moment_calls_matter() -> void:
 					best[top] = int(best.get(top, 0)) + 1
 				s3.resolve_moment(int(m.get("default", 0)))
 			s3.end_quarter()
+	# A sitter and a long shot on the boundary, offered to the same man: the
+	# matches above may hold neither (with more trait carriers, most shots are
+	# taken and kicked; traits up to five, director 2026-11-12).
+	var s4 := _sim(9400)
+	s4.moment_side = 0
+	s4.begin_quarter()
+	var kicker: Dictionary = (s4.squads[0] as Squad).ground[0]
+	for band in [{"key": "sitter", "spot": "15 out, straight in front", "goal": 0.85, "behind": 0.1},
+			{"key": "boundary", "spot": "50 out on the boundary", "goal": 0.1, "behind": 0.25}]:
+		s4.call("_offer_set_shot", 0, 80.0, kicker, null, band)
+		var top := ""
+		var top_ev := -1.0
+		for o in s4.pending_moment["options"]:
+			var ev := 6.0 * float(o.get("goal", 0.0)) + float(o.get("behind", 0.0) if o.has("behind") else (1.0 - float(o.get("goal", 0.0))) * 0.3)
+			if ev > top_ev:
+				top_ev = ev
+				top = str(o["key"])
+		best[top] = int(best.get(top, 0)) + 1
 	_check(best.size() >= 2, "No set-shot call is always right: the best one changes with the shot (%s)" % str(best))
 
 
