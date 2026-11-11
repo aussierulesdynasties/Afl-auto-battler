@@ -28,6 +28,7 @@ func run() -> void:
 	_t("_test_backing_named_side")
 	_t("_test_backing_ask_closes_when_picked")
 	_t("_test_backing_suspended_named_side")
+	_t("_test_promised_game_named_side")
 	_t("_test_pushing_for_games_needs_no_games")
 	_t("_test_fact_talks")
 	_t("_test_backing_lasts_the_season")
@@ -2125,3 +2126,31 @@ func _test_board_goal_said_aloud() -> void:
 	_check(GameState.board_goal_reason().contains("of 18 on paper"),
 			"An old board with no club count reads it from the season's rankings (%s)" % GameState.board_goal_reason())
 	GameState.delete_saved_career()
+
+
+## Director, 2026-11-12: "he should show as on the team the moment you accept
+## the event". A card's "a game this week" with a side you named: he is named
+## in it the moment you answer, and plays that game.
+func _test_promised_game_named_side() -> void:
+	_fresh_season()
+	var kid := _kid(_spare_kid(), 4)
+	_named_side_without(kid)
+	var card := GameState.story_card("selection_talk_dropped", kid)
+	var pick := -1
+	var opts: Array = card.get("options", [])
+	for i in range(opts.size()):
+		if pick < 0 and str((opts[i] as Dictionary).get("label", "")).begins_with("Promise"):
+			pick = i
+	_check(pick >= 0, "The talk has a promise of a game (%s)" % str(opts.map(func(o): return o.get("label", ""))))
+	if pick < 0:
+		return
+	GameState.week_events = [card]
+	var out := GameState.resolve_card(0, pick)
+	_check(_in_side(GameState.current_side(), kid) and _named_ids(GameState.my_selection()).has(str(kid["id"])),
+			"Promised a game: he is named in your side at once (%s)" % out)
+	_check(out.contains("He's in the side this week"), "...and the answer says so (%s)" % out)
+	kid.erase("injury_weeks")
+	kid.erase("suspension_weeks")
+	GameState.week_events = []
+	GameState.advance()
+	_check(GameState.last_side.has(str(kid["id"])), "...and he plays that game")
