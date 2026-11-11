@@ -317,6 +317,8 @@ func _test_screens() -> void:
 	var meter: Button = ui.find_child("ChemistryMeter", true, false)
 	_check(meter != null and meter.size.y >= 44.0, "The meter is a thumb-sized target above the oval")
 	_check(meter != null and is_equal_approx(float(meter.get_meta("share")), 1.0), "A settled side's meter is full")
+	var fig: Label = meter.find_child("ChemistryFigure", true, false)
+	_check(fig != null and fig.text == "100%", "A full bar says 100% in it")
 	var nobody_tap: String = await Tap.tap(meter)
 	_check(nobody_tap == "", "A finger reaches the meter")
 	await _settle()
@@ -331,6 +333,7 @@ func _test_screens() -> void:
 	ui.find_child("TeamBuilder", true, false).changed.emit("")
 	var at_three := float(meter.get_meta("share"))
 	_check(at_three > 0.95 and at_three < 1.0, "3 men dent the meter by their own form only, live")
+	_check(fig != null and fig.text == "%d%%" % ChemistryMeter.percent(at_three) and fig.text != "100%", "The figure in the bar moves with it, and a bar short of full never says 100%% (%s)" % (fig.text if fig != null else ""))
 	_check(TF.team_points(GameState.familiarity_side()) == 0, "3 men carry no team-wide cost")
 	TF.arrive_club(named[3])
 	named[3]["team_fam"] = 70.0

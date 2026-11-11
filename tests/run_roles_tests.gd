@@ -467,6 +467,26 @@ func _test_selection_pages_tests() -> void:
 				"Phone: Save as my Best 23 sits beside the interchange it saves (%s)" % tag)
 		var list_h := (ui.find_child("NotSelectedScroll", true, false) as Control).size.y
 		_check(list_h >= 90.0, "Phone: the not-picked list keeps at least %d px (%s)" % [int(list_h), tag])
+		# The list pulls up over the bottom half of the oval (director, 2026-11-11).
+		var tb_p: Node = ui.find_child("TeamBuilder", true, false)
+		var pull: Control = ui.find_child("ListPull", true, false)
+		var sheet_p: Control = ui.find_child("ListSheet", true, false)
+		var pitch_p: Control = ui.find_child("Pitch", true, false)
+		_check(pull != null and (await Tap.tap(pull)) == "", "Phone: the list's top edge takes a tap (%s)" % tag)
+		await Tap.steady(sheet_p)
+		var up_h := (ui.find_child("NotSelectedScroll", true, false) as Control).size.y
+		var mid_y := pitch_p.global_position.y + pitch_p.size.y * 0.5
+		_check(tb_p.is_raised() and absf(sheet_p.global_position.y - mid_y) < 2.0 and up_h >= list_h + 180.0,
+				"Phone: a tap on the top edge raises the list to the middle of the oval (%d px of list, sheet at %d, middle %d) (%s)" % [int(up_h), int(sheet_p.global_position.y), int(mid_y), tag])
+		_check(_no_scroll(ui.find_child("SelectionScroll", true, false)), "Phone: the page still does not scroll with the list raised (%s)" % tag)
+		await Tap.tap_at(pitch_p, Vector2(6, 6))
+		await Tap.steady(sheet_p)
+		_check(not tb_p.is_raised() and is_equal_approx((ui.find_child("NotSelectedScroll", true, false) as Control).size.y, list_h),
+				"Phone: a tap on the oval drops the list back (%s)" % tag)
+		tb_p.set_raised(true, false)
+		_check((await Tap.tap(ui.find_child("Spot_FF", true, false))) == "" and not tb_p.is_raised() and tb_p.picked() != "",
+				"Phone: tapping a player above a raised list picks him and drops the list (%s)" % tag)
+		await Tap.tap(ui.find_child("PickedCancel", true, false))
 		# A real tap swaps two players.
 		var side0: Dictionary = _state.current_side()
 		var centre := str(side0["MID"][0])
