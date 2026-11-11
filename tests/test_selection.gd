@@ -431,15 +431,8 @@ func _test_fifth_interchange() -> void:
 		for side in 2:
 			for p in (sim.squads[side] as Squad).bench:
 				bench_ids[side].append(str(p["id"]))
-		# A Running machine side (three Engines) tires 50% slower and barely
-		# rotates; with traits up to five Geelong has one (director, 2026-11-12).
-		var rotates := []
-		for side in 2:
-			rotates.append(not Traits.active((sim.squads[side] as Squad).ground).has("running_machine"))
 		var res := sim.run()
 		for side in 2:
-			if not rotates[side]:
-				continue
 			for id in bench_ids[side]:
 				played_all = played_all and (sim._played[side] as Dictionary).has(id)
 				var st: Dictionary = (res["players"] as Dictionary).get(id, {})
@@ -447,9 +440,27 @@ func _test_fifth_interchange() -> void:
 				stats_all = stats_all and float(st.get("distance_run", 0.0)) > 0.0
 				if int(st.get("disposals", 0)) + int(st.get("hitouts", 0)) + int(st.get("tackles", 0)) + int(st.get("marks", 0)) == 0:
 					quiet.append("%s %s %s" % [seed, id, str(st)])
-	_check(stints >= 15, "At least one side rotates its bench in every match (%d stints)" % stints)
 	_check(played_all, "All five on the bench come on during a match")
 	_check(stats_all and quiet.size() * 10 <= stints, "All five on the bench take the field, and almost all get involved (quiet: %s)" % str(quiet))
+	# A Running machine side (three Engines, tires 50% slower) barely needs to
+	# rotate, but every interchange player still gets on, as in every AFL match.
+	var rm_missed := []
+	for seed in [701, 702, 703, 704]:
+		var sim := MatchSim.new(Squad.new("GEE", GameDB.club_list("GEE"), true, "GEE"),
+				Squad.new("COL", GameDB.club_list("COL"), false, "COL"), seed)
+		for side in 2:
+			if not (sim.synergies[side] as Array).has("running_machine"):
+				(sim.synergies[side] as Array).append("running_machine")
+		var bench_ids := [[], []]
+		for side in 2:
+			for p in (sim.squads[side] as Squad).bench:
+				bench_ids[side].append(str(p["id"]))
+		sim.run()
+		for side in 2:
+			for id in bench_ids[side]:
+				if not (sim._played[side] as Dictionary).has(id):
+					rm_missed.append("%d %d %s" % [seed, side, id])
+	_check(rm_missed.is_empty(), "A Running machine side gets every interchange player on (missed: %s)" % str(rm_missed))
 
 	# XP and the game count: a round through the real season.
 	_new_season()

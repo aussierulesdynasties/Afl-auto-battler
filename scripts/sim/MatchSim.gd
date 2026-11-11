@@ -5308,10 +5308,57 @@ func _auto_rotate(side: int) -> void:
 			worst = i
 			worst_e = e
 	if worst < 0:
+		_first_stint(side)
 		return
 	var bi := _bench_for(side, str((sq.ground[worst] as Dictionary)["role"]), 85.0, true)
 	if bi >= 0:
 		_swap(side, worst, bi)
+
+
+## Every interchange player gets on the ground in an AFL match. From the second
+## quarter, when nobody is past his line (a side whose legs last, such as a
+## Running machine line), a bench player who has not yet played goes on for
+## the most tired man in a spot he can play; the usual rotations then take
+## over. The same for every club; a rest the coach called still holds, and the
+## named tagger and play-through picks keep their own rules.
+func _first_stint(side: int) -> void:
+	if current_quarter < 2:
+		return
+	var sq: Squad = squads[side]
+	var named := str((tactics[side] as Dictionary).get("tagger_id", "")) if _tag_id(side) != "" else ""
+	var focus := {}
+	for slot in FOCUS_SLOTS:
+		var fid := str((tactics[side] as Dictionary).get(slot, ""))
+		if fid != "":
+			focus[fid] = slot
+	for bi in range(sq.bench.size()):
+		var on: Dictionary = sq.bench[bi]
+		var on_id := str(on["id"])
+		if _played[side].has(on_id) or str(_held.get(on_id, "")) == "rest":
+			continue
+		var best := -1
+		var best_e := 101.0
+		var best_fits := false
+		for gi in range(sq.ground.size()):
+			var p: Dictionary = sq.ground[gi]
+			var pid := str(p["id"])
+			if str(_held.get(pid, "")) == "keep" or (named != "" and pid == named):
+				continue
+			var role := str(p["role"])
+			var focus_slot := str(focus.get(on_id, ""))
+			if focus_slot != "" and not (FOCUS_SLOT_ROLES[focus_slot] as Array).has(role):
+				continue
+			if named != "" and on_id == named and role != "MID":
+				continue
+			var fits := Traits.plays(on, role) or focus_slot != ""
+			var e := float(energy.get(pid, 100.0))
+			if (fits and not best_fits) or (fits == best_fits and e < best_e):
+				best = gi
+				best_e = e
+				best_fits = fits
+		if best >= 0:
+			_swap(side, best, bi)
+			return
 
 
 ## The freshest bench player (at or above `min_energy`) for a ground role,
