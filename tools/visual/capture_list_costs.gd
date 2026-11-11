@@ -4,7 +4,8 @@ extends SceneTree
 ## talks with an offer under his ask, and the release confirmation for a player
 ## with seasons left. Windowed:
 ##   godot --windowed --path . --script tools/visual/capture_list_costs.gd -- --out <prefix> --size 390x844
-## Writes <prefix>_retire.png, <prefix>_haggle.png, <prefix>_insult.png, <prefix>_release.png.
+## Writes <prefix>_retire.png, <prefix>_haggle.png (a small haggle), <prefix>_haggle_floor.png (his
+## floor), <prefix>_insult.png, <prefix>_release.png.
 ## A fresh Melbourne career at the off-season. Never touches a real save.
 
 var _w := 390
@@ -104,9 +105,15 @@ func _run() -> void:
 		var tp: Dictionary = state.list_player(talk_id)
 		var yrs := int(off.get("_offer_years"))
 		var floor_price: int = CT.lowest(tp, yrs) - state.culture_resign_discount(state.my_club, tp, yrs)
-		off.set("_offer_salary", floor_price)
+		# A small haggle first ($5k under his ask: a part sting), then his
+		# floor (the full one).
+		var ask: int = CT.asking_salary(tp)
+		off.set("_offer_salary", maxi(floor_price, ask - 5000))
 		off.call("_show_talks")
 		await _shot(off, "HaggleCost", "HaggleGain", "%s_haggle.png" % out)
+		off.set("_offer_salary", floor_price)
+		off.call("_show_talks")
+		await _shot(off, "HaggleCost", "HaggleGain", "%s_haggle_floor.png" % out)
 		off.set("_offer_salary", int(floor_price * 0.6 / CT.SALARY_STEP) * CT.SALARY_STEP)
 		off.call("_show_talks")
 		await _shot(off, "HaggleCost", "HaggleGain", "%s_insult.png" % out)

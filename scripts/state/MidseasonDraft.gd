@@ -169,14 +169,21 @@ static func _open_draft(gs) -> void:
 		if not gs.season.lists.has(code):
 			continue
 		var list: Array = gs.season.lists[code]
-		# A pick fills a rookie spot (RookieList).
-		if RookieList.rookie_spot_free(list):
+		# A pick fills a rookie spot (RookieList), or the spot a medical
+		# retirement left on a list now under the minimum (director, 2026-11-11).
+		if RookieList.rookie_spot_free(list) or _short(list):
 			order.append(code)
 	rec["order"] = order
 	rec["next"] = 0
 	rec["picks"] = []
 	rec["done"] = false
 	_run(gs)
+
+
+## A list under the minimum: only a medical retirement puts one there, and the
+## club stays a player short until an intake fills the spot.
+static func _short(list: Array) -> bool:
+	return list.size() < Contracts.MIN_LIST
 
 
 ## True while the draft waits on your pick.
@@ -244,6 +251,7 @@ static func settle(gs) -> void:
 
 
 static func _take(gs, code: String, p: Dictionary) -> void:
+	var rookie: bool = RookieList.rookie_spot_free(gs.season.lists.get(code, []))
 	var from := from_word(gs, p)
 	var id := str(p["id"])
 	var drafted: bool = not gs.free_agents.has(p)
@@ -266,8 +274,12 @@ static func _take(gs, code: String, p: Dictionary) -> void:
 	# A rookie deal to the end of next season: the rollover takes one off,
 	# so two now is "out of contract after next season".
 	p["contract_years"] = 2
-	p["salary"] = Contracts.indexed_money_2027(Contracts.ROOKIE_MIN_2027, gs.season_year)
-	p["rookie_list"] = "A"
+	if rookie:
+		p["salary"] = Contracts.indexed_money_2027(Contracts.ROOKIE_MIN_2027, gs.season_year)
+		p["rookie_list"] = "A"
+	else:
+		# The rookie spots are full: he fills the open senior spot, on the senior minimum.
+		p["salary"] = RookieList.senior_wage(gs.season_year)
 	Workload.reset({code: [p]})
 	(gs.midseason["picks"] as Array).append({"club": code, "id": id,
 			"name": GameDB.player_display_name(p), "from": from})

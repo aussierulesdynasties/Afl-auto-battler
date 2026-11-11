@@ -2636,6 +2636,12 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 		inj.name = "MyInjured"
 		inj.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(inj)
+	var panel := GameState.my_medical_lines()
+	if not panel.is_empty():
+		var md := UiKit.lbl("Medical panel: " + " ".join(panel), UiKit.SMALL, UiKit.BAD, true)
+		md.name = "MyMedical"
+		md.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(md)
 	var mro := GameState.my_mro_lines()
 	if not mro.is_empty():
 		var mr := UiKit.lbl("MRO: " + ", ".join(mro), UiKit.SMALL, UiKit.BAD, true)

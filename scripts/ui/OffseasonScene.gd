@@ -295,6 +295,12 @@ func _contracts(body: VBoxContainer) -> void:
 		_compact_actions(row, talk)
 		talk.pressed.connect(_open_talks.bind(str(p["id"])))
 		row.add_child(talk)
+		# Talked round this off-season: he stays until the next one (the ask's cost).
+		if ListStings.release_held(p, GameState.season_year + 1):
+			var held := _para(ListCosts.HELD_LINE, 12, UiKit.TEXT)
+			held.name = "ReleaseHeld"
+			(card.get_child(0) as VBoxContainer).add_child(held)
+			continue
 		var rel := UiKit.btn("Release", UiKit.SECONDARY)
 		rel.name = "Release"
 		rel.custom_minimum_size = Vector2(0, 44)
