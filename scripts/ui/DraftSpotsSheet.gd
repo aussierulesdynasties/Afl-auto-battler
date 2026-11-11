@@ -104,23 +104,24 @@ static func lines(s: Dictionary) -> Array:
 	var out := []
 	var picks: Array = s["picks"]
 	var passing: Array = s["passing"]
-	out.append(["Your senior list will hold %d of %d when the draft opens: %d spot%s for %d pick%s." % [
-			int(s["held"]), int(s["cap"]), int(s["open"]), "" if int(s["open"]) == 1 else "s",
-			picks.size(), "" if picks.size() == 1 else "s"], true, "", "DraftSpotsCount"])
+	# Small counts in words, as the gate's line says them; list sizes stay digits.
+	out.append(["Your senior list will hold %d of %d when the draft opens: %s spot%s for %s pick%s." % [
+			int(s["held"]), int(s["cap"]), GameState._count_word(int(s["open"])), "" if int(s["open"]) == 1 else "s",
+			GameState._count_word(picks.size()), "" if picks.size() == 1 else "s"], true, "", "DraftSpotsCount"])
 	if not passing.is_empty():
 		out.append(["%s %s will pass." % ["Pick" if passing.size() == 1 else "Picks", Draft.picks_words(passing)],
 				true, "bad", "DraftSpotsPassing"])
 	if int(s["resign"]) > 0:
-		out.append(["That counts %d undecided player%s who re-sign%s when the draft opens." % [
-				int(s["resign"]), "" if int(s["resign"]) == 1 else "s", "s" if int(s["resign"]) == 1 else ""],
+		out.append(["That counts %s undecided player%s who re-sign%s when the draft opens." % [
+				GameState._count_word(int(s["resign"])), "" if int(s["resign"]) == 1 else "s", "s" if int(s["resign"]) == 1 else ""],
 				false, "", "DraftSpotsResign"])
 	if int(s["ties"]) > 0:
-		out.append(["It counts %d father-son or academy player%s who join%s your list first." % [
-				int(s["ties"]), "" if int(s["ties"]) == 1 else "s", "s" if int(s["ties"]) == 1 else ""],
+		out.append(["It counts %s father-son or academy player%s who join%s your list first." % [
+				GameState._count_word(int(s["ties"])), "" if int(s["ties"]) == 1 else "s", "s" if int(s["ties"]) == 1 else ""],
 				false, "", "DraftSpotsTies"])
 	if int(s["maybe"]) > 0:
-		out.append(["%d player%s testing the market or holding your offer could still sign; each who does takes a spot." % [
-				int(s["maybe"]), "" if int(s["maybe"]) == 1 else "s"], false, "", "DraftSpotsMaybe"])
+		out.append(["%s player%s testing the market or holding your offer could still sign; each who does takes a spot." % [
+				GameState._count_word(int(s["maybe"]), true), "" if int(s["maybe"]) == 1 else "s"], false, "", "DraftSpotsMaybe"])
 	if int(s["retiring"]) > 0:
 		out.append(["Retiring players hold their spot until the draft is over.", false, "", "DraftSpotsRetiring"])
 	out.append(["A club with a full senior list passes its picks. Out-of-contract players can be delisted before the draft starts, and any player traded away; contracted players cannot be delisted. Rookies do not take a senior spot.",

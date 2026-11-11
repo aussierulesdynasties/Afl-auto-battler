@@ -2769,6 +2769,8 @@ func _on_intake_draft() -> void:
 		_build()
 		return
 	if DraftSpotsSheet.needed():
+		# One sheet at a time: a new card's sheet steps aside (it stays on the hub).
+		_close_event_sheet_quiet()
 		DraftSpotsSheet.open(self, _start_intake_draft)
 		return
 	_start_intake_draft()

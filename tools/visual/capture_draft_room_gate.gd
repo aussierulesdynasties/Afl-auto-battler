@@ -82,6 +82,8 @@ func _run() -> void:
 		for i in range(8):
 			await process_frame
 		hub.call("_on_intake_draft")
+		print("sheets open: EventSheet=%s DraftSpots=%s" % [hub.find_child("EventSheet", true, false) != null,
+				hub.find_child("DraftSpots", true, false) != null])
 		for i in range(4):
 			await process_frame
 		if str(step[0]) != "":
@@ -92,6 +94,9 @@ func _run() -> void:
 			# The screen change runs under the dot cover: wait until it has gone.
 			await create_timer(2.5).timeout
 		await _shot(out + str(step[1]))
+		var rel = current_scene.find_child("Release", true, false) if current_scene != null else null
+		if rel != null:
+			print("%s first Release button %s in %s" % [step[1], rel.get_global_rect(), Rect2(Vector2.ZERO, Vector2(W, H))])
 		if is_instance_valid(hub):
 			hub.queue_free()
 		var cur = current_scene
