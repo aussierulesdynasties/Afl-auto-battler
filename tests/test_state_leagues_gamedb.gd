@@ -6,8 +6,8 @@ extends RefCounted
 ## one reload each), that a dataset without the key loads none, the club
 ## lookups for state codes, the Player names switch on state men, and the
 ## mature-age recruits' VFL clubs read from the data (Aspley gone).
-## Run through tests/run_state_leagues_gamedb_tests.gd. Seeded by design: it
-## loads data and plays no match.
+## Run through tests/run_state_leagues_gamedb_tests.gd.
+## Seeded by design: it loads data and plays no match.
 
 var failures: Array[String] = []
 var checks := 0
