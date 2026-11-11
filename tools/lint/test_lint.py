@@ -84,6 +84,13 @@ class CopyVoice(Repo):
         found = copy_voice.check(self.root, allow={}, tales=["data/tales/career.json"])
         self.assertEqual([f.path for f in found], ["data/tales/career.json"])
 
+    def test_click_fails_and_tap_passes(self):
+        self.assertIsNotNone(copy_voice.CLICK.search("Painting with Aqua: click the part of the guernsey"))
+        self.assertIsNotNone(copy_voice.CLICK.search("Clicking the guernsey first"))
+        self.assertIsNone(copy_voice.CLICK.search("Painting with Aqua: tap the part of the guernsey to colour it."))
+        self.write("scripts/ui/Screen.gd", 'var a = "Tap the part to colour it"\n# "click here" in a comment\nvar b = "Click the part to colour it"\n')
+        self.assertEqual(self.at(copy_voice.check_no_click(self.root, ["scripts/ui"])), ["scripts/ui/Screen.gd:3"])
+
     def test_hub_pins(self):
         self.write("scripts/ui/HubScene.gd", 'var a = "Our week"\nvar b = "Begin season"\n')
         found = copy_voice.check_passes(self.root, [(copy_voice.HUB, "copy voice pass 2, hub", ["Our week", "Start the season"], ["Begin season"])])

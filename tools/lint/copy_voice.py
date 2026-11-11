@@ -239,6 +239,26 @@ def check(root, allow=None, sources=None, tales=None):
     return out
 
 
+## Phone first: a line of copy says "tap", never "click". A screen that names the pointer by
+## device asks ScreenLayout.tap_word() (a one-word literal, so the scan passes it).
+CLICK = re.compile(r"(?i)(?<![A-Za-z])click(s|ed|ing)?(?![A-Za-z])")
+
+
+def check_no_click(root, sources=None):
+    """No copy source has a line with "click" in it (moved from copy_rules _test_no_click)."""
+    out = []
+    for d in (SOURCES if sources is None else sources):
+        for path in gd_files(root, d, ext=(".gd", ".json")):
+            try:
+                strings = source_strings(path, read(root, path))
+            except ValueError:
+                continue  # copy-voice reports the broken JSON
+            for n, s in strings:
+                if CLICK.search(s):
+                    out.append(Finding(path, n, "no-click", "copy says 'tap', not 'click': \"%s\"" % s[:90]))
+    return out
+
+
 def check_passes(root, passes=None):
     """Each copy pass's rewritten lines are still in their file, and none of the old ones."""
     out = []
