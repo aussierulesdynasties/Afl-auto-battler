@@ -66,6 +66,7 @@ Pick the suites for the code you changed and run just those (`tools/run_tests.sh
 | `gather_round` | Gather Round: one of rounds 3 to 7 at the host grounds, the home edge only at a club's own ground, the odd-count bye, its name in the fixture, hub and match, a live round across a save and load |
 | `save` | Saving and loading a career, including old-save migrations and the safe write: a failed or interrupted write never loses the career, and a failed swap leaves the newer save readable |
 | `chronology` | 2026 is history, careers start in 2027, and every system agrees |
+| `dataset` | The career's dataset (Legacy mode): GameDB loads the chosen set, the save keeps it, and the 2026 load, real-lists opening and seeded season match golden fingerprints from before the choice |
 | `career` | Games, goals and club stints across a dynasty |
 | `coaches` | The coaching world: six jobs a club, records, grades, the Staff screen |
 | `coach_market` | Coach moves, hiring, sackings, retirements, assistant contracts |
