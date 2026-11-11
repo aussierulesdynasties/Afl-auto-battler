@@ -5,18 +5,21 @@ extends SceneTree
 ## careers: Fremantle drafts an international, the next home-and-away season is
 ## played week by week, and the week's dealer (GameState's own, never this
 ## test) draws at least one of his international cards in most careers.
-## Before the fix another card was about him every 8 to 10 weeks and his own
-## cards waited 12 weeks after any card about him, so none ever came.
+## Before the fix his own cards waited 12 weeks after any card about him, and
+## another card was about him every 8 to 10 weeks, so the wait rarely ended.
+## Seeds 2027-2032 (2026-11-11): under the old rule 4 of 6 careers saw a card and
+## his cards were open 26 weeks against 83 held by that wait; under the fix 5 of
+## 6, open 63 weeks against 45.
 ##
-## INTL_CAREERS=<n> plays more careers; INTL_REPORT=1 prints what held his
-## cards back each week (the measurement behind the rule); INTL_OLD_RULE=1
+## INTL_CAREERS=<n> plays more careers. Each career prints what held his cards
+## back each week (the measurement behind the rule). INTL_OLD_RULE=1
 ## plays them under the old rule, where this suite goes red.
 
 const SUITE_SEED := 2027
 ## Careers played, seeds SUITE_SEED, SUITE_SEED + 1, ...
 const CAREERS := 6
 ## Of those, how many must see one of his international cards dealt.
-const NEED := 4
+const NEED := 5
 
 var _state: Node
 var _db: Node
@@ -131,7 +134,7 @@ func _held(engine: GDScript, deck: Array, ctx: Dictionary, before: Dictionary, p
 func _test_the_dealer_draws_his_cards() -> void:
 	var engine: GDScript = load("res://scripts/sim/StoryEngine.gd")
 	var stories: GDScript = load("res://scripts/state/ClubStories.gd")
-	var deck: Array = (load("res://scripts/sim/StoryDeck.gd") as GDScript).all()
+	var deck_script: GDScript = load("res://scripts/sim/StoryDeck.gd")
 	var careers := maxi(CAREERS, int(OS.get_environment("INTL_CAREERS")))
 	var drafted := 0
 	var with_card := 0
@@ -144,10 +147,15 @@ func _test_the_dealer_draws_his_cards() -> void:
 			print("INTL dealt: seed %d, no international drafted" % career_seed)
 			continue
 		drafted += 1
+		# The deck the game deals from: GameState.reset() reloads StoryDeck's
+		# cache, so it is taken after the career starts, never before. StoryDeck
+		# is load()ed, never named: its chain reaches GameDB, and naming it stops
+		# this runner compiling.
+		var deck: Array = deck_script.all()
 		# INTL_OLD_RULE=1 measures the rule before the fix: his cards count
-		# their wait from any card about him (the deck is reloaded per career).
+		# their wait from any card about him.
 		if OS.get_environment("INTL_OLD_RULE") == "1":
-			for t in StoryDeck.all():
+			for t in deck:
 				(t as Dictionary).erase("series")
 		if _state.needs_season_wrap():
 			_state.begin_season_from_wrap()
@@ -204,11 +212,12 @@ func _test_the_dealer_draws_his_cards() -> void:
 		var p: Dictionary = _state.list_player(pid)
 		print("INTL dealt: seed %d, %s (%s, %d games): his cards [%s]" % [career_seed, str(p.get("name", pid)),
 				str(p.get("intl", "?")), int(_state.games_played(p)), ", ".join(PackedStringArray(his))])
-		if true:
-			print("  other cards about him [%s]; weeks by what held his cards %s" % [", ".join(PackedStringArray(others)), str(weeks)])
-			print("  " + " ".join(PackedStringArray(trail)))
+		print("  other cards about him [%s]; weeks by what held his cards %s" % [", ".join(PackedStringArray(others)), str(weeks)])
+		print("  " + " ".join(PackedStringArray(trail)))
 	print("INTL dealt: %d of %d careers saw an international card in his first season; weeks %s" % [with_card, drafted, str(tally)])
 	_check(drafted == careers, "Fremantle drafts an international in every seeded career (%d of %d)" % [drafted, careers])
 	_check(with_card * CAREERS >= NEED * drafted,
 			"The game deals an international his own card in his first season in most careers (%d of %d)" % [with_card, drafted])
+	_check(int(tally.get("free", 0)) >= int(tally.get("wait", 0)),
+			"His cards are open more weeks than another card's wait holds them (%d open, %d held)" % [int(tally.get("free", 0)), int(tally.get("wait", 0))])
 	_check(crowded == 0, "His international cards come a month or more after any card about him, and twelve weeks apart (%d did not)" % crowded)

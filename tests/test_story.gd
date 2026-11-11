@@ -2448,7 +2448,9 @@ func ", at + 5) - at)
 	for f in files:
 		if FileAccess.get_file_as_string(f).contains("Culture.club_effect("):
 			effect_readers.append(f.get_file())
-	_check(effect_readers == ["GameState.gd"], "Only GameState applies a culture effect (%s)" % ", ".join(effect_readers))
+	# CoachEffects gives a match squad its Togetherness from the relations GameState hands it (empty while culture effects are off).
+	effect_readers.sort()
+	_check(effect_readers == ["CoachEffects.gd", "GameState.gd"], "Only GameState and match day's CoachEffects apply a culture effect (%s)" % ", ".join(effect_readers))
 	for kind in ["recovery", "sting", "resign_floor", "free_agent_score", "young_growth", "young_ceiling"]:
 		_check(gs.contains("culture_effect(") and gs.contains("\"%s\")" % kind), "Culture's %s effect is applied" % kind)
 	for st in ["standards", "together", "ambition"]:
