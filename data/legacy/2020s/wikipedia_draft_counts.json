@@ -1,0 +1,49 @@
+{
+ "2019": {
+  "free_agency": 10,
+  "national": 65,
+  "preseason": 2,
+  "rookie": 33
+ },
+ "2020": {
+  "free_agency": 9,
+  "mid_season": 22,
+  "national": 59,
+  "preseason": 1,
+  "rookie": 26
+ },
+ "2021": {
+  "free_agency": 10,
+  "mid_season": 17,
+  "national": 65,
+  "preseason": 2,
+  "rookie": 26
+ },
+ "2022": {
+  "free_agency": 7,
+  "mid_season": 13,
+  "national": 59,
+  "rookie": 27
+ },
+ "2023": {
+  "free_agency": 11,
+  "mid_season": 19,
+  "national": 64,
+  "preseason": 3,
+  "rookie": 19
+ },
+ "2024": {
+  "free_agency": 10,
+  "mid_season": 18,
+  "national": 71,
+  "preseason": 2,
+  "rookie": 24
+ },
+ "2025": {
+  "free_agency": 7,
+  "mid_season": 18,
+  "national": 60,
+  "preseason": 1,
+  "rookie": 15
+ }
+}
