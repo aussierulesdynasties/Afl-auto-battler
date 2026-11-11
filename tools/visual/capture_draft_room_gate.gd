@@ -71,7 +71,7 @@ func _run() -> void:
 		pads.append(copy)
 		n += 1
 	# Three cheap players out of contract: the Contracts tab's Release buttons.
-	var oc := state.my_list.filter(func(q): return not state.retiring_now(q))
+	var oc: Array = state.my_list.filter(func(q): return not state.retiring_now(q))
 	oc.sort_custom(func(x, y): return int(x.get("salary", 0)) < int(y.get("salary", 0)))
 	for q in oc.slice(0, 3):
 		q["contract_years"] = 1
