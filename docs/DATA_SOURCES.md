@@ -44,6 +44,15 @@ these free public pages, fetched 2026-11-10 into a local cache by
   free agency, compensation), `https://en.wikipedia.org/wiki/Rookie_list` and
   `https://en.wikipedia.org/wiki/AFL_draft` (list limits).
 
+## Legacy mode, the 2020s (tools/legacy_2020s/, row 142)
+
+`data/legacy/2020s/` (lists 2020-2025, drafts and moves 2019-2025, ladders, season totals and
+season facts) comes from the same free public pages as the 2010s, for those years, fetched
+2026-11-11 by `tools/legacy_2020s/fetch.py`, plus Wikipedia's `<year>_AFL_season` pages
+(2020-2025: shortened 2020 season, relocated fixtures, Opening and Gather Rounds) and the
+2026 draft page (the 2026 mid-season rookie draft). Details, counts and gaps:
+[research/LEGACY_2020S_MANIFEST.md](research/LEGACY_2020S_MANIFEST.md).
+
 ## What we have vs wishlist
 
 Base: `data/players_2026.csv` — 669 players, season totals only:

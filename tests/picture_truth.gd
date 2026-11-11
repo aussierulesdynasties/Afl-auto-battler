@@ -79,6 +79,18 @@ static func ball_fault(ball: Dictionary, prev: Dictionary, tokens: Array, _h: fl
 	return ""
 
 
+## The ball went no further since the last frame than the hardest kick sends it
+## in `h` match seconds: a ball brought to a mark flies there, it does not jump.
+static func ball_speed_fault(ball: Dictionary, prev: Dictionary, h: float) -> String:
+	if prev.is_empty() or h <= 0.0:
+		return ""
+	var went := (ball.get("pos", Vector2.ZERO) as Vector2).distance_to(prev.get("pos", Vector2.ZERO))
+	if went > KICK_SPEED * h * 1.001:
+		return "the ball went %.1f m in a tick (%.0f m a second, %s to %s), the hardest kick covers %.1f m" % [went,
+				went / h, str(prev.get("mode", "")), str(ball.get("mode", "")), KICK_SPEED * h]
+	return ""
+
+
 ## Thirty-six discs, 18 a side, each drawn once, on the screen, on the ground,
 ## and no two men of a side in the same number.
 static func disc_fault(tokens: Array, discs: PackedVector2Array, order: Array, view: Rect2, radius: float) -> String:
