@@ -2099,8 +2099,12 @@ static func apply_insets(margin: MarginContainer, pad := 12) -> void:
 
 ## Shared ladder. Header and rows use one spec, and only the club column grows,
 ## so the numbers stay under their headings on a phone.
+## `finalists`: where the finals rule falls (Season.finalists(); 0 is the
+## game league's top ten).
 static func ladder_table(rows: Array, mine: String, width: float, limit := 0,
-		full := false) -> VBoxContainer:
+		full := false, finalists := 0) -> VBoxContainer:
+	if finalists <= 0:
+		finalists = Season.FINALISTS
 	var v := vbox(2)
 	var specs := ladder_specs(width, full)
 	var shown := rows.size() if limit <= 0 else mini(limit, rows.size())
@@ -2120,10 +2124,10 @@ static func ladder_table(rows: Array, mine: String, width: float, limit := 0,
 			# The table, and so the finals rule, ends at its last column.
 			v.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	v.add_child(_ladder_header(specs))
-	var cut := Season.FINALISTS - 1
+	var cut := finalists - 1
 	for i in range(shown):
 		v.add_child(_ladder_data_row(rows[i], i + 1, specs, mine))
-		if i == cut and (shown > Season.FINALISTS or limit == Season.FINALISTS):
+		if i == cut and (shown > finalists or limit == finalists):
 			v.add_child(rule())
 	return v
 

@@ -91,7 +91,7 @@ func run() -> void:
 					first_no_captain = weeks
 			else:
 				captain_weeks_by_season[GameState.season_year] = int(captain_weeks_by_season.get(GameState.season_year, 0)) + 1
-			elif int(cap.get("injury_weeks", 0)) <= 0 and in_side.has(str(cap["id"])):
+			if not cap.is_empty() and int(cap.get("injury_weeks", 0)) <= 0 and in_side.has(str(cap["id"])):
 				eligible += 1
 				var m := ClubLife.morale(cap)
 				var run := int(GameState.losing_streak)

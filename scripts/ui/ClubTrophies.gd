@@ -204,7 +204,7 @@ static func progress(season, club: String) -> String:
 		if str(res.get("home", "")) == club or str(res.get("away", "")) == club:
 			return str(FINALS.get(str(res.get("tag", "")).substr(0, 2), ""))
 	# Not in this week's finals: the week as the Fixture names it.
-	var names: Array = StatsFixture.FINALS_WEEKS
+	var names: Array = StatsFixture.week_titles(season)
 	return str(names[weeks.size() - 1]) if weeks.size() <= names.size() else ""
 
 

@@ -462,7 +462,7 @@ func _week_title(season: Season) -> String:
 	if season.is_season_over():
 		return "%d season" % GameState.season_year
 	if not season.is_regular_done():
-		return "Round %d of %d" % [season.round_index + 1, Season.REGULAR_ROUNDS]
+		return "Round %d of %d" % [season.round_index + 1, season.regular_rounds()]
 	return _finals_label()
 
 
@@ -487,7 +487,8 @@ func _ladder_section(season: Season, table_width := -1.0) -> Control:
 	var width := _content_width() if _narrow() else _content_width() * 0.45
 	if table_width > 0.0:
 		width = table_width
-	v.add_child(UiKit.ladder_table(season.ladder_sorted(), GameState.my_club, width, 0, false))
+	v.add_child(UiKit.ladder_table(season.ladder_sorted(), GameState.my_club, width, 0, false,
+			season.finalists()))
 	return v
 
 
@@ -936,7 +937,7 @@ func _week_section(season: Season) -> Control:
 			_:
 				nv.add_child(UiKit.lbl("Season over", UiKit.H1, UiKit.BAD, true))
 				nv.add_child(UiKit.lbl(
-						"We missed the top %d. Play out the finals to see who lifts the cup." % Season.FINALISTS,
+						"We missed the top %d. Play out the finals to see who lifts the cup." % GameState.season.finalists(),
 						UiKit.BODY, UiKit.MUTED))
 	else:
 		var mine: Dictionary = _upcoming_match()
@@ -2143,7 +2144,7 @@ func _upcoming_match() -> Dictionary:
 
 func _ladder_grid(_limit: int) -> Control:
 	return UiKit.ladder_table(GameState.season.ladder_sorted(), GameState.my_club,
-			_content_width() - 24.0, 8, false)
+			_content_width() - 24.0, 8, false, GameState.season.finalists())
 
 
 # ---------------------------------------------------------------------------
@@ -2635,6 +2636,12 @@ func _my_result(v: VBoxContainer, res: Dictionary) -> void:
 		inj.name = "MyInjured"
 		inj.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(inj)
+	var panel := GameState.my_medical_lines()
+	if not panel.is_empty():
+		var md := UiKit.lbl("Medical panel: " + " ".join(panel), UiKit.SMALL, UiKit.BAD, true)
+		md.name = "MyMedical"
+		md.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(md)
 	var mro := GameState.my_mro_lines()
 	if not mro.is_empty():
 		var mr := UiKit.lbl("MRO: " + ", ".join(mro), UiKit.SMALL, UiKit.BAD, true)
