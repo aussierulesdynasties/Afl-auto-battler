@@ -128,6 +128,24 @@ static func fold_football(allocation: Dictionary) -> Dictionary:
 ## funding level (measured, tools/measure_scout_miss.gd).
 const SCOUT_WORST_MISS := [7, 6, 5, 4]
 
+## Your recruiters' POT range on another club's player or a free agent, per
+## funding level: about one read in this many has his true potential outside
+## it, and by at most this much. Measured over 35 off-seasons of six seeded
+## careers, every club as the reader, 457,871 reads a level
+## (tools/balance/rival_reads.gd): 19.5%, 16.2%, 13.1% and 10.6% miss, the
+## worst by 7, 5, 5 and 3. The worst is also the most the read can miss by
+## (DraftScouting.pot_read). The reads sharpen as a player's games add up, so
+## they miss a little more often early in a career (1 in 4 to 1 in 8 at the
+## first off-season). tests/test_workload.gd holds both figures to the
+## measured counts (tools/balance/rival_reads_measured.json) and to the reads.
+const RIVAL_POT_MISS_IN := [5, 6, 8, 9]
+const RIVAL_POT_WORST_MISS := [7, 5, 5, 3]
+## The same reads on a player under 50 games: about one in this many misses,
+## at every funding level (143,164 reads a level: 27.2%, 26.7%, 22.8% and
+## 22.7%). Named in the same line so the coach sees the bigger miss on young
+## players; held to the measured counts by tests/test_workload.gd.
+const RIVAL_POT_YOUNG_MISS_IN := [4, 4, 4, 4]
+
 
 ## The UI uses these exact statements before the player spends.
 static func benefit_text(area: String, level: int) -> String:
@@ -136,7 +154,7 @@ static func benefit_text(area: String, level: int) -> String:
 		# The miss share and the worst miss are measured (tools/measure_scout_miss.gd,
 		# ten draft classes, 514 prospects): funding narrows the scouts' ranges,
 		# so about the same share of reads miss at every level, by less.
-		var miss := "about 1 read in 7 misses his true rating, by up to %d" % SCOUT_WORST_MISS[level]
+		var miss := "about 1 read in 7 misses his true rating, by up to %d. Other clubs' players: about 1 POT read in %d misses (1\u00a0in\u00a0%d under 50 games), by up to %d" 				% [SCOUT_WORST_MISS[level], RIVAL_POT_MISS_IN[level], RIVAL_POT_YOUNG_MISS_IN[level], RIVAL_POT_WORST_MISS[level]]
 		if level == 0:
 			return "Prospect scouts' ranges are 25% wider than standard: " + miss + "."
 		if level == 1:

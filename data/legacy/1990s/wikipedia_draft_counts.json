@@ -1,0 +1,56 @@
+{
+ "1989": {
+  "mid_season": 45,
+  "national": 116,
+  "preseason": 56
+ },
+ "1990": {
+  "mid_season": 38,
+  "national": 94,
+  "preseason": 58
+ },
+ "1991": {
+  "mid_season": 49,
+  "national": 89,
+  "preseason": 55
+ },
+ "1992": {
+  "mid_season": 31,
+  "national": 124,
+  "preseason": 81
+ },
+ "1993": {
+  "national": 66,
+  "preseason": 39
+ },
+ "1994": {
+  "national": 91,
+  "preseason": 36
+ },
+ "1995": {
+  "national": 77,
+  "preseason": 22
+ },
+ "1996": {
+  "national": 90,
+  "preseason": 20,
+  "rookie": 45
+ },
+ "1997": {
+  "national": 83,
+  "preseason": 11,
+  "rookie": 60,
+  "rookie_listed_elsewhere": 3
+ },
+ "1998": {
+  "national": 84,
+  "preseason": 14,
+  "rookie": 50
+ },
+ "1999": {
+  "national": 93,
+  "national_listed_elsewhere": 5,
+  "preseason": 15,
+  "rookie": 63
+ }
+}
