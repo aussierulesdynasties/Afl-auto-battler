@@ -78,6 +78,9 @@ func run() -> void:
 	_t("_test_current_club_identity")
 	_t("_test_tag_ends_with_injury")
 	_t("_test_named_tagger_back_on")
+	_t("_test_play_through_back_on_in_his_line")
+	_t("_test_play_through_mid_stands_in_midfield")
+	_t("_test_view_slots_stand_in_their_zone")
 	_t("_test_tag_hold")
 	_t("_test_match_story")
 	_t("_test_first_goal_feed")
@@ -2948,6 +2951,185 @@ func _test_named_tagger_back_on() -> void:
 	var t = sim.tagger_of(0)
 	_check(t != null and str(t["id"]) == nid and str(sim.tactics[0].get("tag_id", "")) == str(target["id"]),
 			"Back on in a midfielder's place, the named tagger resumes the tag")
+
+
+## Director, 2026-11-12: "Pickett was my 'play through' midfielder, but he
+## spent the whole quarter parked in the goal square?" A routine interchange
+## put him back on in the full-forward's place (he plays forward too), and the
+## call waited all quarter. Each play-through pick, at every club, goes back
+## on only in a spot his call works from, and first when one comes up.
+func _test_play_through_back_on_in_his_line() -> void:
+	var tried := 0
+	var clubs: Array = GameDB.players_by_club.keys().filter(
+			func(c): return (GameDB.club_list(str(c)) as Array).size() >= 30)
+	clubs.sort()
+	for club in clubs:
+		for slot in MatchSim.FOCUS_SLOTS:
+			var sim := _sim(9120 + tried, club, "SYD" if club != "SYD" else "GEE")
+			sim.moment_side = -1
+			var sq: Squad = sim.squads[0]
+			var own: Array = MatchSim.FOCUS_SLOT_ROLES[slot]
+			# A man in this call's line who also plays another line.
+			var pick = null
+			var other := ""
+			for p in sq.ground:
+				if not own.has(str(p.get("role", ""))):
+					continue
+				for line in ["MID", "FWD", "DEF"]:
+					if not own.has(line) and Traits.plays(p, line):
+						pick = p
+						other = line
+						break
+				if pick != null:
+					break
+			if pick == null:
+				continue
+			tried += 1
+			var pid := str(pick["id"])
+			sim.tactics[0] = {"gameplan": "balanced", slot: pid}
+			sim._swap(0, sq.ground.find(pick), 0)
+			for p in sq.ground + sq.bench:
+				sim.energy[str(p["id"])] = 100.0
+			for p in sq.bench:
+				if str(p["id"]) != pid:
+					sim.energy[str(p["id"])] = 90.0
+			# A tired man in his other line comes off: the pick waits.
+			var gi := -1
+			for k in sq.ground.size():
+				if str((sq.ground[k] as Dictionary).get("role", "")) == other:
+					gi = k
+					break
+			if gi < 0:
+				continue
+			sim.energy[str((sq.ground[gi] as Dictionary)["id"])] = 5.0
+			sim._auto_rotate(0)
+			var role := ""
+			for p in sq.ground:
+				if str(p["id"]) == pid:
+					role = str(p.get("role", ""))
+			_check(role == "", "%s %s: %s (%s) does not go back on in a %s's place (went on as %s)"
+					% [club, slot, GameDB.player_display_name(pick), slot, other, role])
+			sim.energy[str((sq.ground[gi] as Dictionary)["id"])] = 100.0
+			# A tired man in his own line comes off: he goes on first, in his line.
+			for k in sq.ground.size():
+				if str((sq.ground[k] as Dictionary).get("role", "")) == str(own[0]):
+					sim.energy[str((sq.ground[k] as Dictionary)["id"])] = 5.0
+					break
+			sim._auto_rotate(0)
+			for p in sq.ground:
+				if str(p["id"]) == pid:
+					role = str(p.get("role", ""))
+			_check(own.has(role), "%s %s: %s goes back on first in his own line (%s)" % [club, slot,
+					GameDB.player_display_name(pick), role])
+			_check(sim.focus_active(0, slot), "%s %s: back on, the call works again" % [club, slot])
+	_check(tried >= 10, "Enough clubs have a play-through pick who plays two lines (%d)" % tried)
+
+
+## The same at full speed: Melbourne play through Kysaiah Pickett for whole
+## matches. Wherever the sim has him on the ground he is a midfielder, and the
+## picture keeps his disc in a midfield spot, off the goal square, through the
+## quarter he first comes back on in.
+func _test_play_through_mid_stands_in_midfield() -> void:
+	var pid := ""
+	for p in GameDB.club_list("MEL"):
+		if str(p.get("real_name", "")) == "Kysaiah Pickett":
+			pid = str(p["id"])
+	_check(pid != "", "Kysaiah Pickett is on Melbourne's list")
+	if pid == "":
+		return
+	var first_res := {}
+	for seed in [6101, 6102, 6103]:
+		var sim := _sim(seed, "MEL", "FRE")
+		sim.moment_side = -1
+		var on = sim._ground_player(0, pid)
+		_check(on != null and MatchSim.FOCUS_SLOT_ROLES["focus_mid"].has(str(on["role"])),
+				"Seed %d: Pickett starts in the midfield" % seed)
+		sim.set_tactics(0, {"gameplan": "balanced", "focus_mid": pid})
+		var chains := 0
+		var wrong := 0
+		var where := ""
+		while sim.current_quarter <= 4:
+			sim.begin_quarter()
+			var total: int = sim._q_count
+			for k in range(total):
+				sim._q_count = k + 1
+				while not sim.continue_quarter():
+					sim.resolve_moment(int(sim.pending_moment.get("default", 0)))
+				var g = sim._ground_player(0, pid)
+				if g != null:
+					chains += 1
+					if not MatchSim.FOCUS_SLOT_ROLES["focus_mid"].has(str(g["role"])):
+						wrong += 1
+						if where == "":
+							where = "Q%d chain %d as %s" % [sim.current_quarter, k, str(g["role"])]
+			sim._q_count = total
+			sim.end_quarter()
+		_check(chains > 0 and wrong == 0, "Seed %d: on the ground for %d chains, never outside the midfield (%d off it, first %s)"
+				% [seed, chains, wrong, where])
+		if first_res.is_empty():
+			first_res = sim.result()
+	# The picture: from the start to the end of the quarter he first comes
+	# back on in, his disc holds a midfield slot and sits off the goal square.
+	var res := first_res
+	res["home"] = "MEL"
+	res["away"] = "FRE"
+	res["label"] = "Round 1"
+	var all: Array = res["events"]
+	var back := -1
+	for i in range(all.size()):
+		var e: Dictionary = all[i]
+		if str(e.get("kind", "")) == "sub" and str(e.get("player_id", "")) == pid:
+			back = i
+			break
+	_check(back >= 0, "Pickett rests and comes back on in the match")
+	var cut := all.size()
+	for i in range(maxi(0, back), all.size()):
+		if str((all[i] as Dictionary).get("kind", "")) == "quarter":
+			cut = i + 1
+			break
+	var d := MatchDirector.new()
+	d.setup(res, all.slice(0, cut))
+	var ticks := 0
+	var off_line := 0
+	var in_square := 0
+	var guard := 0
+	while not d.idle() and guard < 200000:
+		guard += 1
+		d.advance(1.0 / 10.0)
+		for t in d.tokens:
+			if str(t.get("pid", "")) != pid:
+				continue
+			ticks += 1
+			if not ["MID", "RUCK"].has(str(t["role"])) or absf((t["base"] as Vector2).x) > 28.0:
+				off_line += 1
+			# Deep in his forward 50, where the full forward stands (FF x 66).
+			var x := (t["pos"] as Vector2).x * MatchDirector._dir(int(t["side"]))
+			if x > 58.0:
+				in_square += 1
+	_check(ticks > 100, "The picture shows Pickett through the quarter (%d ticks)" % ticks)
+	_check(off_line == 0, "Pickett's disc holds a midfield slot every tick (%d of %d not)" % [off_line, ticks])
+	_check(in_square * 20 < ticks, "Pickett is in the goal square under 5%% of the time (%d of %d ticks)"
+			% [in_square, ticks])
+
+
+## Each role's slot in the picture stands in its own zone (attacking frame,
+## x toward the goal a side attacks): backs in the back 50, forwards in the
+## forward 50, the ruck and the midfield within the centre's reach.
+func _test_view_slots_stand_in_their_zone() -> void:
+	for role in MatchDirector.SLOTS:
+		for s in MatchDirector.SLOTS[role]:
+			var x: float = (s[1] as Vector2).x
+			var ok := false
+			match str(role):
+				"RUCK", "MID":
+					ok = absf(x) <= 28.0
+				"DEF":
+					ok = x <= -38.0
+				"FWD":
+					ok = x >= 38.0
+			_check(ok, "%s slot %s stands in the %s zone (x %.0f)" % [role, s[0], role, x])
+	for v in MatchDirector.EXTRA_SLOTS:
+		_check(absf((v as Vector2).x) <= 28.0, "An extra midfielder's slot is within the centre's reach (x %.0f)" % v.x)
 
 
 ## A tagged player hurt and gone off takes the tag with him: the tagging side

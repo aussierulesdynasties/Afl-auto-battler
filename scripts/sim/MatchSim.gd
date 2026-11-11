@@ -5322,12 +5322,19 @@ func _auto_rotate(side: int) -> void:
 ## `rotation`: a routine interchange, which leaves a rested star on the bench.
 ## The coach's named tagger goes back on only in a midfielder's place, and
 ## first when one comes off, so he picks the tag up again (tagger_of).
+## Each play-through pick (focus_mid/fwd/def) goes back on the same way: only
+## in a spot his call works from (FOCUS_SLOT_ROLES), and first when one does.
 const DEF_TIRED_GAP := 25.0
 
 
 func _bench_for(side: int, role: String, min_energy: float, rotation := false) -> int:
 	var sq: Squad = squads[side]
 	var named := str((tactics[side] as Dictionary).get("tagger_id", "")) if _tag_id(side) != "" else ""
+	var focus := {}
+	for slot in FOCUS_SLOTS:
+		var fid := str((tactics[side] as Dictionary).get(slot, ""))
+		if fid != "":
+			focus[fid] = slot
 	var best := -1
 	var best_score := -1.0
 	var best_fits := false
@@ -5347,7 +5354,15 @@ func _bench_for(side: int, role: String, min_energy: float, rotation := false) -
 		var is_named := rotation and named != "" and str(p["id"]) == named
 		if is_named and role != "MID":
 			continue
-		var score := e + (100.0 if fits else 0.0) + (200.0 if is_named else 0.0)
+		# A play-through pick goes back on only in a spot his call works from,
+		# and first when one comes up, so the call never waits from a slot in
+		# another line (director, 2026-11-12: the play-through midfielder
+		# "spent the whole quarter parked in the goal square").
+		var focus_slot := str(focus.get(str(p["id"]), "")) if rotation else ""
+		if focus_slot != "" and not (FOCUS_SLOT_ROLES[focus_slot] as Array).has(role):
+			continue
+		var is_focus := focus_slot != "" and fits
+		var score := e + (100.0 if fits else 0.0) + (200.0 if is_named or is_focus else 0.0)
 		if score > best_score:
 			best = i
 			best_score = score
