@@ -57,7 +57,10 @@ def check_presets(root):
     out = []
     for rule, need, never, why in PRESET_LINES:
         if need not in text:
-            out.append(Finding(PRESETS, 0, rule, "missing %s: %s" % (need, why)))
+            # Point at the key's line when it is there with another value.
+            at = text.find(need.split("=")[0] + "=")
+            out.append(Finding(PRESETS, text.count("\n", 0, at) + 1 if at >= 0 else 0, rule,
+                               "missing %s: %s" % (need, why)))
         if never and never in text:
             out.append(Finding(PRESETS, text.count("\n", 0, text.find(never)) + 1, rule, "%s is set: %s" % (never, why)))
     return out
