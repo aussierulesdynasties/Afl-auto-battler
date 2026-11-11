@@ -2,7 +2,8 @@ extends SceneTree
 ## CLI for tools/balance/dynasty.gd: runs seeded careers and writes JSON.
 ##   godot --headless --path . --script tools/balance/dynasty_run.gd -- \
 ##       --seeds 301,302 --policy board --seasons 5 --out /tmp/dyn.json [--coach] \
-##       [--manage none|list|full|exploit]
+##       [--manage none|list|full|exploit] [--reads]
+## --reads records how often the coach's reads on other clubs hold (rival_reads.gd).
 
 
 func _initialize() -> void:
@@ -42,6 +43,8 @@ func _run() -> void:
 		quit(1)
 		return
 	var dyn = lib.new()
+	if args.has("--reads"):
+		dyn.reads = load("res://tools/balance/rival_reads.gd").new()
 	var careers := []
 	for s in seeds:
 		var t := Time.get_ticks_msec()

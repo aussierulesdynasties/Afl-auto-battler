@@ -29,6 +29,10 @@ var lb = load("res://tools/balance/league_balance.gd").new()
 ## Every player traded so far this career: each season start records where
 ## he is and what he is rated (snap["traded"]), to see what deals became.
 var _traded := {}
+## Set to tools/balance/rival_reads.gd to record, as each off-season opens, how
+## often the reads the coach is shown on other clubs hold (snap["reads"]). It
+## only reads the career, so the career plays out the same with or without it.
+var reads = null
 
 
 ## One career of `seasons` seasons. Returns one record per season (see
@@ -88,6 +92,8 @@ func run_career(draft_seed: int, policy: String, seasons: int, top_n := 5, coach
 		# The rivals' own trades, made as the off-season opened.
 		snap["ai_trades"] = gs.offseason_log.filter(func(e): return str(e.get("kind", "")) == "ai_trade") \
 				.map(func(e): return str(e.get("text", "")))
+		if reads != null:
+			snap["reads"] = reads.record(gs, user)
 		var mgmt := _manage(gs, user, manage)
 		snap["market"] = _market(gs, user, snap["best22"])
 		if not _offseason(gs, user, mgmt):
